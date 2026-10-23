@@ -6,8 +6,7 @@ use std::path::Path;
 use gpui_kit::*;
 use wormhole_core::project::{Feature, ProjectFolder, TrustRequest};
 
-use super::{ProjectHub, load_project, projects_changed};
-use crate::app_state::{app, app_mut};
+use super::{ProjectHub, hub, hub_mut, load_project, projects_changed};
 use crate::platform::auth;
 use crate::window::Workspace;
 
@@ -31,10 +30,10 @@ impl ProjectHub {
 /// Ask for Touch ID (or the password), then trust the project at `root` exactly as it was shown:
 /// the hub's snapshot of it, which the Project tab and Settings display.
 pub(crate) fn approve_project(root: &Path, cx: &mut App) {
-    if app(cx).hub.approving {
+    if hub(cx).approving {
         return;
     }
-    let hub = &mut app_mut(cx).hub;
+    let hub = hub_mut(cx);
     if !hub.projects.contains_key(root) {
         let Some(folder) = ProjectFolder::open(root) else { return };
         let loaded = load_project(folder, &hub.trust);
@@ -52,13 +51,13 @@ pub(crate) fn approve_project(root: &Path, cx: &mut App) {
 
 /// Ask for Touch ID (or the password), then trust exactly what `request` describes.
 pub(crate) fn approve_request(request: TrustRequest, cx: &mut App) {
-    if app(cx).hub.approving {
+    if hub(cx).approving {
         return;
     }
     let root = &request.root;
     let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     let reason = format!("trust the project folder \u{201c}{name}\u{201d} and let it run commands");
-    let hub = &mut app_mut(cx).hub;
+    let hub = hub_mut(cx);
     hub.approving = true;
     hub.error = None;
     cx.refresh_windows();
@@ -67,7 +66,7 @@ pub(crate) fn approve_request(request: TrustRequest, cx: &mut App) {
     cx.spawn(async move |cx| {
         let result = rx.recv().await;
         cx.update(|cx| {
-            app_mut(cx).hub.finish_approval(&request, result.ok());
+            hub_mut(cx).finish_approval(&request, result.ok());
             projects_changed(cx);
         });
     })
@@ -75,13 +74,13 @@ pub(crate) fn approve_request(request: TrustRequest, cx: &mut App) {
 }
 
 pub(crate) fn revoke_project(root: &Path, cx: &mut App) {
-    app_mut(cx).hub.trust.revoke(root);
+    hub_mut(cx).trust.revoke(root);
     projects_changed(cx);
 }
 
 /// `None` goes back to the default for all projects.
 pub(crate) fn set_feature_for(root: &Path, feature: Feature, enabled: Option<bool>, cx: &mut App) {
-    let hub = &mut app_mut(cx).hub;
+    let hub = hub_mut(cx);
     match enabled {
         Some(enabled) => hub.prefs.set_enabled(root, feature, enabled),
         None => hub.prefs.clear_override(root, feature),
@@ -90,7 +89,7 @@ pub(crate) fn set_feature_for(root: &Path, feature: Feature, enabled: Option<boo
 }
 
 pub(crate) fn set_feature_default(feature: Feature, enabled: bool, cx: &mut App) {
-    app_mut(cx).hub.prefs.set_default(feature, enabled);
+    hub_mut(cx).prefs.set_default(feature, enabled);
     projects_changed(cx);
 }
 

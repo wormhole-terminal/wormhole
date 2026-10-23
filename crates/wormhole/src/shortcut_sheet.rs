@@ -17,6 +17,7 @@ use crate::app_state::{AppState, OpenWindow, app};
 use crate::settings::{UiColors, settings, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::window::Workspace;
+use crate::window::features::project;
 use crate::window::overlay::{OverlayContent, OverlayKind, OverlayView, scrim};
 
 /// How far below the window's top the sheet opens, its widest, and the room left round it.
@@ -87,7 +88,7 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
 /// The current terminal's project keys, once it is trusted (an untrusted project shows
 /// nothing here).
 fn project_keys(ws: &Workspace, cx: &App) -> Option<ProjectKeys> {
-    let hub = &app(cx).hub;
+    let hub = project::hub(cx);
     let project = ws.active_project(cx).filter(|p| hub.enabled(p, Feature::Actions))?;
     let actions: Vec<(String, KeySpec)> =
         project.actions().iter().filter_map(|a| Some((a.title.clone(), a.key_spec()?))).collect();

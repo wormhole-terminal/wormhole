@@ -26,6 +26,7 @@ use crate::platform::status_item::{self, MenuBar};
 use crate::settings::{settings, ui};
 use crate::settings_window;
 use crate::updates;
+use crate::window::features::project;
 use crate::window::window_lifecycle::open_tab;
 use crate::window::window_lifecycle::with_front_workspace;
 
@@ -184,8 +185,8 @@ pub(crate) fn project_actions(cx: &App) -> Vec<ActionItem> {
             continue;
         }
         seen.push(root);
-        let Some(project) = state.hub.projects.get(root) else { continue };
-        if !state.hub.enabled(project, Feature::Actions) {
+        let Some(project) = project::hub(cx).projects.get(root) else { continue };
+        if !project::hub(cx).enabled(project, Feature::Actions) {
             continue;
         }
         actions.extend(project.actions().iter().map(|action| ActionItem {

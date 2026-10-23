@@ -8,8 +8,7 @@ use std::path::Path;
 use gpui_kit::*;
 use wormhole_core::project::{ProjectColorChoice, ProjectFolder};
 
-use super::{project_folders_on, reload_projects};
-use crate::app_state::app_mut;
+use super::{hub_mut, project_folders_on, reload_projects};
 
 /// What the hub's error says when writing the colour failed, so a later success can take it away
 /// without touching the other problems it may be showing.
@@ -41,7 +40,7 @@ pub(in crate::window) fn set_project_color(root: &Path, color: Option<ProjectCol
 
 /// What came of writing the colour into the project at `root`.
 fn project_color_set(root: &Path, made: Result<bool, String>, cx: &mut App) {
-    let hub = &mut app_mut(cx).hub;
+    let hub = hub_mut(cx);
     match made {
         Ok(changed) => {
             tracing::info!(root = %root.display(), changed, "project colour set");

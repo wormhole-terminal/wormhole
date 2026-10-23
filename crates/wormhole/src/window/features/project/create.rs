@@ -7,8 +7,7 @@ use std::path::{Path, PathBuf};
 use gpui_kit::*;
 use wormhole_core::project::{self as proj, ProjectError, ProjectFolder};
 
-use super::{project_folders_on, reload_projects};
-use crate::app_state::app_mut;
+use super::{hub_mut, project_folders_on, reload_projects};
 use crate::window::Workspace;
 
 impl Workspace {
@@ -34,7 +33,7 @@ fn project_made(folder: &Path, made: Result<PathBuf, ProjectError>, cx: &mut App
     match made {
         Ok(dir) => {
             tracing::info!(dir = %dir.display(), "project folder created");
-            app_mut(cx).hub.error = None;
+            hub_mut(cx).error = None;
         }
         // A second click, or another program, got there first: it is a project all the same.
         Err(err) if ProjectFolder::open(folder).is_some() => {
@@ -42,7 +41,7 @@ fn project_made(folder: &Path, made: Result<PathBuf, ProjectError>, cx: &mut App
         }
         Err(err) => {
             tracing::warn!("creating the project folder: {err}");
-            app_mut(cx).hub.error = Some(format!("Couldn't create the project folder: {err}").into());
+            hub_mut(cx).error = Some(format!("Couldn't create the project folder: {err}").into());
         }
     }
     reload_projects(cx);

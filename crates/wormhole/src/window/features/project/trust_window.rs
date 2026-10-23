@@ -15,8 +15,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::project::{TrustLine, TrustStatus};
 
-use super::{LoadedProject, approve_project};
-use crate::app_state::{app, app_mut};
+use super::{LoadedProject, approve_project, hub};
 use crate::platform::auth;
 use crate::settings::{SettingsStore, ui};
 use crate::style::{self, Edges, TextRole};
@@ -28,6 +27,12 @@ const MIN: (f32, f32) = (480.0, 320.0);
 /// Lines laid out above and below the list's view, so scrolling doesn't pop them in.
 const LIST_OVERDRAW: f32 = 200.0;
 
+/// The window while it is open, if it is: there is one at most.
+#[derive(Default)]
+struct Open(aux_window::Slot);
+
+impl Global for Open {}
+
 pub(crate) struct TrustWindow {
     root: PathBuf,
     list: ListState,
@@ -36,7 +41,7 @@ pub(crate) struct TrustWindow {
 
 /// Open the window for the project at `root`, or bring it to the front showing that project.
 pub(crate) fn open_trust_window(root: PathBuf, cx: &mut App) {
-    if let Some((handle, view)) = app(cx).trust_window.clone() {
+    if let Some((handle, view)) = cx.default_global::<Open>().0.clone() {
         let shown = handle.update(cx, |_, window, cx| {
             if let Some(view) = view.upgrade().and_then(|view| view.downcast::<TrustWindow>().ok()) {
                 view.update(cx, |view, cx| view.show(root.clone(), cx));
@@ -60,7 +65,7 @@ pub(crate) fn open_trust_window(root: PathBuf, cx: &mut App) {
             cx.new(|cx| TrustWindow::new(root, window, cx))
         });
         match opened {
-            Ok((handle, view)) => app_mut(cx).trust_window = Some((handle, view.downgrade().into())),
+            Ok((handle, view)) => cx.default_global::<Open>().0 = Some((handle, view.downgrade().into())),
             Err(err) => tracing::error!("opening the project commands window failed: {err:#}"),
         }
     });
@@ -116,8 +121,8 @@ impl Render for TrustWindow {
         let ui = ui(cx);
         // Opaque: a window of text to read, not a place for the blur.
         let surfaces = aux_window::surfaces(cx, false);
-        let shown = Shown::of(app(cx).hub.projects.get(&self.root), &self.root);
-        let approving = app(cx).hub.approving;
+        let shown = Shown::of(hub(cx).projects.get(&self.root), &self.root);
+        let approving = hub(cx).approving;
         if self.list.item_count() != shown.lines.len() {
             self.list.reset(shown.lines.len());
         }
@@ -256,7 +261,7 @@ impl Workspace {
 #[cfg(feature = "devctl")]
 pub(crate) fn devctl_trust_shot(name: &str, dir: &Path, cx: &mut App) -> anyhow::Result<String> {
     let (handle, _) =
-        app(cx).trust_window.clone().ok_or_else(|| anyhow::anyhow!("that window is not open"))?;
+        cx.default_global::<Open>().0.clone().ok_or_else(|| anyhow::anyhow!("that window is not open"))?;
     let path = dir.join(format!("{name}.png"));
     // Draw first: a window behind others may not have redrawn since its last change.
     let image = handle.update(cx, |_, window, cx| {

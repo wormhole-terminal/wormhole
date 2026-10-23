@@ -64,8 +64,8 @@ impl Workspace {
         // Deferred: the new window renders right away, and nothing may read
         // this workspace while it is still being updated.
         cx.defer(move |cx| {
-            let state = app_mut(cx);
-            let (id, session_id) = (state.alloc_window_id(), state.alloc_id_in(&profile));
+            let id = app_mut(cx).alloc_window_id();
+            let session_id = AppState::alloc_id_in(&profile, cx);
             let record = WindowRecord {
                 id,
                 layout,

@@ -31,7 +31,6 @@ use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 use crate::app_state::look::LookOverride;
 use crate::app_state::recent_projects::RecentProjects;
 use crate::status_item;
-use crate::window::features::project;
 use crate::window::{Workspace, aux_window};
 
 /// A window showing a [`Workspace`].
@@ -58,8 +57,6 @@ pub(crate) struct AppState {
     pub store: Option<Store>,
     /// The tips closed with "Don't show again", kept in the store across launches.
     pub tips: DismissedTips,
-    /// `.wormhole/` project folders: preferences, trust and loaded files.
-    pub hub: project::ProjectHub,
     /// The projects worked in lately (Open Recent), most recent first.
     pub recent_projects: RecentProjects,
     /// Menu bar item and global hotkey.
@@ -73,9 +70,6 @@ pub(crate) struct AppState {
     /// The About and Licenses windows, while open.
     pub about_window: aux_window::Slot,
     pub licenses_window: aux_window::Slot,
-    /// The window listing everything a project wants to run (the trust notice's "View all"),
-    /// while open.
-    pub trust_window: aux_window::Slot,
     /// Open windows, oldest first.
     pub windows: Vec<OpenWindow>,
     /// The window that was in front last: its session's project settings apply.
@@ -123,7 +117,7 @@ impl Global for AppState {}
 impl AppState {
     /// The state at launch: the shown profile's data, the profiles, the menu bar item and the session
     /// hosts found. The id counters start past every profile's database, so an id never repeats
-    /// across profiles, and the project hub's ids start there too.
+    /// across profiles.
     pub(crate) fn new(
         root: DataRoot,
         profiles: ProfileList,
@@ -133,9 +127,8 @@ impl AppState {
         menu: status_item::MenuState,
         display_options: Option<crate::platform::look::DisplayObserver>,
     ) -> Self {
-        let profiles::ProfileData { store, tips, mut hub, recent, worktrees, last_panes } = data;
+        let profiles::ProfileData { store, tips, recent, worktrees, last_panes } = data;
         let (next_id, next_window_id) = profiles::first_free_ids(&root, &profiles, store.as_ref());
-        hub.ids_start_at(next_id);
         Self {
             root,
             profiles,
@@ -143,14 +136,12 @@ impl AppState {
             parked: Default::default(),
             store,
             tips,
-            hub,
             recent_projects: recent,
             menu,
             settings_window: None,
             studio_window: None,
             about_window: None,
             licenses_window: None,
-            trust_window: None,
             windows: Vec::new(),
             front: 0,
             quitting: false,
@@ -172,6 +163,11 @@ impl AppState {
         }
     }
 
+    /// The first id nobody has been given yet.
+    pub(crate) fn next_id(&self) -> i64 {
+        self.next_id
+    }
+
     /// Count one app tick (400 ms) and say which one it is.
     pub(crate) fn advance_tick(&mut self) -> u64 {
         self.ticks += 1;
@@ -191,14 +187,12 @@ impl AppState {
             parked: Default::default(),
             store: None,
             tips: DismissedTips::default(),
-            hub: project::ProjectHub::load(),
             recent_projects: RecentProjects::default(),
             menu,
             settings_window: None,
             studio_window: None,
             about_window: None,
             licenses_window: None,
-            trust_window: None,
             windows: Vec::new(),
             front: 0,
             quitting: false,

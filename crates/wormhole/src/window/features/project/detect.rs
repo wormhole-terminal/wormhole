@@ -8,8 +8,7 @@ use std::path::PathBuf;
 use gpui_kit::*;
 use wormhole_core::project::{self as proj, Feature};
 
-use super::{BTreeMapEnv, LoadedProject, load_project, load_projects, project_folders_on};
-use crate::app_state::{app, app_mut};
+use super::{BTreeMapEnv, LoadedProject, hub, hub_mut, load_project, load_projects, project_folders_on};
 use crate::settings::SettingsStore;
 use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
@@ -102,7 +101,7 @@ impl Workspace {
             return None;
         }
         let root = self.active_session().project.as_ref()?;
-        app(cx).hub.projects.get(root)
+        hub(cx).projects.get(root)
     }
 
     /// Env and shell for a new session started in `cwd`, if its project allows it.
@@ -118,7 +117,7 @@ impl Workspace {
         };
         // Sessions restored at startup spawn before the first refresh; load on demand.
         let root = folder.root.clone();
-        let hub = &mut app_mut(cx).hub;
+        let hub = hub_mut(cx);
         if !hub.projects.contains_key(&root) {
             let loaded = load_project(folder, &hub.trust);
             hub.projects.insert(root.clone(), loaded);
@@ -135,7 +134,7 @@ impl Workspace {
 
     /// Layer the active session's project settings over the user's.
     fn apply_project_settings(&mut self, cx: &mut Context<Self>) {
-        let hub = &app(cx).hub;
+        let hub = super::hub(cx);
         let overrides = self
             .active_project(cx)
             .filter(|p| hub.enabled(p, Feature::Settings))
@@ -144,12 +143,12 @@ impl Workspace {
             .filter(|s| !s.is_empty());
         if overrides != hub.applied_overrides {
             SettingsStore::set_project_overrides(cx, overrides.clone());
-            app_mut(cx).hub.applied_overrides = overrides;
+            hub_mut(cx).applied_overrides = overrides;
             cx.refresh_windows();
         }
 
         // Project theme: harmless, so it needs no trust, but can be switched off.
-        let hub = &app(cx).hub;
+        let hub = super::hub(cx);
         let theme_json = self
             .active_project(cx)
             .filter(|p| hub.enabled(p, Feature::Theme))
@@ -162,7 +161,7 @@ impl Workspace {
                     .ok()
             });
             SettingsStore::set_project_theme(cx, tokens);
-            app_mut(cx).hub.applied_theme = theme_json;
+            hub_mut(cx).applied_theme = theme_json;
             cx.refresh_windows();
         }
     }

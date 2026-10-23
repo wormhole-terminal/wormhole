@@ -28,6 +28,7 @@ use crate::app_state::{AppState, OpenWindow, app};
 use crate::settings::settings;
 use crate::settings_window;
 use crate::window::Workspace;
+use crate::window::features::project;
 use crate::window::overlay::{OverlayContent, OverlayKind, OverlayView};
 use crate::window::window_lifecycle::open_tab;
 use crate::window::window_lifecycle::with_front_workspace;
@@ -191,7 +192,7 @@ fn palette_here(
 ) -> (Option<String>, Option<usize>, Option<ProjectItem>) {
     let cwd = ws.active_terminal().read(cx).cwd.as_deref().map(|cwd| display_path(cwd, home));
     let changes = ws.active_changes(cx);
-    let hub = &app(cx).hub;
+    let hub = project::hub(cx);
     let project = ws.active_project(cx).filter(|p| hub.enabled(p, Feature::Actions)).map(|project| {
         let root = &project.folder.root;
         let folder = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();

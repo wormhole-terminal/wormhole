@@ -28,6 +28,7 @@ use wormhole_term::listening_ports;
 use crate::app_state::{app, app_mut};
 use crate::settings::settings_in;
 use crate::window::Workspace;
+use crate::window::features::project;
 
 /// How often the ports under the terminal on screen are looked at.
 const PORTS_EVERY: Duration = Duration::from_secs(5);
@@ -182,7 +183,7 @@ impl Workspace {
         let session = self.sessions.get(ix)?;
         let status =
             session.git.status.as_ref().filter(|_| session.git.cwd == session.terminal().read(cx).cwd)?;
-        let hub = &app(cx).hub;
+        let hub = project::hub(cx);
         let project = hub.projects.get(session.project.as_ref()?)?;
         let name = status.branch.clone()?;
         hub.trusted(project).then(|| Branch { root: status.root.clone(), name })

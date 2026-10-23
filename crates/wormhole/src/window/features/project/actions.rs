@@ -9,7 +9,7 @@ use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::project::{ActionKind, ChainStep, Feature, ProjectSnapshot, Target};
 use wormhole_core::storage::store::SessionRecord;
 
-use crate::app_state::app;
+use super::hub;
 use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
 
@@ -19,7 +19,7 @@ const MAX_CHAIN_DEPTH: usize = 16;
 impl Workspace {
     pub(crate) fn run_project_action(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {
         let Some(project) = self.active_project(cx) else { return };
-        if !app(cx).hub.enabled(project, Feature::Actions) {
+        if !hub(cx).enabled(project, Feature::Actions) {
             return;
         }
         // The snapshot trust was just checked against: its actions and prompt texts are what run.
@@ -120,7 +120,7 @@ impl Workspace {
     /// `layout.json`: open the project's sessions (reusing ones with the same name).
     pub(in crate::window) fn open_project_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(project) = self.active_project(cx) else { return };
-        if !app(cx).hub.enabled(project, Feature::Layout) {
+        if !hub(cx).enabled(project, Feature::Layout) {
             return;
         }
         let (folder, layout) =
@@ -152,7 +152,7 @@ impl Workspace {
         // The keys first: this runs for every ⌘ key typed, and asking whether the feature is
         // on resolves the project's folder on disk.
         let (_, id) = project.keys.iter().find(|(spec, _)| key_matches(spec, keystroke))?;
-        app(cx).hub.enabled(project, Feature::Actions).then(|| id.clone())
+        hub(cx).enabled(project, Feature::Actions).then(|| id.clone())
     }
 
     pub(in crate::window) fn send_prompt(
@@ -184,7 +184,7 @@ impl Workspace {
     /// (checked here, not only by hiding the buttons).
     fn enabled_prompt(&self, id: &str, cx: &App) -> Option<String> {
         let project = self.active_project(cx)?;
-        if !app(cx).hub.enabled(project, Feature::Prompts) {
+        if !hub(cx).enabled(project, Feature::Prompts) {
             return None;
         }
         project.snapshot.prompts().iter().find(|p| p.id == id).map(|p| p.body.clone())

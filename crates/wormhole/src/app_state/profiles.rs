@@ -1,7 +1,7 @@
 //! Profiles in the app (RF-21): which one Wormhole is in, what each one keeps while it is not the
 //! shown one, and where a window's data goes.
 //!
-//! One profile is shown at a time and its state is the app's own (`AppState.store`, `hub`, the
+//! One profile is shown at a time and its state is the app's own (`AppState.store`, the
 //! `SettingsStore` global, …), so everything written for a single profile keeps working. Every
 //! other profile that has been opened is parked: its [`ProfileData`] here, its settings in
 //! settings' own [`ParkedSettings`]; switching swaps the two (`switch_profile`), so no call site
@@ -52,15 +52,6 @@ impl AppState {
         }
     }
 
-    /// The project folders (preferences, trust, notes sync) of `profile`.
-    fn hub_of_mut(&mut self, profile: &ProfileId) -> Option<&mut project::ProjectHub> {
-        if profile == self.profiles.active_id() {
-            Some(&mut self.hub)
-        } else {
-            self.parked.get_mut(profile).map(|data| &mut data.hub)
-        }
-    }
-
     pub(crate) fn save_window(&mut self, profile: &ProfileId, record: &WindowRecord) {
         if let Some(store) = self.store_of_mut(profile)
             && let Err(err) = store.save_window(record)
@@ -107,13 +98,12 @@ impl AppState {
 
     /// Ids for sessions (terminals) and splits. One counter for every profile, so a terminal's id
     /// (what hooks report, what `find_session` searches for across windows) never repeats.
-    pub(crate) fn alloc_id_in(&mut self, profile: &ProfileId) -> i64 {
-        let id = self.next_id;
-        self.next_id += 1;
-        // Belt and braces with `ids_start_at`: a fresh id never comes with a notes base.
-        if let Some(hub) = self.hub_of_mut(profile) {
-            hub.id_allocated(id);
-        }
+    pub(crate) fn alloc_id_in(profile: &ProfileId, cx: &mut App) -> i64 {
+        let state = app_mut(cx);
+        let id = state.next_id;
+        state.next_id += 1;
+        // Belt and braces with the hubs' start ids: a fresh id never comes with a notes base.
+        project::id_allocated(profile, id, cx);
         id
     }
 
@@ -141,6 +131,7 @@ impl AppState {
             let _ = window.handle.update(cx, |_, win, _| win.remove_window());
         }
         cx.default_global::<ParkedSettings>().remove(id);
+        project::profile_deleted(id, cx);
         let state = app_mut(cx);
         // Its database closes before its folder goes, and its saved text's key with it.
         state.parked.remove(id);
@@ -158,11 +149,10 @@ impl AppState {
         if profile == state.active_profile() || state.parked.contains_key(profile) {
             return;
         }
-        let (mut data, settings) = open_beside(&state.root.profile(profile));
-        let state = app_mut(cx);
-        data.hub.ids_start_at(state.next_id);
-        state.parked.insert(profile.clone(), data);
+        let (data, settings) = open_beside(&state.root.profile(profile));
+        app_mut(cx).parked.insert(profile.clone(), data);
         cx.default_global::<ParkedSettings>().park(profile.clone(), settings);
+        project::profile_opened(profile, cx);
     }
 
     /// A new window in `target` ("Open a window in…"), stepped away from the window in front. When
@@ -223,7 +213,6 @@ impl AppState {
 pub(crate) struct ProfileData {
     pub store: Option<Store>,
     pub tips: DismissedTips,
-    pub hub: project::ProjectHub,
     pub recent: RecentProjects,
     pub worktrees: Worktrees,
     pub last_panes: RememberedPanes,
@@ -242,7 +231,7 @@ impl ProfileData {
         worktrees.prune();
         let last_panes = RememberedPanes::parse(meta(REMEMBERED_PANES_KEY).as_deref());
         let recent = RecentProjects::load(store.as_ref());
-        Self { store, tips, hub: project::ProjectHub::load_from(paths.dir()), recent, worktrees, last_panes }
+        Self { store, tips, recent, worktrees, last_panes }
     }
 }
 
@@ -294,14 +283,11 @@ impl AppState {
         };
         let leaving_settings = SettingsStore::swap_in(cx, settings);
         cx.global_mut::<ParkedSettings>().park(from.clone(), leaving_settings);
-        let first_free = app(cx).next_id;
         let state = app_mut(cx);
-        let ProfileData { store, tips, mut hub, recent, worktrees, last_panes } = data;
-        hub.ids_start_at(first_free);
+        let ProfileData { store, tips, recent, worktrees, last_panes } = data;
         let leaving = ProfileData {
             store: std::mem::replace(&mut state.store, store),
             tips: std::mem::replace(&mut state.tips, tips),
-            hub: std::mem::replace(&mut state.hub, hub),
             worktrees: std::mem::replace(&mut state.worktrees, worktrees),
             last_panes: std::mem::replace(&mut state.last_panes, last_panes),
             recent: std::mem::replace(&mut state.recent_projects, recent),

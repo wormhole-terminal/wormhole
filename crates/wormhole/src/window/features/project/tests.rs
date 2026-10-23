@@ -16,8 +16,10 @@ use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::project::{Feature, ProjectFolder, TrustStatus};
 use wormhole_core::storage::paths::ProfileId;
 
-use super::{ProjectHub, approve_project, revoke_project, set_feature_default, set_feature_for};
-use crate::app_state::{AppState, OpenWindow, app};
+use super::{
+    ProjectHub, approve_project, hub, hub_mut, revoke_project, set_feature_default, set_feature_for,
+};
+use crate::app_state::{AppState, OpenWindow};
 use crate::window::Workspace;
 use crate::window::features::notes::testing as notes;
 use crate::window::view_tests::{drive, isolate_in, read, read_cx, start};
@@ -89,17 +91,17 @@ fn sync_notes(ws: &mut Workspace, window: &mut gpui_kit::Window, cx: &mut gpui_k
 
 /// What the hub says of the project at `root`.
 fn status(cx: &mut TestAppContext, root: &Path) -> Option<TrustStatus> {
-    cx.update(|cx| app(cx).hub.projects.get(root).map(|project| project.status))
+    cx.update(|cx| hub(cx).projects.get(root).map(|project| project.status))
 }
 
 fn with_hub<R>(cx: &mut TestAppContext, f: impl FnOnce(&ProjectHub) -> R) -> R {
-    cx.update(|cx| f(&app(cx).hub))
+    cx.update(|cx| f(hub(cx)))
 }
 
 fn trust(cx: &mut TestAppContext, root: &Path) {
     cx.update(|cx| {
         let folder = ProjectFolder::open(root).expect("a project");
-        crate::app_state::app_mut(cx).hub.trust.trust(&folder);
+        hub_mut(cx).trust.trust(&folder);
     });
 }
 

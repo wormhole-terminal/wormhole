@@ -15,9 +15,10 @@ use wormhole_core::theme::tokens::ThemeFile;
 
 use super::draft::{changes, copy_name, export_dir, export_file_name, export_json};
 use super::{StudioWindow, ui};
-use crate::app_state::{AppState, app};
+use crate::app_state::AppState;
 use crate::settings::SettingsStore;
 use crate::style::{self, Edges};
+use crate::window::features::project;
 
 /// The app record (`Store::meta`) of the folder the last export went to, so the next one's
 /// dialog starts there, across launches.
@@ -216,7 +217,7 @@ impl StudioWindow {
             .ok()
             .flatten()
             .ok_or("The terminal in front isn't in a project with a .wormhole folder.")?;
-        let hub = &app(cx).hub;
+        let hub = project::hub(cx);
         let project = hub.projects.get(&root).ok_or("The project in front hasn't loaded yet.")?;
         if hub.trust.status_of(&project.snapshot) != TrustStatus::Trusted {
             return Err("Trust this project first (Project tab), then use the theme in it.");

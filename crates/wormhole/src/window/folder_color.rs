@@ -16,11 +16,11 @@ use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::theme::folder_color::FolderColor;
 use wormhole_core::theme::tokens::{Color, ThemeTokens};
 
-use crate::app_state::app;
 use crate::settings::update_settings;
 use crate::settings::{SettingsStore, settings, settings_in, store_in};
 use crate::theme_bridge;
 use crate::window::Workspace;
+use crate::window::features::project;
 use crate::window::features::project::{project_folders_on, set_project_color};
 use crate::window::title::Tint;
 
@@ -138,14 +138,14 @@ impl Workspace {
         let project = project_folders_on(cx)
             .then(|| self.folder_projects.get(folder))
             .flatten()
-            .and_then(|root| app(cx).hub.projects.get(root))
+            .and_then(|root| project::hub(cx).projects.get(root))
             .filter(|project| project.snapshot.has(Feature::Settings));
         match project {
             Some(project) => FolderPaint::Project(ProjectPaint {
                 root: project.folder.root.clone(),
                 chosen: project.snapshot.config().and_then(|config| config.color),
                 locked: project.snapshot.config().is_some_and(|config| config.color_locked),
-                shown: app(cx).hub.prefs.enabled(&project.folder.root, Feature::Settings),
+                shown: project::hub(cx).prefs.enabled(&project.folder.root, Feature::Settings),
                 unreadable: project.snapshot.config_error().is_some(),
             }),
             None => FolderPaint::Own(settings_in(&self.profile, cx).folder_color_choice(folder)),

@@ -18,6 +18,7 @@ use crate::actions::DEBUG;
 use crate::app_state::{AppState, app};
 use crate::settings::settings;
 use crate::window::Workspace;
+use crate::window::features::project;
 use wormhole_core::config::TabId;
 
 /// What the menus show changed outside a key or the tick (a profile switch, a window moved to
@@ -103,7 +104,7 @@ impl Workspace {
             state.disabled.push(ShowProject);
         }
         if let Some(project) =
-            self.active_project(cx).filter(|project| app(cx).hub.enabled(project, Feature::Actions))
+            self.active_project(cx).filter(|project| project::hub(cx).enabled(project, Feature::Actions))
         {
             state.project_actions =
                 project.actions().iter().map(|a| (a.id.clone(), a.title.clone())).collect();

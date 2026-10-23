@@ -4,8 +4,7 @@
 use gpui_kit::*;
 use wormhole_core::project::{self as proj, Feature, NotesBase, NotesDoc, NotesFile};
 
-use super::project_folders_on;
-use crate::app_state::{app, app_mut};
+use super::{hub, hub_mut, project_folders_on};
 use crate::window::Workspace;
 use crate::window::features::notes::Notes;
 
@@ -22,7 +21,7 @@ impl Workspace {
         for ix in 0..self.sessions.len() {
             let session_id = self.sessions[ix].id;
             let Some(root) = self.sessions[ix].notes_root.clone() else { continue };
-            let hub = &app(cx).hub;
+            let hub = hub(cx);
             let Some(project) = hub.projects.get(&root) else { continue };
             // Syncs when switched on and the project has a notes.md, or when the user
             // explicitly opted in for this project (which creates the file). The Project tab's
@@ -30,7 +29,7 @@ impl Workspace {
             if !hub.prefs.notes_sync(&root, project.folder.has(Feature::Notes)) {
                 // Switched off: switching on again merges both sides afresh.
                 self.sessions[ix].notes_base = None;
-                app_mut(cx).hub.notes_bases.remove(session_id);
+                hub_mut(cx).notes_bases.remove(session_id);
                 continue;
             }
             let folder = project.folder.clone();
@@ -39,7 +38,7 @@ impl Workspace {
             // `notes_base` is this run's copy of the base (empty after a launch); the hub knows
             // which project it belongs to and keeps it for the next launch.
             let session_base = self.sessions[ix].notes_base.clone();
-            let hub = &mut app_mut(cx).hub;
+            let hub = hub_mut(cx);
             let base = hub.notes_bases.get(session_id).map(|saved| NotesBase {
                 root: saved.root.clone(),
                 doc: session_base.unwrap_or_else(|| saved.doc.clone()),
@@ -76,6 +75,6 @@ impl Workspace {
             }
             self.sessions[ix].notes_base = Some(plan.base.doc);
         }
-        app_mut(cx).hub.save_notes_bases();
+        hub_mut(cx).save_notes_bases();
     }
 }

@@ -66,7 +66,7 @@ fn allowed(repo: &Path, cx: &mut App) -> Result<(), String> {
     let Some(project) = project::load_project_info(&folder.root, cx) else {
         return Err("The project's .wormhole folder can't be read".into());
     };
-    if app(cx).hub.enabled(&project, Feature::Settings) {
+    if project::hub(cx).enabled(&project, Feature::Settings) {
         Ok(())
     } else {
         Err("Trust the project first: a terminal in its worktree would run with the project's settings"
@@ -84,7 +84,7 @@ fn setup_command(repo: &Path, cx: &mut App) -> Option<String> {
     }
     let folder = wormhole_core::project::find_project(repo)?;
     let project = project::load_project_info(&folder.root, cx)?;
-    if !app(cx).hub.enabled(&project, Feature::Settings) {
+    if !project::hub(cx).enabled(&project, Feature::Settings) {
         return None;
     }
     project.snapshot.config()?.worktree_setup.clone()

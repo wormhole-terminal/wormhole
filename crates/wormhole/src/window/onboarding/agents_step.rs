@@ -11,7 +11,6 @@ use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::onboarding::Event;
 
 use super::Intro;
-use crate::app_state::app;
 use crate::settings::update_settings;
 use crate::settings::{UiColors, settings};
 use crate::style::{self, Edges, TextRole};
@@ -184,7 +183,7 @@ impl Workspace {
             1 => "Its action runs a command, so it waits until you trust the folder.".to_string(),
             n => format!("Its actions run {n} commands, so they wait until you trust the folder."),
         };
-        let approving = app(cx).hub.approving;
+        let approving = project::hub(cx).approving;
         let trust_root = root.clone();
         Some(
             div()

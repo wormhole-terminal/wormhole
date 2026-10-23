@@ -15,7 +15,6 @@ use wormhole_core::project::Feature;
 use wormhole_core::project::{FeatureStanding, TrustStatus, trust_applies};
 
 use super::reveal;
-use crate::app_state::app;
 use crate::select;
 use crate::select::{Choice, SearchSelect, SelectTrigger};
 use crate::settings::UiColors;
@@ -251,7 +250,7 @@ impl SettingsWindow {
                     .child("A project can still turn a feature on or off just for you: pick it above."),
             );
         for feature in Feature::ALL {
-            let on = app(cx).hub.prefs.default_enabled(feature);
+            let on = project::hub(cx).prefs.default_enabled(feature);
             let switch = style::toggle(
                 SharedString::from(format!("default-{}", feature.key())),
                 on,
@@ -277,7 +276,7 @@ impl SettingsWindow {
             "Trusted projects",
             Some("Projects allowed to run commands"),
         ));
-        let list: Vec<PathBuf> = app(cx).hub.trust.list().into_iter().map(|p| p.root.clone()).collect();
+        let list: Vec<PathBuf> = project::hub(cx).trust.list().into_iter().map(|p| p.root.clone()).collect();
         if list.is_empty() {
             trusted =
                 trusted.child(div().py_3().rule_top(ui).text_body().text_color(ui.faint).child("None yet."));
@@ -337,7 +336,7 @@ impl SettingsWindow {
             )
             .into_any_element();
         };
-        let hub = &app(cx).hub;
+        let hub = project::hub(cx);
         let approving = hub.approving;
         let hub_error = hub.error.clone();
         let prefs: Vec<(Feature, FeatureStanding, Option<bool>, bool)> = Feature::ALL

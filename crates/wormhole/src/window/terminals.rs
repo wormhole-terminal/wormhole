@@ -10,7 +10,7 @@ use gpui_kit::*;
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::SessionRecord;
 
-use crate::app_state::{app, app_mut};
+use crate::app_state::{AppState, app, app_mut};
 use crate::settings::settings_in;
 use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
@@ -114,7 +114,7 @@ impl Workspace {
     }
 
     pub(super) fn alloc_id(&self, cx: &mut App) -> i64 {
-        app_mut(cx).alloc_id_in(&self.profile)
+        AppState::alloc_id_in(&self.profile, cx)
     }
 
     /// Where a new terminal starts: where the current one is.

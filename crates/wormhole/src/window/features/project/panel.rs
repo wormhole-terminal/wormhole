@@ -20,8 +20,7 @@ use wormhole_core::view::limits::count_grouped;
 use wormhole_core::view::sidebar::display_path;
 use wormhole_core::view::spoken;
 
-use super::LoadedProject;
-use crate::app_state::app;
+use super::{LoadedProject, hub};
 use crate::platform::auth;
 use crate::settings::UiColors;
 use crate::settings::{store_in, ui_in};
@@ -168,7 +167,7 @@ impl Workspace {
                                 )),
                             ),
                     )
-                    .children(app(cx).hub.error.clone().map(|err| problem_line(ui, err))),
+                    .children(hub(cx).error.clone().map(|err| problem_line(ui, err))),
             )
             .into_any_element()
     }
@@ -206,10 +205,10 @@ impl Workspace {
         if project.request.is_some() && (!commands.is_empty() || !needing.is_empty()) {
             body = body.child(self.render_trust(project.status, &commands, &needing, cx));
         }
-        if let Some(err) = &app(cx).hub.error {
+        if let Some(err) = &hub(cx).error {
             body = body.child(problem_line(ui, err.clone()));
         }
-        let notes_error = app(cx).hub.notes_errors.get(&root).map(|err| format!("Notes sync: {err}"));
+        let notes_error = hub(cx).notes_errors.get(&root).map(|err| format!("Notes sync: {err}"));
         for err in project.errors.iter().chain(notes_error.as_ref()) {
             body = body.child(problem_line(ui, err.clone()));
         }
@@ -225,7 +224,7 @@ impl Workspace {
             if !present && feature != Feature::Notes {
                 continue;
             }
-            let prefs = &app(cx).hub.prefs;
+            let prefs = &hub(cx).prefs;
             // Notes sync where the file is, not wherever the switch defaults to.
             let on = match feature {
                 Feature::Notes => prefs.notes_sync(&root, present),
@@ -255,7 +254,7 @@ impl Workspace {
 
         // Actions: a click runs one.
         let actions = project.actions();
-        if app(cx).hub.enabled(project, Feature::Actions) && !actions.is_empty() {
+        if hub(cx).enabled(project, Feature::Actions) && !actions.is_empty() {
             body = body.head(section_band("project-actions", "Actions", Some(actions.len()), ui));
             for action in actions {
                 let id = action.id.clone();
@@ -288,7 +287,7 @@ impl Workspace {
 
         // Prompts: paste one, or copy it into a note to edit first.
         let prompts = project.snapshot.prompts();
-        if app(cx).hub.enabled(project, Feature::Prompts) && !prompts.is_empty() {
+        if hub(cx).enabled(project, Feature::Prompts) && !prompts.is_empty() {
             body = body.head(section_band("project-prompts", "Prompts", Some(prompts.len()), ui));
             for prompt in prompts {
                 let (send_id, note_id) = (prompt.id.clone(), prompt.id.clone());
@@ -324,7 +323,7 @@ impl Workspace {
         }
 
         // Terminal layout: what it opens, and the button that opens it.
-        if app(cx).hub.enabled(project, Feature::Layout)
+        if hub(cx).enabled(project, Feature::Layout)
             && let Some(layout) = project.snapshot.layout().filter(|l| !l.sessions.is_empty())
         {
             let names: Vec<String> = layout.sessions.iter().map(|c| c.name.clone()).collect();
@@ -394,7 +393,7 @@ impl Workspace {
                 .into_any_element();
         }
         let (title, text) = trust_notice(status, !commands.is_empty(), &applies);
-        let approve_label = if app(cx).hub.approving {
+        let approve_label = if hub(cx).approving {
             "Waiting for approval…"
         } else if auth::biometrics_available() {
             "Trust with Touch ID"
