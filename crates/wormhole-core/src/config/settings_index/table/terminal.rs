@@ -1,170 +1,89 @@
 //! The Terminal section: scrollback and restoring, opening, the shell, worktrees, the bell and privacy.
 
-use super::{literal_entry, literal_group};
+use super::{entry, group};
 use crate::config::settings_index::Group;
+use wormhole_text::keys::*;
 
 pub(super) const TERMINAL: &[Group] = &[
-    literal_group(
-        "Behaviour",
+    group(
+        SETTINGS_TERMINAL_GROUP_BEHAVIOUR,
         &[
-            literal_entry(
-                "scrollback",
-                "Scrollback",
-                "Lines kept per terminal (applies to new terminals)",
-                "history buffer lines",
-                &["scrollback_lines"],
-            ),
-            literal_entry(
-                "restore-text",
-                "Restore terminal text after restart",
-                "Encrypted and kept only on this Mac. Off erases what's saved",
-                "scrollback history saved restore privacy secrets encrypted keychain",
-                &["restore_terminal_text"],
-            ),
-            literal_entry(
-                "minimap",
-                "Show minimap",
-                "The scrollback drawn small along the terminal's right edge. Click or drag it to \
-                 scroll",
-                "overview scrollbar map outline",
-                &["minimap"],
-            ),
-            literal_entry(
-                "split-gaps",
-                "Gaps between split terminals",
-                "Each terminal of a split is its own rounded surface, a small gap apart. Off joins \
-                 them with a hairline",
-                "panes divider spacing rounded margin",
-                &["split_gaps"],
-            ),
-            literal_entry(
-                "meta",
-                "Use Option as Meta",
-                "For emacs and readline shortcuts. A side set to Meta can't type @ { [ on some \
-                 keyboard layouts",
-                "alt option escape keyboard left right",
-                &["option_as_meta"],
-            ),
-            literal_entry("terminal-font", "Font", "", "typeface size line height", &[]),
+            entry("scrollback", SETTINGS_TERMINAL_SCROLLBACK, &["scrollback_lines"])
+                .with_description(SETTINGS_TERMINAL_SCROLLBACK_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_SCROLLBACK_KEYWORDS),
+            entry("restore-text", SETTINGS_TERMINAL_RESTORE_TEXT, &["restore_terminal_text"])
+                .with_description(SETTINGS_TERMINAL_RESTORE_TEXT_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_RESTORE_TEXT_KEYWORDS),
+            entry("minimap", SETTINGS_TERMINAL_MINIMAP, &["minimap"])
+                .with_description(SETTINGS_TERMINAL_MINIMAP_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_MINIMAP_KEYWORDS),
+            entry("split-gaps", SETTINGS_TERMINAL_SPLIT_GAPS, &["split_gaps"])
+                .with_description(SETTINGS_TERMINAL_SPLIT_GAPS_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_SPLIT_GAPS_KEYWORDS),
+            entry("meta", SETTINGS_TERMINAL_META, &["option_as_meta"])
+                .with_description(SETTINGS_TERMINAL_META_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_META_KEYWORDS),
+            entry("terminal-font", SETTINGS_TERMINAL_FONT, &[])
+                .with_keywords(SETTINGS_TERMINAL_FONT_KEYWORDS),
         ],
     ),
-    literal_group(
-        "Opening",
+    group(
+        SETTINGS_TERMINAL_GROUP_OPENING,
         &[
-            literal_entry(
-                "open-in",
-                "Open folders in",
-                "The Open in… button in a terminal's title row opens its folder here; its menu lists \
-                 the others",
-                "editor ide zed code vscode cursor sublime xcode jetbrains phpstorm finder app",
-                &["open_in"],
-            ),
-            literal_entry(
-                "default-terminal",
-                "Default terminal",
-                "Double-clicked .command files and programs run in a new Wormhole terminal instead \
-                 of Terminal",
-                "default terminal app command script executable finder open with launch services",
-                &[],
-            ),
+            entry("open-in", SETTINGS_TERMINAL_OPEN_IN, &["open_in"])
+                .with_description(SETTINGS_TERMINAL_OPEN_IN_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_OPEN_IN_KEYWORDS),
+            entry("default-terminal", SETTINGS_TERMINAL_DEFAULT_TERMINAL, &[])
+                .with_description(SETTINGS_TERMINAL_DEFAULT_TERMINAL_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_DEFAULT_TERMINAL_KEYWORDS),
         ],
     ),
-    literal_group(
-        "Shell",
+    group(
+        SETTINGS_TERMINAL_GROUP_SHELL,
         &[
-            literal_entry(
-                "default-shell",
-                "Default shell",
-                "What a new terminal runs: your login shell, a shell on this Mac, or a profile \
-                 below. Right-click a + for the others",
-                "shell zsh bash fish nu nushell login program default",
-                &["default_shell"],
-            ),
-            literal_entry(
-                "shells",
-                "Shells",
-                "Profiles for New Terminal With: a program with its arguments, listed \
-                 in config.json",
-                "shell profiles custom command arguments args claude program",
-                &["shells"],
-            ),
+            entry("default-shell", SETTINGS_TERMINAL_DEFAULT_SHELL, &["default_shell"])
+                .with_description(SETTINGS_TERMINAL_DEFAULT_SHELL_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_DEFAULT_SHELL_KEYWORDS),
+            entry("shells", SETTINGS_TERMINAL_SHELLS, &["shells"])
+                .with_description(SETTINGS_TERMINAL_SHELLS_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_SHELLS_KEYWORDS),
         ],
     ),
-    literal_group(
-        "Worktrees",
-        &[literal_entry(
-            "worktree-base",
-            "Worktrees folder",
-            "Where Shell → New Terminal in New Worktree puts a worktree: beside the repository in \
-             <name>-worktrees, or under the folder worktree_base names in config.json",
-            "worktree worktrees git branch folder base parallel agents",
-            &["worktree_base"],
-        )],
+    group(
+        SETTINGS_TERMINAL_GROUP_WORKTREES,
+        &[entry("worktree-base", SETTINGS_TERMINAL_WORKTREE_BASE, &["worktree_base"])
+            .with_description(SETTINGS_TERMINAL_WORKTREE_BASE_DESCRIPTION)
+            .with_keywords(SETTINGS_TERMINAL_WORKTREE_BASE_KEYWORDS)],
     ),
-    literal_group(
-        "Bell",
+    group(
+        SETTINGS_TERMINAL_GROUP_BELL,
         &[
-            literal_entry(
-                "bell-sound",
-                "Play a sound",
-                "The system beep when a program in a terminal rings the bell",
-                "bell beep audible alert",
-                &["bell_sound"],
-            ),
-            literal_entry(
-                "bell-visual",
-                "Flash the window edge",
-                "A short glow along the terminal's edge when it rings the bell",
-                "bell visual flash glow",
-                &["bell_visual"],
-            ),
+            entry("bell-sound", SETTINGS_TERMINAL_BELL_SOUND, &["bell_sound"])
+                .with_description(SETTINGS_TERMINAL_BELL_SOUND_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_BELL_SOUND_KEYWORDS),
+            entry("bell-visual", SETTINGS_TERMINAL_BELL_VISUAL, &["bell_visual"])
+                .with_description(SETTINGS_TERMINAL_BELL_VISUAL_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_BELL_VISUAL_KEYWORDS),
         ],
     ),
-    literal_group(
-        "Privacy",
+    group(
+        SETTINGS_TERMINAL_GROUP_PRIVACY,
         &[
-            literal_entry(
-                "clipboard-read",
-                "Programs reading the clipboard",
-                "What a program gets when it asks for the clipboard's text (OSC 52), over ssh too. Ask \
-                 puts a question over that terminal; the clipboard often holds a password",
-                "osc 52 clipboard read paste copy password ask allow deny security ssh",
-                &["clipboard_read"],
-            ),
-            literal_entry(
-                "clipboard-write",
-                "Programs setting the clipboard",
-                "Lets a program put text on the clipboard (OSC 52), which replaces what you copied. \
-                 The terminal says when one does",
-                "osc 52 clipboard write copy set security ssh notice",
-                &["clipboard_write"],
-            ),
-            literal_entry(
-                "screen-checksum",
-                "Let programs read the screen back",
-                "Answers a program's request for the checksum of part of the screen (DECRQCRA), which \
-                 also lets a program, over ssh too, read the screen cell by cell. Applies to new \
-                 terminals",
-                "decrqcra checksum screen read capture esctest security ssh",
-                &["allow_screen_checksum"],
-            ),
-            literal_entry(
-                "window-ops",
-                "Let programs control the window",
-                "Lets a program move, resize, minimise, raise or full-screen the window (xterm's \
-                 window operations). Applies to new terminals",
-                "xtwinops window operations resize move iconify fullscreen maximize security ssh",
-                &["allow_window_ops"],
-            ),
-            literal_entry(
-                "title-report",
-                "Let programs read the window title back",
-                "Answers a program's request for the window title and icon name (XTWINOPS 20 and \
-                 21). A title is text a program chose, and the answer is typed into the shell, so over \
-                 ssh this lets a program type a command line. Applies to new terminals",
-                "xtwinops title icon name report read back window security ssh esctest",
-                &["allow_title_report"],
-            ),
+            entry("clipboard-read", SETTINGS_TERMINAL_CLIPBOARD_READ, &["clipboard_read"])
+                .with_description(SETTINGS_TERMINAL_CLIPBOARD_READ_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_CLIPBOARD_READ_KEYWORDS),
+            entry("clipboard-write", SETTINGS_TERMINAL_CLIPBOARD_WRITE, &["clipboard_write"])
+                .with_description(SETTINGS_TERMINAL_CLIPBOARD_WRITE_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_CLIPBOARD_WRITE_KEYWORDS),
+            entry("screen-checksum", SETTINGS_TERMINAL_SCREEN_CHECKSUM, &["allow_screen_checksum"])
+                .with_description(SETTINGS_TERMINAL_SCREEN_CHECKSUM_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_SCREEN_CHECKSUM_KEYWORDS),
+            entry("window-ops", SETTINGS_TERMINAL_WINDOW_OPS, &["allow_window_ops"])
+                .with_description(SETTINGS_TERMINAL_WINDOW_OPS_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_WINDOW_OPS_KEYWORDS),
+            entry("title-report", SETTINGS_TERMINAL_TITLE_REPORT, &["allow_title_report"])
+                .with_description(SETTINGS_TERMINAL_TITLE_REPORT_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_TITLE_REPORT_KEYWORDS),
         ],
     ),
 ];

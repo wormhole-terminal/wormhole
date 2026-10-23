@@ -20,6 +20,7 @@ pub(crate) const LOCALES: [Locale; 1] = [
             ("settings-notifications.ftl", include_str!("../../locales/en/settings-notifications.ftl")),
             ("settings-profile.ftl", include_str!("../../locales/en/settings-profile.ftl")),
             ("settings-sessions.ftl", include_str!("../../locales/en/settings-sessions.ftl")),
+            ("settings-terminal.ftl", include_str!("../../locales/en/settings-terminal.ftl")),
             ("settings-updates.ftl", include_str!("../../locales/en/settings-updates.ftl")),
             ("settings.ftl", include_str!("../../locales/en/settings.ftl")),
         ],

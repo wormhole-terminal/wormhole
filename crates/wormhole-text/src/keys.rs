@@ -325,51 +325,171 @@ pub const SETTINGS_SESSIONS_SIDEBAR_NOTES_KEYWORDS: Key = Key::new(156);
 pub const SETTINGS_SESSIONS_GROUP_CHANGES_PANEL: Key = Key::new(157);
 /// "Diff view"
 pub const SETTINGS_SESSIONS_GROUP_DIFF_VIEW: Key = Key::new(158);
-/// "Updates"
-pub const SETTINGS_SECTION_UPDATES: Key = Key::new(159);
-/// "Signed releases, checked in the background."
-pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(160);
-/// "Updates"
-pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(161);
-/// "Version"
-pub const SETTINGS_UPDATES_VERSION: Key = Key::new(162);
-/// "release build"
-pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(163);
-/// "Update automatically"
-pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(164);
-/// "Checks in the background and installs on the next restart"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(165);
-/// "download auto"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(166);
-/// "Channel"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(167);
-/// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(168);
-/// "beta nightly unstable stable prerelease dev builds main feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(169);
-/// "Check for updates"
-pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(170);
-/// "install restart release notes check skip"
-pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(171);
-/// "Appearance"
-pub const SETTINGS_SECTION_APPEARANCE: Key = Key::new(172);
-/// "Fonts"
-pub const SETTINGS_SECTION_FONTS: Key = Key::new(173);
 /// "Terminal"
-pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(174);
+pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(159);
+/// "How the terminal behaves. Its font is in Fonts."
+pub const SETTINGS_SECTION_TERMINAL_INTRO: Key = Key::new(160);
+/// "Behaviour"
+pub const SETTINGS_TERMINAL_GROUP_BEHAVIOUR: Key = Key::new(161);
+/// "Scrollback"
+pub const SETTINGS_TERMINAL_SCROLLBACK: Key = Key::new(162);
+/// "Lines kept per terminal (applies to new terminals)"
+pub const SETTINGS_TERMINAL_SCROLLBACK_DESCRIPTION: Key = Key::new(163);
+/// "history buffer lines"
+pub const SETTINGS_TERMINAL_SCROLLBACK_KEYWORDS: Key = Key::new(164);
+/// "Restore terminal text after restart"
+pub const SETTINGS_TERMINAL_RESTORE_TEXT: Key = Key::new(165);
+/// "Encrypted and kept only on this Mac. Off erases what's saved"
+pub const SETTINGS_TERMINAL_RESTORE_TEXT_DESCRIPTION: Key = Key::new(166);
+/// "scrollback history saved restore privacy secrets encrypted keychain"
+pub const SETTINGS_TERMINAL_RESTORE_TEXT_KEYWORDS: Key = Key::new(167);
+/// "Show minimap"
+pub const SETTINGS_TERMINAL_MINIMAP: Key = Key::new(168);
+/// "The scrollback drawn small along the terminal's right edge. Click or drag it to scroll"
+pub const SETTINGS_TERMINAL_MINIMAP_DESCRIPTION: Key = Key::new(169);
+/// "overview scrollbar map outline"
+pub const SETTINGS_TERMINAL_MINIMAP_KEYWORDS: Key = Key::new(170);
+/// "Gaps between split terminals"
+pub const SETTINGS_TERMINAL_SPLIT_GAPS: Key = Key::new(171);
+/// "Each terminal of a split is its own rounded surface, a small gap apart. Off joins them with a hairline"
+pub const SETTINGS_TERMINAL_SPLIT_GAPS_DESCRIPTION: Key = Key::new(172);
+/// "panes divider spacing rounded margin"
+pub const SETTINGS_TERMINAL_SPLIT_GAPS_KEYWORDS: Key = Key::new(173);
+/// "Use Option as Meta"
+pub const SETTINGS_TERMINAL_META: Key = Key::new(174);
+/// "For emacs and readline shortcuts. A side set to Meta can't type @ { [ on some keyboard layouts"
+pub const SETTINGS_TERMINAL_META_DESCRIPTION: Key = Key::new(175);
+/// "alt option escape keyboard left right"
+pub const SETTINGS_TERMINAL_META_KEYWORDS: Key = Key::new(176);
+/// "Font"
+pub const SETTINGS_TERMINAL_FONT: Key = Key::new(177);
+/// "typeface size line height"
+pub const SETTINGS_TERMINAL_FONT_KEYWORDS: Key = Key::new(178);
+/// "Opening"
+pub const SETTINGS_TERMINAL_GROUP_OPENING: Key = Key::new(179);
+/// "Open folders in"
+pub const SETTINGS_TERMINAL_OPEN_IN: Key = Key::new(180);
+/// "The Open in… button in a terminal's title row opens its folder here; its menu lists the others"
+pub const SETTINGS_TERMINAL_OPEN_IN_DESCRIPTION: Key = Key::new(181);
+/// "editor ide zed code vscode cursor sublime xcode jetbrains phpstorm finder app"
+pub const SETTINGS_TERMINAL_OPEN_IN_KEYWORDS: Key = Key::new(182);
+/// "Default terminal"
+pub const SETTINGS_TERMINAL_DEFAULT_TERMINAL: Key = Key::new(183);
+/// "Double-clicked .command files and programs run in a new Wormhole terminal instead of Terminal"
+pub const SETTINGS_TERMINAL_DEFAULT_TERMINAL_DESCRIPTION: Key = Key::new(184);
+/// "default terminal app command script executable finder open with launch services"
+pub const SETTINGS_TERMINAL_DEFAULT_TERMINAL_KEYWORDS: Key = Key::new(185);
+/// "Shell"
+pub const SETTINGS_TERMINAL_GROUP_SHELL: Key = Key::new(186);
+/// "Default shell"
+pub const SETTINGS_TERMINAL_DEFAULT_SHELL: Key = Key::new(187);
+/// "What a new terminal runs: your login shell, a shell on this Mac, or a profile below. Right-click a + for the others"
+pub const SETTINGS_TERMINAL_DEFAULT_SHELL_DESCRIPTION: Key = Key::new(188);
+/// "shell zsh bash fish nu nushell login program default"
+pub const SETTINGS_TERMINAL_DEFAULT_SHELL_KEYWORDS: Key = Key::new(189);
+/// "Shells"
+pub const SETTINGS_TERMINAL_SHELLS: Key = Key::new(190);
+/// "Profiles for New Terminal With: a program with its arguments, listed in config.json"
+pub const SETTINGS_TERMINAL_SHELLS_DESCRIPTION: Key = Key::new(191);
+/// "shell profiles custom command arguments args claude program"
+pub const SETTINGS_TERMINAL_SHELLS_KEYWORDS: Key = Key::new(192);
+/// "Worktrees"
+pub const SETTINGS_TERMINAL_GROUP_WORKTREES: Key = Key::new(193);
+/// "Worktrees folder"
+pub const SETTINGS_TERMINAL_WORKTREE_BASE: Key = Key::new(194);
+/// "Where Shell → New Terminal in New Worktree puts a worktree: beside the repository in <name>-worktrees, or under the folder worktree_base names in config.json"
+pub const SETTINGS_TERMINAL_WORKTREE_BASE_DESCRIPTION: Key = Key::new(195);
+/// "worktree worktrees git branch folder base parallel agents"
+pub const SETTINGS_TERMINAL_WORKTREE_BASE_KEYWORDS: Key = Key::new(196);
+/// "Bell"
+pub const SETTINGS_TERMINAL_GROUP_BELL: Key = Key::new(197);
+/// "Play a sound"
+pub const SETTINGS_TERMINAL_BELL_SOUND: Key = Key::new(198);
+/// "The system beep when a program in a terminal rings the bell"
+pub const SETTINGS_TERMINAL_BELL_SOUND_DESCRIPTION: Key = Key::new(199);
+/// "bell beep audible alert"
+pub const SETTINGS_TERMINAL_BELL_SOUND_KEYWORDS: Key = Key::new(200);
+/// "Flash the window edge"
+pub const SETTINGS_TERMINAL_BELL_VISUAL: Key = Key::new(201);
+/// "A short glow along the terminal's edge when it rings the bell"
+pub const SETTINGS_TERMINAL_BELL_VISUAL_DESCRIPTION: Key = Key::new(202);
+/// "bell visual flash glow"
+pub const SETTINGS_TERMINAL_BELL_VISUAL_KEYWORDS: Key = Key::new(203);
+/// "Privacy"
+pub const SETTINGS_TERMINAL_GROUP_PRIVACY: Key = Key::new(204);
+/// "Programs reading the clipboard"
+pub const SETTINGS_TERMINAL_CLIPBOARD_READ: Key = Key::new(205);
+/// "What a program gets when it asks for the clipboard's text (OSC 52), over ssh too. Ask puts a question over that terminal; the clipboard often holds a password"
+pub const SETTINGS_TERMINAL_CLIPBOARD_READ_DESCRIPTION: Key = Key::new(206);
+/// "osc 52 clipboard read paste copy password ask allow deny security ssh"
+pub const SETTINGS_TERMINAL_CLIPBOARD_READ_KEYWORDS: Key = Key::new(207);
+/// "Programs setting the clipboard"
+pub const SETTINGS_TERMINAL_CLIPBOARD_WRITE: Key = Key::new(208);
+/// "Lets a program put text on the clipboard (OSC 52), which replaces what you copied. The terminal says when one does"
+pub const SETTINGS_TERMINAL_CLIPBOARD_WRITE_DESCRIPTION: Key = Key::new(209);
+/// "osc 52 clipboard write copy set security ssh notice"
+pub const SETTINGS_TERMINAL_CLIPBOARD_WRITE_KEYWORDS: Key = Key::new(210);
+/// "Let programs read the screen back"
+pub const SETTINGS_TERMINAL_SCREEN_CHECKSUM: Key = Key::new(211);
+/// "Answers a program's request for the checksum of part of the screen (DECRQCRA), which also lets a program, over ssh too, read the screen cell by cell. Applies to new terminals"
+pub const SETTINGS_TERMINAL_SCREEN_CHECKSUM_DESCRIPTION: Key = Key::new(212);
+/// "decrqcra checksum screen read capture esctest security ssh"
+pub const SETTINGS_TERMINAL_SCREEN_CHECKSUM_KEYWORDS: Key = Key::new(213);
+/// "Let programs control the window"
+pub const SETTINGS_TERMINAL_WINDOW_OPS: Key = Key::new(214);
+/// "Lets a program move, resize, minimise, raise or full-screen the window (xterm's window operations). Applies to new terminals"
+pub const SETTINGS_TERMINAL_WINDOW_OPS_DESCRIPTION: Key = Key::new(215);
+/// "xtwinops window operations resize move iconify fullscreen maximize security ssh"
+pub const SETTINGS_TERMINAL_WINDOW_OPS_KEYWORDS: Key = Key::new(216);
+/// "Let programs read the window title back"
+pub const SETTINGS_TERMINAL_TITLE_REPORT: Key = Key::new(217);
+/// "Answers a program's request for the window title and icon name (XTWINOPS 20 and 21). A title is text a program chose, and the answer is typed into the shell, so over ssh this lets a program type a command line. Applies to new terminals"
+pub const SETTINGS_TERMINAL_TITLE_REPORT_DESCRIPTION: Key = Key::new(218);
+/// "xtwinops title icon name report read back window security ssh esctest"
+pub const SETTINGS_TERMINAL_TITLE_REPORT_KEYWORDS: Key = Key::new(219);
+/// "Updates"
+pub const SETTINGS_SECTION_UPDATES: Key = Key::new(220);
+/// "Signed releases, checked in the background."
+pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(221);
+/// "Updates"
+pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(222);
+/// "Version"
+pub const SETTINGS_UPDATES_VERSION: Key = Key::new(223);
+/// "release build"
+pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(224);
+/// "Update automatically"
+pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(225);
+/// "Checks in the background and installs on the next restart"
+pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(226);
+/// "download auto"
+pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(227);
+/// "Channel"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(228);
+/// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(229);
+/// "beta nightly unstable stable prerelease dev builds main feature flags"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(230);
+/// "Check for updates"
+pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(231);
+/// "install restart release notes check skip"
+pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(232);
+/// "Appearance"
+pub const SETTINGS_SECTION_APPEARANCE: Key = Key::new(233);
+/// "Fonts"
+pub const SETTINGS_SECTION_FONTS: Key = Key::new(234);
 /// "Coding agents"
-pub const SETTINGS_SECTION_AGENTS: Key = Key::new(175);
+pub const SETTINGS_SECTION_AGENTS: Key = Key::new(235);
 /// "Mode"
-pub const SETTINGS_THEME_MODE: Key = Key::new(176);
+pub const SETTINGS_THEME_MODE: Key = Key::new(236);
 /// "Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode"
-pub const SETTINGS_THEME_MODE_DESCRIPTION: Key = Key::new(177);
+pub const SETTINGS_THEME_MODE_DESCRIPTION: Key = Key::new(237);
 /// "dark light system appearance match night day"
-pub const SETTINGS_THEME_MODE_KEYWORDS: Key = Key::new(178);
+pub const SETTINGS_THEME_MODE_KEYWORDS: Key = Key::new(238);
 /// "Defaults of Wormhole for this profile"
-pub const SETTINGS_ABOUT_DEFAULTS: Key = Key::new(182);
+pub const SETTINGS_ABOUT_DEFAULTS: Key = Key::new(242);
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 180] = [
+pub const ALL: [Key; 240] = [
     SETTINGS_SECTION_ADVANCED,
     SETTINGS_SECTION_ADVANCED_INTRO,
     SETTINGS_ADVANCED_GROUP_FILES,
@@ -529,6 +649,67 @@ pub const ALL: [Key; 180] = [
     SETTINGS_SESSIONS_SIDEBAR_NOTES_KEYWORDS,
     SETTINGS_SESSIONS_GROUP_CHANGES_PANEL,
     SETTINGS_SESSIONS_GROUP_DIFF_VIEW,
+    SETTINGS_SECTION_TERMINAL,
+    SETTINGS_SECTION_TERMINAL_INTRO,
+    SETTINGS_TERMINAL_GROUP_BEHAVIOUR,
+    SETTINGS_TERMINAL_SCROLLBACK,
+    SETTINGS_TERMINAL_SCROLLBACK_DESCRIPTION,
+    SETTINGS_TERMINAL_SCROLLBACK_KEYWORDS,
+    SETTINGS_TERMINAL_RESTORE_TEXT,
+    SETTINGS_TERMINAL_RESTORE_TEXT_DESCRIPTION,
+    SETTINGS_TERMINAL_RESTORE_TEXT_KEYWORDS,
+    SETTINGS_TERMINAL_MINIMAP,
+    SETTINGS_TERMINAL_MINIMAP_DESCRIPTION,
+    SETTINGS_TERMINAL_MINIMAP_KEYWORDS,
+    SETTINGS_TERMINAL_SPLIT_GAPS,
+    SETTINGS_TERMINAL_SPLIT_GAPS_DESCRIPTION,
+    SETTINGS_TERMINAL_SPLIT_GAPS_KEYWORDS,
+    SETTINGS_TERMINAL_META,
+    SETTINGS_TERMINAL_META_DESCRIPTION,
+    SETTINGS_TERMINAL_META_KEYWORDS,
+    SETTINGS_TERMINAL_FONT,
+    SETTINGS_TERMINAL_FONT_KEYWORDS,
+    SETTINGS_TERMINAL_GROUP_OPENING,
+    SETTINGS_TERMINAL_OPEN_IN,
+    SETTINGS_TERMINAL_OPEN_IN_DESCRIPTION,
+    SETTINGS_TERMINAL_OPEN_IN_KEYWORDS,
+    SETTINGS_TERMINAL_DEFAULT_TERMINAL,
+    SETTINGS_TERMINAL_DEFAULT_TERMINAL_DESCRIPTION,
+    SETTINGS_TERMINAL_DEFAULT_TERMINAL_KEYWORDS,
+    SETTINGS_TERMINAL_GROUP_SHELL,
+    SETTINGS_TERMINAL_DEFAULT_SHELL,
+    SETTINGS_TERMINAL_DEFAULT_SHELL_DESCRIPTION,
+    SETTINGS_TERMINAL_DEFAULT_SHELL_KEYWORDS,
+    SETTINGS_TERMINAL_SHELLS,
+    SETTINGS_TERMINAL_SHELLS_DESCRIPTION,
+    SETTINGS_TERMINAL_SHELLS_KEYWORDS,
+    SETTINGS_TERMINAL_GROUP_WORKTREES,
+    SETTINGS_TERMINAL_WORKTREE_BASE,
+    SETTINGS_TERMINAL_WORKTREE_BASE_DESCRIPTION,
+    SETTINGS_TERMINAL_WORKTREE_BASE_KEYWORDS,
+    SETTINGS_TERMINAL_GROUP_BELL,
+    SETTINGS_TERMINAL_BELL_SOUND,
+    SETTINGS_TERMINAL_BELL_SOUND_DESCRIPTION,
+    SETTINGS_TERMINAL_BELL_SOUND_KEYWORDS,
+    SETTINGS_TERMINAL_BELL_VISUAL,
+    SETTINGS_TERMINAL_BELL_VISUAL_DESCRIPTION,
+    SETTINGS_TERMINAL_BELL_VISUAL_KEYWORDS,
+    SETTINGS_TERMINAL_GROUP_PRIVACY,
+    SETTINGS_TERMINAL_CLIPBOARD_READ,
+    SETTINGS_TERMINAL_CLIPBOARD_READ_DESCRIPTION,
+    SETTINGS_TERMINAL_CLIPBOARD_READ_KEYWORDS,
+    SETTINGS_TERMINAL_CLIPBOARD_WRITE,
+    SETTINGS_TERMINAL_CLIPBOARD_WRITE_DESCRIPTION,
+    SETTINGS_TERMINAL_CLIPBOARD_WRITE_KEYWORDS,
+    SETTINGS_TERMINAL_SCREEN_CHECKSUM,
+    SETTINGS_TERMINAL_SCREEN_CHECKSUM_DESCRIPTION,
+    SETTINGS_TERMINAL_SCREEN_CHECKSUM_KEYWORDS,
+    SETTINGS_TERMINAL_WINDOW_OPS,
+    SETTINGS_TERMINAL_WINDOW_OPS_DESCRIPTION,
+    SETTINGS_TERMINAL_WINDOW_OPS_KEYWORDS,
+    SETTINGS_TERMINAL_TITLE_REPORT,
+    SETTINGS_TERMINAL_TITLE_REPORT_DESCRIPTION,
+    SETTINGS_TERMINAL_TITLE_REPORT_KEYWORDS,
     SETTINGS_SECTION_UPDATES,
     SETTINGS_SECTION_UPDATES_INTRO,
     SETTINGS_UPDATES_GROUP_UPDATES,
@@ -544,7 +725,6 @@ pub const ALL: [Key; 180] = [
     SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS,
     SETTINGS_SECTION_APPEARANCE,
     SETTINGS_SECTION_FONTS,
-    SETTINGS_SECTION_TERMINAL,
     SETTINGS_SECTION_AGENTS,
     SETTINGS_THEME_MODE,
     SETTINGS_THEME_MODE_DESCRIPTION,
@@ -556,7 +736,7 @@ pub const ALL: [Key; 180] = [
 /// Open { $section }
 /// ```
 pub fn settings_open_section(section: &str) -> String {
-    crate::active::message(179, &[("section", Arg::Str(section))])
+    crate::active::message(239, &[("section", Arg::Str(section))])
 }
 
 /// ```text
@@ -566,7 +746,7 @@ pub fn settings_open_section(section: &str) -> String {
 /// }
 /// ```
 pub fn settings_font_count(count: i64) -> String {
-    crate::active::message(180, &[("count", Arg::Int(count))])
+    crate::active::message(240, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -576,7 +756,7 @@ pub fn settings_font_count(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_tab_width(count: i64) -> String {
-    crate::active::message(181, &[("count", Arg::Int(count))])
+    crate::active::message(241, &[("count", Arg::Int(count))])
 }
 
 /// Each message with variables formatted with sample arguments: text as `Sample`, numbers as 1 and

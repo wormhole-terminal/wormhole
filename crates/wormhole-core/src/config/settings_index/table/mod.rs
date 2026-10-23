@@ -111,8 +111,8 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             nav: NavGroup::Look,
         },
         SectionId::Terminal => &SectionInfo {
-            title: Word::Literal("Terminal"),
-            intro: Word::Literal("How the terminal behaves. Its font is in Fonts."),
+            title: Word::Key(SETTINGS_SECTION_TERMINAL),
+            intro: Word::Key(SETTINGS_SECTION_TERMINAL_INTRO),
             nav: NavGroup::Work,
         },
         SectionId::Sessions => &SectionInfo {
