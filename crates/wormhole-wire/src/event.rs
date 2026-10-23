@@ -100,20 +100,20 @@ pub struct Event<'a> {
 }
 
 mod k {
-    pub const TITLE: u8 = 1;
-    pub const RESET_TITLE: u8 = 2;
-    pub const BELL: u8 = 3;
-    pub const CWD: u8 = 4;
-    pub const MARK: u8 = 5;
-    pub const NOTIFY: u8 = 6;
-    pub const PROGRESS: u8 = 7;
-    pub const PROGRAM_STATUS: u8 = 8;
-    pub const CLIPBOARD_STORE: u8 = 9;
-    pub const CLIPBOARD_LOAD: u8 = 10;
-    pub const WINDOW_OP: u8 = 11;
-    pub const EXITED: u8 = 12;
-    pub const FULL_RESET: u8 = 13;
-    pub const REPAINT_SEEDS: u8 = 14;
+    pub(super) const TITLE: u8 = 1;
+    pub(super) const RESET_TITLE: u8 = 2;
+    pub(super) const BELL: u8 = 3;
+    pub(super) const CWD: u8 = 4;
+    pub(super) const MARK: u8 = 5;
+    pub(super) const NOTIFY: u8 = 6;
+    pub(super) const PROGRESS: u8 = 7;
+    pub(super) const PROGRAM_STATUS: u8 = 8;
+    pub(super) const CLIPBOARD_STORE: u8 = 9;
+    pub(super) const CLIPBOARD_LOAD: u8 = 10;
+    pub(super) const WINDOW_OP: u8 = 11;
+    pub(super) const EXITED: u8 = 12;
+    pub(super) const FULL_RESET: u8 = 13;
+    pub(super) const REPAINT_SEEDS: u8 = 14;
 }
 
 impl<'a> Event<'a> {

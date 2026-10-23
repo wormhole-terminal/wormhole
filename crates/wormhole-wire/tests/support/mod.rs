@@ -2,54 +2,53 @@
 //! bytes in chosen pieces, and small helpers. No dependency: the generator is a xorshift and
 //! every test prints its seed, so a failure is reproducible.
 #![allow(dead_code)] // each test binary uses a part
-#![allow(unreachable_pub, reason = "not yet cleaned (R-13)")]
 
 use std::io::{self, Read};
 
 use wormhole_wire::*;
 
-pub struct Rng(u64);
+pub(crate) struct Rng(u64);
 
 impl Rng {
-    pub fn new(seed: u64) -> Self {
+    pub(crate) fn new(seed: u64) -> Self {
         Self(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1)
     }
-    pub fn next(&mut self) -> u64 {
+    pub(crate) fn next(&mut self) -> u64 {
         // xorshift64*
         self.0 ^= self.0 >> 12;
         self.0 ^= self.0 << 25;
         self.0 ^= self.0 >> 27;
         self.0.wrapping_mul(0x2545_F491_4F6C_DD1D)
     }
-    pub fn below(&mut self, n: u64) -> u64 {
+    pub(crate) fn below(&mut self, n: u64) -> u64 {
         if n == 0 { 0 } else { self.next() % n }
     }
-    pub fn usize(&mut self, n: usize) -> usize {
+    pub(crate) fn usize(&mut self, n: usize) -> usize {
         self.below(n as u64) as usize
     }
-    pub fn bool(&mut self) -> bool {
+    pub(crate) fn bool(&mut self) -> bool {
         self.next() & 1 == 1
     }
-    pub fn u8(&mut self) -> u8 {
+    pub(crate) fn u8(&mut self) -> u8 {
         self.next() as u8
     }
-    pub fn u16(&mut self) -> u16 {
+    pub(crate) fn u16(&mut self) -> u16 {
         self.next() as u16
     }
-    pub fn u32(&mut self) -> u32 {
+    pub(crate) fn u32(&mut self) -> u32 {
         self.next() as u32
     }
-    pub fn fill(&mut self, out: &mut [u8]) {
+    pub(crate) fn fill(&mut self, out: &mut [u8]) {
         for b in out {
             *b = self.u8();
         }
     }
     /// Random bytes, a random number of them below `max`.
-    pub fn noise(&mut self, max: usize) -> Vec<u8> {
+    pub(crate) fn noise(&mut self, max: usize) -> Vec<u8> {
         let n = self.usize(max);
         self.bytes(n)
     }
-    pub fn bytes(&mut self, n: usize) -> Vec<u8> {
+    pub(crate) fn bytes(&mut self, n: usize) -> Vec<u8> {
         let mut v = vec![0; n];
         self.fill(&mut v);
         v
@@ -57,13 +56,13 @@ impl Rng {
 }
 
 /// Strings and bytes the generated messages borrow from.
-pub struct Pool {
+pub(crate) struct Pool {
     pub strings: Vec<String>,
     pub data: Vec<u8>,
 }
 
 impl Pool {
-    pub fn new(rng: &mut Rng) -> Self {
+    pub(crate) fn new(rng: &mut Rng) -> Self {
         let alphabet: Vec<char> = "abcXYZ019 _-/.:~é€日本🙂\u{0}\n".chars().collect();
         let mut strings = Vec::new();
         for i in 0..24 {
@@ -179,7 +178,7 @@ fn welcome(rng: &mut Rng) -> Welcome {
 }
 
 /// A random message of any kind, with every field random, borrowing from `p`.
-pub fn message<'a>(rng: &mut Rng, p: &'a Pool) -> Message<'a> {
+pub(crate) fn message<'a>(rng: &mut Rng, p: &'a Pool) -> Message<'a> {
     match rng.below(35) {
         0 => {
             let min = 1 + rng.u16() % 100;
@@ -305,7 +304,7 @@ pub fn message<'a>(rng: &mut Rng, p: &'a Pool) -> Message<'a> {
 }
 
 /// A reader that gives out at most `step()` bytes per call, to cut a stream anywhere.
-pub struct Chunked<'a, F: FnMut() -> usize> {
+pub(crate) struct Chunked<'a, F: FnMut() -> usize> {
     pub data: &'a [u8],
     pub step: F,
 }
@@ -322,7 +321,7 @@ impl<F: FnMut() -> usize> Read for Chunked<'_, F> {
 /// Every frame in `stream`, decoded with reads of the sizes `step` gives, rendered with `Debug` so
 /// the result can be compared across ways of cutting the same bytes. Stops at the first error and
 /// includes it.
-pub fn decode_all(stream: &[u8], step: impl FnMut() -> usize) -> Vec<String> {
+pub(crate) fn decode_all(stream: &[u8], step: impl FnMut() -> usize) -> Vec<String> {
     let mut src = Chunked { data: stream, step };
     let mut dec = Decoder::new();
     let mut out = Vec::new();
@@ -346,35 +345,35 @@ pub fn decode_all(stream: &[u8], step: impl FnMut() -> usize) -> Vec<String> {
     }
 }
 
-pub fn encode_one(channel: u16, msg: &Message<'_>) -> Vec<u8> {
+pub(crate) fn encode_one(channel: u16, msg: &Message<'_>) -> Vec<u8> {
     let mut buf = Vec::new();
     encode(&mut buf, channel, 0, msg).expect("encodes");
     buf
 }
 
 /// A frame built by hand, for bytes the encoder would never write.
-pub fn raw_frame(ty: u8, flags: u8, channel: u16, payload: &[u8]) -> Vec<u8> {
+pub(crate) fn raw_frame(ty: u8, flags: u8, channel: u16, payload: &[u8]) -> Vec<u8> {
     let mut v = Header { len: payload.len() as u32, ty, flags, channel }.to_bytes().to_vec();
     v.extend_from_slice(payload);
     v
 }
 
 /// The payload of an encoded frame.
-pub fn payload_of(frame: &[u8]) -> &[u8] {
+pub(crate) fn payload_of(frame: &[u8]) -> &[u8] {
     &frame[HEADER_LEN..]
 }
 
 /// The first result of decoding `bytes` pushed whole.
-pub fn first(bytes: &[u8]) -> Result<Option<String>, WireError> {
+pub(crate) fn first(bytes: &[u8]) -> Result<Option<String>, WireError> {
     let mut dec = Decoder::new();
     dec.push(bytes);
     dec.next_frame().map(|f| f.map(|f| format!("{f:?}")))
 }
 
-pub fn hex(b: &[u8]) -> String {
+pub(crate) fn hex(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
 }
 
-pub fn unhex(s: &str) -> Vec<u8> {
+pub(crate) fn unhex(s: &str) -> Vec<u8> {
     (0..s.len() / 2).map(|i| u8::from_str_radix(&s[2 * i..2 * i + 2], 16).expect("hex")).collect()
 }
