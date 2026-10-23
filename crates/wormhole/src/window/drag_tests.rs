@@ -366,6 +366,9 @@ fn a_row_dragged_out_of_its_bracket_leaves_the_split(cx: &mut TestAppContext) {
     assert_eq!(ids(cx, &window), [1, 3, 2]);
     let row = row_bounds(cx, &window, 3).center();
     let first = row_bounds(cx, &window, 1);
+    // A slow machine between measuring and pressing must not change what is pressed: the test windows
+    // hold the list's slide still (`test_harness`), so the rows are where they were measured.
+    std::thread::sleep(std::time::Duration::from_millis(200));
     let above = point(first.center().x, first.top() + px(3.0));
     drag(cx, &window, row, &[row + point(px(30.0), px(0.0)), above]);
     release(cx, &window, above);

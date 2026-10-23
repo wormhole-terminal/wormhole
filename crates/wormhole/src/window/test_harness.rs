@@ -114,6 +114,9 @@ pub(crate) fn start_with_table(
         gpui_kit::init(cx);
         // The test platform delivers notifications only to an app with an identity.
         cx.set_app_identity("app.getwormhole.terminal.test", "Wormhole");
+        // Layout tests measure rows and then press them: a list that slides to a new order for 180 ms
+        // of the wall clock (not the test clock) would be read halfway, and pressed somewhere else.
+        cx.set_reduce_motion(true);
         cx.set_global(SettingsStore::load());
         set_shared_state(cx);
         crate::window::feature::FeatureTable::install(table, cx);
