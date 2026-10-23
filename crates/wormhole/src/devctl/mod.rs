@@ -322,7 +322,9 @@
 
 mod a11y;
 mod ambient;
+mod batch;
 mod blocks;
+mod commands;
 mod control;
 mod flow;
 mod hosts;
@@ -338,13 +340,14 @@ mod studio;
 mod title;
 mod welcome;
 
-use std::collections::{HashSet, VecDeque};
-use std::fmt::Write as _;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::{Result, anyhow};
 use gpui_kit::*;
-use wormhole_core::storage::files::{self, LinkPolicy};
+
+pub use batch::install;
+#[cfg(test)]
+pub(crate) use batch::poll_dir;
 
 use crate::window::Workspace;
 
@@ -367,355 +370,6 @@ struct Ctx<'a, 'b> {
 /// A command: what it prints when it works (usually nothing), or why it did not. A failure
 /// is reported as `<command> failed: <why>`.
 type Command = fn(&mut Ctx, &str) -> Result<String>;
-
-/// The command called `name`, if there is one.
-fn command(name: &str) -> Option<Command> {
-    Some(match name {
-        "shot" => shots::shot,
-        "screen" => shots::screen,
-        "blocks" => blocks::blocks,
-        "block" => blocks::block,
-        "pane-bar" => blocks::pane_bar,
-        "clipboard-answer" => blocks::clipboard_answer,
-        "images" => blocks::images,
-        "state" => shots::state,
-        "studio-shot" => shots::studio_shot,
-        "settings-shot" => shots::settings_shot,
-        "frames" => shots::frames,
-        "paints" => shots::paints,
-        "perf-profile" => profiling::perf_profile,
-        "type" => input::type_text,
-        "paste" => input::paste,
-        "drag" => |ctx, arg| input::file_drag(ctx, arg, input::FileDrag::Enter),
-        "drop" => |ctx, arg| input::file_drag(ctx, arg, input::FileDrag::Drop),
-        "drag-end" => |ctx, arg| input::file_drag(ctx, arg, input::FileDrag::End),
-        "hover" => input::hover,
-        "scroll" => input::scroll,
-        "mouse-down" => |ctx, arg| input::mouse(ctx, arg, input::Mouse::Down),
-        "mouse-drag" => |ctx, arg| input::mouse(ctx, arg, input::Mouse::Drag),
-        "mouse-up" => |ctx, arg| input::mouse(ctx, arg, input::Mouse::Up),
-        "click" => input::click,
-        "double-click" => input::double_click,
-        "text" => input::text,
-        "key" => input::key,
-        "menus" => menus::menus,
-        "menu" => menus::menu,
-        "menu-pick" => menus::menu_pick,
-        "menu-close" => menus::menu_close,
-        "menu-native" => menus::menu_native,
-        "popover" => menus::popover,
-        "popover-press" => menus::popover_press,
-        "popover-type" => menus::popover_type,
-        "popover-key" => menus::popover_key,
-        "popover-colour" => menus::popover_colour,
-        "popover-close" => menus::popover_close,
-        "popover-native" => menus::popover_native,
-        "popover-real" => menus::popover_real,
-        "popover-real-close" => menus::popover_real_close,
-        "palette" => menus::palette,
-        "sheet" => menus::sheet,
-        "action" => menus::action,
-        "available" => menus::available,
-        "about" => |ctx, arg| menus::about(ctx, "about", arg),
-        "intro" => |ctx, arg| crate::intro::devctl::play(ctx.window, arg, ctx.cx),
-        "intro-frames" => |ctx, arg| crate::intro::devctl::frames(arg, ctx.dir, ctx.cx),
-        "licenses" => |ctx, arg| menus::about(ctx, "licenses", arg),
-        "about-shot" => |ctx, arg| menus::about(ctx, "about-shot", arg),
-        "licenses-shot" => |ctx, arg| menus::about(ctx, "licenses-shot", arg),
-        "licenses-search" => |ctx, arg| menus::about(ctx, "licenses-search", arg),
-        "licenses-select" => |ctx, arg| menus::about(ctx, "licenses-select", arg),
-        #[cfg(any(feature = "inspector", debug_assertions))]
-        "inspect" => input::inspect,
-        #[cfg(any(feature = "inspector", debug_assertions))]
-        "bounds" => shots::bounds,
-        "new" => sessions::new,
-        "hosts" => hosts::hosts,
-        "host-kill" => hosts::host_kill,
-        "detach" => hosts::detach,
-        "reattach" => hosts::reattach,
-        "quit-keep" => hosts::quit_keep,
-        "new-shell" => sessions::new_shell,
-        "shells" => sessions::shells,
-        "activate" => sessions::activate,
-        "rename" => sessions::rename,
-        "menu-new-window" => sessions::menu_new_window,
-        "menu-updates" => sessions::menu_updates,
-        "new-window" => sessions::new_window,
-        "close-window" => sessions::close_window,
-        "rows" => sessions::rows,
-        "split-join" => sessions::split_join,
-        "split-leave" => sessions::split_leave,
-        "row-drop" => sessions::row_drop,
-        "pane-split" => sessions::pane_split,
-        "pane-close" => sessions::pane_close,
-        "pane-zoom" => sessions::pane_zoom,
-        "pane-focus" => sessions::pane_focus,
-        "layout" => sessions::layout,
-        "panes" => sessions::panes,
-        "note" => sessions::note,
-        "task" => sessions::task,
-        "quit" => sessions::quit,
-        "profile" => sessions::profile,
-        "profile-new" => sessions::profile_new,
-        "profile-open" => sessions::profile_open,
-        "profile-move" => sessions::profile_move,
-        "profile-delete" => sessions::profile_delete,
-        "profiles" => sessions::profiles,
-        "group-new" => sidebar::new_group,
-        "sidebar-fold" => sidebar::fold,
-        "group" => sidebar::group,
-        "to-group" => sidebar::to_group,
-        "rename-edit" => sidebar::rename_edit,
-        "pin" => sidebar::pin,
-        "folder-color" => sidebar::folder_color,
-        "hold-cmd" => |ctx, _| sidebar::hold_cmd(ctx, true),
-        "release-cmd" => |ctx, _| sidebar::hold_cmd(ctx, false),
-        "right-click" => sidebar::right_click,
-        "sidebar-scroll" => sidebar::scroll,
-        "resize" => sessions::resize,
-        "onboarding" => sessions::onboarding,
-        "welcome" => welcome::welcome,
-        "welcome-dock" => welcome::dock,
-        "welcome-probe" => welcome::probe,
-        "title" => title::title,
-        "path-card" => title::path_card,
-        "path-menu" => title::path_menu,
-        "toggle-sidebar" => sessions::toggle_sidebar,
-        "toggle-panel" => sessions::toggle_panel,
-        "stash" => sessions::stash,
-        "send" => |ctx, arg| sessions::send(ctx, arg, false),
-        "send-submit" => |ctx, arg| sessions::send(ctx, arg, true),
-        "hook" => sessions::hook,
-        "control" => control::control,
-        "changes" => panels::changes,
-        "diff" => panels::diff,
-        "split" => panels::split,
-        "diff-scroll-x" => panels::diff_scroll_x,
-        "history" => panels::history,
-        "picker" => panels::picker,
-        "commit" => panels::commit,
-        "commit-file" => panels::commit_file,
-        "compare" => panels::compare,
-        "project" => panels::project,
-        "trust-window" => panels::trust_window,
-        "trust-shot" => panels::trust_shot,
-        "panel-tab" => panels::panel_tab,
-        "project-init" => panels::project_init,
-        "project-trust" => panels::project_trust,
-        "comment" => |ctx, arg| {
-            let said = crate::features::git::changes::devctl::comment(ctx.workspace, arg, ctx.window, ctx.cx)
-                .map_err(|e| anyhow!(e))?;
-            Ok(said)
-        },
-        "note-seed" => panels::note_seed,
-        "note-add" => panels::note_add,
-        "note-toggle" => panels::note_toggle,
-        "task-seed" => panels::task_seed,
-        "task-done" => panels::task_done,
-        "panel-scroll" => panels::panel_scroll,
-        "set" => settings::set,
-        "theme" => settings::theme,
-        "settings" => settings::open,
-        "settings-section" => settings::section,
-        "update-installed" => settings::update_installed,
-        "settings-project" => settings::project,
-        "settings-project-menu" => settings::project_menu,
-        "settings-search" => settings::search,
-        "settings-resize" => settings::resize,
-        "settings-scroll" => settings::scroll,
-        "profile-sheet" => settings::profile_sheet,
-        "settings-record" => settings::record,
-        "settings-reveal" => settings::reveal,
-        "settings-preview" => settings::preview,
-        "settings-select" => settings::select,
-        "settings-reset-confirm" => settings::reset_confirm,
-        "settings-cli-tool" => settings::cli_tool,
-        "font-picker" => settings::font_picker,
-        "a11y" => a11y::a11y,
-        "keyboard-navigation" => a11y::keyboard_navigation,
-        "window-front" => a11y::window_front,
-        "front" => sessions::front,
-        "reduce-motion" => settings::reduce_motion,
-        "scroller" => settings::scroller,
-        "appearance" => settings::appearance,
-        "reduce-transparency" => settings::reduce_transparency,
-        "increase-contrast" => settings::increase_contrast,
-        "studio" => studio::toggle,
-        "studio-select" => |ctx, arg| studio::with(ctx, "studio-select", arg),
-        "studio-scroll" => |ctx, arg| studio::with(ctx, "studio-scroll", arg),
-        "studio-save" => |ctx, arg| studio::with(ctx, "studio-save", arg),
-        "studio-set" => |ctx, arg| studio::with(ctx, "studio-set", arg),
-        "studio-type" => |ctx, arg| studio::with(ctx, "studio-type", arg),
-        "studio-filter" => |ctx, arg| studio::with(ctx, "studio-filter", arg),
-        "studio-area" => |ctx, arg| studio::with(ctx, "studio-area", arg),
-        "studio-resize" => |ctx, arg| studio::with(ctx, "studio-resize", arg),
-        "studio-menu" => |ctx, arg| studio::with(ctx, "studio-menu", arg),
-        "studio-frames" => studio::frames,
-        "menubar" => ambient::menubar,
-        "dock" => ambient::dock,
-        "menubar-icons" => ambient::menubar_icons,
-        "notify-sim" => ambient::notify_sim,
-        "notify-log" => ambient::notify_log,
-        "notify-permission" => ambient::notify_permission,
-        "quick-panel" => ambient::quick_panel,
-        "quick-panel-shot" => ambient::quick_panel_shot,
-        "quick-panel-key" => ambient::quick_panel_key,
-        "quick-panel-text" => ambient::quick_panel_text,
-        "jump" => ambient::jump,
-        "wait-idle" => flow::wait_idle,
-        "sync" => flow::sync,
-        _ => return None,
-    })
-}
-
-/// Read each window's command file at the end of its tick, from the app's start on.
-pub fn install(cx: &mut App) {
-    cx.set_global(crate::window::devctl::TickHook(poll));
-}
-
-fn poll(workspace: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
-    let Some(dir) = std::env::var_os("WORMHOLE_DEVCTL").map(PathBuf::from) else {
-        return;
-    };
-    poll_dir(dir, workspace, window, cx);
-}
-
-/// [`poll`] with the control directory given (the view tests have no environment to set).
-pub(crate) fn poll_dir(
-    dir: PathBuf,
-    workspace: &mut Workspace,
-    window: &mut Window,
-    cx: &mut Context<Workspace>,
-) {
-    // A batch that waits (`wait-idle`) finishes before the next one is read, or the two would
-    // interleave.
-    if cx.try_global::<Waiting>().is_some_and(|waiting| waiting.0.contains(&cx.entity_id())) {
-        return;
-    }
-    let number = workspace.window_number(cx);
-    let suffix = if number == 1 { String::new() } else { number.to_string() };
-    let out_path = dir.join(format!("out{suffix}.txt"));
-    let Some(script) = take_script(&dir.join(format!("cmd{suffix}"))) else {
-        return;
-    };
-    let batch = Batch {
-        lines: script.lines().filter(|l| !l.trim().is_empty()).map(str::to_string).collect(),
-        out: String::new(),
-        sync: Vec::new(),
-        dir,
-        out_path,
-    };
-    run(batch, workspace, window, cx);
-}
-
-/// One command file being worked through.
-struct Batch {
-    /// The lines still to run.
-    lines: VecDeque<String>,
-    /// What the commands printed so far.
-    out: String,
-    sync: Vec<String>,
-    dir: PathBuf,
-    out_path: PathBuf,
-}
-
-/// The workspaces (by entity) whose batch is waiting for a command to resolve.
-#[derive(Default)]
-struct Waiting(HashSet<EntityId>);
-
-impl Global for Waiting {}
-
-/// Run `batch` until it ends, or until a command makes the rest wait for it.
-fn run(mut batch: Batch, workspace: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
-    while let Some(line) = batch.lines.pop_front() {
-        let (name, arg) = split_command(&line);
-        let mut ctx = Ctx {
-            workspace: &mut *workspace,
-            window: &mut *window,
-            cx: &mut *cx,
-            dir: &batch.dir,
-            out: &batch.out_path,
-            wait: None,
-            sync: Vec::new(),
-        };
-        let result = command(name).map(|run| run(&mut ctx, &arg));
-        let (wait, mut sync) = (ctx.wait.take(), std::mem::take(&mut ctx.sync));
-        batch.sync.append(&mut sync);
-        match result {
-            Some(Ok(text)) => batch.out.push_str(&text),
-            Some(Err(err)) => {
-                writeln!(batch.out, "{name} failed: {err:#}").ok();
-            }
-            None => {
-                writeln!(batch.out, "unknown command: {name}").ok();
-            }
-        }
-        if let Some(wait) = wait {
-            resume_after(wait, batch, window, cx);
-            return;
-        }
-    }
-    finish(batch, cx);
-}
-
-/// Go on with `batch` once `wait` resolves, adding what it printed.
-fn resume_after(wait: Task<String>, mut batch: Batch, window: &mut Window, cx: &mut Context<Workspace>) {
-    let id = cx.entity_id();
-    cx.default_global::<Waiting>().0.insert(id);
-    cx.spawn_in(window, async move |this, cx| {
-        batch.out.push_str(&wait.await);
-        let resumed = this.update_in(cx, |workspace, window, cx| {
-            cx.default_global::<Waiting>().0.remove(&id);
-            run(batch, workspace, window, cx);
-        });
-        if resumed.is_err() {
-            tracing::debug!("devctl: the window closed while its batch waited");
-        }
-    })
-    .detach();
-}
-
-fn finish(batch: Batch, cx: &mut Context<Workspace>) {
-    let _ = files::write_atomic(&batch.out_path, batch.out.as_bytes(), LinkPolicy::Follow);
-    if !batch.sync.is_empty() {
-        // Deferred, so the token comes after what commands of this batch append once the update
-        // is over (`settings-shot`): a script that waits for it finds their results too.
-        let (path, sync) = (batch.out_path, batch.sync);
-        cx.defer(move |_| append(&path, &sync_lines(&sync)));
-    }
-    cx.notify();
-}
-
-/// The lines `sync` writes for these tokens.
-fn sync_lines(tokens: &[String]) -> String {
-    tokens
-        .iter()
-        .map(|token| if token.is_empty() { "sync\n".into() } else { format!("sync {token}\n") })
-        .collect()
-}
-
-/// Add `text` to the results file at `path`.
-fn append(path: &Path, text: &str) {
-    use std::io::Write as _;
-    let appended = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)
-        .and_then(|mut file| file.write_all(text.as_bytes()));
-    if let Err(err) = appended {
-        tracing::warn!("devctl: could not append to {}: {err}", path.display());
-    }
-}
-
-/// Read the command file and remove it. It is renamed first, so a line a writer appends
-/// while this runs lands in a new file for the next tick; read-then-delete lost it.
-fn take_script(path: &Path) -> Option<String> {
-    let taken = path.with_extension("run");
-    std::fs::rename(path, &taken).ok()?;
-    let script = std::fs::read_to_string(&taken);
-    let _ = std::fs::remove_file(&taken);
-    script.ok()
-}
 
 /// A line is a command name, then (after the first space) its argument, in which `\n`,
 /// `\r` and `\e` stand for the control characters.
@@ -749,7 +403,7 @@ fn nth(arg: &str) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{coordinates, file_name, nth, split_command, sync_lines, take_script};
+    use super::{coordinates, file_name, nth, split_command};
 
     #[test]
     fn a_line_splits_at_the_first_space_and_unescapes_the_argument() {
@@ -770,12 +424,6 @@ mod tests {
     }
 
     #[test]
-    fn sync_writes_one_line_per_token_in_order() {
-        assert_eq!(sync_lines(&["a1".into(), String::new(), "b 2".into()]), "sync a1\nsync\nsync b 2\n");
-        assert_eq!(sync_lines(&[]), "");
-    }
-
-    #[test]
     fn file_names_stay_in_the_control_directory() {
         assert_eq!(file_name(" home-1.v2_b ", "shot").ok(), Some("home-1.v2_b"));
         assert_eq!(file_name("", "shot").ok(), Some("shot"), "the default without a name");
@@ -787,21 +435,5 @@ mod tests {
     #[test]
     fn an_index_is_one_based_and_defaults_to_the_first() {
         assert_eq!((nth("3"), nth(" 1 "), nth(""), nth("x"), nth("0")), (2, 0, 0, 0, 0));
-    }
-
-    #[test]
-    fn taking_the_script_leaves_room_for_the_next_one() {
-        let dir = std::env::temp_dir().join(format!("wormhole-devctl-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).expect("scratch dir");
-        let cmd = dir.join("cmd");
-        assert_eq!(take_script(&cmd), None, "no file, no script");
-        std::fs::write(&cmd, "state\nscreen\n").expect("write");
-        assert_eq!(take_script(&cmd).as_deref(), Some("state\nscreen\n"));
-        // The file is gone, and so is the one it was renamed to: a writer's next line starts
-        // a new file.
-        assert!(!cmd.exists() && !dir.join("cmd.run").exists());
-        std::fs::write(&cmd, "state\n").expect("write again");
-        assert_eq!(take_script(&cmd).as_deref(), Some("state\n"));
-        let _ = std::fs::remove_dir_all(&dir);
     }
 }

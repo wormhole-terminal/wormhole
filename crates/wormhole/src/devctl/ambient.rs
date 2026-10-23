@@ -11,7 +11,8 @@ use anyhow::{Result, anyhow};
 use gpui_kit::*;
 use wormhole_core::notify::Kind;
 
-use super::{Ctx, append, file_name, nth};
+use super::batch::append;
+use super::{Ctx, file_name, nth};
 use crate::notifications;
 use crate::platform::notifications::Permission;
 use crate::status_item;

@@ -377,9 +377,9 @@ fn read(path: &Path) -> String {
     std::fs::read_to_string(path).unwrap_or_else(|err| panic!("read {}: {err}", path.display()))
 }
 
-/// The commands `command()` in `devctl/mod.rs` knows: its `"name" =>` arms.
+/// The commands `command()` in `devctl/commands.rs` knows: its `"name" =>` arms.
 fn devctl_commands(source: &str) -> Vec<String> {
-    let body = source.split("fn command(").nth(1).expect("devctl/mod.rs has fn command(");
+    let body = source.split("fn command(").nth(1).expect("devctl/commands.rs has fn command(");
     let body = body.split("_ => return None").next().unwrap_or(body);
     body.lines()
         .filter_map(|line| {
@@ -448,7 +448,7 @@ fn markdown_commands(text: &str) -> Vec<String> {
 #[test]
 fn the_devctl_docs_name_only_commands_that_exist() {
     let source = read(&src().join("devctl/mod.rs"));
-    let known = devctl_commands(&source);
+    let known = devctl_commands(&read(&src().join("devctl/commands.rs")));
     assert!(known.len() > 40, "found only {} commands in command(): did its shape change?", known.len());
     let skill = read(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.claude/skills/devctl/SKILL.md"));
     for (doc, named) in
