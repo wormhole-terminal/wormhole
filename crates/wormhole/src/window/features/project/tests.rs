@@ -25,7 +25,7 @@ use crate::window::Workspace;
 use crate::window::features::notes::testing as notes;
 use wormhole_core::storage::store::WindowRecord;
 
-use crate::window::view_tests::{drive, isolate_in, read, read_cx, start, start_with_table};
+use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start, start_with_table};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -551,4 +551,57 @@ fn a_window_with_nobody_to_ask_trusts_no_folder(cx: &mut TestAppContext) {
     let record = WindowRecord { id: 1, ..Default::default() };
     let window = start_with_table(cx, record, &[]);
     assert!(!read_cx(cx, &window, |ws, cx| ws.session_trusted(ws.sessions[0].id, cx)));
+}
+
+/// Allocations the third draw of a one-terminal window on the Project tab of a trusted project (three
+/// actions, two prompts, a layout and a notes switch) may make. Measured: 22,609 allocations (12 MB), the
+/// same on every run, and 22,610 (12 MB) before the project's state moved into its entity. The budget is that
+/// plus about a hundredth; the tab draws a row for each part the project has, so a cost per action or per
+/// frame that grows shows at once.
+const PROJECT_FRAME_ALLOCATIONS: u64 = 22_835;
+
+#[gpui_kit::test]
+fn a_window_frame_on_project_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
+    use crate::perf::allocations::thread_counts;
+    if isolate("a_window_frame_on_project_stays_within_its_allocation_budget") {
+        return;
+    }
+    let window = start(cx, 1);
+    let dir = project(
+        "frame",
+        &[
+            (
+                "actions.json",
+                r#"[
+                    { "id": "build", "title": "Build", "type": "run", "command": "make", "key": "f9" },
+                    { "id": "test", "title": "Test", "type": "run", "command": "make test" },
+                    { "id": "say", "title": "Say", "type": "prompt", "text": "hello" }
+                ]"#,
+            ),
+            ("prompts/review.md", "# Review\n\nLook at the diff.\n"),
+            ("prompts/plan.md", "# Plan\n\nWrite the steps.\n"),
+            ("layout.json", r#"{ "sessions": [ { "name": "web" }, { "name": "api" } ] }"#),
+            ("notes.md", "# Notes\n<!-- wormhole:notes -->\n\n## Next steps\n\n## Notes\n"),
+            ("config.json", r#"{ "env": { "A": "1" } }"#),
+        ],
+    );
+    trust(cx, &dir);
+    drive(cx, &window, |ws, _, cx| {
+        go(ws, &dir, cx);
+        ws.show_tab(TabId::Project, cx);
+    });
+    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Project);
+    assert_eq!(status(cx, &dir), Some(TrustStatus::Trusted));
+    // The first draws build what a window keeps; the third is a frame.
+    draw(cx, &window);
+    draw(cx, &window);
+    let before = thread_counts();
+    draw(cx, &window);
+    let drawn = thread_counts().since(before);
+    eprintln!("window frame on Project: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
+    assert!(
+        drawn.allocations <= PROJECT_FRAME_ALLOCATIONS,
+        "a window frame on Project made {} allocations (budget {PROJECT_FRAME_ALLOCATIONS})",
+        drawn.allocations
+    );
 }
