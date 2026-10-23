@@ -26,8 +26,9 @@ pub(super) fn allocations() -> usize {
 
 /// Allocations a frame may make. A full frame builds every row; most of its allocations are this
 /// benchmark's stand-in for the text system (`fed`: four per word with the copy of the text it now
-/// takes by reference, and a row of words is many of them since rows are shaped word by word), which real frames don't pay. The steady frames are the
-/// ones that matter: nothing changed, or one line of output scrolled the screen.
+/// takes by reference, and a row of words is many of them since rows are shaped word by word), which
+/// real frames don't pay. The steady frames are the ones that matter: nothing changed, or one line of
+/// output scrolled the screen.
 const FULL_FRAME_ALLOCATIONS: usize = 1700;
 const UNCHANGED_FRAME_ALLOCATIONS: usize = 50;
 const SCROLLING_FRAME_ALLOCATIONS: usize = 130;
