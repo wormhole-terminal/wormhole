@@ -39,7 +39,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   Build with these before writing a styled `div`. `tests/design_rules.rs`
   fails on off-grid values.
 - A `RenderOnce` component (`#[derive(IntoElement)]` + `impl RenderOnce`) and
-  a `Popover`: `SelectTrigger` and the menu in `select.rs`.
+  a `Popover`: `SelectTrigger` and the menu in `select/mod.rs`.
 - Custom painting with `canvas(prepaint, paint)`: the terminal grid in
   `terminal_view/render/`. An empty `canvas` that only measures its bounds:
   `features/git/diff/render.rs`.
@@ -53,7 +53,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   header comment explains why a scrolling `div` isn't enough. The diff view
   uses `ListState` too: `features/git/diff/`.
 - Fixed-height virtual list (`uniform_list` + `UniformListScrollHandle`,
-  `scroll_to_item`): `settings_window/font_picker.rs`, `select.rs`.
+  `scroll_to_item`): `settings_window/font_picker.rs`, `select/mod.rs`.
 
 ## Input, focus, actions
 
@@ -91,7 +91,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
 - Work off the main thread (`cx.background_executor().spawn`), then
   `this.update(cx, …)` with a ticket so a result that no longer matches the
   request is dropped: `features/git/changes.rs`
-  (`finish_git_refresh`), `features/git/diff/load.rs`,
+  (`finish_git_refresh`), `features/git/diff/load/mod.rs`,
   `features/git/history.rs`.
 - A window-bound loop that stops when its view is gone (`spawn_in` +
   `update_in` returning `Err`): `settings_window/mod.rs`.
@@ -101,7 +101,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
 ## Tests and checks
 
 - Unit tests in a GPUI crate import items explicitly, never `use super::*`:
-  `window/panel_list.rs`, `select.rs`.
+  `window/panel_list.rs`, `select/mod.rs`.
 - Headless GPUI tests (`#[gpui_kit::test]` with `TestAppContext`;
   `gpui_kit::init` and `SettingsStore::for_test()` first, then
   `gpui_kit::open_window`): `select/window_tests.rs`,

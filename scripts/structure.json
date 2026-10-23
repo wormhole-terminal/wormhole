@@ -245,7 +245,7 @@
     },
     "os-edge": {
       "crates/wormhole/src/menubar/mod.rs :: cfg_attr(": 3,
-      "crates/wormhole/src/menubar/model.rs :: cfg_attr(": 1
+      "crates/wormhole/src/menubar/model/mod.rs :: cfg_attr(": 1
     },
     "os-edge-neutral": {},
     "bucket-names": {

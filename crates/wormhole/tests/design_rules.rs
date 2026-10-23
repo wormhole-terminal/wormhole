@@ -199,7 +199,7 @@ fn element_builders_are_track_caller() {
     let src = src();
     let mut files: Vec<PathBuf> =
         all_sources().into_iter().filter(|f| f.starts_with(src.join("style"))).collect();
-    files.push(src.join("select.rs"));
+    files.push(src.join("select/mod.rs"));
     let mut missing = Vec::new();
     for file in files {
         let text = std::fs::read_to_string(&file).expect("read source");
