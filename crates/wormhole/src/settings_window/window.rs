@@ -153,6 +153,15 @@ impl SettingsWindow {
             _subscriptions: subscriptions,
             _refresh: refresh,
         };
+        // The apps Open folders in lists, looked for when Settings opens, when its Terminal page is shown and
+        // when the app comes forward again (an app may have been installed meanwhile): never while it draws.
+        crate::open_in::OpenIn::refresh(cx);
+        cx.observe_window_activation(window, |_, window, cx| {
+            if window.is_window_active() {
+                crate::open_in::OpenIn::refresh(cx);
+            }
+        })
+        .detach();
         // The nav marks an agent whose hooks need repair, so the agents are read up front.
         this.load_agents(cx);
         this.load_cli_tool(cx);
@@ -174,6 +183,9 @@ impl SettingsWindow {
             self.content_scroll.set_offset(point(px(0.0), px(0.0)));
         }
         self.section = section;
+        if section == Section::Terminal {
+            crate::open_in::OpenIn::refresh(cx);
+        }
         self.show_results = false;
         self.open_select = None;
         self.confirm_reset = false;

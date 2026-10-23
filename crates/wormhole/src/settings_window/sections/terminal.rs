@@ -198,11 +198,10 @@ fn draw_scrollback(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
 /// The scrollback select: wide enough for "200,000 lines".
 const SCROLLBACK_W: f32 = 160.0;
 
-/// Open folders in: the apps on this Mac that can open a folder, found when the page opens,
-/// the one the title row's button opens checked; an app that isn't in the list can be picked with
-/// Choose app…. An app that is gone is shown as written, with what opens instead.
+/// Open folders in: the apps on this Mac that can open a folder, found when Settings opens or the page is
+/// shown (`OpenIn::refresh`), the one the title row's button opens checked; an app that isn't in the list can
+/// be picked with Choose app…. An app that is gone is shown as written, with what opens instead.
 fn draw_open_in(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    OpenIn::refresh(cx);
     let ui = ui(cx);
     let apps = OpenIn::apps(cx);
     let resolved = OpenIn::resolved(cx);

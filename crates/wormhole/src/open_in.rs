@@ -19,7 +19,8 @@ use crate::platform::apps;
 use crate::settings::settings;
 
 /// The apps found on this Mac, and the icons drawn for them so far. A GPUI global, set up when the
-/// app starts and looked at again whenever a menu that lists the apps opens.
+/// app starts and looked at again (`refresh`) when Settings opens, shows its Terminal page or comes
+/// forward: a lookup is a LaunchServices query for each editor, so never from a draw.
 pub(crate) struct OpenIn {
     /// The bundle identifiers of the table's apps that are installed.
     found: Vec<String>,
@@ -42,7 +43,7 @@ impl OpenIn {
 
     /// Look again (an app was installed or removed since): the icons already drawn are kept. The
     /// global is only set when the apps differ, since setting it tells everything that watches it
-    /// (the windows' title rows) and Settings looks again every time it draws.
+    /// (every window's regions).
     pub(crate) fn refresh(cx: &mut App) {
         let found = installed();
         match cx.try_global::<Self>() {
