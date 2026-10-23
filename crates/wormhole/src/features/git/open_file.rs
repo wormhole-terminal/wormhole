@@ -1,7 +1,8 @@
-//! The small icon that opens a file of the git panel in the editor Open in… uses: on a Changes or
+//! The small icon that opens a file of the git panel in the editor Open in… uses (the app's `open_in`
+//! module keeps which apps are installed; core's `platform::open_in` which are offered): on a Changes or
 //! History row and on a diff line while the pointer is over it, and in the diff's header. A click
-//! asks that app to open the file (at the line, where the app can: `wormhole_core::platform::open_file`);
-//! for Finder it reveals the file.
+//! asks that app to open the file (at the line, where the app can: `wormhole_core::platform::open_file`
+//! says how); for Finder it reveals the file.
 //!
 //! As for Open in… itself, the person asks an app they chose to open a file, so nothing from the
 //! project runs and project trust (`ProjectHub::enabled`) doesn't come into it. What the path

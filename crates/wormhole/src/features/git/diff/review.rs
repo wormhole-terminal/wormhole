@@ -55,7 +55,8 @@ impl Changes {
         let this = cx.weak_entity();
         Rc::new(move |at, window, cx| {
             let path = path.clone();
-            let _ = this.update(cx, |ws, cx| ws.comment_on_line(terminal.clone(), path, at, window, cx));
+            let _ = this
+                .update(cx, |changes, cx| changes.comment_on_line(terminal.clone(), path, at, window, cx));
         })
     }
 
