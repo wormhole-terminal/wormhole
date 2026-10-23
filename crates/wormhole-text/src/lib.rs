@@ -30,3 +30,9 @@ pub use active::with_language;
 pub use active::{is_loaded, language, set_language, text, text_in};
 pub use key::Key;
 pub use language::{Language, negotiate};
+
+/// A number as a message's whole-number argument (what a plural selects on), however it is stored.
+/// Larger than an `i64` is not a thing a person counts; it saturates.
+pub fn whole<N: TryInto<i64>>(number: N) -> i64 {
+    number.try_into().unwrap_or(i64::MAX)
+}
