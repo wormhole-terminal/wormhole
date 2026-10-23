@@ -34,12 +34,12 @@ pub(crate) fn init(cx: &mut App) {
 impl FirstRun {
     /// Whether the page is still coming in: a key or a click then cuts the animation short instead
     /// of acting.
-    pub(in crate::window) fn intro_is_entering(&self, cx: &App) -> bool {
+    pub(crate) fn intro_is_entering(&self, cx: &App) -> bool {
         self.is_open() && self.intro_entrance(cx).least() < 1.0 && crate::intro::progress(cx).is_some()
     }
 
     /// How far each part of the page has entered now.
-    pub(in crate::window) fn intro_entrance(&self, cx: &App) -> Entrance {
+    pub(crate) fn intro_entrance(&self, cx: &App) -> Entrance {
         let Some(progress) = crate::intro::progress(cx) else { return Entrance::DONE };
         if progress.skipped {
             return Entrance::DONE;
@@ -52,12 +52,7 @@ impl FirstRun {
     }
 
     /// Keys while the intro window is open.
-    pub(in crate::window) fn intro_keys(
-        &mut self,
-        event: &KeyDownEvent,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn intro_keys(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         let Some(intro) = &self.intro else { return };
         let keys = &event.keystroke;
         let m = &keys.modifiers;

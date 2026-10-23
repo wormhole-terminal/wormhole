@@ -157,7 +157,7 @@ impl Sidebar {
     }
 
     /// Close the popover and give the keyboard back to the terminal.
-    pub(in crate::window) fn finish_switcher(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn finish_switcher(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.end_switcher(true, window, cx);
     }
 

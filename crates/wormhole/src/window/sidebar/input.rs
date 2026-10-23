@@ -15,29 +15,29 @@ use crate::window::sidebar::terminal_drag::{DragOrigin, Over};
 
 /// The window's facts the list is drawn and acted on from: its terminals as rows, in the window's
 /// (manual) order, and the few things about the window the rows depend on.
-pub(in crate::window) struct SidebarInput {
+pub(crate) struct SidebarInput {
     /// Every terminal's row facts.
-    pub(in crate::window) rows: Vec<RowInfo>,
+    pub(crate) rows: Vec<RowInfo>,
     /// The selected terminal's place in `rows` (`usize::MAX` while the window has none).
-    pub(in crate::window) active: usize,
+    pub(crate) active: usize,
     /// The profile the window is in, whose settings and theme the list is drawn with.
-    pub(in crate::window) profile: ProfileId,
+    pub(crate) profile: ProfileId,
     /// The sidebar column's width (its width at rest while it slides).
-    pub(in crate::window) width: f32,
+    pub(crate) width: f32,
     /// The window's width, which the tab bar fits itself to.
-    pub(in crate::window) window_width: f32,
+    pub(crate) window_width: f32,
     /// The terminals are in tabs across the top, not in the sidebar.
-    pub(in crate::window) tabs_on: bool,
+    pub(crate) tabs_on: bool,
     /// The window's glass, while it is on: each card asks for a glass of its own.
-    pub(in crate::window) glass: Option<Rc<Glass>>,
+    pub(crate) glass: Option<Rc<Glass>>,
     /// A question about closing a terminal or the window is up (a × shows no tooltip then).
-    pub(in crate::window) asking: bool,
+    pub(crate) asking: bool,
     /// The terminal being dragged, by its row or its pane's header.
-    pub(in crate::window) terminal_drag: Option<(i64, DragOrigin)>,
+    pub(crate) terminal_drag: Option<(i64, DragOrigin)>,
     /// The group being dragged by its head.
-    pub(in crate::window) group_drag: Option<u32>,
+    pub(crate) group_drag: Option<u32>,
     /// The terminals whose welcome program is running: the example band is drawn only for one of them.
-    pub(in crate::window) welcomes: Vec<i64>,
+    pub(crate) welcomes: Vec<i64>,
 }
 
 impl Default for SidebarInput {
@@ -85,7 +85,7 @@ impl SidebarInput {
     }
 
     /// Terminal `id` and the rest of its split: they move, join and leave groups together.
-    pub(in crate::window) fn with_split_mates(&self, id: i64) -> Vec<i64> {
+    pub(crate) fn with_split_mates(&self, id: i64) -> Vec<i64> {
         let Some(ix) = self.find(id) else { return Vec::new() };
         match self.rows[ix].split {
             Some(split) => {
@@ -98,7 +98,7 @@ impl SidebarInput {
 
 /// How a new terminal is asked for.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::window) enum NewTerminal {
+pub(crate) enum NewTerminal {
     /// Where the selected terminal is, in its group.
     Plain,
     /// With the shell of this key (Settings → Shells), as the + menu offers.
@@ -112,7 +112,7 @@ pub(in crate::window) enum NewTerminal {
 /// What the list asks of the window. Delivered when the update that raised it ends, so a window never
 /// runs one while the sidebar is still being updated.
 #[derive(Clone, Debug)]
-pub(in crate::window) enum SidebarEvent {
+pub(crate) enum SidebarEvent {
     /// The saved view changed (a group made, folded, renamed, coloured, a terminal moved): save the window.
     Changed,
     /// Show terminal `id`; with `then_focus_list` the keyboard stays in the list (Space browses).

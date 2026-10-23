@@ -178,7 +178,7 @@ impl FirstRun {
 /// The themes the step offers, if the build has them (more are in Settings): core's list
 /// (`onboarding::LOOK_THEMES`), filled up with others where a build lacks some, and always with the
 /// theme in use (`current`) among them. The terminal welcome offers the same.
-pub(in crate::window) fn offered_themes(current: &str) -> Vec<&'static ThemeTokens> {
+pub(crate) fn offered_themes(current: &str) -> Vec<&'static ThemeTokens> {
     let wanted = onboarding::LOOK_THEMES;
     let mut themes: Vec<&ThemeTokens> =
         wanted.iter().filter_map(|name| builtins().iter().find(|t| t.name == *name)).collect();
@@ -201,7 +201,7 @@ pub(in crate::window) fn offered_themes(current: &str) -> Vec<&'static ThemeToke
 
 /// The primary colours the step offers for the theme `base`: the theme's own, and those of its
 /// terminal colours that differ from it, each with its place in the terminal's 16.
-pub(in crate::window) fn offered_primaries(
+pub(crate) fn offered_primaries(
     base: &ThemeTokens,
 ) -> (Option<wormhole_core::theme::tokens::Color>, Vec<(usize, wormhole_core::theme::tokens::Color)>) {
     let theme_primary = base.get("primary").map(|c| c.with_alpha(1.0));

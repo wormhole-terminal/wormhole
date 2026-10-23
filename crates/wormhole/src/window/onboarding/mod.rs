@@ -51,7 +51,7 @@ use crate::settings::{UiColors, ui};
 use crate::style::{self, Edges, TextRole};
 
 pub(crate) use keys::init;
-pub(in crate::window) use look_step::{offered_primaries, offered_themes};
+pub(crate) use look_step::{offered_primaries, offered_themes};
 
 /// An agent on PATH, as the third step lists it.
 #[derive(Clone)]
@@ -128,7 +128,7 @@ enum AgentsNote {
 /// the sidebar's note after a primer. The window tells it what it needs of the window (`set_facts`, the
 /// terminal that was there when it began, whether an agent runs) and hears from it by [`FirstRunEvent`].
 #[derive(Default)]
-pub(in crate::window) struct FirstRun {
+pub(crate) struct FirstRun {
     intro: Option<Intro>,
     /// A change of page waiting for the window to be out of sight (a replay's start).
     swap: Option<Task<()>>,
@@ -139,46 +139,46 @@ pub(in crate::window) struct FirstRun {
 }
 
 /// How an intro window opens: what it is of, and what the window knows that it needs from the start.
-pub(in crate::window) struct Opening {
-    pub(in crate::window) model: Onboarding,
+pub(crate) struct Opening {
+    pub(crate) model: Onboarding,
     /// Whether finishing it is the first run (remembered, the first terminal moving to the folder
     /// picked) or only a replay.
-    pub(in crate::window) first_run: bool,
+    pub(crate) first_run: bool,
     /// The window's terminal that is there now.
-    pub(in crate::window) first: Option<i64>,
+    pub(crate) first: Option<i64>,
     /// Whether the animation plays around it, and from where.
-    pub(in crate::window) play: Option<Start>,
+    pub(crate) play: Option<Start>,
     /// The projects opened recently, which the first step offers.
-    pub(in crate::window) recent: Vec<PathBuf>,
+    pub(crate) recent: Vec<PathBuf>,
 }
 
 /// What the intro needs to know of the window it is in, said before it is drawn.
 #[derive(Default)]
-pub(in crate::window) struct Facts {
+pub(crate) struct Facts {
     /// The trust card of the project the intro is about, if it has one to show.
-    pub(in crate::window) trust: Option<TrustCard>,
+    pub(crate) trust: Option<TrustCard>,
     /// Whether the window's profile has Notes on, for the words and keys that name it.
-    pub(in crate::window) notes_on: bool,
+    pub(crate) notes_on: bool,
 }
 
 /// The project folder's trust card, as the window's profile sees the project (the window asks the project
 /// feature, so the intro names no feature).
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::window) struct TrustCard {
+pub(crate) struct TrustCard {
     /// The project's root: what the button trusts.
-    pub(in crate::window) root: PathBuf,
+    pub(crate) root: PathBuf,
     /// The project folder's name, and the name of its `.wormhole` directory on disk.
-    pub(in crate::window) name: String,
-    pub(in crate::window) dir: String,
+    pub(crate) name: String,
+    pub(crate) dir: String,
     /// How many commands trusting it would let run.
-    pub(in crate::window) commands: usize,
+    pub(crate) commands: usize,
     /// The approval dialog is up.
-    pub(in crate::window) approving: bool,
+    pub(crate) approving: bool,
 }
 
 /// What the intro asks of the window. Delivered when the update that raised it ends.
 #[derive(Debug)]
-pub(in crate::window) enum FirstRunEvent {
+pub(crate) enum FirstRunEvent {
     /// The intro window is over and the keyboard goes back to the terminal. On a first run that picked a
     /// folder, the terminal that was there when it began (`first`) is replaced by one in the folder, if it
     /// is still the window's only one and not there already.
@@ -202,7 +202,7 @@ impl FirstRun {
     /// The project whose trust card the agents step shows: the folder picked in the first step, else the
     /// project of the terminal in front (`active_root`). `None` when the step shows no card (another
     /// step, or "Later" was pressed). The window builds the card from it ([`Facts::trust`]).
-    pub(in crate::window) fn trust_root(&self, active_root: Option<PathBuf>) -> Option<PathBuf> {
+    pub(crate) fn trust_root(&self, active_root: Option<PathBuf>) -> Option<PathBuf> {
         let intro = self.intro.as_ref().filter(|intro| !intro.trust_later)?;
         if intro.model.step() != Step::Agents {
             return None;
@@ -214,23 +214,23 @@ impl FirstRun {
     }
 
     /// The window's facts, before the intro is drawn.
-    pub(in crate::window) fn set_facts(&mut self, facts: Facts) {
+    pub(crate) fn set_facts(&mut self, facts: Facts) {
         self.facts = facts;
     }
 
     /// The intro window is over the window (its keys go to it, the window's actions wait).
-    pub(in crate::window) fn is_open(&self) -> bool {
+    pub(crate) fn is_open(&self) -> bool {
         self.intro.is_some()
     }
 
     /// Whether the sidebar's note is up or offered (the window then says whether an agent runs).
-    pub(in crate::window) fn note_wanted(&self, tip_dismissed: bool) -> bool {
+    pub(crate) fn note_wanted(&self, tip_dismissed: bool) -> bool {
         self.agents_note != AgentsNote::Off && !tip_dismissed
     }
 
     /// The terminal welcome ended on the primer (no agent on PATH): the sidebar says so until an
     /// agent shows, as after the intro window's primer.
-    pub(in crate::window) fn show_no_agents_note(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn show_no_agents_note(&mut self, cx: &mut Context<Self>) {
         self.agents_note = AgentsNote::Shown;
         cx.notify();
     }
@@ -245,12 +245,7 @@ impl FirstRun {
     /// as shown or never shown, or with nothing played when that is `None`. `first_run` is whether
     /// finishing it is the first run (remembered, the first terminal moving to the folder picked) or
     /// only a replay; `first` is the window's terminal that is there now.
-    pub(in crate::window) fn open_intro(
-        &mut self,
-        opening: Opening,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn open_intro(&mut self, opening: Opening, window: &mut Window, cx: &mut Context<Self>) {
         let Opening { model, first_run, first, play, recent } = opening;
         let intro = self.new_intro(model, first_run, first, &recent, cx);
         // Test instances stay behind other windows, and their screenshots don't need a show.
@@ -283,7 +278,7 @@ impl FirstRun {
     }
 
     /// Run `then` once the window has left, as a replay begins.
-    pub(in crate::window) fn after_fade(
+    pub(crate) fn after_fade(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -297,7 +292,7 @@ impl FirstRun {
 
     /// The replay button (and R): the window leaves, the animation plays again and the intro comes
     /// back to its welcome page.
-    pub(in crate::window) fn replay_intro(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn replay_intro(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.intro.is_none() {
             return;
         }
@@ -377,7 +372,7 @@ impl FirstRun {
     /// What the intro window is doing, for devctl's `state`: the page, the animation and how far the
     /// page has entered; `None` when it isn't open.
     #[cfg(feature = "devctl")]
-    pub(in crate::window) fn devctl_intro_state(&self, cx: &App) -> Option<String> {
+    pub(crate) fn devctl_intro_state(&self, cx: &App) -> Option<String> {
         let intro = self.intro.as_ref()?;
         let playing = match crate::intro::progress(cx) {
             Some(p) => format!("{:.2}s{}", p.seconds, if p.skipped { " skipped" } else { "" }),
@@ -393,7 +388,7 @@ impl FirstRun {
 
     /// Close the intro window without remembering it (devctl `onboarding close`, as Skip but unmarked).
     #[cfg(feature = "devctl")]
-    pub(in crate::window) fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.intro = None;
         self.swap = None;
         crate::platform::window::set_shown(window, true);
@@ -485,7 +480,7 @@ impl FirstRun {
     /// the way to the agents' settings. Gone once a terminal of the window runs an agent, or
     /// with its ×; closed for good with "Don't show again".
     /// `agent_seen`: a terminal of the window runs an agent, which the window says.
-    pub(in crate::window) fn render_no_agents_note(
+    pub(crate) fn render_no_agents_note(
         &self,
         agent_seen: bool,
         cx: &mut Context<Self>,

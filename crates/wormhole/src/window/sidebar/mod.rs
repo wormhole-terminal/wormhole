@@ -7,7 +7,7 @@
 //! rows, which is selected, the profile, the width, the glass, the drag in flight) before it is drawn
 //! and before the window asks it for something that depends on the terminals as they are; what the
 //! person does in the list comes back as a [`SidebarEvent`] the window handles (`window::sidebar_host`).
-//! The window reaches the list's state through the methods marked `pub(in crate::window)`.
+//! The window reaches the list's state through the methods marked `pub(crate)`.
 use std::cell::RefCell;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::rc::Rc;
@@ -37,7 +37,7 @@ mod hints;
 mod input;
 mod keys;
 mod motion;
-pub(in crate::window) mod profile_chip;
+pub(crate) mod profile_chip;
 mod rename;
 mod row_menu;
 mod rows;
@@ -46,19 +46,19 @@ pub(crate) mod shells;
 mod sidebar_tests;
 mod switcher;
 mod tab_bar;
-pub(in crate::window) mod terminal_drag;
+pub(crate) mod terminal_drag;
 
-pub(in crate::window) use facts::row_times;
-pub(in crate::window) use facts::{RowExtra, RowExtras, RowFailure, RowInfo};
-pub(in crate::window) use input::{NewTerminal, SidebarEvent, SidebarInput};
-pub(in crate::window) use keys::SidebarStop;
+pub(crate) use facts::row_times;
+pub(crate) use facts::{RowExtra, RowExtras, RowFailure, RowInfo};
+pub(crate) use input::{NewTerminal, SidebarEvent, SidebarInput};
+pub(crate) use keys::SidebarStop;
 use motion::{ItemKey, ListMotion};
-pub(in crate::window) use row_menu::reveal_in_finder;
-pub(in crate::window) use tab_bar::TAB_ROW_H;
+pub(crate) use row_menu::reveal_in_finder;
+pub(crate) use tab_bar::TAB_ROW_H;
 
 /// The terminal list: what is saved with the window (the groups, their order, which are folded) and what
 /// it is doing right now.
-pub(in crate::window) struct Sidebar {
+pub(crate) struct Sidebar {
     /// Saved in the window's layout.
     view: WindowSidebar,
     /// What the window last said of itself.
@@ -111,7 +111,7 @@ impl EventEmitter<SidebarEvent> for Sidebar {}
 
 impl Sidebar {
     /// A list with `view` saved from the window it was in, whose keys go to `focus` (the area's handle).
-    pub(in crate::window) fn new(
+    pub(crate) fn new(
         view: WindowSidebar,
         focus: FocusHandle,
         profiles: profile_chip::ProfilesFn,
@@ -148,91 +148,87 @@ impl Sidebar {
 
     /// What the window says of itself now: what the next frame, and every call that reads the
     /// terminals, goes by.
-    pub(in crate::window) fn set_input(&mut self, input: SidebarInput) {
+    pub(crate) fn set_input(&mut self, input: SidebarInput) {
         self.input = Rc::new(input);
     }
 
     /// The column's width as last said, for a push that changes nothing else.
-    pub(in crate::window) fn width(&self) -> f32 {
+    pub(crate) fn width(&self) -> f32 {
         self.input.width
     }
 
     /// The saved view: the groups, their order, which are folded.
-    pub(in crate::window) fn view(&self) -> &WindowSidebar {
+    pub(crate) fn view(&self) -> &WindowSidebar {
         &self.view
     }
 
     /// The saved view, to change (the window seats a joined terminal beside its mates, closes one).
     /// The caller says `Changed` itself when it matters.
-    pub(in crate::window) fn view_mut(&mut self) -> &mut WindowSidebar {
+    pub(crate) fn view_mut(&mut self) -> &mut WindowSidebar {
         &mut self.view
     }
 
     /// The list's scroll, which devctl and the tests turn and measure.
     #[cfg(any(test, feature = "devctl"))]
-    pub(in crate::window) fn scroll(&self) -> &ScrollHandle {
+    pub(crate) fn scroll(&self) -> &ScrollHandle {
         &self.scroll
     }
 
     /// What the pointer is over in the list while something is dragged over it.
     #[cfg(test)]
-    pub(in crate::window) fn over(&self) -> Option<Over> {
+    pub(crate) fn over(&self) -> Option<Over> {
         self.over
     }
 
     /// The pointer left the list for the panes: nothing in the list is the target. Whether it was.
-    pub(in crate::window) fn take_over(&mut self) -> bool {
+    pub(crate) fn take_over(&mut self) -> bool {
         self.over.take().is_some()
     }
 
     /// The list's focus handle, which holds the keyboard while the list is the area the keys are in.
-    pub(in crate::window) fn focus_handle(&self) -> &FocusHandle {
+    pub(crate) fn focus_handle(&self) -> &FocusHandle {
         &self.focus
     }
 
     /// The item the keys are on.
     #[cfg(any(test, feature = "devctl"))]
-    pub(in crate::window) fn keys_at(&self) -> Option<&SidebarStop> {
+    pub(crate) fn keys_at(&self) -> Option<&SidebarStop> {
         self.keys_at.as_ref()
     }
 
     /// The terminal whose row wears the ring for an open menu.
     #[cfg(test)]
-    pub(in crate::window) fn menu_row(&self) -> Option<i64> {
+    pub(crate) fn menu_row(&self) -> Option<i64> {
         self.menu_row
     }
 
     /// The group being renamed, and its name field.
     #[cfg(test)]
-    pub(in crate::window) fn group_renaming(
-        &self,
-    ) -> Option<(u32, Entity<gpui_kit::component::input::InputState>)> {
+    pub(crate) fn group_renaming(&self) -> Option<(u32, Entity<gpui_kit::component::input::InputState>)> {
         self.group_renaming.as_ref().map(|r| (r.group, r.input.clone()))
     }
 
     /// Whether the terminal welcome's example band is up.
     #[cfg(test)]
-    pub(in crate::window) fn has_demo(&self) -> bool {
+    pub(crate) fn has_demo(&self) -> bool {
         self.demo.is_some()
     }
 
     /// The profile chip's menu is open.
     #[cfg(test)]
-    pub(in crate::window) fn profile_menu_open(&self) -> bool {
+    pub(crate) fn profile_menu_open(&self) -> bool {
         self.profile_menu.is_some()
     }
 
     /// The terminal being renamed, and its name field.
     #[cfg(test)]
-    pub(in crate::window) fn terminal_renaming(
-        &self,
-    ) -> Option<Entity<gpui_kit::component::input::InputState>> {
+    pub(crate) fn terminal_renaming(&self) -> Option<Entity<gpui_kit::component::input::InputState>> {
         self.renaming.as_ref().map(|r| r.input.clone())
     }
 
     /// Whether the times on the rows read as `now` says: no, and the list wants a redraw (a row's
     /// "Working · 3m" moved on its own).
-    pub(in crate::window) fn times_changed(&mut self, now: Vec<Option<String>>) -> bool {
+    pub(crate) fn times_changed(&mut self, now: Vec<Option<String>>) -> bool {
         if self.times_drawn == now {
             return false;
         }
@@ -241,7 +237,7 @@ impl Sidebar {
     }
 
     /// The list as the sidebar draws it, from `input`'s terminals.
-    pub(in crate::window) fn listing_of(&self, input: &SidebarInput, cx: &App) -> Listing {
+    pub(crate) fn listing_of(&self, input: &SidebarInput, cx: &App) -> Listing {
         let ids = input.ids();
         let pinned = input.pinned();
         let split_of = input.split_of();
@@ -282,7 +278,7 @@ impl Sidebar {
     }
 
     /// The person rearranged the list: the ⌘ numbers are dealt again, and the window saves.
-    pub(in crate::window) fn list_rearranged(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn list_rearranged(&mut self, cx: &mut Context<Self>) {
         self.order_rev += 1;
         self.changed(cx);
     }

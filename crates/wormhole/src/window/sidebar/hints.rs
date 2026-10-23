@@ -10,12 +10,12 @@ use crate::settings::settings_in;
 
 impl Sidebar {
     /// The ⌘1–9 keycaps are showing (⌘ held alone long enough, and the setting on).
-    pub(in crate::window) fn hints_showing(&self, cx: &App) -> bool {
+    pub(crate) fn hints_showing(&self, cx: &App) -> bool {
         settings_in(&self.input.profile, cx).sidebar_cmd_hints && self.hold.showing(Instant::now())
     }
 
     /// The modifier keys changed (from the window's root).
-    pub(in crate::window) fn modifiers(
+    pub(crate) fn modifiers(
         &mut self,
         event: &ModifiersChangedEvent,
         window: &mut Window,
@@ -46,7 +46,7 @@ impl Sidebar {
     }
 
     /// The window lost focus: whatever is held is not for this window.
-    pub(in crate::window) fn blur(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn blur(&mut self, cx: &mut Context<Self>) {
         let before = self.hints_showing(cx);
         self.hold.blur();
         self.hold_timer = None;

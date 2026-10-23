@@ -16,26 +16,26 @@ use crate::style::home_dir;
 use crate::theme_bridge;
 
 /// The colours a group can wear, as the theme in force draws them.
-pub(in crate::window) fn group_colors(profile: &ProfileId, cx: &App) -> Vec<(GroupColor, Hsla)> {
+pub(crate) fn group_colors(profile: &ProfileId, cx: &App) -> Vec<(GroupColor, Hsla)> {
     let tokens = &store_in(profile, cx).tokens;
     GroupColor::ALL.into_iter().map(|color| (color, theme_bridge::hsla(color.color(tokens)))).collect()
 }
 
 impl Sidebar {
     /// Fold an open group, or open a folded one.
-    pub(in crate::window) fn toggle_group_band(&mut self, group: u32, cx: &mut Context<Self>) {
+    pub(crate) fn toggle_group_band(&mut self, group: u32, cx: &mut Context<Self>) {
         self.view.toggle_group_fold(group);
         self.list_rearranged(cx);
     }
 
     /// Where a new terminal in `group` starts: the group's folder if it has one that is still a
     /// directory (`None`: the window's choice, where the selected terminal is).
-    pub(in crate::window) fn start_folder(&self, group: u32) -> Option<String> {
+    pub(crate) fn start_folder(&self, group: u32) -> Option<String> {
         self.view.groups.start_folder(group)
     }
 
     /// Put terminal `id` (with the rest of its split) in group `group`, last in it.
-    pub(in crate::window) fn move_to_group(&mut self, id: i64, group: u32, cx: &mut Context<Self>) {
+    pub(crate) fn move_to_group(&mut self, id: i64, group: u32, cx: &mut Context<Self>) {
         let ids = self.input.ids();
         for member in self.input.with_split_mates(id) {
             self.view.place_in_group(&ids, member, group, None);
@@ -44,7 +44,7 @@ impl Sidebar {
     }
 
     /// Take terminal `id` (with the rest of its split) out of its group: it stands right after it.
-    pub(in crate::window) fn remove_from_group(&mut self, id: i64, cx: &mut Context<Self>) {
+    pub(crate) fn remove_from_group(&mut self, id: i64, cx: &mut Context<Self>) {
         let ids = self.input.ids();
         let Some(group) = self.view.groups.group_of(id) else { return };
         let top = self.view.arranged(&ids);
@@ -57,7 +57,7 @@ impl Sidebar {
     }
 
     /// A new group holding `terminals` (and the rest of their splits). Its id.
-    pub(in crate::window) fn group_terminals(&mut self, terminals: &[i64], cx: &mut Context<Self>) -> u32 {
+    pub(crate) fn group_terminals(&mut self, terminals: &[i64], cx: &mut Context<Self>) -> u32 {
         let ids = self.input.ids();
         let mut members: Vec<i64> = Vec::new();
         for &id in terminals {
@@ -80,29 +80,19 @@ impl Sidebar {
     }
 
     /// Take group `group` apart; its terminals stand where it stood.
-    pub(in crate::window) fn ungroup(&mut self, group: u32, cx: &mut Context<Self>) {
+    pub(crate) fn ungroup(&mut self, group: u32, cx: &mut Context<Self>) {
         let ids = self.input.ids();
         self.view.ungroup(&ids, group);
         self.list_rearranged(cx);
     }
 
-    pub(in crate::window) fn set_group_color(
-        &mut self,
-        group: u32,
-        color: Option<GroupColor>,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn set_group_color(&mut self, group: u32, color: Option<GroupColor>, cx: &mut Context<Self>) {
         self.view.groups.set_color(group, color);
         self.changed(cx);
     }
 
     /// Give group `group` a colour of its own, as the system's colour panel chose it.
-    pub(in crate::window) fn set_group_custom_color(
-        &mut self,
-        group: u32,
-        color: Hsla,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn set_group_custom_color(&mut self, group: u32, color: Hsla, cx: &mut Context<Self>) {
         let rgba = Rgba::from(color);
         let byte = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
         self.view.groups.set_custom_color(group, [byte(rgba.r), byte(rgba.g), byte(rgba.b)]);
@@ -110,7 +100,7 @@ impl Sidebar {
     }
 
     /// The group's folder as the list shows it (`~/Projects/app`), if it has one.
-    pub(in crate::window) fn group_folder_label(&self, group: u32) -> Option<String> {
+    pub(crate) fn group_folder_label(&self, group: u32) -> Option<String> {
         let folder = self.view.groups.get(group)?.folder.as_deref()?;
         Some(wormhole_core::view::sidebar::display_path(Path::new(folder), home_dir()))
     }
@@ -146,18 +136,13 @@ impl Sidebar {
     }
 
     /// Set the folder new terminals in group `group` start in, or take it away (`None`).
-    pub(in crate::window) fn set_group_folder(
-        &mut self,
-        group: u32,
-        folder: Option<&str>,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn set_group_folder(&mut self, group: u32, folder: Option<&str>, cx: &mut Context<Self>) {
         self.view.groups.set_folder(group, folder);
         self.changed(cx);
     }
 
     /// Pin group `group` (it stays, as a line, when its last terminal closes) or let it go again.
-    pub(in crate::window) fn toggle_group_pin(&mut self, group: u32, cx: &mut Context<Self>) {
+    pub(crate) fn toggle_group_pin(&mut self, group: u32, cx: &mut Context<Self>) {
         let pinned = self.view.groups.get(group).is_some_and(|group| group.pinned);
         self.view.groups.set_pinned(group, !pinned);
         self.changed(cx);
@@ -165,7 +150,7 @@ impl Sidebar {
 
     /// Put what a drop landed where it landed: a terminal (with its split, if `with_mates`) or a
     /// group.
-    pub(in crate::window) fn land_terminal(
+    pub(crate) fn land_terminal(
         &mut self,
         id: i64,
         landing: Landing,
@@ -187,7 +172,7 @@ impl Sidebar {
     }
 
     /// Flash terminal `id`'s row once: it just moved to another group.
-    pub(in crate::window) fn flash(&mut self, id: i64) {
+    pub(crate) fn flash(&mut self, id: i64) {
         self.flash = Some((id, self.flash.map_or(0, |(_, n)| n + 1)));
     }
 }

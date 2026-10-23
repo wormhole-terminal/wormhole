@@ -78,7 +78,7 @@ impl Sidebar {
 
     /// Open terminal `id`'s menu at `at`, its row wearing the ring until the menu closes, with the
     /// terminals the window says could show beside it. Nothing opens for a terminal that is gone.
-    pub(in crate::window) fn show_row_menu(
+    pub(crate) fn show_row_menu(
         &mut self,
         id: i64,
         at: Point<Pixels>,
@@ -124,7 +124,7 @@ impl Sidebar {
 /// Finder).
 // GPUI's test platform panics on `reveal_path` (gpui-pre 0.3.9, `platform/test/platform.rs`), so a view
 // test that clicks this needs a stand-in first.
-pub(in crate::window) fn reveal_in_finder(path: &Path, cx: &App) {
+pub(crate) fn reveal_in_finder(path: &Path, cx: &App) {
     cx.reveal_path(path);
 }
 

@@ -247,7 +247,7 @@ impl Sidebar {
     }
 
     /// What dropping terminal `dragged` on `over` would do, of the terminals `input` says there are.
-    pub(in crate::window) fn terminal_drop_plan(
+    pub(crate) fn terminal_drop_plan(
         input: &SidebarInput,
         listing: &Listing,
         dragged: i64,

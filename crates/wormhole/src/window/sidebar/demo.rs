@@ -43,13 +43,7 @@ impl Sidebar {
     /// The welcome in `tab` says its sidebar step is up (`show`) or was left. Only a terminal of this
     /// window can put the band up (`in_window`: the window checked); asking again while it is up
     /// leaves the cycle where it is.
-    pub(in crate::window) fn set_welcome_demo(
-        &mut self,
-        tab: i64,
-        show: bool,
-        in_window: bool,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn set_welcome_demo(&mut self, tab: i64, show: bool, in_window: bool, cx: &mut Context<Self>) {
         if !show {
             self.end_welcome_demo(tab);
         } else if self.demo.as_ref().is_none_or(|demo| demo.tab != tab) && in_window {
@@ -70,7 +64,7 @@ impl Sidebar {
     }
 
     /// Take the band away if it is `tab`'s.
-    pub(in crate::window) fn end_welcome_demo(&mut self, tab: i64) {
+    pub(crate) fn end_welcome_demo(&mut self, tab: i64) {
         if self.demo.as_ref().is_some_and(|demo| demo.tab == tab) {
             self.demo = None;
         }
@@ -87,11 +81,7 @@ impl Sidebar {
 
     /// The example rows as drawn now (devctl and the tests).
     #[cfg(any(test, feature = "devctl"))]
-    pub(in crate::window) fn welcome_demo_rows(
-        &self,
-        input: &SidebarInput,
-        cx: &App,
-    ) -> Option<[example::Row; 3]> {
+    pub(crate) fn welcome_demo_rows(&self, input: &SidebarInput, cx: &App) -> Option<[example::Row; 3]> {
         let demo = self.demo_in_view(input)?;
         Some(example::rows(demo.since.elapsed(), cx.reduce_motion()))
     }

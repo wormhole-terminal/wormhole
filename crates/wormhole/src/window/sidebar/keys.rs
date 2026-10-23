@@ -25,7 +25,7 @@ use crate::focus_keys::{
 /// A sidebar item the keys can be on: one of the person's groups (by its id) or a terminal (by its
 /// id).
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::window) enum SidebarStop {
+pub(crate) enum SidebarStop {
     Group(u32),
     Row(i64),
 }
@@ -68,7 +68,7 @@ impl Sidebar {
 
     /// Coming into the list (F6, ⇥): the keys go back where they were, or onto the selected
     /// terminal (its band while it is folded away), or the first item.
-    pub(in crate::window) fn enter(&mut self, cx: &App) {
+    pub(crate) fn enter(&mut self, cx: &App) {
         let list = self.walk(cx);
         if self.keys_at.as_ref().is_some_and(|at| list.stops.contains(at)) {
             return;

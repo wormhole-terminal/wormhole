@@ -16,15 +16,11 @@ use crate::settings::settings;
 const MENU_TITLE: &str = "New terminal with";
 
 /// What choosing a shell (by its key) does.
-pub(in crate::window) type OnShell = Rc<dyn Fn(String, &mut Window, &mut App)>;
+pub(crate) type OnShell = Rc<dyn Fn(String, &mut Window, &mut App)>;
 
 /// `button` (a +) with the shells' menu under a right-click: every shell by name, the default
 /// (what a left click opens) checked.
-pub(in crate::window) fn with_shell_menu(
-    id: &'static str,
-    button: impl IntoElement,
-    on_shell: OnShell,
-) -> AnyElement {
+pub(crate) fn with_shell_menu(id: &'static str, button: impl IntoElement, on_shell: OnShell) -> AnyElement {
     div()
         .id(id)
         .relative()

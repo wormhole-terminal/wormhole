@@ -29,7 +29,7 @@ use crate::style::TerminalTab;
 /// The gap between the tabs and the terminal's surface under them.
 const TAB_GAP: f32 = 8.0;
 /// The tab bar's height under the title row: a tab's, and the gap above the terminal's surface.
-pub(in crate::window) const TAB_ROW_H: f32 = style::TAB_H + TAB_GAP;
+pub(crate) const TAB_ROW_H: f32 = style::TAB_H + TAB_GAP;
 /// How much of the selected tab's fill lies over its glass.
 const GLASS_SELECTED: f32 = 0.7;
 /// The hairlines between the bar's parts.
@@ -89,7 +89,7 @@ impl Sidebar {
     /// switch to. The bar shows once there is more than one set (a group beside another, or beside
     /// the ungrouped terminals), where the group switcher is, or the current set has more than one
     /// terminal. Wherever it shows, the current set's terminals are its tabs, even when it is one.
-    pub(in crate::window) fn render_tab_bar(
+    pub(crate) fn render_tab_bar(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -226,7 +226,7 @@ impl Sidebar {
 
     /// ⌃⌥] and ⌃⌥[: the next or previous group, in the switcher's order with the terminals in no
     /// group last. Both layouts.
-    pub(in crate::window) fn step_group(&mut self, forward: bool, cx: &mut Context<Self>) {
+    pub(crate) fn step_group(&mut self, forward: bool, cx: &mut Context<Self>) {
         let listing = self.listing(cx);
         let view = self.set_view(&listing, cx);
         let Some(current) = view.current else { return };
@@ -236,7 +236,7 @@ impl Sidebar {
     }
 
     /// ⌃⌥1–9: the group with that number in the switcher's list.
-    pub(in crate::window) fn go_to_group(&mut self, number: u8, cx: &mut Context<Self>) {
+    pub(crate) fn go_to_group(&mut self, number: u8, cx: &mut Context<Self>) {
         let listing = self.listing(cx);
         let view = self.set_view(&listing, cx);
         if let Some(at) = set_numbered(&view.sets, usize::from(number)) {

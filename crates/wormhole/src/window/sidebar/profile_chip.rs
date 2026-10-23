@@ -24,18 +24,18 @@ use crate::theme_bridge;
 
 /// The app's profiles as the chip draws them: every profile, in the list's order, and the one Wormhole
 /// is in.
-pub(in crate::window) struct Profiles {
-    pub(in crate::window) list: Vec<Profile>,
-    pub(in crate::window) active: ProfileId,
+pub(crate) struct Profiles {
+    pub(crate) list: Vec<Profile>,
+    pub(crate) active: ProfileId,
 }
 
 /// Where the chip reads the profiles from: the window says, so the sidebar names no app state. `None`
 /// while there is one profile, which the chip is not drawn for.
-pub(in crate::window) type ProfilesFn = fn(&App) -> Option<Profiles>;
+pub(crate) type ProfilesFn = fn(&App) -> Option<Profiles>;
 
 /// Which list the open menu shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::window) enum ProfilePage {
+pub(crate) enum ProfilePage {
     Main,
     /// "Open a window in…": the profiles to pick from.
     OpenIn,
@@ -61,7 +61,7 @@ struct Choice {
 
 impl Sidebar {
     /// The chip with its menu, or nothing while there is one profile.
-    pub(in crate::window) fn render_profile_chip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+    pub(crate) fn render_profile_chip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let Profiles { list, active } = (self.profiles)(cx)?;
         let ui = ui_in(&self.input.profile, cx);
         let tokens = &store_in(&self.input.profile, cx).tokens;

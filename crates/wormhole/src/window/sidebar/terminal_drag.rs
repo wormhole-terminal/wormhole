@@ -16,7 +16,7 @@ use crate::style::StatusGlyph;
 
 /// Where a drag was picked up.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::window) enum DragOrigin {
+pub(crate) enum DragOrigin {
     /// A terminal's row in the sidebar.
     Row,
     /// A pane's header over the terminal.
@@ -25,23 +25,18 @@ pub(in crate::window) enum DragOrigin {
 
 /// The payload and the picture of a dragged terminal: its status glyph and name, beside the pointer.
 #[derive(Clone)]
-pub(in crate::window) struct DraggedTerminal {
-    pub(in crate::window) id: i64,
-    pub(in crate::window) origin: DragOrigin,
-    pub(in crate::window) name: SharedString,
-    pub(in crate::window) glyph: StatusGlyph,
+pub(crate) struct DraggedTerminal {
+    pub(crate) id: i64,
+    pub(crate) origin: DragOrigin,
+    pub(crate) name: SharedString,
+    pub(crate) glyph: StatusGlyph,
     /// Where in the row or header it was picked up. GPUI draws the picture with its corner where
     /// the source's was, so it moves by this much to come out beside the pointer.
-    pub(in crate::window) grabbed: Point<Pixels>,
+    pub(crate) grabbed: Point<Pixels>,
 }
 
 impl DraggedTerminal {
-    pub(in crate::window) fn new(
-        id: i64,
-        origin: DragOrigin,
-        name: SharedString,
-        glyph: StatusGlyph,
-    ) -> Self {
+    pub(crate) fn new(id: i64, origin: DragOrigin, name: SharedString, glyph: StatusGlyph) -> Self {
         Self { id, origin, name, glyph, grabbed: Point::default() }
     }
 }
@@ -64,14 +59,14 @@ impl Render for DraggedTerminal {
 /// The side of a pane the pointer is over while a terminal is dragged over the panes, where
 /// dropping it would work.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::window) struct PaneHover {
-    pub(in crate::window) target: PaneId,
-    pub(in crate::window) zone: Zone,
+pub(crate) struct PaneHover {
+    pub(crate) target: PaneId,
+    pub(crate) zone: Zone,
 }
 
 /// What the pointer is over in the sidebar while something is dragged there.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::window) enum Over {
+pub(crate) enum Over {
     /// A terminal's row, and the part of it.
     Row { id: i64, part: Part },
     /// A group's head, and the part of it.
@@ -83,27 +78,27 @@ pub(in crate::window) enum Over {
 }
 
 /// What a drag in flight is over.
-pub(in crate::window) struct TerminalDrag {
-    pub(in crate::window) id: i64,
-    pub(in crate::window) origin: DragOrigin,
+pub(crate) struct TerminalDrag {
+    pub(crate) id: i64,
+    pub(crate) origin: DragOrigin,
     /// The pane edge the pointer is over.
-    pub(in crate::window) pane: Option<PaneHover>,
+    pub(crate) pane: Option<PaneHover>,
 }
 
 impl TerminalDrag {
-    pub(in crate::window) fn new(id: i64, origin: DragOrigin) -> Self {
+    pub(crate) fn new(id: i64, origin: DragOrigin) -> Self {
         Self { id, origin, pane: None }
     }
 }
 
 /// The payload and the picture of a dragged group: its colour and name, beside the pointer.
 #[derive(Clone)]
-pub(in crate::window) struct DraggedGroup {
-    pub(in crate::window) group: u32,
-    pub(in crate::window) name: SharedString,
-    pub(in crate::window) color: Option<Hsla>,
+pub(crate) struct DraggedGroup {
+    pub(crate) group: u32,
+    pub(crate) name: SharedString,
+    pub(crate) color: Option<Hsla>,
     /// Where in the head it was picked up (see [`DraggedTerminal::grabbed`]).
-    pub(in crate::window) grabbed: Point<Pixels>,
+    pub(crate) grabbed: Point<Pixels>,
 }
 
 impl Render for DraggedGroup {
@@ -122,7 +117,7 @@ impl Render for DraggedGroup {
 }
 
 /// The status glyph a pane's header says its terminal has: the same states as its slot.
-pub(in crate::window) fn pane_glyph(status: crate::terminal_view::Status, told: bool) -> StatusGlyph {
+pub(crate) fn pane_glyph(status: crate::terminal_view::Status, told: bool) -> StatusGlyph {
     use crate::terminal_view::Status;
     match status {
         Status::Busy if told => StatusGlyph::Working,

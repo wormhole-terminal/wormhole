@@ -17,12 +17,7 @@ pub(super) struct TerminalRename {
 }
 
 impl Sidebar {
-    pub(in crate::window) fn start_terminal_rename(
-        &mut self,
-        id: i64,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn start_terminal_rename(&mut self, id: i64, window: &mut Window, cx: &mut Context<Self>) {
         let Some(ix) = self.input.find(id) else { return };
         let name = self.input.rows[ix].name.to_string();
         let input = cx.new(|cx| InputState::new(window, cx).default_value(name));
@@ -40,7 +35,7 @@ impl Sidebar {
 
     /// Keep the typed name (`keep`) or the old one; the window sets it and gives the keyboard back to
     /// the terminal.
-    pub(in crate::window) fn finish_terminal_rename(&mut self, keep: bool, cx: &mut Context<Self>) {
+    pub(crate) fn finish_terminal_rename(&mut self, keep: bool, cx: &mut Context<Self>) {
         let Some(renaming) = self.renaming.take() else { return };
         let typed = keep.then(|| renaming.input.read(cx).value().trim().to_string());
         cx.emit(SidebarEvent::Renamed { id: renaming.id, typed });
@@ -74,12 +69,7 @@ pub(super) struct GroupRename {
 
 impl Sidebar {
     /// Group `group`'s name becomes a field on its head (or on its card in the group switcher).
-    pub(in crate::window) fn start_group_rename(
-        &mut self,
-        group: u32,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn start_group_rename(&mut self, group: u32, window: &mut Window, cx: &mut Context<Self>) {
         let Some(name) = self.view.groups.get(group).map(|g| g.name.clone()) else { return };
         // The field made below has the keyboard: nothing here gives it to the terminal meanwhile.
         self.end_group_rename(true, false, window, cx);
@@ -101,12 +91,7 @@ impl Sidebar {
     }
 
     /// Keep the typed name (`keep`) or the old one, and give the keyboard back to the terminal.
-    pub(in crate::window) fn finish_group_rename(
-        &mut self,
-        keep: bool,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn finish_group_rename(&mut self, keep: bool, window: &mut Window, cx: &mut Context<Self>) {
         self.end_group_rename(keep, true, window, cx);
     }
 
