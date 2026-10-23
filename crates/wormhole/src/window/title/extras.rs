@@ -34,7 +34,7 @@ const PORTS_EVERY: Duration = Duration::from_secs(5);
 
 /// What the extras remember about one session.
 #[derive(Default)]
-pub(in crate::window) struct SessionExtras {
+pub(crate) struct SessionExtras {
     /// The model and context window its agent last reported.
     gauge: Option<Gauge>,
     /// The ports its programs listen on as of the last look, lowest first.

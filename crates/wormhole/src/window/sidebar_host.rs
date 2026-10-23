@@ -474,7 +474,7 @@ impl Workspace {
     }
 
     /// A new group holding `terminals` (and the rest of their splits). Its id.
-    pub(super) fn group_terminals(&mut self, terminals: &[i64], cx: &mut Context<Self>) -> u32 {
+    pub(crate) fn group_terminals(&mut self, terminals: &[i64], cx: &mut Context<Self>) -> u32 {
         self.with_sidebar(cx, |sidebar, cx| sidebar.group_terminals(terminals, cx))
     }
 

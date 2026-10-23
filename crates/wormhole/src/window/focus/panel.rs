@@ -43,7 +43,7 @@ impl Workspace {
 
     /// Where each of the tab's lists starts, as indices into its walkable rows: one ⇥ stop per
     /// section (a tab without bands is one list).
-    pub(in crate::window) fn panel_lists(&self, cx: &App) -> Vec<usize> {
+    pub(crate) fn panel_lists(&self, cx: &App) -> Vec<usize> {
         let rows = self.panel_walkable(cx);
         let mut starts: Vec<usize> =
             rows.iter().enumerate().filter(|(_, w)| w.band).map(|(ix, _)| ix).collect();
@@ -86,7 +86,7 @@ impl Workspace {
         self.panel_reveal(rows[start].row, cx);
     }
 
-    pub(in crate::window) fn panel_key(
+    pub(crate) fn panel_key(
         &mut self,
         keystroke: &Keystroke,
         window: &mut Window,

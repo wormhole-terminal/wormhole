@@ -11,13 +11,13 @@
 //! background hop as the status, so a feature that watches a file (an open diff) does not stat it on
 //! the UI thread.
 
-pub(in crate::window) mod job;
+pub(crate) mod job;
 mod poll;
 mod state;
 #[cfg(test)]
 mod tests;
 
-pub(in crate::window) use state::GitState;
+pub(crate) use state::GitState;
 
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -25,14 +25,14 @@ use std::time::SystemTime;
 /// A working-tree file's modification time and size. When they differ from what a diff was read
 /// from, the file was edited since.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::window) struct Stamp {
-    pub(in crate::window) modified: Option<SystemTime>,
-    pub(in crate::window) len: u64,
+pub(crate) struct Stamp {
+    pub(crate) modified: Option<SystemTime>,
+    pub(crate) len: u64,
 }
 
 impl Stamp {
     /// The stamp of the file at `path`, if it is there.
-    pub(in crate::window) fn of(path: &Path) -> Option<Self> {
+    pub(crate) fn of(path: &Path) -> Option<Self> {
         Some(Self::from(&std::fs::metadata(path).ok()?))
     }
 }
@@ -44,13 +44,13 @@ impl From<&std::fs::Metadata> for Stamp {
 }
 
 /// What a status read saw of the file a feature asked it to look at, in the same hop.
-pub(in crate::window) struct Observed {
+pub(crate) struct Observed {
     pub path: PathBuf,
     pub stamp: Option<Stamp>,
 }
 
 impl Observed {
-    pub(in crate::window) fn of(path: PathBuf) -> Self {
+    pub(crate) fn of(path: PathBuf) -> Self {
         let stamp = Stamp::of(&path);
         Self { path, stamp }
     }

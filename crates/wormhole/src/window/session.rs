@@ -17,7 +17,7 @@ use crate::window::feature::Stake;
 use crate::window::repo::GitState;
 
 /// A session's terminal: what the shell's agent hooks report is its id.
-pub(super) struct Pane {
+pub(crate) struct Pane {
     /// What the shell's agent hooks report (`WORMHOLE_TAB_ID`): the session's own id, unique
     /// across every session of every window.
     pub id: PaneId,
@@ -31,7 +31,7 @@ pub(super) struct Pane {
 }
 
 impl Pane {
-    pub(super) fn new(
+    pub(crate) fn new(
         id: PaneId,
         shell: Option<String>,
         terminal: Entity<TerminalView>,
@@ -51,17 +51,17 @@ impl Pane {
 
     /// The terminal's own name: the title its program set, else what runs in it, the agent,
     /// the program in front or the shell.
-    pub(super) fn label(&self, cx: &App) -> SharedString {
+    pub(crate) fn label(&self, cx: &App) -> SharedString {
         names::process_name(&name_facts(self.terminal.read(cx))).into()
     }
 
     /// What runs in front, whatever title it set: the agent, the running command or the shell.
-    pub(super) fn program(&self, cx: &App) -> SharedString {
+    pub(crate) fn program(&self, cx: &App) -> SharedString {
         names::program_name(&name_facts(self.terminal.read(cx))).into()
     }
 }
 
-pub(super) struct Session {
+pub(crate) struct Session {
     /// The session's id, which is its terminal's too.
     pub id: i64,
     pub number: usize,
@@ -87,16 +87,16 @@ pub(super) struct Session {
 impl Session {
     /// The session's terminal: what has the keyboard when the session is selected, and whose
     /// folder the panels show the repository of.
-    pub(super) fn terminal(&self) -> &Entity<TerminalView> {
+    pub(crate) fn terminal(&self) -> &Entity<TerminalView> {
         &self.pane.terminal
     }
 
-    pub(super) fn status(&self, cx: &App) -> Status {
+    pub(crate) fn status(&self, cx: &App) -> Status {
         self.terminal().read(cx).status()
     }
 
     /// The session's name: the project's, else what runs in its terminal.
-    pub(super) fn name(&self, cx: &App) -> SharedString {
+    pub(crate) fn name(&self, cx: &App) -> SharedString {
         if let Some(name) = &self.custom_name {
             return name.clone().into();
         }
@@ -106,7 +106,7 @@ impl Session {
 
     /// Who a question about closing it names as at stake: the agent by its short name, else the
     /// program that reports its own status ("brew is still working").
-    pub(super) fn told_name(&self, cx: &App) -> Option<String> {
+    pub(crate) fn told_name(&self, cx: &App) -> Option<String> {
         let terminal = self.terminal().read(cx);
         terminal
             .agent
@@ -115,25 +115,25 @@ impl Session {
     }
 
     /// Whether a program other than the shell is in the foreground.
-    pub(super) fn command_running(&self, cx: &App) -> bool {
+    pub(crate) fn command_running(&self, cx: &App) -> bool {
         self.terminal().read(cx).program_in_foreground()
     }
 
     /// The program running in the terminal, as its row names it ("claude", "npm run dev"): none
     /// when the question already names its agent (`skip_agent`).
-    pub(super) fn running_programs(&self, skip_agent: bool, cx: &App) -> Vec<String> {
+    pub(crate) fn running_programs(&self, skip_agent: bool, cx: &App) -> Vec<String> {
         let foreground = self.terminal().read(cx).foreground().map(|f| f.command.clone());
         foreground.into_iter().filter(|_| !skip_agent).collect()
     }
 
     /// Closing the session would cut something off: an agent at work or waiting for an answer, or
     /// a command running. Notes and tasks alone never ask; they are the user's to keep or not.
-    pub(super) fn needs_close_confirmation(&self, cx: &App) -> bool {
+    pub(crate) fn needs_close_confirmation(&self, cx: &App) -> bool {
         close_needs_confirmation(self.status(cx), self.command_running(cx))
     }
 
     /// The window's part of the saved record; the features add theirs (`Workspace::session_record`).
-    pub(super) fn record(&self, cx: &App) -> SessionRecord {
+    pub(crate) fn record(&self, cx: &App) -> SessionRecord {
         SessionRecord {
             id: self.id,
             name: self.custom_name.clone(),
@@ -164,7 +164,7 @@ impl Session {
 
     /// Its program runs in a session host: quitting leaves it running (unless the question before
     /// quitting is answered with the box unticked).
-    pub(super) fn is_hosted(&self, cx: &App) -> bool {
+    pub(crate) fn is_hosted(&self, cx: &App) -> bool {
         self.terminal().read(cx).is_hosted()
     }
 }
@@ -187,7 +187,7 @@ fn close_needs_confirmation(status: Status, command_running: bool) -> bool {
 
 /// What the question before closing a session says is at stake: its agent by name, then the
 /// other programs that end with it (`programs`, without the agent's own).
-pub(super) fn close_session_detail(
+pub(crate) fn close_session_detail(
     agent: Option<&str>,
     stakes: &[Stake],
     status: Status,
@@ -247,14 +247,14 @@ fn running_list(programs: &[String]) -> Option<String> {
 }
 
 /// The question before closing a session, naming it (“Close “sidebar polish”?”).
-pub(super) fn close_session_title(name: &str) -> String {
+pub(crate) fn close_session_title(name: &str) -> String {
     format!("Close \u{201c}{name}\u{201d}?")
 }
 
 /// What the question before closing a window says: how many terminals end, the most pressing
 /// thing still running among `running` (the lead status and whether a command runs, of each
 /// session that asks), the programs that end by name, and whether notes and tasks go with them.
-pub(super) fn close_window_detail(
+pub(crate) fn close_window_detail(
     terminals: usize,
     running: &[(Status, bool)],
     programs: &[String],
@@ -272,12 +272,12 @@ pub(super) fn close_window_detail(
 }
 
 /// The title of the question before closing a group.
-pub(super) fn close_group_title(name: &str) -> String {
+pub(crate) fn close_group_title(name: &str) -> String {
     format!("Close the group \u{201c}{name}\u{201d}?")
 }
 
 /// What the question before closing a group says: how many terminals end, and what still runs.
-pub(super) fn close_group_detail(
+pub(crate) fn close_group_detail(
     terminals: usize,
     running: &[(Status, bool)],
     programs: &[String],
@@ -295,7 +295,7 @@ pub(super) fn close_group_detail(
 }
 
 /// What the question before quitting says: the terminals come back, what runs in them doesn't.
-pub(super) fn quit_detail(
+pub(crate) fn quit_detail(
     running: &[(Status, bool)],
     programs: &[String],
     other_profiles: &[(String, usize)],
@@ -325,7 +325,7 @@ fn quit_detail_with(
 
 /// How the question before quitting is asked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum QuitAsk {
+pub(crate) enum QuitAsk {
     /// Quit / Cancel only: the sheet GPUI draws.
     Plain,
     /// With the box "Keep terminals running in the background". `local_running`: some terminal
@@ -337,7 +337,7 @@ pub(super) enum QuitAsk {
 /// (`local_running`), and whether any terminal at all is hosted (`any_hosted`: the box is about
 /// those, idle ones too). `None`: nothing runs, so quit without asking. Quit and End All Terminals
 /// (`end_hosts`) ends everything, so it has nothing to choose.
-pub(super) fn quit_ask(
+pub(crate) fn quit_ask(
     end_hosts: bool,
     hosted_running: usize,
     local_running: usize,
@@ -355,14 +355,14 @@ pub(super) fn quit_ask(
 
 /// Whether quitting ends the session hosts too: the box "Keep terminals running in the background"
 /// left unticked.
-pub(super) fn quit_ends_hosts(keep_running: bool) -> bool {
+pub(crate) fn quit_ends_hosts(keep_running: bool) -> bool {
     !keep_running
 }
 
 /// What the question before quitting says when it has the box: what runs in terminals that are
 /// kept goes on, what runs in the others ends. Without a kept terminal that runs something there is
 /// nothing to add to [`quit_detail`], which stays true whichever way the box is.
-pub(super) fn quit_detail_keeping(
+pub(crate) fn quit_detail_keeping(
     running: &[(Status, bool)],
     programs: &[String],
     other_profiles: &[(String, usize)],
@@ -403,10 +403,10 @@ fn still_running(running: &[(Status, bool)], programs: &[String]) -> String {
 /// `git::find_root` stats `.git` in every ancestor, which grouping the sidebar by folder asked
 /// for every session on every frame, and frames come as fast as a terminal prints.
 #[derive(Default)]
-pub(super) struct RepoRoot(RefCell<Option<(PathBuf, PathBuf)>>);
+pub(crate) struct RepoRoot(RefCell<Option<(PathBuf, PathBuf)>>);
 
 impl RepoRoot {
-    pub(super) fn of(&self, cwd: &Path) -> PathBuf {
+    pub(crate) fn of(&self, cwd: &Path) -> PathBuf {
         self.of_with(cwd, wormhole_core::git::find_root)
     }
 
@@ -422,7 +422,7 @@ impl RepoRoot {
     }
 
     /// Look again next time: a `git init` or a removed `.git` doesn't change the folder.
-    pub(super) fn forget(&self) {
+    pub(crate) fn forget(&self) {
         self.0.take();
     }
 }
@@ -431,7 +431,7 @@ impl RepoRoot {
 /// so the caller starts a new session. `Some((ix, switched))`: the selection is now session `ix`, and
 /// `switched` says whether that is a different session from before (then its panels start fresh);
 /// closing another session in the background must leave the selected one exactly as it was.
-pub(super) fn session_after_close(active: usize, closed: usize, len: usize) -> Option<(usize, bool)> {
+pub(crate) fn session_after_close(active: usize, closed: usize, len: usize) -> Option<(usize, bool)> {
     debug_assert!(active < len && closed < len);
     if len < 2 {
         return None;
@@ -446,7 +446,7 @@ pub(super) fn session_after_close(active: usize, closed: usize, len: usize) -> O
 }
 
 /// `active` moved by `delta` places, wrapping around `len` items.
-pub(super) fn step_wrapping(active: usize, delta: isize, len: usize) -> usize {
+pub(crate) fn step_wrapping(active: usize, delta: isize, len: usize) -> usize {
     (active as isize + delta).rem_euclid(len as isize) as usize
 }
 

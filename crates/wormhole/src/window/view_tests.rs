@@ -118,13 +118,13 @@ pub(crate) fn set_shared_state(cx: &mut App) {
 }
 
 /// [`start`] with the window's sessions as `record` has them (a terminal's scrollback, say).
-pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenWindow {
+pub(crate) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenWindow {
     start_with_table(cx, record, crate::window::features::TABLE)
 }
 
 /// [`start_with`] for an app whose feature table is `table`: what the window copies from the global
 /// the app installs at launch.
-pub(super) fn start_with_table(
+pub(crate) fn start_with_table(
     cx: &mut TestAppContext,
     record: WindowRecord,
     table: &'static [crate::window::feature::FeatureDef],
@@ -176,7 +176,7 @@ pub(crate) fn draw(cx: &mut TestAppContext, window: &OpenWindow) {
 }
 
 /// Read the window's sidebar (its list's state), which is an entity of its own.
-pub(in crate::window) fn sidebar_of<R>(
+pub(crate) fn sidebar_of<R>(
     cx: &mut TestAppContext,
     window: &OpenWindow,
     f: impl FnOnce(&crate::sidebar::Sidebar) -> R,
@@ -199,7 +199,7 @@ pub(crate) fn read<R>(cx: &mut TestAppContext, window: &OpenWindow, f: impl FnOn
 }
 
 /// Run `f` on the window itself (not its workspace).
-pub(super) fn with_window<R>(
+pub(crate) fn with_window<R>(
     cx: &mut TestAppContext,
     window: &OpenWindow,
     f: impl FnOnce(&mut Window, &mut App) -> R,

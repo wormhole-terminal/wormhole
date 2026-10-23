@@ -9,6 +9,7 @@ mod command_palette;
 #[cfg(feature = "devctl")]
 mod devctl;
 mod dialog;
+mod features;
 mod focus_keys;
 mod fonts;
 mod hotkey;

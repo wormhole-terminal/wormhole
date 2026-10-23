@@ -17,27 +17,28 @@ use crate::window::Workspace;
 /// while the feature is off, so nothing that scans them (the menu bar's project actions, pruning the hub)
 /// keeps a stale project alive.
 pub(crate) fn roots(ws: &Workspace, cx: &App) -> Vec<PathBuf> {
-    if !project_folders_on(&ws.profile, cx) {
+    let facts = ws.facts(cx);
+    if !project_folders_on(facts.profile, cx) {
         return Vec::new();
     }
     let Some(project) = ws.feature::<Project>() else { return Vec::new() };
     let project = project.read(cx);
-    let terminals = ws.sessions.iter().filter_map(|session| project.of.get(&session.id)?.root.clone());
+    let terminals = facts.sessions().filter_map(|session| project.of.get(&session.id)?.root.clone());
     terminals.chain(project.folder_projects.values().cloned()).collect()
 }
 
 /// The project folder of the terminal in front, as of the window's last look (what Settings marks "set by
 /// this project").
 pub(crate) fn active_root(ws: &Workspace, cx: &App) -> Option<PathBuf> {
-    ws.feature::<Project>()?.read(cx).of.get(&ws.active_session().id)?.root.clone()
+    ws.feature::<Project>()?.read(cx).of.get(&ws.facts(cx).active()?.id)?.root.clone()
 }
 
 /// The terminal of the window that is in the project at `root`.
 pub(crate) fn session_for_project(ws: &Workspace, root: &Path, cx: &App) -> Option<usize> {
     let project = ws.feature::<Project>()?;
     let project = project.read(cx);
-    ws.sessions
-        .iter()
+    ws.facts(cx)
+        .sessions()
         .position(|session| project.of.get(&session.id).is_some_and(|of| of.root.as_deref() == Some(root)))
 }
 
@@ -45,20 +46,21 @@ pub(crate) fn session_for_project(ws: &Workspace, root: &Path, cx: &App) -> Opti
 /// and the shortcut sheet list the actions of.
 pub(crate) fn actionable<'a>(ws: &Workspace, cx: &'a App) -> Option<&'a LoadedProject> {
     let project = ws.feature::<Project>()?;
-    let project = project.read(cx).project(ws.active_session().id, ws.profile(), cx)?;
+    let project = project.read(cx).project(ws.facts(cx).active()?.id, ws.profile(), cx)?;
     hub_of(ws.profile(), cx).enabled(project, Feature::Actions).then_some(project)
 }
 
 /// Runs action `id` of the project of the terminal in front.
 pub(crate) fn run_action(ws: &Workspace, id: &str, cx: &mut App) {
     let Some(project) = ws.feature::<Project>() else { return };
-    let (session, profile) = (ws.active_session().id, ws.profile().clone());
+    let Some(session) = ws.facts(cx).active().map(|active| active.id) else { return };
+    let profile = ws.profile().clone();
     project.update(cx, |project, cx| project.run_action(session, &profile, id, cx));
 }
 
 /// The id of the action of the terminal in front's project that `keystroke` is the key of.
 pub(crate) fn action_for_key(ws: &Workspace, keystroke: &Keystroke, cx: &App) -> Option<String> {
-    ws.feature::<Project>()?.read(cx).action_for_key(ws.active_session().id, ws.profile(), keystroke, cx)
+    ws.feature::<Project>()?.read(cx).action_for_key(ws.facts(cx).active()?.id, ws.profile(), keystroke, cx)
 }
 
 /// The first run's trust card for the project at `root`, as `profile` (the window's) sees it: `None` when

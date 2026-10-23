@@ -75,7 +75,7 @@ impl Workspace {
         ix
     }
 
-    pub(super) fn add_session(
+    pub(crate) fn add_session(
         &mut self,
         record: Option<SessionRecord>,
         window: &mut Window,
@@ -215,7 +215,7 @@ impl Workspace {
     /// Close terminal `ix`: its shell ends. In a split its pane goes and the others take its room;
     /// one left alone becomes a plain row. The selection stays in the split when the closed one
     /// was selected (the keyboard goes where the layout sends it: the next pane in reading order).
-    pub(super) fn close_session(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn close_session(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
         let len = self.sessions.len();
         if ix >= len {
             return;
@@ -271,7 +271,7 @@ impl Workspace {
         }
     }
 
-    pub(super) fn active_session(&self) -> &Session {
+    pub(crate) fn active_session(&self) -> &Session {
         &self.sessions[self.active]
     }
 

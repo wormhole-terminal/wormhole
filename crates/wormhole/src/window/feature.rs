@@ -44,7 +44,7 @@ use crate::window::repo::Observed;
 /// ([`features::install`](super::features::install)) and each `Workspace` copies the slice into a field
 /// when it is made, so the frame never reads the global.
 #[derive(Clone, Copy)]
-pub(crate) struct FeatureTable(pub(in crate::window) &'static [FeatureDef]);
+pub(crate) struct FeatureTable(pub(crate) &'static [FeatureDef]);
 
 impl Global for FeatureTable {}
 
@@ -80,13 +80,13 @@ impl FeatureTable {
         }
     }
 
-    pub(in crate::window) fn install(table: &'static [FeatureDef], cx: &mut App) {
+    pub(crate) fn install(table: &'static [FeatureDef], cx: &mut App) {
         cx.set_global(Self(table));
     }
 
     /// The installed table. A window made before there is one (a test that doesn't need it) has
     /// no features, which is the table's own start.
-    pub(in crate::window) fn installed(cx: &App) -> &'static [FeatureDef] {
+    pub(crate) fn installed(cx: &App) -> &'static [FeatureDef] {
         cx.try_global::<Self>().map_or(&[], |table| table.0)
     }
 }
@@ -95,7 +95,7 @@ impl FeatureTable {
 /// subscribes when it makes the entity ([`Workspace::listen`]), so a feature never holds the
 /// `Workspace` and can't take its lease twice.
 #[derive(Clone, Debug, PartialEq)]
-pub(in crate::window) enum FeatureEvent {
+pub(crate) enum FeatureEvent {
     /// Show this panel tab.
     ShowTab(TabId),
     /// Give the keyboard back to the terminal on screen.
@@ -129,7 +129,7 @@ pub(in crate::window) enum FeatureEvent {
 
 /// What a feature asks of the window's reading of a terminal's repository ([`FeatureEvent::Repo`]).
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::window) enum RepoRequest {
+pub(crate) enum RepoRequest {
     /// Read the status now (a Retry, the refresh button, the tab being shown).
     Refresh { session: i64 },
     /// Read it against `branch` from now on (`None`: HEAD), and forget the answer for the old one.
@@ -138,7 +138,7 @@ pub(in crate::window) enum RepoRequest {
 
 /// Which terminal of the window a [`FeatureEvent::Terminal`] is for.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::window) enum TerminalTarget {
+pub(crate) enum TerminalTarget {
     /// The one on screen.
     Active,
     /// A new one, in `cwd`, selected.
@@ -152,7 +152,7 @@ pub(in crate::window) enum TerminalTarget {
 
 /// What goes into the terminal.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::window) enum TerminalInput {
+pub(crate) enum TerminalInput {
     /// Nothing: the terminal is only found or made, and given the keyboard when it is a new one.
     None,
     /// Typed in, then Enter.
@@ -165,7 +165,7 @@ pub(in crate::window) enum TerminalInput {
 
 /// A terminal [`FeatureEvent::OpenTerminals`] opens.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::window) struct NewTerminal {
+pub(crate) struct NewTerminal {
     pub name: String,
     pub cwd: PathBuf,
     /// Typed in once it starts, then Enter.
@@ -176,24 +176,21 @@ pub(in crate::window) struct NewTerminal {
 
 /// The hooks' shapes. Plain function pointers, never `dyn`: the frame calls them and a closure's box
 /// would be an allocation.
-pub(in crate::window) type BindFn = fn(&AnyEntity, &WindowFacts<'_>, Root, &App) -> Root;
-pub(in crate::window) type RowExtrasFn = fn(&AnyEntity, &WindowFacts<'_>, &mut RowExtras<'_>, &App);
-pub(in crate::window) type CloseStakeFn = fn(&AnyEntity, &[i64], &App) -> Option<Stake>;
-pub(in crate::window) type CloseExtraFn =
-    fn(&AnyEntity, &WindowFacts<'_>, &[i64], CloseOf, &App) -> Option<CloseExtra>;
-pub(in crate::window) type MenuFn = fn(&AnyEntity, &WindowFacts<'_>, &mut MenuState, &App);
-pub(in crate::window) type CountFn = fn(&AnyEntity, &WindowFacts<'_>, &App) -> Option<usize>;
-pub(in crate::window) type TabActionsFn =
-    fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App) -> Option<AnyElement>;
-pub(in crate::window) type OnShowFn = fn(&AnyEntity, &WindowFacts<'_>, session: i64, &mut App);
-pub(in crate::window) type FocusInFn =
-    fn(&AnyEntity, &WindowFacts<'_>, session: i64, &mut Window, &mut App) -> bool;
-pub(in crate::window) type ProfileShownFn = fn(&mut App);
-pub(in crate::window) type TickFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
-pub(in crate::window) type RefreshFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App);
-pub(in crate::window) type ApprovesProgramsFn = fn(&AnyEntity, session: i64, &ProfileId, &App) -> bool;
-pub(in crate::window) type SpawnFn = fn(&ProfileId, Option<&Path>, &mut App) -> SpawnAdd;
-pub(in crate::window) type PressFn = fn(
+pub(crate) type BindFn = fn(&AnyEntity, &WindowFacts<'_>, Root, &App) -> Root;
+pub(crate) type RowExtrasFn = fn(&AnyEntity, &WindowFacts<'_>, &mut RowExtras<'_>, &App);
+pub(crate) type CloseStakeFn = fn(&AnyEntity, &[i64], &App) -> Option<Stake>;
+pub(crate) type CloseExtraFn = fn(&AnyEntity, &WindowFacts<'_>, &[i64], CloseOf, &App) -> Option<CloseExtra>;
+pub(crate) type MenuFn = fn(&AnyEntity, &WindowFacts<'_>, &mut MenuState, &App);
+pub(crate) type CountFn = fn(&AnyEntity, &WindowFacts<'_>, &App) -> Option<usize>;
+pub(crate) type TabActionsFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App) -> Option<AnyElement>;
+pub(crate) type OnShowFn = fn(&AnyEntity, &WindowFacts<'_>, session: i64, &mut App);
+pub(crate) type FocusInFn = fn(&AnyEntity, &WindowFacts<'_>, session: i64, &mut Window, &mut App) -> bool;
+pub(crate) type ProfileShownFn = fn(&mut App);
+pub(crate) type TickFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
+pub(crate) type RefreshFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App);
+pub(crate) type ApprovesProgramsFn = fn(&AnyEntity, session: i64, &ProfileId, &App) -> bool;
+pub(crate) type SpawnFn = fn(&ProfileId, Option<&Path>, &mut App) -> SpawnAdd;
+pub(crate) type PressFn = fn(
     &AnyEntity,
     &WindowFacts<'_>,
     session: i64,
@@ -203,21 +200,20 @@ pub(in crate::window) type PressFn = fn(
     &mut Window,
     &mut App,
 ) -> bool;
-pub(in crate::window) type FoldFn = fn(&AnyEntity, &WindowFacts<'_>, session: i64, row: usize, &mut App);
-pub(in crate::window) type CoverCloseFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
-pub(in crate::window) type CoverTitleFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App) -> Option<AnyElement>;
-pub(in crate::window) type TabChangedFn = fn(&AnyEntity, TabId, &mut App);
-pub(in crate::window) type PickBranchFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
-pub(in crate::window) type WatchFn = fn(&AnyEntity, &App) -> Option<PathBuf>;
-pub(in crate::window) type ReadFn =
-    fn(&AnyEntity, &WindowFacts<'_>, session: i64, Option<&Observed>, &mut App);
+pub(crate) type FoldFn = fn(&AnyEntity, &WindowFacts<'_>, session: i64, row: usize, &mut App);
+pub(crate) type CoverCloseFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
+pub(crate) type CoverTitleFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App) -> Option<AnyElement>;
+pub(crate) type TabChangedFn = fn(&AnyEntity, TabId, &mut App);
+pub(crate) type PickBranchFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
+pub(crate) type WatchFn = fn(&AnyEntity, &App) -> Option<PathBuf>;
+pub(crate) type ReadFn = fn(&AnyEntity, &WindowFacts<'_>, session: i64, Option<&Observed>, &mut App);
 
 /// The root element a feature adds its action handlers to.
-pub(in crate::window) type Root = Div;
+pub(crate) type Root = Div;
 
 /// What a feature contributes to the window. Core's [`FeatureInfo`](wormhole_core::config::FeatureInfo)
 /// of the same id says what it is called and whether it can be off.
-pub(in crate::window) struct FeatureDef {
+pub(crate) struct FeatureDef {
     pub id: FeatureId,
     /// The panel tabs it brings, in order. The table's order is the tab order, so there is no
     /// ordering field.
@@ -307,7 +303,7 @@ impl FeatureDef {
 /// the find shortcuts and the tab bar's focus stop away while it is up, and has Esc close it before
 /// anything else. What it lays over is a file of the terminal's repository, so it also takes part in the
 /// window's reading of that repository (`window::repo`).
-pub(in crate::window) struct CoverDef {
+pub(crate) struct CoverDef {
     /// Whether the feature has something over the terminal now. Asked each frame and at keys: a read.
     pub open: fn(&AnyEntity, &App) -> bool,
     /// The card, built inline from `Workspace::render`.
@@ -327,7 +323,7 @@ pub(in crate::window) struct CoverDef {
 
 /// The first run's trust card, from the feature that keeps the projects. Asked whether or not the feature
 /// is on: the card is the intro's own page, and a project is trusted or not whatever the tab shows.
-pub(in crate::window) struct TrustHooks {
+pub(crate) struct TrustHooks {
     /// The project folder the terminal in front is in, for the card when no folder was picked.
     pub active_root: fn(&AnyEntity, &WindowFacts<'_>, &App) -> Option<PathBuf>,
     /// The card for the project at this root as the profile sees it; `None` when there is nothing to
@@ -340,7 +336,7 @@ pub(in crate::window) struct TrustHooks {
 
 /// The title row's branch chip. The window draws it (it knows the row's width) and hands a click to
 /// the feature that contributed it, so the row names neither the feature nor its tab.
-pub(in crate::window) struct BranchChip {
+pub(crate) struct BranchChip {
     /// The panel tab the click shows first, so what it opens is in view.
     pub tab: TabId,
     /// Opens the branch picker the chip stands for.
@@ -348,7 +344,7 @@ pub(in crate::window) struct BranchChip {
 }
 
 /// A panel tab of a feature.
-pub(in crate::window) struct TabDef {
+pub(crate) struct TabDef {
     pub id: TabId,
     pub icon: IconName,
     pub label: &'static str,
@@ -385,7 +381,7 @@ pub(in crate::window) struct TabDef {
 
 /// One row of a panel list as the keys walk it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::window) struct Walkable {
+pub(crate) struct Walkable {
     /// Its place among the tab's rows (what the virtual list draws).
     pub row: usize,
     pub item: Item,
@@ -395,7 +391,7 @@ pub(in crate::window) struct Walkable {
 
 /// F-70's four questions about a tab's rows, each over the feature's entity: a `&'static` table of
 /// values could not hold the feature's folds and selection.
-pub(in crate::window) struct WalkFns {
+pub(crate) struct WalkFns {
     /// The rows the keys can be on. A `Vec`: it is asked on key presses only.
     pub walkable: fn(&AnyEntity, &WindowFacts<'_>, &App) -> Vec<Walkable>,
     /// ↩ or Space on a row of `session` (`following`: a diff is open and follows the keys); whether
@@ -413,7 +409,7 @@ pub(in crate::window) struct WalkFns {
 /// What a feature adds to the start of a terminal: variables for its environment and the shell it
 /// runs, which a later source (the profile's own environment, the terminal's own shell) may replace.
 #[derive(Default, Debug, PartialEq, Eq)]
-pub(in crate::window) struct SpawnAdd {
+pub(crate) struct SpawnAdd {
     pub env: std::collections::BTreeMap<String, String>,
     pub shell: Option<String>,
 }
@@ -422,7 +418,7 @@ pub(in crate::window) struct SpawnAdd {
 /// shown one, when one is deleted, and when a terminal id is handed out in one (so data kept under an
 /// id of a session that is gone can be dropped).
 /// A feature registers only the hooks it needs.
-pub(in crate::window) struct ProfileHooks {
+pub(crate) struct ProfileHooks {
     pub opened: Option<fn(&ProfileId, &mut App)>,
     pub deleted: Option<fn(&ProfileId, &mut App)>,
     pub id_allocated: Option<fn(&ProfileId, id: i64, &mut App)>,
@@ -435,7 +431,7 @@ impl ProfileHooks {
 
 /// A feature's part in the question before terminals are closed: both hooks see the whole set being
 /// closed (a group, a window), and a feature registers the one it needs.
-pub(in crate::window) struct CloseHooks {
+pub(crate) struct CloseHooks {
     /// What closing these terminals would lose (notes' open items, a worktree's changes).
     pub stake: Option<CloseStakeFn>,
     /// What closing these terminals adds to the question the window asks: a sentence and, if the feature
@@ -452,7 +448,7 @@ impl CloseHooks {
 
 /// What is being closed, for a feature's part in the question.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::window) enum CloseOf {
+pub(crate) enum CloseOf {
     /// One terminal (its row's ×, ⌘W).
     Terminal,
     /// A group's terminals.
@@ -460,7 +456,7 @@ pub(in crate::window) enum CloseOf {
 }
 
 /// What a feature adds to the question before closing terminals.
-pub(in crate::window) struct CloseExtra {
+pub(crate) struct CloseExtra {
     /// Said after the rest of the question's detail.
     pub note: String,
     /// A button between the closing one and Cancel, which closes and then does more.
@@ -468,13 +464,13 @@ pub(in crate::window) struct CloseExtra {
 }
 
 /// An extra button of the close question: its words, and what to do once the terminals are closed.
-pub(in crate::window) struct CloseAlso {
+pub(crate) struct CloseAlso {
     pub label: &'static str,
     pub then: std::rc::Rc<dyn Fn(&mut App)>,
 }
 
 /// What closing some terminals would lose, in the words of the close question.
-pub(in crate::window) struct Stake {
+pub(crate) struct Stake {
     /// How many things (notes' open items).
     pub count: usize,
     /// How the question says it ("3 open notes").
@@ -483,7 +479,7 @@ pub(in crate::window) struct Stake {
 
 /// A feature's per-window state and how it follows the window's terminals. `SessionRecord` stays the
 /// interchange format, so none of this changes what is saved.
-pub(in crate::window) struct StateDef {
+pub(crate) struct StateDef {
     /// Makes the entity with the window, whether the feature is on or off, and returns what
     /// [`Workspace::listen`] makes of it: the entity and the window's subscription to its events. No
     /// handle to the `Workspace` is given to a feature: that would be a way to take its lease twice.

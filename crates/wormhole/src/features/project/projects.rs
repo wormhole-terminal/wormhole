@@ -97,8 +97,9 @@ fn open_session_ids(cx: &App) -> Option<HashSet<i64>> {
     }
     let mut ids = HashSet::new();
     for window in &state.windows {
-        let sessions =
-            window.workspace.read_with(cx, |ws, _| ws.sessions.iter().map(|s| s.id).collect::<Vec<_>>());
+        let sessions = window
+            .workspace
+            .read_with(cx, |ws, cx| ws.facts(cx).sessions().map(|s| s.id).collect::<Vec<_>>());
         ids.extend(sessions.ok()?);
     }
     Some(ids)

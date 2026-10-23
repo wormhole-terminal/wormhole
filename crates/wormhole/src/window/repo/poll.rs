@@ -47,12 +47,7 @@ impl Workspace {
 
     /// Read the status of terminal `ix` against `branch` from now on (`None`: HEAD): the answer for
     /// the old one is dropped, so the list never shows one branch's files under another's name.
-    pub(in crate::window) fn compare_with(
-        &mut self,
-        ix: usize,
-        branch: Option<String>,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn compare_with(&mut self, ix: usize, branch: Option<String>, cx: &mut Context<Self>) {
         let Some(session) = self.sessions.get_mut(ix) else { return };
         session.git.compare = branch;
         session.git.status = None;
@@ -127,7 +122,7 @@ impl Workspace {
 
     /// What the tick does about each terminal's repository: ask git, look for a `.git`, or nothing.
     /// A terminal whose git is missing waits for a Retry.
-    pub(in crate::window) fn poll_repos(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn poll_repos(&mut self, cx: &mut Context<Self>) {
         for ix in 0..self.sessions.len() {
             if self.sessions[ix].git.waits_for_retry() {
                 continue;

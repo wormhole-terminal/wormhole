@@ -20,7 +20,11 @@ pub(crate) fn control_ask(
     let Some(worktrees) = ws.feature::<Worktrees>() else {
         return Err(Error { code: ErrorCode::Failed, message: "this window has no worktrees".into() });
     };
-    let (terminal, window_id, profile) = (ws.active_terminal(), ws.window_id, ws.profile().clone());
+    let facts = ws.facts(cx);
+    let Some(terminal) = facts.active().map(|active| active.terminal.clone()) else {
+        return Err(Error { code: ErrorCode::Failed, message: "this window has no terminal".into() });
+    };
+    let (window_id, profile) = (facts.window_id, facts.profile.clone());
     worktrees.update(cx, |worktrees, wcx| {
         worktrees.control_ask_worktree(&profile, &terminal, window_id, folder, branch, command, window, wcx)
     })

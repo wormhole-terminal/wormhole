@@ -76,7 +76,7 @@ impl Workspace {
     }
 
     /// What a terminal asks of the window: its exited shell's bar has a Restart and a Close.
-    pub(super) fn on_terminal_event(
+    pub(crate) fn on_terminal_event(
         &mut self,
         id: i64,
         event: TerminalEvent,

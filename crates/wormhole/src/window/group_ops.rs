@@ -91,7 +91,7 @@ impl Workspace {
     /// Move group `group` to a window of its own, its terminals running on (the new window takes
     /// the live terminals) and the splits they are in along with them. An empty pinned group has
     /// nothing to move.
-    pub(super) fn move_group_to_window(&mut self, group: u32, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn move_group_to_window(&mut self, group: u32, window: &mut Window, cx: &mut Context<Self>) {
         let Some(found) = self.sidebar_view(cx).groups.get(group).cloned() else { return };
         // The group's terminals and the rest of every split they are in.
         let mut ids: Vec<i64> = Vec::new();

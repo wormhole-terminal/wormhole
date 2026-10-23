@@ -25,7 +25,7 @@ use wormhole_core::config::TabId;
 
 pub(super) use bars::TitleButton;
 
-pub(super) struct FocusAreas {
+pub(crate) struct FocusAreas {
     title_row: FocusHandle,
     sidebar: FocusHandle,
     tabs: FocusHandle,
@@ -35,7 +35,7 @@ pub(super) struct FocusAreas {
     /// The title row's button the keys are on.
     pub(super) title: usize,
     /// The panel row the keys are on: its tab and its place among that tab's rows.
-    pub(super) panel_at: Option<(TabId, usize)>,
+    pub(crate) panel_at: Option<(TabId, usize)>,
     /// The status bar's item the keys are on.
     pub(super) status: usize,
 }
@@ -239,7 +239,7 @@ impl Workspace {
 
     /// Give the keyboard to the terminal on screen: where it goes back to when a panel, the sidebar
     /// or an editor lets go of it.
-    pub(in crate::window) fn focus_terminal(&self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn focus_terminal(&self, window: &mut Window, cx: &mut Context<Self>) {
         window.focus(&self.active_terminal().focus_handle(cx), cx);
     }
 

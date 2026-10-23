@@ -12,11 +12,11 @@ use wormhole_core::git::{GitError, RepoStatus};
 use crate::window::repo::job::{Job, Ticket, Wanted};
 
 /// What a status refresh is for: the folder, and the branch compared with.
-pub(in crate::window) type StatusKey = (PathBuf, Option<String>);
+pub(crate) type StatusKey = (PathBuf, Option<String>);
 
 /// Git state kept per session.
 #[derive(Default)]
-pub(in crate::window) struct GitState {
+pub(crate) struct GitState {
     pub status: Option<RepoStatus>,
     /// The cwd the status was computed for.
     pub cwd: Option<PathBuf>,
@@ -38,7 +38,7 @@ pub(in crate::window) struct GitState {
 
 /// What became of a refresh's answer.
 #[derive(Debug, PartialEq, Eq)]
-pub(in crate::window) enum Refreshed {
+pub(crate) enum Refreshed {
     /// Not the answer wanted any more (a newer request superseded it, or the
     /// session moved to another folder or branch while git ran): dropped.
     Stale,
@@ -49,7 +49,7 @@ pub(in crate::window) enum Refreshed {
 
 /// What the tick does about one session's git status.
 #[derive(Debug, PartialEq, Eq)]
-pub(in crate::window) enum GitPoll {
+pub(crate) enum GitPoll {
     /// Ask git.
     Refresh,
     /// Look for a `.git` (a `stat` walk), not at git.
@@ -63,12 +63,7 @@ impl GitState {
     /// for is asked at once. A repository is polled every 5th tick (2 s) when in front, every
     /// 20th (8 s) behind. A folder in no repository is not polled at all: it is looked at for a
     /// `.git` every tick in front (0.4 s), every 5th behind.
-    pub(in crate::window) fn poll(
-        &self,
-        cwd: Option<&std::path::Path>,
-        tick: u64,
-        in_front: bool,
-    ) -> GitPoll {
+    pub(crate) fn poll(&self, cwd: Option<&std::path::Path>, tick: u64, in_front: bool) -> GitPoll {
         if self.cwd.as_deref() != cwd {
             return GitPoll::Refresh;
         }
@@ -79,34 +74,34 @@ impl GitState {
     }
 
     #[cfg(any(test, feature = "devctl"))]
-    pub(in crate::window) fn loading(&self) -> bool {
+    pub(crate) fn loading(&self) -> bool {
         self.job.is_pending()
     }
 
     /// Why the last refresh failed, if it did.
-    pub(in crate::window) fn error(&self) -> Option<&GitError> {
+    pub(crate) fn error(&self) -> Option<&GitError> {
         self.error.as_ref()
     }
 
     /// git is missing: nothing polls it again until Retry (or the window coming to the
     /// front), since on a Mac without the Command Line Tools every run of the stub asks
     /// to install them.
-    pub(in crate::window) fn waits_for_retry(&self) -> bool {
+    pub(crate) fn waits_for_retry(&self) -> bool {
         self.error == Some(GitError::GitMissing)
     }
 
     /// Git said "not a repository" for `cwd` and nothing has changed since: no need to poll it.
-    pub(in crate::window) fn is_absent_for(&self, cwd: &std::path::Path) -> bool {
+    pub(crate) fn is_absent_for(&self, cwd: &std::path::Path) -> bool {
         self.error.is_none() && self.absent.as_ref().is_some_and(|absent| absent.is_for(cwd))
     }
 
     /// The answer shown is for `cwd`, whatever it said: the panel need not say "Reading".
-    pub(in crate::window) fn answered_for(&self, cwd: &std::path::Path) -> bool {
+    pub(crate) fn answered_for(&self, cwd: &std::path::Path) -> bool {
         self.cwd.as_deref() == Some(cwd)
     }
 
     /// Start a look for a `.git` near `cwd`. False when one already runs or nothing is absent.
-    pub(in crate::window) fn begin_probe(&mut self, cwd: &std::path::Path) -> bool {
+    pub(crate) fn begin_probe(&mut self, cwd: &std::path::Path) -> bool {
         if self.probing || !self.is_absent_for(cwd) {
             return false;
         }
@@ -115,11 +110,7 @@ impl GitState {
     }
 
     /// A look came back with `found`: what to do about it.
-    pub(in crate::window) fn finish_probe(
-        &mut self,
-        cwd: &std::path::Path,
-        found: Option<PathBuf>,
-    ) -> Sighting {
+    pub(crate) fn finish_probe(&mut self, cwd: &std::path::Path, found: Option<PathBuf>) -> Sighting {
         self.probing = false;
         match &mut self.absent {
             Some(absent) if absent.is_for(cwd) && self.error.is_none() => absent.observe(found),
@@ -130,12 +121,12 @@ impl GitState {
     /// Start a refresh for `key`. `None` when that same refresh is already
     /// running; a different one (another branch compared, another folder)
     /// supersedes it, and the older answer is dropped when it lands.
-    pub(in crate::window) fn begin_refresh(&mut self, key: StatusKey) -> Option<Wanted> {
+    pub(crate) fn begin_refresh(&mut self, key: StatusKey) -> Option<Wanted> {
         self.job.begin(key)
     }
 
     /// Take a refresh's answer. `now` is what the session shows at this moment.
-    pub(in crate::window) fn finish_refresh(
+    pub(crate) fn finish_refresh(
         &mut self,
         ticket: Ticket,
         now: Option<&StatusKey>,

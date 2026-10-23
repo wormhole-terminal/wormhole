@@ -8,7 +8,7 @@ use crate::window::Workspace;
 impl Workspace {
     /// ⇧⌘E: from anywhere to the terminal, and from the terminal to the feature that takes the keys
     /// (Notes: the note being worked on, a new one if there is none).
-    pub(super) fn toggle_focus(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn toggle_focus(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let terminal_focus = self.active_terminal().focus_handle(cx);
         if !terminal_focus.is_focused(window) {
             window.focus(&terminal_focus, cx);

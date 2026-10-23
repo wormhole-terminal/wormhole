@@ -61,7 +61,7 @@ impl Workspace {
     }
 
     /// The three columns' widths as of the last frame.
-    pub(super) fn columns(&self) -> Columns {
+    pub(crate) fn columns(&self) -> Columns {
         self.shown_panes().columns(self.window_width)
     }
 

@@ -22,8 +22,10 @@ use crate::window::session::{RepoRoot, Session};
 
 /// The window as a feature sees it.
 #[derive(Clone, Copy)]
-pub(in crate::window) struct WindowFacts<'a> {
+pub(crate) struct WindowFacts<'a> {
     pub profile: &'a ProfileId,
+    /// The window's id among the app's.
+    pub window_id: i64,
     /// Which features are on. Copied, so a hook can ask about an off feature too (the menu hook runs
     /// whether the feature is on or off).
     pub features: FeatureMask,
@@ -49,7 +51,7 @@ pub(in crate::window) struct WindowFacts<'a> {
 
 /// One terminal of the window.
 #[derive(Clone, Copy)]
-pub(in crate::window) struct SessionFacts<'a> {
+pub(crate) struct SessionFacts<'a> {
     pub id: i64,
     pub terminal: &'a Entity<TerminalView>,
     /// `Session.git` stays on the session (the sidebar's rows, the title row and the status bar read
@@ -119,10 +121,11 @@ impl<'a> WindowFacts<'a> {
 impl Workspace {
     /// The facts a feature may read of this window, as of now. `cx` is read for the settings' feature
     /// mask and not kept.
-    pub(in crate::window) fn facts<'a>(&'a self, cx: &App) -> WindowFacts<'a> {
+    pub(crate) fn facts<'a>(&'a self, cx: &App) -> WindowFacts<'a> {
         let columns = self.columns();
         WindowFacts {
             profile: &self.profile,
+            window_id: self.window_id,
             features: crate::settings::store_in(&self.profile, cx).features(),
             tab: self.right_tab,
             panel_width: px(columns.panel),
@@ -137,7 +140,7 @@ impl Workspace {
 
     /// [`Self::facts`] for drawing a frame: with the row the keys are on in the shown tab, which
     /// needs the window to say whether the ring shows.
-    pub(in crate::window) fn frame_facts<'a>(&'a self, window: &Window, cx: &App) -> WindowFacts<'a> {
+    pub(crate) fn frame_facts<'a>(&'a self, window: &Window, cx: &App) -> WindowFacts<'a> {
         let mut facts = self.facts(cx);
         facts.panel_cursor = self
             .areas

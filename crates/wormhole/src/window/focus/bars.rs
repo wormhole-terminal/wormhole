@@ -106,7 +106,7 @@ impl Workspace {
 
     /// The right panel's tabs as they are on screen, in the panel's order: a tab is offered when its
     /// feature is in the table, on, and the tab says it is `shown`.
-    pub(in crate::window) fn panel_tab_list(&self, cx: &App) -> Vec<TabId> {
+    pub(crate) fn panel_tab_list(&self, cx: &App) -> Vec<TabId> {
         let facts = self.facts(cx);
         TabId::ALL.into_iter().filter(|&tab| self.tab_offered(tab, &facts, cx)).collect()
     }

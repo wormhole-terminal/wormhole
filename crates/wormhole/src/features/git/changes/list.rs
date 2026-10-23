@@ -20,7 +20,7 @@ use crate::window::feature::Walkable;
 /// What opening a file's diff from the list needs of the repository, kept with the rows so a click or a
 /// key needs neither the status nor a new look at the settings: where the repository is, what the working
 /// tree is compared with, and the files the diff's arrows step through.
-pub(in crate::window::features::git) struct DiffTarget {
+pub(in crate::features::git) struct DiffTarget {
     pub root: std::path::PathBuf,
     pub base_rev: String,
     pub siblings: Vec<FileChange>,
@@ -132,7 +132,7 @@ impl Changes {
     }
 
     /// Opens the diff of working-tree change `file` of `session`.
-    pub(in crate::window::features::git) fn open_change(
+    pub(in crate::features::git) fn open_change(
         &mut self,
         session: i64,
         file: FileChange,

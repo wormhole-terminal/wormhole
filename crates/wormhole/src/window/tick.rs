@@ -23,7 +23,7 @@ impl Workspace {
         self.blur.set_backing((!blur).then(|| ui_in(&self.profile, cx).panel));
     }
 
-    pub(super) fn tick(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn tick(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.ticks += 1;
         self.sync_appearance(cx);
         self.track_window(window, cx);

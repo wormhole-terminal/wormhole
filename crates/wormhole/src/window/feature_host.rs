@@ -24,7 +24,7 @@ use crate::window::feature::{
 /// A feature's entity and the window's hold on its events. Dropping it unsubscribes. The only way to
 /// make one is [`Workspace::listen`] (the subscription field is private to this module), so the
 /// subscription is the window's and no feature can forget it or keep the entity without it.
-pub(in crate::window) struct FeatureState {
+pub(crate) struct FeatureState {
     pub entity: AnyEntity,
     _events: Subscription,
     /// A change the feature notes redraws the window: it is the window that draws its panel.
@@ -51,7 +51,7 @@ impl Workspace {
 
     /// Subscribes the window to a feature's entity, for its [`FeatureEvent`]s, and gives back the
     /// entity with that subscription. A feature's `make` ends with it.
-    pub(in crate::window) fn listen<T: EventEmitter<FeatureEvent>>(
+    pub(crate) fn listen<T: EventEmitter<FeatureEvent>>(
         entity: &Entity<T>,
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -199,7 +199,7 @@ impl Workspace {
     }
 
     /// The table's entry for `tab` and its place in the table: the entry whose feature brings it.
-    pub(in crate::window) fn tab_entry(&self, tab: TabId) -> Option<(usize, &'static TabDef)> {
+    pub(crate) fn tab_entry(&self, tab: TabId) -> Option<(usize, &'static TabDef)> {
         self.features
             .iter()
             .enumerate()
@@ -207,7 +207,7 @@ impl Workspace {
     }
 
     /// The entity of the feature at `at` in the table, if it has state.
-    pub(in crate::window) fn feature_entity(&self, at: usize) -> Option<&AnyEntity> {
+    pub(crate) fn feature_entity(&self, at: usize) -> Option<&AnyEntity> {
         self.feature_states.get(at)?.as_ref().map(|state| &state.entity)
     }
 
@@ -288,7 +288,7 @@ impl Workspace {
     }
 
     /// Once per window tick: the housekeeping of every feature with state, on or off.
-    pub(in crate::window) fn tick_features(&self, window: &mut Window, cx: &mut App) {
+    pub(crate) fn tick_features(&self, window: &mut Window, cx: &mut App) {
         let facts = self.facts(cx);
         for (at, def) in self.features.iter().enumerate() {
             if let (Some(tick), Some(entity)) = (def.tick, self.feature_entity(at)) {
@@ -299,7 +299,7 @@ impl Workspace {
 
     /// The window looks again at what its features show of the world outside the app: when it comes to
     /// the front, when an outside change should reach every window (a project's trust or files).
-    pub(in crate::window) fn refresh_features(&self, cx: &mut App) {
+    pub(crate) fn refresh_features(&self, cx: &mut App) {
         let facts = self.facts(cx);
         for (at, def) in self.features.iter().enumerate() {
             if let (Some(refresh), Some(entity)) = (def.refresh, self.feature_entity(at)) {
@@ -310,7 +310,7 @@ impl Workspace {
 
     /// What the features add to the start of a terminal in `cwd`: their environment, in the table's
     /// order, and the shell of the last that names one.
-    pub(in crate::window) fn spawn_adds(
+    pub(crate) fn spawn_adds(
         profile: &ProfileId,
         cwd: Option<&Path>,
         features: &[FeatureDef],
@@ -327,7 +327,7 @@ impl Workspace {
     /// Whether the folder of terminal `session` is one a feature has approved to run programs for (git's
     /// pull request lookup asks before it starts `gh`). It fails closed: with no feature that gives the
     /// approval, or one that doesn't, nothing is approved.
-    pub(in crate::window) fn programs_approved(&self, session: i64, cx: &App) -> bool {
+    pub(crate) fn programs_approved(&self, session: i64, cx: &App) -> bool {
         let mut approved = false;
         for (at, def) in self.features.iter().enumerate() {
             let Some(approves) = def.approves_programs else { continue };
@@ -395,7 +395,7 @@ impl Workspace {
     }
 
     /// What closing these terminals would lose, by each feature that is on and has something at stake.
-    pub(in crate::window) fn close_stakes(&self, sessions: &[i64], cx: &App) -> Vec<Stake> {
+    pub(crate) fn close_stakes(&self, sessions: &[i64], cx: &App) -> Vec<Stake> {
         let features = crate::settings::store_in(&self.profile, cx).features();
         let mut stakes = Vec::new();
         for (at, def) in self.features.iter().enumerate() {
@@ -413,7 +413,7 @@ impl Workspace {
 
     /// What each feature that is on adds to the question before closing `sessions` (the terminal, or a
     /// group's): in the table's order.
-    pub(in crate::window) fn close_extras(&self, sessions: &[i64], of: CloseOf, cx: &App) -> Vec<CloseExtra> {
+    pub(crate) fn close_extras(&self, sessions: &[i64], of: CloseOf, cx: &App) -> Vec<CloseExtra> {
         let facts = self.facts(cx);
         let mut extras = Vec::new();
         for (at, def) in self.features.iter().enumerate() {
@@ -430,7 +430,7 @@ impl Workspace {
     }
 
     /// Lets each feature that is on put its extra on the rows (a count after the status).
-    pub(in crate::window) fn feature_row_extras(&self, rows: &mut [RowInfo], cx: &App) {
+    pub(crate) fn feature_row_extras(&self, rows: &mut [RowInfo], cx: &App) {
         let facts = self.facts(cx);
         let mut extras = RowExtras::new(rows);
         for (at, def) in self.features.iter().enumerate() {
