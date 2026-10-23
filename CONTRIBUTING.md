@@ -69,6 +69,10 @@ also run `scripts/perf.sh` (a release build timed against your machine's baselin
   `ProjectHub::enabled` (which includes the user's Touch ID approval).
 - Colors come from design tokens, never hard-coded. Spacing, type, corners and shared components
   come from `crates/wormhole/src/style/`; `tests/design_rules.rs` enforces the rules.
+- Words: what a person reads is a message in `crates/wormhole-text/locales/en/`, never a literal in the
+  code (`TEXT_BLESS=1 cargo test -p wormhole-text --test generated` writes the typed keys from the
+  catalogs). `tests/text_rules.rs` fails on a word written in Rust in the folders it lists (`MIGRATED`), and
+  a test fails on a message nothing uses. `devctl language en-XA` shows what is still hard-coded.
 - The database is migrated: a schema change appends a step to `MIGRATIONS` (never edit a shipped
   one), and `store/tests/migrations.rs` checks it.
 - Comments explain *why*. Split files that grow past about 600 lines.
