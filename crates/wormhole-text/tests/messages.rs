@@ -28,9 +28,9 @@ fn a_term_is_filled_in_where_a_message_uses_it() {
 #[test]
 fn messages_with_variables_are_typed_functions() {
     assert_eq!(settings_open_section("Fonts"), "Open Fonts");
-    assert_eq!(settings_font_count(1), "1 font");
-    assert_eq!(settings_font_count(0), "0 fonts");
-    assert_eq!(settings_font_count(5), "5 fonts");
+    assert_eq!(settings_fonts_count(1), "1 font");
+    assert_eq!(settings_fonts_count(0), "0 fonts");
+    assert_eq!(settings_fonts_count(5), "5 fonts");
     assert_eq!(settings_git_tab_width_value(1), "1 space");
     assert_eq!(settings_git_tab_width_value(4), "4 spaces");
 }
@@ -70,8 +70,8 @@ fn every_message_in_the_pseudo_language_is_wrapped_accented_and_longer() {
 #[test]
 fn a_message_with_variables_keeps_its_plural_in_the_pseudo_language() {
     with_language(Language::PSEUDO, || {
-        assert_eq!(settings_font_count(1), "⟦1 föñt···⟧");
-        assert_eq!(settings_font_count(5), "⟦5 föñtš···⟧");
+        assert_eq!(settings_fonts_count(1), "⟦1 föñt···⟧");
+        assert_eq!(settings_fonts_count(5), "⟦5 föñtš···⟧");
         assert_eq!(settings_open_section("Fonts"), "⟦Öpéñ Fonts····⟧");
         for (id, text) in wormhole_text::keys::samples() {
             assert!(text.starts_with('⟦') && text.ends_with('⟧'), "{id}: {text}");

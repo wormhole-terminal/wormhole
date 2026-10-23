@@ -4,6 +4,7 @@
 //! The messages of `locales/en/settings-fonts.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Fonts"
 pub const SETTINGS_SECTION_FONTS: Key = Key::new(123);
@@ -53,3 +54,73 @@ pub const SETTINGS_FONTS_FOLDER_KEYWORDS: Key = Key::new(144);
 pub const SETTINGS_FONTS_CUSTOM_FONTS: Key = Key::new(145);
 /// "custom families"
 pub const SETTINGS_FONTS_CUSTOM_FONTS_KEYWORDS: Key = Key::new(146);
+/// "Open fonts folder"
+pub const SETTINGS_FONTS_OPEN_FONTS_FOLDER: Key = Key::new(147);
+/// "None yet: the fonts folder is empty."
+pub const SETTINGS_FONTS_NONE_YET: Key = Key::new(148);
+/// "ligatures on"
+pub const SETTINGS_FONTS_LIGATURES_ON: Key = Key::new(149);
+/// "ligatures off"
+pub const SETTINGS_FONTS_LIGATURES_OFF: Key = Key::new(150);
+/// "Hover a font in a list to preview it here"
+pub const SETTINGS_FONTS_HOVER_A_FONT_IN_A_LIST: Key = Key::new(151);
+/// "Search fonts"
+pub const SETTINGS_FONTS_SEARCH_FONTS: Key = Key::new(152);
+/// "Bundled"
+pub const SETTINGS_FONTS_BUNDLED: Key = Key::new(153);
+/// "Loading installed fonts…"
+pub const SETTINGS_FONTS_LOADING_INSTALLED_FONTS: Key = Key::new(154);
+/// "Finding monospace fonts…"
+pub const SETTINGS_FONTS_FINDING_MONOSPACE_FONTS: Key = Key::new(155);
+/// "Monospace"
+pub const SETTINGS_FONTS_MONOSPACE: Key = Key::new(156);
+/// "All"
+pub const SETTINGS_FONTS_ALL: Key = Key::new(157);
+
+/// ```text
+/// { $count ->
+///     [one] { $count } font
+///    *[other] { $count } fonts
+/// }
+/// ```
+pub fn settings_fonts_count(count: i64) -> String {
+    crate::active::message(158, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] { $count } family found: { $families }
+///    *[other] { $count } families found: { $families }
+/// }
+/// ```
+pub fn settings_fonts_families_found(count: i64, families: &str) -> String {
+    crate::active::message(159, &[("count", Arg::Int(count)), ("families", Arg::Str(families))])
+}
+
+/// ```text
+/// { $size } pt
+/// ```
+pub fn settings_fonts_size_points(size: &str) -> String {
+    crate::active::message(160, &[("size", Arg::Str(size))])
+}
+
+/// ```text
+/// { $family } { $size } pt
+/// ```
+pub fn settings_fonts_specimen_size(family: &str, size: &str) -> String {
+    crate::active::message(161, &[("family", Arg::Str(family)), ("size", Arg::Str(size))])
+}
+
+/// ```text
+/// line height { $value }
+/// ```
+pub fn settings_fonts_specimen_line_height(value: &str) -> String {
+    crate::active::message(162, &[("value", Arg::Str(value))])
+}
+
+/// ```text
+/// { $theme } colours
+/// ```
+pub fn settings_fonts_specimen_colours(theme: &str) -> String {
+    crate::active::message(163, &[("theme", Arg::Str(theme))])
+}

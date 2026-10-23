@@ -7,202 +7,202 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Terminal"
-pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(364);
+pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(381);
 /// "How the terminal behaves. Its font is in Fonts."
-pub const SETTINGS_SECTION_TERMINAL_INTRO: Key = Key::new(365);
+pub const SETTINGS_SECTION_TERMINAL_INTRO: Key = Key::new(382);
 /// "Behaviour"
-pub const SETTINGS_TERMINAL_GROUP_BEHAVIOUR: Key = Key::new(366);
+pub const SETTINGS_TERMINAL_GROUP_BEHAVIOUR: Key = Key::new(383);
 /// "Scrollback"
-pub const SETTINGS_TERMINAL_SCROLLBACK: Key = Key::new(367);
+pub const SETTINGS_TERMINAL_SCROLLBACK: Key = Key::new(384);
 /// "Lines kept per terminal (applies to new terminals)"
-pub const SETTINGS_TERMINAL_SCROLLBACK_DESCRIPTION: Key = Key::new(368);
+pub const SETTINGS_TERMINAL_SCROLLBACK_DESCRIPTION: Key = Key::new(385);
 /// "history buffer lines"
-pub const SETTINGS_TERMINAL_SCROLLBACK_KEYWORDS: Key = Key::new(369);
+pub const SETTINGS_TERMINAL_SCROLLBACK_KEYWORDS: Key = Key::new(386);
 /// "Restore terminal text after restart"
-pub const SETTINGS_TERMINAL_RESTORE_TEXT: Key = Key::new(370);
+pub const SETTINGS_TERMINAL_RESTORE_TEXT: Key = Key::new(387);
 /// "Encrypted and kept only on this Mac. Off erases what's saved"
-pub const SETTINGS_TERMINAL_RESTORE_TEXT_DESCRIPTION: Key = Key::new(371);
+pub const SETTINGS_TERMINAL_RESTORE_TEXT_DESCRIPTION: Key = Key::new(388);
 /// "scrollback history saved restore privacy secrets encrypted keychain"
-pub const SETTINGS_TERMINAL_RESTORE_TEXT_KEYWORDS: Key = Key::new(372);
+pub const SETTINGS_TERMINAL_RESTORE_TEXT_KEYWORDS: Key = Key::new(389);
 /// "Show minimap"
-pub const SETTINGS_TERMINAL_MINIMAP: Key = Key::new(373);
+pub const SETTINGS_TERMINAL_MINIMAP: Key = Key::new(390);
 /// "The scrollback drawn small along the terminal's right edge. Click or drag it to scroll"
-pub const SETTINGS_TERMINAL_MINIMAP_DESCRIPTION: Key = Key::new(374);
+pub const SETTINGS_TERMINAL_MINIMAP_DESCRIPTION: Key = Key::new(391);
 /// "overview scrollbar map outline"
-pub const SETTINGS_TERMINAL_MINIMAP_KEYWORDS: Key = Key::new(375);
+pub const SETTINGS_TERMINAL_MINIMAP_KEYWORDS: Key = Key::new(392);
 /// "Gaps between split terminals"
-pub const SETTINGS_TERMINAL_SPLIT_GAPS: Key = Key::new(376);
+pub const SETTINGS_TERMINAL_SPLIT_GAPS: Key = Key::new(393);
 /// "Each terminal of a split is its own rounded surface, a small gap apart. Off joins them with a hairline"
-pub const SETTINGS_TERMINAL_SPLIT_GAPS_DESCRIPTION: Key = Key::new(377);
+pub const SETTINGS_TERMINAL_SPLIT_GAPS_DESCRIPTION: Key = Key::new(394);
 /// "panes divider spacing rounded margin"
-pub const SETTINGS_TERMINAL_SPLIT_GAPS_KEYWORDS: Key = Key::new(378);
+pub const SETTINGS_TERMINAL_SPLIT_GAPS_KEYWORDS: Key = Key::new(395);
 /// "Use Option as Meta"
-pub const SETTINGS_TERMINAL_META: Key = Key::new(379);
+pub const SETTINGS_TERMINAL_META: Key = Key::new(396);
 /// "For emacs and readline shortcuts. A side set to Meta can't type @ { [ on some keyboard layouts"
-pub const SETTINGS_TERMINAL_META_DESCRIPTION: Key = Key::new(380);
+pub const SETTINGS_TERMINAL_META_DESCRIPTION: Key = Key::new(397);
 /// "alt option escape keyboard left right"
-pub const SETTINGS_TERMINAL_META_KEYWORDS: Key = Key::new(381);
+pub const SETTINGS_TERMINAL_META_KEYWORDS: Key = Key::new(398);
 /// "Font"
-pub const SETTINGS_TERMINAL_FONT: Key = Key::new(382);
+pub const SETTINGS_TERMINAL_FONT: Key = Key::new(399);
 /// "typeface size line height"
-pub const SETTINGS_TERMINAL_FONT_KEYWORDS: Key = Key::new(383);
+pub const SETTINGS_TERMINAL_FONT_KEYWORDS: Key = Key::new(400);
 /// "Opening"
-pub const SETTINGS_TERMINAL_GROUP_OPENING: Key = Key::new(384);
+pub const SETTINGS_TERMINAL_GROUP_OPENING: Key = Key::new(401);
 /// "Open folders in"
-pub const SETTINGS_TERMINAL_OPEN_IN: Key = Key::new(385);
+pub const SETTINGS_TERMINAL_OPEN_IN: Key = Key::new(402);
 /// "The Open in… button in a terminal's title row opens its folder here; its menu lists the others"
-pub const SETTINGS_TERMINAL_OPEN_IN_DESCRIPTION: Key = Key::new(386);
+pub const SETTINGS_TERMINAL_OPEN_IN_DESCRIPTION: Key = Key::new(403);
 /// "editor ide zed code vscode cursor sublime xcode jetbrains phpstorm finder app"
-pub const SETTINGS_TERMINAL_OPEN_IN_KEYWORDS: Key = Key::new(387);
+pub const SETTINGS_TERMINAL_OPEN_IN_KEYWORDS: Key = Key::new(404);
 /// "Default terminal"
-pub const SETTINGS_TERMINAL_DEFAULT_TERMINAL: Key = Key::new(388);
+pub const SETTINGS_TERMINAL_DEFAULT_TERMINAL: Key = Key::new(405);
 /// "Double-clicked .command files and programs run in a new Wormhole terminal instead of Terminal"
-pub const SETTINGS_TERMINAL_DEFAULT_TERMINAL_DESCRIPTION: Key = Key::new(389);
+pub const SETTINGS_TERMINAL_DEFAULT_TERMINAL_DESCRIPTION: Key = Key::new(406);
 /// "default terminal app command script executable finder open with launch services"
-pub const SETTINGS_TERMINAL_DEFAULT_TERMINAL_KEYWORDS: Key = Key::new(390);
+pub const SETTINGS_TERMINAL_DEFAULT_TERMINAL_KEYWORDS: Key = Key::new(407);
 /// "Shell"
-pub const SETTINGS_TERMINAL_GROUP_SHELL: Key = Key::new(391);
+pub const SETTINGS_TERMINAL_GROUP_SHELL: Key = Key::new(408);
 /// "Default shell"
-pub const SETTINGS_TERMINAL_DEFAULT_SHELL: Key = Key::new(392);
+pub const SETTINGS_TERMINAL_DEFAULT_SHELL: Key = Key::new(409);
 /// "What a new terminal runs: your login shell, a shell on this Mac, or a profile below. Right-click a + for the others"
-pub const SETTINGS_TERMINAL_DEFAULT_SHELL_DESCRIPTION: Key = Key::new(393);
+pub const SETTINGS_TERMINAL_DEFAULT_SHELL_DESCRIPTION: Key = Key::new(410);
 /// "shell zsh bash fish nu nushell login program default"
-pub const SETTINGS_TERMINAL_DEFAULT_SHELL_KEYWORDS: Key = Key::new(394);
+pub const SETTINGS_TERMINAL_DEFAULT_SHELL_KEYWORDS: Key = Key::new(411);
 /// "Shells"
-pub const SETTINGS_TERMINAL_SHELLS: Key = Key::new(395);
+pub const SETTINGS_TERMINAL_SHELLS: Key = Key::new(412);
 /// "Profiles for New Terminal With: a program with its arguments, listed in config.json"
-pub const SETTINGS_TERMINAL_SHELLS_DESCRIPTION: Key = Key::new(396);
+pub const SETTINGS_TERMINAL_SHELLS_DESCRIPTION: Key = Key::new(413);
 /// "shell profiles custom command arguments args claude program"
-pub const SETTINGS_TERMINAL_SHELLS_KEYWORDS: Key = Key::new(397);
+pub const SETTINGS_TERMINAL_SHELLS_KEYWORDS: Key = Key::new(414);
 /// "Worktrees"
-pub const SETTINGS_TERMINAL_GROUP_WORKTREES: Key = Key::new(398);
+pub const SETTINGS_TERMINAL_GROUP_WORKTREES: Key = Key::new(415);
 /// "Worktrees folder"
-pub const SETTINGS_TERMINAL_WORKTREE_BASE: Key = Key::new(399);
+pub const SETTINGS_TERMINAL_WORKTREE_BASE: Key = Key::new(416);
 /// "Where Shell → New Terminal in New Worktree puts a worktree: beside the repository in <name>-worktrees, or under the folder worktree_base names in config.json"
-pub const SETTINGS_TERMINAL_WORKTREE_BASE_DESCRIPTION: Key = Key::new(400);
+pub const SETTINGS_TERMINAL_WORKTREE_BASE_DESCRIPTION: Key = Key::new(417);
 /// "worktree worktrees git branch folder base parallel agents"
-pub const SETTINGS_TERMINAL_WORKTREE_BASE_KEYWORDS: Key = Key::new(401);
+pub const SETTINGS_TERMINAL_WORKTREE_BASE_KEYWORDS: Key = Key::new(418);
 /// "Bell"
-pub const SETTINGS_TERMINAL_GROUP_BELL: Key = Key::new(402);
+pub const SETTINGS_TERMINAL_GROUP_BELL: Key = Key::new(419);
 /// "Play a sound"
-pub const SETTINGS_TERMINAL_BELL_SOUND: Key = Key::new(403);
+pub const SETTINGS_TERMINAL_BELL_SOUND: Key = Key::new(420);
 /// "The system beep when a program in a terminal rings the bell"
-pub const SETTINGS_TERMINAL_BELL_SOUND_DESCRIPTION: Key = Key::new(404);
+pub const SETTINGS_TERMINAL_BELL_SOUND_DESCRIPTION: Key = Key::new(421);
 /// "bell beep audible alert"
-pub const SETTINGS_TERMINAL_BELL_SOUND_KEYWORDS: Key = Key::new(405);
+pub const SETTINGS_TERMINAL_BELL_SOUND_KEYWORDS: Key = Key::new(422);
 /// "Flash the window edge"
-pub const SETTINGS_TERMINAL_BELL_VISUAL: Key = Key::new(406);
+pub const SETTINGS_TERMINAL_BELL_VISUAL: Key = Key::new(423);
 /// "A short glow along the terminal's edge when it rings the bell"
-pub const SETTINGS_TERMINAL_BELL_VISUAL_DESCRIPTION: Key = Key::new(407);
+pub const SETTINGS_TERMINAL_BELL_VISUAL_DESCRIPTION: Key = Key::new(424);
 /// "bell visual flash glow"
-pub const SETTINGS_TERMINAL_BELL_VISUAL_KEYWORDS: Key = Key::new(408);
+pub const SETTINGS_TERMINAL_BELL_VISUAL_KEYWORDS: Key = Key::new(425);
 /// "Privacy"
-pub const SETTINGS_TERMINAL_GROUP_PRIVACY: Key = Key::new(409);
+pub const SETTINGS_TERMINAL_GROUP_PRIVACY: Key = Key::new(426);
 /// "Programs reading the clipboard"
-pub const SETTINGS_TERMINAL_CLIPBOARD_READ: Key = Key::new(410);
+pub const SETTINGS_TERMINAL_CLIPBOARD_READ: Key = Key::new(427);
 /// "What a program gets when it asks for the clipboard's text (OSC 52), over ssh too. Ask puts a question over that terminal; the clipboard often holds a password"
-pub const SETTINGS_TERMINAL_CLIPBOARD_READ_DESCRIPTION: Key = Key::new(411);
+pub const SETTINGS_TERMINAL_CLIPBOARD_READ_DESCRIPTION: Key = Key::new(428);
 /// "osc 52 clipboard read paste copy password ask allow deny security ssh"
-pub const SETTINGS_TERMINAL_CLIPBOARD_READ_KEYWORDS: Key = Key::new(412);
+pub const SETTINGS_TERMINAL_CLIPBOARD_READ_KEYWORDS: Key = Key::new(429);
 /// "Programs setting the clipboard"
-pub const SETTINGS_TERMINAL_CLIPBOARD_WRITE: Key = Key::new(413);
+pub const SETTINGS_TERMINAL_CLIPBOARD_WRITE: Key = Key::new(430);
 /// "Lets a program put text on the clipboard (OSC 52), which replaces what you copied. The terminal says when one does"
-pub const SETTINGS_TERMINAL_CLIPBOARD_WRITE_DESCRIPTION: Key = Key::new(414);
+pub const SETTINGS_TERMINAL_CLIPBOARD_WRITE_DESCRIPTION: Key = Key::new(431);
 /// "osc 52 clipboard write copy set security ssh notice"
-pub const SETTINGS_TERMINAL_CLIPBOARD_WRITE_KEYWORDS: Key = Key::new(415);
+pub const SETTINGS_TERMINAL_CLIPBOARD_WRITE_KEYWORDS: Key = Key::new(432);
 /// "Let programs read the screen back"
-pub const SETTINGS_TERMINAL_SCREEN_CHECKSUM: Key = Key::new(416);
+pub const SETTINGS_TERMINAL_SCREEN_CHECKSUM: Key = Key::new(433);
 /// "Answers a program's request for the checksum of part of the screen (DECRQCRA), which also lets a program, over ssh too, read the screen cell by cell. Applies to new terminals"
-pub const SETTINGS_TERMINAL_SCREEN_CHECKSUM_DESCRIPTION: Key = Key::new(417);
+pub const SETTINGS_TERMINAL_SCREEN_CHECKSUM_DESCRIPTION: Key = Key::new(434);
 /// "decrqcra checksum screen read capture esctest security ssh"
-pub const SETTINGS_TERMINAL_SCREEN_CHECKSUM_KEYWORDS: Key = Key::new(418);
+pub const SETTINGS_TERMINAL_SCREEN_CHECKSUM_KEYWORDS: Key = Key::new(435);
 /// "Let programs control the window"
-pub const SETTINGS_TERMINAL_WINDOW_OPS: Key = Key::new(419);
+pub const SETTINGS_TERMINAL_WINDOW_OPS: Key = Key::new(436);
 /// "Lets a program move, resize, minimise, raise or full-screen the window (xterm's window operations). Applies to new terminals"
-pub const SETTINGS_TERMINAL_WINDOW_OPS_DESCRIPTION: Key = Key::new(420);
+pub const SETTINGS_TERMINAL_WINDOW_OPS_DESCRIPTION: Key = Key::new(437);
 /// "xtwinops window operations resize move iconify fullscreen maximize security ssh"
-pub const SETTINGS_TERMINAL_WINDOW_OPS_KEYWORDS: Key = Key::new(421);
+pub const SETTINGS_TERMINAL_WINDOW_OPS_KEYWORDS: Key = Key::new(438);
 /// "Let programs read the window title back"
-pub const SETTINGS_TERMINAL_TITLE_REPORT: Key = Key::new(422);
+pub const SETTINGS_TERMINAL_TITLE_REPORT: Key = Key::new(439);
 /// "Answers a program's request for the window title and icon name (XTWINOPS 20 and 21). A title is text a program chose, and the answer is typed into the shell, so over ssh this lets a program type a command line. Applies to new terminals"
-pub const SETTINGS_TERMINAL_TITLE_REPORT_DESCRIPTION: Key = Key::new(423);
+pub const SETTINGS_TERMINAL_TITLE_REPORT_DESCRIPTION: Key = Key::new(440);
 /// "xtwinops title icon name report read back window security ssh esctest"
-pub const SETTINGS_TERMINAL_TITLE_REPORT_KEYWORDS: Key = Key::new(424);
+pub const SETTINGS_TERMINAL_TITLE_REPORT_KEYWORDS: Key = Key::new(441);
 /// "Off"
-pub const SETTINGS_TERMINAL_OFF: Key = Key::new(425);
+pub const SETTINGS_TERMINAL_OFF: Key = Key::new(442);
 /// "Left"
-pub const SETTINGS_TERMINAL_LEFT: Key = Key::new(426);
+pub const SETTINGS_TERMINAL_LEFT: Key = Key::new(443);
 /// "Right"
-pub const SETTINGS_TERMINAL_RIGHT: Key = Key::new(427);
+pub const SETTINGS_TERMINAL_RIGHT: Key = Key::new(444);
 /// "Both"
-pub const SETTINGS_TERMINAL_BOTH: Key = Key::new(428);
+pub const SETTINGS_TERMINAL_BOTH: Key = Key::new(445);
 /// "Edit in Fonts"
-pub const SETTINGS_TERMINAL_EDIT_IN_FONTS: Key = Key::new(429);
+pub const SETTINGS_TERMINAL_EDIT_IN_FONTS: Key = Key::new(446);
 /// "Edit in config.json"
-pub const SETTINGS_TERMINAL_EDIT_IN_CONFIG_JSON: Key = Key::new(430);
+pub const SETTINGS_TERMINAL_EDIT_IN_CONFIG_JSON: Key = Key::new(447);
 /// "Ask"
-pub const SETTINGS_TERMINAL_ASK: Key = Key::new(431);
+pub const SETTINGS_TERMINAL_ASK: Key = Key::new(448);
 /// "Allow"
-pub const SETTINGS_TERMINAL_ALLOW: Key = Key::new(432);
+pub const SETTINGS_TERMINAL_ALLOW: Key = Key::new(449);
 /// "Deny"
-pub const SETTINGS_TERMINAL_DENY: Key = Key::new(433);
+pub const SETTINGS_TERMINAL_DENY: Key = Key::new(450);
 /// "Wormhole is the default"
-pub const SETTINGS_TERMINAL_WORMHOLE_IS_THE_DEFAULT: Key = Key::new(434);
+pub const SETTINGS_TERMINAL_WORMHOLE_IS_THE_DEFAULT: Key = Key::new(451);
 /// "To change it, pick another app for a .command file in Finder's Get Info"
-pub const SETTINGS_TERMINAL_TO_CHANGE_IT_PICK_ANOTHER_APP: Key = Key::new(435);
+pub const SETTINGS_TERMINAL_TO_CHANGE_IT_PICK_ANOTHER_APP: Key = Key::new(452);
 /// "Make default"
-pub const SETTINGS_TERMINAL_MAKE_DEFAULT: Key = Key::new(436);
+pub const SETTINGS_TERMINAL_MAKE_DEFAULT: Key = Key::new(453);
 /// "Instead of Terminal"
-pub const SETTINGS_TERMINAL_INSTEAD_OF_TERMINAL: Key = Key::new(437);
+pub const SETTINGS_TERMINAL_INSTEAD_OF_TERMINAL: Key = Key::new(454);
 /// "Only Wormhole.app can be the default terminal"
-pub const SETTINGS_TERMINAL_DEFAULT_ONLY_APP: Key = Key::new(438);
+pub const SETTINGS_TERMINAL_DEFAULT_ONLY_APP: Key = Key::new(455);
 /// "Not installed: the title row opens it in another app"
-pub const SETTINGS_TERMINAL_NOT_INSTALLED_THE_TITLE_ROW_OPENS: Key = Key::new(439);
+pub const SETTINGS_TERMINAL_NOT_INSTALLED_THE_TITLE_ROW_OPENS: Key = Key::new(456);
 /// "Choose app…"
-pub const SETTINGS_TERMINAL_CHOOSE_APP: Key = Key::new(440);
+pub const SETTINGS_TERMINAL_CHOOSE_APP: Key = Key::new(457);
 /// "Choose"
-pub const SETTINGS_TERMINAL_CHOOSE: Key = Key::new(441);
+pub const SETTINGS_TERMINAL_CHOOSE: Key = Key::new(458);
 /// "Not found: the login shell runs instead"
-pub const SETTINGS_TERMINAL_NOT_FOUND_THE_LOGIN_SHELL_RUNS: Key = Key::new(442);
+pub const SETTINGS_TERMINAL_NOT_FOUND_THE_LOGIN_SHELL_RUNS: Key = Key::new(459);
 
 /// ```text
 /// Couldn't make { -brand } the default: { $error }
 /// ```
 pub fn settings_terminal_default_failed(error: &str) -> String {
-    crate::active::message(443, &[("error", Arg::Str(error))])
+    crate::active::message(460, &[("error", Arg::Str(error))])
 }
 
 /// ```text
 /// { $family } { $size } pt · line height { $line_height } · ligatures on
 /// ```
 pub fn settings_terminal_font_summary_ligatures_on(family: &str, size: &str, line_height: &str) -> String {
-    crate::active::message(444, &[("family", Arg::Str(family)), ("size", Arg::Str(size)), ("line_height", Arg::Str(line_height))])
+    crate::active::message(461, &[("family", Arg::Str(family)), ("size", Arg::Str(size)), ("line_height", Arg::Str(line_height))])
 }
 
 /// ```text
 /// { $family } { $size } pt · line height { $line_height } · ligatures off
 /// ```
 pub fn settings_terminal_font_summary_ligatures_off(family: &str, size: &str, line_height: &str) -> String {
-    crate::active::message(445, &[("family", Arg::Str(family)), ("size", Arg::Str(size)), ("line_height", Arg::Str(line_height))])
+    crate::active::message(462, &[("family", Arg::Str(family)), ("size", Arg::Str(size)), ("line_height", Arg::Str(line_height))])
 }
 
 /// ```text
 /// Under { $folder }, in a folder named after the repository (worktree_base in config.json)
 /// ```
 pub fn settings_terminal_worktree_base_under(folder: &str) -> String {
-    crate::active::message(446, &[("folder", Arg::Str(folder))])
+    crate::active::message(463, &[("folder", Arg::Str(folder))])
 }
 
 /// ```text
 /// { $count } lines
 /// ```
 pub fn settings_terminal_scrollback_lines(count: &str) -> String {
-    crate::active::message(447, &[("count", Arg::Str(count))])
+    crate::active::message(464, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// Login shell · { $command }
 /// ```
 pub fn settings_terminal_login_shell(command: &str) -> String {
-    crate::active::message(448, &[("command", Arg::Str(command))])
+    crate::active::message(465, &[("command", Arg::Str(command))])
 }

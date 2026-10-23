@@ -11,9 +11,3 @@ settings-nav-preview = Preview
 # The command palette's line that opens a page. { $section } is that page's title, so this is a
 # sentence with a hole: keep the word order your language needs.
 settings-open-section = Open { $section }
-
-# Under the font pickers: how many fonts the folder holds. { $count } is a whole number.
-settings-font-count = { $count ->
-    [one] { $count } font
-   *[other] { $count } fonts
-}

@@ -38,6 +38,8 @@ const MIGRATED: &[&str] = &[
     "settings_window/sections/profile_form.rs",
     "settings_window/sections/profile_sheet.rs",
     "settings_window/sections/terminal.rs",
+    "settings_window/sections/fonts.rs",
+    "settings_window/font_picker.rs",
 ];
 
 /// A marker that says a literal on its line is not interface text.

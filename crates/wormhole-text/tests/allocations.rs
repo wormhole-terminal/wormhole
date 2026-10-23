@@ -72,9 +72,9 @@ fn a_plain_message_in_another_language_allocates_nothing_either() {
 
 #[test]
 fn a_message_with_variables_costs_a_few_small_allocations_not_a_load() {
-    let _ = settings_font_count(2);
+    let _ = settings_fonts_count(2);
     let before = allocations();
-    let _ = settings_font_count(2);
+    let _ = settings_fonts_count(2);
     let used = allocations() - before;
     assert!(used <= 8, "a formatted message took {used} allocations");
 }

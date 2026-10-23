@@ -6,28 +6,28 @@
 use crate::key::Key;
 
 /// "Updates"
-pub const SETTINGS_SECTION_UPDATES: Key = Key::new(449);
+pub const SETTINGS_SECTION_UPDATES: Key = Key::new(466);
 /// "Signed releases, checked in the background."
-pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(450);
+pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(467);
 /// "Updates"
-pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(451);
+pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(468);
 /// "Version"
-pub const SETTINGS_UPDATES_VERSION: Key = Key::new(452);
+pub const SETTINGS_UPDATES_VERSION: Key = Key::new(469);
 /// "release build"
-pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(453);
+pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(470);
 /// "Update automatically"
-pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(454);
+pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(471);
 /// "Checks in the background and installs on the next restart"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(455);
+pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(472);
 /// "download auto"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(456);
+pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(473);
 /// "Channel"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(457);
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(474);
 /// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(458);
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(475);
 /// "beta nightly unstable stable prerelease dev builds main feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(459);
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(476);
 /// "Check for updates"
-pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(460);
+pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(477);
 /// "install restart release notes check skip"
-pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(461);
+pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(478);

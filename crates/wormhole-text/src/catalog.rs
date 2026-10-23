@@ -218,8 +218,8 @@ mod tests {
         let mut count = FluentArgs::new();
         count.set("count", 5);
         // German has no font count of its own: the caller formats English's.
-        assert_eq!(german.format(index("settings-font-count"), &count), None);
-        assert_eq!(english.format(index("settings-font-count"), &count).as_deref(), Some("5 fonts"));
+        assert_eq!(german.format(index("settings-fonts-count"), &count), None);
+        assert_eq!(english.format(index("settings-fonts-count"), &count).as_deref(), Some("5 fonts"));
     }
 
     #[test]

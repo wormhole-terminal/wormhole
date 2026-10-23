@@ -7,6 +7,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
+use wormhole_text::{keys::*, text, whole};
 
 use gpui_kit::component::Sizable;
 use gpui_kit::component::input::{Input, InputState};
@@ -43,7 +44,7 @@ impl FontPickerState {
     pub(super) fn new(window: &mut Window, cx: &mut Context<SettingsWindow>) -> Self {
         Self {
             open: None,
-            search: cx.new(|cx| InputState::new(window, cx).placeholder("Search fonts")),
+            search: cx.new(|cx| InputState::new(window, cx).placeholder(text(SETTINGS_FONTS_SEARCH_FONTS))),
             show_all: false,
             scroll: UniformListScrollHandle::new(),
             hovered: None,
@@ -145,7 +146,7 @@ impl SettingsWindow {
                         .text_caption()
                         .text_color(ui.faint)
                         .child(if family == SYSTEM_FONT {
-                            "SF Pro".to_string()
+                            "SF Pro".to_string() // text: name (the system font's own name)
                         } else {
                             display_name(&family).to_string()
                         }),
@@ -164,7 +165,7 @@ impl SettingsWindow {
                         .font_family(family.clone())
                         .child(display_name(&family).to_string()),
                 )
-                .when(bundled, |d| d.child(style::tint_chip(ui, None, "Bundled"))),
+                .when(bundled, |d| d.child(style::tint_chip(ui, None, text(SETTINGS_FONTS_BUNDLED)))),
         };
 
         let this = cx.weak_entity();
@@ -199,7 +200,7 @@ impl SettingsWindow {
                 FontSlot::Interface => "font-size-interface",
                 FontSlot::Code => "font-size-code",
             },
-            format!("{size:.0} pt"),
+            settings_fonts_size_points(&format!("{size:.0}")),
             cx.listener(move |_, _, _, cx| update_settings(cx, |s| s.step_slot_size(slot, -1.0))),
             cx.listener(move |_, _, _, cx| update_settings(cx, |s| s.step_slot_size(slot, 1.0))),
         );
@@ -239,12 +240,12 @@ impl FontMenu {
         let show_all = page.font_picker.show_all;
 
         let status = if loading {
-            "Loading installed fonts…".to_string()
+            text(SETTINGS_FONTS_LOADING_INSTALLED_FONTS).to_string()
         } else if slot.prefers_monospace() && !show_all && classifying {
-            "Finding monospace fonts…".to_string()
+            text(SETTINGS_FONTS_FINDING_MONOSPACE_FONTS).to_string()
         } else {
             let fonts = entries.iter().filter(|e| matches!(e, Entry::Family(_))).count();
-            format!("{fonts} font{}", if fonts == 1 { "" } else { "s" })
+            settings_fonts_count(whole(fonts))
         };
         Self {
             slot,
@@ -318,8 +319,8 @@ impl FontMenu {
                         .rule_bottom(ui)
                         .child(
                             style::segmented(ui)
-                                .child(segment(0, "Monospace", false))
-                                .child(segment(1, "All", true)),
+                                .child(segment(0, text(SETTINGS_FONTS_MONOSPACE), false))
+                                .child(segment(1, text(SETTINGS_FONTS_ALL), true)),
                         )
                         .child(div().text_caption().text_color(ui.faint).child(self.status.clone())),
                 )

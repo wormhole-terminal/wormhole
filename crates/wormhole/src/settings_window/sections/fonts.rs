@@ -5,6 +5,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::theme::fonts::{FontSlot, display_name};
+use wormhole_text::{keys::*, text, whole};
 
 use super::open_button;
 use crate::fonts::LoadedFonts;
@@ -33,7 +34,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("font-code", |w, cx| w.font_control(FontSlot::Code, cx)),
     Setting::custom("font-interface", |w, cx| w.font_control(FontSlot::Interface, cx)),
     Setting::custom("fonts-folder", |_, _| {
-        open_button("fonts-folder", IconName::ExternalLink, "Open fonts folder", |cx| {
+        open_button("fonts-folder", IconName::ExternalLink, text(SETTINGS_FONTS_OPEN_FONTS_FOLDER), |cx| {
             open_folder(&crate::active_profile::paths().fonts_dir(), cx)
         })
     }),
@@ -44,19 +45,18 @@ pub(super) const SETTINGS: &[Setting] = &[
 fn describe_custom(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<SharedString> {
     let families = cx.try_global::<LoadedFonts>().map(LoadedFonts::custom_families).unwrap_or_default();
     Some(match families.len() {
-        0 => "None yet: the fonts folder is empty.".into(),
-        1 => format!("1 family found: {}", families[0]).into(),
-        n => format!("{n} families found: {}", families.join(", ")).into(),
+        0 => text(SETTINGS_FONTS_NONE_YET).into(),
+        n => settings_fonts_families_found(whole(n), &families.join(", ")).into(),
     })
 }
 
 /// The specimen's text: a prompt, a result, code with the pairs ligatures join, and the
 /// characters that tell fonts apart.
 const SPECIMEN: [&str; 4] = [
-    "→ wormhole (main) cargo test --workspace",
-    "test result: ok. 57 passed; 0 failed",
-    "fn resolve(&self) -> Result<Tokens> { a != b && c >= d }",
-    "0O 1lI {}[] => != ~ |> <= www // ligatures",
+    "→ wormhole (main) cargo test --workspace", // text: sample (the specimen's terminal text)
+    "test result: ok. 57 passed; 0 failed",     // text: sample (the specimen's terminal text)
+    "fn resolve(&self) -> Result<Tokens> { a != b && c >= d }", // text: sample (the specimen's terminal text)
+    "0O 1lI {}[] => != ~ |> <= www // ligatures", // text: sample (the specimen's terminal text)
 ];
 
 /// One specimen, Terminal | Code | Interface, in the theme's terminal colors at the slot's
@@ -98,7 +98,7 @@ pub(in crate::settings_window) fn draw_specimen(
         )
     };
     let fg = theme_bridge::hsla(term.foreground);
-    let text = div()
+    let specimen = div()
         .flex()
         .flex_col()
         .px_4()
@@ -111,15 +111,15 @@ pub(in crate::settings_window) fn draw_specimen(
         .line_height(relative(line_height))
         .child(line(vec![
             (ansi(2), "→ "),
-            (ansi(4), "wormhole "),
-            (ansi(5), "(main) "),
-            (fg, "cargo test --workspace"),
+            (ansi(4), "wormhole "), // text: sample (the specimen's terminal text)
+            (ansi(5), "(main) "),   // text: sample (the specimen's terminal text)
+            (fg, "cargo test --workspace"), // text: sample (the specimen's terminal text)
         ]))
-        .child(line(vec![(fg, "test result: "), (ansi(2), "ok"), (fg, ". 57 passed; 0 failed")]))
+        .child(line(vec![(fg, "test result: "), (ansi(2), "ok"), (fg, ". 57 passed; 0 failed")])) // text: sample (the specimen's terminal text)
         .child(line(vec![
-            (ansi(5), "fn "),
+            (ansi(5), "fn "), // text: sample (the specimen's terminal text)
             (ansi(4), "resolve"),
-            (fg, "(&self) -> Result<Tokens> { a != b && c >= d }"),
+            (fg, "(&self) -> Result<Tokens> { a != b && c >= d }"), // text: sample (the specimen's terminal text)
         ]))
         .child(line(vec![(ui.muted, SPECIMEN[3])]));
     let facts = div()
@@ -131,12 +131,18 @@ pub(in crate::settings_window) fn draw_specimen(
         .rule_top(ui)
         .text_caption()
         .text_color(ui.muted)
-        .child(format!("{} {size:.0} pt", display_name(&family)))
-        .when(slot == FontSlot::Terminal, |d| d.child(format!("line height {:.2}", s.line_height)))
-        .when(slot != FontSlot::Interface, |d| {
-            d.child(if s.font_ligatures { "ligatures on" } else { "ligatures off" })
+        .child(settings_fonts_specimen_size(display_name(&family), &format!("{size:.0}")))
+        .when(slot == FontSlot::Terminal, |d| {
+            d.child(settings_fonts_specimen_line_height(&format!("{:.2}", s.line_height)))
         })
-        .child(format!("{theme_name} colours"));
+        .when(slot != FontSlot::Interface, |d| {
+            d.child(if s.font_ligatures {
+                text(SETTINGS_FONTS_LIGATURES_ON)
+            } else {
+                text(SETTINGS_FONTS_LIGATURES_OFF)
+            })
+        })
+        .child(settings_fonts_specimen_colours(&theme_name));
     div()
         .flex()
         .flex_col()
@@ -164,10 +170,10 @@ pub(in crate::settings_window) fn draw_specimen(
                                 .truncate()
                                 .text_caption()
                                 .text_color(ui.faint)
-                                .child("Hover a font in a list to preview it here"),
+                                .child(text(SETTINGS_FONTS_HOVER_A_FONT_IN_A_LIST)),
                         ),
                 )
-                .child(text)
+                .child(specimen)
                 .child(facts),
         )
         .into_any_element()
