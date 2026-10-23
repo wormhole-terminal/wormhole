@@ -28,7 +28,7 @@ pub(crate) struct Pane {
     /// What the window shows of the terminal, as of its last change (`window::summaries`): its
     /// rows, bars and headers read this, never the terminal, so output alone doesn't draw them.
     pub summary: TerminalSummary,
-    /// Its grid's size as of its last paint: no notification says when it changes.
+    /// Its grid's size as of its last paint; `TerminalEvent::Resized` tells the window when it changes.
     pub grid: GridProbe,
     _observer: Subscription,
     _events: Subscription,

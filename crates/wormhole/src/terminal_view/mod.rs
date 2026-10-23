@@ -58,7 +58,7 @@ pub const MIN_WIDTH: f32 = wormhole_core::view::layout::TERMINAL_MIN;
 pub use wormhole_core::theme::fonts::TERMINAL_FONT_SIZES as FONT_SIZES;
 
 /// The size of a terminal's grid as of the last frame it painted, which a terminal sets while
-/// painting (nothing notifies when it changes: a reader of it redraws on a clock of its own).
+/// painting (a change of it is told by `TerminalEvent::Resized`, which the window listens to).
 #[derive(Clone)]
 pub struct GridProbe(Rc<Cell<Layout>>);
 
