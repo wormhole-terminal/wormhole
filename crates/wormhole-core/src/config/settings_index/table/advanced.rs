@@ -1,44 +1,31 @@
 //! The Advanced section: resetting settings and tips.
 
-use super::{literal_entry, literal_group};
+use super::{entry, group};
 use crate::config::settings_index::Group;
+use wormhole_text::keys::*;
 
 pub(super) const ADVANCED: &[Group] = &[
-    literal_group(
-        "Files",
+    group(
+        SETTINGS_ADVANCED_GROUP_FILES,
         &[
-            literal_entry(
-                "open-config",
-                "Settings file",
-                "config.json: edits apply live",
-                "json config",
-                &[],
-            ),
-            literal_entry(
-                "open-data",
-                "Data folder",
-                "Terminals, notes, themes, logs",
-                "finder database",
-                &[],
-            ),
-            literal_entry("open-logs", "Logs", "Set WORMHOLE_LOG=debug for more detail", "debug log", &[]),
-            literal_entry(
-                "reset-settings",
-                "Reset all settings",
-                "Your terminals, notes and themes are kept",
-                "defaults reset restore",
-                &[],
-            ),
+            entry("open-config", SETTINGS_ADVANCED_OPEN_CONFIG, &[])
+                .with_description(SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION)
+                .with_keywords(SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS),
+            entry("open-data", SETTINGS_ADVANCED_OPEN_DATA, &[])
+                .with_description(SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION)
+                .with_keywords(SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS),
+            entry("open-logs", SETTINGS_ADVANCED_OPEN_LOGS, &[])
+                .with_description(SETTINGS_ADVANCED_OPEN_LOGS_DESCRIPTION)
+                .with_keywords(SETTINGS_ADVANCED_OPEN_LOGS_KEYWORDS),
+            entry("reset-settings", SETTINGS_ADVANCED_RESET_SETTINGS, &[])
+                .with_description(SETTINGS_ADVANCED_RESET_SETTINGS_DESCRIPTION)
+                .with_keywords(SETTINGS_ADVANCED_RESET_SETTINGS_KEYWORDS),
         ],
     ),
-    literal_group(
-        "Tips",
-        &[literal_entry(
-            "reset-tips",
-            "Closed tips",
-            "Bring back the tips closed with “Don't show again”, such as the sidebar's coding agents note",
-            "hints tips reset show again dismissed",
-            &[],
-        )],
+    group(
+        SETTINGS_ADVANCED_GROUP_TIPS,
+        &[entry("reset-tips", SETTINGS_ADVANCED_RESET_TIPS, &[])
+            .with_description(SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION)
+            .with_keywords(SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS)],
     ),
 ];

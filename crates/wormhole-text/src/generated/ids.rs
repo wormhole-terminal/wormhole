@@ -5,7 +5,26 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 30] = [
+pub(crate) const IDS: [&str; 48] = [
+    "settings-section-advanced",
+    "settings-section-advanced.intro",
+    "settings-advanced-group-files",
+    "settings-advanced-open-config",
+    "settings-advanced-open-config.description",
+    "settings-advanced-open-config.keywords",
+    "settings-advanced-open-data",
+    "settings-advanced-open-data.description",
+    "settings-advanced-open-data.keywords",
+    "settings-advanced-open-logs",
+    "settings-advanced-open-logs.description",
+    "settings-advanced-open-logs.keywords",
+    "settings-advanced-reset-settings",
+    "settings-advanced-reset-settings.description",
+    "settings-advanced-reset-settings.keywords",
+    "settings-advanced-group-tips",
+    "settings-advanced-reset-tips",
+    "settings-advanced-reset-tips.description",
+    "settings-advanced-reset-tips.keywords",
     "settings-section-updates",
     "settings-section-updates.intro",
     "settings-updates-group-updates",
@@ -28,7 +47,6 @@ pub(crate) const IDS: [&str; 30] = [
     "settings-section-agents",
     "settings-section-notifications",
     "settings-section-menu-bar",
-    "settings-section-advanced",
     "settings-theme-mode",
     "settings-theme-mode.description",
     "settings-theme-mode.keywords",
@@ -39,7 +57,25 @@ pub(crate) const IDS: [&str; 30] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 30] = [
+pub(crate) const TAKES_ARGS: [bool; 48] = [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
     false,
     false,
     false,

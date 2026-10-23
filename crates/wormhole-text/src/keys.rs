@@ -7,63 +7,118 @@
 use crate::args::Arg;
 use crate::key::Key;
 
-/// "Updates"
-pub const SETTINGS_SECTION_UPDATES: Key = Key::new(0);
-/// "Signed releases, checked in the background."
-pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(1);
-/// "Updates"
-pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(2);
-/// "Version"
-pub const SETTINGS_UPDATES_VERSION: Key = Key::new(3);
-/// "release build"
-pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(4);
-/// "Update automatically"
-pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(5);
-/// "Checks in the background and installs on the next restart"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(6);
-/// "download auto"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(7);
-/// "Channel"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(8);
-/// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(9);
-/// "beta nightly unstable stable prerelease dev builds main feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(10);
-/// "Check for updates"
-pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(11);
-/// "install restart release notes check skip"
-pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(12);
-/// "Profile"
-pub const SETTINGS_SECTION_PROFILE: Key = Key::new(13);
-/// "Appearance"
-pub const SETTINGS_SECTION_APPEARANCE: Key = Key::new(14);
-/// "Fonts"
-pub const SETTINGS_SECTION_FONTS: Key = Key::new(15);
-/// "Terminal"
-pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(16);
-/// "Terminals & sidebar"
-pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(17);
-/// "Changes & diffs"
-pub const SETTINGS_SECTION_GIT: Key = Key::new(18);
-/// "Coding agents"
-pub const SETTINGS_SECTION_AGENTS: Key = Key::new(19);
-/// "Notifications"
-pub const SETTINGS_SECTION_NOTIFICATIONS: Key = Key::new(20);
-/// "Menu bar & hotkey"
-pub const SETTINGS_SECTION_MENU_BAR: Key = Key::new(21);
 /// "Advanced"
-pub const SETTINGS_SECTION_ADVANCED: Key = Key::new(22);
+pub const SETTINGS_SECTION_ADVANCED: Key = Key::new(0);
+/// "Files, folders and a way back to the defaults."
+pub const SETTINGS_SECTION_ADVANCED_INTRO: Key = Key::new(1);
+/// "Files"
+pub const SETTINGS_ADVANCED_GROUP_FILES: Key = Key::new(2);
+/// "Settings file"
+pub const SETTINGS_ADVANCED_OPEN_CONFIG: Key = Key::new(3);
+/// "config.json: edits apply live"
+pub const SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION: Key = Key::new(4);
+/// "json config"
+pub const SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS: Key = Key::new(5);
+/// "Data folder"
+pub const SETTINGS_ADVANCED_OPEN_DATA: Key = Key::new(6);
+/// "Terminals, notes, themes, logs"
+pub const SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION: Key = Key::new(7);
+/// "finder database"
+pub const SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS: Key = Key::new(8);
+/// "Logs"
+pub const SETTINGS_ADVANCED_OPEN_LOGS: Key = Key::new(9);
+/// "Set WORMHOLE_LOG=debug for more detail"
+pub const SETTINGS_ADVANCED_OPEN_LOGS_DESCRIPTION: Key = Key::new(10);
+/// "debug log"
+pub const SETTINGS_ADVANCED_OPEN_LOGS_KEYWORDS: Key = Key::new(11);
+/// "Reset all settings"
+pub const SETTINGS_ADVANCED_RESET_SETTINGS: Key = Key::new(12);
+/// "Your terminals, notes and themes are kept"
+pub const SETTINGS_ADVANCED_RESET_SETTINGS_DESCRIPTION: Key = Key::new(13);
+/// "defaults reset restore"
+pub const SETTINGS_ADVANCED_RESET_SETTINGS_KEYWORDS: Key = Key::new(14);
+/// "Tips"
+pub const SETTINGS_ADVANCED_GROUP_TIPS: Key = Key::new(15);
+/// "Closed tips"
+pub const SETTINGS_ADVANCED_RESET_TIPS: Key = Key::new(16);
+/// "Bring back the tips closed with “Don't show again”, such as the sidebar's coding agents note"
+pub const SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION: Key = Key::new(17);
+/// "hints tips reset show again dismissed"
+pub const SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS: Key = Key::new(18);
+/// "Updates"
+pub const SETTINGS_SECTION_UPDATES: Key = Key::new(19);
+/// "Signed releases, checked in the background."
+pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(20);
+/// "Updates"
+pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(21);
+/// "Version"
+pub const SETTINGS_UPDATES_VERSION: Key = Key::new(22);
+/// "release build"
+pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(23);
+/// "Update automatically"
+pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(24);
+/// "Checks in the background and installs on the next restart"
+pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(25);
+/// "download auto"
+pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(26);
+/// "Channel"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(27);
+/// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(28);
+/// "beta nightly unstable stable prerelease dev builds main feature flags"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(29);
+/// "Check for updates"
+pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(30);
+/// "install restart release notes check skip"
+pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(31);
+/// "Profile"
+pub const SETTINGS_SECTION_PROFILE: Key = Key::new(32);
+/// "Appearance"
+pub const SETTINGS_SECTION_APPEARANCE: Key = Key::new(33);
+/// "Fonts"
+pub const SETTINGS_SECTION_FONTS: Key = Key::new(34);
+/// "Terminal"
+pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(35);
+/// "Terminals & sidebar"
+pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(36);
+/// "Changes & diffs"
+pub const SETTINGS_SECTION_GIT: Key = Key::new(37);
+/// "Coding agents"
+pub const SETTINGS_SECTION_AGENTS: Key = Key::new(38);
+/// "Notifications"
+pub const SETTINGS_SECTION_NOTIFICATIONS: Key = Key::new(39);
+/// "Menu bar & hotkey"
+pub const SETTINGS_SECTION_MENU_BAR: Key = Key::new(40);
 /// "Mode"
-pub const SETTINGS_THEME_MODE: Key = Key::new(23);
+pub const SETTINGS_THEME_MODE: Key = Key::new(41);
 /// "Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode"
-pub const SETTINGS_THEME_MODE_DESCRIPTION: Key = Key::new(24);
+pub const SETTINGS_THEME_MODE_DESCRIPTION: Key = Key::new(42);
 /// "dark light system appearance match night day"
-pub const SETTINGS_THEME_MODE_KEYWORDS: Key = Key::new(25);
+pub const SETTINGS_THEME_MODE_KEYWORDS: Key = Key::new(43);
 /// "Defaults of Wormhole for this profile"
-pub const SETTINGS_ABOUT_DEFAULTS: Key = Key::new(29);
+pub const SETTINGS_ABOUT_DEFAULTS: Key = Key::new(47);
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 27] = [
+pub const ALL: [Key; 45] = [
+    SETTINGS_SECTION_ADVANCED,
+    SETTINGS_SECTION_ADVANCED_INTRO,
+    SETTINGS_ADVANCED_GROUP_FILES,
+    SETTINGS_ADVANCED_OPEN_CONFIG,
+    SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION,
+    SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS,
+    SETTINGS_ADVANCED_OPEN_DATA,
+    SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION,
+    SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS,
+    SETTINGS_ADVANCED_OPEN_LOGS,
+    SETTINGS_ADVANCED_OPEN_LOGS_DESCRIPTION,
+    SETTINGS_ADVANCED_OPEN_LOGS_KEYWORDS,
+    SETTINGS_ADVANCED_RESET_SETTINGS,
+    SETTINGS_ADVANCED_RESET_SETTINGS_DESCRIPTION,
+    SETTINGS_ADVANCED_RESET_SETTINGS_KEYWORDS,
+    SETTINGS_ADVANCED_GROUP_TIPS,
+    SETTINGS_ADVANCED_RESET_TIPS,
+    SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION,
+    SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS,
     SETTINGS_SECTION_UPDATES,
     SETTINGS_SECTION_UPDATES_INTRO,
     SETTINGS_UPDATES_GROUP_UPDATES,
@@ -86,7 +141,6 @@ pub const ALL: [Key; 27] = [
     SETTINGS_SECTION_AGENTS,
     SETTINGS_SECTION_NOTIFICATIONS,
     SETTINGS_SECTION_MENU_BAR,
-    SETTINGS_SECTION_ADVANCED,
     SETTINGS_THEME_MODE,
     SETTINGS_THEME_MODE_DESCRIPTION,
     SETTINGS_THEME_MODE_KEYWORDS,
@@ -97,7 +151,7 @@ pub const ALL: [Key; 27] = [
 /// Open { $section }
 /// ```
 pub fn settings_open_section(section: &str) -> String {
-    crate::active::message(26, &[("section", Arg::Str(section))])
+    crate::active::message(44, &[("section", Arg::Str(section))])
 }
 
 /// ```text
@@ -107,7 +161,7 @@ pub fn settings_open_section(section: &str) -> String {
 /// }
 /// ```
 pub fn settings_font_count(count: i64) -> String {
-    crate::active::message(27, &[("count", Arg::Int(count))])
+    crate::active::message(45, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -117,7 +171,7 @@ pub fn settings_font_count(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_tab_width(count: i64) -> String {
-    crate::active::message(28, &[("count", Arg::Int(count))])
+    crate::active::message(46, &[("count", Arg::Int(count))])
 }
 
 /// Each message with variables formatted with sample arguments: text as `Sample`, numbers as 1 and

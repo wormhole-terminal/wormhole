@@ -14,6 +14,7 @@ pub(crate) const LOCALES: [Locale; 1] = [
         tag: "en",
         files: &[
             ("common.ftl", include_str!("../../locales/en/common.ftl")),
+            ("settings-advanced.ftl", include_str!("../../locales/en/settings-advanced.ftl")),
             ("settings-updates.ftl", include_str!("../../locales/en/settings-updates.ftl")),
             ("settings.ftl", include_str!("../../locales/en/settings.ftl")),
         ],

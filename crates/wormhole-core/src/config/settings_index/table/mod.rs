@@ -167,8 +167,8 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             nav: NavGroup::App,
         },
         SectionId::Advanced => &SectionInfo {
-            title: Word::Literal("Advanced"),
-            intro: Word::Literal("Files, folders and a way back to the defaults."),
+            title: Word::Key(SETTINGS_SECTION_ADVANCED),
+            intro: Word::Key(SETTINGS_SECTION_ADVANCED_INTRO),
             nav: NavGroup::App,
         },
     }
