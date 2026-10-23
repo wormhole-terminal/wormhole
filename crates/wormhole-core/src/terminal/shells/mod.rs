@@ -17,7 +17,7 @@ use std::sync::LazyLock;
 pub use quote::{quote, quote_all, single_quote};
 
 use crate::config::{Settings, ShellProfile};
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 
 /// The key of the login shell.
 pub const LOGIN: &str = "";
@@ -206,7 +206,7 @@ pub fn system_shells() -> &'static [String] {
 /// The shells a file in `/etc/shells`' format lists that exist: one absolute path per line,
 /// `#` comments and blank lines skipped. A missing or unreadable file lists nothing.
 pub fn etc_shells(path: &Path) -> Vec<String> {
-    let text = match fsutil::read_capped(path, ETC_SHELLS_CAP, LinkPolicy::Follow) {
+    let text = match files::read_capped(path, ETC_SHELLS_CAP, LinkPolicy::Follow) {
         Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
         Err(err) => {
             tracing::debug!("{}: {err}", path.display());

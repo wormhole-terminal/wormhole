@@ -13,7 +13,7 @@ use std::time::{Duration, SystemTime};
 
 use super::{ChangeKind, FileChange, MAX_TEXT_BYTES};
 use crate::platform::fs::{inode, mtime};
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 
 /// A file modified more recently than this is counted again next time even if it looks the
 /// same: a writer may be in the middle of it, and two writes within one timestamp tick and of
@@ -100,7 +100,7 @@ fn count(path: &Path, remembered: Option<Counted>, key: &str, kept: &mut PerRoot
 fn read_and_count(path: &Path) -> Option<u32> {
     #[cfg(test)]
     READS.with(|reads| reads.set(reads.get() + 1));
-    let bytes = fsutil::read_capped(path, MAX_TEXT_BYTES, LinkPolicy::Follow).ok()?;
+    let bytes = files::read_capped(path, MAX_TEXT_BYTES, LinkPolicy::Follow).ok()?;
     if bytes.contains(&0) {
         return None;
     }

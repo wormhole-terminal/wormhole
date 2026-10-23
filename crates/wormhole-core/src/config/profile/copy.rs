@@ -10,7 +10,7 @@ use std::io;
 use std::path::Path;
 
 use crate::platform::fs::symlink;
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 use crate::storage::paths::ProfilePaths;
 
 /// Largest single file copied; a font family is a few MiB.
@@ -21,9 +21,9 @@ const MAX_ENTRIES: usize = 20_000;
 const MAX_DEPTH: usize = 8;
 
 pub(super) fn copy_settings(from: &ProfilePaths, to: &ProfilePaths) -> io::Result<()> {
-    fsutil::ensure_private_dir(to.dir())?;
-    match fsutil::read_capped(&from.config_file(), 1024 * 1024, LinkPolicy::Follow) {
-        Ok(bytes) => fsutil::write_atomic(&to.config_file(), &bytes, LinkPolicy::Follow)?,
+    files::ensure_private_dir(to.dir())?;
+    match files::read_capped(&from.config_file(), 1024 * 1024, LinkPolicy::Follow) {
+        Ok(bytes) => files::write_atomic(&to.config_file(), &bytes, LinkPolicy::Follow)?,
         Err(err) if err.kind() == io::ErrorKind::NotFound => {}
         Err(err) => return Err(err),
     }
@@ -53,7 +53,7 @@ fn copy_tree(src: &Path, dst: &Path, depth: usize, budget: &mut usize) -> io::Re
     if meta.file_type().is_symlink() {
         let target = fs::read_link(src)?;
         if let Some(parent) = dst.parent() {
-            fsutil::create_dir_all_private(parent)?;
+            files::create_dir_all_private(parent)?;
         }
         return match symlink(target, dst) {
             Err(err) if err.kind() != io::ErrorKind::AlreadyExists => Err(err),
@@ -61,15 +61,15 @@ fn copy_tree(src: &Path, dst: &Path, depth: usize, budget: &mut usize) -> io::Re
         };
     }
     if meta.is_dir() {
-        fsutil::create_dir_all_private(dst)?;
+        files::create_dir_all_private(dst)?;
         let mut names: Vec<_> = fs::read_dir(src)?.filter_map(Result::ok).map(|e| e.file_name()).collect();
         names.sort();
         for name in names {
             copy_tree(&src.join(&name), &dst.join(&name), depth + 1, budget)?;
         }
     } else if meta.is_file() {
-        match fsutil::read_capped(src, MAX_FILE, LinkPolicy::Follow) {
-            Ok(bytes) => fsutil::write_atomic(dst, &bytes, LinkPolicy::Follow)?,
+        match files::read_capped(src, MAX_FILE, LinkPolicy::Follow) {
+            Ok(bytes) => files::write_atomic(dst, &bytes, LinkPolicy::Follow)?,
             // One file that is too big or unreadable must not stop the profile from being made.
             Err(err) => tracing::warn!("not copying {} to a new profile: {err}", src.display()),
         }

@@ -28,7 +28,7 @@ use std::path::{Component, Path, PathBuf};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 
 pub use actions::{Action, ActionKind, ChainStep, Target};
 pub use color::{ProjectColor, ProjectColorChoice, TINT_PEAK, TINT_STOPS};
@@ -109,7 +109,7 @@ impl ProjectError {
     /// A failed read: a refusal (outside the project, too large, not a file) is invalid
     /// content, anything else an I/O error.
     fn read(path: &Path, source: io::Error) -> Self {
-        match fsutil::refusal(&source) {
+        match files::refusal(&source) {
             Some(refusal) => Self::invalid(path, refusal.to_string()),
             None => Self::io(path, source),
         }
@@ -492,7 +492,7 @@ fn check_relative(path: &str) -> Result<(), String> {
 
 /// Read a UTF-8 file of at most `cap` bytes; `Ok(None)` if it doesn't exist.
 fn read_text(path: &Path, cap: u64, policy: LinkPolicy<'_>) -> Result<Option<String>, ProjectError> {
-    match fsutil::read_to_string_capped(path, cap, policy) {
+    match files::read_to_string_capped(path, cap, policy) {
         Ok(text) => Ok(Some(text)),
         Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(ProjectError::read(path, e)),
@@ -522,10 +522,10 @@ fn set_aside(path: &Path) {
     }
 }
 
-/// Replace `path` atomically (see [`crate::storage::fsutil::write_atomic`]: a uniquely named temp file, so
+/// Replace `path` atomically (see [`crate::storage::files::write_atomic`]: a uniquely named temp file, so
 /// nothing planted in a repository can redirect the write).
 fn write_atomic(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>) -> Result<(), ProjectError> {
-    fsutil::write_atomic(path, bytes, policy).map_err(|e| ProjectError::io(path, e))
+    files::write_atomic(path, bytes, policy).map_err(|e| ProjectError::io(path, e))
 }
 
 #[cfg(test)]

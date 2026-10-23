@@ -3,7 +3,7 @@ use std::path::Path;
 
 use super::*;
 use crate::config::profile::{NewProfile, ProfileList, StartFrom};
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 use crate::storage::paths::DataRoot;
 
 /// Every folder and file under `dir` with a mode other than expected: `(path, mode)`.
@@ -50,11 +50,10 @@ fn data_folder_is_private() {
     work.set_meta("k", "v").expect("writes");
     // What settings, trust, notes sync, the panic note and the `wh` command are written with.
     for file in ["config.json", "trusted-projects.json", "notes-sync.json", "logs/last-panic.txt"] {
-        fsutil::write_atomic(&data.join(file), b"{}", LinkPolicy::Follow).expect("writes");
+        files::write_atomic(&data.join(file), b"{}", LinkPolicy::Follow).expect("writes");
     }
-    fsutil::write_atomic(&root.profile(&id).config_file(), b"{}", LinkPolicy::Follow).expect("writes");
-    fsutil::write_atomic_executable(&data.join("bin/wh"), b"#!/bin/sh\n", LinkPolicy::Follow)
-        .expect("writes");
+    files::write_atomic(&root.profile(&id).config_file(), b"{}", LinkPolicy::Follow).expect("writes");
+    files::write_atomic_executable(&data.join("bin/wh"), b"#!/bin/sh\n", LinkPolicy::Follow).expect("writes");
 
     assert!(data.join("wormhole.db-wal").exists() && data.join("profiles.json").exists());
     let mut found = Vec::new();

@@ -7,7 +7,7 @@ use serde_json::Value;
 
 use super::{PlanLimit, Usage};
 use crate::agents::AgentId;
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 
 const TRANSCRIPT_TAIL: u64 = 1 << 20;
 
@@ -18,7 +18,7 @@ pub fn from_hook(agent: AgentId, event: &str, input: &Value, codex_home: &Path, 
         (AgentId::Codex, "Stop" | "PostToolUse" | "SessionEnd") => {
             let path = Path::new(input.get("transcript_path")?.as_str()?);
             let bytes =
-                fsutil::read_tail_capped(path, TRANSCRIPT_TAIL, LinkPolicy::Within(codex_home)).ok()?;
+                files::read_tail_capped(path, TRANSCRIPT_TAIL, LinkPolicy::Within(codex_home)).ok()?;
             codex_tail(&bytes, now)
         }
         (AgentId::Gemini, "AfterModel") => gemini(input, now),

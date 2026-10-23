@@ -19,7 +19,7 @@
 //!
 //! As for Open in… itself, the person asks an app they chose to open a file, so nothing here
 //! runs anything from the project and project trust doesn't come into it. A path that leads out
-//! of the repository is refused before this is asked (`fsutil::resolve_within`).
+//! of the repository is refused before this is asked (`files::resolve_within`).
 
 use std::path::{Path, PathBuf};
 

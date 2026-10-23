@@ -7,7 +7,7 @@ use serde_json::Value;
 
 use super::copy::copy_settings;
 use super::model::{Profile, ProfileError, first_letter};
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 use crate::storage::paths::{DataRoot, ProfileId};
 use crate::view::sidebar::GroupColor;
 
@@ -66,7 +66,7 @@ impl ProfileList {
     /// something changes). A profile entry that doesn't read is left out and the rest are kept.
     pub fn load(root: &DataRoot) -> Result<Self, ProfileError> {
         let path = root.profiles_file();
-        let text = match fsutil::read_to_string_capped(&path, MAX_FILE, LinkPolicy::Follow) {
+        let text = match files::read_to_string_capped(&path, MAX_FILE, LinkPolicy::Follow) {
             Ok(text) => text,
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Self::default()),
             Err(err) => return Err(ProfileError::io(&path, err)),
@@ -143,7 +143,7 @@ impl ProfileList {
         };
         let path = root.profiles_file();
         let json = serde_json::to_string_pretty(&form).map_err(|e| ProfileError::invalid(e.to_string()))?;
-        fsutil::write_atomic(&path, json.as_bytes(), LinkPolicy::Follow)
+        files::write_atomic(&path, json.as_bytes(), LinkPolicy::Follow)
             .map_err(|e| ProfileError::io(&path, e))
     }
 
@@ -232,7 +232,7 @@ impl ProfileList {
         let paths = root.profile(&id);
         let made = match &source {
             Some(source) => copy_settings(&root.profile(&source.id), &paths),
-            None => fsutil::ensure_private_dir(paths.dir()),
+            None => files::ensure_private_dir(paths.dir()),
         };
         if let Err(err) = made {
             remove_profile_dir(root, &id);

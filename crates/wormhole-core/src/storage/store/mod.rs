@@ -40,7 +40,7 @@ pub fn make_data_dir_private(dir: &Path) {
     if !is_data_dir(dir, chosen) {
         return;
     }
-    match crate::storage::fsutil::make_tree_private(dir, &is_wormhole_name) {
+    match crate::storage::files::make_tree_private(dir, &is_wormhole_name) {
         Ok(0) => {}
         Ok(changed) => tracing::info!("made {changed} files and folders in the data folder owner-only"),
         Err(err) => tracing::warn!("couldn't make the data folder {} owner-only: {err}", dir.display()),
@@ -175,7 +175,7 @@ impl Store {
 
     /// [`open_at`](Self::open_at) with the operating system's part played by `platform`.
     fn open_in(dir: &Path, platform: Arc<dyn Platform>) -> Result<Self> {
-        if let Err(err) = crate::storage::fsutil::ensure_private_dir(dir) {
+        if let Err(err) = crate::storage::files::ensure_private_dir(dir) {
             // A data folder that is a link (to another disk, a synced folder) still works; it just
             // isn't made private here.
             tracing::warn!("couldn't make {} owner-only: {err}", dir.display());
@@ -211,9 +211,9 @@ impl Store {
         // A failure here is only logged: a mode that can't be set must never cost the saved data.
         for file in [path.to_path_buf(), with_suffix(path, "-wal"), with_suffix(path, "-shm")] {
             let made = if file == path {
-                crate::storage::fsutil::create_private_file(&file)
+                crate::storage::files::create_private_file(&file)
             } else {
-                crate::storage::fsutil::make_private(&file)
+                crate::storage::files::make_private(&file)
             };
             if let Err(err) = made {
                 tracing::warn!("couldn't make {} owner-only: {err}", file.display());
@@ -237,7 +237,7 @@ impl Store {
             conn.execute("VACUUM main INTO ?1", [copy.to_string_lossy()])
                 .with_context(|| format!("keeping a copy of the database in {}", copy.display()))?;
             // SQLite makes the copy with its default mode, readable by everyone.
-            if let Err(err) = crate::storage::fsutil::make_private(&copy) {
+            if let Err(err) = crate::storage::files::make_private(&copy) {
                 tracing::warn!("couldn't make {} owner-only: {err}", copy.display());
             }
             // Not the terminals' text: that moves to a file of its own, out of backups. A copy that

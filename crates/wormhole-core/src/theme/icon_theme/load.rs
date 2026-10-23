@@ -10,7 +10,7 @@ use serde::Deserialize;
 
 use super::format::FamilyContent;
 use super::{IconSource, IconThemeFamily, build_family, builtin_family, pick_theme};
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 use crate::storage::jsonc;
 
 /// Load a theme family from its JSON file, or from a folder containing one
@@ -51,7 +51,7 @@ pub fn load_family(dir_or_json_path: &Path) -> Result<IconThemeFamily, String> {
 fn read_family(json: &Path) -> Result<IconThemeFamily, String> {
     #[cfg(test)]
     PARSES.with(|n| n.set(n.get() + 1));
-    let text = fsutil::read_to_string_capped(json, MAX_FAMILY_BYTES, LinkPolicy::Follow)
+    let text = files::read_to_string_capped(json, MAX_FAMILY_BYTES, LinkPolicy::Follow)
         .map_err(|e| format!("{}: {e}", json.display()))?;
     let content: FamilyContent = jsonc::parse(&text).map_err(|e| format!("{}: {e}", json.display()))?;
     let json_dir = json.parent().unwrap_or(Path::new("."));
@@ -165,7 +165,7 @@ pub fn discover(user_dir: &Path) -> Vec<(String, PathBuf)> {
                 _ => {
                     #[cfg(test)]
                     PARSES.with(|n| n.set(n.get() + 1));
-                    fsutil::read_to_string_capped(&json, MAX_FAMILY_BYTES, LinkPolicy::Follow)
+                    files::read_to_string_capped(&json, MAX_FAMILY_BYTES, LinkPolicy::Follow)
                         .ok()
                         .and_then(|t| jsonc::parse::<NameOnly>(&t).ok())
                         .map(|n| n.name)

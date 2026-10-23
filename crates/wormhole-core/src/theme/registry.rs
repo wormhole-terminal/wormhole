@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex, PoisonError};
 use std::time::SystemTime;
 
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 use crate::theme;
 use crate::theme::tokens::{self, ThemeFile, ThemeTokens};
 
@@ -250,7 +250,7 @@ static CACHE: LazyLock<Mutex<HashMap<PathBuf, HashMap<PathBuf, Cached>>>> = Lazy
 fn read_content(path: &Path) -> Content {
     #[cfg(test)]
     PARSES.with(|n| n.set(n.get() + 1));
-    let text = fsutil::read_to_string_capped(path, tokens::MAX_THEME_BYTES as u64, LinkPolicy::Follow)
+    let text = files::read_to_string_capped(path, tokens::MAX_THEME_BYTES as u64, LinkPolicy::Follow)
         .map_err(|e| e.to_string());
     if path.extension().is_some_and(|e| e == "json") {
         let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
@@ -280,7 +280,7 @@ thread_local! {
 /// A theme file on disk: JSON token theme, or a Ghostty / iTerm2 / Alacritty
 /// palette. A JSON theme may extend the themes in `dir`.
 pub(crate) fn load_theme_path(dir: &Path, path: &Path) -> Result<ThemeTokens, String> {
-    let text = fsutil::read_to_string_capped(path, tokens::MAX_THEME_BYTES as u64, LinkPolicy::Follow)
+    let text = files::read_to_string_capped(path, tokens::MAX_THEME_BYTES as u64, LinkPolicy::Follow)
         .map_err(|e| e.to_string())?;
     if path.extension().is_some_and(|e| e == "json") {
         UserThemes::read(dir).resolve_file(&tokens::parse_theme_file(&text)?)

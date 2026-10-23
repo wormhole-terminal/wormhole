@@ -93,14 +93,14 @@ pub(super) fn dev_key_file(dir: &Path) -> Result<Key> {
         bail!("a development build keeps no terminal text in the real data folder (set WORMHOLE_DATA_DIR)");
     }
     let path = dir.join(DEV_KEY_FILE);
-    match crate::storage::fsutil::read_capped(&path, 64, crate::storage::fsutil::LinkPolicy::Follow) {
+    match crate::storage::files::read_capped(&path, 64, crate::storage::files::LinkPolicy::Follow) {
         Ok(found) => to_key(zeroize::Zeroizing::new(found).as_slice(), &path.display().to_string()),
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
             let key = new_key()?;
-            crate::storage::fsutil::write_atomic(
+            crate::storage::files::write_atomic(
                 &path,
                 key.as_ref(),
-                crate::storage::fsutil::LinkPolicy::Follow,
+                crate::storage::files::LinkPolicy::Follow,
             )
             .with_context(|| format!("writing {}", path.display()))?;
             Ok(key)

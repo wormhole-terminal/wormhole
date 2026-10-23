@@ -11,7 +11,7 @@ use std::path::Path;
 use wormhole_term::hosted::meta::Meta;
 
 use crate::platform::{fs, process};
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 
 use super::is_valid_host_id;
 
@@ -38,7 +38,7 @@ pub fn read_meta(path: &Path) -> io::Result<HostMeta> {
         .ok_or_else(|| bad("not named <id>.meta"))?;
     // `Within` the folder: a link planted as the file is refused, not followed.
     let root = path.parent().ok_or_else(|| bad("no folder"))?;
-    let text = fsutil::read_to_string_capped(path, META_CAP, LinkPolicy::Within(root))?;
+    let text = files::read_to_string_capped(path, META_CAP, LinkPolicy::Within(root))?;
     let mut meta = Meta::parse(&text).map_err(|err| bad(&err.to_string()))?;
     // 0 is "not known yet" to every reader, as it is on the wire.
     meta.child_pid = meta.child_pid.filter(|pid| *pid > 0);

@@ -43,7 +43,7 @@ use self::theme_setting::{ThemeStamp, default_tokens, resolve_theme};
 pub use self::theme_setting::{
     resolve_theme_file, resolve_theme_file_in, tokens_from_json, tokens_from_json_in,
 };
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 use crate::storage::jsonc;
 use crate::storage::jsonc::suggest::did_you_mean;
 use crate::storage::paths::{DataRoot, ProfilePaths};
@@ -148,7 +148,7 @@ impl Config {
 
     fn reload(&mut self) {
         self.modified = mtime(&self.path);
-        let text = match fsutil::read_to_string_capped(&self.path, MAX_CONFIG_BYTES, LinkPolicy::Follow) {
+        let text = match files::read_to_string_capped(&self.path, MAX_CONFIG_BYTES, LinkPolicy::Follow) {
             Ok(text) => text,
             Err(err) => return self.mark_unreadable(&err.to_string(), None),
         };
@@ -226,7 +226,7 @@ impl Config {
     }
 
     fn save(&mut self) -> Result<(), String> {
-        let text = match fsutil::read_to_string_capped(&self.path, MAX_CONFIG_BYTES, LinkPolicy::Follow) {
+        let text = match files::read_to_string_capped(&self.path, MAX_CONFIG_BYTES, LinkPolicy::Follow) {
             Ok(old) => file::updated_text(&old, &self.settings).map_err(|err| {
                 // Changed on disk since it was read, and not readable now: keep it.
                 self.unreadable = true;
@@ -238,7 +238,7 @@ impl Config {
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => file::fresh_text(&self.settings)?,
             Err(err) => return Err(err.to_string()),
         };
-        fsutil::write_atomic(&self.path, text.as_bytes(), LinkPolicy::Follow).map_err(|e| e.to_string())
+        files::write_atomic(&self.path, text.as_bytes(), LinkPolicy::Follow).map_err(|e| e.to_string())
     }
 
     /// Reload if `config.json` changed on disk, or resolve the theme again if

@@ -12,7 +12,7 @@ use super::features::root_key;
 use super::snapshot::{ProjectSnapshot, fingerprint};
 use super::trust::{TrustRequest, TrustStatus};
 use super::{Feature, ProjectError, ProjectFolder, parse_json, read_state_file, set_aside, write_atomic};
-use crate::storage::fsutil::LinkPolicy;
+use crate::storage::files::LinkPolicy;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TrustedProject {

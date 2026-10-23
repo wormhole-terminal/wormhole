@@ -5,7 +5,7 @@ use std::path::Path;
 
 use serde_json::{Value, json};
 
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 
 /// Suffix of the copy kept next to a config file before we change it.
 pub(crate) const BACKUP_SUFFIX: &str = "wormhole-backup";
@@ -63,7 +63,7 @@ pub fn write_text(path: &Path, text: &str) -> Result<(), String> {
         std::fs::copy(path, with_suffix(path, BACKUP_SUFFIX)).map_err(err)?;
     }
     // Creates missing folders (a first install of `~/.gemini/settings.json`).
-    fsutil::write_atomic(path, text.as_bytes(), LinkPolicy::Follow).map_err(err)
+    files::write_atomic(path, text.as_bytes(), LinkPolicy::Follow).map_err(err)
 }
 
 /// `settings.json` → `settings.json.<suffix>`.

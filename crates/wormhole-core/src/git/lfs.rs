@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use super::{FileChange, FileDiff, GitCmd, LineKind};
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 
 /// What a Git LFS pointer file says: the object stored in the file's place.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -67,7 +67,7 @@ pub(super) fn mark_lfs(root: &Path, files: &mut [FileChange]) {
 /// Whether the top-level `.gitattributes` names the LFS filter. (One further down that does
 /// while the top one doesn't is missed; LFS setups put it at the top.)
 fn uses_lfs(root: &Path) -> bool {
-    fsutil::read_capped(&root.join(".gitattributes"), ATTRIBUTES_CAP, LinkPolicy::Within(root))
+    files::read_capped(&root.join(".gitattributes"), ATTRIBUTES_CAP, LinkPolicy::Within(root))
         .is_ok_and(|text| String::from_utf8_lossy(&text).contains("filter=lfs"))
 }
 

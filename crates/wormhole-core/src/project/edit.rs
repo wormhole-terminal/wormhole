@@ -61,7 +61,7 @@ mod tests {
 
     use super::super::tests::project;
     use super::super::{CONFIG_FILE, ProjectColorChoice, ProjectFolder, init};
-    use crate::storage::fsutil::FileStamp;
+    use crate::storage::files::FileStamp;
     use crate::theme::folder_color::FolderColor;
 
     fn config_of(project: &ProjectFolder) -> String {

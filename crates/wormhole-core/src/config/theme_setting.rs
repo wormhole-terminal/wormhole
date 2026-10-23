@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use super::{Config, Settings, ThemeMode};
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 use crate::theme;
 use crate::theme::registry::{self, DEFAULT_THEME, ThemeSource, UserTheme, UserThemes, load_theme_path};
 use crate::theme::tokens::{self, Appearance, ThemeFile, ThemeTokens};
@@ -92,7 +92,7 @@ fn save_into_variant(theme: &UserTheme, short: &str, file: &ThemeFile) -> Result
     let extends_itself = file.extends.as_deref().is_some_and(|e| e.eq_ignore_ascii_case(&theme.name));
     let layers = if extends_itself { file.layered_over(&entry.to_file()) } else { file.clone() };
     entry.set_layers(&layers);
-    fsutil::write_atomic(&theme.path, source.to_json_pretty().as_bytes(), LinkPolicy::Follow)
+    files::write_atomic(&theme.path, source.to_json_pretty().as_bytes(), LinkPolicy::Follow)
         .map_err(|e| e.to_string())?;
     Ok(theme.path.clone())
 }
@@ -121,7 +121,7 @@ fn save_theme_in(dir: &Path, file: &ThemeFile) -> Result<PathBuf, String> {
         None => file.clone(),
     };
     let path = named_in(&themes, &name).unwrap_or_else(|| free_path(dir, &file_stem_for(&name), "json"));
-    fsutil::write_atomic(&path, file.to_json_pretty().as_bytes(), LinkPolicy::Follow)
+    files::write_atomic(&path, file.to_json_pretty().as_bytes(), LinkPolicy::Follow)
         .map_err(|e| e.to_string())?;
     Ok(path)
 }
@@ -129,7 +129,7 @@ fn save_theme_in(dir: &Path, file: &ThemeFile) -> Result<PathBuf, String> {
 /// Copy `source` into `dir` under its own name, or a free variant of it when
 /// a different file has that name. Re-importing the same file reuses it.
 fn import_into(dir: &Path, source: &Path) -> Result<PathBuf, String> {
-    let bytes = fsutil::read_capped(source, tokens::MAX_THEME_BYTES as u64, LinkPolicy::Follow)
+    let bytes = files::read_capped(source, tokens::MAX_THEME_BYTES as u64, LinkPolicy::Follow)
         .map_err(|e| e.to_string())?;
     let file_name = source.file_name().ok_or("not a file")?;
     let same = dir.join(file_name);
@@ -140,7 +140,7 @@ fn import_into(dir: &Path, source: &Path) -> Result<PathBuf, String> {
         let ext = Path::new(file_name).extension().map(|e| e.to_string_lossy().into_owned());
         free_path(dir, stem.as_deref().unwrap_or("theme"), ext.as_deref().unwrap_or(""))
     };
-    fsutil::write_atomic(&target, &bytes, LinkPolicy::Follow).map_err(|e| e.to_string())?;
+    files::write_atomic(&target, &bytes, LinkPolicy::Follow).map_err(|e| e.to_string())?;
     Ok(target)
 }
 

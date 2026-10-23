@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use super::{ProjectError, parse_json, read_state_file, set_aside, write_atomic};
-use crate::storage::fsutil::LinkPolicy;
+use crate::storage::files::LinkPolicy;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use super::super::{ProjectError, ProjectFolder, parse_json, read_state_file, set_aside, write_atomic};
 use super::{NotesDoc, merge_notes};
-use crate::storage::fsutil::{FileStamp, LinkPolicy};
+use crate::storage::files::{FileStamp, LinkPolicy};
 
 /// The last notes and tasks a session and a `notes.md` agreed on, and the project root of that file.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

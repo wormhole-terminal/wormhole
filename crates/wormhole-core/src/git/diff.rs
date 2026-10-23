@@ -9,7 +9,7 @@ use super::{
     ChangeKind, DiffLine, DiffSpec, EMPTY_TREE, FileChange, FileDiff, GitCmd, GitError, Hunk, LineKind,
     MAX_TEXT_BYTES, Side, sides,
 };
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 
 /// For each line of a hunk, the line of the file as it is now that an editor should open for it:
 /// its own number on the new side; for a removed line, which has none there, the line that
@@ -240,7 +240,7 @@ fn read_text(path: &Path, max_bytes: u64) -> Option<String> {
         return None;
     }
     // `read_capped` adds one to its cap, so `u64::MAX` (unlimited) must not reach it.
-    let bytes = fsutil::read_capped(path, max_bytes.min(u64::MAX - 1), LinkPolicy::Follow).ok()?;
+    let bytes = files::read_capped(path, max_bytes.min(u64::MAX - 1), LinkPolicy::Follow).ok()?;
     (!bytes.contains(&0)).then(|| String::from_utf8_lossy(&bytes).into_owned())
 }
 

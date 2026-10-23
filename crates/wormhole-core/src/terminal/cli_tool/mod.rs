@@ -26,7 +26,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::ipc::control::COMMAND_NAME;
-use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy};
 pub use path::{Advice, advice, login_path, login_shell_path, on_path, path_with_first};
 
 /// The line that makes a file this module's. Not derived from the command's name: a file that
@@ -89,7 +89,7 @@ enum Slot {
 }
 
 fn inspect(path: &Path, wanted: Option<&str>) -> Slot {
-    match fsutil::read_to_string_capped(path, READ_CAP, LinkPolicy::Follow) {
+    match files::read_to_string_capped(path, READ_CAP, LinkPolicy::Follow) {
         Ok(text) if is_ours(&text) => Slot::Ours { current: wanted == Some(text.as_str()) },
         // Nothing there to see: no file, or no folder to have one in.
         Err(_) if path.symlink_metadata().is_err() => Slot::Missing,
@@ -141,7 +141,7 @@ fn put(path: &Path, script: &str) -> Result<bool, Error> {
         Slot::Foreign => Err(Error::Foreign(path.to_path_buf())),
         Slot::Ours { current: true } => Ok(false),
         Slot::Ours { current: false } | Slot::Missing => {
-            fsutil::write_atomic_executable(path, script.as_bytes(), LinkPolicy::Follow)
+            files::write_atomic_executable(path, script.as_bytes(), LinkPolicy::Follow)
                 .map_err(|source| Error::Io { path: path.to_path_buf(), source })?;
             Ok(true)
         }
