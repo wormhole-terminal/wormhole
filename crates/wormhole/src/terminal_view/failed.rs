@@ -67,35 +67,46 @@ impl TerminalView {
     /// report may leave to its parent's), else the command it runs. `None` for a terminal no
     /// program reports in, and where neither is known.
     pub fn program_name(&self) -> Option<String> {
-        if self.source() != Source::Program {
-            return None;
+        match self.name_source()? {
+            NameSource::App(app) => Some(app.to_owned()),
+            NameSource::Command(command) => Some(command_name(command)).filter(|name| !name.is_empty()),
         }
-        let app = self.program.as_ref().and_then(|program| program.app.clone());
-        let command = || {
-            let command =
-                self.foreground.as_ref().map(|f| f.command.as_str()).or(self.finished_command.as_deref());
-            command.map(command_name).filter(|name| !name.is_empty())
-        };
-        app.or_else(command)
     }
 
     /// Whether [`program_name`](Self::program_name) is `expected`, without making the name: the
     /// window compares its copy of a terminal with the terminal on every redraw of it, and a
     /// reporting program's name is built from the command line when it gave none of its own.
     pub fn program_name_is(&self, expected: Option<&str>) -> bool {
-        if self.source() != Source::Program {
-            return expected.is_none();
-        }
-        if let Some(app) = self.program.as_ref().and_then(|program| program.app.as_deref()) {
-            return expected == Some(app);
-        }
-        let command =
-            self.foreground.as_ref().map(|f| f.command.as_str()).or(self.finished_command.as_deref());
-        match (command, expected) {
-            (Some(command), Some(name)) => !name.is_empty() && command_name_is(command, name),
+        match (self.name_source(), expected) {
+            (Some(NameSource::App(app)), expected) => expected == Some(app),
+            (Some(NameSource::Command(command)), Some(name)) => {
+                !name.is_empty() && command_name_is(command, name)
+            }
             // A command with no words has no name.
-            (Some(command), None) => command.split_whitespace().next().is_none(),
+            (Some(NameSource::Command(command)), None) => command.split_whitespace().next().is_none(),
             (None, expected) => expected.is_none(),
         }
     }
+
+    /// Where the program's name comes from, the one precedence both name methods follow: what it
+    /// calls itself, else the command it runs; nothing for a terminal no program reports in.
+    fn name_source(&self) -> Option<NameSource<'_>> {
+        if self.source() != Source::Program {
+            return None;
+        }
+        if let Some(app) = self.program.as_ref().and_then(|program| program.app.as_deref()) {
+            return Some(NameSource::App(app));
+        }
+        let command =
+            self.foreground.as_ref().map(|f| f.command.as_str()).or(self.finished_command.as_deref());
+        command.map(NameSource::Command)
+    }
+}
+
+/// What a reporting program's name is taken from ([`TerminalView::name_source`]).
+enum NameSource<'a> {
+    /// The name it gave itself.
+    App(&'a str),
+    /// The command line it runs, whose first word is the name.
+    Command(&'a str),
 }
