@@ -20,9 +20,16 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
+use foldhash::fast::RandomState;
 use gpui_kit::{FontId, GlyphId, Hsla, Pixels, Point};
 
 use super::rows::{Segment, Style};
+
+/// The caches' map. Their keys come from the program's output, so the hash is seeded at random
+/// for each cache (an unseeded one, FxHash, would let a hostile file make words that all collide
+/// and turn every lookup into a scan); it is also several times faster than std's SipHash, and a
+/// row of katakana looks up a character per cell.
+type Map<K, V> = HashMap<K, V, RandomState>;
 
 /// A glyph as shaping placed it, from its word's first cell.
 #[derive(Clone, Debug, PartialEq)]
@@ -135,10 +142,10 @@ enum Budget {
 pub(super) struct WordCache<K> {
     /// What every word was shaped with (font, size, cell width, ligatures).
     key: Option<K>,
-    words: HashMap<WordKey, Rc<[Shaped]>>,
+    words: Map<WordKey, Rc<[Shaped]>>,
     /// Characters shaped one by one (those that stand alone, and a word's characters while the
     /// frame's budget is spent), by character, wide, bold and italic.
-    chars: HashMap<(char, bool, bool, bool), Rc<[Shaped]>>,
+    chars: Map<(char, bool, bool, bool), Rc<[Shaped]>>,
     /// The key being looked up, kept so a lookup doesn't allocate.
     scratch: WordKey,
     budget: Budget,
@@ -150,8 +157,8 @@ impl<K> Default for WordCache<K> {
     fn default() -> Self {
         Self {
             key: None,
-            words: HashMap::new(),
-            chars: HashMap::new(),
+            words: Map::default(),
+            chars: Map::default(),
             scratch: WordKey::default(),
             budget: Budget::Unlimited,
             deferred: false,
@@ -397,5 +404,23 @@ impl<'a> Runs<'a> {
             self.run += 1;
         }
         self.runs.get(self.run).map(|(_, style)| *style)
+    }
+}
+
+#[cfg(test)]
+mod seed_tests {
+    use std::hash::BuildHasher;
+
+    use super::{WordCache, WordKey};
+
+    /// The keys are text from programs' output: a precomputed set of colliding words must not
+    /// collide in every cache, so each cache's hasher has its own seed.
+    #[test]
+    fn each_cache_hashes_with_its_own_seed() {
+        let key = WordKey { text: "collide".into(), ..WordKey::default() };
+        let (a, b) = (WordCache::<()>::default(), WordCache::<()>::default());
+        assert_ne!(a.words.hasher().hash_one(&key), b.words.hasher().hash_one(&key));
+        assert_ne!(a.chars.hasher().hash_one('x'), b.chars.hasher().hash_one('x'));
+        assert_eq!(a.words.hasher().hash_one(&key), a.words.hasher().hash_one(&key), "one seed per cache");
     }
 }

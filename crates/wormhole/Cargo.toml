@@ -29,6 +29,8 @@ gpui-kit = { version = "0.8.0", features = [
     "tree-sitter-c", "tree-sitter-cpp", "tree-sitter-java", "tree-sitter-swift",
 ] }
 anyhow.workspace = true
+# The terminal's word caches hash text from programs' output: a fast hasher seeded at random.
+foldhash = "0.2"
 # System-wide show/hide hotkey (Carbon RegisterEventHotKey on macOS; no extra permissions).
 # Cross-platform so the key-spec parser builds (and is tested) off macOS too.
 global-hotkey = "0.8.0"
