@@ -441,6 +441,8 @@ impl Workspace {
     }
 
     fn mark_dirty(&mut self, cx: &mut Context<Self>) {
+        #[cfg(any(test, debug_assertions))]
+        self.regions.assert_not_drawing("mark_dirty");
         self.dirty = true;
         cx.notify();
     }

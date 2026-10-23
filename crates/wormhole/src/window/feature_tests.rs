@@ -26,7 +26,9 @@ use crate::sidebar::{RowExtra, RowExtras, RowInfo};
 use crate::window::Workspace;
 use crate::window::feature::Walkable;
 use crate::window::feature::{CloseHooks, FeatureDef, FeatureEvent, Stake, StateDef, TabDef, WalkFns};
-use crate::window::test_harness::{draw, drive, isolate_in, read, start, start_with_table, with_window};
+use crate::window::test_harness::{
+    draw, draw_fresh, drive, isolate_in, read, start, start_with_table, with_window,
+};
 
 #[test]
 fn every_feature_core_lists_has_exactly_one_entry_in_the_table() {
@@ -570,7 +572,7 @@ fn a_window_frame_on_changes_stays_within_its_allocation_budget(cx: &mut TestApp
     // The first draw builds what a window keeps (lists, layouts, caches); the second is a frame.
     draw(cx, &window);
     let before = thread_counts();
-    draw(cx, &window);
+    draw_fresh(cx, &window);
     let drawn = thread_counts().since(before);
     eprintln!("window frame on Changes: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
     assert!(
@@ -607,7 +609,7 @@ fn a_window_frame_on_notes_stays_within_its_allocation_budget(cx: &mut TestAppCo
     draw(cx, &window);
     draw(cx, &window);
     let before = thread_counts();
-    draw(cx, &window);
+    draw_fresh(cx, &window);
     let drawn = thread_counts().since(before);
     eprintln!("window frame on Notes: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
     assert!(
@@ -664,7 +666,7 @@ fn a_window_frame_on_usage_stays_within_its_allocation_budget(cx: &mut TestAppCo
     draw(cx, &window);
     draw(cx, &window);
     let before = thread_counts();
-    draw(cx, &window);
+    draw_fresh(cx, &window);
     let drawn = thread_counts().since(before);
     eprintln!("window frame on Usage: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
     assert!(

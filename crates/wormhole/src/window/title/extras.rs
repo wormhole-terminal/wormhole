@@ -53,6 +53,7 @@ impl SessionExtras {
 }
 
 /// What the extras say about the terminal on screen, for one frame.
+#[derive(Debug)]
 pub(in crate::window) struct ExtraFacts {
     pub(in crate::window) branch: Option<BranchStatus>,
     pub(in crate::window) gauge: Option<Gauge>,
@@ -71,8 +72,13 @@ impl Workspace {
             branch: status.filter(|_| settings.title_branch_status).and_then(RepoStatus::branch_status),
             gauge: self.agent_gauge().filter(|_| settings.title_agent_gauge).cloned(),
             ports: if settings.title_ports { session.extras.ports.clone() } else { Vec::new() },
-            pull_request: self.pull_request_branch(cx).and_then(|branch| app(cx).pr.get(&branch).cloned()),
+            pull_request: self.shown_pull_request(cx),
         }
+    }
+
+    /// The pull request the row shows for the active terminal's branch, if it has one and the switch is on.
+    pub(in crate::window) fn shown_pull_request(&self, cx: &App) -> Option<PullRequest> {
+        self.pull_request_branch(cx).and_then(|branch| app(cx).pr.get(&branch).cloned())
     }
 
     /// The model and context window the active terminal's agent last reported. Only the agent

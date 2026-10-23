@@ -99,7 +99,7 @@ fn run(mut batch: Batch, workspace: &mut Workspace, window: &mut Window, cx: &mu
             return;
         }
     }
-    finish(batch, cx);
+    finish(batch, workspace, cx);
 }
 
 /// Go on with `batch` once `wait` resolves, adding what it printed.
@@ -119,7 +119,7 @@ fn resume_after(wait: Task<String>, mut batch: Batch, window: &mut Window, cx: &
     .detach();
 }
 
-fn finish(batch: Batch, cx: &mut Context<Workspace>) {
+fn finish(batch: Batch, workspace: &Workspace, cx: &mut Context<Workspace>) {
     let _ = files::write_atomic(&batch.out_path, batch.out.as_bytes(), LinkPolicy::Follow);
     if !batch.sync.is_empty() {
         // Deferred, so the token comes after what commands of this batch append once the update
@@ -127,7 +127,9 @@ fn finish(batch: Batch, cx: &mut Context<Workspace>) {
         let (path, sync) = (batch.out_path, batch.sync);
         cx.defer(move |_| append(&path, &sync_lines(&sync)));
     }
-    cx.notify();
+    // A frame, as a terminal's output asks for one. What a command changed in the chrome has to have notified
+    // the window itself: notifying it here would draw the chrome again and hide a command that did not.
+    workspace.active_terminal().update(cx, |_, cx| cx.notify());
 }
 
 /// The lines `sync` writes for these tokens.

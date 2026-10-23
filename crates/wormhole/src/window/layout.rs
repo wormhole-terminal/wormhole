@@ -78,9 +78,14 @@ impl Workspace {
                 // The last probe of the frame: every region that wants glass has said so by now.
                 glass.commit();
                 let beside = f32::from(window.viewport_size().width - bounds.size.width);
-                let changed = this.update(cx, |this, _| {
+                let changed = this.update(cx, |this, cx| {
                     let changed = (this.beside - beside).abs() > 0.5;
                     this.beside = beside;
+                    // After every region of the frame was prepaint (built or replayed).
+                    #[cfg(any(test, debug_assertions))]
+                    this.check_regions(window, cx);
+                    #[cfg(not(any(test, debug_assertions)))]
+                    let _ = cx;
                     changed
                 });
                 if changed.unwrap_or(false) {
@@ -124,6 +129,8 @@ impl Workspace {
 
 impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        #[cfg(any(test, debug_assertions))]
+        self.regions.begin_frame();
         // The workspace's own column: the window less what lies beside it (`column_probe`).
         self.window_width = f32::from(window.viewport_size().width) - self.beside;
         self.sync_tab_layout(window, cx);

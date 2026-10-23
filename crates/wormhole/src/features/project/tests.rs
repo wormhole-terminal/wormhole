@@ -26,7 +26,9 @@ use crate::features::notes::testing as notes;
 use crate::window::Workspace;
 use wormhole_core::storage::store::WindowRecord;
 
-use crate::window::test_harness::{draw, drive, isolate_in, read, read_cx, start, start_with_table};
+use crate::window::test_harness::{
+    draw, draw_fresh, drive, isolate_in, read, read_cx, start, start_with_table,
+};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -809,7 +811,7 @@ fn a_window_frame_on_project_stays_within_its_allocation_budget(cx: &mut TestApp
     draw(cx, &window);
     draw(cx, &window);
     let before = thread_counts();
-    draw(cx, &window);
+    draw_fresh(cx, &window);
     let drawn = thread_counts().since(before);
     eprintln!("window frame on Project: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
     assert!(

@@ -54,7 +54,7 @@ impl Workspace {
     }
 
     /// What the title row says about the active terminal, as of now.
-    fn title_facts(&self, cx: &App) -> Facts {
+    pub(in crate::window) fn title_facts(&self, cx: &App) -> Facts {
         let session = self.active_session();
         let summary = &session.pane.summary;
         let folder = summary.cwd.clone();

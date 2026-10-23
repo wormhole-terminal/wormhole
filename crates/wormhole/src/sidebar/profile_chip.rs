@@ -24,6 +24,7 @@ use crate::theme_bridge;
 
 /// The app's profiles as the chip draws them: every profile, in the list's order, and the one Wormhole
 /// is in.
+#[derive(Debug)]
 pub(crate) struct Profiles {
     pub(crate) list: Vec<Profile>,
     pub(crate) active: ProfileId,

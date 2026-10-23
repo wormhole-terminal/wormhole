@@ -40,6 +40,7 @@ use crate::window::Workspace;
 use crate::window::title::extras::ExtraFacts;
 
 /// What the title row says about the terminal it is for, gathered once per frame.
+#[derive(Debug)]
 pub(super) struct Facts {
     pub(super) id: i64,
     /// Where the terminal is, and how that reads (`~/Projects/tube`).
@@ -203,7 +204,7 @@ impl Workspace {
     /// The tint behind the active terminal's title row: its group's colour, as the sidebar's card
     /// wears it. A terminal in no group (or in a group without a colour) has none. It only
     /// paints, so it needs no trust.
-    fn title_tint(&self, cx: &App) -> Option<Tint> {
+    pub(in crate::window) fn title_tint(&self, cx: &App) -> Option<Tint> {
         let id = self.sessions.get(self.active)?.id;
         let groups = &self.sidebar_view(cx).groups;
         let color = groups.get(groups.group_of(id)?)?.paint()?;

@@ -164,7 +164,18 @@ pub(crate) fn drive<R>(
 }
 
 /// Draw the window once, as a frame would (not from inside an update of the workspace).
+///
+/// First as the display would, replaying what GPUI keeps: the chrome's check (`regions::oracle`) panics there
+/// when a region shows what the window no longer holds, so every test that draws is a check for a missing
+/// notify. Then with every cache dropped, which is what most tests want to read.
 pub(crate) fn draw(cx: &mut TestAppContext, window: &OpenWindow) {
+    draw_replaying(cx, window);
+    draw_fresh(cx, window);
+}
+
+/// [`draw`] without the replayed frame before: one frame, every cache dropped. For a test that counts what
+/// a frame costs.
+pub(crate) fn draw_fresh(cx: &mut TestAppContext, window: &OpenWindow) {
     cx.update(|cx| window.handle.update(cx, |_, window, cx| window.render_frame(cx)))
         .expect("the window is open");
 }

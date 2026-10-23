@@ -10,7 +10,7 @@ use gpui_kit::{
 use wormhole_core::view::sidebar::Entry;
 
 use crate::app_state::OpenWindow;
-use crate::window::test_harness::{draw, drive, isolate_in, press, read, sidebar_of, start};
+use crate::window::test_harness::{draw, draw_fresh, drive, isolate_in, press, read, sidebar_of, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -416,7 +416,7 @@ fn a_frame_of_twenty_terminals_in_three_groups_stays_within_its_allocation_budge
     let window = crowded(cx);
     draw(cx, &window);
     let before = thread_counts();
-    draw(cx, &window);
+    draw_fresh(cx, &window);
     let drawn = thread_counts().since(before);
     report(&format!("crowded frame: {} allocations, {} bytes", drawn.allocations, drawn.bytes));
     assert!(

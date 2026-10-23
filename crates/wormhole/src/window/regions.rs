@@ -19,8 +19,17 @@
 //! accessibility tree in every frame and replays none of a reused view's nodes, so a cached region would
 //! drop out of the tree (and its buttons stop answering VoiceOver) at the terminal's frame rate.
 //!
+//! A missed notify shows nowhere else: a test that draws drops GPUI's caches first. In debug and test builds
+//! every region records what it was built from and every frame checks that the regions it placed would be
+//! built from the same now (`oracle`), and the workspace may not be notified while a frame draws, when
+//! nothing listens (`Oracle::assert_not_drawing`).
+//!
 //! A change of focus, the keyboard modality, the window's size or activation and every click, drag
 //! and tooltip make GPUI drop all its caches for a frame (`Window::refresh`), so those need no notify.
+
+mod app_facts;
+#[cfg(any(test, debug_assertions))]
+mod oracle;
 
 use gpui_kit::*;
 use wormhole_core::view::layout::status_bar::STATUS_BAR_H;
@@ -39,6 +48,21 @@ pub(super) enum Part {
     TitleRow,
     /// The optional bar along the bottom.
     StatusBar,
+}
+
+impl Part {
+    /// How many there are.
+    #[cfg(any(test, debug_assertions))]
+    const COUNT: usize = 4;
+    /// Every part, in the order of [`Part::index`].
+    #[cfg(any(test, debug_assertions))]
+    const ALL: [Part; Self::COUNT] = [Part::Sidebar, Part::Panel, Part::TitleRow, Part::StatusBar];
+
+    /// Where the part is in arrays kept per part.
+    #[cfg(any(test, debug_assertions))]
+    const fn index(self) -> usize {
+        self as usize
+    }
 }
 
 /// One part of the chrome, drawn from the workspace it belongs to.
@@ -73,6 +97,9 @@ pub(super) struct Regions {
     status_bar: Entity<Region>,
     /// What the regions last drew of what moves with time, to notice on the tick when it is stale.
     pub(super) drawn: Drawn,
+    /// What each was built from, checked at the end of every frame.
+    #[cfg(any(test, debug_assertions))]
+    oracle: oracle::Oracle,
 }
 
 /// What the regions drew last of what changes with the clock.
@@ -101,6 +128,8 @@ impl Regions {
             title_row: region(Part::TitleRow),
             status_bar: region(Part::StatusBar),
             drawn: Drawn::default(),
+            #[cfg(any(test, debug_assertions))]
+            oracle: Default::default(),
         }
     }
 
@@ -119,26 +148,26 @@ impl Regions {
     /// The sidebar's column, `width` wide and as tall as the window.
     pub(super) fn sidebar(&self, width: f32, window: &Window) -> AnyElement {
         let style = StyleRefinement::default().w(px(width)).h_full().flex_none();
-        embed(&self.sidebar, style, window)
+        self.embed(Part::Sidebar, style, window)
     }
 
     /// The right panel's column, `width` wide and as tall as the window.
     pub(super) fn panel(&self, width: f32, window: &Window) -> AnyElement {
         let style = StyleRefinement::default().w(px(width)).h_full().flex_none();
-        embed(&self.panel, style, window)
+        self.embed(Part::Panel, style, window)
     }
 
     /// The terminal's title row, across the top of its column.
     pub(super) fn title_row(&self, window: &Window) -> AnyElement {
         let style =
             StyleRefinement::default().absolute().top_0().left_0().right_0().h(px(crate::style::TITLE_ROW_H));
-        embed(&self.title_row, style, window)
+        self.embed(Part::TitleRow, style, window)
     }
 
     /// The status bar, across the bottom of the window.
     pub(super) fn status_bar(&self, window: &Window) -> AnyElement {
         let style = StyleRefinement::default().w_full().h(px(STATUS_BAR_H)).flex_none();
-        embed(&self.status_bar, style, window)
+        self.embed(Part::StatusBar, style, window)
     }
 
     /// Tell the regions when a global they draw from changes. The workspace's own state notifies the
@@ -154,20 +183,44 @@ impl Regions {
     pub(super) fn builds(&self, cx: &App) -> [usize; 4] {
         self.all().map(|region| region.read(cx).builds)
     }
-}
 
-/// `region` laid out at `style`: replayed from the last frame while nothing in it changed, except while
-/// the accessibility tree is built. GPUI fills the tree during every frame's prepaint and replays no
-/// nodes, so a replayed region would vanish from it (VoiceOver would lose the sidebar's rows, the
-/// panel's tabs and the bar's buttons at the terminal's frame rate). Then the region is a plain child in a
-/// box of the same style, built in every frame like the rest of the window.
-fn embed(region: &Entity<Region>, style: StyleRefinement, window: &Window) -> AnyElement {
-    if crate::platform::a11y::tree_built(window) {
-        let mut shell = div();
-        *shell.style() = style;
-        shell.child(region.clone()).into_any_element()
-    } else {
-        region.clone().cached(style).into_any_element()
+    /// The root is being built: a frame begins (nothing may notify the workspace until it ends).
+    #[cfg(any(test, debug_assertions))]
+    pub(super) fn begin_frame(&self) {
+        self.oracle.begin_frame();
+    }
+
+    /// `what` notifies the workspace: not while it draws.
+    #[cfg(any(test, debug_assertions))]
+    pub(super) fn assert_not_drawing(&self, what: &str) {
+        self.oracle.assert_not_drawing(what);
+    }
+
+    fn entity(&self, part: Part) -> &Entity<Region> {
+        match part {
+            Part::Sidebar => &self.sidebar,
+            Part::Panel => &self.panel,
+            Part::TitleRow => &self.title_row,
+            Part::StatusBar => &self.status_bar,
+        }
+    }
+
+    /// `part` laid out at `style`: replayed from the last frame while nothing in it changed, except while
+    /// the accessibility tree is built. GPUI fills the tree during every frame's prepaint and replays no
+    /// nodes, so a replayed region would vanish from it (VoiceOver would lose the sidebar's rows, the
+    /// panel's tabs and the bar's buttons at the terminal's frame rate). Then the region is a plain child
+    /// in a box of the same style, built in every frame like the rest of the window.
+    fn embed(&self, part: Part, style: StyleRefinement, window: &Window) -> AnyElement {
+        #[cfg(any(test, debug_assertions))]
+        self.oracle.place(part);
+        let region = self.entity(part).clone();
+        if crate::platform::a11y::tree_built(window) {
+            let mut shell = div();
+            *shell.style() = style;
+            shell.child(region).into_any_element()
+        } else {
+            region.cached(style).into_any_element()
+        }
     }
 }
 
@@ -179,7 +232,7 @@ fn watch<G: Global>(cx: &mut Context<Workspace>) {
 impl Workspace {
     /// Build `part` as the window's state stands: what a [`Region`] draws when it is built.
     fn render_part(&mut self, part: Part, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        match part {
+        let element = match part {
             Part::Sidebar => {
                 let width = self.columns().sidebar;
                 self.render_sidebar(width, window, cx)
@@ -204,6 +257,9 @@ impl Workspace {
                     self.regions.drawn.status_bar.clone().map(|bar| self.render_status_bar(&bar, window, cx));
                 div().flex().flex_col().w_full().children(bar).into_any_element()
             }
-        }
+        };
+        #[cfg(any(test, debug_assertions))]
+        self.record_region(part, window, cx);
+        element
     }
 }

@@ -225,3 +225,34 @@ fn a_frame_only_a_terminal_asks_for_stays_within_its_allocation_budget(cx: &mut 
         "replaying the chrome saves most of a frame's allocations ({replayed} of {rebuilt})"
     );
 }
+
+/// The check itself: a fact a region shows that changes without notifying the workspace is found in the
+/// next frame, by name; the same change with the notify is not.
+#[gpui_kit::test]
+fn a_fact_changed_without_notifying_is_found_by_the_check(cx: &mut TestAppContext) {
+    if isolate("a_fact_changed_without_notifying_is_found_by_the_check") {
+        return;
+    }
+    let window = settled_window(cx);
+    // `drive` draws too (the effects it sets off end in a frame), so the change is made, and the frame
+    // drawn, in one update.
+    let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        cx.update(|cx| {
+            crate::app_state::AppState::with_workspace(&window, cx, |ws, _, _| ws.right_tab = TabId::History)
+        })
+        .expect("the window is open");
+        draw(cx, &window);
+    }));
+    let report = match caught {
+        Ok(()) => panic!("the check missed a panel that shows the wrong tab"),
+        Err(payload) => payload
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| payload.downcast_ref::<&str>().map(ToString::to_string))
+            .unwrap_or_default(),
+    };
+    assert!(
+        report.contains("Panel") && report.contains("tab:"),
+        "the report names the region and the fact: {report}"
+    );
+}

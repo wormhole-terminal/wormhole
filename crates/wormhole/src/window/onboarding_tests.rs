@@ -18,7 +18,9 @@ use wormhole_core::storage::store::Store;
 use crate::app_state::{OpenWindow, app, app_mut};
 use crate::onboarding::{AgentsNote, FADE_OUT, FirstRun};
 use crate::settings::update_settings;
-use crate::window::test_harness::{draw, drive, isolate_in, press, read, read_cx, start, with_window};
+use crate::window::test_harness::{
+    draw, draw_fresh, drive, isolate_in, press, read, read_cx, start, with_window,
+};
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
 fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
@@ -488,7 +490,7 @@ fn a_frame_under_the_intro_window_stays_within_its_allocation_budget(cx: &mut Te
         draw(cx, &window);
         draw(cx, &window);
         let before = thread_counts();
-        draw(cx, &window);
+        draw_fresh(cx, &window);
         let drawn = thread_counts().since(before);
         eprintln!(
             "window frame under the intro's {page:?} page: {} allocations, {} bytes",
