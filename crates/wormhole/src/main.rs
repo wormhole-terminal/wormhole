@@ -34,7 +34,7 @@ mod studio;
 mod style;
 mod terminal_view;
 mod theme_bridge;
-mod updates;
+mod update;
 mod window;
 mod window_ops;
 

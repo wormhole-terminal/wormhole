@@ -24,7 +24,7 @@
 //! (`sidebar_host`, `onboarding_host`, and for the terminal welcome `welcome_host`) and hears through
 //! their events. Above it, and using it: the features (`features`, which the app installs as a table the
 //! window holds and never names), the secondary windows' options (`aux_window`), and everything else the
-//! app builds on top (`notifications`, `updates`, `about`, `studio`, `settings_window`, the status item,
+//! app builds on top (`notifications`, `update`, `about`, `studio`, `settings_window`, the status item,
 //! the command palette, the shortcut sheet, `app`). The window uses nothing above it: what it would tell
 //! the surfaces above goes through `app_state::attention` (a terminal is in front or gone, a status
 //! changed), which the notifications listen to; the welcome's agents step opens Settings by dispatching

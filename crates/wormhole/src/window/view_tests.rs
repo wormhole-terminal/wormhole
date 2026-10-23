@@ -112,7 +112,7 @@ pub(crate) fn start(cx: &mut TestAppContext, sessions: i64) -> OpenWindow {
 /// one and a test window has the features the app's has ([`start_with_table`] swaps the table).
 pub(crate) fn set_shared_state(cx: &mut App) {
     cx.set_global(AppState::for_test(100));
-    cx.set_global(crate::updates::Updates::new(None, None));
+    cx.set_global(crate::update::Updates::new(None, None));
     crate::features::install(cx);
     crate::window::feature::FeatureTable::profile_shown(cx);
 }

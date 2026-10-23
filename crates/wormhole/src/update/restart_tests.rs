@@ -7,8 +7,8 @@ use gpui_kit::TestAppContext;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
 use crate::app_state::{OpenWindow, app};
-use crate::updates::restart::{request_restart, tick_at};
-use crate::updates::{UpdatePhase, Updates};
+use crate::update::restart::{request_restart, tick_at};
+use crate::update::{UpdatePhase, Updates};
 use crate::window::view_tests::{hook, isolate_in, start};
 use crate::window::window_lifecycle::open_workspace_window;
 

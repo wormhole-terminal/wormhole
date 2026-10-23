@@ -26,7 +26,7 @@ pub(super) fn section(ctx: &mut Ctx, arg: &str) -> Result<String> {
 pub(super) fn update_installed(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let mut words = arg.split_whitespace();
     let version = words.next().ok_or_else(|| anyhow!("expected a version, e.g. 0.3.1"))?;
-    crate::updates::devctl_installed(version, words.next() == Some("pending"), ctx.cx);
+    crate::update::devctl_installed(version, words.next() == Some("pending"), ctx.cx);
     Ok(String::new())
 }
 

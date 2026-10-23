@@ -15,9 +15,9 @@ use crate::features::project;
 use crate::menubar::MenuCommand;
 use crate::settings::{ParkedSettings, SettingsStore};
 use crate::status_item;
-use crate::updates::restart;
+use crate::update::restart;
 use crate::window::window_lifecycle::open_workspace_window;
-use crate::{notifications, updates};
+use crate::{notifications, update};
 
 /// What the socket delivered: a hook's message, or a control request to answer (`control`).
 pub(super) fn dispatch_hook(incoming: ipc::Incoming, cx: &mut App) {
@@ -85,7 +85,7 @@ pub(super) fn tick(cx: &mut App) {
     notifications::tick(ticks, cx);
     status_item::sync(cx);
     menus::sync(cx);
-    updates::schedule_check(ticks, cx);
+    update::schedule_check(ticks, cx);
     restart::tick(cx);
     if ticks.is_multiple_of(5) {
         project::prune_projects(cx);

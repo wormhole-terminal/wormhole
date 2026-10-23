@@ -12,7 +12,7 @@ use wormhole_core::agents::agent;
 use crate::app_state::app;
 use crate::dialog::{self, shortened};
 use crate::terminal_view::Status;
-use crate::updates::{self, UpdatePhase, Updates};
+use crate::update::{self, UpdatePhase, Updates};
 use crate::window::Workspace;
 use crate::window::restart_facts::RestartFacts;
 
@@ -149,7 +149,7 @@ fn all_idle(cx: &App) -> bool {
 pub(crate) fn request_restart(window: &mut Window, cx: &mut App) {
     let running = running_terminals(cx);
     if running.is_empty() {
-        updates::restart_to_update(cx);
+        update::restart_to_update(cx);
         return;
     }
     let question = dialog::CloseQuestion {
@@ -157,14 +157,14 @@ pub(crate) fn request_restart(window: &mut Window, cx: &mut App) {
         detail: restart_detail(&running).into(),
         confirm: "Restart",
     };
-    let when_idle: dialog::OnConfirm = Rc::new(|_, cx| updates::restart_when_idle(cx));
+    let when_idle: dialog::OnConfirm = Rc::new(|_, cx| update::restart_when_idle(cx));
     dialog::ask_with_cancel(
         window,
         cx,
         question,
         "Later",
         Some(("Restart When Idle", when_idle)),
-        |_, cx| updates::restart_to_update(cx),
+        |_, cx| update::restart_to_update(cx),
         |_| {},
     );
 }
@@ -184,14 +184,14 @@ pub(super) fn tick_at(now: Instant, cx: &mut App) {
     // The line in Settings only shows beside an installed update: without one the request would
     // restart invisibly.
     if !matches!(updates.phase, UpdatePhase::Installed(_)) {
-        updates::cancel_restart_when_idle(cx);
+        update::cancel_restart_when_idle(cx);
         return;
     }
     let idle = all_idle(cx);
     let due = cx.global_mut::<Updates>().restart_watch().is_some_and(|watch| watch.seen(idle, now));
     if due {
         tracing::info!("restarting to update: the terminals have been idle");
-        updates::restart_to_update(cx);
+        update::restart_to_update(cx);
     }
 }
 

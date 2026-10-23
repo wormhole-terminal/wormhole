@@ -24,7 +24,7 @@ use crate::menubar::{ActionItem, MenuCommand, MenuSnapshot, StatusColors};
 use crate::platform::status_item::{self, MenuBar};
 use crate::settings::{settings, ui};
 use crate::settings_window;
-use crate::updates;
+use crate::update;
 use crate::window::window_lifecycle::open_tab;
 use crate::window::window_lifecycle::with_front_workspace;
 
@@ -320,7 +320,7 @@ pub(crate) fn run_command(command: MenuCommand, cx: &mut App) {
         MenuCommand::OpenSettings => settings_window::open_settings(None, cx),
         MenuCommand::CheckForUpdates => {
             settings_window::open_settings(Some(settings_window::Section::Updates), cx);
-            updates::check_for_updates(true, cx);
+            update::check_for_updates(true, cx);
         }
     }
 }

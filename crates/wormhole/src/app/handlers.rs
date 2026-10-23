@@ -33,7 +33,7 @@ use crate::onboarding;
 use crate::settings::{SettingsStore, settings, update_settings};
 use crate::settings_window;
 use crate::terminal_view::{TerminalKeys, keystroke_spec};
-use crate::updates;
+use crate::update;
 use crate::window::window_lifecycle::with_front_workspace;
 use crate::window::{ambient, window_lifecycle};
 use crate::{about, studio};
@@ -54,7 +54,7 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &CheckForUpdates, cx| {
         cx.defer(|cx| {
             settings_window::open_settings(Some(settings_window::Section::Updates), cx);
-            updates::check_for_updates(true, cx);
+            update::check_for_updates(true, cx);
         });
     });
     cx.on_action(|_: &NewProfile, cx| cx.defer(settings_window::open_new_profile_sheet));

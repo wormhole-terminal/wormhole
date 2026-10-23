@@ -27,7 +27,7 @@ use wormhole_core::update::{
 
 use crate::app_state::app;
 use crate::settings::{SettingsStore, settings};
-use crate::updates::restart::IdleWatch;
+use crate::update::restart::IdleWatch;
 
 const BUNDLE_ID: &str = "app.getwormhole.terminal";
 const SCHEDULE_KEY: &str = "update_schedule";
@@ -56,7 +56,7 @@ pub(crate) struct Updates {
     progress: Arc<(AtomicU64, AtomicU64)>,
     task: Option<Task<()>>,
     /// "Restart When Idle" was chosen: the app restarts once its terminals have been idle for a
-    /// while (`updates::restart::tick`). Not saved: a request lives as long as the run that made it.
+    /// while (`update::restart::tick`). Not saved: a request lives as long as the run that made it.
     restart_when_idle: Option<IdleWatch>,
     /// The channel the shown phase belongs to; switching it checks the new one (see [`init`]).
     channel: UpdateChannel,

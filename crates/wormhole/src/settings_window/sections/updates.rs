@@ -15,7 +15,7 @@ use crate::settings::UiColors;
 use crate::settings_window::registry::{Segment, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
-use crate::updates::{UpdatePhase, Updates};
+use crate::update::{UpdatePhase, Updates};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("version", |_, cx| {
@@ -140,12 +140,12 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
                         .ghost()
                         .small()
                         .label("Skip this version")
-                        .on_click(cx.listener(move |_, _, _, cx| crate::updates::skip_update(&skip, cx))),
+                        .on_click(cx.listener(move |_, _, _, cx| crate::update::skip_update(&skip, cx))),
                 );
             }
             actions = actions.child(
                 Button::new("update-install").primary().small().label("Install update").on_click(
-                    cx.listener(move |_, _, _, cx| crate::updates::install_update(install.clone(), cx)),
+                    cx.listener(move |_, _, _, cx| crate::update::install_update(install.clone(), cx)),
                 ),
             );
         }
@@ -153,20 +153,21 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
             // Restarting asks first while something runs; waiting for the terminals to be idle
             // can be called off, or cut short by restarting now (no second question: it was asked).
             if restart_pending {
-                actions =
-                    actions.child(
-                        Button::new("update-restart-cancel").ghost().small().label("Don't restart").on_click(
-                            cx.listener(|_, _, _, cx| crate::updates::cancel_restart_when_idle(cx)),
-                        ),
-                    );
+                actions = actions.child(
+                    Button::new("update-restart-cancel")
+                        .ghost()
+                        .small()
+                        .label("Don't restart")
+                        .on_click(cx.listener(|_, _, _, cx| crate::update::cancel_restart_when_idle(cx))),
+                );
             }
             actions =
                 actions.child(Button::new("update-restart").primary().small().label("Restart now").on_click(
                     cx.listener(move |_, _, window, cx| {
                         if restart_pending {
-                            crate::updates::restart_to_update(cx);
+                            crate::update::restart_to_update(cx);
                         } else {
-                            crate::updates::restart::request_restart(window, cx);
+                            crate::update::restart::request_restart(window, cx);
                         }
                     }),
                 ));
@@ -185,7 +186,7 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
             actions = actions.child(Button::new("update-check").small().label("Check now").on_click(
                 cx.listener(move |_, _, _, cx| {
                     if !busy {
-                        crate::updates::check_for_updates(true, cx);
+                        crate::update::check_for_updates(true, cx);
                     }
                 }),
             ));

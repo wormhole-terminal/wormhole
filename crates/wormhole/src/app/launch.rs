@@ -26,7 +26,7 @@ use crate::app_state::profiles;
 use crate::settings::ParkedSettings;
 use crate::status_item;
 use crate::window::window_lifecycle::{open_workspace_window, save_all, window_closed};
-use crate::{notifications, updates};
+use crate::{notifications, update};
 
 const TICK: Duration = Duration::from_millis(400);
 
@@ -64,7 +64,7 @@ pub(crate) fn start(
     crate::open_in::OpenIn::install(cx);
     cx.set_global(ParkedSettings::new(profiles.active_id().clone()));
     // The updater's state is a global of its own, so the shared state does not name it.
-    cx.set_global(updates::Updates::new(Some(root.update_schedule_file()), data.store.as_ref()));
+    cx.set_global(update::Updates::new(Some(root.update_schedule_file()), data.store.as_ref()));
     cx.set_global(AppState::new(
         root,
         profiles,
@@ -103,7 +103,7 @@ pub(crate) fn start(
     .detach();
     cx.on_window_closed(window_closed).detach();
     notifications::init(cx);
-    updates::init(cx);
+    update::init(cx);
     crate::app::saved_text::init(cx);
 
     cx.spawn(async move |cx| {
