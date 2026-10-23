@@ -69,11 +69,6 @@ pub(crate) fn picker(ws: &mut Workspace, query: &str, window: &mut Window, cx: &
     });
 }
 
-/// The selected terminal's History list, to scroll.
-pub(crate) fn list(ws: &Workspace, cx: &App) -> Option<ListState> {
-    Some(ws.feature::<History>()?.read(cx).of.get(&ws.active_session().id)?.list.state())
-}
-
 /// Whether a log read is under way for any of the window's terminals.
 pub(crate) fn busy(ws: &Workspace, cx: &App) -> bool {
     ws.feature::<History>().is_some_and(|history| history.read(cx).of.values().any(|state| state.loading()))

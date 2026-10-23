@@ -79,7 +79,7 @@ impl Workspace {
             }
             FeatureEvent::TabGone(tab) => {
                 if self.right_tab == *tab {
-                    self.set_right_tab(TabId::Changes);
+                    self.set_right_tab(TabId::FALLBACK);
                 }
                 cx.notify();
             }

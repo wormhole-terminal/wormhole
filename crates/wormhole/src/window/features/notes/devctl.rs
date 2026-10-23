@@ -16,13 +16,6 @@ fn run<R>(
     Some(notes.update(cx, |notes, ncx| f(notes, session, panel, ncx)))
 }
 
-/// The selected terminal's Notes list, to scroll.
-pub(crate) fn list(ws: &Workspace, cx: &App) -> Option<ListState> {
-    let notes = ws.feature::<Notes>()?;
-    let of = notes.read(cx).of.get(&ws.active_session().id)?;
-    Some(of.list.rows.state())
-}
-
 /// `note <text>`: the first note holds `text`, made if there is none.
 pub(crate) fn set_first_note(ws: &Workspace, text: String, window: &mut Window, cx: &mut Context<Workspace>) {
     run(ws, cx, |n, session, panel, cx| n.devctl_set_first_note(session, text, panel, window, cx));

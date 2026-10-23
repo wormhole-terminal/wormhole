@@ -299,7 +299,7 @@ impl Workspace {
         let tab =
             |icon: IconName, label: &str, key: ActionId, count: Option<usize>, spoken: String, tab: TabId| {
                 let active = self.right_tab == tab;
-                style::icon_tab(tab_element_id(tab), ui, icon, keymap::with_key(label, key), active, count)
+                style::icon_tab(tab.element_id(), ui, icon, keymap::with_key(label, key), active, count)
                     .relative()
                     .role(Role::Tab)
                     .aria_label(spoken)
@@ -335,17 +335,6 @@ impl Workspace {
                 None => None,
             }));
         self.area_container(Area::PanelTabs, bar, cx).into_any_element()
-    }
-}
-
-/// A tab's element id, which the tests and devctl find it by.
-const fn tab_element_id(tab: TabId) -> &'static str {
-    match tab {
-        TabId::Changes => "tab-changes",
-        TabId::History => "tab-history",
-        TabId::Notes => "tab-notes",
-        TabId::Usage => "tab-usage",
-        TabId::Project => "tab-project",
     }
 }
 

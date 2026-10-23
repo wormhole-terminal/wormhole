@@ -27,6 +27,10 @@ pub enum TabId {
 }
 
 impl TabId {
+    /// The tab a window falls back to when the one it had is gone (its feature went off, an agent left
+    /// the screen, a layout from a newer build). Changes is an always-on feature, so it is always there.
+    pub const FALLBACK: Self = Self::Changes;
+
     /// Every tab, in the order the panel lists them.
     pub const ALL: [TabId; 5] = [Self::Changes, Self::History, Self::Notes, Self::Usage, Self::Project];
 
@@ -38,6 +42,17 @@ impl TabId {
             Self::Notes => "notes",
             Self::Usage => "usage",
             Self::Project => "project",
+        }
+    }
+
+    /// The tab's element id in the window, which the tests and devctl find it by.
+    pub const fn element_id(self) -> &'static str {
+        match self {
+            Self::Changes => "tab-changes",
+            Self::History => "tab-history",
+            Self::Notes => "tab-notes",
+            Self::Usage => "tab-usage",
+            Self::Project => "tab-project",
         }
     }
 
@@ -68,10 +83,18 @@ mod tests {
     }
 
     #[test]
+    fn element_ids_are_the_tab_names() {
+        for tab in TabId::ALL {
+            assert_eq!(tab.element_id(), format!("tab-{}", tab.key()));
+        }
+    }
+
+    #[test]
     fn a_tab_of_a_newer_build_reads_as_changes() {
         assert_eq!(serde_json::from_str::<TabId>(r#""terminal-log""#).unwrap(), TabId::Changes);
         assert_eq!(serde_json::from_str::<TabId>(r#""""#).unwrap(), TabId::Changes);
         assert_eq!(TabId::from_key("terminal-log"), None, "devctl is told, a layout is not");
         assert_eq!(TabId::default(), TabId::Changes);
+        assert_eq!(TabId::FALLBACK, TabId::default());
     }
 }

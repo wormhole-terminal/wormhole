@@ -103,6 +103,7 @@ static STAND_IN: &[FeatureDef] = &[
                     marker(entity).update(cx, |m, _| m.asked.push(format!("fold:{session}:{row}")));
                 },
                 reveal: |entity, _, row, cx| marker(entity).read(cx).revealed.set(Some(row)),
+                list: |_, _, _| None,
             }),
             actions: Some(|entity, facts, _, cx| {
                 let on = facts.agent_on_screen(cx);

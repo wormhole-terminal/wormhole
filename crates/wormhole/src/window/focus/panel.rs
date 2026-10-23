@@ -15,7 +15,6 @@ use super::{activation, list_key};
 
 use crate::window::Workspace;
 use crate::window::feature::WalkFns;
-use wormhole_core::config::TabId;
 
 /// How an item is pressed: ↩ or Space.
 pub(in crate::window) use wormhole_core::view::focus::list::Press as Activate;
@@ -182,13 +181,8 @@ impl Workspace {
     /// The panel's list area, holding the keyboard for it: a list VoiceOver names after
     /// the tab, whose active descendant is the row the keys are on.
     pub(in crate::window) fn panel_content(&self, content: AnyElement, cx: &mut Context<Self>) -> AnyElement {
-        let name = match self.right_tab {
-            TabId::Notes => "Notes",
-            TabId::Changes => "Changes",
-            TabId::History => "History",
-            TabId::Project => "Project",
-            TabId::Usage => "Usage",
-        };
+        // The tab's own label; a window with no table has no tab, so no words either.
+        let name = self.tab_entry(self.right_tab).map_or("", |(_, tab)| tab.label);
         let list = div()
             .id("panel-content")
             .role(Role::List)

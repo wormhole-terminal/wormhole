@@ -17,24 +17,16 @@ impl Global for TickHook {}
 impl Workspace {
     /// `scroll-panel`: the shown tab's list scrolled by `y` points.
     pub(crate) fn devctl_panel_scroll(&mut self, y: f32, cx: &mut Context<Self>) {
-        use wormhole_core::config::TabId;
-        let list = match self.right_tab {
-            TabId::Changes => match crate::window::features::git::changes::devctl::list(self, cx) {
-                Some(list) => list,
-                None => return,
-            },
-            TabId::History => match crate::window::features::git::history::devctl::list(self, cx) {
-                Some(list) => list,
-                None => return,
-            },
-            TabId::Notes => match crate::window::features::notes::devctl::list(self, cx) {
-                Some(list) => list,
-                None => return,
-            },
-            TabId::Project | TabId::Usage => return,
-        };
+        let Some(list) = self.devctl_panel_list(cx) else { return };
         list.scroll_by(px(y));
         cx.notify();
+    }
+
+    /// The shown tab's list for the terminal on screen, if the tab has one.
+    pub(crate) fn devctl_panel_list(&self, cx: &App) -> Option<ListState> {
+        let (at, tab) = self.tab_entry(self.right_tab)?;
+        let (walk, entity) = (tab.walk.as_ref()?, self.feature_entity(at)?);
+        (walk.list)(entity, &self.facts(cx), cx)
     }
 
     /// Run the installed [`TickHook`], if there is one (the view tests install none).

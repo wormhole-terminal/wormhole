@@ -118,7 +118,7 @@ impl<T: PartialEq> Rows<T> {
         Self { rows: Rc::default(), state: ListState::new(0, ListAlignment::Top, px(OVERDRAW)) }
     }
 
-    #[cfg(feature = "devctl")]
+    /// The list's state, to scroll it from outside (devctl's wheel).
     pub fn state(&self) -> ListState {
         self.state.clone()
     }

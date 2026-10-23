@@ -852,7 +852,7 @@ fn a_devctl_scroll_turns_the_wheel_over_a_point(cx: &mut TestAppContext) {
     draw(cx, &window);
     let top = |cx: &mut TestAppContext| {
         let top = read_cx(cx, &window, |ws, cx| {
-            crate::window::features::notes::devctl::list(ws, cx).expect("the notes list").logical_scroll_top()
+            ws.devctl_panel_list(cx).expect("the notes list").logical_scroll_top()
         });
         (top.item_ix, f32::from(top.offset_in_item))
     };

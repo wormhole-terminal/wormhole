@@ -24,7 +24,6 @@ use crate::window::Workspace;
 use crate::window::title::TitlePlan;
 use crate::window::title::breadcrumb::{CRUMB_GAP, Measure};
 use crate::window::title::extras::ExtraFacts;
-use wormhole_core::config::TabId;
 
 /// The gap in front of each chip at the right end of the row (`ml_2`).
 const CHIP_GAP: f32 = 8.0;
@@ -106,7 +105,7 @@ impl Workspace {
                 .aria_label(words)
                 .cursor_pointer()
                 .tooltip(move |window, cx| Tooltip::new(tip.clone()).build(window, cx))
-                .on_click(cx.listener(|this, _, _, cx| this.show_tab(TabId::Changes, cx)))
+                .on_click(cx.listener(|this, _, _, cx| this.show_branch_tab(cx)))
                 .into_any_element(),
         )
     }

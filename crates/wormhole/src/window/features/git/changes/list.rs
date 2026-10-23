@@ -195,8 +195,7 @@ impl Changes {
         }
     }
 
-    /// The list, to scroll (devctl).
-    #[cfg(feature = "devctl")]
+    /// The list, to scroll from outside.
     pub(super) fn list_state(&self, session: i64) -> Option<ListState> {
         Some(self.of.get(&session)?.list.rows.state())
     }
@@ -219,4 +218,5 @@ pub(super) const WALK: WalkFns = WalkFns {
             super::def::typed(entity).read(cx).reveal(active.id, row);
         }
     },
+    list: |entity, facts, cx| super::def::typed(entity).read(cx).list_state(facts.active()?.id),
 };

@@ -19,7 +19,7 @@ impl Workspace {
         // The tab actually on screen: if the chosen one isn't in the tab list any more (the
         // Project tab vanished with its feature flag), show Changes until the next refresh resets it.
         let tab =
-            if self.panel_tab_list(cx).contains(&self.right_tab) { self.right_tab } else { TabId::Changes };
+            if self.panel_tab_list(cx).contains(&self.right_tab) { self.right_tab } else { TabId::FALLBACK };
         div()
             .relative()
             .flex()
@@ -81,6 +81,15 @@ impl Workspace {
         }
     }
 
+    /// The title row's branch status was clicked: shows the tab of the feature that contributes the
+    /// branch chip, the one that has the changes the status counts.
+    pub(in crate::window) fn show_branch_tab(&mut self, cx: &mut Context<Self>) {
+        let tab = self.features.iter().find_map(|def| def.branch_chip.as_ref()).map(|chip| chip.tab);
+        if let Some(tab) = tab {
+            self.show_tab(tab, cx);
+        }
+    }
+
     pub(crate) fn show_tab(&mut self, tab: TabId, cx: &mut Context<Self>) {
         // A tab of a feature that is off, or that is not offered now (Usage without an agent), is gone.
         let tab = {
@@ -89,7 +98,7 @@ impl Workspace {
                 Some((at, entry))
                     if !facts.features.has(self.features[at].id) || !(entry.shown)(&facts, cx) =>
                 {
-                    TabId::Changes
+                    TabId::FALLBACK
                 }
                 _ => tab,
             }

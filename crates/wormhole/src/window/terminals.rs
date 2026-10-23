@@ -285,7 +285,7 @@ impl Workspace {
 
     /// The folder the active terminal belongs to, as the sidebar's bands name it: its repository, else
     /// the folder itself. `None` until its shell has said where it is.
-    #[cfg(feature = "devctl")]
+    #[cfg(any(test, feature = "devctl"))]
     pub(crate) fn active_folder(&self, cx: &App) -> Option<PathBuf> {
         let cwd = self.active_terminal().read(cx).cwd.clone()?;
         Some(self.active_session().repo_root.of(&cwd))

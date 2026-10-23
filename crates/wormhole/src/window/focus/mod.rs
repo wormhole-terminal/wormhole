@@ -399,9 +399,7 @@ impl Workspace {
                 SidebarStop::Group(id) => format!("group {id}"),
                 SidebarStop::Row(id) => format!("terminal id={id}"),
             }),
-            Area::PanelContent => {
-                self.areas.panel_at.map(|(tab, row)| format!("{} row {row}", tab_name(tab)))
-            }
+            Area::PanelContent => self.areas.panel_at.map(|(tab, row)| format!("{} row {row}", tab.key())),
             Area::StatusBar => self.status_items().get(self.areas.status).map(|item| format!("{item:?}")),
             Area::Tabs | Area::PanelTabs | Area::Terminal => None,
         };
@@ -410,17 +408,6 @@ impl Workspace {
             Some(at) => format!("{} {at}{ring}", area.name()),
             None => format!("{}{ring}", area.name()),
         }
-    }
-}
-
-#[cfg(feature = "devctl")]
-fn tab_name(tab: TabId) -> &'static str {
-    match tab {
-        TabId::Notes => "notes",
-        TabId::Changes => "changes",
-        TabId::History => "history",
-        TabId::Project => "project",
-        TabId::Usage => "usage",
     }
 }
 

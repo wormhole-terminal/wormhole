@@ -124,4 +124,8 @@ pub(super) const WALK: WalkFns = WalkFns {
             of.list.rows.reveal(row);
         }
     },
+    list: |entity, facts, cx| {
+        let of = super::def::typed(entity).read(cx).of.get(&facts.active()?.id)?;
+        Some(of.list.rows.state())
+    },
 };

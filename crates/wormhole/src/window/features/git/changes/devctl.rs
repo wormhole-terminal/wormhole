@@ -74,8 +74,3 @@ pub(crate) fn comment(
 ) -> Result<String, &'static str> {
     run(ws, cx, |changes, _, _, cx| changes.devctl_comment(text, window, cx)).ok_or("no changes feature")?
 }
-
-/// The selected terminal's Changes list, to scroll.
-pub(crate) fn list(ws: &Workspace, cx: &App) -> Option<ListState> {
-    ws.feature::<Changes>()?.read(cx).list_state(ws.active_session().id)
-}

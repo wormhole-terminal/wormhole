@@ -100,7 +100,7 @@ impl Workspace {
             .tab_before_previous
             .take()
             .filter(|tab| *tab != self.right_tab && self.panel_tab_list(cx).contains(tab))
-            .unwrap_or(TabId::Changes);
+            .unwrap_or(TabId::FALLBACK);
         self.show_tab(back, cx);
     }
 

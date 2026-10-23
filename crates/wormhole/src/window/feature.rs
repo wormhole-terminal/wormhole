@@ -345,6 +345,9 @@ pub(in crate::window) struct WalkFns {
     pub fold: FoldFn,
     /// Scrolls a row into view.
     pub reveal: fn(&AnyEntity, &WindowFacts<'_>, row: usize, &App),
+    /// The list the rows are in, for what scrolls it from outside (devctl's wheel); `None` while the
+    /// terminal on screen has none.
+    pub list: fn(&AnyEntity, &WindowFacts<'_>, &App) -> Option<ListState>,
 }
 
 /// What a feature adds to the start of a terminal: variables for its environment and the shell it
