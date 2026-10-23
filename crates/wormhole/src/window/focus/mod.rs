@@ -24,7 +24,6 @@ use crate::window::Workspace;
 use wormhole_core::config::TabId;
 
 pub(super) use bars::TitleButton;
-pub(in crate::window) use panel::Walkable;
 
 pub(super) struct FocusAreas {
     title_row: FocusHandle,

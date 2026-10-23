@@ -13,17 +13,7 @@ use wormhole_core::view::focus::list::{Item, Move, band_folds, walk};
 
 use crate::focus_keys::{Activate, activation, list_key};
 use crate::window::Workspace;
-use crate::window::feature::WalkFns;
-
-/// One row of a panel list as the keys walk it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::window) struct Walkable {
-    /// Its place among the tab's rows (what the virtual list draws).
-    pub row: usize,
-    pub item: Item,
-    /// A section's band, where a ⇥ stop starts.
-    pub band: bool,
-}
+use crate::window::feature::{WalkFns, Walkable};
 
 /// How the tab on show is walked: through its feature's entity. `E` is the entity, borrowed from the
 /// window or cloned out of it for a call that changes the window.

@@ -12,7 +12,7 @@ use wormhole_core::git::FileChange;
 use super::changes::Changes;
 use crate::app_state::OpenWindow;
 use crate::window::Workspace;
-use crate::window::focus::Walkable;
+use crate::window::feature::Walkable;
 use crate::window::view_tests::drive;
 
 /// Runs git in `dir`, as a test's fixture (the app itself never writes to a repository this way).

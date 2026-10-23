@@ -6,8 +6,8 @@ use wormhole_core::view::focus::list::Item;
 
 use super::{History, HistoryRow};
 use crate::window::feature::WalkFns;
+use crate::window::feature::Walkable;
 use crate::window::features::git::changes::Changes;
-use crate::window::focus::Walkable;
 
 impl History {
     /// The History rows the keys can be on: the commits, and the open one's files under it.

@@ -30,6 +30,7 @@ use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keymap::menus::MenuState;
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::SessionRecord;
+use wormhole_core::view::focus::list::Item;
 
 use crate::focus_keys::Activate;
 use crate::onboarding::TrustCard;
@@ -37,7 +38,6 @@ use crate::sidebar::RowExtras;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
 use crate::window::feature_host::FeatureState;
-use crate::window::focus::Walkable;
 use crate::window::repo::Observed;
 
 /// The features the app has, in the order of their tabs. The app installs it once at launch
@@ -381,6 +381,16 @@ pub(in crate::window) struct TabDef {
     /// The tab is offered only while something holds (Usage: an agent is on screen). The window
     /// remembers the tab it came from when this one is opened, and goes back there when it is gone.
     pub returns_to_previous: bool,
+}
+
+/// One row of a panel list as the keys walk it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::window) struct Walkable {
+    /// Its place among the tab's rows (what the virtual list draws).
+    pub row: usize,
+    pub item: Item,
+    /// A section's band, where a ⇥ stop starts.
+    pub band: bool,
 }
 
 /// F-70's four questions about a tab's rows, each over the feature's entity: a `&'static` table of

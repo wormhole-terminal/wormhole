@@ -8,7 +8,7 @@ use super::{Notes, NotesOf};
 use crate::focus_keys::Activate;
 use crate::style::panel_list::{CardPart, Rows};
 use crate::window::feature::WalkFns;
-use crate::window::focus::Walkable;
+use crate::window::feature::Walkable;
 
 /// The Notes tab of one terminal: its rows, and whether its folded done steps are shown.
 #[derive(Default)]
