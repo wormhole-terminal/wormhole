@@ -292,10 +292,16 @@ pub(in crate::window) struct SpawnAdd {
 /// How a feature that keeps data for each profile follows the profiles: when one is opened beside the
 /// shown one, when one is deleted, and when a terminal id is handed out in one (so data kept under an
 /// id of a session that is gone can be dropped).
+/// A feature registers only the hooks it needs.
 pub(in crate::window) struct ProfileHooks {
-    pub opened: fn(&ProfileId, &mut App),
-    pub deleted: fn(&ProfileId, &mut App),
-    pub id_allocated: fn(&ProfileId, id: i64, &mut App),
+    pub opened: Option<fn(&ProfileId, &mut App)>,
+    pub deleted: Option<fn(&ProfileId, &mut App)>,
+    pub id_allocated: Option<fn(&ProfileId, id: i64, &mut App)>,
+}
+
+impl ProfileHooks {
+    /// No hook, for a table entry to build on in a `const` (`..ProfileHooks::DEFAULT`).
+    pub const DEFAULT: Self = Self { opened: None, deleted: None, id_allocated: None };
 }
 
 /// What closing some terminals would lose, in the words of the close question.

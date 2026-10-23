@@ -7,10 +7,10 @@ use wormhole_core::config::{FeatureId, TabId};
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::view::spoken::{self, PanelTab};
 
-use super::state::{self, profile_shown};
+use super::state::{self, profile_deleted, profile_shown};
 use super::view;
 use crate::window::Workspace;
-use crate::window::feature::{FeatureDef, StateDef, TabDef};
+use crate::window::feature::{FeatureDef, ProfileHooks, StateDef, TabDef};
 
 /// "resets 34m" and "Updated 2m ago" move on: the tab redraws this often while it shows, in ticks of
 /// the window (400 ms each).
@@ -46,7 +46,8 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     }),
     tick: None,
     profile_shown: Some(profile_shown),
-    profiles: None,
+    // A profile's id is a slug that a deleted profile's name can get again: its reports go with it.
+    profiles: Some(ProfileHooks { deleted: Some(profile_deleted), ..ProfileHooks::DEFAULT }),
     refresh: None,
     trusted: None,
     spawn: None,

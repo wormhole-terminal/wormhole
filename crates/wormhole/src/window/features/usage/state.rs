@@ -85,3 +85,11 @@ pub(crate) fn record(report: Usage, cx: &mut App) {
 pub(crate) fn profile_shown(cx: &mut App) {
     shared(cx).update(cx, |reports, cx| reports.show(cx));
 }
+
+/// A profile was deleted: its reports go, so a profile made later under the same id starts with none
+/// and never writes these into its own database.
+pub(crate) fn profile_deleted(profile: &ProfileId, cx: &mut App) {
+    shared(cx).update(cx, |reports, _| {
+        reports.by_profile.remove(profile);
+    });
+}

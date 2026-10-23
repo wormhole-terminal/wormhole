@@ -193,6 +193,24 @@ fn each_profile_has_its_own_reports(cx: &mut TestAppContext) {
         json.map(|json| usage::from_json(&json)).unwrap_or_default()
     });
     assert_eq!(in_work.iter().map(|u| u.agent).collect::<Vec<_>>(), [AgentId::Codex]);
+
+    // Profile ids are slugs, so deleting "Work" and making "Work" again gives the same id: the new
+    // profile starts with no reports, and the first it gets is the only one in its database.
+    cx.update(|cx| AppState::delete_profile(&work, cx)).expect("deletes the profile");
+    let again = cx
+        .update(|cx| {
+            let new =
+                NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults };
+            AppState::create_profile(new, cx)
+        })
+        .expect("makes the profile again");
+    assert_eq!(again, work, "the same id");
+    cx.update(|cx| AppState::switch_profile(&again, cx)).expect("switches");
+    cx.run_until_parked();
+    assert!(reports(cx).is_empty(), "nothing of the deleted profile's");
+    report(cx, claude(60.0, 300));
+    assert_eq!(reports(cx).iter().map(|u| u.agent).collect::<Vec<_>>(), [AgentId::Claude]);
+    assert_eq!(remembered(cx), reports(cx), "and its database has only what it reported itself");
 }
 
 #[gpui_kit::test]

@@ -51,9 +51,9 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     tick: Some(tick),
     profile_shown: Some(hubs::profile_shown),
     profiles: Some(ProfileHooks {
-        opened: hubs::profile_opened,
-        deleted: hubs::profile_deleted,
-        id_allocated: hubs::id_allocated,
+        opened: Some(hubs::profile_opened),
+        deleted: Some(hubs::profile_deleted),
+        id_allocated: Some(hubs::id_allocated),
     }),
     refresh: Some(look),
     trusted: Some(trusted),
