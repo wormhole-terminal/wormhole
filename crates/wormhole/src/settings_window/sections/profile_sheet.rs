@@ -9,6 +9,7 @@ use gpui_kit::*;
 use wormhole_core::config::profile::{NewProfile, StartFrom, first_letter};
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::storage::paths::ProfileId;
+use wormhole_text::{keys::*, text};
 
 use crate::app_state::{AppState, app};
 use crate::settings::SettingsStore;
@@ -35,12 +36,12 @@ impl SettingsWindow {
             .profiles
             .profiles()
             .iter()
-            .map(|p| (format!("A copy of {}", p.name).into(), StartFrom::Copy(p.id.clone())))
+            .map(|p| (settings_profile_start_from_copy(&p.name).into(), StartFrom::Copy(p.id.clone())))
             .collect();
-        options.push(("Wormhole's defaults".into(), StartFrom::Defaults));
+        options.push((text(SETTINGS_PROFILE_WORMHOLES_DEFAULTS).into(), StartFrom::Defaults));
         let chosen =
             options.iter().position(|(_, from)| *from == StartFrom::Copy(shown.clone())).unwrap_or(0);
-        let name = cx.new(|cx| InputState::new(window, cx).placeholder("Name"));
+        let name = cx.new(|cx| InputState::new(window, cx).placeholder(text(SETTINGS_PROFILE_NAME_FIELD)));
         let subscription =
             cx.subscribe_in(&name, window, |this, _, event: &InputEvent, window, cx| match event {
                 InputEvent::PressEnter { .. } => this.create_profile(window, cx),
@@ -62,7 +63,7 @@ impl SettingsWindow {
         let Some(sheet) = self.new_profile.as_mut() else { return };
         let name = sheet.name.read(cx).value().trim().to_string();
         if name.is_empty() {
-            sheet.error = Some("Give the profile a name".into());
+            sheet.error = Some(text(SETTINGS_PROFILE_GIVE_THE_PROFILE_A_NAME).into());
             cx.notify();
             return;
         }
@@ -99,7 +100,7 @@ impl SettingsWindow {
             .gap_3()
             .bg(ui.elevated)
             .occlude()
-            .child(style::panel_title(ui, "New profile"))
+            .child(style::panel_title(ui, text(SETTINGS_PROFILE_NEW_PROFILE)))
             .child(
                 div()
                     .flex()
@@ -108,7 +109,7 @@ impl SettingsWindow {
                     .child(style::profile_avatar(ui, color, letter, PREVIEW_AVATAR))
                     .child(div().flex_1().child(Input::new(&sheet.name))),
             )
-            .child(style::section_label(ui, "Start from"))
+            .child(style::section_label(ui, text(SETTINGS_PROFILE_START_FROM)))
             .child(div().flex().flex_col().children(sheet.options.iter().enumerate().map(
                 |(ix, (label, _))| {
                     style::choice_row(("new-profile-from", ix), ui, label.clone(), ix == sheet.chosen)
@@ -121,10 +122,7 @@ impl SettingsWindow {
                 },
             )))
             .child(
-                div()
-                    .text_caption()
-                    .text_color(ui.muted)
-                    .child("Agent logins are never copied: the new profile signs in on its own."),
+                div().text_caption().text_color(ui.muted).child(text(SETTINGS_PROFILE_LOGINS_NEVER_COPIED)),
             )
             .children(
                 sheet.error.clone().map(|error| div().text_caption().text_color(ui.danger_text).child(error)),
@@ -134,17 +132,21 @@ impl SettingsWindow {
                     .flex()
                     .justify_end()
                     .gap_2()
-                    .child(Button::new("new-profile-cancel").outline().small().label("Cancel").on_click(
-                        cx.listener(|this, _, _, cx| {
-                            this.new_profile = None;
-                            cx.notify();
-                        }),
-                    ))
+                    .child(
+                        Button::new("new-profile-cancel")
+                            .outline()
+                            .small()
+                            .label(text(SETTINGS_PROFILE_CANCEL))
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.new_profile = None;
+                                cx.notify();
+                            })),
+                    )
                     .child(
                         Button::new("new-profile-create")
                             .primary()
                             .small()
-                            .label("Create")
+                            .label(text(SETTINGS_PROFILE_CREATE))
                             .on_click(cx.listener(|this, _, window, cx| this.create_profile(window, cx))),
                     ),
             );

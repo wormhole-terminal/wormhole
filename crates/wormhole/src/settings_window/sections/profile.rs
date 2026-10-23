@@ -12,6 +12,7 @@ use gpui_kit::*;
 use wormhole_core::config::profile::Profile;
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::view::sidebar::GroupColor;
+use wormhole_text::{keys::*, text};
 
 use super::profile_form::{LOGIN_AGENTS, Pick, ProfileForm};
 use crate::app_state::{AppState, app};
@@ -121,7 +122,7 @@ fn choose(id: impl Into<ElementId>, pick: Pick, cx: &mut Context<SettingsWindow>
         .outline()
         .small()
         .icon(IconName::Folder)
-        .tooltip("Choose a folder")
+        .tooltip(text(SETTINGS_PROFILE_CHOOSE_A_FOLDER))
         .on_click(cx.listener(move |this, _, window, cx| this.pick_profile_folder(pick, window, cx)))
 }
 
@@ -131,13 +132,9 @@ fn start_caption(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> O
     let folders = profile.folders.iter().map(String::as_str).collect::<Vec<_>>();
     Some(
         match folders.as_slice() {
-            [] => {
-                format!("Where a new terminal starts. A folder you add below opens in {} too.", profile.name)
-            }
-            [one] => format!("Folders under {one} open in {} too.", profile.name),
-            [head @ .., last] => {
-                format!("Folders under {} and {last} open in {} too.", head.join(", "), profile.name)
-            }
+            [] => settings_profile_start_caption_none(&profile.name),
+            [one] => settings_profile_start_caption_one(one, &profile.name),
+            [head @ .., last] => settings_profile_start_caption_many(&head.join(", "), last, &profile.name),
         }
         .into(),
     )
@@ -161,7 +158,7 @@ fn folder_list(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
                     .ghost()
                     .small()
                     .icon(IconName::X)
-                    .tooltip("Stop opening this folder in the profile")
+                    .tooltip(text(SETTINGS_PROFILE_STOP_OPENING_FOLDER))
                     .on_click(cx.listener(move |this, _, _, cx| {
                         let folder = folder.clone();
                         this.edit_profile(move |p| p.folders.retain(|f| *f != folder), cx);
@@ -174,11 +171,14 @@ fn folder_list(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
             .flex_col()
             .pb_2()
             .children(rows)
-            .child(div().pt_1().child(
-                style::link_button("profile-folder-add", ui, "Add a folder…", false).on_click(
-                    cx.listener(|this, _, window, cx| this.pick_profile_folder(Pick::Folder, window, cx)),
+            .child(
+                div().pt_1().child(
+                    style::link_button("profile-folder-add", ui, text(SETTINGS_PROFILE_ADD_A_FOLDER), false)
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.pick_profile_folder(Pick::Folder, window, cx)
+                        })),
                 ),
-            ))
+            )
             .into_any_element(),
     )
 }
@@ -221,10 +221,7 @@ fn draw_logins(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
 
 fn delete_caption(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<SharedString> {
     let (profile, _) = shown(window, cx)?;
-    profile
-        .id
-        .is_default()
-        .then(|| "The Default profile stays: it holds the data Wormhole always had.".into())
+    profile.id.is_default().then(|| text(SETTINGS_PROFILE_THE_DEFAULT_PROFILE_STAYS_IT_HOLDS).into())
 }
 
 fn draw_delete(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
@@ -233,7 +230,7 @@ fn draw_delete(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
         .outline()
         .small()
         .icon(IconName::Trash)
-        .label("Delete profile…")
+        .label(text(SETTINGS_PROFILE_DELETE_PROFILE))
         .disabled(is_default || window.confirm_delete_profile)
         .on_click(cx.listener(|this, _, _, cx| {
             this.confirm_delete_profile = true;
@@ -251,39 +248,39 @@ fn delete_question(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
     let (profile, _) = shown(window, cx)?;
     let id = profile.id.clone();
     Some(
-        style::banner(
-            ui,
-            style::BannerKind::Danger,
-            false,
-            format!(
-                "Delete {}? Its terminals, notes, tasks and settings are removed, and its windows close. Wormhole goes to Default.",
-                profile.name
-            ),
-        )
-        .child(Button::new("profile-delete-cancel").ghost().small().label("Cancel").on_click(cx.listener(
-            |this, _, _, cx| {
-                this.confirm_delete_profile = false;
-                cx.notify();
-            },
-        )))
-        .child(Button::new("profile-delete-confirm").danger().small().label("Delete").on_click(cx.listener(
-            move |this, _, _, cx| {
-                this.confirm_delete_profile = false;
-                let id = id.clone();
-                let page = cx.weak_entity();
-                cx.defer(move |cx| {
-                    if let Err(message) = AppState::delete_profile(&id, cx) {
-                        page.update(cx, |this, cx| {
-                            this.notice = Some((Section::Profile, message.into()));
-                            cx.notify();
-                        })
-                        .ok();
-                    }
-                });
-                cx.notify();
-            },
-        )))
-        .into_any_element(),
+        style::banner(ui, style::BannerKind::Danger, false, settings_profile_delete_question(&profile.name))
+            .child(
+                Button::new("profile-delete-cancel")
+                    .ghost()
+                    .small()
+                    .label(text(SETTINGS_PROFILE_CANCEL))
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.confirm_delete_profile = false;
+                        cx.notify();
+                    })),
+            )
+            .child(
+                Button::new("profile-delete-confirm")
+                    .danger()
+                    .small()
+                    .label(text(SETTINGS_PROFILE_DELETE_BUTTON))
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.confirm_delete_profile = false;
+                        let id = id.clone();
+                        let page = cx.weak_entity();
+                        cx.defer(move |cx| {
+                            if let Err(message) = AppState::delete_profile(&id, cx) {
+                                page.update(cx, |this, cx| {
+                                    this.notice = Some((Section::Profile, message.into()));
+                                    cx.notify();
+                                })
+                                .ok();
+                            }
+                        });
+                        cx.notify();
+                    })),
+            )
+            .into_any_element(),
     )
 }
 

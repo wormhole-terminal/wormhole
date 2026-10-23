@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 421] = [
+pub(crate) const IDS: [&str; 445] = [
     "settings-section-advanced", "settings-section-advanced.intro", "settings-advanced-group-files",
     "settings-advanced-open-config", "settings-advanced-open-config.description", "settings-advanced-open-config.keywords",
     "settings-advanced-open-data", "settings-advanced-open-data.description", "settings-advanced-open-data.keywords",
@@ -101,7 +101,15 @@ pub(crate) const IDS: [&str; 421] = [
     "settings-profile-env.keywords", "settings-profile-git", "settings-profile-git.description",
     "settings-profile-git.keywords", "settings-profile-logins", "settings-profile-logins.description",
     "settings-profile-logins.keywords", "settings-profile-group-danger-zone", "settings-profile-delete",
-    "settings-profile-delete.description", "settings-profile-delete.keywords", "settings-section-projects",
+    "settings-profile-delete.description", "settings-profile-delete.keywords", "settings-profile-choose-a-folder",
+    "settings-profile-stop-opening-folder", "settings-profile-add-a-folder", "settings-profile-the-default-profile-stays-it-holds",
+    "settings-profile-delete-profile", "settings-profile-cancel", "settings-profile-delete-button",
+    "settings-profile-name-field", "settings-profile-the-home-folder", "settings-profile-email",
+    "settings-profile-name-value-one-per-line", "settings-profile-choose", "settings-profile-wormholes-defaults",
+    "settings-profile-give-the-profile-a-name", "settings-profile-new-profile", "settings-profile-start-from",
+    "settings-profile-logins-never-copied", "settings-profile-create", "settings-profile-start-caption-none",
+    "settings-profile-start-caption-one", "settings-profile-start-caption-many", "settings-profile-delete-question",
+    "settings-profile-env-not-a-pair", "settings-profile-start-from-copy", "settings-section-projects",
     "settings-section-projects.intro", "settings-projects-projects", "settings-projects-projects.description",
     "settings-projects-projects.keywords", "settings-section-sessions", "settings-section-sessions.intro",
     "settings-sessions-sidebar-preview", "settings-sessions-sidebar-preview.keywords", "settings-sessions-group-terminals-in",
@@ -150,7 +158,7 @@ pub(crate) const IDS: [&str; 421] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 421] = [
+pub(crate) const TAKES_ARGS: [bool; 445] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, true, false, false, false, false, false, false,
@@ -175,6 +183,8 @@ pub(crate) const TAKES_ARGS: [bool; 421] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, true, true, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, true, true, true, true, true, true, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,

@@ -4,6 +4,7 @@
 //! The messages of `locales/en/settings-profile.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Profile"
 pub const SETTINGS_SECTION_PROFILE: Key = Key::new(268);
@@ -43,3 +44,81 @@ pub const SETTINGS_PROFILE_DELETE: Key = Key::new(284);
 pub const SETTINGS_PROFILE_DELETE_DESCRIPTION: Key = Key::new(285);
 /// "remove danger"
 pub const SETTINGS_PROFILE_DELETE_KEYWORDS: Key = Key::new(286);
+/// "Choose a folder"
+pub const SETTINGS_PROFILE_CHOOSE_A_FOLDER: Key = Key::new(287);
+/// "Stop opening this folder in the profile"
+pub const SETTINGS_PROFILE_STOP_OPENING_FOLDER: Key = Key::new(288);
+/// "Add a folder…"
+pub const SETTINGS_PROFILE_ADD_A_FOLDER: Key = Key::new(289);
+/// "The Default profile stays: it holds the data Wormhole always had."
+pub const SETTINGS_PROFILE_THE_DEFAULT_PROFILE_STAYS_IT_HOLDS: Key = Key::new(290);
+/// "Delete profile…"
+pub const SETTINGS_PROFILE_DELETE_PROFILE: Key = Key::new(291);
+/// "Cancel"
+pub const SETTINGS_PROFILE_CANCEL: Key = Key::new(292);
+/// "Delete"
+pub const SETTINGS_PROFILE_DELETE_BUTTON: Key = Key::new(293);
+/// "Name"
+pub const SETTINGS_PROFILE_NAME_FIELD: Key = Key::new(294);
+/// "~ (the home folder)"
+pub const SETTINGS_PROFILE_THE_HOME_FOLDER: Key = Key::new(295);
+/// "Email"
+pub const SETTINGS_PROFILE_EMAIL: Key = Key::new(296);
+/// "NAME=value, one per line"
+pub const SETTINGS_PROFILE_NAME_VALUE_ONE_PER_LINE: Key = Key::new(297);
+/// "Choose"
+pub const SETTINGS_PROFILE_CHOOSE: Key = Key::new(298);
+/// "Wormhole's defaults"
+pub const SETTINGS_PROFILE_WORMHOLES_DEFAULTS: Key = Key::new(299);
+/// "Give the profile a name"
+pub const SETTINGS_PROFILE_GIVE_THE_PROFILE_A_NAME: Key = Key::new(300);
+/// "New profile"
+pub const SETTINGS_PROFILE_NEW_PROFILE: Key = Key::new(301);
+/// "Start from"
+pub const SETTINGS_PROFILE_START_FROM: Key = Key::new(302);
+/// "Agent logins are never copied: the new profile signs in on its own."
+pub const SETTINGS_PROFILE_LOGINS_NEVER_COPIED: Key = Key::new(303);
+/// "Create"
+pub const SETTINGS_PROFILE_CREATE: Key = Key::new(304);
+
+/// ```text
+/// Where a new terminal starts. A folder you add below opens in { $profile } too.
+/// ```
+pub fn settings_profile_start_caption_none(profile: &str) -> String {
+    crate::active::message(305, &[("profile", Arg::Str(profile))])
+}
+
+/// ```text
+/// Folders under { $folder } open in { $profile } too.
+/// ```
+pub fn settings_profile_start_caption_one(folder: &str, profile: &str) -> String {
+    crate::active::message(306, &[("folder", Arg::Str(folder)), ("profile", Arg::Str(profile))])
+}
+
+/// ```text
+/// Folders under { $folders } and { $last } open in { $profile } too.
+/// ```
+pub fn settings_profile_start_caption_many(folders: &str, last: &str, profile: &str) -> String {
+    crate::active::message(307, &[("folders", Arg::Str(folders)), ("last", Arg::Str(last)), ("profile", Arg::Str(profile))])
+}
+
+/// ```text
+/// Delete { $profile }? Its terminals, notes, tasks and settings are removed, and its windows close. { -brand } goes to Default.
+/// ```
+pub fn settings_profile_delete_question(profile: &str) -> String {
+    crate::active::message(308, &[("profile", Arg::Str(profile))])
+}
+
+/// ```text
+/// “{ $line }” is not NAME=value
+/// ```
+pub fn settings_profile_env_not_a_pair(line: &str) -> String {
+    crate::active::message(309, &[("line", Arg::Str(line))])
+}
+
+/// ```text
+/// A copy of { $profile }
+/// ```
+pub fn settings_profile_start_from_copy(profile: &str) -> String {
+    crate::active::message(310, &[("profile", Arg::Str(profile))])
+}

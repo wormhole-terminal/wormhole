@@ -5,6 +5,7 @@
 
 use std::collections::BTreeMap;
 use std::path::Path;
+use wormhole_text::{keys::*, text};
 
 use gpui_kit::component::input::{InputEvent, InputState, TextareaState};
 use gpui_kit::*;
@@ -17,8 +18,10 @@ use crate::app_state::{app, app_mut};
 use crate::settings_window::SettingsWindow;
 
 /// The agents that have a login folder of their own, in the order the page lists them.
-pub(super) const LOGIN_AGENTS: [(AgentId, &str, &str); 2] =
-    [(AgentId::Claude, "Claude", "~/.claude-work"), (AgentId::Codex, "Codex", "~/.codex-work")];
+pub(super) const LOGIN_AGENTS: [(AgentId, &str, &str); 2] = [
+    (AgentId::Claude, "Claude", "~/.claude-work"), // text: name (the agent's own name)
+    (AgentId::Codex, "Codex", "~/.codex-work"),    // text: name (the agent's own name)
+];
 
 /// The fields of the page, made for one profile and made again when Wormhole is in another.
 pub(in crate::settings_window) struct ProfileForm {
@@ -53,7 +56,7 @@ impl Typed {
         let mut env = BTreeMap::new();
         for line in text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
             let Some((name, value)) = line.split_once('=') else {
-                return Err(format!("“{line}” is not NAME=value"));
+                return Err(settings_profile_env_not_a_pair(line));
             };
             env.insert(name.trim().to_string(), value.trim().to_string());
         }
@@ -124,11 +127,11 @@ impl ProfileForm {
         let login = |agent: AgentId| {
             profile.agent_logins.iter().find(|l| l.agent == agent).map(|l| l.dir.clone()).unwrap_or_default()
         };
-        let name = input(&profile.name, "Name", window, cx);
+        let name = input(&profile.name, text(SETTINGS_PROFILE_NAME_FIELD), window, cx);
         let avatar = input(&profile.avatar.to_string(), "W", window, cx);
-        let start = input(&profile.start_dir, "~ (the home folder)", window, cx);
-        let git_name = input(&profile.git.name, "Name", window, cx);
-        let git_email = input(&profile.git.email, "Email", window, cx);
+        let start = input(&profile.start_dir, text(SETTINGS_PROFILE_THE_HOME_FOLDER), window, cx);
+        let git_name = input(&profile.git.name, text(SETTINGS_PROFILE_NAME_FIELD), window, cx);
+        let git_email = input(&profile.git.email, text(SETTINGS_PROFILE_EMAIL), window, cx);
         let logins: Vec<_> = LOGIN_AGENTS
             .iter()
             .map(|(agent, _, placeholder)| input(&login(*agent), placeholder, window, cx))
@@ -137,7 +140,7 @@ impl ProfileForm {
         let env = cx.new(|cx| {
             TextareaState::new(window, cx)
                 .auto_grow(ENV_ROWS.0, ENV_ROWS.1)
-                .placeholder("NAME=value, one per line")
+                .placeholder(text(SETTINGS_PROFILE_NAME_VALUE_ONE_PER_LINE))
                 .default_value(env_text)
         });
         let mut subscriptions: Vec<Subscription> = [&name, &avatar, &start, &git_name, &git_email]
@@ -259,7 +262,7 @@ impl SettingsWindow {
             files: false,
             directories: true,
             multiple: false,
-            prompt: Some("Choose".into()),
+            prompt: Some(text(SETTINGS_PROFILE_CHOOSE).into()),
         });
         cx.spawn_in(window, async move |this, cx| {
             let Ok(Ok(Some(paths))) = paths.await else { return };

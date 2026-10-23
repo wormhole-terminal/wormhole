@@ -52,7 +52,7 @@ pub use settings_updates::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 412] = [
+pub const ALL: [Key; 430] = [
     SETTINGS_SECTION_ADVANCED, SETTINGS_SECTION_ADVANCED_INTRO, SETTINGS_ADVANCED_GROUP_FILES,
     SETTINGS_ADVANCED_OPEN_CONFIG, SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION, SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS,
     SETTINGS_ADVANCED_OPEN_DATA, SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION, SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS,
@@ -147,6 +147,12 @@ pub const ALL: [Key; 412] = [
     SETTINGS_PROFILE_GIT_DESCRIPTION, SETTINGS_PROFILE_GIT_KEYWORDS, SETTINGS_PROFILE_LOGINS,
     SETTINGS_PROFILE_LOGINS_DESCRIPTION, SETTINGS_PROFILE_LOGINS_KEYWORDS, SETTINGS_PROFILE_GROUP_DANGER_ZONE,
     SETTINGS_PROFILE_DELETE, SETTINGS_PROFILE_DELETE_DESCRIPTION, SETTINGS_PROFILE_DELETE_KEYWORDS,
+    SETTINGS_PROFILE_CHOOSE_A_FOLDER, SETTINGS_PROFILE_STOP_OPENING_FOLDER, SETTINGS_PROFILE_ADD_A_FOLDER,
+    SETTINGS_PROFILE_THE_DEFAULT_PROFILE_STAYS_IT_HOLDS, SETTINGS_PROFILE_DELETE_PROFILE, SETTINGS_PROFILE_CANCEL,
+    SETTINGS_PROFILE_DELETE_BUTTON, SETTINGS_PROFILE_NAME_FIELD, SETTINGS_PROFILE_THE_HOME_FOLDER,
+    SETTINGS_PROFILE_EMAIL, SETTINGS_PROFILE_NAME_VALUE_ONE_PER_LINE, SETTINGS_PROFILE_CHOOSE,
+    SETTINGS_PROFILE_WORMHOLES_DEFAULTS, SETTINGS_PROFILE_GIVE_THE_PROFILE_A_NAME, SETTINGS_PROFILE_NEW_PROFILE,
+    SETTINGS_PROFILE_START_FROM, SETTINGS_PROFILE_LOGINS_NEVER_COPIED, SETTINGS_PROFILE_CREATE,
     SETTINGS_SECTION_PROJECTS, SETTINGS_SECTION_PROJECTS_INTRO, SETTINGS_PROJECTS_PROJECTS,
     SETTINGS_PROJECTS_PROJECTS_DESCRIPTION, SETTINGS_PROJECTS_PROJECTS_KEYWORDS, SETTINGS_SECTION_SESSIONS,
     SETTINGS_SECTION_SESSIONS_INTRO, SETTINGS_SESSIONS_SIDEBAR_PREVIEW, SETTINGS_SESSIONS_SIDEBAR_PREVIEW_KEYWORDS,
@@ -208,6 +214,12 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("settings-menu-bar-key-conflict", settings_menu_bar_key_conflict("Sample")),
         ("settings-notifications-after-minutes", settings_notifications_after_minutes("Sample")),
         ("settings-notifications-after-seconds", settings_notifications_after_seconds("Sample")),
+        ("settings-profile-start-caption-none", settings_profile_start_caption_none("Sample")),
+        ("settings-profile-start-caption-one", settings_profile_start_caption_one("Sample", "Sample")),
+        ("settings-profile-start-caption-many", settings_profile_start_caption_many("Sample", "Sample", "Sample")),
+        ("settings-profile-delete-question", settings_profile_delete_question("Sample")),
+        ("settings-profile-env-not-a-pair", settings_profile_env_not_a_pair("Sample")),
+        ("settings-profile-start-from-copy", settings_profile_start_from_copy("Sample")),
         ("settings-sessions-preview-now", settings_sessions_preview_now("Sample")),
         ("settings-sessions-preview-hovering", settings_sessions_preview_hovering("Sample")),
     ]

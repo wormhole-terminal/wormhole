@@ -29,3 +29,50 @@ settings-profile-group-danger-zone = Danger zone
 settings-profile-delete = Delete profile
     .description = Its terminals, notes, tasks and settings are removed and its windows close.
     .keywords = remove danger
+
+## settings_window/sections/profile.rs (labels, hints and notes drawn by this page's code)
+
+settings-profile-choose-a-folder = Choose a folder
+settings-profile-stop-opening-folder = Stop opening this folder in the profile
+settings-profile-add-a-folder = Add a folder…
+settings-profile-the-default-profile-stays-it-holds = The Default profile stays: it holds the data { -brand } always had.
+settings-profile-delete-profile = Delete profile…
+settings-profile-cancel = Cancel
+settings-profile-delete-button = Delete
+
+## settings_window/sections/profile_form.rs (labels, hints and notes drawn by this page's code)
+
+settings-profile-name-field = Name
+settings-profile-the-home-folder = ~ (the home folder)
+settings-profile-email = Email
+settings-profile-name-value-one-per-line = NAME=value, one per line
+settings-profile-choose = Choose
+
+## settings_window/sections/profile_sheet.rs (labels, hints and notes drawn by this page's code)
+
+settings-profile-wormholes-defaults = { -brand }'s defaults
+settings-profile-give-the-profile-a-name = Give the profile a name
+settings-profile-new-profile = New profile
+settings-profile-start-from = Start from
+settings-profile-logins-never-copied = Agent logins are never copied: the new profile signs in on its own.
+settings-profile-create = Create
+
+## Sentences with a hole in them
+
+# Under "Start new terminals in" while the profile has no folder of its own. { $profile } is the profile's name.
+settings-profile-start-caption-none = Where a new terminal starts. A folder you add below opens in { $profile } too.
+
+# The same with one folder. { $folder } is that folder and { $profile } the profile's name.
+settings-profile-start-caption-one = Folders under { $folder } open in { $profile } too.
+
+# The same with several. { $folders } are all but the last, separated by commas, and { $last } the last.
+settings-profile-start-caption-many = Folders under { $folders } and { $last } open in { $profile } too.
+
+# The question under "Delete profile…". { $profile } is the profile's name.
+settings-profile-delete-question = Delete { $profile }? Its terminals, notes, tasks and settings are removed, and its windows close. { -brand } goes to Default.
+
+# Why the environment field is refused. { $line } is the line that is not NAME=value.
+settings-profile-env-not-a-pair = “{ $line }” is not NAME=value
+
+# An option of "Start from" in the new profile sheet. { $profile } is the profile that is copied.
+settings-profile-start-from-copy = A copy of { $profile }

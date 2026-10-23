@@ -7,108 +7,108 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Terminals & sidebar"
-pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(292);
+pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(316);
 /// "The Terminals list on the left: how it's grouped and what each row shows."
-pub const SETTINGS_SECTION_SESSIONS_INTRO: Key = Key::new(293);
+pub const SETTINGS_SECTION_SESSIONS_INTRO: Key = Key::new(317);
 /// "Live preview"
-pub const SETTINGS_SESSIONS_SIDEBAR_PREVIEW: Key = Key::new(294);
+pub const SETTINGS_SESSIONS_SIDEBAR_PREVIEW: Key = Key::new(318);
 /// "preview sidebar"
-pub const SETTINGS_SESSIONS_SIDEBAR_PREVIEW_KEYWORDS: Key = Key::new(295);
+pub const SETTINGS_SESSIONS_SIDEBAR_PREVIEW_KEYWORDS: Key = Key::new(319);
 /// "Terminals in"
-pub const SETTINGS_SESSIONS_GROUP_TERMINALS_IN: Key = Key::new(296);
+pub const SETTINGS_SESSIONS_GROUP_TERMINALS_IN: Key = Key::new(320);
 /// "Show terminals in"
-pub const SETTINGS_SESSIONS_TERMINALS_IN: Key = Key::new(297);
+pub const SETTINGS_SESSIONS_TERMINALS_IN: Key = Key::new(321);
 /// "Sidebar: the list on the left; Tabs: a tab bar instead, with the groups as sets of tabs"
-pub const SETTINGS_SESSIONS_TERMINALS_IN_DESCRIPTION: Key = Key::new(298);
+pub const SETTINGS_SESSIONS_TERMINALS_IN_DESCRIPTION: Key = Key::new(322);
 /// "tabs tab bar sidebar list layout"
-pub const SETTINGS_SESSIONS_TERMINALS_IN_KEYWORDS: Key = Key::new(299);
+pub const SETTINGS_SESSIONS_TERMINALS_IN_KEYWORDS: Key = Key::new(323);
 /// "Terminals list"
-pub const SETTINGS_SESSIONS_GROUP_TERMINALS_LIST: Key = Key::new(300);
+pub const SETTINGS_SESSIONS_GROUP_TERMINALS_LIST: Key = Key::new(324);
 /// "Density"
-pub const SETTINGS_SESSIONS_DENSITY: Key = Key::new(301);
+pub const SETTINGS_SESSIONS_DENSITY: Key = Key::new(325);
 /// "How much room each terminal takes, in the sidebar and the tab bar: Regular rows are 48 pt with a second line, Compact 32, Dense 26"
-pub const SETTINGS_SESSIONS_DENSITY_DESCRIPTION: Key = Key::new(302);
+pub const SETTINGS_SESSIONS_DENSITY_DESCRIPTION: Key = Key::new(326);
 /// "density compact dense regular comfortable rows size"
-pub const SETTINGS_SESSIONS_DENSITY_KEYWORDS: Key = Key::new(303);
+pub const SETTINGS_SESSIONS_DENSITY_KEYWORDS: Key = Key::new(327);
 /// "Show groups as cards"
-pub const SETTINGS_SESSIONS_CARDS: Key = Key::new(304);
+pub const SETTINGS_SESSIONS_CARDS: Key = Key::new(328);
 /// "Off: groups are a head and their rows, with no card around them"
-pub const SETTINGS_SESSIONS_CARDS_DESCRIPTION: Key = Key::new(305);
+pub const SETTINGS_SESSIONS_CARDS_DESCRIPTION: Key = Key::new(329);
 /// "cards groups card background border"
-pub const SETTINGS_SESSIONS_CARDS_KEYWORDS: Key = Key::new(306);
+pub const SETTINGS_SESSIONS_CARDS_KEYWORDS: Key = Key::new(330);
 /// "Fade group colours"
-pub const SETTINGS_SESSIONS_FADE_GROUP_COLORS: Key = Key::new(307);
+pub const SETTINGS_SESSIONS_FADE_GROUP_COLORS: Key = Key::new(331);
 /// "On: a group's colour fades out across its card; off, it fills the card evenly"
-pub const SETTINGS_SESSIONS_FADE_GROUP_COLORS_DESCRIPTION: Key = Key::new(308);
+pub const SETTINGS_SESSIONS_FADE_GROUP_COLORS_DESCRIPTION: Key = Key::new(332);
 /// "fade gradient group colour color card wash"
-pub const SETTINGS_SESSIONS_FADE_GROUP_COLORS_KEYWORDS: Key = Key::new(309);
+pub const SETTINGS_SESSIONS_FADE_GROUP_COLORS_KEYWORDS: Key = Key::new(333);
 /// "Show group folders"
-pub const SETTINGS_SESSIONS_SHOW_GROUP_FOLDERS: Key = Key::new(310);
+pub const SETTINGS_SESSIONS_SHOW_GROUP_FOLDERS: Key = Key::new(334);
 /// "The folder a group's new terminals start in, under its name"
-pub const SETTINGS_SESSIONS_SHOW_GROUP_FOLDERS_DESCRIPTION: Key = Key::new(311);
+pub const SETTINGS_SESSIONS_SHOW_GROUP_FOLDERS_DESCRIPTION: Key = Key::new(335);
 /// "group folder path directory name head show hide"
-pub const SETTINGS_SESSIONS_SHOW_GROUP_FOLDERS_KEYWORDS: Key = Key::new(312);
+pub const SETTINGS_SESSIONS_SHOW_GROUP_FOLDERS_KEYWORDS: Key = Key::new(336);
 /// "⌘1–⌘9 numbers"
-pub const SETTINGS_SESSIONS_SIDEBAR_NUMBERS: Key = Key::new(313);
+pub const SETTINGS_SESSIONS_SIDEBAR_NUMBERS: Key = Key::new(337);
 /// "Stay with the terminal: dealt down the list, then kept (a new terminal gets the next one); Follow the list: the first nine rows you can see"
-pub const SETTINGS_SESSIONS_SIDEBAR_NUMBERS_DESCRIPTION: Key = Key::new(314);
+pub const SETTINGS_SESSIONS_SIDEBAR_NUMBERS_DESCRIPTION: Key = Key::new(338);
 /// "command shortcuts numbers stay follow list stable classic"
-pub const SETTINGS_SESSIONS_SIDEBAR_NUMBERS_KEYWORDS: Key = Key::new(315);
+pub const SETTINGS_SESSIONS_SIDEBAR_NUMBERS_KEYWORDS: Key = Key::new(339);
 /// "Show ⌘1–⌘9 while ⌘ is held"
-pub const SETTINGS_SESSIONS_CMD_HINTS: Key = Key::new(316);
+pub const SETTINGS_SESSIONS_CMD_HINTS: Key = Key::new(340);
 /// "Keycaps on the first nine terminals after 250 ms; the shortcuts work either way"
-pub const SETTINGS_SESSIONS_CMD_HINTS_DESCRIPTION: Key = Key::new(317);
+pub const SETTINGS_SESSIONS_CMD_HINTS_DESCRIPTION: Key = Key::new(341);
 /// "command keycaps shortcuts numbers hints"
-pub const SETTINGS_SESSIONS_CMD_HINTS_KEYWORDS: Key = Key::new(318);
+pub const SETTINGS_SESSIONS_CMD_HINTS_KEYWORDS: Key = Key::new(342);
 /// "Row details"
-pub const SETTINGS_SESSIONS_GROUP_ROW_DETAILS: Key = Key::new(319);
+pub const SETTINGS_SESSIONS_GROUP_ROW_DETAILS: Key = Key::new(343);
 /// "Changed files"
-pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES: Key = Key::new(320);
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES: Key = Key::new(344);
 /// "±N uncommitted changes in the terminal's row"
-pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_DESCRIPTION: Key = Key::new(321);
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_DESCRIPTION: Key = Key::new(345);
 /// "git changes count"
-pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_KEYWORDS: Key = Key::new(322);
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_KEYWORDS: Key = Key::new(346);
 /// "Status dot"
-pub const SETTINGS_SESSIONS_SIDEBAR_DOT: Key = Key::new(323);
+pub const SETTINGS_SESSIONS_SIDEBAR_DOT: Key = Key::new(347);
 /// "Working, needs you, finished or idle, as the state round every terminal's status tile"
-pub const SETTINGS_SESSIONS_SIDEBAR_DOT_DESCRIPTION: Key = Key::new(324);
+pub const SETTINGS_SESSIONS_SIDEBAR_DOT_DESCRIPTION: Key = Key::new(348);
 /// "status glyph agent"
-pub const SETTINGS_SESSIONS_SIDEBAR_DOT_KEYWORDS: Key = Key::new(325);
+pub const SETTINGS_SESSIONS_SIDEBAR_DOT_KEYWORDS: Key = Key::new(349);
 /// "Notes and tasks"
-pub const SETTINGS_SESSIONS_SIDEBAR_NOTES: Key = Key::new(326);
+pub const SETTINGS_SESSIONS_SIDEBAR_NOTES: Key = Key::new(350);
 /// "Note icon with the number of notes and open tasks"
-pub const SETTINGS_SESSIONS_SIDEBAR_NOTES_DESCRIPTION: Key = Key::new(327);
+pub const SETTINGS_SESSIONS_SIDEBAR_NOTES_DESCRIPTION: Key = Key::new(351);
 /// "notes tasks next steps count"
-pub const SETTINGS_SESSIONS_SIDEBAR_NOTES_KEYWORDS: Key = Key::new(328);
+pub const SETTINGS_SESSIONS_SIDEBAR_NOTES_KEYWORDS: Key = Key::new(352);
 /// "Changes panel"
-pub const SETTINGS_SESSIONS_GROUP_CHANGES_PANEL: Key = Key::new(329);
+pub const SETTINGS_SESSIONS_GROUP_CHANGES_PANEL: Key = Key::new(353);
 /// "Diff view"
-pub const SETTINGS_SESSIONS_GROUP_DIFF_VIEW: Key = Key::new(330);
+pub const SETTINGS_SESSIONS_GROUP_DIFF_VIEW: Key = Key::new(354);
 /// "Sidebar"
-pub const SETTINGS_SESSIONS_SIDEBAR: Key = Key::new(331);
+pub const SETTINGS_SESSIONS_SIDEBAR: Key = Key::new(355);
 /// "Tabs"
-pub const SETTINGS_SESSIONS_TABS: Key = Key::new(332);
+pub const SETTINGS_SESSIONS_TABS: Key = Key::new(356);
 /// "Stay with the terminal"
-pub const SETTINGS_SESSIONS_STAY_WITH_THE_TERMINAL: Key = Key::new(333);
+pub const SETTINGS_SESSIONS_STAY_WITH_THE_TERMINAL: Key = Key::new(357);
 /// "Follow the list"
-pub const SETTINGS_SESSIONS_FOLLOW_THE_LIST: Key = Key::new(334);
+pub const SETTINGS_SESSIONS_FOLLOW_THE_LIST: Key = Key::new(358);
 /// "Live preview of the Terminals list. Hovering a density previews it under the current one"
-pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_STACKED: Key = Key::new(335);
+pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_STACKED: Key = Key::new(359);
 /// "Live preview of the Terminals list. Hovering a density previews it next to the current one"
-pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE: Key = Key::new(336);
+pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE: Key = Key::new(360);
 /// "Terminals"
-pub const SETTINGS_SESSIONS_TERMINALS: Key = Key::new(337);
+pub const SETTINGS_SESSIONS_TERMINALS: Key = Key::new(361);
 
 /// ```text
 /// Now · { $density }
 /// ```
 pub fn settings_sessions_preview_now(density: &str) -> String {
-    crate::active::message(338, &[("density", Arg::Str(density))])
+    crate::active::message(362, &[("density", Arg::Str(density))])
 }
 
 /// ```text
 /// Previewed while hovering { $density }
 /// ```
 pub fn settings_sessions_preview_hovering(density: &str) -> String {
-    crate::active::message(339, &[("density", Arg::Str(density))])
+    crate::active::message(363, &[("density", Arg::Str(density))])
 }
