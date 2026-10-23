@@ -636,13 +636,14 @@ impl TerminalView {
         }));
     }
 
-    /// Recompute the grid size for the available space and resize the PTY.
-    fn resize(&mut self, size: GridSize) {
+    /// Resize the PTY to the grid the available space makes, and say so if that is another size.
+    fn resize(&mut self, size: GridSize, cx: &mut Context<Self>) {
         if let Some(pty) = &mut self.pty
             && pty.size() != size
         {
             self.last_resize = Instant::now();
             pty.resize(size);
+            cx.emit(TerminalEvent::Resized);
         }
     }
 }

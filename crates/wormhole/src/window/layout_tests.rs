@@ -75,3 +75,43 @@ fn the_panels_edge_follows_the_workspaces_column_beside_the_inspector(cx: &mut T
     draw(cx, &window);
     assert_eq!((column(cx), handle_x()), (1800.0, at_edge), "closing it gives the window back");
 }
+
+/// The bar's size item is the terminal's grid. A resize is found out by the frame that lays the grid
+/// out, after the bar was built: that frame has the window drawn again, so the bar shows the size from
+/// the next frame on, not from the window's tick.
+#[gpui_kit::test]
+fn the_status_bar_shows_a_new_grid_size_without_waiting_for_the_tick(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "the_status_bar_shows_a_new_grid_size_without_waiting_for_the_tick") {
+        return;
+    }
+    let window = start(cx, 1);
+    cx.update(|cx| SettingsStore::update(cx, |s| s.status_bar = true));
+    cx.simulate_window_resize(window.handle, size(px(1800.0), px(900.0)));
+    for _ in 0..3 {
+        draw(cx, &window);
+        cx.run_until_parked();
+    }
+    let before = read(cx, &window, |ws| ws.drawn_size()).expect("the bar says the size");
+
+    cx.simulate_window_resize(window.handle, size(px(1400.0), px(700.0)));
+    cx.run_until_parked();
+    let wakes = std::rc::Rc::new(std::cell::Cell::new(0));
+    let counted = wakes.clone();
+    cx.update(|cx| {
+        let workspace = window.workspace.upgrade().expect("the window is open");
+        cx.observe(&workspace, move |_, _| counted.set(counted.get() + 1)).detach();
+    });
+    // The frame that lays the new size out. Whatever it leaves the bar saying, it asks for another.
+    draw(cx, &window);
+    cx.run_until_parked();
+    assert!(wakes.get() >= 1, "the window is drawn again once the grid is known");
+    draw(cx, &window);
+    let (shown, grid) = read(cx, &window, |ws| (ws.drawn_size(), ws.sessions[0].pane.grid.size()));
+    assert_ne!(shown.as_deref(), Some(before.as_str()), "the size changed with the window");
+    let shell = read(cx, &window, |ws| ws.active_session().pane.program());
+    assert_eq!(
+        shown,
+        Some(wormhole_core::view::layout::status_bar::size(&shell, grid.0, grid.1)),
+        "and the bar has the terminal's own"
+    );
+}

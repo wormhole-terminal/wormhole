@@ -123,12 +123,15 @@ impl Prepare {
         let mut ticks = Vec::new();
         let palette = &self.palette;
         let has_terminal = self.entity.update(cx, |this, cx| {
-            this.resize(GridSize {
-                cols: cols as u16,
-                rows: rows as u16,
-                cell_width: f32::from(cell_width),
-                cell_height: f32::from(line_height),
-            });
+            this.resize(
+                GridSize {
+                    cols: cols as u16,
+                    rows: rows as u16,
+                    cell_width: f32::from(cell_width),
+                    cell_height: f32::from(line_height),
+                },
+                cx,
+            );
             this.share_palette(palette);
             this.share_window(geometry);
             let Some(pty) = &this.pty else { return false };

@@ -244,6 +244,20 @@ impl Workspace {
         }
     }
 
+    /// A terminal's grid has another size. The bar says the selected terminal's, and was built before
+    /// the frame that found it out: draw it again then, not on the tick.
+    pub(super) fn grid_resized(&mut self, ix: usize, cx: &mut Context<Self>) {
+        if ix == self.active && self.status_bar(cx) != self.status_bar_drawn {
+            cx.notify();
+        }
+    }
+
+    /// What the bar drew for the terminal's size, for the tests.
+    #[cfg(test)]
+    pub(super) fn drawn_size(&self) -> Option<String> {
+        self.status_bar_drawn.as_ref().and_then(|bar| bar.size.clone())
+    }
+
     /// A click on an agent item: that terminal, in whichever window it is.
     fn go_to_tab(&mut self, tab: i64, window: &mut Window, cx: &mut Context<Self>) {
         if self.find_session(tab).is_some() {

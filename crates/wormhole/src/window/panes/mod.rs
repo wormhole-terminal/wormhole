@@ -106,6 +106,8 @@ impl Workspace {
                 cx.notify();
             }
             TerminalEvent::Restart => self.restart_pane(ix, window, cx),
+            // Found out by a frame (the grid is laid out in it), and the bar was built before it.
+            TerminalEvent::Resized => self.grid_resized(ix, cx),
             // A program (with `allow_window_ops`) asks the window for something: it is read as
             // being about the pane that asked.
             TerminalEvent::WindowOp(op) => {

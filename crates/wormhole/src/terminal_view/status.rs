@@ -142,6 +142,9 @@ pub enum TerminalEvent {
     HostChanged,
     /// The user cleared the terminal (⌘K): its saved text goes from the database too, at once.
     Cleared,
+    /// The grid got another size (a frame laid it out so): what shows it, the status bar's size, draws
+    /// again at once instead of on the window's next tick.
+    Resized,
 }
 
 impl TerminalView {
