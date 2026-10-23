@@ -310,11 +310,6 @@ impl Workspace {
         let sidebar =
             cx.new(|cx| crate::sidebar::Sidebar::new(view, list_focus, Self::profiles_for_chip, window, cx));
         cx.subscribe_in(&sidebar, window, Self::on_sidebar_event).detach();
-        // The list draws itself (a hover, a rename, a menu): so does the window around it, which draws
-        // what the list holds (the title row names the selected terminal's group, the focus ring and
-        // the keys read where the list's keys are). Told only when it changed: a window asleep stays so.
-        cx.observe(&sidebar, |_, _, cx| cx.notify()).detach();
-
         let first_run = cx.new(|_| crate::onboarding::FirstRun::default());
         cx.subscribe_in(&first_run, window, Self::on_first_run_event).detach();
         // The intro draws itself (a page, a hover): so does the window it covers.
@@ -406,6 +401,8 @@ impl Workspace {
         .detach();
         cx.observe_global::<crate::settings::SettingsStore>(|this, cx| this.sync_sidebar_soon(cx)).detach();
         self::regions::Regions::watch_globals(&mut this, cx);
+        // The list draws itself (a hover, a rename, a menu); the window around it hears of what it draws.
+        self::regions::Regions::watch_sidebar(&mut this, cx);
         this
     }
 

@@ -94,6 +94,8 @@ pub(crate) fn open_workspace_window_in(
                 hidden: false,
             });
             state.front = id;
+            // Its own observer starts after this update, so it would not hear that it was listed.
+            workspace.update(cx, |workspace, cx| workspace.app_state_changed(cx));
             crate::background::activate(cx);
             let _ = handle.update(cx, |_, window, cx| crate::background::activate_window(window, cx));
         }

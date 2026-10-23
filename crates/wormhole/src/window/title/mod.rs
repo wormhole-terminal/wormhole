@@ -27,6 +27,7 @@ use wormhole_core::project::ProjectColor;
 use wormhole_core::theme::tokens::Color;
 use wormhole_core::view::layout::title_row::{PathStep, RowFit};
 use wormhole_core::view::panes::Axis;
+use wormhole_core::view::sidebar::GroupPaint;
 
 use crate::menubar::model::KeyEquivalent;
 use crate::open_in::{self, OpenIn};
@@ -201,13 +202,19 @@ impl Workspace {
         .into_any_element()
     }
 
+    /// What the selected terminal's group is painted with: all the window's chrome reads of the list's
+    /// saved view, so the window hears of a change of the list only when this differs (`Regions::watch_sidebar`).
+    pub(in crate::window) fn group_paint(&self, cx: &App) -> Option<GroupPaint> {
+        let id = self.sessions.get(self.active)?.id;
+        let groups = &self.sidebar_view(cx).groups;
+        groups.get(groups.group_of(id)?)?.paint()
+    }
+
     /// The tint behind the active terminal's title row: its group's colour, as the sidebar's card
     /// wears it. A terminal in no group (or in a group without a colour) has none. It only
     /// paints, so it needs no trust.
     pub(in crate::window) fn title_tint(&self, cx: &App) -> Option<Tint> {
-        let id = self.sessions.get(self.active)?.id;
-        let groups = &self.sidebar_view(cx).groups;
-        let color = groups.get(groups.group_of(id)?)?.paint()?;
+        let color = self.group_paint(cx)?;
         let tokens = &store_in(&self.profile, cx).tokens;
         let color = ProjectColor::from_color(color.color(tokens));
         let store = store_in(&self.profile, cx);

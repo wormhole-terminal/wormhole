@@ -32,6 +32,7 @@ mod app_facts;
 mod oracle;
 
 use self::app_facts::AppFacts;
+use wormhole_core::view::sidebar::GroupPaint;
 
 use gpui_kit::*;
 use wormhole_core::view::layout::status_bar::STATUS_BAR_H;
@@ -101,6 +102,8 @@ pub(super) struct Regions {
     pub(super) drawn: Drawn,
     /// The shared state's facts as the window last saw them (`watch_globals`).
     app_seen: Option<AppFacts>,
+    /// What the selected terminal's group was last painted with, as the list's notifications saw it.
+    paint_seen: Option<GroupPaint>,
     /// What each was built from, checked at the end of every frame.
     #[cfg(any(test, debug_assertions))]
     oracle: oracle::Oracle,
@@ -133,6 +136,7 @@ impl Regions {
             status_bar: region(Part::StatusBar),
             drawn: Drawn::default(),
             app_seen: None,
+            paint_seen: None,
             #[cfg(any(test, debug_assertions))]
             oracle: Default::default(),
         }
@@ -185,10 +189,22 @@ impl Regions {
         watch::<crate::settings::SettingsStore>(cx);
         watch::<crate::open_in::OpenIn>(cx);
         workspace.regions.app_seen = Some(AppFacts::of(workspace, cx));
-        cx.observe_global::<crate::app_state::AppState>(|workspace, cx| {
-            let now = AppFacts::of(workspace, cx);
-            if workspace.regions.app_seen.as_ref() != Some(&now) {
-                workspace.regions.app_seen = Some(now);
+        cx.observe_global::<crate::app_state::AppState>(|workspace, cx| workspace.app_state_changed(cx))
+            .detach();
+    }
+
+    /// Tell the regions when the list changes in a way they draw. The list notifies for its own drawing (a
+    /// hover, a rename being typed, a turn of an agent's spinner, 30 times a second) and the window
+    /// is not drawn again for those: the regions read the list's saved view only for the tint of the
+    /// selected terminal's group. The tab bar, which the root draws from the list's state when the
+    /// terminals are in tabs, is the one other reader, and is drawn for every notification then.
+    pub(super) fn watch_sidebar(workspace: &mut Workspace, cx: &mut Context<Workspace>) {
+        workspace.regions.paint_seen = workspace.group_paint(cx);
+        let sidebar = workspace.sidebar.clone();
+        cx.observe(&sidebar, |workspace, _, cx| {
+            let paint = workspace.group_paint(cx);
+            let moved = std::mem::replace(&mut workspace.regions.paint_seen, paint) != paint;
+            if moved || workspace.tabs_on_top() {
                 cx.notify();
             }
         })
@@ -247,6 +263,22 @@ fn watch<G: Global>(cx: &mut Context<Workspace>) {
 }
 
 impl Workspace {
+    /// The shared state was written: draw the regions again if a fact they draw from it differs from the
+    /// last one seen.
+    ///
+    /// GPUI starts a global observer a moment after it is made, and a window made in the update that
+    /// writes the state (it is listed in `windows` after it was built) is not told of that write, so the
+    /// window that lists it tells it (`open_workspace_window_in`). Nor does its own observer of itself
+    /// run yet, which is why the regions are told here as well as the workspace.
+    pub(in crate::window) fn app_state_changed(&mut self, cx: &mut Context<Self>) {
+        let now = AppFacts::of(self, cx);
+        if self.regions.app_seen.as_ref() != Some(&now) {
+            self.regions.app_seen = Some(now);
+            self.regions.notify(cx);
+            cx.notify();
+        }
+    }
+
     /// Build `part` as the window's state stands: what a [`Region`] draws when it is built.
     fn render_part(&mut self, part: Part, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let element = match part {

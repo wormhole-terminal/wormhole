@@ -159,7 +159,8 @@ impl Workspace {
             self.regions.oracle.recorded[part.index()] = Some(now);
             if !moved.is_empty() {
                 stale.push(format!(
-                    "{part:?} was replayed with facts that changed:\n  {}",
+                    "{part:?} of window {} was replayed with facts that changed:\n  {}",
+                    self.window_id,
                     moved.join("\n  ")
                 ));
             }

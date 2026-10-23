@@ -205,6 +205,60 @@ fn a_fact_of_the_apps_shared_state_that_changes_draws_every_region_again(cx: &mu
     }
 }
 
+/// The list notifies for its own drawing, an agent's spinner at 30 frames a second among it.
+#[gpui_kit::test]
+fn the_list_drawing_itself_builds_neither_the_panel_nor_the_title_row_nor_the_bar(cx: &mut TestAppContext) {
+    if isolate("the_list_drawing_itself_builds_neither_the_panel_nor_the_title_row_nor_the_bar") {
+        return;
+    }
+    let window = settled_window(cx);
+    let before = builds(cx, &window);
+    for _ in 0..10 {
+        cx.update(|cx| {
+            let sidebar = window.workspace.read_with(cx, |ws, _| ws.sidebar.clone()).expect("open");
+            sidebar.update(cx, |_, cx| cx.notify());
+        });
+        cx.run_until_parked();
+        draw(cx, &window);
+    }
+    let after = builds(cx, &window);
+    assert_eq!(
+        [after[PANEL], after[TITLE_ROW], after[STATUS_BAR]],
+        [before[PANEL], before[TITLE_ROW], before[STATUS_BAR]],
+        "a hover in the list is the list's: {before:?} -> {after:?}"
+    );
+}
+
+#[gpui_kit::test]
+fn the_colour_of_the_selected_terminals_group_changing_draws_the_title_row_again(cx: &mut TestAppContext) {
+    if isolate("the_colour_of_the_selected_terminals_group_changing_draws_the_title_row_again") {
+        return;
+    }
+    let window = settled_window(cx);
+    drive(cx, &window, |ws, _, cx| {
+        let id = ws.sessions[ws.active].id;
+        ws.group_terminals(&[id], cx);
+    });
+    draw(cx, &window);
+    let before = builds(cx, &window);
+    // The list's own change, as a band's menu makes it: the list notifies, the window hears of what it reads.
+    cx.update(|cx| {
+        let sidebar = window.workspace.read_with(cx, |ws, _| ws.sidebar.clone()).expect("open");
+        sidebar.update(cx, |sidebar, cx| {
+            use wormhole_core::view::sidebar::GroupColor;
+            let group = &sidebar.view().groups.0[0];
+            let now = group.color();
+            let other = if now == Some(GroupColor::Red) { GroupColor::Green } else { GroupColor::Red };
+            let id = group.id;
+            sidebar.view_mut().groups.set_color(id, Some(other));
+            cx.notify();
+        });
+    });
+    cx.run_until_parked();
+    draw(cx, &window);
+    assert!(builds(cx, &window)[TITLE_ROW] > before[TITLE_ROW], "the row wears the group's colour");
+}
+
 /// Allocations a frame of a two-terminal window with the status bar on may make when only a terminal asked
 /// for it and the chrome is replayed. Measured: 533 allocations (203 KB), the same on every run. The
 /// budget is that plus about a hundredth: what is left is the root's own rebuild (the window's actions,

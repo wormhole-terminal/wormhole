@@ -70,8 +70,8 @@ fn output_that_changes_no_fact_does_not_wake_the_window_and_a_change_does_at_onc
 }
 
 /// The times on the rows move on by themselves: the tick draws the sidebar when one would read
-/// differently, and draws nothing while none does. (The window around it is notified with the list, as
-/// it is for a hover or a rename: it draws what the list holds, e.g. the title row's group.)
+/// differently, and draws nothing while none does. (The window around it is not drawn for that, nor for a
+/// hover or a rename in the list: only for a change of what it reads of the list, `regions_tests`.)
 #[gpui_kit::test]
 fn a_time_that_reads_differently_draws_the_sidebar_on_the_tick(cx: &mut TestAppContext) {
     if isolate_in(module_path!(), "a_time_that_reads_differently_draws_the_sidebar_on_the_tick") {
