@@ -45,8 +45,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 - A window of a profile that is not the one shown now follows its own profile's project approvals
   instead of the shown profile's. A project folder you trusted in one profile no longer runs its
-  actions, environment or worktree setup in a window of another profile, and one trusted only in that
-  other profile works there.
+  actions, environment, worktree setup or pull request lookup in a window of another profile, and one
+  trusted only in that other profile works there. A window of another profile no longer restyles the
+  shown profile's windows with its project's look, and the menu bar's project actions run in a window
+  of the shown profile.
 
 - Quitting Wormhole with `kill` (or anything else that sends it SIGTERM) now saves every window and
   the terminals' text first, as ⌘Q does, instead of losing what changed since the last save. Session

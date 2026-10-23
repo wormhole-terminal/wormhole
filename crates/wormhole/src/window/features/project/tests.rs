@@ -586,6 +586,58 @@ fn a_window_reads_the_feature_switches_of_its_own_profile(cx: &mut TestAppContex
     );
 }
 
+/// The status item's list of actions is the shown profile's projects': running one finds a window of the
+/// shown profile, though another profile's window, opened earlier, has a terminal in the same folder.
+#[gpui_kit::test]
+fn a_status_item_action_runs_in_a_window_of_the_shown_profile(cx: &mut TestAppContext) {
+    if isolate("a_status_item_action_runs_in_a_window_of_the_shown_profile") {
+        return;
+    }
+    let first = start(cx, 1);
+    let default = ProfileId::default_profile();
+    let work = cx
+        .update(|cx| {
+            let new =
+                NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults };
+            let id = AppState::create_profile(new, cx)?;
+            AppState::ensure_open(&id, cx);
+            Ok::<ProfileId, String>(id)
+        })
+        .expect("makes the profile");
+    cx.update(|cx| cx.set_global(crate::fonts::LoadedFonts::default()));
+    cx.update(|cx| AppState::open_window_in_profile(&work, cx));
+    cx.run_until_parked();
+    let odd = cx
+        .update(|cx| crate::app_state::app(cx).windows.iter().find(|w| w.profile == work).cloned())
+        .expect("the window in Work opened");
+    cx.update(|cx| AppState::switch_profile(&work, cx)).expect("switches");
+    cx.run_until_parked();
+
+    let dir = project("status-item", &[("actions.json", ACTIONS)]);
+    let folder = ProjectFolder::open(&dir).expect("a project");
+    for profile in [&default, &work] {
+        cx.update(|cx| super::hub_of_mut(profile, cx).expect("a hub").trust.trust(&folder));
+    }
+    drive(cx, &first, |ws, _, cx| go(ws, &dir, cx));
+    drive(cx, &odd, |ws, _, cx| go(ws, &dir, cx));
+    let root = project_of(&odd, 0, cx).expect("Work's terminal is in the project");
+
+    cx.update(|cx| {
+        crate::status_item::run_command(
+            crate::menubar::MenuCommand::RunAction { root, id: "more".into() },
+            cx,
+        )
+    });
+    cx.run_until_parked();
+    let sessions = |cx: &mut TestAppContext, window: &OpenWindow| read(cx, window, |ws| ws.sessions.len());
+    assert_eq!(sessions(cx, &odd), 2, "Work is shown: its window ran the action");
+    assert_eq!(
+        sessions(cx, &first),
+        1,
+        "Default's window, though it is earlier and in the same folder, did not"
+    );
+}
+
 /// The Project tab's menu line is there for a terminal with a folder and the feature on.
 #[gpui_kit::test]
 fn the_menu_line_needs_a_folder_and_the_feature(cx: &mut TestAppContext) {

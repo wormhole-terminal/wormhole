@@ -348,9 +348,12 @@ pub(crate) fn run_command(command: MenuCommand, cx: &mut App) {
         MenuCommand::OpenTab(tab) => open_tab(tab, cx),
         MenuCommand::JumpToWaiting => crate::window::ambient::jump_to_waiting(cx),
         MenuCommand::RunAction { root, id } => {
-            // Actions run in the context of their project's terminal.
+            // Actions run in the context of their project's terminal, in a window of the shown profile:
+            // the menu lists the shown profile's projects, and another profile's window may have a
+            // terminal in the same folder, under its own approvals.
+            let shown = crate::app_state::app(cx).active_profile().clone();
             let owner = AppState::find_window(cx, |ws, cx| {
-                project::api::session_for_project(ws, &root, cx).is_some()
+                *ws.profile() == shown && project::api::session_for_project(ws, &root, cx).is_some()
             });
             if let Some(owner) = owner {
                 AppState::with_workspace(&owner, cx, |ws, window, cx| {
