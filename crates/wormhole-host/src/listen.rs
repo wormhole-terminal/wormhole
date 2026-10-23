@@ -4,10 +4,12 @@
 
 use std::fs::{self, DirBuilder};
 use std::io;
-use std::os::unix::fs::{DirBuilderExt as _, FileTypeExt as _, MetadataExt as _, PermissionsExt as _};
-use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+
+use wormhole_term::sys::fs::{inode, is_socket, mode, private_dir, set_mode};
+use wormhole_term::sys::socket::{self, Stream};
+use wormhole_term::sys::user::UserId;
 
 use crate::sys;
 
@@ -16,23 +18,23 @@ pub const TOUCH_EVERY: Duration = Duration::from_secs(60 * 60);
 
 /// Make sure `dir` is a directory of this user's that only this user can enter.
 pub fn prepare_dir(dir: &Path) -> io::Result<()> {
-    DirBuilder::new().recursive(true).mode(0o700).create(dir)?;
+    private_dir(DirBuilder::new().recursive(true)).create(dir)?;
     let meta = fs::symlink_metadata(dir)?;
     if !meta.is_dir() {
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "the hosts directory is not a directory"));
     }
-    if meta.uid() != sys::euid() {
+    if UserId::owner_of(&meta) != UserId::current() {
         return Err(io::Error::new(io::ErrorKind::PermissionDenied, "the hosts directory is someone else's"));
     }
-    if meta.mode() & 0o077 != 0 {
-        fs::set_permissions(dir, fs::Permissions::from_mode(0o700))?;
+    if mode(&meta) & 0o077 != 0 {
+        set_mode(dir, 0o700)?;
     }
     Ok(())
 }
 
 /// A bound socket and what it was bound as.
 pub struct Listener {
-    pub listener: UnixListener,
+    pub listener: socket::Listener,
     pub path: PathBuf,
     /// The socket file's inode: a different one at `path` is not ours any more.
     ino: u64,
@@ -43,35 +45,35 @@ impl Listener {
     /// host still listens on is not (`AddrInUse`), nor is anything that is not a socket.
     pub fn bind(path: &Path) -> io::Result<Self> {
         if let Ok(meta) = fs::symlink_metadata(path) {
-            if !meta.file_type().is_socket() {
+            if !is_socket(&meta.file_type()) {
                 return Err(io::Error::new(
                     io::ErrorKind::AlreadyExists,
                     "something else is at the socket's path",
                 ));
             }
-            if UnixStream::connect(path).is_ok() {
+            if Stream::connect(path).is_ok() {
                 return Err(io::Error::new(io::ErrorKind::AddrInUse, "a host already listens there"));
             }
             fs::remove_file(path)?;
         }
-        let listener = UnixListener::bind(path)?;
+        let listener = socket::Listener::bind(path)?;
         // The umask made it 0600 already; said again for a host started without it.
-        fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+        set_mode(path, 0o600)?;
         listener.set_nonblocking(true)?;
-        let ino = fs::symlink_metadata(path)?.ino();
+        let ino = inode(&fs::symlink_metadata(path)?);
         Ok(Self { listener, path: path.to_owned(), ino })
     }
 
     /// Whether the file at our path is still our socket.
     pub fn is_ours(&self) -> bool {
-        fs::symlink_metadata(&self.path).is_ok_and(|m| m.ino() == self.ino && m.file_type().is_socket())
+        fs::symlink_metadata(&self.path).is_ok_and(|m| inode(&m) == self.ino && is_socket(&m.file_type()))
     }
 
     /// The hourly look: touch the socket; when it is gone, bind it again. Whether it was bound
     /// again (the caller re-registers the new listener).
     pub fn refresh(&mut self) -> io::Result<bool> {
         if self.is_ours() {
-            sys::touch(&self.path)?;
+            sys::fs::touch(&self.path)?;
             return Ok(false);
         }
         tracing::info!("the socket file went, binding again");

@@ -2,7 +2,7 @@
 //! (`wormhole-vt/tests/structure.rs`): files stay small; the host links only what it must
 //! (`session-host.md`, section 5: no GPUI, SQLite, TLS or the app's core); the session, the part
 //! that decides, does no I/O and reads no clock, so it is tested on a virtual one; and `unsafe`
-//! stays in the two files that talk to the system.
+//! stays where the system is (`src/sys/`) and in the driver's one registration with the poller.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -34,8 +34,9 @@ const SESSION_FORBIDS: &[&str] = &[
     "std::thread",
 ];
 
-/// The files that may hold `unsafe` (each in a small function with `#[allow(unsafe_code)]`).
-const UNSAFE_IN: &[&str] = &["src/sys.rs", "src/serve.rs", "src/peer.rs"];
+/// Where `unsafe` may be (each use in a small function with `#[allow(unsafe_code)]`): the system's
+/// folder, and the driver's one registration with the poller (polling's contract).
+const UNSAFE_IN: &[&str] = &["src/sys/", "src/serve.rs"];
 
 fn crate_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -131,7 +132,7 @@ fn unsafe_stays_where_the_system_is() {
     rust_files(&crate_dir().join("src"), &mut files);
     let found: Vec<String> = files
         .iter()
-        .filter(|path| !UNSAFE_IN.contains(&relative(path).as_str()))
+        .filter(|path| !UNSAFE_IN.iter().any(|allowed| relative(path).starts_with(allowed)))
         .filter(|path| code(path).iter().any(|line| line.contains("unsafe ") || line.contains("unsafe{")))
         .map(|path| relative(path))
         .collect();

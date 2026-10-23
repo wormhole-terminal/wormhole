@@ -7,7 +7,6 @@
 use std::fmt::{self, Write as _};
 use std::fs::{self, DirBuilder, OpenOptions};
 use std::io::Write as _;
-use std::os::unix::fs::{DirBuilderExt as _, OpenOptionsExt as _};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -15,6 +14,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id, Record};
 use tracing::{Event, Level, Metadata, Subscriber};
+use wormhole_term::sys::fs::{private_dir, private_file};
 
 /// A log that grew past this is started over when the host starts.
 const MAX_SIZE: u64 = 1024 * 1024;
@@ -39,12 +39,12 @@ pub fn level_from(value: Option<&str>) -> Level {
 /// without a log.
 pub fn init(path: &Path, level: Level) {
     let Some(dir) = path.parent() else { return };
-    if DirBuilder::new().recursive(true).mode(0o700).create(dir).is_err() {
+    if private_dir(DirBuilder::new().recursive(true)).create(dir).is_err() {
         return;
     }
     let too_big = fs::metadata(path).is_ok_and(|m| m.len() > MAX_SIZE);
     let mut options = OpenOptions::new();
-    options.create(true).mode(0o600);
+    private_file(options.create(true));
     if too_big {
         options.write(true).truncate(true);
     } else {

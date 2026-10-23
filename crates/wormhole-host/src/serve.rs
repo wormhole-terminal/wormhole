@@ -8,21 +8,21 @@
 //! once. Detached and idle, the only timer is the hourly look at the socket file.
 
 use std::io::{self, Read as _, Write as _};
-use std::os::fd::AsRawFd as _;
-use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use polling::{Event, Events, PollMode, Poller};
+use polling::{AsRawSource, Event, Events, PollMode, Poller};
 use wormhole_term::hosted::meta::{self, Meta};
+use wormhole_term::sys::socket::{Stream, peer_user};
+use wormhole_term::sys::user::UserId;
 
 use crate::listen::{Listener, TOUCH_EVERY};
 use crate::peer::Policy;
 use crate::program::Spawner;
 use crate::session::{ConnId, Notice, Session};
-use crate::sys::{self, ReadyPipe};
+use crate::sys::ready::ReadyPipe;
 
 /// The listener's key in the poller; a connection's is its id (from 1).
 const LISTENER: usize = 0;
@@ -74,7 +74,7 @@ pub fn serve<S: Spawner>(
 ) -> io::Result<()> {
     let poller = wakes.poller.clone();
     watch(&poller, &listener.listener, LISTENER, false)?;
-    let mut conns: Vec<(ConnId, UnixStream, bool)> = Vec::new();
+    let mut conns: Vec<(ConnId, Stream, bool)> = Vec::new();
     let mut events = Events::new();
     let mut buf = vec![0u8; 64 * 1024];
     let mut touch_at = Instant::now() + TOUCH_EVERY;
@@ -155,16 +155,16 @@ fn on_notice(notice: Notice, ready: &mut ReadyPipe, files: &mut Files<'_>) {
 
 /// Register `source` with the poller (readable, and writable when asked), level-triggered.
 #[allow(unsafe_code)] // polling's registration contract.
-fn watch(poller: &Poller, source: &impl std::os::fd::AsFd, key: usize, writable: bool) -> io::Result<()> {
+fn watch(poller: &Poller, source: impl AsRawSource, key: usize, writable: bool) -> io::Result<()> {
     let interest = if writable { Event::all(key) } else { Event::readable(key) };
     // SAFETY: every registered source is deleted from the poller before it is dropped
     // (`forget`, and the listener lives as long as the loop).
-    unsafe { poller.add_with_mode(source.as_fd().as_raw_fd(), interest, PollMode::Level) }
+    unsafe { poller.add_with_mode(source, interest, PollMode::Level) }
 }
 
 fn forget(
     poller: &Poller,
-    conns: &mut Vec<(ConnId, UnixStream, bool)>,
+    conns: &mut Vec<(ConnId, Stream, bool)>,
     session: &mut Session<impl Spawner>,
     id: ConnId,
 ) {
@@ -180,7 +180,7 @@ fn accept_all<S: Spawner>(
     listener: &Listener,
     peers: &Policy,
     poller: &Poller,
-    conns: &mut Vec<(ConnId, UnixStream, bool)>,
+    conns: &mut Vec<(ConnId, Stream, bool)>,
     now: Instant,
 ) {
     loop {
@@ -194,10 +194,13 @@ fn accept_all<S: Spawner>(
             }
         };
         // Same user, always; then the signature, when the host is signed (see `peer`).
-        let uid = sys::peer_uid(&stream);
-        if uid.as_ref().ok() != Some(&sys::euid()) {
-            tracing::warn!(peer_uid = uid.ok(), "refused a connection from another user");
-            continue;
+        match peer_user(&stream) {
+            Ok(peer) if peer == UserId::current() => {}
+            refused => {
+                let peer = refused.map_or_else(|err| format!("unreadable ({err})"), |peer| peer.to_string());
+                tracing::warn!(peer_uid = peer, "refused a connection from another user");
+                continue;
+            }
         }
         if !peers.allows(&stream) {
             continue;
@@ -224,7 +227,7 @@ fn accept_all<S: Spawner>(
 
 fn read_from<S: Spawner>(
     session: &mut Session<S>,
-    conns: &mut Vec<(ConnId, UnixStream, bool)>,
+    conns: &mut Vec<(ConnId, Stream, bool)>,
     id: ConnId,
     buf: &mut [u8],
     poller: &Poller,
@@ -250,7 +253,7 @@ fn read_from<S: Spawner>(
 /// watch for writability where something is left. Whether every queue was written out.
 fn write_all<S: Spawner>(
     session: &mut Session<S>,
-    conns: &mut Vec<(ConnId, UnixStream, bool)>,
+    conns: &mut Vec<(ConnId, Stream, bool)>,
     poller: &Poller,
 ) -> bool {
     let mut all = true;
@@ -287,7 +290,7 @@ fn write_all<S: Spawner>(
 }
 
 /// The host is ending: give the connections a moment to take their last frames.
-fn flush_at_end<S: Spawner>(session: &mut Session<S>, conns: &mut [(ConnId, UnixStream, bool)]) {
+fn flush_at_end<S: Spawner>(session: &mut Session<S>, conns: &mut [(ConnId, Stream, bool)]) {
     let until = Instant::now() + FLUSH_AT_END;
     for (id, stream, _) in conns.iter_mut() {
         let _ = stream.set_nonblocking(false);

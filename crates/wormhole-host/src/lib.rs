@@ -12,7 +12,7 @@
 //! - `program`: the seam between the session and the terminal (`wormhole_term::hosted`);
 //! - `serve`: the socket, the connections and the clock around the session;
 //! - `listen`: the socket file and its directory; `sys`: start-up hygiene, signals, the peer's
-//!   uid, QoS; `log`: the log file; `args`: the command line.
+//!   code signature, QoS; `log`: the log file; `args`: the command line.
 //!
 //! **What a client says, in order.** Spawning (the app, right after starting the host): connect
 //! (retry while the socket is not there yet; the meta file appears once it listens), `Hello{role:
@@ -54,7 +54,7 @@ use peer::Policy;
 use program::PtySpawner;
 use serve::{Files, Wakes};
 use session::{Config, Session};
-use sys::ReadyPipe;
+use sys::ready::ReadyPipe;
 
 /// The host's version, as `Welcome` carries it.
 pub fn host_version() -> AppVersion {
@@ -79,9 +79,9 @@ pub fn main(argv: impl IntoIterator<Item = OsString>) -> ExitCode {
     let mut ready = ReadyPipe::take();
     let socket = hosted::paths::socket_path(&args.dir, &args.id);
     let level = log::level_from(std::env::var("WORMHOLE_LOG").ok().as_deref());
-    sys::clear_environment();
-    sys::hygiene();
-    sys::block_signals();
+    sys::process::clear_environment();
+    sys::process::hygiene();
+    sys::signals::block_ending_signals();
     log::init(&log::path(&args.data_dir(), &args.id), level);
     std::panic::set_hook(Box::new(|info| {
         // `panic = abort` for the host: a half-broken host must not keep a terminal half-served.
@@ -149,9 +149,8 @@ fn serve_files(
     let signals = wakes.clone();
     std::thread::Builder::new().name("signals".into()).spawn(move || {
         loop {
-            let signal = sys::wait_signal();
-            if signal == libc::SIGTERM || signal == libc::SIGINT {
-                tracing::info!(signal, "signal");
+            if let Some(ending) = sys::signals::wait_ending_signal() {
+                tracing::info!(?ending, "signal");
                 signals.terminate();
             }
         }
@@ -159,7 +158,7 @@ fn serve_files(
     let wake_from = wakes.clone();
     let wake: hosted::Wake = Arc::new(move || wake_from.wake());
     let config = Config::new(args.id.clone(), host_version(), started_ms);
-    let spawner = PtySpawner { on_reader_start: sys::set_user_interactive };
+    let spawner = PtySpawner { on_reader_start: sys::process::set_user_interactive };
     let mut session = Session::new(config, spawner, wake, Instant::now());
     serve::serve(&mut session, listener, &wakes, ready, files, &peers)?;
     if !ready.is_spent() {

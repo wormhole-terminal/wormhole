@@ -8,8 +8,7 @@
         "src/platform/"
       ],
       "wormhole-host": [
-        "src/sys.rs",
-        "src/peer.rs"
+        "src/sys/"
       ],
       "wormhole-term": [
         "src/pty/",
@@ -33,6 +32,14 @@
             "allow(unsafe_code)": 1
           },
           "why": "polling's registration contract (the socket outlives its registration, kept by Drop), not OS code"
+        }
+      },
+      "wormhole-host": {
+        "src/serve.rs": {
+          "tokens": {
+            "allow(unsafe_code)": 1
+          },
+          "why": "polling's registration contract (every source is deleted from the poller before it is dropped), not OS code"
         }
       }
     },
@@ -266,12 +273,6 @@
       "crates/wormhole-core/src/update/mod.rs :: cfg!(target_os": 1,
       "crates/wormhole-core/src/update/test_support.rs :: std::os::unix": 2,
       "crates/wormhole-core/src/update/tests.rs :: std::os::unix": 1,
-      "crates/wormhole-host/src/lib.rs :: libc::": 2,
-      "crates/wormhole-host/src/listen.rs :: std::os::unix": 2,
-      "crates/wormhole-host/src/log.rs :: std::os::unix": 1,
-      "crates/wormhole-host/src/serve.rs :: allow(unsafe_code)": 1,
-      "crates/wormhole-host/src/serve.rs :: std::os::fd": 2,
-      "crates/wormhole-host/src/serve.rs :: std::os::unix": 1,
       "crates/wormhole/src/menubar/mod.rs :: cfg_attr(": 3,
       "crates/wormhole/src/menubar/model.rs :: cfg_attr(": 1
     },
