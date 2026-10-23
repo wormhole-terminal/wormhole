@@ -48,7 +48,7 @@ pub struct Launch {
 /// controlling terminal. The copies of the slave made for the child are closed when this returns;
 /// `slave` itself stays the caller's (see `reader::Core::slave` for why it may keep it).
 pub(super) fn spawn(launch: &Launch, slave: &OwnedFd) -> io::Result<Child> {
-    let mut command = Command::new(&launch.shell.program);
+    let mut command = crate::sys::process::command(&launch.shell.program);
     command.args(&launch.shell.args).envs(&launch.env);
     command
         .stdin(Stdio::from(slave.try_clone()?))

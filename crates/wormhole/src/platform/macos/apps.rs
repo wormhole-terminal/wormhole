@@ -13,6 +13,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSBundle, NSDictionary, NSPoint, NSRect, NSSize, NSString};
 use wormhole_core::platform::open_file::Launch;
+use wormhole_core::platform::process;
 
 pub fn app_path(bundle: &str) -> Option<PathBuf> {
     let url =
@@ -66,7 +67,7 @@ pub fn icon_png(bundle: &str, size: usize) -> Option<Vec<u8>> {
 
 /// The process for a [`Launch`]: `open` aimed at the app, or the command line the app brings.
 pub fn command(bundle: &str, launch: Launch) -> Option<Command> {
-    let open = || Command::new("open");
+    let open = || process::command("open");
     let in_app = |what: &dyn AsRef<std::ffi::OsStr>| {
         let mut cmd = open();
         cmd.arg("-b").arg(bundle).arg(what.as_ref());
@@ -90,7 +91,7 @@ pub fn command(bundle: &str, launch: Launch) -> Option<Command> {
         Launch::Bundled { relative, arg } => {
             match app_path(bundle).map(|app| app.join(relative)).filter(|exe| exe.is_file()) {
                 Some(exe) => {
-                    let mut cmd = Command::new(exe);
+                    let mut cmd = process::command(exe);
                     cmd.arg(arg);
                     cmd
                 }
@@ -106,7 +107,7 @@ pub fn command(bundle: &str, launch: Launch) -> Option<Command> {
 
 /// `open -t`: the text editor macOS picks for the file.
 pub fn text_editor_command(path: &Path) -> Option<Command> {
-    let mut cmd = Command::new("open");
+    let mut cmd = process::command("open");
     cmd.arg("-t").arg(path);
     Some(cmd)
 }

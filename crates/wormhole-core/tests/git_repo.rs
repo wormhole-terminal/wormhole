@@ -1,5 +1,7 @@
 //! End-to-end checks of the git layer against throwaway repositories.
 
+#![allow(clippy::disallowed_methods, reason = "a test builds its own files and processes")]
+
 use std::path::Path;
 use std::process::Command;
 

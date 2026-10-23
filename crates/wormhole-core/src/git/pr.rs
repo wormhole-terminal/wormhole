@@ -25,10 +25,10 @@
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::{Duration, Instant};
 
 use super::cmd::{GitError, Limit, run_bounded};
+use crate::platform::process;
 
 /// What `gh` is given to reach a host and nothing more. Lower-case proxy variables are the ones
 /// curl-like programs read first.
@@ -288,7 +288,7 @@ pub fn parse(json: &[u8]) -> Option<PullRequest> {
 /// The pull request of the branch checked out in `repo`, `Ok(None)` when there is none.
 pub fn pull_request(repo: &Path) -> Result<Option<PullRequest>, PrError> {
     let gh = program().ok_or(PrError::GhMissing)?;
-    let mut command = Command::new(&gh);
+    let mut command = process::command(&gh);
     command
         .current_dir(repo)
         .args(["pr", "view", "--json", FIELDS])

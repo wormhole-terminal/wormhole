@@ -16,7 +16,7 @@ use super::driver::{Answer, Driver};
 use super::gate::TOKEN_VAR;
 use super::render::Size;
 use crate::ipc::control::{Action, Request, WelcomeOp, exchange};
-use crate::platform::process::exec;
+use crate::platform::process::{self, exec};
 use crate::platform::tty::{self, RawMode};
 
 pub const HELP: &str = "\
@@ -238,9 +238,8 @@ fn wait_for_finish(worker: &Worker) {
 /// welcome never moves it), without the welcome's token. Only comes back when no program could be
 /// started; then it says so and falls back to the login shell, so the terminal is never left dead.
 fn hand_over(shell: &[String]) -> i32 {
-    let start = |program: &str, args: &[String]| {
-        exec(std::process::Command::new(program).args(args).env_remove(TOKEN_VAR))
-    };
+    let start =
+        |program: &str, args: &[String]| exec(process::command(program).args(args).env_remove(TOKEN_VAR));
     let Some((program, args)) = shell.split_first() else { return 1 };
     let err = start(program, args);
     let _ = writeln!(io::stderr(), "Wormhole: couldn't start {program}: {err}");

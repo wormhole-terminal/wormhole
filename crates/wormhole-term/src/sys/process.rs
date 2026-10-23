@@ -3,8 +3,10 @@
 //! read, is `None` or nothing, never an error: callers poll every few seconds and a process may end
 //! between two of their calls.
 
+use std::ffi::OsStr;
 use std::io;
 use std::path::PathBuf;
+use std::process::Command;
 use std::time::SystemTime;
 
 use super::unix::process as unix;
@@ -13,6 +15,14 @@ use super::unix::process as unix;
 use super::linux::process as os;
 #[cfg(target_os = "macos")]
 use super::macos::process as os;
+
+/// A command for `program`: the one place the app builds one, so that what every spawn needs on a system
+/// (a port to Windows would hide the console window it flashes) is added once. Anything that starts a
+/// process starts from this; clippy's `disallowed_methods` refuses `Command::new` anywhere else.
+#[allow(clippy::disallowed_methods, reason = "the one place a command is built")]
+pub fn command(program: impl AsRef<OsStr>) -> Command {
+    Command::new(program)
+}
 
 /// Whether a process with this pid exists. One that exists but is not ours still counts: the pid is
 /// taken.

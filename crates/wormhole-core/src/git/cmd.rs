@@ -29,6 +29,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
 
+use crate::platform::process;
 use anyhow::{Context as _, Result};
 
 /// Long enough for `git status` in a very large repository on a cold cache (with fsmonitor
@@ -164,7 +165,7 @@ impl GitCmd {
 
     /// [`GitCmd::new`] running `program` instead of git: a stand-in that fails the way git can.
     pub(crate) fn with_program(program: impl AsRef<OsStr>, dir: &Path) -> Self {
-        let mut command = Command::new(program);
+        let mut command = process::command(program);
         command
             .arg("--no-pager")
             .arg("-C")

@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use crate::platform::process;
+
 /// Where macOS keeps its own version. `sw_vers` is a front end for this file.
 const SYSTEM_VERSION_PLIST: &str = "/System/Library/CoreServices/SystemVersion.plist";
 
@@ -16,7 +18,7 @@ fn version_in(path: &Path) -> Option<String> {
 }
 
 fn version_from_sw_vers() -> Option<String> {
-    let out = std::process::Command::new("/usr/bin/sw_vers").arg("-productVersion").output().ok()?;
+    let out = process::command("/usr/bin/sw_vers").arg("-productVersion").output().ok()?;
     if !out.status.success() {
         return None;
     }

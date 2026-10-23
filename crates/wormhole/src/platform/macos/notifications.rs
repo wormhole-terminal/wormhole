@@ -31,6 +31,7 @@ use smol::channel::Sender;
 use crate::platform::notifications::{ButtonKind, Buttons, Category, FromCenter, Notice, Permission};
 use delegate::Delegate;
 use wormhole_core::notify::Level;
+use wormhole_core::platform::process;
 
 /// The categories (sets of buttons) our notifications use, by `Category`.
 const NEEDS_YOU: &str = "wormhole.needs-you";
@@ -172,7 +173,7 @@ pub fn script(notice: &Notice) -> Option<Command> {
         escape(&notice.title),
         escape(&notice.subtitle)
     );
-    let mut command = Command::new("osascript");
+    let mut command = process::command("osascript");
     command.arg("-e").arg(script);
     Some(command)
 }

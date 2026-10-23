@@ -7,12 +7,12 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 
 use tempfile::TempDir;
 
 use crate::platform::fs::{is_executable, mode};
-use crate::platform::process::own_process_group;
+use crate::platform::process::{self, own_process_group};
 use crate::platform::user::UserId;
 
 use super::archive::extract;
@@ -131,7 +131,7 @@ fn spawn_relaunch_helper(
         sleep "$5"
         exec "$2" -n "$0"
     ) </dev/null >/dev/null 2>&1 &"#;
-    let mut command = Command::new("/bin/sh");
+    let mut command = process::command("/bin/sh");
     command
         .arg("-c")
         .arg(SCRIPT)
@@ -238,7 +238,7 @@ fn validate_bundle(app: &Path, config: &UpdaterConfig, version: &semver::Version
 }
 
 fn verify_codesign(app: &Path, team_id: Option<&str>) -> Result<(), UpdateError> {
-    let mut cmd = Command::new("/usr/bin/codesign");
+    let mut cmd = process::command("/usr/bin/codesign");
     cmd.args(["--verify", "--deep", "--strict"]);
     if let Some(team) = team_id {
         // Interpolated into a requirement string, so restrict to what Apple team IDs look like.

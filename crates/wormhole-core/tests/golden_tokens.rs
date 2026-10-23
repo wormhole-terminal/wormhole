@@ -6,6 +6,8 @@
 //! After an intended change, regenerate the files and review the diff:
 //! `UPDATE_GOLDEN=1 cargo test -p wormhole-core --test golden_tokens`.
 
+#![allow(clippy::disallowed_methods, reason = "a test builds its own files and processes")]
+
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::path::PathBuf;
