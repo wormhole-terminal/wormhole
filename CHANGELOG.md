@@ -42,6 +42,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- The History tab's commit ages ("2h ago") keep up with the clock while the tab is shown, instead of
+  staying as they were when something last redrew it.
 - A program that exits in the middle of a synchronized update no longer leaves its last screen
   undrawn.
 - Fast output of long lines with a colour per character (gradients, colour floods) draws several

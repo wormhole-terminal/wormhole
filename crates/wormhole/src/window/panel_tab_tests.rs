@@ -111,3 +111,24 @@ fn the_usage_tab_follows_the_agent(cx: &mut TestAppContext) {
     });
     assert!(read(cx, &window, |ws| ws.right_tab == TabId::Changes));
 }
+
+/// History's commit ages ("2h ago") come from the clock when the tab draws, and nothing else draws it:
+/// the window redraws it on its own period while it shows, and not for the tabs without that need.
+#[gpui_kit::test]
+fn the_history_tab_is_redrawn_on_a_period_for_its_ages(cx: &mut TestAppContext) {
+    if isolate("the_history_tab_is_redrawn_on_a_period_for_its_ages") {
+        return;
+    }
+    let window = start(cx, 1);
+    draw(cx, &window);
+    let due = |cx: &mut TestAppContext, tab: TabId, ticks: u64| {
+        drive(cx, &window, |ws, _, cx| {
+            ws.show_tab(tab, cx);
+            ws.set_ticks(ticks);
+            ws.tab_refresh_due()
+        })
+    };
+    assert!(due(cx, TabId::History, 25), "a period after the last");
+    assert!(!due(cx, TabId::History, 26), "not between");
+    assert!(!due(cx, TabId::Changes, 25), "a tab with no times on it is left alone");
+}
