@@ -223,6 +223,12 @@ impl Sidebar {
         self.keys_at.as_ref()
     }
 
+    /// Whether any row slides to a new place now (the list's move animation under way).
+    #[cfg(test)]
+    pub(crate) fn rows_moving(&self) -> bool {
+        self.motion.is_moving()
+    }
+
     /// The terminal whose row wears the ring for an open menu.
     #[cfg(test)]
     pub(crate) fn menu_row(&self) -> Option<i64> {

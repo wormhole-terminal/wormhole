@@ -49,6 +49,12 @@ impl ListMotion {
         self.moving.get(key).copied()
     }
 
+    /// Whether any line slides now.
+    #[cfg(test)]
+    pub(super) fn is_moving(&self) -> bool {
+        !self.moving.is_empty()
+    }
+
     pub(super) fn is_entering(&self, key: &ItemKey) -> bool {
         self.entering.contains(key)
     }
