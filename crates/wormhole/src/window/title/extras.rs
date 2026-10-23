@@ -181,7 +181,7 @@ impl Workspace {
         let status =
             session.git.status.as_ref().filter(|_| session.git.cwd == session.terminal().read(cx).cwd)?;
         let name = status.branch.clone()?;
-        self.session_trusted(session.id, cx).then(|| Branch { root: status.root.clone(), name })
+        self.programs_approved(session.id, cx).then(|| Branch { root: status.root.clone(), name })
     }
 
     /// Ask `gh` for each terminal's branch's pull request when the cache says it is time (a branch

@@ -524,7 +524,7 @@ fn the_entry_offers_the_tab_and_says_who_is_trusted(cx: &mut TestAppContext) {
             (
                 (tab.shown)(&facts, cx),
                 (tab.spoken)(entity, &facts, cx),
-                ws.session_trusted(ws.sessions[0].id, cx),
+                ws.programs_approved(ws.sessions[0].id, cx),
             )
         })
     };
@@ -550,7 +550,7 @@ fn a_window_with_nobody_to_ask_trusts_no_folder(cx: &mut TestAppContext) {
     }
     let record = WindowRecord { id: 1, ..Default::default() };
     let window = start_with_table(cx, record, &[]);
-    assert!(!read_cx(cx, &window, |ws, cx| ws.session_trusted(ws.sessions[0].id, cx)));
+    assert!(!read_cx(cx, &window, |ws, cx| ws.programs_approved(ws.sessions[0].id, cx)));
 }
 
 /// Allocations the third draw of a one-terminal window on the Project tab of a trusted project (three

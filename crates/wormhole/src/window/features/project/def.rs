@@ -56,7 +56,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         id_allocated: Some(hubs::id_allocated),
     }),
     refresh: Some(look),
-    trusted: Some(trusted),
+    approves_programs: Some(approves_programs),
     spawn: Some(detect::spawn_options),
     state: Some(STATE),
 };
@@ -105,7 +105,7 @@ fn tick(entity: &AnyEntity, facts: &WindowFacts<'_>, window: &mut Window, cx: &m
 
 /// Whether terminal `session` is in a project the person has approved: what a program started for the
 /// project's sake (git's pull request lookup starts `gh`) asks first.
-fn trusted(entity: &AnyEntity, session: i64, cx: &App) -> bool {
+fn approves_programs(entity: &AnyEntity, session: i64, cx: &App) -> bool {
     typed(entity).read(cx).project(session, cx).is_some_and(|project| hub(cx).trusted(project))
 }
 

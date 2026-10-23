@@ -247,11 +247,11 @@ impl Workspace {
     /// Whether the folder of terminal `session` is one a feature has approved to run programs for (git's
     /// pull request lookup asks before it starts `gh`). It fails closed: with no feature that gives the
     /// approval, or one that doesn't, nothing is approved.
-    pub(in crate::window) fn session_trusted(&self, session: i64, cx: &App) -> bool {
+    pub(in crate::window) fn programs_approved(&self, session: i64, cx: &App) -> bool {
         let mut approved = false;
         for (at, def) in self.features.iter().enumerate() {
-            let Some(trusted) = def.trusted else { continue };
-            if !self.feature_entity(at).is_some_and(|entity| trusted(entity, session, cx)) {
+            let Some(approves) = def.approves_programs else { continue };
+            if !self.feature_entity(at).is_some_and(|entity| approves(entity, session, cx)) {
                 return false;
             }
             approved = true;

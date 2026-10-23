@@ -136,7 +136,7 @@ static STAND_IN: &[FeatureDef] = &[
         profile_shown: None,
         profiles: None,
         refresh: None,
-        trusted: None,
+        approves_programs: None,
         spawn: None,
         state: Some(StateDef {
             make: |window, cx| {
@@ -691,7 +691,7 @@ macro_rules! crowd_member {
             profile_shown: None,
             profiles: None,
             refresh: None,
-            trusted: None,
+            approves_programs: None,
             spawn: None,
             state: Some(StateDef {
                 make: |window, cx| {

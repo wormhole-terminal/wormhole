@@ -143,7 +143,7 @@ pub(in crate::window) type FocusInFn =
 pub(in crate::window) type ProfileShownFn = fn(&mut App);
 pub(in crate::window) type TickFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
 pub(in crate::window) type RefreshFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App);
-pub(in crate::window) type TrustedFn = fn(&AnyEntity, session: i64, &App) -> bool;
+pub(in crate::window) type ApprovesProgramsFn = fn(&AnyEntity, session: i64, &App) -> bool;
 pub(in crate::window) type SpawnFn = fn(Option<&Path>, &mut App) -> SpawnAdd;
 pub(in crate::window) type PressFn =
     fn(&AnyEntity, session: i64, row: usize, Activate, following: bool, &mut Window, &mut App) -> bool;
@@ -192,7 +192,7 @@ pub(in crate::window) struct FeatureDef {
     /// Whether the folder of terminal `session` is one the person has approved to run programs for.
     /// Asked before something is started for the folder's sake (git's pull request lookup starts
     /// `gh`). The window fails closed: with no hook anywhere, nothing is approved.
-    pub trusted: Option<TrustedFn>,
+    pub approves_programs: Option<ApprovesProgramsFn>,
     /// What a new terminal started in a folder gets from the feature (the project's environment and
     /// shell). Called for every feature, on or off: it decides itself. One user so far, noted as the
     /// exception to "a hook when a second feature needs it": the terminal is made by the window, and

@@ -49,7 +49,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     // A profile's id is a slug that a deleted profile's name can get again: its reports go with it.
     profiles: Some(ProfileHooks { deleted: Some(profile_deleted), ..ProfileHooks::DEFAULT }),
     refresh: None,
-    trusted: None,
+    approves_programs: None,
     spawn: None,
     state: Some(STATE),
 };

@@ -49,7 +49,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     profile_shown: None,
     profiles: None,
     refresh: None,
-    trusted: None,
+    approves_programs: None,
     spawn: None,
     state: Some(STATE),
 };
