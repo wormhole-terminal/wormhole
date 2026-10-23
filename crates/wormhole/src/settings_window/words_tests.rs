@@ -1,6 +1,7 @@
 //! The Settings window's sentences with a hole in them, as `wormhole-text` writes them, against the
 //! strings the window built from pieces before its words moved to the catalogs: byte for byte, so
-//! the move changed nothing a person reads. In `en-XA` the same sentences are bracketed and accented,
+//! the move changed nothing a person reads, except one case on purpose: a tab width of 1 now reads
+//! "1 space" (the old text said "1 spaces"). In `en-XA` the same sentences are bracketed and accented,
 //! which shows that none of them is still assembled here.
 
 use wormhole_text::keys::*;
