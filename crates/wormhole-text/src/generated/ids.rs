@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 362] = [
+pub(crate) const IDS: [&str; 363] = [
     "settings-section-advanced",
     "settings-section-advanced.intro",
     "settings-advanced-group-files",
@@ -361,17 +361,20 @@ pub(crate) const IDS: [&str; 362] = [
     "settings-updates-update-channel.keywords",
     "settings-updates-update-status",
     "settings-updates-update-status.keywords",
-    "settings-theme-mode",
-    "settings-theme-mode.description",
-    "settings-theme-mode.keywords",
+    "settings-nav-look",
+    "settings-nav-work",
+    "settings-nav-agents",
+    "settings-nav-app",
+    "settings-nav-preview",
     "settings-open-section",
     "settings-font-count",
     "settings-tab-width",
-    "settings-about-defaults",
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 362] = [
+pub(crate) const TAKES_ARGS: [bool; 363] = [
+    false,
+    false,
     false,
     false,
     false,
@@ -733,5 +736,4 @@ pub(crate) const TAKES_ARGS: [bool; 362] = [
     true,
     true,
     true,
-    false,
 ];

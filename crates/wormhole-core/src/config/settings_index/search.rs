@@ -5,7 +5,11 @@
 //! a word there ("line" finds "Lines kept", not "readline"). Results come in nav order, a section's
 //! best first, with the range to mark in the label or the description.
 
+use std::collections::HashMap;
 use std::ops::Range;
+use std::sync::{Arc, Mutex, PoisonError};
+
+use wormhole_text::Language;
 
 use super::{Entry, Group, SectionId, entries};
 use crate::config::Settings;
@@ -57,16 +61,70 @@ const SECTION_TITLE: u32 = 10;
 /// The whole query begins the label ("line h" for "Line height").
 const LABEL_PREFIX_BONUS: u32 = 50;
 
+/// The lowercased words of every setting in one language, in `entries()` order. A keystroke compares the
+/// query with these; lowercasing the table again for each one would allocate a few hundred strings.
+struct Index {
+    rows: Vec<Row>,
+    /// Each section's title, by its place in `SectionId::ALL`.
+    sections: Vec<String>,
+}
+
+struct Row {
+    label: String,
+    description: String,
+    keywords: String,
+    group_title: String,
+    /// The setting's English label, description and search words, when the language is another: a
+    /// person may know a setting by the name the documentation gives it. Empty in English.
+    english: String,
+}
+
+impl Index {
+    fn build(language: Language) -> Self {
+        let rows = entries()
+            .map(|(_, group, entry)| {
+                let [label, description, keywords] = entry.words_in(language);
+                let english = if language == Language::ENGLISH {
+                    String::new()
+                } else {
+                    entry.words_in(Language::ENGLISH).join(" ").to_lowercase()
+                };
+                Row {
+                    label: label.to_lowercase(),
+                    description: description.to_lowercase(),
+                    keywords: keywords.to_lowercase(),
+                    group_title: group.title().to_lowercase(),
+                    english,
+                }
+            })
+            .collect();
+        let sections = SectionId::ALL.iter().map(|section| section.title().to_lowercase()).collect();
+        Self { rows, sections }
+    }
+}
+
+/// The index of the language in use, built the first time it is searched in and kept: at most one per
+/// language, so bounded by the languages there are.
+fn index() -> Arc<Index> {
+    static INDEXES: Mutex<Option<HashMap<Language, Arc<Index>>>> = Mutex::new(None);
+    let language = wormhole_text::language();
+    let mut indexes = INDEXES.lock().unwrap_or_else(PoisonError::into_inner);
+    let indexes = indexes.get_or_insert_with(HashMap::new);
+    Arc::clone(indexes.entry(language).or_insert_with(|| Arc::new(Index::build(language))))
+}
+
 /// Every setting `query` finds, sections in nav order and each section's best first. An empty
 /// query finds nothing.
 pub fn search(query: &Query) -> Vec<Hit> {
     if query.is_empty() {
         return Vec::new();
     }
+    let index = index();
     let mut hits: Vec<(usize, Hit)> = entries()
         .enumerate()
         .filter_map(|(order, (section, group, entry))| {
-            score(query, section, group, entry).map(|hit| (order, hit))
+            let section_title = &index.sections[section as usize];
+            score(query, section, group, entry, &index.rows[order], section_title).map(|hit| (order, hit))
         })
         .collect();
     let section_order = |section: SectionId| SectionId::ALL.iter().position(|s| *s == section);
@@ -107,20 +165,23 @@ fn range_in(original: &str, lower: &str, at: usize, len: usize) -> Option<Range<
         .then(|| at..at + len)
 }
 
-fn score(query: &Query, section: SectionId, group: &'static Group, entry: &'static Entry) -> Option<Hit> {
-    let label = entry.label().to_lowercase();
-    let description = entry.description().to_lowercase();
-    let keywords = entry.keywords().to_lowercase();
-    let group_title = group.title().to_lowercase();
-    let section_title = section.title().to_lowercase();
+fn score(
+    query: &Query,
+    section: SectionId,
+    group: &'static Group,
+    entry: &'static Entry,
+    row: &Row,
+    section_title: &str,
+) -> Option<Hit> {
+    let Row { label, description, keywords, group_title, english } = row;
     let mut hit =
         Hit { section, group, entry, score: 0, label_range: None, description_range: None, key: None };
     for word in &query.words {
         let mut best = 0;
-        if let Some((at, starts)) = find(&label, word) {
+        if let Some((at, starts)) = find(label, word) {
             best = best.max(if starts { LABEL_WORD_START } else { LABEL_INSIDE });
             if hit.label_range.is_none() {
-                hit.label_range = range_in(entry.label(), &label, at, word.len());
+                hit.label_range = range_in(entry.label(), label, at, word.len());
             }
         }
         if let Some(key) = entry.keys.iter().find(|key| key.contains(word.as_str())) {
@@ -129,13 +190,17 @@ fn score(query: &Query, section: SectionId, group: &'static Group, entry: &'stat
         }
         // Outside the label a word counts only where a word starts with it: "line" should
         // not find "readline".
-        if let Some((at, true)) = find(&description, word) {
+        if let Some((at, true)) = find(description, word) {
             best = best.max(DESCRIPTION_WORD_START);
             if hit.description_range.is_none() {
-                hit.description_range = range_in(entry.description(), &description, at, word.len());
+                hit.description_range = range_in(entry.description(), description, at, word.len());
             }
         }
-        if let Some((_, true)) = find(&keywords, word) {
+        if let Some((_, true)) = find(keywords, word) {
+            best = best.max(KEYWORDS);
+        }
+        // In another language the English words find it too, as search words do.
+        if let Some((_, true)) = find(english, word) {
             best = best.max(KEYWORDS);
         }
         if group_title.contains(word.as_str()) {
@@ -234,6 +299,27 @@ mod tests {
         assert_eq!(wrap.label_range.clone().map(|r| &wrap.entry.label()[r]), Some("ines"));
         // But not inside a word of the description: "readline" is not a line.
         assert!(!ids("line").contains(&"meta"));
+    }
+
+    #[test]
+    fn the_index_counts_sections_in_the_order_of_all() {
+        for (at, section) in SectionId::ALL.into_iter().enumerate() {
+            assert_eq!(section as usize, at, "{section:?}: the index finds a section's title by its place");
+        }
+    }
+
+    #[test]
+    fn another_language_is_found_by_its_own_words_and_by_english_ones() {
+        use wormhole_text::{Language, with_language};
+        with_language(Language::PSEUDO, || {
+            // The pseudo-language's words are accented, so only English's can match "dark": the search
+            // finds a setting by the name the documentation gives it, whatever the language.
+            assert!(ids("dark").contains(&"theme-mode"));
+            assert!(ids("tab width").contains(&"tab-width"));
+            // And by its own: the accented label.
+            assert!(ids("mödé").contains(&"theme-mode"));
+        });
+        assert!(ids("dark").contains(&"theme-mode"));
     }
 
     #[test]

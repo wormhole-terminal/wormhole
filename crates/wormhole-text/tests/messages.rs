@@ -9,17 +9,20 @@ use wormhole_text::{Key, Language, text, with_language};
 fn messages_without_variables_read_as_written() {
     assert_eq!(text(SETTINGS_SECTION_FONTS), "Fonts");
     assert_eq!(text(SETTINGS_SECTION_SESSIONS), "Terminals & sidebar");
-    assert_eq!(text(SETTINGS_THEME_MODE), "Mode");
+    assert_eq!(text(SETTINGS_APPEARANCE_THEME_MODE), "Mode");
     assert_eq!(
-        text(SETTINGS_THEME_MODE_DESCRIPTION),
+        text(SETTINGS_APPEARANCE_THEME_MODE_DESCRIPTION),
         "Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode"
     );
-    assert_eq!(SETTINGS_THEME_MODE_KEYWORDS.id(), "settings-theme-mode.keywords");
+    assert_eq!(SETTINGS_APPEARANCE_THEME_MODE_KEYWORDS.id(), "settings-appearance-theme-mode.keywords");
 }
 
 #[test]
 fn a_term_is_filled_in_where_a_message_uses_it() {
-    assert_eq!(text(SETTINGS_ABOUT_DEFAULTS), "Defaults of Wormhole for this profile");
+    assert_eq!(
+        text(SETTINGS_AGENTS_OTHER_DESCRIPTION),
+        "Agents Wormhole recognises that aren't on this Mac's PATH"
+    );
 }
 
 #[test]
@@ -93,7 +96,7 @@ fn the_override_is_this_threads_and_ends_with_the_closure() {
 fn all_lists_every_key_once() {
     let ids: std::collections::BTreeSet<&str> = ALL.iter().map(|key| key.id()).collect();
     assert_eq!(ids.len(), ALL.len(), "a key is listed twice");
-    assert!(ids.contains("settings-theme-mode.keywords"));
+    assert!(ids.contains("settings-appearance-theme-mode.keywords"));
     assert!(ALL.iter().all(|key| !key.id().is_empty()));
     // The generator's list is the catalog's messages without variables.
     let english = support::english();

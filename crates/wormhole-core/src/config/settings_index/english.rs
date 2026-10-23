@@ -1,7 +1,7 @@
 //! The migration guard: every word of the table, in English, is what it was before the words moved to
 //! `wormhole-text`'s catalogs. `english.txt` is the table as it was written in Rust, and this test
 //! reads it back through the keys, byte for byte. A deliberate change to the English wording is made in
-//! `locales/en/` and here.
+//! `locales/en/` and here. The same table in the pseudo-language shows that none of it is a literal.
 
 use std::fmt::Write as _;
 
@@ -52,4 +52,25 @@ fn the_table_says_in_english_what_it_always_said() {
         assert_eq!(new, old, "line {} of english.txt", at + 1);
     }
     assert_eq!(now.lines().count(), GOLDEN.lines().count(), "the table and english.txt differ in length");
+}
+
+/// In `en-XA` every message is accented and in `⟦ ⟧`, so a word of the table still written in Rust shows.
+#[test]
+fn no_word_of_the_table_is_left_in_rust() {
+    use wormhole_text::{Language, with_language};
+    let said = |text: &str| text.is_empty() || (text.starts_with('⟦') && text.ends_with('⟧'));
+    with_language(Language::PSEUDO, || {
+        for section in SectionId::ALL {
+            let info = section.info();
+            assert!(said(info.title()) && said(info.intro()), "{section:?}");
+            for group in section.groups() {
+                assert!(said(group.title()) && said(group.blurb()) && said(group.aside()), "{section:?}");
+            }
+        }
+        for (_, _, entry) in entries() {
+            let words = [entry.label(), entry.description(), entry.keywords()];
+            assert!(words.into_iter().all(said), "{} has a word that is not a message", entry.id);
+            assert!(!entry.label().is_empty(), "{}", entry.id);
+        }
+    });
 }

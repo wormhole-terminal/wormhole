@@ -13,7 +13,10 @@ mod english;
 mod search;
 mod table;
 
-use wormhole_text::{Key, text};
+use wormhole_text::keys::{
+    SETTINGS_NAV_AGENTS, SETTINGS_NAV_APP, SETTINGS_NAV_LOOK, SETTINGS_NAV_PREVIEW, SETTINGS_NAV_WORK,
+};
+use wormhole_text::{Key, Language, text, text_in};
 
 use serde_json::{Map, Value};
 
@@ -57,77 +60,56 @@ impl NavGroup {
     pub fn title(self) -> &'static str {
         match self {
             NavGroup::Profile => "",
-            NavGroup::Look => "Look",
-            NavGroup::Work => "Work",
-            NavGroup::Agents => "Agents",
-            NavGroup::App => "App",
-            NavGroup::Preview => "Preview",
+            NavGroup::Look => text(SETTINGS_NAV_LOOK),
+            NavGroup::Work => text(SETTINGS_NAV_WORK),
+            NavGroup::Agents => text(SETTINGS_NAV_AGENTS),
+            NavGroup::App => text(SETTINGS_NAV_APP),
+            NavGroup::Preview => text(SETTINGS_NAV_PREVIEW),
         }
     }
 }
 
 /// What a section is called, what its page says under the title, and where the nav lists it.
 pub struct SectionInfo {
-    title: Word,
-    intro: Word,
+    title: Key,
+    intro: Key,
     pub nav: NavGroup,
 }
 
 impl SectionInfo {
     pub fn title(&self) -> &'static str {
-        self.title.get()
+        text(self.title)
     }
 
     /// The line under the page's title.
     pub fn intro(&self) -> &'static str {
-        self.intro.get()
-    }
-}
-
-/// A piece of the table's wording: a key into the catalogs, or, while a section still has its words
-/// in Rust, the literal itself. Only the sections not yet moved use the second.
-#[derive(Clone, Copy)]
-enum Word {
-    Key(Key),
-    Literal(&'static str),
-}
-
-impl Word {
-    /// No wording: an empty description, a group without a title.
-    const NONE: Word = Word::Literal("");
-
-    /// The words in the language in use.
-    fn get(self) -> &'static str {
-        match self {
-            Word::Key(key) => text(key),
-            Word::Literal(literal) => literal,
-        }
+        text(self.intro)
     }
 }
 
 /// A titled run of settings on a page (an empty title: rows without a label above them).
 pub struct Group {
-    title: Word,
-    /// A paragraph under the title; none for none.
-    blurb: Word,
+    title: Option<Key>,
+    /// A paragraph under the title.
+    blurb: Option<Key>,
     /// A quiet note at the right of the title ("Follows the terminal until you pick one").
-    aside: Word,
+    aside: Option<Key>,
     pub entries: &'static [Entry],
 }
 
 impl Group {
     pub fn title(&self) -> &'static str {
-        self.title.get()
+        self.title.map_or("", text)
     }
 
     /// A paragraph under the title; empty for none.
     pub fn blurb(&self) -> &'static str {
-        self.blurb.get()
+        self.blurb.map_or("", text)
     }
 
     /// A quiet note at the right of the title ("Follows the terminal until you pick one"); empty for none.
     pub fn aside(&self) -> &'static str {
-        self.aside.get()
+        self.aside.map_or("", text)
     }
 }
 
@@ -136,12 +118,12 @@ pub struct Entry {
     /// Names the setting's row and control in the app, and the setting in tests and devctl.
     /// Unique across the sections.
     pub id: &'static str,
-    label: Word,
-    /// The quiet line under the label; none for none. A page may say something more
-    /// current in its place (the font in use, how many custom fonts were found).
-    description: Word,
+    label: Key,
+    /// The quiet line under the label. A page may say something more current in its place (the font
+    /// in use, how many custom fonts were found).
+    description: Option<Key>,
     /// Words that find it besides its label and description.
-    keywords: Word,
+    keywords: Option<Key>,
     /// The `config.json` keys it writes: what "changed", the reset arrow and "set by a project"
     /// look at. Empty for a row that stores nothing there (a folder button, the agents' hooks).
     pub keys: &'static [&'static str],
@@ -152,17 +134,24 @@ pub struct Entry {
 
 impl Entry {
     pub fn label(&self) -> &'static str {
-        self.label.get()
+        text(self.label)
     }
 
     /// The quiet line under the label; empty for none.
     pub fn description(&self) -> &'static str {
-        self.description.get()
+        self.description.map_or("", text)
     }
 
     /// Words that find it besides its label and description; empty for none.
     pub fn keywords(&self) -> &'static str {
-        self.keywords.get()
+        self.keywords.map_or("", text)
+    }
+
+    /// The label, the description and the search words in one particular language (empty where it has
+    /// none): what the search index is built from, once per language.
+    fn words_in(&self, language: Language) -> [&'static str; 3] {
+        let of = |key: Option<Key>| key.map_or("", |key| text_in(language, key));
+        [text_in(language, self.label), of(self.description), of(self.keywords)]
     }
 
     /// Whether the setting is of use with these features on: always, unless it is about a feature

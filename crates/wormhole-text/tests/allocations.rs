@@ -45,11 +45,11 @@ fn allocations() -> usize {
 #[test]
 fn a_plain_message_allocates_nothing() {
     // The first ask loads English; that is the one time it may allocate.
-    let mut sink = text(SETTINGS_THEME_MODE).len();
+    let mut sink = text(SETTINGS_APPEARANCE_THEME_MODE).len();
     let before = allocations();
     for _ in 0..10_000 {
-        sink += text(SETTINGS_THEME_MODE).len();
-        sink += text(SETTINGS_THEME_MODE_DESCRIPTION).len();
+        sink += text(SETTINGS_APPEARANCE_THEME_MODE).len();
+        sink += text(SETTINGS_APPEARANCE_THEME_MODE_DESCRIPTION).len();
         sink += text(SETTINGS_SECTION_SESSIONS).len();
     }
     assert_eq!(allocations() - before, 0, "text() allocated");
@@ -59,10 +59,10 @@ fn a_plain_message_allocates_nothing() {
 #[test]
 fn a_plain_message_in_another_language_allocates_nothing_either() {
     with_language(Language::PSEUDO, || {
-        let mut sink = text(SETTINGS_THEME_MODE).len();
+        let mut sink = text(SETTINGS_APPEARANCE_THEME_MODE).len();
         let before = allocations();
         for _ in 0..10_000 {
-            sink += text(SETTINGS_THEME_MODE).len();
+            sink += text(SETTINGS_APPEARANCE_THEME_MODE).len();
             sink += text(SETTINGS_SECTION_SESSIONS).len();
         }
         assert_eq!(allocations() - before, 0, "text() allocated under with_language");

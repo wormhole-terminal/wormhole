@@ -1,11 +1,12 @@
-# The Settings window: the section titles in the nav and over each page, and a few messages with variables.
+# The Settings window: what its pages share. Each page's own words are in settings-<page>.ftl.
 
+## The headings the nav lists its pages under
 
-# The Mode row of Appearance. The description is the quiet line under the label, the keywords find
-# the row in search besides its label and description.
-settings-theme-mode = Mode
-    .description = Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode
-    .keywords = dark light system appearance match night day
+settings-nav-look = Look
+settings-nav-work = Work
+settings-nav-agents = Agents
+settings-nav-app = App
+settings-nav-preview = Preview
 
 # The command palette's line that opens a page. { $section } is that page's title, so this is a
 # sentence with a hole: keep the word order your language needs.
@@ -22,6 +23,3 @@ settings-tab-width = { $count ->
     [one] { $count } space
    *[other] { $count } spaces
 }
-
-# The line under the title of a page that fills in from { -brand }'s defaults.
-settings-about-defaults = Defaults of { -brand } for this profile

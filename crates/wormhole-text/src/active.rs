@@ -86,6 +86,13 @@ pub fn text(key: Key) -> &'static str {
     current().plain(key.index())
 }
 
+/// The text of a message without variables in one particular language, loading it first if it is not.
+/// For what is built once from every language at a time (the Settings search finds a setting by its
+/// English words in any language); a frame uses [`text`], which never loads.
+pub fn text_in(language: Language, key: Key) -> &'static str {
+    load(language).plain(key.index())
+}
+
 /// Runs `body` with `language` as this thread's language, whatever the global one is. For tests,
 /// which share a process: nobody else sees the change.
 #[cfg(feature = "test-support")]

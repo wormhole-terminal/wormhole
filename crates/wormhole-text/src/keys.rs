@@ -717,17 +717,19 @@ pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(352);
 pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(353);
 /// "install restart release notes check skip"
 pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(354);
-/// "Mode"
-pub const SETTINGS_THEME_MODE: Key = Key::new(355);
-/// "Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode"
-pub const SETTINGS_THEME_MODE_DESCRIPTION: Key = Key::new(356);
-/// "dark light system appearance match night day"
-pub const SETTINGS_THEME_MODE_KEYWORDS: Key = Key::new(357);
-/// "Defaults of Wormhole for this profile"
-pub const SETTINGS_ABOUT_DEFAULTS: Key = Key::new(361);
+/// "Look"
+pub const SETTINGS_NAV_LOOK: Key = Key::new(355);
+/// "Work"
+pub const SETTINGS_NAV_WORK: Key = Key::new(356);
+/// "Agents"
+pub const SETTINGS_NAV_AGENTS: Key = Key::new(357);
+/// "App"
+pub const SETTINGS_NAV_APP: Key = Key::new(358);
+/// "Preview"
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(359);
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 359] = [
+pub const ALL: [Key; 360] = [
     SETTINGS_SECTION_ADVANCED,
     SETTINGS_SECTION_ADVANCED_INTRO,
     SETTINGS_ADVANCED_GROUP_FILES,
@@ -1083,17 +1085,18 @@ pub const ALL: [Key; 359] = [
     SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS,
     SETTINGS_UPDATES_UPDATE_STATUS,
     SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS,
-    SETTINGS_THEME_MODE,
-    SETTINGS_THEME_MODE_DESCRIPTION,
-    SETTINGS_THEME_MODE_KEYWORDS,
-    SETTINGS_ABOUT_DEFAULTS,
+    SETTINGS_NAV_LOOK,
+    SETTINGS_NAV_WORK,
+    SETTINGS_NAV_AGENTS,
+    SETTINGS_NAV_APP,
+    SETTINGS_NAV_PREVIEW,
 ];
 
 /// ```text
 /// Open { $section }
 /// ```
 pub fn settings_open_section(section: &str) -> String {
-    crate::active::message(358, &[("section", Arg::Str(section))])
+    crate::active::message(360, &[("section", Arg::Str(section))])
 }
 
 /// ```text
@@ -1103,7 +1106,7 @@ pub fn settings_open_section(section: &str) -> String {
 /// }
 /// ```
 pub fn settings_font_count(count: i64) -> String {
-    crate::active::message(359, &[("count", Arg::Int(count))])
+    crate::active::message(361, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -1113,7 +1116,7 @@ pub fn settings_font_count(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_tab_width(count: i64) -> String {
-    crate::active::message(360, &[("count", Arg::Int(count))])
+    crate::active::message(362, &[("count", Arg::Int(count))])
 }
 
 /// Each message with variables formatted with sample arguments: text as `Sample`, numbers as 1 and

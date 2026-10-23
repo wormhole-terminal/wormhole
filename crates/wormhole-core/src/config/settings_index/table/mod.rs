@@ -4,7 +4,7 @@
 use wormhole_text::Key;
 use wormhole_text::keys::*;
 
-use super::{Entry, Group, NavGroup, SectionId, SectionInfo, Word};
+use super::{Entry, Group, NavGroup, SectionId, SectionInfo};
 use crate::config::FeatureId;
 
 mod advanced;
@@ -20,25 +20,7 @@ mod updates;
 /// A setting whose words are in the catalogs: `label` is the message and the quiet line under it and the
 /// search words are its attributes (`.with_description`, `.with_keywords`).
 const fn entry(id: &'static str, label: Key, keys: &'static [&'static str]) -> Entry {
-    Entry { id, label: Word::Key(label), description: Word::NONE, keywords: Word::NONE, keys, feature: None }
-}
-
-/// A setting of a section whose words are still in Rust.
-const fn literal_entry(
-    id: &'static str,
-    label: &'static str,
-    description: &'static str,
-    keywords: &'static str,
-    keys: &'static [&'static str],
-) -> Entry {
-    Entry {
-        id,
-        label: Word::Literal(label),
-        description: Word::Literal(description),
-        keywords: Word::Literal(keywords),
-        keys,
-        feature: None,
-    }
+    Entry { id, label, description: None, keywords: None, keys, feature: None }
 }
 
 impl Entry {
@@ -50,42 +32,37 @@ impl Entry {
 
     /// The quiet line under the label.
     const fn with_description(mut self, description: Key) -> Self {
-        self.description = Word::Key(description);
+        self.description = Some(description);
         self
     }
 
     /// The words that find it besides its label and description.
     const fn with_keywords(mut self, keywords: Key) -> Self {
-        self.keywords = Word::Key(keywords);
+        self.keywords = Some(keywords);
         self
     }
 }
 
 /// A titled run of settings, the title a message of the catalogs.
 const fn group(title: Key, entries: &'static [Entry]) -> Group {
-    Group { title: Word::Key(title), blurb: Word::NONE, aside: Word::NONE, entries }
+    Group { title: Some(title), blurb: None, aside: None, entries }
 }
 
 /// Settings without a heading over them.
 const fn untitled(entries: &'static [Entry]) -> Group {
-    Group { title: Word::NONE, blurb: Word::NONE, aside: Word::NONE, entries }
-}
-
-/// A group of a section whose words are still in Rust.
-const fn literal_group(title: &'static str, entries: &'static [Entry]) -> Group {
-    Group { title: Word::Literal(title), blurb: Word::NONE, aside: Word::NONE, entries }
+    Group { title: None, blurb: None, aside: None, entries }
 }
 
 impl Group {
     /// The paragraph under the title.
     const fn with_blurb(mut self, blurb: Key) -> Self {
-        self.blurb = Word::Key(blurb);
+        self.blurb = Some(blurb);
         self
     }
 
     /// The quiet note at the right of the title.
     const fn with_aside(mut self, aside: Key) -> Self {
-        self.aside = Word::Key(aside);
+        self.aside = Some(aside);
         self
     }
 }
@@ -93,68 +70,68 @@ impl Group {
 pub(super) fn section(id: SectionId) -> &'static SectionInfo {
     match id {
         SectionId::Profile => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_PROFILE),
-            intro: Word::Key(SETTINGS_SECTION_PROFILE_INTRO),
+            title: SETTINGS_SECTION_PROFILE,
+            intro: SETTINGS_SECTION_PROFILE_INTRO,
             nav: NavGroup::Profile,
         },
         SectionId::Appearance => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_APPEARANCE),
-            intro: Word::Key(SETTINGS_SECTION_APPEARANCE_INTRO),
+            title: SETTINGS_SECTION_APPEARANCE,
+            intro: SETTINGS_SECTION_APPEARANCE_INTRO,
             nav: NavGroup::Look,
         },
         SectionId::Fonts => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_FONTS),
-            intro: Word::Key(SETTINGS_SECTION_FONTS_INTRO),
+            title: SETTINGS_SECTION_FONTS,
+            intro: SETTINGS_SECTION_FONTS_INTRO,
             nav: NavGroup::Look,
         },
         SectionId::Terminal => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_TERMINAL),
-            intro: Word::Key(SETTINGS_SECTION_TERMINAL_INTRO),
+            title: SETTINGS_SECTION_TERMINAL,
+            intro: SETTINGS_SECTION_TERMINAL_INTRO,
             nav: NavGroup::Work,
         },
         SectionId::Sessions => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_SESSIONS),
-            intro: Word::Key(SETTINGS_SECTION_SESSIONS_INTRO),
+            title: SETTINGS_SECTION_SESSIONS,
+            intro: SETTINGS_SECTION_SESSIONS_INTRO,
             nav: NavGroup::Work,
         },
         SectionId::Git => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_GIT),
-            intro: Word::Key(SETTINGS_SECTION_GIT_INTRO),
+            title: SETTINGS_SECTION_GIT,
+            intro: SETTINGS_SECTION_GIT_INTRO,
             nav: NavGroup::Work,
         },
         SectionId::Agents => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_AGENTS),
-            intro: Word::Key(SETTINGS_SECTION_AGENTS_INTRO),
+            title: SETTINGS_SECTION_AGENTS,
+            intro: SETTINGS_SECTION_AGENTS_INTRO,
             nav: NavGroup::Agents,
         },
         SectionId::Projects => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_PROJECTS),
-            intro: Word::Key(SETTINGS_SECTION_PROJECTS_INTRO),
+            title: SETTINGS_SECTION_PROJECTS,
+            intro: SETTINGS_SECTION_PROJECTS_INTRO,
             nav: NavGroup::Preview,
         },
         SectionId::FeatureFlags => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_FEATURE_FLAGS),
-            intro: Word::Key(SETTINGS_SECTION_FEATURE_FLAGS_INTRO),
+            title: SETTINGS_SECTION_FEATURE_FLAGS,
+            intro: SETTINGS_SECTION_FEATURE_FLAGS_INTRO,
             nav: NavGroup::Preview,
         },
         SectionId::Notifications => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_NOTIFICATIONS),
-            intro: Word::Key(SETTINGS_SECTION_NOTIFICATIONS_INTRO),
+            title: SETTINGS_SECTION_NOTIFICATIONS,
+            intro: SETTINGS_SECTION_NOTIFICATIONS_INTRO,
             nav: NavGroup::App,
         },
         SectionId::MenuBar => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_MENU_BAR),
-            intro: Word::Key(SETTINGS_SECTION_MENU_BAR_INTRO),
+            title: SETTINGS_SECTION_MENU_BAR,
+            intro: SETTINGS_SECTION_MENU_BAR_INTRO,
             nav: NavGroup::App,
         },
         SectionId::Updates => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_UPDATES),
-            intro: Word::Key(SETTINGS_SECTION_UPDATES_INTRO),
+            title: SETTINGS_SECTION_UPDATES,
+            intro: SETTINGS_SECTION_UPDATES_INTRO,
             nav: NavGroup::App,
         },
         SectionId::Advanced => &SectionInfo {
-            title: Word::Key(SETTINGS_SECTION_ADVANCED),
-            intro: Word::Key(SETTINGS_SECTION_ADVANCED_INTRO),
+            title: SETTINGS_SECTION_ADVANCED,
+            intro: SETTINGS_SECTION_ADVANCED_INTRO,
             nav: NavGroup::App,
         },
     }

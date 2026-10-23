@@ -188,7 +188,8 @@ mod tests {
         "settings.ftl",
         "settings-section-fonts = Schriftarten\n\
          settings-open-section = { $section } öffnen\n\
-         settings-about-defaults = Standardwerte von { -brand }\n",
+         settings-agents-other = Andere\n\
+         \x20   .description = Agenten, die { -brand } erkennt\n",
     )];
 
     #[test]
@@ -203,7 +204,7 @@ mod tests {
     fn a_translation_uses_the_term_english_defines() {
         let english = english();
         let german = Loaded::translation("de", GERMAN, LOCALES[0].files, &english);
-        assert_eq!(german.plain(SETTINGS_ABOUT_DEFAULTS.index()), "Standardwerte von Wormhole");
+        assert_eq!(german.plain(SETTINGS_AGENTS_OTHER_DESCRIPTION.index()), "Agenten, die Wormhole erkennt");
     }
 
     #[test]
