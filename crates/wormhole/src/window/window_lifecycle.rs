@@ -16,7 +16,7 @@ use crate::app_state::look::sync_system_look;
 use crate::app_state::{AppState, OpenWindow, app, app_mut};
 use crate::settings::settings_in;
 use crate::style;
-use crate::window::{Layout, Workspace, chrome, window_bounds};
+use crate::window::{Layout, Workspace, window_bounds};
 
 const DEFAULT_SIZE: (f32, f32) = (1320.0, 820.0);
 
@@ -66,7 +66,7 @@ pub(crate) fn open_workspace_window_in(
         titlebar: Some(TitlebarOptions {
             title: Some("Wormhole".into()),
             appears_transparent: true,
-            traffic_light_position: Some(chrome::traffic_light_position(style::TITLE_ROW_H)),
+            traffic_light_position: Some(style::traffic_light_position(style::TITLE_ROW_H)),
         }),
         window_background: WindowBackgroundAppearance::Transparent,
         window_min_size: Some(size(px(WINDOW_MIN_WIDTH), px(WINDOW_MIN_HEIGHT))),

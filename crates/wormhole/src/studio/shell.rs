@@ -11,7 +11,6 @@ use super::token_list::LIST_W;
 use super::{StudioWindow, ui};
 use crate::settings::settings;
 use crate::style;
-use crate::window::chrome;
 
 impl StudioWindow {
     /// The gallery's filter, which narrows the token list to the same part of the app.
@@ -36,7 +35,7 @@ impl Render for StudioWindow {
             .flex()
             .flex_col()
             .text_color(ui.text)
-            .child(self.render_title_bar(surfaces.panel, chrome::lights_end(window), cx))
+            .child(self.render_title_bar(surfaces.panel, style::lights_end(window), cx))
             .children(self.render_notice(surfaces.background, cx))
             .child(
                 div()

@@ -13,19 +13,11 @@ use wormhole_core::view::layout::{Edge, PanelToggle};
 
 use crate::app_state::app;
 use crate::settings::{store_in, ui_in};
-use crate::style::{self, TitleDrag as _};
+use crate::style::{self, ASSUMED_LIGHTS_SPAN, LIGHTS_X, TitleDrag as _, lights_end};
 use crate::window::Workspace;
 use crate::window::focus::TitleButton;
 use wormhole_core::config::TabId;
 
-/// The traffic lights start 12 pt in, on the line the sidebar's "Terminals" starts on (the user's
-/// call over the board's 20, which left the lights hanging right of everything below them). They
-/// are assumed to be three 12 pt ones 8 apart (x 12 to 64); later macOS versions draw them larger, so the span is measured (`platform::window`)
-/// by whatever has to clear the real lights.
-const LIGHTS_X: f32 = 12.0;
-const ASSUMED_LIGHTS_SPAN: f32 = 52.0;
-/// The height of AppKit's frame round each light, which is what its position places.
-const LIGHT_FRAME: f32 = 14.0;
 /// The sidebar's collapse button starts here (its glyph is centred in it, at x 82–98), at
 /// 12 after the lights. It doesn't follow the sidebar; it moves right only
 /// when macOS draws the lights wider than assumed, so it never covers them.
@@ -51,19 +43,6 @@ const BESIDE_PANEL: f32 = PANEL_TOGGLE_RIGHT;
 /// A title row's own padding at an edge without the lights or the toggle: the room round a
 /// button's glyph, so the glyph and text line up with the 12 pt edge below.
 const TITLE_ROW_PAD: f32 = PANEL_TOGGLE_RIGHT;
-
-/// Where macOS draws the traffic lights (the close button's frame): from the 12 pt inset,
-/// centred in a top row `row` tall. Every window of the app puts them in a title row; a workspace
-/// with a taller tab bar moves them down to its middle.
-pub(crate) fn traffic_light_position(row: f32) -> Point<Pixels> {
-    point(px(LIGHTS_X), px((row - LIGHT_FRAME) / 2.0))
-}
-
-/// Where the traffic lights end in this window, from the left edge: for whatever has to clear
-/// the real lights (the Studio's title, the sidebar's collapse button).
-pub(crate) fn lights_end(window: &Window) -> f32 {
-    LIGHTS_X + crate::platform::window::span(window).unwrap_or(ASSUMED_LIGHTS_SPAN)
-}
 
 /// Where the sidebar's collapse button starts, after lights that end at `lights_end`.
 fn collapse_x(lights_end: f32) -> f32 {

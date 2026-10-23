@@ -19,9 +19,9 @@ use crate::settings::{settings_in, ui_in};
 use crate::sidebar::profile_chip::Profiles;
 use crate::sidebar::terminal_drag::TerminalDrag;
 use crate::sidebar::{NewTerminal, RowFailure, RowInfo, Sidebar, SidebarEvent, SidebarInput, row_times};
+use crate::style::traffic_light_position;
 use crate::terminal_view::Status;
 use crate::window::Workspace;
-use crate::window::chrome::traffic_light_position;
 use crate::{sidebar::shells, style};
 
 /// What the window keeps for the sidebar that is neither the list's state nor the terminals': where the
