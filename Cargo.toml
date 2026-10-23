@@ -46,6 +46,8 @@ todo = "warn"
 unwrap_used = "warn"
 print_stdout = "warn"
 wildcard_imports = "warn"
+# `foo/mod.rs` for a folder module, never `foo.rs` beside a `foo/` (R-12). Not its opposite, `mod_module_files`.
+self_named_module_files = "warn"
 
 # GPUI is slow unoptimized; optimize dependencies even in dev builds.
 [profile.dev]
