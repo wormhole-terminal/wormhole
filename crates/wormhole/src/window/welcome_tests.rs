@@ -13,10 +13,10 @@ use wormhole_core::ipc::control::{
 use wormhole_core::onboarding::intro::Handover;
 use wormhole_core::view::sidebar::RowState;
 
-use super::{Plan, Services, handle};
 use crate::app::control;
 use crate::app_state::app;
 use crate::notifications;
+use crate::onboarding::welcome::{Plan, Services, handle};
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
 use crate::settings::update_settings;
@@ -29,7 +29,9 @@ fn isolate(name: &str) -> bool {
 /// The welcome terminal a replay opened: its tab and token.
 fn welcome_terminal(cx: &mut TestAppContext) -> (i64, String) {
     cx.update(|cx| {
-        let run = super::welcomes(cx).and_then(|w| w.runs.last()).expect("a welcome is running");
+        let run = crate::onboarding::welcome::welcomes(cx)
+            .and_then(|w| w.runs.last())
+            .expect("a welcome is running");
         (run.tab, run.token.clone())
     })
 }
@@ -311,7 +313,8 @@ fn hooks_are_written_only_for_an_agent_that_was_found_and_asked_for(cx: &mut Tes
             hooks: HooksFact::Missing,
             path: None,
         }];
-        super::run_of_mut(tab, cx).expect("the run").agents = Some(AgentsFacts { found, others: 3 });
+        crate::onboarding::welcome::run_of_mut(tab, cx).expect("the run").agents =
+            Some(AgentsFacts { found, others: 3 });
     });
     let home = integrations::home();
     // An agent that wasn't offered is refused, and nothing is written for it.
@@ -351,7 +354,7 @@ fn finishing_shuts_the_door_and_closing_the_terminal_forgets_it(cx: &mut TestApp
         ws.close_session(ix, window, cx);
     });
     assert_eq!(code(&ask(cx, Some(second), &second_token, state())), Some(ErrorCode::Refused));
-    cx.update(|cx| assert!(super::run_of(second, cx).is_none()));
+    cx.update(|cx| assert!(crate::onboarding::welcome::run_of(second, cx).is_none()));
 }
 
 #[gpui_kit::test]
@@ -366,9 +369,12 @@ fn the_first_launch_makes_the_windows_first_terminal_the_welcome(cx: &mut TestAp
         cx.set_global(crate::settings::SettingsStore::load());
         crate::window::view_tests::set_shared_state(cx);
         crate::app::handlers::init(cx);
-        super::set_first_launch(Some(Plan { handover: Handover::Portal, first_run: true }), cx);
+        crate::onboarding::welcome::set_first_launch(
+            Some(Plan { handover: Handover::Portal, first_run: true }),
+            cx,
+        );
         crate::window::window_lifecycle::open_workspace_window(None, None, cx);
-        super::set_first_launch(None, cx);
+        crate::onboarding::welcome::set_first_launch(None, cx);
     });
     cx.run_until_parked();
     let (tab, token) = welcome_terminal(cx);

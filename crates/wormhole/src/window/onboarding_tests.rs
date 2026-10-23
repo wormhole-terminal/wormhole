@@ -15,8 +15,8 @@ use wormhole_core::onboarding::{Event, ONBOARDED_KEY, Step};
 use wormhole_core::project::{ProjectFolder, TrustStatus};
 use wormhole_core::storage::store::Store;
 
-use super::{AgentsNote, FADE_OUT, FirstRun};
 use crate::app_state::{OpenWindow, app, app_mut};
+use crate::onboarding::{AgentsNote, FADE_OUT, FirstRun};
 use crate::settings::update_settings;
 use crate::window::view_tests::{draw, drive, isolate_in, press, read, read_cx, start, with_window};
 
@@ -152,7 +152,7 @@ fn the_intro_can_be_shown_again_as_the_welcome_page_alone(cx: &mut TestAppContex
     assert_eq!(step(cx, &window), Some(Step::Welcome));
     key(cx, &window, "enter");
     assert_eq!(step(cx, &window), None);
-    first_run(cx, &window, |first_run| assert!(first_run.agents_note == super::AgentsNote::Off));
+    first_run(cx, &window, |first_run| assert!(first_run.agents_note == crate::onboarding::AgentsNote::Off));
 }
 
 // ------------------------------------------------------------------------------ the first run
@@ -368,8 +368,8 @@ fn only_an_agents_own_install_writes_its_hooks(cx: &mut TestAppContext) {
     first_run_mut(cx, &window, |first_run, _| {
         // The list of agents a PATH lookup found is the test's own.
         if let Some(intro) = &mut first_run.intro {
-            intro.agents = Some(super::Agents {
-                found: vec![super::FoundAgent {
+            intro.agents = Some(crate::onboarding::Agents {
+                found: vec![crate::onboarding::FoundAgent {
                     agent: wormhole_core::agents::AGENTS
                         .iter()
                         .find(|a| a.id == AgentId::Claude)

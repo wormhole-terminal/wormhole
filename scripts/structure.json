@@ -92,6 +92,10 @@
         "actions",
         "focus_keys",
         [
+          "sidebar",
+          "onboarding"
+        ],
+        [
           "app_state",
           "window"
         ],

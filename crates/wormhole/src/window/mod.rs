@@ -86,8 +86,9 @@ mod layout;
 pub(crate) mod menu_state;
 #[cfg(test)]
 mod menu_tests;
-pub(crate) mod onboarding;
 mod onboarding_host;
+#[cfg(test)]
+mod onboarding_tests;
 pub(crate) mod open_in;
 pub(crate) mod overlay;
 #[cfg(test)]
@@ -109,11 +110,12 @@ mod save;
 mod saved_layout;
 mod session;
 mod shortcuts;
-mod sidebar;
 #[cfg(feature = "devctl")]
 mod sidebar_devctl;
 mod sidebar_drops;
 mod sidebar_host;
+#[cfg(test)]
+mod sidebar_tests;
 mod slide;
 #[cfg(test)]
 mod stable_list_tests;
@@ -124,12 +126,18 @@ mod title;
 #[cfg(test)]
 pub(crate) mod view_tests;
 mod welcome_host;
+#[cfg(test)]
+mod welcome_tests;
 pub(crate) use self::welcome_host::remember_first_run;
 mod window_actions;
 mod window_bounds;
 mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
+
+// Old paths, for one commit only: the next commit names every module by its new path and removes them.
+pub(crate) use crate::onboarding;
+pub(crate) use crate::sidebar;
 
 use self::saved_layout::Layout;
 use self::session::Session;

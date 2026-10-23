@@ -72,7 +72,7 @@ pub(crate) struct Run {
 #[derive(Default)]
 pub(crate) struct Welcomes {
     gates: Registry,
-    runs: Vec<Run>,
+    pub(crate) runs: Vec<Run>,
     /// The first launch's window starts with a welcome terminal, not a plain one: set for as long as that
     /// window is being opened.
     first: Option<Plan>,
@@ -83,7 +83,7 @@ pub(crate) struct Welcomes {
 impl Global for Welcomes {}
 
 /// The welcomes, if any ever started.
-fn welcomes(cx: &App) -> Option<&Welcomes> {
+pub(crate) fn welcomes(cx: &App) -> Option<&Welcomes> {
     cx.try_global::<Welcomes>()
 }
 
@@ -158,6 +158,3 @@ pub(crate) fn forget(tab: i64, cx: &mut App) -> bool {
     welcomes.runs.retain(|run| run.tab != tab);
     first_run
 }
-
-#[cfg(test)]
-mod tests;

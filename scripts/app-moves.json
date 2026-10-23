@@ -333,6 +333,28 @@
           "to": "window"
         }
       ]
+    },
+    "7": {
+      "doc": "The sidebar and the first run leave window/ (phase 5, step 5g)",
+      "moves": [
+        {
+          "from": "window/sidebar",
+          "to": "sidebar"
+        },
+        {
+          "from": "window/onboarding",
+          "to": "onboarding"
+        }
+      ],
+      "layers": {
+        "after": "focus_keys",
+        "insert": [
+          [
+            "sidebar",
+            "onboarding"
+          ]
+        ]
+      }
     }
   }
 }

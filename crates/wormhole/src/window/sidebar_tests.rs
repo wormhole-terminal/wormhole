@@ -275,7 +275,7 @@ fn holding_command_shows_the_keycaps_and_a_key_a_release_or_a_blur_hides_them(cx
 fn letters_typed_in_the_list_jump_to_the_next_name_that_starts_with_them(cx: &mut TestAppContext) {
     use wormhole_core::view::focus::Area;
 
-    use crate::window::sidebar::SidebarStop;
+    use crate::sidebar::SidebarStop;
     if isolate("letters_typed_in_the_list_jump_to_the_next_name_that_starts_with_them") {
         return;
     }

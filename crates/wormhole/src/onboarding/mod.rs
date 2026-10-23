@@ -28,8 +28,6 @@ mod keys;
 mod look_step;
 mod page;
 mod steps;
-#[cfg(test)]
-mod tests;
 pub(crate) mod welcome;
 mod welcome_page;
 
@@ -55,20 +53,20 @@ pub(crate) use look_step::{offered_primaries, offered_themes};
 
 /// An agent on PATH, as the third step lists it.
 #[derive(Clone)]
-struct FoundAgent {
-    agent: &'static Agent,
-    spec: Option<&'static Spec>,
+pub(crate) struct FoundAgent {
+    pub(crate) agent: &'static Agent,
+    pub(crate) spec: Option<&'static Spec>,
     /// The hooks' state; `None` without hook support or when the file didn't read.
-    state: Option<State>,
+    pub(crate) state: Option<State>,
     /// The file the hooks go in, for the row (`~/.claude/settings.json`).
-    path: Option<String>,
+    pub(crate) path: Option<String>,
 }
 
 /// What was found on PATH: the agents there, and the first of the others with their count.
 #[derive(Clone, Default)]
-struct Agents {
-    found: Vec<FoundAgent>,
-    others: Vec<&'static Agent>,
+pub(crate) struct Agents {
+    pub(crate) found: Vec<FoundAgent>,
+    pub(crate) others: Vec<&'static Agent>,
 }
 
 impl Agents {
@@ -94,11 +92,11 @@ impl Agents {
 }
 
 /// The intro window while it is open.
-struct Intro {
-    model: Onboarding,
-    focus: FocusHandle,
+pub(crate) struct Intro {
+    pub(crate) model: Onboarding,
+    pub(crate) focus: FocusHandle,
     /// `None` until the agents were looked for.
-    agents: Option<Agents>,
+    pub(crate) agents: Option<Agents>,
     _scan: Option<Task<()>>,
     /// The terminal that was there when the first run began: Start moves it to the folder picked.
     first: Option<i64>,
@@ -107,15 +105,15 @@ struct Intro {
     /// "Later" was pressed on the folder's trust.
     trust_later: bool,
     /// What went wrong writing an agent's hooks.
-    problem: Option<SharedString>,
+    pub(crate) problem: Option<SharedString>,
     /// The first run, which finishing is remembered of and starts the first terminal in the folder
     /// picked, or a replay of the intro, which changes nothing.
-    first_run: bool,
+    pub(crate) first_run: bool,
 }
 
 /// The sidebar's "No coding agents yet" note after a primer, as the window keeps it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-enum AgentsNote {
+pub(crate) enum AgentsNote {
     #[default]
     Off,
     /// Up until a terminal of the window runs an agent, or its × is pressed.
@@ -129,11 +127,11 @@ enum AgentsNote {
 /// terminal that was there when it began, whether an agent runs) and hears from it by [`FirstRunEvent`].
 #[derive(Default)]
 pub(crate) struct FirstRun {
-    intro: Option<Intro>,
+    pub(crate) intro: Option<Intro>,
     /// A change of page waiting for the window to be out of sight (a replay's start).
     swap: Option<Task<()>>,
     /// The intro ended on the primer (no agent on PATH): the sidebar says so until an agent shows.
-    agents_note: AgentsNote,
+    pub(crate) agents_note: AgentsNote,
     /// What the window last said of itself.
     facts: Facts,
 }
@@ -238,7 +236,7 @@ impl FirstRun {
 
 /// How the window leaves as a replay begins, the page changing once it is gone (core's
 /// `wormhole::window_motion` takes 0.3 s).
-const FADE_OUT: Duration = Duration::from_millis(320);
+pub(crate) const FADE_OUT: Duration = Duration::from_millis(320);
 
 impl FirstRun {
     /// Open the intro window, with the animation playing around it from a window that is `play`ing
@@ -396,7 +394,7 @@ impl FirstRun {
         cx.notify();
     }
 
-    fn onboarding_event(&mut self, event: Event, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn onboarding_event(&mut self, event: Event, window: &mut Window, cx: &mut Context<Self>) {
         let Some(intro) = &mut self.intro else { return };
         let primer = intro.model.step() == Step::Primer;
         let moves = matches!(event, Event::Continue | Event::Back | Event::Start);
