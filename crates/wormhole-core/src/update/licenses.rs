@@ -143,7 +143,6 @@ mod tests {
     /// other-platform one, so this asks `cargo metadata` what the generator asks it, for this
     /// Mac's target (its crates are fetched, so it works offline); on Linux the macOS crates may
     /// not be, and the stale check above still runs.
-    #[cfg(target_os = "macos")]
     #[test]
     fn bundled_list_has_every_crate_the_app_is_built_from() {
         let target =
@@ -168,7 +167,6 @@ mod tests {
 
     /// What `scripts/gen-licenses.py` lists: the packages reachable from the workspace crates
     /// through normal dependencies (not dev- or build-only ones), as (name, version).
-    #[cfg(target_os = "macos")]
     fn shipped(meta: &serde_json::Value) -> HashSet<(String, String)> {
         use std::collections::HashMap;
         let packages: HashMap<&str, (String, String)> = meta["packages"]

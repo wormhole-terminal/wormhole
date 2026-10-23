@@ -1,5 +1,3 @@
-use std::os::unix::ffi::OsStrExt as _;
-use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -15,7 +13,7 @@ fn fake_app(root: &Path) -> PathBuf {
     std::fs::create_dir_all(&dir).expect("folder");
     let app = dir.join("Wormhole");
     std::fs::write(&app, "#!/bin/sh\nprintf '%s\\n' \"$@\"\n").expect("binary");
-    std::fs::set_permissions(&app, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+    std::fs::set_permissions(&app, crate::platform::fs::permissions(0o755)).expect("chmod");
     app
 }
 
@@ -79,7 +77,7 @@ fn a_path_a_script_cannot_name_gets_no_script() {
         "the script runs from anywhere: a relative path is no use"
     );
     assert!(shim(Path::new("")).is_none());
-    assert!(shim(Path::new(std::ffi::OsStr::from_bytes(b"/not/utf8/\xff"))).is_none());
+    assert!(shim(crate::platform::fs::path_from_bytes(b"/not/utf8/\xff")).is_none());
     let root = tempfile::tempdir().expect("temp dir");
     let refused = install(&Targets::only(root.path().to_path_buf()), Path::new("/odd\nname/Wormhole"));
     assert!(matches!(refused, Err(Error::Unusable)));
@@ -107,7 +105,7 @@ fn install_writes_an_executable_script_and_the_state_follows() {
 
     let first = install(&targets, old).expect("installs");
     assert_eq!(first, super::Installed { path: root.path().join("bin").join(COMMAND_NAME), changed: true });
-    let mode = std::fs::metadata(&first.path).expect("written").permissions().mode();
+    let mode = crate::platform::fs::mode(&std::fs::metadata(&first.path).expect("written"));
     assert_eq!(mode & 0o100, 0o100, "executable");
     assert_eq!(status(&targets, old), Status::Installed { path: first.path.clone(), current: true });
 
@@ -146,7 +144,7 @@ fn what_cannot_be_read_as_a_script_counts_as_another_wh() {
     std::fs::create_dir(&spot).expect("a folder named wh");
     assert!(matches!(status(&targets, Path::new("/opt/W")), Status::Foreign { .. }));
     std::fs::remove_dir(&spot).expect("remove");
-    std::os::unix::fs::symlink(root.path().join("nowhere"), &spot).expect("dangling link");
+    crate::platform::fs::symlink(root.path().join("nowhere"), &spot).expect("dangling link");
     assert!(matches!(install(&targets, Path::new("/opt/W")), Err(Error::Foreign(_))));
     std::fs::remove_file(&spot).expect("remove");
     std::fs::write(&spot, [0xff, 0xfe, 0x00, 0x01]).expect("a binary");
@@ -188,7 +186,7 @@ fn a_system_folder_that_cannot_be_written_hands_over_to_the_home_folder() {
     let root = tempfile::tempdir().expect("temp dir");
     let system = root.path().join("system");
     std::fs::create_dir(&system).expect("system folder");
-    std::fs::set_permissions(&system, std::fs::Permissions::from_mode(0o555)).expect("read only");
+    std::fs::set_permissions(&system, crate::platform::fs::permissions(0o555)).expect("read only");
     // Root writes anywhere, so the case can't be made.
     if std::fs::write(system.join("probe"), "").is_ok() {
         return;

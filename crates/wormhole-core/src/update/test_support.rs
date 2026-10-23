@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 use std::fs;
 use std::io::{Cursor, Write as _};
-use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -94,7 +93,7 @@ pub fn write_fake_app(path: &Path, bundle_id: &str, version: &str, marker: &str)
     fs::write(path.join("Contents/Info.plist"), info_plist(bundle_id, version)).unwrap();
     let exe = path.join("Contents/MacOS/Wormhole");
     fs::write(&exe, format!("#!/bin/sh\necho {marker}\n")).unwrap();
-    fs::set_permissions(&exe, fs::Permissions::from_mode(0o755)).unwrap();
+    fs::set_permissions(&exe, crate::platform::fs::permissions(0o755)).unwrap();
 }
 
 pub fn marker_of(app: &Path) -> String {
@@ -109,7 +108,7 @@ pub fn fake_app_archive(bundle_id: &str, version: &str) -> Vec<u8> {
     let versions = app.join("Contents/Frameworks/X.framework/Versions");
     fs::create_dir_all(versions.join("A")).unwrap();
     fs::write(versions.join("A/X"), b"lib").unwrap();
-    std::os::unix::fs::symlink("A", versions.join("Current")).unwrap();
+    crate::platform::fs::symlink("A", versions.join("Current")).unwrap();
 
     let mut builder = tar::Builder::new(GzEncoder::new(Vec::new(), Compression::fast()));
     builder.follow_symlinks(false);

@@ -236,9 +236,8 @@ fn rejects_paths_escaping_the_theme_folder() {
         let err = load_family(&dir).expect_err(bad);
         assert!(err.contains("escapes"), "{bad}: {err}");
     }
-    #[cfg(unix)]
     {
-        std::os::unix::fs::symlink(tmp.path().join("secret.svg"), dir.join("link.svg")).expect("symlink");
+        crate::platform::fs::symlink(tmp.path().join("secret.svg"), dir.join("link.svg")).expect("symlink");
         fs::write(
             dir.join("t.json"),
             r#"{ "name": "L", "author": "", "themes": [ { "name": "L", "appearance": "dark",

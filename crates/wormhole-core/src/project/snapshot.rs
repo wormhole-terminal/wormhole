@@ -525,15 +525,13 @@ mod tests {
         }
         assert_eq!(snapshot.action_prompt("sub/x.md"), Some("rm -rf ~"));
     }
-
-    #[cfg(unix)]
     #[test]
     fn relinking_is_noticed() {
         let (_tmp, p) = project(&[("prompts/a.md", "a"), ("prompts/b.md", "bbb")]);
-        std::os::unix::fs::symlink("prompts/a.md", p.path(LAYOUT_FILE)).expect("symlink");
+        crate::platform::fs::symlink("prompts/a.md", p.path(LAYOUT_FILE)).expect("symlink");
         let snapshot = ProjectSnapshot::load(&p);
         fs::remove_file(p.path(LAYOUT_FILE)).expect("rm");
-        std::os::unix::fs::symlink("prompts/b.md", p.path(LAYOUT_FILE)).expect("symlink");
+        crate::platform::fs::symlink("prompts/b.md", p.path(LAYOUT_FILE)).expect("symlink");
         assert!(!snapshot.is_current());
     }
 

@@ -252,14 +252,13 @@ fn every_installed_event_means_something() {
 
 #[test]
 fn install_keeps_the_file_mode() {
-    use std::os::unix::fs::PermissionsExt;
     // Claude's settings.json often carries API keys in `env`; a 0600 file must stay 0600.
     let home = home();
     let path = home.path().join(".claude/settings.json");
     write(&path, r#"{"env": {"ANTHROPIC_API_KEY": "secret"}}"#);
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).expect("chmod");
+    std::fs::set_permissions(&path, crate::platform::fs::permissions(0o600)).expect("chmod");
     claude().install(home.path()).expect("install");
-    let mode = |p: &Path| std::fs::metadata(p).expect("stat").permissions().mode() & 0o777;
+    let mode = |p: &Path| crate::platform::fs::mode(&std::fs::metadata(p).expect("stat")) & 0o777;
     assert_eq!(mode(&path), 0o600);
     assert_eq!(mode(&files::with_suffix(&path, files::BACKUP_SUFFIX)), 0o600);
     claude().uninstall(home.path()).expect("uninstall");
@@ -274,7 +273,7 @@ fn install_writes_through_a_symlinked_config() {
     write(&real, r#"{"model": "opus"}"#);
     let link = home.path().join(".claude/settings.json");
     std::fs::create_dir_all(link.parent().expect("parent")).expect("mkdir");
-    std::os::unix::fs::symlink(&real, &link).expect("symlink");
+    crate::platform::fs::symlink(&real, &link).expect("symlink");
 
     claude().install(home.path()).expect("install");
     assert!(std::fs::symlink_metadata(&link).expect("lstat").file_type().is_symlink());

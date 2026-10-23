@@ -174,7 +174,7 @@ fn a_copy_recreates_a_linked_fonts_folder_as_a_link() {
     let (dir, root) = root();
     let shared = dir.path().join("shared-fonts");
     std::fs::create_dir_all(&shared).expect("makes");
-    std::os::unix::fs::symlink(&shared, root.default_profile().fonts_dir()).expect("links");
+    crate::platform::fs::symlink(&shared, root.default_profile().fonts_dir()).expect("links");
     let mut list = ProfileList::default();
     let work =
         list.create(&root, new("Work", StartFrom::Copy(ProfileId::default_profile()))).expect("creates");

@@ -105,7 +105,6 @@ fn opening_a_store_does_not_ask_for_the_key() {
 /// made once and read back.
 #[test]
 fn a_development_build_keeps_its_key_in_an_owner_only_file() {
-    use std::os::unix::fs::PermissionsExt;
     let dir = temp_dir("sealed-dev-key");
     {
         let mut store = Store::open_at(&dir).expect("opens");
@@ -113,7 +112,7 @@ fn a_development_build_keeps_its_key_in_an_owner_only_file() {
         assert_eq!(store.save_scrollbacks(&[(1, "kept")]).expect("saves"), 1);
     }
     let key = dir.join("scrollback-key.dev-only");
-    let mode = std::fs::metadata(&key).expect("the key file").permissions().mode() & 0o777;
+    let mode = crate::platform::fs::mode(&std::fs::metadata(&key).expect("the key file")) & 0o777;
     assert_eq!(mode, 0o600);
     assert_eq!(std::fs::read(&key).expect("reads").len(), 32);
     let store = Store::open_at(&dir).expect("opens");

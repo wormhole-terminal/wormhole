@@ -729,10 +729,7 @@ mod tests {
     }
 
     // -- the real command, with a stand-in for gh
-
-    #[cfg(unix)]
     mod run {
-        use std::os::unix::fs::PermissionsExt;
         use std::path::{Path, PathBuf};
 
         use super::{PrError, PrState, pr, pull_request};
@@ -742,7 +739,7 @@ mod tests {
         fn with_gh<T>(dir: &Path, script: &str, f: impl FnOnce() -> T) -> T {
             let path: PathBuf = dir.join("gh");
             std::fs::write(&path, format!("#!/bin/sh\n{script}\n")).expect("script");
-            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+            std::fs::set_permissions(&path, crate::platform::fs::permissions(0o755)).expect("chmod");
             super::super::PROGRAM.set(Some(path));
             let out = f();
             super::super::PROGRAM.set(None);

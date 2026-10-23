@@ -280,7 +280,6 @@ mod tests {
     use super::{GitError, find_root, repo_root};
 
     #[test]
-    #[cfg(unix)]
     fn repo_root_is_none_only_when_git_says_there_is_no_repository() {
         use super::testing::{DUBIOUS, fake_git, init, with_git};
         let plain = tempfile::tempdir().expect("tempdir");

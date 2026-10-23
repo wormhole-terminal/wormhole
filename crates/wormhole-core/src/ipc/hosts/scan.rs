@@ -231,7 +231,7 @@ mod tests {
         let real = elsewhere.path().join("abcdefghij12.meta");
         std::fs::write(&real, meta_text("abcdefghij12", 77, Path::new("/s/x.sock"), 5)).expect("write");
         let link = dir.path().join("abcdefghij12.meta");
-        std::os::unix::fs::symlink(&real, &link).expect("link");
+        crate::platform::fs::symlink(&real, &link).expect("link");
         assert!(read_meta(&link).is_err());
     }
 

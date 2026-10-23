@@ -286,7 +286,7 @@ fn a_folder_that_was_deleted_is_missing_and_a_link_is_not_followed() {
     // A symlink in the folder's place is somebody else's repository.
     let elsewhere = tempfile::tempdir().expect("tempdir");
     git(elsewhere.path(), &["init", "-q"]);
-    std::os::unix::fs::symlink(elsewhere.path(), fx.lib()).expect("symlink");
+    crate::platform::fs::symlink(elsewhere.path(), fx.lib()).expect("symlink");
     let log = submodule_log(fx.root(), "libs/lib", sub).expect("log");
     assert_eq!(log.checkout, Checkout::NotCheckedOut);
 }

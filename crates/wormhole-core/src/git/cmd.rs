@@ -639,10 +639,8 @@ mod tests {
     ];
 
     #[test]
-    #[cfg(unix)]
     fn classify_tells_a_missing_git_and_a_missing_repository_from_a_failure() {
-        use std::os::unix::process::ExitStatusExt;
-        let status = std::process::ExitStatus::from_raw(128 << 8);
+        let status = crate::platform::process::exit_status_from_raw(128 << 8);
         for (stderr, kind) in SAID {
             // Anything else is a failure in git's own words (trimmed), all of them: the view shows
             // the first line and copies the rest.
@@ -653,7 +651,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
     fn a_stand_in_git_is_told_apart_by_what_it_says() {
         use crate::git::testing::fake_git;
         let dir = tempfile::tempdir().expect("tempdir");
@@ -681,7 +678,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
     fn a_git_that_cannot_be_started_is_a_failure_not_missing() {
         // A folder where the program should be: there is something, it just cannot run.
         let dir = tempfile::tempdir().expect("tempdir");
@@ -708,7 +704,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
     fn a_stuck_git_status_is_killed_and_reported() {
         use crate::git::testing::{git, repo_with, write};
         // A clean filter that does not return stands in for git stuck on a dead network volume.

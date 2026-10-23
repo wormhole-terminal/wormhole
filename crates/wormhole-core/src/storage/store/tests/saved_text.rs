@@ -187,14 +187,13 @@ fn assert_layout_kept_and_saving_works(store: &mut Store) {
 
 #[test]
 fn an_unwritable_text_file_is_started_again_and_costs_nothing_else() {
-    use std::os::unix::fs::PermissionsExt;
     let dir = temp_dir("saved-read-only");
     layout_with_text(&mut Store::open_at(&dir).expect("opens"));
     for name in ["scrollback.db-wal", "scrollback.db-shm"] {
         let _ = std::fs::remove_file(dir.join(name));
     }
     let file = dir.join("scrollback.db");
-    std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o400)).expect("chmod");
+    std::fs::set_permissions(&file, crate::platform::fs::permissions(0o400)).expect("chmod");
     let mut store = Store::open_at(&dir).expect("opens");
     assert!(store.recovered_from().is_none(), "the main database is never set aside for it");
     assert_layout_kept_and_saving_works(&mut store);

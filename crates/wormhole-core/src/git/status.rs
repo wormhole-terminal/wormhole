@@ -313,7 +313,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
     fn status_passes_on_why_git_failed() {
         use crate::git::GitError;
         use crate::git::testing::{DUBIOUS, fake_git, repo_with, with_git};

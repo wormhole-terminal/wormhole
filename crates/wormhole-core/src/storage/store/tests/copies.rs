@@ -92,7 +92,7 @@ fn a_link_named_like_a_copy_is_not_followed_or_deleted() {
     let victim = elsewhere.path().join("keep.txt");
     std::fs::write(&victim, "not ours").expect("writes");
     let link = dir.path().join("wormhole.db.old-5");
-    std::os::unix::fs::symlink(&victim, &link).expect("links");
+    crate::platform::fs::symlink(&victim, &link).expect("links");
     assert!(prune(dir.path(), SystemTime::now()).is_empty());
     assert!(victim.exists() && std::fs::symlink_metadata(&link).is_ok());
 }

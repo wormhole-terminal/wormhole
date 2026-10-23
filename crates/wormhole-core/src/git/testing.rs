@@ -60,14 +60,12 @@ pub(crate) fn with_git<T>(program: impl AsRef<Path>, f: impl FnOnce() -> T) -> T
 
 /// A stand-in for git, `dir/<name>`, that prints `stderr` and exits with `code` whatever it is
 /// asked: git as it fails on someone else's machine.
-#[cfg(unix)]
 pub(crate) fn fake_git(dir: &Path, name: &str, stderr: &str, code: i32) -> PathBuf {
-    use std::os::unix::fs::PermissionsExt;
     let said = dir.join(format!("{name}.stderr"));
     std::fs::write(&said, stderr).expect("write stderr");
     let path = dir.join(name);
     std::fs::write(&path, format!("#!/bin/sh\ncat '{}' >&2\nexit {code}\n", said.display())).expect("script");
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+    std::fs::set_permissions(&path, crate::platform::fs::permissions(0o755)).expect("chmod");
     path
 }
 

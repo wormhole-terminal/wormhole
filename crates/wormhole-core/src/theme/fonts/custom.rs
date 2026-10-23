@@ -297,11 +297,9 @@ mod tests {
         assert!(font_files(&dir.join("missing")).is_empty());
         let _ = std::fs::remove_dir_all(&dir);
     }
-
-    #[cfg(unix)]
     #[test]
     fn linked_folders_are_followed_once_but_never_back_up() {
-        use std::os::unix::fs::symlink;
+        use crate::platform::fs::symlink;
         let home = temp_dir("links");
         let dir = home.join("data").join("fonts");
         let shared = home.join("Shared Fonts");

@@ -377,11 +377,9 @@ mod tests {
         let base = tempfile::tempdir().expect("tempdir");
         // A post-checkout hook that leaves a trace: it must never run.
         write(repo.path(), ".git/hooks/post-checkout", "#!/bin/sh\ntouch \"$PWD/hooked\"\n");
-        #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt;
             let hook = repo.path().join(".git/hooks/post-checkout");
-            std::fs::set_permissions(&hook, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+            std::fs::set_permissions(&hook, crate::platform::fs::permissions(0o755)).expect("chmod");
         }
 
         let worktree = plan(repo.path(), "fix/login", Some(base.path())).expect("plans");

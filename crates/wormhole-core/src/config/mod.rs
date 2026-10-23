@@ -446,13 +446,11 @@ mod tests {
         let saved: Settings = crate::storage::jsonc::parse(&read(&path)).expect("parses");
         assert_eq!(saved, Settings::default());
     }
-
-    #[cfg(unix)]
     #[test]
     fn a_symlinked_config_stays_a_symlink() {
         let (dir, real) = config_file("{ \"theme\": \"Nord\" }");
         let link = dir.path().join("link.json");
-        std::os::unix::fs::symlink(&real, &link).expect("symlink");
+        crate::platform::fs::symlink(&real, &link).expect("symlink");
         let mut config = Config::load_from(link.clone(), themes_dir(&link));
         config.update(|s| s.font_size = 15.0);
         assert!(std::fs::symlink_metadata(&link).expect("link").file_type().is_symlink());

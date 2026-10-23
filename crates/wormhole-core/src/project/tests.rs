@@ -226,7 +226,6 @@ fn notes_read_write() {
 
 /// A cloned repository commits `notes.md.tmp -> ~/.ssh/authorized_keys`; syncing the
 /// notes (on by default, no trust needed) must not write through it.
-#[cfg(unix)]
 #[test]
 fn a_planted_temp_symlink_does_not_redirect_the_notes_write() {
     let (_tmp, p) = project(&[(NOTES_FILE, "# Notes\n")]);
@@ -234,7 +233,7 @@ fn a_planted_temp_symlink_does_not_redirect_the_notes_write() {
     let victim = home.path().join("authorized_keys");
     fs::write(&victim, "ssh-ed25519 AAAA owner-key\n").expect("write");
     for name in ["notes.md.tmp", "notes.md.wormhole-tmp", ".notes.md.tmp"] {
-        std::os::unix::fs::symlink(&victim, p.dir.join(name)).expect("symlink");
+        crate::platform::fs::symlink(&victim, p.dir.join(name)).expect("symlink");
     }
     let doc = NotesDoc { tasks: Vec::new(), notes: vec!["ssh-ed25519 AAAA attacker-key".into()] };
     assert!(p.write_notes(&doc).expect("write"));
@@ -245,14 +244,13 @@ fn a_planted_temp_symlink_does_not_redirect_the_notes_write() {
 }
 
 /// A file outside the project with content that would load as `name`.
-#[cfg(unix)]
 fn link_outside(p: &ProjectFolder, name: &str, content: &str) -> (TempDir, PathBuf) {
     let outside = TempDir::new().expect("tempdir");
     let secret = outside.path().join("secret");
     fs::write(&secret, content).expect("write");
     let link = p.dir.join(name);
     fs::create_dir_all(link.parent().expect("parent")).expect("mkdir");
-    std::os::unix::fs::symlink(&secret, &link).expect("symlink");
+    crate::platform::fs::symlink(&secret, &link).expect("symlink");
     (outside, secret)
 }
 
@@ -265,7 +263,6 @@ fn assert_refused<T: std::fmt::Debug>(result: Result<T, ProjectError>, needle: &
 
 /// `.wormhole/notes.md -> ~/.ssh/id_ed25519` showed the key as a note and the next
 /// sync wrote it into the repository, ready for an agent's `git add -A && git push`.
-#[cfg(unix)]
 #[test]
 fn files_linking_outside_the_project_are_refused() {
     let (_tmp, p) = project(&[]);
@@ -302,7 +299,6 @@ fn the_studio_writes_the_project_theme() {
 
 /// A repository can ship `theme.json` as a link to a file of the user's: writing the project's
 /// theme must neither follow it nor quietly replace it.
-#[cfg(unix)]
 #[test]
 fn a_theme_json_linking_outside_is_not_written() {
     let (_tmp, p) = project(&[]);
@@ -313,7 +309,6 @@ fn a_theme_json_linking_outside_is_not_written() {
 }
 
 /// A prompt that an action pastes (and may submit) is read like every other project file.
-#[cfg(unix)]
 #[test]
 fn a_prompt_file_linking_outside_is_refused_for_actions_too() {
     let actions = r#"[{"id": "go", "title": "Go", "type": "prompt", "file": "go.md", "submit": true}]"#;
@@ -322,15 +317,13 @@ fn a_prompt_file_linking_outside_is_refused_for_actions_too() {
     assert_refused(p.actions(), "outside");
     assert_refused(p.prompt_file("go.md"), "outside");
 }
-
-#[cfg(unix)]
 #[test]
 fn links_inside_the_project_still_work() {
     let (_tmp, p) = project(&[("prompts/review.md", "# Review\nGo")]);
     fs::create_dir_all(p.root.join("docs")).expect("mkdir");
     fs::write(p.root.join("docs/layout.json"), r#"{"sessions": [{"name": "A"}]}"#).expect("write");
-    std::os::unix::fs::symlink("../docs/layout.json", p.dir.join(LAYOUT_FILE)).expect("symlink");
-    std::os::unix::fs::symlink("review.md", p.dir.join("prompts/alias.md")).expect("symlink");
+    crate::platform::fs::symlink("../docs/layout.json", p.dir.join(LAYOUT_FILE)).expect("symlink");
+    crate::platform::fs::symlink("review.md", p.dir.join("prompts/alias.md")).expect("symlink");
     assert_eq!(p.layout().expect("ok").expect("present").sessions.len(), 1);
     let ids: Vec<_> = p.prompts().expect("ok").expect("present").into_iter().map(|p| p.id).collect();
     assert_eq!(ids, ["alias", "review"]);
@@ -370,7 +363,6 @@ fn oversized_files_are_refused_before_reading() {
 }
 
 /// A FIFO committed as notes.md would block the sync (and the UI thread) forever.
-#[cfg(unix)]
 #[test]
 fn a_fifo_is_refused_instead_of_blocking() {
     let (_tmp, p) = project(&[]);

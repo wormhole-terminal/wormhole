@@ -116,7 +116,6 @@ fn between_markers(output: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::os::unix::fs::PermissionsExt as _;
     use std::path::Path;
     use std::time::{Duration, Instant};
 
@@ -160,7 +159,7 @@ mod tests {
         assert!(!on_path(&dir, ""));
         // Through a link: the same folder by another name.
         let link = root.path().join("link");
-        std::os::unix::fs::symlink(&dir, &link).expect("link");
+        crate::platform::fs::symlink(&dir, &link).expect("link");
         assert!(on_path(&dir, &text(&link)));
     }
 
@@ -194,7 +193,7 @@ mod tests {
     fn fake_shell(dir: &Path, body: &str) -> String {
         let path = dir.join("fake-shell");
         std::fs::write(&path, format!("#!/bin/sh\n{body}\n")).expect("script");
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+        std::fs::set_permissions(&path, crate::platform::fs::permissions(0o755)).expect("chmod");
         path.to_str().expect("utf-8").to_string()
     }
 

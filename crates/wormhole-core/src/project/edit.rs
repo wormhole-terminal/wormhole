@@ -216,13 +216,12 @@ mod tests {
     /// A repository can commit `config.json` as a link to a file elsewhere: neither read nor
     /// written through.
     #[test]
-    #[cfg(unix)]
     fn a_link_out_of_the_project_is_not_written_through() {
         let (_tmp, p) = project(&[]);
         let elsewhere = TempDir::new().expect("tempdir");
         let target = elsewhere.path().join("victim.json");
         fs::write(&target, "{ \"keep\": true }").expect("write");
-        std::os::unix::fs::symlink(&target, p.path(CONFIG_FILE)).expect("symlink");
+        crate::platform::fs::symlink(&target, p.path(CONFIG_FILE)).expect("symlink");
         assert!(p.set_project_color(Some(FolderColor::Teal)).is_err());
         assert_eq!(fs::read_to_string(&target).expect("read"), "{ \"keep\": true }");
         assert!(fs::symlink_metadata(p.path(CONFIG_FILE)).expect("still a link").file_type().is_symlink());

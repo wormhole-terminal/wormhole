@@ -1,5 +1,8 @@
+use std::ffi::OsStr;
 use std::fs::{Metadata, OpenOptions, Permissions};
+use std::os::unix::ffi::OsStrExt as _;
 use std::os::unix::fs::{MetadataExt as _, OpenOptionsExt as _, PermissionsExt as _};
+use std::path::Path;
 
 pub(crate) fn permissions(mode: u32) -> Permissions {
     Permissions::from_mode(mode)
@@ -14,6 +17,10 @@ pub(crate) fn no_block(options: &mut OpenOptions) -> &mut OpenOptions {
 /// standard library always adds stays.)
 pub(crate) fn no_block_no_follow(options: &mut OpenOptions) -> &mut OpenOptions {
     options.custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
+}
+
+pub(crate) fn path_from_bytes(bytes: &[u8]) -> &Path {
+    Path::new(OsStr::from_bytes(bytes))
 }
 
 pub(crate) fn is_executable(meta: &Metadata) -> bool {

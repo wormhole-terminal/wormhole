@@ -213,10 +213,8 @@ mod tests {
         fs::write(root.join(DIR_NAME), "a file").expect("write");
         assert!(init(&root).is_err());
         assert_eq!(fs::read_to_string(root.join(DIR_NAME)).expect("still there"), "a file");
-
-        #[cfg(unix)]
         {
-            use std::os::unix::fs::symlink;
+            use crate::platform::fs::symlink;
             // A link to a folder somewhere else: nothing is written through it.
             let (_elsewhere_tmp, elsewhere) = scratch();
             let (_repo_tmp, repo) = scratch();
@@ -258,16 +256,14 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
     fn a_folder_that_cannot_be_written_to_fails_without_leaving_a_half_made_project() {
-        use std::os::unix::fs::PermissionsExt;
         let (_tmp, root) = scratch();
         let locked = root.join("locked");
         fs::create_dir(&locked).expect("mkdir");
-        fs::set_permissions(&locked, fs::Permissions::from_mode(0o555)).expect("chmod");
+        fs::set_permissions(&locked, crate::platform::fs::permissions(0o555)).expect("chmod");
         // (Root can write anywhere; the check is for a person's own account.)
         let result = init(&locked);
-        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).expect("chmod back");
+        fs::set_permissions(&locked, crate::platform::fs::permissions(0o755)).expect("chmod back");
         if result.is_ok() {
             return;
         }

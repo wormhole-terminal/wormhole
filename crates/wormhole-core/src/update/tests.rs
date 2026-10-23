@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 use std::fs;
 use std::io::Write as _;
-use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 
 use semver::Version;
@@ -99,7 +98,7 @@ fn full_update_flow() {
     assert!(marker_of(&app).contains("new"));
     let current = app.join("Contents/Frameworks/X.framework/Versions/Current");
     assert_eq!(fs::read_link(&current).unwrap(), Path::new("A"));
-    let exe_mode = fs::metadata(app.join("Contents/MacOS/Wormhole")).unwrap().permissions().mode();
+    let exe_mode = crate::platform::fs::mode(&fs::metadata(app.join("Contents/MacOS/Wormhole")).unwrap());
     assert_eq!(exe_mode & 0o111, 0o111, "executable bit preserved");
     assert!(leftovers(dir.path()).is_empty(), "left behind: {:?}", leftovers(dir.path()));
 
@@ -304,23 +303,23 @@ fn failed_swap_rolls_back() {
 #[test]
 fn unwritable_location_is_reported() {
     let (dir, app) = temp_apps_dir();
-    fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o555)).unwrap();
+    fs::set_permissions(dir.path(), crate::platform::fs::permissions(0o555)).unwrap();
     // root ignores directory permissions (cloud and container CI), so there is nothing to report.
     if fs::write(dir.path().join(".probe"), b"").is_ok() {
-        fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o755)).unwrap();
+        fs::set_permissions(dir.path(), crate::platform::fs::permissions(0o755)).unwrap();
         return;
     }
     let result = preflight(&app);
-    fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o755)).unwrap();
+    fs::set_permissions(dir.path(), crate::platform::fs::permissions(0o755)).unwrap();
     assert!(
         matches!(result, Err(UpdateError::NotWritable(ref p)) if p.ends_with(dir.path().file_name().unwrap()))
     );
 
     // A bundle directory we can't modify (like a root-owned install) is also refused.
     let contents = app.join("Contents");
-    fs::set_permissions(&contents, fs::Permissions::from_mode(0o555)).unwrap();
+    fs::set_permissions(&contents, crate::platform::fs::permissions(0o555)).unwrap();
     let result = preflight(&app);
-    fs::set_permissions(&contents, fs::Permissions::from_mode(0o755)).unwrap();
+    fs::set_permissions(&contents, crate::platform::fs::permissions(0o755)).unwrap();
     assert!(matches!(result, Err(UpdateError::NotWritable(_))), "{result:?}");
     assert!(leftovers(dir.path()).is_empty());
 }
@@ -368,10 +367,10 @@ fn setuid_bits_and_special_files_do_not_survive_extraction() {
     let app = result.unwrap();
     assert_eq!(app, dest.path().join("out/A.app"));
     for path in ["", "suid", "sgid", "sticky"] {
-        let mode = fs::metadata(app.join(path)).unwrap().permissions().mode();
+        let mode = crate::platform::fs::mode(&fs::metadata(app.join(path)).unwrap());
         assert_eq!(mode & 0o7000, 0, "{path:?} kept special bits: {mode:o}");
     }
-    assert_eq!(fs::metadata(app.join("suid")).unwrap().permissions().mode() & 0o777, 0o755);
+    assert_eq!(crate::platform::fs::mode(&fs::metadata(app.join("suid")).unwrap()) & 0o777, 0o755);
 
     for (name, kind) in
         [("fifo", tar::EntryType::Fifo), ("char", tar::EntryType::Char), ("block", tar::EntryType::Block)]

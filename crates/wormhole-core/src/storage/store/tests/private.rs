@@ -1,6 +1,4 @@
 //! The data folder Wormhole makes is its owner's alone: folders `0700`, files `0600`.
-
-use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
 use super::*;
@@ -13,7 +11,7 @@ fn not_private(dir: &Path, found: &mut Vec<(String, u32)>) {
     for entry in std::fs::read_dir(dir).expect("lists") {
         let path = entry.expect("entry").path();
         let meta = std::fs::symlink_metadata(&path).expect("stat");
-        let mode = meta.permissions().mode() & 0o777;
+        let mode = crate::platform::fs::mode(&meta) & 0o777;
         // A program keeps the umask's mode (it may be installed for everyone elsewhere): in the
         // data folder its `0700` folder is what keeps it private.
         if path.ends_with("bin/wh") {
@@ -61,7 +59,7 @@ fn data_folder_is_private() {
     assert!(data.join("wormhole.db-wal").exists() && data.join("profiles.json").exists());
     let mut found = Vec::new();
     not_private(&data, &mut found);
-    assert_eq!(std::fs::metadata(&data).expect("stat").permissions().mode() & 0o777, 0o700);
+    assert_eq!(crate::platform::fs::mode(&std::fs::metadata(&data).expect("stat")) & 0o777, 0o700);
     assert!(found.is_empty(), "not owner-only: {found:?}");
 }
 
@@ -69,14 +67,14 @@ fn data_folder_is_private() {
 fn launch_tightens_only_wormholes_names_and_only_in_its_data_folder() {
     let base = tempfile::tempdir().expect("temp dir");
     let loose = |path: &Path| {
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o644)).expect("chmod");
+        std::fs::set_permissions(path, crate::platform::fs::permissions(0o644)).expect("chmod");
     };
     // A folder someone pointed `WORMHOLE_DATA_DIR` at that holds no Wormhole data: left alone.
     let elsewhere = base.path().join("elsewhere");
     std::fs::create_dir_all(&elsewhere).expect("dir");
     std::fs::write(elsewhere.join("notes.txt"), "x").expect("writes");
     loose(&elsewhere.join("notes.txt"));
-    std::fs::set_permissions(&elsewhere, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+    std::fs::set_permissions(&elsewhere, crate::platform::fs::permissions(0o755)).expect("chmod");
     assert!(!super::super::is_data_dir(&elsewhere, true));
 
     // Wormhole's: its names tightened, a stranger's file beside them not.
@@ -88,7 +86,8 @@ fn launch_tightens_only_wormholes_names_and_only_in_its_data_folder() {
     }
     assert!(super::super::is_data_dir(&data, true));
     super::super::make_data_dir_private(&data);
-    let mode = |name: &str| std::fs::metadata(data.join(name)).expect("stat").permissions().mode() & 0o777;
+    let mode =
+        |name: &str| crate::platform::fs::mode(&std::fs::metadata(data.join(name)).expect("stat")) & 0o777;
     for name in ["wormhole.db", "wormhole.db-wal", "config.json", "profiles/work/config.json"] {
         assert_eq!(mode(name), 0o600, "{name}");
     }

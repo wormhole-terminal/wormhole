@@ -193,7 +193,7 @@ mod tests {
             format!("#!/bin/sh\n[ \"$1\" = statusline ] && cat > '{}'\necho noise\n", got.display()),
         )
         .expect("write the stand-in");
-        std::fs::set_permissions(&bin, std::os::unix::fs::PermissionsExt::from_mode(0o755)).expect("chmod");
+        std::fs::set_permissions(&bin, crate::platform::fs::permissions(0o755)).expect("chmod");
 
         let theirs = r#"m=$(sed 's/.*"model":"\([a-z]*\)".*/\1/'); echo "$m: it's mine""#;
         let ours = command(Some(theirs));

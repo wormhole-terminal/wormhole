@@ -3,6 +3,7 @@
 //! core needs.
 
 use std::fs::{Metadata, OpenOptions, Permissions};
+use std::path::Path;
 
 use super::unix::fs as os;
 
@@ -23,6 +24,11 @@ pub fn no_block(options: &mut OpenOptions) -> &mut OpenOptions {
 /// checked fails instead of being followed.
 pub fn no_block_no_follow(options: &mut OpenOptions) -> &mut OpenOptions {
     os::no_block_no_follow(options)
+}
+
+/// A path made of exactly these bytes, which need not be text (file names on Unix are bytes).
+pub fn path_from_bytes(bytes: &[u8]) -> &Path {
+    os::path_from_bytes(bytes)
 }
 
 /// Whether two metadata are of the same file: the same device and inode.
