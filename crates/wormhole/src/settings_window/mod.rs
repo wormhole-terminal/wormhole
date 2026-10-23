@@ -15,6 +15,8 @@
 
 pub(crate) mod devctl;
 mod font_picker;
+#[cfg(test)]
+mod frame_tests;
 mod nav;
 mod open;
 mod preview_column;
@@ -22,6 +24,8 @@ mod recorder;
 mod registry;
 mod sections;
 mod window;
+#[cfg(test)]
+mod words_tests;
 
 use std::path::{Path, PathBuf};
 
