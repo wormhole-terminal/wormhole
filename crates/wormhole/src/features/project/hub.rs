@@ -80,6 +80,19 @@ impl ProjectHub {
         }
     }
 
+    /// Note why `root`'s notes.md can't be synced (`None`: it can). Whether what the Project tab says of it
+    /// changed, which the caller must pass on: the hub is a global nobody watches.
+    pub(super) fn set_notes_error(&mut self, root: &Path, error: Option<String>) -> bool {
+        match error {
+            Some(error) if self.notes_errors.get(root) == Some(&error) => false,
+            Some(error) => {
+                self.notes_errors.insert(root.to_path_buf(), error);
+                true
+            }
+            None => self.notes_errors.remove(root).is_some(),
+        }
+    }
+
     /// Present in the folder, switched on by the user, and trusted if it needs to be. Checks
     /// the loaded snapshot (the content that would run), never the disk.
     pub fn enabled(&self, project: &LoadedProject, feature: Feature) -> bool {
@@ -148,5 +161,23 @@ impl LoadedProject {
 
     pub fn actions(&self) -> &[Action] {
         self.snapshot.actions()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::ProjectHub;
+
+    #[test]
+    fn a_notes_sync_error_reports_only_what_changes_what_the_tab_says() {
+        let (mut hub, root) = (ProjectHub::default(), Path::new("/work/app"));
+        assert!(!hub.set_notes_error(root, None), "nothing to clear");
+        assert!(hub.set_notes_error(root, Some("denied".into())), "a new error");
+        assert!(!hub.set_notes_error(root, Some("denied".into())), "the same again");
+        assert!(hub.set_notes_error(root, Some("too big".into())), "another reason");
+        assert!(hub.set_notes_error(root, None), "cleared");
+        assert!(hub.notes_errors.is_empty());
     }
 }

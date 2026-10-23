@@ -400,6 +400,34 @@ fn the_notes_file_and_the_terminals_notes_follow_each_other(cx: &mut TestAppCont
     assert!(file.contains("only here"), "and on again: merged afresh: {file}");
 }
 
+/// The hub is a global the window does not watch: a sync that starts failing has to wake the window itself
+/// for the Project tab to say why.
+#[gpui_kit::test]
+fn a_notes_sync_that_fails_wakes_the_window_so_the_tab_says_why(cx: &mut TestAppContext) {
+    if isolate("a_notes_sync_that_fails_wakes_the_window_so_the_tab_says_why") {
+        return;
+    }
+    let window = start(cx, 1);
+    let dir = project("sync-fails", &[("notes.md", "# Notes\n<!-- wormhole:notes -->\n\n## Notes\n")]);
+    drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
+    drive(cx, &window, sync_notes);
+    // Bytes that are not text: the file cannot be read.
+    std::fs::write(dir.join(".wormhole/notes.md"), [0xff_u8, 0xfe, 0x00, 0xff]).expect("breaks notes.md");
+    let wakes = std::rc::Rc::new(std::cell::Cell::new(0));
+    cx.update(|cx| {
+        let counted = wakes.clone();
+        let workspace = window.workspace.upgrade().expect("the window is open");
+        cx.observe(&workspace, move |_, _| counted.set(counted.get() + 1)).detach();
+    });
+    drive(cx, &window, sync_notes);
+    assert!(wakes.get() >= 1, "the window is woken when the error appears");
+    let said = cx.update(|cx| hub(cx).notes_errors.len());
+    assert_eq!(said, 1, "and the hub has the reason");
+    let after = wakes.get();
+    drive(cx, &window, sync_notes);
+    assert_eq!(wakes.get(), after, "the same error again wakes nobody");
+}
+
 /// Approving asks the owner (here the answer is "cancelled": no Touch ID in a test), revoking and the
 /// per-project switches take effect at once, and the defaults are the hub's.
 #[gpui_kit::test]

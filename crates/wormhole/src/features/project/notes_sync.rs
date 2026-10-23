@@ -45,6 +45,8 @@ impl Project {
         }
         let Some(notes) = facts.feature::<Notes>() else { return };
         let profile = facts.profile;
+        // The Project tab says why a sync fails; the hub is a global the window does not watch.
+        let mut told = false;
         for session in facts.sessions() {
             let session_id = session.id;
             let Some(root) = self.of.get(&session_id).and_then(|of| of.root.clone()) else { continue };
@@ -83,7 +85,8 @@ impl Project {
                     if fresh {
                         tracing::warn!("notes.md: {err}");
                     }
-                    hub.notes_errors.insert(root, err.to_string());
+                    let message = err.to_string();
+                    told |= hub.set_notes_error(&root, Some(message));
                     continue;
                 }
             };
@@ -92,13 +95,14 @@ impl Project {
                 && let Err(err) = file.write(doc)
             {
                 let err = err.to_string();
-                if hub.notes_errors.get(&root) != Some(&err) {
+                let changed = hub.set_notes_error(&root, Some(err.clone()));
+                if changed {
                     tracing::warn!("writing notes.md: {err}");
                 }
-                hub.notes_errors.insert(root, err);
+                told |= changed;
                 continue;
             }
-            hub.notes_errors.remove(&root);
+            told |= hub.set_notes_error(&root, None);
             hub.notes_bases.set(session_id, plan.base.clone());
             if let Some(doc) = &plan.apply {
                 notes.update(cx, |notes, cx| notes.apply(session_id, doc, window, cx));
@@ -109,6 +113,9 @@ impl Project {
         }
         if let Some(hub) = hub_of_mut(profile, cx) {
             hub.save_notes_bases();
+        }
+        if told {
+            cx.notify();
         }
     }
 
