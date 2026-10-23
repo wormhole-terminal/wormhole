@@ -11,14 +11,12 @@ use std::path::Path;
 use gpui_kit::*;
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keymap::menus::MenuState;
-use wormhole_core::project::Feature;
 use wormhole_core::terminal::shells;
 
 use crate::actions::DEBUG;
 use crate::app_state::{AppState, app};
 use crate::settings::settings;
 use crate::window::Workspace;
-use crate::window::features::project;
 use wormhole_core::config::TabId;
 
 /// What the menus show changed outside a key or the tick (a profile switch, a window moved to
@@ -88,8 +86,7 @@ impl Workspace {
             Some((_, entry)) => Some(entry.action),
             None => match self.right_tab {
                 TabId::History => Some(ShowHistory),
-                TabId::Project => Some(ShowProject),
-                TabId::Changes | TabId::Notes | TabId::Usage => None,
+                TabId::Changes | TabId::Notes | TabId::Usage | TabId::Project => None,
             },
         });
         if self.active_session().pinned {
@@ -98,16 +95,6 @@ impl Workspace {
         self.pane_menu_state(&mut state);
         if self.active_terminal().read(cx).cwd.is_none() {
             state.disabled.extend([RevealInFinder, CopyPath]);
-        }
-        // The Project tab needs a folder, and the whole project-folder feature behind its flag.
-        if self.active_folder(cx).is_none() || !crate::window::features::project::project_folders_on(cx) {
-            state.disabled.push(ShowProject);
-        }
-        if let Some(project) =
-            self.active_project(cx).filter(|project| project::hub(cx).enabled(project, Feature::Actions))
-        {
-            state.project_actions =
-                project.actions().iter().map(|a| (a.id.clone(), a.title.clone())).collect();
         }
         self.feature_menus(&mut state, cx);
         let numbered = self.session_listing(cx).numbered();

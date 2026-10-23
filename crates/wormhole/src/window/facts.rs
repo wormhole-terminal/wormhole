@@ -9,9 +9,7 @@
 //! The facts live through the build part of `render`; a listener never captures them (it captures the
 //! feature's entity and ids), so the borrow ends before any listener runs.
 
-#![cfg_attr(not(test), expect(dead_code, reason = "the contract is built before every feature uses it"))]
-
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use gpui_kit::*;
 use wormhole_core::config::{FeatureMask, TabId};
@@ -22,7 +20,7 @@ use crate::window::Workspace;
 // A feature's type that the window names. It moves to `window/repo.rs` in 5d, when Changes takes its
 // state; until then `Session.git` is lent through the facts, not copied.
 use crate::window::features::git::changes::GitState;
-use crate::window::session::Session;
+use crate::window::session::{RepoRoot, Session};
 
 /// The window as a feature sees it.
 #[derive(Clone, Copy)]
@@ -39,6 +37,8 @@ pub(in crate::window) struct WindowFacts<'a> {
     /// were last used, and the window is in front). Only for facts made for drawing a frame
     /// ([`Workspace::frame_facts`]); `None` otherwise.
     pub panel_cursor: Option<(usize, bool)>,
+    /// How many ticks (400 ms each) the window has had, for a feature that does something every so many.
+    pub ticks: u64,
     /// Scrolls the panel's short tabs (a tab that is all there at once draws itself in a column
     /// that scrolls with this); the window sets it back to the top when another tab is shown.
     pub panel_scroll: &'a ScrollHandle,
@@ -54,16 +54,28 @@ pub(in crate::window) struct SessionFacts<'a> {
     /// it too, so it is not a feature's); the facts lend it, so the Changes tab reads the status
     /// without the window naming its types and without a copy.
     pub git: &'a GitState,
+    repo_root: &'a RepoRoot,
 }
 
 impl<'a> SessionFacts<'a> {
     fn of(session: &'a Session) -> Self {
-        Self { id: session.id, terminal: session.terminal(), git: &session.git }
+        Self {
+            id: session.id,
+            terminal: session.terminal(),
+            git: &session.git,
+            repo_root: &session.repo_root,
+        }
     }
 
     /// The terminal's folder, if it reports one. Reads the terminal, so it takes the caller's `cx`.
     pub fn folder<'c>(&self, cx: &'c App) -> Option<&'c Path> {
         self.terminal.read(cx).cwd.as_deref()
+    }
+
+    /// The folder the terminal belongs to as the sidebar's bands name it: its repository's root, else the
+    /// folder itself. `None` until its shell has said where it is.
+    pub fn band_folder(&self, cx: &App) -> Option<PathBuf> {
+        Some(self.repo_root.of(self.folder(cx)?))
     }
 }
 
@@ -71,6 +83,21 @@ impl<'a> WindowFacts<'a> {
     /// The selected terminal; `None` only while the window has none.
     pub fn active(&self) -> Option<SessionFacts<'a>> {
         self.workspace.sessions.get(self.workspace.active).map(SessionFacts::of)
+    }
+
+    /// Every terminal of the window, in its order.
+    pub fn sessions(&self) -> impl Iterator<Item = SessionFacts<'a>> + use<'a> {
+        self.workspace.sessions.iter().map(SessionFacts::of)
+    }
+
+    /// Whether this is the window the person used last.
+    pub fn is_front(&self, cx: &App) -> bool {
+        self.workspace.is_front(cx)
+    }
+
+    /// The window's entity of feature type `T`, for a feature that works with another's through a bridge.
+    pub fn feature<T: 'static>(&self) -> Option<Entity<T>> {
+        self.workspace.feature::<T>()
     }
 
     /// The terminals on screen, in the window's order: the selected one, or every pane of its split.
@@ -97,6 +124,7 @@ impl Workspace {
             tab: self.right_tab,
             panel_width: px(self.columns().panel),
             panel_cursor: None,
+            ticks: self.ticks,
             panel_scroll: &self.panel_scroll,
             workspace: self,
         }

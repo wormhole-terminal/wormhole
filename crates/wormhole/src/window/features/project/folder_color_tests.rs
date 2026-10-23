@@ -9,14 +9,15 @@ use wormhole_core::project::{
 };
 use wormhole_core::theme::folder_color::FolderColor;
 
+use super::Project;
+use super::folder_color::{FolderPaint, ProjectPaint, set_folder_color};
+use super::{create_project_folder, set_feature_for};
 use crate::app_state::OpenWindow;
 use crate::settings::{SettingsStore, settings};
 use crate::theme_bridge;
 use crate::window::Workspace;
 use crate::window::features::project;
-use crate::window::features::project::set_feature_for;
-use crate::window::folder_color::{FolderPaint, ProjectPaint, set_folder_color};
-use crate::window::view_tests::{draw, drive, isolate_in, read, start};
+use crate::window::view_tests::{draw, drive, isolate_in, read_cx, start};
 use wormhole_core::config::TabId;
 
 fn isolate(name: &str) -> bool {
@@ -37,24 +38,30 @@ fn folder(name: &str, project_color: Option<&str>) -> PathBuf {
     folder
 }
 
+/// Where `folder`'s colour lives, as the Project tab and the band's menu get it.
+fn folder_paint(ws: &Workspace, folder: &Path, cx: &gpui_kit::App) -> FolderPaint {
+    let project = ws.feature::<Project>().expect("the window has the project feature");
+    project.read(cx).folder_paint(ws.profile(), folder, cx)
+}
+
 /// The terminal in front is in `dir`, and the window has looked for its project.
 fn go(ws: &mut Workspace, dir: &Path, cx: &mut gpui_kit::Context<Workspace>) {
     let dir = dir.to_path_buf();
     ws.active_terminal().update(cx, |terminal, _| terminal.cwd = Some(dir));
-    ws.refresh_projects(cx);
+    ws.refresh_features(cx);
 }
 
 /// The hex of the colour the active terminal's folder wears (its band's; the title row wears its
 /// group's colour instead), if it has one.
 fn tint(ws: &Workspace, _: &mut gpui_kit::Window, cx: &mut gpui_kit::Context<Workspace>) -> Option<String> {
     let tokens = &cx.global::<SettingsStore>().tokens;
-    let paint = ws.folder_paint(&ws.active_folder(cx)?, cx);
+    let paint = folder_paint(ws, &ws.active_folder(cx)?, cx);
     paint.tint(tokens).map(|(color, _)| color.color().to_hex())
 }
 
 /// The folder's paint, as the band and the Project tab get it.
 fn paint(cx: &mut TestAppContext, window: &OpenWindow, folder: &Path) -> FolderPaint {
-    cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.folder_paint(folder, cx))).expect("open")
+    cx.update(|cx| window.workspace.read_with(cx, |ws, cx| folder_paint(ws, folder, cx))).expect("open")
 }
 
 /// The words of the folder's tint for VoiceOver, if the folder is tinted.
@@ -62,7 +69,7 @@ fn band_name(cx: &mut TestAppContext, window: &OpenWindow, folder: &Path) -> Opt
     cx.update(|cx| {
         window.workspace.read_with(cx, |ws, cx| {
             let tokens = &cx.global::<SettingsStore>().tokens;
-            ws.folder_paint(folder, cx).tint(tokens).map(|(_, name)| name)
+            folder_paint(ws, folder, cx).tint(tokens).map(|(_, name)| name)
         })
     })
     .expect("open")
@@ -71,7 +78,7 @@ fn band_name(cx: &mut TestAppContext, window: &OpenWindow, folder: &Path) -> Opt
 /// Pick `color` for `folder` as its band's menu does (the colour goes where the paint says).
 fn pick(cx: &mut TestAppContext, window: &OpenWindow, folder: &Path, color: Option<FolderColor>) {
     drive(cx, window, |ws, _, cx| {
-        let paint = ws.folder_paint(folder, cx);
+        let paint = folder_paint(ws, folder, cx);
         set_folder_color(&paint, folder, color, cx);
     });
 }
@@ -205,10 +212,14 @@ fn a_project_folder_without_a_config_json_keeps_the_persons_own_colour(cx: &mut 
     ));
     assert!(!bare.join(".wormhole/config.json").exists(), "no config.json is made for a colour");
 
-    // The picker's colour is a hex colour, kept the same way and drawn as it is.
+    // The picker's colour is a hex colour, kept the same way and drawn as it is. The picker is the Project
+    // tab's, so the tab has been drawn for the folder.
+    drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::Project, cx));
+    draw(cx, &window);
     let picked = ProjectColor::parse("#2bb3a3").expect("a colour");
     drive(cx, &window, |ws, _, cx| {
-        ws.pick_folder_color(theme_bridge::hsla(picked.color()), cx);
+        let project = ws.feature::<Project>().expect("the window has the project feature");
+        project.update(cx, |project, cx| project.pick_color(theme_bridge::hsla(picked.color()), cx));
     });
     let now = paint(cx, &window, &bare);
     assert!(matches!(now, FolderPaint::Own(Some(ProjectColorChoice::Hex(c))) if c == picked), "{now:?}");
@@ -249,7 +260,7 @@ fn a_locked_colour_is_shown_and_cannot_be_picked(cx: &mut TestAppContext) {
     // Locking it by hand while a menu is open: the pick it was offered is refused by the file.
     let open = paint(cx, &window, &locked);
     std::fs::write(locked.join(".wormhole/config.json"), "{ \"project_color\": \"teal\" }").expect("write");
-    drive(cx, &window, |ws, _, cx| ws.refresh_projects(cx));
+    drive(cx, &window, |ws, _, cx| ws.refresh_features(cx));
     assert_eq!(paint(cx, &window, &locked).closed(), None, "unlocked by hand");
     std::fs::write(locked.join(".wormhole/config.json"), text).expect("write");
     cx.update(|cx| {
@@ -329,7 +340,7 @@ fn a_project_colour_follows_the_settings_switch_and_needs_no_trust(cx: &mut Test
     cx.update(|cx| set_feature_for(&project, Feature::Settings, Some(false), cx));
     cx.run_until_parked();
     let off = drive(cx, &window, |ws, window, cx| {
-        ws.refresh_projects(cx);
+        ws.refresh_features(cx);
         tint(ws, window, cx)
     });
     assert_eq!(off, None);
@@ -343,7 +354,7 @@ fn a_project_colour_follows_the_settings_switch_and_needs_no_trust(cx: &mut Test
     cx.update(|cx| set_feature_for(&project, Feature::Settings, None, cx));
     cx.run_until_parked();
     let on = drive(cx, &window, |ws, window, cx| {
-        ws.refresh_projects(cx);
+        ws.refresh_features(cx);
         tint(ws, window, cx)
     });
     assert!(on.is_some());
@@ -379,7 +390,7 @@ fn picking_a_colour_does_not_send_a_trusted_project_back_for_approval(cx: &mut T
         let project = ProjectFolder::open(&trusted).expect("a project");
         project::hub_mut(cx).trust.trust(&project);
     });
-    drive(cx, &window, |ws, _, cx| ws.refresh_projects(cx));
+    drive(cx, &window, |ws, _, cx| ws.refresh_features(cx));
     assert_eq!(status(cx), Some(TrustStatus::Trusted));
     for color in [Some(FolderColor::Blue), None, Some(FolderColor::Pink)] {
         pick(cx, &window, &trusted, color);
@@ -389,7 +400,7 @@ fn picking_a_colour_does_not_send_a_trusted_project_back_for_approval(cx: &mut T
     // Anything else in the file still asks.
     std::fs::write(trusted.join(".wormhole/config.json"), config_of(&trusted).replace("debug", "trace"))
         .expect("write");
-    drive(cx, &window, |ws, _, cx| ws.refresh_projects(cx));
+    drive(cx, &window, |ws, _, cx| ws.refresh_features(cx));
     assert_eq!(status(cx), Some(TrustStatus::Changed));
 }
 
@@ -410,16 +421,22 @@ fn the_project_tab_is_there_for_any_folder_and_makes_the_project(cx: &mut TestAp
     let bare = folder("bare", None);
     drive(cx, &window, |ws, _, cx| go(ws, &bare, cx));
     assert!(tabs(cx).contains(&TabId::Project), "a folder is enough, with no .wormhole/");
-    assert!(read(cx, &window, |ws| ws.active_session().project.clone().is_none()));
+    assert!(read_cx(cx, &window, super::api::active_root).is_none());
 
-    drive(cx, &window, |ws, _, cx| ws.create_project_folder(cx));
+    drive(cx, &window, |ws, _, cx| {
+        let folder = ws.active_folder(cx).expect("a folder");
+        create_project_folder(folder, cx);
+    });
     assert!(bare.join(".wormhole/config.json").is_file(), "the project folder was made");
-    let found = read(cx, &window, |ws| ws.active_session().project.clone());
+    let found = read_cx(cx, &window, super::api::active_root);
     assert_eq!(found.as_deref(), Some(bare.as_path()), "every window looked again at once");
 
     // A second click (or another program) finds it there: no error, nothing replaced.
     let config = std::fs::read_to_string(bare.join(".wormhole/config.json")).expect("config");
-    drive(cx, &window, |ws, _, cx| ws.create_project_folder(cx));
+    drive(cx, &window, |ws, _, cx| {
+        let folder = ws.active_folder(cx).expect("a folder");
+        create_project_folder(folder, cx);
+    });
     assert_eq!(std::fs::read_to_string(bare.join(".wormhole/config.json")).expect("config"), config);
     let error = cx.update(|cx| project::hub(cx).error.is_some());
     assert!(!error, "it is a project all the same");
@@ -477,6 +494,6 @@ fn an_older_approval_is_upgraded_on_load_and_survives_a_colour(cx: &mut TestAppC
             .replace("/bin/zsh", "/bin/sh"),
     )
     .expect("write");
-    drive(cx, &window, |ws, _, cx| ws.refresh_projects(cx));
+    drive(cx, &window, |ws, _, cx| ws.refresh_features(cx));
     assert_eq!(status(cx), Some(TrustStatus::Changed));
 }

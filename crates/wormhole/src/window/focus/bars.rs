@@ -117,7 +117,7 @@ impl Workspace {
     /// has a folder, with or without a `.wormhole/`: it is where a folder gets its colour and, without
     /// one, where the project folder is made. It stays while it is the tab on show, so a terminal
     /// whose folder isn't known for a moment doesn't pull it out from under the person.
-    pub(in crate::window) fn legacy_tab_offered(&self, tab: TabId, cx: &App) -> bool {
+    pub(in crate::window) fn legacy_tab_offered(&self, tab: TabId) -> bool {
         match tab {
             TabId::Changes => false,
             TabId::History => true,
@@ -125,12 +125,8 @@ impl Workspace {
             TabId::Notes => false,
             // In the table.
             TabId::Usage => false,
-            // The Project tab belongs to the project-folder feature, so it's gone while that flag is
-            // off (see `features`).
-            TabId::Project => {
-                crate::window::features::project::project_folders_on(cx)
-                    && (self.active_folder(cx).is_some() || self.right_tab == TabId::Project)
-            }
+            // In the table.
+            TabId::Project => false,
         }
     }
 

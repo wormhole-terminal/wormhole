@@ -2,6 +2,7 @@
 //! window, hearing their events, and asking the table what the frame needs (the tab list, the action
 //! bindings, the menu, the keys over a list). Nothing here names a feature.
 
+use std::path::Path;
 use std::time::Duration;
 
 use gpui_kit::prelude::*;
@@ -13,7 +14,7 @@ use wormhole_core::storage::store::SessionRecord;
 use crate::actions::gpui_action;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{FeatureDef, FeatureEvent, Root, Stake, TabDef};
+use crate::window::feature::{FeatureDef, FeatureEvent, Root, SpawnAdd, Stake, TabDef};
 use crate::window::sidebar::{RowExtras, RowInfo};
 
 /// The pause between a pasted text and the Enter that submits it.
@@ -75,6 +76,18 @@ impl Workspace {
             FeatureEvent::SendText { session, text, submit } => {
                 self.send_to_terminal(*session, text, *submit, window, cx);
             }
+            FeatureEvent::TabGone(tab) => {
+                if self.right_tab == *tab {
+                    self.set_right_tab(TabId::Changes);
+                }
+                cx.notify();
+            }
+            FeatureEvent::Terminal { target, input } => {
+                self.run_in_terminal(target.clone(), input.clone(), window, cx);
+            }
+            FeatureEvent::OpenTerminals { terminals } => {
+                self.open_terminals(terminals.clone(), window, cx);
+            }
         }
     }
 
@@ -122,7 +135,7 @@ impl Workspace {
     pub(in crate::window) fn tab_offered(&self, tab: TabId, facts: &WindowFacts<'_>, cx: &App) -> bool {
         match self.tab_entry(tab) {
             Some((at, entry)) => facts.features.has(self.features[at].id) && (entry.shown)(facts, cx),
-            None => self.legacy_tab_offered(tab, cx),
+            None => self.legacy_tab_offered(tab),
         }
     }
 
@@ -197,11 +210,53 @@ impl Workspace {
 
     /// Once per window tick: the housekeeping of every feature with state, on or off.
     pub(in crate::window) fn tick_features(&self, window: &mut Window, cx: &mut App) {
+        let facts = self.facts(cx);
         for (at, def) in self.features.iter().enumerate() {
             if let (Some(tick), Some(entity)) = (def.tick, self.feature_entity(at)) {
-                tick(entity, window, cx);
+                tick(entity, &facts, window, cx);
             }
         }
+    }
+
+    /// The window looks again at what its features show of the world outside the app: when it comes to
+    /// the front, when an outside change should reach every window (a project's trust or files).
+    pub(in crate::window) fn refresh_features(&self, cx: &mut App) {
+        let facts = self.facts(cx);
+        for (at, def) in self.features.iter().enumerate() {
+            if let (Some(refresh), Some(entity)) = (def.refresh, self.feature_entity(at)) {
+                refresh(entity, &facts, cx);
+            }
+        }
+    }
+
+    /// What the features add to the start of a terminal in `cwd`: their environment, in the table's
+    /// order, and the shell of the last that names one.
+    pub(in crate::window) fn spawn_adds(
+        cwd: Option<&Path>,
+        features: &[FeatureDef],
+        cx: &mut App,
+    ) -> SpawnAdd {
+        let mut all = SpawnAdd::default();
+        for add in features.iter().filter_map(|def| def.spawn).map(|spawn| spawn(cwd, cx)) {
+            all.env.extend(add.env);
+            all.shell = add.shell.or(all.shell);
+        }
+        all
+    }
+
+    /// Whether the folder of terminal `session` is one a feature has approved to run programs for (git's
+    /// pull request lookup asks before it starts `gh`). It fails closed: with no feature that gives the
+    /// approval, or one that doesn't, nothing is approved.
+    pub(in crate::window) fn session_trusted(&self, session: i64, cx: &App) -> bool {
+        let mut approved = false;
+        for (at, def) in self.features.iter().enumerate() {
+            let Some(trusted) = def.trusted else { continue };
+            if !self.feature_entity(at).is_some_and(|entity| trusted(entity, session, cx)) {
+                return false;
+            }
+            approved = true;
+        }
+        approved
     }
 
     /// The saved record of the terminal at `ix`: its own, then each feature's part of it, written by

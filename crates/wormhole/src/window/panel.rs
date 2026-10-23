@@ -5,7 +5,7 @@ use gpui_kit::*;
 use wormhole_core::config::TabId;
 
 use crate::settings::ui_in;
-use crate::window::{Workspace, panel_list};
+use crate::window::Workspace;
 
 impl Workspace {
     /// The right panel, `width` points wide (its column's, or its width at rest while it slides).
@@ -54,13 +54,8 @@ impl Workspace {
                     }
                     // Notes is in the table.
                     TabId::Notes => div().into_any_element(),
-                    // Short tabs, all there at once: a plain scrolling column.
-                    TabId::Project => {
-                        let content = self.render_project_tab(cx).into_any_element();
-                        panel_list::scroll_column("project-scroll", &self.panel_scroll, ui, content, cx)
-                    }
                     // In the table.
-                    TabId::Usage => div().into_any_element(),
+                    TabId::Project | TabId::Usage => div().into_any_element(),
                     // Changes is always in the table; a window made without it has nothing to show.
                     TabId::Changes => div().into_any_element(),
                 },
@@ -116,13 +111,13 @@ impl Workspace {
                 } else if let (Some(on_show), Some(entity)) =
                     (entry.on_show, self.feature_entity(at).cloned())
                 {
-                    on_show(&entity, session, cx);
+                    let facts = self.facts(cx);
+                    on_show(&entity, &facts, session, cx);
                 }
             }
             None => match tab {
                 TabId::History => self.refresh_history(self.active, cx),
-                TabId::Project => self.refresh_projects(cx),
-                TabId::Changes | TabId::Notes | TabId::Usage => {}
+                TabId::Changes | TabId::Notes | TabId::Usage | TabId::Project => {}
             },
         }
         self.mark_dirty(cx);

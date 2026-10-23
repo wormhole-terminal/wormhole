@@ -335,15 +335,4 @@ impl AppState {
             .ok()
             .flatten()
     }
-
-    /// Projects with a session open in any window.
-    pub(crate) fn open_project_roots(cx: &App) -> Vec<PathBuf> {
-        let mut roots = Vec::new();
-        for window in &app(cx).windows {
-            if let Ok(found) = window.workspace.read_with(cx, |ws, cx| ws.project_roots(cx)) {
-                roots.extend(found);
-            }
-        }
-        roots
-    }
 }

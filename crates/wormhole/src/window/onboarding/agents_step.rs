@@ -169,7 +169,7 @@ impl Workspace {
         }
         let root = match sheet.model.folder() {
             Some(folder) => wormhole_core::project::find_project(folder).map(|f| f.root),
-            None => self.active_session().project.clone(),
+            None => project::api::active_root(self, cx),
         }?;
         let project = project::load_project_info(&root, cx)?;
         if project.status == wormhole_core::project::TrustStatus::Trusted {

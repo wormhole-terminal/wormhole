@@ -16,7 +16,7 @@
 //! rows or terminals take the whole set. A downcast clones a handle, which is a weak upgrade and an
 //! atomic, and that is not a price to pay per row.
 //!
-//! Only Changes, Notes and Usage are in the table so far. Features move in one at a time, and a hook is
+//! Only Changes, Notes, Usage and Project are in the table so far. Features move in one at a time, and a hook is
 //! added when the first feature needs it, so a field below that nothing uses yet is the shape the
 //! design settled on, not a promise that each is used.
 //!
@@ -29,11 +29,14 @@
 
 #![cfg_attr(not(test), expect(dead_code, reason = "the contract is built before every feature uses it"))]
 
+use std::path::{Path, PathBuf};
+
 use gpui_kit::assets::IconName;
 use gpui_kit::*;
 use wormhole_core::config::{FeatureId, TabId};
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keymap::menus::MenuState;
+use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::SessionRecord;
 
 use crate::window::Workspace;
@@ -81,6 +84,46 @@ pub(in crate::window) enum FeatureEvent {
     /// Paste `text` into a terminal of this window and give it the keyboard; with `submit`, press
     /// Enter after it.
     SendText { session: i64, text: SharedString, submit: bool },
+    /// This tab is gone (its feature went off): if the panel shows it, show Changes. Nothing else is
+    /// done for the change, unlike a [`Self::ShowTab`].
+    TabGone(TabId),
+    /// Put `input` into a terminal of this window, as the `target` says which. The terminals
+    /// are found, or made, when the event is handled, so several in a row see each other's.
+    Terminal { target: TerminalTarget, input: TerminalInput },
+    /// Open these terminals, each in turn selected and given the keyboard, then select the last of them
+    /// that asks for the focus. One whose name is already a terminal's is not opened again.
+    OpenTerminals { terminals: Vec<NewTerminal> },
+}
+
+/// Which terminal of the window a [`FeatureEvent::Terminal`] is for.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::window) enum TerminalTarget {
+    /// The one on screen.
+    Active,
+    /// A new one, in `cwd`, selected.
+    New { cwd: Option<PathBuf> },
+    /// The one called `name`, made in `cwd` if there is none, and selected.
+    Named { name: String, cwd: Option<PathBuf> },
+}
+
+/// What goes into the terminal.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::window) enum TerminalInput {
+    /// Typed in, then Enter.
+    Command(String),
+    /// Pasted, then Enter a moment later with `submit`. The terminal doesn't get the keyboard.
+    Paste { text: String, submit: bool },
+}
+
+/// A terminal [`FeatureEvent::OpenTerminals`] opens.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::window) struct NewTerminal {
+    pub name: String,
+    pub cwd: PathBuf,
+    /// Typed in once it starts, then Enter.
+    pub run: Option<String>,
+    /// Selected at the end, of the ones opened.
+    pub focus: bool,
 }
 
 /// The hooks' shapes. Plain function pointers, never `dyn`: the frame calls them and a closure's box
@@ -92,11 +135,14 @@ pub(in crate::window) type MenuFn = fn(&AnyEntity, &WindowFacts<'_>, &mut MenuSt
 pub(in crate::window) type CountFn = fn(&AnyEntity, &WindowFacts<'_>, &App) -> Option<usize>;
 pub(in crate::window) type TabActionsFn =
     fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App) -> Option<AnyElement>;
-pub(in crate::window) type OnShowFn = fn(&AnyEntity, session: i64, &mut App);
+pub(in crate::window) type OnShowFn = fn(&AnyEntity, &WindowFacts<'_>, session: i64, &mut App);
 pub(in crate::window) type FocusInFn =
     fn(&AnyEntity, &WindowFacts<'_>, session: i64, &mut Window, &mut App) -> bool;
 pub(in crate::window) type ProfileShownFn = fn(&mut App);
-pub(in crate::window) type TickFn = fn(&AnyEntity, &mut Window, &mut App);
+pub(in crate::window) type TickFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
+pub(in crate::window) type RefreshFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App);
+pub(in crate::window) type TrustedFn = fn(&AnyEntity, session: i64, &App) -> bool;
+pub(in crate::window) type SpawnFn = fn(Option<&Path>, &mut App) -> SpawnAdd;
 pub(in crate::window) type PressFn =
     fn(&AnyEntity, session: i64, row: usize, Activate, following: bool, &mut Window, &mut App) -> bool;
 
@@ -135,6 +181,21 @@ pub(in crate::window) struct FeatureDef {
     /// its own app-wide data for it (Usage's reports). Per window state is the window's and doesn't
     /// need this. Called from outside any window, so it gets only the app.
     pub profile_shown: Option<ProfileShownFn>,
+    /// The rest of what a feature that keeps data for each profile is told about the profiles.
+    pub profiles: Option<ProfileHooks>,
+    /// The window looks again at what it shows of the world outside the app (Project: which project each
+    /// terminal is in): once in a while on the tick, when the window comes to the front, when its tab
+    /// is shown, and when something every window should see changed.
+    pub refresh: Option<RefreshFn>,
+    /// Whether the folder of terminal `session` is one the person has approved to run programs for.
+    /// Asked before something is started for the folder's sake (git's pull request lookup starts
+    /// `gh`). The window fails closed: with no hook anywhere, nothing is approved.
+    pub trusted: Option<TrustedFn>,
+    /// What a new terminal started in a folder gets from the feature (the project's environment and
+    /// shell). Called for every feature, on or off: it decides itself. One user so far, noted as the
+    /// exception to "a hook when a second feature needs it": the terminal is made by the window, and
+    /// what it is made with is not the window's to know.
+    pub spawn: Option<SpawnFn>,
     /// The per-window state, if the feature has any.
     pub state: Option<StateDef>,
 }
@@ -218,6 +279,23 @@ pub(in crate::window) struct WalkFns {
     pub fold: fn(&AnyEntity, session: i64, row: usize, &mut App),
     /// Scrolls a row into view.
     pub reveal: fn(&AnyEntity, &WindowFacts<'_>, row: usize, &App),
+}
+
+/// What a feature adds to the start of a terminal: variables for its environment and the shell it
+/// runs, which a later source (the profile's own environment, the terminal's own shell) may replace.
+#[derive(Default, Debug, PartialEq, Eq)]
+pub(in crate::window) struct SpawnAdd {
+    pub env: std::collections::BTreeMap<String, String>,
+    pub shell: Option<String>,
+}
+
+/// How a feature that keeps data for each profile follows the profiles: when one is opened beside the
+/// shown one, when one is deleted, and when a terminal id is handed out in one (so data kept under an
+/// id of a session that is gone can be dropped).
+pub(in crate::window) struct ProfileHooks {
+    pub opened: fn(&ProfileId, &mut App),
+    pub deleted: fn(&ProfileId, &mut App),
+    pub id_allocated: fn(&ProfileId, id: i64, &mut App),
 }
 
 /// What closing some terminals would lose, in the words of the close question.

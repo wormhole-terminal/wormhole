@@ -8,24 +8,20 @@ use gpui_kit::*;
 use wormhole_core::project::{self as proj, ProjectError, ProjectFolder};
 
 use super::{hub_mut, project_folders_on, reload_projects};
-use crate::window::Workspace;
 
-impl Workspace {
-    /// Make the project folder for the active terminal's folder, then have every window look for
-    /// it, so the tab turns into the project's at once. A new project is untrusted and sets
-    /// nothing, which the tab already shows.
-    pub(in crate::window) fn create_project_folder(&mut self, cx: &mut Context<Self>) {
-        if !project_folders_on(cx) {
-            return;
-        }
-        let Some(folder) = self.active_folder(cx) else { return };
-        cx.spawn(async move |this, cx| {
-            let target = folder.clone();
-            let made = cx.background_spawn(async move { proj::init(&target) }).await;
-            this.update(cx, |_, cx| project_made(&folder, made, cx)).ok();
-        })
-        .detach();
+/// Make the project folder in `folder` (the terminal's folder, as its band names it), then have every
+/// window look for it, so the tab turns into the project's at once. A new project is untrusted and sets
+/// nothing, which the tab already shows.
+pub(crate) fn create_project_folder(folder: PathBuf, cx: &mut App) {
+    if !project_folders_on(cx) {
+        return;
     }
+    cx.spawn(async move |cx| {
+        let target = folder.clone();
+        let made = cx.background_spawn(async move { proj::init(&target) }).await;
+        cx.update(|cx| project_made(&folder, made, cx));
+    })
+    .detach();
 }
 
 /// What came of making the project folder in `folder`.

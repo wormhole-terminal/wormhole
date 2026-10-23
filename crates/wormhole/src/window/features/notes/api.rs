@@ -1,7 +1,7 @@
-//! What the project folder's `notes.md` sync may do with a terminal's notes and tasks: read them as
-//! a document, replace them with a merged one, and ask whether one is being written (the sync waits
-//! for the writer). This is the one bridge between the two features; the sync's own decisions are
-//! core's (`project::plan_sync`).
+//! What the project folder may do with a terminal's notes and tasks: read them as a document, replace
+//! them with a merged one, ask whether one is being written (the `notes.md` sync waits for the writer),
+//! and add a note from a prompt. The project feature's `notes_sync` is the one file that uses it; the
+//! sync's own decisions are core's (`project::plan_sync`).
 use gpui_kit::*;
 use wormhole_core::project::{NotesDoc, TaskItem as DocTask};
 use wormhole_core::view::notes::paragraphs::note_slots;
@@ -10,6 +10,19 @@ use wormhole_core::view::notes::tasks::Task;
 use super::Notes;
 
 impl Notes {
+    /// A note with `text` on the terminal, selected and given the keyboard, as the key for a new note
+    /// does. `panel` is the panel's width, for the hint of an empty note.
+    pub(in crate::window) fn note_from(
+        &mut self,
+        session: i64,
+        text: String,
+        panel: f32,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.new_note(session, Some(text), panel, window, cx);
+    }
+
     /// The terminal's tasks and its notes with something in them, as the document the sync compares.
     pub(in crate::window) fn snapshot(&self, session: i64, cx: &App) -> NotesDoc {
         let Some(of) = self.of.get(&session) else { return NotesDoc::default() };

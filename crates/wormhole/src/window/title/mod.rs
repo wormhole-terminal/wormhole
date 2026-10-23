@@ -24,6 +24,7 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::platform::open_in::{Installed, Resolved};
 use wormhole_core::project::ProjectColor;
+use wormhole_core::theme::tokens::Color;
 use wormhole_core::view::layout::title_row::{PathStep, RowFit};
 use wormhole_core::view::panes::Axis;
 
@@ -35,7 +36,6 @@ use crate::terminal_view::Status;
 use crate::theme_bridge::token;
 use crate::window::Workspace;
 use crate::window::chrome::TitleDrag as _;
-use crate::window::folder_color;
 use crate::window::open_in::{self, OpenIn};
 use crate::window::title::extras::ExtraFacts;
 
@@ -207,7 +207,14 @@ impl Workspace {
         let color = self.sidebar.view.groups.get(group)?.paint()?;
         let tokens = &store_in(&self.profile, cx).tokens;
         let color = ProjectColor::from_color(color.color(tokens));
-        Some(folder_color::title_tint(&self.profile, color, cx))
+        let store = store_in(&self.profile, cx);
+        let bar = store.tokens.get("surface.window").map_or(Color::BLACK, |c| c.with_alpha(1.0));
+        let text = store.tokens.get("text.primary").unwrap_or(Color::WHITE);
+        Some(Tint {
+            color,
+            peak: color.tint_peak(bar, text),
+            line: crate::theme_bridge::hsla(color.line(bar)),
+        })
     }
 
     /// Open in… and the splits at the right end of the title row, flush against each other with no

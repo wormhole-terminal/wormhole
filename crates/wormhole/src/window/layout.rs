@@ -136,9 +136,6 @@ impl Render for Workspace {
             self.group_drag = None;
             self.sidebar.over = None;
         }
-        if self.picking_folder.is_some() && !self.folder_picker.read(cx).is_open() {
-            self.picking_folder = None;
-        }
         let notes_visible = self.notes_visible();
         let columns = self.columns();
         if notes_visible {
@@ -146,9 +143,8 @@ impl Render for Workspace {
             match self.right_tab {
                 TabId::Changes => self.sync_changes_list(cx),
                 TabId::History => self.sync_history_list(),
-                TabId::Notes => {}
-                TabId::Project => self.sync_folder_picker(window, cx),
-                TabId::Usage => {}
+                // In the table: their frames build their own lists.
+                TabId::Notes | TabId::Usage | TabId::Project => {}
             }
         }
         let ui = ui_in(&self.profile, cx);

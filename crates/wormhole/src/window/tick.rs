@@ -97,17 +97,10 @@ impl Workspace {
             for session in &self.sessions {
                 session.repo_root.forget();
             }
-            self.refresh_projects(cx);
         }
         // The features' housekeeping (Notes: the backstop for a new note that never got the focus it
         // would be thrown away on losing).
         self.tick_features(window, cx);
-        if self.ticks.is_multiple_of(3) {
-            self.sync_project_notes(window, cx);
-        }
-        if self.is_front(cx) {
-            self.remember_project(cx);
-        }
         self.tick_extras(cx);
         self.refresh_status_bar(cx);
         self.crumb_tick(cx);
@@ -121,11 +114,5 @@ impl Workspace {
 
         #[cfg(feature = "devctl")]
         self.run_tick_hook(window, cx);
-    }
-
-    /// The selected session's project counts as recently used.
-    fn remember_project(&self, cx: &mut App) {
-        let Some(root) = self.active_session().project.clone() else { return };
-        crate::app_state::app_mut(cx).remember_project(root);
     }
 }

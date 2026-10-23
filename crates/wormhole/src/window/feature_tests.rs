@@ -29,7 +29,7 @@ use crate::window::view_tests::{draw, drive, isolate_in, read, start, start_with
 
 /// Features core lists that have not moved into the app's table yet. Each phase 5 step takes one off
 /// this list when it adds the entry; the list ends empty.
-const NOT_YET: &[FeatureId] = &[FeatureId::History, FeatureId::Project, FeatureId::Worktrees];
+const NOT_YET: &[FeatureId] = &[FeatureId::History, FeatureId::Worktrees];
 
 #[test]
 fn every_feature_is_in_the_table_or_waiting_for_its_step() {
@@ -84,7 +84,7 @@ static STAND_IN: &[FeatureDef] = &[
             icon: IconName::PanelRight,
             label: "Stand-in",
             action: ActionId::ShowUsage,
-            on_show: Some(|entity, session, cx| {
+            on_show: Some(|entity, _, session, cx| {
                 marker(entity).update(cx, |m, _| m.asked.push(format!("shown:{session}")));
             }),
             shown: |facts, _| facts.active().is_some(),
@@ -134,6 +134,10 @@ static STAND_IN: &[FeatureDef] = &[
         menu: Some(|_, _, state, _| state.disabled.push(ActionId::NewNote)),
         tick: None,
         profile_shown: None,
+        profiles: None,
+        refresh: None,
+        trusted: None,
+        spawn: None,
         state: Some(StateDef {
             make: |window, cx| {
                 let entity = cx.new(|_| Marker {
@@ -258,7 +262,7 @@ fn a_window_makes_its_features_state_and_hands_facts_to_its_hooks(cx: &mut TestA
         );
 
         // The tab's own hooks need no `Workspace`: the entity, the session and the app's `cx` are enough.
-        (tab.on_show.expect("has on_show"))(&entity, 7, cx);
+        (tab.on_show.expect("has on_show"))(&entity, &facts, 7, cx);
         let walk = tab.walk.as_ref().expect("has a list");
         assert_eq!((walk.walkable)(&entity, &facts, cx).len(), 2);
         assert!((walk.press)(&entity, 7, 1, Activate::Space, false, window, cx));
@@ -685,6 +689,10 @@ macro_rules! crowd_member {
             menu: None,
             tick: None,
             profile_shown: None,
+            profiles: None,
+            refresh: None,
+            trusted: None,
+            spawn: None,
             state: Some(StateDef {
                 make: |window, cx| {
                     let entity = cx.new(|_| Marker {

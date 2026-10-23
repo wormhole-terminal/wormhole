@@ -15,19 +15,24 @@ use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::project::{ActionKind, Feature, TrustLine, TrustStatus, trust_applies};
+use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::theme::folder_color::FolderColor;
 use wormhole_core::view::limits::count_grouped;
 use wormhole_core::view::sidebar::display_path;
 use wormhole_core::view::spoken;
 
-use super::{LoadedProject, hub};
+use super::notes_sync::NotesLink;
+use super::{
+    LoadedProject, Project, approve_project, create_project_folder, folder_color, hub, revoke_project,
+    set_feature_for,
+};
 use crate::platform::auth;
 use crate::settings::UiColors;
 use crate::settings::{store_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::theme_bridge;
-use crate::window::Workspace;
-use crate::window::folder_color;
+use crate::window::facts::WindowFacts;
+use crate::window::panel_list;
 use crate::window::session::home_dir;
 
 /// How many lines the trust notice shows in full; a longer list shows [`TRUST_LINES_SHOWN`]
@@ -35,18 +40,56 @@ use crate::window::session::home_dir;
 const TRUST_LINES_MAX: usize = 6;
 const TRUST_LINES_SHOWN: usize = 5;
 
-impl Workspace {
-    /// The Project tab: the colour of the terminal's folder, which works with or without a
-    /// project folder, then the project folder or the way to make one.
-    pub(in crate::window) fn render_project_tab(&self, cx: &Context<Self>) -> AnyElement {
-        let folder = self.active_folder(cx);
+/// The tab: the colour of the terminal's folder, which works with or without a project folder, then the
+/// project folder or the way to make one. Built inline from the window's frame, in the column that scrolls
+/// the panel's short tabs; its buttons update the feature's entity.
+pub(super) fn tab(
+    entity: &AnyEntity,
+    facts: &WindowFacts<'_>,
+    window: &mut Window,
+    cx: &mut App,
+) -> AnyElement {
+    let project =
+        entity.clone().downcast::<Project>().expect("the project entity is made by this entry's `make`");
+    let Some(active) = facts.active() else { return div().into_any_element() };
+    let folder = active.band_folder(cx);
+    project.update(cx, |project, cx| project.sync_picker(facts.profile, folder.as_deref(), window, cx));
+    let ui = ui_in(facts.profile, cx);
+    let tab = Tab {
+        project: &project,
+        profile: facts.profile,
+        session: active.id,
+        folder,
+        panel: f32::from(facts.panel_width),
+        notes: NotesLink::of(facts),
+    };
+    let content = tab.content(cx);
+    panel_list::scroll_column("project-scroll", facts.panel_scroll, ui, content, cx)
+}
+
+/// What the tab is drawn for.
+struct Tab<'a> {
+    project: &'a Entity<Project>,
+    profile: &'a ProfileId,
+    /// The terminal in front.
+    session: i64,
+    /// Its folder, as the band names it.
+    folder: Option<std::path::PathBuf>,
+    /// The panel's width, for the hint of a note a prompt becomes.
+    panel: f32,
+    notes: Option<NotesLink>,
+}
+
+impl Tab<'_> {
+    fn content(&self, cx: &App) -> AnyElement {
+        let folder = self.folder.as_deref();
         div()
             .flex()
             .flex_col()
-            .children(folder.as_deref().map(|folder| self.render_folder_color(folder, cx)))
-            .child(match self.active_project(cx) {
+            .children(folder.map(|folder| self.render_folder_color(folder, cx)))
+            .child(match self.project.read(cx).project(self.session, cx) {
                 Some(project) => self.render_project(project, cx),
-                None => self.render_no_project(folder.as_deref(), cx),
+                None => self.render_no_project(folder, cx),
             })
             .into_any_element()
     }
@@ -56,9 +99,9 @@ impl Workspace {
     /// the project's `config.json` when it has one; the line under the row says which. A project
     /// that locks its colour (or whose file can't be read) shows the row dimmed, and a hex colour
     /// it sets by hand is shown as a swatch of its own, matching none of the names.
-    fn render_folder_color(&self, folder: &Path, cx: &Context<Self>) -> AnyElement {
-        let ui = ui_in(&self.profile, cx);
-        let paint = self.folder_paint(folder, cx);
+    fn render_folder_color(&self, folder: &Path, cx: &App) -> AnyElement {
+        let ui = ui_in(self.profile, cx);
+        let paint = self.project.read(cx).folder_paint(self.profile, folder, cx);
         let (current, custom) = (paint.checked(), paint.custom());
         let enabled = paint.closed().is_none();
         let choice =
@@ -100,10 +143,10 @@ impl Workspace {
                 )
             }))
             // Any other colour: the picker, which shows the folder's own and saves a hex colour.
-            .children((enabled && self.picking_folder.is_none()).then(|| {
+            .children(enabled.then(|| {
                 let featured = folder_color::choices(cx).into_iter().map(|(_, shown)| shown).collect();
                 div().flex().items_center().h(px(style::HIT_MIN)).pl_1().child(
-                    ColorPicker::new(&self.folder_picker)
+                    ColorPicker::new(&self.project.read(cx).picker)
                         .icon(IconName::Plus)
                         .featured_colors(featured)
                         .anchor(Anchor::TopRight)
@@ -125,8 +168,8 @@ impl Workspace {
     }
 
     /// A folder with no `.wormhole/`: what one is, and the button that makes it.
-    fn render_no_project(&self, folder: Option<&Path>, cx: &Context<Self>) -> AnyElement {
-        let ui = ui_in(&self.profile, cx);
+    fn render_no_project(&self, folder: Option<&Path>, cx: &App) -> AnyElement {
+        let ui = ui_in(self.profile, cx);
         let target = folder.map(|folder| {
             format!("Creates {}/.wormhole/", display_path(folder, home_dir()).trim_end_matches('/'))
         });
@@ -159,7 +202,14 @@ impl Workspace {
                                     .small()
                                     .label("Create project folder")
                                     .disabled(folder.is_none())
-                                    .on_click(cx.listener(|this, _, _, cx| this.create_project_folder(cx))),
+                                    .on_click({
+                                        let folder = folder.map(Path::to_path_buf);
+                                        move |_, _, cx| {
+                                            if let Some(folder) = folder.clone() {
+                                                create_project_folder(folder, cx);
+                                            }
+                                        }
+                                    }),
                             )
                             .child(
                                 div().text_caption().text_color(ui.faint).child(target.unwrap_or_else(
@@ -173,8 +223,8 @@ impl Workspace {
     }
 
     /// The project at the terminal's folder: its trust, then a band for each part.
-    fn render_project(&self, project: &LoadedProject, cx: &Context<Self>) -> AnyElement {
-        let ui = ui_in(&self.profile, cx);
+    fn render_project(&self, project: &LoadedProject, cx: &App) -> AnyElement {
+        let ui = ui_in(self.profile, cx);
         let root = project.folder.root.clone();
         let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
 
@@ -203,7 +253,7 @@ impl Workspace {
         let commands = project.request.as_ref().map(|r| r.commands.clone()).unwrap_or_default();
         let needing = project.snapshot.needing_trust();
         if project.request.is_some() && (!commands.is_empty() || !needing.is_empty()) {
-            body = body.child(self.render_trust(project.status, &commands, &needing, cx));
+            body = body.child(self.render_trust(&root, project.status, &commands, &needing, cx));
         }
         if let Some(err) = &hub(cx).error {
             body = body.child(problem_line(ui, err.clone()));
@@ -242,9 +292,12 @@ impl Workspace {
                     trailing: Some(
                         Switch::new(SharedString::from(format!("feature-{}", feature.key())))
                             .checked(on)
-                            .on_click(cx.listener(move |this, checked: &bool, _, cx| {
-                                this.set_project_feature(feature, *checked, cx)
-                            }))
+                            .on_click({
+                                let root = root.clone();
+                                move |checked: &bool, _, cx| {
+                                    set_feature_for(&root, feature, Some(*checked), cx)
+                                }
+                            })
                             .into_any_element(),
                     ),
                     actions: Vec::new(),
@@ -278,9 +331,10 @@ impl Workspace {
                         },
                     )
                     .cursor_pointer()
-                    .on_click(
-                        cx.listener(move |this, _, window, cx| this.run_project_action(&id, window, cx)),
-                    ),
+                    .on_click({
+                        let (project, session) = (self.project.clone(), self.session);
+                        move |_, _, cx| project.update(cx, |project, cx| project.run_action(session, &id, cx))
+                    }),
                 );
             }
         }
@@ -297,14 +351,31 @@ impl Workspace {
                         ui,
                         IconName::ArrowUpRight,
                         "Paste into the terminal",
-                        cx.listener(move |this, _, window, cx| this.send_prompt(&send_id, false, window, cx)),
+                        {
+                            let (project, session) = (self.project.clone(), self.session);
+                            move |_, _, cx| {
+                                project.update(cx, |project, cx| {
+                                    project.send_prompt(session, &send_id, false, cx)
+                                })
+                            }
+                        },
                     ),
                     style::item_action(
                         SharedString::from(format!("prompt-note-{}", prompt.id)),
                         ui,
                         IconName::FilePlus,
                         "Copy into a new note",
-                        cx.listener(move |this, _, window, cx| this.prompt_to_note(&note_id, window, cx)),
+                        {
+                            let (project, session, panel) = (self.project.clone(), self.session, self.panel);
+                            let notes = self.notes.clone();
+                            move |_, window, cx| {
+                                if let Some(notes) = &notes {
+                                    project.update(cx, |project, cx| {
+                                        project.prompt_to_note(session, &note_id, panel, notes, window, cx)
+                                    });
+                                }
+                            }
+                        },
                     ),
                 ];
                 body = body.child(style::two_line_row(
@@ -344,11 +415,10 @@ impl Workspace {
                             .text_color(ui.muted)
                             .child(names.join(" · ")),
                     )
-                    .child(
-                        Button::new("open-layout").primary().xsmall().label("Open terminals").on_click(
-                            cx.listener(|this, _, window, cx| this.open_project_layout(window, cx)),
-                        ),
-                    ),
+                    .child(Button::new("open-layout").primary().xsmall().label("Open terminals").on_click({
+                        let (project, session) = (self.project.clone(), self.session);
+                        move |_, _, cx| project.update(cx, |project, cx| project.open_layout(session, cx))
+                    })),
             );
         }
 
@@ -362,12 +432,13 @@ impl Workspace {
     /// callout all the same, saying what trusting applies: that is held back too.
     fn render_trust(
         &self,
+        root: &Path,
         status: TrustStatus,
         commands: &[TrustLine],
         needing: &[Feature],
-        cx: &Context<Self>,
+        cx: &App,
     ) -> AnyElement {
-        let ui = ui_in(&self.profile, cx);
+        let ui = ui_in(self.profile, cx);
         let applies = trust_applies(needing);
         if status == TrustStatus::Trusted {
             let line = if commands.is_empty() {
@@ -383,13 +454,10 @@ impl Workspace {
                 .px(px(style::CARD_INSET))
                 .child(style::lead(style::icon(IconName::ShieldCheck).text_color(ui.success_text)))
                 .child(div().flex_1().min_w_0().truncate().text_caption().text_color(ui.muted).child(line))
-                .child(
-                    Button::new("revoke-trust")
-                        .ghost()
-                        .xsmall()
-                        .label("Revoke trust")
-                        .on_click(cx.listener(|this, _, _, cx| this.revoke_active_project(cx))),
-                )
+                .child(Button::new("revoke-trust").ghost().xsmall().label("Revoke trust").on_click({
+                    let root = root.to_path_buf();
+                    move |_, _, cx| revoke_project(&root, cx)
+                }))
                 .into_any_element();
         }
         let (title, text) = trust_notice(status, !commands.is_empty(), &applies);
@@ -402,20 +470,16 @@ impl Workspace {
         };
         // Every line wrapped, never cut off: a cut-off line is where a payload would hide. Past
         // a few lines the rest are a window away, with the same approval there.
-        let command_color = crate::theme_bridge::token(&store_in(&self.profile, cx).tokens, "trust.command");
+        let command_color = crate::theme_bridge::token(&store_in(self.profile, cx).tokens, "trust.command");
         let shown = if commands.len() > TRUST_LINES_MAX { TRUST_LINES_SHOWN } else { commands.len() };
         let lines = commands.iter().take(shown).map(|line| trust_line(ui, command_color, line));
         let view_all = (shown < commands.len()).then(|| {
-            let root = self.active_session().project.clone();
+            let root = root.to_path_buf();
             Button::new("trust-view-all")
                 .ghost()
                 .small()
                 .label(format!("View all {}…", commands.len()))
-                .on_click(move |_, _, cx| {
-                    if let Some(root) = root.clone() {
-                        super::open_trust_window(root, cx);
-                    }
-                })
+                .on_click(move |_, _, cx| super::open_trust_window(root.clone(), cx))
         });
         let mut body = vec![div().text_caption().text_color(ui.muted).child(text).into_any_element()];
         if !commands.is_empty() {
@@ -428,8 +492,8 @@ impl Workspace {
                     .rounded(ui.radius)
                     .bg(ui.hover)
                     .text_caption()
-                    .font_family(crate::fonts::code_font_in(&self.profile, cx).0)
-                    .font_features(crate::fonts::code_font_features_in(&self.profile, cx))
+                    .font_family(crate::fonts::code_font_in(self.profile, cx).0)
+                    .font_features(crate::fonts::code_font_features_in(self.profile, cx))
                     .children(lines)
                     .into_any_element(),
             );
@@ -439,13 +503,10 @@ impl Workspace {
                 .flex()
                 .items_center()
                 .gap_2()
-                .child(
-                    Button::new("trust-project")
-                        .primary()
-                        .small()
-                        .label(approve_label)
-                        .on_click(cx.listener(|this, _, _, cx| this.approve_active_project(cx))),
-                )
+                .child(Button::new("trust-project").primary().small().label(approve_label).on_click({
+                    let root = root.to_path_buf();
+                    move |_, _, cx| approve_project(&root, cx)
+                }))
                 .children(view_all)
                 .into_any_element(),
         );

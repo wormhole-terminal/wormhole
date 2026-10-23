@@ -55,9 +55,20 @@ pub(super) fn load_projects(roots: impl IntoIterator<Item = PathBuf>, cx: &mut A
     changed
 }
 
+/// Projects with a terminal open in any window.
+fn open_roots(cx: &App) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    for window in &app(cx).windows {
+        if let Ok(found) = window.workspace.read_with(cx, super::api::roots) {
+            roots.extend(found);
+        }
+    }
+    roots
+}
+
 /// Forget projects no session in any window uses any more, and the notes bases of closed sessions.
 pub(crate) fn prune_projects(cx: &mut App) {
-    let open = AppState::open_project_roots(cx);
+    let open = open_roots(cx);
     let sessions = open_session_ids(cx);
     let hub = &mut hub_mut(cx);
     hub.projects.retain(|root, _| open.contains(root));
@@ -97,7 +108,7 @@ pub(super) fn reload_projects(cx: &mut App) {
     // Deferred: this may run inside a window's own update.
     cx.defer(|cx| {
         for window in app(cx).windows.clone() {
-            AppState::with_workspace(&window, cx, |ws, _, cx| ws.refresh_projects(cx));
+            AppState::with_workspace(&window, cx, |ws, _, cx| ws.refresh_features(cx));
         }
     });
     cx.refresh_windows();
@@ -108,7 +119,7 @@ pub(super) fn reload_projects(cx: &mut App) {
 pub(crate) fn known_projects(cx: &App) -> Vec<PathBuf> {
     let state = app(cx);
     let mut roots: Vec<PathBuf> = Vec::new();
-    let candidates = AppState::open_project_roots(cx)
+    let candidates = open_roots(cx)
         .into_iter()
         .chain(state.recent_projects.roots().iter().cloned())
         .chain(hub(cx).trust.list().into_iter().map(|p| p.root.clone()));

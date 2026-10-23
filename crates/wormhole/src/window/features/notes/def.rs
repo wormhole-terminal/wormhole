@@ -42,11 +42,15 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     row_extras: Some(row_extras),
     close_stake: Some(close_stake),
     menu: None,
-    tick: Some(|entity, window, cx| {
+    tick: Some(|entity, _, window, cx| {
         // The backstop for a new note that never got the focus it would be thrown away on losing.
         typed(entity).update(cx, |notes, cx| notes.prune_blank_notes(window, cx));
     }),
     profile_shown: None,
+    profiles: None,
+    refresh: None,
+    trusted: None,
+    spawn: None,
     state: Some(STATE),
 };
 

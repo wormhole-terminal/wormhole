@@ -46,6 +46,10 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     }),
     tick: None,
     profile_shown: Some(profile_shown),
+    profiles: None,
+    refresh: None,
+    trusted: None,
+    spawn: None,
     state: Some(STATE),
 };
 

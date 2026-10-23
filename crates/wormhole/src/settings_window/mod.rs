@@ -83,7 +83,12 @@ impl FrontWindow {
     fn read(cx: &App) -> Self {
         AppState::front_window(cx)
             .and_then(|window| {
-                window.workspace.read_with(cx, |ws, _| Self { project: ws.active_project_root() }).ok()
+                window
+                    .workspace
+                    .read_with(cx, |ws, cx| Self {
+                        project: crate::window::features::project::api::active_root(ws, cx),
+                    })
+                    .ok()
             })
             .unwrap_or_default()
     }

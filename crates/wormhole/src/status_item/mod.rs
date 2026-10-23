@@ -173,7 +173,7 @@ pub(crate) fn project_actions(cx: &App) -> Vec<ActionItem> {
     let state = app(cx);
     let mut roots = Vec::new();
     for window in state.windows.iter().filter(|w| !w.hidden) {
-        if let Ok(window_roots) = window.workspace.read_with(cx, |ws, cx| ws.project_roots(cx)) {
+        if let Ok(window_roots) = window.workspace.read_with(cx, project::api::roots) {
             roots.extend(window_roots);
         }
     }
@@ -347,23 +347,27 @@ pub(crate) fn run_command(command: MenuCommand, cx: &mut App) {
         MenuCommand::JumpToWaiting => crate::window::ambient::jump_to_waiting(cx),
         MenuCommand::RunAction { root, id } => {
             // Actions run in the context of their project's terminal.
-            let owner = AppState::find_window(cx, |ws, _| ws.session_for_project(&root).is_some());
+            let owner = AppState::find_window(cx, |ws, cx| {
+                project::api::session_for_project(ws, &root, cx).is_some()
+            });
             if let Some(owner) = owner {
                 AppState::with_workspace(&owner, cx, |ws, window, cx| {
                     crate::background::activate_window(window, cx);
-                    if let Some(ix) = ws.session_for_project(&root) {
+                    if let Some(ix) = project::api::session_for_project(ws, &root, cx) {
                         ws.activate(ix, window, cx);
-                        ws.run_project_action(&id, window, cx);
+                        project::api::run_action(ws, &id, cx);
                     }
                 });
             }
         }
         MenuCommand::OpenProject(root) => {
-            match AppState::find_window(cx, |ws, _| ws.session_for_project(&root).is_some()) {
+            match AppState::find_window(cx, |ws, cx| {
+                project::api::session_for_project(ws, &root, cx).is_some()
+            }) {
                 Some(owner) => {
                     AppState::with_workspace(&owner, cx, |ws, window, cx| {
                         crate::background::activate_window(window, cx);
-                        if let Some(ix) = ws.session_for_project(&root) {
+                        if let Some(ix) = project::api::session_for_project(ws, &root, cx) {
                             ws.activate(ix, window, cx);
                         }
                     });

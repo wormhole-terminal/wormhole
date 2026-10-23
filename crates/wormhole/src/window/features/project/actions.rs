@@ -1,24 +1,24 @@
-//! Running a project's actions (run, prompt, open, chain), its session layout and its prompts, and
-//! matching action keys.
+//! Running a project's actions (run, prompt, open, chain), its terminal layout and its prompts, and
+//! matching action keys. What an action does to a terminal is the window's: this decides what is
+//! allowed and says it as events.
 
 use std::path::PathBuf;
-use std::time::Duration;
 
 use gpui_kit::*;
 use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::project::{ActionKind, ChainStep, Feature, ProjectSnapshot, Target};
-use wormhole_core::storage::store::SessionRecord;
 
-use super::hub;
-use crate::terminal_view::TerminalView;
-use crate::window::Workspace;
+use super::{Project, hub};
+use crate::window::feature::{FeatureEvent, NewTerminal, TerminalInput, TerminalTarget};
 
 /// Longest action chain we follow (chains are validated for cycles, this is a backstop).
 const MAX_CHAIN_DEPTH: usize = 16;
 
-impl Workspace {
-    pub(crate) fn run_project_action(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(project) = self.active_project(cx) else { return };
+impl Project {
+    /// Run action `id` of the project terminal `session` is in, if the project is trusted and has
+    /// Actions on.
+    pub(super) fn run_action(&mut self, session: i64, id: &str, cx: &mut Context<Self>) {
+        let Some(project) = self.project(session, cx) else { return };
         if !hub(cx).enabled(project, Feature::Actions) {
             return;
         }
@@ -26,164 +26,52 @@ impl Workspace {
         let snapshot = project.snapshot.clone();
         let Some(action) = snapshot.actions().iter().find(|a| a.id == id) else { return };
         tracing::info!(action = %action.id, "running project action");
-        self.run_action_kind(&snapshot, &action.kind, 0, window, cx);
+        run_kind(&snapshot, &action.kind, 0, cx);
     }
 
-    fn run_action_kind(
-        &mut self,
-        snapshot: &ProjectSnapshot,
-        kind: &ActionKind,
-        depth: usize,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let folder = snapshot.folder();
-        if depth > MAX_CHAIN_DEPTH {
-            return;
-        }
-        match kind {
-            ActionKind::Run { command, target, cwd } => {
-                let cwd = folder.resolve_cwd(cwd.as_deref());
-                let terminal = self.target_terminal(target, Some(cwd), window, cx);
-                terminal.update(cx, |t, _| t.write_input(format!("{command}\r").into_bytes()));
-            }
-            ActionKind::Prompt { text, file, target, submit } => {
-                let body = match (text, file) {
-                    (Some(text), _) => Some(text.clone()),
-                    (None, Some(file)) => snapshot.action_prompt(file).map(str::to_string),
-                    (None, None) => None,
-                };
-                let Some(body) = body else { return };
-                let terminal = self.target_terminal(target, Some(folder.root.clone()), window, cx);
-                paste_into(&terminal, &body, *submit, cx);
-            }
-            ActionKind::Open { url } => open_url(url, cx),
-            ActionKind::Chain { steps } => {
-                for step in steps {
-                    match step {
-                        ChainStep::Ref(id) => {
-                            if let Some(action) = snapshot.actions().iter().find(|a| &a.id == id) {
-                                self.run_action_kind(snapshot, &action.kind, depth + 1, window, cx);
-                            }
-                        }
-                        ChainStep::Inline(kind) => {
-                            self.run_action_kind(snapshot, kind, depth + 1, window, cx)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /// The session an action targets, creating it if needed.
-    fn target_terminal(
-        &mut self,
-        target: &Target,
-        cwd: Option<PathBuf>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Entity<TerminalView> {
-        match target {
-            Target::Current => self.active_terminal(),
-            Target::NewSession => {
-                let ix = self.spawn_session(None, cwd, window, cx);
-                self.sessions[ix].terminal().clone()
-            }
-            Target::Session(name) => {
-                let existing = self.sessions.iter().position(|s| s.name(cx).as_ref() == name.as_str());
-                let ix = match existing {
-                    Some(ix) => ix,
-                    None => self.spawn_session(Some(name.clone()), cwd, window, cx),
-                };
-                self.activate(ix, window, cx);
-                self.sessions[ix].terminal().clone()
-            }
-        }
-    }
-
-    /// Open a new session (optionally named, in `cwd`) and focus it.
-    pub(crate) fn spawn_session(
-        &mut self,
-        name: Option<String>,
-        cwd: Option<PathBuf>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> usize {
-        let id = self.alloc_id(cx);
-        let record = SessionRecord::new(id, name, cwd.map(|p| p.to_string_lossy().into_owned()));
-        let ix = self.add_session(Some(record), window, cx);
-        self.activate(ix, window, cx);
-        self.dirty = true;
-        ix
-    }
-
-    /// `layout.json`: open the project's sessions (reusing ones with the same name).
-    pub(in crate::window) fn open_project_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(project) = self.active_project(cx) else { return };
+    /// `layout.json`: open the project's terminals (reusing ones with the same name).
+    pub(super) fn open_layout(&mut self, session: i64, cx: &mut Context<Self>) {
+        let Some(project) = self.project(session, cx) else { return };
         if !hub(cx).enabled(project, Feature::Layout) {
             return;
         }
         let (folder, layout) =
             (project.folder.clone(), project.snapshot.layout().cloned().unwrap_or_default());
-        let mut focus = None;
-        for session in &layout.sessions {
-            if self.sessions.iter().any(|s| s.custom_name.as_deref() == Some(session.name.as_str())) {
-                continue;
-            }
-            let cwd = folder.resolve_cwd(session.cwd.as_deref());
-            let ix = self.spawn_session(Some(session.name.clone()), Some(cwd), window, cx);
-            if let Some(run) = &session.run {
-                self.sessions[ix]
-                    .terminal()
-                    .update(cx, |t, _| t.write_input(format!("{run}\r").into_bytes()));
-            }
-            if session.focus {
-                focus = Some(ix);
-            }
-        }
-        if let Some(ix) = focus {
-            self.activate(ix, window, cx);
+        let terminals: Vec<NewTerminal> = layout
+            .sessions
+            .iter()
+            .map(|session| NewTerminal {
+                name: session.name.clone(),
+                cwd: folder.resolve_cwd(session.cwd.as_deref()),
+                run: session.run.clone(),
+                focus: session.focus,
+            })
+            .collect();
+        if !terminals.is_empty() {
+            cx.emit(FeatureEvent::OpenTerminals { terminals });
         }
     }
 
-    /// Match a keystroke against the active project's action shortcuts.
-    pub(crate) fn project_action_for_key(&self, keystroke: &Keystroke, cx: &App) -> Option<String> {
-        let project = self.active_project(cx)?;
-        // The keys first: this runs for every ⌘ key typed, and asking whether the feature is
-        // on resolves the project's folder on disk.
+    /// The id of the action of the project terminal `session` is in that `keystroke` is the key of, if the
+    /// project is trusted and has Actions on.
+    pub(super) fn action_for_key(&self, session: i64, keystroke: &Keystroke, cx: &App) -> Option<String> {
+        let project = self.project(session, cx)?;
+        // The keys first: this runs for every ⌘ key typed, and asking whether the feature is on resolves
+        // the project's folder on disk.
         let (_, id) = project.keys.iter().find(|(spec, _)| key_matches(spec, keystroke))?;
         hub(cx).enabled(project, Feature::Actions).then(|| id.clone())
     }
 
-    pub(in crate::window) fn send_prompt(
-        &mut self,
-        id: &str,
-        submit: bool,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let Some(body) = self.enabled_prompt(id, cx) else { return };
-        let session = self.active_session().id;
-        self.send_to_terminal(session, body.trim(), submit, window, cx);
+    /// Paste prompt `id` into terminal `session`, with Enter after it when `submit`.
+    pub(super) fn send_prompt(&mut self, session: i64, id: &str, submit: bool, cx: &mut Context<Self>) {
+        let Some(body) = self.enabled_prompt(session, id, cx) else { return };
+        cx.emit(FeatureEvent::SendText { session, text: body.trim().to_string().into(), submit });
     }
 
-    pub(in crate::window) fn prompt_to_note(
-        &mut self,
-        id: &str,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let Some(body) = self.enabled_prompt(id, cx) else { return };
-        // The second place project reaches into notes (the first is `notes_sync`): a prompt as a note.
-        let Some(notes) = self.feature::<crate::window::features::notes::Notes>() else { return };
-        let (session, panel) = (self.active_session().id, self.columns().panel);
-        notes.update(cx, |notes, cx| notes.new_note(session, Some(body), panel, window, cx));
-    }
-
-    /// The text of the active project's prompt `id`, if the user has Prompts switched on for it
-    /// (checked here, not only by hiding the buttons).
-    fn enabled_prompt(&self, id: &str, cx: &App) -> Option<String> {
-        let project = self.active_project(cx)?;
+    /// The text of prompt `id` of the project terminal `session` is in, if the user has Prompts switched on
+    /// for it (checked here, not only by hiding the buttons).
+    pub(super) fn enabled_prompt(&self, session: i64, id: &str, cx: &App) -> Option<String> {
+        let project = self.project(session, cx)?;
         if !hub(cx).enabled(project, Feature::Prompts) {
             return None;
         }
@@ -191,15 +79,53 @@ impl Workspace {
     }
 }
 
-fn paste_into(terminal: &Entity<TerminalView>, text: &str, submit: bool, cx: &mut App) {
-    terminal.update(cx, |t, _| t.paste(text));
-    if submit {
-        let terminal = terminal.clone();
-        cx.spawn(async move |cx| {
-            cx.background_executor().timer(Duration::from_millis(60)).await;
-            terminal.update(cx, |t, _| t.write(b"\r".to_vec()));
-        })
-        .detach();
+/// Where in the window an action's text goes, for the terminal to be found or made when it is typed.
+fn terminal_target(target: &Target, cwd: Option<PathBuf>) -> TerminalTarget {
+    match target {
+        Target::Current => TerminalTarget::Active,
+        Target::NewSession => TerminalTarget::New { cwd },
+        Target::Session(name) => TerminalTarget::Named { name: name.clone(), cwd },
+    }
+}
+
+fn run_kind(snapshot: &ProjectSnapshot, kind: &ActionKind, depth: usize, cx: &mut Context<Project>) {
+    let folder = snapshot.folder();
+    if depth > MAX_CHAIN_DEPTH {
+        return;
+    }
+    match kind {
+        ActionKind::Run { command, target, cwd } => {
+            let cwd = folder.resolve_cwd(cwd.as_deref());
+            cx.emit(FeatureEvent::Terminal {
+                target: terminal_target(target, Some(cwd)),
+                input: TerminalInput::Command(command.clone()),
+            });
+        }
+        ActionKind::Prompt { text, file, target, submit } => {
+            let body = match (text, file) {
+                (Some(text), _) => Some(text.clone()),
+                (None, Some(file)) => snapshot.action_prompt(file).map(str::to_string),
+                (None, None) => None,
+            };
+            let Some(body) = body else { return };
+            cx.emit(FeatureEvent::Terminal {
+                target: terminal_target(target, Some(folder.root.clone())),
+                input: TerminalInput::Paste { text: body, submit: *submit },
+            });
+        }
+        ActionKind::Open { url } => open_url(url, cx),
+        ActionKind::Chain { steps } => {
+            for step in steps {
+                match step {
+                    ChainStep::Ref(id) => {
+                        if let Some(action) = snapshot.actions().iter().find(|a| &a.id == id) {
+                            run_kind(snapshot, &action.kind, depth + 1, cx);
+                        }
+                    }
+                    ChainStep::Inline(kind) => run_kind(snapshot, kind, depth + 1, cx),
+                }
+            }
+        }
     }
 }
 

@@ -11,9 +11,10 @@ use gpui_kit::*;
 use wormhole_core::keys::keymap::sheet::{self, Filtered, Hit, Keys, Row};
 use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::keys::keyspec::KeySpec;
-use wormhole_core::project::Feature;
 
-use crate::app_state::{AppState, OpenWindow, app};
+#[cfg(feature = "devctl")]
+use crate::app_state::app;
+use crate::app_state::{AppState, OpenWindow};
 use crate::settings::{UiColors, settings, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::window::Workspace;
@@ -88,8 +89,7 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
 /// The current terminal's project keys, once it is trusted (an untrusted project shows
 /// nothing here).
 fn project_keys(ws: &Workspace, cx: &App) -> Option<ProjectKeys> {
-    let hub = project::hub(cx);
-    let project = ws.active_project(cx).filter(|p| hub.enabled(p, Feature::Actions))?;
+    let project = project::api::actionable(ws, cx)?;
     let actions: Vec<(String, KeySpec)> =
         project.actions().iter().filter_map(|a| Some((a.title.clone(), a.key_spec()?))).collect();
     let folder = project.folder.root.file_name()?.to_string_lossy().into_owned();

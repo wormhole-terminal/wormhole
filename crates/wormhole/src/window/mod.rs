@@ -20,7 +20,7 @@
 //! `window_lifecycle`, `hosting` for the persistent terminals), what it answers from outside
 //! (`window_control`, `restart_facts`, `ambient`, `menu_state`, and `devctl` in a devctl build), its
 //! actions and keys (`window_actions`, `shortcuts`), its look (`layout`, `chrome`, `resize`, `slide`,
-//! `glass`, `status_bar`, `panel_list`, `folder_color`), the windows it opens beside itself
+//! `glass`, `status_bar`, `panel_list`), the windows it opens beside itself
 //! (`aux_window`), the apps it opens a folder in (`open_in`) and what opens over it (`overlay`,
 //! `dialog`).
 //!
@@ -40,10 +40,8 @@
 //! `scripts/structure.json`, phase 5's shrink-only counter. Outside `window/` no `impl Workspace`
 //! is allowed.
 
-use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -75,13 +73,11 @@ mod facts;
 mod failed_tests;
 mod feature;
 mod feature_host;
+mod feature_terminals;
 #[cfg(test)]
 mod feature_tests;
 pub(crate) mod features;
 pub(crate) mod focus;
-mod folder_color;
-#[cfg(test)]
-mod folder_color_tests;
 mod glass;
 #[cfg(test)]
 mod group_tests;
@@ -146,11 +142,6 @@ pub struct Workspace {
     sessions: Vec<Session>,
     /// The splits some of them are shown in (a split's members are adjacent in `sessions`).
     splits: Vec<crate::window::panes::splits::Split>,
-    /// The root of the `.wormhole/` project that governs each folder a band names (the terminals'
-    /// and the pinned ones), as of the last look (`refresh_projects`): the band, the title row and
-    /// the Project tab ask it where a folder's colour lives without touching the disk. A folder in
-    /// no project isn't in it.
-    folder_projects: std::collections::HashMap<PathBuf, PathBuf>,
     /// Which saved window this is.
     window_id: i64,
     /// The profile this window belongs to: its sessions are saved in that profile's database and its
@@ -193,12 +184,6 @@ pub struct Workspace {
     /// The branch picker's search box (one for both tabs: only one picker is open at a time).
     picker_search: Entity<InputState>,
     _picker_subscription: Subscription,
-    /// The Project tab's colour picker for the active terminal's folder (`folder_color`).
-    folder_picker: Entity<ColorPickerState>,
-    /// The folder whose band's "Custom colour…" has the picker open (it hangs off that band), else
-    /// the picker is the Project tab's and means the active terminal's folder.
-    picking_folder: Option<PathBuf>,
-    _folder_picker_subscription: Subscription,
     diff_view: Option<diff_view::DiffView>,
     /// Folders collapsed in the Changes tree view.
     collapsed_dirs: std::collections::HashSet<String>,
@@ -323,13 +308,6 @@ impl Workspace {
                 _ => {}
             });
 
-        let folder_picker = cx.new(|cx| ColorPickerState::new(window, cx));
-        let folder_picker_subscription =
-            cx.subscribe_in(&folder_picker, window, |this, _, event: &ColorPickerEvent, _, cx| {
-                let ColorPickerEvent::Change(Some(color)) = event else { return };
-                this.pick_folder_color(*color, cx);
-            });
-
         let features = self::feature::FeatureTable::installed(cx);
         let feature_states = Self::make_feature_states(features, window, cx);
 
@@ -354,9 +332,6 @@ impl Workspace {
             branches: Vec::new(),
             picker_search,
             _picker_subscription: picker_subscription,
-            folder_picker,
-            picking_folder: None,
-            _folder_picker_subscription: folder_picker_subscription,
             diff_view: None,
             collapsed_dirs: Default::default(),
             resizing: None,
@@ -383,7 +358,6 @@ impl Workspace {
             font_zoom: 0.0,
             closing_prompt: false,
             close_dot: false,
-            folder_projects: Default::default(),
             closing_session_prompt: false,
             worktree_ask: None,
             commenting: None,

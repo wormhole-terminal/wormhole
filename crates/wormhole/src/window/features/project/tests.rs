@@ -16,13 +16,16 @@ use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::project::{Feature, ProjectFolder, TrustStatus};
 use wormhole_core::storage::paths::ProfileId;
 
+use super::notes_sync::NotesLink;
 use super::{
-    ProjectHub, approve_project, hub, hub_mut, revoke_project, set_feature_default, set_feature_for,
+    Project, ProjectHub, approve_project, hub, hub_mut, revoke_project, set_feature_default, set_feature_for,
 };
 use crate::app_state::{AppState, OpenWindow};
 use crate::window::Workspace;
 use crate::window::features::notes::testing as notes;
-use crate::window::view_tests::{drive, isolate_in, read, read_cx, start};
+use wormhole_core::storage::store::WindowRecord;
+
+use crate::window::view_tests::{drive, isolate_in, read, read_cx, start, start_with_table};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -30,14 +33,19 @@ fn isolate(name: &str) -> bool {
 
 // ---------------------------------------------------------------- where the state is kept
 
+/// The window's project entity.
+fn feature(ws: &Workspace) -> gpui_kit::Entity<Project> {
+    ws.feature::<Project>().expect("the window has the project feature")
+}
+
 /// The project terminal `ix` is in, as of the window's last look.
 fn project_of(window: &OpenWindow, ix: usize, cx: &mut TestAppContext) -> Option<PathBuf> {
-    read(cx, window, |ws| ws.sessions[ix].project.clone())
+    read_cx(cx, window, |ws, cx| feature(ws).read(cx).of[&ws.sessions[ix].id].root.clone())
 }
 
 /// The window looks for each terminal's project again.
 fn refresh(ws: &mut Workspace, cx: &mut gpui_kit::Context<Workspace>) {
-    ws.refresh_projects(cx);
+    ws.refresh_features(cx);
 }
 
 /// The terminal in front is in `dir`, and the window has looked for its project.
@@ -48,32 +56,32 @@ fn go(ws: &mut Workspace, dir: &Path, cx: &mut gpui_kit::Context<Workspace>) {
 }
 
 /// A click on one of the Project tab's actions (or its key, or a menu line).
-fn run_action(
-    ws: &mut Workspace,
-    id: &str,
-    window: &mut gpui_kit::Window,
-    cx: &mut gpui_kit::Context<Workspace>,
-) {
-    ws.run_project_action(id, window, cx);
+fn run_action(ws: &mut Workspace, id: &str, cx: &mut gpui_kit::Context<Workspace>) {
+    super::api::run_action(ws, id, cx);
 }
 
 /// The id of the action the key `keys` runs in the project in front, if any.
 fn action_for_key(window: &OpenWindow, keys: &str, cx: &mut TestAppContext) -> Option<String> {
     let keystroke = Keystroke::parse(keys).expect("a keystroke");
-    read_cx(cx, window, |ws, cx| ws.project_action_for_key(&keystroke, cx))
+    read_cx(cx, window, |ws, cx| super::api::action_for_key(ws, &keystroke, cx))
 }
 
+/// The Project tab's "copy into a new note" button.
 fn prompt_to_note(
     ws: &mut Workspace,
     id: &str,
     window: &mut gpui_kit::Window,
     cx: &mut gpui_kit::Context<Workspace>,
 ) {
-    ws.prompt_to_note(id, window, cx);
+    let (session, panel) = (ws.active_session().id, ws.columns().panel);
+    let notes = NotesLink::of(&ws.facts(cx)).expect("the window has notes");
+    feature(ws).update(cx, |project, cx| project.prompt_to_note(session, id, panel, &notes, window, cx));
 }
 
-fn open_layout(ws: &mut Workspace, window: &mut gpui_kit::Window, cx: &mut gpui_kit::Context<Workspace>) {
-    ws.open_project_layout(window, cx);
+/// The Project tab's "Open terminals" button.
+fn open_layout(ws: &mut Workspace, cx: &mut gpui_kit::Context<Workspace>) {
+    let session = ws.active_session().id;
+    feature(ws).update(cx, |project, cx| project.open_layout(session, cx));
 }
 
 /// The environment and shell a terminal started in `dir` gets from its project.
@@ -81,12 +89,13 @@ fn spawn_options(
     cx: &mut TestAppContext,
     dir: &Path,
 ) -> (std::collections::BTreeMap<String, String>, Option<String>) {
-    cx.update(|cx| Workspace::project_spawn_options(Some(dir), cx))
+    let add = cx.update(|cx| super::detect::spawn_options(Some(dir), cx));
+    (add.env, add.shell)
 }
 
 /// One round of the notes.md sync for the window.
 fn sync_notes(ws: &mut Workspace, window: &mut gpui_kit::Window, cx: &mut gpui_kit::Context<Workspace>) {
-    ws.sync_project_notes(window, cx);
+    feature(ws).update(cx, |project, pcx| project.sync_notes(&ws.facts(pcx), window, pcx));
 }
 
 /// What the hub says of the project at `root`.
@@ -200,7 +209,7 @@ fn actions_run_only_in_a_trusted_project_with_actions_on(cx: &mut TestAppContext
     drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
     let sessions = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.sessions.len());
 
-    drive(cx, &window, |ws, window, cx| run_action(ws, "more", window, cx));
+    drive(cx, &window, |ws, _, cx| run_action(ws, "more", cx));
     assert_eq!(sessions(cx), 1, "untrusted: nothing runs");
     assert_eq!(action_for_key(&window, "f9", cx), None, "and its key is not taken");
     let menu = read_cx(cx, &window, |ws, cx| ws.menu_state(cx).project_actions);
@@ -213,16 +222,16 @@ fn actions_run_only_in_a_trusted_project_with_actions_on(cx: &mut TestAppContext
     assert_eq!(action_for_key(&window, "f8", cx), None, "another key is nobody's");
     let menu = read_cx(cx, &window, |ws, cx| ws.menu_state(cx).project_actions);
     assert_eq!(menu, [("more".to_string(), "More".to_string()), ("say".to_string(), "Say".to_string())]);
-    drive(cx, &window, |ws, window, cx| run_action(ws, "more", window, cx));
+    drive(cx, &window, |ws, _, cx| run_action(ws, "more", cx));
     assert_eq!(sessions(cx), 2, "a new session was opened for it");
-    drive(cx, &window, |ws, window, cx| run_action(ws, "nope", window, cx));
+    drive(cx, &window, |ws, _, cx| run_action(ws, "nope", cx));
     assert_eq!(sessions(cx), 2, "an id the project doesn't have does nothing");
 
     cx.update(|cx| set_feature_for(&dir, Feature::Actions, Some(false), cx));
     cx.run_until_parked();
-    drive(cx, &window, |ws, window, cx| {
+    drive(cx, &window, |ws, _, cx| {
         refresh(ws, cx);
-        run_action(ws, "more", window, cx);
+        run_action(ws, "more", cx);
     });
     assert_eq!(sessions(cx), 2, "switched off for the project: nothing runs");
     assert_eq!(action_for_key(&window, "f9", cx), None);
@@ -232,7 +241,7 @@ fn actions_run_only_in_a_trusted_project_with_actions_on(cx: &mut TestAppContext
     flag(cx, false);
     cx.update(|cx| set_feature_for(&dir, Feature::Actions, None, cx));
     cx.run_until_parked();
-    drive(cx, &window, |ws, window, cx| run_action(ws, "more", window, cx));
+    drive(cx, &window, |ws, _, cx| run_action(ws, "more", cx));
     assert_eq!(sessions(cx), 2, "with the whole feature off, nothing runs");
 }
 
@@ -280,15 +289,15 @@ fn the_layout_opens_its_terminals_once(cx: &mut TestAppContext) {
         read(cx, &window, |ws| ws.sessions.iter().filter_map(|s| s.custom_name.clone()).collect::<Vec<_>>())
     };
 
-    drive(cx, &window, open_layout);
+    drive(cx, &window, |ws, _, cx| open_layout(ws, cx));
     assert!(names(cx).is_empty(), "untrusted: nothing opens");
 
     trust(cx, &dir);
     drive(cx, &window, |ws, _, cx| refresh(ws, cx));
-    drive(cx, &window, open_layout);
+    drive(cx, &window, |ws, _, cx| open_layout(ws, cx));
     assert_eq!(names(cx), ["web", "api"]);
     assert_eq!(read(cx, &window, |ws| ws.active_session().custom_name.clone()).as_deref(), Some("api"));
-    drive(cx, &window, open_layout);
+    drive(cx, &window, |ws, _, cx| open_layout(ws, cx));
     assert_eq!(names(cx), ["web", "api"], "the ones that are open are reused");
 }
 
@@ -455,4 +464,91 @@ fn the_menu_line_needs_a_folder_and_the_feature(cx: &mut TestAppContext) {
     assert!(!disabled(cx));
     flag(cx, false);
     assert!(disabled(cx), "the feature off");
+}
+
+/// The project entity keeps an entry for exactly the terminals of the window: made with it, added with a
+/// new terminal, dropped with a closed one and with one that moved to another window.
+#[gpui_kit::test]
+fn the_project_entity_keeps_an_entry_for_exactly_the_terminals_of_the_window(cx: &mut TestAppContext) {
+    if isolate("the_project_entity_keeps_an_entry_for_exactly_the_terminals_of_the_window") {
+        return;
+    }
+    let window = start(cx, 2);
+    let ids = |cx: &mut TestAppContext, window: &OpenWindow| {
+        read_cx(cx, window, |ws, cx| {
+            let mut ours: Vec<i64> = ws.sessions.iter().map(|s| s.id).collect();
+            ours.sort_unstable();
+            let mut kept: Vec<i64> = feature(ws).read(cx).of.keys().copied().collect();
+            kept.sort_unstable();
+            (kept, ours)
+        })
+    };
+    let (kept, ours) = ids(cx, &window);
+    assert_eq!(kept, ours, "made with the window's terminals");
+
+    drive(cx, &window, |ws, window, cx| ws.new_session(window, cx));
+    let (kept, ours) = ids(cx, &window);
+    assert_eq!((kept.clone(), kept.len()), (ours, 3), "added with a new terminal");
+
+    let new = read(cx, &window, |ws| ws.sessions[2].id);
+    drive(cx, &window, |ws, window, cx| {
+        let ix = ws.find_session(new).expect("a row");
+        ws.close_session(ix, window, cx);
+    });
+    let (kept, ours) = ids(cx, &window);
+    assert_eq!((kept.clone(), kept.len()), (ours, 2), "dropped with a closed terminal");
+
+    let group = drive(cx, &window, |ws, _, cx| ws.group_terminals(&[2], cx));
+    drive(cx, &window, |ws, window, cx| ws.move_group_to_window(group, window, cx));
+    cx.run_until_parked();
+    let (kept, ours) = ids(cx, &window);
+    assert_eq!((kept.clone(), kept.len()), (ours, 1), "and with a terminal that moved away");
+}
+
+/// The table's entry: the tab is offered with a folder (or while it shows) and says its name; the project
+/// is trusted for a terminal only in a trusted project, which is what the pull request lookup asks before
+/// it starts `gh`, and a window whose table has nobody to ask approves nothing.
+#[gpui_kit::test]
+fn the_entry_offers_the_tab_and_says_who_is_trusted(cx: &mut TestAppContext) {
+    if isolate("the_entry_offers_the_tab_and_says_who_is_trusted") {
+        return;
+    }
+    let window = start(cx, 1);
+    let dir = project("entry", &[("actions.json", ACTIONS)]);
+    let asked = |cx: &mut TestAppContext| {
+        drive(cx, &window, |ws, _, cx| {
+            let at = ws.features.iter().position(|def| def.id == wormhole_core::config::FeatureId::Project);
+            let at = at.expect("in the table");
+            let (def, entity) = (&ws.features[at], ws.feature_entity(at).expect("made with the window"));
+            let (tab, facts) = (&def.tabs[0], ws.facts(cx));
+            (
+                (tab.shown)(&facts, cx),
+                (tab.spoken)(entity, &facts, cx),
+                ws.session_trusted(ws.sessions[0].id, cx),
+            )
+        })
+    };
+    assert_eq!(asked(cx), (false, "Project".to_string(), false), "no folder");
+    drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
+    assert_eq!(asked(cx), (true, "Project".to_string(), false), "a folder, a project not trusted");
+    trust(cx, &dir);
+    drive(cx, &window, |ws, _, cx| refresh(ws, cx));
+    assert_eq!(asked(cx), (true, "Project".to_string(), true), "trusted");
+    flag(cx, false);
+    assert!(!asked(cx).2, "the feature off");
+    flag(cx, true);
+    cx.update(|cx| revoke_project(&dir, cx));
+    cx.run_until_parked();
+    assert!(!asked(cx).2, "revoked");
+}
+
+/// A window whose table has no feature to ask approves nothing: the check fails closed.
+#[gpui_kit::test]
+fn a_window_with_nobody_to_ask_trusts_no_folder(cx: &mut TestAppContext) {
+    if isolate("a_window_with_nobody_to_ask_trusts_no_folder") {
+        return;
+    }
+    let record = WindowRecord { id: 1, ..Default::default() };
+    let window = start_with_table(cx, record, &[]);
+    assert!(!read_cx(cx, &window, |ws, cx| ws.session_trusted(ws.sessions[0].id, cx)));
 }

@@ -79,7 +79,9 @@ pub(super) fn folder_color(ctx: &mut Ctx, arg: &str) -> Result<String> {
     if let Some(path) = path.as_deref().filter(|path| !path.is_absolute()) {
         return Err(anyhow!("expected an absolute path, got {:?}", path.display()));
     }
-    let folder = ctx.workspace.devctl_folder_color(path.as_deref(), color, ctx.cx).map_err(|e| anyhow!(e))?;
+    let folder =
+        crate::window::features::project::devctl::folder_color(ctx.workspace, path.as_deref(), color, ctx.cx)
+            .map_err(|e| anyhow!(e))?;
     Ok(format!("{} {}", color.map_or("no colour".into(), ProjectColorChoice::to_value), folder.display()))
 }
 

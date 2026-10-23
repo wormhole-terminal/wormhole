@@ -19,7 +19,6 @@ use super::{LoadedProject, approve_project, hub};
 use crate::platform::auth;
 use crate::settings::{SettingsStore, ui};
 use crate::style::{self, Edges, TextRole};
-use crate::window::Workspace;
 use crate::window::aux_window;
 
 const SIZE: (f32, f32) = (640.0, 480.0);
@@ -244,16 +243,6 @@ impl Render for TrustWindow {
                     .child(div().flex_1())
                     .children(approve),
             )
-    }
-}
-
-impl Workspace {
-    /// devctl `trust-window`: the window for the active terminal's project.
-    #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_trust_window(&self, cx: &mut Context<Self>) -> anyhow::Result<()> {
-        let root = self.active_session().project.clone().ok_or_else(|| anyhow::anyhow!("no project here"))?;
-        cx.defer(move |cx| open_trust_window(root, cx));
-        Ok(())
     }
 }
 

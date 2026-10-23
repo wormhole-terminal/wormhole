@@ -13,8 +13,8 @@ use crate::actions::{
     FocusPaneDown, FocusPaneLeft, FocusPaneRight, FocusPaneUp, FocusPreviousArea, FocusTerminalOrPanel,
     GoToGroup, GoToTerminal, LayoutColumns, LayoutGrid, LayoutRows, LayoutSingle, LeaveSplit, NewSession,
     NewTerminalInWorktree, NewTerminalNoGroup, NewTerminalWith, NextGroup, NextTerminal, PinTerminal,
-    PreviousGroup, PreviousTerminal, RevealInFinder, RunProjectAction, ShowHistory, ShowProject, Smaller,
-    SplitDown, SplitRight, ToggleRightPanel, ToggleSidebar, UseSelectionForFind, ZoomPane,
+    PreviousGroup, PreviousTerminal, RevealInFinder, ShowHistory, Smaller, SplitDown, SplitRight,
+    ToggleRightPanel, ToggleSidebar, UseSelectionForFind, ZoomPane,
 };
 use crate::settings::settings;
 use crate::terminal_view::FONT_SIZES;
@@ -124,16 +124,9 @@ impl Workspace {
                     }
                 }))
             })
-            .on_action(cx.listener(|this, action: &RunProjectAction, window, cx| {
-                this.run_project_action(&action.0, window, cx)
-            }))
             .on_action(cx.listener(|this, _: &ToggleSidebar, _, cx| this.toggle_sidebar(cx)))
             .on_action(cx.listener(|this, _: &ToggleRightPanel, window, cx| this.toggle_notes(window, cx)))
             .on_action(cx.listener(|this, _: &ShowHistory, _, cx| this.show_tab(TabId::History, cx)))
-            // Any terminal whose folder is known has the tab, with a project or not.
-            .when(has_folder, |root| {
-                root.on_action(cx.listener(|this, _: &ShowProject, _, cx| this.show_tab(TabId::Project, cx)))
-            })
             .on_action(
                 cx.listener(|this, _: &FocusTerminalOrPanel, window, cx| this.toggle_focus(window, cx)),
             )

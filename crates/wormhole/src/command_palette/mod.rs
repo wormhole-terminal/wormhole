@@ -20,7 +20,7 @@ use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::*;
 use wormhole_core::git;
 use wormhole_core::keys::keymap::palette as palette_actions;
-use wormhole_core::project::{ActionKind, Feature};
+use wormhole_core::project::ActionKind;
 use wormhole_core::view::search::{self, Scope};
 use wormhole_core::view::sidebar::display_path;
 
@@ -192,8 +192,7 @@ fn palette_here(
 ) -> (Option<String>, Option<usize>, Option<ProjectItem>) {
     let cwd = ws.active_terminal().read(cx).cwd.as_deref().map(|cwd| display_path(cwd, home));
     let changes = ws.active_changes(cx);
-    let hub = project::hub(cx);
-    let project = ws.active_project(cx).filter(|p| hub.enabled(p, Feature::Actions)).map(|project| {
+    let project = project::api::actionable(ws, cx).map(|project| {
         let root = &project.folder.root;
         let folder = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
         ProjectItem {
@@ -454,7 +453,7 @@ impl CommandPalette {
                 }
             }
             Item::ProjectAction(id) => {
-                let _ = self.workspace.update(cx, |ws, cx| ws.run_project_action(&id, window, cx));
+                let _ = self.workspace.update(cx, |ws, cx| project::api::run_action(ws, &id, cx));
             }
             Item::NewTerminalWith(key) => {
                 let _ = self.workspace.update(cx, |ws, cx| ws.new_session_with(Some(key), window, cx));

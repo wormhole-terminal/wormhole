@@ -344,16 +344,7 @@ impl Workspace {
                     ),
                     // In the table.
                     TabId::Notes => return None,
-                    TabId::Usage => return None,
-                    // Whenever the terminal has a folder: its colour is set there, and its project made.
-                    TabId::Project => tab(
-                        IconName::Folder,
-                        "Project",
-                        ActionId::ShowProject,
-                        None,
-                        spoken::panel_tab(PanelTab::Project),
-                        id,
-                    ),
+                    TabId::Usage | TabId::Project => return None,
                 }),
             }));
         self.area_container(Area::PanelTabs, bar, cx).into_any_element()

@@ -66,6 +66,10 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     menu: None,
     tick: None,
     profile_shown: None,
+    profiles: None,
+    refresh: None,
+    trusted: None,
+    spawn: None,
     state: Some(StateDef {
         make: |window, cx| {
             let entity = cx.new(|_| ChangesPanel);

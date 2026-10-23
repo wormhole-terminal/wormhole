@@ -26,7 +26,6 @@ use crate::app_state::recent_projects::RecentProjects;
 use crate::app_state::{AppState, OpenWindow};
 use crate::app_state::{app, app_mut};
 use crate::settings::{ParkedSettings, SettingsStore};
-use crate::window::features::project;
 use crate::window::window_lifecycle::with_front_workspace;
 
 impl AppState {
@@ -103,7 +102,7 @@ impl AppState {
         let id = state.next_id;
         state.next_id += 1;
         // Belt and braces with the hubs' start ids: a fresh id never comes with a notes base.
-        project::id_allocated(profile, id, cx);
+        crate::window::features::id_allocated(profile, id, cx);
         id
     }
 
@@ -131,7 +130,7 @@ impl AppState {
             let _ = window.handle.update(cx, |_, win, _| win.remove_window());
         }
         cx.default_global::<ParkedSettings>().remove(id);
-        project::profile_deleted(id, cx);
+        crate::window::features::profile_deleted(id, cx);
         let state = app_mut(cx);
         // Its database closes before its folder goes, and its saved text's key with it.
         state.parked.remove(id);
@@ -152,7 +151,7 @@ impl AppState {
         let (data, settings) = open_beside(&state.root.profile(profile));
         app_mut(cx).parked.insert(profile.clone(), data);
         cx.default_global::<ParkedSettings>().park(profile.clone(), settings);
-        project::profile_opened(profile, cx);
+        crate::window::features::profile_opened(profile, cx);
     }
 
     /// A new window in `target` ("Open a window in…"), stepped away from the window in front. When

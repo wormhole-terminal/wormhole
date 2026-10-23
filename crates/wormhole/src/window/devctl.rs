@@ -1,13 +1,11 @@
 //! What devctl (`crate::devctl`) asks of a window that nothing else does.
 
-use std::path::{Path, PathBuf};
-
 use anyhow::{Result, bail};
 use gpui_kit::*;
 use wormhole_core::agents::{AgentId, integrations};
 
 use crate::app_state::app;
-use crate::window::{Workspace, folder_color};
+use crate::window::Workspace;
 
 /// What runs at the end of every window tick in a devctl build: devctl's command reader, which
 /// the app installs at startup (`crate::devctl::install`). devctl drives the window from above,
@@ -107,40 +105,6 @@ impl Workspace {
     /// How many terminals the window has, and the id of the `ix`th (devctl `row-drop`).
     pub(crate) fn devctl_session_count(&self) -> usize {
         self.sessions.len()
-    }
-
-    /// devctl `folder-color`: colour `folder` (the active terminal's when none is named), or take
-    /// its colour away, where its colour lives (the project's `config.json`, else the person's
-    /// settings), as the band's menu does. Says which folder it was.
-    pub(crate) fn devctl_folder_color(
-        &mut self,
-        folder: Option<&Path>,
-        color: Option<wormhole_core::project::ProjectColorChoice>,
-        cx: &mut Context<Self>,
-    ) -> Result<PathBuf, &'static str> {
-        let folder = match folder {
-            Some(folder) => folder.to_path_buf(),
-            None => self.active_folder(cx).ok_or("the active terminal has no folder yet")?,
-        };
-        let paint = self.folder_paint(&folder, cx);
-        folder_color::set_folder_choice(&paint, &folder, color, cx);
-        Ok(folder)
-    }
-
-    /// devctl `project-init`: what the Project tab's Create project folder button does; says which
-    /// folder it makes the `.wormhole/` in.
-    pub(crate) fn devctl_project_init(&mut self, cx: &mut Context<Self>) -> Result<PathBuf, &'static str> {
-        let folder = self.active_folder(cx).ok_or("the active terminal has no folder yet")?;
-        self.create_project_folder(cx);
-        Ok(folder)
-    }
-
-    /// devctl `project-trust`: what the Project tab's trust button does for the active terminal's
-    /// project (Touch ID is answered by `WORMHOLE_AUTH`); says which folder it asked for.
-    pub(crate) fn devctl_project_trust(&mut self, cx: &mut Context<Self>) -> Result<PathBuf, &'static str> {
-        let root = self.active_session().project.clone().ok_or("the active terminal has no project")?;
-        self.approve_active_project(cx);
-        Ok(root)
     }
 
     pub(crate) fn devctl_session_id(&self, ix: usize) -> i64 {

@@ -32,6 +32,7 @@ use crate::settings::{SettingsStore, settings, update_settings};
 use crate::settings_window;
 use crate::terminal_view::{TerminalKeys, keystroke_spec};
 use crate::updates;
+use crate::window::features::project;
 use crate::window::window_lifecycle::with_front_workspace;
 use crate::window::{ambient, focus, onboarding, window_lifecycle};
 use crate::{about, studio};
@@ -242,7 +243,7 @@ fn claim_window_key(keystroke: &Keystroke, window: &mut Window, cx: &mut App) ->
     if escape {
         return workspace.update(cx, |ws, cx| ws.terminal_escape(window, cx));
     }
-    let Some(action) = workspace.read(cx).project_action_for_key(keystroke, cx) else { return false };
-    workspace.update(cx, |ws, cx| ws.run_project_action(&action, window, cx));
+    let Some(action) = project::api::action_for_key(workspace.read(cx), keystroke, cx) else { return false };
+    workspace.update(cx, |ws, cx| project::api::run_action(ws, &action, cx));
     true
 }

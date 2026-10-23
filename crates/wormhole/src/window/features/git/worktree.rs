@@ -20,7 +20,6 @@ use gpui_kit::*;
 use wormhole_core::git::worktree::{self, Worktree};
 use wormhole_core::git::{find_root, worktree_of};
 use wormhole_core::ipc::control::{Asked, Error, ErrorCode};
-use wormhole_core::project::Feature;
 
 use crate::app_state::{AppState, app, app_mut};
 use crate::settings::{settings, ui};
@@ -52,42 +51,6 @@ fn base(cx: &App) -> Option<PathBuf> {
         _ if base == "~" => home.map_or_else(|| PathBuf::from(base), Path::to_path_buf),
         _ => PathBuf::from(base),
     })
-}
-
-/// Whether a worktree may be made of `repo`: a project folder there must be trusted with its
-/// settings on, since the new terminal takes the project's env and shell; no project, no condition.
-fn allowed(repo: &Path, cx: &mut App) -> Result<(), String> {
-    // With the project-folder feature off, `.wormhole/` isn't read at all, so a worktree carries
-    // no project settings and there's nothing to trust.
-    if !project::project_folders_on(cx) {
-        return Ok(());
-    }
-    let Some(folder) = wormhole_core::project::find_project(repo) else { return Ok(()) };
-    let Some(project) = project::load_project_info(&folder.root, cx) else {
-        return Err("The project's .wormhole folder can't be read".into());
-    };
-    if project::hub(cx).enabled(&project, Feature::Settings) {
-        Ok(())
-    } else {
-        Err("Trust the project first: a terminal in its worktree would run with the project's settings"
-            .into())
-    }
-}
-
-/// What a new worktree of `repo` runs first: its trusted project's `worktree.setup`, under the
-/// same conditions [`allowed`] checks (a project that isn't trusted with its settings on runs
-/// nothing). It is the repository's project that is asked, not the copy of `.wormhole/` the new
-/// worktree checks out: that one has not been trusted in its new folder.
-fn setup_command(repo: &Path, cx: &mut App) -> Option<String> {
-    if !project::project_folders_on(cx) {
-        return None;
-    }
-    let folder = wormhole_core::project::find_project(repo)?;
-    let project = project::load_project_info(&folder.root, cx)?;
-    if !project::hub(cx).enabled(&project, Feature::Settings) {
-        return None;
-    }
-    project.snapshot.config()?.worktree_setup.clone()
 }
 
 /// A path with the home folder as `~`.
@@ -122,7 +85,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let Some(repo) = self.repo_for_worktree(cx) else { return };
-        if let Err(why) = allowed(&repo, cx) {
+        if let Err(why) = project::api::worktree_allowed(&repo, cx) {
             tell("Can't make a worktree here", why, window, cx);
             return;
         }
@@ -151,7 +114,7 @@ impl Workspace {
             ));
         };
         let repo = worktree_of(&root).unwrap_or(root);
-        allowed(&repo, cx).map_err(|why| refuse(ErrorCode::Refused, why))?;
+        project::api::worktree_allowed(&repo, cx).map_err(|why| refuse(ErrorCode::Refused, why))?;
         let plan = worktree::plan(&repo, branch, base(cx).as_deref())
             .map_err(|why| refuse(ErrorCode::BadRequest, why))?;
         if self.worktree_ask.is_some() {
@@ -335,7 +298,7 @@ impl Workspace {
                         _ => app(cx).worktrees.free_ports(worktree::port_free),
                     };
                     tracing::info!(branch = plan.branch, folder = %plan.folder.display(), port = ?plan.port, "worktree made");
-                    let setup = setup_command(&plan.repo, cx);
+                    let setup = project::api::worktree_setup(&plan.repo, cx);
                     app_mut(cx).record_worktree(plan.clone());
                     let folder = plan.folder.to_string_lossy().into_owned();
                     let ix = ws.open_session(None, Some(folder), window, cx);

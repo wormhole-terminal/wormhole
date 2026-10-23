@@ -4,16 +4,20 @@
 //! Part of the window: it must not use the surfaces above it (the command palette, the shortcut
 //! sheet, the Settings and Studio windows, the status item, the app root); they call these.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use gpui_kit::*;
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::SessionRecord;
+use wormhole_core::terminal::SpawnOptions;
+use wormhole_core::terminal::shells::ShellCommand;
 
 use crate::app_state::{AppState, app, app_mut};
 use crate::settings::settings_in;
 use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
+use crate::window::feature::SpawnAdd;
 use crate::window::features::git::{changes, history};
 use crate::window::session::{Pane, Session};
 
@@ -96,9 +100,6 @@ impl Workspace {
             git: changes::GitState::default(),
             compare: None,
             history: history::HistoryState::default(),
-            project: None,
-            notes_root: None,
-            notes_base: None,
             repo_root: Default::default(),
             pinned: record.pinned,
             forget_text: record.forget_text,
@@ -143,7 +144,9 @@ impl Workspace {
             return (Pane::new(record.id, record.shell.clone(), terminal, window, cx), None);
         }
         let cwd = record.cwd.as_ref().map(PathBuf::from);
-        let (mut env, project_shell) = Self::project_spawn_options(cwd.as_deref(), cx);
+        // What the features add to a terminal started in the folder (a trusted project's environment and
+        // shell).
+        let SpawnAdd { mut env, shell: project_shell } = Self::spawn_adds(cwd.as_deref(), self.features, cx);
         // A worktree Wormhole made: its own ports, whatever the project says.
         if let Some(made) = cwd.as_deref().and_then(|cwd| app(cx).worktrees.find(cwd)) {
             env.extend(made.env().into_iter().map(|(name, value)| (name.to_string(), value)));
@@ -153,13 +156,7 @@ impl Workspace {
             project_shell.as_deref(),
             settings_in(&self.profile, cx),
         );
-        let mut options = crate::window::features::project::spawn_options(
-            record.id,
-            cwd,
-            record.scrollback.clone(),
-            env,
-            shell,
-        );
+        let mut options = spawn_options(record.id, cwd, record.scrollback.clone(), env, shell);
         // After the project's environment is in: what a trusted project set is kept. The profile's
         // own environment is the person's (not repository content), so it applies in an untrusted
         // project as well.
@@ -294,9 +291,12 @@ impl Workspace {
         &self.profile
     }
 
-    /// The project folder of the terminal in front (what Settings marks "set by this project").
-    pub(crate) fn active_project_root(&self) -> Option<PathBuf> {
-        self.active_session().project.clone()
+    /// The folder the active terminal belongs to, as the sidebar's bands name it: its repository, else
+    /// the folder itself. `None` until its shell has said where it is.
+    #[cfg(feature = "devctl")]
+    pub(crate) fn active_folder(&self, cx: &App) -> Option<PathBuf> {
+        let cwd = self.active_terminal().read(cx).cwd.clone()?;
+        Some(self.active_session().repo_root.of(&cwd))
     }
 
     pub(crate) fn active_terminal(&self) -> Entity<TerminalView> {
@@ -353,8 +353,28 @@ impl Workspace {
             .map(|status| status.files.len())
             .filter(|&n| n > 0)
     }
+}
 
-    pub(crate) fn session_for_project(&self, root: &Path) -> Option<usize> {
-        self.sessions.iter().position(|s| s.project.as_deref() == Some(root))
+/// What a terminal starts with: its folder, the scrollback to restore, the environment and the shell.
+fn spawn_options(
+    tab_id: i64,
+    cwd: Option<PathBuf>,
+    restore: Option<String>,
+    env: BTreeMap<String, String>,
+    shell: ShellCommand,
+) -> SpawnOptions {
+    SpawnOptions {
+        cwd,
+        tab_id: tab_id.to_string(),
+        restore,
+        scrollback_lines: 0,
+        allow_screen_checksum: false,
+        allow_window_ops: false,
+        allow_title_report: false,
+        env,
+        shell: Some(shell),
+        welcome: false,
+        colors: None,
+        color_scheme: None,
     }
 }

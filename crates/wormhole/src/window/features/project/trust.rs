@@ -8,7 +8,6 @@ use wormhole_core::project::{Feature, ProjectFolder, TrustRequest};
 
 use super::{ProjectHub, hub, hub_mut, load_project, projects_changed};
 use crate::platform::auth;
-use crate::window::Workspace;
 
 impl ProjectHub {
     /// The answer to an approval dialog for `request` (`None`: it went away without one).
@@ -91,28 +90,6 @@ pub(crate) fn set_feature_for(root: &Path, feature: Feature, enabled: Option<boo
 pub(crate) fn set_feature_default(feature: Feature, enabled: bool, cx: &mut App) {
     hub_mut(cx).prefs.set_default(feature, enabled);
     projects_changed(cx);
-}
-
-impl Workspace {
-    pub(in crate::window) fn approve_active_project(&mut self, cx: &mut Context<Self>) {
-        let Some(root) = self.active_session().project.clone() else { return };
-        approve_project(&root, cx);
-    }
-
-    pub(in crate::window) fn revoke_active_project(&mut self, cx: &mut Context<Self>) {
-        let Some(root) = self.active_session().project.clone() else { return };
-        revoke_project(&root, cx);
-    }
-
-    pub(in crate::window) fn set_project_feature(
-        &mut self,
-        feature: Feature,
-        enabled: bool,
-        cx: &mut Context<Self>,
-    ) {
-        let Some(root) = self.active_session().project.clone() else { return };
-        set_feature_for(&root, feature, Some(enabled), cx);
-    }
 }
 
 #[cfg(test)]

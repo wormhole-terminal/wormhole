@@ -1,5 +1,4 @@
 //! One window's life: opening siblings, closing, saving, and being the one in front.
-use std::path::PathBuf;
 use std::time::Duration;
 
 use gpui_kit::*;
@@ -244,10 +243,11 @@ impl Workspace {
         self.save_scrollback(cx);
     }
 
-    /// This window just became the one in front: its session's project settings apply.
+    /// This window just became the one in front: its features look again (the project of its terminal
+    /// applies its settings and theme).
     pub(super) fn became_front(&mut self, cx: &mut Context<Self>) {
         app_mut(cx).front = self.window_id;
-        self.refresh_projects(cx);
+        self.refresh_features(cx);
         // Coming back after installing git is a retry; polling a missing git is not (on a Mac
         // without the Command Line Tools each run asks to install them). Only the terminal in
         // front: the others ask when they are in front and the window comes back.
@@ -282,18 +282,6 @@ impl Workspace {
     /// Whether the terminal a hook names (`WORMHOLE_TAB_ID`, its id) is in this window.
     pub(crate) fn owns_terminal(&self, id: &str) -> bool {
         id.parse().ok().is_some_and(|id| self.find_session(id).is_some())
-    }
-
-    /// Projects of this window's sessions (the terminal's and the one its notes sync with) and of
-    /// its folders (whose colour they hold), in session order.
-    pub(crate) fn project_roots(&self, cx: &App) -> Vec<PathBuf> {
-        // No project roots while the project-folder feature is off, so nothing that scans them
-        // (the menu bar's project actions, pruning the hub) keeps a stale project alive.
-        if !crate::window::features::project::project_folders_on(cx) {
-            return Vec::new();
-        }
-        let sessions = self.sessions.iter().flat_map(|s| [s.project.clone(), s.notes_root.clone()]).flatten();
-        sessions.chain(self.folder_projects.values().cloned()).collect()
     }
 
     pub(super) fn is_front(&self, cx: &App) -> bool {

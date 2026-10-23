@@ -28,7 +28,6 @@ use wormhole_term::listening_ports;
 use crate::app_state::{app, app_mut};
 use crate::settings::settings_in;
 use crate::window::Workspace;
-use crate::window::features::project;
 
 /// How often the ports under the terminal on screen are looked at.
 const PORTS_EVERY: Duration = Duration::from_secs(5);
@@ -175,18 +174,14 @@ impl Workspace {
 
     /// [`Self::pull_request_branch`] for any of the window's terminals.
     pub(in crate::window) fn session_pr_branch(&self, ix: usize, cx: &App) -> Option<Branch> {
-        if !settings_in(&self.profile, cx).title_pull_request
-            || !crate::window::features::project::project_folders_on(cx)
-        {
+        if !settings_in(&self.profile, cx).title_pull_request {
             return None;
         }
         let session = self.sessions.get(ix)?;
         let status =
             session.git.status.as_ref().filter(|_| session.git.cwd == session.terminal().read(cx).cwd)?;
-        let hub = project::hub(cx);
-        let project = hub.projects.get(session.project.as_ref()?)?;
         let name = status.branch.clone()?;
-        hub.trusted(project).then(|| Branch { root: status.root.clone(), name })
+        self.session_trusted(session.id, cx).then(|| Branch { root: status.root.clone(), name })
     }
 
     /// Ask `gh` for each terminal's branch's pull request when the cache says it is time (a branch

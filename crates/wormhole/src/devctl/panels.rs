@@ -65,7 +65,7 @@ pub(super) fn project(ctx: &mut Ctx, _: &str) -> Result<String> {
     if !project_folders_on(ctx) {
         return Ok("project folders feature is off (feature_flags.project_folders)".into());
     }
-    ctx.workspace.devctl_project_tab(ctx.cx);
+    crate::window::features::project::devctl::show_tab(ctx.workspace, ctx.cx);
     Ok(String::new())
 }
 
@@ -75,7 +75,8 @@ pub(super) fn project_init(ctx: &mut Ctx, _: &str) -> Result<String> {
     if !project_folders_on(ctx) {
         return Ok("project folders feature is off (feature_flags.project_folders)".into());
     }
-    let folder = ctx.workspace.devctl_project_init(ctx.cx).map_err(|e| anyhow!(e))?;
+    let folder =
+        crate::window::features::project::devctl::init(ctx.workspace, ctx.cx).map_err(|e| anyhow!(e))?;
     Ok(format!("creating {}/.wormhole", folder.display()))
 }
 
@@ -84,7 +85,8 @@ pub(super) fn project_trust(ctx: &mut Ctx, _: &str) -> Result<String> {
     if !project_folders_on(ctx) {
         return Ok("project folders feature is off (feature_flags.project_folders)".into());
     }
-    let root = ctx.workspace.devctl_project_trust(ctx.cx).map_err(|e| anyhow!(e))?;
+    let root =
+        crate::window::features::project::devctl::trust(ctx.workspace, ctx.cx).map_err(|e| anyhow!(e))?;
     Ok(format!("trusting {}", root.display()))
 }
 
@@ -95,7 +97,7 @@ fn project_folders_on(ctx: &Ctx) -> bool {
 
 /// `trust-window`: the window listing everything the active terminal's project wants to run.
 pub(super) fn trust_window(ctx: &mut Ctx, _: &str) -> Result<String> {
-    ctx.workspace.devctl_trust_window(ctx.cx)?;
+    crate::window::features::project::devctl::trust_window(ctx.workspace, ctx.cx)?;
     Ok(String::new())
 }
 

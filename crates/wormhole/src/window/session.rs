@@ -77,13 +77,6 @@ pub(super) struct Session {
     /// Branch the Changes tab compares against (None = HEAD).
     pub compare: Option<String>,
     pub history: history::HistoryState,
-    /// Root of the `.wormhole/` project the terminal's folder belongs to.
-    pub project: Option<PathBuf>,
-    /// The project the session started in, which its notes sync with: unlike `project` it doesn't
-    /// change as the terminal goes to other folders.
-    pub notes_root: Option<PathBuf>,
-    /// Last notes/tasks state agreed with the project's notes.md (merge base).
-    pub notes_base: Option<wormhole_core::project::NotesDoc>,
     /// Where the session's folder lives on disk, for grouping the sidebar by folder.
     pub repo_root: RepoRoot,
     /// Pinned to the top of its group in the sidebar (saved). Every member of a split carries it.

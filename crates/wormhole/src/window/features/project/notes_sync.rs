@@ -1,43 +1,63 @@
-//! Two-way sync of each session's notes and tasks with its project's `notes.md` (the merge itself
-//! is in core: `wormhole_core::project::plan_sync`).
+//! The one place the project feature works with the notes feature, through notes' `api`: two-way sync
+//! of each terminal's notes and tasks with its project's `notes.md` (the merge itself is in core:
+//! `wormhole_core::project::plan_sync`), and a project prompt copied into a new note.
 
 use gpui_kit::*;
+use wormhole_core::config::FeatureId;
 use wormhole_core::project::{self as proj, Feature, NotesBase, NotesDoc, NotesFile};
 
-use super::{hub, hub_mut, project_folders_on};
-use crate::window::Workspace;
+use super::{Project, hub, hub_mut, project_folders_on};
+use crate::window::facts::WindowFacts;
 use crate::window::features::notes::Notes;
 
-impl Workspace {
-    /// Two-way sync between each session's notes/tasks and its project's `notes.md`, as a three-way
-    /// merge against the last state both agreed on (kept per session and project across restarts).
-    pub(in crate::window) fn sync_project_notes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        // It runs more often than `refresh_projects`, so the `notes_root`s may not be cleared yet
+/// The window's notes, as the Project tab's button that copies a prompt into a note holds them. The only
+/// way the rest of the project feature gets at the notes feature.
+#[derive(Clone)]
+pub(super) struct NotesLink(Entity<Notes>);
+
+impl NotesLink {
+    /// The window's notes, if it has any.
+    pub(super) fn of(facts: &WindowFacts<'_>) -> Option<Self> {
+        facts.feature::<Notes>().map(Self)
+    }
+}
+
+impl Project {
+    /// Two-way sync between each terminal's notes/tasks and its project's `notes.md`, as a three-way
+    /// merge against the last state both agreed on (kept per terminal and project across restarts).
+    pub(super) fn sync_notes(
+        &mut self,
+        facts: &WindowFacts<'_>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        // It runs more often than the look for projects, so the terminals' projects may not be cleared yet
         // when the project-folder flag goes off: check the flag itself before touching notes.md.
-        if !project_folders_on(cx) || !crate::window::features::notes::on(cx) {
+        if !project_folders_on(cx) || !crate::settings::features(cx).has(FeatureId::Notes) {
             return;
         }
-        let Some(notes) = self.feature::<Notes>() else { return };
-        for ix in 0..self.sessions.len() {
-            let session_id = self.sessions[ix].id;
-            let Some(root) = self.sessions[ix].notes_root.clone() else { continue };
-            let hub = hub(cx);
-            let Some(project) = hub.projects.get(&root) else { continue };
-            // Syncs when switched on and the project has a notes.md, or when the user
-            // explicitly opted in for this project (which creates the file). The Project tab's
-            // switch asks the same question, so it shows on only when this runs.
-            if !hub.prefs.notes_sync(&root, project.folder.has(Feature::Notes)) {
+        let Some(notes) = facts.feature::<Notes>() else { return };
+        for session in facts.sessions() {
+            let session_id = session.id;
+            let Some(root) = self.of.get(&session_id).and_then(|of| of.root.clone()) else { continue };
+            let Some(project) = hub(cx).projects.get(&root) else { continue };
+            // Syncs when switched on and the project has a notes.md, or when the user explicitly opted in
+            // for this project (which creates the file). The Project tab's switch asks the same question,
+            // so it shows on only when this runs.
+            if !hub(cx).prefs.notes_sync(&root, project.folder.has(Feature::Notes)) {
                 // Switched off: switching on again merges both sides afresh.
-                self.sessions[ix].notes_base = None;
+                if let Some(of) = self.of.get_mut(&session_id) {
+                    of.notes_base = None;
+                }
                 hub_mut(cx).notes_bases.remove(session_id);
                 continue;
             }
             let folder = project.folder.clone();
             let local = notes.read(cx).snapshot(session_id, cx);
             let editing = notes.read(cx).being_written(session_id);
-            // `notes_base` is this run's copy of the base (empty after a launch); the hub knows
-            // which project it belongs to and keeps it for the next launch.
-            let session_base = self.sessions[ix].notes_base.clone();
+            // `notes_base` is this run's copy of the base (empty after a launch); the hub knows which
+            // project it belongs to and keeps it for the next launch.
+            let session_base = self.of.get(&session_id).and_then(|of| of.notes_base.clone());
             let hub = hub_mut(cx);
             let base = hub.notes_bases.get(session_id).map(|saved| NotesBase {
                 root: saved.root.clone(),
@@ -73,8 +93,25 @@ impl Workspace {
             if let Some(doc) = &plan.apply {
                 notes.update(cx, |notes, cx| notes.apply(session_id, doc, window, cx));
             }
-            self.sessions[ix].notes_base = Some(plan.base.doc);
+            if let Some(of) = self.of.get_mut(&session_id) {
+                of.notes_base = Some(plan.base.doc);
+            }
         }
         hub_mut(cx).save_notes_bases();
+    }
+
+    /// Copy prompt `id` into a new note on terminal `session`, where the project has Prompts on. `panel` is
+    /// the panel's width, for the note's hint.
+    pub(super) fn prompt_to_note(
+        &mut self,
+        session: i64,
+        id: &str,
+        panel: f32,
+        notes: &NotesLink,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(body) = self.enabled_prompt(session, id, cx) else { return };
+        notes.0.update(cx, |notes, cx| notes.note_from(session, body, panel, window, cx));
     }
 }
