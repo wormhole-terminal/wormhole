@@ -61,7 +61,7 @@ pub(crate) fn start(
     let display_observer = crate::platform::look::observe_display_options(move || {
         let _ = display_changed.try_send(());
     });
-    crate::window::open_in::OpenIn::install(cx);
+    crate::open_in::OpenIn::install(cx);
     cx.set_global(ParkedSettings::new(profiles.active_id().clone()));
     // The updater's state is a global of its own, so the shared state does not name it.
     cx.set_global(updates::Updates::new(Some(root.update_schedule_file()), data.store.as_ref()));
@@ -71,9 +71,10 @@ pub(crate) fn start(
         profiles_error.map(|err| err.to_string()),
         data,
         launch_hosts,
-        menu,
         display_observer,
     ));
+    crate::hotkey::install(menu.sender(), cx);
+    cx.set_global(menu);
     // The features that keep app-wide data for the shown profile read it now that its database is open.
     crate::window::feature::FeatureTable::profile_shown(cx);
     // A profile switch changes what the menus show; they follow it at once, not on the next tick.

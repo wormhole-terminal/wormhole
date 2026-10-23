@@ -19,11 +19,11 @@ use wormhole_core::git::review::{LineSide, Review, ReviewComment};
 
 use super::DiffView;
 use super::render::{LineAt, OnLine};
+use crate::dialog;
 use crate::settings::UiColors;
 use crate::settings::ui_in;
 use crate::style::{self, Edges, TextRole};
 use crate::terminal_view::TerminalView;
-use crate::window::dialog;
 use crate::window::features::git::changes::Changes;
 
 /// How tall the comment field grows, in lines.

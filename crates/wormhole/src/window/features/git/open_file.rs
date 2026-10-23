@@ -15,9 +15,9 @@ use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
+use crate::open_in::OpenIn;
 use crate::settings::UiColors;
 use crate::style::{self, IconButton};
-use crate::window::open_in::OpenIn;
 use wormhole_core::platform::open_file;
 use wormhole_core::platform::open_in::Installed;
 use wormhole_core::storage::fsutil;

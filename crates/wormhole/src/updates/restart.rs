@@ -10,10 +10,10 @@ use gpui_kit::*;
 use wormhole_core::agents::agent;
 
 use crate::app_state::app;
+use crate::dialog::{self, shortened};
 use crate::terminal_view::Status;
 use crate::updates::{self, UpdatePhase, Updates};
 use crate::window::Workspace;
-use crate::window::dialog::{self, shortened};
 use crate::window::restart_facts::RestartFacts;
 
 /// How long every terminal must stay idle, without a break, before the app restarts by itself. An

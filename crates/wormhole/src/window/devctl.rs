@@ -226,8 +226,7 @@ impl Workspace {
             ),
             None => "none".to_string(),
         };
-        let apps: Vec<String> =
-            crate::window::open_in::OpenIn::apps(cx).into_iter().map(|app| app.bundle).collect();
+        let apps: Vec<String> = crate::open_in::OpenIn::apps(cx).into_iter().map(|app| app.bundle).collect();
         let chip = plan.fit.chip.map_or("none".to_string(), |w| format!("{w:.0}"));
         format!(
             "title row: path={path} steps={steps} words={} chip={chip} folded={} name={:.0} tint={tint} indicator={:?}\n\

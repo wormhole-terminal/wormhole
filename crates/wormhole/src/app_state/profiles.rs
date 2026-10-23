@@ -291,7 +291,6 @@ impl AppState {
             last_panes: std::mem::replace(&mut state.last_panes, last_panes),
             recent: std::mem::replace(&mut state.recent_projects, recent),
         };
-        state.menu.switch_profile();
         state.parked.insert(from.clone(), leaving);
         if let Err(err) = state.profiles.set_active(target) {
             return Err(err.to_string());

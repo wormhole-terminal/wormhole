@@ -10,13 +10,14 @@ use wormhole_core::view::sidebar::WindowSidebar;
 use crate::app_state::AppState;
 use crate::app_state::attention::{self, Attention};
 use crate::app_state::{app, app_mut};
+use crate::dialog;
 use crate::settings::settings;
 use crate::terminal_view::Status;
 use crate::window::feature::{CloseAlso, CloseOf};
 use crate::window::feature_host::extras_to_ask;
 use crate::window::session::{self, Session};
 use crate::window::window_lifecycle::open_workspace_window_in;
-use crate::window::{Layout, Workspace, dialog, window_bounds};
+use crate::window::{Layout, Workspace, window_bounds};
 
 impl Layout {
     /// A new window's layout, made from another's: the same panels, but the sidebar the way a

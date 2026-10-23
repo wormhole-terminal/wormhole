@@ -31,12 +31,12 @@ use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::theme::tokens::{Color, ThemeFile, ThemeTokens};
 
 use crate::app_state::{AppState, app, app_mut};
+use crate::aux_window;
 use crate::platform::vibrancy::Blur;
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges};
 use crate::terminal_view::keystroke_spec;
 use crate::theme_bridge::{self, hsla, token};
-use crate::window::aux_window;
 use draft::{Themes, draft_for, group_of, is_metric, number, override_of, set_override};
 use gallery::{Area, GalleryView};
 use save::Notice;
@@ -163,7 +163,7 @@ pub(crate) fn toggle_studio(cx: &mut App) {
 }
 
 /// The Studio window while it is open, and its view. The shared state keeps the view untyped
-/// (`aux_window::Slot`, as it does About's), so it doesn't name the Studio; `None` once the view is
+/// (`crate::app_state::Slot`, as it does About's), so it doesn't name the Studio; `None` once the view is
 /// gone, as a weak handle that no longer upgrades.
 fn current_window(cx: &App) -> Option<(AnyWindowHandle, Entity<StudioWindow>)> {
     let (handle, view) = app(cx).studio_window.clone()?;

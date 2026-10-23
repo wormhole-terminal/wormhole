@@ -15,10 +15,10 @@ use wormhole_core::storage::paths::ProfileId;
 
 use super::Worktrees;
 use crate::app_state::{app, app_mut};
+use crate::dialog;
 use crate::settings::{settings, ui};
 use crate::style::{self, TextRole};
 use crate::terminal_view::TerminalView;
-use crate::window::dialog;
 use crate::window::feature::{FeatureEvent, TerminalInput, TerminalTarget};
 use crate::window::features::project;
 

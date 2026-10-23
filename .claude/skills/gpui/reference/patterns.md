@@ -17,7 +17,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   that one is already being updated.
 - Opening extra windows (Settings, Studio) with `open_window`:
   `settings_window/mod.rs`, `studio/mod.rs`; their shared
-  window options and surfaces: `window/aux_window.rs`.
+  window options and surfaces: `aux_window.rs`.
 - Settings and theme as a `Global` (`SettingsStore`), read with
   `settings(cx)` / `ui(cx)`: `settings/mod.rs`. Tokens become GPUI colors in
   `theme_bridge.rs` (`token`, `hsla`, `apply` for GPUI Kit's theme).

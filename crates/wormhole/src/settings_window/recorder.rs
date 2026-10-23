@@ -19,7 +19,6 @@ use wormhole_core::keys::keyspec::{KeyMods, KeySpec};
 use wormhole_core::keys::shortcut_record::{self, Recorded};
 
 use super::{SettingsWindow, registry, ui};
-use crate::app_state::app_mut;
 use crate::settings::update_settings;
 use crate::settings::{Settings, settings};
 use crate::style::{self, TextRole};
@@ -78,7 +77,7 @@ impl SettingsWindow {
     pub(super) fn set_recording(&mut self, recording: Option<Recording>, cx: &mut App) {
         let paused = pauses_hotkey(recording.as_ref());
         self.recording = recording;
-        app_mut(cx).menu.pause_hotkey(paused);
+        crate::hotkey::pause(paused, cx);
     }
 
     /// Esc: a recording ends without a change; whether there was one.

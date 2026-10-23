@@ -11,6 +11,7 @@ mod devctl;
 mod dialog;
 mod focus_keys;
 mod fonts;
+mod hotkey;
 mod icons;
 #[cfg(any(feature = "inspector", debug_assertions))]
 mod inspector;

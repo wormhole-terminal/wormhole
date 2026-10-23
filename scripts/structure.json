@@ -90,6 +90,7 @@
         ],
         [
           "dialog",
+          "hotkey",
           "open_in"
         ],
         "terminal_view",

@@ -1,9 +1,9 @@
 //! The status item, the Dock (badge and menu) and the global hotkey: keeps them in step with the
 //! settings and the terminals of every window, and carries out what the user picks.
 //!
-//! Above the window: it may use the window and the shared state; the app root uses it, and so does
-//! the shared state (`AppState`), which holds the status item's [`MenuState`] as a field and builds
-//! it. That is the one edge back down, kept until `MenuState` is a global of its own.
+//! Above the window: it may use the window and the shared state; the app root uses it. Its
+//! [`MenuState`] is a global of its own, set at launch, and the hotkey is another (`hotkey`), which the
+//! settings window below it can hold off.
 
 pub(crate) mod quick_panel;
 
@@ -18,10 +18,9 @@ use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::notify::{self, Counts, Terminal};
 use wormhole_core::project::Feature;
 
-use crate::app_state::{AppState, app, app_mut};
+use crate::app_state::{AppState, app};
 use crate::menubar::model::{self, DockEntry, KeyEquivalent};
 use crate::menubar::{ActionItem, MenuCommand, MenuSnapshot, StatusColors};
-use crate::platform::hotkey::Hotkey;
 use crate::platform::status_item::{self, MenuBar};
 use crate::settings::{settings, ui};
 use crate::settings_window;
@@ -39,16 +38,10 @@ pub(crate) struct DockOpenTab {
 
 actions!(dock, [DockNewTerminal, DockNewWindow, DockHeader]);
 
+/// The menu bar item's and the hotkey's state: a global of its own, which the shared state does not name.
 pub(crate) struct MenuState {
     tx: smol::channel::Sender<MenuCommand>,
     bar: Option<MenuBar>,
-    hotkey: Option<Hotkey>,
-    /// The hotkey setting last applied, so a bad spec isn't retried every tick.
-    applied_hotkey: Option<String>,
-    /// Held off while the settings window records a new one: the keys pressed then reach
-    /// the recorder, the current hotkey's included.
-    hotkey_paused: bool,
-    pub hotkey_error: Option<String>,
     /// The working animation while it runs (dropping it stops it).
     animation: Option<Task<()>>,
     /// The Dock menu as last given to GPUI, which keeps every action it is ever handed: so it
@@ -58,69 +51,20 @@ pub(crate) struct MenuState {
     dock_actions: bool,
 }
 
+impl Global for MenuState {}
+
 impl MenuState {
+    /// Where menu clicks and hotkey presses are sent.
+    pub(crate) fn sender(&self) -> smol::channel::Sender<MenuCommand> {
+        self.tx.clone()
+    }
+
     /// Menu clicks and hotkey presses arrive on the returned receiver.
     pub fn new() -> (Self, smol::channel::Receiver<MenuCommand>) {
         let (tx, rx) = smol::channel::unbounded();
-        let state = Self {
-            tx,
-            bar: None,
-            hotkey: None,
-            applied_hotkey: None,
-            hotkey_paused: false,
-            hotkey_error: None,
-            animation: None,
-            dock_menu: None,
-            dock_actions: false,
-        };
+        let state = Self { tx, bar: None, animation: None, dock_menu: None, dock_actions: false };
         (state, rx)
     }
-
-    /// A profile switch: the hotkey is registered again as the new profile sets it. The status
-    /// item stays: whether it shows, and its icon, follow the settings every tick.
-    pub fn switch_profile(&mut self) {
-        self.applied_hotkey = None;
-    }
-
-    /// Hold the hotkey off while its field in Settings records, or put it back.
-    pub fn pause_hotkey(&mut self, paused: bool) {
-        if self.hotkey_paused == paused {
-            return;
-        }
-        self.hotkey_paused = paused;
-        if let Some(spec) = self.applied_hotkey.clone() {
-            self.apply_hotkey(&spec);
-        }
-    }
-
-    fn apply_hotkey(&mut self, spec: &str) {
-        // Release the old key first, or re-registering the same combination fails.
-        self.hotkey = None;
-        self.hotkey_error = None;
-        self.applied_hotkey = Some(spec.to_string());
-        if !registers(spec, self.hotkey_paused) {
-            return;
-        }
-        match Hotkey::register(spec) {
-            Ok(key) => {
-                let tx = self.tx.clone();
-                Hotkey::on_press(move || {
-                    let _ = tx.try_send(MenuCommand::Hotkey);
-                });
-                self.hotkey = Some(key);
-            }
-            Err(err) => {
-                tracing::warn!("global hotkey: {err}");
-                self.hotkey_error = Some(err);
-            }
-        }
-    }
-}
-
-/// Whether a hotkey spec is to be registered now: never an empty one, and not while the
-/// recorder in Settings has the keys.
-fn registers(spec: &str, paused: bool) -> bool {
-    !spec.is_empty() && !paused
 }
 
 /// Called every tick: cheap, since the menu is only built as it opens and the icon, the badge
@@ -130,18 +74,15 @@ pub(crate) fn sync(cx: &mut App) {
         let s = settings(cx);
         (s.menu_bar, s.hotkey.trim().to_string())
     };
-    let mut hotkey_changed = false;
+    let shown = app(cx).active_profile().clone();
+    let hotkey_changed = crate::hotkey::sync(&spec, &shown, cx);
     {
-        let menu = &mut app_mut(cx).menu;
+        let menu = cx.global_mut::<MenuState>();
         if enabled && menu.bar.is_none() {
             menu.bar = status_item::install(menu.tx.clone());
         } else if !enabled {
             menu.bar = None;
             menu.animation = None;
-        }
-        if menu.applied_hotkey.as_deref() != Some(spec.as_str()) {
-            menu.apply_hotkey(&spec);
-            hotkey_changed = true;
         }
     }
     if hotkey_changed {
@@ -151,12 +92,12 @@ pub(crate) fn sync(cx: &mut App) {
     register_dock_actions(cx);
     let terminals = crate::window::ambient::terminals(crate::notifications::finished_commands(cx), cx);
     sync_dock(&terminals, cx);
-    if app(cx).menu.bar.is_none() {
+    if cx.global::<MenuState>().bar.is_none() {
         return;
     }
     let snapshot = snapshot(terminals, cx);
     let animate = model::status_icon(&snapshot.terminals, snapshot.icon, snapshot.animate).animate;
-    if let Some(bar) = &mut app_mut(cx).menu.bar {
+    if let Some(bar) = &mut cx.global_mut::<MenuState>().bar {
         bar.update(&snapshot);
     }
     animate_icon(animate, cx);
@@ -204,13 +145,9 @@ pub(crate) fn project_actions(cx: &App) -> Vec<ActionItem> {
 fn snapshot(terminals: Vec<Terminal>, cx: &App) -> MenuSnapshot {
     let actions = project_actions(cx);
     let state = app(cx);
-    let menu = &state.menu;
     let recent_projects =
         state.recent_projects.roots().iter().map(|root| (project_name(root), root.clone())).collect();
-    // A hotkey held off while a new one is recorded shows as it would be (as background mode's,
-    // which holds nothing, does).
-    let registered = menu.hotkey.is_some() || (menu.hotkey_paused && menu.hotkey_error.is_none());
-    let hotkey = menu.applied_hotkey.as_deref().filter(|_| registered);
+    let hotkey = crate::hotkey::shown(cx);
     let key = |spec: &str| spec.parse::<KeySpec>().ok().and_then(|spec| KeyEquivalent::from_spec(&spec));
     let s = settings(cx);
     let ui = ui(cx);
@@ -218,7 +155,7 @@ fn snapshot(terminals: Vec<Terminal>, cx: &App) -> MenuSnapshot {
         terminals,
         actions,
         recent_projects,
-        hotkey: hotkey.and_then(key),
+        hotkey: hotkey.as_deref().and_then(key),
         jump_key: key(&s.jump_waiting_key),
         icon: s.menu_bar_icon,
         // Reduce Motion stops it.
@@ -236,12 +173,12 @@ fn snapshot(terminals: Vec<Terminal>, cx: &App) -> MenuSnapshot {
 /// Start or stop the working animation: [`notify::MENU_ANIM_FRAMES`] frames,
 /// [`notify::MENU_ANIM_FRAME`] each, only while working is what the icon shows.
 fn animate_icon(animate: bool, cx: &mut App) {
-    let running = app(cx).menu.animation.is_some();
+    let running = cx.global::<MenuState>().animation.is_some();
     if animate == running {
         return;
     }
     if !animate {
-        let menu = &mut app_mut(cx).menu;
+        let menu = cx.global_mut::<MenuState>();
         menu.animation = None;
         if let Some(bar) = &mut menu.bar {
             bar.show_frame(None);
@@ -254,13 +191,13 @@ fn animate_icon(animate: bool, cx: &mut App) {
             cx.background_executor().timer(notify::MENU_ANIM_FRAME).await;
             frame = (frame + 1) % notify::MENU_ANIM_FRAMES;
             cx.update(|cx| {
-                if let Some(bar) = &mut app_mut(cx).menu.bar {
+                if let Some(bar) = &mut cx.global_mut::<MenuState>().bar {
                     bar.show_frame(Some(frame));
                 }
             });
         }
     });
-    app_mut(cx).menu.animation = Some(task);
+    cx.global_mut::<MenuState>().animation = Some(task);
 }
 
 /// The Dock's badge (`dock_badge`) and its menu.
@@ -269,7 +206,7 @@ fn sync_dock(terminals: &[Terminal], cx: &mut App) {
     let badge = notify::dock_badge(settings(cx).dock_badge, counts.needs_you, counts.results());
     crate::platform::dock::set_badge(badge, cx);
     let menu = model::dock_menu(terminals, Instant::now());
-    if app(cx).menu.dock_menu.as_ref() == Some(&menu) {
+    if cx.global::<MenuState>().dock_menu.as_ref() == Some(&menu) {
         return;
     }
     let items = menu
@@ -289,11 +226,11 @@ fn sync_dock(terminals: &[Terminal], cx: &mut App) {
         })
         .collect();
     cx.set_dock_menu(items);
-    app_mut(cx).menu.dock_menu = Some(menu);
+    cx.global_mut::<MenuState>().dock_menu = Some(menu);
 }
 
 fn register_dock_actions(cx: &mut App) {
-    if std::mem::replace(&mut app_mut(cx).menu.dock_actions, true) {
+    if std::mem::replace(&mut cx.global_mut::<MenuState>().dock_actions, true) {
         return;
     }
     // A menu's action runs inside the update of the window that was active: act afterwards.
@@ -418,7 +355,7 @@ pub(crate) fn dump(cx: &App) -> String {
     let snapshot =
         snapshot(crate::window::ambient::terminals(crate::notifications::finished_commands(cx), cx), cx);
     let mut out = model::dump(&model::build(&snapshot, Instant::now()));
-    out.push_str(&format!("installed={}\n", app(cx).menu.bar.is_some()));
+    out.push_str(&format!("installed={}\n", cx.global::<MenuState>().bar.is_some()));
     out
 }
 
@@ -453,18 +390,4 @@ pub(crate) fn dock_dump(cx: &App) -> String {
 
 fn project_name(root: &Path) -> String {
     root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| root.display().to_string())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::registers;
-
-    /// While the settings window records a new hotkey the current one is held off, so
-    /// pressing it again records it instead of opening the quick panel.
-    #[test]
-    fn a_recording_holds_the_hotkey_off() {
-        assert!(registers("alt-space", false));
-        assert!(!registers("alt-space", true));
-        assert!(!registers("", false), "no hotkey set");
-    }
 }

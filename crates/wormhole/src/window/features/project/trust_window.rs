@@ -17,10 +17,10 @@ use wormhole_core::project::{TrustLine, TrustStatus};
 use wormhole_core::storage::paths::ProfileId;
 
 use super::{LoadedProject, approve_project, hub_of};
+use crate::aux_window;
 use crate::platform::auth;
 use crate::settings::{SettingsStore, ui};
 use crate::style::{self, Edges, TextRole};
-use crate::window::aux_window;
 
 const SIZE: (f32, f32) = (640.0, 480.0);
 const MIN: (f32, f32) = (480.0, 320.0);
@@ -29,7 +29,7 @@ const LIST_OVERDRAW: f32 = 200.0;
 
 /// The window while it is open, if it is: there is one at most.
 #[derive(Default)]
-struct Open(aux_window::Slot);
+struct Open(crate::app_state::Slot);
 
 impl Global for Open {}
 

@@ -1,6 +1,6 @@
 //! The system's own alert as a sheet on a window, for the one question GPUI's prompt can't ask:
 //! one with a checkbox (the question before quitting). The app falls back to GPUI's prompt where
-//! there is no such sheet (`window::dialog`).
+//! there is no such sheet (`dialog`).
 
 use gpui_kit::Window;
 use smol::channel::Receiver;

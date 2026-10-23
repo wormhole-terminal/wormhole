@@ -6,7 +6,6 @@ use wormhole_core::config::{HotkeyAction, MenuBarIcon};
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keyspec::KeySpec;
 
-use crate::app_state::app;
 use crate::settings::Settings;
 use crate::settings_window::recorder::RecorderRow;
 use crate::settings_window::registry::{Segment, Setting, toggle};
@@ -67,7 +66,7 @@ fn jump_accepts(spec: &KeySpec) -> bool {
 /// Why the hotkey set now doesn't work: macOS, the app or the shell has the keys (set by hand in
 /// config.json; the recorder refuses them), or it didn't register.
 fn hotkey_problem(s: &Settings, cx: &App) -> Option<String> {
-    crate::platform::hotkey::system_conflict(&s.hotkey).or_else(|| app(cx).menu.hotkey_error.clone())
+    crate::platform::hotkey::system_conflict(&s.hotkey).or_else(|| crate::hotkey::error(cx))
 }
 
 #[cfg(test)]

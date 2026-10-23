@@ -10,9 +10,9 @@ use wormhole_core::view::panes::PaneId;
 use wormhole_core::view::sidebar::{SplitId, names};
 
 use crate::app_state::app;
+use crate::dialog::shortened;
 use crate::terminal_view::{Status, TerminalEvent, TerminalView};
 use crate::window::Workspace;
-use crate::window::dialog::shortened;
 use crate::window::feature::Stake;
 use crate::window::repo::GitState;
 

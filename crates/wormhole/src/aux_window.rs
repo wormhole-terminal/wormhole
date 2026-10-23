@@ -4,8 +4,8 @@
 
 use gpui_kit::*;
 
-use crate::app_state::AppState;
 use crate::app_state::app_mut;
+use crate::app_state::{AppState, Slot};
 use crate::style;
 
 /// Options for a secondary window: transparent title bar with the traffic
@@ -31,9 +31,6 @@ pub(crate) fn window_options(
         ..Default::default()
     }
 }
-
-/// A secondary window that exists at most once: its handle, and its view (for devctl).
-pub(crate) type Slot = Option<(AnyWindowHandle, AnyWeakEntity)>;
 
 /// Bring the window in `slot` to the front, or open a new one there.
 pub(crate) fn open_single<V: Render + 'static>(

@@ -29,6 +29,7 @@ use wormhole_core::view::layout::title_row::{PathStep, RowFit};
 use wormhole_core::view::panes::Axis;
 
 use crate::menubar::model::KeyEquivalent;
+use crate::open_in::{self, OpenIn};
 use crate::platform::{self, Anchor, Icon, Item, Menu};
 use crate::settings::{UiColors, store_in, ui_in};
 use crate::style::TitleDrag as _;
@@ -36,7 +37,6 @@ use crate::style::{self, Edges};
 use crate::terminal_view::Status;
 use crate::theme_bridge::token;
 use crate::window::Workspace;
-use crate::window::open_in::{self, OpenIn};
 use crate::window::title::extras::ExtraFacts;
 
 /// What the title row says about the terminal it is for, gathered once per frame.

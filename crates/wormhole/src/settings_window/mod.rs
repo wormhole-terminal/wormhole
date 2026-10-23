@@ -28,13 +28,13 @@ use wormhole_core::theme::fonts::FontSlot;
 use wormhole_core::view::sidebar::Density;
 
 use crate::app_state::{AppState, app, app_mut};
+use crate::aux_window;
 use crate::platform::vibrancy::Blur;
 use crate::settings::{SettingsStore, update_settings};
 use crate::settings::{UiColors, settings};
 use crate::style::TitleDrag as _;
 use crate::style::{self, TextRole};
 use crate::theme_bridge;
-use crate::window::aux_window;
 use font_picker::FontPickerState;
 use preview_column::{COLUMN_SWITCH_W, PREVIEW_W};
 
@@ -341,9 +341,7 @@ impl SettingsWindow {
         subscriptions.extend(project_subscriptions);
         // Closed while its field records: the hotkey comes back with the window gone.
         subscriptions.push(cx.on_release(|_, cx| {
-            if cx.has_global::<AppState>() {
-                app_mut(cx).menu.pause_hotkey(false);
-            }
+            crate::hotkey::pause(false, cx);
         }));
         let theme_picker = sections::ThemePicker::new(window, cx);
         let translucent = settings(cx).settings_translucent;

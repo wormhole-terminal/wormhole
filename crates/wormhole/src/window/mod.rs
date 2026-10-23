@@ -132,11 +132,6 @@ mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 
-// Old paths, for one commit only: the next commit names every module by its new path and removes them.
-pub(crate) use crate::aux_window;
-pub(crate) use crate::dialog;
-pub(crate) use crate::open_in;
-
 use self::saved_layout::Layout;
 use self::session::Session;
 use wormhole_core::config::TabId;

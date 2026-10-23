@@ -150,7 +150,7 @@ impl Workspace {
                 + CRUMB_GAP,
         };
         let fit = fit_row(self.title_row_width(window), &wants);
-        TitlePlan { app: crate::window::open_in::OpenIn::resolved(cx), facts, steps, fit, tint }
+        TitlePlan { app: crate::open_in::OpenIn::resolved(cx), facts, steps, fit, tint }
     }
 
     /// The selected terminal's breadcrumb: folder › branch › the terminal's tool and name.

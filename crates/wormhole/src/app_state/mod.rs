@@ -1,5 +1,5 @@
-//! State shared by every window: the database, project folders, menu bar,
-//! updater, the settings and Theme Studio windows, and the list of open windows.
+//! State shared by every window: the database, the profiles, the settings and Theme Studio windows, and
+//! the list of open windows.
 //!
 //! Each window's [`Workspace`] owns only its own sessions. Anything that must
 //! exist once (the menu bar item, the hook socket, the updater) lives here and
@@ -7,10 +7,8 @@
 //! the same with one window or five; windows open and close in `window_lifecycle`.
 //!
 //! One tier with the window (`window`): the shared state names the window's type and opens and
-//! closes windows through it, and a window reads the shared state, until phase 5 separates them.
-//! The one edge up, kept until then, is the field holding the status item's `MenuState`; the cycle
-//! entries in `scripts/structure.json` that name this module come from it and from that tie. The
-//! updater's `Updates` is a global of its own, set at launch.
+//! closes windows through it, and a window reads the shared state. The status item's `MenuState` and
+//! the updater's `Updates` are globals of their own, set at launch.
 
 pub(crate) mod attention;
 pub(crate) mod look;
@@ -31,8 +29,10 @@ use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 
 use crate::app_state::look::LookOverride;
 use crate::app_state::recent_projects::RecentProjects;
-use crate::status_item;
-use crate::window::{Workspace, aux_window};
+use crate::window::Workspace;
+
+/// A secondary window that exists at most once: its handle, and its view (for devctl).
+pub(crate) type Slot = Option<(AnyWindowHandle, AnyWeakEntity)>;
 
 /// A window showing a [`Workspace`].
 #[derive(Clone)]
@@ -60,17 +60,15 @@ pub(crate) struct AppState {
     pub tips: DismissedTips,
     /// The projects worked in lately (Open Recent), most recent first.
     pub recent_projects: RecentProjects,
-    /// Menu bar item and global hotkey.
-    pub menu: status_item::MenuState,
     /// The settings window, while open, and its page: untyped (the page is `settings_window::SettingsWindow`,
     /// which sits above the shared state and reads it back typed with `current_window`).
     pub settings_window: Option<(AnyWindowHandle, AnyEntity)>,
     /// The Theme Studio window, while open. Weak, so closing the window drops
     /// the Studio (which clears its preview); the Studio module reads it typed.
-    pub studio_window: aux_window::Slot,
+    pub studio_window: Slot,
     /// The About and Licenses windows, while open.
-    pub about_window: aux_window::Slot,
-    pub licenses_window: aux_window::Slot,
+    pub about_window: Slot,
+    pub licenses_window: Slot,
     /// Open windows, oldest first.
     pub windows: Vec<OpenWindow>,
     /// The window that was in front last: its session's project settings apply.
@@ -120,7 +118,6 @@ impl AppState {
         profiles_error: Option<String>,
         data: profiles::ProfileData,
         launch_hosts: wormhole_core::ipc::hosts::LaunchHosts,
-        menu: status_item::MenuState,
         display_options: Option<crate::platform::look::DisplayObserver>,
     ) -> Self {
         let profiles::ProfileData { store, tips, recent, worktrees, last_panes } = data;
@@ -133,7 +130,6 @@ impl AppState {
             store,
             tips,
             recent_projects: recent,
-            menu,
             settings_window: None,
             studio_window: None,
             about_window: None,
@@ -173,7 +169,6 @@ impl AppState {
 impl AppState {
     /// An app with no database and no windows, for tests that open a `Workspace` themselves.
     pub(crate) fn for_test(next_id: i64) -> Self {
-        let (menu, _) = status_item::MenuState::new();
         Self {
             root: DataRoot::current(),
             profiles: ProfileList::default(),
@@ -182,7 +177,6 @@ impl AppState {
             store: None,
             tips: DismissedTips::default(),
             recent_projects: RecentProjects::default(),
-            menu,
             settings_window: None,
             studio_window: None,
             about_window: None,

@@ -5,10 +5,10 @@ mod licenses;
 
 use gpui_kit::*;
 
+use crate::aux_window;
 use crate::icons::app_icon_for;
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, TextRole};
-use crate::window::aux_window;
 
 pub(crate) use licenses::open_licenses;
 

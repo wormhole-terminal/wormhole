@@ -8,8 +8,8 @@ use wormhole_core::storage::store::{SplitRecord, WindowRecord};
 use wormhole_core::view::sidebar::{Item, SplitId, WindowSidebar, group_key};
 
 use crate::app_state::app_mut;
+use crate::dialog;
 use crate::terminal_view::Status;
-use crate::window::dialog;
 use crate::window::feature::{CloseAlso, CloseOf};
 use crate::window::feature_host::extras_to_ask;
 use crate::window::session::Session;

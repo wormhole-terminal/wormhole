@@ -16,6 +16,7 @@ use wormhole_core::terminal::shells::{self, ShellChoice, ShellKind};
 use wormhole_core::theme::fonts::FontSlot;
 
 use super::open_in_editor;
+use crate::open_in::OpenIn;
 use crate::platform::apps;
 use crate::platform::default_app;
 use crate::select::Choice;
@@ -24,7 +25,6 @@ use crate::settings::{SettingsStore, UiColors, settings};
 use crate::settings_window::registry::{Segment, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
-use crate::window::open_in::OpenIn;
 
 /// The scrollback sizes offered; a value set in config.json shows as it is.
 const SCROLLBACK: [usize; 6] = [1_000, 5_000, 10_000, 50_000, 100_000, 200_000];
