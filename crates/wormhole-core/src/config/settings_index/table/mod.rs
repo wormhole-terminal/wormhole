@@ -2,6 +2,7 @@
 //! section's groups of settings are in a file of their own.
 
 use wormhole_text::Key;
+use wormhole_text::keys::*;
 
 use super::{Entry, Group, NavGroup, SectionId, SectionInfo, Word};
 use crate::config::FeatureId;
@@ -161,8 +162,8 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             nav: NavGroup::App,
         },
         SectionId::Updates => &SectionInfo {
-            title: Word::Literal("Updates"),
-            intro: Word::Literal("Signed releases, checked in the background."),
+            title: Word::Key(SETTINGS_SECTION_UPDATES),
+            intro: Word::Key(SETTINGS_SECTION_UPDATES_INTRO),
             nav: NavGroup::App,
         },
         SectionId::Advanced => &SectionInfo {

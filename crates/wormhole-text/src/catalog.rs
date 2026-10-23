@@ -176,6 +176,12 @@ mod tests {
         Loaded::english("en", LOCALES[0].files)
     }
 
+    /// Where a message is in the generated id list: the table moves as messages are added, so a test
+    /// asks for it by id.
+    fn index(id: &str) -> usize {
+        IDS.iter().position(|known| *known == id).expect("the message exists")
+    }
+
     /// A small German: one plain message, one with a variable, one through English's term, and the
     /// plural of a message English has two forms of.
     const GERMAN: &[(&str, &str)] = &[(
@@ -206,13 +212,13 @@ mod tests {
         let german = Loaded::translation("de", GERMAN, LOCALES[0].files, &english);
         let mut args = FluentArgs::new();
         args.set("section", "Fonts");
-        assert_eq!(german.format(14, &args).as_deref(), Some("Fonts öffnen"));
-        assert_eq!(english.format(14, &args).as_deref(), Some("Open Fonts"));
+        assert_eq!(german.format(index("settings-open-section"), &args).as_deref(), Some("Fonts öffnen"));
+        assert_eq!(english.format(index("settings-open-section"), &args).as_deref(), Some("Open Fonts"));
         let mut count = FluentArgs::new();
         count.set("count", 5);
         // German has no font count of its own: the caller formats English's.
-        assert_eq!(german.format(15, &count), None);
-        assert_eq!(english.format(15, &count).as_deref(), Some("5 fonts"));
+        assert_eq!(german.format(index("settings-font-count"), &count), None);
+        assert_eq!(english.format(index("settings-font-count"), &count).as_deref(), Some("5 fonts"));
     }
 
     #[test]
@@ -222,6 +228,6 @@ mod tests {
         assert_eq!(pseudo.plain(SETTINGS_SECTION_FONTS.index()), "⟦Föñtš··⟧");
         let mut args = FluentArgs::new();
         args.set("section", "Fonts");
-        assert_eq!(pseudo.format(14, &args).as_deref(), Some("⟦Öpéñ Fonts····⟧"));
+        assert_eq!(pseudo.format(index("settings-open-section"), &args).as_deref(), Some("⟦Öpéñ Fonts····⟧"));
     }
 }

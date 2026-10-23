@@ -1,33 +1,20 @@
 //! The Updates section: automatic updates and the channel.
 
-use super::{literal_entry, literal_group};
+use super::{entry, group};
 use crate::config::settings_index::Group;
+use wormhole_text::keys::*;
 
-pub(super) const UPDATES: &[Group] = &[literal_group(
-    "Updates",
+pub(super) const UPDATES: &[Group] = &[group(
+    SETTINGS_UPDATES_GROUP_UPDATES,
     &[
-        literal_entry("version", "Version", "", "release build", &[]),
-        literal_entry(
-            "auto-update",
-            "Update automatically",
-            "Checks in the background and installs on the next restart",
-            "download auto",
-            &["auto_update"],
-        ),
-        literal_entry(
-            "update-channel",
-            "Channel",
-            "Unstable also gets a build of every change once it passes the tests, and shows the \
-             feature flags",
-            "beta nightly unstable stable prerelease dev builds main feature flags",
-            &["update_channel"],
-        ),
-        literal_entry(
-            "update-status",
-            "Check for updates",
-            "",
-            "install restart release notes check skip",
-            &[],
-        ),
+        entry("version", SETTINGS_UPDATES_VERSION, &[]).with_keywords(SETTINGS_UPDATES_VERSION_KEYWORDS),
+        entry("auto-update", SETTINGS_UPDATES_AUTO_UPDATE, &["auto_update"])
+            .with_description(SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION)
+            .with_keywords(SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS),
+        entry("update-channel", SETTINGS_UPDATES_UPDATE_CHANNEL, &["update_channel"])
+            .with_description(SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION)
+            .with_keywords(SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS),
+        entry("update-status", SETTINGS_UPDATES_UPDATE_STATUS, &[])
+            .with_keywords(SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS),
     ],
 )];

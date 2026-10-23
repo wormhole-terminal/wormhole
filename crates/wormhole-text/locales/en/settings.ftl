@@ -9,7 +9,6 @@ settings-section-git = Changes & diffs
 settings-section-agents = Coding agents
 settings-section-notifications = Notifications
 settings-section-menu-bar = Menu bar & hotkey
-settings-section-updates = Updates
 settings-section-advanced = Advanced
 
 # The Mode row of Appearance. The description is the quiet line under the label, the keywords find
