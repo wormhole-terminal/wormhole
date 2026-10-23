@@ -14,7 +14,7 @@ use wormhole_core::view::layout::path_menu::{self, PathFolder};
 
 use crate::platform::{self, Icon, Item, Menu};
 use crate::terminal_view::Status;
-use crate::window::{Workspace, session};
+use crate::window::Workspace;
 
 impl Workspace {
     /// Open the menu of the active terminal's folder under the folder in the title row (a right-click
@@ -23,7 +23,7 @@ impl Workspace {
         let terminal = self.active_terminal().read(cx);
         let Some(folder) = terminal.cwd.clone() else { return };
         let exited = terminal.status() == Status::Exited;
-        let shown = wormhole_core::view::sidebar::display_path(&folder, session::home_dir());
+        let shown = wormhole_core::view::sidebar::display_path(&folder, crate::style::home_dir());
         let menu = path_menu(&folder, &shown, &platform::boot_volume_name(), exited, &cx.weak_entity());
         platform::show_menu(menu, self.path_anchor.below(), window, cx);
     }

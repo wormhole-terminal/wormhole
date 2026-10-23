@@ -17,7 +17,7 @@ use crate::platform::{self};
 use crate::settings::store_in;
 use crate::style::motion::{PATH_CARD_CLOSE_DELAY, PATH_CARD_COPIED_FOR, PATH_CARD_OPEN_DELAY};
 use crate::terminal_view::Status;
-use crate::window::{Workspace, session};
+use crate::window::Workspace;
 
 /// What the pointer is over: the folder in the title row, or the card under it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -116,7 +116,7 @@ impl Workspace {
         let terminal = self.active_terminal().read(cx);
         let Some(folder) = terminal.cwd.clone() else { return };
         let exited = terminal.status() == Status::Exited;
-        let shown = wormhole_core::view::sidebar::display_path(&folder, session::home_dir());
+        let shown = wormhole_core::view::sidebar::display_path(&folder, crate::style::home_dir());
         let appearance = store_in(&self.profile, cx).tokens.appearance;
         self.path_card.opened += 1;
         let which = self.path_card.opened;

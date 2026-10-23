@@ -60,7 +60,7 @@ impl Workspace {
         let folder = terminal.cwd.clone();
         let shown = folder
             .as_deref()
-            .map(|cwd| wormhole_core::view::sidebar::display_path(cwd, crate::window::session::home_dir()));
+            .map(|cwd| wormhole_core::view::sidebar::display_path(cwd, crate::style::home_dir()));
         // The branch only while git's answer is about the folder the terminal is in now.
         let branch = session
             .git

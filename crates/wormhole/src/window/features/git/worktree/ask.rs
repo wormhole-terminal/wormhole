@@ -18,9 +18,9 @@ use crate::app_state::{app, app_mut};
 use crate::settings::{settings, ui};
 use crate::style::{self, TextRole};
 use crate::terminal_view::TerminalView;
+use crate::window::dialog;
 use crate::window::feature::{FeatureEvent, TerminalInput, TerminalTarget};
 use crate::window::features::project;
-use crate::window::{dialog, session};
 
 /// The dialog's state while it is up: the branch field, what the worktree would be of, what to run in the
 /// terminal once it opens and why the last Create was refused.
@@ -42,7 +42,7 @@ pub(super) fn base(cx: &App) -> Option<PathBuf> {
     if base.is_empty() {
         return None;
     }
-    let home = session::home_dir();
+    let home = crate::style::home_dir();
     Some(match (base.strip_prefix("~/"), home) {
         (Some(rest), Some(home)) => home.join(rest),
         _ if base == "~" => home.map_or_else(|| PathBuf::from(base), Path::to_path_buf),
@@ -52,7 +52,7 @@ pub(super) fn base(cx: &App) -> Option<PathBuf> {
 
 /// A path with the home folder as `~`.
 pub(super) fn shown(path: &Path) -> String {
-    wormhole_core::view::sidebar::display_path(path, session::home_dir())
+    wormhole_core::view::sidebar::display_path(path, crate::style::home_dir())
 }
 
 /// `message` in a dialog of its own, with nothing to do but close it.

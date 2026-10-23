@@ -3,7 +3,6 @@
 //! own, with its own notes and tasks.
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
-use std::sync::LazyLock;
 
 use gpui_kit::*;
 use wormhole_core::storage::store::SessionRecord;
@@ -179,13 +178,6 @@ fn name_facts(terminal: &TerminalView) -> names::NameFacts<'_> {
         shell: terminal.shell_name(),
     }
 }
-/// The user's home folder, read from the environment once: asking costs an environment lock and
-/// an allocation, and terminal names are worked out on every frame.
-pub(super) fn home_dir() -> Option<&'static Path> {
-    static HOME: LazyLock<Option<PathBuf>> = LazyLock::new(|| std::env::var_os("HOME").map(PathBuf::from));
-    HOME.as_deref()
-}
-
 /// Whether closing a session whose terminal is in `status`, and which has a command running if
 /// `command_running`, asks first. Closing a window asks by the same rule for each of its
 /// sessions.
