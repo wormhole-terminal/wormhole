@@ -292,12 +292,8 @@ impl Sidebar {
         cx.notify();
     }
 
-    /// The list, `input.width` points wide: what lies under the sidebar's header (the window's).
-    pub(in crate::window) fn render_list(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
+    /// The list: what lies under the sidebar's header (the window's).
+    fn render_list(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let input = self.input.clone();
         let infos = &input.rows;
         // A drag that ended outside every drop target never heard its drop.
@@ -483,6 +479,14 @@ impl Sidebar {
             scrollbar,
             cx,
         )
+    }
+}
+
+/// The window draws the list as a child view, after it has told it how it stands (`set_input`): a child
+/// renders once its parent's render has returned, so this never meets the window's lease.
+impl Render for Sidebar {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.render_list(window, cx)
     }
 }
 

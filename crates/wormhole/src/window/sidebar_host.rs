@@ -244,7 +244,6 @@ impl Workspace {
         let ui = ui_in(&self.profile, cx);
         let glass = self.glass_on(cx);
         self.push_sidebar(width, cx);
-        let list = self.sidebar.update(cx, |sidebar, cx| sidebar.render_list(window, cx));
         div()
             .id("sidebar")
             .relative()
@@ -259,7 +258,8 @@ impl Workspace {
             .flex_none()
             .bg(if glass { gpui_kit::transparent_black() } else { ui.panel })
             .child(self.render_sidebar_header(window, cx))
-            .child(list)
+            // The list is a view of its own, drawn after this render returns, from what was pushed above.
+            .child(self.sidebar.clone())
             .children(self.render_no_agents_note(cx))
             .into_any_element()
     }
