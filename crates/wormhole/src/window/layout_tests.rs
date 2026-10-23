@@ -1,11 +1,15 @@
 //! What sits around the terminal in a real window: the status bar's count of other windows and the panel's
 //! edge beside the inspector. The harness is `test_harness`.
 
+use std::time::Duration;
+
 use gpui_kit::{TestAppContext, px, rems, size};
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
+use wormhole_core::view::layout::Edge;
 
 use crate::app_state::app;
 use crate::settings::SettingsStore;
+use crate::style::motion::{MOTION_PANEL, MOTION_PANEL_EXIT};
 use crate::terminal_view::TerminalEvent;
 use crate::window::status_bar::StatusItem;
 use crate::window::test_harness::{draw, drive, hook, isolate_in, own_window, read, start, with_window};
@@ -75,6 +79,40 @@ fn the_panels_edge_follows_the_workspaces_column_beside_the_inspector(cx: &mut T
     draw(cx, &window);
     draw(cx, &window);
     assert_eq!((column(cx), handle_x()), (1800.0, at_edge), "closing it gives the window back");
+}
+
+/// The test windows cut every slide (reduce motion), so this is the one place a side column slides:
+/// coming in it is over the terminal and joins the layout when it lands; going out it leaves the
+/// layout at once and is covered up meanwhile.
+#[gpui_kit::test]
+fn a_side_column_slides_over_the_terminal_and_joins_the_layout_when_it_lands(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "a_side_column_slides_over_the_terminal_and_joins_the_layout_when_it_lands")
+    {
+        return;
+    }
+    let window = start(cx, 1);
+    cx.update(|cx| cx.set_reduce_motion(false));
+    cx.simulate_window_resize(window.handle, size(px(1800.0), px(900.0)));
+    draw(cx, &window);
+    let state = |cx: &mut TestAppContext| {
+        read(cx, &window, |ws| {
+            (ws.columns().panel > 0.0, ws.in_flow(Edge::Panel), ws.slide_motion().is_some())
+        })
+    };
+    assert_eq!(state(cx), (true, true, false), "the panel is in at rest");
+
+    drive(cx, &window, |ws, window, cx| ws.toggle_notes(window, cx));
+    assert_eq!(state(cx), (false, true, true), "going out it has left the layout and is covered up");
+    cx.executor().advance_clock(MOTION_PANEL_EXIT + Duration::from_millis(10));
+    cx.run_until_parked();
+    assert_eq!(state(cx), (false, true, false), "the slide ended");
+
+    drive(cx, &window, |ws, window, cx| ws.toggle_notes(window, cx));
+    assert_eq!(state(cx), (true, false, true), "coming in it lies over the terminal, out of the flow");
+    draw(cx, &window);
+    cx.executor().advance_clock(MOTION_PANEL + Duration::from_millis(10));
+    cx.run_until_parked();
+    assert_eq!(state(cx), (true, true, false), "landed, it joins the layout");
 }
 
 /// The bar's size item is the terminal's grid. A resize is found out by the frame that lays the grid
