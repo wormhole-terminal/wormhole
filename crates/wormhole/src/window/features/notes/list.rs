@@ -5,9 +5,9 @@ use gpui_kit::*;
 use wormhole_core::view::notes::rows::{self, NoteFact, NotesRow};
 
 use super::{Notes, NotesOf};
+use crate::style::panel_list::{CardPart, Rows};
 use crate::window::feature::WalkFns;
 use crate::window::focus::{Activate, Walkable};
-use crate::window::panel_list::{CardPart, Rows};
 
 /// The Notes tab of one terminal: its rows, and whether its folded done steps are shown.
 #[derive(Default)]

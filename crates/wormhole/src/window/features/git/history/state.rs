@@ -9,7 +9,7 @@ use std::rc::Rc;
 use gpui_kit::*;
 use wormhole_core::git::{Commit, FileChange, GitError};
 
-use crate::window::panel_list::{CardPart, Rows};
+use crate::style::panel_list::{CardPart, Rows};
 use crate::window::repo::job::{Job, Ticket, Wanted};
 
 /// What a history refresh is for: the folder, and the branch whose log is shown.

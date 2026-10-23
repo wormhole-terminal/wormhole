@@ -30,10 +30,10 @@ use crate::platform::auth;
 use crate::settings::UiColors;
 use crate::settings::{store_in, ui_in};
 use crate::style::home_dir;
+use crate::style::panel_list;
 use crate::style::{self, TextRole};
 use crate::theme_bridge;
 use crate::window::facts::WindowFacts;
-use crate::window::panel_list;
 
 /// How many lines the trust notice shows in full; a longer list shows [`TRUST_LINES_SHOWN`]
 /// and "View all N…", which opens them in their own window.

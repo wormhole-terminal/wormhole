@@ -12,9 +12,9 @@ use wormhole_core::view::panel as rules;
 use super::rows::{ChangeRow, Folded, Group, build_rows, collapse_key, display_order, untracked_apart};
 use super::{Changes, ChangesOf};
 use crate::settings::settings_in;
+use crate::style::panel_list::Rows;
 use crate::window::feature::WalkFns;
 use crate::window::focus::{Activate, Walkable};
-use crate::window::panel_list::Rows;
 
 /// What opening a file's diff from the list needs of the repository, kept with the rows so a click or a
 /// key needs neither the status nor a new look at the settings: where the repository is, what the working

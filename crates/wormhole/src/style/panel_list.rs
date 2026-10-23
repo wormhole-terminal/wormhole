@@ -26,7 +26,8 @@ const OVERDRAW: f32 = 300.0;
 /// always (legacy). No fade at the bottom: over a translucent surface a gradient darkens what it
 /// covers instead of fading it, and the row cut off at the edge already says there is more. Lay it
 /// over the list, beside it rather than in it: a child of the scrolled content moves with it.
-pub(super) fn scroll_edges(ui: UiColors, scrolled: bool, scrollbar: Scrollbar, cx: &App) -> AnyElement {
+#[track_caller]
+pub(crate) fn scroll_edges(ui: UiColors, scrolled: bool, scrollbar: Scrollbar, cx: &App) -> AnyElement {
     let mode = match crate::platform::scroller::ScrollerPrefs::style(cx) {
         ScrollerStyle::Overlay => ScrollbarMode::Scrolling,
         ScrollerStyle::Legacy => ScrollbarMode::Always,
@@ -42,14 +43,15 @@ pub(super) fn scroll_edges(ui: UiColors, scrolled: bool, scrollbar: Scrollbar, c
 /// Whether a scrolled div's offset is a real scroll. A wheel turn moves the offset at once and the
 /// layout clamps it only on the next frame, and the clamp leaves -0, which `Pixels` orders below 0:
 /// a list too short to scroll would draw as scrolled. Half a point counts.
-pub(super) fn is_scrolled(scroll: &ScrollHandle) -> bool {
+pub(crate) fn is_scrolled(scroll: &ScrollHandle) -> bool {
     let (offset, max) = (scroll.offset(), scroll.max_offset());
     offset.y.max(-max.y) < px(-0.5)
 }
 
 /// A div that scrolls `content` (a short tab, all there at once: Project, Usage), with the room
 /// above its first card and the [`scroll_edges`] over it.
-pub(super) fn scroll_column(
+#[track_caller]
+pub(crate) fn scroll_column(
     id: &'static str,
     scroll: &ScrollHandle,
     ui: UiColors,

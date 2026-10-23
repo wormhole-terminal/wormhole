@@ -468,9 +468,9 @@ impl Sidebar {
     /// What lies over the list's edges (`panel_list::scroll_edges`, as the panel's lists).
     fn list_edges(&self, ui: UiColors, cx: &App) -> AnyElement {
         let scrollbar = Scrollbar::vertical(&self.scroll).id("sidebar-scrollbar");
-        crate::window::panel_list::scroll_edges(
+        crate::style::panel_list::scroll_edges(
             ui,
-            crate::window::panel_list::is_scrolled(&self.scroll),
+            crate::style::panel_list::is_scrolled(&self.scroll),
             scrollbar,
             cx,
         )

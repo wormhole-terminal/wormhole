@@ -9,9 +9,9 @@ use wormhole_core::agents::usage::{self, Level, PlanLimit, Usage};
 
 use super::reports;
 use crate::settings::{UiColors, ui_in};
+use crate::style::panel_list;
 use crate::style::{self, TextRole};
 use crate::window::facts::WindowFacts;
-use crate::window::panel_list;
 
 /// The tab's body, in the column that scrolls the panel's short tabs. It reads the app's reports
 /// directly: they are one value for every window, so the window's handle on the entity is not needed.
