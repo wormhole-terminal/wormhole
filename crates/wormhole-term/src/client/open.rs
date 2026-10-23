@@ -19,6 +19,7 @@ use crate::engine::OwnFeed;
 use crate::events::EventProxy;
 use crate::hosted::{meta, paths};
 use crate::pty::{self, FairLock, Sink};
+use crate::sys::detached::Signal;
 use crate::sys::socket::Stream;
 use crate::{Backend, GridSize, Launch, Pty, PtyEvents, StartOptions};
 
@@ -55,7 +56,7 @@ impl Pty {
             Ok((joined, info)) => {
                 tracing::info!(
                     id = host.id,
-                    host_pid = started.pid,
+                    host_pid = started.pid(),
                     pid = info.pid,
                     "hosted terminal started"
                 );
@@ -66,7 +67,7 @@ impl Pty {
                 // A host that came up without its program would wait for a `Spawn` until it gives
                 // up; it is ours, so it goes now (one that ended already is a zombie until
                 // `started` is dropped, so the signal cannot reach anyone else).
-                started.signal(libc::SIGTERM);
+                started.signal(Signal::Terminate);
                 Err(err.context(format!("could not start {program}")))
             }
         }
@@ -183,7 +184,7 @@ fn spawn_in(
         Err(text) => anyhow::bail!("{text}"),
     };
     // The pipe says the same; it is the host's word if the connection lied.
-    match started.ready.read(until) {
+    match started.ready(until) {
         Ready::Ok(pid) if pid == info.pid => {}
         Ready::Ok(pid) => anyhow::bail!("the session host started {pid}, but said {}", info.pid),
         Ready::Err(text) => anyhow::bail!("{text}"),
@@ -201,7 +202,7 @@ fn connect_new(host: &HostCommand<'_>, started: &mut launch::Started) -> anyhow:
     let meta_path = paths::meta_path(host.hosts_dir, host.id);
     let until = Instant::now() + START_TIMEOUT;
     loop {
-        match started.ready.read(Instant::now() + std::time::Duration::from_millis(5)) {
+        match started.ready(Instant::now() + std::time::Duration::from_millis(5)) {
             Ready::Silent => {}
             Ready::Err(text) => anyhow::bail!("{text}"),
             Ready::Closed => anyhow::bail!("the session host ended before it listened"),
@@ -209,7 +210,7 @@ fn connect_new(host: &HostCommand<'_>, started: &mut launch::Started) -> anyhow:
         }
         if let Ok(found) = meta::read(&meta_path)
             && found.id == host.id
-            && found.pid == started.pid
+            && found.pid == started.pid()
         {
             match socket::connect(&found.socket) {
                 Ok(stream) => return Ok(stream),

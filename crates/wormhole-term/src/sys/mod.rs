@@ -8,6 +8,7 @@
 //! and never `wormhole-core`, and core re-exports what it uses through its own `platform`, so a
 //! user id, a peer check or a file mode is written once for all three.
 
+pub mod detached;
 pub mod fs;
 pub mod host;
 pub mod process;

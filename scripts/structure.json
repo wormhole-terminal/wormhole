@@ -272,12 +272,6 @@
       "crates/wormhole-host/src/serve.rs :: allow(unsafe_code)": 1,
       "crates/wormhole-host/src/serve.rs :: std::os::fd": 2,
       "crates/wormhole-host/src/serve.rs :: std::os::unix": 1,
-      "crates/wormhole-term/src/client/launch.rs :: allow(unsafe_code)": 7,
-      "crates/wormhole-term/src/client/launch.rs :: libc::": 58,
-      "crates/wormhole-term/src/client/launch.rs :: std::os::fd": 2,
-      "crates/wormhole-term/src/client/launch.rs :: std::os::unix": 1,
-      "crates/wormhole-term/src/client/launch.rs :: target_vendor": 3,
-      "crates/wormhole-term/src/client/open.rs :: libc::": 1,
       "crates/wormhole/src/menubar/mod.rs :: cfg_attr(": 3,
       "crates/wormhole/src/menubar/model.rs :: cfg_attr(": 1
     },
