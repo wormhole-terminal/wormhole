@@ -227,11 +227,16 @@ fn clipboard_reply(selection: String, terminator: Terminator) -> TextFormatter {
     })
 }
 
-/// The mark an engine event is, with its prompt number (see [`numbered`]); for the test terminal.
+/// The shell's marks the engine queued on a test terminal's `screen`, numbered as `Pty` numbers them
+/// (see [`numbered`]), and the other events dropped: it has no host to hear them.
 #[cfg(any(test, feature = "test-support"))]
-pub(crate) fn mark_of(event: Event, prompts: &mut u64) -> Option<(Mark, u64)> {
-    match event {
-        Event::Mark(mark) => numbered(mark, prompts),
-        _ => None,
-    }
+pub(crate) fn drain_marks(screen: &mut Screen, prompts: &mut u64) -> Vec<(Mark, u64)> {
+    screen
+        .drain_events()
+        .into_iter()
+        .filter_map(|event| match event {
+            Event::Mark(mark) => numbered(mark, prompts),
+            _ => None,
+        })
+        .collect()
 }

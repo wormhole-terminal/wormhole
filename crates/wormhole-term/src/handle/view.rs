@@ -3,7 +3,7 @@
 use crate::Pty;
 use wormhole_vt::{Colors, Line, Modes, Scroll};
 
-use crate::{Backend, ScreenSnapshot, engine, find, images, minimap, types};
+use crate::{Backend, ScreenSnapshot, find, images, minimap, types};
 
 impl Pty {
     pub fn mode(&self) -> Modes {
@@ -118,7 +118,7 @@ impl Pty {
     pub fn virtual_placement(&self, image_id: u32, placement_id: u32) -> Option<images::Tiles> {
         let placement = self.term.lock().virtual_placement(image_id, placement_id)?;
         Some(images::Tiles {
-            key: engine::image_key(placement.image),
+            key: images::key_of(placement.image),
             cols: placement.cols,
             rows: placement.rows,
         })

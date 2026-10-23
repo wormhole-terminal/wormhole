@@ -38,7 +38,8 @@
 //! - `contents`: the screen and scrollback as plain text;
 //! - `find`: find in scrollback, on a copy of the grid's text;
 //! - `program_status`: what programs report about themselves (OSC 7501), and the records kept;
-//! - `marks`: where a command block's parts are, read back from the grid;
+//! - `row_mark`: what a row of the grid carries of a command block; `marks`: where a block's parts are,
+//!   read back from the grid;
 //! - `blocks`: each prompt with its command and output, and how the command went;
 //! - `input`: keys, mouse and dropped files → bytes for the PTY;
 //! - `links`: OSC 8 hyperlinks and URLs in the text, and which may be opened;
@@ -70,6 +71,7 @@ mod procinfo;
 pub mod program_status;
 mod pty;
 mod restore;
+mod row_mark;
 mod screen;
 pub mod scrollbar;
 pub mod sequences;
@@ -103,7 +105,7 @@ pub use contents::prompt_in;
 use events::Shared;
 pub use events::{PtyEvent, PtyEvents, Reply, TextFormatter};
 pub use links::{Link, Openable};
-pub use marks::{Direction, Part, RowMark};
+pub use marks::Direction;
 pub use osc::percent_decode;
 pub use osc::{
     BODY_MAX_CHARS, Mark, Notification, Progress, ProgressState, PromptKind, TITLE_MAX_CHARS, clean,
@@ -111,6 +113,7 @@ pub use osc::{
 pub use ports::listening_ports;
 use pty::FairLock;
 pub use pty::{Launch, Shell};
+pub use row_mark::{Part, RowMark};
 use screen::Screen;
 pub use snapshot::{BlockSpan, ScreenSnapshot, SnapshotCursor, SnapshotRow};
 

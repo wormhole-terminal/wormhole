@@ -26,7 +26,7 @@ impl TestTerm {
     /// with the number of the prompt each belongs to: what `Pty` would have told its command log.
     pub fn feed_with_marks(&mut self, bytes: &[u8]) -> Vec<(Mark, u64)> {
         self.screen.feed(bytes);
-        self.screen.drain_marks(&mut self.prompts)
+        crate::engine::drain_marks(&mut self.screen, &mut self.prompts)
     }
 
     /// Print `bytes` as a program would. A sequence cut between two calls is not joined.

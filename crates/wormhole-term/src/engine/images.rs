@@ -16,16 +16,9 @@ use wormhole_vt::image::ImageHandle;
 use wormhole_vt::image::{Compression, ImageError, ImageFormat, ImageUpload};
 
 use crate::events::{EventProxy, Shared};
-use crate::images::{DecodeError, Format, Image, Limits, decode};
+use crate::images::{DecodeError, Format, Image, Limits, decode, key_of as key};
 use crate::pty::FairLock;
 use crate::screen::Screen;
-
-/// The key of a picture's pixels in the store: its handle, which counts up from 1 and is never
-/// reused. The store's keys are 32 bits; a terminal that sent four billion pictures would have
-/// had the first evicted long ago.
-pub(crate) fn key(handle: ImageHandle) -> u32 {
-    handle.get() as u32
-}
 
 /// What to do with the pictures a terminal's engine sends.
 pub(super) struct Uploads {

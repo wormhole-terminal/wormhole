@@ -24,7 +24,7 @@ use wormhole_vt::{
 use wormhole_vt::{Policy, Terminal};
 
 use super::GridSize;
-use super::marks::{Part, RowMark};
+use super::row_mark::{Part, RowMark};
 use wormhole_vt::Column;
 
 /// The engine's name for a part of a block.
@@ -92,11 +92,10 @@ impl Screen {
         Self { term, hold: Hold::Off }
     }
 
-    /// The shell's marks the engine queued, numbered as `Pty` numbers them, and the other events
-    /// dropped: for a test terminal, which has no host to hear them.
+    /// The events the engine queued, for a test terminal, which has no host to hear them.
     #[cfg(any(test, feature = "test-support"))]
-    pub(crate) fn drain_marks(&mut self, prompts: &mut u64) -> Vec<(crate::Mark, u64)> {
-        self.term.events().filter_map(|event| super::engine::mark_of(event, prompts)).collect()
+    pub(crate) fn drain_events(&mut self) -> Vec<wormhole_vt::event::Event> {
+        self.term.events().collect()
     }
 
     /// Note whether a synchronized update is in progress after the engine read some output.

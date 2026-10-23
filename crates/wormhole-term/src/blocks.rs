@@ -13,8 +13,9 @@ use std::time::{Duration, Instant};
 
 use wormhole_vt::{Cell, Column, Line, Modes, Point};
 
-use super::marks::{self, Part, RowMark};
+use super::marks;
 use super::osc::{BODY_MAX_CHARS, Mark, clean};
+use super::row_mark::{Part, RowMark};
 use super::screen::Screen;
 
 /// How many commands the log remembers. A block older than that (a prompt pressed Enter at tens

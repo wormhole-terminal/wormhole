@@ -30,9 +30,11 @@ pub struct Tiles {
     pub rows: u32,
 }
 
-/// The key of the pixels of a picture the engine placed, in [`ImageStore`].
+/// The key of a picture's pixels in the [`ImageStore`]: its handle, which counts up from 1 and is never
+/// reused. The store's keys are 32 bits; a terminal that sent four billion pictures would have
+/// had the first evicted long ago.
 pub fn key_of(handle: wormhole_vt::image::ImageHandle) -> u32 {
-    super::engine::image_key(handle)
+    handle.get() as u32
 }
 
 /// How many images may be decoding at once per terminal; more are dropped (a program flooding

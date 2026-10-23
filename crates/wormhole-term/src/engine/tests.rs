@@ -109,7 +109,7 @@ fn a_kitty_picture_is_decoded_kept_placed_and_freed() {
     pty.snapshot(&mut snapshot, 0);
     let [placement] = snapshot.placements() else { panic!("one placement: {:?}", snapshot.placements()) };
     assert_eq!((placement.cols, placement.rows, placement.line, placement.column), (3, 2, Line(0), 0));
-    let key = crate::engine::image_key(placement.image);
+    let key = crate::images::key_of(placement.image);
     assert_eq!(pty.images().dimensions(key), Some((1, 1)));
     // The store counts the picture from its reservation; the pixels come from the decoder thread.
     wait_until("the pixels", || pty.images().get(key).is_some());
@@ -325,7 +325,7 @@ fn a_decoder_that_panics_refuses_the_picture_and_releases_the_replies_behind_it(
     assert!(screen.term.replies().is_empty(), "the cursor report waits for the picture");
     let screen = FairLock::new(screen);
     let shared = proxy.shared();
-    assert!(shared.images().reserve(super::images::key(handle), 1, 1));
+    assert!(shared.images().reserve(crate::images::key_of(handle), 1, 1));
     assert!(shared.begin_decode());
 
     super::images::settle_decode(&proxy, &screen, handle, || panic!("hostile data"));

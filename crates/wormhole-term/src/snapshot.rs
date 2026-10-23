@@ -14,7 +14,8 @@ use wormhole_vt::{
 };
 
 use super::blocks::BlockState;
-use super::marks::{self, RowMark};
+use super::marks;
+use super::row_mark::RowMark;
 use super::screen::Screen;
 
 /// How far above the viewport the block its top row continues is looked for: a run of unmarked

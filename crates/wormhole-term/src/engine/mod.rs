@@ -28,9 +28,8 @@ use super::screen::{Hold, SYNC_TIMEOUT, Screen};
 use super::{GridSize, StartOptions, restore};
 use host::Host;
 #[cfg(any(test, feature = "test-support"))]
-pub(super) use host::mark_of;
+pub(super) use host::drain_marks;
 use images::Uploads;
-pub(crate) use images::key as image_key;
 
 /// The host side of the engine, as the PTY thread drives it (the parser is the terminal's own).
 pub(super) struct OwnFeed {
