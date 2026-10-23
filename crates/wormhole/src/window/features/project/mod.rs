@@ -17,6 +17,8 @@ mod create;
 mod detect;
 mod notes_sync;
 mod panel;
+#[cfg(test)]
+mod tests;
 mod trust;
 mod trust_window;
 
