@@ -13,6 +13,7 @@ use tempfile::TempDir;
 
 use crate::platform::fs::{is_executable, mode};
 use crate::platform::process::{self, own_process_group};
+use crate::platform::shell;
 use crate::platform::user::UserId;
 
 use super::archive::extract;
@@ -131,10 +132,8 @@ fn spawn_relaunch_helper(
         sleep "$5"
         exec "$2" -n "$0"
     ) </dev/null >/dev/null 2>&1 &"#;
-    let mut command = process::command("/bin/sh");
+    let mut command = shell::script(SCRIPT);
     command
-        .arg("-c")
-        .arg(SCRIPT)
         .arg(app_bundle)
         .arg(pid.to_string())
         .arg(opener)

@@ -9,14 +9,11 @@
 //! trusted project's `shell`, `default_shell`, then the login shell. The engine's `WORMHOLE_SHELL`
 //! (tests) comes before all of it, in `terminal::process`.
 
-mod quote;
-
 use std::path::Path;
 use std::sync::LazyLock;
 
-pub use quote::{quote, quote_all, single_quote};
-
 use crate::config::{Settings, ShellProfile};
+use crate::platform::shell::{self, quote_all};
 use crate::storage::files::{self, LinkPolicy};
 
 /// The key of the login shell.
@@ -115,7 +112,8 @@ fn from_profile(profile: &ShellProfile, login: &str) -> ShellCommand {
         return ShellCommand { program: command.to_string(), args, name };
     }
     let line = format!("exec {}", quote_all(std::iter::once(command).chain(args.iter().map(String::as_str))));
-    ShellCommand { program: login.to_string(), args: vec!["-l".into(), "-c".into(), line], name }
+    let (program, args) = shell::login_command(login, &line);
+    ShellCommand { program, args, name }
 }
 
 /// The program for a terminal: the profile chosen for it (`chosen`, its remembered key), else a trusted

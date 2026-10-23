@@ -26,6 +26,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::ipc::control::COMMAND_NAME;
+use crate::platform::shell;
 use crate::storage::files::{self, LinkPolicy};
 pub use path::{Advice, advice, login_path, login_shell_path, on_path, path_with_first};
 
@@ -62,13 +63,8 @@ pub fn shim(binary: &Path) -> Option<String> {
          the command line tool in Settings > Coding agents.\" >&2; exit 127; }}\n\
          [ \"$#\" -gt 0 ] || set -- help\n\
          exec \"$bin\" \"$@\"\n",
-        quoted = shell_quote(binary),
+        quoted = shell::single_quote(binary),
     ))
-}
-
-/// `text` as one word of a POSIX shell, whatever is in it.
-fn shell_quote(text: &str) -> String {
-    format!("'{}'", text.replace('\'', r"'\''"))
 }
 
 /// Whether `text` is a script of this module's (or one an earlier build wrote).

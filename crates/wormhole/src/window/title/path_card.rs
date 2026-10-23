@@ -10,7 +10,7 @@
 use std::path::Path;
 
 use gpui_kit::*;
-use wormhole_core::terminal::shells;
+use wormhole_core::platform::shell;
 
 use crate::platform::popover::{Behavior, Button, Glyph, Handle, Popover, Row};
 use crate::platform::{self};
@@ -194,7 +194,7 @@ fn path_popover(
 
 /// What Insert into terminal types: the path in single quotes, so spaces and `$` survive.
 pub(in crate::window) fn insert_text(folder: &Path) -> String {
-    shells::single_quote(&folder.to_string_lossy())
+    shell::single_quote(&folder.to_string_lossy())
 }
 
 #[cfg(test)]

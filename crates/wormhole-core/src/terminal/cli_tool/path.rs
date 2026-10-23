@@ -8,7 +8,7 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use super::{LOGIN_PATH_VAR, Targets};
-use crate::platform::process;
+use crate::platform::{process, shell};
 use crate::terminal::shells;
 
 /// `PATH` for a terminal whose environment says `base`, with `dir` first. Unchanged when `dir`
@@ -87,7 +87,8 @@ const END: &str = ":WORMHOLE_LOGIN_PATH_END";
 pub fn login_path(shell: &str, wait: Duration) -> Option<String> {
     let script = format!("printf '\\n{BEGIN}%s{END}\\n' \"$PATH\"");
     let mut child = process::command(shell)
-        .args(["-l", "-i", "-c", &script])
+        .args(shell::interactive_login_args())
+        .arg(&script)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())

@@ -8,6 +8,8 @@
 
 use serde_json::{Value, json};
 
+use crate::platform::shell::single_quote;
+
 /// In every status line command we install; how we recognise ours.
 const MARKER: &str = "\"$WORMHOLE_BIN\" statusline";
 /// The same in the status line versions up to 0.2 installed, under the app's old codename.
@@ -21,17 +23,12 @@ fn command(original: Option<&str>) -> String {
         "input=$(cat); [ -n \"$WORMHOLE_BIN\" ] && printf '%s' \"$input\" | {MARKER} >/dev/null 2>&1 &"
     );
     match original {
-        Some(original) => format!("{forward} printf '%s' \"$input\" {CHAIN}{}", quote(original)),
+        Some(original) => format!("{forward} printf '%s' \"$input\" {CHAIN}{}", single_quote(original)),
         None => format!("{forward} true"),
     }
 }
 
-/// `text` as one single-quoted shell word.
-fn quote(text: &str) -> String {
-    format!("'{}'", text.replace('\'', r"'\''"))
-}
-
-/// The word [`quote`] made, back as it was; `None` if `word` isn't one.
+/// The word [`single_quote`] made, back as it was; `None` if `word` isn't one.
 fn unquote(word: &str) -> Option<String> {
     let mut out = String::new();
     let mut rest = word;
@@ -119,13 +116,13 @@ pub(super) fn uninstall(settings: &mut Value) -> bool {
 mod tests {
     use serde_json::json;
 
-    use super::{chained, command, install, installed, quote, uninstall, unquote};
+    use super::{chained, command, install, installed, single_quote, uninstall, unquote};
 
     #[test]
     fn quoting_round_trips_any_command() {
         for text in ["~/.claude/statusline.sh", "jq -r '.model.display_name'", "echo \"it's $HOME\"", "", "'"]
         {
-            assert_eq!(unquote(&quote(text)).as_deref(), Some(text), "{text}");
+            assert_eq!(unquote(&single_quote(text)).as_deref(), Some(text), "{text}");
         }
         assert_eq!(unquote("not quoted"), None);
     }

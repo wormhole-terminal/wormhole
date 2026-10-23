@@ -1,11 +1,36 @@
-//! Words for a shell's command line: a bare program name from a profile runs through the login
-//! shell (`$SHELL -l -c 'exec claude …'`), whose line is built here, so an argument with a space
-//! or a quote arrives as the one word it was.
+//! POSIX shells: how a word is quoted for `sh`, `bash`, `zsh` and `fish` alike, and how a script or a
+//! login shell is started with `-c`.
+
+use std::process::Command;
+
+use wormhole_term::sys::process::command;
+
+/// The shell that runs a script the app brings itself, whatever the person's shell is.
+const SCRIPT_SHELL: &str = "/bin/sh";
+
+/// `sh -c script`: the arguments added after it are `$0`, `$1`, ...
+pub(in crate::platform) fn script(script: &str) -> Command {
+    let mut sh = command(SCRIPT_SHELL);
+    sh.arg("-c").arg(script);
+    sh
+}
+
+/// What runs `line` in a login shell: the shell with `-l -c line`, so the person's startup files have set
+/// their real `PATH` first (an app started from the Finder has a short one).
+pub(in crate::platform) fn login_command(shell: &str, line: &str) -> (String, Vec<String>) {
+    (shell.to_string(), vec!["-l".into(), "-c".into(), line.to_string()])
+}
+
+/// The arguments before a script for a shell that starts as a terminal's does: a login shell, interactive,
+/// so every startup file runs.
+pub(in crate::platform) fn interactive_login_args() -> [&'static str; 3] {
+    ["-l", "-i", "-c"]
+}
 
 /// `word` as one word of a POSIX shell command line: as it is when every character is safe, else
 /// in single quotes, with a quote inside written as `'\''` (the quoting zsh, bash, fish and sh
 /// read alike).
-pub fn quote(word: &str) -> String {
+pub(in crate::platform) fn quote(word: &str) -> String {
     if !word.is_empty() && word.chars().all(is_safe) {
         return word.to_string();
     }
@@ -14,7 +39,7 @@ pub fn quote(word: &str) -> String {
 
 /// `word` in single quotes always, even when it needs none (a path typed at a prompt reads as one
 /// word whatever it holds): a quote inside is written as `'\''`.
-pub fn single_quote(word: &str) -> String {
+pub(in crate::platform) fn single_quote(word: &str) -> String {
     let mut out = String::with_capacity(word.len() + 2);
     out.push('\'');
     for c in word.chars() {
@@ -29,7 +54,7 @@ pub fn single_quote(word: &str) -> String {
 }
 
 /// `words` as one command line, each word quoted as it needs.
-pub fn quote_all<I, S>(words: I) -> String
+pub(in crate::platform) fn quote_all<I, S>(words: I) -> String
 where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
