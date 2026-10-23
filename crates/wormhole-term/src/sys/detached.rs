@@ -21,11 +21,22 @@ pub enum Signal {
 
 /// A program just started. Dropped, it is left to the reaper.
 pub struct Detached {
-    pub pid: u32,
-    pub ready: ReadyReader,
+    // Private: Drop kills and reaps `pid`, so no caller may swap it for another process's.
+    pid: u32,
+    ready: ReadyReader,
 }
 
 impl Detached {
+    /// The program's process id.
+    pub fn pid(&self) -> u32 {
+        self.pid
+    }
+
+    /// Wait for the program's readiness line until `until`.
+    pub fn read_ready(&mut self, until: std::time::Instant) -> io::Result<ReadyLine> {
+        self.ready.read_line(until)
+    }
+
     /// Send the program `signal`. Sound until this is dropped: nobody has reaped it, so its pid is
     /// still its own, even as a zombie.
     pub fn signal(&self, signal: Signal) {
@@ -56,7 +67,7 @@ mod tests {
     }
 
     fn line(started: &mut Detached) -> ReadyLine {
-        started.ready.read_line(Instant::now() + Duration::from_secs(10)).expect("reads")
+        started.read_ready(Instant::now() + Duration::from_secs(10)).expect("reads")
     }
 
     #[test]
@@ -81,7 +92,7 @@ mod tests {
     #[test]
     fn it_is_silent_until_it_speaks_and_can_be_stopped() {
         let mut started = run("exec sleep 30", &[]);
-        assert_eq!(started.ready.read_line(Instant::now()).expect("reads"), ReadyLine::Silent);
+        assert_eq!(started.read_ready(Instant::now()).expect("reads"), ReadyLine::Silent);
         started.signal(Signal::Terminate);
         assert_eq!(line(&mut started), ReadyLine::Closed);
     }

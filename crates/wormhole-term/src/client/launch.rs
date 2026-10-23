@@ -23,7 +23,7 @@ pub(super) struct Started {
 
 impl Started {
     pub(super) fn pid(&self) -> u32 {
-        self.detached.pid
+        self.detached.pid()
     }
 
     /// Send the host `signal` (one that failed to come up is not left behind). Sound until this
@@ -34,7 +34,7 @@ impl Started {
 
     /// What the readiness pipe says by `until` (a past `until` only looks).
     pub(super) fn ready(&mut self, until: Instant) -> Ready {
-        match self.detached.ready.read_line(until) {
+        match self.detached.read_ready(until) {
             Ok(ReadyLine::Line(line)) => parse_line(&line),
             Ok(ReadyLine::Closed) => Ready::Closed,
             Ok(ReadyLine::Silent) => Ready::Silent,
