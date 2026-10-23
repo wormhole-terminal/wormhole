@@ -1,44 +1,37 @@
 //! One window. A [`Workspace`] is the view of one window's terminals with their splits and panes, the
 //! sidebar, the side panels (notes, changes, history, project), the title rows and the status bar; it
 //! saves and restores itself. What must exist once, whatever the number of windows, is `AppState`
-//! (`app_state`), which the windows read and update: the two are one tier of the order until phase 5
-//! separates them. Windows are opened and closed in `window_lifecycle`. The type keeps the name
+//! (`app_state`), which the windows read and update: the two are one tier of the order, and the
+//! app's only cycle. Windows are opened and closed in `window_lifecycle`. The type keeps the name
 //! `Workspace`, and so do the action namespace `workspace` and the key context `"Workspace"`: they
 //! are in users' keymaps.
 //!
-//! Inside, by folder:
-//! - `panes/` the split on screen, its model (`splits`) and the pane drop; `title/` the title rows
-//!   (breadcrumb, chips, extras, the path card and menu); `focus/` keyboard focus: F6's areas, the
-//!   stops, the Esc ladder and the ring.
-//! - `features/` the side panels' contents, each owning its state: a folder each for `notes`, `usage`,
-//!   `project` and `git` (Changes, History and the worktrees).
-//! - `sidebar/` the terminal list with its groups, rows, menus and drag; `onboarding/` the intro
-//!   window and the welcome.
+//! Inside, by folder: `panes/` the split on screen, its model (`splits`) and the pane drop; `title/`
+//! the title rows (breadcrumb, chips, extras, the path card and menu); `focus/` keyboard focus: F6's
+//! areas, the stops, the Esc ladder and the ring; `repo/` what git says of each terminal's folder.
 //!
-//! and by file: what a feature is to the window (`feature`, its facts in `facts`), the session
-//! (`session`), what git says of each terminal's folder (`repo`), the window's terminals (`terminals`) and their drag (`terminal_drag`), its tick
-//! (`tick`), its saves (`save`, `saved_layout`, `window_bounds`), its life (`windows`,
-//! `window_lifecycle`, `hosting` for the persistent terminals), what it answers from outside
-//! (`window_control`, `restart_facts`, `ambient`, `menu_state`, and `devctl` in a devctl build), its
-//! actions and keys (`window_actions`, `shortcuts`), its look (`layout`, `chrome`, `resize`, `slide`,
-//! `glass`, `status_bar`), the windows it opens beside itself
-//! (`aux_window`), the apps it opens a folder in (`open_in`) and what opens over it (`overlay`,
-//! `dialog`).
+//! and by file: what a feature is to the window (`feature`, `feature_host`, its facts in `facts`), the
+//! session (`session`), the window's terminals (`terminals`), its tick (`tick`), its saves (`save`,
+//! `saved_layout`, `window_bounds`), its life (`windows`, `window_lifecycle`, `hosting` for the
+//! persistent terminals), what it answers from outside (`window_control`, `restart_facts`, `ambient`,
+//! `menu_state`, and `devctl` in a devctl build), its actions and keys (`window_actions`, `shortcuts`),
+//! its look (`layout`, `chrome`, `resize`, `slide`, `glass`, `status_bar`) and what opens over it
+//! (`overlay`).
 //!
-//! Everything that sits above the window has left this folder (`app`, `command_palette`,
-//! `shortcut_sheet`, `status_item`, `settings_window`, `studio`, `about`, `notifications`,
-//! `updates`), and so have the shared state and the actions it builds on (`app_state`, `actions`).
-//! The window uses nothing above it. What it would tell the surfaces above goes through
-//! `app_state::attention` (a terminal is in front or gone, a status changed), which the notifications
-//! listen to; the welcome's agents step opens Settings by dispatching `actions::OpenSettingsAt`, which the
-//! app root answers; and the control socket hands the welcome the budgets and the notifications'
-//! permission (`onboarding::welcome::Services`).
-//!
-//! The nested areas `sidebar/` and `onboarding/` each keep their state in an entity of their own that
-//! the window hosts: it is told how the window stands (`sidebar_host`, `onboarding_host`) and heard
-//! through its events, and the terminal welcome's window side is `welcome_host`. Outside `window/` no
-//! `impl Workspace` is allowed, and none is left in those two folders (the `impl-outside` rule's
-//! `pending` list is empty).
+//! The window sits between the modules it hosts and the ones that use it. Below it, and used by it:
+//! `sidebar` (the terminal list with its groups, rows, menus and drag) and `onboarding` (the intro window
+//! and the welcome), which keep their state in entities of their own that the window tells how it stands
+//! (`sidebar_host`, `onboarding_host`, and for the terminal welcome `welcome_host`) and hears through
+//! their events. Above it, and using it: the features (`features`, which the app installs as a table the
+//! window holds and never names), the secondary windows' options (`aux_window`), and everything else the
+//! app builds on top (`notifications`, `updates`, `about`, `studio`, `settings_window`, the status item,
+//! the command palette, the shortcut sheet, `app`). The window uses nothing above it: what it would tell
+//! the surfaces above goes through `app_state::attention` (a terminal is in front or gone, a status
+//! changed), which the notifications listen to; the welcome's agents step opens Settings by dispatching
+//! `actions::OpenSettingsAt`, which the app root answers; and the control socket hands the welcome the
+//! budgets, the notifications' permission and the windows to show its example band in
+//! (`onboarding::welcome::Services`). `impl Workspace` and `impl Session` are allowed only here (the
+//! `impl-outside` rule).
 
 use std::time::{Duration, Instant};
 
