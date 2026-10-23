@@ -1,0 +1,72 @@
+# Settings window, sessions page: the page's title and intro, its groups and the rows in them.
+# A row is its label, with the quiet line under it (.description) and the extra words search finds it by (.keywords).
+
+settings-section-sessions = Terminals & sidebar
+    .intro = The Terminals list on the left: how it's grouped and what each row shows.
+
+settings-sessions-sidebar-preview = Live preview
+    .keywords = preview sidebar
+
+## Terminals in
+
+settings-sessions-group-terminals-in = Terminals in
+
+settings-sessions-terminals-in = Show terminals in
+    .description = Sidebar: the list on the left; Tabs: a tab bar instead, with the groups as sets of tabs
+    .keywords = tabs tab bar sidebar list layout
+
+## Terminals list
+
+settings-sessions-group-terminals-list = Terminals list
+
+settings-sessions-density = Density
+    .description = How much room each terminal takes, in the sidebar and the tab bar: Regular rows are 48 pt with a second line, Compact 32, Dense 26
+    .keywords = density compact dense regular comfortable rows size
+
+settings-sessions-cards = Show groups as cards
+    .description = Off: groups are a head and their rows, with no card around them
+    .keywords = cards groups card background border
+
+## Fade group colours
+
+settings-sessions-fade-group-colors = Fade group colours
+    .description = On: a group's colour fades out across its card; off, it fills the card evenly
+    .keywords = fade gradient group colour color card wash
+
+## Show group folders
+
+settings-sessions-show-group-folders = Show group folders
+    .description = The folder a group's new terminals start in, under its name
+    .keywords = group folder path directory name head show hide
+
+settings-sessions-sidebar-numbers = ⌘1–⌘9 numbers
+    .description = Stay with the terminal: dealt down the list, then kept (a new terminal gets the next one); Follow the list: the first nine rows you can see
+    .keywords = command shortcuts numbers stay follow list stable classic
+
+settings-sessions-cmd-hints = Show ⌘1–⌘9 while ⌘ is held
+    .description = Keycaps on the first nine terminals after 250 ms; the shortcuts work either way
+    .keywords = command keycaps shortcuts numbers hints
+
+## Row details
+
+settings-sessions-group-row-details = Row details
+
+settings-sessions-sidebar-changes = Changed files
+    .description = ±N uncommitted changes in the terminal's row
+    .keywords = git changes count
+
+settings-sessions-sidebar-dot = Status dot
+    .description = Working, needs you, finished or idle, as the state round every terminal's status tile
+    .keywords = status glyph agent
+
+settings-sessions-sidebar-notes = Notes and tasks
+    .description = Note icon with the number of notes and open tasks
+    .keywords = notes tasks next steps count
+
+## Changes panel
+
+settings-sessions-group-changes-panel = Changes panel
+
+## Diff view
+
+settings-sessions-group-diff-view = Diff view

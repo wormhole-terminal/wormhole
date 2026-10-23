@@ -1,145 +1,86 @@
 //! The Sessions and Git sections: the sidebar's terminals and rows, and the Changes panel and diff view.
 
-use super::{literal_entry, literal_group};
+use super::{entry, group, untitled};
 use crate::config::FeatureId;
-use crate::config::settings_index::{Group, Word};
+use crate::config::settings_index::Group;
+use wormhole_text::keys::*;
 
 pub(super) const SESSIONS: &[Group] = &[
-    literal_group("", &[literal_entry("sidebar-preview", "Live preview", "", "preview sidebar", &[])]),
-    literal_group(
-        "Terminals in",
-        &[literal_entry(
-            "terminals-in",
-            "Show terminals in",
-            "Sidebar: the list on the left; Tabs: a tab bar instead, with the groups as sets of tabs",
-            "tabs tab bar sidebar list layout",
-            &["terminals_in"],
-        )],
+    untitled(&[entry("sidebar-preview", SETTINGS_SESSIONS_SIDEBAR_PREVIEW, &[])
+        .with_keywords(SETTINGS_SESSIONS_SIDEBAR_PREVIEW_KEYWORDS)]),
+    group(
+        SETTINGS_SESSIONS_GROUP_TERMINALS_IN,
+        &[entry("terminals-in", SETTINGS_SESSIONS_TERMINALS_IN, &["terminals_in"])
+            .with_description(SETTINGS_SESSIONS_TERMINALS_IN_DESCRIPTION)
+            .with_keywords(SETTINGS_SESSIONS_TERMINALS_IN_KEYWORDS)],
     ),
-    Group {
-        title: Word::Literal("Terminals list"),
-        blurb: Word::Literal(""),
-        aside: Word::Literal(""),
-        entries: &[
-            literal_entry(
-                "density",
-                "Density",
-                "How much room each terminal takes, in the sidebar and the tab bar: Regular rows are 48 pt with a second line, Compact 32, Dense 26",
-                "density compact dense regular comfortable rows size",
-                &["density"],
-            ),
-            literal_entry(
-                "cards",
-                "Show groups as cards",
-                "Off: groups are a head and their rows, with no card around them",
-                "cards groups card background border",
-                &["show_groups_as_cards"],
-            ),
-            literal_entry(
-                "fade-group-colors",
-                "Fade group colours",
-                "On: a group's colour fades out across its card; off, it fills the card evenly",
-                "fade gradient group colour color card wash",
-                &["fade_group_colors"],
-            ),
-            literal_entry(
-                "show-group-folders",
-                "Show group folders",
-                "The folder a group's new terminals start in, under its name",
-                "group folder path directory name head show hide",
-                &["show_group_folders"],
-            ),
-            literal_entry(
-                "sidebar-numbers",
-                "⌘1–⌘9 numbers",
-                "Stay with the terminal: dealt down the list, then kept (a new terminal gets the next one); Follow the list: the first nine rows you can see",
-                "command shortcuts numbers stay follow list stable classic",
-                &["sidebar_numbers"],
-            ),
-            literal_entry(
-                "cmd-hints",
-                "Show ⌘1–⌘9 while ⌘ is held",
-                "Keycaps on the first nine terminals after 250 ms; the shortcuts work either way",
-                "command keycaps shortcuts numbers hints",
-                &["sidebar_cmd_hints"],
-            ),
-        ],
-    },
-    literal_group(
-        "Row details",
+    group(
+        SETTINGS_SESSIONS_GROUP_TERMINALS_LIST,
         &[
-            literal_entry(
-                "sidebar-changes",
-                "Changed files",
-                "±N uncommitted changes in the terminal's row",
-                "git changes count",
-                &["sidebar_changes"],
-            ),
-            literal_entry(
-                "sidebar-dot",
-                "Status dot",
-                "Working, needs you, finished or idle, as the state round every terminal's status tile",
-                "status glyph agent",
-                &["sidebar_status_dot"],
-            ),
-            literal_entry(
-                "sidebar-notes",
-                "Notes and tasks",
-                "Note icon with the number of notes and open tasks",
-                "notes tasks next steps count",
-                &["sidebar_notes"],
-            )
-            .of(FeatureId::Notes),
+            entry("density", SETTINGS_SESSIONS_DENSITY, &["density"])
+                .with_description(SETTINGS_SESSIONS_DENSITY_DESCRIPTION)
+                .with_keywords(SETTINGS_SESSIONS_DENSITY_KEYWORDS),
+            entry("cards", SETTINGS_SESSIONS_CARDS, &["show_groups_as_cards"])
+                .with_description(SETTINGS_SESSIONS_CARDS_DESCRIPTION)
+                .with_keywords(SETTINGS_SESSIONS_CARDS_KEYWORDS),
+            entry("fade-group-colors", SETTINGS_SESSIONS_FADE_GROUP_COLORS, &["fade_group_colors"])
+                .with_description(SETTINGS_SESSIONS_FADE_GROUP_COLORS_DESCRIPTION)
+                .with_keywords(SETTINGS_SESSIONS_FADE_GROUP_COLORS_KEYWORDS),
+            entry("show-group-folders", SETTINGS_SESSIONS_SHOW_GROUP_FOLDERS, &["show_group_folders"])
+                .with_description(SETTINGS_SESSIONS_SHOW_GROUP_FOLDERS_DESCRIPTION)
+                .with_keywords(SETTINGS_SESSIONS_SHOW_GROUP_FOLDERS_KEYWORDS),
+            entry("sidebar-numbers", SETTINGS_SESSIONS_SIDEBAR_NUMBERS, &["sidebar_numbers"])
+                .with_description(SETTINGS_SESSIONS_SIDEBAR_NUMBERS_DESCRIPTION)
+                .with_keywords(SETTINGS_SESSIONS_SIDEBAR_NUMBERS_KEYWORDS),
+            entry("cmd-hints", SETTINGS_SESSIONS_CMD_HINTS, &["sidebar_cmd_hints"])
+                .with_description(SETTINGS_SESSIONS_CMD_HINTS_DESCRIPTION)
+                .with_keywords(SETTINGS_SESSIONS_CMD_HINTS_KEYWORDS),
+        ],
+    ),
+    group(
+        SETTINGS_SESSIONS_GROUP_ROW_DETAILS,
+        &[
+            entry("sidebar-changes", SETTINGS_SESSIONS_SIDEBAR_CHANGES, &["sidebar_changes"])
+                .with_description(SETTINGS_SESSIONS_SIDEBAR_CHANGES_DESCRIPTION)
+                .with_keywords(SETTINGS_SESSIONS_SIDEBAR_CHANGES_KEYWORDS),
+            entry("sidebar-dot", SETTINGS_SESSIONS_SIDEBAR_DOT, &["sidebar_status_dot"])
+                .with_description(SETTINGS_SESSIONS_SIDEBAR_DOT_DESCRIPTION)
+                .with_keywords(SETTINGS_SESSIONS_SIDEBAR_DOT_KEYWORDS),
+            entry("sidebar-notes", SETTINGS_SESSIONS_SIDEBAR_NOTES, &["sidebar_notes"])
+                .with_description(SETTINGS_SESSIONS_SIDEBAR_NOTES_DESCRIPTION)
+                .with_keywords(SETTINGS_SESSIONS_SIDEBAR_NOTES_KEYWORDS)
+                .of(FeatureId::Notes),
         ],
     ),
 ];
 
 pub(super) const GIT: &[Group] = &[
-    literal_group(
-        "Changes panel",
+    group(
+        SETTINGS_SESSIONS_GROUP_CHANGES_PANEL,
         &[
-            literal_entry(
-                "changes-view",
-                "File view",
-                "A flat list, or folders as a tree",
-                "folders files list tree",
-                &["changes_tree"],
-            ),
-            literal_entry(
-                "group-untracked",
-                "Group untracked files separately",
-                "New files get their own section under the changes",
-                "untracked new files",
-                &["group_untracked"],
-            ),
+            entry("changes-view", SETTINGS_GIT_CHANGES_VIEW, &["changes_tree"])
+                .with_description(SETTINGS_GIT_CHANGES_VIEW_DESCRIPTION)
+                .with_keywords(SETTINGS_GIT_CHANGES_VIEW_KEYWORDS),
+            entry("group-untracked", SETTINGS_GIT_GROUP_UNTRACKED, &["group_untracked"])
+                .with_description(SETTINGS_GIT_GROUP_UNTRACKED_DESCRIPTION)
+                .with_keywords(SETTINGS_GIT_GROUP_UNTRACKED_KEYWORDS),
         ],
     ),
-    literal_group(
-        "Diff view",
+    group(
+        SETTINGS_SESSIONS_GROUP_DIFF_VIEW,
         &[
-            literal_entry(
-                "diff-layout",
-                "Default layout",
-                "Split keeps old and new side by side, even for a new or deleted file. The diff's own \
-                 toolbar switches one diff",
-                "split unified side by side",
-                &["diff_split"],
-            ),
-            literal_entry(
-                "diff-wrap",
-                "Wrap long lines",
-                "Otherwise the diff scrolls sideways",
-                "wrap",
-                &["diff_wrap"],
-            ),
-            literal_entry("tab-width", "Tab width", "Spaces per tab in diffs", "indent tabs", &["tab_width"]),
-            literal_entry(
-                "size-units",
-                "File sizes",
-                "Decimal like Finder (12.4 MB), or binary like git (11.8 MiB)",
-                "size units bytes kilobytes megabytes kb mb kib mib finder binary decimal",
-                &["size_units"],
-            ),
+            entry("diff-layout", SETTINGS_GIT_DIFF_LAYOUT, &["diff_split"])
+                .with_description(SETTINGS_GIT_DIFF_LAYOUT_DESCRIPTION)
+                .with_keywords(SETTINGS_GIT_DIFF_LAYOUT_KEYWORDS),
+            entry("diff-wrap", SETTINGS_GIT_DIFF_WRAP, &["diff_wrap"])
+                .with_description(SETTINGS_GIT_DIFF_WRAP_DESCRIPTION)
+                .with_keywords(SETTINGS_GIT_DIFF_WRAP_KEYWORDS),
+            entry("tab-width", SETTINGS_GIT_TAB_WIDTH, &["tab_width"])
+                .with_description(SETTINGS_GIT_TAB_WIDTH_DESCRIPTION)
+                .with_keywords(SETTINGS_GIT_TAB_WIDTH_KEYWORDS),
+            entry("size-units", SETTINGS_GIT_SIZE_UNITS, &["size_units"])
+                .with_description(SETTINGS_GIT_SIZE_UNITS_DESCRIPTION)
+                .with_keywords(SETTINGS_GIT_SIZE_UNITS_KEYWORDS),
         ],
     ),
 ];

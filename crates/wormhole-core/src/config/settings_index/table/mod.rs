@@ -116,13 +116,13 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             nav: NavGroup::Work,
         },
         SectionId::Sessions => &SectionInfo {
-            title: Word::Literal("Terminals & sidebar"),
-            intro: Word::Literal("The Terminals list on the left: how it's grouped and what each row shows."),
+            title: Word::Key(SETTINGS_SECTION_SESSIONS),
+            intro: Word::Key(SETTINGS_SECTION_SESSIONS_INTRO),
             nav: NavGroup::Work,
         },
         SectionId::Git => &SectionInfo {
-            title: Word::Literal("Changes & diffs"),
-            intro: Word::Literal("The Changes panel and the diff view."),
+            title: Word::Key(SETTINGS_SECTION_GIT),
+            intro: Word::Key(SETTINGS_SECTION_GIT_INTRO),
             nav: NavGroup::Work,
         },
         SectionId::Agents => &SectionInfo {

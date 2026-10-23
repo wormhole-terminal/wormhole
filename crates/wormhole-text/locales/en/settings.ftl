@@ -3,8 +3,6 @@
 settings-section-appearance = Appearance
 settings-section-fonts = Fonts
 settings-section-terminal = Terminal
-settings-section-sessions = Terminals & sidebar
-settings-section-git = Changes & diffs
 settings-section-agents = Coding agents
 
 # The Mode row of Appearance. The description is the quiet line under the label, the keywords find
