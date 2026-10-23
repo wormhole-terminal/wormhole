@@ -3,6 +3,7 @@
 
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{self};
+use wormhole_text::{keys::*, text};
 
 use super::preview_column::PREVIEW_W;
 use crate::app_state::{app, app_mut};
@@ -36,7 +37,7 @@ pub(crate) fn open_settings(section: Option<Section>, cx: &mut App) {
         }
     }
     let mut options = aux_window::window_options(
-        "Settings",
+        text(SETTINGS_WINDOW_SETTINGS),
         size(px(WINDOW_SIZE.0), px(WINDOW_SIZE.1)),
         size(px(WINDOW_MIN.0), px(WINDOW_MIN.1)),
         cx,

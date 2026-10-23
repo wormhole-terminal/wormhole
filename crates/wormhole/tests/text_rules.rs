@@ -26,28 +26,7 @@ mod support;
 use support::{Literal, is_test_file, non_test_part, sources, src, string_literals};
 
 /// Folders and files under `src/` whose words are all in the catalogs.
-const MIGRATED: &[&str] = &[
-    "settings_window/sections/git.rs",
-    "settings_window/sections/sessions.rs",
-    "settings_window/sections/preview.rs",
-    "settings_window/sections/menu_bar.rs",
-    "settings_window/recorder.rs",
-    "settings_window/sections/advanced.rs",
-    "settings_window/sections/notifications.rs",
-    "settings_window/sections/profile.rs",
-    "settings_window/sections/profile_form.rs",
-    "settings_window/sections/profile_sheet.rs",
-    "settings_window/sections/terminal.rs",
-    "settings_window/sections/fonts.rs",
-    "settings_window/font_picker.rs",
-    "settings_window/sections/updates.rs",
-    "settings_window/sections/agents.rs",
-    "settings_window/sections/cli_tool.rs",
-    "settings_window/sections/projects.rs",
-    "settings_window/sections/appearance.rs",
-    "settings_window/sections/stage.rs",
-    "settings_window/sections/theme_picker/mod.rs",
-];
+const MIGRATED: &[&str] = &["settings_window"];
 
 /// A marker that says a literal on its line is not interface text.
 const MARKER: &str = "// text:";

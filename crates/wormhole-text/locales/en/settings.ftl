@@ -7,7 +7,3 @@ settings-nav-work = Work
 settings-nav-agents = Agents
 settings-nav-app = App
 settings-nav-preview = Preview
-
-# The command palette's line that opens a page. { $section } is that page's title, so this is a
-# sentence with a hole: keep the word order your language needs.
-settings-open-section = Open { $section }

@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 634] = [
+pub(crate) const IDS: [&str; 664] = [
     "settings-section-advanced", "settings-section-advanced.intro", "settings-advanced-group-files",
     "settings-advanced-open-config", "settings-advanced-open-config.description", "settings-advanced-open-config.keywords",
     "settings-advanced-open-data", "settings-advanced-open-data.description", "settings-advanced-open-data.keywords",
@@ -215,13 +215,23 @@ pub(crate) const IDS: [&str; 634] = [
     "settings-updates-up-to-date-checked", "settings-updates-security-available", "settings-updates-version-available",
     "settings-updates-fixes-critical", "settings-updates-fixes-high", "settings-updates-fixes-medium",
     "settings-updates-fixes-low", "settings-updates-installed-waits", "settings-updates-installed-restart",
-    "settings-updates-whats-new", "settings-nav-look", "settings-nav-work",
-    "settings-nav-agents", "settings-nav-app", "settings-nav-preview",
-    "settings-open-section",
+    "settings-updates-whats-new", "settings-window-rescan-path", "settings-window-new-profile",
+    "settings-window-import-theme", "settings-window-search-settings", "settings-window-search",
+    "settings-window-no-results", "settings-window-results", "settings-window-clears-the-search-then-closes",
+    "settings-window-feature-flags", "settings-window-open", "settings-window-config-json-cant-be-read-so",
+    "settings-window-some-settings-live-only-in-config", "settings-window-open-config-json", "settings-window-clear-search",
+    "settings-window-settings", "settings-window-edit-in-project", "settings-window-window",
+    "settings-window-fonts", "settings-window-terminals-list", "settings-window-preview-window-label",
+    "settings-window-preview-fonts-label", "settings-window-preview-terminals-label", "settings-window-preview",
+    "settings-window-preview-column-hint", "settings-window-open-section", "settings-window-import-failed",
+    "settings-window-results-summary", "settings-window-preview-feature-note", "settings-window-profiles-unreadable",
+    "settings-window-nothing-matches", "settings-window-set-by-project", "settings-nav-look",
+    "settings-nav-work", "settings-nav-agents", "settings-nav-app",
+    "settings-nav-preview",
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 634] = [
+pub(crate) const TAKES_ARGS: [bool; 664] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, true, false, false, false, false, false, false,
@@ -274,5 +284,8 @@ pub(crate) const TAKES_ARGS: [bool; 634] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, true, true, true, true, true, true, false, false, false,
-    false, true, true, true, false, false, false, false, false, true,
+    false, true, true, true, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, true, true, true, true, true, true, true, false,
+    false, false, false, false,
 ];

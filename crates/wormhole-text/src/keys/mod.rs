@@ -33,6 +33,8 @@ mod settings_sessions;
 mod settings_terminal;
 #[rustfmt::skip]
 mod settings_updates;
+#[rustfmt::skip]
+mod settings_window;
 
 pub use settings::*;
 pub use settings_advanced::*;
@@ -48,11 +50,12 @@ pub use settings_projects::*;
 pub use settings_sessions::*;
 pub use settings_terminal::*;
 pub use settings_updates::*;
+pub use settings_window::*;
 
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 571] = [
+pub const ALL: [Key; 595] = [
     SETTINGS_SECTION_ADVANCED, SETTINGS_SECTION_ADVANCED_INTRO, SETTINGS_ADVANCED_GROUP_FILES,
     SETTINGS_ADVANCED_OPEN_CONFIG, SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION, SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS,
     SETTINGS_ADVANCED_OPEN_DATA, SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION, SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS,
@@ -241,7 +244,15 @@ pub const ALL: [Key; 571] = [
     SETTINGS_UPDATES_WORMHOLE_IS_UP_TO_DATE, SETTINGS_UPDATES_DOWNLOADING, SETTINGS_UPDATES_SKIP_THIS_VERSION,
     SETTINGS_UPDATES_INSTALL_UPDATE, SETTINGS_UPDATES_DONT_RESTART, SETTINGS_UPDATES_RESTART_NOW,
     SETTINGS_UPDATES_CHECK_NOW, SETTINGS_UPDATES_FIXES_CRITICAL, SETTINGS_UPDATES_FIXES_HIGH,
-    SETTINGS_UPDATES_FIXES_MEDIUM, SETTINGS_UPDATES_FIXES_LOW, SETTINGS_NAV_LOOK,
+    SETTINGS_UPDATES_FIXES_MEDIUM, SETTINGS_UPDATES_FIXES_LOW, SETTINGS_WINDOW_RESCAN_PATH,
+    SETTINGS_WINDOW_NEW_PROFILE, SETTINGS_WINDOW_IMPORT_THEME, SETTINGS_WINDOW_SEARCH_SETTINGS,
+    SETTINGS_WINDOW_SEARCH, SETTINGS_WINDOW_NO_RESULTS, SETTINGS_WINDOW_RESULTS,
+    SETTINGS_WINDOW_CLEARS_THE_SEARCH_THEN_CLOSES, SETTINGS_WINDOW_FEATURE_FLAGS, SETTINGS_WINDOW_OPEN,
+    SETTINGS_WINDOW_CONFIG_JSON_CANT_BE_READ_SO, SETTINGS_WINDOW_SOME_SETTINGS_LIVE_ONLY_IN_CONFIG, SETTINGS_WINDOW_OPEN_CONFIG_JSON,
+    SETTINGS_WINDOW_CLEAR_SEARCH, SETTINGS_WINDOW_SETTINGS, SETTINGS_WINDOW_EDIT_IN_PROJECT,
+    SETTINGS_WINDOW_WINDOW, SETTINGS_WINDOW_FONTS, SETTINGS_WINDOW_TERMINALS_LIST,
+    SETTINGS_WINDOW_PREVIEW_WINDOW_LABEL, SETTINGS_WINDOW_PREVIEW_FONTS_LABEL, SETTINGS_WINDOW_PREVIEW_TERMINALS_LABEL,
+    SETTINGS_WINDOW_PREVIEW, SETTINGS_WINDOW_PREVIEW_COLUMN_HINT, SETTINGS_NAV_LOOK,
     SETTINGS_NAV_WORK, SETTINGS_NAV_AGENTS, SETTINGS_NAV_APP,
     SETTINGS_NAV_PREVIEW,
 ];
@@ -251,7 +262,6 @@ pub const ALL: [Key; 571] = [
 #[cfg(feature = "test-support")]
 pub fn samples() -> Vec<(&'static str, String)> {
     vec![
-        ("settings-open-section", settings_open_section("Sample")),
         ("settings-advanced-reset-question", settings_advanced_reset_question(1)),
         ("settings-advanced-reset-question", settings_advanced_reset_question(5)),
         ("settings-agents-hooks-failed", settings_agents_hooks_failed("Sample", "Sample")),
@@ -323,5 +333,13 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("settings-updates-installed-waits", settings_updates_installed_waits("Sample")),
         ("settings-updates-installed-restart", settings_updates_installed_restart("Sample")),
         ("settings-updates-whats-new", settings_updates_whats_new("Sample")),
+        ("settings-window-open-section", settings_window_open_section("Sample")),
+        ("settings-window-import-failed", settings_window_import_failed("Sample")),
+        ("settings-window-results-summary", settings_window_results_summary(1, 1, "Sample")),
+        ("settings-window-results-summary", settings_window_results_summary(5, 5, "Sample")),
+        ("settings-window-preview-feature-note", settings_window_preview_feature_note("Sample")),
+        ("settings-window-profiles-unreadable", settings_window_profiles_unreadable("Sample")),
+        ("settings-window-nothing-matches", settings_window_nothing_matches("Sample")),
+        ("settings-window-set-by-project", settings_window_set_by_project("Sample", "Sample", "Sample")),
     ]
 }

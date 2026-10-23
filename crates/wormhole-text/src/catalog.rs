@@ -187,7 +187,7 @@ mod tests {
     const GERMAN: &[(&str, &str)] = &[(
         "settings.ftl",
         "settings-section-fonts = Schriftarten\n\
-         settings-open-section = { $section } öffnen\n\
+         settings-window-open-section = { $section } öffnen\n\
          settings-agents-other = Andere\n\
          \x20   .description = Agenten, die { -brand } erkennt\n",
     )];
@@ -213,8 +213,14 @@ mod tests {
         let german = Loaded::translation("de", GERMAN, LOCALES[0].files, &english);
         let mut args = FluentArgs::new();
         args.set("section", "Fonts");
-        assert_eq!(german.format(index("settings-open-section"), &args).as_deref(), Some("Fonts öffnen"));
-        assert_eq!(english.format(index("settings-open-section"), &args).as_deref(), Some("Open Fonts"));
+        assert_eq!(
+            german.format(index("settings-window-open-section"), &args).as_deref(),
+            Some("Fonts öffnen")
+        );
+        assert_eq!(
+            english.format(index("settings-window-open-section"), &args).as_deref(),
+            Some("Open Fonts")
+        );
         let mut count = FluentArgs::new();
         count.set("count", 5);
         // German has no font count of its own: the caller formats English's.
@@ -229,6 +235,9 @@ mod tests {
         assert_eq!(pseudo.plain(SETTINGS_SECTION_FONTS.index()), "⟦Föñtš··⟧");
         let mut args = FluentArgs::new();
         args.set("section", "Fonts");
-        assert_eq!(pseudo.format(index("settings-open-section"), &args).as_deref(), Some("⟦Öpéñ Fonts····⟧"));
+        assert_eq!(
+            pseudo.format(index("settings-window-open-section"), &args).as_deref(),
+            Some("⟦Öpéñ Fonts····⟧")
+        );
     }
 }

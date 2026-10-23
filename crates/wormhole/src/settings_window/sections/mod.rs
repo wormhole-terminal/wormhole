@@ -2,6 +2,7 @@
 //! page's header action, opening a file in the editor.
 
 use std::path::Path;
+use wormhole_text::{keys::*, text};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
@@ -90,7 +91,7 @@ impl SettingsWindow {
                     .outline()
                     .small()
                     .icon(IconName::RefreshCw)
-                    .label("Rescan PATH")
+                    .label(text(SETTINGS_WINDOW_RESCAN_PATH))
                     .loading(self.agents_task.is_some())
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.load_agents(cx);
@@ -103,7 +104,7 @@ impl SettingsWindow {
                     .outline()
                     .small()
                     .icon(IconName::Plus)
-                    .label("New profile…")
+                    .label(text(SETTINGS_WINDOW_NEW_PROFILE))
                     .on_click(cx.listener(|this, _, window, cx| this.open_new_profile(window, cx)))
                     .into_any_element(),
             ),
@@ -193,7 +194,7 @@ fn import_theme(this: WeakEntity<SettingsWindow>, cx: &mut App) {
         files: true,
         directories: false,
         multiple: false,
-        prompt: Some("Import theme".into()),
+        prompt: Some(text(SETTINGS_WINDOW_IMPORT_THEME).into()),
     });
     cx.spawn(async move |cx| {
         let Ok(Ok(Some(paths))) = paths.await else { return };
@@ -201,7 +202,8 @@ fn import_theme(this: WeakEntity<SettingsWindow>, cx: &mut App) {
         cx.update(|cx| {
             if let Err(err) = SettingsStore::import_theme(cx, &path) {
                 this.update(cx, |this, cx| {
-                    this.notice = Some((Section::Appearance, format!("Import failed: {err}").into()));
+                    this.notice =
+                        Some((Section::Appearance, settings_window_import_failed(&err.to_string()).into()));
                     cx.notify();
                 })
                 .ok();

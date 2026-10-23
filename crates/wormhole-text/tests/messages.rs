@@ -27,7 +27,7 @@ fn a_term_is_filled_in_where_a_message_uses_it() {
 
 #[test]
 fn messages_with_variables_are_typed_functions() {
-    assert_eq!(settings_open_section("Fonts"), "Open Fonts");
+    assert_eq!(settings_window_open_section("Fonts"), "Open Fonts");
     assert_eq!(settings_fonts_count(1), "1 font");
     assert_eq!(settings_fonts_count(0), "0 fonts");
     assert_eq!(settings_fonts_count(5), "5 fonts");
@@ -37,7 +37,7 @@ fn messages_with_variables_are_typed_functions() {
 
 #[test]
 fn a_variable_keeps_what_it_is_given_without_isolation_marks() {
-    let shown = settings_open_section("Terminals & sidebar");
+    let shown = settings_window_open_section("Terminals & sidebar");
     assert_eq!(shown, "Open Terminals & sidebar");
     assert!(!shown.contains(['\u{2068}', '\u{2069}']));
 }
@@ -72,7 +72,7 @@ fn a_message_with_variables_keeps_its_plural_in_the_pseudo_language() {
     with_language(Language::PSEUDO, || {
         assert_eq!(settings_fonts_count(1), "⟦1 föñt···⟧");
         assert_eq!(settings_fonts_count(5), "⟦5 föñtš···⟧");
-        assert_eq!(settings_open_section("Fonts"), "⟦Öpéñ Fonts····⟧");
+        assert_eq!(settings_window_open_section("Fonts"), "⟦Öpéñ Fonts····⟧");
         for (id, text) in wormhole_text::keys::samples() {
             assert!(text.starts_with('⟦') && text.ends_with('⟧'), "{id}: {text}");
         }

@@ -5,6 +5,7 @@
 //! a section shows how many settings it holds that match, and dims when it holds none.
 
 use std::collections::HashMap;
+use wormhole_text::{keys::*, text};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
@@ -105,7 +106,7 @@ impl SettingsWindow {
                     .items_center()
                     .h(px(style::TITLE_ROW_H))
                     .px_4()
-                    .child(style::panel_title(ui, "Settings")),
+                    .child(style::panel_title(ui, text(SETTINGS_WINDOW_SETTINGS))),
             )
             .child(self.render_profile_line(ui, cx))
             .child(

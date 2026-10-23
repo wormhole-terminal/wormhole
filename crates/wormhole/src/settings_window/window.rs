@@ -1,6 +1,7 @@
 //! The settings window as a view: making it, the page it draws and what its controls do.
 
 use std::time::Duration;
+use wormhole_text::{keys::*, text, whole};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
@@ -31,8 +32,9 @@ use super::{
 impl SettingsWindow {
     pub(super) fn new(section: Option<Section>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let current = settings(cx).clone();
-        let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search settings"));
-        let menu_search = cx.new(|cx| InputState::new(window, cx).placeholder("Search"));
+        let search =
+            cx.new(|cx| InputState::new(window, cx).placeholder(text(SETTINGS_WINDOW_SEARCH_SETTINGS)));
+        let menu_search = cx.new(|cx| InputState::new(window, cx).placeholder(text(SETTINGS_WINDOW_SEARCH)));
         let font_picker = FontPickerState::new(window, cx);
         let primary_picker = cx.new(|cx| ColorPickerState::new(window, cx));
         let asked_opacity = cx.global::<SettingsStore>().asked_opacity();
@@ -265,20 +267,18 @@ impl SettingsWindow {
                 .collect::<std::collections::HashSet<_>>()
                 .len();
             let intro = match hits {
-                0 => "No setting has these words in its name, description or config key.".to_string(),
-                _ => format!(
-                    "{hits} {} in {sections} {} match “{}”. Pick a section to see it in context.",
-                    if hits == 1 { "setting" } else { "settings" },
-                    if sections == 1 { "section" } else { "sections" },
-                    query.text()
-                ),
+                0 => text(SETTINGS_WINDOW_NO_RESULTS).to_string(),
+                _ => settings_window_results_summary(whole(hits), whole(sections), &query.text()),
             };
-            ("Results".into(), intro.into())
+            (text(SETTINGS_WINDOW_RESULTS).into(), intro.into())
         } else {
             (self.section.title().into(), self.section.info().intro().into())
         };
         let action = if self.show_results {
-            Some(style::key_hint(ui, "esc", "clears the search, then closes").into_any_element())
+            Some(
+                style::key_hint(ui, "esc", text(SETTINGS_WINDOW_CLEARS_THE_SEARCH_THEN_CLOSES))
+                    .into_any_element(),
+            )
         } else {
             self.header_action(cx)
         };
@@ -356,7 +356,7 @@ impl Render for SettingsWindow {
         div()
             .id("settings-window")
             .track_focus(&self.focus_handle)
-            .key_context("SettingsWindow")
+            .key_context("SettingsWindow") // text: not shown (a key context)
             .on_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
                 let keys = &event.keystroke;
                 if this.record_key(keys, cx) {
@@ -401,16 +401,13 @@ impl SettingsWindow {
                     ui,
                     style::BannerKind::Info,
                     false,
-                    format!(
-                        "Preview feature, behind the “{}” flag — a release build doesn't have it yet.",
-                        flag.key()
-                    ),
+                    settings_window_preview_feature_note(flag.key()),
                 )
                 .child(
                     Button::new("preview-open-flags")
                         .outline()
                         .small()
-                        .label("Feature flags")
+                        .label(text(SETTINGS_WINDOW_FEATURE_FLAGS))
                         .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::FeatureFlags, cx))),
                 )
                 .into_any_element(),
@@ -419,9 +416,13 @@ impl SettingsWindow {
         match store.error.clone() {
             Some(error) if self.section == Section::Advanced => problems.push(
                 style::banner(ui, style::BannerKind::Warning, false, error)
-                    .child(Button::new("config-error-open").outline().small().label("Open").on_click(|_, _, _| {
-                        sections::open_in_editor(&SettingsStore::config_path())
-                    }))
+                    .child(
+                        Button::new("config-error-open")
+                            .outline()
+                            .small()
+                            .label(text(SETTINGS_WINDOW_OPEN))
+                            .on_click(|_, _, _| sections::open_in_editor(&SettingsStore::config_path())),
+                    )
                     .into_any_element(),
             ),
             _ if store.config_unreadable() => problems.push(
@@ -429,7 +430,7 @@ impl SettingsWindow {
                     ui,
                     style::BannerKind::Warning,
                     false,
-                    "config.json can't be read, so changes made here aren't saved until it is fixed (see Advanced).",
+                    text(SETTINGS_WINDOW_CONFIG_JSON_CANT_BE_READ_SO),
                 )
                 .into_any_element(),
             ),
@@ -442,7 +443,7 @@ impl SettingsWindow {
                         ui,
                         style::BannerKind::Warning,
                         false,
-                        format!("The list of profiles couldn't be read, so it was set aside and rebuilt: {message}"),
+                        settings_window_profiles_unreadable(&message),
                     )
                     .into_any_element(),
                 );
@@ -480,12 +481,13 @@ impl SettingsWindow {
                 div()
                     .text_body()
                     .font_weight(FontWeight::SEMIBOLD)
-                    .child(format!("Nothing matches “{}”", query.text())),
+                    .child(settings_window_nothing_matches(&query.text())),
             )
             .child(
-                div().text_caption().text_color(ui.muted).child(
-                    "Some settings live only in config.json, and projects can bring their own actions.",
-                ),
+                div()
+                    .text_caption()
+                    .text_color(ui.muted)
+                    .child(text(SETTINGS_WINDOW_SOME_SETTINGS_LIVE_ONLY_IN_CONFIG)),
             )
             .child(
                 div()
@@ -498,14 +500,14 @@ impl SettingsWindow {
                             .outline()
                             .small()
                             .icon(IconName::CodeXml)
-                            .label("Open config.json")
+                            .label(text(SETTINGS_WINDOW_OPEN_CONFIG_JSON))
                             .on_click(|_, _, _| sections::open_in_editor(&SettingsStore::config_path())),
                     )
                     .child(
                         Button::new("no-results-clear")
                             .ghost()
                             .small()
-                            .label("Clear search")
+                            .label(text(SETTINGS_WINDOW_CLEAR_SEARCH))
                             .on_click(cx.listener(|this, _, window, cx| this.clear_search(window, cx))),
                     ),
             )

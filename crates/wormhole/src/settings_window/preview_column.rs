@@ -14,6 +14,7 @@
 
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, SectionId as Section};
+use wormhole_text::{keys::*, text};
 
 use super::{PAGE_TOP, SettingsWindow, nav, sections, ui};
 use crate::style::{self, Edges, SettingParts, SettingState, TextRole};
@@ -38,18 +39,18 @@ impl PreviewKind {
     /// What the column's head says.
     fn title(self) -> &'static str {
         match self {
-            Self::Window => "Window",
-            Self::Fonts => "Fonts",
-            Self::Sidebar => "Terminals list",
+            Self::Window => text(SETTINGS_WINDOW_WINDOW),
+            Self::Fonts => text(SETTINGS_WINDOW_FONTS),
+            Self::Sidebar => text(SETTINGS_WINDOW_TERMINALS_LIST),
         }
     }
 
     /// What VoiceOver says for the column: that it is a picture of the settings, not controls.
     fn spoken(self) -> &'static str {
         match self {
-            Self::Window => "Preview of the window with your current settings",
-            Self::Fonts => "Preview of your fonts in a sample of terminal text",
-            Self::Sidebar => "Preview of the Terminals list with your current settings",
+            Self::Window => text(SETTINGS_WINDOW_PREVIEW_WINDOW_LABEL),
+            Self::Fonts => text(SETTINGS_WINDOW_PREVIEW_FONTS_LABEL),
+            Self::Sidebar => text(SETTINGS_WINDOW_PREVIEW_TERMINALS_LABEL),
         }
     }
 }
@@ -107,7 +108,7 @@ impl SettingsWindow {
                     .flex()
                     .items_center()
                     .h(px(style::CONTROL_H))
-                    .child(style::section_label(ui, "Preview"))
+                    .child(style::section_label(ui, text(SETTINGS_WINDOW_PREVIEW)))
                     .child(
                         div().ml_2().text_caption().text_color(ui.faint).child(format!("· {}", kind.title())),
                     ),
@@ -130,7 +131,7 @@ impl SettingsWindow {
             ui,
             SettingParts {
                 label: entry.label().into(),
-                description: Some("Shown in the preview column at the right of the window".into()),
+                description: Some(text(SETTINGS_WINDOW_PREVIEW_COLUMN_HINT).into()),
                 chip: None,
                 key: "",
                 state: SettingState::Default,

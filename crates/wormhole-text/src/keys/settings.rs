@@ -4,22 +4,14 @@
 //! The messages of `locales/en/settings.ftl`.
 
 use crate::key::Key;
-use crate::args::Arg;
 
 /// "Look"
-pub const SETTINGS_NAV_LOOK: Key = Key::new(628);
+pub const SETTINGS_NAV_LOOK: Key = Key::new(659);
 /// "Work"
-pub const SETTINGS_NAV_WORK: Key = Key::new(629);
+pub const SETTINGS_NAV_WORK: Key = Key::new(660);
 /// "Agents"
-pub const SETTINGS_NAV_AGENTS: Key = Key::new(630);
+pub const SETTINGS_NAV_AGENTS: Key = Key::new(661);
 /// "App"
-pub const SETTINGS_NAV_APP: Key = Key::new(631);
+pub const SETTINGS_NAV_APP: Key = Key::new(662);
 /// "Preview"
-pub const SETTINGS_NAV_PREVIEW: Key = Key::new(632);
-
-/// ```text
-/// Open { $section }
-/// ```
-pub fn settings_open_section(section: &str) -> String {
-    crate::active::message(633, &[("section", Arg::Str(section))])
-}
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(663);
