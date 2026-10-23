@@ -34,7 +34,7 @@ use crate::terminal_view::{TerminalKeys, keystroke_spec};
 use crate::updates;
 use crate::window::features::project;
 use crate::window::window_lifecycle::with_front_workspace;
-use crate::window::{ambient, focus, onboarding, window_lifecycle};
+use crate::window::{ambient, onboarding, window_lifecycle};
 use crate::{about, studio};
 use crate::{command_palette, shortcut_sheet, status_item};
 
@@ -42,7 +42,7 @@ use crate::{command_palette, shortcut_sheet, status_item};
 /// Before the menus are set: they read the bindings for their key equivalents.
 pub(crate) fn init(cx: &mut App) {
     cx.bind_keys(crate::actions::bindings());
-    focus::init(cx);
+    crate::focus_keys::init(cx);
     onboarding::init(cx);
     bind_jump_key(cx);
     cx.observe_global::<SettingsStore>(bind_jump_key).detach();

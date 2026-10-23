@@ -12,12 +12,13 @@ use super::facts::RowInfo;
 use super::group_popover::{group_menu, group_popover};
 use super::rows::{Frame, glyph_for, tile_for};
 use super::{NewTerminal, Sidebar, SidebarEvent};
+use crate::focus_keys::key_menu_origin;
 use crate::platform::{self, Anchor};
 use crate::settings::store_in;
 use crate::style;
 use crate::style::{ClickHandler, GroupHead};
 use crate::theme_bridge;
-use crate::window::focus::{SidebarStop, key_menu_origin};
+use crate::window::sidebar::SidebarStop;
 
 impl Sidebar {
     /// A group's head: the tiles of its terminals while folded, the dot while one needs you or

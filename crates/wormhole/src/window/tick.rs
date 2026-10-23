@@ -38,7 +38,7 @@ impl Workspace {
         // Only the selected terminal and the panes shown with it are on screen.
         let on_screen: Vec<bool> = (0..self.sessions.len()).map(|ix| self.on_screen(ix)).collect();
         // A program's clipboard read is asked about only where the question can be seen.
-        let looking = crate::window::focus::in_front(window);
+        let looking = crate::focus_keys::in_front(window);
         for (session, is_active) in self.sessions.iter().zip(on_screen) {
             let pane = &session.pane;
             changed |= pane.terminal.update(cx, |terminal, _| {

@@ -14,9 +14,10 @@ use gpui_kit::*;
 use wormhole_core::view::sidebar::Entry;
 
 use super::{RowInfo, Sidebar, SidebarEvent};
+use crate::focus_keys::key_menu_origin;
 use crate::platform::{self, Item, Menu};
 use crate::settings::settings_in;
-use crate::window::focus::{SidebarStop, key_menu_origin};
+use crate::window::sidebar::SidebarStop;
 
 /// What a row's menu is made from, as it is when the menu opens.
 struct RowFacts {

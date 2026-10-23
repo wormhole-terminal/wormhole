@@ -23,7 +23,6 @@ use wormhole_core::view::sidebar::{Card, Entry, ListInput, Listing, SidebarNumbe
 
 use crate::settings::{UiColors, settings_in, store_in, ui_in};
 use crate::style::{self, TextRole};
-use crate::window::focus::SidebarStop;
 use crate::window::glass::{GlassKind, Insets, LIST_CLIP, clip_probe, glass_key, probe};
 use crate::window::terminal_drag::Over;
 
@@ -50,6 +49,7 @@ mod tab_bar;
 pub(in crate::window) use facts::row_times;
 pub(in crate::window) use facts::{RowExtra, RowExtras, RowFailure, RowInfo};
 pub(in crate::window) use input::{NewTerminal, SidebarEvent, SidebarInput};
+pub(in crate::window) use keys::SidebarStop;
 use motion::{ItemKey, ListMotion};
 pub(in crate::window) use row_menu::reveal_in_finder;
 pub(in crate::window) use tab_bar::TAB_ROW_H;

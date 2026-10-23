@@ -18,9 +18,17 @@ use wormhole_core::view::focus::list::{Item, Move, band_folds, type_ahead, walk}
 use wormhole_core::view::sidebar::Entry;
 
 use super::{Sidebar, SidebarEvent};
-use crate::window::focus::{
-    AREA_CONTEXT, Activate, NextStop, PreviousStop, SidebarStop, activation, in_front, is_menu_key, list_key,
+use crate::focus_keys::{
+    AREA_CONTEXT, Activate, NextStop, PreviousStop, activation, in_front, is_menu_key, list_key,
 };
+
+/// A sidebar item the keys can be on: one of the person's groups (by its id) or a terminal (by its
+/// id).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::window) enum SidebarStop {
+    Group(u32),
+    Row(i64),
+}
 
 /// The list as the keys walk it, top to bottom.
 struct Walk {

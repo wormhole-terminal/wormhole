@@ -90,6 +90,7 @@
         ],
         "terminal_view",
         "actions",
+        "focus_keys",
         [
           "app_state",
           "window"

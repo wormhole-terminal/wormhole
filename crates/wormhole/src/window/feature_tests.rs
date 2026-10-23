@@ -18,12 +18,13 @@ use wormhole_core::view::focus::list::Item;
 use wormhole_core::view::spoken::{self, PanelTab};
 
 use crate::actions::ShowChanges;
+use crate::focus_keys::Activate;
 use crate::window::Workspace;
 use crate::window::feature::{CloseHooks, FeatureDef, FeatureEvent, Stake, StateDef, TabDef, WalkFns};
 use crate::window::features::TABLE;
 use crate::window::features::git::changes;
 use crate::window::features::notes::testing as notes;
-use crate::window::focus::{Activate, Walkable};
+use crate::window::focus::Walkable;
 use crate::window::sidebar::{RowExtra, RowExtras, RowInfo};
 use crate::window::view_tests::{draw, drive, isolate_in, read, start, start_with_table, with_window};
 

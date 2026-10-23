@@ -7,7 +7,7 @@ use gpui_kit::*;
 use wormhole_core::view::focus::list::Key;
 use wormhole_core::view::focus::{Area, Stop};
 
-use super::{activation, list_key};
+use crate::focus_keys::{activation, list_key};
 use crate::window::Workspace;
 use crate::window::session::step_wrapping;
 use wormhole_core::config::TabId;

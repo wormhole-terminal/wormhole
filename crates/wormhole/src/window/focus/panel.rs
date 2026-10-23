@@ -11,13 +11,9 @@ use gpui_kit::*;
 use wormhole_core::view::focus::Area;
 use wormhole_core::view::focus::list::{Item, Move, band_folds, walk};
 
-use super::{activation, list_key};
-
+use crate::focus_keys::{Activate, activation, list_key};
 use crate::window::Workspace;
 use crate::window::feature::WalkFns;
-
-/// How an item is pressed: ↩ or Space.
-pub(in crate::window) use wormhole_core::view::focus::list::Press as Activate;
 
 /// One row of a panel list as the keys walk it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

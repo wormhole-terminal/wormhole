@@ -17,40 +17,14 @@ mod panel;
 mod window_tests;
 
 use gpui_kit::*;
-use wormhole_core::view::focus::list::Key;
 use wormhole_core::view::focus::{self, Area, EscState, Escape, Stop};
 
-use crate::actions;
+use crate::focus_keys::{AREA_CONTEXT, NextStop, PreviousStop, in_front, is_menu_key};
 use crate::window::Workspace;
 use wormhole_core::config::TabId;
 
 pub(super) use bars::TitleButton;
-pub(in crate::window) use menu::{is_menu_key, key_menu_origin};
-pub(in crate::window) use panel::{Activate, Walkable};
-
-actions!(focus_area, [NextStop, PreviousStop]);
-
-/// The key context of an area's container: where ⇥ / ⇧⇥ step from stop to stop.
-pub(in crate::window) const AREA_CONTEXT: &str = "FocusArea";
-
-/// Bind ⇥ and ⇧⇥ inside the areas. They are the conventions for moving through a window, like
-/// a text field's own keys, not shortcuts, so they aren't in core's key table. The terminal takes
-/// its keys before any binding, so it keeps them; GPUI Kit's window root binds them to step through
-/// its controls, and this deeper context wins over it.
-pub(crate) fn init(cx: &mut App) {
-    cx.bind_keys([
-        KeyBinding::new("tab", NextStop, Some(AREA_CONTEXT)),
-        KeyBinding::new("shift-tab", PreviousStop, Some(AREA_CONTEXT)),
-    ]);
-}
-
-/// A sidebar item the keys can be on: one of the person's groups (by its id) or a terminal (by its
-/// id).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::window) enum SidebarStop {
-    Group(u32),
-    Row(i64),
-}
+pub(in crate::window) use panel::Walkable;
 
 pub(super) struct FocusAreas {
     title_row: FocusHandle,
@@ -103,61 +77,6 @@ impl FocusAreas {
     /// The area one of these handles holds the focus for.
     pub(super) fn holder(&self, window: &Window) -> Option<Area> {
         Area::ALL.into_iter().find(|&area| self.handle(area).is_some_and(|h| h.is_focused(window)))
-    }
-}
-
-/// Whether `window` is the one in front, as far as the ring goes. devctl can say so in place of
-/// macOS (`window-front`), to see the ring without taking the front from the app the person uses.
-pub(in crate::window) fn in_front(window: &Window) -> bool {
-    #[cfg(feature = "devctl")]
-    if let Some(front) = FRONT.get() {
-        return front;
-    }
-    window.is_window_active()
-}
-
-#[cfg(feature = "devctl")]
-thread_local! {
-    static FRONT: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
-}
-
-/// devctl's `window-front on|off|system`.
-#[cfg(feature = "devctl")]
-pub(crate) fn set_front(front: Option<bool>) {
-    FRONT.set(front);
-}
-
-/// The arrow keys a list walks with (⌥↑ / ⌥↓: the first and the last item).
-pub(in crate::window) fn list_key(keystroke: &Keystroke) -> Option<Key> {
-    let m = &keystroke.modifiers;
-    if m.control || m.platform || m.shift || m.function && !is_arrow(&keystroke.key) {
-        return None;
-    }
-    Some(match (keystroke.key.as_str(), m.alt) {
-        ("up", false) => Key::Up,
-        ("down", false) => Key::Down,
-        ("left", false) => Key::Left,
-        ("right", false) => Key::Right,
-        ("up", true) => Key::First,
-        ("down", true) => Key::Last,
-        _ => return None,
-    })
-}
-
-/// macOS reports the arrows with the function modifier set.
-fn is_arrow(key: &str) -> bool {
-    matches!(key, "up" | "down" | "left" | "right")
-}
-
-/// Return and Space, with no modifier: what presses the item the keys are on.
-pub(in crate::window) fn activation(keystroke: &Keystroke) -> Option<Activate> {
-    if keystroke.modifiers.modified() {
-        return None;
-    }
-    match keystroke.key.as_str() {
-        "enter" => Some(Activate::Return),
-        "space" => Some(Activate::Space),
-        _ => None,
     }
 }
 
@@ -362,7 +281,7 @@ impl Workspace {
             return;
         }
         // ⌃↩ in a list: its row's menu.
-        if matches!(area, Area::Tabs | Area::PanelContent) && menu::is_menu_key(&event.keystroke) {
+        if matches!(area, Area::Tabs | Area::PanelContent) && is_menu_key(&event.keystroke) {
             self.row_menu_key(area, window, cx);
             cx.stop_propagation();
             return;
@@ -396,8 +315,8 @@ impl Workspace {
         let at = match area {
             Area::TitleRow => self.title_buttons(cx).get(self.areas.title).map(|b| format!("{b:?}")),
             Area::Sidebar => self.sidebar.read(cx).keys_at().map(|at| match at {
-                SidebarStop::Group(id) => format!("group {id}"),
-                SidebarStop::Row(id) => format!("terminal id={id}"),
+                crate::window::sidebar::SidebarStop::Group(id) => format!("group {id}"),
+                crate::window::sidebar::SidebarStop::Row(id) => format!("terminal id={id}"),
             }),
             Area::PanelContent => self.areas.panel_at.map(|(tab, row)| format!("{} row {row}", tab.key())),
             Area::StatusBar => self.status_items().get(self.areas.status).map(|item| format!("{item:?}")),
@@ -408,36 +327,5 @@ impl Workspace {
             Some(at) => format!("{} {at}{ring}", area.name()),
             None => format!("{}{ring}", area.name()),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use gpui_kit::Keystroke;
-    use wormhole_core::view::focus::list::Key;
-
-    use super::{Activate, activation, list_key};
-
-    fn key(text: &str) -> Keystroke {
-        Keystroke::parse(text).expect("a keystroke")
-    }
-
-    #[test]
-    fn the_arrows_walk_and_option_jumps_to_the_ends() {
-        assert_eq!(list_key(&key("up")), Some(Key::Up));
-        assert_eq!(list_key(&key("right")), Some(Key::Right));
-        assert_eq!(list_key(&key("alt-up")), Some(Key::First));
-        assert_eq!(list_key(&key("alt-down")), Some(Key::Last));
-        assert_eq!(list_key(&key("cmd-up")), None, "⌘↑ is an app key");
-        assert_eq!(list_key(&key("shift-down")), None);
-        assert_eq!(list_key(&key("a")), None);
-    }
-
-    #[test]
-    fn return_and_space_press_without_modifiers() {
-        assert_eq!(activation(&key("enter")), Some(Activate::Return));
-        assert_eq!(activation(&key("space")), Some(Activate::Space));
-        assert_eq!(activation(&key("cmd-enter")), None);
-        assert_eq!(activation(&key("tab")), None);
     }
 }

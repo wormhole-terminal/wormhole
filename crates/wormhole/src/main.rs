@@ -7,6 +7,7 @@ mod background;
 mod command_palette;
 #[cfg(feature = "devctl")]
 mod devctl;
+mod focus_keys;
 mod fonts;
 mod icons;
 #[cfg(any(feature = "inspector", debug_assertions))]

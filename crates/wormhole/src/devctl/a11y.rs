@@ -58,7 +58,7 @@ pub(super) fn window_front(ctx: &mut Ctx, arg: &str) -> Result<String> {
         "system" => None,
         other => return Err(anyhow!("expected on|off|system, got {other:?}")),
     };
-    crate::window::set_front(front);
+    crate::focus_keys::set_front(front);
     ctx.cx.notify();
     Ok(String::new())
 }

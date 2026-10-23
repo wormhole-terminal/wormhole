@@ -31,10 +31,11 @@ use wormhole_core::keys::keymap::menus::MenuState;
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::SessionRecord;
 
+use crate::focus_keys::Activate;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
 use crate::window::feature_host::FeatureState;
-use crate::window::focus::{Activate, Walkable};
+use crate::window::focus::Walkable;
 use crate::window::repo::Observed;
 use crate::window::sidebar::RowExtras;
 

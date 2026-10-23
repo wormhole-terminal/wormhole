@@ -6,23 +6,9 @@
 //! terminal behind it.
 
 use gpui_kit::*;
-use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::view::focus::Area;
 
-use crate::style;
 use crate::window::Workspace;
-
-/// Whether `keystroke` is the row menu's key.
-pub(in crate::window) fn is_menu_key(keystroke: &Keystroke) -> bool {
-    keymap::list_action(&crate::terminal_view::keystroke_spec(keystroke)) == Some(ActionId::RowMenu)
-}
-
-/// Where a menu opened from the keys starts: under the row, in from its edge by the list's inset
-/// (a flush row starts at the window's edge, where the menu's corners would be cut off), where a
-/// right-click on its lead column would put it.
-pub(in crate::window) fn key_menu_origin(row: Bounds<Pixels>) -> Point<Pixels> {
-    point(row.left() + px(style::SIDEBAR_INSET), row.bottom())
-}
 
 impl Workspace {
     /// ⌃↩ in `area`'s list: open the menu of the row the keys are on, if it has one.

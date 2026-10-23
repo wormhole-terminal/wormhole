@@ -4,10 +4,10 @@
 use gpui_kit::TestAppContext;
 use wormhole_core::view::focus::Area;
 
-use super::SidebarStop;
 use crate::app_state::OpenWindow;
 use crate::window::features::git::changes::Changes;
 use crate::window::features::notes::testing as notes;
+use crate::window::sidebar::SidebarStop;
 use crate::window::view_tests::{draw, drive, isolate_in, press, read, read_cx, sidebar_of, start};
 use wormhole_core::config::TabId;
 

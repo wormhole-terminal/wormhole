@@ -45,8 +45,6 @@ use std::time::{Duration, Instant};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-#[cfg(feature = "devctl")]
-pub(crate) use self::focus::set_front;
 pub(crate) use self::windows::{request_quit, request_quit_ending_hosts};
 use crate::app_state::attention::{self, Attention};
 use crate::platform::vibrancy;
