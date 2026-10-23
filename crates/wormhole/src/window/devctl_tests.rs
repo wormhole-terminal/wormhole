@@ -24,12 +24,13 @@ fn a_devctl_batch_waits_for_idle_and_ends_with_its_sync_tokens(cx: &mut TestAppC
         let dir = dir.clone();
         drive(cx, &window, move |ws, window, cx| crate::devctl::poll_dir(dir, ws, window, cx));
     };
-    let script = "sync first\nreduce-motion on\nhook 2 Notification Allow Bash?\nhook 9 Stop\nwait-idle 5000\n\
+    let script = "sync first\nreduce-motion off\nhook 2 Notification Allow Bash?\nhook 9 Stop\nwait-idle 5000\n\
                   reduce-motion\nsync second\n";
     std::fs::write(&cmd, script).expect("writes the batch");
     poll(cx);
     assert!(!out.exists(), "the batch waits for the window to settle");
-    assert!(cx.update(|cx| cx.reduce_motion()), "what came before the wait ran");
+    // The harness starts with reduce motion on, so only turning it off proves the script ran.
+    assert!(!cx.update(|cx| cx.reduce_motion()), "what came before the wait ran");
     std::fs::write(&cmd, "state\n").expect("writes the next batch");
     poll(cx);
     assert!(cmd.exists(), "the next batch is not taken while one waits");
@@ -44,7 +45,7 @@ fn a_devctl_batch_waits_for_idle_and_ends_with_its_sync_tokens(cx: &mut TestAppC
     let printed = std::fs::read_to_string(&out).expect("the batch finished");
     assert_eq!(
         printed,
-        "hook failed: no terminal 9 in this window (`state` lists them)\nidle\nreduce-motion on\nsync first\nsync second\n"
+        "hook failed: no terminal 9 in this window (`state` lists them)\nidle\nreduce-motion off\nsync first\nsync second\n"
     );
     let status = cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.sessions[1].status(cx)));
     assert_eq!(status.expect("the window is open"), Status::Attention, "the hook arrived");
