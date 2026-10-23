@@ -47,6 +47,7 @@ pub(crate) fn thread_counts() -> Counts {
 
 /// Run `f` and leave this thread's counts as they were: for a check that is part of a debug or test build
 /// and would otherwise be counted as the code it checks.
+#[cfg(any(test, debug_assertions))]
 pub(crate) fn uncounted<R>(f: impl FnOnce() -> R) -> R {
     let before = thread_counts();
     let out = f();

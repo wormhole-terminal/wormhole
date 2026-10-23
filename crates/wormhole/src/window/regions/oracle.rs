@@ -59,11 +59,11 @@ impl Oracle {
 
 /// `f` without its allocations counted, where they are (tests and devctl builds): the check is not the code
 /// it checks, for the tests that count a frame's allocations and `perf-profile`.
-#[cfg(any(test, feature = "devctl"))]
+#[cfg(any(test, all(debug_assertions, feature = "devctl")))]
 use crate::perf::allocations::uncounted;
 
 /// Without a counting allocator there is nothing to leave out.
-#[cfg(not(any(test, feature = "devctl")))]
+#[cfg(not(any(test, all(debug_assertions, feature = "devctl"))))]
 fn uncounted<R>(f: impl FnOnce() -> R) -> R {
     f()
 }
