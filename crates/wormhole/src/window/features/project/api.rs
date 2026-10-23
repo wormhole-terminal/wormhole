@@ -60,6 +60,37 @@ pub(crate) fn action_for_key(ws: &Workspace, keystroke: &Keystroke, cx: &App) ->
     ws.feature::<Project>()?.read(cx).action_for_key(ws.active_session().id, ws.profile(), keystroke, cx)
 }
 
+/// What the first run's trust card says of a project that is not trusted yet.
+pub(crate) struct TrustPrompt {
+    /// The project folder's name, and the name of its `.wormhole` directory on disk.
+    pub name: String,
+    pub dir: String,
+    /// How many commands trusting it would let run.
+    pub commands: usize,
+    /// The approval dialog is up.
+    pub approving: bool,
+}
+
+/// The first run's trust card for the project at `root`, as `profile` (the window's) sees it: `None` when
+/// the project can't be read or is trusted already.
+pub(crate) fn trust_prompt(profile: &ProfileId, root: &Path, cx: &App) -> Option<TrustPrompt> {
+    let project = super::load_project_info(profile, root, cx)?;
+    if project.status == wormhole_core::project::TrustStatus::Trusted {
+        return None;
+    }
+    Some(TrustPrompt {
+        name: root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+        dir: wormhole_core::project::dir_name_at(root),
+        commands: project.request.as_ref().map_or(0, |request| request.commands.len()),
+        approving: hub_of(profile, cx).approving,
+    })
+}
+
+/// Ask for Touch ID, then trust the project at `root` for `profile` (the first run's button).
+pub(crate) fn approve(profile: &ProfileId, root: &Path, cx: &mut App) {
+    super::approve_project(profile, root, cx);
+}
+
 /// Whether a worktree may be made of `repo` for a window of `profile`: a project folder there must be
 /// trusted with its settings on in that profile, since the new terminal takes the project's env and shell;
 /// no project, no condition.

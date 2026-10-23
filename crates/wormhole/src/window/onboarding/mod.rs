@@ -378,7 +378,7 @@ impl Workspace {
                     found.state = spec.state(&home).ok();
                 }
             }
-            Action::Trust(root) => project::approve_project(&profile, &root, cx),
+            Action::Trust(root) => project::api::approve(&profile, &root, cx),
         }
         cx.notify();
     }

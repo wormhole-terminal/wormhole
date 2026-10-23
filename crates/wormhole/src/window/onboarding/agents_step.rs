@@ -171,19 +171,13 @@ impl Workspace {
             Some(folder) => wormhole_core::project::find_project(folder).map(|f| f.root),
             None => project::api::active_root(self, cx),
         }?;
-        let project = project::load_project_info(self.profile(), &root, cx)?;
-        if project.status == wormhole_core::project::TrustStatus::Trusted {
-            return None;
-        }
-        let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-        let dir = wormhole_core::project::dir_name_at(&root);
-        let commands = project.request.as_ref().map_or(0, |r| r.commands.len());
+        let project::api::TrustPrompt { name, dir, commands, approving } =
+            project::api::trust_prompt(self.profile(), &root, cx)?;
         let waits = match commands {
             0 => "Nothing in it runs commands yet.".to_string(),
             1 => "Its action runs a command, so it waits until you trust the folder.".to_string(),
             n => format!("Its actions run {n} commands, so they wait until you trust the folder."),
         };
-        let approving = project::hub_of(self.profile(), cx).approving;
         let trust_root = root.clone();
         Some(
             div()
