@@ -13,7 +13,7 @@ use wormhole_core::ipc::control::{
 use wormhole_core::onboarding::intro::Handover;
 use wormhole_core::view::sidebar::RowState;
 
-use super::{Plan, handle};
+use super::{Plan, Services, handle};
 use crate::app::control;
 use crate::app_state::app;
 use crate::notifications;
@@ -36,7 +36,12 @@ fn welcome_terminal(cx: &mut TestAppContext) -> (i64, String) {
 
 fn ask(cx: &mut TestAppContext, from: Option<i64>, token: &str, op: WelcomeOp) -> Reply {
     // The budgets are the control socket's (`app::control`); no test here asks enough to meet them.
-    cx.update(|cx| handle(token.to_string(), op, from, |_, _, _| Ok(()), cx))
+    let services = Services {
+        budget: |_, _, _| Ok(()),
+        permission: notifications::permission,
+        ask_permission: notifications::ask_permission_if_new,
+    };
+    cx.update(|cx| handle(token.to_string(), op, from, services, cx))
 }
 
 fn state_of(reply: &Reply) -> WelcomeState {

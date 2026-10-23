@@ -8,8 +8,8 @@ use wormhole_core::view::layout::RememberedPanes;
 use wormhole_core::view::sidebar::WindowSidebar;
 
 use crate::app_state::AppState;
+use crate::app_state::attention::{self, Attention};
 use crate::app_state::{app, app_mut};
-use crate::notifications;
 use crate::settings::settings;
 use crate::terminal_view::Status;
 use crate::window::feature::{CloseAlso, CloseOf};
@@ -250,7 +250,7 @@ impl Workspace {
     fn discard(&mut self, cx: &mut Context<Self>) {
         self.discarded = true;
         for session in &self.sessions {
-            notifications::dismiss(session.id, cx);
+            attention::tell(Attention::Seen(session.id), cx);
         }
         app_mut(cx).forget_window(&self.profile, self.window_id);
     }

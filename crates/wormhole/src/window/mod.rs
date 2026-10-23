@@ -28,14 +28,11 @@
 //! Everything that sits above the window has left this folder (`app`, `command_palette`,
 //! `shortcut_sheet`, `status_item`, `settings_window`, `studio`, `about`, `notifications`,
 //! `updates`), and so have the shared state and the actions it builds on (`app_state`, `actions`).
-//! The window uses nothing above it but one known exception, kept until phase 5:
-//! - it calls `notifications`' `dismiss` and `sweep` (the window will emit seen and closed events
-//!   instead) from `tick`, `terminals`, `panes` (and `panes::splits`), `windows` and this file's
-//!   window-activation observer, `finished_commands` from `ambient`, and `permission_asks` from
-//!   the welcome.
-//!
-//! The welcome's agents step opens Settings by dispatching an action that carries the section
-//! (`actions::OpenSettingsAt`), which the app root answers.
+//! The window uses nothing above it. What it would tell the surfaces above goes through
+//! `app_state::attention` (a terminal is in front or gone, a status changed), which the notifications
+//! listen to; the welcome's agents step opens Settings by dispatching `actions::OpenSettingsAt`, which the
+//! app root answers; and the control socket hands the welcome the budgets and the notifications'
+//! permission (`onboarding::welcome::Services`).
 //!
 //! The nested areas `sidebar/` and `onboarding/` each keep their state in an entity of their own that
 //! the window hosts: it is told how the window stands (`sidebar_host`, `onboarding_host`) and heard
@@ -51,6 +48,7 @@ use gpui_kit::*;
 #[cfg(feature = "devctl")]
 pub(crate) use self::focus::set_front;
 pub(crate) use self::windows::{request_quit, request_quit_ending_hosts};
+use crate::app_state::attention::{self, Attention};
 use crate::platform::vibrancy;
 use crate::settings::settings_in;
 use wormhole_core::agents::AgentId;
@@ -410,7 +408,7 @@ impl Workspace {
         }
         if status != before {
             // At once rather than on the next tick; after this update, so this window can be read.
-            cx.defer(crate::notifications::sweep);
+            attention::tell(Attention::Changed, cx);
         }
         cx.notify();
     }

@@ -106,7 +106,7 @@ fn pointer_display(cx: &App) -> Option<std::rc::Rc<dyn PlatformDisplay>> {
 
 /// Every terminal of every window, now.
 fn terminals_now(cx: &App) -> Vec<Terminal> {
-    crate::window::ambient::terminals(cx)
+    crate::window::ambient::terminals(crate::notifications::finished_commands(cx), cx)
 }
 
 /// The Do section: a new terminal where the one in front is, Open Folder…, and the actions of

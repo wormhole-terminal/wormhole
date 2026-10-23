@@ -23,7 +23,6 @@ use wormhole_core::theme::fonts::FontSlot;
 
 use super::{Play, Run, remember_first_run};
 use crate::app_state::{AppState, OpenWindow};
-use crate::notifications;
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
 use crate::settings::update_settings;
@@ -35,9 +34,25 @@ use gpui_kit::App;
 /// that owns them sits above the welcome.
 pub(crate) type Budget = fn(Limited, Option<i64>, &mut App) -> Result<(), Reply>;
 
+/// What the welcome asks of the app root, which owns it: the budgets, and the notifications' permission
+/// (what macOS has said of banners, and asking it, once). Handed in, not named, so the welcome uses
+/// nothing above the window.
+#[derive(Clone, Copy)]
+pub(crate) struct Services {
+    pub budget: Budget,
+    pub permission: fn(&App) -> Permission,
+    pub ask_permission: fn(&mut App) -> bool,
+}
+
 /// Answer a welcome request. `from` is the tab it says it comes from; `budget` is checked after the
 /// request is authorised, so a request the door refuses does not use any up.
-pub(crate) fn handle(token: String, op: WelcomeOp, from: Option<i64>, budget: Budget, cx: &mut App) -> Reply {
+pub(crate) fn handle(
+    token: String,
+    op: WelcomeOp,
+    from: Option<i64>,
+    services: Services,
+    cx: &mut App,
+) -> Reply {
     if let Err(error) = super::welcomes_mut(cx).gates.authorize(from, &token, &op) {
         return Reply::error(error.code, error.message);
     }
@@ -52,17 +67,17 @@ pub(crate) fn handle(token: String, op: WelcomeOp, from: Option<i64>, budget: Bu
         WelcomeOp::Finish { .. } => Some(Limited::WelcomeFinish),
     };
     if let Some(kind) = limited
-        && let Err(reply) = budget(kind, from, cx)
+        && let Err(reply) = (services.budget)(kind, from, cx)
     {
         return reply;
     }
     match op {
-        WelcomeOp::State => Reply::ok(state(tab, cx)),
+        WelcomeOp::State => Reply::ok(state(tab, &services, cx)),
         WelcomeOp::SetLook { theme, primary, ligatures, font_step } => {
             set_look(theme, primary, ligatures, font_step, cx)
         }
         WelcomeOp::SetNotify { needs_you, agent_done, sound, allow } => {
-            set_notify(needs_you, agent_done, sound, allow, cx)
+            set_notify(needs_you, agent_done, sound, allow, &services, cx)
         }
         WelcomeOp::InstallHooks { agent } => install(tab, agent, cx),
         WelcomeOp::Demo { show } => demo(tab, show, cx),
@@ -71,10 +86,10 @@ pub(crate) fn handle(token: String, op: WelcomeOp, from: Option<i64>, budget: Bu
 }
 
 /// Everything the pages are made of.
-fn state(tab: i64, cx: &mut App) -> WelcomeState {
+fn state(tab: i64, services: &Services, cx: &mut App) -> WelcomeState {
     let reduce_motion = cx.reduce_motion();
     let look = look_facts(cx);
-    let notify = notify_facts(cx);
+    let notify = notify_facts(services, cx);
     let Some(run) = super::run_of(tab, cx) else {
         // The gate and the run are made and dropped together; a gate without a run is a bug.
         return empty_state(tab);
@@ -164,13 +179,13 @@ fn ansi_name(ix: usize) -> &'static str {
 }
 
 /// What reaches the person, as Settings → Notifications has it, and what macOS says of banners.
-fn notify_facts(cx: &App) -> NotifyFacts {
+fn notify_facts(services: &Services, cx: &App) -> NotifyFacts {
     let s = settings(cx);
     NotifyFacts {
         needs_you: s.notify_kind_on(s.notify_needs_you),
         agent_done: s.notify_kind_on(s.notify_agent_done),
         sound: s.notify_sound,
-        permission: match notifications::permission(cx) {
+        permission: match (services.permission)(cx) {
             Permission::Checking => PermissionFact::Checking,
             Permission::NotAsked => PermissionFact::NotAsked,
             Permission::Allowed { .. } => PermissionFact::Allowed,
@@ -225,6 +240,7 @@ fn set_notify(
     agent_done: Option<bool>,
     sound: Option<NotifySound>,
     allow: bool,
+    services: &Services,
     cx: &mut App,
 ) -> Reply {
     let before = settings(cx);
@@ -244,7 +260,7 @@ fn set_notify(
         }
     });
     if turns_on || allow {
-        notifications::ask_permission_if_new(cx);
+        let _asked = (services.ask_permission)(cx);
     }
     Reply::ok(serde_json::json!({}))
 }

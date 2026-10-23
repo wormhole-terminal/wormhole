@@ -3,11 +3,11 @@
 //!
 //! Part of the window: it may use the shared state (`app`) and the platform, and must not use the
 //! surfaces above it (the command palette, the shortcut sheet, the Settings and Studio windows, the
-//! status item, the app root). The one known exception is `notifications::dismiss` for a terminal
-//! the person has seen, listed with the others in `window/mod.rs`.
+//! status item, the app root). A terminal the person has seen is told through `app_state::attention`.
 
 use gpui_kit::*;
 
+use crate::app_state::attention::{self, Attention};
 use crate::settings::{settings_in, ui_in};
 use crate::window::Workspace;
 use crate::window::save::SCROLLBACK_SAVE_INTERVAL;
@@ -60,7 +60,7 @@ impl Workspace {
                 changed || before != terminal.status()
             });
             if is_active && window_active {
-                crate::notifications::dismiss(pane.id, cx);
+                attention::tell(Attention::Seen(pane.id), cx);
             }
         }
         // A tab whose words change with time (Usage's "resets 34m") is redrawn on its own period.

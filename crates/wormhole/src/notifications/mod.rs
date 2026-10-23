@@ -32,6 +32,7 @@ use wormhole_core::notify::{
 };
 use wormhole_core::update::current_app_bundle;
 
+use crate::app_state::attention::{self, Attention};
 use crate::app_state::{AppState, app};
 use crate::platform::notifications::{
     self as system, Button, ButtonKind, Category, Center, FromCenter, Notice, Permission, Response,
@@ -134,6 +135,12 @@ fn notifier(cx: &mut App) -> &mut Notifier {
 
 /// Set up the route and the handling of clicks and replies. Call once, at start.
 pub(crate) fn init(cx: &mut App) {
+    // What the windows tell: a terminal that is in front or gone takes its notification down, and a
+    // status that changed is looked at now (after the update that told, which a window may be in).
+    attention::listen(cx, |event, cx| match event {
+        Attention::Seen(tab) => dismiss(tab, cx),
+        Attention::Changed => cx.defer(sweep),
+    });
     let (tx, rx) = smol::channel::unbounded();
     let route = route();
     let center = (route == Route::Center).then(|| Center::open(tx.clone(), actions)).flatten();

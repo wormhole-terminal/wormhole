@@ -149,7 +149,7 @@ pub(crate) fn sync(cx: &mut App) {
         cx.refresh_windows();
     }
     register_dock_actions(cx);
-    let terminals = crate::window::ambient::terminals(cx);
+    let terminals = crate::window::ambient::terminals(crate::notifications::finished_commands(cx), cx);
     sync_dock(&terminals, cx);
     if app(cx).menu.bar.is_none() {
         return;
@@ -412,7 +412,8 @@ pub(crate) fn open_folder(cx: &mut App) {
 /// devctl: the status item's menu as text, as it would be built now.
 #[cfg(feature = "devctl")]
 pub(crate) fn dump(cx: &App) -> String {
-    let snapshot = snapshot(crate::window::ambient::terminals(cx), cx);
+    let snapshot =
+        snapshot(crate::window::ambient::terminals(crate::notifications::finished_commands(cx), cx), cx);
     let mut out = model::dump(&model::build(&snapshot, Instant::now()));
     out.push_str(&format!("installed={}\n", app(cx).menu.bar.is_some()));
     out
@@ -428,7 +429,7 @@ pub(crate) fn save_icons(dir: &Path, prefix: &str, cx: &App) -> anyhow::Result<V
 /// devctl: the Dock's badge, bounces and menu.
 #[cfg(feature = "devctl")]
 pub(crate) fn dock_dump(cx: &App) -> String {
-    let terminals = crate::window::ambient::terminals(cx);
+    let terminals = crate::window::ambient::terminals(crate::notifications::finished_commands(cx), cx);
     let dock = cx.try_global::<crate::platform::dock::DockState>();
     let mut out = format!(
         "dock badge={:?} bounces={}\n",

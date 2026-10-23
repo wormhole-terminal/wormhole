@@ -15,7 +15,7 @@ use wormhole_core::view::panes::{
 };
 use wormhole_core::view::sidebar::SplitId;
 
-use crate::notifications;
+use crate::app_state::attention::{self, Attention};
 use crate::style;
 use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
@@ -304,7 +304,7 @@ impl Workspace {
     fn drop_session(&mut self, ix: usize, cx: &mut Context<Self>) {
         let session = self.sessions.remove(ix);
         self.features_closed(session.id, cx);
-        notifications::dismiss(session.id, cx);
+        attention::tell(Attention::Seen(session.id), cx);
     }
 
     /// The id of session `anchor`'s split, made (with `layout`) when it stands alone.

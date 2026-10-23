@@ -11,6 +11,8 @@ use wormhole_core::agents::Foreground;
 use wormhole_core::notify::{self, Source, State};
 use wormhole_core::view::sidebar::command::ends_by_itself;
 
+use std::collections::HashMap;
+
 use crate::app_state::app;
 use crate::terminal_view::Status;
 use crate::terminal_view::{Failure, ProgramNotice};
@@ -161,9 +163,11 @@ fn tabs_of(with_hidden: bool, cx: &App) -> Vec<TabFacts> {
 }
 
 /// Every sidebar terminal of every window, for the status item, the Dock and the quick panel.
-pub(crate) fn terminals(cx: &App) -> Vec<notify::Terminal> {
+pub(crate) fn terminals(
+    finished: Option<&HashMap<i64, (String, std::time::Duration)>>,
+    cx: &App,
+) -> Vec<notify::Terminal> {
     let tabs = shown_tabs(cx);
-    let finished = crate::notifications::finished_commands(cx);
     tabs.iter().map(|t| terminal(t, finished.and_then(|f| f.get(&t.tab)))).collect()
 }
 
@@ -220,7 +224,8 @@ impl Global for JumpedFinished {}
 /// select it; again, the next one. Nothing waiting: nothing happens. Runs outside any window's
 /// update (defer it from a key handler).
 pub(crate) fn jump_to_waiting(cx: &mut App) {
-    let terminals = terminals(cx);
+    // Only the states matter here, not the words about the last finished commands.
+    let terminals = terminals(None, cx);
     let waiting: Vec<i64> =
         notify::sections(&terminals).needs_you.iter().map(|&ix| terminals[ix].tab).collect();
     let last = cx.default_global::<Jumped>().0;
@@ -233,7 +238,7 @@ pub(crate) fn jump_to_waiting(cx: &mut App) {
 /// ⇧⌥⌘J: the terminal that finished last and hasn't been looked at, then on each press the one
 /// that finished before it (looking at one clears its "finished", so the next press moves on).
 pub(crate) fn jump_to_finished(cx: &mut App) {
-    let terminals = terminals(cx);
+    let terminals = terminals(None, cx);
     let finished: Vec<i64> =
         notify::sections(&terminals).finished.iter().map(|&ix| terminals[ix].tab).collect();
     let last = cx.default_global::<JumpedFinished>().0;

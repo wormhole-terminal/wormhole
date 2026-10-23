@@ -20,8 +20,8 @@ use wormhole_core::view::sidebar::SplitId;
 use wormhole_core::view::spoken;
 
 use crate::app_state::app;
+use crate::app_state::attention::{self, Attention};
 use crate::menubar::model::KeyEquivalent;
-use crate::notifications;
 use crate::platform::{self, Anchor, Item, Menu};
 use crate::settings::{settings_in, ui_in};
 use crate::style;
@@ -71,7 +71,7 @@ impl Workspace {
             self.dirty = true;
         }
         self.sessions[ix].terminal().update(cx, |t, _| t.acknowledge());
-        notifications::dismiss(id, cx);
+        attention::tell(Attention::Seen(id), cx);
         cx.notify();
     }
 

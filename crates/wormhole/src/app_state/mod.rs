@@ -12,6 +12,7 @@
 //! entries in `scripts/structure.json` that name this module come from it and from that tie. The
 //! updater's `Updates` is a global of its own, set at launch.
 
+pub(crate) mod attention;
 pub(crate) mod look;
 pub(crate) mod profiles;
 pub(crate) mod recent_projects;

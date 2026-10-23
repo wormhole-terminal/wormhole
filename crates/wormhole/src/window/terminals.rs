@@ -13,6 +13,7 @@ use wormhole_core::storage::store::SessionRecord;
 use wormhole_core::terminal::SpawnOptions;
 use wormhole_core::terminal::shells::ShellCommand;
 
+use crate::app_state::attention::{self, Attention};
 use crate::app_state::{AppState, app, app_mut};
 use crate::settings::settings_in;
 use crate::terminal_view::TerminalView;
@@ -234,7 +235,7 @@ impl Workspace {
         let closed = self.sessions.remove(ix);
         self.edit_sidebar_view(cx, |view| view.groups.leave(closed.id));
         self.features_closed(closed.id, cx);
-        crate::notifications::dismiss(closed.pane.id, cx);
+        attention::tell(Attention::Seen(closed.pane.id), cx);
         crate::window::onboarding::welcome::forget(closed.id, cx);
         self.end_welcome_demo(closed.id, cx);
         self.dirty = true;
@@ -264,7 +265,7 @@ impl Workspace {
         for ix in self.on_screen_sessions() {
             let pane = &self.sessions[ix].pane;
             pane.terminal.update(cx, |t, _| t.acknowledge());
-            crate::notifications::dismiss(pane.id, cx);
+            attention::tell(Attention::Seen(pane.id), cx);
         }
     }
 

@@ -32,7 +32,7 @@ use crate::app_state::{AppState, app};
 use crate::settings::settings;
 use crate::window::window_lifecycle::with_front_workspace;
 
-pub(crate) use answers::handle;
+pub(crate) use answers::{Services, handle};
 
 /// What a welcome is to be.
 #[derive(Clone, Copy, Debug)]
