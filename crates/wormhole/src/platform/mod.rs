@@ -24,8 +24,8 @@
 //! The platform is the lowest layer of the app: it must not use `settings`, `style`, `window`
 //! or any other feature. Where drawing needs the app's look (the GPUI-drawn menus and popovers),
 //! the app hands it over (`Drawn`); the intro's colours come with the call. It still names the
-//! status item's model and the menu key type from `menubar`, which are to move down into the
-//! neutral menu model.
+//! status item's model and the menu key type from `menubar` (the layer below it, whose `build` the
+//! status item calls as its menu opens); moving them down needs the platform to be handed a builder.
 
 pub mod a11y;
 mod anchor;

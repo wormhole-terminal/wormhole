@@ -1,7 +1,5 @@
 //! Pure snapshot → menu mapping, with the Dock menu. No AppKit here, so the layout is
 //! unit-testable; `appkit.rs` only renders what this produces.
-// Only the macOS renderer consumes the model; it is portable and unit-tested everywhere.
-#![cfg_attr(not(target_os = "macos"), allow(dead_code))]
 
 use std::time::Instant;
 

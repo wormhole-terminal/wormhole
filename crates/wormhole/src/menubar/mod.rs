@@ -28,7 +28,6 @@ pub type Rgba = [f32; 4];
 
 /// The theme's status colours, as the native menu glyphs take them.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub struct StatusColors {
     /// `agent.attention`: needs you, the bell.
     pub attention: Rgba,
@@ -56,12 +55,10 @@ pub struct MenuSnapshot {
     /// What the icon shows (`menu_bar_icon`) and whether it may animate while working.
     pub icon: MenuBarIcon,
     pub animate: bool,
-    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     pub colors: StatusColors,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub enum MenuCommand {
     ShowApp,
     NewSession,

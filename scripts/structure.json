@@ -241,10 +241,7 @@
   },
   "allowlist": {
     "file-size": {},
-    "os-edge": {
-      "crates/wormhole/src/menubar/mod.rs :: cfg_attr(": 3,
-      "crates/wormhole/src/menubar/model/mod.rs :: cfg_attr(": 1
-    },
+    "os-edge": {},
     "os-edge-neutral": {},
     "bucket-names": {},
     "orphans": {},
@@ -254,9 +251,7 @@
       "wormhole: window -> app_state": 1
     },
     "layers": {},
-    "cross-reexports": {
-      "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1
-    },
+    "cross-reexports": {},
     "impl-outside": {},
     "feature-api": {},
     "features-siblings": {},

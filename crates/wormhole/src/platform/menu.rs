@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use gpui_kit::*;
 
-pub use crate::menubar::model::KeyEquivalent;
+use crate::menubar::model::KeyEquivalent;
 
 /// What choosing an item does. It runs after the menu has closed, outside every borrow of the app,
 /// so it may update any entity or open a window.
