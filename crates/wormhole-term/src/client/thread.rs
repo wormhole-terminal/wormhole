@@ -403,6 +403,8 @@ impl State {
         }
         if !self.exited {
             self.exited = true;
+            // Nothing runs after this to give up on an update the host never ended.
+            self.replica.release_sync();
             self.proxy.exited(None, None);
         }
     }

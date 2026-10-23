@@ -42,6 +42,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- A program that exits in the middle of a synchronized update no longer leaves its last screen
+  undrawn.
 - Fast output of long lines with a colour per character (gradients, colour floods) draws several
   times faster.
 

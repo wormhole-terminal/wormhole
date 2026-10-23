@@ -234,8 +234,10 @@ impl<S: Send + 'static, F: Feed<S>> Reader<S, F> {
             }
         }
         exit::unwatch(&self.core.poller, &self.core.child);
-        // Everything it wrote is read now.
+        // Everything it wrote is read now. An update it began and never ended is shown: nothing
+        // runs after this to give up on it.
         self.core.slave = None;
+        self.sink.release_sync();
         use std::os::unix::process::ExitStatusExt as _;
         let (code, signal) = status.map_or((None, None), |status| (status.code(), status.signal()));
         self.sink.report_exit(code, signal);

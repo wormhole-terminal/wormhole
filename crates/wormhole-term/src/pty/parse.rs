@@ -106,12 +106,25 @@ impl<S, F: Feed<S>> Sink<S, F> {
     /// Give up on a synchronized update that has been going on for too long, if it has.
     pub(crate) fn expire_sync(&mut self) {
         if self.feed.deadline().is_some_and(|at| at <= Instant::now()) {
-            {
-                let mut screen = self.screen.lock_as(Side::Reader);
-                self.feed.expire(&mut screen);
-            }
-            self.proxy.wakeup();
+            self.give_up_sync();
         }
+    }
+
+    /// Give up on a synchronized update that is still held, whatever its time: for the end of the
+    /// output, after which nothing would wake to do it and the screen would stay on the frame from
+    /// before the update.
+    pub(crate) fn release_sync(&mut self) {
+        if self.feed.deadline().is_some() {
+            self.give_up_sync();
+        }
+    }
+
+    fn give_up_sync(&mut self) {
+        {
+            let mut screen = self.screen.lock_as(Side::Reader);
+            self.feed.expire(&mut screen);
+        }
+        self.proxy.wakeup();
     }
 
     /// Change the screen and the parser together, under the screen's lock, and tell the UI (a

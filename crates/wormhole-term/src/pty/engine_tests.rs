@@ -109,6 +109,20 @@ fn a_synchronized_update_that_never_ends_wakes_the_ui_again_when_it_times_out() 
 }
 
 #[test]
+fn a_program_that_exits_inside_a_synchronized_update_leaves_its_last_screen_shown() {
+    // The UI keeps drawing the frame from before an update until it ends, and nothing runs after
+    // the exit to give up on one: its timeout (150 ms) is far longer than the program lives.
+    let (pty, events) = spawn(r"sleep 0.3; printf '\033[?2026h'; printf 'last words'");
+    let mut snapshot = ScreenSnapshot::default();
+    pty.snapshot(&mut snapshot, 0);
+    wait_until("the exit", Duration::from_secs(10), || {
+        matches!(events.try_recv(), Some(PtyEvent::Exited(_)))
+    });
+    pty.snapshot(&mut snapshot, 0);
+    assert_eq!(snapshot.rows()[0].cells()[0].c, 'l', "the screen is shown, not the frame from before");
+}
+
+#[test]
 fn events_a_program_sends_inside_a_synchronized_update_still_arrive() {
     // A bell and a title, between the update's begin and the end it never sends.
     let (_pty, events) = spawn(r"printf '\033[?2026h\007\033]0;in-update\007'; sleep 5");

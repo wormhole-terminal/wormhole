@@ -17,7 +17,7 @@ use super::{ACK_EVERY, INPUT_WINDOW};
 use crate::osc::{Mark, PromptKind};
 use crate::sys::socket::Stream;
 use crate::types::Line;
-use crate::{GridSize, Pty, PtyEvent, PtyEvents, StartOptions};
+use crate::{GridSize, Pty, PtyEvent, PtyEvents, ScreenSnapshot, StartOptions};
 
 const PATIENCE: Duration = Duration::from_secs(5);
 const GRID: GridSize = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
@@ -354,6 +354,21 @@ fn a_connection_that_ends_without_the_programs_exit_is_a_lost_host() {
     assert!(matches!(got, PtyEvent::Exited(None)));
     assert!(pty.host_lost());
     assert!(!pty.is_alive());
+}
+
+#[test]
+fn a_lost_host_inside_a_synchronized_update_leaves_the_last_screen_shown() {
+    let (pty, events, mut script) = connected(StreamMode::Raw);
+    // The UI keeps its copy of the frame from before an update until it ends.
+    let mut snapshot = ScreenSnapshot::default();
+    pty.snapshot(&mut snapshot, 0);
+    script.send(&Message::Out(wire::Out { offset: 0, bytes: b"\x1b[?2026hlast words" }));
+    wait_for("the update's text", || pty.screen_text().contains("last words"));
+    drop(script);
+    next_event(&events, "exit", |e| matches!(e, PtyEvent::Exited(None)));
+    // At once: the update's own timeout (150 ms) would show it too, but nothing runs for it now.
+    pty.snapshot(&mut snapshot, 0);
+    assert_eq!(snapshot.rows()[0].cells()[0].c, 'l', "the screen is shown, not the frame from before");
 }
 
 #[test]
