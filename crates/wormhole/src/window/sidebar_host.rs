@@ -41,23 +41,6 @@ impl SidebarFeed {
     }
 }
 
-/// What a terminal's status makes of its row. A terminal whose status is told (`told`: an
-/// agent's, or a program's own report) shows it; one without is working while a command runs,
-/// needs you while its bell counts, and has failed when its last command did and nobody has seen.
-fn row_state(told: bool, status: Status, command: bool) -> RowState {
-    match (told, status) {
-        (_, Status::Exited) => RowState::Exited,
-        (_, Status::Attention) => RowState::NeedsYou,
-        (true, Status::Busy) => RowState::Working,
-        (true, Status::Done) => RowState::Finished,
-        (true, Status::Failed) => RowState::Failed,
-        (true, Status::Idle) => RowState::Idle,
-        (false, _) if command => RowState::Working,
-        (false, Status::Failed) => RowState::Failed,
-        (false, _) => RowState::Idle,
-    }
-}
-
 impl Workspace {
     // ---------------------------------------------------------------- the facts
 
@@ -97,7 +80,7 @@ impl Workspace {
                     name: session.name(cx),
                     agent,
                     source,
-                    state: row_state(told, status, command.is_some()),
+                    state: RowState::of(told, status, command.is_some()),
                     message: terminal.agent_message.clone(),
                     since: terminal.status_since().elapsed(),
                     cwd: terminal.cwd.clone(),
@@ -524,42 +507,5 @@ impl Workspace {
     /// ⌃⌥1–9: the group with that number in the switcher's list.
     pub(super) fn go_to_group(&mut self, number: u8, _: &mut Window, cx: &mut Context<Self>) {
         self.with_sidebar(cx, |sidebar, cx| sidebar.go_to_group(number, cx));
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use wormhole_core::view::sidebar::RowState;
-
-    use super::row_state;
-    use crate::terminal_view::Status;
-
-    #[test]
-    fn a_failure_is_a_row_state_for_agents_programs_and_plain_terminals() {
-        assert_eq!(row_state(true, Status::Failed, false), RowState::Failed);
-        assert_eq!(row_state(false, Status::Failed, false), RowState::Failed);
-        // A plain terminal that runs a command again is working, whatever its last one did.
-        assert_eq!(row_state(false, Status::Failed, true), RowState::Working);
-        // Seen, it is a result nobody has left to look at.
-        assert_eq!(row_state(false, Status::Idle, false), RowState::Idle);
-        assert_eq!(row_state(true, Status::Attention, false), RowState::NeedsYou, "asking outranks");
-    }
-
-    #[test]
-    fn an_agents_status_is_its_rows_state() {
-        assert_eq!(row_state(true, Status::Busy, false), RowState::Working);
-        assert_eq!(row_state(true, Status::Attention, false), RowState::NeedsYou);
-        assert_eq!(row_state(true, Status::Done, false), RowState::Finished);
-        assert_eq!(row_state(true, Status::Idle, true), RowState::Idle, "the agent itself is the command");
-        assert_eq!(row_state(true, Status::Exited, false), RowState::Exited);
-    }
-
-    #[test]
-    fn a_plain_terminal_works_while_a_command_runs_and_needs_you_for_its_bell() {
-        assert_eq!(row_state(false, Status::Idle, true), RowState::Working);
-        assert_eq!(row_state(false, Status::Busy, false), RowState::Idle, "output alone is unread, not work");
-        assert_eq!(row_state(false, Status::Done, false), RowState::Idle);
-        assert_eq!(row_state(false, Status::Attention, true), RowState::NeedsYou);
-        assert_eq!(row_state(false, Status::Exited, true), RowState::Exited);
     }
 }

@@ -14,22 +14,7 @@ use wormhole_term::{Mark, Notification, PtyEvent, WindowOp};
 use super::TerminalView;
 use crate::settings::settings_in;
 
-/// A terminal's status (idle, busy, done, failed, needs you, exited), from its output, its
-/// agent's hooks and what its programs report.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Status {
-    Idle,
-    Busy,
-    /// Finished producing output while you weren't looking.
-    Done,
-    /// A command ended with a failing exit code (the shell's marks), or an agent or program
-    /// stopped on an error (its hooks, or its own report), while you weren't looking. Seen like
-    /// `Done`: opening the terminal clears it.
-    Failed,
-    /// Rang the bell while you weren't looking, or its agent asks something.
-    Attention,
-    Exited,
-}
+pub use wormhole_core::view::sidebar::Status;
 
 /// What the rest of the app shows about a terminal (sidebar, title row, menu
 /// bar). A copy, so readers don't have to hold the terminal during their render.

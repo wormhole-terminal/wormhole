@@ -35,7 +35,7 @@ pub use listing::{Band, Card, Entry, ListInput, Listing, NUMBERED, WindowSidebar
 pub use order::SidebarNumbers;
 pub use place::{Drop, DropInput, Landing, Target, group_drop, terminal_drop};
 pub use split::{Bracket, SplitId, SplitMarks, Splits, gather_splits, split_of};
-pub use state::RowState;
+pub use state::{RowState, Status};
 pub use tabs::TerminalsIn;
 pub use urgency::Urgency;
 pub use wording::display_path;
