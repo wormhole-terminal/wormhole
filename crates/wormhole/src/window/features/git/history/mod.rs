@@ -107,7 +107,7 @@ impl History {
     }
 
     /// The tick, while the tab shows: the log is read again about every 5 s, at once when the folder or
-    /// branch changed, and not while git is missing (the window coming to the front is the retry) or
+    /// branch changed or the window found a repository the tab had none for, and not while git is missing (the window coming to the front is the retry) or
     /// the folder is known to be in no repository.
     pub(super) fn tick(&mut self, facts: &WindowFacts<'_>, cx: &mut Context<Self>) {
         self.follow(facts);
@@ -124,7 +124,10 @@ impl History {
                 && state.problem.is_none()
                 && state.answered_for(cwd)
         });
-        if (facts.ticks.is_multiple_of(12) || unanswered) && !state.waits_for_retry() && !absent {
+        // The window found a repository where the tab had answered "none" (a `git init` since): now,
+        // not at the next period.
+        let appeared = state.root.is_none() && state.problem.is_none() && active.git.status.is_some();
+        if (facts.ticks.is_multiple_of(12) || unanswered || appeared) && !state.waits_for_retry() && !absent {
             self.refresh(active.id, cx);
         }
     }

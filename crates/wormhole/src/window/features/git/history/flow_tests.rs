@@ -297,6 +297,40 @@ fn the_tab_reads_the_log_again_on_the_tick_while_it_shows(cx: &mut TestAppContex
     assert_eq!(subjects(cx, &window).len(), 3);
 }
 
+/// A folder that becomes a repository (`git init`) has its log on the next tick, not at the next period.
+#[gpui_kit::test]
+fn a_folder_that_becomes_a_repository_gets_its_log_at_once(cx: &mut TestAppContext) {
+    if isolate("a_folder_that_becomes_a_repository_gets_its_log_at_once") {
+        return;
+    }
+    let plain = folder("becomes-a-repository");
+    let record = WindowRecord {
+        id: 1,
+        sessions: vec![SessionRecord::new(1, None, Some(plain.to_string_lossy().into_owned()))],
+        ..Default::default()
+    };
+    let window = start_with(cx, record);
+    drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::History, cx));
+    cx.run_until_parked();
+    with_state(cx, &window, |state, _| assert!(state.root.is_none() && state.answered_for(&plain)));
+    git(&plain, &["init", "-q", "-b", "main"]);
+    write(&plain, &[("a.txt", "one\n")]);
+    git(&plain, &["add", "-A"]);
+    git(&plain, &["commit", "-q", "-m", "first"]);
+    // The window asks git about the folder (its own poll), then the tick that is not the 12th.
+    drive(cx, &window, |ws, _, cx| {
+        let ix = ws.active;
+        ws.refresh_git(ix, cx);
+    });
+    cx.run_until_parked();
+    drive(cx, &window, |ws, window, cx| {
+        ws.ticks = 1;
+        ws.tick(window, cx);
+    });
+    cx.run_until_parked();
+    assert_eq!(subjects(cx, &window), ["first"]);
+}
+
 /// A restart puts a new terminal view under the same id: History reads the log in the folder of the one
 /// that lives now, not of the dead one it first saw.
 #[gpui_kit::test]
