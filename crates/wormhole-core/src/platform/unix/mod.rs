@@ -2,3 +2,5 @@
 
 pub(super) mod fs;
 pub(super) mod process;
+pub(super) mod signal;
+pub(super) mod tty;

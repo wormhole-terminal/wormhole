@@ -20,34 +20,28 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context as _, Result, bail};
 
 use super::cipher::{KEY_LEN, Key, new_key};
+use crate::platform::keychain;
 
 /// The development build's key file, in the profile's folder. For testing only: a key next to the
 /// text it seals keeps nothing from anyone who can read the folder.
 pub(crate) const DEV_KEY_FILE: &str = "scrollback-key.dev-only";
 
 /// The Keychain item's service; its account is the profile's random id.
-#[cfg(target_os = "macos")]
 const KEYCHAIN_SERVICE: &str = "Wormhole saved terminal text";
 
-#[cfg(target_os = "macos")]
-const ITEM_NOT_FOUND: i32 = -25300;
-#[cfg(target_os = "macos")]
-const DUPLICATE_ITEM: i32 = -25299;
-
 /// The key kept under `account` in the login Keychain, made there on first use.
-#[cfg(target_os = "macos")]
 pub(super) fn keychain(account: &str) -> Result<Key> {
     match read_keychain(account) {
         Ok(Some(key)) => Ok(key),
         Ok(None) => {
             let key = new_key()?;
-            match add_keychain(account, &key) {
+            match keychain::add(KEYCHAIN_SERVICE, account, key.as_ref()) {
                 Ok(()) => {
                     tracing::info!("made a saved text key in the Keychain");
                     Ok(key)
                 }
                 // Made by someone else in between: theirs is the one, never overwritten.
-                Err(err) if err.code() == DUPLICATE_ITEM => {
+                Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
                     read_keychain(account)?.context("the Keychain has a saved text key that can't be read")
                 }
                 Err(err) => bail!("keeping a new saved text key in the Keychain: {err}"),
@@ -57,48 +51,18 @@ pub(super) fn keychain(account: &str) -> Result<Key> {
     }
 }
 
-#[cfg(target_os = "macos")]
 fn read_keychain(account: &str) -> Result<Option<Key>> {
-    match security_framework::passwords::get_generic_password(KEYCHAIN_SERVICE, account) {
-        Ok(found) => {
-            to_key(zeroize::Zeroizing::new(found).as_slice(), "the Keychain's saved text key").map(Some)
-        }
-        Err(err) if err.code() == ITEM_NOT_FOUND => Ok(None),
+    match keychain::find(KEYCHAIN_SERVICE, account) {
+        Ok(Some(found)) => to_key(found.as_slice(), "the Keychain's saved text key").map(Some),
+        Ok(None) => Ok(None),
         // Denied, cancelled, a locked Keychain: the text isn't kept this time.
         Err(err) => bail!("reading the saved text key from the Keychain: {err}"),
     }
 }
 
-/// `SecItemAdd` alone: unlike `set_generic_password`, it never replaces an item that is there.
-#[cfg(target_os = "macos")]
-fn add_keychain(account: &str, key: &Key) -> Result<(), security_framework::base::Error> {
-    use core_foundation::data::CFData;
-    use security_framework::item::{ItemAddOptions, ItemAddValue, ItemClass};
-
-    let mut options = ItemAddOptions::new(ItemAddValue::Data {
-        class: ItemClass::generic_password(),
-        data: CFData::from_buffer(key.as_ref()),
-    });
-    options.set_service(KEYCHAIN_SERVICE).set_account_name(account).set_label(KEYCHAIN_SERVICE);
-    options.add()
-}
-
-#[cfg(target_os = "macos")]
 pub(super) fn forget_keychain(account: &str) -> Result<()> {
-    match security_framework::passwords::delete_generic_password(KEYCHAIN_SERVICE, account) {
-        Err(err) if err.code() != ITEM_NOT_FOUND => bail!("deleting the saved text key: {err}"),
-        _ => Ok(()),
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-pub(super) fn keychain(_: &str) -> Result<Key> {
-    bail!("no Keychain on this system")
-}
-
-#[cfg(not(target_os = "macos"))]
-pub(super) fn forget_keychain(_: &str) -> Result<()> {
-    Ok(())
+    keychain::delete(KEYCHAIN_SERVICE, account)
+        .map_err(|err| anyhow::anyhow!("deleting the saved text key: {err}"))
 }
 
 fn to_key(bytes: &[u8], what: &str) -> Result<Key> {

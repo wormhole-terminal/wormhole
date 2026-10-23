@@ -44,6 +44,9 @@
       }
     },
     "os_edge_neutral": {
+      "wormhole-core": [
+        "src/platform/"
+      ],
       "wormhole-host": [
         "src/sys/"
       ],
@@ -209,9 +212,6 @@
       "crates/wormhole-core/src/git/worktree.rs :: cfg(unix": 1,
       "crates/wormhole-core/src/git/worktree.rs :: std::os::unix": 1,
       "crates/wormhole-core/src/ipc/hosts/scan.rs :: std::os::unix": 1,
-      "crates/wormhole-core/src/onboarding/welcome/run.rs :: std::os::unix": 1,
-      "crates/wormhole-core/src/onboarding/welcome/tty.rs :: allow(unsafe_code)": 5,
-      "crates/wormhole-core/src/onboarding/welcome/tty.rs :: libc::": 23,
       "crates/wormhole-core/src/project/create.rs :: cfg(unix": 2,
       "crates/wormhole-core/src/project/create.rs :: std::os::unix": 2,
       "crates/wormhole-core/src/project/edit.rs :: cfg(unix": 1,
@@ -220,14 +220,8 @@
       "crates/wormhole-core/src/project/snapshot.rs :: std::os::unix": 2,
       "crates/wormhole-core/src/project/tests.rs :: cfg(unix": 7,
       "crates/wormhole-core/src/project/tests.rs :: std::os::unix": 4,
-      "crates/wormhole-core/src/storage/store/saved_text/keys.rs :: cfg(target_os": 9,
-      "crates/wormhole-core/src/storage/store/saved_text/platform.rs :: allow(unsafe_code)": 2,
-      "crates/wormhole-core/src/storage/store/saved_text/platform.rs :: cfg(target_os": 4,
-      "crates/wormhole-core/src/storage/store/saved_text/platform.rs :: libc::": 4,
-      "crates/wormhole-core/src/storage/store/saved_text/platform.rs :: std::os::unix": 2,
       "crates/wormhole-core/src/storage/store/tests/copies.rs :: std::os::unix": 1,
       "crates/wormhole-core/src/storage/store/tests/private.rs :: std::os::unix": 1,
-      "crates/wormhole-core/src/storage/store/tests/saved_text.rs :: cfg(target_os": 1,
       "crates/wormhole-core/src/storage/store/tests/saved_text.rs :: std::os::unix": 1,
       "crates/wormhole-core/src/storage/store/tests/sealed.rs :: std::os::unix": 1,
       "crates/wormhole-core/src/terminal/cli_tool/path.rs :: std::os::unix": 2,
@@ -237,7 +231,6 @@
       "crates/wormhole-core/src/theme/icon_theme/tests.rs :: cfg(unix": 1,
       "crates/wormhole-core/src/theme/icon_theme/tests.rs :: std::os::unix": 1,
       "crates/wormhole-core/src/update/licenses.rs :: cfg(target_os": 2,
-      "crates/wormhole-core/src/update/mod.rs :: cfg!(target_os": 1,
       "crates/wormhole-core/src/update/test_support.rs :: std::os::unix": 2,
       "crates/wormhole-core/src/update/tests.rs :: std::os::unix": 1,
       "crates/wormhole/src/menubar/mod.rs :: cfg_attr(": 3,

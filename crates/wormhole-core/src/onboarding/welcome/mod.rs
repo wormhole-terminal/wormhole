@@ -29,7 +29,7 @@
 //! - `facts`: the agents the pages list, read from the machine;
 //! - `gate`: the token rules;
 //! - `driver`: one tick of the program, without any I/O, so it can be scripted in tests;
-//! - `tty`: raw mode, the size and waiting for a key (the only `libc` here);
+//! - `platform::tty` (core's edge): raw mode, the size and waiting for a key;
 //! - `run`: the loop around the driver, the request thread and the final `exec`.
 
 mod ansi;
@@ -44,7 +44,6 @@ mod keys;
 mod model;
 mod render;
 mod run;
-mod tty;
 
 pub use art::{
     DockCell, LOGO, LOGO_CHEVRON_CELL, LOGO_DOCK, MARGIN, MARK_CELL, MARK_CHEVRON_ROWS, MARK_DOCK, Rect, TOP,

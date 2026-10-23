@@ -109,14 +109,13 @@ fn the_file_and_its_journal_are_kept_out_of_backups() {
     assert!(!excluded.iter().any(|path| path.ends_with("wormhole.db")), "the layout stays in backups");
 }
 
-/// The real call, on the file the store makes (macOS only: it has Time Machine).
-#[cfg(target_os = "macos")]
+/// The real call, on the file the store makes (it does nothing where there is no Time Machine).
 #[test]
 fn the_real_file_carries_the_backup_exclusion() {
     let dir = temp_dir("saved-xattr");
     let _store = Store::open_at(&dir).expect("opens");
-    assert!(crate::storage::store::saved_text::platform::is_excluded_from_backup(&dir.join("scrollback.db")));
-    assert!(!crate::storage::store::saved_text::platform::is_excluded_from_backup(&dir.join("wormhole.db")));
+    assert!(crate::platform::backup::is_excluded(&dir.join("scrollback.db")));
+    assert!(!crate::platform::backup::is_excluded(&dir.join("wormhole.db")));
 }
 
 #[test]

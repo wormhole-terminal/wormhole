@@ -30,7 +30,7 @@ mod test_support;
 mod tests;
 
 use std::fmt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 pub use channel::UpdateChannel;
 pub use download::{DownloadedUpdate, download};
@@ -111,32 +111,10 @@ pub fn current_platform() -> String {
     format!("{os}-{}", std::env::consts::ARCH)
 }
 
-/// Where macOS keeps its own version. `sw_vers` is a front end for this file.
-const SYSTEM_VERSION_PLIST: &str = "/System/Library/CoreServices/SystemVersion.plist";
-
-/// The running macOS version, or `None` elsewhere or if it can't be determined.
-///
-/// Read from the system's version file, not by running `sw_vers`: this is called while the app
-/// starts, on the UI thread, and a process spawn (fork, exec, dyld) costs milliseconds there for
-/// one short string. `sw_vers` remains the fallback if the file can't be read.
+/// The running macOS version, or `None` elsewhere or if it can't be determined (the system's
+/// text, `platform::system`, read as an Apple-style version).
 pub fn macos_version() -> Option<semver::Version> {
-    if !cfg!(target_os = "macos") {
-        return None;
-    }
-    version_from_system_plist(Path::new(SYSTEM_VERSION_PLIST)).or_else(version_from_sw_vers)
-}
-
-fn version_from_system_plist(path: &Path) -> Option<semver::Version> {
-    let value = plist::Value::from_file(path).ok()?;
-    parse_lenient_version(value.as_dictionary()?.get("ProductVersion")?.as_string()?)
-}
-
-fn version_from_sw_vers() -> Option<semver::Version> {
-    let out = std::process::Command::new("/usr/bin/sw_vers").arg("-productVersion").output().ok()?;
-    if !out.status.success() {
-        return None;
-    }
-    parse_lenient_version(String::from_utf8_lossy(&out.stdout).trim())
+    crate::platform::system::macos_version_text().as_deref().and_then(parse_lenient_version)
 }
 
 /// Parses Apple-style versions ("13", "14.5", "15.0.1") that strict semver rejects.
@@ -263,7 +241,6 @@ pub(crate) fn check_url(url: &str) -> Result<(), UpdateError> {
 mod unit_tests {
     use super::{
         DEFAULT_MAX_DOWNLOAD_SIZE, UpdateChannel, UpdateError, check_url, feed_url, parse_lenient_version,
-        version_from_system_plist,
     };
     use semver::Version;
 
@@ -287,32 +264,6 @@ mod unit_tests {
         assert_eq!(shown(DEFAULT_MAX_DOWNLOAD_SIZE), "update is larger than the 500 MiB limit");
         assert_eq!(shown(1024 * 1024), "update is larger than the 1 MiB limit");
         assert_eq!(shown(100), "update is larger than the 100 bytes limit");
-    }
-
-    #[test]
-    fn the_system_version_file_is_read_without_a_process() {
-        let dir = tempfile::tempdir().unwrap();
-        let plist = |body: &str| {
-            let path = dir.path().join("SystemVersion.plist");
-            std::fs::write(
-                &path,
-                format!(
-                    r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>{body}</dict></plist>"#
-                ),
-            )
-            .unwrap();
-            path
-        };
-        let read = |body: &str| version_from_system_plist(&plist(body));
-        let real =
-            "<key>ProductName</key><string>macOS</string><key>ProductVersion</key><string>14.5</string>";
-        assert_eq!(read(real), Some(Version::new(14, 5, 0)));
-        assert_eq!(read("<key>ProductVersion</key><string>15.0.1</string>"), Some(Version::new(15, 0, 1)));
-        assert_eq!(read("<key>ProductName</key><string>macOS</string>"), None);
-        assert_eq!(read("<key>ProductVersion</key><string>soon</string>"), None);
-        assert_eq!(version_from_system_plist(&dir.path().join("missing.plist")), None);
     }
 
     #[test]

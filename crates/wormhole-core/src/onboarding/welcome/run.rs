@@ -7,7 +7,6 @@
 //! started or the program ends with the terminal as it was.
 
 use std::io::{self, Write as _};
-use std::os::unix::process::CommandExt as _;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
@@ -16,8 +15,9 @@ use super::banner;
 use super::driver::{Answer, Driver};
 use super::gate::TOKEN_VAR;
 use super::render::Size;
-use super::tty::{self, RawMode};
 use crate::ipc::control::{Action, Request, WelcomeOp, exchange};
+use crate::platform::process::exec;
+use crate::platform::tty::{self, RawMode};
 
 pub const HELP: &str = "\
 Wormhole welcome: the first-run welcome, in this terminal
@@ -239,7 +239,7 @@ fn wait_for_finish(worker: &Worker) {
 /// started; then it says so and falls back to the login shell, so the terminal is never left dead.
 fn hand_over(shell: &[String]) -> i32 {
     let start = |program: &str, args: &[String]| {
-        std::process::Command::new(program).args(args).env_remove(TOKEN_VAR).exec()
+        exec(std::process::Command::new(program).args(args).env_remove(TOKEN_VAR))
     };
     let Some((program, args)) = shell.split_first() else { return 1 };
     let err = start(program, args);

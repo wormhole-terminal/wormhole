@@ -12,13 +12,6 @@ use std::io;
 const STDIN: libc::c_int = 0;
 const STDOUT: libc::c_int = 1;
 
-/// Whether the program is attached to a terminal at both ends.
-#[allow(unsafe_code)] // libc: isatty only inspects the descriptor.
-pub fn is_terminal() -> bool {
-    // SAFETY: isatty takes a descriptor number and touches nothing else.
-    unsafe { libc::isatty(STDIN) == 1 && libc::isatty(STDOUT) == 1 }
-}
-
 /// The terminal in raw mode until this is dropped or [`restore`](Self::restore)d.
 pub struct RawMode {
     saved: libc::termios,
@@ -68,7 +61,7 @@ impl Drop for RawMode {
 /// The terminal's size in cells (columns, rows), when it says. A terminal that reports no size at all
 /// (zero) is treated as unknown.
 #[allow(unsafe_code)] // libc: TIOCGWINSZ on a descriptor.
-pub fn size() -> Option<(usize, usize)> {
+pub(crate) fn size() -> Option<(usize, usize)> {
     // SAFETY: `winsize` is plain data; zeroed is a valid value for the ioctl to fill in.
     let mut size: libc::winsize = unsafe { std::mem::zeroed() };
     // SAFETY: STDOUT is a valid descriptor and `size` is writable for one winsize, which is what
@@ -80,7 +73,7 @@ pub fn size() -> Option<(usize, usize)> {
 /// Read what has been typed, waiting at most `wait_ms`; empty when nothing was, `None` at the end of
 /// the input (the terminal went away).
 #[allow(unsafe_code)] // libc: poll and read on stdin.
-pub fn read_input(buf: &mut [u8], wait_ms: i32) -> Option<usize> {
+pub(crate) fn read_input(buf: &mut [u8], wait_ms: i32) -> Option<usize> {
     let mut fd = libc::pollfd { fd: STDIN, events: libc::POLLIN, revents: 0 };
     // SAFETY: `fd` is one live pollfd and the count says so.
     let ready = unsafe { libc::poll(&mut fd, 1, wait_ms) };
