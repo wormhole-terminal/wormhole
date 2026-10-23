@@ -17,7 +17,7 @@ use wormhole_core::theme::folder_color::FolderColor;
 use wormhole_core::theme::tokens::ThemeTokens;
 
 use super::color::set_project_color;
-use super::{Project, hub, project_folders_on};
+use super::{Project, hub_of, project_folders_on};
 use crate::settings::update_settings;
 use crate::settings::{SettingsStore, settings, settings_in, store_in};
 use crate::theme_bridge;
@@ -129,14 +129,14 @@ impl Project {
         let project = project_folders_on(cx)
             .then(|| self.folder_projects.get(folder))
             .flatten()
-            .and_then(|root| hub(cx).projects.get(root))
+            .and_then(|root| hub_of(profile, cx).projects.get(root))
             .filter(|project| project.snapshot.has(Feature::Settings));
         match project {
             Some(project) => FolderPaint::Project(ProjectPaint {
                 root: project.folder.root.clone(),
                 chosen: project.snapshot.config().and_then(|config| config.color),
                 locked: project.snapshot.config().is_some_and(|config| config.color_locked),
-                shown: hub(cx).prefs.enabled(&project.folder.root, Feature::Settings),
+                shown: hub_of(profile, cx).prefs.enabled(&project.folder.root, Feature::Settings),
                 unreadable: project.snapshot.config_error().is_some(),
             }),
             None => FolderPaint::Own(settings_in(profile, cx).folder_color_choice(folder)),
@@ -175,13 +175,19 @@ impl Project {
             return;
         };
         let paint = self.folder_paint(&profile, &folder, cx);
-        set_folder_choice(&paint, &folder, Some(ProjectColorChoice::Hex(picked)), cx);
+        set_folder_choice(&paint, &profile, &folder, Some(ProjectColorChoice::Hex(picked)), cx);
     }
 }
 
 /// Colour `folder` with one of the names, or (`None`) take its colour away: [`set_folder_choice`].
-pub(super) fn set_folder_color(paint: &FolderPaint, folder: &Path, color: Option<FolderColor>, cx: &mut App) {
-    set_folder_choice(paint, folder, color.map(ProjectColorChoice::Named), cx);
+pub(super) fn set_folder_color(
+    paint: &FolderPaint,
+    profile: &ProfileId,
+    folder: &Path,
+    color: Option<FolderColor>,
+    cx: &mut App,
+) {
+    set_folder_choice(paint, profile, folder, color.map(ProjectColorChoice::Named), cx);
 }
 
 /// Colour `folder`, or (`None`) take its colour away, where `paint` says it lives: for the person's
@@ -189,6 +195,7 @@ pub(super) fn set_folder_color(paint: &FolderPaint, folder: &Path, color: Option
 /// its `config.json`, which every window then reads again.
 pub(super) fn set_folder_choice(
     paint: &FolderPaint,
+    profile: &ProfileId,
     folder: &Path,
     color: Option<ProjectColorChoice>,
     cx: &mut App,
@@ -210,7 +217,7 @@ pub(super) fn set_folder_choice(
     if project.locked || project.unreadable || project.chosen == color {
         return;
     }
-    set_project_color(&project.root, color, cx);
+    set_project_color(profile, &project.root, color, cx);
 }
 
 /// The colours a folder can wear, as the theme in force draws them.

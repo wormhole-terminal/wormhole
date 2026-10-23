@@ -9,6 +9,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::{FeatureId, TabId};
 use wormhole_core::keys::keymap::menus::MenuState;
+use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::SessionRecord;
 
 use crate::actions::gpui_action;
@@ -310,12 +311,13 @@ impl Workspace {
     /// What the features add to the start of a terminal in `cwd`: their environment, in the table's
     /// order, and the shell of the last that names one.
     pub(in crate::window) fn spawn_adds(
+        profile: &ProfileId,
         cwd: Option<&Path>,
         features: &[FeatureDef],
         cx: &mut App,
     ) -> SpawnAdd {
         let mut all = SpawnAdd::default();
-        for add in features.iter().filter_map(|def| def.spawn).map(|spawn| spawn(cwd, cx)) {
+        for add in features.iter().filter_map(|def| def.spawn).map(|spawn| spawn(profile, cwd, cx)) {
             all.env.extend(add.env);
             all.shell = add.shell.or(all.shell);
         }
@@ -329,7 +331,7 @@ impl Workspace {
         let mut approved = false;
         for (at, def) in self.features.iter().enumerate() {
             let Some(approves) = def.approves_programs else { continue };
-            if !self.feature_entity(at).is_some_and(|entity| approves(entity, session, cx)) {
+            if !self.feature_entity(at).is_some_and(|entity| approves(entity, session, &self.profile, cx)) {
                 return false;
             }
             approved = true;

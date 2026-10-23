@@ -19,6 +19,7 @@ use wormhole_core::storage::paths::ProfileId;
 use super::notes_sync::NotesLink;
 use super::{
     Project, ProjectHub, approve_project, hub, hub_mut, revoke_project, set_feature_default, set_feature_for,
+    shown_profile,
 };
 use crate::app_state::{AppState, OpenWindow};
 use crate::window::Workspace;
@@ -81,7 +82,7 @@ fn prompt_to_note(
 /// The Project tab's "Open terminals" button.
 fn open_layout(ws: &mut Workspace, cx: &mut gpui_kit::Context<Workspace>) {
     let session = ws.active_session().id;
-    feature(ws).update(cx, |project, cx| project.open_layout(session, cx));
+    feature(ws).update(cx, |project, cx| project.open_layout(session, &ProfileId::default_profile(), cx));
 }
 
 /// The environment and shell a terminal started in `dir` gets from its project.
@@ -89,7 +90,7 @@ fn spawn_options(
     cx: &mut TestAppContext,
     dir: &Path,
 ) -> (std::collections::BTreeMap<String, String>, Option<String>) {
-    let add = cx.update(|cx| super::detect::spawn_options(Some(dir), cx));
+    let add = cx.update(|cx| super::detect::spawn_options(&ProfileId::default_profile(), Some(dir), cx));
     (add.env, add.shell)
 }
 
@@ -227,7 +228,7 @@ fn actions_run_only_in_a_trusted_project_with_actions_on(cx: &mut TestAppContext
     drive(cx, &window, |ws, _, cx| run_action(ws, "nope", cx));
     assert_eq!(sessions(cx), 2, "an id the project doesn't have does nothing");
 
-    cx.update(|cx| set_feature_for(&dir, Feature::Actions, Some(false), cx));
+    cx.update(|cx| set_feature_for(&shown_profile(cx).clone(), &dir, Feature::Actions, Some(false), cx));
     cx.run_until_parked();
     drive(cx, &window, |ws, _, cx| {
         refresh(ws, cx);
@@ -239,7 +240,7 @@ fn actions_run_only_in_a_trusted_project_with_actions_on(cx: &mut TestAppContext
     assert!(menu.is_empty());
 
     flag(cx, false);
-    cx.update(|cx| set_feature_for(&dir, Feature::Actions, None, cx));
+    cx.update(|cx| set_feature_for(&shown_profile(cx).clone(), &dir, Feature::Actions, None, cx));
     cx.run_until_parked();
     drive(cx, &window, |ws, _, cx| run_action(ws, "more", cx));
     assert_eq!(sessions(cx), 2, "with the whole feature off, nothing runs");
@@ -264,7 +265,7 @@ fn a_prompt_can_be_copied_into_a_note(cx: &mut TestAppContext) {
     let text = read_cx(cx, &window, |ws, cx| notes::note(ws, 0, 0, cx).0.read(cx).value().to_string());
     assert_eq!(text, "Look at the diff.");
 
-    cx.update(|cx| set_feature_for(&dir, Feature::Prompts, Some(false), cx));
+    cx.update(|cx| set_feature_for(&shown_profile(cx).clone(), &dir, Feature::Prompts, Some(false), cx));
     cx.run_until_parked();
     drive(cx, &window, |ws, window, cx| {
         refresh(ws, cx);
@@ -316,9 +317,9 @@ fn a_trusted_projects_shell_and_environment_start_its_terminals(cx: &mut TestApp
     assert_eq!(env.get("A").map(String::as_str), Some("1"));
     assert_eq!(shell.as_deref(), Some("/bin/sh"));
 
-    cx.update(|cx| set_feature_for(&dir, Feature::Settings, Some(false), cx));
+    cx.update(|cx| set_feature_for(&shown_profile(cx).clone(), &dir, Feature::Settings, Some(false), cx));
     assert_eq!(spawn_options(cx, &dir), Default::default(), "Settings switched off for the project");
-    cx.update(|cx| set_feature_for(&dir, Feature::Settings, None, cx));
+    cx.update(|cx| set_feature_for(&shown_profile(cx).clone(), &dir, Feature::Settings, None, cx));
     flag(cx, false);
     assert_eq!(spawn_options(cx, &dir), Default::default(), "the feature off");
     flag(cx, true);
@@ -356,7 +357,7 @@ fn the_notes_file_and_the_terminals_notes_follow_each_other(cx: &mut TestAppCont
     assert!(file.contains("- [ ] from the terminal") && file.contains("- [ ] from the file"), "{file}");
 
     // Switched off for the project: both sides are left alone, and a later switch-on merges afresh.
-    cx.update(|cx| set_feature_for(&dir, Feature::Notes, Some(false), cx));
+    cx.update(|cx| set_feature_for(&shown_profile(cx).clone(), &dir, Feature::Notes, Some(false), cx));
     cx.run_until_parked();
     drive(cx, &window, |ws, window, cx| {
         notes::add_task(ws, 0, "only here", cx);
@@ -365,7 +366,7 @@ fn the_notes_file_and_the_terminals_notes_follow_each_other(cx: &mut TestAppCont
     let file = std::fs::read_to_string(dir.join(".wormhole/notes.md")).expect("notes.md");
     assert!(!file.contains("only here"), "{file}");
 
-    cx.update(|cx| set_feature_for(&dir, Feature::Notes, None, cx));
+    cx.update(|cx| set_feature_for(&shown_profile(cx).clone(), &dir, Feature::Notes, None, cx));
     flag(cx, false);
     drive(cx, &window, sync_notes);
     let file = std::fs::read_to_string(dir.join(".wormhole/notes.md")).expect("notes.md");
@@ -391,7 +392,7 @@ fn trust_and_the_switches_are_the_hubs(cx: &mut TestAppContext) {
     drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
     assert_eq!(status(cx, &dir), Some(TrustStatus::Untrusted));
 
-    cx.update(|cx| approve_project(&dir, cx));
+    cx.update(|cx| approve_project(&shown_profile(cx).clone(), &dir, cx));
     cx.run_until_parked();
     assert_eq!(status(cx, &dir), Some(TrustStatus::Untrusted), "the owner cancelled: still not trusted");
     assert!(!with_hub(cx, |hub| hub.approving), "and nothing is waiting");
@@ -400,14 +401,14 @@ fn trust_and_the_switches_are_the_hubs(cx: &mut TestAppContext) {
     trust(cx, &dir);
     drive(cx, &window, |ws, _, cx| refresh(ws, cx));
     assert_eq!(status(cx, &dir), Some(TrustStatus::Trusted));
-    cx.update(|cx| revoke_project(&dir, cx));
+    cx.update(|cx| revoke_project(&shown_profile(cx).clone(), &dir, cx));
     cx.run_until_parked();
     assert_eq!(status(cx, &dir), Some(TrustStatus::Untrusted), "revoked at once");
 
     assert!(with_hub(cx, |hub| hub.prefs.default_enabled(Feature::Layout)));
-    cx.update(|cx| set_feature_default(Feature::Layout, false, cx));
+    cx.update(|cx| set_feature_default(&shown_profile(cx).clone(), Feature::Layout, false, cx));
     assert!(!with_hub(cx, |hub| hub.prefs.default_enabled(Feature::Layout)));
-    cx.update(|cx| set_feature_default(Feature::Layout, true, cx));
+    cx.update(|cx| set_feature_default(&shown_profile(cx).clone(), Feature::Layout, true, cx));
 }
 
 /// Each profile has its own hub: its preferences, its trust and its notes bases. A window of the
@@ -418,7 +419,7 @@ fn each_profile_has_its_own_project_hub(cx: &mut TestAppContext) {
         return;
     }
     let _window = start(cx, 1);
-    cx.update(|cx| set_feature_default(Feature::Prompts, false, cx));
+    cx.update(|cx| set_feature_default(&shown_profile(cx).clone(), Feature::Prompts, false, cx));
     let dir = project("profiles", &[("actions.json", ACTIONS)]);
     trust(cx, &dir);
     let work = cx
@@ -439,13 +440,73 @@ fn each_profile_has_its_own_project_hub(cx: &mut TestAppContext) {
         TrustStatus::Untrusted,
         "and its own trust: the other profile's approval is not its"
     );
-    cx.update(|cx| set_feature_default(Feature::Layout, false, cx));
+    cx.update(|cx| set_feature_default(&shown_profile(cx).clone(), Feature::Layout, false, cx));
 
     cx.update(|cx| AppState::switch_profile(&ProfileId::default_profile(), cx)).expect("switches back");
     cx.run_until_parked();
     assert!(!with_hub(cx, |hub| hub.prefs.default_enabled(Feature::Prompts)), "the first profile's, as left");
     assert!(with_hub(cx, |hub| hub.prefs.default_enabled(Feature::Layout)), "Work's change stayed in Work");
     assert_eq!(with_hub(cx, |hub| hub.trust.status(&folder)), TrustStatus::Trusted);
+}
+
+/// A window follows the trust of the profile it lives in, whichever profile is shown: a project the shown
+/// profile approved is not approved in a window of another one, and the other way round, before and after
+/// a switch.
+#[gpui_kit::test]
+fn a_window_follows_the_trust_of_its_own_profile_not_the_shown_ones(cx: &mut TestAppContext) {
+    if isolate("a_window_follows_the_trust_of_its_own_profile_not_the_shown_ones") {
+        return;
+    }
+    let first = start(cx, 1);
+    let default = ProfileId::default_profile();
+    let work = cx
+        .update(|cx| {
+            let new =
+                NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults };
+            let id = AppState::create_profile(new, cx)?;
+            AppState::ensure_open(&id, cx);
+            Ok::<ProfileId, String>(id)
+        })
+        .expect("makes the profile");
+    cx.update(|cx| cx.set_global(crate::fonts::LoadedFonts::default()));
+    cx.update(|cx| AppState::open_window_in_profile(&work, cx));
+    cx.run_until_parked();
+    let odd = cx
+        .update(|cx| crate::app_state::app(cx).windows.iter().find(|w| w.profile == work).cloned())
+        .expect("the window in Work opened");
+
+    let dir = project("two-profiles", &[("actions.json", ACTIONS)]);
+    let folder = ProjectFolder::open(&dir).expect("a project");
+    // What each window may run: its project's actions, and the pull request lookup's approval.
+    let actions = |cx: &mut TestAppContext, window: &OpenWindow| {
+        drive(cx, window, |ws, _, cx| go(ws, &dir, cx));
+        read_cx(cx, window, |ws, cx| {
+            (
+                super::api::actionable(ws, cx).is_some(),
+                super::api::action_for_key(ws, &Keystroke::parse("f9").expect("a key"), cx).is_some(),
+                ws.programs_approved(ws.sessions[0].id, cx),
+            )
+        })
+    };
+    let (yes, no) = ((true, true, true), (false, false, false));
+
+    // Only the shown profile (Default) trusts it.
+    cx.update(|cx| super::hub_of_mut(&default, cx).expect("Default's hub").trust.trust(&folder));
+    assert_eq!(actions(cx, &first), yes, "Default's window: trusted in Default");
+    assert_eq!(actions(cx, &odd), no, "Work's window: Default's approval is not Work's");
+
+    // The switch makes Work the shown profile: the windows keep their own profile's trust.
+    cx.update(|cx| AppState::switch_profile(&work, cx)).expect("switches");
+    cx.run_until_parked();
+    assert_eq!(actions(cx, &first), yes, "Default's window, now not shown, still follows Default");
+    assert_eq!(actions(cx, &odd), no, "Work's window, now shown, follows Work");
+
+    // Work approves it, and Default takes its approval back: each window follows only its own.
+    cx.update(|cx| super::hub_of_mut(&work, cx).expect("Work's hub").trust.trust(&folder));
+    cx.update(|cx| revoke_project(&default, &dir, cx));
+    cx.run_until_parked();
+    assert_eq!(actions(cx, &odd), yes, "Work's window: trusted in Work");
+    assert_eq!(actions(cx, &first), no, "Default's window: revoked in Default, though Work trusts it");
 }
 
 /// The Project tab's menu line is there for a terminal with a folder and the feature on.
@@ -537,7 +598,7 @@ fn the_entry_offers_the_tab_and_says_who_is_trusted(cx: &mut TestAppContext) {
     flag(cx, false);
     assert!(!asked(cx).2, "the feature off");
     flag(cx, true);
-    cx.update(|cx| revoke_project(&dir, cx));
+    cx.update(|cx| revoke_project(&shown_profile(cx).clone(), &dir, cx));
     cx.run_until_parked();
     assert!(!asked(cx).2, "revoked");
 }

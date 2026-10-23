@@ -126,5 +126,6 @@ pub(super) fn ask_for_worktree(
 ) {
     let folder = ws.facts(cx).active().and_then(|active| active.band_folder(cx));
     let worktrees = ws.feature::<super::worktree::Worktrees>().expect("in the table");
-    worktrees.update(cx, |worktrees, cx| worktrees.new_terminal_in_worktree(folder, window, cx));
+    let profile = ws.profile().clone();
+    worktrees.update(cx, |worktrees, cx| worktrees.new_terminal_in_worktree(&profile, folder, window, cx));
 }

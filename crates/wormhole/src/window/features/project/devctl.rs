@@ -30,7 +30,7 @@ pub(crate) fn folder_color(
     };
     let project = ws.feature::<Project>().ok_or("the window has no project feature")?;
     let paint: FolderPaint = project.read(cx).folder_paint(ws.profile(), &folder, cx);
-    set_folder_choice(&paint, &folder, color, cx);
+    set_folder_choice(&paint, ws.profile(), &folder, color, cx);
     Ok(folder)
 }
 
@@ -38,7 +38,7 @@ pub(crate) fn folder_color(
 /// the `.wormhole/` in.
 pub(crate) fn init(ws: &Workspace, cx: &mut Context<Workspace>) -> Result<PathBuf, &'static str> {
     let folder = ws.active_folder(cx).ok_or("the active terminal has no folder yet")?;
-    create_project_folder(folder.clone(), cx);
+    create_project_folder(ws.profile(), folder.clone(), cx);
     Ok(folder)
 }
 
@@ -46,13 +46,14 @@ pub(crate) fn init(ws: &Workspace, cx: &mut Context<Workspace>) -> Result<PathBu
 /// is answered by `WORMHOLE_AUTH`); says which folder it asked for.
 pub(crate) fn trust(ws: &Workspace, cx: &mut Context<Workspace>) -> Result<PathBuf, &'static str> {
     let root = super::api::active_root(ws, cx).ok_or("the active terminal has no project")?;
-    approve_project(&root, cx);
+    approve_project(ws.profile(), &root, cx);
     Ok(root)
 }
 
 /// `trust-window`: the window for the active terminal's project.
 pub(crate) fn trust_window(ws: &Workspace, cx: &mut Context<Workspace>) -> anyhow::Result<()> {
     let root = super::api::active_root(ws, cx).ok_or_else(|| anyhow::anyhow!("no project here"))?;
-    cx.defer(move |cx| open_trust_window(root, cx));
+    let profile = ws.profile().clone();
+    cx.defer(move |cx| open_trust_window(profile, root, cx));
     Ok(())
 }

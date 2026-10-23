@@ -7,8 +7,9 @@ use std::path::Path;
 
 use gpui_kit::*;
 use wormhole_core::project::{ProjectColorChoice, ProjectFolder};
+use wormhole_core::storage::paths::ProfileId;
 
-use super::{hub_mut, project_folders_on, reload_projects};
+use super::{hub_of_mut, project_folders_on, reload_projects};
 
 /// What the hub's error says when writing the colour failed, so a later success can take it away
 /// without touching the other problems it may be showing.
@@ -17,12 +18,17 @@ const FAILED: &str = "Couldn't change the project's colour";
 /// Write `color` as the `project_color` of the project at `root` (`None` takes the key out), then
 /// have every window read the project again, so the band, the title row and the Project tab turn to
 /// it at once. The file is read, spliced and replaced off the UI thread.
-pub(in crate::window) fn set_project_color(root: &Path, color: Option<ProjectColorChoice>, cx: &mut App) {
+pub(in crate::window) fn set_project_color(
+    profile: &ProfileId,
+    root: &Path,
+    color: Option<ProjectColorChoice>,
+    cx: &mut App,
+) {
     // The one write into a project's `config.json`: never while the project-folder feature is off.
     if !project_folders_on(cx) {
         return;
     }
-    let root = root.to_path_buf();
+    let (root, profile) = (root.to_path_buf(), profile.clone());
     cx.spawn(async move |cx| {
         let target = root.clone();
         let made = cx
@@ -33,14 +39,14 @@ pub(in crate::window) fn set_project_color(root: &Path, color: Option<ProjectCol
                 }
             })
             .await;
-        cx.update(|cx| project_color_set(&root, made, cx));
+        cx.update(|cx| project_color_set(&profile, &root, made, cx));
     })
     .detach();
 }
 
 /// What came of writing the colour into the project at `root`.
-fn project_color_set(root: &Path, made: Result<bool, String>, cx: &mut App) {
-    let hub = hub_mut(cx);
+fn project_color_set(profile: &ProfileId, root: &Path, made: Result<bool, String>, cx: &mut App) {
+    let Some(hub) = hub_of_mut(profile, cx) else { return };
     match made {
         Ok(changed) => {
             tracing::info!(root = %root.display(), changed, "project colour set");

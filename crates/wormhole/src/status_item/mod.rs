@@ -167,12 +167,14 @@ fn rgba(color: Hsla) -> crate::menubar::Rgba {
     [rgba.r, rgba.g, rgba.b, rgba.a]
 }
 
-/// The actions of the projects that have a terminal open, in terminal order (the menu's
-/// Projects submenu, the quick panel's Do section).
+/// The actions of the projects that have a terminal open in a window of the shown profile, in terminal
+/// order (the menu's Projects submenu, the quick panel's Do section): the shown profile's approvals say
+/// which may run.
 pub(crate) fn project_actions(cx: &App) -> Vec<ActionItem> {
     let state = app(cx);
+    let shown = project::shown_profile(cx);
     let mut roots = Vec::new();
-    for window in state.windows.iter().filter(|w| !w.hidden) {
+    for window in state.windows.iter().filter(|w| !w.hidden && &w.profile == shown) {
         if let Ok(window_roots) = window.workspace.read_with(cx, project::api::roots) {
             roots.extend(window_roots);
         }

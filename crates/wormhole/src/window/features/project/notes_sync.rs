@@ -5,20 +5,25 @@
 use gpui_kit::*;
 use wormhole_core::config::FeatureId;
 use wormhole_core::project::{self as proj, Feature, NotesBase, NotesDoc, NotesFile};
+use wormhole_core::storage::paths::ProfileId;
 
-use super::{Project, hub, hub_mut, project_folders_on};
+use super::{Project, hub_of, hub_of_mut, project_folders_on};
 use crate::window::facts::WindowFacts;
 use crate::window::features::notes::Notes;
 
-/// The window's notes, as the Project tab's button that copies a prompt into a note holds them. The only
-/// way the rest of the project feature gets at the notes feature.
+/// The window's notes, as the Project tab's button that copies a prompt into a note holds them, with the
+/// profile the window is in (whose approvals say whether the prompt may be used). The only way the rest of
+/// the project feature gets at the notes feature.
 #[derive(Clone)]
-pub(super) struct NotesLink(Entity<Notes>);
+pub(super) struct NotesLink {
+    notes: Entity<Notes>,
+    profile: ProfileId,
+}
 
 impl NotesLink {
     /// The window's notes, if it has any.
     pub(super) fn of(facts: &WindowFacts<'_>) -> Option<Self> {
-        facts.feature::<Notes>().map(Self)
+        facts.feature::<Notes>().map(|notes| Self { notes, profile: facts.profile.clone() })
     }
 }
 
@@ -37,19 +42,22 @@ impl Project {
             return;
         }
         let Some(notes) = facts.feature::<Notes>() else { return };
+        let profile = facts.profile;
         for session in facts.sessions() {
             let session_id = session.id;
             let Some(root) = self.of.get(&session_id).and_then(|of| of.root.clone()) else { continue };
-            let Some(project) = hub(cx).projects.get(&root) else { continue };
+            let Some(project) = hub_of(profile, cx).projects.get(&root) else { continue };
             // Syncs when switched on and the project has a notes.md, or when the user explicitly opted in
             // for this project (which creates the file). The Project tab's switch asks the same question,
             // so it shows on only when this runs.
-            if !hub(cx).prefs.notes_sync(&root, project.folder.has(Feature::Notes)) {
+            if !hub_of(profile, cx).prefs.notes_sync(&root, project.folder.has(Feature::Notes)) {
                 // Switched off: switching on again merges both sides afresh.
                 if let Some(of) = self.of.get_mut(&session_id) {
                     of.notes_base = None;
                 }
-                hub_mut(cx).notes_bases.remove(session_id);
+                if let Some(hub) = hub_of_mut(profile, cx) {
+                    hub.notes_bases.remove(session_id);
+                }
                 continue;
             }
             let folder = project.folder.clone();
@@ -58,7 +66,7 @@ impl Project {
             // `notes_base` is this run's copy of the base (empty after a launch); the hub knows which
             // project it belongs to and keeps it for the next launch.
             let session_base = self.of.get(&session_id).and_then(|of| of.notes_base.clone());
-            let hub = hub_mut(cx);
+            let Some(hub) = hub_of_mut(profile, cx) else { continue };
             let base = hub.notes_bases.get(session_id).map(|saved| NotesBase {
                 root: saved.root.clone(),
                 doc: session_base.unwrap_or_else(|| saved.doc.clone()),
@@ -97,7 +105,9 @@ impl Project {
                 of.notes_base = Some(plan.base.doc);
             }
         }
-        hub_mut(cx).save_notes_bases();
+        if let Some(hub) = hub_of_mut(profile, cx) {
+            hub.save_notes_bases();
+        }
     }
 
     /// Copy prompt `id` into a new note on terminal `session`, where the project has Prompts on. `panel` is
@@ -111,7 +121,7 @@ impl Project {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let Some(body) = self.enabled_prompt(session, id, cx) else { return };
-        notes.0.update(cx, |notes, cx| notes.note_from(session, body, panel, window, cx));
+        let Some(body) = self.enabled_prompt(session, &notes.profile, id, cx) else { return };
+        notes.notes.update(cx, |notes, cx| notes.note_from(session, body, panel, window, cx));
     }
 }

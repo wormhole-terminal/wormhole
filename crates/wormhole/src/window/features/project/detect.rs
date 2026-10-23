@@ -7,8 +7,9 @@ use std::path::{Path, PathBuf};
 use gpui_kit::*;
 use wormhole_core::config::TabId;
 use wormhole_core::project::{self as proj, Feature};
+use wormhole_core::storage::paths::ProfileId;
 
-use super::{Project, hub, hub_mut, load_project, load_projects, project_folders_on};
+use super::{Project, hub_of, hub_of_mut, load_project, load_projects, project_folders_on, shown_profile};
 use crate::settings::SettingsStore;
 use crate::window::facts::WindowFacts;
 use crate::window::feature::{FeatureEvent, SpawnAdd};
@@ -66,7 +67,7 @@ impl Project {
         roots.extend(folder_projects.values().cloned());
         moved |= self.folder_projects != folder_projects;
         self.folder_projects = folder_projects;
-        if load_projects(roots, cx) {
+        if load_projects(facts.profile, roots, cx) {
             // Other windows (and Settings) may show the project that changed.
             cx.refresh_windows();
         }
@@ -79,26 +80,33 @@ impl Project {
         }
     }
 
-    /// Layer the active terminal's project settings over the user's.
+    /// Layer the active terminal's project settings over the user's. They go over the shown profile's
+    /// settings, so only a window of the shown profile puts any on: a project another profile trusts
+    /// does not change the look and behaviour of this one.
     fn apply_project_settings(&mut self, facts: &WindowFacts<'_>, cx: &mut Context<Self>) {
+        if facts.profile != shown_profile(cx) {
+            return;
+        }
         let active = facts.active().map(|session| session.id);
-        let hub = hub(cx);
+        let hub = hub_of(facts.profile, cx);
         let overrides = active
-            .and_then(|id| self.project(id, cx))
+            .and_then(|id| self.project(id, facts.profile, cx))
             .filter(|p| hub.enabled(p, Feature::Settings))
             .and_then(|p| p.snapshot.config())
             .map(|c| c.settings.clone())
             .filter(|s| !s.is_empty());
         if overrides != hub.applied_overrides {
             SettingsStore::set_project_overrides(cx, overrides.clone());
-            hub_mut(cx).applied_overrides = overrides;
+            if let Some(hub) = hub_of_mut(facts.profile, cx) {
+                hub.applied_overrides = overrides;
+            }
             cx.refresh_windows();
         }
 
         // Project theme: harmless, so it needs no trust, but can be switched off.
-        let hub = super::hub(cx);
+        let hub = hub_of(facts.profile, cx);
         let theme_json = active
-            .and_then(|id| self.project(id, cx))
+            .and_then(|id| self.project(id, facts.profile, cx))
             .filter(|p| hub.enabled(p, Feature::Theme))
             .and_then(|p| p.snapshot.theme_json())
             .map(|value| value.to_string());
@@ -109,14 +117,17 @@ impl Project {
                     .ok()
             });
             SettingsStore::set_project_theme(cx, tokens);
-            hub_mut(cx).applied_theme = theme_json;
+            if let Some(hub) = hub_of_mut(facts.profile, cx) {
+                hub.applied_theme = theme_json;
+            }
             cx.refresh_windows();
         }
     }
 }
 
-/// Env and shell for a new terminal started in `cwd`, if its project allows it.
-pub(super) fn spawn_options(cwd: Option<&Path>, cx: &mut App) -> SpawnAdd {
+/// Env and shell for a new terminal of a window of `profile` started in `cwd`, if its project allows it
+/// under that profile's approvals.
+pub(super) fn spawn_options(profile: &ProfileId, cwd: Option<&Path>, cx: &mut App) -> SpawnAdd {
     if !project_folders_on(cx) {
         return Default::default();
     }
@@ -125,7 +136,7 @@ pub(super) fn spawn_options(cwd: Option<&Path>, cx: &mut App) -> SpawnAdd {
     };
     // Terminals restored at startup spawn before the first refresh; load on demand.
     let root: PathBuf = folder.root.clone();
-    let hub = hub_mut(cx);
+    let Some(hub) = hub_of_mut(profile, cx) else { return Default::default() };
     if !hub.projects.contains_key(&root) {
         let loaded = load_project(folder, &hub.trust);
         hub.projects.insert(root.clone(), loaded);

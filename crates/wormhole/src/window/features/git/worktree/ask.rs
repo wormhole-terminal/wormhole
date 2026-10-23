@@ -11,6 +11,7 @@ use gpui_kit::*;
 use wormhole_core::git::worktree::{self, Worktree};
 use wormhole_core::git::{find_root, worktree_of};
 use wormhole_core::ipc::control::{Asked, Error, ErrorCode};
+use wormhole_core::storage::paths::ProfileId;
 
 use super::Worktrees;
 use crate::app_state::{app, app_mut};
@@ -26,6 +27,8 @@ use crate::window::{dialog, session};
 pub(super) struct Asking {
     pub(super) input: Entity<InputState>,
     repo: PathBuf,
+    /// The profile of the window it was asked in: whose approvals the project's setup follows.
+    profile: ProfileId,
     command: Option<String>,
     pub(super) error: Option<SharedString>,
     /// ↩ in the field presses Create.
@@ -74,16 +77,17 @@ impl Worktrees {
     /// `band_folder` (`SessionFacts::band_folder`).
     pub(in crate::window) fn new_terminal_in_worktree(
         &mut self,
+        profile: &ProfileId,
         band_folder: Option<PathBuf>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         let Some(repo) = band_folder.and_then(Self::repo_for_worktree) else { return };
-        if let Err(why) = project::api::worktree_allowed(&repo, cx) {
+        if let Err(why) = project::api::worktree_allowed(profile, &repo, cx) {
             tell("Can't make a worktree here", why, window, cx);
             return;
         }
-        self.ask_worktree(repo, None, None, window, cx);
+        self.ask_worktree(profile.clone(), repo, None, None, window, cx);
     }
 
     /// The command line's `new-terminal --worktree <branch>`: the dialog, filled in, in this window;
@@ -92,6 +96,7 @@ impl Worktrees {
     #[expect(clippy::too_many_arguments, reason = "what the command line asked, and where")]
     pub(super) fn control_ask_worktree(
         &mut self,
+        profile: &ProfileId,
         terminal: &Entity<TerminalView>,
         window_id: i64,
         folder: Option<String>,
@@ -112,13 +117,13 @@ impl Worktrees {
             ));
         };
         let repo = worktree_of(&root).unwrap_or(root);
-        project::api::worktree_allowed(&repo, cx).map_err(|why| refuse(ErrorCode::Refused, why))?;
+        project::api::worktree_allowed(profile, &repo, cx).map_err(|why| refuse(ErrorCode::Refused, why))?;
         let plan = worktree::plan(&repo, branch, base(cx).as_deref())
             .map_err(|why| refuse(ErrorCode::BadRequest, why))?;
         if self.asking.is_some() {
             return Err(refuse(ErrorCode::Failed, "a worktree dialog is already up in that window".into()));
         }
-        self.ask_worktree(repo, Some(plan.branch.clone()), command, window, cx);
+        self.ask_worktree(profile.clone(), repo, Some(plan.branch.clone()), command, window, cx);
         Ok(Asked {
             asked: true,
             window: window_id,
@@ -132,6 +137,7 @@ impl Worktrees {
     /// the reason under the field.
     fn ask_worktree(
         &mut self,
+        profile: ProfileId,
         repo: PathBuf,
         branch: Option<String>,
         command: Option<String>,
@@ -150,8 +156,14 @@ impl Worktrees {
                 window.dispatch_action(Box::new(Confirm { secondary: false }), cx);
             }
         });
-        self.asking =
-            Some(Asking { input: input.clone(), repo: repo.clone(), command, error: None, _enter: enter });
+        self.asking = Some(Asking {
+            input: input.clone(),
+            repo: repo.clone(),
+            profile,
+            command,
+            error: None,
+            _enter: enter,
+        });
         let repo_name = repo.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
         let weak = cx.weak_entity();
         // The Kit gives the keys back to whatever had them when the dialog opened, a quarter
@@ -244,9 +256,9 @@ impl Worktrees {
         let typed = ask.input.read(cx).value().to_string();
         match worktree::plan(&ask.repo, &typed, base(cx).as_deref()) {
             Ok(plan) => {
-                let command = ask.command.clone();
+                let (command, profile) = (ask.command.clone(), ask.profile.clone());
                 self.asking = None;
-                self.create_worktree(plan, command, window, cx);
+                self.create_worktree(plan, command, profile, window, cx);
                 true
             }
             Err(why) => {
@@ -265,6 +277,7 @@ impl Worktrees {
         &mut self,
         plan: Worktree,
         command: Option<String>,
+        profile: ProfileId,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -294,7 +307,7 @@ impl Worktrees {
                         _ => app(cx).worktrees.free_ports(worktree::port_free),
                     };
                     tracing::info!(branch = plan.branch, folder = %plan.folder.display(), port = ?plan.port, "worktree made");
-                    let setup = project::api::worktree_setup(&plan.repo, cx);
+                    let setup = project::api::worktree_setup(&profile, &plan.repo, cx);
                     app_mut(cx).record_worktree(plan.clone());
                     // The project's setup first, then what was asked for, as one line: the command
                     // starts once the setup has finished and only if it worked, and a setup that

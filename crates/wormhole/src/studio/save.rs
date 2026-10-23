@@ -217,7 +217,8 @@ impl StudioWindow {
             .ok()
             .flatten()
             .ok_or("The terminal in front isn't in a project with a .wormhole folder.")?;
-        let hub = project::hub(cx);
+        // The trust of the profile the window in front lives in, shown or not.
+        let hub = project::hub_of(&front.profile, cx);
         let project = hub.projects.get(&root).ok_or("The project in front hasn't loaded yet.")?;
         if hub.trust.status_of(&project.snapshot) != TrustStatus::Trusted {
             return Err("Trust this project first (Project tab), then use the theme in it.");

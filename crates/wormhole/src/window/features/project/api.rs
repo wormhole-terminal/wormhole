@@ -7,8 +7,9 @@ use std::path::{Path, PathBuf};
 
 use gpui_kit::*;
 use wormhole_core::project::Feature;
+use wormhole_core::storage::paths::ProfileId;
 
-use super::{LoadedProject, Project, hub, project_folders_on};
+use super::{LoadedProject, Project, hub_of, project_folders_on};
 use crate::window::Workspace;
 
 /// Projects of the window's terminals and of its folders (whose colour they hold), in terminal order. None
@@ -43,35 +44,36 @@ pub(crate) fn session_for_project(ws: &Workspace, root: &Path, cx: &App) -> Opti
 /// and the shortcut sheet list the actions of.
 pub(crate) fn actionable<'a>(ws: &Workspace, cx: &'a App) -> Option<&'a LoadedProject> {
     let project = ws.feature::<Project>()?;
-    let project = project.read(cx).project(ws.active_session().id, cx)?;
-    hub(cx).enabled(project, Feature::Actions).then_some(project)
+    let project = project.read(cx).project(ws.active_session().id, ws.profile(), cx)?;
+    hub_of(ws.profile(), cx).enabled(project, Feature::Actions).then_some(project)
 }
 
 /// Runs action `id` of the project of the terminal in front.
 pub(crate) fn run_action(ws: &Workspace, id: &str, cx: &mut App) {
     let Some(project) = ws.feature::<Project>() else { return };
-    let session = ws.active_session().id;
-    project.update(cx, |project, cx| project.run_action(session, id, cx));
+    let (session, profile) = (ws.active_session().id, ws.profile().clone());
+    project.update(cx, |project, cx| project.run_action(session, &profile, id, cx));
 }
 
 /// The id of the action of the terminal in front's project that `keystroke` is the key of.
 pub(crate) fn action_for_key(ws: &Workspace, keystroke: &Keystroke, cx: &App) -> Option<String> {
-    ws.feature::<Project>()?.read(cx).action_for_key(ws.active_session().id, keystroke, cx)
+    ws.feature::<Project>()?.read(cx).action_for_key(ws.active_session().id, ws.profile(), keystroke, cx)
 }
 
-/// Whether a worktree may be made of `repo`: a project folder there must be trusted with its
-/// settings on, since the new terminal takes the project's env and shell; no project, no condition.
-pub(crate) fn worktree_allowed(repo: &Path, cx: &mut App) -> Result<(), String> {
+/// Whether a worktree may be made of `repo` for a window of `profile`: a project folder there must be
+/// trusted with its settings on in that profile, since the new terminal takes the project's env and shell;
+/// no project, no condition.
+pub(crate) fn worktree_allowed(profile: &ProfileId, repo: &Path, cx: &mut App) -> Result<(), String> {
     // With the project-folder feature off, `.wormhole/` isn't read at all, so a worktree carries
     // no project settings and there's nothing to trust.
     if !project_folders_on(cx) {
         return Ok(());
     }
     let Some(folder) = wormhole_core::project::find_project(repo) else { return Ok(()) };
-    let Some(project) = super::load_project_info(&folder.root, cx) else {
+    let Some(project) = super::load_project_info(profile, &folder.root, cx) else {
         return Err("The project's .wormhole folder can't be read".into());
     };
-    if hub(cx).enabled(&project, Feature::Settings) {
+    if hub_of(profile, cx).enabled(&project, Feature::Settings) {
         Ok(())
     } else {
         Err("Trust the project first: a terminal in its worktree would run with the project's settings"
@@ -83,13 +85,13 @@ pub(crate) fn worktree_allowed(repo: &Path, cx: &mut App) -> Result<(), String> 
 /// same conditions [`worktree_allowed`] checks (a project that isn't trusted with its settings on runs
 /// nothing). It is the repository's project that is asked, not the copy of `.wormhole/` the new
 /// worktree checks out: that one has not been trusted in its new folder.
-pub(crate) fn worktree_setup(repo: &Path, cx: &mut App) -> Option<String> {
+pub(crate) fn worktree_setup(profile: &ProfileId, repo: &Path, cx: &mut App) -> Option<String> {
     if !project_folders_on(cx) {
         return None;
     }
     let folder = wormhole_core::project::find_project(repo)?;
-    let project = super::load_project_info(&folder.root, cx)?;
-    if !hub(cx).enabled(&project, Feature::Settings) {
+    let project = super::load_project_info(profile, &folder.root, cx)?;
+    if !hub_of(profile, cx).enabled(&project, Feature::Settings) {
         return None;
     }
     project.snapshot.config()?.worktree_setup.clone()

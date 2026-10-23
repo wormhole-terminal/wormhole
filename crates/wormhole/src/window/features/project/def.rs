@@ -8,9 +8,10 @@ use gpui_kit::*;
 use wormhole_core::config::{FeatureId, TabId};
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::project::Feature;
+use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::spoken::{self, PanelTab};
 
-use super::{Project, detect, hub, hubs, panel, project_folders_on};
+use super::{Project, detect, hub_of, hubs, panel, project_folders_on};
 use crate::actions::RunProjectAction;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
@@ -74,9 +75,9 @@ fn look(entity: &AnyEntity, facts: &WindowFacts<'_>, cx: &mut App) {
 /// is trusted and has Actions on.
 fn bind(entity: &AnyEntity, facts: &WindowFacts<'_>, root: Root, _: &App) -> Root {
     let Some(active) = facts.active() else { return root };
-    let (project, session) = (typed(entity), active.id);
+    let (project, session, profile) = (typed(entity), active.id, facts.profile.clone());
     root.on_action(move |action: &RunProjectAction, _, cx| {
-        project.update(cx, |project, cx| project.run_action(session, &action.0, cx));
+        project.update(cx, |project, cx| project.run_action(session, &profile, &action.0, cx));
     })
 }
 
@@ -94,8 +95,10 @@ fn menu(
     }
     let Some(active) = active else { return };
     let project = typed(entity);
-    if let Some(project) =
-        project.read(cx).project(active.id, cx).filter(|project| hub(cx).enabled(project, Feature::Actions))
+    if let Some(project) = project
+        .read(cx)
+        .project(active.id, facts.profile, cx)
+        .filter(|project| hub_of(facts.profile, cx).enabled(project, Feature::Actions))
     {
         state.project_actions = project.actions().iter().map(|a| (a.id.clone(), a.title.clone())).collect();
     }
@@ -109,8 +112,11 @@ fn tick(entity: &AnyEntity, facts: &WindowFacts<'_>, window: &mut Window, cx: &m
 
 /// Whether terminal `session` is in a project the person has approved: what a program started for the
 /// project's sake (git's pull request lookup starts `gh`) asks first.
-fn approves_programs(entity: &AnyEntity, session: i64, cx: &App) -> bool {
-    typed(entity).read(cx).project(session, cx).is_some_and(|project| hub(cx).trusted(project))
+fn approves_programs(entity: &AnyEntity, session: i64, profile: &ProfileId, cx: &App) -> bool {
+    typed(entity)
+        .read(cx)
+        .project(session, profile, cx)
+        .is_some_and(|project| hub_of(profile, cx).trusted(project))
 }
 
 const STATE: StateDef = StateDef {

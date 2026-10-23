@@ -43,6 +43,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Fast output of long lines with a colour per character (gradients, colour floods) draws several
   times faster.
 
+- A window of a profile that is not the one shown now follows its own profile's project approvals
+  instead of the shown profile's. A project folder you trusted in one profile no longer runs its
+  actions, environment or worktree setup in a window of another profile, and one trusted only in that
+  other profile works there.
+
 - Quitting Wormhole with `kill` (or anything else that sends it SIGTERM) now saves every window and
   the terminals' text first, as ⌘Q does, instead of losing what changed since the last save. Session
   hosts keep running, as with ⌘Q.

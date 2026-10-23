@@ -158,8 +158,8 @@ pub(in crate::window) type FocusInFn =
 pub(in crate::window) type ProfileShownFn = fn(&mut App);
 pub(in crate::window) type TickFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
 pub(in crate::window) type RefreshFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App);
-pub(in crate::window) type ApprovesProgramsFn = fn(&AnyEntity, session: i64, &App) -> bool;
-pub(in crate::window) type SpawnFn = fn(Option<&Path>, &mut App) -> SpawnAdd;
+pub(in crate::window) type ApprovesProgramsFn = fn(&AnyEntity, session: i64, &ProfileId, &App) -> bool;
+pub(in crate::window) type SpawnFn = fn(&ProfileId, Option<&Path>, &mut App) -> SpawnAdd;
 pub(in crate::window) type PressFn = fn(
     &AnyEntity,
     &WindowFacts<'_>,

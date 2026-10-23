@@ -171,7 +171,7 @@ impl Workspace {
             Some(folder) => wormhole_core::project::find_project(folder).map(|f| f.root),
             None => project::api::active_root(self, cx),
         }?;
-        let project = project::load_project_info(&root, cx)?;
+        let project = project::load_project_info(self.profile(), &root, cx)?;
         if project.status == wormhole_core::project::TrustStatus::Trusted {
             return None;
         }
@@ -183,7 +183,7 @@ impl Workspace {
             1 => "Its action runs a command, so it waits until you trust the folder.".to_string(),
             n => format!("Its actions run {n} commands, so they wait until you trust the folder."),
         };
-        let approving = project::hub(cx).approving;
+        let approving = project::hub_of(self.profile(), cx).approving;
         let trust_root = root.clone();
         Some(
             div()

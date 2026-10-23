@@ -93,7 +93,7 @@ impl ProjectPicker {
         {
             return project.clone();
         }
-        let project = project::load_project_info(root, cx).map(Rc::new);
+        let project = project::load_project_info(project::shown_profile(cx), root, cx).map(Rc::new);
         *info = Some((root.to_path_buf(), project.clone()));
         project
     }
@@ -251,10 +251,11 @@ impl SettingsWindow {
             );
         for feature in Feature::ALL {
             let on = project::hub(cx).prefs.default_enabled(feature);
+            let profile = project::shown_profile(cx).clone();
             let switch = style::toggle(
                 SharedString::from(format!("default-{}", feature.key())),
                 on,
-                move |on, _, cx| project::set_feature_default(feature, on, cx),
+                move |on, _, cx| project::set_feature_default(&profile, feature, on, cx),
             );
             let mut description = feature.description().to_string();
             if feature.requires_trust() {
@@ -307,7 +308,7 @@ impl SettingsWindow {
                             .child(Button::new(("revoke", ix)).ghost().small().label("Revoke").on_click(
                                 cx.listener(move |this, _, _, cx| {
                                     let root = revoke.clone();
-                                    project::revoke_project(&root, cx);
+                                    project::revoke_project(&project::shown_profile(cx).clone(), &root, cx);
                                     this.projects.forget_info();
                                 }),
                             )),
@@ -368,7 +369,7 @@ impl SettingsWindow {
             Button::new("project-revoke").outline().small().label("Revoke trust").on_click(cx.listener(
                 move |this, _, _, cx| {
                     let root = trust_root.clone();
-                    project::revoke_project(&root, cx);
+                    project::revoke_project(&project::shown_profile(cx).clone(), &root, cx);
                     this.projects.forget_info();
                 },
             ))
@@ -380,7 +381,7 @@ impl SettingsWindow {
                 .label(if approving { "Waiting for approval…" } else { "Trust with Touch ID…" })
                 .on_click(cx.listener(move |this, _, _, cx| {
                     let root = trust_root.clone();
-                    project::approve_project(&root, cx);
+                    project::approve_project(&project::shown_profile(cx).clone(), &root, cx);
                     this.projects.forget_info();
                 }))
         };
@@ -460,7 +461,13 @@ impl SettingsWindow {
                     )
                     .on_click(cx.listener(move |_, _, _, cx| {
                         let root = root.clone();
-                        project::set_feature_for(&root, feature, value, cx)
+                        project::set_feature_for(
+                            &project::shown_profile(cx).clone(),
+                            &root,
+                            feature,
+                            value,
+                            cx,
+                        )
                     }))
                 }))
                 .into_any_element();

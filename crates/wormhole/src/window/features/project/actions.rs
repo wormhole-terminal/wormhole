@@ -7,8 +7,9 @@ use std::path::PathBuf;
 use gpui_kit::*;
 use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::project::{ActionKind, ChainStep, Feature, ProjectSnapshot, Target};
+use wormhole_core::storage::paths::ProfileId;
 
-use super::{Project, hub};
+use super::{Project, hub_of};
 use crate::window::feature::{FeatureEvent, NewTerminal, TerminalInput, TerminalTarget};
 
 /// Longest action chain we follow (chains are validated for cycles, this is a backstop).
@@ -17,9 +18,9 @@ const MAX_CHAIN_DEPTH: usize = 16;
 impl Project {
     /// Run action `id` of the project terminal `session` is in, if the project is trusted and has
     /// Actions on.
-    pub(super) fn run_action(&mut self, session: i64, id: &str, cx: &mut Context<Self>) {
-        let Some(project) = self.project(session, cx) else { return };
-        if !hub(cx).enabled(project, Feature::Actions) {
+    pub(super) fn run_action(&mut self, session: i64, profile: &ProfileId, id: &str, cx: &mut Context<Self>) {
+        let Some(project) = self.project(session, profile, cx) else { return };
+        if !hub_of(profile, cx).enabled(project, Feature::Actions) {
             return;
         }
         // The snapshot trust was just checked against: its actions and prompt texts are what run.
@@ -30,9 +31,9 @@ impl Project {
     }
 
     /// `layout.json`: open the project's terminals (reusing ones with the same name).
-    pub(super) fn open_layout(&mut self, session: i64, cx: &mut Context<Self>) {
-        let Some(project) = self.project(session, cx) else { return };
-        if !hub(cx).enabled(project, Feature::Layout) {
+    pub(super) fn open_layout(&mut self, session: i64, profile: &ProfileId, cx: &mut Context<Self>) {
+        let Some(project) = self.project(session, profile, cx) else { return };
+        if !hub_of(profile, cx).enabled(project, Feature::Layout) {
             return;
         }
         let (folder, layout) =
@@ -54,25 +55,44 @@ impl Project {
 
     /// The id of the action of the project terminal `session` is in that `keystroke` is the key of, if the
     /// project is trusted and has Actions on.
-    pub(super) fn action_for_key(&self, session: i64, keystroke: &Keystroke, cx: &App) -> Option<String> {
-        let project = self.project(session, cx)?;
+    pub(super) fn action_for_key(
+        &self,
+        session: i64,
+        profile: &ProfileId,
+        keystroke: &Keystroke,
+        cx: &App,
+    ) -> Option<String> {
+        let project = self.project(session, profile, cx)?;
         // The keys first: this runs for every ⌘ key typed, and asking whether the feature is on resolves
         // the project's folder on disk.
         let (_, id) = project.keys.iter().find(|(spec, _)| key_matches(spec, keystroke))?;
-        hub(cx).enabled(project, Feature::Actions).then(|| id.clone())
+        hub_of(profile, cx).enabled(project, Feature::Actions).then(|| id.clone())
     }
 
     /// Paste prompt `id` into terminal `session`, with Enter after it when `submit`.
-    pub(super) fn send_prompt(&mut self, session: i64, id: &str, submit: bool, cx: &mut Context<Self>) {
-        let Some(body) = self.enabled_prompt(session, id, cx) else { return };
+    pub(super) fn send_prompt(
+        &mut self,
+        session: i64,
+        profile: &ProfileId,
+        id: &str,
+        submit: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(body) = self.enabled_prompt(session, profile, id, cx) else { return };
         cx.emit(FeatureEvent::SendText { session, text: body.trim().to_string().into(), submit });
     }
 
     /// The text of prompt `id` of the project terminal `session` is in, if the user has Prompts switched on
     /// for it (checked here, not only by hiding the buttons).
-    pub(super) fn enabled_prompt(&self, session: i64, id: &str, cx: &App) -> Option<String> {
-        let project = self.project(session, cx)?;
-        if !hub(cx).enabled(project, Feature::Prompts) {
+    pub(super) fn enabled_prompt(
+        &self,
+        session: i64,
+        profile: &ProfileId,
+        id: &str,
+        cx: &App,
+    ) -> Option<String> {
+        let project = self.project(session, profile, cx)?;
+        if !hub_of(profile, cx).enabled(project, Feature::Prompts) {
             return None;
         }
         project.snapshot.prompts().iter().find(|p| p.id == id).map(|p| p.body.clone())

@@ -52,7 +52,10 @@ use crate::window::feature::FeatureEvent;
 pub(crate) use create::create_project_folder;
 pub(in crate::window) use def::DEF;
 pub(crate) use hub::{LoadedProject, ProjectHub, load_project};
-pub(crate) use hubs::{hub, hub_mut};
+#[cfg(test)]
+pub(crate) use hubs::hub_mut;
+use hubs::profiles;
+pub(crate) use hubs::{hub, hub_of, hub_of_mut, shown_profile};
 pub(crate) use projects::{known_projects, load_project_info, prune_projects};
 use projects::{load_projects, projects_changed, reload_projects};
 pub(crate) use trust::{approve_project, revoke_project, set_feature_default, set_feature_for};
@@ -112,16 +115,21 @@ impl Project {
         }
     }
 
-    /// The project terminal `session` is in, from the hub: none while the feature is off, whatever the
-    /// last look found.
-    pub(super) fn project<'a>(&self, session: i64, cx: &'a App) -> Option<&'a LoadedProject> {
+    /// The project terminal `session` is in, from the hub of `profile`, the window's: none while the
+    /// feature is off, whatever the last look found.
+    pub(super) fn project<'a>(
+        &self,
+        session: i64,
+        profile: &ProfileId,
+        cx: &'a App,
+    ) -> Option<&'a LoadedProject> {
         // The one accessor the menus, the palette, the shortcut sheet and the Project tab reach a project
         // through, so gating it here makes them all inert the instant the flag is off, without waiting
         // for the next look to clear the terminal's project.
         if !project_folders_on(cx) {
             return None;
         }
-        hub(cx).projects.get(self.of.get(&session)?.root.as_ref()?)
+        hub_of(profile, cx).projects.get(self.of.get(&session)?.root.as_ref()?)
     }
 
     /// A terminal was opened in the window: its entry, empty until the window looks.

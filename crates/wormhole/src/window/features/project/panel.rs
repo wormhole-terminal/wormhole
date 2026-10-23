@@ -23,7 +23,7 @@ use wormhole_core::view::spoken;
 
 use super::notes_sync::NotesLink;
 use super::{
-    LoadedProject, Project, approve_project, create_project_folder, folder_color, hub, revoke_project,
+    LoadedProject, Project, approve_project, create_project_folder, folder_color, hub_of, revoke_project,
     set_feature_for,
 };
 use crate::platform::auth;
@@ -87,7 +87,7 @@ impl Tab<'_> {
             .flex()
             .flex_col()
             .children(folder.map(|folder| self.render_folder_color(folder, cx)))
-            .child(match self.project.read(cx).project(self.session, cx) {
+            .child(match self.project.read(cx).project(self.session, self.profile, cx) {
                 Some(project) => self.render_project(project, cx),
                 None => self.render_no_project(folder, cx),
             })
@@ -106,12 +106,14 @@ impl Tab<'_> {
         let enabled = paint.closed().is_none();
         let choice =
             |id: SharedString, name: &'static str, shown: Option<Hsla>, color: Option<FolderColor>| {
-                let (target, paint) = (folder.to_path_buf(), paint.clone());
+                let (target, paint, profile) = (folder.to_path_buf(), paint.clone(), self.profile.clone());
                 let chosen = current == color && (color.is_some() || custom.is_none());
                 style::color_choice(id, ui, name, shown, chosen, enabled)
                     .tooltip(move |window, cx| Tooltip::new(name).build(window, cx))
                     .when(enabled, |d| {
-                        d.on_click(move |_, _, cx| folder_color::set_folder_color(&paint, &target, color, cx))
+                        d.on_click(move |_, _, cx| {
+                            folder_color::set_folder_color(&paint, &profile, &target, color, cx)
+                        })
                     })
             };
         let row = div()
@@ -204,9 +206,10 @@ impl Tab<'_> {
                                     .disabled(folder.is_none())
                                     .on_click({
                                         let folder = folder.map(Path::to_path_buf);
+                                        let profile = self.profile.clone();
                                         move |_, _, cx| {
                                             if let Some(folder) = folder.clone() {
-                                                create_project_folder(folder, cx);
+                                                create_project_folder(&profile, folder, cx);
                                             }
                                         }
                                     }),
@@ -217,7 +220,7 @@ impl Tab<'_> {
                                 )),
                             ),
                     )
-                    .children(hub(cx).error.clone().map(|err| problem_line(ui, err))),
+                    .children(hub_of(self.profile, cx).error.clone().map(|err| problem_line(ui, err))),
             )
             .into_any_element()
     }
@@ -255,10 +258,11 @@ impl Tab<'_> {
         if project.request.is_some() && (!commands.is_empty() || !needing.is_empty()) {
             body = body.child(self.render_trust(&root, project.status, &commands, &needing, cx));
         }
-        if let Some(err) = &hub(cx).error {
+        if let Some(err) = &hub_of(self.profile, cx).error {
             body = body.child(problem_line(ui, err.clone()));
         }
-        let notes_error = hub(cx).notes_errors.get(&root).map(|err| format!("Notes sync: {err}"));
+        let notes_error =
+            hub_of(self.profile, cx).notes_errors.get(&root).map(|err| format!("Notes sync: {err}"));
         for err in project.errors.iter().chain(notes_error.as_ref()) {
             body = body.child(problem_line(ui, err.clone()));
         }
@@ -274,7 +278,7 @@ impl Tab<'_> {
             if !present && feature != Feature::Notes {
                 continue;
             }
-            let prefs = &hub(cx).prefs;
+            let prefs = &hub_of(self.profile, cx).prefs;
             // Notes sync where the file is, not wherever the switch defaults to.
             let on = match feature {
                 Feature::Notes => prefs.notes_sync(&root, present),
@@ -293,9 +297,9 @@ impl Tab<'_> {
                         Switch::new(SharedString::from(format!("feature-{}", feature.key())))
                             .checked(on)
                             .on_click({
-                                let root = root.clone();
+                                let (root, profile) = (root.clone(), self.profile.clone());
                                 move |checked: &bool, _, cx| {
-                                    set_feature_for(&root, feature, Some(*checked), cx)
+                                    set_feature_for(&profile, &root, feature, Some(*checked), cx)
                                 }
                             })
                             .into_any_element(),
@@ -307,7 +311,7 @@ impl Tab<'_> {
 
         // Actions: a click runs one.
         let actions = project.actions();
-        if hub(cx).enabled(project, Feature::Actions) && !actions.is_empty() {
+        if hub_of(self.profile, cx).enabled(project, Feature::Actions) && !actions.is_empty() {
             body = body.head(section_band("project-actions", "Actions", Some(actions.len()), ui));
             for action in actions {
                 let id = action.id.clone();
@@ -332,8 +336,11 @@ impl Tab<'_> {
                     )
                     .cursor_pointer()
                     .on_click({
-                        let (project, session) = (self.project.clone(), self.session);
-                        move |_, _, cx| project.update(cx, |project, cx| project.run_action(session, &id, cx))
+                        let (project, session, profile) =
+                            (self.project.clone(), self.session, self.profile.clone());
+                        move |_, _, cx| {
+                            project.update(cx, |project, cx| project.run_action(session, &profile, &id, cx))
+                        }
                     }),
                 );
             }
@@ -341,7 +348,7 @@ impl Tab<'_> {
 
         // Prompts: paste one, or copy it into a note to edit first.
         let prompts = project.snapshot.prompts();
-        if hub(cx).enabled(project, Feature::Prompts) && !prompts.is_empty() {
+        if hub_of(self.profile, cx).enabled(project, Feature::Prompts) && !prompts.is_empty() {
             body = body.head(section_band("project-prompts", "Prompts", Some(prompts.len()), ui));
             for prompt in prompts {
                 let (send_id, note_id) = (prompt.id.clone(), prompt.id.clone());
@@ -352,10 +359,11 @@ impl Tab<'_> {
                         IconName::ArrowUpRight,
                         "Paste into the terminal",
                         {
-                            let (project, session) = (self.project.clone(), self.session);
+                            let (project, session, profile) =
+                                (self.project.clone(), self.session, self.profile.clone());
                             move |_, _, cx| {
                                 project.update(cx, |project, cx| {
-                                    project.send_prompt(session, &send_id, false, cx)
+                                    project.send_prompt(session, &profile, &send_id, false, cx)
                                 })
                             }
                         },
@@ -394,7 +402,7 @@ impl Tab<'_> {
         }
 
         // Terminal layout: what it opens, and the button that opens it.
-        if hub(cx).enabled(project, Feature::Layout)
+        if hub_of(self.profile, cx).enabled(project, Feature::Layout)
             && let Some(layout) = project.snapshot.layout().filter(|l| !l.sessions.is_empty())
         {
             let names: Vec<String> = layout.sessions.iter().map(|c| c.name.clone()).collect();
@@ -416,8 +424,11 @@ impl Tab<'_> {
                             .child(names.join(" · ")),
                     )
                     .child(Button::new("open-layout").primary().xsmall().label("Open terminals").on_click({
-                        let (project, session) = (self.project.clone(), self.session);
-                        move |_, _, cx| project.update(cx, |project, cx| project.open_layout(session, cx))
+                        let (project, session, profile) =
+                            (self.project.clone(), self.session, self.profile.clone());
+                        move |_, _, cx| {
+                            project.update(cx, |project, cx| project.open_layout(session, &profile, cx))
+                        }
                     })),
             );
         }
@@ -455,13 +466,13 @@ impl Tab<'_> {
                 .child(style::lead(style::icon(IconName::ShieldCheck).text_color(ui.success_text)))
                 .child(div().flex_1().min_w_0().truncate().text_caption().text_color(ui.muted).child(line))
                 .child(Button::new("revoke-trust").ghost().xsmall().label("Revoke trust").on_click({
-                    let root = root.to_path_buf();
-                    move |_, _, cx| revoke_project(&root, cx)
+                    let (root, profile) = (root.to_path_buf(), self.profile.clone());
+                    move |_, _, cx| revoke_project(&profile, &root, cx)
                 }))
                 .into_any_element();
         }
         let (title, text) = trust_notice(status, !commands.is_empty(), &applies);
-        let approve_label = if hub(cx).approving {
+        let approve_label = if hub_of(self.profile, cx).approving {
             "Waiting for approval…"
         } else if auth::biometrics_available() {
             "Trust with Touch ID"
@@ -474,12 +485,12 @@ impl Tab<'_> {
         let shown = if commands.len() > TRUST_LINES_MAX { TRUST_LINES_SHOWN } else { commands.len() };
         let lines = commands.iter().take(shown).map(|line| trust_line(ui, command_color, line));
         let view_all = (shown < commands.len()).then(|| {
-            let root = root.to_path_buf();
+            let (root, profile) = (root.to_path_buf(), self.profile.clone());
             Button::new("trust-view-all")
                 .ghost()
                 .small()
                 .label(format!("View all {}…", commands.len()))
-                .on_click(move |_, _, cx| super::open_trust_window(root.clone(), cx))
+                .on_click(move |_, _, cx| super::open_trust_window(profile.clone(), root.clone(), cx))
         });
         let mut body = vec![div().text_caption().text_color(ui.muted).child(text).into_any_element()];
         if !commands.is_empty() {
@@ -504,8 +515,8 @@ impl Tab<'_> {
                 .items_center()
                 .gap_2()
                 .child(Button::new("trust-project").primary().small().label(approve_label).on_click({
-                    let root = root.to_path_buf();
-                    move |_, _, cx| approve_project(&root, cx)
+                    let (root, profile) = (root.to_path_buf(), self.profile.clone());
+                    move |_, _, cx| approve_project(&profile, &root, cx)
                 }))
                 .children(view_all)
                 .into_any_element(),

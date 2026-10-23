@@ -1,7 +1,10 @@
 //! Each profile's hub, held by the feature and not by the app's shared state. One profile is shown at a
-//! time and its hub is what everything reads ([`hub`]); the hub of every other profile the app has opened
-//! is kept beside it, and a profile switch swaps them, as the rest of a profile's data is swapped. A
-//! window of a profile that isn't shown reads the shown profile's, as it always has.
+//! time; the hub of every other profile the app has opened is kept beside it, and a profile switch swaps
+//! them, as the rest of a profile's data is swapped.
+//!
+//! Who reads which: a window asks for its own profile's hub ([`hub_of`]), shown or not, so what it trusts
+//! and runs follows that profile's approvals. Settings and the status item belong to the shown profile
+//! and read [`hub`].
 
 use std::collections::HashMap;
 
@@ -16,6 +19,8 @@ struct Hubs {
     shown: ProfileId,
     hub: ProjectHub,
     parked: HashMap<ProfileId, ProjectHub>,
+    /// What a profile that has no hub reads: no preferences, nothing trusted, nothing loaded.
+    none: ProjectHub,
 }
 
 impl Global for Hubs {}
@@ -24,6 +29,10 @@ impl Hubs {
     /// The hub of `profile`, shown or not.
     fn of_mut(&mut self, profile: &ProfileId) -> Option<&mut ProjectHub> {
         if *profile == self.shown { Some(&mut self.hub) } else { self.parked.get_mut(profile) }
+    }
+
+    fn of(&self, profile: &ProfileId) -> Option<&ProjectHub> {
+        if *profile == self.shown { Some(&self.hub) } else { self.parked.get(profile) }
     }
 }
 
@@ -34,11 +43,36 @@ fn load(profile: &ProfileId, cx: &App) -> ProjectHub {
     hub
 }
 
-/// The shown profile's hub.
+/// The shown profile's hub: what Settings, the status item and the tests read. A window reads
+/// [`hub_of`].
 pub(crate) fn hub(cx: &App) -> &ProjectHub {
     &cx.global::<Hubs>().hub
 }
 
+/// The hub of `profile`, shown or not: a window's own, so its trust and preferences are the profile's it
+/// lives in. A profile no window has opened has no hub, and reads one that trusts nothing.
+pub(crate) fn hub_of<'a>(profile: &ProfileId, cx: &'a App) -> &'a ProjectHub {
+    let hubs = cx.global::<Hubs>();
+    hubs.of(profile).unwrap_or(&hubs.none)
+}
+
+/// [`hub_of`] to change; `None` for a profile that has no hub, where nothing is changed.
+pub(crate) fn hub_of_mut<'a>(profile: &ProfileId, cx: &'a mut App) -> Option<&'a mut ProjectHub> {
+    cx.global_mut::<Hubs>().of_mut(profile)
+}
+
+/// Every profile that has a hub: the shown one first.
+pub(super) fn profiles(cx: &App) -> Vec<ProfileId> {
+    let hubs = cx.global::<Hubs>();
+    std::iter::once(hubs.shown.clone()).chain(hubs.parked.keys().cloned()).collect()
+}
+
+/// The profile whose hub [`hub`] reads.
+pub(crate) fn shown_profile(cx: &App) -> &ProfileId {
+    &cx.global::<Hubs>().shown
+}
+
+#[cfg(test)]
 pub(crate) fn hub_mut(cx: &mut App) -> &mut ProjectHub {
     &mut cx.global_mut::<Hubs>().hub
 }
@@ -49,7 +83,7 @@ pub(crate) fn profile_shown(cx: &mut App) {
     let shown = app(cx).active_profile().clone();
     if !cx.has_global::<Hubs>() {
         let hub = load(&shown, cx);
-        cx.set_global(Hubs { shown, hub, parked: HashMap::new() });
+        cx.set_global(Hubs { shown, hub, parked: HashMap::new(), none: ProjectHub::default() });
         return;
     }
     if cx.global::<Hubs>().shown == shown {

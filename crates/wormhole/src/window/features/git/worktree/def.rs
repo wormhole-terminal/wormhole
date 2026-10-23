@@ -33,7 +33,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     refresh: None,
     approves_programs: None,
     // A worktree Wormhole made: its own ports, whatever the project says.
-    spawn: Some(|cwd, cx| SpawnAdd {
+    spawn: Some(|_, cwd, cx| SpawnAdd {
         env: cwd
             .and_then(|cwd| app(cx).worktrees.find(cwd))
             .map(|made| made.env().into_iter().map(|(name, value)| (name.to_string(), value)).collect())
@@ -50,9 +50,11 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
 /// not handled (so the menu greys it out) while the terminal's folder has no git status.
 fn bind(entity: &AnyEntity, facts: &WindowFacts<'_>, root: Root, cx: &App) -> Root {
     let Some(active) = facts.active().filter(|active| active.git.status.is_some()) else { return root };
-    let (this, folder) = (typed(entity), active.band_folder(cx));
+    let (this, folder, profile) = (typed(entity), active.band_folder(cx), facts.profile.clone());
     root.on_action(move |_: &NewTerminalInWorktree, window, cx| {
-        this.update(cx, |worktrees, cx| worktrees.new_terminal_in_worktree(folder.clone(), window, cx));
+        this.update(cx, |worktrees, cx| {
+            worktrees.new_terminal_in_worktree(&profile, folder.clone(), window, cx)
+        });
     })
 }
 

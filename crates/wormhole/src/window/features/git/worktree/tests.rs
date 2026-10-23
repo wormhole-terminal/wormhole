@@ -10,6 +10,7 @@ use gpui_kit::{Context, Entity, TestAppContext, Window};
 use wormhole_core::git::worktree::Worktree;
 use wormhole_core::ipc::control::{Asked, Error, ErrorCode};
 use wormhole_core::project::ProjectFolder;
+use wormhole_core::storage::paths::ProfileId;
 
 use super::super::testing::{folder, go, read_repo, repo, write};
 use super::Worktrees;
@@ -38,7 +39,9 @@ fn worktrees(ws: &Workspace) -> Entity<Worktrees> {
 /// The menu item, or its key: the dialog for the terminal in front.
 fn menu_item(ws: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
     let folder = ws.facts(cx).active().and_then(|active| active.band_folder(cx));
-    worktrees(ws).update(cx, |worktrees, cx| worktrees.new_terminal_in_worktree(folder, window, cx));
+    worktrees(ws).update(cx, |worktrees, cx| {
+        worktrees.new_terminal_in_worktree(&ProfileId::default_profile(), folder, window, cx)
+    });
 }
 
 /// The command line's request, as the control socket's handler makes it.
@@ -166,8 +169,8 @@ fn the_menu_item_asks_and_makes_nothing_until_the_person_confirms(cx: &mut TestA
     let (in_worktree, in_repo) = cx.update(|cx| {
         let table = crate::window::features::TABLE;
         (
-            Workspace::spawn_adds(Some(worktree.folder.as_path()), table, cx),
-            Workspace::spawn_adds(Some(root.as_path()), table, cx),
+            Workspace::spawn_adds(&ProfileId::default_profile(), Some(worktree.folder.as_path()), table, cx),
+            Workspace::spawn_adds(&ProfileId::default_profile(), Some(root.as_path()), table, cx),
         )
     });
     let ports: std::collections::BTreeMap<String, String> =
@@ -204,7 +207,11 @@ fn a_project_that_is_not_trusted_gets_no_worktree_from_the_menu_or_the_command_l
     let asked = drive(cx, &window, |ws, window, cx| command_line(ws, &root, "x", None, window, cx));
     assert_eq!(asked.expect_err("refused").code, ErrorCode::Refused);
     assert!(!asking(cx, &window));
-    assert_eq!(cx.update(|cx| project::api::worktree_setup(&root, cx)), None, "and no setup runs");
+    assert_eq!(
+        cx.update(|cx| project::api::worktree_setup(&ProfileId::default_profile(), &root, cx)),
+        None,
+        "and no setup runs"
+    );
 
     // Trusted, the dialog opens for either, and the command line makes nothing by itself.
     trust(cx, &root);
@@ -216,7 +223,7 @@ fn a_project_that_is_not_trusted_gets_no_worktree_from_the_menu_or_the_command_l
     assert!(asking(cx, &window) && sessions(cx, &window) == 1);
     assert!(!std::path::Path::new(&asked.folder).exists(), "only the dialog was opened");
     assert_eq!(
-        cx.update(|cx| project::api::worktree_setup(&root, cx)).as_deref(),
+        cx.update(|cx| project::api::worktree_setup(&ProfileId::default_profile(), &root, cx)).as_deref(),
         Some("make setup"),
         "a trusted project's setup runs in the new terminal"
     );

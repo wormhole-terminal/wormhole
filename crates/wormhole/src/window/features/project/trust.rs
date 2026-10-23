@@ -5,8 +5,9 @@ use std::path::Path;
 
 use gpui_kit::*;
 use wormhole_core::project::{Feature, ProjectFolder, TrustRequest};
+use wormhole_core::storage::paths::ProfileId;
 
-use super::{ProjectHub, hub, hub_mut, load_project, projects_changed};
+use super::{ProjectHub, hub_of, hub_of_mut, load_project, projects_changed};
 use crate::platform::auth;
 
 impl ProjectHub {
@@ -26,13 +27,14 @@ impl ProjectHub {
     }
 }
 
-/// Ask for Touch ID (or the password), then trust the project at `root` exactly as it was shown:
-/// the hub's snapshot of it, which the Project tab and Settings display.
-pub(crate) fn approve_project(root: &Path, cx: &mut App) {
-    if hub(cx).approving {
+/// Ask for Touch ID (or the password), then trust the project at `root` for `profile` exactly as it was
+/// shown: the hub's snapshot of it, which the Project tab and Settings display. The approval is the
+/// profile's own, whichever profile is shown.
+pub(crate) fn approve_project(profile: &ProfileId, root: &Path, cx: &mut App) {
+    if hub_of(profile, cx).approving {
         return;
     }
-    let hub = hub_mut(cx);
+    let Some(hub) = hub_of_mut(profile, cx) else { return };
     if !hub.projects.contains_key(root) {
         let Some(folder) = ProjectFolder::open(root) else { return };
         let loaded = load_project(folder, &hub.trust);
@@ -45,51 +47,62 @@ pub(crate) fn approve_project(root: &Path, cx: &mut App) {
         cx.refresh_windows();
         return;
     };
-    approve_request(request, cx);
+    approve_request(profile, request, cx);
 }
 
-/// Ask for Touch ID (or the password), then trust exactly what `request` describes.
-pub(crate) fn approve_request(request: TrustRequest, cx: &mut App) {
-    if hub(cx).approving {
+/// Ask for Touch ID (or the password), then trust exactly what `request` describes, for `profile`.
+pub(crate) fn approve_request(profile: &ProfileId, request: TrustRequest, cx: &mut App) {
+    if hub_of(profile, cx).approving {
         return;
     }
     let root = &request.root;
     let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     let reason = format!("trust the project folder \u{201c}{name}\u{201d} and let it run commands");
-    let hub = hub_mut(cx);
+    let Some(hub) = hub_of_mut(profile, cx) else { return };
     hub.approving = true;
     hub.error = None;
     cx.refresh_windows();
 
     let rx = auth::authenticate_rx(&reason);
+    let profile = profile.clone();
     cx.spawn(async move |cx| {
         let result = rx.recv().await;
         cx.update(|cx| {
-            hub_mut(cx).finish_approval(&request, result.ok());
-            projects_changed(cx);
+            if let Some(hub) = hub_of_mut(&profile, cx) {
+                hub.finish_approval(&request, result.ok());
+            }
+            projects_changed(&profile, cx);
         });
     })
     .detach();
 }
 
-pub(crate) fn revoke_project(root: &Path, cx: &mut App) {
-    hub_mut(cx).trust.revoke(root);
-    projects_changed(cx);
+pub(crate) fn revoke_project(profile: &ProfileId, root: &Path, cx: &mut App) {
+    let Some(hub) = hub_of_mut(profile, cx) else { return };
+    hub.trust.revoke(root);
+    projects_changed(profile, cx);
 }
 
 /// `None` goes back to the default for all projects.
-pub(crate) fn set_feature_for(root: &Path, feature: Feature, enabled: Option<bool>, cx: &mut App) {
-    let hub = hub_mut(cx);
+pub(crate) fn set_feature_for(
+    profile: &ProfileId,
+    root: &Path,
+    feature: Feature,
+    enabled: Option<bool>,
+    cx: &mut App,
+) {
+    let Some(hub) = hub_of_mut(profile, cx) else { return };
     match enabled {
         Some(enabled) => hub.prefs.set_enabled(root, feature, enabled),
         None => hub.prefs.clear_override(root, feature),
     }
-    projects_changed(cx);
+    projects_changed(profile, cx);
 }
 
-pub(crate) fn set_feature_default(feature: Feature, enabled: bool, cx: &mut App) {
-    hub_mut(cx).prefs.set_default(feature, enabled);
-    projects_changed(cx);
+pub(crate) fn set_feature_default(profile: &ProfileId, feature: Feature, enabled: bool, cx: &mut App) {
+    let Some(hub) = hub_of_mut(profile, cx) else { return };
+    hub.prefs.set_default(feature, enabled);
+    projects_changed(profile, cx);
 }
 
 #[cfg(test)]

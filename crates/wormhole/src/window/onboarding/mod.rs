@@ -350,6 +350,7 @@ impl Workspace {
     }
 
     fn onboarding_event(&mut self, event: Event, window: &mut Window, cx: &mut Context<Self>) {
+        let profile = self.profile().clone();
         let Some(intro) = &mut self.first_run.intro else { return };
         let primer = intro.model.step() == Step::Primer;
         let moves = matches!(event, Event::Continue | Event::Back | Event::Start);
@@ -377,7 +378,7 @@ impl Workspace {
                     found.state = spec.state(&home).ok();
                 }
             }
-            Action::Trust(root) => project::approve_project(&root, cx),
+            Action::Trust(root) => project::approve_project(&profile, &root, cx),
         }
         cx.notify();
     }

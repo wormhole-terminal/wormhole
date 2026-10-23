@@ -14,8 +14,9 @@ use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::project::{TrustLine, TrustStatus};
+use wormhole_core::storage::paths::ProfileId;
 
-use super::{LoadedProject, approve_project, hub};
+use super::{LoadedProject, approve_project, hub_of};
 use crate::platform::auth;
 use crate::settings::{SettingsStore, ui};
 use crate::style::{self, Edges, TextRole};
@@ -33,17 +34,20 @@ struct Open(aux_window::Slot);
 impl Global for Open {}
 
 pub(crate) struct TrustWindow {
+    /// The profile whose approval it asks for: the one of the window it was opened from.
+    profile: ProfileId,
     root: PathBuf,
     list: ListState,
     focus_handle: FocusHandle,
 }
 
-/// Open the window for the project at `root`, or bring it to the front showing that project.
-pub(crate) fn open_trust_window(root: PathBuf, cx: &mut App) {
+/// Open the window for the project at `root` as `profile` sees it, or bring it to the front showing that
+/// project.
+pub(crate) fn open_trust_window(profile: ProfileId, root: PathBuf, cx: &mut App) {
     if let Some((handle, view)) = cx.default_global::<Open>().0.clone() {
         let shown = handle.update(cx, |_, window, cx| {
             if let Some(view) = view.upgrade().and_then(|view| view.downcast::<TrustWindow>().ok()) {
-                view.update(cx, |view, cx| view.show(root.clone(), cx));
+                view.update(cx, |view, cx| view.show(profile.clone(), root.clone(), cx));
             }
             crate::background::activate_window(window, cx);
         });
@@ -61,7 +65,7 @@ pub(crate) fn open_trust_window(root: PathBuf, cx: &mut App) {
     // update (the Project tab's button).
     cx.defer(move |cx| {
         let opened = crate::background::open_window(options, cx, |window, cx| {
-            cx.new(|cx| TrustWindow::new(root, window, cx))
+            cx.new(|cx| TrustWindow::new(profile, root, window, cx))
         });
         match opened {
             Ok((handle, view)) => cx.default_global::<Open>().0 = Some((handle, view.downgrade().into())),
@@ -103,13 +107,14 @@ impl Shown {
 }
 
 impl TrustWindow {
-    fn new(root: PathBuf, window: &mut Window, cx: &mut Context<Self>) -> Self {
+    fn new(profile: ProfileId, root: PathBuf, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let focus_handle = cx.focus_handle();
         window.focus(&focus_handle, cx);
-        Self { root, list: ListState::new(0, ListAlignment::Top, px(LIST_OVERDRAW)), focus_handle }
+        Self { profile, root, list: ListState::new(0, ListAlignment::Top, px(LIST_OVERDRAW)), focus_handle }
     }
 
-    fn show(&mut self, root: PathBuf, cx: &mut Context<Self>) {
+    fn show(&mut self, profile: ProfileId, root: PathBuf, cx: &mut Context<Self>) {
+        self.profile = profile;
         self.root = root;
         cx.notify();
     }
@@ -120,8 +125,8 @@ impl Render for TrustWindow {
         let ui = ui(cx);
         // Opaque: a window of text to read, not a place for the blur.
         let surfaces = aux_window::surfaces(cx, false);
-        let shown = Shown::of(hub(cx).projects.get(&self.root), &self.root);
-        let approving = hub(cx).approving;
+        let shown = Shown::of(hub_of(&self.profile, cx).projects.get(&self.root), &self.root);
+        let approving = hub_of(&self.profile, cx).approving;
         if self.list.item_count() != shown.lines.len() {
             self.list.reset(shown.lines.len());
         }
@@ -147,7 +152,7 @@ impl Render for TrustWindow {
             }
             TrustStatus::Untrusted => "It wants to run these commands. Nothing runs until you approve.",
         };
-        let root = self.root.clone();
+        let (root, profile) = (self.root.clone(), self.profile.clone());
         let approve = (shown.status != TrustStatus::Trusted && shown.problem.is_none()).then(|| {
             let label = if approving {
                 "Waiting for approval…"
@@ -157,7 +162,7 @@ impl Render for TrustWindow {
                 "Trust (approve with password)"
             };
             Button::new("trust-window-approve").primary().small().label(label).on_click(move |_, _, cx| {
-                approve_project(&root, cx);
+                approve_project(&profile, &root, cx);
             })
         });
 

@@ -11,7 +11,7 @@ use wormhole_core::theme::folder_color::FolderColor;
 
 use super::Project;
 use super::folder_color::{FolderPaint, ProjectPaint, set_folder_color};
-use super::{create_project_folder, set_feature_for};
+use super::{create_project_folder, set_feature_for, shown_profile};
 use crate::app_state::OpenWindow;
 use crate::settings::{SettingsStore, settings};
 use crate::theme_bridge;
@@ -79,7 +79,7 @@ fn band_name(cx: &mut TestAppContext, window: &OpenWindow, folder: &Path) -> Opt
 fn pick(cx: &mut TestAppContext, window: &OpenWindow, folder: &Path, color: Option<FolderColor>) {
     drive(cx, window, |ws, _, cx| {
         let paint = folder_paint(ws, folder, cx);
-        set_folder_color(&paint, folder, color, cx);
+        set_folder_color(&paint, &shown_profile(cx).clone(), folder, color, cx);
     });
 }
 
@@ -186,7 +186,9 @@ fn with_the_project_folder_flag_off_nothing_is_written_into_the_repository(cx: &
     let tabs = cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.panel_tab_list(cx))).expect("open");
     assert!(!tabs.contains(&TabId::Project));
 
-    drive(cx, &window, |_, _, cx| set_folder_color(&opened, &tinted, Some(FolderColor::Red), cx));
+    drive(cx, &window, |_, _, cx| {
+        set_folder_color(&opened, &shown_profile(cx).clone(), &tinted, Some(FolderColor::Red), cx)
+    });
     assert_eq!(config_of(&tinted), r#"{ "project_color": "teal" }"#, "the repository is untouched");
     let own = cx.update(|cx| settings(cx).folder_color(&tinted));
     assert_eq!(own, Some(FolderColor::Red), "the pick is the person's own colour");
@@ -269,6 +271,7 @@ fn a_locked_colour_is_shown_and_cannot_be_picked(cx: &mut TestAppContext) {
                 FolderPaint::Project(p) => ProjectPaint { locked: false, ..p.clone() },
                 _ => unreachable!("a project"),
             }),
+            &shown_profile(cx).clone(),
             &locked,
             Some(FolderColor::Red),
             cx,
@@ -308,6 +311,7 @@ fn a_config_that_does_not_load_is_not_rewritten(cx: &mut TestAppContext) {
                 shown: true,
                 unreadable: false,
             }),
+            &shown_profile(cx).clone(),
             &broken,
             Some(FolderColor::Red),
             cx,
@@ -337,7 +341,7 @@ fn a_project_colour_follows_the_settings_switch_and_needs_no_trust(cx: &mut Test
     assert!(shown.is_some(), "untrusted, and tinted all the same");
     assert_eq!(band_name(cx, &window, &project), Some("Teal"));
 
-    cx.update(|cx| set_feature_for(&project, Feature::Settings, Some(false), cx));
+    cx.update(|cx| set_feature_for(&shown_profile(cx).clone(), &project, Feature::Settings, Some(false), cx));
     cx.run_until_parked();
     let off = drive(cx, &window, |ws, window, cx| {
         ws.refresh_features(cx);
@@ -351,7 +355,7 @@ fn a_project_colour_follows_the_settings_switch_and_needs_no_trust(cx: &mut Test
     pick(cx, &window, &project, Some(FolderColor::Pink));
     assert_eq!(config_of(&project), "{ \"project_color\": \"pink\" }");
 
-    cx.update(|cx| set_feature_for(&project, Feature::Settings, None, cx));
+    cx.update(|cx| set_feature_for(&shown_profile(cx).clone(), &project, Feature::Settings, None, cx));
     cx.run_until_parked();
     let on = drive(cx, &window, |ws, window, cx| {
         ws.refresh_features(cx);
@@ -425,7 +429,7 @@ fn the_project_tab_is_there_for_any_folder_and_makes_the_project(cx: &mut TestAp
 
     drive(cx, &window, |ws, _, cx| {
         let folder = ws.active_folder(cx).expect("a folder");
-        create_project_folder(folder, cx);
+        create_project_folder(&shown_profile(cx).clone(), folder, cx);
     });
     assert!(bare.join(".wormhole/config.json").is_file(), "the project folder was made");
     let found = read_cx(cx, &window, super::api::active_root);
@@ -435,7 +439,7 @@ fn the_project_tab_is_there_for_any_folder_and_makes_the_project(cx: &mut TestAp
     let config = std::fs::read_to_string(bare.join(".wormhole/config.json")).expect("config");
     drive(cx, &window, |ws, _, cx| {
         let folder = ws.active_folder(cx).expect("a folder");
-        create_project_folder(folder, cx);
+        create_project_folder(&shown_profile(cx).clone(), folder, cx);
     });
     assert_eq!(std::fs::read_to_string(bare.join(".wormhole/config.json")).expect("config"), config);
     let error = cx.update(|cx| project::hub(cx).error.is_some());

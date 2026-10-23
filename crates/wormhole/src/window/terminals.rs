@@ -143,7 +143,8 @@ impl Workspace {
         let cwd = record.cwd.as_ref().map(PathBuf::from);
         // What the features add to a terminal started in the folder (a trusted project's environment and
         // shell, a worktree's ports).
-        let SpawnAdd { env, shell: project_shell } = Self::spawn_adds(cwd.as_deref(), self.features, cx);
+        let SpawnAdd { env, shell: project_shell } =
+            Self::spawn_adds(&self.profile, cwd.as_deref(), self.features, cx);
         let shell = wormhole_core::terminal::shells::for_terminal(
             record.shell.as_deref(),
             project_shell.as_deref(),

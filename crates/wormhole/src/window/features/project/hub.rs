@@ -14,6 +14,7 @@ use wormhole_core::project::{
     TrustStatus, TrustStore,
 };
 
+#[derive(Default)]
 pub(crate) struct ProjectHub {
     pub prefs: ProjectPrefs,
     pub trust: TrustStore,
