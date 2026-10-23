@@ -141,8 +141,7 @@ mod tests {
     /// The other direction: a dependency added without the generator ships without its
     /// license listed. Cargo.lock alone can't tell a shipped crate from a dev-only or
     /// other-platform one, so this asks `cargo metadata` what the generator asks it, for this
-    /// Mac's target (its crates are fetched, so it works offline); on Linux the macOS crates may
-    /// not be, and the stale check above still runs.
+    /// Mac's target (its crates are fetched, so it works offline).
     #[test]
     fn bundled_list_has_every_crate_the_app_is_built_from() {
         let target =
