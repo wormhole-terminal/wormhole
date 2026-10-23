@@ -64,7 +64,13 @@ impl Workspace {
     /// The repository a worktree belongs to, by its root; read from disk once per refresh.
     fn worktree_of(&self, root: &Path) -> Option<PathBuf> {
         let mut cache = self.sidebar_feed.worktrees.borrow_mut();
-        cache.entry(root.to_path_buf()).or_insert_with(|| wormhole_core::git::worktree_of(root)).clone()
+        // A hit allocates nothing: the key is only made for a root not seen yet.
+        if let Some(known) = cache.get(root) {
+            return known.clone();
+        }
+        let found = wormhole_core::git::worktree_of(root);
+        cache.insert(root.to_path_buf(), found.clone());
+        found
     }
 
     /// Every terminal's row facts, in the window's (manual) order.
