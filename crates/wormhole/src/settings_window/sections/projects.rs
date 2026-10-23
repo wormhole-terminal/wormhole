@@ -250,7 +250,7 @@ impl SettingsWindow {
                     .child("A project can still turn a feature on or off just for you: pick it above."),
             );
         for feature in Feature::ALL {
-            let on = project::hub(cx).prefs.default_enabled(feature);
+            let on = project::api::default_enabled(feature, cx);
             let profile = project::shown_profile(cx).clone();
             let switch = style::toggle(
                 SharedString::from(format!("default-{}", feature.key())),
@@ -277,7 +277,7 @@ impl SettingsWindow {
             "Trusted projects",
             Some("Projects allowed to run commands"),
         ));
-        let list: Vec<PathBuf> = project::hub(cx).trust.list().into_iter().map(|p| p.root.clone()).collect();
+        let list: Vec<PathBuf> = project::api::trusted_roots(cx);
         if list.is_empty() {
             trusted =
                 trusted.child(div().py_3().rule_top(ui).text_body().text_color(ui.faint).child("None yet."));
@@ -337,22 +337,9 @@ impl SettingsWindow {
             )
             .into_any_element();
         };
-        let hub = project::hub(cx);
-        let approving = hub.approving;
-        let hub_error = hub.error.clone();
-        let prefs: Vec<(Feature, FeatureStanding, Option<bool>, bool)> = Feature::ALL
-            .into_iter()
-            .map(|f| {
-                let prefs = &hub.prefs;
-                // Notes: with no notes.md nothing syncs unless the person switches it on, so
-                // "Default (on)" would say what doesn't happen.
-                let default = match f {
-                    Feature::Notes => prefs.default_enabled(f) && project.folder.has(f),
-                    _ => prefs.default_enabled(f),
-                };
-                (f, project.snapshot.standing(f, project.status), prefs.project_override(root, f), default)
-            })
-            .collect();
+        let (approving, hub_error) = project::api::approval(cx);
+        let prefs: Vec<(Feature, FeatureStanding, Option<bool>, bool)> =
+            project::api::feature_rows(root, &project, cx);
         let needing = project.snapshot.needing_trust();
         let has_commands = project.request.as_ref().is_some_and(|r| !r.commands.is_empty());
 

@@ -6,7 +6,7 @@
 use std::path::{Path, PathBuf};
 
 use gpui_kit::*;
-use wormhole_core::project::Feature;
+use wormhole_core::project::{Feature, FeatureStanding};
 use wormhole_core::storage::paths::ProfileId;
 
 use super::{LoadedProject, Project, hub_of, project_folders_on};
@@ -119,4 +119,78 @@ pub(crate) fn worktree_setup(profile: &ProfileId, repo: &Path, cx: &mut App) -> 
         return None;
     }
     project.snapshot.config()?.worktree_setup.clone()
+}
+
+// What Settings' Projects page and the status item read of the shown profile's hub, and the Studio of a
+// window's, said as questions so the surfaces above the feature don't hold the hub.
+
+/// Whether `feature` is on by default for all projects in the shown profile.
+pub(crate) fn default_enabled(feature: Feature, cx: &App) -> bool {
+    super::hub(cx).prefs.default_enabled(feature)
+}
+
+/// The projects the shown profile trusts, whether or not they are open anywhere.
+pub(crate) fn trusted_roots(cx: &App) -> Vec<PathBuf> {
+    super::hub(cx).trust.list().into_iter().map(|trusted| trusted.root.clone()).collect()
+}
+
+/// An approval is being asked for in the shown profile, and the last thing that went wrong with a project
+/// in it, for Settings' Projects page.
+pub(crate) fn approval(cx: &App) -> (bool, Option<SharedString>) {
+    let hub = super::hub(cx);
+    (hub.approving, hub.error.clone())
+}
+
+/// One row of the Projects page per feature, for the project at `root` as the shown profile has it: the
+/// feature, where it stands, the project's own switch for it, and the default it falls back to.
+pub(crate) fn feature_rows(
+    root: &Path,
+    project: &LoadedProject,
+    cx: &App,
+) -> Vec<(Feature, FeatureStanding, Option<bool>, bool)> {
+    let prefs = &super::hub(cx).prefs;
+    Feature::ALL
+        .into_iter()
+        .map(|f| {
+            // Notes: with no notes.md nothing syncs unless the person switches it on, so
+            // "Default (on)" would say what doesn't happen.
+            let default = match f {
+                Feature::Notes => prefs.default_enabled(f) && project.folder.has(f),
+                _ => prefs.default_enabled(f),
+            };
+            (f, project.snapshot.standing(f, project.status), prefs.project_override(root, f), default)
+        })
+        .collect()
+}
+
+/// The shown profile's project at `root`, if it has loaded, is trusted with its Actions on: what the status
+/// item lists the actions of.
+pub(crate) fn shown_actionable<'a>(root: &Path, cx: &'a App) -> Option<&'a LoadedProject> {
+    let hub = super::hub(cx);
+    let project = hub.projects.get(root)?;
+    hub.enabled(project, Feature::Actions).then_some(project)
+}
+
+/// The project folder "Use in this project" writes a theme to: the one at `root`, as the profile of the
+/// window in front has it, when it is trusted and its theme isn't switched off. Otherwise what stands in
+/// the way, in the person's words.
+pub(crate) fn theme_target(
+    profile: &ProfileId,
+    root: &Path,
+    cx: &App,
+) -> Result<wormhole_core::project::ProjectFolder, &'static str> {
+    let hub = hub_of(profile, cx);
+    let project = hub.projects.get(root).ok_or("The project in front hasn't loaded yet.")?;
+    if hub.trust.status_of(&project.snapshot) != wormhole_core::project::TrustStatus::Trusted {
+        return Err("Trust this project first (Project tab), then use the theme in it.");
+    }
+    let switched_on = if project.snapshot.has(Feature::Theme) {
+        hub.enabled(project, Feature::Theme)
+    } else {
+        hub.prefs.enabled(root, Feature::Theme)
+    };
+    if !switched_on {
+        return Err("This project's theme is switched off (Project tab).");
+    }
+    Ok(project.folder.clone())
 }

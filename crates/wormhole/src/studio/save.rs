@@ -9,7 +9,7 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
 use style::BannerKind;
-use wormhole_core::project::{Feature, ProjectFolder, TrustStatus};
+use wormhole_core::project::ProjectFolder;
 use wormhole_core::storage::fsutil::{self, LinkPolicy};
 use wormhole_core::theme::tokens::ThemeFile;
 
@@ -218,20 +218,7 @@ impl StudioWindow {
             .flatten()
             .ok_or("The terminal in front isn't in a project with a .wormhole folder.")?;
         // The trust of the profile the window in front lives in, shown or not.
-        let hub = project::hub_of(&front.profile, cx);
-        let project = hub.projects.get(&root).ok_or("The project in front hasn't loaded yet.")?;
-        if hub.trust.status_of(&project.snapshot) != TrustStatus::Trusted {
-            return Err("Trust this project first (Project tab), then use the theme in it.");
-        }
-        let switched_on = if project.snapshot.has(Feature::Theme) {
-            hub.enabled(project, Feature::Theme)
-        } else {
-            hub.prefs.enabled(&root, Feature::Theme)
-        };
-        if !switched_on {
-            return Err("This project's theme is switched off (Project tab).");
-        }
-        Ok(project.folder.clone())
+        project::api::theme_target(&front.profile, &root, cx)
     }
 
     /// The notice under the title row, if there is one.

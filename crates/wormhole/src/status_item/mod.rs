@@ -16,7 +16,6 @@ use gpui_kit::*;
 use wormhole_core::config::HotkeyAction;
 use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::notify::{self, Counts, Terminal};
-use wormhole_core::project::Feature;
 
 use crate::app_state::{AppState, app};
 use crate::features::project;
@@ -128,10 +127,7 @@ pub(crate) fn project_actions(cx: &App) -> Vec<ActionItem> {
             continue;
         }
         seen.push(root);
-        let Some(project) = project::hub(cx).projects.get(root) else { continue };
-        if !project::hub(cx).enabled(project, Feature::Actions) {
-            continue;
-        }
+        let Some(project) = project::api::shown_actionable(root, cx) else { continue };
         actions.extend(project.actions().iter().map(|action| ActionItem {
             project: project_name(root),
             root: root.clone(),
