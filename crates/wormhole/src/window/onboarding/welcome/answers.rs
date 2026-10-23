@@ -260,7 +260,7 @@ fn set_notify(
         }
     });
     if turns_on || allow {
-        let _asked = (services.ask_permission)(cx);
+        let _ = (services.ask_permission)(cx);
     }
     Reply::ok(serde_json::json!({}))
 }
