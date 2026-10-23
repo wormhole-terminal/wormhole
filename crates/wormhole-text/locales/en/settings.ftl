@@ -17,9 +17,3 @@ settings-font-count = { $count ->
     [one] { $count } font
    *[other] { $count } fonts
 }
-
-# The tab width stepper's value. { $count } is a whole number of spaces.
-settings-tab-width = { $count ->
-    [one] { $count } space
-   *[other] { $count } spaces
-}

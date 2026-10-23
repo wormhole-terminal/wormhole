@@ -52,7 +52,7 @@ pub use settings_updates::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 360] = [
+pub const ALL: [Key; 366] = [
     SETTINGS_SECTION_ADVANCED, SETTINGS_SECTION_ADVANCED_INTRO, SETTINGS_ADVANCED_GROUP_FILES,
     SETTINGS_ADVANCED_OPEN_CONFIG, SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION, SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS,
     SETTINGS_ADVANCED_OPEN_DATA, SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION, SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS,
@@ -105,6 +105,8 @@ pub const ALL: [Key; 360] = [
     SETTINGS_GIT_DIFF_WRAP, SETTINGS_GIT_DIFF_WRAP_DESCRIPTION, SETTINGS_GIT_DIFF_WRAP_KEYWORDS,
     SETTINGS_GIT_TAB_WIDTH, SETTINGS_GIT_TAB_WIDTH_DESCRIPTION, SETTINGS_GIT_TAB_WIDTH_KEYWORDS,
     SETTINGS_GIT_SIZE_UNITS, SETTINGS_GIT_SIZE_UNITS_DESCRIPTION, SETTINGS_GIT_SIZE_UNITS_KEYWORDS,
+    SETTINGS_GIT_LIST, SETTINGS_GIT_TREE, SETTINGS_GIT_SPLIT,
+    SETTINGS_GIT_UNIFIED, SETTINGS_GIT_MB, SETTINGS_GIT_MIB,
     SETTINGS_SECTION_MENU_BAR, SETTINGS_SECTION_MENU_BAR_INTRO, SETTINGS_MENU_BAR_GROUP_MENU_BAR,
     SETTINGS_MENU_BAR_MENU_BAR, SETTINGS_MENU_BAR_MENU_BAR_DESCRIPTION, SETTINGS_MENU_BAR_MENU_BAR_KEYWORDS,
     SETTINGS_MENU_BAR_ICON, SETTINGS_MENU_BAR_ICON_DESCRIPTION, SETTINGS_MENU_BAR_ICON_KEYWORDS,
@@ -183,7 +185,7 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("settings-open-section", settings_open_section("Sample")),
         ("settings-font-count", settings_font_count(1)),
         ("settings-font-count", settings_font_count(5)),
-        ("settings-tab-width", settings_tab_width(1)),
-        ("settings-tab-width", settings_tab_width(5)),
+        ("settings-git-tab-width-value", settings_git_tab_width_value(1)),
+        ("settings-git-tab-width-value", settings_git_tab_width_value(5)),
     ]
 }

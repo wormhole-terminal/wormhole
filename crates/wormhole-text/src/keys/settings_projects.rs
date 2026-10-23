@@ -6,12 +6,12 @@
 use crate::key::Key;
 
 /// "Project folders"
-pub const SETTINGS_SECTION_PROJECTS: Key = Key::new(237);
+pub const SETTINGS_SECTION_PROJECTS: Key = Key::new(244);
 /// "Change the defaults for every project, or pick one to set it up just for you."
-pub const SETTINGS_SECTION_PROJECTS_INTRO: Key = Key::new(238);
+pub const SETTINGS_SECTION_PROJECTS_INTRO: Key = Key::new(245);
 /// "Project folders"
-pub const SETTINGS_PROJECTS_PROJECTS: Key = Key::new(239);
+pub const SETTINGS_PROJECTS_PROJECTS: Key = Key::new(246);
 /// "The .wormhole folder of a project: trust, and which of its files you use"
-pub const SETTINGS_PROJECTS_PROJECTS_DESCRIPTION: Key = Key::new(240);
+pub const SETTINGS_PROJECTS_PROJECTS_DESCRIPTION: Key = Key::new(247);
 /// ".wormhole project folder trust touch id actions prompts layout notes theme settings"
-pub const SETTINGS_PROJECTS_PROJECTS_KEYWORDS: Key = Key::new(241);
+pub const SETTINGS_PROJECTS_PROJECTS_KEYWORDS: Key = Key::new(248);

@@ -7,21 +7,21 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Look"
-pub const SETTINGS_NAV_LOOK: Key = Key::new(355);
+pub const SETTINGS_NAV_LOOK: Key = Key::new(362);
 /// "Work"
-pub const SETTINGS_NAV_WORK: Key = Key::new(356);
+pub const SETTINGS_NAV_WORK: Key = Key::new(363);
 /// "Agents"
-pub const SETTINGS_NAV_AGENTS: Key = Key::new(357);
+pub const SETTINGS_NAV_AGENTS: Key = Key::new(364);
 /// "App"
-pub const SETTINGS_NAV_APP: Key = Key::new(358);
+pub const SETTINGS_NAV_APP: Key = Key::new(365);
 /// "Preview"
-pub const SETTINGS_NAV_PREVIEW: Key = Key::new(359);
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(366);
 
 /// ```text
 /// Open { $section }
 /// ```
 pub fn settings_open_section(section: &str) -> String {
-    crate::active::message(360, &[("section", Arg::Str(section))])
+    crate::active::message(367, &[("section", Arg::Str(section))])
 }
 
 /// ```text
@@ -31,15 +31,5 @@ pub fn settings_open_section(section: &str) -> String {
 /// }
 /// ```
 pub fn settings_font_count(count: i64) -> String {
-    crate::active::message(361, &[("count", Arg::Int(count))])
-}
-
-/// ```text
-/// { $count ->
-///     [one] { $count } space
-///    *[other] { $count } spaces
-/// }
-/// ```
-pub fn settings_tab_width(count: i64) -> String {
-    crate::active::message(362, &[("count", Arg::Int(count))])
+    crate::active::message(368, &[("count", Arg::Int(count))])
 }

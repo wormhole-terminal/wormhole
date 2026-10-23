@@ -29,3 +29,20 @@ settings-git-tab-width = Tab width
 settings-git-size-units = File sizes
     .description = Decimal like Finder (12.4 MB), or binary like git (11.8 MiB)
     .keywords = size units bytes kilobytes megabytes kb mb kib mib finder binary decimal
+
+## settings_window/sections/git.rs (labels, hints and notes drawn by this page's code)
+
+settings-git-list = List
+settings-git-tree = Tree
+settings-git-split = Split
+settings-git-unified = Unified
+settings-git-mb = MB
+settings-git-mib = MiB
+
+## Sentences with a hole in them
+
+# The tab width stepper's value. { $count } is a whole number of spaces.
+settings-git-tab-width-value = { $count ->
+    [one] { $count } space
+   *[other] { $count } spaces
+}

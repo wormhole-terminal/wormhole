@@ -31,8 +31,8 @@ fn messages_with_variables_are_typed_functions() {
     assert_eq!(settings_font_count(1), "1 font");
     assert_eq!(settings_font_count(0), "0 fonts");
     assert_eq!(settings_font_count(5), "5 fonts");
-    assert_eq!(settings_tab_width(1), "1 space");
-    assert_eq!(settings_tab_width(4), "4 spaces");
+    assert_eq!(settings_git_tab_width_value(1), "1 space");
+    assert_eq!(settings_git_tab_width_value(4), "4 spaces");
 }
 
 #[test]

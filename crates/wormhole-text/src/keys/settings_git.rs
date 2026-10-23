@@ -4,6 +4,7 @@
 //! The messages of `locales/en/settings-git.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Changes & diffs"
 pub const SETTINGS_SECTION_GIT: Key = Key::new(136);
@@ -45,3 +46,25 @@ pub const SETTINGS_GIT_SIZE_UNITS: Key = Key::new(153);
 pub const SETTINGS_GIT_SIZE_UNITS_DESCRIPTION: Key = Key::new(154);
 /// "size units bytes kilobytes megabytes kb mb kib mib finder binary decimal"
 pub const SETTINGS_GIT_SIZE_UNITS_KEYWORDS: Key = Key::new(155);
+/// "List"
+pub const SETTINGS_GIT_LIST: Key = Key::new(156);
+/// "Tree"
+pub const SETTINGS_GIT_TREE: Key = Key::new(157);
+/// "Split"
+pub const SETTINGS_GIT_SPLIT: Key = Key::new(158);
+/// "Unified"
+pub const SETTINGS_GIT_UNIFIED: Key = Key::new(159);
+/// "MB"
+pub const SETTINGS_GIT_MB: Key = Key::new(160);
+/// "MiB"
+pub const SETTINGS_GIT_MIB: Key = Key::new(161);
+
+/// ```text
+/// { $count ->
+///     [one] { $count } space
+///    *[other] { $count } spaces
+/// }
+/// ```
+pub fn settings_git_tab_width_value(count: i64) -> String {
+    crate::active::message(162, &[("count", Arg::Int(count))])
+}
