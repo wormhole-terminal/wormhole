@@ -158,6 +158,12 @@ impl Glass {
         Self { native: std::cell::RefCell::new(os::GlassViews::find(window)), ..Self::default() }
     }
 
+    /// Where the glasses are now, for devctl.
+    #[cfg(feature = "devctl")]
+    pub fn placed(&self) -> Vec<GlassRect> {
+        self.shown.borrow().clone()
+    }
+
     /// Whether this Mac has Liquid Glass.
     pub fn available(&self) -> bool {
         self.native.borrow().is_some()

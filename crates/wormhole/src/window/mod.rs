@@ -16,7 +16,7 @@
 //! `saved_layout`, `window_bounds`), its life (`windows`, `window_lifecycle`, `hosting` for the
 //! persistent terminals), what it answers from outside (`window_control`, `restart_facts`, `ambient`,
 //! `menu_state`, and `devctl` in a devctl build), its actions and keys (`window_actions`, `shortcuts`),
-//! its look (`layout`, `chrome`, `resize`, `slide`, `glass`, `status_bar`) and what opens over it
+//! its look (`layout`, `chrome`, `resize`, `slide`, `glass`, `status_bar`; `regions`: the chrome GPUI keeps between frames) and what opens over it
 //! (`overlay`).
 //!
 //! The window sits between the modules it hosts and the ones that use it. Below it, and used by it:

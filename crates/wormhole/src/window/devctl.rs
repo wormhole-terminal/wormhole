@@ -291,6 +291,14 @@ impl Workspace {
             self.session_listing(cx).numbered().into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
         );
         out.push_str(&format!("regions built {:?}\n", self.regions.builds(cx)));
+        let glass = self.glass.placed();
+        out.push_str(&format!(
+            "glass available={} on={} placed={} {:?}\n",
+            self.glass.available(),
+            self.glass_on(cx),
+            glass.len(),
+            glass.iter().map(|g| (g.x as i32, g.y as i32, g.w as i32, g.h as i32)).collect::<Vec<_>>()
+        ));
         for (ix, session) in self.sessions.iter().enumerate() {
             let terminal = session.terminal().read(cx);
             let marker = if ix == self.active {
