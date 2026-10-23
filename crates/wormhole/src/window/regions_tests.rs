@@ -79,7 +79,9 @@ fn with_the_accessibility_tree_built_the_chrome_is_drawn_in_every_frame(cx: &mut
     }
     crate::platform::a11y::force_tree(true);
     // GPUI refreshes the window when the tree turns on; the first frame builds the regions as plain children.
+    assert!(!read_cx(cx, &window, |ws, _| ws.regions.tree_seen()), "not before an app asks");
     draw(cx, &window);
+    assert!(read_cx(cx, &window, |ws, _| ws.regions.tree_seen()), "noted once the tree is built");
     let before = builds(cx, &window);
     for _ in 0..5 {
         output(cx, &shown);

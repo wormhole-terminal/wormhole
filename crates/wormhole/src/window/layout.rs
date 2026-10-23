@@ -131,6 +131,7 @@ impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         #[cfg(any(test, debug_assertions))]
         self.regions.begin_frame();
+        self.regions.note_tree(window, self.window_id);
         // The workspace's own column: the window less what lies beside it (`column_probe`).
         self.window_width = f32::from(window.viewport_size().width) - self.beside;
         self.sync_tab_layout(window, cx);

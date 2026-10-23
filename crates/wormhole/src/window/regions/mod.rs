@@ -15,9 +15,11 @@
 //! changing (`feature_host`) and the settings. A new fact a part draws must notify the workspace the
 //! same way; one that only changes in a draw would be missed.
 //!
-//! While an assistive app is connected the regions are not cached at all (`embed`): GPUI rebuilds the
-//! accessibility tree in every frame and replays none of a reused view's nodes, so a cached region would
-//! drop out of the tree (and its buttons stop answering VoiceOver) at the terminal's frame rate.
+//! While an app has asked for the window's accessibility tree the regions are not cached at all (`embed`):
+//! GPUI rebuilds the tree in every frame and replays none of a reused view's nodes, so a cached region would
+//! drop out of the tree (and its buttons stop answering VoiceOver) at the terminal's frame rate. On macOS
+//! the tree, once on, stays on for the window's life, and any app using the accessibility API turns it on
+//! (`platform::a11y::tree_built`), so the window logs it once ([`Regions::note_tree`]).
 //!
 //! A missed notify shows nowhere else: a test that draws drops GPUI's caches first. In debug and test builds
 //! every region records what it was built from and every frame checks that the regions it placed would be
@@ -30,6 +32,8 @@
 mod app_facts;
 #[cfg(any(test, debug_assertions))]
 mod oracle;
+
+use std::cell::Cell;
 
 use self::app_facts::AppFacts;
 use wormhole_core::view::sidebar::GroupPaint;
@@ -98,6 +102,8 @@ pub(super) struct Regions {
     panel: Entity<Region>,
     title_row: Entity<Region>,
     status_bar: Entity<Region>,
+    /// The accessibility tree was built in some frame of this window, so the chrome has not been cached since.
+    tree_seen: Cell<bool>,
     /// What the regions last drew of what moves with time, to notice on the tick when it is stale.
     pub(super) drawn: Drawn,
     /// The shared state's facts as the window last saw them (`watch_globals`).
@@ -134,12 +140,30 @@ impl Regions {
             panel: region(Part::Panel),
             title_row: region(Part::TitleRow),
             status_bar: region(Part::StatusBar),
+            tree_seen: Cell::new(false),
             drawn: Drawn::default(),
             app_seen: None,
             paint_seen: None,
             #[cfg(any(test, debug_assertions))]
             oracle: Default::default(),
         }
+    }
+
+    /// A frame begins in window `window_id`: say once if the accessibility tree is built in it. From then on
+    /// the window draws its chrome in every frame (see the module's note), which a profile of it should know.
+    pub(super) fn note_tree(&self, window: &Window, window_id: i64) {
+        if crate::platform::a11y::tree_built(window) && !self.tree_seen.replace(true) {
+            tracing::info!(
+                window_id,
+                "an app asked for the accessibility tree: this window's chrome is no longer cached"
+            );
+        }
+    }
+
+    /// Whether the accessibility tree has been built in this window, so its chrome is drawn in every frame.
+    #[cfg(any(test, feature = "devctl"))]
+    pub(super) fn tree_seen(&self) -> bool {
+        self.tree_seen.get()
     }
 
     fn all(&self) -> [&Entity<Region>; 4] {

@@ -22,10 +22,14 @@ pub fn announce(text: &str, interrupt: bool) {
     }
 }
 
-/// Whether GPUI builds the accessibility tree for the frame being drawn (an assistive app is connected).
-/// GPUI rebuilds the tree from scratch in every frame's prepaint and does not replay the nodes of a view it
-/// reuses, so a view kept between frames would drop out of the tree: callers that keep one draw it afresh
-/// while this is true. GPUI forces a frame when it turns on or off.
+/// Whether GPUI builds the accessibility tree for the frame being drawn (an app has asked the window for
+/// its accessibility tree). GPUI rebuilds the tree from scratch in every frame's prepaint and does not
+/// replay the nodes of a view it reuses, so a view kept between frames would drop out of the tree: callers
+/// that keep one draw it afresh while this is true. GPUI forces a frame when it turns on.
+///
+/// On macOS it never turns off again: GPUI's platform drops the deactivation, so for the window's life it
+/// stays true once any client has connected, and that is any app using the accessibility API (a screen
+/// reader, a switch or voice control, an automation or inspection tool), not only VoiceOver.
 pub fn tree_built(window: &gpui_kit::Window) -> bool {
     #[cfg(test)]
     if forced::get() {

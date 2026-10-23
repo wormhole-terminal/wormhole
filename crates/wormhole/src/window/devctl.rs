@@ -36,6 +36,12 @@ impl Workspace {
         }
     }
 
+    /// Whether the accessibility tree has been built in this window (`perf-profile` reports it: the chrome
+    /// is drawn in every frame then, not replayed).
+    pub(crate) fn devctl_a11y_tree(&self) -> bool {
+        self.regions.tree_seen()
+    }
+
     /// How many of this window's terminals run in a session host, and how many in the app
     /// (`perf-profile` reports it: the two are read differently).
     pub(crate) fn devctl_hosting(&self, cx: &App) -> (usize, usize) {
@@ -291,6 +297,10 @@ impl Workspace {
             self.session_listing(cx).numbered().into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
         );
         out.push_str(&format!("regions built {:?}\n", self.regions.builds(cx)));
+        out.push_str(&format!(
+            "a11y tree built={} (the chrome is drawn in every frame once it is)\n",
+            self.devctl_a11y_tree()
+        ));
         let glass = self.glass.placed();
         out.push_str(&format!(
             "glass available={} on={} placed={} {:?}\n",

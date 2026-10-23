@@ -48,10 +48,12 @@ pub(super) fn perf_profile(ctx: &mut Ctx, arg: &str) -> Result<String> {
         let Some(recording) = Recording::start() else {
             return "perf-profile failed: another window is recording one\n".into();
         };
-        let recorded = record(this, cx, period).await;
+        let recorded = record(this.clone(), cx, period).await;
         let counters = recording.stop();
+        // Whether the window's chrome was replayed or drawn in every frame decides what the numbers mean.
+        let a11y_tree = this.read_with(cx, |workspace, _| workspace.devctl_a11y_tree()).unwrap_or(false);
         match recorded.and_then(|(samples, elapsed)| {
-            let report = Report::new(&samples, elapsed, counters, terminals);
+            let report = Report::new(&samples, elapsed, counters, terminals).with_a11y_tree(a11y_tree);
             write(&report, &dir, &name)?;
             Ok(report.summary())
         }) {

@@ -134,6 +134,9 @@ pub(crate) struct Report {
     pub format_version: u32,
     pub seconds: f64,
     pub terminals: Terminals,
+    /// The window's accessibility tree was built (an app asked for it): its chrome and terminals are then
+    /// drawn in every frame instead of replayed, so the profile is not comparable with one without.
+    pub a11y_tree: bool,
     pub frames: Frames,
     pub reader: Reader,
     /// The terminals' locks as every other thread took them (the UI's snapshot, input, find; the
@@ -161,6 +164,7 @@ impl Report {
             format_version: FORMAT_VERSION,
             seconds: round(seconds),
             terminals,
+            a11y_tree: false,
             frames: Frames {
                 count: frames.len(),
                 terminal_frames: drew.len(),
@@ -194,6 +198,12 @@ impl Report {
         }
     }
 
+    /// The report of a window whose accessibility tree was (`on`) or was not built meanwhile.
+    pub(crate) fn with_a11y_tree(mut self, on: bool) -> Report {
+        self.a11y_tree = on;
+        self
+    }
+
     /// The report as a short table.
     pub(crate) fn summary(&self) -> String {
         let f = &self.frames;
@@ -206,6 +216,11 @@ impl Report {
             self.terminals.hosted,
             self.terminals.local
         );
+        if self.a11y_tree {
+            out.push_str(
+                "accessibility tree built: the chrome and the terminals were drawn in every frame\n",
+            );
+        }
         let _ = writeln!(out, "{:<22}{:>10}{:>10}{:>10}{:>10}", "per frame", "avg", "p50", "p95", "max");
         let mut row = |name: &str, s: &Spread| {
             let _ = writeln!(out, "{name:<22}{:>10.3}{:>10.3}{:>10.3}{:>10.3}", s.avg, s.p50, s.p95, s.max);
@@ -334,6 +349,21 @@ mod tests {
         assert_eq!(report.reader.parse_busy_pct, 12.5);
         assert_eq!((report.reader.lock.wait_ms, report.reader.lock.hold_max_ms), (2.0, 0.3));
         assert_eq!((report.ui_lock.locks, report.ui_lock.wait_ms), (600, 1.5));
+    }
+
+    #[test]
+    fn a_profile_of_a_window_with_the_accessibility_tree_says_so() {
+        let report = Report::new(
+            &[frame(2, true); 6],
+            Duration::from_secs(1),
+            Counters::default(),
+            Terminals::default(),
+        );
+        assert!(!report.summary().contains("accessibility tree"), "not when it was not built");
+        let report = report.with_a11y_tree(true);
+        assert!(report.summary().contains("accessibility tree built"));
+        let json = serde_json::to_value(&report).expect("serializes");
+        assert_eq!(json["a11y_tree"], true);
     }
 
     #[test]
