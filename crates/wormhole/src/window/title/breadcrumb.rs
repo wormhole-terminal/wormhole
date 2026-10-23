@@ -99,7 +99,6 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> TitlePlan {
         let facts = self.title_facts(cx);
-        self.regions.drawn.crumb.replace(facts.words.clone());
         let measure = Measure::new(window, cx);
         let steps = facts
             .shown
@@ -394,16 +393,22 @@ impl Workspace {
     /// On the tick: the breadcrumb's "working · 4m" moves on by itself once a minute, with nothing
     /// else to redraw the window (an agent thinking quietly); redraw when it would read
     /// differently.
-    pub(in crate::window) fn crumb_tick(&self, cx: &mut Context<Self>) {
+    pub(in crate::window) fn crumb_tick(&mut self, cx: &mut Context<Self>) {
         // The status bar's tick redraws its own copy.
         if settings_in(&self.profile, cx).status_bar {
             return;
         }
         let now = crumb_words(&self.active_session().pane.summary);
         // Taken as drawn: if nothing draws it (a diff is over the title row), it asks once.
-        if self.regions.drawn.crumb.replace(now.clone()) != now {
+        if std::mem::replace(&mut self.regions.drawn.crumb, now.clone()) != now {
             cx.notify();
         }
+    }
+
+    /// The words the title row is drawn with, for the tick to compare the next ones with.
+    pub(in crate::window) fn crumb_drawn(&self, cx: &App) -> Option<String> {
+        crumb_words(&self.active_session().pane.summary)
+            .filter(|_| !settings_in(&self.profile, cx).status_bar)
     }
 }
 

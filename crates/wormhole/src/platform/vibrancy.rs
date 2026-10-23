@@ -88,10 +88,21 @@ pub struct Glass {
     /// What this frame proposed outside any region.
     now: std::cell::RefCell<Proposals>,
     /// What each region proposed when it was last drawn, kept while it is replayed.
-    kept: std::cell::RefCell<std::collections::HashMap<u32, Proposals>>,
+    kept: std::cell::RefCell<std::collections::HashMap<RegionId, Proposals>>,
     /// The region whose proposals are being made, between `begin_region` and `end_region`.
-    recording: std::cell::Cell<Option<u32>>,
+    recording: std::cell::Cell<Option<RegionId>>,
     shown: std::cell::RefCell<Vec<GlassRect>>,
+}
+
+/// A part of the window whose glass is kept while GPUI replays it ([`Glass::begin_region`]). Not a clip's
+/// id ([`Glass::clip_to`]), which names a room a list scrolls in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct RegionId(u32);
+
+impl RegionId {
+    pub const fn new(id: u32) -> Self {
+        Self(id)
+    }
 }
 
 /// The glasses and the clips a part of a frame asked for.
@@ -190,7 +201,7 @@ impl Glass {
 
     /// What follows, up to [`end_region`](Self::end_region), is `region` drawing itself: its earlier
     /// proposals are replaced by these.
-    pub fn begin_region(&self, region: u32) {
+    pub fn begin_region(&self, region: RegionId) {
         self.kept.borrow_mut().insert(region, Proposals::default());
         self.recording.set(Some(region));
     }
@@ -200,7 +211,7 @@ impl Glass {
     }
 
     /// `region` is not in the window now: its proposals no longer count.
-    pub fn forget_region(&self, region: u32) {
+    pub fn forget_region(&self, region: RegionId) {
         self.kept.borrow_mut().remove(&region);
     }
 
@@ -240,7 +251,7 @@ pub fn set_material_appearance(appearance: Appearance) {
 
 #[cfg(test)]
 mod tests {
-    use super::{Glass, GlassRect};
+    use super::{Glass, GlassRect, RegionId};
 
     fn rect(x: f32) -> GlassRect {
         GlassRect { x, y: 0.0, w: 10.0, h: 10.0, radius: 0.0 }
@@ -251,7 +262,7 @@ mod tests {
     #[test]
     fn a_region_that_is_replayed_keeps_its_glass_until_it_draws_again_or_is_forgotten() {
         let glass = Glass::default();
-        glass.begin_region(1);
+        glass.begin_region(RegionId::new(1));
         glass.propose(10, rect(0.0), None);
         glass.end_region();
         glass.propose(20, rect(50.0), None);
@@ -262,12 +273,12 @@ mod tests {
         glass.commit();
         assert_eq!(*glass.shown.borrow(), [rect(0.0), rect(60.0)], "the replayed region's glass stays");
         // Drawn again, it replaces what it proposed before.
-        glass.begin_region(1);
+        glass.begin_region(RegionId::new(1));
         glass.propose(10, rect(5.0), None);
         glass.end_region();
         glass.commit();
         assert_eq!(*glass.shown.borrow(), [rect(5.0)], "and the loose one, not proposed, is hidden");
-        glass.forget_region(1);
+        glass.forget_region(RegionId::new(1));
         glass.commit();
         assert!(glass.shown.borrow().is_empty(), "a region that left the window shows no glass");
     }
@@ -276,7 +287,7 @@ mod tests {
     #[test]
     fn a_replayed_regions_clip_still_cuts_its_glass() {
         let glass = Glass::default();
-        glass.begin_region(1);
+        glass.begin_region(RegionId::new(1));
         glass.clip_to(0, GlassRect { x: 0.0, y: 0.0, w: 10.0, h: 5.0, radius: 0.0 });
         glass.propose(10, rect(0.0), Some(0));
         glass.end_region();

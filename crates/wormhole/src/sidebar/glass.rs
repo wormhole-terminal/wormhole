@@ -97,7 +97,7 @@ pub(super) fn clip_probe(glass: &std::rc::Rc<crate::platform::vibrancy::Glass>, 
 
 /// The glass region the sidebar's column is. The column is drawn by a view GPUI replays in frames
 /// that change none of it, so its glass is kept by the region (`Glass::begin_region`) in those.
-const COLUMN_REGION: u32 = 0;
+const COLUMN_REGION: crate::platform::vibrancy::RegionId = crate::platform::vibrancy::RegionId::new(0);
 
 /// The first thing in the sidebar's column: what it proposes from here to [`column_end`] is the
 /// column's own.

@@ -203,7 +203,8 @@ impl Workspace {
     }
 
     /// What the selected terminal's group is painted with: all the window's chrome reads of the list's
-    /// saved view, so the window hears of a change of the list only when this differs (`Regions::watch_sidebar`).
+    /// saved view, so the window hears of a change of the list only when this differs
+    /// (`Regions::watch_sidebar`).
     pub(in crate::window) fn group_paint(&self, cx: &App) -> Option<GroupPaint> {
         let id = self.sessions.get(self.active)?.id;
         let groups = &self.sidebar_view(cx).groups;

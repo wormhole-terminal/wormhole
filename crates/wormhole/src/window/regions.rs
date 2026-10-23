@@ -115,7 +115,7 @@ pub(super) struct Drawn {
     /// The status bar (`None` while it is off).
     pub(super) status_bar: Option<StatusBar>,
     /// The breadcrumb's status words ("working · 4m"), for the minute.
-    pub(super) crumb: std::cell::RefCell<Option<String>>,
+    pub(super) crumb: Option<String>,
 }
 
 impl Regions {
@@ -292,11 +292,14 @@ impl Workspace {
             }
             // The row positions itself at the top of its column; here it is placed in the view's own
             // bounds, which a root with no size of its own would not fill.
-            Part::TitleRow => div()
-                .relative()
-                .size_full()
-                .child(self.render_terminal_title_row(window, cx))
-                .into_any_element(),
+            Part::TitleRow => {
+                self.regions.drawn.crumb = self.crumb_drawn(cx);
+                div()
+                    .relative()
+                    .size_full()
+                    .child(self.render_terminal_title_row(window, cx))
+                    .into_any_element()
+            }
             Part::StatusBar => {
                 // What the bar drew is what the tick compares the next one with.
                 self.regions.drawn.status_bar = self.status_bar(cx);
