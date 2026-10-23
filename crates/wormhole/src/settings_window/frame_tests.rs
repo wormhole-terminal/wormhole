@@ -3,8 +3,11 @@
 //! formatted by Fluent (a few allocations more than a `format!`, five for one with a number), and a page
 //! that does so for every row of every frame would show here.
 //!
-//! [`BEFORE`] is what a third draw of each page allocated while the words were still written in Rust
-//! (measured on the commit before the Settings window's words moved); a frame may make a hundredth more.
+//! [`BUDGET`] is what a third draw of each page allocates today plus [`SLACK`], a fixed margin for small
+//! drift. The reference is what a third draw allocated while the words were still written in Rust
+//! (measured on the commit before the Settings window's words moved): Profile 9,847, Appearance 14,383,
+//! Fonts 7,247, Terminal 12,521, Sessions 13,750, Git 7,745, Agents 27,044, Notifications 10,353,
+//! MenuBar 7,852, Updates 6,621, Advanced 7,318, Projects 12,190, FeatureFlags 6,742, search 13,259.
 //! The pages with sentences made a few more (2 to 14 of about 10,000); the search made 14% fewer, since
 //! its words are lower-cased once per language and no longer for every keystroke.
 //!
@@ -18,23 +21,27 @@ use super::{Section, current_window, open_settings};
 use crate::perf::allocations::thread_counts;
 use crate::window::test_harness::{isolate_in, start};
 
-/// Allocations a third draw of each page made before the move (the first two build what a window keeps),
-/// and of the results page of a search for a word found in several pages.
-const BEFORE: [(&str, u64); 14] = [
-    ("Profile", 9_847),
-    ("Appearance", 14_383),
-    ("Fonts", 7_247),
-    ("Terminal", 12_521),
-    ("Sessions", 13_750),
-    ("Git", 7_745),
-    ("Agents", 27_044),
-    ("Notifications", 10_353),
-    ("MenuBar", 7_852),
-    ("Updates", 6_621),
-    ("Advanced", 7_318),
-    ("Projects", 12_190),
-    ("FeatureFlags", 6_742),
-    ("search", 13_259),
+/// Allocations a frame may make over what the pages made when this budget was set.
+const SLACK: u64 = 20;
+
+/// Allocations a third draw of each page made when the budget was set (the first two build what a window
+/// keeps), and of the results page of a search for a word found in several pages; a frame may make
+/// [`SLACK`] more.
+const BUDGET: [(&str, u64); 14] = [
+    ("Profile", 9849),
+    ("Appearance", 14388),
+    ("Fonts", 7259),
+    ("Terminal", 12535),
+    ("Sessions", 13752),
+    ("Git", 7749),
+    ("Agents", 27055),
+    ("Notifications", 10355),
+    ("MenuBar", 7852),
+    ("Updates", 6621),
+    ("Advanced", 7318),
+    ("Projects", 12196),
+    ("FeatureFlags", 6742),
+    ("search", 11356),
 ];
 
 fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {
@@ -86,14 +93,10 @@ fn a_settings_frame_stays_within_its_allocation_budget(cx: &mut TestAppContext) 
         .collect();
     let over: Vec<String> = measured
         .iter()
-        .zip(BEFORE)
-        .filter(|((_, drawn), (_, before))| drawn.allocations > before + before / 100)
-        .map(|((name, drawn), (_, before))| {
-            format!(
-                "{name}: {} (before the move {before}, budget {})",
-                drawn.allocations,
-                before + before / 100
-            )
+        .zip(BUDGET)
+        .filter(|((_, drawn), (_, budget))| drawn.allocations > budget + SLACK)
+        .map(|((name, drawn), (_, budget))| {
+            format!("{name}: {} (budget {})", drawn.allocations, budget + SLACK)
         })
         .collect();
     assert!(over.is_empty(), "frames over their budget:\n{}\nall:\n{}", over.join("\n"), table.join("\n"));
