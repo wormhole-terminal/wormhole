@@ -252,8 +252,6 @@
     "orphans": {},
     "glob-imports": {},
     "cycles": {
-      "wormhole-core: ipc::control -> ipc::message": 1,
-      "wormhole-core: ipc::message -> ipc::control": 1,
       "wormhole-term: blocks -> images": 1,
       "wormhole-term: blocks -> marks": 1,
       "wormhole-term: blocks -> screen": 1,

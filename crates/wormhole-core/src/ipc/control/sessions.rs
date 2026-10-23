@@ -295,7 +295,7 @@ fn utc(secs: u64) -> String {
 /// What `list` and `status` say when the app is not running but terminals are: the app is not
 /// there to ask, so the hosts' own files answer. `None` when there is nothing to add (no live host,
 /// or a question only the app can answer), and the caller says "Wormhole isn't running" as before.
-pub(super) fn offline(action: &super::Action, json: bool) -> Option<String> {
+pub(in crate::ipc) fn offline(action: &super::Action, json: bool) -> Option<String> {
     let hosts_dir = hosts::hosts_dir(&crate::storage::paths::data_dir());
     offline_in(action, json, &hosts_dir)
 }

@@ -30,8 +30,8 @@ mod welcome;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub(crate) use cli::exchange;
-pub use cli::{COMMAND_NAME, Cli, Parsed, help, is_verb, parse, render, run};
+pub use cli::{COMMAND_NAME, Cli, Parsed, help, is_verb, parse, render};
+pub(in crate::ipc) use cli::{print, print_err};
 pub use limits::{Limited, RateLimits};
 pub use welcome::{
     AgentFact, AgentsFacts, FIELD_MAX_BYTES, HooksFact, LookFacts, NotifyFacts, PermissionFact, PrimaryFact,

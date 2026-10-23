@@ -11,7 +11,8 @@
 //! are the one kind of message the app answers, on the same connection.
 //!
 //! - `message`: the wire format;
-//! - `control`: the control requests and replies, their rules, limits and command line;
+//! - `control`: the control requests and replies, their rules, limits and the command line's verbs;
+//! - `exchange`: the command line's round trip over the control socket, and the welcome's;
 //! - `instance`: who serves the socket;
 //! - `server`: the listener thread (connections from this user only);
 //! - `client`: the `hook` and `statusline` command lines;
@@ -25,6 +26,7 @@
 
 mod client;
 pub mod control;
+pub(crate) mod exchange;
 pub mod host_binary;
 pub mod hosts;
 mod instance;
@@ -42,7 +44,7 @@ use crate::platform::user::UserId;
 use crate::storage::paths::data_dir;
 
 pub use client::{Command, command, run_cli, run_status_line_cli};
-pub use control::run as run_control_cli;
+pub use exchange::run as run_control_cli;
 pub use instance::{Instance, InstanceLock, acquire, start_server};
 pub use message::Message;
 

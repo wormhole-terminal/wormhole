@@ -15,7 +15,8 @@ use super::banner;
 use super::driver::{Answer, Driver};
 use super::gate::TOKEN_VAR;
 use super::render::Size;
-use crate::ipc::control::{Action, Request, WelcomeOp, exchange};
+use crate::ipc::control::{Action, Request, WelcomeOp};
+use crate::ipc::exchange::exchange;
 use crate::platform::process::{self, exec};
 use crate::platform::tty::{self, RawMode};
 
