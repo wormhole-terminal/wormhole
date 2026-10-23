@@ -252,10 +252,6 @@
     "cycles": {
       "wormhole-core: ipc::control -> ipc::message": 1,
       "wormhole-core: ipc::message -> ipc::control": 1,
-      "wormhole-core: project::actions -> project::trust": 1,
-      "wormhole-core: project::snapshot -> project::actions": 1,
-      "wormhole-core: project::snapshot -> project::trust": 1,
-      "wormhole-core: project::trust -> project::snapshot": 1,
       "wormhole-term: blocks -> images": 1,
       "wormhole-term: blocks -> marks": 1,
       "wormhole-term: blocks -> screen": 1,

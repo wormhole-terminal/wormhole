@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use super::actions::{self, Action};
 use super::features::root_key;
-use super::trust::{self, Input, TrustRequest};
+use super::trust::{self, Input, TrustLine, TrustRequest};
 use super::{
     ACTIONS_FILE, CONFIG_FILE, Feature, FeatureStanding, LAYOUT_FILE, Layout, MAX_JSON_BYTES,
     MAX_PROMPT_BYTES, PROMPTS_DIR, ProjectConfig, ProjectError, ProjectFolder, ProjectWarning, Prompt,
@@ -355,7 +355,7 @@ impl ProjectSnapshot {
         if self.config.is_err() || self.actions.is_err() || self.layout.is_err() {
             return None;
         }
-        Some(trust::request_for(self, self.trusted_files.clone()))
+        Some(request_for(self, self.trusted_files.clone()))
     }
 
     /// [`Self::trust_request`], or the first error that prevents it.
@@ -378,6 +378,58 @@ fn parse_read<T>(
     match read? {
         Some(text) => parse(path, &text).map(Some),
         None => Ok(None),
+    }
+}
+
+/// The fingerprint of `folder` as it is on disk now: `config.json`, `actions.json`, `layout.json`
+/// and every prompt file an action names (see [`ProjectSnapshot::fingerprint`]).
+pub fn fingerprint(folder: &ProjectFolder) -> String {
+    ProjectSnapshot::load(folder).fingerprint().to_string()
+}
+
+/// Describe what trusting `folder` (as it is on disk now) would enable. Fails if a file doesn't
+/// load, since an invalid file can't be shown (or used) faithfully.
+pub fn describe_trust_request(folder: &ProjectFolder) -> Result<TrustRequest, ProjectError> {
+    ProjectSnapshot::load(folder).into_trust_request()
+}
+
+/// The request for a snapshot whose trust-relevant files all loaded.
+fn request_for(snapshot: &ProjectSnapshot, files: Vec<PathBuf>) -> TrustRequest {
+    let mut commands = Vec::new();
+    if let Some(config) = snapshot.config() {
+        if let Some(shell) = &config.shell {
+            commands.push(TrustLine::new("shell:", shell, ""));
+        }
+        for (name, value) in &config.env {
+            commands.push(TrustLine::new("env:", format!("{name}={value}"), ""));
+        }
+        if let Some(setup) = &config.worktree_setup {
+            commands.push(TrustLine::new("new worktree: run", setup, "in the worktree"));
+        }
+    }
+    let prompt_text = |file: &str| snapshot.action_prompt(file);
+    for action in snapshot.actions() {
+        // The key runs it before the terminal sees the key press, so the user should know it.
+        let prefix = match action.key_spec() {
+            Some(key) => format!("action {} (key {})", action.id, key.glyphs()),
+            None => format!("action {}", action.id),
+        };
+        action.kind.describe(&mut commands, &prefix, &prompt_text);
+    }
+    if let Some(layout) = snapshot.layout() {
+        for session in &layout.sessions {
+            if let Some(run) = &session.run {
+                let cwd = session.cwd.as_deref().map(|c| format!("in {c}")).unwrap_or_default();
+                commands.push(TrustLine::new(format!("terminal {}: run", session.name), run, cwd));
+            }
+        }
+    }
+    let commands = commands.iter().map(TrustLine::revealed).collect();
+    TrustRequest {
+        root: snapshot.root().to_path_buf(),
+        fingerprint: snapshot.fingerprint().to_string(),
+        files,
+        commands,
     }
 }
 

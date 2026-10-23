@@ -18,6 +18,7 @@ mod notes;
 mod prompts;
 mod snapshot;
 mod trust;
+mod trust_store;
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -38,10 +39,9 @@ pub use notes::{
     plan_sync, render_notes_md,
 };
 pub use prompts::Prompt;
-pub use snapshot::ProjectSnapshot;
-pub use trust::{
-    TrustLine, TrustRequest, TrustStatus, TrustStore, TrustedProject, describe_trust_request, fingerprint,
-};
+pub use snapshot::{ProjectSnapshot, describe_trust_request, fingerprint};
+pub use trust::{TrustLine, TrustRequest, TrustStatus};
+pub use trust_store::{TrustStore, TrustedProject};
 
 /// Name of the project folder inside a repository.
 pub const DIR_NAME: &str = ".wormhole";
