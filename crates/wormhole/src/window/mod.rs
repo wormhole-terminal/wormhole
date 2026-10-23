@@ -111,6 +111,8 @@ mod slide;
 mod stable_list_tests;
 mod status_bar;
 mod terminals;
+#[cfg(test)]
+mod test_access;
 mod tick;
 mod title;
 #[cfg(test)]
@@ -136,20 +138,20 @@ use wormhole_core::view::layout::{Edge, Panes};
 
 pub struct Workspace {
     /// The window's terminals, one session each, in the order the sidebar's manual order keeps.
-    pub(crate) sessions: Vec<Session>,
+    pub(in crate::window) sessions: Vec<Session>,
     /// The splits some of them are shown in (a split's members are adjacent in `sessions`).
     splits: Vec<crate::window::panes::splits::Split>,
     /// Which saved window this is.
-    pub(crate) window_id: i64,
+    pub(in crate::window) window_id: i64,
     /// The profile this window belongs to: its sessions are saved in that profile's database and its
     /// terminals start with that profile's environment.
-    pub(crate) profile: ProfileId,
+    pub(in crate::window) profile: ProfileId,
     /// The selected terminal. When it is in a split, the split is on screen with its pane focused.
-    pub(crate) active: usize,
+    pub(in crate::window) active: usize,
     next_number: usize,
     /// The side panels as the user left them (persisted). Whether the right panel is drawn
     /// also depends on the room left, see `notes_visible`.
-    pub(crate) panes: Panes,
+    pub(in crate::window) panes: Panes,
     /// The window's width as of the last render, for layout decisions made
     /// outside `render` (a shortcut that reveals the panel). Unbounded until the
     /// first frame so nothing collapses on a guess.
@@ -162,10 +164,10 @@ pub struct Workspace {
     sidebar: Entity<crate::sidebar::Sidebar>,
     /// What the window keeps for the list besides: where the terminals are listed, the traffic lights.
     sidebar_feed: self::sidebar_host::SidebarFeed,
-    pub(crate) right_tab: TabId,
+    pub(in crate::window) right_tab: TabId,
     /// The features the app has (`feature`), copied from the installed table when the window was
     /// made so the frame never reads the global. A test installs its own before it opens one.
-    pub(crate) features: &'static [self::feature::FeatureDef],
+    pub(in crate::window) features: &'static [self::feature::FeatureDef],
     /// The entity of each feature that has state, in the table's order (`None` where the entry has
     /// none), made with the window whether the feature is on or off.
     feature_states: Vec<Option<self::feature_host::FeatureState>>,
@@ -216,7 +218,7 @@ pub struct Workspace {
     /// The window title last set (the session's name).
     title: SharedString,
     /// What F6 moves the keyboard to besides the terminal.
-    pub(crate) areas: self::focus::FocusAreas,
+    pub(in crate::window) areas: self::focus::FocusAreas,
     /// Points over the terminal font size in Settings, for this window (⌘+ / ⌘-; not saved).
     font_zoom: f32,
     /// A "close this window?" question is on screen.
@@ -224,7 +226,7 @@ pub struct Workspace {
     /// Whether the close button shows its dot: closing would ask first (`should_close`).
     close_dot: bool,
     /// A "close this terminal?" question is on screen.
-    pub(crate) closing_session_prompt: bool,
+    pub(in crate::window) closing_session_prompt: bool,
     /// The window was closed on purpose: nothing of it is saved any more.
     discarded: bool,
     dirty: bool,
@@ -239,7 +241,7 @@ pub struct Workspace {
     /// While the window opens: the saved terminals on screen, which attach to their hosts with a
     /// repaint at once (the rest attach headless).
     shown_at_launch: Vec<i64>,
-    pub(crate) ticks: u64,
+    pub(in crate::window) ticks: u64,
     _tick: Task<()>,
 }
 

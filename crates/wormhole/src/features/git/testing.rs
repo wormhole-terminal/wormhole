@@ -67,7 +67,7 @@ pub(super) fn go(ws: &mut Workspace, dir: &Path, cx: &mut Context<Workspace>) {
 /// The window asks git about the terminal in front, and the answer is in.
 pub(super) fn read_repo(cx: &mut TestAppContext, window: &OpenWindow) {
     drive(cx, window, |ws, _, cx| {
-        let ix = ws.active;
+        let ix = ws.active_index();
         ws.refresh_git(ix, cx);
     });
     cx.run_until_parked();

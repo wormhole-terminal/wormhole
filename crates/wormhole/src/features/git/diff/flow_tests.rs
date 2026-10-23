@@ -181,7 +181,7 @@ fn comment(
 fn review(cx: &mut TestAppContext, window: &OpenWindow, session: usize) -> (String, Option<String>) {
     read_cx(cx, window, |ws, cx| {
         let entity = changes(ws);
-        let review = entity.read(cx).review(ws.sessions[session].id);
+        let review = entity.read(cx).review(ws.sessions()[session].id);
         review.map_or(("0 comments".to_string(), None), |review| (review.summary(), review.message()))
     })
 }

@@ -41,7 +41,7 @@ fn feature(ws: &Workspace) -> gpui_kit::Entity<Project> {
 
 /// The project terminal `ix` is in, as of the window's last look.
 fn project_of(window: &OpenWindow, ix: usize, cx: &mut TestAppContext) -> Option<PathBuf> {
-    read_cx(cx, window, |ws, cx| feature(ws).read(cx).of[&ws.sessions[ix].id].root.clone())
+    read_cx(cx, window, |ws, cx| feature(ws).read(cx).of[&ws.sessions()[ix].id].root.clone())
 }
 
 /// The window looks for each terminal's project again.
@@ -157,15 +157,15 @@ fn a_terminal_is_in_the_project_of_its_folder(cx: &mut TestAppContext) {
     let bare = std::env::current_dir().expect("scratch").join("bare");
     std::fs::create_dir_all(&bare).expect("mkdir");
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions[0].terminal().update(cx, |t, _| t.cwd = Some(one.clone()));
-        ws.sessions[1].terminal().update(cx, |t, _| t.cwd = Some(two.join("src")));
+        ws.sessions()[0].terminal().update(cx, |t, _| t.cwd = Some(one.clone()));
+        ws.sessions()[1].terminal().update(cx, |t, _| t.cwd = Some(two.join("src")));
         refresh(ws, cx);
     });
     assert_eq!(project_of(&window, 0, cx).as_deref(), Some(one.as_path()));
     assert_eq!(project_of(&window, 1, cx).as_deref(), Some(two.as_path()), "from a folder inside it");
 
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions[1].terminal().update(cx, |t, _| t.cwd = Some(bare.clone()));
+        ws.sessions()[1].terminal().update(cx, |t, _| t.cwd = Some(bare.clone()));
         refresh(ws, cx);
     });
     assert_eq!(project_of(&window, 1, cx), None, "a folder in no project");
@@ -191,12 +191,16 @@ fn the_project_tab_follows_the_flag_and_the_folder(cx: &mut TestAppContext) {
     drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
     assert!(tabs(cx).contains(&TabId::Project));
     drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::Project, cx));
-    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Project);
+    assert_eq!(read(cx, &window, |ws| ws.right_tab()), TabId::Project);
 
     flag(cx, false);
     assert!(!tabs(cx).contains(&TabId::Project), "gone at once");
     drive(cx, &window, |ws, _, cx| refresh(ws, cx));
-    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes, "and the window's next look leaves it");
+    assert_eq!(
+        read(cx, &window, |ws| ws.right_tab()),
+        TabId::Changes,
+        "and the window's next look leaves it"
+    );
 }
 
 /// Nothing a project says runs until the folder is trusted and the part is switched on.
@@ -208,7 +212,7 @@ fn actions_run_only_in_a_trusted_project_with_actions_on(cx: &mut TestAppContext
     let window = start(cx, 1);
     let dir = project("actions", &[("actions.json", ACTIONS)]);
     drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
-    let sessions = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.sessions.len());
+    let sessions = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.sessions().len());
 
     drive(cx, &window, |ws, _, cx| run_action(ws, "more", cx));
     assert_eq!(sessions(cx), 1, "untrusted: nothing runs");
@@ -287,7 +291,7 @@ fn the_layout_opens_its_terminals_once(cx: &mut TestAppContext) {
     );
     drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
     let names = |cx: &mut TestAppContext| {
-        read(cx, &window, |ws| ws.sessions.iter().filter_map(|s| s.custom_name.clone()).collect::<Vec<_>>())
+        read(cx, &window, |ws| ws.sessions().iter().filter_map(|s| s.custom_name.clone()).collect::<Vec<_>>())
     };
 
     drive(cx, &window, |ws, _, cx| open_layout(ws, cx));
@@ -499,7 +503,7 @@ fn a_window_follows_the_trust_of_its_own_profile_not_the_shown_ones(cx: &mut Tes
             (
                 super::api::actionable(ws, cx).is_some(),
                 super::api::action_for_key(ws, &Keystroke::parse("f9").expect("a key"), cx).is_some(),
-                ws.programs_approved(ws.sessions[0].id, cx),
+                ws.programs_approved(ws.sessions()[0].id, cx),
             )
         })
     };
@@ -629,7 +633,7 @@ fn a_status_item_action_runs_in_a_window_of_the_shown_profile(cx: &mut TestAppCo
         )
     });
     cx.run_until_parked();
-    let sessions = |cx: &mut TestAppContext, window: &OpenWindow| read(cx, window, |ws| ws.sessions.len());
+    let sessions = |cx: &mut TestAppContext, window: &OpenWindow| read(cx, window, |ws| ws.sessions().len());
     assert_eq!(sessions(cx, &odd), 2, "Work is shown: its window ran the action");
     assert_eq!(
         sessions(cx, &first),
@@ -666,7 +670,7 @@ fn the_project_entity_keeps_an_entry_for_exactly_the_terminals_of_the_window(cx:
     let window = start(cx, 2);
     let ids = |cx: &mut TestAppContext, window: &OpenWindow| {
         read_cx(cx, window, |ws, cx| {
-            let mut ours: Vec<i64> = ws.sessions.iter().map(|s| s.id).collect();
+            let mut ours: Vec<i64> = ws.sessions().iter().map(|s| s.id).collect();
             ours.sort_unstable();
             let mut kept: Vec<i64> = feature(ws).read(cx).of.keys().copied().collect();
             kept.sort_unstable();
@@ -680,7 +684,7 @@ fn the_project_entity_keeps_an_entry_for_exactly_the_terminals_of_the_window(cx:
     let (kept, ours) = ids(cx, &window);
     assert_eq!((kept.clone(), kept.len()), (ours, 3), "added with a new terminal");
 
-    let new = read(cx, &window, |ws| ws.sessions[2].id);
+    let new = read(cx, &window, |ws| ws.sessions()[2].id);
     drive(cx, &window, |ws, window, cx| {
         let ix = ws.find_session(new).expect("a row");
         ws.close_session(ix, window, cx);
@@ -707,14 +711,16 @@ fn the_entry_offers_the_tab_and_says_who_is_trusted(cx: &mut TestAppContext) {
     let dir = project("entry", &[("actions.json", ACTIONS)]);
     let asked = |cx: &mut TestAppContext| {
         drive(cx, &window, |ws, _, cx| {
-            let at = ws.features.iter().position(|def| def.id == wormhole_core::config::FeatureId::Project);
+            let at =
+                ws.feature_defs().iter().position(|def| def.id == wormhole_core::config::FeatureId::Project);
             let at = at.expect("in the table");
-            let (def, entity) = (&ws.features[at], ws.feature_entity(at).expect("made with the window"));
+            let (def, entity) =
+                (&ws.feature_defs()[at], ws.feature_entity(at).expect("made with the window"));
             let (tab, facts) = (&def.tabs[0], ws.facts(cx));
             (
                 (tab.shown)(&facts, cx),
                 (tab.spoken)(entity, &facts, cx),
-                ws.programs_approved(ws.sessions[0].id, cx),
+                ws.programs_approved(ws.sessions()[0].id, cx),
             )
         })
     };
@@ -740,7 +746,7 @@ fn a_window_with_nobody_to_ask_trusts_no_folder(cx: &mut TestAppContext) {
     }
     let record = WindowRecord { id: 1, ..Default::default() };
     let window = start_with_table(cx, record, &[]);
-    assert!(!read_cx(cx, &window, |ws, cx| ws.programs_approved(ws.sessions[0].id, cx)));
+    assert!(!read_cx(cx, &window, |ws, cx| ws.programs_approved(ws.sessions()[0].id, cx)));
 }
 
 /// Allocations the third draw of a one-terminal window on the Project tab of a trusted project (three
@@ -780,7 +786,7 @@ fn a_window_frame_on_project_stays_within_its_allocation_budget(cx: &mut TestApp
         go(ws, &dir, cx);
         ws.show_tab(TabId::Project, cx);
     });
-    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Project);
+    assert_eq!(read(cx, &window, |ws| ws.right_tab()), TabId::Project);
     assert_eq!(status(cx, &dir), Some(TrustStatus::Trusted));
     // The first draws build what a window keeps; the third is a frame.
     draw(cx, &window);

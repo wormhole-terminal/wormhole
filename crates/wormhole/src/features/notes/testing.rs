@@ -15,7 +15,7 @@ fn at<R>(
     f: impl FnOnce(&mut Notes, i64, f32, &mut Context<Notes>) -> R,
 ) -> R {
     let notes = ws.feature::<Notes>().expect("the window has notes");
-    let (session, panel) = (ws.sessions[ix].id, ws.columns().panel);
+    let (session, panel) = (ws.sessions()[ix].id, ws.columns().panel);
     notes.update(cx, |notes, ncx| f(notes, session, panel, ncx))
 }
 
@@ -89,19 +89,19 @@ pub(crate) fn add_task(ws: &Workspace, ix: usize, text: &str, cx: &mut Context<W
 /// A task of the terminal `ix` as the test looks at it.
 pub(crate) fn tasks(ws: &Workspace, ix: usize, cx: &App) -> Vec<(String, bool)> {
     let notes = ws.feature::<Notes>().expect("the window has notes");
-    let of = &notes.read(cx).of[&ws.sessions[ix].id];
+    let of = &notes.read(cx).of[&ws.sessions()[ix].id];
     of.tasks.items().iter().map(|t| (t.text.to_string(), t.done)).collect()
 }
 
 /// Whether terminal `ix`'s Next steps section is folded.
 pub(crate) fn tasks_collapsed(ws: &Workspace, ix: usize, cx: &App) -> bool {
     let notes = ws.feature::<Notes>().expect("the window has notes");
-    notes.read(cx).of[&ws.sessions[ix].id].tasks.collapsed
+    notes.read(cx).of[&ws.sessions()[ix].id].tasks.collapsed
 }
 
 pub(crate) fn notes_collapsed(ws: &Workspace, ix: usize, cx: &App) -> bool {
     let notes = ws.feature::<Notes>().expect("the window has notes");
-    notes.read(cx).of[&ws.sessions[ix].id].notes_collapsed
+    notes.read(cx).of[&ws.sessions()[ix].id].notes_collapsed
 }
 
 pub(crate) fn set_notes_collapsed(ws: &Workspace, ix: usize, collapsed: bool, cx: &mut Context<Workspace>) {
@@ -111,13 +111,13 @@ pub(crate) fn set_notes_collapsed(ws: &Workspace, ix: usize, collapsed: bool, cx
 /// How many notes terminal `ix` has.
 pub(crate) fn note_count(ws: &Workspace, ix: usize, cx: &App) -> usize {
     let notes = ws.feature::<Notes>().expect("the window has notes");
-    notes.read(cx).of[&ws.sessions[ix].id].notes.len()
+    notes.read(cx).of[&ws.sessions()[ix].id].notes.len()
 }
 
 /// Note `n` of terminal `ix`: its editor and whether it is folded.
 pub(crate) fn note(ws: &Workspace, ix: usize, n: usize, cx: &App) -> (Entity<TextareaState>, bool) {
     let notes = ws.feature::<Notes>().expect("the window has notes");
-    let note = &notes.read(cx).of[&ws.sessions[ix].id].notes[n];
+    let note = &notes.read(cx).of[&ws.sessions()[ix].id].notes[n];
     (note.state.clone(), note.collapsed)
 }
 

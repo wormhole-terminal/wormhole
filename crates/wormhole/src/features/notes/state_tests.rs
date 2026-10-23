@@ -205,7 +205,7 @@ fn a_terminal_moved_to_another_window_keeps_its_notes_and_tasks(cx: &mut TestApp
         .expect("a window of its own");
     let after = drive(cx, &other, |ws, _, cx| saved(ws, 11, cx));
     assert_eq!(after, before, "the same notes and tasks, in the same folds");
-    let here: Vec<i64> = read(cx, &window, |ws| ws.sessions.iter().map(|s| s.id).collect());
+    let here: Vec<i64> = read(cx, &window, |ws| ws.sessions().iter().map(|s| s.id).collect());
     assert_eq!(here, [1], "and the first window no longer has the terminal");
 }
 
@@ -215,7 +215,7 @@ fn choosing_another_terminal_lets_go_of_the_focused_note(cx: &mut TestAppContext
         return;
     }
     let window = start(cx, 2);
-    drive(cx, &window, |ws, window, cx| notes::new_note(ws, ws.active, Some("first"), window, cx));
+    drive(cx, &window, |ws, window, cx| notes::new_note(ws, ws.active_index(), Some("first"), window, cx));
     assert_eq!(read_cx(cx, &window, focused_note), Some(0));
     drive(cx, &window, |ws, window, cx| ws.activate(1, window, cx));
     assert_eq!(read_cx(cx, &window, focused_note), None, "the other terminal starts fresh");
@@ -239,7 +239,7 @@ fn the_notes_list_is_walked_by_the_keys_and_a_note_is_folded_or_written_in(cx: &
     });
     draw(cx, &window);
     // Two lists, one ⇥ stop each: Next steps (its band, a, b) and Notes (its band, n1, n2).
-    assert!(read(cx, &window, |ws| ws.areas.panel_at.is_none()));
+    assert!(read(cx, &window, |ws| ws.areas().panel_at.is_none()));
     assert_eq!(drive(cx, &window, |ws, _, cx| ws.panel_lists(cx)), [0, 3]);
 
     let area = |cx: &mut TestAppContext| {
@@ -287,7 +287,7 @@ fn cmd_shift_e_with_no_note_starts_one_and_with_notes_goes_to_the_one_worked_on(
             ws.focus_terminal(window, cx);
             ws.toggle_focus(window, cx);
         });
-        drive(cx, &window, |ws, _, cx| (ws.right_tab, saved(ws, 1, cx).notes.len(), focused_note(ws, cx)))
+        drive(cx, &window, |ws, _, cx| (ws.right_tab(), saved(ws, 1, cx).notes.len(), focused_note(ws, cx)))
     };
     // An empty note is thrown away when it loses the keyboard, so the first press makes one and the
     // next, with the terminal focused again, finds none and makes another.
@@ -304,7 +304,7 @@ fn cmd_shift_e_with_no_note_starts_one_and_with_notes_goes_to_the_one_worked_on(
             ws.focus_terminal(window, cx);
             ws.toggle_focus(window, cx);
         });
-        drive(cx, &window, |ws, _, cx| (ws.right_tab, saved(ws, 11, cx).notes.len(), focused_note(ws, cx)))
+        drive(cx, &window, |ws, _, cx| (ws.right_tab(), saved(ws, 11, cx).notes.len(), focused_note(ws, cx)))
     };
     assert_eq!(toggle_in_11(cx), (TabId::Notes, 2, Some(0)), "the first note when none was worked on");
     drive(cx, &window, |ws, _, cx| notes::set_focused_note(ws, Some(1), cx));
@@ -319,7 +319,7 @@ fn the_notes_keep_an_entry_for_exactly_the_terminals_of_the_window(cx: &mut Test
     let window = start(cx, 2);
     let ids = |cx: &mut TestAppContext, window: &OpenWindow| {
         read_cx(cx, window, |ws, cx| {
-            let mut ours: Vec<i64> = ws.sessions.iter().map(|s| s.id).collect();
+            let mut ours: Vec<i64> = ws.sessions().iter().map(|s| s.id).collect();
             ours.sort_unstable();
             (notes::kept_ids(ws, cx), ours)
         })

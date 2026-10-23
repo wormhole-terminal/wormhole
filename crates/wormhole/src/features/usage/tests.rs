@@ -75,10 +75,10 @@ pub(crate) fn drawn(cx: &mut TestAppContext, window: &OpenWindow, name: &str) ->
 pub(crate) fn on_usage(cx: &mut TestAppContext) -> OpenWindow {
     let window = start(cx, 1);
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Claude));
+        ws.sessions()[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Claude));
         ws.show_tab(TabId::Usage, cx);
     });
-    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Usage);
+    assert_eq!(read(cx, &window, |ws| ws.right_tab()), TabId::Usage);
     window
 }
 
@@ -132,12 +132,12 @@ fn the_tab_redraws_on_the_tick_only_while_it_shows(cx: &mut TestAppContext) {
         drive(cx, &window, |ws, _, cx| {
             // The tick looks for the agent in the terminal's process tree, where `cat` runs and none
             // does, so it is told again before each.
-            ws.sessions[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Claude));
+            ws.sessions()[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Claude));
             ws.show_tab(tab, cx);
         });
         redraws.set(0);
         drive(cx, &window, |ws, window, cx| {
-            ws.ticks = at - 1;
+            ws.set_ticks(at - 1);
             ws.tick(window, cx);
         });
         redraws.get()
@@ -237,8 +237,10 @@ fn the_entry_offers_the_tab_and_its_menu_line_while_an_agent_is_on_screen(cx: &m
     let window = start(cx, 1);
     let asked = |cx: &mut TestAppContext| {
         drive(cx, &window, |ws, _, cx| {
-            let at = ws.features.iter().position(|def| def.id == FeatureId::Usage).expect("in the table");
-            let (def, entity) = (&ws.features[at], ws.feature_entity(at).expect("made with the window"));
+            let at =
+                ws.feature_defs().iter().position(|def| def.id == FeatureId::Usage).expect("in the table");
+            let (def, entity) =
+                (&ws.feature_defs()[at], ws.feature_entity(at).expect("made with the window"));
             let (tab, facts) = (&def.tabs[0], ws.facts(cx));
             let mut state = Default::default();
             (def.menu.expect("has a menu hook"))(entity, &facts, &mut state, cx);
@@ -248,7 +250,7 @@ fn the_entry_offers_the_tab_and_its_menu_line_while_an_agent_is_on_screen(cx: &m
     };
     assert_eq!(asked(cx), (false, true, "Usage".to_string()), "no agent");
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Codex));
+        ws.sessions()[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Codex));
     });
     assert_eq!(asked(cx), (true, false, "Usage".to_string()), "an agent");
 }

@@ -58,13 +58,13 @@ fn command_line(
 }
 
 fn sessions(cx: &mut TestAppContext, window: &OpenWindow) -> usize {
-    read(cx, window, |ws| ws.sessions.len())
+    read(cx, window, |ws| ws.sessions().len())
 }
 
 /// The worktree Wormhole made that terminal `ix` is in.
 fn made(cx: &mut TestAppContext, window: &OpenWindow, ix: usize) -> Option<Worktree> {
     read_cx(cx, window, |ws, cx| {
-        let cwd = ws.sessions[ix].terminal().read(cx).cwd.clone()?;
+        let cwd = ws.sessions()[ix].terminal().read(cx).cwd.clone()?;
         app(cx).worktrees.find(&cwd).cloned()
     })
 }
@@ -116,7 +116,7 @@ fn trust(cx: &mut TestAppContext, root: &std::path::Path) {
 /// remove the worktree too.
 fn group_question(cx: &mut TestAppContext, window: &OpenWindow) -> (String, bool) {
     read_cx(cx, window, |ws, cx| {
-        let extras = ws.close_extras(&[ws.sessions[1].id], CloseOf::Group, cx);
+        let extras = ws.close_extras(&[ws.sessions()[1].id], CloseOf::Group, cx);
         let extra = extras.into_iter().next().expect("the terminal is in a worktree Wormhole made");
         (extra.note, extra.also.is_some())
     })
@@ -152,7 +152,7 @@ fn the_menu_item_asks_and_makes_nothing_until_the_person_confirms(cx: &mut TestA
     assert!(!asking(cx, &window));
     let folder = base.join(root.file_name().expect("a name")).join("fix-login");
     let made_folder =
-        read_cx(cx, &window, |ws, cx| ws.sessions.last().and_then(|s| s.terminal().read(cx).cwd.clone()));
+        read_cx(cx, &window, |ws, cx| ws.sessions().last().and_then(|s| s.terminal().read(cx).cwd.clone()));
     let worktree = made(cx, &window, 1).expect("the new terminal is in a worktree Wormhole made");
     assert_eq!(worktree.branch, "fix/login");
     assert_eq!(made_folder.as_deref(), Some(worktree.folder.as_path()));
@@ -160,7 +160,7 @@ fn the_menu_item_asks_and_makes_nothing_until_the_person_confirms(cx: &mut TestA
     assert!(worktree.folder.starts_with(&base) && worktree.repo == root);
     let _ = folder;
     assert_eq!(sessions(cx, &window), 2);
-    assert_eq!(read(cx, &window, |ws| ws.active), 1, "selected");
+    assert_eq!(read(cx, &window, |ws| ws.active_index()), 1, "selected");
     assert!(cx.update(|cx| app(cx).worktrees.find(&worktree.folder).is_some()));
     assert!(worktree.port.is_some(), "with ports of its own");
 
@@ -300,7 +300,7 @@ fn closing_a_terminal_in_a_made_worktree_asks_and_keeps_a_worktree_with_changes(
 
     // Clean: the group question offers to remove it too.
     drive(cx, &window, |ws, _, cx| {
-        let ix = ws.active;
+        let ix = ws.active_index();
         ws.refresh_git(ix, cx);
     });
     cx.run_until_parked();
@@ -311,12 +311,12 @@ fn closing_a_terminal_in_a_made_worktree_asks_and_keeps_a_worktree_with_changes(
     // The question comes first: the terminal is still there.
     drive(cx, &window, |ws, window, cx| ws.request_close_session(1, window, cx));
     assert_eq!(sessions(cx, &window), 2);
-    assert!(read(cx, &window, |ws| ws.closing_session_prompt), "asked");
+    assert!(read(cx, &window, |ws| ws.closing_session_prompt()), "asked");
 
     // With changes in it the worktree stays, and the question says so.
     write(&worktree.folder, &[("new.txt", "x\n")]);
     drive(cx, &window, |ws, _, cx| {
-        let ix = ws.active;
+        let ix = ws.active_index();
         ws.refresh_git(ix, cx);
     });
     cx.run_until_parked();

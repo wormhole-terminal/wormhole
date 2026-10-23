@@ -165,20 +165,20 @@ fn the_keys_walk_the_list_and_return_opens_a_diff(cx: &mut TestAppContext) {
         assert!(ws.panel_key(&Keystroke::parse("down").expect("a key"), window, cx));
         assert!(ws.panel_key(&Keystroke::parse("down").expect("a key"), window, cx));
         assert_eq!(
-            ws.areas.panel_at.map(|(tab, row)| (tab, row > list[0].row)),
+            ws.areas().panel_at.map(|(tab, row)| (tab, row > list[0].row)),
             Some((TabId::Changes, true))
         );
     });
     // ↩ on a file opens its diff and keeps the keys in the list.
     drive(cx, &window, |ws, window, cx| {
-        ws.areas.panel_at = Some((TabId::Changes, first_file));
+        ws.areas_mut().panel_at = Some((TabId::Changes, first_file));
         assert!(ws.panel_key(&Keystroke::parse("enter").expect("a key"), window, cx));
     });
     assert!(open_path(cx, &window).is_some(), "the diff is open");
     // ↩ on the band does nothing; Space folds it, and the rows change shape.
     let before = rows(cx, &window);
     drive(cx, &window, |ws, window, cx| {
-        ws.areas.panel_at = Some((TabId::Changes, list[0].row));
+        ws.areas_mut().panel_at = Some((TabId::Changes, list[0].row));
         assert!(ws.panel_key(&Keystroke::parse("space").expect("a key"), window, cx));
     });
     assert_ne!(rows(cx, &window), before, "the section folded");
@@ -279,7 +279,7 @@ fn the_history_key_shows_the_tab_and_the_menu_checks_it(cx: &mut TestAppContext)
     draw(cx, &window);
     with_window(cx, &window, |window, cx| window.dispatch_action(Box::new(ShowHistory), cx));
     cx.run_until_parked();
-    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::History);
+    assert_eq!(read(cx, &window, |ws| ws.right_tab()), TabId::History);
     let checked = read_cx(cx, &window, |ws, cx| ws.menu_state(cx).checked);
     assert!(checked.contains(&ActionId::ShowHistory) && !checked.contains(&ActionId::ShowChanges));
     // The menu line and the palette list it, enabled.
@@ -371,14 +371,14 @@ fn history_off_hides_its_tab_key_menu_line_and_commits_and_never_changes_or_work
         ws.focus_terminal(window, cx);
     });
     draw(cx, &window);
-    let before = read(cx, &window, |ws| (ws.right_tab, ws.panes));
+    let before = read(cx, &window, |ws| (ws.right_tab(), ws.panes()));
     assert_eq!(before.0, TabId::Notes);
     with_window(cx, &window, |window, cx| window.dispatch_action(Box::new(ShowHistory), cx));
     cx.run_until_parked();
-    assert_eq!(read(cx, &window, |ws| (ws.right_tab, ws.panes)), before, "the key was not handled");
+    assert_eq!(read(cx, &window, |ws| (ws.right_tab(), ws.panes())), before, "the key was not handled");
     // Showing the tab by other means shows Changes.
     drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::History, cx));
-    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes);
+    assert_eq!(read(cx, &window, |ws| ws.right_tab()), TabId::Changes);
     // The palette's commits have nowhere to go.
     let second = read_cx(cx, &window, |ws, cx| {
         let history = ws.feature::<super::history::History>().expect("in the table");
@@ -386,7 +386,7 @@ fn history_off_hides_its_tab_key_menu_line_and_commits_and_never_changes_or_work
     });
     drive(cx, &window, |ws, _, cx| super::history::api::reveal_commit(ws, root.clone(), second.clone(), cx));
     cx.run_until_parked();
-    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes);
+    assert_eq!(read(cx, &window, |ws| ws.right_tab()), TabId::Changes);
 
     // Changes and its compare picker, and the worktree dialog, are as they were.
     draw(cx, &window);

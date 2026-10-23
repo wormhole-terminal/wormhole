@@ -235,7 +235,7 @@ fn a_commit_found_in_the_palette_is_revealed_on_its_branch_or_on_head(cx: &mut T
     });
     cx.run_until_parked();
     reveal(cx, &window, &root, &second);
-    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::History);
+    assert_eq!(read(cx, &window, |ws| ws.right_tab()), TabId::History);
     assert_eq!(expanded(cx, &window), Some(second.sha.clone()));
     assert_eq!(history_branch(cx, &window).as_deref(), Some("other"));
     // A commit that is not on the branch shown puts the log back on HEAD.
@@ -279,7 +279,7 @@ fn the_tab_reads_the_log_again_on_the_tick_while_it_shows(cx: &mut TestAppContex
     git(&root, &["commit", "-q", "-m", "third"]);
     // Every 12th tick (about 5 s), not each one.
     drive(cx, &window, |ws, window, cx| {
-        ws.ticks = 11;
+        ws.set_ticks(11);
         ws.tick(window, cx);
     });
     cx.run_until_parked();
@@ -290,7 +290,7 @@ fn the_tab_reads_the_log_again_on_the_tick_while_it_shows(cx: &mut TestAppContex
     git(&root, &["commit", "-q", "-m", "fourth"]);
     drive(cx, &window, |ws, window, cx| {
         ws.show_tab(TabId::Notes, cx);
-        ws.ticks = 22;
+        ws.set_ticks(22);
         ws.tick(window, cx);
     });
     cx.run_until_parked();
@@ -319,12 +319,12 @@ fn a_folder_that_becomes_a_repository_gets_its_log_at_once(cx: &mut TestAppConte
     git(&plain, &["commit", "-q", "-m", "first"]);
     // The window asks git about the folder (its own poll), then the tick that is not the 12th.
     drive(cx, &window, |ws, _, cx| {
-        let ix = ws.active;
+        let ix = ws.active_index();
         ws.refresh_git(ix, cx);
     });
     cx.run_until_parked();
     drive(cx, &window, |ws, window, cx| {
-        ws.ticks = 1;
+        ws.set_ticks(1);
         ws.tick(window, cx);
     });
     cx.run_until_parked();
@@ -381,7 +381,7 @@ fn the_tab_follows_a_terminal_that_was_restarted(cx: &mut TestAppContext) {
     assert_ne!(read(cx, &window, |ws| ws.active_terminal()), old, "a new view under the same id");
     cx.update(|cx| old.update(cx, |terminal, _| terminal.cwd = Some(first.clone())));
     drive(cx, &window, |ws, window, cx| {
-        ws.ticks = 11;
+        ws.set_ticks(11);
         ws.tick(window, cx);
     });
     cx.run_until_parked();
@@ -416,7 +416,7 @@ fn a_window_frame_on_history_stays_within_its_allocation_budget(cx: &mut TestApp
     two_commits(cx, &window, "history-frame");
     let second = first_commit(cx, &window);
     toggle_commit(cx, &window, &second.sha);
-    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::History);
+    assert_eq!(read(cx, &window, |ws| ws.right_tab()), TabId::History);
     // The first draws build what a window keeps; the third is a frame.
     draw(cx, &window);
     draw(cx, &window);
