@@ -14,10 +14,12 @@ use wormhole_core::view::panes::Axis;
 use wormhole_core::view::sidebar::command::{OutputFacts, ends_by_itself, has_new_output};
 use wormhole_core::view::sidebar::{Listing, RowState, TerminalsIn, WindowSidebar};
 
+use crate::app_state::app;
 use crate::settings::{settings_in, ui_in};
 use crate::terminal_view::Status;
 use crate::window::Workspace;
 use crate::window::chrome::traffic_light_position;
+use crate::window::sidebar::profile_chip::Profiles;
 use crate::window::sidebar::terminal_drag::TerminalDrag;
 use crate::window::sidebar::{
     NewTerminal, RowFailure, RowInfo, Sidebar, SidebarEvent, SidebarInput, row_times,
@@ -286,10 +288,17 @@ impl Workspace {
         self.sidebar.update(cx, |sidebar, cx| sidebar.render_tab_bar(window, cx))
     }
 
+    /// The app's profiles for the chip, while there are two or more to choose between.
+    pub(super) fn profiles_for_chip(cx: &App) -> Option<Profiles> {
+        let list = &app(cx).profiles;
+        (list.profiles().len() >= 2)
+            .then(|| Profiles { list: list.profiles().to_vec(), active: list.active_id().clone() })
+    }
+
     /// Whether the profile chip is drawn: two or more profiles.
     #[cfg(test)]
     pub(super) fn profile_chip_shown(&self, cx: &App) -> bool {
-        Sidebar::profile_chip_shown(cx)
+        Self::profiles_for_chip(cx).is_some()
     }
 
     /// The profile chip, for the sidebar's header.

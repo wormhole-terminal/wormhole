@@ -103,6 +103,8 @@ pub(in crate::window) struct Sidebar {
     tabs: tab_bar::TabBarState,
     /// The profile chip's menu being open, and the list it shows.
     profile_menu: Option<profile_chip::ProfilePage>,
+    /// Where the chip reads the app's profiles from.
+    profiles: profile_chip::ProfilesFn,
 }
 
 impl EventEmitter<SidebarEvent> for Sidebar {}
@@ -112,6 +114,7 @@ impl Sidebar {
     pub(in crate::window) fn new(
         view: WindowSidebar,
         focus: FocusHandle,
+        profiles: profile_chip::ProfilesFn,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -139,6 +142,7 @@ impl Sidebar {
             demo: None,
             tabs: tab_bar::TabBarState::default(),
             profile_menu: None,
+            profiles,
         }
     }
 

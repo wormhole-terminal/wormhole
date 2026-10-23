@@ -291,7 +291,8 @@ impl Workspace {
         let areas = self::focus::FocusAreas::new(cx);
         let list_focus = areas.list_focus();
         let view = std::mem::take(&mut layout.sidebar);
-        let sidebar = cx.new(|cx| self::sidebar::Sidebar::new(view, list_focus, window, cx));
+        let sidebar =
+            cx.new(|cx| self::sidebar::Sidebar::new(view, list_focus, Self::profiles_for_chip, window, cx));
         cx.subscribe_in(&sidebar, window, Self::on_sidebar_event).detach();
         // The list draws itself (a hover, a rename, a menu): so does the window around it.
         cx.observe(&sidebar, |_, _, cx| cx.notify()).detach();
