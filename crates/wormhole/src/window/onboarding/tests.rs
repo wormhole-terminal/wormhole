@@ -10,6 +10,7 @@ use gpui_kit::TestAppContext;
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
 use wormhole_core::config::features::FeatureFlag;
+use wormhole_core::config::settings_index::SectionId;
 use wormhole_core::onboarding::{Event, ONBOARDED_KEY, Step};
 use wormhole_core::project::{ProjectFolder, TrustStatus};
 use wormhole_core::storage::store::Store;
@@ -17,7 +18,7 @@ use wormhole_core::storage::store::Store;
 use super::{AgentsNote, FADE_OUT};
 use crate::app_state::{OpenWindow, app, app_mut};
 use crate::settings::update_settings;
-use crate::window::view_tests::{draw, drive, isolate_in, press, read, read_cx, start};
+use crate::window::view_tests::{draw, drive, isolate_in, press, read, read_cx, start, with_window};
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
 fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
@@ -423,4 +424,20 @@ fn devctls_close_leaves_the_intro_without_remembering_it(cx: &mut TestAppContext
     drive(cx, &window, |ws, window, cx| ws.close_onboarding(window, cx));
     assert_eq!(step(cx, &window), None);
     assert!(!remembered(cx), "closed, not finished");
+}
+
+#[gpui_kit::test]
+fn the_notes_settings_link_is_an_action_the_app_answers_by_opening_settings(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "the_notes_settings_link_is_an_action_the_app_answers_by_opening_settings")
+    {
+        return;
+    }
+    let window = start(cx, 1);
+    assert!(cx.update(|cx| app(cx).settings_window.is_none()));
+    // What the link in the sidebar's "No coding agents yet" note dispatches from the window.
+    with_window(cx, &window, |window, cx| {
+        window.dispatch_action(Box::new(crate::actions::OpenSettingsAt(SectionId::Agents)), cx)
+    });
+    cx.run_until_parked();
+    assert!(cx.update(|cx| app(cx).settings_window.is_some()), "Settings opened");
 }

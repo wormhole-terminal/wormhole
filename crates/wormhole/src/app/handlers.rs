@@ -19,8 +19,8 @@ use wormhole_core::view::sidebar::TerminalsIn;
 use crate::actions::{
     About, BringAllToFront, CheckForUpdates, GoToFinished, GoToWaiting, Hide, HideOthers, Licenses,
     ManageProfiles, Minimize, MoveWindowToProfile, NewProfile, NewWindow, OpenFolder, OpenRecent,
-    OpenSettings, OpenWindowInProfile, PlayIntroAurora, PlayIntroCollapse, PlayIntroEmerge, PlayIntroFtl,
-    PlayIntroTentacles, PlayIntroVortex, PlayIntroVoyage, PlayWelcomeCursor, PlayWelcomeLogo,
+    OpenSettings, OpenSettingsAt, OpenWindowInProfile, PlayIntroAurora, PlayIntroCollapse, PlayIntroEmerge,
+    PlayIntroFtl, PlayIntroTentacles, PlayIntroVortex, PlayIntroVoyage, PlayWelcomeCursor, PlayWelcomeLogo,
     PlayWelcomePortal, ShowAll, ShowIntro, ShowKeyboardShortcuts, ShowLogs, SwitchProfile,
     ToggleCommandPalette, ToggleFullScreen, ToggleMinimap, ToggleStatusBar, ToggleTerminalTabs,
     ToggleThemeStudio, Zoom,
@@ -89,6 +89,10 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &About, cx| cx.defer(about::open_about));
     cx.on_action(|_: &Licenses, cx| cx.defer(about::open_licenses));
     cx.on_action(|_: &OpenSettings, cx| cx.defer(|cx| settings_window::open_settings(None, cx)));
+    cx.on_action(|open: &OpenSettingsAt, cx| {
+        let section = open.0;
+        cx.defer(move |cx| settings_window::open_settings(Some(section), cx))
+    });
     // ⌘O: a terminal in the picked folder, in the window in front (the status item's too).
     cx.on_action(|_: &OpenFolder, cx| cx.defer(status_item::open_folder));
     // ⌥⌘J: the terminal that has waited longest, in any window.

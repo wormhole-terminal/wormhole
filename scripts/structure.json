@@ -254,13 +254,11 @@
       "wormhole: updates -> app_state": 1,
       "wormhole: updates -> window": 1,
       "wormhole: window -> app_state": 1,
-      "wormhole: window -> notifications": 1,
-      "wormhole: window -> settings_window": 1
+      "wormhole: window -> notifications": 1
     },
     "layers": {
       "wormhole: app_state -> status_item": 1,
-      "wormhole: window -> notifications": 1,
-      "wormhole: window -> settings_window": 1
+      "wormhole: window -> notifications": 1
     },
     "cross-reexports": {
       "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1

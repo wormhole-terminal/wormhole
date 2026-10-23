@@ -28,13 +28,14 @@
 //! Everything that sits above the window has left this folder (`app`, `command_palette`,
 //! `shortcut_sheet`, `status_item`, `settings_window`, `studio`, `about`, `notifications`,
 //! `updates`), and so have the shared state and the actions it builds on (`app_state`, `actions`).
-//! The window uses nothing above it but two known exceptions, kept until phase 5:
+//! The window uses nothing above it but one known exception, kept until phase 5:
 //! - it calls `notifications`' `dismiss` and `sweep` (the window will emit seen and closed events
 //!   instead) from `tick`, `terminals`, `panes` (and `panes::splits`), `windows` and this file's
 //!   window-activation observer, `finished_commands` from `ambient`, and `permission_asks` from
-//!   the welcome;
-//! - the welcome's agents step opens Settings (`onboarding`: `settings_window::open_settings`,
-//!   which an action carrying the section will replace).
+//!   the welcome.
+//!
+//! The welcome's agents step opens Settings by dispatching an action that carries the section
+//! (`actions::OpenSettingsAt`), which the app root answers.
 //!
 //! The nested areas `sidebar/` and `onboarding/` still keep their state in `Workspace` (the features no
 //! longer do: each owns its state in an entity):

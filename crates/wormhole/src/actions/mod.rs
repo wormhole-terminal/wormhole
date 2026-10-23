@@ -12,6 +12,7 @@ use std::rc::Rc;
 
 use gpui_kit::component::input;
 use gpui_kit::*;
+use wormhole_core::config::settings_index::SectionId;
 use wormhole_core::keys::keymap::{self, ActionId, Scope, Stage};
 
 use crate::terminal_view::{
@@ -146,6 +147,12 @@ pub struct OpenWindowInProfile(pub SharedString);
 #[derive(Clone, Debug, PartialEq, Action)]
 #[action(namespace = app, no_json)]
 pub struct MoveWindowToProfile(pub SharedString);
+
+/// A link in a window that opens Settings at a page (the first run's "Coding agents settings"): the
+/// window dispatches it and the app root, which owns the Settings window, handles it.
+#[derive(Clone, Debug, PartialEq, Action)]
+#[action(namespace = app, no_json)]
+pub struct OpenSettingsAt(pub SectionId);
 
 /// Shell → New Terminal With: a new terminal running the shell with this key.
 #[derive(Clone, Debug, PartialEq, Action)]

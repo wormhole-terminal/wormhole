@@ -35,14 +35,15 @@ use gpui_kit::assets::IconName;
 use gpui_kit::*;
 use wormhole_core::agents::integrations::{self, Spec, State};
 use wormhole_core::agents::{self, AGENTS, Agent};
+use wormhole_core::config::settings_index::SectionId;
 use wormhole_core::onboarding::intro::Start;
 use wormhole_core::onboarding::{
     self, Action, Event, ONBOARDED_KEY, Onboarding, Place, Step, Tip, should_show,
 };
 
+use crate::actions::OpenSettingsAt;
 use crate::app_state::{AppState, app, app_mut};
 use crate::settings::{UiColors, ui};
-use crate::settings_window;
 use crate::style::{self, Edges, TextRole};
 use crate::window::Workspace;
 use crate::window::features::project;
@@ -480,8 +481,8 @@ impl Workspace {
                         .child(
                             style::link_button("no-agents-settings", ui, "Coding agents settings", false)
                                 .ml(px(-NOTE_LINK_INSET))
-                                .on_click(|_, _, cx| {
-                                    settings_window::open_settings(Some(settings_window::Section::Agents), cx)
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(Box::new(OpenSettingsAt(SectionId::Agents)), cx)
                                 }),
                         ),
                 )
