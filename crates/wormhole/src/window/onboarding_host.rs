@@ -100,7 +100,7 @@ impl Workspace {
         if !self.first_run.read(cx).note_wanted(dismissed) {
             return None;
         }
-        let agent_seen = self.sessions.iter().any(|session| session.terminal().read(cx).agent.is_some());
+        let agent_seen = self.sessions.iter().any(|session| session.pane.summary.agent.is_some());
         self.first_run.update(cx, |first_run, cx| first_run.render_no_agents_note(agent_seen, cx))
     }
 

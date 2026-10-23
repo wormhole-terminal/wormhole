@@ -59,7 +59,7 @@ impl History {
                     ))
                     .into_any_element();
             }
-            let answered = terminal.read(cx).cwd.as_deref().is_some_and(|cwd| history.answered_for(cwd));
+            let answered = active.folder().is_some_and(|cwd| history.answered_for(cwd));
             let text = if answered {
                 "This terminal's folder isn't inside a git repository."
             } else {
