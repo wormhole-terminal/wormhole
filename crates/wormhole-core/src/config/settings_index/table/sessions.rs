@@ -60,7 +60,7 @@ pub(super) const SESSIONS: &[Group] = &[
 
 pub(super) const GIT: &[Group] = &[
     group(
-        SETTINGS_SESSIONS_GROUP_CHANGES_PANEL,
+        SETTINGS_GIT_GROUP_CHANGES_PANEL,
         &[
             entry("changes-view", SETTINGS_GIT_CHANGES_VIEW, &["changes_tree"])
                 .with_description(SETTINGS_GIT_CHANGES_VIEW_DESCRIPTION)
@@ -71,7 +71,7 @@ pub(super) const GIT: &[Group] = &[
         ],
     ),
     group(
-        SETTINGS_SESSIONS_GROUP_DIFF_VIEW,
+        SETTINGS_GIT_GROUP_DIFF_VIEW,
         &[
             entry("diff-layout", SETTINGS_GIT_DIFF_LAYOUT, &["diff_split"])
                 .with_description(SETTINGS_GIT_DIFF_LAYOUT_DESCRIPTION)

@@ -4,15 +4,21 @@
 settings-section-git = Changes & diffs
     .intro = The Changes panel and the diff view.
 
+## Changes panel
+
+settings-git-group-changes-panel = Changes panel
+
 settings-git-changes-view = File view
     .description = A flat list, or folders as a tree
     .keywords = folders files list tree
 
-## Group untracked files separately
-
 settings-git-group-untracked = Group untracked files separately
     .description = New files get their own section under the changes
     .keywords = untracked new files
+
+## Diff view
+
+settings-git-group-diff-view = Diff view
 
 settings-git-diff-layout = Default layout
     .description = Split keeps old and new side by side, even for a new or deleted file. The diff's own toolbar switches one diff

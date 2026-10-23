@@ -24,9 +24,6 @@ settings-window-clear-search = Clear search
 
 settings-window-settings = Settings
 
-## settings_window/open.rs (labels, hints and notes drawn by this page's code)
-
-
 ## settings_window/registry.rs (labels, hints and notes drawn by this page's code)
 
 settings-window-edit-in-project = Edit in project

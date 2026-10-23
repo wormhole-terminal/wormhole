@@ -27,13 +27,9 @@ settings-sessions-cards = Show groups as cards
     .description = Off: groups are a head and their rows, with no card around them
     .keywords = cards groups card background border
 
-## Fade group colours
-
 settings-sessions-fade-group-colors = Fade group colours
     .description = On: a group's colour fades out across its card; off, it fills the card evenly
     .keywords = fade gradient group colour color card wash
-
-## Show group folders
 
 settings-sessions-show-group-folders = Show group folders
     .description = The folder a group's new terminals start in, under its name
@@ -62,14 +58,6 @@ settings-sessions-sidebar-dot = Status dot
 settings-sessions-sidebar-notes = Notes and tasks
     .description = Note icon with the number of notes and open tasks
     .keywords = notes tasks next steps count
-
-## Changes panel
-
-settings-sessions-group-changes-panel = Changes panel
-
-## Diff view
-
-settings-sessions-group-diff-view = Diff view
 
 ## settings_window/sections/sessions.rs (labels, hints and notes drawn by this page's code)
 
