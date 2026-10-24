@@ -28,7 +28,7 @@ use crate::window::Workspace;
 use crate::window::window_lifecycle::open_tab;
 
 /// One terminal (a sidebar row) as the bar counts it.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(super) struct Counted {
     tab: i64,
     activity: Activity,
@@ -60,6 +60,20 @@ pub(super) struct StatusBar {
     /// The profile of a window that is not in the profile Wormhole is in, while the window is
     /// wide enough: the bar's lowest-priority item, at its left.
     profile: Option<ProfileTag>,
+}
+
+impl StatusBar {
+    /// The bar without the words that move with the clock ("working · 4m", "needs you · 2m"): the tick
+    /// owns those and redraws up to a tick late, so a check of the bar against the window compares
+    /// [`Workspace::status_bar_sources`] for them.
+    pub(super) fn without_clock(mut self) -> Self {
+        self.state = None;
+        if let Some(attention) = &mut self.attention {
+            attention.words.clear();
+            attention.spoken.clear();
+        }
+        self
+    }
 }
 
 /// The name of the profile an odd window is in, with its colour.
@@ -164,13 +178,8 @@ impl Workspace {
             .collect();
     }
 
-    /// What the bar shows now, or `None` while it is switched off.
-    pub(super) fn status_bar(&self, cx: &App) -> Option<StatusBar> {
-        if !settings_in(&self.profile, cx).status_bar {
-            return None;
-        }
-        // Every window's terminals, in window order: this one's now, the others' as the tick
-        // last read them.
+    /// Every window's terminals, in window order: this one's now, the others' as the tick last read them.
+    fn status_counted(&self, cx: &App) -> Vec<Counted> {
         let mut counted = Vec::new();
         let mut seen_self = false;
         for window in app(cx).windows.iter().filter(|w| !w.hidden) {
@@ -184,6 +193,26 @@ impl Workspace {
         if !seen_self {
             counted.extend(self.status_terminals());
         }
+        counted
+    }
+
+    /// What the bar's words that move with the clock are made of, for the check on the chrome: the terminals
+    /// as counted, the width's class and what the front terminal's state says (see
+    /// [`StatusBar::without_clock`]).
+    pub(super) fn status_bar_sources(&self, cx: &App) -> impl std::fmt::Debug + use<> {
+        (
+            self.status_counted(cx),
+            Detail::at(self.window_width),
+            crate::window::title::breadcrumb::crumb_source(&self.active_session().pane.summary),
+        )
+    }
+
+    /// What the bar shows now, or `None` while it is switched off.
+    pub(super) fn status_bar(&self, cx: &App) -> Option<StatusBar> {
+        if !settings_in(&self.profile, cx).status_bar {
+            return None;
+        }
+        let counted = self.status_counted(cx);
         let entries: Vec<Entry> = counted
             .iter()
             .map(|c| Entry { activity: c.activity, since: c.since, agent: c.agent.as_deref(), name: &c.name })

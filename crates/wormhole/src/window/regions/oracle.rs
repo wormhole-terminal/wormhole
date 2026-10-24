@@ -19,6 +19,7 @@ use gpui_kit::*;
 
 use super::{Part, app_facts::AppFacts};
 use crate::window::Workspace;
+use crate::window::status_bar::StatusBar;
 
 /// What a region was built from (or is now), each fact by name.
 pub(super) type Facts = Vec<(&'static str, String)>;
@@ -99,14 +100,24 @@ impl Workspace {
                 fact(&mut facts, "editing", &self.feature_editing);
             }
             Part::TitleRow => {
+                let summary = &self.active_session().pane.summary;
                 fact(&mut facts, "covered", &self.covered(cx));
                 fact(&mut facts, "pads", &self.title_row_pads(window));
-                fact(&mut facts, "title", &self.title_facts(cx));
+                // The words ("working · 4m") move with the clock and the tick owns them: what they are made
+                // of is compared, not the minute they say.
+                let mut title = self.title_facts(cx);
+                let words =
+                    title.words.take().map(|_| crate::window::title::breadcrumb::crumb_source(summary));
+                fact(&mut facts, "title", &title);
+                fact(&mut facts, "title words", &words);
                 fact(&mut facts, "tint", &self.title_tint(cx).map(|tint| (tint.color, tint.peak)));
                 fact(&mut facts, "open in", &crate::open_in::OpenIn::resolved(cx));
             }
             Part::StatusBar => {
-                fact(&mut facts, "bar", &self.status_bar(cx));
+                // Likewise the bar's state and attention words, and made of what the bar reads.
+                let bar = self.status_bar(cx);
+                fact(&mut facts, "bar sources", &bar.as_ref().map(|_| self.status_bar_sources(cx)));
+                fact(&mut facts, "bar", &bar.map(StatusBar::without_clock));
             }
         }
         facts

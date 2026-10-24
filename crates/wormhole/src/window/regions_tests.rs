@@ -337,6 +337,37 @@ fn a_frame_only_a_terminal_asks_for_stays_within_its_allocation_budget(cx: &mut 
     );
 }
 
+/// Words that move with the clock ("working · 4m") are the tick's, up to a tick late: the check compares what
+/// they are made of, so a minute that turns between the tick and a frame is not a missing notify.
+#[gpui_kit::test]
+fn a_minute_turning_between_ticks_is_not_a_missing_notify(cx: &mut TestAppContext) {
+    if isolate("a_minute_turning_between_ticks_is_not_a_missing_notify") {
+        return;
+    }
+    let window = settled_window(cx);
+    drive(cx, &window, |ws, window, cx| ws.tick(window, cx));
+    hook(cx, &window, 1, "UserPromptSubmit", None);
+    let working = terminal(cx, &window, 0);
+    for status_bar in [true, false] {
+        cx.update(|cx| SettingsStore::update(cx, |settings| settings.status_bar = status_bar));
+        cx.update(|cx| {
+            working.update(cx, |t, cx| {
+                // Just short of the minute, which a few moments later is reached.
+                t.backdate_status_for_test(std::time::Duration::from_millis(59_900));
+                cx.notify();
+            })
+        });
+        cx.run_until_parked();
+        for _ in 0..3 {
+            draw(cx, &window);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(150));
+        // The words now read "1m" where the regions drew "<1m", and nothing has ticked: this draws the
+        // regions as they were, and the check must let it pass.
+        draw(cx, &window);
+    }
+}
+
 /// The check itself: a fact a region shows that changes without notifying the workspace is found in the
 /// next frame, by name; the same change with the notify is not.
 #[gpui_kit::test]
