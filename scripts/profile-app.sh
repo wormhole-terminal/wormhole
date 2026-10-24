@@ -10,6 +10,8 @@
 #     --seconds <n>     how long each load is profiled (default 5)
 #     --save-baseline   write this run as the profile baseline of this machine
 #     --bin <path>      profile this prebuilt devctl binary instead of building HEAD
+#     --tree            wake the accessibility tree first (devctl `a11y`), as an assistive app does: the
+#                       window then builds it in every frame, and the chrome should still be replayed
 #     --keep            keep the scratch dir (instances' data and every report) and print it
 #     -h, --help
 #   Results: each load's summary, then a table of every number against the baseline with the change,
@@ -42,13 +44,14 @@ WINDOW_W=2400 WINDOW_H=1300
 SETTLE_SECONDS=4
 ALL_LOADS="warptunnel matrix flood-truecolor"
 
-only="" save_baseline=0 bin="" keep=0 seconds=5
+only="" save_baseline=0 bin="" keep=0 seconds=5 tree=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --only) only="${2:?--only needs a list}"; shift ;;
     --seconds) seconds="${2:?--seconds needs a number}"; shift ;;
     --save-baseline) save_baseline=1 ;;
     --bin) bin="${2:?--bin needs a path}"; shift ;;
+    --tree) tree=1 ;;
     --keep) keep=1 ;;
     -h|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d'; exit 0 ;;
     -*) die "unknown option: $1" ;;
@@ -62,6 +65,7 @@ need cargo; need git; need python3
 # perf-profile's own range, checked before anything is built.
 awk -v s="$seconds" 'BEGIN { exit !(s >= 0.1 && s <= 600) }' || die "--seconds is 0.1 to 600, not $seconds"
 [ "$save_baseline" = 0 ] || [ -z "$only" ] || die "--save-baseline needs a full run (no --only)"
+[ "$save_baseline" = 0 ] || [ "$tree" = 0 ] || die "--save-baseline is for a run without --tree (the baseline is the tree off)"
 loads="$ALL_LOADS"
 if [ -n "$only" ]; then
   loads="${only//,/ }"
@@ -96,6 +100,10 @@ profile_load() {
   log "$name: ttystorm $args, profiled for ${seconds}s"
   start_workload "$name" "$args"
   sleep "$SETTLE_SECONDS"
+  if [ "$tree" = 1 ]; then
+    send "$ctl" "a11y"
+    sleep 2
+  fi
   send "$ctl" "perf-profile $seconds $name"
   wait_profile "$name" $((${seconds%.*} + 120))
   cat "$ctl/$name.txt"
