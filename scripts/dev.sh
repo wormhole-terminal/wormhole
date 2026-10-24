@@ -65,8 +65,27 @@ if [ -d "$real_data" ] && [ "$(cd "$WORMHOLE_DATA_DIR" && pwd -P)" = "$(cd "$rea
   die "WORMHOLE_DATA_DIR is the real app's data dir; the dev instance needs its own"
 fi
 run="$WORMHOLE_DATA_DIR/dev"
-bin="$run/bin/$APP_BINARY-Dev"   # the process name, so ⌘Tab and the menu tell it apart
-mkdir -p "$run/bin"
+# A bare executable is drawn by AppKit as an app without a bundle (its traffic lights differ
+# from the shipped app's), so the instance runs from a small bundle of its own, like the release.
+dev_app="$run/$APP_NAME-Dev.app"
+bin_dir="$dev_app/Contents/MacOS"
+bin="$bin_dir/$APP_BINARY-Dev"   # the process name, so ⌘Tab and the menu tell it apart
+legacy_bin="$run/bin/$APP_BINARY-Dev"   # where it ran before the bundle, for taking one over
+mkdir -p "$bin_dir"
+sed_escape() { printf '%s' "$1" | sed -e 's/[\\|&]/\\&/g'; }
+# The release's Info.plist with its own name and id (so LaunchServices never mistakes it for the
+# installed app) and without the document types, which would offer it in Finder's Open With.
+sed \
+  -e "s|@APP_NAME@|$(sed_escape "$APP_NAME Dev")|g" \
+  -e "s|@APP_BINARY@|$(sed_escape "$APP_BINARY-Dev")|g" \
+  -e "s|@BUNDLE_ID@|$(sed_escape "$BUNDLE_ID.dev")|g" \
+  -e "s|@SHORT_VERSION@|$(sed_escape "${APP_VERSION%%[-+]*}")|g" \
+  -e "s|@BUILD_VERSION@|$(sed_escape "${APP_VERSION%%[-+]*}")|g" \
+  -e "s|@MIN_MACOS@|$(sed_escape "$MIN_MACOS")|g" \
+  -e "s|@COPYRIGHT@|$(sed_escape "$COPYRIGHT")|g" \
+  "$PACKAGING/Info.plist" > "$dev_app/Contents/Info.plist" || die "cannot write the dev bundle's Info.plist"
+plutil -remove CFBundleDocumentTypes "$dev_app/Contents/Info.plist" >/dev/null 2>&1 || true
+plutil -lint -s "$dev_app/Contents/Info.plist" || die "the dev bundle's Info.plist is not valid"
 if [[ " ${features//,/ } " == *" devctl "* ]]; then
   export WORMHOLE_DEVCTL="${WORMHOLE_DEVCTL:-$run/ctl}"
   # Owner-only, which keeps other users out; your own processes can still use it, hence the warning.
@@ -215,7 +234,7 @@ start_app() {
 # and moved into place so the running instance keeps its own file.
 swap() {
   local built="${CARGO_TARGET_DIR:-$ROOT/target}/$profile/$APP_BINARY"
-  local built_host="${CARGO_TARGET_DIR:-$ROOT/target}/$profile/$HOST_BINARY" host="$run/bin/$HOST_BINARY"
+  local built_host="${CARGO_TARGET_DIR:-$ROOT/target}/$profile/$HOST_BINARY" host="$bin_dir/$HOST_BINARY"
   cp -c "$built" "$bin.new" 2>/dev/null || cp "$built" "$bin.new" || { warn "cannot copy $built"; return 1; }
   if [ -x "$built_host" ]; then
     cp -c "$built_host" "$host.new" 2>/dev/null || cp "$built_host" "$host.new" \
@@ -256,7 +275,8 @@ fi
 echo $$ > "$run/loop.pid"
 if [ -f "$run/app.pid" ]; then
   old="$(cat "$run/app.pid")"
-  if alive "$old" && [[ "$(ps -p "$old" -o command= 2>/dev/null)" == "$bin"* ]]; then
+  old_command="$(ps -p "$old" -o command= 2>/dev/null)"
+  if alive "$old" && { [[ "$old_command" == "$bin"* ]] || [[ "$old_command" == "$legacy_bin"* ]]; }; then
     app_pid="$old"
     log "taking over dev instance left running (pid $app_pid)"
   fi
