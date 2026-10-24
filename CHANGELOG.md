@@ -42,6 +42,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - A frame in which only a terminal's output changes no longer builds the sidebar, the side panel, the
   title row or the status bar again, which takes about a quarter off the time a full-screen animation's
   frame spends drawing the window.
+- The terminal's text stays where it is when a side column opens or closes or the window is resized:
+  the grid keeps its place at the top left and what doesn't make a whole cell goes to the right and
+  bottom edges, instead of the text shifting sideways by up to half a character.
 
 ### Fixed
 

@@ -48,8 +48,9 @@ actions!(
 );
 
 /// The grid's least inset from the pane's sides, and below the title bar and above the bottom; with
-/// the surface's own inset it makes the window's standard edge. What doesn't make a whole cell is split evenly between the two sides
-/// (the grid is centred), and the edge cells' backgrounds run out to the pane's edges.
+/// the surface's own inset it makes the window's standard edge. What doesn't make a whole cell goes to the
+/// right and bottom edges (the grid stays at the top left, so the text doesn't shift when the number of
+/// columns changes), and the edge cells' backgrounds run out to the pane's edges.
 const PADDING_X: f32 = crate::style::TERMINAL_PAD;
 const PADDING_Y: f32 = crate::style::TERMINAL_PAD;
 /// Narrowest the terminal column may get (padding included); the layout rules in core own it.
@@ -76,7 +77,7 @@ struct Layout {
     cell: Size<Pixels>,
     cols: usize,
     rows: usize,
-    /// How far the grid's left edge is from the pane's: the padding and half the leftover width.
+    /// How far the grid's left edge is from the pane's: the padding.
     gutter: f32,
     /// What the window has around the grid (the content less the grid's area), for window operations.
     frame: (f32, f32),

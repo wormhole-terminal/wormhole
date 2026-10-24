@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::rc::Rc;
 
-use gpui_kit::{App, Bounds, Entity, Font, Pixels, Point, Size, Window, point, px, size};
+use gpui_kit::{App, Bounds, Entity, Font, Pixels, Point, Size, Window, px, size};
 use wormhole_term::GridSize;
 use wormhole_term::images::Tiles;
 
@@ -69,25 +69,7 @@ impl Prepare {
         let cell_width =
             text_system.advance(font_id, font_size, 'm').map(|size| size.width).unwrap_or(px(8.4));
         let line_height = px((self.font_size * self.line_height).round());
-        let cols = (f32::from(bounds.size.width) / f32::from(cell_width)).floor().max(2.0) as usize;
-        let rows = (f32::from(bounds.size.height) / f32::from(line_height)).floor().max(1.0) as usize;
-        // Whole cells only: what is left over is split evenly, so the grid is centred in
-        // the padded area (whole points, so the glyphs stay where the pixels are).
-        let spare_x = (f32::from(bounds.size.width) - f32::from(cell_width) * cols as f32).max(0.0);
-        let spare_y = (f32::from(bounds.size.height) - f32::from(line_height) * rows as f32).max(0.0);
-        let area = bounds;
-        let (left, top) = ((spare_x / 2.0).floor(), (spare_y / 2.0).floor());
-        let bounds = Bounds::new(
-            point(area.origin.x + px(left), area.origin.y + px(top)),
-            size(cell_width * cols as f32, line_height * rows as f32),
-        );
-        // How far the edge cells' backgrounds run out: to the pane's edges.
-        let reach = gpui_kit::Edges {
-            left: px(left + PADDING_X),
-            top: px(top + PADDING_Y),
-            right: px(spare_x - left + PADDING_X),
-            bottom: px(spare_y - top + PADDING_Y),
-        };
+        let Placement { cols, rows, bounds, reach } = Placement::new(bounds, cell_width, line_height);
         let viewport = window.viewport_size();
         let frame = (
             (f32::from(viewport.width) - f32::from(bounds.size.width)).max(0.0),
@@ -98,7 +80,7 @@ impl Prepare {
             cell: size(cell_width, line_height),
             cols,
             rows,
-            gutter: left + PADDING_X,
+            gutter: PADDING_X,
             frame,
         });
         if let Some(dock) = self.dock {
@@ -264,6 +246,38 @@ impl Prepare {
     }
 }
 
+/// Where the grid sits in the canvas: whole cells from the top left, and the leftover width and
+/// height go to the right and bottom edges (as Terminal.app, iTerm2 and Ghostty do by default).
+/// Centring the grid would move the text by up to half a cell whenever a side column opens or the
+/// window is resized and the number of columns (or rows) changes; anchored, only what is past the
+/// last column or row moves.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) struct Placement {
+    pub cols: usize,
+    pub rows: usize,
+    /// The grid's own bounds, whole cells.
+    pub bounds: Bounds<Pixels>,
+    /// How far the edge cells' backgrounds run out: to the pane's edges.
+    pub reach: gpui_kit::Edges<Pixels>,
+}
+
+impl Placement {
+    pub fn new(area: Bounds<Pixels>, cell_width: Pixels, line_height: Pixels) -> Self {
+        let cols = (f32::from(area.size.width) / f32::from(cell_width)).floor().max(2.0) as usize;
+        let rows = (f32::from(area.size.height) / f32::from(line_height)).floor().max(1.0) as usize;
+        let grid = size(cell_width * cols as f32, line_height * rows as f32);
+        let spare_x = (f32::from(area.size.width) - f32::from(grid.width)).max(0.0);
+        let spare_y = (f32::from(area.size.height) - f32::from(grid.height)).max(0.0);
+        let reach = gpui_kit::Edges {
+            left: px(PADDING_X),
+            top: px(PADDING_Y),
+            right: px(spare_x + PADDING_X),
+            bottom: px(spare_y + PADDING_Y),
+        };
+        Self { cols, rows, bounds: Bounds::new(area.origin, grid), reach }
+    }
+}
+
 /// Where the start animation's ship docks: the middle of the chevron of `dock` (in cells, from the
 /// grid's top left, so a cell's middle is `n + 0.5`) and how tall that chevron is, in window points.
 pub(in crate::terminal_view) fn dock_landing(
@@ -284,4 +298,46 @@ fn report_dock(
 ) {
     let landing = dock_landing(origin, cell, dock);
     crate::intro::set_landing(cx, [landing.centre[0], landing.centre[1], landing.size]);
+}
+
+#[cfg(test)]
+mod tests {
+    use gpui_kit::{Bounds, point, px, size};
+
+    use super::{PADDING_X, PADDING_Y, Placement};
+
+    fn area(width: f32, height: f32) -> Bounds<gpui_kit::Pixels> {
+        Bounds::new(point(px(40.0), px(30.0)), size(px(width), px(height)))
+    }
+
+    #[test]
+    fn the_grid_keeps_its_origin_when_the_width_changes_the_columns() {
+        let (cell, line) = (px(8.4), px(18.0));
+        let wide = Placement::new(area(700.0, 400.0), cell, line);
+        let narrow = Placement::new(area(700.0 - 3.0 * 8.4 - 4.0, 400.0), cell, line);
+        assert_ne!(wide.cols, narrow.cols, "the width really changed the columns");
+        assert_eq!(wide.bounds.origin, narrow.bounds.origin);
+        assert_eq!(wide.bounds.origin, point(px(40.0), px(30.0)), "the area's own corner");
+    }
+
+    #[test]
+    fn the_grid_keeps_its_origin_when_the_height_changes_the_rows() {
+        let (cell, line) = (px(8.4), px(18.0));
+        let tall = Placement::new(area(700.0, 400.0), cell, line);
+        let short = Placement::new(area(700.0, 400.0 - 18.0 - 5.0), cell, line);
+        assert_ne!(tall.rows, short.rows);
+        assert_eq!(tall.bounds.origin, short.bounds.origin);
+    }
+
+    #[test]
+    fn the_leftover_goes_to_the_right_and_bottom_edges() {
+        let (cell, line) = (px(10.0), px(20.0));
+        let placed = Placement::new(area(105.0, 207.0), cell, line);
+        assert_eq!((placed.cols, placed.rows), (10, 10));
+        assert_eq!(placed.bounds.size, size(px(100.0), px(200.0)));
+        assert_eq!(placed.reach.left, px(PADDING_X));
+        assert_eq!(placed.reach.top, px(PADDING_Y));
+        assert_eq!(placed.reach.right, px(5.0 + PADDING_X));
+        assert_eq!(placed.reach.bottom, px(7.0 + PADDING_Y));
+    }
 }
