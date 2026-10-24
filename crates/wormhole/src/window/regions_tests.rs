@@ -77,7 +77,7 @@ fn with_the_accessibility_tree_built_the_chrome_is_drawn_in_every_frame(cx: &mut
     for _ in 0..3 {
         draw(cx, &window);
     }
-    crate::platform::a11y::force_tree(true);
+    let tree = crate::platform::a11y::force_tree();
     // GPUI refreshes the window when the tree turns on; the first frame builds the regions as plain children.
     assert!(!read_cx(cx, &window, |ws, _| ws.regions.tree_seen()), "not before an app asks");
     draw(cx, &window);
@@ -91,7 +91,7 @@ fn with_the_accessibility_tree_built_the_chrome_is_drawn_in_every_frame(cx: &mut
     for (region, (before, after)) in before.iter().zip(after).enumerate() {
         assert!(after >= before + 5, "region {region} is built in each of five frames ({before} to {after})");
     }
-    crate::platform::a11y::force_tree(false);
+    drop(tree);
     draw(cx, &window);
     let before = builds(cx, &window);
     for _ in 0..5 {

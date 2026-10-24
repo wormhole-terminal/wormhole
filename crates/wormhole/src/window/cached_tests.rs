@@ -35,7 +35,7 @@ fn frames_leave_it_alone_unless_the_tree_is_built(
     }
     let after: Vec<usize> = shown.iter().map(|&ix| renders(cx, window, ix)).collect();
     assert_eq!(after, before, "frames nothing asked for replay the terminals");
-    crate::platform::a11y::force_tree(true);
+    let tree = crate::platform::a11y::force_tree();
     // GPUI refreshes the window when the tree turns on.
     draw(cx, window);
     let before: Vec<usize> = shown.iter().map(|&ix| renders(cx, window, ix)).collect();
@@ -49,7 +49,7 @@ fn frames_leave_it_alone_unless_the_tree_is_built(
             "terminal {ix} is rendered in each of four frames with the tree built ({was} to {now})"
         );
     }
-    crate::platform::a11y::force_tree(false);
+    drop(tree);
 }
 
 #[gpui_kit::test]

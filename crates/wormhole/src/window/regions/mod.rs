@@ -212,7 +212,7 @@ impl Regions {
     pub(super) fn watch_globals(workspace: &mut Workspace, cx: &mut Context<Workspace>) {
         watch::<crate::settings::SettingsStore>(cx);
         watch::<crate::open_in::OpenIn>(cx);
-        workspace.regions.app_seen = Some(AppFacts::of(workspace, cx));
+        workspace.regions.app_seen = Some(AppFacts::of(cx));
         cx.observe_global::<crate::app_state::AppState>(|workspace, cx| workspace.app_state_changed(cx))
             .detach();
     }
@@ -274,6 +274,12 @@ impl Regions {
     }
 }
 
+/// The check on the chrome (`oracle`) is for debug and test builds; a release build has nothing to check.
+#[cfg(not(any(test, debug_assertions)))]
+impl Workspace {
+    pub(in crate::window) fn check_regions(&mut self, _: &Window, _: &App) {}
+}
+
 /// Notify the regions when global `G` changes.
 fn watch<G: Global>(cx: &mut Context<Workspace>) {
     cx.observe_global::<G>(|workspace, cx| workspace.regions.notify(cx)).detach();
@@ -288,7 +294,7 @@ impl Workspace {
     /// window that lists it tells it (`open_workspace_window_in`). Nor does its own observer of itself
     /// run yet, which is why the regions are told here as well as the workspace.
     pub(in crate::window) fn app_state_changed(&mut self, cx: &mut Context<Self>) {
-        let now = AppFacts::of(self, cx);
+        let now = AppFacts::of(cx);
         if self.regions.app_seen.as_ref() != Some(&now) {
             self.regions.app_seen = Some(now);
             self.regions.notify(cx);

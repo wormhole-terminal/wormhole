@@ -38,10 +38,24 @@ pub fn tree_built(window: &gpui_kit::Window) -> bool {
     window.is_a11y_active()
 }
 
-/// In a test, say the tree is built (GPUI's test platform has no assistive app to connect).
+/// In a test, say the tree is built (GPUI's test platform has no assistive app to connect), until the
+/// returned guard is dropped: a panic cannot leave the next test on this thread with it set.
 #[cfg(test)]
-pub fn force_tree(on: bool) {
-    forced::set(on);
+pub fn force_tree() -> ForcedTree {
+    forced::set(true);
+    ForcedTree(())
+}
+
+/// The tree is said to be built while this lives (`force_tree`).
+#[cfg(test)]
+#[must_use = "the tree is built only while the guard lives"]
+pub struct ForcedTree(());
+
+#[cfg(test)]
+impl Drop for ForcedTree {
+    fn drop(&mut self) {
+        forced::set(false);
+    }
 }
 
 #[cfg(test)]

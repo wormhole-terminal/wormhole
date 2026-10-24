@@ -32,7 +32,9 @@ pub(super) struct Oracle {
     recorded: [Option<Facts>; Part::COUNT],
     /// Set while the root is built, by the region being embedded; read and cleared by the check.
     placed: Cell<[bool; Part::COUNT]>,
-    /// The window is drawing: from the root's render to the last probe.
+    /// The window is drawing: from the root's render to the last probe. Only that probe clears it (the check
+    /// runs from `Workspace::column_probe`, the root's last child), so a root without the probe would
+    /// leave it set and every later notify would panic.
     drawing: Cell<bool>,
 }
 
@@ -167,7 +169,7 @@ impl Workspace {
     /// Remember what `part` was just built from.
     pub(super) fn record_region(&mut self, part: Part, window: &Window, cx: &App) {
         // Not the code it checks, for the tests that count a frame's allocations.
-        let facts = uncounted(|| self.region_facts(part, &AppFacts::of(self, cx), window, cx));
+        let facts = uncounted(|| self.region_facts(part, &AppFacts::of(cx), window, cx));
         self.regions.oracle.recorded[part.index()] = Some(facts);
     }
 
@@ -180,7 +182,7 @@ impl Workspace {
         self.regions.oracle.drawing.set(false);
         let placed = self.regions.oracle.placed.take();
         let mut stale = Vec::new();
-        let app = AppFacts::of(self, cx);
+        let app = AppFacts::of(cx);
         for part in Part::ALL {
             if !placed[part.index()] {
                 continue;

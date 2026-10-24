@@ -82,10 +82,7 @@ impl Workspace {
                     let changed = (this.beside - beside).abs() > 0.5;
                     this.beside = beside;
                     // After every region of the frame was prepaint (built or replayed).
-                    #[cfg(any(test, debug_assertions))]
                     this.check_regions(window, cx);
-                    #[cfg(not(any(test, debug_assertions)))]
-                    let _ = cx;
                     changed
                 });
                 if changed.unwrap_or(false) {
@@ -304,6 +301,8 @@ impl Render for Workspace {
             .child(crate::style::menu_layer::layer(window, cx))
             .child(crate::style::popover_layer::layer(window, cx))
             .when(intro_open, |d| d.child(self.first_run.clone()))
+            // Last, and it has to stay so: it runs the check on the chrome after every region of the frame was
+            // placed, and it alone ends the frame that `render` began for it (`regions::oracle`).
             .child(self.column_probe(cx))
     }
 }
