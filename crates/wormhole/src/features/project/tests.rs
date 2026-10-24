@@ -226,6 +226,8 @@ fn actions_run_only_in_a_trusted_project_with_actions_on(cx: &mut TestAppContext
         return;
     }
     let window = start(cx, 1);
+    // A trusted action types its command into a new terminal, whose echo wakes the window from the reader.
+    crate::window::test_harness::let_programs_print(cx);
     let dir = project("actions", &[("actions.json", ACTIONS)]);
     drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
     let sessions = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.sessions().len());

@@ -277,6 +277,8 @@ fn a_feature_tells_the_window_by_events(cx: &mut TestAppContext) {
         return;
     }
     let window = start_with_table(cx, WindowRecord { id: 1, ..Default::default() }, STAND_IN);
+    // `SendText` types into terminal 1, whose echo wakes the window from the reader thread.
+    crate::window::test_harness::let_programs_print(cx);
     draw(cx, &window);
     let emit = |cx: &mut TestAppContext, event: FeatureEvent| {
         drive(cx, &window, |ws, _, cx| {
