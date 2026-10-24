@@ -38,9 +38,9 @@ pub(super) fn state(ctx: &mut Ctx, _: &str) -> Result<String> {
             .map(|lights| format!("intro closed{}\n", say(lights)))
             .unwrap_or_default(),
     };
-    // The appearance the lights are drawn in: the theme's, whatever the system is in.
-    let lights_look = crate::platform::window::lights_appearance(ctx.window)
-        .map(|name| format!("lights-appearance {name}\n"))
+    // The appearance the lights are drawn in (the theme's, whatever the system is in) and where they sit.
+    let lights_look = crate::platform::window::lights_state(ctx.window)
+        .map(|look| format!("lights-look {look}\n"))
         .unwrap_or_default();
     let welcome = ctx.workspace.devctl_welcome_state(crate::notifications::permission_asks(ctx.cx), ctx.cx);
     let language = wormhole_text::language().tag();

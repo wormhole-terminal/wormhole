@@ -8,7 +8,7 @@ use objc2_foundation::NSPoint;
 use super::appkit::ns_window;
 
 #[cfg(feature = "devctl")]
-pub use lights_look::lights_appearance;
+pub use lights_look::lights_state;
 pub use lights_look::{follow_theme, refresh_theme};
 
 pub fn lights_span(window: &Window) -> Option<f32> {
@@ -201,10 +201,24 @@ mod lights_look {
         container.setAppearance(NSAppearance::appearanceNamed(name).as_deref());
     }
 
-    /// The name of the appearance the lights are drawn in (devctl's `state`).
+    /// The appearance the lights are drawn in, by AppKit's name, then where the close light and its
+    /// title bar container sit (devctl's `state`): AppKit may lay the lights out again when an
+    /// appearance is applied, and this is how that shows.
     #[cfg(feature = "devctl")]
-    pub fn lights_appearance(window: &Window) -> Option<String> {
-        let container = container(&*ns_window(window)?)?;
-        Some(container.effectiveAppearance().name().to_string())
+    pub fn lights_state(window: &Window) -> Option<String> {
+        let ns_window = ns_window(window)?;
+        let container = container(&ns_window)?;
+        let close = ns_window.standardWindowButton(NSWindowButton::CloseButton)?.frame();
+        let at = container.frame();
+        Some(format!(
+            "{} close=({},{}) container=({},{} {}x{})",
+            container.effectiveAppearance().name(),
+            close.origin.x,
+            close.origin.y,
+            at.origin.x,
+            at.origin.y,
+            at.size.width,
+            at.size.height
+        ))
     }
 }

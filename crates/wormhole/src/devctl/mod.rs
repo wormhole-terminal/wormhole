@@ -24,8 +24,9 @@
 //!   clipboard-answer <once|always|deny>   the bar's three buttons
 //!   images          the active terminal's inline images (kitty, iTerm2, Sixel), one a line: id, size,
 //!                   decoded bytes or `decoding`, and each placement's cells
-//!   state           dump terminals, statuses, cwds and notes; `lights-appearance` names the
-//!                   appearance the traffic lights are drawn in (the theme's, not the system's)
+//!   state           dump terminals, statuses, cwds and notes; `lights-look` names the
+//!                   appearance the traffic lights are drawn in (the theme's, not the system's) and
+//!                   where the close light and its title bar sit
 //!   type <text>     send raw input to the active terminal
 //!   paste <text>    paste (bracketed if enabled) into the active terminal
 //!   drag <x> <y> <path>   hover a file over the window at (x, y), as when dragging from Finder

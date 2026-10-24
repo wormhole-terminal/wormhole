@@ -106,7 +106,7 @@ pub(super) fn signatures_match() {
     same! {
         a11y::wake_tree: fn(&Window);
         window::lights_opacity: fn(&Window) -> Option<(f32, bool)>;
-        window::lights_appearance: fn(&Window) -> Option<String>;
+        window::lights_state: fn(&Window) -> Option<String>;
         inspect::menu_bar: fn() -> Option<String>;
         inspect::menu: fn(&super::Menu, Option<usize>) -> anyhow::Result<String>;
         inspect::popover: fn(&super::Popover, &Path) -> anyhow::Result<String>;

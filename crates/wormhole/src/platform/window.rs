@@ -39,11 +39,11 @@ pub fn follow_theme(window: &Window) {
     os::follow_theme(window);
 }
 
-/// The appearance the lights are drawn in, by AppKit's name (devctl's `state`), `None` where the
-/// system draws no lights.
+/// The appearance the lights are drawn in, by AppKit's name, and where the close light and its title
+/// bar sit (devctl's `state`), `None` where the system draws no lights.
 #[cfg(feature = "devctl")]
-pub fn lights_appearance(window: &Window) -> Option<String> {
-    os::lights_appearance(window)
+pub fn lights_state(window: &Window) -> Option<String> {
+    os::lights_state(window)
 }
 
 /// How opaque the close light is and whether it is hidden (devctl's `state`), `None` where the
