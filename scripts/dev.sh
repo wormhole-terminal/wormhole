@@ -34,6 +34,9 @@ while [ $# -gt 0 ]; do
   shift
 done
 features="${WORMHOLE_DEV_FEATURES-}"
+# Build for the release's oldest macOS (bundle.sh does the same), so which APIs are available
+# matches what ships.
+export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-$MIN_MACOS}"
 if [ "$with_devctl" = 1 ] && [[ " ${features//,/ } " != *" devctl "* ]]; then
   features="${features:+$features,}devctl"
 fi
@@ -65,8 +68,8 @@ if [ -d "$real_data" ] && [ "$(cd "$WORMHOLE_DATA_DIR" && pwd -P)" = "$(cd "$rea
   die "WORMHOLE_DATA_DIR is the real app's data dir; the dev instance needs its own"
 fi
 run="$WORMHOLE_DATA_DIR/dev"
-# A bare executable is drawn by AppKit as an app without a bundle (its traffic lights differ
-# from the shipped app's), so the instance runs from a small bundle of its own, like the release.
+# The instance runs from a small bundle of its own, like the shipped app: a bare executable has
+# no app identity for LaunchServices and notifications, and the session host sits beside it.
 dev_app="$run/$APP_NAME-Dev.app"
 bin_dir="$dev_app/Contents/MacOS"
 bin="$bin_dir/$APP_BINARY-Dev"   # the process name, so ⌘Tab and the menu tell it apart
