@@ -92,6 +92,7 @@ pub(super) fn signatures_match() {
         vibrancy::set_material_appearance: fn(Appearance);
         window::lights_span: fn(&Window) -> Option<f32>;
         window::set_lights_shown: fn(&Window, bool);
+        window::follow_theme: fn(&Window);
         window::set_top_left: fn(&Window, &App, f32, f32);
         window::is_minimised: fn(&Window) -> bool;
         window::allow_fullscreen: fn(&Window);
@@ -105,6 +106,7 @@ pub(super) fn signatures_match() {
     same! {
         a11y::wake_tree: fn(&Window);
         window::lights_opacity: fn(&Window) -> Option<(f32, bool)>;
+        window::lights_appearance: fn(&Window) -> Option<String>;
         inspect::menu_bar: fn() -> Option<String>;
         inspect::menu: fn(&super::Menu, Option<usize>) -> anyhow::Result<String>;
         inspect::popover: fn(&super::Popover, &Path) -> anyhow::Result<String>;

@@ -31,6 +31,21 @@ pub fn set_shown(window: &Window, shown: bool) {
     os::set_lights_shown(window, shown);
 }
 
+/// Draw `window`'s traffic lights in the theme's appearance (`vibrancy::set_material_appearance`),
+/// not the system's: with a light theme in Dark Mode, or a dark one in Light Mode, AppKit would
+/// otherwise draw the other mode's lights. Call it for each window that has lights, once it is
+/// open; they follow the theme from then on, full screen included.
+pub fn follow_theme(window: &Window) {
+    os::follow_theme(window);
+}
+
+/// The appearance the lights are drawn in, by AppKit's name (devctl's `state`), `None` where the
+/// system draws no lights.
+#[cfg(feature = "devctl")]
+pub fn lights_appearance(window: &Window) -> Option<String> {
+    os::lights_appearance(window)
+}
+
 /// How opaque the close light is and whether it is hidden (devctl's `state`), `None` where the
 /// system draws no lights.
 #[cfg(feature = "devctl")]

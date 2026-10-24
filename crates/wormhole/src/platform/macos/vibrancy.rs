@@ -134,6 +134,13 @@ impl GlassViews {
 
 pub fn set_material_appearance(appearance: Appearance) {
     material::set(appearance);
+    // The traffic lights go with the blur: one appearance, one place it is set.
+    super::window::refresh_theme();
+}
+
+/// The theme's appearance as last set, `None` before the first theme is applied.
+pub(super) fn material_appearance() -> Option<Appearance> {
+    material::current()
 }
 
 mod material {
@@ -157,6 +164,10 @@ mod material {
             apply(effect, appearance);
         }
         EFFECTS.with_borrow_mut(|effects| effects.push(Weak::new(effect)));
+    }
+
+    pub(super) fn current() -> Option<Appearance> {
+        APPEARANCE.get()
     }
 
     pub(super) fn set(appearance: Appearance) {

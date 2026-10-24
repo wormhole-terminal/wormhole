@@ -59,6 +59,8 @@ pub fn open_window<V: Render>(
         options.show = false;
     }
     let (handle, view) = gpui_kit::open_window(options, cx, build)?;
+    // Every window the app opens with lights has them drawn in the theme's appearance.
+    let _ = handle.update(cx, |_, window, _| crate::platform::window::follow_theme(window));
     if behind {
         let _ = handle.update(cx, |_, window, _| crate::platform::window::keep_behind(window));
     }

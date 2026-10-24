@@ -38,10 +38,14 @@ pub(super) fn state(ctx: &mut Ctx, _: &str) -> Result<String> {
             .map(|lights| format!("intro closed{}\n", say(lights)))
             .unwrap_or_default(),
     };
+    // The appearance the lights are drawn in: the theme's, whatever the system is in.
+    let lights_look = crate::platform::window::lights_appearance(ctx.window)
+        .map(|name| format!("lights-appearance {name}\n"))
+        .unwrap_or_default();
     let welcome = ctx.workspace.devctl_welcome_state(crate::notifications::permission_asks(ctx.cx), ctx.cx);
     let language = wormhole_text::language().tag();
     Ok(format!(
-        "{}focus {focus}\nlanguage {language}\n{find}{studio}{intro}{welcome}",
+        "{}focus {focus}\nlanguage {language}\n{find}{studio}{intro}{lights_look}{welcome}",
         ctx.workspace.debug_state(ctx.cx)
     ))
 }

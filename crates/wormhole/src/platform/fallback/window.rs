@@ -9,6 +9,13 @@ pub fn lights_span(_: &Window) -> Option<f32> {
 
 pub fn set_lights_shown(_: &Window, _: bool) {}
 
+pub fn follow_theme(_: &Window) {}
+
+#[cfg(feature = "devctl")]
+pub fn lights_appearance(_: &Window) -> Option<String> {
+    None
+}
+
 #[cfg(feature = "devctl")]
 pub fn lights_opacity(_: &Window) -> Option<(f32, bool)> {
     None

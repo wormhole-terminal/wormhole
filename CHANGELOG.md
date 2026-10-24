@@ -48,6 +48,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- The window's traffic lights now match the theme when it differs from the system's Light or Dark
+  Mode, instead of showing the other mode's lights on the title row.
 - The History tab's commit ages ("2h ago") keep up with the clock while the tab is shown, instead of
   staying as they were when something last redrew it.
 - A program that exits in the middle of a synchronized update no longer leaves its last screen
