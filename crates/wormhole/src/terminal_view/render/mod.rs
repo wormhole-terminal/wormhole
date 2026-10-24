@@ -5,7 +5,7 @@
 //! content or selection changed (`RowCache`; scrolled rows are found again by
 //! content), shaping only words it hasn't seen before (`WordCache`), and paints
 //! glyph by glyph from that cache (`FrameCache`). The view is
-//! embedded with `.cached(..)`, so window frames the terminal didn't cause
+//! embedded cached (`window::cached`), so window frames the terminal didn't cause
 //! (sidebar, tick, hover) reuse its last paint instead of running any of this.
 //!
 //! This file is the `Render` impl and what the canvas keeps between frames; the work is split

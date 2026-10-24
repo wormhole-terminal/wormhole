@@ -657,11 +657,24 @@ impl TitleGate {
 pub(super) struct RedrawGate {
     /// A notify is out that no render has picked up yet.
     pending: bool,
+    /// How many times the view was rendered, for the tests that check a frame left it alone.
+    #[cfg(test)]
+    renders: usize,
 }
 
 impl RedrawGate {
     pub(super) fn rendered(&mut self) {
         self.pending = false;
+        #[cfg(test)]
+        {
+            self.renders += 1;
+        }
+    }
+
+    /// How many times the view was rendered.
+    #[cfg(test)]
+    pub(super) fn renders(&self) -> usize {
+        self.renders
     }
 
     pub(super) fn notified(&mut self) {

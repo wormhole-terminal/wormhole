@@ -265,21 +265,12 @@ impl Regions {
     }
 
     /// `part` laid out at `style`: replayed from the last frame while nothing in it changed, except while
-    /// the accessibility tree is built. GPUI fills the tree during every frame's prepaint and replays no
-    /// nodes, so a replayed region would vanish from it (VoiceOver would lose the sidebar's rows, the
-    /// panel's tabs and the bar's buttons at the terminal's frame rate). Then the region is a plain child
-    /// in a box of the same style, built in every frame like the rest of the window.
+    /// the accessibility tree is built (`window::cached`): VoiceOver would lose the sidebar's rows, the
+    /// panel's tabs and the bar's buttons at the terminal's frame rate.
     fn embed(&self, part: Part, style: StyleRefinement, window: &Window) -> AnyElement {
         #[cfg(any(test, debug_assertions))]
         self.oracle.place(part);
-        let region = self.entity(part).clone();
-        if crate::platform::a11y::tree_built(window) {
-            let mut shell = div();
-            *shell.style() = style;
-            shell.child(region).into_any_element()
-        } else {
-            region.cached(style).into_any_element()
-        }
+        crate::window::cached::view(self.entity(part), style, window)
     }
 }
 

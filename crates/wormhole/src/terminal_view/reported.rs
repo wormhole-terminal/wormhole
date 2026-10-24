@@ -129,6 +129,11 @@ impl TerminalView {
         self.after_events(cx);
     }
 
+    /// How many times the view was rendered.
+    pub(crate) fn renders_for_test(&self) -> usize {
+        self.redraw.renders()
+    }
+
     /// The terminal has been in its status `by` longer than it has.
     pub(crate) fn backdate_status_for_test(&mut self, by: std::time::Duration) {
         self.status_since = self.status_since.checked_sub(by).expect("a time long enough ago");

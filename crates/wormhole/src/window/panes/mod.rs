@@ -331,12 +331,12 @@ impl Workspace {
 
     /// The selected terminal's split: each pane with its header, the dividers over their
     /// shared edges, the whole surface. A zoomed pane alone fills the area.
-    pub(super) fn render_panes(&self, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn render_panes(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let Some(split) = self.active_split() else { return div().into_any_element() };
         let order = split.layout.panes();
         let body = match split.layout.zoomed() {
-            Some(id) => self.render_pane(split, id, &order, cx),
-            None => self.render_node(split, split.layout.tree().root(), &mut Vec::new(), &order, cx),
+            Some(id) => self.render_pane(split, id, &order, window, cx),
+            None => self.render_node(split, split.layout.tree().root(), &mut Vec::new(), &order, window, cx),
         };
         div().id("panes").absolute().top_0().left_0().size_full().flex().child(body).into_any_element()
     }
@@ -350,11 +350,12 @@ impl Workspace {
         node: &Node,
         path: &mut Vec<usize>,
         order: &[PaneId],
+        window: &Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let Node::Split { axis, children } = node else {
             let Node::Leaf(id) = node else { unreachable!("a node is a pane or a split") };
-            return self.render_pane(split, *id, order, cx);
+            return self.render_pane(split, *id, order, window, cx);
         };
         let gaps = settings_in(&self.profile, cx).split_gaps;
         let mut container = div().flex().size_full().min_w_0().min_h_0();
@@ -364,7 +365,7 @@ impl Workspace {
         };
         for (i, child) in children.iter().enumerate() {
             path.push(i);
-            let inner = self.render_node(split, &child.node, path, order, cx);
+            let inner = self.render_node(split, &child.node, path, order, window, cx);
             path.pop();
             let gap = if i > 0 && gaps { px(style::PANE_GAP) } else { px(0.0) };
             let mut cell = div()
@@ -391,7 +392,14 @@ impl Workspace {
 
     /// One pane: its header and its terminal, the terminal dimmed while another pane has the
     /// keyboard (72 %).
-    fn render_pane(&self, split: &Split, id: PaneId, order: &[PaneId], cx: &mut Context<Self>) -> AnyElement {
+    fn render_pane(
+        &self,
+        split: &Split,
+        id: PaneId,
+        order: &[PaneId],
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let Some(pane) = self.find_session(id).map(|ix| &self.sessions[ix].pane) else {
             return div().into_any_element();
         };
@@ -428,8 +436,12 @@ impl Workspace {
                     // header's tile.
                     .when(gaps, |d| d.px(px(style::PANE_TEXT_PAD)).pb(px(style::PANE_TEXT_PAD)))
                     .when(!focused, |d| d.opacity(style::PANE_DIM))
-                    // Cached: window frames the terminal didn't cause reuse its last paint.
-                    .child(pane.terminal.clone().cached(StyleRefinement::default().size_full())),
+                    // Cached (`window::cached`): window frames the terminal didn't cause reuse its last paint.
+                    .child(super::cached::view(
+                        &pane.terminal,
+                        StyleRefinement::default().size_full(),
+                        window,
+                    )),
             )
             .when(gaps, |d| d.child(style::pane_outline(ui, focused)))
             .into_any_element()

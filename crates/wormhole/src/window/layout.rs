@@ -230,13 +230,17 @@ impl Render for Workspace {
                             // coat of a translucent one would draw the surface as a darker box. A split
                             // with gaps: each pane is the surface, the gaps show the window.
                             .children(cover)
-                            // Cached: window frames the terminal didn't cause reuse its last
-                            // paint. A split's panes are drawn with their headers below the
+                            // Cached (`cached`): window frames the terminal didn't cause reuse its
+                            // last paint. A split's panes are drawn with their headers below the
                             // title rows.
                             .when(!covered && !split, |d| {
-                                d.child(terminal.cached(StyleRefinement::default().size_full()))
+                                d.child(super::cached::view(
+                                    &terminal,
+                                    StyleRefinement::default().size_full(),
+                                    window,
+                                ))
                             })
-                            .when(!covered && split, |d| d.child(self.render_panes(cx)))
+                            .when(!covered && split, |d| d.child(self.render_panes(window, cx)))
                             .when(!covered, |d| d.child(self.pane_probe(cx)))
                             // While a terminal is dragged, over the panes (the terminal swallows the mouse).
                             .when(!covered, |d| d.children(self.render_drop_overlay(cx)))

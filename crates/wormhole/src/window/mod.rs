@@ -49,6 +49,9 @@ use wormhole_core::agents::integrations;
 use wormhole_core::storage::paths::ProfileId;
 
 pub(crate) mod ambient;
+mod cached;
+#[cfg(test)]
+mod cached_tests;
 pub(crate) mod chrome;
 #[cfg(test)]
 mod clear_tests;
