@@ -34,9 +34,6 @@ while [ $# -gt 0 ]; do
   shift
 done
 features="${WORMHOLE_DEV_FEATURES-}"
-# Build for the release's oldest macOS (bundle.sh does the same), so which APIs are available
-# matches what ships.
-export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-$MIN_MACOS}"
 if [ "$with_devctl" = 1 ] && [[ " ${features//,/ } " != *" devctl "* ]]; then
   features="${features:+$features,}devctl"
 fi
