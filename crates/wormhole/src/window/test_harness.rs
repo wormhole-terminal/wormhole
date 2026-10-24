@@ -26,6 +26,14 @@ const CHILD: &str = "WORMHOLE_VIEW_TEST_CHILD";
 /// [`isolate`] for a test of another module (`module_path!()` there).
 pub(crate) fn isolate_in(module_path: &str, name: &str) -> bool {
     if std::env::var_os(CHILD).is_some() {
+        // The marker alone must never let a test run on the person's own data: set by hand, it once
+        // rewrote a real config.json. Only the scratch folder the parent made counts.
+        let data = std::env::var_os("WORMHOLE_DATA_DIR").map(std::path::PathBuf::from);
+        assert!(
+            data.is_some_and(|dir| dir.starts_with(std::env::temp_dir())
+                && dir.file_name().is_some_and(|n| n.to_string_lossy().starts_with("wormhole-view-test-"))),
+            "{CHILD} is set without a scratch WORMHOLE_DATA_DIR from the test harness; run the test without it"
+        );
         return false;
     }
     // The test's path as the harness names it: without the crate's name.
