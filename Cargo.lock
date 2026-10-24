@@ -2705,8 +2705,7 @@ dependencies = [
 [[package]]
 name = "gpui-pre"
 version = "0.3.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34f61c1cfd36fc9c436af09308c963822ae27a45a84feb21a77ba5c9e051f1c0"
+source = "git+https://github.com/wormhole-terminal/gpui-pre?rev=76854ddaabd759bba0943fd74caa9827f538e690#76854ddaabd759bba0943fd74caa9827f538e690"
 dependencies = [
  "accesskit",
  "anyhow",

@@ -69,3 +69,14 @@ lto = "thin"
 inherits = "release"
 debug = "line-tables-only"
 strip = false
+
+# gpui-pre 0.3.9 with two changes Wormhole needs, in a fork of its own (Apache-2.0, `NOTICE` there lists the
+# files): a cached view's accessibility nodes and action listeners are replayed when it is reused (otherwise
+# the chrome drops out of the tree at every cached frame while an assistive app is connected, so
+# `window::cached` could not cache it then), and the scene sort allocates nothing per frame (3.3 MB a frame
+# in a truecolor terminal) while ordering exactly as the stable sort did. The version is the published one, so
+# gpui-kit, gpui-base and gpui-component, which only ask for it, take the fork without changes.
+# Upstream: both are being offered to zed-industries/zed, not yet sent. Drop this entry once a gpui-pre
+# release has them (the fork's README says how).
+[patch.crates-io]
+gpui-pre = { git = "https://github.com/wormhole-terminal/gpui-pre", rev = "76854ddaabd759bba0943fd74caa9827f538e690" }
