@@ -298,7 +298,7 @@ impl Workspace {
         );
         out.push_str(&format!("regions built {:?}\n", self.regions.builds(cx)));
         out.push_str(&format!(
-            "a11y tree built={} (the chrome is drawn in every frame once it is)\n",
+            "a11y tree built={} (every frame builds it once it is; the chrome is still replayed)\n",
             self.devctl_a11y_tree()
         ));
         let glass = self.glass.placed();

@@ -1,6 +1,7 @@
 //! The chrome around the terminal (`regions`) is drawn again when a fact it shows changes, and left
 //! alone by a frame that only a terminal's output asks for. The harness is `test_harness`.
 
+use gpui_kit::accesskit::Role;
 use gpui_kit::{Entity, TestAppContext};
 use wormhole_core::config::TabId;
 use wormhole_term::PtyEvent;
@@ -9,7 +10,10 @@ use crate::app_state::{OpenWindow, app, app_mut};
 use crate::settings::SettingsStore;
 use crate::terminal_view::TerminalView;
 use crate::window::reported_tests::terminal;
-use crate::window::test_harness::{draw_replaying as draw, drive, hook, isolate_in, read, read_cx, start};
+use crate::window::test_harness::{
+    activate, draw_replaying as draw, drive, hook, isolate_in, read, read_cx, rebuild, simulate_tree, start,
+    tree,
+};
 
 const SIDEBAR: usize = 0;
 const PANEL: usize = 1;
@@ -63,12 +67,14 @@ fn a_frame_only_a_terminal_asks_for_builds_none_of_the_chrome(cx: &mut TestAppCo
     assert_eq!(builds(cx, &window), before, "twenty frames of output left the chrome as it was");
 }
 
-/// GPUI fills the accessibility tree during every frame and replays no nodes: with it built, a region kept
-/// between frames would drop out of the tree and VoiceOver would lose the chrome at the terminal's frame
-/// rate. The test platform has no assistive app, so the test says the tree is built.
+/// GPUI fills the accessibility tree during every frame and, in the patched `gpui-pre`, replays a reused
+/// view's nodes with the rest of it: with the tree built a frame only the terminal asked for still builds
+/// none of the chrome, and the tree is the one a full rebuild gives (the sidebar's rows, the panel's tabs, the
+/// status bar, with the same ids, links, labels and focus). The test platform has no assistive app, so the
+/// test says one connected.
 #[gpui_kit::test]
-fn with_the_accessibility_tree_built_the_chrome_is_drawn_in_every_frame(cx: &mut TestAppContext) {
-    if isolate("with_the_accessibility_tree_built_the_chrome_is_drawn_in_every_frame") {
+fn with_the_accessibility_tree_built_the_chrome_is_replayed_and_stays_in_the_tree(cx: &mut TestAppContext) {
+    if isolate("with_the_accessibility_tree_built_the_chrome_is_replayed_and_stays_in_the_tree") {
         return;
     }
     let window = settled_window(cx);
@@ -77,28 +83,89 @@ fn with_the_accessibility_tree_built_the_chrome_is_drawn_in_every_frame(cx: &mut
     for _ in 0..3 {
         draw(cx, &window);
     }
-    let tree = crate::platform::a11y::force_tree();
-    // GPUI refreshes the window when the tree turns on; the first frame builds the regions as plain children.
     assert!(!read_cx(cx, &window, |ws, _| ws.regions.tree_seen()), "not before an app asks");
-    draw(cx, &window);
+    simulate_tree(cx, &window, true);
+    // A view prepainted before the tree was built has no nodes to replay: the first frames draw the
+    // regions, the later ones replay them.
+    for _ in 0..3 {
+        draw(cx, &window);
+    }
     assert!(read_cx(cx, &window, |ws, _| ws.regions.tree_seen()), "noted once the tree is built");
+    // The reference: everything drawn afresh.
+    rebuild(cx, &window);
+    let reference = tree(cx, &window);
+    assert!(reference.whole(), "{:?}", reference.problems);
+    assert_eq!(reference.count(Role::TreeItem), 2, "the sidebar's rows: {:?}", reference.nodes);
+    assert_eq!(reference.count(Role::TabList), 1, "the panel's tabs: {:?}", reference.nodes);
+    assert_eq!(reference.count(Role::Toolbar), 1, "the status bar: {:?}", reference.nodes);
     let before = builds(cx, &window);
-    for _ in 0..5 {
+    for round in 0..5 {
         output(cx, &shown);
         draw(cx, &window);
+        assert_eq!(tree(cx, &window), reference, "frame {round} of output");
     }
-    let after = builds(cx, &window);
-    for (region, (before, after)) in before.iter().zip(after).enumerate() {
-        assert!(after >= before + 5, "region {region} is built in each of five frames ({before} to {after})");
+    assert_eq!(builds(cx, &window), before, "five frames of output left the chrome as it was");
+}
+
+/// A popover opens its content through `deferred`, which GPUI prepaints after the cached view that holds the
+/// popover: the content stays in the tree, and answers, on the frames that replay the view. The profile
+/// chip's menu is one (two profiles make the chip).
+#[gpui_kit::test]
+fn an_open_menu_stays_in_the_tree_on_frames_that_replay_the_chrome(cx: &mut TestAppContext) {
+    use wormhole_core::config::profile::{NewProfile, StartFrom};
+
+    use crate::app_state::AppState;
+    use crate::sidebar::profile_chip::ProfilePage;
+    if isolate("an_open_menu_stays_in_the_tree_on_frames_that_replay_the_chrome") {
+        return;
     }
-    drop(tree);
+    let window = settled_window(cx);
+    cx.update(|cx| {
+        let new = NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults };
+        AppState::create_profile(new, cx).expect("makes the profile");
+    });
+    simulate_tree(cx, &window, true);
+    for _ in 0..3 {
+        draw(cx, &window);
+    }
+    let sidebar = read_cx(cx, &window, |ws, _| ws.sidebar.clone());
+    cx.update(|cx| sidebar.update(cx, |sidebar, cx| sidebar.open_profile_menu_for_test(cx)));
+    // The popover shows its content from the frame after it has seen where its trigger is.
+    for _ in 0..3 {
+        draw(cx, &window);
+    }
+    rebuild(cx, &window);
+    let reference = tree(cx, &window);
+    assert!(reference.whole(), "{:?}", reference.problems);
+    let open_in = reference.one(Role::Button, "Open a window in");
+    assert!(!reference.labelled(Role::Button, "Settings").is_empty(), "the menu's last row is in the tree");
+
+    // Frames only the terminal asked for replay the sidebar's region, and the menu with it.
+    let shown = terminal(cx, &window, 0);
+    let before = builds(cx, &window);
+    for round in 0..4 {
+        output(cx, &shown);
+        draw(cx, &window);
+        assert_eq!(tree(cx, &window), reference, "frame {round} of output with the menu open");
+    }
+    assert_eq!(builds(cx, &window), before, "the chrome was replayed");
+
+    // And a row answers on such a frame: it opens the menu's second page.
+    activate(cx, &window, open_in);
+    assert_eq!(sidebar_page(cx, &sidebar), Some(ProfilePage::OpenIn));
     draw(cx, &window);
-    let before = builds(cx, &window);
-    for _ in 0..5 {
-        output(cx, &shown);
-        draw(cx, &window);
-    }
-    assert_eq!(builds(cx, &window), before, "with the tree off again, the chrome is replayed");
+    draw(cx, &window);
+    let second = tree(cx, &window);
+    assert!(second.whole(), "{:?}", second.problems);
+    assert!(!second.labelled(Role::Button, "Back").is_empty(), "its back row is there");
+    assert!(second.labelled(Role::Button, "Settings").is_empty(), "and the first page's rows are gone");
+}
+
+fn sidebar_page(
+    cx: &mut TestAppContext,
+    sidebar: &Entity<crate::sidebar::Sidebar>,
+) -> Option<crate::sidebar::profile_chip::ProfilePage> {
+    cx.update(|cx| sidebar.read(cx).profile_page())
 }
 
 #[gpui_kit::test]

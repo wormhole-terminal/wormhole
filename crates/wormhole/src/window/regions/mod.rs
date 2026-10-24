@@ -15,11 +15,11 @@
 //! changing (`feature_host`) and the settings. A new fact a part draws must notify the workspace the
 //! same way; one that only changes in a draw would be missed.
 //!
-//! While an app has asked for the window's accessibility tree the regions are not cached at all (`embed`):
-//! GPUI rebuilds the tree in every frame and replays none of a reused view's nodes, so a cached region would
-//! drop out of the tree (and its buttons stop answering VoiceOver) at the terminal's frame rate. On macOS
-//! the tree, once on, stays on for the window's life, and any app using the accessibility API turns it on
-//! (`platform::a11y::tree_built`), so the window logs it once ([`Regions::note_tree`]).
+//! While an app has asked for the window's accessibility tree the regions stay cached: GPUI rebuilds the
+//! tree in every frame, and replays a reused view's nodes and action listeners with the rest of it (the
+//! patched `gpui-pre`, `window::cached`). On macOS the tree, once on, stays on for the window's life, and any
+//! app using the accessibility API turns it on (`platform::a11y::tree_built`), so the window logs it once
+//! ([`Regions::note_tree`]): a profile of it should know the tree is being built.
 //!
 //! A missed notify shows nowhere else: a test that draws drops GPUI's caches first. In debug and test builds
 //! every region records what it was built from and every frame checks that the regions it placed would be
@@ -150,17 +150,17 @@ impl Regions {
     }
 
     /// A frame begins in window `window_id`: say once if the accessibility tree is built in it. From then on
-    /// the window draws its chrome in every frame (see the module's note), which a profile of it should know.
+    /// every frame also builds the tree (see the module's note), which a profile of the window should know.
     pub(super) fn note_tree(&self, window: &Window, window_id: i64) {
         if crate::platform::a11y::tree_built(window) && !self.tree_seen.replace(true) {
             tracing::info!(
                 window_id,
-                "an app asked for the accessibility tree: this window's chrome is no longer cached"
+                "an app asked for the accessibility tree: every frame of this window now builds it"
             );
         }
     }
 
-    /// Whether the accessibility tree has been built in this window, so its chrome is drawn in every frame.
+    /// Whether the accessibility tree has been built in this window (every frame builds it from then on).
     #[cfg(any(test, feature = "devctl"))]
     pub(super) fn tree_seen(&self) -> bool {
         self.tree_seen.get()
@@ -179,28 +179,28 @@ impl Regions {
     }
 
     /// The sidebar's column, `width` wide and as tall as the window.
-    pub(super) fn sidebar(&self, width: f32, window: &Window) -> AnyElement {
+    pub(super) fn sidebar(&self, width: f32) -> AnyElement {
         let style = StyleRefinement::default().w(px(width)).h_full().flex_none();
-        self.embed(Part::Sidebar, style, window)
+        self.embed(Part::Sidebar, style)
     }
 
     /// The right panel's column, `width` wide and as tall as the window.
-    pub(super) fn panel(&self, width: f32, window: &Window) -> AnyElement {
+    pub(super) fn panel(&self, width: f32) -> AnyElement {
         let style = StyleRefinement::default().w(px(width)).h_full().flex_none();
-        self.embed(Part::Panel, style, window)
+        self.embed(Part::Panel, style)
     }
 
     /// The terminal's title row, across the top of its column.
-    pub(super) fn title_row(&self, window: &Window) -> AnyElement {
+    pub(super) fn title_row(&self) -> AnyElement {
         let style =
             StyleRefinement::default().absolute().top_0().left_0().right_0().h(px(crate::style::TITLE_ROW_H));
-        self.embed(Part::TitleRow, style, window)
+        self.embed(Part::TitleRow, style)
     }
 
     /// The status bar, across the bottom of the window.
-    pub(super) fn status_bar(&self, window: &Window) -> AnyElement {
+    pub(super) fn status_bar(&self) -> AnyElement {
         let style = StyleRefinement::default().w_full().h(px(STATUS_BAR_H)).flex_none();
-        self.embed(Part::StatusBar, style, window)
+        self.embed(Part::StatusBar, style)
     }
 
     /// Tell the regions when a global they draw from changes. The workspace's own state notifies the
@@ -264,13 +264,12 @@ impl Regions {
         }
     }
 
-    /// `part` laid out at `style`: replayed from the last frame while nothing in it changed, except while
-    /// the accessibility tree is built (`window::cached`): VoiceOver would lose the sidebar's rows, the
-    /// panel's tabs and the bar's buttons at the terminal's frame rate.
-    fn embed(&self, part: Part, style: StyleRefinement, window: &Window) -> AnyElement {
+    /// `part` laid out at `style`: replayed from the last frame while nothing in it changed (`window::cached`),
+    /// with its accessibility nodes.
+    fn embed(&self, part: Part, style: StyleRefinement) -> AnyElement {
         #[cfg(any(test, debug_assertions))]
         self.oracle.place(part);
-        crate::window::cached::view(self.entity(part), style, window)
+        crate::window::cached::view(self.entity(part), style)
     }
 }
 

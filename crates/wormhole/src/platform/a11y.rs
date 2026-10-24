@@ -23,56 +23,14 @@ pub fn announce(text: &str, interrupt: bool) {
 }
 
 /// Whether GPUI builds the accessibility tree for the frame being drawn (an app has asked the window for
-/// its accessibility tree). GPUI rebuilds the tree from scratch in every frame's prepaint and does not
-/// replay the nodes of a view it reuses, so a view kept between frames would drop out of the tree: callers
-/// that keep one draw it afresh while this is true. GPUI forces a frame when it turns on.
+/// its accessibility tree). GPUI rebuilds it from scratch in every frame's prepaint; a view it reuses
+/// replays its nodes (the patched `gpui-pre`), so only the cost of building it is felt.
 ///
 /// On macOS it never turns off again: GPUI's platform drops the deactivation, so for the window's life it
 /// stays true once any client has connected, and that is any app using the accessibility API (a screen
 /// reader, a switch or voice control, an automation or inspection tool), not only VoiceOver.
 pub fn tree_built(window: &gpui_kit::Window) -> bool {
-    #[cfg(test)]
-    if forced::get() {
-        return true;
-    }
     window.is_a11y_active()
-}
-
-/// In a test, say the tree is built (GPUI's test platform has no assistive app to connect), until the
-/// returned guard is dropped: a panic cannot leave the next test on this thread with it set.
-#[cfg(test)]
-pub fn force_tree() -> ForcedTree {
-    forced::set(true);
-    ForcedTree(())
-}
-
-/// The tree is said to be built while this lives (`force_tree`).
-#[cfg(test)]
-#[must_use = "the tree is built only while the guard lives"]
-pub struct ForcedTree(());
-
-#[cfg(test)]
-impl Drop for ForcedTree {
-    fn drop(&mut self) {
-        forced::set(false);
-    }
-}
-
-#[cfg(test)]
-mod forced {
-    use std::cell::Cell;
-
-    thread_local! {
-        static ON: Cell<bool> = const { Cell::new(false) };
-    }
-
-    pub(super) fn get() -> bool {
-        ON.get()
-    }
-
-    pub(super) fn set(on: bool) {
-        ON.set(on);
-    }
 }
 
 /// Whether macOS's Keyboard navigation is on (System Settings → Keyboard): ⇥ then reaches buttons

@@ -116,6 +116,12 @@ impl Reply {
         }
     }
 
+    /// A reply that goes nowhere, for a test of what holds one (a bar asking for the clipboard).
+    #[doc(hidden)]
+    pub fn detached() -> Self {
+        Self::hosted(0, Arc::new(|_, _| {}))
+    }
+
     /// The answer to a session host's ticket.
     pub(crate) fn hosted(ticket: u64, send: HostedReply) -> Self {
         Self(Arc::new(ReplySlot { ticket, to: ReplyTo::Hosted(send, AtomicBool::new(false)) }))

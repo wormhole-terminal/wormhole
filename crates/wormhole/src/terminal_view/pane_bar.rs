@@ -177,6 +177,24 @@ impl TerminalView {
     }
 }
 
+/// What the tests of the window do to the bar.
+#[cfg(test)]
+impl TerminalView {
+    /// A program asks to read the clipboard (OSC 52), in a terminal that is shown: the bar asks.
+    pub(crate) fn ask_clipboard_for_test(&mut self, cx: &mut Context<Self>) {
+        use wormhole_term::{PtyEvent, Reply};
+
+        self.set_in_front(true);
+        let format: TextFormatter = std::sync::Arc::new(|text: &str| text.to_string());
+        self.event_for_test(PtyEvent::ClipboardLoad(format, Reply::detached()), cx);
+    }
+
+    /// The bar asks the person about the clipboard.
+    pub(crate) fn asking_for_test(&self) -> bool {
+        matches!(self.pane_bar(), Some(Bar::Ask(_)))
+    }
+}
+
 /// devctl's view of the bar.
 #[cfg(feature = "devctl")]
 impl TerminalView {

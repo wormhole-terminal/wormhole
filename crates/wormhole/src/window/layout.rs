@@ -154,10 +154,10 @@ impl Render for Workspace {
         // One geometry for both looks: the title bar has its own row and the terminal's rounded surface
         // lies below it, so nothing scrolls under the bar. Glass only changes the material.
         let lifted = self.glass_on(cx);
-        let titlebar = self.regions.title_row(window);
+        let titlebar = self.regions.title_row();
         let [sidebar_toggle, panel_toggle] = self.render_window_controls(window, cx);
         // The bar itself is built by its region, which keeps what the bar drew (`regions.drawn`).
-        let status_bar = settings_in(&self.profile, cx).status_bar.then(|| self.regions.status_bar(window));
+        let status_bar = settings_in(&self.profile, cx).status_bar.then(|| self.regions.status_bar());
         if status_bar.is_none() {
             self.regions.drawn.status_bar = None;
         }
@@ -214,7 +214,7 @@ impl Render for Workspace {
                     .flex_1()
                     .min_h_0()
                     .when(self.sidebar_shown() && self.in_flow(Edge::Sidebar), |d| {
-                        d.child(self.regions.sidebar(columns.sidebar, window))
+                        d.child(self.regions.sidebar(columns.sidebar))
                     })
                     .child({
                         let surface = div()
@@ -234,10 +234,9 @@ impl Render for Workspace {
                                 d.child(super::cached::view(
                                     &terminal,
                                     StyleRefinement::default().size_full(),
-                                    window,
                                 ))
                             })
-                            .when(!covered && split, |d| d.child(self.render_panes(window, cx)))
+                            .when(!covered && split, |d| d.child(self.render_panes(cx)))
                             .when(!covered, |d| d.child(self.pane_probe(cx)))
                             // While a terminal is dragged, over the panes (the terminal swallows the mouse).
                             .when(!covered, |d| d.children(self.render_drop_overlay(cx)))
@@ -274,7 +273,7 @@ impl Render for Workspace {
                         self.carry_with_slide(column)
                     })
                     .when(notes_visible && self.in_flow(Edge::Panel), |d| {
-                        d.child(self.regions.panel(columns.panel, window))
+                        d.child(self.regions.panel(columns.panel))
                     })
                     // A column sliding in or out lies over the terminal.
                     .children(self.render_slide(window, cx))

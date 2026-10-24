@@ -253,6 +253,19 @@ impl Sidebar {
         self.profile_menu.is_some()
     }
 
+    /// Open the profile chip's menu, as a click on the chip does.
+    #[cfg(test)]
+    pub(crate) fn open_profile_menu_for_test(&mut self, cx: &mut Context<Self>) {
+        self.profile_menu = Some(profile_chip::ProfilePage::Main);
+        cx.notify();
+    }
+
+    /// The page of the profile chip's menu that is open.
+    #[cfg(test)]
+    pub(crate) fn profile_page(&self) -> Option<profile_chip::ProfilePage> {
+        self.profile_menu
+    }
+
     /// The terminal being renamed, and its name field.
     #[cfg(test)]
     pub(crate) fn terminal_renaming(&self) -> Option<Entity<gpui_kit::component::input::InputState>> {

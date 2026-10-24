@@ -8,6 +8,7 @@
 
 use std::process::Command;
 
+use gpui_kit::accesskit::{Action, ActionRequest, NodeId, Role, TreeId, TreeUpdate};
 use gpui_kit::test::TestWindowExt as _;
 use gpui_kit::{App, Context, Keystroke, TestAppContext, Window};
 use wormhole_core::agents::AgentId;
@@ -245,4 +246,144 @@ pub(crate) fn press(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
 pub(crate) fn own_window(cx: &mut TestAppContext, window: &OpenWindow) -> Option<gpui_kit::WindowId> {
     let workspace = window.workspace.upgrade().expect("the window is open");
     cx.update(|cx| cx.with_window(workspace.entity_id(), |window, _| window.window_handle().window_id()))
+}
+
+/// Say an assistive app has connected to the window (or left it), as the platform's adapter would: the test
+/// platform has none. The next frame builds the accessibility tree (or stops).
+pub(crate) fn simulate_tree(cx: &mut TestAppContext, window: &OpenWindow, on: bool) {
+    with_window(cx, window, |window, _| window.simulate_a11y_active(on));
+}
+
+/// Rebuild the whole window as the first frame with the tree does: GPUI's `refresh` replays nothing. The
+/// tree this leaves is the reference that frames replaying the chrome must match.
+pub(crate) fn rebuild(cx: &mut TestAppContext, window: &OpenWindow) {
+    with_window(cx, window, |window, _| window.refresh());
+    draw_replaying(cx, window);
+}
+
+/// One node of the accessibility tree, as a test compares them.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Node {
+    pub id: u64,
+    pub role: Role,
+    pub label: Option<String>,
+    pub children: Vec<u64>,
+}
+
+/// What GPUI last sent as the window's accessibility tree: every node by id, the node that has focus, and the
+/// ways the tree is broken (`problems`, empty for a good one). Two trees are equal when they hold the same
+/// nodes with the same links, labels and focus, so a replayed frame is compared with a rebuilt one by `==`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Tree {
+    pub root: u64,
+    pub focus: u64,
+    /// Sorted by id.
+    pub nodes: Vec<Node>,
+    pub problems: Vec<String>,
+}
+
+impl Tree {
+    fn of(update: &TreeUpdate) -> Self {
+        let root = update.tree.as_ref().map_or(0, |tree| tree.root.0);
+        let mut nodes: Vec<Node> = update
+            .nodes
+            .iter()
+            .map(|(id, node)| Node {
+                id: id.0,
+                role: node.role(),
+                label: node.label().map(String::from),
+                children: node.children().iter().map(|child| child.0).collect(),
+            })
+            .collect();
+        nodes.sort_by_key(|node| node.id);
+        let mut tree = Self { root, focus: update.focus.0, nodes, problems: Vec::new() };
+        tree.check();
+        tree
+    }
+
+    /// Every child link points at a node of the tree, and every node is reached from the root exactly once:
+    /// a node under two parents, or listed twice, is as wrong as one that fell out of the tree.
+    fn check(&mut self) {
+        let mut reached = std::collections::HashMap::<u64, usize>::new();
+        let mut pending = vec![self.root];
+        *reached.entry(self.root).or_default() += 1;
+        while let Some(id) = pending.pop() {
+            let Some(node) = self.nodes.iter().find(|node| node.id == id) else {
+                self.problems.push(format!("a child link points at {id}, which is not in the tree"));
+                continue;
+            };
+            for &child in &node.children {
+                let seen = reached.entry(child).or_default();
+                *seen += 1;
+                if *seen == 1 {
+                    pending.push(child);
+                }
+            }
+        }
+        for node in &self.nodes {
+            match reached.get(&node.id) {
+                None => self
+                    .problems
+                    .push(format!("{:?} {:?} ({}) is not reached", node.role, node.label, node.id)),
+                Some(1) => {}
+                Some(n) => self
+                    .problems
+                    .push(format!("{:?} {:?} ({}) is reached {n} times", node.role, node.label, node.id)),
+            }
+        }
+        let mut ids: Vec<u64> = self.nodes.iter().map(|node| node.id).collect();
+        ids.dedup();
+        if ids.len() != self.nodes.len() {
+            self.problems.push("a node is in the tree twice".into());
+        }
+    }
+
+    /// The tree is a tree: nothing dangling, unreachable or reached twice.
+    pub fn whole(&self) -> bool {
+        self.problems.is_empty()
+    }
+
+    /// How many nodes have `role`.
+    pub fn count(&self, role: Role) -> usize {
+        self.nodes.iter().filter(|node| node.role == role).count()
+    }
+
+    /// The nodes with `role` whose label starts with `label`.
+    pub fn labelled(&self, role: Role, label: &str) -> Vec<&Node> {
+        self.nodes
+            .iter()
+            .filter(|node| node.role == role && node.label.as_deref().is_some_and(|l| l.starts_with(label)))
+            .collect()
+    }
+
+    /// The one node with `role` whose label starts with `label`.
+    pub fn one(&self, role: Role, label: &str) -> u64 {
+        match self.labelled(role, label).as_slice() {
+            [node] => node.id,
+            found => panic!("expected one {role:?} labelled {label:?}, found {found:?} in {:?}", self.nodes),
+        }
+    }
+}
+
+/// The tree of the last frame that built one (`simulate_tree`).
+pub(crate) fn tree(cx: &mut TestAppContext, window: &OpenWindow) -> Tree {
+    let update =
+        with_window(cx, window, |window, _| window.last_a11y_tree_update()).expect("a frame built the tree");
+    Tree::of(&update)
+}
+
+/// Do what an assistive app does to node `node` of the tree: press it, as VoiceOver's "activate" does.
+pub(crate) fn activate(cx: &mut TestAppContext, window: &OpenWindow, node: u64) {
+    with_window(cx, window, |window, cx| {
+        window.simulate_a11y_action(
+            ActionRequest {
+                action: Action::Click,
+                target_tree: TreeId::ROOT,
+                target_node: NodeId(node),
+                data: None,
+            },
+            cx,
+        )
+    });
+    cx.run_until_parked();
 }
