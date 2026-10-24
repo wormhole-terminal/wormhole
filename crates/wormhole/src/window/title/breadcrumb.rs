@@ -6,8 +6,6 @@
 //!
 //! When the row is narrow its parts give way in the order core's `layout::title_row` says; this
 //! measures them, asks, and draws what is left.
-use std::time::Instant;
-
 use gpui_kit::assets::IconName;
 use gpui_kit::component::ActiveTheme as _;
 use gpui_kit::component::tooltip::Tooltip;
@@ -435,7 +433,10 @@ pub(in crate::window) fn crumb_words(summary: &TerminalSummary) -> Option<String
 /// What [`crumb_words`] is made of: the status, since when, and a failure's exit code. The words move with
 /// the clock and the tick owns them (`crumb_tick`, `refresh_status_bar`), up to a tick late, so the check on
 /// the chrome compares these instead.
-pub(in crate::window) fn crumb_source(summary: &TerminalSummary) -> (Status, Instant, Option<i32>) {
+#[cfg(any(test, debug_assertions))]
+pub(in crate::window) fn crumb_source(
+    summary: &TerminalSummary,
+) -> (Status, std::time::Instant, Option<i32>) {
     (summary.status, summary.status_since, summary.failure.as_ref().map(|failure| failure.code))
 }
 

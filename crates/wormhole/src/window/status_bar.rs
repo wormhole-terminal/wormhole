@@ -66,6 +66,7 @@ impl StatusBar {
     /// The bar without the words that move with the clock ("working · 4m", "needs you · 2m"): the tick
     /// owns those and redraws up to a tick late, so a check of the bar against the window compares
     /// [`Workspace::status_bar_sources`] for them.
+    #[cfg(any(test, debug_assertions))]
     pub(super) fn without_clock(mut self) -> Self {
         self.state = None;
         if let Some(attention) = &mut self.attention {
@@ -199,6 +200,7 @@ impl Workspace {
     /// What the bar's words that move with the clock are made of, for the check on the chrome: the terminals
     /// as counted, the width's class and what the front terminal's state says (see
     /// [`StatusBar::without_clock`]).
+    #[cfg(any(test, debug_assertions))]
     pub(super) fn status_bar_sources(&self, cx: &App) -> impl std::fmt::Debug + use<> {
         (
             self.status_counted(cx),
