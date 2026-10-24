@@ -2705,7 +2705,7 @@ dependencies = [
 [[package]]
 name = "gpui-pre"
 version = "0.3.9"
-source = "git+https://github.com/wormhole-terminal/gpui-pre?rev=76854ddaabd759bba0943fd74caa9827f538e690#76854ddaabd759bba0943fd74caa9827f538e690"
+source = "git+https://github.com/wormhole-terminal/gpui-pre?rev=4e81039a39bdb4a708b4e2edb41eb37ea0f6fcf4#4e81039a39bdb4a708b4e2edb41eb37ea0f6fcf4"
 dependencies = [
  "accesskit",
  "anyhow",

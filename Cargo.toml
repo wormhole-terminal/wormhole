@@ -79,4 +79,4 @@ strip = false
 # Upstream: both are being offered to zed-industries/zed, not yet sent. Drop this entry once a gpui-pre
 # release has them (the fork's README says how).
 [patch.crates-io]
-gpui-pre = { git = "https://github.com/wormhole-terminal/gpui-pre", rev = "76854ddaabd759bba0943fd74caa9827f538e690" }
+gpui-pre = { git = "https://github.com/wormhole-terminal/gpui-pre", rev = "4e81039a39bdb4a708b4e2edb41eb37ea0f6fcf4" }
