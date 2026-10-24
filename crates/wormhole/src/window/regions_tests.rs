@@ -368,6 +368,29 @@ fn a_minute_turning_between_ticks_is_not_a_missing_notify(cx: &mut TestAppContex
     }
 }
 
+/// What the check reports when `change` is made to the window without a notify and a frame is drawn.
+fn report_of_a_missed_notify(
+    cx: &mut TestAppContext,
+    window: &OpenWindow,
+    change: impl FnOnce(&mut crate::window::Workspace) + 'static,
+) -> String {
+    // `drive` draws too (the effects it sets off end in a frame), so the change is made, and the frame
+    // drawn, in one update.
+    let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        cx.update(|cx| crate::app_state::AppState::with_workspace(window, cx, |ws, _, _| change(ws)))
+            .expect("the window is open");
+        draw(cx, window);
+    }));
+    match caught {
+        Ok(()) => panic!("the check missed a change that was not told"),
+        Err(payload) => payload
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| payload.downcast_ref::<&str>().map(ToString::to_string))
+            .unwrap_or_default(),
+    }
+}
+
 /// The check itself: a fact a region shows that changes without notifying the workspace is found in the
 /// next frame, by name; the same change with the notify is not.
 #[gpui_kit::test]
@@ -376,25 +399,39 @@ fn a_fact_changed_without_notifying_is_found_by_the_check(cx: &mut TestAppContex
         return;
     }
     let window = settled_window(cx);
-    // `drive` draws too (the effects it sets off end in a frame), so the change is made, and the frame
-    // drawn, in one update.
-    let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        cx.update(|cx| {
-            crate::app_state::AppState::with_workspace(&window, cx, |ws, _, _| ws.right_tab = TabId::History)
-        })
-        .expect("the window is open");
-        draw(cx, &window);
-    }));
-    let report = match caught {
-        Ok(()) => panic!("the check missed a panel that shows the wrong tab"),
-        Err(payload) => payload
-            .downcast_ref::<String>()
-            .cloned()
-            .or_else(|| payload.downcast_ref::<&str>().map(ToString::to_string))
-            .unwrap_or_default(),
-    };
+    let report = report_of_a_missed_notify(cx, &window, |ws| ws.right_tab = TabId::History);
     assert!(
         report.contains("Panel") && report.contains("tab:"),
         "the report names the region and the fact: {report}"
     );
 }
+
+/// The window's own state that a part draws besides the shared state's facts is checked too: the title
+/// row's menu and the keys' places, the panel's scroll. A panic ends the window (GPUI leaves its update
+/// poisoned), so each is a test of its own.
+macro_rules! a_missed_notify_is_found {
+    ($name:ident, $region:literal, $fact:literal, $change:expr) => {
+        #[gpui_kit::test]
+        fn $name(cx: &mut TestAppContext) {
+            if isolate(stringify!($name)) {
+                return;
+            }
+            let window = settled_window(cx);
+            let report = report_of_a_missed_notify(cx, &window, $change);
+            assert!(report.contains($region) && report.contains(concat!($fact, ":")), "{report}");
+        }
+    };
+}
+
+a_missed_notify_is_found!(a_ports_menu_opened_unannounced_is_found, "TitleRow", "ports menu", |ws| {
+    ws.ports_menu = true
+});
+a_missed_notify_is_found!(a_title_button_moved_unannounced_is_found, "TitleRow", "button", |ws| {
+    ws.areas.title = 1
+});
+a_missed_notify_is_found!(a_status_item_moved_unannounced_is_found, "StatusBar", "item", |ws| {
+    ws.areas.status = 1
+});
+a_missed_notify_is_found!(a_panel_scrolled_unannounced_is_found, "Panel", "scroll", |ws| {
+    ws.panel_scroll.set_offset(gpui_kit::point(gpui_kit::px(0.0), gpui_kit::px(-40.0)))
+});

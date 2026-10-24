@@ -41,8 +41,8 @@ pub(in crate::window) struct PathCard {
 }
 
 impl PathCard {
-    /// Whether the card is on screen (devctl's `title`, and the tests).
-    #[cfg(any(test, feature = "devctl"))]
+    /// Whether the card is on screen (devctl's `title`, the tests and the check on the chrome).
+    #[cfg(any(test, debug_assertions, feature = "devctl"))]
     pub(in crate::window) fn is_shown(&self) -> bool {
         self.shown
     }

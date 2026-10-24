@@ -149,6 +149,13 @@ impl Workspace {
         self.open_cover(cx).is_some()
     }
 
+    /// The file the cover shows (a diff's), where it has one: what the title row's entry for it names.
+    #[cfg(any(test, debug_assertions))]
+    pub(in crate::window) fn cover_file(&self, cx: &App) -> Option<std::path::PathBuf> {
+        let (cover, entity) = self.open_cover(cx)?;
+        (cover.watch)(entity, cx)
+    }
+
     /// What is laid over the terminal, built for this frame.
     pub(in crate::window) fn render_cover(&self, window: &mut Window, cx: &mut App) -> Option<AnyElement> {
         let (cover, entity) = self.open_cover(cx)?;

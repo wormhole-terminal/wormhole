@@ -18,6 +18,8 @@ use std::fmt::Debug;
 use gpui_kit::*;
 
 use super::{Part, app_facts::AppFacts};
+use wormhole_core::view::panes::Axis;
+
 use crate::window::Workspace;
 use crate::window::status_bar::StatusBar;
 
@@ -76,11 +78,13 @@ fn fact(facts: &mut Facts, name: &'static str, value: &impl Debug) {
 
 impl Workspace {
     /// What `part` is drawn from, as the window stands.
-    pub(super) fn region_facts(&self, part: Part, window: &Window, cx: &App) -> Facts {
+    ///
+    /// `app` is the shared state's facts, read once for the frame: they are the same for every region.
+    pub(super) fn region_facts(&self, part: Part, app: &AppFacts, window: &Window, cx: &App) -> Facts {
         let mut facts = Facts::new();
         let columns = self.columns();
         fact(&mut facts, "active", &self.active);
-        fact(&mut facts, "app", &AppFacts::of(self, cx));
+        fact(&mut facts, "app", app);
         fact(&mut facts, "glass", &self.glass_on(cx));
         fact(&mut facts, "slide", &self.slide_motion().map(|motion| motion.edge));
         match part {
@@ -98,6 +102,11 @@ impl Workspace {
                 fact(&mut facts, "tabs", &tabs);
                 fact(&mut facts, "tab words", &self.panel_tab_words(&tabs, cx));
                 fact(&mut facts, "editing", &self.feature_editing);
+                // What the body is drawn with besides the feature's own entity (which notifies): the row the
+                // keys are on, with its ring, and how far the body is scrolled.
+                fact(&mut facts, "cursor", &self.frame_facts(window, cx).panel_cursor);
+                fact(&mut facts, "panel at", &self.areas.panel_at);
+                fact(&mut facts, "scroll", &self.panel_scroll.offset());
             }
             Part::TitleRow => {
                 let summary = &self.active_session().pane.summary;
@@ -112,12 +121,18 @@ impl Workspace {
                 fact(&mut facts, "title words", &words);
                 fact(&mut facts, "tint", &self.title_tint(cx).map(|tint| (tint.color, tint.peak)));
                 fact(&mut facts, "open in", &crate::open_in::OpenIn::resolved(cx));
+                fact(&mut facts, "cover file", &self.cover_file(cx));
+                fact(&mut facts, "button", &self.areas.title);
+                fact(&mut facts, "ports menu", &self.ports_menu);
+                fact(&mut facts, "path card", &(self.path_card.is_shown(), self.path_card.is_open_popover()));
+                fact(&mut facts, "splits", &(self.can_split(Axis::Row), self.can_split(Axis::Column)));
             }
             Part::StatusBar => {
                 // Likewise the bar's state and attention words, and made of what the bar reads.
                 let bar = self.status_bar(cx);
                 fact(&mut facts, "bar sources", &bar.as_ref().map(|_| self.status_bar_sources(cx)));
                 fact(&mut facts, "bar", &bar.map(StatusBar::without_clock));
+                fact(&mut facts, "item", &self.areas.status);
             }
         }
         facts
@@ -152,7 +167,7 @@ impl Workspace {
     /// Remember what `part` was just built from.
     pub(super) fn record_region(&mut self, part: Part, window: &Window, cx: &App) {
         // Not the code it checks, for the tests that count a frame's allocations.
-        let facts = uncounted(|| self.region_facts(part, window, cx));
+        let facts = uncounted(|| self.region_facts(part, &AppFacts::of(self, cx), window, cx));
         self.regions.oracle.recorded[part.index()] = Some(facts);
     }
 
@@ -165,12 +180,13 @@ impl Workspace {
         self.regions.oracle.drawing.set(false);
         let placed = self.regions.oracle.placed.take();
         let mut stale = Vec::new();
+        let app = AppFacts::of(self, cx);
         for part in Part::ALL {
             if !placed[part.index()] {
                 continue;
             }
             let Some(drawn) = self.regions.oracle.recorded[part.index()].take() else { continue };
-            let now = self.region_facts(part, window, cx);
+            let now = self.region_facts(part, &app, window, cx);
             let moved: Vec<String> = drawn
                 .iter()
                 .zip(&now)
