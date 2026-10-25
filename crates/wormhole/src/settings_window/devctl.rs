@@ -71,6 +71,28 @@ pub(crate) fn profile_sheet(cx: &mut App) {
     sections::open_new_profile_sheet(cx);
 }
 
+/// devctl `probe-approve <id>`: Settings → Extensions, the sheet of that Probe, approved.
+pub(crate) fn probe_approve(id: String, cx: &mut App) {
+    with_page(cx, move |page, _, cx| {
+        page.show_section(Section::Extensions, cx);
+        page.devctl_approve_probe(id, cx);
+    });
+}
+
+/// devctl `probe-off <id>`.
+pub(crate) fn probe_off(id: String, cx: &mut App) {
+    with_page(cx, move |page, _, cx| {
+        page.show_section(Section::Extensions, cx);
+        page.turn_probe_off(id.clone(), id, cx);
+    });
+}
+
+/// The `state` line for an open approval sheet (`probe-sheet <id> ready|waiting`), or nothing.
+pub(crate) fn probe_sheet_line(cx: &App) -> String {
+    let Some((_, page)) = current_window(cx) else { return String::new() };
+    page.read(cx).probe_sheet_line()
+}
+
 /// devctl `settings-scroll <px>`: scroll the page down (negative: up).
 pub(crate) fn scroll(by: f32, cx: &mut App) {
     with_page(cx, move |page, _, _| {

@@ -230,6 +230,11 @@
 //!                   the palette does for a setting)
 //!   settings-preview <regular|compact|dense|off>   Terminals & sidebar's preview of a density, as on hover
 //!   profile-sheet   the New profile sheet over the settings window (shot it with settings-shot next batch)
+//!   probe-approve <id>   Settings → Extensions: open the approval sheet for that Probe and press Approve with
+//!                   every permission on, as a person would (a Touch ID level one asks `WORMHOLE_AUTH`;
+//!                   open the page first with `settings-section extensions`; needs the `probes` flag, set with
+//!                   `set feature_flags {"probes": true}`); `state` lists each Probe as `probe <folder> <state>`
+//!   probe-off <id>  turn that Probe off, with no question: its approval and its copy go
 //!   settings-scroll <px>   scroll the settings page (negative = up)
 //!   settings-resize <w> <h>   the settings window's size (a tall one shows a whole page in one shot)
 //!   settings-select <scrollback|icon-theme>   open that row's select in the settings window
@@ -395,6 +400,7 @@ mod language;
 mod menus;
 mod notices;
 mod panels;
+mod probes;
 mod profiling;
 mod scaling;
 mod sessions;

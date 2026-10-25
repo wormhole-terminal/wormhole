@@ -44,8 +44,9 @@ pub(super) fn state(ctx: &mut Ctx, _: &str) -> Result<String> {
         .unwrap_or_default();
     let welcome = ctx.workspace.devctl_welcome_state(crate::notifications::permission_asks(ctx.cx), ctx.cx);
     let language = wormhole_text::language().tag();
+    let probes = super::probes::state(ctx.cx);
     Ok(format!(
-        "{}focus {focus}\nlanguage {language}\n{find}{studio}{intro}{lights_look}{welcome}",
+        "{}focus {focus}\nlanguage {language}\n{find}{studio}{intro}{lights_look}{welcome}{probes}",
         ctx.workspace.debug_state(ctx.cx)
     ))
 }

@@ -6,7 +6,7 @@ use anyhow::anyhow;
 
 use super::{
     Command, a11y, agents, ambient, blocks, control, flow, hosts, input, language, menus, notices, panels,
-    profiling, scaling, sessions, settings, shots, sidebar, studio, tear_off, title, welcome,
+    probes, profiling, scaling, sessions, settings, shots, sidebar, studio, tear_off, title, welcome,
 };
 
 /// The command called `name`, if there is one.
@@ -184,6 +184,8 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "settings-resize" => settings::resize,
         "settings-scroll" => settings::scroll,
         "profile-sheet" => settings::profile_sheet,
+        "probe-approve" => probes::approve,
+        "probe-off" => probes::off,
         "settings-record" => settings::record,
         "settings-reveal" => settings::reveal,
         "settings-preview" => settings::preview,
