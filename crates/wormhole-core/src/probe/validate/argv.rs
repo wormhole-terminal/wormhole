@@ -7,6 +7,7 @@
 //! and `git`, which runs through the app's hardened `GitCmd` and only for the read-only subcommands.
 
 use super::Findings;
+use super::program;
 use crate::probe::read::ProbeFolder;
 
 /// The `git` subcommands a Probe may run. `branch` is only for listing; see [`check_git`].
@@ -14,7 +15,17 @@ pub(crate) const READ_ONLY_GIT: &[&str] =
     &["log", "show", "status", "rev-parse", "diff", "describe", "branch", "ls-files"];
 
 /// Flags no read-only use needs and some can write or run a program with.
-const REFUSED_GIT_FLAGS: &[&str] = &["--output", "--ext-diff", "--textconv", "--exec-path", "--upload-pack"];
+const REFUSED_GIT_FLAGS: &[&str] = &[
+    "--output",
+    "--ext-diff",
+    "--textconv",
+    "--exec-path",
+    "--upload-pack",
+    // Verifying a signature runs the user's `gpg.program`.
+    "--show-signature",
+    "--verify-signatures",
+    "--gpg-sign",
+];
 /// `git branch` flags that create, move, delete or configure a branch.
 const BRANCH_WRITE_LONG: &[&str] = &[
     "--delete",
@@ -99,7 +110,8 @@ pub(super) fn check(folder: &ProbeFolder, run: &[String], at: &Where<'_>, out: &
             );
         }
     }
-    if program == "git" {
+    // Whatever the spelling: the name check above refuses anything but `git`, but this must not rest on it.
+    if program.eq_ignore_ascii_case("git") {
         check_git(run, at, out);
     }
 }
@@ -129,6 +141,9 @@ fn check_program(folder: &ProbeFolder, program: &str, at: &Where<'_>, out: &mut 
             &path,
             format!("`{program}`: a program is a bare name that Wormhole finds, or `./path` inside the Probe's folder"),
         );
+        return;
+    } else if let Some(why) = program::bare_name_problem(program) {
+        out.error("run-program-name", &path, why);
         return;
     }
     if !folder.manifest.permissions.process.iter().any(|allowed| allowed == program) {
@@ -270,6 +285,9 @@ mod tests {
             "git diff --output=/tmp/x",
             "git log --ext-diff",
             "git show --textconv",
+            "git log --show-signature",
+            "git log --verify-signatures",
+            "git show --gpg-sign=x",
         ] {
             assert!(!git_errors(bad, false).is_empty(), "{bad}");
         }

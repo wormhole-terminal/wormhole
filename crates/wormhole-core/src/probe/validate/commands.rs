@@ -5,6 +5,7 @@ use super::Findings;
 use super::argv::{self, Where};
 use crate::keys::keymap;
 use crate::keys::keyspec::KeySpec;
+use crate::probe::hidden::has_hidden;
 use crate::probe::manifest::{Command, RunIn, StatusItem};
 use crate::probe::read::ProbeFolder;
 
@@ -40,13 +41,21 @@ fn check_command(folder: &ProbeFolder, command: &Command, ix: usize, has_code: b
     let at = format!("contributes.commands[{ix}]");
     if command.title.trim().is_empty() {
         out.error("command-title", format!("{at}.title"), "must not be empty");
-    } else if command.title.chars().any(char::is_control) {
-        out.error("command-title", format!("{at}.title"), "must not hold control characters");
+    } else if has_hidden(&command.title) {
+        out.error(
+            "command-title",
+            format!("{at}.title"),
+            "must not hold control, bidi or invisible characters",
+        );
     }
     if let Some(description) = &command.description
-        && description.chars().any(char::is_control)
+        && has_hidden(description)
     {
-        out.error("command-title", format!("{at}.description"), "must not hold control characters");
+        out.error(
+            "command-title",
+            format!("{at}.description"),
+            "must not hold control, bidi or invisible characters",
+        );
     }
     let Some(run) = &command.run else {
         if !has_code {
@@ -74,10 +83,10 @@ fn check_command(folder: &ProbeFolder, command: &Command, ix: usize, has_code: b
         return;
     }
     if command.run_in == RunIn::NewTerminal {
-        out.warning(
+        out.error(
             "command-capture-new-terminal",
             &path,
-            "a capture reaches the user's own shell in a new terminal; use `in = \"background\"` unless the program reads it with care",
+            "a capture would reach the user's own shell in a new terminal, which is not safe until captures are quoted for it; use `in = \"background\"`",
         );
     }
     let targeted =

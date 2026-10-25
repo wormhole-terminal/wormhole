@@ -6,7 +6,8 @@
 //!
 //! - at most 1 KiB, and the compiled program at most 256 KiB;
 //! - never able to match the empty string (a rule that matches everywhere marks everything);
-//! - the flags `i`, and `u` only to switch Unicode off for a word boundary: `(?-u:\b)`;
+//! - the flags `i` and `u` (so `(?-u:\b)` can ask for an ASCII word boundary); `m`, `s`, `x`, `U`, `R` are
+//!   refused. `u` is not restricted further: a `str` regex refuses a pattern that can match invalid UTF-8;
 //! - a Unicode `\b` is a warning, for it makes the engine's lazy DFA give up on non-ASCII text.
 //!
 //! [`Pattern::capture_hazard`] is the anchoring check for a capture that becomes a command's
@@ -42,6 +43,9 @@ pub(crate) enum CaptureHazard {
     Unbounded,
     /// Its first character can be `-`, so it can be read as an option.
     MayStartWithDash,
+    /// It can be empty, or not take part in a match at all (it is in an alternative or an optional
+    /// part), and an empty argument is not a value.
+    MayBeEmpty,
 }
 
 /// Check `pattern` (the manifest field `path`) and report what is wrong; the parsed pattern when it
@@ -68,9 +72,7 @@ pub(crate) fn analyze(pattern: &str, path: &str, out: &mut Findings) -> Option<P
         out.error(
             "pattern-flag",
             path,
-            format!(
-                "the flag `{flag}` is not allowed: only `i`, and `u` to switch Unicode off for `(?-u:\\b)`"
-            ),
+            format!("the flag `{flag}` is not allowed: only `i`, and `u` (as in `(?-u:\\b)`)"),
         );
     }
     let hir = match regex_syntax::ParserBuilder::new().nest_limit(NEST_LIMIT).build().parse(pattern) {
@@ -180,8 +182,10 @@ impl Pattern {
     /// A capture comes from a program's output, so it is hostile, and an argument that begins with
     /// `-` is read as an option (`--upload-pack=…`). Wormhole refuses such a capture when it runs and
     /// puts the end-of-options marker before it, but a pattern that *can* produce one is still
-    /// wrong, so `validate` demands the pattern rule it out. A capture is accepted when both hold:
+    /// wrong, so `validate` demands the pattern rule it out. A capture is accepted when all three hold:
     ///
+    /// 0. **Present**: it always takes part in a match (it is in no alternative and no part that may
+    ///    repeat zero times) and cannot match the empty string, so the argument is never empty.
     /// 1. **Bounded**: the longest string it can match is at most [`MAX_ARGUMENT_BYTES`].
     /// 2. **No dash first**: no string it matches starts with `-`. This is computed from the capture's
     ///    own HIR: the characters a literal, a class or a repetition of one can start with, through
@@ -194,23 +198,28 @@ impl Pattern {
     /// a literal in front of the capture count as an anchor; that is not accepted, because
     /// `commit (.+)` still matches `commit --upload-pack=…`.
     pub(crate) fn capture_hazard(&self, index: usize) -> Option<CaptureHazard> {
-        let node = if index == 0 {
-            &self.hir
-        } else {
-            let mut found = None;
-            visit(&self.hir, &mut |node| {
-                if let HirKind::Capture(cap) = node.kind()
-                    && cap.index as usize == index
-                {
-                    found = Some(&*cap.sub);
-                }
-            });
-            found?
-        };
+        let (node, optional) =
+            if index == 0 { (&self.hir, false) } else { find_capture(&self.hir, index, false)? };
+        if optional || node.properties().minimum_len() == Some(0) {
+            return Some(CaptureHazard::MayBeEmpty);
+        }
         if node.properties().maximum_len().is_none_or(|max| max > MAX_ARGUMENT_BYTES) {
             return Some(CaptureHazard::Unbounded);
         }
         can_start_with_dash(node).then_some(CaptureHazard::MayStartWithDash)
+    }
+}
+
+/// Capture `index` below `hir`, and whether a match can go without it (it is in an alternative, or in
+/// a part that may repeat zero times).
+fn find_capture(hir: &Hir, index: usize, optional: bool) -> Option<(&Hir, bool)> {
+    match hir.kind() {
+        HirKind::Capture(cap) if cap.index as usize == index => Some((&cap.sub, optional)),
+        HirKind::Capture(cap) => find_capture(&cap.sub, index, optional),
+        HirKind::Repetition(rep) => find_capture(&rep.sub, index, optional || rep.min == 0),
+        HirKind::Concat(parts) => parts.iter().find_map(|part| find_capture(part, index, optional)),
+        HirKind::Alternation(parts) => parts.iter().find_map(|part| find_capture(part, index, true)),
+        HirKind::Empty | HirKind::Literal(_) | HirKind::Class(_) | HirKind::Look(_) => None,
     }
 }
 
@@ -367,6 +376,17 @@ mod tests {
         assert_eq!(hazard("(-)", 1), Some(CaptureHazard::MayStartWithDash));
         assert_eq!(hazard("([+-][0-9]{1,3})", 1), Some(CaptureHazard::MayStartWithDash));
         assert_eq!(hazard("(?:-|x)(a)", 0), Some(CaptureHazard::MayStartWithDash), "the whole match");
+    }
+
+    #[test]
+    fn a_capture_that_can_be_empty_or_not_take_part_is_a_hazard() {
+        for bad in ["(a*)b", "(a?)b", "(a|)b", "(?:(a)|b)", "(?:(a)|(b))", "(?:(a))?b", "x(?:(a)){0,3}"] {
+            let group = 1;
+            assert_eq!(hazard(bad, group), Some(CaptureHazard::MayBeEmpty), "{bad}");
+        }
+        assert_eq!(hazard("(?:(b))+", 1), None, "a repetition that must happen once");
+        assert_eq!(hazard("(a|b)c", 1), None, "the alternative is inside the group");
+        assert_eq!(hazard("(?:a|(b))c", 0), None, "the whole match is always there");
     }
 
     #[test]

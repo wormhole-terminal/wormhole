@@ -20,6 +20,7 @@ mod identity;
 mod paths;
 mod pattern;
 mod permissions;
+mod program;
 mod rules;
 mod svg;
 mod template;

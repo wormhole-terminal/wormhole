@@ -7,8 +7,12 @@ use wormhole_term::agents::AGENTS;
 use super::Findings;
 use super::paths;
 use super::svg;
+use crate::probe::hidden::{has_hidden, is_hidden};
 use crate::probe::manifest::{AgentDef, AgentStatus};
 use crate::probe::read::ProbeFolder;
+
+/// The shortest package name detection will look for.
+const MIN_PACKAGE_CHARS: usize = 4;
 
 pub(super) fn check(folder: &ProbeFolder, out: &mut Findings) {
     for (ix, agent) in folder.manifest.contributes.agents.iter().enumerate() {
@@ -17,12 +21,16 @@ pub(super) fn check(folder: &ProbeFolder, out: &mut Findings) {
 }
 
 fn bare_name(text: &str) -> bool {
-    !text.is_empty() && !text.contains('/') && !text.chars().any(|c| c.is_control() || c.is_whitespace())
+    !text.is_empty() && !text.contains('/') && !text.chars().any(|c| is_hidden(c) || c.is_whitespace())
 }
 
 fn check_agent(folder: &ProbeFolder, agent: &AgentDef, at: &str, out: &mut Findings) {
-    if agent.name.trim().is_empty() || agent.name.chars().any(char::is_control) {
-        out.error("agent-name", format!("{at}.name"), "must be a name without control characters");
+    if agent.name.trim().is_empty() || has_hidden(&agent.name) {
+        out.error(
+            "agent-name",
+            format!("{at}.name"),
+            "must be a name without control, bidi or invisible characters",
+        );
     }
     if !bare_name(&agent.command) {
         out.error(
@@ -48,11 +56,30 @@ fn check_agent(folder: &ProbeFolder, agent: &AgentDef, at: &str, out: &mut Findi
         }
     }
     for (ix, package) in agent.packages.iter().enumerate() {
-        if package.is_empty() || package.chars().any(char::is_control) {
+        let at = format!("{at}.packages[{ix}]");
+        // Detection looks for the package as a piece of a script's path, so a short or common one would
+        // take other programs for this agent.
+        if has_hidden(package)
+            || package.chars().count() < MIN_PACKAGE_CHARS
+            || !package.chars().any(char::is_alphabetic)
+        {
             out.error(
                 "agent-packages",
-                format!("{at}.packages[{ix}]"),
-                "must not be empty or hold control characters",
+                &at,
+                format!(
+                    "`{package}` must be at least {MIN_PACKAGE_CHARS} characters with a letter in them, and without control, bidi or invisible characters"
+                ),
+            );
+        } else if let Some(builtin) = AGENTS.iter().find(|b| {
+            b.packages.iter().any(|known| known.contains(package.as_str()) || package.contains(known))
+        }) {
+            out.error(
+                "agent-packages-builtin",
+                &at,
+                format!(
+                    "`{package}` overlaps a package of the built-in agent {}, so it could take that agent's scripts",
+                    builtin.name
+                ),
             );
         }
     }

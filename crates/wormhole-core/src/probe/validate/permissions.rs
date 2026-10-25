@@ -7,6 +7,8 @@ use std::collections::BTreeSet;
 use super::Findings;
 use super::argv;
 use super::paths;
+use super::program;
+use crate::probe::hidden::is_hidden;
 use crate::probe::manifest::{AgentStatus, TerminalAccess};
 use crate::probe::read::ProbeFolder;
 
@@ -67,7 +69,10 @@ pub struct Summary {
     pub programs: Vec<ProgramNote>,
 }
 
-/// Shells, interpreters and launchers: whatever they are given, they run.
+/// Programs that run whatever they are given, or something it names: shells and interpreters, launchers
+/// and schedulers, containers, editors and pagers with a shell escape (`!`), archivers that can run a
+/// program (`tar --checkpoint-action`, `zip -TT`), database shells (`.shell`, `\\!`, `system`), and
+/// tools with aliases or extensions that are commands (`gh`).
 const RUNS_ANYTHING: &[&str] = &[
     "sh",
     "bash",
@@ -77,53 +82,96 @@ const RUNS_ANYTHING: &[&str] = &[
     "ksh",
     "csh",
     "tcsh",
+    "pwsh",
+    "tclsh",
     "node",
     "deno",
     "bun",
+    "bunx",
     "ruby",
     "perl",
     "php",
     "lua",
+    "swift",
     "awk",
     "gawk",
+    "nawk",
+    "mawk",
+    "sed",
     "osascript",
     "env",
     "xargs",
     "open",
     "find",
+    "arch",
+    "command",
+    "stdbuf",
     "nohup",
+    "nice",
+    "timeout",
+    "time",
     "sudo",
     "su",
     "doas",
-    "exec",
-    "eval",
-    "time",
-    "timeout",
-    "nice",
-    "caffeinate",
+    "sandbox-exec",
+    "parallel",
+    "watch",
     "script",
     "expect",
+    "exec",
+    "eval",
+    "caffeinate",
     "tmux",
     "screen",
     "xcrun",
+    "vi",
+    "vim",
+    "nvim",
+    "less",
+    "more",
+    "tar",
+    "zip",
+    "sqlite3",
+    "psql",
+    "mysql",
+    "uvx",
+    "pipx",
+    "gh",
+    "docker",
+    "podman",
+    "launchctl",
+    "crontab",
 ];
-/// Tools that read the folder they start in and run what it says.
+/// Tools that read the folder they start in and run what it says (a Makefile, a build script, a
+/// config, a project's scripts).
 const RUNS_FOLDER_CODE: &[&str] = &[
     "make", "gmake", "ninja", "just", "rake", "npm", "npx", "pnpm", "yarn", "cargo", "ssh", "scp", "sftp",
-    "rsync", "gradle", "mvn", "go", "pip",
+    "rsync", "gradle", "mvn", "go", "pip", "uv",
 ];
+
+/// `name` without a trailing version (`perl5.34`, `node22`), which names the same program. A name that
+/// ends in a digit of its own (`sqlite3`) is looked up whole as well.
+fn without_version(name: &str) -> &str {
+    let stripped = name.trim_end_matches(|c: char| c.is_ascii_digit() || c == '.');
+    if stripped.is_empty() { name } else { stripped }
+}
 
 pub(crate) fn classify(program: &str) -> ProgramClass {
     if program.starts_with("./") {
         return ProgramClass::OwnScript;
     }
-    if program == "git" {
+    let name = program.to_ascii_lowercase();
+    if name == "git" {
         return ProgramClass::ReadOnlyGit;
     }
-    let name = program.to_ascii_lowercase();
-    if RUNS_ANYTHING.contains(&name.as_str()) || name.starts_with("python") || name.starts_with("pypy") {
+    let base = without_version(&name);
+    if RUNS_ANYTHING.contains(&name.as_str())
+        || RUNS_ANYTHING.contains(&base)
+        || name.starts_with("python")
+        || name.starts_with("pypy")
+    {
         ProgramClass::RunsAnything
-    } else if RUNS_FOLDER_CODE.contains(&name.as_str()) {
+    } else if RUNS_FOLDER_CODE.contains(&name.as_str()) || RUNS_FOLDER_CODE.contains(&base) {
         ProgramClass::RunsFolderCode
     } else {
         ProgramClass::Other
@@ -151,11 +199,11 @@ pub(super) fn check(folder: &ProbeFolder, out: &mut Findings) {
     let p = &m.permissions;
     for (ix, program) in p.process.iter().enumerate() {
         let at = format!("permissions.process[{ix}]");
-        if program.is_empty() || program.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        if program.is_empty() || program.chars().any(|c| is_hidden(c) || c.is_whitespace()) {
             out.error(
                 "permission-process",
                 at,
-                "must be a program name without spaces or control characters",
+                "must be a program name without spaces or control, bidi or invisible characters",
             );
         } else if let Some(script) = program.strip_prefix("./") {
             match paths::inside_folder(script) {
@@ -173,6 +221,8 @@ pub(super) fn check(folder: &ProbeFolder, out: &mut Findings) {
                 at,
                 format!("`{program}`: a program is a bare name that Wormhole finds, or `./path` inside the Probe's folder"),
             );
+        } else if let Some(why) = program::bare_name_problem(program) {
+            out.error("permission-process", at, why);
         }
     }
     // A listed program nothing runs is an ask without a reason; with code, `$.process.run` may use it.
@@ -353,9 +403,77 @@ mod tests {
             ("ssh", ProgramClass::RunsFolderCode),
             ("jq", ProgramClass::Other),
             ("say", ProgramClass::Other),
+            ("perl5.34", ProgramClass::RunsAnything),
+            ("ruby3.3", ProgramClass::RunsAnything),
+            ("node22", ProgramClass::RunsAnything),
+            ("php8.3", ProgramClass::RunsAnything),
+            ("python3", ProgramClass::RunsAnything),
+            ("uv", ProgramClass::RunsFolderCode),
+            ("GIT", ProgramClass::ReadOnlyGit),
         ] {
             assert_eq!(classify(program), class, "{program}");
         }
+    }
+
+    #[test]
+    fn launchers_interpreters_and_escapes_run_anything() {
+        for program in [
+            "arch",
+            "pwsh",
+            "tclsh",
+            "swift",
+            "vim",
+            "nvim",
+            "vi",
+            "less",
+            "more",
+            "tar",
+            "zip",
+            "sqlite3",
+            "psql",
+            "mysql",
+            "uvx",
+            "pipx",
+            "bunx",
+            "deno",
+            "bun",
+            "gh",
+            "docker",
+            "podman",
+            "launchctl",
+            "crontab",
+            "command",
+            "stdbuf",
+            "nohup",
+            "nice",
+            "timeout",
+            "time",
+            "sudo",
+            "doas",
+            "sandbox-exec",
+            "parallel",
+            "watch",
+            "script",
+            "expect",
+            "awk",
+            "gawk",
+            "nawk",
+            "sed",
+            "perl",
+            "ruby",
+            "node",
+            "php",
+        ] {
+            assert_eq!(classify(program), ProgramClass::RunsAnything, "{program}");
+        }
+    }
+
+    #[test]
+    fn a_version_is_not_a_different_program() {
+        assert_eq!(without_version("perl5.34"), "perl");
+        assert_eq!(without_version("node22"), "node");
+        assert_eq!(without_version("7"), "7", "a name that is only a version stays");
+        assert_eq!(without_version("sqlite3"), "sqlite");
     }
 
     #[test]

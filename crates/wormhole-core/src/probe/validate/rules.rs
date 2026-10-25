@@ -5,6 +5,7 @@ use super::Findings;
 use super::argv;
 use super::pattern::{self, CaptureHazard, Pattern};
 use super::template;
+use crate::probe::hidden::{has_hidden, is_hidden};
 use crate::probe::manifest::{Action, ActionKind, Command, KeepSpec, Look, Rule};
 use crate::probe::read::ProbeFolder;
 
@@ -95,8 +96,8 @@ fn check_hover(hover: &str, groups: Option<usize>, path: &str, out: &mut Finding
     if chars > MAX_HOVER_CHARS {
         out.error("hover-too-long", path, format!("{chars} characters; at most {MAX_HOVER_CHARS}"));
     }
-    if hover.chars().any(char::is_control) {
-        out.error("hover-control", path, "must be plain text, without control characters");
+    if has_hidden(hover) {
+        out.error("hover-control", path, "must be plain text, without control, bidi or invisible characters");
     }
     check_template_groups(hover, groups, path, "hover-template", "hover-group", out);
 }
@@ -170,7 +171,7 @@ fn check_action(
                 return;
             };
             let path = action_at("url");
-            if url.len() > MAX_URL_BYTES || url.chars().any(|c| c.is_control() || c.is_whitespace()) {
+            if url.len() > MAX_URL_BYTES || url.chars().any(|c| is_hidden(c) || c.is_whitespace()) {
                 out.error(
                     "action-url",
                     &path,
@@ -249,6 +250,13 @@ fn check_command_target(command: &Command, pattern: Option<&Pattern>, path: &str
                 path,
                 format!(
                     "{what} goes to a program as an argument but can start with `-`, which a program reads as an option; start it with a class that leaves `-` out, as in `([0-9a-f][0-9a-f]{{6,39}})`"
+                ),
+            ),
+            Some(CaptureHazard::MayBeEmpty) => out.error(
+                "capture-unanchored",
+                path,
+                format!(
+                    "{what} goes to a program as an argument but can be empty or not take part in a match; an empty argument is not a value, so require at least one character in a group that always takes part"
                 ),
             ),
             None => {}

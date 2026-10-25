@@ -14,8 +14,8 @@ pub(crate) fn inside_folder(path: &str) -> Result<String, &'static str> {
     if path.starts_with('/') {
         return Err("is absolute; it must be inside the Probe's folder");
     }
-    if path.contains('\0') || path.contains('\\') || path.chars().any(char::is_control) {
-        return Err("holds a control character or a backslash");
+    if path.contains('\0') || path.contains('\\') || crate::probe::hidden::has_hidden(path) {
+        return Err("holds a control or invisible character or a backslash");
     }
     for part in path.split('/') {
         match part {

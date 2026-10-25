@@ -17,6 +17,7 @@
 //! in the tier of `git` and `notify` so that `ipc` can offer it on the command line.
 
 pub mod fingerprint;
+mod hidden;
 pub mod manifest;
 pub mod read;
 pub mod scan;

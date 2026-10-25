@@ -7,6 +7,7 @@ use semver::{Version, VersionReq};
 
 use super::Findings;
 use super::paths;
+use crate::probe::hidden::has_hidden;
 use crate::probe::manifest::{API, CODE_API, Permissions, is_local_id, is_probe_id};
 use crate::probe::read::ProbeFolder;
 
@@ -44,8 +45,12 @@ fn check_probe(folder: &ProbeFolder, out: &mut Findings) {
     for (field, text) in [("name", &p.name), ("description", &p.description), ("author", &p.author)] {
         if text.trim().is_empty() {
             out.error("probe-text-empty", format!("probe.{field}"), "must not be empty");
-        } else if text.chars().any(char::is_control) {
-            out.error("probe-text-control", format!("probe.{field}"), "must not hold control characters");
+        } else if has_hidden(text) {
+            out.error(
+                "probe-text-control",
+                format!("probe.{field}"),
+                "must not hold control, bidi or invisible characters",
+            );
         }
     }
     if let Err(err) = Version::parse(&p.version) {

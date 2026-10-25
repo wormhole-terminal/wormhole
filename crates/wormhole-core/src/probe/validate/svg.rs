@@ -6,7 +6,8 @@
 //!
 //! What is accepted: `<svg>`, `<g>`, `<path>`, `<circle>`, `<rect>`, `<ellipse>`, `<line>`,
 //! `<polyline>`, `<polygon>`, `<title>` and `<desc>`, with any attributes except `style`, an event
-//! handler (`on…`) or a link (`href`, `xlink:href`), plus comments and the XML declaration. What is
+//! handler (`on…`) or a link (`href`, `xlink:href`), plus comments and the XML declaration (`<?xml …?>`,
+//! first only). What is
 //! refused, by name: `<script>`, `<image>`, `<style>`, `<foreignObject>`, `<use>` and every other
 //! element, a DOCTYPE or entity, CDATA, and anything it cannot read as tags and attributes.
 
@@ -18,16 +19,23 @@ const ALLOWED: &[&str] =
 
 /// Why `text` is not an acceptable icon, if it is not one.
 pub(crate) fn problem(text: &str) -> Option<String> {
-    let mut rest = text;
+    // The XML declaration is the one `<?` accepted, and only first; `<?xml-stylesheet …?>` and any other
+    // processing instruction are not.
+    let mut rest = text.trim_start_matches('\u{feff}').trim_start();
+    if let Some(after) = rest.strip_prefix("<?xml").filter(|after| after.starts_with(char::is_whitespace)) {
+        let Some(end) = after.find("?>") else { return Some("has an unterminated `<?xml`".into()) };
+        rest = &after[end + 2..];
+    }
     let mut saw_svg = false;
     while let Some(at) = rest.find('<') {
         rest = &rest[at + 1..];
         if let Some(after) = rest.strip_prefix("!--") {
             let Some(end) = after.find("-->") else { return Some("has an unterminated comment".into()) };
             rest = &after[end + 3..];
-        } else if let Some(after) = rest.strip_prefix('?') {
-            let Some(end) = after.find("?>") else { return Some("has an unterminated `<?`".into()) };
-            rest = &after[end + 2..];
+        } else if rest.starts_with('?') {
+            return Some(
+                "has a processing instruction (`<?`) other than the XML declaration at the start".into(),
+            );
         } else if rest.starts_with('!') {
             return Some("has a DOCTYPE, entity or CDATA, which are not allowed".into());
         } else if let Some(after) = rest.strip_prefix('/') {
@@ -125,11 +133,28 @@ mod tests {
             ("<svg><path d='M0 0' fill='url(https://x/y#z)'/></svg>", "url("),
             ("<svg><path d='M0 0' xlink:href='x'/></svg>", "xlink:href"),
             ("<!DOCTYPE svg [<!ENTITY x SYSTEM 'file:///etc/passwd'>]><svg/>", "DOCTYPE"),
+            ("<?xml-stylesheet href='x.css'?><svg><path d='M0 0'/></svg>", "processing instruction"),
+            ("<?xml version='1.0'?><?xml-stylesheet href='x.css'?><svg/>", "processing instruction"),
+            ("<svg><?php echo 1 ?></svg>", "processing instruction"),
+            ("<svg/><?xml version='1.0'?>", "processing instruction"),
             ("<svg><![CDATA[x]]></svg>", "CDATA"),
         ] {
             let why = problem(bad).unwrap_or_else(|| panic!("accepted {bad}"));
             assert!(why.contains(word), "{bad}: {why}");
         }
+    }
+
+    #[test]
+    fn the_xml_declaration_is_fine_first_with_a_byte_order_mark_or_white_space() {
+        let svg = "<svg><path d='M0 0'/></svg>";
+        for head in [
+            "<?xml version='1.0'?>",
+            "\u{feff}<?xml version='1.0'?>",
+            "\n  <?xml version='1.0' encoding='UTF-8'?>\n",
+        ] {
+            assert_eq!(problem(&format!("{head}{svg}")), None, "{head:?}");
+        }
+        assert!(problem(&format!("<?xml{svg}")).is_some(), "`<?xml` must be followed by white space");
     }
 
     #[test]

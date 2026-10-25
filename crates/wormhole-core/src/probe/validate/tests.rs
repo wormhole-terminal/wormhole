@@ -319,12 +319,13 @@ fn a_capture_is_only_ever_a_whole_argument() {
 }
 
 #[test]
-fn a_command_in_a_new_terminal_with_a_capture_is_a_warning_and_an_unbound_one_too() {
+fn a_capture_in_a_new_terminal_command_is_an_error_and_an_unbound_one_a_warning() {
     let found = report(&command("run = [\"say\", \"$1\"]\nin = \"new-terminal\"\n", "\"say\""));
-    let warned: Vec<_> = found.warnings().map(|f| f.code).collect();
-    assert!(warned.contains(&"command-capture-new-terminal"), "{warned:?}");
-    assert!(warned.contains(&"command-capture-unbound"), "{warned:?}");
-    assert!(found.is_ok());
+    assert!(found.errors().any(|f| f.code == "command-capture-new-terminal"), "{:?}", found.findings);
+    assert!(found.warnings().any(|f| f.code == "command-capture-unbound"));
+    assert!(!found.is_ok());
+    let background = report(&command("run = [\"say\", \"$1\"]\nin = \"background\"\n", "\"say\""));
+    assert!(background.find("command-capture-new-terminal").is_none());
 }
 
 #[test]
@@ -551,4 +552,112 @@ fn findings_print_as_one_line_with_their_place() {
     let found = report(&rule("pattern = 'a*'\ntone = \"link\"\n"));
     let line = found.findings[0].to_string();
     assert!(line.starts_with("error[pattern-empty-match] contributes.rules[0].pattern: "), "{line}");
+}
+
+// ---- one spelling of a program ------------------------------------------------------------------
+
+#[test]
+fn git_is_git_whatever_the_case_and_its_other_programs_are_refused() {
+    for name in ["GIT", "Git", "gIT"] {
+        let found = report(&command(
+            &format!("run = [\"{name}\", \"push\"]\nin = \"background\"\n"),
+            &format!("\"{name}\""),
+        ));
+        assert!(found.find("run-program-name").is_some(), "{name}: {:?}", found.findings);
+        assert!(found.find("permission-process").is_some(), "{name}: {:?}", found.findings);
+        assert!(!found.is_ok());
+        // Not even the git checks are skipped: the name is judged as `git` too.
+        assert!(found.find("git-subcommand").is_some(), "{name}");
+    }
+    for name in ["git-upload-pack", "git-receive-pack", "git-shell", "git-upload-archive", "scalar"] {
+        let found =
+            report(&command(&format!("run = [\"{name}\"]\nin = \"background\"\n"), &format!("\"{name}\"")));
+        let said = found.find("permission-process").unwrap_or_else(|| panic!("{name}: {:?}", found.findings));
+        assert!(said.message.contains("`git`"), "{}", said.message);
+        assert!(found.find("run-program-name").is_some(), "{name}");
+    }
+    // A bare name alone in permissions is refused too.
+    assert!(has("[permissions]\nprocess = [\"GIT\"]\n", "permission-process"));
+    // The same program is `git` for the summary.
+    let summary = report("[permissions]\nprocess = [\"GIT\"]\n").summary;
+    assert_eq!(summary.programs[0].class, ProgramClass::ReadOnlyGit);
+}
+
+// ---- text that hides itself -----------------------------------------------------------------------
+
+#[test]
+fn text_a_person_reads_cannot_hide_in_bidi_or_invisible_characters() {
+    for bad in ["\u{202e}", "\u{200b}", "\u{2066}", "\u{feff}", "\u{2028}"] {
+        let in_head = |field: &str| {
+            let value =
+                |name: &str, plain: &str| if name == field { format!("x{bad}y") } else { plain.to_string() };
+            let text = HEAD
+                .replace("name = \"Tiny\"", &format!("name = \"{}\"", value("name", "Tiny")))
+                .replace("description = \"d\"", &format!("description = \"{}\"", value("description", "d")))
+                .replace("author = \"a\"", &format!("author = \"{}\"", value("author", "a")));
+            let parsed = Manifest::parse(&text).expect("parses");
+            validate(&ProbeFolder { manifest: parsed.manifest, ..probe("", &[]) })
+        };
+        for field in ["name", "description", "author"] {
+            assert!(in_head(field).find("probe-text-control").is_some(), "{field} {bad:?}");
+        }
+        let title = report(&format!(
+            "[permissions]\nprocess = [\"say\"]\n[[contributes.commands]]\nid = \"c\"\ntitle = \"x{bad}y\"\nrun = [\"say\"]\nin = \"background\"\n"
+        ));
+        assert!(title.find("command-title").is_some(), "title {bad:?}");
+        let description = report(&format!(
+            "[permissions]\nprocess = [\"say\"]\n[[contributes.commands]]\nid = \"c\"\ntitle = \"t\"\ndescription = \"x{bad}y\"\nrun = [\"say\"]\nin = \"background\"\n"
+        ));
+        assert!(description.find("command-title").is_some(), "description {bad:?}");
+        assert!(
+            has(&rule(&format!("pattern = 'a+'\ntone = \"link\"\nhover = \"x{bad}y\"\n")), "hover-control"),
+            "hover {bad:?}"
+        );
+        assert!(
+            has(&agent("").replace("name = \"Zork\"", &format!("name = \"Zo{bad}rk\"")), "agent-name"),
+            "agent {bad:?}"
+        );
+        assert!(
+            has(&format!("[permissions]\nprocess = [\"sa{bad}y\"]\n"), "permission-process"),
+            "process {bad:?}"
+        );
+        assert!(has(&format!("[permissions]\nenv = [\"TO{bad}KEN\"]\n"), "permission-env"), "env {bad:?}");
+        assert!(
+            has(&format!("[permissions]\nopen = [\"acme{bad}.net\"]\n"), "permission-open"),
+            "open {bad:?}"
+        );
+        assert!(
+            has(&agent("").replace("[\"zork\"]", &format!("[\"zo{bad}rk\"]")), "agent-executables"),
+            "executable {bad:?}"
+        );
+    }
+}
+
+// ---- captures that reach an argument ------------------------------------------------------------
+
+#[test]
+fn a_capture_that_can_be_empty_or_absent_is_not_an_argument() {
+    let run = "[\"git\", \"show\", \"$1\"]";
+    for bad in ["([0-9a-f]{0,9})x", "(?:([0-9a-f]{7,9})|zz)", "(?:([0-9a-f]{7,9}))?x", "x(a*)"] {
+        let found = report(&command_rule(bad, run));
+        let said = found.find("capture-unanchored").unwrap_or_else(|| panic!("{bad}: {:?}", found.findings));
+        assert!(said.message.contains("empty"), "{bad}: {}", said.message);
+    }
+    clean(&command_rule("x([0-9a-f]{7,9})", run));
+}
+
+// ---- agent packages ---------------------------------------------------------------------------------
+
+#[test]
+fn an_agent_package_is_long_and_overlaps_no_built_in_s() {
+    let with = |packages: &str| agent(&format!("packages = [{packages}]\n"));
+    clean(&with("\"@acme/zork-cli\""));
+    for short in ["\"npm\"", "\"/a/\"", "\"1234\"", "\"\""] {
+        assert!(has(&with(short), "agent-packages"), "{short}");
+    }
+    // A piece of Claude Code's package, a package that holds it, and one that is the same.
+    for overlapping in ["\"anthropic-ai\"", "\"/.local/share/claude/versions/foo\"", "\"@openai/codex\""] {
+        assert!(has(&with(overlapping), "agent-packages-builtin"), "{overlapping}");
+    }
+    assert!(has(&with("\"zork\u{202e}pkg\""), "agent-packages"));
 }
