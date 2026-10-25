@@ -1,5 +1,6 @@
 //! AppKit's side of `platform::vibrancy`: an `NSVisualEffectView` and a plain `NSBox` fill behind
-//! GPUI's view, the `NSGlassEffectView`s of Liquid Glass, and the appearance their material follows.
+//! GPUI's view, and the `NSGlassEffectView`s of Liquid Glass. Their material follows the theme's
+//! appearance (`appearance`).
 
 use gpui_kit::{Hsla, Window};
 use objc2::MainThreadMarker;
@@ -13,6 +14,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use wormhole_core::theme::tokens::Appearance;
 
+use super::appearance;
 use super::appkit::ns_view;
 use crate::platform::vibrancy::GlassRect;
 
@@ -39,7 +41,7 @@ impl BlurViews {
             NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewHeightSizable,
         );
         effect.setHidden(!enabled);
-        material::adopt(&effect);
+        appearance::follow_effect(&effect);
         parent.addSubview_positioned_relativeTo(&effect, NSWindowOrderingMode::Below, Some(&view));
 
         let backing = NSBox::initWithFrame(mtm.alloc(), parent.bounds());
@@ -108,7 +110,7 @@ impl GlassViews {
         let flipped = self.parent.isFlipped();
         while self.glass.len() < rects.len() {
             let view = NSGlassEffectView::initWithFrame(self.mtm.alloc(), NSRect::ZERO);
-            material::adopt(&view);
+            appearance::follow_effect(&view);
             // Just under GPUI's view, over the window's blur.
             self.parent.addSubview_positioned_relativeTo(
                 &view,
@@ -132,66 +134,7 @@ impl GlassViews {
     }
 }
 
+/// The theme's appearance: the blur and glass views, and the traffic lights (`window`), follow it.
 pub fn set_material_appearance(appearance: Appearance) {
-    material::set(appearance);
-    // The traffic lights go with the blur: one appearance, one place it is set.
-    super::window::refresh_theme();
-}
-
-/// The theme's appearance as last set, `None` before the first theme is applied.
-pub(super) fn material_appearance() -> Option<Appearance> {
-    material::current()
-}
-
-mod material {
-    use std::cell::{Cell, RefCell};
-
-    use objc2::rc::Weak;
-    use objc2_app_kit::{
-        NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSView,
-    };
-    use wormhole_core::theme::tokens::Appearance;
-
-    thread_local! {
-        /// Every window's effect view (AppKit lives on the main thread), forgotten as windows close.
-        static EFFECTS: RefCell<Vec<Weak<NSView>>> = const { RefCell::new(Vec::new()) };
-        static APPEARANCE: Cell<Option<Appearance>> = const { Cell::new(None) };
-    }
-
-    /// A blur or glass view that follows the theme's appearance from now on.
-    pub(super) fn adopt(effect: &NSView) {
-        if let Some(appearance) = APPEARANCE.get() {
-            apply(effect, appearance);
-        }
-        EFFECTS.with_borrow_mut(|effects| effects.push(Weak::new(effect)));
-    }
-
-    pub(super) fn current() -> Option<Appearance> {
-        APPEARANCE.get()
-    }
-
-    pub(super) fn set(appearance: Appearance) {
-        if APPEARANCE.replace(Some(appearance)) == Some(appearance) {
-            return;
-        }
-        EFFECTS.with_borrow_mut(|effects| {
-            effects.retain(|weak| {
-                let Some(effect) = weak.load() else { return false };
-                apply(&effect, appearance);
-                true
-            });
-        });
-    }
-
-    #[allow(unsafe_code)]
-    fn apply(effect: &NSView, appearance: Appearance) {
-        // SAFETY: AppKit's appearance names are immutable statics, set before main runs.
-        let name = unsafe {
-            match appearance {
-                Appearance::Light => NSAppearanceNameAqua,
-                Appearance::Dark => NSAppearanceNameDarkAqua,
-            }
-        };
-        effect.setAppearance(NSAppearance::appearanceNamed(name).as_deref());
-    }
+    appearance::set(appearance);
 }

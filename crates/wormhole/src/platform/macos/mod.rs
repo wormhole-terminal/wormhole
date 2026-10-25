@@ -2,6 +2,7 @@
 //! and `unsafe`.
 
 pub mod a11y;
+mod appearance;
 pub mod appkit;
 pub mod apps;
 #[cfg(not(test))]
