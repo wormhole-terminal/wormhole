@@ -63,10 +63,14 @@ pub enum FeatureFlag {
     /// A small chip that drops onto the top of a terminal to say what was just done ("Copied 3 lines").
     /// Off, a copy says nothing, and a program's clipboard write keeps the pane bar's notice.
     Notices,
+    /// Probes, the extensions that are a folder with a `probe.toml` (`repo-docs/docs/probes.md`):
+    /// Settings → Extensions and what Probes contribute. The core can read and check a Probe
+    /// already; nothing of it is switched on by this flag yet.
+    Probes,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 10] = [
+    pub const ALL: [FeatureFlag; 11] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
@@ -77,6 +81,7 @@ impl FeatureFlag {
         Self::TearOff,
         Self::LiveResize,
         Self::Notices,
+        Self::Probes,
     ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
@@ -92,6 +97,7 @@ impl FeatureFlag {
             Self::TearOff => "tear_off",
             Self::LiveResize => "live_resize",
             Self::Notices => "notices",
+            Self::Probes => "probes",
         }
     }
 
@@ -112,6 +118,7 @@ impl FeatureFlag {
             Self::TearOff => "Tear off a terminal",
             Self::LiveResize => "Live resize",
             Self::Notices => "Notice chip",
+            Self::Probes => "Probes",
         }
     }
 
@@ -159,6 +166,10 @@ impl FeatureFlag {
                 "A small chip that drops onto the top of a terminal to say what was copied and similar \
                  short messages."
             }
+            Self::Probes => {
+                "Extensions as folders with a probe.toml: text rules, palette commands, status items and \
+                 agent definitions, each with the permissions it asks for."
+            }
         }
     }
 
@@ -185,6 +196,8 @@ impl FeatureFlag {
             Self::LiveResize => false,
             // Through its visual check (small windows, narrow splits, both appearances) and approved.
             Self::Notices => true,
+            // Being built: the manifest and its checks first, then what Probes contribute.
+            Self::Probes => false,
         }
     }
 }
@@ -404,6 +417,18 @@ mod tests {
         flags.insert(UNLOCKED_KEY.to_string(), false);
         assert!(!unlocked(&flags), "written false by hand, it stays locked");
         assert_eq!(FeatureFlag::from_key(UNLOCKED_KEY), None, "no flag may take the unlock entry's key");
+    }
+
+    #[test]
+    fn probes_are_off_in_a_release_and_follow_the_map_in_a_dev_build() {
+        let flag = FeatureFlag::Probes;
+        assert_eq!(flag.key(), "probes");
+        assert!(!flag.released());
+        assert!(!enabled_in(flag, &BTreeMap::new(), RELEASE));
+        assert!(!enabled_in(flag, &BTreeMap::from([("probes".to_string(), true)]), RELEASE));
+        assert!(!enabled_in(flag, &BTreeMap::new(), FlagMode::Unstable));
+        assert!(enabled_in(flag, &BTreeMap::new(), DEV));
+        assert!(!enabled_in(flag, &BTreeMap::from([("probes".to_string(), false)]), DEV));
     }
 
     #[test]
