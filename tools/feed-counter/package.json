@@ -1,0 +1,13 @@
+{
+  "name": "wormhole-feed-counter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "deploy": "wrangler deploy",
+    "stats": "bun stats.ts"
+  },
+  "devDependencies": {
+    "wrangler": "4.151.0"
+  }
+}

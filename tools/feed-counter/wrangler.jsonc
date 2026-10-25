@@ -1,0 +1,22 @@
+// The download server's counter (src/index.ts): `bun run deploy` uploads it with the wrangler pinned in
+// package.json. Its routes are the addresses the Cloudflare redirect rules answer (and from 1.4 one DMG per architecture); the
+// rules must be off, since they run before a Worker and would answer first (README.md).
+{
+  "name": "wormhole-feed-counter",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  // No usage telemetry from wrangler.
+  "send_metrics": false,
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "downloads.getwormhole.app/stable/latest.json", "zone_name": "getwormhole.app" },
+    { "pattern": "downloads.getwormhole.app/unstable/latest.json", "zone_name": "getwormhole.app" },
+    { "pattern": "downloads.getwormhole.app/stable/Wormhole-latest.dmg", "zone_name": "getwormhole.app" },
+    { "pattern": "downloads.getwormhole.app/stable/Wormhole-latest-aarch64.dmg", "zone_name": "getwormhole.app" },
+    { "pattern": "downloads.getwormhole.app/stable/Wormhole-latest-x86_64.dmg", "zone_name": "getwormhole.app" }
+  ],
+  "analytics_engine_datasets": [{ "binding": "COUNTS", "dataset": "wormhole_counts" }],
+  // No request logs: they would hold IP addresses and full user agents.
+  "observability": { "enabled": false }
+}

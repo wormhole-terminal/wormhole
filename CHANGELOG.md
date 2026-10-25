@@ -122,8 +122,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   shown profile's windows with its project's look, and the menu bar's project actions run in a window
   of the shown profile.
 - Quitting Wormhole with `kill` (or anything else that sends it SIGTERM) now saves every window and
-  the terminals' text first, as ⌘Q does, instead of losing what changed since the last save. Session
-  hosts keep running, as with ⌘Q.
+  the terminals' text first, as ⌘Q does, instead of losing what changed since the last save.
 - Closing Settings while it records a shortcut no longer leaves the global hotkey switched off until
   Settings opens again, and the menu bar no longer shows it as set while it is off.
 - The View menu's Project line no longer shows, greyed out, while project folders are off.

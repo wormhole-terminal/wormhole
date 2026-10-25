@@ -16,8 +16,8 @@
 #         no-devctl check for the app alone. Core's tests can't see the app, so they're skipped.
 #   text  skills, agents, rules, scripts, tools/visual, the top-level .md files (CHANGELOG.md too): only
 #         design_rules (it scans their wording), never a compile of either crate.
-#   none  .github, .claude/hooks and settings, .gitignore, the rest of packaging and tools/bench (its
-#         own workspace): nothing to run.
+#   none  .github, .claude/hooks and settings, .gitignore, the rest of packaging, tools/bench (its
+#         own workspace) and tools/feed-counter (bun test there): nothing to run.
 # Whatever the scope, first the history (cheap, before any cargo): the commits since the base follow
 # the rules (scripts/commits.py), a feat/fix/perf, breaking or Security commit comes with a
 # CHANGELOG.md entry, and CHANGELOG.md itself is well formed when it changed (scripts/changelog.py).
@@ -62,6 +62,8 @@ scope_of() {
     .github/*|.claude/hooks/*|.claude/settings*.json|.claude/worktrees/*|.gitignore|LICENSE|packaging/*) echo none ;;
     # Its own workspace, built and checked on its own (tools/bench/README.md).
     tools/bench/*) echo none ;;
+    # The download server's counter, a Cloudflare Worker with its own tests (bun test there).
+    tools/feed-counter/*) echo none ;;
     *) echo all ;;   # unknown: safer to run everything than to miss a test that reads it
   esac
 }
