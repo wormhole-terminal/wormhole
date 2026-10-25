@@ -46,7 +46,7 @@ pub(crate) fn open_single<V: Render + 'static>(
     }
     // Deferred: the new window renders right away, and this may run inside another window's
     // update.
-    cx.defer(move |cx| match crate::background::open_window(options, cx, build) {
+    cx.defer(move |cx| match crate::window_open::open(options, cx, build) {
         Ok((handle, view)) => *slot(app_mut(cx)) = Some((handle, view.downgrade().into())),
         Err(err) => tracing::error!("opening a window failed: {err:#}"),
     });

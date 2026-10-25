@@ -73,6 +73,7 @@
         ],
         "platform",
         "background",
+        "window_open",
         "window_ops",
         [
           "active_profile",

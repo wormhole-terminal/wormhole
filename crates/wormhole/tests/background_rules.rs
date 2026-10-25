@@ -1,21 +1,21 @@
 //! Source lint that keeps background mode working. A test instance started with
 //! `WORMHOLE_BACKGROUND=1` stays behind the other apps' windows only because every activation
-//! and every new window goes through `src/background.rs` (`activate`, `activate_window`,
-//! `open_window`). Code that calls GPUI's own `activate(true)`, `activate_window()` or
-//! `open_window` pops the instance up over whoever is at the Mac, and nothing else notices: the
-//! instance still works. So this reads the sources as text (like `design_rules.rs`, which is for
+//! and every new window goes through `src/background.rs` (`activate`, `activate_window`) and
+//! `src/window_open.rs` (`open`, which asks background mode). Code that calls GPUI's own
+//! `activate(true)`, `activate_window()` or `open_window` pops the instance up over whoever is at
+//! the Mac, and nothing else notices: the instance still works. So this reads the sources as text (like `design_rules.rs`, which is for
 //! the design language and so not the place for it) and fails on such a call.
 //!
-//! Allowed: `background.rs` itself; test code (files named `*_tests.rs` or `tests.rs`, and a
-//! `#[cfg(test)]` module closing a file), whose windows belong to GPUI's test platform; and
-//! devctl's `front`, which brings a window forward on purpose (see [`ALLOWED`]).
+//! Allowed: `background.rs` and `window_open.rs` themselves; test code (files named `*_tests.rs` or
+//! `tests.rs`, and a `#[cfg(test)]` module closing a file), whose windows belong to GPUI's test
+//! platform; and devctl's `front`, which brings a window forward on purpose (see [`ALLOWED`]).
 
 mod support;
 
 use support::{is_test_file, non_test_part, sources, src};
 
 /// The calls that bypass `background.rs`, as they appear in code. (`open_window(` is checked on
-/// its own below, as `background::open_window(` is the right call.)
+/// its own below: `window_open::open(` is the right call.)
 const ACTIVATIONS: [&str; 3] = [".activate(true)", ".activate(false)", ".activate_window()"];
 
 /// Direct uses that are meant, by file (relative to `src/`), pattern and how many there are. A
@@ -28,14 +28,12 @@ const ALLOWED: [(&str, &str, usize); 2] = [
 ];
 
 /// What `line` (comments cut) does that background mode can't have: the pattern, and for
-/// `open_window(` anything but the wrapper.
+/// `open_window(` any call (a definition is no call).
 fn bypasses(line: &str) -> Vec<&'static str> {
     let code = line.split("//").next().unwrap_or("");
     let mut found: Vec<&'static str> = ACTIVATIONS.iter().copied().filter(|p| code.contains(p)).collect();
-    let direct_open = code.match_indices("open_window(").any(|(at, _)| {
-        let before = &code[..at];
-        !before.ends_with("background::") && !before.trim_end().ends_with("fn")
-    });
+    let direct_open =
+        code.match_indices("open_window(").any(|(at, _)| !code[..at].trim_end().ends_with("fn"));
     if direct_open {
         found.push("open_window(");
     }
@@ -44,7 +42,7 @@ fn bypasses(line: &str) -> Vec<&'static str> {
 
 /// Every bypass in `text` of the file at `relative` (under `src/`): line and pattern.
 fn violations(relative: &str, text: &str) -> Vec<(usize, &'static str)> {
-    if relative == "background.rs" || is_test_file(relative) {
+    if relative == "background.rs" || relative == "window_open.rs" || is_test_file(relative) {
         return Vec::new();
     }
     non_test_part(text)
@@ -89,7 +87,7 @@ fn activation_and_new_windows_go_through_background_mode() {
     assert!(
         found.is_empty(),
         "background mode keeps a test instance behind other apps only if every activation and window \
-         goes through crate::background (activate, activate_window, open_window):\n{}",
+         goes through crate::background (activate, activate_window) and crate::window_open (open):\n{}",
         found.join("\n")
     );
 }
@@ -104,7 +102,7 @@ fn the_lint_sees_what_it_is_for() {
 
     let fine = "fn f(cx: &mut App, window: &Window) {\n    crate::background::activate(cx);\n    \
                 background::activate_window(window, cx);\n    \
-                let _ = crate::background::open_window(o, cx, build);\n    \
+                let _ = crate::window_open::open(o, cx, build);\n    \
                 // cx.activate(true) in a comment\n    self.activate(1, window, cx);\n}\n";
     assert!(violations("window/x.rs", fine).is_empty());
 }
@@ -113,6 +111,8 @@ fn the_lint_sees_what_it_is_for() {
 fn background_rs_and_test_code_are_left_alone() {
     let call = "fn f(cx: &mut App) {\n    cx.activate(true);\n}\n";
     assert!(violations("background.rs", call).is_empty(), "the wrapper itself");
+    let open = "fn f(cx: &mut App) {\n    let _ = gpui_kit::open_window(o, cx, build);\n}\n";
+    assert!(violations("window_open.rs", open).is_empty(), "the one window opener");
     assert!(violations("window/session_tests.rs", call).is_empty(), "a tests file");
     assert!(violations("select/tests.rs", call).is_empty());
 

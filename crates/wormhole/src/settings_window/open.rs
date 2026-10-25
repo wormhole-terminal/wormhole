@@ -51,7 +51,7 @@ pub(crate) fn open_settings(section: Option<Section>, cx: &mut App) {
     // Deferred: the new window renders right away, and this may run inside
     // another window's update.
     cx.defer(move |cx| {
-        let opened = crate::background::open_window(options, cx, |window, cx| {
+        let opened = crate::window_open::open(options, cx, |window, cx| {
             cx.new(|cx| SettingsWindow::new(section, window, cx))
         });
         match opened {

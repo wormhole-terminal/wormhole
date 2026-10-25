@@ -2,7 +2,9 @@
 //! scripts and agents start (`scripts/devctl-instance.sh`, the visual check) open behind the other
 //! apps' windows and never take the focus, so they never come over the work of whoever is at the
 //! Mac. Wormhole then never activates itself and has no Dock icon (an accessory app); its windows
-//! open without the focus, ordered behind every other window at the normal level; notifications
+//! open without the focus, ordered behind every other window at the normal level (the way windows
+//! open, `window_open`, asks [`keeps_new_windows_behind`] and uses [`open_unfocused`] and
+//! [`send_behind`]); notifications
 //! go to devctl's log, and the Dock, the bell's sound, VoiceOver's announcements, the global hotkey
 //! and the status item stay out of the system. Once the person brings the app forward themselves
 //! (a click on one of its windows), it behaves as usual until another app is in front again.
@@ -44,27 +46,22 @@ pub fn activate_window(window: &Window, cx: &App) {
     }
 }
 
-/// `gpui_kit::open_window`, except that while background mode keeps Wormhole behind, the window
-/// opens without the focus and behind every other app's windows (a pop-up's level too).
-pub fn open_window<V: Render>(
-    mut options: WindowOptions,
-    cx: &mut App,
-    build: impl FnOnce(&mut Window, &mut App) -> Entity<V>,
-) -> anyhow::Result<(AnyWindowHandle, Entity<V>)> {
-    let behind = !may_come_forward(cx);
-    if behind {
-        // Not shown either: GPUI would order it in front, and it would flash over everything
-        // until it is sent back.
-        options.focus = false;
-        options.show = false;
-    }
-    let (handle, view) = gpui_kit::open_window(options, cx, build)?;
-    // Every window the app opens with lights has them drawn in the theme's appearance.
-    let _ = handle.update(cx, |_, window, _| crate::platform::window::follow_theme(window));
-    if behind {
-        let _ = handle.update(cx, |_, window, _| crate::platform::window::keep_behind(window));
-    }
-    Ok((handle, view))
+/// Whether a window opening now belongs behind the other apps' windows: while background mode keeps
+/// Wormhole there. (`window_open::open` asks.)
+pub fn keeps_new_windows_behind(cx: &App) -> bool {
+    !may_come_forward(cx)
+}
+
+/// Make `options` open a window that neither takes the focus nor shows: GPUI would order it in
+/// front, and it would flash over everything until it is sent back ([`send_behind`]).
+pub fn open_unfocused(options: &mut WindowOptions) {
+    options.focus = false;
+    options.show = false;
+}
+
+/// Order `window` behind every other app's windows, a pop-up's level too.
+pub fn send_behind(window: &Window) {
+    crate::platform::window::keep_behind(window);
 }
 
 /// Set up background mode, if asked for: no Dock icon, and the covered windows drawn. Call it

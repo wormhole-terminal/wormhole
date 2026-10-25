@@ -85,9 +85,8 @@ pub(crate) fn open(cx: &mut App) {
         window_background: WindowBackgroundAppearance::Transparent,
         ..Default::default()
     };
-    match crate::background::open_window(options, cx, |window, cx| {
-        cx.new(|cx| QuickPanel::new(height, window, cx))
-    }) {
+    match crate::window_open::open(options, cx, |window, cx| cx.new(|cx| QuickPanel::new(height, window, cx)))
+    {
         Ok((handle, _)) => cx.default_global::<Open>().0 = Some(handle),
         Err(err) => tracing::error!("opening the quick panel failed: {err:#}"),
     }

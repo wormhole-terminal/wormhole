@@ -75,7 +75,7 @@ pub(crate) fn open_workspace_window_in(
         ..Default::default()
     };
     let owner = profile.clone();
-    match crate::background::open_window(options, cx, move |window, cx| {
+    match crate::window_open::open(options, cx, move |window, cx| {
         cx.new(|cx| Workspace::new(record, owner, window, cx))
     }) {
         Ok((handle, workspace)) => {

@@ -187,9 +187,8 @@ pub(crate) fn open_studio(cx: &mut App) {
     // Deferred: the new window renders right away, and this may run inside
     // another window's update.
     cx.defer(move |cx| {
-        let opened = crate::background::open_window(options, cx, |window, cx| {
-            cx.new(|cx| StudioWindow::new(window, cx))
-        });
+        let opened =
+            crate::window_open::open(options, cx, |window, cx| cx.new(|cx| StudioWindow::new(window, cx)));
         match opened {
             Ok((handle, studio)) => app_mut(cx).studio_window = Some((handle, studio.downgrade().into())),
             Err(err) => tracing::error!("opening the Theme Studio window failed: {err:#}"),

@@ -42,6 +42,7 @@ mod terminal_view;
 mod theme_bridge;
 mod update;
 mod window;
+mod window_open;
 mod window_ops;
 
 use gpui_kit::*;

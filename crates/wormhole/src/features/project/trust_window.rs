@@ -64,7 +64,7 @@ pub(crate) fn open_trust_window(profile: ProfileId, root: PathBuf, cx: &mut App)
     // Deferred: the new window renders right away, and this may run inside another window's
     // update (the Project tab's button).
     cx.defer(move |cx| {
-        let opened = crate::background::open_window(options, cx, |window, cx| {
+        let opened = crate::window_open::open(options, cx, |window, cx| {
             cx.new(|cx| TrustWindow::new(profile, root, window, cx))
         });
         match opened {
