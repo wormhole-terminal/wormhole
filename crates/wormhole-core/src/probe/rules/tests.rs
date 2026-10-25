@@ -94,7 +94,8 @@ fn of_two_matches_from_the_same_place_the_longer_wins() {
 
 #[test]
 fn of_two_equal_spans_the_earlier_rule_wins() {
-    let r = rules(&format!("{}{}", rule("one", "ab", "tone = \"link\""), rule("two", "ab", "tone = \"muted\"")));
+    let r =
+        rules(&format!("{}{}", rule("one", "ab", "tone = \"link\""), rule("two", "ab", "tone = \"muted\"")));
     let found = matches(&r, "ab");
     assert_eq!(found.len(), 1);
     assert_eq!(found[0].rule, 0);
@@ -241,11 +242,7 @@ fn the_template_around_a_capture_is_not_encoded() {
 fn a_group_that_did_not_take_part_is_empty_in_the_link() {
     let r = rules(&format!(
         "{JIRA}{}",
-        rule(
-            "t",
-            "A(B)?C",
-            "action = { type = \"open-url\", url = \"https://acme.atlassian.net/{1}x\" }"
-        )
+        rule("t", "A(B)?C", "action = { type = \"open-url\", url = \"https://acme.atlassian.net/{1}x\" }")
     ));
     assert_eq!(target_of(&r, "AC"), Some(Target::OpenUrl("https://acme.atlassian.net/x".into())));
 }
@@ -277,11 +274,7 @@ const SHOW: &str = "[permissions]\nprocess = [\"git\"]\n\
 fn a_command_target_names_the_command_and_the_values_of_its_arguments() {
     let r = rules(&format!(
         "{SHOW}{}",
-        rule(
-            "sha",
-            "([0-9a-f][0-9a-f]{6,39})",
-            "action = { type = \"command\", command = \"show\" }"
-        )
+        rule("sha", "([0-9a-f][0-9a-f]{6,39})", "action = { type = \"command\", command = \"show\" }")
     ));
     assert_eq!(
         target_of(&r, "at abc1234 ok"),
@@ -314,7 +307,10 @@ fn the_target_uses_the_context_the_match_was_found_in() {
     let line = "XACME-1 ACME-2";
     let found = matches(&r, line);
     assert_eq!(found.len(), 1);
-    assert_eq!(target(&r, &found[0], line), Some(Target::OpenUrl("https://acme.atlassian.net/ACME-2".into())));
+    assert_eq!(
+        target(&r, &found[0], line),
+        Some(Target::OpenUrl("https://acme.atlassian.net/ACME-2".into()))
+    );
 }
 
 #[test]

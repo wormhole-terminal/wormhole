@@ -58,11 +58,12 @@ pub fn matches(rules: &CompiledRules, line: &str) -> Vec<Match> {
     for index in candidates {
         let rule = &rules.rules[index];
         found.extend(
-            rule.regex
-                .find_iter(text)
-                .filter(|m| !m.is_empty())
-                .take(MAX_MATCHES_PER_RULE)
-                .map(|m| Match { rule: index, start: m.start(), end: m.end(), look: rule.rule.look }),
+            rule.regex.find_iter(text).filter(|m| !m.is_empty()).take(MAX_MATCHES_PER_RULE).map(|m| Match {
+                rule: index,
+                start: m.start(),
+                end: m.end(),
+                look: rule.rule.look,
+            }),
         );
     }
     settle(found)
