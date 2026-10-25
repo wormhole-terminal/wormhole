@@ -8,6 +8,7 @@ use gpui_kit::{App, Window, point, px};
 use objc2_app_kit::{
     NSNormalWindowLevel, NSWindow, NSWindowButton, NSWindowCollectionBehavior,
     NSWindowDidEnterFullScreenNotification, NSWindowDidExitFullScreenNotification,
+    NSWindowWillEnterFullScreenNotification, NSWindowWillExitFullScreenNotification,
 };
 use objc2_foundation::{NSNotification, NSNotificationCenter, NSOperationQueue, NSPoint};
 
@@ -109,6 +110,12 @@ pub fn follow_theme(window: &Window) {
 }
 
 /// Full screen moves the buttons into another title bar, which has none of the theme's appearance.
+///
+/// Unverified: that AppKit makes that title bar a new view (so that the appearance is lost) rather
+/// than keeping one. A full screen window can't be tried in a test instance, which would take over
+/// the display; so the title bars are put right when a transition begins as well as when it ends,
+/// which costs nothing if the view stays and keeps the system's look from showing during the
+/// transition if it doesn't.
 #[allow(unsafe_code)]
 fn watch_full_screen() {
     thread_local! {
@@ -121,7 +128,14 @@ fn watch_full_screen() {
     }
     let center = NSNotificationCenter::defaultCenter();
     // SAFETY: notification names AppKit defines, immutable statics.
-    let names = unsafe { [NSWindowDidEnterFullScreenNotification, NSWindowDidExitFullScreenNotification] };
+    let names = unsafe {
+        [
+            NSWindowWillEnterFullScreenNotification,
+            NSWindowDidEnterFullScreenNotification,
+            NSWindowWillExitFullScreenNotification,
+            NSWindowDidExitFullScreenNotification,
+        ]
+    };
     for name in names {
         let block = block2::RcBlock::new(|_: NonNull<NSNotification>| appearance::refresh_titlebars());
         // SAFETY: no sender filter, and the main queue, so the block runs on the main thread, where
