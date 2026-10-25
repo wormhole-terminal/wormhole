@@ -42,6 +42,7 @@ pub(super) fn render(
     cx: &mut Context<GalleryView>,
 ) -> AnyElement {
     let notes_on = crate::settings::settings(cx).feature_enabled(FeatureFlag::NotesAndTasks);
+    let projects_on = crate::settings::settings(cx).feature_enabled(FeatureFlag::ProjectFolders);
     let ui = env.ui;
     let section = |id: &'static str, title: &'static str, section, count: Option<&'static str>| {
         style::section_card(
@@ -462,7 +463,9 @@ pub(super) fn render(
             .into_any_element(),
         1 => card_column(ui, changes()).into_any_element(),
         2 => card_column(ui, history()).into_any_element(),
-        3 => card_column(ui, project()).into_any_element(),
+        // Project folders are a feature behind a flag too: no trust prompt while it is off.
+        3 if projects_on => card_column(ui, project()).into_any_element(),
+        3 => div().into_any_element(),
         _ => div()
             .flex()
             .flex_col()

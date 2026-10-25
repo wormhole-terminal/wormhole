@@ -119,9 +119,9 @@ pub(super) fn render(
         .gap_2()
         .child(env.mark("badge", style::count_badge(ui, "1")))
         .child(style::count_badge(ui, "12"))
-        .child(style::status_badge(ui, ui.success_text, "trusted"))
+        .child(style::status_badge(ui, ui.success_text, "installed"))
         .child(style::status_badge(ui, ui.warning_text, "changed"))
-        .child(style::status_badge(ui, ui.muted, "not trusted"))
+        .child(style::status_badge(ui, ui.muted, "not installed"))
         .child(style::keycap(ui, "esc"));
     // What a token is used by (the inspector's "Used by"): grey, unlike an override's tint chip.
     let neutral = div()
@@ -138,7 +138,7 @@ pub(super) fn render(
         .flex_col()
         .gap_1()
         .child(div().text_body().child("A card sets a few lines apart"))
-        .child(div().text_caption().text_color(ui.muted).child("Release notes, a trust prompt."));
+        .child(div().text_caption().text_color(ui.muted).child("Release notes, a hint."));
     let navigation = div()
         .flex()
         .flex_col()

@@ -427,16 +427,11 @@ fn banners(ui: UiColors) -> Div {
             false,
             "Couldn't write ~/.gemini/settings.json: permission denied.",
         ))
-        .child(style::banner(
-            ui,
-            BannerKind::Success,
-            false,
-            "Trusted with Touch ID. Actions and the terminal layout can run.",
-        ))
+        .child(style::banner(ui, BannerKind::Success, false, "Status hooks installed for Claude Code."))
         .child(style::banner(
             ui,
             BannerKind::Warning,
             true,
-            "This project wants to run commands. Trust it to let them.",
+            "The settings file changed on disk. Reload to use it.",
         ))
 }

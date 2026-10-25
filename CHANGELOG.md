@@ -30,7 +30,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   update, and the next launch tries once more.
 - The keyboard shortcuts sheet names only the panel tabs there are: with notes and project folders off,
   its row reads "Changes · History · Usage" with each key, instead of naming tabs that don't show.
-- The Theme Studio no longer shows notes and tasks while they are hidden.
+- The Theme Studio no longer shows notes and tasks, or a project's trust prompt, while they are hidden.
 
 ## [1.3.0] - 2026-10-25
 
