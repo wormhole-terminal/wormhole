@@ -79,6 +79,16 @@ fn at_most_200_files() {
 }
 
 #[test]
+fn folders_count_against_the_entries_cap_as_files_do() {
+    let tmp = probe(&[]);
+    // Empty folders are no files, so only the entries cap stops a folder made of them.
+    for ix in 0..MAX_ENTRIES {
+        fs::create_dir(tmp.path().join(format!("d{ix}"))).expect("mkdir");
+    }
+    assert!(matches!(read(&tmp), Err(ReadError::TooManyEntries)));
+}
+
+#[test]
 fn at_most_2_mib_in_all_and_64_kib_of_manifest() {
     let half = vec![b'x'; (MAX_TOTAL_BYTES / 2) as usize];
     let tmp = probe(&[("a", &half), ("b", &half[..half.len() - MANIFEST.len()])]);

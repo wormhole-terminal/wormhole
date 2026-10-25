@@ -122,12 +122,12 @@ fn every_warning_fixture_warns_and_is_still_ok() {
 
 #[test]
 fn scanning_a_folder_of_probes_lists_each_with_its_probe_or_its_reason() {
-    let found = scan(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/probes/ok"));
+    let found = scan(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/probes/ok")).expect("scans");
     let names: Vec<_> = found.iter().map(|s| s.name.as_str()).collect();
     assert_eq!(names, ["acme-tools", "minimal", "rules-only"]);
     assert!(found.iter().all(|s| s.probe.is_ok()));
     // The error fixtures are named by a code, not by the id inside: each is listed with that reason.
-    let found = scan(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/probes/errors"));
+    let found = scan(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/probes/errors")).expect("scans");
     assert!(found.len() >= 30);
     for scanned in found {
         assert!(matches!(&scanned.probe, Err(ScanError::IdMismatch { .. })), "{}", scanned.name);

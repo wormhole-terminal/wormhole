@@ -24,6 +24,9 @@ pub const MAX_FILES: usize = 200;
 pub const MAX_TOTAL_BYTES: u64 = 2 * 1024 * 1024;
 /// `probe.toml` alone.
 pub const MAX_MANIFEST_BYTES: u64 = 64 * 1024;
+/// Entries of every kind (folders included) the walk looks at: a folder of thousands of empty folders
+/// is cheap to make and costly to list.
+pub const MAX_ENTRIES: usize = 1000;
 /// Folders below the Probe's own: more is a build tree, not a Probe.
 const MAX_DEPTH: usize = 8;
 /// Left out of the folder: Finder writes it on opening a folder, nothing reads it, and counting it
@@ -82,7 +85,7 @@ impl ProbeFolder {
             Err(source) => return Err(ReadError::Io { path: root.to_path_buf(), source }),
         }
         let mut found = Vec::new();
-        list(root, "", 0, &mut found)?;
+        list(root, "", 0, &mut found, &mut 0)?;
         found.sort_by(|a, b| a.0.cmp(&b.0));
 
         let mut files = Vec::with_capacity(found.len());
@@ -121,14 +124,24 @@ impl ProbeFolder {
 }
 
 /// The files below `dir` as (relative path, real path), at most [`MAX_FILES`].
-fn list(dir: &Path, prefix: &str, depth: usize, out: &mut Vec<(String, PathBuf)>) -> Result<(), ReadError> {
+fn list(
+    dir: &Path,
+    prefix: &str,
+    depth: usize,
+    out: &mut Vec<(String, PathBuf)>,
+    entries: &mut usize,
+) -> Result<(), ReadError> {
     let io_err = |source| ReadError::Io { path: dir.to_path_buf(), source };
     for entry in fs::read_dir(dir).map_err(io_err)? {
         let entry = entry.map_err(io_err)?;
+        *entries += 1;
+        if *entries > MAX_ENTRIES {
+            return Err(ReadError::TooManyEntries);
+        }
         let name = entry.file_name();
         let relative =
             |name: &str| if prefix.is_empty() { name.to_string() } else { format!("{prefix}/{name}") };
-        let Some(name) = name.to_str().filter(|name| !name.chars().any(char::is_control)) else {
+        let Some(name) = name.to_str().filter(|name| !super::hidden::has_hidden(name)) else {
             return Err(ReadError::BadName(relative(&name.to_string_lossy())));
         };
         if IGNORED.contains(&name) {
@@ -153,7 +166,7 @@ fn list(dir: &Path, prefix: &str, depth: usize, out: &mut Vec<(String, PathBuf)>
             if depth >= MAX_DEPTH {
                 return Err(ReadError::TooDeep(path));
             }
-            list(&abs, &path, depth + 1, out)?;
+            list(&abs, &path, depth + 1, out, entries)?;
         } else {
             out.push((path, abs));
             if out.len() > MAX_FILES {
@@ -191,9 +204,11 @@ pub enum ReadError {
         reason: String,
     },
     TooManyFiles,
+    /// More than [`MAX_ENTRIES`] files and folders together.
+    TooManyEntries,
     TooMuch,
     TooDeep(String),
-    /// A file name that is not UTF-8 or holds a control character.
+    /// A file name that is not UTF-8 or holds a control, bidi or invisible character.
     BadName(String),
     NoManifest,
     Manifest(ManifestError),
@@ -208,6 +223,7 @@ impl fmt::Display for ReadError {
             Self::FolderLink(path) => write!(f, "{path} is a link to a folder, which is not followed"),
             Self::Refused { path, reason } => write!(f, "{path} {reason}"),
             Self::TooManyFiles => write!(f, "the folder has more than {MAX_FILES} files"),
+            Self::TooManyEntries => write!(f, "the folder has more than {MAX_ENTRIES} files and folders"),
             Self::TooMuch => write!(f, "the folder holds more than {} MiB", MAX_TOTAL_BYTES >> 20),
             Self::TooDeep(path) => write!(f, "{path} is more than {MAX_DEPTH} folders deep"),
             Self::BadName(name) => write!(f, "{name:?} is not a usable file name"),
