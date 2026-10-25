@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 677] = [
+pub(crate) const IDS: [&str; 686] = [
     "settings-section-advanced", "settings-section-advanced.intro", "settings-advanced-group-files",
     "settings-advanced-open-config", "settings-advanced-open-config.description", "settings-advanced-open-config.keywords",
     "settings-advanced-open-data", "settings-advanced-open-data.description", "settings-advanced-open-data.keywords",
@@ -204,16 +204,19 @@ pub(crate) const IDS: [&str; 677] = [
     "settings-terminal-worktree-base-under", "settings-terminal-scrollback-lines", "settings-terminal-login-shell",
     "settings-section-updates", "settings-section-updates.intro", "settings-updates-group-updates",
     "settings-updates-version", "settings-updates-version.keywords", "settings-updates-auto-update",
-    "settings-updates-auto-update.description", "settings-updates-auto-update.keywords", "settings-updates-anonymous-count",
-    "settings-updates-anonymous-count.description", "settings-updates-anonymous-count.keywords", "settings-updates-update-channel",
+    "settings-updates-auto-update.description", "settings-updates-auto-update.keywords", "settings-updates-update-channel",
     "settings-updates-update-channel.description", "settings-updates-update-channel.keywords", "settings-updates-update-status",
-    "settings-updates-update-status.keywords", "settings-updates-stable", "settings-updates-unstable",
-    "settings-updates-checked-just-now", "settings-updates-checked-a-minute-ago", "settings-updates-checked-an-hour-ago",
-    "settings-updates-fixes-a-security-issue", "settings-updates-development-build", "settings-updates-not-checked-yet",
-    "settings-updates-checking", "settings-updates-wormhole-is-up-to-date", "settings-updates-downloading",
-    "settings-updates-skip-this-version", "settings-updates-install-update", "settings-updates-dont-restart",
-    "settings-updates-restart-now", "settings-updates-check-now", "settings-updates-count-sends",
-    "settings-updates-count-off", "settings-updates-count-starts-in", "settings-updates-checked-minutes-ago",
+    "settings-updates-update-status.keywords", "settings-updates-group-privacy", "settings-updates-group-privacy.blurb",
+    "settings-updates-anonymous-count", "settings-updates-anonymous-count.description", "settings-updates-anonymous-count.keywords",
+    "settings-updates-count-details", "settings-updates-count-details.keywords", "settings-updates-stable",
+    "settings-updates-unstable", "settings-updates-checked-just-now", "settings-updates-checked-a-minute-ago",
+    "settings-updates-checked-an-hour-ago", "settings-updates-fixes-a-security-issue", "settings-updates-development-build",
+    "settings-updates-not-checked-yet", "settings-updates-checking", "settings-updates-wormhole-is-up-to-date",
+    "settings-updates-downloading", "settings-updates-skip-this-version", "settings-updates-install-update",
+    "settings-updates-dont-restart", "settings-updates-restart-now", "settings-updates-check-now",
+    "settings-updates-count-starts-in", "settings-updates-count-every-check", "settings-updates-count-every-check-counted",
+    "settings-updates-count-every-check-plain", "settings-updates-count-first-check", "settings-updates-count-first-check-why",
+    "settings-updates-count-never", "settings-updates-count-never-what", "settings-updates-checked-minutes-ago",
     "settings-updates-checked-hours-ago", "settings-updates-checked-days-ago", "settings-updates-up-to-date-checked",
     "settings-updates-security-available", "settings-updates-version-available", "settings-updates-fixes-critical",
     "settings-updates-fixes-high", "settings-updates-fixes-medium", "settings-updates-fixes-low",
@@ -235,7 +238,7 @@ pub(crate) const IDS: [&str; 677] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 677] = [
+pub(crate) const TAKES_ARGS: [bool; 686] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, true, false, false, false, false, false, false,
@@ -287,10 +290,11 @@ pub(crate) const TAKES_ARGS: [bool; 677] = [
     false, false, false, false, false, false, true, true, true, true, true, true,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, false, false, false, true, true, true, true,
-    true, true, true, true, true, false, false, false, false, true, true, true,
+    false, false, false, false, false, false, false, false, false, false, false, false,
+    true, false, false, false, false, false, false, false, true, true, true, true,
+    true, true, false, false, false, false, true, true, true, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, true, true, true, true, true, true, true,
-    false, false, false, false, false,
+    false, false, true, true, true, true, true, true, true, false, false, false,
+    false, false,
 ];

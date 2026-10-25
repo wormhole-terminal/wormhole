@@ -15,6 +15,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   only the counts, not your IP address. Counting starts a day after this version first runs, so
   there is time to turn it off: Settings → Updates → Count this Mac anonymously (`anonymous_count`),
   which also shows exactly what a check sends. Off, a check sends the version alone, as before.
+- Settings → Updates has a Privacy group: why update checks are counted, the switch, exactly what a
+  check sends from this Mac and what it never sends, and how many hours are left before the first
+  count.
 
 ## [1.3.0] - 2026-10-25
 

@@ -152,6 +152,9 @@ section Updates
 group "Updates"
   blurb ""
   aside ""
+group "Privacy"
+  blurb "Wormhole has no analytics, telemetry or crash reports. Update checks are counted, so we know how many people use Wormhole and which Macs and macOS versions to keep supporting, with nothing that tells one Mac from another."
+  aside ""
 section Advanced
   title "Advanced"
   intro "Files, folders and a way back to the defaults."
@@ -544,10 +547,6 @@ entry Updates auto-update
   label "Update automatically"
   description "Checks in the background and installs on the next restart"
   keywords "download auto"
-entry Updates anonymous-count
-  label "Count this Mac anonymously"
-  description "Once a day an update check also says that Wormhole runs here, so we know how many people use it. No ID, and your IP address isn't kept"
-  keywords "analytics telemetry privacy usage statistics count"
 entry Updates update-channel
   label "Channel"
   description "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
@@ -556,6 +555,14 @@ entry Updates update-status
   label "Check for updates"
   description ""
   keywords "install restart release notes check skip"
+entry Updates anonymous-count
+  label "Count this Mac anonymously"
+  description "The first update check of a day and of a month says so. Off, a check sends the version alone"
+  keywords "analytics telemetry privacy usage statistics count tracking"
+entry Updates count-details
+  label "What an update check sends"
+  description ""
+  keywords "privacy data sent user agent ip address"
 entry Advanced open-config
   label "Settings file"
   description "config.json: edits apply live"

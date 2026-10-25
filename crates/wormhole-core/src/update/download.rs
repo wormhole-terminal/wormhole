@@ -228,10 +228,12 @@ mod tests {
         // The two halves live in different languages; if either side's format changes, this
         // fails and says to change both.
         let package = include_str!("../../../../scripts/package.sh");
-        let lib = include_str!("../../../../scripts/lib.sh");
-        assert!(package.contains(r#"-t "$APP_NAME $APP_VERSION $ARCHIVE_NAME""#), "trusted comment format");
-        assert!(lib.contains(r#"ARCHIVE_NAME="$APP_NAME-$APP_VERSION-macos.app.tar.gz""#), "archive name");
-        assert!(package.contains(r#"url="$base_url/$ARCHIVE_NAME""#), "asset url");
+        assert!(package.contains(r#"-t "$APP_NAME $APP_VERSION $name""#), "trusted comment format");
+        assert!(
+            package.contains(r#"printf '%s-%s-macos%s.app.tar.gz' "$APP_NAME" "$APP_VERSION""#),
+            "archive name"
+        );
+        assert!(package.contains(r#"--arg url "$base_url/$name""#), "asset url");
         assert!(package.contains(r#"--arg version "$APP_VERSION""#), "feed version");
     }
 }
