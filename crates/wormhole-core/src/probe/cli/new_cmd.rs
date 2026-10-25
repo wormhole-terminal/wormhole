@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::Path;
 
-use super::text::{self, Out, count};
+use super::output::{self, Out, count};
 use super::{Env, Outcome};
 use crate::probe::scaffold::{Kind, ScaffoldError, create};
 
@@ -20,7 +20,7 @@ pub(super) fn run(id: &str, kind: Kind, parent: &Path, env: &Env<'_>) -> Outcome
             let mut out = Out::default();
             out.line(&format!(
                 "created {} ({} Probe, {})",
-                text::path(&made.root),
+                output::path(&made.root),
                 kind.word(),
                 count(made.files.len(), "file", "files")
             ));

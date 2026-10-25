@@ -5,7 +5,7 @@ use std::path::Path;
 use serde::Serialize;
 
 use super::Outcome;
-use super::text::{self, Out, count};
+use super::output::{self, Out, count};
 use super::validate_cmd::{JSON_VERSION, unreadable};
 use crate::probe::fixture::{self, TESTS_DIR, TestReport};
 use crate::probe::read::ProbeFolder;
@@ -34,7 +34,7 @@ pub(super) fn run(dir: &Path, json: bool) -> Outcome {
     let untested = !rules.is_empty() && tests.cases.is_empty() && tests.unreadable.is_empty();
     let ok = tests.is_ok() && !untested;
     let stdout = if json {
-        text::json_line(&Json::of(&tests, ok, untested))
+        output::json_line(&Json::of(&tests, ok, untested))
     } else {
         render(&folder, &rules, &tests, files, untested)
     };
@@ -53,7 +53,7 @@ fn refused(folder: &ProbeFolder, errors: &[&Finding], json: bool) -> Outcome {
                 .map(|f| JsonError { code: f.code, path: &f.path, message: &f.message })
                 .collect(),
         };
-        return Outcome::new(1, text::json_line(&reply), String::new());
+        return Outcome::new(1, output::json_line(&reply), String::new());
     }
     let mut out = Out::default();
     out.line(&format!(

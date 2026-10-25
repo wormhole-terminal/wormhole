@@ -1,10 +1,10 @@
 use std::fs;
-use std::os::unix::fs::PermissionsExt as _;
 
 use tempfile::TempDir;
 
 use super::plan::{monogram_of, name_of};
 use super::*;
+use crate::platform::fs as platform_fs;
 use crate::probe::fixture;
 use crate::probe::read::ProbeFolder;
 use crate::probe::rules::CompiledRules;
@@ -73,9 +73,10 @@ fn the_kinds_contribute_what_they_are_named_for() {
 fn the_script_can_be_run_and_the_rest_cannot() {
     let tmp = TempDir::new().expect("tempdir");
     let made = create(tmp.path(), "my-probe", Kind::Command).expect("creates");
-    let mode = |path: &str| fs::metadata(made.root.join(path)).expect("exists").permissions().mode();
-    assert_ne!(mode("scripts/hello.sh") & 0o100, 0, "owner can execute");
-    assert_eq!(mode("probe.toml") & 0o111, 0);
+    let runnable =
+        |path: &str| platform_fs::is_executable(&fs::metadata(made.root.join(path)).expect("exists"));
+    assert!(runnable("scripts/hello.sh"));
+    assert!(!runnable("probe.toml"));
     let script = fs::read_to_string(made.root.join("scripts/hello.sh")).expect("reads");
     assert!(script.starts_with("#!/bin/sh\n") && script.contains("Hello from my-probe"), "{script}");
 }

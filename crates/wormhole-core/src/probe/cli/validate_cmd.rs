@@ -5,7 +5,7 @@ use std::path::Path;
 use serde::Serialize;
 
 use super::Outcome;
-use super::text::{self, Out, count};
+use super::output::{self, Out, count};
 use crate::probe::read::ProbeFolder;
 use crate::probe::validate::{
     Combination, Confirmation, DeclaredPermission, Finding, ProgramClass, ProgramNote, Report, Severity,
@@ -23,8 +23,11 @@ pub(super) fn run(dir: &Path, json: bool) -> Outcome {
     };
     let report = validate(&folder);
     let code = i32::from(!report.is_ok());
-    let stdout =
-        if json { text::json_line(&Json::of(dir, &folder, &report)) } else { render(dir, &folder, &report) };
+    let stdout = if json {
+        output::json_line(&Json::of(dir, &folder, &report))
+    } else {
+        render(dir, &folder, &report)
+    };
     Outcome::new(code, stdout, String::new())
 }
 
@@ -37,7 +40,7 @@ pub(super) fn unreadable(dir: &Path, why: &str, json: bool) -> Outcome {
             folder: dir.to_string_lossy().into_owned(),
             error: why.to_string(),
         };
-        return Outcome::new(1, text::json_line(&reply), String::new());
+        return Outcome::new(1, output::json_line(&reply), String::new());
     }
     Outcome::fail(1, &format!("{}: {why}", dir.display()))
 }
@@ -84,7 +87,7 @@ fn class_key(class: ProgramClass) -> &'static str {
 fn render(dir: &Path, folder: &ProbeFolder, report: &Report) -> String {
     let info = &folder.manifest.probe;
     let mut out = Out::default();
-    out.line(&format!("{} {} in {}", info.id, info.version, text::path(dir)));
+    out.line(&format!("{} {} in {}", info.id, info.version, output::path(dir)));
     out.line(&format!("  {}", info.name));
     let c = &folder.manifest.contributes;
     let parts: Vec<String> = [

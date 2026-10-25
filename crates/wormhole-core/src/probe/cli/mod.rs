@@ -14,15 +14,15 @@
 //! not there or is not a Probe), 2 a mistake in the arguments.
 //!
 //! - `args`: the words after `probe`.
-//! - `text`: cleaning and the shape of the output.
+//! - `output`: cleaning and the shape of the output.
 //! - `validate_cmd`, `test_cmd`, `new_cmd`: one verb each.
 //!
 //! Must not use anything above `rules`, `fixture`, `scaffold` and `validate`; it knows no settings.
 
 mod args;
 mod new_cmd;
+mod output;
 mod test_cmd;
-mod text;
 mod validate_cmd;
 
 use std::path::{Path, PathBuf};
@@ -59,7 +59,7 @@ impl Outcome {
 
     /// An error on stderr, as `Wormhole: …`.
     pub(super) fn fail(code: i32, message: &str) -> Self {
-        Self { code, stdout: String::new(), stderr: format!("Wormhole: {}\n", text::clean(message)) }
+        Self { code, stdout: String::new(), stderr: format!("Wormhole: {}\n", output::clean(message)) }
     }
 }
 
@@ -92,7 +92,7 @@ pub fn run(args: &[String], env: &Env<'_>) -> Outcome {
         Err(mistake) => Outcome::new(
             2,
             String::new(),
-            format!("Wormhole: {}\n\n{}", text::clean(&mistake), help(env.command)),
+            format!("Wormhole: {}\n\n{}", output::clean(&mistake), help(env.command)),
         ),
     }
 }
