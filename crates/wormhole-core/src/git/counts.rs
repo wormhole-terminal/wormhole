@@ -64,13 +64,19 @@ pub(super) fn count_untracked_lines(root: &Path, files: &mut [FileChange]) {
     let mut kept = PerRoot::new();
     for file in files.iter_mut().filter(|f| f.kind == ChangeKind::Untracked && f.added.is_none()) {
         let remembered = previous.remove(&file.path);
-        file.added = count(&root.join(&file.path), remembered, &file.path, &mut kept);
+        file.added = count(root, &root.join(&file.path), remembered, &file.path, &mut kept);
         file.removed = Some(0);
     }
     put(root, kept);
 }
 
-fn count(path: &Path, remembered: Option<Counted>, key: &str, kept: &mut PerRoot) -> Option<u32> {
+fn count(
+    root: &Path,
+    path: &Path,
+    remembered: Option<Counted>,
+    key: &str,
+    kept: &mut PerRoot,
+) -> Option<u32> {
     let meta = std::fs::symlink_metadata(path).ok()?;
     // Git shows an untracked link as one line, its target, and does not follow it.
     if meta.file_type().is_symlink() {
@@ -88,7 +94,7 @@ fn count(path: &Path, remembered: Option<Counted>, key: &str, kept: &mut PerRoot
         kept.insert(key.to_string(), known);
         return known.lines;
     }
-    let lines = read_and_count(path);
+    let lines = read_and_count(root, path);
     let settled =
         meta.modified().is_ok_and(|at| SystemTime::now().duration_since(at).is_ok_and(|age| age >= SETTLE));
     if settled {
@@ -97,10 +103,12 @@ fn count(path: &Path, remembered: Option<Counted>, key: &str, kept: &mut PerRoot
     lines
 }
 
-fn read_and_count(path: &Path) -> Option<u32> {
+/// The lines of `path`, a file of the repository at `root`: hostile content, so a folder on the way that
+/// links out of it makes the file unread (`None`), as an over-sized one is.
+fn read_and_count(root: &Path, path: &Path) -> Option<u32> {
     #[cfg(test)]
     READS.with(|reads| reads.set(reads.get() + 1));
-    let bytes = files::read_capped(path, MAX_TEXT_BYTES, LinkPolicy::Follow).ok()?;
+    let bytes = files::read_capped(path, MAX_TEXT_BYTES, LinkPolicy::Within(root)).ok()?;
     if bytes.contains(&0) {
         return None;
     }
@@ -198,6 +206,20 @@ mod tests {
         assert_eq!(refresh(root, &["log.txt"]), (vec![Some(1)], 1), "fresh files are read every time");
         write(root, "log.txt", "b\nc\n");
         assert_eq!(refresh(root, &["log.txt"]), (vec![Some(2)], 1));
+    }
+
+    /// A folder of the repository that links out of it: git lists no path through one, but the count
+    /// asks the disk, so it is the read that must keep inside.
+    #[test]
+    fn a_file_under_a_folder_that_links_out_of_the_repository_is_not_read() {
+        let dir = init();
+        let outside = init();
+        write(outside.path(), "secret.txt", "one\ntwo\n");
+        let root = dir.path();
+        crate::platform::fs::symlink(outside.path(), root.join("out")).expect("symlink");
+        write(root, "in.txt", "one\n");
+        let (counts, _) = refresh(root, &["out/secret.txt", "in.txt"]);
+        assert_eq!(counts, [None, Some(1)], "the file outside is not counted, the one inside is");
     }
 
     #[test]

@@ -127,7 +127,7 @@ pub fn diff_with_limits(
         };
         if file.kind != ChangeKind::Deleted {
             diff.new_text = match &spec.new {
-                None => read_text(&root.join(&file.path), limits.max_text_bytes),
+                None => read_text(root, &root.join(&file.path), limits.max_text_bytes),
                 Some(rev) => show(rev, &file.path),
             };
         }
@@ -230,8 +230,9 @@ fn link_patch(path: &str, target: &str) -> String {
 
 /// A worktree file as text for highlighting, or `None` (missing, binary, over `max_bytes`, or
 /// not a regular file: a FIFO or a link to one must never be opened). A link reads as its
-/// target, the way git stores and diffs it.
-fn read_text(path: &Path, max_bytes: u64) -> Option<String> {
+/// target, the way git stores and diffs it. `path` is in the repository at `root`, whose content is
+/// hostile: a folder on the way that links out of it makes the file unreadable, not read.
+fn read_text(root: &Path, path: &Path, max_bytes: u64) -> Option<String> {
     let meta = std::fs::symlink_metadata(path).ok()?;
     if meta.file_type().is_symlink() {
         return std::fs::read_link(path).ok().map(|target| target.to_string_lossy().into_owned());
@@ -240,7 +241,7 @@ fn read_text(path: &Path, max_bytes: u64) -> Option<String> {
         return None;
     }
     // `read_capped` adds one to its cap, so `u64::MAX` (unlimited) must not reach it.
-    let bytes = files::read_capped(path, max_bytes.min(u64::MAX - 1), LinkPolicy::Follow).ok()?;
+    let bytes = files::read_capped(path, max_bytes.min(u64::MAX - 1), LinkPolicy::Within(root)).ok()?;
     (!bytes.contains(&0)).then(|| String::from_utf8_lossy(&bytes).into_owned())
 }
 
@@ -330,6 +331,22 @@ mod tests {
         assert_eq!((lines[2].kind, lines[2].new), (LineKind::Added, Some(2)));
         assert_eq!((lines[3].kind, lines[3].new), (LineKind::Added, Some(3)));
         assert_eq!((lines[4].old, lines[4].new), (Some(3), Some(4)));
+    }
+
+    /// The worktree's text is read from the repository's own files only: a folder that links out of
+    /// it (git lists no path through one) gives no text, a link as the last part still reads as its target.
+    #[test]
+    fn a_worktree_file_is_read_only_from_inside_the_repository() {
+        let dir = crate::git::testing::init();
+        let outside = crate::git::testing::init();
+        crate::git::testing::write(outside.path(), "secret.txt", "classified\n");
+        crate::git::testing::write(dir.path(), "in.txt", "inside\n");
+        crate::platform::fs::symlink(outside.path(), dir.path().join("out")).expect("symlink");
+        crate::platform::fs::symlink("elsewhere", dir.path().join("link")).expect("symlink");
+        let read = |name: &str| read_text(dir.path(), &dir.path().join(name), 1 << 20);
+        assert_eq!(read("in.txt").as_deref(), Some("inside\n"));
+        assert_eq!(read("out/secret.txt"), None, "through a folder that links out");
+        assert_eq!(read("link").as_deref(), Some("elsewhere"), "a link as the file shows its target");
     }
 
     #[test]
