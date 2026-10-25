@@ -6,6 +6,7 @@ use std::io::Read as _;
 use semver::Version;
 use serde::Deserialize;
 
+use super::count::{self, Count};
 use super::security::Security;
 use super::{UpdateError, UpdaterConfig, check_url, feed_url, http, parse_lenient_version};
 
@@ -78,8 +79,11 @@ struct Feed {
 /// nor make the schedule retry every minute as it does after a network error.
 pub fn check(config: &UpdaterConfig) -> Result<UpdateStatus, UpdateError> {
     let mut best: Option<Result<UpdateStatus, UpdateError>> = None;
-    for &channel in config.channel.feeds() {
-        let result = check_feed(&feed_url(&config.base_url, channel), config);
+    let user_agent = count::user_agent(config);
+    for (i, &channel) in config.channel.feeds().iter().enumerate() {
+        // The count's flags go with the channel's own feed only: a check that reads two counts once.
+        let flags = config.count.filter(|_| i == 0).and_then(Count::header);
+        let result = check_feed(&feed_url(&config.base_url, channel), config, &user_agent, flags);
         if let Err(err) = &result {
             tracing::warn!(?channel, "update feed failed: {err}");
         }
@@ -113,10 +117,16 @@ fn better(
     if rank(&b) > rank(&a) { b } else { a }
 }
 
-fn check_feed(url: &str, config: &UpdaterConfig) -> Result<UpdateStatus, UpdateError> {
+fn check_feed(
+    url: &str,
+    config: &UpdaterConfig,
+    user_agent: &str,
+    count: Option<&str>,
+) -> Result<UpdateStatus, UpdateError> {
     check_url(url)?;
     tracing::debug!(%url, "checking for updates");
-    let response = http::get(url, http::FEED_TIMEOUT)?;
+    let headers: Vec<(&str, &str)> = count.map(|flags| (count::HEADER, flags)).into_iter().collect();
+    let response = http::request(url, http::FEED_TIMEOUT, user_agent, &headers)?;
     let mut body = Vec::new();
     response
         .into_body()

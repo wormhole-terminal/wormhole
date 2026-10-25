@@ -24,6 +24,14 @@ impl UpdateChannel {
         }
     }
 
+    /// The channel's name, as the feed's path and the update check's user agent spell it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Stable => "stable",
+            Self::Unstable => "unstable",
+        }
+    }
+
     /// The feeds a check reads, its own first.
     pub fn feeds(self) -> &'static [UpdateChannel] {
         match self {

@@ -99,6 +99,9 @@ pub struct Settings {
     pub hotkey: String,
     /// Check for and download updates automatically.
     pub auto_update: bool,
+    /// Update checks say once a day and once a month that a copy is running, with no ID
+    /// (`update::Count`), so the number of people using Wormhole can be counted.
+    pub anonymous_count: bool,
     /// Which builds to update to: releases, or also every build of main (see [`UpdateChannel`]).
     /// Unstable also shows the feature-flag switches (see [`crate::config::features`]).
     pub update_channel: UpdateChannel,
@@ -279,6 +282,7 @@ impl Default for Settings {
             menu_bar: true,
             hotkey: String::new(),
             auto_update: true,
+            anonymous_count: true,
             update_channel: UpdateChannel::Stable,
             settings_translucent: false,
             studio_translucent: false,

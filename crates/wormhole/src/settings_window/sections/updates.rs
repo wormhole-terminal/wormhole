@@ -34,6 +34,7 @@ pub(super) const SETTINGS: &[Setting] = &[
             .into_any_element()
     }),
     toggle!("auto-update", auto_update),
+    toggle!("anonymous-count", anonymous_count),
     Setting::segmented(
         "update-channel",
         &[Segment::text(SETTINGS_UPDATES_STABLE), Segment::text(SETTINGS_UPDATES_UNSTABLE)],

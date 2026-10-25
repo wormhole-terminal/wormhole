@@ -16,6 +16,7 @@
 
 mod archive;
 mod channel;
+mod count;
 mod download;
 mod feed;
 mod http;
@@ -33,6 +34,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 pub use channel::UpdateChannel;
+pub use count::Count;
 pub use download::{DownloadedUpdate, download};
 pub use feed::{Asset, Release, UpdateStatus, check};
 pub(crate) use install::bundle_from_exe;
@@ -71,6 +73,9 @@ pub struct UpdaterConfig {
     /// validly-signed-by-someone-else app can't be swapped in even if minisign were bypassed.
     pub team_id: Option<String>,
     pub max_download_size: u64,
+    /// The anonymous count (`count`): which periods this check is the first of, `None` when the
+    /// person turned the count off.
+    pub count: Option<Count>,
 }
 
 impl UpdaterConfig {
@@ -94,6 +99,7 @@ impl UpdaterConfig {
             verify_codesign: true,
             team_id: None,
             max_download_size: DEFAULT_MAX_DOWNLOAD_SIZE,
+            count: None,
         }
     }
 }

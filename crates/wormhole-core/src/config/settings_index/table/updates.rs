@@ -15,6 +15,9 @@ pub(super) const UPDATES: &[Group] = &[group(
         entry("auto-update", SETTINGS_UPDATES_AUTO_UPDATE, &["auto_update"])
             .with_description(SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION)
             .with_keywords(SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS),
+        entry("anonymous-count", SETTINGS_UPDATES_ANONYMOUS_COUNT, &["anonymous_count"])
+            .with_description(SETTINGS_UPDATES_ANONYMOUS_COUNT_DESCRIPTION)
+            .with_keywords(SETTINGS_UPDATES_ANONYMOUS_COUNT_KEYWORDS),
         entry("update-channel", SETTINGS_UPDATES_UPDATE_CHANNEL, &["update_channel"])
             .with_description(SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION)
             .with_keywords(SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS),

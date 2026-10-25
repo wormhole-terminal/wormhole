@@ -15,6 +15,10 @@ settings-updates-auto-update = Update automatically
     .description = Checks in the background and installs on the next restart
     .keywords = download auto
 
+settings-updates-anonymous-count = Count this Mac anonymously
+    .description = Update checks say once a day that Wormhole runs here, with no ID and nothing about you
+    .keywords = analytics telemetry privacy usage statistics count
+
 settings-updates-update-channel = Channel
     .description = Unstable also gets a build of every change once it passes the tests, and shows the feature flags
     .keywords = beta nightly unstable stable prerelease dev builds main feature flags

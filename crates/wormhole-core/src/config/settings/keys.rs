@@ -55,6 +55,8 @@ pub const APP_SETTINGS: &[&str] = &[
     "hotkey",
     "menu_bar",
     "auto_update",
+    // Whether this Mac is counted: the person's, never a cloned repository's.
+    "anonymous_count",
     // Which builds the app installs, and whether config.json may turn unfinished features on: a
     // cloned repository must not be able to choose either.
     "update_channel",

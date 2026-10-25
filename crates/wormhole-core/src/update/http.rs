@@ -13,7 +13,7 @@ use ureq::tls::{RootCerts, TlsConfig, TlsProvider};
 
 use super::UpdateError;
 
-fn agent(url: &str, body_timeout: Duration) -> Agent {
+fn agent(url: &str, body_timeout: Duration, user_agent: &str) -> Agent {
     let tls = TlsConfig::builder()
         .provider(TlsProvider::Rustls)
         .root_certs(RootCerts::PlatformVerifier)
@@ -30,7 +30,7 @@ fn agent(url: &str, body_timeout: Duration) -> Agent {
         // stalled connection would pin the background thread forever.
         .timeout_recv_body(Some(body_timeout))
         .timeout_recv_response(Some(Duration::from_secs(30)))
-        .user_agent(format!("Wormhole-Updater/{}", env!("CARGO_PKG_VERSION")))
+        .user_agent(user_agent)
         .build()
         .new_agent()
 }
@@ -44,5 +44,19 @@ pub(crate) fn get(
     url: &str,
     body_timeout: Duration,
 ) -> Result<ureq::http::Response<ureq::Body>, UpdateError> {
-    agent(url, body_timeout).get(url).call().map_err(|e| UpdateError::Network(format!("GET {url}: {e}")))
+    request(url, body_timeout, concat!("Wormhole-Updater/", env!("CARGO_PKG_VERSION")), &[])
+}
+
+/// A GET with its own user agent and extra headers: the feed's, which carry the anonymous count.
+pub(crate) fn request(
+    url: &str,
+    body_timeout: Duration,
+    user_agent: &str,
+    headers: &[(&str, &str)],
+) -> Result<ureq::http::Response<ureq::Body>, UpdateError> {
+    let mut request = agent(url, body_timeout, user_agent).get(url);
+    for (name, value) in headers {
+        request = request.header(*name, *value);
+    }
+    request.call().map_err(|e| UpdateError::Network(format!("GET {url}: {e}")))
 }

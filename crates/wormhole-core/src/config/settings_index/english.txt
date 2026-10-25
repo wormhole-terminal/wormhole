@@ -544,6 +544,10 @@ entry Updates auto-update
   label "Update automatically"
   description "Checks in the background and installs on the next restart"
   keywords "download auto"
+entry Updates anonymous-count
+  label "Count this Mac anonymously"
+  description "Update checks say once a day that Wormhole runs here, with no ID and nothing about you"
+  keywords "analytics telemetry privacy usage statistics count"
 entry Updates update-channel
   label "Channel"
   description "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"

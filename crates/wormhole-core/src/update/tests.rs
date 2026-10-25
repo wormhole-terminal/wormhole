@@ -11,10 +11,12 @@ use super::archive::extract;
 use super::download::sha256_hex;
 use super::install::swap_into_place;
 use super::test_support::{
-    BUNDLE_ID, RawEntry, TEST_TRUSTED_COMMENT, TestKey, fake_app_archive, marker_of, raw_archive, serve,
-    temp_apps_dir, test_config, write_fake_app,
+    BUNDLE_ID, RawEntry, Seen, TEST_TRUSTED_COMMENT, TestKey, fake_app_archive, marker_of, raw_archive,
+    serve, serve_recording, temp_apps_dir, test_config, write_fake_app,
 };
-use super::{UpdateChannel, UpdateError, UpdateStatus, UpdaterConfig, check, download, install, preflight};
+use super::{
+    Count, UpdateChannel, UpdateError, UpdateStatus, UpdaterConfig, check, download, install, preflight,
+};
 
 const ARCHIVE_PATH: &str = "/releases/0.2.0/Wormhole-0.2.0-macos.app.tar.gz";
 
@@ -118,6 +120,38 @@ fn unstable_still_gets_stable_releases_when_its_own_feed_is_missing() {
     assert_eq!(available(&config).version, Version::new(0, 2, 0));
     config.current_version = Version::new(0, 2, 0);
     assert_eq!(check(&config).unwrap(), UpdateStatus::UpToDate, "an answer, not the 404");
+}
+
+#[test]
+fn the_count_goes_with_the_channels_own_feed_and_nothing_goes_while_it_is_off() {
+    let feed = br#"{"version":"0.1.0","platforms":{}}"#.to_vec();
+    let (base, seen) = serve_recording(HashMap::from([
+        ("/stable/latest.json".to_string(), feed.clone()),
+        ("/unstable/latest.json".to_string(), feed),
+    ]));
+    let mut config = test_config("0.1.0", "");
+    config.base_url = base;
+    config.channel = UpdateChannel::Unstable;
+    config.count = Some(Count { day: true, month: true });
+    assert_eq!(check(&config).unwrap(), UpdateStatus::UpToDate);
+    config.count = None;
+    assert_eq!(check(&config).unwrap(), UpdateStatus::UpToDate);
+    let request = |path: &str, user_agent: &str, count: Option<&str>| Seen {
+        path: path.into(),
+        user_agent: Some(user_agent.into()),
+        count: count.map(String::from),
+    };
+    let detailed = "Wormhole-Updater/0.1.0 (unstable; aarch64; macOS 14)";
+    let plain = "Wormhole-Updater/0.1.0";
+    assert_eq!(
+        *seen.lock().unwrap(),
+        [
+            request("/unstable/latest.json", detailed, Some("day, month")),
+            request("/stable/latest.json", detailed, None),
+            request("/unstable/latest.json", plain, None),
+            request("/stable/latest.json", plain, None),
+        ]
+    );
 }
 
 #[test]

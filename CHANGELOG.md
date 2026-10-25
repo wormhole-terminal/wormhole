@@ -6,6 +6,15 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Added
+
+- Update checks let us count how many copies of Wormhole run, without telling one from another. A
+  check now names the update channel, Apple silicon or Intel and the macOS major version, and the
+  first check of each day and of each month says so; counting those gives the copies running each
+  day and month. There is no ID, so two checks from one Mac can't be linked, and the server keeps
+  only the counts, not your IP address. Settings → Updates → Count this Mac anonymously
+  (`anonymous_count`) turns it off, and a check then sends the version alone, as before.
+
 ## [1.3.0] - 2026-10-25
 
 ### Added

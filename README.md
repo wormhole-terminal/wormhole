@@ -81,6 +81,14 @@ a separate repository.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for build checks, tests and contribution
 conventions.
 
+## Privacy
+
+Wormhole has no analytics or crash reporting, and your settings, notes and terminal output stay on
+your Mac. Update checks send the app's version, the update channel, Apple silicon or Intel and the
+macOS major version, and the first check of each day and month says so: that is how we count how many
+copies run, with no ID and no IP address kept. Settings → Updates → Count this Mac anonymously turns
+the count off.
+
 ## Feedback
 
 [Report a bug](https://github.com/wormhole-terminal/wormhole/issues/new/choose)

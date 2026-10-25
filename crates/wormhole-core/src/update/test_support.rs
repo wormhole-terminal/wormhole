@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{Cursor, Write as _};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use flate2::Compression;
 use flate2::write::GzEncoder;
@@ -61,6 +61,7 @@ pub(super) fn test_config(current: &str, public_key: &str) -> UpdaterConfig {
         verify_codesign: false,
         team_id: None,
         max_download_size: DEFAULT_MAX_DOWNLOAD_SIZE,
+        count: None,
     }
 }
 
@@ -173,10 +174,34 @@ pub(super) fn raw_archive(entries: &[RawEntry<'_>]) -> Vec<u8> {
 /// Serves fixed bodies on 127.0.0.1 and returns the base URL. The server thread lives until the
 /// test process exits, which is fine for tests.
 pub(super) fn serve(routes: HashMap<String, Vec<u8>>) -> String {
+    serve_recording(routes).0
+}
+
+/// One request as the server saw it: its path, user agent and `Wormhole-Count` header.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct Seen {
+    pub(super) path: String,
+    pub(super) user_agent: Option<String>,
+    pub(super) count: Option<String>,
+}
+
+/// [`serve`], also keeping what each request sent.
+pub(super) fn serve_recording(routes: HashMap<String, Vec<u8>>) -> (String, Arc<Mutex<Vec<Seen>>>) {
     let server = Arc::new(tiny_http::Server::http("127.0.0.1:0").unwrap());
     let base = format!("http://{}", server.server_addr().to_ip().unwrap());
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let log = Arc::clone(&seen);
     std::thread::spawn(move || {
         for request in server.incoming_requests() {
+            let header = |name: &'static str| {
+                request.headers().iter().find(|h| h.field.equiv(name)).map(|h| h.value.to_string())
+            };
+            let entry = Seen {
+                path: request.url().to_string(),
+                user_agent: header("User-Agent"),
+                count: header("Wormhole-Count"),
+            };
+            log.lock().unwrap().push(entry);
             let response = match routes.get(request.url()) {
                 Some(body) => tiny_http::Response::from_data(body.clone()),
                 None => tiny_http::Response::from_data(b"not found".to_vec()).with_status_code(404),
@@ -184,7 +209,7 @@ pub(super) fn serve(routes: HashMap<String, Vec<u8>>) -> String {
             let _ = request.respond(response);
         }
     });
-    base
+    (base, seen)
 }
 
 pub(super) fn temp_apps_dir() -> (tempfile::TempDir, PathBuf) {
