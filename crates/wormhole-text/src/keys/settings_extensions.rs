@@ -54,26 +54,24 @@ pub const SETTINGS_EXTENSIONS_TOUCH_ID: Key = Key::new(319);
 pub const SETTINGS_EXTENSIONS_READ_ONLY_GIT: Key = Key::new(322);
 /// "A script from its own folder, exactly as approved."
 pub const SETTINGS_EXTENSIONS_OWN_SCRIPT: Key = Key::new(323);
-/// "Runs as"
-pub const SETTINGS_EXTENSIONS_RUNS_AS: Key = Key::new(324);
 /// "Dangerous together"
-pub const SETTINGS_EXTENSIONS_COMBINATIONS: Key = Key::new(325);
+pub const SETTINGS_EXTENSIONS_COMBINATIONS: Key = Key::new(324);
 /// "Since you approved it"
-pub const SETTINGS_EXTENSIONS_SINCE: Key = Key::new(327);
+pub const SETTINGS_EXTENSIONS_SINCE: Key = Key::new(326);
 /// "Its files changed."
-pub const SETTINGS_EXTENSIONS_FILES_CHANGED: Key = Key::new(328);
+pub const SETTINGS_EXTENSIONS_FILES_CHANGED: Key = Key::new(327);
 /// "Approving needs Touch ID, or your password."
-pub const SETTINGS_EXTENSIONS_CONFIRM_TOUCH_ID: Key = Key::new(332);
+pub const SETTINGS_EXTENSIONS_CONFIRM_TOUCH_ID: Key = Key::new(331);
 /// "Approving needs only a click."
-pub const SETTINGS_EXTENSIONS_CONFIRM_CLICK: Key = Key::new(333);
+pub const SETTINGS_EXTENSIONS_CONFIRM_CLICK: Key = Key::new(332);
 /// "Cancel"
-pub const SETTINGS_EXTENSIONS_CANCEL: Key = Key::new(334);
+pub const SETTINGS_EXTENSIONS_CANCEL: Key = Key::new(333);
 /// "Approve"
-pub const SETTINGS_EXTENSIONS_APPROVE: Key = Key::new(335);
+pub const SETTINGS_EXTENSIONS_APPROVE: Key = Key::new(334);
 /// "Approve with Touch ID…"
-pub const SETTINGS_EXTENSIONS_APPROVE_TOUCH_ID: Key = Key::new(336);
+pub const SETTINGS_EXTENSIONS_APPROVE_TOUCH_ID: Key = Key::new(335);
 /// "Waiting for approval…"
-pub const SETTINGS_EXTENSIONS_WAITING: Key = Key::new(337);
+pub const SETTINGS_EXTENSIONS_WAITING: Key = Key::new(336);
 
 /// ```text
 /// Probes live in { $folder }, one folder each with a probe.toml in it.
@@ -198,33 +196,33 @@ pub fn settings_extensions_runs_folder_code(program: &str) -> String {
 /// It { $what }.
 /// ```
 pub fn settings_extensions_combination(what: &str) -> String {
-    crate::active::message(326, &[("what", Arg::Str(what))])
+    crate::active::message(325, &[("what", Arg::Str(what))])
 }
 
 /// ```text
 /// Now also asks for: { $what }
 /// ```
 pub fn settings_extensions_now_asks(what: &str) -> String {
-    crate::active::message(329, &[("what", Arg::Str(what))])
+    crate::active::message(328, &[("what", Arg::Str(what))])
 }
 
 /// ```text
 /// No longer asks for: { $what }
 /// ```
 pub fn settings_extensions_no_longer_asks(what: &str) -> String {
-    crate::active::message(330, &[("what", Arg::Str(what))])
+    crate::active::message(329, &[("what", Arg::Str(what))])
 }
 
 /// ```text
 /// files: { $count }, fingerprint { $fingerprint }…
 /// ```
 pub fn settings_extensions_files_fingerprint(count: &str, fingerprint: &str) -> String {
-    crate::active::message(331, &[("count", Arg::Str(count)), ("fingerprint", Arg::Str(fingerprint))])
+    crate::active::message(330, &[("count", Arg::Str(count)), ("fingerprint", Arg::Str(fingerprint))])
 }
 
 /// ```text
 /// turn on the Probe “{ $name }” and let it do what it asks
 /// ```
 pub fn settings_extensions_auth_reason(name: &str) -> String {
-    crate::active::message(338, &[("name", Arg::Str(name))])
+    crate::active::message(337, &[("name", Arg::Str(name))])
 }

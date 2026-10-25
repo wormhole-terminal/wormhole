@@ -87,9 +87,6 @@ settings-extensions-runs-folder-code = { $program } runs code that the folder it
 settings-extensions-read-only-git = Read-only git, run by Wormhole itself.
 settings-extensions-own-script = A script from its own folder, exactly as approved.
 
-# Under a program: the command lines that run it. Wording of the heading.
-settings-extensions-runs-as = Runs as
-
 settings-extensions-combinations = Dangerous together
 # What a pair of permissions can do together; it follows "It". { $what } is the end of the sentence, in English.
 settings-extensions-combination = It { $what }.
