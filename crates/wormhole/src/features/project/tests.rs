@@ -440,6 +440,40 @@ fn an_untrusted_projects_notes_file_is_neither_read_nor_written(cx: &mut TestApp
     assert!(cx.update(|cx| hub(cx).notes_errors.is_empty()), "and nothing is waiting any more");
 }
 
+/// Waiting for trust keeps the last agreed state: a task deleted from notes.md while the project waited
+/// stays deleted once it is trusted again, instead of coming back from the terminal's copy.
+#[gpui_kit::test]
+fn a_deletion_made_while_waiting_for_trust_stays_deleted(cx: &mut TestAppContext) {
+    if isolate("a_deletion_made_while_waiting_for_trust_stays_deleted") {
+        return;
+    }
+    let window = start(cx, 1);
+    let theirs =
+        "# Notes\n<!-- wormhole:notes -->\n\n## Next steps\n- [ ] gone soon\n- [ ] stays\n\n## Notes\n";
+    let dir = project("sync-wait", &[("notes.md", theirs)]);
+    trust(cx, &dir);
+    drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
+    drive(cx, &window, sync_notes);
+    let tasks = |cx: &mut TestAppContext| {
+        let mut now = read_cx(cx, &window, |ws, cx| notes::tasks(ws, 0, cx));
+        now.sort();
+        now
+    };
+    assert_eq!(tasks(cx).len(), 2, "both tasks came in while trusted");
+
+    cx.update(|cx| hub_mut(cx).trust.revoke(&dir));
+    let without = "# Notes\n<!-- wormhole:notes -->\n\n## Next steps\n- [ ] stays\n\n## Notes\n";
+    std::fs::write(dir.join(".wormhole/notes.md"), without).expect("deletes a task in notes.md");
+    drive(cx, &window, sync_notes);
+    assert_eq!(tasks(cx).len(), 2, "untrusted, the deletion is not read yet");
+
+    trust(cx, &dir);
+    drive(cx, &window, sync_notes);
+    assert_eq!(tasks(cx), [("stays".to_string(), false)], "trusted again, the deletion comes in");
+    let file = std::fs::read_to_string(dir.join(".wormhole/notes.md")).expect("notes.md");
+    assert!(!file.contains("gone soon"), "and the task does not come back: {file}");
+}
+
 /// The hub is a global the window does not watch: a sync that starts failing has to wake the window itself
 /// for the Project tab to say why.
 #[gpui_kit::test]

@@ -67,12 +67,15 @@ impl Project {
                 (hub.prefs.notes_sync(&root, project.folder.has(Feature::Notes)), hub.trusted(project))
             };
             if !(wanted && trusted) {
-                // Switched off or waiting for trust: switching on or trusting merges both sides afresh.
-                if let Some(of) = self.of.get_mut(&session_id) {
+                // Switched off: switching on merges both sides afresh. Waiting for trust keeps the base, so
+                // what was deleted on either side before the wait stays deleted once the project is trusted.
+                if !wanted && let Some(of) = self.of.get_mut(&session_id) {
                     of.notes_base = None;
                 }
                 if let Some(hub) = hub_of_mut(profile, cx) {
-                    hub.notes_bases.remove(session_id);
+                    if !wanted {
+                        hub.notes_bases.remove(session_id);
+                    }
                     // The Project tab says why nothing syncs while the person wants it to.
                     told |= hub.set_notes_error(&root, (wanted && !trusted).then(|| NEEDS_TRUST.to_string()));
                 }
