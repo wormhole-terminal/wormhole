@@ -191,9 +191,11 @@ git push origin main v0.4.0           # or pass --push
 and creates the annotated tag `v0.4.0`, whose message is `Wormhole 0.4.0` and the version's notes.
 Run `scripts/gen-licenses.py` first if a dependency changed.
 
-The tag starts the Release workflow. It builds one app for Apple Silicon and Intel, signs with the
-Developer ID certificate, notarizes, signs the update archive with minisign and publishes everything as
-the GitHub Release `v0.4.0`, with the notes from CHANGELOG.md (it fails when the version has no
+The tag starts the Release workflow. It builds both architectures once and makes three apps from them:
+universal (`Wormhole-<v>-macos.dmg`, the website's default download and Homebrew's), Apple silicon
+(`-macos-aarch64`) and Intel (`-macos-x86_64`). It signs each with the Developer ID certificate,
+notarizes, signs the two update archives with minisign (`latest.json` gives each Mac the one of its
+architecture) and publishes everything as the GitHub Release `v0.4.0`, with the notes from CHANGELOG.md (it fails when the version has no
 section). A version with a Security entry gets `"security": {"severity": …, "advisories": […]}` in
 `latest.json`, and the Release page opens with a security notice. The app checks
 `https://downloads.getwormhole.app/stable/latest.json`, which redirects to the latest release's

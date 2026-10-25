@@ -5,6 +5,8 @@
 #   scripts/bundle.sh --universal     # aarch64 + x86_64 merged with lipo
 #   scripts/bundle.sh --arch x86_64   # one specific architecture
 #   scripts/bundle.sh --no-build ...  # reuse existing target/<triple>/release binaries
+#   scripts/bundle.sh --out DIR ...   # assemble DIR/Wormhole.app instead (a release makes three:
+#                                     # universal, then each architecture from the same binaries)
 #
 # Signing: APPLE_SIGNING_IDENTITY (e.g. "Developer ID Application: Name (TEAMID)")
 # selects a real identity from the keychain; unset = ad-hoc signature ("-"), which
@@ -24,12 +26,14 @@ set -euo pipefail
 
 archs=()
 build=1
+app="$APP_PATH_DEFAULT"
 while [ $# -gt 0 ]; do
   case "$1" in
     --universal) archs=(aarch64 x86_64) ;;
     --arch) shift; archs=("${1:?--arch needs aarch64 or x86_64}") ;;
     --no-build) build=0 ;;
-    -h|--help) sed -n '2,21p' "$0"; exit 0 ;;
+    --out) shift; app="${1:?--out needs a directory}/$APP_NAME.app" ;;
+    -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
     *) die "unknown argument: $1" ;;
   esac
   shift
@@ -76,7 +80,7 @@ for triple in "${triples[@]}"; do
   host_bins+=("$host_bin")
 done
 
-app="$APP_PATH_DEFAULT"
+mkdir -p "$(dirname "$app")"
 log "assembling $app (version $APP_VERSION, ${archs[*]})"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"

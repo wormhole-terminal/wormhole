@@ -18,6 +18,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Settings → Updates has a Privacy group: why update checks are counted, the switch, exactly what a
   check sends from this Mac and what it never sends, and how many hours are left before the first
   count.
+- Each release has a download for Apple silicon and one for Intel Macs besides the universal one, and
+  an update downloads only your Mac's architecture, about half the size it was.
 
 ## [1.3.0] - 2026-10-25
 

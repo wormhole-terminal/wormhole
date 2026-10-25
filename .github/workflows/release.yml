@@ -179,9 +179,10 @@ jobs:
             exit 1
           fi
 
-      # One universal app, as every release since 0.1.2: Intel Macs update from the same feed, and a
-      # release without darwin-x86_64 would leave them on the last one that had it. The runner is
-      # Apple Silicon, so only the Intel target needs adding.
+      # Three apps from one build of both architectures: universal (the website's default download and
+      # Homebrew's), Apple silicon and Intel. The feed gives each Mac the archive of its own architecture,
+      # half the size of the universal one; a release without darwin-x86_64 would leave Intel Macs on the
+      # last one that had it. The runner is Apple Silicon, so only the Intel target needs adding.
       - name: Rust (the version in rust-toolchain.toml) + the Intel target
         run: |
           rustup toolchain install
@@ -276,12 +277,16 @@ jobs:
           # bundle.sh validates it (App ID, team, entitlement, expiry) and embeds it.
           echo "APPLE_PROVISIONING_PROFILE_PATH=$profile" >> "$GITHUB_ENV"
 
-      - name: Bundle (universal)
+      - name: Bundle (universal, Apple silicon, Intel)
         env:
           # Compiled into the app: the updater's feed (PUBLIC_BASE_URL, set above) and the
           # Apple team a downloaded update must be signed by.
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: scripts/bundle.sh --universal
+        run: |
+          scripts/bundle.sh --universal
+          # The same binaries again, one architecture each.
+          scripts/bundle.sh --no-build --arch aarch64 --out target/release/aarch64
+          scripts/bundle.sh --no-build --arch x86_64 --out target/release/x86_64
 
       - name: Notarize app
         env:
@@ -289,7 +294,10 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
           REQUIRE_NOTARIZATION: ${{ env.PUBLISH == 'true' && env.ALLOW_UNSIGNED != 'true' && '1' || '0' }}
-        run: scripts/notarize.sh target/release/Wormhole.app
+        run: |
+          for app in target/release/Wormhole.app target/release/aarch64/Wormhole.app target/release/x86_64/Wormhole.app; do
+            scripts/notarize.sh "$app"
+          done
 
       # CHANGELOG.md is the one source of the notes: latest.json, the GitHub Release and the app's
       # update window all show them. A Security entry also marks the update as a security update.
@@ -351,7 +359,7 @@ jobs:
             printf 'wormhole-dev\nwormhole-dev\n' \
               | minisign -G -f -p packaging/dev-updater.pub -s packaging/dev-updater.key >/dev/null
           fi
-          scripts/package.sh
+          scripts/package.sh target/release/Wormhole.app target/release/aarch64/Wormhole.app target/release/x86_64/Wormhole.app
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -426,7 +434,7 @@ jobs:
           gh release upload "$tag" "$dist/latest.json" --clobber
           gh release view "$tag" --json assets -q '.assets[].name' | while read -r name; do
             case "$name" in
-              latest.json | SHA256SUMS | Wormhole-macos.dmg | *"-$VERSION-"*) continue ;;
+              latest.json | SHA256SUMS | Wormhole-macos.dmg | Wormhole-macos-*.dmg | *"-$VERSION-"*) continue ;;
             esac
             if [ -n "$previous" ] && [[ "$name" == *"-$previous-"* ]]; then continue; fi
             gh release delete-asset "$tag" "$name" --yes

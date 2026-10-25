@@ -84,8 +84,6 @@ dev_version() {
 TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
 APP_PATH_DEFAULT="$TARGET_DIR/release/$APP_NAME.app"
 DIST_DEFAULT="$TARGET_DIR/release/dist"
-ARCHIVE_NAME="$APP_NAME-$APP_VERSION-macos.app.tar.gz"
-DMG_NAME="$APP_NAME-$APP_VERSION-macos.dmg"
 
 # True when the bundle carries a real Developer ID signature (not ad-hoc).
 is_developer_id_signed() {
