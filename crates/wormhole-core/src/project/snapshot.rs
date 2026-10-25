@@ -11,13 +11,14 @@ use std::path::{Path, PathBuf};
 
 use super::actions::{self, Action};
 use super::features::root_key;
-use super::trust::{self, Input, TrustLine, TrustRequest};
+use super::trust::{self, TrustLine, TrustRequest};
 use super::{
     ACTIONS_FILE, CONFIG_FILE, Feature, FeatureStanding, LAYOUT_FILE, Layout, MAX_JSON_BYTES,
     MAX_PROMPT_BYTES, PROMPTS_DIR, ProjectConfig, ProjectError, ProjectFolder, ProjectWarning, Prompt,
     THEME_FILE, TrustStatus, check_relative, config_from_value, parse_json, parse_layout, prompts,
 };
 use crate::storage::files::FileStamp;
+use crate::storage::fingerprint::{Input, fingerprint_of};
 
 /// A loaded project folder. Cheap to query: nothing here touches the disk after [`Self::load`].
 #[derive(Debug)]
@@ -90,23 +91,21 @@ impl ProjectSnapshot {
 
         let mut inputs: Vec<(String, Input)> = vec![
             (CONFIG_FILE.to_string(), trust::config_input(&config_read, parsed_config.as_ref())),
-            (ACTIONS_FILE.to_string(), Input::of(&actions_read)),
-            (LAYOUT_FILE.to_string(), Input::of(&layout_read)),
+            (ACTIONS_FILE.to_string(), trust::input_of(&actions_read)),
+            (LAYOUT_FILE.to_string(), trust::input_of(&layout_read)),
         ];
         inputs.extend(
-            prompt_reads.iter().map(|(file, read)| (format!("{PROMPTS_DIR}/{file}"), Input::of(read))),
+            prompt_reads.iter().map(|(file, read)| (format!("{PROMPTS_DIR}/{file}"), trust::input_of(read))),
         );
-        let fingerprint = trust::fingerprint_of(
+        let fingerprint = fingerprint_of(
             trust::FINGERPRINT_VERSION,
             inputs.iter().map(|(name, input)| (name.as_str(), *input)),
         );
         // The same files as approvals were given for before `config.json` was taken by what it
         // says: its bytes.
-        inputs[0].1 = Input::of(&config_read);
-        let legacy_fingerprint = trust::fingerprint_of(
-            trust::LEGACY_VERSION,
-            inputs.iter().map(|(name, input)| (name.as_str(), *input)),
-        );
+        inputs[0].1 = trust::input_of(&config_read);
+        let legacy_fingerprint =
+            fingerprint_of(trust::LEGACY_VERSION, inputs.iter().map(|(name, input)| (name.as_str(), *input)));
 
         let mut trusted_files: Vec<PathBuf> = [CONFIG_FILE, ACTIONS_FILE, LAYOUT_FILE]
             .into_iter()

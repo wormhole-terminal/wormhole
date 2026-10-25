@@ -22,10 +22,11 @@ use std::fmt;
 use std::path::PathBuf;
 
 use serde_json::Value;
-use sha2::{Digest, Sha256};
 
 use super::ProjectError;
 use super::color::PAINT_KEYS;
+// The rule itself is shared with Probes (`storage::fingerprint`); what is hashed, and under which tag, stays here.
+use crate::storage::fingerprint::Input;
 
 /// Bumping this invalidates every stored approval (they show as `Changed` once), e.g. when the
 /// set of inputs changes, unless the old one is still understood (see [`LEGACY_VERSION`]). v2 added
@@ -46,27 +47,12 @@ pub enum TrustStatus {
     Changed,
 }
 
-/// One input of the fingerprint, as read for a snapshot.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum Input {
-    Absent,
-    /// Refused or failed to read: the loaders report why, and nothing in it can run.
-    Unreadable,
-    Present {
-        len: u64,
-        digest: [u8; 32],
-    },
-}
-
-impl Input {
-    pub(super) fn of(read: &Result<Option<String>, ProjectError>) -> Self {
-        match read {
-            Ok(None) => Self::Absent,
-            Ok(Some(text)) => {
-                Self::Present { len: text.len() as u64, digest: Sha256::digest(text.as_bytes()).into() }
-            }
-            Err(_) => Self::Unreadable,
-        }
+/// The input for a file the loader read (or failed to), by its text.
+pub(super) fn input_of(read: &Result<Option<String>, ProjectError>) -> Input {
+    match read {
+        Ok(None) => Input::Absent,
+        Ok(Some(text)) => Input::of_bytes(text.as_bytes()),
+        Err(_) => Input::Unreadable,
     }
 }
 
@@ -88,7 +74,7 @@ pub(super) fn config_input(
     read: &Result<Option<String>, ProjectError>,
     parsed: Option<&Result<Value, ProjectError>>,
 ) -> Input {
-    let Some(Ok(value)) = parsed else { return Input::of(read) };
+    let Some(Ok(value)) = parsed else { return input_of(read) };
     let mut canonical = String::new();
     match value {
         Value::Object(map) => {
@@ -96,7 +82,7 @@ pub(super) fn config_input(
         }
         other => write_value(other, &mut canonical),
     }
-    Input::Present { len: canonical.len() as u64, digest: Sha256::digest(canonical.as_bytes()).into() }
+    Input::of_bytes(canonical.as_bytes())
 }
 
 /// `value` as JSON text with every object's keys in sorted order (they are unique after a parse)
@@ -131,33 +117,6 @@ fn write_object<'a>(members: impl Iterator<Item = (&'a String, &'a Value)>, out:
         write_value(value, out);
     }
     out.push('}');
-}
-
-/// SHA-256 (hex) over named inputs, in the order given, under `version`. Names are length-prefixed
-/// and each input is marked absent, unreadable or present (with its length and digest), so adding,
-/// deleting, moving or editing any input changes the result. All but `config.json` are raw bytes
-/// (even whitespace or comments count): what the user approved is what's on disk.
-pub(super) fn fingerprint_of<'a>(
-    version: &str,
-    inputs: impl IntoIterator<Item = (&'a str, Input)>,
-) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(version.as_bytes());
-    hasher.update([0]);
-    for (name, input) in inputs {
-        hasher.update((name.len() as u64).to_le_bytes());
-        hasher.update(name.as_bytes());
-        match input {
-            Input::Absent => hasher.update(b"absent\0"),
-            Input::Unreadable => hasher.update(b"unreadable\0"),
-            Input::Present { len, digest } => {
-                hasher.update(b"present\0");
-                hasher.update(len.to_le_bytes());
-                hasher.update(digest);
-            }
-        }
-    }
-    hasher.finalize().iter().map(|b| format!("{b:02x}")).collect()
 }
 
 /// One line of the approval dialog: what runs it (the shell setting, an env var, an action with
