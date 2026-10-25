@@ -1,0 +1,12 @@
+[probe]
+id = "fixture"
+name = "Fixture"
+description = "A fixture for one validate finding."
+author = "tests"
+version = "0.1.0"
+wormhole = ">=1.3"
+api = 1
+[[contributes.rules]]
+id = "r"
+pattern = '\bTODO\b'
+tone = "warning"

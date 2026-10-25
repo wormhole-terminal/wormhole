@@ -1,0 +1,268 @@
+[probe]
+id = "fixture"
+name = "Fixture"
+description = "A fixture for one validate finding."
+author = "tests"
+version = "0.1.0"
+wormhole = ">=1.3"
+api = 1
+[[contributes.rules]]
+id = "r0"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r1"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r2"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r3"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r4"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r5"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r6"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r7"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r8"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r9"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r10"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r11"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r12"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r13"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r14"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r15"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r16"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r17"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r18"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r19"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r20"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r21"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r22"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r23"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r24"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r25"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r26"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r27"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r28"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r29"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r30"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r31"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r32"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r33"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r34"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r35"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r36"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r37"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r38"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r39"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r40"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r41"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r42"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r43"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r44"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r45"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r46"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r47"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r48"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r49"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r50"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r51"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r52"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r53"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r54"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r55"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r56"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r57"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r58"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r59"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r60"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r61"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r62"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r63"
+pattern = 'a+'
+tone = "link"
+[[contributes.rules]]
+id = "r64"
+pattern = 'a+'
+tone = "link"

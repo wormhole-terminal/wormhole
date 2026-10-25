@@ -23,6 +23,9 @@ dirs.workspace = true
 libc.workspace = true
 plist.workspace = true
 rusqlite.workspace = true
+# Probe rules are compiled by the `regex` crate (below); `regex-syntax` is what `probe::validate`
+# reads their structure from.
+regex-syntax = "0.8"
 # The terminals' saved text is sealed with ChaCha20-Poly1305 (the ring rustls already brings), its
 # key wiped from memory when dropped.
 ring = "0.17"
@@ -30,7 +33,7 @@ zeroize = "1"
 serde.workspace = true
 # `wh wait --text` matches terminal text with the caller's pattern: an engine without backtracking, so a
 # hostile pattern costs time in proportion to the text, and with a memory limit (already in the tree
-# through `wormhole-term`).
+# through `wormhole-term`). Probe rules are compiled by it too (linear time, no look-around).
 regex = "1.13"
 # Config files we edit for agents (~/.claude/settings.json, …) keep their key
 # order; without this it would depend on another crate enabling the feature.

@@ -1,0 +1,8 @@
+[probe]
+id = "fixture"
+name = "Fixture"
+description = "A fixture for one validate finding."
+author = "tests"
+version = "one"
+wormhole = ">=1.3"
+api = 1

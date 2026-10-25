@@ -1,0 +1,19 @@
+[probe]
+id = "fixture"
+name = "Fixture"
+description = "A fixture for one validate finding."
+author = "tests"
+version = "0.1.0"
+wormhole = ">=1.3"
+api = 1
+[permissions]
+process = ["git"]
+[[contributes.rules]]
+id = "r"
+pattern = '(.+)'
+action = { type = "command", command = "show" }
+[[contributes.commands]]
+id = "show"
+title = "Show"
+run = ["git", "show", "$1"]
+in = "background"

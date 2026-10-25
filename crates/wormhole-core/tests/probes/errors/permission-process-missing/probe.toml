@@ -1,0 +1,15 @@
+[probe]
+id = "fixture"
+name = "Fixture"
+description = "A fixture for one validate finding."
+author = "tests"
+version = "0.1.0"
+wormhole = ">=1.3"
+api = 1
+[permissions]
+process = ["./scripts/gone.sh"]
+[[contributes.commands]]
+id = "c"
+title = "T"
+run = ["./scripts/gone.sh"]
+in = "background"
