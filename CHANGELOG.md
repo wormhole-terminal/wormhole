@@ -102,46 +102,38 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Closing Settings while it records a shortcut no longer leaves the global hotkey switched off until
   Settings opens again, and the menu bar no longer shows it as set while it is off.
 - The View menu's Project line no longer shows, greyed out, while project folders are off.
-
-### Security
-
-- **High** · no advisory · affects 0.1.0–1.2.0: the text of a closed terminal stayed on disk. Wormhole
-  saves each terminal's recent text so it can come back after a restart; when the terminal was
-  closed, the text was deleted from the database but its bytes stayed in the file's free space and
-  in its journal, where any program running as you could read them, along with whatever secrets were
-  printed. Deleted text is now overwritten and the journal emptied, and what earlier versions left
-  behind is erased the first time this version opens the database. Backups made before the update
-  (Time Machine, for example) still hold that text.
-- **Low** · no advisory · affects 0.1.0–1.2.0: clearing a terminal with ⌘K left the copy of its text
-  that Wormhole saves on disk for up to a minute, so a secret you cleared right away could still be
-  read from the file or come back after a restart. Clearing now erases that saved copy at once.
-- **Medium** · no advisory · affects 0.1.0–1.2.0: copies of the database that Wormhole keeps before an
-  upgrade or when it sets a damaged one aside were never deleted, and each held every terminal's
-  saved text as it was then. Wormhole now keeps the newest copy from before an upgrade for two weeks,
-  in case you need to go back, and deletes the others, and any copy older than two weeks, at launch.
-- **Low** · no advisory · affects 0.1.0–1.2.0: Wormhole's data folder and the files in it (the
-  database with your terminals' saved text, settings, profiles and their environment, logs) could be
-  read by other accounts on the Mac wherever the folder wasn't already protected by macOS, for
-  example when it was moved or copied elsewhere. Wormhole now makes the folder and everything in it
-  readable by you alone, and fixes an existing folder at launch.
-- **Medium** · no advisory · affects 0.1.0–1.2.0: the text Wormhole saves from each terminal, so it
-  can come back after a restart, was kept in the same file as your windows and notes, so Time Machine
-  backed it up along with any secrets that were printed. The text now has a file of its own that
-  backups skip, and the copy of the database Wormhole keeps before an upgrade no longer holds it.
-  Copies made by earlier versions keep their text until Wormhole deletes them, within two weeks, and
-  backups made before the update still hold it.
-- **High** · no advisory · affects 0.1.0–1.2.0: the text Wormhole saves from each terminal was
-  stored as plain text, so any program running as you could copy the file and read whatever secrets
-  had been printed (tokens shown by `env`, `cat .env` or `gh auth token`, for example). The text is
-  now encrypted with a key Wormhole keeps in your login Keychain, so a copy of the file is useless
-  without it. If the Keychain can't be used or you deny access, the text isn't kept at all rather
-  than saved unencrypted.
-- **Low** · no advisory · affects 0.4.0–1.2.0: the review comments you paste into a terminal for a
-  coding agent named each file as the repository does, and a file name can hold line breaks and
-  control characters. They went into the pasted message as they were, and where the program in the
-  terminal takes no paste as text and the message is pasted by hand into a shell, each line of such
-  a name would run as a command. Wormhole now leaves control characters out of the file name, as it
-  does out of the quoted code.
+- The text of a closed terminal stayed on disk. Wormhole saves each terminal's recent text so it can
+  come back after a restart; when the terminal was closed, the text was deleted from the database but
+  its bytes stayed in the file's free space and in its journal, where any program running as you could
+  read them, along with whatever secrets were printed. Deleted text is now overwritten and the journal
+  emptied, and what earlier versions left behind is erased the first time this version opens the
+  database. Backups made before the update (Time Machine, for example) still hold that text.
+- Clearing a terminal with ⌘K left the copy of its text that Wormhole saves on disk for up to a
+  minute, so a secret you cleared right away could still be read from the file or come back after a
+  restart. Clearing now erases that saved copy at once.
+- Copies of the database that Wormhole keeps before an upgrade or when it sets a damaged one aside
+  were never deleted, and each held every terminal's saved text as it was then. Wormhole now keeps the
+  newest copy from before an upgrade for two weeks, in case you need to go back, and deletes the
+  others, and any copy older than two weeks, at launch.
+- Wormhole's data folder and the files in it (the database with your terminals' saved text, settings,
+  profiles and their environment, logs) could be read by other accounts on the Mac wherever the folder
+  wasn't already protected by macOS, for example when it was moved or copied elsewhere. Wormhole now
+  makes the folder and everything in it readable by you alone, and fixes an existing folder at launch.
+- The text Wormhole saves from each terminal, so it can come back after a restart, was kept in the
+  same file as your windows and notes, so Time Machine backed it up along with any secrets that were
+  printed. The text now has a file of its own that backups skip, and the copy of the database Wormhole
+  keeps before an upgrade no longer holds it. Copies made by earlier versions keep their text until
+  Wormhole deletes them, within two weeks, and backups made before the update still hold it.
+- The text Wormhole saves from each terminal was stored as plain text, so any program running as you
+  could copy the file and read whatever secrets had been printed (tokens shown by `env`, `cat .env` or
+  `gh auth token`, for example). The text is now encrypted with a key Wormhole keeps in your login
+  Keychain, so a copy of the file is useless without it. If the Keychain can't be used or you deny
+  access, the text isn't kept at all rather than saved unencrypted.
+- The review comments you paste into a terminal for a coding agent named each file as the repository
+  does, and a file name can hold line breaks and control characters. They went into the pasted message
+  as they were, and where the program in the terminal takes no paste as text and the message is pasted
+  by hand into a shell, each line of such a name would run as a command. Wormhole now leaves control
+  characters out of the file name, as it does out of the quoted code.
 
 ## [1.2.0] - 2026-10-22
 
@@ -367,38 +359,34 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   on macOS the system throws away what a program wrote when its terminal closes before it is read,
   and a short command is gone before the terminal's reader gets to it. The terminal now keeps its
   end open until the output is read.
-
-### Security
-
-- **Low** · no advisory · affects 1.0.0–1.1.0: a program could hide text in a notification. Wormhole
-  cleaned notification text of control characters and some invisible ones, but let through characters
-  that draw nothing (Hangul and Mongolian fillers, the combining grapheme joiner, tag characters and
-  variation selectors), which can carry a message you cannot see or make a line read differently from
-  what it holds. They are dropped now, except the one emoji or text selector that follows a symbol.
-  A malformed percent escape in a folder a program reports (`%+F`) is refused too.
-- **Medium** · no advisory · affects 1.0.0–1.1.0: a program could freeze a terminal for seconds with
-  a few kilobytes of output. The 80/132-column switch (`CSI ? 3 h` and `l`, after `CSI ? 40 h`) rewrapped
-  the whole scrollback twice each time, so a file shown with `cat` that toggled it thousands of times
-  stalled the pane. The switch now clears the screen and homes the cursor without changing the width,
-  unless "Let programs control the window" is on.
-- **Low** · no advisory · affects 1.0.0–1.1.0: a program could put text of its choosing on your command
-  line. Wormhole's answer to a clipboard read repeated whatever the program named as the clipboard, so a
-  file shown with `cat` could type a command at your prompt (it did not run it: the text could not
-  hold a Return). Only the names of real clipboards come back now.
-- **Medium** · no advisory · affects 0.1.0–1.1.0: a program could read your clipboard. A program in a
-  terminal, also one over ssh or a file shown with `cat`, could ask for the clipboard with OSC 52 and
-  got its text at once, which is often a password. Now a bar over that terminal asks first, naming the
-  program: Allow once, Always for this terminal (until it closes) or Deny. One question at a time, none
-  for a terminal you cannot see, and 30 seconds without an answer deny. Settings → Terminal → Privacy
-  has "Programs reading the clipboard" (`clipboard_read`: ask, allow or deny; a project cannot set it).
-  A program setting the clipboard is still allowed, now with a notice over the pane saying how much it
-  copied, and "Programs setting the clipboard" (`clipboard_write`) turns it off.
-- **Medium** · no advisory · affects 0.3.0–1.1.0: a program could make Rerun Command run something
-  other than the command you saw. The command is read back from the screen, and a program can draw
-  text so it cannot be seen (concealed, in the background's own colour, or as characters that draw
-  nothing), so a block that looked like `ls` could hold `ls; rm -rf ~`; Rerun typed it and pressed
-  Return. Put Command at Prompt (the renamed action) refuses a command with any such text, and never
-  presses Return.
+- A program could hide text in a notification. Wormhole cleaned notification text of control
+  characters and some invisible ones, but let through characters that draw nothing (Hangul and
+  Mongolian fillers, the combining grapheme joiner, tag characters and variation selectors), which can
+  carry a message you cannot see or make a line read differently from what it holds. They are dropped
+  now, except the one emoji or text selector that follows a symbol. A malformed percent escape in a
+  folder a program reports (`%+F`) is refused too.
+- A program could freeze a terminal for seconds with a few kilobytes of output. The 80/132-column
+  switch (`CSI ? 3 h` and `l`, after `CSI ? 40 h`) rewrapped the whole scrollback twice each time, so
+  a file shown with `cat` that toggled it thousands of times stalled the pane. The switch now clears
+  the screen and homes the cursor without changing the width, unless "Let programs control the window"
+  is on.
+- A program could put text of its choosing on your command line. Wormhole's answer to a clipboard read
+  repeated whatever the program named as the clipboard, so a file shown with `cat` could type a
+  command at your prompt (it did not run it: the text could not hold a Return). Only the names of real
+  clipboards come back now.
+- A program could read your clipboard. A program in a terminal, also one over ssh or a file shown with
+  `cat`, could ask for the clipboard with OSC 52 and got its text at once, which is often a password.
+  Now a bar over that terminal asks first, naming the program: Allow once, Always for this terminal
+  (until it closes) or Deny. One question at a time, none for a terminal you cannot see, and 30
+  seconds without an answer deny. Settings → Terminal → Privacy has "Programs reading the clipboard"
+  (`clipboard_read`: ask, allow or deny; a project cannot set it). A program setting the clipboard is
+  still allowed, now with a notice over the pane saying how much it copied, and "Programs setting the
+  clipboard" (`clipboard_write`) turns it off.
+- A program could make Rerun Command run something other than the command you saw. The command is read
+  back from the screen, and a program can draw text so it cannot be seen (concealed, in the
+  background's own colour, or as characters that draw nothing), so a block that looked like `ls` could
+  hold `ls; rm -rf ~`; Rerun typed it and pressed Return. Put Command at Prompt (the renamed action)
+  refuses a command with any such text, and never presses Return.
 
 ## [1.1.0] - 2026-10-15
 
