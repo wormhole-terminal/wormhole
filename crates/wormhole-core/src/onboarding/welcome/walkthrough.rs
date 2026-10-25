@@ -185,7 +185,7 @@ fn a_notification_choice_comes_only_from_a_press_on_its_own_row() {
     for _ in 0..4 {
         assert!(asks(&w.key(Key::Up, NOW)).is_empty());
     }
-    // Needs you: on, so Return turns it off.
+    // Needs input: on, so Return turns it off.
     assert_eq!(asks(&w.key(Key::Enter, NOW)), [&set_notify(Some(false), None, None, false)]);
     assert_eq!(w.notify().map(|notify| notify.needs_you), Some(false), "the page shows it at once");
     // Again: back on.
@@ -193,7 +193,7 @@ fn a_notification_choice_comes_only_from_a_press_on_its_own_row() {
     // Finished.
     w.key(Key::Down, NOW);
     assert_eq!(asks(&w.key(Key::Enter, NOW)), [&set_notify(None, Some(false), None, false)]);
-    // Sound goes round: all, none, and back to needs you only.
+    // Sound goes round: all, none, and back to needs input only.
     w.key(Key::Down, NOW);
     assert_eq!(asks(&w.key(Key::Enter, NOW)), [&set_notify(None, None, Some(NotifySound::All), false)]);
     assert_eq!(asks(&w.key(Key::Enter, NOW)), [&set_notify(None, None, Some(NotifySound::None), false)]);

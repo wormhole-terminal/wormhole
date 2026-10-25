@@ -55,7 +55,7 @@ pub enum State {
     Exited,
 }
 
-/// What tells a terminal's state, which decides what a change of it means: the same "needs you"
+/// What tells a terminal's state, which decides what a change of it means: the same "needs input"
 /// is a question from an agent or a program, and a bell from a terminal without either.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum Source {
@@ -106,7 +106,7 @@ pub enum Level {
     TimeSensitive,
 }
 
-/// The level a kind is delivered at: needs you is Time Sensitive when the build is entitled to
+/// The level a kind is delivered at: needs input is Time Sensitive when the build is entitled to
 /// it (a Developer ID build with the provisioning profile), else Active; an agent finishing, a
 /// failure of any kind and a program's own notification are Active; a command finishing and the
 /// bell are Passive. A grouped summary is Active.
@@ -138,7 +138,7 @@ pub struct Seen {
 }
 
 /// Whether the settings ask to hear about `kind` at all (`notifications` is the master switch).
-/// A program's own notification asks for you on purpose, so it follows "needs you" rather than
+/// A program's own notification asks for you on purpose, so it follows "needs input" rather than
 /// the bell, which is off by default because programs ring it by accident. A command that fails
 /// has its own switch; an agent or program that stops on an error is the end of its work like a
 /// finish is, so it follows "an agent finishes".
@@ -238,8 +238,8 @@ pub fn failed_exit(code: Option<i32>) -> Option<i32> {
     code.filter(|&code| code != 0 && code != INTERRUPTED)
 }
 
-/// The Dock icon's badge: terminals that need you (bells of terminals without an agent
-/// included), with "needs you + finished" also the finished and failed ones nobody has seen
+/// The Dock icon's badge: terminals that need input (bells of terminals without an agent
+/// included), with "needs input + finished" also the finished and failed ones nobody has seen
 /// (`done` counts both: [`Counts::results`]). Working never badges; `None` clears it.
 pub fn dock_badge(mode: DockBadge, needs_you: usize, done: usize) -> Option<String> {
     let n = match mode {
@@ -372,7 +372,7 @@ mod tests {
         s.notify_command_failed = false;
         assert!(!wanted(Kind::CommandFailed, &s));
         assert!(wanted(Kind::Notice, &Settings::default()), "a program's own notification is on");
-        assert!(!wanted(Kind::Notice, &s), "and follows needs you");
+        assert!(!wanted(Kind::Notice, &s), "and follows needs input");
         let off = Settings { notifications: false, ..settings() };
         for kind in KINDS {
             assert_eq!(delivery(kind, AWAY, &off), Delivery::Nothing, "{kind:?}");

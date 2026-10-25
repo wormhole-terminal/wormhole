@@ -101,7 +101,7 @@ pub fn row_label_in_split(name: &str, speech: RowSpeech, place: Place, split: Op
 
 /// A group's head: "Release 1.2, coloured blue, pinned, 3 terminals, expanded, 1 of 4". The colour is said
 /// because the card's wash is all the eyes get of it; a folded group says how many of its
-/// terminals need you or failed, since only the dot on its head tells the eyes. A group with a
+/// terminals need input or failed, since only the dot on its head tells the eyes. A group with a
 /// folder says it after the count (`folder` is how the sidebar shows it, `~/Projects/app`), since
 /// its tooltip is all the eyes get of it.
 #[allow(clippy::too_many_arguments)]
@@ -150,12 +150,12 @@ pub fn new_in_group_label(name: &str) -> String {
     format!("New terminal in {name}")
 }
 
-/// The group switcher on the tab bar: "Group Release 1.2, 3 terminals, another group needs you".
+/// The group switcher on the tab bar: "Group Release 1.2, 3 terminals, another group needs input".
 /// The dot is all the eyes get of the last part, so it is said.
 pub fn switcher_label(name: &str, terminals: usize, another_needs_you: bool) -> String {
     let mut parts = vec![format!("Group {name}"), terminals_in(terminals)];
     if another_needs_you {
-        parts.push("another group needs you".to_string());
+        parts.push("another group needs input".to_string());
     }
     parts.join(", ")
 }
@@ -194,10 +194,10 @@ fn terminals_in(n: usize) -> String {
     if n == 0 { "no terminals".to_string() } else { count(n, "terminal", "terminals") }
 }
 
-/// A row's state as a word: "needs you", "working", "finished", "failed".
+/// A row's state as a word: "needs input", "working", "finished", "failed".
 pub fn state_word(state: RowState) -> &'static str {
     match state {
-        RowState::NeedsYou => "needs you",
+        RowState::NeedsYou => "needs input",
         RowState::Working => "working",
         RowState::Finished => "finished",
         RowState::Failed => "failed",
@@ -237,7 +237,7 @@ mod tests {
     #[test]
     fn the_switcher_and_its_tabs_read_in_words() {
         assert_eq!(switcher_label("Release 1.2", 3, false), "Group Release 1.2, 3 terminals");
-        assert_eq!(switcher_label("Docs", 0, true), "Group Docs, no terminals, another group needs you");
+        assert_eq!(switcher_label("Docs", 0, true), "Group Docs, no terminals, another group needs input");
         assert_eq!(
             switcher_card_label("Review", 2, 2, true, 2, 4),
             "Review, 2 terminals, 2 need attention, current, 2 of 4"
@@ -257,7 +257,7 @@ mod tests {
         let needs = RowSpeech::Agent { state: RowState::NeedsYou, detail: Some("Approve cargo test?") };
         assert_eq!(
             row_label("diff perf", needs, place(false, 2, Some(2))),
-            "diff perf, needs you, Approve cargo test?, 2 of 3, Command 2"
+            "diff perf, needs input, Approve cargo test?, 2 of 3, Command 2"
         );
         let idle = RowSpeech::Agent { state: RowState::Idle, detail: None };
         assert_eq!(row_label("zsh", idle, place(false, 3, None)), "zsh, idle, 3 of 3");
@@ -309,11 +309,11 @@ mod tests {
         let split = |others, on_screen| Some(SplitSpeech { others, on_screen });
         assert_eq!(
             row_label_in_split("claude · tests", needs, place(false, 2, None), split(2, false)),
-            "claude · tests, needs you, in a split with 2 others, 2 of 3"
+            "claude · tests, needs input, in a split with 2 others, 2 of 3"
         );
         assert_eq!(
             row_label_in_split("claude · tests", needs, place(false, 2, Some(2)), split(1, true)),
-            "claude · tests, needs you, in a split with 1 other, on screen, 2 of 3, Command 2"
+            "claude · tests, needs input, in a split with 1 other, on screen, 2 of 3, Command 2"
         );
         // The selected one is not "on screen": it is selected, and says so after the split.
         let plain =

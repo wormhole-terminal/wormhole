@@ -71,7 +71,7 @@ pub fn palette_footer(ui: UiColors) -> Div {
         .text_color(ui.muted)
 }
 
-/// The label over a group of results ("Needs you 2"): 12 / 600 muted on a [`ROW_H`] line,
+/// The label over a group of results ("Needs input 2"): 12 / 600 muted on a [`ROW_H`] line,
 /// sitting on the rows below it, the count faint.
 #[track_caller]
 pub fn palette_label(ui: UiColors, title: impl Into<SharedString>, count: Option<usize>) -> Div {
@@ -119,7 +119,7 @@ pub struct PaletteResult {
     pub strong: bool,
     /// After the title, in caption text: where, what it is doing, the setting's page.
     pub detail: Option<SharedString>,
-    /// The detail's color when it says something (needs you, finished); muted otherwise.
+    /// The detail's color when it says something (needs input, finished); muted otherwise.
     pub detail_color: Option<Hsla>,
     /// The detail in this (code) font: a command.
     pub detail_font: Option<SharedString>,

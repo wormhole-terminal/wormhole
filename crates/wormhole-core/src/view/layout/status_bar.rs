@@ -89,13 +89,13 @@ pub struct Counted {
 }
 
 impl Counted {
-    /// "2 working", "1 done", "3 failed", "2 need you": all of them in words.
+    /// "2 working", "1 done", "3 failed", "2 need input": all of them in words.
     pub fn words(&self) -> String {
         let n = self.count;
         match self.activity {
             Activity::Working => format!("{n} working"),
-            Activity::NeedsYou if n == 1 => "1 needs you".to_string(),
-            Activity::NeedsYou => format!("{n} need you"),
+            Activity::NeedsYou if n == 1 => "1 needs input".to_string(),
+            Activity::NeedsYou => format!("{n} need input"),
             Activity::Done => format!("{n} done"),
             Activity::Failed => format!("{n} failed"),
             Activity::Quiet => n.to_string(),
@@ -137,20 +137,20 @@ impl Summary {
     }
 
     /// The terminal the bar's button is for: the one that has waited longest for you (an index
-    /// into the entries). `None` while nothing needs you.
+    /// into the entries). `None` while nothing needs input.
     pub fn attention(&self) -> Option<usize> {
         self.needs_you.first().copied()
     }
 
-    /// What the attention button says after the terminal's name: "needs you · 2m", and only
+    /// What the attention button says after the terminal's name: "needs input · 2m", and only
     /// "2m" once the words have gone.
     pub fn attention_words(&self, entries: &[Entry], detail: Detail, now: Instant) -> Option<String> {
         let entry = &entries[self.attention()?];
         let waited = elapsed(now.saturating_duration_since(entry.since));
-        Some(if detail.words() { format!("needs you · {waited}") } else { waited })
+        Some(if detail.words() { format!("needs input · {waited}") } else { waited })
     }
 
-    /// The rest, as the bar counts them after the button: any others that need you, then what
+    /// The rest, as the bar counts them after the button: any others that need input, then what
     /// works, what is done and what failed, each with how many and the terminal a click goes to.
     pub fn rest(&self) -> Vec<Counted> {
         let others = self.needs_you.get(1..).unwrap_or_default();
@@ -167,7 +167,7 @@ impl Summary {
         .collect()
     }
 
-    /// Who needs you, longest waiting first, and what a click does ("diff perf, then prod · go
+    /// Who needs input, longest waiting first, and what a click does ("diff perf, then prod · go
     /// to the first").
     pub fn needs_you_tooltip(&self, entries: &[Entry]) -> Option<String> {
         const NAMED: usize = 3;
@@ -260,11 +260,14 @@ mod tests {
         ];
         let summary = Summary::of(&entries);
         assert_eq!(summary.attention(), Some(2), "waiting 2m, not the one waiting 1m");
-        assert_eq!(summary.attention_words(&entries, Detail::Words, now).as_deref(), Some("needs you · 2m"));
+        assert_eq!(
+            summary.attention_words(&entries, Detail::Words, now).as_deref(),
+            Some("needs input · 2m")
+        );
         // Under ~1100 the words go first: only how long it has waited stays.
         assert_eq!(summary.attention_words(&entries, Detail::Numbers, now).as_deref(), Some("2m"));
         assert_eq!(summary.attention_words(&entries, Detail::Lean, now).as_deref(), Some("2m"));
-        // The other one that needs you is counted with the rest, a click goes to it.
+        // The other one that needs input is counted with the rest, a click goes to it.
         assert_eq!(
             summary.rest(),
             [
@@ -298,8 +301,8 @@ mod tests {
         // The terminal in the button isn't counted again.
         assert_eq!(rest_line(&rest), "2 working · 1 done · 2 failed");
         assert_eq!(rest.iter().map(|c| c.terminal).collect::<Vec<_>>(), [0, 3, 4], "each goes to its first");
-        assert_eq!(Counted { activity: Activity::NeedsYou, count: 1, terminal: 0 }.words(), "1 needs you");
-        assert_eq!(Counted { activity: Activity::NeedsYou, count: 3, terminal: 0 }.words(), "3 need you");
+        assert_eq!(Counted { activity: Activity::NeedsYou, count: 1, terminal: 0 }.words(), "1 needs input");
+        assert_eq!(Counted { activity: Activity::NeedsYou, count: 3, terminal: 0 }.words(), "3 need input");
     }
 
     #[test]

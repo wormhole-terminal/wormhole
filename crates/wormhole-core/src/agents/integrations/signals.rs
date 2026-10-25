@@ -56,7 +56,7 @@ pub fn signal(agent: AgentId, event: &str) -> Option<Signal> {
         (Gemini, "Notification") => Some(Attention),
         (Gemini, "AfterAgent") => Some(Done),
         (Copilot, "userPromptSubmitted" | "preToolUse" | "postToolUse") => Some(Busy),
-        // Copilot also notifies when idle or done; only questions need you.
+        // Copilot also notifies when idle or done; only questions need input.
         (Copilot, "notification") => {
             matches!(kind, "permission_prompt" | "elicitation_dialog").then_some(Attention)
         }
@@ -73,7 +73,7 @@ pub fn signal(agent: AgentId, event: &str) -> Option<Signal> {
     }
 }
 
-/// A key typed into a terminal whose agent needs you: what answering its prompt means. Return, a
+/// A key typed into a terminal whose agent needs input: what answering its prompt means. Return, a
 /// number or y/n picks an answer, so it works on; Esc or ⌃C turns the question down and stops
 /// it. Anything else (the arrows, ⇥) only moves through the choices.
 pub fn answer_key(key: &str, control: bool) -> Option<Signal> {

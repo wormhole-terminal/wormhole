@@ -39,7 +39,7 @@ pub struct BandParts {
     /// The count badge's text (`style::count_label`); `None` leaves it out.
     pub count: Option<SharedString>,
     /// Before the count of a folded folder: the needs-you dot (a `style::status_glyph`) while a
-    /// terminal folded away in it needs you.
+    /// terminal folded away in it needs input.
     pub waiting: Option<AnyElement>,
     /// The + at the right edge: its tooltip and what it does. Its click leaves the band's
     /// own state alone.

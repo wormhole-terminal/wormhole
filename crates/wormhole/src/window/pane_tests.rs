@@ -228,7 +228,7 @@ fn a_saved_split_opens_split_and_a_hook_finds_its_pane(cx: &mut TestAppContext) 
         assert_eq!((ws.sessions.len(), ws.active), (2, 0));
         assert!(ws.on_screen(0) && ws.on_screen(1), "both panes are on screen with the selected one");
     });
-    // The hook names the terminal, which needs you once it asks; the other row stays quiet.
+    // The hook names the terminal, which needs input once it asks; the other row stays quiet.
     hook(cx, &window, 2, "Notification", Some("Allow Bash?"));
     let statuses: Vec<Status> = cx
         .update(|cx| {

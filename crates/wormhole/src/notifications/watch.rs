@@ -203,7 +203,7 @@ mod tests {
         let mut watch = Watch::default();
         let mut facts = tab(State::Idle, Instant::now());
         watch.observe(&[facts.clone()], false, 10, SystemTime::now());
-        // The notification counted as the bell: the tab needs you, and one event says so.
+        // The notification counted as the bell: the tab needs input, and one event says so.
         facts.state = State::NeedsYou;
         facts.notice = notice(1, "Build finished");
         let events = watch.observe(&[facts.clone()], false, 10, SystemTime::now());

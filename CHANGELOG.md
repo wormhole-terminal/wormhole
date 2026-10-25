@@ -48,6 +48,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Notes sync with a project's notes.md now needs the project to be trusted. Until then the file is
   neither merged into the terminal's notes nor written back, and the Project tab says it is waiting
   for trust.
+- A terminal waiting for an answer is now shown as "Needs input" instead of "Needs you": in the
+  sidebar, the status bar, the menu bar, the palette, notifications, VoiceOver and Settings. The
+  `Wormhole list` and `status` command line keeps saying `needs you`, so scripts that read it still
+  work.
 
 ### Fixed
 

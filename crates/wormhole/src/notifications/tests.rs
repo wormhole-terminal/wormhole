@@ -145,7 +145,7 @@ fn a_newer_notification_replaces_the_tabs_older_one(cx: &mut TestAppContext) {
     cx.update(|cx| {
         cx.set_app_identity("app.getwormhole.terminal", "Wormhole");
         init(cx);
-        post(notice(3, "api needs you", "Allow?"), cx);
+        post(notice(3, "api needs input", "Allow?"), cx);
         post(notice(3, "api finished", "Finished"), cx);
         post(notice(4, "web finished", "Finished"), cx);
     });
@@ -180,7 +180,7 @@ fn a_response_to_someone_elses_notification_changes_nothing(cx: &mut TestAppCont
     cx.update(|cx| {
         cx.set_app_identity("app.getwormhole.terminal", "Wormhole");
         init(cx);
-        post(notice(9, "api needs you", "Allow?"), cx);
+        post(notice(9, "api needs input", "Allow?"), cx);
     });
     cx.simulate_system_notification_response(SystemNotificationResponse {
         tag: "gpui-component/notification/abc".into(),

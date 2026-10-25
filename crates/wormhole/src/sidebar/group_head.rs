@@ -21,7 +21,7 @@ use crate::style::{ClickHandler, GroupHead};
 use crate::theme_bridge;
 
 impl Sidebar {
-    /// A group's head: the tiles of its terminals while folded, the dot while one needs you or
+    /// A group's head: the tiles of its terminals while folded, the dot while one needs input or
     /// failed, a + when it is pinned and empty.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn render_group_band(

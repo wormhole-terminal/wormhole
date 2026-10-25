@@ -70,7 +70,7 @@ pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_DESCRIPTION: Key = Key::new(484);
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_KEYWORDS: Key = Key::new(485);
 /// "Status dot"
 pub const SETTINGS_SESSIONS_SIDEBAR_DOT: Key = Key::new(486);
-/// "Working, needs you, finished or idle, as the state round every terminal's status tile"
+/// "Working, needs input, finished or idle, as the state round every terminal's status tile"
 pub const SETTINGS_SESSIONS_SIDEBAR_DOT_DESCRIPTION: Key = Key::new(487);
 /// "status glyph agent"
 pub const SETTINGS_SESSIONS_SIDEBAR_DOT_KEYWORDS: Key = Key::new(488);

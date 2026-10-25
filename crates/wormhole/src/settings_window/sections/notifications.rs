@@ -188,7 +188,7 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
     .into_any_element()
 }
 
-/// "A terminal needs you", and when this build can't deliver it as Time Sensitive, says so
+/// "A terminal needs input", and when this build can't deliver it as Time Sensitive, says so
 /// (the entitlement is only in Developer ID builds with the profile).
 fn describe_needs_you(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<SharedString> {
     let entitled = notifications::time_sensitive(cx);

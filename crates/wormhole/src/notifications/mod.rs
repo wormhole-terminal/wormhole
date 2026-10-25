@@ -9,7 +9,7 @@
 //! hook) [`sweep`] reads every tab of every window, `watch` turns what changed into events, and
 //! the rules decide. Banners go out by one of these routes:
 //! - the bundled app: the system's notification centre (`platform::notifications`), with
-//!   interruption levels (Time Sensitive for "needs you" when the build is entitled to it), a
+//!   interruption levels (Time Sensitive for "needs input" when the build is entitled to it), a
 //!   thread per terminal, sound, and the Open / Reply… / Show Changes actions;
 //! - a dev build (`cargo run`) has no bundle, and the notification center would abort the
 //!   process: the platform's script instead, without actions or levels;
@@ -195,7 +195,7 @@ pub(crate) fn sweep(cx: &mut App) {
             Event::Retract(tab) | Event::Seen(tab) => dismiss(tab, cx),
         }
     }
-    // VoiceOver hears every terminal that needs you, finished or failed, the one on screen too:
+    // VoiceOver hears every terminal that needs input, finished or failed, the one on screen too:
     // unlike a banner, nothing else would read it out.
     let said: Vec<Said> = heard
         .iter()
@@ -206,7 +206,7 @@ pub(crate) fn sweep(cx: &mut App) {
     }
 }
 
-/// Whether "needs you" goes out as Time Sensitive: only from a bundle signed with the entitlement
+/// Whether "needs input" goes out as Time Sensitive: only from a bundle signed with the entitlement
 /// (a Developer ID build with its provisioning profile); every other build uses Active.
 pub(crate) fn time_sensitive(cx: &mut App) -> bool {
     notifier(cx).route == Route::Center && system::entitled_to_time_sensitive()
@@ -261,7 +261,7 @@ pub(crate) fn finished_commands(cx: &App) -> Option<&HashMap<i64, (String, std::
     cx.try_global::<Notifier>().map(|notifier| &notifier.watch.finished)
 }
 
-/// "Send test": a real banner, as "needs you" would be, about the terminal in front.
+/// "Send test": a real banner, as "needs input" would be, about the terminal in front.
 pub(crate) fn send_test(cx: &mut App) {
     let name = AppState::front_window(cx)
         .and_then(|front| front.workspace.read_with(cx, |ws, _| ws.active_session_name()).ok())
@@ -272,9 +272,9 @@ pub(crate) fn send_test(cx: &mut App) {
         Notice {
             id: TEST_ID.to_string(),
             thread: TEST_ID.to_string(),
-            title: format!("{name} needs you"),
+            title: format!("{name} needs input"),
             subtitle: "Wormhole · test".to_string(),
-            body: "This is how a terminal that needs you is announced.".to_string(),
+            body: "This is how a terminal that needs input is announced.".to_string(),
             level,
             sound,
             category: Category::Plain,

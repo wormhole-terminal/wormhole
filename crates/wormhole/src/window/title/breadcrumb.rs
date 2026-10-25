@@ -418,7 +418,7 @@ pub(in crate::window) fn crumb_words(summary: &TerminalSummary) -> Option<String
     let took = || wormhole_core::view::layout::status_bar::elapsed(summary.status_since.elapsed());
     match summary.status {
         Status::Busy => Some(format!("working · {}", took())),
-        Status::Attention => Some("needs you".to_string()),
+        Status::Attention => Some("needs input".to_string()),
         Status::Done => Some(format!("done · {}", took())),
         // The exit code when the shell gave one; else how long ago, as for done.
         Status::Failed => Some(match &summary.failure {

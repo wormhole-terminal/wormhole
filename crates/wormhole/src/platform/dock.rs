@@ -1,4 +1,4 @@
-//! The Dock icon: its badge (how many terminals need you), one informational bounce when a
+//! The Dock icon: its badge (how many terminals need input), one informational bounce when a
 //! terminal starts needing you while Wormhole is in the background, and whether Wormhole is
 //! the active app at all. The Dock's menu goes through GPUI (`status_item`).
 //!

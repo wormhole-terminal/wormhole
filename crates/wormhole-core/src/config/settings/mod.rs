@@ -77,7 +77,7 @@ pub struct Settings {
     /// Save each terminal's last lines (encrypted, in the profile's `scrollback.db`) and show them
     /// again after a restart. Off: nothing is saved, and what was is erased.
     pub restore_terminal_text: bool,
-    /// macOS notifications when a background session finishes or needs you.
+    /// macOS notifications when a background session finishes or needs input.
     pub notifications: bool,
     /// Changes panel: show files as a folder tree instead of a flat list.
     pub changes_tree: bool,
@@ -180,7 +180,7 @@ pub struct Settings {
     pub shells: Vec<ShellProfile>,
 
     // Notifications, Dock and menu bar (`notifications` is the master switch)
-    /// When an agent needs you.
+    /// When an agent needs input.
     pub notify_needs_you: bool,
     /// When an agent finishes.
     pub notify_agent_done: bool,
@@ -201,7 +201,7 @@ pub struct Settings {
     /// Several notifications in a few seconds become one summary.
     pub notify_group_bursts: bool,
     pub dock_badge: DockBadge,
-    /// One bounce of the Dock icon when a terminal needs you.
+    /// One bounce of the Dock icon when a terminal needs input.
     pub dock_bounce: bool,
     pub menu_bar_icon: MenuBarIcon,
     /// Animate the menu bar item while an agent works.

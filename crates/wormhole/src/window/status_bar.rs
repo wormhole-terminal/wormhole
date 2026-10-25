@@ -63,7 +63,7 @@ pub(super) struct StatusBar {
 }
 
 impl StatusBar {
-    /// The bar without the words that move with the clock ("working · 4m", "needs you · 2m"): the tick
+    /// The bar without the words that move with the clock ("working · 4m", "needs input · 2m"): the tick
     /// owns those and redraws up to a tick late, so a check of the bar against the window compares
     /// [`Workspace::status_bar_sources`] for them.
     #[cfg(any(test, debug_assertions))]
@@ -92,9 +92,9 @@ struct Attention {
     tab: i64,
     name: SharedString,
     face: TileFace,
-    /// "needs you · 2m", or "2m" in a narrow window.
+    /// "needs input · 2m", or "2m" in a narrow window.
     words: String,
-    /// Who else needs you, and what a click does.
+    /// Who else needs input, and what a click does.
     tooltip: String,
     spoken: String,
 }
@@ -121,7 +121,7 @@ pub(super) enum StatusItem {
     /// The longest-waiting terminal's button.
     Attention(i64),
     Working(i64),
-    /// Another terminal that needs you.
+    /// Another terminal that needs input.
     NeedsYou(i64),
     Done(i64),
     Failed(i64),

@@ -1,5 +1,5 @@
 //! What VoiceOver hears beyond the accessibility tree GPUI builds from the views' roles and
-//! labels: announcements, since GPUI has no live regions. A terminal that needs you is
+//! labels: announcements, since GPUI has no live regions. A terminal that needs input is
 //! said at once, interrupting; one that finished waits its turn. Which changes are said, and in
 //! what words, is core's (`wormhole_core::notify::Announcer`); this only posts them. And
 //! whether macOS's Keyboard navigation is on, which makes buttons ⇥ stops.
@@ -11,7 +11,7 @@ use super::background_mode;
 use super::os::a11y as os;
 
 /// Say `text` through VoiceOver (when it runs; otherwise nothing happens). `interrupt` cuts into
-/// what it is saying (needs you); without it the announcement is queued (finished).
+/// what it is saying (needs input); without it the announcement is queued (finished).
 pub fn announce(text: &str, interrupt: bool) {
     tracing::debug!(interrupt, "announce: {text}");
     #[cfg(feature = "devctl")]

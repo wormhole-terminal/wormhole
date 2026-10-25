@@ -15,7 +15,7 @@ use std::fmt::Write as _;
 pub(super) mod color {
     pub(crate) const RED: u8 = 1;
     pub(crate) const GREEN: u8 = 2;
-    /// The sidebar's amber, in the palette: a terminal that needs you.
+    /// The sidebar's amber, in the palette: a terminal that needs input.
     pub(crate) const YELLOW: u8 = 3;
     pub(crate) const BLUE: u8 = 4;
     pub(crate) const BRIGHT_BLACK: u8 = 8;

@@ -200,7 +200,7 @@ fn the_terminals_scope_lists_every_window_by_who_needs_you() {
     assert_eq!(
         shape(&snapshot, &rows(&snapshot, Scope::Terminals, "")),
         [
-            "[Needs you 1]",
+            "[Needs input 1]",
             "diff perf",
             "[Working 2]",
             "theme shape metrics",
@@ -264,7 +264,7 @@ fn a_terminal_says_where_it_is_in_a_scope_and_what_it_does_elsewhere() {
     waiting.terminal.source = Source::Agent;
     waiting.terminal.who = Some("Claude Code".into());
     waiting.terminal.message = Some("Approve cargo test?".into());
-    assert_eq!(terminal_detail(&waiting, false, now), "Needs you · Approve cargo test?");
+    assert_eq!(terminal_detail(&waiting, false, now), "Needs input · Approve cargo test?");
     assert!(terminal_detail(&waiting, true, now).starts_with("Window 1 · terminal"));
     assert_eq!(question(&waiting).as_deref(), Some("Claude Code is asking: Approve cargo test?"));
     let working = terminal(1, "sidebar polish", State::Working, 0);

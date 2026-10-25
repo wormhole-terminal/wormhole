@@ -21,7 +21,7 @@ pub enum StatusGlyph {
     Working,
     /// A command runs in a terminal without an agent: the same spinner, neutral (muted).
     Running,
-    /// An agent needs you: an 8 pt amber dot in a 3 pt halo that breathes (steady under
+    /// An agent needs input: an 8 pt amber dot in a 3 pt halo that breathes (steady under
     /// Reduce Motion); the dot itself never fades.
     NeedsYou,
     /// An agent finished: a 14 pt check in `agent.done` (shape, not only color, says it).

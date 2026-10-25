@@ -55,7 +55,7 @@ pub enum DockBadge {
     Off,
     #[default]
     NeedsYou,
-    /// Terminals that need you and agents that finished while you were away.
+    /// Terminals that need input and agents that finished while you were away.
     NeedsYouDone,
 }
 
@@ -63,7 +63,7 @@ pub enum DockBadge {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MenuBarIcon {
-    /// The status dot and the number of terminals that need you.
+    /// The status dot and the number of terminals that need input.
     #[default]
     StatusCount,
     /// The status dot only.

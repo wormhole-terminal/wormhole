@@ -60,12 +60,12 @@ impl Do {
 /// One line of the panel.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Row {
-    /// A section's label ("Needs you 2").
+    /// A section's label ("Needs input 2").
     Label {
         title: &'static str,
         count: Option<usize>,
     },
-    /// A quiet line where a section has nothing ("Nothing needs you").
+    /// A quiet line where a section has nothing ("Nothing needs input").
     Note(&'static str),
     Terminal(Terminal),
     Do(Do),
@@ -93,9 +93,9 @@ pub(crate) fn rows(terminals: &[Terminal], items: &[Do], query: &str) -> Vec<Row
     let mut rows = Vec::new();
     let terminal = |ix: &usize| Row::Terminal(terminals[*ix].clone());
     if query.is_empty() {
-        rows.push(Row::Label { title: "Needs you", count: Some(sections.needs_you.len()) });
+        rows.push(Row::Label { title: "Needs input", count: Some(sections.needs_you.len()) });
         if sections.needs_you.is_empty() {
-            rows.push(Row::Note("Nothing needs you"));
+            rows.push(Row::Note("Nothing needs input"));
         }
         rows.extend(sections.needs_you.iter().map(terminal));
         for (title, list) in [("Working", &sections.working), ("Recent", &sections.finished)] {
@@ -195,7 +195,7 @@ mod tests {
         assert_eq!(
             shape(&rows(&terminals, &items(), "")),
             [
-                "[Needs you 2]",
+                "[Needs input 2]",
                 "prod",
                 "diff perf",
                 "[Working 1]",
@@ -213,7 +213,7 @@ mod tests {
     #[test]
     fn nothing_waiting_says_so() {
         let shown = shape(&rows(&[terminal(1, "idle", State::Idle, 0)], &items(), " "));
-        assert_eq!(shown[..2], ["[Needs you 0]", "(Nothing needs you)"]);
+        assert_eq!(shown[..2], ["[Needs input 0]", "(Nothing needs input)"]);
         assert_eq!(shown[2], "[Do]");
     }
 

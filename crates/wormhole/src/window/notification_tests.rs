@@ -73,7 +73,7 @@ fn a_background_sessions_notification_follows_its_agent(cx: &mut TestAppContext)
     };
 
     hook(cx, &window, 2, "Notification", Some("Allow Bash?"));
-    let needs_you = format!("{} needs you", name(cx));
+    let needs_you = format!("{} needs input", name(cx));
     assert_eq!(notices(cx), [(tag.clone(), needs_you, "Allow Bash?".to_string())]);
     // The agent finishes instead: the same tab's notification is replaced, not added to.
     hook(cx, &window, 2, "Stop", None);

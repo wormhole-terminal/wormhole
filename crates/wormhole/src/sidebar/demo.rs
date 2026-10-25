@@ -1,5 +1,5 @@
 //! The example band the terminal welcome's sidebar step puts in the sidebar: a small band ("Example")
-//! with three rows whose statuses cycle working, needs you, done, drawn with the sidebar's own band
+//! with three rows whose statuses cycle working, needs input, done, drawn with the sidebar's own band
 //! and row components so the page's text can point at them ("←") and say what each means. What the
 //! rows say and when they change is core's (`welcome::demo`); this draws them.
 //!

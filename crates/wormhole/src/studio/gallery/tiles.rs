@@ -132,7 +132,7 @@ fn caption(ui: UiColors, text: &'static str) -> Div {
 }
 
 /// Every state of the tile at every size, the same terminals in each row: a terminal at rest, an
-/// agent at rest, working, a command running, needs you, done, failed, the bell, new output, an
+/// agent at rest, working, a command running, needs input, done, failed, the bell, new output, an
 /// agent with no logo (its monogram), and last the same on a selected row. The light and the
 /// breathing edge move; under Reduce Motion they stand still (set it in Settings to see them so).
 fn tile_states(ui: UiColors, app: &App) -> Div {

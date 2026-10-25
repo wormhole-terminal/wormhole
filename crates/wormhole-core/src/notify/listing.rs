@@ -40,7 +40,7 @@ pub struct Terminal {
 }
 
 impl Terminal {
-    /// A terminal that nothing tells the state of, and that needs you, does so for its bell.
+    /// A terminal that nothing tells the state of, and that needs input, does so for its bell.
     pub fn bell(&self) -> bool {
         self.state == State::NeedsYou && !self.source.told()
     }
@@ -109,7 +109,7 @@ pub fn sections(terminals: &[Terminal]) -> Sections {
     sections
 }
 
-/// What the status item shows: the most urgent state of any terminal wins (needs you › failed ›
+/// What the status item shows: the most urgent state of any terminal wins (needs input › failed ›
 /// finished › working › idle).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ItemState {
@@ -149,7 +149,7 @@ impl Counts {
         counts
     }
 
-    /// The results nobody has looked at yet, finished or failed: what "needs you + finished" adds
+    /// The results nobody has looked at yet, finished or failed: what "needs input + finished" adds
     /// to the Dock badge.
     pub fn results(self) -> usize {
         self.finished + self.failed
@@ -179,13 +179,13 @@ pub fn badge(n: usize) -> Option<String> {
     }
 }
 
-/// The status item's tooltip: "Wormhole — 2 need you · 1 failed · 2 working · 2 finished".
+/// The status item's tooltip: "Wormhole — 2 need input · 1 failed · 2 working · 2 finished".
 pub fn tooltip(counts: Counts) -> String {
     let total = counts.total();
     let parts: Vec<String> = [
         (counts.needs_you > 0).then(|| match counts.needs_you {
-            1 => "1 needs you".to_string(),
-            n => format!("{n} need you"),
+            1 => "1 needs input".to_string(),
+            n => format!("{n} need input"),
         }),
         (counts.failed > 0).then(|| format!("{} failed", counts.failed)),
         (counts.working > 0).then(|| format!("{} working", counts.working)),
@@ -317,12 +317,12 @@ mod tests {
     #[test]
     fn the_tooltip_sums_up_most_urgent_first() {
         let counts = Counts { needs_you: 2, working: 2, finished: 2, failed: 0, quiet: 1 };
-        assert_eq!(tooltip(counts), "Wormhole — 2 need you · 2 working · 2 finished");
+        assert_eq!(tooltip(counts), "Wormhole — 2 need input · 2 working · 2 finished");
         let failed = Counts { failed: 1, ..counts };
-        assert_eq!(tooltip(failed), "Wormhole — 2 need you · 1 failed · 2 working · 2 finished");
+        assert_eq!(tooltip(failed), "Wormhole — 2 need input · 1 failed · 2 working · 2 finished");
         assert_eq!(tooltip(Counts { failed: 3, ..Counts::default() }), "Wormhole — 3 failed");
         assert_eq!((failed.results(), counts.results()), (3, 2), "the Dock badge counts both");
-        assert_eq!(tooltip(Counts { needs_you: 1, ..Counts::default() }), "Wormhole — 1 needs you");
+        assert_eq!(tooltip(Counts { needs_you: 1, ..Counts::default() }), "Wormhole — 1 needs input");
         assert_eq!(tooltip(Counts { quiet: 3, ..Counts::default() }), "Wormhole — 3 terminals, all quiet");
         assert_eq!(tooltip(Counts { quiet: 1, ..Counts::default() }), "Wormhole — 1 terminal, all quiet");
         assert_eq!(tooltip(Counts::default()), "Wormhole — no terminals open");
@@ -362,7 +362,7 @@ mod tests {
         assert_eq!(agent.detail(false).as_deref(), Some("Failed · Rate limit reached"));
 
         // A program that reports its own status reads like an agent, under its own name, and its
-        // bell-less "needs you" is a question.
+        // bell-less "needs input" is a question.
         let mut brew = terminal(3, State::NeedsYou, t0);
         brew.source = Source::Program;
         brew.who = Some("brew".into());

@@ -15,7 +15,7 @@ settings-notifications-notify-permission = Notifications in System Settings
 
 settings-notifications-group-notify-me-when = Notify me when
 
-settings-notifications-notify-needs-you = A terminal needs you
+settings-notifications-notify-needs-you = A terminal needs input
     .description = An agent asks a question or for permission
     .keywords = time sensitive focus question permission notifications
 
@@ -64,7 +64,7 @@ settings-notifications-dock-badge = Badge
     .description = The count on the Dock icon
     .keywords = dock badge count
 
-settings-notifications-dock-bounce = Bounce once when a terminal needs you
+settings-notifications-dock-bounce = Bounce once when a terminal needs input
     .description = Only while { -brand } isn’t the active app; never for a bell
     .keywords = dock bounce
 
@@ -73,12 +73,12 @@ settings-notifications-dock-bounce = Bounce once when a terminal needs you
 settings-notifications-time-sensitive = Time Sensitive
 settings-notifications-banner = Banner
 settings-notifications-nothing = Nothing
-settings-notifications-needs-you-only = Needs you only
+settings-notifications-needs-you-only = Needs input only
 settings-notifications-all = All
 settings-notifications-none = None
 settings-notifications-off = Off
-settings-notifications-needs-you = Needs you
-settings-notifications-needs-you-finished = Needs you + finished
+settings-notifications-needs-you = Needs input
+settings-notifications-needs-you-finished = Needs input + finished
 settings-notifications-asking-macos = Asking macOS…
 settings-notifications-not-asked-yet = Not asked yet
 settings-notifications-macos-asks-once-nothing-is-sent = macOS asks once; nothing is sent before

@@ -410,7 +410,7 @@ entry Sessions sidebar-changes
   keywords "git changes count"
 entry Sessions sidebar-dot
   label "Status dot"
-  description "Working, needs you, finished or idle, as the state round every terminal's status tile"
+  description "Working, needs input, finished or idle, as the state round every terminal's status tile"
   keywords "status glyph agent"
 entry Sessions sidebar-notes
   label "Notes and tasks"
@@ -445,7 +445,7 @@ entry Agents agents-summary
   description ""
   keywords "installed hooks repair path summary"
 entry Agents agents-notifications
-  label "Notify me when an agent needs you or finishes"
+  label "Notify me when an agent needs input or finishes"
   description "These, and notifications about long commands and the bell, have their own section"
   keywords "notifications alerts banner"
 entry Agents agents-installed
@@ -473,7 +473,7 @@ entry Notifications notify-permission
   description ""
   keywords "permission allow system settings send test banner"
 entry Notifications notify-needs-you
-  label "A terminal needs you"
+  label "A terminal needs input"
   description "An agent asks a question or for permission"
   keywords "time sensitive focus question permission notifications"
 entry Notifications notify-agent-done
@@ -513,7 +513,7 @@ entry Notifications dock-badge
   description "The count on the Dock icon"
   keywords "dock badge count"
 entry Notifications dock-bounce
-  label "Bounce once when a terminal needs you"
+  label "Bounce once when a terminal needs input"
   description "Only while Wormhole isn’t the active app; never for a bell"
   keywords "dock bounce"
 entry MenuBar menu-bar
@@ -539,7 +539,7 @@ entry MenuBar hotkey-action
 entry MenuBar jump-waiting-key
   label "Jump to next waiting terminal"
   description "Inside Wormhole, in any window"
-  keywords "needs you waiting shortcut"
+  keywords "needs input needs you waiting shortcut"
 entry Updates version
   label "Version"
   description ""

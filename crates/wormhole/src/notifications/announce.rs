@@ -126,7 +126,7 @@ pub(super) fn banner(happened: &Happened, settings: &Settings, cx: &mut App) {
         sound: notify::sound(kind, level, settings.notify_sound),
         category: category(kind),
     };
-    // What needs you is never folded into a summary: it is the one worth a banner of its own.
+    // What needs input is never folded into a summary: it is the one worth a banner of its own.
     if !settings.notify_group_bursts || kind == Kind::NeedsYou {
         post(single, cx);
         return;

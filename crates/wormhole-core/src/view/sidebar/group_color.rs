@@ -15,7 +15,7 @@ pub const WASH_FAR: f32 = 0.03;
 pub const WASH_SPAN: f32 = 0.6;
 
 /// The text a card's wash must leave readable, and the contrast each needs: the primary text, the
-/// second lines, and the amber of a terminal that needs you (its text and its edge).
+/// second lines, and the amber of a terminal that needs input (its text and its edge).
 const WASH_TEXT: [(&str, f32); 4] =
     [("text.primary", 4.5), ("text.muted", 3.5), ("agent.attention.text", 4.0), ("agent.attention", 3.0)];
 

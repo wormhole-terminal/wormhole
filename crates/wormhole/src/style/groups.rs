@@ -1,7 +1,7 @@
 //! A group's head in the sidebar, as RF-11 draws it: the name in 13 semibold alone on the line (a
 //! dot of the group's colour before it where there is no card to wash), the pin after it, and the
 //! chevron at the right in a 20 box. Folded, the head also keeps its terminals' tiles, their count
-//! and a dot while one needs you or failed; a pinned group with nothing in it is one line with
+//! and a dot while one needs input or failed; a pinned group with nothing in it is one line with
 //! "No terminals" and a + instead, and any other head shows a + while the pointer is over it. A
 //! group with a folder shows it under the name in the caption role (after the name in Dense), when
 //! `Metrics::group_folders` is on. The label opens the group's menu, the chevron folds it.
@@ -38,7 +38,7 @@ pub struct GroupHead {
     /// number.
     pub tiles: Vec<AnyElement>,
     pub count: usize,
-    /// A terminal in it needs you (amber) or failed (danger): the dot after the tiles.
+    /// A terminal in it needs input (amber) or failed (danger): the dot after the tiles.
     pub alert: Option<Hsla>,
     /// A pinned group with no terminal: its + (tooltip, what it does), always shown.
     pub empty: Option<(SharedString, ClickHandler)>,

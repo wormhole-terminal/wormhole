@@ -110,7 +110,7 @@ pub const EMPTY_GLYPH: f32 = 24.0;
 /// The least size of anything clickable: a smaller drawing keeps its size and
 /// gets a hit area this big around it ([`super::hit_area`]).
 pub const HIT_MIN: f32 = 28.0;
-/// An agent's status dot, with a halo this wide round it while it needs you.
+/// An agent's status dot, with a halo this wide round it while it needs input.
 pub const STATUS_DOT_SIZE: f32 = 8.0;
 pub const STATUS_HALO: f32 = 3.0;
 /// The dot that marks a changed setting, an active filter, a panel wanted but hidden.

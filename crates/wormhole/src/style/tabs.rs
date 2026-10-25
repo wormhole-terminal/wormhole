@@ -1,5 +1,5 @@
 //! The tab bar a window shows instead of the sidebar (Settings → Show terminals in → Tabs), as
-//! RF-02 draws it: one 38 pt row with the group switcher (the group's name, up-down chevrons, an amber dot while another group needs you) and that group's
+//! RF-02 draws it: one 38 pt row with the group switcher (the group's name, up-down chevrons, an amber dot while another group needs input) and that group's
 //! terminals as tabs. A tab is 28 tall and 172 wide: a 16 pt status tile, the name in 12.5, and the
 //! × while the pointer is over it (the open one too; it takes its room from the name then). Every
 //! tab is a box on the terminal's colour: the open one in a 14 % fill, the others in a 5 % one.
@@ -86,7 +86,7 @@ pub fn tab_divider(ui: UiColors, tall: f32) -> Div {
 /// The parts of a [`group_switcher`].
 pub struct GroupSwitch {
     pub name: SharedString,
-    /// Another group has a terminal that needs you (or failed): the amber dot at the corner.
+    /// Another group has a terminal that needs input (or failed): the amber dot at the corner.
     pub alert: bool,
     pub spoken: SharedString,
 }

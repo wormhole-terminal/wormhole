@@ -147,10 +147,10 @@ pub(super) fn result(item: Item) -> Row {
     Row::Result { item, marks: Vec::new() }
 }
 
-/// The section a terminal is listed under in the Terminals scope: who needs you first.
+/// The section a terminal is listed under in the Terminals scope: who needs input first.
 pub(super) fn state_title(state: State) -> &'static str {
     match state {
-        State::NeedsYou => "Needs you",
+        State::NeedsYou => "Needs input",
         State::Working => "Working",
         State::Done | State::Failed => "Finished",
         State::Idle | State::Exited => "Idle",

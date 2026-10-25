@@ -16,7 +16,7 @@ use super::{SECOND_LINE_GAP, TILE_GAP, lead};
 pub enum RowTone {
     /// What's happening, in muted text.
     Plain,
-    /// The agent needs you: amber in every state, also on the selected row.
+    /// The agent needs input: amber in every state, also on the selected row.
     Attention,
     /// The agent finished: green.
     Done,
@@ -26,12 +26,12 @@ pub enum RowTone {
 
 /// One terminal in the sidebar: the status glyph in the lead column, the
 /// name at x 40 (14 / 500, on the selected row 600 in the tint's text color), and a second
-/// line under it (working, needs you, finished, the command in front, else where the
+/// line under it (working, needs input, finished, the command in front, else where the
 /// terminal is), which makes the row [`ROW_TWO_LINE_H`] tall. Only the compact density has
 /// one-line rows, [`ROW_H`].
 /// Nothing sits on the right at rest unless the row has something to say there: `hint` is
 /// the ⌘N keycap while ⌘ is held (it takes the place of `trail`), and a compact row that
-/// needs you says so there instead of on a second line.
+/// needs input says so there instead of on a second line.
 pub struct SessionRow {
     /// A `style::status_glyph`, a `style::agent_logo`, or an empty lead slot.
     pub glyph: AnyElement,
@@ -206,7 +206,7 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
             .text_caption()
             .font_weight(FontWeight::MEDIUM)
             .text_color(tone_color)
-            .child("needs you")
+            .child("needs input")
     });
     let has_tile = tile.is_some();
     let two_lines = detail.is_some();

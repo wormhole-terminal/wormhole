@@ -227,7 +227,7 @@ fn a_state_on_its_way_when_a_choice_is_made_does_not_undo_it() {
     driver.tick(ms(100), SIZE, b"\r", vec![]);
     driver.tick(ms(120), SIZE, b"\r", vec![]);
     assert_eq!(driver.model().map(Welcome::step), Some(Step::Notify));
-    // The poll is due, and in the same breath the person turns "Needs you" off (four Ups, then Return).
+    // The poll is due, and in the same breath the person turns "Needs input" off (four Ups, then Return).
     let tick = driver.tick(ms(400), SIZE, b"\x1b[A\x1b[A\x1b[A\x1b[A\r", vec![]);
     assert_eq!(
         tick.ask,

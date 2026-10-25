@@ -52,7 +52,7 @@ settings-sessions-sidebar-changes = Changed files
     .keywords = git changes count
 
 settings-sessions-sidebar-dot = Status dot
-    .description = Working, needs you, finished or idle, as the state round every terminal's status tile
+    .description = Working, needs input, finished or idle, as the state round every terminal's status tile
     .keywords = status glyph agent
 
 settings-sessions-sidebar-notes = Notes and tasks

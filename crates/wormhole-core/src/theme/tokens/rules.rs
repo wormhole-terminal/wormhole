@@ -139,7 +139,7 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
              over(text.primary / 16%, sidebar.background), 3)"
         }
         "agent.exited" => "text.faint",
-        // The bell's orange (the boards' RF-12): not the amber of "needs you", so the two badges
+        // The bell's orange (the boards' RF-12): not the amber of "needs input", so the two badges
         // don't read alike.
         "agent.bell" => "#ff9e64",
         "agent.attention.ring" => "agent.attention / 28%",

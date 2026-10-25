@@ -16,7 +16,7 @@ use crate::style::{self, Edges, TextRole};
 
 /// The tallest the panel gets before its list scrolls.
 const MAX_H: f32 = 560.0;
-/// A quiet line ("Nothing needs you") is a row tall, like the rows it stands in for.
+/// A quiet line ("Nothing needs input") is a row tall, like the rows it stands in for.
 const NOTE_H: f32 = style::QP_ROW_H;
 /// The answer region under a waiting row: the question, the reply field and its hints.
 const ANSWER_H: f32 = 112.0;

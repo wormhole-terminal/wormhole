@@ -145,7 +145,7 @@ const SAMPLES: &[Card] = &[
             Sample {
                 name: "Fix pile fan-out", // text: sample (a made-up terminal of the preview)
                 glyph: StatusGlyph::NeedsYou,
-                detail: "Needs you · 2m", // text: sample (a made-up terminal of the preview)
+                detail: "Needs input · 2m", // text: sample (a made-up terminal of the preview)
                 tone: RowTone::Attention,
                 selected: false,
                 notes: 0,

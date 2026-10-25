@@ -275,7 +275,7 @@ fn macos_is_asked_only_when_a_press_turns_a_banner_on_or_says_allow(cx: &mut Tes
     assert_eq!(asks(cx), 0, "turning off, a sound and the same again ask nothing");
     assert_eq!(permission(cx), Permission::NotAsked);
 
-    // Turning "Needs you" on is a banner turned on: macOS is asked, once.
+    // Turning "Needs input" on is a banner turned on: macOS is asked, once.
     assert!(ask(cx, Some(tab), &token, set_notify(Some(true), None, None, false)).ok);
     assert_eq!(asks(cx), 1);
     assert!(matches!(permission(cx), Permission::Allowed { .. }), "(a test has no macOS to say no)");
@@ -443,7 +443,7 @@ fn the_example_band_comes_up_with_the_step_and_is_no_terminal(cx: &mut TestAppCo
     assert_eq!(
         band(cx, &window),
         Some(vec![RowState::Working, RowState::NeedsYou, RowState::Finished]),
-        "working, needs you, done"
+        "working, needs input, done"
     );
     draw(cx, &window);
 

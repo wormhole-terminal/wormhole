@@ -200,7 +200,7 @@ pub fn status_working(summary: &Summary, entries: &[Entry], now: Instant) -> Opt
 pub fn status_attention(summary: &Summary, entries: &[Entry], now: Instant) -> Option<String> {
     let entry = &entries[summary.attention()?];
     let waited = spoken_elapsed(now.saturating_duration_since(entry.since));
-    Some(format!("{} needs you, waiting {waited}", entry.name))
+    Some(format!("{} needs input, waiting {waited}", entry.name))
 }
 
 /// One of the numbers after the button: "2 terminals working", "1 terminal finished".
@@ -216,7 +216,7 @@ pub fn status_counted(counted: &crate::view::layout::status_bar::Counted) -> Str
     }
 }
 
-/// The needs-you item: "1 terminal needs you", "2 terminals need you".
+/// The needs-you item: "1 terminal needs input", "2 terminals need input".
 pub fn status_needs_you(summary: &Summary) -> Option<String> {
     let n = summary.needs_you.len();
     (n > 0).then(|| terminals_need_you(n))
@@ -252,9 +252,9 @@ pub fn spoken_elapsed(time: Duration) -> String {
     }
 }
 
-/// "2 terminals need you"; the status bar and an announced burst say it alike.
+/// "2 terminals need input"; the status bar and an announced burst say it alike.
 pub fn terminals_need_you(n: usize) -> String {
-    if n == 1 { "1 terminal needs you".to_string() } else { format!("{n} terminals need you") }
+    if n == 1 { "1 terminal needs input".to_string() } else { format!("{n} terminals need input") }
 }
 
 /// "3 terminals finished".
@@ -378,13 +378,13 @@ mod tests {
         ];
         let summary = Summary::of(&entries);
         assert_eq!(status_working(&summary, &entries, now).as_deref(), Some("Claude working, 4 minutes"));
-        assert_eq!(status_needs_you(&summary).as_deref(), Some("1 terminal needs you"));
+        assert_eq!(status_needs_you(&summary).as_deref(), Some("1 terminal needs input"));
         assert_eq!(status_done(&summary).as_deref(), Some("1 terminal finished"));
         // The button names who waits and for how long; the numbers after it keep every word too,
         // whatever the window shows.
         assert_eq!(
             status_attention(&summary, &entries, now).as_deref(),
-            Some("diff perf needs you, waiting less than a minute")
+            Some("diff perf needs input, waiting less than a minute")
         );
         let rest: Vec<String> = summary.rest().iter().map(status_counted).collect();
         assert_eq!(rest, ["1 terminal working", "1 terminal finished"]);
@@ -406,7 +406,7 @@ mod tests {
         ];
         let summary = Summary::of(&entries);
         assert_eq!(status_working(&summary, &entries, now).as_deref(), Some("2 terminals working"));
-        assert_eq!(status_needs_you(&summary).as_deref(), Some("2 terminals need you"));
+        assert_eq!(status_needs_you(&summary).as_deref(), Some("2 terminals need input"));
         assert_eq!(status_done(&summary).as_deref(), Some("3 terminals finished"));
         assert_eq!(status_failed(&summary).as_deref(), Some("2 terminals failed"));
         let one_failed = Summary::of(&entries[7..8]);

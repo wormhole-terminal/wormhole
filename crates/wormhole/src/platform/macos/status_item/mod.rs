@@ -248,7 +248,7 @@ fn rebuild(mtm: MainThreadMarker, menu: &NSMenu, target: &MenuTarget) {
 /// terminal in the system's secondary label colour).
 fn glyph_image(glyph: Glyph, colors: StatusColors) -> Option<Retained<NSImage>> {
     let (names, color, description): (&[&str], _, _) = match glyph {
-        Glyph::NeedsYou => (&["circle.fill"], ns_color(colors.attention), "Needs you"),
+        Glyph::NeedsYou => (&["circle.fill"], ns_color(colors.attention), "Needs input"),
         Glyph::Bell => (&["bell.fill"], ns_color(colors.attention), "Bell"),
         Glyph::Working => (&["progress.indicator", "circle.dotted"], ns_color(colors.working), "Working"),
         Glyph::Running => (&["progress.indicator", "circle.dotted"], ns_color(colors.running), "Running"),

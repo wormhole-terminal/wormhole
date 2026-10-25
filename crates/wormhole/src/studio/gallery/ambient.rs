@@ -50,7 +50,7 @@ pub(super) fn render(
                 .child(div().flex_1().text_color(ui.faint).child("Search terminals and actions"))
                 .child(style::keycap(ui, "⇧⌘Space")),
         )
-        .child(style::palette_label(ui, "Needs you", Some(2)))
+        .child(style::palette_label(ui, "Needs input", Some(2)))
         .child(style::palette_result("g-qp-needs", ui, true, needs))
         .child(style::palette_label(ui, "Running", None))
         .child(style::palette_result("g-qp-tests", ui, false, tests))

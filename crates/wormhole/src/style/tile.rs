@@ -6,7 +6,7 @@
 //! status bar is smaller (see [`status_tile_at`]). It holds what the terminal is (an agent's logo
 //! at half the tile, its letters, or the terminal symbol) and says what it is doing round it: a
 //! light circles its edge while an agent works (grey while a command runs), its edge breathes
-//! amber while the agent needs you, and a badge in its corner tells the rest (finished, failed,
+//! amber while the agent needs input, and a badge in its corner tells the rest (finished, failed,
 //! new output, the bell). Under Reduce Motion the light stands still as a ring and the amber edge
 //! holds. The tile is drawn per row each frame: nothing here allocates per frame beyond the
 //! elements themselves.
@@ -363,7 +363,7 @@ fn perimeter_point(w: f32, h: f32, r: f32, s: f32) -> (f32, f32) {
     (r + d.min(half), 0.0)
 }
 
-/// The edge of a tile whose agent needs you: amber, breathing down to [`TILE_BREATHE_LEAST`] every
+/// The edge of a tile whose agent needs input: amber, breathing down to [`TILE_BREATHE_LEAST`] every
 /// [`TILE_BREATHE`]; steady under Reduce Motion.
 #[track_caller]
 fn breathing_edge(id: impl Into<ElementId>, ui: UiColors, size: f32, corner: f32, still: bool) -> AnyElement {
@@ -392,7 +392,7 @@ fn breathing_edge(id: impl Into<ElementId>, ui: UiColors, size: f32, corner: f32
     .into_any_element()
 }
 
-/// The badge in the tile's bottom-right corner for the states the edge doesn't tell: needs you
+/// The badge in the tile's bottom-right corner for the states the edge doesn't tell: needs input
 /// (!), finished (✓), failed (×), the bell, and new output (a dot).
 #[track_caller]
 fn badge(ui: UiColors, state: StatusGlyph, tile: f32, surface: Hsla) -> Option<AnyElement> {

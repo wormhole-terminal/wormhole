@@ -18,7 +18,7 @@ pub const SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION: Key = Key::new(304);
 pub const SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION_KEYWORDS: Key = Key::new(305);
 /// "Notify me when"
 pub const SETTINGS_NOTIFICATIONS_GROUP_NOTIFY_ME_WHEN: Key = Key::new(306);
-/// "A terminal needs you"
+/// "A terminal needs input"
 pub const SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU: Key = Key::new(307);
 /// "An agent asks a question or for permission"
 pub const SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU_DESCRIPTION: Key = Key::new(308);
@@ -80,7 +80,7 @@ pub const SETTINGS_NOTIFICATIONS_DOCK_BADGE: Key = Key::new(335);
 pub const SETTINGS_NOTIFICATIONS_DOCK_BADGE_DESCRIPTION: Key = Key::new(336);
 /// "dock badge count"
 pub const SETTINGS_NOTIFICATIONS_DOCK_BADGE_KEYWORDS: Key = Key::new(337);
-/// "Bounce once when a terminal needs you"
+/// "Bounce once when a terminal needs input"
 pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE: Key = Key::new(338);
 /// "Only while Wormhole isn’t the active app; never for a bell"
 pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_DESCRIPTION: Key = Key::new(339);
@@ -92,7 +92,7 @@ pub const SETTINGS_NOTIFICATIONS_TIME_SENSITIVE: Key = Key::new(341);
 pub const SETTINGS_NOTIFICATIONS_BANNER: Key = Key::new(342);
 /// "Nothing"
 pub const SETTINGS_NOTIFICATIONS_NOTHING: Key = Key::new(343);
-/// "Needs you only"
+/// "Needs input only"
 pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_ONLY: Key = Key::new(344);
 /// "All"
 pub const SETTINGS_NOTIFICATIONS_ALL: Key = Key::new(345);
@@ -100,9 +100,9 @@ pub const SETTINGS_NOTIFICATIONS_ALL: Key = Key::new(345);
 pub const SETTINGS_NOTIFICATIONS_NONE: Key = Key::new(346);
 /// "Off"
 pub const SETTINGS_NOTIFICATIONS_OFF: Key = Key::new(347);
-/// "Needs you"
+/// "Needs input"
 pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU: Key = Key::new(348);
-/// "Needs you + finished"
+/// "Needs input + finished"
 pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_FINISHED: Key = Key::new(349);
 /// "Asking macOS…"
 pub const SETTINGS_NOTIFICATIONS_ASKING_MACOS: Key = Key::new(350);

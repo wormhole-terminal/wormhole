@@ -1,5 +1,5 @@
 //! The status item ("menu extra"): one for every window, whose icon says whether a terminal
-//! needs you and whose menu lists the terminals by status.
+//! needs input and whose menu lists the terminals by status.
 //!
 //! The snapshot → layout mapping is pure (`model`) and tested; `platform::status_item` draws it
 //! (on macOS an `NSStatusItem` + `NSMenu`, whose own glyph `platform/macos/status_item/icon.rs`
@@ -29,7 +29,7 @@ pub type Rgba = [f32; 4];
 /// The theme's status colours, as the native menu glyphs take them.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct StatusColors {
-    /// `agent.attention`: needs you, the bell.
+    /// `agent.attention`: needs input, the bell.
     pub attention: Rgba,
     /// `agent.done`: finished.
     pub done: Rgba,

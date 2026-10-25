@@ -75,7 +75,7 @@ pub fn set_numbered(sets: &[TabSet], number: usize) -> Option<usize> {
 /// How many sets a key reaches.
 pub const NUMBERED_SETS: usize = 9;
 
-/// Whether a set other than `current` has a terminal that needs you or failed: the amber dot on the
+/// Whether a set other than `current` has a terminal that needs input or failed: the amber dot on the
 /// closed switcher. `urgency` is the urgency of the terminal at a session index.
 pub fn others_need_you(sets: &[TabSet], current: usize, urgency: impl Fn(usize) -> Urgency) -> bool {
     sets.iter()

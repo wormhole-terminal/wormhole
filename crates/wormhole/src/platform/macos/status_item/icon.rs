@@ -119,7 +119,7 @@ fn glyph(filled: bool, frame: Option<usize>, ink: &NSColor) {
     compositing(NSCompositingOperation::SourceOver);
 }
 
-/// The amber dot (needs you) or the danger one (failed), a badge tucked onto the box's top-right corner inside a ring cut out of what is
+/// The amber dot (needs input) or the danger one (failed), a badge tucked onto the box's top-right corner inside a ring cut out of what is
 /// under it.
 fn dot(rgba: Rgba) {
     let center = (BOX.origin.x + BOX.size.width - 0.1, DOT / 2.0 + RING);

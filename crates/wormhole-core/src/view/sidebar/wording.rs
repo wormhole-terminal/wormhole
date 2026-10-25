@@ -6,7 +6,7 @@ use std::time::Duration;
 use super::state::RowState;
 
 /// What the second line of a row whose status something tells (an agent, or a program that
-/// reports its own) says, or `None` for a one-line row: "Needs you · Approve cargo test?",
+/// reports its own) says, or `None` for a one-line row: "Needs input · Approve cargo test?",
 /// "Editing sidebar.rs…" (its own words) or "Working · 3m" ("Working · <1m" in the first minute),
 /// "Finished · 12m ago", "Failed · rate limit reached". `since` is how long it has been in
 /// `state`. A result with words of its own ("Upgraded 12 packages") says them in place of when.
@@ -14,8 +14,8 @@ pub fn agent_detail(state: RowState, message: Option<&str>, since: Duration) -> 
     let message = message.map(str::trim).filter(|m| !m.is_empty());
     match state {
         RowState::NeedsYou => Some(match message {
-            Some(message) => format!("Needs you · {message}"),
-            None => "Needs you".to_string(),
+            Some(message) => format!("Needs input · {message}"),
+            None => "Needs input".to_string(),
         }),
         RowState::Working => Some(match message {
             Some(message) => message.to_string(),
@@ -112,9 +112,9 @@ mod tests {
         let ask = Some("Approve cargo test?");
         assert_eq!(
             agent_detail(RowState::NeedsYou, ask, mins(1)).as_deref(),
-            Some("Needs you · Approve cargo test?")
+            Some("Needs input · Approve cargo test?")
         );
-        assert_eq!(agent_detail(RowState::NeedsYou, Some("  "), mins(1)).as_deref(), Some("Needs you"));
+        assert_eq!(agent_detail(RowState::NeedsYou, Some("  "), mins(1)).as_deref(), Some("Needs input"));
         assert_eq!(
             agent_detail(RowState::Working, Some("Editing sidebar.rs…"), mins(3)).as_deref(),
             Some("Editing sidebar.rs…")

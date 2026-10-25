@@ -322,7 +322,7 @@ impl Mini {
             .child(self.row(
                 self.dot(ui.agent_attention, false),
                 "diff perf", // text: sample (the miniature's made-up terminals, commands and notes)
-                Some(("Needs you · Approve cargo test?", ui.agent_attention)), // text: sample (the miniature's made-up terminals, commands and notes)
+                Some(("Needs input · Approve cargo test?", ui.agent_attention)), // text: sample (the miniature's made-up terminals, commands and notes)
                 false,
             ))
             .child(self.row(self.dot(ui.faint, true), "zsh", None, false))
@@ -609,7 +609,7 @@ impl Mini {
             .child(item(vec![self.ring(ui.agent_working), self.caption("Claude working · 4m", ui.muted)])) // text: sample (the miniature's made-up terminals, commands and notes)
             .child(item(vec![
                 self.icon(IconName::CircleAlert, MINI_GLYPH, ui.agent_attention),
-                self.caption("1 needs you", ui.agent_attention), // text: sample (the miniature's made-up terminals, commands and notes)
+                self.caption("1 needs input", ui.agent_attention), // text: sample (the miniature's made-up terminals, commands and notes)
             ]))
             .child(item(vec![
                 self.icon(IconName::CircleCheck, MINI_GLYPH, ui.agent_done),

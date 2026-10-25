@@ -122,7 +122,7 @@ pub const TITLE_TAB_MAX_W: f32 = 220.0;
 /// corners, a 16 pt status slot and the label in 13 pt. The active tab is quiet: a raised
 /// neutral fill (`tab.active.background`, `surface.elevated` by default), its label in `text.primary` 500, since the primary's
 /// tint already marks the selected terminal in the sidebar. The others are muted with a hover
-/// fill; one that needs you wears the attention tint and ring until it is answered. Add the
+/// fill; one that needs input wears the attention tint and ring until it is answered. Add the
 /// status slot, the label and the × with `.child(…)`.
 #[track_caller]
 pub fn title_tab(id: impl Into<ElementId>, ui: UiColors, active: bool, needs_you: bool) -> Stateful<Div> {

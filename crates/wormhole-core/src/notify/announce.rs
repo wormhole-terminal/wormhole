@@ -1,5 +1,5 @@
 //! What VoiceOver announces when a terminal changes. GPUI has no live regions, so the app
-//! posts these as NSAccessibility announcements: a terminal that needs you interrupts what
+//! posts these as NSAccessibility announcements: a terminal that needs input interrupts what
 //! VoiceOver is saying, one that finished or failed waits its turn, and a burst is said as one
 //! count, as the notifications' summary groups it.
 //!
@@ -21,7 +21,7 @@ const QUESTION_MAX: usize = 100;
 /// How an announcement takes its turn (`NSAccessibilityPriorityLevel`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Priority {
-    /// Interrupts what VoiceOver is saying (needs you).
+    /// Interrupts what VoiceOver is saying (needs input).
     High,
     /// Waits its turn (finished, failed).
     Medium,
@@ -42,7 +42,7 @@ pub struct Said<'a> {
     /// The terminal's name, as the sidebar shows it.
     pub name: &'a str,
     pub kind: Kind,
-    /// The agent's question, for needs you; what went wrong, for a failure ("exit 101").
+    /// The agent's question, for needs input; what went wrong, for a failure ("exit 101").
     pub question: Option<&'a str>,
 }
 
@@ -59,7 +59,7 @@ struct Told {
     heard: Heard,
 }
 
-/// What an announcement is about. Needs you, finished and failed are counted apart: a burst of
+/// What an announcement is about. Needs input, finished and failed are counted apart: a burst of
 /// agents finishing doesn't turn the next question into a count.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Heard {
@@ -91,11 +91,11 @@ impl Heard {
 
 impl Announcer {
     /// What VoiceOver says for the changes one sweep found (in the order given), at `at`: at most
-    /// one announcement for needs you, then at most one each for finished and failed. A single
-    /// terminal is named ("diff perf needs you: Approve cargo test?", "auth tokens finished",
+    /// one announcement for needs input, then at most one each for finished and failed. A single
+    /// terminal is named ("diff perf needs input: Approve cargo test?", "auth tokens finished",
     /// "build failed: exit 101"); several in this sweep,
     /// or from the [`NOTIFY_BURST`]th terminal within [`NOTIFY_BURST_WINDOW`] on, are said as the
-    /// burst's count ("3 terminals need you"). A terminal heard again inside the window is still
+    /// burst's count ("3 terminals need input"). A terminal heard again inside the window is still
     /// one terminal.
     pub fn announce(&mut self, at: Instant, changes: &[Said]) -> Vec<Announcement> {
         self.recent.retain(|told| at.saturating_duration_since(told.at) < NOTIFY_BURST_WINDOW);
@@ -139,8 +139,8 @@ fn named(said: &Said) -> String {
     match (Heard::of(said.kind), words) {
         (Some(Heard::NeedsYou), Some(words)) if said.kind == Kind::Notice => format!("{name}: {words}"),
         (Some(Heard::NeedsYou), None) if said.kind == Kind::Notice => format!("{name} sent a notification"),
-        (Some(Heard::NeedsYou), Some(question)) => format!("{name} needs you: {question}"),
-        (Some(Heard::NeedsYou), None) => format!("{name} needs you"),
+        (Some(Heard::NeedsYou), Some(question)) => format!("{name} needs input: {question}"),
+        (Some(Heard::NeedsYou), None) => format!("{name} needs input"),
         (Some(Heard::Failed), Some(words)) => format!("{name} failed: {words}"),
         (Some(Heard::Failed), None) => format!("{name} failed"),
         _ => format!("{name} finished"),
@@ -207,16 +207,16 @@ mod tests {
         let mut announcer = Announcer::default();
         assert_eq!(
             announcer.announce(t0, &[needs(1, "diff perf", Some("Approve cargo test?"))]),
-            [high("diff perf needs you: Approve cargo test?")]
+            [high("diff perf needs input: Approve cargo test?")]
         );
         assert_eq!(
             announcer.announce(t0 + secs(1), &[done(2, "auth tokens")]),
             [medium("auth tokens finished")]
         );
         let three = [needs(3, "a", None), needs(4, "b", None), needs(5, "c", None)];
-        assert_eq!(announcer.announce(t0 + secs(2), &three), [high("4 terminals need you")]);
+        assert_eq!(announcer.announce(t0 + secs(2), &three), [high("4 terminals need input")]);
         // The same, without the one before.
-        assert_eq!(Announcer::default().announce(t0, &three), [high("3 terminals need you")]);
+        assert_eq!(Announcer::default().announce(t0, &three), [high("3 terminals need input")]);
     }
 
     #[test]
@@ -232,12 +232,12 @@ mod tests {
             let said = needs(1, "diff perf", question);
             assert_eq!(
                 Announcer::default().announce(t0, &[said]),
-                [high("diff perf needs you")],
+                [high("diff perf needs input")],
                 "{question:?}"
             );
         }
         let unnamed = needs(1, " ", Some(" Approve? "));
-        assert_eq!(Announcer::default().announce(t0, &[unnamed]), [high("Terminal needs you: Approve?")]);
+        assert_eq!(Announcer::default().announce(t0, &[unnamed]), [high("Terminal needs input: Approve?")]);
     }
 
     #[test]
@@ -262,7 +262,7 @@ mod tests {
         let mut announcer = Announcer::default();
         assert_eq!(
             announcer.announce(t0, &[needs(1, "a", Some("Q?")), needs(2, "b", Some("R?"))]),
-            [high("2 terminals need you")]
+            [high("2 terminals need input")]
         );
         let finished = [done(3, "c"), Said { tab: 4, name: "d", kind: Kind::CommandDone, question: None }];
         assert_eq!(announcer.announce(t0 + secs(30), &finished), [medium("2 terminals finished")]);
@@ -289,7 +289,7 @@ mod tests {
             let said = needs(tab as i64, "prod", Some("Continue?"));
             assert_eq!(
                 announcer.announce(t0 + secs(at), &[said]),
-                [high("prod needs you: Continue?")],
+                [high("prod needs input: Continue?")],
                 "at {at}s"
             );
         }
@@ -302,7 +302,7 @@ mod tests {
         for (n, question) in ["One?", "Two?", "Three?"].into_iter().enumerate() {
             assert_eq!(
                 announcer.announce(t0 + secs(n as u64), &[needs(7, "diff perf", Some(question))]),
-                [high(&format!("diff perf needs you: {question}"))]
+                [high(&format!("diff perf needs input: {question}"))]
             );
         }
     }
@@ -312,9 +312,9 @@ mod tests {
         let t0 = Instant::now();
         let mut announcer = Announcer::default();
         let sweeps = [
-            (needs(1, "a", None), "a needs you"),
+            (needs(1, "a", None), "a needs input"),
             (done(2, "b"), "b finished"),
-            (needs(3, "c", None), "c needs you"),
+            (needs(3, "c", None), "c needs input"),
             (done(4, "d"), "d finished"),
         ];
         for (n, (said, text)) in sweeps.into_iter().enumerate() {
@@ -324,7 +324,10 @@ mod tests {
         }
         // The third of one kind is.
         assert_eq!(announcer.announce(t0 + secs(5), &[done(5, "e")]), [medium("3 terminals finished")]);
-        assert_eq!(announcer.announce(t0 + secs(6), &[needs(6, "f", None)]), [high("3 terminals need you")]);
+        assert_eq!(
+            announcer.announce(t0 + secs(6), &[needs(6, "f", None)]),
+            [high("3 terminals need input")]
+        );
     }
 
     #[test]
@@ -354,7 +357,7 @@ mod tests {
         assert_eq!(announcer.announce(t0, &[bell(1), bell(2), bell(3)]), []);
         assert_eq!(
             announcer.announce(t0 + secs(1), &[needs(4, "diff perf", None)]),
-            [high("diff perf needs you")]
+            [high("diff perf needs input")]
         );
         assert_eq!(announcer.announce(t0 + secs(2), &[]), []);
     }
@@ -376,7 +379,7 @@ mod tests {
         let sweep = [done(1, "auth tokens"), needs(2, "diff perf", Some("Approve cargo test?"))];
         assert_eq!(
             announcer.announce(t0, &sweep),
-            [high("diff perf needs you: Approve cargo test?"), medium("auth tokens finished")]
+            [high("diff perf needs input: Approve cargo test?"), medium("auth tokens finished")]
         );
     }
 }

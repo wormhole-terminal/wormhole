@@ -16,7 +16,7 @@ pub const SETTINGS_AGENTS_SUMMARY: Key = Key::new(32);
 pub const SETTINGS_AGENTS_SUMMARY_KEYWORDS: Key = Key::new(33);
 /// "Notifications"
 pub const SETTINGS_AGENTS_GROUP_NOTIFICATIONS: Key = Key::new(34);
-/// "Notify me when an agent needs you or finishes"
+/// "Notify me when an agent needs input or finishes"
 pub const SETTINGS_AGENTS_NOTIFICATIONS: Key = Key::new(35);
 /// "These, and notifications about long commands and the bell, have their own section"
 pub const SETTINGS_AGENTS_NOTIFICATIONS_DESCRIPTION: Key = Key::new(36);

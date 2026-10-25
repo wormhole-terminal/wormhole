@@ -1,4 +1,4 @@
-//! A terminal's status (idle, busy, done, failed, needs you, exited) from its output,
+//! A terminal's status (idle, busy, done, failed, needs input, exited) from its output,
 //! its agent's hooks and what programs report about themselves (`reported`), what the rest of
 //! the app shows about it, and when it redraws.
 
@@ -429,7 +429,7 @@ impl TerminalView {
     }
 
     /// Clear "done"/"failed"/"attention" and the bell once the user looks at this terminal. Returns
-    /// whether anything the sidebar shows changed (a bell that didn't count as "needs you" changes
+    /// whether anything the sidebar shows changed (a bell that didn't count as "needs input" changes
     /// only the row's bell).
     pub fn acknowledge(&mut self) -> bool {
         let rang = std::mem::take(&mut self.bell_rang);
@@ -576,7 +576,7 @@ fn program_left_the_terminal(was_in_front: bool, now: Option<bool>) -> bool {
 struct Bell {
     /// The row shows the bell until someone looks.
     mark: bool,
-    /// The terminal needs you now.
+    /// The terminal needs input now.
     needs_you: bool,
 }
 
@@ -584,8 +584,8 @@ struct Bell {
 const BELL_COUNTS_EVERY: Duration = Duration::from_secs(60);
 
 /// What the bell does. A terminal whose status is told (`reported`: an agent's hooks, or a
-/// program's own reports) ignores it: they say exactly when it needs you. An agent without hooks
-/// rings to ask, so it needs you. A terminal without an agent marks the bell until you look, and
+/// program's own reports) ignores it: they say exactly when it needs input. An agent without hooks
+/// rings to ask, so it needs input. A terminal without an agent marks the bell until you look, and
 /// counts as needing you at most once a minute (`since_counted`: how long ago it last did), so a
 /// program ringing in a loop doesn't keep asking. An ended shell ignores it.
 fn on_bell(status: Status, reported: bool, agent: bool, since_counted: Option<Duration>) -> Bell {
@@ -724,13 +724,13 @@ mod tests {
         assert_eq!(
             on_bell(Status::Busy, true, true, None),
             quiet,
-            "hooks or reports say when an agent needs you"
+            "hooks or reports say when an agent needs input"
         );
         assert_eq!(on_bell(Status::Busy, false, true, None), ask, "an agent without hooks rings to ask");
         assert_eq!(
             on_bell(Status::Idle, false, false, None),
             mark,
-            "a plain terminal: the bell, and needs you"
+            "a plain terminal: the bell, and needs input"
         );
         assert_eq!(on_bell(Status::Exited, false, false, None), quiet);
         // Again within the minute: marked, but it doesn't ask again.

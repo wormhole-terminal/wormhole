@@ -4,7 +4,7 @@
 //!
 //! 1. Welcome: the mark, the name and the sidebar's three lines;
 //! 2. Look: theme, colour, font, ligatures;
-//! 3. Notify: what reaches you when an agent needs you or finishes;
+//! 3. Notify: what reaches you when an agent needs input or finishes;
 //! 4. Sidebar: the example band in the real sidebar, and the agents found with their hooks (or, with
 //!    none, a primer);
 //! 5. Extras: what else is here, read-only.

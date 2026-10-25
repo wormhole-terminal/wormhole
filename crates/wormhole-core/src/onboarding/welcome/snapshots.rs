@@ -73,7 +73,7 @@ fn the_welcome_page_points_at_the_sidebar() {
         "     A terminal for working with AI coding agents.",
         "",
         "  ←  your terminals and what their agents are doing",
-        "  ←  which is working, which needs you, which is done",
+        "  ←  which is working, which needs input, which is done",
         "  ←  ⌘T opens another; click one to switch",
         "",
         "  ❯ Get started",
@@ -99,7 +99,7 @@ fn the_logo_page_has_a_block_art_logo_and_the_name_beside_it() {
             "  ▀          ▀",
             "",
             "  ←  your terminals and what their agents are doing",
-            "  ←  which is working, which needs you, which is done",
+            "  ←  which is working, which needs input, which is done",
             "  ←  ⌘T opens another; click one to switch",
             "",
             "  ❯ Get started",
@@ -166,12 +166,12 @@ fn the_notifications_step_offers_the_settings_switches_with_the_current_ones_cho
         lines(&[
             "",
             "  Tell me when an agent needs me",
-            "  A banner and a sound can tell you when a terminal needs you or an agent",
+            "  A banner and a sound can tell you when a terminal needs input or an agent",
             "  finishes, so you can look away. The same switches are in Settings (⌘,).",
             "",
-            "    Needs you  ● On  ○ Off    an agent asks a question or for permission",
-            "    Finished   ● On  ○ Off    an agent is done",
-            "    Sound      ● Needs you only  ○ All  ○ None",
+            "    Needs input  ● On  ○ Off    an agent asks a question or for permission",
+            "    Finished     ● On  ○ Off    an agent is done",
+            "    Sound        ● Needs input only  ○ All  ○ None",
             "    Allow notifications…  macOS asks once, and only when you press this",
             "",
             "  ❯ Continue",
@@ -184,19 +184,19 @@ fn the_notifications_step_offers_the_settings_switches_with_the_current_ones_cho
 #[test]
 fn the_notifications_step_shows_what_was_chosen_and_names_what_return_does() {
     let mut w = at(Step::Notify, fixtures::welcome(Handover::Cursor));
-    // Up from Continue: Allow, Sound, Finished, Needs you.
+    // Up from Continue: Allow, Sound, Finished, Needs input.
     w.key(Key::Up, NOW);
     assert_eq!(footer(&w, 80, 24), "  ↑↓ choose  ⏎ allow  ← back  esc skip");
     w.key(Key::Up, NOW);
     assert_eq!(footer(&w, 80, 24), "  ↑↓ choose  ⏎ change  ← back  esc skip");
     w.key(Key::Enter, NOW);
     let text = page(&w, 80, 24, END);
-    assert!(text.contains(&"  ❯ Sound      ○ Needs you only  ● All  ○ None".to_string()), "{text:#?}");
+    assert!(text.contains(&"  ❯ Sound        ○ Needs input only  ● All  ○ None".to_string()), "{text:#?}");
     assert_eq!(w.notify().map(|notify| notify.sound), Some(NotifySound::All));
     w.key(Key::Up, NOW);
     w.key(Key::Enter, NOW);
     let text = page(&w, 80, 24, END);
-    assert!(text.contains(&"  ❯ Finished   ○ On  ● Off    an agent is done".to_string()), "{text:#?}");
+    assert!(text.contains(&"  ❯ Finished     ○ On  ● Off    an agent is done".to_string()), "{text:#?}");
 }
 
 #[test]
@@ -225,9 +225,9 @@ fn the_sidebar_step_points_at_the_example_rows_and_lists_each_agent_with_its_hoo
             "  The Example folder in the sidebar is only there while this page is up: three",
             "  terminals showing what a row tells you.",
             "",
-            "  ←  working    the agent is busy; nothing for you to do",
-            "  ←  needs you  it asked a question or for permission",
-            "  ←  done       it finished; time to look at what it did",
+            "  ←  working      the agent is busy; nothing for you to do",
+            "  ←  needs input  it asked a question or for permission",
+            "  ←  done         it finished; time to look at what it did",
             "",
             "  Coding agents",
             "  Hooks tell Wormhole what an agent is doing. Nothing is installed until you",
@@ -280,9 +280,9 @@ fn without_an_agent_the_sidebar_step_has_the_primer_in_place_of_the_list() {
             "  The Example folder in the sidebar is only there while this page is up: three",
             "  terminals showing what a row tells you.",
             "",
-            "  ←  working    the agent is busy; nothing for you to do",
-            "  ←  needs you  it asked a question or for permission",
-            "  ←  done       it finished; time to look at what it did",
+            "  ←  working      the agent is busy; nothing for you to do",
+            "  ←  needs input  it asked a question or for permission",
+            "  ←  done         it finished; time to look at what it did",
             "",
             "  No coding agent found on PATH. Install Claude Code, Codex or another and",
             "  Wormhole recognises it in any terminal, then offers its hooks once.",
@@ -360,7 +360,7 @@ fn a_tour_says_once_that_it_is_read_only_and_offers_no_install() {
     let notify = at(Step::Notify, Welcome::new(facts::tour_state(Path::new("/nonexistent")), false));
     let text = page(&notify, 80, 24, END);
     assert!(text.iter().any(|row| row.contains("read-only")), "{text:#?}");
-    assert!(text.iter().all(|row| !row.contains("Needs you")), "no switches to press");
+    assert!(text.iter().all(|row| !row.contains("Needs input")), "no switches to press");
 }
 
 #[test]

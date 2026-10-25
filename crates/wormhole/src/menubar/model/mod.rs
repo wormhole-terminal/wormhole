@@ -18,7 +18,7 @@ pub const MAX_SESSIONS: usize = 20;
 /// shapes of the sidebar's lead column.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Glyph {
-    /// An agent or a program that reports needs you: an amber dot.
+    /// An agent or a program that reports needs input: an amber dot.
     NeedsYou,
     /// A terminal that nothing tells the state of rang its bell: an amber bell.
     Bell,
@@ -144,7 +144,7 @@ pub enum Mark {
 pub struct StatusIcon {
     pub state: ItemState,
     pub mark: Mark,
-    /// How many need you ("9+" past nine), beside the glyph.
+    /// How many need input ("9+" past nine), beside the glyph.
     pub count: Option<String>,
     pub tooltip: String,
     /// The working glyph types its prompt out (`menu_bar_animate`; only while working is the
@@ -159,7 +159,7 @@ pub struct MenuModel {
 }
 
 /// The status item for `terminals`, as `mode` (`menu_bar_icon`) wants it shown. Most urgent
-/// wins: needs you › failed › finished › working › idle.
+/// wins: needs input › failed › finished › working › idle.
 pub fn status_icon(terminals: &[Terminal], mode: MenuBarIcon, animate: bool) -> StatusIcon {
     let counts = Counts::of(terminals);
     let state = notify::item_state(counts);
@@ -252,9 +252,11 @@ pub fn build(snapshot: &MenuSnapshot, now: Instant) -> MenuModel {
     let mut entries = Vec::new();
     let mut listed = 0;
     let mut hidden = 0;
-    for (title, list) in
-        [("Needs you", &sections.needs_you), ("Working", &sections.working), ("Finished", &sections.finished)]
-    {
+    for (title, list) in [
+        ("Needs input", &sections.needs_you),
+        ("Working", &sections.working),
+        ("Finished", &sections.finished),
+    ] {
         if list.is_empty() {
             continue;
         }
@@ -340,7 +342,7 @@ pub enum DockEntry {
 pub fn dock_menu(terminals: &[Terminal], now: Instant) -> Vec<DockEntry> {
     let sections = notify::sections(terminals);
     let mut entries = Vec::new();
-    for (title, list) in [("Needs you", &sections.needs_you), ("Working", &sections.working)] {
+    for (title, list) in [("Needs input", &sections.needs_you), ("Working", &sections.working)] {
         if list.is_empty() {
             continue;
         }

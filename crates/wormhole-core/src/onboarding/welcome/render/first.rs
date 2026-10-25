@@ -18,7 +18,7 @@ impl Page {
         let mut row = next;
         let lines = [
             "your terminals and what their agents are doing".to_string(),
-            "which is working, which needs you, which is done".to_string(),
+            "which is working, which needs input, which is done".to_string(),
             format!("{} opens another; click one to switch", keymap::glyphs(ActionId::NewTerminal)),
         ];
         for line in lines {

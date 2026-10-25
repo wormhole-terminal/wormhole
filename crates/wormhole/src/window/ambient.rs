@@ -1,6 +1,6 @@
 //! Every terminal of every window as the ambient surfaces see it: the notifications, the status
 //! item, the Dock and the quick panel all start from [`all_tabs`] / [`terminals`], so they agree
-//! on who needs you. Also ⌥⌘J, which goes to whoever has waited longest. A "tab" here
+//! on who needs input. Also ⌥⌘J, which goes to whoever has waited longest. A "tab" here
 //! is one terminal (a row of the sidebar), named by the id its hooks report.
 
 use std::time::{Instant, SystemTime};

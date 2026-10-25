@@ -62,7 +62,9 @@ impl Center {
         center.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
         center.setNotificationCategories(&categories(buttons));
         if !entitled_to_time_sensitive() {
-            tracing::debug!("notifications: no Time Sensitive entitlement, needs you is delivered at Active");
+            tracing::debug!(
+                "notifications: no Time Sensitive entitlement, needs input is delivered at Active"
+            );
         }
         Some(Self { center, _delegate: delegate, tx, asked: Cell::new(false) })
     }
@@ -222,7 +224,7 @@ fn categories(buttons: Buttons) -> Retained<NSSet<UNNotificationCategory>> {
 }
 
 /// Whether this process was signed with the Time Sensitive entitlement (read once). Only a
-/// Developer ID build with the provisioning profile has it; everything else delivers "needs you"
+/// Developer ID build with the provisioning profile has it; everything else delivers "needs input"
 /// at Active.
 #[allow(unsafe_code)]
 pub fn entitled_to_time_sensitive() -> bool {

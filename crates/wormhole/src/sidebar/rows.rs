@@ -629,7 +629,7 @@ mod tests {
         assert_eq!(
             second_line(&asks, false, || None),
             SecondLine {
-                text: Some("Needs you · Password:".into()),
+                text: Some("Needs input · Password:".into()),
                 tone: RowTone::Attention,
                 mono: false,
                 trail: None
@@ -719,7 +719,7 @@ mod tests {
             message: Some("Allow edit?".into()),
             ..info(true, RowState::NeedsYou)
         };
-        assert_eq!(row_label(&asking, false, &place(2, 3, None)), "api, needs you, Allow edit?, 2 of 3");
+        assert_eq!(row_label(&asking, false, &place(2, 3, None)), "api, needs input, Allow edit?, 2 of 3");
         let build = RowInfo {
             name: "web".into(),
             command: Some("cargo build --release".into()),

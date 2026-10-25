@@ -1,6 +1,6 @@
 //! What a terminal is doing, as the list sees it, and how its status makes it.
 
-/// A terminal's status (idle, busy, done, failed, needs you, exited), from its output, its
+/// A terminal's status (idle, busy, done, failed, needs input, exited), from its output, its
 /// agent's hooks and what its programs report.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Status {
@@ -39,7 +39,7 @@ pub enum RowState {
 impl RowState {
     /// What a terminal's status makes of its row. A terminal whose status is told (`told`: an
     /// agent's, or a program's own report) shows it; one without is working while a command runs,
-    /// needs you while its bell counts, and has failed when its last command did and nobody has seen.
+    /// needs input while its bell counts, and has failed when its last command did and nobody has seen.
     pub fn of(told: bool, status: Status, command: bool) -> Self {
         match (told, status) {
             (_, Status::Exited) => Self::Exited,

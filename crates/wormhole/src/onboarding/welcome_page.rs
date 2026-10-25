@@ -70,7 +70,7 @@ impl FirstRun {
                             .text_caption()
                             .text_color(ui.muted)
                             .text_center()
-                            .child("Which agent is working, which needs you, which is done."),
+                            .child("Which agent is working, which needs input, which is done."),
                     )
                     .entering(entrance.body),
             )
@@ -214,7 +214,7 @@ fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
             "welcome-needs-you",
             StatusGlyph::NeedsYou,
             "release notes",
-            "Needs you · Approve git push?",
+            "Needs input · Approve git push?",
             RowTone::Attention,
             false,
         ))

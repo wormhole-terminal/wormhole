@@ -197,7 +197,7 @@ fn a_program_that_is_no_agent_works_asks_finishes_and_fails_like_one(cx: &mut Te
     assert_eq!(told.len(), 1, "{told:?}");
     assert_eq!(
         (told[0].0.as_str(), told[0].1.as_str()),
-        (format!("{name} needs you").as_str(), "Password for sudo")
+        (format!("{name} needs input").as_str(), "Password for sudo")
     );
 
     // Done, in its own words: a banner of the finished kind, though no command crossed a threshold.

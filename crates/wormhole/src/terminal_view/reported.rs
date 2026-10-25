@@ -2,7 +2,7 @@
 //! the terminal's status.
 //!
 //! The terminal's PTY thread keeps the records and says when they changed
-//! (`PtyEvent::ProgramStatus`); this reads the one record that needs you most (`Reported`) and
+//! (`PtyEvent::ProgramStatus`); this reads the one record that needs input most (`Reported`) and
 //! turns it into a status. While any program holds a record, the status is the program's: it is
 //! exact, where the output heuristics only guess, so those stand aside ([`TerminalView::reported`]).
 //! An agent's hooks report the same way and whichever spoke last wins. Any program may report, not
@@ -155,7 +155,7 @@ impl TerminalView {
     }
 }
 
-/// The status and the words a program's record amounts to. A blocked program needs you, with its
+/// The status and the words a program's record amounts to. A blocked program needs input, with its
 /// own words or a short default for what it waits for; working is busy, done is done, and an error
 /// is failed, with what went wrong as its words. How far along a working or blocked program says it
 /// is follows its words ("Installing · 40%"); a result has no progress to show.

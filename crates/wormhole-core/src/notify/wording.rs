@@ -47,7 +47,7 @@ pub fn text(kind: Kind, about: &About) -> Text {
     let name = if about.name.trim().is_empty() { "Terminal" } else { about.name.trim() };
     match kind {
         Kind::NeedsYou => Text {
-            title: format!("{name} needs you"),
+            title: format!("{name} needs input"),
             subtitle: joined([about.who, about.folder, about.branch]),
             body: words(about.message).unwrap_or("Waiting for your answer").to_string(),
         },
@@ -192,7 +192,7 @@ mod tests {
         assert_eq!(
             text(Kind::NeedsYou, &about),
             Text {
-                title: "diff perf needs you".into(),
+                title: "diff perf needs input".into(),
                 subtitle: "Claude Code · terminal · ui-unify".into(),
                 body: "Claude wants to run cargo test -p wormhole-core".into(),
             }
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn an_unnamed_terminal_still_reads() {
-        assert_eq!(text(Kind::NeedsYou, &About::default()).title, "Terminal needs you");
+        assert_eq!(text(Kind::NeedsYou, &About::default()).title, "Terminal needs input");
     }
 
     #[test]

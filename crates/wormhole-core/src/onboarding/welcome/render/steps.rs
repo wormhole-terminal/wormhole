@@ -18,7 +18,7 @@ impl Page {
     pub(super) fn notify(&mut self, w: &Welcome) -> Vec<Hint<'static>> {
         let settings = keymap::glyphs(ActionId::Settings);
         let note = format!(
-            "A banner and a sound can tell you when a terminal needs you or an agent finishes, so you \
+            "A banner and a sound can tell you when a terminal needs input or an agent finishes, so you \
              can look away. The same switches are in Settings ({settings})."
         );
         let mut row = self.heading("Tell me when an agent needs me", &note);
@@ -35,7 +35,7 @@ impl Page {
                 Item::Notify(NotifyRow::NeedsYou) => {
                     let options = [("On", notify.needs_you), ("Off", !notify.needs_you)];
                     let meaning = "an agent asks a question or for permission";
-                    self.switch(row, line, selected, "Needs you", &options, meaning);
+                    self.switch(row, line, selected, "Needs input", &options, meaning);
                 }
                 Item::Notify(NotifyRow::AgentDone) => {
                     let options = [("On", notify.agent_done), ("Off", !notify.agent_done)];
@@ -133,9 +133,9 @@ impl Page {
                     terminals showing what a row tells you.";
         let mut row = self.heading("Watch the sidebar", note);
         let states = [
-            ("working  ", ACCENT, "the agent is busy; nothing for you to do"),
-            ("needs you", ATTENTION, "it asked a question or for permission"),
-            ("done     ", GOOD, "it finished; time to look at what it did"),
+            ("working    ", ACCENT, "the agent is busy; nothing for you to do"),
+            ("needs input", ATTENTION, "it asked a question or for permission"),
+            ("done       ", GOOD, "it finished; time to look at what it did"),
         ];
         for (word, style, meaning) in states {
             self.shown(
@@ -267,13 +267,13 @@ impl Page {
     }
 }
 
-/// The width of a switch's label ("Needs you" is the longest), so the choices line up.
-const LABEL_W: usize = 9;
+/// The width of a switch's label ("Needs input" is the longest), so the choices line up.
+const LABEL_W: usize = 11;
 
 /// Settings' three sounds, the one in use chosen.
 fn sound_choices(sound: NotifySound) -> [(&'static str, bool); 3] {
     [
-        ("Needs you only", sound == NotifySound::NeedsYou),
+        ("Needs input only", sound == NotifySound::NeedsYou),
         ("All", sound == NotifySound::All),
         ("None", sound == NotifySound::None),
     ]

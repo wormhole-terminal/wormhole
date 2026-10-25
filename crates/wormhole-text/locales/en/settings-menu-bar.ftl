@@ -34,7 +34,7 @@ settings-menu-bar-hotkey-action = Hotkey opens
 
 settings-menu-bar-jump-waiting-key = Jump to next waiting terminal
     .description = Inside { -brand }, in any window
-    .keywords = needs you waiting shortcut
+    .keywords = needs input needs you waiting shortcut
 
 ## settings_window/sections/menu_bar.rs (labels, hints and notes drawn by this page's code)
 

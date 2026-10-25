@@ -169,7 +169,7 @@ pub(super) fn render(
                     "g-row-anatomy-2",
                     "Fix pile fan-out",
                     StatusGlyph::NeedsYou,
-                    "Needs you · 2m",
+                    "Needs input · 2m",
                     false,
                 )
                 .into_any_element(),
@@ -272,7 +272,7 @@ pub(super) fn render(
             .child(row(
                 id("g-r2-needs", "g-r1-needs"),
                 glyph(id("g-g2-needs", "g-g1-needs"), StatusGlyph::NeedsYou),
-                line("Needs you · Approve cargo test?"),
+                line("Needs input · Approve cargo test?"),
                 RowTone::Attention,
                 false,
                 None,
@@ -505,7 +505,7 @@ pub(super) fn render(
             [
                 ("g-glyph-working", StatusGlyph::Working, "Working"),
                 ("g-glyph-running", StatusGlyph::Running, "Running"),
-                ("g-glyph-needs", StatusGlyph::NeedsYou, "Needs you"),
+                ("g-glyph-needs", StatusGlyph::NeedsYou, "Needs input"),
                 ("g-glyph-done", StatusGlyph::Done, "Done"),
                 ("g-glyph-idle", StatusGlyph::Idle, "Idle"),
                 ("g-glyph-bell", StatusGlyph::Bell, "Bell"),
@@ -543,7 +543,7 @@ pub(super) fn render(
                         cx,
                     ))
                     .child("Fix pile fan-out")
-                    .child(div().text_color(ui.attention_text).child("needs you · 2m")),
+                    .child(div().text_color(ui.attention_text).child("needs input · 2m")),
             )
             .child(
                 style::status_item("g-status-working", ui, false, true)

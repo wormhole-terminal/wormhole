@@ -142,7 +142,7 @@ pub struct UiColors {
     /// / `.tint`).
     pub attention_ring: Hsla,
     pub attention_tint: Hsla,
-    /// "Needs you" and "Finished" as text, also on the selected row (`agent.*.text`).
+    /// "Needs input" and "Finished" as text, also on the selected row (`agent.*.text`).
     pub attention_text: Hsla,
     pub done_text: Hsla,
     /// A status tile: black by default, an agent's own colors (Claude's, Gemini's blue to its

@@ -48,7 +48,7 @@ pub const SETTINGS_MENU_BAR_HOTKEY_ACTION_KEYWORDS: Key = Key::new(291);
 pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY: Key = Key::new(292);
 /// "Inside Wormhole, in any window"
 pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_DESCRIPTION: Key = Key::new(293);
-/// "needs you waiting shortcut"
+/// "needs input needs you waiting shortcut"
 pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_KEYWORDS: Key = Key::new(294);
 /// "Status and count"
 pub const SETTINGS_MENU_BAR_STATUS_AND_COUNT: Key = Key::new(295);

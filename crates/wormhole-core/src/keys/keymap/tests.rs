@@ -608,7 +608,7 @@ fn the_sheet_lists_the_keys_from_the_table() {
     assert_eq!(row("Previous / next prompt"), "⌘↑ ⌘↓");
     assert!(!sections.iter().flat_map(|s| &s.rows).any(|r| r.actions.contains(&ActionId::CopyOutput)));
     assert_eq!(row("Wormhole help"), "⌘?");
-    assert_eq!(row("Go to the terminal that needs you"), "⌥⌘J");
+    assert_eq!(row("Go to the terminal that needs input"), "⌥⌘J");
     // The palette and sheet rows.
     assert_eq!(row("Command palette"), "⇧⌘P");
     assert_eq!(row("Keyboard shortcuts (this sheet)"), "⌥⌘/");

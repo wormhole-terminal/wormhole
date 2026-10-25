@@ -109,7 +109,7 @@ fn f40(now: Instant) -> MenuSnapshot {
 fn the_menu_lists_terminals_by_status() {
     let now = Instant::now();
     let model = build(&f40(now), now);
-    assert_eq!(headers(&model.entries), ["Needs you", "Working", "Finished"]);
+    assert_eq!(headers(&model.entries), ["Needs input", "Working", "Finished"]);
     let rows: Vec<_> = items(&model.entries)
         .into_iter()
         .take(6)
@@ -203,7 +203,7 @@ fn the_status_item_shows_the_most_urgent_state_its_way() {
         (ItemState::NeedsYou, Mark::NeedsYou, Some("2"))
     );
     assert!(!icon.animate, "only the working state animates");
-    assert_eq!(icon.tooltip, "Wormhole — 2 need you · 1 working");
+    assert_eq!(icon.tooltip, "Wormhole — 2 need input · 1 working");
     let dot = status_icon(&all, MenuBarIcon::Status, false);
     assert_eq!((dot.mark, dot.count), (Mark::NeedsYou, None), "the dot without the count");
     let plain = status_icon(&all, MenuBarIcon::Plain, false);
@@ -308,7 +308,7 @@ fn the_dock_menu_lists_who_waits_and_works() {
     assert_eq!(
         menu,
         [
-            DockEntry::Header("Needs you"),
+            DockEntry::Header("Needs input"),
             DockEntry::Terminal { label: "prod   5m".into(), tab: 2 },
             DockEntry::Terminal { label: "diff perf   2m".into(), tab: 1 },
             DockEntry::Header("Working"),
@@ -327,7 +327,7 @@ fn the_dump_reads_like_the_menu() {
     let now = Instant::now();
     let text = dump(&build(&f40(now), now));
     assert!(text.starts_with("icon state=NeedsYou mark=NeedsYou count=Some(\"2\")"), "{text}");
-    assert!(text.contains("== Needs you\n[Bell] prod  ⇥ 5m\n    Bell · ssh deploy@prod-1\n"), "{text}");
+    assert!(text.contains("== Needs input\n[Bell] prod  ⇥ 5m\n    Bell · ssh deploy@prod-1\n"), "{text}");
     assert!(text.contains("Other Terminals  ⇥ 4  ▸\n"), "{text}");
     assert!(text.contains("Jump to Next Waiting  ⌨ ⌥⌘J\n"), "{text}");
 }

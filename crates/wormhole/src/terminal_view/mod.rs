@@ -121,7 +121,7 @@ pub struct TerminalView {
     /// Latest notification text from the agent ("Claude needs permission…").
     pub agent_message: Option<String>,
     /// What the programs in the terminal report about themselves (OSC 7501), as last read from the
-    /// terminal: the record that needs you most. `Some` while any program holds a record, which
+    /// terminal: the record that needs input most. `Some` while any program holds a record, which
     /// makes the status the program's own (see `reported`).
     program: Option<Reported>,
     /// The status and message last came from `program` (rather than from hooks or the heuristics),
@@ -168,7 +168,7 @@ pub struct TerminalView {
     in_front: bool,
     /// The bell rang in a terminal without an agent and nobody has looked since.
     bell_rang: bool,
-    /// When a bell last counted as "needs you" (at most once a minute).
+    /// When a bell last counted as "needs input" (at most once a minute).
     bell_counted: Option<Instant>,
     /// What the shell's own marks (OSC 133) say: `Some(true)` at its prompt, `Some(false)`
     /// running a command, `None` for a shell without integration (the heuristics decide alone).

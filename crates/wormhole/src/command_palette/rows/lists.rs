@@ -1,4 +1,4 @@
-//! The lists a query that is empty shows: Recent and the actions for here, the terminals by who needs you,
+//! The lists a query that is empty shows: Recent and the actions for here, the terminals by who needs input,
 //! the actions by section, the settings opened lately.
 
 use wormhole_core::keys::keymap::palette::{self as actions, Section as ActionSection};
@@ -24,7 +24,7 @@ pub(super) fn suggestions(snapshot: &Snapshot) -> Vec<Row> {
     rows
 }
 
-/// The Terminals scope with nothing typed: every window's, under who needs you, working,
+/// The Terminals scope with nothing typed: every window's, under who needs input, working,
 /// finished and idle.
 pub(super) fn terminals_by_state(snapshot: &Snapshot) -> Vec<Row> {
     let mut rows = Vec::new();

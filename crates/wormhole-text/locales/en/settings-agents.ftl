@@ -11,7 +11,7 @@ settings-agents-summary = Agents found
 
 settings-agents-group-notifications = Notifications
 
-settings-agents-notifications = Notify me when an agent needs you or finishes
+settings-agents-notifications = Notify me when an agent needs input or finishes
     .description = These, and notifications about long commands and the bell, have their own section
     .keywords = notifications alerts banner
 

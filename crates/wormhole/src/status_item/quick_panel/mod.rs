@@ -1,5 +1,5 @@
 //! The hotkey quick panel: a floating panel over whatever app is in front, without
-//! bringing Wormhole forward. It lists the status item's sections (Needs you, Working,
+//! bringing Wormhole forward. It lists the status item's sections (Needs input, Working,
 //! Recent) and a Do section; typing filters them. On a waiting row ⌘⏎ opens Reply (typed into
 //! that terminal, then Return); ⏎ opens the terminal. Numbered answers wait for agents to report
 //! their options (backlog). It is a sibling of the command palette: the same surface,

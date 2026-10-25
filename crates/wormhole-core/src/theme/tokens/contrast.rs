@@ -86,7 +86,7 @@ pub const CONTRAST_PAIRS: &[ContrastPair] = &[
     on("trust.command", "banner.warning.background", "surface.panel", 4.5),
     pair("trust.command", "surface.window", 4.5),
     // The sidebar's and the panel's cards: their fill is faint, but text and marks on them keep
-    // what they have on the column (the amber edge of a card that needs you included).
+    // what they have on the column (the amber edge of a card that needs input included).
     on("text.primary", "card", "sidebar.background", 4.5),
     on("text.muted", "card", "sidebar.background", 4.5),
     on("text.faint", "card", "sidebar.background", 3.0),

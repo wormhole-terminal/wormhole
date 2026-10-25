@@ -1,6 +1,6 @@
 //! What a hook's JSON payload adds to its event name: the detail [`super::signal`] reads after a
 //! `:` (`Notification:idle_prompt`, `SessionEnd:clear`, `PreToolUse:AskUserQuestion`), and the
-//! words the sidebar shows while the agent needs you ("Approve cargo test?").
+//! words the sidebar shows while the agent needs input ("Approve cargo test?").
 
 use serde_json::Value;
 

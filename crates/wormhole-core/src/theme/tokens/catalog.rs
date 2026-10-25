@@ -100,7 +100,7 @@ pub const UI_TOKENS: &[TokenInfo] = &[
     t("agent.bell", "Agents", "The bell's orange: the badge of a terminal that rang"),
     t("agent.attention.ring", "Agents", "The halo round a needs-you dot (overlay)"),
     t("agent.attention.tint", "Agents", "Fill of a tab that waits for input (overlay)"),
-    t("agent.attention.text", "Agents", "“Needs you” as text: second lines, the status bar"),
+    t("agent.attention.text", "Agents", "“Needs input” as text: second lines, the status bar"),
     t("agent.done.text", "Agents", "“Finished” as text: second lines"),
     t("agent.claude", "Agents", "Claude's own color: the face of its status tile"),
     t("agent.gemini", "Agents", "Gemini's own blue: the face of its status tile, from the top left"),

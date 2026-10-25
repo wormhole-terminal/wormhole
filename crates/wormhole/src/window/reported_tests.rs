@@ -275,7 +275,7 @@ fn hooks_and_reports_take_turns_and_the_last_one_wins(cx: &mut TestAppContext) {
     let t = terminal(cx, &window, 0);
     hook(cx, &window, 1, "UserPromptSubmit", None);
     assert_eq!(now(cx, &t).0, Status::Busy);
-    // The program says it needs you: that is the latest word.
+    // The program says it needs input: that is the latest word.
     report(cx, &t, "state=blocked:kind=permission:msg={msg:Run it?}");
     assert_eq!(now(cx, &t), (Status::Attention, words("Run it?")));
     // The hook says it works again; the program's records don't reset it by being cleared.
@@ -314,7 +314,7 @@ fn a_reported_question_is_told_but_a_program_cannot_flood_the_banners(cx: &mut T
     let name = |cx: &mut TestAppContext| drive(cx, &window, |ws, _, _| ws.sessions[1].name().to_string());
 
     report(cx, &t, "state=blocked:kind=permission:app=claude-code:msg={msg:Allow Bash?}");
-    let needs_you = format!("{} needs you", name(cx));
+    let needs_you = format!("{} needs input", name(cx));
     assert_eq!(notices(cx), [(needs_you, "Allow Bash?".to_string())]);
     report(cx, &t, "state=working:app=claude-code");
     assert!(notices(cx).is_empty(), "it moved on: the banner goes");
