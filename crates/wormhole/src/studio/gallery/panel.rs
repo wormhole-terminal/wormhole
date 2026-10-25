@@ -12,6 +12,7 @@ use gpui_kit::component::switch::Switch;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::{BandKind, BandParts, FileLines, FileRow, ItemParts, Section};
+use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::git::ChangeKind;
 use wormhole_core::project::{Feature, FeatureStanding};
 
@@ -40,6 +41,7 @@ pub(super) fn render(
     part: usize,
     cx: &mut Context<GalleryView>,
 ) -> AnyElement {
+    let notes_on = crate::settings::settings(cx).feature_enabled(FeatureFlag::NotesAndTasks);
     let ui = env.ui;
     let section = |id: &'static str, title: &'static str, section, count: Option<&'static str>| {
         style::section_card(
@@ -272,7 +274,7 @@ pub(super) fn render(
             style::CommitRow {
                 subject: subject.into(),
                 sha: sha.into(),
-                author: "Benny".into(),
+                author: "Ada".into(),
                 age: age.into(),
                 code_font: crate::fonts::code_font(cx).0,
                 expanded,
@@ -406,7 +408,9 @@ pub(super) fn render(
             .flex()
             .items_center()
             .gap_1()
-            .child(style::icon_tab("g-ftab-notes", ui, IconName::StickyNote, "Notes", false, None))
+            .when(notes_on, |d| {
+                d.child(style::icon_tab("g-ftab-notes", ui, IconName::StickyNote, "Notes", false, None))
+            })
             .child(style::icon_tab("g-ftab-changes", ui, IconName::GitCompare, "Changes", false, Some(3)))
             .child(env.mark(
                 "icon.tab",
@@ -448,7 +452,14 @@ pub(super) fn render(
 
     // The page builds one piece at a time (a piece is a list item).
     match part {
-        0 => div().flex().flex_col().gap_3().child(tabs()).child(card_column(ui, notes())).into_any_element(),
+        // Notes and tasks are a feature behind a flag: while it is off nothing shows their rows.
+        0 => div()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .child(tabs())
+            .when(notes_on, |d| d.child(card_column(ui, notes())))
+            .into_any_element(),
         1 => card_column(ui, changes()).into_any_element(),
         2 => card_column(ui, history()).into_any_element(),
         3 => card_column(ui, project()).into_any_element(),

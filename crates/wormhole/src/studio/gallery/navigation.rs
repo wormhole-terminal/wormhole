@@ -19,7 +19,7 @@ pub(super) fn render(
     let tabs = div()
         .flex()
         .gap_1()
-        .child(style::pill("g-tab-notes", ui, true, true).child("Notes"))
+        .child(style::pill("g-tab-usage", ui, true, true).child("Usage"))
         .child(
             style::pill("g-tab-changes", ui, false, true).child("Changes").child(style::count_badge(ui, "3")),
         )
@@ -29,7 +29,7 @@ pub(super) fn render(
         .flex()
         .items_center()
         .gap_1()
-        .child(style::icon_tab("g-itab-notes", ui, IconName::StickyNote, "Notes", false, Some(2)))
+        .child(style::icon_tab("g-itab-usage", ui, IconName::Gauge, "Usage", false, Some(2)))
         // Active with a count: the tab is the selected tint, its badge `state.selected.inset`.
         .child(style::icon_tab("g-itab-changes", ui, IconName::GitCompare, "Changes", true, Some(3)))
         .child(style::icon_tab("g-itab-history", ui, IconName::GitCommitHorizontal, "History", false, None));

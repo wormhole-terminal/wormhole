@@ -2,6 +2,7 @@
 //! sentence-case labels, with the keys read from the action table. A row of an action that is
 //! not live yet is left out until it is.
 
+use std::borrow::Cow;
 use std::ops;
 
 use super::{ActionId, Stage, entry};
@@ -18,7 +19,9 @@ pub enum Keys {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Row {
-    pub label: &'static str,
+    /// The table's label, or for a row that names each of its actions (" · " between them), the
+    /// names of the ones shown.
+    pub label: Cow<'static, str>,
     pub actions: Vec<ActionId>,
     /// The keys to show, in order (for a range, the first and the last).
     pub keys: Vec<KeySpec>,
@@ -159,7 +162,14 @@ pub fn sections_without(hidden: &[ActionId]) -> Vec<Section> {
                 .filter_map(|&(label, actions, style)| {
                     let shown: Vec<ActionId> =
                         actions.iter().copied().filter(|a| !hidden.contains(a)).collect();
-                    if shown.is_empty() { None } else { row(label, &shown, style) }
+                    if shown.is_empty() {
+                        return None;
+                    }
+                    if shown.len() == actions.len() {
+                        return row(Cow::Borrowed(label), &shown, style);
+                    }
+                    // A run with a gap is no run: "⌃⌘1 … ⌃⌘4" would promise the ⌃⌘3 that is hidden.
+                    row(label_of(label, actions, &shown), &shown, Keys::Each)
                 })
                 .collect(),
         })
@@ -167,7 +177,23 @@ pub fn sections_without(hidden: &[ActionId]) -> Vec<Section> {
         .collect()
 }
 
-fn row(label: &'static str, actions: &[ActionId], style: Keys) -> Option<Row> {
+/// A row's label once some of its actions are hidden: a label that names each action in turn
+/// ("Changes · History · Notes") names the ones shown; any other stays as written.
+fn label_of(label: &'static str, actions: &[ActionId], shown: &[ActionId]) -> Cow<'static, str> {
+    let parts: Vec<&str> = label.split(" · ").collect();
+    if parts.len() != actions.len() {
+        return Cow::Borrowed(label);
+    }
+    let named: Vec<&str> = actions
+        .iter()
+        .zip(parts)
+        .filter(|(action, _)| shown.contains(action))
+        .map(|(_, part)| part)
+        .collect();
+    Cow::Owned(named.join(" · "))
+}
+
+fn row(label: Cow<'static, str>, actions: &[ActionId], style: Keys) -> Option<Row> {
     let entries: Vec<_> = actions.iter().map(|id| entry(*id)).collect::<Option<_>>()?;
     if entries.iter().any(|e| e.stage != Stage::Now && e.stage != Stage::System) {
         return None;
@@ -241,7 +267,7 @@ pub fn filter(sections: &[Section], query: &str) -> Filtered {
             let rows = section
                 .rows
                 .iter()
-                .filter_map(|row| matches(query, row.label, &row.all_keys()).map(|hit| (row.clone(), hit)))
+                .filter_map(|row| matches(query, &row.label, &row.all_keys()).map(|hit| (row.clone(), hit)))
                 .collect();
             (section.title, rows)
         })

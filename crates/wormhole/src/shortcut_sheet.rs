@@ -238,8 +238,9 @@ impl Render for ShortcutSheet {
         let heights: Vec<usize> = found.sections.iter().map(|(_, rows)| rows.len() + 1).collect();
         let section = |(title, rows): &(&'static str, Vec<(Row, Hit)>)| {
             div().flex().flex_col().child(style::palette_label(ui, *title, None).px_0()).children(
-                rows.iter()
-                    .map(|(row, hit)| shortcut(ui, row.label.into(), hit.label.clone(), key_caps(ui, row))),
+                rows.iter().map(|(row, hit)| {
+                    shortcut(ui, row.label.as_ref().into(), hit.label.clone(), key_caps(ui, row))
+                }),
             )
         };
         let runs = sheet::columns(&heights, columns);

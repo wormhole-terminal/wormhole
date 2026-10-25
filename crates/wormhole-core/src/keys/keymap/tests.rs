@@ -1,5 +1,5 @@
 use super::menus::{Command, Item, MenuState, dump, menus};
-use super::sheet::{Keys, columns, filter, sections};
+use super::sheet::{Keys, columns, filter, sections, sections_without};
 use super::{
     ActionId, KeyUse, Scope, Stage, action_for, entries, entry, glyphs, list_action, terminal_action,
 };
@@ -592,6 +592,13 @@ fn the_sheet_lists_the_keys_from_the_table() {
     assert_eq!(row("Previous / next terminal"), "⌃⌘↑ ⌃⌘↓");
     assert_eq!(row("Terminals 1–9 (hold ⌘ to see them)"), "⌘1 … ⌘9");
     assert_eq!(row("Changes · History · Notes · Usage · Project"), "⌃⌘1 … ⌃⌘5");
+    // With notes and project folders off (a release build), the row names and keys what is left.
+    let hidden = sections_without(&[ActionId::ShowNotes, ActionId::ShowProject, ActionId::NewNote]);
+    let tabs = hidden.iter().flat_map(|s| &s.rows).find(|r| r.label.starts_with("Changes")).expect("tab row");
+    assert_eq!(
+        (tabs.label.as_ref(), tabs.keys_text().as_str()),
+        ("Changes · History · Usage", "⌃⌘1 ⌃⌘2 ⌃⌘4")
+    );
     assert_eq!(row("Next / previous area"), "F6 ⇧F6");
     assert_eq!(row("Bigger / smaller / actual size"), "⌘+ ⌘- ⌘0");
     assert_eq!(row("Hide / show status bar"), "⌘/");
@@ -654,11 +661,11 @@ fn the_sheet_is_a_projection_of_the_table() {
 #[test]
 fn the_sheet_filter_finds_labels_and_keys() {
     let sheet = sections();
-    let labels = |query: &str| -> Vec<&str> {
+    let labels = |query: &str| -> Vec<String> {
         filter(&sheet, query)
             .sections
             .iter()
-            .flat_map(|(_, rows)| rows.iter().map(|(r, _)| r.label))
+            .flat_map(|(_, rows)| rows.iter().map(|(r, _)| r.label.to_string()))
             .collect()
     };
     // "⌘W" finds Close terminal, and not Close window's ⇧⌘W.
