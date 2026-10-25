@@ -230,6 +230,40 @@ fn every_capture_is_percent_encoded_so_it_cannot_change_the_target() {
 }
 
 #[test]
+fn a_capture_that_is_a_dot_segment_leaves_no_target() {
+    let r = jira("https://acme.atlassian.net/browse/{1}");
+    for capture in ["..", ".", "%2e", "%2E%2e"] {
+        // `%2e` is encoded to `%252e`, which stays text: only the bare dots walk a path.
+        let target = target_of(&r, &format!("ACME-{capture}"));
+        let walks = capture == ".." || capture == ".";
+        assert_eq!(target.is_none(), walks, "{capture}: {target:?}");
+    }
+    // Neither is there one when two captures meet in one segment.
+    let r = rules(&format!(
+        "{JIRA}{}",
+        rule(
+            "t",
+            r"(\.)(\.)",
+            "action = { type = \"open-url\", url = \"https://acme.atlassian.net/{1}{2}/issues\" }"
+        )
+    ));
+    assert_eq!(target_of(&r, "a..b"), None);
+    // One dot is a name, not a segment of the path walked up.
+    let r = rules(&format!(
+        "{JIRA}{}",
+        rule(
+            "t",
+            r"(\.)(\.)",
+            "action = { type = \"open-url\", url = \"https://acme.atlassian.net/{1}x{2}\" }"
+        )
+    ));
+    assert!(target_of(&r, "a..b").is_some());
+    // The query and the fragment are not the path.
+    let r = jira("https://acme.atlassian.net/search?q={1}#{1}");
+    assert!(target_of(&r, "ACME-..").is_some());
+}
+
+#[test]
 fn the_template_around_a_capture_is_not_encoded() {
     let r = jira("https://acme.atlassian.net/search?q={0}&n={1}");
     assert_eq!(

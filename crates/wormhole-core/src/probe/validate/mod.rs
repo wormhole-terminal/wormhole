@@ -34,6 +34,7 @@ pub(crate) use argv::capture_index;
 pub(crate) use identity::MAX_RULES;
 pub(crate) use pattern::SIZE_LIMIT;
 pub use permissions::{Combination, Confirmation, DeclaredPermission, ProgramClass, ProgramNote, Summary};
+pub(crate) use template::has_dot_segment;
 
 /// How much a finding matters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

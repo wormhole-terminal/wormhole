@@ -208,6 +208,20 @@ fn open_url(url: &str, open: &str) -> String {
 }
 
 #[test]
+fn a_link_that_spells_a_dot_segment_is_refused() {
+    for url in [
+        "https://acme.net/a/../{1}",
+        "https://acme.net/a/./{1}",
+        "https://acme.net/%2e%2E/{1}",
+        "https://acme.net/..",
+        "https://acme.net/a/..?q={1}",
+    ] {
+        assert!(has(&open_url(url, "\"acme.net\""), "action-url-dot-segment"), "{url}");
+    }
+    clean(&open_url("https://acme.net/a/b.c/{1}{2}?q=../..", "\"acme.net\""));
+}
+
+#[test]
 fn open_url_has_a_fixed_https_host_the_probe_may_open() {
     clean(&open_url("https://acme.atlassian.net/browse/{1}", "\"acme.atlassian.net\""));
     assert!(has(&open_url("https://acme.atlassian.net/browse/{1}", ""), "action-url-host-not-permitted"));

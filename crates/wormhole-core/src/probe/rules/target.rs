@@ -4,7 +4,7 @@
 use super::compile::CompiledRules;
 use super::matching::{Match, scanned};
 use crate::probe::manifest::ActionKind;
-use crate::probe::validate::capture_index;
+use crate::probe::validate::{capture_index, has_dot_segment};
 
 /// What a rule's action comes to for one match.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,7 +30,8 @@ impl Target {
 /// The target of `rule`'s action for `found`, a match of `matches(rules, line)` on the same `line`.
 /// `None` when the rule has no action, or when the action must not run: a capture that starts with
 /// `-` would be read as an option by the program it is handed to, so the command is refused (the
-/// pattern `validate` accepts cannot produce one, but a Probe that skipped `validate` can).
+/// pattern `validate` accepts cannot produce one, but a Probe that skipped `validate` can); and a link
+/// that came out with a `.` or `..` segment in its path, because of what was captured, is refused.
 pub fn target(rules: &CompiledRules, found: &Match, line: &str) -> Option<Target> {
     let rule = rules.rules.get(found.rule)?;
     let action = rule.rule.action.as_ref()?;
@@ -47,7 +48,10 @@ pub fn target(rules: &CompiledRules, found: &Match, line: &str) -> Option<Target
         ActionKind::None => None,
         ActionKind::OpenUrl => {
             let url = action.url.as_deref()?;
-            Some(Target::OpenUrl(expand(url, |n| percent_encode(capture(n)))))
+            let url = expand(url, |n| percent_encode(capture(n)));
+            // Encoding keeps a capture in its slot, but not a `.` or `..` that fills a whole segment:
+            // browsers walk the path up there (`%2e` too), which would change where the link goes.
+            (!has_dot_segment(&url)).then_some(Target::OpenUrl(url))
         }
         ActionKind::Copy => Some(Target::Copy(match &action.text {
             Some(template) => expand(template, |n| capture(n).to_string()),

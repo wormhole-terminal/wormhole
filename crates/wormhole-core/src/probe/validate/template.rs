@@ -48,6 +48,35 @@ pub(crate) fn https_host(url: &str) -> Result<&str, &'static str> {
     Ok(host)
 }
 
+/// Whether the path of the `https` link `url` (between the host and the first `?` or `#`) has a segment
+/// that is `.` or `..`, however it is spelt: a browser (WHATWG URL) reads `%2e` in any case as a dot,
+/// and `\\` as a `/`. Such a segment walks the path up, so `https://host/browse/{1}` with a capture of
+/// `..` would open `https://host/` and `{1}{2}` with two `.` does the same. A `{n}` in a template is not
+/// a dot, so a template is judged by what it spells itself.
+pub(crate) fn has_dot_segment(url: &str) -> bool {
+    let after = url.strip_prefix("https://").unwrap_or(url);
+    let Some(path_at) = after.find(['/', '\\']) else { return false };
+    let path = &after[path_at..];
+    let path = &path[..path.find(['?', '#']).unwrap_or(path.len())];
+    path.split(['/', '\\']).any(|segment| {
+        let mut plain = String::with_capacity(segment.len());
+        let mut rest = segment;
+        while let Some(at) = rest.find('%') {
+            plain.push_str(&rest[..at]);
+            let after = &rest[at + 1..];
+            if after.len() >= 2 && after.is_char_boundary(2) && after[..2].eq_ignore_ascii_case("2e") {
+                plain.push('.');
+                rest = &after[2..];
+            } else {
+                plain.push('%');
+                rest = after;
+            }
+        }
+        plain.push_str(rest);
+        plain == "." || plain == ".."
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,6 +120,45 @@ mod tests {
             "https://acme.net\\@evil.example/",
         ] {
             assert!(https_host(bad).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn a_dot_segment_is_found_however_it_is_spelt() {
+        for url in [
+            "https://h.example/a/../b",
+            "https://h.example/a/./b",
+            "https://h.example/..",
+            "https://h.example/.",
+            "https://h.example/%2e%2e/x",
+            "https://h.example/%2E/x",
+            "https://h.example/.%2e",
+            "https://h.example/a/%2e%2E",
+            "https://h.example/a\\..\\b",
+            "https://h.example/browse/..?q=1",
+            "https://h.example/a/..#frag",
+        ] {
+            assert!(has_dot_segment(url), "{url}");
+        }
+    }
+
+    #[test]
+    fn other_paths_are_not_dot_segments() {
+        for url in [
+            "https://h.example",
+            "https://h.example/",
+            "https://h.example/a/b.c",
+            "https://h.example/...",
+            "https://h.example/a/.hidden",
+            "https://h.example/%252e",
+            "https://h.example/{1}",
+            "https://h.example/browse/ACME-1",
+            "https://h.example/?q=../..",
+            "https://h.example#../",
+            "https://h.example/a%2",
+            "https://h.example/a%é2e",
+        ] {
+            assert!(!has_dot_segment(url), "{url}");
         }
     }
 }

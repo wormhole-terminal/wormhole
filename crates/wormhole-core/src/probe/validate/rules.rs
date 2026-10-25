@@ -178,6 +178,13 @@ fn check_action(
                     format!("must be one line without spaces, at most {MAX_URL_BYTES} bytes"),
                 );
             }
+            if template::has_dot_segment(url) {
+                out.error(
+                    "action-url-dot-segment",
+                    &path,
+                    "has a `.` or `..` segment in its path, which walks the link up out of where it was written",
+                );
+            }
             match template::https_host(url) {
                 Err(why) => out.error(
                     if why.contains("capture") { "action-url-host-capture" } else { "action-url" },
