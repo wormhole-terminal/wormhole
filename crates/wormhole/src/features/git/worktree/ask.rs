@@ -267,6 +267,15 @@ impl Worktrees {
     /// the name is one git won't take, which the dialog then says.
     pub(super) fn confirm_worktree(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
         let Some(ask) = &self.asking else { return true };
+        // Trust may have been revoked (or the project changed) while the dialog was up: Create asks again,
+        // as the menu and the command line did when they opened it.
+        if let Err(why) = FeatureTable::worktree_allowed(&ask.profile, &ask.repo, cx) {
+            if let Some(ask) = &mut self.asking {
+                ask.error = Some(why.into());
+            }
+            cx.notify();
+            return false;
+        }
         let typed = ask.input.read(cx).value().to_string();
         match worktree::plan(&ask.repo, &typed, base(cx).as_deref()) {
             Ok(plan) => {

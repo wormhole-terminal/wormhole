@@ -232,6 +232,34 @@ fn a_project_that_is_not_trusted_gets_no_worktree_from_the_menu_or_the_command_l
     assert_eq!(again.expect_err("refused").code, ErrorCode::Failed);
 }
 
+/// Trust is asked again when Create is pressed: revoked while the dialog is up, nothing is made and the
+/// dialog says why.
+#[gpui_kit::test]
+fn create_makes_nothing_in_a_project_whose_trust_was_revoked_while_the_dialog_was_up(
+    cx: &mut TestAppContext,
+) {
+    if isolate("create_makes_nothing_in_a_project_whose_trust_was_revoked_while_the_dialog_was_up") {
+        return;
+    }
+    let window = start(cx, 1);
+    let base = base(cx, "worktrees-revoked");
+    let root = in_repo(cx, &window, "revoked");
+    with_project(&root);
+    trust(cx, &root);
+    drive(cx, &window, menu_item);
+    assert!(asking(cx, &window), "trusted, the dialog opens");
+    cx.update(|cx| {
+        assert!(hub_mut(cx).trust.revoke(&root), "the approval was there");
+    });
+    assert!(!create(cx, &window, "topic"), "the dialog stays");
+    assert!(asking(cx, &window));
+    assert_eq!(sessions(cx, &window), 1, "no terminal was opened");
+    assert!(base.read_dir().is_ok_and(|mut made| made.next().is_none()), "no folder was made");
+    let said =
+        read_cx(cx, &window, |ws, cx| worktrees(ws).read(cx).asking.as_ref().and_then(|a| a.error.clone()));
+    assert!(said.is_some_and(|why| why.contains("Trust the project first")), "and it says why");
+}
+
 /// A dialog that is up when its window moves to another profile follows that profile's approvals: Create
 /// reads the project's setup as the window's profile is now, not as it was when the dialog opened.
 #[gpui_kit::test]
