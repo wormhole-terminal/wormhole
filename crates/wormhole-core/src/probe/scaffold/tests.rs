@@ -1,4 +1,6 @@
 use std::fs;
+use std::io;
+use std::path::Path;
 
 use tempfile::TempDir;
 
@@ -135,6 +137,69 @@ fn an_existing_folder_or_file_is_never_touched() {
     crate::platform::fs::symlink(tmp.path().join("nowhere"), tmp.path().join("dangling")).expect("link");
     assert!(matches!(create(tmp.path(), "dangling", Kind::Rules), Err(ScaffoldError::Exists(_))));
     assert!(!tmp.path().join("nowhere").exists());
+}
+
+#[test]
+fn a_write_that_fails_half_way_takes_back_everything_this_call_made() {
+    for kind in Kind::ALL {
+        let tmp = TempDir::new().expect("tempdir");
+        fs::write(tmp.path().join("keep"), "mine").expect("write");
+        let mut calls = 0;
+        let mut failing = |path: &Path, root: &Path, bytes: &[u8], executable: bool| {
+            calls += 1;
+            if calls == 3 {
+                return Err(io::Error::other("disk full"));
+            }
+            super::write_file(path, root, bytes, executable)
+        };
+        let err = create_with(tmp.path(), "my-probe", kind, &mut failing).expect_err("fails");
+        assert!(
+            matches!(&err, ScaffoldError::Io { source, .. } if source.to_string() == "disk full"),
+            "{err}"
+        );
+        assert!(!tmp.path().join("my-probe").exists(), "{kind:?}: the folder is gone");
+        assert_eq!(
+            fs::read_dir(tmp.path()).expect("lists").count(),
+            1,
+            "{kind:?}: and nothing else was touched"
+        );
+        // So a retry is not told the folder exists.
+        create(tmp.path(), "my-probe", kind).unwrap_or_else(|err| panic!("{kind:?}: {err}"));
+    }
+}
+
+#[test]
+fn taking_back_leaves_what_it_did_not_make() {
+    let tmp = TempDir::new().expect("tempdir");
+    let mut calls = 0;
+    let mut failing = |path: &Path, root: &Path, bytes: &[u8], executable: bool| {
+        calls += 1;
+        if calls == 4 {
+            // Someone else puts a file in the new folder while it is being written.
+            fs::write(root.join("scripts/theirs.txt"), "x").expect("write");
+            return Err(io::Error::other("disk full"));
+        }
+        super::write_file(path, root, bytes, executable)
+    };
+    create_with(tmp.path(), "my-probe", Kind::Command, &mut failing).expect_err("fails");
+    // `remove_dir` stops at a folder that is not empty, and so does what is above it.
+    assert!(tmp.path().join("my-probe/scripts/theirs.txt").exists());
+    assert!(!tmp.path().join("my-probe/probe.toml").exists());
+    assert!(!tmp.path().join("my-probe/scripts/hello.sh").exists());
+}
+
+#[test]
+fn every_write_is_held_to_the_real_path_of_the_new_folder() {
+    let tmp = TempDir::new().expect("tempdir");
+    let real = fs::canonicalize(tmp.path()).expect("canonical");
+    let mut roots = Vec::new();
+    let mut seen = |path: &Path, root: &Path, bytes: &[u8], executable: bool| {
+        roots.push(root.to_path_buf());
+        super::write_file(path, root, bytes, executable)
+    };
+    create_with(tmp.path(), "my-probe", Kind::Rules, &mut seen).expect("creates");
+    assert_eq!(roots.len(), 3);
+    assert!(roots.iter().all(|root| *root == real.join("my-probe")), "{roots:?}");
 }
 
 #[test]

@@ -120,6 +120,29 @@ pub fn preview(id: &str, kind: Kind) -> Result<ProbeFolder, ScaffoldError> {
 
 /// Make `<parent>/<id>/` a Probe of `kind`. `parent` must exist; `<parent>/<id>` must not.
 pub fn create(parent: &Path, id: &str, kind: Kind) -> Result<Created, ScaffoldError> {
+    create_with(parent, id, kind, &mut write_file)
+}
+
+/// Writes one file of a Probe: its path, the canonical folder it must stay inside, its bytes and
+/// whether it is a program.
+type WriteFile<'a> = dyn FnMut(&Path, &Path, &[u8], bool) -> io::Result<()> + 'a;
+
+fn write_file(path: &Path, root: &Path, bytes: &[u8], executable: bool) -> io::Result<()> {
+    let policy = LinkPolicy::Within(root);
+    if executable {
+        files::write_atomic_executable(path, bytes, policy)
+    } else {
+        files::write_atomic(path, bytes, policy)
+    }
+}
+
+/// [`create`] with the writing of each file in the caller's hands, so a failure half way can be tried.
+fn create_with(
+    parent: &Path,
+    id: &str,
+    kind: Kind,
+    write: &mut WriteFile<'_>,
+) -> Result<Created, ScaffoldError> {
     let (planned, _) = plan::build(id, kind)?;
     match fs::metadata(parent) {
         Ok(meta) if meta.is_dir() => {}
@@ -134,19 +157,62 @@ pub fn create(parent: &Path, id: &str, kind: Kind) -> Result<Created, ScaffoldEr
         io::ErrorKind::AlreadyExists => ScaffoldError::Exists(root.clone()),
         _ => ScaffoldError::Io { path: root.clone(), source },
     })?;
-    let mut written = Vec::with_capacity(planned.len());
-    for file in planned {
-        let path = root.join(file.path);
-        let policy = LinkPolicy::Within(&root);
-        let result = if file.executable {
-            files::write_atomic_executable(&path, file.text.as_bytes(), policy)
-        } else {
-            files::write_atomic(&path, file.text.as_bytes(), policy)
-        };
-        result.map_err(|source| ScaffoldError::Io { path, source })?;
-        written.push(file.path.to_string());
+    // Resolved once, now that the folder is ours: every write is held to this real path, so a link put
+    // in the place of `<parent>` or of `<id>` afterwards cannot send the files elsewhere.
+    let real = match fs::canonicalize(&root) {
+        Ok(real) => real,
+        Err(source) => {
+            let _ = fs::remove_dir(&root);
+            return Err(ScaffoldError::Io { path: root, source });
+        }
+    };
+    let mut made = Made::default();
+    for file in &planned {
+        let path = real.join(file.path);
+        made.folders_for(&real, &path);
+        let result = write(&path, &real, file.text.as_bytes(), file.executable);
+        if let Err(source) = result {
+            made.undo(&real);
+            return Err(ScaffoldError::Io { path: root.join(file.path), source });
+        }
+        made.files.push(path);
     }
-    Ok(Created { root, files: written })
+    Ok(Created { root, files: planned.iter().map(|file| file.path.to_string()).collect() })
+}
+
+/// What a `create` has made so far, to take back exactly that and nothing else.
+#[derive(Default)]
+struct Made {
+    files: Vec<PathBuf>,
+    /// Folders below the Probe's, outermost first.
+    folders: Vec<PathBuf>,
+}
+
+impl Made {
+    /// Note the folders between `root` and `file` that are not there yet, which writing it creates.
+    fn folders_for(&mut self, root: &Path, file: &Path) {
+        let mut missing: Vec<PathBuf> = file
+            .ancestors()
+            .skip(1)
+            .take_while(|dir| *dir != root && dir.starts_with(root))
+            .filter(|dir| !dir.exists())
+            .map(Path::to_path_buf)
+            .collect();
+        missing.reverse();
+        self.folders.extend(missing);
+    }
+
+    /// Remove what was made: each file, then each folder, deepest first, then the Probe's own folder.
+    /// Never a recursive removal, so a folder that holds anything else is left as it is.
+    fn undo(&self, root: &Path) {
+        for file in self.files.iter().rev() {
+            let _ = fs::remove_file(file);
+        }
+        for dir in self.folders.iter().rev() {
+            let _ = fs::remove_dir(dir);
+        }
+        let _ = fs::remove_dir(root);
+    }
 }
 
 #[cfg(test)]
