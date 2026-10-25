@@ -10,9 +10,9 @@ use crate::probe::scan::scan_data;
 use crate::probe::validate::Confirmation;
 use crate::storage::paths::DataRoot;
 
-const NOW: u64 = 1_800_000_000;
+pub(super) const NOW: u64 = 1_800_000_000;
 
-fn manifest(id: &str, permissions: &str, extra: &str) -> String {
+pub(super) fn manifest(id: &str, permissions: &str, extra: &str) -> String {
     format!(
         "[probe]\nid = \"{id}\"\nname = \"Acme tools\"\ndescription = \"d\"\nauthor = \"a\"\n\
          version = \"0.3.0\"\nwormhole = \">=1.3\"\napi = 1\n\n[permissions]\n{permissions}\n{extra}"
@@ -22,7 +22,7 @@ fn manifest(id: &str, permissions: &str, extra: &str) -> String {
 const DEPLOY: &str = "[[contributes.commands]]\nid = \"deploy\"\ntitle = \"Deploy\"\n\
     run = [\"./scripts/deploy.sh\"]\nin = \"new-terminal\"\ncwd = \"terminal\"\n";
 
-fn install(root: &DataRoot, id: &str, permissions: &str) {
+pub(super) fn install(root: &DataRoot, id: &str, permissions: &str) {
     let dir = root.probes_dir().join(id);
     fs::create_dir_all(dir.join("scripts")).expect("mkdir");
     fs::write(dir.join("probe.toml"), manifest(id, permissions, DEPLOY)).expect("manifest");
@@ -31,37 +31,46 @@ fn install(root: &DataRoot, id: &str, permissions: &str) {
 }
 
 /// The scratch folder; its copies are read-only, so they are made deletable before it goes.
-struct Scratch {
+pub(super) struct Scratch {
+    pub(super) data: PathBuf,
     approved: PathBuf,
-    _tmp: TempDir,
+    pub(super) _tmp: TempDir,
 }
 
 impl Drop for Scratch {
     fn drop(&mut self) {
         let _ = snapshot::remove_tree(&self.approved);
+        // A test that left a folder unreadable or read-only for the checks below.
+        let _ = set_mode(self.data.as_path(), 0o700);
     }
 }
 
-fn setup() -> (Scratch, DataRoot) {
+pub(super) fn setup() -> (Scratch, DataRoot) {
     let tmp = TempDir::new().expect("tempdir");
     let root = DataRoot::new(tmp.path().join("data"));
     fs::create_dir_all(root.base()).expect("data dir");
-    (Scratch { approved: root.probes_approved_dir(), _tmp: tmp }, root)
+    (Scratch { data: root.base().to_path_buf(), approved: root.probes_approved_dir(), _tmp: tmp }, root)
 }
 
-fn request(root: &DataRoot, id: &str) -> Request {
+pub(super) fn request(root: &DataRoot, id: &str) -> Request {
     read_one(root, id).expect("a request")
 }
 
-fn state(root: &DataRoot, id: &str) -> ProbeState {
-    list(root).expect("lists").into_iter().find(|e| e.folder == id).expect("listed").state
+pub(super) fn state(root: &DataRoot, id: &str) -> ProbeState {
+    list(root).expect("lists").entries.into_iter().find(|e| e.folder == id).expect("listed").state
 }
 
-const ACME: &str = "process = [\"./scripts/deploy.sh\"]\nnotify = true\n";
+pub(super) const ACME: &str = "process = [\"./scripts/deploy.sh\"]\nnotify = true\n";
 
-fn approve_all(root: &DataRoot, id: &str) -> Request {
+/// The yes that the rules ask for: Touch ID, which a test only stands in for (nothing here reaches the system).
+pub(super) fn approve_with(root: &DataRoot, request: &Request, grants: &Grants) {
+    let confirmed = request.confirm(grants, Proof::TouchId).expect("a yes");
+    approve(root, request, &confirmed, NOW).expect("approves");
+}
+
+pub(super) fn approve_all(root: &DataRoot, id: &str) -> Request {
     let request = request(root, id);
-    approve(root, &request, &request.initial_grants(), NOW).expect("approves");
+    approve_with(root, &request, &request.initial_grants());
     request
 }
 
@@ -117,7 +126,7 @@ fn what_cannot_be_enabled_says_why() {
     .expect("write");
     fs::write(coded.join("src/index.ts"), "export {}\n").expect("write");
 
-    let rows = list(&root).expect("lists");
+    let rows = list(&root).expect("lists").entries;
     let by = |folder: &str| rows.iter().find(|e| e.folder == folder).expect(folder);
     assert!(matches!(&by("broken").state, ProbeState::Invalid(reason) if reason.contains("probe.toml")));
     assert!(by("broken").probe.is_none());
@@ -156,7 +165,7 @@ fn the_copy_is_made_from_the_bytes_that_were_shown_not_from_the_disk() {
     let request = request(&root, "acme-tools");
     // Edited while the sheet was open.
     fs::write(root.probes_dir().join("acme-tools/scripts/deploy.sh"), "#!/bin/sh\nevil\n").expect("edit");
-    approve(&root, &request, &request.initial_grants(), NOW).expect("approves");
+    approve_with(&root, &request, &request.initial_grants());
 
     let snapshot = ApprovalStore::load(&root).snapshot(&root, "acme-tools").expect("approved");
     snapshot.verify().expect("the copy matches what was shown");
@@ -177,14 +186,18 @@ fn a_tampered_snapshot_does_not_verify() {
     set_mode(&snapshot.dir().join("scripts"), 0o700).expect("chmod");
     set_mode(&script, 0o700).expect("chmod");
     fs::write(&script, "#!/bin/sh\nevil\n").expect("tamper");
-    assert!(matches!(snapshot.verify(), Err(VerifyError::Differs)));
-    assert_eq!(state(&root, "acme-tools"), ProbeState::On, "the live folder is still the approved one");
+    assert_eq!(snapshot.verify(), Err(VerifyError::Differs));
+    // The live folder is the approved one, but a copy that is not what was approved needs approving again.
+    assert_eq!(state(&root, "acme-tools"), ProbeState::Changed);
+    let row =
+        list(&root).expect("lists").entries.into_iter().find(|e| e.folder == "acme-tools").expect("row");
+    assert_eq!(row.copy_problem, Some(VerifyError::Differs));
 
     fs::write(&script, "#!/bin/sh\necho deploy\n").expect("restore");
     snapshot.verify().expect("restored");
     set_mode(snapshot.dir(), 0o700).expect("chmod");
     fs::write(snapshot.dir().join("planted"), "x").expect("plant");
-    assert!(matches!(snapshot.verify(), Err(VerifyError::Differs)), "an added file counts");
+    assert_eq!(snapshot.verify(), Err(VerifyError::Differs), "an added file counts");
 }
 
 #[test]
@@ -194,7 +207,7 @@ fn a_missing_snapshot_does_not_verify() {
     approve_all(&root, "acme-tools");
     let snapshot = ApprovalStore::load(&root).snapshot(&root, "acme-tools").expect("approved");
     snapshot::remove(&root, "acme-tools").expect("removed");
-    assert!(matches!(snapshot.verify(), Err(VerifyError::Missing)));
+    assert_eq!(snapshot.verify(), Err(VerifyError::Missing));
 }
 
 #[test]
@@ -230,7 +243,7 @@ fn removing_a_probe_removes_its_approval_and_copy_and_leftovers() {
 
     fs::remove_dir_all(root.probes_dir().join("acme-tools")).expect("the user deletes the folder");
     let present: BTreeSet<String> = scan_data(&root).expect("scans").into_iter().map(|s| s.name).collect();
-    sweep(&root, &present).expect("sweeps");
+    sweep(&root, Some(&present)).expect("sweeps");
 
     let kept: Vec<_> = fs::read_dir(root.probes_approved_dir())
         .expect("dir")
@@ -268,7 +281,7 @@ fn the_grants_are_kept_and_a_refused_permission_stays_refused() {
     let mut grants = first.initial_grants();
     assert!(grants.is_granted(&notify), "on by default");
     grants.set(&notify, false);
-    approve(&root, &first, &grants, NOW).expect("approves");
+    approve_with(&root, &first, &grants);
 
     let store = ApprovalStore::load(&root);
     let approval = store.get("acme-tools").expect("approved");

@@ -3,15 +3,16 @@
 use super::store::ApprovalStore;
 use crate::probe::read::ProbeFolder;
 use crate::probe::validate::{Report, Severity};
+use crate::storage::paths::DataRoot;
 
 /// Whether a Probe is on, and if not, why.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ProbeState {
     /// Valid and not approved.
     Off,
-    /// Approved, and the folder is what was approved.
+    /// Approved, the folder is what was approved, and the copy it runs from is there.
     On,
-    /// Approved once, but the folder differs now: off until approved again.
+    /// Approved once, but the folder differs now (or the approved copy is gone): off until approved again.
     Changed,
     /// It cannot be enabled as it is; the first reason, in the words of `validate`.
     Invalid(String),
@@ -20,7 +21,8 @@ pub enum ProbeState {
 }
 
 impl ProbeState {
-    /// Whether a Probe in this state may run: only `On` does.
+    /// Whether a Probe in this state may run: only `On` does. A step that runs one asks
+    /// [`runnable`](super::runnable), which adds the check of the copy's bytes.
     pub fn is_on(&self) -> bool {
         matches!(self, Self::On)
     }
@@ -30,8 +32,8 @@ impl ProbeState {
         matches!(self, Self::Off | Self::Changed)
     }
 
-    /// The state of `folder`, as `report` validated it, against `store`.
-    pub fn of(folder: &ProbeFolder, report: &Report, store: &ApprovalStore) -> Self {
+    /// The state of `folder`, as `report` validated it, against `store` and the copies under `root`.
+    pub fn of(root: &DataRoot, folder: &ProbeFolder, report: &Report, store: &ApprovalStore) -> Self {
         if let Some(first) = report.findings.iter().find(|finding| finding.severity == Severity::Error) {
             return Self::Invalid(if first.path.is_empty() {
                 first.message.clone()
@@ -42,9 +44,16 @@ impl ProbeState {
         if report.summary.has_code {
             return Self::Unsupported;
         }
-        match store.get(&folder.manifest.probe.id) {
+        let id = &folder.manifest.probe.id;
+        match store.get(id) {
             None => Self::Off,
-            Some(approval) if approval.fingerprint == folder.fingerprint() => Self::On,
+            // The copy's existence only; its bytes are `Snapshot::verify`'s, which reads them.
+            Some(approval)
+                if approval.fingerprint == folder.fingerprint()
+                    && store.snapshot(root, id).is_some_and(|copy| copy.exists()) =>
+            {
+                Self::On
+            }
             Some(_) => Self::Changed,
         }
     }

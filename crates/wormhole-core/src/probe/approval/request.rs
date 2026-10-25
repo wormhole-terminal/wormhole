@@ -82,6 +82,45 @@ impl Grants {
     }
 }
 
+/// What the user did to say yes: a click, or the system's owner authentication (Touch ID, or the password).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Proof {
+    Click,
+    TouchId,
+}
+
+/// The permissions asked for need Touch ID and the user only clicked.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NeedsTouchId;
+
+impl fmt::Display for NeedsTouchId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("this approval needs Touch ID")
+    }
+}
+
+impl std::error::Error for NeedsTouchId {}
+
+/// A yes that meets the rule of [`Request::confirmation`]: the one thing [`approve`](super::approve) takes
+/// besides the request, so the Touch ID policy is core's and not each caller's. It holds the grants as they
+/// were when the user pressed Approve, and it is for that request's bytes only.
+#[derive(Debug, Clone)]
+pub struct Confirmed {
+    id: String,
+    fingerprint: String,
+    grants: Grants,
+}
+
+impl Confirmed {
+    pub(super) fn is_for(&self, request: &Request) -> bool {
+        self.id == request.id() && self.fingerprint == request.fingerprint()
+    }
+
+    pub(super) fn grants(&self) -> &Grants {
+        &self.grants
+    }
+}
+
 /// A Probe about to be approved.
 #[derive(Debug, Clone)]
 pub struct Request {
@@ -94,7 +133,7 @@ pub struct Request {
 impl Request {
     /// The request for `folder`, or why it cannot be approved. `store` gives the earlier approval,
     /// for the diff.
-    pub fn new(folder: ProbeFolder, store: &ApprovalStore) -> Result<Self, NotApprovable> {
+    pub(super) fn new(folder: ProbeFolder, store: &ApprovalStore) -> Result<Self, NotApprovable> {
         let report = validate(&folder);
         if let Some(first) = report.errors().next() {
             let at = if first.path.is_empty() { String::new() } else { format!("{}: ", first.path) };
@@ -163,6 +202,19 @@ impl Request {
                 .iter()
                 .any(|p| p.confirmation == Confirmation::TouchId && grants.is_granted(p));
         if touch { Confirmation::TouchId } else { Confirmation::Click }
+    }
+
+    /// Turn a yes into the token [`approve`](super::approve) takes, with `grants` frozen as they are now.
+    /// A click is enough only where [`Self::confirmation`] says so.
+    pub fn confirm(&self, grants: &Grants, proof: Proof) -> Result<Confirmed, NeedsTouchId> {
+        if self.confirmation(grants) == Confirmation::TouchId && proof != Proof::TouchId {
+            return Err(NeedsTouchId);
+        }
+        Ok(Confirmed {
+            id: self.id().to_string(),
+            fingerprint: self.fingerprint.clone(),
+            grants: grants.clone(),
+        })
     }
 
     pub(super) fn approval(&self, grants: &Grants, now: u64) -> Approval {

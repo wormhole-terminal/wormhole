@@ -19,6 +19,12 @@ pub(crate) fn no_block_no_follow(options: &mut OpenOptions) -> &mut OpenOptions 
     options.custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
 }
 
+/// Open a folder for its descriptor, refusing a link at the last component (`O_NOFOLLOW | O_DIRECTORY`):
+/// what is changed through the descriptor is the folder that was opened, not what a name is swapped for.
+pub(crate) fn open_dir_no_follow(path: &Path) -> std::io::Result<std::fs::File> {
+    OpenOptions::new().read(true).custom_flags(libc::O_NOFOLLOW | libc::O_DIRECTORY).open(path)
+}
+
 pub(crate) fn path_from_bytes(bytes: &[u8]) -> &Path {
     Path::new(OsStr::from_bytes(bytes))
 }

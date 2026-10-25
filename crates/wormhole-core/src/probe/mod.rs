@@ -36,5 +36,5 @@ pub mod validate;
 pub use fingerprint::{FINGERPRINT_VERSION, fingerprint};
 pub use manifest::{Manifest, ManifestError, ParseWarning, Parsed};
 pub use read::{MANIFEST_FILE, ProbeFile, ProbeFolder, ReadError};
-pub use scan::{ScanError, Scanned, TooManyEntries, scan, scan_data};
+pub use scan::{Coverage, Scan, ScanError, Scanned, TooManyEntries, scan, scan_covering, scan_data};
 pub use validate::{Finding, Report, Severity, Summary, validate};

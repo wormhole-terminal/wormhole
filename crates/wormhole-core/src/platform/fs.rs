@@ -26,6 +26,12 @@ pub fn no_block_no_follow(options: &mut OpenOptions) -> &mut OpenOptions {
     os::no_block_no_follow(options)
 }
 
+/// Set the mode of the folder at `path` through a descriptor opened without following a link, so a name
+/// swapped for a link between the check and the change is refused rather than followed.
+pub fn set_dir_mode_no_follow(path: &Path, mode: u32) -> std::io::Result<()> {
+    os::open_dir_no_follow(path)?.set_permissions(permissions(mode))
+}
+
 /// A path made of exactly these bytes, which need not be text (file names on Unix are bytes).
 pub fn path_from_bytes(bytes: &[u8]) -> &Path {
     os::path_from_bytes(bytes)

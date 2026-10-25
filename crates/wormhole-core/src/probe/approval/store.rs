@@ -105,8 +105,9 @@ impl ApprovalStore {
         self.damaged
     }
 
-    /// The Probe's read-only copy, when it is approved. It has not been checked yet.
-    pub fn snapshot(&self, root: &DataRoot, id: &str) -> Option<Snapshot> {
+    /// The Probe's read-only copy, when it is approved. It has not been checked, and the Probe may have
+    /// changed: later steps ask [`runnable`](super::runnable) instead.
+    pub(super) fn snapshot(&self, root: &DataRoot, id: &str) -> Option<Snapshot> {
         Snapshot::of(root, id, self.entries.get(id)?)
     }
 

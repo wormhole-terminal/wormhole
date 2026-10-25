@@ -6,6 +6,7 @@
 
 use std::fmt;
 use std::fs;
+use std::io;
 use std::path::Path;
 
 use super::manifest::is_probe_id;
@@ -71,35 +72,78 @@ impl fmt::Display for TooManyEntries {
 
 impl std::error::Error for TooManyEntries {}
 
+/// How much of the Probes folder a scan saw. A tidy-up that forgets what it did not see must know.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Coverage {
+    /// Every entry was looked at.
+    Whole,
+    /// There is no Probes folder.
+    Missing,
+    /// The folder could not be read, or an entry of it could not be looked at: what is listed is not
+    /// all there is.
+    Partial,
+}
+
+/// What a scan found, and how much of the folder it saw.
+#[derive(Debug)]
+pub struct Scan {
+    pub found: Vec<Scanned>,
+    pub coverage: Coverage,
+}
+
 /// The Probes of `root`'s data folder.
 pub fn scan_data(root: &DataRoot) -> Result<Vec<Scanned>, TooManyEntries> {
     scan(&root.probes_dir())
 }
 
-/// The folders of `dir`, sorted by name. A missing `dir` is no Probes; files and `.`-folders in it
-/// are not Probes and are left out, but every entry counts against [`MAX_ENTRIES`].
+/// The folders of `dir`, sorted by name; see [`scan_covering`].
 pub fn scan(dir: &Path) -> Result<Vec<Scanned>, TooManyEntries> {
-    let Ok(entries) = fs::read_dir(dir) else { return Ok(Vec::new()) };
-    let entries: Vec<_> = entries.filter_map(Result::ok).take(MAX_ENTRIES + 1).collect();
-    if entries.len() > MAX_ENTRIES {
+    scan_covering(dir).map(|scan| scan.found)
+}
+
+/// The folders of `dir`, sorted by name, and how much of `dir` was seen. A missing `dir` is no Probes;
+/// any other failure to read it, or to look at one of its entries, is [`Coverage::Partial`] and not an
+/// empty folder. Files and `.`-folders in it are not Probes and are left out, but every entry counts
+/// against [`MAX_ENTRIES`].
+pub fn scan_covering(dir: &Path) -> Result<Scan, TooManyEntries> {
+    let entries = match fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(err) => {
+            let coverage =
+                if err.kind() == io::ErrorKind::NotFound { Coverage::Missing } else { Coverage::Partial };
+            return Ok(Scan { found: Vec::new(), coverage });
+        }
+    };
+    let mut coverage = Coverage::Whole;
+    let mut listed = Vec::new();
+    for entry in entries.take(MAX_ENTRIES + 1) {
+        match entry {
+            Ok(entry) => listed.push(entry),
+            Err(_) => coverage = Coverage::Partial,
+        }
+    }
+    if listed.len() > MAX_ENTRIES {
         return Err(TooManyEntries);
     }
-    let mut found: Vec<Scanned> = entries
-        .into_iter()
-        .filter_map(|entry| {
-            let name = entry.file_name().to_string_lossy().into_owned();
-            if name.starts_with('.') {
-                return None;
-            }
-            let kind = fs::symlink_metadata(entry.path()).ok()?.file_type();
-            if kind.is_symlink() {
-                return Some(Scanned { name, probe: Err(ScanError::Link) });
-            }
-            kind.is_dir().then(|| load(name, &entry.path()))
-        })
-        .collect();
+    let mut found = Vec::new();
+    for entry in listed {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.starts_with('.') {
+            continue;
+        }
+        let Ok(meta) = fs::symlink_metadata(entry.path()) else {
+            coverage = Coverage::Partial;
+            continue;
+        };
+        let kind = meta.file_type();
+        if kind.is_symlink() {
+            found.push(Scanned { name, probe: Err(ScanError::Link) });
+        } else if kind.is_dir() {
+            found.push(load(name, &entry.path()));
+        }
+    }
     found.sort_by(|a, b| a.name.cmp(&b.name));
-    Ok(found)
+    Ok(Scan { found, coverage })
 }
 
 pub(crate) fn load(name: String, path: &Path) -> Scanned {

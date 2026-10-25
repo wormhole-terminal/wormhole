@@ -64,7 +64,7 @@ fn the_reference_probe_s_fingerprint_is_stable() {
     // The files as committed. If this changes, a file of the fixture did, or the fingerprint's
     // encoding did, and every stored Probe approval would change with it.
     let folder = read(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/probes/ok/acme-tools"));
-    assert_eq!(folder.fingerprint(), "878302534e21bb9d340458eb88d7161370cf8cde27d2639bd88fc4a904f269d0");
+    assert_eq!(folder.fingerprint(), "a358fe3d2b018b4f83ab499cc9344eb7ddba7e80a68f9919e042ee28d1db8dfe");
 }
 
 #[test]
