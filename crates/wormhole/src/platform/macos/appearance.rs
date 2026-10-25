@@ -40,17 +40,19 @@ fn ns_appearance(appearance: Appearance) -> Option<Retained<NSAppearance>> {
     NSAppearance::appearanceNamed(name)
 }
 
-/// The theme's appearance is now `appearance`: every view that follows it is drawn that way.
+/// The theme's appearance is now `appearance`: every view that follows it is drawn that way. Does
+/// nothing when it is the one already set, which is most settings changes.
 pub(super) fn set(appearance: Appearance) {
-    if CURRENT.replace(Some(appearance)) != Some(appearance) {
-        EFFECTS.with_borrow_mut(|effects| {
-            effects.retain(|weak| {
-                let Some(effect) = weak.load() else { return false };
-                apply(&effect, appearance);
-                true
-            });
-        });
+    if CURRENT.replace(Some(appearance)) == Some(appearance) {
+        return;
     }
+    EFFECTS.with_borrow_mut(|effects| {
+        effects.retain(|weak| {
+            let Some(effect) = weak.load() else { return false };
+            apply(&effect, appearance);
+            true
+        });
+    });
     refresh_titlebars();
 }
 
@@ -102,6 +104,12 @@ fn apply_titlebar(window: &NSWindow) {
     }
 }
 
+/// Set `appearance` on `view`, unless it has it: AppKit lays a view out and draws it again for any
+/// appearance set, even the same one.
 fn apply(view: &NSView, appearance: Appearance) {
-    view.setAppearance(ns_appearance(appearance).as_deref());
+    let Some(wanted) = ns_appearance(appearance) else { return };
+    if view.appearance().is_some_and(|set| set == wanted) {
+        return;
+    }
+    view.setAppearance(Some(&wanted));
 }
