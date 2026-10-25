@@ -188,6 +188,7 @@ fn empty(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let folder = DataRoot::current().probes_dir();
     let shown = crate::settings_window::with_tilde(&folder);
     let to_open = folder.clone();
+    let command = format!("{COMMAND_NAME} probe new"); // text: a command line, not interface text
     style::card(ui, ui.border)
         .flex()
         .flex_col()
@@ -197,12 +198,13 @@ fn empty(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
         .child(
             div().text_body().font_weight(FontWeight::SEMIBOLD).child(text(SETTINGS_EXTENSIONS_NONE_TITLE)),
         )
-        .child(div().text_caption().text_color(ui.muted).child(settings_extensions_none_where(&shown)).child(
-            settings_extensions_none_new(
-                // text: a command line, not interface text
-                &format!("{COMMAND_NAME} probe new"),
-            ),
-        ))
+        .child(
+            div()
+                .text_caption()
+                .text_color(ui.muted)
+                .child(settings_extensions_none_where(&shown))
+                .child(settings_extensions_none_new(&command)),
+        )
         .child(
             div().flex().pt_1().child(
                 Button::new("probes-show-folder")

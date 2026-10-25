@@ -81,7 +81,7 @@ impl SettingsWindow {
     pub(in crate::settings_window) fn probe_sheet_line(&self) -> String {
         self.extensions.sheet.as_ref().map_or_else(String::new, |sheet| {
             let waiting = if sheet.waiting { "waiting" } else { "ready" };
-            format!("probe-sheet {} {waiting}\n", sheet.request.id())
+            format!("probe-sheet {} {waiting}\n", sheet.request.id()) // text: devctl's output
         })
     }
 
