@@ -45,6 +45,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - The terminal's text stays where it is when a side column opens or closes or the window is resized:
   the grid keeps its place at the top left and what doesn't make a whole cell goes to the right and
   bottom edges, instead of the text shifting sideways by up to half a character.
+- Notes sync with a project's notes.md now needs the project to be trusted. Until then the file is
+  neither merged into the terminal's notes nor written back, and the Project tab says it is waiting
+  for trust.
 
 ### Fixed
 

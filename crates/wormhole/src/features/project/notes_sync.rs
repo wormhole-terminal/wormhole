@@ -11,6 +11,11 @@ use super::{Project, hub_of, hub_of_mut, project_folders_on};
 use crate::features::notes::Notes;
 use crate::window::facts::WindowFacts;
 
+/// Why a project's notes.md does not sync while the person wants it to and the project is not trusted
+/// (shown in the Project tab after "Notes sync: ").
+const NEEDS_TRUST: &str =
+    "waits for the project to be trusted; its notes.md is neither read nor written until then";
+
 /// The window's notes, as the Project tab's button that copies a prompt into a note holds them, with the
 /// profile the window is in (whose approvals say whether the prompt may be used). The only way the rest of
 /// the project feature gets at the notes feature.
@@ -54,14 +59,22 @@ impl Project {
             let Some(project) = hub_of(profile, cx).projects.get(&root) else { continue };
             // Syncs when switched on and the project has a notes.md, or when the user explicitly opted in
             // for this project (which creates the file). The Project tab's switch asks the same question,
-            // so it shows on only when this runs.
-            if !hub_of(profile, cx).prefs.notes_sync(&root, project.folder.has(Feature::Notes)) {
-                // Switched off: switching on again merges both sides afresh.
+            // so it shows on only when this runs. And only for a trusted project: the file comes with the
+            // repository, which may be anyone's, and it is merged into the terminal's notes and written
+            // back, so an untrusted one is neither read nor written.
+            let (wanted, trusted) = {
+                let hub = hub_of(profile, cx);
+                (hub.prefs.notes_sync(&root, project.folder.has(Feature::Notes)), hub.trusted(project))
+            };
+            if !(wanted && trusted) {
+                // Switched off or waiting for trust: switching on or trusting merges both sides afresh.
                 if let Some(of) = self.of.get_mut(&session_id) {
                     of.notes_base = None;
                 }
                 if let Some(hub) = hub_of_mut(profile, cx) {
                     hub.notes_bases.remove(session_id);
+                    // The Project tab says why nothing syncs while the person wants it to.
+                    told |= hub.set_notes_error(&root, (wanted && !trusted).then(|| NEEDS_TRUST.to_string()));
                 }
                 continue;
             }

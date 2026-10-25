@@ -365,6 +365,7 @@ fn the_notes_file_and_the_terminals_notes_follow_each_other(cx: &mut TestAppCont
             "# Notes\n<!-- wormhole:notes -->\n\n## Next steps\n- [ ] from the file\n\n## Notes\n",
         )],
     );
+    trust(cx, &dir);
     drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
     let tasks = |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| notes::tasks(ws, 0, cx));
 
@@ -402,6 +403,43 @@ fn the_notes_file_and_the_terminals_notes_follow_each_other(cx: &mut TestAppCont
     assert!(file.contains("only here"), "and on again: merged afresh: {file}");
 }
 
+/// notes.md comes with the repository: until the project is trusted it is neither merged into the
+/// terminal's notes nor written back, and the Project tab says why. Trusted, it syncs.
+#[gpui_kit::test]
+fn an_untrusted_projects_notes_file_is_neither_read_nor_written(cx: &mut TestAppContext) {
+    if isolate("an_untrusted_projects_notes_file_is_neither_read_nor_written") {
+        return;
+    }
+    let window = start(cx, 1);
+    let theirs = "# Notes\n<!-- wormhole:notes -->\n\n## Next steps\n- [ ] from the repository\n\n## Notes\n";
+    let dir = project("sync-untrusted", &[("notes.md", theirs)]);
+    drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
+    let tasks = |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| notes::tasks(ws, 0, cx));
+    let file = || std::fs::read_to_string(dir.join(".wormhole/notes.md")).expect("notes.md");
+
+    drive(cx, &window, |ws, window, cx| {
+        notes::add_task(ws, 0, "from the terminal", cx);
+        sync_notes(ws, window, cx);
+    });
+    assert_eq!(tasks(cx), [("from the terminal".to_string(), false)], "the file's task did not come in");
+    assert_eq!(file(), theirs, "and nothing was written back");
+    let said = cx.update(|cx| hub(cx).notes_errors.values().cloned().collect::<Vec<_>>());
+    assert_eq!(said.len(), 1, "the Project tab is told why: {said:?}");
+    assert!(said[0].contains("trusted"), "{said:?}");
+
+    trust(cx, &dir);
+    drive(cx, &window, sync_notes);
+    let mut now = tasks(cx);
+    now.sort();
+    assert_eq!(
+        now,
+        [("from the repository".to_string(), false), ("from the terminal".to_string(), false)],
+        "trusted, the file's task comes in"
+    );
+    assert!(file().contains("- [ ] from the terminal"), "and the terminal's goes out: {}", file());
+    assert!(cx.update(|cx| hub(cx).notes_errors.is_empty()), "and nothing is waiting any more");
+}
+
 /// The hub is a global the window does not watch: a sync that starts failing has to wake the window itself
 /// for the Project tab to say why.
 #[gpui_kit::test]
@@ -411,6 +449,7 @@ fn a_notes_sync_that_fails_wakes_the_window_so_the_tab_says_why(cx: &mut TestApp
     }
     let window = start(cx, 1);
     let dir = project("sync-fails", &[("notes.md", "# Notes\n<!-- wormhole:notes -->\n\n## Notes\n")]);
+    trust(cx, &dir);
     drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
     drive(cx, &window, sync_notes);
     // Bytes that are not text: the file cannot be read.
@@ -446,6 +485,7 @@ fn a_notes_sync_that_fails_in_one_window_wakes_the_profiles_other_windows_too(cx
         .update(|cx| crate::app_state::app(cx).windows.iter().find(|w| w.id == 2).cloned())
         .expect("a second window of the profile");
     let dir = project("sync-fails-two", &[("notes.md", "# Notes\n<!-- wormhole:notes -->\n\n## Notes\n")]);
+    trust(cx, &dir);
     drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
     drive(cx, &window, sync_notes);
     std::fs::write(dir.join(".wormhole/notes.md"), [0xff_u8, 0xfe, 0x00, 0xff]).expect("breaks notes.md");

@@ -255,8 +255,12 @@ impl Tab<'_> {
         // project is trusted (settings too: `font_size` alone needs it).
         let commands = project.request.as_ref().map(|r| r.commands.clone()).unwrap_or_default();
         let needing = project.snapshot.needing_trust();
-        if project.request.is_some() && (!commands.is_empty() || !needing.is_empty()) {
-            body = body.child(self.render_trust(&root, project.status, &commands, &needing, cx));
+        // Notes sync waits for trust too (its notes.md is repository content), so the card is there to
+        // give it, though nothing else in the project asks for it.
+        let notes_wait = project.status != TrustStatus::Trusted
+            && hub_of(self.profile, cx).prefs.notes_sync(&root, project.snapshot.has(Feature::Notes));
+        if project.request.is_some() && (!commands.is_empty() || !needing.is_empty() || notes_wait) {
+            body = body.child(self.render_trust(&root, project.status, &commands, &needing, notes_wait, cx));
         }
         if let Some(err) = &hub_of(self.profile, cx).error {
             body = body.child(problem_line(ui, err.clone()));
@@ -447,10 +451,15 @@ impl Tab<'_> {
         status: TrustStatus,
         commands: &[TrustLine],
         needing: &[Feature],
+        notes_wait: bool,
         cx: &App,
     ) -> AnyElement {
         let ui = ui_in(self.profile, cx);
-        let applies = trust_applies(needing);
+        let applies = match (trust_applies(needing), notes_wait) {
+            (applies, false) => applies,
+            (applies, true) if applies.is_empty() => "its notes.md sync".to_string(),
+            (applies, true) => format!("{applies} and its notes.md sync"),
+        };
         if status == TrustStatus::Trusted {
             let line = if commands.is_empty() {
                 format!("Applies {applies}.")
@@ -620,6 +629,10 @@ fn trust_notice(status: TrustStatus, has_commands: bool, applies: &str) -> (&'st
 /// Notes have their own line: the switch is how the file gets made.
 fn feature_hint(project: &LoadedProject, feature: Feature) -> (String, bool) {
     if feature == Feature::Notes {
+        if project.status != TrustStatus::Trusted {
+            // The sync reads and writes a file that comes with the repository.
+            return ("Syncs once the project is trusted".to_string(), true);
+        }
         let hint = if project.snapshot.has(feature) {
             feature.description()
         } else {
@@ -748,7 +761,14 @@ mod tests {
 
     #[test]
     fn the_notes_row_says_what_the_switch_does() {
-        let (repo, _data, store) = project(None);
+        let (repo, _data, mut store) = project(None);
+        let untrusted = loaded(&repo, &store);
+        assert_eq!(
+            feature_hint(&untrusted, Feature::Notes),
+            ("Syncs once the project is trusted".to_string(), true),
+            "the file comes with the repository"
+        );
+        store.trust_request(&untrusted.request.clone().expect("request"));
         let with_file = loaded(&repo, &store);
         assert_eq!(
             feature_hint(&with_file, Feature::Notes),
