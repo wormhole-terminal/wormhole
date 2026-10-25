@@ -1,11 +1,12 @@
 //! Probes: extensions that are a folder with a `probe.toml` (`repo-docs/docs/probes.md`).
 //!
 //! This is the first slice of the files-only level (E1): reading a Probe's folder under caps,
-//! parsing its manifest, fingerprinting it, validating it, and finding the Probes in the data
-//! folder. Nothing here enables, approves or runs a Probe, and nothing in the app calls it yet;
-//! the feature flag [`FeatureFlag::Probes`](crate::config::features::FeatureFlag::Probes) is what
+//! parsing its manifest, fingerprinting it, validating it, finding the Probes in the data folder,
+//! and the command line that makes, checks and tests one. Nothing here enables, approves or runs a
+//! Probe, and nothing in the app calls it yet, only `Wormhole probe …`; the feature flag [`FeatureFlag::Probes`](crate::config::features::FeatureFlag::Probes) is what
 //! the later slices gate on.
 //!
+//! - `cli`: `Wormhole probe new | validate | test`, as text to print and an exit code.
 //! - `manifest`: `probe.toml` as types; unknown keys are warnings at parse.
 //! - `read`: a folder, once, through `storage::files` with every cap and link rule.
 //! - `fingerprint`: the hash an approval is bound to.
@@ -19,6 +20,7 @@
 //! uses `storage` and `keys` (a command's shortcut) and the agent registry in `wormhole-term`; it is
 //! in the tier of `git` and `notify` so that `ipc` can offer it on the command line.
 
+pub mod cli;
 pub mod fingerprint;
 pub mod fixture;
 mod hidden;
