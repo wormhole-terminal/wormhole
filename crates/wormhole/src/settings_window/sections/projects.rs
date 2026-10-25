@@ -630,6 +630,7 @@ fn feature_row(
             found: None,
             found_description: None,
             control,
+            tall: false,
             extra: None,
             on_reset: None,
         },

@@ -102,6 +102,9 @@ pub struct SettingParts {
     /// The same in the description.
     pub found_description: Option<Range<usize>>,
     pub control: AnyElement,
+    /// The control runs over more than one line (a few fields, a text box): the label sits
+    /// beside its first line rather than in the middle of the row, and the description under it.
+    pub tall: bool,
     /// Before the control: a link such as "Edit in project".
     pub extra: Option<AnyElement>,
     /// Puts the default back; the reset arrow shows while the value is changed.
@@ -127,6 +130,7 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
         found,
         found_description,
         control,
+        tall,
         extra,
         on_reset,
     } = parts;
@@ -152,7 +156,7 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
         .id(id.clone())
         .group(group.clone())
         .flex()
-        .items_center()
+        .map(|d| if tall { d.items_start() } else { d.items_center() })
         .gap_4()
         .w_full()
         .min_h(px(SETTING_ROW_MIN_H))
@@ -171,6 +175,8 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
                         .items_center()
                         .gap_2()
                         .min_h(rems(NAME_LINE))
+                        // As tall as the control's first line, so the two share a middle.
+                        .when(tall, |d| d.min_h(px(CONTROL_H)))
                         .when(changed, |d| d.child(changed_dot(ui)))
                         .child(
                             div()
@@ -263,7 +269,9 @@ pub fn setting_group_head(ui: UiColors, title: &str, aside: Option<&str>) -> Div
 const GROUP_HEAD_H: f32 = 40.0;
 
 /// A text button in the link color ("Edit in Fonts", "Open Notifications"), with an arrow
-/// after it when it takes you to another page. Add `.on_click(…)`.
+/// after it when it takes you to another page. Its text lines up with the edge it is placed
+/// at, like any other text: the hover fill reaches [`LINK_PAD`] past it on both sides. Add
+/// `.on_click(…)`.
 #[track_caller]
 pub fn link_button(
     id: impl Into<ElementId>,
@@ -273,21 +281,37 @@ pub fn link_button(
 ) -> Stateful<Div> {
     div()
         .id(id)
+        .group(LINK_GROUP)
+        .relative()
         .flex_none()
         .flex()
         .items_center()
         .gap_1()
         .h(px(CONTROL_H))
-        .px_1()
-        .rounded(ui.radius)
         .text_label()
         .font_weight(FontWeight::MEDIUM)
         .text_color(ui.link)
         .cursor_pointer()
-        .hover(move |d| d.bg(ui.hover))
+        // The fill is laid over nothing: out of the layout, so the text keeps its place.
+        .child(
+            div()
+                .absolute()
+                .top_0()
+                .bottom_0()
+                .left(px(-LINK_PAD))
+                .right(px(-LINK_PAD))
+                .rounded(ui.radius)
+                .group_hover(LINK_GROUP, move |d| d.bg(ui.hover)),
+        )
         .child(label.into())
         .when(arrow, |d| d.child(super::buttons::icon(IconName::ArrowRight)))
 }
+
+/// The group a [`link_button`]'s hover fill answers to.
+const LINK_GROUP: &str = "link-button";
+
+/// The room between a [`link_button`]'s text and the edge of its hover fill.
+const LINK_PAD: f32 = 4.0;
 
 /// A value on a scale: GPUI Kit's slider [`SLIDER_W`] wide (`compact`:
 /// [`super::scale::SLIDER_W_COMPACT`]), the value after it in a column of its own, and under

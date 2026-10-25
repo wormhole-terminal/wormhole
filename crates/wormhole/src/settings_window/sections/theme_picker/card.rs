@@ -150,7 +150,7 @@ impl ThemeCard {
                     entry.family.as_ref().map_or_else(|| entry.label.clone(), |(_, v)| v.clone()).into();
                 let (value, appearance) = (entry.value.clone(), entry.tokens.appearance);
                 let ring = place < 32 && picked & (1 << place) != 0;
-                style::swatch(("theme-version", ix), ui, hsla(entry.tokens.terminal.background), ring)
+                style::swatch_small(("theme-version", ix), ui, hsla(entry.tokens.terminal.background), ring)
                     .tooltip(move |window, cx| {
                         gpui_kit::component::tooltip::Tooltip::new(name.clone()).build(window, cx)
                     })

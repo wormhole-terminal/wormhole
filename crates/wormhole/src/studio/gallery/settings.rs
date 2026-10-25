@@ -162,6 +162,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
                 found,
                 found_description: None,
                 control,
+                tall: false,
                 extra: None,
                 on_reset: Some(Box::new(|_, _, _| {})),
             },
@@ -343,6 +344,13 @@ fn controls(env: &Env) -> Div {
                         .into_iter()
                         .enumerate()
                         .map(|(ix, color)| style::swatch(("g-swatch", ix), ui, color, ix == 0)),
+                )
+                .children(
+                    palette
+                        .into_iter()
+                        .take(2)
+                        .enumerate()
+                        .map(|(ix, color)| style::swatch_small(("g-swatch-small", ix), ui, color, ix == 0)),
                 )
                 .child(env.mark("tint.chip", style::tint_chip(ui, Some(IconName::Folder), "api-server")))
                 .child(style::tint_chip(ui, None, "Bundled"))

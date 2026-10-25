@@ -82,11 +82,13 @@ pub(super) struct Setting {
     pub describe: Option<Describe>,
     pub below: Option<Below>,
     pub chip: Option<Chip>,
+    /// The control runs over more than one line (see `SettingParts::tall`).
+    pub tall: bool,
 }
 
 impl Setting {
     pub(super) const fn new(id: &'static str, control: Control) -> Self {
-        Self { id, control, describe: None, below: None, chip: None }
+        Self { id, control, describe: None, below: None, chip: None, tall: false }
     }
 
     pub(super) const fn toggle(
@@ -139,6 +141,11 @@ impl Setting {
     /// Something under the row, across the column, while there is something to say.
     pub(super) const fn below(self, below: Below) -> Self {
         Self { below: Some(below), ..self }
+    }
+
+    /// A control of more than one line: the label sits beside its first line.
+    pub(super) const fn tall(self) -> Self {
+        Self { tall: true, ..self }
     }
 }
 
@@ -363,6 +370,7 @@ impl SettingsWindow {
                 found,
                 found_description,
                 control,
+                tall: setting.tall,
                 extra,
                 on_reset: (!keys.is_empty()).then(|| -> style::ClickHandler {
                     Box::new(move |_, _, cx| update_settings(cx, |s| *s = settings_index::reset(s, keys)))

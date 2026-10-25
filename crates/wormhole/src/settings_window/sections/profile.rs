@@ -27,11 +27,11 @@ use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
 
 pub(super) const SETTINGS: &[Setting] = &[
-    Setting::custom("profile-name", draw_name),
+    Setting::custom("profile-name", draw_name).tall(),
     Setting::custom("profile-start", draw_start).describe(start_caption).below(folder_list),
-    Setting::custom("profile-env", draw_env),
+    Setting::custom("profile-env", draw_env).tall(),
     Setting::custom("profile-git", draw_git),
-    Setting::custom("profile-logins", draw_logins),
+    Setting::custom("profile-logins", draw_logins).tall(),
     Setting::custom("profile-delete", draw_delete).describe(delete_caption).below(delete_question),
 ];
 

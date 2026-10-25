@@ -9,7 +9,9 @@
 //! Fonts 7,247, Terminal 12,521, Sessions 13,750, Git 7,745, Agents 27,044, Notifications 10,353,
 //! MenuBar 7,852, Updates 6,621, Advanced 7,318, Projects 12,190, FeatureFlags 6,742, search 13,259.
 //! The pages with sentences made a few more (2 to 14 of about 10,000); the search made 14% fewer, since
-//! its words are lower-cased once per language and no longer for every keystroke.
+//! its words are lower-cased once per language and no longer for every keystroke. The search's budget
+//! rose by 49 when a link's hover fill became a layer of its own, out of the layout (so the link's text
+//! lines up with the edge it sits at); the results show several links.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -41,7 +43,7 @@ const BUDGET: [(&str, u64); 14] = [
     ("Advanced", 7318),
     ("Projects", 12196),
     ("FeatureFlags", 6742),
-    ("search", 11356),
+    ("search", 11405),
 ];
 
 fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {

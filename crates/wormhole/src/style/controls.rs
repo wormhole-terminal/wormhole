@@ -10,7 +10,9 @@ use gpui_kit::*;
 use super::buttons::tooltip_delay;
 use super::labels::{count_badge, selected_count_badge};
 use super::motion::{EASE_IN_OUT, MOTION_BASE};
-use super::scale::{CONTROL_H, CONTROL_H_SM, Edges, KEYCAP_H, KEYCAP_MIN_W, ROW_H, SWATCH, TextRole};
+use super::scale::{
+    CONTROL_H, CONTROL_H_SM, Edges, KEYCAP_H, KEYCAP_MIN_W, ROW_H, SWATCH, SWATCH_SMALL, TextRole,
+};
 use crate::settings::UiColors;
 
 /// A clickable list row: body text, hover fill, selected fill, at least [`ROW_H`] tall,
@@ -296,6 +298,24 @@ pub fn form_segment(
 /// ring reads on any color. Add `.on_click(…)`.
 #[track_caller]
 pub fn swatch(id: impl Into<ElementId>, ui: UiColors, color: Hsla, chosen: bool) -> Stateful<Div> {
+    sized_swatch(id, ui, color, chosen, SWATCH)
+}
+
+/// A [`swatch`] at [`SWATCH_SMALL`], for a strip as low as a theme card's name: a theme
+/// family's versions there. Add `.on_click(…)`.
+#[track_caller]
+pub fn swatch_small(id: impl Into<ElementId>, ui: UiColors, color: Hsla, chosen: bool) -> Stateful<Div> {
+    sized_swatch(id, ui, color, chosen, SWATCH_SMALL)
+}
+
+#[track_caller]
+fn sized_swatch(
+    id: impl Into<ElementId>,
+    ui: UiColors,
+    color: Hsla,
+    chosen: bool,
+    size: f32,
+) -> Stateful<Div> {
     let ring = UiColors { border_width: px(SWATCH_RING), ..ui };
     div()
         .id(id)
@@ -303,11 +323,11 @@ pub fn swatch(id: impl Into<ElementId>, ui: UiColors, color: Hsla, chosen: bool)
         .flex()
         .items_center()
         .justify_center()
-        .size(px(SWATCH + 2.0 * (SWATCH_RING + SWATCH_GAP)))
+        .size(px(size + 2.0 * (SWATCH_RING + SWATCH_GAP)))
         .rounded(ui.radius_sm + px(SWATCH_RING + SWATCH_GAP))
         .cursor_pointer()
         .when(chosen, |d| d.outlined(ring, ui.text))
-        .child(div().size(px(SWATCH)).rounded(ui.radius_sm).bg(color).outlined(ui, ui.border))
+        .child(div().size(px(size)).rounded(ui.radius_sm).bg(color).outlined(ui, ui.border))
 }
 
 /// The ring round a chosen [`swatch`] and the gap inside it.

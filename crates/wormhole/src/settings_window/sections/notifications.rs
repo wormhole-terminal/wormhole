@@ -180,6 +180,7 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
             found: None,
             found_description: None,
             control: div().flex().gap_2().children(buttons).into_any_element(),
+            tall: false,
             extra: None,
             on_reset: None,
         },

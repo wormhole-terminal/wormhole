@@ -143,6 +143,7 @@ impl SettingsWindow {
                 found: hit.and_then(|hit| hit.label_range.clone()),
                 found_description: None,
                 control: div().into_any_element(),
+                tall: false,
                 extra: None,
                 on_reset: None,
             },

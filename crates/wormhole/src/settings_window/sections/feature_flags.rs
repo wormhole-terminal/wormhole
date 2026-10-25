@@ -50,6 +50,7 @@ impl SettingsWindow {
                     found: None,
                     found_description: None,
                     control,
+                    tall: false,
                     extra: None,
                     on_reset: Some(Box::new(move |_, _, cx| {
                         update_settings(cx, |s| {
