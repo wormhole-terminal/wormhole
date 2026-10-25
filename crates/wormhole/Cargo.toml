@@ -46,7 +46,7 @@ tracing-appender = "0.2"
 [target.'cfg(target_os = "macos")'.dependencies]
 block2 = "0.6.2"
 objc2 = "0.6.4"
-objc2-foundation = { version = "0.3.2", features = ["NSGeometry", "NSError", "NSString", "NSArray", "NSObject", "NSSet", "NSBundle", "NSAttributedString", "NSRange", "NSDictionary", "NSData", "NSNotification", "NSUserDefaults", "NSOperation", "NSFileManager", "NSLocale"] }
+objc2-foundation = { version = "0.3.2", features = ["NSGeometry", "NSError", "NSString", "NSArray", "NSObject", "NSSet", "NSBundle", "NSAttributedString", "NSRange", "NSDictionary", "NSData", "NSNotification", "NSUserDefaults", "NSOperation", "NSFileManager", "NSLocale", "NSURL"] }
 # Notifications from the bundled app: interruption levels (Time Sensitive), threads, actions and
 # Reply, which GPUI's own notifications don't carry.
 objc2-user-notifications = { version = "0.3.2", default-features = false, features = [

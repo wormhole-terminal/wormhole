@@ -1,6 +1,9 @@
 //! One card of the theme picker: a miniature of the app in a theme's own colors with its name
-//! in a strip under it. A card stands for one theme; a click makes it the pick of its kind.
+//! in a strip under it. A card stands for one theme; a click makes it the pick of its kind. Under
+//! the pointer a card that isn't a pick offers to hide its theme, and its menu (a right click) does
+//! too, with Move to Trash for a theme the person imported.
 
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use gpui_kit::assets::IconName;
@@ -9,12 +12,21 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::{Settings, ThemeMode};
 use wormhole_core::theme::catalog::ThemeEntry;
+use wormhole_core::theme::registry::ThemeId;
 use wormhole_core::theme::tokens::{Appearance, ThemeTokens};
 
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::text;
+
 use super::card_height;
+use crate::platform::{self, menu::Item, menu::Menu};
 use crate::settings::UiColors;
 use crate::settings::update_settings;
-use crate::style::{Edges, TextRole};
+use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::{hsla, token};
 
 // The preview is a drawing at its own small scale, not a control: its rules and bars do not
@@ -27,6 +39,8 @@ const PREVIEW_GAP: f32 = 5.0;
 const STRIP_H: f32 = 28.0;
 /// The ring round the card that is its shelf's pick, outside its edge.
 const RING_WIDTH: f32 = 2.0;
+/// The group the hide button answers to, shown while the pointer is on its card.
+const CARD_GROUP: &str = "theme-card";
 
 /// One theme's card.
 pub(crate) struct ThemeCard {
@@ -58,6 +72,42 @@ fn choose(s: &mut Settings, value: String, appearance: Appearance) {
     if light { s.theme_light = value } else { s.theme = value }
 }
 
+/// Leave the theme `value` out of the picker.
+fn hide(value: &str, cx: &mut App) {
+    let value = value.to_string();
+    update_settings(cx, move |s| {
+        s.set_theme_hidden(&value, true);
+    });
+}
+
+/// The file a theme the person imported lives in; `None` for a built-in.
+fn file_of(entry: &ThemeEntry) -> Option<PathBuf> {
+    match &entry.id {
+        ThemeId::File(path) | ThemeId::Variant(path, _) => Some(path.clone()),
+        ThemeId::Builtin(_) => None,
+    }
+}
+
+/// The card's menu: hide the theme, and for one the person imported, move its file to the Trash.
+fn card_menu(entry: &ThemeEntry, picked: bool) -> Menu {
+    let value = entry.value.clone();
+    let mut menu = Menu::new().item(
+        Item::new(text(SETTINGS_APPEARANCE_HIDE_THEME))
+            .enabled(!picked)
+            .on_select(move |_, cx| hide(&value, cx)),
+    );
+    if let Some(path) = file_of(entry) {
+        menu = menu.separator().item(Item::new(text(SETTINGS_APPEARANCE_MOVE_TO_TRASH)).on_select(
+            move |_, _| {
+                if let Err(error) = platform::trash::move_to_trash(&path) {
+                    tracing::warn!("theme picker: moving {} to the Trash failed: {error:#}", path.display());
+                }
+            },
+        ));
+    }
+    menu
+}
+
 impl Render for ThemeCard {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         #[cfg(test)]
@@ -67,10 +117,13 @@ impl Render for ThemeCard {
         let tokens = &entry.tokens;
         let t = |name: &str| token(tokens, name);
         let (value, appearance) = (entry.value.clone(), tokens.appearance);
-        let ring = UiColors { border_width: px(RING_WIDTH), ..ui };
         let name_color = if picked { t("primary") } else { t("text.primary") };
+        let hide_value = entry.value.clone();
+        let menu_entry = self.entry;
         div()
             .id(("theme-card", self.entry))
+            .group(CARD_GROUP)
+            .relative()
             .w_full()
             .h(card_height(px(0.0)))
             .flex()
@@ -78,13 +131,48 @@ impl Render for ThemeCard {
             .rounded(ui.radius_lg)
             .overflow_hidden()
             .cursor_pointer()
-            .map(|d| if picked { d.outlined(ring, ui.primary) } else { d.outlined(ui, ui.border) })
+            .map(
+                |d| if picked { d.ringed(ui, ui.primary, px(RING_WIDTH)) } else { d.outlined(ui, ui.border) },
+            )
             .when(!picked, |d| d.hover(|d| d.border_color(ui.border_strong)))
             .on_click(cx.listener(move |_, _, _, cx| {
                 let value = value.clone();
                 update_settings(cx, |s| choose(s, value, appearance));
             }))
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, event: &MouseDownEvent, window, cx| {
+                    let menu = card_menu(&this.catalog[menu_entry], this.picked);
+                    platform::show_menu(menu, event.position, window, cx);
+                }),
+            )
             .child(preview(tokens))
+            // The theme in use can't be hidden: its card keeps its place while it is a pick.
+            .when(!picked, |d| {
+                d.child(
+                    div()
+                        .absolute()
+                        .top_2()
+                        .right_2()
+                        .invisible()
+                        .group_hover(CARD_GROUP, |s| s.visible())
+                        .child(
+                            div().rounded(ui.radius).bg(ui.panel).outlined(ui, ui.border).child(
+                                style::icon_button(
+                                    ("theme-hide", self.entry),
+                                    ui,
+                                    IconName::EyeOff,
+                                    text(SETTINGS_APPEARANCE_HIDE_THEME),
+                                )
+                                .on_click(move |_, _, cx| {
+                                    // The card under it would choose the theme.
+                                    cx.stop_propagation();
+                                    hide(&hide_value, cx);
+                                }),
+                            ),
+                        ),
+                )
+            })
             .child(
                 div()
                     .flex()

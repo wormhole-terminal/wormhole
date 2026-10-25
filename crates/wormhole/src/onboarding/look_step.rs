@@ -222,7 +222,6 @@ fn theme_card(ix: usize, tokens: &ThemeTokens, current: bool, ui: UiColors) -> S
     let t = |name: &str| token(tokens, name);
     let ansi = |i: usize| hsla(tokens.terminal.ansi[i]);
     let bar = |color: Hsla, width: f32| div().h(px(PREVIEW_BAR)).w(relative(width)).rounded_full().bg(color);
-    let ring = UiColors { border_width: px(CARD_RING), ..ui };
     let solid = |name: &str| match (tokens.get(name), tokens.get("surface.window").map(|c| c.with_alpha(1.0)))
     {
         (Some(color), Some(window)) => hsla(color.over(window)),
@@ -237,7 +236,7 @@ fn theme_card(ix: usize, tokens: &ThemeTokens, current: bool, ui: UiColors) -> S
         .rounded(ui.radius)
         .overflow_hidden()
         .cursor_pointer()
-        .map(|d| if current { d.outlined(ring, ui.primary) } else { d.outlined(ui, ui.border) })
+        .map(|d| if current { d.ringed(ui, ui.primary, px(CARD_RING)) } else { d.outlined(ui, ui.border) })
         .when(!current, |d| d.hover(|d| d.border_color(ui.border_strong)))
         .child(
             div()

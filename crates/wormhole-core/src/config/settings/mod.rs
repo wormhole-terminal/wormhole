@@ -142,6 +142,9 @@ pub struct Settings {
     pub theme_mode: ThemeMode,
     /// The theme for light mode (`theme` is the dark one).
     pub theme_light: String,
+    /// Themes the picker leaves out, each as `theme` would name it; Settings brings them back one
+    /// by one.
+    pub hidden_themes: Vec<String>,
 
     // Window and terminal
     /// The status bar along the bottom of every window (View → Show Status Bar).
@@ -293,6 +296,7 @@ impl Default for Settings {
             sidebar_cmd_hints: true,
             theme_mode: ThemeMode::default(),
             theme_light: DEFAULT_THEME_LIGHT.into(),
+            hidden_themes: Vec::new(),
             status_bar: false,
             minimap: false,
             split_gaps: true,

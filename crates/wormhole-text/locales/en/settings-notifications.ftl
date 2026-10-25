@@ -102,3 +102,9 @@ settings-notifications-needs-you-hint-plain = An agent asks a question or for pe
 settings-notifications-after-minutes = { $count } min
 # The same with seconds. { $count } is a whole number.
 settings-notifications-after-seconds = { $count } s
+
+## settings_window/sections/notifications_preview.rs
+
+# When the banner in the preview arrived.
+settings-notifications-preview-now = now
+settings-notifications-preview-caption = How a notification looks. macOS decides where it shows and for how long (System Settings → Notifications → Wormhole).

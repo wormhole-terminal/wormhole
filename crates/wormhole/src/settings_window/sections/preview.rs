@@ -1,11 +1,12 @@
 //! Terminals & sidebar's live preview: the Terminals list drawn with the sidebar's own cards,
-//! heads and rows from the current options, beside the option under the pointer. Appearance's
-//! stage is `stage`.
+//! heads and rows from the current options, beside the option under the pointer. Coding agents
+//! shows the same list with agents at work in it. Appearance's stage is `stage`.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::{Metrics, RowTone, SessionRow, StatusGlyph, TileFace};
+use wormhole_core::agents::AgentId;
 use wormhole_core::view::sidebar::Density;
 #[allow(
     clippy::wildcard_imports,
@@ -45,7 +46,7 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
             .flex_col()
             .gap_2()
             .child(label(settings_sessions_preview_now(now.density.label())))
-            .child(list("now", now, ui, cx)),
+            .child(list("now", now, SAMPLES, ui, cx)),
     );
     if let Some(SidebarLook::Density(density)) = window.sidebar_preview
         && density != now.density
@@ -60,7 +61,7 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
                 .flex_col()
                 .gap_2()
                 .child(label(settings_sessions_preview_hovering(previewed.density.label())))
-                .child(list("previewed", previewed, ui, cx)),
+                .child(list("previewed", previewed, SAMPLES, ui, cx)),
         );
     }
     div()
@@ -73,6 +74,27 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
         } else {
             text(SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE)
         }))
+        .into_any_element()
+}
+
+/// Coding agents → the Terminals list as the options make it, with an agent working, one asking and
+/// one finished: what the hooks (or the output) tell the sidebar.
+pub(in crate::settings_window) fn draw_agents_preview(cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let ui = ui(cx);
+    let look = Look::of(settings(cx));
+    div()
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            div()
+                .p_4()
+                .rounded(ui.radius_lg)
+                .outlined(ui, ui.border)
+                .bg(ui.background)
+                .child(div().max_w(px(SIDEBAR_W)).child(list("agents", look, AGENT_SAMPLES, ui, cx))),
+        )
+        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_AGENTS_PREVIEW_CAPTION)))
         .into_any_element()
 }
 
@@ -107,6 +129,8 @@ struct Sample {
     selected: bool,
     /// Notes and open tasks.
     notes: usize,
+    /// The agent at work in it; `None` draws the first agent's logo, as any agent would.
+    agent: Option<AgentId>,
 }
 
 /// A card of the sample list: a group's head and its rows, or a terminal in no group.
@@ -128,6 +152,7 @@ const SAMPLES: &[Card] = &[
             tone: RowTone::Plain,
             selected: false,
             notes: 0,
+            agent: None,
         }],
     },
     Card {
@@ -141,6 +166,7 @@ const SAMPLES: &[Card] = &[
                 tone: RowTone::Plain,
                 selected: true,
                 notes: 2,
+                agent: None,
             },
             Sample {
                 name: "Fix pile fan-out", // text: sample (a made-up terminal of the preview)
@@ -149,6 +175,7 @@ const SAMPLES: &[Card] = &[
                 tone: RowTone::Attention,
                 selected: false,
                 notes: 0,
+                agent: None,
             },
             Sample {
                 name: "cargo test", // text: sample (a made-up terminal of the preview)
@@ -157,6 +184,7 @@ const SAMPLES: &[Card] = &[
                 tone: RowTone::Plain,
                 selected: false,
                 notes: 0,
+                agent: None,
             },
         ],
     },
@@ -170,12 +198,47 @@ const SAMPLES: &[Card] = &[
             tone: RowTone::Plain,
             selected: false,
             notes: 0,
+            agent: None,
         }],
     },
 ];
 
+const AGENT_SAMPLES: &[Card] = &[Card {
+    group: Some("api"),             // text: sample (a made-up project of the preview)
+    folder: Some("~/Projects/api"), // text: sample (a made-up folder of the preview)
+    rows: &[
+        Sample {
+            name: "Rate limits", // text: sample (a made-up terminal of the preview)
+            glyph: StatusGlyph::Working,
+            detail: "Working · 4m", // text: sample (a made-up terminal of the preview)
+            tone: RowTone::Plain,
+            selected: true,
+            notes: 0,
+            agent: Some(AgentId::Claude),
+        },
+        Sample {
+            name: "Flaky login test", // text: sample (a made-up terminal of the preview)
+            glyph: StatusGlyph::NeedsYou,
+            detail: "Needs input · Allow edit?", // text: sample (a made-up terminal of the preview)
+            tone: RowTone::Attention,
+            selected: false,
+            notes: 0,
+            agent: Some(AgentId::Codex),
+        },
+        Sample {
+            name: "Release notes", // text: sample (a made-up terminal of the preview)
+            glyph: StatusGlyph::Done,
+            detail: "Finished · 1m", // text: sample (a made-up terminal of the preview)
+            tone: RowTone::Done,
+            selected: false,
+            notes: 0,
+            agent: Some(AgentId::OpenCode),
+        },
+    ],
+}];
+
 /// The sample list in `look`, with the sidebar's own cards, heads and rows.
-fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
+fn list(id: &'static str, look: Look, samples: &[Card], ui: UiColors, cx: &App) -> AnyElement {
     let metrics = Metrics::of(look.density, look.cards).fading(look.fade).with_group_folders(look.folders);
     // The sidebar's own header: its title and the + (drawn, not working).
     let header = div()
@@ -188,9 +251,10 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
         .child(div().flex_1())
         .child(style::icon(IconName::Plus).text_color(ui.muted));
     let claude = wormhole_core::agents::AGENTS.first();
-    let face = || match claude.and_then(|agent| agent.icon()) {
-        Some(path) => TileFace::Logo(path),
-        None => TileFace::Terminal,
+    let face = |agent: Option<AgentId>| match (agent, claude.and_then(|agent| agent.icon())) {
+        (Some(agent), _) => TileFace::Agent(agent),
+        (None, Some(path)) => TileFace::Logo(path),
+        (None, None) => TileFace::Terminal,
     };
     let mut column = div()
         .flex()
@@ -201,7 +265,7 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
         .bg(ui.panel)
         .pb(px(metrics.card_gap))
         .child(header);
-    for (cx_ix, card) in SAMPLES.iter().enumerate() {
+    for (cx_ix, card) in samples.iter().enumerate() {
         let mut lines: Vec<AnyElement> = Vec::new();
         let tokens = &cx.global::<SettingsStore>().tokens;
         let blue = wormhole_core::view::sidebar::GroupColor::Blue;
@@ -242,7 +306,7 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
                 SharedString::from(format!("preview-{id}-tile-{cx_ix}-{rx}")),
                 ui,
                 style::StatusTile {
-                    face: face(),
+                    face: face(sample.agent),
                     glyph: sample.glyph,
                     selected: sample.selected,
                     mini: false,

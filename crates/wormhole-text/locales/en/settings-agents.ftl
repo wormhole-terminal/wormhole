@@ -145,3 +145,7 @@ settings-agents-cli-path-off = { $dir } isn't on your shell's PATH, so new termi
 
 # Under the row, when the shell's PATH could not be read. { $dir } is the tool's folder.
 settings-agents-cli-path-unknown = Couldn't read your shell's PATH. If { $command } isn't found, add { $dir } to it.
+
+## settings_window/sections/preview.rs (the Coding agents preview)
+
+settings-agents-preview-caption = How the Terminals list shows each agent: working, asking you, finished. With status hooks it knows the moment; without, it reads the agent's output.

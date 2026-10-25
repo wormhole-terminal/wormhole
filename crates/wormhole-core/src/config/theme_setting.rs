@@ -68,6 +68,25 @@ impl Settings {
         };
         if light { &self.theme_light } else { &self.theme }
     }
+
+    /// Whether the theme picker leaves `value` (a theme as `theme` names it) out.
+    pub fn theme_hidden(&self, value: &str) -> bool {
+        self.hidden_themes.iter().any(|hidden| hidden == value)
+    }
+
+    /// Leave `value` out of the theme picker, or bring it back. Hidden once, however often it is
+    /// hidden; true when that changed anything.
+    pub fn set_theme_hidden(&mut self, value: &str, hidden: bool) -> bool {
+        if self.theme_hidden(value) == hidden {
+            return false;
+        }
+        if hidden {
+            self.hidden_themes.push(value.to_string());
+        } else {
+            self.hidden_themes.retain(|v| v != value);
+        }
+        true
+    }
 }
 
 /// The JSON theme in `themes` whose name is `name` (any case). A file that
@@ -248,6 +267,20 @@ fn expand_home(path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    /// A theme is hidden once however often it is hidden, and shown again by its name.
+    #[test]
+    fn a_hidden_theme_is_listed_once_and_comes_back() {
+        let mut s = super::Settings::default();
+        assert!(s.set_theme_hidden("Nord", true));
+        assert!(!s.set_theme_hidden("Nord", true), "already hidden");
+        assert!(s.set_theme_hidden("Dracula", true));
+        assert_eq!(s.hidden_themes, ["Nord", "Dracula"]);
+        assert!(s.theme_hidden("Nord"));
+        assert!(s.set_theme_hidden("Nord", false));
+        assert!(!s.set_theme_hidden("Nord", false), "already shown");
+        assert_eq!(s.hidden_themes, ["Dracula"]);
+    }
+
     use std::path::Path;
 
     use super::{import_into, resolve_theme, save_theme_in};

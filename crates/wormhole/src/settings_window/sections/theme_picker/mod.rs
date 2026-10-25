@@ -4,7 +4,8 @@
 //! Light Mode". The pick of each shelf has the primary's ring, its name in 600 and a check, and a
 //! click makes a card the pick of its kind. A theme that ships several versions has a card per
 //! version, on the shelf of its kind. Until "Show all" the shelves show their first cards, the pick
-//! always among them; the filter box narrows every shelf.
+//! always among them; the filter box narrows every shelf. A hidden theme (`hidden_themes`) is on no
+//! shelf unless it is a pick; "Hidden themes" under the cards lists them, each with Show.
 //!
 //! Each card is a view of its own, drawn from a fixed-size box, so the settings window can
 //! leave the ~40 of them alone while it redraws for a scroll tick or a keystroke in the filter:
@@ -35,7 +36,7 @@ use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use crate::settings::{SettingsStore, UiColors};
+use crate::settings::{SettingsStore, UiColors, settings, update_settings};
 use crate::settings_window::sections::import_theme;
 use crate::settings_window::{SettingsWindow, ui};
 use crate::studio;
@@ -56,31 +57,40 @@ pub(crate) struct ThemePicker {
     /// How many themes the filter's placeholder counts ("Filter 14 themes").
     counted: usize,
     cards: RefCell<CardSet>,
+    /// The list of hidden themes is open.
+    hidden_open: bool,
     _subscription: Subscription,
 }
 
 impl ThemePicker {
     pub(crate) fn new(window: &mut Window, cx: &mut Context<SettingsWindow>) -> Self {
-        let counted = entries(cx).len();
+        let counted = shown_count(cx);
         let filter = cx.new(|cx| InputState::new(window, cx).placeholder(filter_placeholder(counted)));
         let subscription = cx.subscribe(&filter, |_, _, event: &InputEvent, cx| {
             if let InputEvent::Change = event {
                 cx.notify();
             }
         });
-        Self { filter, counted, cards: RefCell::default(), _subscription: subscription }
+        Self { filter, counted, cards: RefCell::default(), hidden_open: false, _subscription: subscription }
     }
 
     /// Keep the filter's placeholder at the live count ("Filter 14 themes") as themes are
     /// imported, saved or dropped into the folder. Called from the window's refresh, not a draw.
     pub(crate) fn sync_placeholder(&mut self, window: &mut Window, cx: &mut App) {
-        let count = entries(cx).len();
+        let count = shown_count(cx);
         if count != self.counted {
             self.counted = count;
             self.filter
                 .update(cx, |filter, cx| filter.set_placeholder(filter_placeholder(count), window, cx));
         }
     }
+}
+
+/// How many themes the picker can show: the catalog but the hidden ones.
+fn shown_count(cx: &mut App) -> usize {
+    let entries = entries(cx);
+    let s = settings(cx);
+    entries.iter().filter(|entry| !s.theme_hidden(&entry.value)).count()
 }
 
 /// The filter's placeholder: how many themes there are to filter.
@@ -133,6 +143,8 @@ struct CardSet {
     picked: Vec<bool>,
     /// Each card's names (its own and the family's), lowercased once, for the filter box.
     search: Vec<String>,
+    /// What each card's strip says, for the list of hidden themes too.
+    names: Vec<SharedString>,
     /// The theme revision the cards were last given.
     look: Option<u64>,
 }
@@ -150,6 +162,7 @@ impl CardSet {
         if !self.catalog.as_ref().is_some_and(|catalog| Rc::ptr_eq(catalog, entries)) {
             let labels = labels(entries);
             self.picked = entries.iter().map(|entry| picks.picked(entry)).collect();
+            self.names = labels.clone();
             self.cards = labels
                 .into_iter()
                 .zip(&self.picked)
@@ -243,6 +256,7 @@ impl SettingsWindow {
         let store = cx.global::<SettingsStore>();
         let (dark, light) = (store.settings.theme.clone(), store.settings.theme_light.clone());
         let kinds = shelves(store.settings.theme_mode);
+        let hidden_themes = store.settings.hidden_themes.clone();
         let picks = Picks { dark: &dark, light: &light };
         let theme = store.revisions.theme;
         let query = self.theme_picker.filter.read(cx).value().trim().to_lowercase();
@@ -257,6 +271,7 @@ impl SettingsWindow {
         for (place, &kind) in kinds.iter().enumerate() {
             let all: Vec<usize> = (0..entries.len())
                 .filter(|ix| entries[*ix].tokens.appearance == kind)
+                .filter(|ix| set.picked[*ix] || !hidden_themes.contains(&entries[*ix].value))
                 .filter(|ix| query.is_empty() || set.search[*ix].contains(&query))
                 .collect();
             let shown = if narrowed || self.themes_all {
@@ -343,6 +358,8 @@ impl SettingsWindow {
                     .on_click(cx.listener(|_, _, _, cx| studio::open_studio(cx))),
             );
 
+        let hidden_list = (!hidden_themes.is_empty())
+            .then(|| self.render_hidden_themes(&hidden_themes, &entries, &set, ui, cx));
         div()
             .flex()
             .flex_col()
@@ -359,6 +376,78 @@ impl SettingsWindow {
                 )
             })
             .child(footer)
+            .children(hidden_list)
+            .into_any_element()
+    }
+
+    /// "Hidden themes (n)" and, while it is open, a row per hidden theme with Show. A name no theme
+    /// has any more (its file is gone) is listed as it is written, so it can still be taken off.
+    fn render_hidden_themes(
+        &self,
+        hidden: &[String],
+        entries: &[ThemeEntry],
+        set: &CardSet,
+        ui: UiColors,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let open = self.theme_picker.hidden_open;
+        let toggle = style::link_button(
+            "themes-hidden",
+            ui,
+            settings_appearance_hidden_themes(&hidden.len().to_string()),
+            false,
+        )
+        .text_color(ui.text)
+        .child(style::icon(if open { IconName::ChevronUp } else { IconName::ChevronDown }))
+        .on_click(cx.listener(|this, _, _, cx| {
+            this.theme_picker.hidden_open = !this.theme_picker.hidden_open;
+            cx.notify();
+        }));
+        let rows = open.then(|| {
+            hidden.iter().enumerate().map(|(ix, value)| {
+                let found = entries.iter().position(|entry| &entry.value == value);
+                let name =
+                    found.and_then(|at| set.names.get(at).cloned()).unwrap_or_else(|| value.clone().into());
+                let kind = found.map(|at| match entries[at].tokens.appearance {
+                    Appearance::Dark => text(SETTINGS_APPEARANCE_DARK).into(),
+                    Appearance::Light => text(SETTINGS_APPEARANCE_LIGHT).into(),
+                });
+                let value = value.clone();
+                let show =
+                    style::link_button(("theme-show", ix), ui, text(SETTINGS_APPEARANCE_SHOW_THEME), false)
+                        .on_click(move |_, _, cx| {
+                            let value = value.clone();
+                            update_settings(cx, move |s| {
+                                s.set_theme_hidden(&value, false);
+                            });
+                        })
+                        .into_any_element();
+                style::setting(
+                    ("hidden-theme", ix),
+                    ui,
+                    style::SettingParts {
+                        label: name,
+                        description: kind,
+                        chip: None,
+                        key: "",
+                        state: style::SettingState::Default,
+                        found: None,
+                        found_description: None,
+                        control: show,
+                        tall: false,
+                        extra: None,
+                        on_reset: None,
+                    },
+                    cx,
+                )
+                .into_any_element()
+            })
+        });
+        div()
+            .flex()
+            .flex_col()
+            .child(div().flex().child(toggle))
+            .children(rows.into_iter().flatten())
             .into_any_element()
     }
 }

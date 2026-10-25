@@ -49,3 +49,10 @@ settings-menu-bar-show-or-hide-wormhole = Show or hide { -brand }
 # Under the shortcut recorder when the keys are taken. { $conflict } says by what (a sentence, in English
 # for now).
 settings-menu-bar-key-conflict = { $conflict }. Press other keys.
+
+## settings_window/sections/menu_bar_preview.rs
+
+settings-menu-bar-preview-search = Search terminals and actions
+settings-menu-bar-preview-needs-input = Needs input
+settings-menu-bar-preview-working = Working
+settings-menu-bar-preview-caption = The menu bar item, with a dot and a count while a terminal needs input, and the quick panel it and the hotkey open.

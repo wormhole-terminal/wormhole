@@ -1,11 +1,12 @@
 //! The 16 ANSI colors, text, selection and cursor.
 
+use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::theme::tokens::ThemeTokens;
 
 use super::Env;
 use super::view::GalleryView;
-use crate::settings::{UiColors, settings};
+use crate::settings::settings;
 use crate::studio::draft::ANSI_NAMES;
 use crate::studio::ui;
 use crate::style::{Edges, TextRole};
@@ -71,10 +72,13 @@ impl GalleryView {
             .size(px(SLOT))
             .rounded(ui.radius_sm)
             .cursor_pointer()
-            .outlined(
-                if selected { UiColors { border_width: ui.border_width * 2.0, ..ui } } else { ui },
-                if selected { ui.primary } else { ui.border },
-            )
+            .map(|d| {
+                if selected {
+                    d.ringed(ui, ui.primary, ui.border_width * 2.0)
+                } else {
+                    d.outlined(ui, ui.border)
+                }
+            })
             .bg(hsla(color))
             .on_click(cx.listener(move |this, _, window, cx| this.select_token(name, window, cx)))
     }

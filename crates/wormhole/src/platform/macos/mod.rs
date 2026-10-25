@@ -29,5 +29,6 @@ pub mod sheet;
 pub mod sound;
 pub mod status_item;
 mod swatches;
+pub mod trash;
 pub mod vibrancy;
 pub mod window;

@@ -51,6 +51,7 @@ pub const APP_SETTINGS: &[&str] = &[
     "theme",
     "theme_mode",
     "theme_light",
+    "hidden_themes",
     "hotkey",
     "menu_bar",
     "auto_update",

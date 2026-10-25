@@ -12,7 +12,9 @@
 //! its words are lower-cased once per language and no longer for every keystroke. The search's budget
 //! rose by 49 when a link's hover fill became a layer of its own, out of the layout (so the link's text
 //! lines up with the edge it sits at); the results show several links. Every page rose by 2 to 3 per row
-//! when a row's hover fill became such a layer too, reaching past the row's text on both sides.
+//! when a row's hover fill became such a layer too, reaching past the row's text on both sides. Pages
+//! without a preview of their own (Profile, Terminal, …) fell by about 3,000 when they lost the
+//! window's miniature; Appearance rose by about 300 with each theme card's hide button and menu.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -31,20 +33,20 @@ const SLACK: u64 = 20;
 /// keeps), and of the results page of a search for a word found in several pages; a frame may make
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 14] = [
-    ("Profile", 9875),
-    ("Appearance", 14446),
-    ("Fonts", 7286),
-    ("Terminal", 12586),
-    ("Sessions", 13514),
-    ("Git", 7772),
-    ("Agents", 27081),
-    ("Notifications", 10402),
-    ("MenuBar", 7875),
-    ("Updates", 6632),
-    ("Advanced", 7337),
-    ("Projects", 12219),
-    ("FeatureFlags", 6757),
-    ("search", 11449),
+    ("Profile", 6590),
+    ("Appearance", 14776),
+    ("Fonts", 7288),
+    ("Terminal", 9588),
+    ("Sessions", 13516),
+    ("Git", 4396),
+    ("Agents", 26295),
+    ("Notifications", 7711),
+    ("MenuBar", 6024),
+    ("Updates", 3256),
+    ("Advanced", 3949),
+    ("Projects", 8866),
+    ("FeatureFlags", 3472),
+    ("search", 11451),
 ];
 
 fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {

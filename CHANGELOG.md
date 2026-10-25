@@ -24,6 +24,13 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   saved. For one terminal, "Don't keep this terminal's text" in its menu in the sidebar does the
   same.
 
+- Settings → Appearance: any theme, built-in or yours, can be hidden from the theme picker with
+  the eye on its card or from its menu (right-click), and "Hidden themes" under the cards brings
+  each back with Show. A theme you imported can also be moved to the Trash from its menu.
+- Settings shows a preview that belongs to the page: Coding agents the Terminals list with agents
+  working, asking and finished, Notifications two banners, Menu bar & hotkey the menu bar item and
+  the quick panel. Pages with nothing to preview have no preview column and use its width.
+
 ### Changed
 
 - In the tab bar (Settings → Show terminals in → Tabs), the terminals in no group are called
@@ -62,6 +69,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- Choosing a theme card, recording a shortcut or picking a colour in the Studio no longer moves
+  what is inside by a point: the ring is drawn round the edge instead of thickening the border.
+- Settings → Coding agents shows each agent's logo where Wormhole has one, instead of two letters.
 - Across Settings, text links ("Edit in Fonts", "Choose app…") line up with the edge of the page,
   the Coding agents page's arrow and icons sit before the column so the words line up with the
   rows, and the Profile page's name, environment and agent logins put their label beside the first

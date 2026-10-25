@@ -24,5 +24,6 @@ pub mod scroller;
 pub mod sheet;
 pub mod sound;
 pub mod status_item;
+pub mod trash;
 pub mod vibrancy;
 pub mod window;

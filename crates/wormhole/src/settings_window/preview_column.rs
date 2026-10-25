@@ -3,11 +3,15 @@
 //! so the page keeps the width it always had; narrower than [`COLUMN_SWITCH_W`] the column goes
 //! away and the same previews sit inline in their pages, as before.
 //!
-//! - Appearance, and every page without a preview of its own, show the window in miniature
-//!   (`sections::draw_stage`): theme, primary, opacity, status bar and fonts as they are now.
+//! - Appearance, and a search's results, show the window in miniature (`sections::draw_stage`):
+//!   theme, primary, opacity, status bar and fonts as they are now.
 //! - Fonts shows the specimen (`sections::draw_specimen`), on the tab of the font being picked.
 //! - Terminals & sidebar shows the Terminals list (`sections::draw_sidebar_preview`), beside the
 //!   density under the pointer.
+//! - Coding agents shows the Terminals list with agents at work in it (`draw_agents_preview`).
+//! - Notifications shows two banners (`draw_notifications_preview`).
+//! - Menu bar & hotkey shows the menu bar item and the quick panel (`draw_menu_bar_preview`).
+//! - Every other page has nothing to show there: no column, and the page takes its width.
 //!
 //! The column holds nothing to operate: no focus stop, so ⇥ and F6 pass over it, and one labelled
 //! group for VoiceOver. A search result for a preview names where it went instead of drawing it.
@@ -38,6 +42,12 @@ pub(super) enum PreviewKind {
     Fonts,
     /// The Terminals list in the sidebar's own look.
     Sidebar,
+    /// The Terminals list with coding agents at work.
+    Agents,
+    /// Notification banners.
+    Notifications,
+    /// The menu bar item and the quick panel.
+    MenuBar,
 }
 
 impl PreviewKind {
@@ -46,7 +56,9 @@ impl PreviewKind {
         match self {
             Self::Window => text(SETTINGS_WINDOW_WINDOW),
             Self::Fonts => text(SETTINGS_WINDOW_FONTS),
-            Self::Sidebar => text(SETTINGS_WINDOW_TERMINALS_LIST),
+            Self::Sidebar | Self::Agents => text(SETTINGS_WINDOW_TERMINALS_LIST),
+            Self::Notifications => text(SETTINGS_WINDOW_NOTIFICATIONS),
+            Self::MenuBar => text(SETTINGS_WINDOW_MENU_BAR),
         }
     }
 
@@ -56,6 +68,9 @@ impl PreviewKind {
             Self::Window => text(SETTINGS_WINDOW_PREVIEW_WINDOW_LABEL),
             Self::Fonts => text(SETTINGS_WINDOW_PREVIEW_FONTS_LABEL),
             Self::Sidebar => text(SETTINGS_WINDOW_PREVIEW_TERMINALS_LABEL),
+            Self::Agents => text(SETTINGS_WINDOW_PREVIEW_AGENTS_LABEL),
+            Self::Notifications => text(SETTINGS_WINDOW_PREVIEW_NOTIFICATIONS_LABEL),
+            Self::MenuBar => text(SETTINGS_WINDOW_PREVIEW_MENU_BAR_LABEL),
         }
     }
 }
@@ -65,16 +80,32 @@ impl PreviewKind {
 const IN_COLUMN: [&str; 3] = ["appearance-preview", "font-specimen", "sidebar-preview"];
 
 impl SettingsWindow {
-    /// The preview of the page in front. A search's results are not a page: they show the window.
-    pub(super) fn preview_kind(&self) -> PreviewKind {
+    /// The preview of the page in front, if it has one. A search's results are not a page: they
+    /// show the window.
+    pub(super) fn preview_kind(&self) -> Option<PreviewKind> {
         if self.show_results {
-            return PreviewKind::Window;
+            return Some(PreviewKind::Window);
         }
         match self.section {
-            Section::Fonts => PreviewKind::Fonts,
-            Section::Sessions => PreviewKind::Sidebar,
-            _ => PreviewKind::Window,
+            Section::Appearance => Some(PreviewKind::Window),
+            Section::Fonts => Some(PreviewKind::Fonts),
+            Section::Sessions => Some(PreviewKind::Sidebar),
+            Section::Agents => Some(PreviewKind::Agents),
+            Section::Notifications => Some(PreviewKind::Notifications),
+            Section::MenuBar => Some(PreviewKind::MenuBar),
+            Section::Profile
+            | Section::Terminal
+            | Section::Git
+            | Section::Updates
+            | Section::Advanced
+            | Section::Projects
+            | Section::FeatureFlags => None,
         }
+    }
+
+    /// Whether the column is drawn: the window is wide enough and the page has a preview.
+    pub(super) fn column_shown(&self) -> bool {
+        self.preview_column && self.preview_kind().is_some()
     }
 
     /// Whether the column shows the preview row `id` (so the page leaves it out).
@@ -83,43 +114,53 @@ impl SettingsWindow {
     }
 
     /// The column: its head, then the page's preview, scrolling on its own when a window is short.
-    pub(super) fn render_preview_column(&self, fill: Hsla, cx: &mut Context<Self>) -> AnyElement {
+    /// `None` for a page without a preview.
+    pub(super) fn render_preview_column(&self, fill: Hsla, cx: &mut Context<Self>) -> Option<AnyElement> {
         let ui = ui(cx);
-        let kind = self.preview_kind();
+        let kind = self.preview_kind()?;
         let preview = match kind {
             PreviewKind::Window => sections::draw_stage(self, cx),
             PreviewKind::Fonts => sections::draw_specimen(self, cx),
             PreviewKind::Sidebar => sections::draw_sidebar_preview(self, cx),
+            PreviewKind::Agents => sections::draw_agents_preview(cx),
+            PreviewKind::Notifications => sections::draw_notifications_preview(cx),
+            PreviewKind::MenuBar => sections::draw_menu_bar_preview(cx),
         };
-        div()
-            .id("settings-preview")
-            .role(Role::Group)
-            .aria_label(kind.spoken())
-            .flex_none()
-            .w(px(PREVIEW_W))
-            .h_full()
-            .flex()
-            .flex_col()
-            .overflow_y_scroll()
-            .px_4()
-            .pt(px(PAGE_TOP))
-            .pb_6()
-            .gap_2()
-            .bg(fill)
-            .rule_left(ui)
-            .child(
-                div()
-                    .flex_none()
-                    .flex()
-                    .items_center()
-                    .h(px(style::CONTROL_H))
-                    .child(style::section_label(ui, text(SETTINGS_WINDOW_PREVIEW)))
-                    .child(
-                        div().ml_2().text_caption().text_color(ui.faint).child(format!("· {}", kind.title())),
-                    ),
-            )
-            .child(preview)
-            .into_any_element()
+        Some(
+            div()
+                .id("settings-preview")
+                .role(Role::Group)
+                .aria_label(kind.spoken())
+                .flex_none()
+                .w(px(PREVIEW_W))
+                .h_full()
+                .flex()
+                .flex_col()
+                .overflow_y_scroll()
+                .px_4()
+                .pt(px(PAGE_TOP))
+                .pb_6()
+                .gap_2()
+                .bg(fill)
+                .rule_left(ui)
+                .child(
+                    div()
+                        .flex_none()
+                        .flex()
+                        .items_center()
+                        .h(px(style::CONTROL_H))
+                        .child(style::section_label(ui, text(SETTINGS_WINDOW_PREVIEW)))
+                        .child(
+                            div()
+                                .ml_2()
+                                .text_caption()
+                                .text_color(ui.faint)
+                                .child(format!("· {}", kind.title())),
+                        ),
+                )
+                .child(preview)
+                .into_any_element(),
+        )
     }
 
     /// A preview row in the search's results while the column is showing it: a note saying where it

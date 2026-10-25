@@ -361,7 +361,12 @@ impl Render for SettingsWindow {
             .pt(px(PAGE_TOP))
             .child(
                 div()
-                    .max_w(px(COLUMN_W))
+                    // A page without a preview takes the column's width too.
+                    .max_w(px(if self.preview_column && !self.column_shown() {
+                        COLUMN_W + super::preview_column::PREVIEW_W
+                    } else {
+                        COLUMN_W
+                    }))
                     .flex()
                     .flex_col()
                     .gap_6()
@@ -396,7 +401,9 @@ impl Render for SettingsWindow {
             .child(div().absolute().top_0().left_0().right_0().h(px(style::TITLE_ROW_H)).title_drag())
             .child(self.render_nav(&query, surfaces.panel, cx))
             .child(content)
-            .children(self.preview_column.then(|| self.render_preview_column(surfaces.panel_right, cx)))
+            .children(
+                self.preview_column.then(|| self.render_preview_column(surfaces.panel_right, cx)).flatten(),
+            )
             .children(self.render_new_profile(cx))
     }
 }

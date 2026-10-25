@@ -170,3 +170,12 @@ settings-appearance-filter-themes-count = { $count ->
 
 # The link under the theme cards that shows the rest. { $total } is how many cards there are.
 settings-appearance-show-all-themes = Show all { $total }
+
+## settings_window/sections/theme_picker (hiding themes)
+
+settings-appearance-hide-theme = Hide theme
+settings-appearance-move-to-trash = Move to Trash
+settings-appearance-show-theme = Show
+
+# The disclosure under the theme cards that lists the hidden ones. { $count } is how many.
+settings-appearance-hidden-themes = Hidden themes ({ $count })

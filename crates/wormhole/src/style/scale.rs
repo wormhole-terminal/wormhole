@@ -209,6 +209,20 @@ pub trait Edges: Styled + Sized {
         self.border_color(color)
     }
 
+    /// A ring of `width` in `color`: the border every side takes the color, and a shadow without
+    /// blur draws the rest just outside the edge. Choosing or focusing an element this way never
+    /// moves what is in it, as a thicker border would.
+    fn ringed(self, ui: UiColors, color: Hsla, width: Pixels) -> Self {
+        let rest = (width - ui.border_width).max(px(0.0));
+        self.outlined(ui, color).shadow(vec![BoxShadow {
+            color,
+            offset: point(px(0.0), px(0.0)),
+            blur_radius: px(0.0),
+            spread_radius: rest,
+            inset: false,
+        }])
+    }
+
     fn rule_top(mut self, ui: UiColors) -> Self {
         self.style().border_widths.top = Some(ui.border_width.into());
         self.border_color(ui.border)

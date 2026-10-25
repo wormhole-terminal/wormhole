@@ -228,21 +228,21 @@ fn draw_installed(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> 
     div().flex().flex_col().children(rows).children(none).into_any_element()
 }
 
-/// An agent's mark (CC, CX, GM…) in a square.
+/// An agent's logo in a square, or its monogram (CX, AI…) for an agent without a bundled logo.
 fn mark(ui: UiColors, agent: &Agent) -> AnyElement {
-    div()
+    let tile = div()
         .flex_none()
         .flex()
         .items_center()
         .justify_center()
         .size(px(style::CONTROL_H))
         .rounded(ui.radius)
-        .bg(ui.hover)
-        .text_caption()
-        .font_weight(FontWeight::BOLD)
-        .text_color(ui.text)
-        .child(agent.monogram)
-        .into_any_element()
+        .bg(ui.hover);
+    match agent.icon() {
+        Some(logo) => tile.child(style::agent_logo(Some(logo), agent.monogram, style::GLYPH, ui.text)),
+        None => tile.text_caption().font_weight(FontWeight::BOLD).text_color(ui.text).child(agent.monogram),
+    }
+    .into_any_element()
 }
 
 /// One installed agent: its mark and name with the hooks' badge, where the hooks are

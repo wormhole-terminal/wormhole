@@ -424,7 +424,7 @@ pub fn shortcut_recorder(
         .rounded(ui.radius)
         .bg(ui.input)
         .cursor_pointer()
-        .outlined(if ring { UiColors { border_width: ui.focus_ring_width, ..ui } } else { ui }, outline)
+        .map(|d| if ring { d.ringed(ui, outline, ui.focus_ring_width) } else { d.outlined(ui, outline) })
         .text_label()
         .font_weight(FontWeight::NORMAL);
     match state {
