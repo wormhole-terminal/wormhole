@@ -281,6 +281,22 @@ mod tests {
         tempfile::Builder::new().prefix("ha").tempdir_in("/tmp").expect("temp")
     }
 
+    /// [`forget`] once a socket just closed has stopped answering. macOS can't create a socket
+    /// close-on-exec in one step, so a program another test starts at that moment (`dead_pid`'s
+    /// `/usr/bin/true`, git) may inherit the listener and keep it answering until it exits: a
+    /// moment, never longer than that program runs.
+    fn forget_once_closed(dir: &std::path::Path, id: &str) -> Result<ForgetOutcome, ForgetError> {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        loop {
+            match forget(dir, id) {
+                Err(ForgetError::Live(_)) if std::time::Instant::now() < deadline => {
+                    std::thread::sleep(std::time::Duration::from_millis(20));
+                }
+                other => return other,
+            }
+        }
+    }
+
     /// A pid that certainly ran and is gone.
     fn dead_pid() -> u32 {
         let mut child = std::process::Command::new("/usr/bin/true").spawn().expect("spawns");
@@ -305,7 +321,7 @@ mod tests {
         drop(Listener::bind(&sock).expect("binds")); // the file stays after the listener is gone
         write_meta(d, "aaaaaaaaaaaa", dead_pid(), &sock);
         std::fs::write(d.join("other.txt"), "x").expect("write");
-        let outcome = forget(d, "aaaaaaaaaaaa").expect("forgets");
+        let outcome = forget_once_closed(d, "aaaaaaaaaaaa").expect("forgets");
         assert_eq!(outcome.removed, [d.join("aaaaaaaaaaaa.meta"), sock.clone()]);
         assert!(!sock.exists() && !d.join("aaaaaaaaaaaa.meta").exists());
         assert!(d.join("other.txt").exists(), "only the host's files");
@@ -341,7 +357,7 @@ mod tests {
         let listener = Listener::bind(d.join("dddddddddddd.sock")).expect("binds");
         assert!(matches!(forget(d, "dddddddddddd"), Err(ForgetError::Live(_))));
         drop(listener);
-        let outcome = forget(d, "dddddddddddd").expect("forgets");
+        let outcome = forget_once_closed(d, "dddddddddddd").expect("forgets");
         assert_eq!(outcome.removed.len(), 2, "{outcome:?}");
     }
 
@@ -350,7 +366,7 @@ mod tests {
         let dir = short_dir();
         let d = dir.path();
         drop(Listener::bind(d.join("eeeeeeeeeeee.sock")).expect("binds"));
-        assert_eq!(forget(d, "eeeeeeeeeeee").expect("forgets").removed.len(), 1);
+        assert_eq!(forget_once_closed(d, "eeeeeeeeeeee").expect("forgets").removed.len(), 1);
     }
 
     #[test]
