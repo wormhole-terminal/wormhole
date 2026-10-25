@@ -644,6 +644,8 @@ impl TerminalView {
         {
             self.last_resize = Instant::now();
             pty.resize(size);
+            // Found out while the frame draws (`render/prepare.rs`): GPUI holds an emitted event back
+            // until the draw is over, which `Workspace::grid_resized` relies on to notify the window.
             cx.emit(TerminalEvent::Resized);
         }
     }
