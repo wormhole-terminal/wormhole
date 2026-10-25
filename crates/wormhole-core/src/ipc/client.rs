@@ -18,8 +18,9 @@ pub enum Command<'a> {
     Hook(&'a [String]),
     /// `statusline`: hand over Claude Code's plan usage, model and context window.
     StatusLine,
-    /// `list`, `status`, `notify`, `send-text`, `new-terminal` or `help`: a control request to
-    /// the running app (the arguments from the verb on; `control::run`).
+    /// `list`, `status`, `notify`, `send-text`, `new-terminal`, `sessions`, `probe` or `help`: a control
+    /// request to the running app, or a tool that works without it (the arguments from the verb on;
+    /// `control::run`).
     Control(&'a [String]),
     /// `welcome [-- <shell…>]`: the first-run welcome, a program in the terminal (the arguments
     /// after `welcome`; `welcome::run`).

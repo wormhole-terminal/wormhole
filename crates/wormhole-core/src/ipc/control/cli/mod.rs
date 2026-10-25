@@ -77,7 +77,9 @@ pub const COMMAND_NAME: &str = "wh";
 /// Whether `word` as the first argument is this command line's (`Wormhole list …`): a verb of the table
 /// (`verbs`), or a way to ask for the usage.
 pub fn is_verb(word: &str) -> bool {
-    verbs::find(word).is_some() || matches!(word, "--help" | "-h")
+    // `probe` is behind the Probes flag and in no release yet, so the table (and with it `help --json` and
+    // the skill agents learn the command line from) leaves it out until it ships.
+    verbs::find(word).is_some() || matches!(word, "probe" | "--help" | "-h")
 }
 
 /// `WORMHOLE_JSON` as it is set in this process.

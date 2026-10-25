@@ -81,6 +81,8 @@ pub fn help_with(automation: bool) -> String {
     };
     let sessions = crate::ipc::control::sessions::help(wh);
     let sessions = sessions.trim_end();
+    let probe = crate::ipc::control::probe::help(wh);
+    let probe = probe.trim_end();
     format!(
         "\
 Wormhole: control the running app from the command line
@@ -100,6 +102,7 @@ Wormhole: control the running app from the command line
       switches, this terminal and its shell integration, the skill, and for each problem the fix.
 {watching}
 {sessions}
+{probe}
   {wh} mcp
       Serve all of this to a coding agent over MCP (a stdio server: the agent starts it, e.g.
       `claude mcp add wormhole -- {wh} mcp`). Same switches, same refusals; see the docs.

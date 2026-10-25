@@ -22,7 +22,7 @@ use super::control::{
     ASK_QUEUE_MAX, ASK_WAIT_S, Action, PROTOCOL_VERSION, Ran, Reason, Reply, Request, SEND_TEXT_MAX_BYTES,
     help_json, help_with, json_env, parse, print, print_err, render_with, run_parts, show_automation,
 };
-use super::control::{sessions, skill_cli};
+use super::control::{probe, sessions, skill_cli};
 use crate::platform::paths;
 use crate::platform::socket::Stream;
 
@@ -255,6 +255,10 @@ pub(crate) fn run(args: &[String]) -> i32 {
     // Like `sessions`, the skill is files: it works with the app closed, and is nothing the app is asked.
     if args.first().map(String::as_str) == Some("skill") {
         return skill_cli::run(&args[1..]);
+    }
+    // Probes are folders: checked and made without the app, too.
+    if args.first().map(String::as_str) == Some("probe") {
+        return probe::run(&args[1..]);
     }
     let cwd = std::env::current_dir().unwrap_or_default();
     let home = paths::home();

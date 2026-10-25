@@ -19,6 +19,9 @@
 //! hosts that keep terminals running behind the app, works from their files and sockets, and needs no app
 //! (`sessions`).
 //!
+//! `probe` (`Wormhole probe new | validate | test`) is not part of the protocol either: it makes, checks and
+//! tests a Probe's folder and needs no app (`probe`).
+//!
 //! One more kind of request is not a script's: `welcome` is the first-run program (`Wormhole welcome`,
 //! in a terminal the app started for it) talking to the app that runs it. A token the app put in that
 //! terminal's environment stands in for `control_write` (`welcome`'s module notes say why that is
@@ -34,6 +37,7 @@ mod limits;
 pub mod mouse;
 mod policy;
 pub mod printable;
+pub mod probe;
 pub mod read;
 pub mod sessions;
 pub mod skill_cli;
