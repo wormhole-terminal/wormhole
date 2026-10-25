@@ -152,6 +152,12 @@ impl DataRoot {
         self.base.join("logs")
     }
 
+    /// The Probes: one folder each, named by the Probe's id. Shared by every profile, like the
+    /// app's own code they extend.
+    pub fn probes_dir(&self) -> PathBuf {
+        self.base.join("probes")
+    }
+
     /// One profile's files. Default's are the data folder's own, where they have always been.
     pub fn profile(&self, id: &ProfileId) -> ProfilePaths {
         let dir = if id.is_default() { self.base.clone() } else { self.profiles_dir().join(id.as_str()) };
