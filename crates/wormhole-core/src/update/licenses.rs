@@ -1,5 +1,6 @@
 //! The open-source software Wormhole is built from: each crate's declared license
-//! and the license texts that shipped in its package.
+//! and the license texts that shipped in its package, and what is compiled in without being a
+//! crate (the bundled font) with its own.
 //!
 //! The data is `assets/licenses.json`, written by `scripts/gen-licenses.py` (run it after
 //! changing dependencies). Identical texts are stored once and shared by index.
@@ -17,6 +18,18 @@ pub struct Licenses {
     crates: Vec<Crate>,
 }
 
+/// What an entry of the list is.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Kind {
+    /// A Rust crate from Cargo.lock.
+    #[default]
+    Crate,
+    /// A font compiled into the app.
+    Font,
+}
+
+/// One entry: a crate, or a font compiled in (see [`Kind`]).
 #[derive(Debug, Deserialize)]
 pub struct Crate {
     pub name: String,
@@ -26,6 +39,8 @@ pub struct Crate {
     pub repository: Option<String>,
     /// Indices into [`Licenses::texts`].
     texts: Vec<usize>,
+    #[serde(default)]
+    pub kind: Kind,
 }
 
 impl Crate {
@@ -97,7 +112,7 @@ impl Licenses {
 mod tests {
     use std::collections::HashSet;
 
-    use super::Licenses;
+    use super::{Kind, Licenses};
 
     const SAMPLE: &str = r#"{"texts": ["MIT text", "Apache text"], "crates": [
         {"name": "alpha", "version": "1.0.0", "license": "MIT OR Apache-2.0", "repository": null, "texts": [0, 1]},
@@ -116,6 +131,21 @@ mod tests {
         assert!(licenses.crates().iter().any(|c| licenses.texts_of(c).next().is_some()));
     }
 
+    /// The bundled font is listed with its license text (the OFL asks for it to travel with the font).
+    #[test]
+    fn the_bundled_font_is_listed_with_its_license() {
+        let licenses = Licenses::bundled();
+        let font = licenses
+            .crates()
+            .iter()
+            .find(|c| c.kind == Kind::Font && c.name == "JetBrains Mono")
+            .expect("JetBrains Mono is in licenses.json");
+        assert_eq!(font.license.as_deref(), Some("OFL-1.1"));
+        assert!(licenses.texts_of(font).any(|text| text.contains("SIL OPEN FONT LICENSE Version 1.1")));
+        let readme = include_str!("../../assets/fonts/JetBrainsMono/README.md");
+        assert!(readme.contains(&format!("Version {}", font.version)), "the version is the bundled files'");
+    }
+
     #[test]
     fn bundled_list_matches_the_lockfile() {
         // A dependency upgrade without `scripts/gen-licenses.py` leaves an entry for a version
@@ -132,6 +162,7 @@ mod tests {
         let stale: Vec<String> = Licenses::bundled()
             .crates()
             .iter()
+            .filter(|c| c.kind == Kind::Crate)
             .filter(|c| !locked.contains(&(c.name.clone(), c.version.clone())))
             .map(|c| c.title())
             .collect();
@@ -156,8 +187,12 @@ mod tests {
         let meta: serde_json::Value = serde_json::from_slice(&output.stdout).expect("metadata is JSON");
         let shipped = shipped(&meta);
         assert!(shipped.len() > 100, "the dependency graph came out empty");
-        let listed: HashSet<(String, String)> =
-            Licenses::bundled().crates().iter().map(|c| (c.name.clone(), c.version.clone())).collect();
+        let listed: HashSet<(String, String)> = Licenses::bundled()
+            .crates()
+            .iter()
+            .filter(|c| c.kind == Kind::Crate)
+            .map(|c| (c.name.clone(), c.version.clone()))
+            .collect();
         let mut missing: Vec<String> =
             shipped.difference(&listed).map(|(name, version)| format!("{name} {version}")).collect();
         missing.sort();

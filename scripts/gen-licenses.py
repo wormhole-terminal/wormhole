@@ -10,7 +10,8 @@ It lists the crates the app is built from on macOS (normal dependencies of the
 workspace crates, for both architectures we ship; not dev- or build-only ones),
 with each crate's declared license and the text of the license files in its
 package. Crates whose package ships no license file get an empty text list, and the
-window says so. Identical texts are stored once.
+window says so. Identical texts are stored once. What is compiled in without being a crate
+(the bundled font) is listed from `ASSETS` below, marked with its `kind`.
 
 Needs only Python 3 and cargo; dependencies must be downloaded (`cargo fetch`).
 """
@@ -24,6 +25,19 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 OUT = os.path.join(ROOT, "crates", "wormhole-core", "assets", "licenses.json")
 TARGETS = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
 LICENSE_PREFIXES = ("LICENSE", "LICENCE", "COPYING", "UNLICENSE", "NOTICE")
+
+# Compiled into the app without being a crate: each with its license file, relative to ROOT.
+# Update the version with the files (the folder's README says which release they are).
+ASSETS = [
+    {
+        "name": "JetBrains Mono",
+        "version": "2.304",
+        "license": "OFL-1.1",
+        "repository": "https://github.com/JetBrains/JetBrainsMono",
+        "kind": "font",
+        "files": ["crates/wormhole-core/assets/fonts/JetBrainsMono/OFL.txt"],
+    },
+]
 
 
 def metadata(target):
@@ -94,15 +108,17 @@ def build():
             packages[package["id"]] = package
         ids |= shipped(meta)
 
-    entries = sorted(
-        (packages[i] for i in ids), key=lambda p: (p["name"].lower(), p["version"], p["id"])
-    )
+    entries = [(p, license_files(p)) for p in (packages[i] for i in ids)]
+    entries += [
+        ({**asset, "id": asset["name"]}, [os.path.join(ROOT, f) for f in asset["files"]]) for asset in ASSETS
+    ]
+    entries.sort(key=lambda e: (e[0]["name"].lower(), e[0]["version"], e[0]["id"]))
     texts = []
     index = {}
     crates = []
-    for package in entries:
+    for package, files in entries:
         used = []
-        for path in license_files(package):
+        for path in files:
             text = read_text(path)
             if not text:
                 continue
@@ -111,15 +127,16 @@ def build():
                 texts.append(text)
             if index[text] not in used:
                 used.append(index[text])
-        crates.append(
-            {
-                "name": package["name"],
-                "version": package["version"],
-                "license": package.get("license"),
-                "repository": package.get("repository") or package.get("homepage"),
-                "texts": used,
-            }
-        )
+        entry = {
+            "name": package["name"],
+            "version": package["version"],
+            "license": package.get("license"),
+            "repository": package.get("repository") or package.get("homepage"),
+            "texts": used,
+        }
+        if "kind" in package:
+            entry["kind"] = package["kind"]
+        crates.append(entry)
 
     # One line per text and per crate, so a regeneration diffs readably.
     lines = ['{"texts": [']
