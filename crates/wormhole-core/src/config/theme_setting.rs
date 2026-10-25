@@ -134,7 +134,10 @@ fn import_into(dir: &Path, source: &Path) -> Result<PathBuf, String> {
         .map_err(|e| e.to_string())?;
     let file_name = source.file_name().ok_or("not a file")?;
     let same = dir.join(file_name);
-    let target = if std::fs::read(&same).is_ok_and(|existing| existing == bytes) {
+    // Capped like the source: a file of that name that is bigger cannot be the same.
+    let same_bytes = files::read_capped(&same, tokens::MAX_THEME_BYTES as u64, LinkPolicy::Follow)
+        .is_ok_and(|existing| existing == bytes);
+    let target = if same_bytes {
         same
     } else {
         let stem = Path::new(file_name).file_stem().map(|s| s.to_string_lossy().into_owned());
