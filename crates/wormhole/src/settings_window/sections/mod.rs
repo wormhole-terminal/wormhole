@@ -27,6 +27,8 @@ mod agent_skills;
 mod agents;
 mod appearance;
 mod cli_tool;
+mod extensions;
+mod extensions_sheet;
 mod feature_flags;
 mod fonts;
 mod git;
@@ -53,6 +55,7 @@ mod updates;
 pub(super) use agents::AgentsSnapshot;
 pub(super) use cli_tool::CliToolPanel;
 pub(super) use feature_flags::is_unlock_key;
+pub(super) use extensions::Extensions;
 pub(super) use fonts::draw_specimen;
 pub(crate) use import::ImportPage;
 pub(super) use menu_bar_preview::draw_menu_bar_preview;
@@ -81,6 +84,7 @@ pub(super) fn controls(section: Section) -> &'static [Setting] {
         Section::Agents => agents::SETTINGS,
         Section::Import => import::SETTINGS,
         Section::Projects => projects::SETTINGS,
+        Section::Extensions => extensions::SETTINGS,
         Section::FeatureFlags => feature_flags::SETTINGS,
         Section::Notifications => notifications::SETTINGS,
         Section::MenuBar => menu_bar::SETTINGS,
@@ -143,6 +147,7 @@ impl SettingsWindow {
                     .on_click(cx.listener(|this, _, _, cx| this.scan_import(cx)))
                     .into_any_element(),
             ),
+            Section::Extensions => Some(extensions::header_action(cx)),
             Section::Profile => Some(
                 Button::new("profile-new")
                     .outline()

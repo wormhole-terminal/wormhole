@@ -45,6 +45,7 @@ pub enum SectionId {
     Advanced,
     // Preview (dev builds only): sections behind a feature flag, listed last.
     Projects,
+    Extensions,
     FeatureFlags,
 }
 
@@ -182,7 +183,7 @@ impl Entry {
 }
 
 impl SectionId {
-    pub const ALL: [SectionId; 15] = [
+    pub const ALL: [SectionId; 16] = [
         SectionId::Profile,
         SectionId::Appearance,
         SectionId::Fonts,
@@ -198,6 +199,7 @@ impl SectionId {
         SectionId::Advanced,
         // Preview, last: behind a feature flag and shown only in a dev build.
         SectionId::Projects,
+        SectionId::Extensions,
         SectionId::FeatureFlags,
     ];
 
@@ -250,6 +252,7 @@ impl SectionId {
         match self {
             SectionId::Projects => Some(crate::config::features::FeatureFlag::ProjectFolders),
             SectionId::Motion => Some(crate::config::features::FeatureFlag::Motion),
+            SectionId::Extensions => Some(crate::config::features::FeatureFlag::Probes),
             _ => None,
         }
     }
@@ -437,7 +440,7 @@ mod tests {
     #[test]
     fn the_preview_sections_show_only_in_a_dev_build_or_on_unstable_and_while_their_flag_is_on() {
         use crate::config::features::FlagMode::{Dev as DEV, Release as RELEASE, Unstable as UNSTABLE};
-        let preview = [SectionId::Projects, SectionId::FeatureFlags, SectionId::Motion];
+        let preview = [SectionId::Projects, SectionId::Extensions, SectionId::FeatureFlags, SectionId::Motion];
         let defaults = Settings::default();
         // A release build: no flag list, and a flagged feature stays hidden whatever the file says.
         let asked_on = Settings {

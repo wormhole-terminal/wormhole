@@ -42,6 +42,7 @@ pub(super) fn section_icon(section: Section) -> IconName {
         Section::Agents => IconName::Sparkles,
         Section::Import => IconName::ArrowDownToLine,
         Section::Projects => IconName::Folder,
+        Section::Extensions => IconName::Puzzle,
         Section::FeatureFlags => IconName::FlaskConical,
         Section::Notifications => IconName::Bell,
         Section::MenuBar => IconName::Command,

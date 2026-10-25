@@ -101,6 +101,7 @@ impl SettingsWindow {
             | Section::Updates
             | Section::Advanced
             | Section::Projects
+            | Section::Extensions
             | Section::FeatureFlags => None,
         }
     }

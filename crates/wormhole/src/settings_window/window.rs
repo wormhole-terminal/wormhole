@@ -160,6 +160,7 @@ impl SettingsWindow {
             agents_task: None,
             import: sections::ImportPage::default(),
             cli_tool: sections::CliToolPanel::read(),
+            extensions: sections::Extensions::default(),
             rem: window.rem_size(),
             blur,
             focus_handle,
@@ -169,12 +170,20 @@ impl SettingsWindow {
         // The apps Open folders in lists, looked for when Settings opens, when its Terminal page is shown and
         // when the app comes forward again (an app may have been installed meanwhile): never while it draws.
         crate::open_in::OpenIn::refresh(cx);
-        cx.observe_window_activation(window, |_, window, cx| {
+        // The Probes folder is read again when the window comes forward with its page showing: a folder
+        // may have been added or edited in the meantime. There is no timer.
+        cx.observe_window_activation(window, |this, window, cx| {
             if window.is_window_active() {
                 crate::open_in::OpenIn::refresh(cx);
+                if this.section == Section::Extensions {
+                    this.scan_probes(cx);
+                }
             }
         })
         .detach();
+        if this.section == Section::Extensions {
+            this.scan_probes(cx);
+        }
         // The nav marks an agent whose hooks need repair, so the agents are read up front.
         this.load_agents(cx);
         this.load_cli_tool(cx);
@@ -212,6 +221,9 @@ impl SettingsWindow {
         // files until a person opens Import), and from here, not `render`, which must not notify.
         if section == Section::Import {
             self.import_shown(cx);
+        }
+        if section == Section::Extensions {
+            self.scan_probes(cx);
         }
         self.show_results = false;
         self.open_select = None;
@@ -257,6 +269,7 @@ impl SettingsWindow {
     /// window.
     pub(super) fn escape(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.new_profile.take().is_some()
+            || self.close_probe_sheet(cx)
             || self.font_picker.open.take().is_some()
             || self.open_select.take().is_some()
             || self.end_recording(cx)
@@ -429,6 +442,7 @@ impl Render for SettingsWindow {
                 self.preview_column.then(|| self.render_preview_column(surfaces.panel_right, cx)).flatten(),
             )
             .children(self.render_new_profile(cx))
+            .children(self.render_probe_sheet(window, cx))
     }
 }
 

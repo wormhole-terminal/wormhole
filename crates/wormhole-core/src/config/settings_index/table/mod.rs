@@ -135,6 +135,11 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             intro: SETTINGS_SECTION_PROJECTS_INTRO,
             nav: NavGroup::Preview,
         },
+        SectionId::Extensions => &SectionInfo {
+            title: SETTINGS_SECTION_EXTENSIONS,
+            intro: SETTINGS_SECTION_EXTENSIONS_INTRO,
+            nav: NavGroup::Preview,
+        },
         SectionId::FeatureFlags => &SectionInfo {
             title: SETTINGS_SECTION_FEATURE_FLAGS,
             intro: SETTINGS_SECTION_FEATURE_FLAGS_INTRO,
@@ -180,6 +185,7 @@ pub(super) fn groups(id: SectionId) -> &'static [Group] {
         SectionId::Agents => agents::AGENTS,
         SectionId::Projects => agents::PROJECTS,
         SectionId::Import => import::IMPORT,
+        SectionId::Extensions => agents::EXTENSIONS,
         SectionId::Notifications => notifications::NOTIFICATIONS,
         SectionId::MenuBar => menu_bar::MENU_BAR,
         SectionId::FeatureFlags => agents::FEATURE_FLAGS,

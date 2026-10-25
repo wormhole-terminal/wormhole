@@ -12,6 +12,8 @@
 #[cfg(test)]
 mod close_tests;
 pub(crate) mod devctl;
+#[cfg(test)]
+mod extensions_tests;
 mod font_picker;
 #[cfg(test)]
 mod frame_tests;
@@ -165,6 +167,8 @@ pub(crate) struct SettingsWindow {
     import: sections::ImportPage,
     /// Coding agents → Command line tool: where it stands.
     cli_tool: sections::CliToolPanel,
+    /// Extensions → the Probes found, the approval sheet and the work behind them.
+    extensions: sections::Extensions,
     /// The window's rem size as of the last draw, for boxes that are sized in rems and drawn
     /// from a cache (the theme cards).
     rem: Pixels,

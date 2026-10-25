@@ -1,4 +1,4 @@
-//! The Coding agents section, and the Project folders and Feature flags sections that hold one setting each.
+//! The Coding agents section, and the Project folders, Extensions and Feature flags sections that hold one setting each.
 
 use super::{entry, group, untitled};
 use crate::config::features::FeatureFlag;
@@ -86,6 +86,10 @@ pub(super) const AGENTS: &[Group] = &[
 pub(super) const PROJECTS: &[Group] = &[untitled(&[entry("projects", SETTINGS_PROJECTS_PROJECTS, &[])
     .with_description(SETTINGS_PROJECTS_PROJECTS_DESCRIPTION)
     .with_keywords(SETTINGS_PROJECTS_PROJECTS_KEYWORDS)])];
+
+pub(super) const EXTENSIONS: &[Group] = &[untitled(&[entry("probes", SETTINGS_EXTENSIONS_PROBES, &[])
+    .with_description(SETTINGS_EXTENSIONS_PROBES_DESCRIPTION)
+    .with_keywords(SETTINGS_EXTENSIONS_PROBES_KEYWORDS)])];
 
 pub(super) const FEATURE_FLAGS: &[Group] =
     &[untitled(&[entry("feature-flags", SETTINGS_FEATURE_FLAGS_FEATURE_FLAGS, &["feature_flags"])

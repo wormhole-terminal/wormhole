@@ -198,6 +198,13 @@ section Projects
 group ""
   blurb ""
   aside ""
+section Extensions
+  title "Extensions"
+  intro "Probes are folders that add to Wormhole. A new or changed one stays off until you approve exactly what it asks for."
+  nav "Preview"
+group ""
+  blurb ""
+  aside ""
 section FeatureFlags
   title "Feature flags"
   intro "Features still being built. They show here in a development build and on the Unstable update channel; otherwise a release has them off until they're finished."
@@ -665,6 +672,10 @@ entry Projects projects
   label "Project folders"
   description "The .wormhole folder of a project: trust, and which of its files you use"
   keywords ".wormhole project folder trust touch id actions prompts layout notes theme settings"
+entry Extensions probes
+  label "Probes"
+  description "Folders with a probe.toml in Wormhole's data folder, and what each is allowed to do"
+  keywords "probe probes extension extensions plugin permissions approve touch id probe.toml"
 entry FeatureFlags feature-flags
   label "Feature flags"
   description "Turn features that are still being built on or off in this build"
