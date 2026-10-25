@@ -17,6 +17,8 @@ use std::path::Path;
 
 use super::COMMAND_NAME;
 use super::cli::{print, print_err};
+use serde_json::Value;
+
 use crate::config::Settings;
 use crate::config::features::FeatureFlag;
 use crate::probe::cli::{self, Env, Outcome};
@@ -54,13 +56,27 @@ pub fn run_in(args: &[String], env: &Env<'_>, enabled: bool) -> Outcome {
     cli::run(args, env)
 }
 
-/// The settings `path` holds, without creating, repairing or saving anything; the defaults when it is
-/// missing or does not read.
+/// The settings `path` holds that decide a feature flag (`feature_flags` and `update_channel`), without
+/// creating, repairing or saving anything. `Settings` as a whole does not deserialize tolerantly: one
+/// mistyped field anywhere in the file fails the whole read, and the defaults then say a development build
+/// has every flag on, even one the file switched off. So each of the two is read on its own, an entry
+/// that is not a switch is skipped, and a file that is missing or not JSON is no flags set.
 fn settings_at(path: &Path) -> Settings {
-    files::read_to_string_capped(path, 1024 * 1024, LinkPolicy::Follow)
+    let mut settings = Settings::default();
+    let Some(Value::Object(file)) = files::read_to_string_capped(path, 1024 * 1024, LinkPolicy::Follow)
         .ok()
-        .and_then(|text| jsonc::parse::<Settings>(&text).ok())
-        .unwrap_or_default()
+        .and_then(|text| jsonc::parse::<Value>(&text).ok())
+    else {
+        return settings;
+    };
+    if let Some(Value::Object(flags)) = file.get("feature_flags") {
+        settings.feature_flags =
+            flags.iter().filter_map(|(key, on)| Some((key.clone(), on.as_bool()?))).collect();
+    }
+    if let Some(channel) = file.get("update_channel").and_then(|v| serde_json::from_value(v.clone()).ok()) {
+        settings.update_channel = channel;
+    }
+    settings
 }
 
 #[cfg(test)]
@@ -99,6 +115,29 @@ mod tests {
             settings_at(&path).feature_enabled(FeatureFlag::Probes),
             "a development build: on unless switched off"
         );
+    }
+
+    #[test]
+    fn a_mistyped_unrelated_field_does_not_turn_the_flag_back_on() {
+        let tmp = TempDir::new().expect("tempdir");
+        let path = tmp.path().join("config.json");
+        // The whole file does not read as `Settings`...
+        let text = "{ \"font_size\": \"large\", \"feature_flags\": { \"probes\": false, \"other\": 3 } }";
+        fs::write(&path, text).expect("write");
+        assert!(jsonc::parse::<Settings>(text).is_err(), "the premise: one bad field fails the whole parse");
+        // ...but the flag is still read, and off.
+        let settings = settings_at(&path);
+        assert!(!settings.feature_enabled(FeatureFlag::Probes));
+        assert_eq!(settings.feature_flags.get("probes"), Some(&false));
+        assert!(!settings.feature_flags.contains_key("other"), "an entry that is not a switch is skipped");
+        // The channel is read the same way, and a bad one is the default.
+        fs::write(&path, "{ \"update_channel\": \"unstable\", \"opacity\": \"x\" }").expect("write");
+        assert_eq!(settings_at(&path).update_channel, crate::update::UpdateChannel::Unstable);
+        fs::write(&path, "{ \"update_channel\": 7 }").expect("write");
+        assert_eq!(settings_at(&path).update_channel, crate::update::UpdateChannel::Stable);
+        // Not an object at all: no flags set.
+        fs::write(&path, "[1]").expect("write");
+        assert!(settings_at(&path).feature_flags.is_empty());
     }
 
     #[test]
