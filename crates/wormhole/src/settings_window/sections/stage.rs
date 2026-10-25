@@ -1,14 +1,19 @@
-//! Appearance's live preview: the window in miniature over a wallpaper, in
-//! the current theme, primary and opacity, drawn with the design's own words at a little over a quarter of
-//! their size (its 1440 × 900 window at [`SCALE`]) rather than as bars. The blur isn't drawn:
-//! it is the window's own effect view behind everything GPUI paints, which a drawing inside a
-//! window can't have; the caption says so.
+//! Appearance's live preview: a window over a wallpaper at its real size, cut off where the column
+//! ends. It is built from the parts the window itself draws: the sidebar's Terminals list (the same
+//! list as Terminals & sidebar's preview, `preview::list`), the title row's crumbs and branch chip,
+//! the status bar's items, and a terminal in the terminal's own font, size and colours. A change to
+//! any of those parts shows here by itself; only the arrangement is this file's.
+//!
+//! The traffic lights are the system's, drawn here as a window in the background has them; the blur
+//! behind a window isn't drawn (it is the window's own effect view, behind everything GPUI paints),
+//! which the caption says.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::theme::fonts::FontSlot;
+use wormhole_core::view::layout::SIDEBAR_MIN;
 #[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
@@ -16,612 +21,191 @@ use wormhole_core::theme::fonts::FontSlot;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use crate::settings::{SettingsStore, UiColors};
+use super::preview::{self, Look};
+use crate::settings::{SettingsStore, UiColors, settings};
 use crate::settings_window::SettingsWindow;
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, Edges, StatusGlyph, StatusTile, TextRole, TileFace};
 use crate::theme_bridge::hsla;
 
-/// The design's window at this scale: every size below is the real one times it, so the
-/// miniature keeps the window's proportions.
-const SCALE: f32 = 0.28;
-const STAGE_H: f32 = WINDOW_H + 48.0;
-const WINDOW_W: f32 = 1440.0 * SCALE;
-const WINDOW_H: f32 = 900.0 * SCALE;
-const MINI_SIDEBAR_W: f32 = 350.0 * SCALE;
-const MINI_PANEL_W: f32 = 360.0 * SCALE;
-const MINI_TITLE_H: f32 = 36.0 * SCALE;
-const MINI_BAND_H: f32 = 32.0 * SCALE;
-const MINI_ROW_H: f32 = 28.0 * SCALE;
-const MINI_ROW_TWO_H: f32 = 44.0 * SCALE;
-const MINI_STATUS_H: f32 = 28.0 * SCALE;
-const MINI_INSET: f32 = 16.0 * SCALE;
-const MINI_GAP: f32 = 8.0 * SCALE;
-const MINI_GAP_SM: f32 = 4.0 * SCALE;
-const MINI_LEAD: f32 = 16.0 * SCALE;
-const MINI_TEXT: f32 = 14.0 * SCALE;
-const MINI_LABEL: f32 = 13.0 * SCALE;
-const MINI_CAPTION: f32 = 12.0 * SCALE;
-const MINI_HEADING: f32 = 16.0 * SCALE;
-const MINI_LINE: f32 = 20.0 * SCALE;
-const MINI_CAPTION_LINE: f32 = 16.0 * SCALE;
-const MINI_ICON: f32 = 16.0 * SCALE;
-const MINI_GLYPH: f32 = 12.0 * SCALE;
-/// The title row's folder, separators and tool icon (`style::GLYPH`).
-const MINI_CRUMB_ICON: f32 = 14.0 * SCALE;
-const MINI_DOT: f32 = 8.0 * SCALE;
-const MINI_CHIP_H: f32 = 20.0 * SCALE;
-const MINI_CHIP_PAD: f32 = 6.0 * SCALE;
-const MINI_TAB_H: f32 = 28.0 * SCALE;
-const MINI_TERM_PAD: f32 = 12.0 * SCALE;
-const MINI_NOTE_INDENT: f32 = 40.0 * SCALE;
-const MINI_CHECK: f32 = 14.0 * SCALE;
-const MINI_METER_W: f32 = 48.0 * SCALE;
-const MINI_METER_H: f32 = 4.0 * SCALE;
-const MINI_CURSOR_W: f32 = 8.0 * SCALE;
-const MINI_CURSOR_H: f32 = 16.0 * SCALE;
-const MINI_DIVIDER_H: f32 = 12.0 * SCALE;
-/// The window's corners and hairlines are not scaled: a 0.28 hairline would vanish.
-const MINI_RADIUS: f32 = 6.0;
-const MINI_CORNER: f32 = 2.0;
-const MINI_RULE: f32 = 1.0;
-/// The wallpaper's two washes, from the theme's own colors.
+/// The wallpaper's height, and how far in from its top left corner the window sits.
+const STAGE_H: f32 = 400.0;
+const WINDOW_INSET: f32 = 24.0;
+/// The window: as wide as the app opens one, so the column shows its left part.
+const WINDOW_W: f32 = 1100.0;
+/// The traffic lights as macOS draws them (`style::LIGHTS_X`, `style::ASSUMED_LIGHTS_SPAN`).
+const LIGHT: f32 = 12.0;
+const LIGHT_GAP: f32 = 8.0;
+/// The terminal's inset: 16 at the sides, 12 at the top (Aligned A-01).
+const TERM_INSET_X: f32 = 16.0;
+const TERM_INSET_Y: f32 = 12.0;
+/// The wallpaper's two washes, from the theme's own colours.
 const WASH_ALPHA: f32 = 0.55;
 const WASH_ANGLE: f32 = 135.0;
-/// The cursor block, a little see-through as the terminal draws it.
-const CURSOR_OPACITY: f32 = 0.8;
-/// How full the agent's context meter is (62 %).
-const CONTEXT_USED: f32 = 0.62;
 
-/// Appearance → the window over the desktop: theme, primary and opacity as they are now.
+/// Appearance → the window over the desktop: theme, primary, opacity, fonts, density and the status
+/// bar as they are now.
 pub(in crate::settings_window) fn draw_stage(
     _: &SettingsWindow,
     cx: &mut Context<SettingsWindow>,
 ) -> AnyElement {
-    // The main window in miniature: its colours, whatever this window's look.
+    // The main window's colours, whatever this window's look.
     let ui = crate::settings::ui(cx);
     let store = cx.global::<SettingsStore>();
-    let tokens = &store.tokens;
+    let base = hsla(store.tokens.terminal.background.with_alpha(1.0));
     let status_bar = store.settings.status_bar;
-    let base = hsla(tokens.terminal.background.with_alpha(1.0));
-    let (mono, _) = crate::fonts::font(FontSlot::Terminal, cx);
-    let mini = Mini { ui, mono, green: hsla(tokens.terminal.ansi[2]), yellow: hsla(tokens.terminal.ansi[3]) };
+    let surfaces = style::window_surfaces(cx, true);
+    let look = Look::of(settings(cx));
     let wallpaper = linear_gradient(
         WASH_ANGLE,
         linear_color_stop(Hsla { a: WASH_ALPHA, ..ui.branch }, 0.0),
         linear_color_stop(Hsla { a: WASH_ALPHA, ..ui.info }, 1.0),
     );
-    let window = div()
-        .w(px(WINDOW_W))
-        .h(px(WINDOW_H))
+    let lights = div()
+        .flex_none()
+        .flex()
+        .items_center()
+        .gap(px(LIGHT_GAP))
+        .h(px(style::TITLE_ROW_H))
+        .pl(px(style::LIGHTS_X))
+        .children((0..3).map(|_| div().size(px(LIGHT)).rounded_full().bg(ui.border_strong)));
+    let sidebar = div()
+        .w(px(SIDEBAR_MIN))
+        .flex_none()
+        .h_full()
         .flex()
         .flex_col()
-        .rounded(px(MINI_RADIUS))
         .overflow_hidden()
-        .bg(ui.background)
-        .border(px(MINI_RULE))
-        .border_color(ui.border_strong)
-        .child(
-            div().flex_1().min_h_0().flex().child(mini.sidebar()).child(mini.terminal()).child(mini.panel()),
-        )
-        .when(status_bar, |d| d.child(mini.status_bar()));
+        .bg(surfaces.panel)
+        .rule_right(ui)
+        .child(lights)
+        .child(preview::list("stage", look, preview::SAMPLES, false, ui, cx));
+    let content =
+        div().flex_1().min_w_0().h_full().flex().flex_col().child(title_row(ui, cx)).child(terminal(cx));
+    let window = div()
+        .absolute()
+        .top(px(WINDOW_INSET))
+        .left(px(WINDOW_INSET))
+        .w(px(WINDOW_W))
+        .h(px(STAGE_H - 2.0 * WINDOW_INSET))
+        .flex()
+        .flex_col()
+        .rounded(ui.radius_lg)
+        .overflow_hidden()
+        .outlined(ui, ui.border_strong)
+        .bg(surfaces.background)
+        .child(div().flex_1().min_h_0().flex().child(sidebar).child(content))
+        .when(status_bar, |d| d.child(status(ui, cx)));
     div()
         .flex()
         .flex_col()
         .gap_2()
         .child(
             div()
+                .relative()
                 .h(px(STAGE_H))
                 .w_full()
-                .flex()
-                .items_center()
-                .justify_center()
                 .rounded(ui.radius_lg)
                 .overflow_hidden()
                 .outlined(ui, ui.border)
                 .bg(base)
-                .child(div().size_full().flex().items_center().justify_center().bg(wallpaper).child(window)),
+                .child(div().absolute().size_full().bg(wallpaper))
+                .child(window),
         )
         .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_APPEARANCE_STAGE_CAPTION)))
         .into_any_element()
 }
 
-/// What the miniature draws with: the theme's colors, the terminal's font, and the ANSI colors
-/// an agent's transcript uses.
-struct Mini {
-    ui: UiColors,
-    mono: SharedString,
-    green: Hsla,
-    yellow: Hsla,
+/// The terminal's title row: its folder, the branch chip, and the agent at work in it.
+fn title_row(ui: UiColors, cx: &App) -> Div {
+    let tile = style::status_tile_at(
+        "stage-title-tile",
+        ui,
+        StatusTile {
+            face: TileFace::Agent(AgentId::Claude),
+            glyph: StatusGlyph::Working,
+            selected: false,
+            mini: true,
+        },
+        style::TILE_SMALL,
+        cx,
+    );
+    div()
+        .flex_none()
+        .flex()
+        .items_center()
+        .gap_2()
+        .h(px(style::TITLE_ROW_H))
+        .px_4()
+        .rule_bottom(ui)
+        .text_body()
+        .child(style::icon(IconName::Folder).text_color(ui.muted))
+        .child(div().text_color(ui.muted).child("~/Projects/wormhole")) // text: sample (a made-up folder of the preview)
+        .child(style::icon(IconName::ChevronRight).text_color(ui.faint))
+        .child(style::branch_chip(ui, Some("sidebar-cards"), Some(3))) // text: sample (a made-up branch of the preview)
+        .child(style::icon(IconName::ChevronRight).text_color(ui.faint))
+        .child(tile)
+        .child(div().font_weight(FontWeight::MEDIUM).text_color(ui.text).child("Sidebar cards")) // text: sample (a made-up terminal of the preview)
 }
 
-impl Mini {
-    /// A line of interface text at the miniature's size, on one line.
-    fn text(&self, text: impl Into<SharedString>, size: f32, line: f32, color: Hsla) -> Div {
+/// The terminal: an agent's transcript in the terminal's font, size, line height and colours.
+fn terminal(cx: &App) -> Div {
+    let store = cx.global::<SettingsStore>();
+    let colors = &store.tokens.terminal;
+    let (font, _) = crate::fonts::font(FontSlot::Terminal, cx);
+    let (fg, green, yellow, blue) =
+        (hsla(colors.foreground), hsla(colors.ansi[2]), hsla(colors.ansi[3]), hsla(colors.ansi[4]));
+    let muted = Hsla { a: 0.6, ..fg };
+    let line = |parts: &[(&'static str, Hsla)]| {
         div()
-            .flex_none()
-            .min_w_0()
-            .text_size(px(size))
-            .line_height(px(line))
-            .text_color(color)
+            .flex()
             .whitespace_nowrap()
-            .overflow_hidden()
-            .child(text.into())
-    }
+            .children(parts.iter().map(|(text, color)| div().text_color(*color).child(*text)))
+    };
+    // text: sample (the preview's made-up transcript, below)
+    div()
+        .flex_1()
+        .min_h_0()
+        .flex()
+        .flex_col()
+        .overflow_hidden()
+        .px(px(TERM_INSET_X))
+        .py(px(TERM_INSET_Y))
+        .bg(hsla(colors.background))
+        .font_family(font)
+        .text_size(px(store.settings.font_size))
+        .line_height(relative(store.settings.line_height))
+        .text_color(fg)
+        .child(line(&[("~/Projects/wormhole", blue), (" on ", muted), ("sidebar-cards", green)])) // text: sample
+        .child(line(&[("$ ", muted), ("claude", fg)])) // text: sample
+        .child(line(&[("● ", green), ("Read ", fg), ("crates/wormhole/src/sidebar/rows.rs", muted)])) // text: sample
+        .child(line(&[("● ", green), ("Update ", fg), ("crates/wormhole/src/style/tile.rs", muted)])) // text: sample
+        .child(line(&[("  ⎿ ", muted), ("+18 −11", fg)])) // text: sample
+        .child(line(&[("● ", green), ("Bash ", fg), ("cargo test -p wormhole", muted)])) // text: sample
+        .child(line(&[("  ⎿ ", muted), ("test result: ", fg), ("ok", green), (". 57 passed; 0 failed", fg)])) // text: sample
+        .child(line(&[("✻ ", yellow), ("Working… ", yellow), ("(esc to interrupt)", muted)])) // text: sample
+        .child(line(&[("> ", fg), ("█", fg)])) // text: sample
+}
 
-    fn body(&self, text: impl Into<SharedString>, color: Hsla) -> Div {
-        self.text(text, MINI_TEXT, MINI_LINE, color)
-    }
-
-    fn caption(&self, text: impl Into<SharedString>, color: Hsla) -> Div {
-        self.text(text, MINI_CAPTION, MINI_CAPTION_LINE, color)
-    }
-
-    /// An icon at the miniature's size: an `IconName` draws itself at the text size around it.
-    fn icon(&self, icon: IconName, size: f32, color: Hsla) -> Div {
-        div().flex_none().flex().items_center().text_size(px(size)).text_color(color).child(icon)
-    }
-
-    /// The lead column of a row or band.
-    fn lead(&self, child: impl IntoElement) -> Div {
-        div().flex_none().size(px(MINI_LEAD)).flex().items_center().justify_center().child(child)
-    }
-
-    /// A status dot: filled, or a ring for an idle terminal.
-    fn dot(&self, color: Hsla, hollow: bool) -> Div {
-        let dot = div().flex_none().size(px(MINI_DOT)).rounded_full();
-        if hollow { dot.border(px(MINI_RULE)).border_color(color) } else { dot.bg(color) }
-    }
-
-    /// The working spinner, held still: a ring in the agent's working color.
-    fn ring(&self, color: Hsla) -> Div {
-        div().flex_none().size(px(MINI_GLYPH)).rounded_full().border(px(MINI_RULE)).border_color(color)
-    }
-
-    /// A folder band's branch chip.
-    fn chip(&self, text: &'static str) -> Div {
-        let ui = self.ui;
-        div()
-            .flex_none()
-            .flex()
-            .items_center()
-            .gap(px(MINI_GAP_SM))
-            .h(px(MINI_CHIP_H))
-            .px(px(MINI_CHIP_PAD))
-            .rounded(px(MINI_CORNER))
-            .bg(ui.branch_bg)
-            .child(self.icon(IconName::GitBranch, MINI_GLYPH, ui.branch))
-            .child(self.caption(text, ui.branch).font_weight(FontWeight::MEDIUM))
-    }
-
-    /// A count badge.
-    fn badge(&self, text: &'static str) -> Div {
-        let ui = self.ui;
-        div()
-            .flex_none()
-            .flex()
-            .items_center()
-            .justify_center()
-            .min_w(px(MINI_LEAD))
-            .h(px(MINI_LEAD))
-            .px(px(MINI_GAP_SM))
-            .rounded(px(MINI_CORNER))
-            .bg(ui.border)
-            .child(self.caption(text, ui.text).font_weight(FontWeight::SEMIBOLD))
-    }
-
-    /// A title row (the sidebar's, a pane's, the panel's): 36 high in the window.
-    fn title_row(&self) -> Div {
-        div()
-            .flex_none()
-            .h(px(MINI_TITLE_H))
-            .flex()
-            .items_center()
-            .gap(px(MINI_GAP_SM))
-            .pl(px(MINI_INSET))
-            .pr(px(MINI_GAP))
-    }
-
-    /// A folder or section band: chevron, name, what follows it, and what sits at its end.
-    fn band(&self, name: &'static str, detail: Option<Div>, trail: Vec<Div>, folded: bool) -> Div {
-        let ui = self.ui;
-        let chevron = if folded { IconName::ChevronRight } else { IconName::ChevronDown };
-        div()
-            .flex_none()
-            .h(px(MINI_BAND_H))
-            .flex()
-            .items_center()
-            .gap(px(MINI_GAP))
-            .px(px(MINI_INSET))
-            .bg(ui.band)
-            .border_t(px(MINI_RULE))
-            .border_b(px(MINI_RULE))
-            .border_color(ui.border)
-            .child(self.lead(self.icon(chevron, MINI_GLYPH, ui.muted)))
-            .child(self.text(name, MINI_LABEL, MINI_LINE, ui.text).font_weight(FontWeight::SEMIBOLD))
-            .children(detail)
-            .child(div().flex_1())
-            .children(trail)
-    }
-
-    /// A terminal's row: its glyph, name and, on a second line, what it is doing.
-    fn row(
-        &self,
-        lead: Div,
-        name: &'static str,
-        detail: Option<(&'static str, Hsla)>,
-        selected: bool,
-    ) -> Div {
-        let ui = self.ui;
-        let name_color = if selected { ui.selected_text } else { ui.text };
-        let name_weight = if selected { FontWeight::SEMIBOLD } else { FontWeight::MEDIUM };
-        div()
-            .flex_none()
-            .h(px(if detail.is_some() { MINI_ROW_TWO_H } else { MINI_ROW_H }))
-            .flex()
-            .flex_col()
-            .justify_center()
-            .px(px(MINI_INSET))
-            .when(selected, |d| d.bg(ui.selected_row))
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(MINI_GAP))
-                    .child(self.lead(lead))
-                    .child(self.body(name, name_color).font_weight(name_weight)),
-            )
-            .children(detail.map(|(detail, color)| {
-                div().pl(px(MINI_LEAD + MINI_GAP)).child(
-                    self.caption(detail, color).font_weight(if selected {
-                        FontWeight::MEDIUM
-                    } else {
-                        FontWeight::NORMAL
-                    }),
-                )
-            }))
-    }
-
-    /// The sidebar: its title rows, then its folders and terminals.
-    fn sidebar(&self) -> Div {
-        let ui = self.ui;
-        div()
-            .w(px(MINI_SIDEBAR_W))
-            .flex_none()
-            .flex()
-            .flex_col()
-            .bg(ui.panel)
-            .border_r(px(MINI_RULE))
-            .border_color(ui.border)
-            // The traffic lights' row: the collapse button.
-            .child(self.title_row().child(div().flex_1()).child(self.icon(
-                IconName::PanelLeft,
-                MINI_ICON,
-                ui.muted,
-            )))
-            .child(
-                self.title_row()
-                    .child(
-                        self.text(text(SETTINGS_APPEARANCE_TERMINALS), MINI_HEADING, MINI_LINE, ui.text)
-                            .font_weight(FontWeight::BOLD),
-                    )
-                    .child(div().flex_1())
-                    .child(self.icon(IconName::Plus, MINI_ICON, ui.muted)),
-            )
-            .child(self.band(
-                "terminal",
-                Some(self.chip("ui-unify")),
-                vec![self.caption("±3", ui.muted)],
-                false,
-            ))
-            .child(self.row(
-                self.ring(ui.agent_working),
-                "sidebar polish", // text: sample (the miniature's made-up terminals, commands and notes)
-                Some(("Editing sidebar.rs…", ui.selected_muted)), // text: sample (the miniature's made-up terminals, commands and notes)
-                true,
-            ))
-            .child(self.row(
-                self.dot(ui.agent_attention, false),
-                "diff perf", // text: sample (the miniature's made-up terminals, commands and notes)
-                Some(("Needs input · Approve cargo test?", ui.agent_attention)), // text: sample (the miniature's made-up terminals, commands and notes)
-                false,
-            ))
-            .child(self.row(self.dot(ui.faint, true), "zsh", None, false))
-            .child(self.band(
-                "api-server",
-                Some(self.chip("feature/auth")),
-                vec![self.caption("±1", ui.muted)],
-                false,
-            ))
-            .child(self.row(
-                self.icon(IconName::Check, MINI_GLYPH, ui.agent_done),
-                "auth tokens", // text: sample (the miniature's made-up terminals, commands and notes)
-                Some(("Finished · 12m ago", ui.agent_done)), // text: sample (the miniature's made-up terminals, commands and notes)
-                false,
-            ))
-            .child(self.row(self.dot(ui.faint, true), "rate limits", None, false)) // text: sample (the miniature's made-up terminals, commands and notes)
-            .child(self.band("dotfiles", None, vec![self.badge("3")], true))
-            .child(self.band("website", Some(self.chip("main")), vec![self.badge("2")], true))
-    }
-
-    /// The title row's breadcrumb as the window draws it: the folder, the branch chip, then
-    /// the terminal's tool, its status, its name and how it is doing. There are no tabs.
-    fn breadcrumb(&self) -> Div {
-        let ui = self.ui;
-        let separator = || self.icon(IconName::ChevronRight, MINI_CRUMB_ICON, ui.faint);
-        let folder = div()
-            .flex_none()
-            .flex()
-            .items_center()
-            .gap(px(MINI_GAP))
-            .child(self.icon(IconName::Folder, MINI_CRUMB_ICON, ui.muted))
-            .child(
-                div()
-                    .flex()
-                    .child(self.text(text(SETTINGS_APPEARANCE_PROJECTS), MINI_LABEL, MINI_LINE, ui.muted))
-                    .child(
-                        self.text("terminal", MINI_LABEL, MINI_LINE, ui.text).font_weight(FontWeight::MEDIUM),
-                    ),
-            );
-        let claude = wormhole_core::agents::agent(AgentId::Claude);
-        let process = div()
-            .flex()
-            .items_center()
-            .gap(px(MINI_GAP))
-            .min_w_0()
-            .overflow_hidden()
-            .child(
-                div()
-                    .flex_none()
-                    .flex()
-                    .items_center()
-                    .gap(px(MINI_GAP_SM))
-                    .child(style::agent_logo(claude.icon(), claude.monogram, MINI_CRUMB_ICON, ui.text))
-                    .child(self.lead(self.ring(ui.agent_working))),
-            )
-            .child(
-                self.text("sidebar polish", MINI_LABEL, MINI_LINE, ui.text).font_weight(FontWeight::MEDIUM), // text: sample (the miniature's made-up terminals, commands and notes)
-            )
-            .child(self.caption("working · 4m", ui.muted)); // text: sample (the miniature's made-up terminals, commands and notes)
-        div()
-            .min_w_0()
-            .flex()
-            .items_center()
-            .gap(px(MINI_GAP))
-            .px(px(MINI_GAP))
-            .overflow_hidden()
-            .child(folder)
-            .child(separator())
-            .child(self.chip("ui-unify"))
-            .child(separator())
-            .child(process)
-    }
-
-    /// A line of the terminal: runs of text in their colors, a bold word among them.
-    fn mono_line(&self, parts: &[(&'static str, Hsla, bool)]) -> Div {
-        div()
-            .flex_none()
-            .h(px(MINI_LINE))
-            .flex()
-            .items_center()
-            .whitespace_nowrap()
-            .overflow_hidden()
-            .children(parts.iter().map(|&(text, color, bold)| {
-                div().text_color(color).when(bold, |d| d.font_weight(FontWeight::SEMIBOLD)).child(text)
-            }))
-    }
-
-    /// The terminal pane: its title row, then an agent's transcript.
-    fn terminal(&self) -> Div {
-        let ui = self.ui;
-        let (text, muted, green, yellow) = (ui.text, ui.muted, self.green, self.yellow);
-        let step = |verb: &'static str, what: &'static str| {
-            [("● ", green, false), (verb, text, true), (what, text, false)]
-        };
-        let note = |what: &'static str| [(what, muted, false)];
-        let cursor =
-            div().flex_none().w(px(MINI_CURSOR_W)).h(px(MINI_CURSOR_H)).bg(ui.text).opacity(CURSOR_OPACITY);
-        div()
-            .flex_1()
-            .min_w_0()
-            .flex()
-            .flex_col()
-            .bg(ui.background)
-            .child(
-                self.title_row()
-                    .pl(px(MINI_GAP_SM))
-                    .border_b(px(MINI_RULE))
-                    .border_color(ui.border)
-                    .child(self.breadcrumb()),
-            )
-            .child(
-                div()
-                    .flex_1()
-                    .min_h_0()
-                    .overflow_hidden()
-                    .flex()
-                    .flex_col()
-                    .p(px(MINI_TERM_PAD))
-                    .font_family(self.mono.clone())
-                    .text_size(px(MINI_LABEL))
-                    .line_height(px(MINI_LINE))
-                    .child(self.mono_line(&[("~/Projects/terminal on ui-unify", muted, false)])) // text: sample (the miniature's made-up terminals, commands and notes)
-                    .child(self.mono_line(&[("$ claude", text, false)])) // text: sample (the miniature's made-up terminals, commands and notes)
-                    .child(self.mono_line(&[]))
-                    .child(self.mono_line(&[(
-                        "> Folder bands, one lead column, and ⌘ hints only while ⌘ is held.", // text: sample (the miniature's made-up terminals, commands and notes)
-                        ui.primary,
-                        false,
-                    )]))
-                    .child(self.mono_line(&[]))
-                    .child(self.mono_line(&step(
-                        "Read", // text: sample (the miniature's made-up terminals, commands and notes)
-                        " crates/wormhole/src/workspace/sidebar.rs (532 lines)", // text: sample (the miniature's made-up terminals, commands and notes)
-                    )))
-                    .child(self.mono_line(&step("Update", " crates/wormhole/src/workspace/sidebar.rs"))) // text: sample (the miniature's made-up terminals, commands and notes)
-                    .child(self.mono_line(&note(
-                        "└ +18 −11 group_header: branch as a chip, badge right-aligned", // text: sample (the miniature's made-up terminals, commands and notes)
-                    )))
-                    .child(self.mono_line(&step("Bash", " cargo test -p wormhole-core"))) // text: sample (the miniature's made-up terminals, commands and notes)
-                    .child(
-                        self.mono_line(&note("└ test result: ok. 214 passed; 0 failed; finished in 3.42s")), // text: sample (the miniature's made-up terminals, commands and notes)
-                    )
-                    .child(self.mono_line(&step("Update", " crates/wormhole/src/style.rs"))) // text: sample (the miniature's made-up terminals, commands and notes)
-                    .child(self.mono_line(&note("└ +6 −2 section_header: one shared 28px header row"))) // text: sample (the miniature's made-up terminals, commands and notes)
-                    .child(self.mono_line(&[]))
-                    .child(self.mono_line(&[
-                        ("* Editing sidebar.rs… ", yellow, false), // text: sample (the miniature's made-up terminals, commands and notes)
-                        ("(esc to interrupt)", muted, false), // text: sample (the miniature's made-up terminals, commands and notes)
-                    ]))
-                    .child(self.mono_line(&[("> ", text, false)]).child(cursor)),
-            )
-    }
-
-    /// A next step's row: its checkbox and text.
-    fn task(&self, done: bool, text: &'static str) -> Div {
-        let ui = self.ui;
-        let check = div()
-            .flex_none()
-            .size(px(MINI_CHECK))
-            .rounded(px(MINI_CORNER))
-            .flex()
-            .items_center()
-            .justify_center();
-        let check = if done {
-            check.bg(ui.checkbox_checked).child(self.icon(IconName::Check, MINI_GLYPH, ui.on_primary))
-        } else {
-            check.bg(ui.input).border(px(MINI_RULE)).border_color(ui.checkbox_border)
-        };
-        div()
-            .flex_none()
-            .h(px(MINI_ROW_H))
-            .flex()
-            .items_center()
-            .gap(px(MINI_GAP))
-            .px(px(MINI_INSET))
-            .child(self.lead(check))
-            .child(self.body(text, if done { ui.muted } else { ui.text }))
-    }
-
-    /// A note's row: open or folded, with its title.
-    fn note(&self, open: bool, title: &'static str) -> Div {
-        let ui = self.ui;
-        let chevron = if open { IconName::ChevronDown } else { IconName::ChevronRight };
-        div()
-            .flex_none()
-            .h(px(MINI_ROW_H))
-            .flex()
-            .items_center()
-            .gap(px(MINI_GAP))
-            .px(px(MINI_INSET))
-            .child(self.lead(self.icon(chevron, MINI_GLYPH, ui.muted)))
-            .child(self.body(title, if open { ui.muted } else { ui.text }))
-    }
-
-    /// The right panel: its tabs, then Next steps and Notes.
-    fn panel(&self) -> Div {
-        let ui = self.ui;
-        let icon_tab = |icon: IconName, selected: bool| {
-            div()
-                .flex_none()
-                .flex()
-                .items_center()
-                .justify_center()
-                .gap(px(MINI_GAP_SM))
-                .h(px(MINI_TAB_H))
-                .min_w(px(MINI_TAB_H))
-                .rounded(px(MINI_CORNER))
-                .when(selected, |d| d.bg(ui.selected))
-                .child(self.icon(icon, MINI_ICON, if selected { ui.selected_text } else { ui.muted }))
-        };
-        let add = || self.icon(IconName::Plus, MINI_ICON, ui.muted);
-        let note_line = |line: &'static str| {
-            self.text(line, MINI_LABEL, MINI_LINE, ui.text).pl(px(MINI_NOTE_INDENT)).pr(px(MINI_INSET))
-        };
-        div()
-            .w(px(MINI_PANEL_W))
-            .flex_none()
-            .flex()
-            .flex_col()
-            .bg(ui.panel_right)
-            .border_l(px(MINI_RULE))
-            .border_color(ui.border)
-            .child(
-                self.title_row()
-                    .pl(px(MINI_GAP))
-                    .child(icon_tab(IconName::FileText, true))
-                    .child(icon_tab(IconName::GitCompare, false).px(px(MINI_GAP_SM)).child(self.badge("3")))
-                    .child(icon_tab(IconName::GitCommitHorizontal, false))
-                    .child(icon_tab(IconName::Folder, false))
-                    .child(div().flex_1())
-                    .child(self.icon(IconName::Inbox, MINI_ICON, ui.muted))
-                    .child(self.icon(IconName::PanelRight, MINI_ICON, ui.muted)),
-            )
-            .child(self.band(text(SETTINGS_APPEARANCE_NEXT_STEPS), None, vec![self.badge("2"), add()], false))
-            .child(self.task(true, "Fix the flaky login test")) // text: sample (the miniature's made-up terminals, commands and notes)
-            .child(self.task(false, "Update README with setup steps")) // text: sample (the miniature's made-up terminals, commands and notes)
-            .child(self.task(false, "Tighten folder header spacing")) // text: sample (the miniature's made-up terminals, commands and notes)
-            .child(self.band(text(SETTINGS_APPEARANCE_NOTES), None, vec![self.badge("2"), add()], false))
-            .child(self.note(true, "Sidebar ideas")) // text: sample (the miniature's made-up terminals, commands and notes)
-            .child(note_line("Drop the idle line on quiet rows.")) // text: sample (the miniature's made-up terminals, commands and notes)
-            .child(note_line("Branch as a chip next to the folder name.")) // text: sample (the miniature's made-up terminals, commands and notes)
-            .child(note_line(""))
-            .child(note_line("One lead column: chevron, status, checkbox.")) // text: sample (the miniature's made-up terminals, commands and notes)
-            .child(self.note(false, "Release checklist").mt(px(MINI_GAP))) // text: sample (the miniature's made-up terminals, commands and notes)
-    }
-
-    /// The status bar: branch, agents, the context meter, the terminal's size.
-    fn status_bar(&self) -> Div {
-        let ui = self.ui;
-        let item = |children: Vec<Div>| {
-            div()
-                .flex_none()
-                .flex()
-                .items_center()
-                .gap(px(MINI_GAP_SM))
-                .px(px(MINI_GAP_SM))
-                .children(children)
-        };
-        let divider = || div().flex_none().w(px(MINI_RULE)).h(px(MINI_DIVIDER_H)).bg(ui.border);
-        let meter = div()
-            .flex_none()
-            .w(px(MINI_METER_W))
-            .h(px(MINI_METER_H))
-            .rounded_full()
-            .bg(ui.border)
-            .overflow_hidden()
-            .child(div().w(relative(CONTEXT_USED)).h_full().rounded_full().bg(ui.primary));
-        div()
-            .flex_none()
-            .h(px(MINI_STATUS_H))
-            .flex()
-            .items_center()
-            .gap(px(MINI_GAP_SM))
-            .px(px(MINI_TERM_PAD))
-            .bg(ui.panel)
-            .border_t(px(MINI_RULE))
-            .border_color(ui.border)
-            .child(item(vec![
-                self.icon(IconName::GitBranch, MINI_GLYPH, ui.branch),
-                self.caption("ui-unify", ui.branch).font_weight(FontWeight::MEDIUM),
-                self.caption("±3", ui.muted),
-            ]))
-            .child(divider())
-            .child(item(vec![self.ring(ui.agent_working), self.caption("Claude working · 4m", ui.muted)])) // text: sample (the miniature's made-up terminals, commands and notes)
-            .child(item(vec![
-                self.icon(IconName::CircleAlert, MINI_GLYPH, ui.agent_attention),
-                self.caption("1 needs input", ui.agent_attention), // text: sample (the miniature's made-up terminals, commands and notes)
-            ]))
-            .child(item(vec![
-                self.icon(IconName::CircleCheck, MINI_GLYPH, ui.agent_done),
-                self.caption("1 done", ui.muted), // text: sample (the miniature's made-up terminals, commands and notes)
-            ]))
-            .child(div().flex_1())
-            .child(item(vec![
-                self.caption(text(SETTINGS_APPEARANCE_CONTEXT), ui.muted),
-                meter,
-                self.caption("62%", ui.text).font_weight(FontWeight::SEMIBOLD),
-            ]))
-            .child(divider())
-            .child(item(vec![self.caption("zsh · 90×40", ui.muted)])) // text: sample (the miniature's made-up terminals, commands and notes)
-    }
+/// The status bar with what it shows while an agent waits and another works.
+fn status(ui: UiColors, cx: &App) -> Div {
+    let tile = style::status_tile_at(
+        "stage-status-tile",
+        ui,
+        StatusTile {
+            face: TileFace::Agent(AgentId::Codex),
+            glyph: StatusGlyph::NeedsYou,
+            selected: false,
+            mini: true,
+        },
+        style::TILE_SMALL,
+        cx,
+    );
+    style::status_bar(ui, false)
+        .child(
+            style::status_attention("stage-status-attention", ui, false)
+                .child(tile)
+                .child(div().child("Flaky login test")) // text: sample (a made-up terminal of the preview)
+                .child(div().text_color(ui.attention_text).child("needs input · 2m")), // text: sample (the preview's made-up wait)
+        )
+        .child(style::status_item("stage-status-working", ui, false, false).child("1 working")) // text: sample (a made-up count)
 }

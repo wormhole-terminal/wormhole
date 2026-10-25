@@ -139,11 +139,6 @@ settings-appearance-project-theme-note = This terminal shows { $project }'s them
 ## settings_window/sections/stage.rs (labels, hints and notes drawn by this page's code)
 
 settings-appearance-stage-caption = Live preview: your windows over the desktop, with everything below applied as you change it (the blur behind a window isn't drawn here)
-settings-appearance-terminals = Terminals
-settings-appearance-projects = ~/Projects/
-settings-appearance-next-steps = Next steps
-settings-appearance-notes = Notes
-settings-appearance-context = Context
 
 ## settings_window/sections/theme_picker/mod.rs (labels, hints and notes drawn by this page's code)
 

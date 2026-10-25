@@ -16,6 +16,8 @@
 //! without a preview of their own (Profile, Terminal, …) fell by about 3,000 when they lost the
 //! window's miniature; Appearance rose by about 300 with each theme card's hide button and menu.
 //! Liquid Glass moved from Appearance (one row fewer) to Feature flags (one row more).
+//! Appearance and a search (which show the window's preview) rose by about 770 when the preview
+//! became the window's own parts at full size instead of a drawing of them.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -35,7 +37,7 @@ const SLACK: u64 = 20;
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 14] = [
     ("Profile", 6590),
-    ("Appearance", 14427),
+    ("Appearance", 15218),
     ("Fonts", 7288),
     ("Terminal", 9588),
     ("Sessions", 13516),
@@ -47,7 +49,7 @@ const BUDGET: [(&str, u64); 14] = [
     ("Advanced", 3949),
     ("Projects", 8866),
     ("FeatureFlags", 3855),
-    ("search", 11451),
+    ("search", 12240),
 ];
 
 fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {

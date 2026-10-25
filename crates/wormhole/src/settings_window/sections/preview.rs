@@ -46,7 +46,7 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
             .flex_col()
             .gap_2()
             .child(label(settings_sessions_preview_now(now.density.label())))
-            .child(list("now", now, SAMPLES, ui, cx)),
+            .child(list("now", now, SAMPLES, true, ui, cx)),
     );
     if let Some(SidebarLook::Density(density)) = window.sidebar_preview
         && density != now.density
@@ -61,7 +61,7 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
                 .flex_col()
                 .gap_2()
                 .child(label(settings_sessions_preview_hovering(previewed.density.label())))
-                .child(list("previewed", previewed, SAMPLES, ui, cx)),
+                .child(list("previewed", previewed, SAMPLES, true, ui, cx)),
         );
     }
     div()
@@ -92,7 +92,7 @@ pub(in crate::settings_window) fn draw_agents_preview(cx: &mut Context<SettingsW
                 .rounded(ui.radius_lg)
                 .outlined(ui, ui.border)
                 .bg(ui.background)
-                .child(div().max_w(px(SIDEBAR_W)).child(list("agents", look, AGENT_SAMPLES, ui, cx))),
+                .child(div().max_w(px(SIDEBAR_W)).child(list("agents", look, AGENT_SAMPLES, true, ui, cx))),
         )
         .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_AGENTS_PREVIEW_CAPTION)))
         .into_any_element()
@@ -100,7 +100,7 @@ pub(in crate::settings_window) fn draw_agents_preview(cx: &mut Context<SettingsW
 
 /// The options a list is drawn with.
 #[derive(Clone, Copy)]
-struct Look {
+pub(super) struct Look {
     density: Density,
     cards: bool,
     fade: bool,
@@ -109,7 +109,7 @@ struct Look {
 }
 
 impl Look {
-    fn of(s: &Settings) -> Self {
+    pub(super) fn of(s: &Settings) -> Self {
         Self {
             density: s.density,
             cards: s.show_groups_as_cards,
@@ -121,7 +121,7 @@ impl Look {
 }
 
 /// A terminal of the sample list.
-struct Sample {
+pub(super) struct Sample {
     name: &'static str,
     glyph: StatusGlyph,
     detail: &'static str,
@@ -134,14 +134,14 @@ struct Sample {
 }
 
 /// A card of the sample list: a group's head and its rows, or a terminal in no group.
-struct Card {
+pub(super) struct Card {
     group: Option<&'static str>,
     /// The group's folder, as its head shows it.
     folder: Option<&'static str>,
     rows: &'static [Sample],
 }
 
-const SAMPLES: &[Card] = &[
+pub(super) const SAMPLES: &[Card] = &[
     Card {
         group: None,
         folder: None,
@@ -237,8 +237,16 @@ const AGENT_SAMPLES: &[Card] = &[Card {
     ],
 }];
 
-/// The sample list in `look`, with the sidebar's own cards, heads and rows.
-fn list(id: &'static str, look: Look, samples: &[Card], ui: UiColors, cx: &App) -> AnyElement {
+/// The sample list in `look`, with the sidebar's own cards, heads and rows; `framed` draws it as a
+/// card of its own, else it fills the sidebar it is put in (Appearance's window).
+pub(super) fn list(
+    id: &'static str,
+    look: Look,
+    samples: &[Card],
+    framed: bool,
+    ui: UiColors,
+    cx: &App,
+) -> AnyElement {
     let metrics = Metrics::of(look.density, look.cards).fading(look.fade).with_group_folders(look.folders);
     // The sidebar's own header: its title and the + (drawn, not working).
     let header = div()
@@ -259,10 +267,7 @@ fn list(id: &'static str, look: Look, samples: &[Card], ui: UiColors, cx: &App) 
     let mut column = div()
         .flex()
         .flex_col()
-        .rounded(ui.radius)
-        .overflow_hidden()
-        .outlined(ui, ui.border)
-        .bg(ui.panel)
+        .when(framed, |d| d.rounded(ui.radius).overflow_hidden().outlined(ui, ui.border).bg(ui.panel))
         .pb(px(metrics.card_gap))
         .child(header);
     for (cx_ix, card) in samples.iter().enumerate() {

@@ -152,34 +152,24 @@ pub const SETTINGS_APPEARANCE_THEME_STUDIO: Key = Key::new(175);
 pub const SETTINGS_APPEARANCE_PROJECT_SETTINGS: Key = Key::new(176);
 /// "Live preview: your windows over the desktop, with everything below applied as you change it (the blur behind a window isn't drawn here)"
 pub const SETTINGS_APPEARANCE_STAGE_CAPTION: Key = Key::new(181);
-/// "Terminals"
-pub const SETTINGS_APPEARANCE_TERMINALS: Key = Key::new(182);
-/// "~/Projects/"
-pub const SETTINGS_APPEARANCE_PROJECTS: Key = Key::new(183);
-/// "Next steps"
-pub const SETTINGS_APPEARANCE_NEXT_STEPS: Key = Key::new(184);
-/// "Notes"
-pub const SETTINGS_APPEARANCE_NOTES: Key = Key::new(185);
-/// "Context"
-pub const SETTINGS_APPEARANCE_CONTEXT: Key = Key::new(186);
 /// "Filter themes"
-pub const SETTINGS_APPEARANCE_FILTER_THEMES: Key = Key::new(187);
+pub const SETTINGS_APPEARANCE_FILTER_THEMES: Key = Key::new(182);
 /// "In Dark Mode"
-pub const SETTINGS_APPEARANCE_IN_DARK_MODE: Key = Key::new(188);
+pub const SETTINGS_APPEARANCE_IN_DARK_MODE: Key = Key::new(183);
 /// "In Light Mode"
-pub const SETTINGS_APPEARANCE_IN_LIGHT_MODE: Key = Key::new(189);
+pub const SETTINGS_APPEARANCE_IN_LIGHT_MODE: Key = Key::new(184);
 /// "Show fewer"
-pub const SETTINGS_APPEARANCE_SHOW_FEWER: Key = Key::new(190);
+pub const SETTINGS_APPEARANCE_SHOW_FEWER: Key = Key::new(185);
 /// "Import theme…"
-pub const SETTINGS_APPEARANCE_IMPORT_THEME: Key = Key::new(191);
+pub const SETTINGS_APPEARANCE_IMPORT_THEME: Key = Key::new(186);
 /// "No themes match the filter."
-pub const SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER: Key = Key::new(192);
+pub const SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER: Key = Key::new(187);
 /// "Hide theme"
-pub const SETTINGS_APPEARANCE_HIDE_THEME: Key = Key::new(195);
+pub const SETTINGS_APPEARANCE_HIDE_THEME: Key = Key::new(190);
 /// "Move to Trash"
-pub const SETTINGS_APPEARANCE_MOVE_TO_TRASH: Key = Key::new(196);
+pub const SETTINGS_APPEARANCE_MOVE_TO_TRASH: Key = Key::new(191);
 /// "Show"
-pub const SETTINGS_APPEARANCE_SHOW_THEME: Key = Key::new(197);
+pub const SETTINGS_APPEARANCE_SHOW_THEME: Key = Key::new(192);
 
 /// ```text
 /// Yours · { $color }, in every theme
@@ -216,19 +206,19 @@ pub fn settings_appearance_project_theme_note(project: &str) -> String {
 /// }
 /// ```
 pub fn settings_appearance_filter_themes_count(count: i64) -> String {
-    crate::active::message(193, &[("count", Arg::Int(count))])
+    crate::active::message(188, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Show all { $total }
 /// ```
 pub fn settings_appearance_show_all_themes(total: &str) -> String {
-    crate::active::message(194, &[("total", Arg::Str(total))])
+    crate::active::message(189, &[("total", Arg::Str(total))])
 }
 
 /// ```text
 /// Hidden themes ({ $count })
 /// ```
 pub fn settings_appearance_hidden_themes(count: &str) -> String {
-    crate::active::message(198, &[("count", Arg::Str(count))])
+    crate::active::message(193, &[("count", Arg::Str(count))])
 }
