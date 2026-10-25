@@ -24,7 +24,7 @@ pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(594);
 pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(595);
 /// "Count this Mac anonymously"
 pub const SETTINGS_UPDATES_ANONYMOUS_COUNT: Key = Key::new(596);
-/// "Update checks say once a day that Wormhole runs here, with no ID and nothing about you"
+/// "Once a day an update check also says that Wormhole runs here, so we know how many people use it. No ID, and your IP address isn't kept"
 pub const SETTINGS_UPDATES_ANONYMOUS_COUNT_DESCRIPTION: Key = Key::new(597);
 /// "analytics telemetry privacy usage statistics count"
 pub const SETTINGS_UPDATES_ANONYMOUS_COUNT_KEYWORDS: Key = Key::new(598);
@@ -71,13 +71,37 @@ pub const SETTINGS_UPDATES_RESTART_NOW: Key = Key::new(618);
 /// "Check now"
 pub const SETTINGS_UPDATES_CHECK_NOW: Key = Key::new(619);
 /// "Fixes a critical-severity security issue."
-pub const SETTINGS_UPDATES_FIXES_CRITICAL: Key = Key::new(626);
+pub const SETTINGS_UPDATES_FIXES_CRITICAL: Key = Key::new(629);
 /// "Fixes a high-severity security issue."
-pub const SETTINGS_UPDATES_FIXES_HIGH: Key = Key::new(627);
+pub const SETTINGS_UPDATES_FIXES_HIGH: Key = Key::new(630);
 /// "Fixes a medium-severity security issue."
-pub const SETTINGS_UPDATES_FIXES_MEDIUM: Key = Key::new(628);
+pub const SETTINGS_UPDATES_FIXES_MEDIUM: Key = Key::new(631);
 /// "Fixes a low-severity security issue."
-pub const SETTINGS_UPDATES_FIXES_LOW: Key = Key::new(629);
+pub const SETTINGS_UPDATES_FIXES_LOW: Key = Key::new(632);
+
+/// ```text
+/// An update check sends { $agent }: the version, channel, chip and macOS version. The first check of a day or a month adds Wormhole-Count: day or month. Nothing else.
+/// ```
+pub fn settings_updates_count_sends(agent: &str) -> String {
+    crate::active::message(620, &[("agent", Arg::Str(agent))])
+}
+
+/// ```text
+/// An update check sends { $agent }: the version alone.
+/// ```
+pub fn settings_updates_count_off(agent: &str) -> String {
+    crate::active::message(621, &[("agent", Arg::Str(agent))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] Counting starts in { $count } hour, a day after this version first ran, so there's time to turn it off.
+///    *[other] Counting starts in { $count } hours, a day after this version first ran, so there's time to turn it off.
+/// }
+/// ```
+pub fn settings_updates_count_starts_in(count: i64) -> String {
+    crate::active::message(622, &[("count", Arg::Int(count))])
+}
 
 /// ```text
 /// { $count ->
@@ -86,7 +110,7 @@ pub const SETTINGS_UPDATES_FIXES_LOW: Key = Key::new(629);
 /// }
 /// ```
 pub fn settings_updates_checked_minutes_ago(count: i64) -> String {
-    crate::active::message(620, &[("count", Arg::Int(count))])
+    crate::active::message(623, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -96,7 +120,7 @@ pub fn settings_updates_checked_minutes_ago(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_updates_checked_hours_ago(count: i64) -> String {
-    crate::active::message(621, &[("count", Arg::Int(count))])
+    crate::active::message(624, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -106,47 +130,47 @@ pub fn settings_updates_checked_hours_ago(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_updates_checked_days_ago(count: i64) -> String {
-    crate::active::message(622, &[("count", Arg::Int(count))])
+    crate::active::message(625, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { -brand } is up to date. { $checked }
 /// ```
 pub fn settings_updates_up_to_date_checked(checked: &str) -> String {
-    crate::active::message(623, &[("checked", Arg::Str(checked))])
+    crate::active::message(626, &[("checked", Arg::Str(checked))])
 }
 
 /// ```text
 /// Security update available: { -brand } { $version }.
 /// ```
 pub fn settings_updates_security_available(version: &str) -> String {
-    crate::active::message(624, &[("version", Arg::Str(version))])
+    crate::active::message(627, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// Version { $version } is available.
 /// ```
 pub fn settings_updates_version_available(version: &str) -> String {
-    crate::active::message(625, &[("version", Arg::Str(version))])
+    crate::active::message(628, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// Version { $version } is installed. Restarts when your terminals are idle.
 /// ```
 pub fn settings_updates_installed_waits(version: &str) -> String {
-    crate::active::message(630, &[("version", Arg::Str(version))])
+    crate::active::message(633, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// Version { $version } is installed. Restart to use it.
 /// ```
 pub fn settings_updates_installed_restart(version: &str) -> String {
-    crate::active::message(631, &[("version", Arg::Str(version))])
+    crate::active::message(634, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// What's new in { $version }
 /// ```
 pub fn settings_updates_whats_new(version: &str) -> String {
-    crate::active::message(632, &[("version", Arg::Str(version))])
+    crate::active::message(635, &[("version", Arg::Str(version))])
 }

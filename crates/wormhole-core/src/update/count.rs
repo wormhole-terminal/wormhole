@@ -6,12 +6,19 @@
 //! up those flags: a day's `day` flags are that day's running copies, a month's `month` flags the
 //! month's, with no ID, no stored address and nothing that links two checks of one Mac. With the
 //! count off (`anonymous_count`), a check sends what it always did: the version alone.
+//!
+//! Counting starts [`GRACE`] after a version that counts first runs (`UpdateSchedule::count_due`),
+//! on a new Mac and after an update alike, so there is time to find the switch first.
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use chrono::{DateTime, Datelike};
+use semver::Version;
 
-use super::UpdaterConfig;
+use super::{UpdateChannel, UpdaterConfig};
+
+/// How long after it first runs a copy waits before it is counted.
+pub(crate) const GRACE: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// The request header that carries the flags.
 pub(crate) const HEADER: &str = "Wormhole-Count";
@@ -37,13 +44,33 @@ impl Count {
 
 /// The user agent of a feed request: the version alone while the count is off.
 pub(crate) fn user_agent(config: &UpdaterConfig) -> String {
-    let version = &config.current_version;
-    if config.count.is_none() {
-        return format!("Wormhole-Updater/{version}");
+    match config.count {
+        Some(_) => counted_user_agent(
+            &config.current_version,
+            config.channel,
+            &config.platform,
+            config.system_version.as_ref(),
+        ),
+        None => plain_user_agent(&config.current_version),
     }
-    let arch = config.platform.rsplit('-').next().unwrap_or("unknown");
-    let macos = config.system_version.as_ref().map_or_else(|| "unknown".to_string(), |v| v.major.to_string());
-    format!("Wormhole-Updater/{version} ({}; {arch}; macOS {macos})", config.channel.name())
+}
+
+/// The user agent of a check while the count is off: the version alone, as before the count.
+pub fn plain_user_agent(version: &Version) -> String {
+    format!("Wormhole-Updater/{version}")
+}
+
+/// The user agent of a counted check, which Settings → Updates shows as what this Mac sends.
+/// `platform` is the feed's key (`darwin-aarch64`, [`super::current_platform`]).
+pub fn counted_user_agent(
+    version: &Version,
+    channel: UpdateChannel,
+    platform: &str,
+    system_version: Option<&Version>,
+) -> String {
+    let arch = platform.rsplit('-').next().unwrap_or("unknown");
+    let macos = system_version.map_or_else(|| "unknown".to_string(), |v| v.major.to_string());
+    format!("Wormhole-Updater/{version} ({}; {arch}; macOS {macos})", channel.name())
 }
 
 /// The UTC day (days since 1970) and month (`year * 12 + month - 1`) of `now`.

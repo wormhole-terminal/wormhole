@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 674] = [
+pub(crate) const IDS: [&str; 677] = [
     "settings-section-advanced", "settings-section-advanced.intro", "settings-advanced-group-files",
     "settings-advanced-open-config", "settings-advanced-open-config.description", "settings-advanced-open-config.keywords",
     "settings-advanced-open-data", "settings-advanced-open-data.description", "settings-advanced-open-data.keywords",
@@ -212,7 +212,8 @@ pub(crate) const IDS: [&str; 674] = [
     "settings-updates-fixes-a-security-issue", "settings-updates-development-build", "settings-updates-not-checked-yet",
     "settings-updates-checking", "settings-updates-wormhole-is-up-to-date", "settings-updates-downloading",
     "settings-updates-skip-this-version", "settings-updates-install-update", "settings-updates-dont-restart",
-    "settings-updates-restart-now", "settings-updates-check-now", "settings-updates-checked-minutes-ago",
+    "settings-updates-restart-now", "settings-updates-check-now", "settings-updates-count-sends",
+    "settings-updates-count-off", "settings-updates-count-starts-in", "settings-updates-checked-minutes-ago",
     "settings-updates-checked-hours-ago", "settings-updates-checked-days-ago", "settings-updates-up-to-date-checked",
     "settings-updates-security-available", "settings-updates-version-available", "settings-updates-fixes-critical",
     "settings-updates-fixes-high", "settings-updates-fixes-medium", "settings-updates-fixes-low",
@@ -234,7 +235,7 @@ pub(crate) const IDS: [&str; 674] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 674] = [
+pub(crate) const TAKES_ARGS: [bool; 677] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, true, false, false, false, false, false, false,
@@ -287,9 +288,9 @@ pub(crate) const TAKES_ARGS: [bool; 674] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, true, true, true, true,
-    true, true, false, false, false, false, true, true, true, false, false, false,
+    true, true, true, true, true, false, false, false, false, true, true, true,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, true, true, true, true, true, true, true, false, false, false,
-    false, false,
+    false, false, false, false, false, true, true, true, true, true, true, true,
+    false, false, false, false, false,
 ];

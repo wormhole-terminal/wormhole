@@ -16,7 +16,7 @@ settings-updates-auto-update = Update automatically
     .keywords = download auto
 
 settings-updates-anonymous-count = Count this Mac anonymously
-    .description = Update checks say once a day that Wormhole runs here, with no ID and nothing about you
+    .description = Once a day an update check also says that { -brand } runs here, so we know how many people use it. No ID, and your IP address isn't kept
     .keywords = analytics telemetry privacy usage statistics count
 
 settings-updates-update-channel = Channel
@@ -44,6 +44,19 @@ settings-updates-install-update = Install update
 settings-updates-dont-restart = Don't restart
 settings-updates-restart-now = Restart now
 settings-updates-check-now = Check now
+
+## Under "Count this Mac anonymously": what an update check sends, and when counting starts
+
+# While the count is on. { $agent } is the exact text sent, such as
+# "Wormhole-Updater/1.4.0 (stable; aarch64; macOS 26)"; keep "Wormhole-Count: day" and "month" as they are.
+settings-updates-count-sends = An update check sends { $agent }: the version, channel, chip and macOS version. The first check of a day or a month adds Wormhole-Count: day or month. Nothing else.
+# While the count is off. { $agent } is the exact text sent, such as "Wormhole-Updater/1.4.0".
+settings-updates-count-off = An update check sends { $agent }: the version alone.
+# In the first day after a version that counts first ran. { $count } is whole hours, 1 to 24.
+settings-updates-count-starts-in = { $count ->
+    [one] Counting starts in { $count } hour, a day after this version first ran, so there's time to turn it off.
+   *[other] Counting starts in { $count } hours, a day after this version first ran, so there's time to turn it off.
+}
 
 ## The status line: when it was last checked, what is available, what is installed
 

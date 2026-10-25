@@ -34,7 +34,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 pub use channel::UpdateChannel;
-pub use count::Count;
+pub use count::{Count, counted_user_agent, plain_user_agent};
 pub use download::{DownloadedUpdate, download};
 pub use feed::{Asset, Release, UpdateStatus, check};
 pub(crate) use install::bundle_from_exe;

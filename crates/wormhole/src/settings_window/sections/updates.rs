@@ -2,6 +2,7 @@
 //! (up to date, checking, available with its notes, downloading with a meter, installed,
 //! development build, failed), its status and actions on one row.
 
+use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 #[allow(
     clippy::wildcard_imports,
@@ -15,9 +16,12 @@ use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::progress::Progress;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::update::{Release, Security, Severity, UpdateChannel};
+use wormhole_core::update::{
+    Release, Security, Severity, UpdateChannel, counted_user_agent, current_platform, macos_version,
+    plain_user_agent,
+};
 
-use crate::settings::UiColors;
+use crate::settings::{UiColors, settings};
 use crate::settings_window::registry::{Segment, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
@@ -34,7 +38,7 @@ pub(super) const SETTINGS: &[Setting] = &[
             .into_any_element()
     }),
     toggle!("auto-update", auto_update),
-    toggle!("anonymous-count", anonymous_count),
+    toggle!("anonymous-count", anonymous_count).below(count_note),
     Setting::segmented(
         "update-channel",
         &[Segment::text(SETTINGS_UPDATES_STABLE), Segment::text(SETTINGS_UPDATES_UNSTABLE)],
@@ -43,6 +47,39 @@ pub(super) const SETTINGS: &[Setting] = &[
     ),
     Setting::block("update-status", draw_status),
 ];
+
+/// What an update check sends from this Mac, word for word, and while its first day lasts, when
+/// counting starts.
+fn count_note(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
+    // The version and the Mac don't change while the app runs; the system's version is read once.
+    static MAC: OnceLock<Option<(semver::Version, String, Option<semver::Version>)>> = OnceLock::new();
+    let (version, platform, system) = MAC
+        .get_or_init(|| {
+            let version = semver::Version::parse(env!("CARGO_PKG_VERSION")).ok()?;
+            Some((version, current_platform(), macos_version()))
+        })
+        .as_ref()?;
+    let ui = ui(cx);
+    let (counting, channel) = (settings(cx).anonymous_count, settings(cx).update_channel);
+    let sends = if counting {
+        settings_updates_count_sends(&counted_user_agent(version, channel, platform, system.as_ref()))
+    } else {
+        settings_updates_count_off(&plain_user_agent(version))
+    };
+    let starts = counting
+        .then(|| cx.global::<Updates>().count_starts_in())
+        .flatten()
+        .map(|left| settings_updates_count_starts_in(whole(left.as_secs().div_ceil(3600))));
+    Some(
+        div()
+            .flex()
+            .flex_col()
+            .gap_2()
+            .when_some(starts, |d, starts| d.child(style::banner(ui, style::BannerKind::Info, false, starts)))
+            .child(div().text_caption().text_color(ui.muted).child(sends))
+            .into_any_element(),
+    )
+}
 
 /// The meter of a download.
 const METER_W: f32 = 120.0;

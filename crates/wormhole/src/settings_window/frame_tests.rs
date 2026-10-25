@@ -18,7 +18,8 @@
 //! Liquid Glass moved from Appearance (one row fewer) to Feature flags (one row more).
 //! Appearance and a search (which show the window's preview) rose by about 770 when the preview
 //! became the window's own parts at full size instead of a drawing of them.
-//! Updates rose by about 380 with its one more row, Count this Mac anonymously.
+//! Updates rose by about 380 with its one more row, Count this Mac anonymously, and by about 150 with
+//! the note under it: what a check sends, and in a fresh data dir when counting starts.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -46,7 +47,7 @@ const BUDGET: [(&str, u64); 14] = [
     ("Agents", 26295),
     ("Notifications", 7711),
     ("MenuBar", 6024),
-    ("Updates", 3632),
+    ("Updates", 3779),
     ("Advanced", 3949),
     ("Projects", 8866),
     ("FeatureFlags", 3855),
