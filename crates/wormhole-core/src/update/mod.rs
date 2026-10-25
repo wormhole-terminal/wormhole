@@ -36,7 +36,7 @@ use std::path::PathBuf;
 pub use channel::UpdateChannel;
 pub use count::{Count, counted_user_agent, plain_user_agent};
 pub use download::{DownloadedUpdate, download};
-pub use feed::{Asset, Release, UpdateStatus, check};
+pub use feed::{Asset, Checked, Release, UpdateStatus, check, check_counted};
 pub(crate) use install::bundle_from_exe;
 pub use install::{current_app_bundle, install, is_translocated, preflight, relaunch};
 pub use schedule::UpdateSchedule;
@@ -76,6 +76,10 @@ pub struct UpdaterConfig {
     /// The anonymous count (`count`): which periods this check is the first of, `None` when the
     /// person turned the count off.
     pub count: Option<Count>,
+    /// A GitHub repository's `…/releases`, read when the feed at `base_url` doesn't answer, so
+    /// updates keep coming if the download server is gone ([`UpdateChannel::github_feed_path`]).
+    /// It gets the version alone, never the count.
+    pub fallback_url: Option<String>,
 }
 
 impl UpdaterConfig {
@@ -100,6 +104,7 @@ impl UpdaterConfig {
             team_id: None,
             max_download_size: DEFAULT_MAX_DOWNLOAD_SIZE,
             count: None,
+            fallback_url: None,
         }
     }
 }

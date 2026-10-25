@@ -62,6 +62,7 @@ pub(super) fn test_config(current: &str, public_key: &str) -> UpdaterConfig {
         team_id: None,
         max_download_size: DEFAULT_MAX_DOWNLOAD_SIZE,
         count: None,
+        fallback_url: None,
     }
 }
 

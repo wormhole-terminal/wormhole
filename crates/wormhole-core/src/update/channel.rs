@@ -24,6 +24,15 @@ impl UpdateChannel {
         }
     }
 
+    /// The feed's path below a GitHub repository's `releases/`, where the release workflow publishes
+    /// it: the latest stable release's `latest.json`, or the rolling `unstable` prerelease's.
+    pub fn github_feed_path(self) -> &'static str {
+        match self {
+            Self::Stable => "latest/download/latest.json",
+            Self::Unstable => "download/unstable/latest.json",
+        }
+    }
+
     /// The channel's name, as the feed's path and the update check's user agent spell it.
     pub fn name(self) -> &'static str {
         match self {

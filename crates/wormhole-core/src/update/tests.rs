@@ -15,7 +15,8 @@ use super::test_support::{
     serve, serve_recording, temp_apps_dir, test_config, write_fake_app,
 };
 use super::{
-    Count, UpdateChannel, UpdateError, UpdateStatus, UpdaterConfig, check, download, install, preflight,
+    Checked, Count, UpdateChannel, UpdateError, UpdateStatus, UpdaterConfig, check, check_counted, download,
+    install, preflight,
 };
 
 const ARCHIVE_PATH: &str = "/releases/0.2.0/Wormhole-0.2.0-macos.app.tar.gz";
@@ -152,6 +153,47 @@ fn the_count_goes_with_the_channels_own_feed_and_nothing_goes_while_it_is_off() 
             request("/stable/latest.json", plain, None),
         ]
     );
+}
+
+#[test]
+fn without_the_download_server_the_feed_comes_from_github_with_the_version_alone() {
+    let feed = br#"{"version":"0.1.0","platforms":{}}"#.to_vec();
+    let (github, seen) = serve_recording(HashMap::from([
+        ("/releases/latest/download/latest.json".to_string(), feed.clone()),
+        ("/releases/download/unstable/latest.json".to_string(), feed),
+    ]));
+    let mut config = test_config("0.1.0", "");
+    // Port 1: nothing answers there, as when the download server is gone.
+    config.base_url = "http://127.0.0.1:1".into();
+    config.fallback_url = Some(format!("{github}/releases"));
+    config.channel = UpdateChannel::Unstable;
+    config.count = Some(Count { day: true, month: true });
+    assert_eq!(check_counted(&config).unwrap(), Checked { status: UpdateStatus::UpToDate, counted: false });
+    let plain = Some("Wormhole-Updater/0.1.0".to_string());
+    let seen = seen.lock().unwrap();
+    assert_eq!(
+        seen.iter().map(|s| (s.path.as_str(), &s.user_agent, &s.count)).collect::<Vec<_>>(),
+        [
+            ("/releases/download/unstable/latest.json", &plain, &None),
+            ("/releases/latest/download/latest.json", &plain, &None),
+        ],
+        "GitHub gets the version alone and no count"
+    );
+}
+
+#[test]
+fn a_check_that_reaches_the_download_server_counts_and_never_asks_github() {
+    let feed = br#"{"version":"0.1.0","platforms":{}}"#.to_vec();
+    let (base, _) = serve_recording(HashMap::from([("/stable/latest.json".to_string(), feed)]));
+    let (github, github_seen) = serve_recording(HashMap::new());
+    let mut config = test_config("0.1.0", "");
+    config.base_url = base;
+    config.fallback_url = Some(format!("{github}/releases"));
+    config.count = Some(Count { day: true, month: false });
+    assert_eq!(check_counted(&config).unwrap(), Checked { status: UpdateStatus::UpToDate, counted: true });
+    config.count = None;
+    assert!(!check_counted(&config).unwrap().counted, "nothing to count with the count off");
+    assert!(github_seen.lock().unwrap().is_empty());
 }
 
 #[test]

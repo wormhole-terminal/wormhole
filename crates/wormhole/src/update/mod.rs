@@ -21,8 +21,8 @@ use std::time::{Duration, SystemTime};
 use gpui_kit::*;
 use wormhole_core::storage::store::Store;
 use wormhole_core::update::{
-    self, Count, DownloadedUpdate, Release, UpdateChannel, UpdateError, UpdateSchedule, UpdateStatus,
-    UpdaterConfig,
+    self, Checked, Count, DownloadedUpdate, Release, UpdateChannel, UpdateError, UpdateSchedule,
+    UpdateStatus, UpdaterConfig,
 };
 
 use crate::app_state::app;
@@ -30,6 +30,8 @@ use crate::settings::{SettingsStore, settings};
 use crate::update::restart::IdleWatch;
 
 const BUNDLE_ID: &str = "app.getwormhole.terminal";
+/// The releases the download server redirects to (`.github/workflows/release.yml`).
+const GITHUB_RELEASES: &str = "https://github.com/wormhole-terminal/wormhole/releases";
 const SCHEDULE_KEY: &str = "update_schedule";
 
 #[derive(Clone)]
@@ -60,6 +62,10 @@ pub(crate) struct Updates {
     restart_when_idle: Option<IdleWatch>,
     /// The channel the shown phase belongs to; switching it checks the new one (see [`init`]).
     channel: UpdateChannel,
+    /// A version whose download or install failed for a reason a retry won't fix (not the network):
+    /// automatic checks offer it with its Install button instead of downloading it again every six
+    /// hours. Not saved: a new run tries once more.
+    failed_install: Option<semver::Version>,
 }
 
 impl Global for Updates {}
@@ -90,6 +96,7 @@ impl Updates {
             task: None,
             restart_when_idle: None,
             channel: UpdateChannel::Stable,
+            failed_install: None,
         }
     }
 
@@ -132,6 +139,8 @@ fn feed_config() -> Option<UpdaterConfig> {
     let version = semver::Version::parse(env!("CARGO_PKG_VERSION")).ok()?;
     let mut config = UpdaterConfig::new(url, key, version, BUNDLE_ID);
     config.team_id = option_env!("WORMHOLE_TEAM_ID").filter(|s| !s.is_empty()).map(str::to_string);
+    // Where the release workflow publishes, for when the download server doesn't answer.
+    config.fallback_url = Some(GITHUB_RELEASES.to_string());
     Some(config)
 }
 
@@ -196,7 +205,7 @@ pub(crate) fn check_for_updates(manual: bool, cx: &mut App) {
     let count = config.count;
     updates.phase = UpdatePhase::Checking;
     notify_settings(cx);
-    let check = cx.background_executor().spawn(async move { update::check(&config) });
+    let check = cx.background_executor().spawn(async move { update::check_counted(&config) });
     let task = cx.spawn(async move |cx| {
         let result = check.await;
         cx.update(|cx| finish_check(result, manual, count, cx));
@@ -207,7 +216,7 @@ pub(crate) fn check_for_updates(manual: bool, cx: &mut App) {
 /// Whether a check that ended like this counts as having been made. Not after a network error
 /// (`UpdateSchedule::record_check`): a laptop that launches before Wi-Fi is up must try again
 /// at the next opportunity, not in six hours.
-fn should_record(result: &Result<UpdateStatus, UpdateError>) -> bool {
+fn should_record<T>(result: &Result<T, UpdateError>) -> bool {
     !matches!(result, Err(UpdateError::Network(_)))
 }
 
@@ -223,16 +232,19 @@ fn notify_settings(cx: &mut App) {
 
 /// `count`: what the check said for the anonymous count, recorded with the check so each day and
 /// month is flagged once.
-fn finish_check(result: Result<UpdateStatus, UpdateError>, manual: bool, count: Option<Count>, cx: &mut App) {
+fn finish_check(result: Result<Checked, UpdateError>, manual: bool, count: Option<Count>, cx: &mut App) {
     if should_record(&result) {
         let now = SystemTime::now();
         let schedule = &mut cx.global_mut::<Updates>().schedule;
         schedule.record_check(now);
-        if let Some(count) = count {
+        // Only a count that reached the download server: from GitHub's copy of the feed, the day
+        // is counted at a later check.
+        if let (Some(count), Ok(Checked { counted: true, .. })) = (count, &result) {
             schedule.record_count(count, now);
         }
         save_update_schedule(cx);
     }
+    let result = result.map(|checked| checked.status);
     let quiet = match &result {
         Ok(status) if !manual => !cx.global::<Updates>().schedule.should_notify(status),
         _ => false,
@@ -245,8 +257,10 @@ fn finish_check(result: Result<UpdateStatus, UpdateError>, manual: bool, count: 
         ),
         Ok(UpdateStatus::Available(release)) => {
             tracing::info!(version = %release.version, "update available");
-            cx.global_mut::<Updates>().phase = UpdatePhase::Available(Box::new(release.clone()));
-            if settings(cx).auto_update {
+            let updates = cx.global_mut::<Updates>();
+            updates.phase = UpdatePhase::Available(Box::new(release.clone()));
+            let failed_before = updates.failed_install.as_ref() == Some(&release.version);
+            if settings(cx).auto_update && (manual || !failed_before) {
                 install_update(release, cx);
             }
             notify_settings(cx);
@@ -284,6 +298,7 @@ pub(crate) fn install_update(release: Release, cx: &mut App) {
     notify_settings(cx);
 
     let version = release.version.to_string();
+    let semver = release.version.clone();
     let work = cx.background_executor().spawn(async move {
         let downloaded: DownloadedUpdate = update::download(&config, &release, |done, _| {
             progress.0.store(done, Ordering::Relaxed);
@@ -293,10 +308,14 @@ pub(crate) fn install_update(release: Release, cx: &mut App) {
     let task = cx.spawn(async move |cx| {
         let result = work.await;
         cx.update(|cx| {
-            cx.global_mut::<Updates>().phase = match result {
+            let updates = cx.global_mut::<Updates>();
+            updates.phase = match result {
                 Ok(()) => UpdatePhase::Installed(version),
                 Err(err) => {
                     tracing::error!("update failed: {err}");
+                    if !matches!(err, UpdateError::Network(_)) {
+                        updates.failed_install = Some(semver);
+                    }
                     UpdatePhase::Failed(err.to_string())
                 }
             };
@@ -391,14 +410,14 @@ mod tests {
 
     #[test]
     fn an_offline_check_is_not_recorded_so_it_is_retried() {
-        assert!(!should_record(&Err(UpdateError::Network("dns error".into()))));
+        assert!(!should_record::<UpdateStatus>(&Err(UpdateError::Network("dns error".into()))));
     }
 
     #[test]
     fn every_check_that_reached_the_server_is_recorded() {
         assert!(should_record(&Ok(UpdateStatus::UpToDate)));
         // A broken feed answered, so retrying in a minute would not help.
-        assert!(should_record(&Err(UpdateError::Feed("not json".into()))));
-        assert!(should_record(&Err(UpdateError::Signature("bad".into()))));
+        assert!(should_record::<UpdateStatus>(&Err(UpdateError::Feed("not json".into()))));
+        assert!(should_record::<UpdateStatus>(&Err(UpdateError::Signature("bad".into()))));
     }
 }

@@ -20,6 +20,14 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   count.
 - Each release has a download for Apple silicon and one for Intel Macs besides the universal one, and
   an update downloads only your Mac's architecture, about half the size it was.
+- When Wormhole's download server doesn't answer, an update check asks GitHub, where the releases are
+  published, so updates keep coming. That check sends the version alone and is not counted.
+
+### Fixed
+
+- An update that downloaded but failed to install (for example, without permission to replace the app)
+  is no longer downloaded again at every automatic check. Settings → Updates offers it with Install
+  update, and the next launch tries once more.
 
 ## [1.3.0] - 2026-10-25
 

@@ -78,12 +78,36 @@ struct Feed {
 /// only when no feed answered: a broken Unstable feed must not keep a stable release from anyone,
 /// nor make the schedule retry every minute as it does after a network error.
 pub fn check(config: &UpdaterConfig) -> Result<UpdateStatus, UpdateError> {
+    check_counted(config).map(|checked| checked.status)
+}
+
+/// A check's answer, and whether its count reached the download server.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Checked {
+    pub status: UpdateStatus,
+    /// False when the count was off, or the channel's own feed was read from the fallback
+    /// (`UpdaterConfig::fallback_url`), which never gets it: the day and month are counted later.
+    pub counted: bool,
+}
+
+/// [`check`], also saying whether the count went out.
+pub fn check_counted(config: &UpdaterConfig) -> Result<Checked, UpdateError> {
     let mut best: Option<Result<UpdateStatus, UpdateError>> = None;
+    let mut counted = false;
     let user_agent = count::user_agent(config);
     for (i, &channel) in config.channel.feeds().iter().enumerate() {
         // The count's flags go with the channel's own feed only: a check that reads two counts once.
         let flags = config.count.filter(|_| i == 0).and_then(Count::header);
-        let result = check_feed(&feed_url(&config.base_url, channel), config, &user_agent, flags);
+        let mut result = check_feed(&feed_url(&config.base_url, channel), config, &user_agent, flags);
+        if result.is_ok() && i == 0 {
+            counted = config.count.is_some();
+        }
+        if let (Err(UpdateError::Network(err)), Some(fallback)) = (&result, &config.fallback_url) {
+            tracing::warn!(?channel, "update feed failed, trying GitHub: {err}");
+            let url = format!("{}/{}", fallback.trim_end_matches('/'), channel.github_feed_path());
+            let plain = count::plain_user_agent(&config.current_version);
+            result = check_feed(&url, config, &plain, None);
+        }
         if let Err(err) = &result {
             tracing::warn!(?channel, "update feed failed: {err}");
         }
@@ -93,8 +117,8 @@ pub fn check(config: &UpdaterConfig) -> Result<UpdateStatus, UpdateError> {
         });
     }
     let status = best.unwrap_or(Ok(UpdateStatus::UpToDate))?;
-    tracing::info!(?status, current = %config.current_version, "update check finished");
-    Ok(status)
+    tracing::info!(?status, counted, current = %config.current_version, "update check finished");
+    Ok(Checked { status, counted })
 }
 
 /// The more useful of two feeds' answers: an update (the newer one), then a version this Mac
