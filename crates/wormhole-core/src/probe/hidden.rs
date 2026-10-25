@@ -17,6 +17,9 @@ pub(crate) fn is_hidden(c: char) -> bool {
         || matches!(c, '\u{061c}' | '\u{2028}' | '\u{2029}' | '\u{feff}' | '\u{00ad}' | '\u{180e}')
         || matches!(c, '\u{115f}' | '\u{1160}' | '\u{3164}' | '\u{ffa0}')
         || matches!(c, '\u{fe00}'..='\u{fe0f}' | '\u{e0000}'..='\u{e007f}' | '\u{e0100}'..='\u{e01ef}')
+        // Joiners and fillers that draw as nothing, the interlinear annotation marks that hide text
+        // between them, and the musical formatting controls.
+        || matches!(c, '\u{034f}' | '\u{17b4}' | '\u{17b5}' | '\u{fff9}'..='\u{fffb}' | '\u{1d173}'..='\u{1d17a}')
 }
 
 /// Whether `text` holds a character [`is_hidden`] names.
@@ -26,13 +29,23 @@ pub(crate) fn has_hidden(text: &str) -> bool {
 
 /// `text` with every [`is_hidden`] character written out (`\n`, `\t`, `\u{202e}`), so that text a Probe
 /// or a folder chose can be printed without driving the terminal it is printed on.
+///
+/// What is written out must not be forgeable by text that merely looks like it, so a literal backslash
+/// that could begin one of our escapes is doubled: `\u{1b}` typed in a name comes out as `\\u{1b}`, and
+/// only a real ESC comes out as `\u{1b}`. A backslash that begins no escape (the `\b` of a pattern) is
+/// left alone while nothing in the text is hidden, because a hint such as `write (?-u:\b)` must stay
+/// something to copy; once the text has a hidden character every backslash is doubled, so a
+/// backslash can not be taken for the start of the escape that follows it.
 pub(crate) fn reveal(text: &str) -> Cow<'_, str> {
-    if !has_hidden(text) {
+    let hidden = has_hidden(text);
+    let looks_like_an_escape = |rest: &str| rest.starts_with(['n', 'r', 't', 'u', '\\']);
+    if !hidden && !text.match_indices('\\').any(|(at, _)| looks_like_an_escape(&text[at + 1..])) {
         return Cow::Borrowed(text);
     }
     let mut out = String::with_capacity(text.len() + 8);
-    for c in text.chars() {
+    for (at, c) in text.char_indices() {
         match c {
+            '\\' if hidden || looks_like_an_escape(&text[at + 1..]) => out.push_str("\\\\"),
             '\n' => out.push_str("\\n"),
             '\r' => out.push_str("\\r"),
             '\t' => out.push_str("\\t"),
@@ -60,6 +73,14 @@ mod tests {
             '\u{feff}',
             '\u{2028}',
             '\u{e0041}',
+            '\u{34f}',
+            '\u{17b4}',
+            '\u{17b5}',
+            '\u{fff9}',
+            '\u{fffa}',
+            '\u{fffb}',
+            '\u{1d173}',
+            '\u{1d17a}',
         ] {
             assert!(is_hidden(c), "{:x}", u32::from(c));
         }
@@ -76,5 +97,25 @@ mod tests {
         assert!(matches!(reveal("plain"), Cow::Borrowed(_)));
         assert_eq!(reveal("a\u{1b}[2Jb\u{202e}c\nd\te\r"), "a\\u{1b}[2Jb\\u{202e}c\\nd\\te\\r");
         assert_eq!(reveal("\u{e0041}"), "\\u{e0041}");
+    }
+
+    #[test]
+    fn a_backslash_that_could_begin_an_escape_is_doubled_so_text_cannot_forge_one() {
+        // Typed by a Probe: looks like a revealed ESC, is not one.
+        assert_eq!(reveal("\\u{1b}"), "\\\\u{1b}");
+        assert_eq!(reveal("a\\nb"), "a\\\\nb");
+        // Two backslashes: the first begins what looks like an escape and is doubled, the last ends the text.
+        assert_eq!(reveal("\\\\"), "\\\\\\");
+        // A real ESC after a backslash stays apart from it.
+        assert_eq!(reveal("\\\u{1b}"), "\\\\\\u{1b}");
+        assert_eq!(reveal("x\\\u{202e}y"), "x\\\\\\u{202e}y");
+    }
+
+    #[test]
+    fn a_backslash_that_begins_no_escape_is_left_for_copying_when_nothing_is_hidden() {
+        assert_eq!(reveal(r"write `(?-u:\b)` and \d"), r"write `(?-u:\b)` and \d");
+        assert!(matches!(reveal(r"\b"), Cow::Borrowed(_)));
+        // With a hidden character about, every backslash is doubled.
+        assert_eq!(reveal("\\b\u{1b}"), "\\\\b\\u{1b}");
     }
 }
