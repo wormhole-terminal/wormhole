@@ -15,7 +15,6 @@ use crate::window::test_harness::{
     tree,
 };
 
-const SIDEBAR: usize = 0;
 const PANEL: usize = 1;
 const TITLE_ROW: usize = 2;
 const STATUS_BAR: usize = 3;
@@ -24,9 +23,14 @@ fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
 }
 
-/// How many times each region has been built so far: sidebar, panel, title row, status bar.
+/// How many times each region has been built so far: sidebar header, panel, title row, status bar.
 fn builds(cx: &mut TestAppContext, window: &OpenWindow) -> [usize; 4] {
     read_cx(cx, window, |ws, cx| ws.regions.builds(cx))
+}
+
+/// How many times the sidebar's list has been built so far (it is a view of its own, not a region).
+fn list_builds(cx: &mut TestAppContext, window: &OpenWindow) -> usize {
+    read_cx(cx, window, |ws, cx| ws.sidebar.read(cx).builds())
 }
 
 /// Output as the PTY's reader delivers it, to a terminal on screen.
@@ -175,10 +179,11 @@ fn a_terminal_that_needs_you_draws_the_sidebar_and_the_status_bar_again(cx: &mut
     }
     let window = settled_window(cx);
     let before = builds(cx, &window);
+    let list_before = list_builds(cx, &window);
     hook(cx, &window, 2, "PermissionRequest:Bash", Some("Approve cargo test?"));
     draw(cx, &window);
     let after = builds(cx, &window);
-    assert!(after[SIDEBAR] > before[SIDEBAR], "its row says so");
+    assert!(list_builds(cx, &window) > list_before, "its row says so");
     assert!(after[STATUS_BAR] > before[STATUS_BAR], "and the bar counts it");
 }
 
@@ -189,6 +194,7 @@ fn a_terminal_renamed_draws_the_title_row_and_the_list_again(cx: &mut TestAppCon
     }
     let window = settled_window(cx);
     let before = builds(cx, &window);
+    let list_before = list_builds(cx, &window);
     drive(cx, &window, |ws, _, cx| {
         ws.sessions[0].custom_name = Some("renamed".into());
         ws.mark_dirty(cx);
@@ -196,7 +202,7 @@ fn a_terminal_renamed_draws_the_title_row_and_the_list_again(cx: &mut TestAppCon
     draw(cx, &window);
     let after = builds(cx, &window);
     assert!(after[TITLE_ROW] > before[TITLE_ROW], "the row names the selected terminal");
-    assert!(after[SIDEBAR] > before[SIDEBAR], "and the list too");
+    assert!(list_builds(cx, &window) > list_before, "and the list too");
 }
 
 #[gpui_kit::test]
@@ -274,14 +280,17 @@ fn a_fact_of_the_apps_shared_state_that_changes_draws_every_region_again(cx: &mu
     }
 }
 
-/// The list notifies for its own drawing, an agent's spinner at 30 frames a second among it.
+/// The list notifies for its own drawing, an agent's spinner at 30 frames a second among it. GPUI marks a
+/// notified view's ancestors dirty, so the list must not be a child of any cached region: its header is its
+/// sibling.
 #[gpui_kit::test]
-fn the_list_drawing_itself_builds_neither_the_panel_nor_the_title_row_nor_the_bar(cx: &mut TestAppContext) {
-    if isolate("the_list_drawing_itself_builds_neither_the_panel_nor_the_title_row_nor_the_bar") {
+fn the_list_drawing_itself_builds_none_of_the_cached_regions(cx: &mut TestAppContext) {
+    if isolate("the_list_drawing_itself_builds_none_of_the_cached_regions") {
         return;
     }
     let window = settled_window(cx);
     let before = builds(cx, &window);
+    let list_before = list_builds(cx, &window);
     for _ in 0..10 {
         cx.update(|cx| {
             let sidebar = window.workspace.read_with(cx, |ws, _| ws.sidebar.clone()).expect("open");
@@ -290,12 +299,12 @@ fn the_list_drawing_itself_builds_neither_the_panel_nor_the_title_row_nor_the_ba
         cx.run_until_parked();
         draw(cx, &window);
     }
-    let after = builds(cx, &window);
     assert_eq!(
-        [after[PANEL], after[TITLE_ROW], after[STATUS_BAR]],
-        [before[PANEL], before[TITLE_ROW], before[STATUS_BAR]],
-        "a hover in the list is the list's: {before:?} -> {after:?}"
+        builds(cx, &window),
+        before,
+        "a hover or a spinner's turn is the list's: no region (the sidebar's header among them) was built"
     );
+    assert_eq!(list_builds(cx, &window), list_before + 10, "and the list itself was drawn each time");
 }
 
 /// With the terminals in tabs the root reads the list to build the bar, which is therefore drawn for the list's
@@ -357,10 +366,11 @@ fn the_colour_of_the_selected_terminals_group_changing_draws_the_title_row_again
 }
 
 /// Allocations a frame of a two-terminal window with the status bar on may make when only a terminal asked
-/// for it and the chrome is replayed. Measured: 533 allocations (203 KB), the same on every run. The
+/// for it and the chrome is replayed. Measured: 546 allocations, the same on every run. The
 /// budget is that plus about a hundredth: what is left is the root's own rebuild (the window's actions,
-/// the overlay and menu layers, the pane probe) and the terminal.
-const REPLAYED_FRAME_ALLOCATIONS: u64 = 539;
+/// the overlay and menu layers, the pane probe, the sidebar's column with its header and list as the
+/// replayed views it holds side by side) and the terminal.
+const REPLAYED_FRAME_ALLOCATIONS: u64 = 551;
 
 /// Allocations of a draw of the window.
 fn allocations_of_draw(cx: &mut TestAppContext, window: &OpenWindow) -> u64 {

@@ -8,7 +8,10 @@
 //! have been built, which is a missing notify. Every window test that draws is such a check.
 //!
 //! The facts are not the whole of what the builders read. They are what changes without a view of its own
-//! to say so: the window's state and the shared state, as text so a failure names what moved. A fact the
+//! to say so: the window's state and the shared state, as text so a failure names what moved. The sidebar's
+//! list is not a region and has none: it is drawn from the sidebar entity, which the window tells how it
+//! stands (`sync_sidebar`, checked by `assert_sidebar_told` in tests) and which draws again whenever the
+//! regions are notified (`Regions::notify`). A fact the
 //! builders read and this misses is not checked; add it to [`Workspace::region_facts`] when one turns out
 //! stale.
 
@@ -21,6 +24,7 @@ use super::{Part, app_facts::AppFacts};
 use wormhole_core::view::panes::Axis;
 
 use crate::window::Workspace;
+use crate::window::focus::TitleButton;
 use crate::window::status_bar::StatusBar;
 
 /// What a region was built from (or is now), each fact by name.
@@ -90,12 +94,17 @@ impl Workspace {
         fact(&mut facts, "glass", &self.glass_on(cx));
         fact(&mut facts, "slide", &self.slide_motion().map(|motion| motion.edge));
         match part {
-            Part::Sidebar => {
-                fact(&mut facts, "width", &columns.sidebar);
-                fact(&mut facts, "tabs_on", &self.tabs_on_top());
+            // Everything `render_sidebar_header` reads that no view of its own announces: the row's
+            // start follows the traffic lights, the chip is drawn from the app's profiles and from the
+            // list's menu state (heard by `watch_sidebar`), the window's own profile may differ from the
+            // shown one (its colours and font), and the keys' ring is on one of its two buttons.
+            Part::SidebarHeader => {
+                fact(&mut facts, "lights end", &crate::style::lights_end(window));
                 fact(&mut facts, "profile chip", &Self::profiles_for_chip(cx));
+                fact(&mut facts, "profile menu", &self.sidebar.read(cx).profile_page());
                 fact(&mut facts, "odd profile", &self.odd_profile(cx).map(|(profile, _)| profile));
-                fact(&mut facts, "no-agents note", &self.no_agents_note_wanted(cx));
+                fact(&mut facts, "button", &self.areas.title);
+                fact(&mut facts, "new terminal ring", &self.title_ring(TitleButton::NewTerminal, window, cx));
             }
             Part::Panel => {
                 let tabs = self.panel_tab_list(cx);
@@ -157,13 +166,6 @@ impl Workspace {
                 ))
             })
             .collect()
-    }
-
-    /// Whether the sidebar draws its note after a first run without agents, and what it reads.
-    fn no_agents_note_wanted(&self, cx: &App) -> (bool, bool) {
-        let dismissed = crate::app_state::app(cx).tips.contains(wormhole_core::onboarding::Tip::NoAgents);
-        let agent_seen = self.sessions.iter().any(|session| session.pane.summary.agent.is_some());
-        (self.first_run.read(cx).note_wanted(dismissed), agent_seen)
     }
 
     /// Remember what `part` was just built from.

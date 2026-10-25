@@ -322,6 +322,7 @@ impl Workspace {
         let features = self::feature::FeatureTable::installed(cx);
         let feature_states = Self::make_feature_states(features, window, cx);
 
+        let regions = self::regions::Regions::new(cx.weak_entity(), sidebar.clone(), cx);
         let mut this = Self {
             sessions: Vec::new(),
             splits: Vec::new(),
@@ -334,7 +335,7 @@ impl Workspace {
             beside: 0.0,
             sidebar,
             sidebar_feed: self::sidebar_host::SidebarFeed::new(),
-            regions: self::regions::Regions::new(cx.weak_entity(), cx),
+            regions,
             right_tab: TabId::default(),
             features,
             feature_states,

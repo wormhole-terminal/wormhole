@@ -107,6 +107,10 @@ pub(crate) struct Sidebar {
     profile_menu: Option<profile_chip::ProfilePage>,
     /// Where the chip reads the app's profiles from.
     profiles: profile_chip::ProfilesFn,
+    /// How many times the list was built, for the tests that check a notification drew it (and
+    /// devctl's report).
+    #[cfg(any(test, feature = "devctl"))]
+    built: usize,
 }
 
 impl EventEmitter<SidebarEvent> for Sidebar {}
@@ -147,6 +151,8 @@ impl Sidebar {
             tabs: tab_bar::TabBarState::default(),
             profile_menu: None,
             profiles,
+            #[cfg(any(test, feature = "devctl"))]
+            built: 0,
         }
     }
 
@@ -247,6 +253,12 @@ impl Sidebar {
         self.demo.is_some()
     }
 
+    /// How many times the list was built.
+    #[cfg(any(test, feature = "devctl"))]
+    pub(crate) fn builds(&self) -> usize {
+        self.built
+    }
+
     /// The profile chip's menu is open.
     #[cfg(test)]
     pub(crate) fn profile_menu_open(&self) -> bool {
@@ -260,8 +272,8 @@ impl Sidebar {
         cx.notify();
     }
 
-    /// The page of the profile chip's menu that is open.
-    #[cfg(test)]
+    /// The page of the profile chip's menu that is open. The chip is drawn by the window's header, a view
+    /// of its own, so the window watches this to draw the header again (`Regions::watch_sidebar`).
     pub(crate) fn profile_page(&self) -> Option<profile_chip::ProfilePage> {
         self.profile_menu
     }
@@ -529,7 +541,25 @@ impl Sidebar {
 /// renders once its parent's render has returned, so this never meets the window's lease.
 impl Render for Sidebar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        self.render_list(window, cx)
+        #[cfg(any(test, feature = "devctl"))]
+        {
+            self.built += 1;
+        }
+        let glass = self.input.glass.clone();
+        // The list's glass is bracketed here, in the view that proposes it: GPUI replays the list
+        // (it is cached, a view of its own) in frames that change none of it, and the glass keeps
+        // what it proposed last until it proposes again. `size_full` fills the bounds a cached view is
+        // given; `flex_1` is the share of the column when the view is drawn inline (a sliding column).
+        div()
+            .relative()
+            .flex_1()
+            .min_h_0()
+            .size_full()
+            .flex()
+            .flex_col()
+            .children(glass.as_ref().map(column_start))
+            .child(self.render_list(window, cx))
+            .children(glass.as_ref().map(column_end))
     }
 }
 

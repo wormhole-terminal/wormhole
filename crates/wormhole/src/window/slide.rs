@@ -101,7 +101,7 @@ impl Workspace {
         let motion = self.slide_motion()?;
         let width = motion.width;
         let column = match motion.edge {
-            Edge::Sidebar => self.render_sidebar(width, window, cx),
+            Edge::Sidebar => self.render_sidebar(width, false, window, cx),
             Edge::Panel => self.render_panel(width, window, cx).into_any_element(),
         };
         // The column keeps its width inside the clip, pinned to the window's edge, so its rows

@@ -269,15 +269,25 @@ impl Workspace {
     /// (`sync_sidebar`) before the frame, none is left to be found by drawing.
     #[cfg(test)]
     fn assert_sidebar_told(&self, cx: &App) {
-        let now = self.sidebar_input(cx);
-        assert!(*self.sidebar.read(cx).input() == now, "the window drew with the sidebar not told");
+        // The check is not the code it checks: not among a frame's counted allocations.
+        crate::perf::allocations::uncounted(|| {
+            let now = self.sidebar_input(cx);
+            assert!(*self.sidebar.read(cx).input() == now, "the window drew with the sidebar not told");
+        });
     }
 
     /// The sidebar, `width` points wide (its column's, or its width at rest while it slides): the
     /// window's header over the list, which is the sidebar's, and the first-run note under it.
+    ///
+    /// In the window's flow (`replayed`) the header and the list are views GPUI keeps between frames,
+    /// side by side in this column: the list is not drawn inside the header's view, so its notifications
+    /// (a hover, an agent's spinner) leave the header alone (`Regions::watch_sidebar`). A sliding column
+    /// is drawn whole, every frame. The note is built here in both: it is as tall as its words, which a
+    /// replayed view's size cannot follow, and it is there for a first run only.
     pub(super) fn render_sidebar(
         &mut self,
         width: f32,
+        replayed: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
@@ -286,6 +296,12 @@ impl Workspace {
         self.fit_sidebar(width, cx);
         #[cfg(test)]
         self.assert_sidebar_told(cx);
+        let (header, list) = if replayed {
+            (self.regions.sidebar_header(), self.regions.sidebar_list())
+        } else {
+            // The list is a view of its own, drawn after this render returns, from what was pushed above.
+            (self.render_sidebar_header(window, cx), self.sidebar.clone().into_any_element())
+        };
         div()
             .id("sidebar")
             .relative()
@@ -299,12 +315,9 @@ impl Workspace {
             .h_full()
             .flex_none()
             .bg(if glass { gpui_kit::transparent_black() } else { ui.panel })
-            .child(crate::sidebar::column_start(&self.glass))
-            .child(self.render_sidebar_header(window, cx))
-            // The list is a view of its own, drawn after this render returns, from what was pushed above.
-            .child(self.sidebar.clone())
+            .child(header)
+            .child(list)
             .children(self.render_no_agents_note(cx))
-            .child(crate::sidebar::column_end(&self.glass))
             .into_any_element()
     }
 

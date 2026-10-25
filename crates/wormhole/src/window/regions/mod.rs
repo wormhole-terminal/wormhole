@@ -1,5 +1,6 @@
-//! The window's chrome as views GPUI keeps between frames: the sidebar's column, the right panel,
-//! the terminal's title row and the status bar.
+//! The window's chrome as views GPUI keeps between frames: the sidebar's header, the right panel,
+//! the terminal's title row and the status bar. The sidebar's list is such a view too, but its own (it
+//! draws itself), and the sidebar's column lays the two out side by side.
 //!
 //! GPUI draws the window's root again for every frame a terminal streams, and with it every div the
 //! chrome is made of, although a terminal's output changes none of it. A [`Region`] is a view that draws
@@ -8,8 +9,8 @@
 //! unchanged, GPUI's rule), without building, laying out or painting it again.
 //!
 //! What makes it draw again is the workspace being notified, or one of the globals the parts read
-//! changing ([`Regions::watch_globals`]). Both reach the regions outside a draw, which is the only
-//! time GPUI acts on a notification for a view it replays. The facts the parts show reach the
+//! changing ([`Regions::watch_globals`]). Both reach the regions (and the list) outside a draw, which is the
+//! only time GPUI acts on a notification for a view it replays. The facts the parts show reach the
 //! workspace already: a terminal's summary changing, a hook, the tick comparing the words that move
 //! with time (`refresh_status_bar`, `crumb_tick`, the sidebar's `times_changed`), a feature's entity
 //! changing (`feature_host`) and the settings. A new fact a part draws must notify the workspace the
@@ -41,14 +42,18 @@ use wormhole_core::view::sidebar::GroupPaint;
 use gpui_kit::*;
 use wormhole_core::view::layout::status_bar::STATUS_BAR_H;
 
+use crate::sidebar::Sidebar;
+use crate::sidebar::profile_chip::ProfilePage;
 use crate::window::Workspace;
 use crate::window::status_bar::StatusBar;
 
 /// A part of the chrome that is a view of its own.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Part {
-    /// The sidebar's column: its header over the terminal list and the first-run note.
-    Sidebar,
+    /// The sidebar's header: the traffic lights' row with the profile chip and the + for a new terminal.
+    /// Not the list under it (a view of its own, so that its drawing leaves this alone) nor the first-run
+    /// note under that (as tall as its words, which a replayed view cannot be).
+    SidebarHeader,
     /// The right panel's column: its tab bar over the shown tab.
     Panel,
     /// The terminal's title row.
@@ -63,7 +68,7 @@ impl Part {
     const COUNT: usize = 4;
     /// Every part, in the order of [`Part::index`].
     #[cfg(any(test, debug_assertions))]
-    const ALL: [Part; Self::COUNT] = [Part::Sidebar, Part::Panel, Part::TitleRow, Part::StatusBar];
+    const ALL: [Part; Self::COUNT] = [Part::SidebarHeader, Part::Panel, Part::TitleRow, Part::StatusBar];
 
     /// Where the part is in arrays kept per part.
     #[cfg(any(test, debug_assertions))]
@@ -98,7 +103,10 @@ impl Render for Region {
 
 /// The window's regions.
 pub(super) struct Regions {
-    sidebar: Entity<Region>,
+    sidebar_header: Entity<Region>,
+    /// The terminal list, drawn beside the header and replayed as the regions are, but a view that
+    /// draws itself: a notification of the list (a hover, a spinner's turn) must not reach the header.
+    list: Entity<Sidebar>,
     panel: Entity<Region>,
     title_row: Entity<Region>,
     status_bar: Entity<Region>,
@@ -110,6 +118,8 @@ pub(super) struct Regions {
     app_seen: Option<AppFacts>,
     /// What the selected terminal's group was last painted with, as the list's notifications saw it.
     paint_seen: Option<GroupPaint>,
+    /// Which page of the profile chip's menu was open, as the list's notifications saw it.
+    menu_seen: Option<ProfilePage>,
     /// What each was built from, checked at the end of every frame.
     #[cfg(any(test, debug_assertions))]
     oracle: oracle::Oracle,
@@ -125,7 +135,7 @@ pub(super) struct Drawn {
 }
 
 impl Regions {
-    pub(super) fn new(workspace: WeakEntity<Workspace>, cx: &mut App) -> Self {
+    pub(super) fn new(workspace: WeakEntity<Workspace>, list: Entity<Sidebar>, cx: &mut App) -> Self {
         let mut region = |part| {
             let workspace = workspace.clone();
             cx.new(|_| Region {
@@ -136,7 +146,8 @@ impl Regions {
             })
         };
         Self {
-            sidebar: region(Part::Sidebar),
+            sidebar_header: region(Part::SidebarHeader),
+            list,
             panel: region(Part::Panel),
             title_row: region(Part::TitleRow),
             status_bar: region(Part::StatusBar),
@@ -144,6 +155,7 @@ impl Regions {
             drawn: Drawn::default(),
             app_seen: None,
             paint_seen: None,
+            menu_seen: None,
             #[cfg(any(test, debug_assertions))]
             oracle: Default::default(),
         }
@@ -167,21 +179,37 @@ impl Regions {
     }
 
     fn all(&self) -> [&Entity<Region>; 4] {
-        [&self.sidebar, &self.panel, &self.title_row, &self.status_bar]
+        [&self.sidebar_header, &self.panel, &self.title_row, &self.status_bar]
     }
 
-    /// Draw every region again on the next frame. Called when the workspace was notified, and so only
-    /// outside a draw.
+    /// Draw every region, and the list, again on the next frame. Called when the workspace was notified,
+    /// and so only outside a draw.
     pub(super) fn notify(&self, cx: &mut App) {
         for region in self.all() {
             region.update(cx, |_, cx| cx.notify());
         }
+        self.list.update(cx, |_, cx| cx.notify());
     }
 
-    /// The sidebar's column, `width` wide and as tall as the window.
-    pub(super) fn sidebar(&self, width: f32) -> AnyElement {
-        let style = StyleRefinement::default().w(px(width)).h_full().flex_none();
-        self.embed(Part::Sidebar, style)
+    /// Draw the sidebar's header again on the next frame (outside a draw).
+    fn notify_header(&self, cx: &mut App) {
+        self.sidebar_header.update(cx, |_, cx| cx.notify());
+    }
+
+    /// The sidebar's header, across the top of its column.
+    pub(super) fn sidebar_header(&self) -> AnyElement {
+        let style = StyleRefinement::default().w_full().h(px(crate::style::TITLE_ROW_H)).flex_none();
+        self.embed(Part::SidebarHeader, style)
+    }
+
+    /// The terminal list under the header: all the column's height that is left.
+    ///
+    /// Not a [`Region`]: it is drawn from the sidebar entity itself, so a notification of the list
+    /// (a hover, a rename being typed, a turn of an agent's spinner) draws it and the views above it in the
+    /// tree, and the header, which is a sibling and not a parent of it, is left alone.
+    pub(super) fn sidebar_list(&self) -> AnyElement {
+        let style = StyleRefinement::default().flex_1().min_h_0().w_full();
+        crate::window::cached::view(&self.list, style)
     }
 
     /// The right panel's column, `width` wide and as tall as the window.
@@ -218,26 +246,34 @@ impl Regions {
     }
 
     /// Tell the regions when the list changes in a way they draw. The list notifies for its own drawing (a
-    /// hover, a rename being typed, a turn of an agent's spinner, 30 times a second) and the window
-    /// is not drawn again for those: the regions read the list's saved view only for the tint of the
-    /// selected terminal's group. The tab bar, which the root draws from the list's state when the
-    /// terminals are in tabs, is the one other reader. It is not a region: the root reads the list while
-    /// it builds the bar, so GPUI draws the root again for every notification of the list then, and
-    /// the bar with it, without a word from here.
+    /// hover, a rename being typed, a turn of an agent's spinner, 30 times a second). GPUI marks a
+    /// notified view and its ancestors dirty, so the list is a sibling of the cached header in the column
+    /// and not a child of it: those notifications draw the list and leave every region as it was. The
+    /// regions read two facts of the list's, which are heard here: the saved view's tint of the selected
+    /// terminal's group (the title row) and the profile chip's menu being open (the header, which draws
+    /// the chip). The tab bar, which the root draws from the list's state when the terminals are in tabs, is
+    /// the one other reader. It is not a region: the root reads the list while it builds the bar, so GPUI
+    /// draws the root again for every notification of the list then, and the bar with it, without a word
+    /// from here.
     pub(super) fn watch_sidebar(workspace: &mut Workspace, cx: &mut Context<Workspace>) {
         workspace.regions.paint_seen = workspace.group_paint(cx);
         let sidebar = workspace.sidebar.clone();
-        cx.observe(&sidebar, |workspace, _, cx| {
+        workspace.regions.menu_seen = sidebar.read(cx).profile_page();
+        cx.observe(&sidebar, |workspace, sidebar, cx| {
             let paint = workspace.group_paint(cx);
             let moved = std::mem::replace(&mut workspace.regions.paint_seen, paint) != paint;
             if moved {
                 cx.notify();
             }
+            let menu = sidebar.read(cx).profile_page();
+            if std::mem::replace(&mut workspace.regions.menu_seen, menu) != menu {
+                workspace.regions.notify_header(cx);
+            }
         })
         .detach();
     }
 
-    /// How many times each region has been built, in the order sidebar, panel, title row, status bar.
+    /// How many times each region has been built, in the order sidebar header, panel, title row, status bar.
     #[cfg(any(test, feature = "devctl"))]
     pub(super) fn builds(&self, cx: &App) -> [usize; 4] {
         self.all().map(|region| region.read(cx).builds)
@@ -257,7 +293,7 @@ impl Regions {
 
     fn entity(&self, part: Part) -> &Entity<Region> {
         match part {
-            Part::Sidebar => &self.sidebar,
+            Part::SidebarHeader => &self.sidebar_header,
             Part::Panel => &self.panel,
             Part::TitleRow => &self.title_row,
             Part::StatusBar => &self.status_bar,
@@ -304,9 +340,9 @@ impl Workspace {
     /// Build `part` as the window's state stands: what a [`Region`] draws when it is built.
     fn render_part(&mut self, part: Part, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let element = match part {
-            Part::Sidebar => {
-                let width = self.columns().sidebar;
-                self.render_sidebar(width, window, cx)
+            // The row fills the view's own bounds, which a root with no size of its own would not.
+            Part::SidebarHeader => {
+                div().w_full().child(self.render_sidebar_header(window, cx)).into_any_element()
             }
             Part::Panel => {
                 let width = self.columns().panel;

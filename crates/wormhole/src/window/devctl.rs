@@ -296,7 +296,11 @@ impl Workspace {
             self.session_order(cx).into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
             self.session_listing(cx).numbered().into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
         );
-        out.push_str(&format!("regions built {:?}\n", self.regions.builds(cx)));
+        out.push_str(&format!(
+            "regions built {:?} (sidebar header, panel, title row, status bar); sidebar list built {}\n",
+            self.regions.builds(cx),
+            self.sidebar.read(cx).builds()
+        ));
         out.push_str(&format!(
             "a11y tree built={} (every frame builds it once it is; the chrome is still replayed)\n",
             self.devctl_a11y_tree()

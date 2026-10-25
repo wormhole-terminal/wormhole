@@ -162,10 +162,13 @@ impl Render for Workspace {
             self.regions.drawn.status_bar = None;
         }
         let sidebar_glass = lifted;
-        // A column that is not in the window proposes no glass, and a region keeps its last.
-        if !(self.sidebar_shown() && self.in_flow(Edge::Sidebar)) {
+        // A column that is not in the window proposes no glass, and a region keeps its last. Nor does a
+        // window without glass, whose list would be replayed with what it proposed while there was.
+        let sidebar_in_flow = self.sidebar_shown() && self.in_flow(Edge::Sidebar);
+        if !(sidebar_in_flow && lifted) {
             crate::sidebar::forget_column(&self.glass);
         }
+        let sidebar_column = sidebar_in_flow.then(|| self.render_sidebar(columns.sidebar, true, window, cx));
         let tabs = self.sidebar_feed.tabs_on;
         let top_tabs = if tabs { self.render_tab_bar(window, cx) } else { None };
         // One terminal and no group to switch to: no tab bar, as in macOS Terminal.
@@ -213,9 +216,7 @@ impl Render for Workspace {
                     .flex()
                     .flex_1()
                     .min_h_0()
-                    .when(self.sidebar_shown() && self.in_flow(Edge::Sidebar), |d| {
-                        d.child(self.regions.sidebar(columns.sidebar))
-                    })
+                    .children(sidebar_column)
                     .child({
                         let surface = div()
                             .relative()
