@@ -8,7 +8,7 @@
 //!
 //! [[case.expect]]                        # every match, in the order they lie in the line
 //! rule   = "ticket"                      # the rule's local id
-//! start  = 4                             # characters (not bytes) from the start, 0-based
+//! start  = 4                             # Unicode scalar values (not bytes or graphemes), 0-based
 //! end    = 12                            # exclusive
 //! text   = "ACME-123"                    # optional: what the span covers
 //! look   = "none"                        # optional: shorten | redact | none

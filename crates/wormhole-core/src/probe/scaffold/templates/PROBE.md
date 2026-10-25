@@ -40,7 +40,8 @@ Text a rule matches comes from programs and from files nobody here wrote. So:
 - A capture that starts with `-` would be read as an option by the program. A rule that hands a capture to a
   command must make that impossible in its pattern, as `([0-9a-f][0-9a-f]{6,39})` does, and bound its length.
 - A link's host is written in the manifest and must be listed in `permissions.open`. Captures go into the path
-  or the query only, and are percent-encoded.
+  or the query only, and are percent-encoded. A path segment that comes out as `.` or `..` (a capture of
+  `..`) leaves no link at all, and a template that spells one is an error.
 - Do not put secrets in the Probe. Do not ask for a shell, an interpreter, `env`, `open` or `find` to
   start a program: they can run anything and the approval sheet says so in red.
 
@@ -79,7 +80,7 @@ input = "fix PROJ-123 today"            # one logical line of text, no line brea
 
 [[case.expect]]                         # every match, in the order they lie in the line
 rule   = "ticket"                       # the rule's id in probe.toml
-start  = 4                              # characters (not bytes) from the start, from 0
+start  = 4                              # Unicode scalar values (not bytes or graphemes), from 0
 end    = 12                             # exclusive
 text   = "PROJ-123"                     # optional: the text the span covers
 look   = "none"                         # optional: shorten | redact | none
@@ -92,7 +93,7 @@ args   = ["abc1234"]                    # optional, for a `command` action
   nothing matches. Write one for each thing that must *not* match.
 - A field that is left out is not checked. An unknown key is an error, so a typo cannot pass.
 - `target` is what the action would do on Command-click: for `open-url` the final link, with each capture
-  percent-encoded (everything but `A-Z a-z 0-9 - . _ ~` becomes `%XX`); for `copy` the copied text; for
+  percent-encoded (everything but `A-Z a-z 0-9 - . _ ~` becomes `%XX`; a `.` or `..` path segment leaves no target); for `copy` the copied text; for
   `command` the command's id, and `args` the values of its `$1`, `$2` ... A match whose capture starts with `-`
   has no target: the command is refused.
 - The input is one logical line, as Wormhole joins the rows of a wrapped line. Test long lines by writing them.
