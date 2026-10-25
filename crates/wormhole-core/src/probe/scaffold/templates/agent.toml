@@ -1,0 +1,11 @@
+
+# A coding agent Wormhole should recognise by the program it runs as. No permission is needed for
+# this, and nothing is written anywhere: the program reports its status itself (OSC 7501).
+[[contributes.agents]]
+id          = "agent"
+name        = "{{name}}"
+command     = "{{id}}"
+executables = ["{{id}}"]
+monogram    = "{{monogram}}"            # two capitals, drawn where there is no icon
+icon        = "assets/icon.svg"         # one colour, paths only, at most 8 KiB
+status      = "osc7501"

@@ -1,0 +1,27 @@
+
+[permissions]
+process = ["git", "./scripts/hello.sh"]   # programs it may run, never through a shell
+
+# A commit id becomes a link on Command-click that runs the command `show-commit` with the id.
+[[contributes.rules]]
+id      = "commit"
+pattern = '(?-u:\b)([0-9a-f][0-9a-f]{6,39})(?-u:\b)'   # the capture cannot start with "-", so it cannot be an option
+tone    = "link"
+hover   = "Show commit {1}"
+action  = { type = "command", command = "show-commit" }
+
+# The captures arrive as $1, $2 ... and only as whole arguments. `git` here runs read-only, through Wormhole.
+[[contributes.commands]]
+id    = "show-commit"
+title = "Show a commit"
+run   = ["git", "show", "--stat", "$1"]
+in    = "background"                      # background: no shell, the result is a notification
+cwd   = "terminal"                        # the focused terminal's folder, when its shell has confirmed it
+
+# A script of this Probe's own folder, run in a new terminal from the command palette.
+[[contributes.commands]]
+id    = "hello"
+title = "Say hello in a new terminal"
+run   = ["./scripts/hello.sh"]
+in    = "new-terminal"
+cwd   = "probe"

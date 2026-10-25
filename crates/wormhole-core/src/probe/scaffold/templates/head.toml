@@ -1,0 +1,9 @@
+# {{name}}: a Probe for Wormhole. PROBE.md in this folder says how to work on it.
+[probe]
+id          = "{{id}}"
+name        = "{{name}}"
+description = "{{description}}"
+author      = "Your name"
+version     = "0.1.0"
+wormhole    = "{{wormhole}}"
+api         = 1

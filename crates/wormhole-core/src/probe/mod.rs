@@ -11,6 +11,7 @@
 //! - `fingerprint`: the hash an approval is bound to.
 //! - `validate`: findings and the summary of what a Probe would be allowed to do.
 //! - `fixture`: the `tests/*.toml` files of `probe test` and the run of their cases.
+//! - `scaffold`: the files of a new Probe, for `probe new`.
 //! - `rules`: a Probe's text rules compiled and run over a line, as `probe test` and the terminal do.
 //! - `scan`: the Probes in `<data dir>/probes/`.
 //!
@@ -24,6 +25,7 @@ mod hidden;
 pub mod manifest;
 pub mod read;
 pub mod rules;
+pub mod scaffold;
 pub mod scan;
 pub mod validate;
 

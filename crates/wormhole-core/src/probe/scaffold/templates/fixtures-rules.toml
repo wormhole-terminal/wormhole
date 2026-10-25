@@ -1,0 +1,48 @@
+# Cases for `wh probe test`: a line of text and the matches the rules must find in it.
+# Spans count characters from 0, the end exclusive. Every match must be listed, in the order they
+# lie in the line; a case with no [[case.expect]] says nothing matches.
+
+[[case]]
+name  = "a ticket is a link"
+input = "fix PROJ-123 today"
+[[case.expect]]
+rule   = "ticket"
+start  = 4
+end    = 12
+text   = "PROJ-123"
+look   = "none"
+target = "https://issues.example.com/browse/PROJ-123"
+
+[[case]]
+name  = "two tickets"
+input = "PROJ-12 and PROJ-345"
+[[case.expect]]
+rule  = "ticket"
+start = 0
+end   = 7
+[[case.expect]]
+rule  = "ticket"
+start = 12
+end   = 20
+
+[[case]]
+name  = "an email is shortened"
+input = "mail anna@example.com now"
+[[case.expect]]
+rule  = "email"
+start = 5
+end   = 21
+look  = "shorten"
+
+[[case]]
+name  = "a key is redacted"
+input = "token sk-aaaaaaaaaaaaaaaaaaaa end"
+[[case.expect]]
+rule  = "api-key"
+start = 6
+end   = 29
+look  = "redact"
+
+[[case]]
+name  = "plain text matches nothing"
+input = "nothing to see here"

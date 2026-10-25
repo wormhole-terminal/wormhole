@@ -1,0 +1,12 @@
+
+[permissions]
+process = ["git"]
+
+# The first line the command prints is the item in the status bar. `git` runs read-only, through Wormhole.
+[[contributes.status]]
+id       = "branch"
+run      = ["git", "rev-parse", "--abbrev-ref", "HEAD"]
+cwd      = "terminal"   # only in a folder the shell has confirmed
+interval = 30           # seconds between runs, at least 5
+timeout  = 3            # seconds before the process is killed, at most 10
+side     = "right"

@@ -1,0 +1,14 @@
+# Cases for `wh probe test`. This Probe has no text rules (no [[contributes.rules]] in probe.toml),
+# so there is nothing to match yet. With a rule, a case looks like this:
+#
+# [[case]]
+# name  = "a ticket is a link"            # optional
+# input = "fix PROJ-123 today"            # one logical line
+#
+# [[case.expect]]                         # every match, in the order they lie in the line
+# rule   = "ticket"                       # the rule's id
+# start  = 4                              # characters from the start, from 0
+# end    = 12                             # exclusive
+# text   = "PROJ-123"                     # optional: the text the span covers
+# look   = "none"                         # optional: shorten | redact | none
+# target = "https://issues.example.com/browse/PROJ-123"   # optional: what the action would do

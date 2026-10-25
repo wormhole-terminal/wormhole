@@ -1,0 +1,19 @@
+# Cases for `wh probe test`: a line of text and the matches the rules must find in it.
+# Spans count characters from 0, the end exclusive. Every match must be listed, in the order they
+# lie in the line; a case with no [[case.expect]] says nothing matches.
+# For a `command` action, `target` is the command's id and `args` the values of its $1, $2 ...
+
+[[case]]
+name  = "a commit id runs the command"
+input = "fixed in abc1234 today"
+[[case.expect]]
+rule   = "commit"
+start  = 9
+end    = 16
+text   = "abc1234"
+target = "show-commit"
+args   = ["abc1234"]
+
+[[case]]
+name  = "a word is not a commit id"
+input = "nothing to see here"

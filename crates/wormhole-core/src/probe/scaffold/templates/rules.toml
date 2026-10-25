@@ -1,0 +1,26 @@
+
+[permissions]
+open = ["issues.example.com"]   # the hosts a rule's link may open: change it to your tracker's
+
+# A ticket id becomes a link on Command-click. The captured id goes into {1} of the link, encoded.
+[[contributes.rules]]
+id      = "ticket"
+pattern = '(?-u:\b)(PROJ-[0-9]{1,6})(?-u:\b)'   # a literal ('...') string, and an ASCII word boundary
+tone    = "link"                                # a theme token's name, never a colour
+hover   = "Open {1}"
+action  = { type = "open-url", url = "https://issues.example.com/browse/{1}" }
+
+# An email address is shortened to its first letter and its domain until it is hovered.
+[[contributes.rules]]
+id      = "email"
+pattern = '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+look    = "shorten"
+keep    = "start:1,domain"
+reveal  = "hover"
+
+# A secret key is a solid block until it is revealed on purpose.
+[[contributes.rules]]
+id      = "api-key"
+pattern = 'sk-[A-Za-z0-9_-]{20,}'
+look    = "redact"
+reveal  = "deliberate"
