@@ -105,6 +105,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   now encrypted with a key Wormhole keeps in your login Keychain, so a copy of the file is useless
   without it. If the Keychain can't be used or you deny access, the text isn't kept at all rather
   than saved unencrypted.
+- **Low** · no advisory · affects 0.4.0–1.2.0: the review comments you paste into a terminal for a
+  coding agent named each file as the repository does, and a file name can hold line breaks and
+  control characters. They went into the pasted message as they were, and where the program in the
+  terminal takes no paste as text and the message is pasted by hand into a shell, each line of such
+  a name would run as a command. Wormhole now leaves control characters out of the file name, as it
+  does out of the quoted code.
 
 ## [1.2.0] - 2026-10-22
 

@@ -37,9 +37,11 @@ impl ReviewComment {
     /// Where it is, as an agent reads a place: "src/orders.rs:42", and for a removed line, which
     /// the file no longer has, "src/orders.rs:40 (removed line)".
     pub fn location(&self) -> String {
+        // A file name is as much the repository's as the quoted line, and can hold any byte but `/`.
+        let path = printable(&self.path, false);
         match self.side {
-            LineSide::New => format!("{}:{}", self.path, self.line),
-            LineSide::Old => format!("{}:{} (removed line)", self.path, self.line),
+            LineSide::New => format!("{path}:{}", self.line),
+            LineSide::Old => format!("{path}:{} (removed line)", self.line),
         }
     }
 
@@ -182,6 +184,24 @@ mod tests {
                  2. src/api.rs:7 (removed line)\n   > validate(req)?;\n   Why did this go?\n   We need it."
             )
         );
+    }
+
+    /// A file name may hold line breaks and escape sequences, and the message is pasted into a prompt
+    /// (or copied for a shell): it carries none of them, in the place or anywhere else.
+    #[test]
+    fn a_hostile_file_name_puts_no_control_character_in_the_message() {
+        let mut review = Review::default();
+        review.put(comment("src/a.rs\nrm -rf ~\r\x1b[2J\x07\x7f\u{85}\tb.rs", LineSide::New, 3, "x", "no"));
+        review.put(comment("old\n\x03.rs", LineSide::Old, 4, "y", "no"));
+        let message = review.message().expect("a message");
+        let allowed = |c: char| c == '\n';
+        assert!(!message.chars().any(|c| c.is_control() && !allowed(c)), "{message:?}");
+        assert!(
+            message.lines().all(|line| !line.starts_with("rm ")),
+            "no line of a file name starts a command of its own: {message:?}"
+        );
+        assert!(message.contains("1. src/a.rsrm -rf ~[2J b.rs:3\n"), "{message:?}");
+        assert!(message.contains("2. old.rs:4 (removed line)\n"), "{message:?}");
     }
 
     #[test]
