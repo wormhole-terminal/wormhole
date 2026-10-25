@@ -14,6 +14,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use super::manifest::{Manifest, ManifestError, ParseWarning};
+use crate::platform::fs as platform_fs;
 use crate::storage::files::{self, LinkPolicy, Refusal};
 
 /// The manifest's name; a folder without it is not a Probe.
@@ -39,11 +40,24 @@ pub struct ProbeFile {
     /// Relative to the folder, with `/` between parts.
     pub path: String,
     bytes: Vec<u8>,
+    /// Whether the file had an execute bit. Not part of the fingerprint (a mode is not content);
+    /// the approved copy keeps it, so a script that ran before still runs from the copy.
+    executable: bool,
 }
 
 impl ProbeFile {
     pub(crate) fn new(path: impl Into<String>, bytes: impl Into<Vec<u8>>) -> Self {
-        Self { path: path.into(), bytes: bytes.into() }
+        Self { path: path.into(), bytes: bytes.into(), executable: false }
+    }
+
+    /// The same file with its execute bit set to `executable`.
+    pub(crate) fn with_executable(mut self, executable: bool) -> Self {
+        self.executable = executable;
+        self
+    }
+
+    pub fn is_executable(&self) -> bool {
+        self.executable
     }
 
     pub fn bytes(&self) -> &[u8] {
@@ -101,7 +115,10 @@ impl ProbeFolder {
             let bytes = files::read_capped(&abs, cap, LinkPolicy::Within(root))
                 .map_err(|err| read_error(&path, &abs, err, total_is_the_limit))?;
             total += bytes.len() as u64;
-            files.push(ProbeFile::new(path, bytes));
+            let mut file = ProbeFile::new(path, bytes);
+            // Through a link to the file it names, as the read did.
+            file.executable = fs::metadata(&abs).is_ok_and(|meta| platform_fs::is_executable(&meta));
+            files.push(file);
         }
 
         let manifest_file =

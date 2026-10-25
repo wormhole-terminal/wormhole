@@ -1,10 +1,10 @@
 //! Probes: extensions that are a folder with a `probe.toml` (`repo-docs/docs/probes.md`).
 //!
-//! This is the first slice of the files-only level (E1): reading a Probe's folder under caps,
-//! parsing its manifest, fingerprinting it, validating it, finding the Probes in the data folder,
-//! and the command line that makes, checks and tests one. Nothing here enables, approves or runs a
-//! Probe, and nothing in the app calls it yet, only `Wormhole probe …`; the feature flag [`FeatureFlag::Probes`](crate::config::features::FeatureFlag::Probes) is what
-//! the later slices gate on.
+//! This is the files-only level (E1): reading a Probe's folder under caps, parsing its manifest,
+//! fingerprinting it, validating it, finding the Probes in the data folder, approving one (the copy it
+//! will run from), and the command line that makes, checks and tests one. Nothing here runs a Probe;
+//! "on" is a stored approval that the later slices read. The feature flag
+//! [`FeatureFlag::Probes`](crate::config::features::FeatureFlag::Probes) is what they gate on.
 //!
 //! - `cli`: `Wormhole probe new | validate | test`, as text to print and an exit code.
 //! - `manifest`: `probe.toml` as types; unknown keys are warnings at parse.
@@ -15,15 +15,17 @@
 //! - `scaffold`: the files of a new Probe, for `probe new`.
 //! - `rules`: a Probe's text rules compiled and run over a line, as `probe test` and the terminal do.
 //! - `scan`: the Probes in `<data dir>/probes/`.
+//! - `approval`: what the user approved, the state that gives each Probe, and the copy it runs from.
 //!
 //! A Probe's folder is hostile input, so everything is read through `storage::files`. This domain
 //! uses `storage` and `keys` (a command's shortcut) and the agent registry in `wormhole-term`; it is
 //! in the tier of `git` and `notify` so that `ipc` can offer it on the command line.
 
+pub mod approval;
 pub mod cli;
 pub mod fingerprint;
 pub mod fixture;
-mod hidden;
+pub mod hidden;
 pub mod manifest;
 pub mod read;
 pub mod rules;

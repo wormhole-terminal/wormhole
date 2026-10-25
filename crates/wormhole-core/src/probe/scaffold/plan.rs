@@ -77,7 +77,10 @@ pub(super) fn build(id: &str, kind: Kind) -> Result<(Vec<Planned>, ProbeFolder),
         root: PathBuf::new(),
         manifest: manifest.manifest,
         warnings: manifest.warnings,
-        files: files.iter().map(|file| ProbeFile::new(file.path, file.text.as_bytes())).collect(),
+        files: files
+            .iter()
+            .map(|file| ProbeFile::new(file.path, file.text.as_bytes()).with_executable(file.executable))
+            .collect(),
     };
     let report = validate(&folder);
     if report.is_ok() && report.warnings().next().is_none() {

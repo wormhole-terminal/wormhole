@@ -36,7 +36,7 @@ pub(crate) fn has_hidden(text: &str) -> bool {
 /// left alone while nothing in the text is hidden, because a hint such as `write (?-u:\b)` must stay
 /// something to copy; once the text has a hidden character every backslash is doubled, so a
 /// backslash can not be taken for the start of the escape that follows it.
-pub(crate) fn reveal(text: &str) -> Cow<'_, str> {
+pub fn reveal(text: &str) -> Cow<'_, str> {
     let hidden = has_hidden(text);
     let looks_like_an_escape = |rest: &str| rest.starts_with(['n', 'r', 't', 'u', '\\']);
     if !hidden && !text.match_indices('\\').any(|(at, _)| looks_like_an_escape(&text[at + 1..])) {

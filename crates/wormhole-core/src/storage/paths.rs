@@ -158,6 +158,17 @@ impl DataRoot {
         self.base.join("probes")
     }
 
+    /// The copies Probes run from: one read-only folder per approved Probe, made at approval from
+    /// the bytes the user was shown, so an edit of `probes/<id>/` afterwards runs nothing.
+    pub fn probes_approved_dir(&self) -> PathBuf {
+        self.base.join("probes-approved")
+    }
+
+    /// What the user approved, per Probe (`probe::approval`).
+    pub fn probe_approvals_file(&self) -> PathBuf {
+        self.base.join("probe-approvals.json")
+    }
+
     /// One profile's files. Default's are the data folder's own, where they have always been.
     pub fn profile(&self, id: &ProfileId) -> ProfilePaths {
         let dir = if id.is_default() { self.base.clone() } else { self.profiles_dir().join(id.as_str()) };

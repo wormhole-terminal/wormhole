@@ -102,7 +102,7 @@ pub fn scan(dir: &Path) -> Result<Vec<Scanned>, TooManyEntries> {
     Ok(found)
 }
 
-fn load(name: String, path: &Path) -> Scanned {
+pub(crate) fn load(name: String, path: &Path) -> Scanned {
     let probe = if !is_probe_id(&name) {
         Err(ScanError::BadName)
     } else {
