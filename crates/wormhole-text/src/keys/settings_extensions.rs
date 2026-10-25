@@ -195,7 +195,7 @@ pub fn settings_extensions_runs_folder_code(program: &str) -> String {
 }
 
 /// ```text
-/// { $what }
+/// It { $what }.
 /// ```
 pub fn settings_extensions_combination(what: &str) -> String {
     crate::active::message(326, &[("what", Arg::Str(what))])

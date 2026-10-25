@@ -51,6 +51,8 @@ gpui_kit::assets::icon_assets!(
         Columns2,
         Rows2,
         FingerprintPattern,
+        // Settings → Extensions: the nav icon and a Probe's mark.
+        Puzzle,
         // The command palette: a project's actions.
         Zap,
         // Theme Studio: Export… and the gallery's "uses of" line.

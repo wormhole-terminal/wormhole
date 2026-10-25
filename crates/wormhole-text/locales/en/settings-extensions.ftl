@@ -91,8 +91,8 @@ settings-extensions-own-script = A script from its own folder, exactly as approv
 settings-extensions-runs-as = Runs as
 
 settings-extensions-combinations = Dangerous together
-# { $what } says what the pair can do, in English.
-settings-extensions-combination = { $what }
+# What a pair of permissions can do together; it follows "It". { $what } is the end of the sentence, in English.
+settings-extensions-combination = It { $what }.
 
 settings-extensions-since = Since you approved it
 settings-extensions-files-changed = Its files changed.

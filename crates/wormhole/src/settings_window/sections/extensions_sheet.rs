@@ -253,12 +253,12 @@ impl SettingsWindow {
                 }),
             );
         }
-        body = body.child(div().text_caption().text_color(ui.muted).child(
-            settings_extensions_files_fingerprint(
+        // Outside the scrolling part: what was fingerprinted stays in view next to the buttons.
+        let fingerprint =
+            div().text_caption().text_color(ui.muted).child(settings_extensions_files_fingerprint(
                 &request.file_count().to_string(),
                 request.short_fingerprint(),
-            ),
-        ));
+            ));
 
         let touch = sheet.confirmation() == Confirmation::TouchId;
         let approve_label = if sheet.waiting {
@@ -280,6 +280,7 @@ impl SettingsWindow {
             .bg(ui.elevated)
             .occlude()
             .child(div().id("probe-sheet-body").max_h(max_h).overflow_y_scroll().child(body))
+            .child(fingerprint)
             .child(div().text_caption().text_color(ui.muted).child(if touch {
                 text(SETTINGS_EXTENSIONS_CONFIRM_TOUCH_ID)
             } else {
