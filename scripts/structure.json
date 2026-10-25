@@ -141,7 +141,8 @@
         "config",
         [
           "git",
-          "notify"
+          "notify",
+          "probe"
         ],
         "ipc",
         "terminal",

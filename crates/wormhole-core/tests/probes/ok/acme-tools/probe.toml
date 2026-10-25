@@ -1,0 +1,73 @@
+[probe]
+id          = "acme-tools"
+name        = "Acme tools"
+description = "Ticket links, shortened keys, a deploy command and the build status."
+author      = "Benny"
+version     = "0.3.0"
+wormhole    = ">=1.3"
+api         = 1
+# main      = "src/index.ts"          # E2: add code, and `code_api = 0` beside it; nothing else changes
+
+[permissions]
+process = ["git", "./scripts/deploy.sh"]  # programs it may run, never through a shell; a ./path is inside this folder
+env     = ["ACME_TOKEN"]                  # variables a background command may see (none by default)
+open    = ["acme.atlassian.net"]          # hosts a rule's link may open
+notify  = true
+# terminal = ["read", "write"]            # E2
+# net = ["api.acme.dev"]                  # E2
+# agents  = ["install-hooks:acme-agent"]  # write that agent's hook entries (the exact file is shown)
+
+[[contributes.rules]]                     # shorten an email until hovered
+id      = "email"
+pattern = '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+look    = "shorten"                       # shorten | redact | none
+keep    = "start:1,domain"                # start:N, end:N, domain
+reveal  = "hover"                         # hover | deliberate (⌥-click) | never
+
+[[contributes.rules]]                     # a ticket id is a link on ⌘-click
+id      = "ticket"
+pattern = '(?-u:\b)(ACME-[0-9]{1,6})(?-u:\b)'   # ASCII \b: a Unicode \b slows the engine (3.1)
+tone    = "link"                          # a design token name, never a colour
+hover   = "Open {1} in Jira"
+action  = { type = "open-url", url = "https://acme.atlassian.net/browse/{1}" }
+
+[[contributes.rules]]                     # a key: redact kind, drawn as a block once Privacy mode exists
+id      = "api-key"
+pattern = 'sk-[A-Za-z0-9_-]{20,}'
+look    = "redact"
+reveal  = "deliberate"
+
+[[contributes.rules]]                     # a commit id: ⌘-click shows it (the command is below)
+id      = "sha"
+pattern = '(?-u:\b)([0-9a-f][0-9a-f]{6,39})(?-u:\b)'   # anchored: the capture cannot start with "-" (3.1)
+action  = { type = "command", command = "show" }   # the captures arrive as $1, $2 in that command's run
+
+[[contributes.commands]]                  # palette: "Acme: Deploy"
+id    = "deploy"
+title = "Deploy this folder"
+run   = ["./scripts/deploy.sh", "--env", "staging"]
+in    = "new-terminal"                    # new-terminal | background
+cwd   = "terminal"                        # terminal (the focused terminal's shell-confirmed folder) | probe
+
+[[contributes.commands]]                  # the rule's target: `git` here runs through GitCmd (3.2)
+id    = "show"
+title = "Show a commit"
+run   = ["git", "show", "--stat", "$1"]   # $1 is the capture; the app puts --end-of-options before it
+in    = "background"
+cwd   = "terminal"
+
+[[contributes.status]]
+id       = "build"
+run      = ["git", "log", "-1", "--format=%h %s"]
+interval = 30                             # seconds, at least 5
+timeout  = 3                              # seconds, at most 10
+side     = "right"
+
+[[contributes.agents]]
+id          = "acme-agent"
+name        = "Acme Agent"
+command     = "acme"
+executables = ["acme", "acme-agent"]
+monogram    = "AA"
+icon        = "assets/acme.svg"           # one-colour path SVG, at most 8 KiB
+status      = "osc7501"                   # the program reports itself; no file is written anywhere
