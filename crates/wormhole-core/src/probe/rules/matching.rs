@@ -41,6 +41,16 @@ pub(super) fn scanned(line: &str) -> &str {
 
 /// What `rules` match in `line`, a logical line, in the order the spans lie in it.
 ///
+/// See [`matches_into`] for the rules; this is it with a buffer of its own.
+pub fn matches(rules: &CompiledRules, line: &str) -> Vec<Match> {
+    let mut found = Vec::new();
+    matches_into(rules, line, &mut found);
+    found
+}
+
+/// [`matches`] into `out`, which is emptied first and keeps its room: a caller that matches line after
+/// line (the row builder) reuses one buffer and allocates nothing once it has grown.
+///
 /// - at most [`MAX_SCAN_BYTES`] of the line are scanned, and each rule finds at most
 ///   [`MAX_MATCHES_PER_RULE`] matches, counted before overlaps are settled, so the work a line can
 ///   cost is bounded whatever it holds;
@@ -48,38 +58,56 @@ pub(super) fn scanned(line: &str) -> &str {
 ///   any other look wherever it lies: half a redacted key left showing would defeat the rule.
 ///
 /// No span is empty, and none overlaps another.
-pub fn matches(rules: &CompiledRules, line: &str) -> Vec<Match> {
+pub fn matches_into(rules: &CompiledRules, line: &str, out: &mut Vec<Match>) {
+    out.clear();
     let text = scanned(line);
-    let mut found: Vec<Match> = Vec::new();
-    let candidates: Vec<usize> = match &rules.prefilter {
-        Some(set) => set.matches(text).into_iter().collect(),
-        None => (0..rules.rules.len()).collect(),
-    };
-    for index in candidates {
-        let rule = &rules.rules[index];
-        found.extend(
-            rule.regex.find_iter(text).filter(|m| !m.is_empty()).take(MAX_MATCHES_PER_RULE).map(|m| Match {
-                rule: index,
-                start: m.start(),
-                end: m.end(),
-                look: rule.rule.look,
-            }),
-        );
+    match &rules.prefilter {
+        Some(set) => {
+            let hits = set.matches(text);
+            for index in hits.iter() {
+                find(rules, index, text, out);
+            }
+        }
+        None => (0..rules.rules.len()).for_each(|index| find(rules, index, text, out)),
     }
-    settle(found)
+    settle(out);
 }
 
-/// Keep the spans that win their overlaps.
-fn settle(mut found: Vec<Match>) -> Vec<Match> {
-    // Redacted spans first, then by where they start, longest first, earliest rule first. Taking spans
-    // in this order and skipping any that touches one taken makes both rules fall out.
-    found.sort_by_key(|m| (m.look != Look::Redact, m.start, std::cmp::Reverse(m.end - m.start), m.rule));
-    let mut kept: Vec<Match> = Vec::with_capacity(found.len());
-    for candidate in found {
-        if !kept.iter().any(|k| candidate.start < k.end && k.start < candidate.end) {
-            kept.push(candidate);
+/// The matches of rule `index` in `text`, at most [`MAX_MATCHES_PER_RULE`], pushed on `out`.
+fn find(rules: &CompiledRules, index: usize, text: &str, out: &mut Vec<Match>) {
+    let rule = &rules.rules[index];
+    out.extend(
+        rule.regex.find_iter(text).filter(|m| !m.is_empty()).take(MAX_MATCHES_PER_RULE).map(|m| Match {
+            rule: index,
+            start: m.start(),
+            end: m.end(),
+            look: rule.rule.look,
+        }),
+    );
+}
+
+/// Keep, in place, the spans that win their overlaps, ordered by where they start.
+///
+/// The candidates are taken in the order of their claim: redacted spans first, then by where they start,
+/// longest first, earliest rule first. The ones kept are a prefix of `found`, ordered by start and never
+/// overlapping, so whether a candidate touches one of them is decided by its two neighbours there, found
+/// by a binary search: the work is that of a sort, not of every candidate against every one kept.
+fn settle(found: &mut Vec<Match>) {
+    found.sort_unstable_by_key(|m| {
+        (m.look != Look::Redact, m.start, std::cmp::Reverse(m.end - m.start), m.rule)
+    });
+    let mut kept = 0;
+    for next in 0..found.len() {
+        let candidate = found[next].clone();
+        let at = found[..kept].partition_point(|k| k.start < candidate.start);
+        let touches_before = at > 0 && found[at - 1].end > candidate.start;
+        let touches_after = at < kept && found[at].start < candidate.end;
+        if touches_before || touches_after {
+            continue;
         }
+        // Slot it in at `at`, moving the ones after it up by one.
+        found[at..=next].rotate_right(1);
+        kept += 1;
     }
-    kept.sort_by_key(|m| m.start);
-    kept
+    found.truncate(kept);
 }

@@ -155,6 +155,75 @@ fn a_redacted_span_hides_the_matches_inside_it() {
 }
 
 #[test]
+fn a_reused_buffer_gives_the_same_matches_and_stops_growing() {
+    let r = rules(&format!(
+        "{}{}{}",
+        rule("n", "[0-9]+", ""),
+        rule("w", "[a-z]+", "tone = \"link\""),
+        rule("k", "sk-[0-9]{3}", "look = \"redact\"")
+    ));
+    let many = "x ".repeat(30);
+    let lines = ["a 12 b 345 sk-678 c", "nothing", many.as_str(), ""];
+    let mut buffer = Vec::new();
+    for line in lines {
+        matches_into(&r, line, &mut buffer);
+        assert_eq!(buffer, matches(&r, line), "{line:?}");
+    }
+    // The same input again: the buffer is emptied and refilled, with no more room asked for.
+    matches_into(&r, lines[0], &mut buffer);
+    let room = buffer.capacity();
+    for _ in 0..3 {
+        matches_into(&r, lines[0], &mut buffer);
+        assert_eq!(buffer.capacity(), room);
+        assert_eq!(buffer, matches(&r, lines[0]));
+    }
+    matches_into(&r, "", &mut buffer);
+    assert!(buffer.is_empty() && buffer.capacity() >= room, "emptied, room kept");
+}
+
+#[test]
+fn settling_overlaps_agrees_with_the_obvious_way_on_many_spans() {
+    // Many rules over a line they all match everywhere: every pair of spans of different rules overlaps in
+    // some way, so each choice made by the neighbour search is checked against the plain definition.
+    let patterns = ["a{1,3}", "b{1,2}a", "ab", "a[ab]{2,4}", "ba+", "[ab]"];
+    let mut text = String::new();
+    for (ix, pattern) in patterns.iter().enumerate() {
+        let look = if ix == 3 { "look = \"redact\"" } else { "" };
+        text.push_str(&rule(&format!("r{ix}"), pattern, look));
+    }
+    let r = rules(&text);
+    for line in ["aabbaabab", "abababab", "baaabbbaaab", "aaaaaaaaaaaaaaaaaaaaaaaa", "bbbbabbbbab"] {
+        let found = matches(&r, line);
+        let mut candidates = Vec::new();
+        for (index, rule) in r.iter().enumerate() {
+            candidates.extend(
+                rule.regex_for_tests()
+                    .find_iter(line)
+                    .take(MAX_MATCHES_PER_RULE)
+                    .map(|m| (index, m.start(), m.end())),
+            );
+        }
+        candidates.sort_by_key(|&(index, start, end)| {
+            (
+                r.rule(index).map(|r| r.rule.look) != Some(Look::Redact),
+                start,
+                std::cmp::Reverse(end - start),
+                index,
+            )
+        });
+        let mut kept: Vec<(usize, usize, usize)> = Vec::new();
+        for c in candidates {
+            if !kept.iter().any(|k| c.1 < k.2 && k.1 < c.2) {
+                kept.push(c);
+            }
+        }
+        kept.sort_by_key(|k| k.1);
+        let got: Vec<_> = found.iter().map(|m| (m.rule, m.start, m.end)).collect();
+        assert_eq!(got, kept, "{line}");
+    }
+}
+
+#[test]
 fn a_rule_whose_prefilter_could_not_be_built_still_matches() {
     let mut r = rules(&rule("n", "[0-9]+", ""));
     r.prefilter = None;

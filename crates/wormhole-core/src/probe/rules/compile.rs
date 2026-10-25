@@ -18,6 +18,11 @@ pub struct CompiledRule {
 }
 
 impl CompiledRule {
+    #[cfg(test)]
+    pub(super) fn regex_for_tests(&self) -> &Regex {
+        &self.regex
+    }
+
     /// The rule's local id (`ticket`, not `acme-tools/ticket`).
     pub fn id(&self) -> &str {
         &self.rule.id
