@@ -404,11 +404,6 @@ impl SettingsStore {
         self.asked_opacity
     }
 
-    /// The name of the theme shown: the dark or the light pick (`theme_mode`, Match system).
-    pub fn shown_theme(&self) -> &str {
-        self.config.shown_theme()
-    }
-
     /// The user's own settings, without the project's: what "changed from its default" and
     /// the reset arrows of the settings window look at.
     pub fn user_settings(&self) -> &Settings {

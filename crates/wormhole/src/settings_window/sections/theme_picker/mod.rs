@@ -1,12 +1,14 @@
-//! The theme picker: a filter, a grid of cards 88 high, four to a row, each a miniature
-//! of the app in that theme's own colors with its name in a strip under it. The first two rows
-//! show until "Show all"; the card of the theme in use has the primary's ring, its name in 600
-//! and a check, and the dark and light picks of Match system wear a moon and a sun. A theme that
-//! ships several versions is one card, with a swatch per version in its strip (see `card`).
+//! The theme picker: the themes as cards 88 high, four to a row, each a miniature of the app in
+//! that theme's own colors with its name in a strip under it. The mode decides what shows: under
+//! Dark or Light one shelf of themes of that kind, under Match system two, "In Dark Mode" and "In
+//! Light Mode". The pick of each shelf has the primary's ring, its name in 600 and a check, and a
+//! click makes a card the pick of its kind. A theme that ships several versions has a card per
+//! version, on the shelf of its kind. Until "Show all" the shelves show their first cards, the pick
+//! always among them; the filter box narrows every shelf.
 //!
 //! Each card is a view of its own, drawn from a fixed-size box, so the settings window can
 //! leave the ~40 of them alone while it redraws for a scroll tick or a keystroke in the filter:
-//! only a card whose selection, mark or look changed is told to draw again.
+//! only a card whose selection or look changed is told to draw again.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -17,6 +19,7 @@ use std::rc::Rc;
 use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
+use wormhole_core::config::ThemeMode;
 use wormhole_core::theme::catalog::{self, ThemeEntry};
 use wormhole_core::theme::tokens::Appearance;
 
@@ -38,10 +41,8 @@ use crate::settings_window::{SettingsWindow, ui};
 use crate::studio;
 use crate::style::{self, TextRole};
 
-/// How many cards show before "Show all": two rows.
+/// How many cards show before "Show all": two rows, shared by the shelves.
 const FIRST_CARDS: usize = 8;
-/// Of those, how many are light themes.
-const FIRST_LIGHT: usize = 2;
 
 /// The height of a card. A cached view is laid out from a style the window gives it, so this
 /// has to be exact; everything in a card is in points, so it holds at every interface size.
@@ -54,39 +55,32 @@ pub(crate) struct ThemePicker {
     filter: Entity<InputState>,
     /// How many themes the filter's placeholder counts ("Filter 14 themes").
     counted: usize,
-    /// `None` shows dark and light themes.
-    appearance: Option<Appearance>,
     cards: RefCell<CardSet>,
     _subscription: Subscription,
 }
 
 impl ThemePicker {
     pub(crate) fn new(window: &mut Window, cx: &mut Context<SettingsWindow>) -> Self {
-        let counted = card_count(cx);
+        let counted = entries(cx).len();
         let filter = cx.new(|cx| InputState::new(window, cx).placeholder(filter_placeholder(counted)));
         let subscription = cx.subscribe(&filter, |_, _, event: &InputEvent, cx| {
             if let InputEvent::Change = event {
                 cx.notify();
             }
         });
-        Self { filter, counted, appearance: None, cards: RefCell::default(), _subscription: subscription }
+        Self { filter, counted, cards: RefCell::default(), _subscription: subscription }
     }
 
     /// Keep the filter's placeholder at the live count ("Filter 14 themes") as themes are
     /// imported, saved or dropped into the folder. Called from the window's refresh, not a draw.
     pub(crate) fn sync_placeholder(&mut self, window: &mut Window, cx: &mut App) {
-        let count = card_count(cx);
+        let count = entries(cx).len();
         if count != self.counted {
             self.counted = count;
             self.filter
                 .update(cx, |filter, cx| filter.set_placeholder(filter_placeholder(count), window, cx));
         }
     }
-}
-
-/// How many cards there are, as "Show all" counts them: a family of versions is one.
-fn card_count(cx: &mut App) -> usize {
-    catalog::cards(&entries(cx)).len()
 }
 
 /// The filter's placeholder: how many themes there are to filter.
@@ -97,98 +91,54 @@ fn filter_placeholder(themes: usize) -> String {
     }
 }
 
-/// What a card says about itself besides its themes.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct CardLook {
-    /// The theme in use is one of the card's.
-    active: bool,
-    /// The dark pick (`theme`) is one of the card's.
-    dark_pick: bool,
-    /// The light pick (`theme_light`) is one of the card's.
-    light_pick: bool,
-    /// Which of the card's themes it draws (an index into the catalog).
-    shown: usize,
-    /// Which of a family's versions are in use or picked, by their place in the card (a file
-    /// ships at most `tokens::MAX_VARIANTS`, 32).
-    picked: u32,
-}
-
-/// What decides each card's look: the dark pick, the light pick, which is shown, and the
-/// kind of theme the filter asks for.
+/// The two picks: the theme of Dark Mode (`theme`) and of Light Mode (`theme_light`).
 struct Picks<'a> {
     dark: &'a str,
     light: &'a str,
-    shown: &'a str,
-    mode: Option<Appearance>,
 }
 
 impl Picks<'_> {
-    /// A card's look: what its themes say together, and the one it draws: the one in use, else
-    /// a pick, else its first, preferring those of the kind the filter asks for. A pick is
-    /// marked on a theme of its own kind only: a light theme set as the dark pick (a `theme`
-    /// chosen before there was a light pick) wears no moon.
-    fn look(&self, entries: &[ThemeEntry], members: &[usize]) -> CardLook {
-        let mut look = CardLook { shown: members[0], ..CardLook::default() };
-        let mut best = usize::MAX;
-        for (place, &ix) in members.iter().enumerate() {
-            let entry = &entries[ix];
-            let light = entry.tokens.appearance == Appearance::Light;
-            let active = entry.is_selected_by(self.shown);
-            let pick = if light { entry.is_selected_by(self.light) } else { entry.is_selected_by(self.dark) };
-            look.active |= active;
-            look.dark_pick |= pick && !light;
-            look.light_pick |= pick && light;
-            if (active || pick) && place < 32 {
-                look.picked |= 1 << place;
-            }
-            let fits = self.mode.is_none_or(|m| entry.tokens.appearance == m);
-            let rank = match (fits, active, pick) {
-                (false, ..) => 3,
-                (true, true, _) => 0,
-                (true, false, true) => 1,
-                (true, false, false) => 2,
-            };
-            if rank < best {
-                best = rank;
-                look.shown = ix;
+    /// Whether `entry` is the pick of its own kind. A theme set as the pick of the other kind (a
+    /// light `theme` chosen before there was a light pick) is no shelf's pick.
+    fn picked(&self, entry: &ThemeEntry) -> bool {
+        match entry.tokens.appearance {
+            Appearance::Dark => entry.is_selected_by(self.dark),
+            Appearance::Light => entry.is_selected_by(self.light),
+        }
+    }
+}
+
+/// What a card's strip says: a family's name when the family has one version of the card's kind
+/// (its shelf then holds only that one), else the version's own name ("Soltari Dim").
+fn labels(entries: &[ThemeEntry]) -> Vec<SharedString> {
+    let mut labels: Vec<SharedString> = entries.iter().map(|e| SharedString::from(e.label.clone())).collect();
+    for family in catalog::cards(entries) {
+        for &ix in &family {
+            let kind = entries[ix].tokens.appearance;
+            let alone = family.iter().filter(|&&other| entries[other].tokens.appearance == kind).count() == 1;
+            if alone {
+                labels[ix] = entries[ix].card_label().to_string().into();
             }
         }
-        look
     }
+    labels
 }
 
-impl CardSet {
-    /// The cards `show` accepts (in `order`), each in the fixed box that lets the window skip
-    /// it while it hasn't changed.
-    fn views(&self, rem: Pixels, order: &[usize], show: impl Fn(usize) -> bool) -> Vec<AnyElement> {
-        let slot = StyleRefinement::default().w_full().h(card_height(rem));
-        order
-            .iter()
-            .copied()
-            .filter(|ix| *ix < self.cards.len() && show(*ix))
-            .map(|ix| AnyView::from(self.cards[ix].clone()).cached(slot.clone()).into_any_element())
-            .collect()
-    }
-}
-
-/// One card per theme of the catalog, and one per family of versions, kept while the catalog
-/// is the same.
+/// One card per theme of the catalog, kept while the catalog is the same.
 #[derive(Default)]
 struct CardSet {
     catalog: Option<Rc<Vec<ThemeEntry>>>,
     cards: Vec<Entity<ThemeCard>>,
-    /// Each card's themes, by index into the catalog.
-    members: Vec<Rc<[usize]>>,
-    /// Each card's look as last given.
-    looks: Vec<CardLook>,
-    /// Each card's names (the family's and every version's), lowercased once, for the filter box.
-    labels: Vec<String>,
+    /// Whether each card is its kind's pick, as last given.
+    picked: Vec<bool>,
+    /// Each card's names (its own and the family's), lowercased once, for the filter box.
+    search: Vec<String>,
     /// The theme revision the cards were last given.
     look: Option<u64>,
 }
 
 impl CardSet {
-    /// Make the cards match `entries`, and tell the ones whose look or selection changed.
+    /// Make the cards match `entries`, and tell the ones whose pick or look changed.
     fn sync<T: 'static>(
         &mut self,
         entries: &Rc<Vec<ThemeEntry>>,
@@ -198,39 +148,32 @@ impl CardSet {
         cx: &mut Context<T>,
     ) {
         if !self.catalog.as_ref().is_some_and(|catalog| Rc::ptr_eq(catalog, entries)) {
-            self.members = catalog::cards(entries).into_iter().map(Rc::from).collect();
-            self.looks = self.members.iter().map(|members| picks.look(entries, members)).collect();
-            self.cards = self
-                .members
-                .iter()
-                .zip(&self.looks)
+            let labels = labels(entries);
+            self.picked = entries.iter().map(|entry| picks.picked(entry)).collect();
+            self.cards = labels
+                .into_iter()
+                .zip(&self.picked)
                 .enumerate()
-                .map(|(card, (members, look))| {
-                    let (catalog, members, look) = (entries.clone(), members.clone(), *look);
-                    cx.new(|_| ThemeCard { catalog, card, members, look, ui })
+                .map(|(entry, (label, &picked))| {
+                    let catalog = entries.clone();
+                    cx.new(|_| ThemeCard { catalog, entry, label, picked, ui })
                 })
                 .collect();
-            self.labels = self
-                .members
+            self.search = entries
                 .iter()
-                .map(|members| {
-                    let names = members.iter().map(|ix| entries[*ix].label.as_str());
-                    let all: Vec<&str> =
-                        std::iter::once(entries[members[0]].card_label()).chain(names).collect();
-                    all.join("\n").to_lowercase()
-                })
+                .map(|entry| format!("{}\n{}", entry.label, entry.card_label()).to_lowercase())
                 .collect();
             self.catalog = Some(entries.clone());
             self.look = Some(theme);
             return;
         }
         let look_changed = self.look != Some(theme);
-        for ((card, members), old) in self.cards.iter().zip(&self.members).zip(self.looks.iter_mut()) {
-            let look = picks.look(entries, members);
-            if look_changed || *old != look {
-                *old = look;
+        for ((card, entry), old) in self.cards.iter().zip(entries.iter()).zip(self.picked.iter_mut()) {
+            let picked = picks.picked(entry);
+            if look_changed || *old != picked {
+                *old = picked;
                 card.update(cx, |card, cx| {
-                    card.look = look;
+                    card.picked = picked;
                     card.ui = ui;
                     cx.notify();
                 });
@@ -241,9 +184,15 @@ impl CardSet {
         }
     }
 
-    /// The kind of theme a card draws.
-    fn appearance(&self, entries: &[ThemeEntry], card: usize) -> Appearance {
-        entries[self.looks[card].shown].tokens.appearance
+    /// The cards at `shown` (indices into the catalog), each in the fixed box that lets the window
+    /// skip it while it hasn't changed.
+    fn views(&self, rem: Pixels, shown: &[usize]) -> Vec<AnyElement> {
+        let slot = StyleRefinement::default().w_full().h(card_height(rem));
+        shown
+            .iter()
+            .filter_map(|ix| self.cards.get(*ix))
+            .map(|card| AnyView::from(card.clone()).cached(slot.clone()).into_any_element())
+            .collect()
     }
 }
 
@@ -268,29 +217,23 @@ fn entries(cx: &mut App) -> Rc<Vec<ThemeEntry>> {
     cache.entries.clone()
 }
 
-/// Which cards show before "Show all": the first dark themes and the first light ones, with
-/// the picks in use always among them.
-fn first_cards(entries: &[ThemeEntry], set: &CardSet) -> Vec<usize> {
-    let of = |appearance: Appearance| -> Vec<usize> {
-        (0..set.cards.len()).filter(|card| set.appearance(entries, *card) == appearance).collect()
-    };
-    let mut shown = Vec::new();
-    for (appearance, count) in
-        [(Appearance::Dark, FIRST_CARDS - FIRST_LIGHT), (Appearance::Light, FIRST_LIGHT)]
-    {
-        let all = of(appearance);
-        let mut first: Vec<usize> = all.iter().copied().take(count).collect();
-        for card in &all {
-            let look = set.looks[*card];
-            if (look.active || look.dark_pick || look.light_pick) && !first.contains(card) {
-                first.pop();
-                first.push(*card);
-            }
-        }
-        shown.extend(first);
+/// The shelves a mode shows, in order.
+fn shelves(mode: ThemeMode) -> &'static [Appearance] {
+    match mode {
+        ThemeMode::Dark => &[Appearance::Dark],
+        ThemeMode::Light => &[Appearance::Light],
+        ThemeMode::System => &[Appearance::Dark, Appearance::Light],
     }
-    shown.sort_unstable();
-    shown
+}
+
+/// The first `count` of a shelf's cards, with its pick among them in place of the last.
+fn first_cards(all: &[usize], count: usize, picked: impl Fn(usize) -> bool) -> Vec<usize> {
+    let mut first: Vec<usize> = all.iter().copied().take(count).collect();
+    if let Some(pick) = all.iter().copied().skip(count).find(|ix| picked(*ix)) {
+        first.pop();
+        first.push(pick);
+    }
+    first
 }
 
 impl SettingsWindow {
@@ -299,64 +242,60 @@ impl SettingsWindow {
         let entries = entries(cx);
         let store = cx.global::<SettingsStore>();
         let (dark, light) = (store.settings.theme.clone(), store.settings.theme_light.clone());
-        // The mode and, under Match system, the system's appearance decide which pick is shown.
-        let shown = store.shown_theme().to_string();
-        let mode = self.theme_picker.appearance;
-        let picks = Picks { dark: &dark, light: &light, shown: &shown, mode };
-        let theme = cx.global::<SettingsStore>().revisions.theme;
+        let kinds = shelves(store.settings.theme_mode);
+        let picks = Picks { dark: &dark, light: &light };
+        let theme = store.revisions.theme;
         let query = self.theme_picker.filter.read(cx).value().trim().to_lowercase();
         let mut set = self.theme_picker.cards.borrow_mut();
         set.sync(&entries, &picks, theme, ui, cx);
 
-        let narrowed = !query.is_empty() || mode.is_some();
-        let first = (!narrowed && !self.themes_all).then(|| first_cards(&entries, &set));
-        // A family's card draws a version of the filter's kind when it has one.
-        let matches = |card: usize| {
-            mode.is_none_or(|m| m == set.appearance(&entries, card))
-                && (query.is_empty() || set.labels[card].contains(&query))
-                && first.as_ref().is_none_or(|first| first.contains(&card))
-        };
-        // Themes like the one shown first (dark ones in a dark theme; light in a light one),
-        // each kind in the catalog's order.
-        let shown_look = entries.iter().find(|e| e.is_selected_by(picks.shown)).map(|e| e.tokens.appearance);
-        let mut order: Vec<usize> = (0..set.cards.len()).collect();
-        order.sort_by_key(|card| Some(set.appearance(&entries, *card)) != shown_look);
-        let cards = set.views(self.rem, &order, matches);
-        let shown = cards.len();
+        let narrowed = !query.is_empty();
+        let (mut total, mut hidden) = (0, 0);
+        // The shelves are runs of one grid, each after its name across the whole row: cards nested in
+        // a box per shelf lose their cached draw from one frame to the next.
+        let mut cells: Vec<AnyElement> = Vec::new();
+        for (place, &kind) in kinds.iter().enumerate() {
+            let all: Vec<usize> = (0..entries.len())
+                .filter(|ix| entries[*ix].tokens.appearance == kind)
+                .filter(|ix| query.is_empty() || set.search[*ix].contains(&query))
+                .collect();
+            let shown = if narrowed || self.themes_all {
+                all.clone()
+            } else {
+                first_cards(&all, FIRST_CARDS / kinds.len(), |ix| set.picked[ix])
+            };
+            total += all.len();
+            hidden += all.len() - shown.len();
+            // One shelf needs no name: the mode above says which kind it is.
+            if kinds.len() > 1 && !shown.is_empty() {
+                let heading = match kind {
+                    Appearance::Dark => text(SETTINGS_APPEARANCE_IN_DARK_MODE),
+                    Appearance::Light => text(SETTINGS_APPEARANCE_IN_LIGHT_MODE),
+                };
+                cells.push(
+                    div()
+                        .col_span_full()
+                        .when(place > 0, |d| d.pt_2())
+                        .text_label()
+                        .text_color(ui.muted)
+                        .child(heading)
+                        .into_any_element(),
+                );
+            }
+            cells.extend(set.views(self.rem, &shown));
+        }
 
-        let mode_segment = |ix: usize, label: &'static str, value: Option<Appearance>| {
-            style::form_segment(("theme-filter", ix), ui, None, label, mode == value).on_click(cx.listener(
-                move |this, _, _, cx| {
-                    this.theme_picker.appearance = value;
-                    cx.notify();
-                },
-            ))
-        };
-        let toolbar = div()
-            .flex()
-            .items_center()
-            .justify_between()
-            .gap_2()
-            .child(
-                div().w(px(FILTER_W)).child(
-                    Input::new(&self.theme_picker.filter)
-                        .small()
-                        .cleanable(true)
-                        .prefix(style::icon(IconName::Search).text_color(ui.muted)),
-                ),
-            )
-            .child(
-                style::segmented_form(ui)
-                    .child(mode_segment(0, text(SETTINGS_APPEARANCE_ALL), None))
-                    .child(mode_segment(1, text(SETTINGS_APPEARANCE_DARK), Some(Appearance::Dark)))
-                    .child(mode_segment(2, text(SETTINGS_APPEARANCE_LIGHT), Some(Appearance::Light))),
-            );
-        let total = set.cards.len();
+        let toolbar = div().w(px(FILTER_W)).child(
+            Input::new(&self.theme_picker.filter)
+                .small()
+                .cleanable(true)
+                .prefix(style::icon(IconName::Search).text_color(ui.muted)),
+        );
         let footer = div()
             .flex()
             .items_center()
             .gap_2()
-            .when(!narrowed, |d| {
+            .when(!narrowed && (self.themes_all || hidden > 0), |d| {
                 d.child(
                     style::link_button(
                         "themes-all",
@@ -409,8 +348,8 @@ impl SettingsWindow {
             .flex_col()
             .gap_3()
             .child(toolbar)
-            .child(div().grid().grid_cols(4).gap_3().children(cards))
-            .when(shown == 0, |d| {
+            .child(div().grid().grid_cols(4).gap_3().children(cells))
+            .when(narrowed && total == 0, |d| {
                 d.child(
                     div()
                         .py_4()
@@ -442,7 +381,7 @@ mod tests {
         WindowOptions, div, px,
     };
     use wormhole_core::theme::catalog;
-    use wormhole_core::theme::registry::DEFAULT_THEME;
+    use wormhole_core::theme::tokens::Appearance;
 
     use super::filter_placeholder;
 
@@ -469,13 +408,14 @@ mod tests {
             let (ui, theme) = (ui(cx), cx.global::<SettingsStore>().revisions.theme);
             let entries = self.entries.clone();
             let selected = self.selected.clone();
-            let picks = super::Picks { dark: &selected, light: "", shown: &selected, mode: None };
+            let picks = super::Picks { dark: &selected, light: &selected };
             self.set.sync(&entries, &picks, theme, ui, cx);
-            div().w(px(900.0)).grid().grid_cols(4).gap_3().children(self.set.views(
-                window.rem_size(),
-                &(0..self.entries.len()).collect::<Vec<_>>(),
-                |_| true,
-            ))
+            div()
+                .w(px(900.0))
+                .grid()
+                .grid_cols(4)
+                .gap_3()
+                .children(self.set.views(window.rem_size(), &(0..self.entries.len()).collect::<Vec<_>>()))
         }
     }
 
@@ -518,11 +458,16 @@ mod tests {
         draw(cx, handle);
         assert_eq!(renders(), drawn, "the cards were drawn again for nothing");
 
-        // Choosing another theme tells the old and the new one, and only those (the dark pick
-        // and the theme shown move together here). The first card is a family: the other theme
-        // is one of a card of its own.
+        // Choosing another theme of the same kind tells the old pick and the new one, and only
+        // those.
         let other = host.read_with(cx, |host, _| {
-            host.entries.iter().find(|e| e.family.is_none()).expect("a theme of one version").value.clone()
+            let first = &host.entries[0];
+            host.entries[1..]
+                .iter()
+                .find(|e| e.tokens.appearance == first.tokens.appearance)
+                .expect("a second theme of the first one's kind")
+                .value
+                .clone()
         });
         cx.update(|cx| {
             host.update(cx, |host, cx| {
@@ -534,63 +479,37 @@ mod tests {
         assert_eq!(renders(), drawn + 2, "only the card that lost and the card that gained the selection");
     }
 
-    /// A family's card under Match system: a version's swatch sets that version's pick only, the
-    /// card around it both picks.
-    #[gpui_kit::test]
-    fn a_swatch_picks_its_version_and_the_card_its_family(cx: &mut TestAppContext) {
-        struct Natural(Entity<ThemeCard>);
-        impl Render for Natural {
-            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-                div().id("card-box").test_support().w(px(280.0)).child(self.0.clone())
+    /// A family has a card per version, each on the shelf of its kind: a family with one version
+    /// of a kind is named by the family there, one with several by each version's own name.
+    #[test]
+    fn a_family_is_a_card_per_version_named_by_its_shelf() {
+        let entries = catalog::catalog_in(Path::new("/nonexistent/wormhole-themes"));
+        let labels = super::labels(&entries);
+        let soltari: Vec<(&str, Appearance)> = entries
+            .iter()
+            .zip(&labels)
+            .filter(|(e, _)| e.card_label() == "Soltari")
+            .map(|(e, label)| (label.as_ref(), e.tokens.appearance))
+            .collect();
+        assert!(soltari.len() > 1, "Soltari ships several versions: {soltari:?}");
+        for kind in [Appearance::Dark, Appearance::Light] {
+            let of_kind: Vec<&str> = soltari.iter().filter(|(_, k)| *k == kind).map(|(l, _)| *l).collect();
+            if of_kind.len() == 1 {
+                assert_eq!(of_kind, ["Soltari"], "the only {kind:?} version is named by its family");
+            } else {
+                assert!(of_kind.iter().all(|l| *l != "Soltari"), "each {kind:?} version by its own name");
             }
         }
-        let card = cx.update(|cx| {
-            gpui_kit::init(cx);
-            cx.set_global(SettingsStore::for_test());
-            let entries = Rc::new(catalog::catalog_in(Path::new("/nonexistent/wormhole-themes")));
-            let members: Rc<[usize]> = catalog::cards(&entries)
-                .into_iter()
-                .find(|card| entries[card[0]].card_label() == "Soltari")
-                .expect("Soltari is a family")
-                .into();
-            let picks = super::Picks {
-                dark: "Tokyo Night",
-                light: "Catppuccin Latte",
-                shown: "Tokyo Night",
-                mode: None,
-            };
-            let look = picks.look(&entries, &members);
-            let ui = ui(cx);
-            cx.new(|_| ThemeCard { catalog: entries, card: 0, members, look, ui })
-        });
-        let handle = cx.update(|cx| {
-            gpui_kit::open_window(WindowOptions::default(), cx, |_, cx| cx.new(|_| Natural(card)))
-                .expect("opens the window")
-                .0
-        });
-        let picks = |cx: &mut TestAppContext| {
-            cx.update(|cx| {
-                let s = &cx.global::<SettingsStore>().settings;
-                (s.theme.clone(), s.theme_light.clone())
-            })
-        };
-        let click = |cx: &mut TestAppContext, x: f32, y: f32| {
-            cx.update(|cx| {
-                handle
-                    .update(cx, |_, window, cx| {
-                        window.render_frame(cx);
-                        window.click_at("card-box", gpui_kit::point(px(x), px(y)), cx);
-                    })
-                    .expect("open")
-            });
-        };
-        // The strip's right end holds the two swatches, 24 wide each inside its 12 of padding:
-        // Light, then Dark.
-        let height = f32::from(card_height(px(13.0)));
-        click(cx, 280.0 - 12.0 - 24.0 - 12.0, height - 14.0);
-        assert_eq!(picks(cx), (DEFAULT_THEME.into(), "Soltari Light".into()), "the light pick only");
-        click(cx, 40.0, 30.0);
-        assert_eq!(picks(cx), ("Soltari Dark".into(), "Soltari Light".into()), "both picks");
+    }
+
+    /// Collapsed, a shelf shows its first cards, with its pick in place of the last when it isn't
+    /// among them.
+    #[test]
+    fn the_first_cards_hold_the_pick() {
+        let all = [3, 5, 8, 9, 12];
+        assert_eq!(super::first_cards(&all, 3, |_| false), [3, 5, 8]);
+        assert_eq!(super::first_cards(&all, 3, |ix| ix == 5), [3, 5, 8]);
+        assert_eq!(super::first_cards(&all, 3, |ix| ix == 12), [3, 5, 12]);
     }
 
     #[gpui_kit::test]
@@ -607,8 +526,8 @@ mod tests {
             cx.set_global(SettingsStore::for_test());
             let entries = Rc::new(catalog::catalog_in(Path::new("/nonexistent/wormhole-themes")));
             let ui = ui(cx);
-            let look = super::CardLook { active: true, dark_pick: true, ..super::CardLook::default() };
-            cx.new(|_| ThemeCard { catalog: entries, card: 0, members: Rc::from(vec![0]), look, ui })
+            let label = entries[0].label.clone().into();
+            cx.new(|_| ThemeCard { catalog: entries, entry: 0, label, picked: true, ui })
         });
         let handle = cx.update(|cx| {
             gpui_kit::open_window(WindowOptions::default(), cx, |_, cx| cx.new(|_| Natural(card)))

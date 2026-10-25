@@ -203,7 +203,7 @@ fn match_system_follows_the_system_appearance() {
     assert_eq!(store.tokens.name, "Tokyo Night");
     let theme = store.revisions.theme;
     system(&mut store, LIGHT);
-    assert_eq!((store.tokens.name.as_str(), store.shown_theme()), ("GitHub Light", "GitHub Light"));
+    assert_eq!((store.tokens.name.as_str(), store.config.shown_theme()), ("GitHub Light", "GitHub Light"));
     assert_eq!(store.tokens.appearance, Appearance::Light);
     assert_eq!(store.revisions.theme, theme + 1);
     update(&mut store, |s| s.theme_mode = ThemeMode::Dark);

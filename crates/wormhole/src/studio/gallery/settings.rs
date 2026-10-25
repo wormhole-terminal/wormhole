@@ -345,13 +345,6 @@ fn controls(env: &Env) -> Div {
                         .enumerate()
                         .map(|(ix, color)| style::swatch(("g-swatch", ix), ui, color, ix == 0)),
                 )
-                .children(
-                    palette
-                        .into_iter()
-                        .take(2)
-                        .enumerate()
-                        .map(|(ix, color)| style::swatch_small(("g-swatch-small", ix), ui, color, ix == 0)),
-                )
                 .child(env.mark("tint.chip", style::tint_chip(ui, Some(IconName::Folder), "api-server")))
                 .child(style::tint_chip(ui, None, "Bundled"))
                 .child(style::changed_dot(ui))

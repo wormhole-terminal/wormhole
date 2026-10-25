@@ -153,7 +153,9 @@ settings-appearance-context = Context
 ## settings_window/sections/theme_picker/mod.rs (labels, hints and notes drawn by this page's code)
 
 settings-appearance-filter-themes = Filter themes
-settings-appearance-all = All
+# Over the theme cards under Match system: the themes of each mode, one of them its pick.
+settings-appearance-in-dark-mode = In Dark Mode
+settings-appearance-in-light-mode = In Light Mode
 settings-appearance-show-fewer = Show fewer
 settings-appearance-import-theme = Import theme…
 settings-appearance-no-themes-match-the-filter = No themes match the filter.

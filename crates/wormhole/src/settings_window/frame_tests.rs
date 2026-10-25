@@ -11,7 +11,8 @@
 //! The pages with sentences made a few more (2 to 14 of about 10,000); the search made 14% fewer, since
 //! its words are lower-cased once per language and no longer for every keystroke. The search's budget
 //! rose by 49 when a link's hover fill became a layer of its own, out of the layout (so the link's text
-//! lines up with the edge it sits at); the results show several links.
+//! lines up with the edge it sits at); the results show several links. Every page rose by 2 to 3 per row
+//! when a row's hover fill became such a layer too, reaching past the row's text on both sides.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -30,20 +31,20 @@ const SLACK: u64 = 20;
 /// keeps), and of the results page of a search for a word found in several pages; a frame may make
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 14] = [
-    ("Profile", 9849),
-    ("Appearance", 14388),
-    ("Fonts", 7259),
-    ("Terminal", 12535),
-    ("Sessions", 13752),
-    ("Git", 7749),
-    ("Agents", 27055),
-    ("Notifications", 10355),
-    ("MenuBar", 7852),
-    ("Updates", 6621),
-    ("Advanced", 7318),
-    ("Projects", 12196),
-    ("FeatureFlags", 6742),
-    ("search", 11405),
+    ("Profile", 9875),
+    ("Appearance", 14446),
+    ("Fonts", 7286),
+    ("Terminal", 12586),
+    ("Sessions", 13514),
+    ("Git", 7772),
+    ("Agents", 27081),
+    ("Notifications", 10402),
+    ("MenuBar", 7875),
+    ("Updates", 6632),
+    ("Advanced", 7337),
+    ("Projects", 12219),
+    ("FeatureFlags", 6757),
+    ("search", 11449),
 ];
 
 fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {

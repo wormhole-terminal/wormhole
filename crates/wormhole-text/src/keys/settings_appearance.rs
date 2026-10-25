@@ -174,14 +174,16 @@ pub const SETTINGS_APPEARANCE_NOTES: Key = Key::new(189);
 pub const SETTINGS_APPEARANCE_CONTEXT: Key = Key::new(190);
 /// "Filter themes"
 pub const SETTINGS_APPEARANCE_FILTER_THEMES: Key = Key::new(191);
-/// "All"
-pub const SETTINGS_APPEARANCE_ALL: Key = Key::new(192);
+/// "In Dark Mode"
+pub const SETTINGS_APPEARANCE_IN_DARK_MODE: Key = Key::new(192);
+/// "In Light Mode"
+pub const SETTINGS_APPEARANCE_IN_LIGHT_MODE: Key = Key::new(193);
 /// "Show fewer"
-pub const SETTINGS_APPEARANCE_SHOW_FEWER: Key = Key::new(193);
+pub const SETTINGS_APPEARANCE_SHOW_FEWER: Key = Key::new(194);
 /// "Import theme…"
-pub const SETTINGS_APPEARANCE_IMPORT_THEME: Key = Key::new(194);
+pub const SETTINGS_APPEARANCE_IMPORT_THEME: Key = Key::new(195);
 /// "No themes match the filter."
-pub const SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER: Key = Key::new(195);
+pub const SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER: Key = Key::new(196);
 
 /// ```text
 /// Yours · { $color }, in every theme
@@ -218,12 +220,12 @@ pub fn settings_appearance_project_theme_note(project: &str) -> String {
 /// }
 /// ```
 pub fn settings_appearance_filter_themes_count(count: i64) -> String {
-    crate::active::message(196, &[("count", Arg::Int(count))])
+    crate::active::message(197, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Show all { $total }
 /// ```
 pub fn settings_appearance_show_all_themes(total: &str) -> String {
-    crate::active::message(197, &[("total", Arg::Str(total))])
+    crate::active::message(198, &[("total", Arg::Str(total))])
 }

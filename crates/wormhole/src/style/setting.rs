@@ -111,14 +111,17 @@ pub struct SettingParts {
     pub on_reset: Option<ClickHandler>,
 }
 
+/// How far a [`setting`] row's hover fill reaches past its text on each side.
+const ROW_FILL_PAD: f32 = 8.0;
+
 /// How faint a control is while a project sets its value.
 const SET_ELSEWHERE_OPACITY: f32 = 0.55;
 
 /// One setting in the settings window: the label (14 / 500) and its
 /// description (12, muted) on the left, the control at the right edge of the column, a
 /// hairline above and at least [`SETTING_ROW_MIN_H`] tall, no card. Hovering fills it
-/// with `state.hover`. See [`SettingState`] for what a changed, project-set or disabled
-/// value adds.
+/// with `state.hover`, [`ROW_FILL_PAD`] past its text on each side. See [`SettingState`]
+/// for what a changed, project-set or disabled value adds.
 #[track_caller]
 pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: &App) -> Stateful<Div> {
     let SettingParts {
@@ -162,7 +165,21 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
         .min_h(px(SETTING_ROW_MIN_H))
         .py_2()
         .rule_top(ui)
-        .when(!disabled, |d| d.hover(|d| d.bg(ui.hover)))
+        .relative()
+        // The hover fill reaches past the text on both sides, so the words don't touch its edges,
+        // while the text keeps the column of the group heads. Out of the layout, as a layer.
+        .when(!disabled, |d| {
+            d.child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .bottom_0()
+                    .left(px(-ROW_FILL_PAD))
+                    .right(px(-ROW_FILL_PAD))
+                    .rounded(ui.radius)
+                    .group_hover(group.clone(), move |d| d.bg(ui.hover)),
+            )
+        })
         .child(
             div()
                 .flex_1()

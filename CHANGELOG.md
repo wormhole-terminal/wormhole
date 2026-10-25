@@ -53,13 +53,19 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   `Wormhole list` and `status` command line keeps saying `needs you`, so scripts that read it still
   work.
 
+- Settings → Appearance: the mode decides which themes show. Dark or Light shows the themes of
+  that kind; Match system shows two rows, "In Dark Mode" and "In Light Mode", each with its pick
+  checked. The Dark/Light filter and the moon and sun marks are gone, and a theme with dark and
+  light versions (Wormhole) has a card in each row, with its name in full.
+- A setting's hover fill reaches a little past its text on both sides, so the words no longer
+  touch its edges.
+
 ### Fixed
 
-- Settings → Appearance: a theme with dark and light versions (Wormhole) shows its name in full
-  again; its version swatches are small enough for the name strip. Across Settings, text links
-  ("Edit in Fonts", "Choose app…") line up with the edge of the page, the Coding agents page's
-  arrow and icons sit before the column so the words line up with the rows, and the Profile page's
-  name, environment and agent logins put their label beside the first line of the fields.
+- Across Settings, text links ("Edit in Fonts", "Choose app…") line up with the edge of the page,
+  the Coding agents page's arrow and icons sit before the column so the words line up with the
+  rows, and the Profile page's name, environment and agent logins put their label beside the first
+  line of the fields.
 - The window's traffic lights now match the theme when it differs from the system's Light or Dark
   Mode, instead of showing the other mode's lights on the title row.
 - The History tab's commit ages ("2h ago") keep up with the clock while the tab is shown, instead of

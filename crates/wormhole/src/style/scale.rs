@@ -144,9 +144,8 @@ pub const FILTER_POPOVER_W: f32 = 320.0;
 /// A slider in a setting row, and in a narrow one.
 pub const SLIDER_W: f32 = 200.0;
 pub const SLIDER_W_COMPACT: f32 = 160.0;
-/// A color swatch, and a small one (in a theme card's name strip).
+/// A color swatch.
 pub const SWATCH: f32 = 24.0;
-pub const SWATCH_SMALL: f32 = 12.0;
 /// A folder colour's dot in a row of choices, and in front of its name in a menu.
 pub const COLOR_DOT: f32 = 16.0;
 pub const COLOR_DOT_MENU: f32 = 12.0;
