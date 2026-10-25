@@ -9,16 +9,16 @@ use crate::theme::fonts;
 use crate::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 
 #[test]
-fn glass_needs_the_setting_the_mac_and_a_system_that_allows_it() {
-    let off = Settings::default();
-    assert!(!off.liquid_glass, "off by default");
-    let on = Settings { liquid_glass: true, ..Settings::default() };
-    assert!(!off.glass_on(true, false));
+fn glass_needs_its_flag_the_mac_and_a_system_that_allows_it() {
+    // The tests are a development build: a flag with no entry is on.
+    let on = Settings::default();
     assert!(on.glass_on(true, false));
     assert!(!on.glass_on(false, false), "before macOS 26");
     assert!(!on.glass_on(true, true), "Reduce Transparency or Increase Contrast");
-    let from_file: Settings = jsonc::parse(r#"{ "liquid_glass": true }"#).expect("valid jsonc");
-    assert!(from_file.liquid_glass);
+    let off: Settings =
+        jsonc::parse(r#"{ "feature_flags": { "liquid_glass": false } }"#).expect("valid jsonc");
+    assert!(!off.glass_on(true, false), "the flag switched off");
+    assert!(!crate::config::features::FeatureFlag::LiquidGlass.released(), "a release has no glass yet");
 }
 
 #[test]

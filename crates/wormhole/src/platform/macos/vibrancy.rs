@@ -79,10 +79,6 @@ impl BlurViews {
     }
 }
 
-pub fn glass_available() -> bool {
-    AnyClass::get(c"NSGlassEffectView").is_some()
-}
-
 /// GPUI's view, its parent, and the glass views made so far (a pool: the nth region uses the
 /// nth view, and the rest are hidden).
 pub struct GlassViews {

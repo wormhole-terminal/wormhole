@@ -7,7 +7,7 @@
 //! This is not the per-project [`crate::project::Feature`] switches (which parts of a trusted
 //! `.wormhole/` a person accepts). A `FeatureFlag` gates whole features of Wormhole itself; the
 //! first one gates the entire project-folder feature and its sidebar module, another the first-run
-//! welcome that runs in the terminal itself.
+//! welcome that runs in the terminal itself, another Liquid Glass.
 
 use std::collections::BTreeMap;
 
@@ -35,11 +35,20 @@ pub enum FeatureFlag {
     /// quitting, crashing or updating Wormhole detaches from them and the next launch attaches
     /// again to the same screen and the same running programs (`repo-docs/docs/session-host.md`).
     PersistentTerminals,
+    /// Liquid Glass under the sidebar's and the panel's cards on macOS 26 and later, where the
+    /// system allows it (not with Reduce Transparency or Increase Contrast). Off, every surface
+    /// paints itself. It was a setting (`liquid_glass`) until 2026-10-25.
+    LiquidGlass,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 4] =
-        [Self::ProjectFolders, Self::TerminalWelcome, Self::NotesAndTasks, Self::PersistentTerminals];
+    pub const ALL: [FeatureFlag; 5] = [
+        Self::ProjectFolders,
+        Self::TerminalWelcome,
+        Self::NotesAndTasks,
+        Self::PersistentTerminals,
+        Self::LiquidGlass,
+    ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
     pub fn key(self) -> &'static str {
@@ -48,6 +57,7 @@ impl FeatureFlag {
             Self::TerminalWelcome => "terminal_welcome",
             Self::NotesAndTasks => "notes_and_tasks",
             Self::PersistentTerminals => "persistent_terminals",
+            Self::LiquidGlass => "liquid_glass",
         }
     }
 
@@ -62,6 +72,7 @@ impl FeatureFlag {
             Self::TerminalWelcome => "Terminal welcome",
             Self::NotesAndTasks => "Notes and tasks",
             Self::PersistentTerminals => "Persistent terminals",
+            Self::LiquidGlass => "Liquid Glass",
         }
     }
 
@@ -84,6 +95,10 @@ impl FeatureFlag {
                 "Terminals keep running when Wormhole quits or updates, and the next launch picks them \
                  up again with their screen and programs."
             }
+            Self::LiquidGlass => {
+                "Glass under the sidebar's and the panel's cards on macOS 26 and later, unless Reduce \
+                 Transparency or Increase Contrast is on. Off: every surface painted."
+            }
         }
     }
 
@@ -98,6 +113,8 @@ impl FeatureFlag {
             Self::NotesAndTasks => false,
             // Off until the host has been through its phases and the user has approved it.
             Self::PersistentTerminals => false,
+            // Unfinished: glass behind every surface still needs its polish.
+            Self::LiquidGlass => false,
         }
     }
 }

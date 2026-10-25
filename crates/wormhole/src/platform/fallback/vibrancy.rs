@@ -18,10 +18,6 @@ impl BlurViews {
     pub fn set_enabled(&self, _: bool) {}
 }
 
-pub fn glass_available() -> bool {
-    false
-}
-
 pub struct GlassViews;
 
 impl GlassViews {

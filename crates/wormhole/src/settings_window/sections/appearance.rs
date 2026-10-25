@@ -4,7 +4,6 @@
 //! blur's row warns.
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::color_picker::ColorPicker;
@@ -59,7 +58,6 @@ pub(super) const SETTINGS: &[Setting] = &[
         .below(draw_swatches),
     Setting::custom("opacity", draw_opacity).below(reduced_transparency_note),
     toggle!("blur", blur).below(blur_off_warning),
-    Setting::custom("liquid-glass", draw_liquid_glass).below(liquid_glass_hint),
     Setting::custom("translucent", draw_translucent),
     Setting::segmented(
         "title-border",
@@ -185,25 +183,6 @@ fn blur_off_warning(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
             )
             .into_any_element()
     })
-}
-
-/// The Liquid Glass switch: out of reach before macOS 26, where there is no glass to turn on.
-fn draw_liquid_glass(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let on = settings(cx).liquid_glass;
-    style::toggle("liquid-glass", on, |on, _, cx| update_settings(cx, |s| s.liquid_glass = on))
-        .disabled(!crate::platform::vibrancy::glass_available())
-        .into_any_element()
-}
-
-fn liquid_glass_hint(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
-    let note = if !crate::platform::vibrancy::glass_available() {
-        text(SETTINGS_APPEARANCE_LIQUID_GLASS_NEEDS_MACOS_26)
-    } else if cx.global::<SettingsStore>().system().opaque() {
-        text(SETTINGS_APPEARANCE_GLASS_HELD_BY_ACCESSIBILITY)
-    } else {
-        return None;
-    };
-    Some(style::banner(ui(cx), style::BannerKind::Info, false, note).into_any_element())
 }
 
 /// The settings and Studio windows in one row of checkboxes.

@@ -89,7 +89,6 @@ pub(super) fn signatures_match() {
         panel::set_height_keeping_top: fn(&mut Window, f32, &mut App);
         panel::pointer_display_id: fn() -> Option<u64>;
         sound::beep: fn();
-        vibrancy::glass_available: fn() -> bool;
         vibrancy::set_material_appearance: fn(Appearance);
         window::lights_span: fn(&Window) -> Option<f32>;
         window::set_lights_shown: fn(&Window, bool);

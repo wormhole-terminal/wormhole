@@ -36,9 +36,6 @@ pub(super) const APPEARANCE: &[Group] = &[
             entry("blur", SETTINGS_APPEARANCE_BLUR, &["blur"])
                 .with_description(SETTINGS_APPEARANCE_BLUR_DESCRIPTION)
                 .with_keywords(SETTINGS_APPEARANCE_BLUR_KEYWORDS),
-            entry("liquid-glass", SETTINGS_APPEARANCE_LIQUID_GLASS, &["liquid_glass"])
-                .with_description(SETTINGS_APPEARANCE_LIQUID_GLASS_DESCRIPTION)
-                .with_keywords(SETTINGS_APPEARANCE_LIQUID_GLASS_KEYWORDS),
             entry(
                 "translucent",
                 SETTINGS_APPEARANCE_TRANSLUCENT,

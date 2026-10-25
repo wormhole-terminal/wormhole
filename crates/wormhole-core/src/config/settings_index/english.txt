@@ -224,10 +224,6 @@ entry Appearance blur
   label "Blur what's behind the window"
   description "Only visible below 100 % opacity"
   keywords "vibrancy frosted"
-entry Appearance liquid-glass
-  label "Liquid Glass"
-  description "Glass under the sidebar's and the panel's cards on macOS 26 and later. Off: every surface painted."
-  keywords "glass translucent material apple tahoe cards"
 entry Appearance translucent
   label "Also translucent"
   description "Use the opacity and blur above for these windows too"

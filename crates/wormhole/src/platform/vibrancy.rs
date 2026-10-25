@@ -159,11 +159,6 @@ impl GlassRect {
     }
 }
 
-/// Whether this Mac has Liquid Glass (macOS 26 and later), for Settings, which has no window glass.
-pub fn glass_available() -> bool {
-    os::glass_available()
-}
-
 impl Glass {
     pub fn install(window: &Window) -> Self {
         Self { native: std::cell::RefCell::new(os::GlassViews::find(window)), ..Self::default() }

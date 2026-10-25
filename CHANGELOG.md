@@ -72,6 +72,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Choosing a theme card, recording a shortcut or picking a colour in the Studio no longer moves
   what is inside by a point: the ring is drawn round the edge instead of thickening the border.
 - Settings → Coding agents shows each agent's logo where Wormhole has one, instead of two letters.
+- Liquid Glass is a feature flag now (Settings → Feature flags, in development builds and on the
+  Unstable channel) instead of a switch in Settings → Appearance. Release builds draw no glass
+  until it is finished; a `liquid_glass` left in config.json says where it went.
 - Across Settings, text links ("Edit in Fonts", "Choose app…") line up with the edge of the page,
   the Coding agents page's arrow and icons sit before the column so the words line up with the
   rows, and the Profile page's name, environment and agent logins put their label beside the first

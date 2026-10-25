@@ -56,7 +56,7 @@ pub struct Settings {
     pub blur: bool,
     /// Liquid Glass under the sidebar's and the panel's cards (macOS 26 and later). Off, every
     /// surface is painted; see [`Settings::glass_on`].
-    pub liquid_glass: bool,
+
     /// How much room each terminal takes in the sidebar and the tab bar.
     pub density: Density,
     /// Groups are cards in the sidebar; off, a group is its head and rows, with no card round them.
@@ -260,7 +260,6 @@ impl Default for Settings {
             line_height: 1.3,
             opacity: 0.8,
             blur: true,
-            liquid_glass: false,
             density: Density::default(),
             show_groups_as_cards: true,
             fade_group_colors: false,
@@ -353,11 +352,11 @@ impl Settings {
         FlagMode::of(features::dev_build(), self.update_channel)
     }
 
-    /// Whether the sidebar's and the panel's cards sit on Liquid Glass: asked for, the Mac has it
-    /// (macOS 26 and later), and the system doesn't want windows opaque (Reduce Transparency,
-    /// Increase Contrast). Otherwise every surface paints itself.
+    /// Whether the sidebar's and the panel's cards sit on Liquid Glass: its feature flag is on,
+    /// the Mac has it (macOS 26 and later), and the system doesn't want windows opaque (Reduce
+    /// Transparency, Increase Contrast). Otherwise every surface paints itself.
     pub fn glass_on(&self, mac_has_glass: bool, system_opaque: bool) -> bool {
-        self.liquid_glass && mac_has_glass && !system_opaque
+        self.feature_enabled(FeatureFlag::LiquidGlass) && mac_has_glass && !system_opaque
     }
 }
 
