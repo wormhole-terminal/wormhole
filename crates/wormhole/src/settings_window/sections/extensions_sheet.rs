@@ -8,11 +8,12 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::probe::approval::{self, Changes, Grants, Request};
+use wormhole_core::probe::approval::{self, Changes, Grants, Proof, Request};
 use wormhole_core::probe::hidden::reveal;
 use wormhole_core::probe::validate::{Confirmation, DeclaredPermission, ProgramClass};
 use wormhole_core::storage::paths::DataRoot;
@@ -23,6 +24,7 @@ use wormhole_core::storage::paths::DataRoot;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
+use super::extensions_text::{approve_error_text, read_error_text};
 use crate::platform::auth::{self, AuthError};
 use crate::settings_window::{Section, SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
@@ -35,13 +37,25 @@ const SHEET_MAX_H: f32 = 0.72;
 pub(in crate::settings_window) struct Sheet {
     request: Request,
     grants: Grants,
+    /// What Approve was pressed with: the grants as they were then, and what the yes will be. The
+    /// approval records exactly these, whatever is changed while the system asks.
+    pending: Option<(Grants, Proof)>,
     /// The Touch ID dialog is up.
     waiting: bool,
+    /// The approval is being written.
+    saving: bool,
     error: Option<SharedString>,
     name: String,
+    /// The body's scroll, to fade its bottom edge while there is more below.
+    scroll: ScrollHandle,
 }
 
 impl Sheet {
+    /// Nothing on the sheet may change while the system asks or the approval is written.
+    fn busy(&self) -> bool {
+        self.waiting || self.saving
+    }
+
     fn confirmation(&self) -> Confirmation {
         self.request.confirmation(&self.grants)
     }
@@ -50,6 +64,12 @@ impl Sheet {
     #[cfg(test)]
     pub(in crate::settings_window) fn request(&self) -> &Request {
         &self.request
+    }
+
+    /// Whether the sheet says something went wrong.
+    #[cfg(test)]
+    pub(in crate::settings_window) fn has_error(&self) -> bool {
+        self.error.is_some()
     }
 
     /// The permissions left on, for a check to change.
@@ -80,7 +100,7 @@ impl SettingsWindow {
     #[cfg(feature = "devctl")]
     pub(in crate::settings_window) fn probe_sheet_line(&self) -> String {
         self.extensions.sheet.as_ref().map_or_else(String::new, |sheet| {
-            let waiting = if sheet.waiting { "waiting" } else { "ready" };
+            let waiting = if sheet.busy() { "waiting" } else { "ready" };
             format!("probe-sheet {} {waiting}\n", sheet.request.id()) // text: devctl's output
         })
     }
@@ -96,8 +116,16 @@ impl SettingsWindow {
                     Ok(request) => {
                         let name = reveal(&request.folder().manifest.probe.name).into_owned();
                         let grants = request.initial_grants();
-                        this.extensions.sheet =
-                            Some(Sheet { request, grants, waiting: false, error: None, name });
+                        this.extensions.sheet = Some(Sheet {
+                            request,
+                            grants,
+                            pending: None,
+                            waiting: false,
+                            saving: false,
+                            error: None,
+                            name,
+                            scroll: ScrollHandle::new(),
+                        });
                         if approve {
                             this.approve_probe(cx);
                         }
@@ -105,7 +133,7 @@ impl SettingsWindow {
                     Err(err) => {
                         this.notice = Some((
                             Section::Extensions,
-                            settings_extensions_cannot_approve(&reveal(&asked), &reveal(&err.to_string()))
+                            settings_extensions_cannot_approve(&reveal(&asked), &read_error_text(&err))
                                 .into(),
                         ));
                         this.scan_probes(cx);
@@ -117,27 +145,40 @@ impl SettingsWindow {
         }));
     }
 
+    /// Close the sheet; it stays while the system asks or the approval is written. Returns whether there
+    /// was a sheet, so Esc is spent on it.
     pub(in crate::settings_window) fn close_probe_sheet(&mut self, cx: &mut Context<Self>) -> bool {
-        let open = self.extensions.sheet.take().is_some();
-        if open {
-            cx.notify();
+        match self.extensions.sheet.as_ref() {
+            None => return false,
+            Some(sheet) if sheet.busy() => return true,
+            Some(_) => {}
         }
-        open
+        self.extensions.sheet = None;
+        cx.notify();
+        true
+    }
+
+    /// Approve was pressed: the grants are frozen as they are, and what yes needs is asked. Returns what
+    /// it needs, or `None` when the sheet is busy or gone.
+    pub(in crate::settings_window) fn press_approve(&mut self) -> Option<Confirmation> {
+        let sheet = self.extensions.sheet.as_mut().filter(|sheet| !sheet.busy())?;
+        sheet.error = None;
+        let confirmation = sheet.confirmation();
+        let proof = if confirmation == Confirmation::TouchId { Proof::TouchId } else { Proof::Click };
+        sheet.pending = Some((sheet.grants.clone(), proof));
+        sheet.waiting = confirmation == Confirmation::TouchId;
+        Some(confirmation)
     }
 
     /// Approve was pressed: a click goes straight to the approval, anything above it asks the system
     /// first (Touch ID, or the login password), and the answer decides.
     pub(in crate::settings_window) fn approve_probe(&mut self, cx: &mut Context<Self>) {
-        let Some(sheet) = self.extensions.sheet.as_mut() else { return };
-        if sheet.waiting {
-            return;
-        }
-        sheet.error = None;
-        match sheet.confirmation() {
+        let Some(confirmation) = self.press_approve() else { return };
+        match confirmation {
             Confirmation::Click => self.finish_approval(Ok(()), cx),
             Confirmation::TouchId => {
-                sheet.waiting = true;
-                let rx = auth::authenticate_rx(&settings_extensions_auth_reason(&sheet.name));
+                let name = self.extensions.sheet.as_ref().map(|sheet| sheet.name.clone()).unwrap_or_default();
+                let rx = auth::authenticate_rx(&settings_extensions_auth_reason(&name));
                 self.extensions.work = Some(cx.spawn(async move |this, cx| {
                     let answer = rx.recv().await.unwrap_or(Err(AuthError::Cancelled));
                     this.update(cx, |this, cx| this.finish_approval(answer, cx)).ok();
@@ -147,8 +188,8 @@ impl SettingsWindow {
         cx.notify();
     }
 
-    /// The answer to the confirmation. Only a yes records anything; the sheet stays up for the rest, so
-    /// the permissions can be looked at again.
+    /// The answer to the confirmation. Only a yes records anything, and what it records is what Approve was
+    /// pressed with; the sheet stays up for the rest, so the permissions can be looked at again.
     pub(in crate::settings_window) fn finish_approval(
         &mut self,
         answer: Result<(), AuthError>,
@@ -156,6 +197,7 @@ impl SettingsWindow {
     ) {
         let Some(sheet) = self.extensions.sheet.as_mut() else { return };
         sheet.waiting = false;
+        let Some((grants, proof)) = sheet.pending.take() else { return };
         match answer {
             Ok(()) => {}
             Err(AuthError::Cancelled) => {
@@ -168,12 +210,21 @@ impl SettingsWindow {
                 return;
             }
         }
-        let (request, grants) = (sheet.request.clone(), sheet.grants.clone());
+        let confirmed = match sheet.request.confirm(&grants, proof) {
+            Ok(confirmed) => confirmed,
+            Err(err) => {
+                sheet.error = Some(settings_extensions_not_approved(&sheet.name, &err.to_string()).into());
+                cx.notify();
+                return;
+            }
+        };
+        sheet.saving = true;
+        let request = sheet.request.clone();
         let root = DataRoot::current();
         self.extensions.work = Some(cx.spawn(async move |this, cx| {
             let result = cx
                 .background_executor()
-                .spawn(async move { approval::approve(&root, &request, &grants, now()) })
+                .spawn(async move { approval::approve(&root, &request, &confirmed, now()) })
                 .await;
             this.update(cx, |this, cx| {
                 this.extensions.work = None;
@@ -181,8 +232,11 @@ impl SettingsWindow {
                     Ok(()) => this.extensions.sheet = None,
                     Err(err) => {
                         if let Some(sheet) = this.extensions.sheet.as_mut() {
-                            sheet.error =
-                                Some(settings_extensions_not_approved(&sheet.name, &err.to_string()).into());
+                            sheet.saving = false;
+                            sheet.error = Some(
+                                settings_extensions_not_approved(&sheet.name, &approve_error_text(&err))
+                                    .into(),
+                            );
                         }
                     }
                 }
@@ -261,7 +315,8 @@ impl SettingsWindow {
             ));
 
         let touch = sheet.confirmation() == Confirmation::TouchId;
-        let approve_label = if sheet.waiting {
+        let busy = sheet.busy();
+        let approve_label = if busy {
             text(SETTINGS_EXTENSIONS_WAITING)
         } else if touch {
             text(SETTINGS_EXTENSIONS_APPROVE_TOUCH_ID)
@@ -279,7 +334,7 @@ impl SettingsWindow {
             .gap_3()
             .bg(ui.elevated)
             .occlude()
-            .child(div().id("probe-sheet-body").max_h(max_h).overflow_y_scroll().child(body))
+            .child(scrolling_body(ui, sheet, body, max_h))
             .child(fingerprint)
             .child(div().text_caption().text_color(ui.muted).child(if touch {
                 text(SETTINGS_EXTENSIONS_CONFIRM_TOUCH_ID)
@@ -299,6 +354,7 @@ impl SettingsWindow {
                             .outline()
                             .small()
                             .label(text(SETTINGS_EXTENSIONS_CANCEL))
+                            .disabled(busy)
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.close_probe_sheet(cx);
                             })),
@@ -308,7 +364,8 @@ impl SettingsWindow {
                             .primary()
                             .small()
                             .label(approve_label)
-                            .loading(sheet.waiting)
+                            .loading(busy)
+                            .disabled(busy)
                             .on_click(cx.listener(|this, _, _, cx| this.approve_probe(cx))),
                     ),
             );
@@ -325,16 +382,41 @@ impl SettingsWindow {
                 .bg(ui.shadow)
                 .occlude()
                 .on_click(cx.listener(|this, _, _, cx| {
-                    // A click beside the sheet leaves it, but not while the system asks.
-                    if !this.extensions.sheet.as_ref().is_some_and(|s| s.waiting) {
-                        this.close_probe_sheet(cx);
-                    }
+                    this.close_probe_sheet(cx);
                 }))
                 .child(card)
                 .into_any_element(),
         )
     }
 }
+
+/// The sheet's body in a box that scrolls, with room under its last line and a fade over the bottom edge
+/// while there is more below, so a card cut by the edge reads as "scroll" and is fully reachable.
+fn scrolling_body(ui: crate::settings::UiColors, sheet: &Sheet, body: Div, max_h: Pixels) -> Div {
+    let more = sheet.scroll.max_offset().y > px(0.0)
+        && -sheet.scroll.offset().y < sheet.scroll.max_offset().y - px(1.0);
+    let clear = Hsla { a: 0.0, ..ui.elevated };
+    div()
+        .relative()
+        .child(
+            div()
+                .id("probe-sheet-body")
+                .max_h(max_h)
+                .overflow_y_scroll()
+                .track_scroll(&sheet.scroll)
+                .child(body.pb_4()),
+        )
+        .when(more, |d| {
+            d.child(div().absolute().left_0().right_0().bottom_0().h(px(FADE_H)).bg(linear_gradient(
+                180.0,
+                linear_color_stop(clear, 0.0),
+                linear_color_stop(ui.elevated, 1.0),
+            )))
+        })
+}
+
+/// How tall the fade over the sheet body's bottom edge is.
+const FADE_H: f32 = 32.0;
 
 /// What differs from the approval the Probe is `Changed` against.
 fn changes_block(ui: crate::settings::UiColors, changes: &Changes) -> Div {
@@ -387,13 +469,14 @@ fn permission_row(
     let switch = style::toggle(("probe-grant", ix), granted, move |_, _, cx| {
         let permission = toggled.clone();
         page.update(cx, |page, cx| {
-            if let Some(sheet) = page.extensions.sheet.as_mut() {
+            if let Some(sheet) = page.extensions.sheet.as_mut().filter(|sheet| !sheet.busy()) {
                 sheet.grants.toggle(&permission);
             }
             cx.notify();
         })
         .ok();
     })
+    .disabled(sheet.busy())
     .accessibility_label(describe(permission));
     let program = (permission.key == "process").then(|| program_lines(ui, code_font, sheet, permission));
     div()

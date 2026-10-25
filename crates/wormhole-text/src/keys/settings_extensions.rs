@@ -72,6 +72,20 @@ pub const SETTINGS_EXTENSIONS_APPROVE: Key = Key::new(334);
 pub const SETTINGS_EXTENSIONS_APPROVE_TOUCH_ID: Key = Key::new(335);
 /// "Waiting for approval…"
 pub const SETTINGS_EXTENSIONS_WAITING: Key = Key::new(336);
+/// "The folder's name is not a Probe id."
+pub const SETTINGS_EXTENSIONS_ERR_BAD_NAME: Key = Key::new(338);
+/// "A Probe is a folder of its own here, not a link."
+pub const SETTINGS_EXTENSIONS_ERR_LINK: Key = Key::new(339);
+/// "It runs code, which this version of Wormhole does not support yet."
+pub const SETTINGS_EXTENSIONS_ERR_NEEDS_CODE: Key = Key::new(342);
+/// "The yes was for another version of it. Open the sheet again."
+pub const SETTINGS_EXTENSIONS_ERR_UNCONFIRMED: Key = Key::new(345);
+/// "Its approved copy is missing, so it is off until you approve it again."
+pub const SETTINGS_EXTENSIONS_COPY_MISSING: Key = Key::new(346);
+/// "Its approved copy is not what you approved, so it is off until you approve it again."
+pub const SETTINGS_EXTENSIONS_COPY_DIFFERS: Key = Key::new(348);
+/// "Forget approval"
+pub const SETTINGS_EXTENSIONS_FORGET: Key = Key::new(349);
 
 /// ```text
 /// Probes live in { $folder }, one folder each with a probe.toml in it.
@@ -102,7 +116,7 @@ pub fn settings_extensions_identity(id: &str, version: &str, author: &str) -> St
 }
 
 /// ```text
-/// Can't be enabled: { $reason }
+/// { $reason }
 /// ```
 pub fn settings_extensions_invalid_reason(reason: &str) -> String {
     crate::active::message(303, &[("reason", Arg::Str(reason))])
@@ -225,4 +239,39 @@ pub fn settings_extensions_files_fingerprint(count: &str, fingerprint: &str) -> 
 /// ```
 pub fn settings_extensions_auth_reason(name: &str) -> String {
     crate::active::message(337, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// Its probe.toml says its id is { $id }, not the folder's name.
+/// ```
+pub fn settings_extensions_err_id_mismatch(id: &str) -> String {
+    crate::active::message(340, &[("id", Arg::Str(id))])
+}
+
+/// ```text
+/// { $reason }
+/// ```
+pub fn settings_extensions_err_read(reason: &str) -> String {
+    crate::active::message(341, &[("reason", Arg::Str(reason))])
+}
+
+/// ```text
+/// Its files could not be copied for it to run from: { $reason }
+/// ```
+pub fn settings_extensions_err_copy(reason: &str) -> String {
+    crate::active::message(343, &[("reason", Arg::Str(reason))])
+}
+
+/// ```text
+/// The approval could not be saved: { $reason }
+/// ```
+pub fn settings_extensions_err_store(reason: &str) -> String {
+    crate::active::message(344, &[("reason", Arg::Str(reason))])
+}
+
+/// ```text
+/// Its approved copy cannot be read ({ $why }), so it is off until you approve it again.
+/// ```
+pub fn settings_extensions_copy_unreadable(why: &str) -> String {
+    crate::active::message(347, &[("why", Arg::Str(why))])
 }

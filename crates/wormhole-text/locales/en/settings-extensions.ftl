@@ -42,8 +42,8 @@ settings-extensions-changed-note = Its files changed since you approved it, so i
 
 settings-extensions-unsupported-note = It runs code, which this version of Wormhole does not support yet.
 
-# { $reason } is why the Probe can't be turned on, in English.
-settings-extensions-invalid-reason = Can't be enabled: { $reason }
+# The reason under a Probe that can't be turned on (its state already says so). { $reason } is in English.
+settings-extensions-invalid-reason = { $reason }
 
 settings-extensions-approve-again = Approve again…
 
@@ -111,3 +111,32 @@ settings-extensions-waiting = Waiting for approval…
 
 # The reason the system's Touch ID dialog shows. { $name } is the Probe's name.
 settings-extensions-auth-reason = turn on the Probe “{ $name }” and let it do what it asks
+
+## Why something did not work (the detail after "was not turned on" and "cannot be turned on", and under a row)
+
+settings-extensions-err-bad-name = The folder's name is not a Probe id.
+settings-extensions-err-link = A Probe is a folder of its own here, not a link.
+
+# { $id } is the id probe.toml gives the Probe.
+settings-extensions-err-id-mismatch = Its probe.toml says its id is { $id }, not the folder's name.
+
+# { $reason } is what reading the folder said, in English.
+settings-extensions-err-read = { $reason }
+
+settings-extensions-err-needs-code = It runs code, which this version of Wormhole does not support yet.
+
+# { $reason } is what the system said, in English.
+settings-extensions-err-copy = Its files could not be copied for it to run from: { $reason }
+# As above, for the approvals file.
+settings-extensions-err-store = The approval could not be saved: { $reason }
+
+settings-extensions-err-unconfirmed = The yes was for another version of it. Open the sheet again.
+
+# Under a row whose approved copy is not what was approved.
+settings-extensions-copy-missing = Its approved copy is missing, so it is off until you approve it again.
+# { $why } is what reading the copy said, in English.
+settings-extensions-copy-unreadable = Its approved copy cannot be read ({ $why }), so it is off until you approve it again.
+settings-extensions-copy-differs = Its approved copy is not what you approved, so it is off until you approve it again.
+
+# The button on a row that is not on but still has an approval stored: it forgets it and deletes the copy.
+settings-extensions-forget = Forget approval

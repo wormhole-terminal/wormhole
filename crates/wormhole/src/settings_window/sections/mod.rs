@@ -29,6 +29,7 @@ mod appearance;
 mod cli_tool;
 mod extensions;
 mod extensions_sheet;
+mod extensions_text;
 mod feature_flags;
 mod fonts;
 mod git;

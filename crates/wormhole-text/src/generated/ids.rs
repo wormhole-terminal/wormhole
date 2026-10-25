@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) static IDS: [&str; 1099] = [
+pub(crate) static IDS: [&str; 1111] = [
     "agent-sheet-title", "agent-sheet-title-scripts", "agent-sheet-wants-read",
     "agent-sheet-wants-type", "agent-sheet-wants-run", "agent-sheet-wants-open",
     "agent-sheet-wants-close", "agent-sheet-detail", "agent-sheet-detail-scripts",
@@ -118,7 +118,11 @@ pub(crate) static IDS: [&str; 1099] = [
     "settings-extensions-files-changed", "settings-extensions-now-asks", "settings-extensions-no-longer-asks",
     "settings-extensions-files-fingerprint", "settings-extensions-confirm-touch-id", "settings-extensions-confirm-click",
     "settings-extensions-cancel", "settings-extensions-approve", "settings-extensions-approve-touch-id",
-    "settings-extensions-waiting", "settings-extensions-auth-reason", "settings-section-feature-flags",
+    "settings-extensions-waiting", "settings-extensions-auth-reason", "settings-extensions-err-bad-name",
+    "settings-extensions-err-link", "settings-extensions-err-id-mismatch", "settings-extensions-err-read",
+    "settings-extensions-err-needs-code", "settings-extensions-err-copy", "settings-extensions-err-store",
+    "settings-extensions-err-unconfirmed", "settings-extensions-copy-missing", "settings-extensions-copy-unreadable",
+    "settings-extensions-copy-differs", "settings-extensions-forget", "settings-section-feature-flags",
     "settings-section-feature-flags.intro", "settings-feature-flags-feature-flags", "settings-feature-flags-feature-flags.description",
     "settings-feature-flags-feature-flags.keywords", "settings-section-fonts", "settings-section-fonts.intro",
     "settings-fonts-font-specimen", "settings-fonts-font-specimen.keywords", "settings-fonts-font-terminal",
@@ -376,7 +380,7 @@ pub(crate) static IDS: [&str; 1099] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 1099] = [
+pub(crate) const TAKES_ARGS: [bool; 1111] = [
     true, false, false, false, false, false, false, false, false, true, false, false,
     false, false, false, false, false, false, false, false, false, true, true, false,
     false, false, false, false, true, true, false, false, false, false, true, true,
@@ -405,7 +409,8 @@ pub(crate) const TAKES_ARGS: [bool; 1099] = [
     false, false, false, true, false, true, true, true, true, true, false, false,
     true, true, true, false, true, false, true, false, true, true, false, false,
     false, true, false, false, true, true, true, false, false, false, false, false,
-    false, true, false, false, false, false, false, false, false, false, false, false,
+    false, true, false, false, true, true, false, true, true, false, false, true,
+    false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, true, true, true, true, true, true,

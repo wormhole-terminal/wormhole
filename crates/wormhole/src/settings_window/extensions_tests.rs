@@ -47,7 +47,7 @@ struct Tidy(DataRoot);
 
 impl Drop for Tidy {
     fn drop(&mut self) {
-        let _ = approval::sweep(&self.0, &Default::default());
+        let _ = approval::sweep(&self.0, Some(&Default::default()));
     }
 }
 
@@ -66,6 +66,10 @@ fn scan(cx: &mut TestAppContext, page: &Entity<SettingsWindow>) {
     cx.run_until_parked();
 }
 
+fn forgettable(cx: &mut TestAppContext, page: &Entity<SettingsWindow>, folder: &str) -> Option<bool> {
+    page.read_with(cx, |page, _| page.extensions.can_forget(folder))
+}
+
 fn sheet_open(cx: &mut TestAppContext, page: &Entity<SettingsWindow>) -> bool {
     page.read_with(cx, |page, _| page.extensions.sheet.is_some())
 }
@@ -74,6 +78,11 @@ fn open_sheet(cx: &mut TestAppContext, page: &Entity<SettingsWindow>, id: &str) 
     let id = id.to_string();
     cx.update(|cx| page.update(cx, |page, cx| page.open_probe_sheet(id, cx)));
     cx.run_until_parked();
+}
+
+/// Approve pressed, without the system's dialog: what comes back is the test's to say.
+fn press(cx: &mut TestAppContext, page: &Entity<SettingsWindow>) {
+    cx.update(|cx| page.update(cx, |page, _| assert!(page.press_approve().is_some())));
 }
 
 fn approvals_file() -> PathBuf {
@@ -130,8 +139,7 @@ fn a_click_approval_turns_a_probe_on_and_off_again(cx: &mut TestAppContext) {
 
     assert!(!sheet_open(cx, &page));
     assert_eq!(state(cx, &page, "quiet-one"), Some(ProbeState::On));
-    let store = ApprovalStore::load(&root);
-    store.snapshot(&root, "quiet-one").expect("approved").verify().expect("the copy is what was approved");
+    approval::runnable(&root, "quiet-one").expect("on, and the copy is what was approved");
 
     // Off needs no question, and takes the copy with it.
     cx.update(|cx| page.update(cx, |page, cx| page.turn_probe_off("quiet-one".into(), "Quiet".into(), cx)));
@@ -163,12 +171,15 @@ fn cancelled_touch_id_changes_nothing_and_a_yes_records_the_approval(cx: &mut Te
     assert!(!approvals_file().exists(), "nothing was written");
 
     // A failed one says so and changes nothing either.
+    press(cx, &page);
     cx.update(|cx| page.update(cx, |page, cx| page.finish_approval(Err(AuthError::Failed("no".into())), cx)));
     cx.run_until_parked();
     assert!(sheet_open(cx, &page));
     assert_eq!(state(cx, &page, "acme-tools"), Some(ProbeState::Off));
+    assert!(page.read_with(cx, |page, _| page.extensions.sheet.as_ref().is_some_and(|s| s.has_error())));
 
     // A yes records exactly what the sheet showed.
+    press(cx, &page);
     cx.update(|cx| page.update(cx, |page, cx| page.finish_approval(Ok(()), cx)));
     cx.run_until_parked();
     assert!(!sheet_open(cx, &page));
@@ -278,4 +289,94 @@ fn removing_a_probe_forgets_its_approval(cx: &mut TestAppContext) {
     assert_eq!(state(cx, &page, "quiet-one"), None);
     assert!(ApprovalStore::load(&root).get("quiet-one").is_none());
     assert!(!root.probes_approved_dir().join("quiet-one").exists());
+}
+
+#[gpui_kit::test]
+fn what_is_approved_is_what_stood_on_the_sheet_when_approve_was_pressed(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "what_is_approved_is_what_stood_on_the_sheet_when_approve_was_pressed") {
+        return;
+    }
+    start(cx, 1);
+    let root = DataRoot::current();
+    let _tidy = Tidy(root.clone());
+    install(&root);
+    let page = open(cx);
+    open_sheet(cx, &page, "acme-tools");
+
+    press(cx, &page);
+    // While the system asks, a switch is flipped (a click, a script): it is not what Approve was pressed with.
+    cx.update(|cx| {
+        page.update(cx, |page, _| {
+            let sheet = page.extensions.sheet.as_mut().expect("open");
+            let notify = sheet
+                .request()
+                .summary()
+                .permissions
+                .iter()
+                .find(|p| p.key == "notify")
+                .expect("notify")
+                .clone();
+            sheet.grants_mut().set(&notify, false);
+        })
+    });
+    // And the sheet does not close under the question.
+    assert!(cx.update(|cx| page.update(cx, |page, cx| page.close_probe_sheet(cx))), "Esc is spent");
+    assert!(sheet_open(cx, &page));
+    cx.update(|cx| page.update(cx, |page, cx| page.finish_approval(Ok(()), cx)));
+    cx.run_until_parked();
+
+    let store = ApprovalStore::load(&root);
+    let approval = store.get("acme-tools").expect("approved");
+    assert_eq!(approval.granted, approval.declared, "every one, as they were at the press");
+    assert_eq!(approval.granted.len(), 2);
+}
+
+#[gpui_kit::test]
+fn an_approval_of_a_probe_that_broke_can_be_forgotten(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "an_approval_of_a_probe_that_broke_can_be_forgotten") {
+        return;
+    }
+    start(cx, 1);
+    let root = DataRoot::current();
+    let _tidy = Tidy(root.clone());
+    install(&root);
+    let page = open(cx);
+    open_sheet(cx, &page, "quiet-one");
+    cx.update(|cx| page.update(cx, |page, cx| page.approve_probe(cx)));
+    cx.run_until_parked();
+    assert_eq!(forgettable(cx, &page, "quiet-one"), Some(false), "on: the switch turns it off");
+
+    fs::write(root.probes_dir().join("quiet-one/probe.toml"), "[probe\n").expect("break it");
+    scan(cx, &page);
+    assert!(matches!(state(cx, &page, "quiet-one"), Some(ProbeState::Invalid(_))));
+    assert_eq!(forgettable(cx, &page, "quiet-one"), Some(true), "the row offers to forget it");
+
+    cx.update(|cx| page.update(cx, |page, cx| page.turn_probe_off("quiet-one".into(), "Quiet".into(), cx)));
+    cx.run_until_parked();
+    assert_eq!(forgettable(cx, &page, "quiet-one"), Some(false));
+    assert!(ApprovalStore::load(&root).get("quiet-one").is_none());
+    assert!(!root.probes_approved_dir().join("quiet-one").exists());
+}
+
+#[gpui_kit::test]
+fn a_probe_whose_copy_was_tampered_with_is_not_on(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "a_probe_whose_copy_was_tampered_with_is_not_on") {
+        return;
+    }
+    start(cx, 1);
+    let root = DataRoot::current();
+    let _tidy = Tidy(root.clone());
+    install(&root);
+    let page = open(cx);
+    open_sheet(cx, &page, "quiet-one");
+    cx.update(|cx| page.update(cx, |page, cx| page.approve_probe(cx)));
+    cx.run_until_parked();
+
+    let copy = root.probes_approved_dir().join("quiet-one");
+    wormhole_core::platform::fs::set_mode(&copy, 0o700).expect("chmod");
+    wormhole_core::platform::fs::set_mode(&copy.join("probe.toml"), 0o600).expect("chmod");
+    fs::write(copy.join("probe.toml"), "tampered").expect("tamper");
+    scan(cx, &page);
+    assert_eq!(state(cx, &page, "quiet-one"), Some(ProbeState::Changed), "off until approved again");
+    assert_eq!(forgettable(cx, &page, "quiet-one"), Some(true));
 }

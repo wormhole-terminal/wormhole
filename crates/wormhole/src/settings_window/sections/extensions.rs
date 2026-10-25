@@ -10,7 +10,7 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::Button;
+use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::ipc::control::COMMAND_NAME;
@@ -26,6 +26,7 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use super::extensions_sheet::Sheet;
+use super::extensions_text::verify_text;
 use crate::settings::UiColors;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{Section, SettingsWindow, ui};
@@ -54,6 +55,15 @@ pub(in crate::settings_window) struct Extensions {
 }
 
 impl Extensions {
+    /// Whether the row of `folder` offers to forget its approval.
+    #[cfg(test)]
+    pub(in crate::settings_window) fn can_forget(&self, folder: &str) -> Option<bool> {
+        match self.listing.as_ref()? {
+            Listing::Probes(entries) => entries.iter().find(|e| e.folder == folder).map(|e| e.can_forget()),
+            Listing::TooMany => None,
+        }
+    }
+
     /// How many folders the last read listed; `None` before it finished or when there were too many.
     #[cfg(test)]
     pub(in crate::settings_window) fn listed(&self) -> Option<usize> {
@@ -74,15 +84,15 @@ impl Extensions {
 }
 
 /// The folder read and tidied: approvals and copies of Probes that are gone are forgotten, but only
-/// after a read that listed the whole folder.
+/// after a read that saw the whole folder.
 fn read_listing(root: &DataRoot) -> Listing {
     match approval::list(root) {
-        Ok(entries) => {
-            let present = entries.iter().map(|entry| entry.folder.clone()).collect();
-            if let Err(err) = approval::sweep(root, &present) {
+        Ok(listing) => {
+            // Approvals of Probes that are gone are forgotten only after a read that saw the whole folder.
+            if let Err(err) = approval::sweep(root, listing.present().as_ref()) {
                 tracing::warn!("tidying the approved Probes: {err}");
             }
-            Listing::Probes(entries)
+            Listing::Probes(listing.entries)
         }
         Err(_) => Listing::TooMany,
     }
@@ -257,8 +267,25 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
                 this.probe_switched(probe_id.clone(), name.clone(), true, cx)
             }))
     });
+    let forget = entry.can_forget().then(|| {
+        let (probe_id, name) = (entry.folder.clone(), title.clone());
+        Button::new(SharedString::from(format!("{id}-forget")))
+            .ghost()
+            .small()
+            .label(text(SETTINGS_EXTENSIONS_FORGET))
+            .on_click(
+                cx.listener(move |this, _, _, cx| this.turn_probe_off(probe_id.clone(), name.clone(), cx)),
+            )
+    });
     let note = match state {
-        ProbeState::Changed => Some(div().child(text(SETTINGS_EXTENSIONS_CHANGED_NOTE)).into_any_element()),
+        ProbeState::Changed => Some(
+            div()
+                .child(match &entry.copy_problem {
+                    Some(problem) => verify_text(problem),
+                    None => text(SETTINGS_EXTENSIONS_CHANGED_NOTE).to_string(),
+                })
+                .into_any_element(),
+        ),
         ProbeState::Unsupported => {
             Some(div().child(text(SETTINGS_EXTENSIONS_UNSUPPORTED_NOTE)).into_any_element())
         }
@@ -319,6 +346,7 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
                             d.child(div().text_caption().text_color(ui.muted).child(description))
                         }),
                 )
+                .children(forget)
                 .children(again)
                 .child(switch),
         )

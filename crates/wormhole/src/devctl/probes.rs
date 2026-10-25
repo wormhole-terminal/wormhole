@@ -40,6 +40,10 @@ pub(super) fn off(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 /// One line per folder of the Probes folder, `probe <folder> <on|off|changed|invalid|unsupported>` with the
 /// reason after `invalid`, and one for an approval sheet that is open. Nothing while the flag is off.
+///
+/// This reads the Probes folder on the main thread, which the page never does: it is a test tool, run by a script
+/// that waits for the answer, over the handful of folders of a scratch data dir, and `state` already reads the
+/// whole window in the same call. The page's own read is on the background executor.
 pub(super) fn state(cx: &App) -> String {
     if !settings(cx).feature_enabled(FeatureFlag::Probes) {
         return String::new();
@@ -47,7 +51,7 @@ pub(super) fn state(cx: &App) -> String {
     let mut out = String::new();
     match approval::list(&DataRoot::current()) {
         Ok(entries) => {
-            for entry in entries {
+            for entry in entries.entries {
                 let word = match &entry.state {
                     ProbeState::Off => "off".to_string(),
                     ProbeState::On => "on".to_string(),
