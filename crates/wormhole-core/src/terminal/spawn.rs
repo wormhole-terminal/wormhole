@@ -160,8 +160,8 @@ mod profile_tests {
         let mut profile = Profile::new(ProfileId::parse("work").expect("an id"), "Work", GroupColor::Cyan);
         profile.env.insert("AWS_PROFILE".into(), "acme-prod".into());
         profile.env.insert("PROJECT_FLAG".into(), "from-profile".into());
-        profile.git.name = "Benny".into();
-        profile.git.email = "benny@acme.dev".into();
+        profile.git.name = "Ada".into();
+        profile.git.email = "ada@example.com".into();
         profile.agent_logins = vec![AgentLogin { agent: AgentId::Claude, dir: "/logins/claude-work".into() }];
         profile.start_dir = "/tmp".into();
         profile
@@ -199,7 +199,7 @@ mod profile_tests {
         }
         let screen = pty.screen_text();
         assert!(
-            screen.contains("[acme-prod] [benny@acme.dev] [/logins/claude-work] [work] [real-tab]"),
+            screen.contains("[acme-prod] [ada@example.com] [/logins/claude-work] [work] [real-tab]"),
             "{screen}"
         );
     }

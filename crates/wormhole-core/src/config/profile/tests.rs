@@ -70,8 +70,8 @@ fn the_list_round_trips_and_remembers_the_active_profile() {
         p.start_dir = "~/work".into();
         p.folders = vec!["~/work".into(), "~/clients".into()];
         p.env.insert("AWS_PROFILE".into(), "acme-prod".into());
-        p.git.name = "Benny".into();
-        p.git.email = "benny@acme.dev".into();
+        p.git.name = "Ada".into();
+        p.git.email = "ada@example.com".into();
         p.agent_logins = vec![AgentLogin { agent: AgentId::Claude, dir: "~/.claude-work".into() }];
     })
     .expect("edits");
@@ -314,9 +314,9 @@ fn edits_that_are_not_allowed_leave_the_profile_alone() {
 fn a_terminal_gets_the_environment_identity_and_logins_of_its_profile() {
     let mut profile = Profile::new(id("work"), "Work", GroupColor::Cyan);
     profile.env.insert("AWS_PROFILE".into(), "acme-prod".into());
-    profile.env.insert("GIT_COMMITTER_EMAIL".into(), "ci@acme.dev".into());
-    profile.git.name = "Benny".into();
-    profile.git.email = "benny@acme.dev".into();
+    profile.env.insert("GIT_COMMITTER_EMAIL".into(), "ci@example.com".into());
+    profile.git.name = "Ada".into();
+    profile.git.email = "ada@example.com".into();
     profile.agent_logins = vec![
         AgentLogin { agent: AgentId::Claude, dir: "~/.claude-work".into() },
         AgentLogin { agent: AgentId::Codex, dir: "/opt/codex".into() },
@@ -324,10 +324,10 @@ fn a_terminal_gets_the_environment_identity_and_logins_of_its_profile() {
     let env = profile.terminal_env_with_home(Some(Path::new("/Users/me")));
     let get = |k: &str| env.get(k).map(String::as_str);
     assert_eq!(get("AWS_PROFILE"), Some("acme-prod"));
-    assert_eq!(get("GIT_AUTHOR_NAME"), Some("Benny"));
-    assert_eq!(get("GIT_COMMITTER_NAME"), Some("Benny"));
-    assert_eq!(get("GIT_AUTHOR_EMAIL"), Some("benny@acme.dev"));
-    assert_eq!(get("GIT_COMMITTER_EMAIL"), Some("ci@acme.dev"), "what the person wrote wins");
+    assert_eq!(get("GIT_AUTHOR_NAME"), Some("Ada"));
+    assert_eq!(get("GIT_COMMITTER_NAME"), Some("Ada"));
+    assert_eq!(get("GIT_AUTHOR_EMAIL"), Some("ada@example.com"));
+    assert_eq!(get("GIT_COMMITTER_EMAIL"), Some("ci@example.com"), "what the person wrote wins");
     assert_eq!(get("CLAUDE_CONFIG_DIR"), Some("/Users/me/.claude-work"));
     assert_eq!(get("CODEX_HOME"), Some("/opt/codex"));
     assert_eq!(login_env_var(AgentId::Aider), None);
