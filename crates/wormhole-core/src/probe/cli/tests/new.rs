@@ -103,6 +103,56 @@ fn the_folder_of_installed_probes_is_never_scaffolded_in() {
 }
 
 #[test]
+fn a_probes_folder_that_is_not_there_yet_is_not_made_into_a_probe() {
+    let tmp = TempDir::new().expect("tempdir");
+    let data = tmp.path().join("data");
+    fs::create_dir(&data).expect("mkdir");
+    let probes = data.join("probes");
+    let env = Env { cwd: tmp.path(), data_probes: Some(&probes), command: "wh" };
+    let words = |args: &[&str]| args.iter().map(ToString::to_string).collect::<Vec<_>>();
+    // The id is the folder's name: `probes` made in the data folder is where installed Probes go.
+    let out = run(&words(&["new", "probes", "--dir", "data"]), &env);
+    assert_eq!(out.code, 2, "{out:?}");
+    assert!(out.stderr.contains("installed Probes live"), "{}", out.stderr);
+    assert!(!probes.exists());
+    // Through a link to the data folder, and through `..`, it is the same place.
+    crate::platform::fs::symlink(&data, tmp.path().join("shortcut")).expect("link");
+    for dir in ["shortcut", "data/../data"] {
+        assert_eq!(run(&words(&["new", "probes", "--dir", dir]), &env).code, 2, "{dir}");
+    }
+    assert_eq!(fs::read_dir(&data).expect("lists").count(), 0);
+    // Another name in the data folder is no concern of the guard.
+    assert_eq!(run(&words(&["new", "other", "--dir", "data"]), &env).code, 0);
+}
+
+#[test]
+fn the_next_step_names_the_folder_as_it_is_reached_from_here() {
+    let tmp = TempDir::new().expect("tempdir");
+    fs::create_dir(tmp.path().join("work")).expect("mkdir");
+    let out = go(tmp.path(), &["new", "xx", "--dir", "work"]);
+    assert!(out.stdout.contains("next: cd work/xx && wh probe validate"), "{}", out.stdout);
+    let out = go(tmp.path(), &["new", "yy"]);
+    assert!(out.stdout.contains("next: cd yy && wh probe validate"), "{}", out.stdout);
+    // Outside the working folder it is the whole path.
+    let elsewhere = TempDir::new().expect("tempdir");
+    let abs = elsewhere.path().to_str().expect("utf-8");
+    let out = go(tmp.path(), &["new", "zz", "--dir", abs]);
+    assert!(out.stdout.contains(&format!("next: cd {abs}/zz && wh probe validate")), "{}", out.stdout);
+}
+
+#[test]
+fn a_folder_with_a_space_or_a_hostile_name_is_one_word_and_written_out() {
+    let tmp = TempDir::new().expect("tempdir");
+    fs::create_dir(tmp.path().join("my work")).expect("mkdir");
+    fs::create_dir(tmp.path().join("bad\u{1b}[2J")).expect("mkdir");
+    let out = go(tmp.path(), &["new", "xx", "--dir", "my work"]);
+    assert!(out.stdout.contains("next: cd 'my work/xx' && "), "{}", out.stdout);
+    let out = go(tmp.path(), &["new", "xx", "--dir", "bad\u{1b}[2J"]);
+    assert!(out.stdout.contains("next: cd 'bad\\u{1b}[2J/xx' && "), "{}", out.stdout);
+    assert!(!out.stdout.contains('\u{1b}'));
+}
+
+#[test]
 fn the_command_is_named_as_the_caller_calls_it() {
     let tmp = TempDir::new().expect("tempdir");
     let env = Env { cwd: tmp.path(), data_probes: None, command: "Wormhole" };
