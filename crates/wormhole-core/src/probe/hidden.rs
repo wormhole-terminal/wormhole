@@ -5,6 +5,10 @@
 //! (zero-width and other invisible characters), or carry text only a language model reads (Unicode
 //! tags). The set is the one project trust writes out in its approval dialog
 //! (`project::trust::hidden`); a Probe's text is refused when it has one, rather than shown escaped.
+//! Where text of a Probe must be printed all the same (the command line names what it refused), it
+//! goes through [`reveal`], which writes the characters out.
+
+use std::borrow::Cow;
 
 /// Whether `c` is a control character or one that draws as nothing or reorders what is around it.
 pub(crate) fn is_hidden(c: char) -> bool {
@@ -18,6 +22,25 @@ pub(crate) fn is_hidden(c: char) -> bool {
 /// Whether `text` holds a character [`is_hidden`] names.
 pub(crate) fn has_hidden(text: &str) -> bool {
     text.chars().any(is_hidden)
+}
+
+/// `text` with every [`is_hidden`] character written out (`\n`, `\t`, `\u{202e}`), so that text a Probe
+/// or a folder chose can be printed without driving the terminal it is printed on.
+pub(crate) fn reveal(text: &str) -> Cow<'_, str> {
+    if !has_hidden(text) {
+        return Cow::Borrowed(text);
+    }
+    let mut out = String::with_capacity(text.len() + 8);
+    for c in text.chars() {
+        match c {
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if is_hidden(c) => out.push_str(&format!("\\u{{{:x}}}", u32::from(c))),
+            c => out.push(c),
+        }
+    }
+    Cow::Owned(out)
 }
 
 #[cfg(test)]
@@ -45,5 +68,13 @@ mod tests {
             assert!(!is_hidden(c), "{c}");
         }
         assert!(!has_hidden("Acme tools — deploy"));
+    }
+
+    #[test]
+    fn revealing_writes_hidden_characters_out_and_leaves_the_rest() {
+        assert_eq!(reveal("Acme tools — deploy"), "Acme tools — deploy");
+        assert!(matches!(reveal("plain"), Cow::Borrowed(_)));
+        assert_eq!(reveal("a\u{1b}[2Jb\u{202e}c\nd\te\r"), "a\\u{1b}[2Jb\\u{202e}c\\nd\\te\\r");
+        assert_eq!(reveal("\u{e0041}"), "\\u{e0041}");
     }
 }

@@ -64,7 +64,7 @@ pub(super) struct Where<'a> {
 }
 
 /// `$n` as a whole argument: capture `n` (0 is the whole match).
-fn capture_index(arg: &str) -> Option<usize> {
+pub(crate) fn capture_index(arg: &str) -> Option<usize> {
     let digits = arg.strip_prefix('$')?;
     (!digits.is_empty() && digits.len() <= 2 && digits.bytes().all(|b| b.is_ascii_digit()))
         .then(|| digits.parse().ok())

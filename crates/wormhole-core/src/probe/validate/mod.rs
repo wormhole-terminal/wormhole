@@ -29,6 +29,10 @@ use std::fmt;
 
 use super::read::ProbeFolder;
 
+// What `rules` compiles with must be what `validate` checked with, so these are shared, not copied.
+pub(crate) use argv::capture_index;
+pub(crate) use identity::MAX_RULES;
+pub(crate) use pattern::SIZE_LIMIT;
 pub use permissions::{Combination, Confirmation, DeclaredPermission, ProgramClass, ProgramNote, Summary};
 
 /// How much a finding matters.

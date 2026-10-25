@@ -10,6 +10,7 @@
 //! - `read`: a folder, once, through `storage::files` with every cap and link rule.
 //! - `fingerprint`: the hash an approval is bound to.
 //! - `validate`: findings and the summary of what a Probe would be allowed to do.
+//! - `rules`: a Probe's text rules compiled and run over a line, as `probe test` and the terminal do.
 //! - `scan`: the Probes in `<data dir>/probes/`.
 //!
 //! A Probe's folder is hostile input, so everything is read through `storage::files`. This domain
@@ -20,6 +21,7 @@ pub mod fingerprint;
 mod hidden;
 pub mod manifest;
 pub mod read;
+pub mod rules;
 pub mod scan;
 pub mod validate;
 
