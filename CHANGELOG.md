@@ -70,6 +70,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   hosts keep running, as with ⌘Q.
 - Closing Settings while it records a shortcut no longer leaves the global hotkey switched off until
   Settings opens again, and the menu bar no longer shows it as set while it is off.
+- The View menu's Project line no longer shows, greyed out, while project folders are off.
 
 ### Security
 

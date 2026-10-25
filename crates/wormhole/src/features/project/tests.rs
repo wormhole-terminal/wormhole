@@ -770,12 +770,17 @@ fn the_menu_line_needs_a_folder_and_the_feature(cx: &mut TestAppContext) {
     let disabled = |cx: &mut TestAppContext| {
         read_cx(cx, &window, |ws, cx| ws.menu_state(cx).disabled.contains(&ActionId::ShowProject))
     };
+    let hidden = |cx: &mut TestAppContext| {
+        read_cx(cx, &window, |ws, cx| ws.menu_state(cx).hidden.contains(&ActionId::ShowProject))
+    };
     assert!(disabled(cx), "no folder");
+    assert!(!hidden(cx), "the feature is on: the line is there, greyed out");
     let dir = project("menu", &[]);
     drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
     assert!(!disabled(cx));
     flag(cx, false);
     assert!(disabled(cx), "the feature off");
+    assert!(hidden(cx), "and the line is left out of the menus, as an off feature's actions are");
 }
 
 /// The project entity keeps an entry for exactly the terminals of the window: made with it, added with a

@@ -237,6 +237,17 @@ mod tests {
         assert!(!hidden.contains(&ShowChanges), "an always-on feature hides nothing");
     }
 
+    /// The Project tab's line is the feature's, as History's and Notes' are: with project folders off (a
+    /// release build today) the menus leave it out instead of showing it greyed.
+    #[test]
+    fn project_folders_off_hide_the_project_tabs_line() {
+        use crate::keys::keymap::ActionId::ShowProject;
+        let hides = |mask: FeatureMask| mask.hidden_actions().any(|id| id == ShowProject);
+        assert!(hides(FeatureMask::resolve_in(&settings_with(&[("project_folders", false)]), FlagMode::Dev)));
+        assert!(hides(FeatureMask::resolve_in(&settings_with(&[]), FlagMode::Release)), "as a release ships");
+        assert!(!hides(FeatureMask::resolve_in(&settings_with(&[("project_folders", true)]), FlagMode::Dev)));
+    }
+
     #[test]
     fn a_switch_turns_an_optional_feature_off_and_never_an_always_on_one() {
         let all = FeatureMask::resolve_in(&settings_with(&[]), FlagMode::Dev);
