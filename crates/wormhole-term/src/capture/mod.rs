@@ -50,7 +50,9 @@ pub enum CaptureRange {
 /// Why nothing was read.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CaptureError {
-    /// The shell has no integration, a full-screen program has the screen, or no command has run.
+    /// The shell has no integration, so its commands can't be told apart.
+    NoIntegration,
+    /// A full-screen program has the screen, or no command has run.
     NoBlock,
     /// The block's rows are no longer on the grid.
     BlockGone,
@@ -59,6 +61,7 @@ pub enum CaptureError {
 impl std::fmt::Display for CaptureError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
+            CaptureError::NoIntegration => "this shell has no integration, so it has no command blocks",
             CaptureError::NoBlock => "no command block to read",
             CaptureError::BlockGone => "that block has left the history",
         })
@@ -225,6 +228,9 @@ impl ScreenReader {
             }
             CaptureRange::Lines { from, to } => (from.max(top), to.min(bottom)),
             CaptureRange::Block(id) => {
+                if self.shared.at_prompt().is_none() {
+                    return Err(CaptureError::NoIntegration);
+                }
                 let log = self.shared.commands();
                 let found = match id {
                     Some(id) => crate::blocks::block(&term, id, &log),

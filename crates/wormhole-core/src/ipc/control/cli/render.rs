@@ -6,9 +6,11 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
+use super::read_text::{blocks_text, read_text};
 use crate::ipc::control::printable::for_terminal;
+use crate::ipc::control::read::{Blocks, Read};
 use crate::ipc::control::{
-    Action, Asked, Listing, Opened, Reached, Reply, StatusInfo, Summary, TabInfo, TerminalInfo,
+    Action, Asked, KeysSent, Listing, Opened, Reached, Reply, StatusInfo, Summary, TabInfo, TerminalInfo,
 };
 
 /// The reply to `action` as a person reads it (`--json` prints the object instead). The action
@@ -16,6 +18,16 @@ use crate::ipc::control::{
 /// its fields. `home` shortens folders under it to `~`. An error comes back as `Err` with its
 /// words, for stderr.
 pub fn render(action: &Action, reply: &Reply, home: Option<&Path>) -> Result<String, String> {
+    render_with(action, reply, home, false)
+}
+
+/// [`render`], with `numbers` putting a gutter of line numbers before the lines of a `read`.
+pub fn render_with(
+    action: &Action,
+    reply: &Reply,
+    home: Option<&Path>,
+    numbers: bool,
+) -> Result<String, String> {
     if let Some(error) = &reply.error {
         let kind = match error.reason {
             Some(reason) => format!("{}, {}", name_of(error.code), name_of(reason)),
@@ -32,9 +44,13 @@ pub fn render(action: &Action, reply: &Reply, home: Option<&Path>) -> Result<Str
         Action::NewTerminal { .. } => read::<Opened>(&result)
             .map(|opened| opened_text(&opened, home))
             .or_else(|| read::<Asked>(&result).map(|asked| asked_text(&asked, home))),
-        Action::Notify { .. } | Action::SendText { .. } => {
+        Action::Notify { .. } | Action::SendText { .. } | Action::Mouse(_) => {
             read::<Reached>(&result).map(|reached| format!("tab {}\n", reached.tab))
         }
+        Action::Read(_) => read::<Read>(&result).map(|read| read_text(&read, numbers)),
+        Action::Blocks(_) => read::<Blocks>(&result).map(|blocks| blocks_text(&blocks)),
+        Action::SendKeys(_) => read::<KeysSent>(&result)
+            .map(|sent| format!("{} {} to tab {}\n", sent.keys, plural(sent.keys, "key"), sent.tab)),
         // Streams and the welcome have their own words.
         Action::Events(_) | Action::Welcome { .. } => None,
     };

@@ -293,7 +293,7 @@ mod blocks {
         let found = plain.reader.blocks(&blocks_spec(5, true));
         assert!(!found.integration && found.blocks.is_empty());
         let block = plain.reader.capture(&spec(CaptureRange::Block(None)), &mut ReadScratch::default());
-        assert_eq!(block.err(), Some(CaptureError::NoBlock));
+        assert_eq!(block.err(), Some(CaptureError::NoIntegration));
 
         let mut rig = Rig::new(12);
         rig.feed(SESSION);

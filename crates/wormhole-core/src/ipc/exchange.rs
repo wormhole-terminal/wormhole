@@ -18,7 +18,7 @@ use super::control::printable::json_line;
 use super::control::sessions;
 use super::control::{
     Action, PROTOCOL_VERSION, Reply, Request, SEND_TEXT_MAX_BYTES, help_with, json_env, parse, print,
-    print_err, render, show_automation,
+    print_err, render_with, show_automation,
 };
 use crate::platform::paths;
 use crate::platform::socket::Stream;
@@ -34,6 +34,10 @@ pub(crate) enum Exchange {
     /// The request could not be written, or the answer could not be read.
     Broken(String),
 }
+
+/// How much of an answer is read: twice what the app sends at most (`REPLY_MAX_BYTES`), for the
+/// escapes a JSON writer adds.
+const REPLY_LIMIT: u64 = 2 << 20;
 
 /// How long to wait for the app's answer: it answers on its UI thread, in a moment, unless it
 /// is starting up or an older build is running that never will.
@@ -61,7 +65,7 @@ pub(crate) fn exchange(socket: &Path, request: &Request, wait: Duration) -> Resu
     // The app reads lines until the connection ends on our side; the answer comes back on it.
     let _ = stream.shutdown(Shutdown::Write);
     let mut answer = String::new();
-    match BufReader::new(stream).take(1 << 20).read_line(&mut answer) {
+    match BufReader::new(stream).take(REPLY_LIMIT).read_line(&mut answer) {
         Ok(0) => Err(Exchange::NoAnswer),
         Ok(_) => {
             serde_json::from_str(&answer).map_err(|e| Exchange::Broken(format!("unreadable reply: {e}")))
@@ -160,6 +164,7 @@ pub fn run(args: &[String]) -> i32 {
         }
     };
     let json = cli.wants_json(json_env().as_deref());
+    let numbers = cli.numbers;
     let mut action = cli.action;
     if cli.stdin
         && let Action::SendText { text, .. } = &mut action
@@ -198,7 +203,7 @@ pub fn run(args: &[String]) -> i32 {
         ));
         return 2;
     }
-    show(&request.action, &reply, json, home.as_deref());
+    show(&request.action, &reply, json, home.as_deref(), numbers);
     reply.error.as_ref().map_or(0, |error| error.code.exit_code())
 }
 
@@ -214,11 +219,11 @@ fn explain(err: &Exchange) -> i32 {
 }
 
 /// Print a reply: the JSON object it is, or as text (an error to stderr).
-fn show(action: &Action, reply: &Reply, json: bool, home: Option<&Path>) {
+fn show(action: &Action, reply: &Reply, json: bool, home: Option<&Path>, numbers: bool) {
     if json {
         print(&format!("{}\n", json_line(reply)));
     } else {
-        match render(action, reply, home) {
+        match render_with(action, reply, home, numbers) {
             Ok(text) => print(&text),
             Err(words) => print_err(&format!("Wormhole: {words}\n")),
         }
@@ -236,7 +241,7 @@ fn watch(socket: &Path, request: &Request, json: bool, home: Option<&Path>) -> i
         if reply.error.is_some() || json {
             // A refusal goes where errors go, whichever format.
             if reply.error.is_some() && !json {
-                show(&request.action, &reply, false, home);
+                show(&request.action, &reply, false, home, false);
             } else {
                 print(&format!("{text}\n"));
             }

@@ -1,5 +1,8 @@
 use std::collections::BTreeSet;
 
+use super::keys::{KeyItem, SendKeysSpec};
+use super::mouse::{ButtonName, MouseOp, MouseSpec, Pointer};
+use super::read::{BlocksSpec, Range, ReadSpec};
 use super::{
     Action, Error, ErrorCode, PROTOCOL_VERSION, Reason, Reply, Request, Summary, Target, TerminalState,
     WelcomeOp, event::EventsSpec, unreadable,
@@ -14,6 +17,10 @@ fn name(action: &Action) -> &'static str {
         Action::SendText { .. } => "send_text",
         Action::NewTerminal { .. } => "new_terminal",
         Action::Events(_) => "events",
+        Action::Read(_) => "read",
+        Action::Blocks(_) => "blocks",
+        Action::SendKeys(_) => "send_keys",
+        Action::Mouse(_) => "mouse",
         Action::Welcome { .. } => "welcome",
     }
 }
@@ -68,6 +75,68 @@ fn golden() -> Vec<(Request, &'static str)> {
         ),
         (
             Request::new(
+                Action::Read(ReadSpec {
+                    target: Some(Target::Terminal(3)),
+                    range: Range::Lines { from: -200, to: 39 },
+                    join: true,
+                    styles: false,
+                }),
+                None,
+            ),
+            r#"{"version":1,"action":"read","target":{"kind":"terminal","id":3},"range":{"kind":"lines","from":-200,"to":39},"join":true}"#,
+        ),
+        (
+            Request::new(
+                Action::Read(ReadSpec { target: None, range: Range::Screen, join: false, styles: true }),
+                Some("7".into()),
+            ),
+            r#"{"version":1,"from":"7","action":"read","range":{"kind":"screen"},"styles":true}"#,
+        ),
+        (
+            Request::new(
+                Action::Blocks(BlocksSpec {
+                    target: Some(Target::Terminal(3)),
+                    last: Some(10),
+                    output: true,
+                }),
+                None,
+            ),
+            r#"{"version":1,"action":"blocks","target":{"kind":"terminal","id":3},"last":10,"output":true}"#,
+        ),
+        (
+            Request::new(
+                Action::SendKeys(SendKeysSpec {
+                    target: Target::Terminal(4),
+                    keys: vec![
+                        KeyItem::Key { key: "ctrl-c".into() },
+                        KeyItem::Text { text: "ls -la".into(), paste: false },
+                        KeyItem::Key { key: "enter".into() },
+                    ],
+                }),
+                Some("2".into()),
+            ),
+            r#"{"version":1,"from":"2","action":"send_keys","target":{"kind":"terminal","id":4},"keys":[{"key":"ctrl-c"},{"text":"ls -la"},{"key":"enter"}]}"#,
+        ),
+        (
+            Request::new(
+                Action::Mouse(MouseSpec {
+                    target: Target::Terminal(3),
+                    op: MouseOp::Click(Pointer {
+                        row: 4,
+                        col: 10,
+                        button: ButtonName::Left,
+                        count: 1,
+                        shift: false,
+                        alt: false,
+                        ctrl: false,
+                    }),
+                }),
+                None,
+            ),
+            r#"{"version":1,"action":"mouse","target":{"kind":"terminal","id":3},"op":{"kind":"click","row":4,"col":10,"button":"left","count":1}}"#,
+        ),
+        (
+            Request::new(
                 Action::Welcome { token: "0123abcd".into(), op: WelcomeOp::State },
                 Some("4".into()),
             ),
@@ -81,7 +150,19 @@ fn every_action_has_a_golden_line() {
     let covered: BTreeSet<_> = golden().iter().map(|(request, _)| name(&request.action)).collect();
     assert_eq!(
         covered,
-        BTreeSet::from(["list", "status", "notify", "send_text", "new_terminal", "events", "welcome"])
+        BTreeSet::from([
+            "list",
+            "status",
+            "notify",
+            "send_text",
+            "new_terminal",
+            "events",
+            "read",
+            "blocks",
+            "send_keys",
+            "mouse",
+            "welcome"
+        ])
     );
 }
 
@@ -124,6 +205,24 @@ fn a_requests_tab_is_an_id_or_nothing() {
 
 #[test]
 fn only_typing_and_starting_programs_need_the_switch() {
+    let keys = Action::SendKeys(SendKeysSpec { target: Target::Tab(1), keys: vec![] });
+    let mouse = Action::Mouse(MouseSpec {
+        target: Target::Tab(1),
+        op: MouseOp::Press(Pointer {
+            row: 0,
+            col: 0,
+            button: ButtonName::Left,
+            count: 1,
+            shift: false,
+            alt: false,
+            ctrl: false,
+        }),
+    });
+    assert!(keys.writes() && mouse.writes() && !keys.reads() && !mouse.reads());
+    let read = Action::Read(ReadSpec { target: None, range: Range::Screen, join: false, styles: false });
+    assert!(read.reads() && !read.writes(), "reading is control_read's, not control_write's");
+    assert!(Action::Blocks(BlocksSpec { target: None, last: None, output: false }).reads());
+    assert!(!Action::List.reads() && !Action::Events(EventsSpec::default()).reads());
     assert!(!Action::List.writes());
     assert!(!Action::Status { target: None }.writes());
     assert!(!Action::Notify { target: None, title: String::new(), body: "x".into() }.writes());
@@ -183,14 +282,15 @@ fn a_reply_from_a_newer_app_still_parses() {
 
 #[test]
 fn an_action_this_build_does_not_know_is_answered_unsupported() {
-    let reply =
-        unreadable(r#"{"kind":"control","version":1,"action":"read","target":{"kind":"terminal","id":3}}"#)
-            .expect("answered");
+    let reply = unreadable(
+        r#"{"kind":"control","version":1,"action":"teleport","target":{"kind":"terminal","id":3}}"#,
+    )
+    .expect("answered");
     let error = reply.err().expect("an error");
     assert_eq!(error.code, ErrorCode::Unsupported);
-    assert!(error.message.contains("`read`"), "{}", error.message);
+    assert!(error.message.contains("`teleport`"), "{}", error.message);
     assert!(
-        serde_json::from_str::<crate::ipc::Message>(r#"{"kind":"control","version":1,"action":"read"}"#)
+        serde_json::from_str::<crate::ipc::Message>(r#"{"kind":"control","version":1,"action":"teleport"}"#)
             .is_err()
     );
 }

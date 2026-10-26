@@ -20,6 +20,7 @@ use wormhole_term::program_status::Summary as Reported;
 use wormhole_term::{GridSize, Pty, WindowGeometry};
 
 mod blocks;
+mod control_input;
 mod failed;
 mod find;
 mod find_bar;
@@ -35,6 +36,7 @@ mod scaling;
 mod status;
 mod window_geometry;
 
+pub use control_input::MouseSent;
 pub use failed::Failure;
 pub use grid_layout::GridProbe;
 use grid_layout::Layout;

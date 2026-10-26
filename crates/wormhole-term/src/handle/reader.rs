@@ -66,7 +66,7 @@ impl ScreenReader {
     }
 
     /// A reader over a screen of a test's own.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn of(screen: Screen) -> Self {
         Self { term: Arc::new(FairLock::new(screen)), shared: Arc::default() }
     }

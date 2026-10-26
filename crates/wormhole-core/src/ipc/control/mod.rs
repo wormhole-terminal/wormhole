@@ -7,10 +7,12 @@
 //! another version is answered with [`ErrorCode::Version`] rather than half understood.
 //!
 //! Who may do what is decided here, in one place the app and the tests share: reading (`list`,
-//! `status`) and telling (`notify`) always work; typing into a terminal (`send-text`) and starting
-//! a program (`new-terminal`) are off until the user turns `control_write` on in Settings, and
-//! never go into a terminal that is waiting for the user's answer or into the caller's own
-//! ([`send_text_check`]). Everything a caller sends is hostile input: capped in size here, rate
+//! `status`) and telling (`notify`) always work; typing into a terminal (`send-text`, `send-keys`,
+//! `mouse`) and starting a program (`new-terminal`) are off until the user turns `control_write` on
+//! in Settings, and never go into a terminal that is waiting for the user's answer or into the
+//! caller's own ([`send_text_check`]); reading what a terminal shows (`read`, `blocks`, the `output`
+//! events) is off until `control_read`, except that a terminal can always read itself
+//! ([`read_check`]). Everything a caller sends is hostile input: capped in size here, rate
 //! limited in `limits`, and shown only through text cleaned like a program's own notification.
 //!
 //! `sessions` (`Wormhole sessions list | end | forget`) is not part of the protocol: it is for the session
@@ -25,24 +27,33 @@
 mod cli;
 pub mod event;
 mod facts;
+pub mod keys;
 mod limits;
+pub mod mouse;
 mod policy;
 pub mod printable;
+pub mod read;
 pub mod sessions;
 mod welcome;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub use cli::{COMMAND_NAME, Cli, Parsed, help, help_with, is_verb, parse, render};
+pub use cli::{COMMAND_NAME, Cli, Parsed, help, help_with, is_verb, parse, render, render_with};
 pub(in crate::ipc) use cli::{events, json_env, print, print_err, show_automation};
 pub use event::{Event, EventFilter, EventsSpec, Subscribed, Topic, Topics};
 pub use facts::{
-    Asked, Listing, Opened, PaneInfo, Reached, StatusInfo, Summary, TabInfo, TerminalInfo, TerminalState,
-    WindowInfo,
+    Asked, KeysSent, Listing, Opened, PaneInfo, Reached, StatusInfo, Summary, TabInfo, TerminalInfo,
+    TerminalState, WindowInfo,
 };
+pub use keys::{KeyItem, SendKeysSpec};
 pub use limits::{Limited, RateLimits};
-pub use policy::{SEND_TEXT_MAX_BYTES, SendTarget, notice_text, send_text_check, writes_off};
+pub use mouse::{MouseOp, MouseSpec};
+pub use policy::{
+    SEND_TEXT_MAX_BYTES, SendTarget, mouse_check, notice_text, read_check, reads_off, send_keys_check,
+    send_text_check, writes_off,
+};
+pub use read::{BlocksSpec, REPLY_MAX_BYTES, ReadSpec};
 pub use welcome::{
     AgentFact, AgentsFacts, FIELD_MAX_BYTES, HooksFact, LookFacts, NotifyFacts, PermissionFact, PrimaryFact,
     ThemeFact, WelcomeOp, WelcomeState,
@@ -117,6 +128,14 @@ pub enum Action {
     /// Watch what happens: the reply says the state as of a point in time, and events follow on the
     /// same connection until either side closes it.
     Events(event::EventsSpec),
+    /// What a terminal shows: its screen, history or one of its command blocks, as text.
+    Read(read::ReadSpec),
+    /// A terminal's command blocks: each command with how it ended, and its output if asked.
+    Blocks(read::BlocksSpec),
+    /// Key presses and text typed into a terminal, encoded for the program's keyboard modes.
+    SendKeys(keys::SendKeysSpec),
+    /// Pointer events for a program that asked for the mouse.
+    Mouse(mouse::MouseSpec),
     /// The first-run welcome program asking the app that runs it (`token` is the one in its
     /// terminal's environment): state, choices, and the end.
     Welcome { token: String, op: WelcomeOp },
@@ -125,7 +144,19 @@ pub enum Action {
 impl Action {
     /// What every action is called in a request's `action` field, for [`unreadable`]: a test keeps
     /// it in step with the enum.
-    const KNOWN: [&str; 7] = ["list", "status", "notify", "send_text", "new_terminal", "events", "welcome"];
+    const KNOWN: [&str; 11] = [
+        "list",
+        "status",
+        "notify",
+        "send_text",
+        "new_terminal",
+        "events",
+        "read",
+        "blocks",
+        "send_keys",
+        "mouse",
+        "welcome",
+    ];
 
     /// What the action is called on the command line.
     pub fn name(&self) -> &'static str {
@@ -136,6 +167,10 @@ impl Action {
             Action::SendText { .. } => "send-text",
             Action::NewTerminal { .. } => "new-terminal",
             Action::Events(_) => "events",
+            Action::Read(_) => "read",
+            Action::Blocks(_) => "blocks",
+            Action::SendKeys(_) => "send-keys",
+            Action::Mouse(_) => "mouse",
             Action::Welcome { .. } => "welcome",
         }
     }
@@ -143,7 +178,16 @@ impl Action {
     /// Whether the action types into a terminal or starts a program: off until `control_write`.
     /// (`Welcome` neither types nor starts a program; its token is its switch.)
     pub fn writes(&self) -> bool {
-        matches!(self, Action::SendText { .. } | Action::NewTerminal { .. })
+        matches!(
+            self,
+            Action::SendText { .. } | Action::NewTerminal { .. } | Action::SendKeys(_) | Action::Mouse(_)
+        )
+    }
+
+    /// Whether the action tells what a terminal shows: off until `control_read`, for a terminal
+    /// other than the one the caller runs in. (`Events` does only with the `output` topic.)
+    pub fn reads(&self) -> bool {
+        matches!(self, Action::Read(_) | Action::Blocks(_))
     }
 }
 

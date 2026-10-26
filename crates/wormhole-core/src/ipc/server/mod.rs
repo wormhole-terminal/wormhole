@@ -15,6 +15,8 @@ use std::sync::mpsc;
 use std::time::{Duration, Instant, SystemTime};
 
 use super::control::{self, ErrorCode, Reply, Request};
+use wormhole_term::ReadScratch;
+
 use super::{Answer, Incoming, Message};
 use crate::platform::socket::{Listener, Stream, peer_is_same_user};
 
@@ -41,9 +43,11 @@ pub(super) fn spawn(listener: Listener, tx: smol::channel::Sender<Incoming>) -> 
 /// [`spawn`] with the streams' times given (the tests shorten them).
 fn spawn_with(listener: Listener, tx: smol::channel::Sender<Incoming>, timing: Timing) -> io::Result<()> {
     std::thread::Builder::new().name("wormhole-socket".into()).spawn(move || {
+        // What a read copies the screen's rows into, kept between reads.
+        let mut scratch = ReadScratch::default();
         loop {
             match listener.accept() {
-                Ok((stream, _)) => serve(stream, &tx, timing),
+                Ok((stream, _)) => serve(stream, &tx, timing, &mut scratch),
                 Err(err) => {
                     // E.g. out of file descriptors: retrying at once would spin.
                     tracing::warn!("hook socket accept failed: {err}");
@@ -57,7 +61,12 @@ fn spawn_with(listener: Listener, tx: smol::channel::Sender<Incoming>, timing: T
 
 /// Read one connection's messages until it closes, its deadline passes or it
 /// sent too much; answer the control requests among them.
-fn serve(mut stream: Stream, tx: &smol::channel::Sender<Incoming>, timing: Timing) {
+fn serve(
+    mut stream: Stream,
+    tx: &smol::channel::Sender<Incoming>,
+    timing: Timing,
+    scratch: &mut ReadScratch,
+) {
     let accepted = SystemTime::now();
     if !peer_is_same_user(&stream) {
         tracing::warn!("hook socket: a connection from another user was refused");
@@ -69,7 +78,7 @@ fn serve(mut stream: Stream, tx: &smol::channel::Sender<Incoming>, timing: Timin
         match serde_json::from_str::<Message>(&line) {
             Ok(Message::Control(request)) => {
                 // A stream took the connection over: this thread has nothing more to read from it.
-                if answer(&mut stream, accepted, request, tx, timing) == Outcome::Streaming {
+                if answer(&mut stream, accepted, request, tx, timing, scratch) == Outcome::Streaming {
                     return;
                 }
             }
@@ -104,6 +113,7 @@ fn answer(
     request: Request,
     tx: &smol::channel::Sender<Incoming>,
     timing: Timing,
+    scratch: &mut ReadScratch,
 ) -> Outcome {
     let (reply_tx, reply_rx) = mpsc::sync_channel(1);
     let peer = Peer::of(stream, accepted);
@@ -116,6 +126,9 @@ fn answer(
     match answer {
         Answer::Reply(reply) => {
             let _ = write_reply(stream, &reply);
+        }
+        Answer::Read(job) => {
+            let _ = write_reply(stream, &job.run(scratch));
         }
         Answer::Stream { reply, subscription } => {
             if !write_reply(stream, &reply) {
@@ -252,7 +265,7 @@ mod tests {
         let mut stream = Stream::connect(&socket).expect("connect");
         writeln!(
             stream,
-            r#"{{"kind":"control","version":1,"action":"read","target":{{"kind":"terminal","id":3}}}}"#
+            r#"{{"kind":"control","version":1,"action":"teleport","target":{{"kind":"terminal","id":3}}}}"#
         )
         .expect("write");
         stream.shutdown(Shutdown::Write).expect("half close");
@@ -263,6 +276,43 @@ mod tests {
         let reply: Reply = serde_json::from_str(&line).expect("parses");
         assert_eq!(reply.err().map(|e| e.code), Some(ErrorCode::Unsupported), "{line}");
         assert!(start.elapsed() < Duration::from_secs(1), "waited {:?}", start.elapsed());
+    }
+
+    /// A read is answered by the socket thread itself from the screen the app handed over: the app's
+    /// thread only decides and returns the job.
+    #[test]
+    fn a_read_is_carried_out_on_the_socket_thread_from_the_job_the_app_hands_over() {
+        use wormhole_term::testing::TestTerm;
+        use wormhole_term::{CaptureRange, CaptureSpec};
+
+        use crate::ipc::{Answer, ReadJob};
+
+        let (_dir, socket, rx) = server();
+        let app = std::thread::spawn(move || match recv_within(&rx, Duration::from_secs(5)) {
+            Some(Incoming::Control { reply, .. }) => {
+                let mut term = TestTerm::new(20, 3, 10);
+                term.feed(b"hello\r\nworld");
+                let spec =
+                    CaptureSpec { range: CaptureRange::Screen, join: false, styles: false, max_bytes: 1000 };
+                let job = ReadJob::lines(term.into_reader(), 3, Some("a title".into()), spec);
+                reply.send(Answer::Read(job)).expect("the connection waits");
+            }
+            other => panic!("expected a control request: {other:?}"),
+        });
+        let mut stream = Stream::connect(&socket).expect("connect");
+        let request = Message::Control(Request::new(Action::List, None));
+        writeln!(stream, "{}", serde_json::to_string(&request).expect("serializes")).expect("write");
+        stream.shutdown(Shutdown::Write).expect("half close");
+        let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+        let mut line = String::new();
+        BufReader::new(stream).read_line(&mut line).expect("a reply line");
+        let reply: Reply = serde_json::from_str(&line).expect("parses");
+        assert!(reply.ok, "{line}");
+        let result = reply.result.expect("a result");
+        assert_eq!(result["lines"], serde_json::json!(["hello", "world", ""]));
+        assert_eq!((result["terminal"].as_i64(), result["title"].as_str()), (Some(3), Some("a title")));
+        assert_eq!(result["cursor"]["col"].as_u64(), Some(5));
+        app.join().expect("the app's side");
     }
 
     /// The round trip `Wormhole list` makes: the request reaches the app with a way to answer, and

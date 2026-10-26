@@ -51,6 +51,12 @@ impl TestTerm {
         self.screen_mut().clear_history();
     }
 
+    /// The terminal as a [`ScreenReader`] (what `Pty::reader` gives): for a test of what reads it from
+    /// another thread.
+    pub fn into_reader(self) -> crate::ScreenReader {
+        crate::ScreenReader::of(*self.screen)
+    }
+
     pub fn start_selection(&mut self, kind: SelectionType, point: Point, side: Side) {
         self.screen_mut().start_selection(kind, point, side);
     }

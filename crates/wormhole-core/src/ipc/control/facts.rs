@@ -194,6 +194,13 @@ pub struct Reached {
     pub tab: i64,
 }
 
+/// `send-keys`' result: which tab got how many items.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct KeysSent {
+    pub tab: i64,
+    pub keys: usize,
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Summary, TerminalState};

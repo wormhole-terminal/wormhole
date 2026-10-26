@@ -9,9 +9,13 @@
 //! passes. A terminal, its one tab and its pane are the same thing now (a row of the sidebar, named
 //! by its id), so the protocol's `tab` and `pane` ids are the terminal's.
 //!
-//! `events` (`stream`) is the one request whose answer is not a line but a stream of them: it gets
-//! a subscription to the bus (`crate::automation`) and the socket thread writes what it yields.
+//! Two kinds of request are not answered with a line made here: `events` (`stream`) gets a
+//! subscription to the bus (`crate::automation`) and the socket thread writes what it yields, and
+//! `read` and `blocks` (`read`) hand the socket thread a job that copies the terminal's screen, so
+//! the UI thread never does. Typing (`input`: `send-text`, `send-keys`, `mouse`) is answered here.
 
+mod input;
+mod read;
 mod stream;
 
 use std::path::Path;
@@ -19,9 +23,8 @@ use std::time::Instant;
 
 use gpui_kit::*;
 use wormhole_core::ipc::control::{
-    Action, ErrorCode, Limited, Listing, PROTOCOL_VERSION, RateLimits, Reached, Reply, Request,
-    SEND_TEXT_MAX_BYTES, SendTarget, StatusInfo, Summary, Target, WindowInfo, notice_text, send_text_check,
-    writes_off,
+    Action, Error, ErrorCode, Limited, Listing, PROTOCOL_VERSION, RateLimits, Reached, Reason, Reply,
+    Request, SEND_TEXT_MAX_BYTES, StatusInfo, Summary, Target, WindowInfo, notice_text, writes_off,
 };
 use wormhole_core::ipc::{Answer, Peer};
 
@@ -37,10 +40,23 @@ impl Global for Budgets {}
 
 /// Answer `request` for the socket thread: one reply line, or a reply and the stream that follows it.
 pub(crate) fn answer(request: Request, peer: &Peer, cx: &mut App) -> Answer {
-    if let (Action::Events(spec), None) = (&request.action, version_error(&request)) {
-        return stream::events(spec, request.from_tab(), peer, cx);
+    if version_error(&request).is_none() {
+        let from = request.from_tab();
+        match &request.action {
+            Action::Events(spec) => return stream::events(spec, from, peer, cx),
+            Action::Read(spec) => return read::read(spec, from, peer, cx),
+            Action::Blocks(spec) => return read::blocks(spec, from, peer, cx),
+            _ => {}
+        }
     }
     Answer::Reply(handle(request, peer, cx))
+}
+
+/// The answer to an action of the automation API while its flag is off in this build.
+fn automation_off(cx: &App) -> Option<Error> {
+    (!settings(cx).feature_enabled(wormhole_core::config::features::FeatureFlag::Automation)).then(|| {
+        Error::new(ErrorCode::Unsupported, "automation is not in this build yet").because(Reason::FlagOff)
+    })
 }
 
 fn version_error(request: &Request) -> Option<Reply> {
@@ -66,13 +82,19 @@ pub(crate) fn handle(request: Request, peer: &Peer, cx: &mut App) -> Reply {
         Action::List => Reply::ok(listing(cx)),
         Action::Status { target } => status(target, from, cx),
         Action::Notify { target, title, body } => notify(target, &title, &body, from, cx),
-        Action::SendText { target, text, submit } => send_text(target, &text, submit, from, peer, cx),
+        Action::SendText { target, text, submit } => input::send_text(target, &text, submit, from, peer, cx),
+        Action::SendKeys(spec) => input::send_keys(&spec, from, peer, cx),
+        Action::Mouse(spec) => input::mouse(&spec, from, peer, cx),
         Action::NewTerminal { folder, command, worktree, window } => {
             new_terminal(folder, command, worktree, window, from, cx)
         }
-        // Answered by `answer`, which can carry a stream; a reply alone (devctl's `control`) cannot.
+        // Answered by `answer`, which can carry a stream or a job for the socket thread; a reply
+        // alone (devctl's `control`) cannot.
         Action::Events(_) => {
             Reply::error(ErrorCode::Failed, "events are a stream: they are not answered here")
+        }
+        Action::Read(_) | Action::Blocks(_) => {
+            Reply::error(ErrorCode::Failed, "reads are carried out by the socket: they are not answered here")
         }
         // Not behind `control_write`: the token the app put in the welcome terminal is the key.
         Action::Welcome { token, op } => {
@@ -147,48 +169,6 @@ fn notify(target: Option<Target>, title: &str, body: &str, from: Option<i64>, cx
     }
     // At once rather than on the next tick; the window's update is over, so it can be read.
     notifications::sweep(cx);
-    Reply::ok(Reached { tab })
-}
-
-/// `send-text`: type into the target's tab as a paste, where the rules allow it.
-fn send_text(
-    target: Target,
-    text: &str,
-    submit: bool,
-    from: Option<i64>,
-    peer: &Peer,
-    cx: &mut App,
-) -> Reply {
-    // The switch before anything about the terminal, as the rules order it.
-    let enabled = settings(cx).control_write;
-    if !enabled {
-        let error = writes_off();
-        return Reply::from(error);
-    }
-    let Some(found) = find(target, cx) else { return not_found(target) };
-    let facts =
-        found.window.workspace.read_with(cx, |ws, cx| ws.control_tab_facts(found.tab, cx)).ok().flatten();
-    let Some((state, shell)) = facts else { return not_found(target) };
-    // Where the caller runs, not what it says: a process can leave `from` out, but it can't move out
-    // from under the shell it was started by, nor off its terminal. In part: a program that starts a
-    // session of its own (`setsid`) leaves both behind.
-    let caller_inside = shell.is_some_and(|shell| peer.runs_in(shell));
-    if let Err(error) =
-        send_text_check(enabled, text, from, SendTarget { tab: found.tab, state, caller_inside })
-    {
-        return Reply::from(error);
-    }
-    if let Err(reply) = budget(Limited::SendText, from, cx) {
-        return reply;
-    }
-    let tab = found.tab;
-    let text = text.trim_end_matches(['\n', '\r']).to_string();
-    let typed =
-        AppState::with_workspace(&found.window, cx, |ws, _, cx| ws.control_send_text(tab, &text, submit, cx));
-    if typed != Some(true) {
-        return Reply::error(ErrorCode::Failed, format!("tab {tab} could not be reached"));
-    }
-    tracing::info!(tab, ?from, submit, bytes = text.len(), "control: text sent to a terminal");
     Reply::ok(Reached { tab })
 }
 

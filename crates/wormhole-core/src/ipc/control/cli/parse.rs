@@ -3,6 +3,9 @@
 use std::path::{Path, PathBuf};
 
 use super::{Cli, Parsed};
+use crate::ipc::control::keys::{KeyItem, SendKeysSpec, parse_key};
+use crate::ipc::control::mouse::{ButtonName, Direction, MouseOp, MouseSpec, Pointer, Wheel};
+use crate::ipc::control::read::{BlockRef, BlocksSpec, Newest, Range, ReadSpec};
 use crate::ipc::control::{Action, EventsSpec, Target};
 
 /// Read the words after the program name (`list --json`, `send-text --tab 3 hello`) into what to
@@ -25,6 +28,9 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
     let mut worktree = None;
     let mut window = None;
     let mut watch = EventsSpec::default();
+    let mut look = Look::default();
+    let mut items: Vec<KeyItem> = Vec::new();
+    let mut pointer = PointerFlags::default();
     let mut words: Vec<&str> = Vec::new();
     let mut args = rest.iter().map(String::as_str);
     while let Some(arg) = args.next() {
@@ -34,6 +40,10 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
         };
         match arg {
             "--json" => json = true,
+            // send-keys' own `--text <string>` is a segment of text, not the output format.
+            "--text" if verb == "send-keys" => {
+                items.push(KeyItem::Text { text: value(arg)?.to_string(), paste: false });
+            }
             "--text" => text_out = true,
             "--help" | "-h" => return Ok(Parsed::Help),
             // `events` watches several terminals and windows: its `--terminal` and `--window` repeat.
@@ -52,6 +62,51 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
                     .extend(value.split(',').map(str::trim).filter(|t| !t.is_empty()).map(String::from));
             }
             "--output" if verb == "events" => watch.output = true,
+            "--output" if verb == "blocks" => look.output = true,
+            "--last" if verb == "blocks" => {
+                let value = value(arg)?;
+                look.last = Some(count(arg, value)?);
+            }
+            "--join" if verb == "read" => look.join = true,
+            "--styles" if verb == "read" => look.styles = true,
+            "--numbers" if verb == "read" => look.numbers = true,
+            "--scrollback" if verb == "read" => {
+                let value = value(arg)?;
+                look.scrollback = Some(count(arg, value)?);
+            }
+            "--lines" if verb == "read" => {
+                let value = value(arg)?;
+                look.lines = Some(rows(value)?);
+            }
+            "--block" if verb == "read" => {
+                let value = value(arg)?;
+                look.block = Some(match value {
+                    "last" => BlockRef::Newest(Newest::Last),
+                    id => BlockRef::Id(id.parse().map_err(|_| {
+                        format!("--block takes a block's id (a number) or `last`, not {id:?}")
+                    })?),
+                });
+            }
+            "--paste" if verb == "send-keys" => {
+                items.push(KeyItem::Text { text: value(arg)?.to_string(), paste: true });
+            }
+            "--button" if verb == "mouse" => {
+                pointer.button = match value(arg)? {
+                    "left" => ButtonName::Left,
+                    "middle" => ButtonName::Middle,
+                    "right" => ButtonName::Right,
+                    other => return Err(format!("--button takes left, middle or right, not {other:?}")),
+                };
+            }
+            "--double" if verb == "mouse" => pointer.count = 2,
+            "--shift" if verb == "mouse" => pointer.shift = true,
+            "--alt" if verb == "mouse" => pointer.alt = true,
+            "--ctrl" if verb == "mouse" => pointer.ctrl = true,
+            "--lines" if verb == "mouse" => {
+                let value = value(arg)?;
+                pointer.lines = u16::try_from(count(arg, value)?)
+                    .map_err(|_| format!("--lines takes a smaller number, not {value:?}"))?;
+            }
             "--terminal" | "--tab" | "--pane" => {
                 let value = value(arg)?;
                 let id = id(arg, value)?;
@@ -72,6 +127,11 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
             "--window" if verb == "new-terminal" => {
                 let value = value(arg)?;
                 window = Some(id(arg, value)?);
+            }
+            // A key's name (`-` is one) among send-keys' words, in the order it was typed with the texts.
+            word if verb == "send-keys" && (!word.starts_with('-') || word == "-") => {
+                parse_key(word).map_err(|e| format!("send-keys: {e}"))?;
+                items.push(KeyItem::Key { key: word.to_string() });
             }
             flag if flag.starts_with('-') && flag != "-" => {
                 return Err(format!("unknown option {flag} for {verb}"));
@@ -116,13 +176,45 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
             }
             Action::Events(watch)
         }
+        "read" => {
+            if !text.is_empty() {
+                return Err(format!("read takes options only, not {text:?}"));
+            }
+            Action::Read(ReadSpec {
+                target: target.take(),
+                range: look.range()?,
+                join: look.join,
+                styles: look.styles,
+            })
+        }
+        "blocks" => {
+            if !text.is_empty() {
+                return Err(format!("blocks takes options only, not {text:?}"));
+            }
+            Action::Blocks(BlocksSpec { target: target.take(), last: look.last, output: look.output })
+        }
+        "send-keys" => {
+            let Some(target) = target.take() else {
+                return Err("send-keys needs a target: --terminal, --tab or --pane".into());
+            };
+            if items.is_empty() {
+                return Err("send-keys needs keys (ctrl-c, enter, up, f5…) or --text".into());
+            }
+            Action::SendKeys(SendKeysSpec { target, keys: items })
+        }
+        "mouse" => {
+            let Some(target) = target.take() else {
+                return Err("mouse needs a target: --terminal, --tab or --pane".into());
+            };
+            Action::Mouse(MouseSpec { target, op: pointer.op(&words)? })
+        }
         other => return Err(format!("unknown command {other:?}")),
     };
     if target.is_some() && matches!(action, Action::List | Action::NewTerminal { .. } | Action::Events(_)) {
         return Err(format!("{verb} takes no target"));
     }
     let stdin = matches!(&action, Action::SendText { text, .. } if text == "-");
-    Ok(Parsed::Run(Cli { action, json, text: text_out, stdin }))
+    Ok(Parsed::Run(Cli { action, json, text: text_out, stdin, numbers: look.numbers }))
 }
 
 /// `folder` as an absolute path: `~` is `home`, a relative path is under `cwd`. Nothing is
@@ -135,6 +227,112 @@ fn resolve_folder(folder: &str, cwd: &Path, home: Option<&Path>) -> String {
         (folder, _) => cwd.join(folder),
     };
     path.to_string_lossy().into_owned()
+}
+
+/// What `read` and `blocks` were asked for, as the flags gave it.
+#[derive(Default)]
+struct Look {
+    scrollback: Option<u32>,
+    lines: Option<(i32, i32)>,
+    block: Option<BlockRef>,
+    join: bool,
+    styles: bool,
+    numbers: bool,
+    last: Option<u32>,
+    output: bool,
+}
+
+impl Look {
+    /// The range the flags name: at most one of them, the screen without any.
+    fn range(&self) -> Result<Range, String> {
+        match (self.scrollback, self.lines, self.block) {
+            (None, None, None) => Ok(Range::Screen),
+            (Some(lines), None, None) => Ok(Range::Last { lines }),
+            (None, Some((from, to)), None) => Ok(Range::Lines { from, to }),
+            (None, None, Some(id)) => Ok(Range::Block { id }),
+            _ => Err("read takes one of --scrollback, --lines and --block".into()),
+        }
+    }
+}
+
+/// The pointer's flags.
+struct PointerFlags {
+    button: ButtonName,
+    count: u8,
+    shift: bool,
+    alt: bool,
+    ctrl: bool,
+    lines: u16,
+}
+
+impl Default for PointerFlags {
+    fn default() -> Self {
+        Self { button: ButtonName::Left, count: 1, shift: false, alt: false, ctrl: false, lines: 1 }
+    }
+}
+
+impl PointerFlags {
+    /// `click <row> <col>`, `press|release|move <row> <col>` or `scroll <row> <col> <direction>`.
+    fn op(&self, words: &[&str]) -> Result<MouseOp, String> {
+        let at = |word: Option<&&str>, what: &str| {
+            let word = word.ok_or_else(|| format!("mouse needs a {what}"))?;
+            word.parse::<u32>().map_err(|_| format!("the {what} is a number (from 0), not {word:?}"))
+        };
+        let usage = "mouse takes click, press, release, move or scroll, then a row and a column";
+        let kind = *words.first().ok_or(usage)?;
+        let (row, col) = (at(words.get(1), "row")?, at(words.get(2), "column")?);
+        let pointer = || Pointer {
+            row,
+            col,
+            button: self.button,
+            count: self.count,
+            shift: self.shift,
+            alt: self.alt,
+            ctrl: self.ctrl,
+        };
+        let op = match kind {
+            "click" => MouseOp::Click(pointer()),
+            "press" => MouseOp::Press(pointer()),
+            "release" => MouseOp::Release(pointer()),
+            "move" => MouseOp::Move(pointer()),
+            "scroll" => {
+                let direction = match words.get(3).copied() {
+                    Some("up") => Direction::Up,
+                    Some("down") => Direction::Down,
+                    Some("left") => Direction::Left,
+                    Some("right") => Direction::Right,
+                    _ => return Err("scroll takes a direction: up, down, left or right".into()),
+                };
+                MouseOp::Scroll(Wheel {
+                    row,
+                    col,
+                    direction,
+                    lines: self.lines,
+                    shift: self.shift,
+                    alt: self.alt,
+                    ctrl: self.ctrl,
+                })
+            }
+            _ => return Err(usage.into()),
+        };
+        let expected = if kind == "scroll" { 4 } else { 3 };
+        if words.len() > expected {
+            return Err(format!("mouse {kind} takes {} words, not {}", expected - 1, words.len() - 1));
+        }
+        Ok(op)
+    }
+}
+
+/// A count flag's value.
+fn count(flag: &str, value: &str) -> Result<u32, String> {
+    value.parse().map_err(|_| format!("{flag} takes a number, not {value:?}"))
+}
+
+/// `--lines <from>:<to>`: grid lines, history negative.
+fn rows(value: &str) -> Result<(i32, i32), String> {
+    let mistake = || format!("--lines takes <from>:<to> (grid lines, history negative), not {value:?}");
+    let (from, to) = value.split_once(':').ok_or_else(mistake)?;
+    Ok((from.trim().parse().map_err(|_| mistake())?, to.trim().parse().map_err(|_| mistake())?))
 }
 
 #[cfg(test)]
@@ -164,7 +362,10 @@ mod tests {
 
     #[test]
     fn every_verb_parses_with_its_options() {
-        assert_eq!(parsed(&["list"]), Cli { action: Action::List, json: false, text: false, stdin: false });
+        assert_eq!(
+            parsed(&["list"]),
+            Cli { action: Action::List, json: false, text: false, stdin: false, numbers: false }
+        );
         assert!(parsed(&["list", "--json"]).json);
         assert_eq!(parsed(&["status"]).action, Action::Status { target: None });
         assert_eq!(
@@ -260,6 +461,7 @@ mod tests {
                 json: true,
                 text: false,
                 stdin: false,
+                numbers: false,
             }
         );
         assert!(mistake(&["events", "--tab", "3"]).contains("takes no target"), "no tabs here");
@@ -267,6 +469,123 @@ mod tests {
         assert!(mistake(&["events", "status"]).contains("options only"));
         assert!(mistake(&["events", "--topics"]).contains("needs a value"));
         assert!(mistake(&["list", "--topics", "x"]).contains("unknown option"));
+    }
+
+    #[test]
+    fn read_and_blocks_take_a_range_and_options() {
+        use crate::ipc::control::read::{BlockRef, BlocksSpec, Newest, Range, ReadSpec};
+        let read = |list: &[&str]| match parsed(list).action {
+            Action::Read(spec) => spec,
+            other => panic!("{other:?}"),
+        };
+        assert_eq!(
+            read(&["read"]),
+            ReadSpec { target: None, range: Range::Screen, join: false, styles: false }
+        );
+        let spec = read(&["read", "--terminal", "3", "--scrollback", "200", "--join"]);
+        assert_eq!(spec.target, Some(Target::Terminal(3)));
+        assert_eq!((spec.range, spec.join), (Range::Last { lines: 200 }, true));
+        assert_eq!(
+            read(&["read", "--lines", "-200:39", "--styles"]).range,
+            Range::Lines { from: -200, to: 39 }
+        );
+        assert_eq!(read(&["read", "--block", "57"]).range, Range::Block { id: BlockRef::Id(57) });
+        assert_eq!(
+            read(&["read", "--block", "last"]).range,
+            Range::Block { id: BlockRef::Newest(Newest::Last) }
+        );
+        assert!(parsed(&["read", "--numbers"]).numbers && !parsed(&["read"]).numbers);
+        assert!(mistake(&["read", "--scrollback", "5", "--block", "last"]).contains("one of"));
+        assert!(mistake(&["read", "--lines", "5"]).contains("<from>:<to>"));
+        assert!(mistake(&["read", "--block", "first"]).contains("block's id"));
+        assert!(mistake(&["read", "now"]).contains("options only"));
+        assert_eq!(
+            parsed(&["blocks", "--tab", "2", "--last", "5", "--output"]).action,
+            Action::Blocks(BlocksSpec { target: Some(Target::Tab(2)), last: Some(5), output: true })
+        );
+        assert!(mistake(&["blocks", "--join"]).contains("unknown option"));
+    }
+
+    #[test]
+    fn send_keys_keeps_keys_and_texts_in_the_order_they_were_typed() {
+        use crate::ipc::control::keys::{KeyItem, SendKeysSpec};
+        let keys = |text: &str| KeyItem::Text { text: text.into(), paste: false };
+        assert_eq!(
+            parsed(&["send-keys", "--terminal", "4", "ctrl-c", "--text", "ls -la", "enter", "--paste", "x"])
+                .action,
+            Action::SendKeys(SendKeysSpec {
+                target: Target::Terminal(4),
+                keys: vec![
+                    KeyItem::Key { key: "ctrl-c".into() },
+                    keys("ls -la"),
+                    KeyItem::Key { key: "enter".into() },
+                    KeyItem::Text { text: "x".into(), paste: true },
+                ],
+            })
+        );
+        let dash = parsed(&["send-keys", "--tab", "1", "-", "ctrl--"]);
+        assert!(matches!(&dash.action, Action::SendKeys(spec) if spec.keys.len() == 2));
+        assert!(mistake(&["send-keys", "ctrl-c"]).contains("needs a target"));
+        assert!(mistake(&["send-keys", "--tab", "1"]).contains("needs keys"));
+        assert!(mistake(&["send-keys", "--tab", "1", "cmd-q"]).contains("Wormhole's own key"));
+        assert!(mistake(&["send-keys", "--tab", "1", "nope"]).contains("unknown key"));
+        assert!(mistake(&["send-keys", "--tab", "1", "--bogus"]).contains("unknown option"));
+        assert!(mistake(&["send-keys", "--tab", "1", "--text"]).contains("needs a value"));
+    }
+
+    #[test]
+    fn mouse_takes_an_operation_a_place_and_the_keys_held() {
+        use crate::ipc::control::mouse::{ButtonName, Direction, MouseOp, MouseSpec, Pointer, Wheel};
+        let op = |list: &[&str]| match parsed(list).action {
+            Action::Mouse(MouseSpec { target, op }) => (target, op),
+            other => panic!("{other:?}"),
+        };
+        let pointer =
+            |button, count, shift| Pointer { row: 4, col: 10, button, count, shift, alt: false, ctrl: false };
+        assert_eq!(
+            op(&["mouse", "--terminal", "3", "click", "4", "10"]),
+            (Target::Terminal(3), MouseOp::Click(pointer(ButtonName::Left, 1, false)))
+        );
+        assert_eq!(
+            op(&["mouse", "--terminal", "3", "click", "4", "10", "--double", "--button", "right", "--shift"])
+                .1,
+            MouseOp::Click(pointer(ButtonName::Right, 2, true))
+        );
+        assert_eq!(
+            op(&["mouse", "--tab", "3", "press", "4", "10"]).1,
+            MouseOp::Press(pointer(ButtonName::Left, 1, false))
+        );
+        assert_eq!(
+            op(&["mouse", "--tab", "3", "release", "4", "10"]).1,
+            MouseOp::Release(pointer(ButtonName::Left, 1, false))
+        );
+        assert_eq!(
+            op(&["mouse", "--tab", "3", "move", "4", "10"]).1,
+            MouseOp::Move(pointer(ButtonName::Left, 1, false))
+        );
+        assert_eq!(
+            op(&["mouse", "--tab", "3", "scroll", "4", "10", "down", "--lines", "3", "--ctrl"]).1,
+            MouseOp::Scroll(Wheel {
+                row: 4,
+                col: 10,
+                direction: Direction::Down,
+                lines: 3,
+                shift: false,
+                alt: false,
+                ctrl: true
+            })
+        );
+        assert!(mistake(&["mouse", "click", "1", "2"]).contains("needs a target"));
+        assert!(mistake(&["mouse", "--tab", "1"]).contains("click, press"));
+        assert!(mistake(&["mouse", "--tab", "1", "click", "x", "2"]).contains("row"));
+        assert!(mistake(&["mouse", "--tab", "1", "click", "1"]).contains("column"));
+        assert!(mistake(&["mouse", "--tab", "1", "scroll", "1", "2"]).contains("direction"));
+        assert!(mistake(&["mouse", "--tab", "1", "click", "1", "2", "3"]).contains("takes 2 words"));
+        assert!(
+            mistake(&["mouse", "--tab", "1", "click", "1", "2", "--button", "back"])
+                .contains("left, middle or right")
+        );
+        assert!(mistake(&["mouse", "--tab", "1", "wiggle", "1", "2"]).contains("click, press"));
     }
 
     #[test]

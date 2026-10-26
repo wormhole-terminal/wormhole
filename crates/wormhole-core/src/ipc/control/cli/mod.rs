@@ -1,4 +1,5 @@
-//! `Wormhole list | status | notify | send-text | new-terminal`: the command line's side of the
+//! `Wormhole list | status | notify | send-text | new-terminal | events | read | blocks | send-keys |
+//! mouse`: the command line's side of the
 //! control protocol. The arguments are read into a [`Request`](super::Request) (`parse`), the app's [`Reply`] is
 //! printed as text or, with `--json` (or `WORMHOLE_JSON`, `--text` to override it), as the one JSON
 //! object it is (`render`). The round trip over the
@@ -12,11 +13,12 @@ use super::Action;
 pub(in crate::ipc) mod events;
 mod help;
 mod parse;
+mod read_text;
 mod render;
 
 pub use help::{help, help_with};
 pub use parse::parse;
-pub use render::render;
+pub use render::{render, render_with};
 
 /// What the arguments asked for.
 #[derive(Debug, Clone, PartialEq)]
@@ -28,6 +30,8 @@ pub struct Cli {
     pub text: bool,
     /// `send-text -`: the text is on stdin.
     pub stdin: bool,
+    /// `read --numbers`: a gutter of line numbers in the text output.
+    pub numbers: bool,
 }
 
 impl Cli {
@@ -67,6 +71,10 @@ pub fn is_verb(word: &str) -> bool {
             | "send-text"
             | "new-terminal"
             | "events"
+            | "read"
+            | "blocks"
+            | "send-keys"
+            | "mouse"
             | "sessions"
             | "help"
             | "--help"
@@ -106,7 +114,7 @@ mod tests {
     use crate::ipc::control::Action;
 
     fn cli(json: bool, text: bool) -> Cli {
-        Cli { action: Action::List, json, text, stdin: false }
+        Cli { action: Action::List, json, text, stdin: false, numbers: false }
     }
 
     #[test]

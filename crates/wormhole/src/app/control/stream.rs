@@ -5,15 +5,13 @@
 //! published too, so the state read here is exactly the one the first event follows.
 
 use gpui_kit::*;
-use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::ipc::bus::Grant;
 use wormhole_core::ipc::control::event::{Subscribed, Topic};
-use wormhole_core::ipc::control::{Error, ErrorCode, EventsSpec, Limited, Reason, Reply};
+use wormhole_core::ipc::control::{Error, ErrorCode, EventsSpec, Limited, Reply};
 use wormhole_core::ipc::{Answer, Peer};
 
-use super::{budget, listing};
+use super::{automation_off, budget, listing};
 use crate::app_state::{AppState, app};
-use crate::settings::settings;
 
 /// Answer an `events` request. Order of the checks: the flag, the request itself, what it may
 /// hear, the budget, then the stream caps.
@@ -25,9 +23,8 @@ pub(super) fn events(spec: &EventsSpec, from: Option<i64>, peer: &Peer, cx: &mut
 }
 
 fn subscribe(spec: &EventsSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Result<Answer, Error> {
-    if !settings(cx).feature_enabled(FeatureFlag::Automation) {
-        return Err(Error::new(ErrorCode::Unsupported, "automation is not in this build yet")
-            .because(Reason::FlagOff));
+    if let Some(off) = automation_off(cx) {
+        return Err(off);
     }
     let filter = spec.filter()?;
     if filter.topics.contains(Topic::Output) {

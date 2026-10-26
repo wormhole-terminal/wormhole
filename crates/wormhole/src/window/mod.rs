@@ -40,6 +40,7 @@ use std::time::{Duration, Instant};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
+pub(crate) use self::control::ReaderFacts;
 pub(crate) use self::windows::{request_quit, request_quit_ending_hosts};
 use crate::app_state::attention::{self, Attention};
 use crate::platform::vibrancy;
@@ -122,6 +123,8 @@ mod plays_motion;
 #[cfg(test)]
 mod profile_look_tests;
 mod published;
+#[cfg(test)]
+mod read_tests;
 mod regions;
 #[cfg(test)]
 mod regions_tests;

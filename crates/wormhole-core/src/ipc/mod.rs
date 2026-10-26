@@ -14,6 +14,7 @@
 //! - `control`: the control requests and replies, their rules, limits and the command line's verbs;
 //! - `exchange`: the command line's round trip over the control socket, and the welcome's;
 //! - `instance`: who serves the socket;
+//! - `read_job`: a read of a terminal's screen, run by the socket thread;
 //! - `bus`: the events the app publishes and the subscriptions that hear them;
 //! - `server`: the listener thread (connections from this user only) and the threads of the streams;
 //! - `client`: the `hook` and `statusline` command lines;
@@ -33,6 +34,7 @@ pub mod host_binary;
 pub mod hosts;
 mod instance;
 mod message;
+mod read_job;
 mod server;
 #[cfg(test)]
 mod test_support;
@@ -51,6 +53,7 @@ pub use client::{Command, command, run_cli, run_status_line_cli};
 pub use exchange::run as run_control_cli;
 pub use instance::{Instance, InstanceLock, Served, acquire, start_server};
 pub use message::Message;
+pub use read_job::ReadJob;
 pub use server::{ANCESTORS_MAX, Peer};
 
 /// What the socket hands the app.
@@ -68,6 +71,9 @@ pub enum Incoming {
 pub enum Answer {
     /// Written back at once: every action that answers in one line, and every refusal.
     Reply(control::Reply),
+    /// A read of a terminal's screen, which the socket thread carries out itself (the copy is not
+    /// for the UI thread) and writes back as one line.
+    Read(ReadJob),
     /// The reply line now, then the connection is handed to a stream thread that writes what the
     /// subscription yields. The app makes the subscription while it answers, so nothing published
     /// after the reply is missed; if the socket gave up waiting, dropping the answer drops the

@@ -65,5 +65,7 @@ workspace = true
 [dev-dependencies]
 # `with_language`, for the tests that read the wording in another language.
 wormhole-text = { workspace = true, features = ["test-support"] }
+# `TestTerm`, a terminal without a PTY, for the tests of what reads a screen (`ipc::read_job`).
+wormhole-term = { workspace = true, features = ["test-support"] }
 minisign = "0.9"
 tiny_http = "0.12"

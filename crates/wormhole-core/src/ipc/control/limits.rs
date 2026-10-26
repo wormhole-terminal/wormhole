@@ -1,7 +1,8 @@
 //! How often a caller may ask. A script in a loop, or an agent that keeps notifying, must not
 //! flood the user with banners, type endlessly into other terminals or open terminals until the
 //! window is full: each kind of request gets a budget per caller (the tab it runs in, or
-//! "outside" for a shell elsewhere) over a sliding minute. Reading (`list`, `status`) is free.
+//! "outside" for a shell elsewhere) over a sliding minute. Looking at the list (`list`, `status`) is
+//! free; reading text is not.
 
 use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, Instant};
@@ -12,6 +13,13 @@ pub enum Limited {
     Notify,
     SendText,
     NewTerminal,
+    /// `read` and `blocks`: each costs the socket thread a copy of the screen under the terminal's lock,
+    /// so a loop of them is slowed down (ten a second keeps the thread mostly free for hooks).
+    Read,
+    /// `send-keys`: a program driven from a script takes bursts of them.
+    SendKeys,
+    /// `mouse`.
+    Mouse,
     /// A stream of events (`events`): each one holds a thread and a place among the few streams there
     /// are, so how often one is started is held down too.
     Subscribe,
@@ -37,6 +45,9 @@ impl Limited {
             Limited::Notify => 10,
             Limited::SendText => 30,
             Limited::NewTerminal => 5,
+            Limited::Read => 600,
+            Limited::SendKeys => 240,
+            Limited::Mouse => 240,
             Limited::Subscribe => 30,
             Limited::WelcomeLook => 240,
             Limited::WelcomeInstall => 12,
