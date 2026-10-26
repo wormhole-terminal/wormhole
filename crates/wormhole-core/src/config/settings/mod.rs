@@ -395,6 +395,12 @@ impl Settings {
         if self.motion_feature_on() { self.motion } else { MotionChoices::CLASSIC }
     }
 
+    /// Whether the Live resize feature is on in this build: windows resize in steps of the terminal's cell,
+    /// and the program in it is told the size calmly while a window is dragged.
+    pub fn live_resize_on(&self) -> bool {
+        self.feature_enabled(FeatureFlag::LiveResize)
+    }
+
     /// Whether the Motion feature is on in this build: the motions the design fixed, which have no choice
     /// to name (the panel's tab switch, the palette's exit, a split opening), are played only then.
     pub fn motion_feature_on(&self) -> bool {

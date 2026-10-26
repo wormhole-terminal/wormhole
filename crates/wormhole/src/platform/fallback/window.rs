@@ -2,6 +2,8 @@
 //! GPUI has no call for moving, ordering or hiding a window.
 
 use gpui_kit::Window;
+use wormhole_core::view::motion::live_resize::Dragged;
+use wormhole_core::view::motion::window_animation::Behaviour;
 
 pub fn lights_span(_: &Window) -> Option<f32> {
     None
@@ -51,27 +53,17 @@ pub fn number(_: &Window) -> Option<i64> {
 
 pub const HAS_SYSTEM_ANIMATION: bool = false;
 
-pub fn set_animated(_: &Window, _: bool) {}
-
-pub fn set_resize_increments(_: &Window, _: Option<(f32, f32)>) {}
+pub fn set_animation(_: &Window, _: Behaviour) {}
 
 #[cfg(feature = "devctl")]
 pub fn scaling_state(_: &Window) -> Option<String> {
     None
 }
 
-pub fn in_live_resize(_: &Window) -> bool {
-    false
-}
+/// Nothing is opened out of sight or dragged to a size here, so there is nothing to do with a handle.
+pub struct Native;
 
-pub fn settle(_: &Window, _: (f32, f32)) -> bool {
-    false
-}
-
-/// Nothing is opened out of sight here, so there is nothing to reveal.
-pub struct Reveal;
-
-impl Reveal {
+impl Native {
     pub fn of(_: &Window) -> Option<Self> {
         None
     }
@@ -79,4 +71,8 @@ impl Reveal {
     pub fn paint(&self) {}
 
     pub fn show(&self, _: bool) {}
+
+    pub fn settle(&self, _: (f32, f32), _: Dragged) -> bool {
+        false
+    }
 }

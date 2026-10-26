@@ -71,6 +71,11 @@ impl GridProbe {
         (layout.cols, layout.rows)
     }
 
+    /// What the pane has beyond the grid's whole cells, across and down, in points.
+    pub fn spare(&self) -> (f32, f32) {
+        self.0.get().spare
+    }
+
     /// A cell's width and height in points: what a window that resizes in whole cells steps by.
     pub fn cell(&self) -> (f32, f32) {
         let layout = self.0.get();
@@ -599,11 +604,6 @@ impl TerminalView {
             (pane.cols, pane.rows) = (cols, rows);
         }
         pane
-    }
-
-    /// What the pane has beyond the grid's whole cells, across and down, as of the last frame.
-    pub fn spare(&self) -> (f32, f32) {
-        self.layout.get().spare
     }
 
     /// The size the window was last asked to give the pane, while the layout has not shown it yet.

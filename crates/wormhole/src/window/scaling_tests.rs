@@ -12,7 +12,7 @@ use gpui_kit::{Subscription, TestAppContext, VisualTestContext, px, size};
 use wormhole_core::config::features::FeatureFlag;
 
 use crate::app_state::OpenWindow;
-use crate::platform::window::test_live;
+use crate::platform::live_resize::test_live;
 use crate::terminal_view::TerminalEvent;
 use crate::window::test_harness::{draw, drive, isolate_in, read, read_cx, start, with_window};
 
@@ -71,20 +71,6 @@ fn count_resizes(cx: &mut TestAppContext, window: &OpenWindow) -> (Rc<Cell<usize
     (resizes, subscription)
 }
 
-fn count_ends(cx: &mut TestAppContext, window: &OpenWindow) -> (Rc<Cell<usize>>, Subscription) {
-    let terminal = read(cx, window, |ws| ws.sessions[0].terminal().clone());
-    let ends = Rc::new(Cell::new(0));
-    let counted = ends.clone();
-    let subscription = cx.update(|cx| {
-        cx.subscribe(&terminal, move |_, event: &TerminalEvent, _| {
-            if *event == TerminalEvent::LiveResizeEnded {
-                counted.set(counted.get() + 1);
-            }
-        })
-    });
-    (ends, subscription)
-}
-
 fn zoom(cx: &mut TestAppContext, window: &OpenWindow, step: Option<f32>) {
     drive(cx, window, |ws, _, cx| ws.zoom_font(step, cx));
 }
@@ -93,10 +79,10 @@ fn resize_window(cx: &mut TestAppContext, window: &OpenWindow, width: f32) {
     cx.simulate_window_resize(window.handle, size(px(width), px(900.0)));
 }
 
-fn set_feature(cx: &mut TestAppContext, on: bool) {
+fn set_feature(cx: &mut TestAppContext, flag: FeatureFlag, on: bool) {
     cx.update(|cx| {
         crate::settings::update_settings(cx, |settings| {
-            settings.feature_flags.insert(FeatureFlag::Motion.key().to_string(), on);
+            settings.feature_flags.insert(flag.key().to_string(), on);
         });
     });
 }
@@ -174,7 +160,8 @@ fn the_motion_feature_off_and_reduce_motion_zoom_at_once_and_the_first_says_the_
     assert_eq!(chip(cx, &window), Some(format!("{} × {}", after.0, after.1)), "and the chip still says it");
 
     cx.update(|cx| cx.set_reduce_motion(false));
-    set_feature(cx, false);
+    set_feature(cx, FeatureFlag::Motion, false);
+    set_feature(cx, FeatureFlag::LiveResize, false);
     zoom(cx, &window, None);
     frames(cx, &window, 2);
     assert_eq!(told(cx, &window), before, "without the feature the zoom is as it always was");
@@ -191,7 +178,6 @@ fn a_live_resize_tells_the_program_at_most_every_100_ms_and_once_more_when_it_en
     }
     let window = open(cx);
     let (resizes, _count) = count_resizes(cx, &window);
-    let (ends, _ends) = count_ends(cx, &window);
     let start_size = told(cx, &window);
 
     test_live::set(Some(true));
@@ -211,7 +197,6 @@ fn a_live_resize_tells_the_program_at_most_every_100_ms_and_once_more_when_it_en
         assert_eq!(drawn(cx, &window), first, "and the grid drawn is the program's");
     }
     assert_eq!(resizes.get(), 1);
-    assert_eq!(ends.get(), 0);
 
     // The pointer rests: the wake tells the size that is there, without another drag.
     cx.executor().advance_clock(Duration::from_millis(100));
@@ -231,9 +216,8 @@ fn a_live_resize_tells_the_program_at_most_every_100_ms_and_once_more_when_it_en
     let last = told(cx, &window);
     assert!(last.0 < trailing.0, "told when the live resize ended: {trailing:?} then {last:?}");
     assert_eq!(resizes.get(), 3);
-    assert_eq!(ends.get(), 1, "and the window heard that it ended, once");
     frames(cx, &window, 2);
-    assert_eq!(ends.get(), 1);
+    assert_eq!(resizes.get(), 3, "and once only");
     test_live::set(None);
 }
 
@@ -308,4 +292,76 @@ fn under_reduce_motion_the_chip_is_cut_and_a_new_terminal_in_a_zoomed_window_say
         ws.sessions.last().expect("a session").terminal().read(cx).size_readout_text()
     });
     assert_eq!(newest, None, "a terminal that is new to a zoomed window just has the size");
+}
+
+#[gpui_kit::test]
+fn each_feature_has_its_own_part_the_live_resize_and_the_zoom(cx: &mut TestAppContext) {
+    if isolate("each_feature_has_its_own_part_the_live_resize_and_the_zoom") {
+        return;
+    }
+    let window = open(cx);
+    let (resizes, _count) = count_resizes(cx, &window);
+    test_live::set(Some(true));
+
+    // Live resize off: a drag tells the program every size at once, and says nothing.
+    set_feature(cx, FeatureFlag::LiveResize, false);
+    for width in [1400.0, 1380.0, 1360.0] {
+        resize_window(cx, &window, width);
+        frames_apart(cx, &window, 1, Duration::from_millis(5));
+    }
+    assert_eq!(resizes.get(), 3, "no throttle without the feature");
+    assert_eq!(chip(cx, &window), None, "and no chip for a drag");
+    // Its zoom still eases and says the size: that is the Motion feature's.
+    let before = told(cx, &window);
+    zoom(cx, &window, Some(2.0));
+    frames_apart(cx, &window, 3, Duration::from_millis(15));
+    assert_eq!(told(cx, &window), before, "the text is on its way");
+    frames_apart(cx, &window, 8, Duration::from_millis(15));
+    assert!(chip(cx, &window).is_some());
+    assert_eq!(resizes.get(), 4);
+
+    // Live resize on and Motion off: the drag is throttled, the zoom is a cut with no chip.
+    set_feature(cx, FeatureFlag::LiveResize, true);
+    set_feature(cx, FeatureFlag::Motion, false);
+    cx.executor().advance_clock(Duration::from_secs(2));
+    cx.run_until_parked();
+    frames(cx, &window, 2);
+    let held_from = resizes.get();
+    resize_window(cx, &window, 1300.0);
+    frames_apart(cx, &window, 1, Duration::from_millis(5));
+    resize_window(cx, &window, 1280.0);
+    frames_apart(cx, &window, 1, Duration::from_millis(5));
+    assert_eq!(resizes.get(), held_from + 1, "the second size of the drag is held back");
+    test_live::set(None);
+    cx.executor().advance_clock(Duration::from_secs(2));
+    cx.run_until_parked();
+    frames(cx, &window, 3);
+    assert_eq!(chip(cx, &window), None, "the drag's chip has gone");
+    zoom(cx, &window, None);
+    frames(cx, &window, 2);
+    assert_eq!(chip(cx, &window), None, "a zoom says nothing without the Motion feature");
+}
+
+#[gpui_kit::test]
+fn a_terminal_that_is_not_on_screen_says_nothing_when_the_text_is_zoomed_and_switched_to(
+    cx: &mut TestAppContext,
+) {
+    if isolate("a_terminal_that_is_not_on_screen_says_nothing_when_the_text_is_zoomed_and_switched_to") {
+        return;
+    }
+    let window = start(cx, 2);
+    cx.update(|cx| cx.set_reduce_motion(true));
+    cx.simulate_window_resize(window.handle, size(px(1500.0), px(900.0)));
+    frames(cx, &window, 3);
+    // A tick tells each terminal whether it is on screen.
+    cx.executor().advance_clock(Duration::from_millis(500));
+    cx.run_until_parked();
+    frames(cx, &window, 2);
+    zoom(cx, &window, Some(1.0));
+    frames(cx, &window, 3);
+    assert!(chip(cx, &window).is_some(), "the terminal on screen says its size");
+    drive(cx, &window, |ws, window, cx| ws.activate(1, window, cx));
+    frames(cx, &window, 3);
+    let other = read_cx(cx, &window, |ws, cx| ws.sessions[1].terminal().read(cx).size_readout_text());
+    assert_eq!(other, None, "the one that was behind says nothing when it is switched to");
 }

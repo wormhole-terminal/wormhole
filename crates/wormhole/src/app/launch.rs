@@ -25,7 +25,9 @@ use crate::app_state::look::{apply_theme, sync_system_look};
 use crate::app_state::profiles;
 use crate::settings::ParkedSettings;
 use crate::status_item;
-use crate::window::window_lifecycle::{open_workspace_window, save_all, window_closed};
+use crate::window::window_lifecycle::{
+    open_first_workspace_window, open_workspace_window, save_all, window_closed,
+};
 use crate::{notifications, update};
 
 const TICK: Duration = Duration::from_millis(400);
@@ -108,6 +110,16 @@ pub(crate) fn start(
     })
     .detach();
     cx.on_window_closed(window_closed).detach();
+    // A person taking hold of a window's edge and letting go of it: heard on the spot, passed on from a task.
+    let drags = cx.to_async();
+    crate::platform::live_resize::watch(move |event| {
+        drags
+            .spawn({
+                let drags = drags.clone();
+                async move |_| drags.update(|cx| crate::window::scaling::live_resize_changed(event, cx))
+            })
+            .detach();
+    });
     notifications::init(cx);
     update::init(cx);
     crate::app::saved_text::init(cx);
@@ -137,7 +149,12 @@ pub(crate) fn start(
         // around the window; otherwise the intro window opens over a plain terminal.
         let welcome = crate::app::welcome::first_launch_plan(cx);
         crate::onboarding::welcome::set_first_launch(welcome, cx);
-        open_workspace_window(None, None, cx);
+        // The first run plays around this window, which it brings in itself: no system animation then.
+        if welcome.is_some() || crate::app::welcome::first_run_pending(cx) {
+            open_first_workspace_window(cx);
+        } else {
+            open_workspace_window(None, None, cx);
+        }
         crate::onboarding::welcome::set_first_launch(None, cx);
         match welcome {
             Some(plan) => crate::app::welcome::play_first(plan, cx),

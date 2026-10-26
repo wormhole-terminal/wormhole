@@ -204,6 +204,8 @@ impl Workspace {
             return;
         }
         self.select(ix, cx);
+        // The cell of the terminal now shown is what the window steps by.
+        self.sync_resize_increments(window, cx);
         window.focus(&self.sessions[ix].terminal().focus_handle(cx), cx);
         cx.notify();
     }

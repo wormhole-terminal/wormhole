@@ -11,6 +11,8 @@
 use std::sync::OnceLock;
 
 use gpui_kit::Window;
+use wormhole_core::view::motion::live_resize::Dragged;
+use wormhole_core::view::motion::window_animation::Behaviour;
 
 use super::os::window as os;
 
@@ -130,21 +132,10 @@ pub fn has_system_animation() -> bool {
     !cfg!(test) && os::HAS_SYSTEM_ANIMATION
 }
 
-/// Give `window` the system's open and close animation (the one a document window has, which scales and
-/// fades it), or, if it was given that, take it away: a cut. A window that never had it is left alone.
-pub fn set_animated(window: &Window, animated: bool) {
-    os::set_animated(window, animated);
-}
-
-/// Make the window resize in steps of `cell` (width and height, in points) when it is dragged, or freely with
-/// `None`. Full screen, zoom and tiling ignore them, and so does a size set by a program or a script.
-///
-/// AppKit keeps increments in whole points: a cell of 8.4 steps by 8, so a font whose cell is not a whole
-/// number of points is followed only roughly across the width (the line height is whole already). It does not
-/// say which size the steps count from either, so a window that is off the grid may stay off it: [`settle`]
-/// takes the leftover strip off when the drag is over.
-pub fn set_resize_increments(window: &Window, cell: Option<(f32, f32)>) {
-    os::set_resize_increments(window, cell);
+/// Give `window` the animation behaviour `behaviour` says: the document window's scale and fade, none (a cut),
+/// or the system's default, which is what a window has until it is asked for something else.
+pub fn set_animation(window: &Window, behaviour: Behaviour) {
+    os::set_animation(window, behaviour);
 }
 
 /// The window's resize steps, animation behaviour and size, for devctl's `scaling`.
@@ -153,30 +144,17 @@ pub fn scaling_state(window: &Window) -> Option<String> {
     os::scaling_state(window)
 }
 
-/// Whether the person is dragging the window's edge or corner right now (`NSWindow.inLiveResize`).
-pub fn in_live_resize(window: &Window) -> bool {
-    #[cfg(test)]
-    if let Some(live) = test_live::get() {
-        return live;
-    }
-    os::in_live_resize(window)
-}
+/// A window's own handle, for what has to happen with the app and the window both free of an update: drawing
+/// the first frame of a window that was opened out of sight and then putting it on the screen (so the system's
+/// opening animation never shows an empty box), and taking the strip off a window a drag left off the cell
+/// grid (GPUI's resize callback needs the window free, too, or it does not run). Take it while updating the
+/// window (`Native::of`), use it after the update is over.
+pub struct Native(os::Native);
 
-/// Make the window `shrink.0` narrower and `shrink.1` shorter, points that its top left corner stays put
-/// for, unless it is full screen, zoomed or tiled. Whether it did.
-pub fn settle(window: &Window, shrink: (f32, f32)) -> bool {
-    os::settle(window, shrink)
-}
-
-/// A window that was opened out of sight and is to be drawn once, then put on the screen, so the system's
-/// opening animation never shows an empty box. Take it while updating the window (`Reveal::of`), use it
-/// after the update is over: drawing the first frame needs the app and the window both free.
-pub struct Reveal(os::Reveal);
-
-impl Reveal {
-    /// The window's reveal, `None` where it has none.
+impl Native {
+    /// The window's handle, `None` where it has none.
     pub fn of(window: &Window) -> Option<Self> {
-        os::Reveal::of(window).map(Self)
+        os::Native::of(window).map(Self)
     }
 
     /// Draw the first frame while the window is still out of sight.
@@ -188,23 +166,11 @@ impl Reveal {
     pub fn show(&self, focus: bool) {
         self.0.show(focus);
     }
-}
 
-/// What the tests say about a live resize: no test window has an `NSWindow` to ask.
-#[cfg(test)]
-pub(crate) mod test_live {
-    use std::cell::Cell;
-
-    thread_local! {
-        static LIVE: Cell<Option<bool>> = const { Cell::new(None) };
-    }
-
-    pub(crate) fn get() -> Option<bool> {
-        LIVE.with(Cell::get)
-    }
-
-    /// Windows are in a live resize (or not) until `None` puts the real answer back.
-    pub(crate) fn set(live: Option<bool>) {
-        LIVE.with(|cell| cell.set(live));
+    /// Make the window `shrink.0` narrower and `shrink.1` shorter, without animation, the edges the person did
+    /// not hold (`dragged`) staying where they are. Not for a window that is full screen, zoomed or tiled (see
+    /// core's `live_resize::tiled`: it spans the screen's usable width or height). Whether it did.
+    pub fn settle(&self, shrink: (f32, f32), dragged: Dragged) -> bool {
+        self.0.settle(shrink, dragged)
     }
 }

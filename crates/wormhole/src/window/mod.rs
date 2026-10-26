@@ -129,7 +129,7 @@ mod resize;
 pub(crate) mod restart_facts;
 mod save;
 mod saved_layout;
-mod scaling;
+pub(crate) mod scaling;
 #[cfg(test)]
 mod scaling_tests;
 mod session;

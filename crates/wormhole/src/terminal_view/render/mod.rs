@@ -158,7 +158,7 @@ impl Render for TerminalView {
             focused,
             draws_cursor,
             reduce_motion,
-            scaling: self.scaling_on(cx),
+            live_resize: self.live_on(cx),
             dock,
             layout: layout_cell,
             state: prepaint_state,

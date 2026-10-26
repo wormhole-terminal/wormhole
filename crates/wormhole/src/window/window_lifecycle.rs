@@ -39,6 +39,33 @@ pub(crate) fn open_workspace_window_in(
     source: Option<window_bounds::Source>,
     cx: &mut App,
 ) {
+    open_window(profile, record, source, Entrance::System, cx);
+}
+
+/// The first window of a first launch, which the intro or the terminal welcome plays around: it never opens
+/// with the system's animation, as it is the intro's to bring in (`app::welcome`).
+pub(crate) fn open_first_workspace_window(cx: &mut App) {
+    let profile = app(cx).active_profile().clone();
+    open_window(&profile, None, None, Entrance::Plain, cx);
+}
+
+/// How a window comes onto the screen.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Entrance {
+    /// With the system's animation when this build plays it (`scaling`): out of sight until its first frame
+    /// is drawn, then put on the screen.
+    System,
+    /// At once, as GPUI opens it.
+    Plain,
+}
+
+fn open_window(
+    profile: &ProfileId,
+    record: Option<WindowRecord>,
+    source: Option<window_bounds::Source>,
+    entrance: Entrance,
+    cx: &mut App,
+) {
     let id = match &record {
         Some(record) => record.id,
         None => app_mut(cx).alloc_window_id(),
@@ -74,8 +101,11 @@ pub(crate) fn open_workspace_window_in(
         ),
     };
     // A terminal window opens and closes with the system's animation: out of sight until its first frame is
-    // drawn (`window_open::reveal`), unless it grows from a torn-off terminal's chip.
-    let animated = scaling::terminal_window_animates(profile, crate::window::grow::active(id, cx), cx);
+    // drawn (`window_open::reveal`), unless it grows from a torn-off terminal's chip, the intro brings it in,
+    // or it comes back full screen or maximized, which the system's own transition handles.
+    let animated = entrance == Entrance::System
+        && matches!(bounds, WindowBounds::Windowed(_))
+        && scaling::terminal_window_animates(profile, crate::window::grow::active(id, cx), cx);
     let options = WindowOptions {
         show: !animated,
         window_bounds: Some(bounds),

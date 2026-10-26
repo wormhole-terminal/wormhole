@@ -55,12 +55,6 @@ impl Ease {
         let here = if t >= 1.0 { self.to } else { self.from + (self.to - self.from) * EASE_OUT.ease(t) };
         Self { from: here, to, began: now }
     }
-
-    /// Where it is going.
-    #[must_use]
-    pub fn target(&self) -> f32 {
-        self.to
-    }
 }
 
 /// `size` to the nearest multiple of [`QUANTUM`].
@@ -135,7 +129,6 @@ mod tests {
         let now = at(start, 40);
         let reached = first.at(now).size;
         let second = first.retarget(now, 2.0);
-        assert_eq!(second.target(), 2.0);
         let begin = second.at(now).size;
         assert!((begin - reached).abs() <= QUANTUM, "no jump: {begin} after {reached}");
         assert_eq!(

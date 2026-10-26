@@ -14,9 +14,7 @@ use crate::window::window_lifecycle::with_front_workspace;
 /// On a first launch (nothing saved, the intro never finished or skipped), open the intro window
 /// on the window that was just opened.
 pub(crate) fn start_if_first_launch(cx: &mut App) {
-    let Some(store) = &app(cx).store else { return };
-    let flag = store.meta(ONBOARDED_KEY).ok().flatten();
-    if !should_show(flag.as_deref(), 0) {
+    if !first_run_pending(cx) {
         return;
     }
     let Some(window) = app(cx).windows.first().cloned() else { return };
@@ -25,6 +23,14 @@ pub(crate) fn start_if_first_launch(cx: &mut App) {
         // The window was never shown: it arrives out of the animation.
         AppState::with_workspace(&window, cx, |ws, window, cx| ws.open_first_intro(window, cx));
     });
+}
+
+/// Whether the first run has not been through yet (never finished or skipped): the intro or the terminal
+/// welcome plays around the first window.
+pub(crate) fn first_run_pending(cx: &App) -> bool {
+    let Some(store) = &app(cx).store else { return false };
+    let flag = store.meta(ONBOARDED_KEY).ok().flatten();
+    should_show(flag.as_deref(), 0)
 }
 
 /// The plan for the first launch, when the terminal welcome is on and this is one (nothing saved, the

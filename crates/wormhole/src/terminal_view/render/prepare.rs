@@ -58,10 +58,9 @@ pub(super) struct Prepare {
     pub focused: bool,
     pub draws_cursor: bool,
     pub reduce_motion: bool,
-    /// The window scales as the design fixed (Motion feature): the grid tolerates a pixel's rounding of the
-    /// window's size, and the PTY is told a size by the rules of a live resize and a text zoom
-    /// (`terminal_view::scaling`).
-    pub scaling: bool,
+    /// The window is resized like Terminal does (Live resize feature): the grid tolerates a pixel's rounding
+    /// of the window's size.
+    pub live_resize: bool,
     pub dock: Option<wormhole_core::onboarding::welcome::DockCell>,
     pub layout: Rc<Cell<Layout>>,
     pub state: Rc<RefCell<RenderState>>,
@@ -79,7 +78,7 @@ impl Prepare {
         let area = bounds;
         // A window whose size AppKit rounded to the screen's pixels (its steps are a fractional cell) may be a
         // pixel short of a whole column.
-        let slack = if self.scaling { 1.0 / window.scale_factor() } else { 0.0 };
+        let slack = if self.live_resize { 1.0 / window.scale_factor() } else { 0.0 };
         let wanted = Placement::new(area, cell_width, line_height, slack);
         // What the PTY is told, and the grid drawn: the size the pane makes, unless it is held back.
         let (told_cols, told_rows) = self.entity.update(cx, |this, cx| {
@@ -113,9 +112,10 @@ impl Prepare {
             rows,
             gutter: PADDING_X,
             frame,
+            // What the pane makes room for, not what is drawn: the grid held back is not the window's strip.
             spare: (
-                (f32::from(area.size.width) - f32::from(bounds.size.width)).max(0.0),
-                (f32::from(area.size.height) - f32::from(bounds.size.height)).max(0.0),
+                (f32::from(area.size.width) - f32::from(wanted.bounds.size.width)).max(0.0),
+                (f32::from(area.size.height) - f32::from(wanted.bounds.size.height)).max(0.0),
             ),
         });
         if let Some(dock) = self.dock {
@@ -381,17 +381,6 @@ mod tests {
         assert_eq!(placed.reach.top, px(PADDING_Y));
         assert_eq!(placed.reach.right, px(5.0 + PADDING_X));
         assert_eq!(placed.reach.bottom, px(7.0 + PADDING_Y));
-    }
-}
-
-#[cfg(test)]
-mod held_tests {
-    use gpui_kit::{Bounds, point, px, size};
-
-    use super::{PADDING_X, Placement};
-
-    fn area(width: f32, height: f32) -> Bounds<gpui_kit::Pixels> {
-        Bounds::new(point(px(40.0), px(30.0)), size(px(width), px(height)))
     }
 
     #[test]

@@ -26,7 +26,7 @@ pub(super) fn reveal_test(ctx: &mut Ctx, _: &str) -> Result<String> {
     ctx.cx
         .spawn(async move |_, cx| {
             let ready = cx.update(|cx| {
-                handle.update(cx, |_, window, _| crate::platform::window::Reveal::of(window)).ok().flatten()
+                handle.update(cx, |_, window, _| crate::platform::window::Native::of(window)).ok().flatten()
             });
             let Some(ready) = ready else {
                 tracing::info!("reveal-test: the window has no reveal");

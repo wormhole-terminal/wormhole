@@ -33,10 +33,15 @@ pub fn open<V: Render>(
 /// the animation never shows an empty box. Done after the current update, as drawing needs the app free; if
 /// the window cannot be drawn ahead, it is put on the screen as any window opens.
 pub fn reveal(handle: AnyWindowHandle, cx: &mut App) {
-    let _ = handle.update(cx, |_, window, _| crate::platform::window::set_animated(window, true));
+    let _ = handle.update(cx, |_, window, _| {
+        crate::platform::window::set_animation(
+            window,
+            wormhole_core::view::motion::window_animation::Behaviour::System,
+        );
+    });
     cx.spawn(async move |cx| {
         let ready = cx.update(|cx| {
-            handle.update(cx, |_, window, _| crate::platform::window::Reveal::of(window)).ok().flatten()
+            handle.update(cx, |_, window, _| crate::platform::window::Native::of(window)).ok().flatten()
         });
         match ready {
             Some(ready) => {
@@ -47,9 +52,13 @@ pub fn reveal(handle: AnyWindowHandle, cx: &mut App) {
                 let _ = handle.update(cx, |_, window, _| crate::platform::window::show(window));
             }),
         }
-        // As a window that opens in front does: the app comes forward with it (unless background mode).
+        // As a window that opens in front does: the app comes forward with it (unless background mode). And a
+        // frame once more, in case Metal did not present the first one for a window that was out of sight.
         cx.update(|cx| {
-            let _ = handle.update(cx, |_, window, cx| crate::background::activate_window(window, cx));
+            let _ = handle.update(cx, |_, window, cx| {
+                window.refresh();
+                crate::background::activate_window(window, cx);
+            });
         });
     })
     .detach();

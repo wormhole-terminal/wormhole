@@ -19,7 +19,8 @@
 //! draws a select under each of its four choices and a preview (a view of its own, about 450) under each, with its caption (6,250).
 //! Liquid Glass moved from Appearance (one row fewer) to Feature flags (one row more); Feature flags rose by
 //! 392 (4,333 to 4,725, measured with the row left out and in) with one more, Tear off a terminal: a switch,
-//! its name, its line of words and its dot.
+//! its name, its line of words and its dot. It rose by 358 more (4,725 to 5,083) with Live resize, the same row
+//! again.
 //! Appearance and a search (which show the window's preview) rose by about 770 when the preview
 //! became the window's own parts at full size instead of a drawing of them.
 //! Updates rose by about 380 with its one more row, Count this Mac anonymously, and by about 150 with
@@ -70,7 +71,7 @@ const BUDGET: [(&str, u64); 15] = [
     ("Advanced", 4120),
     ("Projects", 8990),
     // A sixth switch (Automation) is a row more.
-    ("FeatureFlags", 5163),
+    ("FeatureFlags", 5518),
     ("search", 11820),
 ];
 

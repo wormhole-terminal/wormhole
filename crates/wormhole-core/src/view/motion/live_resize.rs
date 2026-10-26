@@ -5,9 +5,10 @@
 //! size always getting through (trailing), and once more the moment the live resize ends. The grid that is
 //! drawn stays at the PTY's size until then. Outside a live resize every size is told at once.
 //!
-//! Also here: the rule for the strip a window that is not on the cell grid leaves at its right and bottom
-//! edges when the drag ends ([`settle`]). It is a pure timing decision and some arithmetic: asking the
-//! system whether a live resize is going on, and the timers, are the app's.
+//! Also here: the window's resize steps ([`steps`]) and the arithmetic of the strip a window that is not on
+//! the cell grid leaves at its right and bottom edges when the drag ends ([`settle`], [`settled_frame`],
+//! [`tiled`]). They are pure timing decisions and geometry: asking the system whether a live resize is going
+//! on, hearing it end, and the timers, are the app's.
 
 use std::time::{Duration, Instant};
 
@@ -18,32 +19,43 @@ pub const INTERVAL: Duration = Duration::from_millis(100);
 /// a fractional cell to the screen's pixels.
 pub const SETTLE_MIN: f32 = 1.0;
 
+/// How near a whole number of points a cell's width must be for the window to step by it: AppKit keeps its
+/// steps in whole points, so any other width would be followed wrongly on most steps.
+pub const WHOLE_POINT: f32 = 0.05;
+
+/// How near a screen's edges a window's sides are for it to count as tiled or snapped to them.
+pub const TILE_MARGIN: f32 = 24.0;
+
+/// What the system says about a window being dragged to another size: it began, or it ended (with the edges
+/// the person held). `window` is the system's number of the window (`platform::window::number`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Event {
+    Started { window: i64 },
+    Ended { window: i64, dragged: Dragged },
+}
+
 /// What the gate says about one frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Step {
     /// Tell the program the size the window gives it now.
     pub apply: bool,
-    /// The live resize that was going on at the last frame is over.
-    pub ended: bool,
-    /// Draw this terminal again after this long, whether or not anything else asks: the size that is held
-    /// back is told then, and the end of the live resize is noticed. `None` outside a live resize.
+    /// Draw this terminal again after this long, whether or not anything else asks: a size is held back, and
+    /// this is when it is due. `None` when nothing is held back.
     pub wake_in: Option<Duration>,
 }
 
 /// Decides, frame by frame, whether the program is told the window's size.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ResizeGate {
-    live: bool,
     applied: Option<Instant>,
 }
 
 impl ResizeGate {
     /// The frame at `now`: `live` says whether the window is being dragged, `differs` whether the size the
     /// window gives the terminal is not the one the program has. The caller does what [`Step::apply`]
-    /// says; the gate counts it as done.
+    /// says; the gate counts it as done. The end of a live resize is not seen here: the frame after it has
+    /// `live` false and a size that differs, which is told at once.
     pub fn step(&mut self, now: Instant, live: bool, differs: bool) -> Step {
-        let ended = self.live && !live;
-        self.live = live;
         let since = self.applied.map(|at| now.saturating_duration_since(at));
         let due = since.is_none_or(|since| since >= INTERVAL);
         let apply = differs && (!live || due);
@@ -52,19 +64,22 @@ impl ResizeGate {
         if apply {
             self.applied = live.then_some(now);
         }
-        let wake_in = live.then(|| match since {
-            // A size is held back: it is told when the interval since the last one is up.
-            Some(since) if differs && !apply => INTERVAL.saturating_sub(since),
-            _ => INTERVAL,
-        });
-        Step { apply, ended, wake_in }
+        let wake_in = match since {
+            Some(since) if live && differs && !apply => Some(INTERVAL.saturating_sub(since)),
+            _ => None,
+        };
+        Step { apply, wake_in }
     }
+}
 
-    /// Whether the last frame was in a live resize.
-    #[must_use]
-    pub fn is_live(&self) -> bool {
-        self.live
-    }
+/// The steps the window resizes in for a terminal whose cell is `cell` (width, height in points). AppKit keeps
+/// them in whole points, so the width steps only when the cell's width is a whole point already (within
+/// [`WHOLE_POINT`]); otherwise it is left free (one point) and [`settle`] takes the strip off at the end. The
+/// height is whole already.
+#[must_use]
+pub fn steps(cell: (f32, f32)) -> (f32, f32) {
+    let width = if (cell.0 - cell.0.round()).abs() <= WHOLE_POINT { cell.0.round().max(1.0) } else { 1.0 };
+    (width, cell.1.round().max(1.0))
 }
 
 /// How far the window is to be made smaller, in points across and down, so that it holds whole cells with no
@@ -76,6 +91,70 @@ pub fn settle(spare: (f32, f32), cell: (f32, f32)) -> Option<(f32, f32)> {
     let axis = |spare: f32, cell: f32| if spare >= SETTLE_MIN && spare < cell { spare } else { 0.0 };
     let (dx, dy) = (axis(spare.0, cell.0), axis(spare.1, cell.1));
     (dx > 0.0 || dy > 0.0).then_some((dx, dy))
+}
+
+/// A window's frame in AppKit's space: `y` grows up, so it is the bottom edge.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Frame {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+impl Frame {
+    #[must_use]
+    pub fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
+        Self { x, y, w, h }
+    }
+
+    fn right(&self) -> f32 {
+        self.x + self.w
+    }
+
+    fn top(&self) -> f32 {
+        self.y + self.h
+    }
+}
+
+/// Which edges a drag moved.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Dragged {
+    /// The left edge moved (so the right one is the one to keep).
+    pub left: bool,
+    /// The top edge moved (so the bottom one is the one to keep).
+    pub top: bool,
+}
+
+/// The edges that moved between the frame the live resize began at and the one it ended at.
+#[must_use]
+pub fn dragged(start: Frame, end: Frame) -> Dragged {
+    Dragged { left: (end.x - start.x).abs() > 0.5, top: (end.top() - start.top()).abs() > 0.5 }
+}
+
+/// `frame` made `shrink` smaller across and down, the edges that were not dragged staying where they are: a
+/// strip is taken off from the side the person was not holding, and a corner dragged to the top left leaves
+/// the bottom right where it is.
+#[must_use]
+pub fn settled_frame(frame: Frame, shrink: (f32, f32), dragged: Dragged) -> Frame {
+    Frame {
+        x: if dragged.left { frame.x + shrink.0 } else { frame.x },
+        // The bottom edge is `y`: the top is kept by moving the bottom up.
+        y: if dragged.top { frame.y } else { frame.y + shrink.1 },
+        w: frame.w - shrink.0,
+        h: frame.h - shrink.1,
+    }
+}
+
+/// Whether `frame` sits against both sides, or both the top and the bottom, of the screen's usable area
+/// `visible` (within [`TILE_MARGIN`]): the shape the system's tiling and the green button's fill leave, which
+/// are its sizes, not the person's, and which a window is not made smaller from. A window the person dragged
+/// to the full height or width of the screen by hand counts too; it is left as it is.
+#[must_use]
+pub fn tiled(frame: Frame, visible: Frame) -> bool {
+    let across = frame.x <= visible.x + TILE_MARGIN && frame.right() >= visible.right() - TILE_MARGIN;
+    let down = frame.y <= visible.y + TILE_MARGIN && frame.top() >= visible.top() - TILE_MARGIN;
+    across || down
 }
 
 #[cfg(test)]
@@ -91,8 +170,11 @@ mod tests {
         let mut gate = ResizeGate::default();
         let start = Instant::now();
         for ms in [0, 1, 2, 3] {
-            let step = gate.step(after(start, ms), false, true);
-            assert_eq!(step, Step { apply: true, ended: false, wake_in: None }, "at {ms} ms");
+            assert_eq!(
+                gate.step(after(start, ms), false, true),
+                Step { apply: true, wake_in: None },
+                "at {ms}"
+            );
         }
         assert!(!gate.step(after(start, 4), false, false).apply, "and nothing is told when nothing differs");
     }
@@ -107,7 +189,7 @@ mod tests {
         assert_eq!(held.wake_in, Some(Duration::from_millis(84)), "and told when the interval is up");
         let late = gate.step(after(start, 100), true, true);
         assert!(late.apply, "at the interval the size that is there is told");
-        assert_eq!(late.wake_in, Some(INTERVAL));
+        assert_eq!(late.wake_in, None, "and nothing is held back then");
     }
 
     #[test]
@@ -140,23 +222,29 @@ mod tests {
     }
 
     #[test]
-    fn the_end_of_a_live_resize_tells_the_size_at_once_and_says_it_ended() {
+    fn the_frame_after_the_end_of_a_live_resize_tells_the_size_at_once() {
         let mut gate = ResizeGate::default();
         let start = Instant::now();
         gate.step(after(start, 0), true, true);
         assert!(!gate.step(after(start, 10), true, true).apply);
-        let end = gate.step(after(start, 20), false, true);
-        assert_eq!(end, Step { apply: true, ended: true, wake_in: None });
-        assert!(!gate.step(after(start, 30), false, false).ended, "it ends once");
+        assert_eq!(gate.step(after(start, 20), false, true), Step { apply: true, wake_in: None });
     }
 
     #[test]
-    fn a_live_resize_that_changes_nothing_keeps_watching_for_its_end() {
+    fn a_live_resize_that_changes_nothing_asks_for_no_wake() {
         let mut gate = ResizeGate::default();
         let start = Instant::now();
-        let step = gate.step(after(start, 0), true, false);
-        assert_eq!(step, Step { apply: false, ended: false, wake_in: Some(INTERVAL) });
-        assert!(gate.step(after(start, 100), false, false).ended);
+        assert_eq!(gate.step(after(start, 0), true, false), Step { apply: false, wake_in: None });
+    }
+
+    #[test]
+    fn only_a_cell_of_whole_points_steps_the_width() {
+        assert_eq!(steps((8.0, 18.0)), (8.0, 18.0));
+        assert_eq!(steps((8.04, 18.0)), (8.0, 18.0), "a hair off a whole point is whole");
+        assert_eq!(steps((8.4, 18.0)), (1.0, 18.0), "8.4 would be followed as 8: left free");
+        assert_eq!(steps((7.8, 17.0)), (1.0, 17.0), "and 7.8 as 8");
+        assert_eq!(steps((8.4287, 18.4)), (1.0, 18.0));
+        assert_eq!(steps((0.2, 0.2)), (1.0, 1.0), "never less than a point");
     }
 
     #[test]
@@ -168,5 +256,49 @@ mod tests {
         assert_eq!(settle((0.4, 0.0), cell), None, "rounding to the screen's pixels is left alone");
         assert_eq!(settle((-2.0, 0.0), cell), None, "a grid that overhangs has no strip");
         assert_eq!(settle((8.4, 18.0), cell), None, "a whole cell is a size the person chose");
+    }
+
+    const START: Frame = Frame { x: 100.0, y: 100.0, w: 800.0, h: 600.0 };
+
+    #[test]
+    fn the_edges_that_moved_are_the_ones_dragged() {
+        assert_eq!(
+            dragged(START, Frame::new(100.0, 100.0, 850.0, 640.0)),
+            Dragged { left: false, top: false }
+        );
+        assert_eq!(
+            dragged(START, Frame::new(100.0, 60.0, 850.0, 640.0)),
+            Dragged { left: false, top: false }
+        );
+        assert_eq!(dragged(START, Frame::new(60.0, 100.0, 840.0, 600.0)), Dragged { left: true, top: false });
+        assert_eq!(
+            dragged(START, Frame::new(100.0, 100.0, 800.0, 640.0)),
+            Dragged { left: false, top: true }
+        );
+        assert_eq!(dragged(START, Frame::new(60.0, 100.0, 840.0, 640.0)), Dragged { left: true, top: true });
+    }
+
+    #[test]
+    fn the_strip_comes_off_the_side_that_was_not_held() {
+        let frame = Frame::new(100.0, 100.0, 803.0, 611.0);
+        let shrink = (3.0, 11.0);
+        // The bottom right was dragged: the top left stays (the bottom edge, y, moves up).
+        let kept_top_left = settled_frame(frame, shrink, Dragged { left: false, top: false });
+        assert_eq!(kept_top_left, Frame::new(100.0, 111.0, 800.0, 600.0));
+        assert_eq!(kept_top_left.top(), frame.top(), "the top edge is where it was");
+        // The top left was dragged: the bottom right stays.
+        let kept_bottom_right = settled_frame(frame, shrink, Dragged { left: true, top: true });
+        assert_eq!(kept_bottom_right, Frame::new(103.0, 100.0, 800.0, 600.0));
+        assert_eq!(kept_bottom_right.right(), frame.right());
+        assert_eq!(kept_bottom_right.y, frame.y);
+    }
+
+    #[test]
+    fn a_window_against_both_sides_or_the_full_height_is_tiled() {
+        let screen = Frame::new(0.0, 0.0, 1600.0, 1000.0);
+        assert!(tiled(Frame::new(0.0, 0.0, 800.0, 990.0), screen), "a half tile: the full height");
+        assert!(tiled(Frame::new(0.0, 300.0, 1590.0, 400.0), screen), "the full width");
+        assert!(!tiled(Frame::new(200.0, 100.0, 900.0, 700.0), screen), "a window of the person's own size");
+        assert!(!tiled(Frame::new(0.0, 100.0, 900.0, 700.0), screen), "against one side only");
     }
 }

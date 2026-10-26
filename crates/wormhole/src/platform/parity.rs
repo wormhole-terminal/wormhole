@@ -11,6 +11,7 @@ use std::rc::Rc;
 use gpui_kit::{App, Hsla, Window};
 use wormhole_core::onboarding::intro::WindowMotion;
 use wormhole_core::theme::tokens::Appearance;
+use wormhole_core::view::motion::window_animation::Behaviour;
 use wormhole_term::scrollbar::ScrollerStyle;
 
 use super::font_face::Seg;
@@ -108,6 +109,9 @@ pub(super) fn signatures_match() {
         window::show: fn(&Window);
         window::order_back: fn(&Window);
         window::keep_behind: fn(&Window);
+        window::set_animation: fn(&Window, Behaviour);
+        live_resize::set_increments: fn(&Window, Option<(f32, f32)>);
+        live_resize::in_progress: fn(&Window) -> bool;
     }
     #[cfg(feature = "devctl")]
     same! {

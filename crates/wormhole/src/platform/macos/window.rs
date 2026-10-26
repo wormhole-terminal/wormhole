@@ -12,7 +12,9 @@ use objc2_app_kit::{
     NSWindowDidExitFullScreenNotification, NSWindowStyleMask, NSWindowWillEnterFullScreenNotification,
     NSWindowWillExitFullScreenNotification,
 };
-use objc2_foundation::{NSNotification, NSNotificationCenter, NSOperationQueue, NSPoint, NSSize};
+use objc2_foundation::{NSNotification, NSNotificationCenter, NSOperationQueue, NSPoint};
+use wormhole_core::view::motion::live_resize::{Dragged, settled_frame, tiled};
+use wormhole_core::view::motion::window_animation::Behaviour;
 
 use super::appearance;
 use super::appkit::ns_window;
@@ -112,13 +114,24 @@ pub fn deminiaturize(window: &Window) {
 
 pub fn hide(window: &Window) {
     if let Some(ns_window) = ns_window(window) {
+        cut_document_animation(&ns_window);
         ns_window.orderOut(None);
     }
 }
 
 pub fn show(window: &Window) {
     if let Some(ns_window) = ns_window(window) {
+        cut_document_animation(&ns_window);
         ns_window.orderFront(None);
+    }
+}
+
+/// Taking windows off the screen and putting them back (a profile that is switched) is not their opening or
+/// closing: a window that has the document animation is given none first. It is not given back here, since
+/// AppKit may read it after this returns; the window's tick gives it again (`Workspace::sync_window_animation`).
+fn cut_document_animation(window: &NSWindow) {
+    if window.animationBehavior() == NSWindowAnimationBehavior::DocumentWindow {
+        window.setAnimationBehavior(NSWindowAnimationBehavior::None);
     }
 }
 
@@ -139,29 +152,15 @@ pub fn keep_behind(window: &Window) {
 
 pub const HAS_SYSTEM_ANIMATION: bool = true;
 
-pub fn set_animated(window: &Window, animated: bool) {
+pub fn set_animation(window: &Window, behaviour: Behaviour) {
     let Some(ns_window) = ns_window(window) else { return };
-    let current = ns_window.animationBehavior();
-    if animated {
-        if current != NSWindowAnimationBehavior::DocumentWindow {
-            ns_window.setAnimationBehavior(NSWindowAnimationBehavior::DocumentWindow);
-        }
-    } else if current == NSWindowAnimationBehavior::DocumentWindow {
-        // Only what was given is taken away: a window that never had it keeps the system's default.
-        ns_window.setAnimationBehavior(NSWindowAnimationBehavior::None);
-    }
-}
-
-pub fn set_resize_increments(window: &Window, cell: Option<(f32, f32)>) {
-    let Some(ns_window) = ns_window(window) else { return };
-    // AppKit keeps whole points only (8.4 is 8, 0.5 is 0, which would be "none"; checked on this system), so
-    // the steps are rounded here, at least a point: a font whose cell is not a whole number of points is
-    // approximated, and the strip it leaves is taken off when the drag ends (`settle`). "No increments" is
-    // one point, the default of every window.
-    let step = |points: f32| f64::from(points.round().max(1.0));
-    let wanted = cell.map_or(NSSize::new(1.0, 1.0), |(w, h)| NSSize::new(step(w), step(h)));
-    if ns_window.contentResizeIncrements() != wanted {
-        ns_window.setContentResizeIncrements(wanted);
+    let wanted = match behaviour {
+        Behaviour::Default => NSWindowAnimationBehavior::Default,
+        Behaviour::System => NSWindowAnimationBehavior::DocumentWindow,
+        Behaviour::Cut => NSWindowAnimationBehavior::None,
+    };
+    if ns_window.animationBehavior() != wanted {
+        ns_window.setAnimationBehavior(wanted);
     }
 }
 
@@ -183,33 +182,13 @@ pub fn scaling_state(window: &Window) -> Option<String> {
     ))
 }
 
-pub fn in_live_resize(window: &Window) -> bool {
-    ns_window(window).is_some_and(|w| w.inLiveResize())
-}
-
-pub fn settle(window: &Window, shrink: (f32, f32)) -> bool {
-    let Some(ns_window) = ns_window(window) else { return false };
-    // Full screen, a zoomed window and a tiled one are the system's size, not the person's.
-    if ns_window.isZoomed() || ns_window.styleMask().contains(NSWindowStyleMask::FullScreen) {
-        return false;
-    }
-    let mut frame = ns_window.frame();
-    let (dx, dy) = (f64::from(shrink.0), f64::from(shrink.1));
-    frame.size.width -= dx;
-    frame.size.height -= dy;
-    // AppKit's y grows up, so keeping the top edge where it is moves the bottom one up.
-    frame.origin.y += dy;
-    ns_window.setFrame_display_animate(frame, true, true);
-    true
-}
-
-/// A window that was opened out of sight, to be drawn once and put on the screen.
-pub struct Reveal {
+/// A window's AppKit handle, for what must happen outside an update (see `platform::window::Native`).
+pub struct Native {
     window: Retained<NSWindow>,
     view: Retained<NSView>,
 }
 
-impl Reveal {
+impl Native {
     pub fn of(window: &Window) -> Option<Self> {
         Some(Self { window: ns_window(window)?, view: super::appkit::ns_view(window)? })
     }
@@ -240,6 +219,24 @@ impl Reveal {
         } else {
             self.window.orderFront(None);
         }
+    }
+
+    pub fn settle(&self, shrink: (f32, f32), dragged: Dragged) -> bool {
+        // Full screen and a zoomed window are the system's size, not the person's.
+        if self.window.isZoomed() || self.window.styleMask().contains(NSWindowStyleMask::FullScreen) {
+            return false;
+        }
+        let Some(screen) = self.window.screen() else { return false };
+        let frame = super::live_resize::frame_of(self.window.frame());
+        // Tiled and filled windows are the system's size too.
+        if tiled(frame, super::live_resize::frame_of(screen.visibleFrame())) {
+            return false;
+        }
+        let settled = settled_frame(frame, shrink, dragged);
+        // Not animated: the person has just let go, and a window moving by itself after it would be a second
+        // resize. AppKit lines the frame up with the screen's pixels.
+        self.window.setFrame_display(super::live_resize::rect_of(settled), true);
+        true
     }
 }
 

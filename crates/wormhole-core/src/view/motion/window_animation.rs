@@ -1,9 +1,9 @@
-//! Whether a window opens and closes with the system's own animation (`NSWindowAnimationBehavior`
-//! `DocumentWindow`, which scales and fades it), which the design fixed. Only the windows that hold
-//! terminals use it, and only when this build plays the fixed motions and the person has not asked for
-//! Reduce Motion. A torn-off window grows from its chip instead, and the intro, Settings, the Theme
-//! Studio, panels and pop-ups keep the system's default. Background mode keeps its windows behind
-//! everyone's and still, so a test instance never animates.
+//! How a terminal window opens and closes (`NSWindowAnimationBehavior`), which the design fixed. Only the
+//! windows that hold terminals use the system's own animation (`DocumentWindow`, which scales and fades the
+//! window), and only when this build plays the fixed motions. Under Reduce Motion they are cut. A torn-off
+//! window grows from its chip instead; the intro, Settings, the Theme Studio, panels and pop-ups keep the
+//! system's default. Background mode keeps its windows behind everyone's and still, so a test instance is
+//! never touched.
 
 /// What the decision is made from.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -14,16 +14,39 @@ pub struct Facts {
     pub reduce_motion: bool,
     /// Background mode keeps new windows behind the others.
     pub background: bool,
-    /// The window opens as a torn-off terminal's, with a growth of its own.
+    /// The window is a torn-off terminal's, which has a growth of its own.
     pub grows: bool,
     /// The platform has an animation to ask for.
     pub platform: bool,
 }
 
+/// What a window is given.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Behaviour {
+    /// The system's own: whatever AppKit does for a window nobody asked anything of.
+    Default,
+    /// The document window's scale and fade.
+    System,
+    /// None: a cut.
+    Cut,
+}
+
+/// The behaviour a terminal window has with these facts.
+#[must_use]
+pub fn behaviour(facts: Facts) -> Behaviour {
+    if !facts.platform || !facts.motion_feature || facts.background || facts.grows {
+        Behaviour::Default
+    } else if facts.reduce_motion {
+        Behaviour::Cut
+    } else {
+        Behaviour::System
+    }
+}
+
 /// Whether the window opens and closes with the system's animation.
 #[must_use]
 pub fn animates(facts: Facts) -> bool {
-    facts.platform && facts.motion_feature && !facts.reduce_motion && !facts.background && !facts.grows
+    behaviour(facts) == Behaviour::System
 }
 
 #[cfg(test)]
@@ -36,14 +59,30 @@ mod tests {
     #[test]
     fn a_terminal_window_animates_with_the_feature_on() {
         assert!(animates(ON));
+        assert_eq!(behaviour(ON), Behaviour::System);
     }
 
     #[test]
-    fn each_thing_that_asks_for_a_cut_makes_one() {
-        assert!(!animates(Facts { motion_feature: false, ..ON }), "the feature is off: today's cut");
-        assert!(!animates(Facts { reduce_motion: true, ..ON }), "Reduce Motion");
-        assert!(!animates(Facts { background: true, ..ON }), "a test instance stays still");
-        assert!(!animates(Facts { grows: true, ..ON }), "a torn-off window has its own growth");
-        assert!(!animates(Facts { platform: false, ..ON }), "nothing to ask for");
+    fn without_the_feature_in_background_mode_or_growing_the_system_decides_as_it_always_did() {
+        for facts in [
+            Facts { motion_feature: false, ..ON },
+            Facts { background: true, ..ON },
+            Facts { grows: true, ..ON },
+            Facts { platform: false, ..ON },
+        ] {
+            assert_eq!(behaviour(facts), Behaviour::Default, "{facts:?}");
+            assert!(!animates(facts));
+        }
+    }
+
+    #[test]
+    fn reduce_motion_is_a_cut_that_is_asked_for() {
+        assert_eq!(behaviour(Facts { reduce_motion: true, ..ON }), Behaviour::Cut);
+        assert!(!animates(Facts { reduce_motion: true, ..ON }));
+        assert_eq!(
+            behaviour(Facts { reduce_motion: true, motion_feature: false, ..ON }),
+            Behaviour::Default,
+            "with the feature off nothing is asked, Reduce Motion or not"
+        );
     }
 }

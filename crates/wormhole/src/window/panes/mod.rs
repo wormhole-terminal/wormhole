@@ -101,7 +101,6 @@ impl Workspace {
                     self.sync_resize_increments(window, cx);
                 }
             }
-            TerminalEvent::LiveResizeEnded => self.live_resize_ended(ix, window, cx),
             // A program (with `allow_window_ops`) asks the window for something: it is read as
             // being about the pane that asked.
             TerminalEvent::WindowOp(op) => {

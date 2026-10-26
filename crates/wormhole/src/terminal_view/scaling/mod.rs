@@ -1,7 +1,7 @@
-//! A terminal while its window is scaled (the Motion feature; without it a terminal is told every size at
-//! once and shows no chip): what the design fixed for a window being dragged to another size and for the
-//! text zoomed with ⌘+ / ⌘−. The rules are core's (`view::motion::{live_resize, size_readout, text_zoom}`);
-//! this is the terminal's side of them.
+//! A terminal while its window is scaled: what the design fixed for a window being dragged to another size
+//! (the Live resize feature) and for the text zoomed with ⌘+ / ⌘− (the Motion feature). Without them a
+//! terminal is told every size at once and shows no chip. The rules are core's
+//! (`view::motion::{live_resize, size_readout, text_zoom}`); this is the terminal's side of them.
 //!
 //! - `live` decides, each frame, which size the PTY is told and which grid is drawn: the pane's size at once,
 //!   or the PTY's own while a text zoom moves or a live resize holds the size back (the drawn grid is
@@ -40,8 +40,13 @@ pub(super) struct Scaling {
 }
 
 impl TerminalView {
-    /// Whether this terminal's window scales as the design fixed: the Motion feature is on in this build.
-    pub(in crate::terminal_view) fn scaling_on(&self, cx: &App) -> bool {
+    /// Whether the window is resized like Terminal does: the Live resize feature is on in this build.
+    pub(in crate::terminal_view) fn live_on(&self, cx: &App) -> bool {
+        settings_in(&self.profile, cx).live_resize_on()
+    }
+
+    /// Whether the text eases when it is zoomed: the Motion feature is on in this build.
+    pub(in crate::terminal_view) fn motion_on(&self, cx: &App) -> bool {
         settings_in(&self.profile, cx).motion_feature_on()
     }
 }

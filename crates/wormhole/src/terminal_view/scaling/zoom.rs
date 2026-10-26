@@ -13,12 +13,13 @@ impl TerminalView {
             return;
         }
         let now = cx.background_executor().now();
-        if self.scaling_on(cx) {
+        if self.motion_on(cx) {
             self.scaling.zoom = (!cx.reduce_motion()).then(|| match self.scaling.zoom {
                 Some(under_way) => under_way.retarget(now, zoom),
                 None => wormhole_core::view::motion::text_zoom::Ease::new(self.font_zoom, zoom, now),
             });
-            self.scaling.readout_due = Some(now);
+            // A terminal that is not on screen says nothing: it would pop a chip when it is switched to.
+            self.scaling.readout_due = self.is_on_screen().then_some(now);
         } else {
             self.scaling.zoom = None;
         }

@@ -46,15 +46,23 @@ pub enum FeatureFlag {
     Automation,
     /// Settings → Motion: a choice of animation for a terminal opening, a group folding, a status
     /// changing and a column hiding, each with a live preview. The page shows only while the flag is
-    /// on; the choices themselves are ordinary settings (`motion` in `config.json`).
+    /// on; the choices themselves are ordinary settings (`motion` in `config.json`). The motions the
+    /// design fixed play with it too: the panel's tabs, the palette's exit, a split opening, the status
+    /// bar's counts, a terminal window opening and closing with the system's animation, and the text
+    /// easing to its new size when it is zoomed.
     Motion,
     /// Dragging a terminal's row out of the window: it opens a window of its own where it is let go, or
     /// goes into the Wormhole window it is let go over. Off, a drag let go outside the window does nothing.
     TearOff,
+    /// Resizing a window like Terminal does: in steps of the terminal's cell, the strip a window off the
+    /// cell grid leaves taken off when the drag ends, the program in the terminal told calmly (at most every
+    /// 100 ms, and once when the drag ends) and a chip that says the size while the window is dragged. Off,
+    /// a window resizes freely and the program is told every size at once.
+    LiveResize,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 8] = [
+    pub const ALL: [FeatureFlag; 9] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
@@ -63,6 +71,7 @@ impl FeatureFlag {
         Self::Automation,
         Self::Motion,
         Self::TearOff,
+        Self::LiveResize,
     ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
@@ -76,6 +85,7 @@ impl FeatureFlag {
             Self::Automation => "automation",
             Self::Motion => "motion",
             Self::TearOff => "tear_off",
+            Self::LiveResize => "live_resize",
         }
     }
 
@@ -94,6 +104,7 @@ impl FeatureFlag {
             Self::Automation => "Automation",
             Self::Motion => "Motion",
             Self::TearOff => "Tear off a terminal",
+            Self::LiveResize => "Live resize",
         }
     }
 
@@ -126,11 +137,16 @@ impl FeatureFlag {
             }
             Self::Motion => {
                 "Settings → Motion: pick how terminals open, groups fold, statuses change and columns \
-                 slide, with a live preview of each."
+                 slide, with a live preview of each. Terminal windows open and close with the system's \
+                 animation, and the text eases to its new size when zoomed."
             }
             Self::TearOff => {
                 "Drag a terminal out of the window to give it a window of its own, or onto another Wormhole \
                  window to move it there."
+            }
+            Self::LiveResize => {
+                "Resize a window in steps of the terminal's cell, tell the program the size calmly while \
+                 the window is dragged, and say the size on a chip."
             }
         }
     }
@@ -154,6 +170,8 @@ impl FeatureFlag {
             Self::Motion => false,
             // New, and it moves live terminals between windows: off until it has been through its visual check.
             Self::TearOff => false,
+            // Rests on what AppKit does while a person drags a window's edge, which only a real mouse tries.
+            Self::LiveResize => false,
         }
     }
 }

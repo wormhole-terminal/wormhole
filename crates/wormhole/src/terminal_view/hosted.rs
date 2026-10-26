@@ -247,6 +247,11 @@ impl TerminalView {
         }
     }
 
+    /// Whether the terminal is on screen, as the window's last tick said.
+    pub(super) fn is_on_screen(&self) -> bool {
+        self.host.on_screen
+    }
+
     /// On screen or not: a hosted terminal on screen is fed a repaint and then the stream, one off
     /// screen only hears that something printed (its screen keeps what it last showed, which is
     /// what a switch to it shows at once).

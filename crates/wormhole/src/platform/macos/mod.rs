@@ -17,6 +17,7 @@ pub mod hotkey;
 pub mod inspect;
 pub mod intro;
 pub mod keys;
+pub mod live_resize;
 pub mod locale;
 pub mod look;
 pub mod menu;
