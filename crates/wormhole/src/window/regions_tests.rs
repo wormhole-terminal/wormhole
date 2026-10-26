@@ -350,6 +350,41 @@ fn the_list_at_rest_stays_within_its_allocation_budget(cx: &mut TestAppContext) 
     );
 }
 
+/// The status motions cost a list nothing while no status changes: a person who picked the one that keeps the
+/// most (Line rolls keeps the second line each frame to roll it) pays what a Classic list does.
+#[gpui_kit::test]
+fn the_list_at_rest_with_a_status_motion_chosen_stays_within_the_same_budget(cx: &mut TestAppContext) {
+    if isolate("the_list_at_rest_with_a_status_motion_chosen_stays_within_the_same_budget") {
+        return;
+    }
+    use crate::perf::allocations::thread_counts;
+    use wormhole_core::view::motion::{MotionChoices, StatusMotion};
+    let window = list_at_rest_window(cx);
+    cx.update(|cx| {
+        crate::settings::update_settings(cx, |settings| {
+            settings.motion = MotionChoices { status: StatusMotion::LineRoll, ..MotionChoices::CLASSIC }
+        });
+    });
+    for _ in 0..4 {
+        draw(cx, &window);
+    }
+    let sidebar = window.workspace.read_with(cx, |ws, _| ws.sidebar.clone()).expect("open");
+    let mut made = Vec::new();
+    for _ in 0..3 {
+        cx.update(|cx| sidebar.update(cx, |_, cx| cx.notify()));
+        let before = thread_counts();
+        draw(cx, &window);
+        made.push(thread_counts().since(before).allocations);
+    }
+    eprintln!("list at rest with Line rolls chosen: {made:?} allocations");
+    assert_eq!(made[1], made[2], "a list that does not change allocates the same each frame");
+    assert!(
+        made[2] <= LIST_AT_REST_ALLOCATIONS,
+        "the list at rest made {} allocations (budget {LIST_AT_REST_ALLOCATIONS})",
+        made[2]
+    );
+}
+
 /// With the terminals in tabs the root reads the list to build the bar, which is therefore drawn for the list's
 /// every notification (GPUI draws the root again), and the regions are left alone.
 #[gpui_kit::test]

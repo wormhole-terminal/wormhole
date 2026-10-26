@@ -13,7 +13,10 @@ use wormhole_core::view::motion::{MotionChoice, MotionChoices, StatusMotion};
 use wormhole_core::view::sidebar::Urgency;
 
 use crate::app_state::OpenWindow;
-use crate::window::test_harness::{draw, draw_replaying, hook, isolate_in, read_cx, sidebar_of, start};
+use crate::style::motion::ANIMATION_FPS;
+use crate::window::test_harness::{
+    draw, draw_replaying, hook, isolate_in, read_cx, sidebar_of, start, with_window,
+};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -168,24 +171,23 @@ fn a_status_change_draws_the_list_and_no_region_and_stops_when_it_ends(cx: &mut 
         return;
     }
     let window = open(cx, 3);
-    choose(cx, StatusMotion::Crossfade);
+    // A long one: the wall clock, which the animation runs on, must not end it before the test has looked.
+    choose(cx, StatusMotion::Wash);
     // The hook changes what the chrome shows too (the title row, the bar), so let that frame be drawn first.
     agent(cx, &window, "UserPromptSubmit", None);
     assert!(!playing(cx, &window).is_empty());
     let regions = |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| ws.regions.builds(cx));
     let list = |cx: &mut TestAppContext| sidebar_of(cx, &window, |sidebar| sidebar.builds());
     let (chrome, drawn) = (regions(cx), list(cx));
-    // An animation asks for its next frame by notifying the view it is in, here the list (GPUI's test
-    // platform runs no such request itself): each of those frames draws the list and nothing else.
+    // The tile's animation set a timer for its next frame while it was drawn, which notifies the view it is in:
+    // each of those frames draws the list and nothing else.
     for _ in 0..5 {
-        cx.update(|cx| {
-            let sidebar = window.workspace.read_with(cx, |ws, _| ws.sidebar.clone()).expect("open");
-            sidebar.update(cx, |_, cx| cx.notify());
-        });
+        let before_frame = list(cx);
+        frame_passes(cx);
         draw_replaying(cx, &window);
+        assert!(list(cx) > before_frame, "the frame the animation asked for draws the list");
     }
     assert_eq!(regions(cx), chrome, "a tile changing is the list's to draw, not the chrome's");
-    assert_eq!(list(cx), drawn + 5, "the list is drawn again on each");
     // Once the change has played out the list asks for nothing more.
     settle(cx, &window);
     let rest = (regions(cx), list(cx));
@@ -206,7 +208,15 @@ fn with_bar(cx: &mut TestAppContext) -> OpenWindow {
     window
 }
 
-/// An animation in the bar asks for its next frame by notifying the region it is in.
+/// A frame's time goes by on the clock the executor keeps (`ANIMATION_FPS`): the timer an animation set for its
+/// next frame ends, and notifies the view the animation is in. This is the animation's own notification, not a
+/// test's.
+fn frame_passes(cx: &mut TestAppContext) {
+    cx.executor().advance_clock(Duration::from_secs_f32(1.0 / ANIMATION_FPS) + Duration::from_millis(1));
+    cx.run_until_parked();
+}
+
+/// The status bar's region notified, as the tick does when what the bar says is not what it drew.
 fn notify_bar(cx: &mut TestAppContext, window: &OpenWindow) {
     cx.update(|cx| {
         window.workspace.update(cx, |ws, cx| ws.regions.notify_status_bar(cx)).ok();
@@ -239,8 +249,8 @@ fn a_count_in_the_status_bar_rolls_when_it_changes_and_the_bar_holds_nothing_at_
     assert!(!rolling(cx, &window), "a bar at rest holds no roll");
     count_up(cx, &window);
     assert!(rolling(cx, &window), "1 to 2 working turns over");
-    // Some time on (the roll's clock is the wall's): the next build of the bar drops it.
-    std::thread::sleep(Duration::from_millis(250));
+    // Some time on (the roll's clock is the executor's, which a test moves): the next build of the bar drops it.
+    cx.executor().advance_clock(Duration::from_millis(250));
     notify_bar(cx, &window);
     draw(cx, &window);
     assert!(!rolling(cx, &window), "and it is over");
@@ -256,13 +266,26 @@ fn a_count_rolling_draws_the_status_bar_and_no_other_region(cx: &mut TestAppCont
     assert!(rolling(cx, &window));
     let builds = |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| ws.regions.builds(cx));
     let before = builds(cx);
+    // The roll's animation sets a timer for its next frame while it is drawn, which notifies the region it is
+    // in. It runs on the wall clock (160 ms), so a slow machine may end it before the test has looked: each
+    // frame it asked for builds the bar, a frame it did not ask for builds nothing, and no other region is
+    // ever built.
+    let mut asked = 0;
     for _ in 0..4 {
-        notify_bar(cx, &window);
+        let before_frame = builds(cx);
+        frame_passes(cx);
         draw_replaying(cx, &window);
+        let now = builds(cx);
+        assert_eq!(
+            now[..3],
+            before_frame[..3],
+            "the sidebar's header, the panel and the title row were not built"
+        );
+        assert!(now[3] - before_frame[3] <= 1, "the bar is built once for a frame");
+        asked += now[3] - before_frame[3];
     }
-    let after = builds(cx);
-    assert_eq!(after[..3], before[..3], "the sidebar's header, the panel and the title row were not built");
-    assert_eq!(after[3], before[3] + 4, "the bar was, on each");
+    assert!(asked > 0, "the roll asked for frames");
+    assert_eq!(builds(cx)[3], before[3] + asked);
 }
 
 #[gpui_kit::test]
