@@ -37,6 +37,8 @@ pub(crate) struct Departing {
     pub(super) splits: Vec<SplitRecord>,
     /// Which of them the old window had selected, by index in `records` (the first when none).
     pub(super) active: usize,
+    /// The window they left.
+    pub(super) from: i64,
 }
 
 impl Workspace {
@@ -88,14 +90,15 @@ impl Workspace {
         }
         self.dirty = true;
         self.with_sidebar(cx, |sidebar, cx| sidebar.list_rearranged(cx));
-        Some(Departing { records, terminals, splits, active })
+        Some(Departing { records, terminals, splits, active, from: self.window_id })
     }
 
     /// Take in the terminals that [`take_out`](Self::take_out) of another window gave up: they join the
     /// end of the list, each on its own (a split is made in a window opened for it, not joined), the one
     /// that was selected is selected here and has the keyboard, and this window comes forward.
     pub(crate) fn receive(&mut self, departing: Departing, window: &mut Window, cx: &mut Context<Self>) {
-        let Departing { records, terminals, active, .. } = departing;
+        let Departing { records, terminals, active, from, .. } = departing;
+        let ids: Vec<i64> = records.iter().map(|record| record.id).collect();
         app_mut(cx).adopted.extend(terminals);
         let mut shown = None;
         for (at, mut record) in records.into_iter().enumerate() {
@@ -114,6 +117,18 @@ impl Workspace {
         // next save forgets them, with their notes, tasks and text (`Store::save_window` deletes what a
         // window no longer lists).
         self.save(cx);
+        // The same terminals, running on: they moved, they did not open (unless they only came back to the
+        // window they left, when a window opened for them did not open).
+        if from != self.window_id {
+            let window_id = self.window_id;
+            for terminal in ids {
+                crate::automation::publish(cx, Topic::Terminals, || Event {
+                    window: Some(window_id),
+                    terminal: Some(terminal),
+                    body: Body::TerminalMoved { from },
+                });
+            }
+        }
         cx.notify();
     }
 }
@@ -154,7 +169,7 @@ pub(super) fn open_for(
     super::grow::forget(id, cx);
     let back: Vec<_> =
         ids.iter().filter_map(|id| app_mut(cx).adopted.remove(id).map(|view| (*id, view))).collect();
-    let departing = Departing { records: sessions, terminals: back, splits, active };
+    let departing = Departing { records: sessions, terminals: back, splits, active, from: home };
     let home = app(cx).windows.iter().find(|window| window.id == home).cloned();
     if let Some(home) = home {
         AppState::with_workspace(&home, cx, |ws, window, cx| ws.receive(departing, window, cx));

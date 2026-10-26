@@ -103,7 +103,8 @@ impl Workspace {
         }
         let folded = self.sidebar_view(cx).is_group_folded(group);
         let source = crate::window::window_bounds::Source::of(window, cx);
-        let Some(Departing { records, terminals, splits, active }) = self.take_out(&ids, window, cx) else {
+        let Some(Departing { records, terminals, splits, active, .. }) = self.take_out(&ids, window, cx)
+        else {
             return;
         };
         self.edit_sidebar_view(cx, |view| {
