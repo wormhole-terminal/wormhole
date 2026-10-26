@@ -166,6 +166,14 @@ where
 }
 
 impl MotionChoices {
+    /// Every motion as the app made it before there was a choice.
+    pub const CLASSIC: Self = Self {
+        insert: InsertMotion::Classic,
+        fold: FoldMotion::Classic,
+        status: StatusMotion::Classic,
+        column: ColumnMotion::Classic,
+    };
+
     /// What is wrong with a `motion` object as the file has it, one sentence each: a value that is no
     /// option (it reads as the default), and a key that is no choice. Empty when it is all right.
     #[must_use]
@@ -291,6 +299,19 @@ mod tests {
         assert!(problems[0].contains("from-side"), "it lists the options: {problems:?}");
         assert!(problems[1].contains("`motion.fold`") && problems[1].contains('3'), "{problems:?}");
         assert!(problems[2].contains("`motion.toast`"), "{problems:?}");
+    }
+
+    #[test]
+    fn classic_is_the_first_option_of_every_motion() {
+        assert_eq!(
+            MotionChoices::CLASSIC,
+            MotionChoices {
+                insert: InsertMotion::ALL[0],
+                fold: FoldMotion::ALL[0],
+                status: StatusMotion::ALL[0],
+                column: ColumnMotion::ALL[0],
+            }
+        );
     }
 
     #[test]

@@ -388,6 +388,13 @@ impl Settings {
         FlagMode::of(features::dev_build(), self.update_channel)
     }
 
+    /// The motion choices the app draws: the person's while the Motion feature is on in this build,
+    /// otherwise [`MotionChoices::CLASSIC`], so a build that has not shipped the choices moves as it
+    /// always did whatever `config.json` holds.
+    pub fn motion_in_force(&self) -> MotionChoices {
+        if self.feature_enabled(FeatureFlag::Motion) { self.motion } else { MotionChoices::CLASSIC }
+    }
+
     /// Whether the sidebar's and the panel's cards sit on Liquid Glass: its feature flag is on,
     /// the Mac has it (macOS 26 and later), and the system doesn't want windows opaque (Reduce
     /// Transparency, Increase Contrast). Otherwise every surface paints itself.

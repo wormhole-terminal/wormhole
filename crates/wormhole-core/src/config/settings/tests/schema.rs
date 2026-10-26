@@ -7,7 +7,7 @@ use super::super::{
 use crate::storage::jsonc;
 use crate::theme::fonts;
 use crate::view::layout::title_parts::TitlePart;
-use crate::view::motion::{ColumnMotion, FoldMotion, InsertMotion, StatusMotion};
+use crate::view::motion::{ColumnMotion, FoldMotion, InsertMotion, MotionChoices, StatusMotion};
 use crate::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 
 #[test]
@@ -383,4 +383,15 @@ fn the_motion_object_reads_per_choice_and_is_the_persons_own() {
     let chosen = Settings { motion: partly.motion, ..Settings::default() };
     let written = serde_json::to_value(&chosen).expect("serializes");
     assert_eq!(written["motion"], serde_json::json!({ "status": "badge-pop", "column": "content-after" }));
+}
+
+#[test]
+fn the_motion_in_force_is_the_persons_while_the_feature_is_on_and_classic_otherwise() {
+    let chosen: Settings = jsonc::parse(r#"{ "motion": { "insert": "reveal" } }"#).expect("valid jsonc");
+    assert_eq!(chosen.motion_in_force(), chosen.motion, "a development build has the feature on");
+    let off: Settings =
+        jsonc::parse(r#"{ "motion": { "insert": "reveal" }, "feature_flags": { "motion": false } }"#)
+            .expect("valid jsonc");
+    assert_eq!(off.motion_in_force(), MotionChoices::CLASSIC, "the choices wait for the feature");
+    assert_eq!(off.motion.insert, InsertMotion::Reveal, "and are kept in the file");
 }
