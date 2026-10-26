@@ -1,10 +1,19 @@
 //! What opens over the window's content: the command palette and the keyboard-shortcuts
 //! sheet, one at a time, each on a scrim that takes the clicks. Closing one gives the
 //! keyboard back to whatever had it when it opened ("focus returns where it was").
+//!
+//! With the Motion feature on the palette appears at once and fades out in [`EXIT`] when it closes (core
+//! `view::motion::overlay`). It is closed from the moment it is told to be: the keyboard is already where it
+//! goes back to and the window no longer counts it open, so it takes no key. What fades is its last picture,
+//! the same entity drawn over a shield that takes the pointer, until a timer takes it down. Without the
+//! feature, or under Reduce Motion, it is as it was: it fades in over [`MOTION_POPOVER`] and closing is a cut.
+
+use std::time::Duration;
 
 use gpui_kit::*;
+use wormhole_core::view::motion::overlay::{EXIT, exit_opacity};
 
-use crate::settings::SettingsStore;
+use crate::settings::{SettingsStore, settings_in};
 use crate::style;
 use crate::theme_bridge::token;
 use crate::window::Workspace;
@@ -51,6 +60,37 @@ pub(super) struct Overlay {
     return_focus: ReturnFocus,
 }
 
+/// A palette that was closed and is fading out.
+struct Leaving {
+    view: OverlayView,
+    /// Which exit it is, so a later one is not ended by an earlier one's timer.
+    serial: u64,
+    _end: Task<()>,
+}
+
+/// What is over the window: the overlay that is open, or the one that was just closed and is fading. Never
+/// both: an overlay that opens takes down the one that fades.
+#[derive(Default)]
+pub(super) struct Overlays {
+    open: Option<Overlay>,
+    leaving: Option<Leaving>,
+    exits: u64,
+}
+
+impl Overlays {
+    /// Whether an overlay is open: not one that is fading, which has no keys and is no longer there as far
+    /// as the window's state goes.
+    pub(super) fn is_open(&self) -> bool {
+        self.open.is_some()
+    }
+
+    /// Whether a palette is on its way out, drawn and taking nothing.
+    #[cfg(test)]
+    pub(super) fn is_leaving(&self) -> bool {
+        self.leaving.is_some()
+    }
+}
+
 /// What had the keyboard before the first overlay opened.
 pub(crate) struct ReturnFocus {
     handle: Option<FocusHandle>,
@@ -64,7 +104,8 @@ impl Workspace {
     /// say where the keyboard goes back to when the new one closes, which is where it was before
     /// the first.
     pub(crate) fn end_overlay(&mut self, window: &mut Window, cx: &App) -> ReturnFocus {
-        if let Some(open) = self.overlay.take() {
+        self.overlay.leaving = None;
+        if let Some(open) = self.overlay.open.take() {
             return open.return_focus;
         }
         let handle = window.focused(cx);
@@ -84,24 +125,50 @@ impl Workspace {
         return_focus: ReturnFocus,
         cx: &mut Context<Self>,
     ) {
-        self.overlay = Some(Overlay { view, return_focus });
+        self.overlay.leaving = None;
+        self.overlay.open = Some(Overlay { view, return_focus });
         cx.notify();
     }
 
-    /// Take the overlay down and give the keyboard back.
+    /// Take the overlay down and give the keyboard back. A palette fades out first, when motion is on.
     pub(crate) fn close_overlay(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(overlay) = self.overlay.take() else { return };
+        let Some(overlay) = self.overlay.open.take() else { return };
         let ReturnFocus { handle, tab } = overlay.return_focus;
         let gone = tab.is_some_and(|tab| self.find_session(tab).is_none());
         match handle.filter(|_| !gone) {
             Some(focus) => window.focus(&focus, cx),
             None => window.focus(&self.active_terminal().focus_handle(cx), cx),
         }
+        if overlay.view.kind == OverlayKind::Palette && self.fades_palette(cx) {
+            self.fade_out(overlay.view, cx);
+        }
         cx.notify();
     }
 
+    /// Whether the palette appears at once and leaves by a fade: the Motion feature's, under no Reduce Motion.
+    fn fades_palette(&self, cx: &App) -> bool {
+        settings_in(&self.profile, cx).motion_on() && !cx.reduce_motion()
+    }
+
+    /// Keep `view` drawn, fading, for [`EXIT`] and then take it down.
+    fn fade_out(&mut self, view: OverlayView, cx: &mut Context<Self>) {
+        let serial = self.overlay.exits + 1;
+        self.overlay.exits = serial;
+        let end = cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(EXIT + EXIT_GRACE).await;
+            this.update(cx, |this, cx| {
+                if this.overlay.leaving.as_ref().is_some_and(|leaving| leaving.serial == serial) {
+                    this.overlay.leaving = None;
+                    cx.notify();
+                }
+            })
+            .ok();
+        });
+        self.overlay.leaving = Some(Leaving { view, serial, _end: end });
+    }
+
     fn overlay_is(&self, kind: OverlayKind) -> bool {
-        self.overlay.as_ref().is_some_and(|o| o.view.kind == kind)
+        self.overlay.open.as_ref().is_some_and(|o| o.view.kind == kind)
     }
 
     pub(crate) fn palette_open(&self) -> bool {
@@ -121,24 +188,33 @@ impl Workspace {
     /// The open overlay as a `T`, if it is one (devctl types into the palette and the sheet).
     #[cfg(feature = "devctl")]
     pub(crate) fn overlay_of<T: 'static>(&self) -> Option<Entity<T>> {
-        self.overlay.as_ref()?.view.view.clone().downcast::<T>().ok()
+        self.overlay.open.as_ref()?.view.view.clone().downcast::<T>().ok()
     }
 
-    /// The overlay over everything else in the window.
-    pub(super) fn render_overlay(&self) -> Option<AnyElement> {
-        let open = &self.overlay.as_ref()?.view;
+    /// The overlay over everything else in the window: the open one, or a palette fading out.
+    pub(super) fn render_overlay(&self, cx: &App) -> Option<AnyElement> {
+        if let Some(Leaving { view, serial, .. }) = &self.overlay.leaving {
+            return Some(fading(view, *serial));
+        }
+        let open = &self.overlay.open.as_ref()?.view;
         let (view, name) = (open.view.clone().into_any_element(), open.kind.name());
+        let overlay = div()
+            .id("overlay")
+            .debug_selector(|| "overlay".into())
+            // A dialog VoiceOver names.
+            .role(Role::Dialog)
+            .aria_label(name)
+            .absolute()
+            .size_full()
+            .child(view);
         // The scrim and the card fade in together, in `MOTION_POPOVER`; they come in mounted,
-        // so each opening starts it again. Under Reduce Motion GPUI draws the last frame: a cut.
+        // so each opening starts it again. Under Reduce Motion GPUI draws the last frame: a cut. The palette
+        // with motion on does not fade in: it is there as the keys are pressed.
+        if !fades_in(open.kind, settings_in(&self.profile, cx).motion_on()) {
+            return Some(overlay.into_any_element());
+        }
         Some(
-            div()
-                .id("overlay")
-                // A dialog VoiceOver names.
-                .role(Role::Dialog)
-                .aria_label(name)
-                .absolute()
-                .size_full()
-                .child(view)
+            overlay
                 .with_animation(
                     "overlay-in",
                     Animation::new(style::motion::MOTION_POPOVER)
@@ -150,6 +226,36 @@ impl Workspace {
     }
 }
 
+/// Whether an overlay fades in as it opens: all of them but the palette with motion on, which is there at once.
+fn fades_in(kind: OverlayKind, motion_on: bool) -> bool {
+    !(kind == OverlayKind::Palette && motion_on)
+}
+
+/// How long after [`EXIT`] the fading picture is kept, so its last frame is drawn.
+const EXIT_GRACE: Duration = Duration::from_millis(40);
+
+/// A palette that was closed, drawn fading: its scrim and card as they were, under a shield that takes the
+/// pointer, so nothing in it is live and a click does not fall through while it goes.
+fn fading(view: &OverlayView, serial: u64) -> AnyElement {
+    div()
+        .id("overlay-leaving")
+        .absolute()
+        .size_full()
+        .child(view.view.clone())
+        .child(
+            div()
+                .id("overlay-shield")
+                .absolute()
+                .size_full()
+                .occlude()
+                .debug_selector(|| "overlay-shield".into()),
+        )
+        .with_animation(("overlay-out", serial), Animation::new(EXIT), |overlay, t| {
+            overlay.opacity(exit_opacity(t))
+        })
+        .into_any_element()
+}
+
 /// The scrim under an overlay (`surface.overlay`), the whole window: it keeps the pointer from
 /// what is under it. The card goes in with `.child(…)`, placed by the caller, and closes on a
 /// click outside it (`on_mouse_down_out`).
@@ -157,4 +263,17 @@ impl Workspace {
 pub(crate) fn scrim(id: &'static str, cx: &App) -> Stateful<Div> {
     let color = token(&cx.global::<SettingsStore>().tokens, "surface.overlay");
     div().id(id).absolute().top_0().left_0().size_full().bg(color).occlude()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{OverlayKind, fades_in};
+
+    #[test]
+    fn only_the_palette_with_motion_on_is_there_at_once() {
+        assert!(!fades_in(OverlayKind::Palette, true));
+        assert!(fades_in(OverlayKind::Palette, false), "today's fade without the feature");
+        assert!(fades_in(OverlayKind::Sheet, true), "the sheet keeps its fade");
+        assert!(fades_in(OverlayKind::Sheet, false));
+    }
 }

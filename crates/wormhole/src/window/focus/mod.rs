@@ -192,7 +192,7 @@ impl Workspace {
         if self.cancel_resize(cx) || self.cancel_pane_drag(cx) || self.close_path_card(cx) {
             return true;
         }
-        if self.overlay.is_some() || self.first_run_open(cx) {
+        if self.overlay.is_open() || self.first_run_open(cx) {
             return false;
         }
         let in_area = self.areas.holder(window).is_some();

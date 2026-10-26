@@ -8,8 +8,9 @@
 //! looks like at each moment of each motion (`pose`), so the list and the Settings previews draw the same
 //! numbers. How long the other things take (hover, the panels, the spinner) stays in the app's
 //! `style::motion::timing`: nothing but the drawing reads them. The motions' own durations are with
-//! their poses; `pose`'s `//!` says why. Dragging a terminal has two motions the design fixed (`drag`),
-//! so no choice and no pose, only their numbers.
+//! their poses; `pose`'s `//!` says why. Some motions the design fixed, so they have no choice and no pose
+//! of a variant, only their numbers: dragging a terminal (`drag`), the panel's tab switch (`tabs`), the
+//! palette's exit (`overlay`) and a split opening (`split`).
 //!
 //! Rolling counts (`roll`) have no choice: the design fixed them. Like the rest of `view` this uses only
 //! `theme` below it, and the sidebar's [`Urgency`](crate::view::sidebar::Urgency), which a status change
@@ -18,6 +19,7 @@
 mod choices;
 pub mod drag;
 mod ease;
+pub mod overlay;
 pub mod pose;
 pub mod roll;
 mod spring;

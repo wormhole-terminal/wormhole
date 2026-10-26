@@ -102,6 +102,8 @@ mod onboarding_host;
 mod onboarding_tests;
 pub(crate) mod overlay;
 #[cfg(test)]
+mod overlay_tests;
+#[cfg(test)]
 mod pane_memory_tests;
 #[cfg(test)]
 mod pane_tests;
@@ -269,8 +271,9 @@ pub struct Workspace {
     /// The first run: the intro window while it is open, and the note it leaves in the sidebar. An
     /// entity of its own, told how the window stands (`onboarding_host`) and heard through its events.
     first_run: Entity<crate::onboarding::FirstRun>,
-    /// The command palette or the shortcut sheet, while one is open over the window.
-    overlay: Option<self::overlay::Overlay>,
+    /// The command palette or the shortcut sheet, while one is open over the window, and a palette that
+    /// fades out as it closes.
+    overlay: self::overlay::Overlays,
     /// The sidebar or the right panel sliding in or out.
     slide: Option<self::slide::Slide>,
     last_scrollback_save: Instant,
@@ -381,7 +384,7 @@ impl Workspace {
             discarded: false,
             dirty: false,
             first_run,
-            overlay: None,
+            overlay: Default::default(),
             slide: None,
             last_scrollback_save: Instant::now(),
             shown_at_launch: Vec::new(),
