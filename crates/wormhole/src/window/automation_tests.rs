@@ -17,7 +17,9 @@ use crate::app::control;
 use crate::app_state::OpenWindow;
 use crate::settings::update_settings;
 use crate::window::reported_tests::{event, terminal};
-use crate::window::test_harness::{draw, draw_fresh, drive, hook, isolate_in, press, read, start};
+use crate::window::test_harness::{
+    draw, draw_fresh, drive, hook, isolate_in, press, read, start, with_window,
+};
 use crate::window::window_lifecycle::{open_workspace_window, window_closed};
 
 fn isolate(name: &str) -> bool {
@@ -156,28 +158,32 @@ fn terminals_splits_names_and_windows_come_and_go_with_their_ids(cx: &mut TestAp
     assert_eq!(gone.len(), 1, "{closed:?}");
     assert_eq!(gone[0].event.body, Body::Split { split: split_id, terminals: vec![], focused: None });
 
-    // A second window, and its end.
+    // A second window: it is told before the terminals in it.
+    cx.update(|cx| cx.on_window_closed(window_closed).detach());
     cx.update(|cx| open_workspace_window(None, None, cx));
     cx.run_until_parked();
     let windows = told(&watcher);
-    let opened = of_kind(&windows, "window_opened");
-    assert_eq!(opened.len(), 1, "{windows:?}");
-    let second = opened[0].event.window.expect("its id");
+    let names: Vec<_> = windows.iter().map(|p| p.event.body.name()).collect();
+    assert_eq!(names, ["window_opened", "terminal_opened"], "{windows:?}");
+    let second = windows[0].event.window.expect("its id");
     assert_ne!(second, 1);
-    assert_eq!(opened[0].event.terminal, None);
-    let gpui_id = cx.update(|cx| {
-        crate::app_state::app(cx)
-            .windows
-            .iter()
-            .find(|w| w.id == second)
-            .map(|w| w.handle.window_id())
-            .expect("listed")
+    assert_eq!(windows[0].event.terminal, None);
+    assert_eq!(windows[1].event.window, Some(second), "its terminal opened in it");
+    let in_it = windows[1].event.terminal.expect("its id");
+
+    // Its end, as the window system does it: its terminals close first, then it does.
+    let listed = cx.update(|cx| {
+        crate::app_state::app(cx).windows.iter().find(|w| w.id == second).cloned().expect("listed")
     });
-    cx.update(|cx| window_closed(cx, gpui_id));
+    with_window(cx, &listed, |window, _| window.remove_window());
+    cx.run_until_parked();
     let after = told(&watcher);
-    let closed = of_kind(&after, "window_closed");
-    assert_eq!(closed.len(), 1, "{after:?}");
-    assert_eq!(closed[0].event.window, Some(second));
+    let shape: Vec<_> = after.iter().map(|p| (p.event.body.name(), ids(p))).collect();
+    assert_eq!(
+        shape,
+        [("terminal_closed", (Some(second), Some(in_it))), ("window_closed", (Some(second), None))],
+        "{after:?}"
+    );
 }
 
 #[gpui_kit::test]
@@ -258,6 +264,64 @@ fn idle_watchers_cost_a_frame_nothing(cx: &mut TestAppContext) {
     assert!(watchers.iter().all(|w| told(w).is_empty()), "and tells them nothing");
 }
 
+/// One round of what a terminal does while a command runs: an agent's state moves, the bell rings, the
+/// shell marks a command's start and end, output arrives, and a frame is drawn.
+fn activity(cx: &mut TestAppContext, window: &OpenWindow) -> u64 {
+    use crate::perf::allocations::thread_counts;
+    use wormhole_term::{Mark, PtyEvent};
+
+    let t = terminal(cx, window, 0);
+    let before = thread_counts();
+    hook(cx, window, 1, "UserPromptSubmit", None);
+    event(cx, &t, PtyEvent::Bell);
+    event(cx, &t, PtyEvent::Mark(Mark::OutputStart));
+    event(cx, &t, PtyEvent::Output);
+    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(0))));
+    hook(cx, window, 1, "Stop", None);
+    draw_fresh(cx, window);
+    thread_counts().since(before).allocations
+}
+
+/// Watching costs what changes, not the watcher: with subscribers who listen for something else, the
+/// same activity allocates exactly what it does with none; one who listens for it makes the app build
+/// the events (so the comparison measures something).
+#[gpui_kit::test]
+fn watchers_of_other_things_cost_activity_nothing(cx: &mut TestAppContext) {
+    if isolate("watchers_of_other_things_cost_activity_nothing") {
+        return;
+    }
+    let window = start(cx, 2);
+    for _ in 0..3 {
+        activity(cx, &window);
+    }
+    let without = activity(cx, &window);
+
+    // Four watchers of windows opening: the bus is listening, but not for any of this.
+    let bus = Bus::new();
+    cx.update(|cx| crate::automation::install(bus.clone(), cx));
+    let spec = EventsSpec { topics: vec!["windows".into()], ..EventsSpec::default() };
+    let others: Vec<_> = (0..4)
+        .map(|n| bus.subscribe(spec.filter().expect("valid"), Grant::default(), Some(n)).expect("room").0)
+        .collect();
+    for _ in 0..2 {
+        activity(cx, &window);
+    }
+    let with_others = activity(cx, &window);
+    assert_eq!(with_others, without, "activity allocates what it does with nobody watching");
+    assert!(others.iter().all(|w| told(w).is_empty()));
+
+    let (_bus, listener) = watch(cx, &["status", "bell", "blocks"], vec![]);
+    activity(cx, &window);
+    let listened = activity(cx, &window);
+    assert!(listened > without, "{listened} against {without}: the events are built for someone who listens");
+    let heard = told(&listener);
+    // (The marks here are events, not bytes in the grid, so there is no block to name: those are
+    // told by the tests that feed a shell's output.)
+    for kind in ["status", "bell"] {
+        assert!(!of_kind(&heard, kind).is_empty(), "{kind} in {heard:?}");
+    }
+}
+
 #[gpui_kit::test]
 fn a_caller_that_runs_inside_a_terminal_cannot_type_into_it_however_it_asks(cx: &mut TestAppContext) {
     if isolate("a_caller_that_runs_inside_a_terminal_cannot_type_into_it_however_it_asks") {
@@ -282,6 +346,12 @@ fn a_caller_that_runs_inside_a_terminal_cannot_type_into_it_however_it_asks(cx: 
     assert_eq!(code(&send(cx, None, inside.clone(), 1)), Some(ErrorCode::Refused), "no claim at all");
     assert_eq!(code(&send(cx, Some("2"), inside.clone(), 1)), Some(ErrorCode::Refused), "a false claim");
     assert_eq!(code(&send(cx, Some("1"), Peer::default(), 1)), Some(ErrorCode::Refused), "the claim alone");
+    // Its parent gone (`(wh send-text … &)` is handed to launchd): no chain, but the same terminal
+    // device as the shell it was started in, which is as good.
+    let tty = wormhole_core::platform::process::tty(first).expect("a shell has a terminal");
+    let orphan = Peer::new(900_003, vec![]).on_tty(tty);
+    assert_eq!(code(&send(cx, None, orphan.clone(), 1)), Some(ErrorCode::Refused), "an orphan, no claim");
+    assert_eq!(code(&send(cx, None, orphan, 2)), None, "and another terminal is another device");
     // Under terminal 1, typing into terminal 2 is another terminal: allowed.
     assert_eq!(code(&send(cx, None, inside, 2)), None);
     // From outside every terminal, anywhere.

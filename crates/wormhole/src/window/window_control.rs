@@ -49,7 +49,7 @@ impl Workspace {
     pub(crate) fn control_terminals_under(&self, peer: &Peer, cx: &App) -> Vec<i64> {
         self.sessions
             .iter()
-            .filter(|session| session.terminal().read(cx).shell_pid().is_some_and(|pid| peer.runs_under(pid)))
+            .filter(|session| session.terminal().read(cx).shell_pid().is_some_and(|pid| peer.runs_in(pid)))
             .map(|session| session.id)
             .collect()
     }

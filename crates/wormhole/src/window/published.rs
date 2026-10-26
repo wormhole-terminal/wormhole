@@ -104,6 +104,12 @@ impl Workspace {
         }
         let Some(session) = self.sessions.iter().find(|session| session.id == id) else { return };
         let Some(block) = session.terminal().read(cx).newest_block() else { return };
+        // An Enter on an empty line is marked as ending a block too, with no command in it: that is
+        // not a command finishing, and the command before it already said so.
+        let ended = matches!(block.state, BlockState::Finished { .. });
+        if !block.state.ran() || (matches!(mark, CommandMark::Finished { .. }) && !ended) {
+            return;
+        }
         let (phase, exit_code) = match mark {
             CommandMark::Started => (BlockPhase::Started, None),
             CommandMark::Finished { code } => (BlockPhase::Finished, code),
@@ -126,6 +132,35 @@ impl Workspace {
             };
             self.event(Some(id), body)
         });
+    }
+
+    /// The window is going: every split in it dissolves and every terminal in it closes, told before the
+    /// window's own end so a watcher's picture of it empties in order.
+    pub(crate) fn publish_teardown(&self, cx: &App) {
+        if !wants(cx, Topic::Splits) && !wants(cx, Topic::Terminals) {
+            return;
+        }
+        for split in &self.splits {
+            self.publish_split_gone(split.id, cx);
+        }
+        for session in &self.sessions {
+            self.publish_terminal_closed(session.id, cx);
+        }
+    }
+
+    /// Split `split` is no longer in this window (it dissolved, or moved with its terminals).
+    pub(super) fn publish_split_gone(&self, split: SplitId, cx: &App) {
+        publish(cx, Topic::Splits, || {
+            self.event(None, Body::Split { split, terminals: Vec::new(), focused: None })
+        });
+    }
+
+    /// Every split of this window as it stands (a window that has just been given terminals running in
+    /// splits).
+    pub(crate) fn publish_all_splits(&self, cx: &App) {
+        for split in &self.splits {
+            self.publish_split(split.id, cx);
+        }
     }
 
     /// A split was made or changed, or (with no members left in `self.splits`) is gone.

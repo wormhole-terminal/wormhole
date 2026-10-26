@@ -2,8 +2,10 @@
 //!
 //! A caller names itself in `from` (its `WORMHOLE_TAB_ID`), and any process of the user can name
 //! any terminal there. So a claim can only restrict: it names who must not be typed into. What
-//! grants (a terminal reading itself) must be something a process can't choose, and its place in the
-//! process tree is: no process can make itself a descendant of a shell it does not run under.
+//! grants (a terminal reading itself) must be something a process can't easily choose, and its place in
+//! the process tree and on a terminal device is: no process can make itself a descendant of a shell it
+//! does not run under. This is in part: a process that starts a session of its own (`setsid`) and
+//! forks leaves its terminal and its parents behind, and then is only what it claims.
 
 use std::time::SystemTime;
 

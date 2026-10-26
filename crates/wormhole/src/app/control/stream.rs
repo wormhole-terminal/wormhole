@@ -12,7 +12,7 @@ use wormhole_core::ipc::control::{Error, ErrorCode, EventsSpec, Limited, Reason,
 use wormhole_core::ipc::{Answer, Peer};
 
 use super::{budget, listing};
-use crate::app_state::app;
+use crate::app_state::{AppState, app};
 use crate::settings::settings;
 
 /// Answer an `events` request. Order of the checks: the flag, the request itself, what it may
@@ -43,6 +43,11 @@ fn subscribe(spec: &EventsSpec, from: Option<i64>, peer: &Peer, cx: &mut App) ->
         return Err(refusal
             .error
             .unwrap_or_else(|| Error::new(ErrorCode::RateLimited, "too many streams lately")));
+    }
+    // The windows tell what changed in a terminal when they next look; look now, so that what the
+    // snapshot shows and what the stream goes on to say don't both carry the same change.
+    for window in app(cx).windows.clone() {
+        AppState::with_workspace(&window, cx, |ws, _, cx| ws.sync_summaries(cx));
     }
     // What the caller may read of terminals' text: the ones it runs inside of. (The setting that
     // lets it read every terminal comes with reading itself.)

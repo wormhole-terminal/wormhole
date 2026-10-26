@@ -8,7 +8,7 @@ use wormhole_core::ipc::control::event::{Body, Event, Topic};
 use wormhole_core::storage::store::{SplitRecord, WindowRecord};
 use wormhole_core::view::sidebar::{Item, SplitId, WindowSidebar, group_key};
 
-use crate::app_state::app_mut;
+use crate::app_state::{AppState, app, app_mut};
 use crate::dialog;
 use crate::terminal_view::Status;
 use crate::window::feature::{CloseAlso, CloseOf};
@@ -135,6 +135,10 @@ impl Workspace {
             self.features_left(left.id, cx);
         }
         self.splits.retain(|split| !split_ids.contains(&split.id));
+        // They go with their terminals: gone here, and told again where they land.
+        for &split in &split_ids {
+            self.publish_split_gone(split, cx);
+        }
         self.edit_sidebar_view(cx, |view| {
             view.groups.remove(group);
             view.folded.remove(&group_key(group));
@@ -162,7 +166,11 @@ impl Workspace {
             let record =
                 WindowRecord { id: window_id, active, layout, bounds: None, sessions: records, splits };
             open_workspace_window_in(&profile, Some(record), Some(source), cx);
-            // They are the same terminals, running on: they moved, they did not open.
+            // They are the same terminals, running on: they moved, they did not open. Their splits
+            // come with them.
+            if let Some(opened) = app(cx).windows.iter().find(|w| w.id == window_id).cloned() {
+                AppState::with_workspace(&opened, cx, |ws, _, cx| ws.publish_all_splits(cx));
+            }
             for terminal in moved_ids {
                 crate::automation::publish(cx, Topic::Terminals, || Event {
                     window: Some(window_id),

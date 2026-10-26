@@ -122,9 +122,9 @@ impl Workspace {
     pub(crate) fn set_custom_name(&mut self, ix: usize, name: Option<String>, cx: &mut Context<Self>) {
         let Some(session) = self.sessions.get_mut(ix) else { return };
         session.custom_name = name;
-        let (id, named) = (session.id, session.custom_name.clone());
         self.mark_dirty(cx);
-        self.publish_renamed(id, named.as_deref(), cx);
+        let session = &self.sessions[ix];
+        self.publish_renamed(session.id, session.custom_name.as_deref(), cx);
     }
 
     pub(super) fn alloc_id(&self, cx: &mut App) -> i64 {

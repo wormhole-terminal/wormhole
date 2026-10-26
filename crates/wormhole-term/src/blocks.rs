@@ -283,10 +283,12 @@ pub(super) fn ended(screen: &Screen, log: &CommandLog, code: i32) -> Option<Ende
     Some(Ended { command: clean(&block.command, BODY_MAX_CHARS), took, last_line })
 }
 
-/// The newest block whose command ran (started, or gave an exit code): what a mark that has just
-/// arrived is about. The shell has printed its next prompt by the time anyone asks, so it is the
-/// last block or the one before it; looks at those two only, so it costs a few lines of the grid.
-pub(super) fn newest_ran(screen: &Screen, log: &CommandLog) -> Option<Block> {
+/// The newest block that is past its prompt (a command is running, or its end was marked, with or
+/// without an exit code): what a mark that has just arrived is about. The shell has printed its next
+/// prompt by the time anyone asks, so it is the last block or the one before it; looks at those two
+/// only, so it costs a few lines of the grid. An Enter on an empty line ends its block without a command
+/// (`state.ran()` is false), and that block is the answer then, not the command before it.
+pub(super) fn newest_past_prompt(screen: &Screen, log: &CommandLog) -> Option<Block> {
     if screen.mode().contains(Modes::ALT_SCREEN) {
         return None;
     }
@@ -303,7 +305,7 @@ pub(super) fn newest_ran(screen: &Screen, log: &CommandLog) -> Option<Block> {
     [newest, newest.saturating_sub(1)]
         .into_iter()
         .filter_map(|id| block(screen, id, log))
-        .find(|block| block.state.ran())
+        .find(|block| block.state != BlockState::Prompt)
 }
 
 /// The text of lines `first..=last`, trailing blanks trimmed, for copying a block's output (an
@@ -342,8 +344,8 @@ pub(super) mod tests {
     use wormhole_vt::{Line, Scroll};
 
     use super::{
-        BlockState, CommandLog, Ended, block, block_at, blocks, ended, lines_text, newest_ran, readout_text,
-        took_text,
+        BlockState, CommandLog, Ended, block, block_at, blocks, ended, lines_text, newest_past_prompt,
+        readout_text, took_text,
     };
     use crate::osc::{Mark, PromptKind};
     use crate::testing::TestTerm;
@@ -407,22 +409,30 @@ pub(super) mod tests {
     }
 
     #[test]
-    fn the_newest_command_that_ran_is_found_whatever_prompt_follows() {
+    fn the_newest_block_past_its_prompt_is_found_whatever_prompt_follows() {
         // The prompt after `make` is the newest block, and nothing ran at it: `make` is the one.
         let (term, log) = shown(10, SESSION);
-        let found = newest_ran(term.screen(), &log).expect("a command ran");
+        let found = newest_past_prompt(term.screen(), &log).expect("a command ran");
         assert_eq!((found.id, found.command.as_str()), (2, "make"));
         assert!(found.state.failed());
         // Running now: the newest block is the one running.
         let running = b"\x1b]133;A\x07$ \x1b]133;B\x07sleep 9\r\n\x1b]133;C\x07";
         let (term, log) = shown(10, running);
-        let found = newest_ran(term.screen(), &log).expect("running");
+        let found = newest_past_prompt(term.screen(), &log).expect("running");
         assert!(matches!(found.state, BlockState::Running { .. }), "{:?}", found.state);
         // Nothing has run, and the alternate screen has no blocks.
         let (term, log) = shown(10, b"\x1b]133;A\x07$ ");
-        assert_eq!(newest_ran(term.screen(), &log), None);
+        assert_eq!(newest_past_prompt(term.screen(), &log), None);
         let (term, log) = shown(10, b"\x1b[?1049h\x1b]133;A\x07$ ");
-        assert_eq!(newest_ran(term.screen(), &log), None);
+        assert_eq!(newest_past_prompt(term.screen(), &log), None);
+        // An Enter on an empty line: the shell marks its end without a code, and prints the next
+        // prompt. That block is the newest past its prompt, and no command ran in it.
+        let mut empty_enter = SESSION.to_vec();
+        empty_enter.extend_from_slice(b"\r\x1b]133;D\x07\x1b]133;A\x07$ \x1b]133;B\x07");
+        let (term, log) = shown(12, &empty_enter);
+        let found = newest_past_prompt(term.screen(), &log).expect("the empty line's block");
+        assert_eq!(found.id, 3);
+        assert!(!found.state.ran(), "{:?}", found.state);
     }
 
     #[test]

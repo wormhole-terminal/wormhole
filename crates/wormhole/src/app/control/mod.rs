@@ -169,9 +169,10 @@ fn send_text(
     let facts =
         found.window.workspace.read_with(cx, |ws, cx| ws.control_tab_facts(found.tab, cx)).ok().flatten();
     let Some((state, shell)) = facts else { return not_found(target) };
-    // Where the caller runs, not what it says: a process can leave `from` out, but it can't move
-    // out from under the shell it was started by.
-    let caller_inside = shell.is_some_and(|shell| peer.runs_under(shell));
+    // Where the caller runs, not what it says: a process can leave `from` out, but it can't move out
+    // from under the shell it was started by, nor off its terminal. In part: a program that starts a
+    // session of its own (`setsid`) leaves both behind.
+    let caller_inside = shell.is_some_and(|shell| peer.runs_in(shell));
     if let Err(error) =
         send_text_check(enabled, text, from, SendTarget { tab: found.tab, state, caller_inside })
     {

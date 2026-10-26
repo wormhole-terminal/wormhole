@@ -76,6 +76,8 @@ pub(crate) fn open_workspace_window_in(
         ..Default::default()
     };
     let owner = profile.clone();
+    // Before its terminals open: a watcher hears of the window first.
+    tell_window(id, Body::WindowOpened, cx);
     match crate::window_open::open(options, cx, move |window, cx| {
         cx.new(|cx| Workspace::new(record, owner, window, cx))
     }) {
@@ -95,13 +97,15 @@ pub(crate) fn open_workspace_window_in(
                 hidden: false,
             });
             state.front = id;
-            tell_window(id, Body::WindowOpened, cx);
             // Its own observer starts after this update, so it would not hear that it was listed.
             workspace.update(cx, |workspace, cx| workspace.app_state_changed(cx));
             crate::background::activate(cx);
             let _ = handle.update(cx, |_, window, cx| crate::background::activate_window(window, cx));
         }
-        Err(err) => tracing::error!("opening a window failed: {err:#}"),
+        Err(err) => {
+            tell_window(id, Body::WindowClosed, cx);
+            tracing::error!("opening a window failed: {err:#}");
+        }
     }
 }
 
@@ -135,10 +139,16 @@ fn tell_window(id: i64, body: Body, cx: &App) {
 
 pub(crate) fn window_closed(cx: &mut App, id: WindowId) {
     let state = app_mut(cx);
-    let closed = state.windows.iter().find(|w| w.handle.window_id() == id).map(|w| w.id);
+    let closed = state.windows.iter().find(|w| w.handle.window_id() == id).cloned();
+    let quitting = state.quitting;
+    // Its splits and terminals end before it does (not while the app quits: the streams end too).
+    if let (Some(closed), false) = (&closed, quitting) {
+        let _ = closed.workspace.read_with(cx, |ws, cx| ws.publish_teardown(cx));
+    }
+    let state = app_mut(cx);
     state.windows.retain(|w| w.handle.window_id() != id);
-    if let Some(closed) = closed {
-        tell_window(closed, Body::WindowClosed, cx);
+    if let (Some(closed), false) = (&closed, quitting) {
+        tell_window(closed.id, Body::WindowClosed, cx);
     }
     let state = app_mut(cx);
     // Sessions end with their window, so with none left there is nothing to show. (The close

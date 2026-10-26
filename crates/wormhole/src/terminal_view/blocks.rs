@@ -131,7 +131,8 @@ impl TerminalView {
         cx.notify();
     }
 
-    /// The newest command that ran (it may still run): what a mark that has just arrived is about.
+    /// The newest block past its prompt: what a mark that has just arrived is about (see
+    /// `Pty::newest_block`).
     pub fn newest_block(&self) -> Option<Block> {
         self.pty.as_ref()?.newest_block()
     }

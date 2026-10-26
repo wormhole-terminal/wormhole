@@ -47,11 +47,12 @@ impl Pty {
         blocks::command_cells(&self.term.lock(), block)
     }
 
-    /// The newest command that ran (it may still run): what a mark that has just arrived is about.
-    /// Looks only at the newest blocks, so it costs a few lines of the grid.
+    /// The newest block that is past its prompt: what a mark that has just arrived is about. Its
+    /// `state.ran()` says whether a command ran in it (an Enter on an empty line ends a block without
+    /// one). Looks only at the newest blocks, so it costs a few lines of the grid.
     pub fn newest_block(&self) -> Option<Block> {
         let term = self.term.lock();
-        blocks::newest_ran(&term, &self.shared.commands())
+        blocks::newest_past_prompt(&term, &self.shared.commands())
     }
 
     /// The command that most recently finished with exit code `code`: what it was, how long it ran
