@@ -18,13 +18,13 @@ use std::time::Duration;
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::view::motion::SpringSpec;
 use wormhole_core::view::motion::pose::{LIST_MOVE, Phase, Room};
+use wormhole_core::view::motion::{MotionChoices, SpringSpec};
 use wormhole_core::view::sidebar::Listing;
-use wormhole_core::view::sidebar::motion::{Drawn, plan_moves};
+use wormhole_core::view::sidebar::motion::{Drawn, Moves, plan_moves};
 
 use super::fold::{FoldNote, Summaries};
-use super::insert::{changes, motions};
+use super::insert::{Change, changes, motions};
 use super::leaving::{Leavers, Leaving, Snapshot};
 use super::row::{self, Natural, RowMotion};
 use crate::settings::settings_in;
@@ -145,6 +145,147 @@ fn id_of(kind: &'static str, key: &ItemKey, batch: u64) -> (&'static str, u64) {
     (kind, hasher.finish())
 }
 
+/// What a change of the list was: the lines that went, the lines that came, and the motion of each.
+struct Turnover {
+    gone: Vec<Change>,
+    exits: Vec<RowMotion>,
+    came: Vec<Change>,
+    enters: Vec<RowMotion>,
+}
+
+/// How long the parts of a change take, for the timers that end them.
+#[derive(Default)]
+struct Lasting {
+    /// The rows that went stay drawn this long.
+    leaving: Duration,
+    /// The lines that came and moved, and the summary of a folded head, take this long.
+    settling: Duration,
+}
+
+/// What a plan is made of besides the list's own state.
+struct Next<'a> {
+    keys: &'a [ItemKey],
+    listing: &'a Listing,
+    fold: Option<FoldNote>,
+    choices: MotionChoices,
+}
+
+impl ListMotion {
+    /// Plans the change of the list to `next`: who goes, comes and moves, and how.
+    fn plan(&mut self, next: &Next, scroll: &ScrollHandle, still: bool) -> Lasting {
+        self.changed = false;
+        self.keep_snapshot = true;
+        let before = std::mem::replace(&mut self.keys, next.keys.to_vec());
+        let was = if still { None } else { measured(&std::mem::take(&mut self.drawn), scroll) };
+        let Some(was) = was else {
+            self.cut();
+            self.drawn = next.keys.to_vec();
+            return Lasting::default();
+        };
+        let snapshot = self.snapshot.clone();
+        let (gone, came) = changes(&before, snapshot.as_ref().map(|s| &s.listing), next.keys, next.listing);
+        let turnover = Turnover {
+            exits: motions(&gone, Phase::Exit, next.fold.as_ref(), next.choices),
+            enters: motions(&came, Phase::Enter, next.fold.as_ref(), next.choices),
+            gone,
+            came,
+        };
+        self.batch += 1;
+        let mut lasting = Lasting::default();
+        self.keep_leaving(&turnover, &before, next.keys, snapshot, &mut lasting);
+        let moves = self.plan_flips(&turnover, &was, next.keys);
+        self.start_moving(moves, &turnover, &mut lasting);
+        self.start_arriving(turnover, next.keys, &mut lasting);
+        lasting
+    }
+
+    /// The rows that went stay drawn, where they were, for as long as their motion takes, and a folded
+    /// group's head waits with its summary.
+    fn keep_leaving(
+        &mut self,
+        turnover: &Turnover,
+        before: &[ItemKey],
+        now: &[ItemKey],
+        snapshot: Option<Rc<Snapshot>>,
+        lasting: &mut Lasting,
+    ) {
+        let Some(snapshot) = snapshot else { return };
+        let batch = self.batch;
+        let standing: HashSet<&ItemKey> = now.iter().collect();
+        for (change, &how) in turnover.gone.iter().zip(&turnover.exits) {
+            let stays = how.duration(Phase::Exit);
+            if !matches!(change.key, ItemKey::Row(_)) || stays.is_zero() {
+                continue;
+            }
+            let after = before[..change.at].iter().rev().find(|key| standing.contains(key)).cloned();
+            let leaving = Leaving::new(change.key.clone(), after, how, change.at, snapshot.clone(), batch);
+            self.leaving.push(leaving);
+            lasting.leaving = lasting.leaving.max(stays);
+            if let (Some(group), RowMotion::Fold(variant, slot)) = (change.group, how) {
+                self.summaries.push(group, variant, slot.of, batch);
+                lasting.settling = lasting.settling.max(Summaries::duration(variant, slot.of));
+            }
+        }
+    }
+
+    /// Where the lines that stay move to, with the leaving rows among them and a line that opens its
+    /// height starting with none (the lines below follow it as it opens).
+    fn plan_flips(&mut self, turnover: &Turnover, was: &[Drawn<ItemKey>], now: &[ItemKey]) -> Moves<ItemKey> {
+        let by_layout = |key: &ItemKey| {
+            turnover
+                .came
+                .iter()
+                .zip(&turnover.enters)
+                .any(|(came, how)| came.key == *key && how.opens_by_layout())
+        };
+        let likely = |key: &ItemKey| match key {
+            _ if by_layout(key) => 0.0,
+            ItemKey::Row(_) => LIKELY_ROW,
+            ItemKey::Band(_) => was
+                .iter()
+                .find(|line| matches!(line.key, ItemKey::Band(_)))
+                .map_or(LIKELY_ROW, |line| line.height),
+        };
+        let drawn = self.leaving.drawn(now);
+        let lines: Vec<(ItemKey, f32)> = drawn.iter().map(|key| (key.clone(), likely(key))).collect();
+        // The first line sits at the same place at rest whatever the list holds.
+        if self.moving.is_none() || self.pad.is_none() {
+            self.pad = Some(was.first().map_or(0.0, |line| line.top));
+        }
+        self.drawn = drawn;
+        plan_moves(was, &lines, self.pad.unwrap_or(0.0), LIMIT)
+    }
+
+    /// The lines that moved spring to their places: on the spring a room makes for the rows (or
+    /// closes after them) if there is one, else the list's own.
+    fn start_moving(&mut self, moves: Moves<ItemKey>, turnover: &Turnover, lasting: &mut Lasting) {
+        let room = turnover.enters.iter().chain(&turnover.exits).find_map(|how| match how.room() {
+            Room::Spring(spring) => Some(spring),
+            Room::Layout => None,
+        });
+        let spring = self.gap_spring.take().or(room).unwrap_or(LIST_MOVE);
+        self.moving = (!moves.moved.is_empty()).then(|| Moving {
+            batch: self.batch,
+            spring,
+            lines: moves.moved.iter().map(|mv| (mv.key.clone(), (mv.from, mv.to))).collect(),
+        });
+        if self.moving.is_some() {
+            lasting.settling = lasting.settling.max(spring.settle(REST));
+        }
+    }
+
+    /// The lines that came play the pose of their motion.
+    fn start_arriving(&mut self, turnover: Turnover, now: &[ItemKey], lasting: &mut Lasting) {
+        let standing: HashSet<&ItemKey> = now.iter().collect();
+        self.entering.retain(|key, _| standing.contains(key));
+        for (came, how) in turnover.came.into_iter().zip(turnover.enters) {
+            lasting.settling = lasting.settling.max(how.duration(Phase::Enter));
+            let arrival = Arrival { motion: how, natural: Natural::default(), batch: self.batch };
+            self.entering.insert(came.key, arrival);
+        }
+    }
+}
+
 impl Sidebar {
     /// Notice that the list's lines are not the ones last drawn, and start the motion of those that
     /// came, went or moved. Call it once per render with the lines about to be drawn, top to bottom
@@ -161,98 +302,19 @@ impl Sidebar {
             return;
         }
         let choices = settings_in(&self.input.profile, cx).motion_in_force();
-        let motion = &mut self.motion;
-        motion.changed = false;
-        motion.keep_snapshot = true;
-        let before_keys = std::mem::replace(&mut motion.keys, keys.to_vec());
-        let before_drawn = std::mem::take(&mut motion.drawn);
-        let was = if cx.reduce_motion() { None } else { measured(&before_drawn, &self.scroll) };
-        let Some(was) = was else {
-            motion.cut();
-            motion.drawn = keys.to_vec();
-            return;
-        };
-        let snapshot = motion.snapshot.clone();
-        let (gone, came) = changes(&before_keys, snapshot.as_ref().map(|s| &s.listing), keys, listing);
-        let exits = motions(&gone, Phase::Exit, fold.as_ref(), choices);
-        let enters = motions(&came, Phase::Enter, fold.as_ref(), choices);
-
-        motion.batch += 1;
-        let batch = motion.batch;
-        // The rows that go stay, where the motion keeps them for a while.
-        let now: HashSet<&ItemKey> = keys.iter().collect();
-        let mut leaving_for = Duration::ZERO;
-        let mut summary_for = Duration::ZERO;
-        for (change, &how) in gone.iter().zip(&exits) {
-            let stays = how.duration(Phase::Exit);
-            let (ItemKey::Row(_), Some(snapshot), false) = (&change.key, &snapshot, stays.is_zero()) else {
-                continue;
-            };
-            let after = before_keys[..change.at].iter().rev().find(|key| now.contains(key)).cloned();
-            motion.leaving.push(Leaving::new(
-                change.key.clone(),
-                after,
-                how,
-                change.at,
-                snapshot.clone(),
-                batch,
-            ));
-            leaving_for = leaving_for.max(stays);
-            if let (Some(group), RowMotion::Fold(variant, slot)) = (change.group, how) {
-                motion.summaries.push(group, variant, slot.of, batch);
-                summary_for = summary_for.max(Summaries::duration(variant, slot.of));
-            }
-        }
-        // The lines as they stand now, the leaving rows among them, and how tall each is likely to be.
-        let by_layout =
-            |key: &ItemKey| came.iter().zip(&enters).any(|(c, how)| c.key == *key && how.opens_by_layout());
-        let now_drawn = motion.leaving.drawn(keys);
-        let likely = |key: &ItemKey| match key {
-            // A line that opens its height starts with none; the lines below follow it.
-            _ if by_layout(key) => 0.0,
-            ItemKey::Row(_) => LIKELY_ROW,
-            ItemKey::Band(_) => was
-                .iter()
-                .find(|line| matches!(line.key, ItemKey::Band(_)))
-                .map_or(LIKELY_ROW, |line| line.height),
-        };
-        let lines: Vec<(ItemKey, f32)> = now_drawn.iter().map(|key| (key.clone(), likely(key))).collect();
-        // The first line sits at the same place at rest whatever the list holds.
-        if motion.moving.is_none() || motion.pad.is_none() {
-            motion.pad = Some(was.first().map_or(0.0, |line| line.top));
-        }
-        let plan = plan_moves(&was, &lines, motion.pad.unwrap_or(0.0), LIMIT);
-        motion.drawn = now_drawn;
-        // A spring a room makes for the rows or closes after them carries the lines round it.
-        let room = enters.iter().chain(&exits).find_map(|how| match how.room() {
-            Room::Spring(spring) => Some(spring),
-            Room::Layout => None,
-        });
-        let spring = motion.gap_spring.take().or(room).unwrap_or(LIST_MOVE);
-        motion.moving = (!plan.moved.is_empty()).then(|| Moving {
-            batch,
-            spring,
-            lines: plan.moved.iter().map(|mv| (mv.key.clone(), (mv.from, mv.to))).collect(),
-        });
-        motion.entering.retain(|key, _| now.contains(key));
-        let mut arriving = Duration::ZERO;
-        for (change, how) in came.iter().zip(enters) {
-            arriving = arriving.max(how.duration(Phase::Enter));
-            motion
-                .entering
-                .insert(change.key.clone(), Arrival { motion: how, natural: Natural::default(), batch });
-        }
-        let settling = if motion.moving.is_some() { spring.settle(REST) } else { Duration::ZERO };
+        let next = Next { keys, listing, fold, choices };
+        let lasting = self.motion.plan(&next, &self.scroll, cx.reduce_motion());
+        let batch = self.motion.batch;
         // Nothing is left to see of the motion when it is over: the lines are drawn plain again.
-        if let Some(over) = Some(settling.max(arriving).max(summary_for)).filter(|over| !over.is_zero()) {
-            self.later(over + GRACE, cx, move |this, cx| {
+        if !lasting.settling.is_zero() {
+            self.later(lasting.settling + GRACE, cx, move |this, cx| {
                 if this.motion.retire_settled(batch) {
                     cx.notify();
                 }
             });
         }
-        if !leaving_for.is_zero() {
-            self.later(leaving_for + GRACE, cx, move |this, cx| {
+        if !lasting.leaving.is_zero() {
+            self.later(lasting.leaving + GRACE, cx, move |this, cx| {
                 if this.motion.retire_leaving(batch) {
                     cx.notify();
                 }
