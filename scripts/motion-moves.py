@@ -10,6 +10,7 @@
   scripts/motion-moves.py room-file   sidebar/motion/drag.rs -> sidebar/motion/room.rs (the room a dragged row makes)
   scripts/motion-moves.py shift-file  style/shift.rs -> style/status_shift.rs (it is a status change's, beside status.rs)
   scripts/motion-moves.py line-words  sidebar/row/face.rs -> sidebar/row/second_line.rs (line_of and PLACE_CHARS: a second line's words)
+  scripts/motion-moves.py pane-render window/panes/mod.rs -> window/panes/render.rs (the methods that draw a split's panes)
   scripts/motion-moves.py STEP --check [--base REV]
                                       verify that the working tree is a pure move of the files as REV had them
                                       (default HEAD: before the commit; after it, pass the commit's parent)
@@ -684,6 +685,198 @@ def apply_relocation(name: str) -> int:
     return 0
 
 
+class MethodMove(NamedTuple):
+    """Methods of one `impl` block (and the constants only they use) that move to a new file of their own."""
+
+    src: str  # relative to the app crate's src/
+    dst: str
+    impl: str  # the impl's header line, as `dst` writes it
+    methods: List[str]
+    consts: List[str]
+    header: str
+    uses: List[str]
+    widen: Dict[str, str]  # method -> the visibility its `fn` line gets in `dst`, where a caller is elsewhere now
+    edits: List[Tuple[str, str]]  # (old, new): a path that means another thing from the new file, written as it is there
+    mod_line: str  # the `mod` line `src` gets for `dst`
+    mod_after: str  # the line of `src` it goes behind
+    src_uses: List[Tuple[str, str]]  # (old, new) `use` lines of `src`: what the moved code was the last user of
+
+
+METHOD_MOVES: Dict[str, MethodMove] = {
+    "pane-render": MethodMove(
+        src="window/panes/mod.rs",
+        dst="window/panes/render.rs",
+        impl="impl Workspace {",
+        methods=["render_panes", "render_node", "render_pane", "render_pane_header", "render_divider"],
+        consts=["DIVIDER_HINT", "PANE_PATH_MAX"],
+        header="//! Drawing a split: each pane with its header, the dividers over their shared edges, the whole surface.\n"
+               "//! The tree and its geometry are core's; what the panes do when the person acts is `mod.rs`.",
+        uses=[
+            "use gpui_kit::assets::IconName;",
+            "use gpui_kit::component::tooltip::Tooltip;",
+            "use gpui_kit::prelude::*;",
+            "use gpui_kit::*;",
+            "use wormhole_core::keys::keymap::{self, ActionId};",
+            "use wormhole_core::view::panes::{Axis, DividerId, Node, PaneId};",
+            "use wormhole_core::view::sidebar::SplitId;",
+            "use wormhole_core::view::spoken;",
+            "",
+            "use super::splits::Split;",
+            "use crate::platform::{self, Anchor};",
+            "use crate::settings::{settings_in, ui_in};",
+            "use crate::sidebar::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag, pane_glyph};",
+            "use crate::style;",
+            "use crate::style::home_dir;",
+            "use crate::window::Workspace;",
+            "use crate::window::session::Pane;",
+            "use crate::window::title::breadcrumb::terminal_tile;",
+        ],
+        widen={
+            "render_panes": "pub(in crate::window)",
+            "render_node": "pub(super)",
+            "render_pane": "pub(super)",
+        },
+        edits=[("super::cached::view(", "crate::window::cached::view(")],
+        mod_line="mod render;",
+        mod_after="pub(in crate::window) mod opening;",
+        src_uses=[
+            ("use gpui_kit::assets::IconName;\n", ""),
+            ("use gpui_kit::component::tooltip::Tooltip;\n", ""),
+            ("use wormhole_core::view::panes::{Axis, Direction, DividerId, Node, PANE_MIN_W, PaneId, Preset, TabPanes};",
+             "use wormhole_core::view::panes::{Axis, Direction, DividerId, PANE_MIN_W, PaneId, Preset, TabPanes};"),
+            ("use wormhole_core::view::spoken;\n", ""),
+            ("use crate::platform::{self, Anchor, Item, Menu};", "use crate::platform::{self, Item, Menu};"),
+            ("use crate::settings::{settings_in, ui_in};\n", ""),
+            ("use crate::sidebar::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag, pane_glyph};\n", ""),
+            ("use crate::style::home_dir;\n", ""),
+            ("use crate::window::panes::splits::Split;\n", ""),
+            ("use crate::window::session::Pane;\n", ""),
+            ("use crate::window::title::breadcrumb::terminal_tile;\n", ""),
+        ],
+    ),
+}
+
+METHOD_NAME_RE = r"^    (?:pub(?:\([^)]*\))? )?fn %s\b"
+
+
+def method_block(lines: List[str], name: str) -> Tuple[int, int]:
+    """The lines [start, end) of method `name` of an impl: its doc comment and attributes, then to its closing brace."""
+    at = next((i for i, line in enumerate(lines) if re.match(METHOD_NAME_RE % name, line)), None)
+    if at is None:
+        raise KeyError(name)
+    start = at
+    while start > 0 and lines[start - 1].startswith(("    ///", "    #[")):
+        start -= 1
+    end = next(i for i in range(at, len(lines)) if lines[i] == "    }") + 1
+    return start, end
+
+
+def const_block(lines: List[str], name: str) -> Tuple[int, int]:
+    at = next((i for i, line in enumerate(lines) if re.match(r"^(?:pub(?:\([^)]*\))? )?const %s\b" % name, line)), None)
+    if at is None:
+        raise KeyError(name)
+    start = at
+    while start > 0 and lines[start - 1].startswith(("///", "#[")):
+        start -= 1
+    return start, at + 1
+
+
+def method_move_blocks(text: str, move: MethodMove) -> Dict[str, List[str]]:
+    lines = text.split("\n")
+    blocks = {}
+    for name in move.methods:
+        a, b = method_block(lines, name)
+        blocks["fn " + name] = lines[a:b]
+    for name in move.consts:
+        a, b = const_block(lines, name)
+        blocks["const " + name] = lines[a:b]
+    return blocks
+
+
+def apply_method_move(name: str) -> int:
+    move = METHOD_MOVES[name]
+    src, dst = (os.path.join(REPO, APP, p) for p in (move.src, move.dst))
+    if os.path.exists(dst):
+        print("%s: %s exists already, nothing to do" % (name, move.dst))
+        return 0
+    with open(src, encoding="utf-8") as f:
+        text = f.read()
+    lines = text.split("\n")
+    taken: List[Tuple[int, int]] = []
+    consts: List[List[str]] = []
+    methods: List[List[str]] = []
+    for const in move.consts:
+        a, b = const_block(lines, const)
+        consts.append(lines[a:b])
+        taken.append((a, b))
+    for method in move.methods:
+        a, b = method_block(lines, method)
+        block = lines[a:b]
+        if method in move.widen:
+            i = next(i for i, line in enumerate(block) if re.match(METHOD_NAME_RE % method, line))
+            block[i] = re.sub(r"^    (?:pub(?:\([^)]*\))? )?fn", "    %s fn" % move.widen[method], block[i])
+        methods.append(block)
+        taken.append((a, b))
+    for a, b in sorted(taken, reverse=True):  # out of the source, with the blank line after each
+        end = b + 1 if b < len(lines) and lines[b] == "" else b
+        del lines[a:end]
+    out = [*move.header.split("\n"), "", *move.uses, ""]
+    for block in consts:
+        out += [*block, ""]
+    out.append(move.impl)
+    for n, block in enumerate(methods):
+        out += ([""] if n else []) + block
+    out += ["}", ""]
+    moved = "\n".join(out)
+    for old, new in move.edits:
+        moved = moved.replace(old, new)
+    with open(dst, "w", encoding="utf-8") as f:
+        f.write(moved)
+    text = "\n".join(lines).replace(move.mod_after, move.mod_after + "\n" + move.mod_line, 1)
+    for old, new in move.src_uses:
+        text = text.replace(old, new, 1)
+    with open(src, "w", encoding="utf-8") as f:
+        f.write(text)
+    subprocess.run(["git", "add", src, dst], cwd=REPO, check=True)
+    print("%s: moved %s to %s" % (name, ", ".join(move.methods + move.consts), move.dst))
+    return 0
+
+
+def norm_lines(block: List[str], move: MethodMove, moved: bool) -> str:
+    text = "\n".join(block)
+    if moved:  # what was edited for the new file, written as the source had it
+        for old, new in move.edits:
+            text = text.replace(new, old)
+    text = re.sub(r"\s+", "", text)
+    for visibility in set(move.widen.values()) | {"pub(super)"}:
+        text = text.replace(re.sub(r"\s+", "", visibility), "")
+    return re.sub(r",([)\]}])", r"\1", text)
+
+
+def check_method_move(name: str, base: str) -> int:
+    """Every method and constant of the move is, token for token, what `base` had, now in `dst` and not in `src`."""
+    move = METHOD_MOVES[name]
+    try:
+        before = method_move_blocks(run("git", "show", "%s:%s/%s" % (base, APP, move.src)), move)
+    except subprocess.CalledProcessError:
+        print("%s: %s is not in %s; pass --base <the commit before the move>" % (name, move.src, base))
+        return 2
+    with open(os.path.join(REPO, APP, move.dst), encoding="utf-8") as f:
+        after = method_move_blocks(f.read(), move)
+    with open(os.path.join(REPO, APP, move.src), encoding="utf-8") as f:
+        left = f.read()
+    ok = True
+    for key, block in before.items():
+        if norm_lines(block, move, False) != norm_lines(after[key], move, True):
+            print("differs:", key)
+            ok = False
+        if key.startswith("fn ") and re.search(METHOD_NAME_RE % key[3:], left, re.M):
+            print("still in the source:", key)
+            ok = False
+    print("%s: %s" % (name, "a pure move" if ok else "NOT a pure move"))
+    return 0 if ok else 1
+
+
 def norm(chunk: Chunk) -> str:
     """An item without whitespace and without a widened visibility: what a move must keep, token for token
     (rustfmt may rewrap a signature the wider visibility made too long)."""
@@ -730,10 +923,12 @@ def check_step(name: str, base: str) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("step", choices=sorted([*STEPS, *RELOCATIONS, *RENAMES]))
+    parser.add_argument("step", choices=sorted([*STEPS, *RELOCATIONS, *RENAMES, *METHOD_MOVES]))
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--base", default="HEAD", help="the revision the files are compared with (default HEAD)")
     args = parser.parse_args()
+    if args.step in METHOD_MOVES:
+        return check_method_move(args.step, args.base) if args.check else apply_method_move(args.step)
     if args.step in RENAMES:
         return check_rename(args.step, args.base) if args.check else apply_rename(args.step)
     if args.check:
