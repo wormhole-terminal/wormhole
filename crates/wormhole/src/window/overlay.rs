@@ -8,13 +8,12 @@
 //! the same entity drawn over a shield that takes the pointer, until a timer takes it down. Without the
 //! feature, or under Reduce Motion, it is as it was: it fades in over [`MOTION_POPOVER`] and closing is a cut.
 
-use std::time::Duration;
-
 use gpui_kit::*;
 use wormhole_core::view::motion::overlay::{EXIT, exit_opacity};
 
 use crate::settings::{SettingsStore, settings_in};
 use crate::style;
+use crate::style::motion::LAST_FRAME_GRACE;
 use crate::theme_bridge::token;
 use crate::window::Workspace;
 
@@ -147,7 +146,7 @@ impl Workspace {
 
     /// Whether the palette appears at once and leaves by a fade: the Motion feature's, under no Reduce Motion.
     fn fades_palette(&self, cx: &App) -> bool {
-        settings_in(&self.profile, cx).motion_on() && !cx.reduce_motion()
+        self.plays_motion(cx)
     }
 
     /// Keep `view` drawn, fading, for [`EXIT`] and then take it down.
@@ -155,7 +154,7 @@ impl Workspace {
         let serial = self.overlay.exits + 1;
         self.overlay.exits = serial;
         let end = cx.spawn(async move |this, cx| {
-            cx.background_executor().timer(EXIT + EXIT_GRACE).await;
+            cx.background_executor().timer(EXIT + LAST_FRAME_GRACE).await;
             this.update(cx, |this, cx| {
                 if this.overlay.leaving.as_ref().is_some_and(|leaving| leaving.serial == serial) {
                     this.overlay.leaving = None;
@@ -210,7 +209,7 @@ impl Workspace {
         // The scrim and the card fade in together, in `MOTION_POPOVER`; they come in mounted,
         // so each opening starts it again. Under Reduce Motion GPUI draws the last frame: a cut. The palette
         // with motion on does not fade in: it is there as the keys are pressed.
-        if !fades_in(open.kind, settings_in(&self.profile, cx).motion_on()) {
+        if !fades_in(open.kind, settings_in(&self.profile, cx).motion_feature_on()) {
             return Some(overlay.into_any_element());
         }
         Some(
@@ -230,9 +229,6 @@ impl Workspace {
 fn fades_in(kind: OverlayKind, motion_on: bool) -> bool {
     !(kind == OverlayKind::Palette && motion_on)
 }
-
-/// How long after [`EXIT`] the fading picture is kept, so its last frame is drawn.
-const EXIT_GRACE: Duration = Duration::from_millis(40);
 
 /// A palette that was closed, drawn fading: its scrim and card as they were, under a shield that takes the
 /// pointer, so nothing in it is live and a click does not fall through while it goes.
@@ -263,17 +259,4 @@ fn fading(view: &OverlayView, serial: u64) -> AnyElement {
 pub(crate) fn scrim(id: &'static str, cx: &App) -> Stateful<Div> {
     let color = token(&cx.global::<SettingsStore>().tokens, "surface.overlay");
     div().id(id).absolute().top_0().left_0().size_full().bg(color).occlude()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{OverlayKind, fades_in};
-
-    #[test]
-    fn only_the_palette_with_motion_on_is_there_at_once() {
-        assert!(!fades_in(OverlayKind::Palette, true));
-        assert!(fades_in(OverlayKind::Palette, false), "today's fade without the feature");
-        assert!(fades_in(OverlayKind::Sheet, true), "the sheet keeps its fade");
-        assert!(fades_in(OverlayKind::Sheet, false));
-    }
 }

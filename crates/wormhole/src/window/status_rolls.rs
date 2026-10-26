@@ -4,15 +4,13 @@
 //! by the tick, carries it on instead of cutting it), and draws it as an animation of the region that
 //! holds it, which draws that region and nothing else. At rest it holds nothing: no roll, no work.
 
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use wormhole_core::view::layout::status_bar::Activity;
 use wormhole_core::view::motion::roll::DURATION;
 
+use crate::style::motion::LAST_FRAME_GRACE;
 use crate::style::{NumberRoll, RollClock};
-
-/// How long after it should have finished a roll is kept, so its last frame is drawn.
-const GRACE: Duration = Duration::from_millis(40);
 
 /// One count that is rolling.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -43,7 +41,7 @@ impl StatusRolls {
         now: Instant,
         on: bool,
     ) {
-        self.rolling.retain(|roll| on && now.duration_since(roll.began) < DURATION + GRACE);
+        self.rolling.retain(|roll| on && now.duration_since(roll.began) < DURATION + LAST_FRAME_GRACE);
         if !on {
             return;
         }
@@ -63,7 +61,7 @@ impl StatusRolls {
         self.rolling
             .iter()
             .find(|roll| roll.activity == activity && roll.to == to)
-            .filter(|roll| now.duration_since(roll.began) < DURATION + GRACE)
+            .filter(|roll| now.duration_since(roll.began) < DURATION + LAST_FRAME_GRACE)
             .map(|roll| NumberRoll { from: roll.from, clock: RollClock::Playing(roll.turn) })
     }
 

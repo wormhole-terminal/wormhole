@@ -15,7 +15,6 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::view::focus::Area;
 use wormhole_core::view::layout::status_bar::{self as rules, Activity, Detail, Entry, Summary};
 use wormhole_core::view::spoken;
@@ -287,7 +286,7 @@ impl Workspace {
     /// The bar was just built (`regions`): its counts that differ from those of `was`, which it drew before,
     /// start to turn over. Not under Reduce Motion, nor without the Motion feature.
     pub(super) fn note_rolls(&mut self, was: Option<&StatusBar>, cx: &App) {
-        let on = settings_in(&self.profile, cx).feature_enabled(FeatureFlag::Motion) && !cx.reduce_motion();
+        let on = self.plays_motion(cx);
         let (drawn, rolls) = (&self.regions.drawn.status_bar, &mut self.regions.drawn.rolls);
         rolls.note(counts(was), counts(drawn.as_ref()), cx.background_executor().now(), on);
     }

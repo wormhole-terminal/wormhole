@@ -114,6 +114,7 @@ mod panel_switch_tests;
 #[cfg(test)]
 mod panel_tab_tests;
 mod panes;
+mod plays_motion;
 #[cfg(test)]
 mod profile_look_tests;
 mod published;

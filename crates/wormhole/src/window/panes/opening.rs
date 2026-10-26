@@ -14,20 +14,16 @@
 //! A pane that is covered by the new one and not clipped (a pane of a split) shows through a translucent
 //! terminal under it for the length of the spring; a lone terminal never does.
 
-use std::time::Duration;
-
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::motion::split::{self, Opening as Plan};
 use wormhole_core::view::panes::{Axis, PaneId, TabPanes};
 
 use crate::settings::{settings_in, ui_in};
+use crate::style::motion::{LAST_FRAME_GRACE, elapsed};
 use crate::style::{self, Edges as _};
 use crate::window::Workspace;
 use crate::window::panes::splits::Split;
-
-/// How long after the spring is at rest its last frame is kept.
-const GRACE: Duration = Duration::from_millis(40);
 
 /// A split that is opening: what it was, what it ends in and for which room, and the timer that ends it.
 pub(in crate::window) struct Opening {
@@ -42,11 +38,6 @@ pub(in crate::window) struct Opening {
     _end: Task<()>,
 }
 
-/// How long into the spring `t` (0.0..=1.0) of its animation is.
-fn elapsed(duration: Duration, t: f32) -> Duration {
-    Duration::from_secs_f32(t.clamp(0.0, 1.0) * duration.as_secs_f32())
-}
-
 impl Workspace {
     /// Pane `new` was just added to the selected terminal's split, which was `before` it (`None`: the terminal
     /// stood alone): open it, unless motion is off or reduced, the room is not known yet or the change is not a
@@ -57,7 +48,7 @@ impl Workspace {
         new: PaneId,
         cx: &mut Context<Self>,
     ) {
-        if !settings_in(&self.profile, cx).motion_on() || cx.reduce_motion() {
+        if !self.plays_motion(cx) {
             return;
         }
         let area = self.pane_area_size();
@@ -66,7 +57,7 @@ impl Workspace {
         let Some(plan) = Plan::of(before.as_ref(), &after, new, area.0, area.1) else { return };
 
         let end = cx.spawn(async move |this, cx| {
-            cx.background_executor().timer(split::duration() + GRACE).await;
+            cx.background_executor().timer(split::duration() + LAST_FRAME_GRACE).await;
             this.update(cx, |this, cx| {
                 let ended = this
                     .split_mut(split)

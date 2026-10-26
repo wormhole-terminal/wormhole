@@ -5,17 +5,14 @@
 //! carries it on instead of cutting it, and it is drawn as an animation inside the region, which draws
 //! that region and nothing else. At rest it holds nothing: no wrapper, no work.
 
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use gpui_kit::*;
 use wormhole_core::config::TabId;
 use wormhole_core::view::motion::tabs::{CONTENT_IN, Side};
 
-use crate::settings::settings_in;
+use crate::style::motion::LAST_FRAME_GRACE;
 use crate::window::Workspace;
-
-/// How long after it should have finished a switch is kept, so its last frame is drawn.
-const GRACE: Duration = Duration::from_millis(40);
 
 /// The tab switch under way.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -47,7 +44,8 @@ impl PanelSwitch {
 
     /// The side the content comes from and which switch it is, while one is on its way at `now`.
     pub(super) fn playing(&self, now: Instant) -> Option<(Side, u64)> {
-        let switch = self.current.filter(|switch| now.duration_since(switch.began) < CONTENT_IN + GRACE)?;
+        let switch =
+            self.current.filter(|switch| now.duration_since(switch.began) < CONTENT_IN + LAST_FRAME_GRACE)?;
         Some((switch.side, switch.serial))
     }
 
@@ -70,7 +68,7 @@ impl Workspace {
     ) {
         let tabs = self.panel_tab_list(cx);
         let places = tabs.iter().position(|&tab| tab == from).zip(tabs.iter().position(|&tab| tab == to));
-        let on = was_visible && settings_in(&self.profile, cx).motion_on() && !cx.reduce_motion();
+        let on = was_visible && self.plays_motion(cx);
         match places.filter(|_| on) {
             Some((from, to)) => {
                 self.regions.drawn.panel_switch.begin(from, to, cx.background_executor().now())
@@ -84,7 +82,7 @@ impl Workspace {
 mod tests {
     use std::time::{Duration, Instant};
 
-    use super::{CONTENT_IN, GRACE, PanelSwitch, Side};
+    use super::{CONTENT_IN, LAST_FRAME_GRACE, PanelSwitch, Side};
 
     #[test]
     fn a_switch_plays_for_its_duration_and_is_kept_a_moment_longer_for_its_last_frame() {
@@ -93,7 +91,7 @@ mod tests {
         switch.begin(0, 2, now);
         assert_eq!(switch.playing(now), Some((Side::Right, 1)));
         assert_eq!(switch.playing(now + CONTENT_IN), Some((Side::Right, 1)), "the last frame is drawn");
-        assert_eq!(switch.playing(now + CONTENT_IN + GRACE), None, "and then it is gone");
+        assert_eq!(switch.playing(now + CONTENT_IN + LAST_FRAME_GRACE), None, "and then it is gone");
     }
 
     #[test]

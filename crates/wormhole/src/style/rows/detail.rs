@@ -6,7 +6,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use super::RowTone;
-use crate::style::scale::META_LINE;
+use crate::style::scale::{CAPTION_SIZE, LINE_HEIGHT_RATIO, META_LINE};
 use crate::style::status::StatusGlyph;
 use crate::style::status_shift::StatusShift;
 
@@ -47,7 +47,7 @@ impl Words {
 /// GPUI's golden-ratio line height) is taller than `META_LINE`, and a clip cut at the row's own height
 /// takes the descenders of the words mid-roll ("just" showing as "iust"). The row keeps its height; only
 /// the clip is taller, by half of what the line box has over it on each side.
-const CLIP_OVERSCAN: f32 = (0.75 * 1.618_034 - META_LINE) / 2.0;
+const CLIP_OVERSCAN: f32 = (CAPTION_SIZE * LINE_HEIGHT_RATIO - META_LINE) / 2.0;
 
 /// The line that rolls from the `old` words to `now`, `META_LINE` tall in the row and cutting what leaves
 /// it at the words' whole line box. It takes the room the line has (`flex_1`, so the row leaves no spacer

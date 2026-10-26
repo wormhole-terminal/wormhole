@@ -3,9 +3,9 @@
 //! around them, and the one place `right_tab` changes.
 use gpui_kit::*;
 use wormhole_core::config::TabId;
+use wormhole_core::view::layout::Edge;
 use wormhole_core::view::motion::tabs::{CONTENT_IN, content};
 
-use crate::settings::ui_in;
 use crate::window::Workspace;
 
 impl Workspace {
@@ -28,7 +28,6 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        let ui = ui_in(&self.profile, cx);
         // The tab actually on screen: if the chosen one isn't in the tab list any more (the
         // Project tab vanished with its feature flag), show Changes until the next refresh resets it.
         let tab =
@@ -54,7 +53,7 @@ impl Workspace {
             .w(px(width))
             .flex_none()
             .h_full()
-            .bg(if bare { transparent_black() } else { ui.panel_right })
+            .bg(if bare { transparent_black() } else { self.column_surface(Edge::Panel, cx) })
             .child(self.render_panel_tab_bar(window, cx))
             .child(self.slide_in_content(body, cx))
     }

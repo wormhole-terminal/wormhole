@@ -261,7 +261,7 @@ impl Workspace {
         let ring = self.ring(Area::PanelTabs, window);
         // With Motion on the selection is one shape under the tabs that springs between them (the bar draws
         // it), so the selected tab has no fill of its own; otherwise it is today's: each tab fills itself.
-        let sliding = settings_in(&self.profile, cx).motion_on();
+        let sliding = settings_in(&self.profile, cx).motion_feature_on();
         let tab =
             |icon: IconName, label: &str, key: ActionId, count: Option<usize>, spoken: String, tab: TabId| {
                 let active = self.right_tab == tab;

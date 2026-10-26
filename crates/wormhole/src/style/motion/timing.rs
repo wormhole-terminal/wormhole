@@ -19,6 +19,17 @@ pub const MOTION_PANEL_EXIT: Duration = wormhole_core::view::motion::pose::colum
 /// The sidebar and the right panel coming in.
 pub const MOTION_PANEL: Duration = wormhole_core::view::motion::pose::column::CLASSIC_IN;
 
+/// How long after an animation should have finished its last frame is kept drawn: the executor's timer
+/// that ends it and GPUI's own clock are two clocks, and the picture must not drop before the last frame.
+pub const LAST_FRAME_GRACE: Duration = Duration::from_millis(40);
+
+/// How far into an animation of `duration` is `t` (0.0..=1.0) of the way through it: what a pose of core,
+/// which is a function of time, is asked at.
+#[must_use]
+pub fn elapsed(duration: Duration, t: f32) -> Duration {
+    Duration::from_secs_f32(t.clamp(0.0, 1.0) * duration.as_secs_f32())
+}
+
 /// One turn of the working spinner (linear, at most [`ANIMATION_FPS`] frames a second).
 pub const SPIN_PERIOD: Duration = Duration::from_millis(800);
 /// One turn of the light round a working terminal's status tile.

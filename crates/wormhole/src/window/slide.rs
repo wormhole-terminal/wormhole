@@ -17,6 +17,7 @@ use wormhole_core::view::motion::ColumnMotion;
 use wormhole_core::view::motion::pose::column::{self, ColumnPose};
 
 use crate::settings::{settings_in, ui_in};
+use crate::style::motion::elapsed;
 use crate::window::Workspace;
 
 /// A column on its way in or out.
@@ -68,8 +69,7 @@ impl SlideMotion {
 
     /// The column `t` (0.0..=1.0) of the way through the slide.
     pub(super) fn pose(self, t: f32) -> ColumnPose {
-        let elapsed = Duration::from_secs_f32(t.clamp(0.0, 1.0) * self.motion.duration.as_secs_f32());
-        column::pose(self.motion.variant, self.opening, self.motion.from, elapsed)
+        column::pose(self.motion.variant, self.opening, self.motion.from, elapsed(self.motion.duration, t))
     }
 
     /// How many points of the column are in at `t` of the way.
@@ -189,8 +189,9 @@ impl Workspace {
         )
     }
 
-    /// What `edge`'s column is painted on at rest: the translucent surface under what is in it.
-    fn column_surface(&self, edge: Edge, cx: &App) -> Hsla {
+    /// What `edge`'s column is painted on: the translucent surface under what is in it, at rest and while it
+    /// slides, so the one choice cannot drift between them.
+    pub(in crate::window) fn column_surface(&self, edge: Edge, cx: &App) -> Hsla {
         let ui = ui_in(&self.profile, cx);
         match edge {
             Edge::Sidebar if self.glass_on(cx) => transparent_black(),

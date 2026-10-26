@@ -6,6 +6,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use wormhole_core::view::layout::Edge;
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -14,7 +15,7 @@ use wormhole_core::view::sidebar::command::{OutputFacts, ends_by_itself, has_new
 use wormhole_core::view::sidebar::{Listing, RowState, TerminalsIn, WindowSidebar};
 
 use crate::app_state::app;
-use crate::settings::{settings_in, ui_in};
+use crate::settings::settings_in;
 use crate::sidebar::profile_chip::Profiles;
 use crate::sidebar::terminal_drag::TerminalDrag;
 use crate::sidebar::{NewTerminal, RowFailure, RowInfo, Sidebar, SidebarEvent, SidebarInput, row_times};
@@ -304,8 +305,6 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let ui = ui_in(&self.profile, cx);
-        let glass = self.glass_on(cx);
         self.fit_sidebar(width, cx);
         #[cfg(test)]
         self.assert_sidebar_told(cx);
@@ -327,7 +326,7 @@ impl Workspace {
             .overflow_hidden()
             .h_full()
             .flex_none()
-            .bg(if glass || bare { gpui_kit::transparent_black() } else { ui.panel })
+            .bg(if bare { gpui_kit::transparent_black() } else { self.column_surface(Edge::Sidebar, cx) })
             .child(header)
             .child(list)
             .children(self.render_no_agents_note(cx))

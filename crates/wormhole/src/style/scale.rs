@@ -163,12 +163,18 @@ pub const QP_SEARCH_H: f32 = 48.0;
 pub const QP_ROW_H: f32 = 36.0;
 pub const QP_TOP: f32 = 0.2;
 
+/// The caption role's size, in rems (12 points at the default interface size).
+pub const CAPTION_SIZE: f32 = 0.75;
+/// GPUI's default line height as a multiple of the font size (its golden ratio): the line box a text has
+/// when no role sets one.
+pub const LINE_HEIGHT_RATIO: f32 = 1.618_034;
+
 /// The four type roles, plus the label role of band titles. Sizes are GPUI's rem
 /// steps, so they scale with the interface font size.
 pub trait TextRole: Styled + Sized {
     /// Metadata, badges, section labels, second lines (12).
     fn text_caption(self) -> Self {
-        self.text_xs()
+        self.text_size(rems(CAPTION_SIZE))
     }
 
     /// A folder band's name, a section band's title (13 / 600).
