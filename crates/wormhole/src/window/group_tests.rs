@@ -103,3 +103,16 @@ fn a_group_moves_with_its_terminals_and_their_split_to_a_window_of_its_own(cx: &
     assert_eq!(here, [1, 4], "the group's terminal and its split's other member left");
     assert!(read(cx, &window, |ws| ws.splits.is_empty()), "the split went with them");
 }
+
+#[gpui_kit::test]
+fn a_terminal_moved_with_its_group_hears_the_focus_of_its_new_window(cx: &mut TestAppContext) {
+    if isolate("a_terminal_moved_with_its_group_hears_the_focus_of_its_new_window") {
+        return;
+    }
+    let window = start(cx, 3);
+    let group = drive(cx, &window, |ws, _, cx| ws.group_terminals(&[2], cx));
+    super::tear_off_tests::focus_follows_a_moved_terminal(cx, &window, |cx, window| {
+        drive(cx, window, |ws, window, cx| ws.move_group_to_window(group, window, cx));
+        cx.run_until_parked();
+    });
+}

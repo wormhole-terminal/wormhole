@@ -226,7 +226,9 @@ pub struct TerminalView {
     find: find::Find,
     /// Command blocks: the hovered one, and where ⌘↑ / ⌘↓ last landed.
     blocks: blocks::Blocks,
-    _focus_watch: Vec<Subscription>,
+    /// What tells the terminal about its pane's and window's focus: bound to the window it was made in
+    /// until [`TerminalView::moved_to`] binds it to another.
+    focus_watch: Vec<Subscription>,
     /// The profile of the window this terminal is in: whose look (colours, fonts, settings) it
     /// draws with, which is not the shown profile's in an odd window.
     profile: ProfileId,
@@ -284,11 +286,7 @@ impl TerminalView {
         // Programs that asked for focus events (DECSET 1004) hear about the pane
         // and the window gaining or losing focus.
         let focus_handle = cx.focus_handle();
-        let focus_watch = vec![
-            cx.on_focus(&focus_handle, window, |this, window, cx| this.report_focus(window, cx)),
-            cx.on_blur(&focus_handle, window, |this, window, cx| this.report_focus(window, cx)),
-            cx.observe_window_activation(window, |this, window, cx| this.report_focus(window, cx)),
-        ];
+        let focus_watch = Self::watch_focus(&focus_handle, window, cx);
 
         let now = Instant::now();
         let announced = TerminalSummary::idle(now, cwd.clone(), shell.clone());
@@ -359,7 +357,7 @@ impl TerminalView {
             dock: None,
             find: find::Find::default(),
             blocks: blocks::Blocks::default(),
-            _focus_watch: focus_watch,
+            focus_watch,
             _tasks: Vec::new(),
             host,
         };
@@ -391,6 +389,35 @@ impl TerminalView {
 
     /// Tell the program when the terminal gained or lost focus, if it asked, and draw the cursor
     /// for it.
+    /// The watchers of focus, which are bound to `window`: the pane's own, and the window's.
+    fn watch_focus(
+        focus_handle: &FocusHandle,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Vec<Subscription> {
+        vec![
+            cx.on_focus(focus_handle, window, |this, window, cx| this.report_focus(window, cx)),
+            cx.on_blur(focus_handle, window, |this, window, cx| this.report_focus(window, cx)),
+            cx.observe_window_activation(window, |this, window, cx| this.report_focus(window, cx)),
+        ]
+    }
+
+    /// Whether the program asked for focus events (DECSET 1004), which a test waits for.
+    #[cfg(test)]
+    pub(crate) fn wants_focus_events(&self) -> bool {
+        self.pty.as_ref().is_some_and(|pty| keys::focus_report(true, pty.mode()).is_some())
+    }
+
+    /// The terminal now lives in `window` (it was moved there from another): what listened to the old
+    /// window listens to this one, so a program that asked for focus events (DECSET 1004) hears this
+    /// window's focus and not the old one's, and the cursor is filled by it. The window's font zoom is the
+    /// caller's to set.
+    pub fn moved_to(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.focus_watch = Self::watch_focus(&self.focus_handle, window, cx);
+        self.rebind_find_bar(window, cx);
+        self.report_focus(window, cx);
+    }
+
     fn report_focus(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         // The cursor is drawn filled or hollow by focus, and the view is cached: draw it again.
         cx.notify();

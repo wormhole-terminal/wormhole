@@ -74,6 +74,25 @@ impl TerminalView {
         }
     }
 
+    /// The terminal moved to another window: its bar's field was made for the old one, so the bar is made
+    /// again here, with the text it had.
+    pub(super) fn rebind_find_bar(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.find.bar.is_none() {
+            return;
+        }
+        let weak = cx.entity().downgrade();
+        let text = self.find.query.text.clone();
+        let bar = cx.new(|cx| {
+            let mut bar = FindBar::new(weak, window, cx);
+            bar.set_text(&text, window, cx);
+            bar
+        });
+        self.find.bar = Some(bar);
+        if self.find.open {
+            cx.emit(TerminalEvent::FindChanged);
+        }
+    }
+
     /// ⌘E: the selection becomes the query; the keyboard stays where it is. Nothing selected,
     /// nothing changes.
     pub fn use_selection_for_find(&mut self, window: &mut Window, cx: &mut Context<Self>) {

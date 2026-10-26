@@ -152,8 +152,13 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> (Pane, Option<String>) {
-        // A terminal moved here from another window keeps running.
+        // A terminal moved here from another window keeps running, and listens to this window now.
         if let Some(terminal) = app_mut(cx).adopted.remove(&record.id) {
+            let zoom = self.font_zoom;
+            terminal.update(cx, |terminal, cx| {
+                terminal.moved_to(window, cx);
+                terminal.set_font_zoom(zoom, cx);
+            });
             return (Pane::new(record.id, record.shell.clone(), terminal, window, cx), None);
         }
         let cwd = record.cwd.as_ref().map(PathBuf::from);

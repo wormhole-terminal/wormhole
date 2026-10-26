@@ -288,3 +288,65 @@ fn the_new_window_grows_from_the_chip_only_where_motion_plays(cx: &mut TestAppCo
     // Moving it did not start it again, nor resize anything of the other windows.
     assert_eq!(ids(cx, &grown), [3]);
 }
+
+/// How many times `what` is on terminal `id`'s screen of `window`: a program that is not a program (`cat`) shows
+/// what it is sent as the tty echoes it, `^[[I` for the focus-in report.
+fn shown(cx: &mut TestAppContext, window: &OpenWindow, id: i64, what: &str) -> usize {
+    let terminal = read(cx, window, |ws| {
+        ws.sessions.iter().find(|s| s.id == id).expect("the terminal is here").terminal().clone()
+    });
+    terminal.read_with(cx, |t, _| t.screen_text()).matches(what).count()
+}
+
+/// Wait, as the test scheduler can't, for what the PTY's reader thread brings.
+fn until(cx: &mut TestAppContext, what: &str, mut done: impl FnMut(&mut TestAppContext) -> bool) {
+    let limit = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while !done(cx) {
+        assert!(std::time::Instant::now() < limit, "{what}");
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        cx.run_until_parked();
+    }
+}
+
+fn activate(cx: &mut TestAppContext, window: &OpenWindow) {
+    with_window(cx, window, |window, _| window.activate_window());
+    cx.run_until_parked();
+}
+
+/// Terminal 2 of `window` asks for focus events, `mover` moves it to another window, and from then on it is the
+/// new window whose focus it hears: in (`^[[I`) when it is active with the terminal focused, out (`^[[O`) when
+/// the old window is activated, in again when the new one is. (What listened to the old window heard the old
+/// window's activation instead, and missed the new one's.)
+pub(super) fn focus_follows_a_moved_terminal(
+    cx: &mut TestAppContext,
+    window: &OpenWindow,
+    mover: impl FnOnce(&mut TestAppContext, &OpenWindow),
+) {
+    let terminal =
+        read(cx, window, |ws| ws.sessions.iter().find(|s| s.id == 2).expect("terminal 2").terminal().clone());
+    cx.update(|cx| terminal.update(cx, |t, _| t.write_input(b"\x1b[?1004h\r".to_vec())));
+    until(cx, "the program asked for focus events", |cx| {
+        terminal.read_with(cx, |t, _| t.wants_focus_events())
+    });
+    mover(cx, window);
+    let moved = other_than(cx, window);
+    assert_eq!(ids(cx, &moved).contains(&2), true, "the terminal is in the other window");
+
+    activate(cx, &moved);
+    drive(cx, &moved, |ws, window, cx| ws.activate(0, window, cx));
+    until(cx, "focus in", |cx| shown(cx, &moved, 2, "^[[I") == 1);
+    activate(cx, window);
+    until(cx, "focus out", |cx| shown(cx, &moved, 2, "^[[O") == 1);
+    activate(cx, &moved);
+    until(cx, "focus in again", |cx| shown(cx, &moved, 2, "^[[I") == 2);
+    assert_eq!(shown(cx, &moved, 2, "^[[O"), 1, "and out only the once");
+}
+
+#[gpui_kit::test]
+fn a_torn_off_terminal_hears_the_focus_of_its_new_window(cx: &mut TestAppContext) {
+    if isolate("a_torn_off_terminal_hears_the_focus_of_its_new_window") {
+        return;
+    }
+    let window = start(cx, 3);
+    focus_follows_a_moved_terminal(cx, &window, |cx, window| let_go(cx, window, 2, 600.0, 300.0));
+}
