@@ -12,6 +12,7 @@
 mod rows;
 mod view;
 
+use std::cell::Cell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Duration;
@@ -47,6 +48,10 @@ pub(crate) struct CommandPalette {
     snapshot: Rc<Snapshot>,
     rows: Rc<Vec<Row>>,
     list: ListState,
+    /// The card as last painted, for a picture of the palette that fades out (`OverlayContent::card`).
+    card: Rc<Cell<Option<Bounds<Pixels>>>>,
+    /// The palette was closed and its picture is fading: no key, no click is its own.
+    leaving: bool,
     /// The selected row, by what it is (rows come and go as the snapshot changes).
     selected: Option<Item>,
     _subscriptions: Vec<Subscription>,
@@ -56,6 +61,15 @@ pub(crate) struct CommandPalette {
 
 impl OverlayContent for CommandPalette {
     const KIND: OverlayKind = OverlayKind::Palette;
+
+    fn card(&self) -> Option<Bounds<Pixels>> {
+        self.card.get()
+    }
+
+    fn leave(&mut self, cx: &mut Context<Self>) {
+        self.leaving = true;
+        cx.notify();
+    }
 }
 
 /// Results laid out above and below the list's view, so scrolling doesn't pop them in.
@@ -269,6 +283,8 @@ impl CommandPalette {
             snapshot: Rc::new(snapshot),
             rows: Rc::default(),
             list: ListState::new(0, ListAlignment::Top, px(LIST_OVERDRAW)),
+            card: Rc::default(),
+            leaving: false,
             selected: None,
             _subscriptions: subscriptions,
             _refresh: refresh,
@@ -381,6 +397,10 @@ impl CommandPalette {
 
     /// The palette's own keys; `true` when one was used.
     fn on_key(&mut self, keystroke: &Keystroke, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        // Closed: the keys are the window's, whatever the picture that fades out still holds.
+        if self.leaving {
+            return false;
+        }
         let m = &keystroke.modifiers;
         let plain = !m.modified();
         let empty = self.query(cx).is_empty();

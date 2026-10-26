@@ -39,18 +39,36 @@ impl OverlayKind {
 pub(crate) struct OverlayView {
     kind: OverlayKind,
     view: AnyView,
+    /// What the view says of its card and of being closed (`OverlayContent`), through the entity it was made from.
+    card: Box<dyn Fn(&App) -> Option<Bounds<Pixels>>>,
+    leave: Box<dyn Fn(&mut App)>,
 }
 
 /// A view that can be put over the window. Its kind is part of the type, so a caller cannot hand
 /// over a view under another view's kind.
 pub(crate) trait OverlayContent: Render {
     const KIND: OverlayKind;
+
+    /// The card on the scrim, as last painted, in the window's coordinates: what a picture of the view that
+    /// fades out keeps the pointer from. `None`: it has no card to speak of.
+    fn card(&self) -> Option<Bounds<Pixels>> {
+        None
+    }
+
+    /// The overlay was closed and its picture is fading out: it takes no key and no pointer of its own now.
+    fn leave(&mut self, _cx: &mut Context<Self>) {}
 }
 
 impl OverlayView {
     /// The overlay for `view`, of the kind its type says.
     pub(crate) fn new<V: OverlayContent>(view: Entity<V>) -> Self {
-        Self { kind: V::KIND, view: view.into() }
+        let (card, leave) = (view.clone(), view.clone());
+        Self {
+            kind: V::KIND,
+            view: view.into(),
+            card: Box::new(move |cx| card.read(cx).card()),
+            leave: Box::new(move |cx| leave.update(cx, |view, cx| view.leave(cx))),
+        }
     }
 }
 
@@ -62,6 +80,8 @@ pub(super) struct Overlay {
 /// A palette that was closed and is fading out.
 struct Leaving {
     view: OverlayView,
+    /// Where its card was, which the shield covers.
+    card: Option<Bounds<Pixels>>,
     /// Which exit it is, so a later one is not ended by an earlier one's timer.
     serial: u64,
     _end: Task<()>,
@@ -139,6 +159,7 @@ impl Workspace {
             None => window.focus(&self.active_terminal().focus_handle(cx), cx),
         }
         if overlay.view.kind == OverlayKind::Palette && self.fades_palette(cx) {
+            (overlay.view.leave)(cx);
             self.fade_out(overlay.view, cx);
         }
         cx.notify();
@@ -163,7 +184,8 @@ impl Workspace {
             })
             .ok();
         });
-        self.overlay.leaving = Some(Leaving { view, serial, _end: end });
+        let card = (view.card)(cx);
+        self.overlay.leaving = Some(Leaving { view, card, serial, _end: end });
     }
 
     fn overlay_is(&self, kind: OverlayKind) -> bool {
@@ -192,8 +214,8 @@ impl Workspace {
 
     /// The overlay over everything else in the window: the open one, or a palette fading out.
     pub(super) fn render_overlay(&self, cx: &App) -> Option<AnyElement> {
-        if let Some(Leaving { view, serial, .. }) = &self.overlay.leaving {
-            return Some(fading(view, *serial));
+        if let Some(Leaving { view, card, serial, .. }) = &self.overlay.leaving {
+            return Some(fading(view, *card, *serial));
         }
         let open = &self.overlay.open.as_ref()?.view;
         let (view, name) = (open.view.clone().into_any_element(), open.kind.name());
@@ -230,22 +252,21 @@ fn fades_in(kind: OverlayKind, motion_on: bool) -> bool {
     !(kind == OverlayKind::Palette && motion_on)
 }
 
-/// A palette that was closed, drawn fading: its scrim and card as they were, under a shield that takes the
-/// pointer, so nothing in it is live and a click does not fall through while it goes.
-fn fading(view: &OverlayView, serial: u64) -> AnyElement {
+/// A palette that was closed, drawn fading: its scrim and card as they were. The card is under a shield that
+/// takes the pointer, so nothing in it is live; the scrim is only a picture (`OverlayContent::leave` makes it
+/// one), so a click outside the card, on what is under it, lands there.
+fn fading(view: &OverlayView, card: Option<Bounds<Pixels>>, serial: u64) -> AnyElement {
+    let shield = div().id("overlay-shield").absolute().occlude().debug_selector(|| "overlay-shield".into());
+    let shield = match card {
+        Some(card) => shield.left(card.origin.x).top(card.origin.y).w(card.size.width).h(card.size.height),
+        None => shield.size_full(),
+    };
     div()
         .id("overlay-leaving")
         .absolute()
         .size_full()
         .child(view.view.clone())
-        .child(
-            div()
-                .id("overlay-shield")
-                .absolute()
-                .size_full()
-                .occlude()
-                .debug_selector(|| "overlay-shield".into()),
-        )
+        .child(shield)
         .with_animation(("overlay-out", serial), Animation::new(EXIT), |overlay, t| {
             overlay.opacity(exit_opacity(t))
         })
@@ -257,6 +278,13 @@ fn fading(view: &OverlayView, serial: u64) -> AnyElement {
 /// click outside it (`on_mouse_down_out`).
 #[track_caller]
 pub(crate) fn scrim(id: &'static str, cx: &App) -> Stateful<Div> {
+    scrim_surface(id, cx).occlude()
+}
+
+/// The scrim's colour over the window and nothing else: a picture of one, which keeps nothing from what is
+/// under it.
+#[track_caller]
+pub(crate) fn scrim_surface(id: &'static str, cx: &App) -> Stateful<Div> {
     let color = token(&cx.global::<SettingsStore>().tokens, "surface.overlay");
-    div().id(id).absolute().top_0().left_0().size_full().bg(color).occlude()
+    div().id(id).absolute().top_0().left_0().size_full().bg(color)
 }

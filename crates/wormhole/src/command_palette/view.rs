@@ -17,7 +17,7 @@ use super::rows::{self, Item, ProfileCommand, Row, Snapshot};
 use crate::settings::{UiColors, settings, ui};
 use crate::settings_window;
 use crate::style::{self, Edges, TextRole};
-use crate::window::overlay::scrim;
+use crate::window::overlay::{scrim, scrim_surface};
 
 /// How far below the window's top the palette opens, and the most it grows to before its list
 /// scrolls.
@@ -351,10 +351,16 @@ impl Render for CommandPalette {
             None => div().into_any_element(),
         })
         .size_full();
+        let seen = self.card.clone();
         let card = style::palette_surface(ui, true)
             .id("command-palette")
+            .relative()
             .w(px(width))
-            .on_mouse_down_out(cx.listener(|this, _, window, cx| this.close(window, cx)))
+            .when(!self.leaving, |card| {
+                card.on_mouse_down_out(cx.listener(|this, _, window, cx| this.close(window, cx)))
+            })
+            // Where the card is, for the picture that fades out after it is closed.
+            .child(canvas(move |bounds, _, _| seen.set(Some(bounds)), |_, _, _, _| {}).absolute().size_full())
             .child(
                 style::palette_search(ui)
                     .when(self.scope != Scope::All, |d| {
@@ -372,8 +378,10 @@ impl Render for CommandPalette {
             .child(self.render_scopes(ui, cx))
             .child(div().flex().flex_col().h(px(list_h)).pb(px(LIST_BOTTOM)).child(list))
             .child(self.render_footer(ui, code_font, cx));
-        scrim("palette-scrim", cx)
-            .child(div().absolute().top(px(TOP)).left_0().right_0().flex().justify_center().child(card))
+        // A palette on its way out is a picture: its scrim keeps nothing from what is under it.
+        let scrim =
+            if self.leaving { scrim_surface("palette-scrim", cx) } else { scrim("palette-scrim", cx) };
+        scrim.child(div().absolute().top(px(TOP)).left_0().right_0().flex().justify_center().child(card))
     }
 }
 

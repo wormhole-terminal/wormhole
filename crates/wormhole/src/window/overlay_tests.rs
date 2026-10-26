@@ -10,7 +10,7 @@ use gpui_kit::{Focusable as _, TestAppContext, VisualTestContext, px, size};
 use wormhole_core::config::features::FeatureFlag;
 
 use crate::app_state::OpenWindow;
-use crate::window::test_harness::{draw, drive, isolate_in, read, start, with_window};
+use crate::window::test_harness::{draw, drive, isolate_in, press, read, start, with_window};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -47,6 +47,15 @@ fn terminal_focused(cx: &mut TestAppContext, window: &OpenWindow) -> bool {
     })
 }
 
+/// The bounds of a drawn element, `None` when it is not drawn.
+fn bounds_of(
+    cx: &mut TestAppContext,
+    window: &OpenWindow,
+    selector: &'static str,
+) -> Option<gpui_kit::Bounds<gpui_kit::Pixels>> {
+    VisualTestContext::from_window(window.handle, cx).debug_bounds(selector)
+}
+
 fn leaving(cx: &mut TestAppContext, window: &OpenWindow) -> bool {
     read(cx, window, |ws| ws.overlay.is_leaving())
 }
@@ -76,6 +85,28 @@ fn a_palette_closes_at_once_and_its_picture_fades_for_a_moment_and_is_gone_after
     draw(cx, &window);
     assert!(!leaving(cx, &window), "the timer took it down");
     assert!(!drawn(cx, &window, "overlay-shield"), "and nothing of it is drawn");
+}
+
+#[gpui_kit::test]
+fn the_shield_covers_the_card_and_a_click_or_key_outside_it_is_the_windows(cx: &mut TestAppContext) {
+    if isolate("the_shield_covers_the_card_and_a_click_or_key_outside_it_is_the_windows") {
+        return;
+    }
+    let window = open(cx);
+    open_palette(cx, &window);
+    draw(cx, &window);
+    close_overlay(cx, &window);
+    let shield = bounds_of(cx, &window, "overlay-shield").expect("the picture is under a shield");
+    let screen = with_window(cx, &window, |window, _| window.viewport_size());
+    assert!(shield.size.width < screen.width / 2.0, "the card, not the window: {shield:?} in {screen:?}");
+    assert!(shield.size.height < screen.height, "{shield:?}");
+    assert!(shield.origin.y > gpui_kit::px(0.0), "below the window's top, where the card is: {shield:?}");
+    // Keys are the window's: ⏎ would run the palette's selected action, which makes a terminal.
+    let before = read(cx, &window, |ws| ws.session_count());
+    press(cx, &window, "enter");
+    draw(cx, &window);
+    assert_eq!(read(cx, &window, |ws| ws.session_count()), before, "the closed palette ran nothing");
+    assert!(!read(cx, &window, |ws| ws.palette_open()));
 }
 
 #[gpui_kit::test]
