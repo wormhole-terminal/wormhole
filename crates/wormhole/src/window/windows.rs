@@ -62,7 +62,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let layout = Layout::for_new_window(self.window_record(cx).layout.as_deref());
-        let source = window.bounds();
+        let source = window_bounds::Source::of(window, cx);
         // Deferred: the new window renders right away, and nothing may read
         // this workspace while it is still being updated.
         cx.defer(move |cx| {
@@ -258,7 +258,8 @@ impl Workspace {
 
     /// Save the window, its sessions and their scrollback (on the way out).
     pub(crate) fn persist(&mut self, window: &Window, cx: &mut Context<Self>) {
-        self.bounds = window_bounds::encode(window.window_bounds());
+        let display = window.display(cx).map(|display| display.id());
+        self.bounds = window_bounds::encode(window.window_bounds(), display);
         self.save(cx);
         self.save_scrollback(cx);
     }
@@ -278,8 +279,10 @@ impl Workspace {
     }
 
     /// Per tick: remember where the window is, and name it after the session.
-    pub(super) fn track_window(&mut self, window: &mut Window) {
-        if let Some(moved) = self.bounds_watch.moved(window.window_bounds(), self.bounds.as_deref()) {
+    pub(super) fn track_window(&mut self, window: &mut Window, cx: &App) {
+        let display = window.display(cx).map(|display| display.id());
+        if let Some(moved) = self.bounds_watch.moved(window.window_bounds(), display, self.bounds.as_deref())
+        {
             self.bounds = Some(moved);
             self.dirty = true;
         }

@@ -25,7 +25,7 @@ const DEFAULT_SIZE: (f32, f32) = (1320.0, 820.0);
 /// it was saved, or stepped away from `source`, or centered.
 pub(crate) fn open_workspace_window(
     record: Option<WindowRecord>,
-    source: Option<Bounds<Pixels>>,
+    source: Option<window_bounds::Source>,
     cx: &mut App,
 ) {
     let profile = app(cx).active_profile().clone();
@@ -36,7 +36,7 @@ pub(crate) fn open_workspace_window(
 pub(crate) fn open_workspace_window_in(
     profile: &ProfileId,
     record: Option<WindowRecord>,
-    source: Option<Bounds<Pixels>>,
+    source: Option<window_bounds::Source>,
     cx: &mut App,
 ) {
     let id = match &record {
@@ -50,20 +50,32 @@ pub(crate) fn open_workspace_window_in(
         layout: Layout::remembered(&app(cx).last_panes),
         ..Default::default()
     });
-    let displays: Vec<Bounds<Pixels>> = cx.displays().iter().map(|d| d.bounds()).collect();
-    let saved = record.bounds.as_deref().and_then(window_bounds::decode).filter(|saved| {
+    // A window's bounds are in the space of its display, so a place means nothing without the display it
+    // was on: the saved one, else the display of the window this one opens from, else the primary.
+    let find = |id: Option<DisplayId>| id.and_then(|id| cx.displays().into_iter().find(|d| d.id() == id));
+    let saved = record.bounds.as_deref().and_then(window_bounds::decode).and_then(|(saved, display)| {
         // A monitor may be gone since: never restore a window nobody can see.
-        displays.iter().any(|d| d.intersects(&saved.get_bounds()))
+        let display = find(display).or_else(|| cx.primary_display())?;
+        display.bounds().intersects(&saved.get_bounds()).then_some((saved, display))
     });
-    let bounds = match (saved, source) {
-        (Some(saved), _) => saved,
-        (None, Some(source)) => WindowBounds::Windowed(window_bounds::cascade(source, &displays)),
-        (None, None) => {
-            WindowBounds::Windowed(Bounds::centered(None, size(px(DEFAULT_SIZE.0), px(DEFAULT_SIZE.1)), cx))
+    let (bounds, display) = match (saved, source) {
+        (Some((saved, display)), _) => (saved, Some(display)),
+        (None, Some(source)) => {
+            let display = find(source.display).or_else(|| cx.primary_display());
+            let bounds = match &display {
+                Some(display) => window_bounds::cascade(source.bounds, display.bounds()),
+                None => source.bounds,
+            };
+            (WindowBounds::Windowed(bounds), display)
         }
+        (None, None) => (
+            WindowBounds::Windowed(Bounds::centered(None, size(px(DEFAULT_SIZE.0), px(DEFAULT_SIZE.1)), cx)),
+            None,
+        ),
     };
     let options = WindowOptions {
         window_bounds: Some(bounds),
+        display_id: display.map(|display| display.id()),
         titlebar: Some(TitlebarOptions {
             title: Some("Wormhole".into()),
             appears_transparent: true,

@@ -153,7 +153,7 @@ impl Workspace {
         }
         self.with_sidebar(cx, |sidebar, cx| sidebar.list_rearranged(cx));
 
-        let source = window.bounds();
+        let source = crate::window::window_bounds::Source::of(window, cx);
         // The new window stays in this window's profile: its database, its environment.
         let profile = self.profile.clone();
         let (from, moved_ids) = (self.window_id, ids.clone());

@@ -26,7 +26,7 @@ impl Workspace {
     pub(crate) fn tick(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.ticks += 1;
         self.sync_appearance(cx);
-        self.track_window(window);
+        self.track_window(window, cx);
         // Folders are also re-read when a terminal prints (see `TerminalView`); this
         // is the backstop. Agent detection walks the process tree, so less often.
         let refresh_agent = self.ticks % 5 == 1;
