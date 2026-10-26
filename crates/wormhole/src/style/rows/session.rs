@@ -222,6 +222,7 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
             .text_color(tone_color)
             .child("needs input")
     });
+    let rolls = detail_roll.is_some();
     let has_tile = tile.is_some();
     let two_lines = detail.is_some();
     let lines = div()
@@ -297,7 +298,8 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
                         .child(detail)
                         .into_any_element(),
                 })
-                .child(div().flex_1())
+                // A line that rolls takes the room itself.
+                .when(!rolls, |d| d.child(div().flex_1()))
                 .children(detail_trail.map(|trail| {
                     div().flex_none().tabular_nums().text_color(ui.faint).whitespace_nowrap().child(trail)
                 }))

@@ -43,9 +43,10 @@ impl Words {
     }
 }
 
-/// The line that rolls from the `old` words to `now`, `META_LINE` tall and cutting what leaves it. The new
-/// words stay in the layout (so the line is as wide as they are), moved down by what is left of the
-/// roll; the old ones lie over it and go up.
+/// The line that rolls from the `old` words to `now`, `META_LINE` tall and cutting what leaves it. It takes
+/// the room the line has (`flex_1`, so the row leaves no spacer after it), whatever the words are: the old
+/// ones, which lie over the new and go up, are cut to that and not to the width of the new, which may be a
+/// few letters. The new words stay in the layout, moved down by what is left of the roll.
 #[track_caller]
 pub(super) fn rolling(
     id: ElementId,
@@ -54,20 +55,68 @@ pub(super) fn rolling(
     old: Words,
     now: Words,
 ) -> AnyElement {
-    let clip = div().relative().min_w_0().h(rems(META_LINE)).flex().items_center().overflow_hidden();
+    let clip = div().relative().flex_1().min_w_0().h(rems(META_LINE)).flex().items_center().overflow_hidden();
     shift.drive(clip, id, to, move |clip, pose| {
         let rolled = pose.roll;
-        let arriving = now.line().relative().top(rems((1.0 - rolled) * META_LINE));
+        let arriving = now
+            .line()
+            .relative()
+            .top(rems((1.0 - rolled) * META_LINE))
+            .debug_selector(|| "detail-roll-arriving".into());
         let leaving = div()
             .absolute()
             .left_0()
             .top(rems(-rolled * META_LINE))
-            .max_w_full()
+            .w_full()
             .h(rems(META_LINE))
             .flex()
             .items_center()
+            .debug_selector(|| "detail-roll-leaving".into())
             .child(old.line());
         clip.child(if rolled < 1.0 { arriving.opacity(rolled) } else { arriving })
             .children((rolled < 1.0).then(|| leaving.opacity(1.0 - rolled)))
     })
+}
+
+#[cfg(all(test, feature = "devctl"))]
+mod tests {
+    use gpui_kit::prelude::*;
+    use gpui_kit::{FontWeight, Hsla, TestAppContext, VisualTestContext, div, point, px, size};
+    use wormhole_core::view::motion::StatusMotion;
+
+    use super::{Words, rolling};
+    use crate::style::{ShiftClock, StatusGlyph, StatusShift};
+
+    fn words(text: &'static str) -> Words {
+        Words { text: text.into(), color: Hsla::black(), font: None, weight: FontWeight::NORMAL }
+    }
+
+    /// The width of an element `rolling` draws, a quarter of the way through a roll in a line 300 wide.
+    fn widths(cx: &mut TestAppContext, old: &'static str, new: &'static str) -> (f32, f32) {
+        let shift = StatusShift {
+            motion: StatusMotion::LineRoll,
+            from: StatusGlyph::Idle,
+            clock: ShiftClock::At(0.25),
+        };
+        let cx = cx.add_empty_window();
+        cx.draw(point(px(0.0), px(0.0)), size(px(300.0), px(40.0)), |_, _| {
+            div().w(px(300.0)).flex().child(rolling(
+                "roll".into(),
+                shift,
+                StatusGlyph::Working,
+                words(old),
+                words(new),
+            ))
+        });
+        let width =
+            |cx: &mut VisualTestContext, name| f32::from(cx.debug_bounds(name).expect("drawn").size.width);
+        (width(cx, "detail-roll-leaving"), width(cx, "detail-roll-arriving"))
+    }
+
+    #[gpui_kit::test]
+    fn old_words_are_cut_to_the_line_and_not_to_the_width_of_the_new_ones(cx: &mut TestAppContext) {
+        let (leaving, arriving) = widths(cx, "Editing crates/wormhole/src/style/rows/detail.rs", "Done");
+        assert!(leaving > arriving * 2.0, "leaving {leaving} against arriving {arriving}");
+        assert!(leaving > 250.0, "the old words have the line's room: {leaving}");
+    }
 }
