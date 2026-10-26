@@ -262,9 +262,10 @@ mod tests {
 
     #[test]
     fn the_edges_that_moved_are_the_ones_dragged() {
+        // Taller at the top: the top edge (y plus the height) went up.
         assert_eq!(
             dragged(START, Frame::new(100.0, 100.0, 850.0, 640.0)),
-            Dragged { left: false, top: false }
+            Dragged { left: false, top: true }
         );
         assert_eq!(
             dragged(START, Frame::new(100.0, 60.0, 850.0, 640.0)),
