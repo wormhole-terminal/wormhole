@@ -30,7 +30,8 @@ pub(in crate::sidebar) fn tile_shifting(
     cx: &App,
 ) -> AnyElement {
     let (face, state) = tile_parts(info, frame);
-    let id = ElementId::Name(SharedString::from(format!("tile-{}-{}", info.id, size as u32)));
+    // The terminal, then the tile's size: one terminal's tiles of every size share a phase (`phase_of`).
+    let id = ElementId::from((ElementId::from(("tile", info.id as u64)), (size as u32).to_string()));
     let surface = if selected { frame.ui.selected_row } else { frame.ui.panel };
     style::status_tile_shifting(
         id,
