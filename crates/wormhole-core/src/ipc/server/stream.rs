@@ -24,11 +24,13 @@ const STACK_BYTES: usize = 256 * 1024;
 pub(super) struct Timing {
     pub(super) heartbeat: Duration,
     pub(super) write: Duration,
+    /// How long a control request waits for the app's answer.
+    pub(super) reply_wait: Duration,
 }
 
 impl Default for Timing {
     fn default() -> Self {
-        Self { heartbeat: HEARTBEAT, write: WRITE_TIMEOUT }
+        Self { heartbeat: HEARTBEAT, write: WRITE_TIMEOUT, reply_wait: super::REPLY_WAIT }
     }
 }
 
@@ -76,6 +78,14 @@ fn write_line(stream: &mut Stream, line: &mut Vec<u8>) -> io::Result<()> {
     stream.write_all(line)
 }
 
+/// The last line for a client that stopped reading. The write that timed out may have left half a
+/// line in its buffer, so this one starts on a line of its own (a client skips an empty line).
+fn too_slow_notice() -> Vec<u8> {
+    let mut line = vec![b'\n'];
+    push_notice(&mut line, Notice::Closed { reason: CloseReason::TooSlow });
+    line
+}
+
 /// A client that stopped reading gets a last line saying so, if it will take one; one that is gone
 /// gets nothing.
 fn tell_why_it_ended(stream: &mut Stream, err: &io::Error, subscription: &Subscription) {
@@ -83,8 +93,7 @@ fn tell_why_it_ended(stream: &mut Stream, err: &io::Error, subscription: &Subscr
     tracing::info!(caller = ?subscription.caller(), slow, "event stream ended: {err}");
     if slow {
         let _ = stream.set_write_timeout(Some(Duration::from_millis(100)));
-        let mut line = Vec::new();
-        push_notice(&mut line, Notice::Closed { reason: CloseReason::TooSlow });
+        let mut line = too_slow_notice();
         let _ = write_line(stream, &mut line);
     }
 }
@@ -97,7 +106,7 @@ mod tests {
     use std::sync::mpsc;
     use std::time::{Duration, Instant};
 
-    use super::Timing;
+    use super::{Timing, too_slow_notice};
     use crate::ipc::bus::{Bus, Grant};
     use crate::ipc::control::event::{Body, CloseReason, Event, Notice, StreamLine, Subscribed, Topic};
     use crate::ipc::control::{Action, ErrorCode, EventsSpec, Listing, Reply, Request};
@@ -106,6 +115,14 @@ mod tests {
 
     /// Answer the way the app does: a subscription for an `events` request, hooks passed to the test.
     fn serve(timing: Timing) -> (tempfile::TempDir, PathBuf, Arc<Bus>, mpsc::Receiver<Message>) {
+        serve_slowly(timing, Duration::ZERO)
+    }
+
+    /// [`serve`] with an app that takes `delay` to hand over its answer, after it has subscribed.
+    fn serve_slowly(
+        timing: Timing,
+        delay: Duration,
+    ) -> (tempfile::TempDir, PathBuf, Arc<Bus>, mpsc::Receiver<Message>) {
         let dir = tempfile::tempdir().expect("tempdir");
         let socket = dir.path().join("hd.sock");
         let (tx, rx) = smol::channel::unbounded();
@@ -121,7 +138,9 @@ mod tests {
                             let _ = hooks.send(message);
                         }
                         Incoming::Control { request, reply, .. } => {
-                            let _ = reply.send(answer(&bus, &request));
+                            let answered = answer(&bus, &request);
+                            std::thread::sleep(delay);
+                            let _ = reply.send(answered);
                         }
                     }
                 }
@@ -186,7 +205,7 @@ mod tests {
 
     #[test]
     fn a_stream_gets_its_reply_then_the_events_and_a_heartbeat_when_quiet() {
-        let timing = Timing { heartbeat: Duration::from_millis(150), write: Duration::from_secs(2) };
+        let timing = Timing { heartbeat: Duration::from_millis(150), ..Timing::default() };
         let (_dir, socket, bus, _hooks) = serve(timing);
         let (reply, mut reader) = watch(&socket, Some("7"));
         assert!(reply.ok, "{reply:?}");
@@ -202,6 +221,17 @@ mod tests {
         // Quiet now: the app says it is alive, and at which seq.
         let beat = read_line(&mut reader).expect("a heartbeat");
         assert_eq!(StreamLine::parse(&beat), Some(StreamLine::Notice(Notice::Heartbeat { seq: 2 })));
+    }
+
+    #[test]
+    fn the_last_line_for_a_slow_client_starts_on_a_line_of_its_own() {
+        let bytes = too_slow_notice();
+        assert_eq!(bytes[0], b'\n');
+        let text = String::from_utf8(bytes).expect("text");
+        assert_eq!(
+            StreamLine::parse(text.trim()),
+            Some(StreamLine::Notice(Notice::Closed { reason: CloseReason::TooSlow }))
+        );
     }
 
     #[test]
@@ -221,7 +251,7 @@ mod tests {
 
     #[test]
     fn a_client_that_stops_reading_is_let_go_after_the_write_timeout() {
-        let timing = Timing { heartbeat: Duration::from_secs(15), write: Duration::from_millis(200) };
+        let timing = Timing { write: Duration::from_millis(200), ..Timing::default() };
         let (_dir, socket, bus, _hooks) = serve(timing);
         let (_, _reader_that_never_reads) = watch(&socket, None);
         wait_until("subscribed", || bus.subscribers() == 1);
@@ -266,5 +296,74 @@ mod tests {
             bell(&bus, 1);
             bus.subscribers() == 0
         });
+    }
+
+    fn title(bus: &Bus, name: &str) {
+        bus.publish(Topic::Title, || Event {
+            window: Some(1),
+            terminal: Some(1),
+            body: Body::Title { title: None, name: name.to_string() },
+        });
+    }
+
+    /// The count is in the stream itself, not only in the queue: a client that was slower than the
+    /// app reads a `lagged` line before it goes on.
+    #[test]
+    fn a_client_that_fell_behind_reads_how_many_events_it_lost() {
+        let timing = Timing { write: Duration::from_secs(10), ..Timing::default() };
+        let (_dir, socket, bus, _hooks) = serve(timing);
+        let (_, mut reader) = watch(&socket, None);
+        wait_until("subscribed", || bus.subscribers() == 1);
+        // 10 MB at once against a queue of 4 MiB and a socket nobody reads yet.
+        let name = "x".repeat(10_000);
+        for _ in 0..1000 {
+            title(&bus, &name);
+        }
+        let mut lost = None;
+        for _ in 0..1100 {
+            let Some(line) = read_line(&mut reader) else { break };
+            if let Some(StreamLine::Notice(Notice::Lagged { dropped })) = StreamLine::parse(&line) {
+                lost = Some(dropped);
+                break;
+            }
+        }
+        assert!(lost.is_some_and(|dropped| dropped > 0), "a lagged line: {lost:?}");
+    }
+
+    /// A write that times out may leave half a line behind: the stream ends, and a notice that
+    /// follows it starts a line of its own.
+    #[test]
+    fn a_client_that_stops_reading_in_the_middle_of_a_line_ends_the_stream_cleanly() {
+        use std::io::Read as _;
+
+        let timing = Timing { write: Duration::from_millis(200), ..Timing::default() };
+        let (_dir, socket, bus, _hooks) = serve(timing);
+        let (_, mut reader) = watch(&socket, None);
+        wait_until("subscribed", || bus.subscribers() == 1);
+        title(&bus, &"y".repeat(400_000));
+        wait_until("the stream ended", || bus.subscribers() == 0);
+        let mut rest = Vec::new();
+        let _ = reader.get_ref().set_read_timeout(Some(Duration::from_secs(5)));
+        reader.read_to_end(&mut rest).expect("the connection ends: it is not left hanging");
+        let text = String::from_utf8_lossy(&rest);
+        if let Some(at) = text.find(r#""event":"closed""#) {
+            assert!(text[..at].ends_with("{\"version\":1,") && text[..at].contains('\n'), "on its own line");
+            assert!(
+                text[..at].rfind('\n').is_some_and(|nl| text[nl + 1..at].starts_with('{')),
+                "{}",
+                &text[..at.min(80)]
+            );
+        }
+    }
+
+    /// The socket gave up waiting for the app (`reply_wait`); what the app hands over late is
+    /// dropped with the channel, and its subscription goes with it.
+    #[test]
+    fn an_answer_that_comes_after_the_socket_gave_up_leaves_no_subscriber() {
+        let timing = Timing { reply_wait: Duration::from_millis(200), ..Timing::default() };
+        let (_dir, socket, bus, _hooks) = serve_slowly(timing, Duration::from_millis(700));
+        let (reply, _reader) = watch(&socket, None);
+        assert_eq!(reply.err().map(|e| e.code), Some(ErrorCode::Failed), "{reply:?}");
+        wait_until("the late subscription is given back", || bus.subscribers() == 0);
     }
 }

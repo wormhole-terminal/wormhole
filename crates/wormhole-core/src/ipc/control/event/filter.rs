@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{Event, Topic, Topics};
+use super::{Body, Event, Topic, Topics};
 use crate::ipc::control::{Error, ErrorCode, Listing};
 
 /// How many terminals one subscription may be limited to.
@@ -74,11 +74,19 @@ pub struct EventFilter {
 }
 
 impl EventFilter {
+    /// Whether `event` is about one of the terminals asked for: its own, or, for a split, a member.
+    fn names_terminal_of(&self, event: &Event) -> bool {
+        match &event.body {
+            Body::Split { terminals, .. } => terminals.iter().any(|id| self.terminals.contains(id)),
+            _ => event.terminal.is_some_and(|id| self.terminals.contains(&id)),
+        }
+    }
+
     /// Whether the filter lets `event` through.
     pub fn matches(&self, event: &Event) -> bool {
         let Some(topic) = event.body.topic() else { return false };
         self.topics.contains(topic)
-            && (self.terminals.is_empty() || event.terminal.is_some_and(|id| self.terminals.contains(&id)))
+            && (self.terminals.is_empty() || self.names_terminal_of(event))
             && (self.windows.is_empty() || event.window.is_some_and(|id| self.windows.contains(&id)))
     }
 }
@@ -145,6 +153,14 @@ mod tests {
         assert!(terminal.matches(&bell(1, 3)) && !terminal.matches(&bell(1, 4)));
         let window_event = Event { window: Some(1), terminal: None, body: Body::WindowOpened };
         assert!(!terminal.matches(&window_event), "a window's event has no terminal");
+        // A split is about its members, though it belongs to no terminal.
+        let split = |terminals: Vec<i64>| Event {
+            window: Some(1),
+            terminal: None,
+            body: Body::Split { split: 5, terminals, focused: None },
+        };
+        assert!(terminal.matches(&split(vec![2, 3])) && !terminal.matches(&split(vec![4, 5])));
+        assert!(!terminal.matches(&split(vec![])), "a split that is gone names nobody");
         let window = EventsSpec { windows: vec![2], ..spec(&[]) }.filter().expect("valid");
         assert!(window.matches(&bell(2, 9)) && !window.matches(&bell(1, 9)));
         assert!(window.matches(&Event { window: Some(2), terminal: None, body: Body::WindowOpened }));

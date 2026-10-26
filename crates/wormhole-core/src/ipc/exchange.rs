@@ -14,6 +14,7 @@ use super::Message;
 use super::control::Parsed;
 use super::control::event::{HEARTBEAT, StreamLine, Subscribed};
 use super::control::events;
+use super::control::printable::json_line;
 use super::control::sessions;
 use super::control::{
     Action, PROTOCOL_VERSION, Reply, Request, SEND_TEXT_MAX_BYTES, help_with, json_env, parse, print,
@@ -72,8 +73,17 @@ pub(crate) fn exchange(socket: &Path, request: &Request, wait: Duration) -> Resu
     }
 }
 
+/// How a stream ended.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum StreamEnd {
+    /// A callback said stop, with this exit code.
+    Stopped(i32),
+    /// The connection ended without the app saying why: it quit or died between two lines.
+    Hangup,
+}
+
 /// A stream's exchange: send `request`, hand its reply line to `on_reply`, then each line after it to
-/// `on_line`, until one of them breaks with an exit code or the connection ends (code 0). The reply
+/// `on_line`, until one of them breaks with an exit code or the connection ends. The reply
 /// is waited for as long as any reply; after it, a stream that is silent for three heartbeats is
 /// taken to have lost the app.
 pub(crate) fn exchange_stream(
@@ -81,7 +91,7 @@ pub(crate) fn exchange_stream(
     request: &Request,
     on_reply: impl FnOnce(&str, Reply) -> ControlFlow<i32>,
     mut on_line: impl FnMut(&str) -> ControlFlow<i32>,
-) -> Result<i32, Exchange> {
+) -> Result<StreamEnd, Exchange> {
     let mut stream = Stream::connect(socket).map_err(|_| Exchange::NotRunning)?;
     let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
     let _ = stream.set_read_timeout(Some(REPLY_WAIT));
@@ -97,14 +107,14 @@ pub(crate) fn exchange_stream(
     // After a good reply the lines come at their own pace.
     let _ = reader.get_ref().set_read_timeout(Some(3 * HEARTBEAT));
     if let ControlFlow::Break(code) = on_reply(&text, reply) {
-        return Ok(code);
+        return Ok(StreamEnd::Stopped(code));
     }
     while let Some(text) = read_stream_line(&mut reader, false)? {
         if let ControlFlow::Break(code) = on_line(&text) {
-            return Ok(code);
+            return Ok(StreamEnd::Stopped(code));
         }
     }
-    Ok(0)
+    Ok(StreamEnd::Hangup)
 }
 
 /// The next line of a stream without its newline, or `None` at its end. One line is at most
@@ -206,7 +216,7 @@ fn explain(err: &Exchange) -> i32 {
 /// Print a reply: the JSON object it is, or as text (an error to stderr).
 fn show(action: &Action, reply: &Reply, json: bool, home: Option<&Path>) {
     if json {
-        print(&format!("{}\n", serde_json::to_string(reply).unwrap_or_default()));
+        print(&format!("{}\n", json_line(reply)));
     } else {
         match render(action, reply, home) {
             Ok(text) => print(&text),
@@ -256,7 +266,12 @@ fn watch(socket: &Path, request: &Request, json: bool, home: Option<&Path>) -> i
         }
     };
     match exchange_stream(socket, request, on_reply, on_line) {
-        Ok(code) => code,
+        Ok(StreamEnd::Stopped(code)) => code,
+        // Wormhole saying it is quitting is a line (0); a connection that just ends is not.
+        Ok(StreamEnd::Hangup) => {
+            print_err("Wormhole: the stream ended without a closing line (Wormhole quit, or stopped)\n");
+            1
+        }
         Err(err) => explain(&err),
     }
 }

@@ -117,7 +117,7 @@ fn execute(command: &Command, hosts_dir: &Path, wait: Duration) -> (i32, String,
     match command {
         Command::List { json } => {
             let text = if *json {
-                format!("{}\n", serde_json::to_string(&Rows::of(&scanned)).unwrap_or_default())
+                format!("{}\n", super::printable::json_line(&Rows::of(&scanned)))
             } else {
                 list_text(&scanned)
             };
@@ -320,7 +320,7 @@ fn offline_in(action: &super::Action, json: bool, hosts_dir: &Path) -> Option<St
         }
         let hosts = live.iter().map(Row::live).collect();
         let reply = Reply::ok(Offline { app_running: false, hosts });
-        return Some(format!("{}\n", serde_json::to_string(&reply).unwrap_or_default()));
+        return Some(format!("{}\n", super::printable::json_line(&reply)));
     }
     let wh = super::COMMAND_NAME;
     Some(match action {

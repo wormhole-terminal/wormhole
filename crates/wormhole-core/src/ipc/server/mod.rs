@@ -12,7 +12,7 @@
 
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::sync::mpsc;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use super::control::{self, ErrorCode, Reply, Request};
 use super::{Answer, Incoming, Message};
@@ -58,6 +58,7 @@ fn spawn_with(listener: Listener, tx: smol::channel::Sender<Incoming>, timing: T
 /// Read one connection's messages until it closes, its deadline passes or it
 /// sent too much; answer the control requests among them.
 fn serve(mut stream: Stream, tx: &smol::channel::Sender<Incoming>, timing: Timing) {
+    let accepted = SystemTime::now();
     if !peer_is_same_user(&stream) {
         tracing::warn!("hook socket: a connection from another user was refused");
         return;
@@ -68,7 +69,7 @@ fn serve(mut stream: Stream, tx: &smol::channel::Sender<Incoming>, timing: Timin
         match serde_json::from_str::<Message>(&line) {
             Ok(Message::Control(request)) => {
                 // A stream took the connection over: this thread has nothing more to read from it.
-                if answer(&mut stream, request, tx, timing) == Outcome::Streaming {
+                if answer(&mut stream, accepted, request, tx, timing) == Outcome::Streaming {
                     return;
                 }
             }
@@ -99,16 +100,17 @@ enum Outcome {
 /// a thread of its own.
 fn answer(
     stream: &mut Stream,
+    accepted: SystemTime,
     request: Request,
     tx: &smol::channel::Sender<Incoming>,
     timing: Timing,
 ) -> Outcome {
     let (reply_tx, reply_rx) = mpsc::sync_channel(1);
-    let peer = Peer::of(stream);
+    let peer = Peer::of(stream, accepted);
     if tx.send_blocking(Incoming::Control { request, peer, reply: reply_tx }).is_err() {
         return Outcome::Answered;
     }
-    let answer = reply_rx.recv_timeout(REPLY_WAIT).unwrap_or_else(|_| {
+    let answer = reply_rx.recv_timeout(timing.reply_wait).unwrap_or_else(|_| {
         Answer::Reply(Reply::error(ErrorCode::Failed, "Wormhole did not answer in time"))
     });
     match answer {

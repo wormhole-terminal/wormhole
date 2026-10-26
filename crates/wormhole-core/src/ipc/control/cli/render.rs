@@ -6,6 +6,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
+use crate::ipc::control::printable::for_terminal;
 use crate::ipc::control::{
     Action, Asked, Listing, Opened, Reached, Reply, StatusInfo, Summary, TabInfo, TerminalInfo,
 };
@@ -20,7 +21,7 @@ pub fn render(action: &Action, reply: &Reply, home: Option<&Path>) -> Result<Str
             Some(reason) => format!("{}, {}", name_of(error.code), name_of(reason)),
             None => name_of(error.code),
         };
-        return Err(format!("{} ({kind})", error.message));
+        return Err(format!("{} ({kind})", for_terminal(&error.message)));
     }
     let result = reply.result.clone().unwrap_or(Value::Null);
     let text = match action {
@@ -89,7 +90,9 @@ fn summary_text(summary: &Summary) -> String {
 
 fn opened_text(opened: &Opened, home: Option<&Path>) -> String {
     let folder = opened.folder.as_deref().map(|f| shorten(f, home)).unwrap_or_default();
-    let worktree = opened.worktree.as_deref().map(|w| format!(" on worktree {w}")).unwrap_or_default();
+    let folder = for_terminal(&folder);
+    let worktree =
+        opened.worktree.as_deref().map(|w| format!(" on worktree {}", for_terminal(w))).unwrap_or_default();
     format!(
         "opened terminal {} (tab {}, pane {}) in window {} at {folder}{worktree}\n",
         opened.terminal, opened.tab, opened.pane, opened.window
@@ -100,31 +103,33 @@ fn asked_text(asked: &Asked, home: Option<&Path>) -> String {
     format!(
         "asked in window {}: confirm the worktree {} at {} there; the terminal opens once you do\n",
         asked.window,
-        asked.branch,
-        shorten(&asked.folder, home)
+        for_terminal(&asked.branch),
+        for_terminal(&shorten(&asked.folder, home))
     )
 }
 
 fn terminal_line(terminal: &TerminalInfo, home: Option<&Path>) -> String {
-    let mut parts =
-        vec![format!("  terminal {}  {:?}", terminal.id, terminal.name), terminal.status.word().to_string()];
+    let mut parts = vec![
+        format!("  terminal {}  {}", terminal.id, quoted(&terminal.name)),
+        terminal.status.word().to_string(),
+    ];
     if let Some(agent) = &terminal.agent {
-        parts.push(agent.clone());
+        parts.push(for_terminal(agent).into_owned());
     }
     if let Some(folder) = &terminal.folder {
-        parts.push(shorten(folder, home));
+        parts.push(for_terminal(&shorten(folder, home)).into_owned());
     }
     if let Some(branch) = &terminal.branch {
         match terminal.changed {
-            Some(changed) if changed > 0 => parts.push(format!("{branch} ±{changed}")),
-            _ => parts.push(branch.clone()),
+            Some(changed) if changed > 0 => parts.push(format!("{} ±{changed}", for_terminal(branch))),
+            _ => parts.push(for_terminal(branch).into_owned()),
         }
     }
     if terminal.pinned {
         parts.push("pinned".into());
     }
     if let Some(profile) = &terminal.profile {
-        parts.push(format!("profile {profile}"));
+        parts.push(format!("profile {}", for_terminal(profile)));
     }
     if terminal.selected {
         parts.push("selected".into());
@@ -133,13 +138,16 @@ fn terminal_line(terminal: &TerminalInfo, home: Option<&Path>) -> String {
 }
 
 fn tab_line(tab: &TabInfo) -> String {
-    let mut parts =
-        vec![format!("    tab {}  {:?}", tab.id, tab.name), tab.status.word().to_string(), tab.shell.clone()];
+    let mut parts = vec![
+        format!("    tab {}  {}", tab.id, quoted(&tab.name)),
+        tab.status.word().to_string(),
+        for_terminal(&tab.shell).into_owned(),
+    ];
     if let Some(command) = &tab.command {
-        parts.push(format!("running {command}"));
+        parts.push(format!("running {}", for_terminal(command)));
     }
     if let Some(message) = &tab.message {
-        parts.push(format!("{message:?}"));
+        parts.push(quoted(message));
     }
     if tab.selected {
         parts.push("selected".into());
@@ -147,6 +155,11 @@ fn tab_line(tab: &TabInfo) -> String {
     let panes: Vec<String> = tab.panes.iter().map(|pane| pane.id.to_string()).collect();
     parts.push(format!("{} {}", plural(panes.len(), "pane"), panes.join(" ")));
     format!("{}\n", parts.join("  "))
+}
+
+/// Terminal text in double quotes, escaped.
+fn quoted(text: &str) -> String {
+    format!("\"{}\"", for_terminal(text))
 }
 
 fn plural(n: usize, word: &str) -> String {
@@ -307,5 +320,28 @@ mod tests {
     fn an_errors_reason_is_named_beside_its_code() {
         let error = Reply::from(Error::new(ErrorCode::Failed, "took too long").because(Reason::Timeout));
         assert_eq!(render(&notify(), &error, None), Err("took too long (failed, timeout)".into()));
+    }
+
+    /// Text a program chose (a title, a command, a folder, a branch) can't act on the terminal the
+    /// listing is printed in, however it is hidden: not by escape, not by a bidi override.
+    #[test]
+    fn what_a_terminal_said_is_escaped_in_the_listing() {
+        let evil = "x\u{1b}[2Jy\u{202e}z";
+        let mut terminal = terminal();
+        terminal.name = evil.into();
+        terminal.agent = Some(evil.into());
+        terminal.folder = Some(evil.into());
+        terminal.branch = Some(evil.into());
+        terminal.profile = Some(evil.into());
+        terminal.tabs[0].name = evil.into();
+        terminal.tabs[0].command = Some(evil.into());
+        terminal.tabs[0].message = Some(evil.into());
+        terminal.tabs[0].shell = evil.into();
+        let listing = Listing { windows: vec![WindowInfo { id: 1, front: true, terminals: vec![terminal] }] };
+        let text = render(&Action::List, &Reply::ok(listing), None).expect("renders");
+        assert!(!text.contains(['\u{1b}', '\u{202e}']), "{text:?}");
+        assert!(text.contains("\\u{1b}[2Jy\\u{202e}z"), "{text}");
+        let error = render(&notify(), &Reply::error(ErrorCode::Failed, evil), None).expect_err("an error");
+        assert!(!error.contains('\u{1b}'));
     }
 }
