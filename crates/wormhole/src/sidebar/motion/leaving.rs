@@ -16,7 +16,7 @@ use wormhole_core::view::sidebar::{Card, Entry, Listing};
 use super::list::ItemKey;
 use super::row::{Natural, RowMotion};
 use crate::sidebar::card::Cards;
-use crate::sidebar::rows::{Frame, Place, row_face};
+use crate::sidebar::row::{Frame, Place, row_face};
 use crate::sidebar::{Sidebar, SidebarInput};
 
 /// The window's facts and the listing at one moment: what a row that has left the list was drawn from.

@@ -15,7 +15,7 @@ use wormhole_core::view::sidebar::spoken;
 use wormhole_core::view::sidebar::tabs::{Hit, UNGROUPED, search};
 
 use super::facts::RowInfo;
-use super::rows::{Frame, glyph_for};
+use super::row::{Frame, glyph_for};
 use super::tab_bar::SetView;
 use super::{NewTerminal, Sidebar, SidebarEvent};
 use crate::select;
@@ -203,7 +203,7 @@ impl Sidebar {
         let ui = frame.ui;
         let urgency = |ix: usize| Urgency::from(glyph_for(&infos[ix]));
         let snap_tile = |ix: usize| {
-            let (face, glyph) = super::rows::tile_parts(&infos[ix], frame);
+            let (face, glyph) = super::row::tile_parts(&infos[ix], frame);
             TileSnap { id: infos[ix].id, face, glyph }
         };
         let current = view.current;

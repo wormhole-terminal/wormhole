@@ -52,7 +52,7 @@ impl Sidebar {
     ) -> Stateful<Div> {
         let this = cx.weak_entity();
         let dragged =
-            DraggedTerminal::new(info.id, DragOrigin::Row, info.name.clone(), super::rows::glyph_for(info));
+            DraggedTerminal::new(info.id, DragOrigin::Row, info.name.clone(), super::row::glyph_for(info));
         row.on_drag(dragged, move |dragged, grabbed, _, cx| {
             this.update(cx, |_, cx| {
                 cx.emit(SidebarEvent::TerminalDragStarted { id: dragged.id, origin: dragged.origin })

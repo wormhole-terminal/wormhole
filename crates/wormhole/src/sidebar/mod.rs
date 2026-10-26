@@ -41,8 +41,8 @@ mod keys;
 mod motion;
 pub(crate) mod profile_chip;
 mod rename;
+mod row;
 mod row_menu;
-mod rows;
 pub(crate) mod shells;
 mod switcher;
 mod tab_bar;
@@ -381,7 +381,7 @@ impl Sidebar {
             })
             .collect();
         self.plan_list_motion(&keys, &listing, cx);
-        let frame = rows::Frame::new(&input, self.width, self.hints_showing(cx), window, cx);
+        let frame = row::Frame::new(&input, self.width, self.hints_showing(cx), window, cx);
         let mark = self.drop_mark(&listing, infos);
         let group_wash: std::collections::HashMap<u32, Hsla> = {
             let tokens = &store_in(&input.profile, cx).tokens;
@@ -420,7 +420,7 @@ impl Sidebar {
                         && info.repo.is_some()
                         && info.changes.is_some_and(|n| counted_above == Some((band, &info.repo, n)));
                     counted_above = info.changes.map(|n| (band, &info.repo, n));
-                    let place = rows::Place {
+                    let place = row::Place {
                         selected: info.ix == input.active,
                         solo: frame.metrics.cards && matches!(listing.card(at), Some(Card::Loose(_))),
                         position,

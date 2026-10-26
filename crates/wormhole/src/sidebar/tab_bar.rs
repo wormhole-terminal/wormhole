@@ -20,7 +20,7 @@ use wormhole_core::view::sidebar::{Entry, Listing};
 
 use super::facts::RowInfo;
 use super::glass::{GlassKind, Insets, TAB_ROW_CLIP, clip_probe, glass_key, probe};
-use super::rows::{Frame, glyph_for, tile_for};
+use super::row::{Frame, glyph_for, tile_for};
 use super::{NewTerminal, Sidebar, SidebarEvent};
 use crate::settings::{UiColors, store_in, ui_in};
 use crate::style;

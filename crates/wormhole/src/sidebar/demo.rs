@@ -20,7 +20,7 @@ use gpui_kit::*;
 use wormhole_core::onboarding::welcome::demo as example;
 use wormhole_core::view::sidebar::RowState;
 
-use super::rows::Frame;
+use super::row::Frame;
 use super::{Sidebar, SidebarInput};
 use crate::style;
 use crate::style::{RowTone, SessionRow, StatusGlyph};
@@ -180,7 +180,7 @@ fn display_only(element: impl IntoElement) -> AnyElement {
         .into_any_element()
 }
 
-/// The glyph a state is drawn with: an agent's, as `rows::glyph_for` has it for a real row.
+/// The glyph a state is drawn with: an agent's, as `row::glyph_for` has it for a real row.
 fn glyph_of(state: RowState) -> StatusGlyph {
     match state {
         RowState::Working => StatusGlyph::Working,

@@ -113,7 +113,7 @@ impl Sidebar {
         wormhole_core::view::sidebar::wording::place_detail(
             Some(Path::new(folder)),
             home_dir(),
-            super::rows::PLACE_CHARS,
+            super::row::PLACE_CHARS,
         )
     }
 

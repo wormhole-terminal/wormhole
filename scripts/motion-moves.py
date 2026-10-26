@@ -64,7 +64,12 @@ def chunks_of(source: str) -> List[Chunk]:
     for at, line in enumerate(lines):
         if line and not line[0].isspace() and line[0] not in "})]":
             continuing = prev.startswith(("///", "#[")) and not prev[0].isspace()
-            if not continuing and not line.startswith(("//!", "use ", "pub use ", "pub(super) use ")):
+            # An attribute on a `use` (`#[cfg(test)] use ...`) belongs to the imports, not to an item.
+            ahead = next((l for l in lines[at:] if not l.startswith("#[")), "")
+            imports = ("use ", "pub use ", "pub(super) use ")
+            if not continuing and not line.startswith(("//!", *imports)) and not (
+                line.startswith("#[") and ahead.startswith(imports)
+            ):
                 starts.append(at)
         prev = line
     out: List[Chunk] = []

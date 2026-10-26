@@ -10,7 +10,7 @@ use wormhole_core::view::sidebar::{Urgency, spoken};
 
 use super::facts::RowInfo;
 use super::group_popover::{group_menu, group_popover};
-use super::rows::{Frame, glyph_for, tile_for};
+use super::row::{Frame, glyph_for, tile_for};
 use super::{NewTerminal, Sidebar, SidebarEvent};
 use crate::focus_keys::key_menu_origin;
 use crate::platform::{self, Anchor};

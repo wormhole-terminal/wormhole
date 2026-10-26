@@ -10,7 +10,7 @@ use wormhole_core::notify::Source;
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::sidebar::{RowState, SplitId};
 
-use super::rows;
+use super::row;
 use crate::settings::settings_in;
 
 /// What a terminal's row shows, gathered when the window says how it stands. Times are kept as the
@@ -157,5 +157,5 @@ impl RowInfo {
 /// What each row's times read now (compact rows, without a second line, show none).
 pub(crate) fn row_times(infos: &[RowInfo], profile: &ProfileId, cx: &App) -> Vec<Option<String>> {
     let compact = !settings_in(profile, cx).density.two_lines();
-    infos.iter().map(|info| rows::time_text(info, compact)).collect()
+    infos.iter().map(|info| row::time_text(info, compact)).collect()
 }
