@@ -18,14 +18,16 @@ pub struct Spot {
     pub y: f32,
 }
 
-/// The screen the global point (`x`, `y`, y up) is on, and where on it. A screen holds its left and
-/// bottom edges and not its right and top ones, so a point on the line between two screens is on one
-/// of them only. `None` in a gap between screens, where a pointer can't be.
+/// The screen the global point (`x`, `y`, y up) is on, and where on it. A screen holds its left and its
+/// top edge and not its right and bottom ones, as the display space it is counted in does: a pointer at the
+/// very top of a screen is on its first row of points (the system reports 0 there, which this space has as
+/// the screen's height), and the line between two screens is on one of them only. `None` in a gap between
+/// screens, where a pointer can't be.
 #[must_use]
 pub fn locate(x: f32, y: f32, screens: &[Screen]) -> Option<Spot> {
     screens.iter().find_map(|screen| {
         let f = screen.frame;
-        let inside = x >= f.x && x < f.right() && y >= f.y && y < f.bottom();
+        let inside = x >= f.x && x < f.right() && y > f.y && y <= f.bottom();
         // The screen's top is its largest y: down from there is the display's y.
         inside.then(|| Spot { display: screen.id, x: x - f.x, y: f.bottom() - y })
     })
@@ -43,7 +45,10 @@ mod tests {
     fn the_primary_screen_counts_down_from_its_top() {
         let screens = [screen(1, 0.0, 0.0, 1440.0, 900.0)];
         assert_eq!(locate(100.0, 800.0, &screens), Some(Spot { display: 1, x: 100.0, y: 100.0 }));
-        assert_eq!(locate(0.0, 0.0, &screens), Some(Spot { display: 1, x: 0.0, y: 900.0 }));
+        // The system's top row of points (y 0 from the top) is a height up in the global space.
+        assert_eq!(locate(100.0, 900.0, &screens), Some(Spot { display: 1, x: 100.0, y: 0.0 }));
+        assert_eq!(locate(0.0, 0.0, &screens), None, "the line under the bottom row is not on it");
+        assert_eq!(locate(0.0, 0.5, &screens), Some(Spot { display: 1, x: 0.0, y: 899.5 }));
     }
 
     #[test]
@@ -52,15 +57,16 @@ mod tests {
         // 1820 from the left edge of the screen on the left, 100 down from its top (global y 980).
         assert_eq!(locate(-100.0, 880.0, &screens), Some(Spot { display: 2, x: 1820.0, y: 100.0 }));
         assert_eq!(locate(-1920.0, 979.0, &screens).map(|s| (s.display, s.x)), Some((2, 0.0)));
+        assert_eq!(locate(-1920.0, 980.0, &screens).map(|s| (s.display, s.y)), Some((2, 0.0)), "its top row");
     }
 
     #[test]
     fn a_screen_above_the_primary_has_a_global_y_beyond_its_height() {
         let screens = [screen(1, 0.0, 0.0, 1440.0, 900.0), screen(3, 0.0, 900.0, 1440.0, 900.0)];
         assert_eq!(locate(50.0, 1700.0, &screens), Some(Spot { display: 3, x: 50.0, y: 100.0 }));
-        // The line between them belongs to the upper one (its bottom edge) only.
-        assert_eq!(locate(50.0, 900.0, &screens).map(|s| s.display), Some(3));
-        assert_eq!(locate(50.0, 899.5, &screens).map(|s| s.display), Some(1));
+        // The line between them belongs to the lower one: it is its top row, the upper one's bottom edge is out.
+        assert_eq!(locate(50.0, 900.0, &screens).map(|s| s.display), Some(1));
+        assert_eq!(locate(50.0, 900.5, &screens).map(|s| s.display), Some(3));
     }
 
     #[test]
