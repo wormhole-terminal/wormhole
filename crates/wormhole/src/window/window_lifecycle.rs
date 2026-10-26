@@ -39,14 +39,14 @@ pub(crate) fn open_workspace_window_in(
     source: Option<window_bounds::Source>,
     cx: &mut App,
 ) {
-    open_window(profile, record, source, Entrance::System, cx);
+    open_with_entrance(profile, record, source, Entrance::System, cx);
 }
 
 /// The first window of a first launch, which the intro or the terminal welcome plays around: it never opens
 /// with the system's animation, as it is the intro's to bring in (`app::welcome`).
 pub(crate) fn open_first_workspace_window(cx: &mut App) {
     let profile = app(cx).active_profile().clone();
-    open_window(&profile, None, None, Entrance::Plain, cx);
+    open_with_entrance(&profile, None, None, Entrance::Plain, cx);
 }
 
 /// How a window comes onto the screen.
@@ -59,7 +59,7 @@ enum Entrance {
     Plain,
 }
 
-fn open_window(
+fn open_with_entrance(
     profile: &ProfileId,
     record: Option<WindowRecord>,
     source: Option<window_bounds::Source>,
