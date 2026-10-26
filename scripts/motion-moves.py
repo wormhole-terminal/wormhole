@@ -440,6 +440,8 @@ def render(step_name: str, step: Step, name: str, spec: File, source: str, chunk
     for at, key in enumerate(spec.items):
         chunk = chunks[key]
         text = list(chunk.text)
+        if step.widen_all:
+            text = [l.replace("pub(super)", step.widen_all) for l in text]
         for old, new in spec.edits.get(key, []):
             if old not in text:
                 raise SystemExit("%s: %s has no line %r" % (step_name, key, old))
