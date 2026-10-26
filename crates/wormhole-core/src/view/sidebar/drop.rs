@@ -16,6 +16,10 @@ pub enum Part {
     Bottom,
 }
 
+/// How far past an edge between two parts of a line a pointer has to go before it counts as the other
+/// part, when it was over the first a moment ago, as a share of the line's height.
+const HYSTERESIS: f32 = 0.06;
+
 impl Part {
     /// The part of a line a pointer `fraction` of the way down it (0.0 its top edge, 1.0 its bottom) is
     /// over: the top quarter, the bottom quarter, or the middle half between them.
@@ -24,6 +28,26 @@ impl Part {
         if fraction < 0.25 {
             Self::Top
         } else if fraction > 0.75 {
+            Self::Bottom
+        } else {
+            Self::Middle
+        }
+    }
+
+    /// [`Part::at`] for a pointer that was over `previous` part of the same line a moment ago: it stays
+    /// there until it is [`HYSTERESIS`] past the edge, so a pointer that rests on an edge (or a hand that
+    /// shakes) does not flip a drop between a move and a split. With no previous part it is [`Part::at`].
+    #[must_use]
+    pub fn at_from(fraction: f32, previous: Option<Self>) -> Self {
+        let (top, bottom) = match previous {
+            Some(Self::Top) => (0.25 + HYSTERESIS, 0.75),
+            Some(Self::Middle) => (0.25 - HYSTERESIS, 0.75 + HYSTERESIS),
+            Some(Self::Bottom) => (0.25, 0.75 - HYSTERESIS),
+            None => (0.25, 0.75),
+        };
+        if fraction < top {
+            Self::Top
+        } else if fraction > bottom {
             Self::Bottom
         } else {
             Self::Middle
@@ -151,6 +175,30 @@ mod tests {
         assert_eq!(Part::at(0.75), Part::Middle, "and ends at three quarters");
         assert_eq!(Part::at(0.751), Part::Bottom);
         assert_eq!(Part::at(1.2), Part::Bottom);
+    }
+
+    #[test]
+    fn a_pointer_that_rests_on_an_edge_stays_in_the_part_it_was_over() {
+        // Over the middle, a pointer has to leave it by more than the margin to be over an edge part.
+        assert_eq!(Part::at_from(0.22, Some(Part::Middle)), Part::Middle);
+        assert_eq!(Part::at_from(0.78, Some(Part::Middle)), Part::Middle);
+        assert_eq!(Part::at_from(0.18, Some(Part::Middle)), Part::Top);
+        assert_eq!(Part::at_from(0.82, Some(Part::Middle)), Part::Bottom);
+        // Over an edge part, it has to come in by more than the margin to be over the middle.
+        assert_eq!(Part::at_from(0.28, Some(Part::Top)), Part::Top);
+        assert_eq!(Part::at_from(0.32, Some(Part::Top)), Part::Middle);
+        assert_eq!(Part::at_from(0.72, Some(Part::Bottom)), Part::Bottom);
+        assert_eq!(Part::at_from(0.68, Some(Part::Bottom)), Part::Middle);
+        // From an edge part the other edge is the plain one, and a jump over the middle lands where it lands.
+        assert_eq!(Part::at_from(0.8, Some(Part::Top)), Part::Bottom);
+        assert_eq!(Part::at_from(0.1, Some(Part::Bottom)), Part::Top);
+        // With nothing before it, or far from any edge, it is `Part::at`.
+        for fraction in [-0.2, 0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.3] {
+            assert_eq!(Part::at_from(fraction, None), Part::at(fraction), "{fraction}");
+        }
+        for previous in [Part::Top, Part::Middle, Part::Bottom] {
+            assert_eq!(Part::at_from(0.5, Some(previous)), Part::Middle);
+        }
     }
 
     #[test]
