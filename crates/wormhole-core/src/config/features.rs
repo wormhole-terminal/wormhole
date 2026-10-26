@@ -48,10 +48,13 @@ pub enum FeatureFlag {
     /// changing and a column hiding, each with a live preview. The page shows only while the flag is
     /// on; the choices themselves are ordinary settings (`motion` in `config.json`).
     Motion,
+    /// Dragging a terminal's row out of the window: it opens a window of its own where it is let go, or
+    /// goes into the Wormhole window it is let go over. Off, a drag let go outside the window does nothing.
+    TearOff,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 7] = [
+    pub const ALL: [FeatureFlag; 8] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
@@ -59,6 +62,7 @@ impl FeatureFlag {
         Self::LiquidGlass,
         Self::Automation,
         Self::Motion,
+        Self::TearOff,
     ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
@@ -71,6 +75,7 @@ impl FeatureFlag {
             Self::LiquidGlass => "liquid_glass",
             Self::Automation => "automation",
             Self::Motion => "motion",
+            Self::TearOff => "tear_off",
         }
     }
 
@@ -88,6 +93,7 @@ impl FeatureFlag {
             Self::LiquidGlass => "Liquid Glass",
             Self::Automation => "Automation",
             Self::Motion => "Motion",
+            Self::TearOff => "Tear off a terminal",
         }
     }
 
@@ -122,6 +128,10 @@ impl FeatureFlag {
                 "Settings → Motion: pick how terminals open, groups fold, statuses change and columns \
                  slide, with a live preview of each."
             }
+            Self::TearOff => {
+                "Drag a terminal out of the window to give it a window of its own, or onto another Wormhole \
+                 window to move it there."
+            }
         }
     }
 
@@ -142,6 +152,8 @@ impl FeatureFlag {
             Self::Automation => false,
             // Unfinished: only the page and its previews exist, the animations are still to come.
             Self::Motion => false,
+            // New, and it moves live terminals between windows: off until it has been through its visual check.
+            Self::TearOff => false,
         }
     }
 }
