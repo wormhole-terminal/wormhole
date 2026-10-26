@@ -103,13 +103,18 @@ impl ListMotion {
         if let Some(dropped) = &next.dropped {
             moves.moved.extend(dropped.room.kept(&was, &moves));
         }
+        #[cfg(test)]
+        {
+            self.planned = moves.moved.clone();
+        }
         let settle = next.dropped.as_ref().filter(|dropped| dropped.room.joined()).map(|_| JOIN_SETTLE);
         self.start_moving(moves, &turnover, settle, &mut lasting);
         self.start_arriving(turnover, &standing, &mut lasting);
         if let Some(dropped) = &next.dropped {
             self.start_landing(&dropped.room, &standing, &mut lasting);
             if dropped.room.joined() {
-                self.join.draw_bracket(dropped.room.dragged(), self.batch);
+                let (dragged, before) = dropped.room.dragged();
+                self.join.draw_bracket(dragged, before, self.batch);
                 lasting.settling = lasting.settling.max(BRACKET);
             }
         }
@@ -219,14 +224,14 @@ impl ListMotion {
 impl Sidebar {
     /// Notice that the list's lines are not the ones last drawn, and start the motion of those that
     /// came, went or moved. Call it once per render with the lines about to be drawn, top to bottom
-    /// (`keys`, of `listing`).
+    /// (`keys`, of `listing`). Whether it planned a change: the lines are not the ones last measured then.
     pub(in crate::sidebar) fn plan_list_motion(
         &mut self,
         keys: &[ItemKey],
         listing: &Listing,
         window: &Window,
         cx: &mut Context<Self>,
-    ) {
+    ) -> bool {
         // A fold the person made is for the change it makes, whether or not rows come or go with it.
         let fold = self.motion.fold.take();
         // What a drag measured is not the list any more when the list changes under it; a drag that is
@@ -244,7 +249,7 @@ impl Sidebar {
             if let Some(room) = room {
                 self.put_back_room(room, cx);
             }
-            return;
+            return false;
         }
         let choices = settings_in(&self.input.profile, cx).motion_in_force();
         let pointer = f32::from(window.mouse_position().y) - content_top(&self.scroll);
@@ -267,6 +272,7 @@ impl Sidebar {
                 }
             });
         }
+        true
     }
 
     /// Runs `then` after `delay`, if the list is still there.

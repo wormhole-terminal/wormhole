@@ -11,6 +11,7 @@ use gpui_kit::{
     Bounds, Modifiers, MouseButton, Pixels, Point, TestAppContext, VisualTestContext, point, px, size,
 };
 use wormhole_core::config::features::FeatureFlag;
+use wormhole_core::view::panes::Zone;
 use wormhole_core::view::sidebar::Entry;
 
 use crate::app_state::OpenWindow;
@@ -22,9 +23,13 @@ fn isolate(name: &str) -> bool {
 
 /// A window of `sessions` terminals with motion on (the harness starts with Reduce Motion), drawn at rest.
 fn open(cx: &mut TestAppContext, sessions: i64) -> OpenWindow {
+    open_sized(cx, sessions, 1800.0, 900.0)
+}
+
+fn open_sized(cx: &mut TestAppContext, sessions: i64, width: f32, height: f32) -> OpenWindow {
     let window = start(cx, sessions);
     cx.update(|cx| cx.set_reduce_motion(false));
-    cx.simulate_window_resize(window.handle, size(px(1800.0), px(900.0)));
+    cx.simulate_window_resize(window.handle, size(px(width), px(height)));
     draw(cx, &window);
     draw(cx, &window);
     window
@@ -46,7 +51,11 @@ fn row_bounds(cx: &mut TestAppContext, window: &OpenWindow, id: i64) -> Bounds<P
                     |entry| matches!(entry, Entry::Row { session, .. } if ws.sessions[*session].id == id),
                 )
                 .expect("the terminal is listed");
-            ws.sidebar.read(cx).scroll().bounds_for_item(at).expect("the row was drawn")
+            // GPUI keeps the bounds of a child as laid out; the scroll moves them on the screen.
+            let scroll = ws.sidebar.read(cx).scroll();
+            let mut bounds = scroll.bounds_for_item(at).expect("the row was drawn");
+            bounds.origin.y += scroll.offset().y;
+            bounds
         })
     })
     .expect("the window is open")
@@ -183,8 +192,8 @@ fn a_drag_that_ends_without_a_drop_puts_everything_back(cx: &mut TestAppContext)
 }
 
 #[gpui_kit::test]
-fn the_middle_of_a_row_is_a_split_and_opens_no_gap(cx: &mut TestAppContext) {
-    if isolate("the_middle_of_a_row_is_a_split_and_opens_no_gap") {
+fn the_middle_of_a_row_reached_straight_from_the_origin_is_a_split_and_opens_no_gap(cx: &mut TestAppContext) {
+    if isolate("the_middle_of_a_row_reached_straight_from_the_origin_is_a_split_and_opens_no_gap") {
         return;
     }
     let window = open(cx, 3);
@@ -215,6 +224,18 @@ fn with_the_motion_feature_off_a_drag_moves_no_row(cx: &mut TestAppContext) {
     assert!(!sidebar_of(cx, &window, |s| s.has_room()), "the list holds nothing of the drag");
     release(cx, &window, target);
     assert_eq!(ids(cx, &window), [4, 1, 2, 3], "the drop does what it always did");
+    // Over the middle of a row the tint is the plain one at once: no preview, no snap, the edge cut plainly.
+    let (grab, onto) = (middle(cx, &window, 3), middle(cx, &window, 2));
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), onto]);
+    assert_eq!(join_state(cx, &window), (None, None, false), "nothing of the preview is kept");
+    assert!(matches!(
+        sidebar_of(cx, &window, |s| s.over()),
+        Some(crate::sidebar::terminal_drag::Over::Row {
+            id: 2,
+            part: wormhole_core::view::sidebar::Part::Middle
+        })
+    ));
+    release(cx, &window, onto);
 }
 
 #[gpui_kit::test]
@@ -242,7 +263,7 @@ fn a_drag_draws_the_list_only_never_the_chrome_beyond_what_a_drag_costs(cx: &mut
     release(cx, &window, target);
 }
 
-fn join_state(cx: &mut TestAppContext, window: &OpenWindow) -> (Option<i64>, Option<i64>, bool, bool) {
+fn join_state(cx: &mut TestAppContext, window: &OpenWindow) -> (Option<i64>, Option<i64>, bool) {
     sidebar_of(cx, window, |sidebar| sidebar.join_state())
 }
 
@@ -262,19 +283,15 @@ fn over_the_middle_of_a_row_it_previews_the_split_and_leaving_undoes_it(cx: &mut
         return;
     }
     let window = open(cx, 3);
-    assert_eq!(join_state(cx, &window), (None, None, false, false));
+    assert_eq!(join_state(cx, &window), (None, None, false));
     let (grab, onto) = (middle(cx, &window, 3), middle(cx, &window, 1));
     drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), onto]);
-    assert_eq!(
-        join_state(cx, &window),
-        (Some(1), None, true, false),
-        "row 1 takes the preview, the chip snaps"
-    );
+    assert_eq!(join_state(cx, &window), (Some(1), None, true), "row 1 takes the preview, the chip snaps");
     // Out to the gap between rows 2 and 3: the preview goes out and the chip comes off.
     let gap = above(cx, &window, 2);
     pointer(cx, &window).simulate_mouse_move(gap, MouseButton::Left, Modifiers::none());
     draw(cx, &window);
-    assert_eq!(join_state(cx, &window), (None, Some(1), false, false), "row 1's preview is going out");
+    assert_eq!(join_state(cx, &window), (None, Some(1), false), "row 1's preview is going out");
     settle(cx, &window);
     assert_eq!(join_state(cx, &window).1, None, "and is gone when it has");
     // Back onto row 1, then onto row 2: each row's preview is its own.
@@ -283,7 +300,7 @@ fn over_the_middle_of_a_row_it_previews_the_split_and_leaving_undoes_it(cx: &mut
     let next = middle(cx, &window, 2);
     pointer(cx, &window).simulate_mouse_move(next, MouseButton::Left, Modifiers::none());
     draw(cx, &window);
-    assert_eq!(join_state(cx, &window), (Some(2), Some(1), true, false));
+    assert_eq!(join_state(cx, &window), (Some(2), Some(1), true));
     release(cx, &window, next);
     assert_eq!(join_state(cx, &window).0, None, "the drop ends the target");
 }
@@ -299,15 +316,12 @@ fn a_drop_on_the_middle_of_a_row_makes_a_split_whose_bracket_draws_and_then_rest
     release(cx, &window, onto);
     assert_eq!(ids(cx, &window), [1, 4, 2, 3], "right after the row it joined, each row once");
     assert_eq!(in_a_split(cx, &window), [true, false, false, true], "1 and 4 are a split");
-    let (target, leaving, snapping, drawing) = join_state(cx, &window);
-    assert_eq!(
-        (target, leaving, snapping, drawing),
-        (None, Some(1), false, true),
-        "the bracket draws, the tint goes out"
-    );
+    assert_eq!(join_state(cx, &window), (None, Some(1), false), "the tint goes out");
+    assert_eq!(sidebar_of(cx, &window, |s| s.bracket_rows()), [1, 4], "the bracket draws down the two rows");
     assert_eq!(children(cx, &window), 5, "no row is drawn twice");
     settle(cx, &window);
-    assert_eq!(join_state(cx, &window), (None, None, false, false), "everything is at rest");
+    assert_eq!(join_state(cx, &window), (None, None, false), "everything is at rest");
+    assert!(sidebar_of(cx, &window, |s| s.bracket_rows().is_empty()), "the bracket is drawn");
     assert!(!sidebar_of(cx, &window, |s| s.motion_busy() || s.has_room()));
 }
 
@@ -329,5 +343,222 @@ fn with_reduce_motion_the_gap_and_the_split_are_cuts(cx: &mut TestAppContext) {
     release(cx, &window, onto);
     assert_eq!(ids(cx, &window), [1, 4, 2, 3]);
     assert!(!sidebar_of(cx, &window, |s| s.motion_busy()), "no row slides");
-    assert!(!join_state(cx, &window).3, "no bracket draws");
+    assert!(sidebar_of(cx, &window, |s| s.bracket_rows().is_empty()), "no bracket draws");
+}
+
+fn move_to(cx: &mut TestAppContext, window: &OpenWindow, at: Point<Pixels>) {
+    pointer(cx, window).simulate_mouse_move(at, MouseButton::Left, Modifiers::none());
+    draw(cx, window);
+}
+
+fn pushed_ids(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<i64> {
+    pushed(cx, window).into_iter().map(|(id, _)| id).collect()
+}
+
+#[gpui_kit::test]
+fn crossing_the_middle_of_a_row_holds_the_gap_instead_of_shutting_and_opening_it(cx: &mut TestAppContext) {
+    if isolate("crossing_the_middle_of_a_row_holds_the_gap_instead_of_shutting_and_opening_it") {
+        return;
+    }
+    let window = open(cx, 4);
+    let grab = middle(cx, &window, 4);
+    let top_of_3 = above(cx, &window, 3);
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), top_of_3]);
+    assert_eq!(pushed_ids(cx, &window), [3], "the gap is above row 3");
+    // The middle of row 3 is a split: the gap stays where it was, and so does the row that is out.
+    let at = middle(cx, &window, 3);
+    move_to(cx, &window, at);
+    assert_eq!(join_state(cx, &window).0, Some(3), "it is a join now");
+    assert_eq!(pushed_ids(cx, &window), [3], "and the gap is held");
+    assert_eq!(lifted(cx, &window), [4]);
+    // Out of it at the bottom of row 2, which is the same place between two rows.
+    let at = below(cx, &window, 2);
+    move_to(cx, &window, at);
+    assert_eq!(join_state(cx, &window).0, None);
+    assert_eq!(pushed_ids(cx, &window), [3], "the gap is where it was");
+    assert_eq!(lifted(cx, &window), [4]);
+    // Over its own row's place nothing would change: now it all goes back.
+    let at = middle(cx, &window, 4);
+    move_to(cx, &window, at);
+    assert!(pushed_ids(cx, &window).is_empty(), "no gap for a drop that moves nothing");
+    assert!(lifted(cx, &window).is_empty());
+    release(cx, &window, at);
+}
+
+#[gpui_kit::test]
+fn a_pointer_resting_on_a_rows_edge_does_not_flip_between_a_move_and_a_split(cx: &mut TestAppContext) {
+    if isolate("a_pointer_resting_on_a_rows_edge_does_not_flip_between_a_move_and_a_split") {
+        return;
+    }
+    let window = open(cx, 3);
+    let grab = middle(cx, &window, 3);
+    let row = row_bounds(cx, &window, 1);
+    let at = |share: f32| point(row.center().x, row.top() + row.size.height * share);
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), at(0.1)]);
+    assert_eq!(pushed_ids(cx, &window), [1, 2], "the top quarter makes room");
+    // A hair past the quarter is still the top; a clear step past it is the middle, and back.
+    move_to(cx, &window, at(0.28));
+    assert_eq!(join_state(cx, &window).0, None, "still over the top");
+    move_to(cx, &window, at(0.4));
+    assert_eq!(join_state(cx, &window).0, Some(1), "now the middle");
+    move_to(cx, &window, at(0.22));
+    assert_eq!(join_state(cx, &window).0, Some(1), "a hair back is still the middle");
+    move_to(cx, &window, at(0.1));
+    assert_eq!(join_state(cx, &window).0, None);
+    release(cx, &window, at(0.1));
+}
+
+#[gpui_kit::test]
+fn a_join_of_a_row_that_was_not_moved_first_starts_the_dragged_row_where_it_was_laid_out(
+    cx: &mut TestAppContext,
+) {
+    if isolate("a_join_of_a_row_that_was_not_moved_first_starts_the_dragged_row_where_it_was_laid_out") {
+        return;
+    }
+    let window = open(cx, 4);
+    let (grab, onto) = (middle(cx, &window, 4), middle(cx, &window, 1));
+    let laid_out = {
+        let top = row_bounds(cx, &window, 4).top();
+        sidebar_of(cx, &window, |s| f32::from(top - s.scroll().bounds().origin.y))
+    };
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), onto]);
+    release(cx, &window, onto);
+    let planned = sidebar_of(cx, &window, |s| s.planned_rows());
+    let (_, from, _) = *planned.iter().find(|(id, ..)| *id == 4).expect("row 4 moves");
+    assert!(
+        (from - laid_out).abs() < 1.0,
+        "it starts where it stood ({laid_out}), not at the pointer: {from}"
+    );
+}
+
+#[gpui_kit::test]
+fn a_join_the_window_refuses_and_a_drag_let_go_over_a_join_draw_no_bracket(cx: &mut TestAppContext) {
+    if isolate("a_join_the_window_refuses_and_a_drag_let_go_over_a_join_draw_no_bracket") {
+        return;
+    }
+    // A window with room for two panes side by side and no more, with two splits of two: the first
+    // one cannot take a third pane, so the window refuses terminal 4's join and nothing changes.
+    let window = open_sized(cx, 4, 440.0, 900.0);
+    crate::window::test_harness::drive(cx, &window, |ws, window, cx| {
+        ws.join_split(1, 1, Zone::Right, window, cx).expect("room for two");
+        ws.join_split(3, 3, Zone::Right, window, cx).expect("room for two");
+    });
+    draw(cx, &window);
+    draw(cx, &window);
+    let before = in_a_split(cx, &window);
+    assert_eq!(before, [true; 4]);
+    let (grab, onto) = (middle(cx, &window, 4), middle(cx, &window, 1));
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), onto]);
+    release(cx, &window, onto);
+    let split_ids = crate::window::test_harness::read(cx, &window, |ws| {
+        ws.sessions.iter().map(|s| s.split).collect::<Vec<_>>()
+    });
+    assert_eq!(split_ids[2], split_ids[3], "terminal 4 is still with 3: the window refused the join");
+    assert_ne!(split_ids[0], split_ids[3]);
+    assert!(sidebar_of(cx, &window, |s| s.bracket_rows().is_empty()), "so no bracket draws, in either split");
+    settle(cx, &window);
+
+    // Let go over a join in a window that would take it, but off the list: the preview leaves, nothing joins.
+    let window = open(cx, 3);
+    let (grab, onto) = (middle(cx, &window, 3), middle(cx, &window, 1));
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), onto]);
+    assert_eq!(join_state(cx, &window).0, Some(1));
+    let nowhere = point(px(4.0), px(4.0));
+    move_to(cx, &window, nowhere);
+    release(cx, &window, nowhere);
+    assert_eq!(in_a_split(cx, &window), [false; 3]);
+    assert!(sidebar_of(cx, &window, |s| s.bracket_rows().is_empty()), "no bracket after a cancel");
+    assert_eq!(join_state(cx, &window).0, None, "the preview has left");
+}
+
+#[gpui_kit::test]
+fn a_terminal_opened_during_a_drag_does_not_make_the_rows_jump(cx: &mut TestAppContext) {
+    if isolate("a_terminal_opened_during_a_drag_does_not_make_the_rows_jump") {
+        return;
+    }
+    let window = open(cx, 4);
+    let height = f32::from(row_bounds(cx, &window, 4).size.height);
+    let (grab, target) = (middle(cx, &window, 4), above(cx, &window, 2));
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), target]);
+    assert_eq!(pushed_ids(cx, &window), [2, 3]);
+    // A terminal opens under the pointer's feet: the list is another one for a frame.
+    crate::window::test_harness::drive(cx, &window, |ws, window, cx| ws.new_session(window, cx));
+    draw(cx, &window);
+    draw(cx, &window);
+    move_to(cx, &window, target);
+    move_to(cx, &window, target);
+    let by = pushed(cx, &window);
+    assert_eq!(by.iter().map(|(id, _)| *id).collect::<Vec<_>>(), [2, 3]);
+    for (id, by) in by {
+        assert!(
+            (by - height).abs() < 1.5,
+            "row {id} is pushed by a row ({height}), not by a stale measure: {by}"
+        );
+    }
+    release(cx, &window, target);
+}
+
+#[gpui_kit::test]
+fn a_new_drag_while_the_last_one_settles_goes_on_from_its_rows(cx: &mut TestAppContext) {
+    if isolate("a_new_drag_while_the_last_one_settles_goes_on_from_its_rows") {
+        return;
+    }
+    let window = open(cx, 4);
+    let (grab, target) = (middle(cx, &window, 4), above(cx, &window, 1));
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), target]);
+    let nowhere = point(px(4.0), px(4.0));
+    move_to(cx, &window, nowhere);
+    release(cx, &window, nowhere);
+    assert!(sidebar_of(cx, &window, |s| s.has_room()), "the last drag's springs are still held");
+    // The clock has not moved: pick up another.
+    let (grab, target) = (middle(cx, &window, 3), above(cx, &window, 1));
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), target]);
+    assert_eq!(pushed_ids(cx, &window), [1, 2], "the new drag opens its own gap");
+    assert_eq!(lifted(cx, &window), [3]);
+    release(cx, &window, target);
+    assert_eq!(ids(cx, &window), [3, 1, 2, 4]);
+    settle(cx, &window);
+    assert!(!sidebar_of(cx, &window, |s| s.has_room()));
+}
+
+#[gpui_kit::test]
+fn in_a_scrolled_list_the_gap_follows_the_rows_where_they_are_drawn(cx: &mut TestAppContext) {
+    if isolate("in_a_scrolled_list_the_gap_follows_the_rows_where_they_are_drawn") {
+        return;
+    }
+    let window = open_sized(cx, 8, 1200.0, 420.0);
+    // The wheel over the list, as a trackpad turns it.
+    pointer(cx, &window).simulate_event(gpui_kit::ScrollWheelEvent {
+        position: point(px(100.0), px(150.0)),
+        delta: gpui_kit::ScrollDelta::Pixels(point(px(0.0), px(-150.0))),
+        modifiers: Modifiers::none(),
+        touch_phase: gpui_kit::TouchPhase::Moved,
+    });
+    // The list is a cached view: a scroll that no input to it follows would not draw it again here.
+    cx.update(|cx| {
+        let sidebar = window.workspace.read_with(cx, |ws, _| ws.sidebar.clone()).expect("open");
+        sidebar.update(cx, |_, cx| cx.notify());
+    });
+    draw(cx, &window);
+    draw(cx, &window);
+    assert!(sidebar_of(cx, &window, |s| f32::from(s.scroll().offset().y) < -50.0), "the list is scrolled");
+    let visible = |cx: &mut TestAppContext, id: i64| {
+        let bounds = row_bounds(cx, &window, id);
+        let list = sidebar_of(cx, &window, |s| s.scroll().bounds());
+        bounds.top() >= list.top() && bounds.bottom() <= list.bottom()
+    };
+    let rows: Vec<i64> = (1..=8).filter(|id| visible(cx, *id)).collect();
+    assert!(rows.len() >= 3, "three rows or more are in view: {rows:?}");
+    let (first, last) = (rows[0], rows[rows.len() - 1]);
+    let height = f32::from(row_bounds(cx, &window, last).size.height);
+    let (grab, target) = (middle(cx, &window, last), above(cx, &window, first));
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), target]);
+    let by = pushed(cx, &window);
+    assert_eq!(by.iter().map(|(id, _)| *id).collect::<Vec<_>>(), (first..last).collect::<Vec<_>>());
+    assert!(by.iter().all(|(_, by)| (by - height).abs() < 1.5), "each by a row: {by:?}");
+    release(cx, &window, target);
+    let mut want: Vec<i64> = (1..=8).collect();
+    want.remove(last as usize - 1);
+    want.insert(first as usize - 1, last);
+    assert_eq!(ids(cx, &window), want, "it lands where the gap was");
 }

@@ -89,6 +89,8 @@ pub(crate) struct Sidebar {
     flash: Option<(i64, u64)>,
     /// What the pointer is over while something is dragged over the list.
     over: Option<Over>,
+    /// What it was over the last time it was over anything, which a line's edge holds it in (`drop`).
+    over_before: Option<Over>,
     /// How many times the person rearranged the list (a drag, a group made or taken apart): the
     /// ⌘ numbers are dealt again when it changes.
     order_rev: u64,
@@ -143,6 +145,7 @@ impl Sidebar {
             scroll: ScrollHandle::new(),
             flash: None,
             over: None,
+            over_before: None,
             order_rev: 0,
             numbers: RefCell::default(),
             motion: ListMotion::default(),
@@ -254,10 +257,28 @@ impl Sidebar {
     }
 
     /// What a split's preview is doing: the row the dragged one would join, the row whose preview is going
-    /// out, whether the chip snaps onto a row, whether a bracket is being drawn.
+    /// out, whether the chip snaps onto a row.
     #[cfg(test)]
-    pub(crate) fn join_state(&self) -> (Option<i64>, Option<i64>, bool, bool) {
-        self.motion.join.state()
+    pub(crate) fn join_state(&self) -> (Option<i64>, Option<i64>, bool) {
+        self.join_preview_state()
+    }
+
+    /// The terminals whose rows draw their bracket in now.
+    #[cfg(test)]
+    pub(crate) fn bracket_rows(&self) -> Vec<i64> {
+        self.join_bracket_rows()
+    }
+
+    /// What the last plan of the list moved: each row's terminal, where it started and where it went.
+    #[cfg(test)]
+    pub(crate) fn planned_rows(&self) -> Vec<(i64, f32, f32)> {
+        self.motion.planned_rows()
+    }
+
+    /// Whether a gap is open for a dragged row now.
+    #[cfg(test)]
+    pub(crate) fn gap_open(&self) -> bool {
+        self.motion.gap_open()
     }
 
     /// Whether a drag's gap is held (open, or closing).

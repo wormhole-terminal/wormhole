@@ -82,8 +82,11 @@ pub(in crate::sidebar) struct ListMotion {
     /// lines are at rest again.
     pub(super) room: Option<DragRoom>,
     /// The preview of a split a dragged row would make, and its bracket once it has (`join`).
-    pub(in crate::sidebar) join: Join,
+    pub(super) join: Join,
     pub(super) batch: u64,
+    /// What the last plan moved, for the tests that check where a drop started the rows from.
+    #[cfg(test)]
+    pub(super) planned: Vec<wormhole_core::view::sidebar::motion::Move<ItemKey>>,
 }
 
 impl ListMotion {
@@ -163,7 +166,7 @@ pub(super) struct Spring {
 }
 
 /// A key the animation of a line is told apart by: unique to the line and the change that set it going.
-fn id_of(kind: &'static str, key: &ItemKey, batch: u64) -> (&'static str, u64) {
+pub(super) fn id_of(kind: &'static str, key: &ItemKey, batch: u64) -> (&'static str, u64) {
     let mut hasher = DefaultHasher::new();
     (key, batch).hash(&mut hasher);
     (kind, hasher.finish())
@@ -239,7 +242,8 @@ impl ListMotion {
     }
 }
 
-/// Where the list's content starts, in the window: what a place in the content is measured from.
+/// Where the list's content starts in the window now, scrolled: a point of the window is at `y -
+/// content_top` in the content, the places [`measured`] gives.
 pub(super) fn content_top(scroll: &ScrollHandle) -> f32 {
     f32::from(scroll.bounds().origin.y + scroll.offset().y)
 }
@@ -250,7 +254,9 @@ pub(super) fn measured(keys: &[ItemKey], scroll: &ScrollHandle) -> Option<Vec<Dr
     if keys.is_empty() || scroll.children_count() < keys.len() {
         return None;
     }
-    let content_top = content_top(scroll);
+    // GPUI keeps a child's bounds as laid out, before the scroll moves them, so the content starts at the
+    // list's own top whatever it is scrolled to: a place in it does not change as the list scrolls.
+    let content_top = f32::from(scroll.bounds().origin.y);
     keys.iter()
         .enumerate()
         .map(|(at, key)| {

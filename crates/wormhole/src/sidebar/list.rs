@@ -39,6 +39,7 @@ impl Sidebar {
         // A drag that ended outside every drop target never heard its drop.
         if !cx.has_active_drag() {
             self.over = None;
+            self.over_before = None;
         }
         let ui = ui_in(&input.profile, cx);
         let glass = input.glass.clone();
@@ -52,14 +53,14 @@ impl Sidebar {
                 Entry::Row { session, .. } => ItemKey::Row(infos[session].id),
             })
             .collect();
-        self.plan_list_motion(&keys, &listing, window, cx);
+        let planned = self.plan_list_motion(&keys, &listing, window, cx);
         let frame = Frame::new(&input, self.width, self.hints_showing(cx), window, cx);
-        let mark = self.drop_mark(&listing, infos);
-        self.follow_drag(&keys, &listing, mark.as_ref(), cx);
+        let (mark, drop) = self.drop_mark(&listing, infos);
+        self.follow_drag(&keys, &listing, (mark.as_ref(), drop), !planned, cx);
         self.follow_join(mark.as_ref(), cx);
-        // The gap shows where the row lands, so the line that says it too is left out (a split is not a
-        // landing: its tint stays).
-        let mark = mark.filter(|mark| self.row_in_flight(cx).is_none() || matches!(mark, DropMark::Join(_)));
+        // A gap that is open shows where the row lands, so the line that says it too is left out; where
+        // none opens (a folded group's head, the row's own place) the line is all there is.
+        let mark = mark.filter(|mark| !self.motion.gap_open() || matches!(mark, DropMark::Join(_)));
         let group_wash: HashMap<u32, Hsla> = {
             let tokens = &store_in(&input.profile, cx).tokens;
             self.view
@@ -147,7 +148,7 @@ impl Sidebar {
                 match Place::of(listing, infos, at, input.active, frame.metrics.cards) {
                     Some(mut place) => {
                         // A split just made draws its bracket in.
-                        place.bracket_draws = self.motion.join.bracket_of(input, infos[session].split);
+                        place.bracket_draws = self.bracket_draws(infos[session].split);
                         self.render_row(&infos[session], &place, frame, window, cx)
                     }
                     None => div().into_any_element(),

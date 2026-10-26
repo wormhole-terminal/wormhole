@@ -18,3 +18,23 @@ mod room;
 pub(crate) use join::Snap;
 pub(super) use join::draw_bracket;
 pub(super) use list::{ItemKey, ListMotion};
+
+use gpui_kit::*;
+use wormhole_core::config::features::FeatureFlag;
+
+use crate::settings::settings_in;
+use crate::sidebar::Sidebar;
+use crate::sidebar::terminal_drag::DragOrigin;
+
+impl Sidebar {
+    /// Whether the person's Motion feature is on: what a drag does is as it always was without it.
+    pub(in crate::sidebar) fn motion_on(&self, cx: &App) -> bool {
+        settings_in(&self.input.profile, cx).feature_enabled(FeatureFlag::Motion)
+    }
+
+    /// The terminal being dragged by its row, while the list moves for it.
+    pub(in crate::sidebar) fn row_in_flight(&self, cx: &App) -> Option<i64> {
+        let (id, origin) = self.input.terminal_drag?;
+        (cx.has_active_drag() && origin == DragOrigin::Row && self.motion_on(cx)).then_some(id)
+    }
+}

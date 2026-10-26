@@ -13,55 +13,72 @@
 //! shows its target at once.
 
 use std::collections::HashMap;
-use std::hash::{DefaultHasher, Hash, Hasher};
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::motion::drag::ROOM;
-use wormhole_core::view::sidebar::Listing;
 use wormhole_core::view::sidebar::motion::{Drawn, Move, Moves};
 use wormhole_core::view::sidebar::place::Drop;
 use wormhole_core::view::sidebar::room::{make_room, run_of};
+use wormhole_core::view::sidebar::{Listing, SplitId};
 
-use super::list::{ItemKey, ListMotion, Spring, measured};
-use crate::settings::settings_in;
-use crate::sidebar::Sidebar;
+use super::list::{ItemKey, ListMotion, Spring, id_of, measured};
 use crate::sidebar::drop::DropMark;
-use crate::sidebar::terminal_drag::DragOrigin;
+use crate::sidebar::{Sidebar, SidebarInput};
 use crate::style::motion::SPRING_SNAP;
-use wormhole_core::config::features::FeatureFlag;
 
-/// The gap a dragged row has the list open for it.
+/// The room a dragged row has the list make for it.
 pub(super) struct DragRoom {
     /// Every line as laid out with nothing pushed: the places the springs run in.
     lines: Vec<Drawn<ItemKey>>,
+    /// Where each of `lines` is.
+    index: HashMap<ItemKey, usize>,
     /// How far each line that has been pushed in this drag is pushed now (0 for one that has gone back).
     /// A line stays here until the drag is over and at rest, so its spring is never dropped while it moves.
     pushed: HashMap<ItemKey, f32>,
     /// The dragged lines (the row, and the rows of its split that move with it), by whether they are out
     /// of the list now: while a gap is open for them, which is when the drop would move them.
     lifted: HashMap<ItemKey, bool>,
-    /// What the drop in flight does is make a split: the rows settle on the soft spring.
+    /// The drop the pointer is over makes a split: the rows settle on the soft spring.
     joining: bool,
-    /// The terminal being dragged.
+    /// The terminal being dragged, and the split it was in when it was picked up: a split's bracket draws
+    /// only when the drop leaves it in another.
     dragged: i64,
-    /// The drag has ended, and the timer of this batch ends the gap.
+    split_before: Option<SplitId>,
+    /// The drag has ended, and the timer of this batch ends the room.
     over: Option<u64>,
 }
 
 impl DragRoom {
     /// The room of a drag that begins now, over `lines` as laid out.
-    fn begin(lines: Vec<Drawn<ItemKey>>, dragged: i64) -> Self {
-        Self { lines, pushed: HashMap::new(), lifted: HashMap::new(), joining: false, dragged, over: None }
+    fn begin(lines: Vec<Drawn<ItemKey>>, dragged: i64, split_before: Option<SplitId>) -> Self {
+        let index = lines.iter().enumerate().map(|(at, line)| (line.key.clone(), at)).collect();
+        Self {
+            lines,
+            index,
+            pushed: HashMap::new(),
+            lifted: HashMap::new(),
+            joining: false,
+            dragged,
+            split_before,
+            over: None,
+        }
     }
 
-    fn top(&self, key: &ItemKey) -> Option<f32> {
-        self.lines.iter().find(|line| line.key == *key).map(|line| line.top)
+    /// Whether this room was made over the lines `drawn`, in this order.
+    fn holds(&self, drawn: &[ItemKey]) -> bool {
+        self.lines.len() == drawn.len() && self.lines.iter().zip(drawn).all(|(line, key)| line.key == *key)
+    }
+
+    /// A new drag takes over a room that was still settling after the last: its springs go on.
+    fn resume(&mut self, dragged: i64, split_before: Option<SplitId>) {
+        (self.over, self.joining, self.dragged, self.split_before) = (None, false, dragged, split_before);
     }
 
     /// The spring a pushed line runs on: from its place, to its place and how far it is pushed.
     pub(super) fn spring_of(&self, key: &ItemKey) -> Option<Spring> {
-        let (&by, top) = (self.pushed.get(key)?, self.top(key)?);
+        let by = *self.pushed.get(key)?;
+        let top = self.lines.get(*self.index.get(key)?)?.top;
         Some(Spring { spec: ROOM, from: top, to: top + by, place: top })
     }
 
@@ -75,14 +92,19 @@ impl DragRoom {
         self.over.is_some()
     }
 
-    /// Whether the drop that ended this drag made a split.
+    /// Whether any line is pushed aside now: a gap is open somewhere.
+    pub(super) fn has_pushed(&self) -> bool {
+        self.pushed.values().any(|by| *by != 0.0)
+    }
+
+    /// Whether the drop the pointer was over when the drag ended made a split.
     pub(super) fn joined(&self) -> bool {
         self.joining
     }
 
-    /// The terminal that was dragged.
-    pub(super) fn dragged(&self) -> i64 {
-        self.dragged
+    /// The terminal that was dragged, and the split it was in.
+    pub(super) fn dragged(&self) -> (i64, Option<SplitId>) {
+        (self.dragged, self.split_before)
     }
 
     /// The dragged lines that were out of the list when the drag ended.
@@ -96,14 +118,47 @@ impl DragRoom {
         self.lifted.values_mut().for_each(|lifted| *lifted = false);
     }
 
+    /// Opens the gap for a drop that moves the row: `mark` is where it lands among `keys`, `own` the place
+    /// of the dragged terminal in `input`, and `mates` whether the rows of its split next to it go along.
+    fn open(
+        &mut self,
+        keys: &[ItemKey],
+        listing: &Listing,
+        input: &SidebarInput,
+        own: usize,
+        mark: Option<&DropMark>,
+        mates: bool,
+    ) {
+        self.put_back();
+        let split_of = if mates { input.split_of() } else { Vec::new() };
+        let Some(run) = run_of(listing, &split_of, own).and_then(|run| keys.get(run)) else { return };
+        for key in run {
+            self.lifted.insert(key.clone(), true);
+        }
+        let Some(slot) = mark.and_then(|mark| mark.slot(keys)) else { return };
+        let slot = match keys.get(slot) {
+            Some(key) => self.index.get(key).copied(),
+            None => Some(self.lines.len()),
+        };
+        let span = run.iter().filter_map(|key| self.index.get(key)).fold(None, |span, &at| match span {
+            None => Some((at, at + 1)),
+            Some((start, end)) => Some((start.min(at), end.max(at + 1))),
+        });
+        if let (Some(slot), Some((start, end))) = (slot, span) {
+            for (key, by) in make_room(&self.lines, start..end, slot) {
+                self.pushed.insert(key, by);
+            }
+        }
+    }
+
     /// `lines`, as drawn, become where they look to be when the drag ends: pushed lines where they were
     /// pushed to, the dragged lines (stacked) where the pointer let go, at `pointer` in the content.
     pub(super) fn seen(&self, lines: &mut [Drawn<ItemKey>], pointer: f32) {
-        let height: f32 =
-            lines.iter().filter(|line| self.lifted.contains_key(&line.key)).map(|l| l.height).sum();
+        let out = |key: &ItemKey| self.lifted.get(key) == Some(&true);
+        let height: f32 = lines.iter().filter(|line| out(&line.key)).map(|line| line.height).sum();
         let mut at = (pointer - height / 2.0).max(0.0);
         for line in lines.iter_mut() {
-            if self.lifted.contains_key(&line.key) {
+            if out(&line.key) {
                 line.top = at;
                 at += line.height;
             } else if let Some(by) = self.pushed.get(&line.key) {
@@ -153,6 +208,17 @@ impl ListMotion {
         ids
     }
 
+    /// What the last plan moved: each row's terminal, where it started and where it goes (places in the content).
+    pub(in crate::sidebar) fn planned_rows(&self) -> Vec<(i64, f32, f32)> {
+        self.planned
+            .iter()
+            .filter_map(|mv| match &mv.key {
+                ItemKey::Row(id) => Some((*id, mv.from, mv.to)),
+                ItemKey::Band(_) => None,
+            })
+            .collect()
+    }
+
     /// Whether a dragged row's gap is still held (drawn, or on its way back to rest).
     pub(in crate::sidebar) fn has_room(&self) -> bool {
         self.room.is_some()
@@ -160,6 +226,11 @@ impl ListMotion {
 }
 
 impl ListMotion {
+    /// Whether a gap is open for a dragged row now: some line is pushed aside.
+    pub(in crate::sidebar) fn gap_open(&self) -> bool {
+        self.room.as_ref().is_some_and(DragRoom::has_pushed)
+    }
+
     /// The room has been at rest since the drag ended in `batch`: it is not drawn any more.
     pub(super) fn retire_room(&mut self, batch: u64) -> bool {
         let ended = self.room.as_ref().is_some_and(|room| room.over == Some(batch));
@@ -175,14 +246,12 @@ impl ListMotion {
 /// `line` (a dragged row) with the spring that takes it out of the list and back: it is gone while a gap
 /// is open for it, because the lines that stepped aside stand where it was.
 pub(super) fn lifted(line: AnyElement, key: &ItemKey, lifted: bool) -> AnyElement {
-    let mut hasher = DefaultHasher::new();
-    key.hash(&mut hasher);
     div()
         .relative()
         .w_full()
         .child(line)
         .with_spring(
-            ("drag-lift", hasher.finish()),
+            id_of("drag-lift", key, 0),
             SpringAnimation::new(SPRING_SNAP).to(lifted).from(false),
             |line, gone| line.opacity(1.0 - gone.0.clamp(0.0, 1.0)),
         )
@@ -190,68 +259,50 @@ pub(super) fn lifted(line: AnyElement, key: &ItemKey, lifted: bool) -> AnyElemen
 }
 
 impl Sidebar {
-    /// Whether the person's Motion feature is on: the drag moves as it always did without it.
-    pub(in crate::sidebar) fn motion_on(&self, cx: &App) -> bool {
-        settings_in(&self.input.profile, cx).feature_enabled(FeatureFlag::Motion)
-    }
-
-    /// The terminal being dragged by its row, while the list moves for it.
-    pub(in crate::sidebar) fn row_in_flight(&self, cx: &App) -> Option<i64> {
-        let (id, origin) = self.input.terminal_drag?;
-        (cx.has_active_drag() && origin == DragOrigin::Row && self.motion_on(cx)).then_some(id)
-    }
-
     /// Opens the gap the drag in flight asks for and shuts the one it left: call it once per frame of
-    /// the list, before its lines are drawn, with `mark` where the drop would land. Plans nothing while
-    /// no row is dragged.
+    /// the list, before its lines are drawn, with `drop` what letting go would do and `mark` where it
+    /// would land. `fresh` says the lines are the ones last measured: not in the frame a row came or went
+    /// in, whose boxes are the old list's.
+    ///
+    /// Only a drop that moves the row rewrites the room. Over the middle of a row (a split) the room is
+    /// held as it was, so a pointer that crosses rows does not shut the gap and open it again at each;
+    /// over nothing it takes (the row's own place, off the list) everything goes back.
     pub(in crate::sidebar) fn follow_drag(
         &mut self,
         keys: &[ItemKey],
         listing: &Listing,
-        mark: Option<&DropMark>,
+        (mark, drop): (Option<&DropMark>, Option<Drop>),
+        fresh: bool,
         cx: &mut Context<Self>,
     ) {
         let Some(dragged) = self.row_in_flight(cx) else { return };
+        let Some(own) = self.input.find(dragged).filter(|_| fresh) else { return };
+        let split_before = self.input.rows[own].split;
         let mut room = match self.motion.room.take() {
             Some(room) if !room.is_over() => room,
+            // The last drag's lines are still settling: this one carries on from where they are.
+            Some(mut room) if room.holds(&self.motion.drawn) => {
+                room.resume(dragged, split_before);
+                room
+            }
             _ => match measured(&self.motion.drawn, &self.scroll) {
-                Some(lines) => DragRoom::begin(lines, dragged),
+                Some(lines) => DragRoom::begin(lines, dragged, split_before),
                 None => return,
             },
         };
-        let input = self.input.clone();
-        let plan = self.over.and_then(|over| Self::terminal_drop_plan(&input, listing, dragged, over));
-        room.pushed.values_mut().for_each(|by| *by = 0.0);
-        room.lifted.values_mut().for_each(|lifted| *lifted = false);
-        room.joining = matches!(plan, Some(Drop::Join { .. }));
-        let own = input.find(dragged);
-        if let (Some(own), Some(Drop::Move { leave_split, with_mates, .. })) = (own, plan) {
-            // The rows of its split go with it when the drop takes them along, else it goes alone.
-            let split_of = if with_mates && !leave_split { input.split_of() } else { Vec::new() };
-            let run = run_of(listing, &split_of, own).and_then(|run| keys.get(run));
-            let slot = mark.and_then(|mark| mark.slot(keys));
-            if let (Some(run), Some(slot)) = (run, slot) {
-                let at = |key: &ItemKey| room.lines.iter().position(|line| line.key == *key);
-                let slot = keys.get(slot).map_or(Some(room.lines.len()), at);
-                let place = run.iter().filter_map(at).fold(None, |span: Option<(usize, usize)>, at| {
-                    Some(span.map_or((at, at + 1), |(start, end)| (start.min(at), end.max(at + 1))))
-                });
-                for key in run {
-                    room.lifted.insert(key.clone(), true);
-                }
-                if let (Some(slot), Some((start, end))) = (slot, place) {
-                    for (key, by) in make_room(&room.lines, start..end, slot) {
-                        room.pushed.insert(key, by);
-                    }
-                }
+        match drop {
+            Some(Drop::Join { .. }) => room.joining = true,
+            Some(Drop::Move { leave_split, with_mates, .. }) => {
+                room.joining = false;
+                room.open(keys, listing, &self.input, own, mark, with_mates && !leave_split);
+            }
+            None => {
+                room.joining = false;
+                room.put_back();
             }
         }
         // The held row is known from the first frame, so the spring that lifts it starts from the list.
-        if let Some(own) =
-            own.and_then(|own| keys.get(listing.entries.iter().position(|e| entry_is(e, own))?))
-        {
-            room.lifted.entry(own.clone()).or_insert(false);
-        }
+        room.lifted.entry(ItemKey::Row(dragged)).or_insert(false);
         self.motion.room = Some(room);
     }
 
@@ -262,7 +313,8 @@ impl Sidebar {
         self.motion.batch += 1;
         let batch = self.motion.batch;
         if room.joined() && !cx.reduce_motion() {
-            self.motion.join.draw_bracket(room.dragged(), batch);
+            let (dragged, split_before) = room.dragged();
+            self.motion.join.draw_bracket(dragged, split_before, batch);
         }
         room.over = Some(batch);
         self.motion.room = Some(room);
@@ -272,9 +324,4 @@ impl Sidebar {
             }
         });
     }
-}
-
-/// Whether `entry` is the row of the terminal at `session`.
-fn entry_is(entry: &wormhole_core::view::sidebar::Entry, session: usize) -> bool {
-    matches!(entry, wormhole_core::view::sidebar::Entry::Row { session: at, .. } if *at == session)
 }

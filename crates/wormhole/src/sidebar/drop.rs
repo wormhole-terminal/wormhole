@@ -57,7 +57,7 @@ impl Sidebar {
         let this = cx.weak_entity();
         let dragged =
             DraggedTerminal::new(info.id, DragOrigin::Row, info.name.clone(), super::row::glyph_for(info));
-        let dragged = if self.motion_on(cx) { dragged.lifting(self.motion.join.snap()) } else { dragged };
+        let dragged = if self.motion_on(cx) { dragged.lifting(self.snap()) } else { dragged };
         row.on_drag(dragged, move |dragged, grabbed, _, cx| {
             this.update(cx, |_, cx| {
                 cx.emit(SidebarEvent::TerminalDragStarted { id: dragged.id, origin: dragged.origin })
@@ -95,26 +95,33 @@ impl Sidebar {
         gap: Option<f32>,
         cx: &mut Context<Self>,
     ) -> Stateful<Div> {
-        let over_at = move |bounds: Bounds<Pixels>, position: Point<Pixels>| {
+        let over_at = move |bounds: Bounds<Pixels>, position: Point<Pixels>, before: Option<Over>| {
             let height = f32::from(bounds.size.height).max(1.0);
             let y = f32::from(position.y - bounds.origin.y);
             match group {
                 // The gap under a group's card puts the dragged terminal after the group.
                 Some(group) if gap.is_some_and(|gap| y > height - gap) => Over::After(group),
-                _ => Over::Row { id, part: Part::at(y / height) },
+                _ => {
+                    let before = before.and_then(|over| match over {
+                        Over::Row { id: was, part } if was == id => Some(part),
+                        _ => None,
+                    });
+                    Over::Row { id, part: Part::at_from(y / height, before) }
+                }
             }
         };
         line.on_drag_move::<DraggedTerminal>(cx.listener(
             move |this, event: &DragMoveEvent<DraggedTerminal>, _, cx| {
                 // Every row hears every move: only the one under the pointer counts.
                 if event.bounds.contains(&event.event.position) {
-                    this.set_over(Some(over_at(event.bounds, event.event.position)), cx);
+                    let before = this.edge_memory(cx);
+                    this.set_over(Some(over_at(event.bounds, event.event.position, before)), cx);
                 }
             },
         ))
         .on_drag_move::<DraggedGroup>(cx.listener(move |this, event: &DragMoveEvent<DraggedGroup>, _, cx| {
             if event.bounds.contains(&event.event.position) {
-                this.set_over(Some(over_at(event.bounds, event.event.position)), cx);
+                this.set_over(Some(over_at(event.bounds, event.event.position, None)), cx);
             }
         }))
         .on_drop(cx.listener(move |this, dragged: &DraggedTerminal, _, cx| {
@@ -133,25 +140,30 @@ impl Sidebar {
         gap: Option<f32>,
         cx: &mut Context<Self>,
     ) -> Stateful<Div> {
-        let over_at = move |bounds: Bounds<Pixels>, position: Point<Pixels>| {
+        let over_at = move |bounds: Bounds<Pixels>, position: Point<Pixels>, before: Option<Over>| {
             let height = f32::from(bounds.size.height).max(1.0);
             let y = f32::from(position.y - bounds.origin.y);
             if gap.is_some_and(|gap| y > height - gap) {
                 Over::After(group)
             } else {
-                Over::Head { group, part: Part::at(y / height) }
+                let before = before.and_then(|over| match over {
+                    Over::Head { group: was, part } if was == group => Some(part),
+                    _ => None,
+                });
+                Over::Head { group, part: Part::at_from(y / height, before) }
             }
         };
         line.on_drag_move::<DraggedTerminal>(cx.listener(
             move |this, event: &DragMoveEvent<DraggedTerminal>, _, cx| {
                 if event.bounds.contains(&event.event.position) {
-                    this.set_over(Some(over_at(event.bounds, event.event.position)), cx);
+                    let before = this.edge_memory(cx);
+                    this.set_over(Some(over_at(event.bounds, event.event.position, before)), cx);
                 }
             },
         ))
         .on_drag_move::<DraggedGroup>(cx.listener(move |this, event: &DragMoveEvent<DraggedGroup>, _, cx| {
             if event.bounds.contains(&event.event.position) {
-                this.set_over(Some(over_at(event.bounds, event.event.position)), cx);
+                this.set_over(Some(over_at(event.bounds, event.event.position, None)), cx);
             }
         }))
         .on_drop(cx.listener(move |this, dragged: &DraggedTerminal, _, cx| {
@@ -166,10 +178,20 @@ impl Sidebar {
     }
 
     fn set_over(&mut self, over: Option<Over>, cx: &mut Context<Self>) {
+        if over.is_some() {
+            self.over_before = over;
+        }
         if self.over != over {
             self.over = over;
             cx.notify();
         }
+    }
+
+    /// Where the pointer was over the list last, for a line's edge to hold it there (`Part::at_from`):
+    /// only while the Motion feature is on, since without it the parts are cut at the plain edges.
+    /// `over` itself is cleared by the list before each row hears the move, so it can't say.
+    fn edge_memory(&self, cx: &App) -> Option<Over> {
+        self.motion_on(cx).then_some(self.over_before).flatten()
     }
 
     /// A terminal was dropped on what the pointer was over last: the window does what it means
@@ -280,23 +302,29 @@ impl Sidebar {
         }
     }
 
-    /// The line a drag in flight would drop on, if it lands somewhere.
-    pub(super) fn drop_mark(&self, listing: &Listing, infos: &[RowInfo]) -> Option<DropMark> {
-        let over = self.over?;
+    /// The line a drag in flight would drop on, if it lands somewhere, and what a terminal dragged by
+    /// its row would do there (the motion needs both, and the plan is worked out once).
+    pub(super) fn drop_mark(&self, listing: &Listing, infos: &[RowInfo]) -> (Option<DropMark>, Option<Drop>) {
+        let Some(over) = self.over else { return (None, None) };
         let input = &self.input;
         if let Some((dragged, _)) = input.terminal_drag {
-            return match Self::terminal_drop_plan(input, listing, dragged, over)? {
-                Drop::Join { target } => Some(DropMark::Join(infos.get(target)?.id)),
-                Drop::Move { landing, leave_split, .. } => {
-                    let own = input.find(dragged)?;
+            let Some(drop) = Self::terminal_drop_plan(input, listing, dragged, over) else {
+                return (None, None);
+            };
+            let mark = match drop {
+                Drop::Join { target } => infos.get(target).map(|info| DropMark::Join(info.id)),
+                Drop::Move { landing, leave_split, .. } => input.find(dragged).and_then(|own| {
                     let in_split = input.rows[own].split.is_some() && !leave_split;
                     self.landing_mark(listing, infos, landing, in_split)
-                }
+                }),
             };
+            return (mark, Some(drop));
         }
-        let group = input.group_drag?;
-        let landing = Self::group_drop_plan(input, listing, group, over)?;
-        self.landing_mark(listing, infos, landing, false)
+        let mark = input.group_drag.and_then(|group| {
+            let landing = Self::group_drop_plan(input, listing, group, over)?;
+            self.landing_mark(listing, infos, landing, false)
+        });
+        (mark, None)
     }
 
     /// The line `landing` is drawn as: above the item it stands before, or below the last line of

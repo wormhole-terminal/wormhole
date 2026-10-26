@@ -8,17 +8,15 @@
 //! reach: what it snaps to is handed over through a [`Snap`] both hold, and the chip reads it every frame.
 
 use std::cell::Cell;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::motion::EASE_OUT;
 use wormhole_core::view::motion::drag::{BRACKET, FADE_OUT, LIFT, bracket};
-use wormhole_core::view::sidebar::Bracket;
+use wormhole_core::view::sidebar::{Bracket, SplitId};
 
-use super::list::ItemKey;
+use super::list::{ItemKey, id_of};
 use crate::settings::UiColors;
 use crate::sidebar::drop::DropMark;
 use crate::sidebar::{Sidebar, SidebarInput};
@@ -64,25 +62,22 @@ enum Tint {
 /// The preview of a split: which row it is on, and for how long the preview of one that was left is
 /// still going out, and the bracket of the split just made.
 #[derive(Default)]
-pub(in crate::sidebar) struct Join {
+pub(super) struct Join {
     /// The row the dragged one would join now.
     target: Option<i64>,
     /// How many rows have been the target, so each one's preview starts afresh.
     epoch: u64,
     /// The row that was the target, and the count it had, while its preview goes out.
     leaving: Option<(i64, u64)>,
-    /// The terminal that just joined a split, and the batch that ends the bracket's drawing.
-    drawing: Option<(i64, u64)>,
+    /// The terminal that was dropped on a row, the split it was in before, and the batch that ends the
+    /// bracket's drawing, if the drop made a split.
+    drawing: Option<(i64, Option<SplitId>, u64)>,
     snap: Snap,
 }
 
 impl Join {
-    pub(in crate::sidebar) fn snap(&self) -> Snap {
-        self.snap.clone()
-    }
-
     /// The count of the preview on terminal `id`'s row, if it is the target.
-    pub(super) fn epoch_of(&self, id: i64) -> Option<u64> {
+    fn epoch_of(&self, id: i64) -> Option<u64> {
         (self.target == Some(id)).then_some(self.epoch)
     }
 
@@ -112,29 +107,32 @@ impl Join {
         over
     }
 
-    /// The split just made has its bracket drawn for `batch`'s time.
-    pub(super) fn draw_bracket(&mut self, joined: i64, batch: u64) {
-        self.drawing = Some((joined, batch));
+    /// A drop of `joined` on a row (it was in the split `before`) has its bracket drawn for `batch`'s time,
+    /// if it made a split: whether it did is read off the window's facts when a row asks (`bracket_of`),
+    /// not off the preview, which a refused join or a drag let go elsewhere leaves behind.
+    pub(super) fn draw_bracket(&mut self, joined: i64, before: Option<SplitId>, batch: u64) {
+        self.drawing = Some((joined, before, batch));
     }
 
     /// The bracket of the batch has been drawn.
     pub(super) fn retire(&mut self, batch: u64) -> bool {
-        let over = self.drawing.is_some_and(|(_, drawn)| drawn == batch);
+        let over = self.drawing.is_some_and(|(_, _, drawn)| drawn == batch);
         if over {
             self.drawing = None;
         }
         over
     }
 
-    /// The batch the bracket of row `info`'s split is drawing in, if it is the split just made.
-    pub(in crate::sidebar) fn bracket_of(&self, input: &SidebarInput, split: Option<i64>) -> Option<u64> {
-        let (joined, batch) = self.drawing?;
+    /// The batch the bracket of a row in `split` is drawing in: the split the drop just put the dragged
+    /// terminal in, which is not the one it was in before.
+    fn bracket_of(&self, input: &SidebarInput, split: Option<SplitId>) -> Option<u64> {
+        let (joined, before, batch) = self.drawing?;
         let own = input.rows.get(input.find(joined)?)?.split;
-        (split.is_some() && split == own).then_some(batch)
+        (own.is_some() && own != before && split == own).then_some(batch)
     }
 
     /// The preview that is going out on `key`'s row.
-    pub(super) fn leaving_on(&self, key: &ItemKey) -> Option<u64> {
+    fn leaving_on(&self, key: &ItemKey) -> Option<u64> {
         match (self.leaving, key) {
             (Some((id, epoch)), ItemKey::Row(row)) if id == *row => Some(epoch),
             _ => None,
@@ -150,17 +148,17 @@ pub(in crate::sidebar) fn draw_bracket(line: Div, id: i64, batch: u64, part: Bra
         Bracket::Mid => (0.25, 0.75),
         Bracket::End => (0.5, 1.0),
     };
-    line.with_animation(("bracket", id as u64 ^ (batch << 32)), Animation::new(BRACKET), move |line, t| {
-        line.opacity(bracket(t, from, to))
-    })
+    line.with_animation(
+        id_of("bracket", &ItemKey::Row(id), batch),
+        Animation::new(BRACKET),
+        move |line, t| line.opacity(bracket(t, from, to)),
+    )
     .into_any_element()
 }
 
 /// The tint and the split mark over the row of terminal `id`, the `epoch`th to be the target, coming in
 /// or going out.
 fn preview(ui: UiColors, id: i64, epoch: u64, tint: Tint) -> AnyElement {
-    let mut hasher = DefaultHasher::new();
-    (id, epoch).hash(&mut hasher);
     let (name, length) = match tint {
         Tint::In => ("join-in", LIFT),
         Tint::Out => ("join-out", FADE_OUT),
@@ -172,7 +170,7 @@ fn preview(ui: UiColors, id: i64, epoch: u64, tint: Tint) -> AnyElement {
         .size_full()
         .child(style::row_drop_target(ui))
         .child(style::split_mark(ui))
-        .with_animation((name, hasher.finish()), Animation::new(length), move |layer, t| {
+        .with_animation(id_of(name, &ItemKey::Row(id), epoch), Animation::new(length), move |layer, t| {
             let eased = EASE_OUT.ease(t);
             layer.opacity(match tint {
                 Tint::In => eased,
@@ -183,15 +181,46 @@ fn preview(ui: UiColors, id: i64, epoch: u64, tint: Tint) -> AnyElement {
 }
 
 #[cfg(test)]
+impl Sidebar {
+    pub(in crate::sidebar) fn join_preview_state(&self) -> (Option<i64>, Option<i64>, bool) {
+        self.motion.join.state()
+    }
+
+    pub(in crate::sidebar) fn join_bracket_rows(&self) -> Vec<i64> {
+        self.motion.join.bracket_rows(&self.input)
+    }
+}
+
+#[cfg(test)]
 impl Join {
-    /// The terminal whose row the dragged one would join, the one whose preview is going out, whether the
-    /// chip is snapping onto a row, and whether a bracket is being drawn.
-    pub(in crate::sidebar) fn state(&self) -> (Option<i64>, Option<i64>, bool, bool) {
-        (self.target, self.leaving.map(|(id, _)| id), self.snap.target().0, self.drawing.is_some())
+    /// The terminal whose row the dragged one would join, the one whose preview is going out, and whether
+    /// the chip is snapping onto a row.
+    pub(in crate::sidebar) fn state(&self) -> (Option<i64>, Option<i64>, bool) {
+        (self.target, self.leaving.map(|(id, _)| id), self.snap.target().0)
+    }
+
+    /// The terminals whose rows draw their bracket in now.
+    pub(in crate::sidebar) fn bracket_rows(&self, input: &SidebarInput) -> Vec<i64> {
+        input
+            .rows
+            .iter()
+            .filter(|row| self.bracket_of(input, row.split).is_some())
+            .map(|row| row.id)
+            .collect()
     }
 }
 
 impl Sidebar {
+    /// What the chip that follows the pointer snaps onto, which the picture of a drag reads (`terminal_drag`).
+    pub(in crate::sidebar) fn snap(&self) -> Snap {
+        self.motion.join.snap.clone()
+    }
+
+    /// The batch a row in `split` draws its bracket in, while the split the drop just made draws it.
+    pub(in crate::sidebar) fn bracket_draws(&self, split: Option<SplitId>) -> Option<u64> {
+        self.motion.join.bracket_of(&self.input, split)
+    }
+
     /// What lies over the row `key` for a split: the preview coming in on the row the dragged one would
     /// join, or going out on one it has left. `None` for any other line, and when the Motion feature is
     /// off (the row's tint is then the plain one, `mark_element`'s).
