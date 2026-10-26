@@ -6,6 +6,8 @@
   scripts/motion-moves.py urgency     style/tile/mod.rs -> style/status.rs (the Urgency conversion, beside StatusGlyph)
   scripts/motion-moves.py sidebar     sidebar/motion.rs -> sidebar/motion/{mod,list}.rs
   scripts/motion-moves.py rows        sidebar/rows.rs -> sidebar/row/{mod,frame,face,tile,second_line,label}.rs
+  scripts/motion-moves.py drop-file   sidebar/drag.rs -> sidebar/drop.rs (core's twin is view/sidebar/drop.rs)
+  scripts/motion-moves.py room-file   sidebar/motion/drag.rs -> sidebar/motion/room.rs (the room a dragged row makes)
   scripts/motion-moves.py STEP --check [--base REV]
                                       verify that the working tree is a pure move of the files as REV had them
                                       (default HEAD: before the commit; after it, pass the commit's parent)
@@ -427,6 +429,94 @@ STEPS: Dict[str, Step] = {
 }
 
 
+class Rename(NamedTuple):
+    """A file that is only renamed: `git mv`, and the exact text its name is written in elsewhere."""
+
+    src: str  # relative to the app crate's src/
+    dst: str
+    edits: Dict[str, List[Tuple[str, str]]]  # file (relative to src/; `dst` for the moved one) -> replacements
+
+
+RENAMES: Dict[str, Rename] = {
+    "drop-file": Rename(
+        "sidebar/drag.rs",
+        "sidebar/drop.rs",
+        {
+            "sidebar/mod.rs": [("mod drag;", "mod drop;"), ("drag and drop (`drag`)", "drag and drop (`drop`)")],
+            "sidebar/list.rs": [("use super::drag::DropMark;", "use super::drop::DropMark;")],
+            "sidebar/motion/join.rs": [("use crate::sidebar::drag::DropMark;", "use crate::sidebar::drop::DropMark;")],
+            "sidebar/motion/drag.rs": [("use crate::sidebar::drag::DropMark;", "use crate::sidebar::drop::DropMark;")],
+        },
+    ),
+    "room-file": Rename(
+        "sidebar/motion/drag.rs",
+        "sidebar/motion/room.rs",
+        {
+            "sidebar/motion/room.rs": [],
+            "sidebar/drop.rs": [("(`motion::drag`)", "(`motion::room`)")],
+            "sidebar/motion/mod.rs": [("mod drag;", "mod room;"), ("`drag` opens the gap", "`room` opens the gap")],
+            "sidebar/motion/join.rs": [("`drag` opens the gap", "`room` opens the gap")],
+            "sidebar/motion/plan.rs": [("use super::drag::Gap;", "use super::room::Gap;")],
+            "sidebar/motion/list.rs": [
+                ("use super::drag::{self, Gap};", "use super::room::{self, Gap};"),
+                ("for it (`drag`), on the same", "for it (`room`), on the same"),
+                ("lines open for it (`drag`), from", "lines open for it (`room`), from"),
+                ("open for it (`drag`).", "open for it (`room`)."),
+                ("drag::lifted(", "room::lifted("),
+            ],
+        },
+    ),
+}
+
+
+def apply_rename(name: str) -> int:
+    step = RENAMES[name]
+    src, dst = (os.path.join(REPO, APP, p) for p in (step.src, step.dst))
+    if not os.path.exists(src):
+        print("%s: %s is gone already, nothing to do" % (name, step.src))
+        return 0
+    subprocess.run(["git", "mv", src, dst], cwd=REPO, check=True)
+    for rel, edits in step.edits.items():
+        path = os.path.join(REPO, APP, rel)
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        for old, new in edits:
+            if old not in text:
+                raise SystemExit("%s: %s has no %s" % (name, rel, old))
+            text = text.replace(old, new)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text)
+        subprocess.run(["git", "add", path], cwd=REPO, check=True)
+    return 0
+
+
+def lines_of(text: str) -> List[str]:
+    """A file as the sorted multiset of its lines without whitespace: rustfmt sorts `use` and `mod` lines and
+    rewraps, which a rename does not change in meaning."""
+    return sorted(re.sub(r"\s+", "", l) for l in text.split("\n") if l.strip())
+
+
+def check_rename(name: str, base: str) -> int:
+    step = RENAMES[name]
+    bad = 0
+    for rel, edits in step.edits.items():
+        before = step.src if rel == step.dst else rel
+        try:
+            text = run("git", "show", "%s:%s/%s" % (base, APP, before))
+        except subprocess.CalledProcessError:
+            print("%s: %s is not in %s; pass --base <the commit before the move>" % (name, before, base))
+            return 2
+        for old, new in edits:
+            text = text.replace(old, new)
+        with open(os.path.join(REPO, APP, rel), encoding="utf-8") as f:
+            now = f.read()
+        if lines_of(text) != lines_of(now):
+            bad += 1
+            print("%s: %s differs from %s with the renames applied" % (name, rel, before))
+    print("%s: %s" % (name, "a pure move" if not bad else "NOT a pure move"))
+    return 1 if bad else 0
+
+
 def vis_widen(step_name: str) -> str:
     return "pub(in crate::sidebar)" if step_name == "sidebar" else "pub(super)"
 
@@ -615,10 +705,12 @@ def check_step(name: str, base: str) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("step", choices=sorted([*STEPS, *RELOCATIONS]))
+    parser.add_argument("step", choices=sorted([*STEPS, *RELOCATIONS, *RENAMES]))
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--base", default="HEAD", help="the revision the files are compared with (default HEAD)")
     args = parser.parse_args()
+    if args.step in RENAMES:
+        return check_rename(args.step, args.base) if args.check else apply_rename(args.step)
     if args.check:
         return check_step(args.step, args.base)
     return apply_relocation(args.step) if args.step in RELOCATIONS else apply_step(args.step)
