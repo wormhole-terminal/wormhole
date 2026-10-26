@@ -13,7 +13,8 @@ use super::Message;
 use super::control::Parsed;
 use super::control::sessions;
 use super::control::{
-    Action, PROTOCOL_VERSION, Reply, Request, SEND_TEXT_MAX_BYTES, help, parse, print, print_err, render,
+    Action, PROTOCOL_VERSION, Reply, Request, SEND_TEXT_MAX_BYTES, help, json_env, parse, print, print_err,
+    render,
 };
 use crate::platform::paths;
 use crate::platform::socket::Stream;
@@ -87,6 +88,7 @@ pub fn run(args: &[String]) -> i32 {
             return 2;
         }
     };
+    let json = cli.wants_json(json_env().as_deref());
     let mut action = cli.action;
     if cli.stdin
         && let Action::SendText { text, .. } = &mut action
@@ -107,7 +109,7 @@ pub fn run(args: &[String]) -> i32 {
         Ok(reply) => reply,
         Err(Exchange::NotRunning) => {
             // Terminals that outlive the app can still be listed from their hosts' files.
-            if let Some(text) = sessions::offline(&request.action, cli.json) {
+            if let Some(text) = sessions::offline(&request.action, json) {
                 print(&text);
                 return 3;
             }
@@ -130,10 +132,10 @@ pub fn run(args: &[String]) -> i32 {
         ));
         return 2;
     }
-    if cli.json {
+    if json {
         print(&format!("{}\n", serde_json::to_string(&reply).unwrap_or_default()));
     } else {
-        match render(&reply, home.as_deref()) {
+        match render(&request.action, &reply, home.as_deref()) {
             Ok(text) => print(&text),
             Err(words) => print_err(&format!("Wormhole: {words}\n")),
         }

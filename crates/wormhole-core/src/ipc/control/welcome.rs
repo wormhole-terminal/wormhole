@@ -101,18 +101,16 @@ impl WelcomeOp {
 
     /// The strings in the op are within [`FIELD_MAX_BYTES`], the font step is one step.
     pub fn check_caps(&self) -> Result<(), Error> {
-        let too_long = |what: &str| Error {
-            code: ErrorCode::TooLarge,
-            message: format!("{what} is longer than {FIELD_MAX_BYTES} bytes"),
+        let too_long = |what: &str| {
+            Error::new(ErrorCode::TooLarge, format!("{what} is longer than {FIELD_MAX_BYTES} bytes"))
         };
         let long = |text: &Option<String>| text.as_ref().is_some_and(|text| text.len() > FIELD_MAX_BYTES);
         match self {
             WelcomeOp::SetLook { theme, .. } if long(theme) => Err(too_long("the theme's name")),
             WelcomeOp::SetLook { primary, .. } if long(primary) => Err(too_long("the primary colour")),
-            WelcomeOp::SetLook { font_step: Some(step), .. } if !(-1..=1).contains(step) => Err(Error {
-                code: ErrorCode::BadRequest,
-                message: "the font moves one step at a time".to_string(),
-            }),
+            WelcomeOp::SetLook { font_step: Some(step), .. } if !(-1..=1).contains(step) => {
+                Err(Error::new(ErrorCode::BadRequest, "the font moves one step at a time"))
+            }
             _ => Ok(()),
         }
     }

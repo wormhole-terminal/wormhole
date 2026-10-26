@@ -27,9 +27,10 @@ Wormhole: control the running app from the command line
       The first-run welcome, in this terminal; then it starts <program> (your shell) here.
 
   <target>: --terminal <id> | --tab <id> | --pane <id>, with the ids `list` prints.
-  --json prints the reply as one JSON object; the exit code is 0 when it worked, 1 when the app
-  would not or could not, 2 for a mistake in the arguments, 3 when Wormhole isn't running (list and
-  status then still show the terminals that keep running without it).
+  --json prints the reply as one JSON object (WORMHOLE_JSON=1 makes that the default, --text asks for
+  text again); the exit code is 0 when it worked, 1 when the app would not or could not, 2 for a
+  mistake in the arguments, 3 when Wormhole isn't running (list and status then still show the
+  terminals that keep running without it).
 
 Typing into terminals and opening them are off until Settings → Coding agents → \"Let the command
 line type and open terminals\" is on; listing, status and notify always work. Inside a terminal,

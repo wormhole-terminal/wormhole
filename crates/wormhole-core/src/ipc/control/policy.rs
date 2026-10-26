@@ -24,7 +24,7 @@ pub fn send_text_check(
     from: Option<i64>,
     target: SendTarget,
 ) -> Result<(), Error> {
-    let refuse = |code, message: String| Err(Error { code, message });
+    let refuse = |code, message: String| Err(Error::new(code, message));
     if !enabled {
         return Err(writes_off());
     }
@@ -52,20 +52,21 @@ pub fn send_text_check(
             ),
         ),
         TerminalState::Exited => refuse(ErrorCode::Refused, format!("tab {}'s shell has ended", target.tab)),
-        TerminalState::Idle | TerminalState::Working | TerminalState::Finished | TerminalState::Failed => {
-            Ok(())
-        }
+        TerminalState::Idle
+        | TerminalState::Working
+        | TerminalState::Finished
+        | TerminalState::Failed
+        | TerminalState::Other => Ok(()),
     }
 }
 
 /// The answer to `send-text` and `new-terminal` while `control_write` is off.
 pub fn writes_off() -> Error {
-    Error {
-        code: ErrorCode::NotAllowed,
-        message: "typing into terminals and opening them from the command line is off: turn on \
-                  Settings → Coding agents → Let the command line type and open terminals"
-            .into(),
-    }
+    Error::new(
+        ErrorCode::NotAllowed,
+        "typing into terminals and opening them from the command line is off: turn on \
+         Settings → Coding agents → Let the command line type and open terminals",
+    )
 }
 
 /// `notify`'s words as the banner shows them: cleaned like a program's own notification (one

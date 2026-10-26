@@ -41,6 +41,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   corners swap, and the chevron beside Open in… points up while its menu is open. A right panel
   tab's icon plays once as the tab opens. Settings → Appearance → Animate icons turns all of it
   off, and Reduce Motion does too.
+- `wh` prints JSON by default when `WORMHOLE_JSON=1` is set; `--text` asks for text again.
 
 ### Fixed
 
@@ -54,6 +55,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - The keyboard shortcuts sheet names only the panel tabs there are: with notes and project folders off,
   its row reads "Changes · History · Usage" with each key, instead of naming tabs that don't show.
 - The Theme Studio no longer shows notes and tasks, or a project's trust prompt, while they are hidden.
+- A newer `wh` talking to this Wormhole about something it doesn't know gets an answer at once instead
+  of waiting ten seconds.
 
 ## [1.3.0] - 2026-10-25
 

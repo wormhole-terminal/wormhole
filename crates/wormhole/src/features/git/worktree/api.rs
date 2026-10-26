@@ -18,11 +18,11 @@ pub(crate) fn control_ask(
     cx: &mut Context<Workspace>,
 ) -> Result<Asked, Error> {
     let Some(worktrees) = ws.feature::<Worktrees>() else {
-        return Err(Error { code: ErrorCode::Failed, message: "this window has no worktrees".into() });
+        return Err(Error::new(ErrorCode::Failed, "this window has no worktrees"));
     };
     let facts = ws.facts(cx);
     let Some(terminal) = facts.active().map(|active| active.terminal.clone()) else {
-        return Err(Error { code: ErrorCode::Failed, message: "this window has no terminal".into() });
+        return Err(Error::new(ErrorCode::Failed, "this window has no terminal"));
     };
     let (window_id, profile) = (facts.window_id, facts.profile.clone());
     worktrees.update(cx, |worktrees, wcx| {

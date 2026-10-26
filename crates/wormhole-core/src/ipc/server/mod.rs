@@ -14,7 +14,7 @@ use std::io::{self, BufRead, BufReader, Read, Write};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
-use super::control::{ErrorCode, Reply, Request};
+use super::control::{self, ErrorCode, Reply, Request};
 use super::{Incoming, Message};
 use crate::platform::socket::{Listener, Stream, peer_is_same_user};
 
@@ -58,7 +58,13 @@ fn serve(mut stream: Stream, tx: &smol::channel::Sender<Incoming>) {
             Ok(message) => {
                 let _ = tx.send_blocking(Incoming::Message(message));
             }
-            Err(_) => {}
+            // A control request this build can't read (an action newer than the app) is answered
+            // at once, so the caller doesn't wait out its read timeout for nothing.
+            Err(_) => {
+                if let Some(reply) = control::unreadable(&line) {
+                    write_reply(&mut stream, &reply);
+                }
+            }
         }
     }
 }
@@ -72,8 +78,13 @@ fn answer(stream: &mut Stream, request: Request, tx: &smol::channel::Sender<Inco
     let reply = reply_rx
         .recv_timeout(REPLY_WAIT)
         .unwrap_or_else(|_| Reply::error(ErrorCode::Failed, "Wormhole did not answer in time"));
+    write_reply(stream, &reply);
+}
+
+/// Write `reply` as one line; a client that has gone is no error.
+fn write_reply(stream: &mut Stream, reply: &Reply) {
     let _ = stream.set_write_timeout(Some(Duration::from_secs(1)));
-    if let Ok(json) = serde_json::to_string(&reply) {
+    if let Ok(json) = serde_json::to_string(reply) {
         let _ = writeln!(stream, "{json}");
     }
 }
@@ -105,7 +116,7 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::spawn;
-    use crate::ipc::control::{Action, Reply, Request, Summary, TerminalState};
+    use crate::ipc::control::{Action, ErrorCode, Reply, Request, Summary, TerminalState};
     use crate::ipc::test_support::{recv_message_within, recv_within};
     use crate::ipc::{Incoming, Message};
     use crate::platform::socket::{Listener, Stream};
@@ -183,6 +194,27 @@ mod tests {
         assert!(matches!(message, Some(Message::Hook { ref tab, .. }) if tab == "2"), "{message:?}");
         assert!(start.elapsed() < Duration::from_secs(1), "waited {:?}", start.elapsed());
         let _ = flood.join();
+    }
+
+    /// An older app drops a line it can't read and the caller waits out its timeout; from here on
+    /// it is answered `unsupported` at once, so every later addition fails fast.
+    #[test]
+    fn an_action_this_build_does_not_know_is_answered_at_once() {
+        let (_dir, socket, _rx) = server();
+        let mut stream = Stream::connect(&socket).expect("connect");
+        writeln!(
+            stream,
+            r#"{{"kind":"control","version":1,"action":"read","target":{{"kind":"terminal","id":3}}}}"#
+        )
+        .expect("write");
+        stream.shutdown(Shutdown::Write).expect("half close");
+        let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+        let start = Instant::now();
+        let mut line = String::new();
+        BufReader::new(stream).read_line(&mut line).expect("a reply line");
+        let reply: Reply = serde_json::from_str(&line).expect("parses");
+        assert_eq!(reply.err().map(|e| e.code), Some(ErrorCode::Unsupported), "{line}");
+        assert!(start.elapsed() < Duration::from_secs(1), "waited {:?}", start.elapsed());
     }
 
     /// The round trip `Wormhole list` makes: the request reaches the app with a way to answer, and

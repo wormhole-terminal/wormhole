@@ -61,7 +61,7 @@ pub(crate) fn handle(
     cx: &mut App,
 ) -> Reply {
     if let Err(error) = super::welcomes_mut(cx).gates.authorize(from, &token, &op) {
-        return Reply::error(error.code, error.message);
+        return Reply::from(error);
     }
     let Some(tab) = from else { return Reply::error(ErrorCode::Refused, "outside any terminal") };
     tracing::debug!(tab, op = op.name(), "welcome request");

@@ -33,7 +33,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub use cli::{COMMAND_NAME, Cli, Parsed, help, is_verb, parse, render};
-pub(in crate::ipc) use cli::{print, print_err};
+pub(in crate::ipc) use cli::{json_env, print, print_err};
 pub use facts::{
     Asked, Listing, Opened, PaneInfo, Reached, StatusInfo, Summary, TabInfo, TerminalInfo, TerminalState,
     WindowInfo,
@@ -117,6 +117,10 @@ pub enum Action {
 }
 
 impl Action {
+    /// What every action is called in a request's `action` field, for [`unreadable`]: a test keeps
+    /// it in step with the enum.
+    const KNOWN: [&str; 6] = ["list", "status", "notify", "send_text", "new_terminal", "welcome"];
+
     /// What the action is called on the command line.
     pub fn name(&self) -> &'static str {
         match self {
@@ -134,6 +138,28 @@ impl Action {
     pub fn writes(&self) -> bool {
         matches!(self, Action::SendText { .. } | Action::NewTerminal { .. })
     }
+}
+
+/// The answer to a line that says it is a control request but is not one this build can read, or
+/// `None` when the line is something else. An action this build doesn't know is `unsupported` (a
+/// newer command line asking an older app gets that at once, not after its read timeout); one it
+/// knows with fields it can't read, or no action at all, is `bad_request`.
+pub fn unreadable(line: &str) -> Option<Reply> {
+    let value: Value = serde_json::from_str(line).ok()?;
+    if value.get("kind").and_then(Value::as_str) != Some("control") {
+        return None;
+    }
+    let Some(name) = value.get("action").and_then(Value::as_str) else {
+        return Some(Reply::error(ErrorCode::BadRequest, "the request names no action"));
+    };
+    // The name is the caller's: only a short plain word of it is repeated back.
+    let plain = name.len() <= 32 && name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-');
+    let name = if plain { name } else { "?" };
+    Some(if Action::KNOWN.contains(&name) {
+        Reply::error(ErrorCode::BadRequest, format!("the `{name}` request could not be read"))
+    } else {
+        Error::new(ErrorCode::Unsupported, format!("this Wormhole doesn't know the action `{name}`")).into()
+    })
 }
 
 /// What a request is about, by id. A pane is a tab until split panes land: a pane id names
@@ -181,8 +207,7 @@ impl Reply {
     }
 
     pub fn error(code: ErrorCode, message: impl Into<String>) -> Self {
-        let error = Error { code, message: message.into() };
-        Self { version: PROTOCOL_VERSION, ok: false, result: None, error: Some(error) }
+        Error::new(code, message).into()
     }
 
     /// The error, when there is one.
@@ -191,10 +216,61 @@ impl Reply {
     }
 }
 
+/// Why a request was not carried out: a code, words for the person reading, and sometimes a
+/// finer reason a script can act on.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Error {
     pub code: ErrorCode,
     pub message: String,
+    /// What exactly, within the code, when a script could tell more than the code does. Absent from
+    /// an older app's reply, and ignored by an older command line: the code stays what it acts on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<Reason>,
+}
+
+impl Error {
+    pub fn new(code: ErrorCode, message: impl Into<String>) -> Self {
+        Self { code, message: message.into(), reason: None }
+    }
+
+    /// The same error with the finer `reason` named.
+    #[must_use]
+    pub fn because(mut self, reason: Reason) -> Self {
+        self.reason = Some(reason);
+        self
+    }
+}
+
+impl From<Error> for Reply {
+    fn from(error: Error) -> Self {
+        Self { version: PROTOCOL_VERSION, ok: false, result: None, error: Some(error) }
+    }
+}
+
+/// The finer reasons behind an [`ErrorCode`], spelled as stable snake_case words. A new one is an
+/// addition: [`Reason::Other`] is what a build that doesn't know it reads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Reason {
+    /// A wait or a command took longer than it was given.
+    Timeout,
+    /// The shell has no integration, so its commands can't be told apart.
+    NoIntegration,
+    /// The shell is not at its prompt.
+    NotAtPrompt,
+    /// The program in the terminal did not ask for the mouse.
+    NoMouse,
+    /// The window has no room for another pane.
+    NoRoom,
+    /// A close question is already up in that window.
+    QuestionOpen,
+    /// The terminal's shell has ended.
+    Exited,
+    /// The feature is still behind its flag in this build.
+    FlagOff,
+    /// A reason a newer Wormhole gave.
+    #[serde(other)]
+    Other,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -218,6 +294,10 @@ pub enum ErrorCode {
     Unsupported,
     /// The app tried and could not.
     Failed,
+    /// A code a newer Wormhole gave: read as a refusal, so an older command line still says what
+    /// the words say and exits 1.
+    #[serde(other)]
+    Other,
 }
 
 impl ErrorCode {
@@ -236,7 +316,8 @@ mod tests {
     use std::collections::BTreeSet;
 
     use super::{
-        Action, ErrorCode, PROTOCOL_VERSION, Reply, Request, Summary, Target, TerminalState, WelcomeOp,
+        Action, Error, ErrorCode, PROTOCOL_VERSION, Reason, Reply, Request, Summary, Target, TerminalState,
+        WelcomeOp, unreadable,
     };
 
     /// Compiles only while every action is listed: a new one must get a golden line too.
@@ -311,6 +392,12 @@ mod tests {
     }
 
     #[test]
+    fn the_known_actions_are_the_ones_with_golden_lines() {
+        let covered: BTreeSet<_> = golden().iter().map(|(request, _)| name(&request.action)).collect();
+        assert_eq!(covered, Action::KNOWN.into_iter().collect::<BTreeSet<_>>());
+    }
+
+    #[test]
     fn requests_serialize_to_the_golden_lines_and_back() {
         for (request, line) in golden() {
             assert_eq!(serde_json::to_string(&request).expect("serializes"), line);
@@ -370,5 +457,75 @@ mod tests {
             assert_eq!(code.exit_code(), 1, "{code:?}");
         }
         assert_eq!((Target::Pane(4).id(), Target::Pane(4).kind()), (4, "pane"));
+    }
+
+    #[test]
+    fn a_reason_rides_beside_the_code_and_an_older_reader_ignores_it() {
+        let error = Reply::from(Error::new(ErrorCode::Failed, "took too long").because(Reason::Timeout));
+        let line = serde_json::to_string(&error).expect("serializes");
+        assert_eq!(
+            line,
+            r#"{"version":1,"ok":false,"error":{"code":"failed","message":"took too long","reason":"timeout"}}"#
+        );
+        assert_eq!(serde_json::from_str::<Reply>(&line).expect("parses"), error);
+        // Without one the line is what it always was.
+        let plain = serde_json::to_string(&Reply::error(ErrorCode::Failed, "x")).expect("serializes");
+        assert!(!plain.contains("reason"), "{plain}");
+    }
+
+    /// A newer app's reply may carry a code, a reason or a state this build has never heard of;
+    /// it still reads, as an unknown one, so the command line prints the words instead of failing.
+    #[test]
+    fn a_reply_from_a_newer_app_still_parses() {
+        let line = r#"{"version":1,"ok":false,"error":{"code":"quota","message":"nope","reason":"later"}}"#;
+        let reply: Reply = serde_json::from_str(line).expect("parses");
+        let error = reply.err().expect("an error");
+        assert_eq!((error.code, error.reason), (ErrorCode::Other, Some(Reason::Other)));
+        assert_eq!(error.code.exit_code(), 1);
+        let state: TerminalState = serde_json::from_str(r#""sleeping""#).expect("parses");
+        assert_eq!(state, TerminalState::Other);
+        assert_eq!(state.word(), "unknown");
+    }
+
+    #[test]
+    fn an_action_this_build_does_not_know_is_answered_unsupported() {
+        let reply = unreadable(
+            r#"{"kind":"control","version":1,"action":"read","target":{"kind":"terminal","id":3}}"#,
+        )
+        .expect("answered");
+        let error = reply.err().expect("an error");
+        assert_eq!(error.code, ErrorCode::Unsupported);
+        assert!(error.message.contains("`read`"), "{}", error.message);
+        assert!(
+            serde_json::from_str::<crate::ipc::Message>(r#"{"kind":"control","version":1,"action":"read"}"#)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn a_control_line_with_something_else_wrong_is_a_bad_request() {
+        let code = |line: &str| unreadable(line).and_then(|reply| reply.error).map(|error| error.code);
+        // A known action whose fields don't fit.
+        assert_eq!(
+            code(r#"{"kind":"control","version":1,"action":"send_text"}"#),
+            Some(ErrorCode::BadRequest)
+        );
+        assert_eq!(code(r#"{"kind":"control","version":1}"#), Some(ErrorCode::BadRequest));
+        assert_eq!(code(r#"{"kind":"control","version":1,"action":7}"#), Some(ErrorCode::BadRequest));
+        // Not a control line, or not a line at all: nothing to say.
+        assert_eq!(code(r#"{"kind":"hook","action":"read"}"#), None);
+        assert_eq!(code("{not json"), None);
+    }
+
+    /// The caller's words are repeated back only when they are a plain word.
+    #[test]
+    fn a_hostile_action_name_is_not_echoed() {
+        let line = format!(r#"{{"kind":"control","version":1,"action":"{}\u001b[31m"}}"#, "x".repeat(40));
+        let reply = unreadable(&line).expect("answered");
+        let message = reply.err().expect("an error").message.clone();
+        assert!(
+            message.contains("`?`") && !message.contains('\u{1b}') && !message.contains('x'),
+            "{message}"
+        );
     }
 }

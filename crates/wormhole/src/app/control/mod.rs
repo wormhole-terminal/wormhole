@@ -132,14 +132,14 @@ fn send_text(target: Target, text: &str, submit: bool, from: Option<i64>, cx: &m
     let enabled = settings(cx).control_write;
     if !enabled {
         let error = writes_off();
-        return Reply::error(error.code, error.message);
+        return Reply::from(error);
     }
     let Some(found) = find(target, cx) else { return not_found(target) };
     let state =
         found.window.workspace.read_with(cx, |ws, cx| ws.control_tab_state(found.tab, cx)).ok().flatten();
     let Some(state) = state else { return not_found(target) };
     if let Err(error) = send_text_check(enabled, text, from, SendTarget { tab: found.tab, state }) {
-        return Reply::error(error.code, error.message);
+        return Reply::from(error);
     }
     if let Err(reply) = budget(Limited::SendText, from, cx) {
         return reply;
@@ -167,7 +167,7 @@ fn new_terminal(
 ) -> Reply {
     if !settings(cx).control_write {
         let error = writes_off();
-        return Reply::error(error.code, error.message);
+        return Reply::from(error);
     }
     if let Some(folder) = &folder {
         let path = Path::new(folder);
@@ -206,7 +206,7 @@ fn new_terminal(
         });
         return match asked {
             Some(Ok(asked)) => Reply::ok(asked),
-            Some(Err(error)) => Reply::error(error.code, error.message),
+            Some(Err(error)) => Reply::from(error),
             None => Reply::error(ErrorCode::Failed, "the window could not be reached"),
         };
     }

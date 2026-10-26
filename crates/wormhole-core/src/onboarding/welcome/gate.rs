@@ -54,7 +54,7 @@ impl Gate {
     /// carry its token, and arrive while the welcome runs. The reply never says which of the first two
     /// was wrong.
     pub fn check(&self, from: Option<i64>, token: &str) -> Result<(), Error> {
-        let refuse = |message: &str| Err(Error { code: ErrorCode::Refused, message: message.to_string() });
+        let refuse = |message: &str| Err(Error::new(ErrorCode::Refused, message));
         if from != Some(self.tab) || !same(token, &self.token) {
             return refuse("this isn't the welcome's terminal, or its token");
         }
@@ -86,10 +86,7 @@ impl Registry {
     pub fn authorize(&self, from: Option<i64>, token: &str, op: &WelcomeOp) -> Result<(), Error> {
         let gate = from.and_then(|tab| self.gates.iter().find(|gate| gate.tab == tab));
         let Some(gate) = gate else {
-            return Err(Error {
-                code: ErrorCode::Refused,
-                message: "this isn't the welcome's terminal, or its token".to_string(),
-            });
+            return Err(Error::new(ErrorCode::Refused, "this isn't the welcome's terminal, or its token"));
         };
         gate.check(from, token)?;
         op.check_caps()

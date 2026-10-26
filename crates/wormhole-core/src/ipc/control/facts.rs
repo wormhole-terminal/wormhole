@@ -20,6 +20,9 @@ pub enum TerminalState {
     /// still runs the older one.
     Failed,
     Exited,
+    /// A state a newer Wormhole gave, which this build has no word for.
+    #[serde(other)]
+    Other,
 }
 
 impl From<State> for TerminalState {
@@ -44,6 +47,7 @@ impl TerminalState {
             TerminalState::Finished => "finished",
             TerminalState::Failed => "failed",
             TerminalState::Exited => "exited",
+            TerminalState::Other => "unknown",
         }
     }
 }
@@ -153,6 +157,8 @@ impl Summary {
                 TerminalState::Failed => summary.failed += 1,
                 TerminalState::Idle => summary.idle += 1,
                 TerminalState::Exited => summary.exited += 1,
+                // Counted as a terminal, in no state this build can name.
+                TerminalState::Other => {}
             }
         }
         summary

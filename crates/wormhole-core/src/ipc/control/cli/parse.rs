@@ -16,6 +16,7 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
         return Ok(Parsed::Help);
     }
     let mut json = false;
+    let mut text_out = false;
     let mut target = None;
     let mut title = None;
     let mut submit = false;
@@ -32,6 +33,7 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
         };
         match arg {
             "--json" => json = true,
+            "--text" => text_out = true,
             "--help" | "-h" => return Ok(Parsed::Help),
             "--terminal" | "--tab" | "--pane" => {
                 let value = value(arg)?;
@@ -59,6 +61,9 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
             }
             word => words.push(word),
         }
+    }
+    if json && text_out {
+        return Err("--json and --text can't be combined".into());
     }
     let text = words.join(" ");
     let action = match verb {
@@ -94,7 +99,7 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
         return Err(format!("{verb} takes no target"));
     }
     let stdin = matches!(&action, Action::SendText { text, .. } if text == "-");
-    Ok(Parsed::Run(Cli { action, json, stdin }))
+    Ok(Parsed::Run(Cli { action, json, text: text_out, stdin }))
 }
 
 /// `folder` as an absolute path: `~` is `home`, a relative path is under `cwd`. Nothing is
@@ -136,7 +141,7 @@ mod tests {
 
     #[test]
     fn every_verb_parses_with_its_options() {
-        assert_eq!(parsed(&["list"]), Cli { action: Action::List, json: false, stdin: false });
+        assert_eq!(parsed(&["list"]), Cli { action: Action::List, json: false, text: false, stdin: false });
         assert!(parsed(&["list", "--json"]).json);
         assert_eq!(parsed(&["status"]).action, Action::Status { target: None });
         assert_eq!(
@@ -201,6 +206,13 @@ mod tests {
                 window: None
             }
         );
+    }
+
+    #[test]
+    fn the_output_format_is_chosen_by_a_flag() {
+        assert!(parsed(&["list", "--text"]).text);
+        assert!(!parsed(&["list"]).text);
+        assert!(mistake(&["list", "--json", "--text"]).contains("can't be combined"));
     }
 
     #[test]

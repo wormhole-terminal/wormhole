@@ -105,7 +105,7 @@ impl Worktrees {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Result<Asked, Error> {
-        let refuse = |code, message: String| Error { code, message };
+        let refuse = |code, message: String| Error::new(code, message);
         let start = folder.map(PathBuf::from).or_else(|| terminal.read(cx).cwd.clone());
         let Some(start) = start else {
             return Err(refuse(ErrorCode::NotFound, "no folder to make a worktree of".into()));

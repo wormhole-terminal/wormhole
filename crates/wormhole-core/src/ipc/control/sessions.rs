@@ -31,7 +31,7 @@ pub enum Command {
 pub fn help(wh: &str) -> String {
     format!(
         "\
-  {wh} sessions list [--json]
+  {wh} sessions list [--json | --text]
       The terminals that keep running behind the app: id, pid, shell pid, start, version, live or stale.
       Works while the app is closed.
   {wh} sessions end <id> | --all
@@ -44,13 +44,19 @@ pub fn help(wh: &str) -> String {
 
 /// Read the words after `sessions`.
 pub fn parse(args: &[String]) -> Result<Command, String> {
+    parse_with(args, false)
+}
+
+/// [`parse`] with JSON the default for `list` (`WORMHOLE_JSON`), `--text` turning it off again.
+fn parse_with(args: &[String], json_default: bool) -> Result<Command, String> {
     let (verb, rest) = args.split_first().ok_or("sessions needs list, end or forget")?;
-    let mut json = false;
+    let mut json = json_default;
     let mut all = false;
     let mut ids: Vec<&str> = Vec::new();
     for arg in rest {
         match arg.as_str() {
             "--json" if verb == "list" => json = true,
+            "--text" if verb == "list" => json = false,
             "--all" if verb == "end" => all = true,
             flag if flag.starts_with('-') => {
                 return Err(format!("unknown option {flag} for sessions {verb}"));
@@ -79,7 +85,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
 /// `Wormhole sessions …`: returns the exit code (0 done, 1 something would not end or be forgotten,
 /// 2 a mistake in the arguments).
 pub fn run(args: &[String]) -> i32 {
-    let command = match parse(args) {
+    let command = match parse_with(args, super::cli::json_by_default(super::cli::json_env().as_deref())) {
         Ok(command) => command,
         Err(mistake) => {
             print_err(&format!("Wormhole: {mistake}\n\n{}", help(super::COMMAND_NAME)));
@@ -344,6 +350,9 @@ mod tests {
     fn the_sessions_verbs_parse() {
         assert_eq!(parse(&words(&["list"])), Ok(Command::List { json: false }));
         assert_eq!(parse(&words(&["list", "--json"])), Ok(Command::List { json: true }));
+        // WORMHOLE_JSON makes JSON the default; --text asks for text again.
+        assert_eq!(parse_with(&words(&["list"]), true), Ok(Command::List { json: true }));
+        assert_eq!(parse_with(&words(&["list", "--text"]), true), Ok(Command::List { json: false }));
         assert_eq!(parse(&words(&["end", "--all"])), Ok(Command::EndAll));
         assert_eq!(parse(&words(&["end", "abcdefghij12"])), Ok(Command::End("abcdefghij12".into())));
         assert_eq!(parse(&words(&["forget", "abcdefghij12"])), Ok(Command::Forget("abcdefghij12".into())));
