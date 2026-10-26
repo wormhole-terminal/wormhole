@@ -16,7 +16,7 @@ use wormhole_core::view::motion::StatusMotion;
 use super::list::ItemKey;
 use super::plan::GRACE;
 use crate::settings::settings_in;
-use crate::sidebar::row::{Frame, RowShift, line_of, tile_parts};
+use crate::sidebar::row::{Frame, RowShift, Was, line_of, tile_parts};
 use crate::sidebar::{Sidebar, SidebarInput};
 use crate::style::{ShiftClock, StatusGlyph, StatusShift};
 
@@ -93,7 +93,9 @@ impl Statuses {
                 continue;
             }
             // Only Line rolls reads the line the row said, which is not in the frame any more.
-            let was = (motion == StatusMotion::LineRoll).then(|| line_of(old, frame));
+            let was = (motion == StatusMotion::LineRoll).then(|| line_of(old, frame)).and_then(|line| {
+                Some(Was { text: SharedString::from(line.text?), tone: line.tone, mono: line.mono })
+            });
             longest = longest.max(shift.duration(to));
             self.runs.insert(info.id, Run { played: RowShift { shift, was }, to, change });
         }

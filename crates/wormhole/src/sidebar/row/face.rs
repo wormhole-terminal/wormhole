@@ -175,11 +175,11 @@ pub(in crate::sidebar) fn row_face(
     // has to report comes first; a quiet one says where it is, and where even that is
     // unknown it says what it is, so no row is a single line.
     let SecondLine { text: detail, tone, mono, trail: detail_trail } = line_of(info, frame);
-    // Line rolls: the words it had roll away as the new ones come.
+    // Line rolls: the words it had roll away as the new ones come, unless they are the same.
     let detail_roll = place.status.as_ref().and_then(|played| {
         let was = played.was.as_ref()?;
-        Some(DetailRoll {
-            from: SharedString::from(was.text.clone()?),
+        (detail.as_deref() != Some(was.text.as_ref()) || tone != was.tone).then(|| DetailRoll {
+            from: was.text.clone(),
             from_tone: was.tone,
             from_font: was.mono.then(|| frame.code_font.clone()),
             shift: played.shift,

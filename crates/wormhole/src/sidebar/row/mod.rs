@@ -24,7 +24,7 @@ pub(super) use self::face::line_of;
 pub(super) use self::face::{PLACE_CHARS, Place, row_face};
 pub(super) use self::frame::Frame;
 pub(super) use self::second_line::time_text;
-pub(super) use self::shift::RowShift;
+pub(super) use self::shift::{RowShift, Was};
 pub(super) use self::tile::{glyph_for, tile_for, tile_parts};
 
 use super::facts::RowInfo;
