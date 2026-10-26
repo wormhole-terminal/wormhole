@@ -550,12 +550,13 @@ fn showing_a_tab_runs_the_features_on_show_hook(cx: &mut TestAppContext) {
 }
 
 /// Allocations the second draw of a one-terminal window on Changes (three changed files) may make.
-/// Measured: 3,698 allocations (1.8 MB), the same on every run: the count is exact (3,697 before Changes
-/// moved into its entity). The budget is that plus about a hundredth. It guards the window's own frame, which the table's loops (tab bar, bindings, panel
+/// Measured: 3,752 allocations (1.8 MB), the same on every run: the count is exact (3,697 before Changes
+/// moved into its entity, 3,698 before the icons' motions: each tab's icon and each button with a motion
+/// looks up the state it keeps, and a button's click handler is shared). The budget is that plus about a hundredth. It guards the window's own frame, which the table's loops (tab bar, bindings, panel
 /// body) are part of: a lookup, clone or `Vec` per feature per frame shows as a few dozen and a
 /// per-row one as hundreds. Any rise must be explained in the change that makes it, and then raised
 /// here with the new measurement.
-const WINDOW_FRAME_ALLOCATIONS: u64 = 3_735;
+const WINDOW_FRAME_ALLOCATIONS: u64 = 3_790;
 
 #[gpui_kit::test]
 fn a_window_frame_on_changes_stays_within_its_allocation_budget(cx: &mut TestAppContext) {

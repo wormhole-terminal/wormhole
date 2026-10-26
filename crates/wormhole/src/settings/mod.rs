@@ -36,7 +36,7 @@ use wormhole_core::theme::tokens::{Appearance, ColorChoices, ThemeTokens};
 
 use crate::palette::Palette;
 use crate::theme_bridge;
-use derive::{OPAQUE_LOOK, contrasted, main_ui, tally, theme_parts, themed, translucency};
+use derive::{contrasted, main_ui, opaque_ui, tally, theme_parts, themed, translucency};
 pub use profile::{ParkedSettings, edits_in, features_in, settings_in, store_in, ui_in};
 pub use ui_colors::UiColors;
 
@@ -189,7 +189,7 @@ impl SettingsStore {
             icons: crate::icons::resolve(&icon_key.0, icon_key.1),
             ui: main_ui(&tokens, &settings, false),
             features: FeatureMask::resolve(&settings),
-            ui_opaque: UiColors::new(&tokens, OPAQUE_LOOK),
+            ui_opaque: opaque_ui(&tokens, &settings),
             error: config.error.clone().map(Into::into),
             palette,
             highlight,
@@ -279,9 +279,7 @@ impl SettingsStore {
         }
         if theme_changed || look_changed {
             self.ui = main_ui(&self.tokens, &self.settings, self.system.increase_contrast);
-        }
-        if theme_changed {
-            self.ui_opaque = UiColors::new(&self.tokens, OPAQUE_LOOK);
+            self.ui_opaque = opaque_ui(&self.tokens, &self.settings);
         }
 
         let fonts = self.settings.resolved_fonts(&self.tokens.metrics);

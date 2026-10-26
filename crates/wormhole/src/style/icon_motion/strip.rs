@@ -41,13 +41,17 @@ impl StripFill {
     }
 
     /// The fill under a `glyph`-point icon, in `color`, and in `hover`'s color while the pointer is
-    /// over its group.
+    /// over its group; none while the strip is empty and staying so, as the toggles are drawn in
+    /// every frame of the window.
     pub(in crate::style) fn render(
         self,
         glyph: f32,
         color: Hsla,
         hover: Option<(SharedString, Hsla)>,
-    ) -> AnyElement {
+    ) -> Option<AnyElement> {
+        if !self.open && self.slide.is_none() {
+            return None;
+        }
         let full = glyph * STRIP_WIDTH;
         let inset = px(glyph * STRIP_INSET);
         let corner = px(glyph * STRIP_CORNER);
@@ -61,11 +65,11 @@ impl StripFill {
             None => strip,
         };
         let open = self.open;
-        match self.slide {
+        Some(match self.slide {
             Some((id, animation)) => strip
                 .with_animation(id, animation, move |d, t| d.w(px(full * if open { t } else { 1.0 - t })))
                 .into_any_element(),
-            None => strip.w(px(if open { full } else { 0.0 })).into_any_element(),
-        }
+            None => strip.w(px(full)).into_any_element(),
+        })
     }
 }

@@ -236,6 +236,7 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
                     d.child(
                         div().invisible().group_hover(group.clone(), |s| s.visible()).child(
                             icon_button((id.clone(), "reset"), ui, IconName::RotateCcw, "Reset to default")
+                                .still()
                                 .on_click(on_reset),
                         ),
                     )

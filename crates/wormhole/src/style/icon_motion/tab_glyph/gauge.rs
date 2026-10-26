@@ -38,11 +38,9 @@ pub(super) fn glyph(canvas: Canvas, run: u64) -> AnyElement {
             if t >= 1.0 {
                 return frame_box.child(canvas.icon(IconName::Gauge));
             }
-            frame_box.child(canvas.part(part::GAUGE_ARC)).child(
-                canvas
-                    .part_at(part::GAUGE_NEEDLE, PIVOT_SHIFT)
-                    .with_transformation(Transformation::rotate(radians(needle(t)))),
-            )
+            frame_box
+                .child(canvas.part(part::GAUGE_ARC))
+                .child(canvas.part_at(part::GAUGE_NEEDLE, PIVOT_SHIFT).rotate(radians(needle(t))))
         })
         .into_any_element()
 }

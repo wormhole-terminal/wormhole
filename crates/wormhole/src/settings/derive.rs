@@ -74,11 +74,20 @@ pub(super) fn translucency(settings: &Settings) -> Translucency {
 
 /// The main window's colours: the tokens at the window's look, and no line between the columns
 /// when the person turned Column dividers off. Increase Contrast keeps the lines, as the
-/// window's columns would otherwise be told apart by a tint alone. Its icons hold still when the
-/// person turned Animate icons off.
+/// window's columns would otherwise be told apart by a tint alone.
 pub(super) fn main_ui(tokens: &ThemeTokens, settings: &Settings, increase_contrast: bool) -> UiColors {
     let ui = UiColors::new(tokens, translucency(settings));
     let ui = if settings.column_dividers || increase_contrast { ui } else { ui.without_dividers() };
+    with_icon_motion(ui, settings)
+}
+
+/// The other windows' colours (Settings, the Studio, About): the tokens as they are.
+pub(super) fn opaque_ui(tokens: &ThemeTokens, settings: &Settings) -> UiColors {
+    with_icon_motion(UiColors::new(tokens, OPAQUE_LOOK), settings)
+}
+
+/// Every window's icons hold still when the person turned Animate icons off.
+fn with_icon_motion(ui: UiColors, settings: &Settings) -> UiColors {
     if settings.icon_animations { ui } else { ui.without_icon_motion() }
 }
 

@@ -183,6 +183,19 @@ fn column_dividers_off_hides_them_in_the_main_window_unless_contrast_is_increase
     assert_eq!(store.ui.divider_width, theme_width);
 }
 
+/// Animate icons off holds every window's icons still, Settings and the Studio as well as the main
+/// window, and on again lets them all move.
+#[test]
+fn animate_icons_off_holds_the_icons_of_every_window_still() {
+    let mut store = store();
+    assert!(store.ui_for(true).icon_motion && store.ui_for(false).icon_motion);
+    update(&mut store, |s| s.icon_animations = false);
+    assert!(!store.ui_for(true).icon_motion, "the main window");
+    assert!(!store.ui_for(false).icon_motion, "Settings, the Studio and About");
+    update(&mut store, |s| s.icon_animations = true);
+    assert!(store.ui_for(true).icon_motion && store.ui_for(false).icon_motion);
+}
+
 /// Increase Contrast: the theme's high-contrast variant and opaque windows, the
 /// user's opacity kept for when it goes off; the variant is derived once while nothing
 /// else changes.

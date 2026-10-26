@@ -50,15 +50,17 @@ impl Canvas {
         self.icon(icon).absolute().top_0().left_0()
     }
 
-    /// A piece of an icon in its place in the box.
-    pub(super) fn part(self, path: &'static str) -> Svg {
+    /// A piece of an icon in its place in the box, in the icon's color. It is an `Icon` rather than a
+    /// bare `svg()`, which GPUI paints only in a color of its own: the `Icon` takes the text color
+    /// around it as it lays out, as the whole icon does, hover included.
+    pub(super) fn part(self, path: &'static str) -> Icon {
         self.part_at(path, (0.0, 0.0))
     }
 
     /// A piece moved by `shift` grid units: one shape serves for the parts that are alike but
     /// stand apart (the two circles of git-compare are one dot, 12 units apart).
-    pub(super) fn part_at(self, path: &'static str, (x, y): (f32, f32)) -> Svg {
-        svg().path(path).absolute().left(self.at(x)).top(self.at(y)).size(px(self.size))
+    pub(super) fn part_at(self, path: &'static str, (x, y): (f32, f32)) -> Icon {
+        Icon::empty().path(path).with_size(px(self.size)).absolute().left(self.at(x)).top(self.at(y))
     }
 
     /// The part of a piece inside `cut`, with the rest hidden: a line drawn from one end, or a

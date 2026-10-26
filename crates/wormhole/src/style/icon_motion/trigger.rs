@@ -10,6 +10,10 @@
 //!
 //! The Animate icons setting being off keeps the count at 0, so turning it on later doesn't play
 //! what was missed.
+//!
+//! The state is found by the icon's id, so two icons with one id among the same siblings would share
+//! it: a click on one would play both, and a `watch` seeing two values a frame would count a change
+//! in every frame. A button's id must be its own among its siblings, as GPUI asks of any id.
 
 use gpui_kit::*;
 
@@ -82,6 +86,11 @@ pub(super) fn watch<V: Copy + PartialEq + 'static>(
     let seen = window.with_id(scope.clone(), |window| {
         window.use_keyed_state(KEY, cx, move |_, _| Seen { value, before: value, run: 0 })
     });
+    // Read first: most frames see the value they saw last, and a zoom button's runs in every one.
+    let now = seen.read(cx);
+    if now.value == value && (enabled || now.run == 0) {
+        return Change { run: now.run, before: now.before };
+    }
     seen.update(cx, |seen, _| {
         if seen.value != value {
             (seen.before, seen.value) = (seen.value, value);

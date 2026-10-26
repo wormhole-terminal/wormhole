@@ -400,11 +400,12 @@ fn pick(ws: &mut Workspace, branch: Option<String>, cx: &mut gpui_kit::Context<W
 // ---------------------------------------------------------------- the frame
 
 /// Allocations the third draw of a one-terminal window on History (two commits, the newest open with its
-/// two files) may make. Measured: 3,792 allocations (1.8 MB), the same on every run (3,790 before History
-/// moved into its entity). The budget is that plus
+/// two files) may make. Measured: 3,856 allocations (1.8 MB), the same on every run (3,790 before History
+/// moved into its entity, 3,792 before the icons' motions: each tab's icon and each button with a motion
+/// looks up the state it keeps, and a button's click handler is shared). The budget is that plus
 /// about a hundredth; the tab adds a
 /// row for each commit and file in view, so a cost per commit or per file per frame shows at once.
-const HISTORY_FRAME_ALLOCATIONS: u64 = 3_830;
+const HISTORY_FRAME_ALLOCATIONS: u64 = 3_895;
 
 #[gpui_kit::test]
 fn a_window_frame_on_history_stays_within_its_allocation_budget(cx: &mut TestAppContext) {

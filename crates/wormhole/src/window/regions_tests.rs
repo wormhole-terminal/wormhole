@@ -367,7 +367,8 @@ fn the_colour_of_the_selected_terminals_group_changing_draws_the_title_row_again
 
 /// Allocations a frame of a two-terminal window with the status bar on may make when only a terminal asked
 /// for it and the chrome is replayed. Measured: 566 allocations, the same on every run (it was 546 before
-/// the toggles' strip fills and the Animate icons setting). The budget is that plus about a hundredth: what is left is the root's own rebuild (the window's actions,
+/// the toggles' strip fills and the Animate icons setting). The budget is that plus about a hundredth:
+/// what is left is the root's own rebuild (the window's actions,
 /// the overlay and menu layers, the pane probe, the sidebar's column with its header and list as the
 /// replayed views it holds side by side) and the terminal.
 const REPLAYED_FRAME_ALLOCATIONS: u64 = 572;

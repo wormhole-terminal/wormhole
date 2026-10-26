@@ -410,7 +410,7 @@ pub(super) fn render(
             .items_center()
             .gap_1()
             .when(notes_on, |d| {
-                d.child(style::icon_tab("g-ftab-notes", ui, IconName::StickyNote, "Notes", false, None))
+                d.child(style::icon_tab("g-ftab-notes", ui, IconName::FileText, "Notes", false, None))
             })
             .child(style::icon_tab("g-ftab-changes", ui, IconName::GitCompare, "Changes", false, Some(3)))
             .child(env.mark(
