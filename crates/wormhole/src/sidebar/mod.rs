@@ -275,12 +275,6 @@ impl Sidebar {
         self.motion.planned_rows()
     }
 
-    /// Whether a gap is open for a dragged row now.
-    #[cfg(test)]
-    pub(crate) fn gap_open(&self) -> bool {
-        self.motion.gap_open()
-    }
-
     /// Whether a drag's gap is held (open, or closing).
     #[cfg(test)]
     pub(crate) fn has_room(&self) -> bool {
