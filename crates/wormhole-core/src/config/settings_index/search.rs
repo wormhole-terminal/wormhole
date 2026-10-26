@@ -138,10 +138,11 @@ pub fn search(query: &Query) -> Vec<Hit> {
 }
 
 /// Like [`search`], but only in the sections shown for this build and settings, so a hidden
-/// feature's settings (a preview section off in this build) never surface in the results.
+/// feature's settings (a preview section off in this build, a row behind a flag that is off) never
+/// surface in the results.
 pub fn search_visible(query: &Query, settings: &Settings) -> Vec<Hit> {
     let mut hits = search(query);
-    hits.retain(|hit| hit.section.is_visible(settings));
+    hits.retain(|hit| hit.section.is_visible(settings) && hit.entry.is_shown(settings));
     hits
 }
 

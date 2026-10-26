@@ -499,6 +499,10 @@ entry Agents control-write
   label "Let the command line type and open terminals"
   description "send-text types into a terminal and new-terminal opens one, as a paste; never into the terminal that asks, nor one waiting for your answer"
   keywords "cli command line control api socket send-text new-terminal scripts agents automation remote type"
+entry Agents control-read
+  label "Let the command line read terminals"
+  description "read, blocks and the output events see what a terminal shows, also what it showed before; a terminal can always read itself"
+  keywords "cli command line control api socket read blocks output events screen scrollback scripts agents automation watch"
 entry Import import-found
   label "Terminals found"
   description ""

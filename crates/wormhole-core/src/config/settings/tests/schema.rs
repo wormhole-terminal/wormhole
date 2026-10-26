@@ -53,6 +53,7 @@ fn the_final_design_keys_have_their_defaults() {
     assert_eq!(unset.title_border, TitleBorder::Scrolled, "the line shows once output is under the bar");
     assert!(unset.open_in.is_empty(), "Open in… picks an editor until one is chosen");
     assert!(!unset.control_write, "the command line can't type into terminals until asked");
+    assert!(!unset.control_read, "the command line can't read terminals until asked");
     assert!(!unset.allow_screen_checksum, "programs can't read the screen back until asked");
     assert!(!unset.allow_window_ops, "programs can't move the window until asked");
     assert!(!unset.allow_title_report, "programs can't read the window title back until asked");

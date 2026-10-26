@@ -1,6 +1,7 @@
 //! The Coding agents section, and the Project folders and Feature flags sections that hold one setting each.
 
 use super::{entry, group, untitled};
+use crate::config::features::FeatureFlag;
 use crate::config::settings_index::Group;
 #[allow(
     clippy::wildcard_imports,
@@ -46,6 +47,10 @@ pub(super) const AGENTS: &[Group] = &[
             entry("control-write", SETTINGS_AGENTS_CONTROL_WRITE, &["control_write"])
                 .with_description(SETTINGS_AGENTS_CONTROL_WRITE_DESCRIPTION)
                 .with_keywords(SETTINGS_AGENTS_CONTROL_WRITE_KEYWORDS),
+            entry("control-read", SETTINGS_AGENTS_CONTROL_READ, &["control_read"])
+                .with_flag(FeatureFlag::Automation)
+                .with_description(SETTINGS_AGENTS_CONTROL_READ_DESCRIPTION)
+                .with_keywords(SETTINGS_AGENTS_CONTROL_READ_KEYWORDS),
         ],
     )
     .with_blurb(SETTINGS_AGENTS_GROUP_COMMAND_LINE_BLURB),

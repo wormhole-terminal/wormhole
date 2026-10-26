@@ -6,72 +6,72 @@
 use crate::key::Key;
 
 /// "Where do you want to start?"
-pub const TAILOR_START: Key = Key::new(870);
+pub const TAILOR_START: Key = Key::new(873);
 /// "Zen"
-pub const TAILOR_ZEN: Key = Key::new(871);
+pub const TAILOR_ZEN: Key = Key::new(874);
 /// "The terminal list and the terminal: its name and the splits on top, nothing else"
-pub const TAILOR_ZEN_DETAIL: Key = Key::new(872);
+pub const TAILOR_ZEN_DETAIL: Key = Key::new(875);
 /// "Balanced"
-pub const TAILOR_BALANCED: Key = Key::new(873);
+pub const TAILOR_BALANCED: Key = Key::new(876);
 /// "Wormhole as it comes"
-pub const TAILOR_BALANCED_DETAIL: Key = Key::new(874);
+pub const TAILOR_BALANCED_DETAIL: Key = Key::new(877);
 /// "Everything"
-pub const TAILOR_EVERYTHING: Key = Key::new(875);
+pub const TAILOR_EVERYTHING: Key = Key::new(878);
 /// "Every part shown: the whole title row, the status bar and the minimap"
-pub const TAILOR_EVERYTHING_DETAIL: Key = Key::new(876);
+pub const TAILOR_EVERYTHING_DETAIL: Key = Key::new(879);
 /// "What should the title row show?"
-pub const TAILOR_TITLE_ROW: Key = Key::new(877);
+pub const TAILOR_TITLE_ROW: Key = Key::new(880);
 /// "Just the name"
-pub const TAILOR_TITLE_NAME: Key = Key::new(878);
+pub const TAILOR_TITLE_NAME: Key = Key::new(881);
 /// "The terminal's name and the split buttons"
-pub const TAILOR_TITLE_NAME_DETAIL: Key = Key::new(879);
+pub const TAILOR_TITLE_NAME_DETAIL: Key = Key::new(882);
 /// "Where you are"
-pub const TAILOR_TITLE_PATH: Key = Key::new(880);
+pub const TAILOR_TITLE_PATH: Key = Key::new(883);
 /// "Folder, branch and the terminal, with Open in… and the splits"
-pub const TAILOR_TITLE_PATH_DETAIL: Key = Key::new(881);
+pub const TAILOR_TITLE_PATH_DETAIL: Key = Key::new(884);
 /// "Everything"
-pub const TAILOR_TITLE_EVERYTHING: Key = Key::new(882);
+pub const TAILOR_TITLE_EVERYTHING: Key = Key::new(885);
 /// "Also the agent's model and context, open ports and the pull request"
-pub const TAILOR_TITLE_EVERYTHING_DETAIL: Key = Key::new(883);
+pub const TAILOR_TITLE_EVERYTHING_DETAIL: Key = Key::new(886);
 /// "Off"
-pub const TAILOR_OFF: Key = Key::new(884);
+pub const TAILOR_OFF: Key = Key::new(887);
 /// "On"
-pub const TAILOR_ON: Key = Key::new(885);
+pub const TAILOR_ON: Key = Key::new(888);
 /// "A status bar along the bottom?"
-pub const TAILOR_STATUS_BAR: Key = Key::new(886);
+pub const TAILOR_STATUS_BAR: Key = Key::new(889);
 /// "Nothing under the terminal"
-pub const TAILOR_STATUS_BAR_OFF: Key = Key::new(887);
+pub const TAILOR_STATUS_BAR_OFF: Key = Key::new(890);
 /// "Branch, agents and the terminal's size along the bottom of the window"
-pub const TAILOR_STATUS_BAR_ON: Key = Key::new(888);
+pub const TAILOR_STATUS_BAR_ON: Key = Key::new(891);
 /// "A minimap beside each terminal?"
-pub const TAILOR_MINIMAP: Key = Key::new(889);
+pub const TAILOR_MINIMAP: Key = Key::new(892);
 /// "The terminal runs to its edge"
-pub const TAILOR_MINIMAP_OFF: Key = Key::new(890);
+pub const TAILOR_MINIMAP_OFF: Key = Key::new(893);
 /// "An overview of the scrollback along the terminal's right edge"
-pub const TAILOR_MINIMAP_ON: Key = Key::new(891);
+pub const TAILOR_MINIMAP_ON: Key = Key::new(894);
 /// "Lines between the columns?"
-pub const TAILOR_DIVIDERS: Key = Key::new(892);
+pub const TAILOR_DIVIDERS: Key = Key::new(895);
 /// "The sidebar, the terminal and the panel meet without a line"
-pub const TAILOR_DIVIDERS_OFF: Key = Key::new(893);
+pub const TAILOR_DIVIDERS_OFF: Key = Key::new(896);
 /// "A thin line between the sidebar, the terminal and the panel"
-pub const TAILOR_DIVIDERS_ON: Key = Key::new(894);
+pub const TAILOR_DIVIDERS_ON: Key = Key::new(897);
 /// "Should the right panel be open?"
-pub const TAILOR_PANEL: Key = Key::new(895);
+pub const TAILOR_PANEL: Key = Key::new(898);
 /// "Closed"
-pub const TAILOR_PANEL_CLOSED: Key = Key::new(896);
+pub const TAILOR_PANEL_CLOSED: Key = Key::new(899);
 /// "Open it when you want it, with its button at the window's top right"
-pub const TAILOR_PANEL_CLOSED_DETAIL: Key = Key::new(897);
+pub const TAILOR_PANEL_CLOSED_DETAIL: Key = Key::new(900);
 /// "Open"
-pub const TAILOR_PANEL_OPEN: Key = Key::new(898);
+pub const TAILOR_PANEL_OPEN: Key = Key::new(901);
 /// "What changed, and the panel's other tools, beside the terminal"
-pub const TAILOR_PANEL_OPEN_DETAIL: Key = Key::new(899);
+pub const TAILOR_PANEL_OPEN_DETAIL: Key = Key::new(902);
 /// "Which tools should the right panel have?"
-pub const TAILOR_TOOLS: Key = Key::new(900);
+pub const TAILOR_TOOLS: Key = Key::new(903);
 /// "Changes and usage"
-pub const TAILOR_TOOLS_FEW: Key = Key::new(901);
+pub const TAILOR_TOOLS_FEW: Key = Key::new(904);
 /// "What changed in the repository, and the agents' plan limits"
-pub const TAILOR_TOOLS_FEW_DETAIL: Key = Key::new(902);
+pub const TAILOR_TOOLS_FEW_DETAIL: Key = Key::new(905);
 /// "All of them"
-pub const TAILOR_TOOLS_ALL: Key = Key::new(903);
+pub const TAILOR_TOOLS_ALL: Key = Key::new(906);
 /// "Every tool the panel has, such as the history"
-pub const TAILOR_TOOLS_ALL_DETAIL: Key = Key::new(904);
+pub const TAILOR_TOOLS_ALL_DETAIL: Key = Key::new(907);

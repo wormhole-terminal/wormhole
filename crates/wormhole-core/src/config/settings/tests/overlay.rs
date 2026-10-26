@@ -66,11 +66,13 @@ fn a_project_themes_itself_with_its_theme_file_only() {
     assert!(PROJECT_SETTINGS.contains(&"primary_color"), "the primary stays a project's to set");
 }
 
-/// `control_write` lets scripts type into terminals and start programs: only the user's own
-/// config.json may turn it on, never a repository's `.wormhole/config.json`.
+/// `control_write` lets scripts type into terminals and start programs, `control_read` lets them
+/// read what terminals show: only the user's own config.json may turn either on, never a
+/// repository's `.wormhole/config.json`.
 #[test]
 fn a_project_cannot_let_scripts_type_into_terminals() {
     assert!(APP_SETTINGS.contains(&"control_write") && !PROJECT_SETTINGS.contains(&"control_write"));
+    assert!(APP_SETTINGS.contains(&"control_read") && !PROJECT_SETTINGS.contains(&"control_read"));
     assert!(
         APP_SETTINGS.contains(&"allow_screen_checksum")
             && !PROJECT_SETTINGS.contains(&"allow_screen_checksum")
@@ -79,12 +81,12 @@ fn a_project_cannot_let_scripts_type_into_terminals() {
     assert!(
         APP_SETTINGS.contains(&"allow_title_report") && !PROJECT_SETTINGS.contains(&"allow_title_report")
     );
-    let overrides = serde_json::json!({ "control_write": true });
+    let overrides = serde_json::json!({ "control_write": true, "control_read": true });
     let serde_json::Value::Object(map) = overrides else { unreachable!() };
     let (merged, applied) = Settings::default().with_overrides_reported(&map);
     // The merge itself is blind to the lists (the app applies only `PROJECT_SETTINGS`), so
     // what matters is the classification above; the overlay reads like any other key here.
-    assert!(applied == ["control_write"] && merged.control_write);
+    assert!(applied == ["control_read", "control_write"] && merged.control_write && merged.control_read);
 }
 
 /// A folder's colour is the person's own, for every window: a repository can't recolour the

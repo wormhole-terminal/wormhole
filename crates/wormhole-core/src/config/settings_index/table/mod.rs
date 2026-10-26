@@ -10,6 +10,7 @@ use wormhole_text::keys::*;
 
 use super::{Entry, Group, NavGroup, SectionId, SectionInfo};
 use crate::config::FeatureId;
+use crate::config::features::FeatureFlag;
 
 mod advanced;
 mod agents;
@@ -26,13 +27,19 @@ mod updates;
 /// A setting whose words are in the catalogs: `label` is the message and the quiet line under it and the
 /// search words are its attributes (`.with_description`, `.with_keywords`).
 const fn entry(id: &'static str, label: Key, keys: &'static [&'static str]) -> Entry {
-    Entry { id, label, description: None, keywords: None, keys, feature: None }
+    Entry { id, label, description: None, keywords: None, keys, feature: None, flag: None }
 }
 
 impl Entry {
     /// About the feature `feature`.
     const fn of(mut self, feature: FeatureId) -> Self {
         self.feature = Some(feature);
+        self
+    }
+
+    /// Shown only while the feature flag `flag` is on (the row of a feature that is not finished).
+    const fn with_flag(mut self, flag: FeatureFlag) -> Self {
+        self.flag = Some(flag);
         self
     }
 

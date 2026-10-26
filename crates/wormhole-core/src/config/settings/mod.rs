@@ -255,6 +255,9 @@ pub struct Settings {
     /// Let `Wormhole send-text` type into terminals and `Wormhole new-terminal` open them (and
     /// start programs). Off, the command line can only list, report and notify.
     pub control_write: bool,
+    /// Let the command line read what terminals show: `read`, `blocks`, and the `output` events.
+    /// A terminal can always read itself. Off, the rest of the command line works as before.
+    pub control_read: bool,
     /// Answer a program's request for the checksum of a rectangle of the screen (DECRQCRA). Off:
     /// it lets any program, also one over ssh, read the screen back cell by cell. Terminals started
     /// after the change use it.
@@ -374,6 +377,7 @@ impl Default for Settings {
             hotkey_action: HotkeyAction::default(),
             jump_waiting_key: "alt-cmd-j".into(),
             control_write: false,
+            control_read: false,
             allow_screen_checksum: false,
             allow_window_ops: false,
             allow_title_report: false,

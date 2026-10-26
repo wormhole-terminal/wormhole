@@ -51,6 +51,10 @@ settings-agents-control-write = Let the command line type and open terminals
     .description = send-text types into a terminal and new-terminal opens one, as a paste; never into the terminal that asks, nor one waiting for your answer
     .keywords = cli command line control api socket send-text new-terminal scripts agents automation remote type
 
+settings-agents-control-read = Let the command line read terminals
+    .description = read, blocks and the output events see what a terminal shows, also what it showed before; a terminal can always read itself
+    .keywords = cli command line control api socket read blocks output events screen scrollback scripts agents automation watch
+
 ## settings_window/sections/agents.rs (labels, hints and notes drawn by this page's code)
 
 settings-agents-open-notifications = Open Notifications

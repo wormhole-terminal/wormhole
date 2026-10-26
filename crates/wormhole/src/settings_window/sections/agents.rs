@@ -42,6 +42,8 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("agents-how", draw_how),
     cli_tool::SETTING,
     toggle!("control-write", control_write),
+    // Shown while the Automation flag is on (the index row says so).
+    toggle!("control-read", control_read),
 ];
 
 /// What the Agents page shows, read from disk: which agents are installed and what state

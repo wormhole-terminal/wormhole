@@ -137,6 +137,9 @@ pub struct Entry {
     /// The feature it is about, if it is one of an optional feature: while that is off the setting
     /// does nothing. `None` for the rest.
     pub feature: Option<crate::config::FeatureId>,
+    /// The feature flag that hides the row while it is off (an unfinished feature's setting on a page
+    /// that ships): neither the page nor the search shows it then.
+    flag: Option<crate::config::features::FeatureFlag>,
 }
 
 impl Entry {
@@ -159,6 +162,12 @@ impl Entry {
     fn words_in(&self, language: Language) -> [&'static str; 3] {
         let of = |key: Option<Key>| key.map_or("", |key| text_in(language, key));
         [text_in(language, self.label), of(self.description), of(self.keywords)]
+    }
+
+    /// Whether the row is shown for these settings: always, unless an unfinished feature's flag
+    /// that it hangs on is off in this build.
+    pub fn is_shown(&self, settings: &Settings) -> bool {
+        self.flag.is_none_or(|flag| settings.feature_enabled(flag))
     }
 
     /// Whether the setting is of use with these features on: always, unless it is about a feature

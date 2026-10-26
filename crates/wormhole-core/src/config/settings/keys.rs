@@ -110,6 +110,9 @@ pub const APP_SETTINGS: &[&str] = &[
     // Whether scripts may type into terminals and open them: a cloned repository must not be
     // able to turn that on for itself.
     "control_write",
+    // Whether scripts may read what terminals show (their screen, history and output): the same
+    // reason, a cloned repository must not be able to turn that on for itself.
+    "control_read",
     // Whether programs may read the screen back with DECRQCRA: a cloned repository must not be
     // able to turn that on for itself.
     "allow_screen_checksum",
