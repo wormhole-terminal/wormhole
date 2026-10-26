@@ -56,6 +56,7 @@ impl Sidebar {
         let frame = Frame::new(&input, self.width, self.hints_showing(cx), window, cx);
         let mark = self.drop_mark(&listing, infos);
         self.follow_drag(&keys, &listing, mark.as_ref(), cx);
+        self.follow_join(mark.as_ref(), cx);
         // The gap shows where the row lands, so the line that says it too is left out (a split is not a
         // landing: its tint stays).
         let mark = mark.filter(|mark| self.row_in_flight(cx).is_none() || matches!(mark, DropMark::Join(_)));
@@ -144,7 +145,11 @@ impl Sidebar {
             }
             Entry::Row { session, .. } => {
                 match Place::of(listing, infos, at, input.active, frame.metrics.cards) {
-                    Some(place) => self.render_row(&infos[session], &place, frame, window, cx),
+                    Some(mut place) => {
+                        // A split just made draws its bracket in.
+                        place.bracket_draws = self.motion.join.bracket_of(input, infos[session].split);
+                        self.render_row(&infos[session], &place, frame, window, cx)
+                    }
                     None => div().into_any_element(),
                 }
             }

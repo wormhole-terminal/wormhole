@@ -54,8 +54,8 @@ impl Sidebar {
     ) -> Stateful<Div> {
         let this = cx.weak_entity();
         let dragged =
-            DraggedTerminal::new(info.id, DragOrigin::Row, info.name.clone(), super::row::glyph_for(info))
-                .lifting(self.motion_on(cx));
+            DraggedTerminal::new(info.id, DragOrigin::Row, info.name.clone(), super::row::glyph_for(info));
+        let dragged = if self.motion_on(cx) { dragged.lifting(self.motion.join.snap()) } else { dragged };
         row.on_drag(dragged, move |dragged, grabbed, _, cx| {
             this.update(cx, |_, cx| {
                 cx.emit(SidebarEvent::TerminalDragStarted { id: dragged.id, origin: dragged.origin })
@@ -341,6 +341,10 @@ impl Sidebar {
         key: &ItemKey,
         ui: UiColors,
     ) -> Option<AnyElement> {
+        // The split's preview, coming in or going out, while the Motion feature is on.
+        if let Some(preview) = self.join_preview(mark, key, ui) {
+            return Some(preview);
+        }
         match mark? {
             DropMark::Above { key: at, inside } if at == key => {
                 Some(style::drop_line(ui, *inside, false).into_any_element())

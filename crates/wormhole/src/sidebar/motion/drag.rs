@@ -43,14 +43,16 @@ pub(super) struct Gap {
     lifted: HashMap<ItemKey, bool>,
     /// What the drop in flight does is make a split: the rows settle on the soft spring.
     joining: bool,
+    /// The terminal being dragged.
+    dragged: i64,
     /// The drag has ended, and the timer of this batch ends the gap.
     over: Option<u64>,
 }
 
 impl Gap {
     /// The room of a drag that begins now, over `lines` as laid out.
-    fn begin(lines: Vec<Drawn<ItemKey>>) -> Self {
-        Self { lines, pushed: HashMap::new(), lifted: HashMap::new(), joining: false, over: None }
+    fn begin(lines: Vec<Drawn<ItemKey>>, dragged: i64) -> Self {
+        Self { lines, pushed: HashMap::new(), lifted: HashMap::new(), joining: false, dragged, over: None }
     }
 
     fn top(&self, key: &ItemKey) -> Option<f32> {
@@ -76,6 +78,11 @@ impl Gap {
     /// Whether the drop that ended this drag made a split.
     pub(super) fn joined(&self) -> bool {
         self.joining
+    }
+
+    /// The terminal that was dragged.
+    pub(super) fn dragged(&self) -> i64 {
+        self.dragged
     }
 
     /// The dragged lines that were out of the list when the drag ended.
@@ -159,7 +166,9 @@ impl ListMotion {
         if ended {
             self.gap = None;
         }
-        ended
+        // A split's bracket drawn while the lines went back is drawn.
+        let drawn = self.join.retire(batch);
+        ended || drawn
     }
 }
 
@@ -206,7 +215,7 @@ impl Sidebar {
         let mut gap = match self.motion.gap.take() {
             Some(gap) if !gap.is_over() => gap,
             _ => match measured(&self.motion.drawn, &self.scroll) {
-                Some(lines) => Gap::begin(lines),
+                Some(lines) => Gap::begin(lines, dragged),
                 None => return,
             },
         };
@@ -252,6 +261,9 @@ impl Sidebar {
         gap.put_back();
         self.motion.batch += 1;
         let batch = self.motion.batch;
+        if gap.joined() && !cx.reduce_motion() {
+            self.motion.join.draw_bracket(gap.dragged(), batch);
+        }
         gap.over = Some(batch);
         self.motion.gap = Some(gap);
         self.later(ROOM.settle(super::plan::REST) + super::plan::GRACE, cx, move |this, cx| {

@@ -11,9 +11,11 @@ use wormhole_core::view::motion::drag::LIFT;
 use wormhole_core::view::panes::{PaneId, Zone};
 use wormhole_core::view::sidebar::Part;
 
+use super::motion::Snap;
 use crate::settings::ui;
 use crate::style;
 use crate::style::StatusGlyph;
+use crate::style::motion::SPRING_SNAP;
 
 /// Where a drag was picked up.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,37 +38,56 @@ pub(crate) struct DraggedTerminal {
     pub(crate) grabbed: Point<Pixels>,
     /// The picture lifts off the list as it is picked up (the Motion feature).
     pub(crate) lift: bool,
+    /// What the picture snaps onto while the pointer is over the middle of a row (read when it lifts).
+    pub(crate) snap: Snap,
 }
 
 impl DraggedTerminal {
     pub(crate) fn new(id: i64, origin: DragOrigin, name: SharedString, glyph: StatusGlyph) -> Self {
-        Self { id, origin, name, glyph, grabbed: Point::default(), lift: false }
+        Self { id, origin, name, glyph, grabbed: Point::default(), lift: false, snap: Snap::default() }
     }
 
-    /// The picture lifts as it is picked up.
-    pub(crate) fn lifting(mut self, lift: bool) -> Self {
-        self.lift = lift;
+    /// The picture lifts as it is picked up and snaps onto `snap`'s row (the Motion feature).
+    pub(crate) fn lifting(mut self, snap: Snap) -> Self {
+        self.lift = true;
+        self.snap = snap;
         self
     }
 }
 
 impl Render for DraggedTerminal {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let ui = ui(cx);
         let glyph = style::status_glyph(("drag-glyph", self.id as u64), ui, self.glyph, cx);
         let left = f32::from(self.grabbed.x) + style::GHOST_POINTER_GAP;
         let top = (f32::from(self.grabbed.y) - style::GHOST_POINTER_RISE).max(0.0);
         let ghost = style::drag_ghost(ui, cx.theme().popover, Some(glyph), self.name.clone());
-        let ghost = if self.lift {
-            ghost
-                .with_animation(("drag-lift", self.id as u64), Animation::new(LIFT), move |ghost, t| {
-                    style::drag_lift(ghost, ui, t)
-                })
-                .into_any_element()
-        } else {
-            ghost.into_any_element()
+        if !self.lift {
+            return div().pl(px(left)).pt(px(top)).child(ghost).into_any_element();
+        }
+        let ghost =
+            ghost.with_animation(("drag-lift", self.id as u64), Animation::new(LIFT), move |ghost, t| {
+                style::drag_lift(ghost, ui, t)
+            });
+        // Over the middle of a row the picture is drawn on that row instead, and goes there on a spring: this
+        // is its place from the picture's own corner, which is where GPUI drew the picture before the pointer moved.
+        let (snapped, at) = self.snap.target();
+        let (x, y) = {
+            let origin = window.mouse_position() - self.grabbed;
+            (f32::from(at.x - origin.x), f32::from(at.y - origin.y))
         };
-        div().pl(px(left)).pt(px(top)).child(ghost)
+        div()
+            .relative()
+            .child(ghost)
+            .with_spring(
+                ("drag-snap", self.id as u64),
+                SpringAnimation::new(SPRING_SNAP).to(snapped).from(false),
+                move |chip, phase| {
+                    let p = phase.0;
+                    chip.left(px(left + (x - left) * p)).top(px(top + (y - top) * p))
+                },
+            )
+            .into_any_element()
     }
 }
 

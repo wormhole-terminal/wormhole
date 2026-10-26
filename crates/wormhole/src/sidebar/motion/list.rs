@@ -24,6 +24,7 @@ use wormhole_core::view::sidebar::motion::Drawn;
 
 use super::drag::{self, Gap};
 use super::fold::{FoldNote, Summaries};
+use super::join::Join;
 use super::leaving::{Leavers, Snapshot};
 use super::pose::{self, Natural, RowMotion};
 use crate::sidebar::{Sidebar, SidebarInput};
@@ -79,6 +80,8 @@ pub(in crate::sidebar) struct ListMotion {
     /// The gap a dragged row has the lines open for it (`drag`), from the first frame of the drag until its
     /// lines are at rest again.
     pub(super) gap: Option<Gap>,
+    /// The preview of a split a dragged row would make, and its bracket once it has (`join`).
+    pub(in crate::sidebar) join: Join,
     pub(super) batch: u64,
 }
 
@@ -219,7 +222,8 @@ impl ListMotion {
             self.moving = None;
         }
         let summary = self.summaries.retire(batch);
-        summary || before != (self.entering.len(), self.moving.as_ref().map(|moving| moving.batch))
+        let bracket = self.join.retire(batch);
+        summary || bracket || before != (self.entering.len(), self.moving.as_ref().map(|moving| moving.batch))
     }
 
     /// The rows that left in change `batch` are over: they are dropped, and the lines below them close

@@ -7,7 +7,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use gpui_kit::*;
-use wormhole_core::view::motion::drag::JOIN_SETTLE;
+use wormhole_core::view::motion::drag::{BRACKET, JOIN_SETTLE};
 use wormhole_core::view::motion::pose::{LIST_MOVE, Phase, Room};
 use wormhole_core::view::motion::{InsertMotion, MotionChoices, SpringSpec};
 use wormhole_core::view::sidebar::Listing;
@@ -108,6 +108,10 @@ impl ListMotion {
         self.start_arriving(turnover, &standing, &mut lasting);
         if let Some(dropped) = &next.dropped {
             self.start_landing(&dropped.gap, &standing, &mut lasting);
+            if dropped.gap.joined() {
+                self.join.draw_bracket(dropped.gap.dragged(), self.batch);
+                lasting.settling = lasting.settling.max(BRACKET);
+            }
         }
         lasting
     }
@@ -233,6 +237,7 @@ impl Sidebar {
             }
             None
         } else {
+            self.leave_join(cx);
             self.motion.gap.take()
         };
         if self.motion.keys == keys && !self.motion.changed {

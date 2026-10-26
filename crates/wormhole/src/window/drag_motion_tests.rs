@@ -241,3 +241,93 @@ fn a_drag_draws_the_list_only_never_the_chrome_beyond_what_a_drag_costs(cx: &mut
     assert_eq!(list(cx), drawn + 5);
     release(cx, &window, target);
 }
+
+fn join_state(cx: &mut TestAppContext, window: &OpenWindow) -> (Option<i64>, Option<i64>, bool, bool) {
+    sidebar_of(cx, window, |sidebar| sidebar.join_state())
+}
+
+fn in_a_split(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<bool> {
+    crate::window::test_harness::read(cx, window, |ws| {
+        ws.sessions.iter().map(|s| s.split.is_some()).collect()
+    })
+}
+
+fn middle(cx: &mut TestAppContext, window: &OpenWindow, id: i64) -> Point<Pixels> {
+    row_bounds(cx, window, id).center()
+}
+
+#[gpui_kit::test]
+fn over_the_middle_of_a_row_it_previews_the_split_and_leaving_undoes_it(cx: &mut TestAppContext) {
+    if isolate("over_the_middle_of_a_row_it_previews_the_split_and_leaving_undoes_it") {
+        return;
+    }
+    let window = open(cx, 3);
+    assert_eq!(join_state(cx, &window), (None, None, false, false));
+    let (grab, onto) = (middle(cx, &window, 3), middle(cx, &window, 1));
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), onto]);
+    assert_eq!(
+        join_state(cx, &window),
+        (Some(1), None, true, false),
+        "row 1 takes the preview, the chip snaps"
+    );
+    // Out to the gap between rows 2 and 3: the preview goes out and the chip comes off.
+    let gap = above(cx, &window, 2);
+    pointer(cx, &window).simulate_mouse_move(gap, MouseButton::Left, Modifiers::none());
+    draw(cx, &window);
+    assert_eq!(join_state(cx, &window), (None, Some(1), false, false), "row 1's preview is going out");
+    settle(cx, &window);
+    assert_eq!(join_state(cx, &window).1, None, "and is gone when it has");
+    // Back onto row 1, then onto row 2: each row's preview is its own.
+    pointer(cx, &window).simulate_mouse_move(onto, MouseButton::Left, Modifiers::none());
+    draw(cx, &window);
+    let next = middle(cx, &window, 2);
+    pointer(cx, &window).simulate_mouse_move(next, MouseButton::Left, Modifiers::none());
+    draw(cx, &window);
+    assert_eq!(join_state(cx, &window), (Some(2), Some(1), true, false));
+    release(cx, &window, next);
+    assert_eq!(join_state(cx, &window).0, None, "the drop ends the target");
+}
+
+#[gpui_kit::test]
+fn a_drop_on_the_middle_of_a_row_makes_a_split_whose_bracket_draws_and_then_rests(cx: &mut TestAppContext) {
+    if isolate("a_drop_on_the_middle_of_a_row_makes_a_split_whose_bracket_draws_and_then_rests") {
+        return;
+    }
+    let window = open(cx, 4);
+    let (grab, onto) = (middle(cx, &window, 4), middle(cx, &window, 1));
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), onto]);
+    release(cx, &window, onto);
+    assert_eq!(ids(cx, &window), [1, 4, 2, 3], "right after the row it joined, each row once");
+    assert_eq!(in_a_split(cx, &window), [true, false, false, true], "1 and 4 are a split");
+    let (target, leaving, snapping, drawing) = join_state(cx, &window);
+    assert_eq!(
+        (target, leaving, snapping, drawing),
+        (None, Some(1), false, true),
+        "the bracket draws, the tint goes out"
+    );
+    assert_eq!(children(cx, &window), 5, "no row is drawn twice");
+    settle(cx, &window);
+    assert_eq!(join_state(cx, &window), (None, None, false, false), "everything is at rest");
+    assert!(!sidebar_of(cx, &window, |s| s.motion_busy() || s.has_gap()));
+}
+
+#[gpui_kit::test]
+fn with_reduce_motion_the_gap_and_the_split_are_cuts(cx: &mut TestAppContext) {
+    if isolate("with_reduce_motion_the_gap_and_the_split_are_cuts") {
+        return;
+    }
+    let window = open(cx, 4);
+    cx.update(|cx| cx.set_reduce_motion(true));
+    draw(cx, &window);
+    let grab = middle(cx, &window, 4);
+    let gap = above(cx, &window, 2);
+    drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), gap]);
+    assert_eq!(pushed(cx, &window).len(), 2, "the gap is there, with no spring to open it");
+    let onto = middle(cx, &window, 1);
+    pointer(cx, &window).simulate_mouse_move(onto, MouseButton::Left, Modifiers::none());
+    draw(cx, &window);
+    release(cx, &window, onto);
+    assert_eq!(ids(cx, &window), [1, 4, 2, 3]);
+    assert!(!sidebar_of(cx, &window, |s| s.motion_busy()), "no row slides");
+    assert!(!join_state(cx, &window).3, "no bracket draws");
+}

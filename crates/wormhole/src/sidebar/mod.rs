@@ -253,6 +253,13 @@ impl Sidebar {
         self.motion.lifted_rows()
     }
 
+    /// What a split's preview is doing: the row the dragged one would join, the row whose preview is going
+    /// out, whether the chip snaps onto a row, whether a bracket is being drawn.
+    #[cfg(test)]
+    pub(crate) fn join_state(&self) -> (Option<i64>, Option<i64>, bool, bool) {
+        self.motion.join.state()
+    }
+
     /// Whether a drag's gap is held (open, or closing).
     #[cfg(test)]
     pub(crate) fn has_gap(&self) -> bool {

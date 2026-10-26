@@ -15,6 +15,7 @@ use super::label::row_label;
 use super::second_line::{SecondLine, second_line};
 use super::tile::tile_for;
 use crate::sidebar::facts::RowInfo;
+use crate::sidebar::motion::draw_bracket;
 use crate::style::home_dir;
 use crate::style::{self, SessionRow, TextRole};
 
@@ -56,6 +57,8 @@ pub(in crate::sidebar) struct Place {
     /// The row above it in its card counts the same changes of the same repository, so this one
     /// leaves them out.
     pub(in crate::sidebar) changes_above: bool,
+    /// The split's bracket along it is being drawn, in this batch of the list's motion (a split just made).
+    pub(in crate::sidebar) bracket_draws: Option<u64>,
 }
 
 impl Place {
@@ -96,6 +99,7 @@ impl Place {
             grouped: band.is_some(),
             marks,
             changes_above,
+            bracket_draws: None,
         })
     }
 }
@@ -254,10 +258,13 @@ pub(in crate::sidebar) fn row_face(
             trail,
             detail_trail: detail_trail.map(SharedString::from),
             tile: Some(tile),
-            behind: place
-                .marks
-                .bracket
-                .map(|part| style::split_line(part, split_line_x(frame.metrics), ui).into_any_element()),
+            behind: place.marks.bracket.map(|part| {
+                let line = style::split_line(part, split_line_x(frame.metrics), ui);
+                match place.bracket_draws {
+                    Some(batch) => draw_bracket(line, id, batch, part),
+                    None => line.into_any_element(),
+                }
+            }),
             card: true,
             solo: place.solo,
             metrics: frame.metrics,
