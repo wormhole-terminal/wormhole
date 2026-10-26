@@ -133,7 +133,12 @@ impl Spot {
                 .when(self.clip < 1.0, |part| part.overflow_hidden())
                 .when_some(self.width, |part, width| part.w(px(width)))
                 .when(self.width.is_none(), |part| part.right_0())
-                .child(div().flex_none().h(px(self.height)).child(content()));
+                .child(if self.clip < 1.0 {
+                    // Cut, not squeezed: the content keeps the height it has whole.
+                    div().flex_none().h(px(self.height)).child(content()).into_any_element()
+                } else {
+                    content()
+                });
             if self.opacity < 1.0 { part.opacity(self.opacity) } else { part }.into_any_element()
         })
     }

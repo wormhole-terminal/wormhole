@@ -64,17 +64,17 @@ pub(super) fn stage(ui: UiColors, t: f32, cx: &App) -> Div {
         .draw(ui, metrics)
     });
     // Each row follows the one above it as far as that is open; the terminal under the group follows them all.
-    let mut top = head_h;
-    let rows: Vec<_> = [WORKING, ASKING]
-        .into_iter()
-        .zip(&poses)
-        .enumerate()
-        .filter_map(|(at, (sample, pose))| {
+    let tops = poses.iter().scan(head_h, |top, pose| {
+        let at = *top;
+        *top += row_h * pose.clip;
+        Some(at)
+    });
+    let rows = [WORKING, ASKING].into_iter().zip(&poses).zip(tops).enumerate().filter_map(
+        |(at, ((sample, pose), top))| {
             let spot = Spot::row(top, row_h).moved(pose.dx, pose.dy).showing(pose.opacity).clipped(pose.clip);
-            top += row_h * pose.clip;
             spot.put(|| row(&sample, &format!("motion-fold-{at}"), ui, cx))
-        })
-        .collect();
+        },
+    );
     let under =
         Spot::row(head_h + ROWS as f32 * row_h * open, row_h).put(|| row(&IDLE, "motion-fold-under", ui, cx));
     preview_stage(ui, head_h + 3.0 * row_h).children(head).children(rows).children(under)
