@@ -32,6 +32,19 @@ pub(super) enum DropMark {
     Join(i64),
 }
 
+impl DropMark {
+    /// The place among `keys` (the list's lines, top to bottom) the mark stands at: the index of the line
+    /// it is above, or one past the line it is below, so `keys.len()` is after the last. A join stands
+    /// at none.
+    pub(super) fn slot(&self, keys: &[ItemKey]) -> Option<usize> {
+        match self {
+            Self::Above { key, .. } => keys.iter().position(|line| line == key),
+            Self::Below { key, .. } => keys.iter().position(|line| line == key).map(|at| at + 1),
+            Self::Join(_) => None,
+        }
+    }
+}
+
 impl Sidebar {
     pub(super) fn with_drag(
         &self,
@@ -41,7 +54,8 @@ impl Sidebar {
     ) -> Stateful<Div> {
         let this = cx.weak_entity();
         let dragged =
-            DraggedTerminal::new(info.id, DragOrigin::Row, info.name.clone(), super::row::glyph_for(info));
+            DraggedTerminal::new(info.id, DragOrigin::Row, info.name.clone(), super::row::glyph_for(info))
+                .lifting(self.motion_on(cx));
         row.on_drag(dragged, move |dragged, grabbed, _, cx| {
             this.update(cx, |_, cx| {
                 cx.emit(SidebarEvent::TerminalDragStarted { id: dragged.id, origin: dragged.origin })

@@ -61,6 +61,8 @@ mod close_tests;
 #[cfg(feature = "devctl")]
 pub(crate) mod devctl;
 #[cfg(test)]
+mod drag_motion_tests;
+#[cfg(test)]
 mod drag_tests;
 pub(crate) mod facts;
 #[cfg(test)]

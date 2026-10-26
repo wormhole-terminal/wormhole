@@ -88,6 +88,42 @@ pub fn drag_ghost(ui: UiColors, surface: Hsla, lead: Option<AnyElement>, label: 
         .child(div().min_w_0().truncate().child(label))
 }
 
+/// How a dragged picture's shadow falls: lifted off the list, as a popover floats over a window.
+const LIFT_SHADOW_Y: f32 = 8.0;
+const LIFT_SHADOW_BLUR: f32 = 20.0;
+
+/// `ghost` (a [`drag_ghost`]) lifted off the list `lift` (0.0 flat, 1.0 all the way) of the way: the
+/// shadow of something that floats, growing with it. Only the shadow: a div has no scale in GPUI, so a
+/// lift is all the picture can show.
+#[track_caller]
+pub fn drag_lift(ghost: Div, ui: UiColors, lift: f32) -> Div {
+    ghost.shadow(vec![BoxShadow {
+        color: ui.shadow.opacity(lift.clamp(0.0, 1.0)),
+        offset: point(px(0.), px(LIFT_SHADOW_Y * lift.clamp(0.0, 1.0))),
+        blur_radius: px(LIFT_SHADOW_BLUR),
+        spread_radius: px(0.),
+        inset: false,
+    }])
+}
+
+/// The mark on the row a dragged terminal would make a split with: two columns, in the primary, at the
+/// right end of the row. Lay it over the row with [`row_drop_target`].
+#[track_caller]
+pub fn split_mark(ui: UiColors) -> Div {
+    div()
+        .absolute()
+        .top_0()
+        .bottom_0()
+        .right(px(SPLIT_MARK_RIGHT))
+        .flex()
+        .items_center()
+        .text_color(ui.primary)
+        .child(super::buttons::icon(gpui_kit::assets::IconName::Columns2))
+}
+
+/// How far from the row's right edge the split mark stands.
+const SPLIT_MARK_RIGHT: f32 = 8.0;
+
 /// Makes `line` (an item's main line) draggable, and returns it with the overlay that
 /// draws where a dragged sibling would land; the caller lays the overlay over the item.
 #[track_caller]

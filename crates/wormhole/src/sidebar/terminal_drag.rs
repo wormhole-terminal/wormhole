@@ -7,6 +7,7 @@
 
 use gpui_kit::component::ActiveTheme as _;
 use gpui_kit::*;
+use wormhole_core::view::motion::drag::LIFT;
 use wormhole_core::view::panes::{PaneId, Zone};
 use wormhole_core::view::sidebar::Part;
 
@@ -33,11 +34,19 @@ pub(crate) struct DraggedTerminal {
     /// Where in the row or header it was picked up. GPUI draws the picture with its corner where
     /// the source's was, so it moves by this much to come out beside the pointer.
     pub(crate) grabbed: Point<Pixels>,
+    /// The picture lifts off the list as it is picked up (the Motion feature).
+    pub(crate) lift: bool,
 }
 
 impl DraggedTerminal {
     pub(crate) fn new(id: i64, origin: DragOrigin, name: SharedString, glyph: StatusGlyph) -> Self {
-        Self { id, origin, name, glyph, grabbed: Point::default() }
+        Self { id, origin, name, glyph, grabbed: Point::default(), lift: false }
+    }
+
+    /// The picture lifts as it is picked up.
+    pub(crate) fn lifting(mut self, lift: bool) -> Self {
+        self.lift = lift;
+        self
     }
 }
 
@@ -47,12 +56,17 @@ impl Render for DraggedTerminal {
         let glyph = style::status_glyph(("drag-glyph", self.id as u64), ui, self.glyph, cx);
         let left = f32::from(self.grabbed.x) + style::GHOST_POINTER_GAP;
         let top = (f32::from(self.grabbed.y) - style::GHOST_POINTER_RISE).max(0.0);
-        div().pl(px(left)).pt(px(top)).child(style::drag_ghost(
-            ui,
-            cx.theme().popover,
-            Some(glyph),
-            self.name.clone(),
-        ))
+        let ghost = style::drag_ghost(ui, cx.theme().popover, Some(glyph), self.name.clone());
+        let ghost = if self.lift {
+            ghost
+                .with_animation(("drag-lift", self.id as u64), Animation::new(LIFT), move |ghost, t| {
+                    style::drag_lift(ghost, ui, t)
+                })
+                .into_any_element()
+        } else {
+            ghost.into_any_element()
+        };
+        div().pl(px(left)).pt(px(top)).child(ghost)
     }
 }
 

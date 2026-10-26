@@ -241,6 +241,24 @@ impl Sidebar {
         self.motion.is_busy()
     }
 
+    /// The terminals whose rows a dragged row pushes aside now, and how far (down is positive).
+    #[cfg(test)]
+    pub(crate) fn pushed_rows(&self) -> Vec<(i64, f32)> {
+        self.motion.pushed_rows()
+    }
+
+    /// The terminals whose rows are out of the list while a gap is open for them.
+    #[cfg(test)]
+    pub(crate) fn lifted_rows(&self) -> Vec<i64> {
+        self.motion.lifted_rows()
+    }
+
+    /// Whether a drag's gap is held (open, or closing).
+    #[cfg(test)]
+    pub(crate) fn has_gap(&self) -> bool {
+        self.motion.has_gap()
+    }
+
     /// Whether each row that is leaving was the terminal on screen when it was last drawn.
     #[cfg(test)]
     pub(crate) fn leaving_selected(&self) -> Vec<(i64, bool)> {

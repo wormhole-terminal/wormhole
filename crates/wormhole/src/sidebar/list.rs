@@ -52,9 +52,13 @@ impl Sidebar {
                 Entry::Row { session, .. } => ItemKey::Row(infos[session].id),
             })
             .collect();
-        self.plan_list_motion(&keys, &listing, cx);
+        self.plan_list_motion(&keys, &listing, window, cx);
         let frame = Frame::new(&input, self.width, self.hints_showing(cx), window, cx);
         let mark = self.drop_mark(&listing, infos);
+        self.follow_drag(&keys, &listing, mark.as_ref(), cx);
+        // The gap shows where the row lands, so the line that says it too is left out (a split is not a
+        // landing: its tint stays).
+        let mark = mark.filter(|mark| self.row_in_flight(cx).is_none() || matches!(mark, DropMark::Join(_)));
         let group_wash: HashMap<u32, Hsla> = {
             let tokens = &store_in(&input.profile, cx).tokens;
             self.view

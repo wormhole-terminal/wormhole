@@ -7,15 +7,17 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use gpui_kit::*;
-use wormhole_core::view::motion::MotionChoices;
+use wormhole_core::view::motion::drag::JOIN_SETTLE;
 use wormhole_core::view::motion::pose::{LIST_MOVE, Phase, Room};
+use wormhole_core::view::motion::{InsertMotion, MotionChoices, SpringSpec};
 use wormhole_core::view::sidebar::Listing;
 use wormhole_core::view::sidebar::motion::{Drawn, Moves, plan_moves};
 
+use super::drag::Gap;
 use super::fold::{FoldNote, Summaries};
 use super::insert::{Change, changes, motions};
 use super::leaving::{Leaving, Snapshot};
-use super::list::{Arrival, ItemKey, ListMotion, Moving, measured};
+use super::list::{Arrival, ItemKey, ListMotion, Moving, content_top, measured};
 use super::pose::{Natural, RowMotion};
 use crate::settings::settings_in;
 use crate::sidebar::Sidebar;
@@ -27,9 +29,9 @@ const LIMIT: f32 = 480.0;
 /// shorter, but the rows below it are what slides).
 const LIKELY_ROW: f32 = 44.0;
 /// A spring is at rest for the list's purposes within this share of its distance.
-const REST: f32 = 0.005;
+pub(super) const REST: f32 = 0.005;
 /// Timers end a motion this much after it should have finished, so its last frame is drawn.
-const GRACE: Duration = Duration::from_millis(16);
+pub(super) const GRACE: Duration = Duration::from_millis(16);
 
 /// What a change of the list was: the lines that went, the lines that came, and the motion of each.
 struct Turnover {
@@ -48,12 +50,20 @@ struct Lasting {
     settling: Duration,
 }
 
+/// A drag that ended, and where the pointer let go (a place in the content).
+pub(super) struct Dropped {
+    pub(super) gap: Gap,
+    pub(super) pointer: f32,
+}
+
 /// What a plan is made of besides the list's own state.
 struct Next<'a> {
     keys: &'a [ItemKey],
     listing: &'a Listing,
     fold: Option<FoldNote>,
     choices: MotionChoices,
+    /// The drag whose drop changed the list, if one did: the lines look to be where it left them.
+    dropped: Option<Dropped>,
 }
 
 impl ListMotion {
@@ -63,11 +73,19 @@ impl ListMotion {
         let snapshot = self.snapshot();
         let before = std::mem::replace(&mut self.keys, next.keys.to_vec());
         let was = if still { None } else { measured(&std::mem::take(&mut self.drawn), scroll) };
-        let Some(was) = was else {
+        let Some(mut was) = was else {
             self.cut();
             self.drawn = next.keys.to_vec();
             return Lasting::default();
         };
+        // The first line sits at the same place at rest whatever the list holds, and whatever pushed it.
+        if self.moving.is_none() || self.pad.is_none() {
+            self.pad = Some(was.first().map_or(0.0, |line| line.top));
+        }
+        // A drag leaves the lines where it pushed them, which is where they look to be.
+        if let Some(dropped) = &next.dropped {
+            dropped.gap.seen(&mut was, dropped.pointer);
+        }
         let standing: HashSet<&ItemKey> = next.keys.iter().collect();
         // A row that came back before it was gone is the list's own again: it is not drawn twice.
         self.leaving.forget(&standing);
@@ -81,9 +99,16 @@ impl ListMotion {
         self.batch += 1;
         let mut lasting = Lasting::default();
         self.keep_leaving(&turnover, &before, &standing, snapshot, &mut lasting);
-        let moves = self.plan_flips(&turnover, &was, next.keys);
-        self.start_moving(moves, &turnover, &mut lasting);
+        let mut moves = self.plan_flips(&turnover, &was, next.keys);
+        if let Some(dropped) = &next.dropped {
+            moves.moved.extend(dropped.gap.kept(&was, &moves));
+        }
+        let settle = next.dropped.as_ref().filter(|dropped| dropped.gap.joined()).map(|_| JOIN_SETTLE);
+        self.start_moving(moves, &turnover, settle, &mut lasting);
         self.start_arriving(turnover, &standing, &mut lasting);
+        if let Some(dropped) = &next.dropped {
+            self.start_landing(&dropped.gap, &standing, &mut lasting);
+        }
         lasting
     }
 
@@ -135,22 +160,24 @@ impl ListMotion {
         };
         let drawn = self.leaving.drawn(now);
         let lines: Vec<(ItemKey, f32)> = drawn.iter().map(|key| (key.clone(), likely(key))).collect();
-        // The first line sits at the same place at rest whatever the list holds.
-        if self.moving.is_none() || self.pad.is_none() {
-            self.pad = Some(was.first().map_or(0.0, |line| line.top));
-        }
         self.drawn = drawn;
         plan_moves(was, &lines, self.pad.unwrap_or(0.0), LIMIT)
     }
 
     /// The lines that moved spring to their places: on the spring a room makes for the rows (or
     /// closes after them) if there is one, else the list's own.
-    fn start_moving(&mut self, moves: Moves<ItemKey>, turnover: &Turnover, lasting: &mut Lasting) {
+    fn start_moving(
+        &mut self,
+        moves: Moves<ItemKey>,
+        turnover: &Turnover,
+        settle: Option<SpringSpec>,
+        lasting: &mut Lasting,
+    ) {
         let room = turnover.enters.iter().chain(&turnover.exits).find_map(|how| match how.room() {
             Room::Spring(spring) => Some(spring),
             Room::Layout => None,
         });
-        let spring = self.gap_spring.take().or(room).unwrap_or(LIST_MOVE);
+        let spring = settle.or(self.gap_spring.take()).or(room).unwrap_or(LIST_MOVE);
         self.moving = (!moves.moved.is_empty()).then(|| Moving {
             batch: self.batch,
             spring,
@@ -172,6 +199,19 @@ impl ListMotion {
     }
 }
 
+impl ListMotion {
+    /// The row a drag put down comes back into the list: it fades in where the pointer let go while it
+    /// slides to its place, as a row that opens does, unless it was never out of the list.
+    fn start_landing(&mut self, gap: &Gap, standing: &HashSet<&ItemKey>, lasting: &mut Lasting) {
+        for key in gap.lifted_keys().filter(|key| standing.contains(key)) {
+            let how = RowMotion::Insert(InsertMotion::Classic);
+            lasting.settling = lasting.settling.max(how.duration(Phase::Enter));
+            let arrival = Arrival { motion: how, natural: Natural::default(), batch: self.batch };
+            self.entering.insert(key.clone(), arrival);
+        }
+    }
+}
+
 impl Sidebar {
     /// Notice that the list's lines are not the ones last drawn, and start the motion of those that
     /// came, went or moved. Call it once per render with the lines about to be drawn, top to bottom
@@ -180,15 +220,31 @@ impl Sidebar {
         &mut self,
         keys: &[ItemKey],
         listing: &Listing,
+        window: &Window,
         cx: &mut Context<Self>,
     ) {
         // A fold the person made is for the change it makes, whether or not rows come or go with it.
         let fold = self.motion.fold.take();
+        // What a drag measured is not the list any more when the list changes under it; a drag that is
+        // over leaves its room to this plan, or to the lines' way back to where they were.
+        let gap = if cx.has_active_drag() {
+            if self.motion.keys != keys {
+                self.motion.gap = None;
+            }
+            None
+        } else {
+            self.motion.gap.take()
+        };
         if self.motion.keys == keys && !self.motion.changed {
+            if let Some(gap) = gap {
+                self.put_back_room(gap, cx);
+            }
             return;
         }
         let choices = settings_in(&self.input.profile, cx).motion_in_force();
-        let next = Next { keys, listing, fold, choices };
+        let pointer = f32::from(window.mouse_position().y) - content_top(&self.scroll);
+        let dropped = gap.map(|gap| Dropped { gap, pointer });
+        let next = Next { keys, listing, fold, choices, dropped };
         let lasting = self.motion.plan(&next, &self.scroll, cx.reduce_motion());
         let batch = self.motion.batch;
         // Nothing is left to see of the motion when it is over: the lines are drawn plain again.
@@ -209,7 +265,7 @@ impl Sidebar {
     }
 
     /// Runs `then` after `delay`, if the list is still there.
-    fn later(
+    pub(super) fn later(
         &self,
         delay: Duration,
         cx: &mut Context<Self>,

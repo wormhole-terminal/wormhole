@@ -22,6 +22,7 @@ use wormhole_core::view::motion::pose::{Phase, Room};
 use wormhole_core::view::sidebar::Listing;
 use wormhole_core::view::sidebar::motion::Drawn;
 
+use super::drag::{self, Gap};
 use super::fold::{FoldNote, Summaries};
 use super::leaving::{Leavers, Snapshot};
 use super::pose::{self, Natural, RowMotion};
@@ -75,6 +76,9 @@ pub(in crate::sidebar) struct ListMotion {
     pub(super) changed: bool,
     /// The spring the lines below a row that left run on to close its gap.
     pub(super) gap_spring: Option<SpringSpec>,
+    /// The gap a dragged row has the lines open for it (`drag`), from the first frame of the drag until its
+    /// lines are at rest again.
+    pub(super) gap: Option<Gap>,
     pub(super) batch: u64,
 }
 
@@ -132,12 +136,26 @@ impl ListMotion {
         self.summaries.clear();
     }
 
-    /// Where `key`'s line is in a spring (from, to, on which) now, if it is.
-    pub(super) fn flip_of(&self, key: &ItemKey) -> Option<(SpringSpec, f32, f32)> {
-        let moving = self.moving.as_ref()?;
-        let &(from, to) = moving.lines.get(key)?;
-        Some((moving.spring, from, to))
+    /// The spring `key`'s line is on now, if it is on one: a line that changed place, or one that a
+    /// dragged row pushes aside.
+    pub(super) fn spring_of(&self, key: &ItemKey) -> Option<Spring> {
+        if let Some(moving) = &self.moving
+            && let Some(&(from, to)) = moving.lines.get(key)
+        {
+            return Some(Spring { spec: moving.spring, from, to, place: to });
+        }
+        self.gap.as_ref().and_then(|gap| gap.spring_of(key))
     }
+}
+
+/// A line on a spring: where it starts (when nothing holds it yet) and where it is headed, both as places
+/// in the content, and the place the layout itself puts it, which is what its offset is taken from.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct Spring {
+    pub(super) spec: SpringSpec,
+    pub(super) from: f32,
+    pub(super) to: f32,
+    pub(super) place: f32,
 }
 
 /// A key the animation of a line is told apart by: unique to the line and the change that set it going.
@@ -160,7 +178,11 @@ impl Sidebar {
     ) -> E {
         let slot = slot.relative().w_full();
         let motion = &self.motion;
-        let flip = motion.flip_of(&key);
+        // A row held in a drag is out of the list while a gap is open for it (`drag`).
+        if let Some(lifted) = motion.gap.as_ref().and_then(|gap| gap.is_lifted(&key)) {
+            return slot.child(drag::lifted(line, &key, lifted));
+        }
+        let flip = motion.spring_of(&key);
         let (arrival, leaving) = (motion.entering.get(&key), motion.leaving.get(&key));
         if held || (flip.is_none() && arrival.is_none() && leaving.is_none()) {
             return slot.child(line);
@@ -176,14 +198,14 @@ impl Sidebar {
             }
             (None, None) => line,
         };
-        let Some((spec, from, to)) = flip else { return slot.child(line) };
+        let Some(Spring { spec, from, to, place }) = flip else { return slot.child(line) };
         // The spring is kept under the line's key alone, so a change that retargets it carries on.
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
         slot.child(div().relative().w_full().child(line).with_spring(
             ("list-move", hasher.finish()),
             SpringAnimation::new(spring(spec)).to(to).from(from).with_epsilon(REST_PX),
-            move |line, top| line.top(px(top - to)),
+            move |line, top| line.top(px(top - place)),
         ))
     }
 }
@@ -212,13 +234,18 @@ impl ListMotion {
     }
 }
 
+/// Where the list's content starts, in the window: what a place in the content is measured from.
+pub(super) fn content_top(scroll: &ScrollHandle) -> f32 {
+    f32::from(scroll.bounds().origin.y + scroll.offset().y)
+}
+
 /// The lines last drawn with where each was (from the content's start);
 /// `None` when what was measured isn't those lines (the list was rebuilt since, or is empty).
 pub(super) fn measured(keys: &[ItemKey], scroll: &ScrollHandle) -> Option<Vec<Drawn<ItemKey>>> {
     if keys.is_empty() || scroll.children_count() < keys.len() {
         return None;
     }
-    let content_top = f32::from(scroll.bounds().origin.y + scroll.offset().y);
+    let content_top = content_top(scroll);
     keys.iter()
         .enumerate()
         .map(|(at, key)| {

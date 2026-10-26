@@ -101,6 +101,33 @@ pub(super) fn render(
                 )
                 .child(div().text_caption().text_color(ui.muted).child("← a terminal being dragged")),
         )
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap_2()
+                .px_2()
+                .pt_1()
+                .child(
+                    style::drag_lift(
+                        style::drag_ghost(ui, tk("surface.elevated"), None, "Wire up the CLI".into()),
+                        ui,
+                        1.0,
+                    )
+                    .flex_none(),
+                )
+                .child(div().text_caption().text_color(ui.muted).child("← lifted off the list")),
+        )
+        .child(
+            div()
+                .relative()
+                .h(px(32.0))
+                .mx_2()
+                .mt_1()
+                .child(style::row_drop_target(ui))
+                .child(style::split_mark(ui))
+                .child(div().px_2().text_body().text_color(ui.text).child("A row that takes a split")),
+        )
         .child(style::row("g-row-a", ui, true).child("A selected row"))
         .child(style::row("g-row-b", ui, false).child("A row"))
         .child(
