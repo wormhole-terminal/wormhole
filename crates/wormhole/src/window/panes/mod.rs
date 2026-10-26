@@ -7,6 +7,7 @@
 //! (`layout.rs`): no headers, the terminal under the floating title bar.
 
 pub(in crate::window) mod drop;
+pub(in crate::window) mod opening;
 pub(in crate::window) mod splits;
 
 use gpui_kit::assets::IconName;
@@ -336,6 +337,10 @@ impl Workspace {
     /// shared edges, the whole surface. A zoomed pane alone fills the area.
     pub(super) fn render_panes(&self, cx: &mut Context<Self>) -> AnyElement {
         let Some(split) = self.active_split() else { return div().into_any_element() };
+        // A pane that was just added opens over the layout it replaces.
+        if let Some(opening) = self.render_nested_opening(split, cx) {
+            return opening;
+        }
         let order = split.layout.panes();
         let body = match split.layout.zoomed() {
             Some(id) => self.render_pane(split, id, &order, cx),

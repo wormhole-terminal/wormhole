@@ -141,6 +141,8 @@ mod slide;
 #[cfg(test)]
 mod slide_tests;
 #[cfg(test)]
+mod split_opening_tests;
+#[cfg(test)]
 mod stable_list_tests;
 mod status_bar;
 #[cfg(test)]

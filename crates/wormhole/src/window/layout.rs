@@ -149,7 +149,9 @@ impl Render for Workspace {
         let ui = ui_in(&self.profile, cx);
         let session = self.active_session();
         let terminal = session.terminal().clone();
-        let split = self.active_split().is_some();
+        // A split that is opening is drawn as the layout it replaces: a terminal that stood alone looks alone
+        // until the new pane is in (`panes::opening`).
+        let split = !self.drawn_alone();
         let gaps = settings_in(&self.profile, cx).split_gaps && !covered;
         // One geometry for both looks: the title bar has its own row and the terminal's rounded surface
         // lies below it, so nothing scrolls under the bar. Glass only changes the material.
@@ -232,10 +234,9 @@ impl Render for Workspace {
                             // last paint. A split's panes are drawn with their headers below the
                             // title rows.
                             .when(!covered && !split, |d| {
-                                d.child(super::cached::view(
-                                    &terminal,
-                                    StyleRefinement::default().size_full(),
-                                ))
+                                d.child(self.render_lone_opening(cx).unwrap_or_else(|| {
+                                    super::cached::view(&terminal, StyleRefinement::default().size_full())
+                                }))
                             })
                             .when(!covered && split, |d| d.child(self.render_panes(cx)))
                             .when(!covered, |d| d.child(self.pane_probe(cx)))

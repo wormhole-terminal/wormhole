@@ -19,11 +19,14 @@ use crate::app_state::attention::{self, Attention};
 use crate::style;
 use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
+use crate::window::panes::opening::Opening;
 
 /// A split: its id (one counter with the sessions') and the layout its members share.
 pub(in crate::window) struct Split {
     pub id: SplitId,
     pub layout: TabPanes,
+    /// A pane that was just added and is opening (`opening`): the window draws the layout it replaced meanwhile.
+    pub opening: Option<Opening>,
 }
 
 impl Split {
@@ -126,7 +129,7 @@ impl Workspace {
                 records.iter().find(|record| record.id == id).and_then(|record| record.layout.as_deref());
             let layout = TabPanes::restored(saved, &panes).filter(|layout| layout.is_split());
             match layout {
-                Some(layout) => self.splits.push(Split { id, layout }),
+                Some(layout) => self.splits.push(Split { id, layout, opening: None }),
                 None => members.into_iter().for_each(|ix| self.sessions[ix].split = None),
             }
         }
@@ -277,11 +280,10 @@ impl Workspace {
             return;
         }
         let target = self.sessions[self.active].id;
+        // What was on screen, for the new pane to open over (`opening`): nothing of a lone terminal.
+        let before = self.active_split().map(|split| split.layout.clone());
         let (id, ix) = self.new_member(window, cx);
-        let mut layout = match self.active_split() {
-            Some(split) => split.layout.clone(),
-            None => TabPanes::single(target),
-        };
+        let mut layout = before.clone().unwrap_or_else(|| TabPanes::single(target));
         if !layout.split(axis, id) {
             self.drop_session(ix, cx);
             return;
@@ -289,6 +291,7 @@ impl Workspace {
         self.install_layout(self.active, ix, layout, cx);
         let at = self.find_session(id).unwrap_or(ix);
         self.activate(at, window, cx);
+        self.begin_opening(before, id, cx);
     }
 
     /// A new terminal for a split to take: where the selected one is, running its shell, not yet
@@ -316,7 +319,7 @@ impl Workspace {
             return id;
         }
         let id = self.alloc_id(cx);
-        self.splits.push(Split { id, layout: layout.clone() });
+        self.splits.push(Split { id, layout: layout.clone(), opening: None });
         id
     }
 

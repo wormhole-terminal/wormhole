@@ -22,6 +22,7 @@ mod ease;
 pub mod overlay;
 pub mod pose;
 pub mod roll;
+pub mod split;
 mod spring;
 pub mod tabs;
 mod timeline;

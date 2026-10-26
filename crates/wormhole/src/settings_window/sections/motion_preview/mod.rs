@@ -25,7 +25,7 @@ use std::time::{Duration, Instant};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
-use wormhole_core::view::motion::{MotionChoice, Span};
+use wormhole_core::view::motion::MotionChoice;
 use wormhole_core::view::sidebar::Density;
 use wormhole_text::keys::{
     SETTINGS_MOTION_COLUMN_PREVIEW_LABEL, SETTINGS_MOTION_FOLD_PREVIEW_LABEL,
@@ -58,11 +58,6 @@ fn progress(elapsed: Duration, total: Duration) -> f32 {
 /// How long it has been at `t` of the loop since `start`, a share of it: nothing before it.
 fn since(t: f32, start: f32) -> Duration {
     Duration::from_secs_f32((t - start).max(0.0) * LOOP.as_secs_f32())
-}
-
-/// `len` after `start`, as a stretch of the loop.
-fn span(start: f32, len: Duration) -> Span {
-    Span::new(start, start + len.as_secs_f32() / LOOP.as_secs_f32())
 }
 
 /// The sidebar's rows at the density most people have, in cards.
@@ -311,13 +306,7 @@ mod tests {
 
     use gpui_kit::{AppContext as _, IntoElement as _, TestAppContext};
 
-    use super::{MotionPreview, Scene, Spot, span};
-
-    #[test]
-    fn a_span_of_the_loop_is_its_start_and_the_share_its_duration_takes() {
-        let moved = span(0.25, std::time::Duration::from_secs(1));
-        assert_eq!((moved.start, moved.end), (0.25, 0.5));
-    }
+    use super::{MotionPreview, Scene, Spot};
 
     #[test]
     fn a_part_that_shows_nothing_is_not_built() {

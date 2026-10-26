@@ -1,13 +1,14 @@
-//! The sidebar and the right panel sliding in and out: in [`MOTION_PANEL`] easing out, out
-//! in [`MOTION_PANEL_EXIT`] easing in. Anything that resizes the terminal animates a clip and resizes
-//! the PTY once, never per frame: a column coming in is drawn over the terminal at its full width
-//! and uncovered from its edge, and joins the layout (the terminal reflowing once) when it is in;
-//! one going out leaves the layout at once (the terminal reflows then) and is covered up over the
-//! terminal. The sidebar's edge carries the terminal with it meanwhile (shifted, not resized), so
-//! the content moves with the column instead of jumping when it lands; the right panel's edge cuts
-//! the terminal off instead (it reads from the left). Either way the terminal never lies under the
-//! sliding column, which paints its own translucent surface over the blur, as it does at rest. The
-//! traffic lights and the collapse button never move. Under Reduce Motion both are cuts.
+//! The sidebar and the right panel sliding in and out, in the style the person chose (core
+//! `view::motion::pose::column`: Classic, in over 250 ms easing out and out over 200 easing in, Soft spring,
+//! Content after). Anything that resizes the terminal animates a clip and resizes the PTY once, never per
+//! frame: a column coming in is drawn over the terminal at its full width and uncovered from its edge, and
+//! joins the layout (the terminal reflowing once) when it is in; one going out leaves the layout at once (the
+//! terminal reflows then) and is covered up over the terminal. The sidebar's edge carries the terminal with
+//! it meanwhile (shifted, not resized), so the content moves with the column instead of jumping when it
+//! lands; the right panel's edge cuts the terminal off instead (it reads from the left). Either way the
+//! terminal never lies under the sliding column, which paints its own translucent surface over the blur, as
+//! it does at rest. The traffic lights and the collapse button never move. Under Reduce Motion both are cuts,
+//! and without the Motion feature every column is Classic.
 use std::time::{Duration, Instant};
 
 use gpui_kit::*;
