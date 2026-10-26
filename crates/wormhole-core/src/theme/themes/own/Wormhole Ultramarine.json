@@ -1,0 +1,72 @@
+{
+  "name": "Wormhole Ultramarine",
+  "ui": {
+    "primary": "readable(#8a75ff, surface.window, surface.panel, 3)",
+    "git.branch": "readable(mix(#ff6ad5, text.muted, 25%), surface.window, surface.panel, surface.elevated, mix(band.solid, readable(mix(#ff6ad5, text.muted, 25%), surface.window, surface.panel, surface.elevated, mix(band.solid, mix(#ff6ad5, text.muted, 25%), 14%), 5), 14%), 4.5)"
+  },
+  "variants": [
+    {
+      "name": "Dark",
+      "appearance": "dark",
+      "terminal": {
+        "background": "#0d0b16",
+        "foreground": "#e5e3ed",
+        "cursor": "#775fff",
+        "cursor_text": "#0d0b16",
+        "selection_background": "#1c1061",
+        "selection_foreground": "#ffffff",
+        "ansi": {
+          "0": "#1e1b32",
+          "1": "#ff5f6d",
+          "2": "#4fd6a0",
+          "3": "#ffc857",
+          "4": "#2fa3ff",
+          "5": "#b78cff",
+          "6": "#3ad1e8",
+          "7": "#c8c6d7",
+          "8": "#666085",
+          "9": "#ff8590",
+          "10": "#7ce8bc",
+          "11": "#ffdb8a",
+          "12": "#6bbdff",
+          "13": "#cdb0ff",
+          "14": "#78e3f2",
+          "15": "#ffffff"
+        }
+      }
+    },
+    {
+      "name": "Light",
+      "appearance": "light",
+      "ui": {
+        "primary": "readable(#3d1aff, surface.window, surface.panel, 4.5)"
+      },
+      "terminal": {
+        "background": "#f7f7fb",
+        "foreground": "#16122b",
+        "cursor": "#3d1aff",
+        "cursor_text": "#f7f7fb",
+        "selection_background": "#d6d0fc",
+        "selection_foreground": "#16122b",
+        "ansi": {
+          "0": "#16122b",
+          "1": "#c4213a",
+          "2": "#1b7046",
+          "3": "#8a5a00",
+          "4": "#0062c4",
+          "5": "#7a3cc4",
+          "6": "#00707e",
+          "7": "#615c7a",
+          "8": "#7d7996",
+          "9": "#a81c32",
+          "10": "#155e3b",
+          "11": "#774d00",
+          "12": "#0052a8",
+          "13": "#66309f",
+          "14": "#005f6b",
+          "15": "#a19eb3"
+        }
+      }
+    }
+  ]
+}

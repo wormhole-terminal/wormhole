@@ -1,0 +1,198 @@
+# Wormhole Volt Dark (Dark)
+agent.attention #ffc857
+agent.attention.ring #ffc85747
+agent.attention.text #ffc857
+agent.attention.tint #ffc8571f
+agent.bell #ff9e64
+agent.claude #d97757
+agent.done #4fd6a0
+agent.done.text #4fd6a0
+agent.exited #75776c
+agent.gemini #3b7bff
+agent.gemini.end #8f6cf5
+agent.working #c8ff00
+band #ebede30d
+band.hover #ebede314
+band.solid #1b1d14
+banner.danger.background #ff5f6d1a
+banner.danger.border #ff5f6d59
+banner.info.background #3ad1e81a
+banner.info.border #3ad1e859
+banner.success.background #4fd6a01a
+banner.success.border #4fd6a059
+banner.warning.background #ffc8571a
+banner.warning.border #ffc85759
+border #ebede31f
+border.focus #c8ff00
+border.strong #ebede33d
+button.background #2a2c21
+button.hover #36382e
+button.text #ebede3
+card #ebede309
+card.edge #ebede31a
+checkbox.background #101109
+checkbox.border #75776c
+checkbox.checked #c8ff00
+chip.border #ebede33d
+chip.selected #c8ff00
+chip.tint #c8ff0029
+diff.added #4fd6a0
+diff.added.background #1c3120
+diff.filler #ebede31f
+diff.hunk.background #262d0a
+diff.hunk.text #a0a297
+diff.line_number #75776c
+diff.removed #ff606e
+diff.removed.background #352019
+divider #ebede31f
+find.match #ffc85752
+find.match.current #ffc857
+find.match.current.text #000000
+git.branch #a791e5
+git.branch.background #a791e524
+input.background #101109
+input.border #ebede33d
+input.border.focus #c8ff00
+input.placeholder #75776c
+list.selected #3a4416
+list.selected.muted #aaaca1
+list.selected.text #c8ff00
+primary #c8ff00
+primary.hover #ffffff
+resize.handle.active #c8ff00
+resize.handle.hover #c8ff0080
+scrollbar.thumb #ebede340
+selection.ui #c8ff004d
+shadow #00000080
+sidebar.background #101209
+sidebar.row.hover #ebede30d
+sidebar.row.selected #2a3308
+sidebar.row.selected.muted #a0a297
+sidebar.row.selected.text #c8ff00
+state.active #ebede31f
+state.highlight #c8ff0033
+state.hover #ebede30d
+state.selected #c8ff0024
+state.selected.inset #c8ff003d
+status.danger #ff5f6d
+status.danger.text #ff606e
+status.info #3ad1e8
+status.success #4fd6a0
+status.success.text #4fd6a0
+status.warning #ffc857
+status.warning.text #ffc857
+surface.elevated #23251a
+surface.overlay #00000080
+surface.panel #101209
+surface.window #14160b
+switch.knob #ffffff
+tab.active.background #23251a
+tab.inactive.text #a0a297
+text.disabled #585a4f
+text.faint #75776c
+text.link #c8ff00
+text.muted #a0a297
+text.on_primary #000000
+text.on_selected #000000
+text.on_selected.muted #465900
+text.primary #ebede3
+tile.background #121318
+tile.edge #ffffff1a
+tile.mark #c9d1e4
+tile.mark.brand #ffffff
+tile.sheen #ffffff24
+titlebar.background #101209
+tooltip.background #323429
+tooltip.text #ebede3
+trust.command #3ad1e8
+syntax.attribute #ffc857 italic
+syntax.boolean #ff9462
+syntax.comment #8a8c82 italic
+syntax.comment.doc #8a8c82 italic
+syntax.constant #ff9462
+syntax.constant.builtin #ff9462
+syntax.constructor #ffc857
+syntax.embedded #ebede3
+syntax.emphasis #ebede3 italic
+syntax.emphasis.strong #ebede3 bold
+syntax.enum #ffc857
+syntax.function #2fa3ff
+syntax.function.builtin #3ad1e8
+syntax.function.macro #3ad1e8
+syntax.function.method #2fa3ff
+syntax.keyword #b78cff
+syntax.keyword.control #b78cff
+syntax.keyword.operator #b78cff
+syntax.label #b78cff
+syntax.link_text #2fa3ff
+syntax.link_uri #3ad1e8 italic
+syntax.namespace #ffc857
+syntax.number #ff9462
+syntax.operator #81dce6
+syntax.preproc #b78cff
+syntax.property #3ad1e8
+syntax.punctuation #b5b7ad
+syntax.punctuation.bracket #b5b7ad
+syntax.punctuation.delimiter #b5b7ad
+syntax.punctuation.special #81dce6
+syntax.string #4fd6a0
+syntax.string.escape #3ad1e8
+syntax.string.regex #3ad1e8
+syntax.string.special #3ad1e8
+syntax.tag #ff5f6d
+syntax.text.literal #4fd6a0
+syntax.title #2fa3ff bold
+syntax.type #ffc857
+syntax.type.builtin #ffc857
+syntax.variable #ebede3
+syntax.variable.builtin #ff5f6d
+syntax.variable.parameter #ebede3
+syntax.variable.special #ff5f6d
+syntax.variant #ff9462
+metrics.radius_sm 4
+metrics.radius_chip 4
+metrics.radius 6
+metrics.radius_lg 10
+metrics.border_width 1
+metrics.divider_width 1
+metrics.focus_ring_width 2
+translucent 80% blur text.primary #ebede3
+translucent 80% blur text.muted #a0a297
+translucent 80% blur text.faint #7e8076
+translucent 80% blur git.branch #baa4fa
+translucent 80% blur sidebar.row.selected.text #c8ff00
+translucent 80% blur sidebar.row.selected.muted #b3b5ab
+translucent 80% no blur text.primary #ebede3
+translucent 80% no blur text.muted #b7b9af
+translucent 80% no blur text.faint #95978c
+translucent 80% no blur git.branch #cfc1ff
+translucent 80% no blur sidebar.row.selected.text #c8ff00
+translucent 80% no blur sidebar.row.selected.muted #cdcfc4
+increase_contrast agent.exited #7b7d73
+increase_contrast band #ebede314
+increase_contrast band.hover #ebede321
+increase_contrast band.solid #22241a
+increase_contrast border #ebede352
+increase_contrast border.strong #ebede37a
+increase_contrast card #ebede30f
+increase_contrast card.edge #ebede347
+increase_contrast checkbox.border #7b7d73
+increase_contrast chip.border #ebede37a
+increase_contrast diff.line_number #7b7d73
+increase_contrast diff.removed #ff9598
+increase_contrast divider #ebede352
+increase_contrast input.border #ebede37a
+increase_contrast input.placeholder #7b7d73
+increase_contrast list.selected #4b5914
+increase_contrast list.selected.muted #c6c8be
+increase_contrast sidebar.row.hover #ebede31a
+increase_contrast sidebar.row.selected #3c4b07
+increase_contrast sidebar.row.selected.muted #b2b4a9
+increase_contrast state.active #ebede329
+increase_contrast state.hover #ebede31a
+increase_contrast state.selected #c8ff003d
+increase_contrast state.selected.inset #c8ff0047
+increase_contrast status.danger.text #ff9598
+increase_contrast text.disabled #5c5e54
+increase_contrast text.faint #7b7d73
+increase_contrast metrics.focus_ring_width 3

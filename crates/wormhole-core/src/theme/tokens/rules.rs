@@ -398,7 +398,7 @@ mod tests {
     #[test]
     fn builtins_are_complete_and_readable() {
         let all = builtin_tokens();
-        assert_eq!(all.len(), 27);
+        assert_eq!(all.len(), 55);
         for t in &all {
             let n = &t.name;
             assert_eq!(t.ui_tokens().count(), UI_TOKENS.len(), "{n}");
@@ -440,11 +440,28 @@ mod tests {
             assert_eq!(t.metrics, Metrics::default());
         }
         let light: Vec<_> =
-            all.iter().filter(|t| t.appearance == Appearance::Light).map(|t| &t.name).collect();
-        assert_eq!(
-            light,
-            ["Catppuccin Latte", "GitHub Light", "Wormhole Light", "Crimson Light", "Soltari Light"]
-        );
+            all.iter().filter(|t| t.appearance == Appearance::Light).map(|t| t.name.as_str()).collect();
+        let accents = [
+            "Electric Blue",
+            "Vivid Blue",
+            "Klein Blue",
+            "Cobalt",
+            "Azure",
+            "Sky",
+            "Ultramarine",
+            "Volt",
+            "Signal Orange",
+            "Hot Pink",
+            "Ultraviolet",
+            "Acid Cyan",
+            "Red",
+            "White",
+        ]
+        .map(|a| format!("Wormhole {a} Light"));
+        let mut expected = vec!["Catppuccin Latte", "GitHub Light", "Wormhole Light"];
+        expected.extend(accents.iter().map(String::as_str));
+        expected.extend(["Crimson Light", "Soltari Light"]);
+        assert_eq!(light, expected);
     }
 
     #[test]

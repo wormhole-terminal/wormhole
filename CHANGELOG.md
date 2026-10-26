@@ -22,6 +22,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   an update downloads only your Mac's architecture, about half the size it was.
 - When Wormhole's download server doesn't answer, an update check asks GitHub, where the releases are
   published, so updates keep coming. That check sends the version alone and is not counted.
+- Fourteen new Wormhole themes in the website's accent colours: Electric Blue, Vivid Blue, Klein Blue,
+  Cobalt, Azure, Sky, Ultramarine, Volt, Signal Orange, Hot Pink, Ultraviolet, Acid Cyan, Red and
+  White. Each comes in a light and a dark version, built on Wormhole's own palette.
 
 ### Fixed
 

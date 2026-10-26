@@ -11,6 +11,21 @@ use super::variants::variants;
 /// The files, in the order the picker lists them (after the imported themes).
 const SOURCES: &[(&str, &str)] = &[
     ("Wormhole", include_str!("../themes/own/Wormhole.json")),
+    // The website's accent colours on Wormhole's palette, a light and a dark version each.
+    ("Wormhole Electric Blue", include_str!("../themes/own/Wormhole Electric Blue.json")),
+    ("Wormhole Vivid Blue", include_str!("../themes/own/Wormhole Vivid Blue.json")),
+    ("Wormhole Klein Blue", include_str!("../themes/own/Wormhole Klein Blue.json")),
+    ("Wormhole Cobalt", include_str!("../themes/own/Wormhole Cobalt.json")),
+    ("Wormhole Azure", include_str!("../themes/own/Wormhole Azure.json")),
+    ("Wormhole Sky", include_str!("../themes/own/Wormhole Sky.json")),
+    ("Wormhole Ultramarine", include_str!("../themes/own/Wormhole Ultramarine.json")),
+    ("Wormhole Volt", include_str!("../themes/own/Wormhole Volt.json")),
+    ("Wormhole Signal Orange", include_str!("../themes/own/Wormhole Signal Orange.json")),
+    ("Wormhole Hot Pink", include_str!("../themes/own/Wormhole Hot Pink.json")),
+    ("Wormhole Ultraviolet", include_str!("../themes/own/Wormhole Ultraviolet.json")),
+    ("Wormhole Acid Cyan", include_str!("../themes/own/Wormhole Acid Cyan.json")),
+    ("Wormhole Red", include_str!("../themes/own/Wormhole Red.json")),
+    ("Wormhole White", include_str!("../themes/own/Wormhole White.json")),
     ("Nebula", include_str!("../themes/own/Nebula.json")),
     ("Solar Flare", include_str!("../themes/own/Solar Flare.json")),
     ("Borealis", include_str!("../themes/own/Borealis.json")),

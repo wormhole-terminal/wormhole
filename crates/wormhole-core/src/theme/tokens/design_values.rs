@@ -74,7 +74,9 @@ fn only_a_light_palette_with_a_dark_yellow_gets_the_amber_warning() {
             t.name
         ))
         .unwrap();
-        let amber = ["GitHub Light", "Wormhole Light", "Crimson Light"].contains(&t.name.as_str());
+        // Wormhole's accent versions keep Wormhole Light's yellow.
+        let accent = t.name.starts_with("Wormhole ") && t.name.ends_with(" Light");
+        let amber = accent || ["GitHub Light", "Crimson Light"].contains(&t.name.as_str());
         assert_eq!(t.get("status.warning") != from_yellow.get("status.warning"), amber, "{}", t.name);
     }
     // Solarized Dark's yellow is darker than its muted text too, but on a dark
