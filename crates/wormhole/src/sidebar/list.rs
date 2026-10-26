@@ -151,25 +151,29 @@ impl Sidebar {
             None => line,
         };
         let masked = self.motion.opens_by_layout(&keys[at]);
-        let segment = cards.line(at, line, masked);
+        let segment = cards.line(at, line, masked).into_any_element();
         let gap = listing.card_edges(at).1.then_some(frame.metrics.card_gap);
-        let line = match listing.entries[at] {
+        let is_held = matches!(&keys[at], ItemKey::Row(id) if Some(*id) == held);
+        // What answers to a drop stays where the line is laid out; the motion moves the line inside it,
+        // so a line that springs aside never takes the pointer with it.
+        match listing.entries[at] {
             Entry::Row { session, .. } => {
                 let id = infos[session].id;
                 let group = listing.card(at).and_then(|card| match card {
                     Card::Group(band) => Some(listing.bands[band].group),
                     Card::Loose(_) | Card::Split(_) => None,
                 });
-                self.with_row_drop(segment.id(("row-line", id as u64)), id, group, gap, cx).into_any_element()
+                let slot = div().id(("row-line", id as u64));
+                let slot = self.with_list_motion(keys[at].clone(), segment, is_held, slot);
+                self.with_row_drop(slot, id, group, gap, cx).into_any_element()
             }
             Entry::Band { band, .. } => {
                 let group = listing.bands[band].group;
-                self.with_head_drop(segment.id(("head-line", group as u64)), group, gap, cx)
-                    .into_any_element()
+                let slot = div().id(("head-line", group as u64));
+                let slot = self.with_list_motion(keys[at].clone(), segment, is_held, slot);
+                self.with_head_drop(slot, group, gap, cx).into_any_element()
             }
-        };
-        let is_held = matches!(&keys[at], ItemKey::Row(id) if Some(*id) == held);
-        self.with_list_motion(keys[at].clone(), line, is_held)
+        }
     }
 
     /// What lies over the list's edges (`panel_list::scroll_edges`, as the panel's lists).

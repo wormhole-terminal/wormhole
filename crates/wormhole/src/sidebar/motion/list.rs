@@ -148,19 +148,22 @@ fn id_of(kind: &'static str, key: &ItemKey, batch: u64) -> (&'static str, u64) {
 }
 
 impl Sidebar {
-    /// `line` (a line of the list) with the motion it owes: the pose of a line that comes or goes,
-    /// and the spring to its place for one that moved. Not for the row held in a drag.
-    pub(in crate::sidebar) fn with_list_motion(
+    /// `line` (a line of the list) with the motion it owes: the pose of a line that comes or goes, and the
+    /// spring to its place for one that moved. Not for the row held in a drag. `slot` is the box the line
+    /// is laid out in, which stays where the layout puts it: the pointer finds the line there.
+    pub(in crate::sidebar) fn with_list_motion<E: Styled + ParentElement>(
         &self,
         key: ItemKey,
         line: AnyElement,
         held: bool,
-    ) -> AnyElement {
+        slot: E,
+    ) -> E {
+        let slot = slot.relative().w_full();
         let motion = &self.motion;
         let flip = motion.flip_of(&key);
         let (arrival, leaving) = (motion.entering.get(&key), motion.leaving.get(&key));
         if held || (flip.is_none() && arrival.is_none() && leaving.is_none()) {
-            return div().relative().w_full().child(line).into_any_element();
+            return slot.child(line);
         }
         let line = match (arrival, leaving) {
             (Some(arrival), _) => {
@@ -173,20 +176,15 @@ impl Sidebar {
             }
             (None, None) => line,
         };
-        let Some((spec, from, to)) = flip else { return line };
+        let Some((spec, from, to)) = flip else { return slot.child(line) };
         // The spring is kept under the line's key alone, so a change that retargets it carries on.
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
-        div()
-            .relative()
-            .w_full()
-            .child(line)
-            .with_spring(
-                ("list-move", hasher.finish()),
-                SpringAnimation::new(spring(spec)).to(to).from(from).with_epsilon(REST_PX),
-                move |line, top| line.top(px(top - to)),
-            )
-            .into_any_element()
+        slot.child(div().relative().w_full().child(line).with_spring(
+            ("list-move", hasher.finish()),
+            SpringAnimation::new(spring(spec)).to(to).from(from).with_epsilon(REST_PX),
+            move |line, top| line.top(px(top - to)),
+        ))
     }
 }
 

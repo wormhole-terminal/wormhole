@@ -212,7 +212,10 @@ impl Sidebar {
                 active,
             };
             let line = cards.line(leaving.at, face.row.into_any_element(), false).into_any_element();
-            lines.push((put, self.with_list_motion(leaving.key.clone(), line, false)));
+            lines.push((
+                put,
+                self.with_list_motion(leaving.key.clone(), line, false, div()).into_any_element(),
+            ));
         }
         lines
     }
