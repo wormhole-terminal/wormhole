@@ -51,6 +51,14 @@ impl Config {
         save_theme_in(themes, file)
     }
 
+    /// Save a palette another terminal's settings gave (`text` in Ghostty's theme format) into a
+    /// profile's themes folder, as a theme file called `name`; and return where it went. A different
+    /// file already there under that name is kept: the copy gets a new name. The same palette
+    /// saved again reuses its file.
+    pub fn save_palette_to(themes: &Path, name: &str, text: &str) -> Result<PathBuf, String> {
+        write_unique(themes, &palette_file_name(name), "", text.as_bytes())
+    }
+
     /// [`saved_theme_path`](Self::saved_theme_path) in a profile's themes folder.
     pub fn saved_theme_path_in(themes: &Path, name: &str) -> Option<PathBuf> {
         named_in(&UserThemes::read(themes), name)
@@ -152,19 +160,33 @@ fn import_into(dir: &Path, source: &Path) -> Result<PathBuf, String> {
     let bytes = files::read_capped(source, tokens::MAX_THEME_BYTES as u64, LinkPolicy::Follow)
         .map_err(|e| e.to_string())?;
     let file_name = source.file_name().ok_or("not a file")?;
+    let stem = Path::new(file_name).file_stem().map(|s| s.to_string_lossy().into_owned());
+    let ext = Path::new(file_name).extension().map(|e| e.to_string_lossy().into_owned());
+    write_unique(dir, stem.as_deref().unwrap_or("theme"), ext.as_deref().unwrap_or(""), &bytes)
+}
+
+/// Write `bytes` to `dir/<stem>.<ext>`: that file when it already holds exactly these bytes, else a
+/// free variant of the name (never over a different file).
+fn write_unique(dir: &Path, stem: &str, ext: &str, bytes: &[u8]) -> Result<PathBuf, String> {
+    let file_name = if ext.is_empty() { stem.to_string() } else { format!("{stem}.{ext}") };
     let same = dir.join(file_name);
-    // Capped like the source: a file of that name that is bigger cannot be the same.
+    // Capped like a theme: a file of that name that is bigger cannot be the same.
     let same_bytes = files::read_capped(&same, tokens::MAX_THEME_BYTES as u64, LinkPolicy::Follow)
         .is_ok_and(|existing| existing == bytes);
-    let target = if same_bytes {
-        same
-    } else {
-        let stem = Path::new(file_name).file_stem().map(|s| s.to_string_lossy().into_owned());
-        let ext = Path::new(file_name).extension().map(|e| e.to_string_lossy().into_owned());
-        free_path(dir, stem.as_deref().unwrap_or("theme"), ext.as_deref().unwrap_or(""))
-    };
-    files::write_atomic(&target, &bytes, LinkPolicy::Follow).map_err(|e| e.to_string())?;
+    let target = if same_bytes { same } else { free_path(dir, stem, ext) };
+    files::write_atomic(&target, bytes, LinkPolicy::Follow).map_err(|e| e.to_string())?;
     Ok(target)
+}
+
+/// A palette's file name: its name as it is (spaces stay, as in the Ghostty themes), without what a
+/// file name can't hold, and never a hidden file (which the picker skips).
+fn palette_file_name(name: &str) -> String {
+    let clean: String = name
+        .chars()
+        .map(|c| if c == '/' || c == '\\' || c == ':' || c.is_control() { '-' } else { c })
+        .collect();
+    let clean = clean.trim().trim_start_matches('.').trim();
+    if clean.is_empty() { "Imported".into() } else { clean.into() }
 }
 
 /// A file stem for a theme name: letters, digits and `-`; never empty, and

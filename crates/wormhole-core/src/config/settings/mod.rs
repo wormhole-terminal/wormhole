@@ -4,6 +4,7 @@
 //! in `primary`, the title row's parts in `title_row` and the colours of folders in `folder_colors`.
 
 use std::collections::BTreeMap;
+use std::ops::RangeInclusive;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -35,6 +36,13 @@ pub use self::choices::{
 };
 pub use self::keys::{APP_SETTINGS, PROJECT_SETTINGS};
 pub(crate) use self::keys::{LEGACY_SETTINGS, keys};
+
+/// The line height multiplier [`Settings::sanitized`] keeps `line_height` within.
+pub const LINE_HEIGHT: RangeInclusive<f32> = 1.0..=2.0;
+/// The background opacity `opacity` is kept within.
+pub const OPACITY: RangeInclusive<f32> = 0.3..=1.0;
+/// The number of lines `scrollback_lines` is kept within.
+pub const SCROLLBACK_LINES: RangeInclusive<usize> = 100..=200_000;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -446,9 +454,10 @@ impl Settings {
         for slot in FontSlot::ALL {
             self.step_slot_size(slot, 0.0);
         }
-        self.line_height = self.line_height.clamp(1.0, 2.0);
-        self.opacity = self.opacity.clamp(0.3, 1.0);
-        self.scrollback_lines = self.scrollback_lines.clamp(100, 200_000);
+        self.line_height = self.line_height.clamp(*LINE_HEIGHT.start(), *LINE_HEIGHT.end());
+        self.opacity = self.opacity.clamp(*OPACITY.start(), *OPACITY.end());
+        self.scrollback_lines =
+            self.scrollback_lines.clamp(*SCROLLBACK_LINES.start(), *SCROLLBACK_LINES.end());
         self.tab_width = self.tab_width.clamp(1, 16);
         self.notify_command_after = self.notify_command_after.clamp(5, 300);
         if self.font_family.trim().is_empty() {

@@ -14,7 +14,7 @@
 //! The walk through how much the window shows, which both run, is `tailor`.
 //! The domain also holds the wormhole intro as data (`intro`) and `Wormhole welcome`, the first
 //! run as a program in the terminal itself (`welcome`). The top tier: it may use every other
-//! domain (today `agents`, `config`, `ipc`, `keys`, `terminal` and `view`), and none uses it, so
+//! domain (today `agents`, `config`, `ipc`, `keys`, `terminal` and `view`; `import` next, for the look step), and none uses it, so
 //! the first run can change without touching what it shows.
 
 pub mod intro;

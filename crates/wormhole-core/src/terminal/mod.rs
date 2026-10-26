@@ -13,7 +13,7 @@
 //!   macOS hands it.
 //!
 //! Tier 6: it uses `storage`, `config` and `ipc` (the socket a terminal's hooks call). Only
-//! `onboarding` is above it.
+//! `import` and `onboarding` are above it.
 
 pub mod cli_tool;
 pub mod default_terminal;

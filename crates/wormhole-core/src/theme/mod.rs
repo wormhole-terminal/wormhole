@@ -41,20 +41,22 @@ pub const XTERM_PALETTE: [u32; 16] = [
 const DEFAULT_FG: u32 = 0xe5e5e5;
 const DEFAULT_BG: u32 = 0x000000;
 
-/// Partially-specified theme collected by a parser before defaults are applied.
+/// Partially-specified theme collected by a parser before defaults are applied. The importer
+/// (`import`) fills one from other terminals' settings, so a palette it reads gets the same
+/// defaults as a theme file.
 #[derive(Default)]
-struct Builder {
-    foreground: Option<u32>,
-    background: Option<u32>,
-    cursor: Option<u32>,
-    cursor_text: Option<u32>,
-    selection_background: Option<u32>,
-    selection_foreground: Option<u32>,
-    palette: [Option<u32>; 16],
+pub(crate) struct Builder {
+    pub(crate) foreground: Option<u32>,
+    pub(crate) background: Option<u32>,
+    pub(crate) cursor: Option<u32>,
+    pub(crate) cursor_text: Option<u32>,
+    pub(crate) selection_background: Option<u32>,
+    pub(crate) selection_foreground: Option<u32>,
+    pub(crate) palette: [Option<u32>; 16],
 }
 
 impl Builder {
-    fn finish(self, name: &str) -> Theme {
+    pub(crate) fn finish(self, name: &str) -> Theme {
         let foreground = self.foreground.unwrap_or(DEFAULT_FG);
         let background = self.background.unwrap_or(DEFAULT_BG);
         let mut palette = XTERM_PALETTE;
@@ -86,7 +88,7 @@ fn mix(a: u32, b: u32, t: f32) -> u32 {
 }
 
 /// Parse `#rrggbb`, `rrggbb`, `0xrrggbb`, or 3-digit `#rgb`.
-fn parse_hex(s: &str) -> Result<u32, String> {
+pub(crate) fn parse_hex(s: &str) -> Result<u32, String> {
     let t = s.trim().trim_matches(|c| c == '"' || c == '\'');
     let h =
         t.strip_prefix('#').or_else(|| t.strip_prefix("0x")).or_else(|| t.strip_prefix("0X")).unwrap_or(t);

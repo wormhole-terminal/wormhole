@@ -9,13 +9,14 @@
 //! Its modules are grouped by domain, lowest first; a domain uses only the ones
 //! before it or in its own tier (`scripts/structure.json`'s `layers` checks it):
 //! `platform`, `storage`, `keys`; `theme`, `agents`, `update`; `view`, `project`; `config`; `git`, `notify`;
-//! `ipc`; `terminal`; `onboarding`.
+//! `ipc`; `terminal`; `import`; `onboarding`.
 
 #![cfg_attr(test, allow(clippy::disallowed_methods, reason = "tests build their own files and processes"))]
 
 pub mod agents;
 pub mod config;
 pub mod git;
+pub mod import;
 pub mod ipc;
 pub mod keys;
 pub mod notify;
