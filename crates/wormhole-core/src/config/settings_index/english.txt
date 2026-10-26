@@ -247,6 +247,10 @@ entry Appearance status-bar
   label "Show status bar"
   description "Branch, agents and terminal size along the bottom of every window"
   keywords "bottom bar footer"
+entry Appearance icon-animations
+  label "Animate icons"
+  description "Buttons show what a click did with their icon, such as the sidebar button's strip draining as the sidebar slides away. Reduce Motion turns this off too"
+  keywords "motion animation toolbar buttons icons sidebar panel toggle"
 entry Appearance title-row
   label "Parts and order"
   description "What the title row shows, and where. Drag a part to move it: the ones above the flexible space sit at the row's left, the others at its right. Right-click the title row to show or hide them there. The pull request is asked of the GitHub CLI (gh), only in a trusted project; hidden, it isn't asked for, and the folder's band in the sidebar has no mark for it either"

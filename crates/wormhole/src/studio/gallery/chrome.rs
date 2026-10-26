@@ -47,7 +47,8 @@ pub(super) fn render(
                 .child(style::icon_button("g-ibtn-plus", ui, IconName::Plus, "Add"))
                 .child(
                     style::icon_button("g-ibtn-collapse", ui, IconName::PanelLeft, "Hide sidebar")
-                        .in_title_row(),
+                        .in_title_row()
+                        .strip(style::StripFill::new(style::StripSide::Left, true)),
                 )
                 .child(
                     style::icon_button("g-ibtn-settings", ui, IconName::Settings, "Settings (⌘,)")

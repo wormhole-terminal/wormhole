@@ -57,6 +57,9 @@ pub(super) const APPEARANCE: &[Group] = &[
             entry("status-bar", SETTINGS_APPEARANCE_STATUS_BAR, &["status_bar"])
                 .with_description(SETTINGS_APPEARANCE_STATUS_BAR_DESCRIPTION)
                 .with_keywords(SETTINGS_APPEARANCE_STATUS_BAR_KEYWORDS),
+            entry("icon-animations", SETTINGS_APPEARANCE_ICON_ANIMATIONS, &["icon_animations"])
+                .with_description(SETTINGS_APPEARANCE_ICON_ANIMATIONS_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_ICON_ANIMATIONS_KEYWORDS),
         ],
     ),
     group(

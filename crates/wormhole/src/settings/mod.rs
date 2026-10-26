@@ -241,6 +241,7 @@ impl SettingsStore {
         let look_changed = settings.as_ref().is_some_and(|s| {
             translucency(s) != translucency(&self.settings)
                 || s.column_dividers != self.settings.column_dividers
+                || s.icon_animations != self.settings.icon_animations
         });
         if let Some(settings) = settings {
             self.settings = settings;

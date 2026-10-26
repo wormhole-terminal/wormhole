@@ -169,6 +169,9 @@ pub struct Settings {
     /// (`divider`, `metrics.divider_width`). Off hides them whatever the theme says; the handles
     /// still resize. Increase Contrast keeps them.
     pub column_dividers: bool,
+    /// Icon buttons show what a click did with their own drawing (the toggles' strip filling and
+    /// draining). Off, they change at once; Reduce Motion turns them off too.
+    pub icon_animations: bool,
     /// The line under the terminal's title row: always, only while content is under the bar, never.
     pub title_border: TitleBorder,
     /// The app the title row's Open in… button opens a terminal's folder in, by its bundle
@@ -326,6 +329,7 @@ impl Default for Settings {
             minimap: false,
             split_gaps: true,
             column_dividers: true,
+            icon_animations: true,
             title_border: TitleBorder::default(),
             open_in: String::new(),
             title_row: Some(TitleRow::default()),

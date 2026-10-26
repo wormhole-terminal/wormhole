@@ -84,6 +84,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     ),
     toggle!("column-dividers", column_dividers),
     toggle!("status-bar", status_bar),
+    toggle!("icon-animations", icon_animations),
     Setting::custom("title-row", title_row::draw_control).below(title_row::draw_parts),
     Setting::custom("icon-theme", draw_icon_select),
     Setting::custom("icon-themes-folder", |_, _| {

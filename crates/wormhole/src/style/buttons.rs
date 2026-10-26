@@ -8,6 +8,7 @@ use gpui_kit::component::{Icon, Selectable, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
+use super::icon_motion::StripFill;
 use super::motion::TOOLTIP_DELAY;
 use super::scale::{CONTROL_H_SM, GLYPH, HIT_MIN, ICON_SIZE, MARK_DOT, TITLE_GLYPH};
 use crate::settings::UiColors;
@@ -95,6 +96,7 @@ pub struct IconButton {
     selected: bool,
     marked: bool,
     ring: bool,
+    strip: Option<StripFill>,
 }
 
 /// An [`IconButton`] with a 14 pt glyph. Add `.on_click(…)` or a menu.
@@ -121,6 +123,7 @@ pub fn icon_button(
         selected: false,
         marked: false,
         ring: false,
+        strip: None,
     }
 }
 
@@ -173,6 +176,13 @@ impl IconButton {
     /// The small primary dot of a filter that is on (with the button selected).
     pub fn marked(mut self, marked: bool) -> Self {
         self.marked = marked;
+        self
+    }
+
+    /// The glyph's column strip, filled while the column is open: the sidebar's and the right
+    /// panel's toggles (`style::StripFill`).
+    pub fn strip(mut self, fill: StripFill) -> Self {
+        self.strip = Some(fill);
         self
     }
 
@@ -244,8 +254,32 @@ impl RenderOnce for IconButton {
             selected,
             marked,
             ring,
+            strip,
         } = self;
         let clear = transparent_black();
+        let shown = {
+            let drawn = match drawing {
+                Some(drawing) => drawing,
+                None => Icon::new(icon).with_size(px(glyph)).into_any_element(),
+            };
+            match strip {
+                // The fill takes the glyph's colors, which a div can't inherit as the icon does.
+                Some(fill) => {
+                    let (color, hover) = if selected {
+                        (ui.selected_text, None)
+                    } else {
+                        (ui.muted, Some((group.clone(), ui.text)))
+                    };
+                    div()
+                        .relative()
+                        .size(px(glyph))
+                        .child(fill.render(glyph, color, hover))
+                        .child(drawn)
+                        .into_any_element()
+                }
+                None => drawn,
+            }
+        };
         // The Kit draws nothing of its own; the face below does.
         let plain = ButtonCustomVariant::new(cx).color(clear).hover(clear).active(clear);
         let button = button
@@ -272,10 +306,7 @@ impl RenderOnce for IconButton {
                     .when(!selected, |d| {
                         d.group_hover(group, move |s| s.bg(ui.band_hover).text_color(ui.text))
                     })
-                    .map(|d| match drawing {
-                        Some(drawing) => d.child(drawing),
-                        None => d.child(Icon::new(icon).with_size(px(glyph))),
-                    })
+                    .child(shown)
                     .when(marked, |d| d.child(mark(ui))),
             );
         // The ring goes round the face, outside it, over the box the Kit's button clips to.

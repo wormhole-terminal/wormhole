@@ -13,7 +13,7 @@ use wormhole_core::view::layout::{Edge, PanelToggle};
 
 use crate::app_state::app;
 use crate::settings::{store_in, ui_in};
-use crate::style::{self, ASSUMED_LIGHTS_SPAN, LIGHTS_X, TitleDrag as _, lights_end};
+use crate::style::{self, ASSUMED_LIGHTS_SPAN, LIGHTS_X, StripFill, StripSide, TitleDrag as _, lights_end};
 use crate::window::Workspace;
 use crate::window::focus::TitleButton;
 use wormhole_core::config::TabId;
@@ -79,6 +79,16 @@ impl Workspace {
     pub(super) fn render_window_controls(&self, window: &Window, cx: &mut Context<Self>) -> [AnyElement; 2] {
         let ui = ui_in(&self.profile, cx);
         let sidebar_open = self.panes.sidebar_open;
+        // Each glyph's strip is full while its column is on screen, and follows the column's slide.
+        let columns = self.columns();
+        let slide = self.slide_motion().filter(|_| ui.icon_motion);
+        let strip = |edge: Edge, side: StripSide, open: bool| {
+            let fill = StripFill::new(side, open);
+            match slide.filter(|motion| motion.edge == edge) {
+                Some(motion) => fill.sliding(motion.id("toggle-strip"), motion.animation()),
+                None => fill,
+            }
+        };
         let sidebar = div()
             .id("sidebar-toggle")
             .occlude()
@@ -99,6 +109,7 @@ impl Workspace {
                     ),
                 )
                 .in_title_row()
+                .strip(strip(Edge::Sidebar, StripSide::Left, columns.sidebar > 0.0))
                 .focus_ring(self.title_ring(TitleButton::Sidebar, window, cx))
                 .on_click(cx.listener(|this, _, _, cx| this.toggle_sidebar(cx))),
             );
@@ -126,6 +137,7 @@ impl Workspace {
             .child(
                 style::icon_button("toggle-panel", ui, IconName::PanelRight, tooltip)
                     .in_title_row()
+                    .strip(strip(Edge::Panel, StripSide::Right, columns.panel > 0.0))
                     // Wanted but hidden for lack of room: the dot says it comes back.
                     .marked(look == PanelToggle::Waiting)
                     .on_click(cx.listener(|this, _, window, cx| this.toggle_notes(window, cx))),

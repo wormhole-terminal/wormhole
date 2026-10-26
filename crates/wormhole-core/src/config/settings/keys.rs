@@ -69,6 +69,7 @@ pub const APP_SETTINGS: &[&str] = &[
     "minimap",
     "split_gaps",
     "column_dividers",
+    "icon_animations",
     // The person's own habit: what ⌘1–9 reach, whatever project is in front.
     "sidebar_numbers",
     // The window's chrome, one look for every window (where the terminals are listed too); and the

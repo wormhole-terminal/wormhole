@@ -81,6 +81,15 @@ fn a_groups_folder_shows_under_its_name_until_turned_off() {
 }
 
 #[test]
+fn icon_animations_play_until_turned_off_and_are_the_persons_own() {
+    let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
+    assert!(unset.icon_animations);
+    let off: Settings = jsonc::parse(r#"{ "icon_animations": false }"#).expect("valid jsonc");
+    assert!(!off.icon_animations);
+    assert!(APP_SETTINGS.contains(&"icon_animations") && !PROJECT_SETTINGS.contains(&"icon_animations"));
+}
+
+#[test]
 fn column_dividers_are_shown_until_turned_off_and_the_persons_own() {
     let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
     assert!(unset.column_dividers);

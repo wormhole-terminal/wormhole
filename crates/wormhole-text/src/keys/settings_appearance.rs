@@ -84,120 +84,126 @@ pub const SETTINGS_APPEARANCE_STATUS_BAR: Key = Key::new(141);
 pub const SETTINGS_APPEARANCE_STATUS_BAR_DESCRIPTION: Key = Key::new(142);
 /// "bottom bar footer"
 pub const SETTINGS_APPEARANCE_STATUS_BAR_KEYWORDS: Key = Key::new(143);
+/// "Animate icons"
+pub const SETTINGS_APPEARANCE_ICON_ANIMATIONS: Key = Key::new(144);
+/// "Buttons show what a click did with their icon, such as the sidebar button's strip draining as the sidebar slides away. Reduce Motion turns this off too"
+pub const SETTINGS_APPEARANCE_ICON_ANIMATIONS_DESCRIPTION: Key = Key::new(145);
+/// "motion animation toolbar buttons icons sidebar panel toggle"
+pub const SETTINGS_APPEARANCE_ICON_ANIMATIONS_KEYWORDS: Key = Key::new(146);
 /// "Title row"
-pub const SETTINGS_APPEARANCE_GROUP_TITLE_ROW: Key = Key::new(144);
+pub const SETTINGS_APPEARANCE_GROUP_TITLE_ROW: Key = Key::new(147);
 /// "Parts and order"
-pub const SETTINGS_APPEARANCE_TITLE_ROW: Key = Key::new(145);
+pub const SETTINGS_APPEARANCE_TITLE_ROW: Key = Key::new(148);
 /// "What the title row shows, and where. Drag a part to move it: the ones above the flexible space sit at the row's left, the others at its right. Right-click the title row to show or hide them there. The pull request is asked of the GitHub CLI (gh), only in a trusted project; hidden, it isn't asked for, and the folder's band in the sidebar has no mark for it either"
-pub const SETTINGS_APPEARANCE_TITLE_ROW_DESCRIPTION: Key = Key::new(146);
+pub const SETTINGS_APPEARANCE_TITLE_ROW_DESCRIPTION: Key = Key::new(149);
 /// "toolbar customize arrange order reorder rearrange move hide show folder path branch git dirty uncommitted ahead behind status working claude model context window ports localhost server pull request pr github gh checks open in editor split buttons"
-pub const SETTINGS_APPEARANCE_TITLE_ROW_KEYWORDS: Key = Key::new(147);
+pub const SETTINGS_APPEARANCE_TITLE_ROW_KEYWORDS: Key = Key::new(150);
 /// "File icons"
-pub const SETTINGS_APPEARANCE_GROUP_FILE_ICONS: Key = Key::new(148);
+pub const SETTINGS_APPEARANCE_GROUP_FILE_ICONS: Key = Key::new(151);
 /// "File icons"
-pub const SETTINGS_APPEARANCE_ICON_THEME: Key = Key::new(149);
+pub const SETTINGS_APPEARANCE_ICON_THEME: Key = Key::new(152);
 /// "In the Changes and History panels. Zed icon themes work too"
-pub const SETTINGS_APPEARANCE_ICON_THEME_DESCRIPTION: Key = Key::new(150);
+pub const SETTINGS_APPEARANCE_ICON_THEME_DESCRIPTION: Key = Key::new(153);
 /// "icon theme"
-pub const SETTINGS_APPEARANCE_ICON_THEME_KEYWORDS: Key = Key::new(151);
+pub const SETTINGS_APPEARANCE_ICON_THEME_KEYWORDS: Key = Key::new(154);
 /// "Icon themes folder"
-pub const SETTINGS_APPEARANCE_ICON_THEMES_FOLDER: Key = Key::new(152);
+pub const SETTINGS_APPEARANCE_ICON_THEMES_FOLDER: Key = Key::new(155);
 /// "Put a Zed icon theme folder here; it's listed above within seconds"
-pub const SETTINGS_APPEARANCE_ICON_THEMES_FOLDER_DESCRIPTION: Key = Key::new(153);
+pub const SETTINGS_APPEARANCE_ICON_THEMES_FOLDER_DESCRIPTION: Key = Key::new(156);
 /// "zed folder"
-pub const SETTINGS_APPEARANCE_ICON_THEMES_FOLDER_KEYWORDS: Key = Key::new(154);
+pub const SETTINGS_APPEARANCE_ICON_THEMES_FOLDER_KEYWORDS: Key = Key::new(157);
 /// "Terminal"
-pub const SETTINGS_APPEARANCE_GROUP_TERMINAL: Key = Key::new(155);
+pub const SETTINGS_APPEARANCE_GROUP_TERMINAL: Key = Key::new(158);
 /// "Code"
-pub const SETTINGS_APPEARANCE_GROUP_CODE: Key = Key::new(156);
+pub const SETTINGS_APPEARANCE_GROUP_CODE: Key = Key::new(159);
 /// "Follows the terminal until you pick one"
-pub const SETTINGS_APPEARANCE_GROUP_CODE_ASIDE: Key = Key::new(157);
+pub const SETTINGS_APPEARANCE_GROUP_CODE_ASIDE: Key = Key::new(160);
 /// "Interface"
-pub const SETTINGS_APPEARANCE_GROUP_INTERFACE: Key = Key::new(158);
+pub const SETTINGS_APPEARANCE_GROUP_INTERFACE: Key = Key::new(161);
 /// "Your fonts"
-pub const SETTINGS_APPEARANCE_GROUP_YOUR_FONTS: Key = Key::new(159);
+pub const SETTINGS_APPEARANCE_GROUP_YOUR_FONTS: Key = Key::new(162);
 /// "Dark"
-pub const SETTINGS_APPEARANCE_DARK: Key = Key::new(160);
+pub const SETTINGS_APPEARANCE_DARK: Key = Key::new(163);
 /// "Light"
-pub const SETTINGS_APPEARANCE_LIGHT: Key = Key::new(161);
+pub const SETTINGS_APPEARANCE_LIGHT: Key = Key::new(164);
 /// "Match system"
-pub const SETTINGS_APPEARANCE_MATCH_SYSTEM: Key = Key::new(162);
+pub const SETTINGS_APPEARANCE_MATCH_SYSTEM: Key = Key::new(165);
 /// "Always"
-pub const SETTINGS_APPEARANCE_ALWAYS: Key = Key::new(163);
+pub const SETTINGS_APPEARANCE_ALWAYS: Key = Key::new(166);
 /// "When scrolled"
-pub const SETTINGS_APPEARANCE_WHEN_SCROLLED: Key = Key::new(164);
+pub const SETTINGS_APPEARANCE_WHEN_SCROLLED: Key = Key::new(167);
 /// "Never"
-pub const SETTINGS_APPEARANCE_NEVER: Key = Key::new(165);
+pub const SETTINGS_APPEARANCE_NEVER: Key = Key::new(168);
 /// "Open folder"
-pub const SETTINGS_APPEARANCE_OPEN_FOLDER: Key = Key::new(166);
+pub const SETTINGS_APPEARANCE_OPEN_FOLDER: Key = Key::new(169);
 /// "Reduce Transparency is on in System Settings, so every window is opaque. Your opacity applies again when it's off."
-pub const SETTINGS_APPEARANCE_OPAQUE_REDUCE_TRANSPARENCY: Key = Key::new(167);
+pub const SETTINGS_APPEARANCE_OPAQUE_REDUCE_TRANSPARENCY: Key = Key::new(170);
 /// "Increase Contrast is on in System Settings, so every window is opaque. Your opacity applies again when it's off."
-pub const SETTINGS_APPEARANCE_OPAQUE_INCREASE_CONTRAST: Key = Key::new(168);
+pub const SETTINGS_APPEARANCE_OPAQUE_INCREASE_CONTRAST: Key = Key::new(171);
 /// "Without blur the desktop shows sharp behind the text: below 95 % opacity it may not read."
-pub const SETTINGS_APPEARANCE_BLUR_OFF_WARNING: Key = Key::new(169);
+pub const SETTINGS_APPEARANCE_BLUR_OFF_WARNING: Key = Key::new(172);
 /// "Turn on blur"
-pub const SETTINGS_APPEARANCE_TURN_ON_BLUR: Key = Key::new(170);
+pub const SETTINGS_APPEARANCE_TURN_ON_BLUR: Key = Key::new(173);
 /// "Settings"
-pub const SETTINGS_APPEARANCE_SETTINGS: Key = Key::new(171);
+pub const SETTINGS_APPEARANCE_SETTINGS: Key = Key::new(174);
 /// "Theme Studio"
-pub const SETTINGS_APPEARANCE_THEME_STUDIO: Key = Key::new(172);
+pub const SETTINGS_APPEARANCE_THEME_STUDIO: Key = Key::new(175);
 /// "Project settings"
-pub const SETTINGS_APPEARANCE_PROJECT_SETTINGS: Key = Key::new(173);
+pub const SETTINGS_APPEARANCE_PROJECT_SETTINGS: Key = Key::new(176);
 /// "Live preview: your windows over the desktop, with everything below applied as you change it (the blur behind a window isn't drawn here)"
-pub const SETTINGS_APPEARANCE_STAGE_CAPTION: Key = Key::new(179);
+pub const SETTINGS_APPEARANCE_STAGE_CAPTION: Key = Key::new(182);
 /// "Filter themes"
-pub const SETTINGS_APPEARANCE_FILTER_THEMES: Key = Key::new(180);
+pub const SETTINGS_APPEARANCE_FILTER_THEMES: Key = Key::new(183);
 /// "In Dark Mode"
-pub const SETTINGS_APPEARANCE_IN_DARK_MODE: Key = Key::new(181);
+pub const SETTINGS_APPEARANCE_IN_DARK_MODE: Key = Key::new(184);
 /// "In Light Mode"
-pub const SETTINGS_APPEARANCE_IN_LIGHT_MODE: Key = Key::new(182);
+pub const SETTINGS_APPEARANCE_IN_LIGHT_MODE: Key = Key::new(185);
 /// "Show fewer"
-pub const SETTINGS_APPEARANCE_SHOW_FEWER: Key = Key::new(183);
+pub const SETTINGS_APPEARANCE_SHOW_FEWER: Key = Key::new(186);
 /// "Import theme…"
-pub const SETTINGS_APPEARANCE_IMPORT_THEME: Key = Key::new(184);
+pub const SETTINGS_APPEARANCE_IMPORT_THEME: Key = Key::new(187);
 /// "No themes match the filter."
-pub const SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER: Key = Key::new(185);
+pub const SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER: Key = Key::new(188);
 /// "Hide theme"
-pub const SETTINGS_APPEARANCE_HIDE_THEME: Key = Key::new(188);
+pub const SETTINGS_APPEARANCE_HIDE_THEME: Key = Key::new(191);
 /// "Move to Trash"
-pub const SETTINGS_APPEARANCE_MOVE_TO_TRASH: Key = Key::new(189);
+pub const SETTINGS_APPEARANCE_MOVE_TO_TRASH: Key = Key::new(192);
 /// "Show"
-pub const SETTINGS_APPEARANCE_SHOW_THEME: Key = Key::new(190);
+pub const SETTINGS_APPEARANCE_SHOW_THEME: Key = Key::new(193);
 
 /// ```text
 /// Yours · { $color }, in every theme
 /// ```
 pub fn settings_appearance_primary_yours(color: &str) -> String {
-    crate::active::message(174, &[("color", Arg::Str(color))])
+    crate::active::message(177, &[("color", Arg::Str(color))])
 }
 
 /// ```text
 /// Pick a colour below · the theme's is { $color }
 /// ```
 pub fn settings_appearance_primary_pick(color: &str) -> String {
-    crate::active::message(175, &[("color", Arg::Str(color))])
+    crate::active::message(178, &[("color", Arg::Str(color))])
 }
 
 /// ```text
 /// The theme's · { $color }. { $description }
 /// ```
 pub fn settings_appearance_primary_theme(color: &str, description: &str) -> String {
-    crate::active::message(176, &[("color", Arg::Str(color)), ("description", Arg::Str(description))])
+    crate::active::message(179, &[("color", Arg::Str(color)), ("description", Arg::Str(description))])
 }
 
 /// ```text
 /// Pick a colour below · the theme's is { $color }
 /// ```
 pub fn settings_appearance_branch_pick(color: &str) -> String {
-    crate::active::message(177, &[("color", Arg::Str(color))])
+    crate::active::message(180, &[("color", Arg::Str(color))])
 }
 
 /// ```text
 /// This terminal shows { $project }'s theme. Your own is kept for everything else.
 /// ```
 pub fn settings_appearance_project_theme_note(project: &str) -> String {
-    crate::active::message(178, &[("project", Arg::Str(project))])
+    crate::active::message(181, &[("project", Arg::Str(project))])
 }
 
 /// ```text
@@ -207,19 +213,19 @@ pub fn settings_appearance_project_theme_note(project: &str) -> String {
 /// }
 /// ```
 pub fn settings_appearance_filter_themes_count(count: i64) -> String {
-    crate::active::message(186, &[("count", Arg::Int(count))])
+    crate::active::message(189, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Show all { $total }
 /// ```
 pub fn settings_appearance_show_all_themes(total: &str) -> String {
-    crate::active::message(187, &[("total", Arg::Str(total))])
+    crate::active::message(190, &[("total", Arg::Str(total))])
 }
 
 /// ```text
 /// Hidden themes ({ $count })
 /// ```
 pub fn settings_appearance_hidden_themes(count: &str) -> String {
-    crate::active::message(191, &[("count", Arg::Str(count))])
+    crate::active::message(194, &[("count", Arg::Str(count))])
 }

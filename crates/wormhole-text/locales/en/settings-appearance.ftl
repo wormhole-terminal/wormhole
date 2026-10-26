@@ -64,6 +64,10 @@ settings-appearance-status-bar = Show status bar
     .description = Branch, agents and terminal size along the bottom of every window
     .keywords = bottom bar footer
 
+settings-appearance-icon-animations = Animate icons
+    .description = Buttons show what a click did with their icon, such as the sidebar button's strip draining as the sidebar slides away. Reduce Motion turns this off too
+    .keywords = motion animation toolbar buttons icons sidebar panel toggle
+
 ## Title row
 
 settings-appearance-group-title-row = Title row

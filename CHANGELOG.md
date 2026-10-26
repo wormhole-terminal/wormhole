@@ -34,6 +34,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   them too: drag a part to move it, and the parts above the flexible space sit at the row's left, the
   others at its right (`title_row`). The four switches for the row's extras became this list; what you
   turned off stays hidden.
+- The sidebar and right panel buttons show whether their column is open: the column's strip in the
+  icon is filled while it is, drains as the column slides away and fills back in as it returns.
 
 ### Fixed
 

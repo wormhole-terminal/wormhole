@@ -25,6 +25,10 @@ pub struct UiColors {
     pub divider_width: Pixels,
     /// The keyboard focus ring's line (`metrics.focus_ring_width`); its color is `focus`.
     pub focus_ring_width: Pixels,
+    /// Icon buttons show what a click did with their own drawing (`style::icon_motion`); the main
+    /// window's follows the Animate icons setting (`without_icon_motion`). Reduce Motion stops them
+    /// apart from this: GPUI shows an animation's last frame then, which is where each one rests.
+    pub icon_motion: bool,
     /// The terminal / main area, at the window opacity.
     pub background: Hsla,
     /// Left sidebar surface, at the window opacity.
@@ -277,6 +281,10 @@ impl UiColors {
         Self { divider_width: px(0.0), ..self }
     }
 
+    pub(crate) fn without_icon_motion(self) -> Self {
+        Self { icon_motion: false, ..self }
+    }
+
     /// The colors for a window that looks like `look`. A translucent one paints its surfaces at
     /// its opacity, and draws its text as core judges it on what shows through
     /// (`ThemeTokens::translucent`).
@@ -290,6 +298,7 @@ impl UiColors {
             border_width: px(m.border_width),
             divider_width: px(m.divider_width),
             focus_ring_width: px(m.focus_ring_width),
+            icon_motion: true,
             ..Self::default()
         };
         for field in SURFACES {

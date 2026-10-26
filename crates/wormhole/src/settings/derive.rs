@@ -74,10 +74,12 @@ pub(super) fn translucency(settings: &Settings) -> Translucency {
 
 /// The main window's colours: the tokens at the window's look, and no line between the columns
 /// when the person turned Column dividers off. Increase Contrast keeps the lines, as the
-/// window's columns would otherwise be told apart by a tint alone.
+/// window's columns would otherwise be told apart by a tint alone. Its icons hold still when the
+/// person turned Animate icons off.
 pub(super) fn main_ui(tokens: &ThemeTokens, settings: &Settings, increase_contrast: bool) -> UiColors {
     let ui = UiColors::new(tokens, translucency(settings));
-    if settings.column_dividers || increase_contrast { ui } else { ui.without_dividers() }
+    let ui = if settings.column_dividers || increase_contrast { ui } else { ui.without_dividers() };
+    if settings.icon_animations { ui } else { ui.without_icon_motion() }
 }
 
 /// An opaque window's look: nothing shows through, so the tokens stand as they are.
