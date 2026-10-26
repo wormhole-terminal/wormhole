@@ -1,12 +1,10 @@
 //! What a group's menu does to terminals and windows beyond rearranging the list (`sidebar::groups`
 //! does that): close it (asking once if an agent is working in it) and move it, with its splits, to a
 //! window of its own.
-use std::collections::HashSet;
-
 use gpui_kit::*;
 use wormhole_core::ipc::control::event::{Body, Event, Topic};
-use wormhole_core::storage::store::{SplitRecord, WindowRecord};
-use wormhole_core::view::sidebar::{Item, SplitId, WindowSidebar, group_key};
+use wormhole_core::storage::store::WindowRecord;
+use wormhole_core::view::sidebar::{Item, WindowSidebar, group_key};
 
 use crate::app_state::{AppState, app, app_mut};
 use crate::dialog;
@@ -15,6 +13,7 @@ use crate::window::feature::{CloseAlso, CloseOf};
 use crate::window::feature_host::extras_to_ask;
 use crate::window::session::Session;
 use crate::window::session::{close_group_detail, close_group_title};
+use crate::window::terminal_move::Departing;
 use crate::window::window_lifecycle::open_workspace_window_in;
 use crate::window::{Layout, Workspace};
 
@@ -104,56 +103,25 @@ impl Workspace {
                 }
             }
         }
-        let moved: Vec<usize> = ids.iter().filter_map(|&id| self.find_session(id)).collect();
-        if moved.is_empty() {
+        let folded = self.sidebar_view(cx).is_group_folded(group);
+        let source = crate::window::window_bounds::Source::of(window, cx);
+        let Some(Departing { records, terminals, splits, active }) = self.take_out(&ids, window, cx) else {
             return;
-        }
-        let records: Vec<_> = moved.iter().map(|&ix| self.session_record(ix, cx)).collect();
-        let terminals: Vec<_> =
-            moved.iter().map(|&ix| (self.sessions[ix].id, self.sessions[ix].terminal().clone())).collect();
-        let split_ids: HashSet<SplitId> = moved.iter().filter_map(|&ix| self.sessions[ix].split).collect();
-        let splits: Vec<SplitRecord> =
-            self.split_records().into_iter().filter(|record| split_ids.contains(&record.id)).collect();
-        let selected = self.sessions.get(self.active).map(|session| session.id);
-        let active = selected.and_then(|id| ids.iter().position(|&moved| moved == id)).unwrap_or(0);
+        };
+        self.edit_sidebar_view(cx, |view| {
+            view.groups.remove(group);
+            view.folded.remove(&group_key(group));
+        });
 
         // The new window's sidebar: the group, folded as it was, standing alone.
         let mut sidebar = WindowSidebar::default();
-        sidebar.groups.0.push(found.clone());
+        sidebar.groups.0.push(found);
         sidebar.items = vec![Item::Group(group)];
-        if self.sidebar_view(cx).is_group_folded(group) {
+        if folded {
             sidebar.folded.insert(group_key(group));
         }
         let layout = Layout::new(self.panes, self.right_tab, sidebar);
         let layout = serde_json::to_string(&layout).ok();
-
-        // Out of this window, the running terminals kept alive for the new one.
-        let mut gone: Vec<usize> = moved;
-        gone.sort_unstable_by(|a, b| b.cmp(a));
-        for ix in gone {
-            let left = self.sessions.remove(ix);
-            self.features_left(left.id, cx);
-        }
-        self.splits.retain(|split| !split_ids.contains(&split.id));
-        // They go with their terminals: gone here, and told again where they land.
-        for &split in &split_ids {
-            self.publish_split_gone(split, cx);
-        }
-        self.edit_sidebar_view(cx, |view| {
-            view.groups.remove(group);
-            view.folded.remove(&group_key(group));
-            for &id in &ids {
-                view.groups.leave(id);
-            }
-        });
-        self.active = selected.and_then(|id| self.find_session(id)).unwrap_or(0);
-        if self.sessions.is_empty() {
-            self.active = usize::MAX;
-            self.new_session(window, cx);
-        }
-        self.with_sidebar(cx, |sidebar, cx| sidebar.list_rearranged(cx));
-
-        let source = crate::window::window_bounds::Source::of(window, cx);
         // The new window stays in this window's profile: its database, its environment.
         let profile = self.profile.clone();
         let (from, moved_ids) = (self.window_id, ids.clone());

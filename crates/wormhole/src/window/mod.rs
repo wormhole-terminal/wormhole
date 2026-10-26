@@ -152,6 +152,7 @@ mod status_rolls;
 mod summaries;
 #[cfg(test)]
 mod summary_tests;
+mod terminal_move;
 #[cfg(test)]
 mod terminal_tests;
 mod terminals;
