@@ -7,6 +7,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
+use wormhole_core::view::motion::StatusMotion;
 
 use crate::settings::UiColors;
 use crate::style::{
@@ -179,13 +180,17 @@ impl Sample {
         if metrics.two_lines {
             row.detail = Some(self.detail.into());
         }
-        row.detail_roll = shift.map(|(was, shift)| DetailRoll {
-            from: was.detail.into(),
-            from_tone: was.tone,
-            from_font: None,
-            shift,
-            to: self.glyph,
-        });
+        // What the list builds: only the Line rolls variant rolls the second line.
+        row.detail_roll =
+            shift.filter(|(_, shift)| shift.motion == StatusMotion::LineRoll).map(|(was, shift)| {
+                DetailRoll {
+                    from: was.detail.into(),
+                    from_tone: was.tone,
+                    from_font: None,
+                    shift,
+                    to: self.glyph,
+                }
+            });
         if notes && self.notes > 0 {
             row.trail = Some(
                 div()
