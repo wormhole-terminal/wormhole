@@ -72,7 +72,8 @@ const BUDGET: [(&str, u64); 16] = [
     ("Terminal", 9771),
     ("Sessions", 13704),
     ("Git", 4567),
-    ("Agents", 26478),
+    // A row more (Let the command line read terminals).
+    ("Agents", 26827),
     ("Import", 53067),
     ("Notifications", 7882),
     ("MenuBar", 6195),
@@ -81,7 +82,8 @@ const BUDGET: [(&str, u64); 16] = [
     ("Projects", 9037),
     // The switches for Automation, Tear off, Live resize and Notice chip are four rows more.
     ("FeatureFlags", 5981),
-    ("search", 11880),
+    // The same row is one more for the search to draw.
+    ("search", 12216),
 ];
 
 /// What a scan finds in the visual checks' fixture home (Ghostty, iTerm2 and Alacritty settings), with the

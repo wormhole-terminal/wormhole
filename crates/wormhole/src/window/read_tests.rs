@@ -509,6 +509,7 @@ fn a_program_that_asked_for_the_locator_gets_the_click_as_locator_reports(cx: &m
     let mouse = |op: MouseOp| Action::Mouse(MouseSpec { target: Target::Terminal(1), op });
     // DECELR: enable the locator; DECSLE: report button down and button up.
     print(cx, &window, 0, b"\x1b[1'z\x1b[1;3'{\r");
+    wait_until(cx, "the locator", |cx| shown(cx, 1, &who).modes.locator);
     let click = reply(ask(cx, mouse(MouseOp::Click(pointer(1, 2))), None, &who.outside));
     assert_eq!(code(&click), None, "{click:?}");
     // Down and up at row 2, column 3 (counted from 1): `CSI Pe ; Pb ; Pr ; Pc ; Pp & w`.

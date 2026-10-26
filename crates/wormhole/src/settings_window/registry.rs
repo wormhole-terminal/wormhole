@@ -276,13 +276,11 @@ impl SettingsWindow {
             }
             let mut any_row = false;
             let mut shown = 0;
-            // A row behind a feature flag that is off is not on the page at all.
-            let rows_here: Vec<&'static Entry> = group
-                .entries
-                .iter()
-                .filter(|entry| !self.in_column(entry.id) && entry.is_shown(settings(cx)))
-                .collect();
-            for entry in rows_here {
+            for entry in group.entries.iter().filter(|entry| !self.in_column(entry.id)) {
+                // A row behind a feature flag that is off is not on the page at all.
+                if !entry.is_shown(settings(cx)) {
+                    continue;
+                }
                 let Some(setting) = control(entry.id) else {
                     tracing::warn!("settings: no control for {}", entry.id);
                     continue;

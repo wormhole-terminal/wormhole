@@ -93,6 +93,7 @@ mod tests {
                 app_cursor: false,
                 app_keypad: false,
                 bracketed_paste: false,
+                locator: false,
                 mouse: "off".into(),
                 mouse_encoding: "x10".into(),
                 kitty_keyboard: 0,

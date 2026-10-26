@@ -208,6 +208,8 @@ pub struct ModesInfo {
     /// DECKPAM.
     pub app_keypad: bool,
     pub bracketed_paste: bool,
+    /// The program asked for the DEC locator (a pointer it is told of in its own reports).
+    pub locator: bool,
     /// What mouse events the program asked for: `off`, `x10`, `click`, `drag` or `motion`.
     pub mouse: String,
     /// How it wants them written: `x10`, `utf8`, `urxvt`, `sgr` or `sgr_pixels`.
@@ -293,6 +295,7 @@ impl ModesInfo {
             app_cursor: modes.contains(Modes::APP_CURSOR),
             app_keypad: modes.contains(Modes::APP_KEYPAD),
             bracketed_paste: modes.contains(Modes::BRACKETED_PASTE),
+            locator: modes.contains(Modes::LOCATOR),
             mouse: mouse.into(),
             mouse_encoding: mouse_encoding.into(),
             kitty_keyboard: modes.kitty_flags().bits(),

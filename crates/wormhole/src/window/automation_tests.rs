@@ -398,8 +398,9 @@ fn events_are_answered_with_the_state_and_a_stream_or_a_reason_why_not(cx: &mut 
         Peer::default(),
     ));
     assert_eq!(error.code, ErrorCode::BadRequest);
+    // What terminals print needs the right to read (the setting is off, and the caller is outside).
     let error = refusal(ask(cx, EventsSpec { output: true, ..Default::default() }, None, Peer::default()));
-    assert_eq!(error.code, ErrorCode::Unsupported, "what terminals print is not watched yet");
+    assert_eq!(error.code, ErrorCode::NotAllowed);
     let wrong_version = Request { version: 99, ..Request::new(Action::Events(EventsSpec::default()), None) };
     let answered = cx.update(|cx| control::answer(wrong_version, &Peer::default(), cx));
     assert_eq!(refusal(answered).code, ErrorCode::Version);
