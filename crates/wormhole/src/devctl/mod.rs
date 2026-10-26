@@ -273,6 +273,15 @@
 //!                   at that point of the primary screen (as `pointer` + a drag's release): a window of its
 //!                   own opens there, or the Wormhole window under it takes the terminal (its list gets
 //!                   it last); nothing without the feature, or for the last terminal of a window
+//!   notice <text>   put a notice (the chip that drops from the title row) in this window that says <text>
+//!                   (the Notices feature flag must be on: `set feature_flags={"notices":true}`)
+//!   notices         each window's chip, a line each: its number, phase (Hidden, Showing, Leaving), words and,
+//!                   while the native panel is up, `frame x y w h` (the chip at rest, in the window's points),
+//!                   `material` (glass, frosted or solid), `panel <n>`, the panel's window number, and
+//!                   `window <n>`, the app window's: the chip is no part of a `shot`, so capture either
+//!                   with `screencapture -l <n> -o file.png`
+//!   notice-material glass|frosted|solid|system   make the next chip of that material (`system`: as the
+//!                   Mac allows), to see all three on one Mac
 //!   grow-hold <t> | grow-hold off   a window growing from a torn-off terminal's chip stands at that
 //!                   point of its growth (0.0 the chip, 1.0 the window) and stays, for a `shot`; `off`:
 //!                   it grows on. Send it before the `tear-off`: the new window reads its own commands
@@ -368,6 +377,7 @@ mod hosts;
 mod input;
 mod language;
 mod menus;
+mod notices;
 mod panels;
 mod profiling;
 mod scaling;

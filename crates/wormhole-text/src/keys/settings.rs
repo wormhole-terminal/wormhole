@@ -6,12 +6,12 @@
 use crate::key::Key;
 
 /// "Look"
-pub const SETTINGS_NAV_LOOK: Key = Key::new(857);
+pub const SETTINGS_NAV_LOOK: Key = Key::new(865);
 /// "Work"
-pub const SETTINGS_NAV_WORK: Key = Key::new(858);
+pub const SETTINGS_NAV_WORK: Key = Key::new(866);
 /// "Agents"
-pub const SETTINGS_NAV_AGENTS: Key = Key::new(859);
+pub const SETTINGS_NAV_AGENTS: Key = Key::new(867);
 /// "App"
-pub const SETTINGS_NAV_APP: Key = Key::new(860);
+pub const SETTINGS_NAV_APP: Key = Key::new(868);
 /// "Preview"
-pub const SETTINGS_NAV_PREVIEW: Key = Key::new(861);
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(869);

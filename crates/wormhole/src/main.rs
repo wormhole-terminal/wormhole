@@ -25,6 +25,7 @@ mod icons;
 mod inspector;
 mod intro;
 mod menubar;
+mod notice;
 mod notifications;
 mod onboarding;
 mod open_in;

@@ -85,6 +85,7 @@
         "settings",
         "fonts",
         "style",
+        "notice",
         [
           "inspector",
           "intro",

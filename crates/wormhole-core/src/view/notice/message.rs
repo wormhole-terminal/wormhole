@@ -5,6 +5,9 @@
 pub enum Notice {
     /// Something was put on the clipboard.
     Copied(Copied),
+    /// A message devctl made up (`notice <text>`); the number tells one from another. The app has no words
+    /// for it: they come with the post.
+    Test(u64),
 }
 
 /// What was copied, and how much.
@@ -18,8 +21,8 @@ pub enum Copied {
     Command,
     /// A folder's path.
     Path,
-    /// A key combination, from the command palette.
-    Shortcut,
+    /// A setting's key in `config.json`, from the command palette.
+    SettingKey,
     /// A git error's message.
     Error,
     /// A git object's id.
@@ -37,7 +40,7 @@ impl Notice {
     #[must_use]
     pub fn glyph(self) -> Glyph {
         match self {
-            Self::Copied(_) => Glyph::Copy,
+            Self::Copied(_) | Self::Test(_) => Glyph::Copy,
         }
     }
 }
@@ -79,7 +82,7 @@ mod tests {
 
     #[test]
     fn every_copy_has_the_copy_glyph() {
-        for copied in [Copied::Command, Copied::Path, Copied::Shortcut, Copied::Error, Copied::ObjectId] {
+        for copied in [Copied::Command, Copied::Path, Copied::SettingKey, Copied::Error, Copied::ObjectId] {
             assert_eq!(Notice::from(copied).glyph(), Glyph::Copy);
         }
     }

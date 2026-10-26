@@ -5,8 +5,8 @@
 use anyhow::anyhow;
 
 use super::{
-    Command, a11y, ambient, blocks, control, flow, hosts, input, language, menus, panels, profiling, scaling,
-    sessions, settings, shots, sidebar, studio, tear_off, title, welcome,
+    Command, a11y, ambient, blocks, control, flow, hosts, input, language, menus, notices, panels, profiling,
+    scaling, sessions, settings, shots, sidebar, studio, tear_off, title, welcome,
 };
 
 /// The command called `name`, if there is one.
@@ -95,6 +95,9 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "scaling" => scaling::scaling,
         "settle" => scaling::settle,
         "reveal-test" => scaling::reveal_test,
+        "notice" => notices::notice,
+        "notices" => notices::notices,
+        "notice-material" => notices::material,
         "pane-split" => sessions::pane_split,
         "pane-close" => sessions::pane_close,
         "pane-zoom" => sessions::pane_zoom,
