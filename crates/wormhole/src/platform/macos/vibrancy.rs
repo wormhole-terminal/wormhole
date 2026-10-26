@@ -107,6 +107,14 @@ impl GlassViews {
         while self.glass.len() < rects.len() {
             let view = NSGlassEffectView::initWithFrame(self.mtm.alloc(), NSRect::ZERO);
             appearance::follow_effect(&view);
+            // GPUI lays the regions out from the window's top, and `Glass::commit` places nothing while
+            // they stay where they were. So a glass keeps its distance from the top when the window
+            // grows or shrinks: from the bottom, it would slide away from its card.
+            view.setAutoresizingMask(if flipped {
+                NSAutoresizingMaskOptions::ViewMaxYMargin
+            } else {
+                NSAutoresizingMaskOptions::ViewMinYMargin
+            });
             // Just under GPUI's view, over the window's blur.
             self.parent.addSubview_positioned_relativeTo(
                 &view,
