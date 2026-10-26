@@ -76,6 +76,9 @@ impl Prepare {
             text_system.advance(font_id, font_size, 'm').map(|size| size.width).unwrap_or(px(8.4));
         let line_height = px((self.font_size * self.line_height).round());
         let area = bounds;
+        // What of the pane shows: the grid may be wider than its pane (a terminal has a least width), and a
+        // notice about it is centred on the part that is there.
+        let shown = bounds.intersect(&window.content_mask().bounds);
         // A window whose size AppKit rounded to the screen's pixels (its steps are a fractional cell) may be a
         // pixel short of a whole column.
         let slack = if self.live_resize { 1.0 / window.scale_factor() } else { 0.0 };
@@ -106,7 +109,7 @@ impl Prepare {
             (f32::from(viewport.height) - f32::from(bounds.size.height)).max(0.0),
         );
         self.layout.set(Layout {
-            area,
+            area: shown,
             origin: bounds.origin,
             cell: size(cell_width, line_height),
             cols,
