@@ -2,25 +2,25 @@
 # ipc folders
 377d30a5b999794364d61a10d105e29013eb57f8
 # Motion folders, scripts/motion-moves.py
-8015d8e678e824591ffe18cb5d7dd441d23d3a1b
 # refactor(style): move motion.rs into a folder of timing and easing
-e23d575a4b19bb85ce9a186c865649637eadcb88
+e4ede6e4d68ea4c4d74ee90ba809bf92e12d7b40
 # refactor(style): move tile.rs into a folder of face, ring, orbit, edge and badge
-017ed4cfd6b33cdd635b2ee2b29f1c461e921769
+7be5801ef938f06c708efc750318fe541e7eae61
 # refactor(style): move the Urgency conversion next to StatusGlyph
-aecf838897c19995a2030aaa402edb448b2a53d1
+9bc8e50765901deff3f80f4904796ead9ba071d8
 # refactor(sidebar): move the list's slide into motion/list.rs
+cb587871146ee994ed7f81d423402c00ecf6a2a5
 # refactor(sidebar): move rows.rs into a folder of frame, face, tile, second_line and label
-d08c0089e59d2cf7360b0eab86d193324b88954b
+a295f0579502b898b82e9b401de9510f2a718369
 # refactor(sidebar): move drag.rs to drop.rs, beside core's drop
-6409445776ff84ff9bb95025ec3a1433c02b3993
+dbbe68b9e51c75aeb5135d2596baf8b57fc6d743
 # refactor(sidebar): move motion/drag.rs to motion/room.rs
-74d095c377697390f8127689a9bd125fd5f5c456
-# refactor(style): move shift.rs to status_shift.rs
-a25a009900642efb374dbaa40d5061fefc85d3ed
+5ab389b4f3aede88518c74900387f17640dac125
+# refactor(style): move shift.rs to status_shift.rs, beside status.rs
+b6c5aacd63d92b5a690c730a4c66aee37507f201
 # refactor(sidebar): move a second line's words to second_line.rs
-04075a1dc1442d41054fbd4a690386728d0c5135
+a8f04a8ef43aed3562e6042bf7a7d2f1df0d854e
 # refactor(panes): move drawing a split's panes to render.rs
-3b8ec23eacd2ad324e66b5ad9f97a19f59ec9b37
+89115c2028567790a78996176bbab6d8475a7637
 # refactor(terminal-view): move the last frame's geometry and the window's geometry out of mod.rs
-f7671d9b277de0533ad65ff1616ccbaa114ad0d5
+e794710d7b0f893e09bab6d59613c734a379f9e7
