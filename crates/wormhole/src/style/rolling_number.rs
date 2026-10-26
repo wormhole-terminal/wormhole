@@ -41,15 +41,22 @@ pub fn rolling_number(id: impl Into<ElementId>, to: usize, roll: Option<NumberRo
     };
     let places = div().flex().items_center();
     match clock {
-        RollClock::At(t) => places.children(cells(&roll, t)).into_any_element(),
+        RollClock::At(t) => places.children(drawn(&roll, to, t)).into_any_element(),
         RollClock::Playing(turn) => places
             .with_animation(
                 (id.into(), turn.to_string()),
                 Animation::new(DURATION).with_max_fps(ANIMATION_FPS),
-                move |places, t| places.children(cells(&roll, t)),
+                move |places, t| places.children(drawn(&roll, to, t)),
             )
             .into_any_element(),
     }
+}
+
+/// The number `t` of the way through its roll: its places while it rolls, and once it has rolled the number as
+/// plain text, so a number that lost a place (10 to 9) does not keep a blank one until it is drawn again.
+#[track_caller]
+fn drawn(roll: &Roll, to: usize, t: f32) -> Vec<AnyElement> {
+    if t >= 1.0 { vec![to.to_string().into_any_element()] } else { cells(roll, t) }
 }
 
 /// The places of the number `t` of the way through its roll.
@@ -88,7 +95,7 @@ fn cells(roll: &Roll, t: f32) -> Vec<AnyElement> {
 mod tests {
     use wormhole_core::view::motion::roll::Roll;
 
-    use super::cells;
+    use super::{cells, drawn};
 
     #[test]
     fn a_place_is_one_element_whether_it_turns_or_not_and_a_longer_number_has_one_more() {
@@ -96,5 +103,12 @@ mod tests {
             let roll = Roll::of(from, to).expect("a roll");
             assert_eq!(cells(&roll, 0.5).len(), places, "{from} to {to}");
         }
+    }
+
+    #[test]
+    fn a_roll_that_is_over_is_the_number_in_one_piece_whatever_places_it_had() {
+        let roll = Roll::of(10, 9).expect("a roll");
+        assert_eq!(drawn(&roll, 9, 0.99).len(), 2, "while it rolls the tens place is still there");
+        assert_eq!(drawn(&roll, 9, 1.0).len(), 1, "after it the number is just its digit");
     }
 }
