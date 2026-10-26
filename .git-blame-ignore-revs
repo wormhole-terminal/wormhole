@@ -10,3 +10,5 @@ d64e63a0ffd59b37c0695ce99167eb9a204f2585
 # refactor(style): move the Urgency conversion next to StatusGlyph
 9cd89b31e8b11f3876f832d2a26d76d65d0f02e5
 # refactor(sidebar): move the list's slide into motion/list.rs
+# refactor(sidebar): move rows.rs into a folder of frame, face, tile, second_line and label
+b8975353e1844bb6193a0145e523cbe9eadb342e
