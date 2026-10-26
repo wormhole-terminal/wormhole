@@ -26,8 +26,8 @@ use self::badge::badge;
 use self::face::{Paint, Resolved, resolve};
 use self::ring::{light, phase_of};
 use super::scale::{TILE, TILE_MINI};
-use super::shift::StatusShift;
 use super::status::StatusGlyph;
+use super::status_shift::StatusShift;
 use crate::icons::glyph;
 use crate::settings::UiColors;
 

@@ -7,8 +7,8 @@ use gpui_kit::*;
 
 use super::RowTone;
 use crate::style::scale::META_LINE;
-use crate::style::shift::StatusShift;
 use crate::style::status::StatusGlyph;
+use crate::style::status_shift::StatusShift;
 
 /// The second line rolling from the words it had to the ones the row has now.
 pub struct DetailRoll {

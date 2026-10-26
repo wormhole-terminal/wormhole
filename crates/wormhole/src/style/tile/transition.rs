@@ -11,8 +11,8 @@ use wormhole_core::view::motion::pose::status::{Flare, Part};
 use super::badge::grown;
 use super::ring::{RING_OUT, light};
 use crate::settings::UiColors;
-use crate::style::shift::StatusShift;
 use crate::style::status::StatusGlyph;
+use crate::style::status_shift::StatusShift;
 
 /// What the layer is drawn on and with: the tile's size and corner, its surface (the badge's rim) and
 /// the phase of its light.
