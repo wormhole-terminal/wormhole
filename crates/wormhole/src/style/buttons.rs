@@ -302,17 +302,16 @@ impl RenderOnce for IconButton {
         let on_click = {
             let started = armed.as_ref().and_then(|armed| armed.clicks());
             let menu = menu.zip(menu_mark);
-            (started.is_some() || on_click.is_some() || menu.is_some()).then(|| {
-                move |event: &ClickEvent, window: &mut Window, cx: &mut App| {
-                    if let Some(started) = &started {
-                        started.start(cx);
-                    }
-                    if let Some(run) = &on_click {
-                        run(event, window, cx);
-                    }
-                    if let Some((open_menu, mark)) = &menu {
-                        open_menu(mark, window, cx);
-                    }
+            let wanted = started.is_some() || on_click.is_some() || menu.is_some();
+            wanted.then_some(move |event: &ClickEvent, window: &mut Window, cx: &mut App| {
+                if let Some(started) = &started {
+                    started.start(cx);
+                }
+                if let Some(run) = &on_click {
+                    run(event, window, cx);
+                }
+                if let Some((open_menu, mark)) = &menu {
+                    open_menu(mark, window, cx);
                 }
             })
         };
