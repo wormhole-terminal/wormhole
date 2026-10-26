@@ -84,16 +84,19 @@ pub(super) struct BoundsWatch {
 
 impl BoundsWatch {
     /// The record to save when the window is somewhere new: `now` is not what was last seen and
-    /// its encoding is not already `saved`.
+    /// its encoding is not already `saved`. `display` (which display it is on) is asked only when the
+    /// bounds are new: it is a lookup, and this runs every tick of every window. (A window moved to
+    /// another display at the very same place on it is seen when it next moves.)
     pub(super) fn moved(
         &mut self,
         now: WindowBounds,
-        display: Option<DisplayId>,
+        display: impl FnOnce() -> Option<DisplayId>,
         saved: Option<&str>,
     ) -> Option<String> {
-        if self.seen == Some((now, display)) {
+        if self.seen.is_some_and(|(bounds, _)| bounds == now) {
             return None;
         }
+        let display = display();
         self.seen = Some((now, display));
         let encoded = encode(now, display)?;
         (saved != Some(encoded.as_str())).then_some(encoded)
@@ -189,19 +192,33 @@ mod tests {
 
         // The first look compares with what was saved: the same place is nothing to save...
         let saved = encode(here, None);
-        assert_eq!(watch.moved(here, None, saved.as_deref()), None);
+        assert_eq!(watch.moved(here, || None, saved.as_deref()), None);
         // ...a different one is saved, once.
-        assert_eq!(watch.moved(there, None, saved.as_deref()), encode(there, None));
+        assert_eq!(watch.moved(there, || None, saved.as_deref()), encode(there, None));
         // Still there: the saved record is stale (the caller has not stored it yet) but the
         // window has not moved since it was last seen.
-        assert_eq!(watch.moved(there, None, saved.as_deref()), None);
+        assert_eq!(watch.moved(there, || None, saved.as_deref()), None);
         // Back to the saved place: nothing new to save.
-        assert_eq!(watch.moved(here, None, saved.as_deref()), None);
+        assert_eq!(watch.moved(here, || None, saved.as_deref()), None);
         // Maximizing is a change even at the same size.
         let maximized = WindowBounds::Maximized(bounds(10.0, 20.0, 1000.0, 700.0));
-        assert_eq!(watch.moved(maximized, None, saved.as_deref()), encode(maximized, None));
-        // So is the same place on another display.
+        assert_eq!(watch.moved(maximized, || None, saved.as_deref()), encode(maximized, None));
+        // The display is asked about when the bounds are new, and only then.
         let other = Some(DisplayId::new(2));
-        assert_eq!(watch.moved(maximized, other, saved.as_deref()), encode(maximized, other));
+        let mut asked = 0;
+        let new = WindowBounds::Maximized(bounds(0.0, 0.0, 1000.0, 700.0));
+        assert_eq!(
+            watch.moved(
+                new,
+                || {
+                    asked += 1;
+                    other
+                },
+                saved.as_deref()
+            ),
+            encode(new, other)
+        );
+        assert_eq!(watch.moved(new, || unreachable!("not asked for bounds seen"), saved.as_deref()), None);
+        assert_eq!(asked, 1);
     }
 }

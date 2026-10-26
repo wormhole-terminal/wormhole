@@ -46,9 +46,16 @@ impl DraggedTerminal {
     }
 }
 
+impl DraggedTerminal {
+    /// Whether window `window` draws the picture: only the one the drag was picked up in does.
+    pub(crate) fn drawn_in(&self, window: WindowId) -> bool {
+        self.source.is_none_or(|source| source == window)
+    }
+}
+
 impl Render for DraggedTerminal {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        if self.source.is_some_and(|source| source != window.window_handle().window_id()) {
+        if !self.drawn_in(window.window_handle().window_id()) {
             return div().into_any_element();
         }
         let ui = ui(cx);

@@ -280,9 +280,9 @@ impl Workspace {
 
     /// Per tick: remember where the window is, and name it after the session.
     pub(super) fn track_window(&mut self, window: &mut Window, cx: &App) {
-        let display = window.display(cx).map(|display| display.id());
-        if let Some(moved) = self.bounds_watch.moved(window.window_bounds(), display, self.bounds.as_deref())
-        {
+        let bounds = window.window_bounds();
+        let display = || window.display(cx).map(|display| display.id());
+        if let Some(moved) = self.bounds_watch.moved(bounds, display, self.bounds.as_deref()) {
             self.bounds = Some(moved);
             self.dirty = true;
         }

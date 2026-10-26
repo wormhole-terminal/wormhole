@@ -8,7 +8,7 @@ use wormhole_core::view::panes::{Rect, Zone};
 use wormhole_core::view::tear_off::{Occupant, Placed, Screen, to_global};
 
 use super::drag_tests::{drag, open, release, row_bounds};
-use super::tear_off::{land_over, pointer_at};
+use super::tear_off::{Release, land_over, pointer_at};
 use super::test_harness::{draw, drive, isolate_in, read, start, with_window};
 use crate::app_state::{OpenWindow, app};
 use crate::platform::pointer;
@@ -56,8 +56,13 @@ fn a_terminal_let_go_over_the_desktop_gets_a_window_of_its_own_and_keeps_running
         return;
     }
     let window = start(cx, 3);
-    drive(cx, &window, |ws, _, _| ws.sessions[1].custom_name = Some("the build".into()));
+    drive(cx, &window, |ws, _, cx| ws.devctl_rename(1, "the build", cx));
     let view = view_of(cx, &window, 2);
+    let terminal = read(cx, &window, |ws| ws.sessions[1].terminal().clone());
+    let pid = terminal.read_with(cx, |t, _| t.shell_pid());
+    assert!(pid.is_some(), "a shell runs in it");
+    cx.update(|cx| terminal.update(cx, |t, _| t.write_input(b"before\r".to_vec())));
+    until(cx, "the echo", |cx| shown(cx, &window, 2, "before") > 0);
     let_go(cx, &window, 2, 600.0, 300.0);
 
     assert_eq!(windows(cx).len(), 2, "a window of its own");
@@ -67,6 +72,11 @@ fn a_terminal_let_go_over_the_desktop_gets_a_window_of_its_own_and_keeps_running
     assert_eq!(view_of(cx, &torn, 2), view, "the very view, so the same program, not a restart");
     let name = read(cx, &torn, |ws| ws.sessions[0].name());
     assert_eq!(name.as_ref(), "the build", "with what the person had called it");
+    // The program itself: the same process, with what it had on its screen, and it answers still.
+    assert_eq!(terminal.read_with(cx, |t, _| t.shell_pid()), pid, "the same process, not a restart");
+    assert!(shown(cx, &torn, 2, "before") > 0, "with its screen as it was");
+    cx.update(|cx| terminal.update(cx, |t, _| t.write_input(b"after\r".to_vec())));
+    until(cx, "it answers", |cx| shown(cx, &torn, 2, "after") > 0);
 }
 
 #[gpui_kit::test]
@@ -163,7 +173,8 @@ fn land_covered(
     at: (f32, f32),
 ) {
     let pointer = cx.update(|cx| pointer_at(at.0, at.1, cx)).expect("a pointer");
-    cx.update(|cx| land_over(stack, covered, source.id, id, pointer, cx));
+    let open = windows(cx);
+    cx.update(|cx| land_over(&open, stack, covered, source.id, Release { id, pointer, chip: None }, cx));
     cx.run_until_parked();
 }
 
@@ -440,4 +451,27 @@ fn a_release_over_another_applications_window_opens_a_window_even_over_one_of_ou
     assert_eq!(windows(cx).len(), 3, "a window of its own");
     assert_eq!(ids(cx, &target), [3], "the second window took nothing");
     assert_eq!(ids(cx, &window), [1]);
+}
+
+#[gpui_kit::test]
+fn a_drag_picked_up_in_one_window_is_drawn_in_that_window_only(cx: &mut TestAppContext) {
+    if isolate("a_drag_picked_up_in_one_window_is_drawn_in_that_window_only") {
+        return;
+    }
+    let (window, other, _) = two_windows(cx);
+    let id = |w: &OpenWindow| w.handle.window_id();
+    let dragged = crate::sidebar::terminal_drag::DraggedTerminal {
+        source: Some(id(&window)),
+        ..crate::sidebar::terminal_drag::DraggedTerminal::new(
+            2,
+            crate::sidebar::terminal_drag::DragOrigin::Row,
+            "x".into(),
+            crate::style::StatusGlyph::Shell,
+        )
+    };
+    assert!(dragged.drawn_in(id(&window)));
+    assert!(!dragged.drawn_in(id(&other)), "the other window would draw it at its own idea of the pointer");
+    // A drag with no known source (none is made without one) is drawn wherever it is asked.
+    let loose = crate::sidebar::terminal_drag::DraggedTerminal { source: None, ..dragged };
+    assert!(loose.drawn_in(id(&other)));
 }
