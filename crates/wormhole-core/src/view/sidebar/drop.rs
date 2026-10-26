@@ -16,6 +16,21 @@ pub enum Part {
     Bottom,
 }
 
+impl Part {
+    /// The part of a line a pointer `fraction` of the way down it (0.0 its top edge, 1.0 its bottom) is
+    /// over: the top quarter, the bottom quarter, or the middle half between them.
+    #[must_use]
+    pub fn at(fraction: f32) -> Self {
+        if fraction < 0.25 {
+            Self::Top
+        } else if fraction > 0.75 {
+            Self::Bottom
+        } else {
+            Self::Middle
+        }
+    }
+}
+
 /// What a drop does. `to` is where the dragged row is in `order` afterwards: take it out, put it
 /// back at index `to` (as `order::move_in_block` does). Keeping a pinned terminal among the pinned
 /// is not decided here: the caller clamps `to` to the block as `order::drop_position` does.
@@ -124,6 +139,18 @@ mod tests {
     fn applied(dragged: usize, to: usize) -> Vec<usize> {
         let from = ORDER.iter().position(|&ix| ix == dragged).unwrap_or(0);
         move_in_block(&ORDER, &[false; 8], from, to)
+    }
+
+    #[test]
+    fn the_pointer_is_over_the_top_quarter_the_middle_half_or_the_bottom_quarter() {
+        assert_eq!(Part::at(-0.1), Part::Top, "above the line counts as its top");
+        assert_eq!(Part::at(0.0), Part::Top);
+        assert_eq!(Part::at(0.249), Part::Top);
+        assert_eq!(Part::at(0.25), Part::Middle, "the middle half starts at a quarter");
+        assert_eq!(Part::at(0.5), Part::Middle);
+        assert_eq!(Part::at(0.75), Part::Middle, "and ends at three quarters");
+        assert_eq!(Part::at(0.751), Part::Bottom);
+        assert_eq!(Part::at(1.2), Part::Bottom);
     }
 
     #[test]

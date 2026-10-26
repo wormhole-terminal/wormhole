@@ -32,17 +32,6 @@ pub(super) enum DropMark {
     Join(i64),
 }
 
-/// The part of a line the pointer is over: the top quarter, the bottom quarter, or the middle half.
-fn part_at(fraction: f32) -> Part {
-    if fraction < 0.25 {
-        Part::Top
-    } else if fraction > 0.75 {
-        Part::Bottom
-    } else {
-        Part::Middle
-    }
-}
-
 impl Sidebar {
     pub(super) fn with_drag(
         &self,
@@ -96,7 +85,7 @@ impl Sidebar {
             match group {
                 // The gap under a group's card puts the dragged terminal after the group.
                 Some(group) if gap.is_some_and(|gap| y > height - gap) => Over::After(group),
-                _ => Over::Row { id, part: part_at(y / height) },
+                _ => Over::Row { id, part: Part::at(y / height) },
             }
         };
         line.on_drag_move::<DraggedTerminal>(cx.listener(
@@ -134,7 +123,7 @@ impl Sidebar {
             if gap.is_some_and(|gap| y > height - gap) {
                 Over::After(group)
             } else {
-                Over::Head { group, part: part_at(y / height) }
+                Over::Head { group, part: Part::at(y / height) }
             }
         };
         line.on_drag_move::<DraggedTerminal>(cx.listener(
