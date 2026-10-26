@@ -5,6 +5,7 @@
   scripts/motion-moves.py tile        style/tile.rs    -> style/tile/{mod,face,orbit,edge,badge}.rs
   scripts/motion-moves.py urgency     style/tile/mod.rs -> style/status.rs (the Urgency conversion, beside StatusGlyph)
   scripts/motion-moves.py sidebar     sidebar/motion.rs -> sidebar/motion/{mod,list}.rs
+  scripts/motion-moves.py rows        sidebar/rows.rs -> sidebar/row/{mod,frame,face,tile,second_line,label}.rs
   scripts/motion-moves.py STEP --check [--base REV]
                                       verify that the working tree is a pure move of the files as REV had them
                                       (default HEAD: before the commit; after it, pass the commit's parent)
@@ -29,7 +30,7 @@ import os
 import re
 import subprocess
 import sys
-from typing import Dict, List, NamedTuple, Optional
+from typing import Dict, List, NamedTuple, Optional, Tuple, Tuple
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APP = "crates/wormhole/src"
@@ -87,6 +88,8 @@ class File(NamedTuple):
     uses: List[str]  # `use` lines (and `mod` lines) this file starts with, after its header
     header: str  # "" for none, "source" for the source's own `//!` lines, or the text itself
     widen: Dict[str, str] = {}  # chunk key -> visibility prefix to put on its item line
+    edits: Dict[str, List[Tuple[str, str]]] = {}  # chunk key -> (line, replacement): a field widened, say
+    edits: Dict[str, List[Tuple[str, str]]] = {}  # chunk key -> (line, replacement): a field widened, say
 
 
 class Step(NamedTuple):
@@ -94,6 +97,8 @@ class Step(NamedTuple):
     first: str  # where `git mv` puts it
     files: Dict[str, File]  # path (relative to the folder of `first`) -> contents
     rewrite: Dict[str, str] = {}  # for a file that is only renamed: exact line replacements
+    widen_all: str = ""  # a visibility that replaces every `pub(super)` of the new files, if they are in a folder
+    callers: Dict[str, Dict[str, str]] = {}  # other files (relative to src/) -> exact replacements for the new path
 
 
 class Relocate(NamedTuple):
@@ -128,6 +133,56 @@ TILE_USES_MOD = [
     "use super::status::StatusGlyph;",
     "use crate::icons::glyph;",
     "use crate::settings::UiColors;",
+]
+
+ROW_USES_MOD = [
+    "mod face;",
+    "mod frame;",
+    "mod label;",
+    "mod second_line;",
+    "mod tile;",
+    "",
+    "use std::time::Duration;",
+    "",
+    "use gpui_kit::component::tooltip::Tooltip;",
+    "use gpui_kit::prelude::*;",
+    "use gpui_kit::*;",
+    "use wormhole_core::view::sidebar::hints::keyshortcut;",
+    "",
+    "use self::face::RowFace;",
+    "pub(super) use self::face::{PLACE_CHARS, Place, row_face};",
+    "pub(super) use self::frame::Frame;",
+    "pub(super) use self::second_line::time_text;",
+    "pub(super) use self::tile::{glyph_for, tile_for, tile_parts};",
+    "#[cfg(test)]",
+    "use self::label::row_label;",
+    "#[cfg(test)]",
+    "use self::second_line::{SecondLine, second_line};",
+    "",
+    "use super::facts::RowInfo;",
+    "use super::{Sidebar, SidebarEvent, two_line_tooltip};",
+    "use crate::settings::UiColors;",
+    "use crate::sidebar::SidebarStop;",
+    "use crate::sidebar::terminal_drag::DragOrigin;",
+    "use crate::style;",
+]
+ROW_USES_FACE = [
+    "use gpui_kit::assets::IconName;",
+    "use gpui_kit::component::{Icon, Sizable};",
+    "use gpui_kit::prelude::*;",
+    "use gpui_kit::*;",
+    "use wormhole_core::view::sidebar::SplitMarks;",
+    "use wormhole_core::view::sidebar::hints::keycap;",
+    "use wormhole_core::view::sidebar::wording::place_detail;",
+    "",
+    "use super::label::row_label;",
+    "use super::second_line::{SecondLine, second_line};",
+    "use super::tile::tile_for;",
+    "use super::Frame;",
+    "use super::super::{BODY_REM, CAPTION_REM, two_line_tooltip};",
+    "use crate::sidebar::facts::RowInfo;",
+    "use crate::style::home_dir;",
+    "use crate::style::{self, SessionRow, TextRole};",
 ]
 
 RELOCATIONS: Dict[str, Relocate] = {
@@ -275,6 +330,90 @@ STEPS: Dict[str, Step] = {
             "use super::Sidebar;": "use crate::sidebar::Sidebar;",
         },
     ),
+    "rows": Step(
+        src="sidebar/rows.rs",
+        first="sidebar/row/mod.rs",
+        files={
+            "mod.rs": File(
+                items=["const MOVE_FLASH", "const CLOSE_X_TOP", "fn close_right", "impl Sidebar", "mod tests"],
+                uses=ROW_USES_MOD,
+                header="source",
+            ),
+            "frame.rs": File(
+                items=["const NAME_FADE", "const FIT_SLACK", "struct Frame", "impl Frame"],
+                uses=[
+                    "use gpui_kit::*;",
+                    "",
+                    "use super::super::input::SidebarInput;",
+                    "use crate::settings::{UiColors, settings_in, ui_in};",
+                    "use crate::style::{self, Metrics};",
+                ],
+                header="//! What every row of one frame shares: the settings it is drawn by and how text is measured, for a\n"
+                       "//! name that is cut off to fade out and a tooltip to know when it is needed.",
+                edits={"struct Frame": [("    show_dot: bool,", "    pub(in crate::sidebar) show_dot: bool,"),
+                                        ("    show_notes: bool,", "    pub(in crate::sidebar) show_notes: bool,")]},
+            ),
+            "face.rs": File(
+                items=[
+                    "const TRAIL_W", "const KEYCAP_TRAIL_W", "const DETAIL_W", "const MARK_W", "const LINE_GAP",
+                    "const MONO_CHAR_W", "const CLOCK_W", "const PLACE_CHARS", "fn split_line_x", "struct Place",
+                    "struct RowFace", "fn row_face",
+                ],
+                uses=ROW_USES_FACE,
+                header="//! A row as it looks, before anything answers to it: where it sits in the listing (`Place`), what it\n"
+                       "//! shows and what its tooltip and VoiceOver say (`RowFace`). Must not wire anything (click, drag, menu).",
+            ),
+            "tile.rs": File(
+                items=["fn tile_for", "fn tile_parts", "fn glyph_for"],
+                uses=[
+                    "use gpui_kit::*;",
+                    "use wormhole_core::view::sidebar::RowState;",
+                    "",
+                    "use super::Frame;",
+                    "use super::super::facts::RowInfo;",
+                    "use crate::style::{self, StatusGlyph, StatusTile, TileFace};",
+                ],
+                header="//! A terminal's status tile and the glyph its state is drawn with: its agent's logo or the terminal\n"
+                       "//! symbol, and its state round it; the bell is a badge on a terminal with nothing louder to say.",
+            ),
+            "second_line.rs": File(
+                items=["struct SecondLine", "fn second_line", "fn time_text", "fn tone_of"],
+                uses=[
+                    "use wormhole_core::view::sidebar::RowState;",
+                    "use wormhole_core::view::sidebar::wording::{agent_detail, ago, clock, took};",
+                    "",
+                    "use super::super::facts::RowInfo;",
+                    "use crate::style::RowTone;",
+                ],
+                header="//! A row's second line: what the terminal has to report, or where it is, and the part of it that moves\n"
+                       "//! with time (so a tick knows when to draw again).",
+            ),
+            "label.rs": File(
+                items=["fn row_label"],
+                uses=[
+                    "use wormhole_core::view::sidebar::RowState;",
+                    "use wormhole_core::view::sidebar::spoken::{self, RowSpeech, SplitSpeech};",
+                    "",
+                    "use super::Place;",
+                    "use super::super::facts::RowInfo;",
+                ],
+                header="//! What VoiceOver says of a row: its name, what it is doing, its split and its place in the list.",
+                widen={"fn row_label": "pub(super)"},
+            ),
+        },
+        widen_all="pub(in crate::sidebar)",
+        callers={
+            "sidebar/mod.rs": {"mod rows;": "mod row;", "rows::Frame::new": "row::Frame::new", "rows::Place {": "row::Place {"},
+            "sidebar/switcher.rs": {"super::rows::": "super::row::"},
+            "sidebar/drag.rs": {"super::rows::": "super::row::"},
+            "sidebar/groups.rs": {"super::rows::": "super::row::"},
+            "sidebar/tab_bar.rs": {"super::rows::": "super::row::"},
+            "sidebar/facts.rs": {"use super::rows;": "use super::row;", "rows::time_text": "row::time_text"},
+            "sidebar/demo.rs": {"super::rows::Frame": "super::row::Frame", "`rows::glyph_for`": "`row::glyph_for`"},
+            "sidebar/group_head.rs": {"super::rows::": "super::row::"},
+            "sidebar/motion/leaving.rs": {"crate::sidebar::rows::": "crate::sidebar::row::"},
+        },
+    ),
 }
 
 
@@ -301,6 +440,10 @@ def render(step_name: str, step: Step, name: str, spec: File, source: str, chunk
     for at, key in enumerate(spec.items):
         chunk = chunks[key]
         text = list(chunk.text)
+        for old, new in spec.edits.get(key, []):
+            if old not in text:
+                raise SystemExit("%s: %s has no line %r" % (step_name, key, old))
+            text = [new if l == old else l for l in text]
         if key in spec.widen:
             first_item = next(i for i, l in enumerate(text) if not l.startswith(("///", "#[")))
             line = text[first_item]
@@ -359,6 +502,17 @@ def apply_step(name: str) -> int:
         subprocess.run(["git", "add", path], cwd=REPO, check=True)
         print("%s: wrote %s" % (name, os.path.relpath(path, REPO)))
     subprocess.run(["git", "add", first], cwd=REPO, check=True)
+    for rel, edits in step.callers.items():
+        path = os.path.join(REPO, APP, rel)
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        for old, new in edits.items():
+            if old not in text:
+                raise SystemExit("%s: %s has no %s" % (name, rel, old))
+            text = text.replace(old, new)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text)
+        subprocess.run(["git", "add", path], cwd=REPO, check=True)
     return 0
 
 
