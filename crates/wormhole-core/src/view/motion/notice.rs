@@ -27,10 +27,6 @@ pub const SWAP: Duration = Duration::from_millis(120);
 pub const LIFE: Duration = Duration::from_secs(2);
 /// The same message again within this long is not said twice.
 pub const DEDUPE: Duration = Duration::from_secs(2);
-/// A spring is within a hundredth of the way it travels (a pixel of the drop, near enough) of its
-/// target for good after this long.
-const TOLERANCE: f32 = 0.01;
-
 /// How the chip comes and goes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Entrance {
@@ -47,30 +43,14 @@ impl Entrance {
         if reduced { Self::Fade } else { Self::Drop }
     }
 
-    /// How long the chip takes to arrive.
-    #[must_use]
-    pub fn arrive(self) -> Duration {
-        match self {
-            Self::Drop => DROP.settle(TOLERANCE),
-            Self::Fade => FADE_IN,
-        }
-    }
-
     /// How long the chip takes to leave: until then the panel must stay.
     #[must_use]
-    pub fn leave(self) -> Duration {
+    pub fn exit_duration(self) -> Duration {
         match self {
             Self::Drop => UP,
             Self::Fade => FADE_OUT,
         }
     }
-}
-
-/// How far a chip `height` points tall travels to go from rest to out of sight above the title row's
-/// edge: its own height and the gap it rests at.
-#[must_use]
-pub fn travel(height: f32) -> f32 {
-    height + REST_GAP
 }
 
 #[cfg(test)]
@@ -92,20 +72,13 @@ mod tests {
     fn reduce_motion_fades_and_otherwise_the_chip_drops() {
         assert_eq!(Entrance::of(true), Entrance::Fade);
         assert_eq!(Entrance::of(false), Entrance::Drop);
-        assert_eq!(Entrance::Fade.arrive(), FADE_IN);
-        assert_eq!(Entrance::Fade.leave(), FADE_OUT);
-        assert_eq!(Entrance::Drop.leave(), UP);
+        assert_eq!(Entrance::Fade.exit_duration(), FADE_OUT);
+        assert_eq!(Entrance::Drop.exit_duration(), UP);
     }
 
     #[test]
-    fn the_drop_settles_in_well_under_a_second_and_after_it_has_started() {
-        let arrive = Entrance::Drop.arrive();
-        assert!(arrive > Duration::from_millis(100) && arrive < Duration::from_millis(700), "{arrive:?}");
-        assert!(arrive < LIFE, "the chip is at rest before it starts to leave");
-    }
-
-    #[test]
-    fn the_chip_travels_its_height_and_its_gap() {
-        assert_eq!(travel(32.0), 40.0);
+    fn the_drop_is_at_rest_well_before_its_life_is_over() {
+        let settled = DROP.settle(0.01);
+        assert!(settled > Duration::from_millis(100) && settled < LIFE / 2, "{settled:?}");
     }
 }

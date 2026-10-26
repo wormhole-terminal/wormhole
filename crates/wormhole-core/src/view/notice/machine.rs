@@ -21,10 +21,10 @@ pub enum Phase {
 /// What the caller does about a message, or about time passing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Effect {
-    /// Bring the chip in with this message.
-    Show(Notice),
-    /// The chip is up: put these words in it, without dropping again.
-    Swap(Notice),
+    /// Bring the chip in with the message just posted.
+    Show,
+    /// The chip is up: put the message's words in it, without dropping again.
+    Swap,
     /// Life is over: take the chip away.
     Hide,
     /// The chip is out of sight: let the panel go.
@@ -36,25 +36,25 @@ pub enum Effect {
 #[derive(Clone, Copy, Debug)]
 enum State {
     Hidden,
-    Showing { notice: Notice, until: Instant },
+    Showing { until: Instant },
     Leaving { until: Instant },
 }
 
 /// One window's chip.
 #[derive(Debug)]
-pub struct Notices {
+pub struct ChipRules {
     state: State,
     /// The last message that was said, and when: what the same message again is held against.
     last: Option<(Notice, Instant)>,
 }
 
-impl Default for Notices {
+impl Default for ChipRules {
     fn default() -> Self {
         Self { state: State::Hidden, last: None }
     }
 }
 
-impl Notices {
+impl ChipRules {
     /// A message arrives at `now`.
     pub fn post(&mut self, notice: Notice, now: Instant) -> Effect {
         if self.last.is_some_and(|(last, at)| last == notice && now.saturating_duration_since(at) < DEDUPE) {
@@ -64,13 +64,13 @@ impl Notices {
         let until = now + LIFE;
         match self.state {
             State::Showing { .. } => {
-                self.state = State::Showing { notice, until };
-                Effect::Swap(notice)
+                self.state = State::Showing { until };
+                Effect::Swap
             }
             // Coming back while it leaves drops it in anew: the panel is still there.
             State::Hidden | State::Leaving { .. } => {
-                self.state = State::Showing { notice, until };
-                Effect::Show(notice)
+                self.state = State::Showing { until };
+                Effect::Show
             }
         }
     }
@@ -108,15 +108,6 @@ impl Notices {
             State::Leaving { .. } => Phase::Leaving,
         }
     }
-
-    /// The message the chip shows now.
-    #[must_use]
-    pub fn current(&self) -> Option<Notice> {
-        match self.state {
-            State::Showing { notice, .. } => Some(notice),
-            _ => None,
-        }
-    }
 }
 
 #[cfg(test)]
@@ -132,24 +123,23 @@ mod tests {
     }
 
     fn lines(n: usize) -> Notice {
-        Copied::Text { lines: n, chars: n * 10 }.into()
+        Copied::Lines(n).into()
     }
 
     #[test]
     fn a_message_while_nothing_shows_drops_the_chip_in() {
-        let (mut chip, t0) = (Notices::default(), Instant::now());
+        let (mut chip, t0) = (ChipRules::default(), Instant::now());
         assert_eq!(chip.phase(), Phase::Hidden);
-        assert_eq!(chip.post(path(), t0), Effect::Show(path()));
-        assert_eq!((chip.phase(), chip.current()), (Phase::Showing, Some(path())));
+        assert_eq!(chip.post(path(), t0), Effect::Show);
+        assert_eq!(chip.phase(), Phase::Showing);
         assert_eq!(chip.due(), Some(t0 + LIFE));
     }
 
     #[test]
     fn a_different_message_swaps_the_words_and_starts_the_life_over() {
-        let (mut chip, t0) = (Notices::default(), Instant::now());
+        let (mut chip, t0) = (ChipRules::default(), Instant::now());
         chip.post(lines(3), t0);
-        assert_eq!(chip.post(path(), t0 + MS(1500)), Effect::Swap(path()));
-        assert_eq!(chip.current(), Some(path()));
+        assert_eq!(chip.post(path(), t0 + MS(1500)), Effect::Swap);
         assert_eq!(chip.due(), Some(t0 + MS(1500) + LIFE), "two seconds more from the new message");
         assert_eq!(
             chip.advance(t0 + LIFE, LEAVE),
@@ -160,7 +150,7 @@ mod tests {
 
     #[test]
     fn the_same_message_within_two_seconds_is_dropped_and_does_not_extend_the_life() {
-        let (mut chip, t0) = (Notices::default(), Instant::now());
+        let (mut chip, t0) = (ChipRules::default(), Instant::now());
         chip.post(path(), t0);
         assert_eq!(chip.post(path(), t0 + MS(1900)), Effect::Ignore);
         assert_eq!(chip.due(), Some(t0 + LIFE));
@@ -168,29 +158,29 @@ mod tests {
 
     #[test]
     fn the_same_message_is_held_against_the_last_one_said_even_after_another_came_between() {
-        let (mut chip, t0) = (Notices::default(), Instant::now());
+        let (mut chip, t0) = (ChipRules::default(), Instant::now());
         chip.post(path(), t0);
         chip.post(lines(2), t0 + MS(500));
         // `path` was said 1.5 s ago, but the last said was `lines`: this is a different message.
-        assert_eq!(chip.post(path(), t0 + MS(900)), Effect::Swap(path()));
+        assert_eq!(chip.post(path(), t0 + MS(900)), Effect::Swap);
         assert_eq!(chip.post(path(), t0 + MS(1200)), Effect::Ignore);
     }
 
     #[test]
     fn the_same_message_after_two_seconds_is_said_again() {
-        let (mut chip, t0) = (Notices::default(), Instant::now());
+        let (mut chip, t0) = (ChipRules::default(), Instant::now());
         chip.post(path(), t0);
         assert_eq!(chip.advance(t0 + LIFE, LEAVE), Effect::Hide);
-        assert_eq!(chip.post(path(), t0 + LIFE), Effect::Show(path()), "it left, and was last said 2 s ago");
+        assert_eq!(chip.post(path(), t0 + LIFE), Effect::Show, "it left, and was last said 2 s ago");
     }
 
     #[test]
     fn the_chip_leaves_when_its_life_is_over_and_the_panel_goes_when_it_is_out_of_sight() {
-        let (mut chip, t0) = (Notices::default(), Instant::now());
+        let (mut chip, t0) = (ChipRules::default(), Instant::now());
         chip.post(path(), t0);
         assert_eq!(chip.advance(t0 + MS(1999), LEAVE), Effect::Ignore);
         assert_eq!(chip.advance(t0 + LIFE, LEAVE), Effect::Hide);
-        assert_eq!((chip.phase(), chip.current()), (Phase::Leaving, None));
+        assert_eq!(chip.phase(), Phase::Leaving);
         assert_eq!(chip.due(), Some(t0 + LIFE + LEAVE));
         assert_eq!(chip.advance(t0 + LIFE + MS(100), LEAVE), Effect::Ignore);
         assert_eq!(chip.advance(t0 + LIFE + LEAVE, LEAVE), Effect::Remove);
@@ -200,17 +190,17 @@ mod tests {
 
     #[test]
     fn a_message_while_the_chip_leaves_brings_it_back() {
-        let (mut chip, t0) = (Notices::default(), Instant::now());
+        let (mut chip, t0) = (ChipRules::default(), Instant::now());
         chip.post(path(), t0);
         chip.advance(t0 + LIFE, LEAVE);
-        assert_eq!(chip.post(lines(4), t0 + LIFE + MS(50)), Effect::Show(lines(4)));
+        assert_eq!(chip.post(lines(4), t0 + LIFE + MS(50)), Effect::Show);
         assert_eq!(chip.phase(), Phase::Showing);
         assert_eq!(chip.advance(t0 + LIFE + LEAVE, LEAVE), Effect::Ignore, "the old leaving is forgotten");
     }
 
     #[test]
     fn the_time_a_chip_takes_to_leave_is_the_callers() {
-        let (mut chip, t0) = (Notices::default(), Instant::now());
+        let (mut chip, t0) = (ChipRules::default(), Instant::now());
         chip.post(path(), t0);
         chip.advance(t0 + LIFE, MS(150));
         assert_eq!(chip.due(), Some(t0 + LIFE + MS(150)));

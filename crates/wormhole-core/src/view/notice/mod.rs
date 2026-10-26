@@ -1,6 +1,6 @@
 //! The notice chip as data and rules, without GPUI: what a notice says (`message`) and when one is shown,
-//! swapped, dropped or taken down (`machine`). A small chip drops from the top of a window to say a copy
-//! happened; a native panel draws it (`platform::notice`), and the app's `notice` module drives that panel
+//! swapped, dropped or taken down (`machine`) and where the chip goes (`place`). A small chip drops from the top
+//! edge of a terminal to say a copy happened; a native panel draws it (`platform::notice`), and the app's `notice` module drives that panel
 //! from the machine here, with the clock it holds.
 //!
 //! The words are not here: a notice is its kind and its numbers, and the app turns it into a sentence from the
@@ -9,6 +9,8 @@
 
 mod machine;
 mod message;
+mod place;
 
-pub use machine::{Effect, Notices, Phase};
+pub use machine::{ChipRules, Effect, Phase};
 pub use message::{Copied, Glyph, Notice};
+pub use place::{Placed, Spot, WINDOW_MARGIN, place};

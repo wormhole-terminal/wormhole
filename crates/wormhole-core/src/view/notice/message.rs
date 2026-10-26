@@ -5,16 +5,19 @@
 pub enum Notice {
     /// Something was put on the clipboard.
     Copied(Copied),
-    /// A message devctl made up (`notice <text>`); the number tells one from another. The app has no words
-    /// for it: they come with the post.
+    /// A message devctl made up (`notice <text>`, which has no sentence in the catalog); the number tells
+    /// one from another and the words come with the post. Nothing but devctl makes one.
     Test(u64),
 }
 
 /// What was copied, and how much.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Copied {
-    /// Text from a terminal's screen, or a program's write to the clipboard.
-    Text { lines: usize, chars: usize },
+    /// Several lines of text, from a terminal's screen or a program's write to the clipboard.
+    Lines(usize),
+    /// A single line of it, told by its characters. Only what is said is kept: two copies that say the
+    /// same words are the same notice.
+    Characters(usize),
     /// A command block's output.
     Output { lines: usize },
     /// A command block's command line.
@@ -49,8 +52,10 @@ impl Copied {
     /// Copied `text`: it is counted here and not kept.
     #[must_use]
     pub fn text(text: &str) -> Self {
-        // A selection that is only a line break still copied one line.
-        Self::Text { lines: text.lines().count().max(1), chars: text.chars().count() }
+        match text.lines().count() {
+            0 | 1 => Self::Characters(text.chars().count()),
+            lines => Self::Lines(lines),
+        }
     }
 
     /// Copied the output `text` of a block.
@@ -72,11 +77,12 @@ mod tests {
 
     #[test]
     fn text_is_counted_and_not_kept() {
-        assert_eq!(Copied::text("one"), Copied::Text { lines: 1, chars: 3 });
-        assert_eq!(Copied::text("a\nbb\nccc"), Copied::Text { lines: 3, chars: 8 });
-        assert_eq!(Copied::text("a\nb\n"), Copied::Text { lines: 2, chars: 4 }, "a last break adds no line");
-        assert_eq!(Copied::text("\n"), Copied::Text { lines: 1, chars: 1 });
-        assert_eq!(Copied::text("日本"), Copied::Text { lines: 1, chars: 2 }, "characters, not bytes");
+        assert_eq!(Copied::text("one"), Copied::Characters(3));
+        assert_eq!(Copied::text("a\nbb\nccc"), Copied::Lines(3));
+        assert_eq!(Copied::text("a\nb\n"), Copied::Lines(2), "a last break adds no line");
+        assert_eq!(Copied::text("\n"), Copied::Characters(1));
+        assert_eq!(Copied::text("日本"), Copied::Characters(2), "characters, not bytes");
+        assert_eq!(Copied::text("a\nb"), Copied::text("c\nd"), "the same words are the same notice");
         assert_eq!(Copied::output("x\ny"), Copied::Output { lines: 2 });
     }
 
