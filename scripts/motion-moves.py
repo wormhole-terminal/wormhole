@@ -9,6 +9,7 @@
   scripts/motion-moves.py drop-file   sidebar/drag.rs -> sidebar/drop.rs (core's twin is view/sidebar/drop.rs)
   scripts/motion-moves.py room-file   sidebar/motion/drag.rs -> sidebar/motion/room.rs (the room a dragged row makes)
   scripts/motion-moves.py shift-file  style/shift.rs -> style/status_shift.rs (it is a status change's, beside status.rs)
+  scripts/motion-moves.py line-words  sidebar/row/face.rs -> sidebar/row/second_line.rs (line_of and PLACE_CHARS: a second line's words)
   scripts/motion-moves.py STEP --check [--base REV]
                                       verify that the working tree is a pure move of the files as REV had them
                                       (default HEAD: before the commit; after it, pass the commit's parent)
@@ -202,6 +203,15 @@ RELOCATIONS: Dict[str, Relocate] = {
         dst_use="use wormhole_core::view::sidebar::Urgency;",
         dst_use_after="use wormhole_core::notify::{State, Terminal};",
         drop_use="use wormhole_core::view::sidebar::Urgency;",
+    ),
+    "line-words": Relocate(
+        src="sidebar/row/face.rs",
+        dst="sidebar/row/second_line.rs",
+        items=["const PLACE_CHARS", "fn line_of"],
+        after="fn second_line",
+        dst_use="use wormhole_core::view::sidebar::wording::place_detail;\nuse super::Frame;\nuse crate::style::home_dir;",
+        dst_use_after="use wormhole_core::view::sidebar::wording::{agent_detail, ago, clock, took};",
+        drop_use="use wormhole_core::view::sidebar::wording::place_detail;",
     ),
 }
 
@@ -660,6 +670,9 @@ def apply_relocation(name: str) -> int:
     for key in move.items:
         chunk = chunks[key]
         block = "\n".join(chunk.text) + "\n" + "\n" * chunk.gap
+        if block not in source:
+            # The last item of a file has no blank line after it.
+            block = "\n".join(chunk.text) + "\n"
         if block not in source:
             raise SystemExit("%s: cannot find %s in %s" % (name, key, move.src))
         source = source.replace(block, "", 1)
