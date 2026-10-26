@@ -1,4 +1,4 @@
-//! Motion: how long things take and how they ease. Short and quiet: nothing
+//! Motion: how long things take, how they ease and how they spring. Short and quiet: nothing
 //! for what follows the pointer (hover, selection), 120–160 ms for what changes in place,
 //! 250 ms for panels; exits run at about 0.8× their entrance. GPUI's animations already
 //! hold still under Reduce Motion (a loop shows its first frame, a one-shot its last);
@@ -6,6 +6,7 @@
 //! `cx.reduce_motion()` itself.
 
 mod easing;
+pub mod spring;
 mod timing;
 
 pub use easing::*;

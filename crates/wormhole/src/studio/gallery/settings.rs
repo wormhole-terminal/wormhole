@@ -353,6 +353,17 @@ fn controls(env: &Env) -> Div {
                 .child(style::keycap(ui, "⌃⌘2")),
         )
         .child(
+            style::preview_frame(ui).w(px(COLUMN_W)).child(
+                style::preview_stage(ui, 56.0).child(
+                    div()
+                        .p_3()
+                        .text_caption()
+                        .text_color(ui.muted)
+                        .child("A preview's stage: its parts are placed by their distance from the top"),
+                ),
+            ),
+        )
+        .child(
             div()
                 .flex()
                 .flex_wrap()

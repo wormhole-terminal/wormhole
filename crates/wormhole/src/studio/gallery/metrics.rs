@@ -86,6 +86,12 @@ pub(super) fn render(
         ("EASE_IN", curve(motion::EASE_IN)),
         ("EASE_IN_OUT", curve(motion::EASE_IN_OUT)),
         ("LINEAR", curve(motion::LINEAR)),
+        (
+            "SPRING SNAP · SOFT · BOUNCY",
+            [motion::spring::SNAP, motion::spring::SOFT, motion::spring::BOUNCY]
+                .map(|s| format!("{}/{}", s.stiffness, s.damping))
+                .join(" · "),
+        ),
         ("SPIN_PERIOD", ms(motion::SPIN_PERIOD)),
         (
             "STATUS_PULSE",
