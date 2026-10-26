@@ -172,6 +172,13 @@ pub(super) fn id_of(kind: &'static str, key: &ItemKey, batch: u64) -> (&'static 
     (kind, hasher.finish())
 }
 
+/// The id of the box a line is laid out in, which its spring is kept under (GPUI keys an element's state by the
+/// ids on its way down). A line that left is drawn in a box of the same id as it had in the list, so a spring
+/// it was on carries on and does not start again.
+pub(in crate::sidebar) fn slot_id(key: &ItemKey) -> (&'static str, u64) {
+    id_of(if matches!(key, ItemKey::Row(_)) { "row-line" } else { "head-line" }, key, 0)
+}
+
 impl Sidebar {
     /// `line` (a line of the list) with the motion it owes: the pose of a line that comes or goes, and the
     /// spring to its place for one that moved. Not for the row held in a drag. `slot` is the box the line
@@ -207,10 +214,8 @@ impl Sidebar {
         };
         let Some(Spring { spec, from, to, place }) = flip else { return slot.child(line) };
         // The spring is kept under the line's key alone, so a change that retargets it carries on.
-        let mut hasher = DefaultHasher::new();
-        key.hash(&mut hasher);
         slot.child(div().relative().w_full().child(line).with_spring(
-            ("list-move", hasher.finish()),
+            id_of("list-move", &key, 0),
             SpringAnimation::new(spring(spec)).to(to).from(from).with_epsilon(REST_PX),
             move |line, top| line.top(px(top - place)),
         ))

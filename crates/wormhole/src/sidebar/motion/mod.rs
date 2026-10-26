@@ -17,7 +17,7 @@ mod room;
 
 pub(crate) use join::Snap;
 pub(super) use join::draw_bracket;
-pub(super) use list::{ItemKey, ListMotion};
+pub(super) use list::{ItemKey, ListMotion, slot_id};
 
 use gpui_kit::*;
 use wormhole_core::config::features::FeatureFlag;

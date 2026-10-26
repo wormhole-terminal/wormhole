@@ -51,7 +51,7 @@ pub(crate) use facts::row_times;
 pub(crate) use facts::{RowExtra, RowExtras, RowFailure, RowInfo};
 pub(crate) use input::{NewTerminal, SidebarEvent, SidebarInput};
 pub(crate) use keys::SidebarStop;
-use motion::{ItemKey, ListMotion};
+use motion::{ItemKey, ListMotion, slot_id};
 pub(crate) use row_menu::reveal_in_finder;
 pub(crate) use tab_bar::TAB_ROW_H;
 

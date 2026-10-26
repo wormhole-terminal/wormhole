@@ -14,7 +14,7 @@ use super::card::Cards;
 use super::drop::DropMark;
 use super::glass::{LIST_CLIP, clip_probe};
 use super::row::{Frame, Place};
-use super::{ItemKey, Sidebar, SidebarInput, row_times};
+use super::{ItemKey, Sidebar, SidebarInput, row_times, slot_id};
 use crate::settings::{UiColors, store_in, ui_in};
 
 /// What every line of one frame of the list is drawn against.
@@ -173,13 +173,13 @@ impl Sidebar {
                     Card::Group(band) => Some(listing.bands[band].group),
                     Card::Loose(_) | Card::Split(_) => None,
                 });
-                let slot = div().id(("row-line", id as u64));
+                let slot = div().id(slot_id(&keys[at]));
                 let slot = self.with_list_motion(keys[at].clone(), segment, is_held, slot);
                 self.with_row_drop(slot, id, group, gap, cx).into_any_element()
             }
             Entry::Band { band, .. } => {
                 let group = listing.bands[band].group;
-                let slot = div().id(("head-line", group as u64));
+                let slot = div().id(slot_id(&keys[at]));
                 let slot = self.with_list_motion(keys[at].clone(), segment, is_held, slot);
                 self.with_head_drop(slot, group, gap, cx).into_any_element()
             }

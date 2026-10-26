@@ -13,7 +13,7 @@ use std::rc::Rc;
 use gpui_kit::*;
 use wormhole_core::view::sidebar::{Entry, Listing};
 
-use super::list::ItemKey;
+use super::list::{ItemKey, slot_id};
 use super::pose::{Natural, RowMotion};
 use crate::sidebar::card::Cards;
 use crate::sidebar::row::{Frame, Place, row_face};
@@ -214,7 +214,8 @@ impl Sidebar {
             let line = cards.line(leaving.at, face.row.into_any_element(), false).into_any_element();
             lines.push((
                 put,
-                self.with_list_motion(leaving.key.clone(), line, false, div()).into_any_element(),
+                self.with_list_motion(leaving.key.clone(), line, false, div().id(slot_id(&leaving.key)))
+                    .into_any_element(),
             ));
         }
         lines
