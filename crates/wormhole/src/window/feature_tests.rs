@@ -743,11 +743,14 @@ static CROWD: &[FeatureDef] = &[
 
 /// Allocations the table's loops make in one frame, for 50 changed files and three stand-in features:
 /// `bind_features`, the tab bar (`render_panel_tabs`, in `render_panel`) and the panel body. Measured:
-/// 109 (24 KB), exact on every run (122 before Changes moved into its entity, which draws its list
-/// from rows kept per terminal); the budget is that plus about a hundredth. Run with 50 files and
+/// 114 (24 KB), exact on every run (122 before Changes moved into its entity, which draws its list
+/// from rows kept per terminal; 109 before the tab bar had a selection of its own: with the Motion
+/// feature on, `style::selection_bar` makes the shared bounds and the boxes of its shape's two closures
+/// and its listener, five allocations a build, none while the feature is off); the budget is that plus
+/// about a hundredth. Run with 50 files and
 /// four features so that a cost per row (fifty times) or per feature (four times) shows at once; a
 /// change that adds either must say why, and raise this with the new measurement.
-const TABLE_LOOP_ALLOCATIONS: u64 = 111;
+const TABLE_LOOP_ALLOCATIONS: u64 = 115;
 
 #[gpui_kit::test]
 fn the_tables_loops_stay_within_their_allocation_budget(cx: &mut TestAppContext) {
