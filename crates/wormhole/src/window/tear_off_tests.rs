@@ -350,3 +350,46 @@ fn a_torn_off_terminal_hears_the_focus_of_its_new_window(cx: &mut TestAppContext
     let window = start(cx, 3);
     focus_follows_a_moved_terminal(cx, &window, |cx, window| let_go(cx, window, 2, 600.0, 300.0));
 }
+
+/// Drag terminal 2's row out of the window (the chip opens) and back to `back`, then let go there.
+fn out_and_back(cx: &mut TestAppContext, window: &OpenWindow, back: gpui_kit::Point<gpui_kit::Pixels>) {
+    let from = row_bounds(cx, window, 2).center();
+    cx.update(|cx| pointer::pretend(pointer_at(1000.0, 300.0, cx)));
+    drag(cx, window, from, &[from + point(px(30.0), px(0.0)), point(px(500.0), px(300.0))]);
+    drag_on(cx, window, point(px(1000.0), px(300.0)));
+    assert_eq!(cx.update(|cx| cx.windows().len()), 2, "the chip is out");
+    drag_on(cx, window, back);
+    release(cx, window, back);
+    pointer::pretend(None);
+}
+
+#[gpui_kit::test]
+fn a_drag_that_went_out_and_is_dropped_on_a_row_leaves_no_chip_and_no_drag_behind(cx: &mut TestAppContext) {
+    if isolate("a_drag_that_went_out_and_is_dropped_on_a_row_leaves_no_chip_and_no_drag_behind") {
+        return;
+    }
+    let window = open(cx, 3, 900.0, 600.0);
+    let third = row_bounds(cx, &window, 3).center();
+    out_and_back(cx, &window, third);
+    assert_eq!(windows(cx).len(), 1, "no window of its own");
+    assert_eq!(cx.update(|cx| cx.windows().len()), 1, "and no chip");
+    assert!(!cx.update(|cx| crate::sidebar::tear_off::in_flight(cx)), "nothing in flight");
+    // The next drag starts clean: it is the one that is followed.
+    let from = row_bounds(cx, &window, 1).center();
+    drag(cx, &window, from, &[from + point(px(30.0), px(0.0))]);
+    assert!(cx.update(|cx| crate::sidebar::tear_off::in_flight(cx)));
+    release(cx, &window, from);
+}
+
+#[gpui_kit::test]
+fn a_drag_that_went_out_and_is_let_go_over_the_terminal_leaves_no_chip_behind(cx: &mut TestAppContext) {
+    if isolate("a_drag_that_went_out_and_is_let_go_over_the_terminal_leaves_no_chip_behind") {
+        return;
+    }
+    let window = open(cx, 3, 900.0, 600.0);
+    // No drop target there: nothing hears the drop, the frame finds the drag over.
+    out_and_back(cx, &window, point(px(700.0), px(300.0)));
+    assert_eq!(windows(cx).len(), 1);
+    assert_eq!(cx.update(|cx| cx.windows().len()), 1, "no chip");
+    assert!(!cx.update(|cx| crate::sidebar::tear_off::in_flight(cx)));
+}

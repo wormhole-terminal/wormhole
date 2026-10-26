@@ -52,9 +52,16 @@ impl Global for InFlight {}
 
 /// A row was picked up in `window`: from now on its drag is followed out of the window.
 pub(super) fn picked_up(dragged: &DraggedTerminal, window: &Window, cx: &mut App) {
+    // One drag at a time: whatever an earlier one left (its chip) goes first.
+    end(cx);
     let info = Info { id: dragged.id, name: dragged.name.clone(), glyph: dragged.glyph };
     let source = window.window_handle().window_id();
     cx.default_global::<InFlight>().0 = Some(Drag { source, info, chip: None });
+}
+
+/// Whether a drag of this feature is in flight (a chip may be out).
+pub(crate) fn in_flight(cx: &App) -> bool {
+    cx.try_global::<InFlight>().is_some_and(|flight| flight.0.is_some())
 }
 
 /// The drag is over, however it ended: the chip goes. Does nothing without a drag of this feature.

@@ -102,6 +102,7 @@ impl Workspace {
 
     fn on_pane_drop(&mut self, dragged: &DraggedTerminal, window: &mut Window, cx: &mut Context<Self>) {
         self.terminal_drag = None;
+        crate::sidebar::tear_off::end(cx);
         let hover = self
             .in_pane_area(window.mouse_position())
             .and_then(|point| self.pane_hover_at(dragged.id, point));

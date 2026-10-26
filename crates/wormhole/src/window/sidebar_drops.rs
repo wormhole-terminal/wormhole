@@ -25,6 +25,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         self.terminal_drag = None;
+        crate::sidebar::tear_off::end(cx);
         let result = over.map(|over| self.drop_terminal(dragged, over, window, cx));
         match result {
             Some(Err(error)) => tracing::debug!(?error, "a drop on a row was refused"),

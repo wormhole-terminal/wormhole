@@ -132,12 +132,15 @@ impl Render for Workspace {
         // The workspace's own column: the window less what lies beside it (`column_probe`).
         self.window_width = f32::from(window.viewport_size().width) - self.beside;
         self.sync_tab_layout(window, cx);
+        // A drag that ended anywhere (a drop on a row clears the window's own drag first, so it is not the
+        // window's drag that says so) has no chip to follow it.
+        if !cx.has_active_drag() && crate::sidebar::tear_off::in_flight(cx) {
+            crate::sidebar::tear_off::end(cx);
+        }
         // A drag that ended outside every drop target never heard its drop.
         if (self.terminal_drag.is_some() || self.group_drag.is_some()) && !cx.has_active_drag() {
             self.terminal_drag = None;
             self.group_drag = None;
-            // A drag that went out of the window and was dropped nowhere: its chip goes.
-            crate::sidebar::tear_off::end(cx);
             // The one fact the frame itself finds out (nothing notifies when a drag ends outside every
             // drop target), and the list is drawn after this returns. It changes the list's input once
             // per drag, so a GPUI that draws only dirty views draws the list one more time then.
