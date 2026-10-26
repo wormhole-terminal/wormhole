@@ -38,6 +38,8 @@ struct Pending {
 
 /// Where a watched terminal's output was last read to.
 struct Track {
+    /// The [`Work::generation`] it was made in: a reset gives back the tracks of earlier ones only.
+    generation: u64,
     window: i64,
     reader: WeakScreenReader,
     tail: Tail,
@@ -49,8 +51,10 @@ struct Work {
     pending: HashMap<i64, Pending>,
     /// By terminal. A track is taken out while it is being looked at, so no lock is held then.
     tracks: HashMap<i64, Track>,
-    /// Nobody watches output any more: give every track back.
+    /// Nobody watches output any more: give back the tracks made before.
     reset: bool,
+    /// Counts the resets, so a track made after one (a stream that began meanwhile) is kept by it.
+    generation: u64,
     closed: bool,
 }
 
@@ -111,13 +115,31 @@ impl Worker {
     /// Start watching `terminal` from where its cursor is now, so the first output after a
     /// subscription is told. A terminal first heard of by a pulse is watched from the look after it.
     pub(super) fn track(&self, window: i64, terminal: i64, reader: &ScreenReader) {
+        // Another stream may be watching it already: its place, and what is not told yet, stay.
+        if self.lock().tracks.contains_key(&terminal) {
+            return;
+        }
         let mut tail = Tail::default();
         // The first look only places the pin: nothing printed before it is told.
         let _ = reader.tail(&mut tail, LIMITS, &mut ReadScratch::default());
-        let track =
-            Track { window, reader: reader.downgrade(), tail, last_look: Instant::now() - FLUSH_EVERY };
-        if let Some(old) = self.lock().tracks.insert(terminal, track) {
-            release(old);
+        let mut work = self.lock();
+        let generation = work.generation;
+        let track = Track {
+            generation,
+            window,
+            reader: reader.downgrade(),
+            tail,
+            last_look: Instant::now() - FLUSH_EVERY,
+        };
+        match work.tracks.entry(terminal) {
+            std::collections::hash_map::Entry::Vacant(slot) => {
+                slot.insert(track);
+            }
+            // Made by another stream while this one looked.
+            std::collections::hash_map::Entry::Occupied(_) => {
+                drop(work);
+                release(track);
+            }
         }
     }
 
@@ -125,6 +147,7 @@ impl Worker {
     pub(super) fn reset(&self) {
         let mut work = self.lock();
         work.pending.clear();
+        work.generation += 1;
         work.reset = true;
         self.wake.notify_one();
     }
@@ -195,8 +218,18 @@ fn run(worker: &Worker, bus: &Weak<Bus>) {
     while let Some(round) = worker.next_due() {
         let Some(bus) = bus.upgrade() else { return };
         if round.reset {
-            let tracks: Vec<Track> = worker.lock().tracks.drain().map(|(_, track)| track).collect();
-            tracks.into_iter().for_each(release);
+            let old: Vec<Track> = {
+                let mut work = worker.lock();
+                let generation = work.generation;
+                let gone: Vec<i64> = work
+                    .tracks
+                    .iter()
+                    .filter(|(_, t)| t.generation < generation)
+                    .map(|(id, _)| *id)
+                    .collect();
+                gone.iter().filter_map(|id| work.tracks.remove(id)).collect()
+            };
+            old.into_iter().for_each(release);
         }
         for (terminal, window, weak) in round.due {
             let track = worker.lock().tracks.remove(&terminal);
@@ -205,10 +238,12 @@ fn run(worker: &Worker, bus: &Weak<Bus>) {
                 track.into_iter().for_each(release);
                 continue;
             }
+            // A terminal heard of only now is told from its start.
             let mut track = track.unwrap_or_else(|| Track {
+                generation: worker.lock().generation,
                 window,
                 reader: weak.clone(),
-                tail: Tail::default(),
+                tail: Tail::from_top(),
                 last_look: Instant::now() - FLUSH_EVERY,
             });
             let read = reader.tail(&mut track.tail, LIMITS, &mut scratch);
@@ -228,9 +263,13 @@ fn run(worker: &Worker, bus: &Weak<Bus>) {
                 });
             }
             let mut work = worker.lock();
-            if !work.reset && !work.closed {
-                work.tracks.insert(terminal, track);
+            if work.closed || track.generation < work.generation {
+                drop(work);
+                release(track);
+            } else if let std::collections::hash_map::Entry::Vacant(slot) = work.tracks.entry(terminal) {
+                slot.insert(track);
             } else {
+                // A stream that began meanwhile placed one: that one stays.
                 drop(work);
                 release(track);
             }

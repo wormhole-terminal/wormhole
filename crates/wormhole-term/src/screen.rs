@@ -10,6 +10,7 @@
 //! `u64`), the cursor (the engine says what the program chose and leaves the rest to the host)
 //! and the cell size, which the engine needs for its pictures and reports.
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 use wormhole_vt::Rgb;
@@ -74,7 +75,17 @@ pub(super) enum Hold {
 pub(crate) struct Screen {
     pub(super) term: Terminal,
     pub(super) hold: Hold,
+    /// Which screen this is among all that were made: a hosted terminal's replica is made again on a
+    /// repaint, which takes every pin with it. A reader that kept pins compares it before it trusts them.
+    epoch: u64,
+    /// Pins of the main screen's grid that were let go of while a program had the alternate screen,
+    /// whose pins are out of reach then (the grids swap, and a handle can name another pin's slot).
+    /// They are removed once the main screen shows again ([`Screen::reap`]).
+    orphans: Vec<Pin>,
 }
+
+/// The next [`Screen::epoch`].
+static EPOCHS: AtomicU64 = AtomicU64::new(1);
 
 fn mark_from(mark: GridMark) -> RowMark {
     RowMark { id: u64::from(mark.block), prompt: mark.prompt, command: mark.command, output: mark.output }
@@ -89,7 +100,7 @@ impl Screen {
             .identity("Wormhole", env!("CARGO_PKG_VERSION"))
             .cell_size(size.cell_width as u16, size.cell_height as u16)
             .build();
-        Self { term, hold: Hold::Off }
+        Self { term, hold: Hold::Off, epoch: EPOCHS.fetch_add(1, Ordering::Relaxed), orphans: Vec::new() }
     }
 
     /// The events the engine queued, for a test terminal, which has no host to hear them.
@@ -257,6 +268,62 @@ impl Screen {
     /// Forget `pin`, which was made on the screen that shows.
     pub(crate) fn unpin(&mut self, pin: Pin) {
         self.term.unpin(pin);
+    }
+
+    /// Which screen this is: see the field.
+    pub(crate) fn epoch(&self) -> u64 {
+        self.epoch
+    }
+
+    /// Whether the alternate screen shows.
+    pub(crate) fn on_alt_screen(&self) -> bool {
+        self.term.modes().contains(Modes::ALT_SCREEN)
+    }
+
+    /// Let go of a pin made on the *main* screen's grid: now, or, while the alternate screen shows
+    /// (its grid has pins of its own), when the main one is back.
+    pub(crate) fn release_pin(&mut self, pin: Pin) {
+        if self.on_alt_screen() {
+            self.orphans.push(pin);
+        } else {
+            self.term.unpin(pin);
+        }
+    }
+
+    /// The highest slot fresh pins land in, and then given back: pins that were not let go of keep their
+    /// slots, so the number grows with each one left behind (tests).
+    #[cfg(test)]
+    pub(crate) fn pin_slots_for_test(&mut self) -> usize {
+        use wormhole_vt::{Column, Line, Point};
+        let pins: Vec<Pin> = (0..6).map(|_| self.term.pin(Point::new(Line(0), Column(0)))).collect();
+        let highest = pins
+            .iter()
+            .map(|pin| {
+                let text = format!("{pin:?}");
+                let digits: String = text
+                    .split("index: ")
+                    .nth(1)
+                    .unwrap_or("0")
+                    .chars()
+                    .take_while(char::is_ascii_digit)
+                    .collect();
+                digits.parse::<usize>().unwrap_or(0)
+            })
+            .max()
+            .unwrap_or(0);
+        for pin in pins {
+            self.term.unpin(pin);
+        }
+        highest
+    }
+
+    /// Remove the pins [`release_pin`](Self::release_pin) had to leave, if the main screen shows.
+    pub(crate) fn reap(&mut self) {
+        if !self.orphans.is_empty() && !self.on_alt_screen() {
+            for pin in std::mem::take(&mut self.orphans) {
+                self.term.unpin(pin);
+            }
+        }
     }
 
     /// Aim `pin` at another row.

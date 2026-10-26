@@ -2,6 +2,7 @@
 
 use wormhole_vt::Line;
 
+use super::{CHUNK, Lines, ReadScratch, copy_rows};
 use crate::ScreenReader;
 use crate::blocks::{self, BlockState};
 
@@ -42,54 +43,65 @@ pub struct BlocksCapture {
     pub blocks: Vec<BlockCapture>,
 }
 
-/// How many rows of a block's output are looked at, at most: the text of the rest would be cut
-/// off anyway, and a block can be as long as the history.
-const OUTPUT_ROWS: i32 = 2000;
+/// How many rows of a block's output are read, at most: the newest. One chunk, copied in one hold of
+/// the lock; the rest of a long output is `truncated`.
+const OUTPUT_ROWS: i32 = CHUNK as i32;
 
 impl ScreenReader {
-    /// The newest blocks of the grid, in one hold of the lock. None while a full-screen program
-    /// has the screen (the engine keeps the main screen's marks out of reach until it exits).
-    pub fn blocks(&self, spec: &BlocksSpec) -> BlocksCapture {
+    /// The newest blocks of the grid. The list (ids, ranges and states, no text) is one hold of the
+    /// lock; each block's output is another, newest block first, a chunk of rows copied and turned
+    /// into text outside it, and none is read once the total is spent. None while a full-screen
+    /// program has the screen (the engine keeps the main screen's marks out of reach until it exits).
+    pub fn blocks(&self, spec: &BlocksSpec, scratch: &mut ReadScratch) -> BlocksCapture {
         let integration = self.shared.at_prompt().is_some();
         if !integration {
             return BlocksCapture { integration, blocks: Vec::new() };
         }
-        let term = self.term.lock();
-        let log = self.shared.commands();
-        let all = blocks::blocks(&term, &log);
-        let skip = all.len().saturating_sub(spec.last);
-        let mut out: Vec<BlockCapture> = all
-            .iter()
-            .skip(skip)
-            .map(|block| BlockCapture {
-                id: block.id,
-                command: block.command.clone(),
-                state: block.state,
-                first_line: block.start.0,
-                last_line: block.end.0,
-                output: None,
-                truncated: false,
-            })
-            .collect();
-        if spec.output {
-            let mut budget = spec.total_bytes;
-            for (block, read) in all.iter().skip(skip).zip(out.iter_mut()).rev() {
-                let Some((first, last)) = block.output_lines() else { continue };
-                let window = Line(first.0.max(last.0 - OUTPUT_ROWS + 1));
-                let mut text = blocks::lines_text(&term, window, last);
-                let cap = spec.output_bytes.min(budget);
-                read.truncated = window > first;
-                if text.len() > cap {
-                    let mut start = text.len() - cap;
-                    while !text.is_char_boundary(start) {
-                        start += 1;
-                    }
-                    text.drain(..start);
-                    read.truncated = true;
-                }
-                budget -= text.len();
-                read.output = Some(text);
+        let mut out: Vec<BlockCapture> = {
+            let mut term = self.term.lock();
+            term.reap();
+            let log = self.shared.commands();
+            let all = blocks::blocks(&term, &log);
+            let skip = all.len().saturating_sub(spec.last);
+            all[skip..]
+                .iter()
+                .map(|block| BlockCapture {
+                    id: block.id,
+                    command: block.command.clone(),
+                    state: block.state,
+                    first_line: block.start.0,
+                    last_line: block.end.0,
+                    output: None,
+                    truncated: false,
+                })
+                .collect()
+        };
+        if !spec.output {
+            return BlocksCapture { integration, blocks: out };
+        }
+        let mut budget = spec.total_bytes;
+        for read in out.iter_mut().rev() {
+            if budget == 0 {
+                break;
             }
+            let term = self.term.lock();
+            // Found again by its id: output arriving between two holds moves its rows.
+            let found = blocks::block(&term, read.id, &self.shared.commands());
+            let Some((first, last)) = found.as_ref().and_then(|block| block.output_lines()) else {
+                continue;
+            };
+            let window = Line(first.0.max(last.0 - OUTPUT_ROWS + 1));
+            let n = copy_rows(&term, window.0, last.0, scratch);
+            let cols = term.columns();
+            drop(term);
+            let mut text = Lines::joined(cols);
+            text.add(scratch.rows(n));
+            let capped = text.into_capped(spec.output_bytes.min(budget));
+            let mut output = capped.lines.join("\n");
+            output.truncate(output.trim_end().len());
+            budget = budget.saturating_sub(output.len());
+            read.truncated = window > first || capped.cut;
+            read.output = Some(output);
         }
         BlocksCapture { integration, blocks: out }
     }

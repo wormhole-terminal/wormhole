@@ -117,7 +117,13 @@ impl ReadSpec {
         if self.styles && rows.is_some_and(|rows| rows > STYLE_ROWS_MAX) {
             return too_large(format!("styles cover at most {STYLE_ROWS_MAX} rows"));
         }
-        Ok(CaptureSpec { range, join: self.join, styles: self.styles, max_bytes: READ_BYTES_MAX })
+        Ok(CaptureSpec {
+            range,
+            join: self.join,
+            styles: self.styles,
+            max_bytes: READ_BYTES_MAX,
+            max_rows: READ_LINES_MAX as usize,
+        })
     }
 }
 

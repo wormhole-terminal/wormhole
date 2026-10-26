@@ -154,3 +154,46 @@ fn the_last_watcher_leaving_stops_the_work() {
     // Dropping the bus ends the worker: nothing to wait for, and nothing panics.
     drop(bus);
 }
+
+#[test]
+fn a_second_watcher_does_not_wipe_what_the_first_has_not_been_told() {
+    let bus = Bus::new();
+    let first = watch(&bus, vec![], reads_all());
+    let screen = reader();
+    bus.watch_output(1, 6, &screen);
+    screen.feed(b"not yet told\r\n");
+    // Another stream begins before the worker has looked.
+    let second = watch(&bus, vec![], reads_all());
+    bus.watch_output(1, 6, &screen);
+    bus.pulse(1, 6, || Some(screen.downgrade()));
+    let (_, body) = heard(&first, Duration::from_secs(2)).expect("the first stream is told");
+    assert_eq!(lines(&body), ["not yet told"]);
+    let (_, body) = heard(&second, Duration::from_secs(2)).expect("so is the second");
+    assert_eq!(lines(&body), ["not yet told"]);
+}
+
+#[test]
+fn a_terminal_first_heard_of_by_its_output_is_told_from_its_start() {
+    let bus = Bus::new();
+    let subscription = watch(&bus, vec![], reads_all());
+    let screen = reader();
+    screen.feed(b"first words\r\n");
+    bus.pulse(1, 8, || Some(screen.downgrade()));
+    let (_, body) = heard(&subscription, Duration::from_secs(2)).expect("told");
+    assert_eq!(lines(&body), ["first words"]);
+}
+
+#[test]
+fn a_stream_that_begins_right_after_the_last_one_ended_keeps_its_place() {
+    let bus = Bus::new();
+    let screen = reader();
+    drop(watch(&bus, vec![], reads_all()));
+    let subscription = watch(&bus, vec![], reads_all());
+    bus.watch_output(1, 2, &screen);
+    // Give the worker time to act on the reset the first stream's end left.
+    std::thread::sleep(Duration::from_millis(150));
+    screen.feed(b"after the reset\r\n");
+    bus.pulse(1, 2, || Some(screen.downgrade()));
+    let (_, body) = heard(&subscription, Duration::from_secs(2)).expect("told");
+    assert_eq!(lines(&body), ["after the reset"]);
+}

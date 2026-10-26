@@ -9,7 +9,7 @@ fn reader(cols: u16, rows: u16, history: usize) -> ScreenReader {
 }
 
 fn spec(range: CaptureRange) -> CaptureSpec {
-    CaptureSpec { range, join: false, styles: false, max_bytes: 256 * 1024 }
+    CaptureSpec { range, join: false, styles: false, max_bytes: 256 * 1024, max_rows: 5000 }
 }
 
 fn read(reader: &ScreenReader, spec: &CaptureSpec) -> super::Capture {
@@ -175,31 +175,8 @@ fn history_dropped_while_a_read_goes_on_cuts_it_short() {
     assert_eq!(found.lines[0], "line 0");
 }
 
-/// The highest slot a fresh set of pins lands in: pins that were not given back keep their slots,
-/// so the number grows with each one left behind.
 fn pin_slots(reader: &ScreenReader) -> usize {
-    use wormhole_vt::{Column, Line, Point};
-    let mut screen = reader.term.lock();
-    let pins: Vec<_> = (0..6).map(|_| screen.pin(Point::new(Line(0), Column(0)))).collect();
-    let highest = pins
-        .iter()
-        .map(|pin| {
-            let text = format!("{pin:?}");
-            let digits: String = text
-                .split("index: ")
-                .nth(1)
-                .unwrap_or("0")
-                .chars()
-                .take_while(char::is_ascii_digit)
-                .collect();
-            digits.parse::<usize>().unwrap_or(0)
-        })
-        .max()
-        .unwrap_or(0);
-    for pin in pins {
-        screen.unpin(pin);
-    }
-    highest
+    reader.term.lock().pin_slots_for_test()
 }
 
 #[test]
@@ -222,6 +199,53 @@ fn nothing_is_left_pinned_after_a_read() {
         },
     );
     assert_eq!(pin_slots(&reader), before);
+}
+
+/// A program that takes the alternate screen between two chunks of a read leaves the read's pins on
+/// the main grid, out of reach; they are removed once it is back, and none is left.
+#[test]
+fn a_screen_swapped_between_chunks_leaves_no_pin_behind() {
+    let reader = reader(20, 5, 2000);
+    for n in 0..800 {
+        reader.feed(format!("line {n}\r\n").as_bytes());
+    }
+    let before = pin_slots(&reader);
+    let found = reader
+        .capture_between(
+            &spec(CaptureRange::Lines { from: -700, to: 4 }),
+            &mut ReadScratch::default(),
+            || {
+                reader.feed(b"\x1b[?1049h");
+            },
+        )
+        .expect("readable");
+    assert!(found.truncated, "the read ended where the screen was swapped");
+    reader.feed(b"\x1b[?1049l");
+    read(&reader, &spec(CaptureRange::Screen));
+    assert_eq!(pin_slots(&reader), before, "reaped by the next look at the main screen");
+}
+
+/// A hosted terminal's replica is made again on a repaint: pins of the old one mean nothing to the new.
+#[test]
+fn a_screen_made_again_takes_the_pins_of_a_read_with_it() {
+    let reader = reader(20, 5, 2000);
+    for n in 0..800 {
+        reader.feed(format!("line {n}\r\n").as_bytes());
+    }
+    let size = GridSize { cols: 20, rows: 5, cell_width: 8.0, cell_height: 16.0 };
+    let found = reader
+        .capture_between(
+            &spec(CaptureRange::Lines { from: -700, to: 4 }),
+            &mut ReadScratch::default(),
+            || {
+                *reader.term.lock() = Screen::new(size, 2000);
+            },
+        )
+        .expect("readable");
+    assert!(found.truncated);
+    // The new screen's pins are its own: the old read removed none of them.
+    let slots = pin_slots(&reader);
+    assert!(slots <= 5, "{slots}");
 }
 
 mod blocks {
@@ -263,14 +287,14 @@ mod blocks {
     fn the_newest_blocks_come_with_their_state_and_output() {
         let mut rig = Rig::new(12);
         rig.feed(SESSION);
-        let found = rig.reader.blocks(&blocks_spec(2, true));
+        let found = rig.reader.blocks(&blocks_spec(2, true), &mut ReadScratch::default());
         assert!(found.integration);
         let summary: Vec<_> =
             found.blocks.iter().map(|b| (b.id, b.command.as_str(), b.output.as_deref())).collect();
         assert_eq!(summary, [(2, "make", Some("error")), (3, "", None)]);
         assert!(matches!(found.blocks[0].state, BlockState::Finished { code: Some(2), .. }));
         assert_eq!(found.blocks[1].state, BlockState::Prompt);
-        let without = rig.reader.blocks(&blocks_spec(10, false));
+        let without = rig.reader.blocks(&blocks_spec(10, false), &mut ReadScratch::default());
         assert_eq!(without.blocks.len(), 3);
         assert!(without.blocks.iter().all(|b| b.output.is_none()));
     }
@@ -280,7 +304,7 @@ mod blocks {
         let mut rig = Rig::new(12);
         rig.feed(SESSION);
         let tiny = BlocksSpec { last: 3, output: true, output_bytes: 3, total_bytes: 4 };
-        let found = rig.reader.blocks(&tiny);
+        let found = rig.reader.blocks(&tiny, &mut ReadScratch::default());
         assert_eq!(found.blocks[1].output.as_deref(), Some("ror"));
         assert!(found.blocks[1].truncated);
         assert_eq!(found.blocks[0].output.as_deref(), Some("s"), "what is left of the total");
@@ -290,7 +314,7 @@ mod blocks {
     fn a_shell_without_integration_has_no_blocks_and_one_block_is_read_as_lines() {
         let plain = Rig::new(5);
         plain.reader.feed(b"just text\r\n");
-        let found = plain.reader.blocks(&blocks_spec(5, true));
+        let found = plain.reader.blocks(&blocks_spec(5, true), &mut ReadScratch::default());
         assert!(!found.integration && found.blocks.is_empty());
         let block = plain.reader.capture(&spec(CaptureRange::Block(None)), &mut ReadScratch::default());
         assert_eq!(block.err(), Some(CaptureError::NoIntegration));

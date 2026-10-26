@@ -14,10 +14,11 @@
 //! [`ScreenReader::capture`]'s job. A program that moves the cursor back above what was reported
 //! (a progress display, `clear`) has what it draws there reported again, as new output.
 
-use wormhole_vt::{Column, Line, Modes, Pin, Point};
+use wormhole_vt::{Column, Line, Pin, Point};
 
 use crate::ScreenReader;
 use crate::capture::{CHUNK, ReadScratch, RowBuf, copy_rows};
+use crate::screen::Screen;
 
 /// What a look may return: more is cut from the oldest, and counted as skipped.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -43,6 +44,13 @@ pub struct TailRead {
     pub lost: bool,
 }
 
+impl Tail {
+    /// A tail whose first look tells everything the terminal has printed (see [`Tail`]).
+    pub fn from_top() -> Self {
+        Self { from_top: true, ..Self::default() }
+    }
+}
+
 impl TailRead {
     /// Nothing to tell.
     pub fn is_empty(&self) -> bool {
@@ -53,6 +61,9 @@ impl TailRead {
 /// Where a terminal's output was last read to.
 #[derive(Default)]
 pub struct Tail {
+    /// The first look starts at the top of the history instead of the cursor: a terminal first heard of
+    /// by its output has printed nothing that was not meant to be told.
+    from_top: bool,
     /// On the main screen's first unread row. The alternate screen has pins of its own, so this one
     /// is left alone while a program has that screen.
     pin: Option<Pin>,
@@ -61,22 +72,45 @@ pub struct Tail {
     partial: String,
     /// The output revision of the last look, to tell whether the alternate screen was printed to.
     revision: u64,
+    /// The screen the pin was made on (`Screen::epoch`).
+    epoch: u64,
 }
 
 /// Rows of finished lines one look reads at most: what is further back would be cut by the limits
 /// anyway, and a flood can have written as many as the history holds.
 const ROWS_PER_LINE_BUDGET: usize = 4;
 
+/// The rows a soft-wrapped line is walked back over to find where it starts, at most.
+const LINE_ROWS: i32 = 4096;
+
 /// The rows of the cursor's own line that are read for `partial`, at most.
 const PARTIAL_ROWS: i32 = 64;
 
 impl ScreenReader {
     /// What was printed since `tail` was last looked at, read in chunks under the lock. The first
-    /// look only places the pin at the cursor's line: nothing printed before it is reported.
+    /// look only places the pin at the cursor's line: nothing printed before it is reported, only
+    /// what that line shows.
     pub fn tail(&self, tail: &mut Tail, limits: TailLimits, scratch: &mut ReadScratch) -> TailRead {
+        self.tail_between(tail, limits, scratch, || {})
+    }
+
+    /// [`tail`](Self::tail), calling `between` each time the lock is let go of between two chunks:
+    /// a test's way to let output (or a program's switch of screens) arrive there.
+    pub(crate) fn tail_between(
+        &self,
+        tail: &mut Tail,
+        limits: TailLimits,
+        scratch: &mut ReadScratch,
+        mut between: impl FnMut(),
+    ) -> TailRead {
         let mut term = self.term.lock();
+        term.reap();
         let revision = self.shared.revision();
-        if term.mode().contains(Modes::ALT_SCREEN) {
+        if term.epoch() != tail.epoch {
+            // A hosted terminal's replica was made again: every pin went with the old one.
+            *tail = Tail { epoch: term.epoch(), from_top: tail.from_top, ..Tail::default() };
+        }
+        if term.on_alt_screen() {
             tail.in_alt = true;
             let changed = revision != std::mem::replace(&mut tail.revision, revision);
             return TailRead { alt_screen: true, changed, ..TailRead::default() };
@@ -89,13 +123,13 @@ impl ScreenReader {
             }
             tail.partial.clear();
         }
-        let cursor = term.grid_cursor();
-        let (cursor_line, cursor_col) = (cursor.line.0, cursor.column.0);
-        let mut cursor_start = cursor_line;
-        while cursor_start > term.topmost_line().0 && term.wraps(Line(cursor_start - 1)) {
-            cursor_start -= 1;
-        }
+        let (mut cursor_start, mut cursor_line, mut cursor_col) = cursor_lines(&term);
         let at = |line: i32| Point::new(Line(line), Column(0));
+        if tail.from_top && tail.pin.is_none() {
+            tail.from_top = false;
+            let top = term.topmost_line().0;
+            tail.pin = Some(term.pin(at(top)));
+        }
         let Some(pin) = tail.pin else {
             tail.pin = Some(term.pin(at(cursor_start)));
             let from = cursor_start.max(cursor_line - PARTIAL_ROWS);
@@ -131,51 +165,64 @@ impl ScreenReader {
             next += 1;
             skipped_rows += 1;
         }
-        let (mut cursor_start, mut cursor_line) = (cursor_start, cursor_line);
-        // More than one chunk: the cursor's own rows are pinned too, since output scrolling between
-        // two holds renumbers every line.
-        let mut ends = None;
         let mut lines = Joined::default();
         let mut partial = None;
-        loop {
-            let chunk_end = (next + CHUNK as i32 - 1).min(cursor_line);
-            let n = copy_rows(&term, next, chunk_end, scratch);
-            // Everything before the cursor's line is finished: the pin follows what has been read.
-            term.move_pin(pin, at((chunk_end + 1).min(cursor_start)));
-            let done = chunk_end >= cursor_line;
-            match (done, ends) {
-                (false, None) => ends = Some((term.pin(at(cursor_start)), term.pin(at(cursor_line)))),
-                (true, Some((start, end))) => {
-                    term.unpin(start);
-                    term.unpin(end);
-                }
-                _ => {}
-            }
+        if cursor_line - next < CHUNK as i32 {
+            // Everything, the cursor's line too, in one hold.
+            let n = copy_rows(&term, next, cursor_line, scratch);
+            term.move_pin(pin, at(cursor_start));
             drop(term);
-            let finished = usize::try_from(cursor_start.min(chunk_end + 1) - next).unwrap_or(0).min(n);
+            let finished = usize::try_from(cursor_start - next).unwrap_or(0).min(n);
             lines.add(&scratch.rows(n)[..finished]);
-            if done {
-                let from = usize::try_from(cursor_start.max(cursor_line - PARTIAL_ROWS) - next).unwrap_or(0);
-                partial = Some(partial_text(&scratch.rows(n)[from.min(n)..], cursor_col));
-                break;
+            let from = usize::try_from(cursor_start.max(cursor_line - PARTIAL_ROWS) - next).unwrap_or(0);
+            partial = Some(partial_text(&scratch.rows(n)[from.min(n)..], cursor_col));
+        } else {
+            // The finished rows, a chunk at a time: only those, so a line of any length (its rows are
+            // the cursor's own, not finished) is never walked over again. `mark` keeps where they end
+            // while output renumbers the lines between two holds.
+            let mark = term.pin(at(cursor_start));
+            let epoch = term.epoch();
+            let mut complete = true;
+            while next < cursor_start {
+                let chunk_end = (next + CHUNK as i32 - 1).min(cursor_start - 1);
+                let n = copy_rows(&term, next, chunk_end, scratch);
+                term.move_pin(pin, at(chunk_end + 1));
+                drop(term);
+                lines.add(scratch.rows(n));
+                between();
+                term = self.term.lock();
+                if term.epoch() != epoch {
+                    // Every pin went with the screen that was replaced.
+                    *tail = Tail { epoch: term.epoch(), ..Tail::default() };
+                    complete = false;
+                    break;
+                }
+                if term.on_alt_screen() {
+                    // A program took the screen between two holds: the mark is on the main grid, out of
+                    // reach, and goes when it is back. This look ends here.
+                    term.release_pin(mark);
+                    return TailRead { lines: lines.finish(limits).0, ..TailRead::default() };
+                }
+                next = match term.pin_point(pin) {
+                    Some(point) => point.line.0,
+                    None => {
+                        lost = true;
+                        term.topmost_line().0
+                    }
+                };
+                match term.pin_point(mark) {
+                    Some(point) => cursor_start = point.line.0,
+                    None => break,
+                }
             }
-            term = self.term.lock();
-            // A program that took the screen between two holds ends this look, and the pins with
-            // it: they are out of reach of the screen that shows now.
-            let (Some((start, end)), false) = (ends, term.mode().contains(Modes::ALT_SCREEN)) else { break };
-            // Behind the pins: the history may have dropped what they held meanwhile.
-            next = match term.pin_point(pin) {
-                Some(point) => point.line.0,
-                None => {
-                    lost = true;
-                    term.topmost_line().0
-                }
-            };
-            match (term.pin_point(start), term.pin_point(end)) {
-                (Some(start_at), Some(end_at)) => {
-                    (cursor_start, cursor_line) = (start_at.line.0, end_at.line.0)
-                }
-                _ => break,
+            if complete {
+                term.release_pin(mark);
+                // The cursor's own line, as it is now.
+                (cursor_start, cursor_line, cursor_col) = cursor_lines(&term);
+                let from = cursor_start.max(cursor_line - PARTIAL_ROWS);
+                let n = copy_rows(&term, from, cursor_line, scratch);
+                drop(term);
+                partial = Some(partial_text(scratch.rows(n), cursor_col));
             }
         }
         let (finished, cut) = lines.finish(limits);
@@ -193,16 +240,27 @@ impl ScreenReader {
         }
     }
 
-    /// Let go of `tail`'s pin, so the grid stops tracking it through reflows. Not while a program
-    /// has the alternate screen: the pin belongs to the main one, out of reach until it returns
-    /// (and then the next look of a tail that is still used lets it go itself).
+    /// Let go of `tail`'s pin, so the grid stops tracking it through reflows. While a program has the
+    /// alternate screen the pin belongs to the main one, out of reach: it is removed once that is back.
     pub fn release(&self, tail: &mut Tail) {
         let Some(pin) = tail.pin.take() else { return };
         let mut term = self.term.lock();
-        if !term.mode().contains(Modes::ALT_SCREEN) {
-            term.unpin(pin);
+        if term.epoch() == tail.epoch {
+            term.release_pin(pin);
         }
     }
+}
+
+/// Where the cursor's own line starts, where it is, and its column: the line is walked back over
+/// soft wraps, at most [`LINE_ROWS`] rows (one that long is cut there).
+fn cursor_lines(term: &Screen) -> (i32, i32, usize) {
+    let cursor = term.grid_cursor();
+    let (line, col) = (cursor.line.0, cursor.column.0);
+    let mut start = line;
+    while start > term.topmost_line().0 && line - start < LINE_ROWS && term.wraps(Line(start - 1)) {
+        start -= 1;
+    }
+    (start, line, col)
 }
 
 /// The text of the cursor's line from `rows`, which end at its row: up to the cursor, or to the
@@ -427,5 +485,67 @@ mod tests {
         assert!(rig.1.pin.is_some());
         rig.0.release(&mut rig.1);
         assert!(rig.1.pin.is_none());
+    }
+
+    #[test]
+    fn a_line_of_many_chunks_without_its_newline_is_told_once_and_the_look_ends() {
+        let mut rig = rig(10, 5, 20_000);
+        look(&mut rig);
+        // 3000 rows of one line, then a few finished lines before it.
+        rig.0.feed(b"before\r\n");
+        rig.0.feed("x".repeat(30_000).as_bytes());
+        let started = std::time::Instant::now();
+        let read = look(&mut rig);
+        assert!(started.elapsed() < std::time::Duration::from_secs(2), "the look did not end");
+        assert_eq!(lines(&read), ["before"]);
+        assert!(
+            read.partial.as_deref().is_some_and(|p| p.starts_with('x') && p.len() <= 65 * 10),
+            "{read:?}"
+        );
+        // The next look has nothing new, and does not walk the line again.
+        let again = look(&mut rig);
+        assert!(again.lines.is_empty() && again.partial.is_none(), "{again:?}");
+        // The line ends. It is longer than a look reads of finished rows, so its start is skipped, and
+        // what follows it is told.
+        rig.0.feed(b"\r\nnext\r\n");
+        let done = look(&mut rig);
+        assert_eq!(done.lines.last().map(String::as_str), Some("next"));
+        assert!(done.skipped > 0, "{done:?}");
+    }
+
+    #[test]
+    fn a_screen_swapped_between_chunks_ends_the_look_and_leaves_no_pin() {
+        let mut rig = rig(30, 5, 5000);
+        look(&mut rig);
+        for n in 0..900 {
+            rig.0.feed(format!("line {n}\r\n").as_bytes());
+        }
+        let before = rig.0.term.lock().pin_slots_for_test();
+        let read = rig.0.tail_between(&mut rig.1, LIMITS, &mut rig.2, || rig.0.feed(b"\x1b[?1049h"));
+        assert!(!read.alt_screen && read.partial.is_none());
+        rig.0.feed(b"\x1b[?1049l");
+        let back = look(&mut rig);
+        assert!(!back.alt_screen);
+        assert_eq!(rig.0.term.lock().pin_slots_for_test(), before, "the mark was reaped");
+        rig.0.release(&mut rig.1);
+        assert_eq!(rig.0.term.lock().pin_slots_for_test(), before - 1, "and the tail's own is given back");
+    }
+
+    #[test]
+    fn a_screen_made_again_leaves_the_tail_without_a_pin_instead_of_unpinning_another() {
+        let mut rig = rig(30, 5, 5000);
+        look(&mut rig);
+        let size = GridSize { cols: 30, rows: 5, cell_width: 8.0, cell_height: 16.0 };
+        *rig.0.term.lock() = Screen::new(size, 5000);
+        // A pin of the new screen's own, in the slot the old tail's pin had.
+        let theirs = {
+            use wormhole_vt::{Column, Line, Point};
+            rig.0.term.lock().pin(Point::new(Line(0), Column(0)))
+        };
+        rig.0.release(&mut rig.1);
+        assert!(rig.0.term.lock().pin_point(theirs).is_some(), "the new screen's pin is untouched");
+        look(&mut rig);
+        rig.0.feed(b"fresh\r\n");
+        assert_eq!(lines(&look(&mut rig)), ["fresh"]);
     }
 }

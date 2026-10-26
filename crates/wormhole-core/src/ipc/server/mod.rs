@@ -292,8 +292,13 @@ mod tests {
             Some(Incoming::Control { reply, .. }) => {
                 let mut term = TestTerm::new(20, 3, 10);
                 term.feed(b"hello\r\nworld");
-                let spec =
-                    CaptureSpec { range: CaptureRange::Screen, join: false, styles: false, max_bytes: 1000 };
+                let spec = CaptureSpec {
+                    range: CaptureRange::Screen,
+                    join: false,
+                    styles: false,
+                    max_bytes: 1000,
+                    max_rows: 100,
+                };
                 let job = ReadJob::lines(term.into_reader(), 3, Some("a title".into()), spec);
                 reply.send(Answer::Read(job)).expect("the connection waits");
             }

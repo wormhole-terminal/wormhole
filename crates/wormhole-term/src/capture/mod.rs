@@ -31,6 +31,8 @@ pub struct CaptureSpec {
     pub styles: bool,
     /// Keep at most this many bytes of text, the newest.
     pub max_bytes: usize,
+    /// Read at most this many rows, the newest of the range (a block can be as long as the history).
+    pub max_rows: usize,
 }
 
 /// Which lines. Grid lines: 0 is the live screen's top row, history is negative.
@@ -138,6 +140,20 @@ impl Lines {
         }
     }
 
+    /// Lines of soft-wrapped rows joined, without styles.
+    fn joined(cols: usize) -> Self {
+        Self {
+            join: true,
+            styles: false,
+            cols,
+            lines: Vec::new(),
+            rows_per_line: Vec::new(),
+            runs: Vec::new(),
+            open: String::new(),
+            open_rows: 0,
+        }
+    }
+
     fn add(&mut self, rows: &[RowBuf]) {
         for row in rows {
             row.push_text(&mut self.open, self.cols);
@@ -216,6 +232,8 @@ impl ScreenReader {
         mut between: impl FnMut(),
     ) -> Result<Capture, CaptureError> {
         let mut term = self.term.lock();
+        term.reap();
+        let epoch = term.epoch();
         let (top, bottom) = (term.topmost_line().0, term.bottommost_line().0);
         let modes = term.mode();
         let alt = modes.contains(Modes::ALT_SCREEN);
@@ -245,6 +263,14 @@ impl ScreenReader {
                 (found.start.0.max(top), found.end.0.min(bottom))
             }
         };
+        let mut first = first;
+        let mut truncated = false;
+        // A range of rows is read from its newest end.
+        let room = i32::try_from(spec.max_rows).unwrap_or(i32::MAX).max(1);
+        if last - first + 1 > room {
+            first = last - room + 1;
+            truncated = true;
+        }
         let cursor = {
             let cursor = term.cursor();
             CaptureCursor {
@@ -256,7 +282,6 @@ impl ScreenReader {
         };
         let (screen_rows, cols, history) = (term.screen_lines(), term.columns(), term.history_size());
         let mut text = Lines::new(spec, cols);
-        let mut truncated = false;
         let mut next = first;
         // The pins that carry a range of more than one chunk across the holds of the lock: the
         // first row not read yet, and the range's end.
@@ -272,8 +297,8 @@ impl ScreenReader {
                     Some((ahead, _)) => term.move_pin(ahead, after),
                 }
             } else if let Some((ahead, end)) = pins.take() {
-                term.unpin(ahead);
-                term.unpin(end);
+                term.release_pin(ahead);
+                term.release_pin(end);
             }
             drop(term);
             text.add(scratch.rows(n));
@@ -283,18 +308,26 @@ impl ScreenReader {
             between();
             term = self.term.lock();
             let Some((ahead, end)) = pins else { break };
-            // The pins belong to the screen they were made on: if a program swapped screens, they
-            // are out of reach (and not ours to remove from the other one).
-            let same_screen = term.mode().contains(Modes::ALT_SCREEN) == alt;
-            let points =
-                if same_screen { (term.pin_point(ahead), term.pin_point(end)) } else { (None, None) };
+            // The pins went with the screen if a hosted terminal's replica was made again; if a
+            // program swapped screens, they belong to the main grid and are let go of when it is back.
+            if term.epoch() != epoch {
+                truncated = true;
+                break;
+            }
+            let points = if term.on_alt_screen() == alt {
+                (term.pin_point(ahead), term.pin_point(end))
+            } else {
+                (None, None)
+            };
             match points {
                 (Some(ahead_at), Some(end_at)) => (next, last) = (ahead_at.line.0, end_at.line.0),
                 _ => {
                     truncated = true;
-                    if same_screen {
-                        term.unpin(ahead);
-                        term.unpin(end);
+                    // (Made on the alternate screen, they stay with it: its grid is cleared when it is
+                    // entered again, and a read of more than a chunk of it needs a screen of 256 rows.)
+                    if !alt {
+                        term.release_pin(ahead);
+                        term.release_pin(end);
                     }
                     break;
                 }

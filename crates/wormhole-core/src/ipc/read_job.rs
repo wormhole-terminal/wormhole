@@ -58,7 +58,7 @@ impl ReadJob {
                 .into(),
                 Err(missing) => Reply::error(ErrorCode::NotFound, missing.to_string()),
             },
-            What::Blocks(spec) => fit_blocks(Blocks::of(self.terminal, &self.reader.blocks(&spec))),
+            What::Blocks(spec) => fit_blocks(Blocks::of(self.terminal, &self.reader.blocks(&spec, scratch))),
         }
     }
 }
