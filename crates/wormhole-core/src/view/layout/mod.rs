@@ -10,6 +10,7 @@ pub mod path_menu;
 mod remembered;
 mod resize;
 pub mod status_bar;
+pub mod title_parts;
 pub mod title_row;
 
 pub use remembered::{RememberedPanes, STORE_KEY as REMEMBERED_PANES_KEY};

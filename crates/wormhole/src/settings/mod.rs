@@ -37,7 +37,7 @@ use wormhole_core::theme::tokens::{Appearance, ColorChoices, ThemeTokens};
 use crate::palette::Palette;
 use crate::theme_bridge;
 use derive::{OPAQUE_LOOK, contrasted, main_ui, tally, theme_parts, themed, translucency};
-pub use profile::{ParkedSettings, features_in, settings_in, store_in, ui_in};
+pub use profile::{ParkedSettings, edits_in, features_in, settings_in, store_in, ui_in};
 pub use ui_colors::UiColors;
 
 /// How many times each derived value has changed since the app started: a view that

@@ -79,10 +79,7 @@ pub const APP_SETTINGS: &[&str] = &[
     // The glass is a look of the whole window, and a repository must not switch it on.
     // What the title row shows is the person's own choice. The pull request also runs `gh`, which
     // a repository must not be able to switch on for itself.
-    "title_branch_status",
-    "title_agent_gauge",
-    "title_ports",
-    "title_pull_request",
+    "title_row",
     "notify_needs_you",
     "notify_agent_done",
     "notify_command_done",
@@ -132,6 +129,11 @@ pub const APP_SETTINGS: &[&str] = &[
     // project's.
     "feature_flags",
 ];
+
+/// Keys of older files that are still read (into the setting that replaced them) but never written:
+/// a file keeps them, and they are not "unknown".
+pub(crate) const LEGACY_SETTINGS: &[&str] =
+    &["compact_sidebar", "title_branch_status", "title_agent_gauge", "title_ports", "title_pull_request"];
 
 /// Every key a settings file can have, sorted.
 pub(crate) fn keys() -> Vec<String> {

@@ -8,6 +8,7 @@ use std::time::Duration;
 use gpui_kit::{Modifiers, MouseButton, TestAppContext, VisualTestContext, point, px, size};
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::usage::Gauge;
+use wormhole_core::view::layout::title_parts::TitlePart;
 use wormhole_core::view::layout::title_row::{Extra, PathShown};
 
 use crate::platform::record;
@@ -300,10 +301,81 @@ fn the_pull_request_chip_shows_a_cached_pull_request_only_for_an_approved_branch
     assert_eq!(words, pr.words());
     assert!(words.starts_with("Pull request #142, open"), "{words}");
 
-    cx.update(|cx| crate::settings::update_settings(cx, |settings| settings.title_pull_request = false));
-    assert_eq!(shown(cx), None, "the switch is off");
-    cx.update(|cx| crate::settings::update_settings(cx, |settings| settings.title_pull_request = true));
+    cx.update(|cx| {
+        crate::settings::update_settings(cx, |settings| {
+            settings.show_title_part(TitlePart::PullRequest, false)
+        })
+    });
+    assert_eq!(shown(cx), None, "hidden from the row");
+    cx.update(|cx| {
+        crate::settings::update_settings(cx, |settings| {
+            settings.show_title_part(TitlePart::PullRequest, true)
+        })
+    });
     // A branch git has not answered for (another folder's answer) shows nothing.
     drive(cx, &window, |ws, _, _| ws.sessions[0].git.cwd = Some(PathBuf::from("/elsewhere")));
     assert_eq!(shown(cx), None);
+}
+
+/// A right-click on the row anywhere but the folder (here on the terminal's name) opens the row's
+/// menu of parts, and choosing one hides it. The arrangement decides which end draws what: the
+/// splits moved to the left end are drawn there, and a hidden part isn't drawn at all.
+#[gpui_kit::test]
+fn a_right_click_on_the_row_shows_its_parts_and_the_row_draws_them_where_they_are(cx: &mut TestAppContext) {
+    if isolate("a_right_click_on_the_row_shows_its_parts_and_the_row_draws_them_where_they_are") {
+        return;
+    }
+    let window = start(cx, 1);
+    cx.simulate_window_resize(window.handle, size(px(1200.0), px(800.0)));
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].terminal().update(cx, |terminal, cx| {
+            terminal.cwd = Some(PathBuf::from("/Volumes/Work/clients/acme"));
+            cx.notify();
+        });
+    });
+    draw(cx, &window);
+    draw(cx, &window);
+    record::close();
+
+    let mut pointer = VisualTestContext::from_window(window.handle, cx);
+    let at = pointer.debug_bounds("crumb-process").expect("the name is drawn").center();
+    pointer.simulate_mouse_down(at, MouseButton::Right, Modifiers::none());
+    pointer.simulate_mouse_up(at, MouseButton::Right, Modifiers::none());
+    cx.run_until_parked();
+    let outline = record::open().expect("the right-click opened the row's menu").outline();
+    assert_eq!(outline[0], "# Show in title row");
+    assert_eq!(outline[1], "- Folder [x]");
+    assert_eq!(outline.last().map(String::as_str), Some("- Customize title row…"));
+
+    let (_, callbacks) = record::pick("Folder").expect("the folder's item");
+    cx.update(|cx| {
+        window.handle.update(cx, |_, window, cx| {
+            for run in callbacks {
+                run(window, cx);
+            }
+        })
+    })
+    .expect("the window is open");
+    cx.run_until_parked();
+    let ends = |cx: &mut TestAppContext| {
+        drive(cx, &window, |ws, window, cx| {
+            let plan = ws.title_plan(window, cx);
+            (plan.ends.0.parts, plan.ends.1.parts)
+        })
+    };
+    let (left, _) = ends(cx);
+    assert!(!left.contains(&TitlePart::Folder), "hidden: {left:?}");
+    assert!(left.contains(&TitlePart::Terminal));
+
+    // The splits first: they lead the left end, and the right one has no splits.
+    cx.update(|cx| {
+        crate::settings::update_settings(cx, |settings| {
+            let from = settings.title_row().parts().iter().position(|p| *p == TitlePart::Splits);
+            settings.move_title_part(from.expect("shown"), 0);
+        })
+    });
+    let (left, right) = ends(cx);
+    assert_eq!(left.first(), Some(&TitlePart::Splits), "{left:?}");
+    assert!(!right.contains(&TitlePart::Splits), "{right:?}");
+    draw(cx, &window);
 }

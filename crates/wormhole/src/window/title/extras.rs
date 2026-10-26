@@ -13,7 +13,7 @@
 //!   repository's own git configuration. Every terminal's branch is asked for, not only the one on
 //!   screen: the sidebar's folder bands show theirs too.
 //!
-//! Each has a Settings switch; one that is off is not looked up at all.
+//! Each is a part of the row the person can hide (`title_row`); a hidden one is not looked up at all.
 
 use std::time::{Duration, Instant};
 
@@ -21,6 +21,7 @@ use gpui_kit::*;
 use wormhole_core::agents::usage::Gauge;
 use wormhole_core::git::RepoStatus;
 use wormhole_core::git::pr::{self, Branch, PullRequest, Settled};
+use wormhole_core::view::layout::title_parts::TitlePart;
 use wormhole_core::view::title_extras::BranchStatus;
 use wormhole_term::Notification;
 use wormhole_term::listening_ports;
@@ -62,21 +63,22 @@ pub(in crate::window) struct ExtraFacts {
 }
 
 impl Workspace {
-    /// What the extras show for the active terminal, with every switched-off one left out.
+    /// What the extras show for the active terminal, with every hidden one left out.
     pub(in crate::window) fn extra_facts(&self, cx: &App) -> ExtraFacts {
         let settings = settings_in(&self.profile, cx);
+        let shows = |part| settings.title_shows(part);
         let session = self.active_session();
         // Git's answer only while it is about the folder the terminal is in now.
         let status = session.git.status.as_ref().filter(|_| session.git.cwd == session.pane.summary.cwd);
         ExtraFacts {
-            branch: status.filter(|_| settings.title_branch_status).and_then(RepoStatus::branch_status),
-            gauge: self.agent_gauge().filter(|_| settings.title_agent_gauge).cloned(),
-            ports: if settings.title_ports { session.extras.ports.clone() } else { Vec::new() },
+            branch: status.filter(|_| shows(TitlePart::BranchStatus)).and_then(RepoStatus::branch_status),
+            gauge: self.agent_gauge().filter(|_| shows(TitlePart::AgentGauge)).cloned(),
+            ports: if shows(TitlePart::Ports) { session.extras.ports.clone() } else { Vec::new() },
             pull_request: self.shown_pull_request(cx),
         }
     }
 
-    /// The pull request the row shows for the active terminal's branch, if it has one and the switch is on.
+    /// The pull request the row shows for the active terminal's branch, if it has one and the row shows it.
     pub(in crate::window) fn shown_pull_request(&self, cx: &App) -> Option<PullRequest> {
         self.pull_request_branch(cx).and_then(|branch| app(cx).pr.get(&branch).cloned())
     }
@@ -130,7 +132,7 @@ impl Workspace {
     /// Ask for the ports under the terminal on screen, off the main thread, when the last look
     /// is a few seconds old.
     fn poll_ports(&mut self, cx: &mut Context<Self>) {
-        let wanted = settings_in(&self.profile, cx).title_ports;
+        let wanted = settings_in(&self.profile, cx).title_shows(TitlePart::Ports);
         let session = &mut self.sessions[self.active];
         let pid = session.pane.terminal.read(cx).shell_pid();
         let Some(pid) = pid.filter(|_| wanted) else {
@@ -169,7 +171,7 @@ impl Workspace {
         }
     }
 
-    /// The branch whose pull request the row may show and ask for: the switch is on, the terminal's
+    /// The branch whose pull request the row may show and ask for: the row shows it, the terminal's
     /// folder is in a repository on a branch, and its project is trusted. `gh` reads the
     /// repository's git configuration and remotes, which a repository the person has not approved
     /// may have filled with anything.
@@ -179,7 +181,7 @@ impl Workspace {
 
     /// [`Self::pull_request_branch`] for any of the window's terminals.
     pub(in crate::window) fn session_pr_branch(&self, ix: usize, cx: &App) -> Option<Branch> {
-        if !settings_in(&self.profile, cx).title_pull_request {
+        if !settings_in(&self.profile, cx).title_shows(TitlePart::PullRequest) {
             return None;
         }
         let session = self.sessions.get(ix)?;

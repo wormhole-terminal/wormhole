@@ -238,7 +238,8 @@ impl Workspace {
             "title row: path={path} steps={steps} words={} chip={chip} folded={} name={:.0} tint={tint} indicator={:?}\n\
              open-in: {} missing={:?} found={}\n\
              border={:?} card={}\n\
-             extras: {}",
+             extras: {}\n\
+             ends: {:?} | {:?}",
             plan.fit.words,
             plan.fit.folded,
             plan.fit.name,
@@ -249,6 +250,8 @@ impl Workspace {
             crate::settings::settings(cx).title_border,
             self.path_card.is_shown(),
             crate::window::title::chips::describe(&plan),
+            plan.ends.0.parts,
+            plan.ends.1.parts,
         )
     }
 

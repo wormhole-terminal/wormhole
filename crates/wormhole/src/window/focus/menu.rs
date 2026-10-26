@@ -7,15 +7,23 @@
 
 use gpui_kit::*;
 use wormhole_core::view::focus::Area;
+use wormhole_core::view::layout::title_parts::TitlePart;
 
+use crate::settings::settings_in;
 use crate::window::Workspace;
 
 impl Workspace {
     /// ⌃↩ in `area`'s list: open the menu of the row the keys are on, if it has one.
     pub(super) fn row_menu_key(&mut self, area: Area, window: &mut Window, cx: &mut Context<Self>) {
-        // The panel's rows have no menu yet; the title strip's is the folder's path menu.
+        // The panel's rows have no menu yet; the title strip's is the folder's path menu, or the
+        // row's own where the row doesn't show the folder (under the strip, where the probe is then).
         if area == Area::Tabs {
-            self.open_path_menu(window, cx);
+            let folder = self.active_session().pane.summary.cwd.is_some()
+                && settings_in(&self.profile, cx).title_shows(TitlePart::Folder);
+            match folder {
+                true => self.open_path_menu(window, cx),
+                false => self.open_title_menu(self.path_anchor.below(), window, cx),
+            }
         }
     }
 }

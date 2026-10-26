@@ -59,3 +59,35 @@ pub fn on_right_click(open: impl Fn(Point<Pixels>, &mut Window, &mut App) + 'sta
     .size_full()
     .into_any_element()
 }
+
+/// [`on_right_click`] for a wrapper with a part that has a menu of its own: a right-click inside
+/// `except`'s bounds (that part, measured by its probe) goes on to the part instead. `None` while the
+/// part isn't drawn, as its probe still holds the bounds it last painted.
+pub fn on_right_click_except(
+    except: Option<Anchor>,
+    open: impl Fn(Point<Pixels>, &mut Window, &mut App) + 'static,
+) -> AnyElement {
+    let open = Rc::new(open);
+    canvas(
+        |bounds, window, _| window.insert_hitbox(bounds, HitboxBehavior::Normal),
+        move |_, hitbox, window, _| {
+            let (open, except) = (open.clone(), except.clone());
+            window.on_mouse_event(move |event: &MouseDownEvent, phase, window, cx| {
+                let theirs = except.as_ref().is_some_and(|anchor| anchor.0.get().contains(&event.position));
+                if phase.bubble()
+                    && event.button == MouseButton::Right
+                    && hitbox.is_hovered(window)
+                    && !theirs
+                {
+                    cx.stop_propagation();
+                    open(event.position, window, cx);
+                }
+            });
+        },
+    )
+    .absolute()
+    .top_0()
+    .left_0()
+    .size_full()
+    .into_any_element()
+}

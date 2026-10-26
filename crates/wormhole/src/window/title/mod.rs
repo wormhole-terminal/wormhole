@@ -1,6 +1,7 @@
 //! The terminal's title row: the breadcrumb of where
-//! the selected terminal is and what it does (`breadcrumb`), Open in… and the two splits flush at
-//! the right end, the project's tint behind them and the line under the row.
+//! the selected terminal is and what it does (`breadcrumb`), its extras (`extras`, `chips`), Open in…
+//! and the two splits, laid out as the person arranged them (`row`, `parts`), the project's tint
+//! behind them and the line under the row. A right-click on the row opens its menu of parts.
 //!
 //! It has its own row above the terminal's surface and never overlaps it. The row's height is [`style::TITLE_ROW_H`]; the line, when it is drawn, is the one
 //! border width under it. An empty stretch of it is the window's title bar: dragging moves the
@@ -9,8 +10,10 @@
 pub(in crate::window) mod breadcrumb;
 pub(in crate::window) mod chips;
 pub(in crate::window) mod extras;
+pub(crate) mod parts;
 pub(in crate::window) mod path_card;
 pub(in crate::window) mod path_menu;
+pub(in crate::window) mod row;
 #[cfg(test)]
 mod title_tests;
 
@@ -25,9 +28,17 @@ use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::platform::open_in::{Installed, Resolved};
 use wormhole_core::project::ProjectColor;
 use wormhole_core::theme::tokens::Color;
+use wormhole_core::view::layout::title_parts::{PartKind, TitlePart, TitleRow};
 use wormhole_core::view::layout::title_row::{PathStep, RowFit};
 use wormhole_core::view::panes::Axis;
 use wormhole_core::view::sidebar::GroupPaint;
+
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::text;
 
 use crate::menubar::model::KeyEquivalent;
 use crate::open_in::{self, OpenIn};
@@ -39,6 +50,7 @@ use crate::terminal_view::Status;
 use crate::theme_bridge::token;
 use crate::window::Workspace;
 use crate::window::title::extras::ExtraFacts;
+use crate::window::title::row::End;
 
 /// What the title row says about the terminal it is for, gathered once per frame.
 #[derive(Debug)]
@@ -60,8 +72,10 @@ pub(super) struct Facts {
     /// For a terminal in a submodule, whose it is: "in terminal".
     pub(super) parent: Option<String>,
     /// The extras beside it (`window::title::extras`): its status, the agent's model and context, the ports
-    /// and the pull request, each only if its setting is on and there is something to say.
+    /// and the pull request, each only if the row shows it and there is something to say.
     pub(super) extras: ExtraFacts,
+    /// Which parts the row shows, and where (`title_row`).
+    pub(super) row: TitleRow,
 }
 
 /// The project's colour as the row draws it.
@@ -80,14 +94,23 @@ pub(super) struct Tint {
     pub(super) line: Hsla,
 }
 
-/// Everything the title row draws, worked out once per frame: the terminal's facts, what the narrow
-/// row gives up (core's `fit_row`), the app a click on Open in… opens, and the project's tint.
+/// Everything the title row draws, worked out once per frame: the terminal's facts, the parts at
+/// each end (`row::ends`), what the narrow row gives up (core's `fit_row`), the app a click on Open
+/// in… opens, and the project's tint.
 pub(super) struct TitlePlan {
     pub(super) facts: Facts,
+    pub(super) ends: (End, End),
     pub(super) steps: Vec<PathStep>,
     pub(super) fit: RowFit,
     pub(super) app: Resolved,
     pub(super) tint: Option<Tint>,
+}
+
+impl TitlePlan {
+    /// Whether either end draws `part` (when the row has room for it).
+    pub(super) fn ends_have(&self, part: TitlePart) -> bool {
+        self.ends.0.parts.contains(&part) || self.ends.1.parts.contains(&part)
+    }
 }
 
 /// The width of Open in… (the app's icon and its chevron), the two splits, and the one `⋯` they
@@ -101,7 +124,7 @@ pub(super) const OPEN_IN_W: f32 = style::HIT_MIN + CHEVRON_W + AFTER_CHEVRON;
 const CHEVRON_W: f32 = 16.0;
 /// After Open in…'s narrow chevron, so its glyph stands as far from the split's as the row's other
 /// glyphs stand from each other (12 pt).
-const AFTER_CHEVRON: f32 = 4.0;
+pub(super) const AFTER_CHEVRON: f32 = 4.0;
 pub(super) const SPLITS_W: f32 = 2.0 * style::HIT_MIN;
 pub(super) const MORE_W: f32 = style::HIT_MIN;
 /// The app's icon in the Open in… button, and in its menu.
@@ -118,15 +141,26 @@ impl Workspace {
         };
         let in_diff = self.covered(cx);
         let plan = (!in_diff).then(|| self.title_plan(window, cx));
-        let (left, right) = self.title_row_pads(window);
+        let (left_pad, right_pad) = self.title_row_pads(window);
 
         // The bar has no fill of its own: its content stands on the window. Under Increase Contrast
         // the group's colour is a line under it.
         let tint = plan.as_ref().and_then(|plan| plan.tint.as_ref());
         let line = tint.filter(|_| system.increase_contrast).map(|tint| tint.line);
-        let strip = plan.as_ref().map(|plan| self.render_title_strip(plan, window, cx));
-        let extras = plan.as_ref().and_then(|plan| self.render_title_extras(plan, cx));
-        let actions = plan.as_ref().map(|plan| self.render_title_actions(plan, cx));
+        let ends = plan.as_ref().map(|plan| self.render_title_ends(plan, window, cx));
+        let (left, right) = ends.unzip();
+        let right_shrinks =
+            plan.as_ref().is_some_and(|plan| plan.ends.1.parts.contains(&TitlePart::Terminal));
+        // A right-click anywhere on the row opens the row's menu of parts, but on the folder, whose
+        // own is the path menu. Laid over the row, so whatever lies over the row (the palette's scrim)
+        // keeps the click. The diff's title has none.
+        let menu = plan.as_ref().map(|plan| {
+            let this = cx.weak_entity();
+            let folder = plan.ends_have(TitlePart::Folder).then(|| self.path_anchor.clone());
+            platform::on_right_click_except(folder, move |at, window, cx| {
+                this.update(cx, |this, cx| this.open_title_menu(at, window, cx)).ok();
+            })
+        });
         let bar = div()
             .relative()
             .flex_none()
@@ -143,24 +177,23 @@ impl Workspace {
                         .size_full()
                         .flex()
                         .items_center()
-                        .gap_1()
                         .title_drag()
-                        // The extras are at this stretch's right end, so no gap of the row's lies between
-                        // them and Open in…: the width the row gives way by counts none.
-                        .child(
+                        .children(self.render_cover_title(cx))
+                        // The left end gives way before the right one: the name in it is cut.
+                        .children(left.map(|left| div().flex().min_w_0().flex_shrink(1.0).child(left)))
+                        // The flexible space: the window's title bar.
+                        .child(div().flex_1().min_w_0())
+                        // The right end keeps its width, unless the name is there to give way.
+                        .children(right.map(|right| {
                             div()
-                                .flex_1()
-                                .min_w_0()
                                 .flex()
-                                .children(self.render_cover_title(cx))
-                                .children(strip)
-                                .when(extras.is_some(), |d| d.child(div().flex_1().min_w_0()))
-                                .children(extras),
-                        )
-                        .children(actions),
-                    (left, right),
+                                .map(|d| if right_shrinks { d.min_w_0() } else { d.flex_none() })
+                                .child(right)
+                        })),
+                    (left_pad, right_pad),
                 ),
-            );
+            )
+            .children(menu);
 
         div()
             .id("titlebar")
@@ -231,83 +264,101 @@ impl Workspace {
         })
     }
 
-    /// Open in… and the splits at the right end of the title row, flush against each other with no
-    /// gaps: the app's icon opens the folder, its chevron lists the others, and the two splits.
-    /// Where the row is narrow they are one `⋯` menu.
-    fn render_title_actions(&self, plan: &TitlePlan, cx: &mut Context<Self>) -> AnyElement {
+    /// What the row's buttons draw for `part`: Open in… (the app's icon opens the folder, its chevron
+    /// lists the others) or the two splits. Where the row is narrow both are one `⋯` menu, in the
+    /// place of the first of them.
+    pub(super) fn render_title_buttons(
+        &self,
+        plan: &TitlePlan,
+        part: TitlePart,
+        cx: &mut Context<Self>,
+    ) -> Option<Vec<AnyElement>> {
         let ui = ui_in(&self.profile, cx);
-        let folder = plan.facts.folder.clone();
-        let menu = self.actions_menu(plan, folder.as_deref(), plan.fit.folded, cx);
+        let open_in = plan.ends_have(TitlePart::OpenIn);
+        let splits = plan.ends_have(TitlePart::Splits);
+        // Open in… needs a folder (`row::has`), so its place in the ends says there is one.
+        let folder = plan.facts.folder.clone().filter(|_| open_in);
         let anchor = Anchor::default();
-        let open_menu = {
+        let menu = |with_splits: bool, cx: &mut Context<Self>| {
+            let menu = self.actions_menu(plan, folder.as_deref(), with_splits, cx);
             let anchor = anchor.clone();
             move |window: &mut Window, cx: &mut App| {
                 platform::show_menu(menu.clone(), anchor.below(), window, cx)
             }
         };
         if plan.fit.folded {
-            return div()
-                .id("title-more")
-                .occlude()
-                .relative()
-                .flex_none()
-                .child(anchor.probe())
-                .child(
-                    style::icon_button("title-more-menu", ui, IconName::Ellipsis, "Open in, split")
-                        .in_title_row()
-                        .on_click(move |_, window, cx| open_menu(window, cx)),
-                )
-                .into_any_element();
-        }
-        let split = |id: &'static str, icon: IconName, text: &str, action: ActionId, axis: Axis| {
-            style::icon_button(id, ui, icon, keymap::with_key(text, action))
-                .in_title_row()
-                .on_click(cx.listener(move |this, _, window, cx| this.split_pane(axis, window, cx)))
-                .into_any_element()
-        };
-        let open_in = folder.map(|folder| {
-            let app = &plan.app.app;
-            let tooltip = match &plan.app.missing {
-                Some(missing) => format!("{missing} isn't installed. Open folder in {}", app.name),
-                None => format!("Open folder in {}", app.name),
-            };
-            let bundle = app.bundle.clone();
-            let icon = app_icon(ui, OpenIn::icon(cx, &app.bundle), &app.monogram, APP_ICON);
-            [
-                style::icon_button("open-in", ui, IconName::ExternalLink, tooltip)
-                    .with_drawing(icon)
-                    .in_title_row()
-                    .on_click(move |_, _, _| open_in::open(&bundle, &folder))
-                    .into_any_element(),
+            // The first of them in the row, left end first.
+            let first =
+                plan.ends.0.parts.iter().chain(&plan.ends.1.parts).find(|p| p.kind() == PartKind::Button);
+            if first != Some(&part) {
+                return None;
+            }
+            let open_menu = menu(splits, cx);
+            let tip = text(match (open_in, splits) {
+                (true, true) => TITLE_ROW_MORE_OPEN_IN_SPLIT,
+                (true, false) => TITLE_ROW_MORE_OPEN_IN,
+                _ => TITLE_ROW_MORE_SPLIT,
+            });
+            return Some(vec![
                 div()
-                    .id("open-in-chevron")
+                    .id("title-more")
                     .occlude()
                     .relative()
                     .flex_none()
                     .child(anchor.probe())
                     .child(
-                        style::icon_button("open-in-menu", ui, IconName::ChevronDown, "Open in another app")
-                            .narrow(CHEVRON_W)
+                        style::icon_button("title-more-menu", ui, IconName::Ellipsis, tip)
+                            .in_title_row()
                             .on_click(move |_, window, cx| open_menu(window, cx)),
                     )
                     .into_any_element(),
-            ]
-        });
-        let gap_after = open_in.is_some();
-        div()
-            .id("title-actions")
-            .flex()
-            .flex_none()
-            .items_center()
-            .children(open_in.into_iter().flatten())
-            .when(gap_after, |d| d.child(div().flex_none().w(px(AFTER_CHEVRON))))
-            .child(split("split-right", IconName::Columns2, "Split right", ActionId::SplitRight, Axis::Row))
-            .child(split("split-down", IconName::Rows2, "Split down", ActionId::SplitDown, Axis::Column))
-            .into_any_element()
+            ]);
+        }
+        if part == TitlePart::Splits {
+            let split = |id: &'static str, icon: IconName, text: &str, action: ActionId, axis: Axis| {
+                style::icon_button(id, ui, icon, keymap::with_key(text, action))
+                    .in_title_row()
+                    .on_click(cx.listener(move |this, _, window, cx| this.split_pane(axis, window, cx)))
+                    .into_any_element()
+            };
+            return Some(vec![
+                split("split-right", IconName::Columns2, "Split right", ActionId::SplitRight, Axis::Row),
+                split("split-down", IconName::Rows2, "Split down", ActionId::SplitDown, Axis::Column),
+            ]);
+        }
+        let open_menu = menu(false, cx);
+        let folder = folder?;
+        let app = &plan.app.app;
+        let tooltip = match &plan.app.missing {
+            Some(missing) => format!("{missing} isn't installed. Open folder in {}", app.name),
+            None => format!("Open folder in {}", app.name),
+        };
+        let bundle = app.bundle.clone();
+        let icon = app_icon(ui, OpenIn::icon(cx, &app.bundle), &app.monogram, APP_ICON);
+        Some(vec![
+            style::icon_button("open-in", ui, IconName::ExternalLink, tooltip)
+                .with_drawing(icon)
+                .in_title_row()
+                .on_click(move |_, _, _| open_in::open(&bundle, &folder))
+                .into_any_element(),
+            div()
+                .id("open-in-chevron")
+                .occlude()
+                .relative()
+                .flex_none()
+                .child(anchor.probe())
+                .child(
+                    style::icon_button("open-in-menu", ui, IconName::ChevronDown, "Open in another app")
+                        .narrow(CHEVRON_W)
+                        .on_click(move |_, window, cx| open_menu(window, cx)),
+                )
+                .into_any_element(),
+        ])
     }
 
     /// The menu of Open in… (the chevron's) or, folded, of the whole group: "Open folder in" with
-    /// every app that can (the one a click opens checked), and then the two splits.
+    /// every app that can (the one a click opens checked), and then the two splits. Without a
+    /// `folder` (no Open in… in the row) it is the splits alone.
     fn actions_menu(
         &self,
         plan: &TitlePlan,

@@ -390,6 +390,52 @@ fn controls(env: &Env) -> Div {
                         ),
                 ),
         )
+        .child(arranged(ui))
+}
+
+/// A list the person arranges (the title row's parts): a row that moves, the fixed space with its
+/// note, and a hidden one, faint and still.
+fn arranged(ui: UiColors) -> Div {
+    let reorder = |ix: usize, label: &'static str| style::Reorder {
+        list: "g-arrange".into(),
+        ix,
+        label: label.into(),
+        on_move: std::rc::Rc::new(|_, _, _, _| {}),
+        dragged: false,
+    };
+    let switch = |id: &'static str, on: bool| style::toggle(id, on, |_, _, _| {}).into_any_element();
+    let row =
+        |id: &'static str, icon, label: &'static str, note: Option<&'static str>, quiet: bool, on: bool| {
+            let control = note.is_none().then(|| switch(id, on));
+            let reorder = (!quiet).then(|| reorder(if note.is_some() { 1 } else { 0 }, label));
+            style::arrange_row(
+                id,
+                ui,
+                style::ArrangeParts {
+                    icon,
+                    label: label.into(),
+                    note: note.map(Into::into),
+                    quiet,
+                    control,
+                    reorder,
+                },
+            )
+        };
+    div()
+        .flex()
+        .flex_col()
+        .w_full()
+        .max_w(px(COLUMN_W))
+        .child(row("g-arrange-folder", IconName::Folder, "Folder", None, false, true))
+        .child(row(
+            "g-arrange-space",
+            IconName::ArrowRightLeft,
+            "Flexible space",
+            Some("Left above, right below"),
+            false,
+            false,
+        ))
+        .child(row("g-arrange-ports", IconName::Globe, "Open ports", None, true, false))
 }
 
 /// Inline banners of each kind, and the flush one of a panel.

@@ -1,7 +1,7 @@
 //! The settings schema: every key of `config.json`, its default and its
 //! valid range. The struct and its defaults are here; the values some settings take are in `choices`,
 //! which keys a project may set in `keys`, the project overlay in `overlay`, the primary colour's switch
-//! in `primary` and the colours of folders in `folder_colors`.
+//! in `primary`, the title row's parts in `title_row` and the colours of folders in `folder_colors`.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -13,6 +13,7 @@ use crate::config::features::{self, FeatureFlag, FlagMode};
 use crate::theme::fonts::{self, FontSlot};
 use crate::theme::registry::{DEFAULT_THEME, DEFAULT_THEME_LIGHT};
 use crate::update::UpdateChannel;
+use crate::view::layout::title_parts::TitleRow;
 use crate::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 
 mod branch_color;
@@ -23,6 +24,7 @@ mod overlay;
 mod primary;
 #[cfg(test)]
 mod tests;
+mod title_row;
 
 use self::folder_colors::folder_color_key;
 
@@ -30,8 +32,8 @@ pub use self::choices::{
     BranchColor, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta, ShellProfile,
     SizeUnits, ThemeMode, TitleBorder,
 };
-pub(crate) use self::keys::keys;
 pub use self::keys::{APP_SETTINGS, PROJECT_SETTINGS};
+pub(crate) use self::keys::{LEGACY_SETTINGS, keys};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -173,13 +175,25 @@ pub struct Settings {
     /// identifier (`dev.zed.Zed`); empty picks the first editor found on this Mac, else Finder.
     /// An app that isn't installed any more falls back the same way.
     pub open_in: String,
-    /// The title row's extras (`title_extras`), each on its own switch: a dot and the ahead and
-    /// behind counts beside the branch, an agent's model and how full its context window is, the
-    /// ports a terminal's programs listen on, and the branch's pull request (which also puts its
-    /// mark on the folder's band and tells when its checks finish).
+    /// What the terminal's title row shows and in what order (`view::layout::title_parts`): its
+    /// parts as a list, the flexible space between its two ends among them. Hiding the pull request
+    /// also stops asking `gh` for it, and its mark on the folder's band. A config from before the
+    /// list has none: see [`Settings::title_row`].
+    #[serde(default)]
+    pub title_row: Option<TitleRow>,
+    /// What `title_row` replaced: four of its parts on switches of their own. Read from older files
+    /// (see [`Settings::title_row`]), never written.
+    #[serde(skip_serializing)]
+    #[doc(hidden)]
     pub title_branch_status: bool,
+    #[serde(skip_serializing)]
+    #[doc(hidden)]
     pub title_agent_gauge: bool,
+    #[serde(skip_serializing)]
+    #[doc(hidden)]
     pub title_ports: bool,
+    #[serde(skip_serializing)]
+    #[doc(hidden)]
     pub title_pull_request: bool,
     /// A system beep when a terminal rings its bell.
     pub bell_sound: bool,
@@ -314,6 +328,7 @@ impl Default for Settings {
             column_dividers: true,
             title_border: TitleBorder::default(),
             open_in: String::new(),
+            title_row: Some(TitleRow::default()),
             title_branch_status: true,
             title_agent_gauge: true,
             title_ports: true,
@@ -394,6 +409,8 @@ impl Settings {
     pub(super) fn sanitized(mut self) -> Self {
         // Written out from now on, so the switch says what is in use.
         self.theme_primary = Some(self.uses_theme_primary());
+        // The same for the title row: the old switches are read once, into the list.
+        self.title_row = Some(self.title_row().into_owned());
         for slot in FontSlot::ALL {
             self.step_slot_size(slot, 0.0);
         }

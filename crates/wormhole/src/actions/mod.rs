@@ -154,6 +154,12 @@ pub struct MoveWindowToProfile(pub SharedString);
 #[action(namespace = app, no_json)]
 pub struct OpenSettingsAt(pub SectionId);
 
+/// A link in a window that opens Settings at one setting's row (the title row's "Customize title
+/// row…"), by its id in core's settings table: dispatched like [`OpenSettingsAt`].
+#[derive(Clone, Debug, PartialEq, Action)]
+#[action(namespace = app, no_json)]
+pub struct RevealSetting(pub &'static str);
+
 /// Shell → New Terminal With: a new terminal running the shell with this key.
 #[derive(Clone, Debug, PartialEq, Action)]
 #[action(namespace = workspace, no_json)]

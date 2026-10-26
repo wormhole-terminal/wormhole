@@ -41,6 +41,7 @@ mod sessions;
 mod stage;
 mod terminal;
 mod theme_picker;
+mod title_row;
 mod updates;
 
 pub(super) use agents::AgentsSnapshot;

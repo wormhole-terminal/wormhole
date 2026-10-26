@@ -134,6 +134,12 @@ pub fn store_in<'a>(profile: &ProfileId, cx: &'a App) -> &'a SettingsStore {
     cx.global::<SettingsStore>()
 }
 
+/// Whether a window in `profile` draws with the global store, the one [`super::update_settings`]
+/// changes: the shown profile's. A window in another profile has its own, parked.
+pub fn edits_in(profile: &ProfileId, cx: &App) -> bool {
+    cx.try_global::<ParkedSettings>().and_then(|parked| parked.get(profile)).is_none()
+}
+
 /// [`super::settings`] for a window in `profile`.
 pub fn settings_in<'a>(profile: &ProfileId, cx: &'a App) -> &'a Settings {
     &store_in(profile, cx).settings

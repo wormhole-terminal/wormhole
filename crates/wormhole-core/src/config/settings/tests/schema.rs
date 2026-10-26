@@ -6,6 +6,7 @@ use super::super::{
 };
 use crate::storage::jsonc;
 use crate::theme::fonts;
+use crate::view::layout::title_parts::TitlePart;
 use crate::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 
 #[test]
@@ -110,19 +111,37 @@ fn the_title_border_reads_by_name_and_shows_by_rule() {
     }
 }
 
-/// Every extra of the title row is on until the person turns it off, and none of them is a
-/// repository's to switch on (the pull request runs `gh`).
+/// The title row shows everything until the person arranges it, and it is never a repository's to
+/// arrange (the pull request runs `gh`).
 #[test]
-fn the_title_rows_extras_are_on_by_default_and_the_persons_own() {
-    let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
-    assert!(unset.title_branch_status && unset.title_agent_gauge);
-    assert!(unset.title_ports && unset.title_pull_request);
-    let off: Settings =
-        jsonc::parse(r#"{ "title_ports": false, "title_pull_request": false }"#).expect("valid jsonc");
-    assert!(!off.title_ports && !off.title_pull_request && off.title_agent_gauge);
-    for key in ["title_branch_status", "title_agent_gauge", "title_ports", "title_pull_request"] {
-        assert!(APP_SETTINGS.contains(&key) && !PROJECT_SETTINGS.contains(&key), "{key}");
+fn the_title_row_shows_every_part_by_default_and_is_the_persons_own() {
+    let read = |text: &str| jsonc::parse::<Settings>(text).expect("valid jsonc").sanitized();
+    assert!(read("{}").title_row().is_default());
+    let mine = read(r#"{ "title_row": ["terminal", "space", "splits"] }"#);
+    assert_eq!(mine.title_row().parts(), [TitlePart::Terminal, TitlePart::Space, TitlePart::Splits]);
+    assert!(!mine.title_shows(TitlePart::PullRequest));
+    assert!(APP_SETTINGS.contains(&"title_row") && !PROJECT_SETTINGS.contains(&"title_row"));
+}
+
+/// Files from before the row could be arranged have four switches for its extras: the parts they
+/// turned off stay hidden, the old keys are never written again, and a list the file has wins.
+#[test]
+fn the_old_title_row_switches_become_the_list() {
+    let read = |text: &str| jsonc::parse::<Settings>(text).expect("valid jsonc").sanitized();
+    let old = read(r#"{ "title_ports": false, "title_pull_request": false }"#);
+    assert_eq!(old.title_row().hidden().collect::<Vec<_>>(), [TitlePart::Ports, TitlePart::PullRequest]);
+    assert!(old.title_shows(TitlePart::AgentGauge) && old.title_shows(TitlePart::BranchStatus));
+    let json = serde_json::to_value(&old).expect("serializes");
+    for gone in ["title_branch_status", "title_agent_gauge", "title_ports", "title_pull_request"] {
+        assert!(json.get(gone).is_none(), "{gone} is not written back");
     }
+    assert_eq!(json["title_row"].as_array().map(Vec::len), Some(TitlePart::ALL.len() - 2));
+    let both = read(r#"{ "title_ports": false, "title_row": ["ports", "space"] }"#);
+    assert!(both.title_shows(TitlePart::Ports), "the list wins over the old switch");
+    // Changing the row of an old file writes the list, which then holds.
+    let mut changed: Settings = jsonc::parse(r#"{ "title_agent_gauge": false }"#).expect("valid jsonc");
+    changed.show_title_part(TitlePart::AgentGauge, true);
+    assert!(changed.title_row.as_ref().is_some_and(|row| row.is_default()));
 }
 
 /// Files from before the three densities have one switch for one-line rows: it becomes Compact,

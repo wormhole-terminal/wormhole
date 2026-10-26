@@ -26,6 +26,10 @@
 //! Every page reads the settings as JSON each frame (`Values`), twice, so its two new keys cost every page
 //! about 10; the colour pickers' check, which no longer builds hex strings, gave back 8. The budgets
 //! were set again from that frame, which also took in a drift of up to 20 on Terminal and Updates.
+//! Every page rose by 19 when the settings gained the title row's list of parts (one more heap list in
+//! each copy of them a frame makes; Advanced, which reads them twice as often, by 38); Appearance by
+//! about 585 more when its four switches for the title row's extras became that list, a row with a grip
+//! and a switch per part; and the search fell by 512 with three entries fewer.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -44,20 +48,20 @@ const SLACK: u64 = 20;
 /// keeps), and of the results page of a search for a word found in several pages; a frame may make
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 14] = [
-    ("Profile", 6592),
-    ("Appearance", 15585),
-    ("Fonts", 7290),
-    ("Terminal", 9602),
-    ("Sessions", 13518),
-    ("Git", 4398),
-    ("Agents", 26297),
-    ("Notifications", 7713),
-    ("MenuBar", 6026),
-    ("Updates", 5480),
-    ("Advanced", 3957),
-    ("Projects", 8868),
-    ("FeatureFlags", 3859),
-    ("search", 12244),
+    ("Profile", 6611),
+    ("Appearance", 16190),
+    ("Fonts", 7309),
+    ("Terminal", 9621),
+    ("Sessions", 13538),
+    ("Git", 4417),
+    ("Agents", 26316),
+    ("Notifications", 7732),
+    ("MenuBar", 6045),
+    ("Updates", 5499),
+    ("Advanced", 3995),
+    ("Projects", 8887),
+    ("FeatureFlags", 3878),
+    ("search", 11732),
 ];
 
 fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {

@@ -28,6 +28,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Settings → Appearance → Branch colour picks the colour of git branch names and their chips: the
   theme's own, your primary colour, or any colour you choose (`branch_color`, `branch_color_custom`).
   A colour that wouldn't read on the window is made readable, as the theme's is.
+- You choose what the title row shows and where. Right-click the title row to show or hide each part:
+  the folder, the branch and its status, the terminal's name and status, the agent's model and context,
+  open ports, the pull request, Open in… and the split buttons. Settings → Appearance → Title row lists
+  them too: drag a part to move it, and the parts above the flexible space sit at the row's left, the
+  others at its right (`title_row`). The four switches for the row's extras became this list; what you
+  turned off stays hidden.
 
 ### Fixed
 

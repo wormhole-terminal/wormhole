@@ -61,20 +61,9 @@ pub(super) const APPEARANCE: &[Group] = &[
     ),
     group(
         SETTINGS_APPEARANCE_GROUP_TITLE_ROW,
-        &[
-            entry("title-branch-status", SETTINGS_APPEARANCE_TITLE_BRANCH_STATUS, &["title_branch_status"])
-                .with_description(SETTINGS_APPEARANCE_TITLE_BRANCH_STATUS_DESCRIPTION)
-                .with_keywords(SETTINGS_APPEARANCE_TITLE_BRANCH_STATUS_KEYWORDS),
-            entry("title-agent-gauge", SETTINGS_APPEARANCE_TITLE_AGENT_GAUGE, &["title_agent_gauge"])
-                .with_description(SETTINGS_APPEARANCE_TITLE_AGENT_GAUGE_DESCRIPTION)
-                .with_keywords(SETTINGS_APPEARANCE_TITLE_AGENT_GAUGE_KEYWORDS),
-            entry("title-ports", SETTINGS_APPEARANCE_TITLE_PORTS, &["title_ports"])
-                .with_description(SETTINGS_APPEARANCE_TITLE_PORTS_DESCRIPTION)
-                .with_keywords(SETTINGS_APPEARANCE_TITLE_PORTS_KEYWORDS),
-            entry("title-pull-request", SETTINGS_APPEARANCE_TITLE_PULL_REQUEST, &["title_pull_request"])
-                .with_description(SETTINGS_APPEARANCE_TITLE_PULL_REQUEST_DESCRIPTION)
-                .with_keywords(SETTINGS_APPEARANCE_TITLE_PULL_REQUEST_KEYWORDS),
-        ],
+        &[entry("title-row", SETTINGS_APPEARANCE_TITLE_ROW, &["title_row"])
+            .with_description(SETTINGS_APPEARANCE_TITLE_ROW_DESCRIPTION)
+            .with_keywords(SETTINGS_APPEARANCE_TITLE_ROW_KEYWORDS)],
     ),
     group(
         SETTINGS_APPEARANCE_GROUP_FILE_ICONS,

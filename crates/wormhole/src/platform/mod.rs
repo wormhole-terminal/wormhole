@@ -75,7 +75,7 @@ use fallback as os;
 #[cfg(target_os = "macos")]
 use macos as os;
 
-pub use anchor::{Anchor, on_right_click};
+pub use anchor::{Anchor, on_right_click, on_right_click_except};
 pub use menu::{Icon, Item, Menu, Swatch, run_on};
 pub use popover::{ColourChange, Handle, Popover};
 

@@ -1,5 +1,6 @@
 //! Appearance: the live preview, the mode and the theme cards, the primary and the branch
-//! color as swatches, the window's opacity, blur and status bar, the file icons. Under Reduce
+//! color as swatches, the window's opacity, blur and status bar, the title row's parts
+//! (`title_row`), the file icons. Under Reduce
 //! Transparency the opacity slider is off and says why; with the blur off below 95 % the
 //! blur's row warns.
 
@@ -19,7 +20,7 @@ use wormhole_core::theme::tokens::{BranchTint, Color, ThemeTokens, Translucency}
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use super::{open_button, stage};
+use super::{open_button, stage, title_row};
 use crate::select::Choice;
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
@@ -83,10 +84,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     ),
     toggle!("column-dividers", column_dividers),
     toggle!("status-bar", status_bar),
-    toggle!("title-branch-status", title_branch_status),
-    toggle!("title-agent-gauge", title_agent_gauge),
-    toggle!("title-ports", title_ports),
-    toggle!("title-pull-request", title_pull_request),
+    Setting::custom("title-row", title_row::draw_control).below(title_row::draw_parts),
     Setting::custom("icon-theme", draw_icon_select),
     Setting::custom("icon-themes-folder", |_, _| {
         open_button(

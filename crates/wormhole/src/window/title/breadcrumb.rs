@@ -1,8 +1,8 @@
-//! The terminal's title row content: where the selected
+//! The terminal's title row's crumbs: where the selected
 //! terminal is and what it does, as the folder (cut in its middle where it is long, with the
-//! hover card of `path_card` and the path menu of `path_menu`), the branch chip, and the terminal's tool and name with its live
-//! status. It is one keyboard stop. Open in… and the splits sit at the right end of the row
-//! (`window::title`).
+//! hover card of `path_card` and the path menu of `path_menu`), the branch chip, and the terminal's
+//! tool and name with its live status. `row` lays them out where the person put them, and the end
+//! that holds the name is one keyboard stop.
 //!
 //! When the row is narrow its parts give way in the order core's `layout::title_row` says; this
 //! measures them, asks, and draws what is left.
@@ -13,6 +13,7 @@ use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
+use wormhole_core::view::layout::title_parts::TitlePart;
 use wormhole_core::view::layout::title_row::{Chip, Face, PathShown, RowWants, fit_row, path_steps};
 
 use crate::settings::{UiColors, settings_in, ui_in};
@@ -20,39 +21,10 @@ use crate::style::{self, TextRole};
 use crate::terminal_view::{Status, TerminalSummary};
 use crate::window::Workspace;
 use crate::window::title::path_card::Over;
-use crate::window::title::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
+use crate::window::title::row::{self, has};
+use crate::window::title::{Facts, MORE_W, OPEN_IN_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
 
 impl Workspace {
-    /// The terminal's title row content: its breadcrumb, the row's keyboard stop with its ring.
-    pub(in crate::window) fn render_title_strip(
-        &self,
-        plan: &TitlePlan,
-        window: &Window,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let ui = ui_in(&self.profile, cx);
-        // The strip is one keyboard stop; its ring round the breadcrumb.
-        let ring = self.ring(wormhole_core::view::focus::Area::Tabs, window);
-        let crumb = div()
-            .relative()
-            .min_w_0()
-            .flex()
-            .child(self.render_breadcrumb(plan, cx))
-            .when(ring, |d| d.child(style::focus_ring(ui, style::RingPlacement::Outside, ui.radius)));
-        let strip = div()
-            .id("title-strip")
-            // Clicks here are for the breadcrumb, not for dragging the window.
-            .occlude()
-            .flex()
-            .items_center()
-            .gap_1()
-            .min_w_0()
-            .max_w_full()
-            .overflow_hidden()
-            .child(crumb);
-        self.area_container(wormhole_core::view::focus::Area::Tabs, strip, cx).into_any_element()
-    }
-
     /// What the title row says about the active terminal, as of now.
     pub(in crate::window) fn title_facts(&self, cx: &App) -> Facts {
         let session = self.active_session();
@@ -62,19 +34,9 @@ impl Workspace {
             .as_deref()
             .map(|cwd| wormhole_core::view::sidebar::display_path(cwd, crate::style::home_dir()));
         // The branch only while git's answer is about the folder the terminal is in now.
-        let branch = session
-            .git
-            .status
-            .as_ref()
-            .filter(|_| session.git.cwd == summary.cwd)
-            .map(|status| status.branch.clone());
-        let parent = session
-            .git
-            .status
-            .as_ref()
-            .filter(|_| session.git.cwd == summary.cwd)
-            .and_then(|status| status.superproject.as_ref())
-            .map(|parent| parent.phrase());
+        let status = session.git.status.as_ref().filter(|_| session.git.cwd == summary.cwd);
+        let branch = status.map(|status| status.branch.clone());
+        let parent = status.and_then(|status| status.superproject.as_ref()).map(|parent| parent.phrase());
         Facts {
             id: session.id,
             folder,
@@ -83,11 +45,11 @@ impl Workspace {
             agent: summary.agent,
             told: summary.source.told(),
             label: session.pane.label(),
-            // Shown, the status bar has the state at its end; the title row doesn't repeat it.
-            words: crumb_words(summary).filter(|_| !settings_in(&self.profile, cx).status_bar),
+            words: crumb_words(summary).filter(|_| self.crumb_words_shown(cx)),
             branch,
             parent,
             extras: self.extra_facts(cx),
+            row: settings_in(&self.profile, cx).title_row().into_owned(),
         }
     }
 
@@ -99,10 +61,13 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> TitlePlan {
         let facts = self.title_facts(cx);
+        let ends = row::ends(&facts);
+        let drawn = |part| ends.0.parts.contains(&part) || ends.1.parts.contains(&part);
         let measure = Measure::new(window, cx);
         let steps = facts
             .shown
             .as_deref()
+            .filter(|_| drawn(TitlePart::Folder))
             .map(|shown| {
                 path_steps(shown, PATH_LAST_MAX, |face, text| match face {
                     Face::Parents => measure.label(text, FontWeight::NORMAL),
@@ -110,24 +75,31 @@ impl Workspace {
                 })
             })
             .unwrap_or_default();
-        // The split buttons are always there; Open in… and its chevron only for a terminal that
-        // has a folder to open.
-        let (group, folded) = match facts.folder {
-            Some(_) => (ROW_GAP + crate::window::title::OPEN_IN_W + SPLITS_W, ROW_GAP + MORE_W),
-            None => (ROW_GAP + SPLITS_W, ROW_GAP + MORE_W),
+        // Open in… (which `has` keeps for a terminal with a folder) and the splits, each where it is
+        // arranged; folded they are one `⋯`.
+        let buttons = [(TitlePart::OpenIn, OPEN_IN_W), (TitlePart::Splits, SPLITS_W)]
+            .into_iter()
+            .filter(|(part, _)| drawn(*part))
+            .map(|(_, width)| width)
+            .collect::<Vec<_>>();
+        let (group, folded) = match buttons.is_empty() {
+            true => (0.0, 0.0),
+            false => (ROW_GAP + buttons.iter().sum::<f32>(), ROW_GAP + MORE_W),
         };
-        // A crumb before the terminal brings a gap, the separator and a gap.
-        let before = 2.0 * CRUMB_GAP + style::GLYPH;
         let (extras, ports_narrower) = Self::extras_wanted(&facts.extras, &measure);
+        let terminal = has(&facts, TitlePart::Terminal);
         let wants = RowWants {
             path: steps.iter().map(|step| CRUMB_GAP + step.width).collect(),
             // The status words and, in a submodule, whose it is: they give way together.
-            words: [facts.words.as_deref(), facts.parent.as_deref()]
-                .into_iter()
-                .flatten()
-                .map(|text| CRUMB_GAP + measure.caption(text))
-                .sum(),
-            chip: facts.branch.as_ref().map(|branch| {
+            words: [
+                facts.words.as_deref().filter(|_| drawn(TitlePart::TerminalStatus)),
+                facts.parent.as_deref().filter(|_| drawn(TitlePart::Branch)),
+            ]
+            .into_iter()
+            .flatten()
+            .map(|text| CRUMB_GAP + measure.caption(text))
+            .sum(),
+            chip: facts.branch.as_ref().filter(|_| drawn(TitlePart::Branch)).map(|branch| {
                 let text = branch.as_deref().unwrap_or("detached");
                 Chip {
                     natural: (measure.caption_medium(text) + CHIP_CHROME).min(style::BRANCH_CHIP_MAX),
@@ -138,37 +110,33 @@ impl Workspace {
             ports_narrower,
             group,
             folded,
-            name: measure.label(&facts.label, FontWeight::MEDIUM).min(style::TITLE_TAB_MAX_W),
-            name_min: CRUMB_TEXT_MIN,
-            // The padding, the folder's icon and its separator, the branch's separator, and the
-            // terminal's status tile and the gap before its name.
-            fixed: 2.0 * CRUMB_PAD
-                + facts.folder.as_ref().map_or(0.0, |_| style::GLYPH + before)
-                + facts.branch.as_ref().map_or(0.0, |_| before)
-                + style::TILE_TITLE
-                + CRUMB_GAP,
+            name: match terminal {
+                true => measure.label(&facts.label, FontWeight::MEDIUM).min(style::TITLE_TAB_MAX_W),
+                false => 0.0,
+            },
+            name_min: if terminal { CRUMB_TEXT_MIN } else { 0.0 },
+            fixed: row::fixed_width(&ends),
         };
         let fit = fit_row(self.title_row_width(window), &wants);
-        TitlePlan { app: crate::open_in::OpenIn::resolved(cx), facts, steps, fit, tint }
+        TitlePlan { app: crate::open_in::OpenIn::resolved(cx), facts, ends, steps, fit, tint }
     }
 
-    /// The selected terminal's breadcrumb: folder › branch › the terminal's tool and name.
-    /// The folder shows in Finder, has its hover card and a menu; the branch opens the compare
-    /// picker; the name is what runs, with its live status next to the tool's icon.
-    fn render_breadcrumb(&self, plan: &TitlePlan, cx: &mut Context<Self>) -> AnyElement {
+    /// The folder: it shows in Finder, has its hover card and the Finder-style path menu.
+    pub(in crate::window) fn render_folder_crumb(
+        &self,
+        plan: &TitlePlan,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
         let ui = ui_in(&self.profile, cx);
-        let Facts { id, folder, status, agent, told, label, words, branch, parent, .. } = &plan.facts;
-        let fit = &plan.fit;
+        let folder = plan.facts.folder.clone()?;
         // Under a tint the folder's icon and its parents step up to the main text color, so they
         // keep their contrast on it.
         let soft = if plan.tint.is_some() { ui.text } else { ui.muted };
-
-        let separator = || div().flex_none().text_color(ui.faint).child(style::icon(IconName::ChevronRight));
-        let path = folder.clone().map(|folder| {
-            let text = match fit.path {
-                PathShown::Step(ix) => Some(&plan.steps[ix].text),
-                PathShown::Icon | PathShown::None => None,
-            };
+        let text = match plan.fit.path {
+            PathShown::Step(ix) => Some(&plan.steps[ix].text),
+            PathShown::Icon | PathShown::None => None,
+        };
+        Some(
             div()
                 .id("crumb-folder")
                 .debug_selector(|| "crumb-folder".to_string())
@@ -217,53 +185,84 @@ impl Workspace {
                         this.open_path_menu(window, cx);
                     }),
                 )
-        });
-        let branch = branch.as_ref().zip(fit.chip).map(|(branch, width)| {
-            let (color, fill, name) = match branch {
-                Some(branch) => (ui.branch, ui.branch_bg, branch.as_str()),
-                None => (ui.warning_text, ui.banner_warning, "detached"),
-            };
-            // Down to its glyph, which the chip keeps.
-            let text = width >= CHIP_CHROME + CRUMB_TEXT_MIN / 2.0;
-            div()
-                .id("crumb-branch")
-                .flex_none()
-                .w(px(width))
-                .cursor_pointer()
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .h(px(CHIP_H))
-                        .w_full()
-                        .gap_1()
-                        .pl_1()
-                        .when(text, |d| d.pr_2())
-                        .when(!text, |d| d.pr_1())
-                        .overflow_hidden()
-                        .rounded(ui.radius_chip)
-                        .bg(fill)
-                        .text_color(color)
-                        .text_caption()
-                        .font_weight(FontWeight::MEDIUM)
-                        .child(Icon::new(IconName::GitBranch).xsmall())
-                        .when(text, |d| d.child(div().min_w_0().truncate().child(name.to_string()))),
-                )
-                .on_click(cx.listener(|this, _, window, cx| {
-                    this.pick_branch(window, cx);
-                }))
-        });
+                .into_any_element(),
+        )
+    }
 
-        // The terminal: a small status tile (the tool's own icon, its live status round it), then
-        // the name and how it is doing.
+    /// The branch chip, which opens the compare picker, and in a submodule whose it is ("in
+    /// terminal") after it.
+    pub(in crate::window) fn render_branch_crumb(
+        &self,
+        plan: &TitlePlan,
+        cx: &mut Context<Self>,
+    ) -> Option<Vec<AnyElement>> {
+        let ui = ui_in(&self.profile, cx);
+        let (branch, width) = plan.facts.branch.as_ref().zip(plan.fit.chip)?;
+        let (color, fill, name) = match branch {
+            Some(branch) => (ui.branch, ui.branch_bg, branch.as_str()),
+            None => (ui.warning_text, ui.banner_warning, "detached"),
+        };
+        // Down to its glyph, which the chip keeps.
+        let text = width >= CHIP_CHROME + CRUMB_TEXT_MIN / 2.0;
+        let chip = div()
+            .id("crumb-branch")
+            .flex_none()
+            .w(px(width))
+            .cursor_pointer()
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .h(px(CHIP_H))
+                    .w_full()
+                    .gap_1()
+                    .pl_1()
+                    .when(text, |d| d.pr_2())
+                    .when(!text, |d| d.pr_1())
+                    .overflow_hidden()
+                    .rounded(ui.radius_chip)
+                    .bg(fill)
+                    .text_color(color)
+                    .text_caption()
+                    .font_weight(FontWeight::MEDIUM)
+                    .child(Icon::new(IconName::GitBranch).xsmall())
+                    .when(text, |d| d.child(div().min_w_0().truncate().child(name.to_string()))),
+            )
+            .on_click(cx.listener(|this, _, window, cx| {
+                this.pick_branch(window, cx);
+            }));
+        let whose = plan.facts.parent.clone().filter(|_| plan.fit.words).map(|phrase| {
+            let tip = SharedString::from(format!("A submodule: {phrase}"));
+            div()
+                .id("crumb-superproject")
+                .flex_none()
+                .ml_2()
+                .whitespace_nowrap()
+                .text_caption()
+                .text_color(ui.muted)
+                .tooltip(move |window, cx| Tooltip::new(tip.clone()).build(window, cx))
+                .child(phrase)
+                .into_any_element()
+        });
+        Some(std::iter::once(chip.into_any_element()).chain(whose).collect())
+    }
+
+    /// The terminal: a small status tile (the tool's own icon, its live status round it), then its
+    /// name, cut at its end where the row is short of room.
+    pub(in crate::window) fn render_terminal_crumb(
+        &self,
+        plan: &TitlePlan,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let ui = ui_in(&self.profile, cx);
+        let Facts { id, status, agent, told, label, .. } = &plan.facts;
         let tile = terminal_tile(("terminal-tile", *id as u64), *agent, *told, *status, ui, cx);
-        let attention = *status == Status::Attention;
-        let failed = *status == Status::Failed;
         // Room round the tile: the box clips a long name sideways, and GPUI's clip is never one axis
         // only, so a box hugging the tile would cut its shadow off at the left and the bottom. The
         // room on the left is taken back by the margin, so nothing moves.
-        let process = div()
+        div()
             .id("crumb-process")
+            .debug_selector(|| "crumb-process".to_string())
             .py(px(SHADOW_ROOM))
             .pl(px(SHADOW_ROOM))
             .ml(px(-SHADOW_ROOM))
@@ -276,62 +275,45 @@ impl Workspace {
             .child(
                 div()
                     .min_w_0()
-                    .max_w(px(fit.name))
+                    .max_w(px(plan.fit.name))
                     .truncate()
                     .text_label()
                     .font_weight(FontWeight::MEDIUM)
                     .text_color(ui.text)
                     .child(label.clone()),
             )
-            .children(words.clone().filter(|_| fit.words).map(|words| {
-                div()
-                    .flex_none()
-                    .whitespace_nowrap()
-                    .text_caption()
-                    .text_color(match () {
-                        _ if attention => ui.attention_text,
-                        _ if failed => ui.danger_text,
-                        _ => ui.muted,
-                    })
-                    .child(words)
-            }));
+            .into_any_element()
+    }
 
-        // The branch's status (a dot, ↑2 ↓1) follows its chip, before the separator.
-        let status = branch.is_some().then(|| self.render_branch_status(plan, cx)).flatten();
-        // A terminal in a submodule says whose it is, after the branch: "in terminal".
-        let whose = parent.clone().filter(|_| fit.words).map(|phrase| {
-            let tip = SharedString::from(format!("A submodule: {phrase}"));
+    /// How the terminal is doing ("working · 4m"), in the colour of its state.
+    pub(in crate::window) fn render_terminal_words(
+        &self,
+        plan: &TitlePlan,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let ui = ui_in(&self.profile, cx);
+        let words = plan.facts.words.clone().filter(|_| plan.fit.words)?;
+        let color = match plan.facts.status {
+            Status::Attention => ui.attention_text,
+            Status::Failed => ui.danger_text,
+            _ => ui.muted,
+        };
+        Some(
             div()
-                .id("crumb-superproject")
                 .flex_none()
                 .whitespace_nowrap()
                 .text_caption()
-                .text_color(ui.muted)
-                .tooltip(move |window, cx| Tooltip::new(tip.clone()).build(window, cx))
-                .child(phrase)
-                .into_any_element()
-        });
-        let mut crumbs: Vec<AnyElement> = Vec::new();
-        for part in [
-            path.map(|path| vec![path.into_any_element()]),
-            branch.map(|chip| std::iter::once(chip.into_any_element()).chain(whose).chain(status).collect()),
-        ]
-        .into_iter()
-        .flatten()
-        {
-            crumbs.extend(part);
-            crumbs.push(separator().into_any_element());
-        }
-        crumbs.push(process.into_any_element());
-        div()
-            .flex()
-            .items_center()
-            .gap_2()
-            .min_w_0()
-            .overflow_hidden()
-            .px_2()
-            .children(crumbs)
-            .into_any_element()
+                .text_color(color)
+                .child(words)
+                .into_any_element(),
+        )
+    }
+
+    /// Whether the row says how the terminal is doing: it shows the part, and the status bar, which
+    /// has the state at its end, isn't shown (the row doesn't repeat it).
+    fn crumb_words_shown(&self, cx: &App) -> bool {
+        let settings = settings_in(&self.profile, cx);
+        !settings.status_bar && settings.title_shows(TitlePart::TerminalStatus)
     }
 }
 
@@ -340,7 +322,7 @@ impl Workspace {
 pub(in crate::window) const CRUMB_GAP: f32 = 8.0;
 /// The room the crumb's clip leaves round the terminal's tile, for its shadow.
 const SHADOW_ROOM: f32 = 4.0;
-const CRUMB_PAD: f32 = 8.0;
+pub(in crate::window) const CRUMB_PAD: f32 = 8.0;
 const CRUMB_TEXT_MIN: f32 = 24.0;
 /// A branch chip's glyph, gap and padding round its text, and its width when it is the glyph alone.
 const CHIP_CHROME: f32 = 28.0;
@@ -394,8 +376,8 @@ impl Workspace {
     /// else to redraw the window (an agent thinking quietly); redraw when it would read
     /// differently.
     pub(in crate::window) fn crumb_tick(&mut self, cx: &mut Context<Self>) {
-        // The status bar's tick redraws its own copy.
-        if settings_in(&self.profile, cx).status_bar {
+        // The status bar's tick redraws its own copy, and a row without the words has nothing to redraw.
+        if !self.crumb_words_shown(cx) {
             return;
         }
         let now = crumb_words(&self.active_session().pane.summary);
@@ -407,8 +389,7 @@ impl Workspace {
 
     /// The words the title row is drawn with, for the tick to compare the next ones with.
     pub(in crate::window) fn crumb_drawn(&self, cx: &App) -> Option<String> {
-        crumb_words(&self.active_session().pane.summary)
-            .filter(|_| !settings_in(&self.profile, cx).status_bar)
+        crumb_words(&self.active_session().pane.summary).filter(|_| self.crumb_words_shown(cx))
     }
 }
 

@@ -307,6 +307,7 @@ fn notice(text: &str) -> Option<String> {
     let unknown: Vec<String> = keys
         .into_iter()
         .filter(|key| *key != "$schema" && !key.starts_with("x-") && !known.contains(key))
+        .filter(|key| !settings::LEGACY_SETTINGS.contains(&key.as_str()))
         .map(|key| match key.as_str() {
             "accent_color" => "`accent_color` is now `primary_color`".to_string(),
             "liquid_glass" => {
@@ -634,6 +635,18 @@ mod tests {
         // While the theme's own is in use, a color kept for later is not in the way.
         config.apply(Settings { theme_primary: Some(true), ..chosen("orange") });
         assert_eq!(config.error, None);
+    }
+
+    /// A file an older build wrote has the keys that later moved into another setting: they are still
+    /// read, so the file says nothing that does nothing, and no notice says it does.
+    #[test]
+    fn keys_still_read_from_older_files_are_not_reported() {
+        let (_dir, path) =
+            config_file(r#"{ "title_ports": false, "title_pull_request": true, "compact_sidebar": false }"#);
+        let mut config = Config::at(path);
+        config.reload();
+        assert_eq!(config.error, None);
+        assert!(!config.settings.title_shows(crate::view::layout::title_parts::TitlePart::Ports));
     }
 
     #[test]

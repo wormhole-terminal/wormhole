@@ -68,21 +68,9 @@ settings-appearance-status-bar = Show status bar
 
 settings-appearance-group-title-row = Title row
 
-settings-appearance-title-branch-status = Branch status
-    .description = A dot while the tree has uncommitted changes, and how many commits the branch is ahead of or behind its upstream (↑2 ↓1)
-    .keywords = git dirty uncommitted ahead behind upstream push pull sync commits chip
-
-settings-appearance-title-agent-gauge = Agent model and context
-    .description = The model a coding agent runs and how much of its context window is used, when the agent reports it (Claude Code does, through its status line)
-    .keywords = claude model context window tokens percent compact meter usage
-
-settings-appearance-title-ports = Open ports
-    .description = The ports a terminal's programs listen on, as chips that open localhost in your browser
-    .keywords = localhost server dev http listen browser network
-
-settings-appearance-title-pull-request = Pull request
-    .description = The branch's pull request and how its checks and reviews stand: a link in the title row and a mark on the folder's band in the sidebar, with a notification when its checks finish. Asked of the GitHub CLI (gh), only in a trusted project, and only when gh is installed and signed in
-    .keywords = github gh pr merge review link ci checks actions build failed passed draft approved
+settings-appearance-title-row = Parts and order
+    .description = What the title row shows, and where. Drag a part to move it: the ones above the flexible space sit at the row's left, the others at its right. Right-click the title row to show or hide them there. The pull request is asked of the GitHub CLI (gh), only in a trusted project; hidden, it isn't asked for, and the folder's band in the sidebar has no mark for it either
+    .keywords = toolbar customize arrange order reorder rearrange move hide show folder path branch git dirty uncommitted ahead behind status working claude model context window ports localhost server pull request pr github gh checks open in editor split buttons
 
 ## File icons
 

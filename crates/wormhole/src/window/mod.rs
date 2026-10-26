@@ -141,7 +141,7 @@ mod test_access;
 #[cfg(test)]
 pub(crate) mod test_harness;
 mod tick;
-mod title;
+pub(crate) mod title;
 mod welcome_host;
 #[cfg(test)]
 mod welcome_tests;
@@ -228,7 +228,8 @@ pub struct Workspace {
     ports_menu: bool,
     /// The path's hover card, a popover under the title row's folder.
     path_card: crate::window::title::path_card::PathCard,
-    /// Where the title row's folder is drawn: the card and the path menu open under it.
+    /// Where the title row's folder is drawn: the card and the path menu open under it. In a row
+    /// that doesn't show the folder, its keyboard stop, which ⌃↩'s menu of the row opens under.
     path_anchor: crate::platform::Anchor,
     /// The other windows' terminals as the bar counts them, by window id, read on the tick.
     status_others: Vec<(i64, Vec<self::status_bar::Counted>)>,

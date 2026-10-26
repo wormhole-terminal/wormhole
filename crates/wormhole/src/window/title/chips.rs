@@ -2,15 +2,16 @@
 //! `layout::title_row` needs to decide what fits, and drawing the ones it keeps. What each says
 //! comes from `window::title::extras`; the pieces are `style::extras`.
 //!
-//! The branch's status follows the branch chip in the breadcrumb. The agent's model and context,
-//! the ports and the pull request sit at the right end of the row, in front of Open in…, in the
-//! stretch that is otherwise the window's title bar. Every chip is its own button for the pointer
-//! and for VoiceOver.
+//! Each is a part of the row of its own (`row`), wherever the person put it: by default the branch's
+//! status follows the branch chip, and the agent's model and context, the ports and the pull request
+//! sit at the right end, in front of Open in…. Every chip is its own button for the pointer and for
+//! VoiceOver.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Selectable;
 use gpui_kit::component::popover::Popover;
 use gpui_kit::component::tooltip::Tooltip;
+use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::usage::Gauge;
 use wormhole_core::git::pr::{Checks, PrState, PullRequest};
@@ -25,7 +26,7 @@ use crate::window::title::TitlePlan;
 use crate::window::title::breadcrumb::{CRUMB_GAP, Measure};
 use crate::window::title::extras::ExtraFacts;
 
-/// The gap in front of each chip at the right end of the row (`ml_2`).
+/// The gap in front of each chip (the row's, and the ports' `ml_2` between theirs).
 const CHIP_GAP: f32 = 8.0;
 /// The menu under "+n", wide enough for `localhost:65535`.
 const MORE_PORTS_W: f32 = 168.0;
@@ -110,35 +111,35 @@ impl Workspace {
         )
     }
 
-    /// The model and context, the ports and the pull request, the ones the row had room for.
-    pub(in crate::window) fn render_title_extras(
+    /// The agent's model and context, if the row had room for it.
+    pub(in crate::window) fn render_gauge_chip(&self, plan: &TitlePlan, cx: &App) -> Option<AnyElement> {
+        let gauge = plan.facts.extras.gauge.as_ref().filter(|_| plan.fit.extras.shows(Extra::Gauge))?;
+        Some(gauge_chip(gauge, ui_in(&self.profile, cx)))
+    }
+
+    /// The ports, as many chips as the row had room for.
+    pub(in crate::window) fn render_port_chips(
         &self,
         plan: &TitlePlan,
         cx: &mut Context<Self>,
-    ) -> Option<AnyElement> {
+    ) -> Option<Vec<AnyElement>> {
+        let ports = &plan.facts.extras.ports;
+        if ports.is_empty() || !plan.fit.extras.shows(Extra::Ports) {
+            return None;
+        }
         let ui = ui_in(&self.profile, cx);
-        let (facts, extras) = (&plan.facts.extras, &plan.fit.extras);
-        let mut chips: Vec<AnyElement> = Vec::new();
-        if let Some(gauge) = facts.gauge.as_ref().filter(|_| extras.shows(Extra::Gauge)) {
-            chips.push(gauge_chip(gauge, ui));
-        }
-        if extras.shows(Extra::Ports) {
-            chips.extend(self.port_chips(&facts.ports, plan.fit.ports_step, ui, cx));
-        }
-        if let Some(pr) = facts.pull_request.as_ref().filter(|_| extras.shows(Extra::PullRequest)) {
-            chips.push(pull_request_chip(pr, ui));
-        }
-        (!chips.is_empty()).then(|| {
-            // Its stretch of the row is no longer the window's title bar: clicks stop here.
-            div()
-                .id("title-extras")
-                .occlude()
-                .flex_none()
-                .flex()
-                .items_center()
-                .children(chips)
-                .into_any_element()
-        })
+        Some(self.port_chips(ports, plan.fit.ports_step, ui, cx))
+    }
+
+    /// The branch's pull request, if the row had room for it.
+    pub(in crate::window) fn render_pull_request_chip(
+        &self,
+        plan: &TitlePlan,
+        cx: &App,
+    ) -> Option<AnyElement> {
+        let extras = &plan.fit.extras;
+        let pr = plan.facts.extras.pull_request.as_ref().filter(|_| extras.shows(Extra::PullRequest))?;
+        Some(pull_request_chip(pr, ui_in(&self.profile, cx)))
     }
 
     /// A chip for each of the first ports, as many as the row has room for (`step` chips fewer
@@ -155,12 +156,14 @@ impl Workspace {
         let more = ports.len() - shown.len();
         let mut chips: Vec<AnyElement> = shown
             .iter()
-            .map(|&port| {
+            .enumerate()
+            .map(|(ix, &port)| {
                 let words = SharedString::from(port_words(port));
                 let tip = words.clone();
                 div()
                     .id(("title-port", u64::from(port)))
-                    .ml_2()
+                    // The row puts the gap before the first.
+                    .when(ix > 0, |d| d.ml_2())
                     .role(Role::Button)
                     .aria_label(words)
                     .cursor_pointer()
@@ -233,7 +236,6 @@ fn gauge_chip(gauge: &Gauge, ui: UiColors) -> AnyElement {
     let tip = words.clone();
     div()
         .id("title-gauge")
-        .ml_2()
         .role(Role::Group)
         .aria_label(words)
         .child(style::agent_gauge(ui, gauge.model.clone().map(SharedString::from), context))
@@ -266,7 +268,6 @@ fn pull_request_chip(pr: &PullRequest, ui: UiColors) -> AnyElement {
     let tip = words.clone();
     div()
         .id("title-pull-request")
-        .ml_2()
         .role(Role::Link)
         .aria_label(words)
         .cursor_pointer()

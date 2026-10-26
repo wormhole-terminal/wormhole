@@ -1,13 +1,17 @@
 //! Drag-and-drop reordering of the items in a section: the drag payload and its picture,
-//! and the overlay that draws where a dragged item would land.
+//! and the overlay that draws where a dragged item would land; and the row of a list a person
+//! arranges in Settings (the title row's parts), which moves the same way.
 
 use std::cell::RefCell;
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::ActiveTheme as _;
+use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::scale::{DROP_LINE_W, Edges, TextRole};
+use super::buttons::icon;
+use super::scale::{CONTROL_H, DRAG_LIFT_OPACITY, DROP_LINE_W, Edges, ITEM_LEAD_W, TextRole};
 use crate::settings::UiColors;
 
 /// Moves an item from one index of its list to another (see [`Reorder`]).
@@ -129,6 +133,87 @@ fn drop_target(id: ElementId, ui: UiColors, reorder: Reorder) -> Stateful<Div> {
                 on_move(dragged.ix, ix, window, cx);
             }
         })
+}
+
+/// What one row of a list the person arranges in Settings is made of (see [`arrange_row`]).
+pub struct ArrangeParts {
+    pub icon: IconName,
+    pub label: SharedString,
+    /// After the label, quieter: what the row means (the flexible space's rule).
+    pub note: Option<SharedString>,
+    /// Left out (a part the title row doesn't show): its icon and name are faint.
+    pub quiet: bool,
+    /// At the row's right end: its switch.
+    pub control: Option<AnyElement>,
+    /// Drag the row to move it within its list; `None` for one that stays where it is.
+    pub reorder: Option<Reorder>,
+}
+
+/// A row of a list the person arranges in Settings, [`CONTROL_H`] tall: a grip while it can be
+/// dragged (the drop line shows where it lands), its icon and name, a note, and its switch at the
+/// right end. A row that can't move keeps the grip's room, so the names line up.
+#[track_caller]
+pub fn arrange_row(id: impl Into<ElementId>, ui: UiColors, parts: ArrangeParts) -> Div {
+    let id = id.into();
+    let dragged = parts.reorder.as_ref().is_some_and(|reorder| reorder.dragged);
+    let grip = div()
+        .flex_none()
+        .w(px(ITEM_LEAD_W))
+        .flex()
+        .justify_center()
+        .text_color(ui.faint)
+        .when(parts.reorder.is_some(), |d| d.child(Icon::new(IconName::GripVertical).xsmall()));
+    let line =
+        div()
+            .id(id.clone())
+            .flex()
+            .items_center()
+            .gap_2()
+            .h(px(CONTROL_H))
+            .pr_1()
+            .rounded(ui.radius)
+            .text_body()
+            .when(parts.reorder.is_some(), |d| d.cursor_grab())
+            .child(grip)
+            .child(
+                div()
+                    .flex_none()
+                    .text_color(if parts.quiet { ui.faint } else { ui.muted })
+                    .child(icon(parts.icon)),
+            )
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .flex()
+                    .items_baseline()
+                    .gap_2()
+                    .child(
+                        div()
+                            .flex_none()
+                            .text_color(if parts.quiet { ui.muted } else { ui.text })
+                            .child(parts.label),
+                    )
+                    .children(parts.note.map(|note| {
+                        div().min_w_0().truncate().text_caption().text_color(ui.muted).child(note)
+                    })),
+            )
+            .children(parts.control);
+    let (line, drop) = match parts.reorder {
+        Some(reorder) => {
+            let (line, drop) = draggable(line, id, ui, reorder);
+            (line, Some(drop))
+        }
+        None => (line, None),
+    };
+    div()
+        .relative()
+        .w_full()
+        .rounded(ui.radius)
+        .hover(|d| d.bg(ui.hover))
+        .when(dragged, |d| d.opacity(DRAG_LIFT_OPACITY))
+        .child(line)
+        .children(drop)
 }
 
 /// The row a dragged terminal would make a split with, or a dragged pane would join:

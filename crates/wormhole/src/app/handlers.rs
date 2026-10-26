@@ -21,7 +21,7 @@ use crate::actions::{
     ManageProfiles, Minimize, MoveWindowToProfile, NewProfile, NewWindow, OpenFolder, OpenRecent,
     OpenSettings, OpenSettingsAt, OpenWindowInProfile, PlayIntroAurora, PlayIntroCollapse, PlayIntroEmerge,
     PlayIntroFtl, PlayIntroTentacles, PlayIntroVortex, PlayIntroVoyage, PlayWelcomeCursor, PlayWelcomeLogo,
-    PlayWelcomePortal, ShowAll, ShowIntro, ShowKeyboardShortcuts, ShowLogs, SwitchProfile,
+    PlayWelcomePortal, RevealSetting, ShowAll, ShowIntro, ShowKeyboardShortcuts, ShowLogs, SwitchProfile,
     ToggleCommandPalette, ToggleFullScreen, ToggleMinimap, ToggleStatusBar, ToggleTerminalTabs,
     ToggleThemeStudio, Zoom,
 };
@@ -93,6 +93,10 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|open: &OpenSettingsAt, cx| {
         let section = open.0;
         cx.defer(move |cx| settings_window::open_settings(Some(section), cx))
+    });
+    cx.on_action(|reveal: &RevealSetting, cx| {
+        let id = reveal.0;
+        cx.defer(move |cx| settings_window::reveal_row(id, cx))
     });
     // ⌘O: a terminal in the picked folder, in the window in front (the status item's too).
     cx.on_action(|_: &OpenFolder, cx| cx.defer(status_item::open_folder));
