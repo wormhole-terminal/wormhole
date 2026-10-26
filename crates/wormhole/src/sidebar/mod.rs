@@ -21,11 +21,12 @@ use wormhole_core::view::sidebar::hints::CmdHold;
 use wormhole_core::view::sidebar::order::FrozenNumbers;
 use wormhole_core::view::sidebar::{Card, Entry, ListInput, Listing, SidebarNumbers, Splits, WindowSidebar};
 
-use self::glass::{GlassKind, Insets, LIST_CLIP, clip_probe, glass_key, probe};
+use self::glass::{LIST_CLIP, clip_probe};
 use crate::settings::{UiColors, settings_in, store_in, ui_in};
 use crate::sidebar::terminal_drag::Over;
-use crate::style::{self, TextRole};
+use crate::style::TextRole;
 
+mod card;
 mod demo;
 mod drag;
 mod facts;
@@ -381,6 +382,15 @@ impl Sidebar {
                 })
                 .collect()
         };
+        let cards = card::Cards {
+            listing: &listing,
+            infos,
+            ui,
+            metrics: frame.metrics,
+            glass: glass.as_ref(),
+            wash: &group_wash,
+            active: input.active,
+        };
         let held = cx.has_active_drag().then(|| input.terminal_drag.map(|(id, _)| id)).flatten();
         let mut items: Vec<AnyElement> = Vec::with_capacity(listing.entries.len());
         // The changes the previous row of the card counted: a group's terminals in one repository
@@ -399,6 +409,7 @@ impl Sidebar {
                         && info.changes.is_some_and(|n| counted_above == Some((band, &info.repo, n)));
                     counted_above = info.changes.map(|n| (band, &info.repo, n));
                     let place = rows::Place {
+                        selected: info.ix == input.active,
                         solo: frame.metrics.cards && matches!(listing.card(at), Some(Card::Loose(_))),
                         position,
                         of,
@@ -415,56 +426,8 @@ impl Sidebar {
                 Some(mark) => div().relative().child(line).child(mark).into_any_element(),
                 None => line,
             };
-            // Each line is a stretch of its card: a group's head and rows, or a terminal's own.
-            let (top, bottom) = listing.card_edges(at);
-            // A group's colour washes its card from the left.
-            let wash = match listing.card(at) {
-                Some(Card::Group(band)) => group_wash.get(&listing.bands[band].group).copied(),
-                _ => None,
-            };
-            let segment = match (listing.card(at), entry) {
-                (Some(Card::Loose(_)), Entry::Row { session, .. }) => {
-                    style::card_segment_solo(ui, frame.metrics, *session == input.active, line)
-                }
-                _ => style::card_segment(ui, frame.metrics, top, bottom, wash, line),
-            };
-            // Each card is a glass of its own.
-            let segment = match glass.as_ref().filter(|_| frame.metrics.cards) {
-                Some(glass) => {
-                    let (key, inset) = match listing.card(at) {
-                        Some(Card::Group(band)) => (
-                            glass_key(GlassKind::Card, 1 + band as u64),
-                            Insets(
-                                frame.metrics.card_margin,
-                                0.0,
-                                frame.metrics.card_margin,
-                                if bottom { frame.metrics.card_gap } else { 0.0 },
-                            ),
-                        ),
-                        Some(Card::Split(first)) => (
-                            glass_key(GlassKind::Loose, infos[first].id as u64),
-                            Insets(
-                                frame.metrics.card_margin,
-                                0.0,
-                                frame.metrics.card_margin,
-                                if bottom { frame.metrics.card_gap } else { 0.0 },
-                            ),
-                        ),
-                        Some(Card::Loose(session)) => (
-                            glass_key(GlassKind::Loose, infos[session].id as u64),
-                            Insets(
-                                frame.metrics.card_margin,
-                                0.0,
-                                frame.metrics.card_margin,
-                                frame.metrics.card_gap,
-                            ),
-                        ),
-                        None => (0, Insets(0.0, 0.0, 0.0, 0.0)),
-                    };
-                    segment.child(probe(glass, key, inset, frame.metrics.card_radius, Some(LIST_CLIP)))
-                }
-                None => segment,
-            };
+            let segment = cards.line(at, line);
+            let bottom = listing.card_edges(at).1;
             let line = match *entry {
                 Entry::Row { session, .. } => {
                     let id = infos[session].id;
