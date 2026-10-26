@@ -115,6 +115,14 @@ pub(super) fn signatures_match() {
     }
     #[cfg(feature = "devctl")]
     same! {
+        notice::force_material: fn(Option<super::notice::Material>);
+    }
+    #[cfg(feature = "devctl")]
+    same_method! {
+        notice::Chip::info: fn(&S) -> Option<super::notice::Info>;
+    }
+    #[cfg(feature = "devctl")]
+    same! {
         a11y::wake_tree: fn(&Window);
         window::lights_opacity: fn(&Window) -> Option<(f32, bool)>;
         window::lights_state: fn(&Window) -> Option<String>;
@@ -136,6 +144,11 @@ pub(super) fn signatures_match() {
         intro::dock_frames: fn(&Window, wormhole_core::onboarding::intro::voyage::Landing, [[f32; 4]; 3], &Path, &str) -> anyhow::Result<String>;
     }
     same_method! {
+        notice::Chip::new: fn(&Window) -> Option<S>;
+        notice::Chip::show: fn(&mut S, &super::notice::Content<'_>, f32, wormhole_core::view::motion::notice::Entrance);
+        notice::Chip::swap: fn(&mut S, &super::notice::Content<'_>);
+        notice::Chip::hide: fn(&mut S, wormhole_core::view::motion::notice::Entrance);
+        notice::Chip::place: fn(&mut S, f32);
         intro::Overlay::new: fn(&Window, Setup, LogoSpot) -> anyhow::Result<Option<S>>;
         intro::Overlay::motion_at: fn(&S, f32) -> WindowMotion;
         intro::Overlay::frame: fn(&S, &Frame);

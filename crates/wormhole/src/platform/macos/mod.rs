@@ -21,6 +21,7 @@ pub mod live_resize;
 pub mod locale;
 pub mod look;
 pub mod menu;
+pub mod notice;
 pub mod notifications;
 pub mod panel;
 pub mod pointer;

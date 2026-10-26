@@ -67,6 +67,12 @@ pub(super) fn follow_effect(effect: &NSView) {
     });
 }
 
+/// `appearance` on `view` and everything in it, once: for a view that lives only a moment (the notice
+/// chip), so it need not be remembered and followed.
+pub(super) fn set_on(view: &NSView, appearance: Appearance) {
+    apply(view, appearance);
+}
+
 /// `window`'s title bar (and with it the traffic lights) follows the theme's appearance from now on.
 pub(super) fn follow_titlebar(window: &NSWindow) {
     apply_titlebar(window);
