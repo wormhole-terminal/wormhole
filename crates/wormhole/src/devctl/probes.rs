@@ -39,7 +39,10 @@ pub(super) fn off(ctx: &mut Ctx, arg: &str) -> Result<String> {
 }
 
 /// One line per folder of the Probes folder, `probe <folder> <on|off|changed|invalid|unsupported>` with the
-/// reason after `invalid`, and one for an approval sheet that is open. Nothing while the flag is off.
+/// reason after `invalid` (`off unsealed` for a stored approval this Wormhole did not seal),
+/// `probes-key unavailable` first when the approvals' key could not be read, and one for an approval sheet
+/// that is open. Nothing while the flag is off. Reading the key never reaches the Keychain here: a devctl build
+/// keeps it in a dev-only file of the instance's scratch data dir.
 ///
 /// This reads the Probes folder on the main thread, which the page never does: it is a test tool, run by a script
 /// that waits for the answer, over the handful of folders of a scratch data dir, and `state` already reads the
@@ -51,8 +54,12 @@ pub(super) fn state(cx: &App) -> String {
     let mut out = String::new();
     match approval::list(&DataRoot::current()) {
         Ok(entries) => {
+            if entries.key_unavailable {
+                out.push_str("probes-key unavailable\n");
+            }
             for entry in entries.entries {
                 let word = match &entry.state {
+                    ProbeState::Off if entry.unsealed => "off unsealed".to_string(),
                     ProbeState::Off => "off".to_string(),
                     ProbeState::On => "on".to_string(),
                     ProbeState::Changed => "changed".to_string(),

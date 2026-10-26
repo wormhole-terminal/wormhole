@@ -60,6 +60,12 @@ pub(crate) fn random_id() -> Result<String> {
     Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
 }
 
+/// Whether `text` has the shape [`random_id`] makes: what a stored account must look like before it
+/// is used as a Keychain account.
+pub(crate) fn is_random_id(text: &str) -> bool {
+    text.len() == 32 && text.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
 /// Whether this build keeps its keys in a file instead of the Keychain: a debug build, or one with
 /// the `dev-key` feature (devctl builds, release-profile dev builds).
 pub(crate) fn uses_dev_key() -> bool {
@@ -70,6 +76,13 @@ pub(crate) fn uses_dev_key() -> bool {
 /// first use.
 pub(crate) fn open(purpose: &Purpose, dir: &Path, account: &str) -> Result<Key> {
     if uses_dev_key() { dev_key_file(purpose, dir) } else { keychain_key(purpose, account) }
+}
+
+/// The same key, but never made: `None` when there is none. For checking something against it,
+/// where a key that isn't there yet means there is nothing to check, and a read must not leave items
+/// behind in the user's Keychain for any account a file names.
+pub(crate) fn find(purpose: &Purpose, dir: &Path, account: &str) -> Result<Option<Key>> {
+    if uses_dev_key() { find_dev_key_file(purpose, dir) } else { find_keychain(purpose, account) }
 }
 
 /// Throw the key away.
@@ -192,7 +205,7 @@ fn remove_if_there(path: &Path) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Purpose, dev_key_file, real_data_dir};
+    use super::{Purpose, dev_key_file, is_random_id, random_id, real_data_dir};
 
     const PURPOSE: Purpose = Purpose {
         what: "test key",
@@ -207,5 +220,15 @@ mod tests {
         // Only asked, never written: the check comes before anything touches the folder.
         let err = dev_key_file(&PURPOSE, &real.join("profiles").join("some-profile")).expect_err("refused");
         assert!(format!("{err:#}").contains("real data folder"), "{err:#}");
+    }
+
+    #[test]
+    fn a_random_id_has_the_shape_it_is_checked_by() {
+        let id = random_id().expect("an id");
+        assert!(is_random_id(&id), "{id}");
+        assert!(!is_random_id(""));
+        assert!(!is_random_id(&id.to_uppercase()));
+        assert!(!is_random_id("../../etc/passwd"));
+        assert!(!is_random_id(&id[1..]));
     }
 }

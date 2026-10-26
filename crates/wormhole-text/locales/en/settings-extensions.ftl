@@ -37,8 +37,17 @@ settings-extensions-state-on = On
 settings-extensions-state-changed = Changed
 settings-extensions-state-invalid = Can't be enabled
 settings-extensions-state-unsupported = Needs code
+# The state of a Probe whose stored approval was not made by this Wormhole (or was changed after): it is off.
+settings-extensions-state-unsealed = Not approved by this Wormhole
 
 settings-extensions-changed-note = Its files changed since you approved it, so it is off until you approve it again.
+
+# Under a Probe in the state above. It can be approved again here, or the stored approval forgotten.
+settings-extensions-unsealed-note = An approval is stored for it that this Wormhole did not make, or that was changed afterwards, so it is off. Approve it again, or forget the approval.
+
+# A notice over the list: Wormhole could not read the key it checks approvals with, so every Probe is off.
+# Nothing was deleted; scanning again asks the Keychain once more.
+settings-extensions-key-unavailable = Wormhole couldn't read its key from the Keychain, so extensions stay off. Unlock the Keychain or allow access when it asks, then scan again.
 
 settings-extensions-unsupported-note = It runs code, which this version of Wormhole does not support yet.
 
@@ -129,6 +138,9 @@ settings-extensions-err-needs-code = It runs code, which this version of Wormhol
 settings-extensions-err-copy = Its files could not be copied for it to run from: { $reason }
 # As above, for the approvals file.
 settings-extensions-err-store = The approval could not be saved: { $reason }
+
+# { $reason } is what the system said, in English.
+settings-extensions-err-key = The key the approval is sealed with could not be read from the Keychain: { $reason }
 
 settings-extensions-err-unconfirmed = The yes was for another version of it. Open the sheet again.
 

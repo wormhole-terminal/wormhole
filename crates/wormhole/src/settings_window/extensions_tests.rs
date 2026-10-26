@@ -380,3 +380,88 @@ fn a_probe_whose_copy_was_tampered_with_is_not_on(cx: &mut TestAppContext) {
     assert_eq!(state(cx, &page, "quiet-one"), Some(ProbeState::Changed), "off until approved again");
     assert_eq!(forgettable(cx, &page, "quiet-one"), Some(true));
 }
+
+/// The approvals file, edited by hand as a program with file access could.
+fn edit_approvals(edit: impl FnOnce(&mut serde_json::Value)) {
+    let mut file: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(approvals_file()).expect("read")).expect("json");
+    edit(&mut file);
+    fs::write(approvals_file(), serde_json::to_string_pretty(&file).expect("json")).expect("write");
+}
+
+#[gpui_kit::test]
+fn an_approval_nobody_sealed_shows_as_not_approved_by_this_wormhole(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "an_approval_nobody_sealed_shows_as_not_approved_by_this_wormhole") {
+        return;
+    }
+    start(cx, 1);
+    let root = DataRoot::current();
+    let _tidy = Tidy(root.clone());
+    install(&root);
+    let page = open(cx);
+    open_sheet(cx, &page, "quiet-one");
+    cx.update(|cx| page.update(cx, |page, cx| page.approve_probe(cx)));
+    cx.run_until_parked();
+    assert_eq!(state(cx, &page, "quiet-one"), Some(ProbeState::On));
+    assert_eq!(page.read_with(cx, |page, _| page.extensions.unsealed("quiet-one")), Some(false));
+
+    // Everything a writer can know is right (the fingerprint, the copy); the seal is not there.
+    edit_approvals(|file| {
+        file["probes"]["quiet-one"].as_object_mut().expect("entry").remove("seal");
+    });
+    scan(cx, &page);
+    assert_eq!(state(cx, &page, "quiet-one"), Some(ProbeState::Off), "off, not on");
+    assert_eq!(page.read_with(cx, |page, _| page.extensions.unsealed("quiet-one")), Some(true));
+    assert!(!page.read_with(cx, |page, _| page.extensions.key_unavailable()));
+    assert_eq!(forgettable(cx, &page, "quiet-one"), Some(true), "it can be forgotten");
+    assert!(approval::runnable(&root, "quiet-one").is_err());
+    let (handle, _) = cx.update(|cx| current_window(cx)).expect("open");
+    cx.update(|cx| handle.update(cx, |_, window, cx| window.render_frame(cx))).expect("draws the row");
+
+    cx.update(|cx| page.update(cx, |page, cx| page.turn_probe_off("quiet-one".into(), "Quiet".into(), cx)));
+    cx.run_until_parked();
+    assert_eq!(page.read_with(cx, |page, _| page.extensions.unsealed("quiet-one")), Some(false));
+    assert_eq!(forgettable(cx, &page, "quiet-one"), Some(false));
+}
+
+#[gpui_kit::test]
+fn a_key_that_cannot_be_read_says_so_and_leaves_every_probe_off(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "a_key_that_cannot_be_read_says_so_and_leaves_every_probe_off") {
+        return;
+    }
+    start(cx, 1);
+    let root = DataRoot::current();
+    let _tidy = Tidy(root.clone());
+    install(&root);
+    let page = open(cx);
+    open_sheet(cx, &page, "quiet-one");
+    cx.update(|cx| page.update(cx, |page, cx| page.approve_probe(cx)));
+    cx.run_until_parked();
+    assert!(!page.read_with(cx, |page, _| page.extensions.key_unavailable()));
+
+    // The development key is a file beside the approvals; a folder in its place can't be read, which is
+    // what a denied Keychain looks like to the page. A new account, so the key this process kept is not asked.
+    let key_file = root.base().join("probe-approvals-key.dev-only");
+    fs::remove_file(&key_file).expect("the dev key");
+    fs::create_dir(&key_file).expect("a folder in its place");
+    edit_approvals(|file| file["account"] = serde_json::json!("a".repeat(32)));
+    let stored = fs::read_to_string(approvals_file()).expect("read");
+    scan(cx, &page);
+
+    assert!(page.read_with(cx, |page, _| page.extensions.key_unavailable()));
+    assert_eq!(state(cx, &page, "quiet-one"), Some(ProbeState::Off));
+    assert_eq!(page.read_with(cx, |page, _| page.extensions.unsealed("quiet-one")), Some(false));
+    assert_eq!(fs::read_to_string(approvals_file()).expect("read"), stored, "nothing was deleted");
+    assert!(root.probes_approved_dir().join("quiet-one").exists());
+    let (handle, _) = cx.update(|cx| current_window(cx)).expect("open");
+    cx.update(|cx| handle.update(cx, |_, window, cx| window.render_frame(cx))).expect("draws the notice");
+
+    // Approving is refused with the reason, and the sheet stays.
+    open_sheet(cx, &page, "quiet-one");
+    cx.update(|cx| page.update(cx, |page, cx| page.approve_probe(cx)));
+    cx.run_until_parked();
+    assert_eq!(state(cx, &page, "quiet-one"), Some(ProbeState::Off));
+    assert!(sheet_open(cx, &page), "the sheet stays");
+    assert!(page.read_with(cx, |page, _| page.extensions.sheet.as_ref().is_some_and(|s| s.has_error())));
+    let _ = fs::remove_dir(&key_file);
+}

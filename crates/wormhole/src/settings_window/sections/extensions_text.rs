@@ -36,6 +36,7 @@ pub(super) fn approve_error_text(err: &ApproveError) -> String {
     match err {
         ApproveError::Snapshot(err) => settings_extensions_err_copy(&err.to_string()),
         ApproveError::Store(err) => settings_extensions_err_store(&err.to_string()),
+        ApproveError::Key(err) => settings_extensions_err_key(&format!("{err:#}")),
         ApproveError::Unconfirmed => text(SETTINGS_EXTENSIONS_ERR_UNCONFIRMED).to_string(),
     }
 }

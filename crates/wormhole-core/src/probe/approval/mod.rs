@@ -5,7 +5,9 @@
 //! were granted, and a read-only copy of exactly those bytes. Nothing runs a Probe yet; the later
 //! steps read these and call [`Snapshot::verify`] right before every spawn.
 //!
-//! - `store`: `probe-approvals.json`, the approvals and their grants.
+//! - `store`: `probe-approvals.json`, the approvals and their grants, each with its seal.
+//! - `seal` and `key`: the HMAC that makes an entry read as approved only when Wormhole wrote it, and
+//!   where its key comes from (the login Keychain; a dev-only file in a development build).
 //! - `state`: [`ProbeState`], a scanned Probe combined with the store.
 //! - `request`: what the approval sheet shows, and the [`Confirmed`] token that approving takes.
 //! - `snapshot`: the read-only copy, its re-hash and its removal.
@@ -15,13 +17,26 @@
 //! live state `On` (approved, the folder as approved, the copy there) and re-hashes the copy. The copy
 //! of a Probe that is changed or invalid is not handed out by anything else.
 //!
+//! **An approval counts only with Wormhole's seal.** [`approve`] is the one call that seals, and it takes a
+//! [`Confirmed`], so a seal comes only from the Touch ID or click path. An entry that is unsealed, or whose
+//! seal does not match, reads as `Off` and is never [`runnable`]; when the key cannot be read at all, every
+//! entry reads as `Off` and [`Listing::key_unavailable`] says why. Nothing is deleted on either account.
+//!
+//! **Threads.** The key is read in [`list`], [`read_one`], [`approve`] and [`runnable`], and reading it may
+//! block or show the Keychain's prompt: call those off the main thread, as the app does. [`turn_off`] and
+//! [`sweep`] never read it, so tidying up never prompts.
+//!
 //! The mutating calls ([`approve`], [`turn_off`], [`sweep`]) read the store afresh under one lock, so
 //! two windows cannot overwrite each other's approvals. Must not use anything above `storage`.
 
+mod key;
 mod list;
 mod request;
 #[cfg(test)]
 mod review_tests;
+mod seal;
+#[cfg(test)]
+mod seal_tests;
 mod snapshot;
 mod state;
 mod store;
@@ -39,6 +54,8 @@ pub use snapshot::{Snapshot, VerifyError};
 pub use state::ProbeState;
 pub use store::{Approval, ApprovalStore, permission_id};
 
+use key::SystemKeys;
+
 use crate::probe::validate::validate;
 use crate::storage::paths::DataRoot;
 
@@ -54,6 +71,8 @@ pub enum ApproveError {
     Store(io::Error),
     /// The confirmation is for another request than the one approved.
     Unconfirmed,
+    /// The key the approval is sealed with could not be read or made (the Keychain said no).
+    Key(anyhow::Error),
 }
 
 impl fmt::Display for ApproveError {
@@ -62,6 +81,7 @@ impl fmt::Display for ApproveError {
             Self::Snapshot(err) => write!(f, "could not copy the Probe's files: {err}"),
             Self::Store(err) => write!(f, "could not save the approval: {err}"),
             Self::Unconfirmed => f.write_str("the confirmation is not for this request"),
+            Self::Key(err) => write!(f, "could not get the key to seal the approval with: {err:#}"),
         }
     }
 }
@@ -71,6 +91,7 @@ impl std::error::Error for ApproveError {
         match self {
             Self::Snapshot(err) | Self::Store(err) => Some(err),
             Self::Unconfirmed => None,
+            Self::Key(err) => Some(err.as_ref()),
         }
     }
 }
@@ -97,10 +118,13 @@ pub fn approve(
         return Err(ApproveError::Unconfirmed);
     }
     let _lock = locked();
-    let mut store = ApprovalStore::load(root);
+    // The entries as stored: the others keep the seals they have (only this one is sealed now), and the
+    // key comes first, so a Keychain that says no changes nothing, not even a copy.
+    let mut store = ApprovalStore::load_unchecked(root);
+    let seal = store.seal_key(&SystemKeys).map_err(ApproveError::Key)?;
     let staged = snapshot::stage(root, request.folder()).map_err(ApproveError::Snapshot)?;
     let committed = staged.commit().map_err(ApproveError::Snapshot)?;
-    store.insert(request.id(), request.approval(confirmed.grants(), now));
+    store.insert_sealed(request.id(), request.approval(confirmed.grants(), now), &seal);
     match store.save() {
         Ok(()) => {
             committed.finish();
@@ -117,7 +141,7 @@ pub fn approve(
 /// and nothing happens for a Probe that was not on.
 pub fn turn_off(root: &DataRoot, id: &str) -> Result<(), ApproveError> {
     let _lock = locked();
-    let mut store = ApprovalStore::load(root);
+    let mut store = ApprovalStore::load_unchecked(root);
     if store.remove(id).is_some() {
         store.save().map_err(ApproveError::Store)?;
     }
@@ -130,7 +154,7 @@ pub fn turn_off(root: &DataRoot, id: &str) -> Result<(), ApproveError> {
 /// back). Never forgets an approval on the word of a scan that did not see everything.
 pub fn sweep(root: &DataRoot, present: Option<&BTreeSet<String>>) -> Result<(), ApproveError> {
     let _lock = locked();
-    let mut store = ApprovalStore::load(root);
+    let mut store = ApprovalStore::load_unchecked(root);
     if let Some(present) = present {
         let gone: Vec<String> = store.ids().filter(|id| !present.contains(*id)).map(str::to_string).collect();
         for id in &gone {
@@ -148,6 +172,10 @@ pub fn sweep(root: &DataRoot, present: Option<&BTreeSet<String>>) -> Result<(), 
 pub enum NotRunnable {
     /// There is no approval of it (or it is no Probe id).
     NotApproved,
+    /// There is an approval, but this Wormhole did not seal it (or it was changed since).
+    Unsealed,
+    /// The key the approvals are checked with could not be read.
+    KeyUnavailable,
     /// The folder is not what was approved, or the approved copy is gone.
     Changed,
     /// The folder is invalid now; the first reason.
@@ -162,6 +190,8 @@ impl fmt::Display for NotRunnable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NotApproved => f.write_str("the Probe is not approved"),
+            Self::Unsealed => f.write_str("the Probe's approval was not made by this Wormhole"),
+            Self::KeyUnavailable => f.write_str("the key the approvals are checked with can't be read"),
             Self::Changed => f.write_str("the Probe changed since it was approved"),
             Self::Invalid(reason) => write!(f, "the Probe is invalid: {reason}"),
             Self::Unsupported => f.write_str("the Probe has code, which is not supported yet"),
@@ -174,9 +204,16 @@ impl std::error::Error for NotRunnable {}
 
 /// The one gate before a Probe's program or script is started: the folder to run it from, when the Probe
 /// is `On` as it stands now and its approved copy re-hashes to what was approved. Reads the Probe's folder
-/// and its copy (at most 4 MiB), so call it off the main thread, right before the spawn.
+/// and its copy (at most 4 MiB), and the key (which may prompt), so call it off the main thread, right
+/// before the spawn.
 pub fn runnable(root: &DataRoot, id: &str) -> Result<Snapshot, NotRunnable> {
     let store = ApprovalStore::load(root);
+    if store.key_unavailable() {
+        return Err(NotRunnable::KeyUnavailable);
+    }
+    if store.is_unsealed(id) {
+        return Err(NotRunnable::Unsealed);
+    }
     let copy = store.snapshot(root, id).ok_or(NotRunnable::NotApproved)?;
     let folder = list::read_live(root, id).map_err(|err| NotRunnable::Invalid(err.to_string()))?;
     let report = validate(&folder);

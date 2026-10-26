@@ -247,21 +247,22 @@ pub(super) fn remove(root: &DataRoot, id: &str) -> io::Result<()> {
     Ok(())
 }
 
-/// Tidy `probes-approved/` against `store`: delete every entry `store` has no approval for (copies of
+/// Tidy `probes-approved/` against `store`: delete every entry `store` has nothing stored for (copies of
 /// Probes that were removed, leftovers), except a `.old-<id>` of an approved Probe whose `<id>` is gone:
-/// that is the copy an interrupted approval set aside, and it is put back.
+/// that is the copy an interrupted approval set aside, and it is put back. Whether an entry is sealed does not
+/// matter here, so tidying never needs the key.
 pub(super) fn tidy(root: &DataRoot, store: &ApprovalStore) -> io::Result<()> {
     let Some(parent) = checked_parent(root)? else { return Ok(()) };
     let mut first_error = None;
     for entry in fs::read_dir(&parent)?.filter_map(Result::ok) {
         let name = entry.file_name();
         let name = name.to_str();
-        if name.is_some_and(|name| store.get(name).is_some()) {
+        if name.is_some_and(|name| store.contains(name)) {
             continue;
         }
         let restore = name
             .and_then(|name| name.strip_prefix(".old-"))
-            .filter(|id| store.get(id).is_some() && fs::symlink_metadata(parent.join(id)).is_err());
+            .filter(|id| store.contains(id) && fs::symlink_metadata(parent.join(id)).is_err());
         let done = match restore {
             Some(id) => fs::rename(entry.path(), parent.join(id)),
             None => remove_tree(&entry.path()),

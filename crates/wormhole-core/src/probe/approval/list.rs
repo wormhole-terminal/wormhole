@@ -38,6 +38,9 @@ pub struct Entry {
     pub state: ProbeState,
     /// An approval of it is stored, whatever its state: it can be forgotten.
     pub approved: bool,
+    /// What is stored for it was not sealed by this Wormhole (or was changed since): it is off, "not
+    /// approved by this Wormhole". Not set when the key could not be read ([`Listing::key_unavailable`]).
+    pub unsealed: bool,
     /// The approved copy is not what was approved (the state is `Changed` then).
     pub copy_problem: Option<VerifyError>,
 }
@@ -55,6 +58,9 @@ impl Entry {
 pub struct Listing {
     pub entries: Vec<Entry>,
     pub coverage: Coverage,
+    /// The key the approvals are sealed with could not be read (denied, locked, cancelled), so every
+    /// Probe is off for now. Nothing was deleted.
+    pub key_unavailable: bool,
 }
 
 impl Listing {
@@ -76,17 +82,20 @@ pub fn list(root: &DataRoot) -> Result<Listing, TooManyEntries> {
     Ok(Listing {
         entries: scan.found.into_iter().map(|scanned| entry(root, scanned, &store)).collect(),
         coverage: scan.coverage,
+        key_unavailable: store.key_unavailable(),
     })
 }
 
 fn entry(root: &DataRoot, scanned: Scanned, store: &ApprovalStore) -> Entry {
-    let approved = store.get(&scanned.name).is_some();
+    let approved = store.contains(&scanned.name);
+    let unsealed = store.is_unsealed(&scanned.name);
     match scanned.probe {
         Err(err) => Entry {
             folder: scanned.name,
             probe: None,
             state: ProbeState::Invalid(err.to_string()),
             approved,
+            unsealed,
             copy_problem: None,
         },
         Ok(folder) => {
@@ -110,7 +119,7 @@ fn entry(root: &DataRoot, scanned: Scanned, store: &ApprovalStore) -> Entry {
                 files: folder.files.len(),
                 fingerprint: folder.fingerprint(),
             };
-            Entry { folder: scanned.name, probe: Some(listed), state, approved, copy_problem }
+            Entry { folder: scanned.name, probe: Some(listed), state, approved, unsealed, copy_problem }
         }
     }
 }
@@ -150,5 +159,6 @@ pub(super) fn read_live(root: &DataRoot, id: &str) -> Result<ProbeFolder, ScanEr
 /// bytes, and approving it copies them.
 pub fn read_one(root: &DataRoot, id: &str) -> Result<Request, ReadOneError> {
     let folder = read_live(root, id).map_err(ReadOneError::Unreadable)?;
+    // The earlier approval the sheet diffs against is only one that is sealed.
     Request::new(folder, &ApprovalStore::load(root)).map_err(ReadOneError::NotApprovable)
 }

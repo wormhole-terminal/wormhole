@@ -36,7 +36,11 @@ pub(super) const SETTINGS: &[Setting] = &[Setting::block("probes", draw_probes)]
 
 /// What the folder held when it was last read.
 pub(in crate::settings_window) enum Listing {
-    Probes(Vec<Entry>),
+    Probes {
+        entries: Vec<Entry>,
+        /// The key approvals are checked with could not be read: every Probe is off, and the page says so.
+        key_unavailable: bool,
+    },
     /// More entries than a list of Probes can be: none are listed.
     TooMany,
 }
@@ -59,7 +63,9 @@ impl Extensions {
     #[cfg(test)]
     pub(in crate::settings_window) fn can_forget(&self, folder: &str) -> Option<bool> {
         match self.listing.as_ref()? {
-            Listing::Probes(entries) => entries.iter().find(|e| e.folder == folder).map(|e| e.can_forget()),
+            Listing::Probes { entries, .. } => {
+                entries.iter().find(|e| e.folder == folder).map(|e| e.can_forget())
+            }
             Listing::TooMany => None,
         }
     }
@@ -68,7 +74,24 @@ impl Extensions {
     #[cfg(test)]
     pub(in crate::settings_window) fn listed(&self) -> Option<usize> {
         match self.listing.as_ref()? {
-            Listing::Probes(entries) => Some(entries.len()),
+            Listing::Probes { entries, .. } => Some(entries.len()),
+            Listing::TooMany => None,
+        }
+    }
+
+    /// Whether the last read could not read the approvals' key.
+    #[cfg(test)]
+    pub(in crate::settings_window) fn key_unavailable(&self) -> bool {
+        matches!(self.listing, Some(Listing::Probes { key_unavailable: true, .. }))
+    }
+
+    /// Whether the row of `folder` says its stored approval is not this Wormhole's.
+    #[cfg(test)]
+    pub(in crate::settings_window) fn unsealed(&self, folder: &str) -> Option<bool> {
+        match self.listing.as_ref()? {
+            Listing::Probes { entries, .. } => {
+                entries.iter().find(|e| e.folder == folder).map(|e| e.unsealed)
+            }
             Listing::TooMany => None,
         }
     }
@@ -77,7 +100,7 @@ impl Extensions {
     #[cfg(test)]
     pub(in crate::settings_window) fn state_of(&self, folder: &str) -> Option<&ProbeState> {
         match self.listing.as_ref()? {
-            Listing::Probes(entries) => entries.iter().find(|e| e.folder == folder).map(|e| &e.state),
+            Listing::Probes { entries, .. } => entries.iter().find(|e| e.folder == folder).map(|e| &e.state),
             Listing::TooMany => None,
         }
     }
@@ -92,7 +115,7 @@ fn read_listing(root: &DataRoot) -> Listing {
             if let Err(err) = approval::sweep(root, listing.present().as_ref()) {
                 tracing::warn!("tidying the approved Probes: {err}");
             }
-            Listing::Probes(listing.entries)
+            Listing::Probes { entries: listing.entries, key_unavailable: listing.key_unavailable }
         }
         Err(_) => Listing::TooMany,
     }
@@ -184,12 +207,33 @@ fn draw_probes(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
             settings_extensions_too_many(&MAX_ENTRIES.to_string()),
         )
         .into_any_element(),
-        Some(Listing::Probes(entries)) if entries.is_empty() => empty(ui, cx),
-        Some(Listing::Probes(entries)) => div()
-            .flex()
-            .flex_col()
-            .children(entries.iter().map(|entry| probe_row(ui, entry, cx)))
-            .into_any_element(),
+        Some(Listing::Probes { entries, key_unavailable }) => {
+            let rows = if entries.is_empty() {
+                empty(ui, cx)
+            } else {
+                div()
+                    .flex()
+                    .flex_col()
+                    .children(entries.iter().map(|entry| probe_row(ui, entry, cx)))
+                    .into_any_element()
+            };
+            if !*key_unavailable {
+                return rows;
+            }
+            // Over the rows, whatever they are: every one of them reads as off while the key can't be read.
+            div()
+                .flex()
+                .flex_col()
+                .gap_2()
+                .child(style::banner(
+                    ui,
+                    style::BannerKind::Warning,
+                    false,
+                    text(SETTINGS_EXTENSIONS_KEY_UNAVAILABLE).to_string(),
+                ))
+                .child(rows)
+                .into_any_element()
+        }
     }
 }
 
@@ -243,7 +287,9 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
         None => (reveal(&folder).into_owned(), String::new(), String::new()),
     };
     let state = &entry.state;
-    let color = state_color(ui, state);
+    // An unsealed approval is a stored one that reads as none: off, but worth a warning's colour.
+    let color = if entry.unsealed { ui.warning_text } else { state_color(ui, state) };
+    let word = if entry.unsealed { text(SETTINGS_EXTENSIONS_STATE_UNSEALED) } else { state_word(state) };
     let can_switch = state.can_approve() || state.is_on();
     let probe_id = entry.probe.as_ref().map_or_else(|| folder.clone(), |probe| probe.id.clone());
     let switch_name = title.clone();
@@ -288,6 +334,9 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
         ),
         ProbeState::Unsupported => {
             Some(div().child(text(SETTINGS_EXTENSIONS_UNSUPPORTED_NOTE)).into_any_element())
+        }
+        ProbeState::Off if entry.unsealed => {
+            Some(div().child(text(SETTINGS_EXTENSIONS_UNSEALED_NOTE)).into_any_element())
         }
         _ => None,
     };
@@ -337,7 +386,7 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
                                 .child(
                                     div().text_body().font_weight(FontWeight::MEDIUM).truncate().child(title),
                                 )
-                                .child(style::status_badge(ui, color, state_word(state))),
+                                .child(style::status_badge(ui, color, word)),
                         )
                         .when(!identity.is_empty(), |d| {
                             d.child(div().text_caption().text_color(ui.muted).truncate().child(identity))

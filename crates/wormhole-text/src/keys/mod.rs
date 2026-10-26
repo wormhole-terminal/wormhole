@@ -82,7 +82,7 @@ pub use title_row::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 980] = [
+pub const ALL: [Key; 983] = [
     AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_READ, AGENT_SHEET_WANTS_TYPE,
     AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_CLOSE,
     AGENT_SHEET_DETAIL, AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_WARNING_UNSIGNED,
@@ -168,7 +168,8 @@ pub const ALL: [Key; 980] = [
     SETTINGS_EXTENSIONS_PROBES_DESCRIPTION, SETTINGS_EXTENSIONS_PROBES_KEYWORDS, SETTINGS_EXTENSIONS_REFRESH,
     SETTINGS_EXTENSIONS_LOOKING, SETTINGS_EXTENSIONS_NONE_TITLE, SETTINGS_EXTENSIONS_SHOW_FOLDER,
     SETTINGS_EXTENSIONS_STATE_OFF, SETTINGS_EXTENSIONS_STATE_ON, SETTINGS_EXTENSIONS_STATE_CHANGED,
-    SETTINGS_EXTENSIONS_STATE_INVALID, SETTINGS_EXTENSIONS_STATE_UNSUPPORTED, SETTINGS_EXTENSIONS_CHANGED_NOTE,
+    SETTINGS_EXTENSIONS_STATE_INVALID, SETTINGS_EXTENSIONS_STATE_UNSUPPORTED, SETTINGS_EXTENSIONS_STATE_UNSEALED,
+    SETTINGS_EXTENSIONS_CHANGED_NOTE, SETTINGS_EXTENSIONS_UNSEALED_NOTE, SETTINGS_EXTENSIONS_KEY_UNAVAILABLE,
     SETTINGS_EXTENSIONS_UNSUPPORTED_NOTE, SETTINGS_EXTENSIONS_APPROVE_AGAIN, SETTINGS_EXTENSIONS_ASKS_FOR,
     SETTINGS_EXTENSIONS_ASKS_FOR_NOTHING, SETTINGS_EXTENSIONS_PERM_NOTIFY, SETTINGS_EXTENSIONS_PERM_CODE,
     SETTINGS_EXTENSIONS_TOUCH_ID, SETTINGS_EXTENSIONS_READ_ONLY_GIT, SETTINGS_EXTENSIONS_OWN_SCRIPT,
@@ -489,6 +490,7 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("settings-extensions-err-read", settings_extensions_err_read("Sample")),
         ("settings-extensions-err-copy", settings_extensions_err_copy("Sample")),
         ("settings-extensions-err-store", settings_extensions_err_store("Sample")),
+        ("settings-extensions-err-key", settings_extensions_err_key("Sample")),
         ("settings-extensions-copy-unreadable", settings_extensions_copy_unreadable("Sample")),
         ("settings-fonts-count", settings_fonts_count(1)),
         ("settings-fonts-count", settings_fonts_count(5)),
