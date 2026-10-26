@@ -12,3 +12,7 @@ d64e63a0ffd59b37c0695ce99167eb9a204f2585
 # refactor(sidebar): move the list's slide into motion/list.rs
 # refactor(sidebar): move rows.rs into a folder of frame, face, tile, second_line and label
 b8975353e1844bb6193a0145e523cbe9eadb342e
+# refactor(sidebar): move drag.rs to drop.rs, beside core's drop
+e8987c8c193de4226331b3066f8242d1b158b080
+# refactor(sidebar): move motion/drag.rs to motion/room.rs
+ecafa9993306bbdde489c1e80558b51a80f9ae74
