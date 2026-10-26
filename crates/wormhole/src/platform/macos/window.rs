@@ -5,10 +5,12 @@ use std::cell::Cell;
 use std::ptr::NonNull;
 
 use gpui_kit::Window;
+use objc2::rc::Retained;
 use objc2_app_kit::{
-    NSNormalWindowLevel, NSWindow, NSWindowButton, NSWindowCollectionBehavior,
-    NSWindowDidEnterFullScreenNotification, NSWindowDidExitFullScreenNotification, NSWindowStyleMask,
-    NSWindowWillEnterFullScreenNotification, NSWindowWillExitFullScreenNotification,
+    NSNormalWindowLevel, NSView, NSWindow, NSWindowAnimationBehavior, NSWindowButton,
+    NSWindowCollectionBehavior, NSWindowDidEnterFullScreenNotification,
+    NSWindowDidExitFullScreenNotification, NSWindowStyleMask, NSWindowWillEnterFullScreenNotification,
+    NSWindowWillExitFullScreenNotification,
 };
 use objc2_foundation::{NSNotification, NSNotificationCenter, NSOperationQueue, NSPoint, NSSize};
 
@@ -135,6 +137,21 @@ pub fn keep_behind(window: &Window) {
     ns_window.orderBack(None);
 }
 
+pub const HAS_SYSTEM_ANIMATION: bool = true;
+
+pub fn set_animated(window: &Window, animated: bool) {
+    let Some(ns_window) = ns_window(window) else { return };
+    let current = ns_window.animationBehavior();
+    if animated {
+        if current != NSWindowAnimationBehavior::DocumentWindow {
+            ns_window.setAnimationBehavior(NSWindowAnimationBehavior::DocumentWindow);
+        }
+    } else if current == NSWindowAnimationBehavior::DocumentWindow {
+        // Only what was given is taken away: a window that never had it keeps the system's default.
+        ns_window.setAnimationBehavior(NSWindowAnimationBehavior::None);
+    }
+}
+
 pub fn set_resize_increments(window: &Window, cell: Option<(f32, f32)>) {
     let Some(ns_window) = ns_window(window) else { return };
     // AppKit keeps whole points only (8.4 is 8, 0.5 is 0, which would be "none"; checked on this system), so
@@ -184,6 +201,46 @@ pub fn settle(window: &Window, shrink: (f32, f32)) -> bool {
     frame.origin.y += dy;
     ns_window.setFrame_display_animate(frame, true, true);
     true
+}
+
+/// A window that was opened out of sight, to be drawn once and put on the screen.
+pub struct Reveal {
+    window: Retained<NSWindow>,
+    view: Retained<NSView>,
+}
+
+impl Reveal {
+    pub fn of(window: &Window) -> Option<Self> {
+        Some(Self { window: ns_window(window)?, view: super::appkit::ns_view(window)? })
+    }
+
+    /// Draw and present the window's first frame while it is off the screen.
+    ///
+    /// GPUI draws a frame when AppKit asks the view to display its layer, which a window nobody can see never
+    /// does; the display link that would also stops for it. The same request is made here, by hand, from
+    /// outside any update of the window or the app (the frame takes both).
+    ///
+    /// Unverified on a real display: that Metal presents a drawable for a window that is ordered out. If it
+    /// doesn't, the first frame is drawn after the window is on the screen, as a window opens without this.
+    #[allow(unsafe_code)]
+    pub fn paint(&self) {
+        let Some(layer) = self.view.layer() else { return };
+        // SAFETY: `displayLayer:` is the method GPUI's view class implements for exactly this request (it
+        // runs the window's frame callback, as AppKit's own call does); the layer is the view's own, and we
+        // are on the main thread (the marker `ns_view` needed).
+        unsafe {
+            let _: () = objc2::msg_send![&*self.view, displayLayer: &*layer];
+        }
+    }
+
+    /// Put the window on the screen, in front, with the keys when `focus`.
+    pub fn show(&self, focus: bool) {
+        if focus {
+            self.window.makeKeyAndOrderFront(None);
+        } else {
+            self.window.orderFront(None);
+        }
+    }
 }
 
 /// Draw `window`'s lights in the theme's appearance from now on (see `appearance`), full screen

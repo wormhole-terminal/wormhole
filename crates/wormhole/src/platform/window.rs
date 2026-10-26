@@ -124,6 +124,18 @@ pub fn keep_behind(window: &Window) {
     os::keep_behind(window);
 }
 
+/// Whether a window can open and close with the system's own animation. Not in tests, whose windows are
+/// not the system's.
+pub fn has_system_animation() -> bool {
+    !cfg!(test) && os::HAS_SYSTEM_ANIMATION
+}
+
+/// Give `window` the system's open and close animation (the one a document window has, which scales and
+/// fades it), or, if it was given that, take it away: a cut. A window that never had it is left alone.
+pub fn set_animated(window: &Window, animated: bool) {
+    os::set_animated(window, animated);
+}
+
 /// Make the window resize in steps of `cell` (width and height, in points) when it is dragged, or freely with
 /// `None`. Full screen, zoom and tiling ignore them, and so does a size set by a program or a script.
 ///
@@ -154,6 +166,28 @@ pub fn in_live_resize(window: &Window) -> bool {
 /// for, unless it is full screen, zoomed or tiled. Whether it did.
 pub fn settle(window: &Window, shrink: (f32, f32)) -> bool {
     os::settle(window, shrink)
+}
+
+/// A window that was opened out of sight and is to be drawn once, then put on the screen, so the system's
+/// opening animation never shows an empty box. Take it while updating the window (`Reveal::of`), use it
+/// after the update is over: drawing the first frame needs the app and the window both free.
+pub struct Reveal(os::Reveal);
+
+impl Reveal {
+    /// The window's reveal, `None` where it has none.
+    pub fn of(window: &Window) -> Option<Self> {
+        os::Reveal::of(window).map(Self)
+    }
+
+    /// Draw the first frame while the window is still out of sight.
+    pub fn paint(&self) {
+        self.0.paint();
+    }
+
+    /// Put the window on the screen, in front, with the keys when `focus`.
+    pub fn show(&self, focus: bool) {
+        self.0.show(focus);
+    }
 }
 
 /// What the tests say about a live resize: no test window has an `NSWindow` to ask.

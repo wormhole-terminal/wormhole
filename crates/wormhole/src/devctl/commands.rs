@@ -94,6 +94,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "grow-hold" => tear_off::grow_hold,
         "scaling" => scaling::scaling,
         "settle" => scaling::settle,
+        "reveal-test" => scaling::reveal_test,
         "pane-split" => sessions::pane_split,
         "pane-close" => sessions::pane_close,
         "pane-zoom" => sessions::pane_zoom,

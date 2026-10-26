@@ -17,7 +17,7 @@ use crate::app_state::look::sync_system_look;
 use crate::app_state::{AppState, OpenWindow, app, app_mut};
 use crate::settings::settings_in;
 use crate::style;
-use crate::window::{Layout, Workspace, window_bounds};
+use crate::window::{Layout, Workspace, scaling, window_bounds};
 
 const DEFAULT_SIZE: (f32, f32) = (1320.0, 820.0);
 
@@ -73,7 +73,11 @@ pub(crate) fn open_workspace_window_in(
             None,
         ),
     };
+    // A terminal window opens and closes with the system's animation: out of sight until its first frame is
+    // drawn (`window_open::reveal`), unless it grows from a torn-off terminal's chip.
+    let animated = scaling::terminal_window_animates(profile, crate::window::grow::active(id, cx), cx);
     let options = WindowOptions {
+        show: !animated,
         window_bounds: Some(bounds),
         display_id: display.map(|display| display.id()),
         titlebar: Some(TitlebarOptions {
@@ -112,7 +116,11 @@ pub(crate) fn open_workspace_window_in(
             // Its own observer starts after this update, so it would not hear that it was listed.
             workspace.update(cx, |workspace, cx| workspace.app_state_changed(cx));
             crate::background::activate(cx);
-            let _ = handle.update(cx, |_, window, cx| crate::background::activate_window(window, cx));
+            if animated {
+                crate::window_open::reveal(handle, cx);
+            } else {
+                let _ = handle.update(cx, |_, window, cx| crate::background::activate_window(window, cx));
+            }
         }
         Err(err) => {
             tell_window(id, Body::WindowClosed, cx);

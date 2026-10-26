@@ -49,6 +49,10 @@ pub fn number(_: &Window) -> Option<i64> {
     None
 }
 
+pub const HAS_SYSTEM_ANIMATION: bool = false;
+
+pub fn set_animated(_: &Window, _: bool) {}
+
 pub fn set_resize_increments(_: &Window, _: Option<(f32, f32)>) {}
 
 #[cfg(feature = "devctl")]
@@ -62,4 +66,17 @@ pub fn in_live_resize(_: &Window) -> bool {
 
 pub fn settle(_: &Window, _: (f32, f32)) -> bool {
     false
+}
+
+/// Nothing is opened out of sight here, so there is nothing to reveal.
+pub struct Reveal;
+
+impl Reveal {
+    pub fn of(_: &Window) -> Option<Self> {
+        None
+    }
+
+    pub fn paint(&self) {}
+
+    pub fn show(&self, _: bool) {}
 }

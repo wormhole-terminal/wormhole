@@ -1,16 +1,31 @@
 //! The window being scaled, as the design fixed (the Motion feature; without it a window is as it always
 //! was): resizing in whole cells of the shown terminal, taking off the strip a window off the cell grid
-//! leaves when the drag ends. What the terminal does meanwhile (the PTY told calmly, the text easing, the
-//! size chip) is `terminal_view::scaling`; the rules are core's (`view::motion::live_resize`).
+//! leaves when the drag ends, and which windows open and close with the system's own animation. What the
+//! terminal does meanwhile (the PTY told calmly, the text easing, the size chip) is `terminal_view::scaling`;
+//! the rules are core's (`view::motion::{live_resize, window_animation}`).
 //!
 //! Part of the window: it may use the platform and the settings, and must not use the surfaces above it.
 
 use gpui_kit::*;
+use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::motion::live_resize::settle;
+use wormhole_core::view::motion::window_animation::{Facts, animates};
 
 use crate::platform;
 use crate::settings::settings_in;
 use crate::window::Workspace;
+
+/// Whether a window of `profile` opens and closes with the system's animation: `grows` when it opens as a
+/// torn-off terminal's, which has a growth of its own.
+pub(super) fn terminal_window_animates(profile: &ProfileId, grows: bool, cx: &App) -> bool {
+    animates(Facts {
+        motion_feature: settings_in(profile, cx).motion_feature_on(),
+        reduce_motion: cx.reduce_motion(),
+        background: crate::background::on(),
+        grows,
+        platform: platform::window::has_system_animation(),
+    })
+}
 
 impl Workspace {
     /// Make the window resize in steps of the shown terminal's cell while one terminal fills the area, as
@@ -43,6 +58,12 @@ impl Workspace {
         if let Some(shrink) = settle(spare, cell) {
             platform::window::settle(window, shrink);
         }
+    }
+
+    /// Give the window the system's open and close animation, or take it away, as the settings and Reduce
+    /// Motion say now (called every tick; the platform changes nothing that is already so).
+    pub(super) fn sync_window_animation(&self, window: &Window, cx: &App) {
+        platform::window::set_animated(window, terminal_window_animates(&self.profile, false, cx));
     }
 }
 

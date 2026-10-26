@@ -34,7 +34,8 @@
 //!   drag-end              abandon the drag
 //!   resize <w> <h>        set the window's content size (logical pixels; the window minimum still applies)
 //!   scaling               the window's resize steps and animation, the shown terminal's cell, grid and spare
-//!                         room (Motion feature); `settle` ends a live resize as the system would
+//!                         room (Motion feature); `settle` ends a live resize as the system would;
+//!                         `reveal-test` draws the window's first frame by hand, as opening one does
 //!   click <x> <y>         left-click at a point in the window (logical pixels, as in a `shot` at 1x)
 //!   double-click <x> <y>  two clicks there, the second a double-click (a resize handle's reset)
 //!   key <keystroke>       press a key combination, e.g. `ctrl-cmd-2`, `shift-cmd-]`, `f6` or `tab` (the
