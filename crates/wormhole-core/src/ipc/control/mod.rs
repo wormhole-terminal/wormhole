@@ -23,7 +23,9 @@
 //! enough, and what it allows).
 
 mod cli;
+mod facts;
 mod limits;
+mod policy;
 pub mod sessions;
 mod welcome;
 
@@ -32,20 +34,20 @@ use serde_json::Value;
 
 pub use cli::{COMMAND_NAME, Cli, Parsed, help, is_verb, parse, render};
 pub(in crate::ipc) use cli::{print, print_err};
+pub use facts::{
+    Asked, Listing, Opened, PaneInfo, Reached, StatusInfo, Summary, TabInfo, TerminalInfo, TerminalState,
+    WindowInfo,
+};
 pub use limits::{Limited, RateLimits};
+pub use policy::{SEND_TEXT_MAX_BYTES, SendTarget, notice_text, send_text_check, writes_off};
 pub use welcome::{
     AgentFact, AgentsFacts, FIELD_MAX_BYTES, HooksFact, LookFacts, NotifyFacts, PermissionFact, PrimaryFact,
     ThemeFact, WelcomeOp, WelcomeState,
 };
 
-use crate::notify::State;
-
 /// The version of this request and reply format. Bump it when a change would make an older
 /// binary misread a newer app's answer (or the reverse); adding an optional field is not that.
 pub const PROTOCOL_VERSION: u32 = 1;
-
-/// The most text one `send-text` may type (a prompt, not a file).
-pub const SEND_TEXT_MAX_BYTES: usize = 16 * 1024;
 
 /// What a caller asks the app to do.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -229,266 +231,12 @@ impl ErrorCode {
     }
 }
 
-/// A terminal's state in the reply, spelled as the sidebar speaks of it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TerminalState {
-    Idle,
-    Working,
-    NeedsYou,
-    Finished,
-    /// A command ended with a non-zero exit code, or an agent or program stopped on an error, and
-    /// nobody has looked yet. A binary built before this state existed can't read a reply that
-    /// has it; the protocol version stays, since moving it would turn away every script that
-    /// still runs the older one.
-    Failed,
-    Exited,
-}
-
-impl From<State> for TerminalState {
-    fn from(state: State) -> Self {
-        match state {
-            State::Idle => TerminalState::Idle,
-            State::Working => TerminalState::Working,
-            State::NeedsYou => TerminalState::NeedsYou,
-            State::Done => TerminalState::Finished,
-            State::Failed => TerminalState::Failed,
-            State::Exited => TerminalState::Exited,
-        }
-    }
-}
-
-impl TerminalState {
-    pub fn word(self) -> &'static str {
-        match self {
-            TerminalState::Idle => "idle",
-            TerminalState::Working => "working",
-            TerminalState::NeedsYou => "needs you",
-            TerminalState::Finished => "finished",
-            TerminalState::Failed => "failed",
-            TerminalState::Exited => "exited",
-        }
-    }
-}
-
-/// `list`'s result.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct Listing {
-    pub windows: Vec<WindowInfo>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct WindowInfo {
-    pub id: i64,
-    /// The window in front (the one `new-terminal` opens in without `--window`).
-    pub front: bool,
-    pub terminals: Vec<TerminalInfo>,
-}
-
-/// A sidebar terminal.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct TerminalInfo {
-    pub id: i64,
-    pub name: String,
-    pub status: TerminalState,
-    /// The coding agent in its lead tab, by id (`claude`, `codex`, …).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub agent: Option<String>,
-    /// Its selected tab's folder.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub folder: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub branch: Option<String>,
-    /// Changed files in its folder's repository, when known.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub changed: Option<usize>,
-    pub pinned: bool,
-    /// The profile it is in, named only while there is more than one.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub profile: Option<String>,
-    /// On screen in its window.
-    pub selected: bool,
-    pub tabs: Vec<TabInfo>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct TabInfo {
-    pub id: i64,
-    pub name: String,
-    pub status: TerminalState,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub agent: Option<String>,
-    /// The agent's last words, when it needs you.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub folder: Option<String>,
-    /// The program the tab runs ("zsh", "claude").
-    pub shell: String,
-    /// The program in its foreground, when one is ("npm run dev").
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub command: Option<String>,
-    /// Seconds in its status.
-    pub since_seconds: u64,
-    pub selected: bool,
-    pub panes: Vec<PaneInfo>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PaneInfo {
-    pub id: i64,
-}
-
-/// `status`'s result for one terminal or tab.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct StatusInfo {
-    pub window: i64,
-    pub terminal: TerminalInfo,
-    /// The tab the status is about: the one asked for, else the terminal's selected tab.
-    pub tab: i64,
-}
-
-/// `status`'s result without a target, outside any tab: the app as a whole.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct Summary {
-    pub windows: usize,
-    pub terminals: usize,
-    pub needs_you: usize,
-    pub working: usize,
-    pub finished: usize,
-    /// Added with the failed state: absent in an older app's reply.
-    #[serde(default)]
-    pub failed: usize,
-    pub idle: usize,
-    pub exited: usize,
-}
-
-impl Summary {
-    /// Count `terminals` (each by its lead tab's state) into a summary over `windows` windows.
-    pub fn of(windows: usize, terminals: impl IntoIterator<Item = TerminalState>) -> Self {
-        let mut summary = Summary { windows, ..Summary::default() };
-        for state in terminals {
-            summary.terminals += 1;
-            match state {
-                TerminalState::NeedsYou => summary.needs_you += 1,
-                TerminalState::Working => summary.working += 1,
-                TerminalState::Finished => summary.finished += 1,
-                TerminalState::Failed => summary.failed += 1,
-                TerminalState::Idle => summary.idle += 1,
-                TerminalState::Exited => summary.exited += 1,
-            }
-        }
-        summary
-    }
-}
-
-/// `new-terminal`'s result: where the terminal is.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Opened {
-    pub window: i64,
-    pub terminal: i64,
-    pub tab: i64,
-    pub pane: i64,
-    pub folder: Option<String>,
-    /// The worktree's branch and folder, when one was made.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub worktree: Option<String>,
-}
-
-/// `new-terminal --worktree`'s result: the worktree is never made without the user's say, so the
-/// dialog that asks is up in `window`; the terminal opens once they confirm.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Asked {
-    pub asked: bool,
-    pub window: i64,
-    pub branch: String,
-    pub folder: String,
-}
-
-/// `notify`'s and `send-text`'s result: which tab it reached.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Reached {
-    pub tab: i64,
-}
-
-/// What the app knows of a `send-text` target when it decides.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SendTarget {
-    pub tab: i64,
-    pub state: TerminalState,
-}
-
-/// Whether `text` may go into `target` for `from`, with typing `enabled` in Settings. Order:
-/// the switch first (so a caller learns about the setting before anything about a terminal),
-/// then the size, then the terminal: never the caller's own (an agent answering its own prompt
-/// from a script), never one waiting for the user's answer (a permission prompt is exactly what
-/// a hostile script would want to type `y` into), never a dead shell.
-pub fn send_text_check(
-    enabled: bool,
-    text: &str,
-    from: Option<i64>,
-    target: SendTarget,
-) -> Result<(), Error> {
-    let refuse = |code, message: String| Err(Error { code, message });
-    if !enabled {
-        return Err(writes_off());
-    }
-    if text.len() > SEND_TEXT_MAX_BYTES {
-        return refuse(
-            ErrorCode::TooLarge,
-            format!("send-text takes at most {} bytes, not {}", SEND_TEXT_MAX_BYTES, text.len()),
-        );
-    }
-    if text.trim().is_empty() {
-        return refuse(ErrorCode::BadRequest, "nothing to send".to_string());
-    }
-    if from == Some(target.tab) {
-        return refuse(
-            ErrorCode::Refused,
-            format!("tab {} is the one asking: a terminal can't type into itself", target.tab),
-        );
-    }
-    match target.state {
-        TerminalState::NeedsYou => refuse(
-            ErrorCode::Refused,
-            format!(
-                "tab {} is waiting for the user's answer; nothing is typed into it until they have",
-                target.tab
-            ),
-        ),
-        TerminalState::Exited => refuse(ErrorCode::Refused, format!("tab {}'s shell has ended", target.tab)),
-        TerminalState::Idle | TerminalState::Working | TerminalState::Finished | TerminalState::Failed => {
-            Ok(())
-        }
-    }
-}
-
-/// The answer to `send-text` and `new-terminal` while `control_write` is off.
-pub fn writes_off() -> Error {
-    Error {
-        code: ErrorCode::NotAllowed,
-        message: "typing into terminals and opening them from the command line is off: turn on \
-                  Settings → Coding agents → Let the command line type and open terminals"
-            .into(),
-    }
-}
-
-/// `notify`'s words as the banner shows them: cleaned like a program's own notification (one
-/// line, no control or invisible characters, cut with an ellipsis), or nothing when nothing is
-/// left to say.
-pub fn notice_text(title: &str, body: &str) -> Option<wormhole_term::Notification> {
-    use wormhole_term::{BODY_MAX_CHARS, TITLE_MAX_CHARS, clean};
-    let (title, body) = (clean(title, TITLE_MAX_CHARS), clean(body, BODY_MAX_CHARS));
-    (!title.is_empty() || !body.is_empty()).then_some(wormhole_term::Notification { title, body })
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
 
     use super::{
-        Action, Error, ErrorCode, PROTOCOL_VERSION, Reply, Request, SEND_TEXT_MAX_BYTES, SendTarget, Summary,
-        Target, TerminalState, WelcomeOp, notice_text, send_text_check,
+        Action, ErrorCode, PROTOCOL_VERSION, Reply, Request, Summary, Target, TerminalState, WelcomeOp,
     };
 
     /// Compiles only while every action is listed: a new one must get a golden line too.
@@ -606,45 +354,8 @@ mod tests {
         assert_eq!(welcome.name(), "welcome");
     }
 
-    fn check(enabled: bool, text: &str, from: Option<i64>, state: TerminalState) -> Result<(), ErrorCode> {
-        send_text_check(enabled, text, from, SendTarget { tab: 5, state }).map_err(|Error { code, .. }| code)
-    }
-
     #[test]
-    fn text_goes_only_where_the_rules_allow() {
-        // The switch first: a caller learns about Settings before anything about the terminal.
-        assert_eq!(check(false, "hi", None, TerminalState::Idle), Err(ErrorCode::NotAllowed));
-        assert_eq!(check(false, "hi", Some(5), TerminalState::NeedsYou), Err(ErrorCode::NotAllowed));
-        assert_eq!(check(true, "hi", None, TerminalState::Idle), Ok(()));
-        assert_eq!(check(true, "hi", Some(2), TerminalState::Working), Ok(()), "another agent at work");
-        assert_eq!(check(true, "hi", None, TerminalState::Finished), Ok(()));
-        assert_eq!(check(true, "hi", None, TerminalState::Failed), Ok(()), "back at its prompt");
-        // Never the caller's own tab.
-        assert_eq!(check(true, "y", Some(5), TerminalState::Idle), Err(ErrorCode::Refused));
-        // Never a terminal waiting for the user: that is the permission prompt.
-        assert_eq!(check(true, "y", Some(2), TerminalState::NeedsYou), Err(ErrorCode::Refused));
-        assert_eq!(check(true, "y", None, TerminalState::NeedsYou), Err(ErrorCode::Refused));
-        assert_eq!(check(true, "ls", None, TerminalState::Exited), Err(ErrorCode::Refused));
-        // Caps.
-        assert_eq!(check(true, "", None, TerminalState::Idle), Err(ErrorCode::BadRequest));
-        assert_eq!(check(true, "  \n", None, TerminalState::Idle), Err(ErrorCode::BadRequest));
-        let huge = "x".repeat(SEND_TEXT_MAX_BYTES + 1);
-        assert_eq!(check(true, &huge, None, TerminalState::Idle), Err(ErrorCode::TooLarge));
-        assert_eq!(check(true, &huge[1..], None, TerminalState::Idle), Ok(()), "at the cap is fine");
-    }
-
-    #[test]
-    fn a_notices_words_are_cleaned_like_a_programs() {
-        let notice =
-            notice_text(" Deploy\u{202e} ", "finished\x07 in  3\u{200b}s\n").expect("something to say");
-        assert_eq!((notice.title.as_str(), notice.body.as_str()), ("Deploy", "finished in 3s"));
-        assert!(notice_text("\x07", "  ").is_none(), "nothing left to say");
-        let long = notice_text("", &"a".repeat(1000)).expect("body");
-        assert!(long.body.ends_with('…') && long.body.chars().count() == wormhole_term::BODY_MAX_CHARS + 1);
-    }
-
-    #[test]
-    fn errors_map_to_exit_codes_and_states_to_words() {
+    fn errors_map_to_exit_codes() {
         assert_eq!(ErrorCode::BadRequest.exit_code(), 2);
         assert_eq!(ErrorCode::Version.exit_code(), 2);
         for code in [
@@ -658,23 +369,6 @@ mod tests {
         ] {
             assert_eq!(code.exit_code(), 1, "{code:?}");
         }
-        assert_eq!(TerminalState::from(crate::notify::State::Done), TerminalState::Finished);
-        assert_eq!(TerminalState::from(crate::notify::State::Failed), TerminalState::Failed);
-        assert_eq!(TerminalState::NeedsYou.word(), "needs you");
-        assert_eq!(TerminalState::Failed.word(), "failed");
-        assert_eq!(serde_json::to_string(&TerminalState::Failed).expect("serializes"), r#""failed""#);
-        assert_eq!(serde_json::to_string(&TerminalState::NeedsYou).expect("serializes"), r#""needs_you""#);
         assert_eq!((Target::Pane(4).id(), Target::Pane(4).kind()), (4, "pane"));
-    }
-
-    /// An app that has no failed count yet answers without it; the command line reads that as none.
-    #[test]
-    fn a_summary_from_an_older_app_has_no_failed_count() {
-        let older =
-            r#"{"windows":1,"terminals":2,"needs_you":0,"working":1,"finished":1,"idle":0,"exited":0}"#;
-        let summary: Summary = serde_json::from_str(older).expect("reads");
-        assert_eq!(summary.failed, 0);
-        let counted = Summary::of(1, [TerminalState::Failed, TerminalState::Failed, TerminalState::Idle]);
-        assert_eq!((counted.failed, counted.idle, counted.terminals), (2, 1, 3));
     }
 }
