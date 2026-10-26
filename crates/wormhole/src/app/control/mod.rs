@@ -13,12 +13,12 @@ use std::path::Path;
 use std::time::Instant;
 
 use gpui_kit::*;
-use wormhole_core::ipc::Peer;
 use wormhole_core::ipc::control::{
     Action, ErrorCode, Limited, Listing, PROTOCOL_VERSION, RateLimits, Reached, Reply, Request,
     SEND_TEXT_MAX_BYTES, SendTarget, StatusInfo, Summary, Target, WindowInfo, notice_text, send_text_check,
     writes_off,
 };
+use wormhole_core::ipc::{Answer, Peer};
 
 use crate::app_state::{AppState, OpenWindow, app};
 use crate::notifications;
@@ -30,7 +30,12 @@ struct Budgets(RateLimits);
 
 impl Global for Budgets {}
 
-/// Answer `request`. Never fails: whatever is wrong with it is said in the reply.
+/// Answer `request` for the socket thread: one reply line, or a reply and the stream that follows it.
+pub(crate) fn answer(request: Request, peer: &Peer, cx: &mut App) -> Answer {
+    Answer::Reply(handle(request, peer, cx))
+}
+
+/// Answer `request` with one reply. Never fails: whatever is wrong with it is said in the reply.
 pub(crate) fn handle(request: Request, peer: &Peer, cx: &mut App) -> Reply {
     let from = request.from_tab();
     tracing::debug!(?from, action = request.action.name(), "control request");
@@ -51,6 +56,7 @@ pub(crate) fn handle(request: Request, peer: &Peer, cx: &mut App) -> Reply {
         Action::NewTerminal { folder, command, worktree, window } => {
             new_terminal(folder, command, worktree, window, from, cx)
         }
+        Action::Events(_) => Reply::error(ErrorCode::Unsupported, "events are not available here yet"),
         // Not behind `control_write`: the token the app put in the welcome terminal is the key.
         Action::Welcome { token, op } => {
             crate::onboarding::welcome::handle(token, op, from, welcome_services(), cx)

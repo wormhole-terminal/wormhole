@@ -12,9 +12,10 @@
 use std::fs::{self, File, TryLockError};
 use std::io::Write;
 use std::path::Path;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
+use super::bus::Bus;
 use super::{Incoming, Message, server, socket_path};
 use crate::platform::fs::{private_file, set_mode};
 use crate::platform::socket::{Listener, Stream};
@@ -28,8 +29,9 @@ pub struct InstanceLock {
 
 #[derive(Debug)]
 pub enum Instance {
-    /// This process runs the app; hook messages and control requests arrive on `events`.
-    Primary { events: smol::channel::Receiver<Incoming>, lock: InstanceLock },
+    /// This process runs the app; hook messages and control requests arrive on `events`, and what
+    /// the app tells its watchers goes through `bus`.
+    Primary { events: smol::channel::Receiver<Incoming>, bus: Arc<Bus>, lock: InstanceLock },
     /// Another process does (and was asked to come to the front, if this launch may ask).
     Secondary,
 }
@@ -69,7 +71,7 @@ pub(super) fn acquire_in(dir: &Path, socket: &Path, come_forward: bool) -> std::
         tracing::warn!("hook socket {} unavailable, agent hooks are off: {err}", socket.display());
         smol::channel::unbounded().1
     });
-    Ok(Instance::Primary { events, lock })
+    Ok(Instance::Primary { events, bus: Bus::new(), lock })
 }
 
 /// Serve the hook socket (the lock is held, so a socket file there is a leftover).
@@ -105,20 +107,27 @@ fn activate(socket: &Path) {
     }
 }
 
+/// What the running instance gets from the socket: what arrives, and the bus its events go out on.
+#[derive(Debug)]
+pub struct Served {
+    pub events: smol::channel::Receiver<Incoming>,
+    pub bus: Arc<Bus>,
+}
+
 /// Become the running instance, or return `None` if one already exists
 /// (after asking it to activate). Without a lock or a socket (an unwritable
 /// data dir) the app still runs, without hooks.
-pub fn start_server() -> Option<smol::channel::Receiver<Incoming>> {
+pub fn start_server() -> Option<Served> {
     static HELD: OnceLock<InstanceLock> = OnceLock::new();
     match acquire() {
-        Ok(Instance::Primary { events, lock }) => {
+        Ok(Instance::Primary { events, bus, lock }) => {
             let _ = HELD.set(lock);
-            Some(events)
+            Some(Served { events, bus })
         }
         Ok(Instance::Secondary) => None,
         Err(err) => {
             tracing::warn!("single-instance lock or hook socket unavailable: {err}");
-            Some(smol::channel::unbounded().1)
+            Some(Served { events: smol::channel::unbounded().1, bus: Bus::new() })
         }
     }
 }

@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use super::{Cli, Parsed};
-use crate::ipc::control::{Action, Target};
+use crate::ipc::control::{Action, EventsSpec, Target};
 
 /// Read the words after the program name (`list --json`, `send-text --tab 3 hello`) into what to
 /// do. `cwd` and `home` resolve a relative folder and a leading `~`.
@@ -24,6 +24,7 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
     let mut command = None;
     let mut worktree = None;
     let mut window = None;
+    let mut watch = EventsSpec::default();
     let mut words: Vec<&str> = Vec::new();
     let mut args = rest.iter().map(String::as_str);
     while let Some(arg) = args.next() {
@@ -35,6 +36,22 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
             "--json" => json = true,
             "--text" => text_out = true,
             "--help" | "-h" => return Ok(Parsed::Help),
+            // `events` watches several terminals and windows: its `--terminal` and `--window` repeat.
+            "--terminal" if verb == "events" => {
+                let value = value(arg)?;
+                watch.terminals.push(id(arg, value)?);
+            }
+            "--window" if verb == "events" => {
+                let value = value(arg)?;
+                watch.windows.push(id(arg, value)?);
+            }
+            "--topics" if verb == "events" => {
+                let value = value(arg)?;
+                watch
+                    .topics
+                    .extend(value.split(',').map(str::trim).filter(|t| !t.is_empty()).map(String::from));
+            }
+            "--output" if verb == "events" => watch.output = true,
             "--terminal" | "--tab" | "--pane" => {
                 let value = value(arg)?;
                 let id = id(arg, value)?;
@@ -93,9 +110,15 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
             let folder = folder.map(|folder| resolve_folder(&folder, cwd, home));
             Action::NewTerminal { folder, command, worktree, window }
         }
+        "events" => {
+            if !text.is_empty() {
+                return Err(format!("events takes options only, not {text:?}"));
+            }
+            Action::Events(watch)
+        }
         other => return Err(format!("unknown command {other:?}")),
     };
-    if target.is_some() && matches!(action, Action::List | Action::NewTerminal { .. }) {
+    if target.is_some() && matches!(action, Action::List | Action::NewTerminal { .. } | Action::Events(_)) {
         return Err(format!("{verb} takes no target"));
     }
     let stdin = matches!(&action, Action::SendText { text, .. } if text == "-");
@@ -119,7 +142,7 @@ mod tests {
     use std::path::Path;
 
     use super::{Cli, Parsed, parse};
-    use crate::ipc::control::{Action, Target};
+    use crate::ipc::control::{Action, EventsSpec, Target};
 
     fn words(list: &[&str]) -> Vec<String> {
         list.iter().map(|s| s.to_string()).collect()
@@ -206,6 +229,44 @@ mod tests {
                 window: None
             }
         );
+    }
+
+    #[test]
+    fn events_takes_topics_terminals_windows_and_output() {
+        assert_eq!(parsed(&["events"]).action, Action::Events(EventsSpec::default()));
+        assert_eq!(
+            parsed(&[
+                "events",
+                "--topics",
+                "status, blocks",
+                "--topics",
+                "bell",
+                "--terminal",
+                "3",
+                "--terminal",
+                "4",
+                "--window",
+                "1",
+                "--output",
+                "--json"
+            ]),
+            Cli {
+                action: Action::Events(EventsSpec {
+                    topics: vec!["status".into(), "blocks".into(), "bell".into()],
+                    terminals: vec![3, 4],
+                    windows: vec![1],
+                    output: true,
+                }),
+                json: true,
+                text: false,
+                stdin: false,
+            }
+        );
+        assert!(mistake(&["events", "--tab", "3"]).contains("takes no target"), "no tabs here");
+        assert!(mistake(&["events", "--terminal", "x"]).contains("takes an id"));
+        assert!(mistake(&["events", "status"]).contains("options only"));
+        assert!(mistake(&["events", "--topics"]).contains("needs a value"));
+        assert!(mistake(&["list", "--topics", "x"]).contains("unknown option"));
     }
 
     #[test]

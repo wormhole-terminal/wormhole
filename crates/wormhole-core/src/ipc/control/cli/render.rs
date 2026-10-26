@@ -34,7 +34,8 @@ pub fn render(action: &Action, reply: &Reply, home: Option<&Path>) -> Result<Str
         Action::Notify { .. } | Action::SendText { .. } => {
             read::<Reached>(&result).map(|reached| format!("tab {}\n", reached.tab))
         }
-        Action::Welcome { .. } => None,
+        // Streams and the welcome have their own words.
+        Action::Events(_) | Action::Welcome { .. } => None,
     };
     Ok(text.unwrap_or_else(|| "ok\n".into()))
 }
@@ -153,7 +154,7 @@ fn plural(n: usize, word: &str) -> String {
 }
 
 /// `folder` with `home` as `~`.
-fn shorten(folder: &str, home: Option<&Path>) -> String {
+pub(super) fn shorten(folder: &str, home: Option<&Path>) -> String {
     match home.map(|home| home.to_string_lossy().into_owned()) {
         Some(home) if folder == home => "~".into(),
         Some(home) if folder.starts_with(&format!("{home}/")) => format!("~{}", &folder[home.len()..]),

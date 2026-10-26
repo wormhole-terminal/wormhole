@@ -9,11 +9,12 @@ use std::io::{self, Write};
 
 use super::Action;
 
+pub(in crate::ipc) mod events;
 mod help;
 mod parse;
 mod render;
 
-pub use help::help;
+pub use help::{help, help_with};
 pub use parse::parse;
 pub use render::render;
 
@@ -60,7 +61,16 @@ pub const COMMAND_NAME: &str = "wh";
 pub fn is_verb(word: &str) -> bool {
     matches!(
         word,
-        "list" | "status" | "notify" | "send-text" | "new-terminal" | "sessions" | "help" | "--help" | "-h"
+        "list"
+            | "status"
+            | "notify"
+            | "send-text"
+            | "new-terminal"
+            | "events"
+            | "sessions"
+            | "help"
+            | "--help"
+            | "-h"
     )
 }
 
@@ -76,6 +86,18 @@ pub(in crate::ipc) fn print(text: &str) {
 
 pub(in crate::ipc) fn print_err(text: &str) {
     let _ = io::stderr().lock().write_all(text.as_bytes());
+}
+
+/// Whether the usage names the verbs behind the automation flag: the flag as the Default profile's
+/// `config.json` has it, read here without opening the app (and without creating the file, which
+/// loading it would: a command line that only prints help leaves nothing behind).
+pub(in crate::ipc) fn show_automation() -> bool {
+    use crate::config::Config;
+    use crate::config::features::FeatureFlag;
+    if !Config::path().exists() {
+        return crate::config::Settings::default().feature_enabled(FeatureFlag::Automation);
+    }
+    Config::load().settings.feature_enabled(FeatureFlag::Automation)
 }
 
 #[cfg(test)]

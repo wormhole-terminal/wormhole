@@ -14,7 +14,8 @@
 //! - `control`: the control requests and replies, their rules, limits and the command line's verbs;
 //! - `exchange`: the command line's round trip over the control socket, and the welcome's;
 //! - `instance`: who serves the socket;
-//! - `server`: the listener thread (connections from this user only);
+//! - `bus`: the events the app publishes and the subscriptions that hear them;
+//! - `server`: the listener thread (connections from this user only) and the threads of the streams;
 //! - `client`: the `hook` and `statusline` command lines;
 //! - `hosts`: the session hosts seen from outside (ids, their folder, which are alive, ending one);
 //! - `host_binary`: where the session host's executable is;
@@ -24,6 +25,7 @@
 //! `onboarding` sit above it, so a terminal's environment can name the socket without the socket
 //! knowing about terminals.
 
+pub mod bus;
 mod client;
 pub mod control;
 pub(crate) mod exchange;
@@ -47,7 +49,7 @@ use crate::storage::paths::data_dir;
 
 pub use client::{Command, command, run_cli, run_status_line_cli};
 pub use exchange::run as run_control_cli;
-pub use instance::{Instance, InstanceLock, acquire, start_server};
+pub use instance::{Instance, InstanceLock, Served, acquire, start_server};
 pub use message::Message;
 pub use server::{ANCESTORS_MAX, Peer};
 
@@ -58,7 +60,25 @@ pub enum Incoming {
     Message(Message),
     /// A control request, answered through `reply` (the connection waits for it), with who sent it
     /// as the system sees it.
-    Control { request: control::Request, peer: Peer, reply: std::sync::mpsc::SyncSender<control::Reply> },
+    Control { request: control::Request, peer: Peer, reply: std::sync::mpsc::SyncSender<Answer> },
+}
+
+/// What the app gives the socket thread for a control request.
+#[derive(Debug)]
+pub enum Answer {
+    /// Written back at once: every action that answers in one line, and every refusal.
+    Reply(control::Reply),
+    /// The reply line now, then the connection is handed to a stream thread that writes what the
+    /// subscription yields. The app makes the subscription while it answers, so nothing published
+    /// after the reply is missed; if the socket gave up waiting, dropping the answer drops the
+    /// subscription and gives its place back.
+    Stream { reply: control::Reply, subscription: bus::Subscription },
+}
+
+impl From<control::Reply> for Answer {
+    fn from(reply: control::Reply) -> Self {
+        Answer::Reply(reply)
+    }
 }
 
 static SOCKET_PATH: OnceLock<PathBuf> = OnceLock::new();

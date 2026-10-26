@@ -16,3 +16,10 @@ pub fn catch_sigterm() -> io::Result<()> {
 pub fn take() -> bool {
     os::take()
 }
+
+/// End the process at once, with exit code 0, when ctrl-c (SIGINT) arrives: for a command line that
+/// streams until it is stopped, where being stopped is how it is meant to end. Nothing is lost by
+/// not unwinding: what it printed was written line by line.
+pub fn exit_on_interrupt() -> io::Result<()> {
+    os::exit_on_interrupt()
+}

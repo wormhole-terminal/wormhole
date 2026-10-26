@@ -25,7 +25,7 @@ pub(super) fn dispatch_hook(incoming: ipc::Incoming, cx: &mut App) {
         ipc::Incoming::Message(message) => message,
         ipc::Incoming::Control { request, peer, reply } => {
             // The connection waits on its thread for this; a receiver that gave up is no error.
-            let _ = reply.send(control::handle(request, &peer, cx));
+            let _ = reply.send(control::answer(request, &peer, cx));
             return;
         }
     };

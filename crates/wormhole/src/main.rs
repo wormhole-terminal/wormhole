@@ -85,7 +85,7 @@ fn main() {
     let _ = std::thread::Builder::new().name("private-data".into()).spawn(|| {
         wormhole_core::storage::store::make_data_dir_private(&wormhole_core::storage::paths::data_dir());
     });
-    let Some(hook_events) = wormhole_core::ipc::start_server() else {
+    let Some(served) = wormhole_core::ipc::start_server() else {
         tracing::info!(
             "already running; asked the existing instance to activate, unless launched in one of its tabs"
         );
@@ -131,7 +131,7 @@ fn main() {
         // The keys from the action table, before the menus (they show the bound keys).
         app::handlers::init(cx);
 
-        app::launch::start(hook_events, root, profiles, profiles_error, cx);
+        app::launch::start(served, root, profiles, profiles_error, cx);
         app::default_terminal::serve(opened, cx);
         background::activate(cx);
     });

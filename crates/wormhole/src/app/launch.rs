@@ -33,7 +33,7 @@ const TICK: Duration = Duration::from_millis(400);
 /// Load what was saved, start the app-level tasks and open the windows
 /// that were open last time (or one fresh window).
 pub(crate) fn start(
-    hook_events: smol::channel::Receiver<ipc::Incoming>,
+    served: ipc::Served,
     root: DataRoot,
     profiles: ProfileList,
     profiles_error: Option<wormhole_core::config::profile::ProfileError>,
@@ -107,7 +107,7 @@ pub(crate) fn start(
     crate::app::saved_text::init(cx);
 
     cx.spawn(async move |cx| {
-        while let Ok(message) = hook_events.recv().await {
+        while let Ok(message) = served.events.recv().await {
             cx.update(|cx| dispatch_hook(message, cx));
         }
     })

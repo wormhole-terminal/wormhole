@@ -30,6 +30,31 @@ pub(crate) fn catch_sigterm() -> io::Result<()> {
     Ok(())
 }
 
+extern "C" fn on_sigint(_: libc::c_int) {
+    // SAFETY: `_exit` is async-signal-safe: it ends the process without running anything.
+    #[allow(unsafe_code)]
+    unsafe {
+        libc::_exit(0)
+    }
+}
+
+/// Make SIGINT end the process with exit code 0.
+pub(crate) fn exit_on_interrupt() -> io::Result<()> {
+    // SAFETY: as for `catch_sigterm`: `act` is initialised before `sigaction` reads it, and the
+    // handler only calls `_exit`.
+    #[allow(unsafe_code)]
+    let status = unsafe {
+        let mut act: libc::sigaction = std::mem::zeroed();
+        act.sa_sigaction = on_sigint as extern "C" fn(libc::c_int) as libc::sighandler_t;
+        libc::sigemptyset(&mut act.sa_mask);
+        libc::sigaction(libc::SIGINT, &act, std::ptr::null_mut())
+    };
+    if status != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
+}
+
 /// Whether SIGTERM arrived since the last call.
 pub(crate) fn take() -> bool {
     ASKED.swap(false, Ordering::SeqCst)

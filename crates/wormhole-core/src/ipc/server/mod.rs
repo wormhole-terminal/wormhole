@@ -15,10 +15,13 @@ use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use super::control::{self, ErrorCode, Reply, Request};
-use super::{Incoming, Message};
+use super::{Answer, Incoming, Message};
 use crate::platform::socket::{Listener, Stream, peer_is_same_user};
 
 mod peer;
+mod stream;
+
+use stream::Timing;
 
 pub use peer::{ANCESTORS_MAX, Peer};
 
@@ -32,10 +35,15 @@ const REPLY_WAIT: Duration = Duration::from_secs(5);
 
 /// Serve `listener` on its own thread, forwarding every message to `tx`.
 pub(super) fn spawn(listener: Listener, tx: smol::channel::Sender<Incoming>) -> io::Result<()> {
+    spawn_with(listener, tx, Timing::default())
+}
+
+/// [`spawn`] with the streams' times given (the tests shorten them).
+fn spawn_with(listener: Listener, tx: smol::channel::Sender<Incoming>, timing: Timing) -> io::Result<()> {
     std::thread::Builder::new().name("wormhole-socket".into()).spawn(move || {
         loop {
             match listener.accept() {
-                Ok((stream, _)) => serve(stream, &tx),
+                Ok((stream, _)) => serve(stream, &tx, timing),
                 Err(err) => {
                     // E.g. out of file descriptors: retrying at once would spin.
                     tracing::warn!("hook socket accept failed: {err}");
@@ -49,7 +57,7 @@ pub(super) fn spawn(listener: Listener, tx: smol::channel::Sender<Incoming>) -> 
 
 /// Read one connection's messages until it closes, its deadline passes or it
 /// sent too much; answer the control requests among them.
-fn serve(mut stream: Stream, tx: &smol::channel::Sender<Incoming>) {
+fn serve(mut stream: Stream, tx: &smol::channel::Sender<Incoming>, timing: Timing) {
     if !peer_is_same_user(&stream) {
         tracing::warn!("hook socket: a connection from another user was refused");
         return;
@@ -58,7 +66,12 @@ fn serve(mut stream: Stream, tx: &smol::channel::Sender<Incoming>) {
     let reader = Deadline { stream: reading, until: Instant::now() + DEADLINE }.take(MAX_BYTES);
     for line in BufReader::new(reader).lines().map_while(Result::ok) {
         match serde_json::from_str::<Message>(&line) {
-            Ok(Message::Control(request)) => answer(&mut stream, request, tx),
+            Ok(Message::Control(request)) => {
+                // A stream took the connection over: this thread has nothing more to read from it.
+                if answer(&mut stream, request, tx, timing) == Outcome::Streaming {
+                    return;
+                }
+            }
             Ok(message) => {
                 let _ = tx.send_blocking(Incoming::Message(message));
             }
@@ -66,32 +79,60 @@ fn serve(mut stream: Stream, tx: &smol::channel::Sender<Incoming>) {
             // at once, so the caller doesn't wait out its read timeout for nothing.
             Err(_) => {
                 if let Some(reply) = control::unreadable(&line) {
-                    write_reply(&mut stream, &reply);
+                    let _ = write_reply(&mut stream, &reply);
                 }
             }
         }
     }
 }
 
-/// Hand `request` to the app and write its reply back on `stream`.
-fn answer(stream: &mut Stream, request: Request, tx: &smol::channel::Sender<Incoming>) {
+/// What became of a connection after its request.
+#[derive(Debug, PartialEq, Eq)]
+enum Outcome {
+    /// The request was answered; the connection may carry more.
+    Answered,
+    /// A stream thread has the connection now.
+    Streaming,
+}
+
+/// Hand `request` to the app and write its answer back on `stream`; a stream's connection goes on to
+/// a thread of its own.
+fn answer(
+    stream: &mut Stream,
+    request: Request,
+    tx: &smol::channel::Sender<Incoming>,
+    timing: Timing,
+) -> Outcome {
     let (reply_tx, reply_rx) = mpsc::sync_channel(1);
     let peer = Peer::of(stream);
     if tx.send_blocking(Incoming::Control { request, peer, reply: reply_tx }).is_err() {
-        return;
+        return Outcome::Answered;
     }
-    let reply = reply_rx
-        .recv_timeout(REPLY_WAIT)
-        .unwrap_or_else(|_| Reply::error(ErrorCode::Failed, "Wormhole did not answer in time"));
-    write_reply(stream, &reply);
+    let answer = reply_rx.recv_timeout(REPLY_WAIT).unwrap_or_else(|_| {
+        Answer::Reply(Reply::error(ErrorCode::Failed, "Wormhole did not answer in time"))
+    });
+    match answer {
+        Answer::Reply(reply) => {
+            let _ = write_reply(stream, &reply);
+        }
+        Answer::Stream { reply, subscription } => {
+            if !write_reply(stream, &reply) {
+                return Outcome::Answered;
+            }
+            let Ok(writer) = stream.try_clone() else { return Outcome::Answered };
+            match stream::start(writer, subscription, timing) {
+                Ok(()) => return Outcome::Streaming,
+                Err(err) => tracing::warn!("couldn't start an event stream: {err}"),
+            }
+        }
+    }
+    Outcome::Answered
 }
 
-/// Write `reply` as one line; a client that has gone is no error.
-fn write_reply(stream: &mut Stream, reply: &Reply) {
+/// Write `reply` as one line; a client that has gone is no error. Whether it was written.
+fn write_reply(stream: &mut Stream, reply: &Reply) -> bool {
     let _ = stream.set_write_timeout(Some(Duration::from_secs(1)));
-    if let Ok(json) = serde_json::to_string(reply) {
-        let _ = writeln!(stream, "{json}");
-    }
+    writeln!(stream, "{}", control::printable::json_line(reply)).is_ok()
 }
 
 /// A stream whose reads fail once `until` has passed.
@@ -238,7 +279,7 @@ mod tests {
                     assert!(peer.ancestors.len() <= super::ANCESTORS_MAX);
                     assert_eq!(request.from.as_deref(), Some("7"));
                     reply
-                        .send(Reply::ok(Summary::of(1, [TerminalState::Working])))
+                        .send(Reply::ok(Summary::of(1, [TerminalState::Working])).into())
                         .expect("the connection waits");
                 }
                 other => panic!("expected a control request: {other:?}"),

@@ -222,7 +222,7 @@ pub(crate) fn hides_text(raw: &str) -> bool {
 /// nothing, used to hide text in an emoji) and the variation selectors, except the two that
 /// choose between text and emoji presentation, which `clean` keeps where they have something to
 /// act on (`is_presentation_selector`).
-fn is_invisible(c: char) -> bool {
+pub fn is_invisible(c: char) -> bool {
     matches!(
         c,
         '\u{00AD}'

@@ -109,6 +109,7 @@ pub use marks::Direction;
 pub use osc::percent_decode;
 pub use osc::{
     BODY_MAX_CHARS, Mark, Notification, Progress, ProgressState, PromptKind, TITLE_MAX_CHARS, clean,
+    is_invisible,
 };
 pub use ports::listening_ports;
 use pty::FairLock;

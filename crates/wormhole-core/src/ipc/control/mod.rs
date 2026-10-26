@@ -23,17 +23,20 @@
 //! enough, and what it allows).
 
 mod cli;
+pub mod event;
 mod facts;
 mod limits;
 mod policy;
+pub mod printable;
 pub mod sessions;
 mod welcome;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub use cli::{COMMAND_NAME, Cli, Parsed, help, is_verb, parse, render};
-pub(in crate::ipc) use cli::{json_env, print, print_err};
+pub use cli::{COMMAND_NAME, Cli, Parsed, help, help_with, is_verb, parse, render};
+pub(in crate::ipc) use cli::{events, json_env, print, print_err, show_automation};
+pub use event::{Event, EventFilter, EventsSpec, Subscribed, Topic, Topics};
 pub use facts::{
     Asked, Listing, Opened, PaneInfo, Reached, StatusInfo, Summary, TabInfo, TerminalInfo, TerminalState,
     WindowInfo,
@@ -111,6 +114,9 @@ pub enum Action {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<i64>,
     },
+    /// Watch what happens: the reply says the state as of a point in time, and events follow on the
+    /// same connection until either side closes it.
+    Events(event::EventsSpec),
     /// The first-run welcome program asking the app that runs it (`token` is the one in its
     /// terminal's environment): state, choices, and the end.
     Welcome { token: String, op: WelcomeOp },
@@ -119,7 +125,7 @@ pub enum Action {
 impl Action {
     /// What every action is called in a request's `action` field, for [`unreadable`]: a test keeps
     /// it in step with the enum.
-    const KNOWN: [&str; 6] = ["list", "status", "notify", "send_text", "new_terminal", "welcome"];
+    const KNOWN: [&str; 7] = ["list", "status", "notify", "send_text", "new_terminal", "events", "welcome"];
 
     /// What the action is called on the command line.
     pub fn name(&self) -> &'static str {
@@ -129,6 +135,7 @@ impl Action {
             Action::Notify { .. } => "notify",
             Action::SendText { .. } => "send-text",
             Action::NewTerminal { .. } => "new-terminal",
+            Action::Events(_) => "events",
             Action::Welcome { .. } => "welcome",
         }
     }
@@ -317,7 +324,7 @@ mod tests {
 
     use super::{
         Action, Error, ErrorCode, PROTOCOL_VERSION, Reason, Reply, Request, Summary, Target, TerminalState,
-        WelcomeOp, unreadable,
+        WelcomeOp, event::EventsSpec, unreadable,
     };
 
     /// Compiles only while every action is listed: a new one must get a golden line too.
@@ -328,6 +335,7 @@ mod tests {
             Action::Notify { .. } => "notify",
             Action::SendText { .. } => "send_text",
             Action::NewTerminal { .. } => "new_terminal",
+            Action::Events(_) => "events",
             Action::Welcome { .. } => "welcome",
         }
     }
@@ -374,6 +382,18 @@ mod tests {
             ),
             (
                 Request::new(
+                    Action::Events(EventsSpec {
+                        topics: vec!["status".into(), "blocks".into()],
+                        terminals: vec![3],
+                        windows: vec![],
+                        output: false,
+                    }),
+                    Some("7".into()),
+                ),
+                r#"{"version":1,"from":"7","action":"events","topics":["status","blocks"],"terminals":[3],"output":false}"#,
+            ),
+            (
+                Request::new(
                     Action::Welcome { token: "0123abcd".into(), op: WelcomeOp::State },
                     Some("4".into()),
                 ),
@@ -387,7 +407,7 @@ mod tests {
         let covered: BTreeSet<_> = golden().iter().map(|(request, _)| name(&request.action)).collect();
         assert_eq!(
             covered,
-            BTreeSet::from(["list", "status", "notify", "send_text", "new_terminal", "welcome"])
+            BTreeSet::from(["list", "status", "notify", "send_text", "new_terminal", "events", "welcome"])
         );
     }
 

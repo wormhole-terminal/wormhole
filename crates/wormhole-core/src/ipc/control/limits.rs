@@ -12,6 +12,9 @@ pub enum Limited {
     Notify,
     SendText,
     NewTerminal,
+    /// A stream of events (`events`): each one holds a thread and a place among the few streams there
+    /// are, so how often one is started is held down too.
+    Subscribe,
     /// The welcome's choices of a theme, a colour or a font size: a person stepping through a
     /// list sends many, and each is a small settings change.
     WelcomeLook,
@@ -34,6 +37,7 @@ impl Limited {
             Limited::Notify => 10,
             Limited::SendText => 30,
             Limited::NewTerminal => 5,
+            Limited::Subscribe => 30,
             Limited::WelcomeLook => 240,
             Limited::WelcomeInstall => 12,
             Limited::WelcomeNotify => 30,
@@ -113,7 +117,7 @@ mod tests {
     fn the_budgets_are_small_enough_to_notice_a_loop() {
         assert!(Limited::Notify.budget() <= 10);
         assert!(Limited::NewTerminal.budget() <= 5);
-        assert!(Limited::SendText.budget() <= 30);
+        assert!(Limited::SendText.budget() <= 30 && Limited::Subscribe.budget() <= 30);
         assert!(Limited::WelcomeInstall.budget() <= 12 && Limited::WelcomeNotify.budget() <= 30);
         assert!(Limited::WelcomeDemo.budget() <= 120 && Limited::WelcomeFinish.budget() <= 4);
         assert_eq!(RateLimits::default().retry_after(Limited::Notify, None, Instant::now()), Duration::ZERO);
