@@ -8,6 +8,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- `features` in config.json switches the right panel's optional tools off and on (`"history": false`);
+  Changes and Usage always stay, and a key that switches nothing is said so. Settings has no page for it
+  yet; the first run's walk through how much the window shows will set it.
 - Update checks let us count how many copies of Wormhole run, without telling one from another. A
   check now names the update channel, Apple silicon or Intel and the macOS major version, and the
   first check of each day and of each month says so; counting those gives the copies running each

@@ -216,6 +216,12 @@ impl SectionId {
     pub fn is_visible_in(self, settings: &Settings, mode: crate::config::features::FlagMode) -> bool {
         match self {
             SectionId::FeatureFlags => mode.shows_switches(),
+            // Project folders switched off as a feature (`features`) have nothing to set either.
+            SectionId::Projects
+                if !settings.feature_switched_on(crate::config::feature_table::FeatureId::Project) =>
+            {
+                false
+            }
             _ => self
                 .feature_flag()
                 .is_none_or(|flag| crate::config::features::enabled_in(flag, &settings.feature_flags, mode)),
@@ -256,8 +262,9 @@ pub fn entry(id: &str) -> Option<(SectionId, &'static Group, &'static Entry)> {
 
 /// `config.json` keys without a row of their own: `notifications` is the master switch, which
 /// the Notifications section's switches set (on while any kind is on); `folder_colors` is a list the
-/// Project tab sets, with nothing to set in a form.
-pub const UNLISTED: &[&str] = &["notifications", "folder_colors"];
+/// Project tab sets, with nothing to set in a form; `features`, the person's switches for optional
+/// features, which the first run's walk sets until Settings has a page of them.
+pub const UNLISTED: &[&str] = &["notifications", "folder_colors", "features"];
 
 fn as_map(settings: &Settings) -> Map<String, Value> {
     match serde_json::to_value(settings) {

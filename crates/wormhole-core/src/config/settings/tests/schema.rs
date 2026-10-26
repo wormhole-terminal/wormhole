@@ -397,3 +397,11 @@ fn the_motion_in_force_is_the_persons_while_the_feature_is_on_and_classic_otherw
     assert!(chosen.motion_feature_on(), "the fixed motions play with the feature");
     assert!(!off.motion_feature_on(), "and wait for it");
 }
+
+/// Which features the person does without is theirs: a repository's overlay never switches a tool.
+#[test]
+fn the_feature_switches_are_the_persons_own() {
+    assert!(APP_SETTINGS.contains(&"features") && !PROJECT_SETTINGS.contains(&"features"));
+    let json = serde_json::to_value(Settings::default()).expect("serializes");
+    assert_eq!(json["features"], serde_json::json!({}));
+}

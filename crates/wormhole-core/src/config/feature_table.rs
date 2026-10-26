@@ -169,8 +169,8 @@ impl FeatureMask {
     }
 
     /// Which features `settings` leave on: an always-on one whatever they say; an optional one
-    /// when its gate (if it has one) passes in this build and the person's own switch is on. That
-    /// switch is not in `config.json` yet, so it is the feature's default.
+    /// when its gate (if it has one) passes in this build and the person's own switch is on
+    /// ([`Settings::feature_switched_on`]).
     pub fn resolve(settings: &Settings) -> Self {
         Self::resolve_in(settings, settings.flag_mode())
     }
@@ -181,8 +181,9 @@ impl FeatureMask {
         for info in &FEATURES {
             let on = match info.kind {
                 FeatureKind::Always => true,
-                FeatureKind::Optional { default_on } => {
-                    default_on && info.gate.is_none_or(|flag| enabled_in(flag, &settings.feature_flags, mode))
+                FeatureKind::Optional { .. } => {
+                    settings.feature_switched_on(info.id)
+                        && info.gate.is_none_or(|flag| enabled_in(flag, &settings.feature_flags, mode))
                 }
             };
             mask = mask.with(info.id, on);
@@ -191,11 +192,94 @@ impl FeatureMask {
     }
 }
 
+impl Settings {
+    /// The person's own switch for feature `id`: what `features` says under its key, else the
+    /// feature's default. An always-on feature has no switch and is on. This is not whether the
+    /// feature is on: a feature still behind its flag is off whatever its switch says, so what to show
+    /// asks [`FeatureMask`] (which reads both).
+    pub fn feature_switched_on(&self, id: FeatureId) -> bool {
+        let info = id.info();
+        match info.kind {
+            FeatureKind::Always => true,
+            FeatureKind::Optional { default_on } => {
+                self.features.get(info.key).copied().unwrap_or(default_on)
+            }
+        }
+    }
+
+    /// Switch an optional feature on or off; an always-on one has no switch. The default is kept as
+    /// no entry, so a file says only what the person changed.
+    pub fn switch_feature(&mut self, id: FeatureId, on: bool) {
+        let info = id.info();
+        let FeatureKind::Optional { default_on } = info.kind else { return };
+        if on == default_on {
+            self.features.remove(info.key);
+        } else {
+            self.features.insert(info.key.to_string(), on);
+        }
+    }
+}
+
+/// What `features` in a settings file says that does nothing: a key that names no feature, or one that
+/// can't be switched off. `None` when all of it counts.
+pub(crate) fn features_notice(features: &std::collections::BTreeMap<String, bool>) -> Option<String> {
+    let idle: Vec<String> = features
+        .keys()
+        .filter(|key| {
+            FEATURES
+                .iter()
+                .find(|info| info.key == key.as_str())
+                .is_none_or(|info| info.kind == FeatureKind::Always)
+        })
+        .map(|key| format!("`{key}`"))
+        .collect();
+    (!idle.is_empty()).then(|| {
+        let optional: Vec<&str> = FEATURES
+            .iter()
+            .filter(|info| matches!(info.kind, FeatureKind::Optional { .. }))
+            .map(|info| info.key)
+            .collect();
+        format!("`features` → {} can't be switched (these can: {})", idle.join(", "), optional.join(", "))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;
 
     use super::*;
+
+    #[test]
+    fn a_switch_is_kept_only_while_it_differs_from_the_default() {
+        let mut settings = Settings::default();
+        assert!(settings.feature_switched_on(FeatureId::Notes));
+        settings.switch_feature(FeatureId::Notes, false);
+        assert_eq!(settings.features.get("notes"), Some(&false));
+        assert!(!settings.feature_switched_on(FeatureId::Notes));
+        settings.switch_feature(FeatureId::Notes, true);
+        assert!(settings.features.is_empty(), "the default is no entry");
+        settings.switch_feature(FeatureId::Changes, false);
+        assert!(
+            settings.features.is_empty() && settings.feature_switched_on(FeatureId::Changes),
+            "always on"
+        );
+        let read: Settings =
+            crate::storage::jsonc::parse(r#"{ "features": { "history": false, "later": true } }"#)
+                .expect("reads");
+        assert!(!read.feature_switched_on(FeatureId::History));
+        assert!(!FeatureMask::resolve(&read).has(FeatureId::History));
+    }
+
+    #[test]
+    fn a_key_that_switches_nothing_is_said_so() {
+        let said = |pairs: &[(&str, bool)]| {
+            features_notice(&pairs.iter().map(|(k, v)| (k.to_string(), *v)).collect())
+        };
+        assert_eq!(said(&[("notes", false), ("history", true)]), None);
+        let notice = said(&[("changes", false), ("notes_and_tasks", false)]).expect("a notice");
+        assert!(notice.contains("`changes`") && notice.contains("`notes_and_tasks`"), "{notice}");
+        assert!(notice.contains("history, notes, project"), "{notice}");
+    }
 
     fn settings_with(flags: &[(&str, bool)]) -> Settings {
         Settings {

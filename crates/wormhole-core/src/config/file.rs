@@ -168,7 +168,12 @@ mod tests {
         let new = updated_text(old, &settings).unwrap();
         // Untouched text is byte for byte the same; the changed value is replaced.
         assert!(new.starts_with("\u{feff}{\n  \"$schema\": \"https://example.com/config.json\",\n  // My theme.\n  \"theme\": \"Dracula\", /* keep */\n  \"x-mine\": { \"a\": [1, 2] },\n  \"font_size\": 14,\n"), "{new}");
-        assert!(new.ends_with("  \"worktree_base\": \"\",\n  \"feature_flags\": {}\n}\n// end\n"), "{new}");
+        assert!(
+            new.ends_with(
+                "  \"worktree_base\": \"\",\n  \"feature_flags\": {},\n  \"features\": {}\n}\n// end\n"
+            ),
+            "{new}"
+        );
         // `14` reads back as the same setting, so it is not rewritten as `14.0`.
         assert!(!new.contains("14.0"));
         assert!(new.contains("\n  \"diff_wrap\": true,\n"));

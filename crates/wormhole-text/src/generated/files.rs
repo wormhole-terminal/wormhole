@@ -30,6 +30,7 @@ pub(crate) const LOCALES: [Locale; 1] = [
             ("settings-updates.ftl", include_str!("../../locales/en/settings-updates.ftl")),
             ("settings-window.ftl", include_str!("../../locales/en/settings-window.ftl")),
             ("settings.ftl", include_str!("../../locales/en/settings.ftl")),
+            ("tailor.ftl", include_str!("../../locales/en/tailor.ftl")),
             ("terminal.ftl", include_str!("../../locales/en/terminal.ftl")),
             ("title-row.ftl", include_str!("../../locales/en/title-row.ftl")),
         ],

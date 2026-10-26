@@ -66,7 +66,7 @@ pub(super) fn compare(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 pub(super) fn project(ctx: &mut Ctx, _: &str) -> Result<String> {
     if !project_folders_on(ctx) {
-        return Ok("project folders feature is off (feature_flags.project_folders)".into());
+        return Ok("project folders are off (feature_flags.project_folders, or features.project)".into());
     }
     crate::features::project::devctl::show_tab(ctx.workspace, ctx.cx);
     Ok(String::new())
@@ -76,7 +76,7 @@ pub(super) fn project(ctx: &mut Ctx, _: &str) -> Result<String> {
 /// terminal's folder. It is made off the UI thread: look at `rows` or `title` a tick later.
 pub(super) fn project_init(ctx: &mut Ctx, _: &str) -> Result<String> {
     if !project_folders_on(ctx) {
-        return Ok("project folders feature is off (feature_flags.project_folders)".into());
+        return Ok("project folders are off (feature_flags.project_folders, or features.project)".into());
     }
     let folder = crate::features::project::devctl::init(ctx.workspace, ctx.cx).map_err(|e| anyhow!(e))?;
     Ok(format!("creating {}/.wormhole", folder.display()))
@@ -85,7 +85,7 @@ pub(super) fn project_init(ctx: &mut Ctx, _: &str) -> Result<String> {
 /// `project-trust`: trust the active terminal's project, as its trust button does.
 pub(super) fn project_trust(ctx: &mut Ctx, _: &str) -> Result<String> {
     if !project_folders_on(ctx) {
-        return Ok("project folders feature is off (feature_flags.project_folders)".into());
+        return Ok("project folders are off (feature_flags.project_folders, or features.project)".into());
     }
     let root = crate::features::project::devctl::trust(ctx.workspace, ctx.cx).map_err(|e| anyhow!(e))?;
     Ok(format!("trusting {}", root.display()))
@@ -119,7 +119,11 @@ pub(super) fn panel_tab(ctx: &mut Ctx, arg: &str) -> Result<String> {
     if let Some(feature) = wormhole_core::config::FeatureId::of_tab(tab)
         && !crate::settings::features(ctx.cx).has(feature)
     {
-        return Ok(format!("{} is off (feature_flags)", feature.info().title.to_lowercase()));
+        return Ok(format!(
+            "{} is off (its flag in feature_flags, or features.{})",
+            feature.info().title.to_lowercase(),
+            feature.info().key
+        ));
     }
     ctx.workspace.show_tab(tab, ctx.cx);
     Ok(String::new())

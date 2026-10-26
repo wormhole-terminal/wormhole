@@ -8,7 +8,8 @@
 //!
 //! The domain also holds what is a setting in all but file: a profile, a whole set of settings
 //! (`profile`), the feature flags (`features`), the table of features and which are on
-//! (`feature_table`) with the names of the panel's tabs (`tab`), the Settings window's table of every
+//! (`feature_table`) with the names of the panel's tabs (`tab`), how much the window shows and its
+//! three presets (`presets`), the Settings window's table of every
 //! setting (`settings_index`) and what a program may do with the clipboard (`clipboard`). Tier 3: it uses
 //! the tiers below for the values it stores and checks (`storage`, `theme`, `agents`, `update`,
 //! `view`, and `project` for a trusted project's overrides). `git`, `notify`, `ipc`, `terminal`
@@ -20,6 +21,7 @@ pub mod feature_table;
 pub mod features;
 mod file;
 mod font_slots;
+pub mod presets;
 pub mod profile;
 mod settings;
 pub mod settings_index;
@@ -322,7 +324,11 @@ fn notice(text: &str) -> Option<String> {
         Some(Value::Object(motion)) => MotionChoices::problems(motion),
         _ => Vec::new(),
     };
-    let said: Vec<String> = unknown.into_iter().chain(motion).collect();
+    let features = map
+        .get("features")
+        .and_then(|value| serde_json::from_value(value.clone()).ok())
+        .and_then(|features| feature_table::features_notice(&features));
+    let said: Vec<String> = unknown.into_iter().chain(motion).chain(features).collect();
     (!said.is_empty()).then(|| format!("config.json: {}", said.join("; ")))
 }
 

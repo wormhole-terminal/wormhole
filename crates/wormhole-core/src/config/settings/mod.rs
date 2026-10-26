@@ -274,6 +274,9 @@ pub struct Settings {
     /// this; otherwise a release uses each flag's release default. A key this build doesn't know
     /// stays in the file.
     pub feature_flags: BTreeMap<String, bool>,
+    /// The person's own switches for the features they can do without (`config::feature_table`), by
+    /// the feature's key (`"notes": false`). A feature not named here is as it is by default.
+    pub features: BTreeMap<String, bool>,
 }
 
 impl Default for Settings {
@@ -370,6 +373,7 @@ impl Default for Settings {
             clipboard_write: ClipboardWrite::default(),
             worktree_base: String::new(),
             feature_flags: BTreeMap::new(),
+            features: BTreeMap::new(),
         }
     }
 }

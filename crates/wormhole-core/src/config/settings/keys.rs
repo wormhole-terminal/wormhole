@@ -131,6 +131,8 @@ pub const APP_SETTINGS: &[&str] = &[
     // Which in-progress features are on is the person's own choice (a dev build, or Unstable), never a
     // project's.
     "feature_flags",
+    // Which features the person does without is theirs: a repository can't switch a tool off (or on).
+    "features",
 ];
 
 /// Keys of older files that are still read (into the setting that replaced them) but never written:
