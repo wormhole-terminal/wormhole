@@ -2,7 +2,7 @@
 //! window the drag began in, in that window's own space, which says nothing about which screen it is over once
 //! it is far outside.
 
-use wormhole_core::view::tear_off::Spot;
+use wormhole_core::view::tear_off::{Screen, Spot};
 
 use super::os::pointer as os;
 
@@ -42,4 +42,22 @@ fn pretended() -> &'static std::sync::Mutex<Option<Pointer>> {
 #[cfg(any(test, feature = "devctl"))]
 pub fn pretend(at: Option<Pointer>) {
     *pretended().lock().unwrap_or_else(std::sync::PoisonError::into_inner) = at;
+}
+
+/// The screens, in the system's global space (y up). In a test, none: GPUI's test displays have no place.
+pub fn screens() -> Vec<Screen> {
+    if cfg!(test) {
+        return Vec::new();
+    }
+    os::screens()
+}
+
+/// The number of the front-most window at a point of the global space, of any application (windows that
+/// take no mouse, like the chip that follows a drag, are not counted), `None` where the system can't say
+/// and in a test.
+pub fn window_number_at(global: (f32, f32)) -> Option<i64> {
+    if cfg!(test) {
+        return None;
+    }
+    os::window_number_at(global)
 }

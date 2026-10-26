@@ -44,3 +44,7 @@ pub fn show(_: &Window) {}
 pub fn order_back(_: &Window) {}
 
 pub fn keep_behind(_: &Window) {}
+
+pub fn number(_: &Window) -> Option<i64> {
+    None
+}

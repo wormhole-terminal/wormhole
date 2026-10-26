@@ -77,6 +77,10 @@ pub fn make_ghost(window: &Window) {
     );
 }
 
+pub fn number(window: &Window) -> Option<i64> {
+    ns_window(window).map(|ns_window| ns_window.windowNumber() as i64)
+}
+
 pub fn set_shadow(window: &Window, shadow: bool) {
     if let Some(ns_window) = ns_window(window) {
         ns_window.setHasShadow(shadow);

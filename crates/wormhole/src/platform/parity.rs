@@ -98,6 +98,9 @@ pub(super) fn signatures_match() {
         window::make_ghost: fn(&Window);
         window::set_shadow: fn(&Window, bool);
         pointer::on_screen: fn() -> Option<super::pointer::Pointer>;
+        pointer::screens: fn() -> Vec<wormhole_core::view::tear_off::Screen>;
+        pointer::window_number_at: fn((f32, f32)) -> Option<i64>;
+        window::number: fn(&Window) -> Option<i64>;
         window::is_minimised: fn(&Window) -> bool;
         window::allow_fullscreen: fn(&Window);
         window::deminiaturize: fn(&Window);

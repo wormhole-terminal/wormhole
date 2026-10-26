@@ -1,7 +1,9 @@
 //! What a terminal let go of outside its window means: which window of the app is under the pointer,
 //! and so whether it opens a window of its own, joins another one or stays. AppKit sends the mouse
 //! events of a drag to the window it began in only, so the other windows never hear it: this is
-//! worked out from where the windows are, front to back.
+//! worked out from where the windows are, front to back, all in the global space (`screen`), so a window
+//! that lies across two screens is one window. Another application's window on top of them is not in the
+//! stack, so the system says whether one is (`covered`).
 
 use crate::view::panes::Rect;
 
@@ -15,11 +17,10 @@ pub enum Occupant<K> {
     Other,
 }
 
-/// A window of the app and where it is: its display and its bounds in that display's space.
+/// A window of the app and where it is, in the global space (`screen::to_global`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Placed<K> {
     pub occupant: Occupant<K>,
-    pub display: u64,
     pub bounds: Rect,
 }
 
@@ -34,25 +35,31 @@ pub enum Landing<K> {
     Into(K),
 }
 
-/// The window at (`x`, `y`) of `display`, the front-most of `stack` (front to back) that holds it.
+/// The window at the global point (`x`, `y`, y up), the front-most of `stack` (front to back) that holds it.
+/// A window holds its left and its top edge, as a screen does (`screen::locate`).
 #[must_use]
-pub fn top_at<K: Copy>(stack: &[Placed<K>], display: u64, x: f32, y: f32) -> Option<Placed<K>> {
+pub fn top_at<K: Copy>(stack: &[Placed<K>], x: f32, y: f32) -> Option<Placed<K>> {
     stack.iter().copied().find(|window| {
         let b = window.bounds;
-        window.display == display && x >= b.x && x < b.right() && y >= b.y && y < b.bottom()
+        x >= b.x && x < b.right() && y > b.y && y <= b.bottom()
     })
 }
 
-/// What a release at (`x`, `y`) of `display` does for a terminal dragged out of window `source`.
+/// What a release at the global point (`x`, `y`) does for a terminal dragged out of window `source`.
+/// `covered`: a window of another application is the front-most there, which is outside Wormhole whatever
+/// lies behind it, so the terminal gets a window of its own (never goes into a window it can't see).
 #[must_use]
 pub fn landing<K: Copy + PartialEq>(
     stack: &[Placed<K>],
-    display: u64,
     x: f32,
     y: f32,
     source: K,
+    covered: bool,
 ) -> Landing<K> {
-    match top_at(stack, display, x, y).map(|window| window.occupant) {
+    if covered {
+        return Landing::NewWindow;
+    }
+    match top_at(stack, x, y).map(|window| window.occupant) {
         None => Landing::NewWindow,
         Some(Occupant::Terminals(key)) if key == source => Landing::Stay,
         Some(Occupant::Terminals(key)) => Landing::Into(key),
@@ -71,49 +78,68 @@ pub fn outside(x: f32, y: f32, width: f32, height: f32) -> bool {
 mod tests {
     use super::*;
 
-    fn at(key: u8, display: u64, x: f32, y: f32, w: f32, h: f32) -> Placed<u8> {
-        Placed { occupant: Occupant::Terminals(key), display, bounds: Rect::new(x, y, w, h) }
+    /// A window at `x`, `y` (its top left, counted down from the top of a 1000-high screen at the origin) of
+    /// the global space.
+    fn at(key: u8, x: f32, top: f32, w: f32, h: f32) -> Placed<u8> {
+        Placed { occupant: Occupant::Terminals(key), bounds: Rect::new(x, 1000.0 - top - h, w, h) }
     }
 
-    fn other(display: u64, x: f32, y: f32, w: f32, h: f32) -> Placed<u8> {
-        Placed { occupant: Occupant::Other, display, bounds: Rect::new(x, y, w, h) }
+    fn other(x: f32, top: f32, w: f32, h: f32) -> Placed<u8> {
+        Placed { occupant: Occupant::Other, ..at(0, x, top, w, h) }
+    }
+
+    /// The global point of (`x`, `top`) counted down from the top of that screen.
+    fn p(x: f32, top: f32) -> (f32, f32) {
+        (x, 1000.0 - top)
+    }
+
+    fn land(stack: &[Placed<u8>], at: (f32, f32), source: u8, covered: bool) -> Landing<u8> {
+        landing(stack, at.0, at.1, source, covered)
     }
 
     #[test]
     fn the_front_most_window_under_the_point_takes_it() {
         // Window 2 lies over window 1 where they overlap.
-        let stack = [at(2, 1, 500.0, 100.0, 600.0, 500.0), at(1, 1, 0.0, 0.0, 800.0, 600.0)];
-        assert_eq!(landing(&stack, 1, 600.0, 200.0, 1), Landing::Into(2));
-        assert_eq!(landing(&stack, 1, 100.0, 200.0, 3), Landing::Into(1));
+        let stack = [at(2, 500.0, 100.0, 600.0, 500.0), at(1, 0.0, 0.0, 800.0, 600.0)];
+        assert_eq!(land(&stack, p(600.0, 200.0), 1, false), Landing::Into(2));
+        assert_eq!(land(&stack, p(100.0, 200.0), 3, false), Landing::Into(1));
         // The same point with 2 behind 1 goes the other way.
         let behind = [stack[1], stack[0]];
-        assert_eq!(landing(&behind, 1, 600.0, 200.0, 3), Landing::Into(1));
+        assert_eq!(land(&behind, p(600.0, 200.0), 3, false), Landing::Into(1));
     }
 
     #[test]
     fn letting_go_over_its_own_window_or_one_that_takes_nothing_stays() {
-        let stack = [other(1, 700.0, 100.0, 300.0, 300.0), at(1, 1, 0.0, 0.0, 800.0, 600.0)];
-        assert_eq!(landing(&stack, 1, 100.0, 100.0, 1), Landing::Stay);
-        assert_eq!(landing(&stack, 1, 750.0, 150.0, 1), Landing::Stay, "Settings lies over it");
+        let stack = [other(700.0, 100.0, 300.0, 300.0), at(1, 0.0, 0.0, 800.0, 600.0)];
+        assert_eq!(land(&stack, p(100.0, 100.0), 1, false), Landing::Stay);
+        assert_eq!(land(&stack, p(750.0, 150.0), 1, false), Landing::Stay, "Settings lies over it");
         // Outside the settings window, under which a window lay, the window behind takes it.
-        assert_eq!(landing(&stack, 1, 650.0, 150.0, 7), Landing::Into(1));
+        assert_eq!(land(&stack, p(650.0, 150.0), 7, false), Landing::Into(1));
     }
 
     #[test]
     fn the_desktop_opens_a_window() {
-        let stack = [at(1, 1, 0.0, 0.0, 800.0, 600.0)];
-        assert_eq!(landing(&stack, 1, 900.0, 100.0, 1), Landing::NewWindow);
-        assert_eq!(landing(&stack, 1, 800.0, 100.0, 1), Landing::NewWindow, "a right edge is outside");
-        assert_eq!(landing(&[], 1, 10.0, 10.0, 1), Landing::NewWindow);
+        let stack = [at(1, 0.0, 0.0, 800.0, 600.0)];
+        assert_eq!(land(&stack, p(900.0, 100.0), 1, false), Landing::NewWindow);
+        assert_eq!(land(&stack, p(800.0, 100.0), 1, false), Landing::NewWindow, "a right edge is outside");
+        assert_eq!(land(&stack, p(10.0, 600.0), 1, false), Landing::NewWindow, "so is a bottom edge");
+        assert_eq!(land(&[], p(10.0, 10.0), 1, false), Landing::NewWindow);
     }
 
     #[test]
-    fn windows_are_looked_for_on_the_display_of_the_point() {
-        // The same display-space point on another display is another place.
-        let stack = [at(2, 2, 0.0, 0.0, 800.0, 600.0), at(1, 1, 0.0, 0.0, 800.0, 600.0)];
-        assert_eq!(landing(&stack, 1, 100.0, 100.0, 9), Landing::Into(1));
-        assert_eq!(landing(&stack, 2, 100.0, 100.0, 9), Landing::Into(2));
-        assert_eq!(landing(&stack, 3, 100.0, 100.0, 9), Landing::NewWindow);
+    fn a_window_across_two_screens_is_one_window() {
+        // A window from x 900 to 1500 on screens that meet at 1000 (the second one starting there).
+        let stack = [at(2, 900.0, 100.0, 600.0, 400.0)];
+        assert_eq!(land(&stack, p(950.0, 200.0), 1, false), Landing::Into(2), "on the first screen");
+        assert_eq!(land(&stack, p(1200.0, 200.0), 1, false), Landing::Into(2), "and on the second");
+    }
+
+    #[test]
+    fn another_applications_window_on_top_is_outside_wormhole() {
+        let stack = [at(2, 500.0, 100.0, 600.0, 500.0), at(1, 0.0, 0.0, 800.0, 600.0)];
+        // A browser lies over both: what is let go over it gets a window of its own, never one it can't see.
+        assert_eq!(land(&stack, p(600.0, 200.0), 1, true), Landing::NewWindow);
+        assert_eq!(land(&stack, p(100.0, 200.0), 1, true), Landing::NewWindow, "not even its own window's");
     }
 
     #[test]

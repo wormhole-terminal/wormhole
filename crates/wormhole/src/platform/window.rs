@@ -73,6 +73,11 @@ pub fn make_ghost(window: &Window) {
     os::make_ghost(window);
 }
 
+/// The system's number of the window, which `pointer::window_number_at` answers with. `None` where it has none.
+pub fn number(window: &Window) -> Option<i64> {
+    os::number(window)
+}
+
 /// Whether the window casts its shadow. A window that grows from a small rectangle in a transparent
 /// frame has none while it does, or the shadow would outline the whole frame; the system draws it again
 /// from the window's content once it is on.

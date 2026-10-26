@@ -5,7 +5,7 @@
 use gpui_kit::{EntityId, TestAppContext, point, px};
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::view::panes::{Rect, Zone};
-use wormhole_core::view::tear_off::{Occupant, Placed};
+use wormhole_core::view::tear_off::{Occupant, Placed, Screen, to_global};
 
 use super::drag_tests::{drag, open, release, row_bounds};
 use super::tear_off::{land_over, pointer_at};
@@ -127,31 +127,43 @@ fn a_terminal_torn_off_a_split_leaves_it_and_its_mate_stays(cx: &mut TestAppCont
     assert!(read(cx, &torn, |ws| ws.sessions[0].split.is_none() && ws.splits.is_empty()), "it is no split");
 }
 
+/// A window of the app of `occupant` at `local` (from the top left of the primary display), where it lies in the
+/// global space: the test display is the primary screen, whose origin is the global one.
+fn placed(cx: &mut TestAppContext, occupant: Occupant<i64>, local: Rect) -> Placed<i64> {
+    let (id, size) = cx
+        .update(|cx| cx.primary_display().map(|d| (u64::from(d.id()), d.bounds().size)))
+        .expect("a display");
+    let screen = Screen { id, frame: Rect::new(0.0, 0.0, f32::from(size.width), f32::from(size.height)) };
+    Placed { occupant, bounds: to_global(id, local, &[screen]).expect("on the display") }
+}
+
 /// Two windows, the second (made by tearing terminal 3 off the first) lying over the first, which keeps 1 and
 /// 2: where each is on the screen, front to back.
 fn two_windows(cx: &mut TestAppContext) -> (OpenWindow, OpenWindow, Vec<Placed<i64>>) {
     let window = start(cx, 3);
     let_go(cx, &window, 3, 600.0, 300.0);
     let target = other_than(cx, &window);
-    let display = cx.update(|cx| cx.primary_display().map(|d| u64::from(d.id()))).expect("a display");
     let stack = vec![
-        Placed {
-            occupant: Occupant::Terminals(target.id),
-            display,
-            bounds: Rect::new(0.0, 0.0, 800.0, 600.0),
-        },
-        Placed {
-            occupant: Occupant::Terminals(window.id),
-            display,
-            bounds: Rect::new(0.0, 0.0, 1400.0, 900.0),
-        },
+        placed(cx, Occupant::Terminals(target.id), Rect::new(0.0, 0.0, 800.0, 600.0)),
+        placed(cx, Occupant::Terminals(window.id), Rect::new(0.0, 0.0, 1400.0, 900.0)),
     ];
     (window, target, stack)
 }
 
 fn land(cx: &mut TestAppContext, stack: &[Placed<i64>], source: &OpenWindow, id: i64, at: (f32, f32)) {
+    land_covered(cx, stack, false, source, id, at);
+}
+
+fn land_covered(
+    cx: &mut TestAppContext,
+    stack: &[Placed<i64>],
+    covered: bool,
+    source: &OpenWindow,
+    id: i64,
+    at: (f32, f32),
+) {
     let pointer = cx.update(|cx| pointer_at(at.0, at.1, cx)).expect("a pointer");
-    cx.update(|cx| land_over(stack, source.id, id, pointer, cx));
+    cx.update(|cx| land_over(stack, covered, source.id, id, pointer, cx));
     cx.run_until_parked();
 }
 
@@ -199,7 +211,8 @@ fn the_last_terminal_of_a_window_can_go_into_another_and_the_window_starts_a_new
     let (window, target, stack) = two_windows(cx);
     // The second window's only terminal goes back into the first, which lies behind it.
     let (first, second) = (stack[1], stack[0]);
-    let back = [Placed { bounds: Rect::new(0.0, 0.0, 100.0, 100.0), ..second }, first];
+    let small = placed(cx, second.occupant, Rect::new(0.0, 0.0, 100.0, 100.0));
+    let back = [small, first];
     land(cx, &back, &target, 3, (500.0, 500.0));
     assert_eq!(ids(cx, &window), [1, 2, 3]);
     let fresh = ids(cx, &target);
@@ -414,4 +427,17 @@ fn a_plain_frame_does_not_touch_the_growth_global_and_a_closed_window_leaves_not
     with_window(cx, &grown, |window, _| window.remove_window());
     cx.run_until_parked();
     assert!(!cx.update(|cx| super::grow::active(grown.id, cx)), "nothing left of the growth");
+}
+
+#[gpui_kit::test]
+fn a_release_over_another_applications_window_opens_a_window_even_over_one_of_ours(cx: &mut TestAppContext) {
+    if isolate("a_release_over_another_applications_window_opens_a_window_even_over_one_of_ours") {
+        return;
+    }
+    let (window, target, stack) = two_windows(cx);
+    // Something that is not Wormhole lies over the second window: terminal 2 does not go into what it can't see.
+    land_covered(cx, &stack, true, &window, 2, (400.0, 300.0));
+    assert_eq!(windows(cx).len(), 3, "a window of its own");
+    assert_eq!(ids(cx, &target), [3], "the second window took nothing");
+    assert_eq!(ids(cx, &window), [1]);
 }

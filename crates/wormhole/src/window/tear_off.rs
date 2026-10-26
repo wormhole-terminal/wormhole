@@ -14,7 +14,7 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::storage::store::WindowRecord;
 use wormhole_core::view::panes::Rect;
 use wormhole_core::view::sidebar::WindowSidebar;
-use wormhole_core::view::tear_off::{Landing, Occupant, Placed, Spot, landing, place};
+use wormhole_core::view::tear_off::{Landing, Occupant, Placed, Screen, Spot, landing, place, to_global};
 
 use crate::app_state::{AppState, OpenWindow, app, app_mut};
 use crate::platform;
@@ -117,52 +117,66 @@ impl Workspace {
     }
 }
 
-/// The app's windows as they lie on the screens, front to back, with what each is for a terminal that is let
-/// go over it: only another window of the same profile that shows terminals takes one.
-fn windows_in_front(source: &OpenWindow, cx: &mut App) -> Vec<Placed<i64>> {
+/// The app's windows as they lie on the screens, front to back, in the global space, with what each is for a
+/// terminal that is let go over it: only another window of the same profile that shows terminals takes one.
+/// And the system's numbers of all of them, to tell them from other applications' windows.
+fn windows_in_front(source: &OpenWindow, screens: &[Screen], cx: &mut App) -> (Vec<Placed<i64>>, Vec<i64>) {
     let open: Vec<OpenWindow> = app(cx).windows.clone();
-    let Some(stack) = cx.window_stack() else { return Vec::new() };
-    let mut placed = Vec::new();
+    let Some(stack) = cx.window_stack() else { return (Vec::new(), Vec::new()) };
+    let (mut placed, mut numbers) = (Vec::new(), Vec::new());
     for handle in stack {
         let seen = handle
             .update(cx, |_, window, cx| {
                 let display = window.display(cx).map(|display| u64::from(display.id()));
-                (window.bounds(), display, platform::window::is_minimised(window))
+                (
+                    window.bounds(),
+                    display,
+                    platform::window::is_minimised(window),
+                    platform::window::number(window),
+                )
             })
             .ok();
-        let Some((bounds, Some(display), false)) = seen else { continue };
+        let Some((bounds, Some(display), false, number)) = seen else { continue };
+        numbers.extend(number);
+        let local = Rect::new(
+            f32::from(bounds.origin.x),
+            f32::from(bounds.origin.y),
+            f32::from(bounds.size.width),
+            f32::from(bounds.size.height),
+        );
+        let Some(bounds) = to_global(display, local, screens) else { continue };
         let occupant = match open.iter().find(|w| w.handle.window_id() == handle.window_id()) {
             Some(w) if !w.hidden && w.profile == source.profile => Occupant::Terminals(w.id),
             _ => Occupant::Other,
         };
-        placed.push(Placed {
-            occupant,
-            display,
-            bounds: Rect::new(
-                f32::from(bounds.origin.x),
-                f32::from(bounds.origin.y),
-                f32::from(bounds.size.width),
-                f32::from(bounds.size.height),
-            ),
-        });
+        placed.push(Placed { occupant, bounds });
     }
-    placed
+    (placed, numbers)
 }
 
 /// Terminal `id` of window `source` was let go with the pointer at `pointer`: do what lies there.
 fn land(source: i64, id: i64, pointer: Pointer, cx: &mut App) {
     let windows = app(cx).windows.clone();
-    let Some(from) = windows.iter().find(|w| w.id == source).cloned() else { return };
-    let stack = windows_in_front(&from, cx);
-    land_over(&stack, source, id, pointer, cx);
+    let Some(from) = windows.iter().find(|w| w.id == source) else { return };
+    let (stack, ours) = windows_in_front(from, &platform::pointer::screens(), cx);
+    // Whatever the front-most window there is, if it is not one of this app's it is another application's
+    // (or the desktop's): outside Wormhole.
+    let covered = platform::pointer::window_number_at(pointer.global).is_some_and(|n| !ours.contains(&n));
+    land_over(&stack, covered, source, id, pointer, cx);
 }
 
 /// [`land`] with the windows' places given (a test says where they are).
-pub(super) fn land_over(stack: &[Placed<i64>], source: i64, id: i64, pointer: Pointer, cx: &mut App) {
+pub(super) fn land_over(
+    stack: &[Placed<i64>],
+    covered: bool,
+    source: i64,
+    id: i64,
+    pointer: Pointer,
+    cx: &mut App,
+) {
     let windows = app(cx).windows.clone();
     let Some(from) = windows.iter().find(|w| w.id == source).cloned() else { return };
-    let Spot { display, x, y } = pointer.spot;
-    match landing(stack, display, x, y, source) {
+    match landing(stack, pointer.global.0, pointer.global.1, source, covered) {
         Landing::Stay => {}
         Landing::NewWindow => {
             AppState::with_workspace(&from, cx, |ws, window, cx| {

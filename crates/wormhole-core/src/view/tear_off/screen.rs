@@ -33,6 +33,15 @@ pub fn locate(x: f32, y: f32, screens: &[Screen]) -> Option<Spot> {
     })
 }
 
+/// A rectangle of display `display`'s own space (from its top left, y down: a window's bounds) in the global
+/// space. `None` for a display that is not among `screens`.
+#[must_use]
+pub fn to_global(display: u64, local: Rect, screens: &[Screen]) -> Option<Rect> {
+    let screen = screens.iter().find(|screen| screen.id == display)?;
+    let f = screen.frame;
+    Some(Rect::new(f.x + local.x, f.bottom() - local.y - local.h, local.w, local.h))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,6 +76,21 @@ mod tests {
         // The line between them belongs to the lower one: it is its top row, the upper one's bottom edge is out.
         assert_eq!(locate(50.0, 900.0, &screens).map(|s| s.display), Some(1));
         assert_eq!(locate(50.0, 900.5, &screens).map(|s| s.display), Some(3));
+    }
+
+    #[test]
+    fn a_windows_bounds_go_to_the_global_space_of_the_screen_it_is_on() {
+        let screens = [screen(1, 0.0, 0.0, 1440.0, 900.0), screen(2, -1920.0, -100.0, 1920.0, 1080.0)];
+        let on_primary = to_global(1, Rect::new(100.0, 50.0, 800.0, 600.0), &screens);
+        assert_eq!(on_primary, Some(Rect::new(100.0, 250.0, 800.0, 600.0)));
+        // 10 points down and 20 in on the left screen, whose top is at global y 980.
+        let on_left = to_global(2, Rect::new(20.0, 10.0, 500.0, 300.0), &screens);
+        assert_eq!(on_left, Some(Rect::new(-1900.0, 670.0, 500.0, 300.0)));
+        assert_eq!(to_global(9, Rect::new(0.0, 0.0, 1.0, 1.0), &screens), None);
+        // Round trip: a point inside it is on the screen it came from.
+        let inside = on_left.map(|r| (r.x + 5.0, r.bottom() - 5.0));
+        let spot = inside.and_then(|(x, y)| locate(x, y, &screens));
+        assert_eq!(spot, Some(Spot { display: 2, x: 25.0, y: 15.0 }));
     }
 
     #[test]

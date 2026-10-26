@@ -19,4 +19,4 @@ mod screen;
 
 pub use landing::{Landing, Occupant, Placed, landing, outside, top_at};
 pub use place::{Placement, place};
-pub use screen::{Screen, Spot, locate};
+pub use screen::{Screen, Spot, locate, to_global};
