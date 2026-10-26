@@ -311,8 +311,9 @@ fn the_list_drawing_itself_builds_none_of_the_cached_regions(cx: &mut TestAppCon
 /// group `list_at_rest_window` makes. The list's motion (springs, rows that come and go) adds to a frame
 /// only while something moves, and at rest the comparison of its keys, which is no allocation more than the
 /// list made before it had any motion. The budget is what it made then (543, the same before and after the
-/// motion work, measured on the commit that preceded it) plus about a hundredth.
-const LIST_AT_REST_ALLOCATIONS: u64 = 549;
+/// motion work, measured on the commit that preceded it; 568 since the toggles' strip fills and the Animate
+/// icons setting, which raised the replayed frame by as much) plus about a hundredth.
+const LIST_AT_REST_ALLOCATIONS: u64 = 574;
 
 /// Six terminals, two of them in a group, drawn until they settle, with motion on.
 fn list_at_rest_window(cx: &mut TestAppContext) -> OpenWindow {

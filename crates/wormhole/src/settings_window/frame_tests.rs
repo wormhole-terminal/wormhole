@@ -57,22 +57,22 @@ const SLACK: u64 = 20;
 /// keeps), and of the results page of a search for a word found in several pages; a frame may make
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 15] = [
-    ("Profile", 6714),
-    ("Appearance", 16655),
-    ("Fonts", 7412),
-    ("Motion", 6250),
-    ("Terminal", 9736),
-    ("Sessions", 13641),
-    ("Git", 4520),
-    ("Agents", 26419),
-    ("Notifications", 7835),
-    ("MenuBar", 6148),
-    ("Updates", 5644),
-    ("Advanced", 4120),
-    ("Projects", 8990),
+    ("Profile", 6696),
+    ("Appearance", 16644),
+    ("Fonts", 7394),
+    ("Motion", 6275),
+    ("Terminal", 9706),
+    ("Sessions", 13639),
+    ("Git", 4502),
+    ("Agents", 26413),
+    ("Notifications", 7817),
+    ("MenuBar", 6130),
+    ("Updates", 5584),
+    ("Advanced", 4084),
+    ("Projects", 8972),
     // A sixth switch (Automation) is a row more.
-    ("FeatureFlags", 5518),
-    ("search", 11820),
+    ("FeatureFlags", 5501),
+    ("search", 11815),
 ];
 
 fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {

@@ -586,10 +586,10 @@ fn a_window_frame_on_changes_stays_within_its_allocation_budget(cx: &mut TestApp
 }
 
 /// Allocations the second draw of a one-terminal window on Notes (three next steps, three notes) may
-/// make. Measured: 5,788 allocations (3.1 MB), the same on every run. Like the Changes budget it is that plus
-/// about a hundredth; the notes tab adds its rows, the shared copy the closures hold and the list's
-/// own, so a cost per note or per step per frame shows at once.
-const NOTES_FRAME_ALLOCATIONS: u64 = 5_846;
+/// make. Measured: 5,851 allocations (5,788 before the icon buttons' animation and the motion work), the same
+/// on every run. Like the Changes budget it is that plus about a hundredth; the notes tab adds its rows, the
+/// shared copy the closures hold and the list's own, so a cost per note or per step per frame shows at once.
+const NOTES_FRAME_ALLOCATIONS: u64 = 5_909;
 
 #[gpui_kit::test]
 fn a_window_frame_on_notes_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
