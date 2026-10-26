@@ -9,7 +9,7 @@
 //! comparison of its keys per frame and nothing else. A line's spring is its own (kept by GPUI under the line's key),
 //! so a second change while it moves sets it going from where it is and how fast, not from the start.
 //! Reduce Motion cuts all of it. A row being dragged is not the list's to animate: while it is held it is out of the list
-//! when a gap is open for it, and the lines step aside for it (`drag`), on the same springs.
+//! when a gap is open for it, and the lines step aside for it (`room`), on the same springs.
 
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
@@ -23,11 +23,11 @@ use wormhole_core::view::motion::pose::{Phase, Room};
 use wormhole_core::view::sidebar::Listing;
 use wormhole_core::view::sidebar::motion::Drawn;
 
-use super::drag::{self, Gap};
 use super::fold::{FoldNote, Summaries};
 use super::join::Join;
 use super::leaving::{Leavers, Snapshot};
 use super::pose::{self, Natural, RowMotion};
+use super::room::{self, Gap};
 use crate::sidebar::{Sidebar, SidebarInput};
 use crate::style::motion::spring;
 
@@ -78,7 +78,7 @@ pub(in crate::sidebar) struct ListMotion {
     pub(super) changed: bool,
     /// The spring the lines below a row that left run on to close its gap.
     pub(super) gap_spring: Option<SpringSpec>,
-    /// The gap a dragged row has the lines open for it (`drag`), from the first frame of the drag until its
+    /// The gap a dragged row has the lines open for it (`room`), from the first frame of the drag until its
     /// lines are at rest again.
     pub(super) gap: Option<Gap>,
     /// The preview of a split a dragged row would make, and its bracket once it has (`join`).
@@ -182,9 +182,9 @@ impl Sidebar {
     ) -> E {
         let slot = slot.relative().w_full();
         let motion = &self.motion;
-        // A row held in a drag is out of the list while a gap is open for it (`drag`).
+        // A row held in a drag is out of the list while a gap is open for it (`room`).
         if let Some(lifted) = motion.gap.as_ref().and_then(|gap| gap.is_lifted(&key)) {
-            return slot.child(drag::lifted(line, &key, lifted));
+            return slot.child(room::lifted(line, &key, lifted));
         }
         let flip = motion.spring_of(&key);
         let (arrival, leaving) = (motion.entering.get(&key), motion.leaving.get(&key));

@@ -7,7 +7,7 @@
 //! terminal out of its split. Core works out what a drop does (`sidebar::place`): where on the
 //! arrangement it lands, or which split it joins; this reads the pointer and draws the line.
 //! A drag inside a bracket reorders the sidebar only, never the layout. With the Motion feature on, the
-//! rows make room for a row dragged by its own (`motion::drag`) and the middle of a row previews its
+//! rows make room for a row dragged by its own (`motion::room`) and the middle of a row previews its
 //! split (`motion::join`) instead of the line.
 use gpui_kit::*;
 use wormhole_core::view::sidebar::{

@@ -13,12 +13,12 @@ use wormhole_core::view::motion::{InsertMotion, MotionChoices, SpringSpec};
 use wormhole_core::view::sidebar::Listing;
 use wormhole_core::view::sidebar::motion::{Drawn, Moves, plan_moves};
 
-use super::drag::Gap;
 use super::fold::{FoldNote, Summaries};
 use super::insert::{Change, changes, motions};
 use super::leaving::{Leaving, Snapshot};
 use super::list::{Arrival, ItemKey, ListMotion, Moving, content_top, measured};
 use super::pose::{Natural, RowMotion};
+use super::room::Gap;
 use crate::settings::settings_in;
 use crate::sidebar::Sidebar;
 

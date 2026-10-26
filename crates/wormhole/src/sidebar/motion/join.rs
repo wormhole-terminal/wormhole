@@ -1,7 +1,7 @@
 //! Dropping a terminal on the middle of another row, which makes a split: the row it would join tints
 //! and shows a split mark, the dragged chip snaps onto it on a spring, and on the drop the split's bracket
 //! draws down the two rows while they settle. Leaving the row undoes the preview on the same timings.
-//! `drag` opens the gap for a row that only moves; this is what is shown instead when the pointer is over
+//! `room` opens the gap for a row that only moves; this is what is shown instead when the pointer is over
 //! the middle of a row, and which row that is, is the drop's own answer (`DropMark::Join`).
 //!
 //! The chip is GPUI's own drag picture, drawn at the pointer in a view of its own that the sidebar cannot
