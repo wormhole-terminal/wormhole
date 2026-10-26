@@ -6,6 +6,7 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
 use wormhole_core::config::NotifySound;
 use wormhole_core::config::features::FeatureFlag;
+use wormhole_core::ipc::Peer;
 use wormhole_core::ipc::control::{
     Action, AgentFact, AgentsFacts, ErrorCode, HooksFact, PermissionFact, Reply, Request, WelcomeOp,
     WelcomeState,
@@ -72,7 +73,7 @@ fn set_notify(
 
 /// What `Wormhole list` answers, as the JSON a script reads.
 fn control_list(cx: &mut TestAppContext) -> serde_json::Value {
-    let reply = cx.update(|cx| control::handle(Request::new(Action::List, None), cx));
+    let reply = cx.update(|cx| control::handle(Request::new(Action::List, None), &Peer::default(), cx));
     reply.result.expect("a listing")
 }
 

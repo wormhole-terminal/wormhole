@@ -11,12 +11,15 @@ pub const SEND_TEXT_MAX_BYTES: usize = 16 * 1024;
 pub struct SendTarget {
     pub tab: i64,
     pub state: TerminalState,
+    /// The caller's process runs under this terminal's shell (its `Peer`), whatever `from` claims.
+    pub caller_inside: bool,
 }
 
 /// Whether `text` may go into `target` for `from`, with typing `enabled` in Settings. Order:
 /// the switch first (so a caller learns about the setting before anything about a terminal),
 /// then the size, then the terminal: never the caller's own (an agent answering its own prompt
-/// from a script), never one waiting for the user's answer (a permission prompt is exactly what
+/// from a script: by the tab it names, or by where its process runs, so leaving the claim out
+/// doesn't help), never one waiting for the user's answer (a permission prompt is exactly what
 /// a hostile script would want to type `y` into), never a dead shell.
 pub fn send_text_check(
     enabled: bool,
@@ -37,7 +40,7 @@ pub fn send_text_check(
     if text.trim().is_empty() {
         return refuse(ErrorCode::BadRequest, "nothing to send".to_string());
     }
-    if from == Some(target.tab) {
+    if from == Some(target.tab) || target.caller_inside {
         return refuse(
             ErrorCode::Refused,
             format!("tab {} is the one asking: a terminal can't type into itself", target.tab),
@@ -85,7 +88,8 @@ mod tests {
     };
 
     fn check(enabled: bool, text: &str, from: Option<i64>, state: TerminalState) -> Result<(), ErrorCode> {
-        send_text_check(enabled, text, from, SendTarget { tab: 5, state }).map_err(|Error { code, .. }| code)
+        send_text_check(enabled, text, from, SendTarget { tab: 5, state, caller_inside: false })
+            .map_err(|Error { code, .. }| code)
     }
 
     #[test]
@@ -109,6 +113,19 @@ mod tests {
         let huge = "x".repeat(SEND_TEXT_MAX_BYTES + 1);
         assert_eq!(check(true, &huge, None, TerminalState::Idle), Err(ErrorCode::TooLarge));
         assert_eq!(check(true, &huge[1..], None, TerminalState::Idle), Ok(()), "at the cap is fine");
+    }
+
+    /// The fix: leaving `from` out, or naming another tab, no longer lets a process type into the
+    /// terminal it runs in.
+    #[test]
+    fn a_caller_inside_the_target_is_refused_whatever_it_claims() {
+        for from in [None, Some(2), Some(5)] {
+            let target = SendTarget { tab: 5, state: TerminalState::Idle, caller_inside: true };
+            let refused = send_text_check(true, "hi", from, target).expect_err("refused");
+            assert_eq!(refused.code, ErrorCode::Refused, "from {from:?}");
+        }
+        let elsewhere = SendTarget { tab: 5, state: TerminalState::Idle, caller_inside: false };
+        assert_eq!(send_text_check(true, "hi", None, elsewhere), Ok(()));
     }
 
     #[test]

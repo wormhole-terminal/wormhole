@@ -56,6 +56,29 @@ pub fn parent(pid: u32) -> Option<u32> {
     os::parent(pid)
 }
 
+/// The parent chain of `pid`, nearest first: at most `max` processes, ending at the first that is gone,
+/// unreadable or is process 1 (which is nobody's shell). A chain that loops, as a reused pid can make it
+/// for a moment, ends where it repeats. `pid` itself is not in it.
+pub fn ancestors(pid: u32, max: usize) -> Vec<u32> {
+    chain(pid, max, parent)
+}
+
+/// [`ancestors`] over any `parent` lookup, which a test can script.
+fn chain(pid: u32, max: usize, parent: impl Fn(u32) -> Option<u32>) -> Vec<u32> {
+    let mut chain = Vec::new();
+    let mut at = pid;
+    while chain.len() < max {
+        match parent(at) {
+            Some(next) if next > 1 && next != pid && !chain.contains(&next) => {
+                chain.push(next);
+                at = next;
+            }
+            _ => break,
+        }
+    }
+    chain
+}
+
 /// When the process started.
 pub fn start_time(pid: u32) -> Option<SystemTime> {
     os::start_time(pid)
@@ -106,6 +129,35 @@ mod tests {
         for pid in [0, 1, u32::MAX] {
             assert_eq!(terminate(pid).expect_err("refused").kind(), io::ErrorKind::InvalidInput, "{pid}");
         }
+    }
+
+    #[test]
+    fn the_chain_of_parents_stops_at_init_a_loop_a_gap_and_the_cap() {
+        let parents = |pid: u32| match pid {
+            100 => Some(90),
+            90 => Some(80),
+            80 => Some(1),
+            // A reused pid that closes a loop, and a parent that can't be read.
+            70 => Some(60),
+            60 => Some(70),
+            50 => Some(40),
+            _ => None,
+        };
+        assert_eq!(chain(100, 32, parents), [90, 80], "not init");
+        assert_eq!(chain(100, 1, parents), [90], "the cap");
+        assert_eq!(chain(70, 32, parents), [60], "a loop ends where it repeats");
+        assert_eq!(chain(50, 32, parents), [40], "an unreadable parent ends it");
+        assert!(chain(999, 32, parents).is_empty());
+    }
+
+    #[test]
+    fn a_childs_parents_lead_back_to_this_process() {
+        let mut child = Command::new("/bin/sleep").arg("30").spawn().expect("spawns");
+        let chain = ancestors(child.id(), 32);
+        assert_eq!(chain.first(), Some(&std::process::id()), "its parent is the test");
+        assert!(chain.len() <= 32 && !chain.contains(&child.id()));
+        let _ = child.kill();
+        let _ = child.wait();
     }
 
     #[test]

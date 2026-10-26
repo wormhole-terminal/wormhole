@@ -57,6 +57,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - The Theme Studio no longer shows notes and tasks, or a project's trust prompt, while they are hidden.
 - A newer `wh` talking to this Wormhole about something it doesn't know gets an answer at once instead
   of waiting ten seconds.
+- `wh send-text` no longer types into the terminal it runs in when `WORMHOLE_TAB_ID` is missing or
+  wrong: the terminal is told by where the command runs, not by what it says about itself.
 
 ## [1.3.0] - 2026-10-25
 

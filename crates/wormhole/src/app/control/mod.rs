@@ -13,6 +13,7 @@ use std::path::Path;
 use std::time::Instant;
 
 use gpui_kit::*;
+use wormhole_core::ipc::Peer;
 use wormhole_core::ipc::control::{
     Action, ErrorCode, Limited, Listing, PROTOCOL_VERSION, RateLimits, Reached, Reply, Request,
     SEND_TEXT_MAX_BYTES, SendTarget, StatusInfo, Summary, Target, WindowInfo, notice_text, send_text_check,
@@ -30,7 +31,7 @@ struct Budgets(RateLimits);
 impl Global for Budgets {}
 
 /// Answer `request`. Never fails: whatever is wrong with it is said in the reply.
-pub(crate) fn handle(request: Request, cx: &mut App) -> Reply {
+pub(crate) fn handle(request: Request, peer: &Peer, cx: &mut App) -> Reply {
     let from = request.from_tab();
     tracing::debug!(?from, action = request.action.name(), "control request");
     if request.version != PROTOCOL_VERSION {
@@ -46,7 +47,7 @@ pub(crate) fn handle(request: Request, cx: &mut App) -> Reply {
         Action::List => Reply::ok(listing(cx)),
         Action::Status { target } => status(target, from, cx),
         Action::Notify { target, title, body } => notify(target, &title, &body, from, cx),
-        Action::SendText { target, text, submit } => send_text(target, &text, submit, from, cx),
+        Action::SendText { target, text, submit } => send_text(target, &text, submit, from, peer, cx),
         Action::NewTerminal { folder, command, worktree, window } => {
             new_terminal(folder, command, worktree, window, from, cx)
         }
@@ -127,7 +128,14 @@ fn notify(target: Option<Target>, title: &str, body: &str, from: Option<i64>, cx
 }
 
 /// `send-text`: type into the target's tab as a paste, where the rules allow it.
-fn send_text(target: Target, text: &str, submit: bool, from: Option<i64>, cx: &mut App) -> Reply {
+fn send_text(
+    target: Target,
+    text: &str,
+    submit: bool,
+    from: Option<i64>,
+    peer: &Peer,
+    cx: &mut App,
+) -> Reply {
     // The switch before anything about the terminal, as the rules order it.
     let enabled = settings(cx).control_write;
     if !enabled {
@@ -135,10 +143,15 @@ fn send_text(target: Target, text: &str, submit: bool, from: Option<i64>, cx: &m
         return Reply::from(error);
     }
     let Some(found) = find(target, cx) else { return not_found(target) };
-    let state =
-        found.window.workspace.read_with(cx, |ws, cx| ws.control_tab_state(found.tab, cx)).ok().flatten();
-    let Some(state) = state else { return not_found(target) };
-    if let Err(error) = send_text_check(enabled, text, from, SendTarget { tab: found.tab, state }) {
+    let facts =
+        found.window.workspace.read_with(cx, |ws, cx| ws.control_tab_facts(found.tab, cx)).ok().flatten();
+    let Some((state, shell)) = facts else { return not_found(target) };
+    // Where the caller runs, not what it says: a process can leave `from` out, but it can't move
+    // out from under the shell it was started by.
+    let caller_inside = shell.is_some_and(|shell| peer.runs_under(shell));
+    if let Err(error) =
+        send_text_check(enabled, text, from, SendTarget { tab: found.tab, state, caller_inside })
+    {
         return Reply::from(error);
     }
     if let Err(reply) = budget(Limited::SendText, from, cx) {

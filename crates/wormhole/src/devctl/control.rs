@@ -4,6 +4,7 @@
 //! included) and appended to the results as the reply's one JSON line.
 
 use anyhow::{Result, anyhow};
+use wormhole_core::ipc::Peer;
 use wormhole_core::ipc::control::{Parsed, Request, help, parse};
 use wormhole_core::platform::paths;
 
@@ -28,7 +29,10 @@ pub(super) fn control(ctx: &mut Ctx, arg: &str) -> Result<String> {
     };
     let request = Request::new(cli.action, from);
     later(ctx, move |cx| {
-        format!("{}\n", serde_json::to_string(&control::handle(request, cx)).unwrap_or_default())
+        format!(
+            "{}\n",
+            serde_json::to_string(&control::handle(request, &Peer::default(), cx)).unwrap_or_default()
+        )
     });
     Ok(String::new())
 }

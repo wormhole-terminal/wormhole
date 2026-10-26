@@ -2,6 +2,7 @@
 //! and send the program's requests by hand to see them refused or answered.
 
 use anyhow::{Result, anyhow};
+use wormhole_core::ipc::Peer;
 use wormhole_core::ipc::control::{Action, Request, WelcomeOp};
 use wormhole_core::onboarding::intro::{Handover, Start};
 
@@ -51,7 +52,10 @@ pub(super) fn probe(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let from = (from != "-").then(|| from.to_string());
     let request = Request::new(Action::Welcome { token: token.to_string(), op }, from);
     later(ctx, move |cx| {
-        format!("{}\n", serde_json::to_string(&control::handle(request, cx)).unwrap_or_default())
+        format!(
+            "{}\n",
+            serde_json::to_string(&control::handle(request, &Peer::default(), cx)).unwrap_or_default()
+        )
     });
     Ok(String::new())
 }

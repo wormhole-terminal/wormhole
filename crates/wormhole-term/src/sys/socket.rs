@@ -56,6 +56,13 @@ pub fn peer_is_same_user(stream: &Stream) -> bool {
     peer_user(stream).is_ok_and(|peer| peer == UserId::current())
 }
 
+/// The process that connected `stream`, as the system recorded it when it did (it may have ended
+/// since), or `None` when the system doesn't say. The one thing a client can't claim: a caller's
+/// own words about who it is are not a proof, its place in the process tree is.
+pub fn peer_pid(stream: &Stream) -> Option<u32> {
+    os::peer_pid(stream).ok().filter(|&pid| pid > 1)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,5 +94,34 @@ mod tests {
         assert!(fits(&exactly), "{} bytes fit", PATH_LIMIT - 1);
         let over = PathBuf::from(format!("/{}", "a".repeat(PATH_LIMIT - 1)));
         assert!(!fits(&over));
+    }
+
+    /// A connection from this very process is attributed to it; one from a child to the child, whose
+    /// parent chain leads back here.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn the_peer_is_the_process_that_connected() {
+        use std::process::Stdio;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("peer.sock");
+        let listener = Listener::bind(&path).expect("bind");
+        let _mine = Stream::connect(&path).expect("connect");
+        let (accepted, _) = listener.accept().expect("accept");
+        assert_eq!(peer_pid(&accepted), Some(std::process::id()));
+
+        // `nc` keeps its connection while its stdin stays open.
+        let mut child = crate::sys::process::command("/usr/bin/nc")
+            .arg("-U")
+            .arg(&path)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .spawn()
+            .expect("nc");
+        let (accepted, _) = listener.accept().expect("accept");
+        assert_eq!(peer_pid(&accepted), Some(child.id()));
+        assert!(crate::sys::process::ancestors(child.id(), 8).contains(&std::process::id()));
+        let _ = child.kill();
+        let _ = child.wait();
     }
 }

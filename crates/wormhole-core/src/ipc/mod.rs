@@ -49,14 +49,16 @@ pub use client::{Command, command, run_cli, run_status_line_cli};
 pub use exchange::run as run_control_cli;
 pub use instance::{Instance, InstanceLock, acquire, start_server};
 pub use message::Message;
+pub use server::{ANCESTORS_MAX, Peer};
 
 /// What the socket hands the app.
 #[derive(Debug)]
 pub enum Incoming {
     /// A hook event, an activate or a usage report: nothing to answer.
     Message(Message),
-    /// A control request, answered through `reply` (the connection waits for it).
-    Control { request: control::Request, reply: std::sync::mpsc::SyncSender<control::Reply> },
+    /// A control request, answered through `reply` (the connection waits for it), with who sent it
+    /// as the system sees it.
+    Control { request: control::Request, peer: Peer, reply: std::sync::mpsc::SyncSender<control::Reply> },
 }
 
 static SOCKET_PATH: OnceLock<PathBuf> = OnceLock::new();

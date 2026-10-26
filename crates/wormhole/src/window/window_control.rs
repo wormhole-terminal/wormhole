@@ -37,8 +37,10 @@ impl Workspace {
         Some(self.terminal_info(ix, cx))
     }
 
-    pub(crate) fn control_tab_state(&self, tab: i64, cx: &App) -> Option<TerminalState> {
-        Some(tab_state(self.pane_terminal(tab)?.read(cx)))
+    /// A tab's state and the pid of its shell (none once it has ended): what the typing rules need.
+    pub(crate) fn control_tab_facts(&self, tab: i64, cx: &App) -> Option<(TerminalState, Option<u32>)> {
+        let terminal = self.pane_terminal(tab)?.read(cx);
+        Some((tab_state(terminal), terminal.shell_pid()))
     }
 
     fn terminal_info(&self, ix: usize, cx: &App) -> TerminalInfo {

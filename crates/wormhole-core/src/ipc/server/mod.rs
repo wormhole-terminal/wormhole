@@ -18,6 +18,10 @@ use super::control::{self, ErrorCode, Reply, Request};
 use super::{Incoming, Message};
 use crate::platform::socket::{Listener, Stream, peer_is_same_user};
 
+mod peer;
+
+pub use peer::{ANCESTORS_MAX, Peer};
+
 /// How long one connection may take to send what it has, start to end.
 const DEADLINE: Duration = Duration::from_secs(2);
 /// How much one connection may send (a hook message is a few hundred bytes; a control request
@@ -72,7 +76,8 @@ fn serve(mut stream: Stream, tx: &smol::channel::Sender<Incoming>) {
 /// Hand `request` to the app and write its reply back on `stream`.
 fn answer(stream: &mut Stream, request: Request, tx: &smol::channel::Sender<Incoming>) {
     let (reply_tx, reply_rx) = mpsc::sync_channel(1);
-    if tx.send_blocking(Incoming::Control { request, reply: reply_tx }).is_err() {
+    let peer = Peer::of(stream);
+    if tx.send_blocking(Incoming::Control { request, peer, reply: reply_tx }).is_err() {
         return;
     }
     let reply = reply_rx
@@ -226,8 +231,11 @@ mod tests {
         let app = std::thread::spawn({
             let rx = rx.clone();
             move || match recv_within(&rx, Duration::from_secs(5)) {
-                Some(Incoming::Control { request, reply }) => {
+                Some(Incoming::Control { request, peer, reply }) => {
                     assert_eq!(request.action, Action::List);
+                    // The connection came from this process, whose parent chain follows.
+                    assert_eq!(peer.pid, Some(std::process::id()));
+                    assert!(peer.ancestors.len() <= super::ANCESTORS_MAX);
                     assert_eq!(request.from.as_deref(), Some("7"));
                     reply
                         .send(Reply::ok(Summary::of(1, [TerminalState::Working])))
