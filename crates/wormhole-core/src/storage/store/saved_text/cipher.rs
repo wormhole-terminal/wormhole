@@ -7,30 +7,20 @@
 //! terminal a minute, nowhere near the 2^32 records one key could seal before a repeat became a
 //! real risk.
 //!
-//! The raw key bytes are wiped when dropped; ring's expanded key inside [`Cipher`], and the copy the
-//! Keychain call makes (`CFData`), are not: both live only in this process's memory.
+//! The raw key bytes are wiped when dropped; ring's expanded key inside [`Cipher`] is not: it lives
+//! only in this process's memory (`storage::secret_key` says the same of the Keychain's copy).
 
 use anyhow::{Result, anyhow, bail};
 use ring::aead::{Aad, CHACHA20_POLY1305, LessSafeKey, NONCE_LEN, Nonce, UnboundKey};
 use ring::rand::{SecureRandom, SystemRandom};
 use zeroize::Zeroizing;
 
-/// The key's length: 256 bits.
-pub(crate) const KEY_LEN: usize = 32;
+use crate::storage::secret_key::Key;
+
 /// The first byte of every record: how the rest is laid out.
 const FORMAT: u8 = 1;
 /// What the associated data starts with, so a record sealed for something else never opens here.
 const CONTEXT: &[u8] = b"wormhole saved terminal text v1\0";
-
-/// The key a profile's text is sealed with.
-pub(crate) type Key = Zeroizing<[u8; KEY_LEN]>;
-
-/// A fresh random key.
-pub(crate) fn new_key() -> Result<Key> {
-    let mut key = Zeroizing::new([0u8; KEY_LEN]);
-    SystemRandom::new().fill(key.as_mut()).map_err(|_| anyhow!("the system has no random numbers"))?;
-    Ok(key)
-}
 
 pub(crate) struct Cipher {
     key: LessSafeKey,
@@ -94,7 +84,8 @@ fn aad(tab_id: i64) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Cipher, KEY_LEN, Key, new_key};
+    use super::{Cipher, Key};
+    use crate::storage::secret_key::{KEY_LEN, new_key};
 
     fn cipher(byte: u8) -> Cipher {
         Cipher::new(&Key::new([byte; KEY_LEN])).expect("a cipher")

@@ -31,6 +31,7 @@ use sha2::{Digest, Sha256};
 use self::cipher::Cipher;
 use self::platform::Platform;
 use super::with_suffix;
+use crate::storage::secret_key::{self, random_id};
 
 /// The file, in the profile's folder.
 pub(super) const FILE: &str = "scrollback.db";
@@ -183,16 +184,6 @@ impl Keeper {
     }
 }
 
-/// 128 random bits as hex: the key's id, which says nothing about the user or the profile.
-fn random_id() -> Result<String> {
-    use ring::rand::SecureRandom as _;
-    let mut bytes = [0u8; 16];
-    ring::rand::SystemRandom::new()
-        .fill(&mut bytes)
-        .map_err(|_| anyhow::anyhow!("the system has no random numbers"))?;
-    Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
-}
-
 /// The key id kept in a profile's database at `db`, read without opening it as a store (the profile
 /// is being deleted): `None` when it has none.
 pub(super) fn account_in(db: &Path) -> Result<Option<String>> {
@@ -224,8 +215,8 @@ pub(super) fn fingerprint(text: &str) -> u64 {
 /// keeps no text and everything else works. Errors from here never carry SQLite's codes out, so
 /// they can't pass for the main database being damaged.
 pub(super) fn attach(conn: &Connection, dir: &Path, platform: &dyn Platform) -> Result<()> {
-    if !platform::uses_dev_key() {
-        keys::remove_stray_dev_key(dir);
+    if !secret_key::uses_dev_key() {
+        secret_key::remove_stray_dev_key(&keys::PURPOSE, dir);
     }
     let path = dir.join(FILE);
     let first = attach_file(conn, &path);

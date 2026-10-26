@@ -8,9 +8,9 @@ use std::sync::{Mutex, PoisonError};
 
 use anyhow::{Context as _, Result, anyhow};
 
-use super::cipher::Key;
 use super::keys;
 use crate::platform::backup;
+use crate::storage::secret_key::{self, Key};
 
 /// The operating system's part in keeping the saved text.
 pub(crate) trait Platform: Send + Sync {
@@ -26,13 +26,7 @@ pub(crate) trait Platform: Send + Sync {
     fn exclude_from_backup(&self, path: &Path) -> Result<()>;
 }
 
-/// Whether this build keeps the key in a file (`keys::DEV_KEY_FILE`) instead of the Keychain: a
-/// debug build, or one with the `dev-key` feature (devctl builds, release-profile dev builds).
-pub(crate) fn uses_dev_key() -> bool {
-    cfg!(debug_assertions) || cfg!(feature = "dev-key")
-}
-
-/// The real thing: the Keychain, or the development key file (see [`uses_dev_key`]).
+/// The real thing: the Keychain, or the development key file (see [`secret_key::uses_dev_key`]).
 pub(crate) struct System;
 
 /// Each account's key, or why there is none, once per process: another store of the same profile,
@@ -44,8 +38,7 @@ impl Platform for System {
         let mut cache = KEYS.lock().unwrap_or_else(PoisonError::into_inner);
         let cache = cache.get_or_insert_with(HashMap::new);
         let found = cache.entry(account.to_string()).or_insert_with(|| {
-            let key = if uses_dev_key() { keys::dev_key_file(dir) } else { keys::keychain(account) };
-            key.map_err(|err| format!("{err:#}"))
+            secret_key::open(&keys::PURPOSE, dir, account).map_err(|err| format!("{err:#}"))
         });
         found.clone().map_err(|err| anyhow!(err))
     }
@@ -54,7 +47,7 @@ impl Platform for System {
         if let Some(cache) = KEYS.lock().unwrap_or_else(PoisonError::into_inner).as_mut() {
             cache.remove(account);
         }
-        if uses_dev_key() { keys::forget_dev_key_file(dir) } else { keys::forget_keychain(account) }
+        secret_key::forget(&keys::PURPOSE, dir, account)
     }
 
     fn exclude_from_backup(&self, path: &Path) -> Result<()> {

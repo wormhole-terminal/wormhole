@@ -1,6 +1,6 @@
 //! Secrets the system keeps for the app: a generic password under a service and an account (the
 //! macOS login Keychain). What is kept, when it is made and what a failure means is the caller's
-//! (`storage::store::saved_text::keys`).
+//! (`storage::secret_key`).
 //!
 //! Failures are `io::Error`s whose kind says what the caller may act on: `AlreadyExists` when
 //! [`add`] finds an item (another program made it first), `Unsupported` when the system has no secret
