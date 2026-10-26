@@ -59,10 +59,13 @@ pub enum FeatureFlag {
     /// 100 ms, and once when the drag ends) and a chip that says the size while the window is dragged. Off,
     /// a window resizes freely and the program is told every size at once.
     LiveResize,
+    /// A small chip that drops from the top of the window to say what was just done ("Copied 3 lines").
+    /// Off, a copy says nothing, and a program's clipboard write keeps the pane bar's notice.
+    Notices,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 9] = [
+    pub const ALL: [FeatureFlag; 10] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
@@ -72,6 +75,7 @@ impl FeatureFlag {
         Self::Motion,
         Self::TearOff,
         Self::LiveResize,
+        Self::Notices,
     ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
@@ -86,6 +90,7 @@ impl FeatureFlag {
             Self::Motion => "motion",
             Self::TearOff => "tear_off",
             Self::LiveResize => "live_resize",
+            Self::Notices => "notices",
         }
     }
 
@@ -105,6 +110,7 @@ impl FeatureFlag {
             Self::Motion => "Motion",
             Self::TearOff => "Tear off a terminal",
             Self::LiveResize => "Live resize",
+            Self::Notices => "Notice chip",
         }
     }
 
@@ -148,6 +154,10 @@ impl FeatureFlag {
                 "Resize a window in steps of the terminal's cell, tell the program the size calmly while \
                  the window is dragged, and say the size on a chip."
             }
+            Self::Notices => {
+                "A small chip that drops from the top of the window to say what was copied and similar \
+                 short messages."
+            }
         }
     }
 
@@ -172,6 +182,8 @@ impl FeatureFlag {
             Self::TearOff => false,
             // Rests on what AppKit does while a person drags a window's edge, which only a real mouse tries.
             Self::LiveResize => false,
+            // New: off until it has been through its visual check and the user has tried it.
+            Self::Notices => false,
         }
     }
 }
@@ -314,6 +326,18 @@ mod tests {
         assert!(!enabled_in(flag, &on, RELEASE), "a release ignores the map");
         assert!(enabled_in(flag, &on, FlagMode::Unstable), "a tester can turn it on");
         assert_eq!(FeatureFlag::from_key("motion"), Some(flag));
+    }
+
+    #[test]
+    fn notices_is_on_in_a_dev_build_and_off_in_a_release() {
+        let flag = FeatureFlag::Notices;
+        assert_eq!(flag.key(), "notices");
+        assert!(!flag.released());
+        assert!(enabled_in(flag, &BTreeMap::new(), DEV));
+        let on = BTreeMap::from([("notices".to_string(), true)]);
+        assert!(!enabled_in(flag, &on, RELEASE), "a release ignores the map");
+        assert!(enabled_in(flag, &on, FlagMode::Unstable), "a tester can turn it on");
+        assert_eq!(FeatureFlag::from_key("notices"), Some(flag));
     }
 
     #[test]
