@@ -14,6 +14,7 @@
 //! [`MotionChoices`], not the other way round.
 
 mod choices;
+pub mod drag;
 mod ease;
 pub mod pose;
 mod spring;
