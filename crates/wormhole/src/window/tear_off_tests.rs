@@ -354,7 +354,7 @@ pub(super) fn focus_follows_a_moved_terminal(
     });
     mover(cx, window);
     let moved = other_than(cx, window);
-    assert_eq!(ids(cx, &moved).contains(&2), true, "the terminal is in the other window");
+    assert!(ids(cx, &moved).contains(&2), "the terminal is in the other window");
 
     activate(cx, &moved);
     drive(cx, &moved, |ws, window, cx| ws.activate(0, window, cx));
