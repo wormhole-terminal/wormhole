@@ -41,4 +41,20 @@ mod tests {
             assert!((spring.canonical().1 - spec.damping_ratio()).abs() < 1e-6);
         }
     }
+
+    #[test]
+    fn core_samples_the_spring_gpui_runs() {
+        // The Settings previews draw `SpringSpec::step`, the list's moves run GPUI's spring: one curve.
+        for (spec, spring) in [
+            (SpringSpec::SNAP, SPRING_SNAP),
+            (SpringSpec::SOFT, SPRING_SOFT),
+            (SpringSpec::BOUNCY, SPRING_BOUNCY),
+        ] {
+            for seconds in [0.05_f32, 0.1, 0.25, 0.5] {
+                let from_rest = gpui_kit::SpringState { position: 0.0, velocity: 0.0 };
+                let gpui = spring.step(from_rest, 1.0, seconds).position;
+                assert!((gpui - spec.step(seconds)).abs() < 0.005, "{spec:?} at {seconds}: {gpui}");
+            }
+        }
+    }
 }
