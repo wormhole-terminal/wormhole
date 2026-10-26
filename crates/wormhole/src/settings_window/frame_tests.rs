@@ -63,7 +63,8 @@ const BUDGET: [(&str, u64); 14] = [
     ("Updates", 5521),
     ("Advanced", 3995),
     ("Projects", 8887),
-    ("FeatureFlags", 3878),
+    // A sixth switch (Automation) is a row more.
+    ("FeatureFlags", 4273),
     ("search", 11732),
 ];
 
