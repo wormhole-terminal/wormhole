@@ -21,8 +21,7 @@ use crate::platform;
 use crate::platform::pointer::Pointer;
 use crate::settings::settings_in;
 use crate::style::{GHOST_POINTER_GAP, GHOST_POINTER_RISE};
-use crate::window::terminal_move::Departing;
-use crate::window::window_lifecycle::open_workspace_window_in;
+use crate::window::terminal_move::{Departing, open_for};
 use crate::window::{Layout, Workspace, window_bounds};
 
 /// Where the pointer lies in a torn-off window: over the new terminal's row, which was under it a moment
@@ -92,10 +91,9 @@ impl Workspace {
         let layout = serde_json::to_string(&layout).ok();
         let profile = self.profile.clone();
         let grows = self.plays_motion(cx).then_some(placed.chip);
+        let home = self.window_id;
         cx.defer(move |cx| {
-            let state = app_mut(cx);
-            let window_id = state.alloc_window_id();
-            state.adopted.extend(terminals);
+            let window_id = app_mut(cx).alloc_window_id();
             let record = WindowRecord {
                 id: window_id,
                 active,
@@ -107,7 +105,7 @@ impl Workspace {
             if let Some(chip) = grows {
                 super::grow::begin(window_id, chip, cx);
             }
-            open_workspace_window_in(&profile, Some(record), None, cx);
+            open_for(&profile, record, terminals, None, home, cx);
         });
     }
 

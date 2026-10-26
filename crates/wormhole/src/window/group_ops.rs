@@ -2,19 +2,17 @@
 //! does that): close it (asking once if an agent is working in it) and move it, with its splits, to a
 //! window of its own.
 use gpui_kit::*;
-use wormhole_core::ipc::control::event::{Body, Event, Topic};
 use wormhole_core::storage::store::WindowRecord;
 use wormhole_core::view::sidebar::{Item, WindowSidebar, group_key};
 
-use crate::app_state::{AppState, app, app_mut};
+use crate::app_state::app_mut;
 use crate::dialog;
 use crate::terminal_view::Status;
 use crate::window::feature::{CloseAlso, CloseOf};
 use crate::window::feature_host::extras_to_ask;
 use crate::window::session::Session;
 use crate::window::session::{close_group_detail, close_group_title};
-use crate::window::terminal_move::Departing;
-use crate::window::window_lifecycle::open_workspace_window_in;
+use crate::window::terminal_move::{Departing, open_for};
 use crate::window::{Layout, Workspace};
 
 impl Workspace {
@@ -124,28 +122,14 @@ impl Workspace {
         let layout = serde_json::to_string(&layout).ok();
         // The new window stays in this window's profile: its database, its environment.
         let profile = self.profile.clone();
-        let (from, moved_ids) = (self.window_id, ids.clone());
         // Deferred: the new window renders right away, and nothing may read this workspace while
         // it is still being updated.
+        let home = self.window_id;
         cx.defer(move |cx| {
-            let state = app_mut(cx);
-            let window_id = state.alloc_window_id();
-            state.adopted.extend(terminals);
+            let window_id = app_mut(cx).alloc_window_id();
             let record =
                 WindowRecord { id: window_id, active, layout, bounds: None, sessions: records, splits };
-            open_workspace_window_in(&profile, Some(record), Some(source), cx);
-            // They are the same terminals, running on: they moved, they did not open. Their splits
-            // come with them.
-            if let Some(opened) = app(cx).windows.iter().find(|w| w.id == window_id).cloned() {
-                AppState::with_workspace(&opened, cx, |ws, _, cx| ws.publish_all_splits(cx));
-            }
-            for terminal in moved_ids {
-                crate::automation::publish(cx, Topic::Terminals, || Event {
-                    window: Some(window_id),
-                    terminal: Some(terminal),
-                    body: Body::TerminalMoved { from },
-                });
-            }
+            open_for(&profile, record, terminals, Some(source), home, cx);
         });
     }
 }

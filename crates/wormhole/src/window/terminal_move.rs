@@ -17,9 +17,15 @@ use gpui_kit::*;
 use wormhole_core::storage::store::{SessionRecord, SplitRecord};
 use wormhole_core::view::sidebar::SplitId;
 
-use crate::app_state::app_mut;
+use wormhole_core::ipc::control::event::{Body, Event, Topic};
+use wormhole_core::storage::paths::ProfileId;
+use wormhole_core::storage::store::WindowRecord;
+
+use crate::app_state::{AppState, app, app_mut};
 use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
+use crate::window::window_bounds::Source;
+use crate::window::window_lifecycle::open_workspace_window_in;
 
 /// Terminals on their way from one window to another.
 pub(crate) struct Departing {
@@ -107,4 +113,45 @@ impl Workspace {
         }
         cx.notify();
     }
+}
+
+/// Open a window for terminals that left window `home`: `record` is what it shows and `terminals` their running
+/// views, which it adopts. When it does not open the terminals go back where they came from (and, if that
+/// window is gone too, are dropped, which ends them: a view nobody shows is not left running). Whether it opened.
+pub(super) fn open_for(
+    profile: &ProfileId,
+    record: WindowRecord,
+    terminals: Vec<(i64, Entity<TerminalView>)>,
+    source: Option<Source>,
+    home: i64,
+    cx: &mut App,
+) -> bool {
+    let id = record.id;
+    let ids: Vec<i64> = terminals.iter().map(|(id, _)| *id).collect();
+    app_mut(cx).adopted.extend(terminals);
+    let (sessions, splits, active) = (record.sessions.clone(), record.splits.clone(), record.active);
+    open_workspace_window_in(profile, Some(record), source, cx);
+    if let Some(opened) = app(cx).windows.iter().find(|window| window.id == id).cloned() {
+        // They are the same terminals, running on: they moved, they did not open. Their splits come with
+        // them.
+        AppState::with_workspace(&opened, cx, |ws, _, cx| ws.publish_all_splits(cx));
+        for &terminal in &ids {
+            crate::automation::publish(cx, Topic::Terminals, || Event {
+                window: Some(id),
+                terminal: Some(terminal),
+                body: Body::TerminalMoved { from: home },
+            });
+        }
+        return true;
+    }
+    tracing::error!("the window for the moved terminals did not open: they go back to window {home}");
+    super::grow::forget(id, cx);
+    let back: Vec<_> =
+        ids.iter().filter_map(|id| app_mut(cx).adopted.remove(id).map(|view| (*id, view))).collect();
+    let departing = Departing { records: sessions, terminals: back, splits, active };
+    let home = app(cx).windows.iter().find(|window| window.id == home).cloned();
+    if let Some(home) = home {
+        AppState::with_workspace(&home, cx, |ws, window, cx| ws.receive(departing, window, cx));
+    }
+    false
 }

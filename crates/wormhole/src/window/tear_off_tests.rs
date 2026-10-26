@@ -393,3 +393,25 @@ fn a_drag_that_went_out_and_is_let_go_over_the_terminal_leaves_no_chip_behind(cx
     assert_eq!(cx.update(|cx| cx.windows().len()), 1, "no chip");
     assert!(!cx.update(|cx| crate::sidebar::tear_off::in_flight(cx)));
 }
+
+#[gpui_kit::test]
+fn a_plain_frame_does_not_touch_the_growth_global_and_a_closed_window_leaves_nothing(
+    cx: &mut TestAppContext,
+) {
+    if isolate("a_plain_frame_does_not_touch_the_growth_global_and_a_closed_window_leaves_nothing") {
+        return;
+    }
+    let window = start(cx, 3);
+    draw(cx, &window);
+    draw(cx, &window);
+    assert!(!cx.update(|cx| super::grow::exists(cx)), "a frame that grows nothing sets no global");
+
+    cx.update(|cx| cx.set_reduce_motion(false));
+    let_go(cx, &window, 2, 600.0, 300.0);
+    let grown = other_than(cx, &window);
+    assert!(cx.update(|cx| super::grow::active(grown.id, cx)));
+    // Closed before it finished growing: its entry goes with it.
+    with_window(cx, &grown, |window, _| window.remove_window());
+    cx.run_until_parked();
+    assert!(!cx.update(|cx| super::grow::active(grown.id, cx)), "nothing left of the growth");
+}

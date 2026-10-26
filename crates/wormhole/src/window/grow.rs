@@ -22,6 +22,7 @@ use crate::window::Workspace;
 /// How long after the growth's clock a window waits before it goes back to its plain frame.
 const GRACE: Duration = Duration::from_millis(60);
 
+#[derive(Clone, Copy)]
 struct Grow {
     chip: Rect,
     /// The end has been scheduled (by the first frame).
@@ -43,6 +44,15 @@ pub(super) fn begin(id: i64, chip: Rect, cx: &mut App) {
     cx.default_global::<Growing>().windows.insert(id, Grow { chip, timed: false });
 }
 
+/// Window `id` is gone or its window never opened: nothing is left of its growth.
+pub(super) fn forget(id: i64, cx: &mut App) {
+    if let Some(growing) = cx.try_global::<Growing>()
+        && growing.windows.contains_key(&id)
+    {
+        cx.global_mut::<Growing>().windows.remove(&id);
+    }
+}
+
 /// Whether window `id` is growing, or about to.
 pub(super) fn active(id: i64, cx: &App) -> bool {
     cx.try_global::<Growing>().is_some_and(|growing| growing.windows.contains_key(&id))
@@ -50,20 +60,25 @@ pub(super) fn active(id: i64, cx: &App) -> bool {
 
 impl Workspace {
     /// The window has just been made: a window that grows hides what would show its full frame.
-    pub(super) fn prepare_grow(&self, window: &Window, cx: &App) {
+    pub(super) fn prepare_grow(&self, window: &Window, cx: &mut Context<Self>) {
         if active(self.window_id, cx) {
             platform::window::set_shadow(window, false);
             platform::window::set_shown(window, false);
+            // Closed before it grew: nothing to wait for.
+            let id = self.window_id;
+            cx.on_release(move |_, cx| forget(id, cx)).detach();
         }
     }
 
     /// The window's frame: `root` as it is, or while the window grows, in the part of it that shows.
     pub(super) fn framed(&mut self, root: Div, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let id = self.window_id;
-        let growing = cx.default_global::<Growing>();
+        // Read only until there is something to change: a global that is touched in a frame tells its
+        // observers, and every frame of every window comes through here.
+        let Some(growing) = cx.try_global::<Growing>() else { return root.into_any_element() };
         #[cfg(feature = "devctl")]
         let hold = growing.hold;
-        let Some(grow) = growing.windows.get_mut(&id) else {
+        let Some(grow) = growing.windows.get(&id).copied() else {
             return root.into_any_element();
         };
         let chip = grow.chip;
@@ -71,7 +86,10 @@ impl Workspace {
         let held = hold.is_some();
         #[cfg(not(feature = "devctl"))]
         let held = false;
-        if !held && !std::mem::replace(&mut grow.timed, true) {
+        if !held && !grow.timed {
+            if let Some(grow) = cx.global_mut::<Growing>().windows.get_mut(&id) {
+                grow.timed = true;
+            }
             cx.spawn_in(window, async move |this, cx| {
                 cx.background_executor().timer(DURATION + GRACE).await;
                 this.update_in(cx, |this, window, cx| this.finish_grow(window, cx)).ok();
@@ -101,7 +119,7 @@ impl Workspace {
 
     /// The growth is over: the window is whole again, with its shadow, its lights and its blur.
     fn finish_grow(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        cx.default_global::<Growing>().windows.remove(&self.window_id);
+        forget(self.window_id, cx);
         platform::window::set_shadow(window, true);
         platform::window::set_shown(window, true);
         self.sync_appearance(cx);
@@ -130,4 +148,10 @@ fn clip(d: Div, g: Pose, ui: UiColors) -> Div {
 #[cfg(feature = "devctl")]
 pub(crate) fn hold(at: Option<f32>, cx: &mut App) {
     cx.default_global::<Growing>().hold = at;
+}
+
+/// Whether the global exists (a test: a plain frame must not make it).
+#[cfg(test)]
+pub(super) fn exists(cx: &App) -> bool {
+    cx.try_global::<Growing>().is_some()
 }
