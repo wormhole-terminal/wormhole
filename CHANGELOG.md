@@ -61,6 +61,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   missing or wrong: the terminal is told by where the command runs (its place under the terminal's
   shell, or on its terminal device), not only by what it says about itself. A program that starts a
   session of its own can still hide where it runs.
+- A working terminal's light, and the breathing amber edge of one that needs you, no longer start over
+  when its row is drawn again (a row moving, a status changing); they go on from where they were.
 
 ## [1.3.0] - 2026-10-25
 
