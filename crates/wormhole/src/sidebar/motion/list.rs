@@ -12,7 +12,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::sidebar::motion::{Drawn, plan_moves};
 
-use super::Sidebar;
+use crate::sidebar::Sidebar;
 use crate::style::motion::{EASE_OUT, MOTION_MOVE};
 
 /// A move longer than this is drawn from this far away, so a terminal sent across a long list
@@ -24,14 +24,14 @@ const LIKELY_ROW: f32 = 44.0;
 
 /// A line of the list, by what it is rather than where.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub(super) enum ItemKey {
+pub(in crate::sidebar) enum ItemKey {
     Row(i64),
     Band(String),
 }
 
 /// What the list was last drawn as, and the move under way.
 #[derive(Default)]
-pub(super) struct ListMotion {
+pub(in crate::sidebar) struct ListMotion {
     keys: Vec<ItemKey>,
     /// Where the first line starts below the top of the content, as measured at rest.
     pad: Option<f32>,
@@ -45,29 +45,29 @@ pub(super) struct ListMotion {
 
 impl ListMotion {
     /// How far from its place `key`'s line starts, if it is sliding.
-    pub(super) fn shift(&self, key: &ItemKey) -> Option<f32> {
+    pub(in crate::sidebar) fn shift(&self, key: &ItemKey) -> Option<f32> {
         self.moving.get(key).copied()
     }
 
     /// Whether any line slides now.
     #[cfg(test)]
-    pub(super) fn is_moving(&self) -> bool {
+    pub(in crate::sidebar) fn is_moving(&self) -> bool {
         !self.moving.is_empty()
     }
 
-    pub(super) fn is_entering(&self, key: &ItemKey) -> bool {
+    pub(in crate::sidebar) fn is_entering(&self, key: &ItemKey) -> bool {
         self.entering.contains(key)
     }
 
     /// Unique to this line and this move, so a later move isn't continued from an earlier one's
     /// progress.
-    pub(super) fn id(&self, key: &ItemKey) -> (&'static str, u64) {
+    pub(in crate::sidebar) fn id(&self, key: &ItemKey) -> (&'static str, u64) {
         let mut hasher = DefaultHasher::new();
         (key, self.serial).hash(&mut hasher);
         ("list-move", hasher.finish())
     }
 
-    pub(super) fn animation() -> Animation {
+    pub(in crate::sidebar) fn animation() -> Animation {
         Animation::new(MOTION_MOVE).with_easing(EASE_OUT.easing())
     }
 }
@@ -75,7 +75,7 @@ impl ListMotion {
 impl Sidebar {
     /// Notice that the list's lines are not the ones last drawn, and start the slide for those
     /// that moved. Call it once per render with the lines about to be drawn, top to bottom.
-    pub(super) fn plan_list_motion(&mut self, keys: Vec<ItemKey>, cx: &mut Context<Self>) {
+    pub(in crate::sidebar) fn plan_list_motion(&mut self, keys: Vec<ItemKey>, cx: &mut Context<Self>) {
         let motion = &mut self.motion;
         if motion.keys == keys {
             return;
@@ -127,7 +127,12 @@ impl Sidebar {
 
     /// `row` (a line of the list) with the slide it owes: shifted to where it was and coming back,
     /// and faded in if it is new. Not for the row held in a drag.
-    pub(super) fn with_list_motion(&self, key: ItemKey, line: AnyElement, held: bool) -> AnyElement {
+    pub(in crate::sidebar) fn with_list_motion(
+        &self,
+        key: ItemKey,
+        line: AnyElement,
+        held: bool,
+    ) -> AnyElement {
         let motion = &self.motion;
         let (shift, entering) = (motion.shift(&key), motion.is_entering(&key));
         let line = div().relative().w_full().child(line);
