@@ -517,6 +517,7 @@ mod tests {
             keywords: None,
             keys: &["density.nested"],
             feature: None,
+            flag: None,
         };
         assert!(PROJECT_SETTINGS.contains(&"density"));
         assert!(set_by_project(&nested, &["density".into()]));
