@@ -94,6 +94,7 @@ impl SettingsWindow {
             Section::Notifications => Some(PreviewKind::Notifications),
             Section::MenuBar => Some(PreviewKind::MenuBar),
             Section::Profile
+            | Section::Motion
             | Section::Terminal
             | Section::Git
             | Section::Updates

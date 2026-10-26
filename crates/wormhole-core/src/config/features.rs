@@ -44,16 +44,21 @@ pub enum FeatureFlag {
     /// windows and splits, waiting and running, and `wh mcp` (`repo-docs/docs/automation.md`). Off,
     /// the new actions answer that they are not in this build yet.
     Automation,
+    /// Settings → Motion: a choice of animation for a terminal opening, a group folding, a status
+    /// changing and a column hiding, each with a live preview. The page shows only while the flag is
+    /// on; the choices themselves are ordinary settings (`motion` in `config.json`).
+    Motion,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 6] = [
+    pub const ALL: [FeatureFlag; 7] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
         Self::PersistentTerminals,
         Self::LiquidGlass,
         Self::Automation,
+        Self::Motion,
     ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
@@ -65,6 +70,7 @@ impl FeatureFlag {
             Self::PersistentTerminals => "persistent_terminals",
             Self::LiquidGlass => "liquid_glass",
             Self::Automation => "automation",
+            Self::Motion => "motion",
         }
     }
 
@@ -81,6 +87,7 @@ impl FeatureFlag {
             Self::PersistentTerminals => "Persistent terminals",
             Self::LiquidGlass => "Liquid Glass",
             Self::Automation => "Automation",
+            Self::Motion => "Motion",
         }
     }
 
@@ -111,6 +118,10 @@ impl FeatureFlag {
                 "The command line and coding agents watch and drive Wormhole: wh events, and later \
                  reading terminals, keys, windows and splits, waiting and running."
             }
+            Self::Motion => {
+                "Settings → Motion: pick how terminals open, groups fold, statuses change and columns \
+                 slide, with a live preview of each."
+            }
         }
     }
 
@@ -129,6 +140,8 @@ impl FeatureFlag {
             Self::LiquidGlass => false,
             // Until its last phase has landed and the user has approved it.
             Self::Automation => false,
+            // Unfinished: only the page and its previews exist, the animations are still to come.
+            Self::Motion => false,
         }
     }
 }
@@ -259,6 +272,18 @@ mod tests {
         assert!(!enabled_in(flag, &on, RELEASE), "a release ignores the map");
         assert!(enabled_in(flag, &on, FlagMode::Unstable));
         assert_eq!(FeatureFlag::from_key("automation"), Some(flag));
+    }
+
+    #[test]
+    fn motion_is_on_in_a_dev_build_and_off_in_a_release() {
+        let flag = FeatureFlag::Motion;
+        assert_eq!(flag.key(), "motion");
+        assert!(!flag.released());
+        assert!(enabled_in(flag, &BTreeMap::new(), DEV));
+        let on = BTreeMap::from([("motion".to_string(), true)]);
+        assert!(!enabled_in(flag, &on, RELEASE), "a release ignores the map");
+        assert!(enabled_in(flag, &on, FlagMode::Unstable), "a tester can turn it on");
+        assert_eq!(FeatureFlag::from_key("motion"), Some(flag));
     }
 
     #[test]

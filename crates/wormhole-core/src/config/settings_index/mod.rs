@@ -10,6 +10,7 @@
 
 #[cfg(test)]
 mod english;
+mod key_path;
 mod search;
 mod table;
 
@@ -30,6 +31,8 @@ pub enum SectionId {
     Profile,
     Appearance,
     Fonts,
+    /// How the app moves, one choice and live preview each. Behind [`crate::config::features::FeatureFlag::Motion`].
+    Motion,
     Terminal,
     Sessions,
     Git,
@@ -125,7 +128,9 @@ pub struct Entry {
     /// Words that find it besides its label and description.
     keywords: Option<Key>,
     /// The `config.json` keys it writes: what "changed", the reset arrow and "set by a project"
-    /// look at. Empty for a row that stores nothing there (a folder button, the agents' hooks).
+    /// look at. A key inside an object is its path (`motion.insert`), so each choice of an object
+    /// has its own changed mark and reset. Empty for a row that stores nothing there (a folder
+    /// button, the agents' hooks).
     pub keys: &'static [&'static str],
     /// The feature it is about, if it is one of an optional feature: while that is off the setting
     /// does nothing. `None` for the rest.
@@ -162,10 +167,11 @@ impl Entry {
 }
 
 impl SectionId {
-    pub const ALL: [SectionId; 13] = [
+    pub const ALL: [SectionId; 14] = [
         SectionId::Profile,
         SectionId::Appearance,
         SectionId::Fonts,
+        SectionId::Motion,
         SectionId::Terminal,
         SectionId::Sessions,
         SectionId::Git,
@@ -221,6 +227,7 @@ impl SectionId {
     pub fn feature_flag(self) -> Option<crate::config::features::FeatureFlag> {
         match self {
             SectionId::Projects => Some(crate::config::features::FeatureFlag::ProjectFolders),
+            SectionId::Motion => Some(crate::config::features::FeatureFlag::Motion),
             _ => None,
         }
     }
@@ -272,7 +279,7 @@ impl Values {
 
     /// Whether `key` is set to something other than its default.
     pub fn changed(&self, key: &str) -> bool {
-        self.current.get(key) != self.defaults.get(key)
+        key_path::get(&self.current, key) != key_path::get(&self.defaults, key)
     }
 
     /// Whether any key of `entry` differs from its default.
@@ -294,8 +301,8 @@ pub fn reset(settings: &Settings, keys: &[&str]) -> Settings {
     let mut map = as_map(settings);
     let defaults = as_map(&Settings::default());
     for key in keys {
-        if let Some(value) = defaults.get(*key) {
-            map.insert((*key).to_string(), value.clone());
+        if let Some(value) = key_path::get(&defaults, key) {
+            key_path::set(&mut map, key, value.clone());
         }
     }
     serde_json::from_value(Value::Object(map)).unwrap_or_else(|_| settings.clone())
@@ -313,6 +320,7 @@ mod tests {
     use std::collections::HashSet;
 
     use super::{SectionId, UNLISTED, Values, entries, entry, reset, set_by_project};
+    use super::{as_map, key_path};
     use crate::config::{APP_SETTINGS, PROJECT_SETTINGS, Settings, keys};
 
     #[test]
@@ -330,17 +338,18 @@ mod tests {
 
     #[test]
     fn every_config_key_has_a_row_or_is_listed_as_waiting_for_one() {
-        let shown: HashSet<&str> = entries().flat_map(|(_, _, e)| e.keys.iter().copied()).collect();
+        let shown: HashSet<&str> =
+            entries().flat_map(|(_, _, e)| e.keys.iter().map(|key| key_path::top(key))).collect();
         for key in keys() {
             let unlisted = UNLISTED.contains(&key.as_str());
             assert!(shown.contains(key.as_str()) || unlisted, "{key}: give it a row in settings_index");
             assert!(!(shown.contains(key.as_str()) && unlisted), "{key} has a row: take it out of UNLISTED");
         }
         // And a row names only keys that exist.
-        let known = keys();
+        let defaults = as_map(&Settings::default());
         for (_, _, entry) in entries() {
             for key in entry.keys {
-                assert!(known.iter().any(|k| k == key), "{}: no config key {key}", entry.id);
+                assert!(key_path::get(&defaults, key).is_some(), "{}: no config key {key}", entry.id);
             }
         }
     }
@@ -359,11 +368,13 @@ mod tests {
     #[test]
     fn the_preview_sections_show_only_in_a_dev_build_or_on_unstable_and_while_their_flag_is_on() {
         use crate::config::features::FlagMode::{Dev as DEV, Release as RELEASE, Unstable as UNSTABLE};
-        let preview = [SectionId::Projects, SectionId::FeatureFlags];
+        let preview = [SectionId::Projects, SectionId::FeatureFlags, SectionId::Motion];
         let defaults = Settings::default();
         // A release build: no flag list, and a flagged feature stays hidden whatever the file says.
-        let asked_on =
-            Settings { feature_flags: [("project_folders".to_string(), true)].into(), ..Settings::default() };
+        let asked_on = Settings {
+            feature_flags: [("project_folders".to_string(), true), ("motion".to_string(), true)].into(),
+            ..Settings::default()
+        };
         for settings in [&defaults, &asked_on] {
             for section in preview {
                 assert!(!section.is_visible_in(settings, RELEASE), "{section:?} in a release build");
@@ -378,6 +389,13 @@ mod tests {
         };
         assert!(!SectionId::Projects.is_visible_in(&off, DEV));
         assert!(SectionId::FeatureFlags.is_visible_in(&off, DEV), "the switch to turn it back on stays");
+        // Motion has its own flag: on in a dev build, and switched off on its own.
+        assert!(SectionId::Motion.is_visible_in(&defaults, DEV));
+        assert!(SectionId::Motion.is_visible_in(&off, DEV), "project folders' flag is not its flag");
+        let motion_off =
+            Settings { feature_flags: [("motion".to_string(), false)].into(), ..Settings::default() };
+        assert!(!SectionId::Motion.is_visible_in(&motion_off, DEV));
+        assert!(SectionId::Projects.is_visible_in(&motion_off, DEV));
         // Every other section ships in both.
         for section in SectionId::ALL.into_iter().filter(|s| !preview.contains(s)) {
             assert!(!section.is_preview());
@@ -388,6 +406,8 @@ mod tests {
         assert!(SectionId::FeatureFlags.is_visible_in(&defaults, UNSTABLE));
         assert!(!SectionId::Projects.is_visible_in(&defaults, UNSTABLE));
         assert!(SectionId::Projects.is_visible_in(&asked_on, UNSTABLE));
+        assert!(!SectionId::Motion.is_visible_in(&defaults, UNSTABLE));
+        assert!(SectionId::Motion.is_visible_in(&asked_on, UNSTABLE));
     }
 
     #[test]
@@ -412,6 +432,29 @@ mod tests {
         assert_eq!(back.tab_width, Settings::default().tab_width);
         assert!(back.diff_wrap, "the other changes stay");
         assert!(Values::of(&Settings::default()).changed_keys().is_empty());
+    }
+
+    #[test]
+    fn each_choice_of_the_motion_object_has_its_own_changed_mark_and_reset() {
+        use crate::view::motion::{FoldMotion, MotionChoices, StatusMotion};
+        let settings = Settings {
+            motion: MotionChoices {
+                fold: FoldMotion::Drawer,
+                status: StatusMotion::Wash,
+                ..Default::default()
+            },
+            ..Settings::default()
+        };
+        let values = Values::of(&settings);
+        let row = |id: &str| entry(id).expect("row").2;
+        assert!(values.entry_changed(row("motion-fold")) && values.entry_changed(row("motion-status")));
+        assert!(!values.entry_changed(row("motion-insert")), "its sibling choices are at their defaults");
+        assert!(!values.entry_changed(row("motion-column")));
+        assert_eq!(values.changed_keys(), ["motion"], "reset all puts the object back whole");
+
+        let back = reset(&settings, row("motion-fold").keys);
+        assert_eq!(back.motion.fold, FoldMotion::Tuck);
+        assert_eq!(back.motion.status, StatusMotion::Wash, "the other choice stays");
     }
 
     #[test]

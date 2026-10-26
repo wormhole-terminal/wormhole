@@ -15,6 +15,7 @@ mod advanced;
 mod agents;
 mod appearance;
 mod menu_bar;
+mod motion;
 mod notifications;
 mod profile;
 mod sessions;
@@ -88,6 +89,11 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             intro: SETTINGS_SECTION_FONTS_INTRO,
             nav: NavGroup::Look,
         },
+        SectionId::Motion => &SectionInfo {
+            title: SETTINGS_SECTION_MOTION,
+            intro: SETTINGS_SECTION_MOTION_INTRO,
+            nav: NavGroup::Look,
+        },
         SectionId::Terminal => &SectionInfo {
             title: SETTINGS_SECTION_TERMINAL,
             intro: SETTINGS_SECTION_TERMINAL_INTRO,
@@ -146,6 +152,7 @@ pub(super) fn groups(id: SectionId) -> &'static [Group] {
         SectionId::Profile => profile::PROFILE,
         SectionId::Appearance => appearance::APPEARANCE,
         SectionId::Fonts => appearance::FONTS,
+        SectionId::Motion => motion::MOTION,
         SectionId::Terminal => terminal::TERMINAL,
         SectionId::Sessions => sessions::SESSIONS,
         SectionId::Git => sessions::GIT,

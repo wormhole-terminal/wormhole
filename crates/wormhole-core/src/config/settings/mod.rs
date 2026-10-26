@@ -14,6 +14,7 @@ use crate::theme::fonts::{self, FontSlot};
 use crate::theme::registry::{DEFAULT_THEME, DEFAULT_THEME_LIGHT};
 use crate::update::UpdateChannel;
 use crate::view::layout::title_parts::TitleRow;
+use crate::view::motion::MotionChoices;
 use crate::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 
 mod branch_color;
@@ -156,6 +157,9 @@ pub struct Settings {
     /// Themes the picker leaves out, each as `theme` would name it; Settings brings them back one
     /// by one.
     pub hidden_themes: Vec<String>,
+    /// Which animation each thing that moves runs (Settings → Motion): a terminal opening, a group
+    /// folding, a status changing, a column hiding. One object, one key per choice.
+    pub motion: MotionChoices,
 
     // Window and terminal
     /// The status bar along the bottom of every window (View → Show Status Bar).
@@ -325,6 +329,7 @@ impl Default for Settings {
             theme_mode: ThemeMode::default(),
             theme_light: DEFAULT_THEME_LIGHT.into(),
             hidden_themes: Vec::new(),
+            motion: MotionChoices::default(),
             status_bar: false,
             minimap: false,
             split_gaps: true,

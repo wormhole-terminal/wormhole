@@ -54,6 +54,8 @@ pub const APP_SETTINGS: &[&str] = &[
     "theme_mode",
     "theme_light",
     "hidden_themes",
+    // How the app moves is the person's own taste, whatever project is in front.
+    "motion",
     "hotkey",
     "menu_bar",
     "auto_update",

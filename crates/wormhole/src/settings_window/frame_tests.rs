@@ -15,6 +15,8 @@
 //! when a row's hover fill became such a layer too, reaching past the row's text on both sides. Pages
 //! without a preview of their own (Profile, Terminal, …) fell by about 3,000 when they lost the
 //! window's miniature; Appearance rose by about 300 with each theme card's hide button and menu.
+//! Every page rose by about 100 when the nav got a row more, Motion; its own page, behind a feature flag,
+//! draws a select and a preview under each of its four choices (7,090).
 //! Liquid Glass moved from Appearance (one row fewer) to Feature flags (one row more).
 //! Appearance and a search (which show the window's preview) rose by about 770 when the preview
 //! became the window's own parts at full size instead of a drawing of them.
@@ -50,22 +52,23 @@ const SLACK: u64 = 20;
 /// Allocations a third draw of each page made when the budget was set (the first two build what a window
 /// keeps), and of the results page of a search for a word found in several pages; a frame may make
 /// [`SLACK`] more.
-const BUDGET: [(&str, u64); 14] = [
-    ("Profile", 6611),
-    ("Appearance", 16550),
-    ("Fonts", 7309),
-    ("Terminal", 9621),
-    ("Sessions", 13538),
-    ("Git", 4417),
-    ("Agents", 26316),
-    ("Notifications", 7732),
-    ("MenuBar", 6045),
-    ("Updates", 5521),
-    ("Advanced", 3995),
-    ("Projects", 8887),
+const BUDGET: [(&str, u64); 15] = [
+    ("Profile", 6714),
+    ("Appearance", 16655),
+    ("Fonts", 7412),
+    ("Motion", 7090),
+    ("Terminal", 9736),
+    ("Sessions", 13641),
+    ("Git", 4520),
+    ("Agents", 26419),
+    ("Notifications", 7835),
+    ("MenuBar", 6148),
+    ("Updates", 5644),
+    ("Advanced", 4120),
+    ("Projects", 8990),
     // A sixth switch (Automation) is a row more.
-    ("FeatureFlags", 4273),
-    ("search", 11732),
+    ("FeatureFlags", 4771),
+    ("search", 11820),
 ];
 
 fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {

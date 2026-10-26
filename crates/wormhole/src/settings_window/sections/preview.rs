@@ -278,33 +278,16 @@ pub(super) fn list(
         let mark = card.group.map(|_| theme_bridge::hsla(blue.color(tokens)));
         let wash = card.group.map(|_| theme_bridge::hsla(blue.wash(tokens)));
         if let Some(title) = card.group {
-            lines.push(
-                style::group_head(
-                    SharedString::from(format!("preview-{id}-head-{cx_ix}")),
-                    ui,
-                    style::GroupHead {
-                        metrics,
-                        name: title.into(),
-                        tooltip: None,
-                        folder: card.folder.map(SharedString::from),
-                        color: mark,
-                        folded: false,
-                        pinned: false,
-                        tiles: Vec::new(),
-                        count: card.rows.len(),
-                        alert: None,
-                        empty: None,
-                        add: None,
-                        on_toggle: Box::new(|_, _, _| {}),
-                        spoken_edit: SharedString::default(),
-                        spoken_fold: SharedString::default(),
-                        on_label: None,
-                        label_anchor: None,
-                        name_edit: None,
-                    },
-                )
-                .into_any_element(),
-            );
+            lines.push(sample_head(
+                SharedString::from(format!("preview-{id}-head-{cx_ix}")),
+                ui,
+                metrics,
+                title,
+                card.folder,
+                mark,
+                card.rows.len(),
+                false,
+            ));
         }
         for (rx, sample) in card.rows.iter().enumerate() {
             let tile = style::status_tile_at(
@@ -352,4 +335,45 @@ pub(super) fn list(
         }
     }
     column.into_any_element()
+}
+
+/// A group's head as the sample lists draw it: the sidebar's own, open or folded, doing nothing when
+/// it is clicked. Motion's previews draw it too.
+#[allow(clippy::too_many_arguments)]
+#[track_caller]
+pub(super) fn sample_head(
+    id: SharedString,
+    ui: UiColors,
+    metrics: Metrics,
+    name: &'static str,
+    folder: Option<&'static str>,
+    color: Option<Hsla>,
+    count: usize,
+    folded: bool,
+) -> AnyElement {
+    style::group_head(
+        id,
+        ui,
+        style::GroupHead {
+            metrics,
+            name: name.into(),
+            tooltip: None,
+            folder: folder.map(SharedString::from),
+            color,
+            folded,
+            pinned: false,
+            tiles: Vec::new(),
+            count,
+            alert: None,
+            empty: None,
+            add: None,
+            on_toggle: Box::new(|_, _, _| {}),
+            spoken_edit: SharedString::default(),
+            spoken_fold: SharedString::default(),
+            on_label: None,
+            label_anchor: None,
+            name_edit: None,
+        },
+    )
+    .into_any_element()
 }

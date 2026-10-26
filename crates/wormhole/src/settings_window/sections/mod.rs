@@ -30,6 +30,8 @@ mod fonts;
 mod git;
 mod menu_bar;
 mod menu_bar_preview;
+mod motion;
+mod motion_preview;
 mod notifications;
 mod notifications_preview;
 mod preview;
@@ -63,6 +65,7 @@ pub(super) fn controls(section: Section) -> &'static [Setting] {
         Section::Profile => profile::SETTINGS,
         Section::Appearance => appearance::SETTINGS,
         Section::Fonts => fonts::SETTINGS,
+        Section::Motion => motion::SETTINGS,
         Section::Terminal => terminal::SETTINGS,
         Section::Sessions => sessions::SETTINGS,
         Section::Git => git::SETTINGS,
@@ -85,7 +88,18 @@ pub(super) fn recorder_id(id: &str) -> Option<&'static str> {
 /// The selects of the pages, by their row's id (devctl opens them by name).
 #[cfg(feature = "devctl")]
 pub(super) fn select_id(id: &str) -> Option<&'static str> {
-    ["scrollback", "icon-theme", "default-shell", "open-in"].into_iter().find(|known| *known == id)
+    [
+        "scrollback",
+        "icon-theme",
+        "default-shell",
+        "open-in",
+        "motion-insert",
+        "motion-fold",
+        "motion-status",
+        "motion-column",
+    ]
+    .into_iter()
+    .find(|known| *known == id)
 }
 
 impl SettingsWindow {

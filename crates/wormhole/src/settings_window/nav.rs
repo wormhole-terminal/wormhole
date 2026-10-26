@@ -35,6 +35,7 @@ pub(super) fn section_icon(section: Section) -> IconName {
         Section::Profile => IconName::CircleUser,
         Section::Appearance => IconName::Palette,
         Section::Fonts => IconName::ALargeSmall,
+        Section::Motion => IconName::Play,
         Section::Terminal => IconName::SquareTerminal,
         Section::Sessions => IconName::PanelLeft,
         Section::Git => IconName::GitCompare,

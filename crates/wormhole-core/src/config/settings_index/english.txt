@@ -49,6 +49,16 @@ group "Interface"
 group "Your fonts"
   blurb ""
   aside ""
+section Motion
+  title "Motion"
+  intro "How things move. Pick one for each, and watch it loop in the preview under it."
+  nav "Look"
+group "Terminals list"
+  blurb ""
+  aside ""
+group "Window"
+  blurb ""
+  aside ""
 section Terminal
   title "Terminal"
   intro "How the terminal behaves. Its font is in Fonts."
@@ -295,6 +305,22 @@ entry Fonts custom-fonts
   label "Custom fonts"
   description ""
   keywords "custom families"
+entry Motion motion-insert
+  label "A terminal opens or closes"
+  description "How its row comes into the list and leaves it"
+  keywords "animation animate new row appear disappear add remove list insert spring slide fade"
+entry Motion motion-fold
+  label "A group folds"
+  description "How a group's rows go away when you fold it, and come back when you open it"
+  keywords "animation animate collapse expand band group fold drawer tuck"
+entry Motion motion-status
+  label "A status changes"
+  description "What a terminal's tile does when its agent starts working, needs you or finishes"
+  keywords "animation animate tile badge agent working needs input done failed crossfade wash flare nudge roll"
+entry Motion motion-column
+  label "The sidebar and panel hide or show"
+  description "How a column slides in and out"
+  keywords "animation animate sidebar panel column slide spring hide show collapse"
 entry Terminal scrollback
   label "Scrollback"
   description "Lines kept per terminal (applies to new terminals)"

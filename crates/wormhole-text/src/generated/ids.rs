@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 707] = [
+pub(crate) const IDS: [&str; 743] = [
     "settings-section-advanced", "settings-section-advanced.intro", "settings-advanced-group-files",
     "settings-advanced-open-config", "settings-advanced-open-config.description", "settings-advanced-open-config.keywords",
     "settings-advanced-open-data", "settings-advanced-open-data.description", "settings-advanced-open-data.keywords",
@@ -106,7 +106,19 @@ pub(crate) const IDS: [&str; 707] = [
     "settings-menu-bar-jump-waiting-key.keywords", "settings-menu-bar-status-and-count", "settings-menu-bar-status",
     "settings-menu-bar-icon-only", "settings-menu-bar-quick-panel", "settings-menu-bar-show-or-hide-wormhole",
     "settings-menu-bar-key-conflict", "settings-menu-bar-preview-search", "settings-menu-bar-preview-needs-input",
-    "settings-menu-bar-preview-working", "settings-menu-bar-preview-caption", "settings-section-notifications",
+    "settings-menu-bar-preview-working", "settings-menu-bar-preview-caption", "settings-section-motion",
+    "settings-section-motion.intro", "settings-motion-group-terminals", "settings-motion-insert",
+    "settings-motion-insert.description", "settings-motion-insert.keywords", "settings-motion-fold",
+    "settings-motion-fold.description", "settings-motion-fold.keywords", "settings-motion-status",
+    "settings-motion-status.description", "settings-motion-status.keywords", "settings-motion-group-window",
+    "settings-motion-column", "settings-motion-column.description", "settings-motion-column.keywords",
+    "settings-motion-today", "settings-motion-insert-reveal", "settings-motion-insert-from-side",
+    "settings-motion-insert-soft-spring", "settings-motion-fold-drawer", "settings-motion-fold-tuck",
+    "settings-motion-status-crossfade", "settings-motion-status-badge-pop", "settings-motion-status-wash",
+    "settings-motion-status-flare", "settings-motion-status-nudge", "settings-motion-status-line-roll",
+    "settings-motion-column-soft-spring", "settings-motion-column-content-after", "settings-motion-insert-preview-label",
+    "settings-motion-fold-preview-label", "settings-motion-status-preview-label", "settings-motion-column-preview-label",
+    "settings-motion-preview-caption", "settings-motion-column-terminal", "settings-section-notifications",
     "settings-section-notifications.intro", "settings-notifications-group-macos", "settings-notifications-notify-permission",
     "settings-notifications-notify-permission.keywords", "settings-notifications-group-notify-me-when", "settings-notifications-notify-needs-you",
     "settings-notifications-notify-needs-you.description", "settings-notifications-notify-needs-you.keywords", "settings-notifications-notify-agent-done",
@@ -245,7 +257,7 @@ pub(crate) const IDS: [&str; 707] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 707] = [
+pub(crate) const TAKES_ARGS: [bool; 743] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, true, false, false, false, false, false, false,
@@ -271,6 +283,9 @@ pub(crate) const TAKES_ARGS: [bool; 707] = [
     false, false, false, false, false, true, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, true, false, false,
+    false, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,

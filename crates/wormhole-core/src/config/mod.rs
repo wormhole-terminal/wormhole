@@ -328,7 +328,9 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     use super::{Config, Settings, ThemeMode};
+    use crate::storage::jsonc;
     use crate::theme::tokens::Appearance;
+    use crate::view::motion::{FoldMotion, InsertMotion, MotionChoices, StatusMotion};
 
     /// A temp dir with `config.json` holding `text`.
     fn config_file(text: &str) -> (tempfile::TempDir, PathBuf) {
@@ -394,6 +396,37 @@ mod tests {
         let saved = read(&path);
         assert!(saved.starts_with("{\n  // Picked after a long evening.\n  \"theme\": \"Nord\","), "{saved}");
         assert!(saved.contains("\"diff_wrap\": true"), "{saved}");
+    }
+
+    #[test]
+    fn a_motion_that_is_no_option_falls_back_to_the_defaults_and_is_said() {
+        let text =
+            "{\n  \"opacity\": 0.5,\n  \"motion\": { \"insert\": \"bounce\", \"fold\": \"today\" }\n}\n";
+        let (_dir, path) = config_file(text);
+        let mut config = Config::load_from(path.clone(), themes_dir(&path));
+        assert_eq!(config.settings.motion, MotionChoices::default(), "the object reads as the defaults");
+        assert_eq!(config.settings.opacity, 0.5, "the rest of the file is kept");
+        assert!(config.is_unreadable(), "and the file is not written over");
+        let error = config.error.clone().unwrap_or_default();
+        assert!(
+            error.contains("bounce") && error.contains("from-side"),
+            "names the value and the options: {error}"
+        );
+        config.update(|s| s.motion.fold = FoldMotion::Drawer);
+        assert_eq!(read(&path), text);
+    }
+
+    #[test]
+    fn a_motion_choice_is_saved_into_the_object_in_place() {
+        let (_dir, path) = config_file("{ \"motion\": { \"insert\": \"reveal\" } } // mine\n");
+        let mut config = Config::load_from(path.clone(), themes_dir(&path));
+        assert_eq!(config.settings.motion.insert, InsertMotion::Reveal);
+        config.update(|s| s.motion.status = StatusMotion::Wash);
+        let saved = read(&path);
+        let reread: Settings = jsonc::parse(&saved).expect("reads back");
+        assert_eq!(reread.motion.insert, InsertMotion::Reveal, "the choice already there is kept");
+        assert_eq!(reread.motion.status, StatusMotion::Wash);
+        assert!(saved.contains("// mine"), "{saved}");
     }
 
     #[test]
