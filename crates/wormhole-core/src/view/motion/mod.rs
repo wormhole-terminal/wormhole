@@ -11,10 +11,10 @@
 //! their poses; `pose`'s `//!` says why. Some motions the design fixed, so they have no choice and no pose
 //! of a variant, only their numbers: dragging a terminal (`drag`), the panel's tab switch (`tabs`), the
 //! palette's exit (`overlay`), a split opening (`split`) and a window growing from a torn-off terminal's chip
-//! (`tear_off`). Scaling the window has four, all fixed: what the program is told while the window is
-//! dragged (`live_resize`), the chip that says the terminal's size (`size_readout`), the text size easing
-//! when it is zoomed (`text_zoom`) and which windows open and close with the system's animation
-//! (`window_animation`).
+//! (`tear_off`), and the notice chip dropping onto the top of its terminal (`notice`). Scaling the window has
+//! four, all fixed: what the program is told while the window is dragged (`live_resize`), the chip that
+//! says the terminal's size (`size_readout`), the text size easing when it is zoomed (`text_zoom`) and which
+//! windows open and close with the system's animation (`window_animation`).
 //!
 //! Rolling counts (`roll`) have no choice: the design fixed them. Like the rest of `view` this uses only
 //! `theme` below it, and the sidebar's [`Urgency`](crate::view::sidebar::Urgency), which a status change
@@ -24,6 +24,7 @@ mod choices;
 pub mod drag;
 mod ease;
 pub mod live_resize;
+pub mod notice;
 pub mod overlay;
 pub mod pose;
 pub mod roll;
