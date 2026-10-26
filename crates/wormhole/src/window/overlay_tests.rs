@@ -127,7 +127,7 @@ fn the_shortcut_sheet_closes_by_a_cut(cx: &mut TestAppContext) {
         return;
     }
     let window = open(cx);
-    cx.update(|cx| crate::shortcut_sheet::toggle(cx));
+    cx.update(crate::shortcut_sheet::toggle);
     cx.run_until_parked();
     draw(cx, &window);
     assert!(read(cx, &window, |ws| ws.sheet_open()));
