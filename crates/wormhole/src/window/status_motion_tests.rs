@@ -14,9 +14,7 @@ use wormhole_core::view::sidebar::Urgency;
 
 use crate::app_state::OpenWindow;
 use crate::style::motion::ANIMATION_FPS;
-use crate::window::test_harness::{
-    draw, draw_replaying, hook, isolate_in, read_cx, sidebar_of, start, with_window,
-};
+use crate::window::test_harness::{draw, draw_replaying, hook, isolate_in, read_cx, sidebar_of, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -178,7 +176,7 @@ fn a_status_change_draws_the_list_and_no_region_and_stops_when_it_ends(cx: &mut 
     assert!(!playing(cx, &window).is_empty());
     let regions = |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| ws.regions.builds(cx));
     let list = |cx: &mut TestAppContext| sidebar_of(cx, &window, |sidebar| sidebar.builds());
-    let (chrome, drawn) = (regions(cx), list(cx));
+    let chrome = regions(cx);
     // The tile's animation set a timer for its next frame while it was drawn, which notifies the view it is in:
     // each of those frames draws the list and nothing else.
     for _ in 0..5 {
