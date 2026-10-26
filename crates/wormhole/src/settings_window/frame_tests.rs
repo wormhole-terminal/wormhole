@@ -17,7 +17,8 @@
 //! window's miniature; Appearance rose by about 300 with each theme card's hide button and menu.
 //! Every page rose by about 100 when the nav got a row more, Motion; its own page, behind a feature flag,
 //! draws a select under each of its four choices and a preview (a view of its own, about 450) under each, with its caption (6,250).
-//! Liquid Glass moved from Appearance (one row fewer) to Feature flags (one row more).
+//! Liquid Glass moved from Appearance (one row fewer) to Feature flags (one row more); Feature flags rose by
+//! about 370 with one more, Tear off a terminal.
 //! Appearance and a search (which show the window's preview) rose by about 770 when the preview
 //! became the window's own parts at full size instead of a drawing of them.
 //! Updates rose by about 380 with its one more row, Count this Mac anonymously, and by about 150 with
@@ -68,7 +69,7 @@ const BUDGET: [(&str, u64); 15] = [
     ("Advanced", 4120),
     ("Projects", 8990),
     // A sixth switch (Automation) is a row more.
-    ("FeatureFlags", 4771),
+    ("FeatureFlags", 5163),
     ("search", 11820),
 ];
 

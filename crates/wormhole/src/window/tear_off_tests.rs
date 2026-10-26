@@ -256,7 +256,7 @@ fn a_window_that_stops_being_active_cancels_the_drag_and_puts_the_chip_away(cx: 
     assert!(cx.update(|cx| cx.has_active_drag()));
     assert_eq!(cx.update(|cx| cx.windows().len()), 2);
 
-    with_window(cx, &window, |window, cx| crate::sidebar::tear_off::cancel(window, cx));
+    with_window(cx, &window, crate::sidebar::tear_off::cancel);
     cx.run_until_parked();
     assert!(!cx.update(|cx| cx.has_active_drag()), "GPUI's drag is dropped");
     assert_eq!(cx.update(|cx| cx.windows().len()), 1, "and the chip is closed");
