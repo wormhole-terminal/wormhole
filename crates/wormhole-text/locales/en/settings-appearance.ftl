@@ -65,7 +65,7 @@ settings-appearance-status-bar = Show status bar
     .keywords = bottom bar footer
 
 settings-appearance-icon-animations = Animate icons
-    .description = Buttons show what a click did with their icon, such as the sidebar button's strip draining as the sidebar slides away. Reduce Motion turns this off too
+    .description = Buttons show what a click did with their icon, such as the + turning, Copy turning into a check, or the sidebar button's strip draining as the sidebar slides away. Reduce Motion turns this off too
     .keywords = motion animation toolbar buttons icons sidebar panel toggle
 
 ## Title row

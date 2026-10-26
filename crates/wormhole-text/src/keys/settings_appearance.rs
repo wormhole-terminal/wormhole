@@ -86,7 +86,7 @@ pub const SETTINGS_APPEARANCE_STATUS_BAR_DESCRIPTION: Key = Key::new(142);
 pub const SETTINGS_APPEARANCE_STATUS_BAR_KEYWORDS: Key = Key::new(143);
 /// "Animate icons"
 pub const SETTINGS_APPEARANCE_ICON_ANIMATIONS: Key = Key::new(144);
-/// "Buttons show what a click did with their icon, such as the sidebar button's strip draining as the sidebar slides away. Reduce Motion turns this off too"
+/// "Buttons show what a click did with their icon, such as the + turning, Copy turning into a check, or the sidebar button's strip draining as the sidebar slides away. Reduce Motion turns this off too"
 pub const SETTINGS_APPEARANCE_ICON_ANIMATIONS_DESCRIPTION: Key = Key::new(145);
 /// "motion animation toolbar buttons icons sidebar panel toggle"
 pub const SETTINGS_APPEARANCE_ICON_ANIMATIONS_KEYWORDS: Key = Key::new(146);
