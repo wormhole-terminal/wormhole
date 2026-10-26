@@ -12,6 +12,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   "Copied 3 lines", "Copied command", "Copied path". A program's copy in the terminal you're typing in
   is said there too, instead of the bar over the terminal's last rows. VoiceOver reads it out, and
   Reduce Motion fades it in instead.
+- Pi (pi.dev) is recognised as a coding agent: its logo in the sidebar, and Settings → Coding agents
+  installs a small extension so its terminal shows when it is working, waiting on a question, done,
+  stopped or failed.
+- Codex, Amp, goose and Kiro show their own logos instead of two letters.
+- OpenCode's terminal shows that it needs you when it asks a question, not only for a permission.
+  Repair OpenCode's hooks in Settings → Coding agents once to get it.
 - `features` in config.json switches the right panel's optional tools off and on (`"history": false`);
   Changes and Usage always stay, and a key that switches nothing is said so. Settings has no page for it
   yet; the first run's walk through how much the window shows will set it.

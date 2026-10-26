@@ -26,7 +26,7 @@ pub const SETTINGS_AGENTS_NOTIFICATIONS_KEYWORDS: Key = Key::new(45);
 pub const SETTINGS_AGENTS_GROUP_INSTALLED: Key = Key::new(46);
 /// "Installed agents"
 pub const SETTINGS_AGENTS_INSTALLED: Key = Key::new(47);
-/// "claude code codex gemini copilot cursor opencode aider amp goose qwen hooks status install remove repair"
+/// "claude code codex gemini copilot cursor opencode aider amp goose qwen pi hooks status install remove repair"
 pub const SETTINGS_AGENTS_INSTALLED_KEYWORDS: Key = Key::new(48);
 /// "Other agents"
 pub const SETTINGS_AGENTS_GROUP_OTHER_AGENTS: Key = Key::new(49);

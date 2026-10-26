@@ -63,9 +63,26 @@ pub fn signal(agent: AgentId, event: &str) -> Option<Signal> {
         (Copilot, "agentStop") => Some(Done),
         (Goose, "UserPromptSubmit" | "PreToolUse" | "PostToolUse") => Some(Busy),
         (Goose, "Stop") => Some(Done),
-        (OpenCode, "session.busy" | "permission.replied") => Some(Busy),
-        (OpenCode, "permission.asked") => Some(Attention),
+        // An answer or a refusal alike: it goes on, and says `session.idle` if it stopped.
+        (OpenCode, "session.busy" | "permission.replied" | "question.replied" | "question.rejected") => {
+            Some(Busy)
+        }
+        (OpenCode, "permission.asked" | "question.asked") => Some(Attention),
         (OpenCode, "session.idle") => Some(Done),
+        (Pi, "agent_start" | "ui_prompt_end") => Some(Busy),
+        (Pi, "ui_prompt_start") => Some(Attention),
+        (Pi, "agent_settled") => Some(match kind {
+            "aborted" => Quiet,
+            "error" => Failed,
+            _ => Done,
+        }),
+        // `/new`, `/resume` and `/fork` change the session under a Pi still at its prompt, and
+        // `/reload` changes nothing you see.
+        (Pi, "session_shutdown") => match kind {
+            "quit" => Some(Ended),
+            "reload" => None,
+            _ => Some(Quiet),
+        },
         // `/clear` and `/resume` end the session, not the agent: it is back at its prompt.
         (_, "SessionEnd" | "sessionEnd") if matches!(kind, "clear" | "resume") => Some(Quiet),
         (_, "SessionEnd" | "sessionEnd") => Some(Ended),

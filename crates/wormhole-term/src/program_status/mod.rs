@@ -118,6 +118,7 @@ pub fn agent_for_app(app: &str) -> Option<AgentId> {
         ("qwen-code", AgentId::Qwen),
         ("kiro", AgentId::Kiro),
         ("cline-cli", AgentId::Cline),
+        ("pi-coding-agent", AgentId::Pi),
     ];
     let app = app.to_ascii_lowercase();
     AGENTS

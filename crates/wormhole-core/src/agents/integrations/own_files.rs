@@ -1,5 +1,5 @@
 //! Agents that load every hook file or plugin from a folder (Copilot CLI,
-//! Goose, OpenCode): we add files of our own there instead of editing the
+//! Goose, OpenCode, Pi): we add files of our own there instead of editing the
 //! user's, and remove only files that still carry our marker.
 
 use std::path::Path;
@@ -115,12 +115,85 @@ export const WormholeStatus = async () => {
     event: async ({ event }) => {
       if (event.type === "session.status") {
         if (event.properties?.status?.type === "busy") send("session.busy");
-      } else if (["session.idle", "permission.asked", "permission.replied"].includes(event.type)) {
+      } else if (
+        [
+          "session.idle",
+          "permission.asked",
+          "permission.replied",
+          "question.asked",
+          "question.replied",
+          "question.rejected",
+        ].includes(event.type)
+      ) {
         send(event.type);
       }
     },
   };
 };
+"#;
+
+pub(super) fn pi() -> Vec<(&'static str, String)> {
+    vec![(".pi/agent/extensions/wormhole.ts", PI_EXTENSION.replace("{MARKER}", MARKER))]
+}
+
+/// Pi's events, passed on under their own names: a run starts (`agent_start`), it waits on a
+/// question in the middle of one (`ui_prompt_start`, its title the sidebar's words) and goes on
+/// (`ui_prompt_end`), it settles (`agent_settled`, after any retry or compaction; `:aborted` when
+/// you stopped it, `:error` when it failed) and the session ends (`session_shutdown:<reason>`).
+/// A prompt outside a run is one you opened yourself, so it isn't reported.
+const PI_EXTENSION: &str = r#"// Installed by Wormhole ({MARKER}): reports Pi's status to the
+// Wormhole sidebar. Does nothing outside Wormhole. Remove it in
+// Wormhole → Settings → Coding agents (or delete this file).
+import { spawn } from "node:child_process";
+
+export default function (pi) {
+  const bin = process.env.WORMHOLE_BIN;
+  if (!bin) return;
+  // One report at a time, so a question answered at once never arrives after its answer.
+  let queue = Promise.resolve();
+  const send = (event, message) => {
+    const args = ["hook", "--agent", "pi", event];
+    if (message) args.push(JSON.stringify({ message }));
+    queue = queue.then(
+      () =>
+        new Promise((done) => {
+          try {
+            const child = spawn(bin, args, { stdio: "ignore" });
+            child.on("exit", done);
+            child.on("error", done);
+            child.unref();
+          } catch {
+            done();
+          }
+        }),
+    );
+  };
+  let running = false;
+  let outcome = "completed";
+  pi.on("agent_start", async () => {
+    running = true;
+    send("agent_start");
+  });
+  pi.on("ui_prompt_start", async (event) => {
+    if (running) send("ui_prompt_start", event.title);
+  });
+  pi.on("ui_prompt_end", async () => {
+    if (running) send("ui_prompt_end");
+  });
+  pi.on("agent_before_settle", async (event) => {
+    outcome = event.outcome;
+  });
+  pi.on("agent_settled", async (event) => {
+    running = false;
+    const why = event.aborted ? "aborted" : outcome;
+    outcome = "completed";
+    send(why === "completed" ? "agent_settled" : `agent_settled:${why}`);
+  });
+  pi.on("session_shutdown", async (event) => {
+    running = false;
+    send(`session_shutdown:${event.reason}`);
+  });
+}
 "#;
 
 fn pretty(value: &serde_json::Value) -> String {
@@ -143,9 +216,14 @@ pub(super) fn state(files: Files, home: &Path) -> Result<State, String> {
         return Ok(State::Partial);
     }
     let present = list.iter().filter(|(rel, _)| is_ours(home, &home.join(rel))).count();
+    // A file of ours from an earlier version still works but misses what was added since
+    // (OpenCode's questions): installing again brings it up to date.
+    let current = list
+        .iter()
+        .all(|(rel, text)| std::fs::read_to_string(home.join(rel)).is_ok_and(|on_disk| on_disk == *text));
     Ok(match present {
         0 => State::NotInstalled,
-        n if n == list.len() => State::Installed,
+        n if n == list.len() && current => State::Installed,
         _ => State::Partial,
     })
 }

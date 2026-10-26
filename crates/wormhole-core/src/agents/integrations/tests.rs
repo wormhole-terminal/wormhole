@@ -139,10 +139,11 @@ fn own_files_are_added_and_removed_without_touching_others() {
     let goose = spec(AgentId::Goose).expect("goose");
     let copilot = spec(AgentId::Copilot).expect("copilot");
     let opencode = spec(AgentId::OpenCode).expect("opencode");
+    let pi = spec(AgentId::Pi).expect("pi");
     let theirs = home.path().join(".copilot/hooks/theirs.json");
     write(&theirs, "{}");
 
-    for spec in [goose, copilot, opencode] {
+    for spec in [goose, copilot, opencode, pi] {
         assert_eq!(spec.state(home.path()), Ok(State::NotInstalled));
         spec.install(home.path()).expect("install");
         spec.install(home.path()).expect("install again");
@@ -153,16 +154,32 @@ fn own_files_are_added_and_removed_without_touching_others() {
     assert!(hooks["hooks"]["agentStop"][0]["bash"].as_str().is_some_and(is_our_command));
     let plugin =
         std::fs::read_to_string(home.path().join(".config/opencode/plugins/wormhole.js")).expect("plugin");
-    assert!(plugin.contains("WORMHOLE_BIN") && plugin.contains("session.idle"));
+    assert!(plugin.contains("WORMHOLE_BIN") && plugin.contains("question.asked"));
+    let extension =
+        std::fs::read_to_string(home.path().join(".pi/agent/extensions/wormhole.ts")).expect("extension");
+    assert!(extension.contains(MARKER) && extension.contains("\"--agent\", \"pi\""));
     assert_eq!(read(&home.path().join(".agents/plugins/wormhole/plugin.json"))["name"], "wormhole");
 
-    for spec in [goose, copilot, opencode] {
+    for spec in [goose, copilot, opencode, pi] {
         spec.uninstall(home.path()).expect("uninstall");
         assert_eq!(spec.state(home.path()), Ok(State::NotInstalled));
     }
     assert!(theirs.exists());
     assert!(!home.path().join(".agents/plugins/wormhole").exists());
     assert!(home.path().join(".copilot/hooks").exists());
+}
+
+/// A plugin an earlier version wrote still works but misses later events: it asks to be repaired,
+/// and installing brings it up to date.
+#[test]
+fn an_older_plugin_of_ours_is_due_for_repair() {
+    let home = home();
+    let path = home.path().join(".config/opencode/plugins/wormhole.js");
+    write(&path, &format!("// Installed by Wormhole ({MARKER}): an older plugin\n"));
+    let opencode = spec(AgentId::OpenCode).expect("opencode");
+    assert_eq!(opencode.state(home.path()), Ok(State::Partial));
+    opencode.install(home.path()).expect("install");
+    assert_eq!(opencode.state(home.path()), Ok(State::Installed));
 }
 
 #[test]
@@ -200,6 +217,16 @@ fn events_map_to_statuses() {
     assert_eq!(signal(AgentId::Copilot, "notification:agent_idle"), None);
     assert_eq!(signal(AgentId::Copilot, "notification:permission_prompt"), Some(Attention));
     assert_eq!(signal(AgentId::OpenCode, "session.busy"), Some(Busy));
+    assert_eq!(signal(AgentId::OpenCode, "question.asked"), Some(Attention));
+    assert_eq!(signal(AgentId::OpenCode, "question.rejected"), Some(Busy));
+    assert_eq!(signal(AgentId::Pi, "agent_start"), Some(Busy));
+    assert_eq!(signal(AgentId::Pi, "ui_prompt_start"), Some(Attention));
+    assert_eq!(signal(AgentId::Pi, "agent_settled"), Some(Done));
+    assert_eq!(signal(AgentId::Pi, "agent_settled:aborted"), Some(Quiet));
+    assert_eq!(signal(AgentId::Pi, "agent_settled:error"), Some(Failed));
+    assert_eq!(signal(AgentId::Pi, "session_shutdown:quit"), Some(Ended));
+    assert_eq!(signal(AgentId::Pi, "session_shutdown:new"), Some(Quiet));
+    assert_eq!(signal(AgentId::Pi, "session_shutdown:reload"), None);
     assert_eq!(signal(AgentId::Goose, "SessionEnd"), Some(Ended));
     assert_eq!(signal(AgentId::Aider, "Stop"), None);
 }
@@ -242,7 +269,22 @@ fn every_installed_event_means_something() {
     for (agent, events) in [
         (AgentId::Copilot, &["userPromptSubmitted", "postToolUse", "agentStop", "sessionEnd"][..]),
         (AgentId::Goose, &["UserPromptSubmit", "PostToolUse", "Stop", "SessionEnd"][..]),
-        (AgentId::OpenCode, &["session.busy", "session.idle", "permission.asked", "permission.replied"][..]),
+        (
+            AgentId::OpenCode,
+            &[
+                "session.busy",
+                "session.idle",
+                "permission.asked",
+                "permission.replied",
+                "question.asked",
+                "question.replied",
+                "question.rejected",
+            ][..],
+        ),
+        (
+            AgentId::Pi,
+            &["agent_start", "ui_prompt_start", "ui_prompt_end", "agent_settled", "session_shutdown:quit"][..],
+        ),
     ] {
         for event in events {
             assert!(signal(agent, event).is_some(), "{agent:?} {event}");

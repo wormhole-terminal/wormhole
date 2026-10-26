@@ -70,6 +70,7 @@ static SPECS: &[Spec] = &[
     Spec { agent: AgentId::Goose, kind: Kind::Files(own_files::goose), note: None },
     Spec { agent: AgentId::Qwen, kind: Kind::Json(".qwen/settings.json", json_hooks::QWEN), note: None },
     Spec { agent: AgentId::Droid, kind: Kind::Json(".factory/hooks.json", json_hooks::DROID), note: None },
+    Spec { agent: AgentId::Pi, kind: Kind::Files(own_files::pi), note: None },
 ];
 
 pub fn spec(agent: AgentId) -> Option<&'static Spec> {

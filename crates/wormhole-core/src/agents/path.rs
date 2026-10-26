@@ -40,6 +40,8 @@ fn search_dirs(agent_path: Option<OsString>, path: OsString, home: &Path) -> Vec
         home.join(".cargo/bin"),
         home.join(".npm-global/bin"),
         home.join(".opencode/bin"),
+        // Where pi's own installer puts it when no folder on `PATH` will do.
+        home.join(".pi/agent/bin"),
         PathBuf::from("/opt/homebrew/bin"),
         PathBuf::from("/usr/local/bin"),
     ];

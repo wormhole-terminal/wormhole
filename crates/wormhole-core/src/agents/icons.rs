@@ -16,12 +16,17 @@ macro_rules! icon {
 
 static ICONS: &[(&str, &[u8])] = &[
     icon!("claude"),
+    icon!("codex"),
     icon!("gemini"),
     icon!("copilot"),
     icon!("cursor"),
     icon!("opencode"),
     icon!("qwen"),
     icon!("cline"),
+    icon!("amp"),
+    icon!("goose"),
+    icon!("kiro"),
+    icon!("pi"),
 ];
 
 /// The SVG bytes behind an `agent-icons/…` asset key.

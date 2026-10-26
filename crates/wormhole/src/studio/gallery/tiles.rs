@@ -155,7 +155,7 @@ fn tile_states(ui: UiColors, app: &App) -> Div {
         ("failed", agent(AgentId::Gemini), StatusGlyph::Failed),
         ("bell", TileFace::Terminal, StatusGlyph::Bell),
         ("output", TileFace::Terminal, StatusGlyph::Terminal { unread: true }),
-        ("monogram", agent(AgentId::Codex), StatusGlyph::Done),
+        ("monogram", agent(AgentId::Aider), StatusGlyph::Done),
         ("gemini", agent(AgentId::Gemini), StatusGlyph::Working),
     ];
     let sizes =

@@ -33,6 +33,7 @@ pub enum AgentId {
     Auggie,
     Kiro,
     Cline,
+    Pi,
 }
 
 /// What colour an agent's status tile is: black unless the agent has colours of its own. The
@@ -104,7 +105,7 @@ pub static AGENTS: &[Agent] = &[
         executables: &["codex"],
         packages: &["@openai/codex"],
         monogram: "CX",
-        logo: None,
+        logo: Some("agent-icons/codex.svg"),
     },
     Agent {
         id: AgentId::Gemini,
@@ -158,7 +159,7 @@ pub static AGENTS: &[Agent] = &[
         executables: &["amp"],
         packages: &["@ampcode/cli", "@sourcegraph/amp"],
         monogram: "AM",
-        logo: None,
+        logo: Some("agent-icons/amp.svg"),
     },
     Agent {
         id: AgentId::Goose,
@@ -167,7 +168,7 @@ pub static AGENTS: &[Agent] = &[
         executables: &["goose"],
         packages: &[],
         monogram: "GO",
-        logo: None,
+        logo: Some("agent-icons/goose.svg"),
     },
     Agent {
         id: AgentId::Qwen,
@@ -212,7 +213,7 @@ pub static AGENTS: &[Agent] = &[
         executables: &["kiro-cli", "kiro-cli-chat"],
         packages: &[],
         monogram: "KI",
-        logo: None,
+        logo: Some("agent-icons/kiro.svg"),
     },
     Agent {
         id: AgentId::Cline,
@@ -222,6 +223,16 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@cline/cli"],
         monogram: "CL",
         logo: Some("agent-icons/cline.svg"),
+    },
+    Agent {
+        id: AgentId::Pi,
+        name: "Pi",
+        command: "pi",
+        executables: &["pi"],
+        // The package moved from its author's scope to Earendil's; an older install keeps the first.
+        packages: &["@mariozechner/pi-coding-agent", "@earendil-works/pi-coding-agent"],
+        monogram: "PI",
+        logo: Some("agent-icons/pi.svg"),
     },
 ];
 

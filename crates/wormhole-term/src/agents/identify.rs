@@ -115,6 +115,13 @@ mod tests {
         assert_eq!(identify(claude_exe, &argv(&["claude"])), Some(AgentId::Claude));
         let opencode_exe = "/x/lib/node_modules/opencode-ai/bin/opencode.exe";
         assert_eq!(identify(opencode_exe, &argv(&[opencode_exe])), Some(AgentId::OpenCode));
+        // Pi's script under Bun, by the name it was started as or by its package (old and new scope).
+        let pi = "/Users/me/.bun/bin/pi";
+        assert_eq!(identify("/Users/me/.bun/bin/bun", &argv(&["bun", pi])), Some(AgentId::Pi));
+        for scope in ["@earendil-works", "@mariozechner"] {
+            let script = format!("/x/lib/node_modules/{scope}/pi-coding-agent/dist/cli.js");
+            assert_eq!(identify("/usr/local/bin/node", &argv(&["node", &script])), Some(AgentId::Pi));
+        }
         // Claude's native installer names the binary after its version.
         assert_eq!(
             identify("/Users/me/.local/share/claude/versions/2.1.3", &argv(&["claude"])),

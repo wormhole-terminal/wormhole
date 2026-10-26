@@ -20,7 +20,7 @@ settings-agents-notifications = Notify me when an agent needs input or finishes
 settings-agents-group-installed = Installed
 
 settings-agents-installed = Installed agents
-    .keywords = claude code codex gemini copilot cursor opencode aider amp goose qwen hooks status install remove repair
+    .keywords = claude code codex gemini copilot cursor opencode aider amp goose qwen pi hooks status install remove repair
 
 ## Other agents
 
