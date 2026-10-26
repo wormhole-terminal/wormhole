@@ -6,6 +6,7 @@
 
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
+use wormhole_core::ipc::Peer;
 use wormhole_core::ipc::control::{Opened, PaneInfo, TabInfo, Target, TerminalInfo, TerminalState};
 use wormhole_term::Notification;
 
@@ -15,7 +16,7 @@ use crate::window::Workspace;
 use crate::window::ambient::state_of;
 
 /// An agent's id as the hooks spell it (`claude`, `codex`).
-fn agent_id(agent: AgentId) -> Option<String> {
+pub(super) fn agent_id(agent: AgentId) -> Option<String> {
     serde_json::to_value(agent).ok().and_then(|v| v.as_str().map(str::to_string))
 }
 
@@ -41,6 +42,16 @@ impl Workspace {
     pub(crate) fn control_tab_facts(&self, tab: i64, cx: &App) -> Option<(TerminalState, Option<u32>)> {
         let terminal = self.pane_terminal(tab)?.read(cx);
         Some((tab_state(terminal), terminal.shell_pid()))
+    }
+
+    /// The terminals of this window whose shell the caller runs under: the ones it is inside of, by
+    /// its place in the process tree, whatever it says about itself.
+    pub(crate) fn control_terminals_under(&self, peer: &Peer, cx: &App) -> Vec<i64> {
+        self.sessions
+            .iter()
+            .filter(|session| session.terminal().read(cx).shell_pid().is_some_and(|pid| peer.runs_under(pid)))
+            .map(|session| session.id)
+            .collect()
     }
 
     fn terminal_info(&self, ix: usize, cx: &App) -> TerminalInfo {

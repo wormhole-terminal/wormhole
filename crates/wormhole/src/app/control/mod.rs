@@ -8,6 +8,11 @@
 //! core's; this module finds the windows and terminals a request names and carries out what
 //! passes. A terminal, its one tab and its pane are the same thing now (a row of the sidebar, named
 //! by its id), so the protocol's `tab` and `pane` ids are the terminal's.
+//!
+//! `events` (`stream`) is the one request whose answer is not a line but a stream of them: it gets
+//! a subscription to the bus (`crate::automation`) and the socket thread writes what it yields.
+
+mod stream;
 
 use std::path::Path;
 use std::time::Instant;
@@ -32,21 +37,30 @@ impl Global for Budgets {}
 
 /// Answer `request` for the socket thread: one reply line, or a reply and the stream that follows it.
 pub(crate) fn answer(request: Request, peer: &Peer, cx: &mut App) -> Answer {
+    if let (Action::Events(spec), None) = (&request.action, version_error(&request)) {
+        return stream::events(spec, request.from_tab(), peer, cx);
+    }
     Answer::Reply(handle(request, peer, cx))
+}
+
+fn version_error(request: &Request) -> Option<Reply> {
+    (request.version != PROTOCOL_VERSION).then(|| {
+        Reply::error(
+            ErrorCode::Version,
+            format!(
+                "this Wormhole speaks protocol {PROTOCOL_VERSION}; the request is version {}",
+                request.version
+            ),
+        )
+    })
 }
 
 /// Answer `request` with one reply. Never fails: whatever is wrong with it is said in the reply.
 pub(crate) fn handle(request: Request, peer: &Peer, cx: &mut App) -> Reply {
     let from = request.from_tab();
     tracing::debug!(?from, action = request.action.name(), "control request");
-    if request.version != PROTOCOL_VERSION {
-        return Reply::error(
-            ErrorCode::Version,
-            format!(
-                "this Wormhole speaks protocol {PROTOCOL_VERSION}; the request is version {}",
-                request.version
-            ),
-        );
+    if let Some(error) = version_error(&request) {
+        return error;
     }
     match request.action {
         Action::List => Reply::ok(listing(cx)),
@@ -56,7 +70,10 @@ pub(crate) fn handle(request: Request, peer: &Peer, cx: &mut App) -> Reply {
         Action::NewTerminal { folder, command, worktree, window } => {
             new_terminal(folder, command, worktree, window, from, cx)
         }
-        Action::Events(_) => Reply::error(ErrorCode::Unsupported, "events are not available here yet"),
+        // Answered by `answer`, which can carry a stream; a reply alone (devctl's `control`) cannot.
+        Action::Events(_) => {
+            Reply::error(ErrorCode::Failed, "events are a stream: they are not answered here")
+        }
         // Not behind `control_write`: the token the app put in the welcome terminal is the key.
         Action::Welcome { token, op } => {
             crate::onboarding::welcome::handle(token, op, from, welcome_services(), cx)

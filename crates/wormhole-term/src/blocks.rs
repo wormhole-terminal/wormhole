@@ -283,6 +283,29 @@ pub(super) fn ended(screen: &Screen, log: &CommandLog, code: i32) -> Option<Ende
     Some(Ended { command: clean(&block.command, BODY_MAX_CHARS), took, last_line })
 }
 
+/// The newest block whose command ran (started, or gave an exit code): what a mark that has just
+/// arrived is about. The shell has printed its next prompt by the time anyone asks, so it is the
+/// last block or the one before it; looks at those two only, so it costs a few lines of the grid.
+pub(super) fn newest_ran(screen: &Screen, log: &CommandLog) -> Option<Block> {
+    if screen.mode().contains(Modes::ALT_SCREEN) {
+        return None;
+    }
+    let mut at = screen.bottommost_line();
+    let newest = loop {
+        if at < screen.topmost_line() {
+            return None;
+        }
+        if let Some(mark) = marks::mark_at(screen, at) {
+            break mark.id;
+        }
+        at -= 1;
+    };
+    [newest, newest.saturating_sub(1)]
+        .into_iter()
+        .filter_map(|id| block(screen, id, log))
+        .find(|block| block.state.ran())
+}
+
 /// The text of lines `first..=last`, trailing blanks trimmed, for copying a block's output (an
 /// image's placeholders aren't text).
 pub(super) fn lines_text(screen: &Screen, first: Line, last: Line) -> String {
@@ -319,7 +342,8 @@ pub(super) mod tests {
     use wormhole_vt::{Line, Scroll};
 
     use super::{
-        BlockState, CommandLog, Ended, block, block_at, blocks, ended, lines_text, readout_text, took_text,
+        BlockState, CommandLog, Ended, block, block_at, blocks, ended, lines_text, newest_ran, readout_text,
+        took_text,
     };
     use crate::osc::{Mark, PromptKind};
     use crate::testing::TestTerm;
@@ -380,6 +404,25 @@ pub(super) mod tests {
         // that just finished can be.
         assert_eq!(ended(term.screen(), &log, 3), None);
         assert_eq!(ended(term.screen(), &log, 0), None);
+    }
+
+    #[test]
+    fn the_newest_command_that_ran_is_found_whatever_prompt_follows() {
+        // The prompt after `make` is the newest block, and nothing ran at it: `make` is the one.
+        let (term, log) = shown(10, SESSION);
+        let found = newest_ran(term.screen(), &log).expect("a command ran");
+        assert_eq!((found.id, found.command.as_str()), (2, "make"));
+        assert!(found.state.failed());
+        // Running now: the newest block is the one running.
+        let running = b"\x1b]133;A\x07$ \x1b]133;B\x07sleep 9\r\n\x1b]133;C\x07";
+        let (term, log) = shown(10, running);
+        let found = newest_ran(term.screen(), &log).expect("running");
+        assert!(matches!(found.state, BlockState::Running { .. }), "{:?}", found.state);
+        // Nothing has run, and the alternate screen has no blocks.
+        let (term, log) = shown(10, b"\x1b]133;A\x07$ ");
+        assert_eq!(newest_ran(term.screen(), &log), None);
+        let (term, log) = shown(10, b"\x1b[?1049h\x1b]133;A\x07$ ");
+        assert_eq!(newest_ran(term.screen(), &log), None);
     }
 
     #[test]

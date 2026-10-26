@@ -91,6 +91,8 @@ impl Workspace {
         if record.forget_text || !settings_in(&self.profile, cx).restore_terminal_text {
             record.scrollback = None;
         }
+        // A terminal that moved here from another window keeps running and is not a new one.
+        let adopted = app(cx).adopted.contains_key(&record.id);
         let (pane, new_host) = self.make_pane(&record, window, cx);
         self.sessions.push(Session {
             id: record.id,
@@ -106,10 +108,23 @@ impl Workspace {
         });
         let ix = self.sessions.len() - 1;
         self.features_opened(&record, window, cx);
+        if !adopted {
+            self.publish_terminal_opened(record.id, record.cwd.as_deref(), cx);
+        }
         if let Some(host) = new_host {
             self.save_host_row(ix, &host, cx);
         }
         ix
+    }
+
+    /// Name terminal `ix`, or, with none, call it what runs in it again: the sidebar's rename and
+    /// the devctl `rename` both end here, and so does telling those who watch.
+    pub(crate) fn set_custom_name(&mut self, ix: usize, name: Option<String>, cx: &mut Context<Self>) {
+        let Some(session) = self.sessions.get_mut(ix) else { return };
+        session.custom_name = name;
+        let (id, named) = (session.id, session.custom_name.clone());
+        self.mark_dirty(cx);
+        self.publish_renamed(id, named.as_deref(), cx);
     }
 
     pub(super) fn alloc_id(&self, cx: &mut App) -> i64 {
@@ -230,11 +245,12 @@ impl Workspace {
             layout.close(self.sessions[ix].id);
             Some(layout.focused())
         });
-        self.leave_layout(ix);
+        self.leave_layout(ix, cx);
         let after = crate::window::session::session_after_close(self.active, ix, len);
         let closed = self.sessions.remove(ix);
         self.edit_sidebar_view(cx, |view| view.groups.leave(closed.id));
         self.features_closed(closed.id, cx);
+        self.publish_terminal_closed(closed.id, cx);
         attention::tell(Attention::Seen(closed.pane.id), cx);
         if crate::onboarding::welcome::forget(closed.id, cx) {
             crate::window::remember_first_run(cx);

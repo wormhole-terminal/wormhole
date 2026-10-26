@@ -206,7 +206,7 @@ impl Workspace {
     /// Take session `ix` out of its split's layout, without touching what is selected: the panes
     /// beside it take its room. A split left with one member is gone and that terminal stands
     /// alone. `None`, nothing changed, when it is in no split.
-    pub(in crate::window) fn leave_layout(&mut self, ix: usize) -> Option<Leave> {
+    pub(in crate::window) fn leave_layout(&mut self, ix: usize, cx: &App) -> Option<Leave> {
         let id = self.sessions.get(ix)?.id;
         let split_id = self.sessions[ix].split?;
         let left = self.split_mut(split_id).and_then(|split| split.layout.leave(id));
@@ -220,6 +220,7 @@ impl Workspace {
             }
         }
         self.dirty = true;
+        self.publish_split(split_id, cx);
         Some(left.unwrap_or(Leave::Dissolved))
     }
 
@@ -227,7 +228,7 @@ impl Workspace {
     /// row dragged out of its bracket). The selection stays where it is. `false` when it is in no
     /// split.
     pub(crate) fn leave_split(&mut self, ix: usize, cx: &mut Context<Self>) -> bool {
-        let left = self.leave_layout(ix).is_some();
+        let left = self.leave_layout(ix, cx).is_some();
         if left {
             cx.notify();
         }
@@ -259,7 +260,7 @@ impl Workspace {
         };
         layout.join(target, zone, joiner, room)?;
         // It fits: leave the old split, then make or update the new one.
-        self.leave_layout(ix);
+        self.leave_layout(ix, cx);
         self.install_layout(target_ix, ix, layout, cx);
         let at = self.find_session(joiner).unwrap_or(ix);
         self.activate(at, window, cx);
@@ -304,6 +305,7 @@ impl Workspace {
     fn drop_session(&mut self, ix: usize, cx: &mut Context<Self>) {
         let session = self.sessions.remove(ix);
         self.features_closed(session.id, cx);
+        self.publish_terminal_closed(session.id, cx);
         attention::tell(Attention::Seen(session.id), cx);
     }
 
@@ -335,6 +337,7 @@ impl Workspace {
         let mates: Vec<i64> = self.members(id).into_iter().map(|m| self.sessions[m].id).collect();
         self.edit_sidebar_view(cx, |view| view.seat_beside(&ids, joiner_id, &mates));
         self.dirty = true;
+        self.publish_split(id, cx);
     }
 
     /// View → Layout: the selected terminal's split as `preset` in one step, made if it
@@ -381,6 +384,7 @@ impl Workspace {
             }
             let focused = self.split_with(split_id).map_or(anchor_id, |split| split.layout.focused());
             self.dirty = true;
+            self.publish_split(split_id, cx);
             let at = self.find_session(focused).unwrap_or(self.active);
             self.activate(at, window, cx);
         } else {
@@ -388,6 +392,7 @@ impl Workspace {
             if let Some(split_id) = self.sessions[anchor].split.take() {
                 self.splits.retain(|split| split.id != split_id);
                 self.members(split_id).into_iter().for_each(|ix| self.sessions[ix].split = None);
+                self.publish_split(split_id, cx);
             }
             self.dirty = true;
             let at = self.find_session(layout.focused()).unwrap_or(self.active);

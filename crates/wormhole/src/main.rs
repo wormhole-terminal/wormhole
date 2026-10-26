@@ -9,6 +9,7 @@ mod actions;
 mod active_profile;
 mod app;
 mod app_state;
+mod automation;
 mod aux_window;
 mod background;
 mod command_palette;

@@ -116,6 +116,9 @@ impl Workspace {
                 let done = crate::window_ops::apply(op, pane, window, cx);
                 terminal.update(cx, |terminal, cx| terminal.window_op_done(done, cx));
             }
+            // Told only while someone watches for them (`wh events`).
+            TerminalEvent::Bell => self.publish_bell(id, cx),
+            TerminalEvent::Command(mark) => self.publish_command(id, mark, cx),
             // The bar is only on screen in the shown terminals.
             TerminalEvent::Close => {
                 if self.on_screen(ix) {

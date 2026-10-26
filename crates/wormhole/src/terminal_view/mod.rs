@@ -38,7 +38,7 @@ pub use input::{TerminalKeys, keystroke_spec};
 #[cfg(feature = "devctl")]
 pub(crate) use render::PAINTS;
 use status::RedrawGate;
-pub use status::{ProgramNotice, Status, TerminalEvent, TerminalSummary};
+pub use status::{CommandMark, ProgramNotice, Status, TerminalEvent, TerminalSummary};
 
 // Edit → Clear Buffer (⌘K) and the command blocks' actions (⌘↑ / ⌘↓ between prompts, the
 // rest on the current block); the terminal answers Edit → Copy, Paste and Select All too.

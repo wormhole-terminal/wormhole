@@ -75,6 +75,7 @@
         "background",
         "window_open",
         "window_ops",
+        "automation",
         [
           "active_profile",
           "icons",

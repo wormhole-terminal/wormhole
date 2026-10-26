@@ -48,6 +48,8 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::storage::paths::ProfileId;
 
 pub(crate) mod ambient;
+#[cfg(test)]
+mod automation_tests;
 mod cached;
 #[cfg(test)]
 mod cached_tests;
@@ -105,6 +107,7 @@ mod panel_tab_tests;
 mod panes;
 #[cfg(test)]
 mod profile_look_tests;
+mod published;
 mod regions;
 #[cfg(test)]
 mod regions_tests;

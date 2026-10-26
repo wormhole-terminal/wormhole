@@ -483,11 +483,12 @@ impl Workspace {
                 if let (Some(typed), Some(ix)) = (typed, self.find_session(id)) {
                     // Emptied, it is called what runs in it again; left as it was, it keeps no name of its own.
                     if typed.is_empty() {
-                        self.sessions[ix].custom_name = None;
+                        self.set_custom_name(ix, None, cx);
                     } else if typed != self.sessions[ix].name().as_ref() {
-                        self.sessions[ix].custom_name = Some(typed.clone());
+                        self.set_custom_name(ix, Some(typed.clone()), cx);
+                    } else {
+                        self.mark_dirty(cx);
                     }
-                    self.mark_dirty(cx);
                 }
                 self.focus_terminal(window, cx);
                 cx.notify();

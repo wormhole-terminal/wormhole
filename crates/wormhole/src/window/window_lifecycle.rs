@@ -8,6 +8,7 @@
 //! opened comes here.
 
 use gpui_kit::*;
+use wormhole_core::ipc::control::event::{Body, Event, Topic};
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::WindowRecord;
 use wormhole_core::view::layout::{WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
@@ -94,6 +95,7 @@ pub(crate) fn open_workspace_window_in(
                 hidden: false,
             });
             state.front = id;
+            tell_window(id, Body::WindowOpened, cx);
             // Its own observer starts after this update, so it would not hear that it was listed.
             workspace.update(cx, |workspace, cx| workspace.app_state_changed(cx));
             crate::background::activate(cx);
@@ -126,9 +128,19 @@ pub(crate) fn new_window_from_front(cx: &mut App) {
     }
 }
 
+/// Tell those who watch that window `id` opened or closed.
+fn tell_window(id: i64, body: Body, cx: &App) {
+    crate::automation::publish(cx, Topic::Windows, || Event { window: Some(id), terminal: None, body });
+}
+
 pub(crate) fn window_closed(cx: &mut App, id: WindowId) {
     let state = app_mut(cx);
+    let closed = state.windows.iter().find(|w| w.handle.window_id() == id).map(|w| w.id);
     state.windows.retain(|w| w.handle.window_id() != id);
+    if let Some(closed) = closed {
+        tell_window(closed, Body::WindowClosed, cx);
+    }
+    let state = app_mut(cx);
     // Sessions end with their window, so with none left there is nothing to show. (The close
     // button asked before the last visible window went, while another profile still had windows.)
     if state.windows.is_empty() && !state.quitting {

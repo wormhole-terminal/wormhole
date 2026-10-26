@@ -39,10 +39,14 @@ pub(crate) fn start(
     profiles_error: Option<wormhole_core::config::profile::ProfileError>,
     cx: &mut App,
 ) {
+    let ipc::Served { events: hook_events, bus } = served;
     let paths = root.profile(profiles.active_id());
     if let Some(err) = &profiles_error {
         tracing::warn!("profiles.json was set aside and rebuilt: {err}");
     }
+    // Before any window: they publish what happens to whoever watches, and nothing else is built
+    // while nobody does.
+    crate::automation::install(bus.clone(), cx);
     // Before any window: each copies the table when it is made.
     crate::features::install(cx);
     upgrade_legacy_hooks(cx);
@@ -94,7 +98,9 @@ pub(crate) fn start(
     // Every way of quitting (⌘Q, the menu bar, the Dock, logging out, the updater's relaunch)
     // ends up here, before GPUI drops the windows and their terminals: the hosts are let go of
     // first, so those drops leave their programs running.
-    cx.on_app_quit(|cx| {
+    cx.on_app_quit(move |cx| {
+        // Streams say why they end, if they get the time before the process does.
+        bus.close_all(wormhole_core::ipc::control::event::CloseReason::Quitting);
         crate::window::hosting::detach_all(cx);
         save_all(cx);
         ipc::remove_socket();
@@ -107,7 +113,7 @@ pub(crate) fn start(
     crate::app::saved_text::init(cx);
 
     cx.spawn(async move |cx| {
-        while let Ok(message) = served.events.recv().await {
+        while let Ok(message) = hook_events.recv().await {
             cx.update(|cx| dispatch_hook(message, cx));
         }
     })

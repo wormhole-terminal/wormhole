@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 use gpui_kit::*;
 use wormhole_core::agents::integrations::{self, Signal};
 use wormhole_core::agents::{AgentId, Foreground};
+use wormhole_core::ipc::control::event::Topic;
 use wormhole_core::notify::Source;
 use wormhole_core::view::sidebar::names;
 use wormhole_term::{Mark, Notification, PtyEvent, WindowOp};
@@ -145,6 +146,19 @@ pub enum TerminalEvent {
     /// The grid got another size (a frame laid it out so): what shows it, the status bar's size, draws
     /// again at once instead of on the window's next tick.
     Resized,
+    /// The bell rang. Emitted only while somebody watches for bells (`wh events`), so a window nobody
+    /// watches hears exactly what it always did.
+    Bell,
+    /// A command started or finished, in a shell with integration; emitted only while somebody
+    /// watches for them.
+    Command(CommandMark),
+}
+
+/// A moment in a command's life, as the shell's marks tell it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CommandMark {
+    Started,
+    Finished { code: Option<i32> },
 }
 
 impl TerminalView {
@@ -539,7 +553,19 @@ impl TerminalView {
             PtyEvent::Cwd => {
                 self.refresh_cwd();
             }
-            PtyEvent::Mark(mark) => self.on_mark(mark),
+            PtyEvent::Mark(mark) => {
+                // Before `on_mark`, which returns early for a terminal its agent's hooks drive.
+                if crate::automation::wants(cx, Topic::Blocks) {
+                    match mark {
+                        Mark::OutputStart => cx.emit(TerminalEvent::Command(CommandMark::Started)),
+                        Mark::Finished(code) => {
+                            cx.emit(TerminalEvent::Command(CommandMark::Finished { code }))
+                        }
+                        Mark::PromptStart(_) | Mark::CommandStart => {}
+                    }
+                }
+                self.on_mark(mark)
+            }
             PtyEvent::Notify(notification) => self.on_notice(notification),
             PtyEvent::ProgramStatus => {
                 self.sync_reported(true);
@@ -553,6 +579,9 @@ impl TerminalView {
                     self.set_status(Status::Attention);
                 }
                 self.ring(cx);
+                if crate::automation::wants(cx, Topic::Bell) {
+                    cx.emit(TerminalEvent::Bell);
+                }
             }
             PtyEvent::ClipboardStore(text) => self.clipboard_store(text, cx),
             // Answered through `reply`, which keeps the answer in its place among the replies the

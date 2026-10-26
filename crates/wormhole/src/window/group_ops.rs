@@ -4,6 +4,7 @@
 use std::collections::HashSet;
 
 use gpui_kit::*;
+use wormhole_core::ipc::control::event::{Body, Event, Topic};
 use wormhole_core::storage::store::{SplitRecord, WindowRecord};
 use wormhole_core::view::sidebar::{Item, SplitId, WindowSidebar, group_key};
 
@@ -151,6 +152,7 @@ impl Workspace {
         let source = window.bounds();
         // The new window stays in this window's profile: its database, its environment.
         let profile = self.profile.clone();
+        let (from, moved_ids) = (self.window_id, ids.clone());
         // Deferred: the new window renders right away, and nothing may read this workspace while
         // it is still being updated.
         cx.defer(move |cx| {
@@ -160,6 +162,14 @@ impl Workspace {
             let record =
                 WindowRecord { id: window_id, active, layout, bounds: None, sessions: records, splits };
             open_workspace_window_in(&profile, Some(record), Some(source), cx);
+            // They are the same terminals, running on: they moved, they did not open.
+            for terminal in moved_ids {
+                crate::automation::publish(cx, Topic::Terminals, || Event {
+                    window: Some(window_id),
+                    terminal: Some(terminal),
+                    body: Body::TerminalMoved { from },
+                });
+            }
         });
     }
 }

@@ -100,10 +100,7 @@ impl Workspace {
     }
 
     pub(crate) fn devctl_rename(&mut self, ix: usize, name: &str, cx: &mut Context<Self>) {
-        if let Some(session) = self.sessions.get_mut(ix) {
-            session.custom_name = (!name.is_empty()).then(|| name.to_string());
-            self.mark_dirty(cx);
-        }
+        self.set_custom_name(ix, (!name.is_empty()).then(|| name.to_string()), cx);
     }
 
     /// Scroll the terminal list by `dy` (negative = up), within its bounds; where it is now and

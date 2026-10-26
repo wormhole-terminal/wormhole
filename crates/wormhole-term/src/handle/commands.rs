@@ -47,6 +47,13 @@ impl Pty {
         blocks::command_cells(&self.term.lock(), block)
     }
 
+    /// The newest command that ran (it may still run): what a mark that has just arrived is about.
+    /// Looks only at the newest blocks, so it costs a few lines of the grid.
+    pub fn newest_block(&self) -> Option<Block> {
+        let term = self.term.lock();
+        blocks::newest_ran(&term, &self.shared.commands())
+    }
+
     /// The command that most recently finished with exit code `code`: what it was, how long it ran
     /// and what it last printed. Looks only at the newest blocks, so it costs a few lines of the
     /// grid, not a scan of the history; for the moment a command is found to have failed.

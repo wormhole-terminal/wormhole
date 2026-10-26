@@ -70,7 +70,7 @@ impl Workspace {
         match drop {
             Drop::Move { landing, leave_split, with_mates } => {
                 if leave_split && let Some(ix) = self.find_session(dragged) {
-                    self.leave_layout(ix);
+                    self.leave_layout(ix, cx);
                 }
                 self.with_sidebar(cx, |sidebar, cx| {
                     sidebar.land_terminal(dragged, landing, with_mates, cx);

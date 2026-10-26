@@ -131,6 +131,11 @@ impl TerminalView {
         cx.notify();
     }
 
+    /// The newest command that ran (it may still run): what a mark that has just arrived is about.
+    pub fn newest_block(&self) -> Option<Block> {
+        self.pty.as_ref()?.newest_block()
+    }
+
     /// The block the Edit menu's actions act on: the one the last jump landed on (until the view
     /// is scrolled or typed in), else the newest one whose command ran.
     pub(super) fn target_block(&self) -> Option<Block> {

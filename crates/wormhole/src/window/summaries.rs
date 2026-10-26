@@ -26,7 +26,8 @@ impl Workspace {
             return false;
         }
         let fresh = terminal.summary();
-        self.sessions[ix].pane.summary = fresh;
+        let old = std::mem::replace(&mut self.sessions[ix].pane.summary, fresh);
+        self.publish_summary_change(ix, &old, cx);
         cx.notify();
         true
     }
