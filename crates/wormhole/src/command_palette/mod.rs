@@ -452,6 +452,7 @@ impl CommandPalette {
         let Some((_, _, entry)) = wormhole_core::config::settings_index::entry(id) else { return };
         if let Some(key) = entry.keys.first() {
             cx.write_to_clipboard(ClipboardItem::new_string((*key).to_string()));
+            crate::notice::post_front(wormhole_core::view::notice::Copied::SettingKey, cx);
         }
     }
 

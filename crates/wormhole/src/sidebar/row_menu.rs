@@ -11,6 +11,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use gpui_kit::*;
+use wormhole_core::view::notice::Copied;
 use wormhole_core::view::sidebar::Entry;
 
 use super::{RowInfo, Sidebar, SidebarEvent};
@@ -199,6 +200,7 @@ fn row_menu(facts: RowFacts, this: &WeakEntity<Sidebar>) -> Menu {
         .item(Item::new("Copy path").enabled(cwd.is_some()).on_select(move |_, cx| {
             if let Some(cwd) = &cwd {
                 cx.write_to_clipboard(ClipboardItem::new_string(cwd.to_string_lossy().into_owned()));
+                crate::notice::post_front(Copied::Path, cx);
             }
         }))
 }

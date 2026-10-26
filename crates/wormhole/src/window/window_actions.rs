@@ -6,6 +6,7 @@
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_core::view::notice::Copied;
 use wormhole_core::view::sidebar::order::shortcut_target;
 
 use crate::actions::{
@@ -111,9 +112,10 @@ impl Workspace {
                         sidebar::reveal_in_finder(&cwd, cx);
                     }
                 }))
-                .on_action(cx.listener(|this, _: &CopyPath, _, cx| {
+                .on_action(cx.listener(|this, _: &CopyPath, window, cx| {
                     if let Some(cwd) = this.active_terminal().read(cx).cwd.clone() {
                         cx.write_to_clipboard(ClipboardItem::new_string(cwd.to_string_lossy().into_owned()));
+                        crate::notice::post(window, Copied::Path, cx);
                     }
                 }))
             })

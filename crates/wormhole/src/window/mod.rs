@@ -97,6 +97,8 @@ mod motion_tests;
 #[cfg(test)]
 mod notes_tab_tests;
 #[cfg(test)]
+mod notice_tests;
+#[cfg(test)]
 mod notification_tests;
 mod onboarding_host;
 #[cfg(test)]

@@ -7,6 +7,7 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_core::view::notice::Copied;
 use wormhole_core::view::spoken;
 use wormhole_term::types::{Line, Scroll};
 use wormhole_term::{Block, BlockState, Direction, command_to_prompt, took_text};
@@ -178,11 +179,15 @@ impl TerminalView {
             }
             BlockAction::CopyOutput => {
                 let Some((first, last)) = block.output_lines() else { return };
-                cx.write_to_clipboard(ClipboardItem::new_string(pty.lines_text(first, last)));
+                let output = pty.lines_text(first, last);
+                let copied = Copied::output(&output);
+                cx.write_to_clipboard(ClipboardItem::new_string(output));
+                crate::notice::post_front(copied, cx);
             }
             BlockAction::CopyCommand => {
                 if !block.command.is_empty() {
                     cx.write_to_clipboard(ClipboardItem::new_string(block.command.clone()));
+                    crate::notice::post_front(Copied::Command, cx);
                 }
             }
             BlockAction::PutAtPrompt => {

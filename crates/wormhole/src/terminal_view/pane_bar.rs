@@ -13,6 +13,7 @@ use gpui_kit::*;
 use wormhole_core::config::clipboard::{
     ASK_TIMEOUT, Choice, ClipboardRead, ClipboardWrite, ReadGate, Request,
 };
+use wormhole_core::view::notice::Copied;
 use wormhole_core::view::sidebar::names::command_name;
 use wormhole_term::{BODY_MAX_CHARS, Reply, TextFormatter, clean};
 
@@ -68,6 +69,7 @@ impl TerminalView {
             return;
         }
         let chars = text.chars().count();
+        let copied = Copied::text(&text);
         // A copy on select takes the clipboard; keep what it held for ⌘V over the selection.
         let replaced = self
             .app_selection
@@ -76,6 +78,11 @@ impl TerminalView {
         cx.write_to_clipboard(ClipboardItem::new_string(text.clone()));
         if let Some(replaced) = replaced {
             self.app_selection.copied(text, replaced);
+        }
+        // The chip says it for the terminal in front of the person, and then the bar doesn't: never both.
+        if self.in_front && crate::notice::enabled(cx) {
+            crate::notice::post_front(copied, cx);
+            return;
         }
         let what = if chars == 1 { "1 character".to_string() } else { format!("{chars} characters") };
         let text = format!("{} copied {what} to the clipboard", self.program_label());
@@ -187,6 +194,30 @@ impl TerminalView {
         self.set_in_front(true);
         let format: TextFormatter = std::sync::Arc::new(|text: &str| text.to_string());
         self.event_for_test(PtyEvent::ClipboardLoad(format, Reply::detached()), cx);
+    }
+
+    /// What the bar's notice says, if it has one.
+    pub(crate) fn bar_notice_for_test(&self) -> Option<String> {
+        match self.pane_bar() {
+            Some(Bar::Notice(_, text)) => Some(text.to_string()),
+            _ => None,
+        }
+    }
+
+    /// A program writes `text` to the clipboard (OSC 52), in a terminal that is `in_front` or not.
+    pub(crate) fn store_clipboard_for_test(&mut self, text: &str, in_front: bool, cx: &mut Context<Self>) {
+        use wormhole_term::PtyEvent;
+
+        self.set_in_front(in_front);
+        self.event_for_test(PtyEvent::ClipboardStore(text.to_string()), cx);
+    }
+
+    /// Select everything and copy it, as ⌘A and ⌘C do.
+    pub(crate) fn copy_all_for_test(&mut self, cx: &mut Context<Self>) {
+        if let Some(pty) = &self.pty {
+            pty.select_all();
+        }
+        self.run_command(super::input::TerminalCommand::Copy, cx);
     }
 
     /// The bar asks the person about the clipboard.

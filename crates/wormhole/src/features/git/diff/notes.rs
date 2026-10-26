@@ -17,6 +17,7 @@ use crate::settings::settings_in;
 use crate::style::{self, Edges, TextRole};
 use wormhole_core::config::SizeUnits;
 use wormhole_core::git::{self, Side};
+use wormhole_core::view::notice::Copied;
 
 /// The text buttons of the too-large card, as tall as the panel's.
 const BUTTON_H: f32 = 24.0;
@@ -132,7 +133,8 @@ pub(crate) fn side_note(ui: UiColors, colors: DiffColors, note: Note) -> Div {
                             style::icon_button("diff-copy-oid", ui, IconName::Copy, "Copy object id")
                                 .in_row()
                                 .on_click(move |_, _, cx| {
-                                    cx.write_to_clipboard(ClipboardItem::new_string(oid.clone()))
+                                    cx.write_to_clipboard(ClipboardItem::new_string(oid.clone()));
+                                    crate::notice::post_front(Copied::ObjectId, cx);
                                 }),
                         )
                 }))

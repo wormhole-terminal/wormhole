@@ -5,6 +5,7 @@ use std::time::Instant;
 use gpui_kit::*;
 use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::keys::keyspec::{KeyMods, KeySpec};
+use wormhole_core::view::notice::Copied;
 use wormhole_term::Pty;
 use wormhole_term::input::{file_drop, keys, mouse};
 use wormhole_term::types::LineSize;
@@ -172,7 +173,9 @@ impl TerminalView {
         match command {
             TerminalCommand::Copy => {
                 if let Some(text) = self.selection_text() {
+                    let copied = Copied::text(&text);
                     cx.write_to_clipboard(ClipboardItem::new_string(text));
+                    crate::notice::post_front(copied, cx);
                 }
             }
             TerminalCommand::Paste => {

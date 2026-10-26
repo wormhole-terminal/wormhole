@@ -14,6 +14,7 @@ use crate::style::{self, ROW_H, TextRole};
 use crate::theme_bridge::token;
 use wormhole_core::git::GitError;
 use wormhole_core::storage::paths::ProfileId;
+use wormhole_core::view::notice::Copied;
 
 /// The git tab a problem is drawn in, which its wording and its Retry are for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -102,7 +103,8 @@ pub(super) fn render_git_problem(
                 .child(button("git-retry", "Retry").on_click(move |_, _, cx| retry(cx)))
                 .children(copy.map(|message| {
                     button("git-copy-error", "Copy error").on_click(move |_, _, cx| {
-                        cx.write_to_clipboard(ClipboardItem::new_string(message.clone()))
+                        cx.write_to_clipboard(ClipboardItem::new_string(message.clone()));
+                        crate::notice::post_front(Copied::Error, cx);
                     })
                 })),
         )
