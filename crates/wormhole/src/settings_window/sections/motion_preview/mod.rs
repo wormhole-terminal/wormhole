@@ -11,9 +11,10 @@
 //! Reduce Motion holds. A preview exists while its page is open (`MotionPreviews`), so nothing ticks
 //! while another page is.
 //!
-//! Picking another option starts the loop again from `t = 0`. Every option draws what the app does
-//! today until the motion it names is built: the frame, the picker and the restart are what these
-//! files settle, and a later phase adds a variant to the scene it belongs to.
+//! Picking another option starts the loop again from `t = 0`. The terminal opening and the group folding
+//! draw every option from the same poses the sidebar does (core's `view::motion::pose`), so the preview
+//! shows exactly what the list will do; the status and the column still draw what the app does today
+//! until the motion they name is built: a later phase adds a variant to the scene it belongs to.
 
 mod column;
 mod fold;
@@ -49,6 +50,17 @@ const LOOP: Duration = Duration::from_secs(4);
 /// How often a still preview (Reduce Motion) looks again whether it may move.
 const STILL_CHECK: Duration = Duration::from_secs(1);
 
+/// How far `elapsed` is through a motion of `total` length (a motion of none is over at once), as the
+/// poses of core take it.
+fn progress(elapsed: Duration, total: Duration) -> f32 {
+    if total.is_zero() { 1.0 } else { elapsed.as_secs_f32() / total.as_secs_f32() }
+}
+
+/// How long it has been at `t` of the loop since `start`, a share of it: nothing before it.
+fn since(t: f32, start: f32) -> Duration {
+    Duration::from_secs_f32((t - start).max(0.0) * LOOP.as_secs_f32())
+}
+
 /// `len` after `start`, as a stretch of the loop.
 fn span(start: f32, len: Duration) -> Span {
     Span::new(start, start + len.as_secs_f32() / LOOP.as_secs_f32())
@@ -81,17 +93,24 @@ struct Spot {
     width: Option<f32>,
     height: f32,
     opacity: f32,
+    /// The share of its height that is open: the rest is cut away from the bottom.
+    clip: f32,
 }
 
 impl Spot {
     /// Across the stage, `top` points from its top.
     fn row(top: f32, height: f32) -> Self {
-        Self { left: 0.0, top, width: None, height, opacity: 1.0 }
+        Self { left: 0.0, top, width: None, height, opacity: 1.0, clip: 1.0 }
     }
 
     /// `width` wide, from the stage's left edge.
     fn wide(width: f32, height: f32) -> Self {
-        Self { left: 0.0, top: 0.0, width: Some(width), height, opacity: 1.0 }
+        Self { left: 0.0, top: 0.0, width: Some(width), height, opacity: 1.0, clip: 1.0 }
+    }
+
+    /// Only the top `share` of it shows.
+    fn clipped(self, share: f32) -> Self {
+        Self { clip: share, ..self }
     }
 
     fn moved(self, dx: f32, dy: f32) -> Self {
@@ -110,10 +129,11 @@ impl Spot {
                 .absolute()
                 .left(px(self.left))
                 .top(px(self.top))
-                .h(px(self.height))
+                .h(px(self.height * self.clip))
+                .when(self.clip < 1.0, |part| part.overflow_hidden())
                 .when_some(self.width, |part, width| part.w(px(width)))
                 .when(self.width.is_none(), |part| part.right_0())
-                .child(content());
+                .child(div().flex_none().h(px(self.height)).child(content()));
             if self.opacity < 1.0 { part.opacity(self.opacity) } else { part }.into_any_element()
         })
     }
