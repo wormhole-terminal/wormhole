@@ -8,7 +8,8 @@
 //! looks like at each moment of each motion (`pose`), so the list and the Settings previews draw the same
 //! numbers. How long the other things take (hover, the panels, the spinner) stays in the app's
 //! `style::motion::timing`: nothing but the drawing reads them. The motions' own durations are with
-//! their poses; `pose`'s `//!` says why.
+//! their poses; `pose`'s `//!` says why. Dragging a terminal has two motions the design fixed (`drag`),
+//! so no choice and no pose, only their numbers.
 //!
 //! Like the rest of `view` it uses only `theme` below it: never settings, which hold a
 //! [`MotionChoices`], not the other way round.

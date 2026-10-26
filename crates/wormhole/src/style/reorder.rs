@@ -121,8 +121,8 @@ pub fn split_mark(ui: UiColors) -> Div {
         .child(super::buttons::icon(gpui_kit::assets::IconName::Columns2))
 }
 
-/// How far from the row's right edge the split mark stands.
-const SPLIT_MARK_RIGHT: f32 = 8.0;
+/// How far from the row's right edge the split mark stands: clear of the counts and glyphs at its end.
+const SPLIT_MARK_RIGHT: f32 = 44.0;
 
 /// Makes `line` (an item's main line) draggable, and returns it with the overlay that
 /// draws where a dragged sibling would land; the caller lays the overlay over the item.

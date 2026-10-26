@@ -76,17 +76,16 @@ impl Render for DraggedTerminal {
             let origin = window.mouse_position() - self.grabbed;
             (f32::from(at.x - origin.x), f32::from(at.y - origin.y))
         };
+        // The root of a view takes no offset of its own, so the chip that moves is the root's child.
         div()
-            .relative()
-            .child(ghost)
-            .with_spring(
+            .child(div().relative().child(ghost).with_spring(
                 ("drag-snap", self.id as u64),
                 SpringAnimation::new(SPRING_SNAP).to(snapped).from(false),
                 move |chip, phase| {
                     let p = phase.0;
                     chip.left(px(left + (x - left) * p)).top(px(top + (y - top) * p))
                 },
-            )
+            ))
             .into_any_element()
     }
 }

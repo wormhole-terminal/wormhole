@@ -8,7 +8,8 @@
 //! this keeps it, wraps what moves in an animation and ends it with a timer, so a list at rest costs a
 //! comparison of its keys per frame and nothing else. A line's spring is its own (kept by GPUI under the line's key),
 //! so a second change while it moves sets it going from where it is and how fast, not from the start.
-//! Reduce Motion cuts all of it; the row being dragged is never animated while it is held.
+//! Reduce Motion cuts all of it. A row being dragged is not the list's to animate: while it is held it is out of the list
+//! when a gap is open for it, and the lines step aside for it (`drag`), on the same springs.
 
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
