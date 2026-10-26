@@ -15,6 +15,7 @@
 
 mod choices;
 mod ease;
+pub mod pose;
 mod spring;
 mod timeline;
 
