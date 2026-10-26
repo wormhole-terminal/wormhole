@@ -70,6 +70,13 @@ pub(super) fn activate(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// Closes the terminal in row `n` without asking, as the × does once the question is answered: for looking at
+/// the motion of a row that goes.
+pub(super) fn close(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    ctx.workspace.close_session(nth(arg), ctx.window, ctx.cx);
+    Ok(String::new())
+}
+
 pub(super) fn menu_new_window(ctx: &mut Ctx, _: &str) -> Result<String> {
     ctx.window.dispatch_action(Box::new(crate::actions::NewWindow), ctx.cx);
     Ok(String::new())

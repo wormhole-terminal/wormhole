@@ -79,6 +79,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "new-shell" => sessions::new_shell,
         "shells" => sessions::shells,
         "activate" => sessions::activate,
+        "close" => sessions::close,
         "rename" => sessions::rename,
         "menu-new-window" => sessions::menu_new_window,
         "menu-updates" => sessions::menu_updates,

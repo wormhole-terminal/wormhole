@@ -89,6 +89,7 @@
 //!                         character, as the keyboard would (not only into the terminal like `type`)
 //!   new [dir] | activate <n> | note <text> | task <text> | stash | send | send-submit   (`new` opens
 //!                   the new terminal in `dir` when given, `~/` being the home folder)
+//!   close <n>       close the terminal in row n at once, without the question the × asks
 //!   new-shell <key> [dir]   a new terminal running the shell `key` names (`shells` lists the keys;
 //!                   `-` is the login shell); `state` shows each terminal's key and what it runs
 //!   shells          the shells on offer, one a line: key, name, what it runs, `default` on the default
