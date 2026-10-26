@@ -3,7 +3,8 @@
 //! pins on top of it, the ⌘1–9 hints, what a row and a group's head say (on screen and to
 //! VoiceOver), what a terminal is called (`names`), what a plain terminal's command means for its
 //! row (`command`), and how the members of a split sit in the list and what a drop on a row does
-//! to them (`split`, `drop`). Pure data, so it is tested here without GPUI; the app only draws it.
+//! to them (`split`, `drop`), and how far the lines step aside while a row is dragged over them
+//! (`room`). Pure data, so it is tested here without GPUI; the app only draws it.
 
 mod arrange;
 pub mod command;
@@ -17,6 +18,7 @@ pub mod motion;
 pub mod names;
 pub mod order;
 pub mod place;
+pub mod room;
 mod split;
 pub mod spoken;
 #[cfg(test)]
