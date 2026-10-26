@@ -287,6 +287,7 @@ impl TerminalView {
         // status back to the output heuristic.
         if agent.is_none() && self.hook_driven {
             self.hook_driven = false;
+            self.wakes = integrations::Wakes::default();
             self.agent_message = None;
             if matches!(self.status, Status::Busy | Status::Attention) {
                 self.set_status(Status::Idle);
@@ -294,6 +295,12 @@ impl TerminalView {
         }
         self.agent = agent;
         true
+    }
+
+    /// What an agent's hook event means for this terminal: a turn that ends while work it waits on
+    /// still runs isn't finished (see [`integrations::Wakes`]).
+    pub fn hook_signal(&mut self, agent: AgentId, event: &str) -> Option<Signal> {
+        self.wakes.signal(agent, event)
     }
 
     /// Apply a status event from an agent's hooks. Returns the new status.

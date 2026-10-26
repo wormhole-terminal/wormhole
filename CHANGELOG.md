@@ -37,6 +37,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- A Claude Code terminal no longer shows finished (with a banner and a sound) while its agent waits
+  on work it started in the background: a `Monitor`, or a build or test a subagent runs in the
+  background. It stays working until that work wakes the agent. A server the agent leaves running on
+  purpose still lets the turn count as finished.
 - An update that downloaded but failed to install (for example, without permission to replace the app)
   is no longer downloaded again at every automatic check. Settings → Updates offers it with Install
   update, and the next launch tries once more.

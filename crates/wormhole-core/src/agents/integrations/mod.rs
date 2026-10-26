@@ -14,6 +14,7 @@ mod own_files;
 mod payload;
 mod signals;
 mod status_line;
+mod wakes;
 
 use std::path::{Path, PathBuf};
 
@@ -23,6 +24,7 @@ use crate::platform::paths;
 
 pub use payload::describe;
 pub use signals::{Signal, answer_key, signal};
+pub use wakes::Wakes;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum State {

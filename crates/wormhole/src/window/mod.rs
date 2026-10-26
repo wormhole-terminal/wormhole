@@ -45,7 +45,6 @@ use crate::app_state::attention::{self, Attention};
 use crate::platform::vibrancy;
 use crate::settings::settings_in;
 use wormhole_core::agents::AgentId;
-use wormhole_core::agents::integrations;
 use wormhole_core::storage::paths::ProfileId;
 
 pub(crate) mod ambient;
@@ -427,8 +426,8 @@ impl Workspace {
     ) {
         tracing::debug!(%tab, ?agent, %event, ?message, "agent hook");
         let Some(ix) = tab.parse().ok().and_then(|id| self.find_session(id)) else { return };
-        let Some(signal) = integrations::signal(agent, event) else { return };
         let terminal = self.sessions[ix].terminal().clone();
+        let Some(signal) = terminal.update(cx, |t, _| t.hook_signal(agent, event)) else { return };
         let before = terminal.read(cx).status();
         let status = terminal.update(cx, |t, _| t.apply_signal(agent, signal, message.clone()));
         let looking = self.on_screen(ix) && window.is_window_active();

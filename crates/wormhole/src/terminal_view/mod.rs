@@ -12,7 +12,7 @@ use wormhole_term::types::Modes;
 use wormhole_core::storage::paths::ProfileId;
 
 use crate::settings::store_in;
-use wormhole_core::agents::{AgentId, Foreground};
+use wormhole_core::agents::{AgentId, Foreground, integrations};
 use wormhole_core::terminal::SpawnOptions;
 use wormhole_term::input::app_selection::AppSelection;
 use wormhole_term::input::{keys, mouse};
@@ -118,6 +118,9 @@ pub struct TerminalView {
     /// Set while an agent's hooks report for this tab; disables the
     /// output-activity heuristic.
     hook_driven: bool,
+    /// The background work its agent's hooks said will wake it: a turn that ends while it runs
+    /// isn't finished.
+    wakes: integrations::Wakes,
     /// Latest notification text from the agent ("Claude needs permission…").
     pub agent_message: Option<String>,
     /// What the programs in the terminal report about themselves (OSC 7501), as last read from the
@@ -297,6 +300,7 @@ impl TerminalView {
             cwd,
             agent: None,
             hook_driven: false,
+            wakes: integrations::Wakes::default(),
             agent_message: None,
             program: None,
             program_driven: false,

@@ -63,9 +63,33 @@
     },
     {
       "event": "Stop",
-      "expect_event": "Stop",
+      "expect_event": "Stop:shells=1",
       "expect_message": null,
       "payload": { "background_tasks": [{ "id": "1", "status": "running", "type": "shell" }] }
+    },
+    {
+      "event": "Stop",
+      "expect_event": "Stop",
+      "expect_message": null,
+      "payload": { "background_tasks": [] }
+    },
+    {
+      "event": "PostToolUse",
+      "expect_event": "PostToolUse:wakes=bjaem4zpt",
+      "expect_message": null,
+      "payload": { "tool_name": "Monitor", "tool_response": { "persistent": false, "taskId": "bjaem4zpt" } }
+    },
+    {
+      "event": "PostToolUse",
+      "expect_event": "PostToolUse:wakes=b35ew9q21",
+      "expect_message": null,
+      "payload": { "agent_id": "a3022c9ab", "tool_name": "Bash", "tool_response": { "backgroundTaskId": "b35ew9q21" } }
+    },
+    {
+      "event": "PostToolUse",
+      "expect_event": "PostToolUse",
+      "expect_message": null,
+      "payload": { "tool_name": "Bash", "tool_response": { "backgroundTaskId": "b35ew9q21" } }
     },
     {
       "event": "SessionEnd",
@@ -127,6 +151,8 @@
     { "agent": "claude", "event": "Notification:idle_prompt", "signal": null },
     { "agent": "claude", "event": "Stop", "signal": "done" },
     { "agent": "claude", "event": "Stop:background", "signal": "busy" },
+    { "agent": "claude", "event": "Stop:shells=b1,b2", "signal": "done" },
+    { "agent": "claude", "event": "PostToolUse:wakes=b1", "signal": "busy" },
     { "agent": "claude", "event": "StopFailure:rate_limit", "signal": "failed" },
     { "agent": "claude", "event": "SessionEnd:clear", "signal": "quiet" },
     { "agent": "claude", "event": "SessionEnd:resume", "signal": "quiet" },

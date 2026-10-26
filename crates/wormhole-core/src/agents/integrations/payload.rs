@@ -1,6 +1,7 @@
 //! What a hook's JSON payload adds to its event name: the detail [`super::signal`] reads after a
-//! `:` (`Notification:idle_prompt`, `SessionEnd:clear`, `PreToolUse:AskUserQuestion`), and the
-//! words the sidebar shows while the agent needs input ("Approve cargo test?").
+//! `:` (`Notification:idle_prompt`, `SessionEnd:clear`, `PreToolUse:AskUserQuestion`), the
+//! background work [`super::Wakes`] keeps track of (`PostToolUse:wakes=…`, `Stop:shells=…`), and
+//! the words the sidebar shows while the agent needs input ("Approve cargo test?").
 
 use serde_json::Value;
 
@@ -11,6 +12,9 @@ const MESSAGE_MAX_CHARS: usize = 200;
 /// (`tail -f`, a dev server), so it doesn't keep a finished turn working.
 const WAKING_TASKS: &[&str] = &["subagent", "workflow", "teammate", "cloud session"];
 
+/// At most this many shells are named in a `Stop:shells=…`: the ones a turn waits on are few.
+const SHELLS_MAX: usize = 16;
+
 /// `event` with the payload's detail appended (`Event:detail`), and the message to show.
 pub fn describe(event: &str, payload: &Value) -> (String, Option<String>) {
     let text = |key: &str| payload.get(key).and_then(Value::as_str);
@@ -19,7 +23,9 @@ pub fn describe(event: &str, payload: &Value) -> (String, Option<String>) {
         "SessionEnd" => text("reason").map(str::to_string),
         "StopFailure" => text("error").map(str::to_string),
         "PreToolUse" | "PermissionRequest" => text("tool_name").map(str::to_string),
-        "Stop" => waits_for_background(payload).then(|| "background".to_string()),
+        "PostToolUse" => started_waking(payload).map(|id| format!("wakes={id}")),
+        "Stop" if waits_for_background(payload) => Some("background".to_string()),
+        "Stop" => running_shells(payload).map(|ids| format!("shells={ids}")),
         _ => None,
     };
     let message = match event {
@@ -41,6 +47,42 @@ fn waits_for_background(payload: &Value) -> bool {
         let field = |key: &str| task.get(key).and_then(Value::as_str).unwrap_or_default();
         WAKING_TASKS.contains(&field("type")) && matches!(field("status"), "running" | "pending")
     })
+}
+
+/// The task id of background work this tool call started that will end and wake the agent: a
+/// `Monitor` (unless `persistent`, which watches until the session ends), or a background shell a
+/// subagent started to wait on. The main agent's own background shell may be a server meant to run
+/// on, so it never counts.
+fn started_waking(payload: &Value) -> Option<&str> {
+    let response = payload.get("tool_response")?;
+    let field = |key: &str| response.get(key).and_then(Value::as_str);
+    let id = match payload.get("tool_name").and_then(Value::as_str)? {
+        "Monitor" if response.get("persistent").and_then(Value::as_bool) != Some(true) => field("taskId"),
+        _ if payload.get("agent_id").and_then(Value::as_str).is_some() => field("backgroundTaskId"),
+        _ => None,
+    }?;
+    is_task_id(id).then_some(id)
+}
+
+/// The ids of the background shells still running when the turn ended, comma-separated.
+fn running_shells(payload: &Value) -> Option<String> {
+    let tasks = payload.get("background_tasks").and_then(Value::as_array)?;
+    let ids: Vec<&str> = tasks
+        .iter()
+        .filter(|task| {
+            let field = |key: &str| task.get(key).and_then(Value::as_str).unwrap_or_default();
+            field("type") == "shell" && matches!(field("status"), "running" | "pending")
+        })
+        .filter_map(|task| task.get("id").and_then(Value::as_str))
+        .filter(|id| is_task_id(id))
+        .take(SHELLS_MAX)
+        .collect();
+    (!ids.is_empty()).then(|| ids.join(","))
+}
+
+/// A task id goes into the event as it is: short, and nothing that could read as a separator.
+fn is_task_id(id: &str) -> bool {
+    (1..=64).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
 
 /// What a permission prompt asks, in the sidebar's words: "Approve cargo test?".
@@ -136,9 +178,43 @@ mod tests {
     fn only_a_background_agent_keeps_a_turn_going() {
         let tasks = |kind: &str, status: &str| json!({ "background_tasks": [{ "id": "1", "type": kind, "status": status }] });
         assert_eq!(describe("Stop", &tasks("subagent", "running")).0, "Stop:background");
-        assert_eq!(describe("Stop", &tasks("shell", "running")).0, "Stop");
+        assert_eq!(describe("Stop", &tasks("shell", "running")).0, "Stop:shells=1");
         assert_eq!(describe("Stop", &tasks("subagent", "completed")).0, "Stop");
         assert_eq!(describe("Stop", &json!({ "background_tasks": [] })).0, "Stop");
+    }
+
+    #[test]
+    fn work_that_wakes_the_agent_is_named() {
+        let monitor = |persistent: bool| json!({ "tool_name": "Monitor", "tool_response": { "taskId": "bjaem4zpt", "persistent": persistent } });
+        assert_eq!(describe("PostToolUse", &monitor(false)).0, "PostToolUse:wakes=bjaem4zpt");
+        assert_eq!(describe("PostToolUse", &monitor(true)).0, "PostToolUse");
+        let shell = |agent: Option<&str>| {
+            let mut payload =
+                json!({ "tool_name": "Bash", "tool_response": { "backgroundTaskId": "b35ew9q21" } });
+            if let Some(agent) = agent {
+                payload["agent_id"] = json!(agent);
+            }
+            payload
+        };
+        assert_eq!(describe("PostToolUse", &shell(Some("a30"))).0, "PostToolUse:wakes=b35ew9q21");
+        assert_eq!(describe("PostToolUse", &shell(None)).0, "PostToolUse", "the main agent's server runs on");
+        let odd = json!({ "tool_name": "Monitor", "tool_response": { "taskId": "a,b:c" } });
+        assert_eq!(describe("PostToolUse", &odd).0, "PostToolUse");
+    }
+
+    #[test]
+    fn a_turn_names_the_shells_it_leaves_running() {
+        let payload = json!({ "background_tasks": [
+            { "id": "b1", "type": "shell", "status": "running" },
+            { "id": "b2", "type": "shell", "status": "completed" },
+            { "id": "b3", "type": "shell", "status": "pending" },
+        ] });
+        assert_eq!(describe("Stop", &payload).0, "Stop:shells=b1,b3");
+        let both = json!({ "background_tasks": [
+            { "id": "b1", "type": "shell", "status": "running" },
+            { "id": "a1", "type": "subagent", "status": "running" },
+        ] });
+        assert_eq!(describe("Stop", &both).0, "Stop:background");
     }
 
     #[test]

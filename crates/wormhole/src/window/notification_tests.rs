@@ -114,6 +114,29 @@ fn closing_a_terminal_takes_its_notification_down(cx: &mut TestAppContext) {
 
 /// In front, nothing shows by default: the sidebar, the Dock badge, the menu bar item and ⌥⌘J
 /// carry the status. A banner comes only when asked for.
+/// A turn that ends while work it waits on runs in the background (a subagent's build, a `Monitor`)
+/// isn't finished; one that leaves only the agent's own server running is.
+#[gpui_kit::test]
+fn waiting_on_background_work_is_not_finished(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "waiting_on_background_work_is_not_finished") {
+        return;
+    }
+    let window = start(cx, 2);
+    banners_in_front(cx);
+    let finished = |cx: &mut TestAppContext| cx.delivered_system_notifications().len();
+
+    hook(cx, &window, 2, "UserPromptSubmit", None);
+    hook(cx, &window, 2, "Stop:background", None);
+    hook(cx, &window, 2, "PostToolUse:wakes=b7", None);
+    // The subagent handed back while its build runs on.
+    hook(cx, &window, 2, "Stop:shells=srv,b7", None);
+    assert_eq!(finished(cx), 0, "it still waits on the build");
+    // The build woke it, and it finished.
+    hook(cx, &window, 2, "UserPromptSubmit", None);
+    hook(cx, &window, 2, "Stop:shells=srv", None);
+    assert_eq!(finished(cx), 1, "only the server runs on");
+}
+
 #[gpui_kit::test]
 fn in_front_a_background_terminal_posts_nothing_unless_banners_are_asked_for(cx: &mut TestAppContext) {
     if isolate_in(module_path!(), "in_front_a_background_terminal_posts_nothing_unless_banners_are_asked_for")
