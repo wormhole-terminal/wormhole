@@ -32,7 +32,7 @@ use crate::style::motion::SPRING_SNAP;
 use wormhole_core::config::features::FeatureFlag;
 
 /// The gap a dragged row has the list open for it.
-pub(super) struct Gap {
+pub(super) struct DragRoom {
     /// Every line as laid out with nothing pushed: the places the springs run in.
     lines: Vec<Drawn<ItemKey>>,
     /// How far each line that has been pushed in this drag is pushed now (0 for one that has gone back).
@@ -49,7 +49,7 @@ pub(super) struct Gap {
     over: Option<u64>,
 }
 
-impl Gap {
+impl DragRoom {
     /// The room of a drag that begins now, over `lines` as laid out.
     fn begin(lines: Vec<Drawn<ItemKey>>, dragged: i64) -> Self {
         Self { lines, pushed: HashMap::new(), lifted: HashMap::new(), joining: false, dragged, over: None }
@@ -129,10 +129,10 @@ impl Gap {
 impl ListMotion {
     /// The terminals whose rows are pushed aside now, and how far (down is positive), top to bottom.
     pub(in crate::sidebar) fn pushed_rows(&self) -> Vec<(i64, f32)> {
-        let Some(gap) = &self.gap else { return Vec::new() };
-        gap.lines
+        let Some(room) = &self.room else { return Vec::new() };
+        room.lines
             .iter()
-            .filter_map(|line| match (&line.key, gap.pushed.get(&line.key)) {
+            .filter_map(|line| match (&line.key, room.pushed.get(&line.key)) {
                 (ItemKey::Row(id), Some(&by)) if by != 0.0 => Some((*id, by)),
                 _ => None,
             })
@@ -141,8 +141,8 @@ impl ListMotion {
 
     /// The terminals whose rows are out of the list while a gap is open for them.
     pub(in crate::sidebar) fn lifted_rows(&self) -> Vec<i64> {
-        let Some(gap) = &self.gap else { return Vec::new() };
-        let mut ids: Vec<i64> = gap
+        let Some(room) = &self.room else { return Vec::new() };
+        let mut ids: Vec<i64> = room
             .lifted_keys()
             .filter_map(|key| match key {
                 ItemKey::Row(id) => Some(*id),
@@ -154,17 +154,17 @@ impl ListMotion {
     }
 
     /// Whether a dragged row's gap is still held (drawn, or on its way back to rest).
-    pub(in crate::sidebar) fn has_gap(&self) -> bool {
-        self.gap.is_some()
+    pub(in crate::sidebar) fn has_room(&self) -> bool {
+        self.room.is_some()
     }
 }
 
 impl ListMotion {
     /// The room has been at rest since the drag ended in `batch`: it is not drawn any more.
     pub(super) fn retire_room(&mut self, batch: u64) -> bool {
-        let ended = self.gap.as_ref().is_some_and(|gap| gap.over == Some(batch));
+        let ended = self.room.as_ref().is_some_and(|room| room.over == Some(batch));
         if ended {
-            self.gap = None;
+            self.room = None;
         }
         // A split's bracket drawn while the lines went back is drawn.
         let drawn = self.join.retire(batch);
@@ -212,18 +212,18 @@ impl Sidebar {
         cx: &mut Context<Self>,
     ) {
         let Some(dragged) = self.row_in_flight(cx) else { return };
-        let mut gap = match self.motion.gap.take() {
-            Some(gap) if !gap.is_over() => gap,
+        let mut room = match self.motion.room.take() {
+            Some(room) if !room.is_over() => room,
             _ => match measured(&self.motion.drawn, &self.scroll) {
-                Some(lines) => Gap::begin(lines, dragged),
+                Some(lines) => DragRoom::begin(lines, dragged),
                 None => return,
             },
         };
         let input = self.input.clone();
         let plan = self.over.and_then(|over| Self::terminal_drop_plan(&input, listing, dragged, over));
-        gap.pushed.values_mut().for_each(|by| *by = 0.0);
-        gap.lifted.values_mut().for_each(|lifted| *lifted = false);
-        gap.joining = matches!(plan, Some(Drop::Join { .. }));
+        room.pushed.values_mut().for_each(|by| *by = 0.0);
+        room.lifted.values_mut().for_each(|lifted| *lifted = false);
+        room.joining = matches!(plan, Some(Drop::Join { .. }));
         let own = input.find(dragged);
         if let (Some(own), Some(Drop::Move { leave_split, with_mates, .. })) = (own, plan) {
             // The rows of its split go with it when the drop takes them along, else it goes alone.
@@ -231,17 +231,17 @@ impl Sidebar {
             let run = run_of(listing, &split_of, own).and_then(|run| keys.get(run));
             let slot = mark.and_then(|mark| mark.slot(keys));
             if let (Some(run), Some(slot)) = (run, slot) {
-                let at = |key: &ItemKey| gap.lines.iter().position(|line| line.key == *key);
-                let slot = keys.get(slot).map_or(Some(gap.lines.len()), at);
+                let at = |key: &ItemKey| room.lines.iter().position(|line| line.key == *key);
+                let slot = keys.get(slot).map_or(Some(room.lines.len()), at);
                 let place = run.iter().filter_map(at).fold(None, |span: Option<(usize, usize)>, at| {
                     Some(span.map_or((at, at + 1), |(start, end)| (start.min(at), end.max(at + 1))))
                 });
                 for key in run {
-                    gap.lifted.insert(key.clone(), true);
+                    room.lifted.insert(key.clone(), true);
                 }
                 if let (Some(slot), Some((start, end))) = (slot, place) {
-                    for (key, by) in make_room(&gap.lines, start..end, slot) {
-                        gap.pushed.insert(key, by);
+                    for (key, by) in make_room(&room.lines, start..end, slot) {
+                        room.pushed.insert(key, by);
                     }
                 }
             }
@@ -250,22 +250,22 @@ impl Sidebar {
         if let Some(own) =
             own.and_then(|own| keys.get(listing.entries.iter().position(|e| entry_is(e, own))?))
         {
-            gap.lifted.entry(own.clone()).or_insert(false);
+            room.lifted.entry(own.clone()).or_insert(false);
         }
-        self.motion.gap = Some(gap);
+        self.motion.room = Some(room);
     }
 
     /// The drag ended without the list changing: the lines go back to where they were, the held row
     /// comes back, and the room is gone when they are at rest.
-    pub(super) fn put_back_room(&mut self, mut gap: Gap, cx: &mut Context<Self>) {
-        gap.put_back();
+    pub(super) fn put_back_room(&mut self, mut room: DragRoom, cx: &mut Context<Self>) {
+        room.put_back();
         self.motion.batch += 1;
         let batch = self.motion.batch;
-        if gap.joined() && !cx.reduce_motion() {
-            self.motion.join.draw_bracket(gap.dragged(), batch);
+        if room.joined() && !cx.reduce_motion() {
+            self.motion.join.draw_bracket(room.dragged(), batch);
         }
-        gap.over = Some(batch);
-        self.motion.gap = Some(gap);
+        room.over = Some(batch);
+        self.motion.room = Some(room);
         self.later(ROOM.settle(super::plan::REST) + super::plan::GRACE, cx, move |this, cx| {
             if this.motion.retire_room(batch) {
                 cx.notify();

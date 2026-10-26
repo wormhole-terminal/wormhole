@@ -18,7 +18,7 @@ use super::insert::{Change, changes, motions};
 use super::leaving::{Leaving, Snapshot};
 use super::list::{Arrival, ItemKey, ListMotion, Moving, content_top, measured};
 use super::pose::{Natural, RowMotion};
-use super::room::Gap;
+use super::room::DragRoom;
 use crate::settings::settings_in;
 use crate::sidebar::Sidebar;
 
@@ -52,7 +52,7 @@ struct Lasting {
 
 /// A drag that ended, and where the pointer let go (a place in the content).
 pub(super) struct Dropped {
-    pub(super) gap: Gap,
+    pub(super) room: DragRoom,
     pub(super) pointer: f32,
 }
 
@@ -84,7 +84,7 @@ impl ListMotion {
         }
         // A drag leaves the lines where it pushed them, which is where they look to be.
         if let Some(dropped) = &next.dropped {
-            dropped.gap.seen(&mut was, dropped.pointer);
+            dropped.room.seen(&mut was, dropped.pointer);
         }
         let standing: HashSet<&ItemKey> = next.keys.iter().collect();
         // A row that came back before it was gone is the list's own again: it is not drawn twice.
@@ -101,15 +101,15 @@ impl ListMotion {
         self.keep_leaving(&turnover, &before, &standing, snapshot, &mut lasting);
         let mut moves = self.plan_flips(&turnover, &was, next.keys);
         if let Some(dropped) = &next.dropped {
-            moves.moved.extend(dropped.gap.kept(&was, &moves));
+            moves.moved.extend(dropped.room.kept(&was, &moves));
         }
-        let settle = next.dropped.as_ref().filter(|dropped| dropped.gap.joined()).map(|_| JOIN_SETTLE);
+        let settle = next.dropped.as_ref().filter(|dropped| dropped.room.joined()).map(|_| JOIN_SETTLE);
         self.start_moving(moves, &turnover, settle, &mut lasting);
         self.start_arriving(turnover, &standing, &mut lasting);
         if let Some(dropped) = &next.dropped {
-            self.start_landing(&dropped.gap, &standing, &mut lasting);
-            if dropped.gap.joined() {
-                self.join.draw_bracket(dropped.gap.dragged(), self.batch);
+            self.start_landing(&dropped.room, &standing, &mut lasting);
+            if dropped.room.joined() {
+                self.join.draw_bracket(dropped.room.dragged(), self.batch);
                 lasting.settling = lasting.settling.max(BRACKET);
             }
         }
@@ -206,8 +206,8 @@ impl ListMotion {
 impl ListMotion {
     /// The row a drag put down comes back into the list: it fades in where the pointer let go while it
     /// slides to its place, as a row that opens does, unless it was never out of the list.
-    fn start_landing(&mut self, gap: &Gap, standing: &HashSet<&ItemKey>, lasting: &mut Lasting) {
-        for key in gap.lifted_keys().filter(|key| standing.contains(key)) {
+    fn start_landing(&mut self, room: &DragRoom, standing: &HashSet<&ItemKey>, lasting: &mut Lasting) {
+        for key in room.lifted_keys().filter(|key| standing.contains(key)) {
             let how = RowMotion::Insert(InsertMotion::Classic);
             lasting.settling = lasting.settling.max(how.duration(Phase::Enter));
             let arrival = Arrival { motion: how, natural: Natural::default(), batch: self.batch };
@@ -231,24 +231,24 @@ impl Sidebar {
         let fold = self.motion.fold.take();
         // What a drag measured is not the list any more when the list changes under it; a drag that is
         // over leaves its room to this plan, or to the lines' way back to where they were.
-        let gap = if cx.has_active_drag() {
+        let room = if cx.has_active_drag() {
             if self.motion.keys != keys {
-                self.motion.gap = None;
+                self.motion.room = None;
             }
             None
         } else {
             self.leave_join(cx);
-            self.motion.gap.take()
+            self.motion.room.take()
         };
         if self.motion.keys == keys && !self.motion.changed {
-            if let Some(gap) = gap {
-                self.put_back_room(gap, cx);
+            if let Some(room) = room {
+                self.put_back_room(room, cx);
             }
             return;
         }
         let choices = settings_in(&self.input.profile, cx).motion_in_force();
         let pointer = f32::from(window.mouse_position().y) - content_top(&self.scroll);
-        let dropped = gap.map(|gap| Dropped { gap, pointer });
+        let dropped = room.map(|room| Dropped { room, pointer });
         let next = Next { keys, listing, fold, choices, dropped };
         let lasting = self.motion.plan(&next, &self.scroll, cx.reduce_motion());
         let batch = self.motion.batch;

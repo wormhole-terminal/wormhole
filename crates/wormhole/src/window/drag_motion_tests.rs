@@ -155,7 +155,7 @@ fn the_rows_a_dragged_row_passes_step_aside_and_it_is_out_of_the_list_while_the_
     assert_eq!(ids(cx, &window), [4, 1, 2, 3], "it lands where the gap was");
     assert_eq!(children(cx, &window), 5, "every row is drawn once: four, and the space under them");
     settle(cx, &window);
-    assert!(!sidebar_of(cx, &window, |s| s.has_gap()), "the gap is gone when everything is at rest");
+    assert!(!sidebar_of(cx, &window, |s| s.has_room()), "the gap is gone when everything is at rest");
     assert_eq!(ids(cx, &window), [4, 1, 2, 3]);
     assert_eq!(children(cx, &window), 5);
 }
@@ -177,9 +177,9 @@ fn a_drag_that_ends_without_a_drop_puts_everything_back(cx: &mut TestAppContext)
     assert_eq!(ids(cx, &window), [1, 2, 3, 4], "nothing moved");
     assert!(sidebar_of(cx, &window, |s| s.pushed_rows().is_empty()), "every row is told to go back");
     assert!(lifted(cx, &window).is_empty(), "and the dragged row is back in the list");
-    assert!(sidebar_of(cx, &window, |s| s.has_gap()), "until they have, the springs are held");
+    assert!(sidebar_of(cx, &window, |s| s.has_room()), "until they have, the springs are held");
     settle(cx, &window);
-    assert!(!sidebar_of(cx, &window, |s| s.has_gap()), "then they are let go");
+    assert!(!sidebar_of(cx, &window, |s| s.has_room()), "then they are let go");
 }
 
 #[gpui_kit::test]
@@ -212,7 +212,7 @@ fn with_the_motion_feature_off_a_drag_moves_no_row(cx: &mut TestAppContext) {
     let target = above(cx, &window, 1);
     drag(cx, &window, grab, &[grab + point(px(30.0), px(0.0)), target]);
     assert!(pushed(cx, &window).is_empty() && lifted(cx, &window).is_empty(), "no gap");
-    assert!(!sidebar_of(cx, &window, |s| s.has_gap()), "the list holds nothing of the drag");
+    assert!(!sidebar_of(cx, &window, |s| s.has_room()), "the list holds nothing of the drag");
     release(cx, &window, target);
     assert_eq!(ids(cx, &window), [4, 1, 2, 3], "the drop does what it always did");
 }
@@ -308,7 +308,7 @@ fn a_drop_on_the_middle_of_a_row_makes_a_split_whose_bracket_draws_and_then_rest
     assert_eq!(children(cx, &window), 5, "no row is drawn twice");
     settle(cx, &window);
     assert_eq!(join_state(cx, &window), (None, None, false, false), "everything is at rest");
-    assert!(!sidebar_of(cx, &window, |s| s.motion_busy() || s.has_gap()));
+    assert!(!sidebar_of(cx, &window, |s| s.motion_busy() || s.has_room()));
 }
 
 #[gpui_kit::test]

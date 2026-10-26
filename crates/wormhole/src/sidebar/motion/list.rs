@@ -27,7 +27,7 @@ use super::fold::{FoldNote, Summaries};
 use super::join::Join;
 use super::leaving::{Leavers, Snapshot};
 use super::pose::{self, Natural, RowMotion};
-use super::room::{self, Gap};
+use super::room::{self, DragRoom};
 use crate::sidebar::{Sidebar, SidebarInput};
 use crate::style::motion::spring;
 
@@ -80,7 +80,7 @@ pub(in crate::sidebar) struct ListMotion {
     pub(super) gap_spring: Option<SpringSpec>,
     /// The gap a dragged row has the lines open for it (`room`), from the first frame of the drag until its
     /// lines are at rest again.
-    pub(super) gap: Option<Gap>,
+    pub(super) room: Option<DragRoom>,
     /// The preview of a split a dragged row would make, and its bracket once it has (`join`).
     pub(in crate::sidebar) join: Join,
     pub(super) batch: u64,
@@ -148,7 +148,7 @@ impl ListMotion {
         {
             return Some(Spring { spec: moving.spring, from, to, place: to });
         }
-        self.gap.as_ref().and_then(|gap| gap.spring_of(key))
+        self.room.as_ref().and_then(|room| room.spring_of(key))
     }
 }
 
@@ -183,7 +183,7 @@ impl Sidebar {
         let slot = slot.relative().w_full();
         let motion = &self.motion;
         // A row held in a drag is out of the list while a gap is open for it (`room`).
-        if let Some(lifted) = motion.gap.as_ref().and_then(|gap| gap.is_lifted(&key)) {
+        if let Some(lifted) = motion.room.as_ref().and_then(|room| room.is_lifted(&key)) {
             return slot.child(room::lifted(line, &key, lifted));
         }
         let flip = motion.spring_of(&key);

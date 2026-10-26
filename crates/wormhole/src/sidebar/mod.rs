@@ -262,8 +262,8 @@ impl Sidebar {
 
     /// Whether a drag's gap is held (open, or closing).
     #[cfg(test)]
-    pub(crate) fn has_gap(&self) -> bool {
-        self.motion.has_gap()
+    pub(crate) fn has_room(&self) -> bool {
+        self.motion.has_room()
     }
 
     /// Whether each row that is leaving was the terminal on screen when it was last drawn.
