@@ -1,7 +1,8 @@
 //! AppKit's side of `platform::notice`: a borderless, non-activating panel that is a child of the app window's
 //! `NSWindow`, wide as that window and as tall as the chip with the gap it rests at and room below for the
-//! glass's shadow, whose top edge sits on the title row's lower edge. The window's own edge is the clip: the
-//! chip drops in from above it and goes back up behind it.
+//! glass's shadow, whose top edge sits on the top edge of the terminal the chip is about (core's `place` says
+//! where the chip is in it). The panel's own edge is the clip: the chip drops in from above it and goes back up
+//! behind it.
 //!
 //! The chip is a view tree, `holder` (the layer Core Animation moves) > the material (Liquid Glass, the HUD's
 //! frosted blur or a plain box) > `label` (an SF Symbol and the words). The drop is a `CASpringAnimation` on
@@ -12,28 +13,27 @@
 #[cfg(feature = "devctl")]
 use std::cell::Cell;
 
-use gpui_kit::Window;
+use gpui_kit::{App, Window};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyClass, AnyObject, Bool};
 use objc2_app_kit::{
     NSAnimatablePropertyContainer as _, NSAnimationContext, NSBackingStoreType, NSBezierPath, NSBox,
-    NSBoxType, NSColor, NSFont, NSGlassEffectView, NSImage, NSImageScaling, NSImageView, NSLineBreakMode,
-    NSPanel, NSTextField, NSTitlePosition, NSView, NSVisualEffectBlendingMode, NSVisualEffectMaterial,
-    NSVisualEffectState, NSVisualEffectView, NSWindow, NSWindowCollectionBehavior, NSWindowOrderingMode,
-    NSWindowStyleMask,
+    NSBoxType, NSColor, NSFont, NSGlassEffectView, NSImage, NSImageResizingMode, NSImageScaling, NSImageView,
+    NSLineBreakMode, NSPanel, NSTextField, NSTitlePosition, NSView, NSVisualEffectBlendingMode,
+    NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView, NSWindow, NSWindowCollectionBehavior,
+    NSWindowOrderingMode, NSWindowStyleMask,
 };
 use objc2_core_foundation::CGAffineTransform;
-use objc2_foundation::{NSNumber, NSPoint, NSRect, NSSize, NSString};
+use objc2_foundation::{NSEdgeInsets, NSNumber, NSPoint, NSRect, NSSize, NSString};
 use objc2_quartz_core::{
     CAAnimation, CABasicAnimation, CALayer, CAMediaTiming as _, CAMediaTimingFunction, CASpringAnimation,
     CATransition, kCATransitionFade,
 };
 use wormhole_core::view::motion::CubicBezier;
-use wormhole_core::view::motion::notice::{
-    DROP, Entrance, FADE_EASE, FADE_IN, FADE_OUT, REST_GAP, SWAP, UP, UP_EASE, travel,
-};
-use wormhole_core::view::notice::Glyph;
+use wormhole_core::view::motion::notice::{DROP, Entrance, FADE_EASE, FADE_IN, FADE_OUT, SWAP, UP, UP_EASE};
+use wormhole_core::view::notice::{Glyph, Placed, Spot, place};
+use wormhole_core::view::panes::Rect;
 
 use super::appearance;
 use super::appkit::{ns_window, symbol};
@@ -46,12 +46,8 @@ const HEIGHT: f64 = 34.0;
 const PAD: f64 = 14.0;
 const ICON: f64 = 15.0;
 const GAP: f64 = 7.0;
-/// The chip keeps this far from the window's side edges, whatever the words.
-const MARGIN: f64 = 16.0;
 /// Under the chip, inside the panel: where the glass's shadow falls.
 const SHADOW_ROOM: f64 = 14.0;
-/// The words' size: the system's, as a menu row's.
-const FONT: f64 = 13.0;
 /// The border of the plain fill, which has no glass edge to show where it ends.
 const EDGE: f64 = 1.0;
 
@@ -66,14 +62,15 @@ pub fn force_material(material: Option<Material>) {
     FORCED.set(material);
 }
 
-/// What the chip is made of now: Reduce Transparency and Increase Contrast ask for a plain fill, otherwise
+/// What the chip is made of now: `opaque` (Reduce Transparency or Increase Contrast, as the app reads them)
+/// asks for a plain fill, otherwise
 /// Liquid Glass where the system has it and the HUD's blur where it hasn't.
-fn material() -> Material {
+fn material(opaque: bool) -> Material {
     #[cfg(feature = "devctl")]
     if let Some(forced) = FORCED.get() {
         return forced;
     }
-    if super::look::reduce_transparency() || super::look::increase_contrast() {
+    if opaque {
         Material::Solid
     } else if AnyClass::get(c"NSGlassEffectView").is_some() {
         // Named only once it is known to exist: on an older system the class lookup aborts.
@@ -93,13 +90,20 @@ enum Backdrop {
 impl Backdrop {
     fn make(material: Material, mtm: MainThreadMarker) -> Self {
         match material {
-            Material::Glass => Self::Glass(NSGlassEffectView::initWithFrame(mtm.alloc(), NSRect::ZERO)),
+            Material::Glass => {
+                let glass = NSGlassEffectView::initWithFrame(mtm.alloc(), NSRect::ZERO);
+                glass.setCornerRadius(HEIGHT / 2.0);
+                Self::Glass(glass)
+            }
             Material::Frosted => {
                 let view = NSVisualEffectView::initWithFrame(mtm.alloc(), NSRect::ZERO);
                 view.setMaterial(NSVisualEffectMaterial::HUDWindow);
                 view.setBlendingMode(NSVisualEffectBlendingMode::BehindWindow);
                 // Active, so the blur doesn't go flat while the app is in the background.
                 view.setState(NSVisualEffectState::Active);
+                // The blur behind a window is cut by the view's mask image, not by its layer: a capsule whose
+                // middle stretches, so the cut follows the view's width when the words change.
+                view.setMaskImage(Some(&capsule()));
                 Self::Frosted(view)
             }
             Material::Solid => {
@@ -107,6 +111,7 @@ impl Backdrop {
                 fill.setBoxType(NSBoxType::Custom);
                 fill.setTitlePosition(NSTitlePosition::NoTitle);
                 fill.setBorderWidth(EDGE);
+                fill.setCornerRadius(HEIGHT / 2.0);
                 fill.setContentViewMargins(NSSize::new(0.0, 0.0));
                 fill.setFillColor(&NSColor::windowBackgroundColor());
                 fill.setBorderColor(&NSColor::separatorColor());
@@ -144,48 +149,39 @@ impl Backdrop {
             }
         }
     }
-
-    /// Cut the material to a capsule of `size`.
-    fn round(&self, size: NSSize) {
-        let radius = size.height / 2.0;
-        match self {
-            Self::Glass(glass) => glass.setCornerRadius(radius),
-            Self::Solid(fill) => fill.setCornerRadius(radius),
-            // The blur behind a window is cut by the view's mask image, not by its layer.
-            Self::Frosted(effect) => effect.setMaskImage(Some(&capsule(size))),
-        }
-    }
 }
 
-/// An opaque capsule of `size`, for the blur to be cut to.
-fn capsule(size: NSSize) -> Retained<NSImage> {
+/// An opaque capsule as tall as the chip, with a stretching middle.
+fn capsule() -> Retained<NSImage> {
+    let radius = HEIGHT / 2.0;
     let handler = block2::RcBlock::new(move |bounds: NSRect| -> Bool {
         NSColor::blackColor().set();
-        let radius = bounds.size.height / 2.0;
         NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(bounds, radius, radius).fill();
         Bool::YES
     });
-    NSImage::imageWithSize_flipped_drawingHandler(size, false, &handler)
+    let image =
+        NSImage::imageWithSize_flipped_drawingHandler(NSSize::new(HEIGHT + 2.0, HEIGHT), false, &handler);
+    image.setCapInsets(NSEdgeInsets { top: 0.0, left: radius, bottom: 0.0, right: radius });
+    image.setResizingMode(NSImageResizingMode::Stretch);
+    image
 }
 
-/// Where everything sits for words of a given width.
+/// Where everything sits in a capsule `chip_w` wide, for words `text` big.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Geometry {
-    /// The capsule.
-    chip: NSSize,
     /// In the label's own space.
     icon: NSRect,
     text: NSRect,
 }
 
-/// The capsule for words `text` big, in a window with `room` for it across.
-fn geometry(text: NSSize, room: f64) -> Geometry {
-    let fixed = PAD + ICON + GAP + PAD;
-    let words = text.width.min((room - fixed).max(0.0)).ceil();
-    let chip = NSSize::new(fixed + words, HEIGHT);
+/// What the capsule needs beside its words.
+const FIXED: f64 = PAD + ICON + GAP + PAD;
+
+fn geometry(text: NSSize, chip_w: f64) -> Geometry {
+    // A capsule too narrow for them cuts the words (the label truncates the tail); the symbol stays.
+    let words = text.width.min((chip_w - FIXED).max(0.0)).ceil();
     let centred = |side: f64| ((HEIGHT - side) / 2.0).floor();
     Geometry {
-        chip,
         icon: NSRect::new(NSPoint::new(PAD, centred(ICON)), NSSize::new(ICON, ICON)),
         text: NSRect::new(
             NSPoint::new(PAD + ICON + GAP, centred(text.height)),
@@ -210,32 +206,35 @@ pub struct Chip {
     label: Retained<NSView>,
     icon: Retained<NSImageView>,
     text: Retained<NSTextField>,
-    /// The chip as it is now (its width follows the words).
-    chip: NSSize,
-    /// The title row's lower edge, from the window's top.
-    inset: f64,
+    /// Where the chip is, as last laid out.
+    placed: Placed,
+    /// The chip is on its way out (or gone): the holder is mid-animation and is left alone until it comes back.
+    leaving: bool,
+    /// The panel has been given to the parent window.
     entered: bool,
+    /// The panel has been taken down (`close`), so dropping the chip has nothing left to do.
+    taken_down: bool,
 }
 
 impl Chip {
-    /// A panel for `window`'s chip, not yet on screen. `None` for a window without a native one.
-    #[allow(unsafe_code)] // AppKit interop; see the SAFETY note below.
-    pub fn new(window: &Window) -> Option<Self> {
+    /// A panel for `window`'s chip, not yet on screen: `opaque` for a plain fill (the person asked the
+    /// system for no transparency or more contrast). `None` for a window without a native one.
+    pub fn new(window: &Window, opaque: bool) -> Option<Self> {
         let mtm = MainThreadMarker::new()?;
         let parent = ns_window(window)?;
-        // SAFETY: on the main thread; the panel is kept by `Retained`, so AppKit must not also release it
-        // when it closes.
-        let panel = unsafe {
-            let panel = NSPanel::initWithContentRect_styleMask_backing_defer(
-                mtm.alloc(),
-                NSRect::ZERO,
-                NSWindowStyleMask::Borderless | NSWindowStyleMask::NonactivatingPanel,
-                NSBackingStoreType::Buffered,
-                false,
-            );
+        let panel = NSPanel::initWithContentRect_styleMask_backing_defer(
+            mtm.alloc(),
+            NSRect::ZERO,
+            NSWindowStyleMask::Borderless | NSWindowStyleMask::NonactivatingPanel,
+            NSBackingStoreType::Buffered,
+            false,
+        );
+        // SAFETY: on the main thread (`mtm`), and the panel is kept by `Retained`, so AppKit must not also
+        // release it when it closes.
+        #[allow(unsafe_code)]
+        unsafe {
             panel.setReleasedWhenClosed(false);
-            panel
-        };
+        }
         panel.setOpaque(false);
         panel.setBackgroundColor(Some(&NSColor::clearColor()));
         panel.setHasShadow(false);
@@ -252,7 +251,7 @@ impl Chip {
         holder.setWantsLayer(true);
         panel.setContentView(Some(&holder));
 
-        let backdrop = Backdrop::make(material(), mtm);
+        let backdrop = Backdrop::make(material(opaque), mtm);
         holder.addSubview(backdrop.view());
 
         let label = NSView::initWithFrame(mtm.alloc(), NSRect::ZERO);
@@ -261,13 +260,14 @@ impl Chip {
         icon.setImageScaling(NSImageScaling::ScaleProportionallyUpOrDown);
         icon.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
         let text = NSTextField::labelWithString(&NSString::from_str(""), mtm);
-        text.setFont(Some(&NSFont::systemFontOfSize(FONT)));
+        text.setFont(Some(&NSFont::systemFontOfSize(NSFont::systemFontSize())));
         text.setTextColor(Some(&NSColor::labelColor()));
         text.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
         label.addSubview(&icon);
         label.addSubview(&text);
         backdrop.hold(&label);
 
+        let placed = Placed { top: 0.0, chip: Rect::new(0.0, 0.0, 0.0, 0.0), cut: false };
         Some(Self {
             parent,
             panel,
@@ -276,41 +276,36 @@ impl Chip {
             label,
             icon,
             text,
-            chip: NSSize::ZERO,
-            inset: 0.0,
+            placed,
+            leaving: false,
             entered: false,
+            taken_down: false,
         })
     }
 
-    /// Bring the chip in with `content`, `top_inset` points under the window's top edge.
-    pub fn show(&mut self, content: &Content<'_>, top_inset: f32, entrance: Entrance) {
-        self.inset = f64::from(top_inset);
+    /// Bring the chip in with `content`, at `spot`.
+    pub fn show(&mut self, content: &Content<'_>, spot: Spot, entrance: Entrance, cx: &mut App) {
+        self.leaving = false;
         self.set_content(content);
-        self.lay_out(false);
+        self.lay_out(spot, false);
         let layer = self.layer();
         layer.removeAllAnimations();
+        rest(&layer);
         match entrance {
-            Entrance::Drop => {
-                rest(&layer);
-                drop_in(&layer, self.travel());
-            }
-            Entrance::Fade => {
-                rest(&layer);
-                fade(&layer, 0.0, 1.0, FADE_IN, FADE_EASE);
-            }
+            Entrance::Drop => drop_in(&layer, self.travel()),
+            Entrance::Fade => fade(&layer, 0.0, 1.0, FADE_IN, FADE_EASE),
         }
         if !self.entered {
-            // SAFETY: both windows are live and on the main thread.
-            #[allow(unsafe_code)]
-            unsafe {
-                self.parent.addChildWindow_ordered(&self.panel, NSWindowOrderingMode::Above);
-            }
             self.entered = true;
+            // Ordering a child window makes AppKit tell the parent, whose view tells GPUI: done from a task,
+            // outside this update (as `panel::set_height_keeping_top` does its resize), so GPUI is free to hear.
+            let (parent, panel) = (self.parent.clone(), self.panel.clone());
+            cx.spawn(async move |_| adopt(&parent, &panel)).detach();
         }
     }
 
     /// New words in the chip that is up: they crossfade and the capsule's width follows.
-    pub fn swap(&mut self, content: &Content<'_>) {
+    pub fn swap(&mut self, content: &Content<'_>, spot: Spot) {
         // The old picture fades into the new: a transition on the label's layer snapshots both.
         if let Some(layer) = self.label.layer() {
             let fade = CATransition::animation();
@@ -321,11 +316,12 @@ impl Chip {
             layer.addAnimation_forKey(&fade, Some(&NSString::from_str("notice-swap")));
         }
         self.set_content(content);
-        self.lay_out(true);
+        self.lay_out(spot, true);
     }
 
-    /// Send the chip away; the panel stays until the chip is dropped.
+    /// Send the chip away; the panel stays until the chip is closed.
     pub fn hide(&mut self, entrance: Entrance) {
+        self.leaving = true;
         let layer = self.layer();
         layer.removeAllAnimations();
         match entrance {
@@ -342,24 +338,28 @@ impl Chip {
         }
     }
 
-    /// Put the panel under the title row again: the window was resized, went full screen or came back.
-    pub fn place(&mut self, top_inset: f32) {
-        self.inset = f64::from(top_inset);
-        self.lay_out(false);
+    /// Put the chip at `spot` again: the window was resized, went full screen or came back, or the terminal it
+    /// is about moved. A chip that is leaving is left to go.
+    pub fn place(&mut self, spot: Spot) {
+        if !self.leaving {
+            self.lay_out(spot, false);
+        }
+    }
+
+    /// Take the panel down. Closing a window tells its parent and AppKit may tell GPUI, so it is done from a
+    /// task, outside whatever update this is called in.
+    pub fn close(mut self, cx: &mut App) {
+        self.taken_down = true;
+        let (parent, panel) = (self.parent.clone(), self.panel.clone());
+        cx.spawn(async move |_| take_down(&parent, &panel)).detach();
     }
 
     #[cfg(feature = "devctl")]
     pub fn info(&self) -> Option<crate::platform::notice::Info> {
-        let frame = self.parent.frame();
-        let chip = self.chip;
+        let chip = self.placed.chip;
         Some(crate::platform::notice::Info {
             material: self.backdrop.material(),
-            frame: [
-                ((frame.size.width - chip.width) / 2.0) as f32,
-                (self.inset + f64::from(REST_GAP)) as f32,
-                chip.width as f32,
-                chip.height as f32,
-            ],
+            frame: [chip.x, chip.y, chip.w, chip.h],
             window_number: self.panel.windowNumber() as i64,
             parent_number: self.parent.windowNumber() as i64,
         })
@@ -370,9 +370,14 @@ impl Chip {
         self.holder.layer().unwrap_or_default()
     }
 
-    /// How far the chip goes to be out of sight above the panel's top edge.
+    /// How far the chip goes to be out of sight above the panel's top edge: its height and the gap it rests at.
     fn travel(&self) -> f64 {
-        f64::from(travel(self.chip.height as f32))
+        f64::from(self.placed.chip.h + self.gap())
+    }
+
+    /// How far under the panel's top edge the chip rests.
+    fn gap(&self) -> f32 {
+        self.placed.chip.y - self.placed.top
     }
 
     fn set_content(&mut self, content: &Content<'_>) {
@@ -383,49 +388,74 @@ impl Chip {
         appearance::set_on(&self.holder, theme);
     }
 
-    /// Size the capsule to the words and the panel to the window, the capsule centred in it. `animated`:
-    /// the capsule's width follows the words over the swap's time.
-    fn lay_out(&mut self, animated: bool) {
+    /// Place the chip at `spot` and the panel, which is as wide as the window, over it. `animated`: the
+    /// capsule's width follows the words over the swap's time.
+    fn lay_out(&mut self, spot: Spot, animated: bool) {
         self.text.sizeToFit();
-        let parent = self.parent.frame();
-        let geometry = geometry(self.text.frame().size, parent.size.width - 2.0 * MARGIN);
-        self.chip = geometry.chip;
+        let words = self.text.frame().size;
+        let natural = ((FIXED + words.width.ceil()) as f32, HEIGHT as f32);
+        self.placed = place(spot, natural);
+        let Placed { top, chip, .. } = self.placed;
+        let geometry = geometry(words, f64::from(chip.w));
 
-        let height = geometry.chip.height + f64::from(REST_GAP) + SHADOW_ROOM;
+        let parent = self.parent.frame();
+        let height = f64::from(chip.h + self.gap()) + SHADOW_ROOM;
         let panel = NSRect::new(
-            NSPoint::new(parent.origin.x, parent.origin.y + parent.size.height - self.inset - height),
+            NSPoint::new(parent.origin.x, parent.origin.y + parent.size.height - f64::from(top) - height),
             NSSize::new(parent.size.width, height),
         );
         if self.panel.frame() != panel {
             self.panel.setFrame_display(panel, true);
         }
-        self.holder.setFrame(NSRect::new(NSPoint::ZERO, panel.size));
+        let whole = NSRect::new(NSPoint::ZERO, panel.size);
+        // The holder's layer is AppKit's own, and is being moved by an animation: its frame is set only when
+        // it has changed.
+        if self.holder.frame() != whole {
+            self.holder.setFrame(whole);
+        }
 
-        let at = NSRect::new(
-            NSPoint::new(((panel.size.width - geometry.chip.width) / 2.0).floor(), SHADOW_ROOM),
-            geometry.chip,
-        );
-        self.label.setFrame(NSRect::new(NSPoint::ZERO, geometry.chip));
+        let capsule = NSSize::new(f64::from(chip.w), f64::from(chip.h));
+        let at = NSRect::new(NSPoint::new(f64::from(chip.x), SHADOW_ROOM), capsule);
+        let inside = NSRect::new(NSPoint::ZERO, capsule);
         self.icon.setFrame(geometry.icon);
         self.text.setFrame(geometry.text);
-        self.backdrop.round(geometry.chip);
         if animated {
+            // The capsule and the label's frame move together, so the words are never ahead of the glass.
             NSAnimationContext::beginGrouping();
             NSAnimationContext::currentContext().setDuration(SWAP.as_secs_f64());
             self.backdrop.view().animator().setFrame(at);
+            if !matches!(self.backdrop, Backdrop::Glass(_)) {
+                self.label.animator().setFrame(inside);
+            }
             NSAnimationContext::endGrouping();
         } else {
             self.backdrop.view().setFrame(at);
+            self.label.setFrame(inside);
         }
     }
 }
 
 impl Drop for Chip {
     fn drop(&mut self) {
-        self.parent.removeChildWindow(&self.panel);
-        self.panel.orderOut(None);
-        self.panel.close();
+        if !self.taken_down {
+            take_down(&self.parent, &self.panel);
+        }
     }
+}
+
+/// Give `panel` to `parent` as a child, above it.
+#[allow(unsafe_code)]
+fn adopt(parent: &NSWindow, panel: &NSPanel) {
+    // SAFETY: both windows are live and on the main thread (the executor's).
+    unsafe { parent.addChildWindow_ordered(panel, NSWindowOrderingMode::Above) };
+}
+
+/// Take `panel` off `parent` and close it. AppKit orders a child out with its parent, but the chip doesn't
+/// rely on that: it goes with its window.
+fn take_down(parent: &NSWindow, panel: &NSPanel) {
+    parent.removeChildWindow(panel);
+    panel.orderOut(None);
+    panel.close();
 }
 
 /// Where the holder's layer sits when the chip is at rest and whole.
@@ -440,7 +470,6 @@ fn translation(y: f64) -> CGAffineTransform {
 }
 
 /// The drop: from `from` points above its place to it, on core's spring (mass 1).
-#[allow(unsafe_code)]
 fn drop_in(layer: &CALayer, from: f64) {
     let spring =
         CASpringAnimation::animationWithKeyPath(Some(&NSString::from_str("transform.translation.y")));
@@ -493,31 +522,29 @@ mod tests {
     }
 
     #[test]
-    fn the_capsule_is_as_wide_as_its_words_and_the_padding() {
-        let g = geometry(words(80.0), 800.0);
-        assert_eq!(g.chip, NSSize::new(PAD + ICON + GAP + 80.0 + PAD, HEIGHT));
+    fn the_words_get_what_the_capsule_has_beside_the_symbol() {
+        let g = geometry(words(80.0), FIXED + 80.0);
         assert_eq!(g.text.size.width, 80.0);
     }
 
     #[test]
     fn the_symbol_and_the_words_sit_in_the_middle_of_the_height() {
-        let g = geometry(words(80.0), 800.0);
+        let g = geometry(words(80.0), FIXED + 80.0);
         assert_eq!(g.icon.origin.y, ((HEIGHT - ICON) / 2.0).floor());
         assert_eq!(g.text.origin.y, ((HEIGHT - 16.0) / 2.0).floor());
         assert!(g.icon.origin.x + g.icon.size.width + GAP <= g.text.origin.x + 1e-9);
     }
 
     #[test]
-    fn words_wider_than_the_room_are_cut_not_the_window() {
+    fn words_wider_than_the_capsule_are_cut_and_the_symbol_stays() {
         let g = geometry(words(2000.0), 300.0);
-        assert!(g.chip.width <= 300.0 + 1.0, "{}", g.chip.width);
-        assert_eq!(g.text.size.width, 300.0 - (PAD + ICON + GAP + PAD));
+        assert_eq!(g.text.size.width, 300.0 - FIXED);
+        assert_eq!(g.icon.size.width, ICON);
     }
 
     #[test]
-    fn a_window_with_no_room_still_gets_a_chip() {
+    fn a_capsule_with_no_room_for_words_has_none() {
         let g = geometry(words(50.0), 0.0);
         assert_eq!(g.text.size.width, 0.0);
-        assert_eq!(g.chip.height, HEIGHT);
     }
 }

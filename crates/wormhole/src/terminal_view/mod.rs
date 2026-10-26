@@ -149,6 +149,8 @@ pub struct TerminalView {
     /// The terminal is shown in a window in front, as of the workspace's last tick: the state in
     /// which a program's clipboard read may be asked about at all.
     in_front: bool,
+    /// The window this terminal is in, for a notice about it (`notice::post_to`).
+    window: AnyWindowHandle,
     /// The bell rang in a terminal without an agent and nobody has looked since.
     bell_rang: bool,
     /// When a bell last counted as "needs input" (at most once a minute).
@@ -314,6 +316,7 @@ impl TerminalView {
             finished_command: None,
             bar: pane_bar::State::default(),
             in_front: false,
+            window: window.window_handle(),
             bell_rang: false,
             bell_counted: None,
             at_prompt: None,
@@ -398,6 +401,7 @@ impl TerminalView {
     /// window's focus and not the old one's, and the cursor is filled by it. The window's font zoom is the
     /// caller's to set.
     pub fn moved_to(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.window = window.window_handle();
         self.focus_watch = Self::watch_focus(&self.focus_handle, window, cx);
         self.rebind_find_bar(window, cx);
         self.report_focus(window, cx);
@@ -511,6 +515,19 @@ impl TerminalView {
         let Some(pty) = &self.pty else { return };
         let bytes = wormhole_term::input::paste(text, pty.mode());
         self.write_input(bytes);
+    }
+
+    /// The pane's area as the last frame drew it, in the window's space: zero until it has been drawn.
+    pub fn pane_bounds(&self) -> Bounds<Pixels> {
+        self.layout.get().area
+    }
+
+    /// Say `notice` in this terminal's window, about this terminal: the chip drops from its top edge.
+    pub(crate) fn say(&self, notice: impl Into<wormhole_core::view::notice::Notice>, cx: &mut Context<Self>) {
+        let this = cx.entity();
+        let anchor: crate::notice::Anchor =
+            std::rc::Rc::new(move |cx: &App| Some(this.read(cx).pane_bounds()));
+        crate::notice::post_to(self.window, notice, Some(anchor), cx);
     }
 
     /// The selected text, if anything is selected.

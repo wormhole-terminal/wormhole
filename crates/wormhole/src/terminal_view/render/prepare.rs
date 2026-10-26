@@ -106,6 +106,7 @@ impl Prepare {
             (f32::from(viewport.height) - f32::from(bounds.size.height)).max(0.0),
         );
         self.layout.set(Layout {
+            area,
             origin: bounds.origin,
             cell: size(cell_width, line_height),
             cols,

@@ -1,5 +1,5 @@
-//! The notice chip's panel: a small capsule of the system's own glass that drops from under a window's
-//! title row to say "Copied 3 lines". GPUI draws only inside its window and has no system material, so the
+//! The notice chip's panel: a small capsule of the system's own glass that drops from the top edge of a
+//! terminal to say "Copied 3 lines". GPUI draws only inside its window and has no system material, so the
 //! chip is a window of its own, a child of the app window's (it moves, minimises and enters full screen with
 //! it), that ignores the mouse and never takes the keys. Core Animation plays the drop, so nothing is drawn
 //! per frame.

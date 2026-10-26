@@ -98,6 +98,7 @@ mod motion_tests;
 mod notes_tab_tests;
 #[cfg(test)]
 mod notice_tests;
+mod notices;
 #[cfg(test)]
 mod notification_tests;
 mod onboarding_host;
@@ -444,6 +445,7 @@ impl Workspace {
         // The list draws itself (a hover, a rename, a menu); the window around it hears of what it draws.
         self::regions::Regions::watch_sidebar(&mut this, cx);
         this.prepare_grow(window, cx);
+        this.tell_notices(window, cx);
         this
     }
 

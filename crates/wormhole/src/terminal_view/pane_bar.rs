@@ -79,9 +79,10 @@ impl TerminalView {
         if let Some(replaced) = replaced {
             self.app_selection.copied(text, replaced);
         }
-        // The chip says it for the terminal in front of the person, and then the bar doesn't: never both.
-        if self.in_front && crate::notice::enabled(cx) {
-            crate::notice::post_front(copied, cx);
+        // The chip says it for the terminal the person is typing in (its window active, it focused), and then
+        // the bar doesn't: never both. Any other terminal's write is the bar's, as ever.
+        if self.focus_reported && crate::notice::enabled(&self.profile, cx) {
+            self.say(copied, cx);
             return;
         }
         let what = if chars == 1 { "1 character".to_string() } else { format!("{chars} characters") };
@@ -204,11 +205,12 @@ impl TerminalView {
         }
     }
 
-    /// A program writes `text` to the clipboard (OSC 52), in a terminal that is `in_front` or not.
-    pub(crate) fn store_clipboard_for_test(&mut self, text: &str, in_front: bool, cx: &mut Context<Self>) {
+    /// A program writes `text` to the clipboard (OSC 52), in a terminal that is `focused` (its window active,
+    /// the terminal focused) or not.
+    pub(crate) fn store_clipboard_for_test(&mut self, text: &str, focused: bool, cx: &mut Context<Self>) {
         use wormhole_term::PtyEvent;
 
-        self.set_in_front(in_front);
+        self.focus_reported = focused;
         self.event_for_test(PtyEvent::ClipboardStore(text.to_string()), cx);
     }
 

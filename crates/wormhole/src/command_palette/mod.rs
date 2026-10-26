@@ -431,7 +431,7 @@ impl CommandPalette {
             }
             // ⌘C on a setting copies its config key.
             "c" if m.platform && !m.shift && !m.alt && !m.control => match self.selected_item() {
-                Some(Item::Setting(id)) => self.copy_key(id, cx),
+                Some(Item::Setting(id)) => self.copy_key(id, window, cx),
                 _ => return false,
             },
             // In the terminals: ⌘⌫ closes the selected one.
@@ -448,11 +448,11 @@ impl CommandPalette {
         let _ = self.workspace.update(cx, |ws, cx| ws.close_overlay(window, cx));
     }
 
-    fn copy_key(&self, id: &'static str, cx: &mut Context<Self>) {
+    fn copy_key(&self, id: &'static str, window: &Window, cx: &mut Context<Self>) {
         let Some((_, _, entry)) = wormhole_core::config::settings_index::entry(id) else { return };
         if let Some(key) = entry.keys.first() {
             cx.write_to_clipboard(ClipboardItem::new_string((*key).to_string()));
-            crate::notice::post_front(wormhole_core::view::notice::Copied::SettingKey, cx);
+            crate::notice::post(window, wormhole_core::view::notice::Copied::SettingKey, None, cx);
         }
     }
 

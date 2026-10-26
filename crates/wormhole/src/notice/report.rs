@@ -2,7 +2,7 @@
 //! notice posted by hand.
 
 use gpui_kit::*;
-use wormhole_core::view::notice::Phase;
+use wormhole_core::view::notice::{Phase, Spot};
 
 use super::chips::Chips;
 #[cfg(feature = "devctl")]
@@ -14,6 +14,8 @@ pub(crate) struct Report {
     pub(crate) phase: Phase,
     /// What it says now, or said last.
     pub(crate) words: String,
+    /// Where the chip was last put: the terminal it is about and the window.
+    pub(crate) spot: Option<Spot>,
     /// The panel, while there is one.
     #[cfg(feature = "devctl")]
     pub(crate) panel: Option<Info>,
@@ -22,7 +24,7 @@ pub(crate) struct Report {
 /// Say `words` in `window` as a notice of its own: the same words within two seconds are dropped, as any
 /// message is.
 #[cfg(feature = "devctl")]
-pub(crate) fn test_notice(window: &mut Window, words: &str, cx: &mut App) {
+pub(crate) fn test_notice(window: &Window, words: &str, cx: &mut App) {
     use std::hash::{DefaultHasher, Hash as _, Hasher as _};
 
     use wormhole_core::view::notice::Notice;
@@ -42,6 +44,7 @@ pub(crate) fn notices(cx: &App) -> Vec<Report> {
             window: *window,
             phase: entry.rules.phase(),
             words: entry.words.clone(),
+            spot: entry.spot,
             #[cfg(feature = "devctl")]
             panel: entry.chip.as_ref().and_then(|chip| chip.info()),
         })

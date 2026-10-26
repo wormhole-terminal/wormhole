@@ -14,15 +14,12 @@ use crate::platform::notice::Material;
 /// `notice <text>`: put a notice that says `<text>` in this window, as a copy would. Does nothing with the
 /// Notices flag off (`set feature_flags={"notices":true}`).
 pub(super) fn notice(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    if !crate::notice::enabled(ctx.cx) {
-        return Ok("notices are off (feature flag)\n".to_string());
-    }
     crate::notice::test_notice(ctx.window, arg.trim(), ctx.cx);
     Ok(String::new())
 }
 
 /// `notices`: each window's chip, a line each: its number, the phase (`Hidden`, `Showing`, `Leaving`), the
-/// words, and the panel if there is one: the chip's frame at rest in the window's points (x y w h), its
+/// words, the terminal it is about (its pane's x y w h, and the window's size) and the panel if there is one: the chip's frame at rest in the window's points (x y w h), its
 /// material, its window number and the app window's.
 pub(super) fn notices(ctx: &mut Ctx, _: &str) -> Result<String> {
     let windows: Vec<WindowId> = app(ctx.cx).windows.iter().map(|w| w.handle.window_id()).collect();
@@ -30,6 +27,13 @@ pub(super) fn notices(ctx: &mut Ctx, _: &str) -> Result<String> {
     for report in crate::notice::notices(ctx.cx) {
         let number = windows.iter().position(|id| *id == report.window).map_or(0, |ix| ix + 1);
         write!(out, "window {number} {:?} {:?}", report.phase, report.words)?;
+        if let Some(spot) = report.spot {
+            let r = spot.anchor;
+            write!(out, " terminal {} {} {} {} in {}x{}", r.x, r.y, r.w, r.h, spot.window.0, spot.window.1)?;
+            if spot.full_screen {
+                out.push_str(" full-screen");
+            }
+        }
         if let Some(panel) = report.panel {
             let [x, y, w, h] = panel.frame;
             write!(

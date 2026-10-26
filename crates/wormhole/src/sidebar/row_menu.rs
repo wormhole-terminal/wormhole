@@ -197,10 +197,10 @@ fn row_menu(facts: RowFacts, this: &WeakEntity<Sidebar>) -> Menu {
                 }
             }
         }))
-        .item(Item::new("Copy path").enabled(cwd.is_some()).on_select(move |_, cx| {
+        .item(Item::new("Copy path").enabled(cwd.is_some()).on_select(move |window, cx| {
             if let Some(cwd) = &cwd {
                 cx.write_to_clipboard(ClipboardItem::new_string(cwd.to_string_lossy().into_owned()));
-                crate::notice::post_front(Copied::Path, cx);
+                crate::notice::post(window, Copied::Path, None, cx);
             }
         }))
 }

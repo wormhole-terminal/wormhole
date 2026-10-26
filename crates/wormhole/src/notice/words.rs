@@ -7,9 +7,8 @@ use wormhole_text::{keys, text, whole};
 pub(super) fn of(notice: Notice) -> Option<String> {
     let Notice::Copied(copied) = notice else { return None };
     Some(match copied {
-        // A line of text is told by its characters ("Copied 12 characters"), more by their lines.
-        Copied::Text { lines, .. } if lines > 1 => keys::notice_copied_lines(whole(lines)),
-        Copied::Text { chars, .. } => keys::notice_copied_characters(whole(chars)),
+        Copied::Lines(lines) => keys::notice_copied_lines(whole(lines)),
+        Copied::Characters(chars) => keys::notice_copied_characters(whole(chars)),
         Copied::Output { lines } => keys::notice_copied_output(whole(lines)),
         Copied::Command => text(keys::NOTICE_COPIED_COMMAND).to_string(),
         Copied::Path => text(keys::NOTICE_COPIED_PATH).to_string(),
@@ -33,9 +32,9 @@ mod tests {
     #[test]
     fn what_was_copied_is_told_with_how_much() {
         with_language(Language::ENGLISH, || {
-            assert_eq!(said(Copied::Text { lines: 3, chars: 40 }), "Copied 3 lines");
-            assert_eq!(said(Copied::Text { lines: 1, chars: 12 }), "Copied 12 characters");
-            assert_eq!(said(Copied::Text { lines: 1, chars: 1 }), "Copied 1 character");
+            assert_eq!(said(Copied::Lines(3)), "Copied 3 lines");
+            assert_eq!(said(Copied::Characters(12)), "Copied 12 characters");
+            assert_eq!(said(Copied::Characters(1)), "Copied 1 character");
             assert_eq!(said(Copied::Output { lines: 1 }), "Copied output, 1 line");
             assert_eq!(said(Copied::Output { lines: 8 }), "Copied output, 8 lines");
             assert_eq!(said(Copied::Command), "Copied command");

@@ -11,7 +11,9 @@ use std::rc::Rc;
 use gpui_kit::{App, Hsla, Window};
 use wormhole_core::onboarding::intro::WindowMotion;
 use wormhole_core::theme::tokens::Appearance;
+use wormhole_core::view::motion::notice::Entrance;
 use wormhole_core::view::motion::window_animation::Behaviour;
+use wormhole_core::view::notice::Spot;
 use wormhole_term::scrollbar::ScrollerStyle;
 
 use super::font_face::Seg;
@@ -144,11 +146,12 @@ pub(super) fn signatures_match() {
         intro::dock_frames: fn(&Window, wormhole_core::onboarding::intro::voyage::Landing, [[f32; 4]; 3], &Path, &str) -> anyhow::Result<String>;
     }
     same_method! {
-        notice::Chip::new: fn(&Window) -> Option<S>;
-        notice::Chip::show: fn(&mut S, &super::notice::Content<'_>, f32, wormhole_core::view::motion::notice::Entrance);
-        notice::Chip::swap: fn(&mut S, &super::notice::Content<'_>);
-        notice::Chip::hide: fn(&mut S, wormhole_core::view::motion::notice::Entrance);
-        notice::Chip::place: fn(&mut S, f32);
+        notice::Chip::new: fn(&Window, bool) -> Option<S>;
+        notice::Chip::show: fn(&mut S, &super::notice::Content<'_>, Spot, Entrance, &mut App);
+        notice::Chip::swap: fn(&mut S, &super::notice::Content<'_>, Spot);
+        notice::Chip::hide: fn(&mut S, Entrance);
+        notice::Chip::place: fn(&mut S, Spot);
+        notice::Chip::close: fn(S, &mut App);
         intro::Overlay::new: fn(&Window, Setup, LogoSpot) -> anyhow::Result<Option<S>>;
         intro::Overlay::motion_at: fn(&S, f32) -> WindowMotion;
         intro::Overlay::frame: fn(&S, &Frame);

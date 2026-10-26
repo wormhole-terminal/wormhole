@@ -175,7 +175,7 @@ impl TerminalView {
                 if let Some(text) = self.selection_text() {
                     let copied = Copied::text(&text);
                     cx.write_to_clipboard(ClipboardItem::new_string(text));
-                    crate::notice::post_front(copied, cx);
+                    self.say(copied, cx);
                 }
             }
             TerminalCommand::Paste => {
@@ -573,7 +573,7 @@ mod tests {
             rows: 24,
             gutter: 12.0,
             frame: (0.0, 0.0),
-            spare: (0.0, 0.0),
+            ..Layout::default()
         }
     }
 

@@ -4,7 +4,7 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use gpui_kit::{Pixels, Point, Size};
+use gpui_kit::{Bounds, Pixels, Point, Size};
 
 /// The size of a terminal's grid as of the last frame it painted, which a terminal sets while
 /// painting (a change of it is told by `TerminalEvent::Resized`, which the window listens to).
@@ -32,6 +32,9 @@ impl GridProbe {
 /// Geometry of the last painted frame, shared with mouse handlers.
 #[derive(Clone, Copy, Default)]
 pub(super) struct Layout {
+    /// The pane's area the grid is anchored in, in the window's space: what a notice about this terminal
+    /// is centred on and drops from.
+    pub(super) area: Bounds<Pixels>,
     pub(super) origin: Point<Pixels>,
     pub(super) cell: Size<Pixels>,
     pub(super) cols: usize,

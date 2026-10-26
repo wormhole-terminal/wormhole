@@ -102,9 +102,9 @@ pub(super) fn render_git_problem(
                 .pb_2()
                 .child(button("git-retry", "Retry").on_click(move |_, _, cx| retry(cx)))
                 .children(copy.map(|message| {
-                    button("git-copy-error", "Copy error").on_click(move |_, _, cx| {
+                    button("git-copy-error", "Copy error").on_click(move |_, window, cx| {
                         cx.write_to_clipboard(ClipboardItem::new_string(message.clone()));
-                        crate::notice::post_front(Copied::Error, cx);
+                        crate::notice::post(window, Copied::Error, None, cx);
                     })
                 })),
         )

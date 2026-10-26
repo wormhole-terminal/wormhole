@@ -1,16 +1,21 @@
 //! The notice chip in a real window (GPUI's test platform; see `test_harness`): a copy says so with the
-//! Notices flag on and says nothing with it off, and a program's clipboard write is said by the chip or by
-//! the pane bar, never both. The panel itself is native and not made in a test, so what is read is the
-//! chip's rules (`notice::notices`), which run all the same.
+//! Notices flag on and says nothing with it off, a program's clipboard write is said by the chip or by the
+//! pane bar, never both, each window has its chip, which comes out of the terminal it is about and goes with
+//! its window. The panel itself is native and not made in a test, so what is read is the chip's rules and
+//! where it was put (`notice::notices`), which run all the same, on GPUI's clock.
+
+use std::time::Duration;
 
 use gpui_kit::TestAppContext;
 use wormhole_core::config::features::FeatureFlag;
-use wormhole_core::view::notice::Phase;
+use wormhole_core::view::motion::notice::{LIFE, UP};
+use wormhole_core::view::notice::{Copied, Phase};
+use wormhole_core::view::panes::Rect;
 use wormhole_text::{Language, with_language};
 
 use super::reported_tests::terminal;
-use super::test_harness::{isolate_in, start};
-use crate::app_state::OpenWindow;
+use super::test_harness::{draw, drive, isolate_in, read, start, with_window};
+use crate::app_state::{OpenWindow, app};
 use crate::settings::update_settings;
 
 fn isolate(name: &str) -> bool {
@@ -28,9 +33,9 @@ fn chips(cx: &mut TestAppContext) -> Vec<(Phase, String)> {
     cx.update(|cx| crate::notice::notices(cx).into_iter().map(|r| (r.phase, r.words)).collect())
 }
 
-fn store(cx: &mut TestAppContext, window: &OpenWindow, text: &str, in_front: bool) {
+fn store(cx: &mut TestAppContext, window: &OpenWindow, text: &str, focused: bool) {
     let terminal = terminal(cx, window, 0);
-    cx.update(|cx| terminal.update(cx, |t, cx| t.store_clipboard_for_test(text, in_front, cx)));
+    cx.update(|cx| terminal.update(cx, |t, cx| t.store_clipboard_for_test(text, focused, cx)));
     cx.run_until_parked();
 }
 
@@ -129,5 +134,109 @@ fn the_same_copy_again_at_once_is_not_said_twice_and_a_different_one_replaces_it
         assert_eq!(chips(cx), [(Phase::Showing, "Copied 3 characters".to_string())]);
         store(cx, &window, "abcd\nef", true);
         assert_eq!(chips(cx), [(Phase::Showing, "Copied 2 lines".to_string())], "one chip, new words");
+    });
+}
+
+/// The terminal `ix` of `window`, as the last frame drew it.
+fn pane(cx: &mut TestAppContext, window: &OpenWindow, ix: usize) -> Rect {
+    let terminal = terminal(cx, window, ix);
+    let bounds = cx.update(|cx| terminal.read(cx).pane_bounds());
+    Rect::new(
+        f32::from(bounds.origin.x),
+        f32::from(bounds.origin.y),
+        f32::from(bounds.size.width),
+        f32::from(bounds.size.height),
+    )
+}
+
+fn spot_of(cx: &mut TestAppContext) -> Rect {
+    cx.update(|cx| {
+        crate::notice::notices(cx).first().and_then(|r| r.spot).expect("a chip with a place").anchor
+    })
+}
+
+#[gpui_kit::test]
+fn the_chip_is_about_the_terminal_that_copied_and_about_the_selected_one_otherwise(cx: &mut TestAppContext) {
+    if isolate("the_chip_is_about_the_terminal_that_copied_and_about_the_selected_one_otherwise") {
+        return;
+    }
+    with_window_size(cx, |cx, window| {
+        let expected = pane(cx, window, 0);
+        assert!(expected.w > 0.0 && expected.h > 0.0, "the first terminal was drawn");
+        store(cx, window, "from the terminal", true);
+        assert_eq!(spot_of(cx), expected, "a terminal's own write: its pane");
+        // A notice of the window's own (a path from a menu): the selected terminal's pane.
+        cx.executor().advance_clock(LIFE + UP + Duration::from_millis(50));
+        cx.run_until_parked();
+        with_window(cx, window, |window, cx| crate::notice::post(window, Copied::Path, None, cx));
+        cx.run_until_parked();
+        assert_eq!(spot_of(cx), pane(cx, window, 0));
+    });
+}
+
+/// A window of two terminals, drawn.
+fn with_window_size(cx: &mut TestAppContext, body: impl FnOnce(&mut TestAppContext, &OpenWindow)) {
+    with_language(Language::ENGLISH, || {
+        let window = start(cx, 1);
+        set_notices(cx, true);
+        draw(cx, &window);
+        draw(cx, &window);
+        body(cx, &window);
+    });
+}
+
+#[gpui_kit::test]
+fn a_chip_goes_up_when_its_life_is_over_and_is_gone_when_it_is_out_of_sight(cx: &mut TestAppContext) {
+    if isolate("a_chip_goes_up_when_its_life_is_over_and_is_gone_when_it_is_out_of_sight") {
+        return;
+    }
+    with_window_size(cx, |cx, window| {
+        store(cx, window, "twelve chars", true);
+        assert_eq!(chips(cx)[0].0, Phase::Showing);
+        cx.executor().advance_clock(LIFE - Duration::from_millis(10));
+        cx.run_until_parked();
+        assert_eq!(chips(cx)[0].0, Phase::Showing, "not yet");
+        cx.executor().advance_clock(Duration::from_millis(20));
+        cx.run_until_parked();
+        assert_eq!(chips(cx)[0].0, Phase::Leaving);
+        cx.executor().advance_clock(UP + Duration::from_millis(10));
+        cx.run_until_parked();
+        assert_eq!(chips(cx)[0].0, Phase::Hidden);
+        // And the same words again, now that the two seconds have passed, are said again.
+        store(cx, window, "twelve chars", true);
+        assert_eq!(chips(cx)[0].0, Phase::Showing);
+    });
+}
+
+#[gpui_kit::test]
+fn each_window_has_its_own_chip_and_a_closed_windows_goes_with_it(cx: &mut TestAppContext) {
+    if isolate("each_window_has_its_own_chip_and_a_closed_windows_goes_with_it") {
+        return;
+    }
+    with_language(Language::ENGLISH, || {
+        let first = start(cx, 2);
+        set_notices(cx, true);
+        drive(cx, &first, |ws, window, cx| ws.tear_off_at(2, 600.0, 300.0, window, cx));
+        cx.run_until_parked();
+        let windows = cx.update(|cx| app(cx).windows.clone());
+        assert_eq!(windows.len(), 2);
+        let second = windows.into_iter().find(|w| w.id != first.id).expect("a second window");
+        draw(cx, &first);
+        draw(cx, &second);
+        store(cx, &first, "abc", true);
+        let terminal = read(cx, &second, |ws| ws.sessions[0].terminal().clone());
+        cx.update(|cx| terminal.update(cx, |t, cx| t.store_clipboard_for_test("abcdef\nx", true, cx)));
+        cx.run_until_parked();
+        let mut said: Vec<String> = chips(cx).into_iter().map(|(_, words)| words).collect();
+        said.sort();
+        assert_eq!(said, ["Copied 2 lines", "Copied 3 characters"], "one each, in its own window");
+
+        cx.update(|cx| second.handle.update(cx, |_, window, _| window.remove_window()).ok());
+        cx.run_until_parked();
+        assert_eq!(
+            chips(cx),
+            [(Phase::Showing, "Copied 3 characters".to_string())],
+            "the closed one's is gone"
+        );
     });
 }

@@ -182,12 +182,12 @@ impl TerminalView {
                 let output = pty.lines_text(first, last);
                 let copied = Copied::output(&output);
                 cx.write_to_clipboard(ClipboardItem::new_string(output));
-                crate::notice::post_front(copied, cx);
+                self.say(copied, cx);
             }
             BlockAction::CopyCommand => {
                 if !block.command.is_empty() {
                     cx.write_to_clipboard(ClipboardItem::new_string(block.command.clone()));
-                    crate::notice::post_front(Copied::Command, cx);
+                    self.say(Copied::Command, cx);
                 }
             }
             BlockAction::PutAtPrompt => {
@@ -368,7 +368,7 @@ mod tests {
             rows: 24,
             gutter: 12.0,
             frame: (0.0, 0.0),
-            spare: (0.0, 0.0),
+            ..Layout::default()
         };
         assert_eq!(block_row(&layout, point(px(50.0), px(42.0))), Some(0));
         assert_eq!(block_row(&layout, point(px(50.0), px(42.0 + 18.0 * 3.0 + 1.0))), Some(3));

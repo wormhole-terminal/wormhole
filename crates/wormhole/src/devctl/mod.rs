@@ -273,10 +273,12 @@
 //!                   at that point of the primary screen (as `pointer` + a drag's release): a window of its
 //!                   own opens there, or the Wormhole window under it takes the terminal (its list gets
 //!                   it last); nothing without the feature, or for the last terminal of a window
-//!   notice <text>   put a notice (the chip that drops from the title row) in this window that says <text>
+//!   notice <text>   put a notice (the chip that drops from the top edge of a terminal) in this window, about its
+//!                   selected terminal, that says <text>
 //!                   (the Notices feature flag must be on: `set feature_flags={"notices":true}`)
-//!   notices         each window's chip, a line each: its number, phase (Hidden, Showing, Leaving), words and,
-//!                   while the native panel is up, `frame x y w h` (the chip at rest, in the window's points),
+//!   notices         each window's chip, a line each: its number, phase (Hidden, Showing, Leaving), words, the
+//!                   `terminal x y w h` it is about (its pane, in the window's points) and, while the
+//!                   native panel is up, `frame x y w h` (the chip at rest, in the window's points),
 //!                   `material` (glass, frosted or solid), `panel <n>`, the panel's window number, and
 //!                   `window <n>`, the app window's: the chip is no part of a `shot`, so capture either
 //!                   with `screencapture -l <n> -o file.png`
