@@ -103,6 +103,41 @@ const GLYPHS: [(&str, &[u8]); 5] = [
     (glyph::TERMINAL, include_bytes!("../assets/glyphs/terminal.svg")),
 ];
 
+/// Pieces of Lucide icons (ISC, the exact path data), each drawn on the icon's own 24-unit grid so
+/// that a piece lies over the icon where it belongs: the part of an icon that moves, fills or
+/// draws itself on its own (`style::icon_motion`).
+pub mod part {
+    pub const COPY_SHEET: &str = "wormhole/glyphs/copy-sheet.svg";
+    pub const FRAME_FILL: &str = "wormhole/glyphs/frame-fill.svg";
+    pub const DOT: &str = "wormhole/glyphs/dot.svg";
+    pub const RING: &str = "wormhole/glyphs/ring.svg";
+    pub const COMMIT_LEFT: &str = "wormhole/glyphs/commit-left.svg";
+    pub const COMMIT_RIGHT: &str = "wormhole/glyphs/commit-right.svg";
+    pub const PAGE: &str = "wormhole/glyphs/page.svg";
+    pub const NOTE_LINE: &str = "wormhole/glyphs/note-line.svg";
+    pub const NOTE_LINE_SHORT: &str = "wormhole/glyphs/note-line-short.svg";
+    pub const GAUGE_ARC: &str = "wormhole/glyphs/gauge-arc.svg";
+    /// Drawn in a box whose centre is the needle's pivot (its view box starts at y 2), so turning
+    /// the box turns the needle about the pivot.
+    pub const GAUGE_NEEDLE: &str = "wormhole/glyphs/gauge-needle.svg";
+    pub const FOLDER_FILL: &str = "wormhole/glyphs/folder-fill.svg";
+}
+
+const PARTS: [(&str, &[u8]); 12] = [
+    (part::COPY_SHEET, include_bytes!("../assets/glyphs/copy-sheet.svg")),
+    (part::FRAME_FILL, include_bytes!("../assets/glyphs/frame-fill.svg")),
+    (part::DOT, include_bytes!("../assets/glyphs/dot.svg")),
+    (part::RING, include_bytes!("../assets/glyphs/ring.svg")),
+    (part::COMMIT_LEFT, include_bytes!("../assets/glyphs/commit-left.svg")),
+    (part::COMMIT_RIGHT, include_bytes!("../assets/glyphs/commit-right.svg")),
+    (part::PAGE, include_bytes!("../assets/glyphs/page.svg")),
+    (part::NOTE_LINE, include_bytes!("../assets/glyphs/note-line.svg")),
+    (part::NOTE_LINE_SHORT, include_bytes!("../assets/glyphs/note-line-short.svg")),
+    (part::GAUGE_ARC, include_bytes!("../assets/glyphs/gauge-arc.svg")),
+    (part::GAUGE_NEEDLE, include_bytes!("../assets/glyphs/gauge-needle.svg")),
+    (part::FOLDER_FILL, include_bytes!("../assets/glyphs/folder-fill.svg")),
+];
+
 /// GPUI Kit's assets plus the bundled icon theme's SVGs and the agent logos.
 pub struct Assets;
 
@@ -134,7 +169,7 @@ impl AssetSource for Assets {
         if path.starts_with(wormhole_core::agents::ICON_PREFIX) {
             return Ok(wormhole_core::agents::icon_bytes(path).map(Cow::Borrowed));
         }
-        if let Some((_, bytes)) = GLYPHS.iter().find(|(glyph, _)| *glyph == path) {
+        if let Some((_, bytes)) = GLYPHS.iter().chain(&PARTS).find(|(glyph, _)| *glyph == path) {
             return Ok(Some(Cow::Borrowed(bytes)));
         }
         if let Some(bytes) = PanelIcons.load(path)? {
@@ -147,7 +182,11 @@ impl AssetSource for Assets {
         let mut paths = gpui_kit::assets::Assets.list(path)?;
         paths.extend(PanelIcons.list(path)?);
         paths.extend(
-            GLYPHS.iter().filter(|(glyph, _)| glyph.starts_with(path)).map(|(glyph, _)| (*glyph).into()),
+            GLYPHS
+                .iter()
+                .chain(&PARTS)
+                .filter(|(glyph, _)| glyph.starts_with(path))
+                .map(|(glyph, _)| (*glyph).into()),
         );
         Ok(paths)
     }
@@ -235,7 +274,7 @@ mod tests {
 
     use gpui_kit::AssetSource as _;
 
-    use super::{Assets, GLYPHS, NONE, fresh, glyph, is_bundled};
+    use super::{Assets, GLYPHS, NONE, PARTS, fresh, glyph, is_bundled};
 
     #[test]
     fn a_listing_is_read_once_within_its_lifetime_and_again_after_it() {
@@ -308,6 +347,15 @@ mod tests {
             let bytes = Assets.load(path).expect("loads").expect("is there");
             assert!(bytes.starts_with(b"<svg"), "{path}");
         }
-        assert_eq!(Assets.list("wormhole/glyphs/").expect("lists").len(), GLYPHS.len());
+        assert_eq!(Assets.list("wormhole/glyphs/").expect("lists").len(), GLYPHS.len() + PARTS.len());
+    }
+
+    #[test]
+    fn every_piece_of_an_icon_is_served_and_is_a_drawing_on_the_24_unit_grid() {
+        for (path, _) in PARTS {
+            let bytes = Assets.load(path).expect("loads").expect("is there");
+            let text = std::str::from_utf8(&bytes).expect("text");
+            assert!(text.starts_with("<svg") && text.contains(r#"width="24" height="24""#), "{path}");
+        }
     }
 }

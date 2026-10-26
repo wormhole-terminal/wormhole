@@ -42,7 +42,12 @@ impl StripFill {
 
     /// The fill under a `glyph`-point icon, in `color`, and in `hover`'s color while the pointer is
     /// over its group.
-    pub(super) fn render(self, glyph: f32, color: Hsla, hover: Option<(SharedString, Hsla)>) -> AnyElement {
+    pub(in crate::style) fn render(
+        self,
+        glyph: f32,
+        color: Hsla,
+        hover: Option<(SharedString, Hsla)>,
+    ) -> AnyElement {
         let full = glyph * STRIP_WIDTH;
         let inset = px(glyph * STRIP_INSET);
         let corner = px(glyph * STRIP_CORNER);

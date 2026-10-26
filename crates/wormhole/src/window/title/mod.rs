@@ -45,7 +45,7 @@ use crate::open_in::{self, OpenIn};
 use crate::platform::{self, Anchor, Icon, Item, Menu};
 use crate::settings::{UiColors, store_in, ui_in};
 use crate::style::TitleDrag as _;
-use crate::style::{self, Edges};
+use crate::style::{self, Edges, MenuMark};
 use crate::terminal_view::Status;
 use crate::theme_bridge::token;
 use crate::window::Workspace;
@@ -282,8 +282,13 @@ impl Workspace {
         let menu = |with_splits: bool, cx: &mut Context<Self>| {
             let menu = self.actions_menu(plan, folder.as_deref(), with_splits, cx);
             let anchor = anchor.clone();
-            move |window: &mut Window, cx: &mut App| {
-                platform::show_menu(menu.clone(), anchor.below(), window, cx)
+            // The chevron's mark follows the menu while it is open; the folded `⋯` has none.
+            move |mark: Option<&MenuMark>, window: &mut Window, cx: &mut App| {
+                let menu = match mark {
+                    Some(mark) => mark.track(menu.clone(), cx),
+                    None => menu.clone(),
+                };
+                platform::show_menu(menu, anchor.below(), window, cx)
             }
         };
         if plan.fit.folded {
@@ -309,21 +314,41 @@ impl Workspace {
                     .child(
                         style::icon_button("title-more-menu", ui, IconName::Ellipsis, tip)
                             .in_title_row()
-                            .on_click(move |_, window, cx| open_menu(window, cx)),
+                            .on_click(move |_, window, cx| open_menu(None, window, cx)),
                     )
                     .into_any_element(),
             ]);
         }
         if part == TitlePart::Splits {
-            let split = |id: &'static str, icon: IconName, text: &str, action: ActionId, axis: Axis| {
+            let split = |id: &'static str,
+                         icon: IconName,
+                         half: style::Half,
+                         text: &str,
+                         action: ActionId,
+                         axis: Axis| {
                 style::icon_button(id, ui, icon, keymap::with_key(text, action))
                     .in_title_row()
+                    .motion(style::IconMotion::NewPane(half))
                     .on_click(cx.listener(move |this, _, window, cx| this.split_pane(axis, window, cx)))
                     .into_any_element()
             };
             return Some(vec![
-                split("split-right", IconName::Columns2, "Split right", ActionId::SplitRight, Axis::Row),
-                split("split-down", IconName::Rows2, "Split down", ActionId::SplitDown, Axis::Column),
+                split(
+                    "split-right",
+                    IconName::Columns2,
+                    style::Half::Right,
+                    "Split right",
+                    ActionId::SplitRight,
+                    Axis::Row,
+                ),
+                split(
+                    "split-down",
+                    IconName::Rows2,
+                    style::Half::Below,
+                    "Split down",
+                    ActionId::SplitDown,
+                    Axis::Column,
+                ),
             ]);
         }
         let open_menu = menu(false, cx);
@@ -350,7 +375,7 @@ impl Workspace {
                 .child(
                     style::icon_button("open-in-menu", ui, IconName::ChevronDown, "Open in another app")
                         .narrow(CHEVRON_W)
-                        .on_click(move |_, window, cx| open_menu(window, cx)),
+                        .menu_chevron(move |mark, window, cx| open_menu(Some(mark), window, cx)),
                 )
                 .into_any_element(),
         ])

@@ -34,8 +34,13 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   them too: drag a part to move it, and the parts above the flexible space sit at the row's left, the
   others at its right (`title_row`). The four switches for the row's extras became this list; what you
   turned off stays hidden.
-- The sidebar and right panel buttons show whether their column is open: the column's strip in the
-  icon is filled while it is, drains as the column slides away and fills back in as it returns.
+- Icon buttons answer with their own drawing. The sidebar and right panel buttons show whether
+  their column is open: the column's strip in the icon is filled while it is, drains as the column
+  slides away and fills back in as it returns. The + turns, Refresh and Reset spin their arrows,
+  Copy fills and turns into a check, the split buttons fill the pane they make, the pane zoom's
+  corners swap, and the chevron beside Open in… points up while its menu is open. A right panel
+  tab's icon plays once as the tab opens. Settings → Appearance → Animate icons turns all of it
+  off, and Reduce Motion does too.
 
 ### Fixed
 

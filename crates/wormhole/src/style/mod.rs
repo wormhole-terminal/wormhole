@@ -102,7 +102,7 @@ pub use find_bar::*;
 pub use folder_colors::*;
 pub use groups::*;
 pub(crate) use home::home_dir;
-pub use icon_motion::{StripFill, StripSide};
+pub use icon_motion::{Half, IconMotion, MenuMark, StripFill, StripSide};
 pub use labels::*;
 pub(crate) use lights::{ASSUMED_LIGHTS_SPAN, LIGHTS_X, lights_end, traffic_light_position};
 pub use messages::*;

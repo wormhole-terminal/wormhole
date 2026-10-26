@@ -3,11 +3,12 @@
 
 use gpui_kit::assets::IconName;
 use gpui_kit::base::{Transition, transition};
-use gpui_kit::component::{Icon, Sizable, Size};
+use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use super::buttons::tooltip_delay;
+use super::icon_motion::TabGlyph;
 use super::labels::{count_badge, selected_count_badge};
 use super::motion::{EASE_IN_OUT, MOTION_BASE};
 use super::scale::{CONTROL_H, CONTROL_H_SM, Edges, KEYCAP_H, KEYCAP_MIN_W, ROW_H, SWATCH, TextRole};
@@ -75,7 +76,8 @@ pub const ICON_TAB: f32 = CONTROL_H;
 /// the icon in `text.primary`, `state.active` while pressed. `count` puts a
 /// [`count_badge`] beside the icon (the tab widens for it). A plain action in the
 /// same bar (stash prompt) is an `icon_tab` that is never active, so every button in
-/// the bar has one size. The tooltip names the tab, since nothing else does.
+/// the bar has one size. The tooltip names the tab, since nothing else does. A tab's icon plays
+/// once as the tab becomes the active one (`style::icon_motion`).
 #[track_caller]
 pub fn icon_tab(
     id: impl Into<ElementId>,
@@ -85,7 +87,9 @@ pub fn icon_tab(
     active: bool,
     count: Option<usize>,
 ) -> Stateful<Div> {
+    let id: ElementId = id.into();
     let tooltip: SharedString = tooltip.into();
+    let glyph = TabGlyph::new(id.clone(), icon, active, ui.icon_motion);
     tooltip_delay(
         div()
             .id(id)
@@ -107,8 +111,8 @@ pub fn icon_tab(
                 gpui_kit::component::tooltip::Tooltip::new(tooltip.clone()).build(window, cx)
             }),
     )
-    // The icon takes the tab's text color.
-    .child(Icon::new(icon).with_size(Size::Medium))
+    // The icon takes the tab's text color, and plays its motion as the tab becomes the active one.
+    .child(glyph)
     .children(count.map(|n| {
         let n = super::scale::count_label(n);
         if active { selected_count_badge(ui, n) } else { count_badge(ui, n) }

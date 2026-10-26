@@ -548,6 +548,8 @@ impl Workspace {
                             zoom_tip,
                         )
                         .in_row()
+                        // Zoomed by the keys or by this button, the corners turn when the icon does.
+                        .motion(style::IconMotion::Swap)
                         .on_click(cx.listener(move |this, _, window, cx| {
                             this.focus_pane(id, window, cx);
                             this.toggle_zoom(cx);

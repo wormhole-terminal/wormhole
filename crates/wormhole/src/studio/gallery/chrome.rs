@@ -7,6 +7,7 @@ use gpui_kit::*;
 
 use super::Env;
 use super::view::GalleryView;
+use crate::platform::{self, Item, Menu};
 use crate::style::{self, Edges, TextRole};
 
 pub(super) fn render(
@@ -89,14 +90,22 @@ pub(super) fn render(
                 )
                 .child(
                     style::icon_button("g-ibtn-open-menu", ui, IconName::ChevronDown, "Open in another app")
-                        .narrow(16.0),
+                        .narrow(16.0)
+                        // Points up while its menu is open.
+                        .menu_chevron(|mark, window, cx| {
+                            let menu = mark.track(Menu::new().item(Item::new("Zed")), cx);
+                            platform::show_menu(menu, window.mouse_position(), window, cx);
+                        }),
                 )
                 .child(
                     style::icon_button("g-ibtn-split-right", ui, IconName::Columns2, "Split right")
-                        .in_title_row(),
+                        .in_title_row()
+                        .motion(style::IconMotion::NewPane(style::Half::Right)),
                 )
                 .child(
-                    style::icon_button("g-ibtn-split-down", ui, IconName::Rows2, "Split down").in_title_row(),
+                    style::icon_button("g-ibtn-split-down", ui, IconName::Rows2, "Split down")
+                        .in_title_row()
+                        .motion(style::IconMotion::NewPane(style::Half::Below)),
                 )
                 .child(note("← an app's icon, its chevron and the splits, flush")),
         )
