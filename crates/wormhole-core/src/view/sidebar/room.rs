@@ -27,7 +27,7 @@ pub fn run_of(listing: &Listing, split_of_each: &[Option<SplitId>], dragged: usi
     let mates =
         |at: usize| session_at(at).is_some_and(|session| split_of(split_of_each, session) == Some(split));
     let start = (0..own).rev().take_while(|&at| mates(at)).last().unwrap_or(own);
-    let end = (own + 1..listing.entries.len()).take_while(|&at| mates(at)).last().map_or(own, |at| at) + 1;
+    let end = (own + 1..listing.entries.len()).take_while(|&at| mates(at)).last().unwrap_or(own) + 1;
     Some(start..end)
 }
 
