@@ -7,6 +7,9 @@ use super::{Axis, Child, Direction, Node, PaneId, Tree};
 /// tree edges match exactly; the slack covers ratios rounded on their way through a record.
 const EDGE_EPS: f32 = 0.5;
 
+/// The least share of a split a pane keeps when the tab's size is not known yet.
+const MIN_SHARE: f32 = 0.01;
+
 /// A pane's or divider's place in the tab.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Rect {
@@ -124,6 +127,48 @@ impl Tree {
         children[k].ratio = (position - first_start) / extent;
         children[k + 1].ratio = pair - children[k].ratio;
         Some(position)
+    }
+
+    /// Give pane `pane` the share `share` (0 to 1) of the split it stands in, taking from or giving to its
+    /// neighbour `beside`, which must be the child next to it in that split; the pair keeps what it had
+    /// between them, so no other pane moves. The share is held where either would drop under `min_w` ×
+    /// `min_h` (as a drag holds a divider), and when the tab's size is not known (a `width` or `height` of 0)
+    /// it only keeps both from vanishing. Returns the share it ended with, or `None`, with nothing changed,
+    /// when the panes are not neighbours or the tab is too small for both minimums.
+    pub fn set_share(
+        &mut self,
+        pane: PaneId,
+        beside: PaneId,
+        share: f32,
+        width: f32,
+        height: f32,
+        (min_w, min_h): (f32, f32),
+    ) -> Option<f32> {
+        let mut path = Vec::new();
+        let at = parent_of(&self.root, pane, &mut path)?;
+        let (node, rect) = split_at(&mut self.root, &path, Rect::new(0.0, 0.0, width, height))?;
+        let Node::Split { axis, children } = node else { return None };
+        let other = children.iter().position(|child| child.node == Node::Leaf(beside))?;
+        if at.abs_diff(other) != 1 {
+            return None;
+        }
+        let (_, extent) = rect.along(*axis);
+        let pair = children[at].ratio + children[other].ratio;
+        let (lo, hi) = if extent > 0.0 {
+            (
+                min_extent(&children[at].node, *axis, min_w, min_h) / extent,
+                pair - min_extent(&children[other].node, *axis, min_w, min_h) / extent,
+            )
+        } else {
+            (MIN_SHARE, pair - MIN_SHARE)
+        };
+        if lo > hi {
+            return None;
+        }
+        let share = share.clamp(lo, hi);
+        children[at].ratio = share;
+        children[other].ratio = pair - share;
+        Some(share)
     }
 
     /// Equal shares for the children of the split this divider belongs to (a double-click on it).
@@ -265,6 +310,23 @@ fn split_at<'a>(node: &'a mut Node, path: &[usize], rect: Rect) -> Option<(&'a m
     let Node::Split { axis, children } = node else { return None };
     let child_rect = child_rects(rect, *axis, children, false).get(i).copied()?;
     split_at(&mut children.get_mut(i)?.node, rest, child_rect)
+}
+
+/// Where pane `id` stands directly in a split: the index among that split's children, with `path` left as the
+/// child indexes from the root down to the split.
+fn parent_of(node: &Node, id: PaneId, path: &mut Vec<usize>) -> Option<usize> {
+    let Node::Split { children, .. } = node else { return None };
+    if let Some(at) = children.iter().position(|child| child.node == Node::Leaf(id)) {
+        return Some(at);
+    }
+    for (i, child) in children.iter().enumerate() {
+        path.push(i);
+        if let Some(found) = parent_of(&child.node, id, path) {
+            return Some(found);
+        }
+        path.pop();
+    }
+    None
 }
 
 /// The least room a subtree needs along `axis` for every pane in it to keep its minimum: panes

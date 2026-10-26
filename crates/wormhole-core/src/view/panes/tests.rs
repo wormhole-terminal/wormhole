@@ -1,6 +1,6 @@
 use super::geometry::{DividerId, Rect};
 use super::preset::{Plan, Preset, plan};
-use super::{Axis, Child, Direction, Node, PANE_MIN_H, PANE_MIN_W, PaneId, TabPanes, Tree};
+use super::{Axis, Child, Direction, Node, PANE_MIN_H, PANE_MIN_W, PaneId, Room, TabPanes, Tree};
 
 pub(super) const W: f32 = 800.0;
 pub(super) const H: f32 = 600.0;
@@ -238,6 +238,66 @@ fn a_drag_in_a_tab_too_small_for_both_minimums_changes_nothing() {
     assert_eq!(drag(&mut t, &divider(&[], 5), 100.0), None, "no such divider");
     assert_eq!(drag(&mut t, &divider(&[3], 0), 100.0), None, "no such split");
     assert_eq!(drag(&mut Tree::single(1), &divider(&[], 0), 100.0), None);
+}
+
+fn room() -> Room {
+    Room::new(W, H)
+}
+
+/// A percent without the float's last digits.
+fn rounded(percent: Option<f32>) -> Option<f32> {
+    percent.map(|p| (p * 100.0).round() / 100.0)
+}
+
+#[test]
+fn a_share_is_set_out_of_the_neighbour_and_nothing_else_moves() {
+    let mut panes = TabPanes::single(1);
+    assert!(panes.split(Axis::Row, 2));
+    assert_eq!(rounded(panes.set_share(2, 1, 30.0, room())), Some(30.0));
+    assert_eq!(shares(panes.tree()), [0.7, 0.3]);
+
+    // In a row of three the pair keeps what it had between them: pane 3 is untouched.
+    let mut three = TabPanes::restored(None, &[1, 2, 3]).expect("three panes");
+    assert_eq!(shares(three.tree()), [0.333, 0.333, 0.333]);
+    assert_eq!(rounded(three.set_share(2, 1, 20.0, room())), Some(20.0));
+    assert_eq!(shares(three.tree()), [0.467, 0.2, 0.333]);
+
+    // The neighbour may be on either side; the share is held where it would leave it under a width.
+    let held = three.set_share(2, 3, 90.0, room()).expect("held, not refused");
+    assert!((held - 100.0 * (1.0 - 0.467 - 0.2)).abs() < 0.2, "{held}");
+    assert_eq!(shares(three.tree()), [0.467, 0.333, 0.2], "pane 3 keeps its minimum width");
+    let least = three.set_share(2, 3, 1.0, room()).expect("held, not refused");
+    assert!((least - 20.0).abs() < 0.1, "{least}: pane 2 keeps its own minimum");
+}
+
+#[test]
+fn a_share_is_refused_between_panes_that_are_not_neighbours_or_in_a_tab_too_small_for_both() {
+    let mut three = TabPanes::restored(None, &[1, 2, 3]).expect("three panes");
+    let before = three.clone();
+    assert_eq!(three.set_share(3, 1, 30.0, room()), None, "pane 2 is between them");
+    assert_eq!(three.set_share(9, 1, 30.0, room()), None, "no such pane");
+    assert_eq!(three.set_share(1, 9, 30.0, room()), None, "no such neighbour");
+    assert_eq!(three.set_share(1, 1, 30.0, room()), None, "a pane is not its own neighbour");
+    assert_eq!(three.set_share(1, 2, 30.0, Room::new(300.0, H)), None, "two minimums do not fit in 300");
+    assert_eq!(three, before, "nothing changed");
+    // Before the first frame the room is not known: the share is taken as given, both panes kept alive.
+    assert_eq!(rounded(three.set_share(1, 2, 30.0, Room::new(0.0, 0.0))), Some(30.0));
+    let alive = three.set_share(1, 2, 0.0, Room::new(0.0, 0.0)).expect("kept alive");
+    assert!(alive > 0.0 && alive <= 1.0, "{alive}");
+}
+
+#[test]
+fn a_share_inside_a_nested_split_is_its_share_of_that_split() {
+    let mut panes = TabPanes::single(1);
+    assert!(panes.split(Axis::Row, 2));
+    assert!(panes.focus(2));
+    assert!(panes.split(Axis::Column, 4));
+    // 2 above 4, in the right half: 4 takes a quarter of that column and the row is left alone.
+    assert_eq!(rounded(panes.set_share(4, 2, 25.0, room())), Some(25.0));
+    assert_eq!(shares(panes.tree()), [0.5, 0.5]);
+    let rects = panes.tree().rects(W, H);
+    let height_of = |id| rects.iter().find(|(pane, _)| *pane == id).map(|(_, rect)| rect.h).expect("a pane");
+    assert_eq!((height_of(2), height_of(4)), (450.0, 150.0));
 }
 
 #[test]

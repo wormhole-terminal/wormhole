@@ -254,6 +254,22 @@ impl TabPanes {
         }
     }
 
+    /// Make pane `pane` take `percent` (1 to 99) of the split it stands in along that split's axis, out of
+    /// its neighbour `beside` (the command line's `split --size`: the new pane and the one it was made
+    /// beside). Held by the room as a divider's drag is. Returns the percent it ended with, or `None`, with
+    /// nothing changed, when the panes are not neighbours or `room` cannot hold both.
+    pub fn set_share(&mut self, pane: PaneId, beside: PaneId, percent: f32, room: Room) -> Option<f32> {
+        let share = self.tree.set_share(
+            pane,
+            beside,
+            percent / 100.0,
+            room.width,
+            room.height,
+            (room.min_w, room.min_h),
+        )?;
+        Some(share * 100.0)
+    }
+
     /// See [`Tree::drag`].
     pub fn drag(
         &mut self,
