@@ -36,7 +36,7 @@ fn place(variant: FoldMotion, t: f32) -> Placed {
         let progress = progress(elapsed, fold::duration(variant, phase, ROWS));
         fold::pose(variant, phase, progress, Slot { index, of: ROWS })
     };
-    let folded = FOLDS <= t && t < OPENS;
+    let folded = (FOLDS..OPENS).contains(&t);
     Placed {
         rows: std::array::from_fn(|index| if still { Pose::REST } else { pose_of(index) }),
         open: if still { 1.0 } else { fold::room_at(variant, phase, ROWS, elapsed) },

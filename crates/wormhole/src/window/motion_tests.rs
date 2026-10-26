@@ -12,7 +12,9 @@ use wormhole_core::view::motion::{FoldMotion, InsertMotion, MotionChoice, Motion
 use wormhole_core::view::sidebar::Entry;
 
 use crate::app_state::OpenWindow;
-use crate::window::test_harness::{draw, drive, isolate_in, read, sidebar_of, simulate_tree, start, tree};
+use crate::window::test_harness::{
+    draw, draw_replaying, drive, isolate_in, read, read_cx, sidebar_of, simulate_tree, start, tree,
+};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -233,22 +235,33 @@ fn reduce_motion_cuts_a_terminal_closing_opening_and_a_group_folding(cx: &mut Te
 }
 
 #[gpui_kit::test]
-fn a_list_at_rest_does_not_draw_again_and_stops_when_the_motion_ends(cx: &mut TestAppContext) {
-    if isolate("a_list_at_rest_does_not_draw_again_and_stops_when_the_motion_ends") {
+fn a_motion_in_the_list_draws_only_the_list_and_stops_when_it_ends(cx: &mut TestAppContext) {
+    if isolate("a_motion_in_the_list_draws_only_the_list_and_stops_when_it_ends") {
         return;
     }
     let window = open(cx, 3);
-    choose(cx, InsertMotion::Reveal, FoldMotion::Classic);
+    choose(cx, InsertMotion::FromSide, FoldMotion::Classic);
+    // The row that opens changes what the chrome shows too, so let that frame be drawn first.
+    open_one(cx, &window);
+    let regions = |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| ws.regions.builds(cx));
+    let list = |cx: &mut TestAppContext| sidebar_of(cx, &window, |sidebar| sidebar.builds());
+    let (chrome, drawn) = (regions(cx), list(cx));
+    // An animation asks for its next frame by notifying the view it is in, here the list (GPUI's test
+    // platform runs no such request itself): each of those frames draws the list and nothing else.
+    for _ in 0..5 {
+        cx.update(|cx| {
+            let sidebar = window.workspace.read_with(cx, |ws, _| ws.sidebar.clone()).expect("open");
+            sidebar.update(cx, |_, cx| cx.notify());
+        });
+        draw_replaying(cx, &window);
+    }
+    assert_eq!(regions(cx), chrome, "a row coming in is the list's to draw, not the chrome's");
+    assert_eq!(list(cx), drawn + 5, "the list is drawn again on each");
+    // Once the motion has ended the list asks for nothing more.
     settle(cx, &window);
-    let builds = |cx: &mut TestAppContext| sidebar_of(cx, &window, |sidebar| sidebar.builds());
-    let at_rest = builds(cx);
-    cx.executor().advance_clock(Duration::from_millis(500));
-    cx.run_until_parked();
-    assert_eq!(builds(cx), at_rest, "nothing draws the list again while it rests");
-    close(cx, &window, 2);
-    settle(cx, &window);
-    let after = builds(cx);
-    cx.executor().advance_clock(Duration::from_secs(1));
-    cx.run_until_parked();
-    assert_eq!(builds(cx), after, "and it rests again when the motion has ended");
+    let rest = (regions(cx), list(cx));
+    for _ in 0..5 {
+        draw_replaying(cx, &window);
+    }
+    assert_eq!((regions(cx), list(cx)), rest, "and a list at rest is not drawn again");
 }

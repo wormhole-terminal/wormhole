@@ -307,6 +307,49 @@ fn the_list_drawing_itself_builds_none_of_the_cached_regions(cx: &mut TestAppCon
     assert_eq!(list_builds(cx, &window), list_before + 10, "and the list itself was drawn each time");
 }
 
+/// What the list allocates when it draws itself with nothing moving, for a window of the terminals and the
+/// group `list_at_rest_window` makes. The list's motion (springs, rows that come and go) adds to a frame
+/// only while something moves, and at rest the comparison of its keys, which is no allocation more than the
+/// list made before it had any motion. The budget is what it made then (543, the same before and after the
+/// motion work, measured on the commit that preceded it) plus about a hundredth.
+const LIST_AT_REST_ALLOCATIONS: u64 = 549;
+
+/// Six terminals, two of them in a group, drawn until they settle, with motion on.
+fn list_at_rest_window(cx: &mut TestAppContext) -> OpenWindow {
+    let window = start(cx, 6);
+    cx.update(|cx| cx.set_reduce_motion(false));
+    drive(cx, &window, |ws, _, cx| ws.group_terminals(&[2, 3], cx));
+    for _ in 0..4 {
+        draw(cx, &window);
+    }
+    window
+}
+
+#[gpui_kit::test]
+fn the_list_at_rest_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
+    if isolate("the_list_at_rest_stays_within_its_allocation_budget") {
+        return;
+    }
+    use crate::perf::allocations::thread_counts;
+    let window = list_at_rest_window(cx);
+    let sidebar = window.workspace.read_with(cx, |ws, _| ws.sidebar.clone()).expect("open");
+    // The list asks to be drawn, and the draw is only the list (the chrome replays).
+    let mut made = Vec::new();
+    for _ in 0..3 {
+        cx.update(|cx| sidebar.update(cx, |_, cx| cx.notify()));
+        let before = thread_counts();
+        draw(cx, &window);
+        made.push(thread_counts().since(before).allocations);
+    }
+    let rest = made[2];
+    eprintln!("list at rest: {made:?} allocations");
+    assert_eq!(made[1], made[2], "a list that does not change allocates the same each frame");
+    assert!(
+        rest <= LIST_AT_REST_ALLOCATIONS,
+        "the list at rest made {rest} allocations (budget {LIST_AT_REST_ALLOCATIONS})"
+    );
+}
+
 /// With the terminals in tabs the root reads the list to build the bar, which is therefore drawn for the list's
 /// every notification (GPUI draws the root again), and the regions are left alone.
 #[gpui_kit::test]
