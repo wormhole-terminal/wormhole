@@ -4,8 +4,8 @@
 //! `room` opens the gap for a row that only moves; this is what is shown instead when the pointer is over
 //! the middle of a row, and which row that is, is the drop's own answer (`DropMark::Join`).
 //!
-//! The chip is GPUI's own drag picture, drawn at the pointer in a view of its own that the sidebar cannot
-//! reach: what it snaps to is handed over through a [`Snap`] both hold, and the chip reads it every frame.
+//! The chip is a part of GPUI's drag picture (`lift`), drawn at the pointer in a view of its own that the
+//! sidebar cannot reach: what it snaps to is handed over through a [`Snap`] both hold, and it reads it every frame.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -14,20 +14,18 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::motion::EASE_OUT;
 use wormhole_core::view::motion::drag::{BRACKET, FADE_OUT, LIFT, bracket};
-use wormhole_core::view::sidebar::{Bracket, SplitId};
+use wormhole_core::view::sidebar::{Bracket, Card, Entry, Listing, SplitId};
 
 use super::list::{ItemKey, id_of};
 use crate::settings::UiColors;
 use crate::sidebar::drop::DropMark;
+use crate::sidebar::row::Frame;
 use crate::sidebar::{Sidebar, SidebarInput};
 use crate::style;
 
-/// Where the chip's top left lands on the row it snaps to: this far in from the row's left and down from
-/// its top, which puts a one-line chip over the row's first line.
-const SNAP_INSET: (f32, f32) = (16.0, 8.0);
-
 /// What the dragged chip snaps onto: the sidebar says where while the pointer is over the middle of a
-/// row, the chip (a view of its own) reads it each frame.
+/// row, the picture of the drag (a view of its own, `lift`) reads it each frame, and tells back how tall
+/// the chip is.
 #[derive(Clone, Default)]
 pub(crate) struct Snap(Rc<SnapAt>);
 
@@ -35,17 +33,37 @@ pub(crate) struct Snap(Rc<SnapAt>);
 struct SnapAt {
     on: Cell<bool>,
     at: Cell<Point<Pixels>>,
+    /// How many times the chip has gone onto a row or come off one: each starts a crossfade.
+    flips: Cell<u64>,
+    chip_h: Cell<f32>,
 }
 
 impl Snap {
-    /// Whether the chip is on its way to the row, and where its top left lands (a place in the window).
-    /// The place stays what it was when the chip comes off the row, so it can leave it from there.
+    /// Whether the chip is on its way to the row, and the place it lands: the middle of its left edge, on
+    /// the row's bottom (a place in the window). The place stays what it was when the chip comes off the
+    /// row, so it can leave it from there.
     pub(crate) fn target(&self) -> (bool, Point<Pixels>) {
         (self.0.on.get(), self.0.at.get())
     }
 
+    /// How many times the chip has gone onto a row or come off one.
+    pub(crate) fn flips(&self) -> u64 {
+        self.0.flips.get()
+    }
+
+    /// How tall the chip is, as the picture last drew it.
+    pub(crate) fn chip_h(&self) -> f32 {
+        self.0.chip_h.get()
+    }
+
+    pub(crate) fn set_chip_h(&self, height: f32) {
+        self.0.chip_h.set(height);
+    }
+
     fn set(&self, at: Option<Point<Pixels>>) {
-        self.0.on.set(at.is_some());
+        if self.0.on.replace(at.is_some()) != at.is_some() {
+            self.0.flips.set(self.0.flips.get() + 1);
+        }
         if let Some(at) = at {
             self.0.at.set(at);
         }
@@ -243,7 +261,13 @@ impl Sidebar {
 
     /// Follows the pointer's target for a drag in flight: which row it would join, and where the chip
     /// snaps. Call it once per frame of the list with `mark` where the drop would land.
-    pub(in crate::sidebar) fn follow_join(&mut self, mark: Option<&DropMark>, cx: &mut Context<Self>) {
+    pub(in crate::sidebar) fn follow_join(
+        &mut self,
+        mark: Option<&DropMark>,
+        listing: &Listing,
+        frame: &Frame,
+        cx: &mut Context<Self>,
+    ) {
         if self.row_in_flight(cx).is_none() {
             return;
         }
@@ -254,7 +278,7 @@ impl Sidebar {
         if let Some(left) = self.motion.join.aim(target) {
             self.end_preview_later(left, cx);
         }
-        let at = target.and_then(|id| self.snap_place(id));
+        let at = target.and_then(|id| self.snap_place(id, listing, frame));
         self.motion.join.snap.set(at);
     }
 
@@ -266,11 +290,23 @@ impl Sidebar {
         self.motion.join.snap.set(None);
     }
 
-    /// Where the chip's top left lands on terminal `id`'s row, in the window.
-    fn snap_place(&self, id: i64) -> Option<Point<Pixels>> {
-        let at = self.motion.drawn.iter().position(|key| *key == ItemKey::Row(id))?;
-        let row = self.scroll.bounds_for_item(at)?;
-        Some(row.origin + point(px(SNAP_INSET.0), px(SNAP_INSET.1)))
+    /// Where the chip lands on terminal `id`'s row: the middle of its left edge on the row's bottom, at the
+    /// x its name starts at, so the name stays readable and the chip stands where the joined row will.
+    fn snap_place(&self, id: i64, listing: &Listing, frame: &Frame) -> Option<Point<Pixels>> {
+        let drawn = self.motion.drawn.iter().position(|key| *key == ItemKey::Row(id))?;
+        // GPUI keeps a child's bounds as laid out: the scroll moves it on the screen.
+        let slot = self.scroll.bounds_for_item(drawn)?;
+        let entry = listing.entries.iter().position(
+            |entry| matches!(*entry, Entry::Row { session, .. } if self.input.rows[session].id == id),
+        )?;
+        let metrics = frame.metrics;
+        let grouped = matches!(listing.card(entry), Some(Card::Group(_)));
+        let left = metrics.card_margin
+            + f32::from(frame.ui.border_width)
+            + if grouped { metrics.card_pad } else { 0.0 }
+            + metrics.title_x();
+        let gap = if listing.card_edges(entry).1 { metrics.card_gap } else { 0.0 };
+        Some(point(slot.origin.x + px(left), slot.bottom() + self.scroll.offset().y - px(gap)))
     }
 
     /// The preview of the row `left` (and its count) is over when it has gone out.

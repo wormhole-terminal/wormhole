@@ -5,17 +5,14 @@
 //! panes' overlay draws its zone for (`pane_drop.rs`). GPUI keeps the payload itself out of reach,
 //! so what is read while drawing is this.
 
-use gpui_kit::component::ActiveTheme as _;
 use gpui_kit::*;
-use wormhole_core::view::motion::drag::LIFT;
 use wormhole_core::view::panes::{PaneId, Zone};
 use wormhole_core::view::sidebar::Part;
 
-use super::motion::Snap;
+use super::motion::Lift;
 use crate::settings::ui;
 use crate::style;
 use crate::style::StatusGlyph;
-use crate::style::motion::SPRING_SNAP;
 
 /// Where a drag was picked up.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,22 +33,13 @@ pub(crate) struct DraggedTerminal {
     /// Where in the row or header it was picked up. GPUI draws the picture with its corner where
     /// the source's was, so it moves by this much to come out beside the pointer.
     pub(crate) grabbed: Point<Pixels>,
-    /// The picture lifts off the list as it is picked up (the Motion feature).
-    pub(crate) lift: bool,
-    /// What the picture snaps onto while the pointer is over the middle of a row (read when it lifts).
-    pub(crate) snap: Snap,
+    /// The row itself as the picture, when the Motion feature is on (`motion::lift`); else the chip.
+    pub(crate) lift: Option<Lift>,
 }
 
 impl DraggedTerminal {
     pub(crate) fn new(id: i64, origin: DragOrigin, name: SharedString, glyph: StatusGlyph) -> Self {
-        Self { id, origin, name, glyph, grabbed: Point::default(), lift: false, snap: Snap::default() }
-    }
-
-    /// The picture lifts as it is picked up and snaps onto `snap`'s row (the Motion feature).
-    pub(crate) fn lifting(mut self, snap: Snap) -> Self {
-        self.lift = true;
-        self.snap = snap;
-        self
+        Self { id, origin, name, glyph, grabbed: Point::default(), lift: None }
     }
 }
 
@@ -59,34 +47,13 @@ impl Render for DraggedTerminal {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let ui = ui(cx);
         let glyph = style::status_glyph(("drag-glyph", self.id as u64), ui, self.glyph, cx);
+        let chip = style::drag_ghost(ui, Some(glyph), self.name.clone());
+        if let Some(lift) = &self.lift {
+            return lift.picture(self.id, self.grabbed, style::drag_lift(chip, ui, 1.0), window, cx);
+        }
         let left = f32::from(self.grabbed.x) + style::GHOST_POINTER_GAP;
         let top = (f32::from(self.grabbed.y) - style::GHOST_POINTER_RISE).max(0.0);
-        let ghost = style::drag_ghost(ui, cx.theme().popover, Some(glyph), self.name.clone());
-        if !self.lift {
-            return div().pl(px(left)).pt(px(top)).child(ghost).into_any_element();
-        }
-        let ghost =
-            ghost.with_animation(("drag-lift", self.id as u64), Animation::new(LIFT), move |ghost, t| {
-                style::drag_lift(ghost, ui, t)
-            });
-        // Over the middle of a row the picture is drawn on that row instead, and goes there on a spring: this
-        // is its place from the picture's own corner, which is where GPUI drew the picture before the pointer moved.
-        let (snapped, at) = self.snap.target();
-        let (x, y) = {
-            let origin = window.mouse_position() - self.grabbed;
-            (f32::from(at.x - origin.x), f32::from(at.y - origin.y))
-        };
-        // The root of a view takes no offset of its own, so the chip that moves is the root's child.
-        div()
-            .child(div().relative().child(ghost).with_spring(
-                ("drag-snap", self.id as u64),
-                SpringAnimation::new(SPRING_SNAP).to(snapped).from(false),
-                move |chip, phase| {
-                    let p = phase.0;
-                    chip.left(px(left + (x - left) * p)).top(px(top + (y - top) * p))
-                },
-            ))
-            .into_any_element()
+        div().pl(px(left)).pt(px(top)).child(chip).into_any_element()
     }
 }
 
@@ -143,7 +110,6 @@ impl Render for DraggedGroup {
         let top = (f32::from(self.grabbed.y) - style::GHOST_POINTER_RISE).max(0.0);
         div().pl(px(left)).pt(px(top)).child(style::drag_ghost(
             ui,
-            cx.theme().popover,
             Some(dot.into_any_element()),
             self.name.clone(),
         ))

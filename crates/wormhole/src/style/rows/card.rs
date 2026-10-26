@@ -8,7 +8,7 @@ use gpui_kit::*;
 use crate::settings::UiColors;
 use crate::style::labels::count_badge;
 use crate::style::metrics::Metrics;
-use crate::style::scale::{MARK_DOT, ROW_H, TITLE_GLYPH, TextRole};
+use crate::style::scale::{Edges, MARK_DOT, ROW_H, TITLE_GLYPH, TextRole};
 use wormhole_core::view::sidebar::{WASH_FAR, WASH_PEAK, WASH_SPAN};
 
 use super::lead;
@@ -114,6 +114,30 @@ fn card_segment_in(
         })
         .child(content);
     outer.when(bottom, |d| d.pb(gap)).child(segment)
+}
+
+/// A terminal's row lifted out of the list: a card of its own, `selected` as the row is, with the shadow of
+/// something floating. It is what follows the pointer while a row is dragged, so it is as wide as the card
+/// the row stood in (`width`, its inside) and holds `content` (the row, drawn as a lone card's, `solo`) with
+/// no padding of its own.
+#[track_caller]
+pub fn card_lifted(
+    ui: UiColors,
+    metrics: Metrics,
+    selected: bool,
+    width: f32,
+    content: impl IntoElement,
+) -> Div {
+    let (fill, edge) = if selected { (ui.selected_row, ui.selected_row) } else { (ui.card, ui.card_edge) };
+    let card = div()
+        .w(px(width))
+        .flex()
+        .flex_col()
+        .rounded(px(metrics.card_radius))
+        .outlined(ui, edge)
+        .bg(fill)
+        .child(content);
+    crate::style::drag_lift(card, ui, 1.0)
 }
 
 /// What a [`nav_row`] says beside its name.

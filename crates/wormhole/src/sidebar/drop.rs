@@ -57,13 +57,16 @@ impl Sidebar {
         let this = cx.weak_entity();
         let dragged =
             DraggedTerminal::new(info.id, DragOrigin::Row, info.name.clone(), super::row::glyph_for(info));
-        let dragged = if self.motion_on(cx) { dragged.lifting(self.snap()) } else { dragged };
         row.on_drag(dragged, move |dragged, grabbed, _, cx| {
-            this.update(cx, |_, cx| {
-                cx.emit(SidebarEvent::TerminalDragStarted { id: dragged.id, origin: dragged.origin })
-            })
-            .ok();
-            cx.new(|_| DraggedTerminal { grabbed, ..dragged.clone() })
+            // The picture is made as the row is picked up, from the list as it stands then.
+            let lift = this
+                .update(cx, |sidebar, cx| {
+                    cx.emit(SidebarEvent::TerminalDragStarted { id: dragged.id, origin: dragged.origin });
+                    sidebar.lift_of(dragged.id, cx)
+                })
+                .ok()
+                .flatten();
+            cx.new(|_| DraggedTerminal { grabbed, lift, ..dragged.clone() })
         })
     }
 

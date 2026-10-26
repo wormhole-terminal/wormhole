@@ -78,9 +78,7 @@ pub(super) fn render(
                 .gap_2()
                 .px_2()
                 .pt_1()
-                .child(
-                    style::drag_ghost(ui, tk("surface.elevated"), None, "Wire up the CLI".into()).flex_none(),
-                )
+                .child(style::drag_ghost(ui, None, "Wire up the CLI".into()).flex_none())
                 .child(div().text_caption().text_color(ui.muted).child("← an item being dragged")),
         )
         .child(
@@ -93,7 +91,6 @@ pub(super) fn render(
                 .child(
                     style::drag_ghost(
                         ui,
-                        tk("surface.elevated"),
                         Some(glyph("g-drag-glyph", style::StatusGlyph::NeedsYou)),
                         "diff perf".into(),
                     )
@@ -109,14 +106,26 @@ pub(super) fn render(
                 .px_2()
                 .pt_1()
                 .child(
-                    style::drag_lift(
-                        style::drag_ghost(ui, tk("surface.elevated"), None, "Wire up the CLI".into()),
-                        ui,
-                        1.0,
-                    )
-                    .flex_none(),
+                    style::drag_lift(style::drag_ghost(ui, None, "Wire up the CLI".into()), ui, 1.0)
+                        .flex_none(),
                 )
                 .child(div().text_caption().text_color(ui.muted).child("← lifted off the list")),
+        )
+        .child(
+            div().px_2().pt_1().child(style::card_lifted(
+                ui,
+                style::Metrics::default(),
+                false,
+                240.0,
+                div()
+                    .px_2()
+                    .h(px(40.0))
+                    .flex()
+                    .items_center()
+                    .text_body()
+                    .text_color(ui.text)
+                    .child("A row, lifted"),
+            )),
         )
         .child(
             div()

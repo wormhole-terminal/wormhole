@@ -5,7 +5,6 @@
 use std::cell::RefCell;
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::ActiveTheme as _;
 use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -58,7 +57,7 @@ pub struct DraggedItem {
 
 impl Render for DraggedItem {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        drag_ghost(crate::settings::ui(cx), cx.theme().popover, None, self.label.clone())
+        drag_ghost(crate::settings::ui(cx), None, self.label.clone())
     }
 }
 
@@ -68,10 +67,10 @@ pub const GHOST_POINTER_GAP: f32 = 12.0;
 pub const GHOST_POINTER_RISE: f32 = 14.0;
 
 /// What follows the pointer while an item is dragged: its main line on a floating chip, after
-/// `lead` (a sidebar terminal's status glyph; a note has none). `surface` is the
-/// popover color (opaque, unlike the panels).
+/// `lead` (a sidebar terminal's status glyph; a note has none), on the elevated surface (opaque, unlike
+/// the panels).
 #[track_caller]
-pub fn drag_ghost(ui: UiColors, surface: Hsla, lead: Option<AnyElement>, label: SharedString) -> Div {
+pub fn drag_ghost(ui: UiColors, lead: Option<AnyElement>, label: SharedString) -> Div {
     div()
         .max_w(px(240.0))
         .flex()
@@ -81,7 +80,7 @@ pub fn drag_ghost(ui: UiColors, surface: Hsla, lead: Option<AnyElement>, label: 
         .py_1()
         .rounded(ui.radius)
         .outlined(ui, ui.border)
-        .bg(surface)
+        .bg(ui.elevated)
         .text_body()
         .text_color(ui.text)
         .children(lead)

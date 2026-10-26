@@ -51,6 +51,12 @@ pub struct Metrics {
 }
 
 impl Metrics {
+    /// Where a terminal row's first line of text starts, from the row's left edge: its padding, its tile and the gap after.
+    #[must_use]
+    pub fn title_x(&self) -> f32 {
+        self.row_px + self.tile + self.tile_gap
+    }
+
     pub fn of(density: Density, cards: bool) -> Self {
         let dense = density == Density::Dense;
         let (row_h, tile, tile_gap) = match density {

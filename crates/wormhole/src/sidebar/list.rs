@@ -57,7 +57,7 @@ impl Sidebar {
         let frame = Frame::new(&input, self.width, self.hints_showing(cx), window, cx);
         let (mark, drop) = self.drop_mark(&listing, infos);
         self.follow_drag(&keys, &listing, (mark.as_ref(), drop), !planned, cx);
-        self.follow_join(mark.as_ref(), cx);
+        self.follow_join(mark.as_ref(), &listing, &frame, cx);
         // A gap that is open shows where the row lands, so the line that says it too is left out; where
         // none opens (a folded group's head, the row's own place) the line is all there is.
         let mark = mark.filter(|mark| !self.motion.gap_open() || matches!(mark, DropMark::Join(_)));
