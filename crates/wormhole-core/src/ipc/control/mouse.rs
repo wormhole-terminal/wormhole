@@ -42,8 +42,10 @@ pub struct Pointer {
     pub row: u32,
     /// 0-based column.
     pub col: u32,
-    #[serde(default)]
-    pub button: ButtonName,
+    /// The button pressed, released or held while the pointer moves (a drag); a click, press or release
+    /// without one is the left button, a move without one has none down.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub button: Option<ButtonName>,
     /// How many clicks (a double click is 2).
     #[serde(default = "one")]
     pub count: u8,
@@ -145,11 +147,12 @@ impl MouseOp {
                 (centre(col, cell.0), centre(row, cell.1))
             }),
         };
-        let button = |name: ButtonName| match name {
+        let named = |name: ButtonName| match name {
             ButtonName::Left => Button::Left,
             ButtonName::Middle => Button::Middle,
             ButtonName::Right => Button::Right,
         };
+        let button = |name: Option<ButtonName>| named(name.unwrap_or(ButtonName::Left));
         match self {
             MouseOp::Click(p) => {
                 for _ in 0..p.count.max(1) {
@@ -166,7 +169,12 @@ impl MouseOp {
                 let at = base(p.row, p.col, p.shift, p.alt, p.ctrl);
                 send(MouseInput { button: button(p.button), action: MouseAction::Release, ..at });
             }
-            MouseOp::Move(p) => send(base(p.row, p.col, p.shift, p.alt, p.ctrl)),
+            // A drag is motion with a button held: a program tracking buttons only (1002) is told of
+            // it, and of motion without one only when it asked for every kind (1003).
+            MouseOp::Move(p) => send(MouseInput {
+                button: p.button.map_or(Button::None, named),
+                ..base(p.row, p.col, p.shift, p.alt, p.ctrl)
+            }),
             MouseOp::Scroll(w) => {
                 let wheel = match w.direction {
                     Direction::Up => Button::WheelUp,
@@ -191,7 +199,7 @@ mod tests {
     use super::{ButtonName, Direction, MouseOp, Pointer, Wheel};
 
     fn pointer(row: u32, col: u32) -> Pointer {
-        Pointer { row, col, button: ButtonName::Left, count: 1, shift: false, alt: false, ctrl: false }
+        Pointer { row, col, button: Some(ButtonName::Left), count: 1, shift: false, alt: false, ctrl: false }
     }
 
     const CELL: (f32, f32) = (8.0, 16.0);
@@ -206,7 +214,7 @@ mod tests {
         let double = MouseOp::Click(Pointer { count: 2, ..pointer(0, 0) });
         let twice = double.encode(sgr, CELL).expect("sent");
         assert_eq!(twice, b"\x1b[<0;1;1M\x1b[<0;1;1m\x1b[<0;1;1M\x1b[<0;1;1m");
-        let right = MouseOp::Click(Pointer { button: ButtonName::Right, ctrl: true, ..pointer(0, 0) });
+        let right = MouseOp::Click(Pointer { button: Some(ButtonName::Right), ctrl: true, ..pointer(0, 0) });
         assert_eq!(right.encode(sgr, CELL), Some(b"\x1b[<18;1;1M\x1b[<18;1;1m".to_vec()));
     }
 
@@ -215,7 +223,10 @@ mod tests {
         let sgr = Modes::MOUSE_CLICK | Modes::MOUSE_MOTION | Modes::MOUSE_SGR;
         assert_eq!(MouseOp::Press(pointer(1, 2)).encode(sgr, CELL), Some(b"\x1b[<0;3;2M".to_vec()));
         assert_eq!(MouseOp::Release(pointer(1, 2)).encode(sgr, CELL), Some(b"\x1b[<0;3;2m".to_vec()));
-        assert_eq!(MouseOp::Move(pointer(1, 2)).encode(sgr, CELL), Some(b"\x1b[<35;3;2M".to_vec()));
+        assert_eq!(
+            MouseOp::Move(Pointer { button: None, ..pointer(1, 2) }).encode(sgr, CELL),
+            Some(b"\x1b[<35;3;2M".to_vec())
+        );
         let wheel = |direction, lines| {
             MouseOp::Scroll(Wheel { row: 0, col: 0, direction, lines, shift: false, alt: false, ctrl: false })
         };
@@ -223,6 +234,23 @@ mod tests {
         assert_eq!(wheel(Direction::Down, 1).encode(sgr, CELL), Some(b"\x1b[<65;1;1M".to_vec()));
         // A program that tracks clicks only is not told of motion.
         assert_eq!(MouseOp::Move(pointer(0, 0)).encode(Modes::MOUSE_CLICK | Modes::MOUSE_SGR, CELL), None);
+    }
+
+    #[test]
+    fn a_drag_is_a_press_motion_with_the_button_held_and_a_release() {
+        let held = MouseOp::Move(Pointer { button: Some(ButtonName::Left), ..pointer(1, 3) });
+        let free = MouseOp::Move(Pointer { button: None, ..pointer(1, 3) });
+        let drag = Modes::MOUSE_CLICK | Modes::MOUSE_DRAG | Modes::MOUSE_SGR;
+        let motion = drag | Modes::MOUSE_MOTION;
+        // Under 1002 only a move with a button down is told; under 1003 every move is.
+        assert_eq!(MouseOp::Press(pointer(1, 2)).encode(drag, CELL), Some(b"\x1b[<0;3;2M".to_vec()));
+        assert_eq!(held.encode(drag, CELL), Some(b"\x1b[<32;4;2M".to_vec()));
+        assert_eq!(free.encode(drag, CELL), None);
+        assert_eq!(MouseOp::Release(pointer(1, 3)).encode(drag, CELL), Some(b"\x1b[<0;4;2m".to_vec()));
+        assert_eq!(held.encode(motion, CELL), Some(b"\x1b[<32;4;2M".to_vec()));
+        assert_eq!(free.encode(motion, CELL), Some(b"\x1b[<35;4;2M".to_vec()));
+        let right = MouseOp::Move(Pointer { button: Some(ButtonName::Right), ..pointer(1, 3) });
+        assert_eq!(right.encode(drag, CELL), Some(b"\x1b[<34;4;2M".to_vec()));
     }
 
     #[test]
@@ -269,6 +297,10 @@ mod tests {
                 .expect("parses");
         assert!(scroll.is_wheel());
         let bare: MouseOp = serde_json::from_str(r#"{"kind":"press","row":0,"col":0}"#).expect("parses");
-        assert_eq!(bare, MouseOp::Press(pointer(0, 0)), "left, once, by default");
+        assert_eq!(bare, MouseOp::Press(Pointer { button: None, ..pointer(0, 0) }), "once, the left button");
+        assert_eq!(
+            bare.encode(Modes::MOUSE_CLICK | Modes::MOUSE_SGR, CELL),
+            MouseOp::Press(pointer(0, 0)).encode(Modes::MOUSE_CLICK | Modes::MOUSE_SGR, CELL)
+        );
     }
 }

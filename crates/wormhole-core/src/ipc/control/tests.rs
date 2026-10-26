@@ -124,7 +124,7 @@ fn golden() -> Vec<(Request, &'static str)> {
                     op: MouseOp::Click(Pointer {
                         row: 4,
                         col: 10,
-                        button: ButtonName::Left,
+                        button: Some(ButtonName::Left),
                         count: 1,
                         shift: false,
                         alt: false,
@@ -211,7 +211,7 @@ fn only_typing_and_starting_programs_need_the_switch() {
         op: MouseOp::Press(Pointer {
             row: 0,
             col: 0,
-            button: ButtonName::Left,
+            button: Some(ButtonName::Left),
             count: 1,
             shift: false,
             alt: false,

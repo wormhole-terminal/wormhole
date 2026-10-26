@@ -19,20 +19,22 @@ pub fn help_with(automation: bool) -> String {
       finishing, terminals, windows and splits. One line each (ctrl-c stops); --json gives one JSON
       object per line. Topics: windows, terminals, status, title, folder, bell, blocks, splits, and
       output (what terminals print: --output, which needs reading to be allowed).
-  {wh} read [<target>] [--scrollback <n> | --lines <from>:<to> | --block <id>|last] [--join] [--styles] [--numbers]
+  {wh} read [<target>] [--last <n> | --lines <from>:<to> | --block <id>|last] [--join] [--styles] [--numbers]
       What a terminal shows: its screen (also a full-screen program's), the last <n> lines of its
       history, lines <from> to <to> (0 is the screen's top row, history is negative) or a command's
       block. --join puts wrapped rows back together; --json also has the size, the cursor and the
       modes (mouse, application keys) and, with --styles, each line's colours.
   {wh} blocks [<target>] [--last <n>] [--output]
       A terminal's commands: id, state, exit code, time, and with --output what they printed.
-  {wh} send-keys <target> <key>... [--text <string>]... [--paste <string>]...
+  {wh} send-keys <target> <key>... [--type <string>]... [--paste <string>]...
       Press keys in a terminal, in the order given: ctrl-c, enter, up, shift-tab, f5, alt-x, a
-      character. --text types a string key by key, --paste pastes it. Keys are encoded for what the
+      character. --type types a string key by key, --paste pastes it. Keys are encoded for what the
       program in the terminal has asked for (application cursor keys, the kitty keyboard).
   {wh} mouse <target> click|press|release|move <row> <col> [--button left|middle|right] [--double]
-      {wh} mouse <target> scroll <row> <col> up|down|left|right [--lines <n>] [--shift] [--alt] [--ctrl]
-      Click or scroll in a program that asked for the mouse (rows and columns count from 0).
+        [--shift] [--alt] [--ctrl]
+  {wh} mouse <target> scroll <row> <col> up|down|left|right [--by <n>] [--shift] [--alt] [--ctrl]
+      Click, drag (move --button left) or scroll in a program that asked for the mouse (rows and
+      columns count from 0).
 "
         )
     } else {

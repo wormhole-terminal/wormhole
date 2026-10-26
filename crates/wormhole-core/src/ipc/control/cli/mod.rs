@@ -13,6 +13,8 @@ use super::Action;
 pub(in crate::ipc) mod events;
 mod help;
 mod parse;
+#[cfg(test)]
+mod parse_tests;
 mod read_text;
 mod render;
 

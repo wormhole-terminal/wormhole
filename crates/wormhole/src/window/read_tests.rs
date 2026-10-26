@@ -102,7 +102,7 @@ fn text(text: &str, paste: bool) -> KeyItem {
 }
 
 fn pointer(row: u32, col: u32) -> Pointer {
-    Pointer { row, col, button: ButtonName::Left, count: 1, shift: false, alt: false, ctrl: false }
+    Pointer { row, col, button: Some(ButtonName::Left), count: 1, shift: false, alt: false, ctrl: false }
 }
 
 /// A caller outside every terminal, and one running under terminal `ix`'s shell.

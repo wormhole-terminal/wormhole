@@ -98,9 +98,9 @@ pub fn send_keys_check(
                 );
             }
             KeyItem::Key { .. } => {}
-            KeyItem::Text { text, .. } => {
+            KeyItem::Text { text, paste } => {
                 text_bytes += text.len();
-                if let Some(problem) = text_problem(text) {
+                if let Some(problem) = text_problem(text, *paste) {
                     return refuse(ErrorCode::BadRequest, problem.into());
                 }
             }
@@ -308,7 +308,7 @@ mod tests {
         let click = MouseOp::Click(Pointer {
             row: 1,
             col: 1,
-            button: ButtonName::Left,
+            button: Some(ButtonName::Left),
             count: 1,
             shift: false,
             alt: false,
@@ -325,7 +325,7 @@ mod tests {
             ..Pointer {
                 row: 0,
                 col: 0,
-                button: ButtonName::Left,
+                button: Some(ButtonName::Left),
                 count: 1,
                 shift: false,
                 alt: false,

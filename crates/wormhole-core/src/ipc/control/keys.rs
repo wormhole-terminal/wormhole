@@ -236,15 +236,26 @@ fn typed_char(c: char, shift: bool, buffer: &mut [u8; 4]) -> &str {
     c.encode_utf8(buffer)
 }
 
-/// Whether a text segment may be sent: printable characters only. Control codes are keys
-/// (`ctrl-c`, `enter`, `escape`), named as such, and never smuggled in text.
-pub fn text_problem(text: &str) -> Option<&'static str> {
+/// Whether a text segment may be sent. Typed text is printable characters only: control codes are keys
+/// (`ctrl-c`, `enter`, `escape`), named as such, and never smuggled in text. A paste may also have
+/// the line breaks and tabs a pasted file has (the program reads them as pasted, and the paste's
+/// brackets cannot be ended from inside it), but still no escape, C1 or invisible character.
+pub fn text_problem(text: &str, paste: bool) -> Option<&'static str> {
     if text.is_empty() {
         return Some("a text segment is empty");
     }
-    text.chars()
-        .any(|c| c.is_control() || wormhole_term::is_invisible(c) || matches!(c, '\u{2028}' | '\u{2029}'))
-        .then_some("text takes printable characters only: use key names (enter, tab, escape, ctrl-c) for control keys")
+    let refused = |c: char| {
+        let layout = paste && matches!(c, '\n' | '\r' | '\t');
+        !layout && (c.is_control() || wormhole_term::is_invisible(c) || matches!(c, '\u{2028}' | '\u{2029}'))
+    };
+    if text.chars().any(refused) {
+        return Some(if paste {
+            "a paste takes printable characters, line breaks and tabs only"
+        } else {
+            "text takes printable characters only: use key names (enter, tab, escape, ctrl-c) for control keys, or --paste"
+        });
+    }
+    None
 }
 
 #[cfg(test)]
@@ -325,11 +336,16 @@ mod tests {
 
     #[test]
     fn text_takes_printable_characters_only() {
-        assert_eq!(text_problem("ls -la | grep 日本"), None);
+        assert_eq!(text_problem("ls -la | grep 日本", false), None);
         for bad in
             ["a\nb", "x\ry", "\u{1b}[31m", "tab\there", "bell\x07", "del\x7f", "c1\u{9b}", "bidi\u{202e}", ""]
         {
-            assert!(text_problem(bad).is_some(), "{bad:?}");
+            assert!(text_problem(bad, false).is_some(), "{bad:?}");
+        }
+        // A paste may have the line breaks and tabs of a file, and nothing that acts.
+        assert_eq!(text_problem("line one\nline two\r\n\tindented", true), None);
+        for bad in ["\u{1b}[200~", "bell\x07", "c1\u{9b}", "bidi\u{202e}", "del\x7f", "\u{2028}", ""] {
+            assert!(text_problem(bad, true).is_some(), "{bad:?}");
         }
     }
 

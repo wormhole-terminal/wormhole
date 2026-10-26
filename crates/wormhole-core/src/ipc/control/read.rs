@@ -349,8 +349,8 @@ impl Read {
     /// About how many bytes the reply will be, cheaply and never under: when this is well under
     /// [`REPLY_MAX_BYTES`] it need not be measured.
     pub fn size_estimate(&self) -> usize {
-        // A character may be written as a `\uXXXX` escape, six bytes for at most three.
-        let text: usize = self.lines.iter().map(|line| line.len() * 2 + 4).sum();
+        // A character may be written as a `\uXXXX` escape, six bytes for as few as one (a control character).
+        let text: usize = self.lines.iter().map(|line| line.len() * 6 + 4).sum();
         let runs: usize = self.styles.iter().flatten().map(|row| row.len() * 96 + 2).sum();
         text + runs + 1024
     }
@@ -433,7 +433,7 @@ impl Blocks {
         self.blocks
             .iter()
             .map(|block| {
-                block.output.as_ref().map_or(0, |output| output.len() * 2) + block.command.len() * 2 + 256
+                block.output.as_ref().map_or(0, |output| output.len() * 6) + block.command.len() * 6 + 256
             })
             .sum::<usize>()
             + 256

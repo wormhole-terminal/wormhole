@@ -131,6 +131,17 @@ mod tests {
         assert!(!small.truncated);
     }
 
+    /// The estimate that decides whether a reply is measured never falls short of the reply, for the
+    /// characters that grow most when written (a soft hyphen is two bytes and six as an escape).
+    #[test]
+    fn the_size_estimate_is_never_under_the_reply() {
+        for ch in ['\u{ad}', '\u{200b}', 'a', '日', '\u{7f}', '\u{85}'] {
+            let read = read(vec![ch.to_string().repeat(500); 4]);
+            let wrote = json_line(&read).len();
+            assert!(read.size_estimate() >= wrote, "{ch:?}: {} against {wrote}", read.size_estimate());
+        }
+    }
+
     #[test]
     fn blocks_over_the_cap_lose_the_output_of_the_oldest_first() {
         let block = |id: i64| BlockInfo {

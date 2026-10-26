@@ -1,6 +1,7 @@
 //! What the control line (`wh send-keys`, `wh mouse`) does to a terminal, and the handle it reads
 //! one with: keys and pointer events encoded for the program's modes as they are when each goes
-//! out, written like typing but not claimed by any selection or scroll position of the person's.
+//! out. A key is typing as far as the terminal is concerned: it clears the person's selection and
+//! brings the view back to the live screen (a pointer event does neither).
 
 use std::time::Instant;
 
@@ -89,12 +90,14 @@ impl TerminalView {
         match op {
             MouseOp::Click(p) => {
                 for _ in 0..p.count.max(1) {
-                    pty.locator(Some((button(p.button), true)), at);
-                    pty.locator(Some((button(p.button), false)), at);
+                    pty.locator(Some((button(p.button.unwrap_or(ButtonName::Left)), true)), at);
+                    pty.locator(Some((button(p.button.unwrap_or(ButtonName::Left)), false)), at);
                 }
             }
-            MouseOp::Press(p) => pty.locator(Some((button(p.button), true)), at),
-            MouseOp::Release(p) => pty.locator(Some((button(p.button), false)), at),
+            MouseOp::Press(p) => pty.locator(Some((button(p.button.unwrap_or(ButtonName::Left)), true)), at),
+            MouseOp::Release(p) => {
+                pty.locator(Some((button(p.button.unwrap_or(ButtonName::Left)), false)), at)
+            }
             MouseOp::Move(_) => pty.locator(None, at),
             MouseOp::Scroll(_) => return MouseSent::Unwanted,
         }

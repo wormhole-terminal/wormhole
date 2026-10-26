@@ -32,6 +32,12 @@ const DEADLINE: Duration = Duration::from_secs(2);
 /// How much one connection may send (a hook message is a few hundred bytes; a control request
 /// at most a prompt's worth of text).
 const MAX_BYTES: u64 = 64 * 1024;
+/// How long writing one reply may take in all. A client that reads a megabyte a byte at a time holds
+/// the one thread that serves the hooks for at most this, not for a timeout at each write.
+const WRITE_DEADLINE: Duration = Duration::from_secs(2);
+/// How many control requests one connection is served: the deadline bounds their time, this their
+/// number (each can be a copy of a screen).
+const REQUESTS_PER_CONNECTION: usize = 8;
 /// How long a control request waits for the app's answer.
 const REPLY_WAIT: Duration = Duration::from_secs(5);
 
@@ -74,9 +80,14 @@ fn serve(
     }
     let Ok(reading) = stream.try_clone() else { return };
     let reader = Deadline { stream: reading, until: Instant::now() + DEADLINE }.take(MAX_BYTES);
+    let mut served = 0;
     for line in BufReader::new(reader).lines().map_while(Result::ok) {
         match serde_json::from_str::<Message>(&line) {
             Ok(Message::Control(request)) => {
+                served += 1;
+                if served > REQUESTS_PER_CONNECTION {
+                    return;
+                }
                 // A stream took the connection over: this thread has nothing more to read from it.
                 if answer(&mut stream, accepted, request, tx, timing, scratch) == Outcome::Streaming {
                     return;
@@ -144,10 +155,28 @@ fn answer(
     Outcome::Answered
 }
 
-/// Write `reply` as one line; a client that has gone is no error. Whether it was written.
+/// Write `reply` as one line within [`WRITE_DEADLINE`] in all; a client that has gone, or reads too
+/// slowly, is no error (the connection is let go of). Whether it was written.
 fn write_reply(stream: &mut Stream, reply: &Reply) -> bool {
-    let _ = stream.set_write_timeout(Some(Duration::from_secs(1)));
-    writeln!(stream, "{}", control::printable::json_line(reply)).is_ok()
+    let mut line = control::printable::json_line(reply).into_bytes();
+    line.push(b'\n');
+    let until = Instant::now() + WRITE_DEADLINE;
+    let mut rest = line.as_slice();
+    while !rest.is_empty() {
+        let left = until.saturating_duration_since(Instant::now());
+        if left.is_zero() {
+            return false;
+        }
+        let _ = stream.set_write_timeout(Some(left));
+        let chunk = rest.len().min(64 * 1024);
+        match stream.write(&rest[..chunk]) {
+            Ok(0) => return false,
+            Ok(n) => rest = &rest[n..],
+            Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
+            Err(_) => return false,
+        }
+    }
+    true
 }
 
 /// A stream whose reads fail once `until` has passed.
@@ -318,6 +347,61 @@ mod tests {
         assert_eq!((result["terminal"].as_i64(), result["title"].as_str()), (Some(3), Some("a title")));
         assert_eq!(result["cursor"]["col"].as_u64(), Some(5));
         app.join().expect("the app's side");
+    }
+
+    /// A client that sends a request and then does not read its big answer holds the thread that serves
+    /// the hooks for the write deadline in all, not for a timeout at each write.
+    #[test]
+    fn a_client_that_does_not_read_its_answer_holds_the_hooks_for_the_write_deadline_only() {
+        let (_dir, socket, rx) = server();
+        let app = std::thread::spawn({
+            let rx = rx.clone();
+            move || {
+                if let Some(Incoming::Control { reply, .. }) = recv_within(&rx, Duration::from_secs(5)) {
+                    let big = "x".repeat(4 << 20);
+                    let _ = reply.send(Reply::ok(serde_json::json!({ "text": big })).into());
+                }
+            }
+        });
+        let mut stuck = Stream::connect(&socket).expect("connect");
+        let request = Message::Control(Request::new(Action::List, None));
+        writeln!(stuck, "{}", serde_json::to_string(&request).expect("serializes")).expect("write");
+        app.join().expect("the app's side");
+        std::thread::sleep(Duration::from_millis(100));
+        let start = Instant::now();
+        hook(&socket, "5");
+        let message = recv_message_within(&rx, Duration::from_secs(6));
+        assert!(matches!(message, Some(Message::Hook { ref tab, .. }) if tab == "5"), "{message:?}");
+        assert!(start.elapsed() < Duration::from_millis(3500), "waited {:?}", start.elapsed());
+        drop(stuck);
+    }
+
+    /// One connection is served a handful of requests, however many it sends in its time.
+    #[test]
+    fn a_connection_is_served_a_few_requests_and_not_a_flood() {
+        let (_dir, socket, rx) = server();
+        let counted = std::thread::spawn({
+            let rx = rx.clone();
+            move || {
+                let mut served = 0;
+                while let Some(Incoming::Control { reply, .. }) = recv_within(&rx, Duration::from_millis(700))
+                {
+                    served += 1;
+                    let _ = reply.send(Reply::ok(Summary::of(1, [TerminalState::Idle])).into());
+                }
+                served
+            }
+        });
+        let mut stream = Stream::connect(&socket).expect("connect");
+        let request = Message::Control(Request::new(Action::List, None));
+        let line = serde_json::to_string(&request).expect("serializes");
+        for _ in 0..30 {
+            if writeln!(stream, "{line}").is_err() {
+                break;
+            }
+        }
+        let served = counted.join().expect("counted");
+        assert_eq!(served, super::REQUESTS_PER_CONNECTION);
     }
 
     /// The round trip `Wormhole list` makes: the request reaches the app with a way to answer, and
