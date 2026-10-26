@@ -35,16 +35,22 @@ pub(crate) struct DraggedTerminal {
     pub(crate) grabbed: Point<Pixels>,
     /// The row itself as the picture, when the Motion feature is on (`motion::lift`); else the chip.
     pub(crate) lift: Option<Lift>,
+    /// The window it was picked up in. GPUI keeps one drag for the whole app and every window draws its
+    /// picture at its own idea of where the pointer is, so only this window draws it.
+    pub(crate) source: Option<WindowId>,
 }
 
 impl DraggedTerminal {
     pub(crate) fn new(id: i64, origin: DragOrigin, name: SharedString, glyph: StatusGlyph) -> Self {
-        Self { id, origin, name, glyph, grabbed: Point::default(), lift: None }
+        Self { id, origin, name, glyph, grabbed: Point::default(), lift: None, source: None }
     }
 }
 
 impl Render for DraggedTerminal {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if self.source.is_some_and(|source| source != window.window_handle().window_id()) {
+            return div().into_any_element();
+        }
         let ui = ui(cx);
         let glyph = style::status_glyph(("drag-glyph", self.id as u64), ui, self.glyph, cx);
         let chip = style::drag_ghost(ui, Some(glyph), self.name.clone());

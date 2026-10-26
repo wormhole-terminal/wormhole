@@ -80,6 +80,7 @@ mod glass;
 mod group_ops;
 #[cfg(test)]
 mod group_tests;
+mod grow;
 pub(crate) mod hosting;
 #[cfg(test)]
 mod key_tests;
@@ -152,6 +153,9 @@ mod status_rolls;
 mod summaries;
 #[cfg(test)]
 mod summary_tests;
+pub(crate) mod tear_off;
+#[cfg(test)]
+mod tear_off_tests;
 mod terminal_move;
 #[cfg(test)]
 mod terminal_tests;
@@ -297,7 +301,9 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let blur_wanted = crate::style::wants_blur(settings_in(&profile, cx), true);
+        // A window that grows from a chip starts with no blur: the whole frame would show before it has grown.
+        let blur_wanted =
+            crate::style::wants_blur(settings_in(&profile, cx), true) && !grow::active(record.id, cx);
         let tick = cx.spawn_in(window, async move |this, cx| {
             loop {
                 cx.background_executor().timer(Duration::from_millis(400)).await;
@@ -313,6 +319,8 @@ impl Workspace {
                 // macOS isn't relied on to say when Reduce Motion changes.
                 cx.defer(crate::app_state::look::sync_system_look);
             } else {
+                // The system may take the mouse away (⌘⇥, Mission Control) and leave a drag set for good.
+                crate::sidebar::tear_off::cancel(window, cx);
                 this.hints_blur(cx);
                 // A popover that is up has the key itself, which is why this window lost it.
                 if this.path_card.is_open_popover() {
@@ -430,6 +438,7 @@ impl Workspace {
         self::regions::Regions::watch_globals(&mut this, cx);
         // The list draws itself (a hover, a rename, a menu); the window around it hears of what it draws.
         self::regions::Regions::watch_sidebar(&mut this, cx);
+        this.prepare_grow(window, cx);
         this
     }
 

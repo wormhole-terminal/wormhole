@@ -14,13 +14,16 @@ use crate::window::save::SCROLLBACK_SAVE_INTERVAL;
 
 impl Workspace {
     /// Apply settings that live outside GPUI's render tree.
-    fn sync_appearance(&mut self, cx: &mut Context<Self>) {
-        let blur = crate::style::wants_blur(settings_in(&self.profile, cx), true);
+    pub(super) fn sync_appearance(&mut self, cx: &mut Context<Self>) {
+        // A window growing from a chip has nothing behind its content (`grow`).
+        let blur = crate::style::wants_blur(settings_in(&self.profile, cx), true)
+            && !crate::window::grow::active(self.window_id, cx);
         self.blur.set_enabled(blur);
         // Without the blur the window stands on the panel's colour: the gaps round the terminal's
         // surface and between a split's panes show the window, glass or not, and would otherwise
         // show the desktop through it.
-        self.blur.set_backing((!blur).then(|| ui_in(&self.profile, cx).panel));
+        let growing = crate::window::grow::active(self.window_id, cx);
+        self.blur.set_backing((!blur && !growing).then(|| ui_in(&self.profile, cx).panel));
     }
 
     pub(crate) fn tick(&mut self, window: &mut Window, cx: &mut Context<Self>) {

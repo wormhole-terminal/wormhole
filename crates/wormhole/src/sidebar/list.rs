@@ -123,6 +123,7 @@ impl Sidebar {
                     .track_scroll(&self.scroll)
                     .children(items);
                 let list = self.with_list_drop(list.child(self.list_tail(cx)), cx);
+                let list = self.with_tear_off(list, cx);
                 // It holds the keyboard for the sidebar.
                 self.area_container(list, cx)
             })

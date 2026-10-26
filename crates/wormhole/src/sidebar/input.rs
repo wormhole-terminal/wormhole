@@ -166,6 +166,9 @@ pub(crate) enum SidebarEvent {
     GroupDragEnded,
     /// A terminal was dropped, on `over` if the pointer was over something of the list.
     TerminalDropped { dragged: i64, origin: DragOrigin, over: Option<Over> },
+    /// A terminal picked up by its row was let go outside the window, with the pointer where `pointer` says
+    /// (`tear_off`): the window decides what that means.
+    TerminalReleasedOutside { id: i64, pointer: crate::platform::pointer::Pointer },
     /// ⇥ / ⇧⇥ in the list: the next or previous stop of the window's areas.
     StepStop(isize),
 }

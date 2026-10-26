@@ -17,6 +17,29 @@ pub struct Pointer {
 }
 
 /// Where the pointer is, `None` where the system can't say or it is in a gap between screens.
+///
+/// In a test, only where [`pretend`] put it, never where the person's own pointer is; in a devctl instance,
+/// where it was put if it was.
 pub fn on_screen() -> Option<Pointer> {
+    #[cfg(any(test, feature = "devctl"))]
+    {
+        let pretended = *pretended().lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        if cfg!(test) || pretended.is_some() {
+            return pretended;
+        }
+    }
     os::on_screen()
+}
+
+#[cfg(any(test, feature = "devctl"))]
+fn pretended() -> &'static std::sync::Mutex<Option<Pointer>> {
+    static POINTER: std::sync::Mutex<Option<Pointer>> = std::sync::Mutex::new(None);
+    &POINTER
+}
+
+/// Say where the pointer is (`None`: wherever it really is, or nowhere in a test), for a drag that a script
+/// or a test makes without a mouse.
+#[cfg(any(test, feature = "devctl"))]
+pub fn pretend(at: Option<Pointer>) {
+    *pretended().lock().unwrap_or_else(std::sync::PoisonError::into_inner) = at;
 }

@@ -221,13 +221,14 @@ impl Workspace {
             )
             // Dragged by its header: to the sidebar the terminal leaves the split, onto another
             // pane's edge it moves there.
-            .on_drag(dragged, move |dragged, grabbed, _, cx| {
+            .on_drag(dragged, move |dragged, grabbed, window, cx| {
                 this.update(cx, |ws, cx| {
                     ws.terminal_drag = Some(TerminalDrag::new(dragged.id, dragged.origin));
                     cx.notify();
                 })
                 .ok();
-                cx.new(|_| DraggedTerminal { grabbed, ..dragged.clone() })
+                let source = Some(window.window_handle().window_id());
+                cx.new(|_| DraggedTerminal { grabbed, source, ..dragged.clone() })
             })
             .child(terminal_tile(("pane-tile", id as u64), agent, told, status, ui, cx))
             // The folder gives way first (it only takes the room left over), then the name; the

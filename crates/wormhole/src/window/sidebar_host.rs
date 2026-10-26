@@ -523,6 +523,9 @@ impl Workspace {
             SidebarEvent::TerminalDropped { dragged, origin, over } => {
                 self.finish_terminal_drop(*dragged, *origin, *over, window, cx)
             }
+            &SidebarEvent::TerminalReleasedOutside { id, pointer } => {
+                self.terminal_released_outside(id, pointer, window, cx)
+            }
             &SidebarEvent::StepStop(delta) => self.step_stop(delta, window, cx),
         }
     }

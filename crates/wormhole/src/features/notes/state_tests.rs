@@ -210,6 +210,28 @@ fn a_terminal_moved_to_another_window_keeps_its_notes_and_tasks(cx: &mut TestApp
 }
 
 #[gpui_kit::test]
+fn a_terminal_torn_off_to_a_window_of_its_own_keeps_its_notes_and_tasks(cx: &mut TestAppContext) {
+    if isolate("a_terminal_torn_off_to_a_window_of_its_own_keeps_its_notes_and_tasks") {
+        return;
+    }
+    let window = start(cx, 1);
+    let record = record_with(11, &[("ship it", false)], &[("remember", true)], (true, false));
+    let before = drive(cx, &window, |ws, window, cx| {
+        open(ws, record, window, cx);
+        saved(ws, 11, cx)
+    });
+    drive(cx, &window, |ws, window, cx| ws.tear_off_at(11, 600.0, 300.0, window, cx));
+    cx.run_until_parked();
+    let other = cx
+        .update(|cx| app(cx).windows.iter().find(|w| w.id != window.id).cloned())
+        .expect("a window of its own");
+    let after = drive(cx, &other, |ws, _, cx| saved(ws, 11, cx));
+    assert_eq!(after, before, "the same notes and tasks, in the same folds");
+    let here: Vec<i64> = read(cx, &window, |ws| ws.sessions().iter().map(|s| s.id).collect());
+    assert_eq!(here, [1], "and the first window no longer has the terminal");
+}
+
+#[gpui_kit::test]
 fn choosing_another_terminal_lets_go_of_the_focused_note(cx: &mut TestAppContext) {
     if isolate("choosing_another_terminal_lets_go_of_the_focused_note") {
         return;

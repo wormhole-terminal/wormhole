@@ -103,7 +103,7 @@ pub(super) fn rows(ctx: &mut Ctx, _: &str) -> Result<String> {
 }
 
 /// The terminal `n` (as `state` numbers them) names, which has to exist.
-fn row_arg(ctx: &Ctx, n: &str) -> Result<usize> {
+pub(super) fn row_arg(ctx: &Ctx, n: &str) -> Result<usize> {
     let ix: usize = n.trim().parse::<usize>().map_err(|_| anyhow!("expected a row number, got {n:?}"))?;
     match ix.checked_sub(1).filter(|&ix| ix < ctx.workspace.devctl_session_count()) {
         Some(ix) => Ok(ix),

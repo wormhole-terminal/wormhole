@@ -136,6 +136,8 @@ impl Render for Workspace {
         if (self.terminal_drag.is_some() || self.group_drag.is_some()) && !cx.has_active_drag() {
             self.terminal_drag = None;
             self.group_drag = None;
+            // A drag that went out of the window and was dropped nowhere: its chip goes.
+            crate::sidebar::tear_off::end(cx);
             // The one fact the frame itself finds out (nothing notifies when a drag ends outside every
             // drop target), and the list is drawn after this returns. It changes the list's input once
             // per drag, so a GPUI that draws only dirty views draws the list one more time then.
@@ -196,7 +198,7 @@ impl Render for Workspace {
         // What the intro window needs of this one is told before it is drawn.
         self.push_first_run(cx);
         let intro = self.first_run.clone();
-        root
+        let root = root
             // The intro window holds the keyboard while it is open.
             .capture_key_down(move |event: &KeyDownEvent, window, cx| {
                 intro.update(cx, |intro, cx| intro.intro_keys(event, window, cx))
@@ -305,6 +307,8 @@ impl Render for Workspace {
             .when(intro_open, |d| d.child(self.first_run.clone()))
             // Last, and it has to stay so: it runs the check on the chrome after every region of the frame was
             // placed, and it alone ends the frame that `render` began for it (`regions::oracle`).
-            .child(self.column_probe(cx))
+            .child(self.column_probe(cx));
+        // Only a window that was just opened for a torn-off terminal is wrapped, for as long as it grows.
+        self.framed(root, window, cx)
     }
 }

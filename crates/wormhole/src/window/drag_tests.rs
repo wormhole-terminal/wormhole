@@ -20,7 +20,7 @@ fn isolate(name: &str) -> bool {
 
 /// A window of `sessions` terminals, `width` × `height` points, drawn twice (the first frame
 /// measures the area the panes share, the next one is laid out with it).
-fn open(cx: &mut TestAppContext, sessions: i64, width: f32, height: f32) -> OpenWindow {
+pub(super) fn open(cx: &mut TestAppContext, sessions: i64, width: f32, height: f32) -> OpenWindow {
     let window = start(cx, sessions);
     cx.simulate_window_resize(window.handle, size(px(width), px(height)));
     draw(cx, &window);
@@ -28,12 +28,12 @@ fn open(cx: &mut TestAppContext, sessions: i64, width: f32, height: f32) -> Open
     window
 }
 
-fn pointer(cx: &mut TestAppContext, window: &OpenWindow) -> VisualTestContext {
+pub(super) fn pointer(cx: &mut TestAppContext, window: &OpenWindow) -> VisualTestContext {
     VisualTestContext::from_window(window.handle, cx)
 }
 
 /// Where terminal `id`'s row is, as the last frame drew it.
-fn row_bounds(cx: &mut TestAppContext, window: &OpenWindow, id: i64) -> Bounds<Pixels> {
+pub(super) fn row_bounds(cx: &mut TestAppContext, window: &OpenWindow, id: i64) -> Bounds<Pixels> {
     cx.update(|cx| {
         window.workspace.read_with(cx, |ws, cx| {
             let at = ws
@@ -71,7 +71,7 @@ fn header_point(cx: &mut TestAppContext, window: &OpenWindow, id: i64) -> Point<
 
 /// Press at `from` and move with the button held to each of `via` in turn, a frame after each.
 /// The button stays down.
-fn drag(cx: &mut TestAppContext, window: &OpenWindow, from: Point<Pixels>, via: &[Point<Pixels>]) {
+pub(super) fn drag(cx: &mut TestAppContext, window: &OpenWindow, from: Point<Pixels>, via: &[Point<Pixels>]) {
     let mut pointer = pointer(cx, window);
     pointer.simulate_mouse_move(from, None, Modifiers::none());
     pointer.simulate_mouse_down(from, MouseButton::Left, Modifiers::none());
@@ -82,7 +82,7 @@ fn drag(cx: &mut TestAppContext, window: &OpenWindow, from: Point<Pixels>, via: 
     draw(cx, window);
 }
 
-fn release(cx: &mut TestAppContext, window: &OpenWindow, at: Point<Pixels>) {
+pub(super) fn release(cx: &mut TestAppContext, window: &OpenWindow, at: Point<Pixels>) {
     pointer(cx, window).simulate_mouse_up(at, MouseButton::Left, Modifiers::none());
     cx.run_until_parked();
     draw(cx, window);

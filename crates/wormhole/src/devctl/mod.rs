@@ -255,6 +255,13 @@
 //!                   its pane's header, onto a pane's edge or a row: send each move in a batch of
 //!                   its own, so a frame is drawn between them (the overlay over the panes appears
 //!                   after the first move and hears the next ones; `panes` has the pane rectangles)
+//!   pointer <x> <y> | pointer off   say where the pointer is (points from the primary screen's top left):
+//!                   a terminal dragged by its row out of the window with `mouse-down`, `mouse-drag` and
+//!                   `mouse-up` is let go there (the Tear off feature); `off`: where it really is
+//!   tear-off <row> <x> <y>   the terminal in that row is let go outside the window with the pointer
+//!                   at that point of the primary screen (as `pointer` + a drag's release): a window of its
+//!                   own opens there, or the Wormhole window under it takes the terminal (its list gets
+//!                   it last); nothing without the feature, or for the last terminal of a window
 //!   inspect         toggle the inspector (⇧⌥⌘I); `hover` highlights, `click <x> <y>` pins
 //!   bounds <x> <y> [levels]   the element at a point (logical pixels): its bounds, where it is
 //!                   built and its id path, then `levels - 1` of its parents. It opens the inspector
@@ -353,6 +360,7 @@ mod settings;
 mod shots;
 mod sidebar;
 mod studio;
+mod tear_off;
 mod title;
 mod welcome;
 

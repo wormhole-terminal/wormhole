@@ -6,7 +6,7 @@ use anyhow::anyhow;
 
 use super::{
     Command, a11y, ambient, blocks, control, flow, hosts, input, language, menus, panels, profiling,
-    sessions, settings, shots, sidebar, studio, title, welcome,
+    sessions, settings, shots, sidebar, studio, tear_off, title, welcome,
 };
 
 /// The command called `name`, if there is one.
@@ -89,6 +89,8 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "split-join" => sessions::split_join,
         "split-leave" => sessions::split_leave,
         "row-drop" => sessions::row_drop,
+        "pointer" => tear_off::pointer,
+        "tear-off" => tear_off::tear_off,
         "pane-split" => sessions::pane_split,
         "pane-close" => sessions::pane_close,
         "pane-zoom" => sessions::pane_zoom,

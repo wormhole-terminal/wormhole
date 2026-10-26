@@ -45,6 +45,7 @@ mod row_menu;
 pub(crate) mod shells;
 mod switcher;
 mod tab_bar;
+pub(crate) mod tear_off;
 pub(crate) mod terminal_drag;
 
 pub(crate) use facts::row_times;
