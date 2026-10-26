@@ -108,6 +108,16 @@ pub fn summary_opacity(variant: FoldMotion, rows: usize, elapsed: Duration) -> f
     }
 }
 
+/// How long after a group started to fold its head's summary has finished fading in: the rows' time
+/// and the fade after it. No time at all where it shows at once (Classic).
+#[must_use]
+pub fn summary_duration(variant: FoldMotion, rows: usize) -> Duration {
+    match variant {
+        FoldMotion::Classic => Duration::ZERO,
+        FoldMotion::Drawer | FoldMotion::Tuck => duration(variant, Phase::Exit, rows) + millis(SUMMARY_FADE),
+    }
+}
+
 /// What makes room for the rows as the group opens, and closes the gap as it folds.
 #[must_use]
 pub fn room(variant: FoldMotion) -> Room {
@@ -131,7 +141,9 @@ pub fn room_at(variant: FoldMotion, phase: Phase, rows: usize, elapsed: Duration
 mod tests {
     use std::time::Duration;
 
-    use super::{FoldMotion, Phase, Pose, Slot, duration, pose, room, room_at, summary_opacity};
+    use super::{
+        FoldMotion, Phase, Pose, Slot, duration, pose, room, room_at, summary_duration, summary_opacity,
+    };
     use crate::view::motion::MotionChoice;
     use crate::view::motion::ease::EASE_OUT;
 
@@ -189,6 +201,8 @@ mod tests {
         let coming = summary_opacity(drawer, 2, ms(220));
         assert!(coming > 0.0 && coming < 1.0, "{coming}");
         assert_eq!(summary_opacity(drawer, 2, ms(280)), 1.0, "after the rows, over 120 ms");
+        assert_eq!(summary_duration(drawer, 2), ms(280));
+        assert!(summary_duration(FoldMotion::Classic, 2).is_zero());
         assert_eq!(room(drawer), super::Room::Layout);
     }
 
