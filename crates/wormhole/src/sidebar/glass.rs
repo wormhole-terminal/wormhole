@@ -35,17 +35,26 @@ pub(super) fn glass_key(kind: GlassKind, n: u64) -> u64 {
 }
 
 /// A probe filling its parent that asks for glass under that region, inset, as the glass `key`, on a
-/// window's glass held apart from its workspace (the sidebar's cards, a pile's cards).
+/// window's glass held apart from its workspace (the sidebar's cards, a pile's cards). `masked` cuts the
+/// glass to what the parents' masks show.
 pub(super) fn probe(
     glass: &std::rc::Rc<crate::platform::vibrancy::Glass>,
     key: u64,
     inset: Insets,
     radius: f32,
     clip: Option<u32>,
+    masked: bool,
 ) -> AnyElement {
     let glass = glass.clone();
     canvas(
-        move |bounds, _, _| {
+        move |bounds, window, _| {
+            // The glass is native and cannot be cut by a box of ours: a region that is shown through a
+            // mask (a row opening its height) asks only for what the mask lets through, none of it when
+            // that is nothing.
+            let bounds = if masked { bounds.intersect(&window.content_mask().bounds) } else { bounds };
+            if bounds.size.width <= px(0.0) || bounds.size.height <= px(0.0) {
+                return;
+            }
             let Insets(l, t, r, b) = inset;
             glass.propose(
                 key,

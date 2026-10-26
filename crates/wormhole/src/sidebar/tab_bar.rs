@@ -309,6 +309,7 @@ impl Sidebar {
                 Insets::NONE,
                 style::CARD_ROW_RADIUS,
                 Some(TAB_ROW_CLIP),
+                false,
             )
         }))
         .group(group)

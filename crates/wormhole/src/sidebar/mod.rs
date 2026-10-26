@@ -12,17 +12,15 @@ use std::cell::RefCell;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::rc::Rc;
 
-use gpui_kit::component::scroll::Scrollbar;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::focus::list::TypeAhead;
 use wormhole_core::view::sidebar::NUMBERED;
 use wormhole_core::view::sidebar::hints::CmdHold;
 use wormhole_core::view::sidebar::order::FrozenNumbers;
-use wormhole_core::view::sidebar::{Card, Entry, ListInput, Listing, SidebarNumbers, Splits, WindowSidebar};
+use wormhole_core::view::sidebar::{ListInput, Listing, SidebarNumbers, Splits, WindowSidebar};
 
-use self::glass::{LIST_CLIP, clip_probe};
-use crate::settings::{UiColors, settings_in, store_in, ui_in};
+use crate::settings::{UiColors, settings_in};
 use crate::sidebar::terminal_drag::Over;
 use crate::style::TextRole;
 
@@ -38,6 +36,7 @@ mod groups;
 mod hints;
 mod input;
 mod keys;
+mod list;
 mod motion;
 pub(crate) mod profile_chip;
 mod rename;
@@ -242,6 +241,12 @@ impl Sidebar {
         self.motion.is_busy()
     }
 
+    /// Whether each row that is leaving was the terminal on screen when it was last drawn.
+    #[cfg(test)]
+    pub(crate) fn leaving_selected(&self) -> Vec<(i64, bool)> {
+        self.motion.leaving_selected()
+    }
+
     /// The terminals whose rows have left the list and are still drawn while they go.
     #[cfg(test)]
     pub(crate) fn leaving_ids(&self) -> Vec<i64> {
@@ -358,162 +363,6 @@ impl Sidebar {
     fn changed(&mut self, cx: &mut Context<Self>) {
         cx.emit(SidebarEvent::Changed);
         cx.notify();
-    }
-
-    /// The list: what lies under the sidebar's header (the window's).
-    fn render_list(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        let input = self.input.clone();
-        let infos = &input.rows;
-        // A drag that ended outside every drop target never heard its drop.
-        if !cx.has_active_drag() {
-            self.over = None;
-        }
-        let ui = ui_in(&input.profile, cx);
-        let glass = input.glass.clone();
-        let listing = self.listing(cx);
-        self.times_drawn = row_times(infos, &input.profile, cx);
-        let keys: Vec<ItemKey> = listing
-            .entries
-            .iter()
-            .map(|entry| match *entry {
-                Entry::Band { band, .. } => ItemKey::Band(listing.bands[band].key()),
-                Entry::Row { session, .. } => ItemKey::Row(infos[session].id),
-            })
-            .collect();
-        self.plan_list_motion(&keys, &listing, cx);
-        let frame = row::Frame::new(&input, self.width, self.hints_showing(cx), window, cx);
-        let mark = self.drop_mark(&listing, infos);
-        let group_wash: std::collections::HashMap<u32, Hsla> = {
-            let tokens = &store_in(&input.profile, cx).tokens;
-            self.view
-                .groups
-                .iter()
-                .filter_map(|group| {
-                    let color = group.paint()?;
-                    Some((group.id, crate::theme_bridge::hsla(color.wash(tokens))))
-                })
-                .collect()
-        };
-        let cards = card::Cards {
-            listing: &listing,
-            infos,
-            ui,
-            metrics: frame.metrics,
-            glass: glass.as_ref(),
-            wash: &group_wash,
-            active: input.active,
-        };
-        let held = cx.has_active_drag().then(|| input.terminal_drag.map(|(id, _)| id)).flatten();
-        let mut items: Vec<AnyElement> = Vec::with_capacity(listing.entries.len());
-        // The changes the previous row of the card counted: a group's terminals in one repository
-        // say "±3" once, not on every row.
-        let mut counted_above: Option<(Option<usize>, &Option<std::path::PathBuf>, usize)> = None;
-        for (at, entry) in listing.entries.iter().enumerate() {
-            let line = match *entry {
-                Entry::Band { band, position, of } => {
-                    self.render_group_band(&listing, infos, band, (position, of), &frame, window, cx)
-                }
-                Entry::Row { session, band, position, of, number, marks } => {
-                    let info = &infos[session];
-                    // Only inside a group's card: a terminal in no group is a card of its own.
-                    let changes_above = band.is_some()
-                        && info.repo.is_some()
-                        && info.changes.is_some_and(|n| counted_above == Some((band, &info.repo, n)));
-                    counted_above = info.changes.map(|n| (band, &info.repo, n));
-                    let place = row::Place {
-                        selected: info.ix == input.active,
-                        solo: frame.metrics.cards && matches!(listing.card(at), Some(Card::Loose(_))),
-                        position,
-                        of,
-                        number,
-                        grouped: band.is_some(),
-                        marks,
-                        changes_above,
-                    };
-                    self.render_row(info, &place, &frame, window, cx)
-                }
-            };
-            // Where a dragged thing would land, as a line over this one.
-            let line = match self.mark_element(mark.as_ref(), &keys[at], ui) {
-                Some(mark) => div().relative().child(line).child(mark).into_any_element(),
-                None => line,
-            };
-            let segment = cards.line(at, line);
-            let bottom = listing.card_edges(at).1;
-            let line = match *entry {
-                Entry::Row { session, .. } => {
-                    let id = infos[session].id;
-                    let group = listing.card(at).and_then(|card| match card {
-                        Card::Group(band) => Some(listing.bands[band].group),
-                        Card::Loose(_) | Card::Split(_) => None,
-                    });
-                    self.with_row_drop(
-                        segment.id(("row-line", id as u64)),
-                        id,
-                        group,
-                        bottom.then_some(frame.metrics.card_gap),
-                        cx,
-                    )
-                    .into_any_element()
-                }
-                Entry::Band { band, .. } => {
-                    let group = listing.bands[band].group;
-                    self.with_head_drop(
-                        segment.id(("head-line", group as u64)),
-                        group,
-                        bottom.then_some(frame.metrics.card_gap),
-                        cx,
-                    )
-                    .into_any_element()
-                }
-            };
-            let is_held = matches!(&keys[at], ItemKey::Row(id) if Some(*id) == held);
-            items.push(self.with_list_motion(keys[at].clone(), line, is_held));
-        }
-        // The rows that have left, still drawn until their motion is over.
-        for (at, line) in self.leaving_lines(&keys, &frame, &group_wash, window, cx) {
-            items.insert(at, line);
-        }
-        // After the person's own terminals: the welcome's example group, which is none of them.
-        items.extend(self.render_demo(&frame, cx));
-        self.motion.remember(&input, listing);
-
-        div()
-            .relative()
-            .flex_1()
-            .min_h_0()
-            .overflow_hidden()
-            .children(glass.as_ref().map(|glass| clip_probe(glass, LIST_CLIP)))
-            .child({
-                let list = div()
-                    .id("session-list")
-                    .role(Role::Tree)
-                    .aria_label("Terminals")
-                    .size_full()
-                    .flex()
-                    .flex_col()
-                    .pt_1()
-                    .overflow_y_scroll()
-                    .track_scroll(&self.scroll)
-                    .children(items);
-                let list = self.with_list_drop(list.child(self.list_tail(cx)), cx);
-                // It holds the keyboard for the sidebar.
-                self.area_container(list, cx)
-            })
-            // Beside the list, not in it: a child of the scrolled list would move with its rows.
-            .child(self.list_edges(ui, cx))
-            .into_any_element()
-    }
-
-    /// What lies over the list's edges (`panel_list::scroll_edges`, as the panel's lists).
-    fn list_edges(&self, ui: UiColors, cx: &App) -> AnyElement {
-        let scrollbar = Scrollbar::vertical(&self.scroll).id("sidebar-scrollbar");
-        crate::style::panel_list::scroll_edges(
-            ui,
-            crate::style::panel_list::is_scrolled(&self.scroll),
-            scrollbar,
-            cx,
-        )
     }
 }
 

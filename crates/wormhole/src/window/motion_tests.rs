@@ -210,6 +210,55 @@ fn a_group_folds_and_opens_with_each_variant_and_ends_as_the_listing_says(cx: &m
 }
 
 #[gpui_kit::test]
+fn a_group_opened_while_its_rows_are_still_leaving_draws_each_row_once(cx: &mut TestAppContext) {
+    if isolate("a_group_opened_while_its_rows_are_still_leaving_draws_each_row_once") {
+        return;
+    }
+    let window = open(cx, 3);
+    let group = drive(cx, &window, |ws, _, cx| ws.group_terminals(&[1, 2], cx));
+    settle(cx, &window);
+    let (listed, drawn) = (lines(cx, &window), children(cx, &window));
+    for (insert, fold) in
+        [(InsertMotion::Reveal, FoldMotion::Drawer), (InsertMotion::Reveal, FoldMotion::Tuck)]
+    {
+        choose(cx, insert, fold);
+        drive(cx, &window, |ws, _, cx| ws.toggle_group_band(group, cx));
+        draw(cx, &window);
+        draw(cx, &window);
+        assert_eq!(leaving(cx, &window), [1, 2], "{fold:?}: folded, its rows are still going");
+        // Open it again without the clock moving: the rows are back before they are gone.
+        drive(cx, &window, |ws, _, cx| ws.toggle_group_band(group, cx));
+        draw(cx, &window);
+        draw(cx, &window);
+        assert_eq!(lines(cx, &window), listed, "{fold:?}");
+        assert!(leaving(cx, &window).is_empty(), "{fold:?}: a row that is listed is not also leaving");
+        assert_eq!(children(cx, &window), drawn, "{fold:?}: each row is drawn once");
+        settle(cx, &window);
+        assert_eq!(children(cx, &window), drawn, "{fold:?}");
+        assert!(!busy(cx, &window), "{fold:?}");
+    }
+}
+
+#[gpui_kit::test]
+fn a_row_that_leaves_is_drawn_as_the_last_frame_had_it_not_as_the_list_last_changed(cx: &mut TestAppContext) {
+    if isolate("a_row_that_leaves_is_drawn_as_the_last_frame_had_it_not_as_the_list_last_changed") {
+        return;
+    }
+    let window = open(cx, 2);
+    choose(cx, InsertMotion::FromSide, FoldMotion::Classic);
+    // Open T (it is the terminal on screen), then select the first: T's row was last drawn not selected.
+    open_one(cx, &window);
+    settle(cx, &window);
+    drive(cx, &window, |ws, window, cx| ws.activate(0, window, cx));
+    draw(cx, &window);
+    draw(cx, &window);
+    let t = read(cx, &window, |ws| ws.sessions.last().expect("a terminal").id);
+    close(cx, &window, t);
+    let drawn = sidebar_of(cx, &window, |sidebar| sidebar.leaving_selected());
+    assert_eq!(drawn, [(t, false)], "it does not flash selected as it was when it opened");
+}
+
+#[gpui_kit::test]
 fn reduce_motion_cuts_a_terminal_closing_opening_and_a_group_folding(cx: &mut TestAppContext) {
     if isolate("reduce_motion_cuts_a_terminal_closing_opening_and_a_group_folding") {
         return;

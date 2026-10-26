@@ -5,9 +5,9 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::view::sidebar::SplitMarks;
 use wormhole_core::view::sidebar::hints::keycap;
 use wormhole_core::view::sidebar::wording::place_detail;
+use wormhole_core::view::sidebar::{Card, Entry, Listing, SplitMarks};
 
 use super::super::{BODY_REM, CAPTION_REM, two_line_tooltip};
 use super::Frame;
@@ -56,6 +56,48 @@ pub(in crate::sidebar) struct Place {
     /// The row above it in its card counts the same changes of the same repository, so this one
     /// leaves them out.
     pub(in crate::sidebar) changes_above: bool,
+}
+
+impl Place {
+    /// Where the row at line `at` of `listing` sits, for the terminal at index `active` being the one on
+    /// screen and `cards` the rows being drawn in cards: `None` for a line that is not a row. The one place
+    /// that works it out, so the list's rows and the rows leaving it are set alike.
+    pub(in crate::sidebar) fn of(
+        listing: &Listing,
+        infos: &[RowInfo],
+        at: usize,
+        active: usize,
+        cards: bool,
+    ) -> Option<Self> {
+        let Entry::Row { session, band, position, of, number, marks } = *listing.entries.get(at)? else {
+            return None;
+        };
+        let info = infos.get(session)?;
+        // Only inside a group's card, and only for a repository the row above counts the same changes of.
+        let above = match at.checked_sub(1).and_then(|prev| listing.entries.get(prev)) {
+            Some(&Entry::Row { session: above, band: above_band, .. }) => {
+                infos.get(above).map(|i| (above_band, i))
+            }
+            _ => None,
+        };
+        let changes_above = band.is_some()
+            && info.repo.is_some()
+            && info.changes.is_some()
+            && above.is_some_and(|(above_band, i)| {
+                above_band == band && i.repo == info.repo && i.changes == info.changes
+            });
+        Some(Self {
+            selected: info.ix == active,
+            // Only a terminal in no group is a card of its own.
+            solo: cards && matches!(listing.card(at), Some(Card::Loose(_))),
+            position,
+            of,
+            number,
+            grouped: band.is_some(),
+            marks,
+            changes_above,
+        })
+    }
 }
 
 /// A row as it looks, before anything answers to it: what it shows, what its tooltip says when a name is

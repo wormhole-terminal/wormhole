@@ -29,7 +29,8 @@ pub(super) struct Cards<'a> {
 
 impl Cards<'_> {
     /// Line `at` of the listing (`line`, a group's head or a terminal's row) as a stretch of its card.
-    pub(super) fn line(&self, at: usize, line: AnyElement) -> Div {
+    /// `masked`: the line is cut by a box that opens (a row coming in by its height), so its glass is too.
+    pub(super) fn line(&self, at: usize, line: AnyElement, masked: bool) -> Div {
         let Self { listing, infos, ui, metrics, glass, wash, active } = *self;
         // Each line is a stretch of its card: a group's head and rows, or a terminal's own.
         let (top, bottom) = listing.card_edges(at);
@@ -70,6 +71,6 @@ impl Cards<'_> {
             ),
             None => (0, Insets(0.0, 0.0, 0.0, 0.0)),
         };
-        segment.child(probe(glass, key, inset, metrics.card_radius, Some(LIST_CLIP)))
+        segment.child(probe(glass, key, inset, metrics.card_radius, Some(LIST_CLIP), masked))
     }
 }

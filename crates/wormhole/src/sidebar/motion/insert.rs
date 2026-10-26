@@ -11,7 +11,7 @@ use wormhole_core::view::sidebar::{Entry, Listing};
 
 use super::fold::FoldNote;
 use super::list::ItemKey;
-use super::row::RowMotion;
+use super::pose::RowMotion;
 
 /// A line that came into the list or went from it.
 #[derive(Clone, Debug, PartialEq)]
