@@ -30,6 +30,9 @@
 //! each copy of them a frame makes; Advanced, which reads them twice as often, by 38); Appearance by
 //! about 585 more when its four switches for the title row's extras became that list, a row with a grip
 //! and a switch per part; and the search fell by 512 with three entries fewer.
+//! Appearance rose by about 360 and Updates by 22 with the Animate icons row and the sidebar's strip
+//! fills; the icon motions of the buttons in the preview add almost none (measured with them out of the
+//! frame: the same).
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -49,7 +52,7 @@ const SLACK: u64 = 20;
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 14] = [
     ("Profile", 6611),
-    ("Appearance", 16190),
+    ("Appearance", 16550),
     ("Fonts", 7309),
     ("Terminal", 9621),
     ("Sessions", 13538),
@@ -57,7 +60,7 @@ const BUDGET: [(&str, u64); 14] = [
     ("Agents", 26316),
     ("Notifications", 7732),
     ("MenuBar", 6045),
-    ("Updates", 5499),
+    ("Updates", 5521),
     ("Advanced", 3995),
     ("Projects", 8887),
     ("FeatureFlags", 3878),
