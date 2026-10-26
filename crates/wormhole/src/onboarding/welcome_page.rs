@@ -185,6 +185,7 @@ fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
             pinned: false,
             tiles: Vec::new(),
             count: 3,
+            summary_fade: None,
             alert: None,
             empty: None,
             add: None,

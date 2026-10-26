@@ -108,6 +108,7 @@ impl Sidebar {
                 pinned: false,
                 tiles: Vec::new(),
                 count: 0,
+                summary_fade: None,
                 alert: None,
                 empty: None,
                 add: None,

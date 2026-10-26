@@ -83,6 +83,7 @@ pub(super) fn render(
                 folded,
                 pinned,
                 count: tiles.len(),
+                summary_fade: None,
                 tiles,
                 alert,
                 empty: empty.then(|| {

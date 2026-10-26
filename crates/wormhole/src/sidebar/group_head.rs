@@ -88,6 +88,7 @@ impl Sidebar {
             pinned: band.pinned,
             tiles,
             count: band.members.len(),
+            summary_fade: self.summary_fade(group),
             alert,
             empty,
             add,

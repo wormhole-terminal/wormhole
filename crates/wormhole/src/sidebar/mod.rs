@@ -236,6 +236,18 @@ impl Sidebar {
         self.motion.is_moving()
     }
 
+    /// Whether any line is in a motion now: sliding, coming in, leaving or fading in a summary.
+    #[cfg(test)]
+    pub(crate) fn motion_busy(&self) -> bool {
+        self.motion.is_busy()
+    }
+
+    /// The terminals whose rows have left the list and are still drawn while they go.
+    #[cfg(test)]
+    pub(crate) fn leaving_ids(&self) -> Vec<i64> {
+        self.motion.leaving_ids()
+    }
+
     /// The terminal whose row wears the ring for an open menu.
     #[cfg(test)]
     pub(crate) fn menu_row(&self) -> Option<i64> {
@@ -368,7 +380,7 @@ impl Sidebar {
                 Entry::Row { session, .. } => ItemKey::Row(infos[session].id),
             })
             .collect();
-        self.plan_list_motion(keys.clone(), cx);
+        self.plan_list_motion(&keys, &listing, cx);
         let frame = rows::Frame::new(&input, self.width, self.hints_showing(cx), window, cx);
         let mark = self.drop_mark(&listing, infos);
         let group_wash: std::collections::HashMap<u32, Hsla> = {
@@ -458,8 +470,13 @@ impl Sidebar {
             let is_held = matches!(&keys[at], ItemKey::Row(id) if Some(*id) == held);
             items.push(self.with_list_motion(keys[at].clone(), line, is_held));
         }
+        // The rows that have left, still drawn until their motion is over.
+        for (at, line) in self.leaving_lines(&keys, &frame, &group_wash, window, cx) {
+            items.insert(at, line);
+        }
         // After the person's own terminals: the welcome's example group, which is none of them.
         items.extend(self.render_demo(&frame, cx));
+        self.motion.remember(&input, listing);
 
         div()
             .relative()

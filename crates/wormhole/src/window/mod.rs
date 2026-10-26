@@ -90,6 +90,8 @@ pub(crate) mod menu_state;
 #[cfg(test)]
 mod menu_tests;
 #[cfg(test)]
+mod motion_tests;
+#[cfg(test)]
 mod notes_tab_tests;
 #[cfg(test)]
 mod notification_tests;

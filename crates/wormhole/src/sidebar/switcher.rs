@@ -392,6 +392,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Sidebar>, cx: &mut App) ->
             pinned: card.pinned,
             tiles: card.tiles.iter().map(|t| tile(t, metrics.folded_tile, cx)).collect(),
             count: card.count,
+            summary_fade: None,
             alert: card.alert,
             empty: (empty && card.pinned).then(|| {
                 let tooltip = SharedString::from(spoken::new_in_group_label(&add_label));

@@ -186,13 +186,15 @@ pub(super) struct SampleHead {
     pub(super) color: Option<Hsla>,
     pub(super) count: usize,
     pub(super) folded: bool,
+    /// Folded: the tiles and the count at this moment of their fade-in (`None`: whole).
+    pub(super) summary: Option<style::SummaryFade>,
 }
 
 impl SampleHead {
     /// The sidebar's own head, open or folded, doing nothing when it is clicked.
     #[track_caller]
     pub(super) fn draw(self, ui: UiColors, metrics: Metrics) -> AnyElement {
-        let Self { id, name, folder, color, count, folded } = self;
+        let Self { id, name, folder, color, count, folded, summary } = self;
         style::group_head(
             id,
             ui,
@@ -206,6 +208,7 @@ impl SampleHead {
                 pinned: false,
                 tiles: Vec::new(),
                 count,
+                summary_fade: summary,
                 alert: None,
                 empty: None,
                 add: None,

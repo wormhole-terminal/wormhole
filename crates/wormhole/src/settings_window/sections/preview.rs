@@ -166,6 +166,7 @@ pub(super) fn list(
                     color: mark,
                     count: card.rows.len(),
                     folded: false,
+                    summary: None,
                 }
                 .draw(ui, metrics),
             );

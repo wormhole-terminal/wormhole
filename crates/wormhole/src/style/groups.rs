@@ -6,6 +6,8 @@
 //! group with a folder shows it under the name in the caption role (after the name in Dense), when
 //! `Metrics::group_folders` is on. The label opens the group's menu, the chevron folds it.
 
+use std::time::Duration;
+
 use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::component::{Icon, Selectable, Sizable as _};
@@ -20,6 +22,15 @@ use super::metrics::Metrics;
 use super::scale::{MARK_DOT, TextRole};
 use super::section::ClickHandler;
 use crate::settings::UiColors;
+
+/// A folded head's summary (its tiles and count) fading in once the rows that folded are gone.
+pub enum SummaryFade {
+    /// Shown at this opacity: for a preview that knows what moment it draws.
+    Opacity(f32),
+    /// Fading as an animation of its own: the animation's `id` (new to each fold), how long it takes
+    /// `over`-all and the opacity at each moment of it (`t`, 0.0..=1.0, of that time).
+    Over { id: ElementId, over: Duration, opacity: Box<dyn Fn(f32) -> f32> },
+}
 
 /// The parts of a [`group_head`].
 pub struct GroupHead {
@@ -38,6 +49,8 @@ pub struct GroupHead {
     /// number.
     pub tiles: Vec<AnyElement>,
     pub count: usize,
+    /// Folded: the tiles and the count fade in rather than show at once, after the rows folded.
+    pub summary_fade: Option<SummaryFade>,
     /// A terminal in it needs input (amber) or failed (danger): the dot after the tiles.
     pub alert: Option<Hsla>,
     /// A pinned group with no terminal: its + (tooltip, what it does), always shown.
@@ -108,6 +121,7 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
         pinned,
         tiles,
         count,
+        summary_fade,
         alert,
         empty,
         add,
@@ -184,14 +198,21 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
             d.tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx))
         });
     let tiles = folded.then(|| {
-        div()
+        let summary = div()
             .flex_none()
             .flex()
             .items_center()
             .gap(px(5.0))
             .children(tiles)
             .child(count_badge(ui, super::scale::count_label(count)))
-            .children(alert.map(|color| div().flex_none().size(px(MARK_DOT + 1.0)).rounded_full().bg(color)))
+            .children(alert.map(|color| div().flex_none().size(px(MARK_DOT + 1.0)).rounded_full().bg(color)));
+        match summary_fade {
+            Some(SummaryFade::Over { id, over, opacity }) => summary
+                .with_animation(id, Animation::new(over), move |summary, t| summary.opacity(opacity(t)))
+                .into_any_element(),
+            Some(SummaryFade::Opacity(opacity)) => summary.opacity(opacity).into_any_element(),
+            None => summary.into_any_element(),
+        }
     });
     let trailing = match empty {
         Some((tooltip, on_add)) => div()

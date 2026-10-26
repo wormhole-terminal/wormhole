@@ -25,6 +25,7 @@ impl Sidebar {
     /// Fold an open group, or open a folded one.
     pub(crate) fn toggle_group_band(&mut self, group: u32, cx: &mut Context<Self>) {
         self.view.toggle_group_fold(group);
+        self.motion.note_fold(group, self.view.is_group_folded(group));
         self.list_rearranged(cx);
     }
 
