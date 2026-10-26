@@ -11,13 +11,15 @@
 //! their poses; `pose`'s `//!` says why. Dragging a terminal has two motions the design fixed (`drag`),
 //! so no choice and no pose, only their numbers.
 //!
-//! Like the rest of `view` it uses only `theme` below it: never settings, which hold a
-//! [`MotionChoices`], not the other way round.
+//! Rolling counts (`roll`) have no choice: the design fixed them. Like the rest of `view` this uses only
+//! `theme` below it, and the sidebar's [`Urgency`](crate::view::sidebar::Urgency), which a status change
+//! is between (`pose::status`): never settings, which hold a [`MotionChoices`], not the other way round.
 
 mod choices;
 pub mod drag;
 mod ease;
 pub mod pose;
+pub mod roll;
 mod spring;
 mod timeline;
 

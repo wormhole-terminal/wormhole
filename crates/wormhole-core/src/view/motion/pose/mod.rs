@@ -1,8 +1,9 @@
-//! What a row of the sidebar looks like at a moment of its coming or going, as plain numbers: one pure
-//! function per motion (`insert`, `fold`) from the person's choice, the phase and how far along the
-//! motion is, to a [`Pose`]. The sidebar draws the pose of the animation's progress and the Settings
-//! previews draw the pose of their loop's time, so the preview shows exactly what the list does and
-//! the motion has one source. No GPUI, no clock: a test pins every variant's start, end and stages.
+//! What a row of the sidebar looks like at a moment of its coming or going, or of its status changing, as
+//! plain numbers: one pure function per motion (`insert`, `fold`, `status`) from the person's choice, the
+//! phase and how far along the motion is, to a [`Pose`] (a status change has a [`status::StatusPose`] of
+//! its own: its parts are not a row's). The sidebar draws the pose of the animation's progress and the
+//! Settings previews draw the pose of their loop's time, so the preview shows exactly what the list does
+//! and the motion has one source. No GPUI, no clock: a test pins every variant's start, end and stages.
 //!
 //! Durations live here, with the poses, and not in the app's `style::motion::timing`: a pose is a
 //! function of the motion's own time, whose stages (a gap that opens, then a row that slides in) are
@@ -20,6 +21,7 @@
 
 pub mod fold;
 pub mod insert;
+pub mod status;
 
 use std::time::Duration;
 

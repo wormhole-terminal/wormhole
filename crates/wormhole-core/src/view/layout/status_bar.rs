@@ -89,16 +89,24 @@ pub struct Counted {
 }
 
 impl Counted {
+    /// What the number counts, in words: "working", "done", "failed", "need input" ("needs input" for one);
+    /// nothing for a count of the quiet ones.
+    pub fn label(&self) -> &'static str {
+        match self.activity {
+            Activity::Working => "working",
+            Activity::NeedsYou if self.count == 1 => "needs input",
+            Activity::NeedsYou => "need input",
+            Activity::Done => "done",
+            Activity::Failed => "failed",
+            Activity::Quiet => "",
+        }
+    }
+
     /// "2 working", "1 done", "3 failed", "2 need input": all of them in words.
     pub fn words(&self) -> String {
-        let n = self.count;
-        match self.activity {
-            Activity::Working => format!("{n} working"),
-            Activity::NeedsYou if n == 1 => "1 needs input".to_string(),
-            Activity::NeedsYou => format!("{n} need input"),
-            Activity::Done => format!("{n} done"),
-            Activity::Failed => format!("{n} failed"),
-            Activity::Quiet => n.to_string(),
+        match self.label() {
+            "" => self.count.to_string(),
+            label => format!("{} {label}", self.count),
         }
     }
 }
@@ -303,6 +311,23 @@ mod tests {
         assert_eq!(rest.iter().map(|c| c.terminal).collect::<Vec<_>>(), [0, 3, 4], "each goes to its first");
         assert_eq!(Counted { activity: Activity::NeedsYou, count: 1, terminal: 0 }.words(), "1 needs input");
         assert_eq!(Counted { activity: Activity::NeedsYou, count: 3, terminal: 0 }.words(), "3 need input");
+    }
+
+    #[test]
+    fn a_count_is_its_number_and_its_label_so_the_number_can_turn_over_alone() {
+        for (activity, count) in [
+            (Activity::Working, 2),
+            (Activity::NeedsYou, 1),
+            (Activity::NeedsYou, 3),
+            (Activity::Done, 1),
+            (Activity::Failed, 12),
+            (Activity::Quiet, 4),
+        ] {
+            let counted = Counted { activity, count, terminal: 0 };
+            let (number, label) = (count.to_string(), counted.label());
+            let want = if label.is_empty() { number } else { format!("{number} {label}") };
+            assert_eq!(counted.words(), want, "{activity:?} {count}");
+        }
     }
 
     #[test]
