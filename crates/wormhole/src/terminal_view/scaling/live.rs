@@ -12,8 +12,9 @@ impl TerminalView {
     /// The frame's pane makes a grid of `wanted`; tell the PTY if it is to be told now, and answer with the
     /// columns and rows to draw: `wanted`'s, or the PTY's own while it is held back.
     ///
-    /// Held back during a live resize (at most every 100 ms, and once more when it ends). Otherwise, and
-    /// without the Motion feature, every size is told at once, as it always was.
+    /// Held back while the text zoom moves (the PTY is told once, when it arrives) and during a live resize
+    /// (at most every 100 ms, and once more when it ends). Otherwise, and without the Motion feature, every
+    /// size is told at once, as it always was.
     pub(in crate::terminal_view) fn scale_grid(
         &mut self,
         wanted: GridSize,
@@ -27,6 +28,9 @@ impl TerminalView {
         }
         let Some(told) = self.pty.as_ref().map(|pty| pty.size()) else { return asked };
         let held = (usize::from(told.cols), usize::from(told.rows));
+        if self.scaling.zoom.is_some() {
+            return held;
+        }
         let now = cx.background_executor().now();
         let live = platform::window::in_live_resize(window);
         let step = self.scaling.gate.step(now, live, told != wanted);

@@ -1,5 +1,6 @@
 //! A window being scaled, in a real window (see `test_harness` for how each test runs in a child process with
-//! scratch data): a live resize tells it at most every 100 ms and once more when it ends, the drawn grid being the
+//! scratch data): the text zoom eases while the terminal keeps its grid and tells the program once, at the
+//! end; a live resize tells it at most every 100 ms and once more when it ends, the drawn grid being the
 //! program's meanwhile; the chip says the size after a zoom and while the window is dragged and never when
 //! it opens; and the Motion feature off and Reduce Motion are cuts. Time is the test clock's
 //! (`BackgroundExecutor::now`), which the tests move.
@@ -7,7 +8,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::time::Duration;
 
-use gpui_kit::{Subscription, TestAppContext, px, size};
+use gpui_kit::{Subscription, TestAppContext, VisualTestContext, px, size};
 use wormhole_core::config::features::FeatureFlag;
 
 use crate::app_state::OpenWindow;
@@ -98,6 +99,59 @@ fn set_feature(cx: &mut TestAppContext, on: bool) {
             settings.feature_flags.insert(FeatureFlag::Motion.key().to_string(), on);
         });
     });
+}
+
+#[gpui_kit::test]
+fn a_zoom_keeps_the_grid_while_the_text_eases_and_tells_the_program_once_at_the_end(cx: &mut TestAppContext) {
+    if isolate("a_zoom_keeps_the_grid_while_the_text_eases_and_tells_the_program_once_at_the_end") {
+        return;
+    }
+    let window = open(cx);
+    let (resizes, _count) = count_resizes(cx, &window);
+    let before = told(cx, &window);
+    assert_eq!(drawn(cx, &window), before);
+    assert_eq!(chip(cx, &window), None, "nothing says the size when a window opens");
+
+    zoom(cx, &window, Some(3.0));
+    // Halfway through its 120 ms: the text moves, the grid is the program's own and nothing was told.
+    frames_apart(cx, &window, 4, Duration::from_millis(15));
+    assert_eq!(told(cx, &window), before, "the program is not told while the text moves");
+    assert_eq!(drawn(cx, &window), before, "and the grid keeps its columns and rows");
+    assert_eq!(resizes.get(), 0);
+    assert_eq!(chip(cx, &window), None, "the chip waits for the new size");
+
+    frames_apart(cx, &window, 8, Duration::from_millis(15));
+    let after = told(cx, &window);
+    assert!(after.0 < before.0, "bigger text, fewer columns: {before:?} then {after:?}");
+    assert_eq!(drawn(cx, &window), after, "the grid is the new one");
+    assert_eq!(resizes.get(), 1, "told once, at the end");
+    assert_eq!(chip(cx, &window), Some(format!("{} × {}", after.0, after.1)));
+    frames(cx, &window, 2);
+    let shown = VisualTestContext::from_window(window.handle, cx).debug_bounds("size-readout");
+    let shown = shown.expect("the chip is drawn");
+    let pane = read(cx, &window, |ws| ws.pane_area);
+    assert!(
+        shown.size.height > px(100.0),
+        "it covers the terminal, so its chip can sit in the middle: {shown:?}"
+    );
+    assert!(shown.size.width <= pane.size.width + px(1.0));
+}
+
+#[gpui_kit::test]
+fn a_key_pressed_again_retargets_and_the_program_is_still_told_once(cx: &mut TestAppContext) {
+    if isolate("a_key_pressed_again_retargets_and_the_program_is_still_told_once") {
+        return;
+    }
+    let window = open(cx);
+    let (resizes, _count) = count_resizes(cx, &window);
+    zoom(cx, &window, Some(1.0));
+    frames_apart(cx, &window, 3, Duration::from_millis(15));
+    zoom(cx, &window, Some(1.0));
+    frames_apart(cx, &window, 3, Duration::from_millis(15));
+    zoom(cx, &window, None);
+    assert_eq!(resizes.get(), 0, "three presses in half a second, and the program has not been told");
+    frames_apart(cx, &window, 12, Duration::from_millis(15));
+    assert_eq!(resizes.get(), 0, "⌘0 went back to the size it began from: the grid is the one it had");
 }
 
 #[gpui_kit::test]
@@ -207,6 +261,28 @@ fn the_chip_says_the_size_while_the_window_is_dragged_never_when_it_resizes_othe
     assert_ne!(chip(cx, &window), Some(wanted), "it follows the drag");
     assert_eq!(told(cx, &window), now, "though the program has not been told");
     test_live::set(None);
+}
+
+#[gpui_kit::test]
+fn the_chip_holds_700_ms_then_fades_for_150_and_goes(cx: &mut TestAppContext) {
+    if isolate("the_chip_holds_700_ms_then_fades_for_150_and_goes") {
+        return;
+    }
+    let window = open(cx);
+    zoom(cx, &window, Some(1.0));
+    frames_apart(cx, &window, 10, Duration::from_millis(15));
+    assert!(chip(cx, &window).is_some());
+    // The last change was a little while ago; 600 ms on it is whole still.
+    cx.executor().advance_clock(Duration::from_millis(500));
+    cx.run_until_parked();
+    frames(cx, &window, 1);
+    assert!(chip(cx, &window).is_some(), "still there");
+    cx.executor().advance_clock(Duration::from_millis(250));
+    cx.run_until_parked();
+    frames_apart(cx, &window, 1, Duration::from_millis(60));
+    assert!(chip(cx, &window).is_some(), "fading");
+    frames_apart(cx, &window, 3, Duration::from_millis(60));
+    assert_eq!(chip(cx, &window), None, "gone");
 }
 
 #[gpui_kit::test]

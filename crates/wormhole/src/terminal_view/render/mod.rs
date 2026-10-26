@@ -121,8 +121,8 @@ impl Render for TerminalView {
         let store = store_in(&self.profile, cx);
         let palette = store.palette.clone();
         // A zoom kept while Settings changed the size still stays within what Settings allows.
-        let font_size_setting =
-            (store.settings.font_size + self.font_zoom).clamp(*FONT_SIZES.start(), *FONT_SIZES.end());
+        let font_size_setting = (store.settings.font_size + self.shown_zoom(window, cx))
+            .clamp(*FONT_SIZES.start(), *FONT_SIZES.end());
         let line_height_setting = store.settings.line_height;
         let ligatures = store.settings.font_ligatures;
         let layout_cell = self.layout.clone();
@@ -187,7 +187,7 @@ impl Render for TerminalView {
                 #[cfg(feature = "devctl")]
                 PAINTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 let span = perf::span();
-                // A grid larger than its pane (held back in a live resize) stays inside the pane.
+                // A grid larger than its pane (held while the text zooms) stays inside the pane.
                 match frame.clip {
                     Some(clip) => window.with_content_mask(Some(ContentMask { bounds: clip }), |window| {
                         paint.run(bounds, &frame, window, cx)
