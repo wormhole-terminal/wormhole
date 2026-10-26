@@ -18,3 +18,5 @@ e8987c8c193de4226331b3066f8242d1b158b080
 ecafa9993306bbdde489c1e80558b51a80f9ae74
 # refactor(style): move shift.rs to status_shift.rs
 7c66e903dc7d563b19e54a1ac93bfb07d549ad1e
+# refactor(sidebar): move a second line's words to second_line.rs
+9cd02a125acd3c777bd13c103320435870db1811
