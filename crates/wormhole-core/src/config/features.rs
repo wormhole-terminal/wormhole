@@ -39,15 +39,21 @@ pub enum FeatureFlag {
     /// system allows it (not with Reduce Transparency or Increase Contrast). Off, every surface
     /// paints itself. It was a setting (`liquid_glass`) until 2026-10-25.
     LiquidGlass,
+    /// Driving Wormhole from scripts and coding agents beyond `list`, `status`, `notify`, `send-text`
+    /// and `new-terminal`: `wh events` and, as the phases land, reading terminals, keys and mouse,
+    /// windows and splits, waiting and running, and `wh mcp` (`repo-docs/docs/automation.md`). Off,
+    /// the new actions answer that they are not in this build yet.
+    Automation,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 5] = [
+    pub const ALL: [FeatureFlag; 6] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
         Self::PersistentTerminals,
         Self::LiquidGlass,
+        Self::Automation,
     ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
@@ -58,6 +64,7 @@ impl FeatureFlag {
             Self::NotesAndTasks => "notes_and_tasks",
             Self::PersistentTerminals => "persistent_terminals",
             Self::LiquidGlass => "liquid_glass",
+            Self::Automation => "automation",
         }
     }
 
@@ -73,6 +80,7 @@ impl FeatureFlag {
             Self::NotesAndTasks => "Notes and tasks",
             Self::PersistentTerminals => "Persistent terminals",
             Self::LiquidGlass => "Liquid Glass",
+            Self::Automation => "Automation",
         }
     }
 
@@ -99,6 +107,10 @@ impl FeatureFlag {
                 "Glass under the sidebar's and the panel's cards on macOS 26 and later, unless Reduce \
                  Transparency or Increase Contrast is on. Off: every surface painted."
             }
+            Self::Automation => {
+                "The command line and coding agents watch and drive Wormhole: wh events, and later \
+                 reading terminals, keys, windows and splits, waiting and running."
+            }
         }
     }
 
@@ -115,6 +127,8 @@ impl FeatureFlag {
             Self::PersistentTerminals => false,
             // Unfinished: glass behind every surface still needs its polish.
             Self::LiquidGlass => false,
+            // Until its last phase has landed and the user has approved it.
+            Self::Automation => false,
         }
     }
 }
@@ -233,6 +247,18 @@ mod tests {
         let off = BTreeMap::from([("persistent_terminals".to_string(), false)]);
         assert!(!enabled_in(flag, &off, DEV));
         assert_eq!(FeatureFlag::from_key("persistent_terminals"), Some(flag));
+    }
+
+    #[test]
+    fn automation_is_on_in_a_dev_build_and_off_in_a_release() {
+        let flag = FeatureFlag::Automation;
+        assert_eq!(flag.key(), "automation");
+        assert!(!flag.released());
+        assert!(enabled_in(flag, &BTreeMap::new(), DEV));
+        let on = BTreeMap::from([("automation".to_string(), true)]);
+        assert!(!enabled_in(flag, &on, RELEASE), "a release ignores the map");
+        assert!(enabled_in(flag, &on, FlagMode::Unstable));
+        assert_eq!(FeatureFlag::from_key("automation"), Some(flag));
     }
 
     #[test]
