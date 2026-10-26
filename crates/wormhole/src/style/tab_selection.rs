@@ -114,8 +114,7 @@ impl Element for Shape {
             (Some(id), Some(active)) => Some(travel(id, active as f32, window, cx)),
             _ => None,
         };
-        let mut style = Style::default();
-        style.position = Position::Absolute;
+        let style = Style { position: Position::Absolute, ..Style::default() };
         (window.request_layout(style, [], cx), at)
     }
 

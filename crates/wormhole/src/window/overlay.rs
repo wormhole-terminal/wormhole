@@ -40,9 +40,12 @@ pub(crate) struct OverlayView {
     kind: OverlayKind,
     view: AnyView,
     /// What the view says of its card and of being closed (`OverlayContent`), through the entity it was made from.
-    card: Box<dyn Fn(&App) -> Option<Bounds<Pixels>>>,
+    card: Box<dyn Fn(&App) -> Card>,
     leave: Box<dyn Fn(&mut App)>,
 }
+
+/// Where an overlay's card was last painted, if it has one.
+type Card = Option<Bounds<Pixels>>;
 
 /// A view that can be put over the window. Its kind is part of the type, so a caller cannot hand
 /// over a view under another view's kind.
