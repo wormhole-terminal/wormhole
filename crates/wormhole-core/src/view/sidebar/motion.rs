@@ -14,12 +14,30 @@ pub struct Drawn<K> {
     pub height: f32,
 }
 
+/// A line that changes place: where its top was (as drawn, from the content's start) and where it is
+/// now. The two are places in the content, not a distance, so a move that is retargeted while it is
+/// under way can carry on from where the line is.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Move<K> {
+    pub key: K,
+    /// Where it started. A move longer than the plan's `limit` starts that far from `to`.
+    pub from: f32,
+    pub to: f32,
+}
+
+impl<K> Move<K> {
+    /// How far below (positive) or above (negative) its new place it starts: the offset that goes to 0.
+    #[must_use]
+    pub fn shift(&self) -> f32 {
+        self.from - self.to
+    }
+}
+
 /// What a change of the list does to its lines.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Moves<K> {
-    /// Each line that changes place and how far below (positive) or above (negative) its new place
-    /// it was: the offset it starts from, going to 0.
-    pub moved: Vec<(K, f32)>,
+    /// Each line that changes place.
+    pub moved: Vec<Move<K>>,
     /// Lines that were not in the list before.
     pub entering: Vec<K>,
 }
@@ -50,7 +68,7 @@ pub fn plan_moves<K: Eq + Hash + Clone>(
             Some(line) => {
                 let shift = (line.top - top).clamp(-limit, limit);
                 if shift.abs() >= MIN_MOVE {
-                    plan.moved.push((key.clone(), shift));
+                    plan.moved.push(Move { key: key.clone(), from: top + shift, to: top });
                 }
                 top += line.height;
             }
@@ -65,7 +83,7 @@ pub fn plan_moves<K: Eq + Hash + Clone>(
 
 #[cfg(test)]
 mod tests {
-    use super::{Drawn, Moves, plan_moves};
+    use super::{Drawn, Move, Moves, plan_moves};
 
     /// Lines of 10 from `pad` 4 down.
     fn drawn(keys: &[&'static str]) -> Vec<Drawn<&'static str>> {
@@ -96,7 +114,8 @@ mod tests {
     fn pinning_a_line_to_the_top_moves_it_up_and_the_ones_it_passes_down() {
         // c goes from the bottom to the top.
         let plan = plan_moves(&drawn(&["a", "b", "c"]), &now(&["c", "a", "b"]), 4.0, 400.0);
-        let moved: std::collections::HashMap<_, _> = plan.moved.into_iter().collect();
+        let moved: std::collections::HashMap<_, _> =
+            plan.moved.iter().map(|line| (line.key, line.shift())).collect();
         assert_eq!(moved["c"], 20.0, "it starts two lines below its place");
         assert_eq!(moved["a"], -10.0, "the others start one line above theirs");
         assert_eq!(moved["b"], -10.0);
@@ -106,10 +125,16 @@ mod tests {
     #[test]
     fn a_line_inserted_above_pushes_the_rest_and_one_removed_pulls_them() {
         let plan = plan_moves(&drawn(&["a", "b"]), &now(&["x", "a", "b"]), 4.0, 400.0);
-        assert_eq!(plan.moved, [("a", -10.0), ("b", -10.0)]);
+        assert_eq!(
+            plan.moved,
+            [Move { key: "a", from: 4.0, to: 14.0 }, Move { key: "b", from: 14.0, to: 24.0 }]
+        );
         assert_eq!(plan.entering, ["x"]);
         let plan = plan_moves(&drawn(&["a", "b", "c"]), &now(&["b", "c"]), 4.0, 400.0);
-        assert_eq!(plan.moved, [("b", 10.0), ("c", 10.0)]);
+        assert_eq!(
+            plan.moved,
+            [Move { key: "b", from: 14.0, to: 4.0 }, Move { key: "c", from: 24.0, to: 14.0 }]
+        );
     }
 
     #[test]
@@ -120,8 +145,9 @@ mod tests {
         let last = after.pop().map(|line| line.0).unwrap_or(0);
         after.insert(0, (last, 10.0));
         let plan = plan_moves(&before, &after, 4.0, 100.0);
-        assert_eq!(plan.moved[0], (59, 100.0), "capped");
+        assert_eq!(plan.moved[0], Move { key: 59, from: 104.0, to: 4.0 }, "capped");
         let plan = plan_moves(&drawn(&["a", "b"]), &[("new", 25.0), ("a", 10.0), ("b", 10.0)], 4.0, 400.0);
-        assert_eq!(plan.moved, [("a", -25.0), ("b", -25.0)]);
+        let shifts: Vec<f32> = plan.moved.iter().map(Move::shift).collect();
+        assert_eq!(shifts, [-25.0, -25.0]);
     }
 }
