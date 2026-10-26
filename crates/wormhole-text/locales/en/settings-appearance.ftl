@@ -26,6 +26,15 @@ settings-appearance-primary-color = Use the theme's primary colour
     .description = Off: a colour of your choice for buttons, focus rings, selection and links, in every theme
     .keywords = accent highlight color colour swatch custom own
 
+settings-appearance-branch-color = Branch colour
+    .description = The git branch on folders, in the title row and in the status bar. Any colour is kept readable
+    .keywords = git branch chip accent color colour magenta purple primary swatch custom own
+
+# The branch colour's three choices: the theme's own, the primary colour, a colour of your own.
+settings-appearance-branch-theme = Theme
+settings-appearance-branch-primary = Primary
+settings-appearance-branch-custom = Custom
+
 ## Window
 
 settings-appearance-group-window = Window
@@ -132,6 +141,10 @@ settings-appearance-primary-pick = Pick a colour below · the theme's is { $colo
 # The same line while the theme's primary is in use. { $color } is its hex code and { $description } the
 # row's own description, which follows after a full stop.
 settings-appearance-primary-theme = The theme's · { $color }. { $description }
+
+# The line under "Branch colour" while Custom is chosen and no colour is picked yet. { $color } is the
+# theme's own branch colour, as a hex code.
+settings-appearance-branch-pick = Pick a colour below · the theme's is { $color }
 
 # Over the theme picker in a project's terminal. { $project } is the project's name.
 settings-appearance-project-theme-note = This terminal shows { $project }'s theme. Your own is kept for everything else.

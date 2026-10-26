@@ -1,12 +1,13 @@
 //! [`ThemeTokens`]: a resolved theme, and how it changes after resolution
-//! (single values, a different primary).
+//! (single values, a different primary or branch color).
 
 use std::collections::BTreeMap;
 
 use super::catalog::UI_TOKENS;
-use super::expr::Expr;
+use super::expr::{Expr, parse_expr};
 use super::model::{Appearance, Metrics, SyntaxStyle, TerminalColors};
 use super::resolve::{FlagOverrides, build_variant};
+use super::rules::branch_rule;
 use crate::theme;
 use crate::theme::tokens::color::Color;
 
@@ -38,6 +39,30 @@ impl PartialEq for Recipe {
     fn eq(&self, _: &Self) -> bool {
         true
     }
+}
+
+/// The colors a person picks over every theme's (Settings → Appearance), for
+/// [`ThemeTokens::with_choices`]. `None` keeps the theme's own.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ColorChoices {
+    pub primary: Option<Color>,
+    pub branch: Option<BranchTint>,
+}
+
+impl ColorChoices {
+    /// Whether nothing is picked, so the theme stays exactly as it is.
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
+}
+
+/// Where a chosen branch color comes from.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum BranchTint {
+    /// The primary in effect, the person's own primary when one is chosen.
+    Primary,
+    /// A color of the person's own.
+    Color(Color),
 }
 
 impl ThemeTokens {
@@ -84,10 +109,28 @@ impl ThemeTokens {
     /// re-derived. The theme's own overrides still apply, expressions like
     /// `primary / 15%` included, so only what followed the primary moves.
     pub fn with_primary(&self, primary: Color) -> ThemeTokens {
+        self.with_choices(ColorChoices { primary: Some(primary), branch: None })
+    }
+
+    /// These tokens with the person's picks on top: a primary as [`Self::with_primary`], and
+    /// a branch color, which replaces `git.branch` (a theme's own included) and is held to the
+    /// contrast the default rule is. Everything that follows either is re-derived.
+    pub fn with_choices(&self, choices: ColorChoices) -> ThemeTokens {
         let mut overrides: BTreeMap<String, (Expr, String)> =
             self.recipe.overrides.iter().map(|(n, e)| (n.clone(), (e.clone(), "theme".into()))).collect();
-        let primary = Expr::Lit(primary.with_alpha(1.0));
-        overrides.insert("primary".into(), (primary, "primary color".into()));
+        if let Some(primary) = choices.primary {
+            let primary = Expr::Lit(primary.with_alpha(1.0));
+            overrides.insert("primary".into(), (primary, "primary color".into()));
+        }
+        let branch_source = choices.branch.map(|branch| match branch {
+            BranchTint::Primary => "primary".to_string(),
+            BranchTint::Color(color) => color.with_alpha(1.0).to_hex(),
+        });
+        // Built from a token name or a hex code, so it always parses; keep the theme's
+        // branch rather than panic if it ever didn't.
+        if let Some(branch) = branch_source.and_then(|source| parse_expr(&branch_rule(&source)).ok()) {
+            overrides.insert("git.branch".into(), (branch, "branch color".into()));
+        }
         let rebuilt = build_variant(
             self.name.clone(),
             self.terminal.clone(),
@@ -115,6 +158,7 @@ impl ThemeTokens {
 
 #[cfg(test)]
 mod tests {
+    use super::{BranchTint, ColorChoices};
     use crate::theme::tokens::test_support::{builtin, hex, ratio, resolve_str, snapshot};
     use crate::theme::tokens::{UI_TOKENS, builtin_tokens};
 
@@ -258,6 +302,47 @@ mod tests {
         let t = base.with_primary(hex("#ff0000"));
         assert_eq!(t.get("border"), Some(pink));
         assert_eq!(t.get("primary"), Some(hex("#ff0000")));
+    }
+
+    /// A chosen branch color replaces the theme's (its own override included), its chip
+    /// follows, and whatever is picked stays as readable as the default rule makes it.
+    #[test]
+    fn a_chosen_branch_color_replaces_the_theme_and_stays_readable() {
+        let picks = ["#ff6600", "#fff3a0", "#0b1d4d", "#777777"];
+        for base in builtin_tokens() {
+            let tints =
+                [BranchTint::Primary].into_iter().chain(picks.iter().map(|p| BranchTint::Color(hex(p))));
+            for branch in tints {
+                let t = base.with_choices(ColorChoices { primary: None, branch: Some(branch) });
+                let n = format!("{} / {branch:?}", base.name);
+                for bg in ["sidebar.background", "surface.panel", "surface.window", "surface.elevated"] {
+                    assert!(ratio(&t, "git.branch", bg) >= 4.5, "{n}: branch on {bg}");
+                }
+                assert_eq!(
+                    t.get("git.branch.background"),
+                    t.get("git.branch").map(|c| c.with_alpha(0.14)),
+                    "{n}"
+                );
+                assert_eq!(t.get("primary"), base.get("primary"), "{n}");
+            }
+        }
+        // A readable pick is used as it is, over a theme that sets its own branch.
+        let themed = resolve_str(r##"{"ui": {"git.branch": "terminal.ansi.4"}}"##).unwrap();
+        let t = themed
+            .with_choices(ColorChoices { primary: None, branch: Some(BranchTint::Color(hex("#ff6600"))) });
+        assert_eq!(t.get("git.branch").map(|c| c.to_hex()).as_deref(), Some("#ff6600"));
+    }
+
+    #[test]
+    fn a_branch_in_the_primary_follows_the_primary_chosen() {
+        let base = builtin("Tokyo Night");
+        let primary = hex("#ff6600");
+        let t = base.with_choices(ColorChoices { primary: Some(primary), branch: Some(BranchTint::Primary) });
+        // `readable()` goes through another color space, so compare what is drawn.
+        assert_eq!(t.get("git.branch").map(|c| c.to_hex()), Some(primary.to_hex()));
+        // Nothing picked is the theme as it is.
+        assert!(ColorChoices::default().is_empty());
+        assert_eq!(snapshot(&base.with_choices(ColorChoices::default())), snapshot(&base));
     }
 
     #[test]

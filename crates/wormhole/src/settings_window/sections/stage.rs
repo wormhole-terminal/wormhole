@@ -55,9 +55,12 @@ pub(in crate::settings_window) fn draw_stage(
     let status_bar = store.settings.status_bar;
     let surfaces = style::window_surfaces(cx, true);
     let look = Look::of(settings(cx));
+    // The theme's own branch magenta, not the one in effect: a branch color picked below recolors
+    // the chips, never the desktop behind the window.
+    let magenta = store.base_tokens().get("git.branch").map(hsla).unwrap_or(ui.branch);
     let wallpaper = linear_gradient(
         WASH_ANGLE,
-        linear_color_stop(Hsla { a: WASH_ALPHA, ..ui.branch }, 0.0),
+        linear_color_stop(Hsla { a: WASH_ALPHA, ..magenta }, 0.0),
         linear_color_stop(Hsla { a: WASH_ALPHA, ..ui.info }, 1.0),
     );
     let lights = div()

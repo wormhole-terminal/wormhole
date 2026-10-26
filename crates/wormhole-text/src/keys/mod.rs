@@ -55,7 +55,7 @@ pub use settings_window::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 615] = [
+pub const ALL: [Key; 621] = [
     SETTINGS_SECTION_ADVANCED, SETTINGS_SECTION_ADVANCED_INTRO, SETTINGS_ADVANCED_GROUP_FILES,
     SETTINGS_ADVANCED_OPEN_CONFIG, SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION, SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS,
     SETTINGS_ADVANCED_OPEN_DATA, SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION, SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS,
@@ -90,6 +90,8 @@ pub const ALL: [Key; 615] = [
     SETTINGS_APPEARANCE_THEME_MODE, SETTINGS_APPEARANCE_THEME_MODE_DESCRIPTION, SETTINGS_APPEARANCE_THEME_MODE_KEYWORDS,
     SETTINGS_APPEARANCE_THEME, SETTINGS_APPEARANCE_THEME_KEYWORDS, SETTINGS_APPEARANCE_GROUP_ACCENT,
     SETTINGS_APPEARANCE_PRIMARY_COLOR, SETTINGS_APPEARANCE_PRIMARY_COLOR_DESCRIPTION, SETTINGS_APPEARANCE_PRIMARY_COLOR_KEYWORDS,
+    SETTINGS_APPEARANCE_BRANCH_COLOR, SETTINGS_APPEARANCE_BRANCH_COLOR_DESCRIPTION, SETTINGS_APPEARANCE_BRANCH_COLOR_KEYWORDS,
+    SETTINGS_APPEARANCE_BRANCH_THEME, SETTINGS_APPEARANCE_BRANCH_PRIMARY, SETTINGS_APPEARANCE_BRANCH_CUSTOM,
     SETTINGS_APPEARANCE_GROUP_WINDOW, SETTINGS_APPEARANCE_OPACITY, SETTINGS_APPEARANCE_OPACITY_DESCRIPTION,
     SETTINGS_APPEARANCE_OPACITY_KEYWORDS, SETTINGS_APPEARANCE_BLUR, SETTINGS_APPEARANCE_BLUR_DESCRIPTION,
     SETTINGS_APPEARANCE_BLUR_KEYWORDS, SETTINGS_APPEARANCE_TRANSLUCENT, SETTINGS_APPEARANCE_TRANSLUCENT_DESCRIPTION,
@@ -290,6 +292,7 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("settings-appearance-primary-yours", settings_appearance_primary_yours("Sample")),
         ("settings-appearance-primary-pick", settings_appearance_primary_pick("Sample")),
         ("settings-appearance-primary-theme", settings_appearance_primary_theme("Sample", "Sample")),
+        ("settings-appearance-branch-pick", settings_appearance_branch_pick("Sample")),
         ("settings-appearance-project-theme-note", settings_appearance_project_theme_note("Sample")),
         ("settings-appearance-filter-themes-count", settings_appearance_filter_themes_count(1)),
         ("settings-appearance-filter-themes-count", settings_appearance_filter_themes_count(5)),

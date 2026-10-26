@@ -1,6 +1,6 @@
 //! The values some settings take, as the file spells them: the theme mode, size units, which windows
-//! count as in front, the sound, badge and icon choices, Option as Meta, the title border and a shell
-//! profile. `Settings` holds them; each reads and writes by its documented name.
+//! count as in front, the sound, badge and icon choices, Option as Meta, the title border, the branch
+//! color and a shell profile. `Settings` holds them; each reads and writes by its documented name.
 
 use serde::{Deserialize, Serialize};
 
@@ -161,6 +161,21 @@ impl TitleBorder {
             TitleBorder::Never => false,
         }
     }
+}
+
+/// Where the git branch's color comes from: the theme's own `git.branch`, the primary color
+/// in effect, or `branch_color_custom`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BranchColor {
+    #[default]
+    Theme,
+    Primary,
+    Custom,
+}
+
+impl BranchColor {
+    pub const ALL: [BranchColor; 3] = [BranchColor::Theme, BranchColor::Primary, BranchColor::Custom];
 }
 
 /// A shell profile as `config.json` lists it under `shells`: a program to offer for new terminals

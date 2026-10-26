@@ -22,6 +22,10 @@
 //! the note under it: what a check sends, and in a fresh data dir when counting starts; then by about
 //! 1,700 when that became a Privacy group of its own (its heading, why, the switch, the first count's
 //! banner and three lines of what a check sends).
+//! Appearance rose by about 370 with the Branch colour row (a segmented control and its quiet line).
+//! Every page reads the settings as JSON each frame (`Values`), twice, so its two new keys cost every page
+//! about 10; the colour pickers' check, which no longer builds hex strings, gave back 8. The budgets
+//! were set again from that frame, which also took in a drift of up to 20 on Terminal and Updates.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -40,20 +44,20 @@ const SLACK: u64 = 20;
 /// keeps), and of the results page of a search for a word found in several pages; a frame may make
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 14] = [
-    ("Profile", 6590),
-    ("Appearance", 15218),
-    ("Fonts", 7288),
-    ("Terminal", 9588),
-    ("Sessions", 13516),
-    ("Git", 4396),
-    ("Agents", 26295),
-    ("Notifications", 7711),
-    ("MenuBar", 6024),
-    ("Updates", 5458),
-    ("Advanced", 3949),
-    ("Projects", 8866),
-    ("FeatureFlags", 3855),
-    ("search", 12240),
+    ("Profile", 6592),
+    ("Appearance", 15585),
+    ("Fonts", 7290),
+    ("Terminal", 9602),
+    ("Sessions", 13518),
+    ("Git", 4398),
+    ("Agents", 26297),
+    ("Notifications", 7713),
+    ("MenuBar", 6026),
+    ("Updates", 5480),
+    ("Advanced", 3957),
+    ("Projects", 8868),
+    ("FeatureFlags", 3859),
+    ("search", 12244),
 ];
 
 fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {

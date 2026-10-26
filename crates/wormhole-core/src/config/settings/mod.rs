@@ -15,6 +15,7 @@ use crate::theme::registry::{DEFAULT_THEME, DEFAULT_THEME_LIGHT};
 use crate::update::UpdateChannel;
 use crate::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 
+mod branch_color;
 mod choices;
 mod folder_colors;
 mod keys;
@@ -26,8 +27,8 @@ mod tests;
 use self::folder_colors::folder_color_key;
 
 pub use self::choices::{
-    DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta, ShellProfile, SizeUnits,
-    ThemeMode, TitleBorder,
+    BranchColor, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta, ShellProfile,
+    SizeUnits, ThemeMode, TitleBorder,
 };
 pub(crate) use self::keys::keys;
 pub use self::keys::{APP_SETTINGS, PROJECT_SETTINGS};
@@ -45,6 +46,11 @@ pub struct Settings {
     /// chose a color keeps it (see [`Settings::uses_theme_primary`]).
     #[serde(default)]
     pub theme_primary: Option<bool>,
+    /// Where the git branch's color comes from: the theme's own, the primary in effect, or
+    /// `branch_color_custom` (see [`Settings::branch_tint`]).
+    pub branch_color: BranchColor,
+    /// The `#rrggbb` a `custom` branch color uses; it stays chosen while another is in use.
+    pub branch_color_custom: String,
     pub font_family: String,
     pub font_size: f32,
     /// Combine sequences like `=>` and `!=` into single glyphs (in fonts that
@@ -255,6 +261,8 @@ impl Default for Settings {
             theme: DEFAULT_THEME.into(),
             primary_color: String::new(),
             theme_primary: Some(true),
+            branch_color: BranchColor::default(),
+            branch_color_custom: String::new(),
             // Only fresh configs: config.json is written out in full on first
             // launch, so existing ones keep the font they have.
             font_family: fonts::bundled::FAMILY.into(),

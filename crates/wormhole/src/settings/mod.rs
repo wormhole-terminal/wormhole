@@ -5,8 +5,8 @@
 //! Every change goes through one of the mutators below, which re-derive in place
 //! and only what their input touched: a setting that is not part of the theme
 //! (wrap lines, a sidebar option) leaves the tokens, the terminal palette and the
-//! syntax theme alone, and the choice of primary color is remembered per base
-//! theme. [`Revisions`] says what moved, so a view that depends on the theme
+//! syntax theme alone, and the colors chosen over the theme (primary, branch) are
+//! remembered per base theme. [`Revisions`] says what moved, so a view that depends on the theme
 //! alone does not rebuild for an unrelated setting. A change to the theme or the
 //! fonts also reaches GPUI Kit's theme right away (`theme_bridge`).
 //!
@@ -32,7 +32,7 @@ use gpui_kit::{App, Global, SharedString};
 pub use wormhole_core::config::Settings;
 use wormhole_core::config::{Config, FeatureMask};
 use wormhole_core::theme::fonts::ResolvedFonts;
-use wormhole_core::theme::tokens::{Appearance, Color, ThemeTokens};
+use wormhole_core::theme::tokens::{Appearance, ColorChoices, ThemeTokens};
 
 use crate::palette::Palette;
 use crate::theme_bridge;
@@ -96,10 +96,11 @@ impl Default for SystemLook {
     }
 }
 
-/// The primary-colored variant of a base theme, kept until either of them changes.
-struct PrimaryMemo {
+/// A base theme with the person's colors on top (a primary, a branch color), kept until
+/// either changes.
+struct ChoicesMemo {
     base: Arc<ThemeTokens>,
-    primary: Color,
+    choices: ColorChoices,
     tokens: Arc<ThemeTokens>,
 }
 
@@ -121,10 +122,10 @@ pub struct SettingsStore {
     preview: Option<Arc<ThemeTokens>>,
     /// `config.tokens`, shared. Core resolves the theme again on every update and hands
     /// out a new value each time; this keeps the old allocation while the theme is the
-    /// same, so what is remembered per base (`primary_memo`) and what compares by
+    /// same, so what is remembered per base (`choices_memo`) and what compares by
     /// pointer stays valid.
     config_tokens: Arc<ThemeTokens>,
-    primary_memo: Option<PrimaryMemo>,
+    choices_memo: Option<ChoicesMemo>,
     contrast_memo: Option<ContrastMemo>,
     /// The icon theme and appearance `icons` was resolved for.
     icon_key: (String, bool),
@@ -177,8 +178,8 @@ impl SettingsStore {
     fn new(config: Config) -> Self {
         let settings = config.settings.clone();
         let config_tokens = Arc::new(config.tokens.clone());
-        let mut primary_memo = None;
-        let tokens = themed(None, None, &config_tokens, settings.primary(), &mut primary_memo);
+        let mut choices_memo = None;
+        let tokens = themed(None, None, &config_tokens, settings.color_choices(), &mut choices_memo);
         let (palette, highlight) = theme_parts(&tokens);
         let icon_key = (settings.icon_theme.clone(), tokens.appearance == Appearance::Light);
         tally("icons");
@@ -196,7 +197,7 @@ impl SettingsStore {
             settings,
             config,
             config_tokens,
-            primary_memo,
+            choices_memo,
             contrast_memo: None,
             icon_key,
             system: SystemLook::default(),
@@ -259,8 +260,8 @@ impl SettingsStore {
             self.preview.as_ref(),
             self.project_theme.as_ref(),
             &self.config_tokens,
-            self.settings.primary(),
-            &mut self.primary_memo,
+            self.settings.color_choices(),
+            &mut self.choices_memo,
         );
         let tokens = contrasted(tokens, self.system.increase_contrast, &mut self.contrast_memo);
         let mut theme_changed = false;

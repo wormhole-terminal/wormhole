@@ -25,6 +25,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Fourteen new Wormhole themes in the website's accent colours: Electric Blue, Vivid Blue, Klein Blue,
   Cobalt, Azure, Sky, Ultramarine, Volt, Signal Orange, Hot Pink, Ultraviolet, Acid Cyan, Red and
   White. Each comes in a light and a dark version, built on Wormhole's own palette.
+- Settings → Appearance → Branch colour picks the colour of git branch names and their chips: the
+  theme's own, your primary colour, or any colour you choose (`branch_color`, `branch_color_custom`).
+  A colour that wouldn't read on the window is made readable, as the theme's is.
 
 ### Fixed
 

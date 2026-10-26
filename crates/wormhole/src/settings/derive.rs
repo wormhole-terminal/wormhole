@@ -1,5 +1,5 @@
 //! What the store works out from the settings and the theme, apart from the store itself: the tokens in
-//! effect (with the primary colour, at the contrast the system asks), how the windows let the desktop
+//! effect (with the colours chosen over the theme, at the contrast the system asks), how the windows let the desktop
 //! through, the main window's colours and what follows from a theme alone. Each is a function of its
 //! inputs, with the last result remembered where working it out costs.
 
@@ -8,39 +8,39 @@ use std::sync::Arc;
 
 use gpui_kit::component::highlighter::HighlightTheme;
 use wormhole_core::config::Settings;
-use wormhole_core::theme::tokens::{Color, ThemeTokens, Translucency};
+use wormhole_core::theme::tokens::{ColorChoices, ThemeTokens, Translucency};
 
-use super::{ContrastMemo, PrimaryMemo, UiColors};
+use super::{ChoicesMemo, ContrastMemo, UiColors};
 use crate::palette::Palette;
 use crate::theme_bridge;
 
 /// The tokens in effect: the Studio's preview exactly as drafted, otherwise the
-/// project's theme or the user's with the chosen primary on top. Re-deriving a theme
-/// around a primary is the one costly step, so the last result is reused while the
-/// base theme (by identity) and the primary stay the same.
+/// project's theme or the user's with the colors they chose (a primary, a branch color) on
+/// top. Re-deriving a theme around them is the one costly step, so the last result is reused
+/// while the base theme (by identity) and the choices stay the same.
 pub(super) fn themed(
     preview: Option<&Arc<ThemeTokens>>,
     project: Option<&Arc<ThemeTokens>>,
     config: &Arc<ThemeTokens>,
-    primary: Option<Color>,
-    memo: &mut Option<PrimaryMemo>,
+    choices: ColorChoices,
+    memo: &mut Option<ChoicesMemo>,
 ) -> Arc<ThemeTokens> {
     if let Some(preview) = preview {
         return preview.clone();
     }
     let base = project.unwrap_or(config);
-    let Some(primary) = primary else {
+    if choices.is_empty() {
         return base.clone();
-    };
+    }
     if let Some(memo) = memo.as_ref()
         && Arc::ptr_eq(&memo.base, base)
-        && memo.primary == primary
+        && memo.choices == choices
     {
         return memo.tokens.clone();
     }
-    tally("with_primary");
-    let tokens = Arc::new(base.with_primary(primary));
-    *memo = Some(PrimaryMemo { base: base.clone(), primary, tokens: tokens.clone() });
+    tally("with_choices");
+    let tokens = Arc::new(base.with_choices(choices));
+    *memo = Some(ChoicesMemo { base: base.clone(), choices, tokens: tokens.clone() });
     tokens
 }
 

@@ -181,18 +181,9 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         }
         // Thin stripes a little lighter (dark) or darker (light) than the window.
         "diff.filler" => p("text.primary / 12%", "text.primary / 16%"),
-        // Magenta: blue is the primary (the working status, focus, selection) and
-        // green / red / yellow / cyan already mean added / removed / warning / info.
-        // Pulled toward muted text so the branch stays quieter than the session name.
-        // Also judged on its own chip (`git.branch.background` over a band). The chip
-        // can't be made from the result, which would refer to itself, nor from the
-        // color before any adjustment, which in a light theme is far paler than the
-        // result. So a first pass finds a color, aiming a little high (5:1) so that it
-        // goes at least as far as the result, and the second judges that color's chip.
         "git.branch" => {
-            "readable(mix(terminal.ansi.5, text.muted, 25%), surface.window, surface.panel, surface.elevated, \
-             mix(band.solid, readable(mix(terminal.ansi.5, text.muted, 25%), surface.window, surface.panel, \
-             surface.elevated, mix(band.solid, mix(terminal.ansi.5, text.muted, 25%), 14%), 5), 14%), 4.5)"
+            static RULE: LazyLock<String> = LazyLock::new(|| branch_rule(BRANCH_SOURCE));
+            RULE.as_str()
         }
         "git.branch.background" => "git.branch / 14%",
         // The terminal's yellow, as in most editors' find: the current match solid with black
@@ -320,6 +311,24 @@ pub(super) fn replaced_by(name: &str) -> Option<&'static str> {
         }
         _ => return None,
     })
+}
+
+/// What `git.branch` starts from. Magenta: blue is the primary (the working status, focus,
+/// selection) and green / red / yellow / cyan already mean added / removed / warning / info.
+/// Pulled toward muted text so the branch stays quieter than the session name.
+const BRANCH_SOURCE: &str = "mix(terminal.ansi.5, text.muted, 25%)";
+
+/// `git.branch` made from `source` (an expression): the theme's default from
+/// [`BRANCH_SOURCE`], or the colour a person chose in Settings, which is held to the same
+/// contrast. Judged on the window's surfaces and on its own chip (`git.branch.background`
+/// over a band). The chip can't be made from the result, which would refer to itself, nor
+/// from the colour before any adjustment, which in a light theme is far paler than the
+/// result. So a first pass finds a colour, aiming a little high (5:1) so that it goes at
+/// least as far as the result, and the second judges that colour's chip.
+pub(super) fn branch_rule(source: &str) -> String {
+    let surfaces = "surface.window, surface.panel, surface.elevated";
+    let first = format!("readable({source}, {surfaces}, mix(band.solid, {source}, 14%), 5)");
+    format!("readable({source}, {surfaces}, mix(band.solid, {first}, 14%), 4.5)")
 }
 
 /// `status.warning` for a light palette whose ANSI yellow is darker than its muted text,

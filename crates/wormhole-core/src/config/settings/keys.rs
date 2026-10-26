@@ -10,6 +10,8 @@ use super::Settings;
 pub const PROJECT_SETTINGS: &[&str] = &[
     "primary_color",
     "theme_primary",
+    "branch_color",
+    "branch_color_custom",
     "font_family",
     "font_size",
     "font_ligatures",

@@ -23,9 +23,14 @@ pub(super) const APPEARANCE: &[Group] = &[
     ),
     group(
         SETTINGS_APPEARANCE_GROUP_ACCENT,
-        &[entry("primary-color", SETTINGS_APPEARANCE_PRIMARY_COLOR, &["theme_primary", "primary_color"])
-            .with_description(SETTINGS_APPEARANCE_PRIMARY_COLOR_DESCRIPTION)
-            .with_keywords(SETTINGS_APPEARANCE_PRIMARY_COLOR_KEYWORDS)],
+        &[
+            entry("primary-color", SETTINGS_APPEARANCE_PRIMARY_COLOR, &["theme_primary", "primary_color"])
+                .with_description(SETTINGS_APPEARANCE_PRIMARY_COLOR_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_PRIMARY_COLOR_KEYWORDS),
+            entry("branch-color", SETTINGS_APPEARANCE_BRANCH_COLOR, &["branch_color", "branch_color_custom"])
+                .with_description(SETTINGS_APPEARANCE_BRANCH_COLOR_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_BRANCH_COLOR_KEYWORDS),
+        ],
     ),
     group(
         SETTINGS_APPEARANCE_GROUP_WINDOW,

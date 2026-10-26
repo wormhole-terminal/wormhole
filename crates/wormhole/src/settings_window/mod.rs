@@ -113,6 +113,8 @@ pub(crate) struct SettingsWindow {
     recording: Option<recorder::Recording>,
     /// Appearance → the "+" after the primary swatches: any color.
     primary_picker: Entity<ColorPickerState>,
+    /// Appearance → the "+" after the branch color's swatches: any color.
+    branch_picker: Entity<ColorPickerState>,
     /// The select whose menu is open (by its row id), and the search box the select menus share.
     open_select: Option<&'static str>,
     menu_search: Entity<InputState>,

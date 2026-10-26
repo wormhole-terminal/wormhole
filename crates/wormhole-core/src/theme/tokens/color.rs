@@ -31,7 +31,7 @@ impl Color {
     }
 
     /// The 8-bit channels a hex string would show; equal bytes mean an equal `to_hex()`.
-    pub(crate) fn to_bytes(self) -> [u8; 4] {
+    pub fn to_bytes(self) -> [u8; 4] {
         [self.r, self.g, self.b, self.a].map(|v| (v.clamp(0.0, 1.0) * 255.0).round() as u8)
     }
 

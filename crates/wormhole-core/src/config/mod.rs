@@ -35,8 +35,8 @@ pub use self::feature_table::{FEATURES, FeatureId, FeatureInfo, FeatureKind, Fea
 #[cfg(test)]
 pub(crate) use self::settings::keys;
 pub use self::settings::{
-    APP_SETTINGS, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta, PROJECT_SETTINGS,
-    Settings, ShellProfile, SizeUnits, ThemeMode, TitleBorder,
+    APP_SETTINGS, BranchColor, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta,
+    PROJECT_SETTINGS, Settings, ShellProfile, SizeUnits, ThemeMode, TitleBorder,
 };
 pub use self::tab::TabId;
 use self::theme_setting::{ThemeStamp, default_tokens, resolve_theme};
@@ -204,6 +204,7 @@ impl Config {
             .or_else(|| self.save_error.clone())
             .or_else(|| self.theme_error.clone())
             .or_else(|| self.settings.primary_error())
+            .or_else(|| self.settings.branch_color_error())
             .or_else(|| self.notice.clone());
     }
 

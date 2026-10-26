@@ -95,7 +95,7 @@ use self::model::auto_appearance;
 pub use self::model::{Appearance, Metrics, SyntaxStyle, TerminalColors};
 use self::resolve::build;
 pub use self::rules::default_rule;
-pub use self::theme_tokens::ThemeTokens;
+pub use self::theme_tokens::{BranchTint, ColorChoices, ThemeTokens};
 pub use self::translucent::{BLUR_OFF_MIN_OPACITY, OPAQUE, Translucency, TranslucentColors};
 pub use self::uses::{Area, TOKEN_USES, TokenUse, followers, refers_to, used_in, uses_of};
 pub use self::variants::{MAX_VARIANTS, Variant, variant_name, variants};

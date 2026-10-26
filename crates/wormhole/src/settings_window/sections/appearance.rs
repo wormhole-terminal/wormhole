@@ -1,17 +1,17 @@
-//! Appearance: the live preview, the mode and the theme cards, the primary as
-//! swatches, the window's opacity, blur and status bar, the file icons. Under Reduce
+//! Appearance: the live preview, the mode and the theme cards, the primary and the branch
+//! color as swatches, the window's opacity, blur and status bar, the file icons. Under Reduce
 //! Transparency the opacity slider is off and says why; with the blur off below 95 % the
 //! blur's row warns.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
-use gpui_kit::component::color_picker::ColorPicker;
+use gpui_kit::component::color_picker::{ColorPicker, ColorPickerState};
 use gpui_kit::component::slider::Slider;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, SectionId as Section};
-use wormhole_core::config::{ThemeMode, TitleBorder};
-use wormhole_core::theme::tokens::Translucency;
+use wormhole_core::config::{BranchColor, ThemeMode, TitleBorder};
+use wormhole_core::theme::tokens::{BranchTint, Color, ThemeTokens, Translucency};
 #[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
@@ -22,7 +22,7 @@ use wormhole_text::text;
 use super::{open_button, stage};
 use crate::select::Choice;
 use crate::settings::update_settings;
-use crate::settings::{SettingsStore, UiColors, settings};
+use crate::settings::{Settings, SettingsStore, UiColors, settings};
 use crate::settings_window::registry::{ProjectSource, Segment, Setting, toggle};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
 use crate::style::{self, Edges};
@@ -56,6 +56,18 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::toggle("primary-color", |s| s.uses_theme_primary(), |s, on| s.theme_primary = Some(on))
         .describe(describe_primary)
         .below(draw_swatches),
+    Setting::segmented(
+        "branch-color",
+        &[
+            Segment::text(SETTINGS_APPEARANCE_BRANCH_THEME),
+            Segment::text(SETTINGS_APPEARANCE_BRANCH_PRIMARY),
+            Segment::text(SETTINGS_APPEARANCE_BRANCH_CUSTOM),
+        ],
+        |s| BranchColor::ALL.iter().position(|c| *c == s.branch_color).unwrap_or(0),
+        |s, ix| s.branch_color = BranchColor::ALL.get(ix).copied().unwrap_or_default(),
+    )
+    .describe(describe_branch)
+    .below(draw_branch_swatches),
     Setting::custom("opacity", draw_opacity).below(reduced_transparency_note),
     toggle!("blur", blur).below(blur_off_warning),
     Setting::custom("translucent", draw_translucent),
@@ -101,45 +113,89 @@ fn describe_primary(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
 /// While the theme's own primary is switched off: the theme's ANSI colors, a color chosen
 /// elsewhere, and the "+" that picks any color.
 fn draw_swatches(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
-    let ui = ui(cx);
     let store = cx.global::<SettingsStore>();
     if store.settings.uses_theme_primary() {
         return None;
     }
     let base = store.base_tokens();
-    let theme_primary = base.get("primary").map(|c| c.with_alpha(1.0));
     let chosen = store.settings.primary();
     // The theme's own colors, without the one its primary already is.
-    let mut colors: Vec<wormhole_core::theme::tokens::Color> = Vec::new();
-    for ix in [2, 5, 1, 3, 6, 4] {
-        let color = base.terminal.ansi[ix].with_alpha(1.0);
-        if Some(color.to_hex()) != theme_primary.map(|c| c.to_hex())
+    let theme_primary = base.get("primary").map(|c| c.with_alpha(1.0));
+    let colors = offered(base, &[2, 5, 1, 3, 6, 4], theme_primary, chosen);
+    Some(swatch_row("primary-swatch", colors, chosen, &window.primary_picker, Settings::choose_primary, cx))
+}
+
+/// "Pick a colour below · the theme's is …" while Custom is chosen and nothing is picked yet;
+/// otherwise the table's description.
+fn describe_branch(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<SharedString> {
+    let store = cx.global::<SettingsStore>();
+    if store.settings.branch_color != BranchColor::Custom || store.settings.branch_tint().is_some() {
+        return None;
+    }
+    let base = store.base_tokens().get("git.branch").map(|c| c.to_hex()).unwrap_or_default();
+    Some(settings_appearance_branch_pick(&base).into())
+}
+
+/// While Custom is chosen: the theme's ANSI colors, the one picked, and the "+" that picks any
+/// color. A pick that would not read on the window is made readable, as the theme's is.
+fn draw_branch_swatches(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
+    let store = cx.global::<SettingsStore>();
+    if store.settings.branch_color != BranchColor::Custom {
+        return None;
+    }
+    let chosen = match store.settings.branch_tint() {
+        Some(BranchTint::Color(color)) => Some(color),
+        _ => None,
+    };
+    let colors = offered(store.base_tokens(), &[5, 1, 3, 2, 6, 4], None, chosen);
+    Some(swatch_row(
+        "branch-swatch",
+        colors,
+        chosen,
+        &window.branch_picker,
+        Settings::choose_branch_color,
+        cx,
+    ))
+}
+
+/// The theme's ANSI colors at `ansi` in that order, each once and without `skip`, then
+/// `chosen` when it is none of them.
+fn offered(base: &ThemeTokens, ansi: &[usize], skip: Option<Color>, chosen: Option<Color>) -> Vec<Color> {
+    let mut colors: Vec<Color> = Vec::new();
+    let candidates = ansi.iter().filter_map(|&ix| base.terminal.ansi.get(ix)).map(|c| c.with_alpha(1.0));
+    for color in candidates.chain(chosen) {
+        if Some(color.to_hex()) != skip.map(|c| c.to_hex())
             && !colors.iter().any(|c| c.to_hex() == color.to_hex())
         {
             colors.push(color);
         }
     }
-    if let Some(chosen) = chosen
-        && !colors.iter().any(|c| c.to_hex() == chosen.to_hex())
-    {
-        colors.push(chosen);
-    }
-    let swatches = div()
+    colors
+}
+
+/// A row of swatches, the `chosen` one marked, that `choose` a color by its hex, then
+/// `picker`'s "+" for any other.
+fn swatch_row(
+    id: &'static str,
+    colors: Vec<Color>,
+    chosen: Option<Color>,
+    picker: &Entity<ColorPickerState>,
+    choose: fn(&mut Settings, String),
+    cx: &App,
+) -> AnyElement {
+    let ui = ui(cx);
+    div()
         .flex()
         .items_center()
         .gap_1()
         .children(colors.into_iter().enumerate().map(|(ix, color)| {
             let hex = color.to_hex();
             let picked = chosen.is_some_and(|c| c.to_hex() == hex);
-            style::swatch(("primary-swatch", ix), ui, theme_bridge::hsla(color), picked).on_click(
-                move |_, _, cx| {
-                    let hex = hex.clone();
-                    update_settings(cx, |s| s.choose_primary(hex))
-                },
-            )
+            style::swatch((id, ix), ui, theme_bridge::hsla(color), picked)
+                .on_click(move |_, _, cx| update_settings(cx, |s| choose(s, hex.clone())))
         }))
-        .child(ColorPicker::new(&window.primary_picker).icon(IconName::Plus).anchor(Anchor::TopRight));
-    Some(swatches.into_any_element())
+        .child(ColorPicker::new(picker).icon(IconName::Plus).anchor(Anchor::TopRight))
+        .into_any_element()
 }
 
 /// The opacity slider at what the settings ask for, switched off while Reduce Transparency or

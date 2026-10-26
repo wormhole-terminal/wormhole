@@ -3,7 +3,7 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use wormhole_core::config::{Config, Settings, ThemeMode};
+use wormhole_core::config::{BranchColor, Config, Settings, ThemeMode};
 use wormhole_core::theme::tokens::{Appearance, Translucency};
 
 use super::derive::{OPAQUE_LOOK, TALLY};
@@ -47,7 +47,7 @@ fn a_setting_outside_the_theme_derives_nothing() {
     // No theme was derived: the old code derived the palette and syntax theme (and
     // the whole token set around a primary) on every one of these.
     assert_eq!(tally().get("theme_parts"), None);
-    assert_eq!(tally().get("with_primary"), None);
+    assert_eq!(tally().get("with_choices"), None);
     // The bundled icon theme is only resolved when the name or appearance changes.
     assert_eq!(tally().get("icons"), None);
 }
@@ -68,7 +68,7 @@ fn choosing_a_primary_derives_the_theme_once_and_remembers_it() {
     let mut store = store();
     reset_tally();
     update(&mut store, |s| s.choose_primary("#ff8800".into()));
-    assert_eq!(tally().get("with_primary"), Some(&1));
+    assert_eq!(tally().get("with_choices"), Some(&1));
     assert_eq!(tally().get("theme_parts"), Some(&1));
     assert!(store.tokens.get("primary").is_some_and(|c| c.to_hex() == "#ff8800"));
     let theme = store.revisions.theme;
@@ -77,16 +77,39 @@ fn choosing_a_primary_derives_the_theme_once_and_remembers_it() {
     // Other settings change while the primary stays: nothing is derived again.
     update(&mut store, |s| s.tab_width = 8);
     update(&mut store, |s| s.opacity = 0.9);
-    assert_eq!(tally().get("with_primary"), Some(&1));
+    assert_eq!(tally().get("with_choices"), Some(&1));
     assert_eq!(tally().get("theme_parts"), Some(&1));
     assert!(Arc::ptr_eq(&tokens, &store.tokens));
     assert_eq!(store.revisions.theme, theme);
 
     // Another primary is another derivation; clearing it goes back to the theme's own.
     update(&mut store, |s| s.choose_primary("#0088ff".into()));
-    assert_eq!(tally().get("with_primary"), Some(&2));
+    assert_eq!(tally().get("with_choices"), Some(&2));
     update(&mut store, |s| s.choose_primary(String::new()));
-    assert_eq!(tally().get("with_primary"), Some(&2));
+    assert_eq!(tally().get("with_choices"), Some(&2));
+    assert!(Arc::ptr_eq(&store.tokens, &store.config_tokens));
+}
+
+#[test]
+fn a_branch_color_in_the_primary_follows_it_and_the_theme_comes_back() {
+    let mut store = store();
+    reset_tally();
+    update(&mut store, |s| s.branch_color = BranchColor::Primary);
+    assert_eq!(tally().get("with_choices"), Some(&1));
+    let primary = store.tokens.get("primary").map(|c| c.to_hex());
+    assert!(primary.is_some() && store.tokens.get("git.branch").map(|c| c.to_hex()) == primary);
+
+    // A primary of the person's own takes the branch along in the same derivation.
+    update(&mut store, |s| s.choose_primary("#ff8800".into()));
+    assert_eq!(tally().get("with_choices"), Some(&2));
+    assert!(store.tokens.get("git.branch").is_some_and(|c| c.to_hex() == "#ff8800"));
+
+    // The theme's own again: no derivation, the theme as loaded.
+    update(&mut store, |s| {
+        s.branch_color = BranchColor::Theme;
+        s.choose_primary(String::new());
+    });
+    assert_eq!(tally().get("with_choices"), Some(&2));
     assert!(Arc::ptr_eq(&store.tokens, &store.config_tokens));
 }
 

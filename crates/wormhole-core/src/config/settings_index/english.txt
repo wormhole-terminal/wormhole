@@ -219,6 +219,10 @@ entry Appearance primary-color
   label "Use the theme's primary colour"
   description "Off: a colour of your choice for buttons, focus rings, selection and links, in every theme"
   keywords "accent highlight color colour swatch custom own"
+entry Appearance branch-color
+  label "Branch colour"
+  description "The git branch on folders, in the title row and in the status bar. Any colour is kept readable"
+  keywords "git branch chip accent color colour magenta purple primary swatch custom own"
 entry Appearance opacity
   label "Background opacity"
   description "30–100 %. Below 100 % the desktop shows through"
