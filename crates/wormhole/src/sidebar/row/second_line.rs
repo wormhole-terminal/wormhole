@@ -10,7 +10,7 @@ use crate::style::RowTone;
 /// A row's second line: its words, their color, whether they are a command (code font; a path is
 /// in the interface font, as the title row and a pane's header show it) and what sits at the
 /// line's right.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::sidebar) struct SecondLine {
     pub(in crate::sidebar) text: Option<String>,
     pub(in crate::sidebar) tone: RowTone,

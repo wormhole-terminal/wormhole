@@ -53,8 +53,10 @@ impl Sidebar {
                 Entry::Row { session, .. } => ItemKey::Row(infos[session].id),
             })
             .collect();
-        let planned = self.plan_list_motion(&keys, &listing, window, cx);
         let frame = Frame::new(&input, self.width, self.hints_showing(cx), window, cx);
+        // Before the list is planned: that takes what the last frame was drawn from.
+        self.plan_status_motion(&input, &keys, &frame, cx);
+        let planned = self.plan_list_motion(&keys, &listing, window, cx);
         let (mark, drop) = self.drop_mark(&listing, infos);
         self.follow_drag(&keys, &listing, (mark.as_ref(), drop), !planned, cx);
         self.follow_join(mark.as_ref(), &listing, &frame, cx);
@@ -149,6 +151,8 @@ impl Sidebar {
                     Some(mut place) => {
                         // A split just made draws its bracket in.
                         place.bracket_draws = self.bracket_draws(infos[session].split);
+                        // A terminal whose status changes plays it over its tile, card and second line.
+                        place.status = self.motion.statuses.shift_of(infos[session].id);
                         self.render_row(&infos[session], &place, frame, window, cx)
                     }
                     None => div().into_any_element(),

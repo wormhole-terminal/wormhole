@@ -9,6 +9,7 @@ mod face;
 mod frame;
 mod label;
 mod second_line;
+mod shift;
 mod tile;
 
 use std::time::Duration;
@@ -19,9 +20,11 @@ use gpui_kit::*;
 use wormhole_core::view::sidebar::hints::keyshortcut;
 
 use self::face::RowFace;
+pub(super) use self::face::line_of;
 pub(super) use self::face::{PLACE_CHARS, Place, row_face};
 pub(super) use self::frame::Frame;
 pub(super) use self::second_line::time_text;
+pub(super) use self::shift::RowShift;
 pub(super) use self::tile::{glyph_for, tile_for, tile_parts};
 
 use super::facts::RowInfo;

@@ -287,6 +287,25 @@ impl Sidebar {
         self.motion.leaving_selected()
     }
 
+    /// The terminals whose tile's status is changing, and how it is played.
+    #[cfg(test)]
+    pub(crate) fn statuses_playing(&self) -> Vec<(i64, wormhole_core::view::motion::StatusMotion)> {
+        self.motion.statuses.playing()
+    }
+
+    /// What terminal `id`'s tile says now, as an urgency.
+    #[cfg(test)]
+    pub(crate) fn shown_urgency(&self, id: i64) -> Option<wormhole_core::view::sidebar::Urgency> {
+        let info = self.input.rows.iter().find(|row| row.id == id)?;
+        Some(row::glyph_for(info).into())
+    }
+
+    /// Whether any tile's status is changing.
+    #[cfg(test)]
+    pub(crate) fn statuses_busy(&self) -> bool {
+        self.motion.statuses.is_playing()
+    }
+
     /// The terminals whose rows have left the list and are still drawn while they go.
     #[cfg(test)]
     pub(crate) fn leaving_ids(&self) -> Vec<i64> {

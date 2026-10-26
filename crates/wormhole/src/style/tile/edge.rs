@@ -8,13 +8,16 @@ use crate::settings::UiColors;
 use crate::style::motion::{ANIMATION_FPS, TILE_BREATHE, TILE_BREATHE_LEAST};
 
 /// The edge of a tile whose agent needs input: amber, breathing down to [`TILE_BREATHE_LEAST`] every
-/// [`TILE_BREATHE`]; steady under Reduce Motion.
+/// [`TILE_BREATHE`]; steady under Reduce Motion. Its breath is read from the clock every animation
+/// shares, moved on by `phase` (the tile's own), so it goes on where it was when it is drawn again
+/// under another element (see `orbit`).
 #[track_caller]
 pub(super) fn breathing_edge(
     id: impl Into<ElementId>,
     ui: UiColors,
     size: f32,
     corner: f32,
+    phase: f32,
     still: bool,
 ) -> AnyElement {
     let stroke = px(line(size));
@@ -31,12 +34,13 @@ pub(super) fn breathing_edge(
     if still {
         return edge.into_any_element();
     }
+    let breath = pulsating_between(TILE_BREATHE_LEAST, 1.0);
     edge.with_animation(
         id,
         Animation::new(TILE_BREATHE)
-            .repeat()
+            .repeat_synced()
             .with_max_fps(ANIMATION_FPS)
-            .with_easing(pulsating_between(TILE_BREATHE_LEAST, 1.0)),
+            .with_easing(move |t| breath((t + phase).fract())),
         |edge, opacity| edge.opacity(opacity),
     )
     .into_any_element()

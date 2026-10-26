@@ -13,11 +13,12 @@ use super::super::{BODY_REM, CAPTION_REM, two_line_tooltip};
 use super::Frame;
 use super::label::row_label;
 use super::second_line::{SecondLine, second_line};
-use super::tile::tile_for;
+use super::shift::RowShift;
+use super::tile::{tile_parts, tile_shifting};
 use crate::sidebar::facts::RowInfo;
 use crate::sidebar::motion::draw_bracket;
 use crate::style::home_dir;
-use crate::style::{self, SessionRow, TextRole};
+use crate::style::{self, DetailRoll, SessionRow, TextRole};
 
 /// What a glyph or a keycap takes at the right of a line, gap included, for knowing when the
 /// name is cut off.
@@ -59,6 +60,8 @@ pub(in crate::sidebar) struct Place {
     pub(in crate::sidebar) changes_above: bool,
     /// The split's bracket along it is being drawn, in this batch of the list's motion (a split just made).
     pub(in crate::sidebar) bracket_draws: Option<u64>,
+    /// Its terminal's status is changing, and how that is played.
+    pub(in crate::sidebar) status: Option<RowShift>,
 }
 
 impl Place {
@@ -100,6 +103,7 @@ impl Place {
             marks,
             changes_above,
             bracket_draws: None,
+            status: None,
         })
     }
 }
@@ -133,7 +137,8 @@ pub(in crate::sidebar) fn row_face(
 
     // Every row leads with its status tile: what the terminal is inside, what it is doing round
     // it. It says the bell too, so nothing is left for the right.
-    let tile = tile_for(info, frame, selected, frame.metrics.tile, cx);
+    let shift = place.status.as_ref().map(|played| played.shift);
+    let tile = tile_shifting(info, frame, selected, frame.metrics.tile, shift, cx);
     // Row details: the notes and tasks still open, the row's own changed files.
     let quiet = if selected { ui.selected_muted } else { ui.muted };
     let notes = info.extra.filter(|_| frame.show_notes).map(|extra| {
@@ -169,9 +174,18 @@ pub(in crate::sidebar) fn row_face(
     // The second line: every regular row has one. What the terminal
     // has to report comes first; a quiet one says where it is, and where even that is
     // unknown it says what it is, so no row is a single line.
-    let whereabouts = || place_detail(info.cwd.as_deref(), home_dir(), PLACE_CHARS);
-    let SecondLine { text: detail, tone, mono, trail: detail_trail } =
-        second_line(info, !frame.metrics.two_lines, whereabouts);
+    let SecondLine { text: detail, tone, mono, trail: detail_trail } = line_of(info, frame);
+    // Line rolls: the words it had roll away as the new ones come.
+    let detail_roll = place.status.as_ref().and_then(|played| {
+        let was = played.was.as_ref()?;
+        Some(DetailRoll {
+            from: SharedString::from(was.text.clone()?),
+            from_tone: was.tone,
+            from_font: was.mono.then(|| frame.code_font.clone()),
+            shift: played.shift,
+            to: tile_parts(info, frame).1,
+        })
+    });
 
     let hint = place.number.filter(|_| frame.hints).map(|n| SharedString::from(keycap(n)));
     // After the name: the pin, and the worktree mark the band carries too, with the
@@ -271,6 +285,7 @@ pub(in crate::sidebar) fn row_face(
             // The whole line at rest; under the pointer, when nothing else sits at the line's end
             // to give way to the ×, faded out before it.
             name_fade: frame.fade(&info.name, BODY_REM, name_weight, name_room, window),
+            detail_roll,
             name_hover: (right == 0.0)
                 .then(|| {
                     frame.fade(&info.name, BODY_REM, name_weight, name_room - style::CLOSE_GLYPH_ROOM, window)
@@ -279,5 +294,18 @@ pub(in crate::sidebar) fn row_face(
                 .map(|fade| (fade, group.clone())),
         },
     );
+    // The card washed in the new status's colour, which fades away (the Card wash variant).
+    let wash = place.status.as_ref().and_then(|played| {
+        let (_, to) = tile_parts(info, frame);
+        played.shift.wash(("status-wash", id as u64), ui, to, frame.metrics.row_radius)
+    });
+    let row = row.children(wash);
     RowFace { row, tooltip, label, group }
+}
+
+/// What a terminal's second line says: the words, their tone, whether they are a command and what sits at
+/// its right.
+pub(in crate::sidebar) fn line_of(info: &RowInfo, frame: &Frame) -> SecondLine {
+    let whereabouts = || place_detail(info.cwd.as_deref(), home_dir(), PLACE_CHARS);
+    second_line(info, !frame.metrics.two_lines, whereabouts)
 }

@@ -7,6 +7,7 @@ use style::{
     TerminalTab, TileFace,
 };
 use wormhole_core::agents::AgentId;
+use wormhole_core::view::motion::{MotionChoice, StatusMotion};
 
 use super::Env;
 use super::view::GalleryView;
@@ -117,6 +118,11 @@ pub(super) fn render(
         .gap_2()
         .child(caption(ui, "Status tiles · every state at 32, 20, 18, 16 and 14 pt"))
         .child(env.mark("status.tile", tiles))
+        .child(caption(
+            ui,
+            "A status change · working to needs input, a third of the way through each variant",
+        ))
+        .child(status_changes(ui, app))
         .child(caption(ui, "A card of terminals"))
         .child(card)
         .child(caption(ui, "Tab bar · the group switcher with its amber dot, the open tab and the others"))
@@ -186,4 +192,45 @@ fn tile_states(ui: UiColors, app: &App) -> Div {
         column = column.child(line(format!("{label} pt"), false, size));
     }
     column.child(line("32 pt on a selected row".to_string(), true, TILE))
+}
+
+/// Each variant of a status change (Classic is a cut, so there is nothing of it to catch) with its tile
+/// caught a third of the way through the change from working to needs input: the old light on its way out,
+/// the new edge and badge on their way in, a flare, a nudge or a wash in the card behind.
+fn status_changes(ui: UiColors, app: &App) -> Div {
+    let shift = |motion| style::StatusShift {
+        motion,
+        from: StatusGlyph::Working,
+        clock: style::ShiftClock::At(1.0 / 3.0),
+    };
+    let tiles = StatusMotion::ALL.iter().filter(|&&motion| motion != StatusMotion::Classic).map(|&motion| {
+        let tile = style::status_tile_shifting(
+            ElementId::Name(SharedString::from(format!("g-change-{}", motion.name()))),
+            ui,
+            StatusTile {
+                face: TileFace::Agent(AgentId::Claude),
+                glyph: StatusGlyph::NeedsYou,
+                selected: false,
+                mini: false,
+            },
+            TILE,
+            ui.panel,
+            Some(shift(motion)),
+            app,
+        );
+        let wash = shift(motion).wash(
+            SharedString::from(format!("g-change-wash-{}", motion.name())),
+            ui,
+            StatusGlyph::NeedsYou,
+            ui.radius.into(),
+        );
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap_2()
+            .child(div().relative().p_3().child(tile).children(wash))
+            .child(div().text_caption().text_color(ui.muted).child(motion.name()))
+    });
+    div().flex().flex_wrap().gap_3().px_4().py_2().children(tiles)
 }

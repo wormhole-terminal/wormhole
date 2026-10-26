@@ -6,7 +6,7 @@ use wormhole_core::view::sidebar::RowState;
 
 use super::super::facts::RowInfo;
 use super::Frame;
-use crate::style::{self, StatusGlyph, StatusTile, TileFace};
+use crate::style::{self, StatusGlyph, StatusShift, StatusTile, TileFace};
 
 /// A terminal's status tile: its agent's logo (when the rows show it) or the terminal symbol, and
 /// its state round it; the bell is a badge on a terminal that has nothing louder to say.
@@ -17,9 +17,30 @@ pub(in crate::sidebar) fn tile_for(
     size: f32,
     cx: &App,
 ) -> AnyElement {
+    tile_shifting(info, frame, selected, size, None, cx)
+}
+
+/// [`tile_for`] while the terminal's status changes to the one it shows, as `shift` plays it.
+pub(in crate::sidebar) fn tile_shifting(
+    info: &RowInfo,
+    frame: &Frame,
+    selected: bool,
+    size: f32,
+    shift: Option<StatusShift>,
+    cx: &App,
+) -> AnyElement {
     let (face, state) = tile_parts(info, frame);
     let id = ElementId::Name(SharedString::from(format!("tile-{}-{}", info.id, size as u32)));
-    style::status_tile_at(id, frame.ui, StatusTile { face, glyph: state, selected, mini: false }, size, cx)
+    let surface = if selected { frame.ui.selected_row } else { frame.ui.panel };
+    style::status_tile_shifting(
+        id,
+        frame.ui,
+        StatusTile { face, glyph: state, selected, mini: false },
+        size,
+        surface,
+        shift,
+        cx,
+    )
 }
 
 /// What a terminal's tile shows: the face and the state, for a tile drawn later (the tab bar's

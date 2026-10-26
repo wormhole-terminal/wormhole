@@ -16,16 +16,17 @@ mod edge;
 mod face;
 mod orbit;
 mod ring;
+mod transition;
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 
 use self::badge::badge;
-use self::edge::breathing_edge;
 use self::face::{Paint, Resolved, resolve};
-use self::orbit::orbit;
+use self::ring::{light, phase_of};
 use super::scale::{TILE, TILE_MINI};
+use super::shift::StatusShift;
 use super::status::StatusGlyph;
 use crate::icons::glyph;
 use crate::settings::UiColors;
@@ -93,6 +94,23 @@ pub fn status_tile_on(
     surface: Hsla,
     cx: &App,
 ) -> AnyElement {
+    status_tile_shifting(id, ui, tile, size, surface, None, cx)
+}
+
+/// [`status_tile_on`] while its terminal's status changes to the one it shows, as `shift` says (what it
+/// changed from, how it is played, how far along it is): the old light, edge and badge go and the new
+/// ones come as the pose of the moment has them. No shift, a status that is not another one, a variant with
+/// nothing to say of it and Reduce Motion all draw the tile as it always is.
+#[track_caller]
+pub fn status_tile_shifting(
+    id: impl Into<ElementId>,
+    ui: UiColors,
+    tile: StatusTile,
+    size: f32,
+    surface: Hsla,
+    shift: Option<StatusShift>,
+    cx: &App,
+) -> AnyElement {
     let StatusTile { face, glyph: state, .. } = tile;
     let id: ElementId = id.into();
     let corner = size * SQUIRCLE;
@@ -113,14 +131,16 @@ pub fn status_tile_on(
             .child(letters)
             .into_any_element(),
     };
-    // The light round the edge, or the amber edge breathing.
-    let ring = match state {
-        StatusGlyph::Working => Some(orbit((id.clone(), "orbit"), ui.agent_working, size, corner, still)),
-        StatusGlyph::Running => Some(orbit((id.clone(), "orbit"), ui.muted, size, corner, still)),
-        StatusGlyph::NeedsYou => Some(breathing_edge((id.clone(), "breathe"), ui, size, corner, still)),
-        _ => None,
+    // The light round the edge, or the amber edge breathing, and the badge: as they are, or the layer
+    // that plays the change from the old ones.
+    let phase = phase_of(&id);
+    let (ring, badge, shifting) = match shift.filter(|shift| !still && shift.is_shown(state)) {
+        None => (light(&id, ui, state, (size, corner), phase, still), badge(ui, state, size, surface), None),
+        Some(shift) => {
+            let shape = transition::Shape { id: id.clone(), ui, size, corner, surface, phase };
+            (None, None, Some(transition::shifting(shape, shift, state)))
+        }
     };
-    let badge = badge(ui, state, size, surface);
     let sheen = div().absolute().top_0().left_0().size_full().rounded(px(corner)).bg(linear_gradient(
         180.0,
         linear_color_stop(ui.tile_sheen, 0.0),
@@ -157,6 +177,7 @@ pub fn status_tile_on(
         .child(face_box.child(sheen).child(face_el))
         .children(ring)
         .children(badge)
+        .children(shifting)
         .into_any_element()
 }
 

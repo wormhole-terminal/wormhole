@@ -18,12 +18,18 @@ const ORBIT_TRACK: f32 = 0.22;
 /// A light that circles the tile's edge once every [`TILE_ORBIT`], its tail fading behind it, over
 /// a faint track. Still, it is the whole ring at the light's strength. It runs along the edge's
 /// outside, so it never covers the tile's own.
+///
+/// Its turn is read from the clock every animation shares (`repeat_synced`) and moved on by `phase`
+/// (a share of a turn, the tile's own), not counted from when the element was made: a light that is
+/// drawn again under another element (a status change playing over the tile, the row moving) keeps
+/// its place on the edge instead of starting over, and tiles' lights are not all at the same point.
 #[track_caller]
 pub(super) fn orbit(
     id: impl Into<ElementId>,
     color: Hsla,
     size: f32,
     corner: f32,
+    phase: f32,
     still: bool,
 ) -> AnyElement {
     let stroke = line(size);
@@ -35,8 +41,8 @@ pub(super) fn orbit(
     layer()
         .with_animation(
             id,
-            Animation::new(TILE_ORBIT).repeat().with_max_fps(ANIMATION_FPS),
-            move |d, turn| d.child(ring_canvas(color, outer, round, stroke, Some(turn))),
+            Animation::new(TILE_ORBIT).repeat_synced().with_max_fps(ANIMATION_FPS),
+            move |d, turn| d.child(ring_canvas(color, outer, round, stroke, Some((turn + phase).fract()))),
         )
         .into_any_element()
 }

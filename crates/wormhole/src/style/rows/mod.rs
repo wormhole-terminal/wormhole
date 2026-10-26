@@ -5,11 +5,13 @@
 
 mod card;
 mod commits;
+mod detail;
 mod files;
 mod session;
 
 pub use card::*;
 pub use commits::*;
+pub use detail::DetailRoll;
 pub use files::*;
 pub use session::*;
 

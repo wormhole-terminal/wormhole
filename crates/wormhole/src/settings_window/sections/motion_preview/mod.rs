@@ -11,10 +11,10 @@
 //! Reduce Motion holds. A preview exists while its page is open (`MotionPreviews`), so nothing ticks
 //! while another page is.
 //!
-//! Picking another option starts the loop again from `t = 0`. The terminal opening and the group folding
-//! draw every option from the same poses the sidebar does (core's `view::motion::pose`), so the preview
-//! shows exactly what the list will do; the status and the column still draw what the app does today
-//! until the motion they name is built: a later phase adds a variant to the scene it belongs to.
+//! Picking another option starts the loop again from `t = 0`. The terminal opening, the group folding and
+//! the status changing draw every option from the same poses the sidebar does (core's `view::motion::pose`),
+//! so the preview shows exactly what the list will do; the column still draws what the app does today until
+//! the motion it names is built: a later phase adds a variant to the scene it belongs to.
 
 mod column;
 mod fold;

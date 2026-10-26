@@ -142,6 +142,7 @@ fn place(position: usize, of: usize, number: Option<usize>) -> Place {
         marks: wormhole_core::view::sidebar::SplitMarks::default(),
         changes_above: false,
         bracket_draws: None,
+        status: None,
     }
 }
 

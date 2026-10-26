@@ -9,6 +9,7 @@ use crate::style::metrics::Metrics;
 use crate::style::motion::{EASE_OUT, MOTION_FAST};
 use crate::style::scale::{ITEM_LEAD_W, META_LINE, NAME_LINE, ROW_H, ROW_TWO_LINE_H, TextRole};
 
+use super::detail::{DetailRoll, Words, rolling};
 use super::{SECOND_LINE_GAP, TILE_GAP, lead};
 
 /// What the second line of a [`session_row`] says, which decides its color.
@@ -74,6 +75,8 @@ pub struct SessionRow {
     /// The name under the pointer of the row's group, where a × then shows at the line's end: cut
     /// shorter, so it has faded out before the ×. Only paints, so nothing moves.
     pub name_hover: Option<(NameFade, SharedString)>,
+    /// The second line is changing from other words (a status change that rolls it).
+    pub detail_roll: Option<DetailRoll>,
 }
 
 /// The room a long name leaves at its line's end for the × that shows there under the pointer:
@@ -157,13 +160,31 @@ impl SessionRow {
             metrics: Metrics::default(),
             name_fade: None,
             name_hover: None,
+            detail_roll: None,
         }
     }
+}
+
+/// The colour a second line of `tone` is set in.
+fn tone_color_of(ui: UiColors, tone: RowTone, selected: bool) -> Hsla {
+    match tone {
+        RowTone::Plain if selected => ui.selected_muted,
+        RowTone::Plain => ui.muted,
+        RowTone::Attention => ui.attention_text,
+        RowTone::Done => ui.done_text,
+        RowTone::Failed => ui.danger_text,
+    }
+}
+
+/// What's happening reads a step heavier than a finished result or a question.
+fn detail_weight_of(tone: RowTone, code: bool) -> FontWeight {
+    if tone == RowTone::Plain && !code { FontWeight::MEDIUM } else { FontWeight::NORMAL }
 }
 
 /// See [`SessionRow`]. Add `.on_click(…)` and the rest of its behavior.
 #[track_caller]
 pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> Stateful<Div> {
+    let id: ElementId = id.into();
     let SessionRow {
         glyph,
         name,
@@ -184,22 +205,15 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
         metrics,
         name_fade,
         name_hover,
+        detail_roll,
     } = row;
     let (name_color, weight) = match (selected, emphasis) {
         (true, _) => (ui.selected_text, FontWeight::SEMIBOLD),
         (false, true) => (ui.text, FontWeight::SEMIBOLD),
         (false, false) => (ui.text, FontWeight::MEDIUM),
     };
-    let tone_color = match tone {
-        RowTone::Plain if selected => ui.selected_muted,
-        RowTone::Plain => ui.muted,
-        RowTone::Attention => ui.attention_text,
-        RowTone::Done => ui.done_text,
-        RowTone::Failed => ui.danger_text,
-    };
-    // What's happening reads a step heavier than a finished result or a question.
-    let detail_weight =
-        if tone == RowTone::Plain && detail_font.is_none() { FontWeight::MEDIUM } else { FontWeight::NORMAL };
+    let tone_color = tone_color_of(ui, tone, selected);
+    let detail_weight = detail_weight_of(tone, detail_font.is_some());
     let one_line_word = (detail.is_none() && tone == RowTone::Attention).then(|| {
         div()
             .flex_none()
@@ -259,14 +273,30 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
                 .min_w_0()
                 .text_caption()
                 .text_color(tone_color)
-                .child(
-                    div()
+                .child(match detail_roll {
+                    Some(DetailRoll { from, from_tone, from_font, shift, to }) => {
+                        let old = Words {
+                            text: from,
+                            color: tone_color_of(ui, from_tone, selected),
+                            weight: detail_weight_of(from_tone, from_font.is_some()),
+                            font: from_font,
+                        };
+                        let now = Words {
+                            text: detail,
+                            color: tone_color,
+                            font: detail_font,
+                            weight: detail_weight,
+                        };
+                        rolling(ElementId::from((id.clone(), "detail")), shift, to, old, now)
+                    }
+                    None => div()
                         .min_w_0()
                         .truncate()
                         .font_weight(detail_weight)
                         .when_some(detail_font, |d, font| d.font_family(font))
-                        .child(detail),
-                )
+                        .child(detail)
+                        .into_any_element(),
+                })
                 .child(div().flex_1())
                 .children(detail_trail.map(|trail| {
                     div().flex_none().tabular_nums().text_color(ui.faint).whitespace_nowrap().child(trail)

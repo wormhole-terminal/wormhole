@@ -28,6 +28,7 @@ use super::join::Join;
 use super::leaving::{Leavers, Snapshot};
 use super::pose::{self, Natural, RowMotion};
 use super::room::{self, DragRoom};
+use super::status::{Statuses, nudged};
 use crate::sidebar::{Sidebar, SidebarInput};
 use crate::style::motion::spring;
 
@@ -83,6 +84,8 @@ pub(in crate::sidebar) struct ListMotion {
     pub(super) room: Option<DragRoom>,
     /// The preview of a split a dragged row would make, and its bracket once it has (`join`).
     pub(super) join: Join,
+    /// The tiles whose status is changing (`status`).
+    pub(in crate::sidebar) statuses: Statuses,
     pub(super) batch: u64,
     /// What the last plan moved, for the tests that check where a drop started the rows from.
     #[cfg(test)]
@@ -141,6 +144,7 @@ impl ListMotion {
         self.entering.clear();
         self.leaving.clear();
         self.summaries.clear();
+        self.statuses.clear();
     }
 
     /// The spring `key`'s line is on now, if it is on one: a line that changed place, or one that a
@@ -198,7 +202,11 @@ impl Sidebar {
         }
         let flip = motion.spring_of(&key);
         let (arrival, leaving) = (motion.entering.get(&key), motion.leaving.get(&key));
-        if held || (flip.is_none() && arrival.is_none() && leaving.is_none()) {
+        let nudge = match key {
+            ItemKey::Row(id) => motion.statuses.nudge_of(id).map(|(shift, to)| (id, shift, to)),
+            ItemKey::Band(_) => None,
+        };
+        if held || (flip.is_none() && arrival.is_none() && leaving.is_none() && nudge.is_none()) {
             return slot.child(line);
         }
         let line = match (arrival, leaving) {
@@ -211,6 +219,11 @@ impl Sidebar {
                 pose::animate(line, id, leaving.motion, Phase::Exit, &leaving.natural)
             }
             (None, None) => line,
+        };
+        // A terminal that needs input nudges its row (the Nudge status change).
+        let line = match nudge {
+            Some((id, shift, to)) => nudged(line, id, shift, to),
+            None => line,
         };
         let Some(Spring { spec, from, to, place }) = flip else { return slot.child(line) };
         // The spring is kept under the line's key alone, so a change that retargets it carries on.

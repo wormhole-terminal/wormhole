@@ -9,7 +9,9 @@ use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 
 use crate::settings::UiColors;
-use crate::style::{self, Metrics, RowTone, SessionRow, StatusGlyph, TextRole, TileFace};
+use crate::style::{
+    self, DetailRoll, Metrics, RowTone, SessionRow, StatusGlyph, StatusShift, TextRole, TileFace,
+};
 
 /// A terminal of a sample list.
 pub(super) struct Sample {
@@ -138,7 +140,23 @@ impl Sample {
         notes: bool,
         cx: &App,
     ) -> AnyElement {
-        let tile = style::status_tile_at(
+        self.row_shifting(id, ui, metrics, (plain, notes), None, cx)
+    }
+
+    /// [`Self::row`] while its terminal's status changes from `was`'s, as `shift` plays it: the tile's
+    /// parts, the card's wash and the second line (the row's nudge is for the caller, which places it).
+    #[track_caller]
+    pub(super) fn row_shifting(
+        &self,
+        id: &str,
+        ui: UiColors,
+        metrics: Metrics,
+        (plain, notes): (&TileFace, bool),
+        shift: Option<(&Sample, StatusShift)>,
+        cx: &App,
+    ) -> AnyElement {
+        let surface = if self.selected { ui.selected_row } else { ui.panel };
+        let tile = style::status_tile_shifting(
             SharedString::from(format!("{id}-tile")),
             ui,
             style::StatusTile {
@@ -148,6 +166,8 @@ impl Sample {
                 mini: false,
             },
             metrics.tile,
+            surface,
+            shift.map(|(_, shift)| shift),
             cx,
         );
         let mut row = SessionRow::new(div().into_any_element(), self.name);
@@ -159,6 +179,13 @@ impl Sample {
         if metrics.two_lines {
             row.detail = Some(self.detail.into());
         }
+        row.detail_roll = shift.map(|(was, shift)| DetailRoll {
+            from: was.detail.into(),
+            from_tone: was.tone,
+            from_font: None,
+            shift,
+            to: self.glyph,
+        });
         if notes && self.notes > 0 {
             row.trail = Some(
                 div()
@@ -172,7 +199,10 @@ impl Sample {
                     .into_any_element(),
             );
         }
-        style::session_row(SharedString::from(format!("{id}-row")), ui, row).into_any_element()
+        let wash = shift.and_then(|(_, shift)| {
+            shift.wash(SharedString::from(format!("{id}-wash")), ui, self.glyph, metrics.row_radius)
+        });
+        style::session_row(SharedString::from(format!("{id}-row")), ui, row).children(wash).into_any_element()
     }
 }
 
