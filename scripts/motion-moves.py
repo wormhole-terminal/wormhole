@@ -8,6 +8,7 @@
   scripts/motion-moves.py rows        sidebar/rows.rs -> sidebar/row/{mod,frame,face,tile,second_line,label}.rs
   scripts/motion-moves.py drop-file   sidebar/drag.rs -> sidebar/drop.rs (core's twin is view/sidebar/drop.rs)
   scripts/motion-moves.py room-file   sidebar/motion/drag.rs -> sidebar/motion/room.rs (the room a dragged row makes)
+  scripts/motion-moves.py shift-file  style/shift.rs -> style/status_shift.rs (it is a status change's, beside status.rs)
   scripts/motion-moves.py STEP --check [--base REV]
                                       verify that the working tree is a pure move of the files as REV had them
                                       (default HEAD: before the commit; after it, pass the commit's parent)
@@ -464,6 +465,17 @@ RENAMES: Dict[str, Rename] = {
                 ("open for it (`drag`).", "open for it (`room`)."),
                 ("drag::lifted(", "room::lifted("),
             ],
+        },
+    ),
+    "shift-file": Rename(
+        "style/shift.rs",
+        "style/status_shift.rs",
+        {
+            "style/status_shift.rs": [],
+            "style/mod.rs": [("mod shift;", "mod status_shift;"), ("pub use shift::*;", "pub use status_shift::*;")],
+            "style/tile/mod.rs": [("use super::shift::StatusShift;", "use super::status_shift::StatusShift;")],
+            "style/tile/transition.rs": [("use crate::style::shift::StatusShift;", "use crate::style::status_shift::StatusShift;")],
+            "style/rows/detail.rs": [("use crate::style::shift::StatusShift;", "use crate::style::status_shift::StatusShift;")],
         },
     ),
 }
