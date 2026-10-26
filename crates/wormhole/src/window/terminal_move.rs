@@ -105,12 +105,15 @@ impl Workspace {
                 shown = Some(ix);
             }
         }
-        self.dirty = true;
         self.with_sidebar(cx, |sidebar, cx| sidebar.list_rearranged(cx));
         crate::background::activate_window(window, cx);
         if let Some(ix) = shown {
             self.activate(ix, window, cx);
         }
+        // At once, not on the next tick: until the terminals' rows name this window, the old window's
+        // next save forgets them, with their notes, tasks and text (`Store::save_window` deletes what a
+        // window no longer lists).
+        self.save(cx);
         cx.notify();
     }
 }
@@ -130,8 +133,11 @@ pub(super) fn open_for(
     let ids: Vec<i64> = terminals.iter().map(|(id, _)| *id).collect();
     app_mut(cx).adopted.extend(terminals);
     let (sessions, splits, active) = (record.sessions.clone(), record.splits.clone(), record.active);
+    let saved = record.clone();
     open_workspace_window_in(profile, Some(record), source, cx);
     if let Some(opened) = app(cx).windows.iter().find(|window| window.id == id).cloned() {
+        // The rows of the terminals name the new window now, before the old one saves without them.
+        app_mut(cx).save_window(profile, &saved);
         // They are the same terminals, running on: they moved, they did not open. Their splits come with
         // them.
         AppState::with_workspace(&opened, cx, |ws, _, cx| ws.publish_all_splits(cx));

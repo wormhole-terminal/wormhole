@@ -76,6 +76,10 @@ fn focused_note(ws: &Workspace, cx: &App) -> Option<usize> {
     notes::focused_note(ws, cx)
 }
 
+fn window_profile(window: &OpenWindow) -> &wormhole_core::storage::paths::ProfileId {
+    &window.profile
+}
+
 fn set_flag(cx: &mut TestAppContext, on: bool) {
     cx.update(|cx| {
         update_settings(cx, |s| {
@@ -215,6 +219,11 @@ fn a_terminal_torn_off_to_a_window_of_its_own_keeps_its_notes_and_tasks(cx: &mut
         return;
     }
     let window = start(cx, 1);
+    // A database (the scratch one of this test's process: the tests' shared state has none), to see what is saved.
+    cx.update(|cx| {
+        crate::app_state::app_mut(cx).store =
+            Some(wormhole_core::storage::store::Store::open().expect("the scratch database opens"));
+    });
     let record = record_with(11, &[("ship it", false)], &[("remember", true)], (true, false));
     let before = drive(cx, &window, |ws, window, cx| {
         open(ws, record, window, cx);
@@ -229,6 +238,18 @@ fn a_terminal_torn_off_to_a_window_of_its_own_keeps_its_notes_and_tasks(cx: &mut
     assert_eq!(after, before, "the same notes and tasks, in the same folds");
     let here: Vec<i64> = read(cx, &window, |ws| ws.sessions().iter().map(|s| s.id).collect());
     assert_eq!(here, [1], "and the first window no longer has the terminal");
+
+    // The old window saving first, before the new one's first tick, forgets nothing it no longer has.
+    drive(cx, &window, |ws, _, cx| ws.save(cx));
+    let stored = cx.update(|cx| {
+        app(cx).store_of(window_profile(&window)).and_then(|store| store.load().ok()).unwrap_or_default()
+    });
+    let session = stored
+        .iter()
+        .find(|w| w.id == other.id)
+        .and_then(|w| w.sessions.iter().find(|s| s.id == 11))
+        .expect("the moved terminal is stored under its new window");
+    assert_eq!((session.notes.len(), session.tasks.len()), (1, 1), "with its notes and tasks");
 }
 
 #[gpui_kit::test]
