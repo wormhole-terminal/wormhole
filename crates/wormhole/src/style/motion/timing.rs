@@ -26,7 +26,7 @@ pub const LAST_FRAME_GRACE: Duration = Duration::from_millis(40);
 /// How far into an animation of `duration` is `t` (0.0..=1.0) of the way through it: what a pose of core,
 /// which is a function of time, is asked at.
 #[must_use]
-pub fn elapsed(duration: Duration, t: f32) -> Duration {
+pub(crate) fn elapsed(duration: Duration, t: f32) -> Duration {
     Duration::from_secs_f32(t.clamp(0.0, 1.0) * duration.as_secs_f32())
 }
 

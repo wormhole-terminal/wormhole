@@ -289,6 +289,17 @@ impl Render for TerminalView {
 }
 
 impl TerminalView {
+    /// The size the view must have to hold the grid it has now (`panes::opening`: a terminal that must not be
+    /// resized while its pane's box moves is laid out at this): whole cells and half a cell over, so no rounding
+    /// takes a column or a row away, and the padding round them.
+    pub fn size_for_grid(&self, cx: &App) -> (f32, f32) {
+        let pane = self.pane_size();
+        (
+            (pane.cols as f32 + 0.5) * pane.cell.0 + PADDING_X + Self::right_inset(&self.profile, cx),
+            (pane.rows as f32 + 0.5) * pane.cell.1 + 2.0 * PADDING_Y,
+        )
+    }
+
     /// How far the grid stays from the pane's right edge: the padding, and the minimap when it is
     /// shown or the scrollbar's gutter (the legacy style; the overlay one takes no room). The
     /// find bar lines up with it.

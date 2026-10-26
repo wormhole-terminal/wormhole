@@ -10,6 +10,7 @@ use wormhole_core::view::panes::{Axis, DividerId, Node, PaneId};
 use wormhole_core::view::sidebar::SplitId;
 use wormhole_core::view::spoken;
 
+use super::opening::Stand;
 use super::splits::Split;
 use crate::platform::{self, Anchor};
 use crate::settings::{settings_in, ui_in};
@@ -33,13 +34,13 @@ impl Workspace {
     pub(in crate::window) fn render_panes(&self, cx: &mut Context<Self>) -> AnyElement {
         let Some(split) = self.active_split() else { return div().into_any_element() };
         // A pane that was just added opens over the layout it replaces.
-        if let Some(opening) = self.render_nested_opening(split, cx) {
+        if let Some(opening) = self.render_opening(split, cx) {
             return opening;
         }
         let order = split.layout.panes();
         let body = match split.layout.zoomed() {
-            Some(id) => self.render_pane(split, id, &order, cx),
-            None => self.render_node(split, split.layout.tree().root(), &mut Vec::new(), &order, cx),
+            Some(id) => self.render_pane(split, id, &order, None, cx),
+            None => self.render_node(split, split.layout.tree().root(), &mut Vec::new(), &order, None, cx),
         };
         div().id("panes").absolute().top_0().left_0().size_full().flex().child(body).into_any_element()
     }
@@ -53,11 +54,12 @@ impl Workspace {
         node: &Node,
         path: &mut Vec<usize>,
         order: &[PaneId],
+        stand: Option<&Stand>,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let Node::Split { axis, children } = node else {
             let Node::Leaf(id) = node else { unreachable!("a node is a pane or a split") };
-            return self.render_pane(split, *id, order, cx);
+            return self.render_pane(split, *id, order, stand, cx);
         };
         let gaps = settings_in(&self.profile, cx).split_gaps;
         let mut container = div().flex().size_full().min_w_0().min_h_0();
@@ -67,9 +69,23 @@ impl Workspace {
         };
         for (i, child) in children.iter().enumerate() {
             path.push(i);
-            let inner = self.render_node(split, &child.node, path, order, cx);
+            let mut inner = self.render_node(split, &child.node, path, order, stand, cx);
             path.pop();
             let gap = if i > 0 && gaps { px(style::PANE_GAP) } else { px(0.0) };
+            // The pane that is being split gives way to the new one: its box is the room the edge leaves it.
+            if let Some(stand) =
+                stand.filter(|stand| matches!(child.node, Node::Leaf(id) if stand.is_split(id)))
+            {
+                let lead = f32::from(gap);
+                inner = self.kept_box(
+                    inner,
+                    stand,
+                    match axis {
+                        Axis::Row => (lead, 0.0),
+                        Axis::Column => (0.0, lead),
+                    },
+                );
+            }
             let mut cell = div()
                 .relative()
                 .flex_grow(child.ratio)
@@ -99,12 +115,16 @@ impl Workspace {
         split: &Split,
         id: PaneId,
         order: &[PaneId],
+        stand: Option<&Stand>,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let Some(pane) = self.find_session(id).map(|ix| &self.sessions[ix].pane) else {
             return div().into_any_element();
         };
-        let focused = split.layout.focused() == id;
+        // While a split opens the keyboard is already in the new pane, which the layout before it does not know.
+        let focused = stand.map_or_else(|| split.layout.focused() == id, |stand| stand.focused(id));
+        // A pane that is being split keeps the terminal it had, whole, from its top left (`panes::opening`).
+        let held = stand.filter(|stand| stand.is_split(id)).map(Stand::hold);
         // The pane being dragged by its header stays in its place, lifted.
         let lifted = cx.has_active_drag()
             && self
@@ -117,6 +137,8 @@ impl Workspace {
         let header = self.render_pane_header(split, pane, focused, position, order.len(), cx);
         div()
             .id(("pane", id as u64))
+            // Which layer paints the pane's colour, for the tests: its own with surfaces, the column's without.
+            .debug_selector(move || if gaps { format!("pane-coat-{id}") } else { format!("pane-{id}") })
             .relative()
             .flex()
             .flex_col()
@@ -137,11 +159,20 @@ impl Workspace {
                     // header's tile.
                     .when(gaps, |d| d.px(px(style::PANE_TEXT_PAD)).pb(px(style::PANE_TEXT_PAD)))
                     .when(!focused, |d| d.opacity(style::PANE_DIM))
+                    .when(held.is_some(), |d| d.overflow_hidden())
                     // Cached (`window::cached`): window frames the terminal didn't cause reuse its last paint.
-                    .child(crate::window::cached::view(
-                        &pane.terminal,
-                        StyleRefinement::default().size_full(),
-                    )),
+                    .child({
+                        let terminal = crate::window::cached::view(
+                            &pane.terminal,
+                            StyleRefinement::default().size_full(),
+                        );
+                        match held {
+                            Some((w, h)) => {
+                                div().flex_none().w(px(w)).h(px(h)).child(terminal).into_any_element()
+                            }
+                            None => terminal,
+                        }
+                    }),
             )
             .when(gaps, |d| d.child(style::pane_outline(ui, focused)))
             .into_any_element()

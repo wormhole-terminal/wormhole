@@ -63,6 +63,28 @@ fn header(cx: &mut TestAppContext, window: &OpenWindow, id: i64) -> bool {
     drawn(cx, window, Box::leak(format!("pane-name-{id}").into_boxed_str()))
 }
 
+fn bounds_of(
+    cx: &mut TestAppContext,
+    window: &OpenWindow,
+    selector: &'static str,
+) -> Option<gpui_kit::Bounds<gpui_kit::Pixels>> {
+    VisualTestContext::from_window(window.handle, cx).debug_bounds(selector)
+}
+
+fn set_gaps(cx: &mut TestAppContext, on: bool) {
+    cx.update(|cx| crate::settings::update_settings(cx, |settings| settings.split_gaps = on));
+}
+
+/// Which layers paint the terminal's colour in the frame drawn: the column, and each pane of the picture.
+fn coats(cx: &mut TestAppContext, window: &OpenWindow, panes: &[i64]) -> (bool, Vec<bool>) {
+    let column = drawn(cx, window, "column-coat");
+    let own = panes
+        .iter()
+        .map(|id| drawn(cx, window, Box::leak(format!("pane-coat-{id}").into_boxed_str())))
+        .collect();
+    (column, own)
+}
+
 fn opening(cx: &mut TestAppContext, window: &OpenWindow) -> bool {
     read(cx, window, |ws| ws.active_split().is_some_and(|split| split.opening.is_some()))
 }
@@ -104,8 +126,12 @@ fn a_lone_terminal_is_split_under_a_picture_of_itself_and_resized_once_at_the_en
     frames(cx, &window, 12);
     assert!(opening(cx, &window), "the spring has not ended");
     assert!(drawn(cx, &window, "split-opening-new"), "the new pane's box is drawn");
-    assert!(!header(cx, &window, 1), "the pane that was split has no header yet");
-    assert!(header(cx, &window, new_id), "the new one does");
+    assert!(header(cx, &window, 1), "the pane that was split has its header from the start");
+    assert!(header(cx, &window, new_id), "and the new one has its own");
+    assert!(drawn(cx, &window, "opening-shield"), "the picture of the layout before is under a shield");
+    let kept = bounds_of(cx, &window, "split-opening-kept").expect("the pane that was split is drawn");
+    let whole = read(cx, &window, |ws| f32::from(ws.pane_area.size.width));
+    assert!(f32::from(kept.size.width) < whole, "its box has given way to the edge: {kept:?} in {whole}");
     assert_eq!(old.get(), 0, "its terminal was not resized while the edge moved");
     assert_eq!(read(cx, &window, |ws| ws.sessions[0].pane.grid.size()), before);
     let new_during = new.get();
@@ -115,6 +141,7 @@ fn a_lone_terminal_is_split_under_a_picture_of_itself_and_resized_once_at_the_en
     finish(cx, &window);
     assert!(!opening(cx, &window), "it ended");
     assert!(!drawn(cx, &window, "split-opening-new"), "the picture is the layout");
+    assert!(!drawn(cx, &window, "opening-shield"), "and live");
     assert!(header(cx, &window, 1), "the pane that was split has its header");
     assert_eq!(old.get(), 1, "the pane that was split was resized exactly once, at the end");
     assert_eq!(new.get(), new_during, "and the new one not again");
@@ -210,4 +237,89 @@ fn a_layout_that_changes_or_a_window_resized_while_it_opens_is_drawn_as_it_is(cx
     draw(cx, &window);
     draw(cx, &window);
     assert!(!drawn(cx, &window, "split-opening-new"), "another room: the layout as it is");
+}
+
+#[gpui_kit::test]
+fn the_new_pane_and_the_one_that_was_split_sit_on_one_coat_of_the_terminals_colour(cx: &mut TestAppContext) {
+    if isolate("the_new_pane_and_the_one_that_was_split_sit_on_one_coat_of_the_terminals_colour") {
+        return;
+    }
+    let window = open(cx);
+    for gaps in [true, false] {
+        set_gaps(cx, gaps);
+        // A lone terminal, then a pane of a split: both are drawn on one coat while the new pane opens.
+        for nested in [false, true] {
+            if nested {
+                finish(cx, &window);
+            }
+            split(cx, &window, Axis::Row);
+            let new_id = read(cx, &window, |ws| ws.sessions[ws.active].id);
+            frames(cx, &window, 6);
+            assert!(opening(cx, &window), "gaps {gaps} nested {nested}: it is opening");
+            let split_id = read(cx, &window, |ws| {
+                ws.active_split().expect("a split").opening.as_ref().map(|o| o.target_for_test())
+            });
+            let target = split_id.expect("an opening");
+            let (column, own) = coats(cx, &window, &[target, new_id]);
+            if gaps {
+                assert!(
+                    !column,
+                    "gaps {gaps} nested {nested}: each pane has its own surface, so the column has none"
+                );
+                assert_eq!(
+                    own,
+                    [true, true],
+                    "gaps {gaps} nested {nested}: the pane that was split and the new one each paint theirs"
+                );
+            } else {
+                assert!(column, "gaps {gaps} nested {nested}: the column paints it once");
+                assert_eq!(own, [false, false], "gaps {gaps} nested {nested}: and the panes paint none");
+            }
+            finish(cx, &window);
+        }
+        // Back to one terminal for the next setting: a window of a lone terminal again.
+        drive(cx, &window, |ws, window, cx| {
+            while ws.active_split().is_some() {
+                let id = ws.sessions[ws.active].id;
+                ws.close_pane(id, window, cx);
+                if ws.session_count() <= 1 {
+                    break;
+                }
+            }
+        });
+        finish(cx, &window);
+    }
+}
+
+#[gpui_kit::test]
+fn a_pane_of_a_split_gives_way_to_the_new_pane_and_keeps_its_grid(cx: &mut TestAppContext) {
+    if isolate("a_pane_of_a_split_gives_way_to_the_new_pane_and_keeps_its_grid") {
+        return;
+    }
+    let window = open(cx);
+    split(cx, &window, Axis::Row);
+    finish(cx, &window);
+    let second = read(cx, &window, |ws| ws.sessions[ws.active].id);
+    let name: &'static str = Box::leak(format!("pane-coat-{second}").into_boxed_str());
+    let whole = bounds_of(cx, &window, name).expect("the second pane");
+    let grid =
+        read(cx, &window, |ws| ws.sessions[ws.find_session(second).expect("a session")].pane.grid.size());
+    split(cx, &window, Axis::Column);
+    frames(cx, &window, 6);
+    let mid = bounds_of(cx, &window, name).expect("the pane that is being split is still drawn");
+    // The layout shares its width after the gaps and core's rectangles before them: a few points of difference.
+    let narrower = f32::from(whole.size.width) - f32::from(mid.size.width);
+    assert!(narrower.abs() < 6.0, "a split down gives up height and keeps its width: {mid:?} from {whole:?}");
+    assert!(mid.size.height < whole.size.height, "its box gave way to the edge: {mid:?} from {whole:?}");
+    assert_eq!(
+        read(cx, &window, |ws| ws.sessions[ws.find_session(second).expect("a session")].pane.grid.size()),
+        grid,
+        "its terminal was held at the grid it had"
+    );
+    let new = bounds_of(cx, &window, "split-opening-new").expect("the new pane");
+    assert!(
+        f32::from(new.origin.y) >= f32::from(mid.origin.y + mid.size.height) - 0.5,
+        "the two meet at the edge and do not overlap: {mid:?} {new:?}"
+    );
+    finish(cx, &window);
 }
