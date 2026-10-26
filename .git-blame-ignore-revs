@@ -22,3 +22,5 @@ ecafa9993306bbdde489c1e80558b51a80f9ae74
 80dd856102c4c8ec4c5c4bbc6af99460d05407ce
 # refactor(panes): move drawing a split's panes to render.rs
 eec18f4b87215cfcd358a118be92a5de9e01f47a
+# refactor(terminal-view): move the last frame's geometry and the window's geometry out of mod.rs
+9cd1c093ebf9600b693617a09399137c83566d16
