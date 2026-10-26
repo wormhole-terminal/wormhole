@@ -97,12 +97,13 @@ pub(crate) fn start(cx: &mut TestAppContext, sessions: i64) -> OpenWindow {
     start_with(cx, record)
 }
 
-/// For a test whose program prints while the test waits: the echo of what was typed into a terminal
-/// reaches the window from the PTY's reader thread, and GPUI's test scheduler reports a wake from another
-/// thread as a test that is not deterministic. Allowing parking once turns off the scheduler's
+/// Every window runs real terminals, whose PTY reader threads wake the window whenever their program
+/// prints: the echo of a key typed into `/bin/cat`, a terminal hanging up as it closes. GPUI's test
+/// scheduler reports a wake from another thread as a test that is not deterministic, which failed tests
+/// now and then on a loaded runner (issue #3). Allowing parking once turns off the scheduler's
 /// cross-thread check, for every thread, for the rest of the test; timers stay deterministic (forbidding
 /// parking again keeps idle waits jumping to the next timer) and a hang still panics.
-pub(crate) fn let_programs_print(cx: &TestAppContext) {
+fn let_programs_print(cx: &TestAppContext) {
     cx.executor().allow_parking();
     cx.executor().forbid_parking();
 }
@@ -129,6 +130,7 @@ pub(crate) fn start_with_table(
     record: WindowRecord,
     table: &'static [crate::window::feature::FeatureDef],
 ) -> OpenWindow {
+    let_programs_print(cx);
     cx.update(|cx| {
         gpui_kit::init(cx);
         // The test platform delivers notifications only to an app with an identity.
