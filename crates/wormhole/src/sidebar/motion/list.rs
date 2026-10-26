@@ -138,7 +138,9 @@ impl ListMotion {
         self.last.take().map(|(input, listing)| Rc::new(Snapshot { input, listing }))
     }
 
-    /// Everything stops where it is: the list is as it is, nothing slides or plays.
+    /// Everything stops where it is: the list is as it is, nothing slides or plays. That includes the status
+    /// changes noted in the same frame (`plan_status_motion` runs before the plan): a list that is cut, by
+    /// Reduce Motion or a list that cannot be measured, shows a changed status at once.
     pub(super) fn cut(&mut self) {
         self.moving = None;
         self.entering.clear();

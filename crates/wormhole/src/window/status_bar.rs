@@ -289,7 +289,7 @@ impl Workspace {
     pub(super) fn note_rolls(&mut self, was: Option<&StatusBar>, cx: &App) {
         let on = settings_in(&self.profile, cx).feature_enabled(FeatureFlag::Motion) && !cx.reduce_motion();
         let (drawn, rolls) = (&self.regions.drawn.status_bar, &mut self.regions.drawn.rolls);
-        rolls.note(counts(was), counts(drawn.as_ref()), Instant::now(), on);
+        rolls.note(counts(was), counts(drawn.as_ref()), cx.background_executor().now(), on);
     }
 
     /// A terminal's grid has another size. The bar says the selected terminal's, and was built before
@@ -358,7 +358,11 @@ impl Workspace {
 
     /// A count as the bar says it: "2 working" (or just "2" when the words do not fit) as plain text, and
     /// while it turns over its number rolls and the label stays.
-    fn count_text(&self, ix: usize, count: &Rest, words: bool, now: Instant) -> AnyElement {
+    ///
+    /// For the bar's migration to the catalogs: this joins a number and a label in English word order,
+    /// which another language may not keep ("{count} working" is one message with a placeable, and the
+    /// roll then needs the placeable's place in it), so the bar's messages must carry `{count}`.
+    fn count_text(&self, count: &Rest, words: bool, now: Instant) -> AnyElement {
         let plain = || if words { count.words.clone() } else { count.count.to_string() };
         match self.regions.drawn.rolls.of(count.activity, count.count, now) {
             None => plain().into_any_element(),
@@ -366,7 +370,11 @@ impl Workspace {
                 .flex()
                 .items_center()
                 .whitespace_nowrap()
-                .child(style::rolling_number(("status-count", ix), count.count, Some(roll)))
+                .child(style::rolling_number(
+                    ("status-count", count.activity as usize),
+                    count.count,
+                    Some(roll),
+                ))
                 .when(words && !count.label.is_empty(), |d| d.child(format!(" {}", count.label)))
                 .into_any_element(),
         }
@@ -425,7 +433,8 @@ impl Workspace {
         });
         // The rest as numbers: "2 working · 1 done" while there is room for the words, each a
         // glyph and its count after that.
-        let now = Instant::now();
+        // The executor's clock, which a test moves: a roll's time is its own.
+        let now = cx.background_executor().now();
         let rest = bar.rest.iter().enumerate().map(|(ix, r)| {
             let tab = r.tab;
             let item = match r.activity {
@@ -453,7 +462,7 @@ impl Workspace {
                 item,
             )
             .when(!bar.words, |d| d.child(glyph))
-            .child(self.count_text(ix, r, bar.words, now))
+            .child(self.count_text(r, bar.words, now))
             .on_click(cx.listener(move |this, _, window, cx| this.go_to_tab(tab, window, cx)));
             // "2 working · 1 done": a dot between the words.
             div()
