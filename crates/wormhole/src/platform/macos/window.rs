@@ -4,7 +4,7 @@
 use std::cell::Cell;
 use std::ptr::NonNull;
 
-use gpui_kit::{App, Window, point, px};
+use gpui_kit::Window;
 use objc2_app_kit::{
     NSNormalWindowLevel, NSWindow, NSWindowButton, NSWindowCollectionBehavior,
     NSWindowDidEnterFullScreenNotification, NSWindowDidExitFullScreenNotification,
@@ -47,13 +47,14 @@ pub fn lights_opacity(window: &Window) -> Option<(f32, bool)> {
     Some((button.alphaValue() as f32, button.isHidden()))
 }
 
-pub fn set_top_left(window: &Window, cx: &App, x: f32, y: f32) {
+pub fn set_top_left(window: &Window, x: f32, y: f32) {
     let Some(ns_window) = ns_window(window) else { return };
-    // AppKit counts y up from the bottom of the primary screen; GPUI down from its top.
-    let primary = cx.displays().into_iter().find(|d| d.bounds().origin == point(px(0.0), px(0.0)));
-    let Some(primary) = primary else { return };
-    let top = f64::from(f32::from(primary.bounds().size.height)) - f64::from(y);
-    ns_window.setFrameTopLeftPoint(NSPoint::new(f64::from(x), top));
+    // The screen the window is on, not "the display at the origin", which every display is for GPUI: AppKit's
+    // y grows up from the bottom of the primary screen, so another screen's frame says where its own top is.
+    let Some(screen) = ns_window.screen() else { return };
+    let frame = screen.frame();
+    let top = frame.origin.y + frame.size.height - f64::from(y);
+    ns_window.setFrameTopLeftPoint(NSPoint::new(frame.origin.x + f64::from(x), top));
 }
 
 pub fn is_minimised(window: &Window) -> bool {

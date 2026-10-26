@@ -10,7 +10,7 @@
 
 use std::sync::OnceLock;
 
-use gpui_kit::{App, Window};
+use gpui_kit::Window;
 
 use super::os::window as os;
 
@@ -53,10 +53,10 @@ pub fn opacity(window: &Window) -> Option<(f32, bool)> {
     os::lights_opacity(window)
 }
 
-/// Put the window's top left corner at `x`, `y` in GPUI's global points (from the top left of the
-/// primary screen). GPUI has no call for it.
-pub fn set_top_left(window: &Window, cx: &App, x: f32, y: f32) {
-    os::set_top_left(window, cx, x, y);
+/// Put the window's top left corner at `x`, `y` of the screen it is on, in points from that screen's top
+/// left (the space of `Window::bounds`). GPUI has no call for it.
+pub fn set_top_left(window: &Window, x: f32, y: f32) {
+    os::set_top_left(window, x, y);
 }
 
 /// Whether the window is minimised. AppKit says so only once the minimise animation is done.

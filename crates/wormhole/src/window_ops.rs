@@ -176,7 +176,7 @@ fn move_to(window: &mut Window, cx: &App, x: i32, y: i32) {
     };
     let x = place(x, full.origin.x, usable.origin.x, usable.size.width, bounds.size.width);
     let y = place(y, full.origin.y, usable.origin.y, usable.size.height, bounds.size.height);
-    os_window::set_top_left(window, cx, x, y);
+    os_window::set_top_left(window, x, y);
 }
 
 /// Resize the window so that the pane's text area is `rows` by `cols`.
@@ -215,7 +215,7 @@ fn fit_on_screen(window: &Window, cx: &App, width: f32, height: f32) {
     let x = place(at.x, usable.origin.x, full.right(), width);
     let y = place(at.y, usable.origin.y, full.bottom(), height);
     if (x, y) != (f32::from(at.x), f32::from(at.y)) {
-        os_window::set_top_left(window, cx, x, y);
+        os_window::set_top_left(window, x, y);
     }
 }
 

@@ -63,6 +63,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   session of its own can still hide where it runs.
 - A working terminal's light, and the breathing amber edge of one that needs you, no longer start over
   when its row is drawn again (a row moving, a status changing); they go on from where they were.
+- With more than one screen, a program's request to move its window (`CSI 3 ; x ; y t`) puts the window on
+  the screen it is on, at that place of it, not at the place of the first screen listed.
 
 ## [1.3.0] - 2026-10-25
 
