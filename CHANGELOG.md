@@ -11,6 +11,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - `features` in config.json switches the right panel's optional tools off and on (`"history": false`);
   Changes and Usage always stay, and a key that switches nothing is said so. Settings has no page for it
   yet; the first run's walk through how much the window shows will set it.
+- Settings → Import brings your font, colours, shell and more over from Ghostty, iTerm2, Terminal.app,
+  Alacritty, kitty, WezTerm, Warp, Zed and VS Code, lists what doesn't carry over, and shows how each
+  terminal compares (sources checked 2026-10). The first-run "Look" step offers "Use my … settings" when
+  it finds one. Nothing of the other terminal is changed or run.
 - Update checks let us count how many copies of Wormhole run, without telling one from another. A
   check now names the update channel, Apple silicon or Intel and the macOS major version, and the
   first check of each day and of each month says so; counting those gives the copies running each

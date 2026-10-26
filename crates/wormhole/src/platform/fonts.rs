@@ -19,6 +19,13 @@ pub fn classify(family: &str) -> Option<Traits> {
     os::classify(family)
 }
 
+/// The family of the face whose PostScript name is `postscript` (`JetBrainsMono-Regular` is in
+/// `JetBrains Mono`), for a settings import: iTerm2 and Terminal.app store the face, Wormhole
+/// sets the family. `None` for a name the system doesn't know, or where it can't be asked.
+pub fn family_of_postscript(postscript: &str) -> Option<String> {
+    os::family_of_postscript(postscript)
+}
+
 /// Make a font file's faces available to this process (or stop that), like an installed font but
 /// without touching the system.
 pub fn register(path: &Path, register: bool) -> anyhow::Result<()> {

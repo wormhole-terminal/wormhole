@@ -199,6 +199,13 @@
 //!   menu-new-window | menu-updates   the Shell > New Window / Check for Updates… menu actions,
 //!                   dispatched through this window like a menu click
 //!   settings | settings-section <name> | settings-shot <name>   (the settings window)
+//!   import-scan [<fixture home>]   Settings → Import over a folder standing in for the home (`~/…` is the
+//!                   instance's; `tools/visual/fixtures/import/`; never the real one), shown and open; without a folder the page scans the
+//!                   instance's own home. Shot it with settings-shot in a later batch
+//!   import-open <ghostty|iterm2|…>   open that terminal's card on the Import page
+//!   import-apply <ghostty|iterm2|terminal-app|alacritty|kitty|wezterm|warp|zed|vscode>   press "Import
+//!                   selected" on that terminal's card, rows ticked as shown (settings change, colours are saved
+//!                   as theme files in the instance's data dir)
 //!   update-installed <version> [pending]   Settings → Updates as after an install: Restart, or with
 //!                   `pending` the line "Restarts when your terminals are idle."
 //!   font-picker <interface|code|terminal> [query]   expand a font picker (open settings first)

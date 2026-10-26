@@ -56,8 +56,9 @@ pub struct FontName {
     /// A family name (`JetBrains Mono`), or a PostScript name (`JetBrainsMono-Regular`) when
     /// `postscript` is set.
     pub name: String,
-    /// iTerm2 and Terminal.app store the PostScript name of the face. The app can ask the system for
-    /// its family; without that, [`FontName::family`] guesses it from the name.
+    /// iTerm2 and Terminal.app store the PostScript name of the face. Only the system can say which
+    /// family it belongs to (the app asks it: [`Proposal::resolve_fonts`]); a name is never cut at its
+    /// `-` to guess, and one still unresolved is not applied.
     pub postscript: bool,
 }
 
@@ -70,12 +71,6 @@ impl FontName {
     /// A PostScript name.
     pub(crate) fn postscript_name(name: impl Into<String>) -> Self {
         Self { name: name.into(), postscript: true }
-    }
-
-    /// The family to set: the name as it is, or for a PostScript name what comes before its
-    /// style (`Monaco`, `SFMono-Regular` → `SFMono`). A guess; the system knows better.
-    pub fn family(&self) -> &str {
-        if self.postscript { self.name.split('-').next().unwrap_or(&self.name) } else { &self.name }
     }
 }
 
@@ -156,6 +151,8 @@ pub enum Reason {
     /// Some colours, but not both the background and the foreground: a few colours on defaults, not
     /// a palette to save as a theme.
     PartialPalette,
+    /// A font the source names by its PostScript name, which no font installed on this Mac has.
+    FontNotInstalled(String),
 }
 
 /// A key of the source that was read and not taken.
@@ -231,6 +228,31 @@ impl Proposal {
     pub(crate) fn sorted(mut self) -> Self {
         self.values.sort_by_key(|proposed| proposed.setting);
         self
+    }
+
+    /// Turn each PostScript font name into its family with `family_of`, the system's answer (core has
+    /// none: the app asks CoreText). A name nothing answers to is not offered: the font is not
+    /// installed, and any family made up from its name would not be either. It moves to the skipped
+    /// list with [`Reason::FontNotInstalled`].
+    pub fn resolve_fonts(&mut self, family_of: impl Fn(&str) -> Option<String>) {
+        let values = std::mem::take(&mut self.values);
+        for mut proposed in values {
+            if let SettingValue::Font(font) = &proposed.value
+                && font.postscript
+            {
+                match family_of(&font.name) {
+                    Some(family) => proposed.value = SettingValue::Font(FontName::family_name(family)),
+                    None => {
+                        self.skipped.push(Skipped {
+                            key: proposed.from,
+                            reason: Reason::FontNotInstalled(font.name.clone()),
+                        });
+                        continue;
+                    }
+                }
+            }
+            self.values.push(proposed);
+        }
     }
 
     /// The proposal for `setting`, if there is one.

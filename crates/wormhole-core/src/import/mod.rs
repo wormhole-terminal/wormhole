@@ -1,7 +1,8 @@
 //! Bringing settings over from other terminals: where Ghostty, iTerm2, Terminal.app, Alacritty,
 //! Kitty, WezTerm, Warp, Zed's terminal and VS Code's terminal keep theirs (`locations`), reading
 //! each into a [`Proposal`] (`ghostty`, `kitty`, `alacritty`, `iterm`, `terminal_app`, `warp`, `zed`,
-//! `vscode`, `wezterm`), and taking what the person ticks (`apply`).
+//! `vscode`, `wezterm`), taking what the person ticks (`apply`), and how each terminal compares
+//! with Wormhole (`compare`: ids, links and dates; the sentences are catalog messages).
 //!
 //! The format of every source and what it can and cannot give is in `repo-docs/docs/importer-formats.md`.
 //!
@@ -15,6 +16,8 @@
 mod alacritty;
 mod apply;
 mod archive;
+mod compare;
+mod display;
 mod entries;
 mod env;
 mod ghostty;
@@ -40,6 +43,8 @@ mod wezterm;
 mod zed;
 
 pub use self::apply::{SavedThemes, apply, save_themes};
+pub use self::compare::{CHECKED, Comparison, Drawback, WORMHOLE, of as comparison};
+pub use self::display::{command_line, visible};
 pub use self::env::Env;
 pub use self::proposal::{FontName, Proposal, Proposed, Reason, Setting, SettingValue, Skipped, SkippedKind};
 pub use self::scan::{Found, scan, scan_one};

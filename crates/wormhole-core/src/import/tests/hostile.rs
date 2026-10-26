@@ -356,3 +356,57 @@ fn volumes_are_outside_the_home_and_not_even_looked_at() {
     let found = left_alone(&fixture, Source::Ghostty);
     assert_eq!(number(&found.proposal, Setting::FontSize), 12.0);
 }
+
+#[test]
+fn a_path_that_climbs_out_of_the_home_is_outside_it() {
+    // `~/../outside/…` begins with the home and ends beside it; so does a relative one climbing out.
+    let fixture = Fixture::new();
+    outside(&fixture, "secret.conf", "font_size 31\n");
+    fixture.home(
+        ".config/kitty/kitty.conf",
+        "font_size 12\ninclude ~/../outside/secret.conf\ninclude ../../../outside/secret.conf\n\
+         globinclude ~/../outside/*.conf\n",
+    );
+    let found = left_alone(&fixture, Source::Kitty);
+    assert_eq!(number(&found.proposal, Setting::FontSize), 12.0);
+    assert_eq!(found.proposal.skipped.iter().filter(|skip| skip.reason == Reason::OutsideHome).count(), 3);
+
+    let fixture = Fixture::new();
+    outside(&fixture, "ghostty.conf", "font-size = 31\n");
+    fixture.home(".config/ghostty/config", "font-size = 12\nconfig-file = ~/../outside/ghostty.conf\n");
+    let found = left_alone(&fixture, Source::Ghostty);
+    assert_eq!(number(&found.proposal, Setting::FontSize), 12.0);
+}
+
+/// A binary plist whose object k is an array of two references to object k + 1, `levels` deep: it holds
+/// 2^levels values in under 200 bytes.
+fn shared_references(levels: u8) -> Vec<u8> {
+    let mut bytes = b"bplist00".to_vec();
+    let mut offsets = Vec::new();
+    for k in 0..levels {
+        offsets.push(u8::try_from(bytes.len()).expect("small"));
+        bytes.extend_from_slice(&[0xA2, k + 1, k + 1]);
+    }
+    offsets.push(u8::try_from(bytes.len()).expect("small"));
+    bytes.push(0xA0);
+    let table = u8::try_from(bytes.len()).expect("small");
+    bytes.extend_from_slice(&offsets);
+    // The trailer: 6 unused bytes, offset size, reference size, object count, top object, table offset.
+    bytes.extend_from_slice(&[0; 6]);
+    bytes.extend_from_slice(&[1, 1]);
+    bytes.extend_from_slice(&(u64::from(levels) + 1).to_be_bytes());
+    bytes.extend_from_slice(&0u64.to_be_bytes());
+    bytes.extend_from_slice(&u64::from(table).to_be_bytes());
+    bytes
+}
+
+#[test]
+fn a_binary_plist_of_shared_objects_is_refused_not_expanded() {
+    // The same bytes in a form that is well made and small are read, so the refusal below is for what
+    // it holds, not for how it is written.
+    assert!(crate::import::plist_value::parse(&shared_references(3)).is_some());
+    // 40 levels: about 2^40 events. Walked unchecked it would never end; built, it would use all memory.
+    let bytes = shared_references(40);
+    assert!(bytes.len() < 400);
+    assert!(crate::import::plist_value::parse(&bytes).is_none());
+}

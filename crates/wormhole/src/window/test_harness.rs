@@ -56,7 +56,10 @@ pub(crate) fn isolate_in(module_path: &str, name: &str) -> bool {
         .env("WORMHOLE_AGENT_HOME", data.join("agent-home"))
         // Where Settings → Command line tool would put `wh`, and what it reads to say whether it is
         // there: never /usr/local/bin, never the person's shell.
-        .env("WORMHOLE_CLI_DIR", data.join("cli-bin"));
+        .env("WORMHOLE_CLI_DIR", data.join("cli-bin"))
+        // Where other terminals keep their settings is asked of these (the Import page reads them):
+        // inside the scratch folder, never the person's own ~/.config.
+        .env("XDG_CONFIG_HOME", home.join(".config"));
     // Run from a Wormhole tab (or its dev instance), the tests would otherwise find its socket,
     // its devctl folder (and take the commands meant for it), its scripted answers and where it
     // starts terminals.
@@ -72,6 +75,10 @@ pub(crate) fn isolate_in(module_path: &str, name: &str) -> bool {
         "ANDROMEDA_BIN",
         "WORMHOLE_AUTH",
         "WORMHOLE_NOTIFY",
+        // The other places a terminal's settings are looked for (`import::Env::from_process`).
+        "XDG_CONFIG_DIRS",
+        "KITTY_CONFIG_DIRECTORY",
+        "WEZTERM_CONFIG_FILE",
     ] {
         command.env_remove(var);
     }

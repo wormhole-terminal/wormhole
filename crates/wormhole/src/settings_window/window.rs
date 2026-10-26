@@ -158,6 +158,7 @@ impl SettingsWindow {
             theme_picker,
             agents: None,
             agents_task: None,
+            import: sections::ImportPage::default(),
             cli_tool: sections::CliToolPanel::read(),
             rem: window.rem_size(),
             blur,
@@ -179,6 +180,9 @@ impl SettingsWindow {
         this.load_cli_tool(cx);
         if this.section == Section::Motion {
             this.show_section(Section::Motion, cx);
+        }
+        if this.section == Section::Import {
+            this.import_shown(cx);
         }
         this
     }
@@ -203,6 +207,11 @@ impl SettingsWindow {
             .then(|| self.motion_previews.take().unwrap_or_else(|| sections::MotionPreviews::new(cx)));
         if section == Section::Terminal {
             crate::open_in::OpenIn::refresh(cx);
+        }
+        // The first time the page is shown it scans (never at launch: nothing reads another terminal's
+        // files until a person opens Import), and from here, not `render`, which must not notify.
+        if section == Section::Import {
+            self.import_shown(cx);
         }
         self.show_results = false;
         self.open_select = None;

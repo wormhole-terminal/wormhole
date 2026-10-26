@@ -63,6 +63,21 @@ pub fn classify(family: &str) -> Option<Traits> {
     }
 }
 
+/// The family of the face called `postscript`. CoreText answers an unknown name with a default
+/// font, so the answer counts only when the face found has the name asked for.
+#[allow(unsafe_code)]
+pub fn family_of_postscript(postscript: &str) -> Option<String> {
+    use objc2_core_foundation::CFString;
+    use objc2_core_text::CTFont;
+
+    let name = CFString::from_str(postscript);
+    // SAFETY: a null matrix is allowed (the identity); the font is released when dropped.
+    let font = unsafe { CTFont::with_name(&name, 12.0, std::ptr::null()) };
+    // SAFETY: the font is a valid CTFont for the calls' duration.
+    let (found, family) = unsafe { (font.post_script_name().to_string(), font.family_name().to_string()) };
+    (found == postscript).then_some(family)
+}
+
 /// Make a font file's faces available to this process (or stop that), like
 /// an installed font but without touching the system. User fonts go through
 /// CoreText rather than GPUI's `add_fonts`, which reads only a collection's

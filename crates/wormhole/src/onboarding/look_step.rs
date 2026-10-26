@@ -3,11 +3,19 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::onboarding;
+use wormhole_core::import::{Found, Proposed};
+use wormhole_core::onboarding::{self, Step};
 use wormhole_core::theme::fonts::{FontSlot, display_name};
 use wormhole_core::theme::tokens::{Appearance, ThemeTokens, builtins};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::whole;
 
-use super::FirstRun;
+use super::{FirstRun, Intro};
+use crate::settings::import::{self as shared, Brought, terminal_name};
 use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, Edges, TextRole};
@@ -32,7 +40,7 @@ const SAMPLE: [&str; 4] =
 
 impl FirstRun {
     /// Step 2: a few themes, the primary, the terminal font's size and ligatures, and a sample.
-    pub(super) fn render_look_step(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn render_look_step(&self, sheet: &Intro, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
         let store = cx.global::<SettingsStore>();
         let s = &store.settings;
         let current = s.theme.clone();
@@ -139,16 +147,7 @@ impl FirstRun {
             .px_6()
             .pb_4()
             .child(cards)
-            .child(
-                style::link_button(
-                    "onboarding-import",
-                    ui,
-                    "Import from Ghostty, iTerm2 or Alacritty…",
-                    false,
-                )
-                .child(style::icon(IconName::ArrowDown))
-                .on_click(cx.listener(|_, _, _, cx| import_theme(cx))),
-            )
+            .child(self.render_import(sheet, ui, cx))
             .child(row("Primary colour", swatches.into_any_element()))
             .child(row("Terminal font", font.into_any_element()))
             .child(row(
@@ -172,6 +171,107 @@ impl FirstRun {
             ))
             .child(sample)
             .into_any_element()
+    }
+}
+
+/// What the step knows of the terminals on this Mac: the newest one's settings, once looked for.
+#[derive(Default)]
+pub(crate) struct LookImport {
+    started: bool,
+    task: Option<Task<()>>,
+    /// The terminal whose settings were changed last that has something to bring over by default.
+    found: Option<Found>,
+    /// What bringing them over did.
+    done: Option<Brought>,
+    /// Why it didn't work, in the words of the Import page.
+    error: Option<SharedString>,
+}
+
+impl FirstRun {
+    /// The first draw of the look step starts the scan (off the UI thread; it reads another terminal's
+    /// files, so it waits until the step is shown).
+    pub(super) fn look_step_shown(&mut self, cx: &mut Context<Self>) {
+        let Some(intro) = self.intro.as_mut() else { return };
+        if intro.model.step() != Step::Look || intro.import.started {
+            return;
+        }
+        intro.import.started = true;
+        intro.import.task = Some(cx.spawn(async move |this, cx| {
+            let found = cx.background_executor().spawn(async { shared::scan_here() }).await;
+            this.update(cx, |this, cx| {
+                if let Some(intro) = &mut this.intro {
+                    // The newest terminal with something ticked by default: one with nothing to "use" leaves
+                    // the theme file import where it is.
+                    intro.import.found =
+                        found.into_iter().find(|found| found.proposal.selected().next().is_some());
+                    intro.import.task = None;
+                }
+                cx.notify();
+            })
+            .ok();
+        }));
+    }
+
+    /// "Use my <terminal> settings" when one was found, else the theme file import. After it, the line
+    /// that says what came over.
+    fn render_import(&self, sheet: &Intro, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+        let Some(found) = sheet.import.found.as_ref() else {
+            return style::link_button(
+                "onboarding-import",
+                ui,
+                "Import from Ghostty, iTerm2 or Alacritty…",
+                false,
+            )
+            .child(style::icon(IconName::ArrowDown))
+            .on_click(cx.listener(|_, _, _, cx| import_theme(cx)))
+            .into_any_element();
+        };
+        let name = terminal_name(found.source);
+        let button = style::link_button("onboarding-import", ui, settings_import_use_mine(name), false)
+            .child(style::icon(IconName::ArrowDown))
+            .on_click(cx.listener(|this, _, _, cx| this.use_found(cx)));
+        let failed =
+            sheet.import.error.clone().map(|why| div().text_caption().text_color(ui.danger_text).child(why));
+        let said = sheet.import.done.map(|done| {
+            let text = if done.left == 0 {
+                settings_import_onboarding_all(whole(done.brought))
+            } else {
+                settings_import_onboarding_summary(whole(done.brought), &done.left.to_string())
+            };
+            div().text_caption().text_color(ui.success_text).child(text)
+        });
+        // The button, and under it what came over: the sentence is longer than the step is wide.
+        div()
+            .flex()
+            .flex_col()
+            .items_start()
+            .gap_1()
+            .child(button)
+            .children(said.map(|said| said.w_full()))
+            .children(failed.map(|failed| failed.w_full()))
+            .into_any_element()
+    }
+
+    /// Bring over what the found terminal's settings tick by default, in one settings update. Read when
+    /// the button is pressed, not each frame.
+    fn use_found(&mut self, cx: &mut Context<Self>) {
+        let Some(found) = self.intro.as_ref().and_then(|intro| intro.import.found.clone()) else { return };
+        let chosen: Vec<Proposed> = found.proposal.selected().cloned().collect();
+        match shared::apply(cx, &found, &chosen) {
+            Ok(done) => {
+                if let Some(intro) = &mut self.intro {
+                    intro.import.done = Some(done);
+                    intro.import.error = None;
+                }
+            }
+            Err(why) => {
+                tracing::warn!("importing from {}: {why}", found.source.key());
+                if let Some(intro) = &mut self.intro {
+                    intro.import.error = Some(why.into());
+                }
+            }
+        }
+        cx.notify();
     }
 }
 

@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{Query, SectionId as Section};
+use wormhole_core::import::{self, Env, Source};
 use wormhole_core::theme::fonts::FontSlot;
 use wormhole_core::view::sidebar::Density;
 
@@ -126,6 +127,43 @@ pub(crate) fn project_menu(query: &str, cx: &mut App) {
     with_page(cx, move |page, window, cx| {
         page.show_section(Section::Projects, cx);
         page.projects.devctl_open(query, window, cx);
+    });
+}
+
+/// devctl `import-scan <fixture home>`: scan that folder as if it were the home (never the real one),
+/// show the result as the Import page's, and open the page. Without a folder the page scans the
+/// instance's own home, as when it is opened.
+pub(crate) fn import_scan(home: Option<PathBuf>, cx: &mut App) {
+    let Some(home) = home else {
+        with_page(cx, |page, _, cx| {
+            page.show_section(Section::Import, cx);
+            page.scan_import(cx);
+        });
+        return;
+    };
+    // A fixed shell rule, so a fixture's shell lines read the same on every machine.
+    let mut env = Env::new(home);
+    env.login_shell = "/bin/zsh".into();
+    env.system_shells = ["/bin/zsh", "/bin/bash", "/bin/sh"].map(String::from).to_vec();
+    let mut found = import::scan(&env);
+    crate::settings::import::resolve_fonts(&mut found);
+    with_page(cx, move |page, _, cx| page.set_import(found, cx));
+}
+
+/// devctl `import-open <source key>`: open that terminal's card on the Import page.
+pub(crate) fn import_open(source: Source, cx: &mut App) {
+    with_page(cx, move |page, _, cx| page.import_open(source, cx));
+}
+
+/// devctl `import-apply <source key>`: press "Import selected" on that terminal's card, with the rows
+/// ticked as shown. Returns whether the page has the terminal.
+pub(crate) fn import_apply(source: Source, cx: &mut App) {
+    with_page(cx, move |page, _, cx| {
+        if page.import_has(source) {
+            page.apply_import(source, cx);
+        } else {
+            tracing::warn!("devctl import-apply: {} was not found by the last scan", source.key());
+        }
     });
 }
 

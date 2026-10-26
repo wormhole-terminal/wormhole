@@ -14,6 +14,7 @@ use crate::config::FeatureId;
 mod advanced;
 mod agents;
 mod appearance;
+mod import;
 mod menu_bar;
 mod motion;
 mod notifications;
@@ -124,6 +125,11 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             intro: SETTINGS_SECTION_FEATURE_FLAGS_INTRO,
             nav: NavGroup::Preview,
         },
+        SectionId::Import => &SectionInfo {
+            title: SETTINGS_SECTION_IMPORT,
+            intro: SETTINGS_SECTION_IMPORT_INTRO,
+            nav: NavGroup::App,
+        },
         SectionId::Notifications => &SectionInfo {
             title: SETTINGS_SECTION_NOTIFICATIONS,
             intro: SETTINGS_SECTION_NOTIFICATIONS_INTRO,
@@ -158,6 +164,7 @@ pub(super) fn groups(id: SectionId) -> &'static [Group] {
         SectionId::Git => sessions::GIT,
         SectionId::Agents => agents::AGENTS,
         SectionId::Projects => agents::PROJECTS,
+        SectionId::Import => import::IMPORT,
         SectionId::Notifications => notifications::NOTIFICATIONS,
         SectionId::MenuBar => menu_bar::MENU_BAR,
         SectionId::FeatureFlags => agents::FEATURE_FLAGS,

@@ -40,6 +40,7 @@ pub(super) fn section_icon(section: Section) -> IconName {
         Section::Sessions => IconName::PanelLeft,
         Section::Git => IconName::GitCompare,
         Section::Agents => IconName::Sparkles,
+        Section::Import => IconName::ArrowDownToLine,
         Section::Projects => IconName::Folder,
         Section::FeatureFlags => IconName::FlaskConical,
         Section::Notifications => IconName::Bell,

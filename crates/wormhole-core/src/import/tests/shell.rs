@@ -83,3 +83,15 @@ fn nothing_is_proposed_for_no_words() {
     propose(&mut proposal, &env(), Source::Kitty, "", &[" ".to_string()]);
     assert!(proposal.is_empty());
 }
+
+#[test]
+fn a_command_with_a_control_character_is_not_offered() {
+    // A quoted escape or line break can't be shown as it runs, and no person types one into a config.
+    for line in ["/bin/zsh -c 'echo \u{1b}[2J'", "/bin/zsh -c 'a\nb'", "\u{7}/bin/zsh"] {
+        let mut proposal = Proposal::default();
+        let words = vec![line.to_string()];
+        propose(&mut proposal, &env(), Source::Ghostty, line, &words);
+        assert!(proposal.values.is_empty(), "{line:?}");
+        assert_eq!(proposal.skipped.len(), 1, "{line:?}");
+    }
+}

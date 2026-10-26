@@ -38,6 +38,14 @@
 //! Appearance rose by about 360 and Updates by 22 with the Animate icons row and the sidebar's strip
 //! fills; the icon motions of the buttons in the preview add almost none (measured with them out of the
 //! frame: the same).
+//! Every page and the search rose by about 65 when the nav gained its Import row (the row's icon,
+//! label and hover layer: exactly 65 on each page). Terminal and Updates stand 12 and 20 above the numbers
+//! this budget had before, but that is not the Import row: the commit before it already drew 9,600 and
+//! 5,478 there, inside [`SLACK`] of the old 9,588 and 5,458, and the same goes for 2 on Appearance, Feature
+//! flags and the search. The Import page is measured over the visual checks' fixture home (three terminals,
+//! Ghostty's card open with its 13 rows and what doesn't carry over, and the comparison), not over the
+//! "Looking for terminals" line a fresh page shows.
+//! On main's frame (the strip fills, the icon motions and the Motion page) it measured 53,067.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -56,24 +64,39 @@ const SLACK: u64 = 20;
 /// Allocations a third draw of each page made when the budget was set (the first two build what a window
 /// keeps), and of the results page of a search for a word found in several pages; a frame may make
 /// [`SLACK`] more.
-const BUDGET: [(&str, u64); 15] = [
-    ("Profile", 6696),
-    ("Appearance", 16644),
-    ("Fonts", 7394),
-    ("Motion", 6275),
-    ("Terminal", 9706),
-    ("Sessions", 13639),
-    ("Git", 4502),
-    ("Agents", 26413),
-    ("Notifications", 7817),
-    ("MenuBar", 6130),
-    ("Updates", 5584),
-    ("Advanced", 4084),
-    ("Projects", 8972),
+const BUDGET: [(&str, u64); 16] = [
+    ("Profile", 6761),
+    ("Appearance", 16709),
+    ("Fonts", 7459),
+    ("Motion", 6340),
+    ("Terminal", 9771),
+    ("Sessions", 13704),
+    ("Git", 4567),
+    ("Agents", 26478),
+    ("Import", 53067),
+    ("Notifications", 7882),
+    ("MenuBar", 6195),
+    ("Updates", 5649),
+    ("Advanced", 4149),
+    ("Projects", 9037),
     // The switches for Automation, Tear off and Live resize are three rows more.
-    ("FeatureFlags", 5524),
-    ("search", 11815),
+    ("FeatureFlags", 5589),
+    ("search", 11880),
 ];
+
+/// What a scan finds in the visual checks' fixture home (Ghostty, iTerm2 and Alacritty settings), with the
+/// fonts asked of the system as the page's own scan does: never this Mac's own home.
+fn fixture_scan() -> Vec<wormhole_core::import::Found> {
+    let home =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/visual/fixtures/import/home");
+    let mut env = wormhole_core::import::Env::new(home);
+    env.login_shell = "/bin/zsh".into();
+    env.system_shells = ["/bin/zsh", "/bin/bash", "/bin/sh"].map(String::from).to_vec();
+    let mut found = wormhole_core::import::scan(&env);
+    crate::settings::import::resolve_fonts(&mut found);
+    assert!(found.len() >= 3, "the fixture home has three terminals");
+    found
+}
 
 fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {
     cx.update(|cx| handle.update(cx, |_, window, cx| window.render_frame(cx)))
@@ -93,6 +116,13 @@ fn a_settings_frame_stays_within_its_allocation_budget(cx: &mut TestAppContext) 
     for section in Section::ALL {
         cx.update(|cx| page.update(cx, |page, cx| page.show_section(section, cx)));
         cx.run_until_parked();
+        if section == Section::Import {
+            // The page's own scan has run over the scratch home and found nothing; measure the page
+            // that has something to show: the cards, the open one's rows, the comparison.
+            let found = fixture_scan();
+            cx.update(|cx| page.update(cx, |page, cx| page.set_import(found, cx)));
+            cx.run_until_parked();
+        }
         draw(cx, handle);
         draw(cx, handle);
         let before = thread_counts();

@@ -10,7 +10,7 @@
 //! nothing, and then by `storage::files`'s `LinkPolicy::Within`.
 
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use super::proposal::{Reason, Skipped};
 use crate::storage::files::{self, LinkPolicy, Refusal};
@@ -55,10 +55,11 @@ impl Reader {
         }
     }
 
-    /// Whether `path` is below the home folder by its name. A `..` or a link inside it can still
-    /// lead out; the read itself checks that.
+    /// Whether `path` is below the home folder by its name, and climbs nowhere: `~/../../Volumes/x`
+    /// begins with the home and leaves it. A link inside the home can still lead out; the read itself
+    /// checks that.
     pub(crate) fn names_home(&self, path: &Path) -> bool {
-        path.starts_with(&self.home)
+        path.starts_with(&self.home) && !path.components().any(|part| part == Component::ParentDir)
     }
 
     /// A source's own file's text. `None` when it is not there (not a problem: most includes are

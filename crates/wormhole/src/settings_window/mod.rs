@@ -158,6 +158,9 @@ pub(crate) struct SettingsWindow {
     /// What the Agents page shows; read in the background (see `AgentsSnapshot`).
     agents: Option<sections::AgentsSnapshot>,
     agents_task: Option<Task<()>>,
+    /// Import → the terminals found, which is open and what is ticked; scanned when the page is
+    /// first shown.
+    import: sections::ImportPage,
     /// Coding agents → Command line tool: where it stands.
     cli_tool: sections::CliToolPanel,
     /// The window's rem size as of the last draw, for boxes that are sized in rems and drawn
@@ -174,6 +177,14 @@ pub(crate) struct SettingsWindow {
 /// look under it are cold code, so nothing is cached.
 fn home() -> Option<PathBuf> {
     paths::home()
+}
+
+/// `dir` as `~/…` when it is under the home folder, as the default location is shown.
+fn with_tilde(dir: &Path) -> String {
+    match home().as_deref().and_then(|home| dir.strip_prefix(home).ok()) {
+        Some(rest) => format!("~/{}", rest.display()),
+        None => dir.display().to_string(),
+    }
 }
 
 /// The icon the settings nav gives a section (the palette's settings show it too).

@@ -9,6 +9,10 @@ pub fn classify(_family: &str) -> Option<Traits> {
     None
 }
 
+pub fn family_of_postscript(_postscript: &str) -> Option<String> {
+    None
+}
+
 pub fn register(_path: &Path, _register: bool) -> anyhow::Result<()> {
     anyhow::bail!("custom fonts need macOS")
 }

@@ -281,23 +281,33 @@ fn propose_keys(proposal: &mut Proposal, env: &Env, entries: &Entries) {
         }
     }
 
-    // Audible is `system` (the alert sound) or `audio` (a file); the one visual cue that Wormhole
-    // has, a glow along the edge, is `border`.
+    // `bell-features` is a list of flags, each `no-` prefixed to turn it off, or a bare `true`/`false`
+    // for all of them. Sound is `system` (on macOS, the alert sound) or `audio` (a file of the
+    // person's); the one visual cue Wormhole has, a glow along the edge, is `border`. A flag the
+    // list does not name keeps Ghostty's default (both sounds off), and a later flag overrides an
+    // earlier one of the same name.
     if let Some(entry) = entries.last("bell-features").filter(|e| !e.value.is_empty()) {
-        let (mut audible, mut border): (Option<bool>, Option<bool>) = (None, None);
+        let (mut system, mut audio, mut border) = (false, false, false);
+        let mut named = (false, false, false);
         for feature in entry.value.split(',').map(str::trim) {
             let (name, on) = feature.strip_prefix("no-").map_or((feature, true), |name| (name, false));
             match name {
-                "system" | "audio" => audible = Some(audible.unwrap_or(false) || on),
-                "border" => border = Some(on),
+                "system" => (system, named.0) = (on, true),
+                "audio" => (audio, named.1) = (on, true),
+                "border" => (border, named.2) = (on, true),
+                "true" | "false" if on => {
+                    let all = name == "true";
+                    (system, audio, border) = (all, all, all);
+                    named = (true, true, true);
+                }
                 _ => {}
             }
         }
-        if let Some(on) = audible {
-            proposal.propose(Setting::BellSound, &entry.raw, SettingValue::Flag(on));
+        if named.0 || named.1 {
+            proposal.propose(Setting::BellSound, &entry.raw, SettingValue::Flag(system || audio));
         }
-        if let Some(on) = border {
-            proposal.propose(Setting::BellVisual, &entry.raw, SettingValue::Flag(on));
+        if named.2 {
+            proposal.propose(Setting::BellVisual, &entry.raw, SettingValue::Flag(border));
         }
     }
 

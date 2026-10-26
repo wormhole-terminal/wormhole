@@ -2,7 +2,7 @@
 
 use super::{Fixture, count, flag, font, meta, number, palette, settings, skipped};
 use crate::config::OptionAsMeta;
-use crate::import::{Reason, Setting, SkippedKind, Source};
+use crate::import::{Reason, Setting, SettingValue, SkippedKind, Source};
 
 const ROSE_PINE: &str = "palette = 0=#26233a\npalette = 1=#eb6f92\nbackground = #191724\nforeground = #e0def4\n\
 cursor-color = #e0def4\nselection-background = #403d52\n";
@@ -231,4 +231,39 @@ fn a_theme_pair_may_use_an_equals_sign_in_either_order() {
     let p = fixture.found(Source::Ghostty).proposal;
     assert_eq!(palette(&p, Setting::Theme).background, 0x191724);
     assert_eq!(palette(&p, Setting::ThemeLight).background, 0xfaf4ed);
+}
+
+/// What `bell-features = <line>` proposes: the sound and the visual cue, `None` where it says nothing.
+fn bell(line: &str) -> (Option<bool>, Option<bool>) {
+    let fixture = Fixture::new();
+    fixture.home(".config/ghostty/config", &format!("bell-features = {line}\n"));
+    let p = fixture.found(Source::Ghostty).proposal;
+    let get = |setting| {
+        p.get(setting).map(|proposed| match proposed.value {
+            SettingValue::Flag(on) => on,
+            _ => panic!("not a flag"),
+        })
+    };
+    (get(Setting::BellSound), get(Setting::BellVisual))
+}
+
+#[test]
+fn bell_features_are_flags_with_no_prefixes() {
+    // On macOS `system` is the alert sound: `no-audio` turns off only the custom file.
+    assert_eq!(bell("no-audio,system,border"), (Some(true), Some(true)));
+    assert_eq!(bell("system"), (Some(true), None));
+    assert_eq!(bell("audio"), (Some(true), None));
+    assert_eq!(bell("no-system,no-audio"), (Some(false), None));
+    assert_eq!(bell("no-audio"), (Some(false), None));
+    // The custom sound alone is a sound.
+    assert_eq!(bell("no-system,audio"), (Some(true), None));
+    // A later flag overrides an earlier one of the same name.
+    assert_eq!(bell("audio,no-audio"), (Some(false), None));
+    assert_eq!(bell("no-border,border"), (None, Some(true)));
+    // Flags that are not about sound or the border say nothing about either.
+    assert_eq!(bell("attention,title"), (None, None));
+    assert_eq!(bell("no-border"), (None, Some(false)));
+    // All of them at once.
+    assert_eq!(bell("false"), (Some(false), Some(false)));
+    assert_eq!(bell("true"), (Some(true), Some(true)));
 }

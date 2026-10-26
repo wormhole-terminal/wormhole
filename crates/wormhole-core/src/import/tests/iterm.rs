@@ -93,10 +93,6 @@ fn the_default_profile_of_a_binary_plist() {
 
     // The name is a PostScript name until the system says which family it belongs to.
     assert_eq!(font(p), ("JetBrainsMono-Regular".to_string(), true));
-    match &p.get(Setting::FontFamily).expect("font").value {
-        SettingValue::Font(f) => assert_eq!(f.family(), "JetBrainsMono"),
-        other => panic!("{other:?}"),
-    }
     assert_eq!(number(p, Setting::FontSize), 14.0);
     assert!((number(p, Setting::LineHeight) - 1.1).abs() < 1e-6);
     assert!(flag(p, Setting::Ligatures));
@@ -323,4 +319,22 @@ fn numbers_that_are_text_for_nan_or_infinity_are_not_taken() {
     let p = fixture.found(Source::ITerm2).proposal;
     assert!(p.get(Setting::LineHeight).is_none());
     assert!(p.get(Setting::Opacity).is_none());
+}
+
+#[test]
+fn either_visual_cue_is_the_glow() {
+    let visual = |keys: &[(&'static str, bool)]| {
+        let fixture = Fixture::new();
+        let mut entries = profile("g1", "Default");
+        entries.retain(|(key, _)| !matches!(*key, "Silence Bell" | "Visual Bell"));
+        entries.extend(keys.iter().map(|(key, on)| (*key, Value::Boolean(*on))));
+        write(&fixture, root(vec![dict(entries)], "g1"));
+        let p = fixture.found(Source::ITerm2).proposal;
+        p.get(Setting::BellVisual).map(|proposed| proposed.value == SettingValue::Flag(true))
+    };
+    assert_eq!(visual(&[]), None);
+    assert_eq!(visual(&[("Visual Bell", false)]), Some(false));
+    assert_eq!(visual(&[("Visual Bell", false), ("Flashing Bell", true)]), Some(true));
+    assert_eq!(visual(&[("Flashing Bell", true)]), Some(true));
+    assert_eq!(visual(&[("Visual Bell", false), ("Flashing Bell", false)]), Some(false));
 }

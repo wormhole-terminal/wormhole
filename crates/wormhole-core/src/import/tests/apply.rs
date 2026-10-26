@@ -3,11 +3,16 @@
 
 use super::Fixture;
 use crate::config::{OptionAsMeta, Settings, ShellProfile};
-use crate::import::{FontName, Proposed, Setting, SettingValue, apply, save_themes};
+use crate::import::{FontName, Proposal, Proposed, Reason, Setting, SettingValue, apply, save_themes};
 use crate::theme::{self, Theme};
 
 fn proposed(setting: Setting, value: SettingValue) -> Proposed {
     Proposed { setting, from: String::new(), value, default_on: true }
+}
+
+/// A proposal that offers `rows`.
+fn proposal_of(rows: &[Proposed]) -> Proposal {
+    Proposal { values: rows.to_vec(), skipped: Vec::new() }
 }
 
 fn theme(name: &str, background: u32) -> Theme {
@@ -24,7 +29,7 @@ fn plain_settings_are_set() {
     let chosen = vec![
         proposed(
             Setting::FontFamily,
-            SettingValue::Font(FontName { name: "SFMono-Regular".into(), postscript: true }),
+            SettingValue::Font(FontName { name: "SF Mono".into(), postscript: false }),
         ),
         proposed(Setting::FontSize, SettingValue::Number(15.0)),
         proposed(Setting::LineHeight, SettingValue::Number(1.4)),
@@ -37,8 +42,8 @@ fn plain_settings_are_set() {
         proposed(Setting::BellVisual, SettingValue::Flag(true)),
         proposed(Setting::DefaultShell, SettingValue::Shell("/bin/bash".into())),
     ];
-    apply(&mut settings, &chosen, &Default::default());
-    assert_eq!(settings.font_family, "SFMono");
+    apply(&mut settings, &Proposal::default(), &chosen, &Default::default());
+    assert_eq!(settings.font_family, "SF Mono");
     assert_eq!((settings.font_size, settings.line_height, settings.opacity), (15.0, 1.4, 0.7));
     assert!(!settings.font_ligatures && !settings.blur && !settings.bell_sound && settings.bell_visual);
     assert_eq!((settings.option_as_meta, settings.scrollback_lines), (OptionAsMeta::Right, 4000));
@@ -48,7 +53,7 @@ fn plain_settings_are_set() {
 #[test]
 fn what_is_not_chosen_is_left_alone() {
     let mut settings = Settings::default();
-    apply(&mut settings, &[], &Default::default());
+    apply(&mut settings, &Proposal::default(), &[], &Default::default());
     assert_eq!(settings, Settings::default());
 }
 
@@ -64,6 +69,7 @@ fn a_shell_profile_is_added_and_one_of_the_same_name_is_replaced() {
     };
     apply(
         &mut settings,
+        &Proposal::default(),
         &[proposed(Setting::ShellProfile, SettingValue::Profile(profile.clone()))],
         &Default::default(),
     );
@@ -92,8 +98,37 @@ fn palettes_are_saved_as_theme_files_and_selected_by_path() {
     assert_eq!((read.background, read.foreground, read.palette[1]), (0x101010, 0xffffff, 0xff0000));
 
     let mut settings = Settings::default();
-    apply(&mut settings, &chosen, &saved);
+    apply(&mut settings, &proposal_of(&chosen), &chosen, &saved);
     assert_eq!((settings.theme, settings.theme_light), (dark, light));
+}
+
+#[test]
+fn unticking_the_light_palette_of_a_pair_leaves_light_mode_alone() {
+    let fixture = Fixture::new();
+    let themes = fixture.root().join("themes");
+    let dark = proposed(Setting::Theme, SettingValue::Palette(theme("Night", 0x101010)));
+    let light = proposed(Setting::ThemeLight, SettingValue::Palette(theme("Day", 0xf0f0f0)));
+    // The source offers both; only the dark one is chosen.
+    let offered = proposal_of(&[dark.clone(), light]);
+    let chosen = vec![dark];
+    let saved = save_themes(&themes, &chosen).expect("saved");
+    let mut settings = Settings::default();
+    let light_before = settings.theme_light.clone();
+    apply(&mut settings, &offered, &chosen, &saved);
+    assert_eq!(Some(settings.theme), saved.dark);
+    assert_eq!(settings.theme_light, light_before);
+}
+
+#[test]
+fn a_single_palette_is_set_for_light_and_dark() {
+    let fixture = Fixture::new();
+    let themes = fixture.root().join("themes");
+    let chosen = vec![proposed(Setting::Theme, SettingValue::Palette(theme("Only One", 0x101010)))];
+    let saved = save_themes(&themes, &chosen).expect("saved");
+    let path = saved.dark.clone().expect("dark");
+    let mut settings = Settings::default();
+    apply(&mut settings, &proposal_of(&chosen), &chosen, &saved);
+    assert_eq!((settings.theme, settings.theme_light), (path.clone(), path));
 }
 
 #[test]
@@ -156,4 +191,42 @@ fn a_long_profile_name_does_not_fail_the_save() {
     let file = path.file_name().expect("a file").to_string_lossy().into_owned();
     assert_eq!(file.chars().count(), 100, "cut on a character, never in the middle of one");
     assert!(path.is_file());
+}
+
+#[test]
+fn a_postscript_name_is_never_applied_as_a_family() {
+    let mut settings = Settings::default();
+    let before = settings.font_family.clone();
+    let chosen = vec![proposed(
+        Setting::FontFamily,
+        SettingValue::Font(FontName { name: "JetBrainsMono-Regular".into(), postscript: true }),
+    )];
+    apply(&mut settings, &Proposal::default(), &chosen, &Default::default());
+    assert_eq!(settings.font_family, before);
+}
+
+#[test]
+fn postscript_fonts_are_resolved_or_left_out() {
+    let font = |name: &str| SettingValue::Font(FontName { name: name.into(), postscript: true });
+    let mut proposal = Proposal::default();
+    proposal.propose(Setting::FontFamily, "Normal Font = Gone-Regular 14", font("Gone-Regular"));
+    proposal.propose(Setting::FontSize, "14", SettingValue::Number(14.0));
+    let mut installed = proposal.clone();
+    installed.values[0].value = font("JetBrainsMono-Regular");
+
+    // Installed: the family the system names, not one cut from the name.
+    installed.resolve_fonts(|name| (name == "JetBrainsMono-Regular").then(|| "JetBrains Mono".to_string()));
+    assert_eq!(
+        installed.get(Setting::FontFamily).map(|p| p.value.clone()),
+        Some(SettingValue::Font(FontName { name: "JetBrains Mono".into(), postscript: false }))
+    );
+    assert!(installed.skipped.is_empty());
+
+    // Not installed: not offered, and said why.
+    proposal.resolve_fonts(|_| None);
+    assert!(proposal.get(Setting::FontFamily).is_none());
+    assert!(proposal.get(Setting::FontSize).is_some());
+    assert_eq!(proposal.skipped.len(), 1);
+    assert_eq!(proposal.skipped[0].key, "Normal Font = Gone-Regular 14");
+    assert_eq!(proposal.skipped[0].reason, Reason::FontNotInstalled("Gone-Regular".into()));
 }

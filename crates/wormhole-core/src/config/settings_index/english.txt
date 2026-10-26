@@ -129,6 +129,16 @@ group "How status works"
 group "Command line"
   blurb "Scripts and agents can drive Wormhole from the command line: list terminals, read a status and send notifications."
   aside ""
+section Import
+  title "Import"
+  intro "Bring your font, colours, shell and more over from the terminal you used before. Nothing changes until you choose what to import, and the other terminal's own files are never touched."
+  nav "App"
+group "Found on this Mac"
+  blurb ""
+  aside ""
+group "Compared with Wormhole"
+  blurb ""
+  aside ""
 section Notifications
   title "Notifications"
   intro "What Wormhole tells you about terminals you aren't looking at."
@@ -489,6 +499,14 @@ entry Agents control-write
   label "Let the command line type and open terminals"
   description "send-text types into a terminal and new-terminal opens one, as a paste; never into the terminal that asks, nor one waiting for your answer"
   keywords "cli command line control api socket send-text new-terminal scripts agents automation remote type"
+entry Import import-found
+  label "Terminals found"
+  description ""
+  keywords "import migrate switch move settings config configuration ghostty iterm iterm2 terminal.app alacritty kitty wezterm warp zed vscode vs code font theme colours colors shell"
+entry Import import-compare
+  label "How they compare"
+  description ""
+  keywords "drawbacks limits strengths differences versus comparison alternatives"
 entry Notifications notify-permission
   label "Notifications in System Settings"
   description ""

@@ -45,6 +45,8 @@ gpui_kit::assets::icon_assets!(
         // diff layout's segments, "Trust with Touch ID…".
         SlidersHorizontal,
         Download,
+        // Settings' Import section: its nav icon and "Import selected".
+        ArrowDownToLine,
         CodeXml,
         Columns2,
         Rows2,

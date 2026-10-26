@@ -1,0 +1,23 @@
+# my config
+font-family = "JetBrains Mono"
+font-family = Menlo
+font-size = 13.5
+adjust-cell-height = 20%
+font-feature = -calt
+theme = light:Rose Pine Dawn,dark:Rose Pine
+background-opacity = 0.9
+background-blur = 20
+macos-option-as-alt = left
+scrollback-limit = 10000000
+bell-features = no-audio,system,border
+command = /bin/zsh
+cursor-style = bar
+cursor-style-blink = false
+window-padding-x = 8,8
+copy-on-select = clipboard
+confirm-close-surface = false
+working-directory = ~/Projects
+keybind = super+d=new_split:right
+keybind = ctrl+a>n=next_tab
+initial-command = htop
+font-thicken = true

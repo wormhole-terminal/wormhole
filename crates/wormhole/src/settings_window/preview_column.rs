@@ -97,6 +97,7 @@ impl SettingsWindow {
             | Section::Motion
             | Section::Terminal
             | Section::Git
+            | Section::Import
             | Section::Updates
             | Section::Advanced
             | Section::Projects

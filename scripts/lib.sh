@@ -115,7 +115,9 @@ ISOLATED_PATH=/usr/bin:/bin:/usr/sbin:/sbin
 # Wormhole kept apart from the person's own setup: data dir, HOME, agent home and the command line
 # tool's folder (cli-bin, where Settings -> Command line tool puts `wh`: never /usr/local/bin) in <run dir>,
 # $ISOLATED_PATH for a PATH and no other place to find agents' commands (WORMHOLE_AGENT_PATH
-# empty), Touch ID answered "cancel", notifications logged instead of shown, and background mode
+# empty), the places other terminals keep settings (XDG_CONFIG_HOME, XDG_CONFIG_DIRS,
+# KITTY_CONFIG_DIRECTORY, WEZTERM_CONFIG_FILE) pointed into <run dir>/home or unset, Touch ID answered
+# "cancel", notifications logged instead of shown, and background mode
 # (it opens behind their windows and never takes the focus). Later VAR=value pairs win. Sets $pid
 # and writes it to <run dir>/pid; commands go to <run dir>/ctl/cmd, the app's output to
 # <run dir>/app.log.
@@ -126,8 +128,11 @@ start_isolated() {
   home="$(cd "$run/home" && pwd -P)"
   # Variables a Wormhole tab sets belong to that instance, not this one (and their old names,
   # which a tab still gets and the app reads when the new ones are missing).
+  # Where other terminals' settings are looked for (the Import page reads these) is the scratch home's,
+  # never the person's own ~/.config: XDG_CONFIG_HOME inside it, the other three unset.
   env -u WORMHOLE_SOCKET -u WORMHOLE_TAB_ID -u WORMHOLE_BIN -u ANDROMEDA_SOCKET -u ANDROMEDA_TAB_ID -u ANDROMEDA_BIN \
-    PATH="$ISOLATED_PATH" WORMHOLE_AGENT_PATH= \
+    -u XDG_CONFIG_DIRS -u KITTY_CONFIG_DIRECTORY -u WEZTERM_CONFIG_FILE \
+    PATH="$ISOLATED_PATH" WORMHOLE_AGENT_PATH= XDG_CONFIG_HOME="$home/.config" \
     HOME="$home" WORMHOLE_DATA_DIR="$run/data" WORMHOLE_DEVCTL="$run/ctl" \
     WORMHOLE_AGENT_HOME="$run/agent-home" WORMHOLE_CLI_DIR="$run/cli-bin" \
     WORMHOLE_SHELL="$shell" WORMHOLE_START_DIR="$start" \

@@ -110,6 +110,8 @@ pub(crate) struct Intro {
     /// The first run, which finishing is remembered of and starts the first terminal in the folder
     /// picked, or a replay of the intro, which changes nothing.
     pub(crate) first_run: bool,
+    /// The look step's offer to bring another terminal's settings over.
+    pub(crate) import: look_step::LookImport,
 }
 
 /// The sidebar's "No coding agents yet" note after a primer, as the window keeps it.
@@ -351,6 +353,7 @@ impl FirstRun {
             trust_later: false,
             problem: None,
             first_run,
+            import: look_step::LookImport::default(),
         }
     }
 

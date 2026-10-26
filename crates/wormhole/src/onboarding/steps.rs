@@ -78,7 +78,7 @@ impl FirstRun {
         };
         let body = match step {
             Step::Folder => self.render_folder_step(sheet, ui, cx),
-            Step::Look => self.render_look_step(ui, cx),
+            Step::Look => self.render_look_step(sheet, ui, cx),
             Step::Agents => self.render_agents_step(sheet, ui, cx),
             Step::Primer => self.render_primer_step(ui, cx),
             Step::Welcome => div().into_any_element(),

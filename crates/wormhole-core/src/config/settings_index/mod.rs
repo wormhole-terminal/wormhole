@@ -37,6 +37,8 @@ pub enum SectionId {
     Sessions,
     Git,
     Agents,
+    /// Other terminals' settings, brought over, and how they compare.
+    Import,
     Notifications,
     MenuBar,
     Updates,
@@ -167,7 +169,7 @@ impl Entry {
 }
 
 impl SectionId {
-    pub const ALL: [SectionId; 14] = [
+    pub const ALL: [SectionId; 15] = [
         SectionId::Profile,
         SectionId::Appearance,
         SectionId::Fonts,
@@ -176,6 +178,7 @@ impl SectionId {
         SectionId::Sessions,
         SectionId::Git,
         SectionId::Agents,
+        SectionId::Import,
         SectionId::Notifications,
         SectionId::MenuBar,
         SectionId::Updates,

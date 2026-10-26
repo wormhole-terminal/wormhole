@@ -28,6 +28,7 @@ mod cli_tool;
 mod feature_flags;
 mod fonts;
 mod git;
+mod import;
 mod menu_bar;
 mod menu_bar_preview;
 mod motion;
@@ -50,6 +51,7 @@ mod updates;
 pub(super) use agents::AgentsSnapshot;
 pub(super) use cli_tool::CliToolPanel;
 pub(super) use fonts::draw_specimen;
+pub(crate) use import::ImportPage;
 pub(super) use menu_bar_preview::draw_menu_bar_preview;
 #[cfg(test)]
 pub(super) use motion_preview::MotionPreview;
@@ -74,6 +76,7 @@ pub(super) fn controls(section: Section) -> &'static [Setting] {
         Section::Sessions => sessions::SETTINGS,
         Section::Git => git::SETTINGS,
         Section::Agents => agents::SETTINGS,
+        Section::Import => import::SETTINGS,
         Section::Projects => projects::SETTINGS,
         Section::FeatureFlags => feature_flags::SETTINGS,
         Section::Notifications => notifications::SETTINGS,
@@ -125,6 +128,16 @@ impl SettingsWindow {
                         this.load_agents(cx);
                         cx.notify();
                     }))
+                    .into_any_element(),
+            ),
+            Section::Import => Some(
+                Button::new("import-rescan")
+                    .outline()
+                    .small()
+                    .icon(IconName::RefreshCw)
+                    .label(text(SETTINGS_IMPORT_SCAN_AGAIN))
+                    .loading(self.import.scanning())
+                    .on_click(cx.listener(|this, _, _, cx| this.scan_import(cx)))
                     .into_any_element(),
             ),
             Section::Profile => Some(

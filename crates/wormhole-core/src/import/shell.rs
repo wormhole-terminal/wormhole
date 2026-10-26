@@ -17,6 +17,12 @@ pub(crate) fn propose(proposal: &mut Proposal, env: &Env, source: Source, from: 
     if program.trim().is_empty() {
         return;
     }
+    // A control character in a command (an escape, a line break) is never one a person typed into a
+    // config; it cannot be shown as it runs, so it is not offered.
+    if words.iter().any(|word| word.chars().any(char::is_control)) {
+        proposal.skip(from, super::proposal::Reason::UnsupportedValue);
+        return;
+    }
     let is_system_shell = program == &env.login_shell || env.system_shells.contains(program);
     if args.is_empty() && is_system_shell {
         proposal.propose(Setting::DefaultShell, from, SettingValue::Shell(program.clone()));

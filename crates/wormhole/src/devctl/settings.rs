@@ -66,6 +66,38 @@ pub(super) fn reveal(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `import-scan [<fixture home>]`: Settings → Import over a folder standing in for the home.
+pub(super) fn import_scan(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    // `~/…` is the instance's own home, so a scenario can name its fixture without the scratch path.
+    let home = (!arg.trim().is_empty()).then(|| match arg.trim().strip_prefix("~/") {
+        Some(rest) => wormhole_core::platform::paths::home().unwrap_or_default().join(rest),
+        None => PathBuf::from(arg.trim()),
+    });
+    if let Some(home) = &home
+        && !home.is_dir()
+    {
+        return Err(anyhow!("no folder {}", home.display()));
+    }
+    crate::settings_window::devctl::import_scan(home, ctx.cx);
+    Ok(String::new())
+}
+
+/// `import-open <source>`: open that terminal's card (`ghostty`, `iterm2`, …).
+pub(super) fn import_open(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let source = wormhole_core::import::Source::from_key(arg.trim())
+        .ok_or_else(|| anyhow!("no terminal {:?}", arg.trim()))?;
+    crate::settings_window::devctl::import_open(source, ctx.cx);
+    Ok(String::new())
+}
+
+/// `import-apply <source>`: press "Import selected" for that terminal (`ghostty`, `iterm2`, …).
+pub(super) fn import_apply(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let source = wormhole_core::import::Source::from_key(arg.trim())
+        .ok_or_else(|| anyhow!("no terminal {:?}", arg.trim()))?;
+    crate::settings_window::devctl::import_apply(source, ctx.cx);
+    Ok(String::new())
+}
+
 /// `profile-sheet`: the "New profile" sheet over the settings window.
 pub(super) fn profile_sheet(ctx: &mut Ctx, _: &str) -> Result<String> {
     crate::settings_window::devctl::profile_sheet(ctx.cx);

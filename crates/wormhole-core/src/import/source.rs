@@ -58,7 +58,7 @@ impl Source {
             Source::ITerm2 => "iTerm2",
             Source::TerminalApp => "Terminal",
             Source::Alacritty => "Alacritty",
-            Source::Kitty => "Kitty",
+            Source::Kitty => "kitty",
             Source::WezTerm => "WezTerm",
             Source::Warp => "Warp",
             Source::Zed => "Zed",

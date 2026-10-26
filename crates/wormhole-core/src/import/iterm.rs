@@ -239,8 +239,13 @@ fn propose_behaviour(proposal: &mut Proposal, env: &Env, profile: &Dictionary) {
     if let Some(silent) = boolean(profile, "Silence Bell") {
         proposal.propose(Setting::BellSound, shown(profile, "Silence Bell"), SettingValue::Flag(!silent));
     }
-    if let Some(on) = boolean(profile, "Visual Bell") {
-        proposal.propose(Setting::BellVisual, shown(profile, "Visual Bell"), SettingValue::Flag(on));
+    // Both of iTerm2's visual cues (the bell icon, the flash of the screen) are the one glow here.
+    let cues: Vec<&str> =
+        ["Visual Bell", "Flashing Bell"].into_iter().filter(|key| boolean(profile, key).is_some()).collect();
+    if !cues.is_empty() {
+        let on = cues.iter().any(|key| boolean(profile, key) == Some(true));
+        let from: Vec<String> = cues.iter().map(|key| shown(profile, key)).collect();
+        proposal.propose(Setting::BellVisual, from.join(", "), SettingValue::Flag(on));
     }
 
     // `Custom Command` says what `Command` is: "Yes" a command line, "Custom Shell" a shell's path.

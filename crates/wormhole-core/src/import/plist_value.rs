@@ -18,12 +18,25 @@ use super::read::{MAX_PLIST_BYTES, Reader};
 /// deep; an archive is flat.
 pub(crate) const MAX_NESTING: usize = 64;
 
-/// A property list's value, XML or binary, or `None` when it is not one or nests deeper than
-/// [`MAX_NESTING`]. The events are walked first, with no value built, so how deep it goes is known
-/// before anything recursive (building, cloning, dropping a [`Value`]) happens.
+/// Events allowed beyond one per byte of input: the ends of the collections of a tiny file.
+const EVENT_SLACK: usize = 64;
+
+/// A property list's value, XML or binary, or `None` when it is not one, nests deeper than
+/// [`MAX_NESTING`], or holds more events than its size can account for. The events are walked first,
+/// with no value built, so how deep and how big it is are known before anything recursive or
+/// allocating (building, cloning, dropping a [`Value`]) happens.
+///
+/// A binary list's objects may be shared (an array of two references to the same array, and so on),
+/// so a few hundred bytes can stand for billions of values; a real file has about one event per
+/// byte at most, hence the cap.
 pub(crate) fn parse(bytes: &[u8]) -> Option<Value> {
-    let mut depth = 0usize;
+    let max_events = bytes.len().saturating_add(EVENT_SLACK);
+    let (mut depth, mut events) = (0usize, 0usize);
     for event in Events::new(Cursor::new(bytes)) {
+        events += 1;
+        if events > max_events {
+            return None;
+        }
         match event.ok()? {
             Event::StartArray(_) | Event::StartDictionary(_) => {
                 depth += 1;

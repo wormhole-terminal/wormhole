@@ -1,0 +1,19 @@
+# Settings → Import: the terminals found in a folder that stands in for the home (Ghostty with a
+# light and a dark theme, iTerm2 with a shell command, Alacritty with one palette), the open card's
+# rows with their ticks and what doesn't carry over, and the comparison under it. `import-scan` reads
+# only that folder, never the real home; nothing is applied.
+@fixture import-home
+@theme Tokyo Night
+@size 1440 900
+settings-section import
+@batch
+import-scan ~/import-home
+settings-resize 1024 1300
+@sleep 1500
+@shot import settings
+settings-scroll 700
+@batch
+@shot import-compare settings
+settings-scroll 1400
+@batch
+@shot import-compare-end settings

@@ -29,6 +29,7 @@ impl<T: Styled> Entering for T {}
 
 impl Render for FirstRun {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.look_step_shown(cx);
         self.render_intro(window, cx).unwrap_or_else(|| div().into_any_element())
     }
 }
