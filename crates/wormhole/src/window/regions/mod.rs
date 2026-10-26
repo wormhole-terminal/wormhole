@@ -46,6 +46,7 @@ use crate::sidebar::Sidebar;
 use crate::sidebar::profile_chip::ProfilePage;
 use crate::window::Workspace;
 use crate::window::status_bar::StatusBar;
+use crate::window::status_rolls::StatusRolls;
 
 /// A part of the chrome that is a view of its own.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -132,6 +133,8 @@ pub(super) struct Drawn {
     pub(super) status_bar: Option<StatusBar>,
     /// The breadcrumb's status words ("working · 4m"), for the minute.
     pub(super) crumb: Option<String>,
+    /// The bar's counts that are turning over.
+    pub(super) rolls: StatusRolls,
 }
 
 impl Regions {
@@ -189,6 +192,12 @@ impl Regions {
             region.update(cx, |_, cx| cx.notify());
         }
         self.list.update(cx, |_, cx| cx.notify());
+    }
+
+    /// Draw the status bar again on the next frame and nothing else, as an animation in it asks to.
+    #[cfg(test)]
+    pub(super) fn notify_status_bar(&self, cx: &mut App) {
+        self.status_bar.update(cx, |_, cx| cx.notify());
     }
 
     /// Draw the sidebar's header again on the next frame (outside a draw).
@@ -359,8 +368,11 @@ impl Workspace {
                     .into_any_element()
             }
             Part::StatusBar => {
-                // What the bar drew is what the tick compares the next one with.
+                // What the bar drew is what the tick compares the next one with, and the counts that
+                // differ from the ones it drew before turn over.
+                let was = self.regions.drawn.status_bar.take();
                 self.regions.drawn.status_bar = self.status_bar(cx);
+                self.note_rolls(was.as_ref(), cx);
                 // A column of its own, as the window's was: the bar fills its width, and a view's
                 // root is only as wide as its content unless something makes it.
                 let bar =

@@ -138,6 +138,7 @@ mod stable_list_tests;
 mod status_bar;
 #[cfg(test)]
 mod status_motion_tests;
+mod status_rolls;
 mod summaries;
 #[cfg(test)]
 mod summary_tests;

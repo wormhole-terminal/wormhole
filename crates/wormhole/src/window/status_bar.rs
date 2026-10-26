@@ -15,6 +15,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::view::focus::Area;
 use wormhole_core::view::layout::status_bar::{self as rules, Activity, Detail, Entry, Summary};
 use wormhole_core::view::spoken;
@@ -62,6 +63,11 @@ pub(super) struct StatusBar {
     profile: Option<ProfileTag>,
 }
 
+/// The counts of a bar's items, by what they count.
+fn counts(bar: Option<&StatusBar>) -> impl Iterator<Item = (Activity, usize)> + Clone + '_ {
+    bar.into_iter().flat_map(|bar| bar.rest.iter()).map(|rest| (rest.activity, rest.count))
+}
+
 impl StatusBar {
     /// The bar without the words that move with the clock ("working · 4m", "needs input · 2m"): the tick
     /// owns those and redraws up to a tick late, so a check of the bar against the window compares
@@ -105,6 +111,8 @@ struct Rest {
     activity: Activity,
     count: usize,
     words: String,
+    /// What the count counts ("working"), after its number, for the number to turn over alone.
+    label: &'static str,
     tab: i64,
     spoken: String,
 }
@@ -248,6 +256,7 @@ impl Workspace {
                 activity: c.activity,
                 count: c.count,
                 words: c.words(),
+                label: c.label(),
                 tab: counted[c.terminal].tab,
                 spoken: spoken::status_counted(&c),
             })
@@ -273,6 +282,14 @@ impl Workspace {
         if self.status_bar(cx) != self.regions.drawn.status_bar {
             cx.notify();
         }
+    }
+
+    /// The bar was just built (`regions`): its counts that differ from those of `was`, which it drew before,
+    /// start to turn over. Not under Reduce Motion, nor without the Motion feature.
+    pub(super) fn note_rolls(&mut self, was: Option<&StatusBar>, cx: &App) {
+        let on = settings_in(&self.profile, cx).feature_enabled(FeatureFlag::Motion) && !cx.reduce_motion();
+        let (drawn, rolls) = (&self.regions.drawn.status_bar, &mut self.regions.drawn.rolls);
+        rolls.note(counts(was), counts(drawn.as_ref()), Instant::now(), on);
     }
 
     /// A terminal's grid has another size. The bar says the selected terminal's, and was built before
@@ -339,6 +356,22 @@ impl Workspace {
         }
     }
 
+    /// A count as the bar says it: "2 working" (or just "2" when the words do not fit) as plain text, and
+    /// while it turns over its number rolls and the label stays.
+    fn count_text(&self, ix: usize, count: &Rest, words: bool, now: Instant) -> AnyElement {
+        let plain = || if words { count.words.clone() } else { count.count.to_string() };
+        match self.regions.drawn.rolls.of(count.activity, count.count, now) {
+            None => plain().into_any_element(),
+            Some(roll) => div()
+                .flex()
+                .items_center()
+                .whitespace_nowrap()
+                .child(style::rolling_number(("status-count", ix), count.count, Some(roll)))
+                .when(words && !count.label.is_empty(), |d| d.child(format!(" {}", count.label)))
+                .into_any_element(),
+        }
+    }
+
     pub(super) fn render_status_bar(
         &self,
         bar: &StatusBar,
@@ -392,6 +425,7 @@ impl Workspace {
         });
         // The rest as numbers: "2 working · 1 done" while there is room for the words, each a
         // glyph and its count after that.
+        let now = Instant::now();
         let rest = bar.rest.iter().enumerate().map(|(ix, r)| {
             let tab = r.tab;
             let item = match r.activity {
@@ -419,7 +453,7 @@ impl Workspace {
                 item,
             )
             .when(!bar.words, |d| d.child(glyph))
-            .child(if bar.words { r.words.clone() } else { r.count.to_string() })
+            .child(self.count_text(ix, r, bar.words, now))
             .on_click(cx.listener(move |this, _, window, cx| this.go_to_tab(tab, window, cx)));
             // "2 working · 1 done": a dot between the words.
             div()

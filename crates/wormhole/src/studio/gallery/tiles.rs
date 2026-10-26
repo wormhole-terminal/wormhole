@@ -123,6 +123,8 @@ pub(super) fn render(
             "A status change · working to needs input, a third of the way through each variant",
         ))
         .child(status_changes(ui, app))
+        .child(caption(ui, "A count turning over · 12 to 13, 19 to 20 and 20 to 19, half way"))
+        .child(rolling_counts(ui))
         .child(caption(ui, "A card of terminals"))
         .child(card)
         .child(caption(ui, "Tab bar · the group switcher with its amber dot, the open tab and the others"))
@@ -233,4 +235,24 @@ fn status_changes(ui: UiColors, app: &App) -> Div {
             .child(div().text_caption().text_color(ui.muted).child(motion.name()))
     });
     div().flex().flex_wrap().gap_3().px_4().py_2().children(tiles)
+}
+
+/// Counts caught half way through turning over: one place, two that turn up and two that turn down.
+fn rolling_counts(ui: UiColors) -> Div {
+    let count = |id: &'static str, from: usize, to: usize| {
+        div().text_caption().tabular_nums().text_color(ui.text).child(style::rolling_number(
+            id,
+            to,
+            Some(style::NumberRoll { from, clock: style::RollClock::At(0.5) }),
+        ))
+    };
+    div()
+        .flex()
+        .items_center()
+        .gap_4()
+        .px_4()
+        .py_2()
+        .child(count("g-roll-1", 12, 13))
+        .child(count("g-roll-2", 19, 20))
+        .child(count("g-roll-3", 20, 19))
 }

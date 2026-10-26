@@ -194,3 +194,94 @@ fn a_status_change_draws_the_list_and_no_region_and_stops_when_it_ends(cx: &mut 
     }
     assert_eq!((regions(cx), list(cx)), rest, "and a list at rest is not drawn again");
 }
+
+/// A window with the status bar on and two terminals, drawn until it settles.
+fn with_bar(cx: &mut TestAppContext) -> OpenWindow {
+    let window = open(cx, 3);
+    cx.update(|cx| crate::settings::update_settings(cx, |settings| settings.status_bar = true));
+    cx.run_until_parked();
+    for _ in 0..3 {
+        draw(cx, &window);
+    }
+    window
+}
+
+/// An animation in the bar asks for its next frame by notifying the region it is in.
+fn notify_bar(cx: &mut TestAppContext, window: &OpenWindow) {
+    cx.update(|cx| {
+        window.workspace.update(cx, |ws, cx| ws.regions.notify_status_bar(cx)).ok();
+    });
+}
+
+fn rolling(cx: &mut TestAppContext, window: &OpenWindow) -> bool {
+    read_cx(cx, window, |ws, _| ws.regions.drawn.rolls.is_rolling())
+}
+
+/// Two terminals' hooks: the count of the working ones goes from none to one to two.
+fn count_up(cx: &mut TestAppContext, window: &OpenWindow) {
+    hook(cx, window, 2, "UserPromptSubmit", None);
+    draw(cx, window);
+    draw(cx, window);
+    assert!(!rolling(cx, window), "an item that comes is not a count turning over");
+    hook(cx, window, 3, "UserPromptSubmit", None);
+    draw(cx, window);
+    draw(cx, window);
+}
+
+#[gpui_kit::test]
+fn a_count_in_the_status_bar_rolls_when_it_changes_and_the_bar_holds_nothing_at_rest(
+    cx: &mut TestAppContext,
+) {
+    if isolate("a_count_in_the_status_bar_rolls_when_it_changes_and_the_bar_holds_nothing_at_rest") {
+        return;
+    }
+    let window = with_bar(cx);
+    assert!(!rolling(cx, &window), "a bar at rest holds no roll");
+    count_up(cx, &window);
+    assert!(rolling(cx, &window), "1 to 2 working turns over");
+    // Some time on (the roll's clock is the wall's): the next build of the bar drops it.
+    std::thread::sleep(Duration::from_millis(250));
+    notify_bar(cx, &window);
+    draw(cx, &window);
+    assert!(!rolling(cx, &window), "and it is over");
+}
+
+#[gpui_kit::test]
+fn a_count_rolling_draws_the_status_bar_and_no_other_region(cx: &mut TestAppContext) {
+    if isolate("a_count_rolling_draws_the_status_bar_and_no_other_region") {
+        return;
+    }
+    let window = with_bar(cx);
+    count_up(cx, &window);
+    assert!(rolling(cx, &window));
+    let builds = |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| ws.regions.builds(cx));
+    let before = builds(cx);
+    for _ in 0..4 {
+        notify_bar(cx, &window);
+        draw_replaying(cx, &window);
+    }
+    let after = builds(cx);
+    assert_eq!(after[..3], before[..3], "the sidebar's header, the panel and the title row were not built");
+    assert_eq!(after[3], before[3] + 4, "the bar was, on each");
+}
+
+#[gpui_kit::test]
+fn counts_do_not_roll_under_reduce_motion_or_without_the_motion_feature(cx: &mut TestAppContext) {
+    if isolate("counts_do_not_roll_under_reduce_motion_or_without_the_motion_feature") {
+        return;
+    }
+    let window = with_bar(cx);
+    cx.update(|cx| cx.set_reduce_motion(true));
+    count_up(cx, &window);
+    assert!(!rolling(cx, &window), "Reduce Motion cuts the count");
+    cx.update(|cx| {
+        cx.set_reduce_motion(false);
+        crate::settings::update_settings(cx, |settings| {
+            settings.feature_flags.insert(FeatureFlag::Motion.key().to_string(), false);
+        });
+    });
+    hook(cx, &window, 2, "Stop", None);
+    draw(cx, &window);
+    draw(cx, &window);
+    assert!(!rolling(cx, &window), "nor does a build without the Motion feature");
+}
