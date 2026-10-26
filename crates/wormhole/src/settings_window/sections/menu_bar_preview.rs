@@ -84,14 +84,10 @@ pub(in crate::settings_window) fn draw_menu_bar_preview(cx: &mut Context<Setting
         .flex_col()
         .gap_2()
         .child(
-            div()
+            style::preview_frame(ui)
                 .flex()
                 .flex_col()
                 .gap_3()
-                .p_4()
-                .rounded(ui.radius_lg)
-                .outlined(ui, ui.border)
-                .bg(ui.background)
                 .child(bar)
                 .child(div().flex().justify_end().child(panel)),
         )

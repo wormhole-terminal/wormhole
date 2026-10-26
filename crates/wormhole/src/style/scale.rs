@@ -154,6 +154,8 @@ pub const THEME_CARD_W: f32 = 176.0;
 pub const THEME_CARD_H: f32 = 88.0;
 /// The shortcut recorder.
 pub const RECORDER_W: f32 = 200.0;
+/// A select in a settings row: as wide as the recorder, so the controls of a page line up.
+pub const SELECT_W: f32 = RECORDER_W;
 /// The quick panel and the command palette: width, search row, result row, and how far
 /// down the screen they open (a share of its height).
 pub const QUICK_PANEL_W: f32 = 600.0;

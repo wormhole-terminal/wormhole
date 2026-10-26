@@ -266,7 +266,7 @@ fn draw_icon_select(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
     window.select(
         "icon-theme",
         div().child(current.clone()).into_any_element(),
-        style::RECORDER_W,
+        style::SELECT_W,
         choices,
         current,
         |s, name| s.icon_theme = name.to_string(),

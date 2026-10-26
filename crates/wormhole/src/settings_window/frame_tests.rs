@@ -16,7 +16,7 @@
 //! without a preview of their own (Profile, Terminal, …) fell by about 3,000 when they lost the
 //! window's miniature; Appearance rose by about 300 with each theme card's hide button and menu.
 //! Every page rose by about 100 when the nav got a row more, Motion; its own page, behind a feature flag,
-//! draws a select and a preview under each of its four choices (7,090).
+//! draws a select under each of its four choices and a preview (a view of its own, about 450) under each, with its caption (6,250).
 //! Liquid Glass moved from Appearance (one row fewer) to Feature flags (one row more).
 //! Appearance and a search (which show the window's preview) rose by about 770 when the preview
 //! became the window's own parts at full size instead of a drawing of them.
@@ -42,6 +42,7 @@ use gpui_kit::test::TestWindowExt as _;
 use gpui_kit::{AnyWindowHandle, TestAppContext};
 use wormhole_core::config::settings_index::Query;
 
+use super::sections::{MotionPreview, MotionScene as Scene};
 use super::{Section, current_window, open_settings};
 use crate::perf::allocations::thread_counts;
 use crate::window::test_harness::{isolate_in, start};
@@ -56,7 +57,7 @@ const BUDGET: [(&str, u64); 15] = [
     ("Profile", 6714),
     ("Appearance", 16655),
     ("Fonts", 7412),
-    ("Motion", 7090),
+    ("Motion", 6250),
     ("Terminal", 9736),
     ("Sessions", 13641),
     ("Git", 4520),
@@ -127,4 +128,60 @@ fn a_settings_frame_stays_within_its_allocation_budget(cx: &mut TestAppContext) 
         })
         .collect();
     assert!(over.is_empty(), "frames over their budget:\n{}\nall:\n{}", over.join("\n"), table.join("\n"));
+}
+
+/// Allocations a third draw of each Motion preview makes on its own (a window holding nothing else),
+/// when the budget was set: what a tick of one costs, since a preview builds only what shows at its
+/// moment of the loop. The four are redrawn by their own clocks, a few times a second each.
+const PREVIEW_BUDGET: [(Scene, u64); 4] =
+    [(Scene::Insert, 487), (Scene::Fold, 543), (Scene::Status, 437), (Scene::Column, 476)];
+
+// A tick draws the window like any other draw: GPUI renders the root view on every draw and marks the
+// ancestors of the view that asked for it dirty, so the page is built again with the previews. What the
+// previews add is their own work, which is what the first half holds down; the second half holds the
+// tick to the cost of a draw at rest, so nothing grows with the clock.
+#[gpui_kit::test]
+fn a_motion_preview_tick_costs_hundreds_of_allocations_and_the_page_no_more_than_at_rest(
+    cx: &mut TestAppContext,
+) {
+    if isolate_in(
+        module_path!(),
+        "a_motion_preview_tick_costs_hundreds_of_allocations_and_the_page_no_more_than_at_rest",
+    ) {
+        return;
+    }
+    start(cx, 1);
+    // Each preview alone: its draw is what its clock asks for.
+    let mut table = Vec::new();
+    for (scene, budget) in PREVIEW_BUDGET {
+        let window = cx.add_window(|_, cx| MotionPreview::new(scene, cx));
+        let handle: AnyWindowHandle = window.into();
+        draw(cx, handle);
+        draw(cx, handle);
+        let before = thread_counts();
+        draw(cx, handle);
+        let made = thread_counts().since(before).allocations;
+        table.push((scene, made, budget));
+    }
+    let over: Vec<String> = table
+        .iter()
+        .filter(|(_, made, budget)| *made > budget + SLACK || *made >= 1500)
+        .map(|(scene, made, budget)| format!("{scene:?}: {made} (budget {})", budget + SLACK))
+        .collect();
+    assert!(over.is_empty(), "previews over their budget:\n{}\nall: {table:?}", over.join("\n"));
+    // The page: a tick draws what a draw at rest does, plus what the previews' own redraw is.
+    cx.update(|cx| open_settings(Some(Section::Motion), cx));
+    cx.run_until_parked();
+    let (handle, _) = cx.update(|cx| current_window(cx)).expect("the settings window opened");
+    draw(cx, handle);
+    draw(cx, handle);
+    let before = thread_counts();
+    draw(cx, handle);
+    let rest = thread_counts().since(before).allocations;
+    cx.executor().advance_clock(std::time::Duration::from_millis(40));
+    cx.run_until_parked();
+    let before = thread_counts();
+    draw(cx, handle);
+    let tick = thread_counts().since(before).allocations;
+    assert!(tick <= rest + SLACK, "a tick drew {tick}, a draw at rest {rest}");
 }

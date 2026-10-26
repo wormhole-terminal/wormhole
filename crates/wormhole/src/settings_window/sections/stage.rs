@@ -22,6 +22,7 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use super::preview::{self, Look};
+use super::samples::SAMPLES;
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::settings_window::SettingsWindow;
 use crate::style::{self, Edges, StatusGlyph, StatusTile, TextRole, TileFace};
@@ -81,7 +82,7 @@ pub(in crate::settings_window) fn draw_stage(
         .bg(surfaces.panel)
         .rule_right(ui)
         .child(lights)
-        .child(preview::list("stage", look, preview::SAMPLES, false, ui, cx));
+        .child(preview::list("stage", look, SAMPLES, false, ui, cx));
     let content =
         div().flex_1().min_w_0().h_full().flex().flex_col().child(title_row(ui, cx)).child(terminal(cx));
     let window = div()

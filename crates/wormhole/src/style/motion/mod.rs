@@ -5,11 +5,10 @@
 //! a component that draws something else then (the spinner's still dots) checks
 //! `cx.reduce_motion()` itself.
 
-mod cycle;
 mod easing;
-pub mod spring;
+mod spring;
 mod timing;
 
-pub(crate) use cycle::cycle;
 pub use easing::*;
+pub use spring::*;
 pub use timing::*;

@@ -364,6 +364,15 @@ fn controls(env: &Env) -> Div {
             ),
         )
         .child(
+            div().w(px(COLUMN_W)).child(
+                style::preview_surface(ui)
+                    .p_3()
+                    .text_caption()
+                    .text_color(ui.muted)
+                    .child("A preview's surface: the panel a list stands on, on its own"),
+            ),
+        )
+        .child(
             div()
                 .flex()
                 .flex_wrap()

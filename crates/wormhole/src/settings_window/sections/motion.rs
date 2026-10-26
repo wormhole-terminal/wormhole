@@ -13,11 +13,11 @@ use wormhole_text::Key;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use super::motion_preview;
+use super::MotionScene;
 use crate::select::Choice;
 use crate::settings::{Settings, settings};
-use crate::settings_window::SettingsWindow;
 use crate::settings_window::registry::Setting;
+use crate::settings_window::{SettingsWindow, ui};
 use crate::style;
 
 /// What the options of a choice are called, in the order the menu lists them.
@@ -64,19 +64,19 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("motion-insert", |w, cx| {
         select(w, "motion-insert", INSERT, settings(cx).motion.insert, pick!(insert), cx)
     })
-    .below(motion_preview::insert),
+    .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Insert, ui(cx)))),
     Setting::custom("motion-fold", |w, cx| {
         select(w, "motion-fold", FOLD, settings(cx).motion.fold, pick!(fold), cx)
     })
-    .below(motion_preview::fold),
+    .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Fold, ui(cx)))),
     Setting::custom("motion-status", |w, cx| {
         select(w, "motion-status", STATUS, settings(cx).motion.status, pick!(status), cx)
     })
-    .below(motion_preview::status),
+    .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Status, ui(cx)))),
     Setting::custom("motion-column", |w, cx| {
         select(w, "motion-column", COLUMN, settings(cx).motion.column, pick!(column), cx)
     })
-    .below(motion_preview::column),
+    .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Column, ui(cx)))),
 ];
 
 /// The select of one choice: the option in use in its face, every option in its menu.
@@ -94,7 +94,7 @@ fn select<T: MotionChoice>(
     window.select(
         id,
         div().child(name_of(current)).into_any_element(),
-        style::RECORDER_W,
+        style::SELECT_W,
         choices,
         current.name().to_string(),
         pick,

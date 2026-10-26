@@ -51,7 +51,10 @@ pub(super) fn render(
         ),
         ("FILTER_POPOVER_W", pt(style::FILTER_POPOVER_W)),
         ("SLIDER_W · compact", format!("{} · {}", style::SLIDER_W, style::SLIDER_W_COMPACT)),
-        ("SWATCH · RECORDER_W", format!("{} · {}", style::SWATCH, style::RECORDER_W)),
+        (
+            "SWATCH · RECORDER_W · SELECT_W",
+            format!("{} · {} · {}", style::SWATCH, style::RECORDER_W, style::SELECT_W),
+        ),
         ("THEME_CARD", format!("{} × {}", style::THEME_CARD_W, style::THEME_CARD_H)),
         (
             "QUICK_PANEL_W · QP_SEARCH_H · QP_ROW_H",
@@ -88,7 +91,7 @@ pub(super) fn render(
         ("LINEAR", curve(motion::LINEAR)),
         (
             "SPRING SNAP · SOFT · BOUNCY",
-            [motion::spring::SNAP, motion::spring::SOFT, motion::spring::BOUNCY]
+            [motion::SPRING_SNAP, motion::SPRING_SOFT, motion::SPRING_BOUNCY]
                 .map(|s| format!("{}/{}", s.stiffness, s.damping))
                 .join(" · "),
         ),

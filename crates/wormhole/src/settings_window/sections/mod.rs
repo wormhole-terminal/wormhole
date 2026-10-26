@@ -39,6 +39,7 @@ mod profile;
 mod profile_form;
 mod profile_sheet;
 mod projects;
+mod samples;
 mod sessions;
 mod stage;
 mod terminal;
@@ -50,6 +51,9 @@ pub(super) use agents::AgentsSnapshot;
 pub(super) use cli_tool::CliToolPanel;
 pub(super) use fonts::draw_specimen;
 pub(super) use menu_bar_preview::draw_menu_bar_preview;
+#[cfg(test)]
+pub(super) use motion_preview::MotionPreview;
+pub(super) use motion_preview::{MotionPreviews, Scene as MotionScene};
 pub(super) use notifications_preview::draw_notifications_preview;
 pub(super) use preview::{draw_agents_preview, draw_sidebar_preview};
 pub(super) use profile_form::ProfileForm;

@@ -11,30 +11,32 @@ use wormhole_core::view::motion::SpringSpec;
 const MASS: f32 = 1.0;
 
 /// `spec` as a GPUI spring.
-pub const fn config(spec: SpringSpec) -> SpringConfig {
+pub const fn spring(spec: SpringSpec) -> SpringConfig {
     SpringConfig::new(spec.stiffness, spec.damping, MASS)
 }
 
 /// Quick, a hint of overshoot: a row snapping onto a target.
-pub const SNAP: SpringConfig = config(SpringSpec::SNAP);
+pub const SPRING_SNAP: SpringConfig = spring(SpringSpec::SNAP);
 /// Slow and without overshoot: rows settling and columns sliding.
-pub const SOFT: SpringConfig = config(SpringSpec::SOFT);
+pub const SPRING_SOFT: SpringConfig = spring(SpringSpec::SOFT);
 /// Loose: overshoots and rings.
-pub const BOUNCY: SpringConfig = config(SpringSpec::BOUNCY);
+pub const SPRING_BOUNCY: SpringConfig = spring(SpringSpec::BOUNCY);
 
 #[cfg(test)]
 mod tests {
     use wormhole_core::view::motion::SpringSpec;
 
-    use super::{BOUNCY, SNAP, SOFT, config};
+    use super::{SPRING_BOUNCY, SPRING_SNAP, SPRING_SOFT};
 
     #[test]
     fn a_spec_becomes_a_unit_mass_spring_with_its_numbers() {
-        for (spec, spring) in
-            [(SpringSpec::SNAP, SNAP), (SpringSpec::SOFT, SOFT), (SpringSpec::BOUNCY, BOUNCY)]
-        {
+        for (spec, spring) in [
+            (SpringSpec::SNAP, SPRING_SNAP),
+            (SpringSpec::SOFT, SPRING_SOFT),
+            (SpringSpec::BOUNCY, SPRING_BOUNCY),
+        ] {
             assert_eq!((spring.stiffness, spring.damping, spring.mass), (spec.stiffness, spec.damping, 1.0));
-            assert_eq!(spring, config(spec));
+            assert_eq!(spring, super::spring(spec));
             // GPUI and core agree on how damped it is, so a preset can't drift from its description.
             assert!((spring.canonical().1 - spec.damping_ratio()).abs() < 1e-6);
         }

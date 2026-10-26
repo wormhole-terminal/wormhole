@@ -1,46 +1,53 @@
 //! Settings → Motion's previews: under each choice, a small stage made of the app's own rows, heads
-//! and tiles that loops through the thing the choice is about. Each scene is a file (`insert`,
-//! `fold`, `status`, `column`); this is what they share: the frame, the loop's clock and the lanes
-//! the parts of a scene ride in.
+//! and tiles that loops through the thing the choice is about. Each scene is a file (`insert`, `fold`,
+//! `status`, `column`) that says where its parts are at a moment of the loop; this is what they share:
+//! the view that runs the loop, the frame and the spots the parts are put on.
 //!
-//! A scene is a function of the loop's time `t` (0.0..1.0), and `t = 0` is the picture before
-//! anything moves: GPUI shows the first frame under Reduce Motion, so a still preview is that one.
-//! The parts are built once, up front, and a lane only moves and fades them; nothing here is
-//! rebuilt from the time. The animation of a lane is keyed by the choice it shows, so picking
-//! another choice starts its scene again from the top.
+//! A preview is a view of its own, so the clock that redraws it is its own and the Settings window's
+//! page is not what ticks. It reads the time itself instead of animating built elements: a scene is a
+//! function of the loop's time `t` (0.0..1.0) that builds only what shows at `t`, so a part that is
+//! away (a row not there yet, the statuses it is not in) is not in the layout, the accessibility tree
+//! or running an animation of its own. `t = 0` is the picture before anything moves, which is what
+//! Reduce Motion holds. A preview exists while its page is open (`MotionPreviews`), so nothing ticks
+//! while another page is.
 //!
-//! Every choice draws what the app does today until the motion it names is built: the frame, the
-//! picker and the restart are what these files settle, and a later phase adds a variant to the
-//! scene it belongs to.
+//! Picking another option starts the loop again from `t = 0`. Every option draws what the app does
+//! today until the motion it names is built: the frame, the picker and the restart are what these
+//! files settle, and a later phase adds a variant to the scene it belongs to.
 
 mod column;
 mod fold;
 mod insert;
 mod status;
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use crate::style::{Metrics, RowTone, SessionRow, StatusGlyph, TileFace};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::view::motion::{MotionChoice, Span};
 use wormhole_core::view::sidebar::Density;
+use wormhole_text::keys::{
+    SETTINGS_MOTION_COLUMN_PREVIEW_LABEL, SETTINGS_MOTION_FOLD_PREVIEW_LABEL,
+    SETTINGS_MOTION_INSERT_PREVIEW_LABEL, SETTINGS_MOTION_PREVIEW_CAPTION,
+    SETTINGS_MOTION_STATUS_PREVIEW_LABEL,
+};
 use wormhole_text::text;
 
-use crate::settings::UiColors;
-use crate::style::{self, TextRole};
-
-pub(super) use column::column;
-pub(super) use fold::fold;
-pub(super) use insert::insert;
-pub(super) use status::status;
+use super::samples::{CARGO_TEST, FIX_PILE, SCRATCH, SIDEBAR_CARDS, Sample};
+use crate::settings::{SettingsStore, UiColors, settings};
+use crate::settings_window::ui;
+use crate::style::motion::ANIMATION_FPS;
+use crate::style::{self, Metrics, TextRole, TileFace};
 
 /// The widest a preview grows: the sidebar's rows read best at about the width the sidebar has.
 const STAGE_MAX_W: f32 = 480.0;
 
 /// The length of every scene's loop: long enough to rest before and after each change.
 const LOOP: Duration = Duration::from_secs(4);
+
+/// How often a still preview (Reduce Motion) looks again whether it may move.
+const STILL_CHECK: Duration = Duration::from_secs(1);
 
 /// `len` after `start`, as a stretch of the loop.
 fn span(start: f32, len: Duration) -> Span {
@@ -52,231 +59,271 @@ fn metrics() -> Metrics {
     Metrics::of(Density::Regular, true)
 }
 
-/// Where a part of a scene is at a moment of the loop: how far from its place it is, and how much of
-/// it shows.
+/// The agent's terminals of the scenes: working, and asking for input, as the sample list has them.
+const WORKING: Sample = Sample { agent: Some(AgentId::Claude), ..SIDEBAR_CARDS };
+const ASKING: Sample = Sample { agent: Some(AgentId::Claude), ..FIX_PILE };
+const RUNNING: Sample = CARGO_TEST;
+const IDLE: Sample = SCRATCH;
+
+/// The sidebar's own row for `sample`, as a scene draws it: a terminal without an agent is the terminal
+/// symbol. `id` tells the row's tile from the others in the window.
+#[track_caller]
+fn row(sample: &Sample, id: &str, ui: UiColors, cx: &App) -> AnyElement {
+    sample.row(id, ui, metrics(), &TileFace::Terminal, false, cx)
+}
+
+/// Where a part of a scene is on the stage, and how much of it shows.
 #[derive(Clone, Copy)]
-struct Pose {
-    dx: f32,
-    dy: f32,
+struct Spot {
+    left: f32,
+    top: f32,
+    /// A part with a width of its own; `None` runs across the stage.
+    width: Option<f32>,
+    height: f32,
     opacity: f32,
 }
 
-impl Pose {
-    /// In its place, drawn.
-    const REST: Self = Self { dx: 0.0, dy: 0.0, opacity: 1.0 };
+impl Spot {
+    /// Across the stage, `top` points from its top.
+    fn row(top: f32, height: f32) -> Self {
+        Self { left: 0.0, top, width: None, height, opacity: 1.0 }
+    }
 
-    /// In its place, drawn while `shown`.
-    fn when(shown: bool) -> Self {
-        Self { opacity: if shown { 1.0 } else { 0.0 }, ..Self::REST }
+    /// `width` wide, from the stage's left edge.
+    fn wide(width: f32, height: f32) -> Self {
+        Self { left: 0.0, top: 0.0, width: Some(width), height, opacity: 1.0 }
+    }
+
+    fn moved(self, dx: f32, dy: f32) -> Self {
+        Self { left: self.left + dx, top: self.top + dy, ..self }
+    }
+
+    fn showing(self, opacity: f32) -> Self {
+        Self { opacity, ..self }
+    }
+
+    /// What `content` builds, there: nothing at all, not even built, while none of it shows.
+    #[track_caller]
+    fn put(self, content: impl FnOnce() -> AnyElement) -> Option<AnyElement> {
+        (self.opacity > 0.0).then(|| {
+            let part = div()
+                .absolute()
+                .left(px(self.left))
+                .top(px(self.top))
+                .h(px(self.height))
+                .when_some(self.width, |part, width| part.w(px(width)))
+                .when(self.width.is_none(), |part| part.right_0())
+                .child(content());
+            if self.opacity < 1.0 { part.opacity(self.opacity) } else { part }.into_any_element()
+        })
     }
 }
 
-/// The most lanes a scene has: what the lanes of one choice are counted in, to key them apart.
-const LANES: usize = 16;
-
-/// Which scene is on the stage and which of its choices: what keys the animations of its lanes.
-#[derive(Clone, Copy)]
-struct Scene {
-    id: &'static str,
-    /// The index of the choice in its `ALL`.
-    choice: usize,
+/// The four previews of the page, as long as the page is up.
+pub(in crate::settings_window) struct MotionPreviews {
+    insert: Entity<MotionPreview>,
+    fold: Entity<MotionPreview>,
+    status: Entity<MotionPreview>,
+    column: Entity<MotionPreview>,
 }
 
-impl Scene {
-    fn of<T: MotionChoice>(id: &'static str, current: T) -> Self {
-        Self { id, choice: T::ALL.iter().position(|choice| *choice == current).unwrap_or(0) }
+impl MotionPreviews {
+    pub(in crate::settings_window) fn new(cx: &mut App) -> Self {
+        let mut view = |kind| cx.new(|cx| MotionPreview::new(kind, cx));
+        Self {
+            insert: view(Scene::Insert),
+            fold: view(Scene::Fold),
+            status: view(Scene::Status),
+            column: view(Scene::Column),
+        }
     }
 
-    /// What GPUI keeps a lane's animation under: the scene, the choice shown and the lane, so another
-    /// choice starts the lane's loop from its first frame.
-    fn key(self, lane: usize) -> (&'static str, u64) {
-        (self.id, (self.choice * LANES + lane) as u64)
-    }
-
-    /// `content` across the stage, `top` points from its top and `height` tall, posed by `pose` as the
-    /// loop runs. `lane` tells the lanes of one scene apart.
-    #[track_caller]
-    fn lane(
-        self,
-        lane: usize,
-        top: f32,
-        height: f32,
-        content: AnyElement,
-        pose: impl Fn(f32) -> Pose + 'static,
-    ) -> AnyElement {
-        self.place(lane, None, top, height, content, pose)
-    }
-
-    /// [`Scene::lane`] for a part of the stage that has its own `width` (from the stage's left, moved
-    /// by the pose), instead of running across it.
-    #[track_caller]
-    fn place(
-        self,
-        lane: usize,
-        width: Option<f32>,
-        top: f32,
-        height: f32,
-        content: AnyElement,
-        pose: impl Fn(f32) -> Pose + 'static,
-    ) -> AnyElement {
+    /// The preview of `scene`, to put under its row.
+    pub(in crate::settings_window) fn of(&self, scene: Scene, ui: UiColors) -> AnyElement {
+        let view = match scene {
+            Scene::Insert => &self.insert,
+            Scene::Fold => &self.fold,
+            Scene::Status => &self.status,
+            Scene::Column => &self.column,
+        };
         div()
-            .absolute()
-            .left_0()
-            .top(px(top))
-            .h(px(height))
-            .when_some(width, |lane, width| lane.w(px(width)))
-            .when(width.is_none(), |lane| lane.right_0())
-            .child(content)
-            .with_animation(self.key(lane), style::motion::cycle(LOOP), move |lane, t| {
-                let at = pose(t);
-                lane.left(px(at.dx)).top(px(top + at.dy)).opacity(at.opacity)
-            })
+            .w_full()
+            .max_w(px(STAGE_MAX_W))
+            .flex()
+            .flex_col()
+            .gap_2()
+            .child(view.clone())
+            .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_MOTION_PREVIEW_CAPTION)))
             .into_any_element()
     }
 }
 
-/// `content` where a lane would put it, but still: the parts of a scene that don't move.
-#[track_caller]
-fn fixed(top: f32, height: f32, content: AnyElement) -> AnyElement {
-    div().absolute().left_0().right_0().top(px(top)).h(px(height)).child(content).into_any_element()
+/// What a preview is a preview of.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::settings_window) enum Scene {
+    Insert,
+    Fold,
+    Status,
+    Column,
 }
 
-/// A terminal of a scene.
-#[derive(Clone, Copy)]
-struct Sample {
-    name: &'static str,
-    detail: &'static str,
-    glyph: StatusGlyph,
-    tone: RowTone,
-    selected: bool,
-    /// The agent at work in it; none draws a plain terminal.
-    agent: Option<AgentId>,
-}
+impl Scene {
+    /// The option of the scene's choice in use, as its place among the options.
+    fn shown(self, cx: &App) -> usize {
+        fn at<T: MotionChoice>(current: T) -> usize {
+            T::ALL.iter().position(|choice| *choice == current).unwrap_or(0)
+        }
+        let motion = settings(cx).motion;
+        match self {
+            Self::Insert => at(motion.insert),
+            Self::Fold => at(motion.fold),
+            Self::Status => at(motion.status),
+            Self::Column => at(motion.column),
+        }
+    }
 
-impl Sample {
-    /// The sidebar's own row for it, with its status tile. `id` tells it from the others in the
-    /// window (the tile's animations are keyed by it).
-    #[track_caller]
-    fn row(self, id: &'static str, key: usize, ui: UiColors, cx: &App) -> AnyElement {
-        let metrics = metrics();
-        let tile = style::status_tile_at(
-            SharedString::from(format!("{id}-tile-{key}")),
-            ui,
-            style::StatusTile {
-                face: self.agent.map_or(TileFace::Terminal, TileFace::Agent),
-                glyph: self.glyph,
-                selected: self.selected,
-                mini: false,
-            },
-            metrics.tile,
-            cx,
-        );
-        let mut row = SessionRow::new(div().into_any_element(), self.name);
-        row.selected = self.selected;
-        row.tone = self.tone;
-        row.tile = Some(tile);
-        row.card = true;
-        row.metrics = metrics;
-        row.detail = Some(self.detail.into());
-        style::session_row(SharedString::from(format!("{id}-row-{key}")), ui, row).into_any_element()
+    /// What VoiceOver says of the preview: a picture of the choice, not something to operate.
+    fn spoken(self) -> &'static str {
+        text(match self {
+            Self::Insert => SETTINGS_MOTION_INSERT_PREVIEW_LABEL,
+            Self::Fold => SETTINGS_MOTION_FOLD_PREVIEW_LABEL,
+            Self::Status => SETTINGS_MOTION_STATUS_PREVIEW_LABEL,
+            Self::Column => SETTINGS_MOTION_COLUMN_PREVIEW_LABEL,
+        })
+    }
+
+    fn id(self) -> &'static str {
+        match self {
+            Self::Insert => "motion-insert",
+            Self::Fold => "motion-fold",
+            Self::Status => "motion-status",
+            Self::Column => "motion-column",
+        }
+    }
+
+    /// The stage at `t`: its parts where they are then.
+    fn stage(self, ui: UiColors, t: f32, cx: &App) -> Div {
+        match self {
+            Self::Insert => insert::stage(ui, t, cx),
+            Self::Fold => fold::stage(ui, t, cx),
+            Self::Status => status::stage(ui, t, cx),
+            Self::Column => column::stage(ui, t, cx),
+        }
     }
 }
 
-/// The terminals the scenes put on their stages.
-const WORKING: Sample = Sample {
-    name: "Sidebar cards",  // text: sample (a made-up terminal of the preview)
-    detail: "Working · 4m", // text: sample (a made-up status of the preview)
-    glyph: StatusGlyph::Working,
-    tone: RowTone::Plain,
-    selected: true,
-    agent: Some(AgentId::Claude),
-};
-const ASKING: Sample = Sample {
-    name: "Fix pile fan-out",   // text: sample (a made-up terminal of the preview)
-    detail: "Needs input · 2m", // text: sample (a made-up status of the preview)
-    glyph: StatusGlyph::NeedsYou,
-    tone: RowTone::Attention,
-    selected: false,
-    agent: Some(AgentId::Claude),
-};
-const RUNNING: Sample = Sample {
-    name: "cargo test",               // text: sample (a made-up terminal of the preview)
-    detail: "cargo test --workspace", // text: sample (a made-up command of the preview)
-    glyph: StatusGlyph::Running,
-    tone: RowTone::Plain,
-    selected: false,
-    agent: None,
-};
-const IDLE: Sample = Sample {
-    name: "scratch", // text: sample (a made-up terminal of the preview)
-    detail: "~",     // text: sample (a made-up folder of the preview)
-    glyph: StatusGlyph::Idle,
-    tone: RowTone::Plain,
-    selected: false,
-    agent: None,
-};
+/// One preview: a scene, its frame and the clock that loops it.
+pub(in crate::settings_window) struct MotionPreview {
+    scene: Scene,
+    /// The option shown (its place among the options) and when its loop began.
+    began: Option<(usize, Instant)>,
+    /// Redraws the preview between frames; dropped with it.
+    _clock: Task<()>,
+    /// A choice changed, or the theme did: draw again.
+    _settings: Subscription,
+}
 
-/// A scene's stage in its frame, with the caption under it. `label` is what VoiceOver says of it: a
-/// picture of the choice, not something to operate.
-#[track_caller]
-fn show(ui: UiColors, id: &'static str, label: &'static str, stage: Div) -> AnyElement {
-    div()
-        .id(id)
-        .role(Role::Group)
-        .aria_label(label)
-        .flex()
-        .flex_col()
-        .gap_2()
-        .child(style::preview_frame(ui).max_w(px(STAGE_MAX_W)).child(stage))
-        .child(
-            div()
-                .text_caption()
-                .text_color(ui.muted)
-                .child(text(wormhole_text::keys::SETTINGS_MOTION_PREVIEW_CAPTION)),
-        )
-        .into_any_element()
+impl MotionPreview {
+    pub(in crate::settings_window) fn new(scene: Scene, cx: &mut Context<Self>) -> Self {
+        let clock = cx.spawn(async move |this, cx| {
+            loop {
+                let still = cx.update(|cx| cx.reduce_motion());
+                let wait = if still { STILL_CHECK } else { Duration::from_secs_f32(1.0 / ANIMATION_FPS) };
+                cx.background_executor().timer(wait).await;
+                if this
+                    .update(cx, |_, cx| {
+                        if !still {
+                            cx.notify()
+                        }
+                    })
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        });
+        Self {
+            scene,
+            began: None,
+            _clock: clock,
+            _settings: cx.observe_global::<SettingsStore>(|_, cx| cx.notify()),
+        }
+    }
+
+    /// How far into its loop the option shown is: 0 when it was just picked, and always under Reduce
+    /// Motion, which holds the picture before anything moves.
+    fn time(&mut self, shown: usize, still: bool) -> f32 {
+        if still {
+            self.began = None;
+            return 0.0;
+        }
+        let began = match self.began {
+            Some((option, at)) if option == shown => at,
+            _ => {
+                let now = Instant::now();
+                self.began = Some((shown, now));
+                now
+            }
+        };
+        (began.elapsed().as_secs_f32() / LOOP.as_secs_f32()).fract()
+    }
+}
+
+impl Render for MotionPreview {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let ui = ui(cx);
+        let t = self.time(self.scene.shown(cx), cx.reduce_motion());
+        div()
+            .id(self.scene.id())
+            .role(Role::Group)
+            .aria_label(self.scene.spoken())
+            .child(style::preview_frame(ui).child(self.scene.stage(ui, t, cx)))
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::time::Instant;
 
-    use wormhole_core::view::motion::{ColumnMotion, FoldMotion, InsertMotion, MotionChoice, StatusMotion};
+    use gpui_kit::{AppContext as _, IntoElement as _, TestAppContext};
 
-    use super::{LANES, Scene, span};
-
-    /// Every lane of every option of a choice has a key of its own.
-    fn keys_of<T: MotionChoice>(id: &'static str) -> Vec<(&'static str, u64)> {
-        T::ALL
-            .iter()
-            .flat_map(|choice| (0..LANES).map(move |lane| Scene::of(id, *choice).key(lane)))
-            .collect()
-    }
-
-    #[test]
-    fn picking_another_option_keys_the_loop_anew_and_the_same_one_keeps_it() {
-        for keys in [
-            keys_of::<InsertMotion>("motion-insert"),
-            keys_of::<FoldMotion>("motion-fold"),
-            keys_of::<StatusMotion>("motion-status"),
-            keys_of::<ColumnMotion>("motion-column"),
-        ] {
-            assert_eq!(keys.iter().collect::<HashSet<_>>().len(), keys.len(), "two lanes share a key");
-        }
-        assert_eq!(
-            Scene::of("motion-fold", FoldMotion::Drawer).key(3),
-            Scene::of("motion-fold", FoldMotion::Drawer).key(3),
-            "the same option on the next frame is the same animation, still running"
-        );
-        assert_ne!(
-            Scene::of("motion-fold", FoldMotion::Drawer).key(3),
-            Scene::of("motion-fold", FoldMotion::Tuck).key(3)
-        );
-    }
+    use super::{MotionPreview, Scene, Spot, span};
 
     #[test]
     fn a_span_of_the_loop_is_its_start_and_the_share_its_duration_takes() {
         let moved = span(0.25, std::time::Duration::from_secs(1));
         assert_eq!((moved.start, moved.end), (0.25, 0.5));
+    }
+
+    #[test]
+    fn a_part_that_shows_nothing_is_not_built() {
+        let built = std::cell::Cell::new(0);
+        let build = || {
+            built.set(built.get() + 1);
+            gpui_kit::div().into_any_element()
+        };
+        assert!(Spot::row(0.0, 48.0).showing(0.0).put(build).is_none());
+        assert_eq!(built.get(), 0, "not even built");
+        assert!(Spot::row(0.0, 48.0).showing(0.5).put(build).is_some());
+        assert_eq!(built.get(), 1);
+    }
+
+    #[gpui_kit::test]
+    fn another_option_starts_the_loop_again_and_the_same_one_goes_on(cx: &mut TestAppContext) {
+        let preview = cx.new(|cx| MotionPreview::new(Scene::Fold, cx));
+        let (first, again, other, still) = preview.update(cx, |preview, _| {
+            let first = preview.time(1, false);
+            std::thread::sleep(std::time::Duration::from_millis(30));
+            let again = preview.time(1, false);
+            let other = preview.time(2, false);
+            let still = preview.time(2, true);
+            (first, again, other, still)
+        });
+        assert!(first < 0.001, "just picked: at the start");
+        assert!(again > first && again < 1.0, "the same option goes on: {again}");
+        assert!(other < 0.001 && other < again, "another option starts over");
+        assert_eq!(still, 0.0, "Reduce Motion holds the first picture");
+        let began: Option<Instant> = preview.read_with(cx, |preview, _| preview.began.map(|(_, at)| at));
+        assert!(began.is_none(), "and forgets the loop, so it starts over when motion is back");
     }
 }

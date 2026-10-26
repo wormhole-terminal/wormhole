@@ -14,16 +14,16 @@ pub fn preview_frame(ui: UiColors) -> Div {
     div().p_4().rounded(ui.radius_lg).outlined(ui, ui.border).bg(ui.background).overflow_hidden()
 }
 
-/// A surface `height` points tall for a preview's parts to be placed on (absolutely, by their
-/// distance from its top): the sidebar's panel, with the corner a list has.
+/// The sidebar's panel as a preview draws it on its own: the surface a list stands on, with the corner
+/// a list has, clipped.
+#[track_caller]
+pub fn preview_surface(ui: UiColors) -> Div {
+    div().rounded(ui.radius).overflow_hidden().outlined(ui, ui.border).bg(ui.panel)
+}
+
+/// [`preview_surface`] `height` points tall for a preview's parts to be placed on (absolutely, by
+/// their distance from its top).
 #[track_caller]
 pub fn preview_stage(ui: UiColors, height: f32) -> Div {
-    div()
-        .relative()
-        .w_full()
-        .h(px(height))
-        .rounded(ui.radius)
-        .overflow_hidden()
-        .outlined(ui, ui.border)
-        .bg(ui.panel)
+    preview_surface(ui).relative().w_full().h(px(height))
 }
