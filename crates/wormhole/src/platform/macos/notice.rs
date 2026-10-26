@@ -365,7 +365,7 @@ impl Chip {
 
     fn layer(&self) -> Retained<CALayer> {
         // Layer-backed from the start (`new`), so it is there.
-        self.holder.layer().unwrap_or_else(CALayer::new)
+        self.holder.layer().unwrap_or_default()
     }
 
     /// How far the chip goes to be out of sight above the panel's top edge.
