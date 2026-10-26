@@ -1,3 +1,12 @@
 # Commits that only move code (git blame skips them): git config blame.ignoreRevsFile .git-blame-ignore-revs
 # ipc folders
 377d30a5b999794364d61a10d105e29013eb57f8
+# Motion folders, scripts/motion-moves.py
+4081d21101bffcee0bd6170258d4de1bc8614d65
+# refactor(style): move motion.rs into a folder of timing and easing
+55a1af486991bc8c8c657944f22991b22b3fe678
+# refactor(style): move tile.rs into a folder of face, ring, orbit, edge and badge
+d64e63a0ffd59b37c0695ce99167eb9a204f2585
+# refactor(style): move the Urgency conversion next to StatusGlyph
+9cd89b31e8b11f3876f832d2a26d76d65d0f02e5
+# refactor(sidebar): move the list's slide into motion/list.rs
