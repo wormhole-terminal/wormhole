@@ -222,7 +222,7 @@ impl Render for GalleryView {
         if let Some((y, frames)) = self.scroll_to {
             self.scroll.set_offset(point(px(0.0), px(-y)));
             let reached = f32::from(self.scroll.max_offset().y) >= y - 0.5;
-            self.scroll_to = (!reached && frames > 0).then_some((y, frames - 1));
+            self.scroll_to = (!reached && frames > 0).then(|| (y, frames - 1));
             if self.scroll_to.is_some() {
                 window.request_animation_frame();
             }
