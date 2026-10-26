@@ -6,13 +6,12 @@ use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::sidebar::hints::keycap;
-use wormhole_core::view::sidebar::wording::place_detail;
 use wormhole_core::view::sidebar::{Card, Entry, Listing, SplitMarks};
 
 use super::super::{BODY_REM, CAPTION_REM, two_line_tooltip};
 use super::Frame;
 use super::label::row_label;
-use super::second_line::{SecondLine, second_line};
+use super::second_line::{SecondLine, line_of};
 use super::shift::RowShift;
 use super::tile::{tile_parts, tile_shifting};
 use crate::sidebar::facts::RowInfo;
@@ -34,9 +33,6 @@ const LINE_GAP: f32 = 8.0;
 /// A code-font character at caption size, roughly, and the room a clock takes.
 const MONO_CHAR_W: f32 = 7.2;
 const CLOCK_W: f32 = 48.0;
-/// How many characters of a path fit on a row's second line before it is cut from the front.
-pub(in crate::sidebar) const PLACE_CHARS: usize = 38;
-
 /// Where a split's line runs in a terminal's row: through the middle of its tile, which stands on it.
 fn split_line_x(metrics: style::Metrics) -> f32 {
     metrics.row_px + metrics.tile / 2.0
@@ -301,11 +297,4 @@ pub(in crate::sidebar) fn row_face(
     });
     let row = row.children(wash);
     RowFace { row, tooltip, label, group }
-}
-
-/// What a terminal's second line says: the words, their tone, whether they are a command and what sits at
-/// its right.
-pub(in crate::sidebar) fn line_of(info: &RowInfo, frame: &Frame) -> SecondLine {
-    let whereabouts = || place_detail(info.cwd.as_deref(), home_dir(), PLACE_CHARS);
-    second_line(info, !frame.metrics.two_lines, whereabouts)
 }

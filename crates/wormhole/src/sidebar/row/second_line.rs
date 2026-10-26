@@ -1,7 +1,10 @@
 //! A row's second line: what the terminal has to report, or where it is, and the part of it that moves
 //! with time (so a tick knows when to draw again).
 
+use super::Frame;
+use crate::style::home_dir;
 use wormhole_core::view::sidebar::RowState;
+use wormhole_core::view::sidebar::wording::place_detail;
 use wormhole_core::view::sidebar::wording::{agent_detail, ago, clock, took};
 
 use super::super::facts::RowInfo;
@@ -58,6 +61,16 @@ pub(in crate::sidebar) fn second_line(
             None => line(Some("Shell".to_string()), RowTone::Plain, false, None),
         },
     }
+}
+
+/// How many characters of a path fit on a row's second line before it is cut from the front.
+pub(in crate::sidebar) const PLACE_CHARS: usize = 38;
+
+/// What a terminal's second line says: the words, their tone, whether they are a command and what sits at
+/// its right.
+pub(in crate::sidebar) fn line_of(info: &RowInfo, frame: &Frame) -> SecondLine {
+    let whereabouts = || place_detail(info.cwd.as_deref(), home_dir(), PLACE_CHARS);
+    second_line(info, !frame.metrics.two_lines, whereabouts)
 }
 
 /// The part of a row's text that moves with time ("Working · 3m", a command's "1:12"), for
