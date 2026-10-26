@@ -19,7 +19,7 @@ use crate::automation::{publish, wants};
 use crate::terminal_view::{CommandMark, TerminalSummary};
 use crate::window::Workspace;
 use crate::window::ambient::state_of;
-use crate::window::window_control::agent_id;
+use crate::window::control::agent_id;
 
 /// A summary's state as the protocol speaks of it (what `list` would say).
 fn state(summary: &TerminalSummary) -> TerminalState {

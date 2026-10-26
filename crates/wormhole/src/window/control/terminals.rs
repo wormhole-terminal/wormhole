@@ -1,8 +1,5 @@
-//! What a window does when asked from outside it: the control protocol's requests about its
-//! terminals (`control`: list, status, notify, send-text, new-terminal), and a notification's
-//! Reply typed into a terminal.
-//!
-//! Part of the window: it must not use `control` or `notifications`, which call it from above.
+//! What a window does when asked from outside it, about its terminals: the control protocol's list,
+//! status, notify, send-text and new-terminal, and a notification's Reply typed into a terminal.
 
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
@@ -16,7 +13,7 @@ use crate::window::Workspace;
 use crate::window::ambient::state_of;
 
 /// An agent's id as the hooks spell it (`claude`, `codex`).
-pub(super) fn agent_id(agent: AgentId) -> Option<String> {
+pub(in crate::window) fn agent_id(agent: AgentId) -> Option<String> {
     serde_json::to_value(agent).ok().and_then(|v| v.as_str().map(str::to_string))
 }
 
@@ -112,7 +109,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> bool {
         let Some(terminal) = self.pane_terminal(tab) else { return false };
-        super::feature_terminals::paste_text(&terminal, text, submit, cx);
+        crate::window::feature_terminals::paste_text(&terminal, text, submit, cx);
         true
     }
 
@@ -143,7 +140,7 @@ impl Workspace {
         if text.is_empty() {
             return false;
         }
-        super::feature_terminals::paste_text(&terminal, text, true, cx);
+        crate::window::feature_terminals::paste_text(&terminal, text, true, cx);
         true
     }
 }

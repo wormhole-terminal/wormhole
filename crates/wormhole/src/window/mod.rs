@@ -15,7 +15,7 @@
 //! (`summaries`: everything the window draws of a terminal comes from it, never from the terminal), its
 //! tick (`tick`), its saves (`save`, `saved_layout`, `window_bounds`), its life (`windows`,
 //! `window_lifecycle`, `hosting` for the persistent terminals), what it answers from outside
-//! (`window_control`, `restart_facts`, `ambient`, `menu_state`, and `devctl` in a devctl build), its
+//! (`control`, `restart_facts`, `ambient`, `menu_state`, and `devctl` in a devctl build), its
 //! actions and keys (`window_actions`, `shortcuts`), its look (`layout`, `chrome`, `resize`, `slide`,
 //! `glass`, `status_bar`; `regions`: the chrome GPUI keeps between frames) and what opens over it
 //! (`overlay`).
@@ -176,9 +176,9 @@ mod welcome_host;
 #[cfg(test)]
 mod welcome_tests;
 pub(crate) use self::welcome_host::remember_first_run;
+mod control;
 mod window_actions;
 mod window_bounds;
-mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 
