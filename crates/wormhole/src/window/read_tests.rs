@@ -526,3 +526,30 @@ fn a_program_that_asked_for_the_locator_gets_the_click_as_locator_reports(cx: &m
     let refused = reply(ask(cx, mouse(wheel), None, &who.outside));
     assert_eq!(refused.err().and_then(|e| e.reason), Some(Reason::NoMouse));
 }
+
+/// A drag is a press, motion with the button held and a release: a program that tracks buttons (1002)
+/// is told of the motion, which it would not be of a move with no button down.
+#[gpui_kit::test]
+fn a_drag_reaches_a_program_that_tracks_buttons(cx: &mut TestAppContext) {
+    if isolate("a_drag_reaches_a_program_that_tracks_buttons") {
+        return;
+    }
+    let window = start(cx, 1);
+    let who = callers(cx, &window);
+    allow(cx, true, true);
+    let mouse = |op: MouseOp| Action::Mouse(MouseSpec { target: Target::Terminal(1), op });
+    print(cx, &window, 0, b"\x1b[?1002h\x1b[?1006h\r");
+    wait_until(cx, "button tracking", |cx| shown(cx, 1, &who).modes.mouse == "drag");
+    let held = Pointer { button: Some(ButtonName::Left), ..pointer(1, 3) };
+    for op in [
+        MouseOp::Press(pointer(1, 2)),
+        MouseOp::Move(Pointer { button: None, ..pointer(1, 5) }),
+        MouseOp::Move(held),
+        MouseOp::Release(pointer(1, 3)),
+    ] {
+        let sent = reply(ask(cx, mouse(op), None, &who.outside));
+        assert!(matches!(code(&sent), None | Some(ErrorCode::Refused)), "{sent:?}");
+    }
+    // The move with no button is not told (the request is refused as nothing to send); the drag is.
+    show_contains(cx, 1, &who, "^[[<0;3;2M^[[<32;4;2M^[[<0;4;2m");
+}
