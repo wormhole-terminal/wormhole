@@ -294,7 +294,13 @@ impl Workspace {
             None => None,
         });
         let bar = if sliding {
-            style::selection_bar("panel-tabs", ui, tabs.iter().position(|&id| id == self.right_tab), shown)
+            style::selection_bar(
+                "panel-tabs",
+                ui,
+                tabs.iter().position(|&id| id == self.right_tab),
+                &self.regions.drawn.panel_slots,
+                shown,
+            )
         } else {
             div().id("panel-tabs").flex().items_center().gap_1().children(shown)
         }

@@ -138,6 +138,8 @@ pub(super) struct Drawn {
     pub(super) rolls: StatusRolls,
     /// The right panel's tab switch that is under way.
     pub(super) panel_switch: PanelSwitch,
+    /// Where the panel's tabs were laid out, which its selection's shape is painted from.
+    pub(super) panel_slots: crate::style::TabSlots,
 }
 
 impl Regions {

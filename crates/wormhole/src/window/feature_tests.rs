@@ -8,6 +8,7 @@ use gpui_kit::{
     AnyElement, AnyEntity, AppContext as _, Entity, EventEmitter, IntoElement as _, Keystroke, Styled as _,
     TestAppContext,
 };
+use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::config::{FEATURES, FeatureId, TabId};
 use wormhole_core::git::{ChangeKind, FileChange, RepoStatus};
 use wormhole_core::keys::keymap::ActionId;
@@ -22,6 +23,7 @@ use crate::features::TABLE;
 use crate::features::git::changes;
 use crate::features::notes::testing as notes;
 use crate::focus_keys::Activate;
+use crate::settings::update_settings;
 use crate::sidebar::{RowExtra, RowExtras, RowInfo};
 use crate::window::Workspace;
 use crate::window::feature::Walkable;
@@ -742,15 +744,17 @@ static CROWD: &[FeatureDef] = &[
 ];
 
 /// Allocations the table's loops make in one frame, for 50 changed files and three stand-in features:
-/// `bind_features`, the tab bar (`render_panel_tabs`, in `render_panel`) and the panel body. Measured:
-/// 114 (24 KB), exact on every run (122 before Changes moved into its entity, which draws its list
-/// from rows kept per terminal; 109 before the tab bar had a selection of its own: with the Motion
-/// feature on, `style::selection_bar` makes the shared bounds and the boxes of its shape's two closures
-/// and its listener, five allocations a build, none while the feature is off); the budget is that plus
-/// about a hundredth. Run with 50 files and
-/// four features so that a cost per row (fifty times) or per feature (four times) shows at once; a
-/// change that adds either must say why, and raise this with the new measurement.
-const TABLE_LOOP_ALLOCATIONS: u64 = 115;
+/// `bind_features`, the tab bar (`render_panel_tabs`, in `render_panel`) and the panel body. Measured with
+/// the Motion feature off, which is what ships: 109 (24 KB), exact on every run (122 before Changes moved
+/// into its entity, which draws its list from rows kept per terminal); the budget is that plus about a
+/// hundredth. Run with 50 files and four features so that a cost per row (fifty times) or per feature (four
+/// times) shows at once; a change that adds either must say why, and raise this with the new measurement.
+const TABLE_LOOP_ALLOCATIONS_MOTION_OFF: u64 = 111;
+
+/// The same with the Motion feature on: the tab bar's selection (`style::selection_bar`) is one more element
+/// and the listener that measures the tabs (the places they are measured into are kept by the window, which
+/// is why it is not five allocations: it was while the bar made them). Measured 110; two over, as above.
+const TABLE_LOOP_ALLOCATIONS_MOTION_ON: u64 = 112;
 
 #[gpui_kit::test]
 fn the_tables_loops_stay_within_their_allocation_budget(cx: &mut TestAppContext) {
@@ -764,22 +768,35 @@ fn the_tables_loops_stay_within_their_allocation_budget(cx: &mut TestAppContext)
         cx.notify();
     });
     draw(cx, &window);
-    let drawn = drive(cx, &window, |ws, window, cx| {
-        let width = ws.columns().panel;
-        // The first pass builds what is kept; the second is the frame.
-        for _ in 0..2 {
+    // What ships first, then what the Motion feature adds; each on its own budget.
+    for (motion, budget) in
+        [(false, TABLE_LOOP_ALLOCATIONS_MOTION_OFF), (true, TABLE_LOOP_ALLOCATIONS_MOTION_ON)]
+    {
+        cx.update(|cx| {
+            update_settings(cx, |s| {
+                s.feature_flags.insert(FeatureFlag::Motion.key().to_string(), motion);
+            })
+        });
+        let drawn = drive(cx, &window, |ws, window, cx| {
+            let width = ws.columns().panel;
+            // The first pass builds what is kept; the second is the frame.
+            for _ in 0..2 {
+                let _ = ws.bind_features(gpui_kit::div(), cx);
+                let _ = ws.render_panel(width, window, cx).into_any_element();
+            }
+            let before = thread_counts();
             let _ = ws.bind_features(gpui_kit::div(), cx);
             let _ = ws.render_panel(width, window, cx).into_any_element();
-        }
-        let before = thread_counts();
-        let _ = ws.bind_features(gpui_kit::div(), cx);
-        let _ = ws.render_panel(width, window, cx).into_any_element();
-        thread_counts().since(before)
-    });
-    eprintln!("table loops, 50 files, 4 features: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
-    assert!(
-        drawn.allocations <= TABLE_LOOP_ALLOCATIONS,
-        "the table's loops made {} allocations (budget {TABLE_LOOP_ALLOCATIONS})",
-        drawn.allocations
-    );
+            thread_counts().since(before)
+        });
+        eprintln!(
+            "table loops, 50 files, 4 features, motion {motion}: {} allocations, {} bytes",
+            drawn.allocations, drawn.bytes
+        );
+        assert!(
+            drawn.allocations <= budget,
+            "the table's loops made {} allocations with motion {motion} (budget {budget})",
+            drawn.allocations
+        );
+    }
 }

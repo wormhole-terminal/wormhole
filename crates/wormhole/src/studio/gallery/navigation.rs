@@ -39,6 +39,7 @@ pub(super) fn render(
         "g-sliding-tabs",
         ui,
         Some(1),
+        &style::TabSlots::default(),
         [
             style::icon_tab("g-stab-usage", ui, IconName::Gauge, "Usage", false, Some(2)).into_any_element(),
             style::icon_tab("g-stab-changes", ui, IconName::GitCompare, "Changes", true, Some(3))
