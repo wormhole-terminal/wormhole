@@ -33,6 +33,21 @@ pub(super) fn render(
         // Active with a count: the tab is the selected tint, its badge `state.selected.inset`.
         .child(style::icon_tab("g-itab-changes", ui, IconName::GitCompare, "Changes", true, Some(3)))
         .child(style::icon_tab("g-itab-history", ui, IconName::GitCommitHorizontal, "History", false, None));
+    // The same tabs with the selection as one shape that springs between them (Motion on): the selected
+    // tab has no fill of its own.
+    let sliding_tabs = style::selection_bar(
+        "g-sliding-tabs",
+        ui,
+        Some(1),
+        [
+            style::icon_tab("g-stab-usage", ui, IconName::Gauge, "Usage", false, Some(2)).into_any_element(),
+            style::icon_tab("g-stab-changes", ui, IconName::GitCompare, "Changes", true, Some(3))
+                .bg(transparent_black())
+                .into_any_element(),
+            style::icon_tab("g-stab-history", ui, IconName::GitCommitHorizontal, "History", false, None)
+                .into_any_element(),
+        ],
+    );
     // The terminal's tabs: the active one quiet on `tab.active.background` with its ×,
     // one waiting for an answer in the attention tint and ring.
     let glyph = |id: &'static str, glyph| style::status_glyph(id, ui, glyph, cx);
@@ -180,6 +195,7 @@ pub(super) fn render(
         .flex_col()
         .gap_3()
         .child(icon_tabs)
+        .child(sliding_tabs)
         .child(title_tabs)
         .child(tabs)
         .child(chips)

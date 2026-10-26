@@ -3,6 +3,7 @@
 //! around them, and the one place `right_tab` changes.
 use gpui_kit::*;
 use wormhole_core::config::TabId;
+use wormhole_core::view::motion::tabs::{CONTENT_IN, content};
 
 use crate::settings::ui_in;
 use crate::window::Workspace;
@@ -20,6 +21,19 @@ impl Workspace {
         // Project tab vanished with its feature flag), show Changes until the next refresh resets it.
         let tab =
             if self.panel_tab_list(cx).contains(&self.right_tab) { self.right_tab } else { TabId::FALLBACK };
+        let body = div().flex().flex_col().flex_1().min_h_0().child(match self.tab_entry(tab) {
+            // A feature in the table draws its tab; a tab with a list gets the area that holds the
+            // keyboard for it.
+            Some((at, entry)) => match self.feature_entity(at) {
+                Some(entity) => {
+                    let content = (entry.view)(entity, &self.frame_facts(window, cx), window, cx);
+                    if entry.walk.is_some() { self.panel_content(content, cx) } else { content }
+                }
+                None => div().into_any_element(),
+            },
+            // Every tab is a feature's; a window made without it has nothing to show.
+            None => div().into_any_element(),
+        });
         div()
             .relative()
             .flex()
@@ -30,19 +44,25 @@ impl Workspace {
             .h_full()
             .bg(ui.panel_right)
             .child(self.render_panel_tab_bar(window, cx))
-            .child(div().flex().flex_col().flex_1().min_h_0().child(match self.tab_entry(tab) {
-                // A feature in the table draws its tab; a tab with a list gets the area that holds the
-                // keyboard for it.
-                Some((at, entry)) => match self.feature_entity(at) {
-                    Some(entity) => {
-                        let content = (entry.view)(entity, &self.frame_facts(window, cx), window, cx);
-                        if entry.walk.is_some() { self.panel_content(content, cx) } else { content }
-                    }
-                    None => div().into_any_element(),
-                },
-                // Every tab is a feature's; a window made without it has nothing to show.
-                None => div().into_any_element(),
-            }))
+            .child(self.slide_in_content(body, cx))
+    }
+
+    /// The shown tab's body, sliding in from the side of the tab it came from while a switch is playing
+    /// (`panel_switch`), and as it is otherwise. Clipped to the panel only while it moves, so what a
+    /// feature draws over its edges (a menu) is not cut at rest.
+    fn slide_in_content(&self, body: Div, cx: &App) -> AnyElement {
+        let Some((side, serial)) = self.regions.drawn.panel_switch.playing(cx.background_executor().now())
+        else {
+            return body.into_any_element();
+        };
+        body.with_animation(("panel-switch", serial), Animation::new(CONTENT_IN), move |body, t| {
+            if t >= 1.0 {
+                return body;
+            }
+            let pose = content(side, t);
+            body.relative().left(px(pose.dx)).opacity(pose.opacity).overflow_hidden()
+        })
+        .into_any_element()
     }
 
     /// Makes `tab` the one the panel shows. A feature's text field only has the keys while its tab
@@ -106,7 +126,11 @@ impl Workspace {
         if self.right_tab != tab && self.tab_entry(tab).is_some_and(|(_, entry)| entry.returns_to_previous) {
             self.tab_before_previous = Some(self.right_tab);
         }
+        let (before, visible) = (self.right_tab, self.notes_visible());
         self.set_right_tab(tab);
+        if before != tab {
+            self.start_tab_switch(before, tab, visible, cx);
+        }
         self.reveal_notes();
         self.remember_panes(cx);
         self.tabs_changed(tab, cx);

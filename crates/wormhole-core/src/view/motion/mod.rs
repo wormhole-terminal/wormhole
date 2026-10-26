@@ -21,6 +21,7 @@ mod ease;
 pub mod pose;
 pub mod roll;
 mod spring;
+pub mod tabs;
 mod timeline;
 
 pub use choices::{ColumnMotion, FoldMotion, InsertMotion, MotionChoice, MotionChoices, StatusMotion};

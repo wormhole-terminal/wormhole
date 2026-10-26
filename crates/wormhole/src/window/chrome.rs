@@ -12,7 +12,7 @@ use wormhole_core::view::focus::Area;
 use wormhole_core::view::layout::{Edge, PanelToggle};
 
 use crate::app_state::app;
-use crate::settings::{store_in, ui_in};
+use crate::settings::{settings_in, store_in, ui_in};
 use crate::style::{self, ASSUMED_LIGHTS_SPAN, LIGHTS_X, StripFill, StripSide, TitleDrag as _, lights_end};
 use crate::window::Workspace;
 use crate::window::focus::TitleButton;
@@ -259,6 +259,9 @@ impl Workspace {
         let tabs = self.panel_tab_list(cx);
         let facts = self.facts(cx);
         let ring = self.ring(Area::PanelTabs, window);
+        // With Motion on the selection is one shape under the tabs that springs between them (the bar draws
+        // it), so the selected tab has no fill of its own; otherwise it is today's: each tab fills itself.
+        let sliding = settings_in(&self.profile, cx).motion_on();
         let tab =
             |icon: IconName, label: &str, key: ActionId, count: Option<usize>, spoken: String, tab: TabId| {
                 let active = self.right_tab == tab;
@@ -274,29 +277,31 @@ impl Workspace {
                     .when(active && ring, |d| {
                         d.child(style::focus_ring(ui, style::RingPlacement::Outside, ui.radius))
                     })
+                    .when(active && sliding, |d| d.bg(transparent_black()))
                     .on_click(cx.listener(move |this, _, _, cx| this.show_tab(tab, cx)))
+                    .into_any_element()
             };
-        let bar = div()
-            .id("panel-tabs")
-            .role(Role::TabList)
-            .aria_label("Right panel")
-            // Clicks here are for the tabs, not for dragging the window.
-            .occlude()
-            .flex()
-            .items_center()
-            .gap_1()
-            .children(tabs.iter().filter_map(|&id| match self.tab_entry(id) {
-                // A feature in the table says what its tab shows and says. It comes last in the
-                // panel's order when it is the Project, so the tabs before it never shift when it
-                // comes and goes.
-                Some((at, def)) => {
-                    let entity = self.feature_entity(at)?;
-                    let count = def.count.and_then(|count| count(entity, &facts, cx));
-                    Some(tab(def.icon, def.label, def.action, count, (def.spoken)(entity, &facts, cx), id))
-                }
-                // Every tab is a feature's; a window made without it has no such tab.
-                None => None,
-            }));
+        let shown = tabs.iter().filter_map(|&id| match self.tab_entry(id) {
+            // A feature in the table says what its tab shows and says. It comes last in the
+            // panel's order when it is the Project, so the tabs before it never shift when it
+            // comes and goes.
+            Some((at, def)) => {
+                let entity = self.feature_entity(at)?;
+                let count = def.count.and_then(|count| count(entity, &facts, cx));
+                Some(tab(def.icon, def.label, def.action, count, (def.spoken)(entity, &facts, cx), id))
+            }
+            // Every tab is a feature's; a window made without it has no such tab.
+            None => None,
+        });
+        let bar = if sliding {
+            style::selection_bar("panel-tabs", ui, tabs.iter().position(|&id| id == self.right_tab), shown)
+        } else {
+            div().id("panel-tabs").flex().items_center().gap_1().children(shown)
+        }
+        .role(Role::TabList)
+        .aria_label("Right panel")
+        // Clicks here are for the tabs, not for dragging the window.
+        .occlude();
         self.area_container(Area::PanelTabs, bar, cx).into_any_element()
     }
 }

@@ -110,6 +110,7 @@ impl Workspace {
                 let tabs = self.panel_tab_list(cx);
                 fact(&mut facts, "width", &columns.panel);
                 fact(&mut facts, "tab", &self.right_tab);
+                fact(&mut facts, "tab switches", &self.regions.drawn.panel_switch.count());
                 fact(&mut facts, "tabs", &tabs);
                 fact(&mut facts, "tab words", &self.panel_tab_words(&tabs, cx));
                 fact(&mut facts, "editing", &self.feature_editing);

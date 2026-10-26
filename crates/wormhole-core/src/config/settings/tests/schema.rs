@@ -394,4 +394,6 @@ fn the_motion_in_force_is_the_persons_while_the_feature_is_on_and_classic_otherw
             .expect("valid jsonc");
     assert_eq!(off.motion_in_force(), MotionChoices::CLASSIC, "the choices wait for the feature");
     assert_eq!(off.motion.insert, InsertMotion::Reveal, "and are kept in the file");
+    assert!(chosen.motion_on(), "the fixed motions play with the feature");
+    assert!(!off.motion_on(), "and wait for it");
 }

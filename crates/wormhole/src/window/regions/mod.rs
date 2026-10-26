@@ -45,6 +45,7 @@ use wormhole_core::view::layout::status_bar::STATUS_BAR_H;
 use crate::sidebar::Sidebar;
 use crate::sidebar::profile_chip::ProfilePage;
 use crate::window::Workspace;
+use crate::window::panel_switch::PanelSwitch;
 use crate::window::status_bar::StatusBar;
 use crate::window::status_rolls::StatusRolls;
 
@@ -135,6 +136,8 @@ pub(super) struct Drawn {
     pub(super) crumb: Option<String>,
     /// The bar's counts that are turning over.
     pub(super) rolls: StatusRolls,
+    /// The right panel's tab switch that is under way.
+    pub(super) panel_switch: PanelSwitch,
 }
 
 impl Regions {

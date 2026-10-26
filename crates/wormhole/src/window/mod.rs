@@ -106,6 +106,9 @@ mod pane_memory_tests;
 #[cfg(test)]
 mod pane_tests;
 mod panel;
+mod panel_switch;
+#[cfg(test)]
+mod panel_switch_tests;
 #[cfg(test)]
 mod panel_tab_tests;
 mod panes;

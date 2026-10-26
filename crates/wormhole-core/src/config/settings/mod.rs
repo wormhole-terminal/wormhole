@@ -392,7 +392,13 @@ impl Settings {
     /// otherwise [`MotionChoices::CLASSIC`], so a build that has not shipped the choices moves as it
     /// always did whatever `config.json` holds.
     pub fn motion_in_force(&self) -> MotionChoices {
-        if self.feature_enabled(FeatureFlag::Motion) { self.motion } else { MotionChoices::CLASSIC }
+        if self.motion_on() { self.motion } else { MotionChoices::CLASSIC }
+    }
+
+    /// Whether the Motion feature is on in this build: the motions the design fixed, which have no choice
+    /// to name (the panel's tab switch, the palette's exit, a split opening), are played only then.
+    pub fn motion_on(&self) -> bool {
+        self.feature_enabled(FeatureFlag::Motion)
     }
 
     /// Whether the sidebar's and the panel's cards sit on Liquid Glass: its feature flag is on,
