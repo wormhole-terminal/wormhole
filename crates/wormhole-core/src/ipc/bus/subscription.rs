@@ -54,6 +54,21 @@ impl Subscriber {
         self.grant.lock().unwrap_or_else(PoisonError::into_inner).clone()
     }
 
+    /// Whether it may be told `terminal`'s text now.
+    pub(super) fn may_read(&self, terminal: Option<i64>) -> bool {
+        self.grant.lock().unwrap_or_else(PoisonError::into_inner).can_read(terminal)
+    }
+
+    /// Whether what `terminal` in `window` prints is for it: it asked for `output` from that terminal
+    /// and window, and may read it.
+    pub(super) fn wants_output_of(&self, window: i64, terminal: i64) -> bool {
+        let filter = &self.filter;
+        filter.topics.contains(Topic::Output)
+            && (filter.terminals.is_empty() || filter.terminals.contains(&terminal))
+            && (filter.windows.is_empty() || filter.windows.contains(&window))
+            && self.may_read(Some(terminal))
+    }
+
     /// The setting that let it read everything was turned off: it keeps what it can read by being
     /// in a terminal, and a stream that needed more is closed.
     pub(super) fn revoke_reads(&self) {

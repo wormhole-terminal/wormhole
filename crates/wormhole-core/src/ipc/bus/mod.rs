@@ -10,6 +10,7 @@
 
 mod queue;
 mod subscription;
+mod worker;
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
@@ -18,6 +19,8 @@ use ring::rand::{SecureRandom as _, SystemRandom};
 
 use subscription::Subscriber;
 pub use subscription::{Caller, Grant, Next, QUEUE_BYTES, QUEUE_ITEMS, Subscription};
+use worker::Worker;
+pub use worker::{OUTPUT_BYTES_MAX, OUTPUT_LINES_MAX};
 
 use super::control::event::{CloseReason, Event, EventFilter, EventLine, Topic};
 use super::control::{PROTOCOL_VERSION, printable};
@@ -102,6 +105,8 @@ pub struct Bus {
     interest: AtomicU32,
     state: Mutex<State>,
     boot: String,
+    /// Reads what terminals print for the `output` topic; idle until somebody asks for it.
+    worker: Arc<Worker>,
 }
 
 impl Bus {
@@ -110,6 +115,7 @@ impl Bus {
             interest: AtomicU32::new(0),
             state: Mutex::new(State::default()),
             boot: random_boot(),
+            worker: Arc::default(),
         })
     }
 
@@ -135,8 +141,14 @@ impl Bus {
 
     fn deliver(&self, event: Event) {
         let mut state = self.lock();
-        let listeners: Vec<Arc<Subscriber>> =
-            state.subscribers.iter().filter(|s| s.filter.matches(&event)).cloned().collect();
+        // Text a terminal printed goes only to those who may read that terminal, now.
+        let text = event.is_terminal_text();
+        let listeners: Vec<Arc<Subscriber>> = state
+            .subscribers
+            .iter()
+            .filter(|s| s.filter.matches(&event) && (!text || s.may_read(event.terminal)))
+            .cloned()
+            .collect();
         if listeners.is_empty() {
             return;
         }
@@ -173,6 +185,34 @@ impl Bus {
         Ok((Subscription::new(self.clone(), subscriber, state.seq), started))
     }
 
+    /// Whether some stream asked for what `terminal` of `window` prints and may read it. Read by the
+    /// worker and by [`pulse`](Self::pulse) after the cheap check of the topic's bit.
+    pub(crate) fn output_wanted(&self, window: i64, terminal: i64) -> bool {
+        self.lock().subscribers.iter().any(|s| s.wants_output_of(window, terminal))
+    }
+
+    /// Terminal `terminal` of `window` printed. With nobody asking for output (one relaxed load) this
+    /// does nothing; otherwise it notes it for the worker, which looks at the terminal soon, off every
+    /// thread the program and the window run on. `reader` is called only when the note is new.
+    pub fn pulse(
+        self: &Arc<Self>,
+        window: i64,
+        terminal: i64,
+        reader: impl FnOnce() -> Option<wormhole_term::WeakScreenReader>,
+    ) {
+        if self.wants(Topic::Output) && self.output_wanted(window, terminal) {
+            self.worker.pulse(self, window, terminal, reader);
+        }
+    }
+
+    /// Start reading `terminal`'s output from where it is now: called for the terminals a new stream
+    /// watches, so what is printed right after the subscription is told. Only if somebody asks.
+    pub fn watch_output(&self, window: i64, terminal: i64, reader: &wormhole_term::ScreenReader) {
+        if self.output_wanted(window, terminal) {
+            self.worker.track(window, terminal, reader);
+        }
+    }
+
     /// How many subscriptions there are.
     pub fn subscribers(&self) -> usize {
         self.lock().subscribers.len()
@@ -198,7 +238,18 @@ impl Bus {
     pub(super) fn unregister(&self, id: u64) {
         let mut state = self.lock();
         state.subscribers.retain(|s| s.id != id);
-        self.interest.store(interest_of(&state), Ordering::Relaxed);
+        let interest = interest_of(&state);
+        let output_gone = self.interest.swap(interest, Ordering::Relaxed) & Topic::Output.bit() != 0
+            && interest & Topic::Output.bit() == 0;
+        if output_gone {
+            self.worker.reset();
+        }
+    }
+}
+
+impl Drop for Bus {
+    fn drop(&mut self) {
+        self.worker.close();
     }
 }
 
@@ -216,5 +267,7 @@ fn random_boot() -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
+#[cfg(test)]
+mod output_tests;
 #[cfg(test)]
 mod tests;

@@ -96,21 +96,44 @@ pub(crate) fn exit_code(reason: CloseReason) -> i32 {
 fn event_text(line: &EventLine, home: Option<&Path>, style: Style) -> String {
     let event = &line.event;
     let time = local_time_of_day(line.at_ms).map_or_else(|| "--:--:--.---".to_string(), |t| t.to_string());
-    let (kind, detail) = describe(event, home, style);
     let ids = match (event.window, event.terminal) {
         (Some(w), Some(t)) => format!("w{w} t{t}"),
         (Some(w), None) => format!("w{w}"),
         (None, Some(t)) => format!("t{t}"),
         (None, None) => String::new(),
     };
-    let mut out = format!("{time}  {:<6}  {ids:<8}  {kind:<8}", format!("#{}", line.seq));
-    if detail.is_empty() {
-        out.truncate(out.trim_end().len());
-    } else {
-        let _ = write!(out, "  {detail}");
+    let row = |kind: &str, detail: &str| {
+        let mut out = format!("{time}  {:<6}  {ids:<8}  {kind:<8}", format!("#{}", line.seq));
+        if detail.is_empty() {
+            out.truncate(out.trim_end().len());
+        } else {
+            let _ = write!(out, "  {detail}");
+        }
+        out.push('\n');
+        out
+    };
+    // What a terminal printed is a row for each line, so the stream stays one line to a row.
+    if let Body::Output { screen, lines, partial, skipped, lost } = &event.body {
+        let mut out = String::new();
+        if *lost {
+            out.push_str(&row("output", &style.paint("33", "(some lines were lost)")));
+        }
+        if *skipped > 0 {
+            out.push_str(&row("output", &style.paint("33", &format!("({skipped} earlier lines skipped)"))));
+        }
+        if screen == "alt" {
+            out.push_str(&row("output", &style.paint("2", "(the screen changed)")));
+        }
+        for text in lines {
+            out.push_str(&row("output", &for_terminal(text)));
+        }
+        if let Some(text) = partial.as_deref().filter(|text| !text.is_empty()) {
+            out.push_str(&row("output", &style.paint("2", &format!("… {}", for_terminal(text)))));
+        }
+        return out;
     }
-    out.push('\n');
-    out
+    let (kind, detail) = describe(event, home, style);
+    row(kind, &detail)
 }
 
 /// The kind column and the rest of the line.
@@ -195,6 +218,8 @@ fn describe(event: &Event, home: Option<&Path>, style: Style) -> (&'static str, 
         ),
         Body::WindowOpened => ("window", "opened".to_string()),
         Body::WindowClosed => ("window", "closed".to_string()),
+        // Written line by line by `event_text`.
+        Body::Output { .. } => ("output", String::new()),
         Body::Other => ("?", "an event this Wormhole doesn't know".to_string()),
     }
 }

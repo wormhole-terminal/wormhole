@@ -95,6 +95,23 @@ pub enum Body {
     },
     WindowOpened,
     WindowClosed,
+    /// What a terminal printed since the last of these: the lines that were finished and the one the
+    /// cursor is on. All terminal text, so only a subscriber who may read that terminal hears it.
+    Output {
+        /// `main`, or `alt` while a full-screen program has the screen (no lines then: the screen changed,
+        /// and `read` says how).
+        screen: String,
+        lines: Vec<String>,
+        /// The cursor's line, when it differs from the last one told (empty: it was cleared).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        partial: Option<String>,
+        /// Lines printed and left out of `lines` (over the cap).
+        #[serde(default)]
+        skipped: u64,
+        /// The history dropped lines that were not told yet.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        lost: bool,
+    },
     /// An event kind a newer Wormhole told.
     #[serde(other)]
     Other,
@@ -116,6 +133,7 @@ impl Body {
             | Body::TerminalMoved { .. }
             | Body::Renamed { .. } => Topic::Terminals,
             Body::WindowOpened | Body::WindowClosed => Topic::Windows,
+            Body::Output { .. } => Topic::Output,
             Body::Other => return None,
         })
     }
@@ -135,6 +153,7 @@ impl Body {
             Body::Renamed { .. } => "renamed",
             Body::WindowOpened => "window_opened",
             Body::WindowClosed => "window_closed",
+            Body::Output { .. } => "output",
             Body::Other => "other",
         }
     }
@@ -145,6 +164,12 @@ impl Event {
     /// terminal gets (the rest is what `list` tells anyone).
     pub fn has_gated_fields(&self) -> bool {
         matches!(self.body, Body::Block { command: Some(_), .. })
+    }
+
+    /// Whether the whole event is terminal text: it goes only to a subscriber who may read that
+    /// terminal, and to nobody else in any form.
+    pub fn is_terminal_text(&self) -> bool {
+        matches!(self.body, Body::Output { .. })
     }
 
     /// The event as a subscriber without the grant to read its terminal gets it.
@@ -309,6 +334,23 @@ mod tests {
                 r#"{"version":1,"seq":435,"at_ms":1793023327120,"window":2,"terminal":10,"event":"terminal_opened","folder":"/Users/me/src/api"}"#,
             ),
             (
+                line(
+                    433,
+                    Event {
+                        window: Some(1),
+                        terminal: Some(8),
+                        body: Body::Output {
+                            screen: "main".into(),
+                            lines: vec!["test result: FAILED. 3 passed; 1 failed".into()],
+                            partial: Some("$ ".into()),
+                            skipped: 0,
+                            lost: false,
+                        },
+                    },
+                ),
+                r#"{"version":1,"seq":433,"at_ms":1793023327120,"window":1,"terminal":8,"event":"output","screen":"main","lines":["test result: FAILED. 3 passed; 1 failed"],"partial":"$ ","skipped":0}"#,
+            ),
+            (
                 line(436, Event { window: Some(1), terminal: Some(3), body: Body::Bell }),
                 r#"{"version":1,"seq":436,"at_ms":1793023327120,"window":1,"terminal":3,"event":"bell"}"#,
             ),
@@ -379,6 +421,23 @@ mod tests {
                 serde_json::to_string(&Event { window: None, terminal: None, body }).expect("serializes");
             assert!(text.contains(&format!(r#""event":"{name}""#)), "{text}");
         }
+    }
+
+    #[test]
+    fn what_a_terminal_printed_is_terminal_text_to_the_last_byte() {
+        let output = Event {
+            window: Some(1),
+            terminal: Some(2),
+            body: Body::Output { screen: "alt".into(), lines: vec![], partial: None, skipped: 3, lost: true },
+        };
+        assert!(output.is_terminal_text() && !output.has_gated_fields(), "all or nothing, never a part");
+        assert_eq!(output.body.topic(), Some(Topic::Output));
+        let text = serde_json::to_string(&output).expect("serializes");
+        assert_eq!(
+            text,
+            r#"{"window":1,"terminal":2,"event":"output","screen":"alt","lines":[],"skipped":3,"lost":true}"#
+        );
+        assert!(!Event { window: None, terminal: None, body: Body::Bell }.is_terminal_text());
     }
 
     #[test]

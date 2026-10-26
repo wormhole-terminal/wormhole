@@ -152,6 +152,10 @@ pub enum TerminalEvent {
     /// A command started or finished, in a shell with integration; emitted only while somebody
     /// watches for them.
     Command(CommandMark),
+    /// The program printed (the PTY's coalesced `Output`, one in flight); emitted only while somebody
+    /// watches what terminals print. The window pulses the output worker and does nothing else:
+    /// nothing is notified or drawn for it.
+    Printed,
 }
 
 /// A moment in a command's life, as the shell's marks tell it.
@@ -531,6 +535,9 @@ impl TerminalView {
     pub(super) fn handle_event(&mut self, event: PtyEvent, cx: &mut Context<Self>) {
         match event {
             PtyEvent::Output => {
+                if crate::automation::wants(cx, Topic::Output) {
+                    cx.emit(TerminalEvent::Printed);
+                }
                 self.check_cwd_soon(cx);
                 // Ignore what answers us, and whatever a shell with integration prints at its
                 // prompt.

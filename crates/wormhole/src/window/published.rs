@@ -96,6 +96,15 @@ impl Workspace {
         publish(cx, Topic::Bell, || self.event(Some(id), Body::Bell));
     }
 
+    /// Session `ix`'s program printed: note it for the output worker, which looks at the terminal off
+    /// this thread. Nothing is read, built or drawn here; with nobody asking for this terminal's text
+    /// nothing is noted either.
+    pub(super) fn publish_printed(&self, ix: usize, cx: &App) {
+        let session = &self.sessions[ix];
+        let terminal = session.terminal().read(cx);
+        crate::automation::printed(cx, self.window_id, session.id, || terminal.reader());
+    }
+
     /// Terminal `id`'s shell marked a command's start or end: tell which command it was, from the
     /// grid's newest block (its number, how long it took, the line typed).
     pub(super) fn publish_command(&self, id: i64, mark: CommandMark, cx: &App) {

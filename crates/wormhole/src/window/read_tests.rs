@@ -1,4 +1,4 @@
-//! Reading a terminal and driving a program in it from the control line, in a real window whose
+//! Reading a terminal, watching what it prints and driving a program in it from the control line, in a real window whose
 //! terminals run `/bin/cat`: its line discipline echoes what is typed (keys as `^[[A`), which shows
 //! the bytes `send-keys` and `mouse` wrote, and a line sent back to it prints raw, which is how a test
 //! makes the engine see a program's mode switches. The harness is `test_harness`.
@@ -6,6 +6,8 @@
 use std::time::{Duration, Instant};
 
 use gpui_kit::TestAppContext;
+use wormhole_core::ipc::bus::{Bus, Next};
+use wormhole_core::ipc::control::event::{Body, CloseReason, EventsSpec};
 use wormhole_core::ipc::control::mouse::{ButtonName, Direction, Pointer, Wheel};
 use wormhole_core::ipc::control::read::{Blocks, Range, Read};
 use wormhole_core::ipc::control::{
@@ -37,6 +39,41 @@ fn reply(answer: Answer) -> Reply {
         Answer::Read(job) => job.run(&mut ReadScratch::default()),
         Answer::Stream { .. } => panic!("a stream"),
     }
+}
+
+/// A stream of `output` from the terminals `terminals` (all without any), for a caller with `peer`.
+fn watch_output(
+    cx: &mut TestAppContext,
+    terminals: Vec<i64>,
+    peer: &Peer,
+) -> Result<wormhole_core::ipc::bus::Subscription, ErrorCode> {
+    let spec = EventsSpec { terminals, output: true, topics: vec!["output".into()], ..EventsSpec::default() };
+    match ask(cx, Action::Events(spec), None, peer) {
+        Answer::Stream { subscription, .. } => Ok(subscription),
+        Answer::Reply(reply) => Err(code(&reply).expect("a refusal")),
+        Answer::Read(_) => panic!("a read"),
+    }
+}
+
+/// The lines of `output` events told so far for terminal `id`, until `wanted` is among them.
+fn output_until(
+    cx: &mut TestAppContext,
+    stream: &wormhole_core::ipc::bus::Subscription,
+    id: i64,
+    wanted: &str,
+) -> Vec<String> {
+    let mut lines = Vec::new();
+    wait_until(cx, wanted, |_| {
+        while let Next::Event(published) = stream.next(Duration::ZERO) {
+            if let Body::Output { lines: told, .. } = &published.event.body {
+                assert_eq!(published.event.terminal, Some(id), "an event of another terminal: {told:?}");
+                assert_eq!(published.event.window, Some(1));
+                lines.extend(told.iter().cloned());
+            }
+        }
+        lines.iter().any(|line| line.contains(wanted))
+    });
+    lines
 }
 
 fn code(reply: &Reply) -> Option<ErrorCode> {
@@ -343,4 +380,118 @@ fn reads_and_keys_have_budgets_per_caller(cx: &mut TestAppContext) {
     assert_eq!(code(&other), Some(ErrorCode::Refused), "tab 2 is the one asking: refused, not rate limited");
     assert_eq!(code(&reply(ask(cx, read_of(2), Some("1"), &who.outside))), None);
     let _ = Duration::ZERO;
+}
+
+#[gpui_kit::test]
+fn what_a_terminal_prints_is_told_to_those_who_may_read_it_with_the_ids(cx: &mut TestAppContext) {
+    if isolate("what_a_terminal_prints_is_told_to_those_who_may_read_it_with_the_ids") {
+        return;
+    }
+    let window = start(cx, 2);
+    cx.update(|cx| crate::automation::install(Bus::new(), cx));
+    let who = callers(cx, &window);
+    allow(cx, false, false);
+    // Without the setting: not all terminals, not the other one's, only the caller's own, by name.
+    assert_eq!(watch_output(cx, vec![], &who.outside).err(), Some(ErrorCode::NotAllowed));
+    assert_eq!(watch_output(cx, vec![], &who.inside_first).err(), Some(ErrorCode::NotAllowed));
+    assert_eq!(watch_output(cx, vec![2], &who.inside_first).err(), Some(ErrorCode::NotAllowed));
+    let own = watch_output(cx, vec![1], &who.inside_first).expect("a terminal's own output");
+    print(cx, &window, 0, b"one two\r");
+    let told = output_until(cx, &own, 1, "one two");
+    assert!(told.iter().any(|line| line == "one two"), "{told:?}");
+    // With it, every terminal, and each event names its terminal.
+    allow(cx, true, false);
+    let all = watch_output(cx, vec![], &who.outside).expect("allowed");
+    print(cx, &window, 1, b"from the second\r");
+    let seen = {
+        let mut lines = Vec::new();
+        wait_until(cx, "the second terminal's output", |_| {
+            while let Next::Event(published) = all.next(Duration::ZERO) {
+                if let Body::Output { lines: told, .. } = &published.event.body {
+                    assert_eq!((published.event.window, published.event.terminal), (Some(1), Some(2)));
+                    lines.extend(told.iter().cloned());
+                }
+            }
+            lines.iter().any(|line| line.contains("from the second"))
+        });
+        lines
+    };
+    assert!(!seen.is_empty());
+    // The first terminal's caller heard nothing of the second.
+    while let Next::Event(published) = own.next(Duration::ZERO) {
+        assert_eq!(published.event.terminal, Some(1));
+    }
+    // The setting goes off: the stream that needed it ends, the terminal's own caller's does not.
+    allow(cx, false, false);
+    cx.update(|cx| crate::automation::sync_grants(cx, true));
+    cx.update(|cx| crate::automation::sync_grants(cx, false));
+    assert!(matches!(all.next(Duration::from_millis(200)), Next::Closed(CloseReason::NotAllowed)));
+    print(cx, &window, 0, b"still mine\r");
+    output_until(cx, &own, 1, "still mine");
+}
+
+#[gpui_kit::test]
+fn a_full_screen_program_is_told_as_the_screen_changing(cx: &mut TestAppContext) {
+    if isolate("a_full_screen_program_is_told_as_the_screen_changing") {
+        return;
+    }
+    let window = start(cx, 1);
+    cx.update(|cx| crate::automation::install(Bus::new(), cx));
+    let who = callers(cx, &window);
+    allow(cx, true, false);
+    let stream = watch_output(cx, vec![], &who.outside).expect("allowed");
+    print(cx, &window, 0, b"\x1b[?1049h\x1b[2Jvim is here\r");
+    wait_until(cx, "the alternate screen", |cx| shown(cx, 1, &who).screen == "alt");
+    let mut alt = false;
+    wait_until(cx, "an event for the alternate screen", |_| {
+        while let Next::Event(published) = stream.next(Duration::ZERO) {
+            if let Body::Output { screen, lines, .. } = &published.event.body
+                && screen == "alt"
+            {
+                assert!(lines.is_empty(), "the screen's text is `read`'s: {lines:?}");
+                alt = true;
+            }
+        }
+        alt
+    });
+}
+
+/// Watching what a terminal prints costs the window nothing: the output reaches the bus's worker
+/// without the workspace being notified, so nothing is drawn for it.
+#[gpui_kit::test]
+fn watching_output_does_not_wake_the_window(cx: &mut TestAppContext) {
+    if isolate("watching_output_does_not_wake_the_window") {
+        return;
+    }
+    use std::cell::Cell;
+    use std::rc::Rc;
+    let window = start(cx, 1);
+    let first = terminal(cx, &window, 0);
+    let notified = Rc::new(Cell::new(0usize));
+    let counter = notified.clone();
+    let workspace = window.workspace.upgrade().expect("the window is open");
+    let _observer = cx.update(|cx| cx.observe(&workspace, move |_, _| counter.set(counter.get() + 1)));
+    let round = |cx: &mut TestAppContext| {
+        for _ in 0..20 {
+            event(cx, &first, PtyEvent::Output);
+        }
+        cx.run_until_parked();
+    };
+    round(cx);
+    notified.set(0);
+    round(cx);
+    let without = notified.get();
+    cx.update(|cx| crate::automation::install(Bus::new(), cx));
+    allow(cx, true, false);
+    let who = callers(cx, &window);
+    let _stream = watch_output(cx, vec![], &who.outside).expect("allowed");
+    round(cx);
+    notified.set(0);
+    round(cx);
+    assert_eq!(
+        notified.get(),
+        without,
+        "output events woke the workspace {} times more",
+        notified.get().saturating_sub(without)
+    );
 }

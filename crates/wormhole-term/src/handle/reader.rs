@@ -72,8 +72,8 @@ impl ScreenReader {
     }
 
     /// Print `bytes` into the screen as a program would (tests).
-    #[cfg(test)]
-    pub(crate) fn feed(&self, bytes: &[u8]) {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn feed(&self, bytes: &[u8]) {
         self.term.lock().feed(bytes);
     }
 }

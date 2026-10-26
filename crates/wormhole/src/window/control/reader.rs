@@ -18,6 +18,23 @@ pub(crate) struct ReaderFacts {
 }
 
 impl Workspace {
+    /// Every terminal of this window that runs a shell, as a reader: what a new stream of `output`
+    /// starts watching from.
+    pub(crate) fn control_readers(&self, cx: &App) -> Vec<ReaderFacts> {
+        self.sessions
+            .iter()
+            .filter_map(|session| {
+                let terminal = session.terminal().read(cx);
+                Some(ReaderFacts {
+                    terminal: session.id,
+                    reader: terminal.reader()?,
+                    title: None,
+                    shell: terminal.shell_pid(),
+                })
+            })
+            .collect()
+    }
+
     /// The reader of `tab`'s terminal (a tab and its terminal are the same number), while its shell
     /// runs.
     pub(crate) fn control_reader(&self, tab: i64, cx: &App) -> Option<ReaderFacts> {

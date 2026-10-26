@@ -6,6 +6,7 @@
 //! root may call into it.
 
 use gpui_kit::*;
+use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::ipc;
 
 use crate::app::{control, menus};
@@ -82,6 +83,13 @@ pub(super) fn tick(cx: &mut App) {
         cx.refresh_windows();
     }
     apply_theme(cx);
+    // The command line reads every terminal only while the setting and the feature are on; when they go
+    // off, the streams that needed it end.
+    let reading = {
+        let settings = crate::settings::settings(cx);
+        settings.control_read && settings.feature_enabled(FeatureFlag::Automation)
+    };
+    crate::automation::sync_grants(cx, reading);
     notifications::tick(ticks, cx);
     status_item::sync(cx);
     menus::sync(cx);
