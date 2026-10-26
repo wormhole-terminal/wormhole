@@ -328,6 +328,9 @@
 //!   wait-idle [ms]  the rest of the batch waits until this window has no git status or history
 //!                   refresh in flight and every window draws the same picture three times in a
 //!                   row (default 5000 ms), and prints `idle` or `timeout: <why>`
+//!   delay <ms>      the rest of the batch waits that long, this window drawing a frame every 16 ms,
+//!                   so a `shot` after it catches an animation part of the way through: `hook 2 Stop`,
+//!                   `delay 80`, `shot mid`
 //!   sync <token>    write `sync <token>` to the results file once everything before it in the
 //!                   batch is done (after `wait-idle`, `bounds` and `settings-shot`; not `frames`),
 //!                   as the last line: a script waits for it before reading the results

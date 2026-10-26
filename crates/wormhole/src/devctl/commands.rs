@@ -207,6 +207,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "quick-panel-text" => ambient::quick_panel_text,
         "jump" => ambient::jump,
         "wait-idle" => flow::wait_idle,
+        "delay" => flow::delay,
         "sync" => flow::sync,
         _ => return None,
     })

@@ -18,6 +18,27 @@ const FRAME_GAP: Duration = Duration::from_millis(100);
 /// How many frames in a row after the first must look the same.
 const STEADY_FRAMES: usize = 2;
 
+/// How often `delay` draws a frame while it waits, as a display would.
+const DELAY_FRAME: Duration = Duration::from_millis(16);
+
+/// The rest of the batch waits `ms` milliseconds, the window drawing a frame every [`DELAY_FRAME`] meanwhile, so
+/// an animation that began before it (a status change, a count rolling) is caught part of the way through by a
+/// `shot` after it.
+pub(super) fn delay(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let ms: u64 = arg.trim().parse().map_err(|_| anyhow!("expected a time in ms, got {arg:?}"))?;
+    ctx.wait = Some(ctx.cx.spawn_in(ctx.window, async move |_, cx| {
+        let start = cx.background_executor().now();
+        while cx.background_executor().now() - start < Duration::from_millis(ms) {
+            if cx.update(|window, cx| window.draw(cx).clear(cx)).is_err() {
+                return "delay failed: the window closed\n".into();
+            }
+            cx.background_executor().timer(DELAY_FRAME).await;
+        }
+        String::new()
+    }));
+    Ok(String::new())
+}
+
 pub(super) fn sync(ctx: &mut Ctx, arg: &str) -> Result<String> {
     ctx.sync.push(arg.trim().to_string());
     Ok(String::new())
