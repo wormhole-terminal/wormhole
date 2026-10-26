@@ -428,7 +428,7 @@ pub(super) mod tests {
         // An Enter on an empty line: the shell marks its end without a code, and prints the next
         // prompt. That block is the newest past its prompt, and no command ran in it.
         let mut empty_enter = SESSION.to_vec();
-        empty_enter.extend_from_slice(b"\r\x1b]133;D\x07\x1b]133;A\x07$ \x1b]133;B\x07");
+        empty_enter.extend_from_slice(b"\r\n\x1b]133;D\x07\x1b]133;A\x07$ \x1b]133;B\x07");
         let (term, log) = shown(12, &empty_enter);
         let found = newest_past_prompt(term.screen(), &log).expect("the empty line's block");
         assert_eq!(found.id, 3);
