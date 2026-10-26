@@ -20,7 +20,7 @@
 //! Liquid Glass moved from Appearance (one row fewer) to Feature flags (one row more); Feature flags rose by
 //! 392 (4,333 to 4,725, measured with the row left out and in) with one more, Tear off a terminal: a switch,
 //! its name, its line of words and its dot. It rose by 358 more (4,725 to 5,083) with Live resize, the same row
-//! again.
+//! again, and by about 392 more with Notice chip.
 //! Appearance and a search (which show the window's preview) rose by about 770 when the preview
 //! became the window's own parts at full size instead of a drawing of them.
 //! Updates rose by about 380 with its one more row, Count this Mac anonymously, and by about 150 with
@@ -79,8 +79,8 @@ const BUDGET: [(&str, u64); 16] = [
     ("Updates", 5649),
     ("Advanced", 4149),
     ("Projects", 9037),
-    // The switches for Automation, Tear off and Live resize are three rows more.
-    ("FeatureFlags", 5589),
+    // The switches for Automation, Tear off, Live resize and Notice chip are four rows more.
+    ("FeatureFlags", 5981),
     ("search", 11880),
 ];
 
