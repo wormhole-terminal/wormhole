@@ -61,27 +61,26 @@ impl IconMotion {
         }
     }
 
-    /// Gets the motion ready for one render of the button keyed `key`: what started it and how many
+    /// Gets the motion ready for one render of the icon `scope` names: what started it and how many
     /// times. `open` is whether the button's menu is open.
     pub(in crate::style) fn arm(
         self,
-        key: &ElementId,
+        scope: &ElementId,
         icon: IconName,
         open: bool,
         enabled: bool,
         window: &mut Window,
         cx: &mut App,
     ) -> Armed {
-        let key = ElementId::from((key.clone(), "icon-motion"));
         let mut armed = Armed { motion: self, run: 0, before: icon, open, clicks: None };
         match self {
             IconMotion::Swap => {
-                let change = watch(key, icon, enabled, window, cx);
+                let change = watch(scope, icon, enabled, window, cx);
                 (armed.run, armed.before) = (change.run, change.before);
             }
-            IconMotion::MenuChevron => armed.run = watch(key, open, enabled, window, cx).run,
+            IconMotion::MenuChevron => armed.run = watch(scope, open, enabled, window, cx).run,
             _ => {
-                let clicks = Clicks::keyed(key, enabled, window, cx);
+                let clicks = Clicks::keyed(scope, enabled, window, cx);
                 armed.run = clicks.run(cx);
                 armed.clicks = Some(clicks);
             }

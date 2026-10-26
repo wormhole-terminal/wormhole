@@ -296,7 +296,7 @@ impl RenderOnce for IconButton {
         let clear = transparent_black();
         // An app's own icon, drawn in its place, has no motion of the glyph's.
         let motion = motion.filter(|_| drawing.is_none());
-        let menu_mark = menu.as_ref().map(|_| MenuMark::keyed((id.clone(), "menu-open"), window, cx));
+        let menu_mark = menu.as_ref().map(|_| MenuMark::keyed(&id, window, cx));
         let open = menu_mark.as_ref().is_some_and(|mark| mark.is_open(cx));
         let armed = motion.map(|motion| motion.arm(&id, icon, open, ui.icon_motion, window, cx));
         let on_click = {

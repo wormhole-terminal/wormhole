@@ -15,6 +15,11 @@ use gpui_kit::*;
 
 use crate::platform::Menu;
 
+/// The keys of the state kept for an icon, within the icon's own id (which, pushed on the id stack
+/// rather than joined to the key, costs no allocation: this runs for every button in every frame).
+const KEY: &str = "icon-motion";
+const MENU_KEY: &str = "menu-open";
+
 /// The clicks one button has counted.
 #[derive(Clone)]
 pub(in crate::style) struct Clicks {
@@ -23,8 +28,9 @@ pub(in crate::style) struct Clicks {
 }
 
 impl Clicks {
-    pub(super) fn keyed(key: impl Into<ElementId>, enabled: bool, window: &mut Window, cx: &mut App) -> Self {
-        let count = window.use_keyed_state(key, cx, |_, _| 0u64);
+    /// The clicks of the icon `scope`, counted in state of its own.
+    pub(super) fn keyed(scope: &ElementId, enabled: bool, window: &mut Window, cx: &mut App) -> Self {
+        let count = window.with_id(scope.clone(), |window| window.use_keyed_state(KEY, cx, |_, _| 0u64));
         if !enabled && *count.read(cx) != 0 {
             count.update(cx, |count, _| *count = 0);
         }
@@ -67,13 +73,15 @@ pub(super) struct Change<V> {
 /// `value` as drawn now against what it was in the last frame this was drawn in. The first frame
 /// only takes note.
 pub(super) fn watch<V: Copy + PartialEq + 'static>(
-    key: impl Into<ElementId>,
+    scope: &ElementId,
     value: V,
     enabled: bool,
     window: &mut Window,
     cx: &mut App,
 ) -> Change<V> {
-    let seen = window.use_keyed_state(key, cx, move |_, _| Seen { value, before: value, run: 0 });
+    let seen = window.with_id(scope.clone(), |window| {
+        window.use_keyed_state(KEY, cx, move |_, _| Seen { value, before: value, run: 0 })
+    });
     seen.update(cx, |seen, _| {
         if seen.value != value {
             (seen.before, seen.value) = (seen.value, value);
@@ -95,8 +103,10 @@ pub struct MenuMark {
 }
 
 impl MenuMark {
-    pub(in crate::style) fn keyed(key: impl Into<ElementId>, window: &mut Window, cx: &mut App) -> Self {
-        MenuMark { open: window.use_keyed_state(key, cx, |_, _| false) }
+    pub(in crate::style) fn keyed(scope: &ElementId, window: &mut Window, cx: &mut App) -> Self {
+        MenuMark {
+            open: window.with_id(scope.clone(), |window| window.use_keyed_state(MENU_KEY, cx, |_, _| false)),
+        }
     }
 
     pub(in crate::style) fn is_open(&self, cx: &App) -> bool {
@@ -150,10 +160,10 @@ mod tests {
     impl Render for Probe {
         fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
             let (value, enabled) = self.now.get();
-            let change = watch("watched", value, enabled, window, cx);
+            let change = watch(&"watched".into(), value, enabled, window, cx);
             self.seen.borrow_mut().push(change);
-            *self.mark.borrow_mut() = Some(MenuMark::keyed("menu-mark", window, cx));
-            *self.clicks.borrow_mut() = Some(Clicks::keyed("clicks", enabled, window, cx));
+            *self.mark.borrow_mut() = Some(MenuMark::keyed(&"menu-mark".into(), window, cx));
+            *self.clicks.borrow_mut() = Some(Clicks::keyed(&"clicks".into(), enabled, window, cx));
             div()
         }
     }

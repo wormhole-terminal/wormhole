@@ -75,7 +75,7 @@ impl RenderOnce for TabGlyph {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let rest = Icon::new(self.icon).with_size(Size::Medium);
         let Some(glyph) = Glyph::of(self.icon) else { return rest.into_any_element() };
-        let change = watch((self.key, "icon-motion"), self.active, self.enabled, window, cx);
+        let change = watch(&self.key, self.active, self.enabled, window, cx);
         // Only a tab that has become active plays; one that has stopped being it is at rest.
         if !self.active || change.run == 0 {
             return rest.into_any_element();
