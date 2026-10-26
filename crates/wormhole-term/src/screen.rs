@@ -21,7 +21,7 @@ use wormhole_vt::{
     COLOR_COUNT, Cell, Colors, CursorShape, Line, LineSize, Modes, Point, RowExtras, Scroll, SelectionRange,
     SelectionType, Side,
 };
-use wormhole_vt::{Policy, Terminal};
+use wormhole_vt::{Pin, Policy, Terminal};
 
 use super::GridSize;
 use super::row_mark::{Part, RowMark};
@@ -240,6 +240,28 @@ impl Screen {
     /// Drop the selection when it covers nothing (a click without a drag).
     pub(crate) fn drop_empty_selection(&mut self) {
         self.term.drop_empty_selection();
+    }
+
+    /// A reference to `point`'s row that follows its text through scrolling and reflow (an
+    /// output tail's place); it belongs to the screen showing now (the alternate screen has pins
+    /// of its own), and dies with the history.
+    pub(crate) fn pin(&mut self, point: Point) -> Pin {
+        self.term.pin(point)
+    }
+
+    /// Where `pin` is now, `None` once its row has left the history.
+    pub(crate) fn pin_point(&self, pin: Pin) -> Option<Point> {
+        self.term.pin_point(pin)
+    }
+
+    /// Forget `pin`, which was made on the screen that shows.
+    pub(crate) fn unpin(&mut self, pin: Pin) {
+        self.term.unpin(pin);
+    }
+
+    /// Aim `pin` at another row.
+    pub(crate) fn move_pin(&mut self, pin: Pin, point: Point) {
+        self.term.move_pin(pin, point);
     }
 
     /// The cursor as drawn.

@@ -40,6 +40,9 @@
 //! - `program_status`: what programs report about themselves (OSC 7501), and the records kept;
 //! - `row_mark`: what a row of the grid carries of a command block; `marks`: where a block's parts are,
 //!   read back from the grid;
+//! - `capture`: the screen, the history and the command blocks as text and style runs, read from any
+//!   thread (`handle::reader`'s `ScreenReader`), and `tail`: the lines a program printed since the last
+//!   look, for the output events;
 //! - `blocks`: each prompt with its command and output, and how the command went;
 //! - `input`: keys, mouse and dropped files → bytes for the PTY;
 //! - `links`: OSC 8 hyperlinks and URLs in the text, and which may be opened;
@@ -49,6 +52,7 @@
 
 pub mod agents;
 mod blocks;
+mod capture;
 pub mod client;
 mod command_to_prompt;
 mod contents;
@@ -77,6 +81,7 @@ pub mod scrollbar;
 pub mod sequences;
 mod snapshot;
 pub mod sys;
+mod tail;
 #[cfg(any(test, feature = "test-support"))]
 pub mod testing;
 
@@ -150,9 +155,14 @@ struct ReportedCwd {
     polled_then: Option<PathBuf>,
 }
 
-pub use handle::{KeySent, ScrollbackSource};
+pub use capture::{
+    BlockCapture, BlocksCapture, BlocksSpec, Capture, CaptureCursor, CaptureError, CaptureRange, CaptureSpec,
+    CapturedBlock, Hue, ReadScratch, Style, StyleRun,
+};
+pub use handle::{KeySent, ScreenReader, ScrollbackSource, WeakScreenReader};
 pub(crate) use options::WindowSize;
 pub use options::{GridSize, StartOptions};
+pub use tail::{Tail, TailLimits, TailRead};
 
 #[cfg(test)]
 mod measure;

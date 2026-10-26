@@ -248,7 +248,7 @@ impl Shared {
         self.cwd_report.lock().unwrap_or_else(PoisonError::into_inner).take()
     }
 
-    fn mark(&self, mark: Mark, prompt: u64) {
+    pub(super) fn mark(&self, mark: Mark, prompt: u64) {
         match mark {
             Mark::PromptStart(_) | Mark::CommandStart => self.prompt.store(PROMPT_AT, Ordering::Release),
             Mark::OutputStart => self.prompt.store(PROMPT_RUNNING, Ordering::Release),

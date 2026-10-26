@@ -48,6 +48,21 @@ impl Pty {
         KeySent::Sent { view_changed }
     }
 
+    /// Send what `encode` makes of the terminal's modes as they are now (a mouse report, a paste
+    /// of the control line's), without clearing the selection or moving the view: input that is
+    /// not the person typing. Whether anything was sent (`encode` may find the mode does not ask
+    /// for it). The lock is let go of before the bytes are written.
+    pub fn write_encoded(&self, encode: impl FnOnce(Modes) -> Option<Vec<u8>>) -> bool {
+        let modes = self.term.lock().mode();
+        match encode(modes) {
+            Some(bytes) if !bytes.is_empty() => {
+                self.write(bytes);
+                true
+            }
+            _ => false,
+        }
+    }
+
     /// The pointer for a program that asked for the DEC locator (`Modes::LOCATOR`): a button
     /// went down or up (`Some`) or the pointer moved (`None`). What the program asked to be told
     /// goes to its input.
