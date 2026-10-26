@@ -24,3 +24,7 @@ a8f04a8ef43aed3562e6042bf7a7d2f1df0d854e
 89115c2028567790a78996176bbab6d8475a7637
 # refactor(terminal-view): move the last frame's geometry and the window's geometry out of mod.rs
 e794710d7b0f893e09bab6d59613c734a379f9e7
+# ipc control tests into a file of their own
+2397ee6fe1ba884f04d56669787b188b2fc13cb0
+# window_control.rs into window/control/
+5c05d88e96382baf30dd54ff673af297bd321169

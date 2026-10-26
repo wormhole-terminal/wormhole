@@ -495,3 +495,33 @@ fn watching_output_does_not_wake_the_window(cx: &mut TestAppContext) {
         notified.get().saturating_sub(without)
     );
 }
+
+/// A program that asked for the DEC locator instead of mouse reports gets the click as locator
+/// reports, and a wheel turn (which the locator has no word for) is refused.
+#[gpui_kit::test]
+fn a_program_that_asked_for_the_locator_gets_the_click_as_locator_reports(cx: &mut TestAppContext) {
+    if isolate("a_program_that_asked_for_the_locator_gets_the_click_as_locator_reports") {
+        return;
+    }
+    let window = start(cx, 1);
+    let who = callers(cx, &window);
+    allow(cx, true, true);
+    let mouse = |op: MouseOp| Action::Mouse(MouseSpec { target: Target::Terminal(1), op });
+    // DECELR: enable the locator; DECSLE: report button down and button up.
+    print(cx, &window, 0, b"\x1b[1'z\x1b[1;3'{\r");
+    let click = reply(ask(cx, mouse(MouseOp::Click(pointer(1, 2))), None, &who.outside));
+    assert_eq!(code(&click), None, "{click:?}");
+    // Down and up at row 2, column 3 (counted from 1): `CSI Pe ; Pb ; Pr ; Pc ; Pp & w`.
+    show_contains(cx, 1, &who, "&w");
+    let wheel = MouseOp::Scroll(Wheel {
+        row: 0,
+        col: 0,
+        direction: Direction::Up,
+        lines: 1,
+        shift: false,
+        alt: false,
+        ctrl: false,
+    });
+    let refused = reply(ask(cx, mouse(wheel), None, &who.outside));
+    assert_eq!(refused.err().and_then(|e| e.reason), Some(Reason::NoMouse));
+}
