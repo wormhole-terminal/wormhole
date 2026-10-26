@@ -9,6 +9,7 @@
 //! nothing while it plays. The theme's appearance goes on the holder (never on an `NSWindow`: GPUI reads that
 //! one as the system's).
 
+#[cfg(feature = "devctl")]
 use std::cell::Cell;
 
 use gpui_kit::Window;
@@ -114,6 +115,7 @@ impl Backdrop {
         }
     }
 
+    #[cfg(feature = "devctl")]
     fn material(&self) -> Material {
         match self {
             Self::Glass(_) => Material::Glass,

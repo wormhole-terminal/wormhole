@@ -34,6 +34,7 @@ pub enum Material {
     Solid,
 }
 
+#[cfg(feature = "devctl")]
 impl Material {
     #[must_use]
     pub fn name(self) -> &'static str {
