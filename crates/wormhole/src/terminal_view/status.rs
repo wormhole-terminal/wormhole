@@ -152,6 +152,9 @@ pub enum TerminalEvent {
     /// A command started or finished, in a shell with integration; emitted only while somebody
     /// watches for them.
     Command(CommandMark),
+    /// A live resize of the window ended (a frame found out): the window may take off the strip it leaves
+    /// when it is not on the cell grid.
+    LiveResizeEnded,
 }
 
 /// A moment in a command's life, as the shell's marks tell it.

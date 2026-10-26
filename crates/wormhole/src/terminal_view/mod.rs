@@ -30,6 +30,7 @@ mod links;
 mod pane_bar;
 mod render;
 mod reported;
+mod scaling;
 mod status;
 
 pub use failed::Failure;
@@ -69,6 +70,12 @@ impl GridProbe {
         let layout = self.0.get();
         (layout.cols, layout.rows)
     }
+
+    /// A cell's width and height in points: what a window that resizes in whole cells steps by.
+    pub fn cell(&self) -> (f32, f32) {
+        let layout = self.0.get();
+        (f32::from(layout.cell.width), f32::from(layout.cell.height))
+    }
 }
 /// Geometry of the last painted frame, shared with mouse handlers.
 #[derive(Clone, Copy, Default)]
@@ -81,6 +88,9 @@ struct Layout {
     gutter: f32,
     /// What the window has around the grid (the content less the grid's area), for window operations.
     frame: (f32, f32),
+    /// What the pane has beyond the grid's whole cells, across and down: the strip a window that is off the
+    /// cell grid leaves at its right and bottom edges.
+    spare: (f32, f32),
 }
 
 pub struct TerminalView {
@@ -213,8 +223,12 @@ pub struct TerminalView {
     cursor_blink: Option<Task<()>>,
     /// The link under the pointer while ⌘ is held (see `links`).
     hovered_link: Option<wormhole_term::Link>,
-    /// Points over the font size in Settings (⌘+ / ⌘- in this window; ⌘0 is 0).
+    /// Points over the font size in Settings (⌘+ / ⌘- in this window; ⌘0 is 0). Where a zoom is going; the
+    /// size drawn eases to it (`scaling`).
     font_zoom: f32,
+    /// What the window being scaled does to this terminal: the live resize's gate, the text zoom's ease and
+    /// the size chip (`scaling`).
+    scaling: scaling::Scaling,
     /// Where the pointer holds the minimap's slider, over its top, while it's dragged.
     minimap_grab: Option<f32>,
     /// The scrollbar: its idle time, the pointer on it and the thumb held.
@@ -352,6 +366,7 @@ impl TerminalView {
             cursor_blink: None,
             hovered_link: None,
             font_zoom: 0.0,
+            scaling: Default::default(),
             minimap_grab: None,
             scrollbar: Default::default(),
             dock: None,
@@ -494,14 +509,6 @@ impl TerminalView {
         }
     }
 
-    /// Draw the text this many points over the size in Settings (⌘+, ⌘-, ⌘0).
-    pub fn set_font_zoom(&mut self, zoom: f32, cx: &mut Context<Self>) {
-        if self.font_zoom != zoom {
-            self.font_zoom = zoom;
-            cx.notify();
-        }
-    }
-
     /// The start animation's ship docks on this cell of the terminal's grid (the welcome program
     /// draws its mark there), or on none. The cell's place in the window is reported as the grid is
     /// laid out, so the ship follows a window that is resized or a font that changes.
@@ -592,6 +599,11 @@ impl TerminalView {
             (pane.cols, pane.rows) = (cols, rows);
         }
         pane
+    }
+
+    /// What the pane has beyond the grid's whole cells, across and down, as of the last frame.
+    pub fn spare(&self) -> (f32, f32) {
+        self.layout.get().spare
     }
 
     /// The size the window was last asked to give the pane, while the layout has not shown it yet.

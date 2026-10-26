@@ -158,6 +158,7 @@ impl Render for TerminalView {
             focused,
             draws_cursor,
             reduce_motion,
+            scaling: self.scaling_on(cx),
             dock,
             layout: layout_cell,
             state: prepaint_state,
@@ -186,7 +187,13 @@ impl Render for TerminalView {
                 #[cfg(feature = "devctl")]
                 PAINTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 let span = perf::span();
-                paint.run(bounds, &frame, window, cx);
+                // A grid larger than its pane (held back in a live resize) stays inside the pane.
+                match frame.clip {
+                    Some(clip) => window.with_content_mask(Some(ContentMask { bounds: clip }), |window| {
+                        paint.run(bounds, &frame, window, cx)
+                    }),
+                    None => paint.run(bounds, &frame, window, cx),
+                }
                 span.end(perf::Part::Paint);
             },
         )
@@ -281,6 +288,7 @@ impl Render for TerminalView {
             // The minimap is the scroller when it is shown.
             .when(!minimap, |this| this.child(self.render_scrollbar(cx)))
             .children(self.render_block_readout(cx))
+            .children(self.render_size_readout(window, cx))
             .children(bell_glow.map(|color| bell_edge(ui, color)))
             .when(exited, |this| this.child(self.render_exited(cx)))
             .children(self.render_pane_bar(exited, cx))

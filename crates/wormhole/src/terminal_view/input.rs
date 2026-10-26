@@ -570,6 +570,7 @@ mod tests {
             rows: 24,
             gutter: 12.0,
             frame: (0.0, 0.0),
+            spare: (0.0, 0.0),
         }
     }
 

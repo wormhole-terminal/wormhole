@@ -33,6 +33,8 @@
 //!   drop <x> <y>          release it there (send `shot` between the two to see the drop tint)
 //!   drag-end              abandon the drag
 //!   resize <w> <h>        set the window's content size (logical pixels; the window minimum still applies)
+//!   scaling               the window's resize steps and animation, the shown terminal's cell, grid and spare
+//!                         room (Motion feature); `settle` ends a live resize as the system would
 //!   click <x> <y>         left-click at a point in the window (logical pixels, as in a `shot` at 1x)
 //!   double-click <x> <y>  two clicks there, the second a double-click (a resize handle's reset)
 //!   key <keystroke>       press a key combination, e.g. `ctrl-cmd-2`, `shift-cmd-]`, `f6` or `tab` (the
@@ -360,6 +362,7 @@ mod language;
 mod menus;
 mod panels;
 mod profiling;
+mod scaling;
 mod sessions;
 mod settings;
 mod shots;

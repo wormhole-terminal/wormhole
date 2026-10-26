@@ -5,7 +5,7 @@
 use anyhow::anyhow;
 
 use super::{
-    Command, a11y, ambient, blocks, control, flow, hosts, input, language, menus, panels, profiling,
+    Command, a11y, ambient, blocks, control, flow, hosts, input, language, menus, panels, profiling, scaling,
     sessions, settings, shots, sidebar, studio, tear_off, title, welcome,
 };
 
@@ -92,6 +92,8 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "pointer" => tear_off::pointer,
         "tear-off" => tear_off::tear_off,
         "grow-hold" => tear_off::grow_hold,
+        "scaling" => scaling::scaling,
+        "settle" => scaling::settle,
         "pane-split" => sessions::pane_split,
         "pane-close" => sessions::pane_close,
         "pane-zoom" => sessions::pane_zoom,

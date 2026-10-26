@@ -7,10 +7,10 @@ use std::ptr::NonNull;
 use gpui_kit::Window;
 use objc2_app_kit::{
     NSNormalWindowLevel, NSWindow, NSWindowButton, NSWindowCollectionBehavior,
-    NSWindowDidEnterFullScreenNotification, NSWindowDidExitFullScreenNotification,
+    NSWindowDidEnterFullScreenNotification, NSWindowDidExitFullScreenNotification, NSWindowStyleMask,
     NSWindowWillEnterFullScreenNotification, NSWindowWillExitFullScreenNotification,
 };
-use objc2_foundation::{NSNotification, NSNotificationCenter, NSOperationQueue, NSPoint};
+use objc2_foundation::{NSNotification, NSNotificationCenter, NSOperationQueue, NSPoint, NSSize};
 
 use super::appearance;
 use super::appkit::ns_window;
@@ -133,6 +133,57 @@ pub fn keep_behind(window: &Window) {
         ns_window.setLevel(NSNormalWindowLevel);
     }
     ns_window.orderBack(None);
+}
+
+pub fn set_resize_increments(window: &Window, cell: Option<(f32, f32)>) {
+    let Some(ns_window) = ns_window(window) else { return };
+    // AppKit keeps whole points only (8.4 is 8, 0.5 is 0, which would be "none"; checked on this system), so
+    // the steps are rounded here, at least a point: a font whose cell is not a whole number of points is
+    // approximated, and the strip it leaves is taken off when the drag ends (`settle`). "No increments" is
+    // one point, the default of every window.
+    let step = |points: f32| f64::from(points.round().max(1.0));
+    let wanted = cell.map_or(NSSize::new(1.0, 1.0), |(w, h)| NSSize::new(step(w), step(h)));
+    if ns_window.contentResizeIncrements() != wanted {
+        ns_window.setContentResizeIncrements(wanted);
+    }
+}
+
+#[cfg(feature = "devctl")]
+pub fn scaling_state(window: &Window) -> Option<String> {
+    let ns_window = ns_window(window)?;
+    let steps = ns_window.contentResizeIncrements();
+    let behaviour = ns_window.animationBehavior();
+    let frame = ns_window.frame();
+    Some(format!(
+        "increments=({},{}) animation={:?} frame={}x{} zoomed={} live={}",
+        steps.width,
+        steps.height,
+        behaviour,
+        frame.size.width,
+        frame.size.height,
+        ns_window.isZoomed(),
+        ns_window.inLiveResize()
+    ))
+}
+
+pub fn in_live_resize(window: &Window) -> bool {
+    ns_window(window).is_some_and(|w| w.inLiveResize())
+}
+
+pub fn settle(window: &Window, shrink: (f32, f32)) -> bool {
+    let Some(ns_window) = ns_window(window) else { return false };
+    // Full screen, a zoomed window and a tiled one are the system's size, not the person's.
+    if ns_window.isZoomed() || ns_window.styleMask().contains(NSWindowStyleMask::FullScreen) {
+        return false;
+    }
+    let mut frame = ns_window.frame();
+    let (dx, dy) = (f64::from(shrink.0), f64::from(shrink.1));
+    frame.size.width -= dx;
+    frame.size.height -= dy;
+    // AppKit's y grows up, so keeping the top edge where it is moves the bottom one up.
+    frame.origin.y += dy;
+    ns_window.setFrame_display_animate(frame, true, true);
+    true
 }
 
 /// Draw `window`'s lights in the theme's appearance from now on (see `appearance`), full screen

@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 743] = [
+pub(crate) const IDS: [&str; 744] = [
     "settings-section-advanced", "settings-section-advanced.intro", "settings-advanced-group-files",
     "settings-advanced-open-config", "settings-advanced-open-config.description", "settings-advanced-open-config.keywords",
     "settings-advanced-open-data", "settings-advanced-open-data.description", "settings-advanced-open-data.keywords",
@@ -247,17 +247,17 @@ pub(crate) const IDS: [&str; 743] = [
     "settings-window-preview-feature-note", "settings-window-profiles-unreadable", "settings-window-nothing-matches",
     "settings-window-set-by-project", "settings-nav-look", "settings-nav-work",
     "settings-nav-agents", "settings-nav-app", "settings-nav-preview",
-    "title-row-part-folder", "title-row-part-branch", "title-row-part-branch-status",
-    "title-row-part-terminal", "title-row-part-terminal-status", "title-row-part-space",
-    "title-row-part-space.description", "title-row-part-agent-gauge", "title-row-part-ports",
-    "title-row-part-pull-request", "title-row-part-open-in", "title-row-part-splits",
-    "title-row-menu-header", "title-row-menu-reset", "title-row-menu-customize",
-    "title-row-more-open-in-split", "title-row-more-open-in", "title-row-more-split",
-    "title-row-hidden", "title-row-status-in-bar",
+    "terminal-size-readout", "title-row-part-folder", "title-row-part-branch",
+    "title-row-part-branch-status", "title-row-part-terminal", "title-row-part-terminal-status",
+    "title-row-part-space", "title-row-part-space.description", "title-row-part-agent-gauge",
+    "title-row-part-ports", "title-row-part-pull-request", "title-row-part-open-in",
+    "title-row-part-splits", "title-row-menu-header", "title-row-menu-reset",
+    "title-row-menu-customize", "title-row-more-open-in-split", "title-row-more-open-in",
+    "title-row-more-split", "title-row-hidden", "title-row-status-in-bar",
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 743] = [
+pub(crate) const TAKES_ARGS: [bool; 744] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, true, false, false, false, false, false, false,
@@ -318,6 +318,6 @@ pub(crate) const TAKES_ARGS: [bool; 743] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, true, true, true, true, true, true, true, false, false,
+    false, false, false, true, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, false, false, false, false, false, false,
 ];

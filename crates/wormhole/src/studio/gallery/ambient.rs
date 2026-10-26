@@ -122,6 +122,21 @@ pub(super) fn render(
                     div().text_caption().text_color(ui.muted).child("← the width beside a dragged handle"),
                 ),
         )
+        // The terminal's size, in its middle while the window is resized: whole, then half way through fading.
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap_3()
+                .child(env.mark("readout", style::size_readout(ui, "120 × 40", 1.0)))
+                .child(style::size_readout(ui, "120 × 40", 0.5))
+                .child(
+                    div()
+                        .text_caption()
+                        .text_color(ui.muted)
+                        .child("← the grid's size, in a terminal's middle"),
+                ),
+        )
         // A hovered command block's readout: its exit code, its time and Copy output.
         .child(
             div()

@@ -363,6 +363,7 @@ mod tests {
             rows: 24,
             gutter: 12.0,
             frame: (0.0, 0.0),
+            spare: (0.0, 0.0),
         };
         assert_eq!(block_row(&layout, point(px(50.0), px(42.0))), Some(0));
         assert_eq!(block_row(&layout, point(px(50.0), px(42.0 + 18.0 * 3.0 + 1.0))), Some(3));

@@ -123,3 +123,54 @@ pub fn order_back(window: &Window) {
 pub fn keep_behind(window: &Window) {
     os::keep_behind(window);
 }
+
+/// Make the window resize in steps of `cell` (width and height, in points) when it is dragged, or freely with
+/// `None`. Full screen, zoom and tiling ignore them, and so does a size set by a program or a script.
+///
+/// AppKit keeps increments in whole points: a cell of 8.4 steps by 8, so a font whose cell is not a whole
+/// number of points is followed only roughly across the width (the line height is whole already). It does not
+/// say which size the steps count from either, so a window that is off the grid may stay off it: [`settle`]
+/// takes the leftover strip off when the drag is over.
+pub fn set_resize_increments(window: &Window, cell: Option<(f32, f32)>) {
+    os::set_resize_increments(window, cell);
+}
+
+/// The window's resize steps, animation behaviour and size, for devctl's `scaling`.
+#[cfg(feature = "devctl")]
+pub fn scaling_state(window: &Window) -> Option<String> {
+    os::scaling_state(window)
+}
+
+/// Whether the person is dragging the window's edge or corner right now (`NSWindow.inLiveResize`).
+pub fn in_live_resize(window: &Window) -> bool {
+    #[cfg(test)]
+    if let Some(live) = test_live::get() {
+        return live;
+    }
+    os::in_live_resize(window)
+}
+
+/// Make the window `shrink.0` narrower and `shrink.1` shorter, points that its top left corner stays put
+/// for, unless it is full screen, zoomed or tiled. Whether it did.
+pub fn settle(window: &Window, shrink: (f32, f32)) -> bool {
+    os::settle(window, shrink)
+}
+
+/// What the tests say about a live resize: no test window has an `NSWindow` to ask.
+#[cfg(test)]
+pub(crate) mod test_live {
+    use std::cell::Cell;
+
+    thread_local! {
+        static LIVE: Cell<Option<bool>> = const { Cell::new(None) };
+    }
+
+    pub(crate) fn get() -> Option<bool> {
+        LIVE.with(Cell::get)
+    }
+
+    /// Windows are in a live resize (or not) until `None` puts the real answer back.
+    pub(crate) fn set(live: Option<bool>) {
+        LIVE.with(|cell| cell.set(live));
+    }
+}

@@ -94,7 +94,14 @@ impl Workspace {
             }
             TerminalEvent::Restart => self.restart_pane(ix, window, cx),
             // Found out by a frame (the grid is laid out in it), and the bar was built before it.
-            TerminalEvent::Resized => self.grid_resized(ix, cx),
+            TerminalEvent::Resized => {
+                self.grid_resized(ix, cx);
+                // Its cell may be another (a font or its size changed): the window's steps are the cell's.
+                if ix == self.active {
+                    self.sync_resize_increments(window, cx);
+                }
+            }
+            TerminalEvent::LiveResizeEnded => self.live_resize_ended(ix, window, cx),
             // A program (with `allow_window_ops`) asks the window for something: it is read as
             // being about the pane that asked.
             TerminalEvent::WindowOp(op) => {

@@ -48,3 +48,18 @@ pub fn keep_behind(_: &Window) {}
 pub fn number(_: &Window) -> Option<i64> {
     None
 }
+
+pub fn set_resize_increments(_: &Window, _: Option<(f32, f32)>) {}
+
+#[cfg(feature = "devctl")]
+pub fn scaling_state(_: &Window) -> Option<String> {
+    None
+}
+
+pub fn in_live_resize(_: &Window) -> bool {
+    false
+}
+
+pub fn settle(_: &Window, _: (f32, f32)) -> bool {
+    false
+}

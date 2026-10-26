@@ -157,7 +157,7 @@ impl Workspace {
             let zoom = self.font_zoom;
             terminal.update(cx, |terminal, cx| {
                 terminal.moved_to(window, cx);
-                terminal.set_font_zoom(zoom, cx);
+                terminal.adopt_font_zoom(zoom, cx);
             });
             return (Pane::new(record.id, record.shell.clone(), terminal, window, cx), None);
         }
@@ -193,7 +193,7 @@ impl Workspace {
         };
         let terminal = cx.new(|cx| TerminalView::new(options, start, self.profile.clone(), window, cx));
         let zoom = self.font_zoom;
-        terminal.update(cx, |terminal, cx| terminal.set_font_zoom(zoom, cx));
+        terminal.update(cx, |terminal, cx| terminal.adopt_font_zoom(zoom, cx));
         (Pane::new(record.id, record.shell.clone(), terminal, window, cx), new_host)
     }
 

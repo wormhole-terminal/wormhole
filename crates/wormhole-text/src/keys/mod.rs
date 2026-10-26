@@ -38,6 +38,8 @@ mod settings_updates;
 #[rustfmt::skip]
 mod settings_window;
 #[rustfmt::skip]
+mod terminal;
+#[rustfmt::skip]
 mod title_row;
 
 pub use settings::*;
@@ -56,6 +58,7 @@ pub use settings_sessions::*;
 pub use settings_terminal::*;
 pub use settings_updates::*;
 pub use settings_window::*;
+pub use terminal::*;
 pub use title_row::*;
 
 use crate::key::Key;
@@ -376,5 +379,6 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("settings-window-profiles-unreadable", settings_window_profiles_unreadable("Sample")),
         ("settings-window-nothing-matches", settings_window_nothing_matches("Sample")),
         ("settings-window-set-by-project", settings_window_set_by_project("Sample", "Sample", "Sample")),
+        ("terminal-size-readout", terminal_size_readout("Sample", "Sample")),
     ]
 }
