@@ -31,7 +31,7 @@ settings-motion-column = The sidebar and panel hide or show
 
 ## Options
 
-settings-motion-today = As it is now
+settings-motion-classic = Classic
 settings-motion-insert-reveal = Reveal
 settings-motion-insert-from-side = From the side
 settings-motion-insert-soft-spring = Soft spring
@@ -46,7 +46,7 @@ settings-motion-status-line-roll = Line rolls
 settings-motion-column-soft-spring = Soft spring
 settings-motion-column-content-after = Content after
 
-## Previews (drawn by settings_window/sections/motion_preview.rs)
+## Previews (drawn by settings_window/sections/motion_preview/)
 
 settings-motion-insert-preview-label = Preview of a terminal opening and closing in the list
 settings-motion-fold-preview-label = Preview of a group folding and opening

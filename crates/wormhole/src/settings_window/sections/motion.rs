@@ -24,18 +24,18 @@ use crate::style;
 type Labels<T> = &'static [(T, Key)];
 
 const INSERT: Labels<InsertMotion> = &[
-    (InsertMotion::Today, SETTINGS_MOTION_TODAY),
+    (InsertMotion::Classic, SETTINGS_MOTION_CLASSIC),
     (InsertMotion::Reveal, SETTINGS_MOTION_INSERT_REVEAL),
     (InsertMotion::FromSide, SETTINGS_MOTION_INSERT_FROM_SIDE),
     (InsertMotion::SoftSpring, SETTINGS_MOTION_INSERT_SOFT_SPRING),
 ];
 const FOLD: Labels<FoldMotion> = &[
-    (FoldMotion::Today, SETTINGS_MOTION_TODAY),
+    (FoldMotion::Classic, SETTINGS_MOTION_CLASSIC),
     (FoldMotion::Drawer, SETTINGS_MOTION_FOLD_DRAWER),
     (FoldMotion::Tuck, SETTINGS_MOTION_FOLD_TUCK),
 ];
 const STATUS: Labels<StatusMotion> = &[
-    (StatusMotion::Today, SETTINGS_MOTION_TODAY),
+    (StatusMotion::Classic, SETTINGS_MOTION_CLASSIC),
     (StatusMotion::Crossfade, SETTINGS_MOTION_STATUS_CROSSFADE),
     (StatusMotion::BadgePop, SETTINGS_MOTION_STATUS_BADGE_POP),
     (StatusMotion::Wash, SETTINGS_MOTION_STATUS_WASH),
@@ -44,7 +44,7 @@ const STATUS: Labels<StatusMotion> = &[
     (StatusMotion::LineRoll, SETTINGS_MOTION_STATUS_LINE_ROLL),
 ];
 const COLUMN: Labels<ColumnMotion> = &[
-    (ColumnMotion::Today, SETTINGS_MOTION_TODAY),
+    (ColumnMotion::Classic, SETTINGS_MOTION_CLASSIC),
     (ColumnMotion::SoftSpring, SETTINGS_MOTION_COLUMN_SOFT_SPRING),
     (ColumnMotion::ContentAfter, SETTINGS_MOTION_COLUMN_CONTENT_AFTER),
 ];
@@ -137,7 +137,7 @@ mod tests {
         assert_eq!(s.motion.status, StatusMotion::BadgePop, "a name that is no option changes nothing");
         assert_eq!(
             (s.motion.insert, s.motion.fold, s.motion.column),
-            (InsertMotion::FromSide, FoldMotion::Tuck, ColumnMotion::Today)
+            (InsertMotion::FromSide, FoldMotion::Tuck, ColumnMotion::Classic)
         );
     }
 }

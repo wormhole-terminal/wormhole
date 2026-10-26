@@ -48,6 +48,7 @@ use crate::storage::jsonc;
 use crate::storage::jsonc::suggest::did_you_mean;
 use crate::storage::paths::{DataRoot, ProfilePaths};
 use crate::theme::tokens::{Appearance, ThemeTokens};
+use crate::view::motion::MotionChoices;
 
 /// Largest `config.json` read; real ones are about 1 KiB.
 const MAX_CONFIG_BYTES: u64 = 1024 * 1024;
@@ -297,8 +298,9 @@ impl Config {
 }
 
 /// What the file says that does nothing, said plainly: keys that aren't
-/// settings (a typo, or a setting that was renamed). `$schema` and `x-*` keys
-/// are for other tools and pass silently.
+/// settings (a typo, or a setting that was renamed), and what is wrong inside the `motion` object
+/// (a value that is no option reads as the default, the other choices are kept). `$schema` and `x-*`
+/// keys are for other tools and pass silently.
 fn notice(text: &str) -> Option<String> {
     let map = jsonc::parse::<Map<String, Value>>(text).ok()?;
     let known = settings::keys();
@@ -316,7 +318,12 @@ fn notice(text: &str) -> Option<String> {
             _ => format!("unknown setting `{key}`{}", did_you_mean(key, known.iter().map(String::as_str))),
         })
         .collect();
-    (!unknown.is_empty()).then(|| format!("config.json: {}", unknown.join("; ")))
+    let motion = match map.get("motion") {
+        Some(Value::Object(motion)) => MotionChoices::problems(motion),
+        _ => Vec::new(),
+    };
+    let said: Vec<String> = unknown.into_iter().chain(motion).collect();
+    (!said.is_empty()).then(|| format!("config.json: {}", said.join("; ")))
 }
 
 fn mtime(path: &Path) -> Option<SystemTime> {
@@ -399,21 +406,28 @@ mod tests {
     }
 
     #[test]
-    fn a_motion_that_is_no_option_falls_back_to_the_defaults_and_is_said() {
+    fn a_motion_that_is_no_option_is_the_default_and_is_said_while_the_rest_is_kept() {
         let text =
-            "{\n  \"opacity\": 0.5,\n  \"motion\": { \"insert\": \"bounce\", \"fold\": \"today\" }\n}\n";
+            "{\n  \"opacity\": 0.5,\n  \"motion\": { \"insert\": \"swoosh\", \"fold\": \"classic\" }\n}\n";
         let (_dir, path) = config_file(text);
         let mut config = Config::load_from(path.clone(), themes_dir(&path));
-        assert_eq!(config.settings.motion, MotionChoices::default(), "the object reads as the defaults");
-        assert_eq!(config.settings.opacity, 0.5, "the rest of the file is kept");
-        assert!(config.is_unreadable(), "and the file is not written over");
-        let error = config.error.clone().unwrap_or_default();
-        assert!(
-            error.contains("bounce") && error.contains("from-side"),
-            "names the value and the options: {error}"
+        assert_eq!(
+            config.settings.motion.insert,
+            MotionChoices::default().insert,
+            "the bad one is its default"
         );
-        config.update(|s| s.motion.fold = FoldMotion::Drawer);
-        assert_eq!(read(&path), text);
+        assert_eq!(config.settings.motion.fold, FoldMotion::Classic, "the good one is kept");
+        assert_eq!(config.settings.opacity, 0.5);
+        assert!(!config.is_unreadable(), "the file reads, so it is saved as usual");
+        let error = config.error.clone().unwrap_or_default();
+        assert!(error.contains("`motion.insert`") && error.contains("swoosh"), "{error}");
+        assert!(error.contains("from-side"), "it names the options: {error}");
+        // A change made in the app is saved, and drops the value that was never in use.
+        config.update(|s| s.motion.status = StatusMotion::Wash);
+        let saved = read(&path);
+        assert!(!saved.contains("swoosh"), "{saved}");
+        let reread: Settings = jsonc::parse(&saved).expect("reads back");
+        assert_eq!((reread.motion.fold, reread.motion.status), (FoldMotion::Classic, StatusMotion::Wash));
     }
 
     #[test]
@@ -427,6 +441,8 @@ mod tests {
         assert_eq!(reread.motion.insert, InsertMotion::Reveal, "the choice already there is kept");
         assert_eq!(reread.motion.status, StatusMotion::Wash);
         assert!(saved.contains("// mine"), "{saved}");
+        // Only what was chosen is in the file: a default that changes later still reaches this person.
+        assert!(!saved.contains("\"fold\"") && !saved.contains("\"column\""), "{saved}");
     }
 
     #[test]

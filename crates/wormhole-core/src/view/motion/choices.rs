@@ -1,9 +1,10 @@
 //! What the person picks for each thing that moves (Settings → Motion): one enum per motion, all in
-//! `config.json`'s `motion` object under the names they serialize to. `Today` is always what the app did
-//! before the choice existed, so a person who picks it loses nothing. The app draws the variants; a
-//! variant it has not built yet draws `Today`.
+//! `config.json`'s `motion` object under the names they serialize to. `Classic` is always how the app
+//! moved before the choice existed (the name does not age as the other styles ship), so a person who
+//! picks it loses nothing. The app draws the variants; one it has not built yet draws `Classic`.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::{Map, Value};
 
 /// A motion's options, as the settings page lists them and `config.json` spells them.
 pub trait MotionChoice: Copy + Eq + 'static {
@@ -40,8 +41,8 @@ macro_rules! choices {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum InsertMotion {
-    /// The app as it is: the row fades in where it will stand while the rows below slide aside.
-    Today,
+    /// Classic: the row fades in where it will stand while the rows below slide aside.
+    Classic,
     /// The row opens its height from nothing and fades in, pushing the rows below down.
     Reveal,
     /// The row slides in from the sidebar's edge as the rows below make room.
@@ -52,7 +53,7 @@ pub enum InsertMotion {
 }
 
 choices!(InsertMotion {
-    Today => "today",
+    Classic => "classic",
     Reveal => "reveal",
     FromSide => "from-side",
     SoftSpring => "soft-spring",
@@ -62,8 +63,8 @@ choices!(InsertMotion {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FoldMotion {
-    /// The app as it is: the rows leave at once and the lines below slide up to close the gap.
-    Today,
+    /// Classic: the rows leave at once and the lines below slide up to close the gap.
+    Classic,
     /// The rows slide shut like a drawer under the group's head, as the F-72 board draws it.
     Drawer,
     /// The rows tuck in one after another, each sliding up under the head.
@@ -72,7 +73,7 @@ pub enum FoldMotion {
 }
 
 choices!(FoldMotion {
-    Today => "today",
+    Classic => "classic",
     Drawer => "drawer",
     Tuck => "tuck",
 });
@@ -81,9 +82,9 @@ choices!(FoldMotion {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum StatusMotion {
-    /// The app as it is: the tile's light, edge and badge change at once.
+    /// Classic: the tile's light, edge and badge change at once.
     #[default]
-    Today,
+    Classic,
     /// The old state fades out while the new one fades in.
     Crossfade,
     /// The corner badge pops in with a small overshoot.
@@ -99,7 +100,7 @@ pub enum StatusMotion {
 }
 
 choices!(StatusMotion {
-    Today => "today",
+    Classic => "classic",
     Crossfade => "crossfade",
     BadgePop => "badge-pop",
     Wash => "wash",
@@ -112,9 +113,9 @@ choices!(StatusMotion {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ColumnMotion {
-    /// The app as it is: the column slides on a timed curve and the terminal resizes once, at the end.
+    /// Classic: the column slides on a timed curve and the terminal resizes once, at the end.
     #[default]
-    Today,
+    Classic,
     /// The column slides on the soft spring instead of a timed curve.
     SoftSpring,
     /// The column slides first and the terminal's text follows once it is in.
@@ -122,25 +123,73 @@ pub enum ColumnMotion {
 }
 
 choices!(ColumnMotion {
-    Today => "today",
+    Classic => "classic",
     SoftSpring => "soft-spring",
     ContentAfter => "content-after",
 });
 
-/// The motion settings: `config.json`'s `motion` object, one key per choice. A key left out is the
-/// default; a value that is no option makes the whole object read as the defaults and the file is
-/// reported, as for every other setting.
+/// The motion settings: `config.json`'s `motion` object, one key per choice.
+///
+/// Like `feature_flags` it holds only what the person chose: a choice at its default is not written, so
+/// a default that changes later reaches everyone who has not picked another (and picking the default
+/// again is the same as never having picked). A key left out is the default. A value that is no option
+/// reads as that choice's default and the other choices are kept; [`MotionChoices::problems`] says what
+/// was wrong, for the config's notice.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct MotionChoices {
     /// A terminal opening or closing.
+    #[serde(deserialize_with = "or_default", skip_serializing_if = "is_default")]
     pub insert: InsertMotion,
     /// A group folding.
+    #[serde(deserialize_with = "or_default", skip_serializing_if = "is_default")]
     pub fold: FoldMotion,
     /// A terminal's status changing.
+    #[serde(deserialize_with = "or_default", skip_serializing_if = "is_default")]
     pub status: StatusMotion,
     /// The sidebar or the panel hiding and showing.
+    #[serde(deserialize_with = "or_default", skip_serializing_if = "is_default")]
     pub column: ColumnMotion,
+}
+
+fn is_default<T: Default + PartialEq>(choice: &T) -> bool {
+    *choice == T::default()
+}
+
+/// A choice that reads as its default when its value is no option, instead of failing the whole file.
+fn or_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de> + Default,
+{
+    Ok(T::deserialize(Value::deserialize(deserializer)?).unwrap_or_default())
+}
+
+impl MotionChoices {
+    /// What is wrong with a `motion` object as the file has it, one sentence each: a value that is no
+    /// option (it reads as the default), and a key that is no choice. Empty when it is all right.
+    #[must_use]
+    pub fn problems(object: &Map<String, Value>) -> Vec<String> {
+        fn wrong<T: MotionChoice>(key: &str, value: &Value) -> Option<String> {
+            if value.as_str().and_then(T::from_name).is_some() {
+                return None;
+            }
+            let options: Vec<&str> = T::ALL.iter().map(|choice| choice.name()).collect();
+            Some(format!("`motion.{key}` is {value}, which is not one of {}", options.join(", ")))
+        }
+        let mut problems = Vec::new();
+        for (key, value) in object {
+            let problem = match key.as_str() {
+                "insert" => wrong::<InsertMotion>(key, value),
+                "fold" => wrong::<FoldMotion>(key, value),
+                "status" => wrong::<StatusMotion>(key, value),
+                "column" => wrong::<ColumnMotion>(key, value),
+                _ => Some(format!("unknown setting `motion.{key}`")),
+            };
+            problems.extend(problem);
+        }
+        problems
+    }
 }
 
 #[cfg(test)]
@@ -171,16 +220,19 @@ mod tests {
         names_are_the_serde_names::<ColumnMotion>();
         assert_eq!(
             InsertMotion::ALL.iter().map(|c| c.name()).collect::<Vec<_>>(),
-            ["today", "reveal", "from-side", "soft-spring"]
+            ["classic", "reveal", "from-side", "soft-spring"]
         );
         assert_eq!(
             StatusMotion::ALL.iter().map(|c| c.name()).collect::<Vec<_>>(),
-            ["today", "crossfade", "badge-pop", "wash", "flare", "nudge", "line-roll"]
+            ["classic", "crossfade", "badge-pop", "wash", "flare", "nudge", "line-roll"]
         );
-        assert_eq!(FoldMotion::ALL.iter().map(|c| c.name()).collect::<Vec<_>>(), ["today", "drawer", "tuck"]);
+        assert_eq!(
+            FoldMotion::ALL.iter().map(|c| c.name()).collect::<Vec<_>>(),
+            ["classic", "drawer", "tuck"]
+        );
         assert_eq!(
             ColumnMotion::ALL.iter().map(|c| c.name()).collect::<Vec<_>>(),
-            ["today", "soft-spring", "content-after"]
+            ["classic", "soft-spring", "content-after"]
         );
     }
 
@@ -189,18 +241,18 @@ mod tests {
         let choices = MotionChoices::default();
         assert_eq!(choices.insert, InsertMotion::FromSide, "a terminal comes in from the side");
         assert_eq!(choices.fold, FoldMotion::Tuck, "rows tuck in when a group folds");
-        assert_eq!(choices.status, StatusMotion::Today, "the status tile stays as it is");
-        assert_eq!(choices.column, ColumnMotion::Today, "the columns slide as they do");
+        assert_eq!(choices.status, StatusMotion::Classic, "the status tile stays as it is");
+        assert_eq!(choices.column, ColumnMotion::Classic, "the columns slide as they do");
     }
 
     #[test]
     fn a_key_left_out_is_its_default_and_the_others_are_kept() {
         let read: MotionChoices =
-            serde_json::from_str(r#"{ "fold": "today", "status": "line-roll" }"#).expect("reads");
+            serde_json::from_str(r#"{ "fold": "classic", "status": "line-roll" }"#).expect("reads");
         assert_eq!(
             read,
             MotionChoices {
-                fold: FoldMotion::Today,
+                fold: FoldMotion::Classic,
                 status: StatusMotion::LineRoll,
                 ..MotionChoices::default()
             }
@@ -209,23 +261,53 @@ mod tests {
     }
 
     #[test]
-    fn a_name_that_is_no_option_does_not_read() {
-        for text in [
-            r#"{ "insert": "bounce" }"#,
-            r#"{ "fold": "Tuck" }"#,
-            r#"{ "status": "badge_pop" }"#,
-            r#"{ "column": 1 }"#,
-        ] {
-            assert!(serde_json::from_str::<MotionChoices>(text).is_err(), "{text}");
-        }
+    fn a_value_that_is_no_option_is_that_choices_default_and_the_others_are_kept() {
+        let read: MotionChoices = serde_json::from_str(
+            r#"{ "insert": "bounce", "fold": "classic", "status": "badge_pop", "column": 1 }"#,
+        )
+        .expect("reads");
+        assert_eq!(
+            read,
+            MotionChoices { fold: FoldMotion::Classic, ..MotionChoices::default() },
+            "insert, status and column are their defaults, fold is what it said"
+        );
     }
 
     #[test]
-    fn the_object_writes_one_key_per_choice() {
-        let written = serde_json::to_value(MotionChoices::default()).expect("serializes");
-        assert_eq!(
-            written,
-            serde_json::json!({ "insert": "from-side", "fold": "tuck", "status": "today", "column": "today" })
+    fn what_is_wrong_in_the_object_is_said_choice_by_choice() {
+        let object = |text: &str| match serde_json::from_str(text).expect("json") {
+            serde_json::Value::Object(map) => map,
+            other => panic!("not an object: {other}"),
+        };
+        assert!(
+            MotionChoices::problems(&object(r#"{ "fold": "tuck", "column": "content-after" }"#)).is_empty()
         );
+        let problems = MotionChoices::problems(&object(r#"{ "insert": "bounce", "fold": 3, "toast": "x" }"#));
+        assert_eq!(problems.len(), 3, "{problems:?}");
+        assert!(
+            problems[0].contains("`motion.insert`") && problems[0].contains("\"bounce\""),
+            "{problems:?}"
+        );
+        assert!(problems[0].contains("from-side"), "it lists the options: {problems:?}");
+        assert!(problems[1].contains("`motion.fold`") && problems[1].contains('3'), "{problems:?}");
+        assert!(problems[2].contains("`motion.toast`"), "{problems:?}");
+    }
+
+    #[test]
+    fn only_what_the_person_chose_is_written() {
+        let nothing = serde_json::to_value(MotionChoices::default()).expect("serializes");
+        assert_eq!(nothing, serde_json::json!({}), "the defaults stay out of the file");
+        let chosen = MotionChoices {
+            fold: FoldMotion::Drawer,
+            status: StatusMotion::Wash,
+            ..MotionChoices::default()
+        };
+        assert_eq!(
+            serde_json::to_value(chosen).expect("serializes"),
+            serde_json::json!({ "fold": "drawer", "status": "wash" })
+        );
+        // And what was written reads back as it was.
+        let text = serde_json::to_string(&chosen).expect("serializes");
+        assert_eq!(serde_json::from_str::<MotionChoices>(&text).expect("reads"), chosen);
     }
 }

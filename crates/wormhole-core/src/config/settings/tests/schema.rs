@@ -367,8 +367,8 @@ fn the_motion_object_reads_per_choice_and_is_the_persons_own() {
     let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
     assert_eq!(unset.motion.insert, InsertMotion::FromSide);
     assert_eq!(unset.motion.fold, FoldMotion::Tuck);
-    assert_eq!(unset.motion.status, StatusMotion::Today);
-    assert_eq!(unset.motion.column, ColumnMotion::Today);
+    assert_eq!(unset.motion.status, StatusMotion::Classic);
+    assert_eq!(unset.motion.column, ColumnMotion::Classic);
     let partly: Settings =
         jsonc::parse(r#"{ "motion": { "status": "badge-pop", "column": "content-after" } }"#)
             .expect("valid jsonc");
@@ -377,7 +377,10 @@ fn the_motion_object_reads_per_choice_and_is_the_persons_own() {
     assert_eq!(partly.motion.insert, InsertMotion::FromSide, "a key left out is its default");
     assert!(keys().contains(&"motion".to_string()));
     assert!(APP_SETTINGS.contains(&"motion") && !PROJECT_SETTINGS.contains(&"motion"));
-    // A fresh file writes the object whole, so every choice can be edited by hand.
+    // A fresh file writes the object empty: nothing is chosen yet, so no default is frozen into it.
     let written = serde_json::to_value(&unset).expect("serializes");
-    assert_eq!(written["motion"]["insert"], "from-side");
+    assert_eq!(written["motion"], serde_json::json!({}));
+    let chosen = Settings { motion: partly.motion, ..Settings::default() };
+    let written = serde_json::to_value(&chosen).expect("serializes");
+    assert_eq!(written["motion"], serde_json::json!({ "status": "badge-pop", "column": "content-after" }));
 }

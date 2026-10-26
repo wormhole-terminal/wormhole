@@ -112,7 +112,7 @@ pub(crate) const IDS: [&str; 743] = [
     "settings-motion-fold.description", "settings-motion-fold.keywords", "settings-motion-status",
     "settings-motion-status.description", "settings-motion-status.keywords", "settings-motion-group-window",
     "settings-motion-column", "settings-motion-column.description", "settings-motion-column.keywords",
-    "settings-motion-today", "settings-motion-insert-reveal", "settings-motion-insert-from-side",
+    "settings-motion-classic", "settings-motion-insert-reveal", "settings-motion-insert-from-side",
     "settings-motion-insert-soft-spring", "settings-motion-fold-drawer", "settings-motion-fold-tuck",
     "settings-motion-status-crossfade", "settings-motion-status-badge-pop", "settings-motion-status-wash",
     "settings-motion-status-flare", "settings-motion-status-nudge", "settings-motion-status-line-roll",

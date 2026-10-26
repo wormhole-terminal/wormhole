@@ -37,8 +37,8 @@ pub const SETTINGS_MOTION_COLUMN: Key = Key::new(315);
 pub const SETTINGS_MOTION_COLUMN_DESCRIPTION: Key = Key::new(316);
 /// "animation animate sidebar panel column slide spring hide show collapse"
 pub const SETTINGS_MOTION_COLUMN_KEYWORDS: Key = Key::new(317);
-/// "As it is now"
-pub const SETTINGS_MOTION_TODAY: Key = Key::new(318);
+/// "Classic"
+pub const SETTINGS_MOTION_CLASSIC: Key = Key::new(318);
 /// "Reveal"
 pub const SETTINGS_MOTION_INSERT_REVEAL: Key = Key::new(319);
 /// "From the side"

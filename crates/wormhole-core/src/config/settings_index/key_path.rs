@@ -30,8 +30,22 @@ pub(super) fn set(map: &mut Map<String, Value>, key: &str, value: Value) {
     }
 }
 
+/// Take the value at `key` out of the map, in the object it names: a setting that is stored only
+/// while it differs from its default is put back to its default by removing it.
+pub(super) fn remove(map: &mut Map<String, Value>, key: &str) {
+    match key.split_once('.') {
+        None => {
+            map.remove(key);
+        }
+        Some((object, rest)) => {
+            if let Some(Value::Object(inner)) = map.get_mut(object) {
+                remove(inner, rest);
+            }
+        }
+    }
+}
+
 /// The key of the setting itself: `motion` for `motion.insert`.
-#[cfg(test)]
 pub(super) fn top(key: &str) -> &str {
     key.split_once('.').map_or(key, |(object, _)| object)
 }
@@ -40,7 +54,7 @@ pub(super) fn top(key: &str) -> &str {
 mod tests {
     use serde_json::{Map, Value, json};
 
-    use super::{get, set, top};
+    use super::{get, remove, set, top};
 
     fn map(value: Value) -> Map<String, Value> {
         match value {
@@ -56,10 +70,12 @@ mod tests {
         assert_eq!(get(&settings, "motion.insert"), Some(&json!("reveal")));
         assert_eq!(get(&settings, "motion.nope"), None);
         assert_eq!(get(&settings, "blur.insert"), None, "a switch has no keys inside");
-        set(&mut settings, "motion.insert", json!("today"));
-        assert_eq!(settings["motion"], json!({ "insert": "today", "fold": "tuck" }), "the sibling stays");
+        set(&mut settings, "motion.insert", json!("classic"));
+        assert_eq!(settings["motion"], json!({ "insert": "classic", "fold": "tuck" }), "the sibling stays");
         set(&mut settings, "blur.insert", json!(1));
         assert_eq!(settings["blur"], json!(true), "a path through a switch changes nothing");
+        remove(&mut settings, "motion.insert");
+        assert_eq!(settings["motion"], json!({ "fold": "tuck" }), "the sibling stays");
         assert_eq!((top("motion.insert"), top("blur")), ("motion", "blur"));
     }
 }

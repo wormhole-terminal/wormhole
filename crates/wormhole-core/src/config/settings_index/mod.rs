@@ -301,8 +301,10 @@ pub fn reset(settings: &Settings, keys: &[&str]) -> Settings {
     let mut map = as_map(settings);
     let defaults = as_map(&Settings::default());
     for key in keys {
-        if let Some(value) = key_path::get(&defaults, key) {
-            key_path::set(&mut map, key, value.clone());
+        match key_path::get(&defaults, key) {
+            Some(value) => key_path::set(&mut map, key, value.clone()),
+            // Stored only while it differs (the motion choices): its default is that it isn't there.
+            None => key_path::remove(&mut map, key),
         }
     }
     serde_json::from_value(Value::Object(map)).unwrap_or_else(|_| settings.clone())
@@ -312,14 +314,19 @@ pub fn reset(settings: &Settings, keys: &[&str]) -> Settings {
 /// `Settings::with_overrides_reported` says the project's overlay applied. A key a project may
 /// not change (the app-wide ones) never counts.
 pub fn set_by_project(entry: &Entry, overridden: &[String]) -> bool {
-    entry.keys.iter().any(|key| PROJECT_SETTINGS.contains(key) && overridden.iter().any(|o| o == key))
+    // A project overrides a setting as a whole: the key of a choice inside an object is the object's.
+    entry
+        .keys
+        .iter()
+        .map(|key| key_path::top(key))
+        .any(|key| PROJECT_SETTINGS.contains(&key) && overridden.iter().any(|overridden| overridden == key))
 }
 
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
 
-    use super::{SectionId, UNLISTED, Values, entries, entry, reset, set_by_project};
+    use super::{Entry, SectionId, UNLISTED, Values, entries, entry, reset, set_by_project};
     use super::{as_map, key_path};
     use crate::config::{APP_SETTINGS, PROJECT_SETTINGS, Settings, keys};
 
@@ -346,10 +353,21 @@ mod tests {
             assert!(!(shown.contains(key.as_str()) && unlisted), "{key} has a row: take it out of UNLISTED");
         }
         // And a row names only keys that exist.
-        let defaults = as_map(&Settings::default());
+        // The motion choices are written only while chosen, so look at a file where every one is.
+        use crate::view::motion::{ColumnMotion, FoldMotion, InsertMotion, MotionChoices, StatusMotion};
+        let chosen = Settings {
+            motion: MotionChoices {
+                insert: InsertMotion::Classic,
+                fold: FoldMotion::Classic,
+                status: StatusMotion::Crossfade,
+                column: ColumnMotion::SoftSpring,
+            },
+            ..Settings::default()
+        };
+        let written = as_map(&chosen);
         for (_, _, entry) in entries() {
             for key in entry.keys {
-                assert!(key_path::get(&defaults, key).is_some(), "{}: no config key {key}", entry.id);
+                assert!(key_path::get(&written, key).is_some(), "{}: no config key {key}", entry.id);
             }
         }
     }
@@ -471,5 +489,20 @@ mod tests {
         let (_, _, mode) = entry("theme-mode").expect("row");
         assert!(!set_by_project(theme, &["theme".into(), "theme_light".into()]));
         assert!(!set_by_project(mode, &["theme_mode".into()]));
+        // A choice inside an object is set by a project when the project sets the object, if the object
+        // is one a project may set at all.
+        let nested = Entry {
+            id: "nested",
+            label: wormhole_text::keys::SETTINGS_MOTION_INSERT,
+            description: None,
+            keywords: None,
+            keys: &["density.nested"],
+            feature: None,
+        };
+        assert!(PROJECT_SETTINGS.contains(&"density"));
+        assert!(set_by_project(&nested, &["density".into()]));
+        assert!(!set_by_project(&nested, &["tab_width".into()]));
+        let (_, _, insert) = entry("motion-insert").expect("row");
+        assert!(!set_by_project(insert, &["motion".into()]), "motion is the person's own");
     }
 }
