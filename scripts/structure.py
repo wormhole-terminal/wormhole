@@ -260,8 +260,9 @@ class Src:
 # Module items: `mod x;` and `mod x { ... }` with their attributes.
 
 _MOD = re.compile(r"mod\s+(\w+)\s*([;{])")
-# What precedes a `mod`: attributes and the visibility, matched backwards from the keyword.
-_MOD_HEAD = re.compile(r"((?:#\s*!?\s*\[[^\]]*\]\s*)*)(?:pub\s*(?:\([^)]*\)\s*)?)?$")
+# What precedes a `mod`: attributes and the visibility, matched backwards from the keyword. The `!`
+# takes its own spaces, so a space after `#` is matched one way only (no exponential backtracking).
+_MOD_HEAD = re.compile(r"((?:#\s*(?:!\s*)?\[[^\]]*\]\s*)*)(?:pub\s*(?:\([^)]*\)\s*)?)?$")
 _INNER_CFG_TEST = re.compile(r"#\s*!\s*\[\s*cfg\s*\(\s*test\s*\)\s*\]")
 _CFG_ATTR = re.compile(r"cfg\s*\(")
 _PATH_ATTR = re.compile(r'#\s*\[\s*path\s*=\s*"')
