@@ -22,6 +22,7 @@ use crate::sidebar::{NewTerminal, RowFailure, RowInfo, Sidebar, SidebarEvent, Si
 use crate::style::traffic_light_position;
 use crate::terminal_view::Status;
 use crate::window::Workspace;
+use crate::window::tear_off::Release;
 use crate::{sidebar::shells, style};
 
 /// What the window keeps for the sidebar that is neither the list's state nor the terminals': where the
@@ -523,8 +524,8 @@ impl Workspace {
             SidebarEvent::TerminalDropped { dragged, origin, over } => {
                 self.finish_terminal_drop(*dragged, *origin, *over, window, cx)
             }
-            &SidebarEvent::TerminalReleasedOutside { id, pointer } => {
-                self.terminal_released_outside(id, pointer, window, cx)
+            &SidebarEvent::TerminalReleasedOutside { id, pointer, chip } => {
+                self.terminal_released_outside(Release { id, pointer, chip }, window, cx)
             }
             &SidebarEvent::StepStop(delta) => self.step_stop(delta, window, cx),
         }

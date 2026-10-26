@@ -1,8 +1,9 @@
 //! A window growing from the chip of the terminal that was torn off, which the design fixed (the picks of
 //! the motion plan: no choice of variant, so no `MotionChoices` field). The window opens at the size it will
 //! have, so its terminal is sized once; what grows is the part of it that shows: a rectangle from the chip's
-//! to the whole window, its corners from the chip's to the window's, and the content fading in once the
-//! rectangle is big enough to hold it. GPUI has no scale, so nothing is ever drawn smaller than it is.
+//! to the whole window, its corners from the chip's to the window's, the chip's own face (the terminal's
+//! glyph and name) fading out as the window's content fades in over it, so no frame shows an empty box.
+//! GPUI has no scale, so nothing is ever drawn smaller than it is.
 
 use std::time::Duration;
 
@@ -12,9 +13,12 @@ use crate::view::panes::Rect;
 /// How long the window takes to grow.
 pub const DURATION: Duration = Duration::from_millis(280);
 
-/// How far through the growth the content starts to fade in, as a share of it: before, the rectangle is
-/// too small for the content to be more than a smear.
-const CONTENT_FROM: f32 = 0.3;
+/// Where in the growth, as a share of it, the content fades in: from the first moments, while the chip's face
+/// is still there, to whole before the rectangle has stopped growing.
+const CONTENT_FROM: f32 = 0.12;
+const CONTENT_TO: f32 = 0.6;
+/// Where the chip's face has gone: it leaves as the content comes.
+const FACE_TO: f32 = 0.4;
 
 /// The corners of the chip the window grows from.
 pub const CHIP_RADIUS: f32 = 6.0;
@@ -28,6 +32,8 @@ pub struct Grow {
     pub radius: f32,
     /// How much of the content shows (0.0 to 1.0).
     pub content: f32,
+    /// How much of the chip's face shows (1.0 to 0.0).
+    pub face: f32,
     /// Whether the growth is over: the window is whole, with its shadow and its lights.
     pub done: bool,
 }
@@ -41,6 +47,7 @@ pub fn pose(chip: Rect, width: f32, height: f32, window_radius: f32, elapsed: Du
             shown: Rect::new(0.0, 0.0, width, height),
             radius: window_radius,
             content: 1.0,
+            face: 0.0,
             done: true,
         };
     }
@@ -50,7 +57,8 @@ pub fn pose(chip: Rect, width: f32, height: f32, window_radius: f32, elapsed: Du
     Grow {
         shown: Rect::new(lerp(chip.x, 0.0), lerp(chip.y, 0.0), lerp(chip.w, width), lerp(chip.h, height)),
         radius: lerp(CHIP_RADIUS, window_radius),
-        content: EASE_OUT.ease(((t - CONTENT_FROM) / (1.0 - CONTENT_FROM)).clamp(0.0, 1.0)),
+        content: EASE_OUT.ease(((t - CONTENT_FROM) / (CONTENT_TO - CONTENT_FROM)).clamp(0.0, 1.0)),
+        face: 1.0 - (t / FACE_TO).clamp(0.0, 1.0),
         done: false,
     }
 }
@@ -69,10 +77,10 @@ mod tests {
     fn it_starts_as_the_chip_and_ends_as_the_window() {
         let first = at(0);
         assert_eq!(first.shown, CHIP);
-        assert_eq!((first.radius, first.content, first.done), (CHIP_RADIUS, 0.0, false));
+        assert_eq!((first.radius, first.content, first.face, first.done), (CHIP_RADIUS, 0.0, 1.0, false));
         let last = at(280);
         assert_eq!(last.shown, Rect::new(0.0, 0.0, 900.0, 600.0));
-        assert_eq!((last.radius, last.content, last.done), (10.0, 1.0, true));
+        assert_eq!((last.radius, last.content, last.face, last.done), (10.0, 1.0, 0.0, true));
     }
 
     #[test]
@@ -89,8 +97,17 @@ mod tests {
     }
 
     #[test]
-    fn the_content_waits_for_room() {
-        assert_eq!(at(60).content, 0.0, "a fifth of the way in: still the chip");
-        assert!(at(140).content > 0.0 && at(140).content < 1.0);
+    fn the_content_comes_as_the_chips_face_goes_so_no_frame_is_empty() {
+        let mut ms = 0;
+        while ms <= 280 {
+            let g = at(ms);
+            // Something shows at every moment: the face or the content, never neither.
+            assert!(g.face + g.content >= 0.5, "at {ms} ms: face {} content {}", g.face, g.content);
+            ms += 5;
+        }
+        assert_eq!(at(20).content, 0.0, "the first frames are the chip");
+        assert!(at(100).content > 0.0 && at(100).face > 0.0, "both show while it grows");
+        assert_eq!(at(180).content, 1.0, "the content is whole before the end");
+        assert_eq!(at(180).face, 0.0, "and the face gone");
     }
 }

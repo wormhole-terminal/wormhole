@@ -42,6 +42,7 @@ struct Drag {
 
 struct Chip {
     handle: AnyWindowHandle,
+    view: Entity<TearChip>,
     shown: bool,
 }
 
@@ -127,17 +128,17 @@ fn follow(outside: bool, cx: &mut App) {
             });
         }
         None => {
-            if let Some(handle) = open_chip(info, &pointer, cx)
+            if let Some((handle, view)) = open_chip(info, &pointer, cx)
                 && let Some(drag) = cx.default_global::<InFlight>().0.as_mut()
             {
-                drag.chip = Some(Chip { handle, shown: true });
+                drag.chip = Some(Chip { handle, view, shown: true });
             }
         }
     }
 }
 
 /// The chip's window, over the screen the pointer is on.
-fn open_chip(info: Info, pointer: &Pointer, cx: &mut App) -> Option<AnyWindowHandle> {
+fn open_chip(info: Info, pointer: &Pointer, cx: &mut App) -> Option<(AnyWindowHandle, Entity<TearChip>)> {
     let spot = pointer.spot;
     let options = WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds::new(
@@ -158,12 +159,12 @@ fn open_chip(info: Info, pointer: &Pointer, cx: &mut App) -> Option<AnyWindowHan
     };
     match crate::window_open::open(options, cx, |window, cx| {
         platform::window::make_ghost(window);
-        cx.new(|_| TearChip { info })
+        cx.new(|_| TearChip { info, measured: None })
     }) {
-        Ok((handle, _)) => {
+        Ok((handle, view)) => {
             let (x, y) = chip_corner(pointer);
             let _ = handle.update(cx, |_, window, _| platform::window::set_global_top_left(window, x, y));
-            Some(handle)
+            Some((handle, view))
         }
         Err(err) => {
             tracing::warn!("opening the tear-off chip failed: {err:#}");
@@ -175,6 +176,8 @@ fn open_chip(info: Info, pointer: &Pointer, cx: &mut App) -> Option<AnyWindowHan
 /// The chip's picture: what the drag shows inside the window (`DraggedTerminal`), plain.
 struct TearChip {
     info: Info,
+    /// The chip's size as it was drawn, which the window it grows into starts from.
+    measured: Option<(f32, f32)>,
 }
 
 impl Render for TearChip {
@@ -220,10 +223,12 @@ impl Sidebar {
                 if !outside(at.x.into(), at.y.into(), view.width.into(), view.height.into()) {
                     return;
                 }
-                let id = cx.try_global::<InFlight>().and_then(|flight| flight.0.as_ref()).map(|d| d.info.id);
+                let drag = cx.try_global::<InFlight>().and_then(|flight| flight.0.as_ref());
+                let id = drag.map(|d| d.info.id);
+                let chip = drag.and_then(|d| d.chip.as_ref()).and_then(|chip| chip.view.read(cx).measured);
                 end(cx);
                 if let (Some(id), Some(pointer)) = (id, platform::pointer::on_screen()) {
-                    cx.emit(SidebarEvent::TerminalReleasedOutside { id, pointer });
+                    cx.emit(SidebarEvent::TerminalReleasedOutside { id, pointer, chip });
                 }
             }),
         )

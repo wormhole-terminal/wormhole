@@ -168,7 +168,8 @@ pub(crate) enum SidebarEvent {
     TerminalDropped { dragged: i64, origin: DragOrigin, over: Option<Over> },
     /// A terminal picked up by its row was let go outside the window, with the pointer where `pointer` says
     /// (`tear_off`): the window decides what that means.
-    TerminalReleasedOutside { id: i64, pointer: crate::platform::pointer::Pointer },
+    /// `chip` is the size the dragged chip was drawn at.
+    TerminalReleasedOutside { id: i64, pointer: crate::platform::pointer::Pointer, chip: Option<(f32, f32)> },
     /// ⇥ / ⇧⇥ in the list: the next or previous stop of the window's areas.
     StepStop(isize),
 }

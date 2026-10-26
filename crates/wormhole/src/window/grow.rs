@@ -17,14 +17,17 @@ use wormhole_core::view::panes::Rect;
 use crate::platform;
 use crate::settings::{UiColors, ui_in};
 use crate::style::motion::elapsed;
+use crate::style::{self, StatusGlyph, TextRole as _};
 use crate::window::Workspace;
 
 /// How long after the growth's clock a window waits before it goes back to its plain frame.
 const GRACE: Duration = Duration::from_millis(60);
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct Grow {
     chip: Rect,
+    /// The chip's face: the terminal's name and glyph, which the window's content fades in over.
+    face: (SharedString, StatusGlyph),
     /// The end has been scheduled (by the first frame).
     timed: bool,
 }
@@ -39,9 +42,9 @@ struct Growing {
 
 impl Global for Growing {}
 
-/// Window `id`, about to open, grows from `chip` (in its own space).
-pub(super) fn begin(id: i64, chip: Rect, cx: &mut App) {
-    cx.default_global::<Growing>().windows.insert(id, Grow { chip, timed: false });
+/// Window `id`, about to open, grows from `chip` (in its own space), whose face is `face`.
+pub(super) fn begin(id: i64, chip: Rect, face: (SharedString, StatusGlyph), cx: &mut App) {
+    cx.default_global::<Growing>().windows.insert(id, Grow { chip, face, timed: false });
 }
 
 /// Window `id` is gone or its window never opened: nothing is left of its growth.
@@ -78,10 +81,10 @@ impl Workspace {
         let Some(growing) = cx.try_global::<Growing>() else { return root.into_any_element() };
         #[cfg(feature = "devctl")]
         let hold = growing.hold;
-        let Some(grow) = growing.windows.get(&id).copied() else {
+        let Some(grow) = growing.windows.get(&id).cloned() else {
             return root.into_any_element();
         };
-        let chip = grow.chip;
+        let (chip, face) = (grow.chip, grow.face.clone());
         #[cfg(feature = "devctl")]
         let held = hold.is_some();
         #[cfg(not(feature = "devctl"))]
@@ -103,17 +106,36 @@ impl Workspace {
         let at = move |t: f32| pose(chip, w, h, radius, elapsed(DURATION, t));
         let whole = div().absolute().w(px(w)).h(px(h)).child(root);
         let body = div().absolute().overflow_hidden();
+        // What the chip showed, at the body's corner: where the eye was, until the window is there.
+        let glyph = style::status_glyph(("grow-glyph", id as u64), ui, face.1, cx);
+        let face = div()
+            .absolute()
+            .top_0()
+            .left_0()
+            .flex()
+            .items_center()
+            .gap_2()
+            .px_2()
+            .py_1()
+            .text_body()
+            .text_color(ui.text)
+            .child(glyph)
+            .child(div().min_w_0().truncate().child(face.0));
         #[cfg(feature = "devctl")]
         if let Some(t) = hold {
             let g = at(t);
-            let body = clip(body.child(inside(whole, g)), g, ui);
+            let body = clip(body.child(inside(whole, g)).child(face.opacity(g.face)), g, ui);
             return div().relative().size_full().child(body).into_any_element();
         }
         let animation = Animation::new(DURATION);
         let whole = whole
             .with_animation(("grow-content", id as u64), animation.clone(), move |d, t| inside(d, at(t)));
+        let face = face
+            .with_animation(("grow-face", id as u64), animation.clone(), move |d, t| d.opacity(at(t).face));
         let body =
-            body.child(whole).with_animation(("grow", id as u64), animation, move |d, t| clip(d, at(t), ui));
+            body.child(whole)
+                .child(face)
+                .with_animation(("grow", id as u64), animation, move |d, t| clip(d, at(t), ui));
         div().relative().size_full().child(body).into_any_element()
     }
 
