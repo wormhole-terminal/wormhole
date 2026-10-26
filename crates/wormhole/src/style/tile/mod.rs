@@ -20,7 +20,6 @@ mod ring;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
-use wormhole_core::view::sidebar::Urgency;
 
 use self::badge::badge;
 use self::edge::breathing_edge;
@@ -159,23 +158,6 @@ pub fn status_tile_on(
         .children(ring)
         .children(badge)
         .into_any_element()
-}
-
-/// What a tile in this state asks of the person, for choosing which of several terminals a folded
-/// group, a tab switcher card or the status bar shows (core's order of urgency).
-impl From<StatusGlyph> for Urgency {
-    fn from(glyph: StatusGlyph) -> Self {
-        match glyph {
-            StatusGlyph::NeedsYou => Urgency::NeedsYou,
-            StatusGlyph::Failed => Urgency::Failed,
-            StatusGlyph::Working => Urgency::Working,
-            StatusGlyph::Bell => Urgency::Bell,
-            StatusGlyph::Terminal { unread: true } => Urgency::NewOutput,
-            StatusGlyph::Running | StatusGlyph::Terminal { unread: false } => Urgency::Running,
-            StatusGlyph::Done => Urgency::Done,
-            StatusGlyph::Idle | StatusGlyph::Shell => Urgency::Idle,
-        }
-    }
 }
 
 /// How far down the tile the sheen reaches, from its full strength at the top.

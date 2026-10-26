@@ -4,6 +4,7 @@
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::notify::{State, Terminal};
+use wormhole_core::view::sidebar::Urgency;
 
 use super::motion::{ANIMATION_FPS, PULSE_RANGE, SPIN_PERIOD, STATUS_PULSE};
 use super::scale::{
@@ -52,6 +53,23 @@ impl StatusGlyph {
             (State::Failed, _) => StatusGlyph::Failed,
             (State::Idle, true) | (State::Exited, _) => StatusGlyph::Idle,
             (State::Idle, false) => StatusGlyph::Shell,
+        }
+    }
+}
+
+/// What a tile in this state asks of the person, for choosing which of several terminals a folded
+/// group, a tab switcher card or the status bar shows (core's order of urgency).
+impl From<StatusGlyph> for Urgency {
+    fn from(glyph: StatusGlyph) -> Self {
+        match glyph {
+            StatusGlyph::NeedsYou => Urgency::NeedsYou,
+            StatusGlyph::Failed => Urgency::Failed,
+            StatusGlyph::Working => Urgency::Working,
+            StatusGlyph::Bell => Urgency::Bell,
+            StatusGlyph::Terminal { unread: true } => Urgency::NewOutput,
+            StatusGlyph::Running | StatusGlyph::Terminal { unread: false } => Urgency::Running,
+            StatusGlyph::Done => Urgency::Done,
+            StatusGlyph::Idle | StatusGlyph::Shell => Urgency::Idle,
         }
     }
 }
