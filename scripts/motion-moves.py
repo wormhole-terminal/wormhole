@@ -360,6 +360,11 @@ STEPS: Dict[str, Step] = {
                     "struct RowFace", "fn row_face",
                 ],
                 uses=ROW_USES_FACE,
+                edits={"struct RowFace": [
+                    ("    tooltip: Option<(SharedString, SharedString)>,", "    pub(super) tooltip: Option<(SharedString, SharedString)>,"),
+                    ("    label: String,", "    pub(super) label: String,"),
+                    ("    group: SharedString,", "    pub(super) group: SharedString,"),
+                ]},
                 header="//! A row as it looks, before anything answers to it: where it sits in the listing (`Place`), what it\n"
                        "//! shows and what its tooltip and VoiceOver say (`RowFace`). Must not wire anything (click, drag, menu).",
             ),
