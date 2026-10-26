@@ -1,7 +1,7 @@
 //! The terminal list on the left, an entity of its own (`Sidebar`) that the window hosts. Core
 //! (`wormhole_core::view::sidebar`) decides what is listed, in what order, with which ⌘ numbers
 //! and in which words; this holds the list's state, draws the groups and rows, and wires up the
-//! ⌘-hold hints (`hints`), the row and group menus (`row_menu`, `groups`) and drag and drop (`drag`).
+//! ⌘-hold hints (`hints`), the row and group menus (`row_menu`, `groups`) and drag and drop (`drop`).
 //!
 //! The sidebar never reads the `Workspace`. The window pushes it a [`SidebarInput`] (the terminals as
 //! rows, which is selected, the profile, the width, the glass, the drag in flight) before it is drawn
@@ -26,7 +26,7 @@ use crate::style::TextRole;
 
 mod card;
 mod demo;
-mod drag;
+mod drop;
 mod facts;
 mod glass;
 pub(crate) use self::glass::{column_end, column_start, forget_column};

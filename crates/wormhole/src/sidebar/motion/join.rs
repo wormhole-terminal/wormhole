@@ -20,7 +20,7 @@ use wormhole_core::view::sidebar::Bracket;
 
 use super::list::ItemKey;
 use crate::settings::UiColors;
-use crate::sidebar::drag::DropMark;
+use crate::sidebar::drop::DropMark;
 use crate::sidebar::{Sidebar, SidebarInput};
 use crate::style;
 

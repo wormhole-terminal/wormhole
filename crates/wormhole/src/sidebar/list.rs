@@ -11,7 +11,7 @@ use gpui_kit::*;
 use wormhole_core::view::sidebar::{Card, Entry, Listing};
 
 use super::card::Cards;
-use super::drag::DropMark;
+use super::drop::DropMark;
 use super::glass::{LIST_CLIP, clip_probe};
 use super::row::{Frame, Place};
 use super::{ItemKey, Sidebar, SidebarInput, row_times};

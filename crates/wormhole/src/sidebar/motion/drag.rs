@@ -26,7 +26,7 @@ use wormhole_core::view::sidebar::room::{make_room, run_of};
 use super::list::{ItemKey, ListMotion, Spring, measured};
 use crate::settings::settings_in;
 use crate::sidebar::Sidebar;
-use crate::sidebar::drag::DropMark;
+use crate::sidebar::drop::DropMark;
 use crate::sidebar::terminal_drag::DragOrigin;
 use crate::style::motion::SPRING_SNAP;
 use wormhole_core::config::features::FeatureFlag;
