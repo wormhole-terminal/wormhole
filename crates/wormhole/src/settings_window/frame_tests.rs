@@ -46,6 +46,11 @@
 //! Ghostty's card open with its 13 rows and what doesn't carry over, and the comparison), not over the
 //! "Looking for terminals" line a fresh page shows.
 //! On main's frame (the strip fills, the icon motions and the Motion page) it measured 53,067.
+//! Agents fell from 26,827 to 9,011 when the tests stopped seeing the agents installed on the Mac that
+//! runs them (`WORMHOLE_AGENT_PATH` empty): an installed agent's row draws its hooks and logins, so the
+//! page cost what that Mac had installed. Pi's row and the logos of Codex, Amp, goose and Kiro came at
+//! the same time and cost nothing measurable (8,662 before them, 8,649 after, measured before the
+//! command line's row: a logo is cheaper than the two letters it replaces).
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -73,7 +78,7 @@ const BUDGET: [(&str, u64); 16] = [
     ("Sessions", 13704),
     ("Git", 4567),
     // A row more (Let the command line read terminals).
-    ("Agents", 26827),
+    ("Agents", 9011),
     ("Import", 53067),
     ("Notifications", 7882),
     ("MenuBar", 6195),

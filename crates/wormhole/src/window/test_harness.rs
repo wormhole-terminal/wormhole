@@ -54,6 +54,9 @@ pub(crate) fn isolate_in(module_path: &str, name: &str) -> bool {
         .env("WORMHOLE_DATA_DIR", &data)
         .env("WORMHOLE_SHELL", "/bin/cat")
         .env("WORMHOLE_AGENT_HOME", data.join("agent-home"))
+        // No agent is installed, whatever the Mac running the tests has on its `PATH`: what Settings
+        // and the first run draw for an installed one would differ from machine to machine.
+        .env("WORMHOLE_AGENT_PATH", "")
         // Where Settings → Command line tool would put `wh`, and what it reads to say whether it is
         // there: never /usr/local/bin, never the person's shell.
         .env("WORMHOLE_CLI_DIR", data.join("cli-bin"))
