@@ -43,10 +43,17 @@ impl Words {
     }
 }
 
-/// The line that rolls from the `old` words to `now`, `META_LINE` tall and cutting what leaves it. It takes
-/// the room the line has (`flex_1`, so the row leaves no spacer after it), whatever the words are: the old
-/// ones, which lie over the new and go up, are cut to that and not to the width of the new, which may be a
-/// few letters. The new words stay in the layout, moved down by what is left of the roll.
+/// What the clip reaches above and below the row's line, in rems: a caption's line box (12 points at
+/// GPUI's golden-ratio line height) is taller than `META_LINE`, and a clip cut at the row's own height
+/// takes the descenders of the words mid-roll ("just" showing as "iust"). The row keeps its height; only
+/// the clip is taller, by half of what the line box has over it on each side.
+const CLIP_OVERSCAN: f32 = (0.75 * 1.618_034 - META_LINE) / 2.0;
+
+/// The line that rolls from the `old` words to `now`, `META_LINE` tall in the row and cutting what leaves
+/// it at the words' whole line box. It takes the room the line has (`flex_1`, so the row leaves no spacer
+/// after it), whatever the words are: the old ones, which lie over the new and go up, are cut to that and
+/// not to the width of the new, which may be a few letters. The new words stay in the layout, moved down
+/// by what is left of the roll.
 #[track_caller]
 pub(super) fn rolling(
     id: ElementId,
@@ -55,8 +62,17 @@ pub(super) fn rolling(
     old: Words,
     now: Words,
 ) -> AnyElement {
-    let clip = div().relative().flex_1().min_w_0().h(rems(META_LINE)).flex().items_center().overflow_hidden();
-    shift.drive(clip, id, to, move |clip, pose| {
+    let clip = div()
+        .absolute()
+        .left_0()
+        .right_0()
+        .top(rems(-CLIP_OVERSCAN))
+        .h(rems(META_LINE + 2.0 * CLIP_OVERSCAN))
+        .flex()
+        .items_center()
+        .overflow_hidden()
+        .debug_selector(|| "detail-roll-clip".into());
+    let rolled = shift.drive(clip, id, to, move |clip, pose| {
         let rolled = pose.roll;
         let arriving = now
             .line()
@@ -66,7 +82,7 @@ pub(super) fn rolling(
         let leaving = div()
             .absolute()
             .left_0()
-            .top(rems(-rolled * META_LINE))
+            .top(rems(CLIP_OVERSCAN - rolled * META_LINE))
             .w_full()
             .h(rems(META_LINE))
             .flex()
@@ -75,7 +91,15 @@ pub(super) fn rolling(
             .child(old.line());
         clip.child(if rolled < 1.0 { arriving.opacity(rolled) } else { arriving })
             .children((rolled < 1.0).then(|| leaving.opacity(1.0 - rolled)))
-    })
+    });
+    div()
+        .relative()
+        .flex_1()
+        .min_w_0()
+        .h(rems(META_LINE))
+        .debug_selector(|| "detail-roll-row".into())
+        .child(rolled)
+        .into_any_element()
 }
 
 #[cfg(all(test, feature = "devctl"))]
@@ -89,6 +113,35 @@ mod tests {
 
     fn words(text: &'static str) -> Words {
         Words { text: text.into(), color: Hsla::black(), font: None, weight: FontWeight::NORMAL }
+    }
+
+    /// The height of an element `rolling` draws, in a line a quarter of the way through a roll.
+    fn height_of(cx: &mut TestAppContext, name: &'static str) -> f32 {
+        let shift = StatusShift {
+            motion: StatusMotion::LineRoll,
+            from: StatusGlyph::Idle,
+            clock: ShiftClock::At(0.25),
+        };
+        let cx = cx.add_empty_window();
+        cx.draw(point(px(0.0), px(0.0)), size(px(300.0), px(40.0)), |_, _| {
+            div().w(px(300.0)).flex().child(rolling(
+                "roll".into(),
+                shift,
+                StatusGlyph::Working,
+                words("Idle"),
+                words("Working"),
+            ))
+        });
+        f32::from(cx.debug_bounds(name).expect("drawn").size.height)
+    }
+
+    #[gpui_kit::test]
+    fn the_clip_holds_the_words_whole_line_box_and_the_row_keeps_its_height(cx: &mut TestAppContext) {
+        let row = height_of(cx, "detail-roll-row");
+        let clip = height_of(cx, "detail-roll-clip");
+        assert!((row - 16.0).abs() < 0.01, "the row's resting height is a META_LINE: {row}");
+        // A 12 point caption's line box at the golden ratio is 19.4 points: descenders live in it.
+        assert!(clip >= 12.0 * 1.618 - 0.1, "the clip is the line box and not the row: {clip}");
     }
 
     /// The width of an element `rolling` draws, a quarter of the way through a roll in a line 300 wide.
