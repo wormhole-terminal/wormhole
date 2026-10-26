@@ -36,15 +36,15 @@ pub(super) struct Slide {
 #[derive(Clone, Copy)]
 struct Motion {
     variant: ColumnMotion,
-    /// How much of the column was in when it began: the rest it left, or where it was when another slide
-    /// turned round (every variant but Classic, which starts from rest as it always did).
-    from: f32,
+    /// How the column stood when it began: the rest it left, or where it was when another slide turned
+    /// round (every variant but Classic, which starts from rest as it always did).
+    from: ColumnPose,
     duration: Duration,
     began: Instant,
 }
 
 impl Motion {
-    fn new(variant: ColumnMotion, opening: bool, from: f32, began: Instant) -> Self {
+    fn new(variant: ColumnMotion, opening: bool, from: ColumnPose, began: Instant) -> Self {
         Self { variant, from, duration: column::duration(variant, opening), began }
     }
 }
@@ -84,10 +84,10 @@ impl SlideMotion {
 }
 
 impl Slide {
-    /// How much of the column is in `now`.
-    fn shown_at(&self, now: Instant) -> f32 {
+    /// How the column stands `now`.
+    fn pose_at(&self, now: Instant) -> ColumnPose {
         let elapsed = now.saturating_duration_since(self.motion.began);
-        column::pose(self.motion.variant, self.opening, self.motion.from, elapsed).shown
+        column::pose(self.motion.variant, self.opening, self.motion.from, elapsed)
     }
 }
 
@@ -105,8 +105,8 @@ impl Workspace {
         // A slide toggled back while it is under way turns round from where the column is. Classic starts
         // from rest, as it always did.
         let from = match &self.slide {
-            Some(slide) if variant != ColumnMotion::Classic && slide.edge == edge => slide.shown_at(now),
-            _ => ColumnPose::rest(!opening).shown,
+            Some(slide) if variant != ColumnMotion::Classic && slide.edge == edge => slide.pose_at(now),
+            _ => ColumnPose::rest(!opening),
         };
         let serial = self.slide.as_ref().map_or(0, |slide| slide.serial + 1);
         let motion = Motion::new(variant, opening, from, now);

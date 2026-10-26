@@ -14,8 +14,9 @@
 //! the end), and one that goes leaves the layout at once and is covered up as it goes. Nothing here may be
 //! sampled to resize a terminal: the terminal is moved or cut, never sized, until the column has landed.
 //!
-//! A motion that is begun while another is under way starts from where the column is (`from`), so a second
-//! toggle turns it round instead of jumping. Classic is today's motion and the app starts it from rest
+//! A motion that is begun while another is under way starts from where the column is (`from`: how much of it is
+//! in and how much of its content shows), so a second toggle turns it round instead of jumping, and Content
+//! after does not flash its content on the turn. Classic is today's motion and the app starts it from rest
 //! every time, as it always did.
 
 use std::time::Duration;
@@ -74,16 +75,16 @@ pub fn duration(variant: ColumnMotion, opening: bool) -> Duration {
     }
 }
 
-/// The column `elapsed` after its motion began, `opening` or not, from `from` of it being in (0.0..=1.0:
-/// the rest it left, or where it was when another motion turned round). Over, it is exactly at rest.
+/// The column `elapsed` after its motion began, `opening` or not, from `from`: the rest it left, or where it
+/// was when another motion turned round. Over, it is exactly at rest.
 #[must_use]
-pub fn pose(variant: ColumnMotion, opening: bool, from: f32, elapsed: Duration) -> ColumnPose {
+pub fn pose(variant: ColumnMotion, opening: bool, from: ColumnPose, elapsed: Duration) -> ColumnPose {
     if elapsed >= duration(variant, opening) {
         return ColumnPose::rest(opening);
     }
     let at = elapsed.as_secs_f32() * 1000.0;
     let target = if opening { 1.0 } else { 0.0 };
-    let travel = |share: f32| from + (target - from) * share;
+    let travel = |share: f32| from.shown + (target - from.shown) * share;
     match (variant, opening) {
         (ColumnMotion::Classic, true) => {
             ColumnPose { shown: travel(EASE_OUT.ease(progress(at, 0.0, IN))), content: 1.0 }
@@ -94,14 +95,24 @@ pub fn pose(variant: ColumnMotion, opening: bool, from: f32, elapsed: Duration) 
         (ColumnMotion::SoftSpring, _) => {
             ColumnPose { shown: travel(SOFT.step(elapsed.as_secs_f32())), content: 1.0 }
         }
-        (ColumnMotion::ContentAfter, true) => ColumnPose {
-            shown: travel(EASE_OUT.ease(progress(at, 0.0, IN))),
-            content: EASE_OUT.ease(progress(at, FADE_IN_AFTER, FADE_IN)),
-        },
-        (ColumnMotion::ContentAfter, false) => ColumnPose {
-            shown: travel(EASE_IN.ease(progress(at, FADE_OUT, OUT))),
-            content: 1.0 - progress(at, 0.0, FADE_OUT),
-        },
+        (ColumnMotion::ContentAfter, true) => {
+            // From out, the content starts from nothing a little after the clip does. Turned round while the
+            // column is still partly in, it goes on from what shows and starts to fade in at once.
+            let (start, wait) = if from.shown > 0.0 { (from.content, 0.0) } else { (0.0, FADE_IN_AFTER) };
+            ColumnPose {
+                shown: travel(EASE_OUT.ease(progress(at, 0.0, IN))),
+                content: start + (1.0 - start) * EASE_OUT.ease(progress(at, wait, FADE_IN)),
+            }
+        }
+        (ColumnMotion::ContentAfter, false) => {
+            // What shows fades out before the clip moves, at the pace a whole column's content would: less of
+            // it is less time.
+            let fade = FADE_OUT * from.content;
+            ColumnPose {
+                shown: travel(EASE_IN.ease(progress(at, fade, OUT))),
+                content: from.content * (1.0 - progress(at, 0.0, fade)),
+            }
+        }
     }
 }
 
@@ -111,7 +122,7 @@ mod tests {
     use crate::view::motion::MotionChoice;
 
     fn at(variant: ColumnMotion, opening: bool, from: f32, ms: u64) -> ColumnPose {
-        pose(variant, opening, from, Duration::from_millis(ms))
+        pose(variant, opening, ColumnPose { shown: from, content: 1.0 }, Duration::from_millis(ms))
     }
 
     fn rest(opening: bool) -> f32 {
@@ -141,10 +152,10 @@ mod tests {
                 let (start, end) = (rest(!opening), rest(opening));
                 let first = at(variant, opening, start, 0);
                 assert!((first.shown - start).abs() < 1e-6, "{variant:?} {opening}: {first:?}");
-                let last = pose(variant, opening, start, duration(variant, opening));
+                let last = pose(variant, opening, ColumnPose::rest(!opening), duration(variant, opening));
                 assert_eq!(last, ColumnPose::rest(opening), "{variant:?} {opening}");
                 assert_eq!(last.shown, end);
-                let long_after = pose(variant, opening, start, Duration::from_secs(9));
+                let long_after = pose(variant, opening, ColumnPose::rest(!opening), Duration::from_secs(9));
                 assert_eq!(long_after, ColumnPose::rest(opening), "{variant:?} {opening}: it stays at rest");
             }
         }
@@ -214,15 +225,49 @@ mod tests {
         assert!(closing.shown < 1.0 && closing.shown > 0.0, "{closing:?}");
     }
 
+    fn from(shown: f32, content: f32) -> ColumnPose {
+        ColumnPose { shown, content }
+    }
+
     #[test]
     fn a_motion_that_turns_round_starts_from_where_the_column_is() {
         // Hiding a column that was two fifths in does not jump to all of it first.
         for variant in [ColumnMotion::SoftSpring, ColumnMotion::ContentAfter] {
-            let begun = pose(variant, false, 0.4, Duration::ZERO);
+            let begun = pose(variant, false, from(0.4, 1.0), Duration::ZERO);
             assert!((begun.shown - 0.4).abs() < 1e-6, "{variant:?}: {begun:?}");
         }
         // And one that was nearly in, coming in again, stays near the end.
-        let nearly = pose(ColumnMotion::SoftSpring, true, 0.9, Duration::from_millis(40));
+        let nearly = pose(ColumnMotion::SoftSpring, true, from(0.9, 1.0), Duration::from_millis(40));
         assert!(nearly.shown > 0.9 && nearly.shown <= 1.0, "{nearly:?}");
+    }
+
+    #[test]
+    fn content_after_turned_round_carries_the_content_over_and_does_not_flash_it() {
+        // Hiding a column that was coming in, its content three tenths up: it goes on from there.
+        let hiding = pose(ColumnMotion::ContentAfter, false, from(0.5, 0.3), Duration::ZERO);
+        assert_eq!((hiding.shown, hiding.content), (0.5, 0.3));
+        let mut before = 0.3;
+        for ms in 0..=40 {
+            let now = pose(ColumnMotion::ContentAfter, false, from(0.5, 0.3), Duration::from_millis(ms));
+            assert!(now.content <= before + 1e-6, "it only fades: {ms} ms {now:?}");
+            before = now.content;
+        }
+        // The fade takes three tenths of a whole one (24 ms), and the clip waits for it and no longer.
+        let waiting = pose(ColumnMotion::ContentAfter, false, from(0.5, 0.3), Duration::from_millis(20));
+        assert_eq!(waiting.shown, 0.5);
+        let gone = pose(ColumnMotion::ContentAfter, false, from(0.5, 0.3), Duration::from_millis(30));
+        assert_eq!(gone.content, 0.0);
+        assert!(gone.shown < 0.5, "{gone:?}");
+        // Showing a column that was going out, its content a quarter left: it goes on from a quarter, and
+        // the fade begins at once, where a column that was out waits 100.
+        let showing = pose(ColumnMotion::ContentAfter, true, from(0.5, 0.25), Duration::ZERO);
+        assert_eq!((showing.shown, showing.content), (0.5, 0.25));
+        let soon = pose(ColumnMotion::ContentAfter, true, from(0.5, 0.25), Duration::from_millis(50));
+        assert!(soon.content > 0.25 && soon.content < 1.0, "{soon:?}");
+        let from_out = pose(ColumnMotion::ContentAfter, true, ColumnPose::OUT, Duration::from_millis(50));
+        assert_eq!(from_out.content, 0.0, "from out it waits");
+        // A column that was fully faded and begins to come back shows nothing at the turn.
+        let flat = pose(ColumnMotion::ContentAfter, true, from(0.2, 0.0), Duration::ZERO);
+        assert_eq!(flat.content, 0.0);
     }
 }

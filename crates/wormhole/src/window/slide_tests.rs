@@ -232,3 +232,24 @@ fn the_right_panel_slides_in_each_style_too(cx: &mut TestAppContext) {
         assert!(read(cx, &window, |ws| ws.columns().panel > 0.0 && ws.in_flow(Edge::Panel)));
     }
 }
+
+#[gpui_kit::test]
+fn content_after_turned_round_carries_what_shows_of_the_content_over(cx: &mut TestAppContext) {
+    if isolate("content_after_turned_round_carries_what_shows_of_the_content_over") {
+        return;
+    }
+    let window = open(cx);
+    choose(cx, ColumnMotion::ContentAfter);
+    drive(cx, &window, |ws, _, cx| ws.toggle_sidebar(cx));
+    let began = read(cx, &window, |ws| ws.slide_motion().map(|slide| slide.pose(0.0).content));
+    assert_eq!(began, Some(1.0), "hiding starts with all of the content");
+    // Forty milliseconds in, the content is half way out; showing the column again goes on from there and
+    // does not flash it back to nothing or to all of it.
+    cx.executor().advance_clock(Duration::from_millis(40));
+    cx.run_until_parked();
+    drive(cx, &window, |ws, _, cx| ws.toggle_sidebar(cx));
+    let turned =
+        read(cx, &window, |ws| ws.slide_motion().map(|slide| slide.pose(0.0))).expect("it slides again");
+    assert!(turned.content > 0.1 && turned.content < 0.9, "{turned:?}");
+    assert!(turned.shown > 0.99, "the clip had not moved yet: {turned:?}");
+}

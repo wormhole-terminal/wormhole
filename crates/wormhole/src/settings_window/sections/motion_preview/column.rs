@@ -28,9 +28,9 @@ const SHOWS: f32 = 0.55;
 /// until it is in. Before it hides it is the picture before anything moves, which Reduce Motion holds.
 fn at(variant: wormhole_core::view::motion::ColumnMotion, t: f32) -> ColumnPose {
     if t < SHOWS {
-        column::pose(variant, false, 1.0, since(t, HIDES))
+        column::pose(variant, false, ColumnPose::IN, since(t, HIDES))
     } else {
-        column::pose(variant, true, 0.0, since(t, SHOWS))
+        column::pose(variant, true, ColumnPose::OUT, since(t, SHOWS))
     }
 }
 
