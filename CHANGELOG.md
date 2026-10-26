@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Copying says so in a small chip that drops onto the top of the terminal, in the system's own glass:
+  "Copied 3 lines", "Copied command", "Copied path". A program's copy in the terminal you're typing in
+  is said there too, instead of the bar over the terminal's last rows. VoiceOver reads it out, and
+  Reduce Motion fades it in instead.
 - `features` in config.json switches the right panel's optional tools off and on (`"history": false`);
   Changes and Usage always stay, and a key that switches nothing is said so. Settings has no page for it
   yet; the first run's walk through how much the window shows will set it.

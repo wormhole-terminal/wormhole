@@ -1,4 +1,4 @@
-//! The notice chip: a small capsule that drops from the top of a window to say what was just done ("Copied 3
+//! The notice chip: a capsule that drops onto a terminal's top edge to say what was just done ("Copied 3
 //! lines"). Call [`post`] when something really happened. This module owns each window's chip: it runs core's
 //! rules (`view::notice`: one chip per window, a new message swaps the words, the same one again is dropped),
 //! turns the notice into words from the catalog, has the platform show it (`platform::notice`: a native panel

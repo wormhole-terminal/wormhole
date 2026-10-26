@@ -1,4 +1,4 @@
-# The notice chip: the short messages that drop from the top of a window ("Copied 3 lines"). What was
+# The notice chip: the short messages that drop onto the top of a terminal ("Copied 3 lines"). What was
 # copied is never in them, only what it was and how much. VoiceOver says the same words.
 
 ## What was copied

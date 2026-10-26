@@ -59,7 +59,7 @@ pub enum FeatureFlag {
     /// 100 ms, and once when the drag ends) and a chip that says the size while the window is dragged. Off,
     /// a window resizes freely and the program is told every size at once.
     LiveResize,
-    /// A small chip that drops from the top of the window to say what was just done ("Copied 3 lines").
+    /// A small chip that drops onto the top of a terminal to say what was just done ("Copied 3 lines").
     /// Off, a copy says nothing, and a program's clipboard write keeps the pane bar's notice.
     Notices,
 }
@@ -155,7 +155,7 @@ impl FeatureFlag {
                  the window is dragged, and say the size on a chip."
             }
             Self::Notices => {
-                "A small chip that drops from the top of the window to say what was copied and similar \
+                "A small chip that drops onto the top of a terminal to say what was copied and similar \
                  short messages."
             }
         }
@@ -182,8 +182,8 @@ impl FeatureFlag {
             Self::TearOff => false,
             // Rests on what AppKit does while a person drags a window's edge, which only a real mouse tries.
             Self::LiveResize => false,
-            // New: off until it has been through its visual check and the user has tried it.
-            Self::Notices => false,
+            // Through its visual check (small windows, narrow splits, both appearances) and approved.
+            Self::Notices => true,
         }
     }
 }
@@ -329,14 +329,15 @@ mod tests {
     }
 
     #[test]
-    fn notices_is_on_in_a_dev_build_and_off_in_a_release() {
+    fn notices_is_on_in_a_dev_build_and_in_a_release() {
         let flag = FeatureFlag::Notices;
         assert_eq!(flag.key(), "notices");
-        assert!(!flag.released());
+        assert!(flag.released());
         assert!(enabled_in(flag, &BTreeMap::new(), DEV));
-        let on = BTreeMap::from([("notices".to_string(), true)]);
-        assert!(!enabled_in(flag, &on, RELEASE), "a release ignores the map");
-        assert!(enabled_in(flag, &on, FlagMode::Unstable), "a tester can turn it on");
+        assert!(enabled_in(flag, &BTreeMap::new(), RELEASE));
+        let off = BTreeMap::from([("notices".to_string(), false)]);
+        assert!(enabled_in(flag, &off, RELEASE), "a release ignores the map");
+        assert!(!enabled_in(flag, &off, FlagMode::Unstable), "a tester can turn it off");
         assert_eq!(FeatureFlag::from_key("notices"), Some(flag));
     }
 
