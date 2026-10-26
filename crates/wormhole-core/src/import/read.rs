@@ -2,12 +2,18 @@
 //! deep includes go, and a guard against a file that includes itself. Every read of the domain goes
 //! through a [`Reader`], so what a hostile dotfiles repository can cost is bounded in one place.
 //! Nothing is written, and nothing in a file is run.
+//!
+//! A source's own settings files are read wherever the system puts them. A file the settings *name*
+//! (an include, an import, a theme, a preferences folder) is read only inside the person's home
+//! (`*_in_home`): with every link resolved it must still be there, so a dotfiles repository cannot
+//! point the importer at `/etc` or at a network volume. The check is by path first, which touches
+//! nothing, and then by `storage::files`'s `LinkPolicy::Within`.
 
 use std::io;
 use std::path::{Path, PathBuf};
 
 use super::proposal::{Reason, Skipped};
-use crate::storage::files::{self, LinkPolicy};
+use crate::storage::files::{self, LinkPolicy, Refusal};
 
 /// Largest settings file read; real ones are a few KiB.
 pub(crate) const MAX_FILE_BYTES: u64 = 1024 * 1024;
@@ -16,8 +22,19 @@ pub(crate) const MAX_PLIST_BYTES: u64 = 16 * 1024 * 1024;
 /// Most files one source reads, its includes and themes counted.
 pub(crate) const MAX_FILES: usize = 32;
 
+/// Where a file may be read from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Scope {
+    /// Where the source keeps it: the person's own settings file, or an app's own folder.
+    Anywhere,
+    /// A file the settings name: inside the home folder only.
+    Home,
+}
+
 /// Reads one source's files and remembers which, and what went wrong.
 pub(crate) struct Reader {
+    /// The person's home: where a file the settings name must be.
+    home: PathBuf,
     /// The files that were there, in the order they were read.
     files: Vec<PathBuf>,
     skipped: Vec<Skipped>,
@@ -27,15 +44,36 @@ pub(crate) struct Reader {
 }
 
 impl Reader {
-    /// A reader that follows includes at most `max_depth` files deep.
-    pub(crate) fn new(max_depth: usize) -> Self {
-        Self { files: Vec::new(), skipped: Vec::new(), active: Vec::new(), max_depth }
+    /// A reader for files under `home` that follows includes at most `max_depth` files deep.
+    pub(crate) fn new(home: &Path, max_depth: usize) -> Self {
+        Self {
+            home: home.to_path_buf(),
+            files: Vec::new(),
+            skipped: Vec::new(),
+            active: Vec::new(),
+            max_depth,
+        }
     }
 
-    /// A file's text. `None` when it is not there (not a problem: most includes are optional) or
-    /// cannot be read (which is noted).
+    /// Whether `path` is below the home folder by its name. A `..` or a link inside it can still
+    /// lead out; the read itself checks that.
+    pub(crate) fn names_home(&self, path: &Path) -> bool {
+        path.starts_with(&self.home)
+    }
+
+    /// A source's own file's text. `None` when it is not there (not a problem: most includes are
+    /// optional) or cannot be read (which is noted).
     pub(crate) fn text(&mut self, path: &Path) -> Option<String> {
-        let bytes = self.bytes(path, MAX_FILE_BYTES)?;
+        self.text_in(path, Scope::Anywhere)
+    }
+
+    /// The text of a file the settings name: inside the home folder only.
+    pub(crate) fn text_in_home(&mut self, path: &Path) -> Option<String> {
+        self.text_in(path, Scope::Home)
+    }
+
+    fn text_in(&mut self, path: &Path, scope: Scope) -> Option<String> {
+        let bytes = self.bytes_in(path, MAX_FILE_BYTES, scope)?;
         match String::from_utf8(bytes) {
             Ok(text) => Some(text),
             Err(_) => {
@@ -45,18 +83,40 @@ impl Reader {
         }
     }
 
-    /// A file's bytes, at most `cap` of them.
+    /// A source's own file's bytes, at most `cap` of them.
     pub(crate) fn bytes(&mut self, path: &Path, cap: u64) -> Option<Vec<u8>> {
+        self.bytes_in(path, cap, Scope::Anywhere)
+    }
+
+    /// [`bytes`](Self::bytes) of a file the settings name.
+    pub(crate) fn bytes_in_home(&mut self, path: &Path, cap: u64) -> Option<Vec<u8>> {
+        self.bytes_in(path, cap, Scope::Home)
+    }
+
+    pub(crate) fn bytes_in(&mut self, path: &Path, cap: u64, scope: Scope) -> Option<Vec<u8>> {
         if self.files.len() >= MAX_FILES {
             self.note(path, Reason::IncludeLimit);
             return None;
         }
-        match files::read_capped(path, cap, LinkPolicy::Follow) {
+        if scope == Scope::Home && !self.names_home(path) {
+            // By name alone: nothing outside the home is touched, not even to see if it is there.
+            self.note(path, Reason::OutsideHome);
+            return None;
+        }
+        let policy = match scope {
+            Scope::Anywhere => LinkPolicy::Follow,
+            Scope::Home => LinkPolicy::Within(&self.home),
+        };
+        match files::read_capped(path, cap, policy) {
             Ok(bytes) => {
                 self.files.push(path.to_path_buf());
                 Some(bytes)
             }
             Err(err) if err.kind() == io::ErrorKind::NotFound => None,
+            Err(err) if matches!(files::refusal(&err), Some(Refusal::OutsideRoot(_))) => {
+                self.note(path, Reason::OutsideHome);
+                None
+            }
             Err(err) => {
                 tracing::debug!("import: {}: {err}", path.display());
                 self.files.push(path.to_path_buf());
@@ -67,8 +127,19 @@ impl Reader {
     }
 
     /// A file that may include others: read it, and run `read` over its text with this reader, which
-    /// knows the file is being read, so an include of it, or too deep a chain, ends there.
-    pub(crate) fn nested<T>(&mut self, path: &Path, read: impl FnOnce(&mut Self, String) -> T) -> Option<T> {
+    /// knows the file is being read, so an include of it, or too deep a chain, ends there. A source's
+    /// own file is read in [`Scope::Anywhere`], one the settings name (an include, an import) in
+    /// [`Scope::Home`].
+    pub(crate) fn nested_in<T>(
+        &mut self,
+        path: &Path,
+        scope: Scope,
+        read: impl FnOnce(&mut Self, String) -> T,
+    ) -> Option<T> {
+        if scope == Scope::Home && !self.names_home(path) {
+            self.note(path, Reason::OutsideHome);
+            return None;
+        }
         let real = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
         if self.active.contains(&real) {
             self.note(path, Reason::IncludeCycle);
@@ -78,7 +149,7 @@ impl Reader {
             self.note(path, Reason::IncludeLimit);
             return None;
         }
-        let text = self.text(path)?;
+        let text = self.text_in(path, scope)?;
         self.active.push(real);
         let out = read(self, text);
         self.active.pop();

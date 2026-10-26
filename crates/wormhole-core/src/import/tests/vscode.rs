@@ -90,16 +90,24 @@ fn a_full_settings_file() {
 }
 
 #[test]
-fn the_editors_font_is_the_terminals_and_pixel_line_heights_are_multipliers() {
+fn the_editors_font_is_the_terminals_and_the_line_height_is_only_a_multiplier() {
     let fixture = Fixture::new();
     fixture.home(
         "Library/Application Support/Code/User/settings.json",
-        r#"{ "editor.fontFamily": "monospace, 'JetBrains Mono'", "terminal.integrated.fontSize": 10, "terminal.integrated.lineHeight": 15 }"#,
+        r#"{ "editor.fontFamily": "monospace, 'JetBrains Mono'", "terminal.integrated.fontSize": 10, "terminal.integrated.lineHeight": 1.5 }"#,
     );
     let p = fixture.found(Source::VsCode).proposal;
     // The generic family is not a font.
     assert_eq!(font(&p).0, "JetBrains Mono");
     assert!((number(&p, Setting::LineHeight) - 1.5).abs() < 1e-6);
+
+    // 15 is 15 times the font, not 15 pixels: it can only be Wormhole's tallest.
+    fixture.home(
+        "Library/Application Support/Code/User/settings.json",
+        r#"{ "terminal.integrated.fontSize": 10, "terminal.integrated.lineHeight": 15 }"#,
+    );
+    let p = fixture.found(Source::VsCode).proposal;
+    assert_eq!(number(&p, Setting::LineHeight), 2.0);
 }
 
 #[test]

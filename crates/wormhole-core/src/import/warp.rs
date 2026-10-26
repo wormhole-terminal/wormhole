@@ -2,41 +2,39 @@
 //! file. Warp's own themes are inside the app, so a theme chosen by name is not in any file. Older
 //! Warps kept their settings in the preferences, which is not read.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use toml::{Table, Value};
 
 use super::env::Env;
-use super::locations;
 use super::proposal::{FontName, Proposal, Reason, Setting, SettingValue, SkippedKind};
 use super::read::Reader;
 use super::shell;
 use super::source::Source;
-use super::table::{at, float, shown};
+use super::toml_value::{at, float, shown};
 use super::units;
 use super::warp_theme;
 use crate::config::OptionAsMeta;
 
 /// Read Warp's settings file and its custom themes and say what they set.
-pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
-    let Some(path) = locations::find(Source::Warp, env).into_iter().next() else {
-        return Proposal::default();
-    };
-    let Some(text) = files.text(&path) else { return Proposal::default() };
+pub(crate) fn import(env: &Env, files: &mut Reader, located: &[PathBuf]) -> Proposal {
+    let Some(path) = located.first() else { return Proposal::default() };
+    let Some(text) = files.text(path) else { return Proposal::default() };
     let table: Table = match text.parse() {
         Ok(table) => table,
         Err(err) => {
             tracing::debug!("import: {}: {err}", path.display());
-            files.note(&path, Reason::Unreadable);
+            files.note(path, Reason::Unreadable);
             return Proposal::default();
         }
     };
     let themes_dir = path.parent().unwrap_or(Path::new("/")).join("themes");
     let mut proposal = propose(env, &table, &mut |theme: &Table| {
-        // A custom theme names its file; a relative one is in the themes folder.
+        // A custom theme names its file; a relative one is in the themes folder. It is the home
+        // folder's files only that are read.
         let file = theme.get("path").and_then(Value::as_str)?;
         let full = env.include_path(file, &themes_dir);
-        files.text(&full)
+        files.text_in_home(&full)
     });
     // The themes come in by the closure; put the settings in order after.
     proposal.values.sort_by_key(|proposed| proposed.setting);
@@ -168,10 +166,7 @@ fn propose_themes(
                 let named = custom.get("name").and_then(Value::as_str).map(str::to_string);
                 let name = named.or_else(|| warp_theme::name(&text)).unwrap_or_default();
                 let label = format!("{} {name}", Source::Warp.brand());
-                match warp_theme::palette(label.trim(), &text) {
-                    Some(theme) => proposal.propose(setting, from, SettingValue::Palette(theme)),
-                    None => proposal.skip(path, Reason::UnsupportedValue),
-                }
+                warp_theme::propose(proposal, setting, from, label.trim(), &text);
             }
             _ => proposal.skip(path, Reason::UnsupportedValue),
         }

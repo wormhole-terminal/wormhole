@@ -55,7 +55,39 @@ pub(crate) struct Builder {
     pub(crate) palette: [Option<u32>; 16],
 }
 
+/// The eight ANSI colours' names in palette order (the bright ones come after the normal ones, in
+/// the same order). Sources that write them capitalised or in another case derive that from these.
+pub(crate) const ANSI_NAMES: [&str; 8] =
+    ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"];
+
 impl Builder {
+    /// Whether the two colours every palette stands on are set. Anything less is a few colours on
+    /// Wormhole's defaults, not a palette another terminal's person chose, so the importer proposes
+    /// a palette only when this holds (the one rule every source shares).
+    pub(crate) fn has_base(&self) -> bool {
+        self.foreground.is_some() && self.background.is_some()
+    }
+
+    /// Whether any colour is set at all.
+    pub(crate) fn has_any(&self) -> bool {
+        self.foreground.is_some()
+            || self.background.is_some()
+            || self.cursor.is_some()
+            || self.cursor_text.is_some()
+            || self.selection_background.is_some()
+            || self.selection_foreground.is_some()
+            || self.palette.iter().any(Option::is_some)
+    }
+
+    /// Fill the sixteen palette colours: `color(bright, name)` gives the colour of the ANSI colour
+    /// `name` (see [`ANSI_NAMES`]), in its bright variant or not.
+    pub(crate) fn fill_ansi(&mut self, mut color: impl FnMut(bool, &str) -> Option<u32>) {
+        for (i, name) in ANSI_NAMES.iter().enumerate() {
+            self.palette[i] = color(false, name);
+            self.palette[i + 8] = color(true, name);
+        }
+    }
+
     pub(crate) fn finish(self, name: &str) -> Theme {
         let foreground = self.foreground.unwrap_or(DEFAULT_FG);
         let background = self.background.unwrap_or(DEFAULT_BG);
@@ -110,6 +142,11 @@ pub(crate) fn parse_hex(s: &str) -> Result<u32, String> {
 // ---------------------------------------------------------------- Ghostty
 
 pub fn parse_ghostty(name: &str, text: &str) -> Result<Theme, String> {
+    ghostty_builder(name, text).map(|builder| builder.finish(name))
+}
+
+/// The colours a Ghostty theme text sets, before the defaults are applied.
+pub(crate) fn ghostty_builder(name: &str, text: &str) -> Result<Builder, String> {
     let mut b = Builder::default();
     for (lineno, raw) in text.lines().enumerate() {
         let line = raw.trim();
@@ -143,7 +180,7 @@ pub fn parse_ghostty(name: &str, text: &str) -> Result<Theme, String> {
             _ => {} // unrelated ghostty config keys are ignored
         }
     }
-    Ok(b.finish(name))
+    Ok(b)
 }
 
 // ---------------------------------------------------------------- iTerm2
@@ -152,7 +189,12 @@ pub fn parse_iterm(name: &str, xml: &str) -> Result<Theme, String> {
     let value =
         plist::Value::from_reader_xml(xml.as_bytes()).map_err(|e| format!("{name}: invalid plist: {e}"))?;
     let dict = value.as_dictionary().ok_or_else(|| format!("{name}: plist root is not a dictionary"))?;
+    iterm_builder(name, dict).map(|builder| builder.finish(name))
+}
 
+/// The colours of a dictionary of iTerm2 colour entries (an `.itermcolors` file, or a profile's
+/// colours), before the defaults are applied.
+pub(crate) fn iterm_builder(name: &str, dict: &plist::Dictionary) -> Result<Builder, String> {
     let color = |key: &str| -> Result<Option<u32>, String> {
         let Some(entry) = dict.get(key) else { return Ok(None) };
         let d = entry.as_dictionary().ok_or_else(|| format!("{name}: {key:?} is not a dictionary"))?;
@@ -166,6 +208,9 @@ pub fn parse_iterm(name: &str, xml: &str) -> Result<Theme, String> {
                 Some(_) => return Err(format!("{name}: {key:?} {c} is not a number")),
                 None => return Err(format!("{name}: {key:?} missing {c}")),
             };
+            if !v.is_finite() {
+                return Err(format!("{name}: {key:?} {c} is not a number"));
+            }
             Ok((v.clamp(0.0, 1.0) * 255.0).round() as u32)
         };
         // "Color Space" (sRGB / Calibrated / P3) is accepted but not converted.
@@ -185,7 +230,7 @@ pub fn parse_iterm(name: &str, xml: &str) -> Result<Theme, String> {
     for i in 0..16 {
         b.palette[i] = color(&format!("Ansi {i} Color"))?;
     }
-    Ok(b.finish(name))
+    Ok(b)
 }
 
 // ---------------------------------------------------------------- Alacritty
@@ -193,10 +238,15 @@ pub fn parse_iterm(name: &str, xml: &str) -> Result<Theme, String> {
 pub fn parse_alacritty(name: &str, toml_text: &str) -> Result<Theme, String> {
     let root: toml::Table = toml_text.parse().map_err(|e| format!("{name}: invalid TOML: {e}"))?;
     let colors = match root.get("colors") {
-        Some(toml::Value::Table(t)) => t.clone(),
+        Some(toml::Value::Table(t)) => t,
         Some(_) => return Err(format!("{name}: `colors` is not a table")),
         None => return Err(format!("{name}: missing [colors] section")),
     };
+    alacritty_builder(name, colors).map(|builder| builder.finish(name))
+}
+
+/// The colours of an Alacritty `[colors]` table, before the defaults are applied.
+pub(crate) fn alacritty_builder(name: &str, colors: &toml::Table) -> Result<Builder, String> {
     let get = |section: &str, key: &str| -> Result<Option<u32>, String> {
         let Some(sec) = colors.get(section) else { return Ok(None) };
         let sec = sec.as_table().ok_or_else(|| format!("{name}: colors.{section} is not a table"))?;
@@ -214,7 +264,6 @@ pub fn parse_alacritty(name: &str, toml_text: &str) -> Result<Theme, String> {
         }
     };
 
-    const NAMES: [&str; 8] = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"];
     let mut b = Builder {
         foreground: get("primary", "foreground")?,
         background: get("primary", "background")?,
@@ -224,11 +273,11 @@ pub fn parse_alacritty(name: &str, toml_text: &str) -> Result<Theme, String> {
         selection_foreground: get("selection", "text")?,
         ..Default::default()
     };
-    for (i, n) in NAMES.iter().enumerate() {
+    for (i, n) in ANSI_NAMES.iter().enumerate() {
         b.palette[i] = get("normal", n)?;
         b.palette[i + 8] = get("bright", n)?;
     }
-    Ok(b.finish(name))
+    Ok(b)
 }
 
 // ---------------------------------------------------------------- Loading

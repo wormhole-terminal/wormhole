@@ -245,6 +245,27 @@ fn the_terminal_font_size_stays_within_the_one_range() {
 }
 
 #[test]
+fn a_number_that_is_not_one_becomes_the_default_not_a_nan_that_clamp_keeps() {
+    let defaults = Settings::default();
+    for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+        let kept = Settings {
+            font_size: bad,
+            ui_font_size: bad,
+            code_font_size: bad,
+            line_height: bad,
+            opacity: bad,
+            ..Settings::default()
+        }
+        .sanitized();
+        assert_eq!(kept.font_size, defaults.font_size, "{bad}");
+        assert_eq!(kept.ui_font_size, defaults.ui_font_size, "{bad}");
+        assert_eq!(kept.code_font_size, defaults.code_font_size, "{bad}");
+        assert_eq!(kept.line_height, defaults.line_height, "{bad}");
+        assert_eq!(kept.opacity, defaults.opacity, "{bad}");
+    }
+}
+
+#[test]
 fn a_command_notification_waits_between_5_seconds_and_5_minutes() {
     let with = |after| Settings { notify_command_after: after, ..Settings::default() }.sanitized();
     assert_eq!(with(0).notify_command_after, 5);

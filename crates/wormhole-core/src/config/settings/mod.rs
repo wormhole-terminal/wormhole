@@ -451,6 +451,19 @@ impl Settings {
         self.theme_primary = Some(self.uses_theme_primary());
         // The same for the title row: the old switches are read once, into the list.
         self.title_row = Some(self.title_row().into_owned());
+        // `clamp` keeps a NaN, and an infinity is as bad: a number that isn't one is the default.
+        let defaults = Settings::default();
+        for (value, default) in [
+            (&mut self.font_size, defaults.font_size),
+            (&mut self.ui_font_size, defaults.ui_font_size),
+            (&mut self.code_font_size, defaults.code_font_size),
+            (&mut self.line_height, defaults.line_height),
+            (&mut self.opacity, defaults.opacity),
+        ] {
+            if !value.is_finite() {
+                *value = default;
+            }
+        }
         for slot in FontSlot::ALL {
             self.step_slot_size(slot, 0.0);
         }

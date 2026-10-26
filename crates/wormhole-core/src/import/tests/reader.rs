@@ -29,7 +29,7 @@ fn a_directory_where_a_file_should_be_is_unreadable_and_a_missing_file_is_quiet(
     // `locations` only lists files, so a folder of that name means there is no Ghostty config.
     assert!(crate::import::scan_one(&fixture.env, Source::Ghostty).is_none());
 
-    let mut reader = Reader::new(4);
+    let mut reader = Reader::new(fixture.root(), 4);
     assert!(reader.text(&fixture.root().join("nowhere")).is_none());
     let (files, skipped) = reader.finish();
     assert!(files.is_empty() && skipped.is_empty());

@@ -3,10 +3,12 @@
 //! person's own `workbench.colorCustomizations`; the colours of the active colour theme are in the
 //! theme's extension and are not read.
 
+use std::path::PathBuf;
+
 use serde_json::Value;
 
 use super::env::Env;
-use super::locations;
+use super::json_value::{at, shown};
 use super::proposal::{FontName, Proposal, Reason, Setting, SettingValue, SkippedKind};
 use super::read::Reader;
 use super::shell;
@@ -16,23 +18,15 @@ use crate::config::OptionAsMeta;
 use crate::storage::jsonc;
 use crate::theme::{Builder, parse_hex};
 
-/// What the terminal draws when `terminal.integrated.fontSize` is not set (on a Mac).
-const DEFAULT_FONT_SIZE: f32 = 12.0;
-
-/// The ANSI colours' names in palette order, normal then bright.
-const ANSI: [&str; 8] = ["Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White"];
-
 /// Read VS Code's user settings and say what they set for the terminal.
-pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
-    let Some(path) = locations::find(Source::VsCode, env).into_iter().next() else {
-        return Proposal::default();
-    };
-    let Some(text) = files.text(&path) else { return Proposal::default() };
+pub(crate) fn import(env: &Env, files: &mut Reader, located: &[PathBuf]) -> Proposal {
+    let Some(path) = located.first() else { return Proposal::default() };
+    let Some(text) = files.text(path) else { return Proposal::default() };
     match jsonc::parse::<Value>(&text) {
         Ok(root) => propose(env, &root),
         Err(err) => {
             tracing::debug!("import: {}: {err}", path.display());
-            files.note(&path, Reason::Unreadable);
+            files.note(path, Reason::Unreadable);
             Proposal::default()
         }
     }
@@ -41,12 +35,7 @@ pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
 /// A setting by its name: the flat key VS Code writes (`terminal.integrated.fontSize`), or the same
 /// path as nested objects.
 fn get<'a>(root: &'a Value, key: &str) -> Option<&'a Value> {
-    root.get(key).or_else(|| key.split('.').try_fold(root, |value, part| value.get(part)))
-}
-
-/// `key = value`, for the review list.
-fn shown(key: &str, value: &Value) -> String {
-    format!("{key} = {value}")
+    root.get(key).or_else(|| at(root, key))
 }
 
 /// The first family of a CSS font list (`'Fira Code', Menlo, monospace`) that names a font and not
@@ -90,24 +79,19 @@ pub(crate) fn propose(env: &Env, root: &Value) -> Proposal {
         );
     }
     // Sizes are CSS pixels, which are points on a Mac.
-    let mut size = DEFAULT_FONT_SIZE;
     if let Some(value) = get(root, &key("fontSize")) {
-        match value.as_f64() {
-            Some(px) => {
-                size = px as f32;
-                proposal.propose(
-                    Setting::FontSize,
-                    shown(&key("fontSize"), value),
-                    SettingValue::Number(units::font_size(size)),
-                );
-            }
+        match value.as_f64().and_then(units::finite) {
+            Some(px) => proposal.propose(
+                Setting::FontSize,
+                shown(&key("fontSize"), value),
+                SettingValue::Number(units::font_size(px)),
+            ),
             None => proposal.skip(key("fontSize"), Reason::UnsupportedValue),
         }
     }
-    // Under 8 the line height is a multiple of the font size, from 8 up it is in pixels.
+    // The line height is a multiplier of the font size (0 is the default, which is 1).
     if let Some(value) = get(root, &key("lineHeight")) {
-        let multiplier =
-            value.as_f64().filter(|n| *n > 0.0).map(|n| if n < 8.0 { n as f32 } else { n as f32 / size });
+        let multiplier = value.as_f64().filter(|n| *n > 0.0).and_then(units::finite);
         match multiplier {
             Some(m) => proposal.propose(
                 Setting::LineHeight,
@@ -263,21 +247,15 @@ fn propose_palette(proposal: &mut Proposal, root: &Value) {
         selection_foreground: color("terminal.selectionForeground"),
         ..Builder::default()
     };
-    for (i, ansi) in ANSI.iter().enumerate() {
-        builder.palette[i] = color(&format!("terminal.ansi{ansi}"));
-        builder.palette[i + 8] = color(&format!("terminal.ansiBright{ansi}"));
-    }
-    if builder.foreground.is_some() && builder.background.is_some() {
-        let label = match theme_name {
-            Some(name) => format!("{} {name}", Source::VsCode.brand()),
-            None => Source::VsCode.brand().to_string(),
-        };
-        proposal.propose(
-            Setting::Theme,
-            "workbench.colorCustomizations",
-            SettingValue::Palette(builder.finish(&label)),
-        );
-    }
+    builder.fill_ansi(|bright, ansi| {
+        let ansi = units::capitalized(ansi);
+        color(&format!("terminal.ansi{}{ansi}", if bright { "Bright" } else { "" }))
+    });
+    let label = match theme_name {
+        Some(name) => format!("{} {name}", Source::VsCode.brand()),
+        None => Source::VsCode.brand().to_string(),
+    };
+    proposal.propose_palette(Setting::Theme, "workbench.colorCustomizations", &label, builder);
     if let Some(name) = theme_name {
         proposal.skip("workbench.colorTheme", Reason::BuiltInTheme(name.to_string()));
     }

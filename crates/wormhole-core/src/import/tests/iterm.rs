@@ -179,7 +179,7 @@ fn light_and_dark_colours_make_a_pair_and_p3_is_converted() {
 #[test]
 fn a_custom_preferences_folder_takes_over() {
     let fixture = Fixture::new();
-    let folder = fixture.root().join("synced");
+    let folder = fixture.env.home.join("synced");
     write(
         &fixture,
         dict(vec![
@@ -234,4 +234,93 @@ fn unlimited_scrollback_and_both_option_keys() {
     let p = fixture.found(Source::ITerm2).proposal;
     assert_eq!(count(&p, Setting::ScrollbackLines), 200_000);
     assert_eq!(meta(&p), OptionAsMeta::Both);
+}
+
+#[test]
+fn a_preferences_folder_outside_the_home_or_not_absolute_is_not_followed() {
+    let fixture = Fixture::new();
+    let synced = fixture.root().join("synced");
+    let mut custom = Vec::new();
+    Value::Dictionary(root(vec![dict(profile("g1", "Synced"))], "g1"))
+        .to_writer_binary(&mut custom)
+        .expect("plist");
+    fixture.bytes(&synced.join("com.googlecode.iterm2.plist"), &custom);
+    let mut own = profile("g2", "Own");
+    own[2] = ("Normal Font", string("Monaco 9"));
+    let mut main = root(vec![dict(own)], "g2");
+    main.insert("LoadPrefsFromCustomFolder".into(), Value::Boolean(true));
+    main.insert("PrefsCustomFolder".into(), string(&synced.to_string_lossy()));
+    write(&fixture, main.clone());
+    let found = fixture.found(Source::ITerm2);
+    // The main file stays the one read; the folder outside is said, not opened.
+    assert_eq!(number(&found.proposal, Setting::FontSize), 9.0);
+    assert!(skipped(&found.proposal, "synced", &Reason::OutsideHome));
+    assert_eq!(found.files.len(), 1);
+
+    main.insert("PrefsCustomFolder".into(), string("synced"));
+    write(&fixture, main);
+    let found = fixture.found(Source::ITerm2);
+    assert_eq!(number(&found.proposal, Setting::FontSize), 9.0);
+    assert!(skipped(&found.proposal, "PrefsCustomFolder", &Reason::UnsupportedValue));
+}
+
+#[test]
+fn a_property_list_nested_deeper_than_any_real_one_is_unreadable() {
+    let fixture = Fixture::new();
+    let deep = 200_000;
+    let xml = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><plist version=\"1.0\"><dict><key>x</key>{}{}</dict></plist>",
+        "<array>".repeat(deep),
+        "</array>".repeat(deep)
+    );
+    fixture.bytes(&fixture.env.home.join("Library/Preferences/com.googlecode.iterm2.plist"), xml.as_bytes());
+    let found = fixture.found(Source::ITerm2);
+    assert!(found.proposal.values.is_empty());
+    assert!(skipped(&found.proposal, "com.googlecode.iterm2.plist", &Reason::Unreadable));
+}
+
+#[test]
+fn the_nesting_limit_is_the_edge_of_what_real_files_do() {
+    use crate::import::plist_value::{MAX_NESTING, parse};
+    let nested = |levels: usize| {
+        let mut value = Value::Integer(1.into());
+        for _ in 0..levels {
+            value = Value::Array(vec![value]);
+        }
+        let mut bytes = Vec::new();
+        value.to_writer_xml(&mut bytes).expect("xml");
+        bytes
+    };
+    assert!(parse(&nested(MAX_NESTING)).is_some());
+    assert!(parse(&nested(MAX_NESTING + 1)).is_none());
+    assert!(parse(b"not a property list").is_none());
+}
+
+#[test]
+fn a_custom_shell_is_one_path_even_with_spaces_and_a_command_is_words() {
+    let fixture = Fixture::new();
+    let mut custom = profile("g1", "Default");
+    custom[12] = ("Custom Command", string("Custom Shell"));
+    custom[13] = ("Command", string("/Users/me/My Tools/bin/fish"));
+    write(&fixture, root(vec![dict(custom)], "g1"));
+    let p = fixture.found(Source::ITerm2).proposal;
+    match &p.get(Setting::ShellProfile).expect("a shell profile").value {
+        SettingValue::Profile(profile) => {
+            assert_eq!(profile.command, "/Users/me/My Tools/bin/fish");
+            assert_eq!(profile.args, None, "no word of the path became an argument");
+        }
+        other => panic!("{other:?}"),
+    }
+}
+
+#[test]
+fn numbers_that_are_text_for_nan_or_infinity_are_not_taken() {
+    let fixture = Fixture::new();
+    let mut odd = profile("g1", "Default");
+    odd[3] = ("Vertical Spacing", string("nan"));
+    odd[5] = ("Transparency", string("inf"));
+    write(&fixture, root(vec![dict(odd)], "g1"));
+    let p = fixture.found(Source::ITerm2).proposal;
+    assert!(p.get(Setting::LineHeight).is_none());
+    assert!(p.get(Setting::Opacity).is_none());
 }

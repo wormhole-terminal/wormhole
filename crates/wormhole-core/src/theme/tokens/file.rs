@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::model::{Appearance, Metrics};
 use crate::storage::jsonc;
+use crate::theme::ANSI_NAMES;
 
 /// Terminal overrides. Keys: `foreground`, `background`, `cursor`,
 /// `cursor_text`, `selection_background`, `selection_foreground`, and `ansi`
@@ -30,8 +31,6 @@ pub struct TerminalFile {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub ansi: BTreeMap<String, String>,
 }
-
-const ANSI_NAMES: [&str; 8] = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"];
 
 impl TerminalFile {
     pub fn is_empty(&self) -> bool {

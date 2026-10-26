@@ -39,18 +39,20 @@ pub fn scan_one(env: &Env, source: Source) -> Option<Found> {
     if located.is_empty() {
         return None;
     }
-    let mut reader =
-        Reader::new(if source == Source::Alacritty { alacritty::MAX_DEPTH } else { DEFAULT_DEPTH });
+    let mut reader = Reader::new(
+        &env.home,
+        if source == Source::Alacritty { alacritty::MAX_DEPTH } else { DEFAULT_DEPTH },
+    );
     let mut proposal = match source {
-        Source::Ghostty => ghostty::import(env, &mut reader),
-        Source::ITerm2 => iterm::import(env, &mut reader),
-        Source::TerminalApp => terminal_app::import(env, &mut reader),
-        Source::Alacritty => alacritty::import(env, &mut reader),
-        Source::Kitty => kitty::import(env, &mut reader),
-        Source::WezTerm => wezterm::import(env, &mut reader),
-        Source::Warp => warp::import(env, &mut reader),
-        Source::Zed => zed::import(env, &mut reader),
-        Source::VsCode => vscode::import(env, &mut reader),
+        Source::Ghostty => ghostty::import(env, &mut reader, &located),
+        Source::ITerm2 => iterm::import(env, &mut reader, &located),
+        Source::TerminalApp => terminal_app::import(env, &mut reader, &located),
+        Source::Alacritty => alacritty::import(env, &mut reader, &located),
+        Source::Kitty => kitty::import(env, &mut reader, &located),
+        Source::WezTerm => wezterm::import(env, &mut reader, &located),
+        Source::Warp => warp::import(env, &mut reader, &located),
+        Source::Zed => zed::import(env, &mut reader, &located),
+        Source::VsCode => vscode::import(env, &mut reader, &located),
     };
     let (mut files, file_problems) = reader.finish();
     // The problems of a file come before the keys of the rest.

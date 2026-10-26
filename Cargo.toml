@@ -27,7 +27,10 @@ fluent-langneg = "0.13"
 fluent-syntax = "0.12"
 intl_pluralrules = "7"
 libc = "0.2"
-plist = { version = "1.10.1", default-features = false }
+# The unstable feature only makes `plist::stream` public: the importer walks a property list's events,
+# with no value built, to refuse one nested deeper than any real file (`import/plist_value.rs`). The
+# tilde keeps it on the minor release whose API that is.
+plist = { version = "~1.10.1", default-features = false, features = ["enable_unstable_features_that_may_break_with_minor_version_bumps"] }
 rusqlite = { version = "0.40.2", features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"

@@ -4,6 +4,7 @@
 mod alacritty;
 mod apply;
 mod ghostty;
+mod hostile;
 mod iterm;
 mod kitty;
 mod reader;

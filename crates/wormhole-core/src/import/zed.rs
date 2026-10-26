@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 
 use super::env::Env;
+use super::json_value::{at, shown};
 use super::locations;
 use super::proposal::{FontName, Proposal, Reason, Setting, SettingValue, SkippedKind};
 use super::read::Reader;
@@ -18,20 +19,15 @@ use crate::config::OptionAsMeta;
 use crate::storage::jsonc;
 use crate::theme::{Builder, parse_hex};
 
-/// The ANSI colours' names in palette order, normal then bright.
-const ANSI: [&str; 8] = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"];
-
 /// Read Zed's settings and the theme files they point at and say what they set.
-pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
-    let Some(path) = locations::find(Source::Zed, env).into_iter().next() else {
-        return Proposal::default();
-    };
-    let Some(text) = files.text(&path) else { return Proposal::default() };
+pub(crate) fn import(env: &Env, files: &mut Reader, located: &[PathBuf]) -> Proposal {
+    let Some(path) = located.first() else { return Proposal::default() };
+    let Some(text) = files.text(path) else { return Proposal::default() };
     let root: Value = match jsonc::parse(&text) {
         Ok(root) => root,
         Err(err) => {
             tracing::debug!("import: {}: {err}", path.display());
-            files.note(&path, Reason::Unreadable);
+            files.note(path, Reason::Unreadable);
             return Proposal::default();
         }
     };
@@ -74,7 +70,8 @@ fn find_themes(env: &Env, files: &mut Reader, wanted: &[String]) -> BTreeMap<Str
         if found.len() == wanted.len() || !files.has_room() {
             break;
         }
-        let Some(text) = files.text(&path) else { continue };
+        // Theme files are found in folders of the home; a link out of it is not followed.
+        let Some(text) = files.text_in_home(&path) else { continue };
         let Ok(file) = jsonc::parse::<Value>(&text) else { continue };
         for theme in file.get("themes").and_then(Value::as_array).into_iter().flatten() {
             let name = theme.get("name").and_then(Value::as_str);
@@ -113,15 +110,6 @@ fn json_files(dir: &Path) -> Vec<PathBuf> {
     out
 }
 
-fn at<'a>(root: &'a Value, path: &str) -> Option<&'a Value> {
-    path.split('.').try_fold(root, |value, part| value.get(part))
-}
-
-/// `path = value`, for the review list.
-fn shown(path: &str, value: &Value) -> String {
-    format!("{path} = {value}")
-}
-
 /// What the settings say; `themes` holds the theme objects found by name.
 pub(crate) fn propose(env: &Env, root: &Value, themes: &BTreeMap<String, Value>) -> Proposal {
     let mut proposal = Proposal::default();
@@ -141,11 +129,11 @@ pub(crate) fn propose(env: &Env, root: &Value, themes: &BTreeMap<String, Value>)
         );
     }
     if let Some((path, value)) = pick("terminal.font_size", "buffer_font_size") {
-        match value.as_f64() {
+        match value.as_f64().and_then(units::finite) {
             Some(size) => proposal.propose(
                 Setting::FontSize,
                 shown(&path, value),
-                SettingValue::Number(units::font_size(size as f32)),
+                SettingValue::Number(units::font_size(size)),
             ),
             None => proposal.skip(path, Reason::UnsupportedValue),
         }
@@ -154,7 +142,7 @@ pub(crate) fn propose(env: &Env, root: &Value, themes: &BTreeMap<String, Value>)
         let multiplier = match value {
             Value::String(name) if name == "comfortable" => Some(1.618),
             Value::String(name) if name == "standard" => Some(1.3),
-            other => other.get("custom").and_then(Value::as_f64).map(|m| m as f32),
+            other => other.get("custom").and_then(Value::as_f64).and_then(units::finite),
         };
         match multiplier {
             Some(m) => proposal.propose(
@@ -260,16 +248,15 @@ fn propose_themes(proposal: &mut Proposal, root: &Value, themes: &BTreeMap<Strin
             background: color("terminal.background".into()),
             ..Builder::default()
         };
-        for (i, ansi) in ANSI.iter().enumerate() {
-            builder.palette[i] = color(format!("terminal.ansi.{ansi}"));
-            builder.palette[i + 8] = color(format!("terminal.ansi.bright_{ansi}"));
-        }
-        if builder.background.is_none() && builder.foreground.is_none() {
+        builder.fill_ansi(|bright, ansi| {
+            color(format!("terminal.ansi.{}{ansi}", if bright { "bright_" } else { "" }))
+        });
+        if !builder.has_any() {
             proposal.skip("theme", Reason::UnsupportedValue);
             continue;
         }
         let label = format!("{} {name}", Source::Zed.brand());
-        proposal.propose(setting, from.clone(), SettingValue::Palette(builder.finish(&label)));
+        proposal.propose_palette(setting, from.clone(), &label, builder);
     }
 }
 

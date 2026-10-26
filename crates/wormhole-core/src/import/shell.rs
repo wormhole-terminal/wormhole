@@ -57,5 +57,53 @@ pub(crate) fn plain_words(text: &str) -> Option<Vec<String>> {
         }
         outside
     };
-    (!unquoted.chars().any(syntax)).then(|| super::units::words(text))
+    (!unquoted.chars().any(syntax)).then(|| words(text))
+}
+
+/// Where `text` splits into the words a command line is made of: whitespace, with `'…'`, `"…"` and
+/// `\` quoting. Nothing is expanded and nothing runs.
+pub(crate) fn words(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut current = String::new();
+    let mut started = false;
+    let mut quote: Option<char> = None;
+    let mut chars = text.chars();
+    while let Some(c) = chars.next() {
+        match (quote, c) {
+            (Some(q), c) if c == q => quote = None,
+            (Some('"'), '\\') => match chars.next() {
+                Some(next @ ('"' | '\\')) => current.push(next),
+                Some(next) => {
+                    current.push('\\');
+                    current.push(next);
+                }
+                None => current.push('\\'),
+            },
+            (Some(_), c) => current.push(c),
+            (None, '\'' | '"') => {
+                quote = Some(c);
+                started = true;
+            }
+            (None, '\\') => {
+                if let Some(next) = chars.next() {
+                    current.push(next);
+                    started = true;
+                }
+            }
+            (None, c) if c.is_whitespace() => {
+                if started || !current.is_empty() {
+                    out.push(std::mem::take(&mut current));
+                    started = false;
+                }
+            }
+            (None, c) => {
+                current.push(c);
+                started = true;
+            }
+        }
+    }
+    if started || !current.is_empty() {
+        out.push(current);
+    }
+    out
 }

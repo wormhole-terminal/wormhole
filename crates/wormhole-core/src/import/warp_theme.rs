@@ -4,10 +4,12 @@
 
 use std::collections::BTreeMap;
 
-use crate::theme::{Builder, Theme, parse_hex};
+use super::proposal::{Proposal, Reason, Setting};
+use crate::theme::{Builder, parse_hex};
 
-/// The ANSI colours' names in palette order, normal then bright.
-const ANSI: [&str; 8] = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"];
+/// How deep the maps of a theme file go: `terminal_colors.normal.red` is three keys. Anything
+/// nested deeper is not read, so a file of thousands of indents costs a line each, not a path.
+const MAX_KEYS: usize = 4;
 
 /// The scalars of a YAML text by dotted path (`terminal_colors.normal.red`). A key whose value is a
 /// map of its own (a gradient) has no scalar, so it is not in the result.
@@ -25,6 +27,9 @@ pub(crate) fn scalars(text: &str) -> BTreeMap<String, String> {
         while stack.last().is_some_and(|(at, _)| *at >= indent) {
             stack.pop();
         }
+        if stack.len() >= MAX_KEYS {
+            continue;
+        }
         let Some((key, value)) = content.split_once(':') else { continue };
         let key = scalar(key);
         let value = value.trim();
@@ -33,7 +38,7 @@ pub(crate) fn scalars(text: &str) -> BTreeMap<String, String> {
         if value.is_empty() {
             stack.push((indent, key));
         } else if let Some(inner) = value.strip_prefix('{').and_then(|rest| rest.strip_suffix('}')) {
-            flow(&path, inner, &mut out);
+            flow(&path, inner, 1, &mut out);
         } else {
             out.insert(path, scalar(value));
         }
@@ -41,8 +46,10 @@ pub(crate) fn scalars(text: &str) -> BTreeMap<String, String> {
     out
 }
 
-/// The pairs of a `{ a: b, c: { d: e } }` map, one level of nesting deep.
-fn flow(prefix: &str, inner: &str, out: &mut BTreeMap<String, String>) {
+/// The pairs of a `{ a: b, c: { d: e } }` map; `level` counts the maps being read, and a map inside
+/// the second is left alone (a flow map written as deep as a hostile file likes would otherwise
+/// be re-scanned at every level).
+fn flow(prefix: &str, inner: &str, level: usize, out: &mut BTreeMap<String, String>) {
     let mut depth = 0;
     let mut start = 0;
     let mut parts = Vec::new();
@@ -63,7 +70,8 @@ fn flow(prefix: &str, inner: &str, out: &mut BTreeMap<String, String>) {
         let (key, value) = (scalar(key), value.trim());
         let path = format!("{prefix}.{key}");
         match value.strip_prefix('{').and_then(|rest| rest.strip_suffix('}')) {
-            Some(nested) => flow(&path, nested, out),
+            Some(nested) if level < 2 => flow(&path, nested, level + 1, out),
+            Some(_) => {}
             None => {
                 out.insert(path, scalar(value));
             }
@@ -105,8 +113,9 @@ fn strip_comment(line: &str) -> &str {
     line
 }
 
-/// The palette of a theme file, named `label`. It needs a background or a foreground.
-pub(crate) fn palette(label: &str, text: &str) -> Option<Theme> {
+/// Offer the palette of a theme file, named `label`, for `setting`, when it has a background and a
+/// foreground. `from` is how the review list names it.
+pub(crate) fn propose(proposal: &mut Proposal, setting: Setting, from: String, label: &str, text: &str) {
     let values = scalars(text);
     let color = |path: &str| values.get(path).and_then(|v| parse_hex(v).ok());
     let mut builder = Builder {
@@ -115,11 +124,14 @@ pub(crate) fn palette(label: &str, text: &str) -> Option<Theme> {
         cursor: color("cursor"),
         ..Builder::default()
     };
-    for (i, name) in ANSI.iter().enumerate() {
-        builder.palette[i] = color(&format!("terminal_colors.normal.{name}"));
-        builder.palette[i + 8] = color(&format!("terminal_colors.bright.{name}"));
+    builder.fill_ansi(|bright, name| {
+        color(&format!("terminal_colors.{}.{name}", if bright { "bright" } else { "normal" }))
+    });
+    if builder.has_any() {
+        proposal.propose_palette(setting, from, label, builder);
+    } else {
+        proposal.skip(from, Reason::UnsupportedValue);
     }
-    (builder.background.is_some() || builder.foreground.is_some()).then(|| builder.finish(label))
 }
 
 /// The theme's own name, from its `name` key.

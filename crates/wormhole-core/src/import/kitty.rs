@@ -6,25 +6,22 @@ use std::path::{Path, PathBuf};
 
 use super::entries::{Entries, Entry};
 use super::env::Env;
-use super::locations;
 use super::proposal::{FontName, Proposal, Reason, Setting, SettingValue, SkippedKind};
-use super::read::{MAX_FILES, Reader};
+use super::read::{MAX_FILES, Reader, Scope};
 use super::shell;
 use super::source::Source;
 use super::units;
 use crate::config::OptionAsMeta;
-use crate::theme::{Builder, Theme, parse_hex};
+use crate::theme::{Builder, parse_hex};
 
 /// What Kitty draws when `font_size` is not set.
 const DEFAULT_FONT_SIZE: f32 = 11.0;
 
 /// Read `kitty.conf` and its includes and say what they set.
-pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
+pub(crate) fn import(env: &Env, files: &mut Reader, located: &[PathBuf]) -> Proposal {
     let mut entries = Entries::default();
-    let Some(conf) = locations::find(Source::Kitty, env).into_iter().next() else {
-        return Proposal::default();
-    };
-    load(env, files, &conf, &mut entries);
+    let Some(conf) = located.first() else { return Proposal::default() };
+    load(env, files, conf, Scope::Anywhere, &mut entries);
     // The themes kitten's light/dark switch writes win over the colours in `kitty.conf`.
     let dir = conf.parent().unwrap_or(Path::new("/")).to_path_buf();
     let mut auto = |name: &str| {
@@ -40,8 +37,8 @@ pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
 
 /// One file's entries; an include is read at its line, so what it sets lands between the entries
 /// on either side of it.
-fn load(env: &Env, files: &mut Reader, path: &Path, entries: &mut Entries) {
-    files.nested(path, |files, text| {
+fn load(env: &Env, files: &mut Reader, path: &Path, scope: Scope, entries: &mut Entries) {
+    files.nested_in(path, scope, |files, text| {
         let dir = path.parent().unwrap_or(Path::new("/")).to_path_buf();
         let mut own = Entries::default();
         let includes = parse_into(&text, &mut own);
@@ -70,14 +67,20 @@ enum Include {
 
 fn follow(env: &Env, files: &mut Reader, dir: &Path, include: Include, entries: &mut Entries) {
     match include {
+        // What the file names is read only inside the home folder.
         Include::Path(text) => {
             if let Some(path) = expand(env, &text, dir) {
-                load(env, files, &path, entries);
+                load(env, files, &path, Scope::Home, entries);
             }
         }
         Include::Glob(text) => {
-            for path in expand(env, &text, dir).map(|pattern| glob(&pattern)).unwrap_or_default() {
-                load(env, files, &path, entries);
+            let Some(pattern) = expand(env, &text, dir) else { return };
+            if !files.names_home(&pattern) {
+                files.note(&pattern, Reason::OutsideHome);
+                return;
+            }
+            for path in glob(&pattern) {
+                load(env, files, &path, Scope::Home, entries);
             }
         }
         Include::Generated(text) => files.note(Path::new(&format!("geninclude {text}")), Reason::Executes),
@@ -143,18 +146,43 @@ fn glob(pattern: &Path) -> Vec<PathBuf> {
     found
 }
 
-/// Whether `name` matches `pattern`, where `*` is any run and `?` any one character.
+/// The longest glob pattern matched: real ones are a few characters.
+const MAX_PATTERN: usize = 256;
+
+/// Whether `name` matches `pattern`, where `*` is any run and `?` any one character. Iterative, with
+/// one place to go back to (the last `*`), so it takes at most pattern times name steps however many
+/// stars a hostile pattern has.
 fn wildcard(pattern: &str, name: &str) -> bool {
-    fn go(p: &[char], n: &[char]) -> bool {
-        match p.split_first() {
-            None => n.is_empty(),
-            Some(('*', rest)) => (0..=n.len()).any(|skip| go(rest, &n[skip..])),
-            Some(('?', rest)) => n.split_first().is_some_and(|(_, tail)| go(rest, tail)),
-            Some((c, rest)) => n.split_first().is_some_and(|(first, tail)| first == c && go(rest, tail)),
+    let p: Vec<char> = pattern.chars().collect();
+    if p.len() > MAX_PATTERN {
+        return false;
+    }
+    let n: Vec<char> = name.chars().collect();
+    let (mut pi, mut ni) = (0, 0);
+    // Where the last `*` was in the pattern, and how much of the name it has taken so far.
+    let mut star: Option<(usize, usize)> = None;
+    while ni < n.len() {
+        match p.get(pi) {
+            Some('*') => {
+                star = Some((pi, ni));
+                pi += 1;
+            }
+            Some(c) if *c == '?' || *c == n[ni] => {
+                pi += 1;
+                ni += 1;
+            }
+            _ => match star {
+                Some((star_pi, star_ni)) => {
+                    // Let the star take one more character of the name and try the rest again.
+                    star = Some((star_pi, star_ni + 1));
+                    pi = star_pi + 1;
+                    ni = star_ni + 1;
+                }
+                None => return false,
+            },
         }
     }
-    let (p, n): (Vec<char>, Vec<char>) = (pattern.chars().collect(), name.chars().collect());
-    go(&p, &n)
+    p[pi..].iter().all(|c| *c == '*')
 }
 
 /// What the merged entries set; `dark` and `light` are the theme files of the system's appearance
@@ -177,7 +205,7 @@ pub(crate) fn propose(
 fn propose_font(proposal: &mut Proposal, entries: &Entries) {
     if let Some(entry) = entries.last("font_family").filter(|e| !e.value.is_empty()) {
         // Newer Kitty writes `family="Fira Code" style=…`; the older form is the name itself.
-        let family = units::words(&entry.value)
+        let family = shell::words(&entry.value)
             .iter()
             .find_map(|word| word.strip_prefix("family=").map(str::to_string))
             .unwrap_or_else(|| entry.value.clone());
@@ -193,24 +221,24 @@ fn propose_font(proposal: &mut Proposal, entries: &Entries) {
     if let Some(entry) = entries.last("font_size") {
         match units::number(&entry.value) {
             Some(points) => {
-                size = points;
-                proposal.propose(
-                    Setting::FontSize,
-                    &entry.raw,
-                    SettingValue::Number(units::font_size(points)),
-                );
+                size = units::font_size(points);
+                proposal.propose(Setting::FontSize, &entry.raw, SettingValue::Number(size));
             }
             None => proposal.skip(&entry.raw, Reason::UnsupportedValue),
         }
     }
-    // `modify_font cell_height 110%` is a share of the natural height, `2px` or `2` an addition.
+    // `modify_font cell_height 110%` is a share of the natural height; `2px` (device pixels) and
+    // `2` (points, the default unit) are additions.
     let height = entries.all("modify_font").filter(|e| e.value.starts_with("cell_height")).last();
     if let Some(entry) = height {
         let amount = entry.value.trim_start_matches("cell_height").trim();
         let multiplier = match amount.strip_suffix('%') {
             Some(percent) => units::number(percent).map(|p| p / 100.0),
-            None => units::number(amount.strip_suffix("px").unwrap_or(amount))
-                .map(|delta| units::added_height_multiplier(delta, size)),
+            None => match amount.strip_suffix("px") {
+                Some(pixels) => units::number(pixels).map(|n| n / units::PIXELS_PER_POINT),
+                None => units::number(amount.strip_suffix("pt").unwrap_or(amount)),
+            }
+            .map(|delta| units::added_height_multiplier(delta, size)),
         };
         match multiplier {
             Some(value) => {
@@ -281,7 +309,7 @@ fn propose_behaviour(proposal: &mut Proposal, env: &Env, entries: &Entries) {
         }
     }
     if let Some(entry) = entries.last("enable_audio_bell") {
-        match units::truthy(&entry.value) {
+        match truthy(&entry.value) {
             Some(on) => proposal.propose(Setting::BellSound, &entry.raw, SettingValue::Flag(on)),
             None => proposal.skip(&entry.raw, Reason::UnsupportedValue),
         }
@@ -305,8 +333,17 @@ fn propose_behaviour(proposal: &mut Proposal, env: &Env, entries: &Entries) {
     }
 }
 
-/// The palette of an entry list, with the line it is best shown by.
-fn palette<'a>(label: &str, entries: &'a Entries, proposal: &mut Proposal) -> Option<(Theme, &'a Entry)> {
+/// Words a config file uses for on and off.
+fn truthy(text: &str) -> Option<bool> {
+    match text.trim().to_ascii_lowercase().as_str() {
+        "true" | "yes" | "on" | "1" => Some(true),
+        "false" | "no" | "off" | "0" => Some(false),
+        _ => None,
+    }
+}
+
+/// The colours of an entry list, with the line they are best shown by.
+fn palette<'a>(entries: &'a Entries, proposal: &mut Proposal) -> Option<(Builder, &'a Entry)> {
     let mut builder = Builder::default();
     let mut shown: Option<&Entry> = None;
     for entry in entries.iter() {
@@ -335,7 +372,7 @@ fn palette<'a>(label: &str, entries: &'a Entries, proposal: &mut Proposal) -> Op
             Err(_) => proposal.skip(&entry.raw, Reason::UnsupportedValue),
         }
     }
-    shown.map(|entry| (builder.finish(label), entry))
+    shown.map(|entry| (builder, entry))
 }
 
 fn propose_themes(
@@ -354,8 +391,8 @@ fn propose_themes(
         }
     }
     for (setting, source, label) in slots {
-        if let Some((theme, entry)) = palette(&label, source, proposal) {
-            proposal.propose(setting, &entry.raw, SettingValue::Palette(theme));
+        if let Some((builder, entry)) = palette(source, proposal) {
+            proposal.propose_palette(setting, &entry.raw, &label, builder);
         }
     }
 }

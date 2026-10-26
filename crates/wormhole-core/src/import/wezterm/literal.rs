@@ -69,14 +69,21 @@ impl Lit {
 pub(crate) struct Cursor<'a> {
     tokens: &'a [Token],
     pos: usize,
+    /// How many expressions are being read inside one another (a table in a call in a table…).
+    depth: usize,
 }
+
+/// The deepest nesting of expressions read. A real config is five or six deep; past this the
+/// expression is skipped as [`Lit::Dynamic`], so neither the parser's recursion nor the value's
+/// drop and display can be made to overflow the stack.
+pub(crate) const MAX_DEPTH: usize = 32;
 
 /// Operators that continue an expression, so what came before is only a part of it.
 const BINARY: [&str; 15] = ["+", "-", "*", "/", "%", "^", "..", "==", "~=", "<", ">", "<=", ">=", "//", "#"];
 
 impl<'a> Cursor<'a> {
     pub(crate) fn new(tokens: &'a [Token]) -> Self {
-        Self { tokens, pos: 0 }
+        Self { tokens, pos: 0, depth: 0 }
     }
 
     pub(crate) fn peek(&self) -> Option<&'a Kind> {
@@ -97,7 +104,13 @@ impl<'a> Cursor<'a> {
 
     /// An expression: a value written out, or [`Lit::Dynamic`] when anything computes it.
     pub(crate) fn value(&mut self) -> Lit {
+        if self.depth >= MAX_DEPTH {
+            self.skip_expression();
+            return Lit::Dynamic;
+        }
+        self.depth += 1;
         let lit = self.primary();
+        self.depth -= 1;
         let continues = match self.peek() {
             Some(Kind::Sym(sym)) => BINARY.contains(&sym.as_str()),
             Some(Kind::Name(name)) => name == "and" || name == "or",

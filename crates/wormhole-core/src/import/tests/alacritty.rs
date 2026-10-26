@@ -217,3 +217,16 @@ fn where_it_looks() {
         9.5
     );
 }
+
+#[test]
+fn the_top_level_import_is_read_before_general_import() {
+    let fixture = Fixture::new();
+    fixture.home("a.toml", "[font]\nsize = 15\n");
+    fixture.home("b.toml", "[font]\nsize = 18\n");
+    fixture.home(
+        ".config/alacritty/alacritty.toml",
+        "import = [\"~/a.toml\"]\n[general]\nimport = [\"~/b.toml\"]\n",
+    );
+    let p = fixture.found(Source::Alacritty).proposal;
+    assert_eq!(number(&p, Setting::FontSize), 15.0);
+}

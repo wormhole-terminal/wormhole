@@ -145,3 +145,15 @@ fn a_palette_is_saved_whatever_the_source_and_round_trips_through_the_theme_form
     let text = crate::import::apply::palette_text(&t);
     assert_eq!(theme::parse_ghostty("Round Trip", &text).expect("parses"), t);
 }
+
+#[test]
+fn a_long_profile_name_does_not_fail_the_save() {
+    let themes = tempfile::tempdir().expect("temp dir");
+    // Two bytes a character: whole, the name is longer than a file name may be.
+    let chosen = vec![proposed(Setting::Theme, SettingValue::Palette(theme(&"é".repeat(300), 0x101010)))];
+    let saved = save_themes(themes.path(), &chosen).expect("a name this long is cut, not refused");
+    let path = std::path::PathBuf::from(saved.dark.expect("saved"));
+    let file = path.file_name().expect("a file").to_string_lossy().into_owned();
+    assert_eq!(file.chars().count(), 100, "cut on a character, never in the middle of one");
+    assert!(path.is_file());
+}

@@ -1,18 +1,22 @@
 //! iTerm2: `com.googlecode.iterm2.plist` (or the custom folder it points to), the profile named by
 //! `Default Bookmark Guid`, found among `New Bookmarks` or the Dynamic Profiles.
 
+use std::path::{Path, PathBuf};
+
 use plist::{Dictionary, Value};
 
 use super::env::Env;
 use super::locations;
-use super::property::{boolean, integer, read_dictionary, real, show, shown, string};
+use super::plist_value::{
+    self, boolean, integer, read_dictionary, read_dictionary_in_home, real, show, shown, string,
+};
 use super::proposal::{FontName, Proposal, Reason, Setting, SettingValue, SkippedKind};
 use super::read::{MAX_FILE_BYTES, Reader};
 use super::shell;
 use super::source::Source;
 use super::units;
 use crate::config::OptionAsMeta;
-use crate::theme::{self, Theme};
+use crate::theme::iterm_builder;
 
 /// The most Dynamic Profiles files looked into for a default profile that is not among the bookmarks.
 const MAX_DYNAMIC_FILES: usize = 16;
@@ -28,13 +32,14 @@ const COLOR_KEYS: [&str; 6] = [
 ];
 
 /// Read iTerm2's preferences and say what its default profile sets.
-pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
-    let Some(mut root) = read_dictionary(files, &locations::iterm(env)) else {
+pub(crate) fn import(env: &Env, files: &mut Reader, located: &[PathBuf]) -> Proposal {
+    let Some(mut root) = located.first().and_then(|path| read_dictionary(files, path)) else {
         return Proposal::default();
     };
     // "Load preferences from a custom folder" moves the whole file; the main one then only says where.
-    if let Some(custom) = custom_file(env, &root)
-        && let Some(moved) = read_dictionary(files, &custom)
+    // The folder is named by the file, so it is read only inside the home folder.
+    if let Some(custom) = custom_file(env, files, &root)
+        && let Some(moved) = read_dictionary_in_home(files, &custom)
     {
         root = moved;
     }
@@ -43,8 +48,8 @@ pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
 }
 
 /// The preferences file `PrefsCustomFolder` names: a folder with the file in it, or the file. A
-/// URL is not read.
-fn custom_file(env: &Env, root: &Dictionary) -> Option<std::path::PathBuf> {
+/// URL is not read, and neither is a relative path, which iTerm2 itself does not write.
+fn custom_file(env: &Env, files: &mut Reader, root: &Dictionary) -> Option<PathBuf> {
     if !boolean(root, "LoadPrefsFromCustomFolder")? {
         return None;
     }
@@ -53,6 +58,10 @@ fn custom_file(env: &Env, root: &Dictionary) -> Option<std::path::PathBuf> {
         return None;
     }
     let path = env.expand_tilde(folder);
+    if !path.is_absolute() {
+        files.note(Path::new("PrefsCustomFolder"), Reason::UnsupportedValue);
+        return None;
+    }
     Some(if path.extension().is_some_and(|e| e == "plist") {
         path
     } else {
@@ -102,7 +111,7 @@ fn dynamic_profile(
         let value = if bytes.iter().find(|b| !b.is_ascii_whitespace()) == Some(&b'{') {
             serde_json::from_slice::<serde_json::Value>(&bytes).ok().map(|json| from_json(&json))
         } else {
-            Value::from_reader(std::io::Cursor::new(bytes)).ok()
+            plist_value::parse(&bytes)
         };
         let Some(Value::Dictionary(file)) = value else { continue };
         let listed = file.get("Profiles").and_then(Value::as_array).into_iter().flatten();
@@ -238,10 +247,14 @@ fn propose_behaviour(proposal: &mut Proposal, env: &Env, profile: &Dictionary) {
     if let Some(kind) = string(profile, "Custom Command") {
         let from = format!("{}, {}", shown(profile, "Custom Command"), shown(profile, "Command"));
         match (kind, string(profile, "Command")) {
-            ("Yes" | "Custom Shell", Some(command)) => match shell::plain_words(command) {
+            // A command line is words; a custom shell is one path, spaces and all.
+            ("Yes", Some(command)) => match shell::plain_words(command) {
                 Some(words) => shell::propose(proposal, env, Source::ITerm2, &from, &words),
                 None => proposal.skip(from, Reason::UnsupportedValue),
             },
+            ("Custom Shell", Some(path)) => {
+                shell::propose(proposal, env, Source::ITerm2, &from, &[path.to_string()]);
+            }
             ("No", _) => {}
             _ => proposal.skip(shown(profile, "Custom Command"), Reason::UnsupportedValue),
         }
@@ -293,34 +306,27 @@ fn srgb(color: &Dictionary) -> Dictionary {
     out
 }
 
-/// A palette from a dictionary of colour entries, which is what an `.itermcolors` file is. It needs
-/// at least a background or a foreground to be a palette at all.
-fn palette(name: &str, colours: &Dictionary) -> Option<Theme> {
-    if !colours.contains_key("Background Color") && !colours.contains_key("Foreground Color") {
-        return None;
-    }
-    let mut xml = Vec::new();
-    Value::Dictionary(colours.clone()).to_writer_xml(&mut xml).ok()?;
-    theme::parse_iterm(name, &String::from_utf8(xml).ok()?).ok()
-}
-
 fn propose_themes(proposal: &mut Proposal, profile: &Dictionary) {
     let label = match string(profile, "Name") {
         Some(name) if !name.trim().is_empty() => format!("{} {}", Source::ITerm2.brand(), name.trim()),
         _ => Source::ITerm2.brand().to_string(),
     };
     let from = "Background Color";
-    if boolean(profile, "Use Separate Colors for Light and Dark Mode") == Some(true) {
-        for (setting, suffix, label) in [
-            (Setting::Theme, "Dark", format!("{label} dark")),
-            (Setting::ThemeLight, "Light", format!("{label} light")),
-        ] {
-            if let Some(theme) = palette(&label, &colours(profile, Some(suffix))) {
-                proposal.propose(setting, format!("{from} ({suffix})"), SettingValue::Palette(theme));
-            }
+    let separate = boolean(profile, "Use Separate Colors for Light and Dark Mode") == Some(true);
+    let variants: Vec<(Setting, Option<&str>, String, String)> = if separate {
+        vec![
+            (Setting::Theme, Some("Dark"), format!("{label} dark"), format!("{from} (Dark)")),
+            (Setting::ThemeLight, Some("Light"), format!("{label} light"), format!("{from} (Light)")),
+        ]
+    } else {
+        vec![(Setting::Theme, None, label, from.to_string())]
+    };
+    for (setting, suffix, label, shown_as) in variants {
+        let colours = colours(profile, suffix);
+        match iterm_builder(&label, &colours) {
+            Ok(builder) => proposal.propose_palette(setting, shown_as, &label, builder),
+            Err(_) => proposal.skip(shown_as, Reason::UnsupportedValue),
         }
-    } else if let Some(theme) = palette(&label, &colours(profile, None)) {
-        proposal.propose(Setting::Theme, from, SettingValue::Palette(theme));
     }
 }
 

@@ -223,3 +223,12 @@ fn values_that_are_not_numbers_are_unsupported() {
     assert_eq!(p.skipped.len(), 3);
     assert!(p.skipped.iter().all(|s| s.reason == Reason::UnsupportedValue));
 }
+
+#[test]
+fn a_theme_pair_may_use_an_equals_sign_in_either_order() {
+    let fixture = ghostty();
+    fixture.home(".config/ghostty/config", "theme = dark=Rose Pine,light=Rose Pine Dawn\n");
+    let p = fixture.found(Source::Ghostty).proposal;
+    assert_eq!(palette(&p, Setting::Theme).background, 0x191724);
+    assert_eq!(palette(&p, Setting::ThemeLight).background, 0xfaf4ed);
+}

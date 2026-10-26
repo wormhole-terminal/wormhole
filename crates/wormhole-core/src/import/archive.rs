@@ -2,9 +2,10 @@
 //! `<data>` value, a flat list of objects that point at each other by index. Nothing here
 //! unarchives anything: it reads the few plain values the archive holds by walking the list.
 
-use std::io::Cursor;
-
 use plist::{Dictionary, Value};
+
+use super::plist_value;
+use super::units;
 
 /// An archive's objects and where its root is.
 pub(crate) struct Archive {
@@ -32,7 +33,7 @@ impl Rgba {
 impl Archive {
     /// The archive in a `<data>` value, or `None` when it is not one.
     pub(crate) fn open(data: &[u8]) -> Option<Self> {
-        let Value::Dictionary(archive) = Value::from_reader(Cursor::new(data)).ok()? else { return None };
+        let Value::Dictionary(archive) = plist_value::parse(data)? else { return None };
         let objects = archive.get("$objects")?.as_array()?.clone();
         let root = archive.get("$top")?.as_dictionary()?.get("root")?.as_uid()?.get();
         Some(Self { objects, root: usize::try_from(root).ok()? })
@@ -55,7 +56,7 @@ impl Archive {
     /// An archived `NSFont`: its PostScript name and size in points.
     pub(crate) fn font(&self) -> Option<(String, f32)> {
         let name = self.value("NSName")?.as_string()?.to_string();
-        let size = self.value("NSSize")?.as_real()? as f32;
+        let size = self.value("NSSize")?.as_real().and_then(units::finite)?;
         Some((name, size))
     }
 
@@ -69,7 +70,11 @@ impl Archive {
                 Value::String(text) => text.clone(),
                 _ => return None,
             };
-            text.trim_end_matches('\0').split_whitespace().map(|n| n.parse().ok()).collect()
+            // `NaN` and `inf` parse as numbers; neither is a colour.
+            text.trim_end_matches('\0')
+                .split_whitespace()
+                .map(|n| n.parse::<f32>().ok().filter(|n| n.is_finite()))
+                .collect()
         };
         if let Some(rgb) = numbers("NSRGB") {
             let [red, green, blue, rest @ ..] = rgb.as_slice() else { return None };

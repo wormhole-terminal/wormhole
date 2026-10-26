@@ -2,20 +2,19 @@
 //! had before 0.13 (which is no longer read). `import` lists are merged under the file that names
 //! them, which wins, five files deep at most. `bell.command` runs a program and is never taken.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use toml::{Table, Value};
 
 use super::env::Env;
-use super::locations;
 use super::proposal::{FontName, Proposal, Reason, Setting, SettingValue, SkippedKind};
-use super::read::Reader;
+use super::read::{Reader, Scope};
 use super::shell;
 use super::source::Source;
-use super::table::{at, float, shown};
+use super::toml_value::{at, float, shown};
 use super::units;
 use crate::config::OptionAsMeta;
-use crate::theme;
+use crate::theme::alacritty_builder;
 
 /// What Alacritty draws when `font.size` is not set.
 const DEFAULT_FONT_SIZE: f32 = 11.25;
@@ -24,24 +23,22 @@ const DEFAULT_FONT_SIZE: f32 = 11.25;
 pub(crate) const MAX_DEPTH: usize = 6;
 
 /// Read Alacritty's config and its imports and say what they set.
-pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
-    let Some(path) = locations::find(Source::Alacritty, env).into_iter().next() else {
-        return Proposal::default();
-    };
+pub(crate) fn import(env: &Env, files: &mut Reader, located: &[PathBuf]) -> Proposal {
+    let Some(path) = located.first() else { return Proposal::default() };
     if matches!(path.extension().and_then(|e| e.to_str()), Some("yml" | "yaml")) {
-        files.seen(&path);
-        files.note(&path, Reason::OldFormat);
+        files.seen(path);
+        files.note(path, Reason::OldFormat);
         return Proposal::default();
     }
-    match load(env, files, &path) {
+    match load(env, files, path, Scope::Anywhere) {
         Some(table) => propose(env, &table),
         None => Proposal::default(),
     }
 }
 
 /// A file's table with its imports merged under it.
-fn load(env: &Env, files: &mut Reader, path: &Path) -> Option<Table> {
-    files.nested(path, |files, text| {
+fn load(env: &Env, files: &mut Reader, path: &Path, scope: Scope) -> Option<Table> {
+    files.nested_in(path, scope, |files, text| {
         let table: Table = match text.parse() {
             Ok(table) => table,
             Err(err) => {
@@ -53,7 +50,7 @@ fn load(env: &Env, files: &mut Reader, path: &Path) -> Option<Table> {
         let dir = path.parent().unwrap_or(Path::new("/"));
         let mut merged = Table::new();
         for name in imports(&table) {
-            if let Some(imported) = load(env, files, &env.include_path(&name, dir)) {
+            if let Some(imported) = load(env, files, &env.include_path(&name, dir), Scope::Home) {
                 merge(&mut merged, imported);
             }
         }
@@ -62,14 +59,12 @@ fn load(env: &Env, files: &mut Reader, path: &Path) -> Option<Table> {
     })
 }
 
-/// The `import` list: `general.import`, or the top-level `import` older files have. A list that is
-/// not all strings is not used, as Alacritty ignores it.
+/// The `import` list: the top-level `import` older files have, which Alacritty reads before
+/// `general.import`. A list that is not all strings is not used, as Alacritty ignores it.
 fn imports(table: &Table) -> Vec<String> {
     let list = table
-        .get("general")
-        .and_then(Value::as_table)
-        .and_then(|general| general.get("import"))
-        .or_else(|| table.get("import"));
+        .get("import")
+        .or_else(|| table.get("general").and_then(Value::as_table).and_then(|general| general.get("import")));
     let Some(Value::Array(items)) = list else { return Vec::new() };
     items.iter().map(|item| item.as_str().map(str::to_string)).collect::<Option<Vec<_>>>().unwrap_or_default()
 }
@@ -102,12 +97,8 @@ pub(crate) fn propose(env: &Env, table: &Table) -> Proposal {
     if let Some(value) = at(table, "font.size") {
         match float(value) {
             Some(points) => {
-                size = points;
-                proposal.propose(
-                    Setting::FontSize,
-                    shown("font.size", value),
-                    SettingValue::Number(units::font_size(points)),
-                );
+                size = units::font_size(points);
+                proposal.propose(Setting::FontSize, shown("font.size", value), SettingValue::Number(size));
             }
             None => proposal.skip("font.size", Reason::UnsupportedValue),
         }
@@ -161,10 +152,10 @@ fn propose_colors(proposal: &mut Proposal, table: &Table) {
     else {
         return;
     };
-    let only_colors = Table::from_iter([("colors".to_string(), Value::Table(colors.clone()))]);
-    let text = toml::to_string(&only_colors).unwrap_or_default();
-    match theme::parse_alacritty(Source::Alacritty.brand(), &text) {
-        Ok(theme) => proposal.propose(Setting::Theme, "[colors]", SettingValue::Palette(theme)),
+    match alacritty_builder(Source::Alacritty.brand(), colors) {
+        Ok(builder) => {
+            proposal.propose_palette(Setting::Theme, "[colors]", Source::Alacritty.brand(), builder)
+        }
         Err(_) => proposal.skip("colors", Reason::UnsupportedValue),
     }
 }

@@ -202,8 +202,8 @@ fn units_and_aliases() {
          disable_ligatures cursor\nfont_family family=\"Fira Code\" style=Retina\nshell .\n",
     );
     let p = fixture.found(Source::Kitty).proposal;
-    // 4 px on an 11 point font.
-    assert!((number(&p, Setting::LineHeight) - (1.0 + 4.0 / 13.2)).abs() < 1e-5);
+    // 4 device pixels are 2 points on a Mac screen, on an 11 point font.
+    assert!((number(&p, Setting::LineHeight) - (1.0 + 2.0 / 13.2)).abs() < 1e-5);
     assert_eq!(count(&p, Setting::ScrollbackLines), 200_000);
     assert_eq!(meta(&p), OptionAsMeta::Both);
     assert!(!flag(&p, Setting::Blur));
@@ -211,4 +211,20 @@ fn units_and_aliases() {
     assert_eq!(font(&p).0, "Fira Code");
     // `.` is the login shell.
     assert!(p.get(Setting::DefaultShell).is_none() && p.get(Setting::ShellProfile).is_none());
+}
+
+#[test]
+fn a_bare_cell_height_is_points_and_px_is_device_pixels() {
+    let height = |amount: &str| {
+        let fixture = Fixture::new();
+        fixture
+            .home(".config/kitty/kitty.conf", &format!("font_size 11\nmodify_font cell_height {amount}\n"));
+        number(&fixture.found(Source::Kitty).proposal, Setting::LineHeight)
+    };
+    let points = 1.0 + 2.0 / 13.2;
+    assert!((height("2") - points).abs() < 1e-5);
+    assert!((height("2pt") - points).abs() < 1e-5);
+    // Two pixels are one point on a Mac screen.
+    assert!((height("2px") - (1.0 + 1.0 / 13.2)).abs() < 1e-5);
+    assert!((height("2px") - height("2")).abs() > 0.01);
 }

@@ -2,6 +2,8 @@
 
 use toml::{Table, Value};
 
+use super::units;
+
 /// The value at a dotted path (`font.normal.family`).
 pub(crate) fn at<'a>(table: &'a Table, path: &str) -> Option<&'a Value> {
     let mut parts = path.split('.');
@@ -12,11 +14,12 @@ pub(crate) fn at<'a>(table: &'a Table, path: &str) -> Option<&'a Value> {
     Some(value)
 }
 
-/// A number, whichever way the file wrote it.
+/// A number, whichever way the file wrote it; never `NaN` or infinite (TOML has both as `nan` and
+/// `inf`).
 pub(crate) fn float(value: &Value) -> Option<f32> {
     match value {
-        Value::Float(f) => Some(*f as f32),
-        Value::Integer(i) => Some(*i as f32),
+        Value::Float(f) => units::finite(*f),
+        Value::Integer(i) => units::finite(*i as f64),
         _ => None,
     }
 }

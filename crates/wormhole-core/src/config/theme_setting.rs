@@ -178,11 +178,17 @@ fn write_unique(dir: &Path, stem: &str, ext: &str, bytes: &[u8]) -> Result<PathB
     Ok(target)
 }
 
+/// The most characters of a palette's name kept in its file name: a file name is limited to 255
+/// bytes, and a profile's name (which an import makes it from) can be anything.
+const PALETTE_NAME_CHARS: usize = 100;
+
 /// A palette's file name: its name as it is (spaces stay, as in the Ghostty themes), without what a
-/// file name can't hold, and never a hidden file (which the picker skips).
+/// file name can't hold, cut to [`PALETTE_NAME_CHARS`] characters (never in the middle of one), and
+/// never a hidden file (which the picker skips).
 fn palette_file_name(name: &str) -> String {
     let clean: String = name
         .chars()
+        .take(PALETTE_NAME_CHARS)
         .map(|c| if c == '/' || c == '\\' || c == ':' || c.is_control() { '-' } else { c })
         .collect();
     let clean = clean.trim().trim_start_matches('.').trim();

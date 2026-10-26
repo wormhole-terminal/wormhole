@@ -1,11 +1,13 @@
 //! Terminal.app: `com.apple.Terminal.plist`, the profile `Default Window Settings` names. A profile
 //! only holds what differs from Terminal's defaults, so a plain one says little.
 
+use std::path::PathBuf;
+
 use plist::{Dictionary, Value};
 
 use super::archive::Archive;
 use super::env::Env;
-use super::property::{boolean, integer, read_dictionary, real, shown, string};
+use super::plist_value::{boolean, integer, read_dictionary, real, shown, string};
 use super::proposal::{FontName, Proposal, Reason, Setting, SettingValue, SkippedKind};
 use super::read::Reader;
 use super::shell;
@@ -14,13 +16,11 @@ use super::units;
 use crate::config::OptionAsMeta;
 use crate::theme::Builder;
 
-/// The eight ANSI colours' names in a profile, in palette order; the bright ones are `ANSIBright…`.
-const ANSI: [&str; 8] = ["Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White"];
-
 /// Read Terminal.app's preferences and say what its default profile sets.
-pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
-    let path = env.home.join("Library/Preferences/com.apple.Terminal.plist");
-    let Some(root) = read_dictionary(files, &path) else { return Proposal::default() };
+pub(crate) fn import(env: &Env, files: &mut Reader, located: &[PathBuf]) -> Proposal {
+    let Some(root) = located.first().and_then(|path| read_dictionary(files, path)) else {
+        return Proposal::default();
+    };
     let profiles = root.get("Window Settings").and_then(Value::as_dictionary);
     let named = ["Default Window Settings", "Startup Window Settings"]
         .iter()
@@ -111,15 +111,15 @@ fn propose_colors(proposal: &mut Proposal, name: &str, profile: &Dictionary) {
     builder.foreground = color("TextColor").map(|c| c.packed());
     builder.cursor = color("CursorColor").map(|c| c.packed());
     builder.selection_background = color("SelectionColor").map(|c| c.packed());
-    for (i, ansi) in ANSI.iter().enumerate() {
-        builder.palette[i] = color(&format!("ANSI{ansi}Color")).map(|c| c.packed());
-        builder.palette[i + 8] = color(&format!("ANSIBright{ansi}Color")).map(|c| c.packed());
-    }
-    if builder.background.is_none() && builder.foreground.is_none() {
-        return;
-    }
+    // The bright ones are `ANSIBright…`.
+    builder.fill_ansi(|bright, ansi| {
+        let ansi = units::capitalized(ansi);
+        let prefix = if bright { "ANSIBright" } else { "ANSI" };
+        color(&format!("{prefix}{ansi}Color")).map(|c| c.packed())
+    });
     let label = format!("{} {name}", Source::TerminalApp.brand());
-    proposal.propose(Setting::Theme, "BackgroundColor", SettingValue::Palette(builder.finish(&label)));
+    proposal.propose_palette(Setting::Theme, "BackgroundColor", &label, builder);
+    // The opacity is the background colour's, whether the colours make a palette or not.
     if let Some(background) = background {
         proposal.propose(
             Setting::Opacity,

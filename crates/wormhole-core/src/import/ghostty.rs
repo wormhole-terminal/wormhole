@@ -3,13 +3,13 @@
 //! read at the end of the file that names them.
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::entries::{Entries, Entry};
 use super::env::Env;
 use super::locations;
 use super::proposal::{Proposal, Reason, Setting, SettingValue, SkippedKind};
-use super::read::Reader;
+use super::read::{Reader, Scope};
 use super::shell;
 use super::source::Source;
 use super::units;
@@ -31,10 +31,10 @@ const COLOR_KEYS: [&str; 7] = [
 ];
 
 /// Read Ghostty's files and say what they set.
-pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
+pub(crate) fn import(env: &Env, files: &mut Reader, located: &[PathBuf]) -> Proposal {
     let mut entries = Entries::default();
-    for path in locations::find(Source::Ghostty, env) {
-        load(env, files, &path, &mut entries);
+    for path in located {
+        load(env, files, path, Scope::Anywhere, &mut entries);
     }
     let mut themes = BTreeMap::new();
     if let Some(entry) = entries.last("theme") {
@@ -47,14 +47,14 @@ pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
     propose(env, &entries, &themes)
 }
 
-/// One file's entries, then the files it includes.
-fn load(env: &Env, files: &mut Reader, path: &Path, entries: &mut Entries) {
-    files.nested(path, |files, text| {
+/// One file's entries, then the files it includes (which must be in the home folder).
+fn load(env: &Env, files: &mut Reader, path: &Path, scope: Scope, entries: &mut Entries) {
+    files.nested_in(path, scope, |files, text| {
         let mut includes = Vec::new();
         parse_into(&text, entries, &mut includes);
         let dir = path.parent().unwrap_or(Path::new("/"));
         for include in includes {
-            load(env, files, &env.include_path(&include, dir), entries);
+            load(env, files, &env.include_path(&include, dir), Scope::Home, entries);
         }
     });
 }
@@ -94,12 +94,13 @@ impl ThemeRef {
     /// `NAME`, or `light:NAME,dark:NAME` (either order; one is enough).
     fn parse(value: &str) -> Self {
         let value = value.trim();
-        if !value.contains([',', ':']) || value.starts_with('/') {
+        // Any of `,` `:` `=` makes it pairs (`light:A,dark:B`, `light=A`), as Ghostty reads it.
+        if !value.contains([',', ':', '=']) || value.starts_with('/') {
             return Self { dark: (!value.is_empty()).then(|| value.to_string()), light: None };
         }
         let (mut dark, mut light) = (None, None);
         for part in value.split(',') {
-            match part.trim().split_once(':') {
+            match part.trim().split_once([':', '=']) {
                 Some(("dark", name)) => dark = Some(name.trim().to_string()),
                 Some(("light", name)) => light = Some(name.trim().to_string()),
                 _ => {}
@@ -116,7 +117,7 @@ impl ThemeRef {
 /// A theme's file: by path, else the person's themes folder, else the app's own.
 fn read_theme(env: &Env, files: &mut Reader, name: &str) -> Option<String> {
     if name.starts_with('/') || name.starts_with("~/") {
-        return files.text(&env.expand_tilde(name));
+        return files.text_in_home(&env.expand_tilde(name));
     }
     if name.split('/').any(|part| part == ".." || part.is_empty()) {
         return None;
@@ -157,12 +158,8 @@ fn propose_font(proposal: &mut Proposal, entries: &Entries) {
     if let Some(entry) = entries.last("font-size").filter(|e| !e.value.is_empty()) {
         match units::number(&entry.value) {
             Some(points) => {
-                size = points;
-                proposal.propose(
-                    Setting::FontSize,
-                    &entry.raw,
-                    SettingValue::Number(units::font_size(points)),
-                );
+                size = units::font_size(points);
+                proposal.propose(Setting::FontSize, &entry.raw, SettingValue::Number(size));
             }
             None => proposal.skip(&entry.raw, Reason::UnsupportedValue),
         }
@@ -332,11 +329,10 @@ fn propose_palette(proposal: &mut Proposal, entries: &Entries, themes: &BTreeMap
 
     let reference = entries.last("theme").filter(|e| !e.value.is_empty());
     let Some(reference) = reference else {
-        if let Some(first) = overlay.first() {
-            let theme = theme::parse_ghostty(Source::Ghostty.brand(), &overlay_text);
-            if let Ok(theme) = theme {
-                proposal.propose(Setting::Theme, &first.raw, SettingValue::Palette(theme));
-            }
+        if let Some(first) = overlay.first()
+            && let Ok(builder) = theme::ghostty_builder(Source::Ghostty.brand(), &overlay_text)
+        {
+            proposal.propose_palette(Setting::Theme, &first.raw, Source::Ghostty.brand(), builder);
         }
         return;
     };
@@ -348,8 +344,8 @@ fn propose_palette(proposal: &mut Proposal, entries: &Entries, themes: &BTreeMap
             continue;
         };
         let label = format!("{} {name}", Source::Ghostty.brand());
-        match theme::parse_ghostty(&label, &format!("{text}{overlay_text}")) {
-            Ok(theme) => proposal.propose(setting, &reference.raw, SettingValue::Palette(theme)),
+        match theme::ghostty_builder(&label, &format!("{text}{overlay_text}")) {
+            Ok(builder) => proposal.propose_palette(setting, &reference.raw, &label, builder),
             Err(_) => proposal.skip(&reference.raw, Reason::Unreadable),
         }
     }

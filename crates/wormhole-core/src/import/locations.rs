@@ -44,7 +44,8 @@ fn ghostty(env: &Env) -> Vec<PathBuf> {
     ])
 }
 
-/// Ghostty's folder of the person's own themes: only the XDG one.
+/// Ghostty's folders of themes, in the order it looks: the person's own (the XDG one) and then the
+/// ones inside each installed Ghostty app.
 pub(crate) fn ghostty_theme_dirs(env: &Env) -> Vec<PathBuf> {
     let mut dirs = vec![env.config_home().join("ghostty").join("themes")];
     dirs.extend(
@@ -53,7 +54,7 @@ pub(crate) fn ghostty_theme_dirs(env: &Env) -> Vec<PathBuf> {
     dirs
 }
 
-pub(crate) fn iterm(env: &Env) -> PathBuf {
+fn iterm(env: &Env) -> PathBuf {
     env.home.join("Library/Preferences/com.googlecode.iterm2.plist")
 }
 

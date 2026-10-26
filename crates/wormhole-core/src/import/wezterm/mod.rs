@@ -7,6 +7,8 @@
 mod lexer;
 mod literal;
 
+use std::path::PathBuf;
+
 use toml::Table;
 
 use self::lexer::{Kind, Token};
@@ -43,18 +45,16 @@ pub(crate) struct Extracted {
 }
 
 /// Read `wezterm.lua` and say what it sets by what it writes out.
-pub(crate) fn import(env: &Env, files: &mut Reader) -> Proposal {
-    let Some(path) = locations::find(Source::WezTerm, env).into_iter().next() else {
-        return Proposal::default();
-    };
-    let Some(text) = files.text(&path) else { return Proposal::default() };
+pub(crate) fn import(env: &Env, files: &mut Reader, located: &[PathBuf]) -> Proposal {
+    let Some(path) = located.first() else { return Proposal::default() };
+    let Some(text) = files.text(path) else { return Proposal::default() };
     let extracted = extract(&lexer::tokenize(&text));
     // A colour scheme by name is a file of the person's, when they have it.
     let scheme = scheme_name(&extracted).and_then(|name| {
         if name.contains('/') || name.contains("..") {
             return None;
         }
-        let file = locations::wezterm_colors_dir(&path, env).join(format!("{name}.toml"));
+        let file = locations::wezterm_colors_dir(path, env).join(format!("{name}.toml"));
         files.text(&file)
     });
     propose(env, &extracted, scheme.as_deref())
@@ -187,6 +187,11 @@ fn effective<'a>(extracted: &'a Extracted, key: &str) -> Option<Value<'a>> {
 /// A scalar setting: its value written out, or `None` after noting why not.
 fn literal<'a>(proposal: &mut Proposal, extracted: &'a Extracted, key: &str) -> Option<&'a Lit> {
     match effective(extracted, key)? {
+        // A number that is not one (`1e999`) is no value to take.
+        Value::Lit(Lit::Num(number)) if !number.is_finite() => {
+            proposal.skip(key, Reason::UnsupportedValue);
+            None
+        }
         Value::Lit(lit) if *lit != Lit::Nil => Some(lit),
         Value::Lit(_) => None,
         Value::Dynamic | Value::Merged(_) => {
@@ -400,7 +405,6 @@ fn propose_theme(proposal: &mut Proposal, extracted: &Extracted, scheme_text: Op
     let mut builder = Builder::default();
     let mut label = brand.to_string();
     let mut from = String::new();
-    let mut complete = false;
 
     // The scheme first, then `colors` over it.
     let scheme = literal(proposal, extracted, "color_scheme").and_then(|lit| match lit {
@@ -430,7 +434,6 @@ fn propose_theme(proposal: &mut Proposal, extracted: &Extracted, scheme_text: Op
                 }
                 label = format!("{brand} {name}");
                 from = shown_scheme;
-                complete = true;
             }
             None => proposal.skip("color_scheme", Reason::BuiltInTheme(name)),
         }
@@ -455,11 +458,9 @@ fn propose_theme(proposal: &mut Proposal, extracted: &Extracted, scheme_text: Op
         _ => {}
     }
 
-    // Colours laid over a scheme that is not on disk would be a few colours on the defaults.
-    let own = builder.background.is_some() && builder.foreground.is_some();
-    if complete || own {
-        proposal.propose(Setting::Theme, from, SettingValue::Palette(builder.finish(&label)));
-    }
+    // Colours laid over a scheme that is not on disk are a few colours on the defaults: offered only
+    // when together they make a palette.
+    proposal.propose_palette(Setting::Theme, from, &label, builder);
 }
 
 fn skip_unsupported(proposal: &mut Proposal, extracted: &Extracted) {

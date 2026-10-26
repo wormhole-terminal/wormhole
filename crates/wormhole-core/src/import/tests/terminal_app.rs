@@ -151,3 +151,29 @@ fn a_file_that_is_not_a_plist_is_noted() {
     let found = fixture.found(Source::TerminalApp);
     assert_eq!(found.proposal.skipped[0].reason, Reason::Unreadable);
 }
+
+#[test]
+fn colour_components_that_are_nan_or_infinite_are_not_a_colour() {
+    let fixture = Fixture::new();
+    let pro = dict(vec![
+        ("name", Value::String("Pro".into())),
+        ("BackgroundColor", white_data(f64::NAN, 1.0)),
+        ("TextColor", rgb_data(f64::INFINITY, 0.0, 0.0, None)),
+        ("Font", font_data("SFMono-Regular", f64::NAN)),
+    ]);
+    write(&fixture, "Pro", vec![("Pro", pro)]);
+    let p = fixture.found(Source::TerminalApp).proposal;
+    assert!(p.get(Setting::Theme).is_none() && p.get(Setting::Opacity).is_none());
+    assert!(p.get(Setting::FontSize).is_none());
+}
+
+#[test]
+fn an_archive_nested_beyond_reason_is_not_opened() {
+    let mut value = Value::Integer(1.into());
+    for _ in 0..200 {
+        value = Value::Array(vec![value]);
+    }
+    let mut bytes = Vec::new();
+    value.to_writer_binary(&mut bytes).expect("archive");
+    assert!(crate::import::archive::Archive::open(&bytes).is_none());
+}

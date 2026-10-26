@@ -3,7 +3,7 @@
 //! every variant.
 
 use crate::config::{OptionAsMeta, ShellProfile};
-use crate::theme::Theme;
+use crate::theme::{Builder, Theme};
 
 /// A Wormhole setting an import can set. Named as `config.json` names them (see [`Setting::key`]).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -150,6 +150,12 @@ pub enum Reason {
     IncludeLimit,
     /// A settings file in a format that is no longer read (Alacritty's YAML).
     OldFormat,
+    /// A file named by the settings (an include, a theme, an import) that is outside the home
+    /// folder, or a link that leads out of it. Only the person's own folder is read.
+    OutsideHome,
+    /// Some colours, but not both the background and the foreground: a few colours on defaults, not
+    /// a palette to save as a theme.
+    PartialPalette,
 }
 
 /// A key of the source that was read and not taken.
@@ -191,6 +197,24 @@ impl Proposal {
             self.values.retain(|proposed| proposed.setting != setting);
         }
         self.values.push(Proposed { setting, from, value, default_on });
+    }
+
+    /// Offer the palette `builder` holds, called `label`, when it is a whole one (both the background
+    /// and the foreground: [`Builder::has_base`]); colours short of that are noted as skipped, under
+    /// `from`. A palette with no colour at all is nothing to say.
+    pub(crate) fn propose_palette(
+        &mut self,
+        setting: Setting,
+        from: impl Into<String>,
+        label: &str,
+        builder: Builder,
+    ) {
+        let from = from.into();
+        if builder.has_base() {
+            self.propose(setting, from, SettingValue::Palette(builder.finish(label)));
+        } else if builder.has_any() {
+            self.skip(from, Reason::PartialPalette);
+        }
     }
 
     /// Note a key that is not taken.
