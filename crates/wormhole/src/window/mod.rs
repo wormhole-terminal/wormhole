@@ -80,7 +80,7 @@ mod glass;
 mod group_ops;
 #[cfg(test)]
 mod group_tests;
-mod grow;
+pub(crate) mod grow;
 pub(crate) mod hosting;
 #[cfg(test)]
 mod key_tests;

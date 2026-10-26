@@ -91,6 +91,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "row-drop" => sessions::row_drop,
         "pointer" => tear_off::pointer,
         "tear-off" => tear_off::tear_off,
+        "grow-hold" => tear_off::grow_hold,
         "pane-split" => sessions::pane_split,
         "pane-close" => sessions::pane_close,
         "pane-zoom" => sessions::pane_zoom,

@@ -11,11 +11,11 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use gpui_kit::*;
-use wormhole_core::view::motion::tear_off::{DURATION, pose};
+use wormhole_core::view::motion::tear_off::{DURATION, Grow as Pose, pose};
 use wormhole_core::view::panes::Rect;
 
 use crate::platform;
-use crate::settings::ui_in;
+use crate::settings::{UiColors, ui_in};
 use crate::style::motion::elapsed;
 use crate::window::Workspace;
 
@@ -29,18 +29,23 @@ struct Grow {
 }
 
 #[derive(Default)]
-struct Growing(HashMap<i64, Grow>);
+struct Growing {
+    windows: HashMap<i64, Grow>,
+    /// devctl: every growing window stands at this point of its growth (0.0 to 1.0) and stays there.
+    #[cfg(feature = "devctl")]
+    hold: Option<f32>,
+}
 
 impl Global for Growing {}
 
 /// Window `id`, about to open, grows from `chip` (in its own space).
 pub(super) fn begin(id: i64, chip: Rect, cx: &mut App) {
-    cx.default_global::<Growing>().0.insert(id, Grow { chip, timed: false });
+    cx.default_global::<Growing>().windows.insert(id, Grow { chip, timed: false });
 }
 
 /// Whether window `id` is growing, or about to.
 pub(super) fn active(id: i64, cx: &App) -> bool {
-    cx.try_global::<Growing>().is_some_and(|growing| growing.0.contains_key(&id))
+    cx.try_global::<Growing>().is_some_and(|growing| growing.windows.contains_key(&id))
 }
 
 impl Workspace {
@@ -55,11 +60,18 @@ impl Workspace {
     /// The window's frame: `root` as it is, or while the window grows, in the part of it that shows.
     pub(super) fn framed(&mut self, root: Div, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let id = self.window_id;
-        let Some(grow) = cx.default_global::<Growing>().0.get_mut(&id) else {
+        let growing = cx.default_global::<Growing>();
+        #[cfg(feature = "devctl")]
+        let hold = growing.hold;
+        let Some(grow) = growing.windows.get_mut(&id) else {
             return root.into_any_element();
         };
         let chip = grow.chip;
-        if !std::mem::replace(&mut grow.timed, true) {
+        #[cfg(feature = "devctl")]
+        let held = hold.is_some();
+        #[cfg(not(feature = "devctl"))]
+        let held = false;
+        if !held && !std::mem::replace(&mut grow.timed, true) {
             cx.spawn_in(window, async move |this, cx| {
                 cx.background_executor().timer(DURATION + GRACE).await;
                 this.update_in(cx, |this, window, cx| this.finish_grow(window, cx)).ok();
@@ -71,39 +83,51 @@ impl Workspace {
         let (w, h) = (f32::from(view.width), f32::from(view.height));
         let radius = f32::from(ui.radius_lg);
         let at = move |t: f32| pose(chip, w, h, radius, elapsed(DURATION, t));
+        let whole = div().absolute().w(px(w)).h(px(h)).child(root);
+        let body = div().absolute().overflow_hidden();
+        #[cfg(feature = "devctl")]
+        if let Some(t) = hold {
+            let g = at(t);
+            let body = clip(body.child(inside(whole, g)), g, ui);
+            return div().relative().size_full().child(body).into_any_element();
+        }
         let animation = Animation::new(DURATION);
-        // The window at its full size, held where it is in the window: the clip moves over it.
-        let whole = div().absolute().w(px(w)).h(px(h)).child(root).with_animation(
-            ("grow-content", id as u64),
-            animation.clone(),
-            move |d, t| {
-                let g = at(t);
-                d.left(px(-g.shown.x)).top(px(-g.shown.y)).opacity(g.content)
-            },
-        );
-        let body = div().absolute().overflow_hidden().child(whole).with_animation(
-            ("grow", id as u64),
-            animation,
-            move |d, t| {
-                let g = at(t);
-                d.left(px(g.shown.x))
-                    .top(px(g.shown.y))
-                    .w(px(g.shown.w))
-                    .h(px(g.shown.h))
-                    .rounded(px(g.radius))
-                    // The chip's own colour, gone once the content is all there.
-                    .bg(ui.elevated.opacity(1.0 - g.content))
-            },
-        );
+        let whole = whole
+            .with_animation(("grow-content", id as u64), animation.clone(), move |d, t| inside(d, at(t)));
+        let body =
+            body.child(whole).with_animation(("grow", id as u64), animation, move |d, t| clip(d, at(t), ui));
         div().relative().size_full().child(body).into_any_element()
     }
 
     /// The growth is over: the window is whole again, with its shadow, its lights and its blur.
     fn finish_grow(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        cx.default_global::<Growing>().0.remove(&self.window_id);
+        cx.default_global::<Growing>().windows.remove(&self.window_id);
         platform::window::set_shadow(window, true);
         platform::window::set_shown(window, true);
         self.sync_appearance(cx);
         cx.notify();
     }
+}
+
+/// The window held where it is in the growth `g`: moved back by the clip's corner, so it stays where it is in
+/// the window, and as much of it as has faded in.
+fn inside(d: Div, g: Pose) -> Div {
+    d.left(px(-g.shown.x)).top(px(-g.shown.y)).opacity(g.content)
+}
+
+/// The clip at `g`: the rectangle that shows, its corners, and the chip's own colour, which is gone once the
+/// content is all there.
+fn clip(d: Div, g: Pose, ui: UiColors) -> Div {
+    d.left(px(g.shown.x))
+        .top(px(g.shown.y))
+        .w(px(g.shown.w))
+        .h(px(g.shown.h))
+        .rounded(px(g.radius))
+        .bg(ui.elevated.opacity(1.0 - g.content))
+}
+
+/// devctl's `grow-hold`: hold every growing window at `at` of its growth (`None`: let it grow).
+#[cfg(feature = "devctl")]
+pub(crate) fn hold(at: Option<f32>, cx: &mut App) {
+    cx.default_global::<Growing>().hold = at;
 }
