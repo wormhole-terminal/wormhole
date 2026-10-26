@@ -23,7 +23,7 @@ pub(super) fn notice(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 /// `notices`: each window's chip, a line each: its number, the phase (`Hidden`, `Showing`, `Leaving`), the
 /// words, and the panel if there is one: the chip's frame at rest in the window's points (x y w h), its
-/// material and its window number.
+/// material, its window number and the app window's.
 pub(super) fn notices(ctx: &mut Ctx, _: &str) -> Result<String> {
     let windows: Vec<WindowId> = app(ctx.cx).windows.iter().map(|w| w.handle.window_id()).collect();
     let mut out = String::new();
@@ -34,9 +34,10 @@ pub(super) fn notices(ctx: &mut Ctx, _: &str) -> Result<String> {
             let [x, y, w, h] = panel.frame;
             write!(
                 out,
-                " frame {x} {y} {w} {h} material {} panel {}",
+                " frame {x} {y} {w} {h} material {} panel {} window {}",
                 panel.material.name(),
-                panel.window_number
+                panel.window_number,
+                panel.parent_number
             )?;
         }
         out.push('\n');
