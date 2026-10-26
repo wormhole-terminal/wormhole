@@ -10,7 +10,8 @@
 //! `style::motion::timing`: nothing but the drawing reads them. The motions' own durations are with
 //! their poses; `pose`'s `//!` says why. Some motions the design fixed, so they have no choice and no pose
 //! of a variant, only their numbers: dragging a terminal (`drag`), the panel's tab switch (`tabs`), the
-//! palette's exit (`overlay`) and a split opening (`split`).
+//! palette's exit (`overlay`), a split opening (`split`) and a window growing from a torn-off terminal's chip
+//! (`tear_off`).
 //!
 //! Rolling counts (`roll`) have no choice: the design fixed them. Like the rest of `view` this uses only
 //! `theme` below it, and the sidebar's [`Urgency`](crate::view::sidebar::Urgency), which a status change
@@ -25,6 +26,7 @@ pub mod roll;
 pub mod split;
 mod spring;
 pub mod tabs;
+pub mod tear_off;
 mod timeline;
 
 pub use choices::{ColumnMotion, FoldMotion, InsertMotion, MotionChoice, MotionChoices, StatusMotion};

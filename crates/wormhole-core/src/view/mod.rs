@@ -3,7 +3,8 @@
 //! areas (`focus`), the command palette's matching (`search`), VoiceOver's words (`spoken`), the
 //! panel's tabs (`panel`), drag and drop order (`reorder`), shortened text (`elide`), the panels'
 //! caps and counts (`limits`), which animation each motion runs (`motion`), the notes and next steps
-//! of a terminal (`notes`) and the title row's extras (`title_extras`).
+//! of a terminal (`notes`), where a terminal torn off the window lands (`tear_off`) and the title row's extras
+//! (`title_extras`).
 //!
 //! It uses only `theme` below it: never settings, git, the store or the running app. What those know
 //! comes to it as values.
@@ -20,4 +21,5 @@ pub mod reorder;
 pub mod search;
 pub mod sidebar;
 pub mod spoken;
+pub mod tear_off;
 pub mod title_extras;
