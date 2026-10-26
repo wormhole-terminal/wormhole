@@ -16,6 +16,18 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
+        self.panel_column(width, false, window, cx)
+    }
+
+    /// The panel's column. `bare` leaves its surface off, for a slide that fades the column's content over
+    /// a surface of its own (`window::slide`).
+    pub(in crate::window) fn panel_column(
+        &self,
+        width: f32,
+        bare: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
         let ui = ui_in(&self.profile, cx);
         // The tab actually on screen: if the chosen one isn't in the tab list any more (the
         // Project tab vanished with its feature flag), show Changes until the next refresh resets it.
@@ -42,7 +54,7 @@ impl Workspace {
             .w(px(width))
             .flex_none()
             .h_full()
-            .bg(ui.panel_right)
+            .bg(if bare { transparent_black() } else { ui.panel_right })
             .child(self.render_panel_tab_bar(window, cx))
             .child(self.slide_in_content(body, cx))
     }

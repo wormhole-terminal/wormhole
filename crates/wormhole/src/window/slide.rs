@@ -8,10 +8,14 @@
 //! the terminal off instead (it reads from the left). Either way the terminal never lies under the
 //! sliding column, which paints its own translucent surface over the blur, as it does at rest. The
 //! traffic lights and the collapse button never move. Under Reduce Motion both are cuts.
+use std::time::{Duration, Instant};
+
 use gpui_kit::*;
 use wormhole_core::view::layout::Edge;
+use wormhole_core::view::motion::ColumnMotion;
+use wormhole_core::view::motion::pose::column::{self, ColumnPose};
 
-use crate::style::motion::{EASE_IN, EASE_OUT, MOTION_PANEL, MOTION_PANEL_EXIT};
+use crate::settings::{settings_in, ui_in};
 use crate::window::Workspace;
 
 /// A column on its way in or out.
@@ -22,7 +26,25 @@ pub(super) struct Slide {
     width: f32,
     /// Which slide this is, so a later one isn't ended by an earlier one's timer.
     serial: u64,
+    motion: Motion,
     _end: Task<()>,
+}
+
+/// How the slide moves, which a person's choice and the moment it began decide.
+#[derive(Clone, Copy)]
+struct Motion {
+    variant: ColumnMotion,
+    /// How much of the column was in when it began: the rest it left, or where it was when another slide
+    /// turned round (every variant but Classic, which starts from rest as it always did).
+    from: f32,
+    duration: Duration,
+    began: Instant,
+}
+
+impl Motion {
+    fn new(variant: ColumnMotion, opening: bool, from: f32, began: Instant) -> Self {
+        Self { variant, from, duration: column::duration(variant, opening), began }
+    }
 }
 
 /// How far a sliding column is in, frame by frame: what everything that moves with it (the column,
@@ -33,20 +55,25 @@ pub(super) struct SlideMotion {
     opening: bool,
     width: f32,
     serial: u64,
+    motion: Motion,
 }
 
 impl SlideMotion {
-    /// The slide's timing: in easing out, out easing in.
+    /// The slide's clock: linear over its whole length, which the pose of core reads the variant's
+    /// curves and stages from.
     pub(super) fn animation(self) -> Animation {
-        let (duration, easing) =
-            if self.opening { (MOTION_PANEL, EASE_OUT) } else { (MOTION_PANEL_EXIT, EASE_IN) };
-        Animation::new(duration).with_easing(easing.easing())
+        Animation::new(self.motion.duration)
     }
 
-    /// How many points of the column are in at `t` (eased) of the way.
+    /// The column `t` (0.0..=1.0) of the way through the slide.
+    pub(super) fn pose(self, t: f32) -> ColumnPose {
+        let elapsed = Duration::from_secs_f32(t.clamp(0.0, 1.0) * self.motion.duration.as_secs_f32());
+        column::pose(self.motion.variant, self.opening, self.motion.from, elapsed)
+    }
+
+    /// How many points of the column are in at `t` of the way.
     pub(super) fn offset(self, t: f32) -> f32 {
-        let (from, to) = if self.opening { (0.0, self.width) } else { (self.width, 0.0) };
-        from + (to - from) * t
+        self.width * self.pose(t).shown
     }
 
     /// An animation id for `what`, unique to this slide.
@@ -55,16 +82,34 @@ impl SlideMotion {
     }
 }
 
+impl Slide {
+    /// How much of the column is in `now`.
+    fn shown_at(&self, now: Instant) -> f32 {
+        let elapsed = now.saturating_duration_since(self.motion.began);
+        column::pose(self.motion.variant, self.opening, self.motion.from, elapsed).shown
+    }
+}
+
 impl Workspace {
     /// `edge`'s column went from `before` to `after` points wide (a toggle): slide it, unless it
-    /// neither came nor went, or motion is reduced.
+    /// neither came nor went, or motion is reduced. The Motion feature's choice says how it moves
+    /// (Classic without it).
     pub(super) fn start_slide(&mut self, edge: Edge, before: f32, after: f32, cx: &mut Context<Self>) {
         if (before > 0.0) == (after > 0.0) || cx.reduce_motion() {
             return;
         }
         let opening = after > 0.0;
+        let variant = settings_in(&self.profile, cx).motion_in_force().column;
+        let now = cx.background_executor().now();
+        // A slide toggled back while it is under way turns round from where the column is. Classic starts
+        // from rest, as it always did.
+        let from = match &self.slide {
+            Some(slide) if variant != ColumnMotion::Classic && slide.edge == edge => slide.shown_at(now),
+            _ => ColumnPose::rest(!opening).shown,
+        };
         let serial = self.slide.as_ref().map_or(0, |slide| slide.serial + 1);
-        let duration = if opening { MOTION_PANEL } else { MOTION_PANEL_EXIT };
+        let motion = Motion::new(variant, opening, from, now);
+        let duration = motion.duration;
         let end = cx.spawn(async move |this, cx| {
             cx.background_executor().timer(duration).await;
             this.update(cx, |this, cx| {
@@ -75,7 +120,7 @@ impl Workspace {
             })
             .ok();
         });
-        self.slide = Some(Slide { edge, opening, width: before.max(after), serial, _end: end });
+        self.slide = Some(Slide { edge, opening, width: before.max(after), serial, motion, _end: end });
     }
 
     /// Whether `edge`'s column takes its place in the layout: not while it slides in over the
@@ -92,6 +137,7 @@ impl Workspace {
             opening: slide.opening,
             width: slide.width,
             serial: slide.serial,
+            motion: slide.motion,
         })
     }
 
@@ -100,13 +146,30 @@ impl Workspace {
     pub(super) fn render_slide(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Option<AnyElement> {
         let motion = self.slide_motion()?;
         let width = motion.width;
+        let fades = motion.motion.variant == ColumnMotion::ContentAfter;
         let column = match motion.edge {
-            Edge::Sidebar => self.render_sidebar(width, false, window, cx),
-            Edge::Panel => self.render_panel(width, window, cx).into_any_element(),
+            Edge::Sidebar => self.sidebar_column(width, false, fades, window, cx),
+            Edge::Panel => self.panel_column(width, fades, window, cx).into_any_element(),
         };
         // The column keeps its width inside the clip, pinned to the window's edge, so its rows
         // don't reflow as it moves. It paints its own translucent surface, as at rest: the terminal
         // never lies under it (`carry_with_slide`), so the blur shows through from the first frame.
+        // Content after fades what is in the column and not its surface, so it has none and the surface is
+        // drawn here, which the fade leaves alone.
+        let column = if fades {
+            let surface = self.column_surface(motion.edge, cx);
+            div()
+                .size_full()
+                .child(div().absolute().size_full().bg(surface))
+                .child(div().size_full().child(column).with_animation(
+                    motion.id("slide-content"),
+                    motion.animation(),
+                    move |content, t| content.opacity(motion.pose(t).content),
+                ))
+                .into_any_element()
+        } else {
+            column
+        };
         let pinned = div().absolute().top_0().bottom_0().w(px(width)).child(column);
         let pinned = match motion.edge {
             Edge::Sidebar => pinned.left_0(),
@@ -123,6 +186,16 @@ impl Workspace {
             })
             .into_any_element(),
         )
+    }
+
+    /// What `edge`'s column is painted on at rest: the translucent surface under what is in it.
+    fn column_surface(&self, edge: Edge, cx: &App) -> Hsla {
+        let ui = ui_in(&self.profile, cx);
+        match edge {
+            Edge::Sidebar if self.glass_on(cx) => transparent_black(),
+            Edge::Sidebar => ui.panel,
+            Edge::Panel => ui.panel_right,
+        }
     }
 
     /// The terminal's column while a column slides, kept out from under it so the sliding column

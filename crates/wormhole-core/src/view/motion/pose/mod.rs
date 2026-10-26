@@ -1,5 +1,5 @@
 //! What a row of the sidebar looks like at a moment of its coming or going, or of its status changing, as
-//! plain numbers: one pure function per motion (`insert`, `fold`, `status`) from the person's choice, the
+//! plain numbers: one pure function per motion (`insert`, `fold`, `status`, `column`) from the person's choice, the
 //! phase and how far along the motion is, to a [`Pose`] (a status change has a [`status::StatusPose`] of
 //! its own: its parts are not a row's). The sidebar draws the pose of the animation's progress and the
 //! Settings previews draw the pose of their loop's time, so the preview shows exactly what the list does
@@ -19,6 +19,7 @@
 //!
 //! Like the rest of `view` it uses only `theme` below it.
 
+pub mod column;
 pub mod fold;
 pub mod insert;
 pub mod status;

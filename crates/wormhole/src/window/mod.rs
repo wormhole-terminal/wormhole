@@ -139,6 +139,8 @@ mod sidebar_host;
 mod sidebar_tests;
 mod slide;
 #[cfg(test)]
+mod slide_tests;
+#[cfg(test)]
 mod stable_list_tests;
 mod status_bar;
 #[cfg(test)]

@@ -13,10 +13,11 @@ pub const MOTION_FAST: Duration = Duration::from_millis(120);
 pub const MOTION_POPOVER: Duration = Duration::from_millis(150);
 /// A band or note folding, a chevron turning, a drop settling.
 pub const MOTION_BASE: Duration = Duration::from_millis(160);
-/// Panels going away (GPUI Kit's sidebar): 0.8× their entrance.
-pub const MOTION_PANEL_EXIT: Duration = Duration::from_millis(200);
+/// Panels going away (GPUI Kit's sidebar): 0.8× their entrance. The column's motion is core's
+/// (`view::motion::pose::column`), which is where its number is.
+pub const MOTION_PANEL_EXIT: Duration = wormhole_core::view::motion::pose::column::CLASSIC_OUT;
 /// The sidebar and the right panel coming in.
-pub const MOTION_PANEL: Duration = Duration::from_millis(250);
+pub const MOTION_PANEL: Duration = wormhole_core::view::motion::pose::column::CLASSIC_IN;
 
 /// One turn of the working spinner (linear, at most [`ANIMATION_FPS`] frames a second).
 pub const SPIN_PERIOD: Duration = Duration::from_millis(800);

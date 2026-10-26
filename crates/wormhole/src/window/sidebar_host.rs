@@ -291,6 +291,19 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        self.sidebar_column(width, replayed, false, window, cx)
+    }
+
+    /// The sidebar's column. `bare` leaves its surface off, for a slide that fades the column's content
+    /// over a surface of its own (`window::slide`).
+    pub(super) fn sidebar_column(
+        &mut self,
+        width: f32,
+        replayed: bool,
+        bare: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
         let glass = self.glass_on(cx);
         self.fit_sidebar(width, cx);
@@ -314,7 +327,7 @@ impl Workspace {
             .overflow_hidden()
             .h_full()
             .flex_none()
-            .bg(if glass { gpui_kit::transparent_black() } else { ui.panel })
+            .bg(if glass || bare { gpui_kit::transparent_black() } else { ui.panel })
             .child(header)
             .child(list)
             .children(self.render_no_agents_note(cx))
