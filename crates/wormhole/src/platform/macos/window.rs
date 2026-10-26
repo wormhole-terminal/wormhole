@@ -57,6 +57,35 @@ pub fn set_top_left(window: &Window, x: f32, y: f32) {
     ns_window.setFrameTopLeftPoint(NSPoint::new(frame.origin.x + f64::from(x), top));
 }
 
+pub fn set_global_top_left(window: &Window, x: f32, y: f32) {
+    if let Some(ns_window) = ns_window(window) {
+        ns_window.setFrameTopLeftPoint(NSPoint::new(f64::from(x), f64::from(y)));
+    }
+}
+
+pub fn make_ghost(window: &Window) {
+    let Some(ns_window) = ns_window(window) else { return };
+    ns_window.setIgnoresMouseEvents(true);
+    ns_window.setHasShadow(false);
+    // Transient and IgnoresCycle keep it out of Mission Control and the window cycle; FullScreenAuxiliary
+    // lets it sit over a full-screen Space; CanJoinAllSpaces keeps it on the Space the drag is on.
+    ns_window.setCollectionBehavior(
+        NSWindowCollectionBehavior::Transient
+            | NSWindowCollectionBehavior::IgnoresCycle
+            | NSWindowCollectionBehavior::FullScreenAuxiliary
+            | NSWindowCollectionBehavior::CanJoinAllSpaces,
+    );
+}
+
+pub fn set_shadow(window: &Window, shadow: bool) {
+    if let Some(ns_window) = ns_window(window) {
+        ns_window.setHasShadow(shadow);
+        if shadow {
+            ns_window.invalidateShadow();
+        }
+    }
+}
+
 pub fn is_minimised(window: &Window) -> bool {
     ns_window(window).is_some_and(|w| w.isMiniaturized())
 }

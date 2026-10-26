@@ -20,6 +20,7 @@ pub mod locale;
 pub mod look;
 pub mod notifications;
 pub mod panel;
+pub mod pointer;
 pub mod scroller;
 pub mod sheet;
 pub mod sound;

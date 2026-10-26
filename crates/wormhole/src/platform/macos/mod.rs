@@ -22,6 +22,7 @@ pub mod look;
 pub mod menu;
 pub mod notifications;
 pub mod panel;
+pub mod pointer;
 pub mod popover;
 mod rows;
 pub mod scroller;

@@ -23,6 +23,12 @@ pub fn lights_opacity(_: &Window) -> Option<(f32, bool)> {
 
 pub fn set_top_left(_: &Window, _: f32, _: f32) {}
 
+pub fn set_global_top_left(_: &Window, _: f32, _: f32) {}
+
+pub fn make_ghost(_: &Window) {}
+
+pub fn set_shadow(_: &Window, _: bool) {}
+
 pub fn is_minimised(_: &Window) -> bool {
     false
 }

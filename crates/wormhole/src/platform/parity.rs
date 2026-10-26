@@ -94,6 +94,10 @@ pub(super) fn signatures_match() {
         window::set_lights_shown: fn(&Window, bool);
         window::follow_theme: fn(&Window);
         window::set_top_left: fn(&Window, f32, f32);
+        window::set_global_top_left: fn(&Window, f32, f32);
+        window::make_ghost: fn(&Window);
+        window::set_shadow: fn(&Window, bool);
+        pointer::on_screen: fn() -> Option<super::pointer::Pointer>;
         window::is_minimised: fn(&Window) -> bool;
         window::allow_fullscreen: fn(&Window);
         window::deminiaturize: fn(&Window);

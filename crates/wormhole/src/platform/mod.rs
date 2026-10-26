@@ -3,7 +3,7 @@
 //! changes. Each concern is a neutral file here (plain functions and types, no OS names: `window`,
 //! `vibrancy`, `look`, `dock`, `a11y`, `auth`, `hotkey`, `keys`, `sound`, `scroller`, `fonts`,
 //! `font_face`, `locale`, `status_item`, `menu`, `popover`, `notifications`, `default_app`, `apps`, `sheet`,
-//! `trash`, `panel`, `intro`, devctl's `inspect`) that calls `os::…`: `macos/` is AppKit's implementation
+//! `trash`, `panel`, `pointer`, `intro`, devctl's `inspect`) that calls `os::…`: `macos/` is AppKit's implementation
 //! (the only code in the app with `objc2`, `block2`, raw window handles and `unsafe` for the
 //! system), `fallback/` the portable one, GPUI's own call where GPUI has one and "not available"
 //! where it hasn't (used only off macOS, not a target yet; compiled on macOS too, so it can't drift
@@ -55,6 +55,7 @@ pub mod panel;
 #[cfg(target_os = "macos")]
 #[cfg_attr(not(test), allow(dead_code))]
 mod parity;
+pub mod pointer;
 pub mod popover;
 #[cfg(any(test, feature = "devctl"))]
 pub mod record;

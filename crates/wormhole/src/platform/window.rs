@@ -59,6 +59,27 @@ pub fn set_top_left(window: &Window, x: f32, y: f32) {
     os::set_top_left(window, x, y);
 }
 
+/// Put the window's top left corner at `x`, `y` of the system's global space (`pointer::Pointer::global`:
+/// from the primary screen's bottom left, y up, so `y` is the corner's height above that line). It goes to
+/// whichever screen that is on.
+pub fn set_global_top_left(window: &Window, x: f32, y: f32) {
+    os::set_global_top_left(window, x, y);
+}
+
+/// Make `window` something the pointer passes through and that no one switches to: it takes no mouse event
+/// and casts no shadow, stays out of the window cycle and out of Mission Control, and it is over a
+/// full-screen Space. The chip that follows the pointer during a drag is one: the drag goes on under it.
+pub fn make_ghost(window: &Window) {
+    os::make_ghost(window);
+}
+
+/// Whether the window casts its shadow. A window that grows from a small rectangle in a transparent
+/// frame has none while it does, or the shadow would outline the whole frame; the system draws it again
+/// from the window's content once it is on.
+pub fn set_shadow(window: &Window, shadow: bool) {
+    os::set_shadow(window, shadow);
+}
+
 /// Whether the window is minimised. AppKit says so only once the minimise animation is done.
 pub fn is_minimised(window: &Window) -> bool {
     os::is_minimised(window)
