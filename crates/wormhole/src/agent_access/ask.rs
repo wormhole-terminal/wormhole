@@ -199,6 +199,7 @@ fn access_off() -> Reply {
 }
 
 /// A question as the tests and devctl see it.
+#[cfg(any(test, feature = "devctl"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Waiting {
     pub id: u64,
@@ -212,6 +213,7 @@ pub(crate) struct Waiting {
     pub facts: String,
 }
 
+#[cfg(any(test, feature = "devctl"))]
 /// The questions waiting for an answer, the one on the screen first. `words` also says what the sheet says
 /// (title, text, facts), which reads the windows: not from inside the update of one.
 pub(crate) fn pending_questions(words: bool, cx: &mut App) -> Vec<Waiting> {
@@ -237,6 +239,7 @@ pub(crate) fn pending_questions(words: bool, cx: &mut App) -> Vec<Waiting> {
     waiting
 }
 
+#[cfg(any(test, feature = "devctl"))]
 /// Answer the question on the screen with `button` (devctl's `agent-ask`, a test): as if it was pressed, a
 /// moment later, outside the update that asked. Whether there was one.
 pub(crate) fn answer_pending(button: Button, cx: &mut App) -> bool {

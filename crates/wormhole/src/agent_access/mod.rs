@@ -34,14 +34,19 @@ use self::processes::Signatures;
 use self::scripted::Asker;
 use crate::app_state::OpenWindow;
 
-pub(crate) use self::approved::{Approved, How, Which, approved, now_seconds, revoke};
+#[cfg(any(test, feature = "devctl"))]
+pub(crate) use self::approved::Which;
+pub(crate) use self::approved::{Approved, How, approved, now_seconds, revoke};
 #[cfg(test)]
 pub(crate) use self::ask::Waiting;
-pub(crate) use self::ask::{answer_pending, pending_questions, tick};
+pub(crate) use self::ask::tick;
+#[cfg(any(test, feature = "devctl"))]
+pub(crate) use self::ask::{answer_pending, pending_questions};
 pub(crate) use self::drive::{announce, drive_of};
 pub(crate) use self::gate::{Gate, gate, standing};
 #[cfg(any(test, feature = "devctl"))]
 pub(crate) use self::scripted::Script;
+#[cfg(any(test, feature = "devctl"))]
 pub(crate) use self::sheet::Button;
 
 /// The question on the screen.
