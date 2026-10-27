@@ -11,7 +11,7 @@ use std::time::SystemTime;
 
 use super::grants::ProcessRef;
 use super::identity::{Identity, Kind};
-use crate::agents::{self, AgentId};
+use crate::agents::{self, AgentId, Launch};
 use crate::platform::codesign::{Signature, SignerKind};
 
 /// What the walk asks of the system.
@@ -20,19 +20,33 @@ pub trait Processes {
     fn command_line(&self, pid: u32) -> Option<(String, Vec<String>)>;
     fn start_time(&self, pid: u32) -> Option<SystemTime>;
     fn signature(&self, pid: u32) -> Signature;
+    /// Whether the process's environment makes an interpreter load code of its own before the script it was
+    /// given (`NODE_OPTIONS`, `PYTHONPATH`, …). A process whose environment cannot be read says yes.
+    fn env_runs_code(&self, pid: u32) -> bool;
     /// Whether `pid` is the shell of one of Wormhole's terminals.
     fn is_terminal_shell(&self, pid: u32) -> bool;
-    /// The folder of the nearest `package.json` at or above a script, else the script's own folder.
-    fn package_folder(&self, script: &Path) -> PathBuf;
+    /// What `script` (as `pid` was started with it, relative to its folder) is and what pins it; `None` when it is
+    /// not a regular file inside the package that would pin it.
+    fn script_pin(&self, pid: u32, script: &str) -> Option<ScriptPin>;
     /// A file's size and modification time (Unix seconds), which pin an unsigned program.
     fn stamp(&self, path: &Path) -> Option<(u64, i64)>;
+}
+
+/// A script as the system resolves it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScriptPin {
+    /// The regular file it is, links followed.
+    pub file: PathBuf,
+    /// What an approval is pinned to: the folder of the nearest `package.json` the file is inside of, else the
+    /// file itself.
+    pub pin: PathBuf,
 }
 
 /// A program, as the question shows it. Never trusted: it is what the system said.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
     pub pid: u32,
-    /// Its executable, or the script an interpreter runs.
+    /// Its executable, or the script an interpreter runs (the file it really is).
     pub path: PathBuf,
     /// The signature of the executable (the interpreter's, for a script).
     pub signature: Signature,
@@ -68,6 +82,10 @@ pub struct Changed;
 /// The chain is cut at this many processes: a bound on what one request costs.
 const CHAIN_MAX: usize = crate::ipc::ANCESTORS_MAX + 1;
 
+/// How many processes above the agent are looked at for a second agent ("started by"): a few levels, not the
+/// whole chain.
+const STARTED_BY_LEVELS: usize = 4;
+
 /// Programs that pass their arguments on and are never the identity.
 const WRAPPERS: &[&str] =
     &["env", "command", "exec", "nice", "nohup", "time", "timeout", "xargs", "caffeinate", "script", "sudo"];
@@ -78,26 +96,54 @@ const SHELLS: &[&str] =
 /// Names `wh` runs as: the command, and the app's executable it is a link to.
 const WH_NAMES: &[&str] = &["wh", "wormhole"];
 
+/// What the walk found at the agent's pid.
+struct Found {
+    agent: AgentId,
+    pid: u32,
+    exe: PathBuf,
+    /// For a script: what it is and what pins it.
+    script: Option<ScriptPin>,
+}
+
 /// Who is behind `chain` (the caller first, then its parents): see the module's notes.
 pub fn resolve(chain: &[u32], procs: &dyn Processes) -> Result<Resolved, Changed> {
     let mut elevated = false;
     let mut requester: Option<Program> = None;
-    let mut found: Option<(AgentId, u32, PathBuf, Vec<String>)> = None;
+    let mut found: Option<Found> = None;
     let mut second: Option<AgentId> = None;
+    let mut above_agent = 0;
     for &pid in chain.iter().take(CHAIN_MAX) {
         let Some(exe) = procs.executable(pid) else { continue };
         let (exe_text, argv) =
             procs.command_line(pid).unwrap_or_else(|| (exe.to_string_lossy().into_owned(), Vec::new()));
-        if let Some(agent) = agents::identify(&exe_text, &argv) {
-            if found.is_some() {
+        if found.is_some() {
+            // Past the agent only to say what started it: a few levels, and never beyond a terminal's shell.
+            above_agent += 1;
+            if above_agent > STARTED_BY_LEVELS || procs.is_terminal_shell(pid) {
+                break;
+            }
+            if let Some(Launch::Native(agent) | Launch::Script { agent, .. }) =
+                agents::identify_launch(&exe_text, &argv, false)
+            {
                 second = Some(agent);
                 break;
             }
-            found = Some((agent, pid, exe, argv));
             continue;
         }
-        if found.is_some() {
-            continue;
+        match agents::identify_launch(&exe_text, &argv, false) {
+            Some(Launch::Native(agent)) => {
+                found = Some(Found { agent, pid, exe, script: None });
+                continue;
+            }
+            // A script is an agent only when its interpreter was started plainly (nothing in the
+            // environment that loads code first) and the script is a regular file inside its package.
+            Some(Launch::Script { agent, script }) if !procs.env_runs_code(pid) => {
+                if let Some(pin) = procs.script_pin(pid, &script) {
+                    found = Some(Found { agent, pid, exe, script: Some(pin) });
+                    continue;
+                }
+            }
+            Some(Launch::Script { .. }) | None => {}
         }
         let name = base_name(&exe);
         if name == "sudo" {
@@ -113,10 +159,10 @@ pub fn resolve(chain: &[u32], procs: &dyn Processes) -> Result<Resolved, Changed
             continue;
         }
         if requester.is_none() {
-            requester = program_of(pid, &exe, &argv, procs).ok();
+            requester = program_of(pid, &exe, &argv, None, procs).ok();
         }
     }
-    let Some((agent, pid, exe, argv)) = found else {
+    let Some(Found { agent, pid, exe, script }) = found else {
         return Ok(Resolved {
             identity: Identity::scripts(),
             label: "Scripts".to_string(),
@@ -128,11 +174,12 @@ pub fn resolve(chain: &[u32], procs: &dyn Processes) -> Result<Resolved, Changed
         });
     };
     let before = procs.start_time(pid).ok_or(Changed)?;
-    let program = program_of(pid, &exe, &argv, procs)?;
+    let argv = procs.command_line(pid).map(|(_, argv)| argv).unwrap_or_default();
+    let program = program_of(pid, &exe, &argv, script.as_ref(), procs)?;
     if procs.start_time(pid) != Some(before) {
         return Err(Changed);
     }
-    let (identity, unusual_signer) = identity_of(agent, &program, procs);
+    let (identity, unusual_signer) = identity_of(agent, &program, &exe, script.as_ref(), procs);
     Ok(Resolved {
         identity,
         label: agents::agent(agent).name.to_string(),
@@ -148,30 +195,54 @@ fn base_name(path: &Path) -> String {
     path.file_name().map(|name| name.to_string_lossy().to_ascii_lowercase()).unwrap_or_default()
 }
 
-/// What the system says about the program at `pid`.
-fn program_of(pid: u32, exe: &Path, argv: &[String], procs: &dyn Processes) -> Result<Program, Changed> {
+/// What the system says about the program at `pid`; for a script, the file it really is and the interpreter.
+fn program_of(
+    pid: u32,
+    exe: &Path,
+    _argv: &[String],
+    script: Option<&ScriptPin>,
+    procs: &dyn Processes,
+) -> Result<Program, Changed> {
     let started = procs.start_time(pid).ok_or(Changed)?;
-    let exe_text = exe.to_string_lossy();
-    let script = agents::interpreted_script(&exe_text, argv);
     let (path, interpreter) = match script {
-        Some(script) => (PathBuf::from(script), Some(base_name(exe))),
+        Some(script) => (script.file.clone(), Some(base_name(exe))),
         None => (exe.to_path_buf(), None),
     };
     Ok(Program { pid, path, signature: procs.signature(pid), interpreter, started })
 }
 
 /// The identity of `agent` running as `program`, and whether its signature is not the usual one.
-fn identity_of(agent: AgentId, program: &Program, procs: &dyn Processes) -> (Identity, bool) {
+fn identity_of(
+    agent: AgentId,
+    program: &Program,
+    exe: &Path,
+    script: Option<&ScriptPin>,
+    procs: &dyn Processes,
+) -> (Identity, bool) {
     let registry = agents::agent(agent);
     let base = Identity { kind: Kind::Unsigned, agent: Some(agent), ..Identity::scripts() };
     let signature = &program.signature;
-    if program.interpreter.is_some() {
-        let folder = procs.package_folder(&program.path);
-        let identity = Identity { kind: Kind::Script, pin: folder.to_string_lossy().into_owned(), ..base };
-        return (identity, false);
-    }
     let identifier = signature.identifier.clone().unwrap_or_default();
     let team = signature.team_id.clone().unwrap_or_default();
+    // What pins a program by its code when its signer cannot: the hash, else the file as it is.
+    let by_code = || match &signature.cdhash {
+        Some(hash) => hash.clone(),
+        None => {
+            let stamp = procs.stamp(exe).map(|(size, time)| format!("|{size}|{time}"));
+            format!("{}{}", exe.display(), stamp.unwrap_or_default())
+        }
+    };
+    if let Some(script) = script {
+        // The key says which package and which interpreter: another `node` is another program.
+        let folder = script.pin.to_string_lossy().into_owned();
+        let signed = matches!(signature.kind, SignerKind::DeveloperId | SignerKind::AppleSystem);
+        let identity = if signed {
+            Identity { kind: Kind::Script, identifier, team_id: team, pin: folder, ..base }
+        } else {
+            Identity { kind: Kind::Script, pin: format!("{folder}\n{}", by_code()), ..base }
+        };
+        return (identity, false);
+    }
     match signature.kind {
         SignerKind::DeveloperId => {
             let usual = registry.signers.is_empty()
@@ -181,12 +252,13 @@ fn identity_of(agent: AgentId, program: &Program, procs: &dyn Processes) -> (Ide
         SignerKind::AppleSystem => (Identity { kind: Kind::Apple, identifier, ..base }, false),
         SignerKind::AdHoc | SignerKind::Other => {
             let pin = signature.cdhash.clone().unwrap_or_default();
-            (Identity { kind: Kind::AdHoc, pin, ..base }, !registry.signers.is_empty())
+            (
+                Identity { kind: Kind::AdHoc, pin, ..base },
+                !registry.signers.is_empty() || signature.injectable,
+            )
         }
         SignerKind::Unsigned | SignerKind::Unreadable => {
-            let stamp = procs.stamp(&program.path).map(|(size, time)| format!("|{size}|{time}"));
-            let pin = format!("{}{}", program.path.display(), stamp.unwrap_or_default());
-            (Identity { kind: Kind::Unsigned, pin, ..base }, !registry.signers.is_empty())
+            (Identity { kind: Kind::Unsigned, pin: by_code(), ..base }, !registry.signers.is_empty())
         }
     }
 }
@@ -197,7 +269,7 @@ mod tests {
     use std::path::{Path, PathBuf};
     use std::time::{Duration, SystemTime};
 
-    use super::{Changed, Processes, Resolved, resolve};
+    use super::{Changed, Processes, Resolved, ScriptPin, resolve};
     use crate::agents::AgentId;
     use crate::ipc::access::identity::Kind;
     use crate::platform::codesign::{Signature, SignerKind};
@@ -217,6 +289,10 @@ mod tests {
         /// A pid whose start time changes on the second read.
         reused: std::cell::RefCell<Option<u32>>,
         reads: std::cell::RefCell<HashMap<u32, u32>>,
+        /// Processes whose environment loads code before a script (`NODE_OPTIONS` and the like).
+        loads_code: std::cell::RefCell<Vec<u32>>,
+        /// Scripts that are not a regular file inside their package.
+        outside_package: std::cell::RefCell<Vec<String>>,
     }
 
     fn at(secs: u64) -> SystemTime {
@@ -263,8 +339,15 @@ mod tests {
         fn is_terminal_shell(&self, pid: u32) -> bool {
             self.procs.get(&pid).is_some_and(|p| p.shell)
         }
-        fn package_folder(&self, script: &Path) -> PathBuf {
-            script.parent().map(Path::to_path_buf).unwrap_or_default()
+        fn env_runs_code(&self, pid: u32) -> bool {
+            self.loads_code.borrow().contains(&pid)
+        }
+        fn script_pin(&self, _pid: u32, script: &str) -> Option<ScriptPin> {
+            if self.outside_package.borrow().iter().any(|s| s == script) {
+                return None;
+            }
+            let file = PathBuf::from(script);
+            Some(ScriptPin { pin: file.parent().map(Path::to_path_buf).unwrap_or_default(), file })
         }
         fn stamp(&self, _path: &Path) -> Option<(u64, i64)> {
             Some((100, 5))
@@ -278,6 +361,7 @@ mod tests {
             team_id: Some(team.into()),
             subject: Some("Anthropic PBC".into()),
             cdhash: Some("abcd".into()),
+            injectable: false,
         }
     }
 
@@ -356,8 +440,12 @@ mod tests {
         assert_eq!(resolved.identity.pin, "/opt/homebrew/lib/node_modules/@google/gemini-cli/dist");
         let program = resolved.program.expect("shown");
         assert_eq!(program.interpreter.as_deref(), Some("node"));
-        assert_eq!(program.signature.team_id.as_deref(), Some("HX7739G8FX"), "shown, not part of the key");
-        assert!(resolved.identity.team_id.is_empty());
+        assert_eq!(program.signature.team_id.as_deref(), Some("HX7739G8FX"));
+        // The interpreter's signer is part of the key: another `node` is another program.
+        assert_eq!(
+            (resolved.identity.identifier.as_str(), resolved.identity.team_id.as_str()),
+            ("node", "HX7739G8FX")
+        );
     }
 
     #[test]
@@ -441,5 +529,117 @@ mod tests {
         );
         *table.reused.borrow_mut() = Some(3);
         assert_eq!(resolve(&[1, 3], &table), Err(Changed));
+    }
+
+    fn gemini_on(table: Table, node: &'static str, args: &[&'static str]) -> Table {
+        table.with(1, "/usr/local/bin/wh", &["wh"]).with(2, node, args)
+    }
+
+    #[test]
+    fn a_program_that_calls_itself_node_is_not_a_script_agent() {
+        // argv[0] says node and the script is Gemini's, but the executable is no interpreter.
+        let table = gemini_on(Table::default(), "/tmp/evil", &["node", "/opt/gemini-cli/bin/gemini"]);
+        assert_eq!(who(&[1, 2], &table).identity.kind, Kind::Scripts);
+    }
+
+    #[test]
+    fn flags_that_load_or_run_code_make_a_script_no_agent() {
+        for args in [
+            &["node", "--require=/tmp/evil.js", "/opt/gemini-cli/bin/gemini"][..],
+            &["node", "-r", "/tmp/evil.js", "/opt/gemini-cli/bin/gemini"],
+            &["node", "-e", "-x", "/opt/gemini-cli/bin/gemini"],
+            &["node", "--import", "/tmp/evil.mjs", "/opt/gemini-cli/bin/gemini"],
+        ] {
+            let table = gemini_on(Table::default(), "/opt/homebrew/bin/node", args);
+            let resolved = who(&[1, 2], &table);
+            assert_eq!(resolved.identity.kind, Kind::Scripts, "{args:?}");
+            assert_eq!(resolved.label, "Scripts");
+        }
+    }
+
+    #[test]
+    fn an_environment_that_loads_code_makes_a_script_no_agent() {
+        let table =
+            gemini_on(Table::default(), "/opt/homebrew/bin/node", &["node", "/opt/gemini-cli/bin/gemini"]);
+        assert_eq!(who(&[1, 2], &table).identity.kind, Kind::Script);
+        table.loads_code.borrow_mut().push(2);
+        assert_eq!(who(&[1, 2], &table).identity.kind, Kind::Scripts, "NODE_OPTIONS and the like");
+    }
+
+    #[test]
+    fn a_script_that_is_not_a_regular_file_inside_its_package_is_no_agent() {
+        let table = gemini_on(Table::default(), "/opt/homebrew/bin/node", &["node", "/tmp/gemini"]);
+        table.outside_package.borrow_mut().push("/tmp/gemini".into());
+        assert_eq!(who(&[1, 2], &table).identity.kind, Kind::Scripts);
+    }
+
+    #[test]
+    fn another_interpreter_is_another_key() {
+        let key = |sig: Signature, exe: &'static str| {
+            let table =
+                gemini_on(Table::default(), exe, &["node", "/opt/gemini-cli/bin/gemini"]).signed(2, sig);
+            who(&[1, 2], &table).identity
+        };
+        let homebrew = key(developer_id("node", "HX7739G8FX"), "/opt/homebrew/bin/node");
+        let other_team = key(developer_id("node", "EVIL123456"), "/opt/homebrew/bin/node");
+        assert_ne!(homebrew, other_team);
+        // Without a signer: the hash, then the file.
+        let hashed = |hash: &str| {
+            key(Signature { cdhash: Some(hash.into()), ..Signature::of(SignerKind::AdHoc) }, "/tmp/node")
+        };
+        assert_ne!(hashed("aa"), hashed("bb"));
+        assert_ne!(hashed("aa"), homebrew);
+        let unsigned = key(Signature::of(SignerKind::Unsigned), "/tmp/node");
+        assert!(unsigned.pin.contains("/tmp/node|100|5"), "{}", unsigned.pin);
+        assert_eq!(homebrew.kind, Kind::Script, "and Always stays possible for a script");
+        assert!(homebrew.can_be_remembered());
+    }
+
+    #[test]
+    fn a_developer_id_program_without_the_hardened_runtime_is_pinned_by_its_hash_and_flagged() {
+        let injectable = Signature {
+            kind: SignerKind::AdHoc,
+            identifier: Some("com.anthropic.claude-code".into()),
+            team_id: Some("Q6L2SF6YDW".into()),
+            cdhash: Some("ab12".into()),
+            injectable: true,
+            ..Signature::of(SignerKind::AdHoc)
+        };
+        let table = Table::default()
+            .with(1, "/usr/local/bin/wh", &["wh"])
+            .with(3, "/x/claude", &["claude"])
+            .signed(3, injectable);
+        let resolved = who(&[1, 3], &table);
+        assert_eq!((resolved.identity.kind, resolved.identity.pin.as_str()), (Kind::AdHoc, "ab12"));
+        assert!(resolved.unusual_signer);
+    }
+
+    #[test]
+    fn the_walk_stops_above_the_agent_at_a_terminals_shell_and_after_a_few_levels() {
+        let mut table =
+            Table::default().with(1, "/usr/local/bin/wh", &["wh"]).with(2, "/x/claude", &["claude"]);
+        for pid in 3..12 {
+            table = table.with(pid, "/bin/true", &["true"]);
+        }
+        // A second agent far above (beyond the few levels) is not looked for.
+        table = table.with(12, "/opt/homebrew/bin/codex", &["codex"]);
+        let chain: Vec<u32> = (1..=12).collect();
+        assert_eq!(who(&chain, &table).started_by, None);
+        // One within a few levels is said; a terminal's shell in between ends the search.
+        let near = Table::default()
+            .with(1, "/usr/local/bin/wh", &["wh"])
+            .with(2, "/x/claude", &["claude"])
+            .with(3, "/opt/homebrew/bin/codex", &["codex"]);
+        assert_eq!(who(&[1, 2, 3], &near).started_by.as_deref(), Some("Codex CLI"));
+        let shell = near.with(4, "/bin/zsh", &["-zsh"]).shell(4);
+        let shell = shell.with(5, "/opt/homebrew/bin/codex", &["codex"]);
+        let blocked = Table::default()
+            .with(1, "/usr/local/bin/wh", &["wh"])
+            .with(2, "/x/claude", &["claude"])
+            .with(4, "/bin/zsh", &["-zsh"])
+            .shell(4)
+            .with(5, "/opt/homebrew/bin/codex", &["codex"]);
+        let _ = shell;
+        assert_eq!(who(&[1, 2, 4, 5], &blocked).started_by, None);
     }
 }

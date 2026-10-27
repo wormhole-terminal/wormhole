@@ -78,6 +78,8 @@ fn start_asking(cx: &mut TestAppContext) {
     let _window = start(cx, 1);
     testing::allow(cx, false, false);
     testing::hold(cx);
+    // The mode Wormhole started with is the one in force from its first tick.
+    cx.update(|cx| agent_access::tick(0, cx));
 }
 
 #[gpui_kit::test]
@@ -381,4 +383,310 @@ fn no_control_action_changes_what_is_allowed(cx: &mut TestAppContext) {
         });
         assert_eq!(after, before, "`{name}` changed what is allowed");
     }
+}
+
+/// Someone who is not Scripts: a coding agent told by its code, as the resolver would give it.
+fn agent(pin: u32) -> wormhole_core::ipc::access::Resolved {
+    use wormhole_core::agents::AgentId;
+    use wormhole_core::ipc::access::{Identity, Kind, Resolved};
+    Resolved {
+        identity: Identity {
+            kind: Kind::AdHoc,
+            agent: Some(AgentId::Claude),
+            pin: pin.to_string(),
+            ..Identity::scripts()
+        },
+        label: "Claude Code".into(),
+        process: None,
+        program: None,
+        elevated: false,
+        started_by: None,
+        unusual_signer: false,
+    }
+}
+
+fn gate_reply(gate: agent_access::Gate) -> Reply {
+    match gate {
+        agent_access::Gate::Reply(reply) => reply,
+        agent_access::Gate::Open(..) => panic!("let in"),
+        agent_access::Gate::Ask(_) => panic!("held"),
+    }
+}
+
+/// In Ask mode with nothing held, every action that needs more than titles and states is asked about and no
+/// handler runs; the ones that need nothing are not asked about. (The other half of the walk above.)
+#[gpui_kit::test]
+fn every_action_that_needs_approval_is_asked_about_and_runs_nothing(cx: &mut TestAppContext) {
+    if isolate("every_action_that_needs_approval_is_asked_about_and_runs_nothing") {
+        return;
+    }
+    use wormhole_core::ipc::access::Need;
+    let _window = start(cx, 2);
+    testing::allow(cx, false, false);
+    testing::hold(cx);
+    let terminals = |cx: &mut TestAppContext| {
+        cx.update(|cx| {
+            app(cx)
+                .windows
+                .iter()
+                .map(|w| w.workspace.read_with(cx, |ws, _| ws.sessions.len()).unwrap_or(0))
+                .sum::<usize>()
+        })
+    };
+    let (windows, sessions) = (cx.update(|cx| app(cx).windows.len()), terminals(cx));
+    for name in Action::KNOWN {
+        let request: Request = serde_json::from_value(sample(name)).expect("parses");
+        let need = Need::of(&request.action);
+        let answered = cx.update(|cx| control::answer(request, &outside(), cx));
+        if need == Need::Nothing {
+            assert!(
+                !matches!(&answered, Answer::Reply(reply) if reason(reply) == Some(Reason::ApprovalNeeded)),
+                "`{name}` needs nothing and was asked about"
+            );
+        } else {
+            let Answer::Reply(refusal) = answered else { panic!("`{name}` was carried out or held") };
+            assert_eq!(reason(&refusal), Some(Reason::ApprovalNeeded), "`{name}`");
+        }
+    }
+    cx.run_until_parked();
+    assert_eq!(cx.update(|cx| app(cx).windows.len()), windows, "no window was opened");
+    assert_eq!(terminals(cx), sessions, "no terminal was opened or closed");
+    assert_eq!(questions(cx).len(), 1, "one program, one question");
+}
+
+#[gpui_kit::test]
+fn a_program_that_changes_hands_while_it_is_read_is_asked_again(cx: &mut TestAppContext) {
+    if isolate("a_program_that_changes_hands_while_it_is_read_is_asked_again") {
+        return;
+    }
+    use wormhole_core::ipc::access::Changed;
+    start_asking(cx);
+    let request = Request::new(typing(), None);
+    let refused = gate_reply(testing::gate_as(&request, &|| Err(Changed), cx));
+    assert_eq!(
+        (refused.err().map(|e| e.code), reason(&refused)),
+        (Some(ErrorCode::Failed), Some(Reason::IdentityChanged))
+    );
+    assert!(questions(cx).is_empty(), "nobody was asked about nobody");
+}
+
+#[gpui_kit::test]
+fn more_than_eight_programs_waiting_are_refused_and_a_ninth_that_is_one_of_them_joins(
+    cx: &mut TestAppContext,
+) {
+    if isolate("more_than_eight_programs_waiting_are_refused_and_a_ninth_that_is_one_of_them_joins") {
+        return;
+    }
+    start_asking(cx);
+    let request = Request::new(typing(), None);
+    for n in 0..8 {
+        let refused = gate_reply(testing::gate_as(&request, &|| Ok(agent(n)), cx));
+        assert_eq!(reason(&refused), Some(Reason::ApprovalNeeded), "program {n}");
+    }
+    let full = gate_reply(testing::gate_as(&request, &|| Ok(agent(8)), cx));
+    assert_eq!(reason(&full), Some(Reason::TooManyQuestions));
+    let joined = gate_reply(testing::gate_as(&request, &|| Ok(agent(3)), cx));
+    assert_eq!(reason(&joined), Some(Reason::ApprovalNeeded), "it has a question already");
+    assert_eq!(questions(cx).len(), 8);
+}
+
+#[gpui_kit::test]
+fn with_no_window_to_ask_in_the_answer_is_approval_needed_and_nothing_is_queued(cx: &mut TestAppContext) {
+    if isolate("with_no_window_to_ask_in_the_answer_is_approval_needed_and_nothing_is_queued") {
+        return;
+    }
+    start_asking(cx);
+    cx.update(|cx| app_mut(cx).windows[0].hidden = true);
+    let refused = reply(answer(cx, typing(), true));
+    assert_eq!(reason(&refused), Some(Reason::ApprovalNeeded));
+    assert!(questions(cx).is_empty());
+}
+
+#[gpui_kit::test]
+fn a_question_that_goes_away_unanswered_is_not_a_no(cx: &mut TestAppContext) {
+    if isolate("a_question_that_goes_away_unanswered_is_not_a_no") {
+        return;
+    }
+    start_asking(cx);
+    let job = waiting(answer(cx, typing(), true));
+    assert!(testing::withdraw(cx));
+    let Decision::Refuse(refusal) = decision(&job) else { panic!("a refusal") };
+    assert_eq!(reason(&refusal), Some(Reason::NotAnswered));
+    // Nothing is remembered: the next request asks again, and is not told "a moment ago".
+    let next = reply(answer(cx, typing(), false));
+    assert_eq!(reason(&next), Some(Reason::ApprovalNeeded));
+}
+
+#[gpui_kit::test]
+fn questions_waiting_when_everyone_is_let_in_are_let_through(cx: &mut TestAppContext) {
+    if isolate("questions_waiting_when_everyone_is_let_in_are_let_through") {
+        return;
+    }
+    start_asking(cx);
+    let job = waiting(answer(cx, typing(), true));
+    mode(cx, AgentAccess::Open);
+    cx.update(|cx| agent_access::tick(1, cx));
+    assert!(matches!(decision(&job), Decision::Retry));
+    assert!(questions(cx).is_empty());
+    assert!(reply(answer(cx, typing(), false)).ok);
+}
+
+#[gpui_kit::test]
+fn the_end_of_open_access_ends_what_it_let_in_and_keeps_what_a_program_was_allowed(cx: &mut TestAppContext) {
+    if isolate("the_end_of_open_access_ends_what_it_let_in_and_keeps_what_a_program_was_allowed") {
+        return;
+    }
+    use wormhole_core::ipc::bus::Bus;
+    use wormhole_core::ipc::control::EventsSpec;
+    let _window = start(cx, 1);
+    let bus = Bus::new();
+    cx.update(|cx| crate::automation::install(bus.clone(), cx));
+    testing::allow(cx, true, false);
+    let events = || {
+        Action::Events(EventsSpec { output: true, topics: vec!["output".into()], ..EventsSpec::default() })
+    };
+    let stream = |cx: &mut TestAppContext| match answer(cx, events(), false) {
+        Answer::Stream { subscription, .. } => subscription,
+        other => panic!("a stream was expected: {other:?}"),
+    };
+    // Under what Scripts were allowed.
+    let allowed = stream(cx);
+    mode(cx, AgentAccess::Open);
+    cx.update(|cx| agent_access::tick(1, cx));
+    // (The app's tick tells the bus every time; the first is what it must have heard for the end to count.)
+    let reading = cx.update(agent_access::reads_open);
+    cx.update(|cx| crate::automation::sync_grants(cx, reading));
+    let open = stream(cx);
+    mode(cx, AgentAccess::Ask);
+    cx.update(|cx| agent_access::tick(2, cx));
+    let reading = cx.update(agent_access::reads_open);
+    cx.update(|cx| crate::automation::sync_grants(cx, reading));
+    assert!(matches!(open.next(Duration::from_secs(1)), Next::Closed(CloseReason::NotAllowed)), "Open's own");
+    assert!(!matches!(allowed.next(Duration::ZERO), Next::Closed(_)), "the program's own grant stays");
+}
+
+/// A `config.json` edited by something else.
+fn edited_outside(cx: &mut TestAppContext, mode: AgentAccess) {
+    cx.update(|cx| {
+        crate::settings::SettingsStore::edit_as_the_file_would(cx, |settings| settings.agent_access = mode)
+    });
+    cx.update(|cx| agent_access::tick(1, cx));
+    cx.run_until_parked();
+}
+
+#[gpui_kit::test]
+fn a_mode_widened_outside_wormhole_waits_for_the_users_yes_and_a_no_puts_it_back(cx: &mut TestAppContext) {
+    if isolate("a_mode_widened_outside_wormhole_waits_for_the_users_yes_and_a_no_puts_it_back") {
+        return;
+    }
+    start_asking(cx);
+    edited_outside(cx, AgentAccess::Open);
+    // Still Ask in force, and the user is asked about the change.
+    assert_eq!(
+        reason(&reply(answer(cx, typing(), false))),
+        Some(Reason::ApprovalNeeded),
+        "not silently Open"
+    );
+    let change = questions(cx).into_iter().find(|q| q.id == 0).expect("the question about the change");
+    assert!(change.shown);
+    assert_eq!(change.buttons, [Button::DontKeep, Button::Keep]);
+    assert!(change.title.contains("changed outside Wormhole"), "{}", change.title);
+    assert!(change.title.contains("Allowed while open"), "{}", change.title);
+    assert!(change.detail.contains("“Ask” stays in force"), "{}", change.detail);
+    // Don't Keep: the earlier mode is written back, and nothing else was let in.
+    assert!(press(cx, Button::Deny));
+    assert_eq!(cx.update(|cx| settings(cx).agent_access), AgentAccess::Ask);
+    assert_eq!(reason(&reply(answer(cx, typing(), false))), Some(Reason::ApprovalNeeded));
+    assert!(questions(cx).iter().all(|q| q.id != 0), "answered");
+}
+
+#[gpui_kit::test]
+fn a_mode_widened_outside_wormhole_and_kept_is_in_force_and_narrowing_applies_at_once(
+    cx: &mut TestAppContext,
+) {
+    if isolate("a_mode_widened_outside_wormhole_and_kept_is_in_force_and_narrowing_applies_at_once") {
+        return;
+    }
+    start_asking(cx);
+    edited_outside(cx, AgentAccess::Open);
+    assert!(press(cx, Button::Keep));
+    assert!(reply(answer(cx, typing(), false)).ok, "kept: everybody is let in");
+    // Narrowing, from outside too, needs no question.
+    edited_outside(cx, AgentAccess::Off);
+    assert_eq!(reason(&reply(answer(cx, typing(), false))), Some(Reason::AgentAccessOff));
+    assert!(questions(cx).iter().all(|q| q.id != 0));
+    // And a change made in Settings never asks.
+    mode(cx, AgentAccess::Open);
+    assert!(reply(answer(cx, typing(), false)).ok);
+}
+
+#[gpui_kit::test]
+fn a_widened_mode_nobody_answers_is_not_kept_after_a_minute(cx: &mut TestAppContext) {
+    if isolate("a_widened_mode_nobody_answers_is_not_kept_after_a_minute") {
+        return;
+    }
+    start_asking(cx);
+    edited_outside(cx, AgentAccess::Open);
+    assert!(questions(cx).iter().any(|q| q.id == 0));
+    cx.executor().advance_clock(Duration::from_secs(61));
+    cx.run_until_parked();
+    assert_eq!(cx.update(|cx| settings(cx).agent_access), AgentAccess::Ask, "put back");
+    assert!(questions(cx).iter().all(|q| q.id != 0));
+}
+
+#[gpui_kit::test]
+fn a_request_is_judged_by_the_profile_of_the_window_it_reaches(cx: &mut TestAppContext) {
+    if isolate("a_request_is_judged_by_the_profile_of_the_window_it_reaches") {
+        return;
+    }
+    use wormhole_core::config::profile::{NewProfile, StartFrom};
+    use wormhole_core::storage::paths::ProfileId;
+
+    use crate::app_state::AppState;
+    use crate::settings::ParkedSettings;
+    use crate::window::Workspace;
+    use crate::window::test_harness::read;
+
+    let shown = start(cx, 1);
+    let work = cx
+        .update(|cx| {
+            let new =
+                NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults };
+            let id = AppState::create_profile(new, cx)?;
+            AppState::ensure_open(&id, cx);
+            Ok::<ProfileId, String>(id)
+        })
+        .expect("makes the profile");
+    // The shown profile lets nobody in; Work lets everybody in.
+    cx.update(|cx| {
+        update_settings(cx, |s| s.agent_access = AgentAccess::Off);
+        cx.global_mut::<ParkedSettings>().get_mut(&work).expect("Work is parked").restyle(|s| {
+            s.agent_access = AgentAccess::Open;
+        });
+    });
+    cx.update(|cx| AppState::open_window_in_profile(&work, cx));
+    cx.run_until_parked();
+    let odd = cx
+        .update(|cx| app(cx).windows.iter().find(|w| w.profile == work).cloned())
+        .expect("the odd window opened");
+    let shown_terminal = read(cx, &shown, |ws: &Workspace| ws.sessions[0].id);
+    let odd_terminal = read(cx, &odd, |ws: &Workspace| ws.sessions[0].id);
+    let type_into = |cx: &mut TestAppContext, id: i64| {
+        let action = Action::SendText { target: Target::Terminal(id), text: "ls".into(), submit: false };
+        reply(answer(cx, action, false))
+    };
+    assert_eq!(reason(&type_into(cx, shown_terminal)), Some(Reason::AgentAccessOff), "its profile says no");
+    assert!(type_into(cx, odd_terminal).ok, "its profile says yes");
+    // An approval kept in one profile's database is not the other's.
+    cx.update(|cx| {
+        update_settings(cx, |s| s.agent_access = AgentAccess::Ask);
+        cx.global_mut::<ParkedSettings>().get_mut(&work).expect("Work is parked").restyle(|s| {
+            s.agent_access = AgentAccess::Ask;
+        });
+    });
+    testing::hold(cx);
+    cx.update(|cx| agent_access::tick(1, cx));
+    assert_eq!(reason(&type_into(cx, shown_terminal)), Some(Reason::ApprovalNeeded));
+    assert_eq!(reason(&type_into(cx, odd_terminal)), Some(Reason::ApprovalNeeded));
+    assert_eq!(questions(cx).len(), 2, "one question for each profile, though the program is the same");
 }

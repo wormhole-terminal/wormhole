@@ -48,6 +48,7 @@ refusal, bad arguments or a timeout: use `--json` when it matters.
 - `declined_recently`: the user said no a moment ago; Wormhole does not ask again for two minutes. Do not retry; ask the user.
 - `agent_access_off`: Agent access is switched off in Settings. Ask the user to turn it on.
 - `identity_changed`: the program asking changed while Wormhole looked at it; try the request once more.
+- `not_answered`: the question went away without an answer (its window closed, or no sheet could be shown); it counts as no for now and is not remembered. Tell the user; try once more after they say Wormhole's window is up.
 - `too_many_questions`: several questions are already waiting for the user; wait, then try again.
 
 ## The refusals that protect the user

@@ -19,8 +19,8 @@ use super::control::event::{HEARTBEAT, StreamLine, Subscribed};
 use super::control::events;
 use super::control::printable::json_line;
 use super::control::{
-    ASK_WAIT_S, Action, PROTOCOL_VERSION, Ran, Reason, Reply, Request, SEND_TEXT_MAX_BYTES, help_json,
-    help_with, json_env, parse, print, print_err, render_with, run_parts, show_automation,
+    ASK_QUEUE_MAX, ASK_WAIT_S, Action, PROTOCOL_VERSION, Ran, Reason, Reply, Request, SEND_TEXT_MAX_BYTES,
+    help_json, help_with, json_env, parse, print, print_err, render_with, run_parts, show_automation,
 };
 use super::control::{sessions, skill_cli};
 use crate::platform::paths;
@@ -161,6 +161,12 @@ const ASK_NOTICE_AFTER: Duration = Duration::from_secs(2);
 /// What the command line says on stderr while a question is on the user's screen.
 pub(crate) const WAITING_FOR_THE_USER: &str = "Wormhole: waiting for your answer in Wormhole…\n";
 
+/// How long a request that may be asked about waits for the answer in all: every question ahead of it in the
+/// queue and its own, a minute each, and a little over.
+fn ask_wait() -> Duration {
+    Duration::from_secs((ASK_QUEUE_MAX as u64 + 1) * ASK_WAIT_S + 10)
+}
+
 /// `request`, from a caller that will wait for the user's answer when the action needs one.
 pub(crate) fn asking_if_needed(request: Request) -> Request {
     if Need::of(&request.action) == Need::Nothing { request } else { request.asking() }
@@ -169,7 +175,7 @@ pub(crate) fn asking_if_needed(request: Request) -> Request {
 /// How long to wait for the app's reply to `request`: [`answer_wait`], and the time of a question to the
 /// user when it may ask one.
 pub(crate) fn request_wait(request: &Request) -> Duration {
-    let extra = if request.ask { Duration::from_secs(ASK_WAIT_S + 5) } else { Duration::ZERO };
+    let extra = if request.ask { ask_wait() } else { Duration::ZERO };
     answer_wait(&request.action) + extra
 }
 
@@ -194,7 +200,7 @@ pub(crate) fn exchange_stream(
 ) -> Result<StreamEnd, Exchange> {
     let mut stream = Stream::connect(socket).map_err(|_| Exchange::NotRunning)?;
     let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
-    let reply_wait = if request.ask { REPLY_WAIT + Duration::from_secs(ASK_WAIT_S + 5) } else { REPLY_WAIT };
+    let reply_wait = if request.ask { REPLY_WAIT + ask_wait() } else { REPLY_WAIT };
     let _ = stream.set_read_timeout(Some(reply_wait));
     let line = serde_json::to_string(&Message::Control(request.clone()))
         .map_err(|e| Exchange::Broken(e.to_string()))?;

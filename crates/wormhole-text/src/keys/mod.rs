@@ -79,7 +79,7 @@ pub use title_row::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 937] = [
+pub const ALL: [Key; 940] = [
     AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_READ, AGENT_SHEET_WANTS_TYPE,
     AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_CLOSE,
     AGENT_SHEET_DETAIL, AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_WARNING_UNSIGNED,
@@ -89,7 +89,8 @@ pub const ALL: [Key; 937] = [
     AGENT_SHEET_LABEL_ASKED_BY, AGENT_SHEET_SIGNED_APPLE, AGENT_SHEET_SIGNED_AD_HOC,
     AGENT_SHEET_SIGNED_OTHER, AGENT_SHEET_SIGNED_NONE, AGENT_SHEET_SIGNED_UNREADABLE,
     AGENT_SHEET_BUTTON_DENY, AGENT_SHEET_BUTTON_SESSION, AGENT_SHEET_BUTTON_QUIT,
-    AGENT_SHEET_BUTTON_ALWAYS, CONTROL_CLOSE_ASKED, NOTICE_COPIED_COMMAND,
+    AGENT_SHEET_BUTTON_ALWAYS, AGENT_SHEET_BUTTON_DONT_KEEP, AGENT_SHEET_BUTTON_KEEP,
+    AGENT_SCRIPTS_LABEL, CONTROL_CLOSE_ASKED, NOTICE_COPIED_COMMAND,
     NOTICE_COPIED_PATH, NOTICE_COPIED_SETTING_KEY, NOTICE_COPIED_ERROR,
     NOTICE_COPIED_OBJECT_ID, NOTICE_DRIVEN_SCRIPTS_TYPING, NOTICE_DRIVEN_SCRIPTS_READING,
     SETTINGS_SECTION_ADVANCED, SETTINGS_SECTION_ADVANCED_INTRO, SETTINGS_ADVANCED_GROUP_FILES,
@@ -406,6 +407,8 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("agent-sheet-signed-team", agent_sheet_signed_team("Sample")),
         ("agent-sheet-in-terminal", agent_sheet_in_terminal("Sample")),
         ("agent-sheet-runs-on", agent_sheet_runs_on("Sample", "Sample")),
+        ("agent-change-title", agent_change_title("Sample")),
+        ("agent-change-detail", agent_change_detail("Sample")),
         ("notice-copied-lines", notice_copied_lines(1)),
         ("notice-copied-lines", notice_copied_lines(5)),
         ("notice-copied-characters", notice_copied_characters(1)),

@@ -1,21 +1,25 @@
-//! The questions: which is on the screen, what an answer does, and what happens when nobody answers.
+//! The questions: which is on the screen, what an answer does, and what happens when nobody answers or the
+//! mode changes under them.
 
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use gpui_kit::*;
+use wormhole_core::config::AgentAccess;
 use wormhole_core::config::features::FeatureFlag;
-use wormhole_core::ipc::access::{CapSet, Held, Scope};
+use wormhole_core::ipc::access::{CapSet, Pending, Scope};
 use wormhole_core::ipc::control::{ASK_WAIT_S, Error, ErrorCode, Reason, Reply};
 use wormhole_core::ipc::{Decision, access};
 use wormhole_core::platform::process;
+use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::AgentGrantRow;
 
-use super::gate::{HOLDER_STORED, lets_in};
+use super::change::{self, reconcile};
+use super::profile::{holder, profile_of, scope_of};
 use super::scripted::{Asker, Script};
 use super::sheet::{self, Button};
-use super::{Shown, state};
-use crate::app_state::{AppState, app, app_mut};
-use crate::settings::settings;
+use super::{CHANGE_ID, Shown, state};
+use crate::app_state::{AppState, OpenWindow, app, app_mut};
+use crate::settings::settings_in;
 
 /// How a question ended.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,18 +28,26 @@ enum Outcome {
     Chose(Button),
     /// Nobody answered in time: no, and not remembered.
     TimedOut,
-    /// The sheet went without an answer (its window closed): no, and not remembered.
+    /// The sheet went without an answer (its window closed, or none could be shown): no for now, and not
+    /// remembered.
     Withdrawn,
 }
 
-/// Put the next question on the screen, if none is. Called when one is queued, when one is answered and
-/// on the tick (a window may have opened since).
+/// Put the next question on the screen, if none is: a mode changed outside Wormhole first, then the queue.
+/// Called when one is queued, when one is answered and on the tick (a window may have opened since).
 pub(super) fn pump(cx: &mut App) {
+    if state(cx).shown.is_some() {
+        return;
+    }
+    if state(cx).change_waits() {
+        show_change(cx);
+        return;
+    }
     let Some(id) = state(cx).queue.next_to_show().map(|pending| pending.id) else { return };
-    let display = {
+    let (display, scope) = {
         let held = cx.global::<super::State>();
         match held.queue.iter().find(|pending| pending.id == id) {
-            Some(pending) => sheet::display(pending, cx),
+            Some(pending) => (sheet::display(pending, cx), pending.scope),
             None => return,
         }
     };
@@ -47,7 +59,7 @@ pub(super) fn pump(cx: &mut App) {
             let button = offered(&display.buttons, button);
             cx.defer(move |cx| settle(id, Outcome::Chose(button), cx));
         }
-        Asker::Sheet => show(id, display, cx),
+        Asker::Sheet => show(id, scope, display, cx),
     }
 }
 
@@ -57,8 +69,8 @@ fn offered(buttons: &[Button], wish: Button) -> Button {
         return wish;
     }
     match wish {
-        Button::Deny => Button::Deny,
-        Button::Session | Button::Always => {
+        Button::Deny | Button::DontKeep => Button::Deny,
+        Button::Session | Button::Always | Button::Keep => {
             if buttons.contains(&Button::Quit) {
                 Button::Quit
             } else {
@@ -69,10 +81,16 @@ fn offered(buttons: &[Button], wish: Button) -> Button {
     }
 }
 
-fn show(id: u64, display: sheet::Display, cx: &mut App) {
-    let Some(window) =
-        AppState::front_window(cx).or_else(|| app(cx).windows.iter().find(|w| !w.hidden).cloned())
-    else {
+/// The window a question of `scope` goes on: the front window if it is of that profile, else any shown one.
+fn window_for(scope: u64, cx: &mut App) -> Option<OpenWindow> {
+    let profile = profile_of(scope, cx)?;
+    AppState::front_window(cx).filter(|window| window.profile == profile).or_else(|| {
+        app(cx).windows.iter().find(|window| !window.hidden && window.profile == profile).cloned()
+    })
+}
+
+fn show(id: u64, scope: u64, display: sheet::Display, cx: &mut App) {
+    let Some(window) = window_for(scope, cx) else {
         settle(id, Outcome::Withdrawn, cx);
         return;
     };
@@ -95,6 +113,42 @@ fn show(id: u64, display: sheet::Display, cx: &mut App) {
     .detach();
 }
 
+/// The question about a mode changed outside Wormhole, on the screen (or answered by a script).
+fn show_change(cx: &mut App) {
+    let Some(change) = state(cx).change.as_mut() else { return };
+    change.asked = true;
+    let (token, scope) = (change.token, change.scope);
+    let display = sheet::change_display(change.previous, change.requested);
+    state(cx).shown = Some(Shown { id: CHANGE_ID, window: None });
+    start_change_timer(token, cx);
+    match state(cx).asker {
+        Asker::Scripted(Script::Hold) => {}
+        Asker::Scripted(Script::Answer(button)) => {
+            cx.defer(move |cx| settle_change(token, button != Button::Deny, cx));
+        }
+        Asker::Sheet => {
+            let Some(window) = window_for(scope, cx) else {
+                settle_change(token, false, cx);
+                return;
+            };
+            let Some(answers) = sheet::show(&window, &display, cx) else {
+                settle_change(token, false, cx);
+                return;
+            };
+            if let Some(shown) = state(cx).shown.as_mut() {
+                shown.window = Some(window);
+            }
+            let buttons = display.buttons;
+            cx.spawn(async move |cx| {
+                let place = answers.recv().await.ok().flatten();
+                let keep = place.and_then(|place| buttons.get(place)) == Some(&Button::Keep);
+                cx.update(|cx| settle_change(token, keep, cx));
+            })
+            .detach();
+        }
+    }
+}
+
 /// A question that nobody answers counts as no after a minute, and is not remembered.
 fn start_timer(id: u64, cx: &mut App) {
     cx.spawn(async move |cx| {
@@ -104,55 +158,82 @@ fn start_timer(id: u64, cx: &mut App) {
     .detach();
 }
 
+/// The same for the question about a changed mode: not answered is not kept.
+fn start_change_timer(token: u64, cx: &mut App) {
+    cx.spawn(async move |cx| {
+        cx.background_executor().timer(Duration::from_secs(ASK_WAIT_S)).await;
+        cx.update(|cx| settle_change(token, false, cx));
+    })
+    .detach();
+}
+
+/// End the question about a changed mode (`token` tells it from an earlier one): keep it or put the mode back.
+fn settle_change(token: u64, keep: bool, cx: &mut App) {
+    if state(cx).change.as_ref().is_none_or(|change| change.token != token || !change.asked) {
+        return;
+    }
+    if let Some(Shown { window: Some(window), .. }) = state(cx).shown.take_if(|shown| shown.id == CHANGE_ID) {
+        sheet::withdraw(&window, cx);
+    }
+    state(cx).shown.take_if(|shown| shown.id == CHANGE_ID);
+    change::answered(keep, cx);
+    pump(cx);
+}
+
 /// End question `id` with `outcome`: record what it means, tell every request that waited, take the sheet
 /// off the screen and put the next question up.
 fn settle(id: u64, outcome: Outcome, cx: &mut App) {
+    if id == CHANGE_ID {
+        return;
+    }
     let Some(pending) = state(cx).queue.take(id) else { return };
     if let Some(Shown { window: Some(window), .. }) = state(cx).shown.take_if(|shown| shown.id == id) {
         sheet::withdraw(&window, cx);
     }
     let resolved = pending.resolved.clone();
     let label = resolved.label.clone();
+    let scope = pending.scope;
     match outcome {
         Outcome::Chose(Button::Deny) => {
-            state(cx).grants.deny(resolved.identity, Instant::now());
+            state(cx).grants_of(scope).deny(resolved.identity, Instant::now());
             pending.answer(|| Decision::Refuse(declined(&label).into()));
         }
         Outcome::Chose(button) => {
-            allow(&resolved, button, cx);
+            allow(&resolved, button, scope, cx);
             pending.answer(|| Decision::Retry);
         }
         Outcome::TimedOut => pending.answer(|| Decision::Refuse(timed_out(&label).into())),
-        Outcome::Withdrawn => pending.answer(|| Decision::Refuse(declined(&label).into())),
+        Outcome::Withdrawn => pending.answer(|| Decision::Refuse(not_answered(&label).into())),
     }
     // Settings lists what is allowed.
+    state(cx).listing = None;
     cx.refresh_windows();
     pump(cx);
 }
 
-/// Remember that `resolved` was let in, as long as `button` says.
-fn allow(resolved: &access::Resolved, button: Button, cx: &mut App) {
+/// Remember that `resolved` was let in, as long as `button` says, in the profile `scope` stands for.
+fn allow(resolved: &access::Resolved, button: Button, scope: u64, cx: &mut App) {
     let caps = CapSet::STANDARD;
     let label = resolved.label.clone();
     let identity = resolved.identity.clone();
     match (button, resolved.process) {
         (Button::Session, Some(process)) => {
-            state(cx).grants.grant(identity, label, Scope::Session(process), caps);
+            state(cx).grants_of(scope).grant(identity, label, Scope::Session(process), caps);
         }
         (Button::Always, _) if identity.can_be_remembered() => {
-            if !store_always(resolved, caps, cx) {
+            if !store_always(resolved, caps, scope, cx) {
                 // The database would not take it: it holds until Wormhole quits, which the user can see.
-                state(cx).grants.grant(identity, label, Scope::UntilQuit, caps);
+                state(cx).grants_of(scope).grant(identity, label, Scope::UntilQuit, caps);
             }
         }
         _ => {
-            state(cx).grants.grant(identity, label, Scope::UntilQuit, caps);
+            state(cx).grants_of(scope).grant(identity, label, Scope::UntilQuit, caps);
         }
     }
 }
 
-fn store_always(resolved: &access::Resolved, caps: CapSet, cx: &mut App) -> bool {
-    let profile = app(cx).active_profile().clone();
+fn store_always(resolved: &access::Resolved, caps: CapSet, scope: u64, cx: &mut App) -> bool {
+    let Some(profile) = profile_of(scope, cx) else { return false };
     let program = resolved.program.as_ref();
     let created = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -192,6 +273,14 @@ fn timed_out(label: &str) -> Error {
     .because(Reason::AskTimedOut)
 }
 
+fn not_answered(label: &str) -> Error {
+    Error::new(
+        ErrorCode::NotAllowed,
+        format!("the question about {label} went away without an answer (its window closed, or none could be shown); it counts as no for now, and is not remembered"),
+    )
+    .because(Reason::NotAnswered)
+}
+
 fn access_off() -> Reply {
     Error::new(ErrorCode::NotAllowed, "agent access was switched off while the question was open")
         .because(Reason::AgentAccessOff)
@@ -213,9 +302,10 @@ pub(crate) struct Waiting {
     pub facts: String,
 }
 
+/// The questions waiting for an answer, the one on the screen first; the question about a changed mode (id 0)
+/// before them when there is one. `words` also says what the sheet says (title, text, facts), which reads the
+/// windows: not from inside the update of one.
 #[cfg(any(test, feature = "devctl"))]
-/// The questions waiting for an answer, the one on the screen first. `words` also says what the sheet says
-/// (title, text, facts), which reads the windows: not from inside the update of one.
 pub(crate) fn pending_questions(words: bool, cx: &mut App) -> Vec<Waiting> {
     let shown = state(cx).shown.as_ref().map(|shown| shown.id);
     let held = cx.global::<super::State>();
@@ -235,15 +325,33 @@ pub(crate) fn pending_questions(words: bool, cx: &mut App) -> Vec<Waiting> {
             }
         })
         .collect();
+    if let Some(change) = &held.change {
+        let said = sheet::change_display(change.previous, change.requested);
+        waiting.push(Waiting {
+            id: CHANGE_ID,
+            label: String::new(),
+            shown: shown == Some(CHANGE_ID),
+            buttons: said.buttons,
+            title: said.title,
+            detail: said.detail,
+            facts: String::new(),
+        });
+    }
     waiting.sort_by_key(|question| !question.shown);
     waiting
 }
 
-#[cfg(any(test, feature = "devctl"))]
 /// Answer the question on the screen with `button` (devctl's `agent-ask`, a test): as if it was pressed, a
-/// moment later, outside the update that asked. Whether there was one.
+/// moment later, outside the update that asked. Whether there was one. For the question about a changed mode
+/// `deny` is Don't Keep and anything else is Keep.
+#[cfg(any(test, feature = "devctl"))]
 pub(crate) fn answer_pending(button: Button, cx: &mut App) -> bool {
     let Some(id) = state(cx).shown.as_ref().map(|shown| shown.id) else { return false };
+    if id == CHANGE_ID {
+        let Some(token) = state(cx).change.as_ref().map(|change| change.token) else { return false };
+        cx.defer(move |cx| settle_change(token, button != Button::Deny, cx));
+        return true;
+    }
     let Some(pending) = cx.global::<super::State>().queue.iter().find(|pending| pending.id == id) else {
         return false;
     };
@@ -252,19 +360,35 @@ pub(crate) fn answer_pending(button: Button, cx: &mut App) -> bool {
     true
 }
 
-/// What the app does about this on its tick: refuse the questions that are waiting when nothing is let in
-/// any more, end the streams that were started under approvals when the mode goes off, forget the approvals
-/// of programs that ended, and put a question up that was waiting for a window.
+/// A question that was withdrawn (its window closed, no sheet could be shown): the test's way to do it.
+#[cfg(test)]
+pub(crate) fn withdraw_pending(cx: &mut App) -> bool {
+    let Some(id) = state(cx).shown.as_ref().map(|shown| shown.id).filter(|id| *id != CHANGE_ID) else {
+        return false;
+    };
+    settle(id, Outcome::Withdrawn, cx);
+    true
+}
+
+/// Whether some profile lets every program read every terminal (Allowed while open), as the last tick settled:
+/// the streams that were let in by that end when it stops.
+pub(crate) fn reads_open(cx: &mut App) -> bool {
+    state(cx).applied.values().any(|mode| matches!(mode, Some(AgentAccess::Open)))
+}
+
+/// What the app does about this on its tick: look at each profile's mode (a change in Settings applies at
+/// once, one made outside Wormhole that widens asks first), settle what a mode that changed means for the
+/// questions and streams of its profile, forget the approvals of programs that ended, and put a question up that
+/// was waiting for a window.
 pub(crate) fn tick(ticks: u64, cx: &mut App) {
-    let settings = settings(cx);
-    let mode = settings.feature_enabled(FeatureFlag::Automation).then_some(settings.agent_access);
-    let was = std::mem::replace(&mut state(cx).mode, mode);
-    let nothing_gets_in = mode.is_none_or(|mode| !lets_in(mode));
-    if nothing_gets_in && was != mode {
-        end_streams_under_approvals(cx);
+    let mut profiles: Vec<ProfileId> = vec![app(cx).active_profile().clone()];
+    for window in &app(cx).windows {
+        if !profiles.contains(&window.profile) {
+            profiles.push(window.profile.clone());
+        }
     }
-    if nothing_gets_in && !state(cx).queue.is_empty() {
-        refuse_waiting_questions(cx);
+    for profile in profiles {
+        settle_mode(&profile, cx);
     }
     if ticks.is_multiple_of(5) {
         end_sessions_of_ended_programs(cx);
@@ -272,56 +396,93 @@ pub(crate) fn tick(ticks: u64, cx: &mut App) {
     pump(cx);
 }
 
-/// Everything waiting is refused: access was switched off while the user had not answered.
-fn refuse_waiting_questions(cx: &mut App) {
-    let questions = std::mem::take(&mut state(cx).queue).drain();
-    if let Some(Shown { window: Some(window), .. }) = state(cx).shown.take() {
+/// What `profile`'s mode, as it stands now, means for what is waiting and what is open there.
+fn settle_mode(profile: &ProfileId, cx: &mut App) {
+    let scope = scope_of(profile);
+    let on = settings_in(profile, cx).feature_enabled(FeatureFlag::Automation);
+    let mode = on.then(|| reconcile(profile, cx));
+    if state(cx).applied.insert(scope, mode) == Some(mode) {
+        return;
+    }
+    match mode {
+        Some(AgentAccess::Open) => allow_waiting_questions(scope, cx),
+        Some(AgentAccess::Ask) => {}
+        Some(AgentAccess::Off) | None => {
+            end_streams_under_approvals(scope, profile, cx);
+            refuse_waiting_questions(scope, cx);
+        }
+    }
+}
+
+/// The questions of `scope` out of the queue, with the sheet of the one on the screen taken down.
+fn take_questions(scope: u64, cx: &mut App) -> Vec<Pending> {
+    let questions = state(cx).queue.take_scope(scope);
+    let shown = state(cx).shown.as_ref().map(|shown| shown.id);
+    if shown.is_some_and(|id| questions.iter().any(|pending| pending.id == id))
+        && let Some(Shown { window, .. }) = state(cx).shown.take()
+        && let Some(window) = window
+    {
         sheet::withdraw(&window, cx);
     }
-    for pending in questions {
+    questions
+}
+
+/// Everything waiting is refused: access was switched off while the user had not answered.
+fn refuse_waiting_questions(scope: u64, cx: &mut App) {
+    for pending in take_questions(scope, cx) {
         pending.answer(|| Decision::Refuse(access_off()));
     }
 }
 
-/// What was allowed no longer reaches the streams it started.
-fn end_streams_under_approvals(cx: &mut App) {
-    let held: Vec<u64> = state(cx).grants.held().iter().map(|held: &Held| held.id).collect();
-    let stored: Vec<i64> = approved_rows(cx);
-    if let Some(bus) = crate::automation::bus(cx) {
-        for id in held {
-            bus.revoke_holder(id);
-        }
-        for id in stored {
-            bus.revoke_holder(HOLDER_STORED | u64::try_from(id).unwrap_or(0));
-        }
+/// Everything waiting is let in: every program is allowed now, so there is nothing to ask.
+fn allow_waiting_questions(scope: u64, cx: &mut App) {
+    for pending in take_questions(scope, cx) {
+        pending.answer(|| Decision::Retry);
     }
 }
 
-fn approved_rows(cx: &App) -> Vec<i64> {
-    let state = app(cx);
-    state
-        .store_of(state.active_profile())
-        .and_then(|store| store.agent_grants().ok())
-        .map(|rows| rows.into_iter().map(|row| row.id).collect())
-        .unwrap_or_default()
+/// What was allowed no longer reaches the streams it started.
+fn end_streams_under_approvals(scope: u64, profile: &ProfileId, cx: &mut App) {
+    let held: Vec<u64> = state(cx).grants_of(scope).held().iter().map(|held| held.id).collect();
+    let stored: Vec<i64> = {
+        let shown = app(cx);
+        shown
+            .store_of(profile)
+            .and_then(|store| store.agent_grants().ok())
+            .map(|rows| rows.into_iter().map(|row| row.id).collect())
+            .unwrap_or_default()
+    };
+    if let Some(bus) = crate::automation::bus(cx) {
+        for id in held {
+            bus.revoke_holder(holder(false, scope, id));
+        }
+        for id in stored {
+            bus.revoke_holder(holder(true, scope, u64::try_from(id).unwrap_or(0)));
+        }
+    }
 }
 
 /// "For this session" lasts while the program runs: when it has ended, the approval goes and so do the
 /// streams it started.
 fn end_sessions_of_ended_programs(cx: &mut App) {
-    if state(cx).grants.held().is_empty() {
-        return;
-    }
-    let dropped = state(cx)
-        .grants
-        .prune(Instant::now(), |process| process::start_time(process.pid) == Some(process.started));
-    if dropped.is_empty() {
-        return;
-    }
-    if let Some(bus) = crate::automation::bus(cx) {
-        for id in dropped {
-            bus.revoke_holder(id);
+    let scopes: Vec<u64> = state(cx).grants.keys().copied().collect();
+    let mut changed = false;
+    for scope in scopes {
+        let dropped = state(cx)
+            .grants_of(scope)
+            .prune(Instant::now(), |process| process::start_time(process.pid) == Some(process.started));
+        if dropped.is_empty() {
+            continue;
+        }
+        changed = true;
+        if let Some(bus) = crate::automation::bus(cx) {
+            for id in dropped {
+                bus.revoke_holder(holder(false, scope, id));
+            }
         }
     }
-    cx.refresh_windows();
+    if changed {
+        state(cx).listing = None;
+        cx.refresh_windows();
+    }
 }

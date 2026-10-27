@@ -118,14 +118,22 @@ impl Store {
         Ok(id)
     }
 
-    /// Note that approval `id` was used at `now` (Unix seconds), where it ran from and its hash. A
-    /// caller that does this on every request writes the database on every request: the app does it
-    /// at most once a minute for an approval.
-    pub fn touch_agent_grant(&mut self, id: i64, now: i64, location: &str, cdhash: &str) -> Result<()> {
+    /// Note that approval `id` was last used at `now` (Unix seconds), where it ran from and its hash, and that it
+    /// was used `uses` more times since the last note. A caller that does this on every request writes the
+    /// database on every request: the app counts the uses in memory and writes the total at most once a minute
+    /// for an approval.
+    pub fn touch_agent_grant(
+        &mut self,
+        id: i64,
+        now: i64,
+        location: &str,
+        cdhash: &str,
+        uses: i64,
+    ) -> Result<()> {
         exec(
             &self.conn,
-            "UPDATE agent_grants SET last_used = ?2, uses = uses + 1, location = ?3, cdhash = ?4 WHERE id = ?1",
-            params![id, now, location, cdhash],
+            "UPDATE agent_grants SET last_used = ?2, uses = uses + ?5, location = ?3, cdhash = ?4 WHERE id = ?1",
+            params![id, now, location, cdhash, uses],
         )?;
         Ok(())
     }

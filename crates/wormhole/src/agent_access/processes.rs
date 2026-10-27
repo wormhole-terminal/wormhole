@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use wormhole_core::ipc::access::Processes;
+use wormhole_core::ipc::access::{Processes, ScriptPin};
 use wormhole_core::platform::codesign::{self, Signature};
 use wormhole_core::platform::process;
 
@@ -73,14 +73,29 @@ impl Processes for System {
         self.shells.contains(&pid)
     }
 
-    fn package_folder(&self, script: &Path) -> PathBuf {
-        let real = script.canonicalize().unwrap_or_else(|_| script.to_path_buf());
-        let start = real.parent().map(Path::to_path_buf).unwrap_or_default();
-        start
+    fn env_runs_code(&self, pid: u32) -> bool {
+        // An environment that cannot be read is not given the benefit of the doubt.
+        process::environment_names(pid).is_none_or(|names| {
+            names.iter().any(|name| wormhole_core::agents::CODE_LOADING_VARIABLES.contains(&name.as_str()))
+        })
+    }
+
+    fn script_pin(&self, pid: u32, script: &str) -> Option<ScriptPin> {
+        let path = Path::new(script);
+        // Relative to the folder the interpreter was started in, which is where it looked for it.
+        let path = if path.is_absolute() { path.to_path_buf() } else { process::cwd(pid)?.join(path) };
+        let file = path.canonicalize().ok()?;
+        if !file.metadata().ok()?.is_file() {
+            return None;
+        }
+        // The package the file is in, or the file itself: never a folder the file is merely named in.
+        let package = file
             .ancestors()
+            .skip(1)
             .take(PACKAGE_LEVELS)
-            .find(|folder| folder.join("package.json").is_file())
-            .map_or(start.clone(), Path::to_path_buf)
+            .find(|folder| folder.join("package.json").is_file());
+        let pin = package.map_or_else(|| file.clone(), Path::to_path_buf);
+        file.starts_with(&pin).then_some(ScriptPin { file, pin })
     }
 
     fn stamp(&self, path: &Path) -> Option<(u64, i64)> {
@@ -118,20 +133,41 @@ mod tests {
     }
 
     #[test]
-    fn a_script_is_pinned_by_the_folder_of_its_package() {
+    fn a_script_is_pinned_by_the_package_it_is_in_or_by_itself() {
         let dir = Scratch::new("package");
         let package = dir.0.join("node_modules/@x/cli");
         std::fs::create_dir_all(package.join("dist")).expect("dirs");
         std::fs::write(package.join("package.json"), "{}").expect("package.json");
         std::fs::write(package.join("dist/cli.js"), "").expect("script");
         let system = System::new(Signatures::default(), vec![]);
-        let found = system.package_folder(&package.join("dist/cli.js"));
-        assert_eq!(found, package.canonicalize().expect("real"));
-        // No package.json above: the script's own folder.
+        let me = std::process::id();
+        let pin =
+            system.script_pin(me, &package.join("dist/cli.js").to_string_lossy()).expect("a regular file");
+        assert_eq!(pin.pin, package.canonicalize().expect("real"));
+        assert_eq!(pin.file, package.join("dist/cli.js").canonicalize().expect("real"));
+        // No package.json above: the file itself, not the folder it is in.
         let loose = dir.0.join("tools");
         std::fs::create_dir_all(&loose).expect("dir");
         std::fs::write(loose.join("run.js"), "").expect("script");
-        assert_eq!(system.package_folder(&loose.join("run.js")), loose.canonicalize().expect("real"));
+        let pin = system.script_pin(me, &loose.join("run.js").to_string_lossy()).expect("a regular file");
+        assert_eq!(pin.pin, loose.join("run.js").canonicalize().expect("real"));
+        // A folder, a missing file, and a link to a file elsewhere (it is what it points at).
+        assert!(system.script_pin(me, &loose.to_string_lossy()).is_none());
+        assert!(system.script_pin(me, &loose.join("nothing.js").to_string_lossy()).is_none());
+        std::os::unix::fs::symlink(loose.join("run.js"), package.join("dist/link.js")).expect("link");
+        let linked =
+            system.script_pin(me, &package.join("dist/link.js").to_string_lossy()).expect("resolves");
+        assert_eq!(linked.file, loose.join("run.js").canonicalize().expect("real"), "the file it really is");
+        assert_eq!(linked.pin, linked.file, "and not the package the link sits in");
+    }
+
+    #[test]
+    fn an_environment_that_loads_code_is_found_and_one_that_cannot_be_read_counts_as_loading() {
+        let system = System::new(Signatures::default(), vec![]);
+        let loads = std::env::vars_os()
+            .any(|(name, _)| wormhole_core::agents::CODE_LOADING_VARIABLES.iter().any(|v| name == *v));
+        assert_eq!(system.env_runs_code(std::process::id()), loads);
+        assert!(system.env_runs_code(u32::MAX), "unreadable: not trusted");
     }
 
     #[test]

@@ -53,6 +53,8 @@ fn word(button: Button) -> &'static str {
         Button::Session => "session",
         Button::Quit => "quit",
         Button::Always => "always",
+        Button::Keep => "keep",
+        Button::DontKeep => "dont-keep",
     }
 }
 

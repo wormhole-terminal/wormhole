@@ -33,14 +33,14 @@ fn an_approval_is_found_by_its_key_and_renewed_not_duplicated() {
     assert!(store.agent_grant(&key("developer_id", "codex", "")).expect("reads").is_none());
 
     // The same program approved again keeps its row and history and takes the new words and powers.
-    store.touch_agent_grant(id, 150, "/bin/claude", "aa").expect("touches");
+    store.touch_agent_grant(id, 150, "/bin/claude", "aa", 3).expect("touches");
     let mut again = grant(key("developer_id", "claude", ""), 0b1111);
     again.label = "Claude".into();
     assert_eq!(store.save_agent_grant(&again).expect("saves"), id);
     let all = store.agent_grants().expect("lists");
     assert_eq!(all.len(), 1);
     assert_eq!((all[0].caps, all[0].label.as_str()), (0b1111, "Claude"));
-    assert_eq!((all[0].uses, all[0].last_used, all[0].created), (1, Some(150), 100));
+    assert_eq!((all[0].uses, all[0].last_used, all[0].created), (3, Some(150), 100));
 }
 
 #[test]
@@ -48,7 +48,7 @@ fn revoking_removes_the_row_and_the_list_is_the_most_recently_used_first() {
     let mut store = Store::open_at(&temp_dir("grants-revoke")).expect("opens");
     let a = store.save_agent_grant(&grant(key("ad_hoc", "aider", "h1"), 1)).expect("saves");
     let b = store.save_agent_grant(&grant(key("script", "pi", "/p"), 1)).expect("saves");
-    store.touch_agent_grant(a, 500, "", "").expect("touches");
+    store.touch_agent_grant(a, 500, "", "", 1).expect("touches");
     let order: Vec<i64> = store.agent_grants().expect("lists").iter().map(|g| g.id).collect();
     assert_eq!(order, [a, b]);
     store.set_agent_grant_caps(b, 3).expect("sets");

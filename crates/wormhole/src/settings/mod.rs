@@ -38,7 +38,7 @@ use wormhole_core::theme::tokens::{Appearance, ColorChoices, ThemeTokens};
 use crate::palette::Palette;
 use crate::theme_bridge;
 use derive::{contrasted, main_ui, opaque_ui, tally, theme_parts, themed, translucency};
-pub use profile::{ParkedSettings, edits_in, features_in, settings_in, store_in, ui_in};
+pub use profile::{ParkedSettings, edits_in, features_in, settings_in, store_in, ui_in, update_in};
 pub use ui_colors::UiColors;
 
 /// How many times each derived value has changed since the app started: a view that
@@ -156,6 +156,9 @@ pub struct SettingsStore {
     /// Bumped on every change, whatever it touched.
     pub revision: u64,
     pub revisions: Revisions,
+    /// How many times the settings were changed from inside Wormhole (`update`): a change that is not one of
+    /// these came from the file (an editor, a script), which `agent_access` does not take at its word.
+    pub ui_edits: u64,
     /// A problem to show in the settings panel.
     pub error: Option<SharedString>,
 }
@@ -208,6 +211,7 @@ impl SettingsStore {
             preview: None,
             revision: 1,
             revisions: Revisions { settings: 1, theme: 1, fonts: 1, icons: 1, features: 1 },
+            ui_edits: 0,
         }
     }
 
@@ -354,6 +358,16 @@ impl SettingsStore {
 
     /// Change settings from the UI and persist them.
     pub fn update(cx: &mut App, f: impl FnOnce(&mut Settings)) {
+        Self::mutate(cx, |store| {
+            store.config.update(f);
+            store.ui_edits += 1;
+        });
+    }
+
+    /// Change the settings the way an edit of `config.json` by something else does when it is read back: not
+    /// counted as an edit from inside Wormhole.
+    #[cfg(test)]
+    pub fn edit_as_the_file_would(cx: &mut App, f: impl FnOnce(&mut Settings)) {
         Self::mutate(cx, |store| store.config.update(f));
     }
 

@@ -73,7 +73,7 @@ impl ErrorCode {
 
 impl Reason {
     /// Every reason this build gives (not [`Reason::Other`]).
-    pub const ALL: [Reason; 17] = [
+    pub const ALL: [Reason; 18] = [
         Reason::Timeout,
         Reason::NoIntegration,
         Reason::NotAtPrompt,
@@ -91,6 +91,7 @@ impl Reason {
         Reason::AgentAccessOff,
         Reason::IdentityChanged,
         Reason::TooManyQuestions,
+        Reason::NotAnswered,
     ];
 
     /// The reason as it is spelled in a reply's `error.reason`.
@@ -113,6 +114,7 @@ impl Reason {
             Reason::AgentAccessOff => "agent_access_off",
             Reason::IdentityChanged => "identity_changed",
             Reason::TooManyQuestions => "too_many_questions",
+            Reason::NotAnswered => "not_answered",
             Reason::Other => "other",
         }
     }
@@ -162,6 +164,9 @@ impl Reason {
             }
             Reason::TooManyQuestions => {
                 "Wormhole already has several questions waiting for the user. Wait for them to be answered, then try again."
+            }
+            Reason::NotAnswered => {
+                "The question went away without an answer (its window closed, or no sheet could be shown). It counts as no for now and is not remembered: tell the user, and try once more after they say Wormhole's window is up."
             }
             Reason::Other => "A reason a newer Wormhole gave; read the message.",
         }

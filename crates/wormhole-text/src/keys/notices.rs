@@ -7,19 +7,19 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Copied command"
-pub const NOTICE_COPIED_COMMAND: Key = Key::new(38);
+pub const NOTICE_COPIED_COMMAND: Key = Key::new(43);
 /// "Copied path"
-pub const NOTICE_COPIED_PATH: Key = Key::new(39);
+pub const NOTICE_COPIED_PATH: Key = Key::new(44);
 /// "Copied setting key"
-pub const NOTICE_COPIED_SETTING_KEY: Key = Key::new(40);
+pub const NOTICE_COPIED_SETTING_KEY: Key = Key::new(45);
 /// "Copied error"
-pub const NOTICE_COPIED_ERROR: Key = Key::new(41);
+pub const NOTICE_COPIED_ERROR: Key = Key::new(46);
 /// "Copied object id"
-pub const NOTICE_COPIED_OBJECT_ID: Key = Key::new(42);
+pub const NOTICE_COPIED_OBJECT_ID: Key = Key::new(47);
 /// "A script is typing"
-pub const NOTICE_DRIVEN_SCRIPTS_TYPING: Key = Key::new(45);
+pub const NOTICE_DRIVEN_SCRIPTS_TYPING: Key = Key::new(50);
 /// "A script is reading"
-pub const NOTICE_DRIVEN_SCRIPTS_READING: Key = Key::new(46);
+pub const NOTICE_DRIVEN_SCRIPTS_READING: Key = Key::new(51);
 
 /// ```text
 /// { $count ->
@@ -28,7 +28,7 @@ pub const NOTICE_DRIVEN_SCRIPTS_READING: Key = Key::new(46);
 /// }
 /// ```
 pub fn notice_copied_lines(count: i64) -> String {
-    crate::active::message(35, &[("count", Arg::Int(count))])
+    crate::active::message(40, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -38,7 +38,7 @@ pub fn notice_copied_lines(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_characters(count: i64) -> String {
-    crate::active::message(36, &[("count", Arg::Int(count))])
+    crate::active::message(41, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -48,19 +48,19 @@ pub fn notice_copied_characters(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_output(count: i64) -> String {
-    crate::active::message(37, &[("count", Arg::Int(count))])
+    crate::active::message(42, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { $name } is typing
 /// ```
 pub fn notice_driven_typing(name: &str) -> String {
-    crate::active::message(43, &[("name", Arg::Str(name))])
+    crate::active::message(48, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name } is reading
 /// ```
 pub fn notice_driven_reading(name: &str) -> String {
-    crate::active::message(44, &[("name", Arg::Str(name))])
+    crate::active::message(49, &[("name", Arg::Str(name))])
 }

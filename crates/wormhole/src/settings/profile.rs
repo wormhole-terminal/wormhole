@@ -40,7 +40,6 @@ impl ParkedSettings {
         if *profile == self.shown { None } else { self.stores.get(profile) }
     }
 
-    #[cfg(test)]
     pub(crate) fn get_mut(&mut self, profile: &ProfileId) -> Option<&mut SettingsStore> {
         if *profile == self.shown { None } else { self.stores.get_mut(profile) }
     }
@@ -153,4 +152,25 @@ pub fn features_in(profile: &ProfileId, cx: &App) -> wormhole_core::config::Feat
 /// [`super::ui`] (the translucent main window's colours) for a window in `profile`.
 pub fn ui_in(profile: &ProfileId, cx: &App) -> UiColors {
     store_in(profile, cx).ui
+}
+
+/// Change the settings of the window's profile `profile` as the UI of its window would: the shown profile's
+/// through the global, another open profile's in its parked store.
+pub fn update_in(profile: &ProfileId, cx: &mut App, f: impl FnOnce(&mut Settings)) {
+    if edits_in(profile, cx) {
+        super::update_settings(cx, f);
+    } else if cx.has_global::<ParkedSettings>()
+        && let Some(store) = cx.global_mut::<ParkedSettings>().get_mut(profile)
+    {
+        store.update_here(f);
+    }
+}
+
+impl SettingsStore {
+    /// Change this store's settings as an edit from inside Wormhole.
+    fn update_here(&mut self, f: impl FnOnce(&mut Settings)) {
+        self.config.update(f);
+        self.ui_edits += 1;
+        self.derive();
+    }
 }

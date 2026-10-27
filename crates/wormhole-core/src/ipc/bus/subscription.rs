@@ -99,7 +99,8 @@ impl Subscriber {
     /// in a terminal, and a stream that needed more is closed.
     pub(super) fn revoke_reads(&self) {
         let mut grant = self.grant.lock().unwrap_or_else(PoisonError::into_inner);
-        if !grant.reads_all {
+        // One that holds an approval of its own keeps it: only the user's Revoke ends that (`revoke_holder`).
+        if !grant.reads_all || grant.holder.is_some() {
             return;
         }
         grant.reads_all = false;

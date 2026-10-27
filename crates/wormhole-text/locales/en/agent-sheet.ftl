@@ -66,3 +66,18 @@ agent-sheet-button-deny = Don’t Allow
 agent-sheet-button-session = Allow for This Session
 agent-sheet-button-quit = Until { -brand } Quits
 agent-sheet-button-always = Always
+
+## A mode that was changed outside { -brand }
+
+# The title of the question. { $mode } is the new mode: Off, Ask or Allowed while open.
+agent-change-title = Agent access was changed outside { -brand } to “{ $mode }”. Keep it?
+
+# { $previous } is the mode that stays in force until the answer: Off, Ask or Allowed while open.
+agent-change-detail = Something other than { -brand }’s Settings edited the file, and the new mode lets more programs in. Until you answer, “{ $previous }” stays in force; Don’t Keep puts it back in the file.
+
+agent-sheet-button-dont-keep = Don’t Keep
+agent-sheet-button-keep = Keep
+
+## The name of the identity that is everything but a known agent
+
+agent-scripts-label = Scripts

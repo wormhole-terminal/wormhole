@@ -5,19 +5,25 @@
 use std::path::Path;
 
 use gpui_kit::*;
+use wormhole_core::config::AgentAccess;
 use wormhole_core::ipc::access::{Capability, Kind, Need, Pending, Resolved};
 use wormhole_core::platform::codesign::{Signature, SignerKind};
 use wormhole_core::platform::paths;
 use wormhole_text::keys::{
-    AGENT_SHEET_BUTTON_ALWAYS, AGENT_SHEET_BUTTON_DENY, AGENT_SHEET_BUTTON_QUIT, AGENT_SHEET_BUTTON_SESSION,
-    AGENT_SHEET_DETAIL, AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_LABEL_ASKED_BY, AGENT_SHEET_LABEL_PATH,
-    AGENT_SHEET_LABEL_PID, AGENT_SHEET_LABEL_RUNS_IN, AGENT_SHEET_LABEL_RUNS_ON, AGENT_SHEET_LABEL_SIGNED_BY,
+    AGENT_SHEET_BUTTON_ALWAYS, AGENT_SHEET_BUTTON_DENY, AGENT_SHEET_BUTTON_DONT_KEEP,
+    AGENT_SHEET_BUTTON_KEEP, AGENT_SHEET_BUTTON_QUIT, AGENT_SHEET_BUTTON_SESSION, AGENT_SHEET_DETAIL,
+    AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_LABEL_ASKED_BY, AGENT_SHEET_LABEL_PATH, AGENT_SHEET_LABEL_PID,
+    AGENT_SHEET_LABEL_RUNS_IN, AGENT_SHEET_LABEL_RUNS_ON, AGENT_SHEET_LABEL_SIGNED_BY,
     AGENT_SHEET_LABEL_STARTED_BY, AGENT_SHEET_SIGNED_AD_HOC, AGENT_SHEET_SIGNED_APPLE,
     AGENT_SHEET_SIGNED_NONE, AGENT_SHEET_SIGNED_OTHER, AGENT_SHEET_SIGNED_UNREADABLE,
     AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_CLOSE, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_READ,
     AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_TYPE, AGENT_SHEET_WARNING_AD_HOC, AGENT_SHEET_WARNING_CHANGED,
-    AGENT_SHEET_WARNING_ROOT, AGENT_SHEET_WARNING_UNSIGNED, agent_sheet_in_terminal, agent_sheet_runs_on,
-    agent_sheet_signed_developer, agent_sheet_signed_team, agent_sheet_title, agent_sheet_warning_unusual,
+    AGENT_SHEET_WARNING_ROOT, AGENT_SHEET_WARNING_UNSIGNED, agent_change_detail, agent_change_title,
+    agent_sheet_in_terminal, agent_sheet_runs_on, agent_sheet_signed_developer, agent_sheet_signed_team,
+    agent_sheet_title, agent_sheet_warning_unusual,
+};
+use wormhole_text::keys::{
+    SETTINGS_AGENTS_ACCESS_ASK, SETTINGS_AGENTS_ACCESS_OFF, SETTINGS_AGENTS_ACCESS_OPEN,
 };
 use wormhole_text::text;
 
@@ -35,6 +41,10 @@ pub(crate) enum Button {
     Quit,
     /// For good.
     Always,
+    /// Keep a mode that was changed outside Wormhole.
+    Keep,
+    /// Put the earlier mode back.
+    DontKeep,
 }
 
 impl Button {
@@ -44,6 +54,8 @@ impl Button {
             Button::Session => AGENT_SHEET_BUTTON_SESSION,
             Button::Quit => AGENT_SHEET_BUTTON_QUIT,
             Button::Always => AGENT_SHEET_BUTTON_ALWAYS,
+            Button::Keep => AGENT_SHEET_BUTTON_KEEP,
+            Button::DontKeep => AGENT_SHEET_BUTTON_DONT_KEEP,
         })
     }
 }
@@ -56,6 +68,23 @@ pub(super) struct Display {
     pub accessory: String,
     /// In the order they are laid out; the first is the default (Return).
     pub buttons: Vec<Button>,
+}
+
+/// The question about a mode that was changed outside Wormhole to something wider than it was.
+pub(super) fn change_display(previous: AgentAccess, requested: AgentAccess) -> Display {
+    let words = |mode| {
+        text(match mode {
+            AgentAccess::Off => SETTINGS_AGENTS_ACCESS_OFF,
+            AgentAccess::Ask => SETTINGS_AGENTS_ACCESS_ASK,
+            AgentAccess::Open => SETTINGS_AGENTS_ACCESS_OPEN,
+        })
+    };
+    Display {
+        title: agent_change_title(words(requested)),
+        detail: agent_change_detail(words(previous)),
+        accessory: String::new(),
+        buttons: vec![Button::DontKeep, Button::Keep],
+    }
 }
 
 /// The answers `pending` offers, the default first. A script is not a program that stays: there is no process

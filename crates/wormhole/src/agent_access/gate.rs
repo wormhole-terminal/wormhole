@@ -1,6 +1,6 @@
 //! The gate every control request passes before a handler sees it.
 
-use std::time::Instant;
+use std::time::{Duration, Instant, SystemTime};
 
 use gpui_kit::*;
 use wormhole_core::config::AgentAccess;
@@ -8,19 +8,19 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::ipc::access::{
     Access, Allowance, CapSet, Capability, Changed, Need, Resolved, Scope, Verdict, decide, resolve,
 };
-use wormhole_core::ipc::control::doctor::{Access as Access2, Standing};
+use wormhole_core::ipc::control::doctor::{Access as DoctorAccess, Standing};
 use wormhole_core::ipc::control::{Action, Error, ErrorCode, Reason, Reply, Request};
 use wormhole_core::ipc::{AskJob, Peer};
+use wormhole_core::platform::process;
 use wormhole_core::view::notice::Driver;
 
+use super::change::reconcile;
 use super::drive::{drive_of, driver_of};
 use super::processes::System;
+use super::profile::{Reach, holder, reach, reach_front};
 use super::{ask, state};
 use crate::app_state::{app, app_mut};
-use crate::settings::settings;
-
-/// Stored approvals are told from the ones held in memory by the bit set in their holder number.
-pub(super) const HOLDER_STORED: u64 = 1 << 62;
+use crate::settings::settings_in;
 
 /// What becomes of a request.
 pub(crate) enum Gate {
@@ -33,23 +33,41 @@ pub(crate) enum Gate {
     Ask(AskJob),
 }
 
-/// Judge `request` from `peer`. With the Automation feature off nothing changes from the release: typing
-/// and opening go by `control_write`, and the actions of the feature answer `unsupported` themselves.
+/// How long who is behind a process is remembered: `wh mcp` is one process that asks again and again.
+const IDENTITY_TTL: Duration = Duration::from_secs(5);
+const IDENTITIES_MAX: usize = 16;
+
+/// Judge `request` from `peer`, by the profile of the window it reaches. With the Automation feature off
+/// nothing changes from the release: typing and opening go by `control_write`, and the actions of the feature
+/// answer `unsupported` themselves.
 pub(crate) fn gate(request: &Request, peer: &Peer, cx: &mut App) -> Gate {
-    let settings = settings(cx);
+    gate_with(request, peer, &identify, cx)
+}
+
+/// [`gate`] with the finding out of who asks given (a test's).
+pub(super) fn gate_with(
+    request: &Request,
+    peer: &Peer,
+    who: &dyn Fn(&Peer, &mut App) -> Result<Resolved, Changed>,
+    cx: &mut App,
+) -> Gate {
+    let reach = reach(request, cx);
+    let settings = settings_in(&reach.profile, cx);
     if !settings.feature_enabled(FeatureFlag::Automation) {
         return Gate::Open(Access { read: false, write: settings.control_write, holder: None }, None);
     }
-    let mode = settings.agent_access;
+    let mode = reconcile(&reach.profile, cx);
     let need = Need::of(&request.action);
     let own = need == Need::Capability(Capability::Read) && reads_only_own(request, peer, cx);
     match decide(mode, need, own, None, false) {
-        Verdict::Allow(access) => return Gate::Open(access, driver_when_shown(request, peer, access, cx)),
+        Verdict::Allow(access) => {
+            return Gate::Open(access, driver_when_shown(request, peer, access, &reach, who, cx));
+        }
         Verdict::Refuse(error) => return Gate::Reply(error.into()),
         // Only in Ask mode, and nothing is held yet: who is it?
         Verdict::Ask => {}
     }
-    let resolved = match identify(peer, cx) {
+    let resolved = match who(peer, cx) {
         Ok(resolved) => resolved,
         Err(Changed) => {
             return Gate::Reply(
@@ -63,32 +81,27 @@ pub(crate) fn gate(request: &Request, peer: &Peer, cx: &mut App) -> Gate {
         }
     };
     let now = Instant::now();
-    let held = allowance(&resolved, now, cx);
-    let cooling = state(cx).grants.cooling(&resolved.identity, now);
+    let held = allowance(&resolved, &reach, now, cx);
+    let cooling = state(cx).grants_of(reach.scope).cooling(&resolved.identity, now);
     let driver = driver_of(&resolved);
     match decide(mode, need, false, held, cooling) {
         Verdict::Allow(access) => Gate::Open(access, Some(driver)),
         Verdict::Refuse(error) => Gate::Reply(error.into()),
-        Verdict::Ask => ask_the_user(resolved, need, request.ask, cx),
+        Verdict::Ask => ask_the_user(resolved, need, request.ask, &reach, cx),
     }
 }
 
-/// Who is acting, for the marker, when the request is let in without a look at who it is (everybody is let in,
-/// or it needed no approval): only when the chip would be shown at all, since finding out costs a walk of the
-/// process chain.
-fn driver_when_shown(request: &Request, peer: &Peer, access: Access, cx: &mut App) -> Option<Driver> {
-    if access == Access::default() || drive_of(&request.action, request.from_tab()).is_none() {
-        return None;
-    }
-    let profile = app(cx).active_profile().clone();
-    if !crate::notice::enabled(&profile, cx) {
-        return None;
-    }
-    identify(peer, cx).ok().map(|resolved| driver_of(&resolved))
-}
-
-/// Who is behind `peer`.
+/// Who is behind `peer`, from the system (and from the last few seconds' answer for the same process).
 fn identify(peer: &Peer, cx: &mut App) -> Result<Resolved, Changed> {
+    let head = peer.pid.and_then(|pid| process::start_time(pid).map(|started| (pid, started)));
+    let now = Instant::now();
+    if let Some((pid, started)) = head
+        && let Some((_, _, _, resolved)) = state(cx).identities.iter().find(|(cached, at, seen, _)| {
+            *cached == pid && *at == started && now.duration_since(*seen) < IDENTITY_TTL
+        })
+    {
+        return Ok(resolved.clone());
+    }
     let chain: Vec<u32> = peer.pid.into_iter().chain(peer.ancestors.iter().copied()).collect();
     let shells: Vec<u32> = app(cx)
         .windows
@@ -99,45 +112,67 @@ fn identify(peer: &Peer, cx: &mut App) -> Result<Resolved, Changed> {
     let system = System::new(std::mem::take(&mut state(cx).signatures), shells);
     let resolved = resolve(&chain, &system);
     state(cx).signatures = system.into_signatures();
-    resolved
+    let resolved = resolved?;
+    if let Some((pid, started)) = head {
+        let identities = &mut state(cx).identities;
+        identities.retain(|(_, _, seen, _)| now.duration_since(*seen) < IDENTITY_TTL);
+        if identities.len() >= IDENTITIES_MAX {
+            identities.remove(0);
+        }
+        identities.push((pid, started, now, resolved.clone()));
+    }
+    Ok(resolved)
 }
 
-/// What covers `resolved`: an approval held in memory, else a stored one (noted as used, at most once a
-/// minute).
-fn allowance(resolved: &Resolved, now: Instant, cx: &mut App) -> Option<Allowance> {
-    if let Some(held) = state(cx).grants.find(&resolved.identity, resolved.process) {
-        return Some(Allowance { caps: held.caps, holder: Some(held.id) });
+/// What covers `resolved`: an approval held in memory, else a stored one (its use counted, and written at most
+/// once a minute).
+fn allowance(resolved: &Resolved, reach: &Reach, now: Instant, cx: &mut App) -> Option<Allowance> {
+    let scope = reach.scope;
+    if let Some(held) = state(cx).grants_of(scope).find(&resolved.identity, resolved.process) {
+        return Some(Allowance { caps: held.caps, holder: Some(holder(false, scope, held.id)) });
     }
-    let profile = app(cx).active_profile().clone();
-    let row = stored(resolved, cx)?;
-    let due = state(cx).touched.get(&row.id).is_none_or(|at| now.duration_since(*at) >= TOUCH_EVERY);
+    let row = stored(resolved, &reach.profile, cx)?;
+    *state(cx).uses.entry((scope, row.id)).or_default() += 1;
+    let due = state(cx).touched.get(&(scope, row.id)).is_none_or(|at| now.duration_since(*at) >= TOUCH_EVERY);
     if due {
-        state(cx).touched.insert(row.id, now);
+        state(cx).touched.insert((scope, row.id), now);
+        let uses = state(cx).uses.remove(&(scope, row.id)).unwrap_or(0);
         let location =
             resolved.program.as_ref().map(|p| p.path.to_string_lossy().into_owned()).unwrap_or_default();
         let cdhash = resolved.program.as_ref().and_then(|p| p.signature.cdhash.clone()).unwrap_or_default();
-        let seconds = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
+        let seconds = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
             .map_or(0, |since| i64::try_from(since.as_secs()).unwrap_or(0));
-        if let Some(store) = app_mut(cx).store_of_mut(&profile)
-            && let Err(err) = store.touch_agent_grant(row.id, seconds, &location, &cdhash)
+        if let Some(store) = app_mut(cx).store_of_mut(&reach.profile)
+            && let Err(err) = store.touch_agent_grant(row.id, seconds, &location, &cdhash, uses)
         {
             tracing::warn!("couldn't note that an approval was used: {err:#}");
         }
     }
-    let holder = HOLDER_STORED | u64::try_from(row.id).unwrap_or(0);
+    let holder = holder(true, scope, u64::try_from(row.id).unwrap_or(0));
     Some(Allowance { caps: CapSet::from_bits(row.caps), holder: Some(holder) })
 }
 
 /// How often a stored approval's use is written.
-const TOUCH_EVERY: std::time::Duration = std::time::Duration::from_secs(60);
+const TOUCH_EVERY: Duration = Duration::from_secs(60);
+
+/// The stored approval of `profile` that covers `resolved`.
+fn stored(
+    resolved: &Resolved,
+    profile: &wormhole_core::storage::paths::ProfileId,
+    cx: &App,
+) -> Option<wormhole_core::storage::store::AgentGrantRow> {
+    app(cx).store_of(profile)?.agent_grant(&resolved.identity.key()).ok().flatten()
+}
 
 /// Queue the question for `resolved`. A caller that waits (`ask`) is held until it is answered; one that
 /// cannot is refused at once, and the question stays, so that the next attempt finds the answer.
-fn ask_the_user(resolved: Resolved, need: Need, waits: bool, cx: &mut App) -> Gate {
+fn ask_the_user(resolved: Resolved, need: Need, waits: bool, reach: &Reach, cx: &mut App) -> Gate {
     let label = resolved.label.clone();
-    if app(cx).windows.iter().all(|window| window.hidden) {
-        return Gate::Reply(approval_needed(&label, "Wormhole has no window to ask in").into());
+    if !reach.shown || app(cx).windows.iter().all(|window| window.hidden) {
+        return Gate::Reply(
+            approval_needed(&label, "Wormhole has no window of that profile to ask in").into(),
+        );
     }
     let (waiter, job) = if waits {
         let (tx, job) = AskJob::channel();
@@ -145,7 +180,7 @@ fn ask_the_user(resolved: Resolved, need: Need, waits: bool, cx: &mut App) -> Ga
     } else {
         (None, None)
     };
-    if state(cx).queue.push(resolved, need, waiter).is_err() {
+    if state(cx).queue.push(resolved, need, reach.scope, waiter).is_err() {
         return Gate::Reply(
             Error::new(ErrorCode::NotAllowed, "several questions are already waiting for the user")
                 .because(Reason::TooManyQuestions)
@@ -169,6 +204,26 @@ fn ask_the_user(resolved: Resolved, need: Need, waits: bool, cx: &mut App) -> Ga
 fn approval_needed(label: &str, why: &str) -> Error {
     Error::new(ErrorCode::NotAllowed, format!("{label} has not been allowed to control Wormhole yet: {why}"))
         .because(Reason::ApprovalNeeded)
+}
+
+/// Who is acting, for the marker, when the request is let in without a look at who it is (everybody is let in,
+/// or it needed no approval): only when the chip would be shown at all, since finding out costs a walk of the
+/// process chain.
+fn driver_when_shown(
+    request: &Request,
+    peer: &Peer,
+    access: Access,
+    reach: &Reach,
+    who: &dyn Fn(&Peer, &mut App) -> Result<Resolved, Changed>,
+    cx: &mut App,
+) -> Option<Driver> {
+    if access == Access::default() || drive_of(&request.action, request.from_tab()).is_none() {
+        return None;
+    }
+    if !crate::notice::enabled(&reach.profile, cx) {
+        return None;
+    }
+    who(peer, cx).ok().map(|resolved| driver_of(&resolved))
 }
 
 /// Whether `request` reads only terminals the caller runs inside of (by its place in the process tree,
@@ -199,15 +254,11 @@ fn reads_only_own(request: &Request, peer: &Peer, cx: &App) -> bool {
     target.is_none_or(|target| own.contains(&target.id()))
 }
 
-/// Whether `mode` lets programs in at all, for the tick: reads of every terminal end when it goes off.
-pub(crate) fn lets_in(mode: AgentAccess) -> bool {
-    mode != AgentAccess::Off
-}
-
-/// Where the caller stands, for `doctor`: the mode, who the app takes it for and what covers it. Reads, never
-/// asks and never notes a use.
-pub(crate) fn standing(peer: &Peer, cx: &mut App) -> Access2 {
-    let mode = settings(cx).agent_access;
+/// Where the caller stands, for `doctor`: the mode, who the app takes it for and what covers it, in the profile
+/// of the window a request with no target acts in. Reads, never asks and never notes a use.
+pub(crate) fn standing(peer: &Peer, cx: &mut App) -> DoctorAccess {
+    let reach = reach_front(cx);
+    let mode = reconcile(&reach.profile, cx);
     let resolved = identify(peer, cx).ok();
     let who = resolved.as_ref().map_or_else(|| "Scripts".to_string(), |resolved| resolved.label.clone());
     let standing = match (mode, &resolved) {
@@ -216,25 +267,19 @@ pub(crate) fn standing(peer: &Peer, cx: &mut App) -> Access2 {
         (AgentAccess::Ask, None) => Standing::NotAsked,
         (AgentAccess::Ask, Some(resolved)) => {
             let now = Instant::now();
-            if let Some(held) = state(cx).grants.find(&resolved.identity, resolved.process) {
+            if let Some(held) = state(cx).grants_of(reach.scope).find(&resolved.identity, resolved.process) {
                 match held.scope {
                     Scope::Session(_) => Standing::Session,
                     Scope::UntilQuit => Standing::UntilQuit,
                 }
-            } else if stored(resolved, cx).is_some() {
+            } else if stored(resolved, &reach.profile, cx).is_some() {
                 Standing::Always
-            } else if state(cx).grants.cooling(&resolved.identity, now) {
+            } else if state(cx).grants_of(reach.scope).cooling(&resolved.identity, now) {
                 Standing::DeclinedRecently
             } else {
                 Standing::NotAsked
             }
         }
     };
-    Access2 { mode, who, standing }
-}
-
-/// The stored approval that covers `resolved`.
-fn stored(resolved: &Resolved, cx: &App) -> Option<wormhole_core::storage::store::AgentGrantRow> {
-    let state = app(cx);
-    state.store_of(state.active_profile())?.agent_grant(&resolved.identity.key()).ok().flatten()
+    DoctorAccess { mode, who, standing }
 }

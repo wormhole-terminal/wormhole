@@ -6,4 +6,4 @@
 use crate::key::Key;
 
 /// "The command line asked to close it."
-pub const CONTROL_CLOSE_ASKED: Key = Key::new(34);
+pub const CONTROL_CLOSE_ASKED: Key = Key::new(39);

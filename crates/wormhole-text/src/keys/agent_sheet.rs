@@ -62,6 +62,12 @@ pub const AGENT_SHEET_BUTTON_SESSION: Key = Key::new(31);
 pub const AGENT_SHEET_BUTTON_QUIT: Key = Key::new(32);
 /// "Always"
 pub const AGENT_SHEET_BUTTON_ALWAYS: Key = Key::new(33);
+/// "Don’t Keep"
+pub const AGENT_SHEET_BUTTON_DONT_KEEP: Key = Key::new(36);
+/// "Keep"
+pub const AGENT_SHEET_BUTTON_KEEP: Key = Key::new(37);
+/// "Scripts"
+pub const AGENT_SCRIPTS_LABEL: Key = Key::new(38);
 
 /// ```text
 /// Allow “{ $name }” to control { -brand }?
@@ -103,4 +109,18 @@ pub fn agent_sheet_in_terminal(title: &str) -> String {
 /// ```
 pub fn agent_sheet_runs_on(name: &str, signer: &str) -> String {
     crate::active::message(29, &[("name", Arg::Str(name)), ("signer", Arg::Str(signer))])
+}
+
+/// ```text
+/// Agent access was changed outside { -brand } to “{ $mode }”. Keep it?
+/// ```
+pub fn agent_change_title(mode: &str) -> String {
+    crate::active::message(34, &[("mode", Arg::Str(mode))])
+}
+
+/// ```text
+/// Something other than { -brand }’s Settings edited the file, and the new mode lets more programs in. Until you answer, “{ $previous }” stays in force; Don’t Keep puts it back in the file.
+/// ```
+pub fn agent_change_detail(previous: &str) -> String {
+    crate::active::message(35, &[("previous", Arg::Str(previous))])
 }

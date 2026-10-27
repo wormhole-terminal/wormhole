@@ -252,3 +252,15 @@ fn taking_an_approval_back_closes_the_streams_started_under_it_and_only_those() 
     assert!(matches!(other.next(NONE), Next::Event(_)), "another approval's stream goes on");
     assert!(matches!(needed_none.next(NONE), Next::Event(_)), "so does one that needed none");
 }
+
+#[test]
+fn the_end_of_open_access_keeps_the_streams_of_programs_that_hold_their_own_read_grant() {
+    let bus = Bus::new();
+    let reads = |holder| Grant { reads_all: true, holder, ..Grant::default() };
+    let (open, _) = bus.subscribe(filter(&["output"]), reads(None), None).expect("room");
+    let (held, _) = bus.subscribe(filter(&["output"]), reads(Some(4)), None).expect("room");
+    bus.revoke_reads();
+    assert!(matches!(open.next(NONE), Next::Closed(CloseReason::NotAllowed)), "what Open let in goes");
+    bus.publish(Topic::Bell, || bell(1));
+    assert!(!matches!(held.next(NONE), Next::Closed(_)), "an approval of its own stays until it is revoked");
+}

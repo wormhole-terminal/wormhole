@@ -79,6 +79,10 @@ pub const PROTOCOL_VERSION: u32 = 1;
 /// not remembered. The command line waits a little longer than that for the reply.
 pub const ASK_WAIT_S: u64 = 60;
 
+/// How many different programs' questions wait for the user at once. A question that is queued waits for its
+/// turn to be shown, then [`ASK_WAIT_S`]: the command line waits for both.
+pub const ASK_QUEUE_MAX: usize = 8;
+
 /// What a caller asks the app to do.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Request {
@@ -433,6 +437,9 @@ pub enum Reason {
     IdentityChanged,
     /// Too many questions are waiting for the user; they are not queued further.
     TooManyQuestions,
+    /// The question went away without an answer (its window closed, or no sheet could be shown): it counts as
+    /// no for now, and is not remembered.
+    NotAnswered,
     /// A reason a newer Wormhole gave.
     #[serde(other)]
     Other,

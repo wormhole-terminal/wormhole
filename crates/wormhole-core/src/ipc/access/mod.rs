@@ -19,4 +19,4 @@ pub use decide::{Access, Allowance, Verdict, decide};
 pub use grants::{COOL_DOWN, Grants, Held, ProcessRef, Scope};
 pub use identity::{Identity, Kind, agent_word};
 pub use queue::{Full, Pending, QUEUE_MAX, Queue};
-pub use resolve::{Changed, Processes, Program, Resolved, resolve};
+pub use resolve::{Changed, Processes, Program, Resolved, ScriptPin, resolve};

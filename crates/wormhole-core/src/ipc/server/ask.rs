@@ -16,7 +16,32 @@ use crate::platform::socket::Stream;
 /// request is refused, not queued, so a looping caller cannot hold a thread each.
 const WAITERS_MAX: usize = 16;
 
-static WAITERS: AtomicUsize = AtomicUsize::new(0);
+/// A number of places, taken and given back.
+struct Places {
+    taken: AtomicUsize,
+    most: usize,
+}
+
+impl Places {
+    const fn new(most: usize) -> Self {
+        Self { taken: AtomicUsize::new(0), most }
+    }
+
+    /// Take a place if there is one.
+    fn take(&self) -> bool {
+        if self.taken.fetch_add(1, Ordering::SeqCst) >= self.most {
+            self.taken.fetch_sub(1, Ordering::SeqCst);
+            return false;
+        }
+        true
+    }
+
+    fn give_back(&self) {
+        self.taken.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+static WAITERS: Places = Places::new(WAITERS_MAX);
 
 /// Take the connection over for `request`, which waits on `job`. The connection is the thread's from here.
 pub(super) fn start(
@@ -28,8 +53,7 @@ pub(super) fn start(
     job: AskJob,
 ) -> Outcome {
     let Ok(mut writer) = stream.try_clone() else { return Outcome::Answered };
-    if WAITERS.fetch_add(1, Ordering::SeqCst) >= WAITERS_MAX {
-        WAITERS.fetch_sub(1, Ordering::SeqCst);
+    if !WAITERS.take() {
         let error = Error::new(ErrorCode::NotAllowed, "too many questions are waiting for the user")
             .because(Reason::TooManyQuestions);
         let _ = write_reply(&mut writer, &error.into());
@@ -44,7 +68,7 @@ pub(super) fn start(
     match spawned {
         Ok(_) => Outcome::Streaming,
         Err(err) => {
-            WAITERS.fetch_sub(1, Ordering::SeqCst);
+            WAITERS.give_back();
             tracing::warn!("couldn't start a thread to wait for the user: {err}");
             Outcome::Answered
         }
@@ -56,7 +80,7 @@ struct Counted;
 
 impl Drop for Counted {
     fn drop(&mut self) {
-        WAITERS.fetch_sub(1, Ordering::SeqCst);
+        WAITERS.give_back();
     }
 }
 
@@ -87,7 +111,10 @@ fn run(
                 );
             }
         }
-        None => refuse(stream, Error::new(ErrorCode::Failed, "Wormhole did not answer in time")),
+        // (`wait` never returns the "shown" signal: it is the start of the minute, not an answer.)
+        Some(Decision::Shown) | None => {
+            refuse(stream, Error::new(ErrorCode::Failed, "Wormhole did not answer in time"))
+        }
     }
 }
 
@@ -131,6 +158,16 @@ mod tests {
             Some(Incoming::Control { request, reply, .. }) => (request, reply),
             other => panic!("expected a control request: {other:?}"),
         }
+    }
+
+    #[test]
+    fn the_places_for_waiting_requests_run_out_and_come_back() {
+        let places = super::Places::new(2);
+        assert!(places.take() && places.take());
+        assert!(!places.take(), "the third is refused (too_many_questions)");
+        places.give_back();
+        assert!(places.take(), "a place given back is taken again");
+        assert_eq!(super::WAITERS_MAX, 16);
     }
 
     /// The socket thread hands the question to a thread of its own: another request goes through while the user
