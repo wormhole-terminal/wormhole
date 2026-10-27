@@ -18,8 +18,7 @@ fn words(line: &str) -> Vec<String> {
     let mut word = String::new();
     let mut has_word = false;
     let mut quote: Option<char> = None;
-    let mut chars = line.chars().peekable();
-    while let Some(c) = chars.next() {
+    for c in line.chars() {
         match (quote, c) {
             (Some(q), c) if c == q => quote = None,
             (Some(_), c) => word.push(c),
