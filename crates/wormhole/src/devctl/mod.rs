@@ -266,7 +266,9 @@
 //!                   whether it is `compact` or `whole`; another commit opens compact)
 //!   commit-copy <hash|short|message|subject|author> [n]   the commit menu's copy item, for the open
 //!                   commit or the n-th of the log (the message and author are read first when need be)
-//!   clipboard       the text on the clipboard now (`empty` when there is none)
+//!   clipboard       the text the app's last copy put on its clipboard (`empty` when there is none): a
+//!                   background instance's own pasteboard, since every copy of the app goes through
+//!                   `platform::clipboard` and none of a test instance's touches the system's
 //!   diff-scroll-x <px>  scroll the open diff's code sideways (negative = back)
 //!   frames <n>      draw the window n times (the workspace is not marked dirty) and append the timings
 //!                   to <dir>/frames.txt (out.txt is rewritten per batch); run it once the tab

@@ -19,10 +19,14 @@ pub(crate) fn sources(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// A file of tests only, which `#[cfg(test)] mod x;` pulls in.
+/// A file of tests only, which `#[cfg(test)] mod x;` pulls in: one named so, or one in a folder of
+/// tests (`flow_tests/details.rs`).
 pub(crate) fn is_test_file(relative: &str) -> bool {
-    let name = relative.rsplit('/').next().unwrap_or(relative);
-    name == "tests.rs" || name.ends_with("_tests.rs")
+    let mut parts = relative.rsplit('/');
+    let name = parts.next().unwrap_or(relative);
+    name == "tests.rs"
+        || name.ends_with("_tests.rs")
+        || parts.any(|folder| folder == "tests" || folder.ends_with("_tests"))
 }
 
 /// The part of a file that is not test code: up to a `#[cfg(test)]`-style attribute (one that

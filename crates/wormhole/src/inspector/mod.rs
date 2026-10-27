@@ -127,7 +127,7 @@ fn render_panel(inspector: &mut Inspector, window: &mut Window, cx: &mut Context
                             .label("Copy")
                             .tooltip("Copy a note with the location and your changes")
                             .on_click(move |_, _, cx| {
-                                cx.write_to_clipboard(ClipboardItem::new_string(note_for(&id)));
+                                crate::platform::clipboard::write(note_for(&id), cx);
                             }),
                     )
                 })

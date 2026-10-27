@@ -114,7 +114,7 @@ impl Workspace {
                 }))
                 .on_action(cx.listener(|this, _: &CopyPath, window, cx| {
                     if let Some(cwd) = this.active_terminal().read(cx).cwd.clone() {
-                        cx.write_to_clipboard(ClipboardItem::new_string(cwd.to_string_lossy().into_owned()));
+                        crate::platform::clipboard::write(cwd.to_string_lossy().into_owned(), cx);
                         crate::notice::post(window, Copied::Path, None, cx);
                     }
                 }))

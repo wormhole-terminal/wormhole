@@ -129,7 +129,7 @@ impl Workspace {
 
     /// Copy path: the plain absolute path, unquoted, on the clipboard; VoiceOver says so.
     pub(in crate::window) fn copy_path(folder: &Path, cx: &mut App) {
-        cx.write_to_clipboard(ClipboardItem::new_string(folder.to_string_lossy().into_owned()));
+        crate::platform::clipboard::write(folder.to_string_lossy().into_owned(), cx);
         crate::platform::a11y::announce("Path copied", false);
     }
 

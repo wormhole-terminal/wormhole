@@ -173,7 +173,7 @@ impl StudioWindow {
 
     /// Copy JSON: the same file, on the clipboard.
     pub(super) fn copy_json(&mut self, cx: &mut Context<Self>) {
-        cx.write_to_clipboard(ClipboardItem::new_string(export_json(&self.draft)));
+        crate::platform::clipboard::write(export_json(&self.draft), cx);
         self.notice = Some(Notice::Done("Copied the theme's JSON.".into()));
         cx.notify();
     }

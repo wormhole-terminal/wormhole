@@ -185,12 +185,12 @@ impl TerminalView {
                 let Some((first, last)) = block.output_lines() else { return };
                 let output = pty.lines_text(first, last);
                 let copied = Copied::output(&output);
-                cx.write_to_clipboard(ClipboardItem::new_string(output));
+                crate::platform::clipboard::write(output, cx);
                 self.say(copied, cx);
             }
             BlockAction::CopyCommand => {
                 if !block.command.is_empty() {
-                    cx.write_to_clipboard(ClipboardItem::new_string(block.command.clone()));
+                    crate::platform::clipboard::write(block.command.clone(), cx);
                     self.say(Copied::Command, cx);
                 }
             }

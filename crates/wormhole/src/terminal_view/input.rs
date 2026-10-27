@@ -174,12 +174,12 @@ impl TerminalView {
             TerminalCommand::Copy => {
                 if let Some(text) = self.selection_text() {
                     let copied = Copied::text(&text);
-                    cx.write_to_clipboard(ClipboardItem::new_string(text));
+                    crate::platform::clipboard::write(text, cx);
                     self.say(copied, cx);
                 }
             }
             TerminalCommand::Paste => {
-                let clipboard = cx.read_from_clipboard().and_then(|item| item.text());
+                let clipboard = crate::platform::clipboard::read(cx);
                 // A program that left the mouse to us has no selection of its own any more.
                 let cursor_row =
                     self.pty.as_ref().filter(|_| mouse::wants_mouse(self.mode)).and_then(Pty::cursor_row);

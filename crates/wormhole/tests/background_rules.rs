@@ -4,7 +4,9 @@
 //! `src/window_open.rs` (`open`, which asks background mode). Code that calls GPUI's own
 //! `activate(true)`, `activate_window()` or `open_window` pops the instance up over whoever is at
 //! the Mac, and nothing else notices: the instance still works. So this reads the sources as text (like `design_rules.rs`, which is for
-//! the design language and so not the place for it) and fails on such a call.
+//! the design language and so not the place for it) and fails on such a call. The same goes for the
+//! system clipboard: a test instance that copies must not write over what the person copied, so every
+//! write and read goes through `platform::clipboard`, which keeps a background instance's own.
 //!
 //! Allowed: `background.rs` and `window_open.rs` themselves; test code (files named `*_tests.rs` or
 //! `tests.rs`, and a `#[cfg(test)]` module closing a file), whose windows belong to GPUI's test
@@ -17,6 +19,9 @@ use support::{is_test_file, non_test_part, sources, src};
 /// The calls that bypass `background.rs`, as they appear in code. (`open_window(` is checked on
 /// its own below: `window_open::open(` is the right call.)
 const ACTIVATIONS: [&str; 3] = [".activate(true)", ".activate(false)", ".activate_window()"];
+
+/// The calls that reach the person's clipboard past `platform/clipboard.rs`.
+const CLIPBOARD: [&str; 2] = [".write_to_clipboard(", ".read_from_clipboard("];
 
 /// Direct uses that are meant, by file (relative to `src/`), pattern and how many there are. A
 /// further one in the same file fails, and so does a file that stops using them (the entry is then
@@ -31,7 +36,8 @@ const ALLOWED: [(&str, &str, usize); 2] = [
 /// `open_window(` any call (a definition is no call).
 fn bypasses(line: &str) -> Vec<&'static str> {
     let code = line.split("//").next().unwrap_or("");
-    let mut found: Vec<&'static str> = ACTIVATIONS.iter().copied().filter(|p| code.contains(p)).collect();
+    let mut found: Vec<&'static str> =
+        ACTIVATIONS.iter().chain(&CLIPBOARD).copied().filter(|p| code.contains(p)).collect();
     let direct_open =
         code.match_indices("open_window(").any(|(at, _)| !code[..at].trim_end().ends_with("fn"));
     if direct_open {
@@ -42,7 +48,11 @@ fn bypasses(line: &str) -> Vec<&'static str> {
 
 /// Every bypass in `text` of the file at `relative` (under `src/`): line and pattern.
 fn violations(relative: &str, text: &str) -> Vec<(usize, &'static str)> {
-    if relative == "background.rs" || relative == "window_open.rs" || is_test_file(relative) {
+    if relative == "background.rs"
+        || relative == "window_open.rs"
+        || relative == "platform/clipboard.rs"
+        || is_test_file(relative)
+    {
         return Vec::new();
     }
     non_test_part(text)
@@ -87,13 +97,20 @@ fn activation_and_new_windows_go_through_background_mode() {
     assert!(
         found.is_empty(),
         "background mode keeps a test instance behind other apps only if every activation and window \
-         goes through crate::background (activate, activate_window) and crate::window_open (open):\n{}",
+         goes through crate::background (activate, activate_window) and crate::window_open (open), and \
+         it keeps the person's clipboard only if every copy goes through crate::platform::clipboard:\n{}",
         found.join("\n")
     );
 }
 
 #[test]
 fn the_lint_sees_what_it_is_for() {
+    let clipboard = "fn f(cx: &mut App) {\n    cx.write_to_clipboard(item);\n    let _ = cx.read_from_clipboard();\n    \
+                     crate::platform::clipboard::write(text, cx);\n}\n";
+    let found: Vec<_> = violations("window/x.rs", clipboard).into_iter().collect();
+    assert_eq!(found, [(2, ".write_to_clipboard("), (3, ".read_from_clipboard(")]);
+    assert!(violations("platform/clipboard.rs", clipboard).is_empty(), "the one place that may");
+
     let bad = "fn f(cx: &mut App, window: &Window) {\n    cx.activate(true);\n    window.activate_window();\n    \
                let _ = gpui_kit::open_window(o, cx, build);\n    let _ = open_window(o, cx, build);\n    \
                let _ = cx.open_window(o, build);\n}\n";

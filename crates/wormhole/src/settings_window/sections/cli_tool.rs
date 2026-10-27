@@ -251,7 +251,7 @@ fn below(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<An
                                 .icon(IconName::Copy)
                                 .label(text(SETTINGS_AGENTS_COPY_LINE))
                                 .on_click(move |_, _, cx| {
-                                    cx.write_to_clipboard(ClipboardItem::new_string(line.clone()));
+                                    crate::platform::clipboard::write(line.clone(), cx);
                                 }),
                         )
                         .into_any_element(),

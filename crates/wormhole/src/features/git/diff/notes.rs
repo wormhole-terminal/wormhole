@@ -133,7 +133,7 @@ pub(crate) fn side_note(ui: UiColors, colors: DiffColors, note: Note) -> Div {
                             style::icon_button("diff-copy-oid", ui, IconName::Copy, "Copy object id")
                                 .in_row()
                                 .on_click(move |_, window, cx| {
-                                    cx.write_to_clipboard(ClipboardItem::new_string(oid.clone()));
+                                    crate::platform::clipboard::write(oid.clone(), cx);
                                     crate::notice::post(window, Copied::ObjectId, None, cx);
                                 }),
                         )

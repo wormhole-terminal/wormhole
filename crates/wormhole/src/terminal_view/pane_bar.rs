@@ -74,8 +74,8 @@ impl TerminalView {
         let replaced = self
             .app_selection
             .copy_from_selection(Instant::now())
-            .then(|| cx.read_from_clipboard().and_then(|item| item.text()));
-        cx.write_to_clipboard(ClipboardItem::new_string(text.clone()));
+            .then(|| crate::platform::clipboard::read(cx));
+        crate::platform::clipboard::write(text.clone(), cx);
         if let Some(replaced) = replaced {
             self.app_selection.copied(text, replaced);
         }
@@ -156,7 +156,7 @@ impl TerminalView {
     }
 
     fn give_clipboard(&self, format: &TextFormatter, reply: &Reply, cx: &mut Context<Self>) {
-        let text = cx.read_from_clipboard().and_then(|item| item.text()).unwrap_or_default();
+        let text = crate::platform::clipboard::read(cx).unwrap_or_default();
         reply.send(format(&text).into_bytes());
     }
 

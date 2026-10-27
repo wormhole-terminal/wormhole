@@ -456,7 +456,7 @@ impl CommandPalette {
     fn copy_key(&self, id: &'static str, window: &Window, cx: &mut Context<Self>) {
         let Some((_, _, entry)) = wormhole_core::config::settings_index::entry(id) else { return };
         if let Some(key) = entry.keys.first() {
-            cx.write_to_clipboard(ClipboardItem::new_string((*key).to_string()));
+            crate::platform::clipboard::write((*key).to_string(), cx);
             crate::notice::post(window, wormhole_core::view::notice::Copied::SettingKey, None, cx);
         }
     }

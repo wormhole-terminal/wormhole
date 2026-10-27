@@ -252,7 +252,7 @@ impl Changes {
         let Some(session) = self.diff.as_ref().map(|view| view.session()) else { return };
         let Some(message) = self.review(session).and_then(Review::message) else { return };
         if !terminal.read(cx).bracketed_paste() {
-            cx.write_to_clipboard(ClipboardItem::new_string(message));
+            crate::platform::clipboard::write(message, cx);
             dialog::open_alert(window, cx, |alert, _, _| {
                 alert
                     .title("Copied the comments instead")
