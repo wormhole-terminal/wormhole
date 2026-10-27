@@ -17,11 +17,11 @@ use super::control::Parsed;
 use super::control::event::{HEARTBEAT, StreamLine, Subscribed};
 use super::control::events;
 use super::control::printable::json_line;
-use super::control::sessions;
 use super::control::{
-    Action, PROTOCOL_VERSION, Ran, Reason, Reply, Request, SEND_TEXT_MAX_BYTES, help_with, json_env, parse,
-    print, print_err, render_with, run_parts, show_automation,
+    Action, PROTOCOL_VERSION, Ran, Reason, Reply, Request, SEND_TEXT_MAX_BYTES, help_json, help_with,
+    json_env, parse, print, print_err, render_with, run_parts, show_automation,
 };
+use super::control::{sessions, skill_cli};
 use crate::platform::paths;
 use crate::platform::socket::Stream;
 
@@ -214,12 +214,20 @@ pub(crate) fn run(args: &[String]) -> i32 {
     if args.first().map(String::as_str) == Some("sessions") {
         return sessions::run(&args[1..]);
     }
+    // Like `sessions`, the skill is files: it works with the app closed, and is nothing the app is asked.
+    if args.first().map(String::as_str) == Some("skill") {
+        return skill_cli::run(&args[1..]);
+    }
     let cwd = std::env::current_dir().unwrap_or_default();
     let home = paths::home();
     let usage = || help_with(show_automation());
     let cli = match parse(args, &cwd, home.as_deref()) {
         Ok(Parsed::Help) => {
             print(&usage());
+            return 0;
+        }
+        Ok(Parsed::HelpJson) => {
+            print(&help_json());
             return 0;
         }
         Ok(Parsed::Run(cli)) => cli,

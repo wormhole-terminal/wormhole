@@ -31,6 +31,7 @@
 pub mod bus;
 mod client;
 pub mod control;
+mod doctor;
 pub(crate) mod exchange;
 pub mod host_binary;
 pub mod hosts;
@@ -39,6 +40,8 @@ mod mcp;
 mod message;
 mod read_job;
 mod server;
+#[cfg(test)]
+mod skill_guards;
 #[cfg(test)]
 mod test_support;
 mod wait_job;
@@ -66,6 +69,8 @@ pub use wait_job::WaitJob;
 pub fn run_control_cli(args: &[String]) -> i32 {
     match args.split_first() {
         Some((verb, rest)) if verb == "mcp" => mcp::run(rest),
+        // Asks the app like any verb, and adds what the command line sees itself.
+        Some((verb, _)) if verb == "doctor" => doctor::run(args),
         _ => exchange::run(args),
     }
 }

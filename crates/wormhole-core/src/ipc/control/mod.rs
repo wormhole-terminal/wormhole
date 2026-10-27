@@ -24,7 +24,9 @@
 //! terminal's environment stands in for `control_write` (`welcome`'s module notes say why that is
 //! enough, and what it allows).
 
-mod cli;
+pub(in crate::ipc) mod cli;
+mod codes;
+pub mod doctor;
 pub mod event;
 mod facts;
 pub mod keys;
@@ -34,6 +36,7 @@ mod policy;
 pub mod printable;
 pub mod read;
 pub mod sessions;
+pub mod skill_cli;
 pub mod structure;
 pub mod wait;
 mod welcome;
@@ -41,7 +44,7 @@ mod welcome;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub use cli::{COMMAND_NAME, Cli, Parsed, help, help_with, is_verb, parse, render, render_with};
+pub use cli::{COMMAND_NAME, Cli, Parsed, help, help_json, help_with, is_verb, parse, render, render_with};
 pub(in crate::ipc) use cli::{
     events, json_env, print, print_err, resolve_folder, run_parts, show_automation,
 };
@@ -155,6 +158,8 @@ pub enum Action {
     Rename(structure::RenameSpec),
     /// Ask the user whether to close a terminal; it never closes on the caller's say.
     Close(structure::CloseSpec),
+    /// What `wh doctor` needs of the app: version, protocol, the flag and switches, and the caller's terminal.
+    Doctor,
     /// Block until a condition holds in a terminal: a state, text on its screen, quiet, a command done.
     Wait(wait::WaitSpec),
     /// Type a command at a shell's prompt, wait for it to finish and tell how it ended.
@@ -167,8 +172,9 @@ pub enum Action {
 impl Action {
     /// What every action is called in a request's `action` field, for [`unreadable`]: a test keeps
     /// it in step with the enum.
-    const KNOWN: [&str; 18] = [
+    const KNOWN: [&str; 19] = [
         "list",
+        "doctor",
         "status",
         "notify",
         "send_text",
@@ -192,6 +198,7 @@ impl Action {
     pub fn name(&self) -> &'static str {
         match self {
             Action::List => "list",
+            Action::Doctor => "doctor",
             Action::Status { .. } => "status",
             Action::Notify { .. } => "notify",
             Action::SendText { .. } => "send-text",

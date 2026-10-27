@@ -129,14 +129,13 @@ fn another_skill_of_the_same_name_is_never_touched() {
     assert_eq!(install(claude(), empty.path()), Ok(Done::Installed));
 }
 
-#[cfg(unix)]
 #[test]
 fn a_link_is_foreign_and_a_link_inside_cannot_send_a_write_out() {
     let home = home();
     let outside = tempfile::tempdir().expect("tempdir");
     let dir = claude().path(home.path());
     std::fs::create_dir_all(dir.parent().expect("parent")).expect("mkdir");
-    std::os::unix::fs::symlink(outside.path(), &dir).expect("link the whole folder");
+    crate::platform::fs::symlink(outside.path(), &dir).expect("link the whole folder");
     assert_eq!(state(claude(), home.path()), Ok(State::Foreign));
     assert!(install(claude(), home.path()).is_err());
     assert_eq!(std::fs::read_dir(outside.path()).expect("outside").count(), 0, "nothing written through it");
@@ -146,7 +145,7 @@ fn a_link_is_foreign_and_a_link_inside_cannot_send_a_write_out() {
     install(claude(), home.path()).expect("installs");
     let dir = claude().path(home.path());
     std::fs::remove_dir_all(dir.join("references")).expect("remove");
-    std::os::unix::fs::symlink(outside.path(), dir.join("references")).expect("link references");
+    crate::platform::fs::symlink(outside.path(), dir.join("references")).expect("link references");
     let _ = install(claude(), home.path());
     assert_eq!(std::fs::read_dir(outside.path()).expect("outside").count(), 0, "nothing written through it");
 }

@@ -26,6 +26,7 @@ pub(super) fn control(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let cli = match parse(&words, &cwd, home.as_deref()).map_err(|mistake| anyhow!(mistake))? {
         Parsed::Run(cli) => cli,
         Parsed::Help => return Ok(help()),
+        Parsed::HelpJson => return Ok(wormhole_core::ipc::control::help_json()),
     };
     let request = Request::new(cli.action, from);
     later(ctx, move |cx| {

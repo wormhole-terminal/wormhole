@@ -64,7 +64,7 @@ pub fn render_with(
         Action::Wait(_) => read::<Waited>(&result).map(|done| wait_text::waited(&done)),
         Action::Run(_) => read::<Ran>(&result).map(|done| wait_text::ran(&done)),
         // Streams and the welcome have their own words.
-        Action::Events(_) | Action::Welcome { .. } => None,
+        Action::Events(_) | Action::Doctor | Action::Welcome { .. } => None,
     };
     Ok(text.unwrap_or_else(|| "ok\n".into()))
 }

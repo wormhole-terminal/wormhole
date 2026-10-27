@@ -156,6 +156,45 @@ fn print(cx: &mut TestAppContext, window: &OpenWindow, ix: usize, bytes: &[u8]) 
 }
 
 #[gpui_kit::test]
+fn doctor_tells_the_flag_the_switches_and_which_terminal_the_caller_is_in(cx: &mut TestAppContext) {
+    use wormhole_core::ipc::control::doctor::Facts;
+    if isolate("doctor_tells_the_flag_the_switches_and_which_terminal_the_caller_is_in") {
+        return;
+    }
+    let window = start(cx, 2);
+    let who = callers(cx, &window);
+    let facts = |cx: &mut TestAppContext, from: Option<&str>, peer: &Peer| -> Facts {
+        let reply = reply(ask(cx, Action::Doctor, from, peer));
+        serde_json::from_value(reply.result.clone().unwrap_or_else(|| panic!("{reply:?}"))).expect("facts")
+    };
+    allow(cx, false, false);
+    let outside = facts(cx, None, &who.outside);
+    assert_eq!(outside.protocol, wormhole_core::ipc::control::PROTOCOL_VERSION);
+    assert_eq!((outside.control_read, outside.control_write), (false, false));
+    assert!(outside.caller.is_none(), "not in any terminal");
+    // Found by where it runs: the terminal whose shell it runs under, whatever it says.
+    let inside = facts(cx, None, &who.inside_first).caller.expect("inside terminal 1");
+    assert_eq!((inside.terminal, inside.verified), (1, true));
+    let lying = facts(cx, Some("2"), &who.inside_first).caller.expect("still terminal 1");
+    assert_eq!((lying.terminal, lying.verified), (1, true));
+    // Only claimed: named, and told not to be taken for it.
+    let claimed = facts(cx, Some("2"), &who.outside).caller.expect("claims terminal 2");
+    assert_eq!((claimed.terminal, claimed.verified), (2, false));
+    // `/bin/cat` is no shell with integration: no prompt mark has come.
+    assert_eq!(inside.shell_integration, Some(false));
+    allow(cx, true, true);
+    let on = facts(cx, None, &who.outside);
+    assert_eq!((on.control_read, on.control_write), (true, true));
+    // Asked with the flag off, it still answers: that is when it is needed.
+    cx.update(|cx| {
+        update_settings(cx, |s| {
+            s.feature_flags.insert("automation".into(), false);
+        })
+    });
+    assert!(!facts(cx, None, &who.outside).automation);
+}
+
+#[gpui_kit::test]
 fn reading_needs_the_switch_unless_the_caller_runs_in_the_terminal(cx: &mut TestAppContext) {
     if isolate("reading_needs_the_switch_unless_the_caller_runs_in_the_terminal") {
         return;

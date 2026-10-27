@@ -14,6 +14,7 @@ use super::{
 fn name(action: &Action) -> &'static str {
     match action {
         Action::List => "list",
+        Action::Doctor => "doctor",
         Action::Status { .. } => "status",
         Action::Notify { .. } => "notify",
         Action::SendText { .. } => "send_text",
@@ -39,6 +40,7 @@ fn name(action: &Action) -> &'static str {
 fn golden() -> Vec<(Request, &'static str)> {
     vec![
         (Request::new(Action::List, Some("7".into())), r#"{"version":1,"from":"7","action":"list"}"#),
+        (Request::new(Action::Doctor, Some("7".into())), r#"{"version":1,"from":"7","action":"doctor"}"#),
         (Request::new(Action::Status { target: None }, None), r#"{"version":1,"action":"status"}"#),
         (
             Request::new(Action::Status { target: Some(Target::Terminal(3)) }, None),
@@ -252,6 +254,7 @@ fn every_action_has_a_golden_line() {
         covered,
         BTreeSet::from([
             "list",
+            "doctor",
             "status",
             "notify",
             "send_text",

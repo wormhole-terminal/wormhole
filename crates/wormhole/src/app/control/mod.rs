@@ -16,6 +16,7 @@
 //! does, and `wait` and `run` (`wait`) hand over a job that a thread of its own waits out. Typing
 //! (`input`: `send-text`, `send-keys`, `mouse`) is answered here.
 
+mod doctor;
 mod input;
 mod read;
 mod stream;
@@ -86,6 +87,7 @@ pub(crate) fn handle(request: Request, peer: &Peer, cx: &mut App) -> Reply {
     }
     match request.action {
         Action::List => Reply::ok(listing(cx)),
+        Action::Doctor => doctor::doctor(from, peer, cx),
         Action::Status { target } => status(target, from, cx),
         Action::Notify { target, title, body } => notify(target, &title, &body, from, cx),
         Action::SendText { target, text, submit } => input::send_text(target, &text, submit, from, peer, cx),

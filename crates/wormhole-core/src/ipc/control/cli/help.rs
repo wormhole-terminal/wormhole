@@ -12,6 +12,7 @@ pub fn help() -> String {
 /// in this build (they still parse when it doesn't: the app has the last word).
 pub fn help_with(automation: bool) -> String {
     let wh = COMMAND_NAME;
+    let skill = crate::ipc::control::skill_cli::help(wh);
     let watching = if automation {
         format!(
             "  {wh} events [--topics <list>] [--terminal <id>]... [--window <id>]... [--output]
@@ -66,7 +67,9 @@ pub fn help_with(automation: bool) -> String {
       the output needs reading to be allowed. --exit-code exits with the command's own code (1 to 255;
       124 if it timed out; note that 1, 2 and 124 are also what refusals, usage mistakes and timeouts
       say); 10 minutes by default (at most 3600). It clears the prompt line first (^U).
-"
+  {wh} help --json
+      The verbs, their flags, the exit codes and the error codes and reasons, as data.
+{skill}"
         )
     } else {
         String::new()
@@ -92,6 +95,9 @@ Wormhole: control the running app from the command line
       Type into a terminal, as a paste (`-` reads the text from stdin); --submit presses Return.
   {wh} new-terminal [--folder <path>] [--command <command>] [--window <id>] [--worktree <branch>]
       A new terminal in the front window (or --window), in a folder, running a command in its shell.
+  {wh} doctor
+      What a coding agent needs to know in one call: whether Wormhole answers, the Automation flag and the
+      switches, this terminal and its shell integration, the skill, and for each problem the fix.
 {watching}
 {sessions}
   {wh} mcp
@@ -120,6 +126,14 @@ line tool\" installs it.
 mod tests {
     use super::super::is_verb;
     use super::help;
+
+    #[test]
+    fn doctor_and_the_skill_are_in_the_usage() {
+        let help = help();
+        for line in ["doctor", "skill install [--agent <id>]", "help --json"] {
+            assert!(help.contains(line), "{line}");
+        }
+    }
 
     #[test]
     fn the_sessions_verb_is_ours_and_in_the_usage() {

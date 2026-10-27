@@ -1,5 +1,5 @@
 //! `Wormhole list | status | notify | send-text | new-terminal | events | read | blocks | send-keys |
-//! mouse | new-window | split | focus | rename | close | wait | run`: the command line's side of the
+//! mouse | new-window | split | focus | rename | close | wait | run | doctor`: the command line's side of the
 //! control protocol. The arguments are read into a [`Request`](super::Request) (`parse`), the app's
 //! [`Reply`] is printed as text or, with `--json` (or `WORMHOLE_JSON`, `--text` to override it), as the one JSON
 //! object it is (`render`). The round trip over the
@@ -12,15 +12,18 @@ use super::Action;
 
 pub(in crate::ipc) mod events;
 mod help;
+mod help_json;
 mod parse;
 #[cfg(test)]
 mod parse_tests;
 mod read_text;
 mod render;
 mod structure_text;
+pub(in crate::ipc) mod verbs;
 mod wait_text;
 
 pub use help::{help, help_with};
+pub use help_json::help_json;
 pub use parse::parse;
 pub(in crate::ipc) use parse::resolve_folder;
 pub use render::{render, render_with};
@@ -62,6 +65,8 @@ pub(super) fn json_by_default(env: Option<&str>) -> bool {
 pub enum Parsed {
     Run(Cli),
     Help,
+    /// `help --json`: the verbs, flags and codes as data.
+    HelpJson,
 }
 
 /// What the command is called when someone types it: the name of the script that `cli_tool` puts in
@@ -69,33 +74,10 @@ pub enum Parsed {
 /// file name, the usage text, Settings and the docs' examples can't disagree.
 pub const COMMAND_NAME: &str = "wh";
 
-/// Whether `word` as the first argument is this command line's (`Wormhole list …`).
+/// Whether `word` as the first argument is this command line's (`Wormhole list …`): a verb of the table
+/// (`verbs`), or a way to ask for the usage.
 pub fn is_verb(word: &str) -> bool {
-    matches!(
-        word,
-        "list"
-            | "status"
-            | "notify"
-            | "send-text"
-            | "new-terminal"
-            | "events"
-            | "read"
-            | "blocks"
-            | "send-keys"
-            | "mouse"
-            | "new-window"
-            | "split"
-            | "focus"
-            | "rename"
-            | "close"
-            | "wait"
-            | "run"
-            | "mcp"
-            | "sessions"
-            | "help"
-            | "--help"
-            | "-h"
-    )
+    verbs::find(word).is_some() || matches!(word, "--help" | "-h")
 }
 
 /// `WORMHOLE_JSON` as it is set in this process.

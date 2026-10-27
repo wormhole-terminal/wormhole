@@ -40,6 +40,12 @@ use server::Server;
 
 use super::control::print_err;
 
+/// Every tool's name, for the guard that holds the skill's MCP reference to them.
+#[cfg(test)]
+pub(super) fn tool_names() -> Vec<&'static str> {
+    tools::all().map(|tool| tool.name).collect()
+}
+
 /// How long a call that is running when the client closes its input is given to answer.
 const GRACE: Duration = Duration::from_secs(3);
 

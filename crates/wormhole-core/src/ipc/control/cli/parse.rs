@@ -19,7 +19,7 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
         None => return Ok(Parsed::Help),
     };
     if matches!(verb, "help" | "--help" | "-h") {
-        return Ok(Parsed::Help);
+        return Ok(if rest.iter().any(|arg| arg == "--json") { Parsed::HelpJson } else { Parsed::Help });
     }
     let mut json = false;
     let mut text_out = false;
@@ -211,6 +211,12 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
     let text = words.join(" ");
     let action = match verb {
         "list" => Action::List,
+        "doctor" => {
+            if !text.is_empty() {
+                return Err(format!("doctor takes no arguments, not {text:?}"));
+            }
+            Action::Doctor
+        }
         "status" => Action::Status { target },
         "notify" => {
             if text.trim().is_empty() && title.as_deref().is_none_or(|t| t.trim().is_empty()) {
@@ -340,7 +346,11 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
     if target.is_some()
         && matches!(
             action,
-            Action::List | Action::NewTerminal { .. } | Action::NewWindow(_) | Action::Events(_)
+            Action::List
+                | Action::Doctor
+                | Action::NewTerminal { .. }
+                | Action::NewWindow(_)
+                | Action::Events(_)
         )
     {
         return Err(format!("{verb} takes no target"));
