@@ -8,7 +8,8 @@
 #     --only <a,b>      run only these loads: warptunnel, matrix (ttystorm animations, at --fps 0),
 #                       flood-truecolor (ttystorm flood --kind colorflood), flood-watched (the same
 #                       flood while a `wh events --output` stream and a `wh wait --match` waiter
-#                       watch the terminal, as an agent's tools would: compare it with flood-truecolor)
+#                       watch the terminal, the requests the MCP tools make: compare it with
+#                       flood-truecolor)
 #     --seconds <n>     how long each load is profiled (default 5)
 #     --save-baseline   write this run as the profile baseline of this machine
 #     --bin <path>      profile this prebuilt devctl binary instead of building HEAD
@@ -134,13 +135,15 @@ for l in $loads; do
   case "$l" in
     flood-truecolor) profile_load "$l" "flood --kind colorflood" ;;
     flood-watched)
-      # The same flood, with what an agent's MCP tools make of a terminal: a subscription to its output
-      # (a worker reads the new lines under the reader's lock) and a waiter on its screen (a look every
-      # 100 ms), both started from inside the terminal, which may watch itself without `control_read`.
-      # The automation flag is off in a release build (the Unstable channel lets a tester turn it on),
-      # and no update check should run meanwhile.
-      workload_setup=('set auto_update=false' 'set update_channel="unstable"' 'set feature_flags={"automation":true}')
-      workload_watchers='"$WORMHOLE_BIN" events --terminal "$WORMHOLE_TAB_ID" --output --json >"$WORKLOAD_DIR/events.out" 2>"$WORKLOAD_DIR/events.err" &
+      # The same flood, with the requests the MCP tools (`wait_events` with output, `wait`) make of a
+      # terminal: a subscription to its output (a worker reads the new lines under the reader's lock)
+      # and a waiter on its screen (a look every 100 ms), both started from inside the terminal, which
+      # may watch itself without `control_read`. The automation flag is off in a release build; the
+      # unlocked key lets a flag be turned on in one (as on the Unstable channel). No update check
+      # should run meanwhile. The stream's first line (its answer) is kept, the rest is read and dropped.
+      workload_setup=('set auto_update=false' 'set feature_flags={"automation":true,"unlocked":true}')
+      workload_watchers='{ "$WORMHOLE_BIN" events --terminal "$WORMHOLE_TAB_ID" --output --json 2>"$WORKLOAD_DIR/events.err" |
+  { head -n 1 >"$WORKLOAD_DIR/events.out"; cat >/dev/null; }; } &
 echo $! >"$WORKLOAD_DIR/events.pid"
 "$WORMHOLE_BIN" wait --terminal "$WORMHOLE_TAB_ID" --match "never printed: 0b1c4f" --timeout 600 >/dev/null 2>"$WORKLOAD_DIR/waiter.err" &
 echo $! >"$WORKLOAD_DIR/waiter.pid"
