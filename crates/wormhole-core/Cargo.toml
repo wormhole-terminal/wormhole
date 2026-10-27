@@ -28,6 +28,10 @@ rusqlite.workspace = true
 ring = "0.17"
 zeroize = "1"
 serde.workspace = true
+# `wh wait --text` matches terminal text with the caller's pattern: an engine without backtracking, so a
+# hostile pattern costs time in proportion to the text, and with a memory limit (already in the tree
+# through `wormhole-term`).
+regex = "1.13"
 # Config files we edit for agents (~/.claude/settings.json, …) keep their key
 # order; without this it would depend on another crate enabling the feature.
 serde_json = { workspace = true, features = ["preserve_order"] }

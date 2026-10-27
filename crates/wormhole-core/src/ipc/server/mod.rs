@@ -141,6 +141,16 @@ fn answer(
         Answer::Read(job) => {
             let _ = write_reply(stream, &job.run(scratch));
         }
+        Answer::Wait(job) => {
+            let Ok(writer) = stream.try_clone() else { return Outcome::Answered };
+            match stream::start_wait(writer, job) {
+                Ok(()) => return Outcome::Streaming,
+                Err(err) => {
+                    tracing::warn!("couldn't start a wait: {err}");
+                    let _ = write_reply(stream, &Reply::error(ErrorCode::Failed, "couldn't start the wait"));
+                }
+            }
+        }
         Answer::Stream { reply, subscription } => {
             if !write_reply(stream, &reply) {
                 return Outcome::Answered;
@@ -347,6 +357,93 @@ mod tests {
         assert_eq!((result["terminal"].as_i64(), result["title"].as_str()), (Some(3), Some("a title")));
         assert_eq!(result["cursor"]["col"].as_u64(), Some(5));
         app.join().expect("the app's side");
+    }
+
+    /// A wait is answered by a thread of its own when it is over: the hooks go through while it waits, and
+    /// the client reads exactly one line, the reply.
+    #[test]
+    fn a_wait_is_answered_once_when_it_ends_and_holds_nothing_up() {
+        use wormhole_term::testing::TestTerm;
+
+        use crate::ipc::bus::{Bus, Grant, Watch};
+        use crate::ipc::control::event::{Body, Event, Topic};
+        use crate::ipc::control::{Target, WaitSpec, Waited};
+        use crate::ipc::{Answer, WaitJob};
+
+        let (_dir, socket, rx) = server();
+        let bus = Bus::new();
+        let waiting = std::thread::spawn({
+            let (rx, bus) = (rx.clone(), bus.clone());
+            move || {
+                let Some(Incoming::Control { reply, .. }) = recv_within(&rx, Duration::from_secs(5)) else {
+                    panic!("expected a control request");
+                };
+                let spec = WaitSpec {
+                    target: Target::Terminal(3),
+                    status: vec![TerminalState::Idle],
+                    text: None,
+                    gone: None,
+                    stable_ms: None,
+                    block_done: false,
+                    timeout_ms: Some(10_000),
+                };
+                let plan = spec.plan().expect("a plan");
+                let (subscription, _) =
+                    bus.wait(Watch::of_wait(3, &plan), Grant::default(), None).expect("room");
+                let reader = TestTerm::new(10, 2, 0).into_reader();
+                // The reader is kept by the job's weak handle only while the test holds this one.
+                let job = WaitJob::wait(subscription, reader.downgrade(), 3, plan);
+                reply.send(Answer::Wait(job)).expect("the connection waits");
+                reader
+            }
+        });
+        let mut stream = Stream::connect(&socket).expect("connect");
+        let request = Message::Control(Request::new(
+            Action::Wait(WaitSpec {
+                target: Target::Terminal(3),
+                status: vec![TerminalState::Idle],
+                text: None,
+                gone: None,
+                stable_ms: None,
+                block_done: false,
+                timeout_ms: Some(10_000),
+            }),
+            None,
+        ));
+        writeln!(stream, "{}", serde_json::to_string(&request).expect("serializes")).expect("write");
+        stream.shutdown(Shutdown::Write).expect("half close");
+        let _reader = waiting.join().expect("the app's side");
+        // The wait is open, and the thread that serves the hooks is free.
+        let start = Instant::now();
+        hook(&socket, "5");
+        let message = recv_message_within(&rx, Duration::from_secs(3));
+        assert!(matches!(message, Some(Message::Hook { ref tab, .. }) if tab == "5"), "{message:?}");
+        assert!(start.elapsed() < Duration::from_millis(500), "waited {:?}", start.elapsed());
+        assert_eq!(bus.subscribers(), 1, "the wait counts among the streams");
+        bus.publish(Topic::Status, || Event {
+            window: Some(1),
+            terminal: Some(3),
+            body: Body::Status {
+                status: TerminalState::Idle,
+                was: TerminalState::Working,
+                agent: None,
+                message: None,
+            },
+        });
+        let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+        let mut lines = BufReader::new(stream);
+        let mut line = String::new();
+        lines.read_line(&mut line).expect("a reply line");
+        let reply: Reply = serde_json::from_str(&line).expect("parses");
+        let done: Waited = serde_json::from_value(reply.result.expect("a result")).expect("a wait");
+        assert_eq!(done.terminal, 3);
+        line.clear();
+        assert_eq!(lines.read_line(&mut line).expect("the end"), 0, "one line, then the connection ends");
+        let until = Instant::now() + Duration::from_secs(3);
+        while bus.subscribers() > 0 && Instant::now() < until {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert_eq!(bus.subscribers(), 0, "its place is given back");
     }
 
     /// A client that sends a request and then does not read its big answer holds the thread that serves

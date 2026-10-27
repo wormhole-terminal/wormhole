@@ -27,7 +27,14 @@ fn mistake(list: &[&str]) -> String {
 fn every_verb_parses_with_its_options() {
     assert_eq!(
         parsed(&["list"]),
-        Cli { action: Action::List, json: false, text: false, stdin: false, numbers: false }
+        Cli {
+            action: Action::List,
+            json: false,
+            text: false,
+            stdin: false,
+            numbers: false,
+            exit_code: false
+        }
     );
     assert!(parsed(&["list", "--json"]).json);
     assert_eq!(parsed(&["status"]).action, Action::Status { target: None });
@@ -116,6 +123,7 @@ fn events_takes_topics_terminals_windows_and_output() {
             text: false,
             stdin: false,
             numbers: false,
+            exit_code: false,
         }
     );
     assert!(mistake(&["events", "--tab", "3"]).contains("takes no target"), "no tabs here");
@@ -350,4 +358,86 @@ fn the_window_and_split_verbs_name_their_mistakes() {
     assert!(mistake(&["focus", "--terminal", "3", "--select"]).contains("unknown option"));
     assert!(mistake(&["close", "--terminal", "3", "--activate"]).contains("unknown option"));
     assert!(mistake(&["new-window", "--select"]).contains("unknown option"));
+}
+
+#[test]
+fn wait_takes_conditions_in_any_mix() {
+    use crate::ipc::control::{RunSpec, TerminalState, WaitSpec};
+
+    let wait = |args: &[&str]| match parsed(args).action {
+        Action::Wait(spec) => spec,
+        other => panic!("{other:?}"),
+    };
+    assert_eq!(
+        wait(&[
+            "wait",
+            "--terminal",
+            "3",
+            "--status",
+            "idle,needs-you",
+            "--status",
+            "failed",
+            "--text",
+            r"\$ $",
+            "--gone",
+            "Loading",
+            "--stable",
+            "800",
+            "--block-done",
+            "--timeout",
+            "45"
+        ]),
+        WaitSpec {
+            target: Target::Terminal(3),
+            status: vec![TerminalState::Idle, TerminalState::NeedsYou, TerminalState::Failed],
+            text: Some(r"\$ $".into()),
+            gone: Some("Loading".into()),
+            stable_ms: Some(800),
+            block_done: true,
+            timeout_ms: Some(45_000),
+        }
+    );
+    // Fractions of a second, and units said out loud.
+    assert_eq!(wait(&["wait", "--tab", "1", "--block-done", "--timeout", "0.5s"]).timeout_ms, Some(500));
+    assert_eq!(wait(&["wait", "--tab", "1", "--stable", "250ms"]).stable_ms, Some(250));
+    // `--text` is the pattern on `wait`; on every other verb it is the output format.
+    assert!(!parsed(&["wait", "--terminal", "3", "--text", "x"]).text);
+    assert!(parsed(&["list", "--text"]).text);
+    // The command line's own exit-code option and the command's words.
+    let run = parsed(&["run", "--terminal", "3", "--timeout", "90", "--exit-code", "cargo test"]);
+    assert!(run.exit_code);
+    assert_eq!(
+        run.action,
+        Action::Run(RunSpec {
+            target: Target::Terminal(3),
+            command: "cargo test".into(),
+            timeout_ms: Some(90_000)
+        })
+    );
+    let after_dashes = parsed(&["run", "--terminal", "3", "--", "ls", "-la", "--color=never"]);
+    assert!(!after_dashes.exit_code);
+    assert_eq!(
+        after_dashes.action,
+        Action::Run(RunSpec {
+            target: Target::Terminal(3),
+            command: "ls -la --color=never".into(),
+            timeout_ms: None
+        })
+    );
+}
+
+#[test]
+fn wait_and_run_name_their_mistakes() {
+    assert!(mistake(&["wait"]).contains("needs a target"));
+    assert!(mistake(&["run"]).contains("needs a target"));
+    assert!(mistake(&["run", "--terminal", "3"]).contains("needs the command"));
+    assert!(mistake(&["wait", "--terminal", "3", "stray"]).contains("options only"));
+    assert!(mistake(&["wait", "--terminal", "3", "--status", "asleep"]).contains("--status takes"));
+    assert!(mistake(&["wait", "--terminal", "3", "--stable", "soon"]).contains("milliseconds"));
+    for bad in ["soon", "0", "-5", "nan"] {
+        assert!(mistake(&["wait", "--terminal", "3", "--timeout", bad]).contains("seconds"), "{bad}");
+    }
+    assert!(mistake(&["wait", "--terminal", "3", "--exit-code"]).contains("unknown option"));
+    assert!(mistake(&["list", "--timeout", "3"]).contains("unknown option"));
+    assert!(mistake(&["wait", "--terminal", "3", "--text"]).contains("needs a value"));
 }

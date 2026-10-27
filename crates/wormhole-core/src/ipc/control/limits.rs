@@ -28,6 +28,11 @@ pub enum Limited {
     Rename,
     /// `close`: each one puts a question in front of the user, so it is the scarcest.
     Close,
+    /// `wait`: each one holds a thread and a place among the few streams there are for as long as it
+    /// waits, so how often one is started is held down.
+    Wait,
+    /// `run`: types a command into a shell as well, so it also counts against `SendText`.
+    Run,
     /// A stream of events (`events`): each one holds a thread and a place among the few streams there
     /// are, so how often one is started is held down too.
     Subscribe,
@@ -64,6 +69,8 @@ impl Limited {
             Limited::Rename => 30,
             Limited::Close => 10,
             Limited::Subscribe => 30,
+            Limited::Wait => 120,
+            Limited::Run => 30,
             Limited::WelcomeLook => 240,
             Limited::WelcomeInstall => 12,
             Limited::WelcomeNotify => 30,
@@ -147,6 +154,7 @@ mod tests {
         assert!(Limited::SendText.budget() <= 30 && Limited::Subscribe.budget() <= 30);
         assert!(Limited::NewWindow.budget() <= 3 && Limited::Close.budget() <= 10);
         assert!(Limited::Focus.budget() <= 60 && Limited::Rename.budget() <= 30);
+        assert!(Limited::Wait.budget() <= 120 && Limited::Run.budget() <= 30);
         assert!(Limited::WelcomeInstall.budget() <= 12 && Limited::WelcomeNotify.budget() <= 30);
         assert!(Limited::WelcomeDemo.budget() <= 120 && Limited::WelcomeFinish.budget() <= 4);
         assert!(Limited::WelcomeImport.budget() <= 6);

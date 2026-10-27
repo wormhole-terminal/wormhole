@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use super::queue::{Pop, Queue};
+use super::wait::Watch;
 use super::{Bus, Published};
 use crate::ipc::control::event::{CloseReason, EventFilter, Topic};
 
@@ -41,13 +42,28 @@ pub(super) struct Subscriber {
     pub(super) id: u64,
     pub(super) caller: Caller,
     pub(super) filter: EventFilter,
+    /// Set for a `wait` or `run`: the terminal it looks at the screen of.
+    pub(super) watch: Option<Watch>,
     grant: Mutex<Grant>,
     pub(super) queue: Queue<Arc<Published>>,
 }
 
 impl Subscriber {
-    pub(super) fn new(id: u64, caller: Caller, filter: EventFilter, grant: Grant) -> Self {
-        Self { id, caller, filter, grant: Mutex::new(grant), queue: Queue::new(QUEUE_ITEMS, QUEUE_BYTES) }
+    pub(super) fn new(
+        id: u64,
+        caller: Caller,
+        filter: EventFilter,
+        watch: Option<Watch>,
+        grant: Grant,
+    ) -> Self {
+        Self {
+            id,
+            caller,
+            filter,
+            watch,
+            grant: Mutex::new(grant),
+            queue: Queue::new(QUEUE_ITEMS, QUEUE_BYTES),
+        }
     }
 
     pub(super) fn grant(&self) -> Grant {
@@ -79,7 +95,10 @@ impl Subscriber {
         grant.reads_all = false;
         let only_own = !self.filter.terminals.is_empty()
             && self.filter.terminals.iter().all(|terminal| grant.own.contains(terminal));
-        if self.filter.topics.contains(Topic::Output) && !only_own {
+        // A wait on a screen's text goes on only for a terminal its caller runs in.
+        let wait_needs =
+            self.watch.is_some_and(|watch| watch.needs_read && !grant.own.contains(&watch.terminal));
+        if (self.filter.topics.contains(Topic::Output) && !only_own) || wait_needs {
             drop(grant);
             self.queue.close(CloseReason::NotAllowed);
         }
@@ -95,6 +114,8 @@ pub enum Next {
     Lagged(u64),
     /// The stream is over, and why.
     Closed(CloseReason),
+    /// The terminal a waiter watches printed since it last looked (any number of times is one).
+    Changed,
     /// Nothing happened in the time given.
     Idle,
 }
@@ -120,6 +141,7 @@ impl Subscription {
             }
             Pop::Lagged(dropped) => Next::Lagged(dropped),
             Pop::Closed(reason) => Next::Closed(reason),
+            Pop::Poked => Next::Changed,
             Pop::Empty => Next::Idle,
         }
     }
@@ -130,6 +152,12 @@ impl Subscription {
         let granted =
             published.event.has_gated_fields() && self.subscriber.grant().can_read(published.event.terminal);
         published.line(granted)
+    }
+
+    /// Whether the text of `terminal` may be read on this subscription's say now: the setting is on,
+    /// or its caller runs in it. Asked when the text is about to be read, so a revocation counts.
+    pub fn may_read(&self, terminal: i64) -> bool {
+        self.subscriber.may_read(Some(terminal))
     }
 
     /// The seq of the last event handed out, or the one the subscription started after.

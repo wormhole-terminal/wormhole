@@ -9,6 +9,7 @@ use std::io::{self, Write};
 use std::thread;
 use std::time::Duration;
 
+use crate::ipc::WaitJob;
 use crate::ipc::bus::{Next, Subscription};
 use crate::ipc::control::event::{CloseReason, HEARTBEAT, Notice, NoticeLine};
 use crate::ipc::control::printable::json_line;
@@ -45,6 +46,23 @@ pub(super) fn start(stream: Stream, subscription: Subscription, timing: Timing) 
         .map(drop)
 }
 
+/// A waiter evaluates patterns and copies a screen, so its stack is a little larger than a stream's.
+const WAIT_STACK_BYTES: usize = 512 * 1024;
+
+/// Hand `stream` and `job` to a thread that waits it out and writes the one reply line. The job's
+/// subscription is given back when the thread ends, however it does.
+pub(super) fn start_wait(stream: Stream, job: WaitJob) -> io::Result<()> {
+    thread::Builder::new()
+        .name("wormhole-wait".into())
+        .stack_size(WAIT_STACK_BYTES)
+        .spawn(move || {
+            let reply = job.finish();
+            let mut stream = stream;
+            super::write_reply(&mut stream, &reply);
+        })
+        .map(drop)
+}
+
 fn run(mut stream: Stream, subscription: &Subscription, timing: Timing) {
     let _ = stream.set_write_timeout(Some(timing.write));
     let mut line = Vec::with_capacity(512);
@@ -53,6 +71,8 @@ fn run(mut stream: Stream, subscription: &Subscription, timing: Timing) {
         match subscription.next(timing.heartbeat) {
             Next::Event(published) => line.extend_from_slice(subscription.line(&published).as_bytes()),
             Next::Lagged(dropped) => push_notice(&mut line, Notice::Lagged { dropped }),
+            // Only a waiter is poked; an event stream has nothing to say about it.
+            Next::Changed => continue,
             Next::Idle => push_notice(&mut line, Notice::Heartbeat { seq: subscription.last_seq() }),
             Next::Closed(reason) => {
                 push_notice(&mut line, Notice::Closed { reason });

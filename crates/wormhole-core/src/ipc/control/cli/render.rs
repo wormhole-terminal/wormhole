@@ -8,11 +8,12 @@ use serde_json::Value;
 
 use super::read_text::{blocks_text, read_text};
 use super::structure_text as text_of;
+use super::wait_text;
 use crate::ipc::control::printable::for_terminal;
 use crate::ipc::control::read::{Blocks, Read};
 use crate::ipc::control::{
-    Action, Asked, CloseAsked, Focused, KeysSent, Listing, Opened, Reached, Renamed, Reply, SplitMade,
-    StatusInfo, Summary, TabInfo, TerminalInfo, WindowOpened,
+    Action, Asked, CloseAsked, Focused, KeysSent, Listing, Opened, Ran, Reached, Renamed, Reply, SplitMade,
+    StatusInfo, Summary, TabInfo, TerminalInfo, Waited, WindowOpened,
 };
 
 /// The reply to `action` as a person reads it (`--json` prints the object instead). The action
@@ -60,6 +61,8 @@ pub fn render_with(
         Action::Focus(_) => read::<Focused>(&result).map(|focused| text_of::focused(&focused)),
         Action::Rename(_) => read::<Renamed>(&result).map(|renamed| text_of::renamed(&renamed)),
         Action::Close(_) => read::<CloseAsked>(&result).map(|asked| text_of::close_asked(&asked)),
+        Action::Wait(_) => read::<Waited>(&result).map(|done| wait_text::waited(&done)),
+        Action::Run(_) => read::<Ran>(&result).map(|done| wait_text::ran(&done)),
         // Streams and the welcome have their own words.
         Action::Events(_) | Action::Welcome { .. } => None,
     };

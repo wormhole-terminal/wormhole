@@ -7,7 +7,8 @@ use crate::ipc::control::keys::{KeyItem, SendKeysSpec, parse_key};
 use crate::ipc::control::mouse::{ButtonName, Direction, MouseOp, MouseSpec, Pointer, Wheel};
 use crate::ipc::control::read::{BlockRef, BlocksSpec, Newest, Range, ReadSpec};
 use crate::ipc::control::{
-    Action, CloseSpec, EventsSpec, FocusSpec, NewWindowSpec, RenameSpec, Side, SplitSpec, Target,
+    Action, CloseSpec, EventsSpec, FocusSpec, NewWindowSpec, RenameSpec, RunSpec, Side, SplitSpec, Target,
+    TerminalState, WaitSpec,
 };
 
 /// Read the words after the program name (`list --json`, `send-text --tab 3 hello`) into what to
@@ -38,6 +39,8 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
     let mut look = Look::default();
     let mut items: Vec<KeyItem> = Vec::new();
     let mut pointer = PointerFlags::default();
+    let mut waiting = WaitFlags::default();
+    let mut exit_code = false;
     let mut words: Vec<&str> = Vec::new();
     let mut args = rest.iter().map(String::as_str);
     while let Some(arg) = args.next() {
@@ -47,6 +50,8 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
         };
         match arg {
             "--json" => json = true,
+            // On `wait`, `--text` is the pattern to find (the plain-text format is `WORMHOLE_JSON=0` there).
+            "--text" if verb == "wait" => waiting.text = Some(value(arg)?.to_string()),
             "--text" => text_out = true,
             "--help" | "-h" => return Ok(Parsed::Help),
             // `events` watches several terminals and windows: its `--terminal` and `--window` repeat.
@@ -89,6 +94,30 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
                         format!("--block takes a block's id (a number) or `last`, not {id:?}")
                     })?),
                 });
+            }
+            "--status" if verb == "wait" => {
+                let value = value(arg)?;
+                for word in value.split(',').map(str::trim).filter(|word| !word.is_empty()) {
+                    waiting.status.push(state(word)?);
+                }
+            }
+            "--gone" if verb == "wait" => waiting.gone = Some(value(arg)?.to_string()),
+            "--stable" if verb == "wait" => {
+                let value = value(arg)?;
+                waiting.stable_ms = Some(
+                    value
+                        .trim_end_matches("ms")
+                        .parse()
+                        .map_err(|_| format!("--stable takes milliseconds, not {value:?}"))?,
+                );
+            }
+            "--block-done" if verb == "wait" => waiting.block_done = true,
+            "--timeout" if matches!(verb, "wait" | "run") => waiting.timeout_ms = Some(seconds(value(arg)?)?),
+            "--exit-code" if verb == "run" => exit_code = true,
+            // Everything after `--` is the command, whatever it starts with.
+            "--" if verb == "run" => {
+                words.extend(args.by_ref());
+                break;
             }
             "--type" if verb == "send-keys" => {
                 items.push(KeyItem::Text { text: value(arg)?.to_string(), paste: false });
@@ -279,6 +308,21 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
             }
             Action::SendKeys(SendKeysSpec { target, keys: items })
         }
+        "wait" => {
+            let target = target.take().ok_or_else(|| needs_target("wait"))?;
+            if !text.is_empty() {
+                return Err(format!("wait takes options only, not {text:?}"));
+            }
+            let WaitFlags { status, text, gone, stable_ms, block_done, timeout_ms } = waiting;
+            Action::Wait(WaitSpec { target, status, text, gone, stable_ms, block_done, timeout_ms })
+        }
+        "run" => {
+            let target = target.take().ok_or_else(|| needs_target("run"))?;
+            if text.trim().is_empty() {
+                return Err("run needs the command to run (after the options, in quotes or after --)".into());
+            }
+            Action::Run(RunSpec { target, command: text, timeout_ms: waiting.timeout_ms })
+        }
         "mouse" => {
             let Some(target) = target.take() else {
                 return Err("mouse needs a target: --terminal, --tab or --pane".into());
@@ -296,7 +340,7 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
         return Err(format!("{verb} takes no target"));
     }
     let stdin = matches!(&action, Action::SendText { text, .. } if text == "-");
-    Ok(Parsed::Run(Cli { action, json, text: text_out, stdin, numbers: look.numbers }))
+    Ok(Parsed::Run(Cli { action, json, text: text_out, stdin, numbers: look.numbers, exit_code }))
 }
 
 /// What a verb that names its target says when it has none.
@@ -319,6 +363,42 @@ fn resolve_folder(folder: &str, cwd: &Path, home: Option<&Path>) -> String {
         (folder, _) => cwd.join(folder),
     };
     path.to_string_lossy().into_owned()
+}
+
+/// What `wait` (and `run`'s timeout) were asked for, as the flags gave it.
+#[derive(Default)]
+struct WaitFlags {
+    status: Vec<TerminalState>,
+    text: Option<String>,
+    gone: Option<String>,
+    stable_ms: Option<u64>,
+    block_done: bool,
+    timeout_ms: Option<u64>,
+}
+
+/// A state as `wait --status` spells it (`needs_you`, also `needs-you`).
+fn state(word: &str) -> Result<TerminalState, String> {
+    match word.replace('-', "_").as_str() {
+        "idle" => Ok(TerminalState::Idle),
+        "working" => Ok(TerminalState::Working),
+        "needs_you" => Ok(TerminalState::NeedsYou),
+        "finished" => Ok(TerminalState::Finished),
+        "failed" => Ok(TerminalState::Failed),
+        "exited" => Ok(TerminalState::Exited),
+        _ => {
+            Err(format!("--status takes idle, working, needs_you, finished, failed or exited, not {word:?}"))
+        }
+    }
+}
+
+/// `--timeout`'s seconds (fractions allowed) as milliseconds.
+fn seconds(value: &str) -> Result<u64, String> {
+    let mistake = || format!("--timeout takes seconds, not {value:?}");
+    let secs: f64 = value.trim_end_matches('s').parse().map_err(|_| mistake())?;
+    if !secs.is_finite() || secs <= 0.0 || secs > 1e9 {
+        return Err(mistake());
+    }
+    Ok((secs * 1000.0).round().max(1.0) as u64)
 }
 
 /// What `read` and `blocks` were asked for, as the flags gave it.

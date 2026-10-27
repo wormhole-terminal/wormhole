@@ -4,6 +4,7 @@ use super::keys::{KeyItem, SendKeysSpec};
 use super::mouse::{ButtonName, MouseOp, MouseSpec, Pointer};
 use super::read::{BlocksSpec, Range, ReadSpec};
 use super::structure::{CloseSpec, FocusSpec, NewWindowSpec, RenameSpec, Side, SplitSpec};
+use super::wait::{RunSpec, WaitSpec};
 use super::{
     Action, Error, ErrorCode, PROTOCOL_VERSION, Reason, Reply, Request, Summary, Target, TerminalState,
     WelcomeOp, event::EventsSpec, unreadable,
@@ -27,6 +28,8 @@ fn name(action: &Action) -> &'static str {
         Action::Focus(_) => "focus",
         Action::Rename(_) => "rename",
         Action::Close(_) => "close",
+        Action::Wait(_) => "wait",
+        Action::Run(_) => "run",
         Action::Welcome { .. } => "welcome",
     }
 }
@@ -191,6 +194,47 @@ fn golden() -> Vec<(Request, &'static str)> {
         ),
         (
             Request::new(
+                Action::Wait(WaitSpec {
+                    target: Target::Terminal(3),
+                    status: vec![TerminalState::Idle, TerminalState::NeedsYou],
+                    text: Some("\\$ $".into()),
+                    gone: None,
+                    stable_ms: Some(800),
+                    block_done: true,
+                    timeout_ms: Some(30000),
+                }),
+                Some("7".into()),
+            ),
+            r#"{"version":1,"from":"7","action":"wait","target":{"kind":"terminal","id":3},"status":["idle","needs_you"],"text":"\\$ $","stable_ms":800,"block_done":true,"timeout_ms":30000}"#,
+        ),
+        (
+            Request::new(
+                Action::Wait(WaitSpec {
+                    target: Target::Terminal(3),
+                    status: vec![],
+                    text: None,
+                    gone: Some("Loading".into()),
+                    stable_ms: None,
+                    block_done: false,
+                    timeout_ms: None,
+                }),
+                None,
+            ),
+            r#"{"version":1,"action":"wait","target":{"kind":"terminal","id":3},"gone":"Loading"}"#,
+        ),
+        (
+            Request::new(
+                Action::Run(RunSpec {
+                    target: Target::Terminal(3),
+                    command: "cargo test".into(),
+                    timeout_ms: Some(600000),
+                }),
+                Some("7".into()),
+            ),
+            r#"{"version":1,"from":"7","action":"run","target":{"kind":"terminal","id":3},"command":"cargo test","timeout_ms":600000}"#,
+        ),
+        (
+            Request::new(
                 Action::Welcome { token: "0123abcd".into(), op: WelcomeOp::State },
                 Some("4".into()),
             ),
@@ -220,6 +264,8 @@ fn every_action_has_a_golden_line() {
             "focus",
             "rename",
             "close",
+            "wait",
+            "run",
             "welcome"
         ])
     );
@@ -278,6 +324,19 @@ fn only_typing_and_starting_programs_need_the_switch() {
         }),
     });
     assert!(keys.writes() && mouse.writes() && !keys.reads() && !mouse.reads());
+    // `run` types a command; `wait` only waits (and reads text, which is `control_read`'s, decided per condition).
+    let run = Action::Run(RunSpec { target: Target::Tab(1), command: "ls".into(), timeout_ms: None });
+    assert!(run.writes() && !run.reads());
+    let wait = Action::Wait(WaitSpec {
+        target: Target::Tab(1),
+        status: vec![],
+        text: None,
+        gone: None,
+        stable_ms: None,
+        block_done: true,
+        timeout_ms: None,
+    });
+    assert!(!wait.writes() && !wait.reads());
     // Windows, splits, the selection, names and the close question are the switch's too.
     for action in [
         Action::NewWindow(NewWindowSpec::default()),

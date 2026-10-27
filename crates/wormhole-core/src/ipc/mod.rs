@@ -15,6 +15,7 @@
 //! - `exchange`: the command line's round trip over the control socket, and the welcome's;
 //! - `instance`: who serves the socket;
 //! - `read_job`: a read of a terminal's screen, run by the socket thread;
+//! - `wait_job`: a `wait` or a `run`, which a thread of its own carries out and answers once;
 //! - `bus`: the events the app publishes and the subscriptions that hear them;
 //! - `server`: the listener thread (connections from this user only) and the threads of the streams;
 //! - `client`: the `hook` and `statusline` command lines;
@@ -38,6 +39,7 @@ mod read_job;
 mod server;
 #[cfg(test)]
 mod test_support;
+mod wait_job;
 
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -55,6 +57,7 @@ pub use instance::{Instance, InstanceLock, Served, acquire, start_server};
 pub use message::Message;
 pub use read_job::ReadJob;
 pub use server::{ANCESTORS_MAX, Peer};
+pub use wait_job::WaitJob;
 
 /// What the socket hands the app.
 #[derive(Debug)]
@@ -74,6 +77,11 @@ pub enum Answer {
     /// A read of a terminal's screen, which the socket thread carries out itself (the copy is not
     /// for the UI thread) and writes back as one line.
     Read(ReadJob),
+    /// A `wait` or a `run`: a thread of its own carries it out and writes the one reply line when it is
+    /// over, however long that takes (the connection is its own, so the hooks never wait for it). The
+    /// app made the subscription it listens on while it answered, as for a stream, so it counts among
+    /// the streams and is given back when the job ends or is dropped.
+    Wait(WaitJob),
     /// The reply line now, then the connection is handed to a stream thread that writes what the
     /// subscription yields. The app makes the subscription while it answers, so nothing published
     /// after the reply is missed; if the socket gave up waiting, dropping the answer drops the

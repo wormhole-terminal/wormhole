@@ -16,6 +16,8 @@ pub(super) enum Pop<T> {
     Lagged(u64),
     /// The queue was closed, and why.
     Closed(CloseReason),
+    /// Nothing was queued, but the queue was poked since the reader last looked.
+    Poked,
     /// Nothing came in time.
     Empty,
 }
@@ -26,6 +28,8 @@ struct Inner<T> {
     items: VecDeque<(T, usize)>,
     bytes: usize,
     dropped: u64,
+    /// Somebody said "something changed" since the last pop: no matter how many times.
+    poked: bool,
     closed: Option<CloseReason>,
 }
 
@@ -40,7 +44,13 @@ pub(super) struct Queue<T> {
 impl<T> Queue<T> {
     pub(super) fn new(max_items: usize, max_bytes: usize) -> Self {
         Self {
-            inner: Mutex::new(Inner { items: VecDeque::new(), bytes: 0, dropped: 0, closed: None }),
+            inner: Mutex::new(Inner {
+                items: VecDeque::new(),
+                bytes: 0,
+                dropped: 0,
+                poked: false,
+                closed: None,
+            }),
             ready: Condvar::new(),
             max_items,
             max_bytes,
@@ -67,8 +77,17 @@ impl<T> Queue<T> {
         self.ready.notify_one();
     }
 
+    /// Wake the reader to say something changed, without saying what: any number of pokes before the
+    /// reader looks are one. For a reader that looks at the thing itself (a waiter and a screen).
+    pub(super) fn poke(&self) {
+        let mut inner = self.inner.lock().unwrap_or_else(PoisonError::into_inner);
+        if inner.closed.is_none() && !std::mem::replace(&mut inner.poked, true) {
+            self.ready.notify_one();
+        }
+    }
+
     /// The next thing for the reader, waiting up to `wait` for one: a closed queue first, then what
-    /// was lost, then the oldest item kept.
+    /// was lost, then the oldest item kept, then a poke.
     pub(super) fn pop(&self, wait: Duration) -> Pop<T> {
         let deadline = Instant::now() + wait;
         let mut inner = self.inner.lock().unwrap_or_else(PoisonError::into_inner);
@@ -82,6 +101,9 @@ impl<T> Queue<T> {
             if let Some((item, bytes)) = inner.items.pop_front() {
                 inner.bytes -= bytes;
                 return Pop::Item(item);
+            }
+            if std::mem::take(&mut inner.poked) {
+                return Pop::Poked;
             }
             let left = deadline.saturating_duration_since(Instant::now());
             if left.is_zero() {
@@ -181,6 +203,32 @@ mod tests {
         assert!(took < Duration::from_secs(2), "woken, not timed out: {took:?}");
         queue.push(2, 1);
         assert_eq!(queue.len(), 0, "a closed queue takes nothing");
+    }
+
+    #[test]
+    fn pokes_are_one_wake_up_after_the_items_and_wake_a_waiting_reader() {
+        let queue = Arc::new(Queue::new(4, 64));
+        for _ in 0..5 {
+            queue.poke();
+        }
+        queue.push(1, 1);
+        assert_eq!([queue.pop(NONE), queue.pop(NONE)], [Pop::Item(1), Pop::Poked]);
+        assert_eq!(queue.pop(NONE), Pop::Empty, "five pokes were one");
+        let reader = std::thread::spawn({
+            let queue = queue.clone();
+            move || {
+                let start = Instant::now();
+                (queue.pop(Duration::from_secs(5)), start.elapsed())
+            }
+        });
+        std::thread::sleep(Duration::from_millis(30));
+        queue.poke();
+        let (popped, took) = reader.join().expect("reader");
+        assert_eq!(popped, Pop::Poked);
+        assert!(took < Duration::from_secs(2), "{took:?}");
+        queue.close(CloseReason::Quitting);
+        queue.poke();
+        assert_eq!(queue.pop(NONE), Pop::Closed(CloseReason::Quitting), "a closed queue is not poked");
     }
 
     #[test]

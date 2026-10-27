@@ -35,13 +35,14 @@ pub mod printable;
 pub mod read;
 pub mod sessions;
 pub mod structure;
+pub mod wait;
 mod welcome;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub use cli::{COMMAND_NAME, Cli, Parsed, help, help_with, is_verb, parse, render, render_with};
-pub(in crate::ipc) use cli::{events, json_env, print, print_err, show_automation};
+pub(in crate::ipc) use cli::{events, json_env, print, print_err, run_parts, show_automation};
 pub use event::{Event, EventFilter, EventsSpec, Subscribed, Topic, Topics};
 pub use facts::{
     Asked, KeysSent, Listing, Opened, PaneInfo, Reached, SplitInfo, StatusInfo, Summary, TabInfo,
@@ -51,14 +52,15 @@ pub use keys::{KeyItem, SendKeysSpec};
 pub use limits::{Limited, RateLimits};
 pub use mouse::{MouseOp, MouseSpec};
 pub use policy::{
-    SEND_TEXT_MAX_BYTES, SendTarget, mouse_check, notice_text, read_check, reads_off, send_keys_check,
-    send_text_check, writes_off,
+    SEND_TEXT_MAX_BYTES, SendTarget, mouse_check, notice_text, read_check, reads_off, run_check,
+    send_keys_check, send_text_check, writes_off,
 };
 pub use read::{BlocksSpec, REPLY_MAX_BYTES, ReadSpec};
 pub use structure::{
     CloseAsked, CloseSpec, FocusSpec, Focused, NewWindowSpec, RenameSpec, Renamed, Side, SplitMade,
     SplitSpec, WindowOpened,
 };
+pub use wait::{Met, Ran, RunPlan, RunSpec, WaitPlan, WaitSpec, Waited, matched_text};
 pub use welcome::{
     AgentFact, AgentsFacts, FIELD_MAX_BYTES, HooksFact, ImportDone, LookFacts, NotifyFacts, PermissionFact,
     PrimaryFact, ThemeFact, WelcomeOp, WelcomeState,
@@ -151,6 +153,10 @@ pub enum Action {
     Rename(structure::RenameSpec),
     /// Ask the user whether to close a terminal; it never closes on the caller's say.
     Close(structure::CloseSpec),
+    /// Block until a condition holds in a terminal: a state, text on its screen, quiet, a command done.
+    Wait(wait::WaitSpec),
+    /// Type a command at a shell's prompt, wait for it to finish and tell how it ended.
+    Run(wait::RunSpec),
     /// The first-run welcome program asking the app that runs it (`token` is the one in its
     /// terminal's environment): state, choices, and the end.
     Welcome { token: String, op: WelcomeOp },
@@ -159,7 +165,7 @@ pub enum Action {
 impl Action {
     /// What every action is called in a request's `action` field, for [`unreadable`]: a test keeps
     /// it in step with the enum.
-    const KNOWN: [&str; 16] = [
+    const KNOWN: [&str; 18] = [
         "list",
         "status",
         "notify",
@@ -175,6 +181,8 @@ impl Action {
         "focus",
         "rename",
         "close",
+        "wait",
+        "run",
         "welcome",
     ];
 
@@ -196,6 +204,8 @@ impl Action {
             Action::Focus(_) => "focus",
             Action::Rename(_) => "rename",
             Action::Close(_) => "close",
+            Action::Wait(_) => "wait",
+            Action::Run(_) => "run",
             Action::Welcome { .. } => "welcome",
         }
     }
@@ -214,6 +224,7 @@ impl Action {
                 | Action::Focus(_)
                 | Action::Rename(_)
                 | Action::Close(_)
+                | Action::Run(_)
         )
     }
 

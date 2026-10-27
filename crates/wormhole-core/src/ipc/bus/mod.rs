@@ -10,6 +10,7 @@
 
 mod queue;
 mod subscription;
+mod wait;
 mod worker;
 
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -19,6 +20,7 @@ use ring::rand::{SecureRandom as _, SystemRandom};
 
 use subscription::Subscriber;
 pub use subscription::{Caller, Grant, Next, QUEUE_BYTES, QUEUE_ITEMS, Subscription};
+pub use wait::{LOOK_EVERY, Watch};
 use worker::Worker;
 pub use worker::{OUTPUT_BYTES_MAX, OUTPUT_LINES_MAX};
 
@@ -29,6 +31,10 @@ use super::control::{PROTOCOL_VERSION, printable};
 pub const STREAMS_MAX: usize = 16;
 /// Streams open at once for one caller, so one agent's loop can't take them all.
 pub const STREAMS_PER_CALLER: usize = 4;
+
+/// The bit of the interest mask for waiters that look at a screen: no topic, since nothing is
+/// published for it, only a wake-up (`Bus::pulse`). Above the topics' bits.
+const SCREEN_BIT: u32 = 1 << 30;
 
 /// An event, numbered and dated, written once for those who may not read the terminal's text and,
 /// when it has some, once for those who may.
@@ -170,6 +176,17 @@ impl Bus {
         grant: Grant,
         caller: Caller,
     ) -> Result<(Subscription, Started), Refused> {
+        self.register(filter, None, grant, caller)
+    }
+
+    /// [`subscribe`](Self::subscribe), for a waiter when `watch` is given.
+    fn register(
+        self: &Arc<Self>,
+        filter: EventFilter,
+        watch: Option<Watch>,
+        grant: Grant,
+        caller: Caller,
+    ) -> Result<(Subscription, Started), Refused> {
         let mut state = self.lock();
         if state.subscribers.len() >= STREAMS_MAX {
             return Err(Refused::Full);
@@ -178,7 +195,7 @@ impl Bus {
             return Err(Refused::CallerFull);
         }
         state.next_id += 1;
-        let subscriber = Arc::new(Subscriber::new(state.next_id, caller, filter, grant));
+        let subscriber = Arc::new(Subscriber::new(state.next_id, caller, filter, watch, grant));
         state.subscribers.push(subscriber.clone());
         self.interest.store(interest_of(&state), Ordering::Relaxed);
         let started = Started { seq: state.seq, boot: self.boot.clone() };
@@ -200,9 +217,17 @@ impl Bus {
         terminal: i64,
         reader: impl FnOnce() -> Option<wormhole_term::WeakScreenReader>,
     ) {
-        if self.wants(Topic::Output) && self.output_wanted(window, terminal) {
+        let interest = self.interest_bits();
+        if interest & SCREEN_BIT != 0 {
+            self.poke_screens(terminal);
+        }
+        if interest & Topic::Output.bit() != 0 && self.output_wanted(window, terminal) {
             self.worker.pulse(self, window, terminal, reader);
         }
+    }
+
+    fn interest_bits(&self) -> u32 {
+        self.interest.load(Ordering::Relaxed)
     }
 
     /// Start reading `terminal`'s output from where it is now: called for the terminals a new stream
@@ -254,7 +279,10 @@ impl Drop for Bus {
 }
 
 fn interest_of(state: &State) -> u32 {
-    state.subscribers.iter().fold(0, |bits, s| bits | s.filter.topics.bits())
+    state.subscribers.iter().fold(0, |bits, s| {
+        let screen = if s.watch.is_some_and(|watch| watch.screen) { SCREEN_BIT } else { 0 };
+        bits | s.filter.topics.bits() | screen
+    })
 }
 
 /// A name for this run of the app: 16 hex digits from the system's random source.

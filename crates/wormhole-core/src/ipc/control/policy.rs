@@ -4,7 +4,7 @@
 use super::keys::{
     KEY_SPEC_MAX_BYTES, KEYS_MAX_ITEMS, KEYS_TEXT_MAX_BYTES, KeyItem, Stroke, parse_items, text_problem,
 };
-use super::{Error, ErrorCode, MouseOp, TerminalState};
+use super::{Error, ErrorCode, MouseOp, Reason, TerminalState};
 
 /// The most text one `send-text` may type (a prompt, not a file).
 pub const SEND_TEXT_MAX_BYTES: usize = 16 * 1024;
@@ -129,6 +129,39 @@ pub fn mouse_check(enabled: bool, op: &MouseOp, from: Option<i64>, target: SendT
     typing_target_check(from, target)
 }
 
+/// Whether `run` may type its command at `target`'s prompt for `from`, with typing `enabled`: the
+/// switch, then the terminal's rules as for keys (never the caller's own, never one waiting for the
+/// user's answer, never a dead shell), then the shell: it needs integration (its marks are how the
+/// end of the command is known) and must be at its prompt, which is what `at_prompt` says (`None`
+/// without integration).
+pub fn run_check(
+    enabled: bool,
+    from: Option<i64>,
+    target: SendTarget,
+    at_prompt: Option<bool>,
+) -> Result<(), Error> {
+    if !enabled {
+        return Err(writes_off());
+    }
+    typing_target_check(from, target)?;
+    match at_prompt {
+        None => Err(Error::new(
+            ErrorCode::Unsupported,
+            format!(
+                "tab {}'s shell has no integration, so run can't tell when a command ends; use send-text and wait",
+                target.tab
+            ),
+        )
+        .because(Reason::NoIntegration)),
+        Some(false) => Err(Error::new(
+            ErrorCode::Refused,
+            format!("tab {} is not at its prompt: something is running in it", target.tab),
+        )
+        .because(Reason::NotAtPrompt)),
+        Some(true) => Ok(()),
+    }
+}
+
 /// Whether the caller may read what the target shows: `enabled` is `control_read`, `self_read`
 /// that the caller's process runs under the target's own shell (its `Peer`, never what `from`
 /// claims: a claim would let anyone switch the setting off for themselves).
@@ -166,14 +199,42 @@ pub fn notice_text(title: &str, body: &str) -> Option<wormhole_term::Notificatio
 #[cfg(test)]
 mod tests {
     use super::{
-        Error, ErrorCode, KEYS_MAX_ITEMS, KEYS_TEXT_MAX_BYTES, KeyItem, MouseOp, SEND_TEXT_MAX_BYTES,
-        SendTarget, TerminalState, mouse_check, notice_text, read_check, send_keys_check, send_text_check,
+        Error, ErrorCode, KEYS_MAX_ITEMS, KEYS_TEXT_MAX_BYTES, KeyItem, MouseOp, Reason, SEND_TEXT_MAX_BYTES,
+        SendTarget, TerminalState, mouse_check, notice_text, read_check, run_check, send_keys_check,
+        send_text_check,
     };
     use crate::ipc::control::mouse::{ButtonName, Pointer};
 
     fn check(enabled: bool, text: &str, from: Option<i64>, state: TerminalState) -> Result<(), ErrorCode> {
         send_text_check(enabled, text, from, SendTarget { tab: 5, state, caller_inside: false })
             .map_err(|Error { code, .. }| code)
+    }
+
+    #[test]
+    fn a_command_is_run_only_at_a_prompt_of_a_shell_with_integration() {
+        let target = |state, caller_inside| SendTarget { tab: 5, state, caller_inside };
+        let run = |enabled, from, target, prompt| {
+            run_check(enabled, from, target, prompt).map_err(|e| (e.code, e.reason))
+        };
+        let idle = target(TerminalState::Idle, false);
+        assert_eq!(run(true, None, idle, Some(true)), Ok(()));
+        assert_eq!(run(false, None, idle, Some(true)), Err((ErrorCode::NotAllowed, None)));
+        assert_eq!(run(true, None, idle, None), Err((ErrorCode::Unsupported, Some(Reason::NoIntegration))));
+        assert_eq!(run(true, None, idle, Some(false)), Err((ErrorCode::Refused, Some(Reason::NotAtPrompt))));
+        // The terminal's rules come first: not one's own, not one waiting for an answer.
+        assert_eq!(run(true, Some(5), idle, Some(true)), Err((ErrorCode::Refused, None)));
+        assert_eq!(
+            run(true, None, target(TerminalState::Idle, true), Some(true)),
+            Err((ErrorCode::Refused, None))
+        );
+        assert_eq!(
+            run(true, None, target(TerminalState::NeedsYou, false), Some(true)),
+            Err((ErrorCode::Refused, None))
+        );
+        assert_eq!(
+            run(true, None, target(TerminalState::Exited, false), Some(true)),
+            Err((ErrorCode::Refused, None))
+        );
     }
 
     #[test]

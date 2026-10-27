@@ -9464,6 +9464,7 @@ dependencies = [
  "minisign",
  "minisign-verify",
  "plist",
+ "regex",
  "ring",
  "rusqlite",
  "rustls",

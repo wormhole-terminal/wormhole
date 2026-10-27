@@ -17,8 +17,8 @@ use super::control::events;
 use super::control::printable::json_line;
 use super::control::sessions;
 use super::control::{
-    Action, PROTOCOL_VERSION, Reply, Request, SEND_TEXT_MAX_BYTES, help_with, json_env, parse, print,
-    print_err, render_with, show_automation,
+    Action, PROTOCOL_VERSION, Ran, Reason, Reply, Request, SEND_TEXT_MAX_BYTES, help_with, json_env, parse,
+    print, print_err, render_with, run_parts, show_automation,
 };
 use crate::platform::paths;
 use crate::platform::socket::Stream;
@@ -184,7 +184,7 @@ pub fn run(args: &[String]) -> i32 {
     if matches!(request.action, Action::Events(_)) {
         return watch(&socket, &request, json, home.as_deref());
     }
-    let reply = match exchange(&socket, &request, REPLY_WAIT) {
+    let reply = match exchange(&socket, &request, answer_wait(&request.action)) {
         Ok(reply) => reply,
         Err(Exchange::NotRunning) => {
             // Terminals that outlive the app can still be listed from their hosts' files.
@@ -204,7 +204,32 @@ pub fn run(args: &[String]) -> i32 {
         return 2;
     }
     show(&request.action, &reply, json, home.as_deref(), numbers);
-    reply.error.as_ref().map_or(0, |error| error.code.exit_code())
+    exit_code_of(&request.action, &reply, cli.exit_code)
+}
+
+/// How long to wait for the app's answer: a moment, except for `wait` and `run`, which answer when they
+/// are done: their own timeout, and a margin for the app to say it ran out.
+fn answer_wait(action: &Action) -> Duration {
+    let patient = match action {
+        Action::Wait(spec) => spec.wait_for(),
+        Action::Run(spec) => spec.wait_for(),
+        _ => return REPLY_WAIT,
+    };
+    patient + Duration::from_secs(5)
+}
+
+/// The command line's exit code for `reply`: 0 when it worked, 124 when a `wait` or `run` ran out of
+/// time (as `timeout(1)` does), the error's own otherwise; and for `run --exit-code` the command's.
+fn exit_code_of(action: &Action, reply: &Reply, command_code: bool) -> i32 {
+    if let Some(error) = &reply.error {
+        let waits = matches!(action, Action::Wait(_) | Action::Run(_));
+        return if waits && error.reason == Some(Reason::Timeout) { 124 } else { error.code.exit_code() };
+    }
+    if command_code && matches!(action, Action::Run(_)) {
+        let ran = reply.result.clone().and_then(|result| serde_json::from_value::<Ran>(result).ok());
+        return ran.and_then(|ran| ran.exit_code).unwrap_or(0);
+    }
+    0
 }
 
 /// Say why there was no reply, and the exit code that goes with it.
@@ -222,12 +247,21 @@ fn explain(err: &Exchange) -> i32 {
 fn show(action: &Action, reply: &Reply, json: bool, home: Option<&Path>, numbers: bool) {
     if json {
         print(&format!("{}\n", json_line(reply)));
+    } else if let (Action::Run(_), None, Some(ran)) = (action, &reply.error, run_result(reply)) {
+        // What the command printed is the output; how it went is not.
+        let (output, note) = run_parts(&ran);
+        print(&output);
+        print_err(&note);
     } else {
         match render_with(action, reply, home, numbers) {
             Ok(text) => print(&text),
             Err(words) => print_err(&format!("Wormhole: {words}\n")),
         }
     }
+}
+
+fn run_result(reply: &Reply) -> Option<Ran> {
+    serde_json::from_value(reply.result.clone()?).ok()
 }
 
 /// `events`: print the stream until it ends. Ctrl-c ends it with 0, as does Wormhole quitting; being shut
