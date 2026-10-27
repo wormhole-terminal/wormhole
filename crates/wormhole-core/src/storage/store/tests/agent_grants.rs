@@ -64,8 +64,11 @@ fn a_database_from_version_10_gains_the_table_and_keeps_its_terminals() {
     {
         let mut store = Store::open_at(&dir).expect("opens");
         store.save_window(&window(1, vec![session(1, "/a")])).expect("saves");
-        // Version 10 as it shipped: the same layout without the table.
-        store.conn.execute_batch("DROP TABLE agent_grants;").expect("drops");
+        // Version 10 as it shipped: the same layout without the table, and without the column of version 12.
+        store
+            .conn
+            .execute_batch("DROP TABLE agent_grants; ALTER TABLE sessions DROP COLUMN agent_hidden;")
+            .expect("drops");
         store.conn.pragma_update(None, "user_version", 10).expect("version");
         assert_eq!(version(&store.conn), 10);
     }
