@@ -8,7 +8,10 @@
 //! **Retired keys.** Withdrawing or replacing an approval puts its account on the file's `retired` list,
 //! which is saved first; its key is deleted after, and the account leaves the list once it is. So an
 //! interrupted write leaves the key to be deleted by the next one, and an old entry copied back finds no
-//! key whichever step it came after.
+//! key whichever step it came after. Until a key is deleted (the Keychain refused, or the app stopped
+//! between the two steps), a program that can write the file can still take the account off the list and
+//! put the old entry back: the next write that deletes the key closes that.
+//!
 //! The file is the app's own state in the data folder, so it is written atomically and owner-only
 //! like `trusted-projects.json`, and read under a cap. A file that is too big or does not parse
 //! reads as nothing approved (the safe side); it is set aside on the next save, not before, so a

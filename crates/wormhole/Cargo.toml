@@ -115,6 +115,9 @@ wormhole-text = { workspace = true, features = ["test-support"] }
 # and contributors run) needs these without the devctl feature. Dev-dependency features are
 # never active in the shipped binary.
 gpui-kit = { version = "0.8.0", features = ["test-support"] }
+# Keys in dev-only files, never the user's Keychain: `cfg!(test)` covers only core's own tests, and
+# `cargo test --release` here has no debug assertions to fall back on.
+wormhole-core = { workspace = true, features = ["dev-key"] }
 
 [features]
 # Dev-only control hook (screenshots + scripted input) for automated checks.

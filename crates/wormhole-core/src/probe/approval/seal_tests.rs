@@ -515,4 +515,9 @@ fn the_development_keys_are_files_beside_the_approvals_one_per_approval() {
     assert_eq!(state(&root, "acme-tools"), ProbeState::On, "read back through the system's source");
     turn_off(&root, "acme-tools").expect("off");
     assert!(!keys.join(&account).exists(), "withdrawn, its key file is gone");
+    // Format 2's one key for all goes at the next tidying.
+    let old = root.base().join("probe-approvals-key.dev-only");
+    fs::write(&old, [0; 32]).expect("write");
+    sweep(&root, None).expect("tidies");
+    assert!(!old.exists());
 }

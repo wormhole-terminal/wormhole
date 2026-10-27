@@ -26,7 +26,8 @@
 //!
 //! **Threads.** The key is read in [`list`], [`read_one`], [`approve`] and [`runnable`], and reading it may
 //! block or show the Keychain's prompt: call those off the main thread, as the app does. [`turn_off`] and
-//! [`sweep`] never read one (they only delete the keys of what they forget), so tidying up never prompts.
+//! [`sweep`] never read one (they only delete the keys of what they forget), so tidying up never asks for
+//! access to a key.
 //!
 //! The mutating calls ([`approve`], [`turn_off`], [`sweep`]) read the store afresh under one lock, so
 //! two windows cannot overwrite each other's approvals. Must not use anything above `storage`.

@@ -10,7 +10,8 @@
 //!   that made it reads it without a prompt; another program running as the user gets one.
 //! - A development build (debug assertions, or the `dev-key` feature that devctl builds turn on:
 //!   `cargo run`, `scripts/dev.sh`, devctl instances, release-profile dev builds) and every test build
-//!   (`cargo test --release` too) never touches the Keychain: a rebuilt binary would ask for it again
+//!   (`cargo test --release` too: core's by `cfg!(test)`, the app's by the feature its dev-dependency
+//!   turns on) never touches the Keychain: a rebuilt binary would ask for it again
 //!   after every build, and an isolated instance or a test must not reach the user's. It keeps the key
 //!   in a file beside what it protects (one per account, in a folder, when [`Purpose::dev_key_per_account`]),
 //!   which protects nothing and says so in its name, and never in the real data folder; a release
@@ -90,8 +91,8 @@ pub(crate) fn is_random_id(text: &str) -> bool {
 }
 
 /// Whether this build keeps its keys in a file instead of the Keychain: a debug build, one with the
-/// `dev-key` feature (devctl builds, release-profile dev builds), or a test build, which must never
-/// reach the user's Keychain even when built with `--release`.
+/// `dev-key` feature (devctl builds, release-profile dev builds, the app's tests), or core's own test
+/// build, which must never reach the user's Keychain even when built with `--release`.
 pub(crate) fn uses_dev_key() -> bool {
     cfg!(debug_assertions) || cfg!(feature = "dev-key") || cfg!(test)
 }

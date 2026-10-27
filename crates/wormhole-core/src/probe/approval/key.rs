@@ -16,9 +16,10 @@
 //! **Reading a key may block**, and shows the system's prompt when the Keychain is locked or another
 //! program asks: never call it on the main thread. Every caller here already runs on the background
 //! executor (listing, reading a Probe for its sheet, approving, [`runnable`](super::runnable)).
-//! [`sweep`](super::sweep) and [`turn_off`](super::turn_off) never read one, they only delete: tidying up
-//! must not prompt. Nothing is kept in memory between calls, so a key deleted from the Keychain counts
-//! at the next read.
+//! [`sweep`](super::sweep) and [`turn_off`](super::turn_off) never read one, they only delete, so tidying
+//! up never asks for access to a key (a locked Keychain may still ask to be unlocked, as a listing does).
+//! Nothing is kept in memory between calls, so a key deleted from the Keychain counts at the next read;
+//! the price is a read per approval at each listing.
 
 use std::path::Path;
 
@@ -41,9 +42,10 @@ pub(crate) trait KeySource: Send + Sync {
     /// The key kept under `account`, or `None` when there is none. Never makes one, so checking a seal
     /// leaves nothing behind. An error: denied, cancelled, a locked Keychain.
     fn find(&self, dir: &Path, account: &str) -> Result<Option<Key>>;
-    /// A new key under `account`, which nothing holds yet. Only approving asks for this.
+    /// The key under `account`, made when there is none: approving asks for it under a fresh random
+    /// account, so it is a new one.
     fn open(&self, dir: &Path, account: &str) -> Result<Key>;
-    /// Delete the key under `account`; one that isn't there is fine. Never reads it, so it never prompts.
+    /// Delete the key under `account`; one that isn't there is fine. Never reads it, so it never asks for access to it.
     fn forget(&self, dir: &Path, account: &str) -> Result<()>;
 }
 
@@ -76,12 +78,17 @@ impl KeySource for SystemKeys {
     }
 }
 
+/// Format 2's one key for every approval, in a development build: nothing reads it any more.
+const FORMAT_2_DEV_KEY: Purpose =
+    Purpose { dev_key_file: "probe-approvals-key.dev-only", dev_key_per_account: false, ..PURPOSE };
+
 /// A release build deletes the development build's key folder it finds beside the approvals: those keys
-/// protect nothing.
+/// protect nothing. Format 2's key file goes in any build.
 pub(super) fn remove_stray_dev_keys(dir: &Path) {
     if !secret_key::uses_dev_key() {
         secret_key::remove_stray_dev_key(&PURPOSE, dir);
     }
+    secret_key::remove_stray_dev_key(&FORMAT_2_DEV_KEY, dir);
 }
 
 /// The seam for tests: a key source that stands in for the system's on this thread, so the public calls
