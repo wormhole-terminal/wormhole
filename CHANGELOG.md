@@ -84,6 +84,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   missing or wrong: the terminal is told by where the command runs (its place under the terminal's
   shell, or on its terminal device), not only by what it says about itself. A program that starts a
   session of its own can still hide where it runs.
+- `wh send-text` types into a terminal whose program only rang the bell. It is still refused while a
+  coding agent waits for your answer (a permission prompt or a question), as it always was meant to be.
 - A working terminal's light, and the breathing amber edge of one that needs you, no longer start over
   when its row is drawn again (a row moving, a status changing); they go on from where they were.
 - With more than one screen, a program's request to move its window (`CSI 3 ; x ; y t`) puts the window on
