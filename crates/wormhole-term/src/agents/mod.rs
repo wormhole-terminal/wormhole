@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 pub(crate) use detect::shell_holds_terminal;
 pub use detect::{Foreground, command_label, foreground_agent, foreground_command, shell_in_foreground};
-pub use identify::{identify, interpreted_script};
+pub use identify::{CODE_LOADING_VARIABLES, Launch, identify, identify_launch, interpreted_script};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]

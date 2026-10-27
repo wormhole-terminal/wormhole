@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
 pub(crate) use super::ports::listening_tcp_ports;
-pub(crate) use super::procargs::command_line;
+pub(crate) use super::procargs::{command_line, environment_names};
 
 /// `PROC_PGRP_ONLY` from `<libproc.h>` (not exported by the libc crate).
 const PROC_PGRP_ONLY: u32 = 2;

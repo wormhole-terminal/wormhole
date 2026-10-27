@@ -43,9 +43,98 @@ fn by_package(path: &str) -> Option<AgentId> {
 /// (`fm serve`) and builds schemas; none of those is an agent in the terminal.
 const SUBCOMMANDS: &[(AgentId, &str)] = &[(AgentId::Fm, "chat")];
 
+/// How a program that may be an agent was started, for deciding whether it is one that the user can approve.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Launch {
+    /// A native program, named by its executable (never by what it says its name is).
+    Native(AgentId),
+    /// A script on an interpreter, started plainly: `interpreter script args`, with nothing in between
+    /// that runs or loads other code. `script` is the argument as given.
+    Script { agent: AgentId, script: String },
+}
+
+/// Flags an interpreter may be started with and still be "that script": none of them runs code of its own,
+/// loads any, or takes a value that could name some. Anything else (`-e`, `-p`, `-r`, `--require`, `--import`,
+/// `--loader`, `-m`, `-c`, `--inspect…`, or any flag with a value) makes the process not an agent that can be
+/// approved by its script: it is whatever the user's own program is, which is "Scripts".
+const HARMLESS_FLAGS: &[&str] = &[
+    "--no-warnings",
+    "--no-deprecation",
+    "--trace-warnings",
+    "--trace-deprecation",
+    "--enable-source-maps",
+    "--no-experimental-fetch",
+    "--no-network-family-autoselection",
+    "-u",
+    "-B",
+    "-O",
+    "-OO",
+    "-s",
+    "-E",
+];
+
+/// `--max-old-space-size=4096`: a number, which is all a memory flag may say.
+fn harmless_flag(flag: &str) -> bool {
+    HARMLESS_FLAGS.contains(&flag)
+        || ["--max-old-space-size=", "--stack-size="].iter().any(|name| {
+            flag.strip_prefix(name).is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+        })
+}
+
+/// Which agent `exe` is, and how it was started, for approving it (`agent-permissions.md`, 4.3).
+/// Stricter than [`identify`], which names what a terminal runs for its sidebar: here only the executable's own
+/// name counts, never `argv[0]` (a program can call itself anything), and a script counts only when its
+/// interpreter was started plainly and `env_runs_code` (the environment holds `NODE_OPTIONS`, `PYTHONPATH` and the
+/// like, which load code before the script) is false. `None` is not an agent the user can approve: it falls to
+/// Scripts.
+pub fn identify_launch(exe: &str, argv: &[String], env_runs_code: bool) -> Option<Launch> {
+    let name = base_name(exe);
+    if !is_interpreter(name) {
+        let agent = by_executable(name).or_else(|| by_package(exe))?;
+        return match SUBCOMMANDS.iter().find(|(id, _)| *id == agent) {
+            Some((_, subcommand)) => {
+                (argv.get(1).map(String::as_str) == Some(*subcommand)).then_some(Launch::Native(agent))
+            }
+            None => Some(Launch::Native(agent)),
+        };
+    }
+    if env_runs_code {
+        return None;
+    }
+    let mut args = argv.iter().skip(1);
+    let script = loop {
+        let arg = args.next()?;
+        if arg.starts_with('-') {
+            if harmless_flag(arg) {
+                continue;
+            }
+            return None;
+        }
+        break arg.clone();
+    };
+    let agent = by_executable(base_name(&script)).or_else(|| by_package(&script))?;
+    Some(Launch::Script { agent, script })
+}
+
+/// Variables that make an interpreter load code before the script it was given runs.
+pub const CODE_LOADING_VARIABLES: &[&str] = &[
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "NODE_EXTRA_CA_CERTS",
+    "PYTHONSTARTUP",
+    "PYTHONPATH",
+    "PYTHONHOME",
+    "RUBYOPT",
+    "RUBYLIB",
+    "PERL5OPT",
+    "PERL5LIB",
+    "BUN_OPTIONS",
+    "DENO_OPTIONS",
+];
+
 /// The script an interpreter runs (`node --flag /path/to/cli.js …`: `/path/to/cli.js`), when the process
-/// is an interpreter with one; `None` for a native program. What an agent installed as a script is
-/// pinned by, since the interpreter's own signature says nothing about which program runs on it.
+/// is an interpreter with one; `None` for a native program. Used by the sidebar's detection, which is
+/// not an approval ([`identify_launch`] is).
 pub fn interpreted_script(exe: &str, argv: &[String]) -> Option<String> {
     let program = argv.first().map(String::as_str).unwrap_or(exe);
     [base_name(exe), base_name(program)]
@@ -76,7 +165,7 @@ pub fn identify(exe: &str, argv: &[String]) -> Option<AgentId> {
 
 #[cfg(test)]
 mod tests {
-    use super::{AgentId, identify};
+    use super::{AgentId, Launch, identify, identify_launch};
 
     fn argv(args: &[&str]) -> Vec<String> {
         args.iter().map(|s| s.to_string()).collect()
@@ -142,6 +231,68 @@ mod tests {
             super::interpreted_script("/Users/me/.local/bin/claude", &argv(&["claude", "--resume"])),
             None
         );
+    }
+
+    fn launch(exe: &str, args: &[&str], env: bool) -> Option<Launch> {
+        identify_launch(exe, &argv(args), env)
+    }
+
+    #[test]
+    fn a_plain_script_on_an_interpreter_is_the_agent_and_a_native_binary_is_named_by_its_executable() {
+        assert_eq!(
+            launch("/opt/homebrew/bin/node", &["node", "--no-warnings", "/x/bin/gemini"], false),
+            Some(Launch::Script { agent: AgentId::Gemini, script: "/x/bin/gemini".into() })
+        );
+        assert_eq!(
+            launch(
+                "/usr/bin/node",
+                &["node", "--max-old-space-size=8192", "/x/@github/copilot/index.js"],
+                false
+            ),
+            Some(Launch::Script { agent: AgentId::Copilot, script: "/x/@github/copilot/index.js".into() })
+        );
+        assert_eq!(
+            launch("/Users/me/.local/bin/claude", &["claude"], false),
+            Some(Launch::Native(AgentId::Claude))
+        );
+        assert_eq!(launch("/usr/bin/fm", &["fm", "chat"], false), Some(Launch::Native(AgentId::Fm)));
+        assert_eq!(launch("/usr/bin/fm", &["fm", "serve"], false), None);
+    }
+
+    #[test]
+    fn what_a_program_calls_itself_is_never_what_it_is() {
+        // `exec -a node /tmp/evil /x/gemini`: the executable is not an interpreter, whatever argv[0] says.
+        assert_eq!(launch("/tmp/evil", &["node", "/x/bin/gemini"], false), None);
+        assert_eq!(launch("/tmp/evil", &["claude"], false), None);
+    }
+
+    #[test]
+    fn a_flag_that_runs_or_loads_code_or_takes_a_value_makes_it_no_agent() {
+        let node = "/usr/bin/node";
+        for args in [
+            &["node", "-e", "-x", "/x/bin/gemini"][..],
+            &["node", "-p", "1", "/x/bin/gemini"],
+            &["node", "--require=/tmp/evil.js", "/x/bin/gemini"],
+            &["node", "-r", "/tmp/evil.js", "/x/bin/gemini"],
+            &["node", "--import", "/tmp/evil.mjs", "/x/bin/gemini"],
+            &["node", "--loader=/tmp/l.mjs", "/x/bin/gemini"],
+            &["node", "--eval", "x", "/x/bin/gemini"],
+            &["node", "--inspect=0", "/x/bin/gemini"],
+            &["node", "-i", "/x/bin/gemini"],
+            &["node", "--max-old-space-size=$(x)", "/x/bin/gemini"],
+            &["node", "--unknown-flag", "/x/bin/gemini"],
+        ] {
+            assert_eq!(launch(node, args, false), None, "{args:?}");
+        }
+        assert_eq!(launch("/usr/bin/python3", &["python3", "-m", "aider"], false), None);
+        assert_eq!(launch("/usr/bin/python3", &["python3", "-c", "x", "/x/aider"], false), None);
+        assert!(launch("/usr/bin/python3", &["python3", "-u", "/x/.local/bin/aider"], false).is_some());
+    }
+
+    #[test]
+    fn an_environment_that_loads_code_makes_a_script_no_agent_but_not_a_native_binary() {
+        assert_eq!(launch("/usr/bin/node", &["node", "/x/bin/gemini"], true), None);
+        assert!(launch("/usr/local/bin/codex", &["codex"], true).is_some());
     }
 
     #[test]

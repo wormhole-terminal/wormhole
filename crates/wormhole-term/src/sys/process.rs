@@ -99,6 +99,11 @@ pub fn command_line(pid: u32) -> Option<(String, Vec<String>)> {
     os::command_line(pid)
 }
 
+/// The names of the variables `pid` was started with (never their values), `None` when it cannot be read.
+pub fn environment_names(pid: u32) -> Option<Vec<String>> {
+    os::environment_names(pid)
+}
+
 /// The processes `pid` started and that still run.
 pub fn children(pid: u32) -> Vec<u32> {
     os::children(pid)

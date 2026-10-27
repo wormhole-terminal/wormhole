@@ -33,6 +33,10 @@ pub(crate) fn group_members(_pgid: u32) -> Vec<u32> {
     Vec::new()
 }
 
+pub(crate) fn environment_names(_pid: u32) -> Option<Vec<String>> {
+    None
+}
+
 pub(crate) fn command_line(_pid: u32) -> Option<(String, Vec<String>)> {
     None
 }

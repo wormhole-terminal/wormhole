@@ -93,14 +93,17 @@ pub struct Signature {
     pub team_id: Option<String>,
     /// The certificate's organisation, for display: `Anthropic PBC`.
     pub subject: Option<String>,
-    /// The code directory's hash, in hex.
+    /// The code directory's hash of the code that is running, in hex.
     pub cdhash: Option<String>,
+    /// A Developer ID program without the hardened runtime, which a library can be injected into: it is
+    /// reported as ad hoc (pinned by its hash) and this says why.
+    pub injectable: bool,
 }
 
 impl Signature {
     /// A signature that says nothing but its `kind`.
     pub fn of(kind: SignerKind) -> Self {
-        Self { kind, identifier: None, team_id: None, subject: None, cdhash: None }
+        Self { kind, identifier: None, team_id: None, subject: None, cdhash: None, injectable: false }
     }
 }
 
