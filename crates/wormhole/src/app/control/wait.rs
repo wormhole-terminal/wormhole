@@ -19,7 +19,7 @@ use super::input::target_facts;
 use super::{Found, automation_off, budget, find, not_found};
 use crate::app_state::{AppState, app};
 use crate::settings::settings;
-use crate::window::ReaderFacts;
+use crate::window::{ReaderFacts, TabFacts};
 
 /// Answer `wait`. Order of the checks: the flag, the request, the terminal, the right to read what it
 /// looks at, the budget, a state that holds already, then the stream caps.
@@ -37,7 +37,7 @@ fn try_wait(spec: &WaitSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Re
     let plan = spec.plan()?;
     let found = find(spec.target, cx).ok_or_else(|| missing(spec.target))?;
     let facts = reader_of(&found, cx)?;
-    let (state, shell) = state_of(&found, cx).ok_or_else(|| missing(spec.target))?;
+    let TabFacts { state, shell, .. } = state_of(&found, cx).ok_or_else(|| missing(spec.target))?;
     let self_read = shell.is_some_and(|shell| peer.runs_in(shell));
     if plan.needs_read() {
         read_check(settings(cx).control_read, self_read)?;
@@ -168,7 +168,7 @@ fn reader_of(found: &Found, cx: &App) -> Result<ReaderFacts, Error> {
 }
 
 /// The terminal's state and its shell's pid, as the sidebar counts them.
-fn state_of(found: &Found, cx: &App) -> Option<(TerminalState, Option<u32>)> {
+fn state_of(found: &Found, cx: &App) -> Option<TabFacts> {
     let tab = found.tab;
     found.window.workspace.read_with(cx, |ws, cx| ws.control_tab_facts(tab, cx)).ok().flatten()
 }

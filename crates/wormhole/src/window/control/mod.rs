@@ -17,4 +17,5 @@ mod terminals;
 
 pub(crate) use reader::ReaderFacts;
 pub(crate) use structure::SplitPlan;
+pub(crate) use terminals::TabFacts;
 pub(in crate::window) use terminals::agent_id;

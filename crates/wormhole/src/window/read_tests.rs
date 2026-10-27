@@ -12,7 +12,7 @@ use wormhole_core::ipc::control::mouse::{ButtonName, Direction, Pointer, Wheel};
 use wormhole_core::ipc::control::read::{Blocks, Range, Read};
 use wormhole_core::ipc::control::{
     Action, BlocksSpec, ErrorCode, KeyItem, KeysSent, MouseOp, MouseSpec, ReadSpec, Reason, Reply, Request,
-    SendKeysSpec, Target,
+    SendKeysSpec, Target, TerminalState,
 };
 use wormhole_core::ipc::{Answer, Peer};
 use wormhole_term::{PtyEvent, ReadScratch};
@@ -313,6 +313,44 @@ fn keys_reach_the_program_encoded_for_the_modes_it_has_set(cx: &mut TestAppConte
         code(&reply(ask(cx, keys_of(9, vec![key("a")]), None, &who.outside))),
         Some(ErrorCode::NotFound)
     );
+}
+
+/// `less` rings the bell at its end, which the sidebar shows as "needs you"; nothing waits for an answer
+/// there, and an agent driving the program must go on. An agent's question is another thing.
+#[gpui_kit::test]
+fn a_bell_does_not_shut_an_agent_out_of_a_terminal_but_a_question_does(cx: &mut TestAppContext) {
+    if isolate("a_bell_does_not_shut_an_agent_out_of_a_terminal_but_a_question_does") {
+        return;
+    }
+    let window = start(cx, 2);
+    let who = callers(cx, &window);
+    allow(cx, true, true);
+    let status_of = |cx: &mut TestAppContext, tab: i64| {
+        let reply =
+            reply(ask(cx, Action::Status { target: Some(Target::Terminal(tab)) }, None, &who.outside));
+        let info: wormhole_core::ipc::control::StatusInfo =
+            serde_json::from_value(reply.result.expect("ok")).expect("status");
+        info.terminal.status
+    };
+    // Terminal 1 (the second) is not the one in view, so a bell counts.
+    let second = terminal(cx, &window, 1);
+    event(cx, &second, PtyEvent::Bell);
+    cx.run_until_parked();
+    assert_eq!(status_of(cx, 2), TerminalState::NeedsYou, "the bell shows in the sidebar");
+    let typed = reply(ask(cx, keys_of(2, vec![key("q")]), None, &who.outside));
+    assert_eq!(code(&typed), None, "{typed:?}");
+    let pasted = reply(ask(
+        cx,
+        Action::SendText { target: Target::Terminal(2), text: "q".into(), submit: false },
+        None,
+        &who.outside,
+    ));
+    assert_eq!(code(&pasted), None, "{pasted:?}");
+    // An agent's question is a wait for an answer.
+    hook(cx, &window, 2, "PermissionRequest:Bash", Some("Allow?"));
+    assert_eq!(status_of(cx, 2), TerminalState::NeedsYou);
+    let waiting = reply(ask(cx, keys_of(2, vec![key("q")]), None, &who.outside));
+    assert_eq!(code(&waiting), Some(ErrorCode::Refused));
 }
 
 #[gpui_kit::test]

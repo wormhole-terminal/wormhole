@@ -49,10 +49,17 @@ impl Workspace {
         Some(self.terminal_info(ix, cx))
     }
 
-    /// A tab's state and the pid of its shell (none once it has ended): what the typing rules need.
-    pub(crate) fn control_tab_facts(&self, tab: i64, cx: &App) -> Option<(TerminalState, Option<u32>)> {
+    /// A tab's state, the pid of its shell (none once it has ended) and whether its `needs_you` is a told
+    /// question: what the typing rules need.
+    pub(crate) fn control_tab_facts(&self, tab: i64, cx: &App) -> Option<TabFacts> {
         let terminal = self.pane_terminal(tab)?.read(cx);
-        Some((tab_state(terminal), terminal.shell_pid()))
+        Some(TabFacts {
+            state: tab_state(terminal),
+            shell: terminal.shell_pid(),
+            // The status is only `needs_you` from a bell when nothing tells the terminal's state: an agent's
+            // hooks and a program's own reports (`Source`) are the ones that ask a question.
+            asked: terminal.source().told(),
+        })
     }
 
     /// The terminals of this window whose shell the caller runs under: the ones it is inside of, by
@@ -158,6 +165,14 @@ impl Workspace {
         crate::window::feature_terminals::paste_text(&terminal, text, true, cx);
         true
     }
+}
+
+/// What the typing rules need to know of a tab.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct TabFacts {
+    pub(crate) state: TerminalState,
+    pub(crate) shell: Option<u32>,
+    pub(crate) asked: bool,
 }
 
 /// A terminal's state as the sidebar counts it.

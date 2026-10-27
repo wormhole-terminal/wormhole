@@ -40,7 +40,7 @@ use std::time::{Duration, Instant};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-pub(crate) use self::control::{ReaderFacts, SplitPlan};
+pub(crate) use self::control::{ReaderFacts, SplitPlan, TabFacts};
 pub(crate) use self::windows::{request_quit, request_quit_ending_hosts};
 use crate::app_state::attention::{self, Attention};
 use crate::platform::vibrancy;

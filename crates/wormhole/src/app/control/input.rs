@@ -14,17 +14,18 @@ use super::{Found, automation_off, budget, find, not_found};
 use crate::app_state::AppState;
 use crate::settings::settings;
 use crate::terminal_view::MouseSent;
+use crate::window::TabFacts;
 
 /// What the typing rules need of the target: its state and whether the caller runs inside it.
 pub(super) fn target_facts(found: &Found, peer: &Peer, cx: &App) -> Option<SendTarget> {
     let facts =
         found.window.workspace.read_with(cx, |ws, cx| ws.control_tab_facts(found.tab, cx)).ok().flatten();
-    let (state, shell) = facts?;
+    let TabFacts { state, shell, asked } = facts?;
     // Where the caller runs, not what it says: a process can leave `from` out, but it can't move out
     // from under the shell it was started by, nor off its terminal. In part: a program that starts a
     // session of its own (`setsid`) leaves both behind.
     let caller_inside = shell.is_some_and(|shell| peer.runs_in(shell));
-    Some(SendTarget { tab: found.tab, state, caller_inside })
+    Some(SendTarget { tab: found.tab, state, caller_inside, asked })
 }
 
 /// `send-text`: type into the target's tab as a paste, where the rules allow it.

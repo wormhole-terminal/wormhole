@@ -16,24 +16,30 @@ pub struct SendTarget {
     pub state: TerminalState,
     /// The caller's process runs under this terminal's shell (its `Peer`), whatever `from` claims.
     pub caller_inside: bool,
+    /// When the state is `needs_you`: it is a question or a permission prompt that an agent (its hooks) or a
+    /// program (its own report) put, not a bell. A bell rings for a person to look, but nothing waits for
+    /// an answer that typing could give or steal (a `less` that ends with a BEL is not a prompt), so only
+    /// a told wait keeps the terminal closed to typing.
+    pub asked: bool,
 }
 
 /// Whether anything may be typed into `target` for `from`: never the caller's own (an agent
 /// answering its own prompt from a script: by the tab it names, or by where its process runs, so
 /// leaving the claim out doesn't help), never one waiting for the user's answer (a permission prompt
-/// is exactly what a hostile script would want to type `y` into), never a dead shell.
+/// is exactly what a hostile script would want to type `y` into; a bell is not one), never a dead shell.
 fn typing_target_check(from: Option<i64>, target: SendTarget) -> Result<(), Error> {
     let refuse = |message: String| Err(Error::new(ErrorCode::Refused, message));
     if from == Some(target.tab) || target.caller_inside {
         return refuse(format!("tab {} is the one asking: a terminal can't type into itself", target.tab));
     }
     match target.state {
-        TerminalState::NeedsYou => refuse(format!(
+        TerminalState::NeedsYou if target.asked => refuse(format!(
             "tab {} is waiting for the user's answer; nothing is typed into it until they have",
             target.tab
         )),
         TerminalState::Exited => refuse(format!("tab {}'s shell has ended", target.tab)),
-        TerminalState::Idle
+        TerminalState::NeedsYou
+        | TerminalState::Idle
         | TerminalState::Working
         | TerminalState::Finished
         | TerminalState::Failed
@@ -206,13 +212,23 @@ mod tests {
     use crate::ipc::control::mouse::{ButtonName, Pointer};
 
     fn check(enabled: bool, text: &str, from: Option<i64>, state: TerminalState) -> Result<(), ErrorCode> {
-        send_text_check(enabled, text, from, SendTarget { tab: 5, state, caller_inside: false })
-            .map_err(|Error { code, .. }| code)
+        send_text_check(
+            enabled,
+            text,
+            from,
+            SendTarget { tab: 5, state, caller_inside: false, asked: state == TerminalState::NeedsYou },
+        )
+        .map_err(|Error { code, .. }| code)
     }
 
     #[test]
     fn a_command_is_run_only_at_a_prompt_of_a_shell_with_integration() {
-        let target = |state, caller_inside| SendTarget { tab: 5, state, caller_inside };
+        let target = |state, caller_inside| SendTarget {
+            tab: 5,
+            state,
+            caller_inside,
+            asked: state == TerminalState::NeedsYou,
+        };
         let run = |enabled, from, target, prompt| {
             run_check(enabled, from, target, prompt).map_err(|e| (e.code, e.reason))
         };
@@ -260,16 +276,45 @@ mod tests {
         assert_eq!(check(true, &huge[1..], None, TerminalState::Idle), Ok(()), "at the cap is fine");
     }
 
+    /// A bell sets `needs_you` for the sidebar, but nothing asks for an answer: an agent driving a TUI
+    /// (`less` rings at its end) must not be shut out. Only a question an agent or a program told is.
+    #[test]
+    fn a_bell_does_not_close_a_terminal_to_typing_but_a_told_question_does() {
+        let bell = SendTarget { tab: 5, state: TerminalState::NeedsYou, caller_inside: false, asked: false };
+        let asked = SendTarget { asked: true, ..bell };
+        let items = [KeyItem::Key { key: "q".into() }];
+        let op = MouseOp::Scroll(crate::ipc::control::mouse::Wheel {
+            row: 0,
+            col: 0,
+            direction: crate::ipc::control::mouse::Direction::Down,
+            lines: 1,
+            shift: false,
+            alt: false,
+            ctrl: false,
+        });
+        assert_eq!(send_text_check(true, "q", None, bell), Ok(()));
+        assert!(send_keys_check(true, &items, None, bell).is_ok());
+        assert_eq!(mouse_check(true, &op, None, bell), Ok(()));
+        assert_eq!(run_check(true, None, bell, Some(true)), Ok(()));
+        assert_eq!(send_text_check(true, "q", None, asked).map_err(|e| e.code), Err(ErrorCode::Refused));
+        assert_eq!(send_keys_check(true, &items, None, asked).map_err(|e| e.code), Err(ErrorCode::Refused));
+        assert_eq!(mouse_check(true, &op, None, asked).map_err(|e| e.code), Err(ErrorCode::Refused));
+        assert_eq!(run_check(true, None, asked, Some(true)).map_err(|e| e.code), Err(ErrorCode::Refused));
+        // A bell is still no way into one's own terminal, nor into a dead shell.
+        let own = SendTarget { caller_inside: true, ..bell };
+        assert_eq!(send_text_check(true, "q", None, own).map_err(|e| e.code), Err(ErrorCode::Refused));
+    }
+
     /// The fix: leaving `from` out, or naming another tab, no longer lets a process type into the
     /// terminal it runs in.
     #[test]
     fn a_caller_inside_the_target_is_refused_whatever_it_claims() {
         for from in [None, Some(2), Some(5)] {
-            let target = SendTarget { tab: 5, state: TerminalState::Idle, caller_inside: true };
+            let target = SendTarget { tab: 5, state: TerminalState::Idle, caller_inside: true, asked: false };
             let refused = send_text_check(true, "hi", from, target).expect_err("refused");
             assert_eq!(refused.code, ErrorCode::Refused, "from {from:?}");
         }
-        let elsewhere = SendTarget { tab: 5, state: TerminalState::Idle, caller_inside: false };
+        let elsewhere = SendTarget { tab: 5, state: TerminalState::Idle, caller_inside: false, asked: false };
         assert_eq!(send_text_check(true, "hi", None, elsewhere), Ok(()));
     }
 
@@ -284,7 +329,7 @@ mod tests {
     }
 
     fn target(state: TerminalState, caller_inside: bool) -> SendTarget {
-        SendTarget { tab: 5, state, caller_inside }
+        SendTarget { tab: 5, state, caller_inside, asked: state == TerminalState::NeedsYou }
     }
 
     fn key(name: &str) -> KeyItem {
