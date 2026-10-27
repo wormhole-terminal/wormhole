@@ -53,27 +53,59 @@ pub(super) struct EventsQuery {
     pub(super) max_events: usize,
 }
 
-/// The two subscriptions this process may hold: the default topics, and those with `output`, which needs
-/// the right to read.
+/// The subscriptions this process may hold: one for the default topics, and, for `output` (which needs the
+/// right to read, or terminals that are the caller's own), one for each set of terminals asked for, since the
+/// app decides the grant by the terminals a subscription names.
 pub(super) struct Feeds {
     plain: Feed,
-    output: Feed,
+    outputs: Mutex<Vec<Arc<Feed>>>,
 }
+
+/// How many `output` subscriptions are kept (the app lets a caller hold four streams in all).
+const OUTPUT_FEEDS_MAX: usize = 3;
 
 impl Feeds {
     pub(super) fn new() -> Self {
-        Self { plain: Feed::new(false), output: Feed::new(true) }
+        Self { plain: Feed::new(false, Vec::new()), outputs: Mutex::new(Vec::new()) }
     }
 
     /// Answer a `wait_events` call, or `None` when it was cancelled.
     pub(super) fn query(&self, at: &Endpoint, query: &EventsQuery, cancel: &Cancel) -> Option<Outcome> {
-        let feed = if query.output { &self.output } else { &self.plain };
+        if !query.output {
+            return self.plain.query(at, query, cancel);
+        }
+        let mut terminals = query.filter.terminals.clone();
+        terminals.sort_unstable();
+        terminals.dedup();
+        let feed = {
+            let mut outputs = self.outputs.lock().unwrap_or_else(PoisonError::into_inner);
+            match outputs.iter().find(|feed| feed.terminals == terminals) {
+                Some(feed) => Arc::clone(feed),
+                None => {
+                    // Room is made by forgetting a watch that is not running.
+                    outputs.retain(|feed| !feed.is_stopped());
+                    if outputs.len() >= OUTPUT_FEEDS_MAX {
+                        return Some(Outcome::failed(
+                            "rate_limited",
+                            format!(
+                                "at most {OUTPUT_FEEDS_MAX} different sets of terminals can be watched for output at once"
+                            ),
+                        ));
+                    }
+                    let feed = Arc::new(Feed::new(true, terminals));
+                    outputs.push(Arc::clone(&feed));
+                    feed
+                }
+            }
+        };
         feed.query(at, query, cancel)
     }
 }
 
 struct Feed {
     output: bool,
+    /// The terminals the subscription is limited to (sorted), when it is for output.
+    terminals: Vec<i64>,
     shared: Arc<Shared>,
 }
 
@@ -158,8 +190,22 @@ impl State {
 }
 
 impl Feed {
-    fn new(output: bool) -> Self {
-        Self { output, shared: Arc::new(Shared { state: Mutex::new(State::new()), changed: Condvar::new() }) }
+    fn new(output: bool, terminals: Vec<i64>) -> Self {
+        Self {
+            output,
+            terminals,
+            shared: Arc::new(Shared { state: Mutex::new(State::new()), changed: Condvar::new() }),
+        }
+    }
+
+    /// Nothing is subscribed and nothing is starting.
+    fn is_stopped(&self) -> bool {
+        matches!(self.shared.lock().phase, Phase::Idle | Phase::Failed(_) | Phase::Ended(_))
+    }
+
+    /// What the app is asked to stream.
+    fn spec(&self) -> EventsSpec {
+        EventsSpec { output: self.output, terminals: self.terminals.clone(), ..EventsSpec::default() }
     }
 
     fn query(&self, at: &Endpoint, query: &EventsQuery, cancel: &Cancel) -> Option<Outcome> {
@@ -180,6 +226,10 @@ impl Feed {
             let gap = query.since.is_some();
             drop(state);
             let snapshot = snapshot(at, cancel)?;
+            // Without a snapshot there is nothing to start from: the failure is the answer.
+            if snapshot.is_error() {
+                return Some(snapshot);
+            }
             return Some(done(&boot, seq, &[], false, gap, Some(&snapshot), None, started, at));
         }
         let since = query.since.unwrap_or_default();
@@ -211,7 +261,8 @@ impl Feed {
                 let boot = state.boot.clone();
                 state.ended_told |= ended.is_some();
                 drop(state);
-                let snapshot = if gap { snapshot(at, cancel) } else { None };
+                // (A snapshot the app would not give leaves the events themselves, and `gap`, to tell.)
+                let snapshot = if gap { snapshot(at, cancel).filter(|s| !s.is_error()) } else { None };
                 return Some(done(&boot, seq, &lines, more, gap, snapshot.as_ref(), ended, started, at));
             }
             let wait = (deadline - now).min(LOOK);
@@ -239,10 +290,10 @@ impl Feed {
             state.last_used = last_used;
             state.phase = Phase::Starting;
             let shared = Arc::clone(&self.shared);
-            let (caller, output) = (at.caller.clone(), self.output);
+            let (caller, spec) = (at.caller.clone(), self.spec());
             let spawned = std::thread::Builder::new()
                 .name("wormhole-mcp-events".into())
-                .spawn(move || pump(&shared, &caller, output, generation));
+                .spawn(move || pump(&shared, &caller, spec, generation));
             if spawned.is_err() {
                 state.phase = Phase::Idle;
                 return Err(Some(Box::new(Outcome::failed(
@@ -273,15 +324,15 @@ impl Feed {
     }
 }
 
-/// A fresh `list`, to start from (`None` when it was cancelled or the app would not say).
+/// A fresh `list`, to start from (`None` when the call was cancelled; its outcome is an error if the app
+/// would not say).
 fn snapshot(at: &Endpoint, cancel: &Cancel) -> Option<Outcome> {
     let outcome = exec::run(at, Action::List, cancel);
-    (!cancel.is_cancelled() && !outcome.is_error()).then_some(outcome)
+    (!cancel.is_cancelled()).then_some(outcome)
 }
 
 /// The thread that drains one subscription into the buffer.
-fn pump(shared: &Shared, caller: &Caller, output: bool, generation: u64) {
-    let spec = EventsSpec { output, ..EventsSpec::default() };
+fn pump(shared: &Shared, caller: &Caller, spec: EventsSpec, generation: u64) {
     let request = Request::new(Action::Events(spec), caller.from.clone());
     let current = |state: &State| state.generation == generation;
     let on_reply = |_: &str, reply: Reply| {

@@ -21,6 +21,7 @@ pub(super) mod code {
     pub(in crate::ipc::mcp) const INVALID_REQUEST: i64 = -32600;
     pub(in crate::ipc::mcp) const METHOD_NOT_FOUND: i64 = -32601;
     pub(in crate::ipc::mcp) const INVALID_PARAMS: i64 = -32602;
+    pub(in crate::ipc::mcp) const INTERNAL_ERROR: i64 = -32603;
     pub(in crate::ipc::mcp) const UNSUPPORTED_VERSION: i64 = -32022;
 }
 

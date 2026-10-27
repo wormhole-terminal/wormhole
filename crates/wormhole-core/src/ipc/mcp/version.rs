@@ -73,9 +73,9 @@ impl Version {
         self >= Version::V2025_06_18
     }
 
-    /// The revisions a request can name in its `_meta`: the stateless ones.
-    pub(super) fn stateless() -> Vec<Value> {
-        Self::ALL.into_iter().filter(|v| v.is_stateless()).map(|v| json!(v.as_str())).collect()
+    /// The revisions this server speaks, newest first, as an error and `server/discover` list them.
+    pub(super) fn listed() -> Vec<Value> {
+        Self::ALL.into_iter().rev().map(|v| json!(v.as_str())).collect()
     }
 }
 
@@ -110,6 +110,7 @@ mod tests {
         assert!(
             !Version::V2025_03_26.has_structured_output() && Version::V2025_06_18.has_structured_output()
         );
-        assert_eq!(Version::stateless(), [serde_json::json!("2026-07-28")]);
+        assert_eq!(Version::listed()[0], serde_json::json!("2026-07-28"));
+        assert_eq!(Version::listed().len(), 5);
     }
 }

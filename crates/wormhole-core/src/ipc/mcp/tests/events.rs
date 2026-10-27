@@ -270,3 +270,63 @@ fn a_cancelled_wait_for_events_gets_no_response() {
     assert_eq!(client.call("ping", json!({}))["result"], json!({}));
     assert_eq!(client.finish(), 0);
 }
+
+#[test]
+fn output_is_watched_for_the_terminals_asked_for_and_each_set_has_its_own_subscription() {
+    // The app grants output on a terminal the caller runs in without `control_read`, but only to a
+    // subscription that names those terminals: the one made here must.
+    let (app, _streams) = app_with_streams(&["b1", "b2"], 10);
+    let mut client = Client::with_app(&app);
+    client.initialize("2025-11-25");
+    events(&mut client, json!({"output": true, "terminals": [3]}));
+    events(&mut client, json!({"output": true, "terminals": [4, 3]}));
+    // The same set again (in any order) is the same subscription.
+    events(
+        &mut client,
+        json!({"output": true, "terminals": [3, 4], "since_seq": 10, "boot": "b2", "timeout_seconds": 0}),
+    );
+    let asked: Vec<_> = app.requests().into_iter().filter(|r| r["action"] == "events").collect();
+    assert_eq!(asked.len(), 2, "{asked:?}");
+    assert_eq!(asked[0]["terminals"], json!([3]));
+    assert_eq!(asked[0]["output"], json!(true));
+    assert_eq!(asked[1]["terminals"], json!([3, 4]));
+    assert_eq!(client.finish(), 0);
+}
+
+#[test]
+fn a_snapshot_the_app_will_not_give_is_the_calls_own_failure_not_a_cancellation() {
+    let (tx, rx) = channel::<String>();
+    let rx = Mutex::new(Some(rx));
+    let app = FakeApp::start(move |request| match &request.action {
+        Action::Events(_) => Behavior::Stream {
+            reply: Reply::ok(
+                json!({"subscribed": true, "seq": 1, "boot": "b", "topics": [], "listing": {"windows": []}}),
+            ),
+            lines: rx.lock().expect("lock").take().expect("one stream"),
+        },
+        _ => Behavior::Reply(Error::new(ErrorCode::Failed, "the list is unavailable").into()),
+    });
+    let mut client = Client::with_app(&app);
+    client.initialize("2025-11-25");
+    let result = client.tool("wait_events", json!({}))["result"].clone();
+    assert_eq!(result["isError"], json!(true));
+    let text = result["content"][0]["text"].as_str().expect("text");
+    assert!(text.contains("the list is unavailable") && !text.contains("cancelled"), "{text}");
+    drop(tx);
+    assert_eq!(client.finish(), 0);
+}
+
+#[test]
+fn what_the_events_tool_returns_fits_its_output_schema() {
+    use crate::ipc::mcp::tools::{find, schema_check::valid};
+    let (app, streams) = app_with_streams(&["b1"], 10);
+    let mut client = Client::with_app(&app);
+    client.initialize("2025-11-25");
+    let schema = (find("wait_events").expect("tool").output)();
+    let first = events(&mut client, json!({}));
+    valid(&schema, &first).unwrap_or_else(|why| panic!("{why}: {first}"));
+    streams[0].send(status(11, 3, "needs_you")).expect("send");
+    let next = events_after(&mut client, 10, "b1", 1, json!({}));
+    valid(&schema, &next).unwrap_or_else(|why| panic!("{why}: {next}"));
+    assert_eq!(client.finish(), 0);
+}

@@ -10,6 +10,8 @@
 
 mod input;
 mod schema;
+#[cfg(test)]
+pub(super) mod schema_check;
 mod structure;
 mod terminals;
 #[cfg(test)]
@@ -69,6 +71,9 @@ pub(super) struct Tool {
     pub(super) hints: Hints,
     /// Can take a long while: a call tells its progress while it waits, if the client asks for it.
     pub(super) long: bool,
+    /// Needs the Automation feature flag: the five tools the command line always had (`list`, `status`,
+    /// `notify`, `send-text`, `new-terminal`) do not, the rest answer `unsupported` until it is on.
+    pub(super) flag: bool,
     pub(super) input: fn() -> Value,
     pub(super) output: fn() -> Value,
     pub(super) build: fn(Value, &Endpoint) -> Result<Call, String>,
@@ -100,6 +105,11 @@ impl Tool {
 /// Every tool, in the order `tools/list` gives them (always the same one, which lets a client cache them).
 pub(super) fn all() -> impl Iterator<Item = &'static Tool> {
     terminals::TOOLS.iter().chain(input::TOOLS).chain(structure::TOOLS).chain(waiting::TOOLS)
+}
+
+/// The tools a client is offered: all of them while the Automation flag is on, else those that work without it.
+pub(super) fn offered(flag_on: bool) -> impl Iterator<Item = &'static Tool> {
+    all().filter(move |tool| flag_on || !tool.flag)
 }
 
 pub(super) fn find(name: &str) -> Option<&'static Tool> {

@@ -140,6 +140,18 @@ fn a_long_call_tells_its_progress_while_it_waits_and_stops_when_it_ends() {
         seen.push(serde_json::from_str::<serde_json::Value>(&line).expect("JSON"));
     }
     drop(ticker);
+    // Nothing follows the end of the call: what was written before it is there to read, and then it is quiet
+    // (the thread is gone when `drop` returns).
+    reader.get_ref().set_read_timeout(Some(Duration::from_millis(150))).expect("timeout");
+    let quiet = |reader: &mut std::io::BufReader<crate::platform::socket::Stream>| {
+        let mut line = String::new();
+        match std::io::BufRead::read_line(reader, &mut line) {
+            Ok(n) => n == 0,
+            Err(e) => matches!(e.kind(), std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut),
+        }
+    };
+    while !quiet(&mut reader) {}
+    assert!(quiet(&mut reader), "no progress after the call ended");
     let progress: Vec<_> = seen.iter().map(|n| n["params"]["progress"].as_u64().expect("number")).collect();
     assert_eq!(progress, [1, 2, 3], "it only grows");
     assert_eq!(seen[0]["method"], json!("notifications/progress"));

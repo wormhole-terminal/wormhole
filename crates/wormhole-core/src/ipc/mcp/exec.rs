@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use super::result::Outcome;
-use crate::ipc::control::{Action, Request};
+use crate::ipc::control::{Action, Request, show_automation};
 use crate::ipc::exchange::{Caller, Cancel, answer_wait, exchange_cancellable};
 use crate::platform::paths;
 
@@ -18,6 +18,9 @@ pub(in crate::ipc) struct Endpoint {
     /// where it runs; the app cannot know).
     pub(super) cwd: PathBuf,
     pub(super) home: Option<PathBuf>,
+    /// Whether the Automation feature flag is on, as the command line asks it (`wh help` hides the verbs the
+    /// same way): read when the tools are listed, so turning it on shows them without a restart.
+    pub(super) automation: fn() -> bool,
 }
 
 impl Endpoint {
@@ -26,6 +29,7 @@ impl Endpoint {
             caller: Caller::from_env(),
             cwd: std::env::current_dir().unwrap_or_default(),
             home: paths::home(),
+            automation: show_automation,
         }
     }
 }

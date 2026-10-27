@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use serde_json::{Value, json};
 
+use super::schema_check::{keywords_known, valid};
 use super::{Call, all, find};
 use crate::ipc::control::{Request, TerminalState};
 use crate::ipc::exchange::Caller;
@@ -18,6 +19,7 @@ fn endpoint() -> Endpoint {
         caller: Caller { socket: PathBuf::from("/nonexistent.sock"), from: Some("7".into()) },
         cwd: PathBuf::from("/work"),
         home: Some(PathBuf::from("/home/me")),
+        automation: || true,
     }
 }
 
@@ -28,126 +30,6 @@ fn request(tool: &str, arguments: Value) -> Result<Value, String> {
         Call::Control(action) => Ok(serde_json::to_value(Request::new(action, None)).expect("serializes")),
         Call::Events(_) => panic!("{} is not a single request", tool.name),
     }
-}
-
-// A small JSON Schema checker: the keywords the tools use, and a failure for any other.
-
-const KEYWORDS: &[&str] = &[
-    "type",
-    "properties",
-    "required",
-    "additionalProperties",
-    "description",
-    "enum",
-    "minimum",
-    "maximum",
-    "minLength",
-    "maxLength",
-    "minItems",
-    "maxItems",
-    "uniqueItems",
-    "items",
-    "oneOf",
-];
-
-fn valid(schema: &Value, value: &Value) -> Result<(), String> {
-    let Value::Object(schema) = schema else { return Err(format!("a schema is an object, not {schema}")) };
-    if let Some(unknown) = schema.keys().find(|key| !KEYWORDS.contains(&key.as_str())) {
-        return Err(format!("the checker does not know the keyword {unknown}"));
-    }
-    if let Some(kind) = schema.get("type").and_then(Value::as_str) {
-        let ok = match kind {
-            "object" => value.is_object(),
-            "array" => value.is_array(),
-            "string" => value.is_string(),
-            "boolean" => value.is_boolean(),
-            "integer" => value.is_i64() || value.is_u64(),
-            "number" => value.is_number(),
-            other => return Err(format!("type {other}")),
-        };
-        if !ok {
-            return Err(format!("{value} is not a {kind}"));
-        }
-    }
-    if let Some(words) = schema.get("enum").and_then(Value::as_array)
-        && !words.contains(value)
-    {
-        return Err(format!("{value} is not one of {words:?}"));
-    }
-    if let Some(number) = value.as_i64().or_else(|| value.as_u64().and_then(|n| i64::try_from(n).ok())) {
-        if schema.get("minimum").and_then(Value::as_i64).is_some_and(|min| number < min) {
-            return Err(format!("{number} is below the minimum"));
-        }
-        if schema.get("maximum").and_then(Value::as_i64).is_some_and(|max| number > max) {
-            return Err(format!("{number} is above the maximum"));
-        }
-    }
-    if let Some(text) = value.as_str() {
-        let length = text.chars().count() as u64;
-        if schema.get("minLength").and_then(Value::as_u64).is_some_and(|min| length < min) {
-            return Err("too short".into());
-        }
-        if schema.get("maxLength").and_then(Value::as_u64).is_some_and(|max| length > max) {
-            return Err("too long".into());
-        }
-    }
-    if let Value::Array(items) = value {
-        let count = items.len() as u64;
-        if schema.get("minItems").and_then(Value::as_u64).is_some_and(|min| count < min) {
-            return Err("too few items".into());
-        }
-        if schema.get("maxItems").and_then(Value::as_u64).is_some_and(|max| count > max) {
-            return Err("too many items".into());
-        }
-        if let Some(item_schema) = schema.get("items") {
-            items.iter().try_for_each(|item| valid(item_schema, item))?;
-        }
-    }
-    if let Value::Object(object) = value {
-        for name in schema.get("required").and_then(Value::as_array).into_iter().flatten() {
-            let name = name.as_str().expect("names");
-            if !object.contains_key(name) {
-                return Err(format!("{name} is required"));
-            }
-        }
-        let properties = schema.get("properties").and_then(Value::as_object);
-        for (name, member) in object {
-            match properties.and_then(|properties| properties.get(name)) {
-                Some(property) => valid(property, member).map_err(|why| format!("{name}: {why}"))?,
-                None if schema.get("additionalProperties") == Some(&json!(false)) => {
-                    return Err(format!("{name} is not a property"));
-                }
-                None => {}
-            }
-        }
-    }
-    if let Some(options) = schema.get("oneOf").and_then(Value::as_array) {
-        let matching = options.iter().filter(|option| valid(option, value).is_ok()).count();
-        if matching != 1 {
-            return Err(format!("{value} matches {matching} of the options"));
-        }
-    }
-    Ok(())
-}
-
-/// Every schema node, to see that its keywords are known (a typo such as `maxLenght` would be ignored by a
-/// client, and the bound would be gone).
-fn keywords_known(schema: &Value) -> Result<(), String> {
-    let Value::Object(schema) = schema else { return Ok(()) };
-    if let Some(unknown) = schema.keys().find(|key| !KEYWORDS.contains(&key.as_str())) {
-        return Err(unknown.clone());
-    }
-    for properties in schema.get("properties").and_then(Value::as_object).into_iter() {
-        properties.values().try_for_each(keywords_known)?;
-    }
-    for sub in schema
-        .get("items")
-        .into_iter()
-        .chain(schema.get("oneOf").and_then(Value::as_array).into_iter().flatten())
-    {
-        keywords_known(sub)?;
-    }
-    Ok(())
 }
 
 #[test]
@@ -444,4 +326,195 @@ fn every_state_a_wait_names_is_one_the_app_knows() {
         let state: TerminalState = serde_json::from_value(word.clone()).expect("reads");
         assert_ne!(state, TerminalState::Other, "{word}");
     }
+}
+
+/// What each tool says it returns is what the app's reply types serialize to: every result type, as the app
+/// makes it (the always-present fields and the optional ones), against its tool's `outputSchema`.
+#[test]
+fn every_reply_type_fits_the_output_schema_of_its_tool() {
+    use crate::ipc::control::read::{BlockInfo, Blocks, CursorInfo, ModesInfo, Read, Size};
+    use crate::ipc::control::{
+        Asked, CloseAsked, Focused, KeysSent, Listing, Met, Opened, PaneInfo, Ran, Reached, Renamed,
+        SplitInfo, SplitMade, StatusInfo, Summary, TabInfo, TerminalInfo, Waited, WindowInfo, WindowOpened,
+    };
+    use wormhole_vt::Modes;
+
+    let tab = TabInfo {
+        id: 3,
+        name: "api".into(),
+        status: TerminalState::Working,
+        agent: Some("claude".into()),
+        message: None,
+        folder: Some("/work".into()),
+        shell: "zsh".into(),
+        command: None,
+        since_seconds: 4,
+        selected: true,
+        panes: vec![PaneInfo { id: 3 }],
+    };
+    let terminal = TerminalInfo {
+        id: 3,
+        name: "api".into(),
+        status: TerminalState::Working,
+        agent: None,
+        folder: None,
+        branch: None,
+        changed: None,
+        pinned: false,
+        profile: None,
+        selected: true,
+        split: Some(1),
+        tabs: vec![tab],
+    };
+    let read = |block: Option<i64>| Read {
+        terminal: 3,
+        title: None,
+        screen: "main".into(),
+        size: Size { rows: 24, cols: 80 },
+        history: 10,
+        cursor: CursorInfo { row: 2, col: 4, visible: true, shape: Some("block".into()) },
+        modes: ModesInfo::of(Modes::default()),
+        first_line: 0,
+        lines: vec!["$ ".into()],
+        styles: None,
+        truncated: false,
+        revision: 9,
+        block,
+    };
+    let samples: Vec<(&str, Value)> = vec![
+        (
+            "list_terminals",
+            serde_json::to_value(Listing {
+                windows: vec![WindowInfo {
+                    id: 1,
+                    front: true,
+                    terminals: vec![terminal.clone()],
+                    splits: vec![SplitInfo { id: 1, terminals: vec![3], focused: 3 }],
+                }],
+            })
+            .expect("serializes"),
+        ),
+        ("list_terminals", serde_json::to_value(Listing::default()).expect("serializes")),
+        (
+            "terminal_status",
+            serde_json::to_value(StatusInfo { window: 1, terminal: terminal.clone(), tab: 3 })
+                .expect("serializes"),
+        ),
+        ("terminal_status", serde_json::to_value(Summary::of(1, [TerminalState::Idle])).expect("serializes")),
+        ("read_terminal", serde_json::to_value(read(None)).expect("serializes")),
+        ("read_terminal", serde_json::to_value(read(Some(57))).expect("serializes")),
+        (
+            "list_blocks",
+            serde_json::to_value(Blocks {
+                terminal: 3,
+                integration: true,
+                blocks: vec![BlockInfo {
+                    id: 57,
+                    command: "make".into(),
+                    state: "finished".into(),
+                    exit_code: Some(2),
+                    took_ms: Some(10),
+                    first_line: -3,
+                    last_line: -1,
+                    output: Some("error".into()),
+                    truncated: false,
+                }],
+            })
+            .expect("serializes"),
+        ),
+        ("notify", serde_json::to_value(Reached { tab: 3 }).expect("serializes")),
+        ("send_text", serde_json::to_value(Reached { tab: 3 }).expect("serializes")),
+        ("mouse", serde_json::to_value(Reached { tab: 3 }).expect("serializes")),
+        ("send_keys", serde_json::to_value(KeysSent { tab: 3, keys: 2 }).expect("serializes")),
+        (
+            "new_terminal",
+            serde_json::to_value(Opened {
+                window: 1,
+                terminal: 4,
+                tab: 4,
+                pane: 4,
+                folder: None,
+                worktree: None,
+            })
+            .expect("serializes"),
+        ),
+        (
+            "new_terminal",
+            serde_json::to_value(Asked { asked: true, window: 1, branch: "x".into(), folder: "/w".into() })
+                .expect("serializes"),
+        ),
+        (
+            "new_window",
+            serde_json::to_value(WindowOpened { window: 2, terminal: 5, folder: Some("/w".into()) })
+                .expect("serializes"),
+        ),
+        (
+            "split",
+            serde_json::to_value(SplitMade {
+                window: 1,
+                split: 2,
+                terminal: 6,
+                folder: None,
+                size: Some(40),
+            })
+            .expect("serializes"),
+        ),
+        ("focus", serde_json::to_value(Focused { window: 1, terminal: 3 }).expect("serializes")),
+        (
+            "rename",
+            serde_json::to_value(Renamed { terminal: 3, name: "api".into(), custom: true })
+                .expect("serializes"),
+        ),
+        (
+            "close",
+            serde_json::to_value(CloseAsked { asked: true, window: 1, terminal: 3 }).expect("serializes"),
+        ),
+        (
+            "wait",
+            serde_json::to_value(Waited {
+                terminal: 3,
+                met: Met::Text,
+                after_ms: 30,
+                status: None,
+                matched: Some("$".into()),
+                block: None,
+                exit_code: None,
+                revision: Some(4),
+            })
+            .expect("serializes"),
+        ),
+        (
+            "run",
+            serde_json::to_value(Ran {
+                terminal: 3,
+                block: 58,
+                exit_code: Some(0),
+                duration_ms: 1200,
+                output: Some("ok".into()),
+                truncated: false,
+                output_hidden: None,
+            })
+            .expect("serializes"),
+        ),
+        (
+            "run",
+            serde_json::to_value(Ran {
+                terminal: 3,
+                block: 58,
+                exit_code: None,
+                duration_ms: 1,
+                output: None,
+                truncated: false,
+                output_hidden: Some("control_read is off".into()),
+            })
+            .expect("serializes"),
+        ),
+    ];
+    for (tool, sample) in samples {
+        let schema = (find(tool).expect("tool").output)();
+        valid(&schema, &sample).unwrap_or_else(|why| panic!("{tool}: {why}: {sample}"));
+    }
+    // And the schema is not empty talk: a result that lacks what the tool promises is refused.
+    let schema = (find("run").expect("tool").output)();
+    assert!(valid(&schema, &json!({"terminal": 3})).is_err());
 }

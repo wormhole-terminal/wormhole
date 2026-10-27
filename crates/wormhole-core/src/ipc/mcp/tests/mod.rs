@@ -76,6 +76,7 @@ impl FakeApp {
             caller: Caller { socket: self.socket.clone(), from: Some("7".into()) },
             cwd: PathBuf::from("/work"),
             home: Some(PathBuf::from("/home/me")),
+            automation: || true,
         }
     }
 

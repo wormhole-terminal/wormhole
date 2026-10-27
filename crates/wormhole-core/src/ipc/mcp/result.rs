@@ -57,10 +57,18 @@ impl Outcome {
             );
         }
         match render_with(action, reply, home, false) {
+            // (`render_with` fails only for a reply that has an error; should it ever fail for another, the call
+            // is still an error and says so, not a success with nothing in it.)
             Err(words) => Self {
-                text: words,
+                text: words.clone(),
                 structured: None,
-                error: reply.error.as_ref().and_then(|error| serde_json::to_value(error).ok()),
+                error: Some(
+                    reply
+                        .error
+                        .as_ref()
+                        .and_then(|error| serde_json::to_value(error).ok())
+                        .unwrap_or_else(|| json!({"code": "failed", "message": words})),
+                ),
             },
             Ok(text) => Self {
                 text: text.trim_end().to_string(),

@@ -213,7 +213,10 @@ fn server_discover_tells_the_versions_capabilities_and_identity() {
     let mut client = Client::with_app(&app);
     let result = client.call("server/discover", json!({"_meta": meta()}))["result"].clone();
     assert_eq!(result["resultType"], json!("complete"));
-    assert_eq!(result["supportedVersions"], json!(["2026-07-28"]));
+    assert_eq!(
+        result["supportedVersions"],
+        json!(["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"])
+    );
     assert_eq!(result["capabilities"], json!({"tools": {"listChanged": false}}));
     assert_eq!(
         result["_meta"]["io.modelcontextprotocol/serverInfo"],
@@ -222,7 +225,7 @@ fn server_discover_tells_the_versions_capabilities_and_identity() {
     assert!(
         result["instructions"].is_string()
             && result["ttlMs"].is_u64()
-            && result["cacheScope"] == json!("public")
+            && result["cacheScope"] == json!("private")
     );
     assert_eq!(client.finish(), 0);
 }
@@ -233,7 +236,7 @@ fn stateless_requests_need_no_handshake_and_carry_result_type_and_cache_hints() 
     let mut client = Client::with_app(&app);
     let list = client.call("tools/list", json!({"_meta": meta()}))["result"].clone();
     assert_eq!(list["resultType"], json!("complete"));
-    assert_eq!((list["ttlMs"].is_u64(), &list["cacheScope"]), (true, &json!("public")));
+    assert_eq!((list["ttlMs"].is_u64(), &list["cacheScope"]), (true, &json!("private")));
     assert_eq!(list["tools"].as_array().expect("tools").len(), 17);
     assert!(list["tools"][0]["outputSchema"].is_object());
 
@@ -269,11 +272,20 @@ fn an_unsupported_stateless_version_is_told_with_the_ones_we_speak() {
     other["io.modelcontextprotocol/protocolVersion"] = json!("2027-01-01");
     let error = client.call("tools/list", json!({"_meta": other}))["error"].clone();
     assert_eq!(error["code"], json!(-32022));
-    assert_eq!(error["data"], json!({"supported": ["2026-07-28"], "requested": "2027-01-01"}));
-    // Also for the revision that has a handshake: it is not selected by `_meta`.
+    // Every revision it speaks, newest first, the handshake ones too: a client told to retry with one of them
+    // is served (below).
+    assert_eq!(
+        error["data"],
+        json!({"supported": ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"],
+               "requested": "2027-01-01"})
+    );
+    // A revision with a handshake, named in `_meta` of a request with no handshake before it, is served as
+    // that revision (its methods; `server/discover` is not one of them).
     let mut old = meta();
     old["io.modelcontextprotocol/protocolVersion"] = json!("2025-11-25");
-    assert_eq!(client.call("server/discover", json!({"_meta": old}))["error"]["code"], json!(-32022));
+    assert_eq!(client.call("server/discover", json!({"_meta": old}))["error"]["code"], json!(-32601));
+    let listed = client.call("tools/list", json!({"_meta": old}))["result"].clone();
+    assert!(listed["tools"].is_array() && listed.get("resultType").is_none());
     assert_eq!(client.finish(), 0);
 }
 
@@ -370,5 +382,56 @@ fn an_app_that_is_not_running_is_an_error_result_that_says_so() {
     assert_eq!(result["isError"], json!(true));
     assert!(result["content"][0]["text"].as_str().expect("text").contains("isn't running"));
     assert_eq!(result["_meta"]["app.getwormhole/error"]["code"], json!("unavailable"));
+    assert_eq!(client.finish(), 0);
+}
+
+// The Automation flag
+
+#[test]
+fn while_the_flag_is_off_only_the_tools_that_work_without_it_are_offered_and_the_instructions_say_so() {
+    let app = FakeApp::always(Reply::ok(json!({})));
+    let mut endpoint = app.endpoint();
+    endpoint.automation = || false;
+    let mut client = Client::start(endpoint);
+    let init = client.initialize("2025-11-25");
+    let instructions = init["instructions"].as_str().expect("instructions");
+    assert!(instructions.contains("Automation feature flag is off"), "{instructions}");
+    let listed = client.call("tools/list", json!({}))["result"]["tools"].clone();
+    assert_eq!(
+        names(&listed),
+        ["list_terminals", "terminal_status", "notify", "send_text", "new_terminal"],
+        "the five the command line always had"
+    );
+    // The stateless flow says it too, with a cache hint that lets a person turn the flag on and see the rest.
+    let discovered = client.call("server/discover", json!({"_meta": meta()}))["result"].clone();
+    assert!(discovered["instructions"].as_str().expect("text").contains("flag is off"));
+    assert_eq!(discovered["ttlMs"], json!(60_000));
+    // A tool that is not offered is still the app's to answer, if a client calls it anyway.
+    let result = client.tool("list_blocks", json!({"terminal": 3}))["result"].clone();
+    assert_eq!(result["isError"], json!(false));
+    assert_eq!(app.requests().len(), 1);
+    assert_eq!(client.finish(), 0);
+
+    // With the flag on, all of them, and no word about it.
+    let mut client = Client::with_app(&app);
+    let init = client.initialize("2025-11-25");
+    assert!(!init["instructions"].as_str().expect("instructions").contains("flag is off"));
+    assert_eq!(client.call("tools/list", json!({}))["result"]["tools"].as_array().expect("tools").len(), 17);
+    assert_eq!(client.finish(), 0);
+}
+
+#[test]
+fn initialize_is_not_part_of_a_batch() {
+    let app = FakeApp::always(Reply::ok(json!({})));
+    let mut client = Client::with_app(&app);
+    client.initialize("2025-03-26");
+    client.send(&json!([
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-03-26"}},
+        {"jsonrpc": "2.0", "id": 2, "method": "ping"}
+    ]));
+    let answers = client.read();
+    let answers = answers.as_array().expect("array");
+    assert_eq!((answers[0]["id"].clone(), answers[0]["error"]["code"].clone()), (json!(1), json!(-32600)));
+    assert_eq!(answers[1]["result"], json!({}));
     assert_eq!(client.finish(), 0);
 }
