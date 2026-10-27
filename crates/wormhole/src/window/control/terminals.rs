@@ -216,7 +216,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Opened {
-        let cwd = folder.or_else(|| self.default_cwd(cx));
+        let cwd = folder.or_else(|| self.default_cwd_for_agent(cx));
         let ix = self.open_session(None, cwd.clone(), window, cx);
         let terminal = self.sessions[ix].id;
         let tab = terminal;

@@ -144,9 +144,21 @@ impl Workspace {
 
     /// Where a new terminal starts: where the current one is.
     pub(crate) fn default_cwd(&self, cx: &App) -> Option<String> {
+        self.start_folder(false, cx)
+    }
+
+    /// [`default_cwd`](Self::default_cwd) for a request from an agent: the folder of a terminal hidden from
+    /// agents is not given away, so with that one in front the start is as if no terminal were.
+    pub(crate) fn default_cwd_for_agent(&self, cx: &App) -> Option<String> {
+        self.start_folder(true, cx)
+    }
+
+    fn start_folder(&self, skip_hidden: bool, cx: &App) -> Option<String> {
         self.sessions
             .get(self.active)
-            .and_then(|s| s.terminal().read(cx).cwd.clone())
+            .map(|s| s.terminal().read(cx))
+            .filter(|terminal| !(skip_hidden && terminal.agent_hidden()))
+            .and_then(|terminal| terminal.cwd.clone())
             .map(|p| p.to_string_lossy().into_owned())
             // Dev/test override for where the first session starts.
             .or_else(|| std::env::var("WORMHOLE_START_DIR").ok())
