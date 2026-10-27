@@ -193,6 +193,7 @@ impl Workspace {
                 play,
                 agents: None,
                 problem: None,
+                imported_theme: None,
                 #[cfg(any(test, feature = "devctl"))]
                 token,
                 _scan: Some(scan),

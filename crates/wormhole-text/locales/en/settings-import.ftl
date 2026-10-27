@@ -152,6 +152,14 @@ settings-import-onboarding-all = { $brought ->
    *[other] { $brought } settings brought over
 }
 
+## First run, in the terminal welcome (`Wormhole welcome`)
+
+# { $terminal } is the name of the terminal whose settings were found.
+settings-import-welcome-found = Your { $terminal } settings were found.
+
+# Shown in a tour that isn't connected to { -brand }, where nothing can be changed.
+settings-import-welcome-tour = Settings → Import brings them over.
+
 ## ghostty
 
 settings-import-strength-ghostty-native-tabs-graphics = Native macOS app with native tabs and splits, kitty graphics and keyboard protocols, ligatures.

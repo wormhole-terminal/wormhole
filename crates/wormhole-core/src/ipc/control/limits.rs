@@ -34,6 +34,9 @@ pub enum Limited {
     /// The welcome's example band in the sidebar going up and coming down: once for each time the
     /// sidebar step is entered or left, so stepping back and forth sends many.
     WelcomeDemo,
+    /// The welcome's Import of another terminal's settings (reads its files, one settings update): a
+    /// press, so a few, even with a retry.
+    WelcomeImport,
     /// The welcome's end, which is only ever sent once.
     WelcomeFinish,
 }
@@ -53,6 +56,7 @@ impl Limited {
             Limited::WelcomeInstall => 12,
             Limited::WelcomeNotify => 30,
             Limited::WelcomeDemo => 120,
+            Limited::WelcomeImport => 6,
             Limited::WelcomeFinish => 4,
         }
     }
@@ -131,6 +135,7 @@ mod tests {
         assert!(Limited::SendText.budget() <= 30 && Limited::Subscribe.budget() <= 30);
         assert!(Limited::WelcomeInstall.budget() <= 12 && Limited::WelcomeNotify.budget() <= 30);
         assert!(Limited::WelcomeDemo.budget() <= 120 && Limited::WelcomeFinish.budget() <= 4);
+        assert!(Limited::WelcomeImport.budget() <= 6);
         assert_eq!(RateLimits::default().retry_after(Limited::Notify, None, Instant::now()), Duration::ZERO);
     }
 }

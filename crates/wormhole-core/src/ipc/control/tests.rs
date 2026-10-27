@@ -300,6 +300,12 @@ fn a_control_line_with_something_else_wrong_is_a_bad_request() {
     let code = |line: &str| unreadable(line).and_then(|reply| reply.error).map(|error| error.code);
     // A known action whose fields don't fit.
     assert_eq!(code(r#"{"kind":"control","version":1,"action":"send_text"}"#), Some(ErrorCode::BadRequest));
+    // A welcome op this build doesn't know (a newer program asking an older app, as `import` was
+    // to the apps before it): the action is known, so it is a bad request the program shows as a
+    // note, not an unsupported action and not a hang.
+    let newer = r#"{"kind":"control","version":1,"from":"4","action":"welcome","token":"t","op":{"kind":"import_everything"}}"#;
+    assert_eq!(code(newer), Some(ErrorCode::BadRequest));
+    assert!(serde_json::from_str::<crate::ipc::Message>(newer).is_err());
     assert_eq!(code(r#"{"kind":"control","version":1}"#), Some(ErrorCode::BadRequest));
     assert_eq!(code(r#"{"kind":"control","version":1,"action":7}"#), Some(ErrorCode::BadRequest));
     // Not a control line, or not a line at all: nothing to say.

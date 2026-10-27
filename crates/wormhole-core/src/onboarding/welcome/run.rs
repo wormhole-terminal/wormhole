@@ -14,7 +14,9 @@ use std::time::{Duration, Instant};
 use super::banner;
 use super::driver::{Answer, Driver};
 use super::gate::TOKEN_VAR;
+use super::offer::{self, ImportOffer};
 use super::render::Size;
+use crate::import::Env;
 use crate::ipc::control::{Action, Request, WelcomeOp};
 use crate::ipc::exchange::exchange;
 use crate::platform::process::{self, exec};
@@ -196,10 +198,15 @@ fn session() {
     let worker = Link::from_env().and_then(Worker::start);
     let home = super::facts::home();
     let mut driver = Driver::new(worker.is_some(), home);
+    // Another terminal's settings are looked for beside the program: the first page never waits.
+    let offers = look_for_offer();
     let begin = Instant::now();
     let mut buf = [0u8; 256];
     loop {
         let now = begin.elapsed();
+        if let Ok(offer) = offers.try_recv() {
+            driver.offer(offer);
+        }
         let answers: Vec<Answer> = worker.iter().flat_map(|worker| worker.answers.try_iter()).collect();
         let (cols, rows) = tty::size().unwrap_or((80, 24));
         let wait = if driver.started(now) { TICK_MS } else { 50 };
@@ -221,6 +228,20 @@ fn session() {
             return;
         }
     }
+}
+
+/// Look for the terminal whose settings the look page offers, on a thread of its own: the one answer
+/// (`None` for nothing found) arrives on the channel. Reads configuration files in the person's home,
+/// under the environment this shell has, and writes nothing.
+fn look_for_offer() -> mpsc::Receiver<Option<ImportOffer>> {
+    let (found, offers) = mpsc::channel();
+    let spawned = std::thread::Builder::new().name("welcome-import-scan".to_string()).spawn(move || {
+        let _ = found.send(Env::from_process().and_then(|env| offer::find(&env)));
+    });
+    if spawned.is_err() {
+        tracing::debug!("welcome: no thread to look for other terminals' settings");
+    }
+    offers
 }
 
 /// Give the app a moment to take the `Finish` (it remembers the first run there).

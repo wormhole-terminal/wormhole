@@ -1,8 +1,10 @@
 //! What the tests show the welcome: the app's state for a first run on an ordinary Mac.
 
 use super::model::Welcome;
+use super::offer::ImportOffer;
 use crate::agents::AgentId;
 use crate::config::NotifySound;
+use crate::import::Source;
 use crate::ipc::control::{
     AgentFact, AgentsFacts, HooksFact, LookFacts, NotifyFacts, PermissionFact, PrimaryFact, ThemeFact,
     WelcomeState,
@@ -80,4 +82,16 @@ pub(super) fn state(handover: Handover) -> WelcomeState {
 /// A live welcome.
 pub(super) fn welcome(handover: Handover) -> Welcome {
     Welcome::new(state(handover), true)
+}
+
+/// Ghostty's settings found, eleven of them ticked by default.
+pub(super) fn offer() -> ImportOffer {
+    ImportOffer { source: Source::Ghostty }
+}
+
+/// A live welcome that has found Ghostty's settings.
+pub(super) fn welcome_with_offer() -> Welcome {
+    let mut w = welcome(Handover::Cursor);
+    w.offer(Some(offer()));
+    w
 }

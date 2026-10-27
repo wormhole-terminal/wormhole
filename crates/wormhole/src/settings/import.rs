@@ -31,6 +31,14 @@ pub(crate) fn scan_here() -> Vec<Found> {
     found
 }
 
+/// One terminal's settings under `env`, with its PostScript fonts resolved: what an `Import` request
+/// from the terminal welcome applies (it names the terminal, never the values).
+pub(crate) fn scan_in(env: &Env, source: Source) -> Option<Found> {
+    let mut found = import::scan_one(env, source)?;
+    resolve_fonts(std::slice::from_mut(&mut found));
+    Some(found)
+}
+
 /// Ask the system for the family of each PostScript font name a scan found (iTerm2, Terminal.app).
 /// A font that isn't installed leaves the proposal for "Doesn't carry over", so the page never
 /// shows, and `apply` never sets, a family that was only guessed from a name.
@@ -55,17 +63,7 @@ pub(crate) fn apply(cx: &mut App, found: &Found, chosen: &[Proposed]) -> Result<
 
 /// A terminal's name as the interface writes it.
 pub(crate) fn terminal_name(source: Source) -> &'static str {
-    text(match source {
-        Source::Ghostty => SETTINGS_IMPORT_TERMINAL_GHOSTTY,
-        Source::ITerm2 => SETTINGS_IMPORT_TERMINAL_ITERM2,
-        Source::TerminalApp => SETTINGS_IMPORT_TERMINAL_TERMINAL_APP,
-        Source::Alacritty => SETTINGS_IMPORT_TERMINAL_ALACRITTY,
-        Source::Kitty => SETTINGS_IMPORT_TERMINAL_KITTY,
-        Source::WezTerm => SETTINGS_IMPORT_TERMINAL_WEZTERM,
-        Source::Warp => SETTINGS_IMPORT_TERMINAL_WARP,
-        Source::Zed => SETTINGS_IMPORT_TERMINAL_ZED,
-        Source::VsCode => SETTINGS_IMPORT_TERMINAL_VSCODE,
-    })
+    text(source.name_key())
 }
 
 #[cfg(test)]

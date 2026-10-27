@@ -4,6 +4,7 @@ use super::super::ansi::{Style, fit, text_width};
 use super::super::art::{self, LOGO, MARGIN, MARK_CELL};
 use super::super::keys::Key;
 use super::super::model::Welcome;
+use super::import;
 use super::{
     ACCENT, BACK, DIM, ESC_SKIP, Hint, MARK, Page, ROW_EVERY, TAGLINE, TITLE, TYPE_NAME, TYPE_TEXT, UP_DOWN,
     VALUE_AT, window_start,
@@ -78,13 +79,14 @@ impl Page {
                 ),
             );
             self.shown(row, MARGIN, &[("Nothing changes here: this tour is read-only.", DIM)]);
+            self.import_offer(w, row + 2);
             return vec![("⏎", "continue", Some(Key::Enter)), BACK, ESC_SKIP];
         }
         let row =
             self.heading("How should it look?", "Themes apply as you move. The rest of it is in Settings.");
         self.shown(row, MARGIN, &[("Theme", DIM)]);
-        // The rows below the list: a blank, the colour, the font and the ligatures.
-        let below = 4;
+        // The rows below the list: a blank, the colour, the font and the ligatures, and the offer.
+        let below = 4 + import::rows(w);
         let height = self.list_height(row + 1, below);
         let cursor = w.cursor();
         let first = window_start(cursor, look.themes.len(), height);
@@ -127,6 +129,7 @@ impl Page {
             &[(state, TITLE), ("  ", Style::PLAIN), ("=> != >=", DIM)],
             self.turn,
         );
+        self.import_offer(w, at + 2);
         vec![
             UP_DOWN,
             ("p", "colour", Some(Key::Char('p'))),

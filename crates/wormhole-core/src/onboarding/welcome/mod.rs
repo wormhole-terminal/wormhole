@@ -27,6 +27,7 @@
 //! - `art`: the mark's and the logo's places, and the logo's pixels;
 //! - `banner`: what the terminal shows at the hand-over;
 //! - `facts`: the agents the pages list, read from the machine;
+//! - `offer`: the terminal whose settings the look page offers to bring over;
 //! - `gate`: the token rules;
 //! - `driver`: one tick of the program, without any I/O, so it can be scripted in tests;
 //! - `platform::tty` (core's edge): raw mode, the size and waiting for a key;
@@ -42,6 +43,7 @@ mod flow;
 mod gate;
 mod keys;
 mod model;
+mod offer;
 mod render;
 mod run;
 
@@ -57,6 +59,8 @@ pub use run::{Args, HELP, parse_args, run};
 mod driving;
 #[cfg(test)]
 mod fixtures;
+#[cfg(test)]
+mod importing;
 #[cfg(test)]
 mod snapshots;
 #[cfg(test)]

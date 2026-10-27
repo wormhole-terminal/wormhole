@@ -12,8 +12,11 @@ use std::time::Duration;
 
 use super::flow::{Action, Event, Flow, Step};
 use super::keys::Key;
+use super::offer::ImportOffer;
 use crate::config::NotifySound;
-use crate::ipc::control::{AgentsFacts, LookFacts, NotifyFacts, PermissionFact, WelcomeOp, WelcomeState};
+use crate::ipc::control::{
+    AgentsFacts, ImportDone, LookFacts, NotifyFacts, PermissionFact, WelcomeOp, WelcomeState,
+};
 use crate::onboarding::intro::Handover;
 
 /// What the program does about a key.
@@ -52,6 +55,17 @@ pub(super) enum Item {
     Start,
 }
 
+/// Where the offer to bring another terminal's settings over stands.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Import {
+    /// Found, not asked for yet.
+    Offered(ImportOffer),
+    /// Asked for; the app has not answered.
+    Asked(ImportOffer),
+    /// Brought over: what the app says it did.
+    Done(ImportOffer, ImportDone),
+}
+
 /// One welcome, from its first state to its end.
 #[derive(Clone, Debug)]
 pub(super) struct Welcome {
@@ -70,6 +84,12 @@ pub(super) struct Welcome {
     settled: bool,
     seen: Vec<Step>,
     ended: Option<End>,
+    /// The terminal found with settings to bring over, `None` when there is none or it is not (yet)
+    /// known.
+    import: Option<Import>,
+    /// The theme list changed under the cursor by an import: the next state from the app puts the
+    /// cursor on the theme now in use.
+    resync_theme: bool,
     /// A request of ours the app refused or could not answer, until the next one that works.
     note: Option<String>,
 }
@@ -90,8 +110,42 @@ impl Welcome {
             step_since: Duration::ZERO,
             settled: false,
             ended: None,
+            import: None,
+            resync_theme: false,
             note: None,
         }
+    }
+
+    // ---------------------------------------------------------------- the import offer
+
+    /// The terminal the machine has settings of, found by the program (not the app): offered on the look
+    /// page. Ignored once the person has begun to use an earlier offer.
+    pub(super) fn offer(&mut self, offer: Option<ImportOffer>) {
+        if self.import.is_none() {
+            self.import = offer.map(Import::Offered);
+        }
+    }
+
+    pub(super) fn import(&self) -> Option<Import> {
+        self.import
+    }
+
+    /// The app answered the import: what it brought over. The theme list may have a new entry, so the
+    /// cursor follows the theme in use as soon as the app next says which it is.
+    pub(super) fn imported(&mut self, done: ImportDone) {
+        if let Some(Import::Asked(offer)) = self.import {
+            self.import = Some(Import::Done(offer, done));
+            self.resync_theme = true;
+            self.note = None;
+        }
+    }
+
+    /// The app refused or failed the import: the offer stands to be tried again, and the page says why.
+    pub(super) fn import_failed(&mut self, why: String) {
+        if let Some(Import::Asked(offer)) = self.import {
+            self.import = Some(Import::Offered(offer));
+        }
+        self.note = Some(why);
     }
 
     // ---------------------------------------------------------------- what the pages read
@@ -229,6 +283,16 @@ impl Welcome {
             };
         }
         self.facts = facts;
+        if self.resync_theme && !stale {
+            self.resync_theme = false;
+            self.theme_at = self
+                .facts
+                .look
+                .themes
+                .iter()
+                .position(|theme| theme.name == self.facts.look.theme)
+                .unwrap_or(self.theme_at);
+        }
     }
 
     // ---------------------------------------------------------------- keys
@@ -345,6 +409,7 @@ impl Welcome {
                     font_step: None,
                 })
             }
+            'i' => self.ask_import(),
             '+' | '=' => {
                 look.font_size += 1.0;
                 ask(WelcomeOp::SetLook { theme: None, primary: None, ligatures: None, font_step: Some(1) })
@@ -355,6 +420,14 @@ impl Welcome {
             }
             _ => Vec::new(),
         }
+    }
+
+    /// `i`: bring over the settings of the terminal found, once. Only the look page offers it, and only
+    /// to a welcome that talks to the app.
+    fn ask_import(&mut self) -> Vec<Effect> {
+        let Some(Import::Offered(offer)) = self.import else { return Vec::new() };
+        self.import = Some(Import::Asked(offer));
+        vec![Effect::Ask(WelcomeOp::Import { source: offer.source.key().to_string() })]
     }
 
     /// Return on the line the cursor is on.

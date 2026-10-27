@@ -8,8 +8,8 @@ use wormhole_core::config::NotifySound;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::ipc::Peer;
 use wormhole_core::ipc::control::{
-    Action, AgentFact, AgentsFacts, ErrorCode, HooksFact, PermissionFact, Reply, Request, WelcomeOp,
-    WelcomeState,
+    Action, AgentFact, AgentsFacts, ErrorCode, HooksFact, ImportDone, PermissionFact, Reply, Request,
+    WelcomeOp, WelcomeState,
 };
 use wormhole_core::onboarding::intro::Handover;
 use wormhole_core::view::sidebar::RowState;
@@ -46,8 +46,16 @@ fn ask(cx: &mut TestAppContext, from: Option<i64>, token: &str, op: WelcomeOp) -
         demo: crate::app::welcome::demo,
         ended: crate::app::welcome::ended,
         remember_first_run: crate::window::remember_first_run,
+        import_env: fixture_env,
     };
     cx.update(|cx| handle(token.to_string(), op, from, services, cx))
+}
+
+/// Where an import looks in these tests: the scratch home the harness made for this test, never the
+/// person's own.
+fn fixture_env() -> Option<wormhole_core::import::Env> {
+    let data = std::env::var_os("WORMHOLE_DATA_DIR").map(std::path::PathBuf::from)?;
+    Some(wormhole_core::import::Env::new(data.join("home")))
 }
 
 fn state_of(reply: &Reply) -> WelcomeState {
@@ -526,4 +534,77 @@ fn the_example_band_goes_in_the_sidebar_of_the_welcomes_own_window(cx: &mut Test
     assert!(ask(cx, Some(tab), &token, WelcomeOp::Demo { show: true }).ok);
     assert!(band(cx, &second).is_some(), "in the window the welcome runs in");
     assert_eq!(band(cx, &first), None, "and in no other");
+}
+
+/// `Import` brings over one terminal's settings, found by the app itself under its own environment: the
+/// request names the terminal and nothing else, and only the welcome's own terminal and token can send it.
+#[gpui_kit::test]
+fn an_import_brings_over_what_settings_import_ticks_and_only_from_the_welcome(cx: &mut TestAppContext) {
+    if isolate("an_import_brings_over_what_settings_import_ticks_and_only_from_the_welcome") {
+        return;
+    }
+    let window = start(cx, 1);
+    drive(cx, &window, |ws, window, cx| ws.replay_welcome(Handover::Cursor, window, cx));
+    let (tab, token) = welcome_terminal(cx);
+    let import = |source: &str| WelcomeOp::Import { source: source.to_string() };
+    let home = fixture_env().expect("the scratch home").home;
+    let config = home.join(".config/ghostty/config");
+    std::fs::create_dir_all(config.parent().expect("a folder")).expect("makes the folder");
+    std::fs::write(
+        &config,
+        "font-family = Fixture Mono\nfont-size = 17\nbackground = #101820\nforeground = #e0e8f0\n\
+         cursor-style = bar\ncommand = /bin/fixture-shell\n",
+    )
+    .expect("writes the fixture config");
+    let now = |cx: &mut TestAppContext| {
+        cx.update(|cx| {
+            let s = settings(cx);
+            (s.font_family.clone(), s.font_size, s.theme.clone(), s.default_shell.clone())
+        })
+    };
+    let before = now(cx);
+
+    // Not from anywhere else, and not for a terminal that isn't one of the nine or has no settings:
+    // nothing changes.
+    for (from, token) in [(None, token.as_str()), (Some(1), token.as_str()), (Some(tab), "wrong")] {
+        assert_eq!(code(&ask(cx, from, token, import("ghostty"))), Some(ErrorCode::Refused));
+    }
+    assert_eq!(code(&ask(cx, Some(tab), &token, import("no-such-terminal"))), Some(ErrorCode::NotFound));
+    assert_eq!(code(&ask(cx, Some(tab), &token, import("kitty"))), Some(ErrorCode::NotFound));
+    let long = import(&"x".repeat(100));
+    assert_eq!(code(&ask(cx, Some(tab), &token, long)), Some(ErrorCode::TooLarge));
+    assert_eq!(now(cx), before, "nothing was imported");
+
+    // The right one: the ticked values are set; a shell command is left (it isn't ticked).
+    let reply = ask(cx, Some(tab), &token, import("ghostty"));
+    assert!(reply.ok, "{reply:?}");
+    let done: ImportDone = serde_json::from_value(reply.result.expect("a result")).expect("two counts");
+    let after = now(cx);
+    assert_eq!(after.0, "Fixture Mono");
+    assert_eq!(after.1, 17.0);
+    assert!(after.2.contains("themes"), "the palette was saved as a theme file: {}", after.2);
+    assert_eq!(after.3, before.3, "a shell command is not ticked");
+    assert!(done.brought >= 3, "{done:?}");
+    assert!(done.left >= 2, "the cursor and the shell command are left: {done:?}");
+
+    // And the page's next state lists the theme and the font, which the cursor follows. Going to a
+    // built-in theme and back leaves the imported one on the list, to be chosen again.
+    let look = state_of(&ask(cx, Some(tab), &token, state())).look;
+    assert_eq!(look.font, "Fixture Mono");
+    assert_eq!(look.theme, "Ghostty");
+    assert!(look.themes.iter().any(|theme| theme.name == "Ghostty"), "on the list");
+    let builtin = look.themes.iter().find(|theme| theme.name != "Ghostty").expect("a built-in").name.clone();
+    let theme_op = |name: &str| WelcomeOp::SetLook {
+        theme: Some(name.to_string()),
+        primary: None,
+        ligatures: None,
+        font_step: None,
+    };
+    assert!(ask(cx, Some(tab), &token, theme_op(&builtin)).ok);
+    assert_eq!(now(cx).2, builtin);
+    let look = state_of(&ask(cx, Some(tab), &token, state())).look;
+    assert_eq!(look.theme, builtin);
+    assert!(look.themes.iter().any(|theme| theme.name == "Ghostty"), "still on the list");
+    assert!(ask(cx, Some(tab), &token, theme_op("Ghostty")).ok);
+    assert_eq!(now(cx).2, after.2, "chosen again by its file");
 }

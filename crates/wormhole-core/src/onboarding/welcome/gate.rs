@@ -197,6 +197,7 @@ mod tests {
             set_notify(),
             install(),
             WelcomeOp::Demo { show: true },
+            WelcomeOp::Import { source: "ghostty".into() },
             WelcomeOp::Finish { skipped: true },
         ];
         for op in &ops {
@@ -206,6 +207,7 @@ mod tests {
                 | WelcomeOp::SetNotify { .. }
                 | WelcomeOp::InstallHooks { .. }
                 | WelcomeOp::Demo { .. }
+                | WelcomeOp::Import { .. }
                 | WelcomeOp::Finish { .. } => {}
             }
         }

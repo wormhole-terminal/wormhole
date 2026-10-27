@@ -113,6 +113,7 @@ fn welcome_services() -> crate::onboarding::welcome::Services {
         demo: crate::app::welcome::demo,
         ended: crate::app::welcome::ended,
         remember_first_run: crate::window::remember_first_run,
+        import_env: wormhole_core::import::Env::from_process,
     }
 }
 

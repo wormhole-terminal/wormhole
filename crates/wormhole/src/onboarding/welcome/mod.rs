@@ -60,11 +60,24 @@ pub(crate) struct Run {
     pub(crate) agents: Option<AgentsFacts>,
     /// What went wrong with the last Install, until the next one that works.
     pub(crate) problem: Option<String>,
+    /// The theme an import brought over, which the look page lists beside the ones it offers (it is
+    /// not one of the built-ins) for as long as the welcome runs.
+    pub(crate) imported_theme: Option<ImportedTheme>,
     /// devctl's `state` names it, so `welcome-probe` can send a request as the program would (and the
     /// tests do).
     #[cfg(any(test, feature = "devctl"))]
     pub(crate) token: String,
     pub(crate) _scan: Option<Task<()>>,
+}
+
+/// A theme an import saved in the profile's themes folder.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct ImportedTheme {
+    /// What the list shows and the page asks for.
+    pub(crate) name: String,
+    /// What `settings.theme` is set to for it: the theme file's path.
+    pub(crate) value: String,
+    pub(crate) light: bool,
 }
 
 /// Every welcome the app has running, and the doors to them: the first-run welcome's own global, made

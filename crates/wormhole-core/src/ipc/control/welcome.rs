@@ -39,6 +39,10 @@ use crate::config::NotifySound;
 /// The longest theme name or colour a request may carry.
 pub const FIELD_MAX_BYTES: usize = 4096;
 
+/// The longest terminal key an [`Import`](WelcomeOp::Import) may name (the longest real one is
+/// `terminal-app`).
+const SOURCE_MAX_BYTES: usize = 32;
+
 /// What the program asks of the app.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -79,6 +83,13 @@ pub enum WelcomeOp {
     /// points at. The program sends it when the step is entered and left; the app also drops it when
     /// the welcome finishes or its terminal goes.
     Demo { show: bool },
+    /// Bring over the settings of the terminal the person used before (`source`: an `import::Source`'s
+    /// key, `ghostty`, `iterm2`, …), which the look page found and offered. Only a press on that
+    /// offer sends it. The app reads that one terminal's settings itself (it never takes values from
+    /// the request), applies what Settings → Import ticks by default in one settings update, and
+    /// answers with an [`ImportDone`]. An app from before this op cannot read it and answers
+    /// `bad_request`; the page shows that as a note and goes on.
+    Import { source: String },
     /// The welcome is over. On the first run the app remembers it; `skipped` is whether Esc ended it.
     Finish {
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -95,6 +106,7 @@ impl WelcomeOp {
             WelcomeOp::SetNotify { .. } => "set_notify",
             WelcomeOp::InstallHooks { .. } => "install_hooks",
             WelcomeOp::Demo { .. } => "demo",
+            WelcomeOp::Import { .. } => "import",
             WelcomeOp::Finish { .. } => "finish",
         }
     }
@@ -111,9 +123,21 @@ impl WelcomeOp {
             WelcomeOp::SetLook { font_step: Some(step), .. } if !(-1..=1).contains(step) => {
                 Err(Error::new(ErrorCode::BadRequest, "the font moves one step at a time"))
             }
+            WelcomeOp::Import { source } if source.len() > SOURCE_MAX_BYTES => {
+                Err(too_long("the terminal's name"))
+            }
             _ => Ok(()),
         }
     }
+}
+
+/// The app's answer to [`WelcomeOp::Import`]: what the import did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ImportDone {
+    /// Settings taken.
+    pub brought: usize,
+    /// Settings read that were not taken: unticked, or with no Wormhole setting to go in.
+    pub left: usize,
 }
 
 /// The app's answer to [`WelcomeOp::State`].
@@ -265,6 +289,9 @@ mod tests {
         for op in ops {
             assert_eq!(op.check_caps().map_err(|e| e.code), Err(ErrorCode::TooLarge), "{op:?}");
         }
+        let long_source = WelcomeOp::Import { source: "x".repeat(SOURCE_MAX_BYTES + 1) };
+        assert_eq!(long_source.check_caps().map_err(|e| e.code), Err(ErrorCode::TooLarge));
+        assert!(WelcomeOp::Import { source: "terminal-app".into() }.check_caps().is_ok());
         let jump = WelcomeOp::SetLook { theme: None, primary: None, ligatures: None, font_step: Some(40) };
         assert_eq!(jump.check_caps().map_err(|e| e.code), Err(ErrorCode::BadRequest));
         let fine = WelcomeOp::SetLook {
@@ -308,6 +335,7 @@ mod tests {
                 r#"{"kind":"install_hooks","agent":"claude"}"#,
             ),
             (WelcomeOp::Demo { show: true }, r#"{"kind":"demo","show":true}"#),
+            (WelcomeOp::Import { source: "ghostty".into() }, r#"{"kind":"import","source":"ghostty"}"#),
             (WelcomeOp::Finish { skipped: true }, r#"{"kind":"finish","skipped":true}"#),
             (WelcomeOp::Finish { skipped: false }, r#"{"kind":"finish"}"#),
         ];
@@ -315,6 +343,14 @@ mod tests {
             assert_eq!(serde_json::to_string(&op).expect("serializes"), line);
             assert_eq!(serde_json::from_str::<WelcomeOp>(line).expect("parses"), op);
         }
+    }
+
+    #[test]
+    fn the_answer_to_an_import_is_two_counts() {
+        let done = ImportDone { brought: 11, left: 7 };
+        let line = serde_json::to_string(&done).expect("serializes");
+        assert_eq!(line, r#"{"brought":11,"left":7}"#);
+        assert_eq!(serde_json::from_str::<ImportDone>(&line).expect("parses"), done);
     }
 
     #[test]

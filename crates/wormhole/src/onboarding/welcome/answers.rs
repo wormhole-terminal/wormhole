@@ -14,16 +14,18 @@ use std::time::Duration;
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations::{self, State};
 use wormhole_core::config::NotifySound;
+use wormhole_core::import::{Env, Proposed, Source};
 use wormhole_core::ipc::control::{
-    AgentFact, ErrorCode, HooksFact, Limited, LookFacts, NotifyFacts, PermissionFact, PrimaryFact, Reply,
-    ThemeFact, WelcomeOp, WelcomeState,
+    AgentFact, ErrorCode, HooksFact, ImportDone, Limited, LookFacts, NotifyFacts, PermissionFact,
+    PrimaryFact, Reply, ThemeFact, WelcomeOp, WelcomeState,
 };
 use wormhole_core::onboarding::intro::Handover;
 use wormhole_core::theme::fonts::FontSlot;
 
-use super::{Play, Run};
+use super::{ImportedTheme, Play, Run};
 use crate::onboarding::{offered_primaries, offered_themes};
 use crate::platform::notifications::Permission;
+use crate::settings::import as shared;
 use crate::settings::settings;
 use crate::settings::update_settings;
 use gpui_kit::App;
@@ -49,6 +51,9 @@ pub(crate) struct Services {
     pub ended: fn(tab: i64, note: bool, &mut App),
     /// The first run is over: not shown again.
     pub remember_first_run: fn(&mut App),
+    /// Where an `Import` looks for the other terminal's settings: this process's own home and variables
+    /// (`Env::from_process`); a test hands in a folder of its own, never the real home.
+    pub import_env: fn() -> Option<Env>,
 }
 
 /// Answer a welcome request. `from` is the tab it says it comes from; `budget` is checked after the
@@ -71,6 +76,7 @@ pub(crate) fn handle(
         WelcomeOp::SetNotify { .. } => Some(Limited::WelcomeNotify),
         WelcomeOp::InstallHooks { .. } => Some(Limited::WelcomeInstall),
         WelcomeOp::Demo { .. } => Some(Limited::WelcomeDemo),
+        WelcomeOp::Import { .. } => Some(Limited::WelcomeImport),
         WelcomeOp::Finish { .. } => Some(Limited::WelcomeFinish),
     };
     if let Some(kind) = limited
@@ -81,13 +87,14 @@ pub(crate) fn handle(
     match op {
         WelcomeOp::State => Reply::ok(state(tab, &services, cx)),
         WelcomeOp::SetLook { theme, primary, ligatures, font_step } => {
-            set_look(theme, primary, ligatures, font_step, cx)
+            set_look(tab, theme, primary, ligatures, font_step, cx)
         }
         WelcomeOp::SetNotify { needs_you, agent_done, sound, allow } => {
             set_notify(needs_you, agent_done, sound, allow, &services, cx)
         }
         WelcomeOp::InstallHooks { agent } => install(tab, agent, cx),
         WelcomeOp::Demo { show } => demo(tab, show, &services, cx),
+        WelcomeOp::Import { source } => import(tab, &source, &services, cx),
         WelcomeOp::Finish { skipped } => finish(tab, skipped, &services, cx),
     }
 }
@@ -95,12 +102,12 @@ pub(crate) fn handle(
 /// Everything the pages are made of.
 fn state(tab: i64, services: &Services, cx: &mut App) -> WelcomeState {
     let reduce_motion = cx.reduce_motion();
-    let look = look_facts(cx);
-    let notify = notify_facts(services, cx);
     let Some(run) = super::run_of(tab, cx) else {
         // The gate and the run are made and dropped together; a gate without a run is a bug.
         return empty_state(tab);
     };
+    let look = look_facts(run.imported_theme.as_ref(), cx);
+    let notify = notify_facts(services, cx);
     WelcomeState {
         wait_ms: wait(run, reduce_motion, cx).as_millis() as u64,
         reduce_motion,
@@ -147,16 +154,24 @@ fn wait(run: &Run, reduce_motion: bool, cx: &App) -> Duration {
     run.handover.wait(playing, reduce_motion)
 }
 
-fn look_facts(cx: &App) -> LookFacts {
+fn look_facts(imported: Option<&ImportedTheme>, cx: &App) -> LookFacts {
     let store = cx.global::<crate::settings::SettingsStore>();
     let s = &store.settings;
-    let themes = offered_themes(&s.theme)
+    let mut themes: Vec<ThemeFact> = offered_themes(&s.theme)
         .into_iter()
         .map(|theme| ThemeFact {
             name: theme.name.clone(),
             light: theme.appearance == wormhole_core::theme::tokens::Appearance::Light,
         })
         .collect();
+    // The theme an import brought over stays on the list, in use or not.
+    let mut in_use = s.theme.clone();
+    if let Some(imported) = imported {
+        themes.push(ThemeFact { name: imported.name.clone(), light: imported.light });
+        if s.theme == imported.value {
+            in_use.clone_from(&imported.name);
+        }
+    }
     let (theme_primary, others) = offered_primaries(store.base_tokens());
     let mut primaries = Vec::new();
     if theme_primary.is_some() {
@@ -171,7 +186,7 @@ fn look_facts(cx: &App) -> LookFacts {
     }
     LookFacts {
         themes,
-        theme: s.theme.clone(),
+        theme: in_use,
         primaries,
         primary: s.primary().map(|color| color.to_hex()).unwrap_or_default(),
         font: store.fonts.family(FontSlot::Terminal).to_string(),
@@ -204,6 +219,7 @@ fn notify_facts(services: &Services, cx: &App) -> NotifyFacts {
 
 /// `SetLook`: a theme, colour, ligature switch or font step, if it is one the page offers.
 fn set_look(
+    tab: i64,
     theme: Option<String>,
     primary: Option<String>,
     ligatures: Option<bool>,
@@ -211,10 +227,16 @@ fn set_look(
     cx: &mut App,
 ) -> Reply {
     let store = cx.global::<crate::settings::SettingsStore>();
-    if let Some(name) = &theme
-        && !offered_themes(&store.settings.theme).iter().any(|offered| &offered.name == name)
-    {
-        return Reply::error(ErrorCode::NotFound, format!("no theme {name:?} on offer"));
+    let imported = super::run_of(tab, cx).and_then(|run| run.imported_theme.clone());
+    // A theme on offer is a built-in one or the one an import brought over, which is set by its file.
+    let mut theme = theme;
+    if let Some(name) = &theme {
+        let imported_choice = imported.as_ref().filter(|imported| &imported.name == name);
+        if let Some(imported) = imported_choice {
+            theme = Some(imported.value.clone());
+        } else if !offered_themes(&store.settings.theme).iter().any(|offered| &offered.name == name) {
+            return Reply::error(ErrorCode::NotFound, format!("no theme {name:?} on offer"));
+        }
     }
     if let Some(hex) = &primary {
         let (_, others) = offered_primaries(store.base_tokens());
@@ -313,6 +335,53 @@ fn demo(tab: i64, show: bool, services: &Services, cx: &mut App) -> Reply {
         return Reply::error(ErrorCode::NotFound, "no such terminal");
     }
     Reply::ok(serde_json::json!({}))
+}
+
+/// `Import`: the settings of one other terminal, which the page offered because the program found it.
+/// The request names only which terminal: the app reads that terminal's files itself, under its own
+/// `Env`, and takes what Settings → Import ticks by default (never a shell command), in one settings
+/// update, with its palette saved as a theme in the active profile. The files are read on this thread,
+/// once, for a press (a few small capped files and the system's font lookup).
+fn import(tab: i64, source: &str, services: &Services, cx: &mut App) -> Reply {
+    let Some(source) = Source::from_key(source) else {
+        return Reply::error(ErrorCode::NotFound, "no such terminal to import from");
+    };
+    let Some(found) = (services.import_env)().and_then(|env| shared::scan_in(&env, source)) else {
+        return Reply::error(ErrorCode::NotFound, "that terminal's settings are not there any more");
+    };
+    let chosen: Vec<Proposed> = found.proposal.selected().cloned().collect();
+    match shared::apply(cx, &found, &chosen) {
+        Ok(done) => {
+            remember_imported_theme(tab, cx);
+            tracing::info!(tab, source = source.key(), brought = done.brought, left = done.left, "imported");
+            Reply::ok(ImportDone { brought: done.brought, left: done.left })
+        }
+        Err(why) => {
+            tracing::warn!(tab, source = source.key(), "import failed: {why}");
+            Reply::error(ErrorCode::Failed, why)
+        }
+    }
+}
+
+/// The theme file an import just set (it is not one of the built-ins the list offers), kept on the
+/// run so the look page lists it from now on, in use or not.
+fn remember_imported_theme(tab: i64, cx: &mut App) {
+    let store = cx.global::<crate::settings::SettingsStore>();
+    let value = store.settings.theme.clone();
+    let themes =
+        wormhole_core::theme::registry::UserThemes::read(&crate::active_profile::paths().themes_dir());
+    let Some(theme) = themes.themes.iter().find(|theme| theme.path.to_string_lossy() == value.as_str())
+    else {
+        return;
+    };
+    let imported = ImportedTheme {
+        name: theme.name.clone(),
+        value,
+        light: store.base_tokens().appearance == wormhole_core::theme::tokens::Appearance::Light,
+    };
+    if let Some(run) = super::run_of_mut(tab, cx) {
+        run.imported_theme = Some(imported);
+    }
 }
 
 /// `Finish`: the welcome is over. On a first run it is remembered, and the sidebar's note for a run

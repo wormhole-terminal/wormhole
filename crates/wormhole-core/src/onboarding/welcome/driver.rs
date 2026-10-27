@@ -16,8 +16,9 @@ use super::ansi::Grid;
 use super::facts;
 use super::keys::{ESC_WAIT, Key, Parser};
 use super::model::{Effect, End, Welcome};
+use super::offer::ImportOffer;
 use super::render::{self, Hit, Size, Target};
-use crate::ipc::control::{WelcomeOp, WelcomeState};
+use crate::ipc::control::{ImportDone, WelcomeOp, WelcomeState};
 
 /// How often the app is asked for its state: often enough that an Install or a permission answer shows
 /// within a blink, and the end of the animation's wait is noticed.
@@ -61,6 +62,9 @@ pub(super) struct Driver {
     demo_sent: Option<bool>,
     demo_at: Option<Duration>,
     held_since: Option<Duration>,
+    /// The terminal with settings to bring over, once the scan for it is done (it runs beside the
+    /// program, so the first page never waits for it).
+    offer: Option<ImportOffer>,
     previous: Option<Grid>,
     hits: Vec<Hit>,
     ended: bool,
@@ -80,6 +84,7 @@ impl Driver {
             demo_sent: Some(false),
             demo_at: None,
             held_since: None,
+            offer: None,
             previous: None,
             hits: Vec::new(),
             ended: false,
@@ -90,6 +95,15 @@ impl Driver {
     #[cfg(test)]
     pub(super) fn model(&self) -> Option<&Welcome> {
         self.model.as_ref()
+    }
+
+    /// The scan for another terminal's settings is done. A page already up shows the offer at its next
+    /// frame.
+    pub(super) fn offer(&mut self, offer: Option<ImportOffer>) {
+        self.offer = offer;
+        if let Some(model) = &mut self.model {
+            model.offer(offer);
+        }
     }
 
     /// Whether the text has started (the animation's wait is over).
@@ -108,7 +122,7 @@ impl Driver {
         }
         // Nobody to ask: the tour begins at once.
         if self.model.is_none() && !self.linked {
-            self.model = Some(Welcome::new(facts::tour_state(&self.home), false));
+            self.start_model(facts::tour_state(&self.home), false);
             self.text_start = Some(now);
         }
         self.ask_state(now, &mut tick);
@@ -229,6 +243,7 @@ impl Driver {
             },
             ("state", Ok(None)) => self.state_failed("no state"),
             ("state", Err(why)) => self.state_failed(&why),
+            ("import", result) => self.import_answered(result),
             (op, result) => {
                 if op == "demo" && result.is_err() {
                     self.demo_sent = None;
@@ -250,9 +265,28 @@ impl Driver {
                 self.text_start = Some(self.text_start.map_or(start, |was| was.min(start)));
             }
             None => {
-                self.model = Some(Welcome::new(state, true));
+                self.start_model(state, true);
                 self.text_start = Some(start);
             }
+        }
+    }
+
+    fn start_model(&mut self, state: WelcomeState, live: bool) {
+        let mut model = Welcome::new(state, live);
+        model.offer(self.offer);
+        self.model = Some(model);
+    }
+
+    /// The app's word on an import: what it brought over, or why not.
+    fn import_answered(&mut self, result: Result<Option<Value>, String>) {
+        let Some(model) = &mut self.model else { return };
+        match result {
+            Ok(Some(value)) => match serde_json::from_value::<ImportDone>(value) {
+                Ok(done) => model.imported(done),
+                Err(err) => model.import_failed(format!("unreadable answer: {err}")),
+            },
+            Ok(None) => model.import_failed("no answer".to_string()),
+            Err(why) => model.import_failed(why),
         }
     }
 
