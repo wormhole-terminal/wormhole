@@ -104,15 +104,23 @@ lines_over() { [ "$(lines_in "$1")" -gt "$2" ]; }
 
 # start_workload <name> <ttystorm arguments>: an instance whose only terminal runs ttystorm once
 # the window has its size (the animations and the benchmark read the terminal's size when they
-# start), then cat. Sets $dir, $ctl, $pid.
+# start), then cat. Sets $dir, $ctl, $pid. A caller may set, before the call:
+#   workload_setup     (array) more devctl commands, sent with the first batch (settings, say);
+#   workload_watchers  shell lines the terminal runs in the background just before ttystorm, with
+#                      $WORMHOLE_BIN and $WORMHOLE_TAB_ID of the terminal and $dir of the workload
+#                      in the environment (as `wh events` and `wh wait` clients of the app); they
+#                      are ended when ttystorm is.
 start_workload() {
   local name="$1"; shift
   dir="$scratch/$name"
   mkdir -p "$dir"
   cat > "$dir/shell.sh" <<SHELL
 #!/bin/bash
+export WORKLOAD_DIR="$dir"
 while [ ! -e "$dir/go" ]; do sleep 0.1; done
+${workload_watchers:-}
 "$ttystorm" $* 2>"$dir/ttystorm.err"
+kill \$(jobs -p) 2>/dev/null
 exec /bin/cat
 SHELL
   chmod +x "$dir/shell.sh"
@@ -120,7 +128,7 @@ SHELL
   "$ROOT/scripts/devctl-instance.sh" --bin "$bin" --shell "$dir/shell.sh" "$dir" > "$dir/start.txt"
   ctl="$dir/ctl"
   pid="$(sed -n 's/^pid=//p' "$dir/start.txt")"
-  send "$ctl" "onboarding close" "appearance dark" "resize $WINDOW_W $WINDOW_H"
+  send "$ctl" "onboarding close" "appearance dark" "resize $WINDOW_W $WINDOW_H" ${workload_setup[@]+"${workload_setup[@]}"}
   sleep 3
   : > "$dir/go"
 }

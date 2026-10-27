@@ -6,7 +6,9 @@
 #
 #   scripts/profile-app.sh [options]
 #     --only <a,b>      run only these loads: warptunnel, matrix (ttystorm animations, at --fps 0),
-#                       flood-truecolor (ttystorm flood --kind colorflood)
+#                       flood-truecolor (ttystorm flood --kind colorflood), flood-watched (the same
+#                       flood while a `wh events --output` stream and a `wh wait --match` waiter
+#                       watch the terminal, as an agent's tools would: compare it with flood-truecolor)
 #     --seconds <n>     how long each load is profiled (default 5)
 #     --save-baseline   write this run as the profile baseline of this machine
 #     --bin <path>      profile this prebuilt devctl binary instead of building HEAD
@@ -42,7 +44,7 @@ set -euo pipefail
 
 WINDOW_W=2400 WINDOW_H=1300
 SETTLE_SECONDS=4
-ALL_LOADS="warptunnel matrix flood-truecolor"
+ALL_LOADS="warptunnel matrix flood-truecolor flood-watched"
 
 only="" save_baseline=0 bin="" keep=0 seconds=5 tree=0
 while [ $# -gt 0 ]; do
@@ -94,12 +96,26 @@ wait_profile() {
   die "$name: no report after ${seconds}s (the instance's results: $(cat "$ctl/out.txt" 2>/dev/null))"
 }
 
+# watchers_alive: the watchers of flood-watched (the stream with output, and the waiter) run and have
+# been answered; a load that measures nothing of them must not pass for one that does.
+watchers_alive() {
+  local file
+  [ -s "$dir/events.out" ] || return 1
+  grep -q '"subscribed":true' "$dir/events.out" || return 1
+  for file in events waiter; do
+    [ -s "$dir/$file.pid" ] && kill -0 "$(cat "$dir/$file.pid")" 2>/dev/null || return 1
+  done
+}
+
 # profile_load <name> <ttystorm arguments>: the load in an instance, `perf-profile` once it settled.
 profile_load() {
   local name="$1" args="$2"
   log "$name: ttystorm $args, profiled for ${seconds}s"
   start_workload "$name" "$args"
   sleep "$SETTLE_SECONDS"
+  if [ "${#workload_watchers}" -gt 0 ] && ! watchers_alive; then
+    die "$name: the watchers are not running or were refused: events $(head -c 300 "$dir/events.out" 2>/dev/null) $(cat "$dir/events.err" "$dir/waiter.err" 2>/dev/null | head -c 300)"
+  fi
   if [ "$tree" = 1 ]; then
     send "$ctl" "a11y"
     sleep 2
@@ -113,9 +129,25 @@ profile_load() {
 }
 
 assemble_args=()
+workload_setup=() workload_watchers=""
 for l in $loads; do
   case "$l" in
     flood-truecolor) profile_load "$l" "flood --kind colorflood" ;;
+    flood-watched)
+      # The same flood, with what an agent's MCP tools make of a terminal: a subscription to its output
+      # (a worker reads the new lines under the reader's lock) and a waiter on its screen (a look every
+      # 100 ms), both started from inside the terminal, which may watch itself without `control_read`.
+      # The automation flag is off in a release build (the Unstable channel lets a tester turn it on),
+      # and no update check should run meanwhile.
+      workload_setup=('set auto_update=false' 'set update_channel="unstable"' 'set feature_flags={"automation":true}')
+      workload_watchers='"$WORMHOLE_BIN" events --terminal "$WORMHOLE_TAB_ID" --output --json >"$WORKLOAD_DIR/events.out" 2>"$WORKLOAD_DIR/events.err" &
+echo $! >"$WORKLOAD_DIR/events.pid"
+"$WORMHOLE_BIN" wait --terminal "$WORMHOLE_TAB_ID" --match "never printed: 0b1c4f" --timeout 600 >/dev/null 2>"$WORKLOAD_DIR/waiter.err" &
+echo $! >"$WORKLOAD_DIR/waiter.pid"
+sleep 1'
+      profile_load "$l" "flood --kind colorflood"
+      workload_setup=() workload_watchers=""
+      ;;
     *) profile_load "$l" "$l --fps 0 --no-hud" ;;
   esac
 done
