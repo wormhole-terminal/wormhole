@@ -41,7 +41,7 @@ fn start(spec: WaitSpec, grant: Grant, term: TestTerm) -> Rig {
     let plan = spec.plan().expect("a plan");
     let (subscription, _) = bus.wait(Watch::of_wait(TERMINAL, &plan), grant, None).expect("room");
     let job = WaitJob::wait(subscription, reader.downgrade(), TERMINAL, plan);
-    Rig { bus, reader, done: std::thread::spawn(move || job.finish()) }
+    Rig { bus, reader, done: std::thread::spawn(move || job.finish(|| false)) }
 }
 
 impl Rig {
@@ -283,7 +283,7 @@ fn run_rig(grant: Grant, timeout: Duration) -> (Rig, u64) {
     reader.print_marked(b"\x1b]133;A\x07$ \x1b]133;B\x07", &mut prompts);
     let (subscription, _) = bus.wait(Watch::of_run(TERMINAL), grant, None).expect("room");
     let job = WaitJob::run(subscription, reader.downgrade(), TERMINAL, None, timeout);
-    (Rig { bus, reader, done: std::thread::spawn(move || job.finish()) }, prompts)
+    (Rig { bus, reader, done: std::thread::spawn(move || job.finish(|| false)) }, prompts)
 }
 
 fn ran(reply: &Reply) -> Ran {
@@ -337,7 +337,7 @@ fn only_the_block_after_the_one_there_was_counts() {
     let (subscription, _) = bus.wait(Watch::of_run(TERMINAL), Grant::default(), None).expect("room");
     // The shell was at block 7's end when the command was typed.
     let job = WaitJob::run(subscription, reader.downgrade(), TERMINAL, Some(7), Duration::from_millis(400));
-    let done = std::thread::spawn(move || job.finish());
+    let done = std::thread::spawn(move || job.finish(|| false));
     let event =
         |body| bus.publish(Topic::Blocks, || Event { window: Some(1), terminal: Some(TERMINAL), body });
     event(block(BlockPhase::Finished, 7, Some(1), None));
@@ -388,4 +388,30 @@ fn an_output_of_characters_that_grow_when_written_is_cut_to_fit_the_reply() {
         huge.truncated && huge.output.as_deref().is_some_and(|text| text.ends_with("end")),
         "the newest stays"
     );
+}
+
+#[test]
+fn a_waiter_whose_client_went_away_ends_and_gives_its_place_back() {
+    let bus = Bus::new();
+    let reader = TestTerm::new(30, 4, 10).into_reader();
+    let plan = WaitSpec { status: vec![TerminalState::Idle], ..spec() }.plan().expect("a plan");
+    let (subscription, _) = bus.wait(Watch::of_wait(TERMINAL, &plan), Grant::default(), None).expect("room");
+    let job = WaitJob::wait(subscription, reader.downgrade(), TERMINAL, plan);
+    let started = Instant::now();
+    let asked = std::cell::Cell::new(0);
+    // Gone from the second time it is asked.
+    let reply = job.finish(|| {
+        asked.set(asked.get() + 1);
+        asked.get() >= 2
+    });
+    assert_eq!(failure(&reply), (ErrorCode::Failed, None));
+    assert!(started.elapsed() >= Duration::from_secs(2) && started.elapsed() < Duration::from_secs(5));
+    assert_eq!(bus.subscribers(), 0);
+    // And a run, the same way.
+    let (subscription, _) = bus.wait(Watch::of_run(TERMINAL), Grant::default(), None).expect("room");
+    let job = WaitJob::run(subscription, reader.downgrade(), TERMINAL, None, Duration::from_secs(30));
+    let started = Instant::now();
+    assert_eq!(failure(&job.finish(|| true)).0, ErrorCode::Failed);
+    assert!(started.elapsed() < Duration::from_secs(4), "{:?}", started.elapsed());
+    assert_eq!(bus.subscribers(), 0);
 }

@@ -446,6 +446,56 @@ mod tests {
         assert_eq!(bus.subscribers(), 0, "its place is given back");
     }
 
+    /// A script interrupted while it waits must not keep a place among the streams until the wait times out.
+    #[test]
+    fn a_wait_whose_client_hung_up_gives_its_place_back() {
+        use wormhole_term::testing::TestTerm;
+
+        use crate::ipc::bus::{Bus, Grant, Watch};
+        use crate::ipc::control::{Target, WaitSpec};
+        use crate::ipc::{Answer, WaitJob};
+
+        let (_dir, socket, rx) = server();
+        let bus = Bus::new();
+        let reader = TestTerm::new(10, 2, 0).into_reader();
+        let spec = WaitSpec {
+            target: Target::Terminal(3),
+            status: vec![TerminalState::Idle],
+            text: None,
+            gone: None,
+            stable_ms: None,
+            block_done: false,
+            timeout_ms: Some(600_000),
+        };
+        let app = std::thread::spawn({
+            let (bus, reader, spec) = (bus.clone(), reader.downgrade(), spec.clone());
+            move || {
+                if let Some(Incoming::Control { reply, .. }) = recv_within(&rx, Duration::from_secs(5)) {
+                    let plan = spec.plan().expect("a plan");
+                    let (subscription, _) =
+                        bus.wait(Watch::of_wait(3, &plan), Grant::default(), None).expect("room");
+                    let _ = reply.send(Answer::Wait(WaitJob::wait(subscription, reader, 3, plan)));
+                }
+            }
+        });
+        let mut stream = Stream::connect(&socket).expect("connect");
+        let request = Message::Control(Request::new(Action::Wait(spec), None));
+        writeln!(stream, "{}", serde_json::to_string(&request).expect("serializes")).expect("write");
+        app.join().expect("the app's side");
+        let until = Instant::now() + Duration::from_secs(3);
+        while bus.subscribers() == 0 && Instant::now() < until {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert_eq!(bus.subscribers(), 1, "the wait is open");
+        drop(stream);
+        let until = Instant::now() + Duration::from_secs(5);
+        while bus.subscribers() > 0 && Instant::now() < until {
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        assert_eq!(bus.subscribers(), 0, "found out within a few seconds, not at the wait's timeout");
+        drop(reader);
+    }
+
     /// A client that sends a request and then does not read its big answer holds the thread that serves
     /// the hooks for the write deadline in all, not for a timeout at each write.
     #[test]

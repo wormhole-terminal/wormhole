@@ -64,7 +64,7 @@ fn begin(answer: Answer) -> mpsc::Receiver<Reply> {
     let Answer::Wait(job) = answer else { panic!("expected a wait: {answer:?}") };
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
-        let _ = tx.send(job.finish());
+        let _ = tx.send(job.finish(|| false));
     });
     rx
 }

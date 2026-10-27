@@ -56,8 +56,11 @@ pub(super) fn start_wait(stream: Stream, job: WaitJob) -> io::Result<()> {
         .name("wormhole-wait".into())
         .stack_size(WAIT_STACK_BYTES)
         .spawn(move || {
-            let reply = job.finish();
             let mut stream = stream;
+            let reply = match stream.try_clone() {
+                Ok(mut probe) => job.finish(move || client_gone(&mut probe)),
+                Err(_) => job.finish(|| false),
+            };
             super::write_reply(&mut stream, &reply);
         })
         .map(drop)
@@ -86,6 +89,14 @@ fn run(mut stream: Stream, subscription: &Subscription, timing: Timing) {
             return;
         }
     }
+}
+
+/// Whether the client of `stream` has hung up. A client that sent its request and shut its writing side
+/// is still listening for the answer; one that closed (it was killed, or interrupted) is not, and a write to
+/// it fails with a broken pipe even when it has no bytes: that is how it is told, without reading anything.
+/// (A system that does not say for an empty write leaves the wait to its own timeout.)
+pub(super) fn client_gone(stream: &mut Stream) -> bool {
+    matches!(stream.write(&[]), Err(err) if err.kind() == io::ErrorKind::BrokenPipe)
 }
 
 fn push_notice(line: &mut Vec<u8>, notice: Notice) {
@@ -126,7 +137,7 @@ mod tests {
     use std::sync::mpsc;
     use std::time::{Duration, Instant};
 
-    use super::{Timing, too_slow_notice};
+    use super::{Timing, client_gone, too_slow_notice};
     use crate::ipc::bus::{Bus, Grant};
     use crate::ipc::control::event::{Body, CloseReason, Event, Notice, StreamLine, Subscribed, Topic};
     use crate::ipc::control::{Action, ErrorCode, EventsSpec, Listing, Reply, Request};
@@ -241,6 +252,18 @@ mod tests {
         // Quiet now: the app says it is alive, and at which seq.
         let beat = read_line(&mut reader).expect("a heartbeat");
         assert_eq!(StreamLine::parse(&beat), Some(StreamLine::Notice(Notice::Heartbeat { seq: 2 })));
+    }
+
+    #[test]
+    fn a_client_that_closed_is_gone_and_one_that_only_shut_its_writing_side_is_not() {
+        use std::net::Shutdown;
+
+        let (mut ours, theirs) = Stream::pair().expect("a socket pair");
+        assert!(!client_gone(&mut ours), "connected");
+        theirs.shutdown(Shutdown::Write).expect("half close");
+        assert!(!client_gone(&mut ours), "it sent its request and listens for the answer");
+        drop(theirs);
+        assert!(client_gone(&mut ours), "it closed");
     }
 
     #[test]

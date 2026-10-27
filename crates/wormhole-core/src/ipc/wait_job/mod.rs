@@ -75,14 +75,46 @@ impl WaitJob {
         Self { core: Core { subscription, reader, terminal }, what: What::Run(plan) }
     }
 
-    /// Wait it out and make the reply. Blocks, for as long as the plan's timeout at most.
-    pub fn finish(self) -> Reply {
+    /// Wait it out and make the reply. Blocks, for as long as the plan's timeout at most, and not
+    /// that long when the client goes: `client_gone` is asked about once a second, and a waiter nobody
+    /// listens for ends (a script interrupted must not keep one of the few places among the streams).
+    pub fn finish(self, mut client_gone: impl FnMut() -> bool) -> Reply {
         let started = Instant::now();
         let Self { core, what } = self;
+        let mut leash = Leash::new(&mut client_gone, started);
         match what {
-            What::Wait(plan) => reply(wait(&core, &plan, started)),
-            What::Run(plan) => reply(run::run(&core, &plan, started)),
+            What::Wait(plan) => reply(wait(&core, &plan, started, &mut leash)),
+            What::Run(plan) => reply(run::run(&core, &plan, started, &mut leash)),
         }
+    }
+}
+
+/// How often a waiter asks whether its client is still there.
+const LEASH_EVERY: Duration = Duration::from_secs(1);
+
+/// The question "is the client still there", asked at a pace.
+struct Leash<'a> {
+    gone: &'a mut dyn FnMut() -> bool,
+    next: Instant,
+}
+
+impl<'a> Leash<'a> {
+    fn new(gone: &'a mut dyn FnMut() -> bool, now: Instant) -> Self {
+        Self { gone, next: now + LEASH_EVERY }
+    }
+
+    /// When the thread should wake to ask.
+    fn due(&self) -> Instant {
+        self.next
+    }
+
+    /// Whether the client has gone, asked when it is time.
+    fn slipped(&mut self, now: Instant) -> Result<(), Error> {
+        if now < self.next {
+            return Ok(());
+        }
+        self.next = now + LEASH_EVERY;
+        if (self.gone)() { Err(Error::new(ErrorCode::Failed, "the caller went away")) } else { Ok(()) }
     }
 }
 
@@ -131,7 +163,7 @@ fn judge(plan: &WaitPlan, terminal: i64, event: &Event) -> Option<Result<Hit, Er
     }
 }
 
-fn wait(core: &Core, plan: &WaitPlan, started: Instant) -> Result<Waited, Error> {
+fn wait(core: &Core, plan: &WaitPlan, started: Instant, leash: &mut Leash) -> Result<Waited, Error> {
     let deadline = started + plan.timeout;
     let mut look = Look::new(plan, started);
     if let Some(hit) = look.first(core)? {
@@ -142,7 +174,7 @@ fn wait(core: &Core, plan: &WaitPlan, started: Instant) -> Result<Waited, Error>
         if now >= deadline {
             return Err(timed_out(plan.timeout, format!("still waiting for {}", describe(plan))));
         }
-        let wake = look.due().map_or(deadline, |due| due.min(deadline));
+        let wake = look.due().map_or(deadline, |due| due.min(deadline)).min(leash.due());
         match core.subscription.next(wake.saturating_duration_since(now)) {
             Next::Event(published) => {
                 if let Some(done) = judge(plan, core.terminal, &published.event) {
@@ -153,7 +185,9 @@ fn wait(core: &Core, plan: &WaitPlan, started: Instant) -> Result<Waited, Error>
             Next::Lagged(_) | Next::Idle => {}
             Next::Closed(reason) => return Err(closed(reason)),
         }
-        if let Some(hit) = look.step(core, Instant::now())? {
+        let now = Instant::now();
+        leash.slipped(now)?;
+        if let Some(hit) = look.step(core, now)? {
             return Ok(waited(core, hit, started));
         }
     }

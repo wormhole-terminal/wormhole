@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use wormhole_term::{CaptureRange, CaptureSpec, ReadScratch};
 
-use super::{Core, closed, gone, timed_out};
+use super::{Core, Leash, closed, gone, timed_out};
 use crate::ipc::bus::Next;
 use crate::ipc::control::event::{BlockPhase, Body};
 use crate::ipc::control::printable::json_line;
@@ -29,7 +29,7 @@ fn after(baseline: Option<u64>, block: i64) -> bool {
     baseline.is_none_or(|before| i64::try_from(before).is_ok_and(|before| block > before))
 }
 
-pub(super) fn run(core: &Core, plan: &RunWait, started: Instant) -> Result<Ran, Error> {
+pub(super) fn run(core: &Core, plan: &RunWait, started: Instant, leash: &mut Leash) -> Result<Ran, Error> {
     let deadline = started + plan.timeout;
     let mut mine: Option<i64> = None;
     loop {
@@ -41,7 +41,7 @@ pub(super) fn run(core: &Core, plan: &RunWait, started: Instant) -> Result<Ran, 
             };
             return Err(timed_out(plan.timeout, words));
         }
-        match core.subscription.next(deadline.saturating_duration_since(now)) {
+        match core.subscription.next(deadline.min(leash.due()).saturating_duration_since(now)) {
             Next::Event(published) => match &published.event.body {
                 Body::Block { phase: BlockPhase::Started, block, .. }
                     if mine.is_none() && after(plan.baseline, *block) =>
@@ -63,6 +63,7 @@ pub(super) fn run(core: &Core, plan: &RunWait, started: Instant) -> Result<Ran, 
             Next::Closed(reason) => return Err(closed(reason)),
             Next::Changed | Next::Lagged(_) | Next::Idle => {}
         }
+        leash.slipped(Instant::now())?;
     }
 }
 

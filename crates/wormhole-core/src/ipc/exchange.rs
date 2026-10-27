@@ -327,3 +327,67 @@ fn read_stdin_text() -> Result<String, String> {
     }
     Ok(text)
 }
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::{answer_wait, exit_code_of};
+    use crate::ipc::control::{Action, Error, ErrorCode, Ran, Reason, Reply, RunSpec, Target, WaitSpec};
+
+    fn wait(timeout_ms: Option<u64>) -> Action {
+        Action::Wait(WaitSpec {
+            target: Target::Terminal(3),
+            status: vec![],
+            text: None,
+            gone: None,
+            stable_ms: None,
+            block_done: true,
+            timeout_ms,
+        })
+    }
+
+    fn run(timeout_ms: Option<u64>) -> Action {
+        Action::Run(RunSpec { target: Target::Terminal(3), command: "make".into(), timeout_ms })
+    }
+
+    fn ran(exit_code: Option<i32>) -> Reply {
+        Reply::ok(Ran {
+            terminal: 3,
+            block: 4,
+            exit_code,
+            duration_ms: 10,
+            output: None,
+            truncated: false,
+            output_hidden: None,
+        })
+    }
+
+    #[test]
+    fn a_wait_or_run_is_waited_for_as_long_as_it_was_given_and_a_little_more() {
+        assert_eq!(answer_wait(&Action::List), Duration::from_secs(10));
+        assert_eq!(answer_wait(&wait(None)), Duration::from_secs(35));
+        assert_eq!(answer_wait(&wait(Some(90_000))), Duration::from_secs(95));
+        assert_eq!(answer_wait(&run(None)), Duration::from_secs(605));
+        assert_eq!(answer_wait(&run(Some(3_600_000))), Duration::from_secs(3605));
+    }
+
+    #[test]
+    fn a_timeout_is_124_and_the_commands_own_code_is_wanted_only_when_asked_for() {
+        let timeout: Reply = Error::new(ErrorCode::Failed, "slow").because(Reason::Timeout).into();
+        assert_eq!(exit_code_of(&wait(None), &timeout, false), 124);
+        assert_eq!(exit_code_of(&run(None), &timeout, true), 124);
+        // Another verb's failure is the usual 1; a refusal of a run is too.
+        assert_eq!(exit_code_of(&Action::List, &timeout, false), 1);
+        let refused: Reply = Error::new(ErrorCode::Refused, "no").into();
+        assert_eq!(exit_code_of(&run(None), &refused, true), 1);
+        let mistake: Reply = Error::new(ErrorCode::BadRequest, "bad").into();
+        assert_eq!(exit_code_of(&wait(None), &mistake, false), 2);
+        // A run that ran is 0 whatever the command's code, unless the command's code is what is asked.
+        assert_eq!(exit_code_of(&run(None), &ran(Some(101)), false), 0);
+        assert_eq!(exit_code_of(&run(None), &ran(Some(101)), true), 101);
+        assert_eq!(exit_code_of(&run(None), &ran(Some(0)), true), 0);
+        assert_eq!(exit_code_of(&run(None), &ran(None), true), 0);
+        assert_eq!(exit_code_of(&wait(None), &Reply::ok(serde_json::json!({})), true), 0);
+    }
+}
