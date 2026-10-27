@@ -100,6 +100,7 @@ mod tests {
             control_write: true,
             control_read: false,
             caller: Some(Caller { terminal: 4, verified: true, shell_integration: None }),
+            access: None,
         };
         assert_eq!(classify(Reply::ok(&facts)), App::Answered(facts));
         assert_eq!(

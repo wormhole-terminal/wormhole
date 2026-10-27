@@ -1,8 +1,8 @@
 //! Defaults, the names the file uses and what older files still read as.
 
 use super::super::{
-    APP_SETTINGS, ChangesScope, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta,
-    PROJECT_SETTINGS, PlainChanges, Settings, SharedChanges, SizeUnits, ThemeMode, TitleBorder, keys,
+    APP_SETTINGS, AgentAccess, ChangesScope, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound,
+    OptionAsMeta, PROJECT_SETTINGS, PlainChanges, Settings, SharedChanges, SizeUnits, ThemeMode, TitleBorder, keys,
 };
 use crate::storage::jsonc;
 use crate::theme::fonts;
@@ -52,8 +52,12 @@ fn the_final_design_keys_have_their_defaults() {
     assert_eq!(unset.size_units, SizeUnits::Decimal, "sizes read like Finder's unless asked");
     assert_eq!(unset.title_border, TitleBorder::Scrolled, "the line shows once output is under the bar");
     assert!(unset.open_in.is_empty(), "Open in… picks an editor until one is chosen");
+    assert_eq!(
+        unset.agent_access,
+        AgentAccess::Ask,
+        "programs ask the first time, unless the user said otherwise"
+    );
     assert!(!unset.control_write, "the command line can't type into terminals until asked");
-    assert!(!unset.control_read, "the command line can't read terminals until asked");
     assert!(!unset.allow_screen_checksum, "programs can't read the screen back until asked");
     assert!(!unset.allow_window_ops, "programs can't move the window until asked");
     assert!(!unset.allow_title_report, "programs can't read the window title back until asked");
@@ -469,4 +473,16 @@ fn a_row_count_choice_this_build_doesnt_know_reads_as_the_default() {
     assert_eq!(settings.sidebar_changes_plain, PlainChanges::Finishing);
     assert_eq!(settings.sidebar_changes_shared, SharedChanges::Each);
     assert_eq!(settings.font_size, 15.0, "the rest of the file is read");
+}
+
+/// The mode is spelled as the file spells it, and a word it does not know falls back to asking (a
+/// misspelt `"open"` must never read as letting everybody in, nor as locking everybody out).
+#[test]
+fn the_agent_access_mode_reads_by_its_words() {
+    for (word, mode) in [("off", AgentAccess::Off), ("ask", AgentAccess::Ask), ("open", AgentAccess::Open)] {
+        let settings: Settings =
+            serde_json::from_value(serde_json::json!({ "agent_access": word })).expect("reads");
+        assert_eq!(settings.agent_access, mode, "{word}");
+        assert_eq!(serde_json::to_value(mode).expect("writes"), serde_json::json!(word));
+    }
 }

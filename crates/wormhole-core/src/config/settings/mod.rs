@@ -33,8 +33,8 @@ mod title_row;
 use self::folder_colors::folder_color_key;
 
 pub use self::choices::{
-    BranchColor, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta, ShellProfile,
-    SizeUnits, ThemeMode, TitleBorder,
+    AgentAccess, BranchColor, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta,
+    ShellProfile, SizeUnits, ThemeMode, TitleBorder,
 };
 pub use self::keys::{APP_SETTINGS, PROJECT_SETTINGS};
 pub(crate) use self::keys::{LEGACY_SETTINGS, keys};
@@ -263,12 +263,13 @@ pub struct Settings {
     pub jump_waiting_key: String,
 
     // The control command line
+    /// Who may control Wormhole through the automation API while the Automation feature is on. It
+    /// replaces `control_write`, which is read only while the feature is off.
+    pub agent_access: AgentAccess,
     /// Let `Wormhole send-text` type into terminals and `Wormhole new-terminal` open them (and
-    /// start programs). Off, the command line can only list, report and notify.
+    /// start programs). Off, the command line can only list, report and notify. Read only while the
+    /// Automation feature is off; with it on, `agent_access` decides.
     pub control_write: bool,
-    /// Let the command line read what terminals show: `read`, `blocks`, and the `output` events.
-    /// A terminal can always read itself. Off, the rest of the command line works as before.
-    pub control_read: bool,
     /// Answer a program's request for the checksum of a rectangle of the screen (DECRQCRA). Off:
     /// it lets any program, also one over ssh, read the screen back cell by cell. Terminals started
     /// after the change use it.
@@ -391,8 +392,8 @@ impl Default for Settings {
             menu_bar_animate: false,
             hotkey_action: HotkeyAction::default(),
             jump_waiting_key: "alt-cmd-j".into(),
+            agent_access: AgentAccess::default(),
             control_write: false,
-            control_read: false,
             allow_screen_checksum: false,
             allow_window_ops: false,
             allow_title_report: false,

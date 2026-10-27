@@ -6,6 +6,8 @@
 //! re-exported here, so a name is `wormhole_text::keys::NAME` wherever it is written.
 
 #[rustfmt::skip]
+mod agent_sheet;
+#[rustfmt::skip]
 mod control;
 #[rustfmt::skip]
 mod notices;
@@ -50,6 +52,7 @@ mod terminal;
 #[rustfmt::skip]
 mod title_row;
 
+pub use agent_sheet::*;
 pub use control::*;
 pub use notices::*;
 pub use settings::*;
@@ -76,9 +79,19 @@ pub use title_row::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 892] = [
-    CONTROL_CLOSE_ASKED, NOTICE_COPIED_COMMAND, NOTICE_COPIED_PATH,
-    NOTICE_COPIED_SETTING_KEY, NOTICE_COPIED_ERROR, NOTICE_COPIED_OBJECT_ID,
+pub const ALL: [Key; 937] = [
+    AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_READ, AGENT_SHEET_WANTS_TYPE,
+    AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_CLOSE,
+    AGENT_SHEET_DETAIL, AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_WARNING_UNSIGNED,
+    AGENT_SHEET_WARNING_AD_HOC, AGENT_SHEET_WARNING_CHANGED, AGENT_SHEET_WARNING_ROOT,
+    AGENT_SHEET_LABEL_PATH, AGENT_SHEET_LABEL_PID, AGENT_SHEET_LABEL_SIGNED_BY,
+    AGENT_SHEET_LABEL_STARTED_BY, AGENT_SHEET_LABEL_RUNS_IN, AGENT_SHEET_LABEL_RUNS_ON,
+    AGENT_SHEET_LABEL_ASKED_BY, AGENT_SHEET_SIGNED_APPLE, AGENT_SHEET_SIGNED_AD_HOC,
+    AGENT_SHEET_SIGNED_OTHER, AGENT_SHEET_SIGNED_NONE, AGENT_SHEET_SIGNED_UNREADABLE,
+    AGENT_SHEET_BUTTON_DENY, AGENT_SHEET_BUTTON_SESSION, AGENT_SHEET_BUTTON_QUIT,
+    AGENT_SHEET_BUTTON_ALWAYS, CONTROL_CLOSE_ASKED, NOTICE_COPIED_COMMAND,
+    NOTICE_COPIED_PATH, NOTICE_COPIED_SETTING_KEY, NOTICE_COPIED_ERROR,
+    NOTICE_COPIED_OBJECT_ID, NOTICE_DRIVEN_SCRIPTS_TYPING, NOTICE_DRIVEN_SCRIPTS_READING,
     SETTINGS_SECTION_ADVANCED, SETTINGS_SECTION_ADVANCED_INTRO, SETTINGS_ADVANCED_GROUP_FILES,
     SETTINGS_ADVANCED_OPEN_CONFIG, SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION, SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS,
     SETTINGS_ADVANCED_OPEN_DATA, SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION, SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS,
@@ -97,8 +110,13 @@ pub const ALL: [Key; 892] = [
     SETTINGS_AGENTS_HOW, SETTINGS_AGENTS_HOW_DESCRIPTION, SETTINGS_AGENTS_HOW_KEYWORDS,
     SETTINGS_AGENTS_GROUP_COMMAND_LINE, SETTINGS_AGENTS_GROUP_COMMAND_LINE_BLURB, SETTINGS_AGENTS_CLI_TOOL,
     SETTINGS_AGENTS_CLI_TOOL_DESCRIPTION, SETTINGS_AGENTS_CLI_TOOL_KEYWORDS, SETTINGS_AGENTS_CONTROL_WRITE,
-    SETTINGS_AGENTS_CONTROL_WRITE_DESCRIPTION, SETTINGS_AGENTS_CONTROL_WRITE_KEYWORDS, SETTINGS_AGENTS_CONTROL_READ,
-    SETTINGS_AGENTS_CONTROL_READ_DESCRIPTION, SETTINGS_AGENTS_CONTROL_READ_KEYWORDS, SETTINGS_AGENTS_GROUP_SKILL,
+    SETTINGS_AGENTS_CONTROL_WRITE_DESCRIPTION, SETTINGS_AGENTS_CONTROL_WRITE_KEYWORDS, SETTINGS_AGENTS_GROUP_ACCESS,
+    SETTINGS_AGENTS_GROUP_ACCESS_BLURB, SETTINGS_AGENTS_ACCESS, SETTINGS_AGENTS_ACCESS_DESCRIPTION,
+    SETTINGS_AGENTS_ACCESS_KEYWORDS, SETTINGS_AGENTS_ACCESS_PROGRAMS, SETTINGS_AGENTS_ACCESS_PROGRAMS_KEYWORDS,
+    SETTINGS_AGENTS_ACCESS_OFF, SETTINGS_AGENTS_ACCESS_ASK, SETTINGS_AGENTS_ACCESS_OPEN,
+    SETTINGS_AGENTS_ACCESS_NONE, SETTINGS_AGENTS_ACCESS_REVOKE, SETTINGS_AGENTS_ACCESS_UNTIL_QUIT,
+    SETTINGS_AGENTS_ACCESS_SESSION, SETTINGS_AGENTS_ACCESS_ALWAYS, SETTINGS_AGENTS_ACCESS_NEVER_USED,
+    SETTINGS_AGENTS_ACCESS_NOT_SIGNED, SETTINGS_AGENTS_ACCESS_AD_HOC, SETTINGS_AGENTS_GROUP_SKILL,
     SETTINGS_AGENTS_GROUP_SKILL_BLURB, SETTINGS_AGENTS_SKILLS, SETTINGS_AGENTS_SKILLS_DESCRIPTION,
     SETTINGS_AGENTS_SKILLS_KEYWORDS, SETTINGS_AGENTS_SKILL_MCP, SETTINGS_AGENTS_SKILL_MCP_DESCRIPTION,
     SETTINGS_AGENTS_SKILL_MCP_KEYWORDS, SETTINGS_AGENTS_SKILL_NONE, SETTINGS_AGENTS_SKILL_NOT_INSTALLED,
@@ -382,14 +400,23 @@ pub const ALL: [Key; 892] = [
 #[cfg(feature = "test-support")]
 pub fn samples() -> Vec<(&'static str, String)> {
     vec![
+        ("agent-sheet-title", agent_sheet_title("Sample")),
+        ("agent-sheet-warning-unusual", agent_sheet_warning_unusual("Sample")),
+        ("agent-sheet-signed-developer", agent_sheet_signed_developer("Sample", "Sample")),
+        ("agent-sheet-signed-team", agent_sheet_signed_team("Sample")),
+        ("agent-sheet-in-terminal", agent_sheet_in_terminal("Sample")),
+        ("agent-sheet-runs-on", agent_sheet_runs_on("Sample", "Sample")),
         ("notice-copied-lines", notice_copied_lines(1)),
         ("notice-copied-lines", notice_copied_lines(5)),
         ("notice-copied-characters", notice_copied_characters(1)),
         ("notice-copied-characters", notice_copied_characters(5)),
         ("notice-copied-output", notice_copied_output(1)),
         ("notice-copied-output", notice_copied_output(5)),
+        ("notice-driven-typing", notice_driven_typing("Sample")),
+        ("notice-driven-reading", notice_driven_reading("Sample")),
         ("settings-advanced-reset-question", settings_advanced_reset_question(1)),
         ("settings-advanced-reset-question", settings_advanced_reset_question(5)),
+        ("settings-agents-access-last-used", settings_agents_access_last_used("Sample")),
         ("settings-agents-skill-failed", settings_agents_skill_failed("Sample", "Sample")),
         ("settings-agents-hooks-failed", settings_agents_hooks_failed("Sample", "Sample")),
         ("settings-agents-hooks-partial", settings_agents_hooks_partial("Sample")),

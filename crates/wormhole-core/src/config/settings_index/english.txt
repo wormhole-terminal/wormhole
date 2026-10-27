@@ -129,6 +129,9 @@ group "How status works"
 group "Command line"
   blurb "Scripts and agents can drive Wormhole from the command line: list terminals, read a status and send notifications."
   aside ""
+group "Agent access"
+  blurb "Programs that drive Wormhole through its command line, MCP or socket: which ones are let in, and what they were allowed. Wormhole controls what goes through Wormhole. It can't stop a program from using your files directly."
+  aside ""
 group "Wormhole skill"
   blurb "A skill teaches a coding agent to drive Wormhole through the command line: run tests in a split, wait for a dev server, read a screen. Nothing is installed until you press Install."
   aside ""
@@ -518,10 +521,14 @@ entry Agents control-write
   label "Let the command line type and open terminals"
   description "send-text types into a terminal and new-terminal opens one, as a paste; never into the terminal that asks, nor one waiting for your answer"
   keywords "cli command line control api socket send-text new-terminal scripts agents automation remote type"
-entry Agents control-read
-  label "Let the command line read terminals"
-  description "read, blocks and the output events see what a terminal shows, also what it showed before; a terminal can always read itself"
-  keywords "cli command line control api socket read blocks output events screen scrollback scripts agents automation watch"
+entry Agents agent-access
+  label "External agents and scripts"
+  description "Off lets nothing in beyond listing terminals and their status. Ask shows a question the first time a program wants more. Allowed while open lets every program in without asking while Wormhole runs"
+  keywords "agent access permissions approve allow deny ask off open scripts mcp command line automation security trust"
+entry Agents agent-access-programs
+  label "Approved programs"
+  description ""
+  keywords "approved programs allowed revoke remove forget signed always session quit claude codex scripts"
 entry Agents agent-skills
   label "Skill for coding agents"
   description "Puts the Wormhole skill in an agent's own skills folder. Update replaces it, Uninstall removes it, and a skill of the same name that Wormhole didn't write is never touched"

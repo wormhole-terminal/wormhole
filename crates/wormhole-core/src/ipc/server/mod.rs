@@ -17,9 +17,10 @@ use std::time::{Duration, Instant, SystemTime};
 use super::control::{self, ErrorCode, Reply, Request};
 use wormhole_term::ReadScratch;
 
-use super::{Answer, Incoming, Message};
+use super::{Answer, AskJob, Incoming, Message};
 use crate::platform::socket::{Listener, Stream, peer_is_same_user};
 
+mod ask;
 mod peer;
 mod stream;
 
@@ -89,7 +90,7 @@ fn serve(
                     return;
                 }
                 // A stream took the connection over: this thread has nothing more to read from it.
-                if answer(&mut stream, accepted, request, tx, timing, scratch) == Outcome::Streaming {
+                if !matches!(answer(&mut stream, accepted, request, tx, timing, scratch), Outcome::Answered) {
                     return;
                 }
             }
@@ -108,12 +109,14 @@ fn serve(
 }
 
 /// What became of a connection after its request.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 enum Outcome {
     /// The request was answered; the connection may carry more.
     Answered,
     /// A stream thread has the connection now.
     Streaming,
+    /// The request waits for the user: a thread of its own is to take the connection.
+    Asking(AskJob),
 }
 
 /// Hand `request` to the app and write its answer back on `stream`; a stream's connection goes on to
@@ -126,13 +129,27 @@ fn answer(
     timing: Timing,
     scratch: &mut ReadScratch,
 ) -> Outcome {
+    let peer = Peer::of(stream, accepted);
+    let Some(answer) = ask_app(&request, &peer, tx, timing) else { return Outcome::Answered };
+    match deliver(stream, answer, scratch, timing) {
+        Outcome::Asking(job) => ask::start(stream, request, peer, tx, timing, job),
+        other => other,
+    }
+}
+
+/// Give the app `request` and wait for what it answers: its answer, or the words for its silence (`None`
+/// when the app is gone).
+fn ask_app(
+    request: &Request,
+    peer: &Peer,
+    tx: &smol::channel::Sender<Incoming>,
+    timing: Timing,
+) -> Option<Answer> {
     let (reply_tx, reply_rx) = mpsc::sync_channel(1);
     let types_a_command = matches!(request.action, control::Action::Run(_));
-    let peer = Peer::of(stream, accepted);
-    if tx.send_blocking(Incoming::Control { request, peer, reply: reply_tx }).is_err() {
-        return Outcome::Answered;
-    }
-    let answer = reply_rx.recv_timeout(timing.reply_wait).unwrap_or_else(|_| {
+    tx.send_blocking(Incoming::Control { request: request.clone(), peer: peer.clone(), reply: reply_tx })
+        .ok()?;
+    Some(reply_rx.recv_timeout(timing.reply_wait).unwrap_or_else(|_| {
         // The app may be about to answer: a `run` it decides on late has typed its command already.
         let words = if types_a_command {
             "Wormhole did not answer in time (the command may have been typed all the same: look at the terminal before running it again)"
@@ -140,7 +157,12 @@ fn answer(
             "Wormhole did not answer in time"
         };
         Answer::Reply(Reply::error(ErrorCode::Failed, words))
-    });
+    }))
+}
+
+/// Write what the app answered. A request that waits for the user is given back as [`Outcome::Asking`]:
+/// whoever may wait for a person takes the connection over.
+fn deliver(stream: &mut Stream, answer: Answer, scratch: &mut ReadScratch, timing: Timing) -> Outcome {
     match answer {
         Answer::Reply(reply) => {
             let _ = write_reply(stream, &reply);
@@ -168,6 +190,7 @@ fn answer(
                 Err(err) => tracing::warn!("couldn't start an event stream: {err}"),
             }
         }
+        Answer::Ask(job) => return Outcome::Asking(job),
     }
     Outcome::Answered
 }

@@ -27,6 +27,9 @@ pub struct Grant {
     pub reads_all: bool,
     /// The terminals the caller runs in, by its place in the process tree.
     pub own: Vec<i64>,
+    /// The approval the subscriber is under (`access::Grants`), so that taking that approval back ends its
+    /// streams. `None` for one that needed no approval.
+    pub holder: Option<u64>,
 }
 
 impl Grant {
@@ -83,6 +86,13 @@ impl Subscriber {
             && (filter.terminals.is_empty() || filter.terminals.contains(&terminal))
             && (filter.windows.is_empty() || filter.windows.contains(&window))
             && self.may_read(Some(terminal))
+    }
+
+    /// The approval it was started under was taken back: whatever it listens for, it is closed.
+    pub(super) fn revoke_holder(&self, holder: u64) {
+        if self.grant().holder == Some(holder) {
+            self.queue.close(CloseReason::NotAllowed);
+        }
     }
 
     /// The setting that let it read everything was turned off: it keeps what it can read by being
@@ -198,10 +208,10 @@ mod tests {
 
     #[test]
     fn a_terminal_can_always_read_itself_and_the_setting_reads_all() {
-        let own = Grant { reads_all: false, own: vec![3] };
+        let own = Grant { reads_all: false, own: vec![3], ..Grant::default() };
         assert!(own.can_read(Some(3)));
         assert!(!own.can_read(Some(4)) && !own.can_read(None));
-        let all = Grant { reads_all: true, own: vec![] };
+        let all = Grant { reads_all: true, own: vec![], ..Grant::default() };
         assert!(all.can_read(Some(4)) && all.can_read(None));
         assert!(!Grant::default().can_read(Some(1)));
     }

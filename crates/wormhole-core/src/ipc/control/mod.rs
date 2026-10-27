@@ -75,6 +75,10 @@ pub use welcome::{
 /// binary misread a newer app's answer (or the reverse); adding an optional field is not that.
 pub const PROTOCOL_VERSION: u32 = 1;
 
+/// How long a question to the user waits for an answer, in seconds, before it counts as "Don't Allow" and is
+/// not remembered. The command line waits a little longer than that for the reply.
+pub const ASK_WAIT_S: u64 = 60;
+
 /// What a caller asks the app to do.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Request {
@@ -84,13 +88,26 @@ pub struct Request {
     /// `send-text` type into.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from: Option<String>,
+    /// The caller will wait for a person: if the request needs the user's approval, the app asks and the
+    /// connection waits for the answer (up to [`ASK_WAIT_S`] seconds) instead of refusing at once with
+    /// `approval_needed`. Set by `wh` and `wh mcp`; absent from an older command line, which gets the
+    /// refusal (and the user still sees the question).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ask: bool,
     #[serde(flatten)]
     pub action: Action,
 }
 
 impl Request {
     pub fn new(action: Action, from: Option<String>) -> Self {
-        Self { version: PROTOCOL_VERSION, from, action }
+        Self { version: PROTOCOL_VERSION, from, ask: false, action }
+    }
+
+    /// The same request from a caller that waits for the user's answer to a question ([`Request::ask`]).
+    #[must_use]
+    pub fn asking(mut self) -> Self {
+        self.ask = true;
+        self
     }
 
     /// The caller's tab as an id, when it runs in one.
@@ -172,7 +189,7 @@ pub enum Action {
 impl Action {
     /// What every action is called in a request's `action` field, for [`unreadable`]: a test keeps
     /// it in step with the enum.
-    const KNOWN: [&str; 19] = [
+    pub const KNOWN: [&str; 19] = [
         "list",
         "doctor",
         "status",
@@ -400,6 +417,22 @@ pub enum Reason {
     RunPending,
     /// The terminal is in a window of a profile that is not shown: it is left alone, as if absent.
     HiddenProfile,
+    /// The program has not been let in yet, and the app has asked the user (or will): either the caller
+    /// did not say it would wait (`Request::ask`), or the app has no window to ask in.
+    ApprovalNeeded,
+    /// The user answered "Don't Allow".
+    Declined,
+    /// The user said "Don't Allow" to this program a moment ago: it is not asked again for two minutes.
+    DeclinedRecently,
+    /// Nobody answered the question in time. The program is not remembered as refused.
+    AskTimedOut,
+    /// Agent access is off in Settings.
+    AgentAccessOff,
+    /// The program that asked is no longer the one the app looked at (its process ended, or another took
+    /// its place); asking again is fine.
+    IdentityChanged,
+    /// Too many questions are waiting for the user; they are not queued further.
+    TooManyQuestions,
     /// A reason a newer Wormhole gave.
     #[serde(other)]
     Other,

@@ -16,6 +16,8 @@
 //! - `mcp`: `wh mcp`, the same requests served to coding agents over MCP (stdin and stdout);
 //! - `instance`: who serves the socket;
 //! - `read_job`: a read of a terminal's screen, run by the socket thread;
+//! - `access`: who may control the app: the identity behind a request, what the user allowed, and the decision;
+//! - `ask_job`: a request that waits for the user's answer to a question;
 //! - `wait_job`: a `wait` or a `run`, which a thread of its own carries out and answers once;
 //! - `bus`: the events the app publishes and the subscriptions that hear them;
 //! - `server`: the listener thread (connections from this user only) and the threads of the streams;
@@ -28,6 +30,8 @@
 //! `onboarding` sit above it, so a terminal's environment can name the socket without the socket
 //! knowing about terminals.
 
+pub mod access;
+mod ask_job;
 pub mod bus;
 mod client;
 pub mod control;
@@ -56,6 +60,7 @@ use crate::platform::socket::socket_in_with;
 use crate::platform::user::UserId;
 use crate::storage::paths::data_dir;
 
+pub use ask_job::{AskJob, Decision};
 pub use client::{Command, command, run_cli, run_status_line_cli};
 pub use instance::{Instance, InstanceLock, Served, acquire, start_server};
 pub use message::Message;
@@ -103,6 +108,10 @@ pub enum Answer {
     /// after the reply is missed; if the socket gave up waiting, dropping the answer drops the
     /// subscription and gives its place back.
     Stream { reply: control::Reply, subscription: bus::Subscription },
+    /// The request needs the user's approval and its caller said it will wait (`Request::ask`): the app
+    /// queued the question. A thread of its own holds the connection until the user answers, then runs the
+    /// request again (or writes the refusal the app decided on).
+    Ask(AskJob),
 }
 
 impl From<control::Reply> for Answer {

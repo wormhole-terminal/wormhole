@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use super::{Caller, Facts};
+use super::{Access, Caller, Facts, Standing};
 use crate::agents::skill::State;
 use crate::ipc::control::{COMMAND_NAME, PROTOCOL_VERSION};
 
@@ -81,6 +81,8 @@ pub struct Report {
     pub automation: Option<bool>,
     pub control_write: Option<bool>,
     pub control_read: Option<bool>,
+    /// Agent access and where the caller stands, while the Automation flag is on.
+    pub access: Option<Access>,
     pub caller: Option<Caller>,
     /// `WORMHOLE_TAB_ID` as this process has it, when it is set.
     pub tab_id_in_environment: Option<String>,
@@ -113,10 +115,44 @@ pub fn mcp_add_command() -> String {
     format!("claude mcp add wormhole -- {COMMAND_NAME} mcp")
 }
 
+const ACCESS_FIX: &str =
+    "Ask the user to set Settings → Coding agents → Agent access to Ask (or Allowed while open).";
+
+/// What the caller's standing means for it, as problems: nothing when it is let in.
+fn access_problems(access: &Access) -> Vec<Problem> {
+    let name = &access.who;
+    match access.standing {
+        Standing::Open | Standing::Session | Standing::UntilQuit | Standing::Always | Standing::Other => {
+            vec![]
+        }
+        Standing::Off => vec![problem(
+            "agent_access_off",
+            Severity::Problem,
+            "Agent access is off: reading other terminals, typing, running and opening answer `not_allowed` (reason `agent_access_off`).",
+            ACCESS_FIX,
+        )],
+        Standing::NotAsked => vec![problem(
+            "not_approved_yet",
+            Severity::Hint,
+            &format!(
+                "The user has not let {name} control Wormhole yet. The first request that reads another terminal, types, runs or opens asks them in Wormhole's window and waits for the answer."
+            ),
+            "Make the request and tell the user a question is waiting in Wormhole. If they say no, do not retry; ask them.",
+        )],
+        Standing::DeclinedRecently => vec![problem(
+            "declined_recently",
+            Severity::Problem,
+            &format!(
+                "The user said no to {name} a moment ago, so it is not asked again for two minutes (reason `declined_recently`)."
+            ),
+            "Do not retry. Ask the user to allow it in Settings → Coding agents → Agent access.",
+        )],
+    }
+}
+
 const AUTOMATION_FIX: &str = "Ask the user to turn the Automation flag on: Settings → Feature flags → Automation (a development build or the Unstable update channel shows it; a Stable release needs `\"unlocked\": true` under feature_flags in config.json).";
 const WRITE_FIX: &str =
     "Ask the user to turn on Settings → Coding agents → \"Let the command line type and open terminals\".";
-const READ_FIX: &str = "Ask the user to turn on Settings → Coding agents → \"Let the command line read terminals\" (shown once the Automation flag is on).";
 
 impl Report {
     /// Put what is known together. `tab` is `WORMHOLE_TAB_ID` as set in this process.
@@ -167,21 +203,16 @@ impl Report {
                     AUTOMATION_FIX,
                 ));
             }
-            if !f.control_write {
-                problems.push(problem(
+            match &f.access {
+                Some(access) => problems.extend(access_problems(access)),
+                // Without the feature typing and opening are the one older switch (reading has none).
+                None if !f.control_write => problems.push(problem(
                     "control_write_off",
                     Severity::Problem,
-                    "Typing and opening are off: send-text, send-keys, mouse, run, new-terminal, new-window, split, focus, rename and close answer `not_allowed`.",
+                    "Typing and opening are off: send-text and new-terminal answer `not_allowed`.",
                     WRITE_FIX,
-                ));
-            }
-            if !f.control_read {
-                problems.push(problem(
-                    "control_read_off",
-                    Severity::Hint,
-                    "Reading other terminals is off: read, blocks, wait --match/--gone, events --output and the output of run answer `not_allowed` or are left out. A terminal can always read itself.",
-                    READ_FIX,
-                ));
+                )),
+                None => {}
             }
             match &f.caller {
                 None => problems.push(problem(
@@ -243,6 +274,7 @@ impl Report {
             automation: facts.map(|f| f.automation),
             control_write: facts.map(|f| f.control_write),
             control_read: facts.map(|f| f.control_read),
+            access: facts.and_then(|f| f.access.clone()),
             caller: facts.and_then(|f| f.caller.clone()),
             tab_id_in_environment: tab,
             skills,
@@ -260,6 +292,7 @@ impl Report {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::AgentAccess;
 
     fn facts(automation: bool, write: bool, read: bool, caller: Option<Caller>) -> Facts {
         Facts {
@@ -269,6 +302,7 @@ mod tests {
             control_write: write,
             control_read: read,
             caller,
+            access: None,
         }
     }
 
@@ -296,11 +330,34 @@ mod tests {
     fn each_switch_that_is_off_says_which_one_and_who_turns_it_on() {
         let report =
             Report::build(App::Answered(facts(false, false, false, own(true, Some(true)))), None, vec![]);
-        assert_eq!(ids(&report), ["automation_off", "control_write_off", "control_read_off"]);
+        assert_eq!(ids(&report), ["automation_off", "control_write_off"]);
         assert!(report.problems[1].fix.contains("Let the command line type and open terminals"));
-        assert!(report.problems[2].fix.contains("Let the command line read terminals"));
-        assert_eq!(report.problems[2].severity, Severity::Hint);
         assert!(report.problems[0].fix.starts_with("Ask the user"));
+    }
+
+    #[test]
+    fn with_the_feature_on_where_the_caller_stands_replaces_the_switches() {
+        let with = |mode, standing| {
+            let mut f = facts(true, false, false, own(true, Some(true)));
+            f.access = Some(Access { mode, who: "Claude Code".into(), standing });
+            ids(&Report::build(App::Answered(f), None, vec![]))
+        };
+        // The older switches are said nothing of, whatever they hold.
+        assert!(with(AgentAccess::Ask, Standing::UntilQuit).is_empty());
+        assert!(with(AgentAccess::Ask, Standing::Always).is_empty());
+        assert!(with(AgentAccess::Open, Standing::Open).is_empty());
+        assert_eq!(with(AgentAccess::Ask, Standing::NotAsked), ["not_approved_yet"]);
+        assert_eq!(with(AgentAccess::Off, Standing::Off), ["agent_access_off"]);
+        assert_eq!(with(AgentAccess::Ask, Standing::DeclinedRecently), ["declined_recently"]);
+        let hint = |standing| {
+            let mut f = facts(true, true, true, None);
+            f.access = Some(Access { mode: AgentAccess::Ask, who: "Scripts".into(), standing });
+            Report::build(App::Answered(f), None, vec![]).problems
+        };
+        let not_asked = hint(Standing::NotAsked);
+        let not_asked = not_asked.iter().find(|p| p.id == "not_approved_yet").expect("a hint");
+        assert_eq!(not_asked.severity, Severity::Hint);
+        assert!(not_asked.message.contains("Scripts") && not_asked.fix.contains("do not retry"));
     }
 
     #[test]

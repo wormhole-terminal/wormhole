@@ -254,6 +254,15 @@ impl Bus {
         }
     }
 
+    /// An approval was taken back (the user pressed Revoke, or the program's session ended): the streams
+    /// that were started under it are closed (`not_allowed`).
+    pub fn revoke_holder(&self, holder: u64) {
+        let subscribers = self.lock().subscribers.clone();
+        for subscriber in subscribers {
+            subscriber.revoke_holder(holder);
+        }
+    }
+
     /// End every stream (the app is quitting).
     pub fn close_all(&self, reason: CloseReason) {
         let subscribers = self.lock().subscribers.clone();

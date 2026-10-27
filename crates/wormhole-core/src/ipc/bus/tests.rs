@@ -179,10 +179,12 @@ fn a_slow_reader_loses_its_oldest_and_is_told_before_the_next() {
 fn what_a_terminal_printed_goes_only_to_those_who_may_read_it() {
     let bus = Bus::new();
     let (nobody, _) = bus.subscribe(filter(&["blocks"]), Grant::default(), None).expect("room");
-    let (itself, _) =
-        bus.subscribe(filter(&["blocks"]), Grant { reads_all: false, own: vec![8] }, Some(8)).expect("room");
-    let (everything, _) =
-        bus.subscribe(filter(&["blocks"]), Grant { reads_all: true, own: vec![] }, None).expect("room");
+    let (itself, _) = bus
+        .subscribe(filter(&["blocks"]), Grant { reads_all: false, own: vec![8], ..Grant::default() }, Some(8))
+        .expect("room");
+    let (everything, _) = bus
+        .subscribe(filter(&["blocks"]), Grant { reads_all: true, own: vec![], ..Grant::default() }, None)
+        .expect("room");
     bus.publish(Topic::Blocks, || block(8, "cargo test"));
     bus.publish(Topic::Blocks, || block(9, "secret"));
     let line = |subscription: &Subscription| match subscription.next(NONE) {
@@ -206,14 +208,17 @@ fn what_a_terminal_printed_goes_only_to_those_who_may_read_it() {
 fn turning_reads_off_closes_the_streams_that_needed_them_and_keeps_a_terminals_own() {
     let bus = Bus::new();
     let output = EventsSpec { output: true, ..EventsSpec::default() }.filter().expect("valid");
-    let (needs_it, _) =
-        bus.subscribe(output.clone(), Grant { reads_all: true, own: vec![] }, None).expect("room");
+    let (needs_it, _) = bus
+        .subscribe(output.clone(), Grant { reads_all: true, own: vec![], ..Grant::default() }, None)
+        .expect("room");
     let own_only =
         EventsSpec { output: true, terminals: vec![8], ..EventsSpec::default() }.filter().expect("valid");
-    let (of_itself, _) =
-        bus.subscribe(own_only, Grant { reads_all: true, own: vec![8] }, Some(8)).expect("room");
-    let (no_output, _) =
-        bus.subscribe(filter(&["blocks"]), Grant { reads_all: true, own: vec![] }, None).expect("room");
+    let (of_itself, _) = bus
+        .subscribe(own_only, Grant { reads_all: true, own: vec![8], ..Grant::default() }, Some(8))
+        .expect("room");
+    let (no_output, _) = bus
+        .subscribe(filter(&["blocks"]), Grant { reads_all: true, own: vec![], ..Grant::default() }, None)
+        .expect("room");
     bus.revoke_reads();
     assert!(matches!(needs_it.next(NONE), Next::Closed(CloseReason::NotAllowed)));
     assert!(matches!(of_itself.next(NONE), Next::Idle), "it reads only itself");
@@ -232,4 +237,18 @@ fn closing_all_ends_every_stream() {
     bus.close_all(CloseReason::Quitting);
     assert!(matches!(one.next(NONE), Next::Closed(CloseReason::Quitting)));
     assert!(matches!(two.next(NONE), Next::Closed(CloseReason::Quitting)));
+}
+
+#[test]
+fn taking_an_approval_back_closes_the_streams_started_under_it_and_only_those() {
+    let bus = Bus::new();
+    let under = |holder| Grant { holder, ..Grant::default() };
+    let (revoked, _) = bus.subscribe(filter(&["bell"]), under(Some(4)), None).expect("room");
+    let (other, _) = bus.subscribe(filter(&["bell"]), under(Some(5)), None).expect("room");
+    let (needed_none, _) = bus.subscribe(filter(&["bell"]), under(None), None).expect("room");
+    bus.revoke_holder(4);
+    assert!(matches!(revoked.next(NONE), Next::Closed(CloseReason::NotAllowed)));
+    bus.publish(Topic::Bell, || bell(1));
+    assert!(matches!(other.next(NONE), Next::Event(_)), "another approval's stream goes on");
+    assert!(matches!(needed_none.next(NONE), Next::Event(_)), "so does one that needed none");
 }

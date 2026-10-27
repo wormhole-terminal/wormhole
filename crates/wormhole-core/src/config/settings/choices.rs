@@ -197,3 +197,32 @@ impl ShellProfile {
         !self.name.trim().is_empty() && !self.command.trim().is_empty()
     }
 }
+
+/// Who may control Wormhole through the automation API (`wh`, `wh mcp`, a script on the socket), once
+/// the Automation feature is on: nobody beyond `list` and `status`, each program once it has been
+/// asked and the user said yes, or every program while Wormhole is open. The one setting that replaces
+/// `control_write` (and the retired `control_read`) for the feature (`agent-permissions.md`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AgentAccess {
+    /// Nothing is let in beyond what needs no approval (`list`, `status`, `notify`, `doctor`).
+    Off,
+    /// A program asks the first time it needs more; the answer is remembered as the user chose. The
+    /// default, also for everybody who never turned the old switches on.
+    #[default]
+    Ask,
+    /// Every program is let in without asking while Wormhole runs. Hidden terminals and command
+    /// rules still apply.
+    Open,
+}
+
+impl AgentAccess {
+    /// The mode as the file spells it.
+    pub fn word(self) -> &'static str {
+        match self {
+            AgentAccess::Off => "off",
+            AgentAccess::Ask => "ask",
+            AgentAccess::Open => "open",
+        }
+    }
+}

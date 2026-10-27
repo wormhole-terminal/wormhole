@@ -51,9 +51,34 @@ settings-agents-control-write = Let the command line type and open terminals
     .description = send-text types into a terminal and new-terminal opens one, as a paste; never into the terminal that asks, nor one waiting for your answer
     .keywords = cli command line control api socket send-text new-terminal scripts agents automation remote type
 
-settings-agents-control-read = Let the command line read terminals
-    .description = read, blocks and the output events see what a terminal shows, also what it showed before; a terminal can always read itself
-    .keywords = cli command line control api socket read blocks output events screen scrollback scripts agents automation watch
+## Agent access
+
+settings-agents-group-access = Agent access
+    .blurb = Programs that drive { -brand } through its command line, MCP or socket: which ones are let in, and what they were allowed. { -brand } controls what goes through { -brand }. It can't stop a program from using your files directly.
+
+settings-agents-access = External agents and scripts
+    .description = Off lets nothing in beyond listing terminals and their status. Ask shows a question the first time a program wants more. Allowed while open lets every program in without asking while { -brand } runs
+    .keywords = agent access permissions approve allow deny ask off open scripts mcp command line automation security trust
+
+settings-agents-access-programs = Approved programs
+    .keywords = approved programs allowed revoke remove forget signed always session quit claude codex scripts
+
+## settings_window/sections/agent_access.rs (labels and notes drawn by that page's code)
+
+settings-agents-access-off = Off
+settings-agents-access-ask = Ask
+settings-agents-access-open = Allowed while open
+settings-agents-access-none = Nothing has asked yet.
+settings-agents-access-revoke = Revoke
+settings-agents-access-until-quit = until { -brand } quits
+settings-agents-access-session = while it runs
+settings-agents-access-always = always
+settings-agents-access-never-used = never used
+# What a row says it was last used. { $when } is a time ago ("3m ago").
+settings-agents-access-last-used = Used { $when }
+
+settings-agents-access-not-signed = not signed
+settings-agents-access-ad-hoc = ad hoc signature
 
 ## Wormhole skill
 

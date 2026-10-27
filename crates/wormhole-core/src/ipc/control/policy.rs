@@ -168,19 +168,20 @@ pub fn run_check(
     }
 }
 
-/// Whether the caller may read what the target shows: `enabled` is `control_read`, `self_read`
+/// Whether the caller may read what the target shows: `enabled` is the user's yes to reading, `self_read`
 /// that the caller's process runs under the target's own shell (its `Peer`, never what `from`
 /// claims: a claim would let anyone switch the setting off for themselves).
 pub fn read_check(enabled: bool, self_read: bool) -> Result<(), Error> {
     if enabled || self_read { Ok(()) } else { Err(reads_off()) }
 }
 
-/// The answer to `read`, `blocks` and `events --output` while `control_read` is off.
+/// The answer to `read`, `blocks` and `events --output` from a program the user has not let read other
+/// terminals.
 pub fn reads_off() -> Error {
     Error::new(
         ErrorCode::NotAllowed,
-        "reading terminals from the command line is off (a terminal can always read itself): turn on \
-         Settings → Coding agents → Let the command line read terminals",
+        "reading other terminals is not allowed for this program (a terminal can always read itself): the \
+         user decides in Settings → Coding agents → Agent access",
     )
 }
 
@@ -357,7 +358,7 @@ mod tests {
         assert!(read_check(true, true).is_ok());
         let off = read_check(false, false).expect_err("off");
         assert_eq!(off.code, ErrorCode::NotAllowed);
-        assert!(off.message.contains("Let the command line read terminals"), "{}", off.message);
+        assert!(off.message.contains("Agent access"), "{}", off.message);
     }
 
     #[test]

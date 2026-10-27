@@ -113,12 +113,12 @@ pub const APP_SETTINGS: &[&str] = &[
     // Whether terminals' text is kept on disk: a cloned repository must not be able to turn that
     // on for itself.
     "restore_terminal_text",
+    // Who may control Wormhole through the automation API: a cloned repository must not be able to
+    // let programs in for itself.
+    "agent_access",
     // Whether scripts may type into terminals and open them: a cloned repository must not be
     // able to turn that on for itself.
     "control_write",
-    // Whether scripts may read what terminals show (their screen, history and output): the same
-    // reason, a cloned repository must not be able to turn that on for itself.
-    "control_read",
     // Whether programs may read the screen back with DECRQCRA: a cloned repository must not be
     // able to turn that on for itself.
     "allow_screen_checksum",
@@ -145,9 +145,16 @@ pub const APP_SETTINGS: &[&str] = &[
 ];
 
 /// Keys of older files that are still read (into the setting that replaced them) but never written:
-/// a file keeps them, and they are not "unknown".
-pub(crate) const LEGACY_SETTINGS: &[&str] =
-    &["compact_sidebar", "title_branch_status", "title_agent_gauge", "title_ports", "title_pull_request"];
+/// a file keeps them, and they are not "unknown". (`control_read` is not read any more: the Automation
+/// feature's `agent_access` replaced it, and without the feature reading had no effect.)
+pub(crate) const LEGACY_SETTINGS: &[&str] = &[
+    "compact_sidebar",
+    "title_branch_status",
+    "title_agent_gauge",
+    "title_ports",
+    "title_pull_request",
+    "control_read",
+];
 
 /// Every key a settings file can have, sorted.
 pub(crate) fn keys() -> Vec<String> {

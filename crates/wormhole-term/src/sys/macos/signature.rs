@@ -137,15 +137,15 @@ fn key_certificates() -> CFString {
 }
 
 fn string(info: &Info, key: fn() -> CFString) -> Option<String> {
-    info.find(&key())?.downcast::<CFString>().map(|text| text.to_string())
+    info.find(key())?.downcast::<CFString>().map(|text| text.to_string())
 }
 
 fn bytes(info: &Info, key: fn() -> CFString) -> Option<Vec<u8>> {
-    info.find(&key())?.downcast::<CFData>().map(|data| data.bytes().to_vec())
+    info.find(key())?.downcast::<CFData>().map(|data| data.bytes().to_vec())
 }
 
 fn number(info: &Info, key: fn() -> CFString) -> Option<i64> {
-    info.find(&key())?.downcast::<CFNumber>()?.to_i64()
+    info.find(key())?.downcast::<CFNumber>()?.to_i64()
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -158,7 +158,7 @@ fn hex(bytes: &[u8]) -> String {
 /// The organisation a Developer ID certificate names: its subject summary reads
 /// `Developer ID Application: Anthropic PBC (Q6L2SF6YDW)`.
 fn organisation(info: &Info) -> Option<String> {
-    let certificates = info.find(&key_certificates())?.downcast::<CFArray>()?;
+    let certificates = info.find(key_certificates())?.downcast::<CFArray>()?;
     let leaf = certificates.get(0)?;
     // SAFETY-free: the array holds SecCertificates; a value of another type is ignored by the type id.
     let leaf = leaf_certificate(&leaf)?;

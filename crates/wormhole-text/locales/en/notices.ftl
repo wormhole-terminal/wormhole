@@ -31,3 +31,16 @@ notice-copied-setting-key = Copied setting key
 notice-copied-error = Copied error
 
 notice-copied-object-id = Copied object id
+
+## What a program that controls { -brand } is doing to the terminal
+
+# A coding agent types, or has a command run, in the terminal the chip is on. { $name } is the agent's name,
+# e.g. Claude Code.
+notice-driven-typing = { $name } is typing
+
+# A coding agent reads what the terminal shows. { $name } is the agent's name, e.g. Claude Code.
+notice-driven-reading = { $name } is reading
+
+notice-driven-scripts-typing = A script is typing
+
+notice-driven-scripts-reading = A script is reading

@@ -51,7 +51,7 @@ impl ErrorCode {
                 "No such terminal, window or folder, or the terminal's shell has ended (reason exited). Read the ids again with `wh list --json`."
             }
             ErrorCode::NotAllowed => {
-                "A Settings switch is off. The message names it. Ask the user to turn it on; never try to get around it."
+                "The user has not allowed this: agent access is off, a switch is off, or they answered Don't Allow (the reason says which). The message names it. Ask the user; never try to get around it."
             }
             ErrorCode::Refused => {
                 "Allowed in general, not into this terminal now: your own terminal, one waiting for the user's answer, a shell that is not at its prompt, no room for a split. The reason says which; do not retry unchanged."
@@ -73,7 +73,7 @@ impl ErrorCode {
 
 impl Reason {
     /// Every reason this build gives (not [`Reason::Other`]).
-    pub const ALL: [Reason; 10] = [
+    pub const ALL: [Reason; 17] = [
         Reason::Timeout,
         Reason::NoIntegration,
         Reason::NotAtPrompt,
@@ -84,6 +84,13 @@ impl Reason {
         Reason::FlagOff,
         Reason::RunPending,
         Reason::HiddenProfile,
+        Reason::ApprovalNeeded,
+        Reason::Declined,
+        Reason::DeclinedRecently,
+        Reason::AskTimedOut,
+        Reason::AgentAccessOff,
+        Reason::IdentityChanged,
+        Reason::TooManyQuestions,
     ];
 
     /// The reason as it is spelled in a reply's `error.reason`.
@@ -99,6 +106,13 @@ impl Reason {
             Reason::FlagOff => "flag_off",
             Reason::RunPending => "run_pending",
             Reason::HiddenProfile => "hidden_profile",
+            Reason::ApprovalNeeded => "approval_needed",
+            Reason::Declined => "declined",
+            Reason::DeclinedRecently => "declined_recently",
+            Reason::AskTimedOut => "ask_timed_out",
+            Reason::AgentAccessOff => "agent_access_off",
+            Reason::IdentityChanged => "identity_changed",
+            Reason::TooManyQuestions => "too_many_questions",
             Reason::Other => "other",
         }
     }
@@ -127,6 +141,27 @@ impl Reason {
             }
             Reason::HiddenProfile => {
                 "The terminal is in a window of a profile that is not shown; leave it alone."
+            }
+            Reason::ApprovalNeeded => {
+                "The user has not let this program control Wormhole, and Wormhole has asked them (or will, in its window). Do not retry in a loop: tell the user to answer the question in Wormhole, then try once more."
+            }
+            Reason::Declined => {
+                "The user chose Don't Allow. Do not retry and do not look for another way in; tell the user what you wanted to do and ask them to allow it in Settings → Coding agents → Agent access."
+            }
+            Reason::DeclinedRecently => {
+                "The user said no a moment ago, so Wormhole does not ask again for two minutes. Do not retry; ask the user."
+            }
+            Reason::AskTimedOut => {
+                "Nobody answered the question in Wormhole within a minute. Tell the user it is waiting, and try once more only after they say they have looked."
+            }
+            Reason::AgentAccessOff => {
+                "Agent access is switched off in Settings → Coding agents → Agent access. Ask the user to turn it on; never try to get around it."
+            }
+            Reason::IdentityChanged => {
+                "The program asking changed while Wormhole looked at it (a process ended or was replaced). Try the request once more."
+            }
+            Reason::TooManyQuestions => {
+                "Wormhole already has several questions waiting for the user. Wait for them to be answered, then try again."
             }
             Reason::Other => "A reason a newer Wormhole gave; read the message.",
         }

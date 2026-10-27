@@ -23,8 +23,18 @@ pub fn render(report: &Report) -> String {
         (None, false) => out.push_str("Wormhole does not answer.\n"),
     }
     out.push_str(&format!("Automation flag: {}\n", on(report.automation)));
-    out.push_str(&format!("Typing and opening (control_write): {}\n", on(report.control_write)));
-    out.push_str(&format!("Reading other terminals (control_read): {}\n", on(report.control_read)));
+    match &report.access {
+        Some(access) => out.push_str(&format!(
+            "Agent access: {}. You are {}: {}\n",
+            access.mode.word(),
+            access.who,
+            access.standing.words()
+        )),
+        None => {
+            out.push_str(&format!("Typing and opening (control_write): {}\n", on(report.control_write)));
+            out.push_str(&format!("Reading other terminals (control_read): {}\n", on(report.control_read)));
+        }
+    }
     match &report.caller {
         Some(caller) => out.push_str(&format!(
             "This terminal: {}{}; shell integration: {}\n",
@@ -71,7 +81,8 @@ pub fn render(report: &Report) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{App, Caller, Facts, Report, render};
+    use super::super::{Access, App, Caller, Facts, Report, Standing, render};
+    use crate::config::AgentAccess;
     use crate::ipc::control::PROTOCOL_VERSION;
 
     #[test]
@@ -83,6 +94,7 @@ mod tests {
             control_write: false,
             control_read: true,
             caller: Some(Caller { terminal: 3, verified: true, shell_integration: Some(true) }),
+            access: None,
         };
         let shown = render(&Report::build(App::Answered(facts), Some("3".into()), vec![]));
         assert!(shown.contains("Wormhole 1.3.0 answers"), "{shown}");
@@ -90,6 +102,28 @@ mod tests {
         assert!(shown.contains("Reading other terminals (control_read): on"));
         assert!(shown.contains("This terminal: 3; shell integration: seen"));
         assert!(shown.contains("Fix: Ask the user to turn on Settings → Coding agents"));
+        let with_access = Facts {
+            access: Some(Access {
+                mode: AgentAccess::Ask,
+                who: "Claude Code".into(),
+                standing: Standing::UntilQuit,
+            }),
+            ..Facts {
+                app_version: "1.3.0".into(),
+                protocol: PROTOCOL_VERSION,
+                automation: true,
+                control_write: false,
+                control_read: false,
+                caller: None,
+                access: None,
+            }
+        };
+        let shown = render(&Report::build(App::Answered(with_access), None, vec![]));
+        assert!(
+            shown.contains("Agent access: ask. You are Claude Code: allowed until Wormhole quits"),
+            "{shown}"
+        );
+        assert!(!shown.contains("control_write"), "the switches are replaced while the flag is on: {shown}");
         let down = render(&Report::build(App::Down("Wormhole isn't running".into()), None, vec![]));
         assert!(down.starts_with("Wormhole does not answer."));
     }

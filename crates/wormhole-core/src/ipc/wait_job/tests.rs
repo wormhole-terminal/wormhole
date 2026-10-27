@@ -26,7 +26,7 @@ fn spec() -> WaitSpec {
 }
 
 fn reading() -> Grant {
-    Grant { reads_all: true, own: Vec::new() }
+    Grant { reads_all: true, own: Vec::new(), ..Grant::default() }
 }
 
 /// A wait on terminal 3 for `spec`, running on a thread, with the grant given.

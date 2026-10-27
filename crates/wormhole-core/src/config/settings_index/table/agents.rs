@@ -44,16 +44,28 @@ pub(super) const AGENTS: &[Group] = &[
             entry("cli-tool", SETTINGS_AGENTS_CLI_TOOL, &[])
                 .with_description(SETTINGS_AGENTS_CLI_TOOL_DESCRIPTION)
                 .with_keywords(SETTINGS_AGENTS_CLI_TOOL_KEYWORDS),
+            // While Automation is on, Agent access below decides who may type and open.
             entry("control-write", SETTINGS_AGENTS_CONTROL_WRITE, &["control_write"])
+                .with_needs(|s| !s.feature_enabled(FeatureFlag::Automation))
                 .with_description(SETTINGS_AGENTS_CONTROL_WRITE_DESCRIPTION)
                 .with_keywords(SETTINGS_AGENTS_CONTROL_WRITE_KEYWORDS),
-            entry("control-read", SETTINGS_AGENTS_CONTROL_READ, &["control_read"])
-                .with_flag(FeatureFlag::Automation)
-                .with_description(SETTINGS_AGENTS_CONTROL_READ_DESCRIPTION)
-                .with_keywords(SETTINGS_AGENTS_CONTROL_READ_KEYWORDS),
         ],
     )
     .with_blurb(SETTINGS_AGENTS_GROUP_COMMAND_LINE_BLURB),
+    // Who may control Wormhole through the command line, MCP and the socket (`agent-permissions.md`).
+    group(
+        SETTINGS_AGENTS_GROUP_ACCESS,
+        &[
+            entry("agent-access", SETTINGS_AGENTS_ACCESS, &["agent_access"])
+                .with_flag(FeatureFlag::Automation)
+                .with_description(SETTINGS_AGENTS_ACCESS_DESCRIPTION)
+                .with_keywords(SETTINGS_AGENTS_ACCESS_KEYWORDS),
+            entry("agent-access-programs", SETTINGS_AGENTS_ACCESS_PROGRAMS, &[])
+                .with_flag(FeatureFlag::Automation)
+                .with_keywords(SETTINGS_AGENTS_ACCESS_PROGRAMS_KEYWORDS),
+        ],
+    )
+    .with_blurb(SETTINGS_AGENTS_GROUP_ACCESS_BLURB),
     // The skill describes the automation verbs, so it comes with the flag.
     group(
         SETTINGS_AGENTS_GROUP_SKILL,

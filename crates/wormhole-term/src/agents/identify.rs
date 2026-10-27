@@ -43,6 +43,18 @@ fn by_package(path: &str) -> Option<AgentId> {
 /// (`fm serve`) and builds schemas; none of those is an agent in the terminal.
 const SUBCOMMANDS: &[(AgentId, &str)] = &[(AgentId::Fm, "chat")];
 
+/// The script an interpreter runs (`node --flag /path/to/cli.js …`: `/path/to/cli.js`), when the process
+/// is an interpreter with one; `None` for a native program. What an agent installed as a script is
+/// pinned by, since the interpreter's own signature says nothing about which program runs on it.
+pub fn interpreted_script(exe: &str, argv: &[String]) -> Option<String> {
+    let program = argv.first().map(String::as_str).unwrap_or(exe);
+    [base_name(exe), base_name(program)]
+        .into_iter()
+        .any(is_interpreter)
+        .then(|| argv.iter().skip(1).find(|a| !a.starts_with('-')).cloned())
+        .flatten()
+}
+
 /// Which agent a process is, from its executable path and argv.
 pub fn identify(exe: &str, argv: &[String]) -> Option<AgentId> {
     let program = argv.first().map(String::as_str).unwrap_or(exe);
@@ -113,6 +125,22 @@ mod tests {
         assert_eq!(
             identify(python, &argv(&["/usr/local/bin/python3.12", "/Users/me/.local/bin/aider"])),
             Some(AgentId::Aider)
+        );
+    }
+
+    #[test]
+    fn the_script_an_interpreter_runs_is_named_and_a_native_program_has_none() {
+        assert_eq!(
+            super::interpreted_script(
+                "/opt/homebrew/bin/node",
+                &argv(&["node", "--no-warnings", "/x/cli.js", "-p"])
+            ),
+            Some("/x/cli.js".to_string())
+        );
+        assert_eq!(super::interpreted_script("/usr/bin/python3", &argv(&["python3"])), None);
+        assert_eq!(
+            super::interpreted_script("/Users/me/.local/bin/claude", &argv(&["claude", "--resume"])),
+            None
         );
     }
 

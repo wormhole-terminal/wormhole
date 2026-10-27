@@ -25,7 +25,7 @@ pub use path::{AgentRow, AgentsSnapshot, installed};
 // not core's `terminal`, which starts shells and so sits above this module.
 pub use wormhole_term::agents::{
     AGENTS, Agent, AgentId, Foreground, Tile, agent, command_label, find, foreground_agent,
-    foreground_command, identify, shell_in_foreground,
+    foreground_command, identify, interpreted_script, shell_in_foreground,
 };
 
 #[cfg(test)]

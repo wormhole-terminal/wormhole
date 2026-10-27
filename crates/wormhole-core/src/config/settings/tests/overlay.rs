@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use super::super::{APP_SETTINGS, PROJECT_SETTINGS, Settings, ShellProfile, keys};
+use super::super::{APP_SETTINGS, AgentAccess, PROJECT_SETTINGS, Settings, ShellProfile, keys};
 use crate::project::ProjectColorChoice;
 use crate::storage::jsonc;
 use crate::theme::folder_color::FolderColor;
@@ -70,13 +70,14 @@ fn a_project_themes_itself_with_its_theme_file_only() {
     assert!(PROJECT_SETTINGS.contains(&"primary_color"), "the primary stays a project's to set");
 }
 
-/// `control_write` lets scripts type into terminals and start programs, `control_read` lets them
-/// read what terminals show: only the user's own config.json may turn either on, never a
-/// repository's `.wormhole/config.json`.
+/// `control_write` lets scripts type into terminals and start programs, `agent_access` lets programs in
+/// at all: only the user's own config.json may turn either on, never a repository's
+/// `.wormhole/config.json`.
 #[test]
 fn a_project_cannot_let_scripts_type_into_terminals() {
     assert!(APP_SETTINGS.contains(&"control_write") && !PROJECT_SETTINGS.contains(&"control_write"));
-    assert!(APP_SETTINGS.contains(&"control_read") && !PROJECT_SETTINGS.contains(&"control_read"));
+    // The mode that replaces both while Automation is on, with the same reason.
+    assert!(APP_SETTINGS.contains(&"agent_access") && !PROJECT_SETTINGS.contains(&"agent_access"));
     assert!(
         APP_SETTINGS.contains(&"allow_screen_checksum")
             && !PROJECT_SETTINGS.contains(&"allow_screen_checksum")
@@ -85,12 +86,13 @@ fn a_project_cannot_let_scripts_type_into_terminals() {
     assert!(
         APP_SETTINGS.contains(&"allow_title_report") && !PROJECT_SETTINGS.contains(&"allow_title_report")
     );
-    let overrides = serde_json::json!({ "control_write": true, "control_read": true });
+    let overrides = serde_json::json!({ "control_write": true, "agent_access": "open" });
     let serde_json::Value::Object(map) = overrides else { unreachable!() };
     let (merged, applied) = Settings::default().with_overrides_reported(&map);
     // The merge itself is blind to the lists (the app applies only `PROJECT_SETTINGS`), so
     // what matters is the classification above; the overlay reads like any other key here.
-    assert!(applied == ["control_read", "control_write"] && merged.control_write && merged.control_read);
+    assert!(applied == ["agent_access", "control_write"] && merged.control_write);
+    assert_eq!(merged.agent_access, AgentAccess::Open);
 }
 
 /// A folder's colour is the person's own, for every window: a repository can't recolour the

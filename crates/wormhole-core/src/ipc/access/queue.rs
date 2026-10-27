@@ -1,0 +1,177 @@
+//! The questions waiting for the user (`agent-permissions.md`, 7.4): one on screen at a time, in the
+//! order they came; a program that asks again while its question is open waits behind the same one and is
+//! answered by it.
+
+use std::collections::VecDeque;
+use std::sync::mpsc::SyncSender;
+
+use super::caps::Need;
+use super::identity::Identity;
+use super::resolve::Resolved;
+use crate::ipc::ask_job::Decision;
+
+/// How many different questions may wait. More are refused (`too_many_questions`).
+pub const QUEUE_MAX: usize = 8;
+
+/// A question, and the requests waiting for its answer.
+#[derive(Debug)]
+pub struct Pending {
+    pub id: u64,
+    pub resolved: Resolved,
+    /// What the first request that raised it needed.
+    pub need: Need,
+    waiters: Vec<SyncSender<Decision>>,
+    shown: bool,
+}
+
+impl Pending {
+    pub fn identity(&self) -> &Identity {
+        &self.resolved.identity
+    }
+
+    /// Answer every request that waited, each with its own decision.
+    pub fn answer(self, mut decision: impl FnMut() -> Decision) {
+        for waiter in self.waiters {
+            let _ = waiter.try_send(decision());
+        }
+    }
+}
+
+/// Too many questions are waiting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Full;
+
+#[derive(Debug, Default)]
+pub struct Queue {
+    pending: VecDeque<Pending>,
+    last_id: u64,
+}
+
+impl Queue {
+    /// Queue a question for `resolved`, or join the one its program has open. `waiter` is the request that
+    /// waits for the answer, if it does. The question's id.
+    pub fn push(
+        &mut self,
+        resolved: Resolved,
+        need: Need,
+        waiter: Option<SyncSender<Decision>>,
+    ) -> Result<u64, Full> {
+        if let Some(open) = self.pending.iter_mut().find(|p| p.resolved.identity == resolved.identity) {
+            open.waiters.extend(waiter);
+            return Ok(open.id);
+        }
+        if self.pending.len() >= QUEUE_MAX {
+            return Err(Full);
+        }
+        self.last_id += 1;
+        self.pending.push_back(Pending {
+            id: self.last_id,
+            resolved,
+            need,
+            waiters: waiter.into_iter().collect(),
+            shown: false,
+        });
+        Ok(self.last_id)
+    }
+
+    /// The question to put on screen now: the first that is not shown, and only when none is. Marks it shown.
+    pub fn next_to_show(&mut self) -> Option<&Pending> {
+        if self.pending.iter().any(|p| p.shown) {
+            return None;
+        }
+        let next = self.pending.iter_mut().find(|p| !p.shown)?;
+        next.shown = true;
+        Some(next)
+    }
+
+    /// Take question `id` off the queue to answer it.
+    pub fn take(&mut self, id: u64) -> Option<Pending> {
+        let at = self.pending.iter().position(|p| p.id == id)?;
+        self.pending.remove(at)
+    }
+
+    /// Every question, to refuse them all (Wormhole is quitting, or access was switched off).
+    pub fn drain(&mut self) -> Vec<Pending> {
+        self.pending.drain(..).collect()
+    }
+
+    pub fn len(&self) -> usize {
+        self.pending.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.pending.is_empty()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Pending> {
+        self.pending.iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::mpsc;
+
+    use super::{Full, QUEUE_MAX, Queue};
+    use crate::agents::AgentId;
+    use crate::ipc::access::caps::{Capability, Need};
+    use crate::ipc::access::identity::{Identity, Kind};
+    use crate::ipc::access::resolve::Resolved;
+    use crate::ipc::ask_job::Decision;
+
+    fn resolved(pin: &str) -> Resolved {
+        Resolved {
+            identity: Identity {
+                kind: Kind::AdHoc,
+                agent: Some(AgentId::Claude),
+                pin: pin.into(),
+                ..Identity::scripts()
+            },
+            label: "Claude Code".into(),
+            process: None,
+            program: None,
+            elevated: false,
+            started_by: None,
+            unusual_signer: false,
+        }
+    }
+
+    const TYPE: Need = Need::Capability(Capability::Type);
+
+    #[test]
+    fn one_question_is_on_screen_at_a_time_in_the_order_they_came() {
+        let mut queue = Queue::default();
+        let a = queue.push(resolved("a"), TYPE, None).expect("room");
+        let b = queue.push(resolved("b"), TYPE, None).expect("room");
+        assert_eq!(queue.next_to_show().map(|p| p.id), Some(a));
+        assert!(queue.next_to_show().is_none(), "a is still up");
+        queue.take(a).expect("a");
+        assert_eq!(queue.next_to_show().map(|p| p.id), Some(b));
+    }
+
+    #[test]
+    fn a_program_that_asks_again_joins_its_open_question_and_all_its_waiters_are_answered() {
+        let mut queue = Queue::default();
+        let (first, first_rx) = mpsc::sync_channel(1);
+        let (second, second_rx) = mpsc::sync_channel(1);
+        let id = queue.push(resolved("a"), TYPE, Some(first)).expect("room");
+        assert_eq!(queue.push(resolved("a"), TYPE, Some(second)).expect("joins"), id);
+        assert_eq!(queue.len(), 1);
+        queue.take(id).expect("there").answer(|| Decision::Retry);
+        assert!(matches!(first_rx.try_recv(), Ok(Decision::Retry)));
+        assert!(matches!(second_rx.try_recv(), Ok(Decision::Retry)));
+    }
+
+    #[test]
+    fn more_than_the_limit_of_different_programs_are_refused() {
+        let mut queue = Queue::default();
+        for n in 0..QUEUE_MAX {
+            queue.push(resolved(&n.to_string()), TYPE, None).expect("room");
+        }
+        assert_eq!(queue.push(resolved("one more"), TYPE, None), Err(Full));
+        // A program that is queued already can still join.
+        assert!(queue.push(resolved("0"), TYPE, None).is_ok());
+        assert_eq!(queue.drain().len(), QUEUE_MAX);
+        assert!(queue.is_empty());
+    }
+}

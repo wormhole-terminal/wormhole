@@ -14,6 +14,7 @@
 
 pub mod backup;
 pub mod clock;
+pub mod codesign;
 pub mod fs;
 pub mod keychain;
 #[cfg(target_os = "linux")]

@@ -13,13 +13,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use super::Message;
+use super::access::Need;
 use super::control::Parsed;
 use super::control::event::{HEARTBEAT, StreamLine, Subscribed};
 use super::control::events;
 use super::control::printable::json_line;
 use super::control::{
-    Action, PROTOCOL_VERSION, Ran, Reason, Reply, Request, SEND_TEXT_MAX_BYTES, help_json, help_with,
-    json_env, parse, print, print_err, render_with, run_parts, show_automation,
+    ASK_WAIT_S, Action, PROTOCOL_VERSION, Ran, Reason, Reply, Request, SEND_TEXT_MAX_BYTES, help_json,
+    help_with, json_env, parse, print, print_err, render_with, run_parts, show_automation,
 };
 use super::control::{sessions, skill_cli};
 use crate::platform::paths;
@@ -123,23 +124,53 @@ pub(crate) fn exchange_cancellable(
 
 fn read_answer(stream: &mut Stream, request: &Request, wait: Duration) -> Result<Reply, Exchange> {
     let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
-    let _ = stream.set_read_timeout(Some(wait));
+    // A request that may be waiting for the user says so on stderr when the app has not answered in a moment.
+    let first = if request.ask { wait.min(ASK_NOTICE_AFTER) } else { wait };
+    let _ = stream.set_read_timeout(Some(first));
     let line = serde_json::to_string(&Message::Control(request.clone()))
         .map_err(|e| Exchange::Broken(e.to_string()))?;
     writeln!(stream, "{line}").map_err(|e| Exchange::Broken(e.to_string()))?;
     // The app reads lines until the connection ends on our side; the answer comes back on it.
     let _ = stream.shutdown(Shutdown::Write);
     let mut answer = String::new();
-    match BufReader::new(&*stream).take(REPLY_LIMIT).read_line(&mut answer) {
-        Ok(0) => Err(Exchange::NoAnswer),
-        Ok(_) => {
-            serde_json::from_str(&answer).map_err(|e| Exchange::Broken(format!("unreadable reply: {e}")))
+    let mut told = !request.ask;
+    let mut reader = BufReader::new(&*stream).take(REPLY_LIMIT);
+    loop {
+        match reader.read_line(&mut answer) {
+            Ok(0) => return Err(Exchange::NoAnswer),
+            Ok(_) => {
+                return serde_json::from_str(&answer)
+                    .map_err(|e| Exchange::Broken(format!("unreadable reply: {e}")));
+            }
+            Err(err) if matches!(err.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut) => {
+                if told {
+                    return Err(Exchange::NoAnswer);
+                }
+                told = true;
+                print_err(WAITING_FOR_THE_USER);
+                let _ = reader.get_ref().get_ref().set_read_timeout(Some(wait));
+            }
+            Err(err) => return Err(Exchange::Broken(err.to_string())),
         }
-        Err(err) if matches!(err.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut) => {
-            Err(Exchange::NoAnswer)
-        }
-        Err(err) => Err(Exchange::Broken(err.to_string())),
     }
+}
+
+/// How long the app may take before the command line says that it is waiting for the user.
+const ASK_NOTICE_AFTER: Duration = Duration::from_secs(2);
+
+/// What the command line says on stderr while a question is on the user's screen.
+pub(crate) const WAITING_FOR_THE_USER: &str = "Wormhole: waiting for your answer in Wormhole…\n";
+
+/// `request`, from a caller that will wait for the user's answer when the action needs one.
+pub(crate) fn asking_if_needed(request: Request) -> Request {
+    if Need::of(&request.action) == Need::Nothing { request } else { request.asking() }
+}
+
+/// How long to wait for the app's reply to `request`: [`answer_wait`], and the time of a question to the
+/// user when it may ask one.
+pub(crate) fn request_wait(request: &Request) -> Duration {
+    let extra = if request.ask { Duration::from_secs(ASK_WAIT_S + 5) } else { Duration::ZERO };
+    answer_wait(&request.action) + extra
 }
 
 /// How a stream ended.
@@ -163,7 +194,8 @@ pub(crate) fn exchange_stream(
 ) -> Result<StreamEnd, Exchange> {
     let mut stream = Stream::connect(socket).map_err(|_| Exchange::NotRunning)?;
     let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
-    let _ = stream.set_read_timeout(Some(REPLY_WAIT));
+    let reply_wait = if request.ask { REPLY_WAIT + Duration::from_secs(ASK_WAIT_S + 5) } else { REPLY_WAIT };
+    let _ = stream.set_read_timeout(Some(reply_wait));
     let line = serde_json::to_string(&Message::Control(request.clone()))
         .map_err(|e| Exchange::Broken(e.to_string()))?;
     writeln!(stream, "{line}").map_err(|e| Exchange::Broken(e.to_string()))?;
@@ -251,11 +283,11 @@ pub(crate) fn run(args: &[String]) -> i32 {
         }
     }
     let Caller { socket, from } = Caller::from_env();
-    let request = Request::new(action, from);
+    let request = asking_if_needed(Request::new(action, from));
     if matches!(request.action, Action::Events(_)) {
         return watch(&socket, &request, json, home.as_deref());
     }
-    let reply = match exchange(&socket, &request, answer_wait(&request.action)) {
+    let reply = match exchange(&socket, &request, request_wait(&request)) {
         Ok(reply) => reply,
         Err(Exchange::NotRunning) => {
             // Terminals that outlive the app can still be listed from their hosts' files.

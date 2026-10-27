@@ -20,7 +20,7 @@ fn watch(bus: &Arc<Bus>, terminals: Vec<i64>, grant: Grant) -> Subscription {
 }
 
 fn reads_all() -> Grant {
-    Grant { reads_all: true, own: vec![] }
+    Grant { reads_all: true, own: vec![], ..Grant::default() }
 }
 
 /// The next `output` event within `wait`.
@@ -119,7 +119,7 @@ fn only_those_who_may_read_the_terminal_hear_it_and_nothing_is_built_for_nobody(
     pulse(&bus, 3);
     assert_eq!(asked.get(), 0, "with nobody listening the handle is never made");
     let stranger = watch(&bus, vec![], Grant::default());
-    let own = watch(&bus, vec![3], Grant { reads_all: false, own: vec![3] });
+    let own = watch(&bus, vec![3], Grant { reads_all: false, own: vec![3], ..Grant::default() });
     assert!(bus.wants(super::Topic::Output));
     assert!(!bus.output_wanted(1, 9), "the stranger may read nothing and the owner asked for 3 only");
     pulse(&bus, 9);

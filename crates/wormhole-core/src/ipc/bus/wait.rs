@@ -189,7 +189,7 @@ mod tests {
     fn reading_going_off_ends_a_waiter_on_text_but_not_one_in_its_own_terminal() {
         let bus = Bus::new();
         let reads = plan(|s| s.pattern = Some("ok".into()));
-        let granted = Grant { reads_all: true, own: vec![9] };
+        let granted = Grant { reads_all: true, own: vec![9], ..Grant::default() };
         let (on_text, _) = bus.wait(Watch::of_wait(3, &reads), granted.clone(), None).expect("room");
         let (own, _) = bus.wait(Watch::of_wait(9, &reads), granted.clone(), None).expect("room");
         let status_only = plan(|s| s.status = vec![TerminalState::Idle]);

@@ -1,13 +1,36 @@
 //! What a notice is. Only its kind and the numbers its sentence needs; never the copied text itself.
 
+use crate::agents::AgentId;
+
 /// A short message the chip says.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Notice {
     /// Something was put on the clipboard.
     Copied(Copied),
+    /// A program that controls Wormhole (a coding agent, a script) acted on this terminal.
+    Driven(Driven),
     /// A message devctl made up (`notice <text>`, which has no sentence in the catalog); the number tells
     /// one from another and the words come with the post. Nothing but devctl makes one.
     Test(u64),
+}
+
+/// What a program that controls Wormhole did to a terminal, and which program it is: only what, never the
+/// text read or typed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Driven {
+    /// It read what the terminal shows.
+    Reading(Driver),
+    /// It typed into the terminal, or had a command run in it.
+    Typing(Driver),
+}
+
+/// Who did it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Driver {
+    /// A coding agent of the registry.
+    Agent(AgentId),
+    /// Anything else: a script, or a command typed at a prompt.
+    Scripts,
 }
 
 /// What was copied, and how much.
@@ -37,6 +60,10 @@ pub enum Copied {
 pub enum Glyph {
     /// Two sheets: a copy.
     Copy,
+    /// An eye: something reads the terminal.
+    Eye,
+    /// A keyboard: something types into the terminal.
+    Keyboard,
 }
 
 impl Notice {
@@ -44,6 +71,8 @@ impl Notice {
     pub fn glyph(self) -> Glyph {
         match self {
             Self::Copied(_) | Self::Test(_) => Glyph::Copy,
+            Self::Driven(Driven::Reading(_)) => Glyph::Eye,
+            Self::Driven(Driven::Typing(_)) => Glyph::Keyboard,
         }
     }
 }
@@ -91,6 +120,13 @@ mod tests {
         for copied in [Copied::Command, Copied::Path, Copied::SettingKey, Copied::Error, Copied::ObjectId] {
             assert_eq!(Notice::from(copied).glyph(), Glyph::Copy);
         }
+    }
+
+    #[test]
+    fn a_program_driving_a_terminal_has_the_glyph_of_what_it_does() {
+        let agent = Driver::Agent(AgentId::Claude);
+        assert_eq!(Notice::Driven(Driven::Reading(agent)).glyph(), Glyph::Eye);
+        assert_eq!(Notice::Driven(Driven::Typing(Driver::Scripts)).glyph(), Glyph::Keyboard);
     }
 
     #[test]
