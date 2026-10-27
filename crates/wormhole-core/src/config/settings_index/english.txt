@@ -129,6 +129,9 @@ group "How status works"
 group "Command line"
   blurb "Scripts and agents can drive Wormhole from the command line: list terminals, read a status and send notifications."
   aside ""
+group "Wormhole skill"
+  blurb "A skill teaches a coding agent to drive Wormhole through the command line: run tests in a split, wait for a dev server, read a screen. Nothing is installed until you press Install."
+  aside ""
 section Import
   title "Import"
   intro "Bring your font, colours, shell and more over from the terminal you used before. Nothing changes until you choose what to import, and the other terminal's own files are never touched."
@@ -503,6 +506,14 @@ entry Agents control-read
   label "Let the command line read terminals"
   description "read, blocks and the output events see what a terminal shows, also what it showed before; a terminal can always read itself"
   keywords "cli command line control api socket read blocks output events screen scrollback scripts agents automation watch"
+entry Agents agent-skills
+  label "Skill for coding agents"
+  description "Puts the Wormhole skill in an agent's own skills folder. Update replaces it, Uninstall removes it, and a skill of the same name that Wormhole didn't write is never touched"
+  keywords "skill skills agent agents claude codex gemini copilot opencode qwen droid install update uninstall wh automation instructions"
+entry Agents agent-mcp
+  label "Add Wormhole to an agent over MCP"
+  description "Run this command in a terminal to give Claude Code the tools of wh mcp. Wormhole doesn't change other apps' settings"
+  keywords "mcp model context protocol claude code tools server wh agent"
 entry Import import-found
   label "Terminals found"
   description ""

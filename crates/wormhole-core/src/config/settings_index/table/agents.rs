@@ -54,6 +54,21 @@ pub(super) const AGENTS: &[Group] = &[
         ],
     )
     .with_blurb(SETTINGS_AGENTS_GROUP_COMMAND_LINE_BLURB),
+    // The skill describes the automation verbs, so it comes with the flag.
+    group(
+        SETTINGS_AGENTS_GROUP_SKILL,
+        &[
+            entry("agent-skills", SETTINGS_AGENTS_SKILLS, &[])
+                .with_flag(FeatureFlag::Automation)
+                .with_description(SETTINGS_AGENTS_SKILLS_DESCRIPTION)
+                .with_keywords(SETTINGS_AGENTS_SKILLS_KEYWORDS),
+            entry("agent-mcp", SETTINGS_AGENTS_SKILL_MCP, &[])
+                .with_flag(FeatureFlag::Automation)
+                .with_description(SETTINGS_AGENTS_SKILL_MCP_DESCRIPTION)
+                .with_keywords(SETTINGS_AGENTS_SKILL_MCP_KEYWORDS),
+        ],
+    )
+    .with_blurb(SETTINGS_AGENTS_GROUP_SKILL_BLURB),
 ];
 
 pub(super) const PROJECTS: &[Group] = &[untitled(&[entry("projects", SETTINGS_PROJECTS_PROJECTS, &[])

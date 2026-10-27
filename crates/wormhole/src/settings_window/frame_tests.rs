@@ -77,8 +77,10 @@ const BUDGET: [(&str, u64); 16] = [
     ("Terminal", 9771),
     ("Sessions", 13704),
     ("Git", 4567),
-    // A row more (Let the command line read terminals).
-    ("Agents", 9011),
+    // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
+    // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
+    // button; 668 more.
+    ("Agents", 9679),
     ("Import", 53067),
     ("Notifications", 7882),
     ("MenuBar", 6195),

@@ -55,6 +55,33 @@ settings-agents-control-read = Let the command line read terminals
     .description = read, blocks and the output events see what a terminal shows, also what it showed before; a terminal can always read itself
     .keywords = cli command line control api socket read blocks output events screen scrollback scripts agents automation watch
 
+## Wormhole skill
+
+settings-agents-group-skill = Wormhole skill
+    .blurb = A skill teaches a coding agent to drive { -brand } through the command line: run tests in a split, wait for a dev server, read a screen. Nothing is installed until you press Install.
+
+settings-agents-skills = Skill for coding agents
+    .description = Puts the { -brand } skill in an agent's own skills folder. Update replaces it, Uninstall removes it, and a skill of the same name that { -brand } didn't write is never touched
+    .keywords = skill skills agent agents claude codex gemini copilot opencode qwen droid install update uninstall wh automation instructions
+
+settings-agents-skill-mcp = Add { -brand } to an agent over MCP
+    .description = Run this command in a terminal to give Claude Code the tools of wh mcp. { -brand } doesn't change other apps' settings
+    .keywords = mcp model context protocol claude code tools server wh agent
+
+## settings_window/sections/agent_skills.rs (rows and notes drawn by that page's code)
+
+settings-agents-skill-none = No coding agent that loads skills was found on this Mac's PATH.
+settings-agents-skill-not-installed = No skill installed in
+settings-agents-skill-current = Skill installed in
+settings-agents-skill-outdated = Skill out of date in
+settings-agents-skill-foreign = Another skill is in the way in
+settings-agents-skill-foreign-tooltip = A skill with this name is there that { -brand } didn't write; it never replaces it
+settings-agents-copy-command = Copy command
+
+# The notice after installing, updating or removing the skill failed. { $agent } is the agent's name and
+# { $error } the reason, in English.
+settings-agents-skill-failed = { $agent } skill: { $error }
+
 ## settings_window/sections/agents.rs (labels, hints and notes drawn by this page's code)
 
 settings-agents-open-notifications = Open Notifications

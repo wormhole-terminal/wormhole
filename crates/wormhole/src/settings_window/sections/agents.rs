@@ -22,7 +22,7 @@ use wormhole_core::agents::{self, AGENTS, Agent};
 use wormhole_core::config::profile::Profile;
 use wormhole_core::config::settings_index::SectionId as Section;
 
-use super::cli_tool;
+use super::{agent_skills, cli_tool};
 use crate::app_state::app;
 use crate::settings::UiColors;
 use crate::settings_window::registry::{Setting, toggle};
@@ -44,6 +44,9 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("control-write", control_write),
     // Shown while the Automation flag is on (the index row says so).
     toggle!("control-read", control_read),
+    // Shown while the Automation flag is on, like the row above.
+    agent_skills::SKILLS,
+    agent_skills::MCP,
 ];
 
 /// What the Agents page shows, read from disk: which agents are installed and what state
@@ -53,6 +56,8 @@ pub(super) const SETTINGS: &[Setting] = &[
 pub(crate) struct AgentsSnapshot {
     home: PathBuf,
     rows: Vec<AgentRow>,
+    /// The Wormhole skill in each skills folder (`agent_skills`).
+    pub(super) skills: Vec<super::agent_skills::SkillRow>,
 }
 
 pub(crate) struct AgentRow {
@@ -111,7 +116,7 @@ impl AgentsSnapshot {
             })
             .collect();
         rows.sort_by_key(|row| !row.installed);
-        Self { home: home.to_path_buf(), rows }
+        Self { home: home.to_path_buf(), rows, skills: super::agent_skills::load(home) }
     }
 
     pub(crate) fn installed(&self) -> impl Iterator<Item = &AgentRow> {
@@ -231,7 +236,7 @@ fn draw_installed(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> 
 }
 
 /// An agent's logo in a square, or its monogram (CX, AI…) for an agent without a bundled logo.
-fn mark(ui: UiColors, agent: &Agent) -> AnyElement {
+pub(super) fn mark(ui: UiColors, agent: &Agent) -> AnyElement {
     let tile = div()
         .flex_none()
         .flex()
