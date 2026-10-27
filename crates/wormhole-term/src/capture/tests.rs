@@ -259,7 +259,11 @@ mod blocks {
 
     impl Rig {
         fn new(rows: u16) -> Self {
-            Self { reader: reader(30, rows, 200), prompts: 0 }
+            Self::with_history(rows, 200)
+        }
+
+        fn with_history(rows: u16, history: usize) -> Self {
+            Self { reader: reader(30, rows, history), prompts: 0 }
         }
 
         fn feed(&mut self, bytes: &[u8]) {
@@ -351,5 +355,41 @@ mod blocks {
         plain.feed(b"text\r\n");
         let none = plain.capture(&spec(CaptureRange::BlockOutput(1)), &mut ReadScratch::default());
         assert_eq!(none.err(), Some(CaptureError::NoIntegration));
+    }
+
+    /// A command that printed more than the history keeps: its prompt and first lines are gone, the rest is
+    /// read, and the read says it is cut.
+    #[test]
+    fn output_longer_than_the_history_is_read_from_what_remains() {
+        let mut rig = Rig::with_history(4, 6);
+        rig.feed(b"\x1b]133;A\x07$ \x1b]133;B\x07seq\r\n\x1b]133;C\x07");
+        for n in 0..3000 {
+            rig.feed(format!("line {n}\r\n").as_bytes());
+        }
+        rig.feed(b"\x1b]133;D;0\x07\x1b]133;A\x07$ \x1b]133;B\x07");
+        let found = read(&rig.reader, &spec(CaptureRange::BlockOutput(1)));
+        assert!(found.truncated, "the start of the block left the history");
+        assert_eq!(found.lines.last().map(String::as_str), Some("line 2999"));
+        assert!(found.lines.len() >= 6 && found.lines[0].starts_with("line "), "{:?}", found.lines);
+        assert_eq!(found.block.map(|b| (b.id, b.command)), Some((1, String::new())));
+        // A block that is whole is not cut.
+        let newest = read(&rig.reader, &spec(CaptureRange::BlockOutput(2)));
+        assert!(!newest.truncated && newest.lines.is_empty());
+    }
+
+    #[test]
+    fn the_log_tells_the_first_command_that_finished_after_a_prompt_with_no_text_on_the_grid() {
+        let mut rig = Rig::new(6);
+        rig.feed(b"\x1b]133;A\x07$ \x1b]133;B\x07a\r\n\x1b]133;C\x07\x1b]133;D;3\x07");
+        // An Enter on an empty line ends a block without a command: not one that ran.
+        rig.feed(b"\x1b]133;A\x07$ \x1b]133;B\x07\r\n\x1b]133;D\x07");
+        rig.feed(b"\x1b]133;A\x07$ \x1b]133;B\x07b\r\n\x1b]133;C\x07\x1b]133;D;0\x07\x1b]133;A\x07$ \x1b]133;B\x07");
+        assert_eq!(rig.reader.finished_after(0), Some((1, Some(3))));
+        assert_eq!(rig.reader.finished_after(1), Some((3, Some(0))), "the empty line is skipped");
+        assert_eq!(rig.reader.finished_after(3), None, "the prompt now shown has run nothing");
+        // Dropping the grid's marks (the history cleared) does not change what the log says.
+        rig.feed(b"\x1b[3J\x1b[2J");
+        assert_eq!(rig.reader.finished_after(1), Some((3, Some(0))));
+        assert_eq!(rig.reader.current_prompt(), Some(4));
     }
 }

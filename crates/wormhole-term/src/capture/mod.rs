@@ -241,6 +241,8 @@ impl ScreenReader {
         let modes = term.mode();
         let alt = modes.contains(Modes::ALT_SCREEN);
         let mut block = None;
+        // The history dropped the start of the block that was asked for.
+        let mut cut_short = false;
         let (first, mut last) = match spec.range {
             CaptureRange::Screen => (0, bottom),
             CaptureRange::Last(n) => {
@@ -249,18 +251,20 @@ impl ScreenReader {
             }
             CaptureRange::Lines { from, to } => (from.max(top), to.min(bottom)),
             CaptureRange::Block(id) => {
-                let (rows, found) = self.block_rows(&term, id, false, (top, bottom))?;
+                let (rows, found, cut) = self.block_rows(&term, id, false, (top, bottom))?;
                 block = Some(found);
+                cut_short = cut;
                 rows
             }
             CaptureRange::BlockOutput(id) => {
-                let (rows, found) = self.block_rows(&term, Some(id), true, (top, bottom))?;
+                let (rows, found, cut) = self.block_rows(&term, Some(id), true, (top, bottom))?;
                 block = Some(found);
+                cut_short = cut;
                 rows
             }
         };
         let mut first = first;
-        let mut truncated = false;
+        let mut truncated = cut_short;
         // A range of rows is read from its newest end.
         let room = i32::try_from(spec.max_rows).unwrap_or(i32::MAX).max(1);
         if last - first + 1 > room {
@@ -359,7 +363,7 @@ impl ScreenReader {
         id: Option<u64>,
         output_only: bool,
         (top, bottom): (i32, i32),
-    ) -> Result<((i32, i32), CapturedBlock), CaptureError> {
+    ) -> Result<((i32, i32), CapturedBlock, bool), CaptureError> {
         if self.shared.at_prompt().is_none() {
             return Err(CaptureError::NoIntegration);
         }
@@ -375,6 +379,6 @@ impl ScreenReader {
         } else {
             (found.start.0.max(top), found.end.0.min(bottom))
         };
-        Ok((rows, CapturedBlock { id: found.id, command: found.command }))
+        Ok((rows, CapturedBlock { id: found.id, command: found.command }, found.cut))
     }
 }

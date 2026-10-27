@@ -264,7 +264,7 @@ fn prompt_marks_give_the_exit_code_the_prompt_state_and_the_prompt_lines() {
     let marks: Vec<Mark> = drain(&events)
         .into_iter()
         .filter_map(|e| match e {
-            PtyEvent::Mark(mark) => Some(mark),
+            PtyEvent::Mark(mark, _) => Some(mark),
             _ => None,
         })
         .collect();

@@ -92,6 +92,22 @@ impl CommandLog {
         }
     }
 
+    /// The oldest command after prompt `after` that has finished (one that ran: an Enter on an empty line is
+    /// not one), with its exit code: told from the shell's marks, so it is there after the history is gone.
+    pub(super) fn finished_after(&self, after: u64) -> Option<(u64, Option<i32>)> {
+        let from = self.records.partition_point(|r| r.prompt <= after);
+        self.records
+            .iter()
+            .skip(from)
+            .find(|r| r.finished.is_some() && (r.code.is_some() || r.started.is_some()))
+            .map(|r| (r.prompt, r.code))
+    }
+
+    /// The number of the newest prompt the log holds: the shell's current prompt, while it is at one.
+    pub(super) fn newest(&self) -> Option<u64> {
+        self.records.back().map(|r| r.prompt)
+    }
+
     /// The number of the oldest prompt the log still holds.
     pub(super) fn oldest(&self) -> Option<u64> {
         self.records.front().map(|r| r.prompt)
@@ -126,6 +142,9 @@ pub struct Block {
     /// The command line as the shell echoed it, lines of a multi-line command joined by `\n`.
     pub command: String,
     pub state: BlockState,
+    /// The history dropped the block's first rows (its prompt, perhaps its command and some output):
+    /// `start` is the oldest row that is left, and `command` is empty.
+    pub cut: bool,
 }
 
 impl Block {
@@ -178,8 +197,10 @@ pub(super) fn block(screen: &Screen, id: u64, log: &CommandLog) -> Option<Block>
     while line >= screen.topmost_line() {
         match marks::mark_at(screen, line) {
             Some(mark) if mark.id == id => {
-                let start = marks::prompt_line(screen, line + 1, marks::Direction::Up)?;
-                return block_from(screen, start, log).filter(|block| block.id == id);
+                let whole = marks::prompt_line(screen, line + 1, marks::Direction::Up)
+                    .and_then(|start| block_from(screen, start, log))
+                    .filter(|block| block.id == id);
+                return whole.or_else(|| cut_block(screen, line, id, log));
             }
             Some(mark) if mark.id < id => return None,
             _ => line -= 1,
@@ -220,7 +241,51 @@ fn block_from(screen: &Screen, start: Line, log: &CommandLog) -> Option<Block> {
         line += 1;
     }
     let output = (last_command_line < end).then_some(last_command_line + 1);
-    Some(Block { id, start, output, end, command: command.trim_end().to_string(), state: log.state(id) })
+    Some(Block {
+        id,
+        start,
+        output,
+        end,
+        command: command.trim_end().to_string(),
+        state: log.state(id),
+        cut: false,
+    })
+}
+
+/// The block `id` whose prompt the history has dropped, when a row of it (`line`) is still there: what
+/// remains runs from the top of the history to its last row. Its output is what follows the last command
+/// line left, or every row if the command line is gone too. `None` when the block's start is not what
+/// is missing (another block's rows lie above its own).
+fn cut_block(screen: &Screen, line: Line, id: u64, log: &CommandLog) -> Option<Block> {
+    let top = screen.topmost_line();
+    let mut first = line;
+    while first > top {
+        match marks::mark_at(screen, first - 1) {
+            Some(above) if above.id != id => return None,
+            _ => first -= 1,
+        }
+    }
+    let bottom = screen.bottommost_line();
+    let (mut end, mut last_command_line) = (line, None);
+    let mut at = first;
+    while at <= bottom {
+        match marks::mark_at(screen, at) {
+            Some(mark) if mark.id != id => break,
+            Some(mark) => {
+                end = at;
+                if mark.is_command_line() {
+                    last_command_line = Some(at);
+                }
+            }
+            None => {}
+        }
+        at += 1;
+    }
+    let output = match last_command_line {
+        Some(command_line) => (command_line < end).then_some(command_line + 1),
+        None => Some(first),
+    };
+    Some(Block { id, start: first, output, end, command: String::new(), state: log.state(id), cut: true })
 }
 
 /// The cells of `block`'s command line as they are drawn, in reading order.

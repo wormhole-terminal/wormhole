@@ -44,8 +44,10 @@ pub enum PtyEvent {
     ClipboardLoad(TextFormatter, Reply),
     /// OSC 7: the shell said where it is (a local folder that exists); `Pty::cwd` has it.
     Cwd,
-    /// OSC 133: the shell's prompt, command and output marks.
-    Mark(Mark),
+    /// OSC 133: the shell's prompt, command and output marks, with the number of the prompt (the
+    /// block) each belongs to, 0 before any: which command a mark is about, however many marks arrive
+    /// before the UI hears of this one.
+    Mark(Mark, u64),
     /// OSC 9 / 99 / 777: a program's own notification.
     Notify(Notification),
     /// What programs report about themselves (OSC 7501) changed since the UI took the last one:
@@ -72,7 +74,7 @@ impl std::fmt::Debug for PtyEvent {
             PtyEvent::ClipboardStore(_) => f.write_str("ClipboardStore"),
             PtyEvent::ClipboardLoad(..) => f.write_str("ClipboardLoad"),
             PtyEvent::Cwd => f.write_str("Cwd"),
-            PtyEvent::Mark(mark) => write!(f, "Mark({mark:?})"),
+            PtyEvent::Mark(mark, prompt) => write!(f, "Mark({mark:?}, {prompt})"),
             PtyEvent::Notify(notification) => write!(f, "Notify({notification:?})"),
             PtyEvent::ProgramStatus => f.write_str("ProgramStatus"),
             PtyEvent::WindowOp(op) => write!(f, "WindowOp({op:?})"),
@@ -513,7 +515,7 @@ impl EventProxy {
             Osc::Mark(mark, prompt) => {
                 self.heard(Heard::Mark(mark, prompt));
                 self.shared.mark(mark, prompt);
-                self.send(PtyEvent::Mark(mark));
+                self.send(PtyEvent::Mark(mark, prompt));
                 // A new prompt: whatever program was reporting is over.
                 if mark == Mark::PromptStart(PromptKind::Initial) && self.shared.program_status().on_prompt()
                 {

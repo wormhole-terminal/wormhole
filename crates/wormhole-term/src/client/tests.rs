@@ -333,8 +333,8 @@ fn events_reach_the_app_as_a_local_terminals_do() {
     assert!(
         matches!(next_event(&events, "title", |e| matches!(e, PtyEvent::Title(_))), PtyEvent::Title(t) if t == "build")
     );
-    let got = next_event(&events, "mark", |e| matches!(e, PtyEvent::Mark(_)));
-    assert!(matches!(got, PtyEvent::Mark(Mark::PromptStart(PromptKind::Initial))));
+    let got = next_event(&events, "mark", |e| matches!(e, PtyEvent::Mark(..)));
+    assert!(matches!(got, PtyEvent::Mark(Mark::PromptStart(PromptKind::Initial), _)));
     assert_eq!(pty.at_prompt(), Some(true));
     let PtyEvent::ClipboardLoad(format, reply) =
         next_event(&events, "clipboard load", |e| matches!(e, PtyEvent::ClipboardLoad(..)))

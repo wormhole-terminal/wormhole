@@ -3,7 +3,7 @@
 use crate::Pty;
 use wormhole_vt::Line;
 
-use crate::{Block, Direction, Ended, blocks, marks};
+use crate::{Block, BlockState, Direction, Ended, blocks, marks};
 
 impl Pty {
     /// The lines where prompts start (OSC 133 `A`), oldest first: negative lines are in the
@@ -34,6 +34,18 @@ impl Pty {
     pub fn block_at(&self, line: Line) -> Option<Block> {
         let term = self.term.lock();
         blocks::block_at(&term, line, &self.shared.commands())
+    }
+
+    /// The number of the shell's newest prompt: the block a command typed now runs in, while the shell is
+    /// at its prompt. `None` before any mark.
+    pub fn current_prompt(&self) -> Option<u64> {
+        self.shared.commands().newest()
+    }
+
+    /// Where the command of prompt number `prompt` stands, from the shell's own marks: it needs no text on
+    /// the grid, so it is told even after the history dropped the block's rows.
+    pub fn command_state(&self, prompt: u64) -> BlockState {
+        self.shared.commands().state(prompt)
     }
 
     /// The block with this id (a `BlockSpan`'s), while its text is on the grid.

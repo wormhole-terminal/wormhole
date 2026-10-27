@@ -56,6 +56,17 @@ impl ScreenReader {
         self.shared.at_prompt()
     }
 
+    /// The number of the shell's newest prompt: the block a command typed now runs in, while the shell
+    /// is at its prompt. `None` before any mark.
+    pub fn current_prompt(&self) -> Option<u64> {
+        self.shared.commands().newest()
+    }
+
+    /// The oldest command after prompt number `after` that has finished, with its exit code.
+    pub fn finished_after(&self, after: u64) -> Option<(u64, Option<i32>)> {
+        self.shared.commands().finished_after(after)
+    }
+
     /// The screen's size as `(rows, columns)`.
     pub fn size(&self) -> (usize, usize) {
         let term = self.term.lock();
