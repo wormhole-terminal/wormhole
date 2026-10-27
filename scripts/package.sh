@@ -12,6 +12,9 @@
 #   dist/SHA256SUMS
 #   dist/latest.json                                   update feed
 #
+# The feed also lists each DMG under its stable name and size ("dmgs": {"<build>": {name, size}}), so the
+# website can show the download's size and whether an Intel one exists without asking for the files.
+#
 # The feed gives each Mac the archive of its own architecture: a thin app where there is one, else the
 # universal one; so with all three the universal app has a DMG and no archive.
 #
@@ -160,6 +163,7 @@ done
 
 # --- dmg ----------------------------------------------------------------------
 sums=()
+dmgs='{}'
 for build in universal aarch64 x86_64; do
   [ -n "$(app_of "$build")" ] || continue
   name="$APP_NAME-$APP_VERSION-macos$(suffix_of "$build").dmg"
@@ -173,7 +177,10 @@ for build in universal aarch64 x86_64; do
     "$(dirname "$0")/notarize.sh" "$dmg"
   fi
   hdiutil verify -quiet "$dmg"
-  cp "$dmg" "$dist/$APP_NAME-macos$(suffix_of "$build").dmg"
+  stable="$APP_NAME-macos$(suffix_of "$build").dmg"
+  cp "$dmg" "$dist/$stable"
+  dmgs="$(jq -n --argjson dmgs "$dmgs" --arg build "$build" --arg name "$stable" \
+    --argjson size "$(stat -f%z "$dmg")" '$dmgs + {($build): {name: $name, size: $size}}')"
   sums+=("$name")
 done
 for build in "${archived[@]}"; do
@@ -217,13 +224,15 @@ jq -n \
   --arg notes "$notes" \
   --arg min "$MIN_MACOS" \
   --argjson platforms "$platforms" \
+  --argjson dmgs "$dmgs" \
   --argjson security "$security" \
   '{
     version: $version,
     pub_date: $pub_date,
     notes: $notes,
     minimum_system_version: $min,
-    platforms: $platforms
+    platforms: $platforms,
+    dmgs: $dmgs
   } + (if $security == null then {} else {security: $security} end)' > "$dist/latest.json"
 
 log "wrote $dist:"
