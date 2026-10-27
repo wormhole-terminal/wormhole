@@ -217,6 +217,8 @@ pub(crate) type PressFn = fn(
     &mut App,
 ) -> bool;
 pub(crate) type FoldFn = fn(&AnyEntity, &WindowFacts<'_>, session: i64, row: usize, &mut App);
+pub(crate) type CopyFn =
+    fn(&AnyEntity, &WindowFacts<'_>, session: i64, row: usize, &Window, &mut App) -> bool;
 pub(crate) type CoverCloseFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
 pub(crate) type CoverTitleFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App) -> Option<AnyElement>;
 pub(crate) type TabChangedFn = fn(&AnyEntity, TabId, &mut App);
@@ -427,6 +429,9 @@ pub(crate) struct WalkFns {
     pub press: PressFn,
     /// → ← on a row.
     pub fold: FoldFn,
+    /// ⌘C on a row: what the row stands for goes on the clipboard. Whether it did; `false` lets the key
+    /// go on (a row with nothing to copy), and a tab with nothing to copy has none.
+    pub copy: Option<CopyFn>,
     /// Scrolls a row into view.
     pub reveal: fn(&AnyEntity, &WindowFacts<'_>, row: usize, &App),
     /// The list the rows are in, for what scrolls it from outside (devctl's wheel); `None` while the

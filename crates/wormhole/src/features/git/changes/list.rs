@@ -214,6 +214,7 @@ pub(super) const WALK: WalkFns = WalkFns {
     fold: |entity, _, session, row, cx| {
         super::def::typed(entity).update(cx, |changes, cx| changes.fold_row(session, row, cx));
     },
+    copy: None,
     reveal: |entity, facts, row, cx| {
         if let Some(active) = facts.active() {
             super::def::typed(entity).read(cx).reveal(active.id, row);

@@ -53,6 +53,16 @@ pub enum Copied {
     Error,
     /// A git object's id.
     ObjectId,
+    /// A commit's full hash, from the History tab.
+    CommitHash,
+    /// A commit's short hash.
+    CommitShortHash,
+    /// A commit's whole message.
+    CommitMessage,
+    /// A commit's subject line.
+    CommitSubject,
+    /// A commit's author, as `Name <email>`.
+    CommitAuthor,
 }
 
 /// The picture beside the words: an SF Symbol on macOS.

@@ -22,12 +22,14 @@
 pub mod attribution;
 mod cmd;
 mod counts;
+mod details;
 mod diff;
 mod diff_text;
 pub mod discover;
 mod head;
 mod lfs;
 mod log;
+mod message;
 pub mod pr;
 pub mod review;
 mod split;
@@ -45,6 +47,7 @@ use anyhow::Result;
 
 pub(crate) use cmd::GitCmd;
 pub use cmd::GitError;
+pub use details::{CommitDetails, CommitRef, DiffStat, RefKind, Signature, commit_details};
 #[cfg(test)]
 pub(crate) use diff::parse_diff;
 pub use diff::{
@@ -55,6 +58,7 @@ pub use diff_text::{byte_size, lfs_side, lfs_summary, sizes_label, too_large_det
 pub use head::{HeadCommit, head_commit, worktree_of};
 pub use lfs::{LfsChange, LfsPointer, parse_pointer};
 pub use log::{LOG_LIMIT, branches, commit_files, commit_spec, is_ancestor, log, log_failure};
+pub use message::{Block, Contact, MESSAGE_CAP};
 pub use split::{Cell, Side, SplitRow, sides, split_rows};
 pub use status::{changed_files, status, status_summary};
 pub use submodule::{
@@ -228,6 +232,8 @@ pub struct Commit {
     pub sha: String,
     pub short: String,
     pub parent: Option<String>,
+    /// More than one parent.
+    pub merge: bool,
     pub author: String,
     /// Unix timestamp (seconds).
     pub time: i64,
@@ -246,6 +252,7 @@ impl Commit {
             sha: fields[0].to_string(),
             short: fields[1].to_string(),
             parent: fields[2].split(' ').next().filter(|p| !p.is_empty()).map(str::to_string),
+            merge: fields[2].split(' ').filter(|p| !p.is_empty()).count() > 1,
             author: fields[3].to_string(),
             time: fields[4].parse().unwrap_or(0),
             subject: fields[5].to_string(),

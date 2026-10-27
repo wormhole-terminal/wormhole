@@ -1,9 +1,12 @@
-//! What devctl's History commands do (`history`, `commit`, `commit-file`, `picker history`): the selected
+//! What devctl's History commands do (`history`, `commit`, `commit-details`, `commit-copy`, `commit-file`,
+//! `picker history`): the selected
 //! terminal's History, through the window's `History` entity like the keys do.
 
 use gpui_kit::*;
 use wormhole_core::config::TabId;
 
+use super::copy::CopyWhat;
+use super::state::CommitInfo;
 use super::{History, PickerHost};
 use crate::window::Workspace;
 
@@ -72,4 +75,79 @@ pub(crate) fn picker(ws: &mut Workspace, query: &str, window: &mut Window, cx: &
 /// Whether a log read is under way for any of the window's terminals.
 pub(crate) fn busy(ws: &Workspace, cx: &App) -> bool {
     ws.feature::<History>().is_some_and(|history| history.read(cx).of.values().any(|state| state.loading()))
+}
+
+/// `commit-details`: what the details block of the open commit shows, one fact a line (`loading` and the
+/// reason it `failed` too); `none` when no commit is open.
+pub(crate) fn details(ws: &Workspace, cx: &mut Context<Workspace>) -> String {
+    run(ws, cx, |history, session, _, _| {
+        let Some(state) = history.of.get(&session) else { return "none".into() };
+        let Some(sha) = state.expanded.clone() else { return "none".into() };
+        let mut out = vec![format!("commit {sha}")];
+        match state.details.get(&sha) {
+            None | Some(CommitInfo::Loading) => out.push("loading".into()),
+            Some(CommitInfo::Failed(err)) => out.push(format!("failed: {err}")),
+            Some(CommitInfo::Loaded(details)) => {
+                out.push(format!("subject: {}", details.subject()));
+                out.push(format!("body: {}", details.body().replace('\n', "\\n")));
+                out.push(format!("author: {} | {}", details.author.line(), details.author.when()));
+                if details.committer_differs() {
+                    out.push(format!(
+                        "committer: {} | {}",
+                        details.committer.line(),
+                        details.committer.when()
+                    ));
+                }
+                for co in &details.co_authors {
+                    out.push(format!("co-author: {} <{}>", co.name, co.email));
+                }
+                out.push(format!("parents: {}", details.parents.join(" ")));
+                let refs: Vec<_> = details.refs.iter().map(|r| format!("{:?} {}", r.kind, r.name)).collect();
+                out.push(format!("refs: {}", refs.join(", ")));
+                out.push(format!("message cut: {}", details.message_cut));
+            }
+        }
+        if let Some(files) = state.loaded(&sha) {
+            let stat = wormhole_core::git::DiffStat::of(files);
+            out.push(format!("changes: {} files +{} -{}", stat.files, stat.added, stat.removed));
+        }
+        out.join("\n")
+    })
+    .unwrap_or_else(|| "none".into())
+}
+
+/// `commit-copy <hash|short|message|subject|author> [n]`: what the commit's menu item does, for the open
+/// commit or the n-th one of the log. The message and the author are read first when they have to be:
+/// look at `clipboard` a moment later.
+pub(crate) fn copy(
+    ws: &Workspace,
+    what: &str,
+    nth: Option<usize>,
+    window: &Window,
+    cx: &mut Context<Workspace>,
+) -> Result<(), String> {
+    let what = match what {
+        "hash" => CopyWhat::Hash,
+        "short" => CopyWhat::ShortHash,
+        "message" => CopyWhat::Message,
+        "subject" => CopyWhat::Subject,
+        "author" => CopyWhat::Author,
+        other => return Err(format!("copy what? {other} (hash, short, message, subject or author)")),
+    };
+    run(ws, cx, |history, session, _, cx| {
+        let state = history.of.get(&session).ok_or("no history for this terminal")?;
+        let sha = match nth {
+            Some(ix) => state.commits.get(ix).map(|c| c.sha.clone()),
+            None => state.expanded.clone(),
+        };
+        let sha = sha.ok_or("no such commit (open one, or name its number)")?;
+        history.copy_commit(session, &sha, what, window, cx);
+        Ok(())
+    })
+    .unwrap_or_else(|| Err("History is off".into()))
+}
+
+/// `clipboard`: the text on the clipboard, or `empty`.
+pub(crate) fn clipboard(cx: &App) -> String {
+    cx.read_from_clipboard().and_then(|item| item.text()).unwrap_or_else(|| "empty".into())
 }

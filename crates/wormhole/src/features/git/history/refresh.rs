@@ -1,4 +1,4 @@
-//! The History tab's reads: the log of the branch shown, a commit's files, and which commit to open.
+//! The History tab's reads: the log of the branch shown, a commit's files and details, and which commit to open.
 //! All off the UI thread; a result is applied only if it answers the request the tab still waits for.
 
 use std::collections::HashSet;
@@ -55,7 +55,13 @@ impl History {
                 let Some(state) = this.of.get_mut(&session) else { return };
                 let now = now.map(|cwd| (cwd, state.rev.clone()));
                 if state.finish_refresh(ticket, now.as_ref(), result) {
+                    // What points at the open commit may have moved with the log.
+                    let stale = state.details_stale();
+                    let root = state.root.clone();
                     cx.notify();
+                    if let (Some(sha), Some(root)) = (stale, root) {
+                        this.fetch_details(session, root, sha, cx);
+                    }
                 }
             });
         })
@@ -66,9 +72,23 @@ impl History {
     pub(super) fn toggle_commit(&mut self, session: i64, sha: String, cx: &mut Context<Self>) {
         let Some(state) = self.of.get_mut(&session) else { return };
         let fetch = state.toggle(&sha);
+        let details = state.expanded.as_deref() == Some(sha.as_str()) && state.want_details(&sha);
+        let root = state.root.clone();
         cx.notify();
         if let Some((root, commit)) = fetch {
             self.fetch_commit_files(session, root, commit, cx);
+        }
+        if let (true, Some(root)) = (details, root) {
+            self.fetch_details(session, root, sha, cx);
+        }
+    }
+
+    /// A parent in the details: open it, and bring its row into view.
+    pub(super) fn reveal_parent(&mut self, session: i64, sha: String, cx: &mut Context<Self>) {
+        let Some(state) = self.of.get_mut(&session) else { return };
+        if state.expanded.as_deref() != Some(sha.as_str()) {
+            state.reveal = Some(sha.clone());
+            self.toggle_commit(session, sha, cx);
         }
     }
 
@@ -104,12 +124,36 @@ impl History {
         cx: &mut Context<Self>,
     ) {
         let Some(state) = self.of.get_mut(&session) else { return };
+        let (sha, details_root) = (commit.sha.clone(), root.clone());
         let fetch = state.open(root, commit, on_branch);
+        let details = state.want_details(&sha);
         cx.emit(FeatureEvent::ShowTab(TabId::History));
         cx.notify();
         if let Some((root, commit)) = fetch {
             self.fetch_commit_files(session, root, commit, cx);
         }
+        if details {
+            self.fetch_details(session, details_root, sha, cx);
+        }
+    }
+
+    /// Reads `sha`'s details off the UI thread. The answer is kept for as long as the log stays the same;
+    /// one that lands for a terminal that has gone is dropped.
+    pub(super) fn fetch_details(&mut self, session: i64, root: PathBuf, sha: String, cx: &mut Context<Self>) {
+        let task = cx.background_executor().spawn({
+            let sha = sha.clone();
+            async move { git::commit_details(&root, &sha).map_err(|e| format!("{e:#}")) }
+        });
+        cx.spawn(async move |this, cx| {
+            let result = task.await;
+            let _ = this.update(cx, |this, cx| {
+                if let Some(state) = this.of.get_mut(&session) {
+                    state.details_loaded(&sha, result);
+                    cx.notify();
+                }
+            });
+        })
+        .detach();
     }
 
     fn fetch_commit_files(&mut self, session: i64, root: PathBuf, commit: Commit, cx: &mut Context<Self>) {

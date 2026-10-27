@@ -107,6 +107,7 @@ static STAND_IN: &[FeatureDef] = &[
                 fold: |entity, _, session, row, cx| {
                     marker(entity).update(cx, |m, _| m.asked.push(format!("fold:{session}:{row}")));
                 },
+                copy: None,
                 reveal: |entity, _, row, cx| marker(entity).read(cx).revealed.set(Some(row)),
                 list: |_, _, _| None,
             }),

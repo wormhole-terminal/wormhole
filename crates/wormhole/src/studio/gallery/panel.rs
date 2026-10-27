@@ -268,20 +268,22 @@ pub(super) fn render(
             ))
     };
 
-    let commit = |id: &'static str, subject: &'static str, sha: &'static str, age: &'static str, expanded| {
-        style::commit_row(
-            id,
-            ui,
-            style::CommitRow {
-                subject: subject.into(),
-                sha: sha.into(),
-                author: "Ada".into(),
-                age: age.into(),
-                code_font: crate::fonts::code_font(cx).0,
-                expanded,
-            },
-        )
-    };
+    let commit =
+        |id: &'static str, subject: &'static str, sha: &'static str, age: &'static str, expanded, merge| {
+            style::commit_row(
+                id,
+                ui,
+                style::CommitRow {
+                    subject: subject.into(),
+                    sha: sha.into(),
+                    author: "Ada".into(),
+                    age: age.into(),
+                    code_font: crate::fonts::code_font(cx).0,
+                    expanded,
+                    merge,
+                },
+            )
+        };
     let history = || {
         div()
             .flex()
@@ -294,6 +296,7 @@ pub(super) fn render(
                     "adcd556",
                     "30m",
                     true,
+                    false,
                 ),
             ))
             .child(file(
@@ -311,7 +314,9 @@ pub(super) fn render(
                 "19601d4",
                 "31m",
                 false,
+                false,
             ))
+            .child(commit("g-commit-merge", "Merge branch 'dev' into main", "5be0a41", "2h", false, true))
     };
 
     let two_line = |id: &'static str, icon, title: &'static str, detail: SharedString, warn: bool| {

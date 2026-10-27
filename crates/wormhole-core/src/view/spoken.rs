@@ -150,6 +150,32 @@ pub fn pane(name: &str, folder: Option<&str>, position: usize, of: usize, focuse
     parts.join(", ")
 }
 
+/// A commit's row in the History tab: "fix: it, merge commit, a1b2c3d, by Ada, 3d ago". The row says
+/// whether its files are shown ("expanded") by its state, not here.
+pub fn commit_row(subject: &str, short: &str, author: &str, age: &str, merge: bool) -> String {
+    let mut parts = vec![subject.to_string()];
+    if merge {
+        parts.push("merge commit".to_string());
+    }
+    parts.push(short.to_string());
+    parts.push(format!("by {author}"));
+    parts.push(if age == "now" { "just now".to_string() } else { format!("{age} ago") });
+    parts.join(", ")
+}
+
+/// The details block of the open commit: "Details of a1b2c3d, fix: it, by Ada, 27 Oct 2026, 14:05 +02:00,
+/// 2 parents". Its buttons are named by their tooltips.
+pub fn commit_details(short: &str, subject: &str, author: &str, when: &str, parents: usize) -> String {
+    let mut parts = vec![format!("Details of {short}"), subject.to_string(), format!("by {author}")];
+    if !when.is_empty() {
+        parts.push(when.to_string());
+    }
+    if parents > 1 {
+        parts.push(format!("{parents} parents"));
+    }
+    parts.join(", ")
+}
+
 /// The icon that opens a file in the editor, which shows when a row or line is hovered: its
 /// tooltip (`open_file::tooltip`) with the file's name after it, so a list of them isn't a list
 /// of identical buttons: "Open in Zed at line 12, main.rs".
@@ -281,7 +307,7 @@ mod tests {
         status_attention, status_counted, status_done, status_failed, status_needs_you, status_size,
         status_working,
     };
-    use super::{profile_chip, profile_choice};
+    use super::{commit_details, commit_row, profile_chip, profile_choice};
     use crate::view::layout::status_bar::{Activity, Entry, Summary};
     use wormhole_term::BlockState;
 
@@ -329,6 +355,20 @@ mod tests {
         assert_eq!(panel_tab(PanelTab::History), "History");
         assert_eq!(panel_tab(PanelTab::Project), "Project");
         assert_eq!(panel_tab(PanelTab::Usage), "Usage");
+    }
+
+    #[test]
+    fn a_commit_is_read_with_what_makes_it_unusual() {
+        assert_eq!(commit_row("fix: it", "a1b2c3d", "Ada", "3d", false), "fix: it, a1b2c3d, by Ada, 3d ago");
+        assert_eq!(
+            commit_row("Merge x", "a1b2c3d", "Ada", "now", true),
+            "Merge x, merge commit, a1b2c3d, by Ada, just now"
+        );
+        assert_eq!(
+            commit_details("a1b2c3d", "fix: it", "Ada", "27 Oct 2026, 14:05 +02:00", 2),
+            "Details of a1b2c3d, fix: it, by Ada, 27 Oct 2026, 14:05 +02:00, 2 parents"
+        );
+        assert_eq!(commit_details("a1b2c3d", "fix: it", "Ada", "", 1), "Details of a1b2c3d, fix: it, by Ada");
     }
 
     #[test]

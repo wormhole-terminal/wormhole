@@ -119,6 +119,7 @@ pub(super) const WALK: WalkFns = WalkFns {
     fold: |entity, _, session, row, cx| {
         super::def::typed(entity).update(cx, |notes, cx| notes.fold_row(session, row, cx));
     },
+    copy: None,
     reveal: |entity, facts, row, cx| {
         let notes = super::def::typed(entity);
         if let Some(of) = facts.active().and_then(|active| notes.read(cx).of.get(&active.id)) {

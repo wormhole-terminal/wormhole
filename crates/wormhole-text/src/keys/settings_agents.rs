@@ -7,225 +7,225 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Coding agents"
-pub const SETTINGS_SECTION_AGENTS: Key = Key::new(82);
+pub const SETTINGS_SECTION_AGENTS: Key = Key::new(87);
 /// "Wormhole recognises the agent running in each terminal. With status hooks it knows exactly when it's working, waiting for you, or done."
-pub const SETTINGS_SECTION_AGENTS_INTRO: Key = Key::new(83);
+pub const SETTINGS_SECTION_AGENTS_INTRO: Key = Key::new(88);
 /// "Agents found"
-pub const SETTINGS_AGENTS_SUMMARY: Key = Key::new(84);
+pub const SETTINGS_AGENTS_SUMMARY: Key = Key::new(89);
 /// "installed hooks repair path summary"
-pub const SETTINGS_AGENTS_SUMMARY_KEYWORDS: Key = Key::new(85);
+pub const SETTINGS_AGENTS_SUMMARY_KEYWORDS: Key = Key::new(90);
 /// "Notifications"
-pub const SETTINGS_AGENTS_GROUP_NOTIFICATIONS: Key = Key::new(86);
+pub const SETTINGS_AGENTS_GROUP_NOTIFICATIONS: Key = Key::new(91);
 /// "Notify me when an agent needs input or finishes"
-pub const SETTINGS_AGENTS_NOTIFICATIONS: Key = Key::new(87);
+pub const SETTINGS_AGENTS_NOTIFICATIONS: Key = Key::new(92);
 /// "These, and notifications about long commands and the bell, have their own section"
-pub const SETTINGS_AGENTS_NOTIFICATIONS_DESCRIPTION: Key = Key::new(88);
+pub const SETTINGS_AGENTS_NOTIFICATIONS_DESCRIPTION: Key = Key::new(93);
 /// "notifications alerts banner"
-pub const SETTINGS_AGENTS_NOTIFICATIONS_KEYWORDS: Key = Key::new(89);
+pub const SETTINGS_AGENTS_NOTIFICATIONS_KEYWORDS: Key = Key::new(94);
 /// "Installed"
-pub const SETTINGS_AGENTS_GROUP_INSTALLED: Key = Key::new(90);
+pub const SETTINGS_AGENTS_GROUP_INSTALLED: Key = Key::new(95);
 /// "Installed agents"
-pub const SETTINGS_AGENTS_INSTALLED: Key = Key::new(91);
+pub const SETTINGS_AGENTS_INSTALLED: Key = Key::new(96);
 /// "claude code codex gemini copilot cursor opencode aider amp goose qwen pi fm foundation models hooks status install remove repair"
-pub const SETTINGS_AGENTS_INSTALLED_KEYWORDS: Key = Key::new(92);
+pub const SETTINGS_AGENTS_INSTALLED_KEYWORDS: Key = Key::new(97);
 /// "Other agents"
-pub const SETTINGS_AGENTS_GROUP_OTHER_AGENTS: Key = Key::new(93);
+pub const SETTINGS_AGENTS_GROUP_OTHER_AGENTS: Key = Key::new(98);
 /// "Other agents"
-pub const SETTINGS_AGENTS_OTHER: Key = Key::new(94);
+pub const SETTINGS_AGENTS_OTHER: Key = Key::new(99);
 /// "Agents Wormhole recognises that aren't on this Mac's PATH"
-pub const SETTINGS_AGENTS_OTHER_DESCRIPTION: Key = Key::new(95);
+pub const SETTINGS_AGENTS_OTHER_DESCRIPTION: Key = Key::new(100);
 /// "not installed path"
-pub const SETTINGS_AGENTS_OTHER_KEYWORDS: Key = Key::new(96);
+pub const SETTINGS_AGENTS_OTHER_KEYWORDS: Key = Key::new(101);
 /// "How status works"
-pub const SETTINGS_AGENTS_GROUP_HOW_STATUS_WORKS: Key = Key::new(97);
+pub const SETTINGS_AGENTS_GROUP_HOW_STATUS_WORKS: Key = Key::new(102);
 /// "How status works"
-pub const SETTINGS_AGENTS_HOW: Key = Key::new(98);
+pub const SETTINGS_AGENTS_HOW: Key = Key::new(103);
 /// "With status hooks the agent tells Wormhole the moment it starts working, waits for you or finishes; without them the status is read from the terminal output"
-pub const SETTINGS_AGENTS_HOW_DESCRIPTION: Key = Key::new(99);
+pub const SETTINGS_AGENTS_HOW_DESCRIPTION: Key = Key::new(104);
 /// "hooks output heuristic backup"
-pub const SETTINGS_AGENTS_HOW_KEYWORDS: Key = Key::new(100);
+pub const SETTINGS_AGENTS_HOW_KEYWORDS: Key = Key::new(105);
 /// "Command line"
-pub const SETTINGS_AGENTS_GROUP_COMMAND_LINE: Key = Key::new(101);
+pub const SETTINGS_AGENTS_GROUP_COMMAND_LINE: Key = Key::new(106);
 /// "Scripts and agents can drive Wormhole from the command line: list terminals, read a status and send notifications."
-pub const SETTINGS_AGENTS_GROUP_COMMAND_LINE_BLURB: Key = Key::new(102);
+pub const SETTINGS_AGENTS_GROUP_COMMAND_LINE_BLURB: Key = Key::new(107);
 /// "Command line tool"
-pub const SETTINGS_AGENTS_CLI_TOOL: Key = Key::new(103);
+pub const SETTINGS_AGENTS_CLI_TOOL: Key = Key::new(108);
 /// "The Wormhole command in any terminal"
-pub const SETTINGS_AGENTS_CLI_TOOL_DESCRIPTION: Key = Key::new(104);
+pub const SETTINGS_AGENTS_CLI_TOOL_DESCRIPTION: Key = Key::new(109);
 /// "wh wht cli command install uninstall path shell alias symlink bin usr local terminal"
-pub const SETTINGS_AGENTS_CLI_TOOL_KEYWORDS: Key = Key::new(105);
+pub const SETTINGS_AGENTS_CLI_TOOL_KEYWORDS: Key = Key::new(110);
 /// "Let the command line type and open terminals"
-pub const SETTINGS_AGENTS_CONTROL_WRITE: Key = Key::new(106);
+pub const SETTINGS_AGENTS_CONTROL_WRITE: Key = Key::new(111);
 /// "send-text types into a terminal and new-terminal opens one, as a paste; never into the terminal that asks, nor one waiting for your answer"
-pub const SETTINGS_AGENTS_CONTROL_WRITE_DESCRIPTION: Key = Key::new(107);
+pub const SETTINGS_AGENTS_CONTROL_WRITE_DESCRIPTION: Key = Key::new(112);
 /// "cli command line control api socket send-text new-terminal scripts agents automation remote type"
-pub const SETTINGS_AGENTS_CONTROL_WRITE_KEYWORDS: Key = Key::new(108);
+pub const SETTINGS_AGENTS_CONTROL_WRITE_KEYWORDS: Key = Key::new(113);
 /// "Agent access"
-pub const SETTINGS_AGENTS_GROUP_ACCESS: Key = Key::new(109);
+pub const SETTINGS_AGENTS_GROUP_ACCESS: Key = Key::new(114);
 /// "Programs that drive Wormhole through its command line, MCP or socket: which ones are let in, and what they were allowed. Wormhole controls what goes through Wormhole. It can't stop a program from using your files directly."
-pub const SETTINGS_AGENTS_GROUP_ACCESS_BLURB: Key = Key::new(110);
+pub const SETTINGS_AGENTS_GROUP_ACCESS_BLURB: Key = Key::new(115);
 /// "External agents and scripts"
-pub const SETTINGS_AGENTS_ACCESS: Key = Key::new(111);
+pub const SETTINGS_AGENTS_ACCESS: Key = Key::new(116);
 /// "Off lets nothing in beyond listing terminals and their status. Ask shows a question the first time a program wants more. Allowed while open lets every program in without asking while Wormhole runs"
-pub const SETTINGS_AGENTS_ACCESS_DESCRIPTION: Key = Key::new(112);
+pub const SETTINGS_AGENTS_ACCESS_DESCRIPTION: Key = Key::new(117);
 /// "agent access permissions approve allow deny ask off open scripts mcp command line automation security trust"
-pub const SETTINGS_AGENTS_ACCESS_KEYWORDS: Key = Key::new(113);
+pub const SETTINGS_AGENTS_ACCESS_KEYWORDS: Key = Key::new(118);
 /// "Approved programs"
-pub const SETTINGS_AGENTS_ACCESS_PROGRAMS: Key = Key::new(114);
+pub const SETTINGS_AGENTS_ACCESS_PROGRAMS: Key = Key::new(119);
 /// "approved programs allowed revoke remove forget signed always session quit claude codex scripts"
-pub const SETTINGS_AGENTS_ACCESS_PROGRAMS_KEYWORDS: Key = Key::new(115);
+pub const SETTINGS_AGENTS_ACCESS_PROGRAMS_KEYWORDS: Key = Key::new(120);
 /// "Off"
-pub const SETTINGS_AGENTS_ACCESS_OFF: Key = Key::new(116);
+pub const SETTINGS_AGENTS_ACCESS_OFF: Key = Key::new(121);
 /// "Ask"
-pub const SETTINGS_AGENTS_ACCESS_ASK: Key = Key::new(117);
+pub const SETTINGS_AGENTS_ACCESS_ASK: Key = Key::new(122);
 /// "Allowed while open"
-pub const SETTINGS_AGENTS_ACCESS_OPEN: Key = Key::new(118);
+pub const SETTINGS_AGENTS_ACCESS_OPEN: Key = Key::new(123);
 /// "Nothing has asked yet."
-pub const SETTINGS_AGENTS_ACCESS_NONE: Key = Key::new(119);
+pub const SETTINGS_AGENTS_ACCESS_NONE: Key = Key::new(124);
 /// "Revoke"
-pub const SETTINGS_AGENTS_ACCESS_REVOKE: Key = Key::new(120);
+pub const SETTINGS_AGENTS_ACCESS_REVOKE: Key = Key::new(125);
 /// "until Wormhole quits"
-pub const SETTINGS_AGENTS_ACCESS_UNTIL_QUIT: Key = Key::new(121);
+pub const SETTINGS_AGENTS_ACCESS_UNTIL_QUIT: Key = Key::new(126);
 /// "while it runs"
-pub const SETTINGS_AGENTS_ACCESS_SESSION: Key = Key::new(122);
+pub const SETTINGS_AGENTS_ACCESS_SESSION: Key = Key::new(127);
 /// "always"
-pub const SETTINGS_AGENTS_ACCESS_ALWAYS: Key = Key::new(123);
+pub const SETTINGS_AGENTS_ACCESS_ALWAYS: Key = Key::new(128);
 /// "never used"
-pub const SETTINGS_AGENTS_ACCESS_NEVER_USED: Key = Key::new(124);
+pub const SETTINGS_AGENTS_ACCESS_NEVER_USED: Key = Key::new(129);
 /// "not signed"
-pub const SETTINGS_AGENTS_ACCESS_NOT_SIGNED: Key = Key::new(126);
+pub const SETTINGS_AGENTS_ACCESS_NOT_SIGNED: Key = Key::new(131);
 /// "ad hoc signature"
-pub const SETTINGS_AGENTS_ACCESS_AD_HOC: Key = Key::new(127);
+pub const SETTINGS_AGENTS_ACCESS_AD_HOC: Key = Key::new(132);
 /// "Wormhole skill"
-pub const SETTINGS_AGENTS_GROUP_SKILL: Key = Key::new(128);
+pub const SETTINGS_AGENTS_GROUP_SKILL: Key = Key::new(133);
 /// "A skill teaches a coding agent to drive Wormhole through the command line: run tests in a split, wait for a dev server, read a screen. Nothing is installed until you press Install."
-pub const SETTINGS_AGENTS_GROUP_SKILL_BLURB: Key = Key::new(129);
+pub const SETTINGS_AGENTS_GROUP_SKILL_BLURB: Key = Key::new(134);
 /// "Skill for coding agents"
-pub const SETTINGS_AGENTS_SKILLS: Key = Key::new(130);
+pub const SETTINGS_AGENTS_SKILLS: Key = Key::new(135);
 /// "Puts the Wormhole skill in an agent's own skills folder. Update replaces it, Uninstall removes it, and a skill of the same name that Wormhole didn't write is never touched"
-pub const SETTINGS_AGENTS_SKILLS_DESCRIPTION: Key = Key::new(131);
+pub const SETTINGS_AGENTS_SKILLS_DESCRIPTION: Key = Key::new(136);
 /// "skill skills agent agents claude codex gemini copilot opencode qwen droid install update uninstall wh automation instructions"
-pub const SETTINGS_AGENTS_SKILLS_KEYWORDS: Key = Key::new(132);
+pub const SETTINGS_AGENTS_SKILLS_KEYWORDS: Key = Key::new(137);
 /// "Add Wormhole to an agent over MCP"
-pub const SETTINGS_AGENTS_SKILL_MCP: Key = Key::new(133);
+pub const SETTINGS_AGENTS_SKILL_MCP: Key = Key::new(138);
 /// "Run this command in a terminal to give Claude Code the tools of wh mcp. Wormhole doesn't change other apps' settings"
-pub const SETTINGS_AGENTS_SKILL_MCP_DESCRIPTION: Key = Key::new(134);
+pub const SETTINGS_AGENTS_SKILL_MCP_DESCRIPTION: Key = Key::new(139);
 /// "mcp model context protocol claude code tools server wh agent"
-pub const SETTINGS_AGENTS_SKILL_MCP_KEYWORDS: Key = Key::new(135);
+pub const SETTINGS_AGENTS_SKILL_MCP_KEYWORDS: Key = Key::new(140);
 /// "No coding agent that loads skills was found on this Mac's PATH."
-pub const SETTINGS_AGENTS_SKILL_NONE: Key = Key::new(136);
+pub const SETTINGS_AGENTS_SKILL_NONE: Key = Key::new(141);
 /// "No skill installed in"
-pub const SETTINGS_AGENTS_SKILL_NOT_INSTALLED: Key = Key::new(137);
+pub const SETTINGS_AGENTS_SKILL_NOT_INSTALLED: Key = Key::new(142);
 /// "Skill installed in"
-pub const SETTINGS_AGENTS_SKILL_CURRENT: Key = Key::new(138);
+pub const SETTINGS_AGENTS_SKILL_CURRENT: Key = Key::new(143);
 /// "Skill out of date in"
-pub const SETTINGS_AGENTS_SKILL_OUTDATED: Key = Key::new(139);
+pub const SETTINGS_AGENTS_SKILL_OUTDATED: Key = Key::new(144);
 /// "Skill covered by"
-pub const SETTINGS_AGENTS_SKILL_COVERED: Key = Key::new(140);
+pub const SETTINGS_AGENTS_SKILL_COVERED: Key = Key::new(145);
 /// "Another skill is in the way in"
-pub const SETTINGS_AGENTS_SKILL_FOREIGN: Key = Key::new(141);
+pub const SETTINGS_AGENTS_SKILL_FOREIGN: Key = Key::new(146);
 /// "A skill with this name is there that Wormhole didn't write; it never replaces it"
-pub const SETTINGS_AGENTS_SKILL_FOREIGN_TOOLTIP: Key = Key::new(142);
+pub const SETTINGS_AGENTS_SKILL_FOREIGN_TOOLTIP: Key = Key::new(147);
 /// "Copy command"
-pub const SETTINGS_AGENTS_COPY_COMMAND: Key = Key::new(143);
+pub const SETTINGS_AGENTS_COPY_COMMAND: Key = Key::new(148);
 /// "Open Notifications"
-pub const SETTINGS_AGENTS_OPEN_NOTIFICATIONS: Key = Key::new(145);
+pub const SETTINGS_AGENTS_OPEN_NOTIFICATIONS: Key = Key::new(150);
 /// "Looking for agents…"
-pub const SETTINGS_AGENTS_LOOKING_FOR_AGENTS: Key = Key::new(146);
+pub const SETTINGS_AGENTS_LOOKING_FOR_AGENTS: Key = Key::new(151);
 /// "reporting through hooks"
-pub const SETTINGS_AGENTS_REPORTING_THROUGH_HOOKS: Key = Key::new(147);
+pub const SETTINGS_AGENTS_REPORTING_THROUGH_HOOKS: Key = Key::new(152);
 /// "needs repair"
-pub const SETTINGS_AGENTS_NEEDS_REPAIR: Key = Key::new(148);
+pub const SETTINGS_AGENTS_NEEDS_REPAIR: Key = Key::new(153);
 /// "recognised, not on PATH"
-pub const SETTINGS_AGENTS_RECOGNISED_NOT_ON_PATH: Key = Key::new(149);
+pub const SETTINGS_AGENTS_RECOGNISED_NOT_ON_PATH: Key = Key::new(154);
 /// "No coding agent on this Mac's PATH. Install Claude Code, Codex or one of the others below: Wormhole recognises it in any terminal, and offers its hooks here."
-pub const SETTINGS_AGENTS_NO_CODING_AGENT_ON_THIS_MACS: Key = Key::new(150);
+pub const SETTINGS_AGENTS_NO_CODING_AGENT_ON_THIS_MACS: Key = Key::new(155);
 /// "Status hooks on"
-pub const SETTINGS_AGENTS_STATUS_HOOKS_ON: Key = Key::new(151);
+pub const SETTINGS_AGENTS_STATUS_HOOKS_ON: Key = Key::new(156);
 /// "Hooks incomplete"
-pub const SETTINGS_AGENTS_HOOKS_INCOMPLETE: Key = Key::new(152);
+pub const SETTINGS_AGENTS_HOOKS_INCOMPLETE: Key = Key::new(157);
 /// "Reading output"
-pub const SETTINGS_AGENTS_READING_OUTPUT: Key = Key::new(153);
+pub const SETTINGS_AGENTS_READING_OUTPUT: Key = Key::new(158);
 /// "Installed · hooks in"
-pub const SETTINGS_AGENTS_INSTALLED_HOOKS_IN: Key = Key::new(154);
+pub const SETTINGS_AGENTS_INSTALLED_HOOKS_IN: Key = Key::new(159);
 /// "Installed · hooks incomplete in"
-pub const SETTINGS_AGENTS_INSTALLED_HOOKS_INCOMPLETE_IN: Key = Key::new(155);
+pub const SETTINGS_AGENTS_INSTALLED_HOOKS_INCOMPLETE_IN: Key = Key::new(160);
 /// "Installed · status from output; hooks go in"
-pub const SETTINGS_AGENTS_INSTALLED_STATUS_FROM_OUTPUT_HOOKS_GO: Key = Key::new(156);
+pub const SETTINGS_AGENTS_INSTALLED_STATUS_FROM_OUTPUT_HOOKS_GO: Key = Key::new(161);
 /// "Installed · status from output (no hook support)"
-pub const SETTINGS_AGENTS_INSTALLED_STATUS_FROM_OUTPUT_NO_HOOK: Key = Key::new(157);
+pub const SETTINGS_AGENTS_INSTALLED_STATUS_FROM_OUTPUT_NO_HOOK: Key = Key::new(162);
 /// "Remove hooks"
-pub const SETTINGS_AGENTS_REMOVE_HOOKS: Key = Key::new(158);
+pub const SETTINGS_AGENTS_REMOVE_HOOKS: Key = Key::new(163);
 /// "Repair hooks"
-pub const SETTINGS_AGENTS_REPAIR_HOOKS: Key = Key::new(159);
+pub const SETTINGS_AGENTS_REPAIR_HOOKS: Key = Key::new(164);
 /// "Install hooks"
-pub const SETTINGS_AGENTS_INSTALL_HOOKS: Key = Key::new(160);
+pub const SETTINGS_AGENTS_INSTALL_HOOKS: Key = Key::new(165);
 /// "Reveal in Finder"
-pub const SETTINGS_AGENTS_REVEAL_IN_FINDER: Key = Key::new(161);
+pub const SETTINGS_AGENTS_REVEAL_IN_FINDER: Key = Key::new(166);
 /// "No hooks"
-pub const SETTINGS_AGENTS_NO_HOOKS: Key = Key::new(162);
+pub const SETTINGS_AGENTS_NO_HOOKS: Key = Key::new(167);
 /// "Not on PATH"
-pub const SETTINGS_AGENTS_NOT_ON_PATH: Key = Key::new(163);
+pub const SETTINGS_AGENTS_NOT_ON_PATH: Key = Key::new(168);
 /// "status hooks available"
-pub const SETTINGS_AGENTS_STATUS_HOOKS_AVAILABLE: Key = Key::new(164);
+pub const SETTINGS_AGENTS_STATUS_HOOKS_AVAILABLE: Key = Key::new(169);
 /// "status from output"
-pub const SETTINGS_AGENTS_STATUS_FROM_OUTPUT: Key = Key::new(165);
+pub const SETTINGS_AGENTS_STATUS_FROM_OUTPUT: Key = Key::new(170);
 /// "With status hooks"
-pub const SETTINGS_AGENTS_WITH_STATUS_HOOKS: Key = Key::new(166);
+pub const SETTINGS_AGENTS_WITH_STATUS_HOOKS: Key = Key::new(171);
 /// "The agent tells Wormhole the moment it starts working, waits for you or finishes."
-pub const SETTINGS_AGENTS_THE_AGENT_TELLS_WORMHOLE_THE_MOMENT: Key = Key::new(167);
+pub const SETTINGS_AGENTS_THE_AGENT_TELLS_WORMHOLE_THE_MOMENT: Key = Key::new(172);
 /// "Without"
-pub const SETTINGS_AGENTS_WITHOUT: Key = Key::new(168);
+pub const SETTINGS_AGENTS_WITHOUT: Key = Key::new(173);
 /// "Status is read from the terminal output: usually right, sometimes a beat late."
-pub const SETTINGS_AGENTS_STATUS_IS_READ_FROM_THE_TERMINAL: Key = Key::new(169);
+pub const SETTINGS_AGENTS_STATUS_IS_READ_FROM_THE_TERMINAL: Key = Key::new(174);
 /// "Hooks do nothing outside Wormhole, only add entries of their own, and a backup of every changed file is kept."
-pub const SETTINGS_AGENTS_HOOKS_DO_NOTHING_OUTSIDE_WORMHOLE_ONLY: Key = Key::new(170);
+pub const SETTINGS_AGENTS_HOOKS_DO_NOTHING_OUTSIDE_WORMHOLE_ONLY: Key = Key::new(175);
 /// "Uninstall"
-pub const SETTINGS_AGENTS_UNINSTALL: Key = Key::new(171);
+pub const SETTINGS_AGENTS_UNINSTALL: Key = Key::new(176);
 /// "Install"
-pub const SETTINGS_AGENTS_INSTALL: Key = Key::new(172);
+pub const SETTINGS_AGENTS_INSTALL: Key = Key::new(177);
 /// "Update"
-pub const SETTINGS_AGENTS_UPDATE: Key = Key::new(173);
+pub const SETTINGS_AGENTS_UPDATE: Key = Key::new(178);
 /// "Checking your shell's PATH…"
-pub const SETTINGS_AGENTS_CHECKING_YOUR_SHELLS_PATH: Key = Key::new(174);
+pub const SETTINGS_AGENTS_CHECKING_YOUR_SHELLS_PATH: Key = Key::new(179);
 /// "Copy line"
-pub const SETTINGS_AGENTS_COPY_LINE: Key = Key::new(175);
+pub const SETTINGS_AGENTS_COPY_LINE: Key = Key::new(180);
 /// "How the Terminals list shows each agent: working, asking you, finished. With status hooks it knows the moment; without, it reads the agent's output."
-pub const SETTINGS_AGENTS_PREVIEW_CAPTION: Key = Key::new(192);
+pub const SETTINGS_AGENTS_PREVIEW_CAPTION: Key = Key::new(197);
 
 /// ```text
 /// Used { $when }
 /// ```
 pub fn settings_agents_access_last_used(when: &str) -> String {
-    crate::active::message(125, &[("when", Arg::Str(when))])
+    crate::active::message(130, &[("when", Arg::Str(when))])
 }
 
 /// ```text
 /// { $agent } skill: { $error }
 /// ```
 pub fn settings_agents_skill_failed(agent: &str, error: &str) -> String {
-    crate::active::message(144, &[("agent", Arg::Str(agent)), ("error", Arg::Str(error))])
+    crate::active::message(149, &[("agent", Arg::Str(agent)), ("error", Arg::Str(error))])
 }
 
 /// ```text
 /// { $agent } hooks: { $error }
 /// ```
 pub fn settings_agents_hooks_failed(agent: &str, error: &str) -> String {
-    crate::active::message(176, &[("agent", Arg::Str(agent)), ("error", Arg::Str(error))])
+    crate::active::message(181, &[("agent", Arg::Str(agent)), ("error", Arg::Str(error))])
 }
 
 /// ```text
 /// Some of { $agent }'s hook events are missing (it may have been updated). Repair adds them back; your own entries stay.
 /// ```
 pub fn settings_agents_hooks_partial(agent: &str) -> String {
-    crate::active::message(177, &[("agent", Arg::Str(agent))])
+    crate::active::message(182, &[("agent", Arg::Str(agent))])
 }
 
 /// ```text
 /// { $profile } profile · { $badge } in
 /// ```
 pub fn settings_agents_login_state(profile: &str, badge: &str) -> String {
-    crate::active::message(178, &[("profile", Arg::Str(profile)), ("badge", Arg::Str(badge))])
+    crate::active::message(183, &[("profile", Arg::Str(profile)), ("badge", Arg::Str(badge))])
 }
 
 /// ```text
@@ -235,89 +235,89 @@ pub fn settings_agents_login_state(profile: &str, badge: &str) -> String {
 /// }
 /// ```
 pub fn settings_agents_others_head(count: i64) -> String {
-    crate::active::message(179, &[("count", Arg::Int(count))])
+    crate::active::message(184, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Couldn't install { $command }: { $error }
 /// ```
 pub fn settings_agents_cli_install_failed(command: &str, error: &str) -> String {
-    crate::active::message(180, &[("command", Arg::Str(command)), ("error", Arg::Str(error))])
+    crate::active::message(185, &[("command", Arg::Str(command)), ("error", Arg::Str(error))])
 }
 
 /// ```text
 /// Couldn't remove { $command }: { $error }
 /// ```
 pub fn settings_agents_cli_remove_failed(command: &str, error: &str) -> String {
-    crate::active::message(181, &[("command", Arg::Str(command)), ("error", Arg::Str(error))])
+    crate::active::message(186, &[("command", Arg::Str(command)), ("error", Arg::Str(error))])
 }
 
 /// ```text
 /// { $command } in any terminal. Not installed
 /// ```
 pub fn settings_agents_cli_not_installed(command: &str) -> String {
-    crate::active::message(182, &[("command", Arg::Str(command))])
+    crate::active::message(187, &[("command", Arg::Str(command))])
 }
 
 /// ```text
 /// { $command } in any terminal. Installed at { $path }
 /// ```
 pub fn settings_agents_cli_installed_at(command: &str, path: &str) -> String {
-    crate::active::message(183, &[("command", Arg::Str(command)), ("path", Arg::Str(path))])
+    crate::active::message(188, &[("command", Arg::Str(command)), ("path", Arg::Str(path))])
 }
 
 /// ```text
 /// { $command } in any terminal. Another { $command } is at { $path }
 /// ```
 pub fn settings_agents_cli_foreign_at(command: &str, path: &str) -> String {
-    crate::active::message(184, &[("command", Arg::Str(command)), ("path", Arg::Str(path))])
+    crate::active::message(189, &[("command", Arg::Str(command)), ("path", Arg::Str(path))])
 }
 
 /// ```text
 /// Puts { $command } in /usr/local/bin, or in ~/.local/bin when that can't be written
 /// ```
 pub fn settings_agents_cli_install_tooltip(command: &str) -> String {
-    crate::active::message(185, &[("command", Arg::Str(command))])
+    crate::active::message(190, &[("command", Arg::Str(command))])
 }
 
 /// ```text
 /// Another { $command } is in the way; { -brand } never replaces it
 /// ```
 pub fn settings_agents_cli_foreign_tooltip(command: &str) -> String {
-    crate::active::message(186, &[("command", Arg::Str(command))])
+    crate::active::message(191, &[("command", Arg::Str(command))])
 }
 
 /// ```text
 /// { -brand } never replaces a command it didn't write. Move that { $command } away to install this one.
 /// ```
 pub fn settings_agents_cli_foreign_note(command: &str) -> String {
-    crate::active::message(187, &[("command", Arg::Str(command))])
+    crate::active::message(192, &[("command", Arg::Str(command))])
 }
 
 /// ```text
 /// The installed { $command } runs a copy of { -brand } that is somewhere else. Update points it at this one.
 /// ```
 pub fn settings_agents_cli_stale_note(command: &str) -> String {
-    crate::active::message(188, &[("command", Arg::Str(command))])
+    crate::active::message(193, &[("command", Arg::Str(command))])
 }
 
 /// ```text
 /// { $dir } is on your shell's PATH: { $command } works in new terminals.
 /// ```
 pub fn settings_agents_cli_path_on(dir: &str, command: &str) -> String {
-    crate::active::message(189, &[("dir", Arg::Str(dir)), ("command", Arg::Str(command))])
+    crate::active::message(194, &[("dir", Arg::Str(dir)), ("command", Arg::Str(command))])
 }
 
 /// ```text
 /// { $dir } isn't on your shell's PATH, so new terminals won't find { $command }. Add this line to { $file }, then open a new terminal:
 /// ```
 pub fn settings_agents_cli_path_off(dir: &str, command: &str, file: &str) -> String {
-    crate::active::message(190, &[("dir", Arg::Str(dir)), ("command", Arg::Str(command)), ("file", Arg::Str(file))])
+    crate::active::message(195, &[("dir", Arg::Str(dir)), ("command", Arg::Str(command)), ("file", Arg::Str(file))])
 }
 
 /// ```text
 /// Couldn't read your shell's PATH. If { $command } isn't found, add { $dir } to it.
 /// ```
 pub fn settings_agents_cli_path_unknown(command: &str, dir: &str) -> String {
-    crate::active::message(191, &[("command", Arg::Str(command)), ("dir", Arg::Str(dir))])
+    crate::active::message(196, &[("command", Arg::Str(command)), ("dir", Arg::Str(dir))])
 }

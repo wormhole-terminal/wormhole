@@ -1,15 +1,17 @@
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use super::state::{CommitInfo, DETAILS_KEPT};
 use super::{CommitFiles, FILES_KEPT, Fetched, HistoryKey, HistoryRow, HistoryState};
 use crate::window::repo::job::testing::ManualExecutor;
-use wormhole_core::git::{ChangeKind, Commit, FileChange, GitError};
+use wormhole_core::git::{ChangeKind, Commit, CommitDetails, FileChange, GitError, Signature};
 
 fn commit(sha: &str) -> Commit {
     Commit {
         sha: sha.into(),
         short: sha[..1].into(),
         parent: None,
+        merge: false,
         author: "a".into(),
         time: 0,
         subject: format!("commit {sha}"),
@@ -251,6 +253,93 @@ fn the_files_cache_is_bounded_and_keeps_the_open_commit() {
     assert!(history.files.len() <= FILES_KEPT + 1);
     assert!(matches!(history.files.get("aaa"), Some(CommitFiles::Loaded(f)) if f[0].path == "keep.rs"));
     assert_eq!(history.loaded("aaa").map(Rc::strong_count), Some(1));
+}
+
+fn details(sha: &str) -> CommitDetails {
+    let who = Signature { name: "Ada".into(), email: "ada@example.com".into(), time: 0, offset: 0 };
+    CommitDetails {
+        sha: sha.into(),
+        parents: Vec::new(),
+        author: who.clone(),
+        committer: who,
+        refs: Vec::new(),
+        message: format!("commit {sha}\n\nbody"),
+        message_cut: false,
+        co_authors: Vec::new(),
+    }
+}
+
+#[test]
+fn the_open_commit_has_a_details_row_that_changes_as_they_arrive() {
+    let mut history = loaded();
+    assert!(!history.rows().iter().any(|r| matches!(r, HistoryRow::Details(_))), "nothing is open");
+    history.toggle("aaa");
+    let before = history.rows();
+    let at = before.iter().position(|r| matches!(r, HistoryRow::Details(_))).expect("a row for the details");
+    assert_eq!(before[at - 1], HistoryRow::Commit(0), "right under its commit");
+    // Asking marks it loading; once read, the row differs, so the list measures it again.
+    assert!(history.want_details("aaa"));
+    let loading = history.rows();
+    assert_ne!(loading[at], before[at]);
+    history.details_loaded("aaa", Ok(details("aaa")));
+    assert_ne!(history.rows()[at], loading[at]);
+    assert_eq!(history.details_of("aaa").map(|d| d.subject().to_string()), Some("commit aaa".into()));
+    // A commit that is not open has no such row, and another's details change nothing here.
+    let shown = history.rows();
+    history.details_loaded("bbb", Ok(details("bbb")));
+    assert_eq!(history.rows(), shown);
+}
+
+#[test]
+fn details_are_read_once_however_often_the_commit_is_opened() {
+    let mut history = loaded();
+    assert!(history.want_details("aaa"));
+    assert!(!history.want_details("aaa"), "the read on its way is awaited");
+    history.details_loaded("aaa", Ok(details("aaa")));
+    assert!(!history.want_details("aaa"), "a read one is kept");
+}
+
+#[test]
+fn details_that_could_not_be_read_are_shown_while_open_and_tried_again_after() {
+    let mut history = loaded();
+    history.toggle("aaa");
+    assert!(history.want_details("aaa"));
+    history.details_loaded("aaa", Err("fatal: bad object".into()));
+    assert!(matches!(history.details.get("aaa"), Some(CommitInfo::Failed(_))));
+    assert!(history.want_details("aaa"), "asking again is a retry");
+    // A failure for a commit that was closed meanwhile is not kept.
+    history.toggle("aaa");
+    history.details_loaded("aaa", Err("boom".into()));
+    assert!(!history.details.contains_key("aaa"));
+}
+
+#[test]
+fn the_details_cache_is_bounded_and_keeps_the_open_commit() {
+    let mut history = loaded();
+    history.toggle("aaa");
+    history.want_details("aaa");
+    history.details_loaded("aaa", Ok(details("aaa")));
+    for n in 0..DETAILS_KEPT + 10 {
+        history.details_loaded(&format!("other-{n}"), Ok(details("x")));
+    }
+    assert!(history.details.len() <= DETAILS_KEPT + 1);
+    assert!(history.details_of("aaa").is_some());
+}
+
+#[test]
+fn a_changed_log_drops_the_details_but_the_open_ones_are_read_again() {
+    let mut history = loaded();
+    history.toggle("aaa");
+    for sha in ["aaa", "bbb"] {
+        history.details_loaded(sha, Ok(details(sha)));
+    }
+    // Loaded for "bbb" only because nothing waited for it: it is what the cache keeps for a copy.
+    assert_eq!(history.details_stale().as_deref(), Some("aaa"));
+    assert!(history.details_of("bbb").is_none());
+    assert!(history.details_of("aaa").is_some(), "still on screen while it is read again");
+    history.toggle("aaa");
+    assert_eq!(history.details_stale(), None, "nothing is open, nothing to read again");
+    assert!(history.details.is_empty());
 }
 
 #[test]

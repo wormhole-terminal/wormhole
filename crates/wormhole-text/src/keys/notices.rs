@@ -20,6 +20,16 @@ pub const NOTICE_COPIED_OBJECT_ID: Key = Key::new(47);
 pub const NOTICE_DRIVEN_SCRIPTS_TYPING: Key = Key::new(50);
 /// "A script is reading"
 pub const NOTICE_DRIVEN_SCRIPTS_READING: Key = Key::new(51);
+/// "Copied commit hash"
+pub const NOTICE_COPIED_COMMIT_HASH: Key = Key::new(52);
+/// "Copied short hash"
+pub const NOTICE_COPIED_COMMIT_SHORT_HASH: Key = Key::new(53);
+/// "Copied commit message"
+pub const NOTICE_COPIED_COMMIT_MESSAGE: Key = Key::new(54);
+/// "Copied subject"
+pub const NOTICE_COPIED_COMMIT_SUBJECT: Key = Key::new(55);
+/// "Copied author"
+pub const NOTICE_COPIED_COMMIT_AUTHOR: Key = Key::new(56);
 
 /// ```text
 /// { $count ->

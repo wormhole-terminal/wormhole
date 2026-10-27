@@ -7,6 +7,7 @@
 //! read-only. Each tab says which of its rows the keys can be on and what pressing one does; this
 //! walks them.
 
+use gpui_kit::component::input as text_input;
 use gpui_kit::*;
 use wormhole_core::view::focus::Area;
 use wormhole_core::view::focus::list::{Item, Move, band_folds, walk};
@@ -148,6 +149,18 @@ impl Workspace {
         }
     }
 
+    /// ⌘C in the panel's list (Edit → Copy too): the row the keys are on, if its tab can copy it.
+    /// `false` when it cannot, so the key goes where it would have.
+    pub(crate) fn panel_copy(&mut self, window: &Window, cx: &mut Context<Self>) -> bool {
+        let rows = self.panel_walkable(cx);
+        let Some(row) = self.panel_cursor(&rows).map(|at| rows[at].row) else { return false };
+        let session = self.active_session().id;
+        let Some(Walker(walk, entity)) = self.walker().map(Walker::cloned) else { return false };
+        let Some(copy) = walk.copy else { return false };
+        let facts = self.facts(cx);
+        copy(&entity, &facts, session, row, window, cx)
+    }
+
     /// Fold or open the row at `row` (a section, a folder, a commit's files, the done steps).
     fn panel_fold(&mut self, row: usize, cx: &mut Context<Self>) {
         let session = self.active_session().id;
@@ -177,6 +190,12 @@ impl Workspace {
             .flex_col()
             .flex_1()
             .min_h_0()
+            // The Edit menu's Copy, and ⌘C with it, when the keys are on a row that can be copied.
+            .on_action(cx.listener(|this, _: &text_input::Copy, window, cx| {
+                if !this.panel_copy(window, cx) {
+                    cx.propagate();
+                }
+            }))
             .child(content);
         self.area_container(Area::PanelContent, list, cx).into_any_element()
     }

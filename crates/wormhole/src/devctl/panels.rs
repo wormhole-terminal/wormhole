@@ -52,6 +52,24 @@ pub(super) fn commit(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `commit-details`: the open commit's details block, as text.
+pub(super) fn commit_details(ctx: &mut Ctx, _: &str) -> Result<String> {
+    Ok(history_panel::details(ctx.workspace, ctx.cx))
+}
+
+/// `commit-copy <what> [n]`: a commit's copy action; `clipboard` shows what it put there.
+pub(super) fn commit_copy(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let (what, n) = arg.trim().split_once(' ').unwrap_or((arg.trim(), ""));
+    let n = (!n.trim().is_empty()).then(|| nth(n));
+    history_panel::copy(ctx.workspace, what, n, ctx.window, ctx.cx).map_err(|e| anyhow!(e))?;
+    Ok(String::new())
+}
+
+/// `clipboard`: what is on the clipboard.
+pub(super) fn clipboard(ctx: &mut Ctx, _: &str) -> Result<String> {
+    Ok(history_panel::clipboard(ctx.cx))
+}
+
 pub(super) fn commit_file(ctx: &mut Ctx, arg: &str) -> Result<String> {
     history_panel::commit_file(ctx.workspace, nth(arg), ctx.cx);
     Ok(String::new())

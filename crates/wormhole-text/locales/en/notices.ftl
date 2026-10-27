@@ -44,3 +44,14 @@ notice-driven-reading = { $name } is reading
 notice-driven-scripts-typing = A script is typing
 
 notice-driven-scripts-reading = A script is reading
+
+# A commit in the History tab: its full hash, the short one, its whole message, its subject line, its author.
+notice-copied-commit-hash = Copied commit hash
+
+notice-copied-commit-short-hash = Copied short hash
+
+notice-copied-commit-message = Copied commit message
+
+notice-copied-commit-subject = Copied subject
+
+notice-copied-commit-author = Copied author

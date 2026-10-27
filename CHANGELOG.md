@@ -17,6 +17,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   right panel. Nothing is saved or changed: leaving it, or quitting and starting again, brings back
   the window as it was, each window's panel included, and Settings meanwhile shows your own values
   with a note and a button to leave.
+- History shows a commit in full when you open it: the whole message, who wrote it and who committed it
+  (when that is someone else), co-authors, the branches and tags that point at it, its parents (click
+  one to open it) and how many files and lines it changed. Copy the hash, short hash, message, subject
+  or author from the buttons there or from a right-click on any commit, or press ⌘C on a commit for its
+  hash. A merge says so in the list, and a long subject shows in full in a tooltip.
 - Copying says so in a small chip that drops onto the top of the terminal, in the system's own glass:
   "Copied 3 lines", "Copied command", "Copied path". A program's copy in the terminal you're typing in
   is said there too, instead of the bar over the terminal's last rows. VoiceOver reads it out, and

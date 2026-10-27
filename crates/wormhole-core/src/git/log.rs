@@ -132,6 +132,8 @@ mod tests {
         let commits = parse_log(text);
         assert_eq!(commits.len(), 2);
         assert_eq!(commits[0].parent.as_deref(), Some("ppp"));
+        assert!(commits[0].merge, "two parents");
+        assert!(!commits[1].merge, "none");
         assert_eq!(commits[0].subject, "Fix: thing");
         assert_eq!(commits[1].parent, None);
         assert_eq!(commits[1].time, 1600000000);

@@ -19,6 +19,11 @@ pub(super) fn of(notice: Notice) -> Option<String> {
         Copied::SettingKey => text(keys::NOTICE_COPIED_SETTING_KEY).to_string(),
         Copied::Error => text(keys::NOTICE_COPIED_ERROR).to_string(),
         Copied::ObjectId => text(keys::NOTICE_COPIED_OBJECT_ID).to_string(),
+        Copied::CommitHash => text(keys::NOTICE_COPIED_COMMIT_HASH).to_string(),
+        Copied::CommitShortHash => text(keys::NOTICE_COPIED_COMMIT_SHORT_HASH).to_string(),
+        Copied::CommitMessage => text(keys::NOTICE_COPIED_COMMIT_MESSAGE).to_string(),
+        Copied::CommitSubject => text(keys::NOTICE_COPIED_COMMIT_SUBJECT).to_string(),
+        Copied::CommitAuthor => text(keys::NOTICE_COPIED_COMMIT_AUTHOR).to_string(),
     })
 }
 
@@ -61,6 +66,8 @@ mod tests {
             assert_eq!(said(Copied::Path), "Copied path");
             assert_eq!(said(Copied::SettingKey), "Copied setting key");
             assert_eq!(said(Copied::Error), "Copied error");
+            assert_eq!(said(Copied::CommitHash), "Copied commit hash");
+            assert_eq!(said(Copied::CommitMessage), "Copied commit message");
             assert_eq!(said(Copied::ObjectId), "Copied object id");
         });
     }

@@ -22,12 +22,15 @@ use crate::window::facts::WindowFacts;
 use crate::window::feature::FeatureEvent;
 
 pub(crate) mod api;
+mod copy;
 mod def;
+mod details_view;
 #[cfg(feature = "devctl")]
 pub(crate) mod devctl;
 #[cfg(test)]
 mod flow_tests;
 mod keys;
+mod menu;
 mod refresh;
 mod state;
 #[cfg(test)]

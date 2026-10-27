@@ -1,5 +1,5 @@
-//! What the History tab keeps of one terminal: the log of the branch shown, the commit opened and its
-//! files, and the rows the list draws from them. No GPUI beyond the list's state: the reads are
+//! What the History tab keeps of one terminal: the log of the branch shown, the commit opened with its
+//! files and details, and the rows the list draws from them. No GPUI beyond the list's state: the reads are
 //! `refresh`'s, the drawing `view`'s.
 
 use std::collections::{HashMap, HashSet};
@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use gpui_kit::*;
-use wormhole_core::git::{Commit, FileChange, GitError};
+use wormhole_core::git::{Commit, CommitDetails, FileChange, GitError};
 
 use crate::style::panel_list::{CardPart, Rows};
 use crate::window::repo::job::{Job, Ticket, Wanted};
@@ -32,6 +32,20 @@ pub(super) enum CommitFiles {
 /// How many commits' files are kept; the open one and those in flight always are.
 pub(super) const FILES_KEPT: usize = 64;
 
+/// One commit's details (the whole message, the committer, the refs), as far as they are known.
+#[derive(Clone)]
+pub(super) enum CommitInfo {
+    /// Being fetched.
+    Loading,
+    Loaded(Rc<CommitDetails>),
+    /// Git failed. Shown while the commit stays open; not kept, so opening it again tries again.
+    Failed(SharedString),
+}
+
+/// How many commits' details are kept (a copy from the menu loads them without opening the commit);
+/// the open one and those in flight always are.
+pub(super) const DETAILS_KEPT: usize = 64;
+
 /// Per-session commit history.
 #[derive(Default)]
 pub(super) struct HistoryState {
@@ -50,6 +64,13 @@ pub(super) struct HistoryState {
     /// Commit expanded to show its files.
     pub(super) expanded: Option<String>,
     pub(super) files: HashMap<String, CommitFiles>,
+    /// Of the commits opened (or copied from) since the log changed: read once each, never per frame.
+    pub(super) details: HashMap<String, CommitInfo>,
+    /// Counts what the open commit's details row shows, so the list measures that row again when
+    /// they arrive or another commit opens: its description (`Details`) would be the same.
+    pub(super) details_shown: u32,
+    /// A commit to scroll to once the list has been laid out again: the parent the person followed.
+    pub(super) reveal: Option<String>,
     /// Of a commit's files, those that are in the working tree now: the ones the icon that
     /// opens a file in the editor shows on. Read when the files arrive, so a frame never touches
     /// the disk.
@@ -59,12 +80,15 @@ pub(super) struct HistoryState {
 }
 
 /// One line of the History list: a commit, or what sits under the expanded one.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(super) enum HistoryRow {
     /// The card's head: "History", how many commits, and the branch picker.
     Head,
     Error,
     Commit(usize),
+    /// Under the open commit: its message, who wrote it, its refs. The number is
+    /// [`HistoryState::details_shown`].
+    Details(u32),
     /// "Loading files…" / "No file changes." under the expanded commit.
     Note(&'static str),
     /// Why the expanded commit's files could not be listed.
@@ -168,6 +192,7 @@ impl HistoryState {
         if matches!(self.files.get(sha), Some(CommitFiles::Failed(_))) {
             self.files.remove(sha);
         }
+        self.details_shown = self.details_shown.wrapping_add(1);
         if open {
             self.expanded = None;
             return None;
@@ -195,6 +220,7 @@ impl HistoryState {
             self.rev = None;
         }
         self.expanded = Some(commit.sha.clone());
+        self.details_shown = self.details_shown.wrapping_add(1);
         if matches!(self.files.get(&commit.sha), Some(CommitFiles::Failed(_))) {
             self.files.remove(&commit.sha);
         }
@@ -247,6 +273,68 @@ impl HistoryState {
         }
     }
 
+    /// `sha`'s details are wanted: whether they have to be fetched (they are not here, or the last try
+    /// failed; one already on its way is awaited).
+    pub(super) fn want_details(&mut self, sha: &str) -> bool {
+        if matches!(self.details.get(sha), Some(CommitInfo::Loading | CommitInfo::Loaded(_))) {
+            return false;
+        }
+        self.details.insert(sha.to_string(), CommitInfo::Loading);
+        self.shown_changed(sha);
+        true
+    }
+
+    /// The details of `sha` arrived (or git failed to read them).
+    pub(super) fn details_loaded(&mut self, sha: &str, result: Result<CommitDetails, String>) {
+        match result {
+            Ok(details) => {
+                self.details.insert(sha.to_string(), CommitInfo::Loaded(Rc::new(details)));
+                if self.details.len() > DETAILS_KEPT {
+                    let expanded = self.expanded.clone();
+                    self.details.retain(|key, info| {
+                        Some(key.as_str()) == expanded.as_deref()
+                            || key == sha
+                            || matches!(info, CommitInfo::Loading)
+                    });
+                }
+            }
+            // Only for a commit that is still waiting for it, and still open.
+            Err(err) if matches!(self.details.get(sha), Some(CommitInfo::Loading)) => {
+                if self.expanded.as_deref() == Some(sha) {
+                    self.details.insert(sha.to_string(), CommitInfo::Failed(err.into()));
+                } else {
+                    self.details.remove(sha);
+                }
+            }
+            Err(_) => {}
+        }
+        self.shown_changed(sha);
+    }
+
+    /// The details of `sha`, once loaded.
+    pub(super) fn details_of(&self, sha: &str) -> Option<&Rc<CommitDetails>> {
+        match self.details.get(sha) {
+            Some(CommitInfo::Loaded(details)) => Some(details),
+            _ => None,
+        }
+    }
+
+    /// The log changed (a commit landed, HEAD moved): the refs of what was read are out of date. All
+    /// but the open commit's are dropped; its are kept on screen while they are read again, and its
+    /// sha is returned for that.
+    pub(super) fn details_stale(&mut self) -> Option<String> {
+        let expanded = self.expanded.clone();
+        self.details.retain(|key, _| Some(key) == expanded.as_ref());
+        expanded.filter(|sha| matches!(self.details.get(sha), Some(CommitInfo::Loaded(_))))
+    }
+
+    /// Row `Details` changes with the open commit's details (and only with those).
+    fn shown_changed(&mut self, sha: &str) {
+        if self.expanded.as_deref() == Some(sha) {
+            self.details_shown = self.details_shown.wrapping_add(1);
+        }
+    }
+
     pub(super) fn rows(&self) -> Vec<HistoryRow> {
         let mut rows = Vec::with_capacity(self.commits.len() + 3);
         rows.push(HistoryRow::Head);
@@ -258,6 +346,7 @@ impl HistoryState {
             if self.expanded.as_deref() != Some(commit.sha.as_str()) {
                 continue;
             }
+            rows.push(HistoryRow::Details(self.details_shown));
             match self.files.get(&commit.sha) {
                 None | Some(CommitFiles::Loading) => rows.push(HistoryRow::Note("Loading files…")),
                 Some(CommitFiles::Failed(_)) => rows.push(HistoryRow::FilesError),

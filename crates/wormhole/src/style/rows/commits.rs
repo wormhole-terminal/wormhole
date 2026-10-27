@@ -88,15 +88,18 @@ pub struct CommitRow {
     pub code_font: SharedString,
     /// Opened to show its files: the selected tint, its subject in the tint's text color.
     pub expanded: bool,
+    /// It has more than one parent: "merge" after the hash, since a merge's files are against its first
+    /// parent and a reader should not take them for the whole story.
+    pub merge: bool,
 }
 
 /// One commit in the History tab: [`ROW_TWO_LINE_H`] tall like the sidebar's
 /// terminals, the chevron in the lead column and the subject at x 40 on the first line; the
-/// short hash in the primary and the author on the second, the age at the right edge. An
+/// short hash in the primary (and "merge" for a merge commit) and the author on the second, the age at the right edge. An
 /// expanded commit is the selected row; its files follow it one level in. Add `.on_click(…)`.
 #[track_caller]
 pub fn commit_row(id: impl Into<ElementId>, ui: UiColors, row: CommitRow) -> Stateful<Div> {
-    let CommitRow { subject, sha, author, age, code_font, expanded } = row;
+    let CommitRow { subject, sha, author, age, code_font, expanded, merge } = row;
     let (meta, hash) = if expanded { (ui.selected_muted, ui.selected_text) } else { (ui.muted, ui.primary) };
     div()
         .id(id)
@@ -142,6 +145,7 @@ pub fn commit_row(id: impl Into<ElementId>, ui: UiColors, row: CommitRow) -> Sta
                 .text_caption()
                 .text_color(meta)
                 .child(div().flex_none().text_color(hash).font_family(code_font).child(sha))
+                .when(merge, |d| d.child(div().flex_none().child("merge")))
                 .child(div().min_w_0().truncate().child(author))
                 .child(div().flex_1())
                 .child(div().flex_none().tabular_nums().child(age)),

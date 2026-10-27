@@ -24,6 +24,7 @@ impl History {
                     HistoryRow::File(_) => item(1, None),
                     HistoryRow::Head
                     | HistoryRow::Error
+                    | HistoryRow::Details(_)
                     | HistoryRow::Note(_)
                     | HistoryRow::FilesError
                     | HistoryRow::Spacer => return None,
@@ -91,6 +92,9 @@ pub(super) const WALK: WalkFns = WalkFns {
     fold: |entity, _, session, row, cx| {
         super::def::typed(entity).update(cx, |history, cx| history.fold_row(session, row, cx));
     },
+    copy: Some(|entity, _, session, row, window, cx| {
+        super::def::typed(entity).update(cx, |history, cx| history.copy_row(session, row, window, cx))
+    }),
     reveal: |entity, facts, row, cx| {
         if let Some(active) = facts.active() {
             super::def::typed(entity).read(cx).reveal(active.id, row);

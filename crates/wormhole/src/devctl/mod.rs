@@ -258,6 +258,13 @@
 //!   compare [branch]   compare the Changes tab with a branch (none, or HEAD, to stop comparing)
 //!   history [branch]   the History tab, on that branch (HEAD: the current one); a branch that
 //!                   doesn't exist shows git's error, as a deleted one does
+//!   commit <n> | commit-file <n>   open or fold the n-th commit's files / open the n-th file's diff
+//!   commit-details   the open commit's details block as text: subject, body, author, committer (when it
+//!                   differs), co-authors, parents, refs and the size of the change; `loading` or the
+//!                   reason it `failed`
+//!   commit-copy <hash|short|message|subject|author> [n]   the commit menu's copy item, for the open
+//!                   commit or the n-th of the log (the message and author are read first when need be)
+//!   clipboard       the text on the clipboard now (`empty` when there is none)
 //!   diff-scroll-x <px>  scroll the open diff's code sideways (negative = back)
 //!   frames <n>      draw the window n times (the workspace is not marked dirty) and append the timings
 //!                   to <dir>/frames.txt (out.txt is rewritten per batch); run it once the tab

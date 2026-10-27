@@ -1,17 +1,21 @@
-//! How the History tab draws: the log as a card of commits, the opened commit's files under it, and
-//! what stands in for the list (git is missing, the folder is no repository, still reading).
+//! How the History tab draws: the log as a card of commits, the opened commit's details (`details_view`) and
+//! files under it, and what stands in for the list (git is missing, the folder is no repository, still reading).
 
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::git::{Commit, FileChange};
 use wormhole_core::view::limits::count_grouped;
 use wormhole_core::view::panel::age;
+use wormhole_core::view::spoken;
 
 use super::def::typed;
+use super::menu::commit_menu;
+use super::state::CommitInfo;
 use super::{CommitFiles, History, HistoryRow};
 use crate::features::git::changes::Changes;
 use crate::features::git::file_line::{Placement, change_row};
@@ -19,6 +23,7 @@ use crate::features::git::open_file::OpenTarget;
 use crate::features::git::picker::{ChipOf, PickerChip};
 use crate::features::git::problem::{self, GitTab};
 use crate::features::git::submodule_row::{open_terminal_by_event, submodule_row};
+use crate::platform;
 use crate::settings::{UiColors, ui_in};
 use crate::style::{self, TextRole};
 use crate::window::facts::WindowFacts;
@@ -44,6 +49,14 @@ impl History {
         let Some(state) = self.of.get_mut(&session) else { return div().into_any_element() };
         let rows = state.rows();
         state.list.set(rows);
+        // A parent the person followed from the details: scroll to its row, now that the list has it.
+        if let Some(sha) = state.reveal.take()
+            && let Some(row) = state.list.items().iter().position(
+                |row| matches!(row, HistoryRow::Commit(ix) if state.commits.get(*ix).is_some_and(|c| c.sha == sha)),
+            )
+        {
+            state.list.reveal(row);
+        }
         let history = &*state;
 
         if history.root.is_none() {
@@ -76,6 +89,7 @@ impl History {
                 .expanded
                 .as_ref()
                 .and_then(|sha| history.commits.iter().find(|c| &c.sha == sha).cloned()),
+            info: history.expanded.as_ref().and_then(|sha| history.details.get(sha).cloned()),
             files: history.expanded.as_ref().and_then(|sha| history.loaded(sha).cloned()),
             present: history.expanded.as_ref().and_then(|sha| history.present.get(sha).cloned()),
             open: history.root.as_deref().map(|root| OpenTarget::new(root, cx)),
@@ -127,15 +141,17 @@ impl History {
 }
 
 /// Where a commit's files and the lines about them start: one level in (x 40).
-const FILES_X: f32 = style::CARD_INSET + style::INDENT;
+pub(super) const FILES_X: f32 = style::CARD_INSET + style::INDENT;
 
 /// What the History list's rows draw from, captured for the render callback.
-struct HistoryView {
-    commits: Rc<Vec<Commit>>,
-    expanded: Option<String>,
-    expanded_commit: Option<Commit>,
+pub(super) struct HistoryView {
+    pub(super) commits: Rc<Vec<Commit>>,
+    pub(super) expanded: Option<String>,
+    pub(super) expanded_commit: Option<Commit>,
+    /// The open commit's details, once asked for.
+    pub(super) info: Option<CommitInfo>,
     /// Files of the expanded commit, once loaded.
-    files: Option<Rc<Vec<FileChange>>>,
+    pub(super) files: Option<Rc<Vec<FileChange>>>,
     /// Which of them are in the working tree now, and the icon that opens one in the editor.
     present: Option<Rc<HashSet<String>>>,
     open: Option<OpenTarget>,
@@ -145,18 +161,26 @@ struct HistoryView {
     /// The repository, which a submodule's folder is under.
     root: Option<PathBuf>,
     open_path: Option<String>,
-    code_font: SharedString,
-    now: i64,
+    pub(super) code_font: SharedString,
+    pub(super) now: i64,
     /// The panel's width, which file names are fitted to.
     width: f32,
     picker: PickerChip<History>,
     /// Changes, which a commit's file opens its diff in.
     changes: Option<Entity<Changes>>,
-    session: i64,
-    this: WeakEntity<History>,
+    pub(super) session: i64,
+    pub(super) this: WeakEntity<History>,
 }
 
 impl HistoryView {
+    /// Whether a row has to cut `subject`: the room a line has is the panel less the chevron's column and the
+    /// card's insets, and a character of body text is about 7 points wide. Near enough: a tooltip that
+    /// repeats a subject that fit costs nothing, and one that is missing is only the cut subject as before.
+    fn cuts(&self, subject: &str) -> bool {
+        let room = self.width - 2.0 * style::CARD_INSET - style::ITEM_LEAD_W - 8.0;
+        subject.chars().count() as f32 * 7.0 > room
+    }
+
     fn render_row(&self, row: &HistoryRow, ui: UiColors, window: &mut Window, cx: &App) -> AnyElement {
         match row {
             HistoryRow::Head => style::section_card(
@@ -192,23 +216,49 @@ impl HistoryView {
             HistoryRow::Commit(ix) => {
                 let Some(commit) = self.commits.get(*ix) else { return div().into_any_element() };
                 let (this, sha, session) = (self.this.clone(), commit.sha.clone(), self.session);
-                style::commit_row(
+                let age = age(self.now - commit.time);
+                let spoken =
+                    spoken::commit_row(&commit.subject, &commit.short, &commit.author, &age, commit.merge);
+                let (menu_this, menu_sha) = (self.this.clone(), commit.sha.clone());
+                let row = style::commit_row(
                     SharedString::from(format!("commit-{}", commit.sha)),
                     ui,
                     style::CommitRow {
                         subject: commit.subject.clone().into(),
                         sha: commit.short.clone().into(),
                         author: commit.author.clone().into(),
-                        age: age(self.now - commit.time).into(),
+                        age: age.into(),
                         code_font: self.code_font.clone(),
                         expanded: self.expanded.as_deref() == Some(commit.sha.as_str()),
+                        merge: commit.merge,
                     },
                 )
+                .aria_label(spoken)
+                .on_mouse_down(MouseButton::Right, move |event, window, cx| {
+                    cx.stop_propagation();
+                    platform::show_menu(
+                        commit_menu(&menu_this, session, &menu_sha),
+                        event.position,
+                        window,
+                        cx,
+                    );
+                })
                 .on_click(move |_, _, cx| {
                     this.update(cx, |this, cx| this.toggle_commit(session, sha.clone(), cx)).ok();
+                });
+                // The whole subject where the row had to cut it.
+                if !self.cuts(&commit.subject) {
+                    return row.into_any_element();
+                }
+                let subject = SharedString::from(commit.subject.clone());
+                row.tooltip(move |window, cx| {
+                    let subject = subject.clone();
+                    Tooltip::element(move |_, _| div().max_w(px(TOOLTIP_W)).child(subject.clone()))
+                        .build(window, cx)
                 })
                 .into_any_element()
             }
+            HistoryRow::Details(_) => self.render_details(ui),
             HistoryRow::Note(text) => files_line(ui.muted).child(*text).into_any_element(),
             HistoryRow::FilesError => files_line(ui.danger_text)
                 .child(self.files_error.clone().unwrap_or_default())
@@ -254,6 +304,9 @@ impl HistoryView {
         }
     }
 }
+
+/// A tooltip wraps at this width rather than running across the window.
+const TOOLTIP_W: f32 = 280.0;
 
 /// A quiet line under the expanded commit, where its files go ("Loading files…").
 #[track_caller]
