@@ -219,7 +219,7 @@ fn draw_mcp(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement 
                 .small()
                 .icon(IconName::Copy)
                 .label(text(SETTINGS_AGENTS_COPY_COMMAND))
-                .on_click(move |_, _, cx| cx.write_to_clipboard(ClipboardItem::new_string(copy.clone()))),
+                .on_click(move |_, _, cx| crate::platform::clipboard::write(copy.clone(), cx)),
         )
         .into_any_element()
 }
