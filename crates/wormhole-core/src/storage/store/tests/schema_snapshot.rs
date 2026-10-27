@@ -67,7 +67,17 @@ fn words(text: &str) -> Vec<&str> {
 
 /// What [`dump`] must give for a fresh database, compared ignoring how the lines are wrapped.
 const EXPECTED: &str = r#"
-user_version 10
+user_version 11
+table agent_grants: CREATE TABLE agent_grants (id INTEGER PRIMARY KEY, kind TEXT NOT NULL,
+        agent TEXT NOT NULL DEFAULT '', identifier TEXT NOT NULL DEFAULT '',
+        team_id TEXT NOT NULL DEFAULT '', pin TEXT NOT NULL DEFAULT '', label TEXT NOT NULL,
+        location TEXT NOT NULL DEFAULT '', cdhash TEXT NOT NULL DEFAULT '', caps INTEGER NOT NULL,
+        created INTEGER NOT NULL, last_used INTEGER, uses INTEGER NOT NULL DEFAULT 0)
+    columns: id INTEGER pk 1, kind TEXT not null, agent TEXT not null default '',
+        identifier TEXT not null default '', team_id TEXT not null default '',
+        pin TEXT not null default '', label TEXT not null, location TEXT not null default '',
+        cdhash TEXT not null default '', caps INTEGER not null, created INTEGER not null,
+        last_used INTEGER, uses INTEGER not null default 0
 table meta: CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)
     columns: key TEXT pk 1, value TEXT
 table notes: CREATE TABLE notes (session_id INTEGER NOT NULL, position INTEGER NOT NULL,
@@ -100,6 +110,8 @@ table windows: CREATE TABLE windows (id INTEGER PRIMARY KEY, position INTEGER NO
         active INTEGER NOT NULL DEFAULT 0, layout TEXT, bounds TEXT)
     columns: id INTEGER pk 1, position INTEGER not null, active INTEGER not null default 0,
         layout TEXT, bounds TEXT
+index agent_grants_identity: CREATE UNIQUE INDEX agent_grants_identity
+        ON agent_grants (kind, agent, identifier, team_id, pin)
 index notes_session: CREATE INDEX notes_session ON notes (session_id)
 index sessions_window: CREATE INDEX sessions_window ON sessions (window_id)
 index splits_window: CREATE INDEX splits_window ON splits (window_id)

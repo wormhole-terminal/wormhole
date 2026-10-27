@@ -183,3 +183,25 @@ pub(super) const V10_ROW_CLAIMS: &str = "
         PRIMARY KEY (session_id, root, path)
     );
 ";
+
+/// Version 10 to 11: the programs the user approved to control Wormhole for good (`agent_grants`).
+/// Only a table is added; no existing row changes.
+pub(super) const V11_AGENT_ACCESS: &str = "
+    CREATE TABLE IF NOT EXISTS agent_grants (
+        id INTEGER PRIMARY KEY,
+        kind TEXT NOT NULL,
+        agent TEXT NOT NULL DEFAULT '',
+        identifier TEXT NOT NULL DEFAULT '',
+        team_id TEXT NOT NULL DEFAULT '',
+        pin TEXT NOT NULL DEFAULT '',
+        label TEXT NOT NULL,
+        location TEXT NOT NULL DEFAULT '',
+        cdhash TEXT NOT NULL DEFAULT '',
+        caps INTEGER NOT NULL,
+        created INTEGER NOT NULL,
+        last_used INTEGER,
+        uses INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS agent_grants_identity
+        ON agent_grants (kind, agent, identifier, team_id, pin);
+";

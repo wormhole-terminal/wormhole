@@ -241,7 +241,7 @@ fn a_text_file_that_refuses_the_move_doesnt_stop_the_upgrade() {
     }
     let mut store = Store::open_in(&dir, FakePlatform::with_key(1)).expect("upgrades");
     assert!(store.recovered_from().is_none());
-    assert_eq!(count(&store, "PRAGMA user_version"), 10);
+    assert_eq!(count(&store, "PRAGMA user_version"), 11);
     assert_eq!(count(&store, "SELECT COUNT(*) FROM saved.scrollback"), 0, "the text is dropped");
     assert_eq!(on_disk(&dir, MARKER), Vec::<String>::new());
     store.conn.execute_batch("DROP TRIGGER saved.refuse").expect("drops");

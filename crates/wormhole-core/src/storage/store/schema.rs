@@ -24,6 +24,7 @@ const MIGRATIONS: &[&str] = &[
     steps::V8_TERMINAL_HOST,
     steps::V9_TEXT_IN_ITS_OWN_FILE,
     steps::V10_ROW_CLAIMS,
+    steps::V11_AGENT_ACCESS,
 ];
 
 /// The schema version this build creates and reads.
@@ -39,6 +40,9 @@ const VERSION: i64 = FIRST_MIGRATABLE + MIGRATIONS.len() as i64;
 /// tabs and panes (schema 6); nothing reads them now, and a later step drops them.
 /// `tabs.host_id` names the session host that runs the terminal (`hosts`), NULL for a terminal in
 /// the app's own process.
+///
+/// `agent_grants` are the programs the user approved to control Wormhole for good; each row is one
+/// identity (`ipc::access`), whose key is the columns before `label`.
 ///
 /// A terminal's saved text is not here but in a file of its own (`saved_text`), keyed by the
 /// terminal's id: never in a `tabs` row, which a window save rewrites.
@@ -99,6 +103,23 @@ pub(super) const SCHEMA: &str = "
         path TEXT NOT NULL,
         PRIMARY KEY (session_id, root, path)
     );
+    CREATE TABLE IF NOT EXISTS agent_grants (
+        id INTEGER PRIMARY KEY,
+        kind TEXT NOT NULL,
+        agent TEXT NOT NULL DEFAULT '',
+        identifier TEXT NOT NULL DEFAULT '',
+        team_id TEXT NOT NULL DEFAULT '',
+        pin TEXT NOT NULL DEFAULT '',
+        label TEXT NOT NULL,
+        location TEXT NOT NULL DEFAULT '',
+        cdhash TEXT NOT NULL DEFAULT '',
+        caps INTEGER NOT NULL,
+        created INTEGER NOT NULL,
+        last_used INTEGER,
+        uses INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS agent_grants_identity
+        ON agent_grants (kind, agent, identifier, team_id, pin);
     CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
     CREATE INDEX IF NOT EXISTS sessions_window ON sessions (window_id);
     CREATE INDEX IF NOT EXISTS splits_window ON splits (window_id);
