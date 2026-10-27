@@ -38,6 +38,11 @@ fn by_package(path: &str) -> Option<AgentId> {
     AGENTS.iter().find(|a| a.packages.iter().any(|p| path.contains(p))).map(|a| a.id)
 }
 
+/// Agents whose command does more than run the agent: only this subcommand, its first argument, is a
+/// session someone works in. `fm` also answers one prompt for a script (`fm respond`), runs a server
+/// (`fm serve`) and builds schemas; none of those is an agent in the terminal.
+const SUBCOMMANDS: &[(AgentId, &str)] = &[(AgentId::Fm, "chat")];
+
 /// Which agent a process is, from its executable path and argv.
 pub fn identify(exe: &str, argv: &[String]) -> Option<AgentId> {
     let program = argv.first().map(String::as_str).unwrap_or(exe);
@@ -48,7 +53,13 @@ pub fn identify(exe: &str, argv: &[String]) -> Option<AgentId> {
             return by_executable(base_name(script)).or_else(|| by_package(script));
         }
     }
-    by_executable(base_name(exe)).or_else(|| by_executable(base_name(program))).or_else(|| by_package(exe))
+    let agent = by_executable(base_name(exe))
+        .or_else(|| by_executable(base_name(program)))
+        .or_else(|| by_package(exe))?;
+    match SUBCOMMANDS.iter().find(|(id, _)| *id == agent) {
+        Some((_, subcommand)) => (argv.get(1).map(String::as_str) == Some(*subcommand)).then_some(agent),
+        None => Some(agent),
+    }
 }
 
 #[cfg(test)]
@@ -74,6 +85,15 @@ mod tests {
             ),
             Some(AgentId::Codex)
         );
+    }
+
+    #[test]
+    fn foundation_models_is_an_agent_only_in_its_interactive_mode() {
+        assert_eq!(identify("/usr/bin/fm", &argv(&["fm", "chat"])), Some(AgentId::Fm));
+        assert_eq!(identify("/usr/bin/fm", &argv(&["fm", "chat", "--resume", "work"])), Some(AgentId::Fm));
+        for script in [&["fm", "respond", "hi"][..], &["fm", "serve"], &["fm"], &["fm", "--help"]] {
+            assert_eq!(identify("/usr/bin/fm", &argv(script)), None, "{script:?}");
+        }
     }
 
     #[test]

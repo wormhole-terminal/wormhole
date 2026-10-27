@@ -482,7 +482,7 @@ entry Agents agents-notifications
 entry Agents agents-installed
   label "Installed agents"
   description ""
-  keywords "claude code codex gemini copilot cursor opencode aider amp goose qwen pi hooks status install remove repair"
+  keywords "claude code codex gemini copilot cursor opencode aider amp goose qwen pi fm foundation models hooks status install remove repair"
 entry Agents agents-other
   label "Other agents"
   description "Agents Wormhole recognises that aren't on this Mac's PATH"

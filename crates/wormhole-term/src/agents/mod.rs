@@ -34,6 +34,9 @@ pub enum AgentId {
     Kiro,
     Cline,
     Pi,
+    /// macOS 27's `fm`, Apple's command for its on-device Foundation Models: only `fm chat` is the agent
+    /// (see `identify`).
+    Fm,
 }
 
 /// What colour an agent's status tile is: black unless the agent has colours of its own. The
@@ -233,6 +236,17 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@mariozechner/pi-coding-agent", "@earendil-works/pi-coding-agent"],
         monogram: "PI",
         logo: Some("agent-icons/pi.svg"),
+    },
+    Agent {
+        id: AgentId::Fm,
+        name: "Foundation Models",
+        // Part of macOS 27 (`/usr/bin/fm`), so it is installed wherever that is.
+        command: "fm",
+        executables: &["fm"],
+        packages: &[],
+        monogram: "FM",
+        // Apple's marks can't be bundled: the two letters stand.
+        logo: None,
     },
 ];
 

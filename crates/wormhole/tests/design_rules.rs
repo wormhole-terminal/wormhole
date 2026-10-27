@@ -488,7 +488,10 @@ fn files_in(dir: &Path) -> Vec<PathBuf> {
 }
 
 /// Third-party names that happen to contain the word: an agent's package and executable.
-const CHAT_ALLOWED: [&str; 2] = ["aider-chat", "kiro-cli-chat"];
+// Agents' own names for themselves: aider's package, Kiro's binary and macOS's `fm chat` (written as a
+// command, as argv and as the subcommand that alone makes `fm` an agent; lower case, as compared).
+const CHAT_ALLOWED: [&str; 5] =
+    ["aider-chat", "kiro-cli-chat", "fm chat", "\"fm\", \"chat\"", "(agentid::fm, \"chat\")"];
 
 /// A sidebar item is a `Session` in code and a "terminal" in the UI and docs; the old word is
 /// gone everywhere: identifiers, strings, comments, assets and the public text files (this file is

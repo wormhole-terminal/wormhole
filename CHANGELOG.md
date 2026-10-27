@@ -16,6 +16,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   installs a small extension so its terminal shows when it is working, waiting on a question, done,
   stopped or failed.
 - Codex, Amp, goose and Kiro show their own logos instead of two letters.
+- `fm chat`, the chat with Apple's on-device model that comes with macOS 27, is recognised as an agent
+  (Foundation Models). It has no hooks, so its status is read from the screen. `fm respond` in a
+  script and `fm serve` aren't taken for an agent.
 - OpenCode's terminal shows that it needs you when it asks a question, not only for a permission.
   Repair OpenCode's hooks in Settings → Coding agents once to get it.
 - The first run's Look step asks "How much to show" one question at a time, as a shell prompt's setup
