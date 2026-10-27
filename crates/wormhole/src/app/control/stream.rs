@@ -57,7 +57,7 @@ fn subscribe(
     }
     // What the caller may read of terminals' text: the ones it runs inside of, and every one while the
     // setting allows it.
-    let mut own: Vec<i64> = app(cx)
+    let own: Vec<i64> = app(cx)
         .windows
         .iter()
         .filter_map(|window| {
@@ -68,7 +68,7 @@ fn subscribe(
     // A program that is held to the terminals in its scope hears the text of those and no others (`readable`,
     // which the gate worked out): they are what it may read, as the terminals it runs in always are.
     let confined = readable.is_some();
-    own.extend(readable.unwrap_or_default());
+    let readable = readable.unwrap_or_default();
     let reads_all = access.read && !confined;
     // What a terminal prints is for those who may read it: the setting, or the terminals the caller
     // runs in and named (the same rule that decides which streams the setting going off ends).
@@ -78,7 +78,7 @@ fn subscribe(
             return Err(reads_off());
         }
     }
-    let grant = Grant { reads_all, own, holder: access.holder };
+    let grant = Grant { reads_all, own, readable, holder: access.holder };
     let (subscription, started) = bus
         .subscribe(filter.clone(), grant, from)
         .map_err(|refused| Error::new(ErrorCode::RateLimited, refused.to_string()))?;

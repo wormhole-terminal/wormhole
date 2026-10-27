@@ -197,3 +197,24 @@ fn a_stream_that_begins_right_after_the_last_one_ended_keeps_its_place() {
     let (_, body) = heard(&subscription, Duration::from_secs(2)).expect("told");
     assert_eq!(lines(&body), ["after the reset"]);
 }
+
+/// A terminal in the stream's scope (the program opened it, or the user said yes about it) is not the one the
+/// program runs inside: hiding it from agents stops what the stream is told of it.
+#[test]
+fn hiding_a_terminal_in_a_streams_scope_stops_its_output_for_it() {
+    let bus = Bus::new();
+    let screen = reader();
+    let scoped = watch(&bus, vec![], Grant { readable: vec![4], ..Grant::default() });
+    let inside = watch(&bus, vec![], Grant { own: vec![4], ..Grant::default() });
+    bus.watch_output(1, 4, &screen);
+    screen.feed(b"first\r\n");
+    bus.pulse(1, 4, || Some(screen.downgrade()));
+    assert!(heard(&scoped, Duration::from_secs(2)).is_some(), "told while it is not hidden");
+    assert!(heard(&inside, Duration::from_secs(2)).is_some());
+    bus.set_hidden(4, true);
+    screen.feed(b"second\r\n");
+    bus.pulse(1, 4, || Some(screen.downgrade()));
+    let (terminal, body) = heard(&inside, Duration::from_secs(2)).expect("a program inside still hears it");
+    assert_eq!((terminal, lines(&body)), (Some(4), vec!["second"]));
+    assert!(heard(&scoped, Duration::from_millis(300)).is_none(), "nothing more arrives once it is hidden");
+}

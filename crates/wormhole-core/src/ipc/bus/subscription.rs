@@ -25,8 +25,12 @@ pub type Caller = Option<i64>;
 pub struct Grant {
     /// Every terminal, by the setting.
     pub reads_all: bool,
-    /// The terminals the caller runs in, by its place in the process tree.
+    /// The terminals the caller runs in, by its place in the process tree. Only these are still seen
+    /// from a hidden terminal.
     pub own: Vec<i64>,
+    /// Terminals it may read besides: the ones its scope holds (it opened them, or the user said yes about
+    /// them). Hiding one of these stops what it is told, as it does for any caller outside it.
+    pub readable: Vec<i64>,
     /// The approval the subscriber is under (`access::Grants`), so that taking that approval back ends its
     /// streams. `None` for one that needed no approval.
     pub holder: Option<u64>,
@@ -35,7 +39,7 @@ pub struct Grant {
 impl Grant {
     /// Whether the text of `terminal` may be told to the subscriber.
     pub fn can_read(&self, terminal: Option<i64>) -> bool {
-        self.reads_all || terminal.is_some_and(|id| self.own.contains(&id))
+        self.reads_all || terminal.is_some_and(|id| self.own.contains(&id) || self.readable.contains(&id))
     }
 }
 

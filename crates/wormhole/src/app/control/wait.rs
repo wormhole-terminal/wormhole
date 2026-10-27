@@ -135,7 +135,7 @@ fn try_run(
     let (subscription, _) = bus
         .wait(
             Watch::of_run(facts.terminal),
-            Grant { reads_all, own: Vec::new(), holder: access.holder },
+            Grant { reads_all, own: Vec::new(), readable: Vec::new(), holder: access.holder },
             from,
         )
         .map_err(|refused| Error::new(ErrorCode::RateLimited, refused.to_string()))?;
@@ -204,5 +204,5 @@ fn grant_for(plan: &WaitPlan, access: Access, peer: &Peer, cx: &mut App) -> Gran
     } else {
         Vec::new()
     };
-    Grant { reads_all, own, holder: access.holder }
+    Grant { reads_all, own, readable: Vec::new(), holder: access.holder }
 }
