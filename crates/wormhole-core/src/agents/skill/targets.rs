@@ -36,7 +36,7 @@ pub const TARGETS: &[Target] = &[
     Target {
         agent: AgentId::Codex,
         dir: ".agents/skills",
-        // (Redirects to learn.chatgpt.com/docs/build-skills; this address is the one the lints allow.)
+        // (It redirects to OpenAI's newer docs site; this address is the stable one.)
         source: "https://developers.openai.com/codex/skills",
         also_reads: &[],
     },
