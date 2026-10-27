@@ -20,6 +20,17 @@ use crate::platform::{self, Item, Menu};
 use crate::settings::settings_in;
 use crate::sidebar::SidebarStop;
 
+/// One group a terminal's menu offers.
+pub(super) struct GroupChoice {
+    pub(super) id: u32,
+    pub(super) name: SharedString,
+    /// The terminal is in it.
+    pub(super) current: bool,
+    /// It takes the terminal: a group that keeps only the terminals in its folder doesn't take one from
+    /// outside.
+    pub(super) allowed: bool,
+}
+
 /// What a row's menu is made from, as it is when the menu opens.
 struct RowFacts {
     id: i64,
@@ -30,8 +41,8 @@ struct RowFacts {
     restoring: bool,
     in_split: bool,
     cwd: Option<PathBuf>,
-    /// The person's groups it can go in: id, name, whether the terminal is in it.
-    groups: Vec<(u32, SharedString, bool)>,
+    /// The person's groups it can go in.
+    groups: Vec<GroupChoice>,
     /// The terminals it could show beside this one.
     beside: Vec<(i64, SharedString)>,
 }
@@ -135,16 +146,16 @@ fn row_menu(facts: RowFacts, this: &WeakEntity<Sidebar>) -> Menu {
     // An item that tells the window, which finds the terminal again by its id: the list may have
     // changed while the menu was open.
     let tell = |event: fn(i64) -> SidebarEvent| platform::run_on(this, move |_, _, cx| cx.emit(event(id)));
-    let grouped = groups.iter().any(|(_, _, current)| *current);
+    let grouped = groups.iter().any(|choice| choice.current);
     let into = Menu::new().when(!groups.is_empty(), |menu| {
-        groups.iter().fold(menu, |menu, (group, name, current)| {
-            let group = *group;
+        groups.iter().fold(menu, |menu, choice| {
+            let group = choice.id;
             menu.item(
-                Item::new(name.clone())
-                    .checked(*current)
-                    .on_select(platform::run_on(this, move |sidebar, _, cx| {
-                        sidebar.move_to_group(id, group, cx)
-                    })),
+                Item::new(choice.name.clone()).checked(choice.current).enabled(choice.allowed).on_select(
+                    platform::run_on(this, move |sidebar, _, cx| {
+                        sidebar.move_to_group(id, group, cx);
+                    }),
+                ),
             )
         })
     });
@@ -211,7 +222,7 @@ mod tests {
 
     use gpui_kit::WeakEntity;
 
-    use super::{RowFacts, row_menu};
+    use super::{GroupChoice, RowFacts, row_menu};
 
     fn facts() -> RowFacts {
         RowFacts {
@@ -267,7 +278,11 @@ mod tests {
             forget_text: true,
             in_split: true,
             cwd: None,
-            groups: vec![(1, "Work".into(), true), (2, "Play".into(), false)],
+            groups: vec![
+                GroupChoice { id: 1, name: "Work".into(), current: true, allowed: true },
+                GroupChoice { id: 2, name: "Play".into(), current: false, allowed: true },
+                GroupChoice { id: 3, name: "Closed".into(), current: false, allowed: false },
+            ],
             beside: vec![(9, "api".into())],
             ..facts()
         });
@@ -279,6 +294,7 @@ mod tests {
                 "> Add terminal to group",
                 "  - Work [x]",
                 "  - Play",
+                "  - Closed [off]",
                 "- Remove from group",
                 "- Split right",
                 "- Close terminal",

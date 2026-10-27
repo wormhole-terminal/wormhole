@@ -10,7 +10,7 @@ use gpui_kit::*;
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::sidebar::{GroupColor, Item, Landing};
 
-use super::Sidebar;
+use super::{Sidebar, SidebarEvent};
 use crate::settings::store_in;
 use crate::style::home_dir;
 use crate::theme_bridge;
@@ -29,29 +29,42 @@ impl Sidebar {
         self.list_rearranged(cx);
     }
 
-    /// Where a new terminal in `group` starts: the group's folder if it has one that is still a
-    /// directory (`None`: the window's choice, where the selected terminal is).
-    pub(crate) fn start_folder(&self, group: u32) -> Option<String> {
-        self.view.groups.start_folder(group)
-    }
-
-    /// Put terminal `id` (with the rest of its split) in group `group`, last in it.
-    pub(crate) fn move_to_group(&mut self, id: i64, group: u32, cx: &mut Context<Self>) {
+    /// Put terminal `id` (with the rest of its split) in group `group`, last in it. `false`, and nothing
+    /// moved, when the group keeps only the terminals in its folder and this one isn't in it.
+    pub(crate) fn move_to_group(&mut self, id: i64, group: u32, cx: &mut Context<Self>) -> bool {
+        if !self.admits(&self.input.clone(), group, id) {
+            return false;
+        }
         let ids = self.input.ids();
         for member in self.input.with_split_mates(id) {
             self.view.place_in_group(&ids, member, group, None);
         }
         self.list_rearranged(cx);
+        true
     }
 
     /// Take terminal `id` (with the rest of its split) out of its group: it stands right after it.
     pub(crate) fn remove_from_group(&mut self, id: i64, cx: &mut Context<Self>) {
+        self.remove_all_from_group(&[id], cx);
+    }
+
+    /// Take `terminals` (and the rest of their splits) out of the group they are in, in the order they
+    /// have: they stand right after it, in that order, and the list is rearranged and saved once.
+    pub(crate) fn remove_all_from_group(&mut self, terminals: &[i64], cx: &mut Context<Self>) {
         let ids = self.input.ids();
-        let Some(group) = self.view.groups.group_of(id) else { return };
+        let Some(group) = terminals.iter().find_map(|&id| self.view.groups.group_of(id)) else { return };
         let top = self.view.arranged(&ids);
         let after =
             top.iter().position(|&item| item == Item::Group(group)).and_then(|at| top.get(at + 1)).copied();
-        for member in self.input.with_split_mates(id) {
+        let mut leaving: Vec<i64> = Vec::new();
+        for &id in terminals {
+            for member in self.input.with_split_mates(id) {
+                if !leaving.contains(&member) {
+                    leaving.push(member);
+                }
+            }
+        }
+        for member in leaving {
             self.view.place_at_top(&ids, Item::Terminal(member), after);
         }
         self.list_rearranged(cx);
@@ -140,6 +153,7 @@ impl Sidebar {
     pub(crate) fn set_group_folder(&mut self, group: u32, folder: Option<&str>, cx: &mut Context<Self>) {
         self.view.groups.set_folder(group, folder);
         self.changed(cx);
+        cx.emit(SidebarEvent::FolderChanged(group));
     }
 
     /// Pin group `group` (it stays, as a line, when its last terminal closes) or let it go again.

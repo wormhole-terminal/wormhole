@@ -143,8 +143,13 @@ impl Workspace {
                         .get(band.group)
                         .and_then(|group| group.folder.as_deref())
                         .map_or(String::new(), |folder| format!(" folder={folder}"));
+                    let declined =
+                        self.sidebar_view(cx).groups.get(band.group).is_some_and(|g| g.folder_declined);
+                    let declined = if declined { " folder-declined" } else { "" };
+                    let only = self.sidebar_view(cx).groups.get(band.group).is_some_and(|g| g.only_in_folder);
+                    let only = if only { " only-in-folder" } else { "" };
                     out.push_str(&format!(
-                        "group {:?} id={} {position}/{of}{folded}{pinned}{colored}{folder} terminals={}\n",
+                        "group {:?} id={} {position}/{of}{folded}{pinned}{colored}{folder}{declined}{only} terminals={}\n",
                         band.label,
                         band.group,
                         band.members.len()

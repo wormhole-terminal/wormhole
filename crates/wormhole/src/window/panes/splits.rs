@@ -210,7 +210,7 @@ impl Workspace {
     /// Take session `ix` out of its split's layout, without touching what is selected: the panes
     /// beside it take its room. A split left with one member is gone and that terminal stands
     /// alone. `None`, nothing changed, when it is in no split.
-    pub(in crate::window) fn leave_layout(&mut self, ix: usize, cx: &App) -> Option<Leave> {
+    pub(in crate::window) fn leave_layout(&mut self, ix: usize, cx: &mut Context<Self>) -> Option<Leave> {
         let id = self.sessions.get(ix)?.id;
         let split_id = self.sessions[ix].split?;
         let left = self.split_mut(split_id).and_then(|split| split.layout.leave(id));
@@ -225,6 +225,8 @@ impl Workspace {
         }
         self.dirty = true;
         self.publish_split(split_id, cx);
+        // The split's other panes may have been held inside a fenced group by this one.
+        self.note_split_lost(id, cx);
         Some(left.unwrap_or(Leave::Dissolved))
     }
 

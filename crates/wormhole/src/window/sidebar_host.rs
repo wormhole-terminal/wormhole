@@ -42,6 +42,9 @@ pub(super) struct SidebarFeed {
     worktrees: RefCell<HashMap<PathBuf, Option<PathBuf>>>,
     /// A sync is queued for the end of the update that notified the window (`sync_sidebar_soon`).
     sync_pending: bool,
+    /// Groups that keep only their folder's terminals whose split lost a pane, to be checked when that sync
+    /// runs (`note_split_lost`).
+    pub(super) fence_checks: Vec<u32>,
 }
 
 impl SidebarFeed {
@@ -52,6 +55,7 @@ impl SidebarFeed {
             lights_row: None,
             worktrees: RefCell::default(),
             sync_pending: false,
+            fence_checks: Vec::new(),
         }
     }
 }
@@ -60,7 +64,7 @@ impl Workspace {
     // ---------------------------------------------------------------- the facts
 
     /// The repository a worktree belongs to, by its root; read from disk once per refresh.
-    fn worktree_of(&self, root: &Path) -> Option<PathBuf> {
+    pub(super) fn worktree_of(&self, root: &Path) -> Option<PathBuf> {
         let mut cache = self.sidebar_feed.worktrees.borrow_mut();
         // A hit allocates nothing: the key is only made for a root not seen yet.
         if let Some(known) = cache.get(root) {
@@ -190,6 +194,7 @@ impl Workspace {
         cx.defer(move |cx| {
             this.update(cx, |this, cx| {
                 this.sidebar_feed.sync_pending = false;
+                this.keep_noted_groups(cx);
                 this.sync_sidebar(cx);
             })
             .ok();
@@ -243,13 +248,6 @@ impl Workspace {
     pub(super) fn active_group(&self, cx: &App) -> Option<u32> {
         let id = self.sessions.get(self.active)?.id;
         self.sidebar_view(cx).groups.group_of(id)
-    }
-
-    /// Where a new terminal in `group` (`None`: in no group) starts: the group's folder if it has
-    /// one that is still a directory, else where the selected terminal is. A split's new pane and
-    /// a terminal in no group never ask, so they keep starting beside the selected one.
-    pub(super) fn start_cwd(&self, group: Option<u32>, cx: &App) -> Option<String> {
-        group.and_then(|group| self.sidebar.read(cx).start_folder(group)).or_else(|| self.default_cwd(cx))
     }
 
     // ---------------------------------------------------------------- where the terminals are listed
@@ -545,6 +543,10 @@ impl Workspace {
             SidebarEvent::FocusTerminal => self.focus_terminal(window, cx),
             &SidebarEvent::CloseGroup(group) => self.close_group(group, window, cx),
             &SidebarEvent::MoveGroupToWindow(group) => self.move_group_to_window(group, window, cx),
+            &SidebarEvent::SetOnlyInFolder { group, on } => self.set_only_in_folder(group, on, cx),
+            &SidebarEvent::FolderChanged(group) => {
+                self.keep_to_folder(group, cx);
+            }
             &SidebarEvent::TerminalDragStarted { id, origin } => {
                 self.terminal_drag = Some(TerminalDrag::new(id, origin));
                 cx.notify();
@@ -568,14 +570,6 @@ impl Workspace {
     }
 
     // ---------------------------------------------------------------- terminals and groups
-
-    /// A new terminal in group `group` (its + or its menu), in the group's folder if it has one,
-    /// else where the selected terminal is.
-    pub(super) fn new_session_in_group(&mut self, group: u32, window: &mut Window, cx: &mut Context<Self>) {
-        let cwd = self.start_cwd(Some(group), cx);
-        self.open_session_in(Some(Some(group)), None, cwd, window, cx);
-        self.mark_dirty(cx);
-    }
 
     /// A new group holding `terminals` (and the rest of their splits). Its id.
     pub(crate) fn group_terminals(&mut self, terminals: &[i64], cx: &mut Context<Self>) -> u32 {

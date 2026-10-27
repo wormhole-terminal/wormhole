@@ -158,6 +158,13 @@ pub(crate) enum SidebarEvent {
     CloseGroup(u32),
     /// "Move group to new window".
     MoveGroupToWindow(u32),
+    /// "Only terminals in this folder" in group `group`'s menu was switched `on` or off: turned on, the
+    /// terminals in other folders leave the group at once, and from then on one that moves out of the
+    /// folder does. Only the window knows where each terminal is.
+    SetOnlyInFolder { group: u32, on: bool },
+    /// Group `group`'s folder was set or taken away: one that keeps only its folder's terminals lets go of
+    /// those outside the new one.
+    FolderChanged(u32),
     /// A terminal was picked up by its row.
     TerminalDragStarted { id: i64, origin: DragOrigin },
     /// A group was picked up by its head.

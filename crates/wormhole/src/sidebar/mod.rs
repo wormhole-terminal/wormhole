@@ -30,6 +30,8 @@ mod drop;
 mod facts;
 mod glass;
 pub(crate) use self::glass::{column_end, column_start, forget_column};
+mod group_fence;
+pub(crate) use self::group_fence::repo_of_folder;
 mod group_head;
 mod group_popover;
 mod groups;
@@ -106,6 +108,8 @@ pub(crate) struct Sidebar {
     demo: Option<demo::Demo>,
     /// The tab bar, while the terminals are in tabs.
     tabs: tab_bar::TabBarState,
+    /// What it remembers of its groups' places.
+    memory: group_fence::Memory,
     /// The profile chip's menu being open, and the list it shows.
     profile_menu: Option<profile_chip::ProfilePage>,
     /// Where the chip reads the app's profiles from.
@@ -153,6 +157,7 @@ impl Sidebar {
             times_drawn: Vec::new(),
             demo: None,
             tabs: tab_bar::TabBarState::default(),
+            memory: group_fence::Memory::default(),
             profile_menu: None,
             profiles,
             #[cfg(any(test, feature = "devctl"))]
@@ -169,7 +174,17 @@ impl Sidebar {
         if *self.input == input {
             return false;
         }
+        let drag_changed = (self.input.terminal_drag.is_some(), self.input.group_drag.is_some())
+            != (input.terminal_drag.is_some(), input.group_drag.is_some());
+        if drag_changed {
+            self.memory.forget_folders();
+        }
         self.input = Rc::new(input);
+        // Only as a drag begins: when it ends nothing is asked, and this is called as a frame is drawn.
+        if drag_changed && self.dragging() {
+            self.warm_drag();
+        }
+        self.note_selected();
         cx.notify();
         true
     }
@@ -421,6 +436,8 @@ impl Sidebar {
 
     /// The saved view changed: tell the window to save it, and draw.
     fn changed(&mut self, cx: &mut Context<Self>) {
+        // The selected terminal may be in another group now.
+        self.note_selected();
         cx.emit(SidebarEvent::Changed);
         cx.notify();
     }

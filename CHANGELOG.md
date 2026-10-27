@@ -94,6 +94,14 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   tab's icon plays once as the tab opens. Settings → Appearance → Animate icons turns all of it
   off, and Reduce Motion does too.
 - `wh` prints JSON by default when `WORMHOLE_JSON=1` is set; `--text` asks for text again.
+- A new terminal in a group without a folder starts where the group was last used, and the + on a group
+  that has no folder asks once whether to use one, suggesting the repository its terminals are in, or
+  else the place that holds most of them. "Use Folder" sets it; the box beside it also makes the group
+  keep only the terminals in that folder. "Not Now" is remembered. "Only terminals in this folder" in a
+  group's menu (checked while it is on) takes the terminals in other folders out of the group, which
+  stay open, lets one leave when it goes to another folder, and keeps out one that is dragged, moved or
+  opened into it from outside. A split stays while any of its panes is in the folder, and a linked
+  worktree of the folder's repository counts as inside, so an agent working in one stays in the group.
 
 ### Fixed
 

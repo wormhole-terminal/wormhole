@@ -120,6 +120,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "group-new" => sidebar::new_group,
         "sidebar-fold" => sidebar::fold,
         "group" => sidebar::group,
+        "group-ask" => sidebar::group_ask,
         "to-group" => sidebar::to_group,
         "rename-edit" => sidebar::rename_edit,
         "pin" => sidebar::pin,

@@ -37,8 +37,10 @@ impl Workspace {
             .ok_or_else(|| format!("no group {name:?}"))
     }
 
-    /// devctl `group <name> <rename|pin|ungroup|close|move|color:<colour>|none|folder:<path>|none>`: what
-    /// the group's menu does. `rename` makes its name a field.
+    /// devctl `group <name> <rename|pin|ungroup|close|move|new|only-in-folder|any-folder|color:<colour>|none|folder:<path>|none>`:
+    /// what the group's menu does. `rename` makes its name a field; `new` is the + on its head (which may
+    /// ask about a folder: `group-ask` answers); `only-in-folder` and `any-folder` switch the menu's checked
+    /// item "Only terminals in this folder".
     pub(crate) fn devctl_group(
         &mut self,
         name: &str,
@@ -55,6 +57,8 @@ impl Workspace {
             "ungroup" => self.with_sidebar(cx, |sidebar, cx| sidebar.ungroup(group, cx)),
             "close" => self.close_group(group, window, cx),
             "move" => self.move_group_to_window(group, window, cx),
+            "new" => self.new_session_in_group(group, window, cx),
+            "only-in-folder" | "any-folder" => self.set_only_in_folder(group, action == "only-in-folder", cx),
             folder if folder.starts_with("folder:") => {
                 // The picker can't be driven, so the path comes with the command.
                 let folder = folder.trim_start_matches("folder:");
@@ -89,8 +93,11 @@ impl Workspace {
             return Ok(());
         }
         let group = self.devctl_group_named(name, cx)?;
-        self.with_sidebar(cx, |sidebar, cx| sidebar.move_to_group(id, group, cx));
-        Ok(())
+        if self.with_sidebar(cx, |sidebar, cx| sidebar.move_to_group(id, group, cx)) {
+            Ok(())
+        } else {
+            Err(format!("group {name:?} keeps only the terminals in its folder"))
+        }
     }
 
     pub(crate) fn devctl_rename_edit(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {

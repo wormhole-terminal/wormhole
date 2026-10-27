@@ -281,15 +281,34 @@ impl Sidebar {
     }
 
     /// What dropping terminal `dragged` on `over` would do, of the terminals `input` says there are.
+    /// None when it would put the terminal in a group that keeps only the terminals in its folder
+    /// and this one isn't in it: the drop has no landing there.
     pub(crate) fn terminal_drop_plan(
+        &self,
         input: &SidebarInput,
         listing: &Listing,
         dragged: i64,
         over: Over,
     ) -> Option<Drop> {
         let (ids, pinned, split_of) = (input.ids(), input.pinned(), input.split_of());
-        let drop = DropInput { listing, ids: &ids, split_of: &split_of, pinned: &pinned };
-        terminal_drop(&drop, input.find(dragged)?, Self::target_of(input, listing, over)?)
+        let plan = DropInput { listing, ids: &ids, split_of: &split_of, pinned: &pinned };
+        let drop = terminal_drop(&plan, input.find(dragged)?, Self::target_of(input, listing, over)?)?;
+        // Into a group by landing in it, or by joining the split of one of its terminals: that is allowed
+        // when the split is inside the group's folder, as it is for one that is in the folder itself.
+        let allowed = match drop {
+            // Leaving its split on the way in, it lands alone, and is judged so even when it is in the group.
+            Drop::Move { landing: Landing::Group { group, .. }, leave_split: true, .. } => {
+                self.inside_alone(input, group, dragged)
+            }
+            Drop::Move { landing: Landing::Group { group, .. }, .. } => self.admits(input, group, dragged),
+            Drop::Join { target } => input.rows.get(target).is_none_or(|row| {
+                self.view.groups.group_of(row.id).is_none_or(|group| {
+                    self.admits(input, group, dragged) || self.inside(input, group, row.id)
+                })
+            }),
+            Drop::Move { .. } => true,
+        };
+        allowed.then_some(drop)
     }
 
     /// What dropping group `group` on `over` would do.
@@ -315,7 +334,7 @@ impl Sidebar {
         let Some(over) = self.over else { return (None, None) };
         let input = &self.input;
         if let Some((dragged, _)) = input.terminal_drag {
-            let Some(drop) = Self::terminal_drop_plan(input, listing, dragged, over) else {
+            let Some(drop) = self.terminal_drop_plan(input, listing, dragged, over) else {
                 return (None, None);
             };
             let mark = match drop {

@@ -29,6 +29,22 @@ pub(super) fn group(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `group-ask <use [move]|later>`: answer the question about a group's folder (the sheet a + on a group
+/// without one puts up) as its buttons do: "Use Folder" with the box ticked for `move`, or "Not Now".
+pub(super) fn group_ask(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    // Buttons are numbered from the closing one: Use Folder, then Not Now.
+    let (button, tick) = match arg.split_whitespace().collect::<Vec<_>>()[..] {
+        ["use"] => (0, Some(false)),
+        ["use", "move"] => (0, Some(true)),
+        ["later"] => (1, None),
+        _ => return Err(anyhow!("group-ask takes use, use move or later")),
+    };
+    if !crate::platform::sheet::answer(ctx.window, button, tick) {
+        return Err(anyhow!("no question is up in this window"));
+    }
+    Ok(String::new())
+}
+
 /// `to-group <row> <name|none>`: put the terminal in that row in the group, or take it out of its group.
 pub(super) fn to_group(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let (row, name) =

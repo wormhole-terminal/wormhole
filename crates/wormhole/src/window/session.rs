@@ -403,24 +403,35 @@ fn still_running(running: &[(Status, bool)], programs: &[String]) -> String {
     detail
 }
 
-/// The root of the repository `cwd` is in (else `cwd` itself), found on disk once per folder.
-/// `git::find_root` stats `.git` in every ancestor, which grouping the sidebar by folder asked
-/// for every session on every frame, and frames come as fast as a terminal prints.
+/// The root of the repository `cwd` is in, found on disk once per folder. `git::find_root` stats `.git`
+/// in every ancestor, which grouping the sidebar by folder asked for every session on every frame, and
+/// frames come as fast as a terminal prints.
 #[derive(Default)]
-pub(crate) struct RepoRoot(RefCell<Option<(PathBuf, PathBuf)>>);
+pub(crate) struct RepoRoot(RefCell<Option<(PathBuf, Option<PathBuf>)>>);
 
 impl RepoRoot {
+    /// The repository's root, else `cwd` itself.
     pub(crate) fn of(&self, cwd: &Path) -> PathBuf {
-        self.of_with(cwd, wormhole_core::git::find_root)
+        self.found(cwd).unwrap_or_else(|| cwd.to_path_buf())
     }
 
+    /// The repository's root; `None` when `cwd` is in none.
+    pub(crate) fn found(&self, cwd: &Path) -> Option<PathBuf> {
+        self.found_with(cwd, wormhole_core::git::find_root)
+    }
+
+    #[cfg(test)]
     fn of_with(&self, cwd: &Path, find: impl FnOnce(&Path) -> Option<PathBuf>) -> PathBuf {
+        self.found_with(cwd, find).unwrap_or_else(|| cwd.to_path_buf())
+    }
+
+    fn found_with(&self, cwd: &Path, find: impl FnOnce(&Path) -> Option<PathBuf>) -> Option<PathBuf> {
         if let Some((from, root)) = &*self.0.borrow()
             && from == cwd
         {
             return root.clone();
         }
-        let root = find(cwd).unwrap_or_else(|| cwd.to_path_buf());
+        let root = find(cwd);
         *self.0.borrow_mut() = Some((cwd.to_path_buf(), root.clone()));
         root
     }

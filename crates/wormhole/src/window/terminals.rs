@@ -63,7 +63,12 @@ impl Workspace {
     ) -> usize {
         let mut record = SessionRecord::new(self.alloc_id(cx), None, cwd);
         record.shell = shell;
-        let group = group.unwrap_or_else(|| self.active_group(cx));
+        // A group that keeps only the terminals in its folder takes none that starts outside it (a
+        // worktree of its repository is inside): the terminal stands loose, instead of joining and then
+        // jumping out at its first `cd`.
+        let group = group
+            .unwrap_or_else(|| self.active_group(cx))
+            .filter(|&group| !self.fenced_out(group, record.cwd.as_deref(), cx));
         let id = record.id;
         let ix = self.add_session(Some(record), window, cx);
         if let Some(group) = group {

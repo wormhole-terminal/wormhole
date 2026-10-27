@@ -26,8 +26,13 @@ impl Workspace {
             return false;
         }
         let fresh = terminal.summary();
+        let moved = fresh.cwd != pane.summary.cwd;
         let old = std::mem::replace(&mut self.sessions[ix].pane.summary, fresh);
         self.publish_summary_change(ix, &old, cx);
+        if moved {
+            // A group that keeps only its folder's terminals lets this one go if it left the folder.
+            self.folder_changed(self.sessions[ix].id, cx);
+        }
         cx.notify();
         true
     }

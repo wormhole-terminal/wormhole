@@ -44,8 +44,6 @@ const CLOSE_RIGHT: f32 = 8.0 - (style::CONTROL_H_SM - style::GLYPH) / 2.0;
 /// What the tab bar remembers between frames.
 #[derive(Default)]
 pub(super) struct TabBarState {
-    /// The terminal last selected in each set, by its key: where opening the set goes back to.
-    last: HashMap<String, i64>,
     /// The group switcher being open: its search field.
     pub(super) switcher: Option<super::switcher::Switcher>,
     /// The row of tabs, which scrolls sideways once they are at their narrowest, and the terminal it
@@ -59,7 +57,6 @@ pub(super) struct TabBarState {
 
 /// One set as the bar draws it.
 pub(super) struct SetLook {
-    pub(super) key: String,
     pub(super) color: Option<Hsla>,
     /// The colour its card is washed with (`GroupPaint::wash`).
     pub(super) wash: Option<Hsla>,
@@ -77,14 +74,11 @@ pub(super) struct SetView {
 
 impl Sidebar {
     /// The sets of the list as it is now, each with its look, and the current one; the terminal
-    /// last selected in the current one is remembered, so coming back to the set lands there.
-    pub(super) fn set_view(&mut self, listing: &Listing, cx: &App) -> SetView {
+    /// last selected in a set is remembered by the list (`last_selected`), so coming back to it lands there.
+    pub(super) fn set_view(&self, listing: &Listing, cx: &App) -> SetView {
         let sets = tab_sets(listing);
         let current = current_set(&sets, self.input.active);
         let looks: Vec<SetLook> = sets.iter().map(|set| self.set_look(listing, set, cx)).collect();
-        if let (Some(look), Some(id)) = (current.and_then(|at| looks.get(at)), self.input.active_id()) {
-            self.tabs.last.insert(look.key.clone(), id);
-        }
         SetView { sets, looks, current }
     }
 
@@ -196,28 +190,21 @@ impl Sidebar {
         Some(bar)
     }
 
-    /// A set's key (its group's), and its colour.
+    /// How a set looks: its colour.
     fn set_look(&self, listing: &Listing, set: &TabSet, cx: &App) -> SetLook {
         let band = set.band.and_then(|band| listing.bands.get(band));
-        let key = band.map_or_else(|| "ungrouped".to_string(), |band| band.key());
         let group = band.map(|band| band.group);
         let tokens = &store_in(&self.input.profile, cx).tokens;
         let paint = group.and_then(|group| self.view.groups.get(group)).and_then(|group| group.paint());
         let color = paint.map(|color| crate::theme_bridge::hsla(color.color(tokens)));
         let wash = paint.map(|color| crate::theme_bridge::hsla(color.wash(tokens)));
-        SetLook { key, color, wash, group, pinned: band.is_some_and(|band| band.pinned) }
+        SetLook { color, wash, group, pinned: band.is_some_and(|band| band.pinned) }
     }
 
     /// Open set `set`: the terminal last selected in it, else its first; an empty group gets a new
     /// terminal.
-    pub(super) fn open_set(
-        &mut self,
-        bar_set: &TabSet,
-        key: &str,
-        group: Option<u32>,
-        cx: &mut Context<Self>,
-    ) {
-        let last = self.tabs.last.get(key).and_then(|&id| self.input.find(id));
+    pub(super) fn open_set(&mut self, bar_set: &TabSet, group: Option<u32>, cx: &mut Context<Self>) {
+        let last = self.last_selected(group).and_then(|id| self.input.find(id));
         let target =
             last.filter(|ix| bar_set.members.contains(ix)).or_else(|| bar_set.members.first().copied());
         match (target, group) {
@@ -234,7 +221,7 @@ impl Sidebar {
         let listing = self.listing(cx);
         let view = self.set_view(&listing, cx);
         let (Some(set), Some(look)) = (view.sets.get(at), view.looks.get(at)) else { return };
-        self.open_set(set, &look.key, look.group, cx);
+        self.open_set(set, look.group, cx);
     }
 
     /// ⌃⌥] and ⌃⌥[: the next or previous group, in the switcher's order with the terminals in no
@@ -244,7 +231,7 @@ impl Sidebar {
         let view = self.set_view(&listing, cx);
         let Some(current) = view.current else { return };
         if let Some(at) = step_set(&view.sets, current, forward) {
-            self.open_set(&view.sets[at], &view.looks[at].key, view.looks[at].group, cx);
+            self.open_set(&view.sets[at], view.looks[at].group, cx);
         }
     }
 
@@ -253,7 +240,7 @@ impl Sidebar {
         let listing = self.listing(cx);
         let view = self.set_view(&listing, cx);
         if let Some(at) = set_numbered(&view.sets, usize::from(number)) {
-            self.open_set(&view.sets[at], &view.looks[at].key, view.looks[at].group, cx);
+            self.open_set(&view.sets[at], view.looks[at].group, cx);
         }
     }
 

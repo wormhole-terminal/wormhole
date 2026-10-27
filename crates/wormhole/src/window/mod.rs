@@ -80,6 +80,9 @@ mod feature_terminals;
 mod feature_tests;
 pub(crate) mod focus;
 mod glass;
+mod group_folder;
+#[cfg(test)]
+mod group_folder_tests;
 mod group_ops;
 #[cfg(test)]
 mod group_tests;

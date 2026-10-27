@@ -11,6 +11,7 @@ use wormhole_core::view::sidebar::{Urgency, spoken};
 use super::facts::RowInfo;
 use super::group_popover::{group_menu, group_popover};
 use super::row::{Frame, glyph_for, tile_for};
+use super::row_menu::GroupChoice;
 use super::{NewTerminal, Sidebar, SidebarEvent};
 use crate::focus_keys::key_menu_origin;
 use crate::platform::{self, Anchor};
@@ -67,7 +68,7 @@ impl Sidebar {
         let label_at = Anchor::default();
         let label_anchor = label_at.clone();
         // The + is the same button for a pinned, empty group (always shown) and any other head
-        // (under the pointer): New terminal in group, which starts in the group's folder.
+        // (under the pointer): New terminal in group, which starts in the group's folder or where it was last used.
         let tooltip = SharedString::from(spoken::new_in_group_label(&band.label));
         let add: ClickHandler = Box::new(move |_, _, cx| {
             on_add.update(cx, |_, cx| cx.emit(SidebarEvent::NewTerminal(NewTerminal::InGroup(group)))).ok();
@@ -197,14 +198,19 @@ impl Sidebar {
         platform::show_popover(popover, anchor, window, cx);
     }
 
-    /// The groups a terminal's menu offers to move it to: every group, with its name and whether
-    /// the terminal is in it.
-    pub(super) fn group_choices(&self, id: i64) -> Vec<(u32, SharedString, bool)> {
+    /// The groups a terminal's menu offers to move it to: every group, with its name, whether the terminal
+    /// is in it and whether the group takes it.
+    pub(super) fn group_choices(&self, id: i64) -> Vec<GroupChoice> {
         let current = self.view.groups.group_of(id);
         self.view
             .groups
             .iter()
-            .map(|group| (group.id, SharedString::from(group.name.clone()), current == Some(group.id)))
+            .map(|group| GroupChoice {
+                id: group.id,
+                name: SharedString::from(group.name.clone()),
+                current: current == Some(group.id),
+                allowed: self.admits(&self.input, group.id, id),
+            })
             .collect()
     }
 }
@@ -223,6 +229,7 @@ mod tests {
             custom: None,
             shown: None,
             pinned,
+            only_in_folder: false,
             folder: folder.map(str::to_string),
             colors: vec![
                 (GroupColor::Grey, hsla(0.0, 0.0, 0.5, 1.0)),
@@ -258,7 +265,7 @@ mod tests {
         let outline =
             group_menu(facts(None, false, Some("~/Projects/foo")), &WeakEntity::new_invalid()).outline();
         assert_eq!(
-            outline[3..10],
+            outline[3..11],
             [
                 "- Other colour…",
                 "- No colour [x]",
@@ -266,12 +273,16 @@ mod tests {
                 "- ~/Projects/foo [off]",
                 "- Set folder…",
                 "- Clear folder",
+                "- Only terminals in this folder",
                 "---"
             ],
             "{outline:?}"
         );
         let none = group_menu(facts(None, false, None), &WeakEntity::new_invalid()).outline();
-        assert!(none.iter().all(|line| !line.contains("Clear folder")), "{none:?}");
+        assert!(
+            none.iter().all(|line| !line.contains("Clear folder") && !line.contains("Only terminals")),
+            "{none:?}"
+        );
     }
 
     #[test]

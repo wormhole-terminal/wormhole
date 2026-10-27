@@ -28,7 +28,7 @@ impl Workspace {
         // worktree; so does closing the group it is in).
         let extras = self.close_extras(&members, CloseOf::Group, cx);
         if asking.is_empty() && extras.is_empty() {
-            self.close_terminals(&members, window, cx);
+            self.close_group_terminals(group, &members, window, cx);
             return;
         }
         if self.closing_session_prompt {
@@ -55,7 +55,8 @@ impl Workspace {
         let close_members = members.clone();
         let also: Option<dialog::Also> = also.map(|CloseAlso { label, then }| {
             let on_also: dialog::OnConfirm = std::rc::Rc::new(move |window: &mut Window, cx: &mut App| {
-                let _ = remove.update(cx, |this, cx| this.close_terminals(&close_members, window, cx));
+                let _ = remove
+                    .update(cx, |this, cx| this.close_group_terminals(group, &close_members, window, cx));
                 then(cx);
             });
             (label, on_also)
@@ -66,7 +67,8 @@ impl Workspace {
             question,
             also,
             move |window, cx| {
-                let _ = confirm.update(cx, |this, cx| this.close_terminals(&members, window, cx));
+                let _ =
+                    confirm.update(cx, |this, cx| this.close_group_terminals(group, &members, window, cx));
             },
             move |cx| {
                 let _ = dismiss.update(cx, |this, cx| {
@@ -77,12 +79,32 @@ impl Workspace {
         );
     }
 
-    /// Close the terminals with these ids, whichever are still here.
-    fn close_terminals(&mut self, ids: &[i64], window: &mut Window, cx: &mut Context<Self>) {
+    /// Close the terminals of group `group` (`ids`), whichever are still here, and the group with them
+    /// unless it is pinned. One that keeps only its folder's terminals stays when it is emptied, which
+    /// moving terminals out is meant to do, so closing it ends it here.
+    fn close_group_terminals(
+        &mut self,
+        group: u32,
+        ids: &[i64],
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         for &id in ids {
             if let Some(ix) = self.find_session(id) {
                 self.close_session(ix, window, cx);
             }
+        }
+        let ended = self.edit_sidebar_view(cx, |view| {
+            let ends = view.groups.get(group).is_some_and(|found| !found.pinned && found.members.is_empty());
+            if ends {
+                view.groups.remove(group);
+                view.folded.remove(&group_key(group));
+            }
+            ends
+        });
+        if ended {
+            self.mark_dirty(cx);
+            cx.notify();
         }
     }
 

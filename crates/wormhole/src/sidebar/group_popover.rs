@@ -2,13 +2,15 @@
 //! on its head opens the popover: the name in a field that has the keyboard at once, the nine
 //! colours (the current one ringed) with an empty ring first that takes the colour away and a last
 //! dot that opens the system's Colours window for a colour of one's own, then the group's folder
-//! (shown greyed out, with Set folder… and, when there is one, Clear folder) and the actions. The
+//! (shown greyed out, with Set folder… and, when there is one, Clear folder and the checked item "Only
+//! terminals in this folder") and the actions. The
 //! right-click menu is Rename… (in place, `rename`), the same dots, Other colour…, No colour
 //! (checked when the group has none), the same folder lines, and the same actions.
 
 use gpui_kit::*;
 use wormhole_core::theme::tokens::Appearance;
 use wormhole_core::view::sidebar::{GroupColor, GroupPaint};
+use wormhole_text::{keys, text};
 
 use super::groups::group_colors;
 use super::{Sidebar, SidebarEvent};
@@ -26,6 +28,8 @@ pub(super) struct GroupFacts {
     /// What it wears now, where the Colours window starts.
     pub(super) shown: Option<Hsla>,
     pub(super) pinned: bool,
+    /// The group keeps only the terminals in its folder.
+    pub(super) only_in_folder: bool,
     /// The group's folder as the list shows it (`~/Projects/app`), if it has one.
     pub(super) folder: Option<String>,
     /// Every named colour on offer, with how the theme draws it.
@@ -46,6 +50,7 @@ impl Sidebar {
             },
             shown: paint.map(|paint| crate::theme_bridge::hsla(paint.color(tokens))),
             pinned: found.is_some_and(|g| g.pinned),
+            only_in_folder: found.is_some_and(|g| g.only_in_folder),
             folder: self.group_folder_label(group),
             colors: group_colors(&self.input.profile, cx),
         }
@@ -109,7 +114,12 @@ const START: Hsla = Hsla { h: 0.0, s: 0.0, l: 0.5, a: 1.0 };
 
 /// The group's folder, which both the popover and the menu list above the actions: an info line
 /// (greyed out, it is not a choice) when there is one, then what changes it.
-fn folder_items(group: u32, folder: Option<&str>, this: &WeakEntity<Sidebar>) -> Vec<Item> {
+fn folder_items(
+    group: u32,
+    folder: Option<&str>,
+    only_in_folder: bool,
+    this: &WeakEntity<Sidebar>,
+) -> Vec<Item> {
     let set = Item::new("Set folder…")
         .on_select(platform::run_on(this, move |sidebar, _, cx| sidebar.choose_group_folder(group, cx)));
     match folder {
@@ -119,6 +129,11 @@ fn folder_items(group: u32, folder: Option<&str>, this: &WeakEntity<Sidebar>) ->
             Item::new("Clear folder").on_select(platform::run_on(this, move |sidebar, _, cx| {
                 sidebar.set_group_folder(group, None, cx)
             })),
+            Item::new(text(keys::SIDEBAR_GROUP_ONLY_IN_FOLDER)).checked(only_in_folder).on_select(
+                platform::run_on(this, move |_, _, cx| {
+                    cx.emit(SidebarEvent::SetOnlyInFolder { group, on: !only_in_folder })
+                }),
+            ),
         ],
         None => vec![set],
     }
@@ -181,7 +196,7 @@ pub(super) fn group_popover(
             }),
         }))
         .row(Row::Separator)
-        .row(Row::Actions(folder_items(group, facts.folder.as_deref(), this)))
+        .row(Row::Actions(folder_items(group, facts.folder.as_deref(), facts.only_in_folder, this)))
         .row(Row::Separator)
         .row(Row::Actions(actions(group, facts.pinned, this)))
         // The keyboard goes back to the terminal, unless an action put it somewhere else.
@@ -220,6 +235,8 @@ pub(super) fn group_menu(facts: GroupFacts, this: &WeakEntity<Sidebar>) -> Menu 
                 })),
         )
         .separator();
-    let menu = folder_items(group, facts.folder.as_deref(), this).into_iter().fold(menu, Menu::item);
+    let menu = folder_items(group, facts.folder.as_deref(), facts.only_in_folder, this)
+        .into_iter()
+        .fold(menu, Menu::item);
     actions(group, facts.pinned, this).into_iter().fold(menu.separator(), Menu::item)
 }

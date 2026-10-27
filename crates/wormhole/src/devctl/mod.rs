@@ -123,15 +123,21 @@
 //!   group-new <name> <row>…   a new group of the terminals in those rows (as `state` numbers them);
 //!                   prints its id
 //!   sidebar-fold <group>   fold or open the group with this name
-//!   group <name> <rename|pin|ungroup|close|move|color:<name|none>|folder:<path|none>>   what the group's
+//!   group <name> <rename|pin|ungroup|close|move|new|only-in-folder|any-folder|color:<name|none>|folder:<path|none>>   what the group's
 //!                   menu does: make its name a field on its head (`text <new name>` then `key enter`
 //!                   types and keeps it, `key escape` drops it), pin or unpin, take apart, close (asks
 //!                   if an agent works in it), move to a window of its own, colour it (grey, blue, red,
 //!                   yellow, green, pink, purple, cyan or orange), or set the folder its new terminals
 //!                   start in (an absolute path without spaces, `~/` the home folder; `none` clears it,
-//!                   as Set folder… and Clear folder do; `rows` shows it as `folder=…`). A click on the
+//!                   as Set folder… and Clear folder do; `rows` shows it as `folder=…`), start a terminal in
+//!                   it as its + does (`new`), or switch "Only terminals in this folder" on or off
+//!                   (`only-in-folder`, `any-folder`). A click on the
 //!                   group's name (`click <x> <y>`) opens its popover (`popover`), a right-click its
 //!                   menu (`menu`)
+//!   group-ask <use [move]|later>   answer the question a + on a group without a folder asks (a sheet,
+//!                   when the group's terminals point to a folder to suggest): `use` is Use Folder,
+//!                   `use move` also ticks "Only keep terminals in this folder in the group",
+//!                   `later` is Not Now (`rows` shows `folder-declined`). `group <name> new` is that +
 //!   to-group <row> <name|none>   put the terminal in that row in the group, or take it out of its group
 //!   rename-edit <row>   the terminal's name becomes a field, as Rename… in its menu makes it
 //!   pin <n>         pin the n-th terminal (as `state` numbers them) to the top of its group, or unpin it
