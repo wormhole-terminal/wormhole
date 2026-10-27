@@ -249,7 +249,12 @@ impl ScreenReader {
                 // The last n rows of what there is, not of the grid: the rows below the cursor and the
                 // last text are blank on a mostly empty screen, and counting them would return nothing.
                 let n = i32::try_from(n).unwrap_or(i32::MAX);
-                let end = rows::content_end(&term, term.grid_cursor().line.0, bottom, scratch);
+                // (A full-screen program's rows are positions, blank ones too: its last rows are the bottom's.)
+                let end = if alt {
+                    bottom
+                } else {
+                    rows::content_end(&term, term.grid_cursor().line.0, bottom, scratch)
+                };
                 ((end - n + 1).max(top), end)
             }
             CaptureRange::Lines { from, to } => (from.max(top), to.min(bottom)),

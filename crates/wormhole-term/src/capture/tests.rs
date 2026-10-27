@@ -81,6 +81,11 @@ fn the_last_lines_are_counted_from_the_text_or_the_cursor_whichever_is_lower() {
     // More than there is: from the top.
     let all = read(&reader, &spec(CaptureRange::Last(50)));
     assert_eq!((all.first_line, all.lines.len()), (0, 5));
+    // A full-screen program's screen is positions: its last rows are the bottom's, blank or not.
+    let alt = self::reader(20, 4, 100);
+    alt.feed(b"\x1b[?1049h\x1b[HTOP");
+    let found = read(&alt, &spec(CaptureRange::Last(2)));
+    assert_eq!((found.lines.as_slice(), found.first_line), (&[String::new(), String::new()][..], 2));
     // An empty screen: its cursor row.
     let empty = self::reader(20, 6, 100);
     let found = read(&empty, &spec(CaptureRange::Last(3)));
