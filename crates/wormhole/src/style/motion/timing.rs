@@ -45,6 +45,9 @@ pub const PULSE_RANGE: (f32, f32) = (0.15, 1.0);
 /// Looping status animations redraw no more often than this: they are small and
 /// always on screen, and a full frame rate would keep the window busy for nothing.
 pub const ANIMATION_FPS: f32 = 30.0;
+/// The tile's light travels its whole edge each turn, several points a frame at
+/// [`ANIMATION_FPS`], which reads as stepping: it redraws twice as often.
+pub const ORBIT_FPS: f32 = 60.0;
 
 /// Before a tooltip shows (GPUI's default, said out loud). Rows show one only when their
 /// text is cut off; icon buttons always do.

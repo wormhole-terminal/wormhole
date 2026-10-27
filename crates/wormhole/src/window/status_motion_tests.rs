@@ -177,11 +177,11 @@ fn a_status_change_draws_the_list_and_no_region_and_stops_when_it_ends(cx: &mut 
     let regions = |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| ws.regions.builds(cx));
     let list = |cx: &mut TestAppContext| sidebar_of(cx, &window, |sidebar| sidebar.builds());
     let chrome = regions(cx);
-    // The tile's animation set a timer for its next frame while it was drawn, which notifies the view it is in:
+    // The tile's animation asked for its next frame while it was drawn, which notifies the view it is in:
     // each of those frames draws the list and nothing else.
     for _ in 0..5 {
         let before_frame = list(cx);
-        frame_passes(cx);
+        frame_passes(cx, &window);
         draw_replaying(cx, &window);
         assert!(list(cx) > before_frame, "the frame the animation asked for draws the list");
     }
@@ -206,12 +206,26 @@ fn with_bar(cx: &mut TestAppContext) -> OpenWindow {
     window
 }
 
-/// A frame's time goes by on the clock the executor keeps (`ANIMATION_FPS`): the timer an animation set for its
-/// next frame ends, and notifies the view the animation is in. This is the animation's own notification, not a
-/// test's.
-fn frame_passes(cx: &mut TestAppContext) {
-    cx.executor().advance_clock(Duration::from_secs_f32(1.0 / ANIMATION_FPS) + Duration::from_millis(1));
+/// The time between a 120 Hz display's frames.
+const REFRESH: Duration = Duration::from_millis(8);
+
+/// One frame of a 120 Hz display: the clock the executor keeps moves on by [`REFRESH`] and the window's frame
+/// callbacks run. An animation with a frame cap notifies the view it is in on the display frame nearest its
+/// due time, so this is the animation's own notification, not a test's.
+fn display_frame(cx: &mut TestAppContext, window: &OpenWindow) {
+    cx.executor().advance_clock(REFRESH);
     cx.run_until_parked();
+    cx.update(|cx| window.handle.update(cx, |_, window, cx| window.simulate_next_frame(cx)))
+        .expect("the window is open");
+    cx.run_until_parked();
+}
+
+/// A frame's time at `ANIMATION_FPS` goes by in display frames: an animation's next frame comes in it.
+fn frame_passes(cx: &mut TestAppContext, window: &OpenWindow) {
+    let interval = Duration::from_secs_f32(1.0 / ANIMATION_FPS) + Duration::from_millis(1);
+    for _ in 0..interval.as_millis().div_ceil(REFRESH.as_millis()) {
+        display_frame(cx, window);
+    }
 }
 
 /// The status bar's region notified, as the tick does when what the bar says is not what it drew.
@@ -264,14 +278,14 @@ fn a_count_rolling_draws_the_status_bar_and_no_other_region(cx: &mut TestAppCont
     assert!(rolling(cx, &window));
     let builds = |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| ws.regions.builds(cx));
     let before = builds(cx);
-    // The roll's animation sets a timer for its next frame while it is drawn, which notifies the region it is
+    // The roll's animation asks for its next frame while it is drawn, which notifies the region it is
     // in. It runs on the wall clock (160 ms), so a slow machine may end it before the test has looked: each
     // frame it asked for builds the bar, a frame it did not ask for builds nothing, and no other region is
-    // ever built.
+    // ever built. One display frame at a time, as a frame can hold one of the bar's builds at most.
     let mut asked = 0;
-    for _ in 0..4 {
+    for _ in 0..16 {
         let before_frame = builds(cx);
-        frame_passes(cx);
+        display_frame(cx, &window);
         draw_replaying(cx, &window);
         let now = builds(cx);
         assert_eq!(

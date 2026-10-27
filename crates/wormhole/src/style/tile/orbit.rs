@@ -7,7 +7,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use super::ring::{RING_OUT, line};
-use crate::style::motion::{ANIMATION_FPS, TILE_ORBIT};
+use crate::style::motion::{ORBIT_FPS, TILE_ORBIT};
 
 /// How much of the edge the light covers, and how many steps its tail fades in.
 const ORBIT_SPAN: f32 = 0.32;
@@ -41,7 +41,7 @@ pub(super) fn orbit(
     layer()
         .with_animation(
             id,
-            Animation::new(TILE_ORBIT).repeat_synced().with_max_fps(ANIMATION_FPS),
+            Animation::new(TILE_ORBIT).repeat_synced().with_max_fps(ORBIT_FPS),
             move |d, turn| d.child(ring_canvas(color, outer, round, stroke, Some((turn + phase).fract()))),
         )
         .into_any_element()

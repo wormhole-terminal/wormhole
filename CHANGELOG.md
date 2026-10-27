@@ -72,6 +72,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- A working terminal's light circles its tile smoothly. It moved in uneven steps, about 20 to 24 a
+  second; now it moves 60 times a second, evenly, and the sidebar's spinners and pulses keep a steady 30.
 - `wh new-terminal --command` (and a command given to a new window or split) now runs: it is typed once the
   shell shows its prompt, where it used to be typed at once and was dropped while a terminal kept running
   behind the app had no shell yet, or lost to a shell still reading its startup files.
