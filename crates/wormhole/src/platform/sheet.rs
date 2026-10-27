@@ -23,3 +23,12 @@ pub struct Question<'a> {
 pub fn ask_with_checkbox(window: &Window, question: &Question) -> Option<Receiver<Option<bool>>> {
     os::ask_with_checkbox(window, question)
 }
+
+/// Answer the sheet that is up on `window`, as if its button number `button` (0 is the closing one, in the
+/// order they were added) had been pressed: whatever asked reads the answer as it reads a click. A number
+/// no button has is a Cancel. Where a person is not there to click (a test instance, driven by devctl).
+/// `false`: no sheet is up.
+#[cfg(feature = "devctl")]
+pub fn answer(window: &Window, button: isize) -> bool {
+    os::answer(window, button)
+}

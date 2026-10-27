@@ -40,3 +40,13 @@ pub fn ask_with_checkbox(window: &Window, question: &Question) -> Option<Receive
     alert.beginSheetModalForWindow_completionHandler(&ns_window, Some(&done));
     Some(rx)
 }
+
+/// End the sheet on `window` with `button` as its answer, which is what AppKit hands the completion handler
+/// of a button's press (GPUI's prompt sets each button's tag to its place, and answers with it).
+#[cfg(feature = "devctl")]
+pub fn answer(window: &Window, button: isize) -> bool {
+    let Some(ns_window) = ns_window(window) else { return false };
+    let Some(sheet) = ns_window.attachedSheet() else { return false };
+    ns_window.endSheet_returnCode(&sheet, button);
+    true
+}

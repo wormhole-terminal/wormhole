@@ -192,6 +192,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "keyboard-navigation" => a11y::keyboard_navigation,
         "window-front" => a11y::window_front,
         "front" => sessions::front,
+        "close-answer" => sessions::close_answer,
         "reduce-motion" => settings::reduce_motion,
         "scroller" => settings::scroller,
         "appearance" => settings::appearance,

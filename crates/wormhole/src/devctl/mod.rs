@@ -22,6 +22,9 @@
 //!   pane-bar        what the bar over the active terminal says: a program's question about reading
 //!                   the clipboard (OSC 52), a notice (a copy it made, a refusal), or `none`
 //!   clipboard-answer <once|always|deny>   the bar's three buttons
+//!   close-answer <close|cancel>   answer the question before closing a terminal or window (or quitting) as
+//!                   its buttons do, through the native sheet on this window; `wh close` and ⌘W ask it, and an
+//!                   instance without a person to click would otherwise leave it up
 //!   images          the active terminal's inline images (kitty, iTerm2, Sixel), one a line: id, size,
 //!                   decoded bytes or `decoding`, and each placement's cells
 //!   state           dump terminals, statuses, cwds and notes; `lights-look` names the

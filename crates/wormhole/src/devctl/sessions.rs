@@ -282,6 +282,22 @@ pub(super) fn front(ctx: &mut Ctx, _: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `close-answer <close|cancel>`: answer the question that asks before closing (or quitting) as its
+/// buttons do, through the same sheet: the closing button, or Cancel. A background instance has nobody to
+/// click it, and stopping it would otherwise wait on the question.
+pub(super) fn close_answer(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    // Buttons are numbered from the closing one; a number no button has is Cancel.
+    let button = match arg.trim() {
+        "close" => 0,
+        "cancel" => 99,
+        other => return Err(anyhow!("close-answer takes close or cancel, not {other:?}")),
+    };
+    if !crate::platform::sheet::answer(ctx.window, button) {
+        return Err(anyhow!("no question is up in this window"));
+    }
+    Ok(String::new())
+}
+
 /// `profile <id>`: switch Wormhole to that profile, after this batch (the windows are updating now).
 pub(super) fn profile(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let id = wormhole_core::storage::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
