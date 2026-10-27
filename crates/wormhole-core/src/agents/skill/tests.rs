@@ -2,7 +2,9 @@
 
 use std::path::Path;
 
-use super::{Done, FILES, MARKER, NAME, State, TARGETS, file, install, state, states, target, uninstall};
+use super::{
+    Done, FILES, MARKER, NAME, State, TARGETS, covered_by, file, install, state, states, target, uninstall,
+};
 use crate::agents::AgentId;
 
 fn home() -> tempfile::TempDir {
@@ -194,4 +196,28 @@ fn every_target_has_its_own_folder_and_its_agent_is_named_by_one_word() {
         install(target, home.path()).expect("installs");
     }
     assert!(states(home.path()).iter().all(|(_, state)| *state == Ok(State::Current)));
+}
+
+#[test]
+fn an_agent_that_reads_a_folder_with_our_current_copy_is_covered() {
+    let home = home();
+    let of = |agent| target(agent).expect("loads skills");
+    assert_eq!(covered_by(of(AgentId::Gemini), home.path()), None);
+    install(of(AgentId::Codex), home.path()).expect("installs in the shared folder");
+    for agent in [AgentId::Gemini, AgentId::Copilot, AgentId::OpenCode, AgentId::Qwen, AgentId::Droid] {
+        assert_eq!(covered_by(of(agent), home.path()).as_deref(), Some("~/.agents/skills"), "{agent:?}");
+    }
+    // Claude and Codex read only their own.
+    assert_eq!(covered_by(of(AgentId::Claude), home.path()), None);
+    assert_eq!(covered_by(of(AgentId::Codex), home.path()), None);
+    // OpenCode also reads Claude's folder.
+    let other = self::home();
+    install(of(AgentId::Claude), other.path()).expect("installs");
+    assert_eq!(covered_by(of(AgentId::OpenCode), other.path()).as_deref(), Some("~/.claude/skills"));
+    assert_eq!(covered_by(of(AgentId::Gemini), other.path()), None, "Gemini does not read Claude's");
+    // An out-of-date copy is not the current skill: it does not cover.
+    let old = claude().path(other.path()).join("SKILL.md");
+    let text = std::fs::read_to_string(&old).expect("read").replace("Driving Wormhole", "Driving");
+    std::fs::write(&old, text).expect("age it");
+    assert_eq!(covered_by(of(AgentId::OpenCode), other.path()), None);
 }

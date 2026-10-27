@@ -40,7 +40,9 @@ pub fn render(report: &Report) -> String {
         None => {}
     }
     for skill in &report.skills {
-        if skill.agent_found || skill.state != "not_installed" {
+        if let Some(covered) = &skill.covered_by {
+            out.push_str(&format!("Skill for {}: covered by {covered}\n", skill.name));
+        } else if skill.agent_found || skill.state != "not_installed" {
             out.push_str(&format!(
                 "Skill for {}: {} ({})\n",
                 skill.name,

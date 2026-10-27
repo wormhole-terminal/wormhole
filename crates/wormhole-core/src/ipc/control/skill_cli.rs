@@ -30,8 +30,9 @@ pub fn help(wh: &str) -> String {
       --agent), or update it there. Folders that are not Wormhole's are never touched.
   {wh} skill uninstall [--agent <id>]
       Take it out again. Files you added to its folder stay.
-  {wh} skill show [<file>] [--agent <id>] [--path]
-      Print the skill (SKILL.md, or a file of references/), or with --path where it goes for each agent.
+  {wh} skill show [<file>] | [--agent <id>] [--path]
+      Print the skill (SKILL.md, or a file of references/); with --path or --agent where it goes and its
+      state, for each agent or the one named.
 "
     )
 }
@@ -86,6 +87,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             if path && file.is_some() {
                 return Err("skill show takes a file or --path, not both".into());
             }
+            if agent.is_some() && file.is_some() {
+                return Err("skill show takes a file or an --agent (whose folder it tells), not both".into());
+            }
             Ok(Command::Show { agent, path, file, json })
         }
         other => Err(format!("unknown skill command {other:?} (install, uninstall, show)")),
@@ -131,7 +135,9 @@ pub fn run_in(
         Command::Uninstall { agent, json: asked } => {
             change(Change::Uninstall, agent, home, &found, json(asked))
         }
-        Command::Show { agent, path: true, json: asked, .. } => where_to(agent, home, json(asked)),
+        // Where it goes, for every agent or the one named: also what `show --agent <id>` means.
+        Command::Show { agent, path: true, json: asked, .. }
+        | Command::Show { agent: agent @ Some(_), json: asked, .. } => where_to(agent, home, json(asked)),
         Command::Show { file, json: asked, .. } => show(file, json(asked)),
     }
 }
@@ -221,51 +227,74 @@ fn change(
         let (code, ok) = if what == Change::Uninstall { (0, true) } else { (1, false) };
         return (code, outcome(&[], ok, json, &words), String::new());
     }
-    let mut results = Vec::new();
+    // Without --agent, an agent that reads a folder where this build's skill is already (installed just
+    // before, for another agent: Codex's `~/.agents/skills` is read by most) is left out: a second copy
+    // would only show twice. Named with --agent, it is installed in its own.
+    let skip_covered = what == Change::Install && agent.is_none();
+    let mut results: Vec<Line> = Vec::new();
     for target in targets {
-        let (word, message) = match what {
-            Change::Install => match skill::install(target, home) {
+        let covered = skip_covered.then(|| skill::covered_by(target, home)).flatten();
+        let (word, message) = match (what, covered.is_some()) {
+            (Change::Install, true) => ("covered", None),
+            (Change::Install, false) => match skill::install(target, home) {
                 Ok(Done::Installed) => ("installed", None),
                 Ok(Done::Updated) => ("updated", None),
                 Ok(Done::Unchanged) => ("unchanged", None),
                 Err(why) => ("error", Some(why)),
             },
-            Change::Uninstall => match skill::uninstall(target, home) {
+            (Change::Uninstall, _) => match skill::uninstall(target, home) {
                 Ok(true) => ("removed", None),
                 Ok(false) => ("not_installed", None),
                 Err(why) => ("error", Some(why)),
             },
         };
-        results.push((target, word, message));
+        results.push(Line { target, word, message, covered });
     }
-    let failed = results.iter().any(|(_, word, _)| *word == "error");
-    let lines: Vec<Value> = results
-        .iter()
-        .map(|(target, word, message)| {
-            let mut line = json!({
-                "agent": target.word(),
-                "name": agents::agent(target.agent).name,
-                "path": target.display_path(home),
-                "result": word,
-            });
-            if let Some(message) = message {
-                line["message"] = json!(message);
+    let failed = results.iter().any(|line| line.word == "error");
+    if json {
+        let lines: Vec<Value> = results.iter().map(|line| line.json(home)).collect();
+        return (i32::from(failed), outcome(&lines, !failed, true, ""), String::new());
+    }
+    let text: String = results.iter().map(|line| line.text(home)).collect();
+    (i32::from(failed), text, String::new())
+}
+
+/// What became of one agent's skill.
+struct Line {
+    target: &'static Target,
+    word: &'static str,
+    message: Option<String>,
+    /// The folder that covers the agent, when it was left out for that.
+    covered: Option<String>,
+}
+
+impl Line {
+    fn json(&self, home: &Path) -> Value {
+        let mut line = json!({
+            "agent": self.target.word(),
+            "name": agents::agent(self.target.agent).name,
+            "path": self.target.display_path(home),
+            "result": self.word,
+        });
+        if let Some(message) = &self.message {
+            line["message"] = json!(message);
+        }
+        if let Some(covered) = &self.covered {
+            line["covered_by"] = json!(covered);
+        }
+        line
+    }
+
+    fn text(&self, home: &Path) -> String {
+        let name = agents::agent(self.target.agent).name;
+        match (&self.message, &self.covered) {
+            (Some(why), _) => format!("{name}: {why}\n"),
+            (None, Some(covered)) => format!("{name}: covered by {covered} (not installed again)\n"),
+            (None, None) => {
+                format!("{name}: {} ({})\n", self.word.replace('_', " "), self.target.display_path(home))
             }
-            line
-        })
-        .collect();
-    let text: String = results
-        .iter()
-        .map(|(target, word, message)| {
-            let name = agents::agent(target.agent).name;
-            match message {
-                Some(why) => format!("{name}: {why}\n"),
-                None => format!("{name}: {} ({})\n", word.replace('_', " "), target.display_path(home)),
-            }
-        })
-        .collect();
-    let out = if json { outcome(&lines, !failed, true, "") } else { text.clone() };
-    (i32::from(failed), if json { out } else { text }, String::new())
+        }
+    }
 }
 
 /// The JSON reply (or the words) of a change.
@@ -379,5 +408,33 @@ mod tests {
             value["result"]["agents"][0]["documented_at"].as_str().expect("source").starts_with("https://")
         );
         assert_eq!(run("show --agent nope", home.path(), &[]).0, 2);
+    }
+
+    #[test]
+    fn an_agent_whose_folder_is_read_by_another_is_left_out_unless_named() {
+        let home = tempfile::tempdir().expect("tempdir");
+        let found = [AgentId::Codex, AgentId::Gemini, AgentId::OpenCode];
+        let (code, out, _) = run("install", home.path(), &found);
+        assert_eq!(code, 0, "{out}");
+        assert!(out.contains("Codex CLI: installed"), "{out}");
+        assert!(out.contains("Gemini CLI: covered by ~/.agents/skills"), "{out}");
+        assert!(out.contains("OpenCode: covered by ~/.agents/skills"), "{out}");
+        assert!(!home.path().join(".gemini").exists() && !home.path().join(".config").exists());
+        let (_, json, _) = run("install --json", home.path(), &found);
+        let value: serde_json::Value = serde_json::from_str(json.trim()).expect("json");
+        assert_eq!(value["result"]["agents"][1]["covered_by"], "~/.agents/skills");
+        // Named, it goes in its own folder too.
+        let (code, out, _) = run("install --agent gemini", home.path(), &found);
+        assert_eq!(code, 0, "{out}");
+        assert!(home.path().join(".gemini/skills/wormhole/SKILL.md").is_file());
+    }
+
+    #[test]
+    fn show_with_an_agent_tells_that_agents_folder_and_not_the_skill() {
+        let home = tempfile::tempdir().expect("tempdir");
+        let (code, out, _) = run("show --agent codex", home.path(), &[]);
+        assert_eq!(code, 0);
+        assert!(out.starts_with("codex: ~/.agents/skills/wormhole (not installed)"), "{out}");
+        assert!(parse(&words("show SKILL.md --agent codex")).is_err());
     }
 }

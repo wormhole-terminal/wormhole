@@ -16,7 +16,7 @@ mod targets;
 #[cfg(test)]
 mod tests;
 
-pub use install::{Done, State, install, state, states, uninstall};
+pub use install::{Done, RETIRED, State, covered_by, install, state, states, uninstall};
 pub use targets::{TARGETS, Target, by_word, target};
 
 /// The skill's name: its folder, and `name` in its frontmatter.

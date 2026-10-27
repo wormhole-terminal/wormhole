@@ -15,7 +15,13 @@ pub struct Target {
     pub dir: &'static str,
     /// Where this is documented.
     pub source: &'static str,
+    /// The other skills folders (relative to the home directory) the agent also reads, from the same
+    /// documentation: the skill in one of them is the agent's too, so a second copy only shows twice.
+    pub also_reads: &'static [&'static str],
 }
+
+/// The folder most agents read besides their own.
+const SHARED: &str = ".agents/skills";
 
 /// Every agent that has a documented personal skills folder, in the registry's order.
 pub const TARGETS: &[Target] = &[
@@ -23,38 +29,46 @@ pub const TARGETS: &[Target] = &[
         agent: AgentId::Claude,
         dir: ".claude/skills",
         source: "https://code.claude.com/docs/en/skills",
+        also_reads: &[],
     },
     // The shared folder of the Agent Skills ecosystem: Codex reads it first, and Gemini CLI, Copilot CLI,
     // Qwen Code, Droid, Goose, Pi and OpenCode read it too.
     Target {
         agent: AgentId::Codex,
         dir: ".agents/skills",
+        // (Redirects to learn.chatgpt.com/docs/build-skills; this address is the one the lints allow.)
         source: "https://developers.openai.com/codex/skills",
+        also_reads: &[],
     },
     Target {
         agent: AgentId::Gemini,
         dir: ".gemini/skills",
         source: "https://geminicli.com/docs/cli/skills/",
+        also_reads: &[SHARED],
     },
     Target {
         agent: AgentId::Copilot,
         dir: ".copilot/skills",
         source: "https://docs.github.com/en/copilot/concepts/agents/about-agent-skills",
+        also_reads: &[SHARED],
     },
     Target {
         agent: AgentId::OpenCode,
         dir: ".config/opencode/skills",
         source: "https://opencode.ai/docs/skills/",
+        also_reads: &[".claude/skills", SHARED],
     },
     Target {
         agent: AgentId::Qwen,
         dir: ".qwen/skills",
         source: "https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/",
+        also_reads: &[SHARED],
     },
     Target {
         agent: AgentId::Droid,
         dir: ".factory/skills",
         source: "https://docs.factory.com/cli/configuration/skills",
+        also_reads: &[SHARED],
     },
 ];
 
@@ -84,6 +98,14 @@ impl Target {
             .ok()
             .and_then(|value| value.as_str().map(str::to_string))
             .unwrap_or_default()
+    }
+}
+
+impl Target {
+    /// The other folders the agent reads, as [`path`](Self::path)s under `home`.
+    pub fn other_paths(&self, home: &Path) -> impl Iterator<Item = PathBuf> + '_ {
+        let home = home.to_path_buf();
+        self.also_reads.iter().map(move |dir| home.join(dir).join(NAME))
     }
 }
 

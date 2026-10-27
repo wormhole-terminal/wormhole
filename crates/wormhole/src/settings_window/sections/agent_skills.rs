@@ -41,6 +41,8 @@ pub(crate) struct SkillRow {
     state: Result<State, String>,
     /// Where the skill's folder is, as a person says it.
     shown: String,
+    /// The folder, read by this agent as well, that has the skill when its own has not.
+    covered: Option<String>,
 }
 
 pub(crate) fn load(home: &Path) -> Vec<SkillRow> {
@@ -49,6 +51,7 @@ pub(crate) fn load(home: &Path) -> Vec<SkillRow> {
         .map(|(target, state)| SkillRow {
             target,
             found: agents::installed(agents::agent(target.agent)),
+            covered: skill::covered_by(target, home).filter(|_| state == Ok(State::NotInstalled)),
             state,
             shown: target.display_path(home),
         })
@@ -98,6 +101,7 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let word = target.word();
     let state = row.state.as_ref().ok().copied();
     let (detail, color) = match state {
+        Some(State::NotInstalled) if row.covered.is_some() => (text(SETTINGS_AGENTS_SKILL_COVERED), ui.muted),
         Some(State::Current) => (text(SETTINGS_AGENTS_SKILL_CURRENT), ui.success_text),
         Some(State::Outdated) => (text(SETTINGS_AGENTS_SKILL_OUTDATED), ui.warning_text),
         Some(State::Foreign) => (text(SETTINGS_AGENTS_SKILL_FOREIGN), ui.warning_text),
@@ -129,6 +133,8 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
                 .disabled(true)
                 .tooltip(text(SETTINGS_AGENTS_SKILL_FOREIGN_TOOLTIP)),
         ),
+        // Covered: the agent reads a folder that has the skill; nothing to press.
+        Some(State::NotInstalled) if row.covered.is_some() => actions,
         _ => actions.child(install(cx, text(SETTINGS_AGENTS_INSTALL), true)),
     };
     let problem = row.state.as_ref().err().map(|err| {
@@ -175,7 +181,7 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
                                         .text_color(ui.muted)
                                         .font_family(code_font)
                                         .truncate()
-                                        .child(row.shown.clone()),
+                                        .child(row.covered.clone().unwrap_or_else(|| row.shown.clone())),
                                 ),
                         ),
                 )

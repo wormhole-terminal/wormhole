@@ -24,6 +24,11 @@ fn skills(home: &Path) -> Vec<SkillLine> {
             agent_found: agents::installed(agents::agent(target.agent)),
             state: SkillLine::state_word(&state),
             path: target.display_path(home),
+            covered_by: if state == Ok(skill::State::NotInstalled) {
+                skill::covered_by(target, home)
+            } else {
+                None
+            },
         })
         .collect()
 }

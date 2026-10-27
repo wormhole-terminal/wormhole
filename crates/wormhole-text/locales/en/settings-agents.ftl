@@ -74,6 +74,7 @@ settings-agents-skill-none = No coding agent that loads skills was found on this
 settings-agents-skill-not-installed = No skill installed in
 settings-agents-skill-current = Skill installed in
 settings-agents-skill-outdated = Skill out of date in
+settings-agents-skill-covered = Skill covered by
 settings-agents-skill-foreign = Another skill is in the way in
 settings-agents-skill-foreign-tooltip = A skill with this name is there that { -brand } didn't write; it never replaces it
 settings-agents-copy-command = Copy command

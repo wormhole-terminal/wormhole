@@ -29,6 +29,9 @@ pub struct SkillLine {
     /// `not_installed`, `current`, `outdated` or `foreign`, or `error`.
     pub state: &'static str,
     pub path: String,
+    /// The folder, read by this agent too, that has this build's skill when its own folder has not: the
+    /// agent has the skill, and a second copy would only show twice.
+    pub covered_by: Option<String>,
 }
 
 impl SkillLine {
@@ -225,7 +228,7 @@ impl Report {
                     &format!("Another skill named wormhole is at {}; Wormhole leaves it alone.", line.path),
                     "Nothing to do unless the user wants it replaced: they remove that folder first.",
                 )),
-                "not_installed" if line.agent_found => problems.push(problem(
+                "not_installed" if line.agent_found && line.covered_by.is_none() => problems.push(problem(
                     "skill_not_installed",
                     Severity::Hint,
                     &format!("{} is installed but has no Wormhole skill.", line.name),
@@ -323,6 +326,7 @@ mod tests {
             agent_found: true,
             state: "outdated",
             path: "~/.claude/skills/wormhole".into(),
+            covered_by: None,
         };
         let report = Report::build(App::Down("Wormhole isn't running".into()), None, vec![line]);
         assert!(!report.app_answered());
@@ -339,11 +343,14 @@ mod tests {
             agent_found,
             state,
             path: "~/.agents/skills/wormhole".into(),
+            covered_by: None,
         };
+        let covered =
+            SkillLine { covered_by: Some("~/.agents/skills".into()), ..line(true, "not_installed") };
         let quiet = Report::build(
             App::Answered(facts(true, true, true, own(true, Some(true)))),
             None,
-            vec![line(false, "not_installed"), line(true, "current")],
+            vec![line(false, "not_installed"), line(true, "current"), covered],
         );
         assert!(quiet.problems.is_empty());
         let missing = Report::build(
