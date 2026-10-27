@@ -19,8 +19,9 @@ const POLL: Duration = Duration::from_millis(50);
 /// Output that has stopped for this long is a prompt waiting.
 const QUIET: Duration = Duration::from_millis(300);
 /// A shell that has printed nothing this long after its PTY came has no prompt to wait for (a program
-/// that reads its input and says nothing).
-const SILENT: Duration = Duration::from_secs(2);
+/// that reads its input and says nothing). Short in tests, whose shell is `cat`: the real wait would
+/// only make them slow, and flaky on a loaded machine.
+const SILENT: Duration = if cfg!(test) { Duration::from_millis(200) } else { Duration::from_secs(2) };
 /// A shell whose output never settles is typed at all the same.
 const GIVE_UP: Duration = Duration::from_secs(5);
 /// A PTY that never comes (the host could not start and the fallback failed): the wait ends.
@@ -104,7 +105,7 @@ impl TerminalView {
 mod tests {
     use std::time::{Duration, Instant};
 
-    use super::{Look, Wait};
+    use super::{Look, SILENT, Wait};
 
     fn shell(at_prompt: Option<bool>, revision: u64) -> Look {
         Look::Shell { at_prompt, revision }
@@ -123,7 +124,11 @@ mod tests {
         assert!(!wait.ready(t0, Look::NoPty));
         assert!(!wait.ready(t0 + Duration::from_secs(10), Look::NoPty));
         assert!(!wait.ready(t0 + Duration::from_secs(10), shell(None, 0)));
-        assert!(wait.ready(t0 + Duration::from_secs(12), shell(None, 0)), "a silent shell, in the end");
+        assert!(!wait.ready(t0 + Duration::from_secs(10) + SILENT - ms(1), shell(None, 0)));
+        assert!(
+            wait.ready(t0 + Duration::from_secs(10) + SILENT, shell(None, 0)),
+            "a silent shell, in the end"
+        );
     }
 
     #[test]
