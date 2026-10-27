@@ -22,6 +22,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   one to open it) and how many files and lines it changed. Copy the hash, short hash, message, subject
   or author from the buttons there or from a right-click on any commit, or press ⌘C on a commit for its
   hash. A merge says so in the list, and a long subject shows in full in a tooltip.
+- History shows a commit in full when you open it: the start of its message with a "Show more", who wrote it
+  and who committed it (when that is someone else), co-authors, the branches and tags that point at it, its
+  parents (click one to open it) and how many files and lines it changed. Copy the hash, message, subject or
+  author from the buttons there, from a right-click on a commit or on its details, or with ↩ on the details; ⌘C
+  copies the hash of the commit the keys are on in the list. A merge says so in the list, and a long subject
+  shows in full in a tooltip.
 - Copying says so in a small chip that drops onto the top of the terminal, in the system's own glass:
   "Copied 3 lines", "Copied command", "Copied path". A program's copy in the terminal you're typing in
   is said there too, instead of the bar over the terminal's last rows. VoiceOver reads it out, and

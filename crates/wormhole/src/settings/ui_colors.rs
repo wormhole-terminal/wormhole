@@ -123,6 +123,8 @@ pub struct UiColors {
     pub branch: Hsla,
     /// A branch chip's fill (`git.branch.background`).
     pub branch_bg: Hsla,
+    /// A tag's name in the ref chips of an opened commit (`git.tag`).
+    pub tag: Hsla,
     /// A tinted chip: the sidebar's filter, a project override (`chip.tint`).
     pub chip_tint: Hsla,
     /// An unchecked checkbox's outline (`checkbox.border`, 3:1), its box and a checked one's
@@ -246,6 +248,7 @@ const COLORS: &[Field] = fields! {
     removed = "diff.removed";
     branch = "git.branch";
     branch_bg = "git.branch.background";
+    tag = "git.tag";
     chip_tint = "chip.tint";
     checkbox_border = "checkbox.border";
     checkbox_bg = "checkbox.background";

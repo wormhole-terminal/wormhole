@@ -9,6 +9,8 @@ pub enum Notice {
     Copied(Copied),
     /// A program that controls Wormhole (a coding agent, a script) acted on this terminal.
     Driven(Driven),
+    /// Something the person asked for could not be done.
+    Failed(Failed),
     /// A message devctl made up (`notice <text>`, which has no sentence in the catalog); the number tells
     /// one from another and the words come with the post. Nothing but devctl makes one.
     Test(u64),
@@ -31,6 +33,13 @@ pub enum Driver {
     Agent(AgentId),
     /// Anything else: a script, or a command typed at a prompt.
     Scripts,
+}
+
+/// What could not be done.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Failed {
+    /// A copy of a commit's message or author, which needed details git could not read.
+    CopyCommit,
 }
 
 /// What was copied, and how much.
@@ -80,7 +89,7 @@ impl Notice {
     #[must_use]
     pub fn glyph(self) -> Glyph {
         match self {
-            Self::Copied(_) | Self::Test(_) => Glyph::Copy,
+            Self::Copied(_) | Self::Failed(_) | Self::Test(_) => Glyph::Copy,
             Self::Driven(Driven::Reading(_)) => Glyph::Eye,
             Self::Driven(Driven::Typing(_)) => Glyph::Keyboard,
         }
@@ -101,6 +110,12 @@ impl Copied {
     #[must_use]
     pub fn output(text: &str) -> Self {
         Self::Output { lines: text.lines().count().max(1) }
+    }
+}
+
+impl From<Failed> for Notice {
+    fn from(failed: Failed) -> Self {
+        Self::Failed(failed)
     }
 }
 

@@ -1,5 +1,6 @@
-//! History under the keys: the commits and the open one's files, → ← to show or fold a
-//! commit's files, ↩ / Space on a file opening its diff with the list keeping the keyboard.
+//! History under the keys: the commits and the open one's details and files, → ← to show or fold a
+//! commit's files, ↩ / Space on a file opening its diff with the list keeping the keyboard, ↩ on the
+//! details opening their menu (the copies, "Show more", the parents).
 
 use gpui_kit::*;
 use wormhole_core::view::focus::list::Item;
@@ -21,10 +22,10 @@ impl History {
                         let sha = history.commits.get(*ix).map(|c| c.sha.as_str());
                         item(0, Some(sha.is_some() && history.expanded.as_deref() == sha))
                     }
-                    HistoryRow::File(_) => item(1, None),
+                    // ↩ on the details is "Show more" / "Show less".
+                    HistoryRow::File(_) | HistoryRow::Details(_) => item(1, None),
                     HistoryRow::Head
                     | HistoryRow::Error
-                    | HistoryRow::Details(_)
                     | HistoryRow::Note(_)
                     | HistoryRow::FilesError
                     | HistoryRow::Spacer => return None,
@@ -52,11 +53,15 @@ impl History {
         session: i64,
         row: usize,
         following: bool,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
         let Some(history) = self.of.get(&session) else { return true };
         match history.list.items().get(row) {
             Some(HistoryRow::Commit(_)) if !following => self.fold_row(session, row, cx),
+            Some(HistoryRow::Details(_)) if !following => {
+                self.show_details_menu_at_row(session, row, window, cx);
+            }
             Some(HistoryRow::File(ix)) => {
                 let commit =
                     history.expanded.as_ref().and_then(|sha| history.commits.iter().find(|c| &c.sha == sha));
@@ -84,10 +89,10 @@ pub(super) const WALK: WalkFns = WalkFns {
         let history = super::def::typed(entity);
         facts.active().map(|active| history.read(cx).walkable(active.id)).unwrap_or_default()
     },
-    press: |entity, facts, session, row, _, following, _, cx| {
+    press: |entity, facts, session, row, _, following, window, cx| {
         let changes = facts.feature::<Changes>();
         super::def::typed(entity)
-            .update(cx, |history, cx| history.press_row(changes, session, row, following, cx))
+            .update(cx, |history, cx| history.press_row(changes, session, row, following, window, cx))
     },
     fold: |entity, _, session, row, cx| {
         super::def::typed(entity).update(cx, |history, cx| history.fold_row(session, row, cx));

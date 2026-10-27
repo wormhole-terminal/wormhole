@@ -10,28 +10,29 @@ use wormhole_core::git::Commit;
 use super::super::changes::Changes;
 use super::super::picker::PickerHost;
 use super::super::testing::{changes, folder, git, go, repo, write};
-use super::copy::CopyWhat;
-use super::state::CommitInfo;
-use super::{History, HistoryRow, HistoryState};
+use super::{History, HistoryState};
 use crate::app_state::OpenWindow;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
 use crate::window::Workspace;
-use crate::window::test_harness::{draw, draw_fresh, drive, isolate_in, read, read_cx, start, start_with};
+use crate::window::test_harness::{draw, drive, isolate_in, read, read_cx, start, start_with};
 
-fn isolate(name: &str) -> bool {
+mod details;
+mod frame;
+
+pub(super) fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
 }
 
 // ---------------------------------------------------------------- where the state is kept
 
 /// The window's History.
-fn history(ws: &Workspace) -> Entity<History> {
+pub(super) fn history(ws: &Workspace) -> Entity<History> {
     ws.feature::<History>().expect("the window has the History feature")
 }
 
 /// What the tab keeps for the terminal in front.
-fn with_state<R>(
+pub(super) fn with_state<R>(
     cx: &mut TestAppContext,
     window: &OpenWindow,
     f: impl FnOnce(&HistoryState, &gpui_kit::App) -> R,
@@ -52,11 +53,11 @@ fn history_branch(cx: &mut TestAppContext, window: &OpenWindow) -> Option<String
     with_state(cx, window, |state, _| state.rev.clone())
 }
 
-fn expanded(cx: &mut TestAppContext, window: &OpenWindow) -> Option<String> {
+pub(super) fn expanded(cx: &mut TestAppContext, window: &OpenWindow) -> Option<String> {
     with_state(cx, window, |state, _| state.expanded.clone())
 }
 
-fn first_commit(cx: &mut TestAppContext, window: &OpenWindow) -> Commit {
+pub(super) fn first_commit(cx: &mut TestAppContext, window: &OpenWindow) -> Commit {
     with_state(cx, window, |state, _| state.commits.first().cloned().expect("a commit"))
 }
 
@@ -72,7 +73,7 @@ fn open_picker(ws: &mut Workspace, window: &mut Window, cx: &mut Context<Workspa
 }
 
 /// The person opens (or closes) a commit in the list.
-fn toggle_commit(cx: &mut TestAppContext, window: &OpenWindow, sha: &str) {
+pub(super) fn toggle_commit(cx: &mut TestAppContext, window: &OpenWindow, sha: &str) {
     drive(cx, window, |ws, _, cx| {
         let session = ws.active_session().id;
         history(ws).update(cx, |history, cx| history.toggle_commit(session, sha.to_string(), cx));
@@ -101,7 +102,7 @@ fn reveal(cx: &mut TestAppContext, window: &OpenWindow, root: &std::path::Path, 
 
 /// A repository of two commits (`first`, `second`) with `other` one commit further (`on other`), and the
 /// window's terminal in it on the History tab.
-fn two_commits(cx: &mut TestAppContext, window: &OpenWindow, name: &str) {
+pub(super) fn two_commits(cx: &mut TestAppContext, window: &OpenWindow, name: &str) {
     let root = make_two_commits(name);
     drive(cx, window, |ws, _, cx| {
         go(ws, &root, cx);
@@ -189,197 +190,6 @@ fn a_commit_opens_to_its_files_and_a_file_opens_its_diff(cx: &mut TestAppContext
     // Closing the commit again.
     toggle_commit(cx, &window, &second.sha);
     assert_eq!(expanded(cx, &window), None);
-}
-
-// ---------------------------------------------------------------- a commit's details
-
-/// A repository whose newest commit is a merge (`Merge branch 'topic'`, tagged `v1`) of a commit with a
-/// two-paragraph message and a co-author, and the window's terminal in it on the History tab.
-fn merged(cx: &mut TestAppContext, window: &OpenWindow, name: &str) {
-    let root = repo(name, &[("a.txt", "one\n")]);
-    git(&root, &["checkout", "-q", "-b", "topic"]);
-    write(&root, &[("t.txt", "t\n")]);
-    git(&root, &["add", "-A"]);
-    git(&root, &["commit", "-q", "-m", "on topic"]);
-    git(&root, &["checkout", "-q", "main"]);
-    write(&root, &[("m.txt", "m\nm2\n"), ("a.txt", "one\ntwo\n")]);
-    git(&root, &["add", "-A"]);
-    git(
-        &root,
-        &[
-            "commit",
-            "-q",
-            "-m",
-            "feat(x): a wide change",
-            "-m",
-            "The body wraps\nover two lines.",
-            "-m",
-            "Co-authored-by: Bob <bob@example.com>",
-        ],
-    );
-    git(&root, &["merge", "-q", "--no-ff", "topic", "-m", "Merge branch 'topic'"]);
-    git(&root, &["tag", "v1"]);
-    drive(cx, window, |ws, _, cx| {
-        go(ws, &root, cx);
-        ws.show_tab(TabId::History, cx);
-    });
-    cx.run_until_parked();
-}
-
-/// The details of the commit `sha`, once read.
-fn details_of(
-    cx: &mut TestAppContext,
-    window: &OpenWindow,
-    sha: &str,
-) -> Option<std::rc::Rc<wormhole_core::git::CommitDetails>> {
-    with_state(cx, window, |state, _| state.details_of(sha).cloned())
-}
-
-/// The sha of the n-th commit of the log.
-fn sha_at(cx: &mut TestAppContext, window: &OpenWindow, n: usize) -> String {
-    with_state(cx, window, |state, _| state.commits[n].sha.clone())
-}
-
-#[gpui_kit::test]
-fn an_opened_commit_shows_its_whole_message_who_wrote_it_and_what_points_at_it(cx: &mut TestAppContext) {
-    if isolate("an_opened_commit_shows_its_whole_message_who_wrote_it_and_what_points_at_it") {
-        return;
-    }
-    let window = start(cx, 1);
-    merged(cx, &window, "details");
-    let (merge, wide) = (sha_at(cx, &window, 0), sha_at(cx, &window, 1));
-    // Not read until a commit is opened.
-    with_state(cx, &window, |state, _| assert!(state.details.is_empty()));
-    toggle_commit(cx, &window, &merge);
-    let details = details_of(cx, &window, &merge).expect("read when the commit opened");
-    assert_eq!(details.subject(), "Merge branch 'topic'");
-    assert_eq!(details.parents.len(), 2);
-    let refs: Vec<_> = details.refs.iter().map(|r| r.name.as_str()).collect();
-    assert!(refs.contains(&"HEAD") && refs.contains(&"main") && refs.contains(&"v1"), "{refs:?}");
-    // The row under the commit is the details, then its files.
-    with_state(cx, &window, |state, _| {
-        let rows = state.list.items();
-        assert!(matches!(rows[1], HistoryRow::Commit(0)));
-        assert!(matches!(rows[2], HistoryRow::Details(_)), "{}", rows.len());
-    });
-    draw(cx, &window);
-
-    toggle_commit(cx, &window, &wide);
-    let details = details_of(cx, &window, &wide).expect("read");
-    assert_eq!(details.subject(), "feat(x): a wide change");
-    assert_eq!(details.body(), "The body wraps\nover two lines.\n\nCo-authored-by: Bob <bob@example.com>");
-    assert_eq!(details.co_authors.len(), 1);
-    assert!(!details.committer_differs());
-    draw(cx, &window);
-    // Opened again: nothing is read twice (the kept details are the same allocation).
-    toggle_commit(cx, &window, &wide);
-    toggle_commit(cx, &window, &wide);
-    let again = details_of(cx, &window, &wide).expect("kept");
-    assert!(std::rc::Rc::ptr_eq(&details, &again));
-}
-
-#[gpui_kit::test]
-fn a_parent_in_the_log_opens_from_the_details(cx: &mut TestAppContext) {
-    if isolate("a_parent_in_the_log_opens_from_the_details") {
-        return;
-    }
-    let window = start(cx, 1);
-    merged(cx, &window, "parents");
-    let (merge, first_parent) = (sha_at(cx, &window, 0), sha_at(cx, &window, 1));
-    toggle_commit(cx, &window, &merge);
-    drive(cx, &window, |ws, _, cx| {
-        let session = ws.active_session().id;
-        history(ws).update(cx, |history, cx| history.reveal_parent(session, first_parent.clone(), cx));
-    });
-    cx.run_until_parked();
-    draw(cx, &window);
-    assert_eq!(expanded(cx, &window), Some(sha_at(cx, &window, 1)));
-    // The pending scroll was used by the draw.
-    with_state(cx, &window, |state, _| assert!(state.reveal.is_none()));
-}
-
-#[gpui_kit::test]
-fn every_copy_of_a_commit_reaches_the_clipboard(cx: &mut TestAppContext) {
-    if isolate("every_copy_of_a_commit_reaches_the_clipboard") {
-        return;
-    }
-    let window = start(cx, 1);
-    merged(cx, &window, "copies");
-    let sha = sha_at(cx, &window, 1);
-    let copy = |cx: &mut TestAppContext, what| {
-        drive(cx, &window, |ws, window, cx| {
-            let session = ws.active_session().id;
-            history(ws).update(cx, |history, cx| history.copy_commit(session, &sha, what, window, cx));
-        });
-        cx.run_until_parked();
-        cx.read_from_clipboard().and_then(|item| item.text()).unwrap_or_default()
-    };
-    assert_eq!(copy(cx, CopyWhat::Hash), sha);
-    assert_eq!(copy(cx, CopyWhat::ShortHash), sha[..7]);
-    assert_eq!(copy(cx, CopyWhat::Subject), "feat(x): a wide change");
-    // Never opened: the message is read first, and kept for the next copy.
-    with_state(cx, &window, |state, _| assert!(state.details_of(&sha).is_none()));
-    assert_eq!(
-        copy(cx, CopyWhat::Message),
-        "feat(x): a wide change\n\nThe body wraps\nover two lines.\n\nCo-authored-by: Bob <bob@example.com>"
-    );
-    with_state(cx, &window, |state, _| assert!(state.details_of(&sha).is_some()));
-    assert_eq!(copy(cx, CopyWhat::Author), "Test <test@example.com>");
-}
-
-#[gpui_kit::test]
-fn command_c_on_a_commit_copies_its_hash_and_on_a_file_goes_on(cx: &mut TestAppContext) {
-    if isolate("command_c_on_a_commit_copies_its_hash_and_on_a_file_goes_on") {
-        return;
-    }
-    let window = start(cx, 1);
-    merged(cx, &window, "command-c");
-    let sha = sha_at(cx, &window, 1);
-    toggle_commit(cx, &window, &sha);
-    draw(cx, &window);
-    let (commit_row, file_row) = with_state(cx, &window, |state, _| {
-        let rows = state.list.items();
-        let commit = rows.iter().position(|r| matches!(r, HistoryRow::Commit(1))).expect("the commit");
-        let file = rows.iter().position(|r| matches!(r, HistoryRow::File(_))).expect("a file");
-        (commit, file)
-    });
-    let pressed = drive(cx, &window, |ws, window, cx| {
-        ws.areas_mut().panel_at = Some((TabId::History, file_row));
-        let on_file = ws.panel_copy(window, cx);
-        ws.areas_mut().panel_at = Some((TabId::History, commit_row));
-        (on_file, ws.panel_copy(window, cx))
-    });
-    cx.run_until_parked();
-    assert_eq!(pressed, (false, true));
-    assert_eq!(cx.read_from_clipboard().and_then(|item| item.text()), Some(sha));
-}
-
-#[gpui_kit::test]
-fn details_that_cannot_be_read_say_so_and_the_commit_still_opens(cx: &mut TestAppContext) {
-    if isolate("details_that_cannot_be_read_say_so_and_the_commit_still_opens") {
-        return;
-    }
-    let window = start(cx, 1);
-    merged(cx, &window, "unreadable");
-    let sha = sha_at(cx, &window, 1);
-    // A hash git does not know: the read fails as it would for a commit gone after a force push.
-    drive(cx, &window, |ws, _, cx| {
-        let session = ws.active_session().id;
-        history(ws).update(cx, |history, cx| {
-            let state = history.of.get_mut(&session).expect("a state");
-            state.expanded = Some("0".repeat(40));
-            assert!(state.want_details(&"0".repeat(40)));
-            let root = state.root.clone().expect("a root");
-            history.fetch_details(session, root, "0".repeat(40), cx);
-        });
-    });
-    cx.run_until_parked();
-    with_state(cx, &window, |state, _| {
-        assert!(matches!(state.details.get(&"0".repeat(40)), Some(CommitInfo::Failed(_))));
-    });
-    toggle_commit(cx, &window, &sha);
-    assert!(details_of(cx, &window, &sha).is_some(), "the next commit opens as usual");
-    draw(cx, &window);
 }
 
 // ---------------------------------------------------------------- the branch picker
@@ -590,39 +400,20 @@ fn pick(ws: &mut Workspace, branch: Option<String>, cx: &mut gpui_kit::Context<W
     });
 }
 
-// ---------------------------------------------------------------- the frame
+/// The sha of the n-th commit of the log.
+pub(super) fn sha_at(cx: &mut TestAppContext, window: &OpenWindow, n: usize) -> String {
+    with_state(cx, window, |state, _| state.commits[n].sha.clone())
+}
 
-/// Allocations the third draw of a one-terminal window on History (two commits, the newest open with its
-/// details and two files) may make. Measured: 5,498 allocations (2.9 MB), the same on every run (3,856
-/// before the open commit showed its details: one block of about forty elements, three icon buttons
-/// among them at about 125 each, drawn once however many commits there are; 3,790 before History moved
-/// into its entity, 3,792 before the icons' motions: each tab's icon and each button with a motion looks
-/// up the state it keeps, and a button's click handler is shared). The budget is that plus
-/// about a hundredth; the tab adds a
-/// row for each commit and file in view, so a cost per commit or per file per frame shows at once.
-const HISTORY_FRAME_ALLOCATIONS: u64 = 5_555;
+/// The person presses "Show more" / "Show less" under the open commit's message.
+pub(super) fn toggle_body(cx: &mut TestAppContext, window: &OpenWindow) {
+    drive(cx, window, |ws, _, cx| {
+        let session = ws.active_session().id;
+        history(ws).update(cx, |history, cx| history.toggle_body(session, cx));
+    });
+    cx.run_until_parked();
+}
 
-#[gpui_kit::test]
-fn a_window_frame_on_history_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
-    use crate::perf::allocations::thread_counts;
-    if isolate("a_window_frame_on_history_stays_within_its_allocation_budget") {
-        return;
-    }
-    let window = start(cx, 1);
-    two_commits(cx, &window, "history-frame");
-    let second = first_commit(cx, &window);
-    toggle_commit(cx, &window, &second.sha);
-    assert_eq!(read(cx, &window, |ws| ws.right_tab()), TabId::History);
-    // The first draws build what a window keeps; the third is a frame.
-    draw(cx, &window);
-    draw(cx, &window);
-    let before = thread_counts();
-    draw_fresh(cx, &window);
-    let drawn = thread_counts().since(before);
-    eprintln!("window frame on History: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
-    assert!(
-        drawn.allocations <= HISTORY_FRAME_ALLOCATIONS,
-        "a window frame on History made {} allocations (budget {HISTORY_FRAME_ALLOCATIONS})",
-        drawn.allocations
-    );
+pub(super) fn body_expanded(cx: &mut TestAppContext, window: &OpenWindow) -> bool {
+    with_state(cx, window, |state, _| state.body_expanded)
 }

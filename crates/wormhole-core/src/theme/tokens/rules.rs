@@ -181,6 +181,8 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
             RULE.as_str()
         }
         "git.branch.background" => "git.branch / 14%",
+        // A tag is the warning color as text: it reads on the panel and on a selected row.
+        "git.tag" => "status.warning.text",
         // The terminal's yellow, as in most editors' find: the current match solid with black
         // text (a dark yellow, as GitHub Light's, is lightened until black reads on it), the others
         // a tint of it the terminal's text reads on.

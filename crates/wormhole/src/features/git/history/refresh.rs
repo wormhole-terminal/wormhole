@@ -9,6 +9,7 @@ use wormhole_core::config::TabId;
 use wormhole_core::git::{self, Commit, FileChange, GitError, LOG_LIMIT};
 
 use super::History;
+use super::shown::Shown;
 use crate::features::git::changes::Changes;
 use crate::window::feature::FeatureEvent;
 
@@ -59,8 +60,8 @@ impl History {
                     let stale = state.details_stale();
                     let root = state.root.clone();
                     cx.notify();
-                    if let (Some(sha), Some(root)) = (stale, root) {
-                        this.fetch_details(session, root, sha, cx);
+                    if let (Some((sha, request)), Some(root)) = (stale, root) {
+                        this.fetch_details(session, root, sha, request, cx);
                     }
                 }
             });
@@ -72,14 +73,24 @@ impl History {
     pub(super) fn toggle_commit(&mut self, session: i64, sha: String, cx: &mut Context<Self>) {
         let Some(state) = self.of.get_mut(&session) else { return };
         let fetch = state.toggle(&sha);
-        let details = state.expanded.as_deref() == Some(sha.as_str()) && state.want_details(&sha);
+        // Read at every opening, so what points at the commit is what is there now.
+        let details =
+            (state.expanded.as_deref() == Some(sha.as_str())).then(|| state.want_details(&sha)).flatten();
         let root = state.root.clone();
         cx.notify();
         if let Some((root, commit)) = fetch {
             self.fetch_commit_files(session, root, commit, cx);
         }
-        if let (true, Some(root)) = (details, root) {
-            self.fetch_details(session, root, sha, cx);
+        if let (Some(request), Some(root)) = (details, root) {
+            self.fetch_details(session, root, sha, request, cx);
+        }
+    }
+
+    /// "Show more" / "Show less" under the open commit's message.
+    pub(super) fn toggle_body(&mut self, session: i64, cx: &mut Context<Self>) {
+        if let Some(state) = self.of.get_mut(&session) {
+            state.toggle_body();
+            cx.notify();
         }
     }
 
@@ -132,24 +143,40 @@ impl History {
         if let Some((root, commit)) = fetch {
             self.fetch_commit_files(session, root, commit, cx);
         }
-        if details {
-            self.fetch_details(session, details_root, sha, cx);
+        if let Some(request) = details {
+            self.fetch_details(session, details_root, sha, request, cx);
         }
     }
 
-    /// Reads `sha`'s details off the UI thread. The answer is kept for as long as the log stays the same;
-    /// one that lands for a terminal that has gone is dropped.
-    pub(super) fn fetch_details(&mut self, session: i64, root: PathBuf, sha: String, cx: &mut Context<Self>) {
+    /// Reads `sha`'s details off the UI thread (and builds what the block draws from them there), as read
+    /// number `request`: an answer for an older one is dropped. A copy that waited for them follows.
+    pub(super) fn fetch_details(
+        &mut self,
+        session: i64,
+        root: PathBuf,
+        sha: String,
+        request: u64,
+        cx: &mut Context<Self>,
+    ) {
         let task = cx.background_executor().spawn({
             let sha = sha.clone();
-            async move { git::commit_details(&root, &sha).map_err(|e| format!("{e:#}")) }
+            async move {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |d| d.as_secs() as i64);
+                git::commit_details(&root, &sha)
+                    .map(|details| Shown::new(details, now))
+                    .map_err(|e| format!("{e:#}"))
+            }
         });
         cx.spawn(async move |this, cx| {
             let result = task.await;
             let _ = this.update(cx, |this, cx| {
-                if let Some(state) = this.of.get_mut(&session) {
-                    state.details_loaded(&sha, result);
-                    cx.notify();
+                let Some(state) = this.of.get_mut(&session) else { return };
+                let taken = state.details_loaded(&sha, request, result);
+                cx.notify();
+                if taken {
+                    this.finish_pending_copy(session, &sha, cx);
                 }
             });
         })

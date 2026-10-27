@@ -1,17 +1,21 @@
-//! The opened commit's details as the block under its row: the subject and the whole message, the refs
-//! that point at it, who wrote and who committed it and when, its hash and parents, and how much it
-//! changed. The block draws from the log's record at once and from the commit's details once they are
-//! read; the list measures the row again when they land.
+//! The opened commit's details as the block under its row: the subject and the message (compact, with a
+//! "Show more", or whole), the refs that point at it, who wrote and who committed it and when, its hash
+//! and parents, and how much it changed. The block draws from the log's record at once and from what
+//! [`Shown`](super::shown::Shown) made of the details once they are read; the list measures the row again
+//! when they land. A frame builds no text of its own here and the block has a bounded number of
+//! elements: what a long message or many refs would add is cut when the details are read.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::git::{Block, Commit, CommitDetails, CommitRef, DiffStat, RefKind, Signature};
-use wormhole_core::view::panel::age;
+use wormhole_core::git::{Commit, RefKind};
 use wormhole_core::view::spoken;
+use wormhole_text::{keys, text};
 
 use super::copy::CopyWhat;
+use super::measure::caption_chars;
 use super::menu::commit_menu;
+use super::shown::{Fact, Shown, Tone};
 use super::state::CommitInfo;
 use super::view::{FILES_X, HistoryView};
 use crate::platform;
@@ -23,18 +27,18 @@ const LABEL_W: f32 = 72.0;
 
 impl HistoryView {
     /// The block for the open commit; nothing when it is not in the log.
-    pub(super) fn render_details(&self, ui: UiColors) -> AnyElement {
+    pub(super) fn render_details(&self, ui: UiColors, window: &Window, cx: &App) -> AnyElement {
         let Some(commit) = &self.expanded_commit else { return div().into_any_element() };
-        let details = match &self.info {
-            Some(CommitInfo::Loaded(details)) => Some(details),
+        let shown = match &self.info {
+            Some(CommitInfo::Loaded(shown)) => Some(shown),
             _ => None,
         };
-        let subject = details.map_or(commit.subject.as_str(), |d| d.subject()).to_string();
-        let when = details.map(|d| d.author.when()).unwrap_or_default();
-        let parents = details.map_or(1, |d| d.parents.len());
-        let spoken = spoken::commit_details(&commit.short, &subject, &commit.author, &when, parents);
-
-        div()
+        let spoken = match shown {
+            Some(shown) => shown.spoken.clone(),
+            None => spoken::commit_details(&commit.short, &commit.subject, &commit.author, "", 1).into(),
+        };
+        let (this, session) = (self.this.clone(), self.session);
+        let mut block = div()
             .id("commit-details")
             .role(Role::Group)
             .aria_label(spoken)
@@ -46,15 +50,25 @@ impl HistoryView {
             .pr(px(style::CARD_INSET))
             .py_2()
             .text_caption()
-            .child(self.heading(commit, subject, ui))
-            .children(self.message(details, ui))
-            .children(refs(details.map_or(&[][..], |d| &d.refs), ui))
-            .child(self.facts(commit, details, ui))
-            .into_any_element()
+            // The menu a key reaches with ↩ on the row: the copies, "Show more", the parents.
+            .on_mouse_down(MouseButton::Right, move |event, window, cx| {
+                cx.stop_propagation();
+                this.update(cx, |this, cx| this.show_details_menu(session, event.position, window, cx)).ok();
+            })
+            .child(self.heading(commit, shown, ui));
+        block = block.children(self.message(shown, ui, window, cx));
+        if let Some(shown) = shown {
+            block = block.children(refs(shown, ui));
+        }
+        block.child(self.facts(commit, shown, ui)).into_any_element()
     }
 
     /// The subject, in full, with the button that copies the whole message.
-    fn heading(&self, commit: &Commit, subject: String, ui: UiColors) -> Div {
+    fn heading(&self, commit: &Commit, shown: Option<&std::rc::Rc<Shown>>, ui: UiColors) -> Div {
+        let subject: SharedString = match shown {
+            Some(shown) => shown.subject.clone(),
+            None => commit.subject.clone().into(),
+        };
         div()
             .flex()
             .items_start()
@@ -70,117 +84,150 @@ impl HistoryView {
             )
             .child(self.copy_button(
                 "history-copy-message",
-                "Copy message",
+                text(keys::HISTORY_COPY_MESSAGE),
                 CopyWhat::Message,
                 &commit.sha,
                 ui,
             ))
     }
 
-    /// The body, block by block; what is not there yet, or could not be read, in a quiet line.
-    fn message(&self, details: Option<&std::rc::Rc<CommitDetails>>, ui: UiColors) -> Vec<AnyElement> {
-        let line = |color: Hsla, text: SharedString| div().text_color(color).child(text).into_any_element();
-        match (&self.info, details) {
-            (_, Some(details)) => {
-                let mut blocks: Vec<AnyElement> = details
-                    .blocks()
-                    .into_iter()
-                    .map(|block| match block {
-                        Block::Paragraph(text) | Block::Lines(text) => line(ui.text, text.into()),
-                        Block::Trailers(text) => line(ui.muted, text.into()),
-                    })
-                    .collect();
-                if details.message_cut {
-                    blocks.push(line(
-                        ui.muted,
-                        "The message is longer than this; the rest is left out.".into(),
-                    ));
+    /// The message: compact (about three lines of its first paragraph, and a "Show more" when something is
+    /// left out) or whole (in at most two text elements: the prose and the trailers). What is not there yet,
+    /// or could not be read, is a quiet line.
+    fn message(
+        &self,
+        shown: Option<&std::rc::Rc<Shown>>,
+        ui: UiColors,
+        window: &Window,
+        cx: &App,
+    ) -> Vec<AnyElement> {
+        let line = |color: Hsla, text: SharedString| div().text_color(color).child(text);
+        let Some(shown) = shown else {
+            return vec![
+                match &self.info {
+                    Some(CommitInfo::Failed(err)) => line(ui.danger_text, err.clone()),
+                    _ => line(ui.muted, text(keys::HISTORY_READING_DETAILS).into()),
                 }
-                blocks
+                .into_any_element(),
+            ];
+        };
+        let room = self.width - 2.0 * style::PANEL_ROW_X - style::INDENT;
+        let (compact, more) = shown.compact(caption_chars(room, window, cx));
+        let mut out: Vec<AnyElement> = Vec::new();
+        if self.body_expanded {
+            if !shown.whole.is_empty() {
+                out.push(line(ui.text, shown.whole.clone()).into_any_element());
             }
-            (Some(CommitInfo::Failed(err)), _) => vec![line(ui.danger_text, err.clone())],
-            _ => vec![line(ui.muted, "Reading details…".into())],
+            if !shown.trailers.is_empty() {
+                out.push(line(ui.muted, shown.trailers.clone()).into_any_element());
+            }
+            if shown.continues {
+                out.push(line(ui.muted, text(keys::HISTORY_MESSAGE_CONTINUES).into()).into_any_element());
+            }
+        } else if !compact.is_empty() {
+            out.push(line(ui.text, compact).into_any_element());
         }
+        if more {
+            let (this, session) = (self.this.clone(), self.session);
+            let key = if self.body_expanded { keys::HISTORY_SHOW_LESS } else { keys::HISTORY_SHOW_MORE };
+            out.push(
+                style::more_toggle("history-more", ui, text(key), self.body_expanded)
+                    .on_click(move |_, _, cx| {
+                        this.update(cx, |this, cx| this.toggle_body(session, cx)).ok();
+                    })
+                    .into_any_element(),
+            );
+        }
+        out
     }
 
-    /// Author, committer (when it is someone else, or another time), co-authors, the hash with its
-    /// buttons, the parents and the size of the change.
-    fn facts(&self, commit: &Commit, details: Option<&std::rc::Rc<CommitDetails>>, ui: UiColors) -> Div {
-        let now = self.now;
+    /// Author, committer (when it differs) and co-authors, the hash with its buttons, the parents and the
+    /// size of the change: a labelled line each, under a rule.
+    fn facts(&self, commit: &Commit, shown: Option<&std::rc::Rc<Shown>>, ui: UiColors) -> Div {
         let mut rows: Vec<AnyElement> = Vec::new();
-        match details {
-            Some(details) => {
-                rows.push(person_row(ui, "Author", &details.author, now));
-                if details.committer_differs() {
-                    rows.push(person_row(ui, "Committer", &details.committer, now));
-                }
-                for co in &details.co_authors {
-                    rows.push(fact(ui, "Co-author", named(ui, &co.name, &co.email), None));
-                }
-            }
-            None => rows.push(fact(
-                ui,
-                "Author",
-                named(ui, &commit.author, &format!("{} ago", age(now - commit.time))),
-                None,
-            )),
+        match shown {
+            Some(shown) => rows.extend(shown.people.iter().map(|fact| text_fact(ui, fact))),
+            None => rows.push(
+                fact_row(
+                    ui,
+                    text(keys::HISTORY_AUTHOR).into(),
+                    div().child(SharedString::from(commit.author.clone())),
+                    None,
+                )
+                .into_any_element(),
+            ),
         }
         rows.push(self.hash_row(commit, ui));
-        if let Some(details) = details
-            && let Some(row) = self.parents_row(details, ui)
+        if let Some(shown) = shown
+            && let Some(row) = self.parents_row(shown, ui)
         {
             rows.push(row);
         }
-        if let Some(files) = &self.files {
-            rows.push(stat_row(DiffStat::of(files), ui));
+        if let Some(stat) = &self.stat {
+            rows.push(text_fact(ui, stat));
         }
         div().flex().flex_col().gap_1().pt_2().rule_top(ui).children(rows)
     }
 
-    /// The short hash (the full one behind its button), and the menu of every other copy: the author, the
-    /// subject and the short hash have no button of their own, which every frame would pay for.
+    /// The short hash, the button that copies the full one, and the menu of every other copy: the author,
+    /// the subject and the short hash have no button of their own, which every frame would pay for.
     fn hash_row(&self, commit: &Commit, ui: UiColors) -> AnyElement {
-        let code = div().font_family(self.code_font.clone()).text_color(ui.text).child(commit.short.clone());
+        let code = div().font_family(self.code_font.clone()).child(commit.short.clone());
         let (this, sha, session) = (self.this.clone(), commit.sha.clone(), self.session);
-        let more = style::icon_button("history-copy-more", ui, IconName::Ellipsis, "More ways to copy")
-            .in_row()
-            .on_click(move |_, window, cx| {
-                platform::show_menu(commit_menu(&this, session, &sha), window.mouse_position(), window, cx);
-            });
+        let more =
+            style::icon_button("history-copy-more", ui, IconName::Ellipsis, text(keys::HISTORY_MORE_COPY))
+                .in_row()
+                .on_click(move |_, window, cx| {
+                    platform::show_menu(
+                        commit_menu(&this, session, &sha),
+                        window.mouse_position(),
+                        window,
+                        cx,
+                    );
+                });
         let buttons = div()
             .flex()
             .items_center()
-            .child(self.copy_button("history-copy-hash", "Copy hash", CopyWhat::Hash, &commit.sha, ui))
-            .child(more);
-        fact(ui, "Commit", code, Some(buttons.into_any_element()))
+            .child(self.copy_button(
+                "history-copy-hash",
+                text(keys::HISTORY_COPY_HASH),
+                CopyWhat::Hash,
+                &commit.sha,
+                ui,
+            ))
+            .child(more)
+            .into_any_element();
+        fact_row(ui, text(keys::HISTORY_COMMIT).into(), code, Some(buttons)).into_any_element()
     }
 
-    fn parents_row(&self, details: &CommitDetails, ui: UiColors) -> Option<AnyElement> {
-        if details.parents.is_empty() {
+    /// The parents as links (the ones the log lists open when clicked), at most a few, the rest counted.
+    fn parents_row(&self, shown: &Shown, ui: UiColors) -> Option<AnyElement> {
+        if shown.parents.is_empty() {
             return None;
         }
-        let label = if details.parents.len() > 1 { "Parents" } else { "Parent" };
-        let parents = details.parents.iter().fold(div().flex().flex_wrap().gap_x_2(), |row, parent| {
-            let short: String = parent.chars().take(7).collect();
+        let links = shown.parents.iter().enumerate().map(|(ix, parent)| {
             // Only a parent the log lists can be opened from here.
-            let listed = self.commits.iter().any(|c| &c.sha == parent);
-            let (this, sha, session) = (self.this.clone(), parent.clone(), self.session);
-            row.child(
-                div()
-                    .id(SharedString::from(format!("history-parent-{parent}")))
+            if !self.commits.iter().any(|c| c.sha == parent.sha) {
+                return div()
                     .font_family(self.code_font.clone())
-                    .when(!listed, |d| d.text_color(ui.text))
-                    .when(listed, |d| {
-                        d.text_color(ui.link).cursor_pointer().hover(|d| d.underline()).on_click(
-                            move |_, _, cx| {
-                                this.update(cx, |this, cx| this.reveal_parent(session, sha.clone(), cx)).ok();
-                            },
-                        )
-                    })
-                    .child(short),
-            )
+                    .child(parent.short.clone())
+                    .into_any_element();
+            }
+            let (this, sha, session) = (self.this.clone(), parent.sha.clone(), self.session);
+            style::hash_link(("history-parent", ix), ui, parent.short.clone(), parent.spoken.clone())
+                .font_family(self.code_font.clone())
+                .on_click(move |_, _, cx| {
+                    this.update(cx, |this, cx| this.reveal_parent(session, sha.clone(), cx)).ok();
+                })
+                .into_any_element()
         });
-        Some(fact(ui, label, parents, None))
+        let row = div()
+            .flex()
+            .flex_wrap()
+            .gap_x_2()
+            .children(links)
+            .children(shown.parents_more.clone().map(|more| div().text_color(ui.muted).child(more)));
+        Some(fact_row(ui, shown.parents_label.clone(), row, None).into_any_element())
     }
 
     /// An icon button that copies `what` of the commit `sha`.
@@ -203,13 +250,9 @@ impl HistoryView {
     }
 }
 
-/// A labelled fact: the label in a column of its own, the value after it, a button at the end.
-fn fact(
-    ui: UiColors,
-    label: &'static str,
-    value: impl IntoElement,
-    trailing: Option<AnyElement>,
-) -> AnyElement {
+/// A labelled fact: the label in a column of its own, the value after it, a button at the end. Three
+/// elements.
+fn fact_row(ui: UiColors, label: SharedString, value: impl IntoElement, trailing: Option<AnyElement>) -> Div {
     div()
         .flex()
         .items_start()
@@ -217,57 +260,34 @@ fn fact(
         .child(div().flex_none().w(px(LABEL_W)).text_color(ui.muted).child(label))
         .child(div().flex_1().min_w_0().text_color(ui.text).child(value))
         .children(trailing)
-        .into_any_element()
 }
 
-/// Someone's name and address, and under them when: "27 Oct 2026, 14:05 +02:00 · 3d ago".
-fn person_row(ui: UiColors, label: &'static str, who: &Signature, now: i64) -> AnyElement {
-    let ago = match age(now - who.time).as_str() {
-        "now" => "just now".to_string(),
-        // No break before "ago": it would stand alone on a line of its own.
-        ago => format!("{ago}\u{a0}ago"),
+/// A fact whose text is in one piece, with stretches in other colors (an address, a date, `+4`).
+fn text_fact(ui: UiColors, fact: &Fact) -> AnyElement {
+    let tint = |tone: &Tone| HighlightStyle {
+        color: Some(match tone {
+            Tone::Muted => ui.muted,
+            Tone::Added => ui.added,
+            Tone::Removed => ui.removed,
+        }),
+        ..HighlightStyle::default()
     };
-    let when = who.when();
-    let value = div().flex().flex_col().child(named(ui, &who.name, &who.email)).child(
-        div().text_color(ui.muted).child(if when.is_empty() { ago } else { format!("{when} · {ago}") }),
-    );
-    fact(ui, label, value, None)
+    let styled = StyledText::new(fact.text.clone())
+        .with_highlights(fact.spans.iter().map(|(range, tone)| (range.clone(), tint(tone))));
+    fact_row(ui, fact.label.clone(), styled, None).into_any_element()
 }
 
-/// A name and, after it in the muted color, the address (or whatever else goes with it).
-fn named(ui: UiColors, name: &str, rest: &str) -> Div {
-    div()
-        .flex()
-        .flex_wrap()
-        .gap_x_1()
-        .child(name.to_string())
-        .child(div().text_color(ui.muted).child(rest.to_string()))
-}
-
-/// "3 files  +12 −4", the numbers in the colors of the file rows.
-fn stat_row(stat: DiffStat, ui: UiColors) -> AnyElement {
-    let files = if stat.files == 1 { "1 file".to_string() } else { format!("{} files", stat.files) };
-    let value = div()
-        .flex()
-        .gap_2()
-        .tabular_nums()
-        .child(files)
-        .child(div().text_color(ui.added).child(format!("+{}", stat.added)))
-        .child(div().text_color(ui.removed).child(format!("\u{2212}{}", stat.removed)));
-    fact(ui, "Changes", value, None)
-}
-
-/// The branches, tags and HEAD that point at the commit, as chips; nothing when none does.
-fn refs(refs: &[CommitRef], ui: UiColors) -> Option<AnyElement> {
-    if refs.is_empty() {
+/// The branches, tags and HEAD that point at the commit, as chips (a few, the rest counted); nothing
+/// when none does.
+fn refs(shown: &Shown, ui: UiColors) -> Option<AnyElement> {
+    if shown.refs.is_empty() {
         return None;
     }
-    let chips = refs.iter().map(|r| match r.kind {
+    let chips = shown.refs.iter().map(|(kind, name)| match kind {
         RefKind::Head => style::status_badge(ui, ui.primary, "HEAD").into_any_element(),
-        RefKind::Tag => style::status_badge(ui, ui.warning_text, r.name.clone()).into_any_element(),
-        RefKind::Branch | RefKind::Remote => {
-            style::branch_chip(ui, Some(r.name.as_str()), None).into_any_element()
-        }
+        RefKind::Tag => style::status_badge(ui, ui.tag, name.clone()).into_any_element(),
+        RefKind::Branch | RefKind::Remote => style::branch_chip(ui, Some(name), None).into_any_element(),
     });
-    Some(div().flex().flex_wrap().items_center().gap_1().children(chips).into_any_element())
+    let more = shown.refs_more.clone().map(|more| div().text_color(ui.muted).child(more));
+    Some(div().flex().flex_wrap().items_center().gap_1().children(chips).children(more).into_any_element())
 }

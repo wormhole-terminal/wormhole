@@ -165,6 +165,7 @@ pub const TOKEN_USES: &[TokenUse] = &[
         &[
             "git.branch",
             "git.branch.background",
+            "git.tag",
             "banner.warning.background",
             "status.warning.text",
             "text.muted",

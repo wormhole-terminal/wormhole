@@ -150,28 +150,17 @@ pub fn pane(name: &str, folder: Option<&str>, position: usize, of: usize, focuse
     parts.join(", ")
 }
 
-/// A commit's row in the History tab: "fix: it, merge commit, a1b2c3d, by Ada, 3d ago". The row says
-/// whether its files are shown ("expanded") by its state, not here.
-pub fn commit_row(subject: &str, short: &str, author: &str, age: &str, merge: bool) -> String {
-    let mut parts = vec![subject.to_string()];
-    if merge {
-        parts.push("merge commit".to_string());
-    }
-    parts.push(short.to_string());
-    parts.push(format!("by {author}"));
-    parts.push(if age == "now" { "just now".to_string() } else { format!("{age} ago") });
-    parts.join(", ")
-}
-
-/// The details block of the open commit: "Details of a1b2c3d, fix: it, by Ada, 27 Oct 2026, 14:05 +02:00,
-/// 2 parents". Its buttons are named by their tooltips.
+/// The details block of the open commit: "Details of a1b2c3d, fix: it, by Ada, 2026-10-27 14:05 +02:00, 2
+/// parents". Its buttons are named by their tooltips.
 pub fn commit_details(short: &str, subject: &str, author: &str, when: &str, parents: usize) -> String {
-    let mut parts = vec![format!("Details of {short}"), subject.to_string(), format!("by {author}")];
+    use wormhole_text::keys;
+    let mut parts =
+        vec![keys::history_spoken_details(short), subject.to_string(), keys::history_spoken_by(author)];
     if !when.is_empty() {
         parts.push(when.to_string());
     }
     if parents > 1 {
-        parts.push(format!("{parents} parents"));
+        parts.push(keys::history_spoken_parents(&parents.to_string()));
     }
     parts.join(", ")
 }
@@ -307,7 +296,7 @@ mod tests {
         status_attention, status_counted, status_done, status_failed, status_needs_you, status_size,
         status_working,
     };
-    use super::{commit_details, commit_row, profile_chip, profile_choice};
+    use super::{commit_details, profile_chip, profile_choice};
     use crate::view::layout::status_bar::{Activity, Entry, Summary};
     use wormhole_term::BlockState;
 
@@ -358,17 +347,18 @@ mod tests {
     }
 
     #[test]
-    fn a_commit_is_read_with_what_makes_it_unusual() {
-        assert_eq!(commit_row("fix: it", "a1b2c3d", "Ada", "3d", false), "fix: it, a1b2c3d, by Ada, 3d ago");
-        assert_eq!(
-            commit_row("Merge x", "a1b2c3d", "Ada", "now", true),
-            "Merge x, merge commit, a1b2c3d, by Ada, just now"
-        );
-        assert_eq!(
-            commit_details("a1b2c3d", "fix: it", "Ada", "27 Oct 2026, 14:05 +02:00", 2),
-            "Details of a1b2c3d, fix: it, by Ada, 27 Oct 2026, 14:05 +02:00, 2 parents"
-        );
-        assert_eq!(commit_details("a1b2c3d", "fix: it", "Ada", "", 1), "Details of a1b2c3d, fix: it, by Ada");
+    fn the_details_of_a_commit_are_read_with_what_makes_them_unusual() {
+        use wormhole_text::{Language, with_language};
+        with_language(Language::ENGLISH, || {
+            assert_eq!(
+                commit_details("a1b2c3d", "fix: it", "Ada", "2026-10-27 14:05 +02:00", 2),
+                "Details of a1b2c3d, fix: it, by Ada, 2026-10-27 14:05 +02:00, 2 parents"
+            );
+            assert_eq!(
+                commit_details("a1b2c3d", "fix: it", "Ada", "", 1),
+                "Details of a1b2c3d, fix: it, by Ada"
+            );
+        });
     }
 
     #[test]

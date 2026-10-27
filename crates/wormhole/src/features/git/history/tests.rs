@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use super::shown::Shown;
 use super::state::{CommitInfo, DETAILS_KEPT};
 use super::{CommitFiles, FILES_KEPT, Fetched, HistoryKey, HistoryRow, HistoryState};
 use crate::window::repo::job::testing::ManualExecutor;
@@ -260,6 +261,7 @@ fn details(sha: &str) -> CommitDetails {
     CommitDetails {
         sha: sha.into(),
         parents: Vec::new(),
+        parents_short: Vec::new(),
         author: who.clone(),
         committer: who,
         refs: Vec::new(),
@@ -267,6 +269,16 @@ fn details(sha: &str) -> CommitDetails {
         message_cut: false,
         co_authors: Vec::new(),
     }
+}
+
+fn shown(sha: &str) -> Shown {
+    Shown::new(details(sha), 0)
+}
+
+/// Asks for `sha`'s details and has them arrive.
+fn read(history: &mut HistoryState, sha: &str) {
+    let request = history.want_details(sha).expect("asked");
+    assert!(history.details_loaded(sha, request, Ok(shown(sha))));
 }
 
 #[test]
@@ -278,68 +290,100 @@ fn the_open_commit_has_a_details_row_that_changes_as_they_arrive() {
     let at = before.iter().position(|r| matches!(r, HistoryRow::Details(_))).expect("a row for the details");
     assert_eq!(before[at - 1], HistoryRow::Commit(0), "right under its commit");
     // Asking marks it loading; once read, the row differs, so the list measures it again.
-    assert!(history.want_details("aaa"));
+    let request = history.want_details("aaa").expect("asked");
     let loading = history.rows();
     assert_ne!(loading[at], before[at]);
-    history.details_loaded("aaa", Ok(details("aaa")));
+    assert!(history.details_loaded("aaa", request, Ok(shown("aaa"))));
     assert_ne!(history.rows()[at], loading[at]);
-    assert_eq!(history.details_of("aaa").map(|d| d.subject().to_string()), Some("commit aaa".into()));
-    // A commit that is not open has no such row, and another's details change nothing here.
-    let shown = history.rows();
-    history.details_loaded("bbb", Ok(details("bbb")));
-    assert_eq!(history.rows(), shown);
+    assert_eq!(history.details_of("aaa").map(|d| d.subject.to_string()), Some("commit aaa".into()));
+    // Another's details change nothing here.
+    let now = history.rows();
+    read(&mut history, "bbb");
+    assert_eq!(history.rows(), now);
+    // Show more / Show less changes the row, and another commit opens compact again.
+    history.toggle_body();
+    assert_ne!(history.rows()[at], now[at]);
+    assert!(history.body_expanded);
+    history.toggle("bbb");
+    assert!(!history.body_expanded);
 }
 
 #[test]
-fn details_are_read_once_however_often_the_commit_is_opened() {
+fn details_are_read_at_each_opening_but_one_read_at_a_time() {
     let mut history = loaded();
-    assert!(history.want_details("aaa"));
-    assert!(!history.want_details("aaa"), "the read on its way is awaited");
-    history.details_loaded("aaa", Ok(details("aaa")));
-    assert!(!history.want_details("aaa"), "a read one is kept");
+    let first = history.want_details("aaa").expect("asked");
+    assert_eq!(history.want_details("aaa"), None, "the read on its way is awaited");
+    assert!(history.details_loaded("aaa", first, Ok(shown("aaa"))));
+    // Opened again: read again (what points at the commit may have moved), the kept copy staying shown.
+    let again = history.want_details("aaa").expect("asked again");
+    assert!(history.details_of("aaa").is_some(), "the old copy is on screen meanwhile");
+    assert!(!history.details_loaded("aaa", first, Ok(shown("aaa"))), "the first answer is out of date");
+    assert!(history.details_loaded("aaa", again, Ok(shown("aaa"))));
 }
 
 #[test]
 fn details_that_could_not_be_read_are_shown_while_open_and_tried_again_after() {
     let mut history = loaded();
     history.toggle("aaa");
-    assert!(history.want_details("aaa"));
-    history.details_loaded("aaa", Err("fatal: bad object".into()));
+    let request = history.want_details("aaa").expect("asked");
+    assert!(history.details_loaded("aaa", request, Err("fatal: bad object".into())));
     assert!(matches!(history.details.get("aaa"), Some(CommitInfo::Failed(_))));
-    assert!(history.want_details("aaa"), "asking again is a retry");
+    let retry = history.want_details("aaa").expect("asking again is a retry");
     // A failure for a commit that was closed meanwhile is not kept.
     history.toggle("aaa");
-    history.details_loaded("aaa", Err("boom".into()));
+    history.details_loaded("aaa", retry, Err("boom".into()));
     assert!(!history.details.contains_key("aaa"));
+    // A failed re-read leaves the copy that was kept.
+    read(&mut history, "bbb");
+    let reread = history.want_details("bbb").expect("asked");
+    history.details_loaded("bbb", reread, Err("boom".into()));
+    assert!(history.details_of("bbb").is_some());
 }
 
 #[test]
 fn the_details_cache_is_bounded_and_keeps_the_open_commit() {
     let mut history = loaded();
     history.toggle("aaa");
-    history.want_details("aaa");
-    history.details_loaded("aaa", Ok(details("aaa")));
+    read(&mut history, "aaa");
     for n in 0..DETAILS_KEPT + 10 {
-        history.details_loaded(&format!("other-{n}"), Ok(details("x")));
+        read(&mut history, &format!("other-{n}"));
     }
     assert!(history.details.len() <= DETAILS_KEPT + 1);
     assert!(history.details_of("aaa").is_some());
 }
 
 #[test]
-fn a_changed_log_drops_the_details_but_the_open_ones_are_read_again() {
+fn a_changed_log_drops_the_details_and_reads_the_open_ones_again() {
     let mut history = loaded();
     history.toggle("aaa");
-    for sha in ["aaa", "bbb"] {
-        history.details_loaded(sha, Ok(details(sha)));
-    }
-    // Loaded for "bbb" only because nothing waited for it: it is what the cache keeps for a copy.
-    assert_eq!(history.details_stale().as_deref(), Some("aaa"));
+    read(&mut history, "aaa");
+    read(&mut history, "bbb");
+    // A read on its way when the log changes is for the old log.
+    let old = history.want_details("aaa").expect("asked");
+    let (sha, new) = history.details_stale().expect("the open commit is read again");
+    assert_eq!(sha, "aaa");
     assert!(history.details_of("bbb").is_none());
     assert!(history.details_of("aaa").is_some(), "still on screen while it is read again");
-    history.toggle("aaa");
-    assert_eq!(history.details_stale(), None, "nothing is open, nothing to read again");
+    assert!(!history.details_loaded("aaa", old, Ok(shown("aaa"))), "the old log's answer is dropped");
+    assert!(history.details_loaded("aaa", new, Ok(shown("aaa"))));
+    // A commit that left the log is not read again, and nothing open reads nothing.
+    history.commits = Rc::default();
+    assert_eq!(history.details_stale(), None);
     assert!(history.details.is_empty());
+    let mut closed = loaded();
+    closed.toggle("aaa");
+    read(&mut closed, "aaa");
+    closed.toggle("aaa");
+    assert_eq!(closed.details_stale(), None);
+}
+
+#[test]
+fn the_files_of_a_commit_make_its_changes_fact_once() {
+    let mut history = loaded();
+    history.toggle("aaa");
+    history.files_loaded("aaa", Ok(vec![file("a.rs"), file("b.rs")]));
+    let fact = history.changes.get("aaa").expect("built with the files");
+    assert!(fact.text.starts_with("2 files"), "{}", fact.text);
 }
 
 #[test]

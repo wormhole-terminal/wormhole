@@ -55,3 +55,8 @@ notice-copied-commit-message = Copied commit message
 notice-copied-commit-subject = Copied subject
 
 notice-copied-commit-author = Copied author
+
+## What went wrong
+
+# A copy that needed the commit's details, which git could not read.
+notice-failed-copy-commit = Couldn't copy: git could not read the commit

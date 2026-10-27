@@ -88,6 +88,9 @@ pub const ITEM_LEAD_W: f32 = 16.0;
 /// How far each level of a tree (folders in Changes, files in a commit) steps in: one
 /// lead column and its gap.
 pub const INDENT: f32 = 24.0;
+
+/// A tooltip that carries a path or a sentence wraps at this width rather than running across the window.
+pub const TOOLTIP_W: f32 = 280.0;
 /// The room between the right panel's tab bar and what each tab shows.
 pub const PANEL_LIST_TOP: f32 = 4.0;
 /// How far in from the panel's edge a row inside a card has its content: the card's margin, its

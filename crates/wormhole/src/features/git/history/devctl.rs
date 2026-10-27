@@ -87,8 +87,16 @@ pub(crate) fn details(ws: &Workspace, cx: &mut Context<Workspace>) -> String {
         match state.details.get(&sha) {
             None | Some(CommitInfo::Loading) => out.push("loading".into()),
             Some(CommitInfo::Failed(err)) => out.push(format!("failed: {err}")),
-            Some(CommitInfo::Loaded(details)) => {
+            Some(CommitInfo::Loaded(shown)) => {
+                let details = &shown.details;
                 out.push(format!("subject: {}", details.subject()));
+                let view = if state.body_expanded { "whole" } else { "compact" };
+                let (compact, more) = shown.compact(40);
+                out.push(format!(
+                    "message: {view} (toggle {}; compact at 40 chars: {:?})",
+                    if more { "offered" } else { "none" },
+                    compact
+                ));
                 out.push(format!("body: {}", details.body().replace('\n', "\\n")));
                 out.push(format!("author: {} | {}", details.author.line(), details.author.when()));
                 if details.committer_differs() {
@@ -114,6 +122,11 @@ pub(crate) fn details(ws: &Workspace, cx: &mut Context<Workspace>) -> String {
         out.join("\n")
     })
     .unwrap_or_else(|| "none".into())
+}
+
+/// `commit-more`: "Show more" / "Show less" under the open commit's message.
+pub(crate) fn more(ws: &Workspace, cx: &mut Context<Workspace>) {
+    run(ws, cx, |history, session, _, cx| history.toggle_body(session, cx));
 }
 
 /// `commit-copy <hash|short|message|subject|author> [n]`: what the commit's menu item does, for the open
@@ -147,7 +160,8 @@ pub(crate) fn copy(
     .unwrap_or_else(|| Err("History is off".into()))
 }
 
-/// `clipboard`: the text on the clipboard, or `empty`.
+/// `clipboard`: the text a copy put on the clipboard (a background instance's own, never the system's),
+/// or `empty`.
 pub(crate) fn clipboard(cx: &App) -> String {
-    cx.read_from_clipboard().and_then(|item| item.text()).unwrap_or_else(|| "empty".into())
+    crate::platform::clipboard::read(cx).unwrap_or_else(|| "empty".into())
 }

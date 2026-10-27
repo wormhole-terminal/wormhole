@@ -10,7 +10,7 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use super::message::{self, Block, Contact, plain};
+use super::message::{self, Body, Contact, plain};
 use super::{FileChange, GitCmd, GitError};
 
 /// What git may print for the other fields and the message together before the message is given up
@@ -37,8 +37,9 @@ impl Signature {
         if self.email.is_empty() { self.name.clone() } else { format!("{} <{}>", self.name, self.email) }
     }
 
-    /// The time as its writer's clock showed it, "27 Oct 2026, 14:05 +02:00". The app has no time
-    /// zone database of its own to show it in the reader's.
+    /// The time as its writer's clock showed it, "2026-10-27 14:05 +02:00": numeric, so it reads the same in
+    /// every language (the app has no month names to translate, and no time zone database to show it in
+    /// the reader's zone).
     pub fn when(&self) -> String {
         let local = self
             .time
@@ -47,7 +48,7 @@ impl Signature {
         let Some(local) = local else { return String::new() };
         let sign = if self.offset < 0 { '-' } else { '+' };
         let minutes = self.offset.unsigned_abs() / 60;
-        format!("{} {sign}{:02}:{:02}", local.format("%-d %b %Y, %H:%M"), minutes / 60, minutes % 60)
+        format!("{} {sign}{:02}:{:02}", local.format("%Y-%m-%d %H:%M"), minutes / 60, minutes % 60)
     }
 }
 
@@ -76,6 +77,8 @@ pub struct CommitDetails {
     pub sha: String,
     /// Every parent, first one first: more than one for a merge, none for a root commit.
     pub parents: Vec<String>,
+    /// The same parents as git abbreviates them (`%p`), for showing.
+    pub parents_short: Vec<String>,
     pub author: Signature,
     pub committer: Signature,
     /// Branches, tags and HEAD pointing at the commit, as they were when it was read.
@@ -100,9 +103,9 @@ impl CommitDetails {
         message::body(&self.message)
     }
 
-    /// The body as paragraphs, lists and trailers, to draw: see [`Block`].
-    pub fn blocks(&self) -> Vec<Block> {
-        message::blocks(self.body())
+    /// The body ready to draw, compact or whole: see [`Body`].
+    pub fn body_view(&self) -> Body {
+        Body::of(self.body())
     }
 
     /// Whether the committer is someone else than the author, or committed at another time (an amend,
@@ -138,24 +141,29 @@ impl DiffStat {
 
 /// The fields of one commit, NUL-separated, the message last: it may hold any character but NUL.
 /// `%ad` and `%cd` are only the time zones (`--date=format:%z`): the times are the Unix ones.
-const FORMAT: &str = "%H%x00%P%x00%an%x00%ae%x00%at%x00%ad%x00%cn%x00%ce%x00%ct%x00%cd%x00%D%x00";
+const FORMAT: &str = "%H%x00%P%x00%p%x00%an%x00%ae%x00%at%x00%ad%x00%cn%x00%ce%x00%ct%x00%cd%x00%D%x00";
 
 /// How many fields [`FORMAT`] has, with the message.
-const FIELDS: usize = 12;
+const FIELDS: usize = 13;
 
 /// The commit `sha` of the repository at `root` in full. No signature is checked (that can run gpg),
 /// no diff is made, and notes and mailmaps are left out.
 pub fn commit_details(root: &Path, sha: &str) -> Result<CommitDetails> {
-    match read(root, sha, "%B") {
-        Ok(raw) => Ok(parse_details(&raw)),
-        // A message too big to print: its subject will do, and the details say it was cut.
-        Err(err) if matches!(GitError::of(&err), GitError::OutputTooLarge { .. }) => {
-            let mut details = parse_details(&read(root, sha, "%s")?);
-            details.message_cut = true;
-            Ok(details)
+    let too_large = |err: &anyhow::Error| matches!(GitError::of(err), GitError::OutputTooLarge { .. });
+    // A message too big to print: its subject will do, and the details say it was cut. A subject too
+    // big for that (it is one line, but a hostile repository may hold any) leaves no message at all.
+    for message in ["%B", "%s", ""] {
+        match read(root, sha, message) {
+            Ok(raw) => {
+                let mut details = parse_details(&raw);
+                details.message_cut |= message != "%B";
+                return Ok(details);
+            }
+            Err(err) if too_large(&err) => {}
+            Err(err) => return Err(err),
         }
-        Err(err) => Err(err),
     }
+    anyhow::bail!("git printed more than {READ_CAP} bytes for the commit's fields")
 }
 
 fn read(root: &Path, sha: &str, message: &str) -> Result<String> {
@@ -177,6 +185,7 @@ pub(crate) fn parse_details(raw: &str) -> CommitDetails {
     let mut next = || fields.next().unwrap_or("");
     let sha = next().trim().to_string();
     let parents = next().split_whitespace().take(LIST_CAP).map(str::to_string).collect();
+    let parents_short = next().split_whitespace().take(LIST_CAP).map(|p| plain(p, 40)).collect();
     let author = signature(next(), next(), next(), next());
     let committer = signature(next(), next(), next(), next());
     let refs = parse_refs(next());
@@ -184,6 +193,7 @@ pub(crate) fn parse_details(raw: &str) -> CommitDetails {
     CommitDetails {
         sha,
         parents,
+        parents_short,
         author,
         committer,
         refs,
@@ -258,9 +268,10 @@ mod tests {
 
     fn record(message: &str) -> String {
         format!(
-            "{}\0{}\0Ada\0ada@example.com\01700000000\0+0530\0Bob\0bob@example.com\01700000500\0-0700\0{}\0{message}",
+            "{}\0{}\0{}\0Ada\0ada@example.com\01700000000\0+0530\0Bob\0bob@example.com\01700000500\0-0700\0{}\0{message}",
             "a".repeat(40),
             "b".repeat(40),
+            "b".repeat(7),
             "HEAD -> refs/heads/main, tag: refs/tags/v1, refs/remotes/origin/main, refs/heads/feature/x"
         )
     }
@@ -270,6 +281,7 @@ mod tests {
         let details = parse_details(&record("fix: it\n\nThe body.\n"));
         assert_eq!(details.sha, "a".repeat(40));
         assert_eq!(details.parents, vec!["b".repeat(40)]);
+        assert_eq!(details.parents_short, vec!["b".repeat(7)]);
         assert_eq!((details.author.name.as_str(), details.author.email.as_str()), ("Ada", "ada@example.com"));
         assert_eq!((details.author.time, details.committer.time), (1_700_000_000, 1_700_000_500));
         assert_eq!(details.subject(), "fix: it");
@@ -327,8 +339,8 @@ mod tests {
         let details = parse_details(&record("x"));
         assert_eq!((details.author.offset, details.committer.offset), (19_800, -25_200));
         // 2023-11-14T22:13:20Z in +05:30 is the 15th, 03:43.
-        assert_eq!(details.author.when(), "15 Nov 2023, 03:43 +05:30");
-        assert_eq!(details.committer.when(), "14 Nov 2023, 15:21 -07:00");
+        assert_eq!(details.author.when(), "2023-11-15 03:43 +05:30");
+        assert_eq!(details.committer.when(), "2023-11-14 15:21 -07:00");
         assert_eq!(Signature { time: i64::MAX, ..details.author }.when(), "");
     }
 
@@ -444,7 +456,7 @@ mod tests {
         let details = head(root);
         assert_eq!((details.author.name.as_str(), details.author.email.as_str()), ("Dee", "dee@example.org"));
         assert_eq!(details.author.time, 1_577_934_245);
-        assert_eq!(details.author.when(), "2 Jan 2020, 03:04 +00:00");
+        assert_eq!(details.author.when(), "2020-01-02 03:04 +00:00");
         assert_eq!(details.committer.name, "Test");
         assert!(details.committer_differs());
     }
@@ -476,9 +488,22 @@ mod tests {
         let details = head(root);
         assert!(details.message_cut);
         assert_eq!(details.message, "big subject");
-        // A rev that looks like an option is not one.
-        assert!(commit_details(root, "--output=/tmp/should-not-exist").is_err());
-        assert!(!Path::new("/tmp/should-not-exist").exists());
+        // A subject that is itself past what git may print leaves no message, and still no error.
+        write(root, "a.txt", "4\n");
+        commit_all_from(root, &format!("{}\n", "z".repeat(2 << 20)));
+        let details = head(root);
+        assert!(details.message_cut);
+        assert_eq!(details.message, "");
+        assert_eq!(details.sha.len(), 40);
+    }
+
+    #[test]
+    fn a_rev_that_looks_like_an_option_is_not_one() {
+        let repo = repo_with(&[("a.txt", "1\n")]);
+        let scratch = tempfile::tempdir().expect("tempdir");
+        let target = scratch.path().join("written-by-git");
+        assert!(commit_details(repo.path(), &format!("--output={}", target.display())).is_err());
+        assert!(!target.exists(), "`--output` would have made git write there");
     }
 
     #[test]

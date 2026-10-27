@@ -80,16 +80,13 @@ pub(super) fn change_row(
                 .flex()
                 .flex_col()
                 .gap_1()
-                .max_w(px(TOOLTIP_W))
+                .max_w(px(style::TOOLTIP_W))
                 .child(div().font_family(code_font.clone()).child(path.clone()))
                 .child(div().text_caption().text_color(ui.muted).child(about.clone()))
         })
         .build(window, cx)
     })
 }
-
-/// A path tooltip wraps at this width rather than running across the window.
-const TOOLTIP_W: f32 = 280.0;
 
 /// How a renamed file's row says where it came from: the old name before the new one
 /// when the name changed, and a mark when the folder did. A `git mv` across folders that kept

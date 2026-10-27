@@ -16,6 +16,7 @@ pub(crate) const LOCALES: [Locale; 1] = [
             ("agent-sheet.ftl", include_str!("../../locales/en/agent-sheet.ftl")),
             ("common.ftl", include_str!("../../locales/en/common.ftl")),
             ("control.ftl", include_str!("../../locales/en/control.ftl")),
+            ("history.ftl", include_str!("../../locales/en/history.ftl")),
             ("notices.ftl", include_str!("../../locales/en/notices.ftl")),
             ("settings-advanced.ftl", include_str!("../../locales/en/settings-advanced.ftl")),
             ("settings-agents.ftl", include_str!("../../locales/en/settings-agents.ftl")),

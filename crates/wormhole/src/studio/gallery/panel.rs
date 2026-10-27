@@ -316,6 +316,15 @@ pub(super) fn render(
                 false,
                 false,
             ))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .px(px(style::CARD_INSET + style::INDENT))
+                    .child(style::more_toggle("g-commit-more", ui, "Show more", false))
+                    .child(style::hash_link("g-commit-parent", ui, "295829f", "Open parent 295829f")),
+            )
             .child(commit("g-commit-merge", "Merge branch 'dev' into main", "5be0a41", "2h", false, true))
     };
 

@@ -10,27 +10,29 @@ pub const MESSAGE_CAP: usize = 64 * 1024;
 /// Trailers and co-authors listed at most.
 const LIST_CAP: usize = 32;
 
-/// The message as it is shown and copied: capped, with Windows line ends made plain and control
-/// characters (the escape sequences of a hostile message) replaced. Whether it was cut.
+/// What a screen must not receive from a repository: control characters (escape sequences), and the
+/// characters that draw nothing or turn the text round (zero-width, bidirectional overrides).
+fn unfit(c: char) -> bool {
+    c.is_control() || wormhole_term::is_invisible(c)
+}
+
+/// The message as it is shown and copied: capped, with Windows line ends made plain and what a screen
+/// must not receive replaced (a line break and a tab stay). Whether it was cut.
 pub(crate) fn clean(message: &str) -> (String, bool) {
     let cut = message.len() > MESSAGE_CAP;
-    let kept = if cut { &message[..floor_char_boundary(message, MESSAGE_CAP)] } else { message };
+    let kept = if cut { &message[..message.floor_char_boundary(MESSAGE_CAP)] } else { message };
     let text: String = kept
         .replace("\r\n", "\n")
         .chars()
-        .map(|c| if c.is_control() && c != '\n' && c != '\t' { '\u{fffd}' } else { c })
+        .map(|c| if unfit(c) && c != '\n' && c != '\t' { '\u{fffd}' } else { c })
         .collect();
     (text.trim_end().to_string(), cut)
 }
 
-/// The largest index not over `at` that is the start of a character.
-fn floor_char_boundary(text: &str, at: usize) -> usize {
-    (0..=at.min(text.len())).rev().find(|&ix| text.is_char_boundary(ix)).unwrap_or(0)
-}
-
-/// One line of a name or an address: no control characters, at most `max` characters.
+/// One line of a name, an address or a subject: nothing a screen must not receive, at most `max`
+/// characters.
 pub(crate) fn plain(text: &str, max: usize) -> String {
-    text.chars().filter(|c| !c.is_control()).take(max).collect()
+    text.chars().filter(|&c| !unfit(c)).take(max).collect()
 }
 
 /// The first line.
@@ -67,7 +69,7 @@ pub(crate) fn blocks(body: &str) -> Vec<Block> {
         .enumerate()
         .map(|(ix, lines)| {
             let text = lines.join("\n");
-            if ix == last && lines.iter().all(|line| is_trailer(line)) {
+            if ix == last && is_trailer_block(&lines, ix > 0) {
                 Block::Trailers(text)
             } else if lines.iter().any(|line| keeps_its_break(line)) {
                 Block::Lines(text)
@@ -76,6 +78,36 @@ pub(crate) fn blocks(body: &str) -> Vec<Block> {
             }
         })
         .collect()
+}
+
+/// The keys that are trailers wherever they stand, even when they are all a body has.
+const KNOWN_TRAILERS: [&str; 14] = [
+    "signed-off-by",
+    "co-authored-by",
+    "reviewed-by",
+    "acked-by",
+    "tested-by",
+    "reported-by",
+    "suggested-by",
+    "helped-by",
+    "cc",
+    "fixes",
+    "closes",
+    "resolves",
+    "change-id",
+    "bug",
+];
+
+/// The last paragraph is trailers when every line reads `Key: value` and either something comes before it
+/// (`after_prose`) or the keys are ones that only trailers use. A body that is one `Note: this is why`
+/// is a sentence, not a trailer.
+fn is_trailer_block(lines: &[&str], after_prose: bool) -> bool {
+    lines.iter().all(|line| is_trailer(line))
+        && (after_prose
+            || lines.iter().all(|line| {
+                let key = line.split_once(':').map_or("", |(key, _)| key);
+                KNOWN_TRAILERS.iter().any(|known| key.eq_ignore_ascii_case(known))
+            }))
 }
 
 /// `Signed-off-by: Ada <a@b.c>`, `Fixes: #12`: a key of letters, digits and dashes, a colon and a value.
@@ -98,6 +130,136 @@ fn keeps_its_break(line: &str) -> bool {
     let numbered =
         digits > 0 && trimmed[digits..].starts_with(['.', ')']) && trimmed[digits + 1..].starts_with(' ');
     numbered || ["- ", "* ", "+ ", "> ", "```", "# ", "|"].iter().any(|marker| trimmed.starts_with(marker))
+}
+
+/// How many lines of its first paragraph a commit's body shows while it is compact.
+pub const COMPACT_LINES: usize = 3;
+
+/// How much of a body is drawn whole (its text, and its trailers apart): a long message is for
+/// copying, the screen shows the start of it and says so.
+pub const DISPLAY_CAP: usize = 6_000;
+
+/// How many lines of a body are drawn whole: a message of thousands of one-line paragraphs is cut here,
+/// whatever its length in characters.
+pub const DISPLAY_LINES: usize = 80;
+
+/// A commit's body ready to draw, made once when the commit's details are read: the compact view's
+/// text, the whole view's text (the blocks joined, so a body of a thousand paragraphs is not a thousand
+/// elements), and what is in neither.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Body {
+    /// The first block, for the compact view: empty when the body is empty or starts with its trailers.
+    pub first: String,
+    /// How many characters each of the first lines of that block has (at most [`COMPACT_LINES`] + 1 are
+    /// kept): what the compact view's height is estimated from.
+    first_lines: Vec<usize>,
+    /// Every block but the trailers, apart by a blank line, cut at [`DISPLAY_CAP`] characters.
+    pub text: String,
+    /// The closing trailers, cut at the same.
+    pub trailers: String,
+    /// Some of `text` or `trailers` was cut.
+    pub cut: bool,
+    /// There is a second block or there are trailers.
+    others: bool,
+}
+
+impl Body {
+    /// The body `body` (see [`body`]) as it is drawn.
+    pub fn of(body: &str) -> Self {
+        let blocks = blocks(body);
+        let first = blocks.first().filter(|block| !matches!(block, Block::Trailers(_)));
+        let first_lines = first
+            .map(|block| match block {
+                Block::Paragraph(text) | Block::Lines(text) | Block::Trailers(text) => {
+                    text.split('\n').take(COMPACT_LINES + 1).map(|line| line.chars().count()).collect()
+                }
+            })
+            .unwrap_or_default();
+        let (mut text, mut trailers) = (Vec::new(), Vec::new());
+        for block in &blocks {
+            match block {
+                Block::Paragraph(t) | Block::Lines(t) => text.push(t.as_str()),
+                Block::Trailers(t) => trailers.push(t.as_str()),
+            }
+        }
+        let (text, cut_text) = cap(&text.join("\n\n"), DISPLAY_CAP, DISPLAY_LINES);
+        let (trailers, cut_trailers) = cap(&trailers.join("\n"), DISPLAY_CAP / 4, DISPLAY_LINES / 4);
+        Self {
+            first: first
+                .map(|block| match block {
+                    Block::Paragraph(t) | Block::Lines(t) | Block::Trailers(t) => {
+                        cap(t, DISPLAY_CAP, DISPLAY_LINES).0
+                    }
+                })
+                .unwrap_or_default(),
+            first_lines,
+            text,
+            trailers,
+            cut: cut_text || cut_trailers,
+            others: blocks.len() > 1 || (first.is_none() && !blocks.is_empty()),
+        }
+    }
+
+    /// Whether the body has nothing to show.
+    pub fn is_empty(&self) -> bool {
+        self.text.is_empty() && self.trailers.is_empty()
+    }
+
+    /// Whether the compact view leaves anything out, for lines of about `line_chars` characters: a second
+    /// block, trailers, or a first block that wraps to more than [`COMPACT_LINES`] lines. The wrapping is
+    /// an estimate (the view wraps by pixels), made to err towards "more": an offer that hides nothing
+    /// costs a click, a missing one hides text.
+    pub fn more(&self, line_chars: usize) -> bool {
+        let line_chars = line_chars.max(1);
+        let lines: usize = self.first_lines.iter().map(|len| len.div_ceil(line_chars).max(1)).sum();
+        self.others || lines > COMPACT_LINES
+    }
+}
+
+impl Body {
+    /// The compact view's text for lines of about `line_chars` characters: the first block up to
+    /// [`COMPACT_LINES`] lines, an ellipsis where it was cut (at a word when there is one near). Made
+    /// here, by the same estimate as [`Body::more`], rather than by the view clamping its lines: a clamp
+    /// makes the text system lay the whole block out again every frame.
+    pub fn compact(&self, line_chars: usize) -> String {
+        let line_chars = line_chars.max(2);
+        let mut left = COMPACT_LINES;
+        let mut out = String::new();
+        let mut lines = self.first.split('\n').peekable();
+        while let Some(line) = lines.next() {
+            let chars = line.chars().count();
+            let needs = chars.div_ceil(line_chars).max(1);
+            if !out.is_empty() {
+                out.push('\n');
+            }
+            if needs <= left {
+                out.push_str(line);
+                left -= needs;
+                if left == 0 && lines.peek().is_some() {
+                    out.push('\u{2026}');
+                    break;
+                }
+                continue;
+            }
+            // This line does not fit what is left: cut it, at a word when one is in the last fifth.
+            let keep: String = line.chars().take(left * line_chars - 1).collect();
+            let at = keep.rfind(' ').filter(|&at| at * 5 >= keep.len() * 4).unwrap_or(keep.len());
+            out.push_str(keep[..at].trim_end());
+            out.push('\u{2026}');
+            break;
+        }
+        out
+    }
+}
+
+/// `text` cut to `max` characters and `lines` lines (on a character), and whether it was.
+fn cap(text: &str, max: usize, lines: usize) -> (String, bool) {
+    let by_chars = text.char_indices().nth(max).map(|(at, _)| at);
+    let by_lines = text.match_indices('\n').nth(lines.saturating_sub(1)).map(|(at, _)| at);
+    match by_chars.into_iter().chain(by_lines).min() {
+        Some(at) => (text[..at].trim_end().to_string(), true),
+        None => (text.to_string(), false),
+    }
 }
 
 /// A name, and the address it was given with.
@@ -155,7 +317,6 @@ mod tests {
         assert!(cut);
         assert!(text.len() <= MESSAGE_CAP);
         assert!(text.starts_with("subject\n\néé"));
-        assert_eq!(floor_char_boundary("aé", 2), 1, "inside the two-byte é: back to its start");
     }
 
     #[test]
@@ -177,8 +338,7 @@ mod tests {
         );
         assert!(blocks("").is_empty());
         assert!(blocks("\n\n \n\n").is_empty());
-        // A sentence with a colon is not a trailer, and neither is a middle paragraph of them.
-        assert_eq!(blocks("Note: this is why."), [Block::Trailers("Note: this is why.".into())]);
+        // A key with a space in it is a sentence, and a paragraph of trailers that is not the last is prose.
         assert_eq!(
             blocks("Why it matters: a lot, really.\n\nFixes: #1\n\nclosing words"),
             [
@@ -187,6 +347,87 @@ mod tests {
                 Block::Paragraph("closing words".into()),
             ]
         );
+    }
+
+    #[test]
+    fn a_body_is_drawn_from_its_first_block_and_all_of_it_in_one_piece() {
+        let body = Body::of(
+            "First paragraph,\nwrapped.\n\nSecond.\n\n- a list\n- of two\n\nFixes: #1\nCc: Bob <b@x.y>",
+        );
+        assert_eq!(body.first, "First paragraph, wrapped.");
+        assert_eq!(body.text, "First paragraph, wrapped.\n\nSecond.\n\n- a list\n- of two");
+        assert_eq!(body.trailers, "Fixes: #1\nCc: Bob <b@x.y>");
+        assert!(!body.cut);
+        assert!(body.more(80), "more blocks follow");
+        assert!(Body::of("").is_empty() && Body::default().is_empty());
+        assert!(!Body::of("").more(40));
+    }
+
+    #[test]
+    fn a_short_single_paragraph_needs_no_toggle_and_a_long_one_does() {
+        assert!(!Body::of(&"x".repeat(100)).more(40), "three lines of forty");
+        assert!(Body::of(&"x".repeat(121)).more(40), "a fourth line");
+        // A list counts its own line breaks, each wrapped on its own.
+        assert!(Body::of("- a\n- b\n- c\n- d").more(40));
+        assert!(!Body::of("- a\n- b\n- c").more(40));
+        let _ = Body::of("x").more(0); // a zero width never panics
+    }
+
+    #[test]
+    fn the_compact_text_is_three_lines_and_an_ellipsis() {
+        let line = |n: usize| "word ".repeat(n).trim_end().to_string();
+        // Fits: as it is.
+        assert_eq!(Body::of("short text").compact(40), "short text");
+        // 200 characters in lines of 40 take five: cut inside the third, at a word.
+        let long = Body::of(&line(40));
+        let compact = long.compact(40);
+        assert!(compact.ends_with('\u{2026}'));
+        assert!(compact.chars().count() <= 3 * 40, "{}", compact.chars().count());
+        assert!(!compact.trim_end_matches('\u{2026}').ends_with(' '));
+        // A list keeps its breaks and is cut after its third line (or where a long line runs out).
+        let list = Body::of("- one\n- two\n- three\n- four\n- five");
+        assert_eq!(list.compact(40), "- one\n- two\n- three\u{2026}");
+        let wrapped = Body::of(&format!("- {}\n- b\n- c", "x".repeat(70)));
+        assert_eq!(wrapped.compact(40).lines().count(), 2, "the first item takes two of the three lines");
+        // Nothing to show compact for a body of trailers, and no panic for odd widths.
+        assert_eq!(Body::of("Fixes: #1").compact(40), "");
+        let _ = Body::of("x y z").compact(0);
+        let _ = Body::of("x y z").compact(1);
+    }
+
+    #[test]
+    fn trailers_alone_are_left_out_of_the_compact_view_and_a_note_is_not_trailers() {
+        let trailers = Body::of("Signed-off-by: Ada <a@b.c>\nFixes: #4");
+        assert_eq!(trailers.first, "");
+        assert!(trailers.more(80), "something to show, but not compact");
+        assert_eq!(
+            (trailers.text.as_str(), trailers.trailers.as_str()),
+            ("", "Signed-off-by: Ada <a@b.c>\nFixes: #4")
+        );
+        // One paragraph that happens to read `Note: …` is the body, shown compact.
+        let note = Body::of("Note: this is why.");
+        assert_eq!(note.first, "Note: this is why.");
+        assert!(!note.more(80));
+        assert_eq!(blocks("Note: this is why."), [Block::Paragraph("Note: this is why.".into())]);
+        // After prose any `Key: value` closing paragraph is trailers, as git reads them.
+        assert_eq!(
+            blocks("Why.\n\nNote: this is why."),
+            [Block::Paragraph("Why.".into()), Block::Trailers("Note: this is why.".into())]
+        );
+    }
+
+    #[test]
+    fn what_is_drawn_is_bounded_however_long_the_message() {
+        let many: String = (0..5_000).map(|n| format!("paragraph {n}\n\n")).collect();
+        let body = Body::of(&many);
+        assert!(body.cut);
+        assert!(body.text.chars().count() <= DISPLAY_CAP);
+        assert!(body.text.lines().count() <= DISPLAY_LINES, "{}", body.text.lines().count());
+        assert!(body.more(80));
+        // Invisible characters are gone from what a repository sends.
+        let (text, _) = clean("a\u{202e}b\u{200b}c");
+        assert_eq!(text, "a\u{fffd}b\u{fffd}c");
+        assert_eq!(plain("x\u{202e}y\u{200b}z", 10), "xyz");
     }
 
     #[test]

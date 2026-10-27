@@ -117,9 +117,16 @@ pub fn age(seconds: i64) -> String {
     }
 }
 
+/// [`age`] in words: "3d ago", "just now" under a minute. The one place that decides when it is "now", so
+/// no caller writes "now ago".
+pub fn ago_words(seconds: i64) -> String {
+    use wormhole_text::{keys, text};
+    if seconds < 60 { text(keys::HISTORY_JUST_NOW).to_string() } else { keys::history_ago(&age(seconds)) }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{StepRow, age, folded_note, note_cap, section_folded, steps, untracked_apart};
+    use super::{StepRow, age, ago_words, folded_note, note_cap, section_folded, steps, untracked_apart};
     use crate::view::limits::{DONE_FOLD_ABOVE, FOLD_ABOVE, NOTE_OPEN_MAX_LINES};
     use StepRow::{Done, Draft, Step};
 
@@ -213,6 +220,17 @@ mod tests {
         assert_eq!(note_cap(31, false, false), Some(NOTE_OPEN_MAX_LINES));
         assert_eq!(note_cap(31, true, false), None, "editing lifts the cap");
         assert_eq!(note_cap(31, false, true), None, "so does Show all");
+    }
+
+    #[test]
+    fn ago_is_never_now_ago() {
+        use wormhole_text::{Language, with_language};
+        with_language(Language::ENGLISH, || {
+            assert_eq!(ago_words(-5), "just now");
+            assert_eq!(ago_words(59), "just now");
+            assert_eq!(ago_words(60), "1m\u{a0}ago");
+            assert_eq!(ago_words(3 * 86_400), "3d\u{a0}ago");
+        });
     }
 
     #[test]

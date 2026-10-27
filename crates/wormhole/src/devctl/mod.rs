@@ -262,6 +262,8 @@
 //!   commit-details   the open commit's details block as text: subject, body, author, committer (when it
 //!                   differs), co-authors, parents, refs and the size of the change; `loading` or the
 //!                   reason it `failed`
+//!   commit-more     "Show more" / "Show less" under the open commit's message (`commit-details` says
+//!                   whether it is `compact` or `whole`; another commit opens compact)
 //!   commit-copy <hash|short|message|subject|author> [n]   the commit menu's copy item, for the open
 //!                   commit or the n-th of the log (the message and author are read first when need be)
 //!   clipboard       the text on the clipboard now (`empty` when there is none)

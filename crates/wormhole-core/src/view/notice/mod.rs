@@ -12,5 +12,5 @@ mod message;
 mod place;
 
 pub use machine::{ChipRules, Effect, Phase};
-pub use message::{Copied, Driven, Driver, Glyph, Notice};
+pub use message::{Copied, Driven, Driver, Failed, Glyph, Notice};
 pub use place::{Placed, Spot, WINDOW_MARGIN, place};

@@ -63,6 +63,7 @@ pub const CONTRAST_PAIRS: &[ContrastPair] = &[
     pair("diff.line_number", "diff.removed.background", 3.0),
     pair("git.branch", "sidebar.background", 4.5),
     pair("git.branch", "surface.panel", 4.5),
+    pair("git.tag", "surface.panel", 4.5),
     on("git.branch", "git.branch.background", "band.solid", 4.5),
     pair("primary", "surface.window", 3.0),
     // The focus ring on every surface a focused control or row can sit on.

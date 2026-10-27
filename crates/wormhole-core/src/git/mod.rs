@@ -58,7 +58,7 @@ pub use diff_text::{byte_size, lfs_side, lfs_summary, sizes_label, too_large_det
 pub use head::{HeadCommit, head_commit, worktree_of};
 pub use lfs::{LfsChange, LfsPointer, parse_pointer};
 pub use log::{LOG_LIMIT, branches, commit_files, commit_spec, is_ancestor, log, log_failure};
-pub use message::{Block, Contact, MESSAGE_CAP};
+pub use message::{Block, Body, COMPACT_LINES, Contact, DISPLAY_CAP, DISPLAY_LINES, MESSAGE_CAP};
 pub use split::{Cell, Side, SplitRow, sides, split_rows};
 pub use status::{changed_files, status, status_summary};
 pub use submodule::{
@@ -253,9 +253,10 @@ impl Commit {
             short: fields[1].to_string(),
             parent: fields[2].split(' ').next().filter(|p| !p.is_empty()).map(str::to_string),
             merge: fields[2].split(' ').filter(|p| !p.is_empty()).count() > 1,
-            author: fields[3].to_string(),
+            author: message::plain(fields[3], 256),
             time: fields[4].parse().unwrap_or(0),
-            subject: fields[5].to_string(),
+            // One clean line: what a repository sends may hold escapes or text that turns round.
+            subject: message::plain(fields[5], 512),
         })
     }
 }

@@ -32,6 +32,7 @@ mod anchor;
 pub mod apps;
 pub mod auth;
 pub mod background_mode;
+pub mod clipboard;
 pub mod default_app;
 pub mod dock;
 // Built on macOS too, though only used elsewhere, so it can't drift from `macos/` (`parity`).

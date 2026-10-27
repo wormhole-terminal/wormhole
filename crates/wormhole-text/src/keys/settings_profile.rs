@@ -7,118 +7,118 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Profile"
-pub const SETTINGS_SECTION_PROFILE: Key = Key::new(712);
+pub const SETTINGS_SECTION_PROFILE: Key = Key::new(745);
 /// "Every page here is this profile's. A new profile starts as a copy of one you have, without its terminals or agent logins."
-pub const SETTINGS_SECTION_PROFILE_INTRO: Key = Key::new(713);
+pub const SETTINGS_SECTION_PROFILE_INTRO: Key = Key::new(746);
 /// "Name and colour"
-pub const SETTINGS_PROFILE_NAME: Key = Key::new(714);
+pub const SETTINGS_PROFILE_NAME: Key = Key::new(747);
 /// "profile rename avatar letter swatch colour color edge"
-pub const SETTINGS_PROFILE_NAME_KEYWORDS: Key = Key::new(715);
+pub const SETTINGS_PROFILE_NAME_KEYWORDS: Key = Key::new(748);
 /// "Start new terminals in"
-pub const SETTINGS_PROFILE_START: Key = Key::new(716);
+pub const SETTINGS_PROFILE_START: Key = Key::new(749);
 /// "folder directory cwd home path open also claim"
-pub const SETTINGS_PROFILE_START_KEYWORDS: Key = Key::new(717);
+pub const SETTINGS_PROFILE_START_KEYWORDS: Key = Key::new(750);
 /// "Environment"
-pub const SETTINGS_PROFILE_ENV: Key = Key::new(718);
+pub const SETTINGS_PROFILE_ENV: Key = Key::new(751);
 /// "Variables this profile's terminals start with"
-pub const SETTINGS_PROFILE_ENV_DESCRIPTION: Key = Key::new(719);
+pub const SETTINGS_PROFILE_ENV_DESCRIPTION: Key = Key::new(752);
 /// "env variable aws path registry export"
-pub const SETTINGS_PROFILE_ENV_KEYWORDS: Key = Key::new(720);
+pub const SETTINGS_PROFILE_ENV_KEYWORDS: Key = Key::new(753);
 /// "Git identity"
-pub const SETTINGS_PROFILE_GIT: Key = Key::new(721);
+pub const SETTINGS_PROFILE_GIT: Key = Key::new(754);
 /// "Set in its terminals only; Wormhole never writes to a repository."
-pub const SETTINGS_PROFILE_GIT_DESCRIPTION: Key = Key::new(722);
+pub const SETTINGS_PROFILE_GIT_DESCRIPTION: Key = Key::new(755);
 /// "author committer name email commit user"
-pub const SETTINGS_PROFILE_GIT_KEYWORDS: Key = Key::new(723);
+pub const SETTINGS_PROFILE_GIT_KEYWORDS: Key = Key::new(756);
 /// "Agent logins"
-pub const SETTINGS_PROFILE_LOGINS: Key = Key::new(724);
+pub const SETTINGS_PROFILE_LOGINS: Key = Key::new(757);
 /// "A separate login for each agent."
-pub const SETTINGS_PROFILE_LOGINS_DESCRIPTION: Key = Key::new(725);
+pub const SETTINGS_PROFILE_LOGINS_DESCRIPTION: Key = Key::new(758);
 /// "claude codex account config dir home sign in"
-pub const SETTINGS_PROFILE_LOGINS_KEYWORDS: Key = Key::new(726);
+pub const SETTINGS_PROFILE_LOGINS_KEYWORDS: Key = Key::new(759);
 /// "Danger zone"
-pub const SETTINGS_PROFILE_GROUP_DANGER_ZONE: Key = Key::new(727);
+pub const SETTINGS_PROFILE_GROUP_DANGER_ZONE: Key = Key::new(760);
 /// "Delete profile"
-pub const SETTINGS_PROFILE_DELETE: Key = Key::new(728);
+pub const SETTINGS_PROFILE_DELETE: Key = Key::new(761);
 /// "Its terminals, notes, tasks and settings are removed and its windows close."
-pub const SETTINGS_PROFILE_DELETE_DESCRIPTION: Key = Key::new(729);
+pub const SETTINGS_PROFILE_DELETE_DESCRIPTION: Key = Key::new(762);
 /// "remove danger"
-pub const SETTINGS_PROFILE_DELETE_KEYWORDS: Key = Key::new(730);
+pub const SETTINGS_PROFILE_DELETE_KEYWORDS: Key = Key::new(763);
 /// "Choose a folder"
-pub const SETTINGS_PROFILE_CHOOSE_A_FOLDER: Key = Key::new(731);
+pub const SETTINGS_PROFILE_CHOOSE_A_FOLDER: Key = Key::new(764);
 /// "Stop opening this folder in the profile"
-pub const SETTINGS_PROFILE_STOP_OPENING_FOLDER: Key = Key::new(732);
+pub const SETTINGS_PROFILE_STOP_OPENING_FOLDER: Key = Key::new(765);
 /// "Add a folder…"
-pub const SETTINGS_PROFILE_ADD_A_FOLDER: Key = Key::new(733);
+pub const SETTINGS_PROFILE_ADD_A_FOLDER: Key = Key::new(766);
 /// "The Default profile stays: it holds the data Wormhole always had."
-pub const SETTINGS_PROFILE_THE_DEFAULT_PROFILE_STAYS_IT_HOLDS: Key = Key::new(734);
+pub const SETTINGS_PROFILE_THE_DEFAULT_PROFILE_STAYS_IT_HOLDS: Key = Key::new(767);
 /// "Delete profile…"
-pub const SETTINGS_PROFILE_DELETE_PROFILE: Key = Key::new(735);
+pub const SETTINGS_PROFILE_DELETE_PROFILE: Key = Key::new(768);
 /// "Cancel"
-pub const SETTINGS_PROFILE_CANCEL: Key = Key::new(736);
+pub const SETTINGS_PROFILE_CANCEL: Key = Key::new(769);
 /// "Delete"
-pub const SETTINGS_PROFILE_DELETE_BUTTON: Key = Key::new(737);
+pub const SETTINGS_PROFILE_DELETE_BUTTON: Key = Key::new(770);
 /// "Name"
-pub const SETTINGS_PROFILE_NAME_FIELD: Key = Key::new(738);
+pub const SETTINGS_PROFILE_NAME_FIELD: Key = Key::new(771);
 /// "~ (the home folder)"
-pub const SETTINGS_PROFILE_THE_HOME_FOLDER: Key = Key::new(739);
+pub const SETTINGS_PROFILE_THE_HOME_FOLDER: Key = Key::new(772);
 /// "Email"
-pub const SETTINGS_PROFILE_EMAIL: Key = Key::new(740);
+pub const SETTINGS_PROFILE_EMAIL: Key = Key::new(773);
 /// "NAME=value, one per line"
-pub const SETTINGS_PROFILE_NAME_VALUE_ONE_PER_LINE: Key = Key::new(741);
+pub const SETTINGS_PROFILE_NAME_VALUE_ONE_PER_LINE: Key = Key::new(774);
 /// "Choose"
-pub const SETTINGS_PROFILE_CHOOSE: Key = Key::new(742);
+pub const SETTINGS_PROFILE_CHOOSE: Key = Key::new(775);
 /// "Wormhole's defaults"
-pub const SETTINGS_PROFILE_WORMHOLES_DEFAULTS: Key = Key::new(743);
+pub const SETTINGS_PROFILE_WORMHOLES_DEFAULTS: Key = Key::new(776);
 /// "Give the profile a name"
-pub const SETTINGS_PROFILE_GIVE_THE_PROFILE_A_NAME: Key = Key::new(744);
+pub const SETTINGS_PROFILE_GIVE_THE_PROFILE_A_NAME: Key = Key::new(777);
 /// "New profile"
-pub const SETTINGS_PROFILE_NEW_PROFILE: Key = Key::new(745);
+pub const SETTINGS_PROFILE_NEW_PROFILE: Key = Key::new(778);
 /// "Start from"
-pub const SETTINGS_PROFILE_START_FROM: Key = Key::new(746);
+pub const SETTINGS_PROFILE_START_FROM: Key = Key::new(779);
 /// "Agent logins are never copied: the new profile signs in on its own."
-pub const SETTINGS_PROFILE_LOGINS_NEVER_COPIED: Key = Key::new(747);
+pub const SETTINGS_PROFILE_LOGINS_NEVER_COPIED: Key = Key::new(780);
 /// "Create"
-pub const SETTINGS_PROFILE_CREATE: Key = Key::new(748);
+pub const SETTINGS_PROFILE_CREATE: Key = Key::new(781);
 
 /// ```text
 /// Where a new terminal starts. A folder you add below opens in { $profile } too.
 /// ```
 pub fn settings_profile_start_caption_none(profile: &str) -> String {
-    crate::active::message(749, &[("profile", Arg::Str(profile))])
+    crate::active::message(782, &[("profile", Arg::Str(profile))])
 }
 
 /// ```text
 /// Folders under { $folder } open in { $profile } too.
 /// ```
 pub fn settings_profile_start_caption_one(folder: &str, profile: &str) -> String {
-    crate::active::message(750, &[("folder", Arg::Str(folder)), ("profile", Arg::Str(profile))])
+    crate::active::message(783, &[("folder", Arg::Str(folder)), ("profile", Arg::Str(profile))])
 }
 
 /// ```text
 /// Folders under { $folders } and { $last } open in { $profile } too.
 /// ```
 pub fn settings_profile_start_caption_many(folders: &str, last: &str, profile: &str) -> String {
-    crate::active::message(751, &[("folders", Arg::Str(folders)), ("last", Arg::Str(last)), ("profile", Arg::Str(profile))])
+    crate::active::message(784, &[("folders", Arg::Str(folders)), ("last", Arg::Str(last)), ("profile", Arg::Str(profile))])
 }
 
 /// ```text
 /// Delete { $profile }? Its terminals, notes, tasks and settings are removed, and its windows close. { -brand } goes to Default.
 /// ```
 pub fn settings_profile_delete_question(profile: &str) -> String {
-    crate::active::message(752, &[("profile", Arg::Str(profile))])
+    crate::active::message(785, &[("profile", Arg::Str(profile))])
 }
 
 /// ```text
 /// “{ $line }” is not NAME=value
 /// ```
 pub fn settings_profile_env_not_a_pair(line: &str) -> String {
-    crate::active::message(753, &[("line", Arg::Str(line))])
+    crate::active::message(786, &[("line", Arg::Str(line))])
 }
 
 /// ```text
 /// A copy of { $profile }
 /// ```
 pub fn settings_profile_start_from_copy(profile: &str) -> String {
-    crate::active::message(754, &[("profile", Arg::Str(profile))])
+    crate::active::message(787, &[("profile", Arg::Str(profile))])
 }

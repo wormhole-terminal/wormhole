@@ -47,6 +47,7 @@ find.match.current #d5a15a
 find.match.current.text #000000
 git.branch #654c92
 git.branch.background #654c9224
+git.tag #7b5500
 input.background #fefdfd
 input.border #2b121d47
 input.border.focus #d3006b
@@ -185,6 +186,7 @@ increase_contrast diff.removed #a50028
 increase_contrast divider #2b121d66
 increase_contrast git.branch #61488e
 increase_contrast git.branch.background #61488e24
+increase_contrast git.tag #6c4b00
 increase_contrast input.border #2b121d94
 increase_contrast input.placeholder #75696e
 increase_contrast list.selected #f3bfd9

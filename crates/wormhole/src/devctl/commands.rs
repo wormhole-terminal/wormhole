@@ -153,6 +153,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "commit" => panels::commit,
         "commit-details" => panels::commit_details,
         "commit-copy" => panels::commit_copy,
+        "commit-more" => panels::commit_more,
         "clipboard" => panels::clipboard,
         "commit-file" => panels::commit_file,
         "compare" => panels::compare,

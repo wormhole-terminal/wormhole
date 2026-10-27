@@ -47,6 +47,7 @@ find.match.current #ebcb8b
 find.match.current.text #000000
 git.branch #c7abc6
 git.branch.background #c7abc624
+git.tag #ebcb8b
 input.background #242932
 input.border #d8dee93d
 input.border.focus #81a1c1

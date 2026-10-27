@@ -122,6 +122,7 @@ pub const UI_TOKENS: &[TokenInfo] = &[
     t("diff.filler", "Diff", "Hatch stripes where one side has no line (translucent)"),
     t("git.branch", "Git", "Branch names and the ⎇ before them"),
     t("git.branch.background", "Git", "Fill of a branch chip (overlay)"),
+    t("git.tag", "Git", "Tag names in the ref chips of an opened commit"),
     t("find.match", "Find", "Every match of a find in the terminal (overlay)"),
     t("find.match.current", "Find", "The current match, and the matches' ticks along the terminal's edge"),
     t("find.match.current.text", "Find", "Text on the current match"),

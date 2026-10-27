@@ -30,8 +30,10 @@ pub(crate) mod devctl;
 #[cfg(test)]
 mod flow_tests;
 mod keys;
+mod measure;
 mod menu;
 mod refresh;
+mod shown;
 mod state;
 #[cfg(test)]
 mod tests;

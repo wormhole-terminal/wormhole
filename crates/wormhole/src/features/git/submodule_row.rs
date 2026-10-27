@@ -13,9 +13,6 @@ use crate::style::{self, TextRole};
 use crate::window::feature::{FeatureEvent, TerminalInput, TerminalTarget};
 use wormhole_core::git::FileChange;
 
-/// A tooltip wraps at this width rather than running across the window.
-const TOOLTIP_W: f32 = 280.0;
-
 /// The row for `file`, a submodule; add `.on_click(…)`. `root` is the repository it is in.
 pub(super) fn submodule_row(
     file: &FileChange,
@@ -63,7 +60,7 @@ pub(super) fn submodule_row(
                 .flex()
                 .flex_col()
                 .gap_1()
-                .max_w(px(TOOLTIP_W))
+                .max_w(px(style::TOOLTIP_W))
                 .child(div().font_family(code_font.clone()).child(path.clone()))
                 .child(div().text_caption().text_color(ui.muted).child(what.clone()))
         })

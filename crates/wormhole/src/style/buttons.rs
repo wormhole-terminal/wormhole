@@ -11,7 +11,7 @@ use std::rc::Rc;
 
 use super::icon_motion::{IconMotion, MenuMark, StripFill};
 use super::motion::TOOLTIP_DELAY;
-use super::scale::{CONTROL_H_SM, GLYPH, HIT_MIN, ICON_SIZE, MARK_DOT, TITLE_GLYPH};
+use super::scale::{CONTROL_H_SM, GLYPH, HIT_MIN, ICON_SIZE, MARK_DOT, TITLE_GLYPH, TextRole};
 use crate::settings::UiColors;
 
 /// The face of a band's +: smaller than a button's, so it sits inside the band's 32 pt
@@ -476,6 +476,59 @@ pub fn hit_area(
         .cursor_pointer()
         .child(child);
     div().flex_none().size(px(drawn)).child(target(square))
+}
+
+/// A quiet "Show more" / "Show less" under text that was cut short: the label in the muted color with a
+/// chevron that points down while more is hidden and up once it is all shown, the link color and a
+/// hover fill under the pointer. A button for VoiceOver, which hears `expanded` and the label. Add
+/// `.on_click(…)`; the keys reach it through the list it is in.
+#[track_caller]
+pub fn more_toggle(
+    id: impl Into<ElementId>,
+    ui: UiColors,
+    label: impl Into<SharedString>,
+    expanded: bool,
+) -> Stateful<Div> {
+    let label: SharedString = label.into();
+    div()
+        .id(id)
+        .role(Role::Button)
+        .aria_label(label.clone())
+        .aria_expanded(expanded)
+        .flex_none()
+        .flex()
+        .items_center()
+        .gap_1()
+        .self_start()
+        .px_1()
+        .h(px(CONTROL_H_SM))
+        .rounded(ui.radius_chip)
+        .cursor_pointer()
+        .text_caption()
+        .text_color(ui.muted)
+        .hover(move |d| d.bg(ui.hover).text_color(ui.link))
+        .child(label)
+        .child(Icon::new(if expanded { IconName::ChevronUp } else { IconName::ChevronDown }).xsmall())
+}
+
+/// A short id that opens what it names (a commit's parent), small and inline, unlike the settings'
+/// [`link_button`]: the link color, underlined under the pointer, a link for VoiceOver named `spoken` ("Open parent a1b2c3d"). Add `.on_click(…)`.
+#[track_caller]
+pub fn hash_link(
+    id: impl Into<ElementId>,
+    ui: UiColors,
+    label: impl Into<SharedString>,
+    spoken: impl Into<SharedString>,
+) -> Stateful<Div> {
+    div()
+        .id(id)
+        .role(Role::Link)
+        .aria_label(spoken)
+        .flex_none()
+        .cursor_pointer()
+        .text_color(ui.link)
+        .hover(|d| d.underline())
+        .child(label.into())
 }
 
 /// A chrome icon on its own: a folder in the sidebar, a glyph beside a label.

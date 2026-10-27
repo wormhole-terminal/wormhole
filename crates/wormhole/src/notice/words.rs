@@ -1,6 +1,6 @@
 //! A notice as a sentence, from the catalog (`locales/en/notices.ftl`), and so what VoiceOver hears.
 
-use wormhole_core::view::notice::{Copied, Driven, Driver, Notice};
+use wormhole_core::view::notice::{Copied, Driven, Driver, Failed, Notice};
 use wormhole_text::{keys, text, whole};
 
 /// The sentence for `notice`; `None` for a test notice, whose words come with the post.
@@ -8,6 +8,7 @@ pub(super) fn of(notice: Notice) -> Option<String> {
     let copied = match notice {
         Notice::Copied(copied) => copied,
         Notice::Driven(driven) => return Some(driven_words(driven)),
+        Notice::Failed(Failed::CopyCommit) => return Some(text(keys::NOTICE_FAILED_COPY_COMMIT).to_string()),
         Notice::Test(_) => return None,
     };
     Some(match copied {
@@ -45,7 +46,7 @@ fn driven_words(driven: Driven) -> String {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::view::notice::{Copied, Driven, Driver, Notice};
+    use wormhole_core::view::notice::{Copied, Driven, Driver, Failed, Notice};
     use wormhole_text::{Language, with_language};
 
     use super::of;
@@ -81,6 +82,16 @@ mod tests {
             assert_eq!(said(Driven::Reading(Driver::Agent(AgentId::Codex))), "Codex CLI is reading");
             assert_eq!(said(Driven::Typing(Driver::Scripts)), "A script is typing");
             assert_eq!(said(Driven::Reading(Driver::Scripts)), "A script is reading");
+        });
+    }
+
+    #[test]
+    fn a_failure_is_told_in_words() {
+        with_language(Language::ENGLISH, || {
+            assert_eq!(
+                of(Notice::Failed(Failed::CopyCommit)).as_deref(),
+                Some("Couldn't copy: git could not read the commit")
+            );
         });
     }
 

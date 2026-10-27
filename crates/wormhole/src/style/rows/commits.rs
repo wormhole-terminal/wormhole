@@ -145,7 +145,9 @@ pub fn commit_row(id: impl Into<ElementId>, ui: UiColors, row: CommitRow) -> Sta
                 .text_caption()
                 .text_color(meta)
                 .child(div().flex_none().text_color(hash).font_family(code_font).child(sha))
-                .when(merge, |d| d.child(div().flex_none().child("merge")))
+                .when(merge, |d| {
+                    d.child(div().flex_none().child(wormhole_text::text(wormhole_text::keys::HISTORY_MERGE)))
+                })
                 .child(div().min_w_0().truncate().child(author))
                 .child(div().flex_1())
                 .child(div().flex_none().tabular_nums().child(age)),

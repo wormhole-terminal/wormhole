@@ -57,6 +57,12 @@ pub(super) fn commit_details(ctx: &mut Ctx, _: &str) -> Result<String> {
     Ok(history_panel::details(ctx.workspace, ctx.cx))
 }
 
+/// `commit-more`: Show more / Show less under the open commit's message.
+pub(super) fn commit_more(ctx: &mut Ctx, _: &str) -> Result<String> {
+    history_panel::more(ctx.workspace, ctx.cx);
+    Ok(String::new())
+}
+
 /// `commit-copy <what> [n]`: a commit's copy action; `clipboard` shows what it put there.
 pub(super) fn commit_copy(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let (what, n) = arg.trim().split_once(' ').unwrap_or((arg.trim(), ""));
