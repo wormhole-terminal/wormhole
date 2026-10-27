@@ -26,8 +26,8 @@ pub struct Pending {
     /// The terminal it is about, when the program was let in but reached for one that is not its own to
     /// use (`Scopes`): the question then is about that terminal. `None` for the one about the program.
     pub about: Option<i64>,
-    /// What the requests that raised a question about a terminal needed of it, all together: what an
-    /// answer opens up.
+    /// What an answer opens up: what the question's `need` is, never more (a request that needs something
+    /// else is a question of its own).
     pub caps: CapSet,
     waiters: Vec<SyncSender<Decision>>,
     shown: bool,
@@ -58,8 +58,8 @@ pub struct Queue {
 
 impl Queue {
     /// Queue a question for `resolved` in `scope`, or join the one its program has open there (about the same
-    /// terminal, or about none). `waiter` is the request that waits for the answer, if it does (told at once
-    /// if the question is on the screen already). The question's id.
+    /// terminal and needing the same thing: an answer never grants more than its question asked). `waiter` is
+    /// the request that waits for the answer, if it does (told at once if the question is on the screen already). The question's id.
     pub fn push(
         &mut self,
         resolved: Resolved,
@@ -72,16 +72,13 @@ impl Queue {
             Need::Capability(capability) => CapSet::EMPTY.with(capability),
             Need::Nothing | Need::Approved => CapSet::EMPTY,
         };
-        if let Some(open) = self
-            .pending
-            .iter_mut()
-            .find(|p| p.scope == scope && p.about == about && p.resolved.identity == resolved.identity)
-        {
+        if let Some(open) = self.pending.iter_mut().find(|p| {
+            p.scope == scope && p.about == about && p.need == need && p.resolved.identity == resolved.identity
+        }) {
             if let (true, Some(waiter)) = (open.shown, &waiter) {
                 let _ = waiter.try_send(Decision::Shown);
             }
             open.waiters.extend(waiter);
-            open.caps = CapSet::from_bits(open.caps.bits() | caps.bits());
             return Ok(open.id);
         }
         if self.pending.len() >= QUEUE_MAX {
@@ -234,11 +231,15 @@ mod tests {
         let eight = queue.push(resolved("a"), TYPE, 0, Some(8), None).expect("room");
         assert_eq!(queue.len(), 3);
         assert!(program != seven && seven != eight);
-        // Another request about terminal 7 joins its question and widens what an answer opens up.
-        assert_eq!(queue.push(resolved("a"), TYPE, 0, Some(7), None).expect("joins"), seven);
+        // Another request about terminal 7 for the same thing joins its question.
+        let read = Need::Capability(Capability::Read);
+        assert_eq!(queue.push(resolved("a"), read, 0, Some(7), None).expect("joins"), seven);
+        // One that needs more is a question of its own, so that an answer to "read" never grants "type".
+        let typing = queue.push(resolved("a"), TYPE, 0, Some(7), None).expect("room");
+        assert_ne!(typing, seven);
         let question = queue.take(seven).expect("there");
         assert_eq!(question.about, Some(7));
-        assert!(question.caps.contains(Capability::Read) && question.caps.contains(Capability::Type));
+        assert!(question.caps.contains(Capability::Read) && !question.caps.contains(Capability::Type));
     }
 
     #[test]
