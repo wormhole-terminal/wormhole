@@ -24,6 +24,7 @@ mod control_input;
 mod failed;
 mod find;
 mod find_bar;
+mod first_command;
 mod grid_layout;
 mod hosted;
 mod input;

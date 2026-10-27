@@ -93,8 +93,8 @@ pub(crate) fn open_control_window(
     let activation = if activate { Activation::Front } else { Activation::Behind };
     open_workspace_window_for(&profile, record, source, activation, cx);
     let opened = app(cx).windows.iter().find(|w| w.id == id).cloned()?;
-    if let Some(command) = command.map(str::trim).filter(|command| !command.is_empty()) {
-        AppState::with_workspace(&opened, cx, |ws, _, cx| ws.control_send_text(terminal, command, true, cx));
+    if let Some(command) = command {
+        AppState::with_workspace(&opened, cx, |ws, _, cx| ws.control_run_first(terminal, command, cx));
     }
     Some(WindowOpened { window: id, terminal, folder: cwd })
 }

@@ -156,6 +156,56 @@ fn print(cx: &mut TestAppContext, window: &OpenWindow, ix: usize, bytes: &[u8]) 
 }
 
 #[gpui_kit::test]
+fn a_command_given_to_a_new_terminal_or_split_is_typed_once_its_shell_is_ready(cx: &mut TestAppContext) {
+    use wormhole_core::ipc::control::{Opened, SplitMade, SplitSpec};
+    if isolate("a_command_given_to_a_new_terminal_or_split_is_typed_once_its_shell_is_ready") {
+        return;
+    }
+    let window = start(cx, 1);
+    let who = callers(cx, &window);
+    allow(cx, true, true);
+    let opened = reply(ask(
+        cx,
+        Action::NewTerminal {
+            folder: None,
+            command: Some("ran-first one".into()),
+            worktree: None,
+            window: None,
+        },
+        None,
+        &who.outside,
+    ));
+    let opened: Opened = serde_json::from_value(opened.result.clone().expect("opened")).expect("opened");
+    // `cat` is the shell: it says nothing, so the command waits out its silence (two seconds) and is then
+    // echoed back as typed.
+    // (Read off the terminal itself: polling through `read` for two seconds would spend its budget.)
+    let screen = |cx: &mut TestAppContext, ix: usize| {
+        let t = terminal(cx, &window, ix);
+        cx.update(|cx| t.read(cx).screen_text())
+    };
+    // The task's timers run on the test's clock: it is moved on with each look.
+    let mut screen_after = |cx: &mut TestAppContext, ix: usize| {
+        cx.executor().advance_clock(Duration::from_millis(70));
+        screen(cx, ix)
+    };
+    wait_until(cx, "the first command was typed", |cx| screen_after(cx, 1).contains("ran-first one"));
+    let split = Action::Split(SplitSpec {
+        target: Target::Terminal(1),
+        direction: Default::default(),
+        size: None,
+        folder: None,
+        command: Some("ran-first two".into()),
+        select: false,
+    });
+    let made = reply(ask(cx, split, None, &who.outside));
+    let made: SplitMade =
+        serde_json::from_value(made.result.clone().unwrap_or_else(|| panic!("{made:?}"))).expect("a split");
+    let ix = 2;
+    assert_ne!(made.terminal, opened.terminal);
+    wait_until(cx, "the split's command was typed", |cx| screen_after(cx, ix).contains("ran-first two"));
+}
+
+#[gpui_kit::test]
 fn doctor_tells_the_flag_the_switches_and_which_terminal_the_caller_is_in(cx: &mut TestAppContext) {
     use wormhole_core::ipc::control::doctor::Facts;
     if isolate("doctor_tells_the_flag_the_switches_and_which_terminal_the_caller_is_in") {

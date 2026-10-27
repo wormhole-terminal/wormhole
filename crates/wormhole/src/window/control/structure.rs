@@ -88,8 +88,8 @@ impl Workspace {
             layout.focus(kept);
         }
         self.install_layout(target_ix, ix, layout, cx);
-        if let Some(command) = command.map(str::trim).filter(|command| !command.is_empty()) {
-            self.control_send_text(id, command, true, cx);
+        if let Some(command) = command {
+            self.control_run_first(id, command, cx);
         }
         if select {
             if let Some(at) = self.find_session(id) {

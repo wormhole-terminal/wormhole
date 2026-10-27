@@ -135,8 +135,17 @@ impl Workspace {
         true
     }
 
+    /// Run `command` in a terminal that has just been made, once its shell is ready for it
+    /// (`TerminalView::run_when_ready`): typing it at once would be dropped while a hosted terminal has no
+    /// PTY yet, and lost to a shell that has not started.
+    pub(crate) fn control_run_first(&mut self, tab: i64, command: &str, cx: &mut Context<Self>) {
+        let command = command.trim();
+        let Some(terminal) = self.pane_terminal(tab).filter(|_| !command.is_empty()) else { return };
+        terminal.update(cx, |terminal, cx| terminal.run_when_ready(command, cx));
+    }
+
     /// A new terminal in `folder` (where the current one is without), selected, with `command`
-    /// typed into its shell and run.
+    /// typed into its shell and run once it is ready.
     pub(crate) fn control_new_terminal(
         &mut self,
         folder: Option<String>,
@@ -148,8 +157,8 @@ impl Workspace {
         let ix = self.open_session(None, cwd.clone(), window, cx);
         let terminal = self.sessions[ix].id;
         let tab = terminal;
-        if let Some(command) = command.map(str::trim).filter(|c| !c.is_empty()) {
-            self.control_send_text(tab, command, true, cx);
+        if let Some(command) = command {
+            self.control_run_first(tab, command, cx);
         }
         Opened { window: self.window_id, terminal, tab, pane: tab, folder: cwd, worktree: None }
     }
