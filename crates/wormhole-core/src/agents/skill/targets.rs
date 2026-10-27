@@ -29,7 +29,7 @@ pub const TARGETS: &[Target] = &[
     Target {
         agent: AgentId::Codex,
         dir: ".agents/skills",
-        source: "https://learn.chatgpt.com/docs/build-skills",
+        source: "https://developers.openai.com/codex/skills",
     },
     Target {
         agent: AgentId::Gemini,
