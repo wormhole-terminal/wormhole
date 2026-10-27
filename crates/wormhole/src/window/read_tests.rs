@@ -184,7 +184,7 @@ fn a_command_given_to_a_new_terminal_or_split_is_typed_once_its_shell_is_ready(c
         cx.update(|cx| t.read(cx).screen_text())
     };
     // The task's timers run on the test's clock: it is moved on with each look.
-    let mut screen_after = |cx: &mut TestAppContext, ix: usize| {
+    let screen_after = |cx: &mut TestAppContext, ix: usize| {
         cx.executor().advance_clock(Duration::from_millis(70));
         screen(cx, ix)
     };

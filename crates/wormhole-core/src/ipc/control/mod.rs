@@ -337,7 +337,7 @@ pub struct Error {
     /// For `rate_limited` when the app knows: the whole seconds after which the same request may be made
     /// again. Absent from an older app's reply, and ignored by an older command line.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub retry_after_s: Option<u32>,
+    pub retry_after_s: Option<u16>,
 }
 
 impl Error {
@@ -356,7 +356,8 @@ impl Error {
     /// The same error with the seconds to wait before asking again.
     #[must_use]
     pub fn retry_after(mut self, seconds: u64) -> Self {
-        self.retry_after_s = Some(u32::try_from(seconds).unwrap_or(u32::MAX));
+        // (A `u16`, an hour and more: it keeps `Reply` under the size clippy asks `Err`s to stay in; the window is a minute.)
+        self.retry_after_s = Some(u16::try_from(seconds).unwrap_or(u16::MAX));
         self
     }
 
