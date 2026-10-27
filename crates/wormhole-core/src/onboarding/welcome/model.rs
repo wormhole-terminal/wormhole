@@ -6,14 +6,18 @@
 //! Nothing here installs or changes what reaches you behind the person's back. An Install goes out
 //! only from Return (or a click) on that agent's own row, a notification choice only from a press on
 //! its own row, and the cursor starts on the step's button: the tests walk every key from every step
-//! to show that moving through the steps asks for neither.
+//! to show that moving through the steps asks for neither. The same goes for the walk through how much
+//! the window shows (`tailoring`): an answer is a press on a number or a line, and Back and Start over
+//! ask only when they undo one.
 
 use std::time::Duration;
 
 use super::flow::{Action, Event, Flow, Step};
 use super::keys::Key;
 use super::offer::ImportOffer;
+use super::tailoring::{Change, Press, Tailoring};
 use crate::config::NotifySound;
+use crate::config::presets::{Preset, Shown};
 use crate::ipc::control::{
     AgentsFacts, ImportDone, LookFacts, NotifyFacts, PermissionFact, WelcomeOp, WelcomeState,
 };
@@ -51,6 +55,8 @@ pub(super) enum Item {
     Theme(usize),
     Notify(NotifyRow),
     Agent(usize),
+    /// An answer of the question the Shown step asks.
+    Answer(usize),
     /// The step's own button: Get started, Continue, Start.
     Start,
 }
@@ -78,6 +84,8 @@ pub(super) struct Welcome {
     theme_at: usize,
     notify_at: Option<NotifyRow>,
     agents_at: Option<usize>,
+    /// The walk through how much the window shows, begun when its step is first reached.
+    tailoring: Option<Tailoring>,
     /// When the current step began, on the program's clock, and whether its entrance was cut short
     /// by a key. Steps seen before come in whole.
     step_since: Duration,
@@ -107,6 +115,7 @@ impl Welcome {
             theme_at,
             notify_at: None,
             agents_at: None,
+            tailoring: None,
             step_since: Duration::ZERO,
             settled: false,
             ended: None,
@@ -197,6 +206,22 @@ impl Welcome {
         self.facts.agents.as_ref()
     }
 
+    /// The walk through how much the window shows, once its step has been reached.
+    pub(super) fn tailoring(&self) -> Option<&Tailoring> {
+        self.tailoring.as_ref()
+    }
+
+    /// The same, for the driver to tell it what the app answered.
+    pub(super) fn tailoring_mut(&mut self) -> Option<&mut Tailoring> {
+        self.tailoring.as_mut()
+    }
+
+    /// Whether the walk's answers reach the window: there is an app, and it said what its window
+    /// shows (an app from before the walk, or a tour, did not).
+    pub(super) fn tailor_live(&self) -> bool {
+        self.live && self.facts.shown.is_some()
+    }
+
     /// What went wrong: the app's word about the last Install, else a request it refused.
     pub(super) fn problem(&self) -> Option<&str> {
         self.facts.problem.as_deref().or(self.note.as_deref())
@@ -214,6 +239,10 @@ impl Welcome {
             // With nothing to list (a tour has no themes) the step still has its way on.
             Step::Look if self.facts.look.themes.is_empty() => vec![Item::Start],
             Step::Look => (0..self.facts.look.themes.len()).map(Item::Theme).collect(),
+            Step::Shown => {
+                let answers = self.tailoring.as_ref().map_or(0, Tailoring::answers);
+                (0..answers).map(Item::Answer).chain([Item::Start]).collect()
+            }
             Step::Notify => {
                 let mut items = Vec::new();
                 if let Some(notify) = self.notify() {
@@ -243,6 +272,7 @@ impl Welcome {
         let last = items.len().saturating_sub(1);
         match self.flow.step() {
             Step::Look => self.theme_at.min(last),
+            Step::Shown => self.tailoring.as_ref().map_or(0, Tailoring::cursor).min(last),
             Step::Notify => self
                 .notify_at
                 .and_then(|row| items.iter().position(|item| *item == Item::Notify(row)))
@@ -307,7 +337,7 @@ impl Welcome {
         let step = self.flow.step();
         match key {
             Key::Esc | Key::Interrupt => self.flow_event(Event::Skip, now),
-            Key::Left | Key::Backspace => self.flow_event(Event::Back, now),
+            Key::Left | Key::Backspace => self.pressed(Tailoring::back, now),
             // → goes on where Return might press a row (an Install, a choice) and so is no way to
             // go on; it never presses one. The last step has nothing after it but the end.
             Key::Right if step != Step::Extras => self.flow_event(Event::Continue, now),
@@ -315,6 +345,7 @@ impl Welcome {
             Key::Up | Key::Char('k') | Key::BackTab => self.step_cursor(-1),
             Key::Down | Key::Char('j') | Key::Tab => self.step_cursor(1),
             Key::Char(c) if step == Step::Look => self.look_key(c),
+            Key::Char(c) if step == Step::Shown => self.pressed(|tailoring| tailoring.key(c), now),
             // A click is resolved to a row or a key by the program, which has the hits.
             _ => Vec::new(),
         }
@@ -342,6 +373,11 @@ impl Welcome {
         let last = items.len().saturating_sub(1);
         match (self.flow.step(), items.get(at)) {
             (Step::Look, _) => self.theme_at = at,
+            (Step::Shown, _) => {
+                if let Some(tailoring) = &mut self.tailoring {
+                    tailoring.set_cursor(at);
+                }
+            }
             (Step::Notify, Some(Item::Notify(row))) => self.notify_at = Some(*row),
             (Step::Notify, _) => self.notify_at = None,
             (Step::Sidebar, _) => self.agents_at = (at != last).then_some(at),
@@ -436,6 +472,7 @@ impl Welcome {
         let Some(item) = items.get(self.cursor()).cloned() else { return Vec::new() };
         match item {
             Item::Theme(_) | Item::Start => self.flow_event(Event::Continue, now),
+            Item::Answer(ix) => self.pressed(|tailoring| tailoring.answer(ix), now),
             Item::Notify(row) => self.press_notify(row),
             Item::Agent(at) => {
                 let agent = self.facts.agents.as_ref().and_then(|agents| agents.found.get(at));
@@ -473,6 +510,25 @@ impl Welcome {
         vec![Effect::Ask(WelcomeOp::SetNotify { needs_you, agent_done, sound, allow })]
     }
 
+    /// Do `press` on the Shown step's walk (Back is the one key that works anywhere) and act on what it
+    /// says: leave the step, or tell the app, where the walk reaches it, what the window shows now.
+    fn pressed(&mut self, press: impl FnOnce(&mut Tailoring) -> Press, now: Duration) -> Vec<Effect> {
+        let in_walk = self.flow.step() == Step::Shown;
+        match self.tailoring.as_mut().filter(|_| in_walk).map(press) {
+            Some(Press::Stay) => Vec::new(),
+            Some(Press::Change(Change { from, shown })) => {
+                if !self.tailor_live() {
+                    return Vec::new();
+                }
+                if let Some(tailoring) = &mut self.tailoring {
+                    tailoring.sent(&shown);
+                }
+                vec![Effect::Ask(WelcomeOp::SetShown { from, shown })]
+            }
+            Some(Press::Leave) | None => self.flow_event(Event::Back, now),
+        }
+    }
+
     /// Run `event` through the flow and turn what it asks into effects.
     fn flow_event(&mut self, event: Event, now: Duration) -> Vec<Effect> {
         let before = self.flow.step();
@@ -483,6 +539,12 @@ impl Welcome {
             self.settled = self.seen.contains(&step);
             if !self.seen.contains(&step) {
                 self.seen.push(step);
+            }
+            // The walk begins from what the window shows as the step is first reached (a tour starts
+            // from the defaults): its Start over puts that back.
+            if step == Step::Shown && self.tailoring.is_none() {
+                let shown = self.facts.shown.clone().unwrap_or_else(|| Shown::of(Preset::Balanced));
+                self.tailoring = Some(Tailoring::new(shown));
             }
         }
         match action {

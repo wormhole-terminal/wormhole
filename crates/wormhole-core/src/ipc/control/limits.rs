@@ -39,6 +39,10 @@ pub enum Limited {
     /// The welcome's choices of a theme, a colour or a font size: a person stepping through a
     /// list sends many, and each is a small settings change.
     WelcomeLook,
+    /// The welcome's answers to how much the window shows (a few settings and the right panel): a
+    /// press each, with Back and Start over between, so a person trying the three answers of seven
+    /// questions a few times over stays well under it.
+    WelcomeShown,
     /// The welcome's Install for an agent's hooks (a file write).
     WelcomeInstall,
     /// The welcome's notification choices (a switch, the sound, Allow): a few presses, and the first
@@ -72,6 +76,7 @@ impl Limited {
             Limited::Wait => 120,
             Limited::Run => 30,
             Limited::WelcomeLook => 240,
+            Limited::WelcomeShown => 120,
             Limited::WelcomeInstall => 12,
             Limited::WelcomeNotify => 30,
             Limited::WelcomeDemo => 120,
@@ -157,7 +162,7 @@ mod tests {
         assert!(Limited::Wait.budget() <= 120 && Limited::Run.budget() <= 30);
         assert!(Limited::WelcomeInstall.budget() <= 12 && Limited::WelcomeNotify.budget() <= 30);
         assert!(Limited::WelcomeDemo.budget() <= 120 && Limited::WelcomeFinish.budget() <= 4);
-        assert!(Limited::WelcomeImport.budget() <= 6);
+        assert!(Limited::WelcomeImport.budget() <= 6 && Limited::WelcomeShown.budget() <= 120);
         assert_eq!(RateLimits::default().retry_after(Limited::Notify, None, Instant::now()), Duration::ZERO);
     }
 }

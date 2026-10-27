@@ -6,6 +6,8 @@
 //! This is not [`FeatureFlag`]: a flag gates a feature that is still being built, and graduates
 //! away. A feature here stays; it may name the flag that gates it for now.
 
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
 use super::Settings;
 use super::features::{FeatureFlag, FlagMode, enabled_in};
 use super::tab::TabId;
@@ -27,6 +29,21 @@ pub enum FeatureId {
     Project,
     /// A terminal in a worktree of its own.
     Worktrees,
+}
+
+/// A feature is written as its [`FeatureInfo::key`], the name the settings file and the control commands
+/// use, so a value that crosses a socket reads the same as one in `config.json`.
+impl Serialize for FeatureId {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.info().key)
+    }
+}
+
+impl<'de> Deserialize<'de> for FeatureId {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let key = String::deserialize(deserializer)?;
+        Self::from_key(&key).ok_or_else(|| serde::de::Error::custom(format!("no feature called {key:?}")))
+    }
 }
 
 /// Whether a person can do without a feature.

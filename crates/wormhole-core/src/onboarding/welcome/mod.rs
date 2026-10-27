@@ -2,10 +2,12 @@
 //!
 //! Where the intro window stands in for the terminal, this is the terminal: the app starts the first
 //! terminal's shell as `Wormhole welcome -- <the shell it would have run>`, the window and its sidebar
-//! show as usual, and the program types its greeting into the real PTY and walks five steps as keyboard
-//! pages: the welcome (the sidebar's three lines), how it looks, what reaches you when an agent needs
-//! you, the sidebar (the app puts an example band in the real one while the page is up) with the
-//! coding agents and their hooks, and what else is here. When it ends it clears the screen, prints a
+//! show as usual, and the program types its greeting into the real PTY and walks six steps as keyboard
+//! pages: the welcome (the sidebar's three lines), how it looks, how much the window shows (a walk of
+//! questions, each answer drawn as the window it gives and applied as it is chosen, in the manner of a
+//! shell prompt's configuration wizard), what reaches you when an agent needs you, the sidebar (the app
+//! puts an example band in the real one while the page is up) with the coding agents and their hooks,
+//! and what else is here. When it ends it clears the screen, prints a
 //! compact banner and `exec`s the shell, in the terminal's own folder, in that same terminal.
 //!
 //! It plays into the start animation. The app's first answer says how long to wait (`wait_ms`: until
@@ -22,7 +24,9 @@
 //! - `keys`: keys, and SGR mouse clicks, read from the terminal's bytes;
 //! - `flow`: the steps and where Back, Continue and Skip lead (its own, not the intro window's);
 //! - `model`: the state: the flow, cursors, and what each key does;
-//! - `render`: the pages, a pure function of the model, the size and the clock;
+//! - `tailoring`: the Shown step's walk (core's `onboarding::tailor`) and its cursor;
+//! - `render`: the pages, a pure function of the model, the size and the clock (`render::sketch` draws
+//!   a window on the grid, `render::tailor` the Shown step's page);
 //! - `demo`: the example rows the sidebar step shows in the window's sidebar, as data;
 //! - `art`: the mark's and the logo's places, and the logo's pixels;
 //! - `banner`: what the terminal shows at the hand-over;
@@ -46,6 +50,7 @@ mod model;
 mod offer;
 mod render;
 mod run;
+mod tailoring;
 
 pub use art::{
     DockCell, LOGO, LOGO_CHEVRON_CELL, LOGO_DOCK, MARGIN, MARK_CELL, MARK_CHEVRON_ROWS, MARK_DOCK, Rect, TOP,
@@ -63,5 +68,7 @@ mod fixtures;
 mod importing;
 #[cfg(test)]
 mod snapshots;
+#[cfg(test)]
+mod tailor_walk;
 #[cfg(test)]
 mod walkthrough;

@@ -28,7 +28,7 @@ fn isolate(name: &str) -> bool {
 }
 
 /// The welcome terminal a replay opened: its tab and token.
-fn welcome_terminal(cx: &mut TestAppContext) -> (i64, String) {
+pub(super) fn welcome_terminal(cx: &mut TestAppContext) -> (i64, String) {
     cx.update(|cx| {
         let run = crate::onboarding::welcome::welcomes(cx)
             .and_then(|w| w.runs.last())
@@ -37,12 +37,14 @@ fn welcome_terminal(cx: &mut TestAppContext) -> (i64, String) {
     })
 }
 
-fn ask(cx: &mut TestAppContext, from: Option<i64>, token: &str, op: WelcomeOp) -> Reply {
+pub(super) fn ask(cx: &mut TestAppContext, from: Option<i64>, token: &str, op: WelcomeOp) -> Reply {
     // The budgets are the control socket's (`app::control`); no test here asks enough to meet them.
     let services = Services {
         budget: |_, _, _| Ok(()),
         permission: notifications::permission,
         ask_permission: notifications::ask_permission_if_new,
+        panel: crate::app::welcome::panel_open,
+        set_panel: crate::app::welcome::set_panel,
         demo: crate::app::welcome::demo,
         ended: crate::app::welcome::ended,
         remember_first_run: crate::window::remember_first_run,
@@ -58,15 +60,15 @@ fn fixture_env() -> Option<wormhole_core::import::Env> {
     Some(wormhole_core::import::Env::new(data.join("home")))
 }
 
-fn state_of(reply: &Reply) -> WelcomeState {
+pub(super) fn state_of(reply: &Reply) -> WelcomeState {
     serde_json::from_value(reply.result.clone().expect("a result")).expect("a state")
 }
 
-fn state() -> WelcomeOp {
+pub(super) fn state() -> WelcomeOp {
     WelcomeOp::State
 }
 
-fn code(reply: &Reply) -> Option<ErrorCode> {
+pub(super) fn code(reply: &Reply) -> Option<ErrorCode> {
     reply.err().map(|error| error.code)
 }
 

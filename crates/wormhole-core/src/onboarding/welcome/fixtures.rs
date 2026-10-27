@@ -4,6 +4,7 @@ use super::model::Welcome;
 use super::offer::ImportOffer;
 use crate::agents::AgentId;
 use crate::config::NotifySound;
+use crate::config::presets::{Preset, Shown};
 use crate::import::Source;
 use crate::ipc::control::{
     AgentFact, AgentsFacts, HooksFact, LookFacts, NotifyFacts, PermissionFact, PrimaryFact, ThemeFact,
@@ -75,6 +76,7 @@ pub(super) fn state(handover: Handover) -> WelcomeState {
         look: look(),
         notify: Some(notify()),
         agents: Some(agents()),
+        shown: Some(Shown::of(Preset::Balanced)),
         problem: None,
     }
 }

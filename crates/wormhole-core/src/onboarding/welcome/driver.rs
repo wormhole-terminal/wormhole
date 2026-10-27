@@ -18,7 +18,7 @@ use super::keys::{ESC_WAIT, Key, Parser};
 use super::model::{Effect, End, Welcome};
 use super::offer::ImportOffer;
 use super::render::{self, Hit, Size, Target};
-use crate::ipc::control::{ImportDone, WelcomeOp, WelcomeState};
+use crate::ipc::control::{ImportDone, ShownDone, WelcomeOp, WelcomeState};
 
 /// How often the app is asked for its state: often enough that an Install or a permission answer shows
 /// within a blink, and the end of the animation's wait is noticed.
@@ -183,7 +183,12 @@ impl Driver {
             match effect {
                 Effect::Ask(op) => {
                     if self.state_in_flight
-                        && matches!(op, WelcomeOp::SetLook { .. } | WelcomeOp::SetNotify { .. })
+                        && matches!(
+                            op,
+                            WelcomeOp::SetLook { .. }
+                                | WelcomeOp::SetNotify { .. }
+                                | WelcomeOp::SetShown { .. }
+                        )
                     {
                         self.stale_state = true;
                     }
@@ -244,6 +249,7 @@ impl Driver {
             ("state", Ok(None)) => self.state_failed("no state"),
             ("state", Err(why)) => self.state_failed(&why),
             ("import", result) => self.import_answered(result),
+            ("set_shown", result) => self.shown_answered(result),
             (op, result) => {
                 if op == "demo" && result.is_err() {
                     self.demo_sent = None;
@@ -288,6 +294,22 @@ impl Driver {
             Ok(None) => model.import_failed("no answer".to_string()),
             Err(why) => model.import_failed(why),
         }
+    }
+
+    /// The app's word on a `SetShown`: where its panel ended up, or why it would not.
+    fn shown_answered(&mut self, result: Result<Option<Value>, String>) {
+        let Some(model) = &mut self.model else { return };
+        let refused = result.as_ref().err().cloned();
+        if let Some(tailoring) = model.tailoring_mut() {
+            match result {
+                Ok(value) => {
+                    let done = value.and_then(|value| serde_json::from_value::<ShownDone>(value).ok());
+                    tailoring.acknowledged(done.map(|done| done.panel_open));
+                }
+                Err(_) => tailoring.refused(),
+            }
+        }
+        model.note_failure(refused);
     }
 
     /// The app can't be reached: before there is a model, the welcome becomes the read-only tour; after,

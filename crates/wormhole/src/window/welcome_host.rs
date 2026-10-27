@@ -209,6 +209,17 @@ impl Workspace {
         self.sessions[ix].terminal().update(cx, |terminal, cx| terminal.set_dock(dock, cx));
     }
 
+    /// Whether the right panel is on screen in this window: what the welcome's walk through how much
+    /// the window shows reads as its panel answer.
+    pub(crate) fn welcome_panel_open(&self) -> bool {
+        self.notes_visible()
+    }
+
+    /// Open or close the right panel as the welcome's walk answered, sliding it as the toggle does.
+    pub(crate) fn set_welcome_panel(&mut self, open: bool, cx: &mut Context<Self>) {
+        self.set_panel_open(open, cx);
+    }
+
     /// The terminal the welcome ended in no longer reports a dock, the sidebar's example band goes
     /// with it, and the sidebar's note for a first run that ended on the primer (no agent on PATH)
     /// comes up.

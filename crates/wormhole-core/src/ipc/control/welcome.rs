@@ -23,6 +23,18 @@
 //! macOS ask for permission are the ones that turn a banner on, and the page's own Allow button). None
 //! is ever part of moving through the steps (`welcome::model` and its tests drive every path to show it).
 //!
+//! `SetShown` changes how much the window around the terminal shows (the title row's parts, the status
+//! bar, the minimap, the lines between the columns, the right panel and its tools), as the intro
+//! window's Look step does. It carries what the walk showed before the answer (`from`) and what it shows
+//! with it (`shown`), and the app writes only the parts where the two differ, so a part the person
+//! changed or arranged themselves meanwhile is never overwritten by a value they did not give. Every
+//! setting but the right panel is the app's (all windows); the panel is the one window's. It is safe to
+//! take from the program for the same reason as the others: only a press on an answer (or Start over)
+//! sends it, it names no file, command or path, every value is a switch or one of a handful of names
+//! read strictly (a name this build doesn't know refuses the request), and the app refuses a title row
+//! or a set of tools of the person's own unless it is the one `from` already had, so the request can
+//! never write an arrangement the walk doesn't offer.
+//!
 //! `Demo` is the one request that only shows something: while the sidebar step is up the app draws a
 //! small example band in the window's sidebar (never a terminal: not listed, not saved, not numbered)
 //! and takes it away when the step is left or the welcome ends.
@@ -30,11 +42,14 @@
 //! The mutating requests have budgets like the other actions' (`limits`), and every string is capped
 //! here, so a program that goes wrong cannot flood the app.
 
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 
 use super::{Error, ErrorCode};
 use crate::agents::AgentId;
 use crate::config::NotifySound;
+use crate::config::presets::{Shown, ToolsShown};
 
 /// The longest theme name or colour a request may carry.
 pub const FIELD_MAX_BYTES: usize = 4096;
@@ -76,6 +91,13 @@ pub enum WelcomeOp {
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         allow: bool,
     },
+    /// Change how much the window around the terminal shows from `from` (what the walk showed before
+    /// the answer) to `shown` (with it). The app writes only the parts where the two differ: the title
+    /// row, the status bar, the minimap and the lines between the columns as settings, the tools as the
+    /// features' switches, and the right panel as the window's own layout. Only a press on an answer (or
+    /// on Start over) sends it. Answered with a [`ShownDone`]. A program only sends it to an app that
+    /// reports what its window shows ([`WelcomeState::shown`]); an app from before this op does not.
+    SetShown { from: Shown, shown: Shown },
     /// Write the status hooks of exactly this agent. Answered at once; the result is in the next
     /// [`WelcomeState`] (the agent's hooks, or the `problem`).
     InstallHooks { agent: AgentId },
@@ -104,6 +126,7 @@ impl WelcomeOp {
             WelcomeOp::State => "state",
             WelcomeOp::SetLook { .. } => "set_look",
             WelcomeOp::SetNotify { .. } => "set_notify",
+            WelcomeOp::SetShown { .. } => "set_shown",
             WelcomeOp::InstallHooks { .. } => "install_hooks",
             WelcomeOp::Demo { .. } => "demo",
             WelcomeOp::Import { .. } => "import",
@@ -111,7 +134,8 @@ impl WelcomeOp {
         }
     }
 
-    /// The strings in the op are within [`FIELD_MAX_BYTES`], the font step is one step.
+    /// The strings in the op are within [`FIELD_MAX_BYTES`], the font step is one step, and a title row
+    /// or a set of tools of the person's own has no more parts than there are, none twice.
     pub fn check_caps(&self) -> Result<(), Error> {
         let too_long = |what: &str| {
             Error::new(ErrorCode::TooLarge, format!("{what} is longer than {FIELD_MAX_BYTES} bytes"))
@@ -126,9 +150,30 @@ impl WelcomeOp {
             WelcomeOp::Import { source } if source.len() > SOURCE_MAX_BYTES => {
                 Err(too_long("the terminal's name"))
             }
+            WelcomeOp::SetShown { from, shown } => check_shown(from).and_then(|()| check_shown(shown)),
             _ => Ok(()),
         }
     }
+}
+
+/// What a [`Shown`] may carry: the tools of the person's own, each at most once. (Their number, and a
+/// title row's, are bounded as they are read, and the title row is whole by construction.)
+fn check_shown(shown: &Shown) -> Result<(), Error> {
+    if let ToolsShown::Own(on) = &shown.tools {
+        let mut seen = HashSet::new();
+        if !on.iter().all(|id| seen.insert(*id)) {
+            return Err(Error::new(ErrorCode::BadRequest, "a tool is named twice"));
+        }
+    }
+    Ok(())
+}
+
+/// The app's answer to [`WelcomeOp::SetShown`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ShownDone {
+    /// Whether the window's right panel is on screen now. A window too narrow for it keeps it hidden
+    /// whatever was asked, and the walk shows what is true.
+    pub panel_open: bool,
 }
 
 /// The app's answer to [`WelcomeOp::Import`]: what the import did.
@@ -160,6 +205,11 @@ pub struct WelcomeState {
     /// `None` while the agents are still being looked for.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agents: Option<AgentsFacts>,
+    /// How much the welcome terminal's window shows now; `None` for a tour, from an app that does not
+    /// know it, and when the window's settings are not the ones being edited (another profile's): then
+    /// the page is read-only, as in a tour.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shown: Option<Shown>,
     /// What went wrong with the last Install.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub problem: Option<String>,
@@ -278,6 +328,8 @@ impl HooksFact {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::presets::{Preset, TitleShown};
+    use crate::view::layout::title_parts::TitlePart;
 
     #[test]
     fn the_caps_refuse_what_is_too_long_or_too_big() {
@@ -302,6 +354,39 @@ mod tests {
         };
         assert!(fine.check_caps().is_ok());
         assert!(WelcomeOp::State.check_caps().is_ok());
+    }
+
+    #[test]
+    fn a_shown_of_ones_own_is_bounded_and_read_strictly() {
+        use crate::config::feature_table::FeatureId;
+        use crate::config::presets::Preset;
+        let set = |shown: Shown| WelcomeOp::SetShown { from: shown.clone(), shown };
+        for preset in Preset::ALL {
+            assert!(set(Shown::of(preset)).check_caps().is_ok(), "{preset:?}");
+        }
+        let own =
+            |tools: Vec<FeatureId>| set(Shown { tools: ToolsShown::Own(tools), ..Shown::of(Preset::Zen) });
+        assert!(own(vec![FeatureId::History, FeatureId::Notes]).check_caps().is_ok());
+        assert!(own(Vec::new()).check_caps().is_ok());
+        let twice = own(vec![FeatureId::History, FeatureId::History]);
+        assert_eq!(twice.check_caps().map_err(|e| e.code), Err(ErrorCode::BadRequest));
+        // Off the wire a name that is no part is refused, not left out, and so is a list longer than
+        // there are parts; a part named twice within that is the part once.
+        let wire = |parts: &str| {
+            let shown = r#""status_bar":false,"minimap":false,"column_dividers":false,"panel_open":false,"tools":"few""#;
+            let shown = format!(r#"{{"title":{{"own":[{parts}]}},{shown}}}"#);
+            serde_json::from_str::<WelcomeOp>(&format!(
+                r#"{{"kind":"set_shown","from":{shown},"shown":{shown}}}"#
+            ))
+        };
+        assert!(wire(r#""nope""#).is_err());
+        assert!(wire(&[r#""folder""#; 12].join(",")).is_err());
+        let op = wire(r#""folder","folder""#).expect("parses");
+        let WelcomeOp::SetShown { shown: Shown { title: TitleShown::Own(row), .. }, .. } = &op else {
+            panic!("{op:?}")
+        };
+        assert_eq!(row.parts(), [TitlePart::Folder, TitlePart::Space]);
+        assert!(op.check_caps().is_ok());
     }
 
     #[test]
@@ -334,6 +419,10 @@ mod tests {
                 WelcomeOp::InstallHooks { agent: AgentId::Claude },
                 r#"{"kind":"install_hooks","agent":"claude"}"#,
             ),
+            (
+                WelcomeOp::SetShown { from: Shown::of(Preset::Balanced), shown: Shown::of(Preset::Zen) },
+                r#"{"kind":"set_shown","from":{"title":"everything","status_bar":false,"minimap":false,"column_dividers":true,"panel_open":false,"tools":"all"},"shown":{"title":"name","status_bar":false,"minimap":false,"column_dividers":false,"panel_open":false,"tools":"all"}}"#,
+            ),
             (WelcomeOp::Demo { show: true }, r#"{"kind":"demo","show":true}"#),
             (WelcomeOp::Import { source: "ghostty".into() }, r#"{"kind":"import","source":"ghostty"}"#),
             (WelcomeOp::Finish { skipped: true }, r#"{"kind":"finish","skipped":true}"#),
@@ -343,6 +432,12 @@ mod tests {
             assert_eq!(serde_json::to_string(&op).expect("serializes"), line);
             assert_eq!(serde_json::from_str::<WelcomeOp>(line).expect("parses"), op);
         }
+    }
+
+    #[test]
+    fn the_answer_to_a_shown_is_where_the_panel_ended_up() {
+        let line = serde_json::to_string(&ShownDone { panel_open: true }).expect("serializes");
+        assert_eq!(line, r#"{"panel_open":true}"#);
     }
 
     #[test]

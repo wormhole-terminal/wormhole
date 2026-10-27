@@ -4,20 +4,24 @@
 //!
 //! 1. Welcome: the mark, the name and the sidebar's three lines;
 //! 2. Look: theme, colour, font, ligatures;
-//! 3. Notify: what reaches you when an agent needs input or finishes;
-//! 4. Sidebar: the example band in the real sidebar, and the agents found with their hooks (or, with
+//! 3. Shown: how much the window shows, a walk of questions with a preview for each answer. The walk
+//!    is inside the step (`tailoring`): its questions are not steps of the flow, so Back on the first
+//!    question is the only Back that leaves it;
+//! 4. Notify: what reaches you when an agent needs input or finishes;
+//! 5. Sidebar: the example band in the real sidebar, and the agents found with their hooks (or, with
 //!    none, a primer);
-//! 5. Extras: what else is here, read-only.
+//! 6. Extras: what else is here, read-only.
 //!
 //! A replay of the welcome (Help → Welcome to Wormhole) is the first step alone. Moving through the
 //! steps never asks the app for anything beyond the look it has been shown: the flow has no event for
-//! an install or a notification choice, those are presses on a row (`model`).
+//! an install, a notification choice or an answer of the walk, those are presses on a row (`model`).
 
 /// A step of the terminal welcome.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Step {
     Welcome,
     Look,
+    Shown,
     Notify,
     Sidebar,
     Extras,
@@ -27,7 +31,8 @@ impl Step {
     fn next(self) -> Option<Step> {
         Some(match self {
             Step::Welcome => Step::Look,
-            Step::Look => Step::Notify,
+            Step::Look => Step::Shown,
+            Step::Shown => Step::Notify,
             Step::Notify => Step::Sidebar,
             Step::Sidebar => Step::Extras,
             Step::Extras => return None,
@@ -37,7 +42,8 @@ impl Step {
     fn previous(self) -> Step {
         match self {
             Step::Welcome | Step::Look => Step::Welcome,
-            Step::Notify => Step::Look,
+            Step::Shown => Step::Look,
+            Step::Notify => Step::Shown,
             Step::Sidebar => Step::Notify,
             Step::Extras => Step::Sidebar,
         }
@@ -118,36 +124,44 @@ mod tests {
     use super::*;
 
     #[test]
-    fn continue_walks_the_five_steps_and_the_last_one_ends() {
+    fn continue_walks_the_six_steps_and_the_last_one_ends() {
         let mut flow = Flow::new();
         let mut seen = vec![flow.step()];
         while flow.apply(Event::Continue) == Action::None {
             seen.push(flow.step());
         }
-        assert_eq!(seen, [Step::Welcome, Step::Look, Step::Notify, Step::Sidebar, Step::Extras]);
+        assert_eq!(seen, [Step::Welcome, Step::Look, Step::Shown, Step::Notify, Step::Sidebar, Step::Extras]);
         assert_eq!(flow.step(), Step::Extras, "it ends where the last step is");
     }
 
     #[test]
     fn back_walks_them_the_other_way_and_stops_at_the_first() {
         let mut flow = Flow::new();
-        for _ in 0..4 {
+        for _ in 0..5 {
             flow.apply(Event::Continue);
         }
         let mut seen = vec![flow.step()];
-        for _ in 0..5 {
+        for _ in 0..6 {
             assert_eq!(flow.apply(Event::Back), Action::None);
             seen.push(flow.step());
         }
         assert_eq!(
             seen,
-            [Step::Extras, Step::Sidebar, Step::Notify, Step::Look, Step::Welcome, Step::Welcome]
+            [
+                Step::Extras,
+                Step::Sidebar,
+                Step::Notify,
+                Step::Shown,
+                Step::Look,
+                Step::Welcome,
+                Step::Welcome
+            ]
         );
     }
 
     #[test]
     fn skip_ends_from_any_step_as_skipped() {
-        for steps in 0..4 {
+        for steps in 0..5 {
             let mut flow = Flow::new();
             for _ in 0..steps {
                 flow.apply(Event::Continue);

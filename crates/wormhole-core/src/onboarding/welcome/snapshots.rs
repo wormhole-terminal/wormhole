@@ -534,7 +534,7 @@ fn every_step_draws_at_every_size_with_palette_colours_only() {
                 }
                 w.key(Key::Enter, NOW);
             }
-            for step in [Step::Welcome, Step::Look, Step::Notify, Step::Sidebar, Step::Extras] {
+            for step in [Step::Welcome, Step::Look, Step::Shown, Step::Notify, Step::Sidebar, Step::Extras] {
                 assert!(seen.contains(&step), "{handover:?} {seen:?}");
             }
         }
@@ -543,7 +543,7 @@ fn every_step_draws_at_every_size_with_palette_colours_only() {
 
 #[test]
 fn the_footer_and_the_button_stay_on_a_window_too_short_for_the_page() {
-    for step in [Step::Look, Step::Notify, Step::Sidebar, Step::Extras] {
+    for step in [Step::Look, Step::Shown, Step::Notify, Step::Sidebar, Step::Extras] {
         let w = at(step, fixtures::welcome(Handover::Cursor));
         let all = rows(&w, 60, 12, END);
         assert!(all[11].contains('⏎'), "{step:?} footer: {:?}", all[11]);

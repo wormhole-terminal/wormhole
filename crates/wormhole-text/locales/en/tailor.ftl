@@ -57,6 +57,19 @@ tailor-looks-good = Looks good
 # The walk once the summary was accepted.
 tailor-all-set = All set
 
+# The terminal welcome's page for the walk (`Wormhole welcome`), around the questions. The key hints
+# along its bottom row are lower case, as that page's other hints are.
+tailor-welcome-note = Each answer changes the window around this terminal as you give it.
+tailor-welcome-continue = Continue
+tailor-welcome-continue-detail = the rest stays as it is
+tailor-welcome-key-pick = pick
+tailor-welcome-key-move = move
+tailor-welcome-key-continue = continue
+tailor-welcome-key-start-over = start over
+# Said under the walk when the answers reach nothing: the running Wormhole can't be asked to change this
+# window's settings from here (it is an older one, or the window's settings are another profile's).
+tailor-welcome-unavailable = The window's settings can't be changed from here, so the answers show only what they would do.
+
 # What a screen reader says as the walk goes to a question: { $question } is its words, { $number } its place and
 # { $of } how many there are.
 tailor-announce = { $question }, { $number } of { $of }

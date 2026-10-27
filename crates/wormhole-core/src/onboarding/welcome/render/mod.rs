@@ -12,12 +12,15 @@
 //! that cell. Colours are the terminal's palette only.
 //!
 //! This file is the page machinery (the typing schedule, rows, hits, the footer); the pages are
-//! `first` (the welcome page and how it looks) and `steps` (notifications, the sidebar and agents,
-//! what else is here).
+//! `first` (the welcome page and how it looks), `tailor` (how much the window shows, with `sketch`
+//! drawing the window each answer gives) and `steps` (notifications, the sidebar and agents, what else
+//! is here).
 
 mod first;
 mod import;
+mod sketch;
 mod steps;
+mod tailor;
 
 use std::time::Duration;
 
@@ -96,6 +99,7 @@ pub(super) fn render(welcome: &Welcome, size: Size, clock: Duration) -> Frame {
     let hints = match welcome.step() {
         Step::Welcome => page.welcome(welcome),
         Step::Look => page.look(welcome),
+        Step::Shown => page.tailor(welcome),
         Step::Notify => page.notify(welcome),
         Step::Sidebar => page.sidebar(welcome),
         Step::Extras => page.extras(),

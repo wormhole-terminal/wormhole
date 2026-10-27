@@ -68,7 +68,7 @@ pub use structure::{
 pub use wait::{Met, Ran, RunPlan, RunSpec, WaitPlan, WaitSpec, Waited, matched_text};
 pub use welcome::{
     AgentFact, AgentsFacts, FIELD_MAX_BYTES, HooksFact, ImportDone, LookFacts, NotifyFacts, PermissionFact,
-    PrimaryFact, ThemeFact, WelcomeOp, WelcomeState,
+    PrimaryFact, ShownDone, ThemeFact, WelcomeOp, WelcomeState,
 };
 
 /// The version of this request and reply format. Bump it when a change would make an older

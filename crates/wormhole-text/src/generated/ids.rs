@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 958] = [
+pub(crate) const IDS: [&str; 966] = [
     "control-close-asked", "notice-copied-lines", "notice-copied-characters",
     "notice-copied-output", "notice-copied-command", "notice-copied-path",
     "notice-copied-setting-key", "notice-copied-error", "notice-copied-object-id",
@@ -318,18 +318,20 @@ pub(crate) const IDS: [&str; 958] = [
     "tailor-tools-all-detail", "tailor-heading", "tailor-counter",
     "tailor-back", "tailor-start-over", "tailor-summary",
     "tailor-own", "tailor-looks-good", "tailor-all-set",
-    "tailor-announce", "terminal-size-readout", "title-row-part-folder",
-    "title-row-part-branch", "title-row-part-branch-status", "title-row-part-terminal",
-    "title-row-part-terminal-status", "title-row-part-space", "title-row-part-space.description",
-    "title-row-part-agent-gauge", "title-row-part-ports", "title-row-part-pull-request",
-    "title-row-part-open-in", "title-row-part-splits", "title-row-menu-header",
-    "title-row-menu-reset", "title-row-menu-customize", "title-row-more-open-in-split",
-    "title-row-more-open-in", "title-row-more-split", "title-row-hidden",
-    "title-row-status-in-bar",
+    "tailor-welcome-note", "tailor-welcome-continue", "tailor-welcome-continue-detail",
+    "tailor-welcome-key-pick", "tailor-welcome-key-move", "tailor-welcome-key-continue",
+    "tailor-welcome-key-start-over", "tailor-welcome-unavailable", "tailor-announce",
+    "terminal-size-readout", "title-row-part-folder", "title-row-part-branch",
+    "title-row-part-branch-status", "title-row-part-terminal", "title-row-part-terminal-status",
+    "title-row-part-space", "title-row-part-space.description", "title-row-part-agent-gauge",
+    "title-row-part-ports", "title-row-part-pull-request", "title-row-part-open-in",
+    "title-row-part-splits", "title-row-menu-header", "title-row-menu-reset",
+    "title-row-menu-customize", "title-row-more-open-in-split", "title-row-more-open-in",
+    "title-row-more-split", "title-row-hidden", "title-row-status-in-bar",
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 958] = [
+pub(crate) const TAKES_ARGS: [bool; 966] = [
     false, true, true, true, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
@@ -408,6 +410,7 @@ pub(crate) const TAKES_ARGS: [bool; 958] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, true, false, false, false, false, false, false,
-    true, true, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, true, true, false, false,
+    false, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false,
 ];

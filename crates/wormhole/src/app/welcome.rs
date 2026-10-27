@@ -80,6 +80,24 @@ pub(crate) fn demo(tab: i64, show: bool, cx: &mut App) -> bool {
     true
 }
 
+/// Whether the right panel of the window the welcome's terminal `tab` is in is on screen; `None` when
+/// there is no such window, or when its settings are not the ones an edit reaches (a window of a profile
+/// that is not the shown one has its own, parked): the walk reads and writes the shown profile's.
+pub(crate) fn panel_open(tab: i64, cx: &App) -> Option<bool> {
+    let window = in_window(tab, cx)?;
+    if !crate::settings::edits_in(&window.profile, cx) {
+        return None;
+    }
+    window.workspace.read_with(cx, |ws, _| ws.welcome_panel_open()).ok()
+}
+
+/// The welcome program's `SetShown` for the right panel: open or close it in the window its terminal is
+/// in, as `demo` shows the band there (a request is answered outside any window's update).
+pub(crate) fn set_panel(tab: i64, open: bool, cx: &mut App) {
+    let Some(window) = in_window(tab, cx) else { return };
+    AppState::with_workspace(&window, cx, |ws, _, cx| ws.set_welcome_panel(open, cx));
+}
+
 /// The welcome program's `Finish`, for the window of its terminal: the example band goes and, with
 /// `note`, the sidebar's note for a run that ended on the primer comes up.
 pub(crate) fn ended(tab: i64, note: bool, cx: &mut App) {

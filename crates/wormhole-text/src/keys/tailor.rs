@@ -90,6 +90,22 @@ pub const TAILOR_OWN: Key = Key::new(933);
 pub const TAILOR_LOOKS_GOOD: Key = Key::new(934);
 /// "All set"
 pub const TAILOR_ALL_SET: Key = Key::new(935);
+/// "Each answer changes the window around this terminal as you give it."
+pub const TAILOR_WELCOME_NOTE: Key = Key::new(936);
+/// "Continue"
+pub const TAILOR_WELCOME_CONTINUE: Key = Key::new(937);
+/// "the rest stays as it is"
+pub const TAILOR_WELCOME_CONTINUE_DETAIL: Key = Key::new(938);
+/// "pick"
+pub const TAILOR_WELCOME_KEY_PICK: Key = Key::new(939);
+/// "move"
+pub const TAILOR_WELCOME_KEY_MOVE: Key = Key::new(940);
+/// "continue"
+pub const TAILOR_WELCOME_KEY_CONTINUE: Key = Key::new(941);
+/// "start over"
+pub const TAILOR_WELCOME_KEY_START_OVER: Key = Key::new(942);
+/// "The window's settings can't be changed from here, so the answers show only what they would do."
+pub const TAILOR_WELCOME_UNAVAILABLE: Key = Key::new(943);
 
 /// ```text
 /// { $number } of { $of }
@@ -102,5 +118,5 @@ pub fn tailor_counter(number: &str, of: &str) -> String {
 /// { $question }, { $number } of { $of }
 /// ```
 pub fn tailor_announce(question: &str, number: &str, of: &str) -> String {
-    crate::active::message(936, &[("question", Arg::Str(question)), ("number", Arg::Str(number)), ("of", Arg::Str(of))])
+    crate::active::message(944, &[("question", Arg::Str(question)), ("number", Arg::Str(number)), ("of", Arg::Str(of))])
 }

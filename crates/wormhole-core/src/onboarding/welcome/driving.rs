@@ -102,7 +102,7 @@ fn without_a_link_it_is_a_tour_that_asks_for_nothing() {
     assert!(text(&tick.draw).contains("Read-only tour") || driver.model().is_some_and(|m| !m.live()));
     // Return all the way through: it ends without a Finish to send, and no example band was asked for.
     let mut end = None;
-    for n in 1..=6 {
+    for n in 1..=7 {
         let tick = driver.tick(ms(n * 50), SIZE, b"\r", vec![]);
         assert!(tick.ask.is_empty(), "{tick:?}");
         end = tick.end.or(end);
@@ -125,7 +125,7 @@ fn an_app_that_cannot_be_reached_turns_the_welcome_into_a_tour() {
 fn the_end_sends_the_finish_and_then_stops() {
     let mut driver = started();
     let mut last = None;
-    for n in 0..5 {
+    for n in 0..6 {
         let tick = driver.tick(ms(100 + n * 50), SIZE, b"\r", vec![]);
         if tick.end.is_some() {
             last = Some(tick);
@@ -191,6 +191,7 @@ fn the_example_band_is_asked_for_on_entering_the_sidebar_step_and_dropped_on_lea
         but_polls(&driver.tick(ms(at), SIZE, input, vec![]).ask).into_iter().cloned().collect()
     };
     assert!(demos(&mut driver, 100, b"\r").is_empty(), "the look step");
+    assert!(demos(&mut driver, 110, b"\r").is_empty(), "the step for how much is shown");
     assert!(demos(&mut driver, 120, b"\r").is_empty(), "the notifications step");
     assert_eq!(demos(&mut driver, 140, b"\r"), [WelcomeOp::Demo { show: true }], "the sidebar step");
     assert!(demos(&mut driver, 160, &[]).is_empty(), "once, not every frame");
@@ -207,7 +208,7 @@ fn the_example_band_is_asked_for_on_entering_the_sidebar_step_and_dropped_on_lea
 #[test]
 fn a_refused_example_band_is_asked_for_again_but_not_every_frame() {
     let mut driver = started();
-    for (at, input) in [(100, &b"\r"[..]), (120, b"\r"), (140, b"\r")] {
+    for (at, input) in [(100, &b"\r"[..]), (110, b"\r"), (120, b"\r"), (140, b"\r")] {
         driver.tick(ms(at), SIZE, input, vec![]);
     }
     let refused = Answer { op: "demo", result: Err("too many requests".to_string()) };
@@ -225,6 +226,7 @@ fn a_refused_example_band_is_asked_for_again_but_not_every_frame() {
 fn a_state_on_its_way_when_a_choice_is_made_does_not_undo_it() {
     let mut driver = started();
     driver.tick(ms(100), SIZE, b"\r", vec![]);
+    driver.tick(ms(110), SIZE, b"\r", vec![]);
     driver.tick(ms(120), SIZE, b"\r", vec![]);
     assert_eq!(driver.model().map(Welcome::step), Some(Step::Notify));
     // The poll is due, and in the same breath the person turns "Needs input" off (four Ups, then Return).

@@ -10,6 +10,11 @@
 //! Each part [`Shown`] reads from the settings comes back as it was when it is written: a title row
 //! or a set of tools of the person's own, which no answer describes, is kept as it is (`Own`).
 
+use std::marker::PhantomData;
+
+use serde::de::{Error as _, SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
+
 use crate::config::Settings;
 use crate::config::feature_table::{FEATURES, FeatureId, FeatureKind};
 use crate::config::features::enabled_in;
@@ -32,8 +37,10 @@ impl Preset {
     pub const ALL: [Preset; 3] = [Preset::Zen, Preset::Balanced, Preset::Everything];
 }
 
-/// How much of the title row shows.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// How much of the title row shows. Written as `"name"`, `"path"`, `"everything"` or
+/// `{"own": [<part names>]}` (the terminal welcome sends a [`Shown`] to the app).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TitleShown {
     /// The terminal's name, and the split buttons at the right end.
     Name,
@@ -42,8 +49,9 @@ pub enum TitleShown {
     Path,
     /// Every part, where it is by default.
     Everything,
-    /// An arrangement of the person's own, which none of the above describes: kept as it is.
-    Own(TitleRow),
+    /// An arrangement of the person's own, which none of the above describes: kept as it is. Read
+    /// strictly off the wire (`own_title`), unlike `config.json`'s title row.
+    Own(#[serde(deserialize_with = "own_title")] TitleRow),
 }
 
 impl TitleShown {
@@ -70,20 +78,58 @@ impl TitleShown {
 
 /// Which of the right panel's optional tools are there (those this build offers: History, and
 /// Notes and Project where their flags are on). The ones that always are (Changes, Usage) are
-/// there whatever this says.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// there whatever this says. Written as `"few"`, `"all"` or `{"own": [<feature keys>]}`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ToolsShown {
     /// None of them.
     Few,
     /// All of them.
     All,
     /// Some, as the person switched them: these are on, the rest off. Kept as it is.
-    Own(Vec<FeatureId>),
+    Own(#[serde(deserialize_with = "own_tools")] Vec<FeatureId>),
+}
+
+/// A list read off the wire, which a program other than the app writes: every name must be one this
+/// build knows (unlike the settings file, which leaves an unknown name out with a warning, once for each),
+/// and there are at most `max` of them, counted as they are read so a long list is refused early.
+fn capped<'de, D: Deserializer<'de>, T: Deserialize<'de>>(
+    deserializer: D,
+    max: usize,
+) -> Result<Vec<T>, D::Error> {
+    struct Capped<T>(usize, PhantomData<T>);
+    impl<'de, T: Deserialize<'de>> Visitor<'de> for Capped<T> {
+        type Value = Vec<T>;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "a list of at most {} names", self.0)
+        }
+
+        fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Vec<T>, A::Error> {
+            let mut out = Vec::new();
+            while let Some(item) = seq.next_element::<T>()? {
+                if out.len() == self.0 {
+                    return Err(A::Error::custom(format!("more than {} names", self.0)));
+                }
+                out.push(item);
+            }
+            Ok(out)
+        }
+    }
+    deserializer.deserialize_seq(Capped(max, PhantomData))
+}
+
+fn own_title<'de, D: Deserializer<'de>>(deserializer: D) -> Result<TitleRow, D::Error> {
+    Ok(TitleRow::new(capped::<_, TitlePart>(deserializer, TitlePart::ALL.len())?))
+}
+
+fn own_tools<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<FeatureId>, D::Error> {
+    capped(deserializer, FeatureId::ALL.len())
 }
 
 /// How much the window shows. `panel_open` is a window's (its layout keeps it), not a setting: the app
 /// reads it from the window and applies it there.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Shown {
     pub title: TitleShown,
     pub status_bar: bool,
@@ -285,6 +331,40 @@ mod tests {
         let mut whole = before;
         Shown { minimap: true, ..balanced }.apply(&mut whole);
         assert_eq!(whole.minimap, settings.minimap);
+    }
+
+    /// What the terminal welcome sends the app: the names are the settings file's own (a part's, a
+    /// feature's key), so the form is as stable as `config.json`.
+    #[test]
+    fn a_shown_crosses_a_socket_as_names() {
+        let line = serde_json::to_string(&Shown::of(Preset::Zen)).expect("serializes");
+        assert_eq!(
+            line,
+            r#"{"title":"name","status_bar":false,"minimap":false,"column_dividers":false,"panel_open":false,"tools":"all"}"#
+        );
+        let own = Shown {
+            title: TitleShown::Own(TitleRow::new([TitlePart::Splits, TitlePart::Space, TitlePart::Folder])),
+            tools: ToolsShown::Own(vec![FeatureId::History, FeatureId::Notes]),
+            ..Shown::of(Preset::Everything)
+        };
+        let line = serde_json::to_string(&own).expect("serializes");
+        assert!(line.contains(r#""title":{"own":["splits","space","folder"]}"#), "{line}");
+        assert!(line.contains(r#""tools":{"own":["history","notes"]}"#), "{line}");
+        assert_eq!(serde_json::from_str::<Shown>(&line).expect("parses"), own);
+        for preset in Preset::ALL {
+            let shown = Shown::of(preset);
+            let back = serde_json::from_str::<Shown>(&serde_json::to_string(&shown).expect("serializes"));
+            assert_eq!(back.expect("parses"), shown, "{preset:?}");
+        }
+        // A feature or a part that does not exist is none: the value is refused whole, not read with
+        // the name left out.
+        assert!(serde_json::from_str::<Shown>(&line.replace("history", "nope")).is_err());
+        assert!(serde_json::from_str::<Shown>(&line.replace("splits", "nope")).is_err());
+        // And a list longer than there are names is refused as it is read.
+        let long = format!(r#""own":[{}]"#, vec![r#""folder""#; TitlePart::ALL.len() + 1].join(","));
+        let line = serde_json::to_string(&Shown::of(Preset::Zen)).expect("serializes");
+        let long = line.replace(r#""title":"name""#, &format!(r#""title":{{{long}}}"#));
+        assert!(serde_json::from_str::<Shown>(&long).is_err());
     }
 
     /// A release offers only the tools it ships (no flag of theirs is on there).

@@ -127,6 +127,8 @@ fn welcome_services() -> crate::onboarding::welcome::Services {
         budget,
         permission: crate::notifications::permission,
         ask_permission: crate::notifications::ask_permission_if_new,
+        panel: crate::app::welcome::panel_open,
+        set_panel: crate::app::welcome::set_panel,
         demo: crate::app::welcome::demo,
         ended: crate::app::welcome::ended,
         remember_first_run: crate::window::remember_first_run,

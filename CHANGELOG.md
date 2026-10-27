@@ -27,6 +27,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   minimap, the lines between the columns and the right panel with its tools. Each answer is a small
   drawing of the window it would give; click one or press 1, 2 or 3. Every answer is applied at once,
   Back and Start over go around, and a summary ends the walk.
+- `Wormhole welcome` asks the same questions in the terminal, after the look, in the manner of a shell
+  prompt's setup wizard: one question to a page, the answers numbered and each drawn as a small sketch
+  of the window, applied as you press 1, 2 or 3: the panel to the window around the terminal, the rest
+  to Wormhole's settings, as in Settings. `b` goes back, `r` starts over, and Return keeps things as
+  they are. An answer changes only that part, so anything you set by hand meanwhile stays.
 - `features` in config.json switches the right panel's optional tools off and on (`"history": false`);
   Changes and Usage always stay, and a key that switches nothing is said so. Settings has no page for it
   yet; the first run's walk through how much the window shows will set it.

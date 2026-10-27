@@ -54,7 +54,7 @@ impl Page {
                     }
                 }
                 Item::Start => start = Some(line),
-                Item::Theme(_) | Item::Agent(_) => continue,
+                Item::Theme(_) | Item::Agent(_) | Item::Answer(_) => continue,
             }
             if selected {
                 enter = match item {

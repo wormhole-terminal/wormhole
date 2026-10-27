@@ -7,17 +7,21 @@
 //! ligature setting or font step the page offers; what reaches the person changes only by the switches
 //! and sound Settings → Notifications has (macOS is asked for permission only when a press turns a
 //! banner on or says Allow, and only if it has not been asked); hooks are written for the one agent
-//! named, if it was found on PATH; the example band goes up in the window's sidebar and comes down.
+//! named, if it was found on PATH; the example band goes up in the window's sidebar and comes down; how
+//! much the window shows changes only to the title row, status bar, minimap, lines between the columns,
+//! tools and right panel that the walk's answers make (core's `Shown`), and only the parts that differ
+//! from what the window shows are written.
 
 use std::time::Duration;
 
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations::{self, State};
 use wormhole_core::config::NotifySound;
+use wormhole_core::config::presets::{Shown, TitleShown, ToolsShown};
 use wormhole_core::import::{Env, Proposed, Source};
 use wormhole_core::ipc::control::{
     AgentFact, ErrorCode, HooksFact, ImportDone, Limited, LookFacts, NotifyFacts, PermissionFact,
-    PrimaryFact, Reply, ThemeFact, WelcomeOp, WelcomeState,
+    PrimaryFact, Reply, ShownDone, ThemeFact, WelcomeOp, WelcomeState,
 };
 use wormhole_core::onboarding::intro::Handover;
 use wormhole_core::theme::fonts::FontSlot;
@@ -43,6 +47,11 @@ pub(crate) struct Services {
     pub budget: Budget,
     pub permission: fn(&App) -> Permission,
     pub ask_permission: fn(&mut App) -> bool,
+    /// Whether the right panel of the window terminal `tab` is in is on screen; `None` if no window has
+    /// that terminal, or its settings are not the ones an edit reaches (another profile's).
+    pub panel: fn(tab: i64, &App) -> Option<bool>,
+    /// Opens or closes the right panel of the window terminal `tab` is in.
+    pub set_panel: fn(tab: i64, open: bool, &mut App),
     /// Shows or hides the example band in the sidebar of the window terminal `tab` is in; whether there
     /// is such a terminal.
     pub demo: fn(tab: i64, show: bool, &mut App) -> bool,
@@ -74,6 +83,7 @@ pub(crate) fn handle(
         WelcomeOp::State => None,
         WelcomeOp::SetLook { .. } => Some(Limited::WelcomeLook),
         WelcomeOp::SetNotify { .. } => Some(Limited::WelcomeNotify),
+        WelcomeOp::SetShown { .. } => Some(Limited::WelcomeShown),
         WelcomeOp::InstallHooks { .. } => Some(Limited::WelcomeInstall),
         WelcomeOp::Demo { .. } => Some(Limited::WelcomeDemo),
         WelcomeOp::Import { .. } => Some(Limited::WelcomeImport),
@@ -92,6 +102,7 @@ pub(crate) fn handle(
         WelcomeOp::SetNotify { needs_you, agent_done, sound, allow } => {
             set_notify(needs_you, agent_done, sound, allow, &services, cx)
         }
+        WelcomeOp::SetShown { from, shown } => set_shown(tab, &from, &shown, &services, cx),
         WelcomeOp::InstallHooks { agent } => install(tab, agent, cx),
         WelcomeOp::Demo { show } => demo(tab, show, &services, cx),
         WelcomeOp::Import { source } => import(tab, &source, &services, cx),
@@ -116,6 +127,7 @@ fn state(tab: i64, services: &Services, cx: &mut App) -> WelcomeState {
         look,
         notify: Some(notify),
         agents: run.agents.clone(),
+        shown: (services.panel)(tab, cx).map(|panel_open| Shown::read(settings(cx), panel_open)),
         problem: run.problem.clone(),
     }
 }
@@ -139,6 +151,7 @@ fn empty_state(tab: i64) -> WelcomeState {
         },
         notify: None,
         agents: None,
+        shown: None,
         problem: None,
     }
 }
@@ -292,6 +305,32 @@ fn set_notify(
         let _ = (services.ask_permission)(cx);
     }
     Reply::ok(serde_json::json!({}))
+}
+
+/// `SetShown`: how much the window shows, from what the walk showed before the answer (`from`) to what
+/// it shows with it. Only the parts where the two differ are written, so what the person changed or
+/// arranged meanwhile is left as it is, and a title row or a set of tools of the person's own is
+/// accepted only as the one `from` already had (the walk never offers to make one). Every setting but
+/// the right panel is the app's; the panel is that window's, and is answered with where it ended up (a
+/// window too narrow for it keeps it hidden). A window of a profile whose settings an edit does not
+/// reach (`edits_in`) is refused rather than written to the shown profile's.
+fn set_shown(tab: i64, from: &Shown, shown: &Shown, services: &Services, cx: &mut App) -> Reply {
+    let own_title = matches!(shown.title, TitleShown::Own(_)) && shown.title != from.title;
+    let own_tools = matches!(shown.tools, ToolsShown::Own(_)) && shown.tools != from.tools;
+    if own_title || own_tools {
+        return Reply::error(ErrorCode::BadRequest, "an arrangement of one's own can only stay as it is");
+    }
+    if (services.panel)(tab, cx).is_none() {
+        return Reply::error(ErrorCode::NotFound, "no such terminal, or its settings can't be changed here");
+    }
+    if (Shown { panel_open: from.panel_open, ..shown.clone() }) != *from {
+        update_settings(cx, |s| shown.apply_changes(from, s));
+    }
+    if shown.panel_open != from.panel_open {
+        (services.set_panel)(tab, shown.panel_open, cx);
+    }
+    let panel_open = (services.panel)(tab, cx).unwrap_or(shown.panel_open);
+    Reply::ok(ShownDone { panel_open })
 }
 
 /// `InstallHooks`: the hooks of this one agent, if it was found on PATH. Nothing else is touched.

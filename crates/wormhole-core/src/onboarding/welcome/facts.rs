@@ -54,6 +54,8 @@ pub fn tour_state(home: &Path) -> WelcomeState {
         },
         notify: None,
         agents: Some(scan_agents(home)),
+        // A tour has no window of the app's to change.
+        shown: None,
         problem: None,
     }
 }

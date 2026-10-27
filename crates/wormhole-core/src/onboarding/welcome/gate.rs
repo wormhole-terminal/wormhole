@@ -195,6 +195,10 @@ mod tests {
                 font_step: None,
             },
             set_notify(),
+            WelcomeOp::SetShown {
+                from: crate::config::presets::Shown::of(crate::config::presets::Preset::Balanced),
+                shown: crate::config::presets::Shown::of(crate::config::presets::Preset::Zen),
+            },
             install(),
             WelcomeOp::Demo { show: true },
             WelcomeOp::Import { source: "ghostty".into() },
@@ -205,6 +209,7 @@ mod tests {
                 WelcomeOp::State
                 | WelcomeOp::SetLook { .. }
                 | WelcomeOp::SetNotify { .. }
+                | WelcomeOp::SetShown { .. }
                 | WelcomeOp::InstallHooks { .. }
                 | WelcomeOp::Demo { .. }
                 | WelcomeOp::Import { .. }

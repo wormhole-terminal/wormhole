@@ -59,6 +59,8 @@ fn no_way_of_moving_about_installs_or_changes_what_reaches_you() {
         Key::Char('l'),
         Key::Char('+'),
         Key::Char('-'),
+        Key::Char('b'),
+        Key::Char('r'),
     ];
     fn walk(w: &Welcome, depth: usize, moves: &[Key], seen: &mut usize) {
         if depth == 0 {
@@ -70,6 +72,11 @@ fn no_way_of_moving_about_installs_or_changes_what_reaches_you() {
             *seen += 1;
             for op in asks(&effects) {
                 assert!(!installs_or_notifies(op), "{key:?} at {:?} asked for {op:?}", w.step());
+                assert!(
+                    !matches!(op, WelcomeOp::SetShown { .. }),
+                    "{key:?} at {:?} asked for {op:?}",
+                    w.step()
+                );
             }
             if next.ended().is_none() {
                 walk(&next, depth - 1, moves, seen);
@@ -96,10 +103,11 @@ fn no_way_of_moving_about_installs_or_changes_what_reaches_you() {
 fn returning_through_every_step_installs_and_changes_nothing_and_ends() {
     let mut w = fixtures::welcome(Handover::Cursor);
     let mut all = Vec::new();
-    for _ in 0..5 {
+    for _ in 0..6 {
         all.extend(w.key(Key::Enter, NOW));
     }
-    // Welcome, look, notifications, sidebar (the cursor starts on Continue on each), what else.
+    // Welcome, look, how much is shown, notifications, sidebar (the cursor starts on Continue on each),
+    // what else.
     assert!(asks(&all).is_empty(), "{all:?}");
     assert_eq!(all.last(), Some(&Effect::End(End { skipped: false })));
 }
@@ -108,12 +116,12 @@ fn returning_through_every_step_installs_and_changes_nothing_and_ends() {
 fn the_steps_come_in_the_order_the_welcome_promises() {
     let mut w = fixtures::welcome(Handover::Cursor);
     let mut seen = vec![w.step()];
-    for _ in 0..4 {
+    for _ in 0..5 {
         w.key(Key::Enter, NOW);
         seen.push(w.step());
     }
-    assert_eq!(seen, [Step::Welcome, Step::Look, Step::Notify, Step::Sidebar, Step::Extras]);
-    for _ in 0..4 {
+    assert_eq!(seen, [Step::Welcome, Step::Look, Step::Shown, Step::Notify, Step::Sidebar, Step::Extras]);
+    for _ in 0..5 {
         w.key(Key::Left, NOW);
     }
     assert_eq!(w.step(), Step::Welcome);
@@ -122,7 +130,7 @@ fn the_steps_come_in_the_order_the_welcome_promises() {
 #[test]
 fn an_install_comes_only_from_return_on_that_agents_own_row() {
     let mut w = fixtures::welcome(Handover::Cursor);
-    for _ in 0..3 {
+    for _ in 0..4 {
         w.key(Key::Enter, NOW);
     }
     assert_eq!(w.step(), Step::Sidebar);
@@ -146,7 +154,7 @@ fn an_install_comes_only_from_return_on_that_agents_own_row() {
 #[test]
 fn a_click_on_an_agents_row_installs_that_one_only() {
     let mut w = fixtures::welcome(Handover::Cursor);
-    for _ in 0..3 {
+    for _ in 0..4 {
         w.key(Key::Enter, NOW);
     }
     assert!(asks(&w.click_row(1, NOW)).is_empty(), "Codex's hooks are in");
@@ -177,7 +185,7 @@ fn a_click_on_a_theme_chooses_it_and_stays_on_the_page() {
 #[test]
 fn a_notification_choice_comes_only_from_a_press_on_its_own_row() {
     let mut w = fixtures::welcome(Handover::Cursor);
-    for _ in 0..2 {
+    for _ in 0..3 {
         w.key(Key::Enter, NOW);
     }
     assert_eq!(w.step(), Step::Notify);
@@ -207,7 +215,7 @@ fn a_notification_choice_comes_only_from_a_press_on_its_own_row() {
 #[test]
 fn a_click_on_a_notification_row_presses_it() {
     let mut w = fixtures::welcome(Handover::Cursor);
-    for _ in 0..2 {
+    for _ in 0..3 {
         w.key(Key::Enter, NOW);
     }
     assert_eq!(asks(&w.click_row(1, NOW)), [&set_notify(None, Some(false), None, false)]);
@@ -221,7 +229,7 @@ fn once_macos_has_been_asked_there_is_nothing_to_allow() {
         notify.permission = PermissionFact::Allowed;
     }
     let mut w = Welcome::new(state, true);
-    for _ in 0..2 {
+    for _ in 0..3 {
         w.key(Key::Enter, NOW);
     }
     // Three switches and the button: one Up from the button is the sound, not an Allow.
@@ -237,7 +245,7 @@ fn a_read_only_tour_asks_for_nothing_whatever_is_pressed() {
     for key in [Key::Enter, Key::Char('p'), Key::Char('l'), Key::Char('+'), Key::Down, Key::Enter] {
         all.extend(w.key(key, NOW));
     }
-    for _ in 0..4 {
+    for _ in 0..5 {
         for _ in 0..4 {
             w.key(Key::Up, NOW);
             all.extend(w.key(Key::Enter, NOW));
@@ -302,12 +310,16 @@ fn a_replay_ends_on_the_first_return() {
 fn the_example_band_is_wanted_on_the_sidebar_step_alone_while_the_welcome_runs() {
     let mut w = fixtures::welcome(Handover::Cursor);
     let mut wanted = Vec::new();
-    for _ in 0..4 {
+    for _ in 0..5 {
         wanted.push(w.wants_demo());
         w.key(Key::Enter, NOW);
     }
     wanted.push(w.wants_demo());
-    assert_eq!(wanted, [false, false, false, true, false], "welcome, look, notify, sidebar, extras");
+    assert_eq!(
+        wanted,
+        [false, false, false, false, true, false],
+        "welcome, look, shown, notify, sidebar, extras"
+    );
     // Back into it, and out by Esc: the end wants no band.
     w.key(Key::Left, NOW);
     assert!(w.wants_demo());
@@ -318,7 +330,7 @@ fn the_example_band_is_wanted_on_the_sidebar_step_alone_while_the_welcome_runs()
 #[test]
 fn a_state_asked_before_a_choice_does_not_undo_it() {
     let mut w = fixtures::welcome(Handover::Cursor);
-    for _ in 0..2 {
+    for _ in 0..3 {
         w.key(Key::Enter, NOW);
     }
     for _ in 0..4 {
@@ -357,7 +369,7 @@ fn the_app_updates_keep_the_cursor_and_the_run_s_own_facts() {
 #[test]
 fn the_cursor_stays_on_its_row_when_the_allow_row_goes() {
     let mut w = fixtures::welcome(Handover::Cursor);
-    for _ in 0..2 {
+    for _ in 0..3 {
         w.key(Key::Enter, NOW);
     }
     // On Finished (the second switch).
