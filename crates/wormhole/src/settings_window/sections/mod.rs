@@ -55,8 +55,8 @@ mod updates;
 
 pub(super) use agents::AgentsSnapshot;
 pub(super) use cli_tool::CliToolPanel;
-pub(super) use feature_flags::is_unlock_key;
 pub(super) use extensions::Extensions;
+pub(super) use feature_flags::is_unlock_key;
 pub(super) use fonts::draw_specimen;
 pub(crate) use import::ImportPage;
 pub(super) use menu_bar_preview::draw_menu_bar_preview;

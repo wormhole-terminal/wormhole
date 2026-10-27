@@ -440,7 +440,8 @@ mod tests {
     #[test]
     fn the_preview_sections_show_only_in_a_dev_build_or_on_unstable_and_while_their_flag_is_on() {
         use crate::config::features::FlagMode::{Dev as DEV, Release as RELEASE, Unstable as UNSTABLE};
-        let preview = [SectionId::Projects, SectionId::Extensions, SectionId::FeatureFlags, SectionId::Motion];
+        let preview =
+            [SectionId::Projects, SectionId::Extensions, SectionId::FeatureFlags, SectionId::Motion];
         let defaults = Settings::default();
         // A release build: no flag list, and a flagged feature stays hidden whatever the file says.
         let asked_on = Settings {
