@@ -105,35 +105,40 @@ impl Workspace {
         crate::automation::printed(cx, self.window_id, session.id, || terminal.reader());
     }
 
-    /// Terminal `id`'s shell marked a command's start or end: tell which command it was, from the
-    /// grid's newest block (its number, how long it took, the line typed).
+    /// Terminal `id`'s shell marked a command's start or end: tell which command it was. The mark carries
+    /// the number of its prompt, which is the block's id, so a mark heard late (the shell having marked
+    /// others since) is still told about the right command; how it went comes from the shell's own log
+    /// by that number, and the line typed from the grid when its rows are still there.
     pub(super) fn publish_command(&self, id: i64, mark: CommandMark, cx: &App) {
         if !wants(cx, Topic::Blocks) {
             return;
         }
+        // Before any prompt (0) the log has nothing to say.
+        let prompt = mark.prompt();
         let Some(session) = self.sessions.iter().find(|session| session.id == id) else { return };
-        let Some(block) = session.terminal().read(cx).newest_block() else { return };
+        let terminal = session.terminal().read(cx);
+        let Some(state) = terminal.command_state(prompt).filter(|_| prompt > 0) else { return };
         // An Enter on an empty line is marked as ending a block too, with no command in it: that is
         // not a command finishing, and the command before it already said so.
-        let ended = matches!(block.state, BlockState::Finished { .. });
-        if !block.state.ran() || (matches!(mark, CommandMark::Finished { .. }) && !ended) {
+        if !state.ran() {
             return;
         }
         let (phase, exit_code) = match mark {
-            CommandMark::Started => (BlockPhase::Started, None),
-            CommandMark::Finished { code } => (BlockPhase::Finished, code),
+            CommandMark::Started { .. } => (BlockPhase::Started, None),
+            CommandMark::Finished { code, .. } => (BlockPhase::Finished, code),
         };
         // How long it took is known once it ended, and only the end says it.
-        let took_ms = match (phase, block.state) {
+        let took_ms = match (phase, state) {
             (BlockPhase::Finished, BlockState::Finished { took, .. }) => {
                 took.map(|took| u64::try_from(took.as_millis()).unwrap_or(u64::MAX))
             }
             _ => None,
         };
         publish(cx, Topic::Blocks, || {
-            let command = wormhole_term::clean(&block.command, COMMAND_CHARS);
+            let line = terminal.block_numbered(prompt).map(|block| block.command).unwrap_or_default();
+            let command = wormhole_term::clean(&line, COMMAND_CHARS);
             let body = Body::Block {
-                block: i64::try_from(block.id).unwrap_or(i64::MAX),
+                block: i64::try_from(prompt).unwrap_or(i64::MAX),
                 phase,
                 exit_code,
                 took_ms,

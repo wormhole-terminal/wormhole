@@ -321,11 +321,23 @@ pub struct Error {
     /// an older app's reply, and ignored by an older command line: the code stays what it acts on.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<Reason>,
+    /// The command block the error is about, when it is about one: a `run` that ran out of time names the
+    /// block still running, so the caller can `wait --after` or `read --block` it later.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub block: Option<u32>,
 }
 
 impl Error {
     pub fn new(code: ErrorCode, message: impl Into<String>) -> Self {
-        Self { code, message: message.into(), reason: None }
+        Self { code, message: message.into(), reason: None, block: None }
+    }
+
+    /// The same error about command block `block`.
+    #[must_use]
+    pub fn about_block(mut self, block: i64) -> Self {
+        // (A shell would have to mark four billion prompts first; the field is small to keep `Reply` so.)
+        self.block = Some(u32::try_from(block).unwrap_or(u32::MAX));
+        self
     }
 
     /// The same error with the finer `reason` named.
@@ -363,6 +375,8 @@ pub enum Reason {
     Exited,
     /// The feature is still behind its flag in this build.
     FlagOff,
+    /// A `run` is under way in that terminal: its command was typed and has not ended.
+    RunPending,
     /// The terminal is in a window of a profile that is not shown: it is left alone, as if absent.
     HiddenProfile,
     /// A reason a newer Wormhole gave.

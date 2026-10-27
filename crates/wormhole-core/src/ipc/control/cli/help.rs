@@ -51,17 +51,21 @@ pub fn help_with(automation: bool) -> String {
   {wh} close <target>
       Asks you, in the terminal's window, whether to close it. It never closes on a script's say; the
       reply only says the question is up, and `events` tells if you said yes (terminal_closed).
-  {wh} wait <target> [--status <state>[,<state>]...] [--text <regex>] [--gone <regex>] [--stable <ms>]
-        [--block-done] [--timeout <s>]
+  {wh} wait <target> [--status <state>[,<state>]...] [--match <regex>] [--gone <regex>] [--stable <ms>]
+        [--block-done [--after <block>]] [--timeout <s>]
       Wait until one of the conditions given holds and say which: the terminal's state (idle, working,
       needs_you, finished, failed, exited), a regular expression found on its screen, one no longer
-      found, no output for <ms>, or a command finishing. 30 s by default (at most 600); exits 124 when
-      the time is up. The text conditions need reading to be allowed.
-  {wh} run <target> [--timeout <s>] [--exit-code] [--] <command>...
+      found, no output for <ms>, or a command finishing (--after <block>: one after that block, even
+      one that has finished already; take the id from `blocks` or `run` before sending the command).
+      30 s by default (at most 600); exits 124 when the time is up. --match and --gone need reading
+      to be allowed.
+  {wh} run <target> [--timeout <s>] [--exit-code] ['<command>' | -- <word>...]
       Run a command at the terminal's shell prompt and wait for it: prints what it printed, and its exit
-      code on stderr. Needs shell integration, a shell at its prompt, and typing to be allowed; the
-      output needs reading to be allowed. --exit-code exits with the command's own code (124 if it
-      timed out); 10 minutes by default (at most 3600). It clears the prompt line first (^U).
+      code on stderr. The command is one quoted argument, or the words after -- (each quoted for the
+      shell where needed). Needs shell integration, a shell at its prompt, and typing to be allowed;
+      the output needs reading to be allowed. --exit-code exits with the command's own code (1 to 255;
+      124 if it timed out; note that 1, 2 and 124 are also what refusals, usage mistakes and timeouts
+      say); 10 minutes by default (at most 3600). It clears the prompt line first (^U).
 "
         )
     } else {

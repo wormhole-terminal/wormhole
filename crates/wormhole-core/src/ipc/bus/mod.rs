@@ -20,7 +20,7 @@ use ring::rand::{SecureRandom as _, SystemRandom};
 
 use subscription::Subscriber;
 pub use subscription::{Caller, Grant, Next, QUEUE_BYTES, QUEUE_ITEMS, Subscription};
-pub use wait::{LOOK_EVERY, Watch};
+pub use wait::{LOOK_EVERY, RunClaim, Watch};
 use worker::Worker;
 pub use worker::{OUTPUT_BYTES_MAX, OUTPUT_LINES_MAX};
 
@@ -102,6 +102,8 @@ struct State {
     seq: u64,
     next_id: u64,
     subscribers: Vec<Arc<Subscriber>>,
+    /// The terminals a `run` is under way in (`Bus::claim_run`).
+    runs: Vec<i64>,
 }
 
 /// The bus.

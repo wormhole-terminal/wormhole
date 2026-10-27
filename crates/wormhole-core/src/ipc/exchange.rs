@@ -208,18 +208,20 @@ pub fn run(args: &[String]) -> i32 {
 }
 
 /// How long to wait for the app's answer: a moment, except for `wait` and `run`, which answer when they
-/// are done: their own timeout, and a margin for the app to say it ran out.
+/// are done: their own timeout, after the moment the app takes to decide, and a margin for it to say it
+/// ran out.
 fn answer_wait(action: &Action) -> Duration {
     let patient = match action {
         Action::Wait(spec) => spec.wait_for(),
         Action::Run(spec) => spec.wait_for(),
         _ => return REPLY_WAIT,
     };
-    patient + Duration::from_secs(5)
+    patient + REPLY_WAIT + Duration::from_secs(10)
 }
 
 /// The command line's exit code for `reply`: 0 when it worked, 124 when a `wait` or `run` ran out of
-/// time (as `timeout(1)` does), the error's own otherwise; and for `run --exit-code` the command's.
+/// time (as `timeout(1)` does), the error's own otherwise; and for `run --exit-code` the command's, which
+/// is then also what a refusal (1), a mistake in the arguments (2) and a timeout (124) say.
 fn exit_code_of(action: &Action, reply: &Reply, command_code: bool) -> i32 {
     if let Some(error) = &reply.error {
         let waits = matches!(action, Action::Wait(_) | Action::Run(_));
@@ -227,7 +229,13 @@ fn exit_code_of(action: &Action, reply: &Reply, command_code: bool) -> i32 {
     }
     if command_code && matches!(action, Action::Run(_)) {
         let ran = reply.result.clone().and_then(|result| serde_json::from_value::<Ran>(result).ok());
-        return ran.and_then(|ran| ran.exit_code).unwrap_or(0);
+        // A process's exit code is a byte: what is not one (a shell that gave none, a signal's negative
+        // number) is a failure, not a success.
+        return match ran.and_then(|ran| ran.exit_code) {
+            None | Some(0) => 0,
+            Some(code @ 1..=255) => code,
+            Some(_) => 1,
+        };
     }
     0
 }
@@ -339,10 +347,11 @@ mod tests {
         Action::Wait(WaitSpec {
             target: Target::Terminal(3),
             status: vec![],
-            text: None,
+            pattern: None,
             gone: None,
             stable_ms: None,
             block_done: true,
+            after: None,
             timeout_ms,
         })
     }
@@ -366,10 +375,11 @@ mod tests {
     #[test]
     fn a_wait_or_run_is_waited_for_as_long_as_it_was_given_and_a_little_more() {
         assert_eq!(answer_wait(&Action::List), Duration::from_secs(10));
-        assert_eq!(answer_wait(&wait(None)), Duration::from_secs(35));
-        assert_eq!(answer_wait(&wait(Some(90_000))), Duration::from_secs(95));
-        assert_eq!(answer_wait(&run(None)), Duration::from_secs(605));
-        assert_eq!(answer_wait(&run(Some(3_600_000))), Duration::from_secs(3605));
+        // Its own time, the app's moment to decide (10 s here, 5 s on the server) and 10 s more.
+        assert_eq!(answer_wait(&wait(None)), Duration::from_secs(50));
+        assert_eq!(answer_wait(&wait(Some(90_000))), Duration::from_secs(110));
+        assert_eq!(answer_wait(&run(None)), Duration::from_secs(620));
+        assert_eq!(answer_wait(&run(Some(3_600_000))), Duration::from_secs(3620));
     }
 
     #[test]
@@ -388,6 +398,11 @@ mod tests {
         assert_eq!(exit_code_of(&run(None), &ran(Some(101)), true), 101);
         assert_eq!(exit_code_of(&run(None), &ran(Some(0)), true), 0);
         assert_eq!(exit_code_of(&run(None), &ran(None), true), 0);
+        // What is no exit code of a process is a failure.
+        assert_eq!(exit_code_of(&run(None), &ran(Some(255)), true), 255);
+        for odd in [256, 1000, -1, -9] {
+            assert_eq!(exit_code_of(&run(None), &ran(Some(odd)), true), 1, "{odd}");
+        }
         assert_eq!(exit_code_of(&wait(None), &Reply::ok(serde_json::json!({})), true), 0);
     }
 }

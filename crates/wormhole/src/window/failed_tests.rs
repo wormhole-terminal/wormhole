@@ -20,8 +20,8 @@ fn isolate(name: &str) -> bool {
 /// The shell ran a command in `t` that ended with `code`, as its marks say, and the tick settled it
 /// (`looking`: the user has the terminal in front).
 fn command_ends(cx: &mut TestAppContext, t: &Entity<TerminalView>, code: Option<i32>, looking: bool) {
-    event(cx, t, PtyEvent::Mark(Mark::OutputStart));
-    event(cx, t, PtyEvent::Mark(Mark::Finished(code)));
+    event(cx, t, PtyEvent::Mark(Mark::OutputStart, 0));
+    event(cx, t, PtyEvent::Mark(Mark::Finished(code), 0));
     cx.update(|cx| t.update(cx, |t, _| t.tick(looking, looking)));
 }
 
@@ -47,9 +47,9 @@ fn a_command_that_fails_unseen_is_failed_until_the_terminal_is_opened(cx: &mut T
     }
     let window = start(cx, 2);
     let t = terminal(cx, &window, 1);
-    event(cx, &t, PtyEvent::Mark(Mark::OutputStart));
+    event(cx, &t, PtyEvent::Mark(Mark::OutputStart, 0));
     assert_eq!(now(cx, &t).0, Status::Busy);
-    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(101))));
+    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(101)), 0));
     cx.update(|cx| t.update(cx, |t, _| t.tick(false, false)));
     assert_eq!(now(cx, &t).0, Status::Failed, "nobody was looking");
     assert_eq!(failure(cx, &t), Some(101));
@@ -66,9 +66,9 @@ fn a_command_that_fails_unseen_is_failed_until_the_terminal_is_opened(cx: &mut T
     assert!(!look(cx, &t), "nothing more to see");
 
     // The next command starts: it is history, and the terminal is at work.
-    event(cx, &t, PtyEvent::Mark(Mark::OutputStart));
+    event(cx, &t, PtyEvent::Mark(Mark::OutputStart, 0));
     assert_eq!((now(cx, &t).0, failure(cx, &t)), (Status::Busy, None));
-    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(0))));
+    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(0)), 0));
     cx.update(|cx| t.update(cx, |t, _| t.tick(false, false)));
     assert_eq!((now(cx, &t).0, failure(cx, &t)), (Status::Done, None), "it went well");
 }
@@ -124,7 +124,7 @@ fn an_exit_code_that_comes_late_turns_done_into_failed(cx: &mut TestAppContext) 
     let t = terminal(cx, &window, 1);
     command_ends(cx, &t, Some(0), false);
     assert_eq!(now(cx, &t).0, Status::Done);
-    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(3))));
+    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(3)), 0));
     cx.update(|cx| t.update(cx, |t, _| t.tick(false, false)));
     assert_eq!(now(cx, &t).0, Status::Failed);
     // And it is seen like the rest.

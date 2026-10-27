@@ -41,6 +41,7 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
     let mut pointer = PointerFlags::default();
     let mut waiting = WaitFlags::default();
     let mut exit_code = false;
+    let mut dashed: Option<Vec<&str>> = None;
     let mut words: Vec<&str> = Vec::new();
     let mut args = rest.iter().map(String::as_str);
     while let Some(arg) = args.next() {
@@ -50,8 +51,6 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
         };
         match arg {
             "--json" => json = true,
-            // On `wait`, `--text` is the pattern to find (the plain-text format is `WORMHOLE_JSON=0` there).
-            "--text" if verb == "wait" => waiting.text = Some(value(arg)?.to_string()),
             "--text" => text_out = true,
             "--help" | "-h" => return Ok(Parsed::Help),
             // `events` watches several terminals and windows: its `--terminal` and `--window` repeat.
@@ -101,6 +100,15 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
                     waiting.status.push(state(word)?);
                 }
             }
+            "--match" if verb == "wait" => waiting.pattern = Some(value(arg)?.to_string()),
+            "--after" if verb == "wait" => {
+                let value = value(arg)?;
+                waiting.after = Some(
+                    value
+                        .parse()
+                        .map_err(|_| format!("--after takes a block's id (a number), not {value:?}"))?,
+                );
+            }
             "--gone" if verb == "wait" => waiting.gone = Some(value(arg)?.to_string()),
             "--stable" if verb == "wait" => {
                 let value = value(arg)?;
@@ -114,9 +122,9 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
             "--block-done" if verb == "wait" => waiting.block_done = true,
             "--timeout" if matches!(verb, "wait" | "run") => waiting.timeout_ms = Some(seconds(value(arg)?)?),
             "--exit-code" if verb == "run" => exit_code = true,
-            // Everything after `--` is the command, whatever it starts with.
+            // Everything after `--` is the command's words, whatever they start with.
             "--" if verb == "run" => {
-                words.extend(args.by_ref());
+                dashed = Some(args.by_ref().collect());
                 break;
             }
             "--type" if verb == "send-keys" => {
@@ -313,15 +321,13 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
             if !text.is_empty() {
                 return Err(format!("wait takes options only, not {text:?}"));
             }
-            let WaitFlags { status, text, gone, stable_ms, block_done, timeout_ms } = waiting;
-            Action::Wait(WaitSpec { target, status, text, gone, stable_ms, block_done, timeout_ms })
+            let WaitFlags { status, pattern, gone, stable_ms, block_done, after, timeout_ms } = waiting;
+            Action::Wait(WaitSpec { target, status, pattern, gone, stable_ms, block_done, after, timeout_ms })
         }
         "run" => {
             let target = target.take().ok_or_else(|| needs_target("run"))?;
-            if text.trim().is_empty() {
-                return Err("run needs the command to run (after the options, in quotes or after --)".into());
-            }
-            Action::Run(RunSpec { target, command: text, timeout_ms: waiting.timeout_ms })
+            let command = run_command(&words, dashed.as_deref())?;
+            Action::Run(RunSpec { target, command, timeout_ms: waiting.timeout_ms })
         }
         "mouse" => {
             let Some(target) = target.take() else {
@@ -369,11 +375,38 @@ fn resolve_folder(folder: &str, cwd: &Path, home: Option<&Path>) -> String {
 #[derive(Default)]
 struct WaitFlags {
     status: Vec<TerminalState>,
-    text: Option<String>,
+    pattern: Option<String>,
     gone: Option<String>,
     stable_ms: Option<u64>,
     block_done: bool,
+    after: Option<u64>,
     timeout_ms: Option<u64>,
+}
+
+/// The command `run` types, from the words the arguments left. One word is the command as it was
+/// written (quote the command: `wh run --terminal 3 'cargo test | tail'`). Several words are only taken
+/// after `--`, as the program and its arguments, each quoted for the shell where it needs it, so
+/// `-- grep "a b" f` types `grep 'a b' f`: the shell sees the words the caller's shell gave `wh`.
+fn run_command(words: &[&str], dashed: Option<&[&str]>) -> Result<String, String> {
+    match (words, dashed) {
+        ([], None | Some([])) => Err("run needs the command to run (in quotes, or after --)".into()),
+        ([only], None) | ([], Some([only])) => Ok((*only).to_string()),
+        ([_, _, ..], None) => Err("run takes the command as one argument in quotes, or its words after --: \
+             wh run --terminal 3 -- grep 'a b' file"
+            .into()),
+        ([], Some(program)) => Ok(program.iter().map(|word| shell_word(word)).collect::<Vec<_>>().join(" ")),
+        (_, Some(_)) => Err("put the whole command after --, or none of it".into()),
+    }
+}
+
+/// `word` as one word of a POSIX shell: as it is when it holds only characters the shell leaves alone,
+/// else in single quotes (a quote inside is `'\''`).
+fn shell_word(word: &str) -> String {
+    let plain = |c: char| c.is_ascii_alphanumeric() || "_@%+=:,./-".contains(c);
+    if !word.is_empty() && word.chars().all(plain) {
+        return word.to_string();
+    }
+    format!("'{}'", word.replace('\'', "'\\''"))
 }
 
 /// A state as `wait --status` spells it (`needs_you`, also `needs-you`).

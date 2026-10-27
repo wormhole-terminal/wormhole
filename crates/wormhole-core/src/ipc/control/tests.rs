@@ -197,25 +197,27 @@ fn golden() -> Vec<(Request, &'static str)> {
                 Action::Wait(WaitSpec {
                     target: Target::Terminal(3),
                     status: vec![TerminalState::Idle, TerminalState::NeedsYou],
-                    text: Some("\\$ $".into()),
+                    pattern: Some("\\$$".into()),
                     gone: None,
                     stable_ms: Some(800),
                     block_done: true,
+                    after: Some(57),
                     timeout_ms: Some(30000),
                 }),
                 Some("7".into()),
             ),
-            r#"{"version":1,"from":"7","action":"wait","target":{"kind":"terminal","id":3},"status":["idle","needs_you"],"text":"\\$ $","stable_ms":800,"block_done":true,"timeout_ms":30000}"#,
+            r#"{"version":1,"from":"7","action":"wait","target":{"kind":"terminal","id":3},"status":["idle","needs_you"],"match":"\\$$","stable_ms":800,"block_done":true,"after":57,"timeout_ms":30000}"#,
         ),
         (
             Request::new(
                 Action::Wait(WaitSpec {
                     target: Target::Terminal(3),
                     status: vec![],
-                    text: None,
+                    pattern: None,
                     gone: Some("Loading".into()),
                     stable_ms: None,
                     block_done: false,
+                    after: None,
                     timeout_ms: None,
                 }),
                 None,
@@ -330,10 +332,11 @@ fn only_typing_and_starting_programs_need_the_switch() {
     let wait = Action::Wait(WaitSpec {
         target: Target::Tab(1),
         status: vec![],
-        text: None,
+        pattern: None,
         gone: None,
         stable_ms: None,
         block_done: true,
+        after: None,
         timeout_ms: None,
     });
     assert!(!wait.writes() && !wait.reads());
@@ -455,4 +458,20 @@ fn a_hostile_action_name_is_not_echoed() {
     let reply = unreadable(&line).expect("answered");
     let message = reply.err().expect("an error").message.clone();
     assert!(message.contains("`?`") && !message.contains('\u{1b}') && !message.contains('x'), "{message}");
+}
+
+#[test]
+fn an_error_about_a_block_names_it_and_a_reason_a_newer_app_gave_still_reads() {
+    let error = Error::new(ErrorCode::Failed, "slow").because(Reason::Timeout).about_block(58);
+    let line = serde_json::to_string(&Reply::from(error.clone())).expect("serializes");
+    assert!(line.contains(r#""reason":"timeout","block":58"#), "{line}");
+    let back: Reply = serde_json::from_str(&line).expect("parses");
+    assert_eq!(back.err(), Some(&error));
+    // An older app's error has no block, and a run under way is a reason of its own.
+    let older: Reply =
+        serde_json::from_str(r#"{"version":1,"ok":false,"error":{"code":"failed","message":"x"}}"#)
+            .expect("parses");
+    assert_eq!(older.err().and_then(|e| e.block), None);
+    let pending = Error::new(ErrorCode::Refused, "x").because(Reason::RunPending);
+    assert!(serde_json::to_string(&pending).expect("serializes").contains(r#""reason":"run_pending""#));
 }

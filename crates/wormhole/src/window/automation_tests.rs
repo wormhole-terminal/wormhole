@@ -274,9 +274,9 @@ fn activity(cx: &mut TestAppContext, window: &OpenWindow) -> u64 {
     let before = thread_counts();
     hook(cx, window, 1, "UserPromptSubmit", None);
     event(cx, &t, PtyEvent::Bell);
-    event(cx, &t, PtyEvent::Mark(Mark::OutputStart));
+    event(cx, &t, PtyEvent::Mark(Mark::OutputStart, 0));
     event(cx, &t, PtyEvent::Output);
-    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(0))));
+    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(0)), 0));
     hook(cx, window, 1, "Stop", None);
     draw_fresh(cx, window);
     thread_counts().since(before).allocations

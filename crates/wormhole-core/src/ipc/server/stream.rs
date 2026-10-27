@@ -96,7 +96,13 @@ fn run(mut stream: Stream, subscription: &Subscription, timing: Timing) {
 /// it fails with a broken pipe even when it has no bytes: that is how it is told, without reading anything.
 /// (A system that does not say for an empty write leaves the wait to its own timeout.)
 pub(super) fn client_gone(stream: &mut Stream) -> bool {
-    matches!(stream.write(&[]), Err(err) if err.kind() == io::ErrorKind::BrokenPipe)
+    matches!(
+        stream.write(&[]),
+        Err(err) if matches!(
+            err.kind(),
+            io::ErrorKind::BrokenPipe | io::ErrorKind::ConnectionReset | io::ErrorKind::NotConnected
+        )
+    )
 }
 
 fn push_notice(line: &mut Vec<u8>, notice: Notice) {

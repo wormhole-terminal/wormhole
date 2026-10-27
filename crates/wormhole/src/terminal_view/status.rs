@@ -162,8 +162,19 @@ pub enum TerminalEvent {
 /// A moment in a command's life, as the shell's marks tell it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CommandMark {
-    Started,
-    Finished { code: Option<i32> },
+    /// The command of this prompt number began to run.
+    Started { prompt: u64 },
+    /// The command of this prompt number ended.
+    Finished { code: Option<i32>, prompt: u64 },
+}
+
+impl CommandMark {
+    /// The prompt number (the block) the mark is about.
+    pub fn prompt(self) -> u64 {
+        match self {
+            CommandMark::Started { prompt } | CommandMark::Finished { prompt, .. } => prompt,
+        }
+    }
 }
 
 impl TerminalView {
@@ -561,13 +572,13 @@ impl TerminalView {
             PtyEvent::Cwd => {
                 self.refresh_cwd();
             }
-            PtyEvent::Mark(mark) => {
+            PtyEvent::Mark(mark, prompt) => {
                 // Before `on_mark`, which returns early for a terminal its agent's hooks drive.
                 if crate::automation::wants(cx, Topic::Blocks) {
                     match mark {
-                        Mark::OutputStart => cx.emit(TerminalEvent::Command(CommandMark::Started)),
+                        Mark::OutputStart => cx.emit(TerminalEvent::Command(CommandMark::Started { prompt })),
                         Mark::Finished(code) => {
-                            cx.emit(TerminalEvent::Command(CommandMark::Finished { code }))
+                            cx.emit(TerminalEvent::Command(CommandMark::Finished { code, prompt }))
                         }
                         Mark::PromptStart(_) | Mark::CommandStart => {}
                     }

@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 use serde::Serialize;
 use wormhole_term::WeakScreenReader;
 
-use super::bus::{Next, Subscription};
+use super::bus::{Next, RunClaim, Subscription};
 use super::control::event::{BlockPhase, Body, CloseReason, Event};
 use super::control::wait::{Met, Waited};
 use super::control::{Error, ErrorCode, Reason, Reply, TerminalState, WaitPlan, matched_text, reads_off};
@@ -42,6 +42,8 @@ struct Core {
     subscription: Subscription,
     reader: WeakScreenReader,
     terminal: i64,
+    /// The terminal's hold for a `run`, given back when the job ends (or is dropped unstarted).
+    _claim: Option<RunClaim>,
 }
 
 impl Core {
@@ -59,20 +61,22 @@ enum What {
 impl WaitJob {
     /// A `wait` on `terminal` for `plan`. `subscription` must have been made for it (`Bus::wait`).
     pub fn wait(subscription: Subscription, reader: WeakScreenReader, terminal: i64, plan: WaitPlan) -> Self {
-        Self { core: Core { subscription, reader, terminal }, what: What::Wait(plan) }
+        Self { core: Core { subscription, reader, terminal, _claim: None }, what: What::Wait(plan) }
     }
 
-    /// A `run` in `terminal`, whose command was just typed at a prompt after the block `baseline`
-    /// (none: the first); gives up after `timeout`.
+    /// A `run` in `terminal`, whose command was just typed at the prompt numbered `first` (the block it
+    /// runs in, or a later one if the shell prints another prompt first); gives up after `timeout`. The
+    /// `claim` keeps other runs out of the terminal for as long as this one is under way.
     pub fn run(
         subscription: Subscription,
         reader: WeakScreenReader,
         terminal: i64,
-        baseline: Option<u64>,
+        first: u64,
         timeout: Duration,
+        claim: RunClaim,
     ) -> Self {
-        let plan = run::RunWait { baseline, timeout };
-        Self { core: Core { subscription, reader, terminal }, what: What::Run(plan) }
+        let plan = run::RunWait { first, timeout };
+        Self { core: Core { subscription, reader, terminal, _claim: Some(claim) }, what: What::Run(plan) }
     }
 
     /// Wait it out and make the reply. Blocks, for as long as the plan's timeout at most, and not
@@ -145,11 +149,18 @@ fn timed_out(took: Duration, what: String) -> Error {
         .because(Reason::Timeout)
 }
 
+/// Whether `block` is after the one a `--after` names (any is, without one).
+fn past(after: Option<u64>, block: i64) -> bool {
+    after.is_none_or(|after| i64::try_from(after).is_ok_and(|after| block > after))
+}
+
 /// What an event says to a `wait` with `plan`: the condition it meets, or that the terminal is gone.
 fn judge(plan: &WaitPlan, terminal: i64, event: &Event) -> Option<Result<Hit, Error>> {
     match &event.body {
         Body::Status { status, .. } if plan.statuses.contains(status) => Some(Ok(Hit::Status(*status))),
-        Body::Block { phase: BlockPhase::Finished, block, exit_code, .. } if plan.block_done => {
+        Body::Block { phase: BlockPhase::Finished, block, exit_code, .. }
+            if plan.block_done && past(plan.after, *block) =>
+        {
             Some(Ok(Hit::BlockDone { block: *block, exit_code: *exit_code }))
         }
         Body::TerminalClosed => Some(Err(gone(terminal, "was closed"))),
@@ -168,6 +179,13 @@ fn wait(core: &Core, plan: &WaitPlan, started: Instant, leash: &mut Leash) -> Re
     let mut look = Look::new(plan, started);
     if let Some(hit) = look.first(core)? {
         return Ok(waited(core, hit, started));
+    }
+    // A command that finished before this wait began, after the block it was told to count from.
+    if let (true, Some(after)) = (plan.block_done, plan.after)
+        && let Some((block, exit_code)) = core.screen()?.finished_after(after)
+    {
+        let block = i64::try_from(block).unwrap_or(i64::MAX);
+        return Ok(waited(core, Hit::BlockDone { block, exit_code }, started));
     }
     loop {
         let now = Instant::now();

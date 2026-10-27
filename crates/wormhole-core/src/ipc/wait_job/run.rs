@@ -19,14 +19,14 @@ use crate::ipc::control::{Error, TerminalState};
 
 /// What a run waits for.
 pub(super) struct RunWait {
-    /// The id of the newest block that had run when the command was typed.
-    pub(super) baseline: Option<u64>,
+    /// The number of the prompt the command was typed at: its block, or a later one.
+    pub(super) first: u64,
     pub(super) timeout: Duration,
 }
 
-/// A block after the baseline is the command's (or a later one's: the baseline is the last that ran).
-fn after(baseline: Option<u64>, block: i64) -> bool {
-    baseline.is_none_or(|before| i64::try_from(before).is_ok_and(|before| block > before))
+/// A block from the prompt the command was typed at on is the command's (or a later one's).
+fn from(first: u64, block: i64) -> bool {
+    i64::try_from(first).is_ok_and(|first| block >= first)
 }
 
 pub(super) fn run(core: &Core, plan: &RunWait, started: Instant, leash: &mut Leash) -> Result<Ran, Error> {
@@ -35,21 +35,23 @@ pub(super) fn run(core: &Core, plan: &RunWait, started: Instant, leash: &mut Lea
     loop {
         let now = Instant::now();
         if now >= deadline {
-            let words = match mine {
-                Some(block) => format!("the command is still running (block {block})"),
-                None => "the command did not start".to_string(),
-            };
-            return Err(timed_out(plan.timeout, words));
+            return Err(match mine {
+                Some(block) => {
+                    timed_out(plan.timeout, format!("the command is still running (block {block})"))
+                        .about_block(block)
+                }
+                None => timed_out(plan.timeout, "the command did not start".to_string()),
+            });
         }
         match core.subscription.next(deadline.min(leash.due()).saturating_duration_since(now)) {
             Next::Event(published) => match &published.event.body {
                 Body::Block { phase: BlockPhase::Started, block, .. }
-                    if mine.is_none() && after(plan.baseline, *block) =>
+                    if mine.is_none() && from(plan.first, *block) =>
                 {
                     mine = Some(*block);
                 }
                 Body::Block { phase: BlockPhase::Finished, block, exit_code, took_ms, .. }
-                    if after(plan.baseline, *block) && mine.is_none_or(|own| own == *block) =>
+                    if from(plan.first, *block) && mine.is_none_or(|own| own == *block) =>
                 {
                     let took = took_ms.unwrap_or_else(|| millis(started.elapsed()));
                     return Ok(finished(core, *block, *exit_code, took));
@@ -119,11 +121,11 @@ pub(super) fn fit(ran: &mut Ran) {
         if output.is_empty() {
             return;
         }
-        let mut cut = output.len() / 4;
+        let mut cut = (output.len() / 4).max(1);
         while !output.is_char_boundary(cut) {
             cut += 1;
         }
-        output.drain(..cut.max(1));
+        output.drain(..cut);
         ran.truncated = true;
     }
 }

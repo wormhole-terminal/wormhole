@@ -174,12 +174,12 @@ fn the_output_heuristics_leave_a_reported_status_alone(cx: &mut TestAppContext) 
     // A command's start (OSC 133 C), its end and the bell, and a notification: all things the
     // heuristics would take for work, for needing you, or for the end of work.
     for mark in [Mark::OutputStart, Mark::Finished(Some(0))] {
-        event(cx, &t, PtyEvent::Mark(mark));
+        event(cx, &t, PtyEvent::Mark(mark, 0));
     }
     event(cx, &t, PtyEvent::Bell);
     assert_eq!(now(cx, &t).0, Status::Idle, "idle is what it said");
     report(cx, &t, "state=working");
-    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(0))));
+    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(0)), 0));
     let settled = cx.update(|cx| t.update(cx, |t, _| t.tick(false, false)));
     assert!(!settled, "the tick does not settle work the program says goes on");
     assert_eq!(now(cx, &t).0, Status::Busy);
@@ -189,9 +189,9 @@ fn the_output_heuristics_leave_a_reported_status_alone(cx: &mut TestAppContext) 
 
     // Reporting over, the heuristics are back: a command starting is work again.
     report(cx, &t, "state=clear");
-    event(cx, &t, PtyEvent::Mark(Mark::OutputStart));
+    event(cx, &t, PtyEvent::Mark(Mark::OutputStart, 0));
     assert_eq!(now(cx, &t).0, Status::Busy);
-    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(0))));
+    event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(0)), 0));
     cx.update(|cx| t.update(cx, |t, _| t.tick(false, false)));
     assert_eq!(now(cx, &t).0, Status::Done, "settled by the tick as before");
 }

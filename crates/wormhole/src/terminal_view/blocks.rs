@@ -132,10 +132,14 @@ impl TerminalView {
         cx.notify();
     }
 
-    /// The newest block past its prompt: what a mark that has just arrived is about (see
-    /// `Pty::newest_block`).
-    pub fn newest_block(&self) -> Option<Block> {
-        self.pty.as_ref()?.newest_block()
+    /// Where the command of prompt number `prompt` stands, from the shell's own marks (not the grid's).
+    pub fn command_state(&self, prompt: u64) -> Option<wormhole_term::BlockState> {
+        Some(self.pty.as_ref()?.command_state(prompt))
+    }
+
+    /// The block numbered `prompt`, while its rows are on the grid (even with its start dropped).
+    pub fn block_numbered(&self, prompt: u64) -> Option<Block> {
+        self.pty.as_ref()?.block(prompt)
     }
 
     /// The block the Edit menu's actions act on: the one the last jump landed on (until the view

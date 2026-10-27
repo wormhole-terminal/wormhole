@@ -16,10 +16,11 @@ fn spec() -> WaitSpec {
     WaitSpec {
         target: Target::Terminal(TERMINAL),
         status: Vec::new(),
-        text: None,
+        pattern: None,
         gone: None,
         stable_ms: None,
         block_done: false,
+        after: None,
         timeout_ms: Some(5000),
     }
 }
@@ -116,7 +117,7 @@ fn a_command_finishing_ends_a_wait_for_one_with_its_block_and_code() {
 fn text_that_appears_on_the_screen_ends_the_wait_with_what_it_found() {
     let mut term = TestTerm::new(30, 4, 10);
     term.feed(b"building...");
-    let rig = start(WaitSpec { text: Some(r"tests? ok\b".into()), ..spec() }, reading(), term);
+    let rig = start(WaitSpec { pattern: Some(r"tests? ok\b".into()), ..spec() }, reading(), term);
     settle();
     assert!(!rig.finished());
     rig.print(b"\r\ntest ok");
@@ -131,7 +132,7 @@ fn text_already_there_meets_a_wait_at_once() {
     term.feed(b"$ ");
     let started = Instant::now();
     // A line's trailing blanks are not text: the prompt "$ " is the line "$".
-    let rig = start(WaitSpec { text: Some(r"^\$$".into()), ..spec() }, reading(), term);
+    let rig = start(WaitSpec { pattern: Some(r"^\$$".into()), ..spec() }, reading(), term);
     let found = waited(&rig.reply());
     assert_eq!(found.met, Met::Text);
     assert!(started.elapsed() < Duration::from_secs(2), "{:?}", started.elapsed());
@@ -154,7 +155,7 @@ fn text_that_goes_meets_gone_and_text_that_is_not_there_meets_it_at_the_start() 
 fn a_full_screen_programs_screen_is_the_one_read() {
     let mut term = TestTerm::new(30, 4, 10);
     term.feed(b"shell prompt\x1b[?1049h\x1b[2;3Hmenu: quit");
-    let rig = start(WaitSpec { text: Some("menu: quit".into()), ..spec() }, reading(), term);
+    let rig = start(WaitSpec { pattern: Some("menu: quit".into()), ..spec() }, reading(), term);
     assert_eq!(waited(&rig.reply()).matched.as_deref(), Some("menu: quit"));
 }
 
@@ -162,7 +163,7 @@ fn a_full_screen_programs_screen_is_the_one_read() {
 fn the_text_conditions_need_the_right_to_read_when_they_read() {
     let mut term = TestTerm::new(30, 4, 10);
     term.feed(b"secret");
-    let rig = start(WaitSpec { text: Some("secret".into()), ..spec() }, Grant::default(), term);
+    let rig = start(WaitSpec { pattern: Some("secret".into()), ..spec() }, Grant::default(), term);
     assert_eq!(failure(&rig.reply()), (ErrorCode::NotAllowed, None));
     // Quiet reads nothing, so it needs no right.
     let rig = start(WaitSpec { stable_ms: Some(50), ..spec() }, Grant::default(), TestTerm::new(30, 4, 10));
@@ -171,7 +172,8 @@ fn the_text_conditions_need_the_right_to_read_when_they_read() {
 
 #[test]
 fn the_setting_going_off_ends_a_wait_on_text() {
-    let rig = start(WaitSpec { text: Some("never".into()), ..spec() }, reading(), TestTerm::new(30, 4, 10));
+    let rig =
+        start(WaitSpec { pattern: Some("never".into()), ..spec() }, reading(), TestTerm::new(30, 4, 10));
     settle();
     rig.bus.revoke_reads();
     assert_eq!(failure(&rig.reply()), (ErrorCode::NotAllowed, None));
@@ -240,7 +242,8 @@ fn the_terminal_going_ends_the_wait_with_a_reason() {
 
 #[test]
 fn the_screen_going_away_ends_a_wait_on_it() {
-    let rig = start(WaitSpec { text: Some("never".into()), ..spec() }, reading(), TestTerm::new(30, 4, 10));
+    let rig =
+        start(WaitSpec { pattern: Some("never".into()), ..spec() }, reading(), TestTerm::new(30, 4, 10));
     settle();
     let Rig { bus, reader, done } = rig;
     drop(reader);
@@ -282,7 +285,9 @@ fn run_rig(grant: Grant, timeout: Duration) -> (Rig, u64) {
     let mut prompts = 0;
     reader.print_marked(b"\x1b]133;A\x07$ \x1b]133;B\x07", &mut prompts);
     let (subscription, _) = bus.wait(Watch::of_run(TERMINAL), grant, None).expect("room");
-    let job = WaitJob::run(subscription, reader.downgrade(), TERMINAL, None, timeout);
+    let claim = bus.claim_run(TERMINAL).expect("the terminal is free");
+    let first = reader.current_prompt().expect("a prompt");
+    let job = WaitJob::run(subscription, reader.downgrade(), TERMINAL, first, timeout, claim);
     (Rig { bus, reader, done: std::thread::spawn(move || job.finish(|| false)) }, prompts)
 }
 
@@ -335,8 +340,9 @@ fn only_the_block_after_the_one_there_was_counts() {
     let bus = Bus::new();
     let reader = TestTerm::new(40, 6, 20).into_reader();
     let (subscription, _) = bus.wait(Watch::of_run(TERMINAL), Grant::default(), None).expect("room");
-    // The shell was at block 7's end when the command was typed.
-    let job = WaitJob::run(subscription, reader.downgrade(), TERMINAL, Some(7), Duration::from_millis(400));
+    // The shell was at prompt 8 when the command was typed: blocks before it are earlier commands.
+    let claim = bus.claim_run(TERMINAL).expect("free");
+    let job = WaitJob::run(subscription, reader.downgrade(), TERMINAL, 8, Duration::from_millis(400), claim);
     let done = std::thread::spawn(move || job.finish(|| false));
     let event =
         |body| bus.publish(Topic::Blocks, || Event { window: Some(1), terminal: Some(TERMINAL), body });
@@ -353,7 +359,7 @@ fn a_run_that_times_out_names_the_block_still_running() {
     rig.event(Topic::Blocks, block(BlockPhase::Started, 4, None, None));
     let reply = rig.reply();
     assert_eq!(failure(&reply), (ErrorCode::Failed, Some(Reason::Timeout)));
-    assert!(reply.err().is_some_and(|e| e.message.contains("block 4")), "{reply:?}");
+    assert!(reply.err().is_some_and(|e| e.message.contains("block 4") && e.block == Some(4)), "{reply:?}");
 }
 
 #[test]
@@ -409,9 +415,89 @@ fn a_waiter_whose_client_went_away_ends_and_gives_its_place_back() {
     assert_eq!(bus.subscribers(), 0);
     // And a run, the same way.
     let (subscription, _) = bus.wait(Watch::of_run(TERMINAL), Grant::default(), None).expect("room");
-    let job = WaitJob::run(subscription, reader.downgrade(), TERMINAL, None, Duration::from_secs(30));
+    let claim = bus.claim_run(TERMINAL).expect("free");
+    let job = WaitJob::run(subscription, reader.downgrade(), TERMINAL, 1, Duration::from_secs(30), claim);
     let started = Instant::now();
     assert_eq!(failure(&job.finish(|| true)).0, ErrorCode::Failed);
     assert!(started.elapsed() < Duration::from_secs(4), "{:?}", started.elapsed());
     assert_eq!(bus.subscribers(), 0);
+}
+
+#[test]
+fn a_run_holds_its_terminal_until_it_ends_and_a_second_waits_outside() {
+    let (rig, _) = run_rig(reading(), Duration::from_millis(300));
+    assert!(rig.bus.claim_run(TERMINAL).is_none(), "the run is under way");
+    let bus = rig.bus.clone();
+    let _ = rig.reply();
+    assert!(bus.claim_run(TERMINAL).is_some(), "given back when it ended, by its timeout here");
+    // And when the job is dropped before it ever ran.
+    let reader = TestTerm::new(30, 4, 10).into_reader();
+    let claim = bus.claim_run(TERMINAL).expect("free");
+    let (subscription, _) = bus.wait(Watch::of_run(TERMINAL), Grant::default(), None).expect("room");
+    let job = WaitJob::run(subscription, reader.downgrade(), TERMINAL, 1, Duration::from_secs(1), claim);
+    assert!(bus.claim_run(TERMINAL).is_none());
+    drop(job);
+    assert!(bus.claim_run(TERMINAL).is_some());
+}
+
+#[test]
+fn a_command_that_ended_before_the_wait_began_meets_it_at_once_by_after() {
+    let bus = Bus::new();
+    let reader = TestTerm::new(40, 8, 50).into_reader();
+    let mut prompts = 0;
+    reader.print_marked(
+        b"\x1b]133;A\x07$ \x1b]133;B\x07a\r\n\x1b]133;C\x07\x1b]133;D;4\x07\x1b]133;A\x07$ \x1b]133;B\x07",
+        &mut prompts,
+    );
+    let start = |after: Option<u64>| {
+        let plan = WaitSpec { block_done: true, after, ..spec() }.plan().expect("a plan");
+        let (subscription, _) =
+            bus.wait(Watch::of_wait(TERMINAL, &plan), Grant::default(), None).expect("room");
+        WaitJob::wait(subscription, reader.downgrade(), TERMINAL, plan)
+    };
+    // Block 1 finished with 4 before the wait: after 0 it counts, after 1 it does not.
+    let found = waited(&start(Some(0)).finish(|| false));
+    assert_eq!((found.met, found.block, found.exit_code), (Met::BlockDone, Some(1), Some(4)));
+    let waiting = start(Some(1));
+    let done = std::thread::spawn(move || waiting.finish(|| false));
+    std::thread::sleep(Duration::from_millis(150));
+    assert!(!done.is_finished(), "nothing after block 1 has finished");
+    // An event for block 1 again does not count; one for block 2 does.
+    let block = |id| Body::Block {
+        block: id,
+        phase: BlockPhase::Finished,
+        exit_code: Some(0),
+        took_ms: None,
+        command: None,
+    };
+    bus.publish(Topic::Blocks, || Event { window: Some(1), terminal: Some(TERMINAL), body: block(1) });
+    std::thread::sleep(Duration::from_millis(100));
+    assert!(!done.is_finished());
+    bus.publish(Topic::Blocks, || Event { window: Some(1), terminal: Some(TERMINAL), body: block(2) });
+    assert_eq!(waited(&done.join().expect("thread")).block, Some(2));
+}
+
+#[test]
+fn batched_marks_are_told_by_the_prompt_they_carry() {
+    // A fast command and then an empty Enter, both ended before the window heard of the first: a run
+    // typed at prompt 1 is the block 1 whatever else is on the grid by then.
+    let (rig, mut prompts) = run_rig(reading(), Duration::from_secs(5));
+    rig.reader.print_marked(
+        b"true\r\n\x1b]133;C\x07\x1b]133;D;0\x07\x1b]133;A\x07$ \x1b]133;B\x07\r\n\x1b]133;D\x07\x1b]133;A\x07$ \x1b]133;B\x07",
+        &mut prompts,
+    );
+    rig.event(Topic::Blocks, block(BlockPhase::Started, 1, None, None));
+    rig.event(Topic::Blocks, block(BlockPhase::Finished, 1, Some(0), Some(2)));
+    let done = ran(&rig.reply());
+    assert_eq!((done.block, done.exit_code, done.output.as_deref()), (1, Some(0), Some("")));
+}
+
+#[test]
+fn a_run_reads_its_output_after_the_history_was_cleared() {
+    let (rig, mut prompts) = run_rig(reading(), Duration::from_secs(5));
+    rig.reader.print_marked(b"make\r\n\x1b]133;C\x07built\r\n\x1b]133;D;0\x07\x1b[3J", &mut prompts);
+    rig.event(Topic::Blocks, block(BlockPhase::Finished, 1, Some(0), Some(2)));
+    let done = ran(&rig.reply());
+    assert_eq!(done.exit_code, Some(0), "the code is the shell's, not the grid's");
+    assert!(done.output.is_some() || done.output_hidden.is_some());
 }

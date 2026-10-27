@@ -59,6 +59,19 @@ impl Bus {
         self.interest_bits() & (super::Topic::Output.bit() | super::SCREEN_BIT) != 0
     }
 
+    /// Claim `terminal` for a `run`: `None` while another is under way in it. A command is typed a moment
+    /// before its shell marks it as running, and until then the shell still looks to be at its prompt, so a
+    /// second `run` would pass the checks, clear the line of the first and both would report the second.
+    /// The claim is the job's and ends with it, wherever it ends.
+    pub fn claim_run(self: &Arc<Self>, terminal: i64) -> Option<RunClaim> {
+        let mut state = self.lock();
+        if state.runs.contains(&terminal) {
+            return None;
+        }
+        state.runs.push(terminal);
+        Some(RunClaim { bus: self.clone(), terminal })
+    }
+
     /// Wake the waiters that watch `terminal`'s screen.
     pub(super) fn poke_screens(&self, terminal: i64) {
         for subscriber in self.lock().subscribers.iter() {
@@ -69,13 +82,26 @@ impl Bus {
     }
 }
 
+/// A terminal held for a `run` ([`Bus::claim_run`]); given back when dropped.
+#[derive(Debug)]
+pub struct RunClaim {
+    bus: Arc<Bus>,
+    terminal: i64,
+}
+
+impl Drop for RunClaim {
+    fn drop(&mut self) {
+        self.bus.lock().runs.retain(|&held| held != self.terminal);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
 
     use super::{Grant, Watch};
     use crate::ipc::bus::{Bus, Next, STREAMS_PER_CALLER};
-    use crate::ipc::control::event::{Body, CloseReason, Event, Topic, Topics};
+    use crate::ipc::control::event::{Body, CloseReason, Event, Topic};
     use crate::ipc::control::wait::{WaitSpec, run_topics};
     use crate::ipc::control::{Target, TerminalState};
 
@@ -83,10 +109,11 @@ mod tests {
         let mut spec = WaitSpec {
             target: Target::Terminal(3),
             status: Vec::new(),
-            text: None,
+            pattern: None,
             gone: None,
             stable_ms: None,
             block_done: false,
+            after: None,
             timeout_ms: None,
         };
         f(&mut spec);
@@ -119,7 +146,7 @@ mod tests {
     fn a_print_wakes_the_waiters_of_that_terminal_once_however_often_it_prints() {
         let bus = Bus::new();
         assert!(!bus.wants_prints());
-        let looking = plan(|s| s.text = Some("ok".into()));
+        let looking = plan(|s| s.pattern = Some("ok".into()));
         let (waiter, _) = bus.wait(Watch::of_wait(3, &looking), Grant::default(), None).expect("room");
         let quiet = plan(|s| s.block_done = true);
         let (other, _) = bus.wait(Watch::of_wait(3, &quiet), Grant::default(), None).expect("room");
@@ -149,9 +176,19 @@ mod tests {
     }
 
     #[test]
+    fn a_terminal_is_held_for_one_run_at_a_time_until_the_claim_is_given_back() {
+        let bus = Bus::new();
+        let first = bus.claim_run(3).expect("free");
+        assert!(bus.claim_run(3).is_none(), "one is under way");
+        assert!(bus.claim_run(4).is_some(), "another terminal is its own");
+        drop(first);
+        assert!(bus.claim_run(3).is_some(), "free again");
+    }
+
+    #[test]
     fn reading_going_off_ends_a_waiter_on_text_but_not_one_in_its_own_terminal() {
         let bus = Bus::new();
-        let reads = plan(|s| s.text = Some("ok".into()));
+        let reads = plan(|s| s.pattern = Some("ok".into()));
         let granted = Grant { reads_all: true, own: vec![9] };
         let (on_text, _) = bus.wait(Watch::of_wait(3, &reads), granted.clone(), None).expect("room");
         let (own, _) = bus.wait(Watch::of_wait(9, &reads), granted.clone(), None).expect("room");
@@ -164,6 +201,5 @@ mod tests {
         assert!(matches!(own.next(Duration::ZERO), Next::Idle), "it reads itself");
         assert!(own.may_read(9));
         assert!(matches!(no_text.next(Duration::ZERO), Next::Idle), "it never read");
-        let _ = Topics::default();
     }
 }

@@ -377,32 +377,36 @@ fn wait_takes_conditions_in_any_mix() {
             "idle,needs-you",
             "--status",
             "failed",
-            "--text",
-            r"\$ $",
+            "--match",
+            r"\$$",
             "--gone",
             "Loading",
             "--stable",
             "800",
             "--block-done",
+            "--after",
+            "57",
             "--timeout",
             "45"
         ]),
         WaitSpec {
             target: Target::Terminal(3),
             status: vec![TerminalState::Idle, TerminalState::NeedsYou, TerminalState::Failed],
-            text: Some(r"\$ $".into()),
+            pattern: Some(r"\$$".into()),
             gone: Some("Loading".into()),
             stable_ms: Some(800),
             block_done: true,
+            after: Some(57),
             timeout_ms: Some(45_000),
         }
     );
     // Fractions of a second, and units said out loud.
     assert_eq!(wait(&["wait", "--tab", "1", "--block-done", "--timeout", "0.5s"]).timeout_ms, Some(500));
     assert_eq!(wait(&["wait", "--tab", "1", "--stable", "250ms"]).stable_ms, Some(250));
-    // `--text` is the pattern on `wait`; on every other verb it is the output format.
-    assert!(!parsed(&["wait", "--terminal", "3", "--text", "x"]).text);
+    // `--text` stays the output format, here as on every command; the pattern is `--match`.
+    assert!(parsed(&["wait", "--terminal", "3", "--match", "x", "--text"]).text);
     assert!(parsed(&["list", "--text"]).text);
+    assert!(mistake(&["wait", "--terminal", "3", "--text", "x"]).contains("options only"));
     // The command line's own exit-code option and the command's words.
     let run = parsed(&["run", "--terminal", "3", "--timeout", "90", "--exit-code", "cargo test"]);
     assert!(run.exit_code);
@@ -414,30 +418,51 @@ fn wait_takes_conditions_in_any_mix() {
             timeout_ms: Some(90_000)
         })
     );
-    let after_dashes = parsed(&["run", "--terminal", "3", "--", "ls", "-la", "--color=never"]);
-    assert!(!after_dashes.exit_code);
+}
+
+#[test]
+fn run_takes_one_argument_as_it_is_and_several_words_only_after_dashes_quoted() {
+    use crate::ipc::control::RunSpec;
+
+    let command = |args: &[&str]| match parsed(args).action {
+        Action::Run(RunSpec { command, .. }) => command,
+        other => panic!("{other:?}"),
+    };
+    // One argument is the command, whatever is in it.
+    assert_eq!(command(&["run", "--terminal", "3", "ls --json | wc -l"]), "ls --json | wc -l");
+    assert_eq!(command(&["run", "--terminal", "3", "--", "ls --json | wc -l"]), "ls --json | wc -l");
+    // Words after `--` are a program and its arguments: quoted where the shell would take them apart.
+    assert_eq!(command(&["run", "--terminal", "3", "--", "grep", "a b", "f"]), "grep 'a b' f");
+    assert_eq!(command(&["run", "--terminal", "3", "--", "ls", "-la", "--json"]), "ls -la --json");
     assert_eq!(
-        after_dashes.action,
-        Action::Run(RunSpec {
-            target: Target::Terminal(3),
-            command: "ls -la --color=never".into(),
-            timeout_ms: None
-        })
+        command(&["run", "--terminal", "3", "--", "echo", "it's", "$HOME", "", "a;b"]),
+        r"echo 'it'\''s' '$HOME' '' 'a;b'"
     );
+    // `--json` after `--` is the command's, not the format's.
+    let json = parsed(&["run", "--terminal", "3", "--", "gh", "api", "--json"]);
+    assert!(!json.json);
+    assert!(parsed(&["run", "--terminal", "3", "--json", "--", "gh", "api"]).json);
+    // Several words without `--` would lose their quoting: a mistake, with the way out.
+    let several = mistake(&["run", "--terminal", "3", "grep", "a b", "f"]);
+    assert!(several.contains("one argument") && several.contains("--"), "{several}");
+    assert!(mistake(&["run", "--terminal", "3", "grep", "--", "a"]).contains("after --"));
+    assert!(mistake(&["run", "--terminal", "3"]).contains("needs the command"));
+    assert!(mistake(&["run", "--terminal", "3", "--"]).contains("needs the command"));
 }
 
 #[test]
 fn wait_and_run_name_their_mistakes() {
     assert!(mistake(&["wait"]).contains("needs a target"));
     assert!(mistake(&["run"]).contains("needs a target"));
-    assert!(mistake(&["run", "--terminal", "3"]).contains("needs the command"));
     assert!(mistake(&["wait", "--terminal", "3", "stray"]).contains("options only"));
     assert!(mistake(&["wait", "--terminal", "3", "--status", "asleep"]).contains("--status takes"));
     assert!(mistake(&["wait", "--terminal", "3", "--stable", "soon"]).contains("milliseconds"));
+    assert!(mistake(&["wait", "--terminal", "3", "--after", "x"]).contains("a block's id"));
     for bad in ["soon", "0", "-5", "nan"] {
         assert!(mistake(&["wait", "--terminal", "3", "--timeout", bad]).contains("seconds"), "{bad}");
     }
     assert!(mistake(&["wait", "--terminal", "3", "--exit-code"]).contains("unknown option"));
     assert!(mistake(&["list", "--timeout", "3"]).contains("unknown option"));
-    assert!(mistake(&["wait", "--terminal", "3", "--text"]).contains("needs a value"));
+    assert!(mistake(&["run", "--terminal", "3", "--match", "x", "ls"]).contains("unknown option"));
+    assert!(mistake(&["wait", "--terminal", "3", "--match"]).contains("needs a value"));
 }

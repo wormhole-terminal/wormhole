@@ -21,7 +21,7 @@ use super::keys::text_problem;
 use super::structure::COMMAND_MAX_BYTES;
 use super::{Error, ErrorCode, Target, TerminalState};
 
-/// The longest pattern `--text` and `--gone` take.
+/// The longest pattern `--match` and `--gone` take.
 pub const PATTERN_MAX_BYTES: usize = 1024;
 /// The memory a compiled pattern may take, and its lazy automaton while it matches.
 const REGEX_BYTES: usize = 1 << 20;
@@ -47,9 +47,9 @@ pub struct WaitSpec {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub status: Vec<TerminalState>,
     /// The regular expression matches the live screen (rows joined by newlines; soft-wrapped rows are one
-    /// line). Needs the right to read the terminal.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub text: Option<String>,
+    /// line). Needs the right to read the terminal. (`--match` on the command line.)
+    #[serde(rename = "match", default, skip_serializing_if = "Option::is_none")]
+    pub pattern: Option<String>,
     /// The regular expression does not match the screen (any more). Needs the right to read it too.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gone: Option<String>,
@@ -59,6 +59,11 @@ pub struct WaitSpec {
     /// A command finishes: the running one, or else the next to run.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub block_done: bool,
+    /// With `block_done`: only a command whose block is after this one counts, and one that has finished
+    /// already meets the wait at once. The block a `blocks`, `run` or `wait` reply named before the command
+    /// was sent, so a command that ends before the wait begins is not missed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timeout_ms: Option<u64>,
 }
@@ -80,6 +85,7 @@ pub struct WaitPlan {
     pub gone: Option<Regex>,
     pub stable: Option<Duration>,
     pub block_done: bool,
+    pub after: Option<u64>,
     pub timeout: Duration,
 }
 
@@ -96,14 +102,17 @@ impl WaitSpec {
     pub fn plan(&self) -> Result<WaitPlan, Error> {
         let bad = |message: String| Error::new(ErrorCode::BadRequest, message);
         if self.status.is_empty()
-            && self.text.is_none()
+            && self.pattern.is_none()
             && self.gone.is_none()
             && self.stable_ms.is_none()
             && !self.block_done
         {
             return Err(bad(
-                "wait needs a condition: --status, --text, --gone, --stable or --block-done".into()
+                "wait needs a condition: --status, --match, --gone, --stable or --block-done".into()
             ));
+        }
+        if self.after.is_some() && !self.block_done {
+            return Err(bad("--after goes with --block-done: it says which commands count".into()));
         }
         let mut statuses = Vec::new();
         for status in &self.status {
@@ -125,10 +134,11 @@ impl WaitSpec {
         };
         Ok(WaitPlan {
             statuses,
-            text: self.text.as_deref().map(|pattern| compile("--text", pattern)).transpose()?,
+            text: self.pattern.as_deref().map(|pattern| compile("--match", pattern)).transpose()?,
             gone: self.gone.as_deref().map(|pattern| compile("--gone", pattern)).transpose()?,
             stable,
             block_done: self.block_done,
+            after: self.after,
             timeout: timeout_of(self.timeout_ms, WAIT_TIMEOUT_DEFAULT, WAIT_TIMEOUT_MAX)?,
         })
     }
@@ -219,7 +229,8 @@ pub fn compile(flag: &str, pattern: &str) -> Result<Regex, Error> {
         .build()
         .map_err(|problem| {
             // The library's message is about the pattern, which is the caller's own text: it is cut to
-            // its first line (the rest is a copy of the pattern with a marker) and not repeated whole.
+            // its last line (the one that says what is wrong; the lines before copy the pattern with a
+            // marker) and not repeated whole.
             let first = problem.to_string();
             let first = first.lines().last().unwrap_or("it can't be compiled").trim().to_string();
             Error::new(ErrorCode::BadRequest, format!("{flag}: {first}"))
@@ -342,10 +353,11 @@ mod tests {
         WaitSpec {
             target: Target::Terminal(3),
             status: Vec::new(),
-            text: None,
+            pattern: None,
             gone: None,
             stable_ms: None,
             block_done: false,
+            after: None,
             timeout_ms: None,
         }
     }
@@ -372,7 +384,7 @@ mod tests {
         assert!(!status.topics().contains(Topic::Blocks) && !status.watches_screen());
         let done = WaitSpec { block_done: true, ..wait() }.plan().expect("a plan");
         assert!(done.topics().contains(Topic::Blocks), "a command finishing is a block event");
-        let text = WaitSpec { text: Some("ok$".into()), ..wait() }.plan().expect("a plan");
+        let text = WaitSpec { pattern: Some("ok$".into()), ..wait() }.plan().expect("a plan");
         assert!(text.needs_read() && text.watches_screen());
         let stable = WaitSpec { stable_ms: Some(500), ..wait() }.plan().expect("a plan");
         assert!(stable.watches_screen() && !stable.needs_read(), "quiet needs no reading");
@@ -402,6 +414,13 @@ mod tests {
             code(WaitSpec { status: vec![TerminalState::Other], ..wait() }.plan()),
             Some(ErrorCode::BadRequest)
         );
+        // `--after` says which commands count, so it goes with the wait for one.
+        assert_eq!(
+            code(WaitSpec { stable_ms: Some(10), after: Some(4), ..wait() }.plan()),
+            Some(ErrorCode::BadRequest)
+        );
+        let after = WaitSpec { block_done: true, after: Some(4), ..wait() }.plan().expect("a plan");
+        assert_eq!(after.after, Some(4));
         assert_eq!(
             WaitSpec { timeout_ms: ms(9999), ..wait() }.wait_for(),
             WAIT_TIMEOUT_DEFAULT,
@@ -413,15 +432,15 @@ mod tests {
 
     #[test]
     fn a_pattern_is_capped_and_compiled_within_limits() {
-        assert_eq!(code(compile("--text", "")), Some(ErrorCode::BadRequest));
+        assert_eq!(code(compile("--match", "")), Some(ErrorCode::BadRequest));
         let at_cap = "a".repeat(PATTERN_MAX_BYTES);
-        assert!(compile("--text", &at_cap).is_ok());
-        assert_eq!(code(compile("--text", &format!("{at_cap}a"))), Some(ErrorCode::TooLarge));
+        assert!(compile("--match", &at_cap).is_ok());
+        assert_eq!(code(compile("--match", &format!("{at_cap}a"))), Some(ErrorCode::TooLarge));
         // Not a pattern at all: refused with words, without repeating the pattern whole.
-        let broken = compile("--text", "foo(").expect_err("refused");
+        let broken = compile("--match", "foo(").expect_err("refused");
         assert_eq!(broken.code, ErrorCode::BadRequest);
         assert!(
-            broken.message.starts_with("--text: ") && !broken.message.contains('\n'),
+            broken.message.starts_with("--match: ") && !broken.message.contains('\n'),
             "{}",
             broken.message
         );
@@ -432,11 +451,11 @@ mod tests {
 
     #[test]
     fn lines_are_matched_one_at_a_time_and_a_hostile_pattern_cannot_take_long() {
-        let found = compile("--text", r"^\$ $").expect("compiles");
+        let found = compile("--match", r"^\$ $").expect("compiles");
         assert!(found.is_match("build ok\n$ "), "the prompt's line, among others");
         assert!(!found.is_match("echo $ x"));
         // Nested repetition would take exponential time with backtracking; this engine takes linear.
-        let hostile = compile("--text", "(a+)+$").expect("compiles");
+        let hostile = compile("--match", "(a+)+$").expect("compiles");
         let text = format!("{}!", "a".repeat(200_000));
         let start = std::time::Instant::now();
         assert!(!hostile.is_match(&text));

@@ -127,12 +127,19 @@ fn answer(
     scratch: &mut ReadScratch,
 ) -> Outcome {
     let (reply_tx, reply_rx) = mpsc::sync_channel(1);
+    let types_a_command = matches!(request.action, control::Action::Run(_));
     let peer = Peer::of(stream, accepted);
     if tx.send_blocking(Incoming::Control { request, peer, reply: reply_tx }).is_err() {
         return Outcome::Answered;
     }
     let answer = reply_rx.recv_timeout(timing.reply_wait).unwrap_or_else(|_| {
-        Answer::Reply(Reply::error(ErrorCode::Failed, "Wormhole did not answer in time"))
+        // The app may be about to answer: a `run` it decides on late has typed its command already.
+        let words = if types_a_command {
+            "Wormhole did not answer in time (the command may have been typed all the same: look at the terminal before running it again)"
+        } else {
+            "Wormhole did not answer in time"
+        };
+        Answer::Reply(Reply::error(ErrorCode::Failed, words))
     });
     match answer {
         Answer::Reply(reply) => {
@@ -215,7 +222,7 @@ mod tests {
     use std::net::Shutdown;
     use std::time::{Duration, Instant};
 
-    use super::spawn;
+    use super::{Timing, spawn};
     use crate::ipc::control::{Action, ErrorCode, Reply, Request, Summary, TerminalState};
     use crate::ipc::test_support::{recv_message_within, recv_within};
     use crate::ipc::{Incoming, Message};
@@ -381,10 +388,11 @@ mod tests {
                 let spec = WaitSpec {
                     target: Target::Terminal(3),
                     status: vec![TerminalState::Idle],
-                    text: None,
+                    pattern: None,
                     gone: None,
                     stable_ms: None,
                     block_done: false,
+                    after: None,
                     timeout_ms: Some(10_000),
                 };
                 let plan = spec.plan().expect("a plan");
@@ -402,10 +410,11 @@ mod tests {
             Action::Wait(WaitSpec {
                 target: Target::Terminal(3),
                 status: vec![TerminalState::Idle],
-                text: None,
+                pattern: None,
                 gone: None,
                 stable_ms: None,
                 block_done: false,
+                after: None,
                 timeout_ms: Some(10_000),
             }),
             None,
@@ -461,10 +470,11 @@ mod tests {
         let spec = WaitSpec {
             target: Target::Terminal(3),
             status: vec![TerminalState::Idle],
-            text: None,
+            pattern: None,
             gone: None,
             stable_ms: None,
             block_done: false,
+            after: None,
             timeout_ms: Some(600_000),
         };
         let app = std::thread::spawn({
@@ -494,6 +504,57 @@ mod tests {
         }
         assert_eq!(bus.subscribers(), 0, "found out within a few seconds, not at the wait's timeout");
         drop(reader);
+    }
+
+    /// The app took longer than the socket waits: a `run` it decides on late has typed its command all the
+    /// same, and the error says so.
+    #[test]
+    fn a_run_the_app_answers_too_late_says_the_command_may_have_been_typed() {
+        use crate::ipc::control::{RunSpec, Target};
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let socket = dir.path().join("hd.sock");
+        let (tx, rx) = smol::channel::unbounded();
+        let timing = Timing { reply_wait: Duration::from_millis(200), ..Timing::default() };
+        super::spawn_with(Listener::bind(&socket).expect("bind"), tx, timing).expect("spawn");
+        let app = std::thread::spawn(move || {
+            // Receives the request and sits on the reply.
+            let held = recv_within(&rx, Duration::from_secs(5));
+            std::thread::sleep(Duration::from_millis(600));
+            drop(held);
+        });
+        let ask = |action| {
+            let mut stream = Stream::connect(&socket).expect("connect");
+            let request = Message::Control(Request::new(action, None));
+            writeln!(stream, "{}", serde_json::to_string(&request).expect("serializes")).expect("write");
+            let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+            let mut line = String::new();
+            BufReader::new(stream).read_line(&mut line).expect("a reply line");
+            serde_json::from_str::<Reply>(&line).expect("parses")
+        };
+        let run =
+            ask(Action::Run(RunSpec { target: Target::Terminal(3), command: "ls".into(), timeout_ms: None }));
+        assert!(run.err().is_some_and(|e| e.message.contains("may have been typed")), "{run:?}");
+        app.join().expect("the app's side");
+        // Another request is just late.
+        let (tx, rx) = smol::channel::unbounded();
+        let other = tempfile::tempdir().expect("tempdir");
+        let socket2 = other.path().join("hd.sock");
+        super::spawn_with(Listener::bind(&socket2).expect("bind"), tx, timing).expect("spawn");
+        let silent = std::thread::spawn(move || {
+            let held = recv_within(&rx, Duration::from_secs(5));
+            std::thread::sleep(Duration::from_millis(600));
+            drop(held);
+        });
+        let mut stream = Stream::connect(&socket2).expect("connect");
+        let request = Message::Control(Request::new(Action::List, None));
+        writeln!(stream, "{}", serde_json::to_string(&request).expect("serializes")).expect("write");
+        let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+        let mut line = String::new();
+        BufReader::new(stream).read_line(&mut line).expect("a reply line");
+        let late: Reply = serde_json::from_str(&line).expect("parses");
+        assert!(late.err().is_some_and(|e| !e.message.contains("typed")), "{late:?}");
+        silent.join().expect("the app's side");
     }
 
     /// A client that sends a request and then does not read its big answer holds the thread that serves

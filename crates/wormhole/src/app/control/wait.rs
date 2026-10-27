@@ -49,6 +49,15 @@ fn try_wait(spec: &WaitSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Re
         )
         .because(Reason::NoIntegration));
     }
+    // A terminal whose shell has ended has nothing more to wait for, unless that is what is asked.
+    let wants_exit = plan.statuses.contains(&TerminalState::Exited);
+    if state == TerminalState::Exited && !wants_exit {
+        return Err(Error::new(
+            ErrorCode::NotFound,
+            format!("terminal {}'s shell has ended: nothing more will happen in it", facts.terminal),
+        )
+        .because(Reason::Exited));
+    }
     charge(Limited::Wait, from, cx)?;
     if plan.statuses.contains(&state) {
         let held = Waited {
@@ -97,31 +106,39 @@ fn try_run(spec: &RunSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Resu
     let facts = reader_of(&found, cx)?;
     let target: SendTarget = target_facts(&found, peer, cx).ok_or_else(|| missing(spec.target))?;
     run_check(enabled, from, target, facts.reader.at_prompt())?;
+    let bus = crate::automation::bus(cx)
+        .ok_or_else(|| Error::new(ErrorCode::Failed, "there is no event bus in this app"))?;
+    // The shell still looks to be at its prompt between the command being typed and its mark, so another
+    // run in the meantime would pass the checks above and clear this one's line.
+    let claim = bus.claim_run(facts.terminal).ok_or_else(|| {
+        Error::new(
+            ErrorCode::Refused,
+            format!("a run is under way in terminal {}: wait for it to end", facts.terminal),
+        )
+        .because(Reason::RunPending)
+    })?;
     charge(Limited::Run, from, cx)?;
     charge(Limited::SendText, from, cx)?;
     let reads_all = settings(cx).control_read;
     crate::automation::sync_grants(cx, reads_all);
-    let bus = crate::automation::bus(cx)
-        .ok_or_else(|| Error::new(ErrorCode::Failed, "there is no event bus in this app"))?;
     let (subscription, _) = bus
         .wait(Watch::of_run(facts.terminal), Grant { reads_all, own: Vec::new() }, from)
         .map_err(|refused| Error::new(ErrorCode::RateLimited, refused.to_string()))?;
     let tab = found.tab;
-    let baseline =
-        found.window.workspace.read_with(cx, |ws, cx| ws.control_last_block(tab, cx)).ok().flatten();
+    // The prompt the command is typed at: its block, whatever the shell marks around it by the time it
+    // is heard.
+    let first = facts
+        .reader
+        .current_prompt()
+        .ok_or_else(|| Error::new(ErrorCode::Failed, format!("tab {tab}'s shell has marked no prompt")))?;
     let typed =
         AppState::with_workspace(&found.window, cx, |ws, _, cx| ws.control_run(tab, &plan.command, cx));
     if typed != Some(true) {
         return Err(Error::new(ErrorCode::Failed, format!("tab {tab} could not be reached")));
     }
     tracing::info!(tab, ?from, bytes = plan.command.len(), "control: a command was run at a prompt");
-    let job = WaitJob::run(
-        subscription,
-        facts.reader.downgrade(),
-        facts.terminal,
-        baseline.flatten(),
-        plan.timeout,
-    );
+    let job =
+        WaitJob::run(subscription, facts.reader.downgrade(), facts.terminal, first, plan.timeout, claim);
     Ok(Answer::Wait(job))
 }
 

@@ -33,10 +33,11 @@ fn wait_for(target: i64, f: impl FnOnce(&mut WaitSpec)) -> Action {
     let mut spec = WaitSpec {
         target: Target::Terminal(target),
         status: Vec::new(),
-        text: None,
+        pattern: None,
         gone: None,
         stable_ms: None,
         block_done: false,
+        after: None,
         timeout_ms: Some(10_000),
     };
     f(&mut spec);
@@ -189,11 +190,11 @@ fn a_wait_is_checked_before_anything_is_registered(cx: &mut TestAppContext) {
     // What is wrong with the request, the terminal and the right to read.
     let bad = at_once(ask(cx, wait_for(1, |_| {}), None, &who.outside));
     assert_eq!(code(&bad).0, Some(ErrorCode::BadRequest));
-    let broken = at_once(ask(cx, wait_for(1, |s| s.text = Some("foo(".into())), None, &who.outside));
+    let broken = at_once(ask(cx, wait_for(1, |s| s.pattern = Some("foo(".into())), None, &who.outside));
     assert_eq!(code(&broken).0, Some(ErrorCode::BadRequest));
     let missing = at_once(ask(cx, wait_for(9, |s| s.block_done = true), None, &who.outside));
     assert_eq!(code(&missing).0, Some(ErrorCode::NotFound));
-    let text = |s: &mut WaitSpec| s.text = Some("ok".into());
+    let text = |s: &mut WaitSpec| s.pattern = Some("ok".into());
     let unread = at_once(ask(cx, wait_for(1, text), None, &who.outside));
     assert_eq!(code(&unread).0, Some(ErrorCode::NotAllowed), "reading is off, and a claim is no proof");
     let claimed = at_once(ask(cx, wait_for(1, text), Some("1"), &who.outside));
@@ -255,7 +256,7 @@ fn text_on_the_screen_is_waited_for_and_found_as_it_is_printed(cx: &mut TestAppC
     let who = callers(cx, &window);
     allow(cx, true, false);
     assert!(!bus.wants_prints(), "nobody waits: nothing is asked of a print");
-    let job = begin(ask(cx, wait_for(1, |s| s.text = Some(r"deploy (\w+)".into())), None, &who.outside));
+    let job = begin(ask(cx, wait_for(1, |s| s.pattern = Some(r"deploy (\w+)".into())), None, &who.outside));
     assert!(bus.wants_prints());
     print(cx, &window, 0, b"building\r");
     settle(cx, "it is on the screen", |cx| shown(cx, 1).contains("building"));
@@ -451,7 +452,7 @@ fn the_setting_going_off_ends_a_wait_on_text_and_a_waiter_costs_the_window_nothi
     notified.set(0);
     round(cx);
     let quiet = notified.get();
-    let job = begin(ask(cx, wait_for(1, |s| s.text = Some("never printed".into())), None, &who.outside));
+    let job = begin(ask(cx, wait_for(1, |s| s.pattern = Some("never printed".into())), None, &who.outside));
     let other = begin(ask(cx, wait_for(2, |s| s.stable_ms = Some(60_000)), None, &who.outside));
     round(cx);
     notified.set(0);
@@ -474,4 +475,100 @@ fn the_setting_going_off_ends_a_wait_on_text_and_a_waiter_costs_the_window_nothi
     assert!(other.try_recv().is_err(), "waiting for quiet needs no right");
     drop(other);
     settle(cx, "places given back", |_| bus.subscribers() <= 1);
+}
+
+#[gpui_kit::test]
+fn a_second_run_in_the_same_terminal_is_refused_until_the_first_has_ended(cx: &mut TestAppContext) {
+    if isolate("a_second_run_in_the_same_terminal_is_refused_until_the_first_has_ended") {
+        return;
+    }
+    let window = start(cx, 2);
+    let bus = app_bus(cx);
+    let who = callers(cx, &window);
+    allow(cx, true, true);
+    at_a_prompt(cx, &window, 1, 2);
+    let first = begin(ask(cx, run_of(2, "echo one"), None, &who.outside));
+    // The shell still looks to be at its prompt: the Return has not gone yet. The second must not clear the
+    // first's line and type over it.
+    let second = at_once(ask(cx, run_of(2, "echo two"), None, &who.outside));
+    assert_eq!(code(&second), (Some(ErrorCode::Refused), Some(Reason::RunPending)), "{second:?}");
+    typed(cx);
+    settle(cx, "the first command was typed", |cx| shown(cx, 2).matches("echo one").count() >= 2);
+    assert!(!shown(cx, 2).contains("echo two"), "{}", shown(cx, 2));
+    // It stays refused while the command runs, and that costs nothing of the budgets.
+    print(cx, &window, 1, b"\x1b]133;C\x07one\r");
+    settle(cx, "it runs", |cx| shown(cx, 2).contains("one\n") || shown(cx, 2).lines().any(|l| l == "one"));
+    let still = at_once(ask(cx, run_of(2, "echo two"), None, &who.outside));
+    assert!(matches!(code(&still).0, Some(ErrorCode::Refused)));
+    // Another terminal is its own.
+    at_a_prompt(cx, &window, 0, 1);
+    assert!(matches!(ask(cx, run_of(1, "echo other"), None, &who.outside), Answer::Wait(_)));
+    // The first ends, and the terminal takes the next run.
+    print(cx, &window, 1, b"\x1b]133;D;0\x07\x1b]133;A\x07$ \x1b]133;B\x07\r");
+    let done = ran(&ended(cx, &first));
+    assert_eq!(done.exit_code, Some(0));
+    // (The line that ends it is echoed by the terminal's line discipline into the output; that is the test's.)
+    assert!(done.output.is_some_and(|output| output.starts_with("one")));
+    settle(cx, "the claim is given back", |_| bus.claim_run(2).is_some());
+}
+
+#[gpui_kit::test]
+fn a_wait_on_a_terminal_whose_shell_ended_answers_at_once_unless_that_is_what_it_waits_for(
+    cx: &mut TestAppContext,
+) {
+    if isolate("a_wait_on_a_terminal_whose_shell_ended_answers_at_once_unless_that_is_what_it_waits_for") {
+        return;
+    }
+    let window = start(cx, 2);
+    let bus = app_bus(cx);
+    let who = callers(cx, &window);
+    let first = terminal(cx, &window, 0);
+    event(cx, &first, PtyEvent::Exited(Some(0)));
+    cx.run_until_parked();
+    let gone = at_once(ask(cx, wait_for(1, |s| s.status = vec![TerminalState::Idle]), None, &who.outside));
+    assert_eq!(code(&gone), (Some(ErrorCode::NotFound), Some(Reason::Exited)), "{gone:?}");
+    let by_text = at_once(ask(cx, wait_for(1, |s| s.stable_ms = Some(500)), None, &who.outside));
+    assert_eq!(code(&by_text).0, Some(ErrorCode::NotFound));
+    assert_eq!(bus.subscribers(), 0);
+    let exited =
+        at_once(ask(cx, wait_for(1, |s| s.status = vec![TerminalState::Exited]), None, &who.outside));
+    assert_eq!(waited(&exited).status, Some(TerminalState::Exited));
+}
+
+#[gpui_kit::test]
+fn block_events_carry_their_prompts_number_even_when_marks_are_heard_in_a_batch(cx: &mut TestAppContext) {
+    if isolate("block_events_carry_their_prompts_number_even_when_marks_are_heard_in_a_batch") {
+        return;
+    }
+    use wormhole_core::ipc::bus::Grant;
+    use wormhole_core::ipc::control::EventsSpec;
+    use wormhole_core::ipc::control::event::{BlockPhase, Body};
+
+    let window = start(cx, 1);
+    let bus = app_bus(cx);
+    let spec = EventsSpec { topics: vec!["blocks".into()], ..EventsSpec::default() };
+    let (stream, _) = bus
+        .subscribe(spec.filter().expect("valid"), Grant { reads_all: true, own: Vec::new() }, None)
+        .expect("room");
+    // A fast command and then an empty Enter, in one print: by the time the window hears of the first
+    // command's end, the shell has marked two more prompts.
+    print(
+        cx,
+        &window,
+        0,
+        b"\x1b]133;A\x07$ \x1b]133;B\x07true\r\x1b]133;C\x07\x1b]133;D;0\x07\x1b]133;A\x07$ \x1b]133;B\x07\r\x1b]133;D\x07\x1b]133;A\x07$ \x1b]133;B\x07\r",
+    );
+    let mut seen = Vec::new();
+    settle(cx, "the command's end", |_| {
+        while let wormhole_core::ipc::bus::Next::Event(published) = stream.next(Duration::ZERO) {
+            if let Body::Block { block, phase, exit_code, .. } = &published.event.body {
+                seen.push((*block, *phase, *exit_code));
+            }
+        }
+        seen.iter().any(|(_, phase, _)| *phase == BlockPhase::Finished)
+    });
+    cx.run_until_parked();
+    // The command is the first block: told started and finished, by its own number, and the empty
+    // Enter that came after it says nothing at all.
+    assert_eq!(seen, [(1, BlockPhase::Started, None), (1, BlockPhase::Finished, Some(0))], "{seen:?}");
 }

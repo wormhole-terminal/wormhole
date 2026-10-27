@@ -125,7 +125,7 @@ impl TerminalView {
             pty.program_status().on_prompt();
         }
         self.handle_event(PtyEvent::ProgramStatus, cx);
-        self.handle_event(PtyEvent::Mark(Mark::PromptStart(PromptKind::Initial)), cx);
+        self.handle_event(PtyEvent::Mark(Mark::PromptStart(PromptKind::Initial), 0), cx);
         self.after_events(cx);
     }
 
