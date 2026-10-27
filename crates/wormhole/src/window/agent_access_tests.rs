@@ -434,6 +434,7 @@ fn every_action_that_needs_approval_is_asked_about_and_runs_nothing(cx: &mut Tes
         })
     };
     let (windows, sessions) = (cx.update(|cx| app(cx).windows.len()), terminals(cx));
+    let mut needs = Vec::new();
     for name in Action::KNOWN {
         let request: Request = serde_json::from_value(sample(name)).expect("parses");
         let need = Need::of(&request.action);
@@ -444,6 +445,9 @@ fn every_action_that_needs_approval_is_asked_about_and_runs_nothing(cx: &mut Tes
                 "`{name}` needs nothing and was asked about"
             );
         } else {
+            if !needs.contains(&need) {
+                needs.push(need);
+            }
             let Answer::Reply(refusal) = answered else { panic!("`{name}` was carried out or held") };
             assert_eq!(reason(&refusal), Some(Reason::ApprovalNeeded), "`{name}`");
         }
@@ -451,7 +455,8 @@ fn every_action_that_needs_approval_is_asked_about_and_runs_nothing(cx: &mut Tes
     cx.run_until_parked();
     assert_eq!(cx.update(|cx| app(cx).windows.len()), windows, "no window was opened");
     assert_eq!(terminals(cx), sessions, "no terminal was opened or closed");
-    assert_eq!(questions(cx).len(), 1, "one program, one question");
+    // One program, one question for each thing it needs: an answer never grants more than its sheet asks for.
+    assert_eq!(questions(cx).len(), needs.len(), "one question for each kind of need: {needs:?}");
 }
 
 #[gpui_kit::test]
