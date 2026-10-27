@@ -246,8 +246,11 @@ impl ScreenReader {
         let (first, mut last) = match spec.range {
             CaptureRange::Screen => (0, bottom),
             CaptureRange::Last(n) => {
+                // The last n rows of what there is, not of the grid: the rows below the cursor and the
+                // last text are blank on a mostly empty screen, and counting them would return nothing.
                 let n = i32::try_from(n).unwrap_or(i32::MAX);
-                ((bottom - n + 1).max(top), bottom)
+                let end = rows::content_end(&term, term.grid_cursor().line.0, bottom, scratch);
+                ((end - n + 1).max(top), end)
             }
             CaptureRange::Lines { from, to } => (from.max(top), to.min(bottom)),
             CaptureRange::Block(id) => {

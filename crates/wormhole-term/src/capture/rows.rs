@@ -30,6 +30,27 @@ impl ReadScratch {
     }
 }
 
+/// The last row of the screen with anything on it: the lowest of the cursor's row and the newest row
+/// that has a character, or `bottom` when there are no screen rows to look at. Rows below the screen's
+/// top are the only ones that can be blank at their end; the history above is read as it is.
+pub(crate) fn content_end(screen: &Screen, cursor_line: i32, bottom: i32, scratch: &mut ReadScratch) -> i32 {
+    let mut end = cursor_line.clamp(0, bottom.max(0));
+    if scratch.rows.is_empty() {
+        scratch.rows.push(RowBuf::default());
+    }
+    let mut line = bottom;
+    while line > end {
+        let row = &mut scratch.rows[0];
+        screen.copy_row(Line(line), &mut row.cells, None);
+        if row.cells.iter().any(|cell| cell.c != ' ' && cell.c != '\0') {
+            end = line;
+            break;
+        }
+        line -= 1;
+    }
+    end
+}
+
 /// Copy grid lines `from..=to` (at most [`CHUNK`]) into `scratch`; how many rows that is.
 pub(crate) fn copy_rows(screen: &Screen, from: i32, to: i32, scratch: &mut ReadScratch) -> usize {
     let n = usize::try_from(to - from + 1).unwrap_or(0).min(CHUNK);

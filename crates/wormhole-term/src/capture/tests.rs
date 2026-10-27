@@ -60,6 +60,33 @@ fn history_is_read_by_line_number_and_by_the_last_few() {
     assert!(none.lines.is_empty());
 }
 
+/// "The last N lines" are the last N of what there is: on a mostly empty screen the blank rows under the
+/// text are not counted, but the cursor's row is (a prompt waiting under the output).
+#[test]
+fn the_last_lines_are_counted_from_the_text_or_the_cursor_whichever_is_lower() {
+    let reader = reader(20, 6, 100);
+    reader.feed(b"one\r\ntwo\r\nthree");
+    let found = read(&reader, &spec(CaptureRange::Last(2)));
+    assert_eq!(found.lines, ["two", "three"], "not the four blank rows under them");
+    assert_eq!(found.first_line, 1);
+    // The cursor moved away from the text: the text is the end.
+    reader.feed(b"\x1b[H");
+    let found = read(&reader, &spec(CaptureRange::Last(2)));
+    assert_eq!(found.lines, ["two", "three"]);
+    // The cursor below the text (a prompt after blank lines): its row is the end.
+    reader.feed(b"\x1b[5;1H");
+    let found = read(&reader, &spec(CaptureRange::Last(2)));
+    assert_eq!(found.lines, ["", ""]);
+    assert_eq!(found.first_line, 3);
+    // More than there is: from the top.
+    let all = read(&reader, &spec(CaptureRange::Last(50)));
+    assert_eq!((all.first_line, all.lines.len()), (0, 5));
+    // An empty screen: its cursor row.
+    let empty = self::reader(20, 6, 100);
+    let found = read(&empty, &spec(CaptureRange::Last(3)));
+    assert_eq!(found.lines, [""]);
+}
+
 #[test]
 fn wrapped_rows_join_into_the_line_the_program_printed() {
     let reader = reader(10, 4, 100);
