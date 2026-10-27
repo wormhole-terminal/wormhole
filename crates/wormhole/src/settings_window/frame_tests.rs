@@ -69,33 +69,35 @@ const SLACK: u64 = 20;
 /// Allocations a third draw of each page made when the budget was set (the first two build what a window
 /// keeps), and of the results page of a search for a word found in several pages; a frame may make
 /// [`SLACK`] more.
-const BUDGET: [(&str, u64); 16] = [
-    ("Profile", 6761),
-    ("Appearance", 16709),
-    ("Fonts", 7459),
-    ("Motion", 6340),
-    ("Terminal", 9771),
+const BUDGET: [(&str, u64); 17] = [
+    ("Profile", 6862),
+    ("Appearance", 16810),
+    ("Fonts", 7560),
+    ("Motion", 6441),
+    ("Terminal", 9872),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 15115),
-    ("Git", 4567),
+    ("Sessions", 15198),
+    ("Git", 4668),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
     // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
     // page measured 9,501: under this, which stays.
     ("Agents", 9679),
-    ("Import", 53067),
-    ("Notifications", 7882),
-    ("MenuBar", 6195),
-    ("Updates", 5649),
+    ("Import", 53166),
+    ("Notifications", 7983),
+    ("MenuBar", 6296),
+    ("Updates", 5750),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
-    ("Advanced", 4185),
-    ("Projects", 9037),
-    // The switches for Automation, Tear off, Live resize and Notice chip are four rows more; the
+    ("Advanced", 4270),
+    ("Projects", 9138),
+    // Measured with the nav's Motion and Import rows, which came after the page.
+    ("Extensions", 2686),
+    // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
-    ("FeatureFlags", 5985),
+    ("FeatureFlags", 6478),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     ("search", 12250),
