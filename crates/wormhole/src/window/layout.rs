@@ -36,23 +36,64 @@ impl Workspace {
         self.shown_panes().panel_visible(self.window_width)
     }
 
-    /// The columns as they are drawn: under tabs there is no sidebar, whatever it would be.
+    /// The columns as they are drawn: under tabs there is no sidebar, whatever it would be, and under
+    /// Zen mode no panel. Zen mode hides the panel in the drawing only: the window's `panes` still say
+    /// whether it was wanted, so it is back as it was when Zen mode ends, whichever window it was open in.
     fn shown_panes(&self) -> Panes {
+        self.panes_drawn(self.sidebar_feed.zen)
+    }
+
+    fn panes_drawn(&self, zen: bool) -> Panes {
         let mut panes = self.panes;
         panes.sidebar_open &= !self.sidebar_feed.tabs_on;
+        panes.panel_wanted &= !zen;
         panes
+    }
+
+    /// Whether the panel would be on screen but for Zen mode: what the menus say of it.
+    pub(super) fn notes_visible_without_zen(&self) -> bool {
+        self.panes_drawn(false).panel_visible(self.window_width)
+    }
+
+    /// Whether Zen mode keeps the panel off the screen.
+    pub(super) fn zen_hides_panel(&self) -> bool {
+        self.sidebar_feed.zen
     }
 
     /// Makes the panel appear. With no room for it the sidebar steps aside (the
     /// user asked for the panel just now, so it wins); ⌃⌘S brings the sidebar back
     /// and, if that leaves no room, hides the panel again.
+    ///
+    /// Not under Zen mode, which shows no panel: asking for it would change what the window comes back to
+    /// when Zen mode ends, unseen (the tab on show still switches).
     pub(super) fn reveal_notes(&mut self) {
-        self.panes.reveal_panel(self.window_width);
+        if !self.zen_hides_panel() {
+            self.panes.reveal_panel(self.window_width);
+        }
+    }
+
+    /// A click on the panel's button. Under Zen mode that is the way out (the button says so): everything
+    /// comes back as it was, the panel as this window left it, and not opened by the click. Otherwise the
+    /// toggle.
+    pub(crate) fn panel_button(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.zen_hides_panel() {
+            crate::settings::set_zen_mode(cx, false);
+        } else {
+            self.toggle_notes(window, cx);
+        }
     }
 
     /// The right panel's toggle: it shows what the person doesn't see, and hides what they do; closing
     /// it gives the keyboard back to the terminal.
+    ///
+    /// Under Zen mode it does nothing (⌥⌘I; the button leaves Zen mode instead, `panel_button`). Showing
+    /// the panel for this window alone would need a state of the window's about Zen mode, and a second
+    /// answer to "is it shown?" for every view that asks. Nothing is changed, so the panel is as it was
+    /// when Zen mode ends.
     pub(crate) fn toggle_notes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.zen_hides_panel() {
+            return;
+        }
         if !self.set_panel_open(!self.notes_visible(), cx) {
             window.focus(&self.active_terminal().focus_handle(cx), cx);
         }

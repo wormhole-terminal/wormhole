@@ -67,14 +67,22 @@ impl ParkedSettings {
         self.stores.remove(profile)
     }
 
-    /// Every parked store keeps up with the system and its files (`SettingsStore::follow`).
+    /// Every parked store keeps up with the system, Zen mode (the shown store's, which is the app's:
+    /// a profile opened after it was turned on takes it here) and its files (`SettingsStore::follow`).
     /// Returns whether any look changed.
-    pub fn follow(&mut self, system: super::SystemLook) -> bool {
+    pub fn follow(&mut self, system: super::SystemLook, zen: bool) -> bool {
         let mut moved = false;
         for store in self.stores.values_mut() {
-            moved |= store.follow(system);
+            moved |= store.follow(system, zen);
         }
         moved
+    }
+
+    /// Zen mode went on or off: every parked store takes it now.
+    pub(super) fn set_zen(&mut self, on: bool) {
+        for store in self.stores.values_mut() {
+            store.take_zen(on);
+        }
     }
 }
 
@@ -85,13 +93,27 @@ impl SettingsStore {
     /// Keep a parked store current (its odd windows draw with it): what the system says now, and
     /// its `config.json` if that changed on disk. Not published to GPUI Kit's theme, which is the
     /// shown profile's. Returns whether anything moved.
-    pub fn follow(&mut self, system: super::SystemLook) -> bool {
+    pub fn follow(&mut self, system: super::SystemLook, zen: bool) -> bool {
+        let mut moved = false;
+        if self.zen != zen {
+            self.zen = zen;
+            moved = true;
+        }
         if self.system != system {
             self.take_system(system);
-        } else if !self.config.poll() {
-            return false;
+            moved = true;
+        } else {
+            moved |= self.config.poll();
         }
-        self.derive().any()
+        moved && self.derive().any()
+    }
+
+    /// Take Zen mode as the app has it.
+    pub(super) fn take_zen(&mut self, on: bool) {
+        if self.zen != on {
+            self.zen = on;
+            self.derive();
+        }
     }
 
     /// Change a parked store's settings in a test, as a settings change would.
@@ -104,6 +126,7 @@ impl SettingsStore {
     pub fn swap_in(cx: &mut App, mut next: SettingsStore) -> SettingsStore {
         let live = cx.global_mut::<SettingsStore>();
         next.system = live.system;
+        next.zen = live.zen;
         next.revision = live.revision + 1;
         next.revisions = super::Revisions {
             settings: live.revisions.settings + 1,

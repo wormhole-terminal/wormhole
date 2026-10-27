@@ -104,6 +104,27 @@ fn the_status_bar_has_command_slash_and_the_sheet_option_command_slash() {
     assert_eq!(entry(ActionId::KeyboardShortcuts).map(|e| e.stage), Some(Stage::Now));
 }
 
+/// Zen mode is a toggle in the View menu after the minimap's, on ⌃⌘Z (which nothing else uses), and the
+/// palette and the sheet list it.
+#[test]
+fn zen_mode_is_a_toggle_on_control_command_z() {
+    use ActionId::ToggleZenMode;
+    assert_eq!(keys_of(ToggleZenMode), ["⌃⌘Z"]);
+    assert_eq!(action_for(&spec("⌃⌘Z"), Scope::App).map(|e| e.id), Some(ToggleZenMode));
+    let titles = |off: bool| {
+        let state = MenuState { off: if off { vec![ToggleZenMode] } else { vec![] }, ..MenuState::default() };
+        dump(&menus(&state))
+    };
+    assert!(titles(false).contains("Exit Zen Mode  ⌃⌘Z"), "{}", titles(false));
+    assert!(titles(true).contains("Enter Zen Mode  ⌃⌘Z"), "{}", titles(true));
+    let view = titles(false);
+    let (minimap, zen) = (view.find("Minimap"), view.find("Zen Mode"));
+    assert!(minimap < zen && zen.is_some(), "after the minimap: {view}");
+    let sheet = sections();
+    let zen_row = sheet.iter().flat_map(|section| &section.rows).find(|row| row.actions == [ToggleZenMode]);
+    assert_eq!(zen_row.map(|row| row.keys_text()).as_deref(), Some("⌃⌘Z"));
+}
+
 #[test]
 fn backlog_and_freed_keys_are_not_taken() {
     // The prompt marks are the command blocks', and the splits came out of the backlog
@@ -385,6 +406,7 @@ View
   Hide Right Panel  ⌥⌘I
   Show Status Bar  ⌘/
   Show Minimap
+  Exit Zen Mode  ⌃⌘Z
   ---
   Zoom Pane  ⇧⌘↩
   Layout ▸

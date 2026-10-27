@@ -202,6 +202,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "reduce-motion" => settings::reduce_motion,
         "scroller" => settings::scroller,
         "appearance" => settings::appearance,
+        "zen" => settings::zen,
         "reduce-transparency" => settings::reduce_transparency,
         "increase-contrast" => settings::increase_contrast,
         "studio" => studio::toggle,

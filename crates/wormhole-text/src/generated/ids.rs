@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) static IDS: [&str; 1116] = [
+pub(crate) static IDS: [&str; 1121] = [
     "agent-sheet-title", "agent-sheet-title-scripts", "agent-sheet-wants-read",
     "agent-sheet-wants-type", "agent-sheet-wants-run", "agent-sheet-wants-open",
     "agent-sheet-wants-close", "agent-sheet-detail", "agent-sheet-detail-scripts",
@@ -378,10 +378,12 @@ pub(crate) static IDS: [&str; 1116] = [
     "title-row-part-splits", "title-row-menu-header", "title-row-menu-reset",
     "title-row-menu-customize", "title-row-more-open-in-split", "title-row-more-open-in",
     "title-row-more-split", "title-row-hidden", "title-row-status-in-bar",
+    "zen-on", "zen-off", "zen-settings-note",
+    "zen-settings-leave", "zen-panel-hidden",
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 1116] = [
+pub(crate) const TAKES_ARGS: [bool; 1121] = [
     true, false, false, false, false, false, false, false, false, true, false, false,
     false, false, false, false, false, false, false, false, false, true, true, false,
     false, false, false, false, true, true, false, false, false, false, true, true,
@@ -475,4 +477,5 @@ pub(crate) const TAKES_ARGS: [bool; 1116] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, true, true, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false,
 ];

@@ -194,6 +194,7 @@ const VIEW: &[Slot] = &[
     A(ToggleRightPanel),
     A(ToggleStatusBar),
     A(ToggleMinimap),
+    A(ToggleZenMode),
     Sep,
     A(ZoomPane),
     Slot::Submenu("Layout", &[A(LayoutColumns), A(LayoutRows), A(LayoutGrid), A(LayoutSingle)]),

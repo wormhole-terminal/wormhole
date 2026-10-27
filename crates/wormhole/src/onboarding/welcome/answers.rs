@@ -30,8 +30,8 @@ use super::{ImportedTheme, Play, Run};
 use crate::onboarding::{offered_primaries, offered_themes};
 use crate::platform::notifications::Permission;
 use crate::settings::import as shared;
-use crate::settings::settings;
 use crate::settings::update_settings;
+use crate::settings::{settings, settings_without_zen};
 use gpui_kit::App;
 
 /// Counts one request of a kind against its caller's budget, or says when to try again. It is the
@@ -127,7 +127,7 @@ fn state(tab: i64, services: &Services, cx: &mut App) -> WelcomeState {
         look,
         notify: Some(notify),
         agents: run.agents.clone(),
-        shown: (services.panel)(tab, cx).map(|panel_open| Shown::read(settings(cx), panel_open)),
+        shown: (services.panel)(tab, cx).map(|panel_open| Shown::read(settings_without_zen(cx), panel_open)),
         problem: run.problem.clone(),
     }
 }

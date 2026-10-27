@@ -149,6 +149,8 @@ impl AppState {
             return;
         }
         let (data, settings) = open_beside(&state.root.profile(profile));
+        // In the app's Zen mode from its first frame (a window opens in it right after).
+        let settings = settings.following(cx.global::<SettingsStore>());
         app_mut(cx).parked.insert(profile.clone(), data);
         cx.default_global::<ParkedSettings>().park(profile.clone(), settings);
         crate::window::feature::FeatureTable::profile_opened(profile, cx);

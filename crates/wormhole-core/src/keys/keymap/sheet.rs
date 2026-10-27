@@ -100,6 +100,7 @@ const SHEET: &[(&str, &[RowSpec])] = &[
             ("Hide / show right panel", &[ToggleRightPanel], Each),
             ("Hide / show status bar", &[ToggleStatusBar], Each),
             ("Hide / show minimap", &[ToggleMinimap], Each),
+            ("Zen mode", &[ToggleZenMode], Each),
             (
                 "Changes · History · Notes · Usage · Project",
                 &[ShowChanges, ShowHistory, ShowNotes, ShowUsage, ShowProject],

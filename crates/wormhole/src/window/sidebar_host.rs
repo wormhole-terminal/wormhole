@@ -32,6 +32,10 @@ use crate::{sidebar::shells, style};
 pub(super) struct SidebarFeed {
     /// The terminals are in tabs (Settings → Show terminals in), in every window.
     pub(super) tabs_on: bool,
+    /// Zen mode is on (the app's, read from this window's profile's settings): the right panel is
+    /// not drawn. Kept here, beside the other fact about the columns that the settings decide, because
+    /// the layout is asked without a context to read the settings with.
+    pub(super) zen: bool,
     /// The height of the row the traffic lights were last centred on.
     lights_row: Option<f32>,
     /// Which repository a worktree belongs to, by its root (read from disk once per refresh).
@@ -42,7 +46,13 @@ pub(super) struct SidebarFeed {
 
 impl SidebarFeed {
     pub(super) fn new() -> Self {
-        Self { tabs_on: false, lights_row: None, worktrees: RefCell::default(), sync_pending: false }
+        Self {
+            tabs_on: false,
+            zen: false,
+            lights_row: None,
+            worktrees: RefCell::default(),
+            sync_pending: false,
+        }
     }
 }
 
@@ -164,7 +174,7 @@ impl Workspace {
     /// changed, the tick), never while the window draws: a view that is drawn from what it was
     /// told is only drawn again when it is told something.
     pub(super) fn sync_sidebar(&mut self, cx: &mut Context<Self>) {
-        self.sidebar_feed.tabs_on = self.tabs_wanted(cx);
+        self.read_column_settings(cx);
         let input = self.sidebar_input(cx);
         self.sidebar.update(cx, |sidebar, cx| sidebar.set_input(input, cx));
     }
@@ -254,6 +264,13 @@ impl Workspace {
         self.sidebar_feed.tabs_on
     }
 
+    /// The facts about the columns that the settings decide: where the terminals are listed, and whether
+    /// Zen mode keeps the panel away.
+    fn read_column_settings(&mut self, cx: &App) {
+        self.sidebar_feed.tabs_on = self.tabs_wanted(cx);
+        self.sidebar_feed.zen = crate::settings::store_in(&self.profile, cx).zen();
+    }
+
     /// Whether the settings list the terminals in tabs across the top.
     fn tabs_wanted(&self, cx: &App) -> bool {
         settings_in(&self.profile, cx).terminals_in == TerminalsIn::Tabs
@@ -262,7 +279,7 @@ impl Workspace {
     /// Read where the terminals are listed from the settings (once a frame, before anything is laid
     /// out), and centre the traffic lights on the row they sit in.
     pub(super) fn sync_tab_layout(&mut self, window: &mut Window, cx: &App) {
-        self.sidebar_feed.tabs_on = self.tabs_wanted(cx);
+        self.read_column_settings(cx);
         let row = style::TITLE_ROW_H;
         if self.sidebar_feed.lights_row != Some(row) {
             self.sidebar_feed.lights_row = Some(row);

@@ -17,6 +17,8 @@ use crate::style::{self, ASSUMED_LIGHTS_SPAN, LIGHTS_X, StripFill, StripSide, Ti
 use crate::window::Workspace;
 use crate::window::focus::TitleButton;
 use wormhole_core::config::TabId;
+use wormhole_text::keys::ZEN_PANEL_HIDDEN;
+use wormhole_text::text;
 
 /// The sidebar's collapse button starts here (its glyph is centred in it, at x 82–98), at
 /// 12 after the lights. It doesn't follow the sidebar; it moves right only
@@ -116,6 +118,8 @@ impl Workspace {
         let look = self.panes.panel_toggle(self.window_width);
         // One glyph in every state; the tooltip says what a click does.
         let tooltip = match look {
+            // Zen mode shows no panel; the click leaves it (`panel_button`), and the tooltip says so.
+            _ if self.zen_hides_panel() => keymap::with_key(text(ZEN_PANEL_HIDDEN), ActionId::ToggleZenMode),
             PanelToggle::Open => keymap::with_key("Hide right panel", ActionId::ToggleRightPanel),
             PanelToggle::Closed { hides_sidebar: false } => {
                 keymap::with_key("Show right panel", ActionId::ToggleRightPanel)
@@ -139,8 +143,8 @@ impl Workspace {
                     .in_title_row()
                     .strip(strip(Edge::Panel, StripSide::Right, columns.panel > 0.0))
                     // Wanted but hidden for lack of room: the dot says it comes back.
-                    .marked(look == PanelToggle::Waiting)
-                    .on_click(cx.listener(|this, _, window, cx| this.toggle_notes(window, cx))),
+                    .marked(look == PanelToggle::Waiting && !self.zen_hides_panel())
+                    .on_click(cx.listener(|this, _, window, cx| this.panel_button(window, cx))),
             );
         [sidebar.into_any_element(), panel.into_any_element()]
     }

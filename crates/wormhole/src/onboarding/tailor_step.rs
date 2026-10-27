@@ -65,7 +65,7 @@ impl FirstRun {
         if intro.tailor.is_some() {
             return;
         }
-        let shown = Shown::read(&cx.global::<SettingsStore>().settings, panel_open);
+        let shown = Shown::read(cx.global::<SettingsStore>().settings_without_zen(), panel_open);
         intro.tailor = Some(Tailor { walk: Walk::new(shown), settled: false });
         cx.notify();
     }

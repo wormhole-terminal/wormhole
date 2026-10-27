@@ -53,6 +53,8 @@ mod tailor;
 mod terminal;
 #[rustfmt::skip]
 mod title_row;
+#[rustfmt::skip]
+mod zen;
 
 pub use agent_sheet::*;
 pub use control::*;
@@ -78,11 +80,12 @@ pub use settings_window::*;
 pub use tailor::*;
 pub use terminal::*;
 pub use title_row::*;
+pub use zen::*;
 
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 984] = [
+pub const ALL: [Key; 989] = [
     AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_READ, AGENT_SHEET_WANTS_TYPE,
     AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_CLOSE,
     AGENT_SHEET_DETAIL, AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_WARNING_UNSIGNED,
@@ -411,6 +414,8 @@ pub const ALL: [Key; 984] = [
     TITLE_ROW_PART_SPLITS, TITLE_ROW_MENU_HEADER, TITLE_ROW_MENU_RESET,
     TITLE_ROW_MENU_CUSTOMIZE, TITLE_ROW_MORE_OPEN_IN_SPLIT, TITLE_ROW_MORE_OPEN_IN,
     TITLE_ROW_MORE_SPLIT, TITLE_ROW_HIDDEN, TITLE_ROW_STATUS_IN_BAR,
+    ZEN_ON, ZEN_OFF, ZEN_SETTINGS_NOTE,
+    ZEN_SETTINGS_LEAVE, ZEN_PANEL_HIDDEN,
 ];
 
 /// Each message with variables formatted with sample arguments: text as `Sample`, numbers as 1 and

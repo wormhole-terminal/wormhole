@@ -105,8 +105,8 @@ fn label_in(entry: &Entry, on: bool, split: bool) -> String {
 pub fn section(id: ActionId) -> Section {
     use ActionId::*;
     match id {
-        ToggleSidebar | ToggleRightPanel | ToggleStatusBar | ToggleMinimap | ShowNotes | ShowChanges
-        | ShowHistory | ShowProject | ShowUsage | ToggleTerminalTabs | FocusTerminalOrPanel
+        ToggleSidebar | ToggleRightPanel | ToggleStatusBar | ToggleMinimap | ToggleZenMode | ShowNotes
+        | ShowChanges | ShowHistory | ShowProject | ShowUsage | ToggleTerminalTabs | FocusTerminalOrPanel
         | FocusNextArea | FocusPreviousArea | Bigger | Smaller | ActualSize | FullScreen
         | KeyboardShortcuts | Minimize | Zoom | BringAllToFront | LayoutColumns | LayoutRows | LayoutGrid
         | LayoutSingle => Section::View,

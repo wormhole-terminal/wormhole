@@ -53,7 +53,7 @@ pub(in crate::settings_window) fn draw_stage(
     let ui = crate::settings::ui(cx);
     let store = cx.global::<SettingsStore>();
     let base = hsla(store.tokens.terminal.background.with_alpha(1.0));
-    let status_bar = store.settings.status_bar;
+    let status_bar = store.settings_without_zen().status_bar;
     let surfaces = style::window_surfaces(cx, true);
     let look = Look::of(settings(cx));
     // The theme's own branch magenta, not the one in effect: a branch color picked below recolors

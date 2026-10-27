@@ -279,7 +279,7 @@ impl Workspace {
     #[cfg(feature = "devctl")]
     pub(crate) fn debug_state(&self, cx: &App) -> String {
         let mut out = format!(
-            "window {} of {} (id {}) close_dot={} closing_terminal_prompt={} profile={}\nlayout sidebar={} notes={} width={} sidebar_shown={} notes_wanted={} notes_visible={} resizing={} status_bar={} groups={} folded={:?} listed={:?} numbered={:?}\n",
+            "window {} of {} (id {}) close_dot={} closing_terminal_prompt={} profile={}\nlayout sidebar={} notes={} width={} sidebar_shown={} notes_wanted={} notes_visible={} resizing={} status_bar={} groups={} folded={:?} listed={:?} numbered={:?} zen={}\n",
             self.window_number(cx),
             app(cx).windows.len(),
             self.window_id,
@@ -298,6 +298,7 @@ impl Workspace {
             self.sidebar_view(cx).folded,
             self.session_order(cx).into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
             self.session_listing(cx).numbered().into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
+            crate::settings::store_in(&self.profile, cx).zen(),
         );
         out.push_str(&format!(
             "regions built {:?} (sidebar header, panel, title row, status bar); sidebar list built {}\n",

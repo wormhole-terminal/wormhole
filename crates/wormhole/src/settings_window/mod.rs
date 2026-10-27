@@ -30,6 +30,7 @@ mod unlock_tests;
 mod window;
 #[cfg(test)]
 mod words_tests;
+mod zen_note;
 
 use std::path::{Path, PathBuf};
 

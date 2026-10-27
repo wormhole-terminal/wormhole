@@ -23,14 +23,14 @@ use crate::actions::{
     PlayIntroFtl, PlayIntroTentacles, PlayIntroVortex, PlayIntroVoyage, PlayWelcomeCursor, PlayWelcomeLogo,
     PlayWelcomePortal, RevealSetting, ShowAll, ShowIntro, ShowKeyboardShortcuts, ShowLogs, SwitchProfile,
     ToggleCommandPalette, ToggleFullScreen, ToggleMinimap, ToggleStatusBar, ToggleTerminalTabs,
-    ToggleThemeStudio, Zoom,
+    ToggleThemeStudio, ToggleZenMode, Zoom,
 };
 use crate::app::menus;
 use crate::app_state::{AppState, app};
 use crate::features::project;
 use crate::menubar::MenuCommand;
 use crate::onboarding;
-use crate::settings::{SettingsStore, settings, update_settings};
+use crate::settings::{SettingsStore, settings, toggle_zen_mode, update_settings, zen};
 use crate::settings_window;
 use crate::terminal_view::{TerminalKeys, keystroke_spec};
 use crate::update;
@@ -108,8 +108,20 @@ pub(crate) fn init(cx: &mut App) {
     // ⇧⌘P and ⌥⌘/: over the window in front, from any window and the terminal too.
     cx.on_action(|_: &ToggleCommandPalette, cx| cx.defer(command_palette::toggle));
     cx.on_action(|_: &ShowKeyboardShortcuts, cx| cx.defer(shortcut_sheet::toggle));
-    cx.on_action(|_: &ToggleStatusBar, cx| update_settings(cx, |s| s.status_bar = !s.status_bar));
-    cx.on_action(|_: &ToggleMinimap, cx| update_settings(cx, |s| s.minimap = !s.minimap));
+    // While Zen mode is on these two have nothing to show (it hides both): they would only change what
+    // comes back when it ends, unseen, so the menu greys them out and the keys do nothing.
+    cx.on_action(|_: &ToggleStatusBar, cx| {
+        if !zen(cx) {
+            update_settings(cx, |s| s.status_bar = !s.status_bar)
+        }
+    });
+    cx.on_action(|_: &ToggleMinimap, cx| {
+        if !zen(cx) {
+            update_settings(cx, |s| s.minimap = !s.minimap)
+        }
+    });
+    // ⌃⌘Z: every window shows less, nothing is saved (`settings::zen`).
+    cx.on_action(|_: &ToggleZenMode, cx| toggle_zen_mode(cx));
     // Terminals in tabs or in the sidebar: every window at once.
     cx.on_action(|_: &ToggleTerminalTabs, cx| {
         update_settings(cx, |s| {

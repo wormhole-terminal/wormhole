@@ -15,7 +15,7 @@ use wormhole_core::view::layout::title_parts::TitlePart;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use crate::settings::{UiColors, settings, update_settings};
+use crate::settings::{UiColors, update_settings};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, ArrangeParts, Reorder};
 use crate::window::title::parts;
@@ -31,8 +31,10 @@ pub(super) fn draw_control(_: &SettingsWindow, _: &mut Context<SettingsWindow>) 
 /// The parts, shown ones first in their order, then the hidden ones.
 pub(super) fn draw_parts(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     let ui = ui(cx);
-    let row = settings(cx).title_row().into_owned();
-    let bar = settings(cx).status_bar;
+    // The person's own arrangement, whatever Zen mode shows meanwhile.
+    let own = crate::settings::settings_without_zen(cx);
+    let row = own.title_row().into_owned();
+    let bar = own.status_bar;
     let list = SharedString::from(LIST);
     let shown: Vec<AnyElement> = row
         .parts()

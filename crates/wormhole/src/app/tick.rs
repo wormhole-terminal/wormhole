@@ -76,8 +76,11 @@ pub(super) fn tick(cx: &mut App) {
     let ticks = app(cx).advance_tick();
     let mut moved = SettingsStore::poll(cx);
     if cx.try_global::<ParkedSettings>().is_some_and(|parked| !parked.is_empty()) {
-        let system = cx.global::<SettingsStore>().system();
-        moved |= cx.global_mut::<ParkedSettings>().follow(system);
+        let (system, zen) = {
+            let shown = cx.global::<SettingsStore>();
+            (shown.system(), shown.zen())
+        };
+        moved |= cx.global_mut::<ParkedSettings>().follow(system, zen);
     }
     if moved {
         cx.refresh_windows();

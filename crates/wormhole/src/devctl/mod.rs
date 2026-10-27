@@ -343,6 +343,9 @@
 //!                   (overlay: thin thumbs that fade) or always (legacy: a gutter), or follow it
 //!   appearance [light|dark|system]   say the system is in Light or Dark Mode (Match system shows
 //!                   that pick), or follow the system again; without one, what it is
+//!   zen [on|off|toggle]   View → Zen Mode: the title row down to the name and the splits, no status bar,
+//!                   minimap or column lines, and no right panel, in every window, with nothing saved;
+//!                   without one, whether it is on (`state` ends each window's layout line with `zen=true|false`)
 //!   reduce-transparency [on|off|system]   say Reduce Transparency is on or off (every window
 //!                   opaque, no blur, the note in Settings), or follow the system again
 //!   increase-contrast [on|off|system]   say Increase Contrast is on or off (the theme's

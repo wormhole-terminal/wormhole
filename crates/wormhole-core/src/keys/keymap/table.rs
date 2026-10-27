@@ -171,6 +171,7 @@ pub(super) fn entries() -> Vec<Entry> {
         row(ToggleStatusBar, "Hide Status Bar", &[(CMD, "/")])
             .toggle("Show Status Bar", "Show / Hide Status Bar"),
         row(ToggleMinimap, "Hide Minimap", &[]).toggle("Show Minimap", "Show / Hide Minimap"),
+        row(ToggleZenMode, "Exit Zen Mode", &[(CTRL_CMD, "z")]).toggle("Enter Zen Mode", "Zen Mode"),
         row(ShowChanges, "Changes", &[(CTRL_CMD, "1")]).named("Show Changes"),
         row(ShowHistory, "History", &[(CTRL_CMD, "2")]).named("Show History").feature("history"),
         row(ShowNotes, "Notes", &[(CTRL_CMD, "3")]).named("Show Notes").feature("notes"),

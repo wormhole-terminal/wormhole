@@ -261,7 +261,7 @@ impl SettingsWindow {
             .into_iter()
             .map(|hit| (hit.entry.id, hit))
             .collect();
-        let mut column = div().flex().flex_col().gap_6();
+        let mut column = div().flex().flex_col().gap_6().children(super::zen_note::draw(section, cx));
         for group in section.groups() {
             let mut rows = div().flex().flex_col();
             if !group.title().is_empty() {
@@ -317,7 +317,8 @@ impl SettingsWindow {
         if let Control::Block(draw) = &setting.control {
             return draw(self, cx);
         }
-        let current = shown(&setting.control, settings(cx));
+        // The person's own values: Zen mode draws the window with less, and says so at the top of the page.
+        let current = shown(&setting.control, crate::settings::settings_without_zen(cx));
         let project = page.project.as_ref().filter(|project| project.sets(entry));
         let state = match project {
             Some(project) => SettingState::Project(project.name.clone()),

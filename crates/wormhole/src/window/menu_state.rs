@@ -40,13 +40,27 @@ pub(crate) fn front_window_state(cx: &mut App) -> MenuState {
     let mut state = front
         .and_then(|front| front.workspace.read_with(cx, |ws, cx| ws.menu_state(cx)).ok())
         .unwrap_or_default();
-    let settings = settings(cx);
-    if !settings.status_bar {
+    // Zen mode hides the status bar and the minimap and the panel whatever they are set to: their toggles
+    // have nothing to do until it ends (and the menu says which way Zen mode itself goes).
+    let zen = crate::settings::zen(cx);
+    if zen {
+        state.disabled.extend([
+            ActionId::ToggleStatusBar,
+            ActionId::ToggleMinimap,
+            ActionId::ToggleRightPanel,
+        ]);
+    } else {
+        state.off.push(ActionId::ToggleZenMode);
+    }
+    // Their titles follow the person's own values, which are what comes back.
+    let own = crate::settings::settings_without_zen(cx);
+    if !own.status_bar {
         state.off.push(ActionId::ToggleStatusBar);
     }
-    if !settings.minimap {
+    if !own.minimap {
         state.off.push(ActionId::ToggleMinimap);
     }
+    let settings = settings(cx);
     if settings.terminals_in == wormhole_core::view::sidebar::TerminalsIn::Sidebar {
         state.off.push(ActionId::ToggleTerminalTabs);
     }
@@ -77,7 +91,7 @@ impl Workspace {
         if !self.sidebar_shown() {
             state.off.push(ToggleSidebar);
         }
-        if !self.notes_visible() {
+        if !self.notes_visible_without_zen() {
             state.off.push(ToggleRightPanel);
         }
         // The tab on show is the checked one: the table says each of its tabs' action.

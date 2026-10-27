@@ -225,6 +225,19 @@ pub(super) fn appearance(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `zen [on|off|toggle]`: Zen mode, as View → Zen Mode turns it on and off (nothing is saved). Without
+/// an argument, whether it is on.
+pub(super) fn zen(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    match arg.trim() {
+        "" => {}
+        "on" => crate::settings::set_zen_mode(ctx.cx, true),
+        "off" => crate::settings::set_zen_mode(ctx.cx, false),
+        "toggle" => crate::settings::toggle_zen_mode(ctx.cx),
+        other => return Err(anyhow!("expected on|off|toggle, got {other:?}")),
+    }
+    Ok(format!("zen {}\n", on_off(crate::settings::zen(ctx.cx))))
+}
+
 /// `reduce-transparency on|off|system`: stand in for the system's Reduce Transparency, or follow
 /// the system again. Without an argument, what the app goes by now.
 pub(super) fn reduce_transparency(ctx: &mut Ctx, arg: &str) -> Result<String> {

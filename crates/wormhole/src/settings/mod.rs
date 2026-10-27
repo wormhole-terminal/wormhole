@@ -14,6 +14,8 @@
 //! Match system, Reduce Transparency makes every window opaque, whatever opacity the settings
 //! ask for, and Increase Contrast does too and shows the theme's high-contrast variant.
 //!
+//! Zen mode is one more layer over all of these, never saved (`zen`).
+//!
 //! Each window draws with the colours of its own look: the translucent main window with text
 //! judged on what shows through it, an opaque one (the settings, the Studio, About, Licenses)
 //! with the theme's own. Both sets are kept ([`SettingsStore::ui_for`]).
@@ -23,6 +25,7 @@ pub(crate) mod import;
 mod overlay;
 mod profile;
 mod ui_colors;
+mod zen;
 
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -40,6 +43,7 @@ use crate::theme_bridge;
 use derive::{contrasted, main_ui, opaque_ui, tally, theme_parts, themed, translucency};
 pub use profile::{ParkedSettings, edits_in, features_in, settings_in, store_in, ui_in, update_in};
 pub use ui_colors::UiColors;
+pub use zen::{set_zen_mode, settings_without_zen, toggle_zen_mode, zen};
 
 /// How many times each derived value has changed since the app started: a view that
 /// caches something built from one of them compares its number, not the store's
@@ -135,9 +139,13 @@ pub struct SettingsStore {
     system: SystemLook,
     /// The opacity the user's and the project's settings ask for, before the system's say.
     asked_opacity: f32,
-    /// The settings in force: the user's, the project's on top, and the system's say (an
-    /// opacity of 1 under Reduce Transparency or Increase Contrast).
+    /// The settings in force: the user's, the project's on top, the system's say (an
+    /// opacity of 1 under Reduce Transparency or Increase Contrast) and, last, Zen mode's.
     pub settings: Settings,
+    /// Whether Zen mode is on (`zen`): never saved, never remembered.
+    zen: bool,
+    /// While Zen mode is on, `settings` as they are without it.
+    unzen: Option<Settings>,
     /// Which features the settings in force leave on, worked out when they change so that asking
     /// is a bit test (`FeatureMask::resolve`).
     features: FeatureMask,
@@ -199,6 +207,8 @@ impl SettingsStore {
             highlight,
             tokens,
             settings,
+            zen: false,
+            unzen: None,
             config,
             config_tokens,
             choices_memo,
@@ -242,6 +252,8 @@ impl SettingsStore {
         if self.system.opaque() {
             settings.opacity = 1.0;
         }
+        let (settings, unzen) = zen::layered(settings, self.zen);
+        self.unzen = unzen;
         let settings = Some(settings).filter(|s| *s != self.settings);
         let look_changed = settings.as_ref().is_some_and(|s| {
             translucency(s) != translucency(&self.settings)
@@ -508,6 +520,9 @@ pub fn window_ui(cx: &App, translucent: bool) -> UiColors {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod zen_tests;
 
 #[cfg(all(test, feature = "devctl"))]
 mod app_tests;

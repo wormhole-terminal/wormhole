@@ -90,6 +90,9 @@ pub enum ActionId {
     ToggleRightPanel,
     ToggleStatusBar,
     ToggleMinimap,
+    /// View → Zen Mode: the window shows only the terminal list and the terminal, for a while and
+    /// without saving it (`config::presets::Preset::Zen`, drawn by the app's settings store).
+    ToggleZenMode,
     ShowNotes,
     ShowChanges,
     ShowHistory,

@@ -14,7 +14,7 @@ use wormhole_text::{Key, text};
 
 use crate::actions::RevealSetting;
 use crate::platform::{self, Item, Menu};
-use crate::settings::{edits_in, settings_in, update_settings};
+use crate::settings::{edits_in, store_in, update_settings};
 use crate::window::Workspace;
 
 /// The settings row that arranges the parts (core's `settings_index`).
@@ -58,8 +58,12 @@ pub(crate) fn icon(part: TitlePart) -> IconName {
 impl Workspace {
     /// The row's own menu, under the pointer at `at`: every part with a check while it is shown.
     pub(in crate::window) fn open_title_menu(&self, at: Point<Pixels>, window: &mut Window, cx: &mut App) {
-        let row = settings_in(&self.profile, cx).title_row().into_owned();
-        platform::show_menu(row_menu(&row, edits_in(&self.profile, cx)), at, window, cx);
+        // Under Zen mode the row on screen is Zen's, not the person's: the menu would check the wrong
+        // parts and change the wrong ones. It shows their own, and leaves them be until Zen mode ends.
+        let store = store_in(&self.profile, cx);
+        let row = store.settings_without_zen().title_row().into_owned();
+        let editable = edits_in(&self.profile, cx) && !store.zen();
+        platform::show_menu(row_menu(&row, editable), at, window, cx);
     }
 }
 

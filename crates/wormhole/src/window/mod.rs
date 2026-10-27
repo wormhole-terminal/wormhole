@@ -186,6 +186,8 @@ mod welcome_host;
 mod welcome_shown_tests;
 #[cfg(test)]
 mod welcome_tests;
+#[cfg(test)]
+mod zen_tests;
 pub(crate) use self::welcome_host::remember_first_run;
 mod control;
 mod window_actions;
