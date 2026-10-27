@@ -37,7 +37,7 @@ fn reply(answer: Answer) -> Reply {
     match answer {
         Answer::Reply(reply) => reply,
         Answer::Read(job) => job.run(&mut ReadScratch::default()),
-        Answer::Stream { .. } => panic!("a stream"),
+        Answer::Stream { .. } | Answer::Wait(_) => panic!("a stream"),
     }
 }
 
@@ -51,7 +51,7 @@ fn watch_output(
     match ask(cx, Action::Events(spec), None, peer) {
         Answer::Stream { subscription, .. } => Ok(subscription),
         Answer::Reply(reply) => Err(code(&reply).expect("a refusal")),
-        Answer::Read(_) => panic!("a read"),
+        Answer::Read(_) | Answer::Wait(_) => panic!("a read"),
     }
 }
 

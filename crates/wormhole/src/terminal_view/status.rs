@@ -153,8 +153,9 @@ pub enum TerminalEvent {
     /// watches for them.
     Command(CommandMark),
     /// The program printed (the PTY's coalesced `Output`, one in flight); emitted only while somebody
-    /// watches what terminals print. The window pulses the output worker and does nothing else:
-    /// nothing is notified or drawn for it.
+    /// watches what terminals print (a stream of `output`, or a `wait` that looks at a screen). The
+    /// window pulses the bus (its output worker, the waiters) and does nothing else: nothing is notified
+    /// or drawn for it.
     Printed,
 }
 
@@ -535,7 +536,7 @@ impl TerminalView {
     pub(super) fn handle_event(&mut self, event: PtyEvent, cx: &mut Context<Self>) {
         match event {
             PtyEvent::Output => {
-                if crate::automation::wants(cx, Topic::Output) {
+                if crate::automation::wants_prints(cx) {
                     cx.emit(TerminalEvent::Printed);
                 }
                 self.check_cwd_soon(cx);

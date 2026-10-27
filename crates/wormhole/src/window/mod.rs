@@ -177,6 +177,8 @@ mod test_access;
 pub(crate) mod test_harness;
 mod tick;
 pub(crate) mod title;
+#[cfg(test)]
+mod wait_tests;
 mod welcome_host;
 #[cfg(test)]
 mod welcome_tests;

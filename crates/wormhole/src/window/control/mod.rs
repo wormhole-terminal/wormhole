@@ -6,10 +6,12 @@
 //! - `terminals`: the list, a terminal's facts, notices, text and new terminals;
 //! - `reader`: a terminal's screen as a handle another thread reads (`read`, `blocks`, `output`);
 //! - `input`: keys and the mouse;
+//! - `run`: typing a command at a prompt, and where the last one ended;
 //! - `structure`: splitting, selecting, naming and asking to close a terminal.
 
 mod input;
 mod reader;
+mod run;
 mod structure;
 mod terminals;
 

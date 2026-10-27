@@ -412,7 +412,7 @@ fn shown(cx: &mut TestAppContext, id: i64) -> Vec<String> {
     let reply = match cx.update(|cx| control::answer(request, &peer, cx)) {
         Answer::Read(job) => job.run(&mut ReadScratch::default()),
         Answer::Reply(reply) => reply,
-        Answer::Stream { .. } => panic!("a stream"),
+        Answer::Stream { .. } | Answer::Wait(_) => panic!("a stream"),
     };
     result::<Read>(&reply).lines
 }

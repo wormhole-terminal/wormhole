@@ -10,15 +10,17 @@
 //! passes. A terminal, its one tab and its pane are the same thing now (a row of the sidebar, named
 //! by its id), so the protocol's `tab` and `pane` ids are the terminal's.
 //!
-//! Two kinds of request are not answered with a line made here: `events` (`stream`) gets a
-//! subscription to the bus (`crate::automation`) and the socket thread writes what it yields, and
-//! `read` and `blocks` (`read`) hand the socket thread a job that copies the terminal's screen, so
-//! the UI thread never does. Typing (`input`: `send-text`, `send-keys`, `mouse`) is answered here.
+//! Some requests are not answered with a line made here: `events` (`stream`) gets a subscription to
+//! the bus (`crate::automation`) and the socket thread writes what it yields, `read` and `blocks`
+//! (`read`) hand the socket thread a job that copies the terminal's screen, so the UI thread never
+//! does, and `wait` and `run` (`wait`) hand over a job that a thread of its own waits out. Typing
+//! (`input`: `send-text`, `send-keys`, `mouse`) is answered here.
 
 mod input;
 mod read;
 mod stream;
 mod structure;
+mod wait;
 
 use std::time::Instant;
 
@@ -48,6 +50,8 @@ pub(crate) fn answer(request: Request, peer: &Peer, cx: &mut App) -> Answer {
             Action::Events(spec) => return stream::events(spec, from, peer, cx),
             Action::Read(spec) => return read::read(spec, from, peer, cx),
             Action::Blocks(spec) => return read::blocks(spec, from, peer, cx),
+            Action::Wait(spec) => return wait::wait(spec, from, peer, cx),
+            Action::Run(spec) => return wait::run(spec, from, peer, cx),
             _ => {}
         }
     }
@@ -103,6 +107,10 @@ pub(crate) fn handle(request: Request, peer: &Peer, cx: &mut App) -> Reply {
         Action::Read(_) | Action::Blocks(_) => {
             Reply::error(ErrorCode::Failed, "reads are carried out by the socket: they are not answered here")
         }
+        Action::Wait(_) | Action::Run(_) => Reply::error(
+            ErrorCode::Failed,
+            "waits are carried out by a thread of the socket's: they are not answered here",
+        ),
         // Not behind `control_write`: the token the app put in the welcome terminal is the key.
         Action::Welcome { token, op } => {
             crate::onboarding::welcome::handle(token, op, from, welcome_services(), cx)

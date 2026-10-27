@@ -96,9 +96,9 @@ impl Workspace {
         publish(cx, Topic::Bell, || self.event(Some(id), Body::Bell));
     }
 
-    /// Session `ix`'s program printed: note it for the output worker, which looks at the terminal off
-    /// this thread. Nothing is read, built or drawn here; with nobody asking for this terminal's text
-    /// nothing is noted either.
+    /// Session `ix`'s program printed: note it for the output worker and wake the waiters on its
+    /// screen, which look at the terminal off this thread. Nothing is read, built or drawn here; with
+    /// nobody asking for this terminal nothing is noted either.
     pub(super) fn publish_printed(&self, ix: usize, cx: &App) {
         let session = &self.sessions[ix];
         let terminal = session.terminal().read(cx);

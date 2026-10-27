@@ -47,6 +47,12 @@ pub(crate) fn wants(cx: &App, topic: Topic) -> bool {
     cx.try_global::<Automation>().is_some_and(|automation| automation.bus.wants(topic))
 }
 
+/// Whether somebody wants to hear that terminals print: a stream of `output`, or a `wait` that looks at
+/// a screen. Ask before emitting anything about a print.
+pub(crate) fn wants_prints(cx: &App) -> bool {
+    cx.try_global::<Automation>().is_some_and(|automation| automation.bus.wants_prints())
+}
+
 /// Terminal `terminal` of `window` printed: note it for the output worker if a stream asked for what
 /// it prints and may read it. `reader` makes the terminal's handle and is called only when the note
 /// is new; with nobody asking it is a global lookup and an atomic load.

@@ -373,7 +373,7 @@ fn events_are_answered_with_the_state_and_a_stream_or_a_reason_why_not(cx: &mut 
     };
     let refusal = |answer: Answer| match answer {
         Answer::Reply(reply) => reply.error.expect("an error"),
-        Answer::Stream { .. } | Answer::Read(_) => panic!("not a refusal"),
+        Answer::Stream { .. } | Answer::Read(_) | Answer::Wait(_) => panic!("not a refusal"),
     };
 
     // The state as of the moment, then the stream: what happens after has a higher number.
@@ -441,7 +441,7 @@ fn what_a_caller_may_read_is_the_terminals_it_runs_in(cx: &mut TestAppContext) {
         let request = Request::new(Action::Events(EventsSpec::default()), None);
         match cx.update(|cx| control::answer(request, &peer, cx)) {
             Answer::Stream { subscription, .. } => subscription,
-            Answer::Reply(_) | Answer::Read(_) => panic!("not a stream"),
+            Answer::Reply(_) | Answer::Read(_) | Answer::Wait(_) => panic!("not a stream"),
         }
     };
     let inside = events_for(cx, Peer::new(900_001, vec![shell]));

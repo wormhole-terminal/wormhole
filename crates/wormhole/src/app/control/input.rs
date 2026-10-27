@@ -16,7 +16,7 @@ use crate::settings::settings;
 use crate::terminal_view::MouseSent;
 
 /// What the typing rules need of the target: its state and whether the caller runs inside it.
-fn target_facts(found: &Found, peer: &Peer, cx: &App) -> Option<SendTarget> {
+pub(super) fn target_facts(found: &Found, peer: &Peer, cx: &App) -> Option<SendTarget> {
     let facts =
         found.window.workspace.read_with(cx, |ws, cx| ws.control_tab_facts(found.tab, cx)).ok().flatten();
     let (state, shell) = facts?;
