@@ -1,8 +1,9 @@
 //! The intro window's keys. It holds the keyboard while it is open, but only takes what it uses:
-//! ← and → between the pages, ⏎ for the main button, R to replay, Esc to skip, ⌘O on the folder
-//! step. ⇥ and ⇧⇥ walk its buttons and stay among them (the sidebar and terminal under it are out of
-//! reach), and ⏎ or Space press the one the keys are on, as everywhere. The window's own shortcuts
-//! wait until the intro is gone, so nothing reaches the terminal underneath.
+//! ← and → between the pages, ⏎ for the main button, R to replay, Esc to skip, ⌘O on the folder step,
+//! and 1–3 for an answer to the Look step's question. ⇥ and ⇧⇥ walk its buttons and stay among them (the
+//! sidebar and terminal under it are out of reach), and ⏎ or Space press the one the keys are on, as
+//! everywhere. The window's own shortcuts wait until the intro is gone, so nothing reaches the terminal
+//! underneath.
 //!
 //! ⇥ is a binding in the page's own key context, which wins over the Kit's at the window's root: GPUI
 //! runs bindings before a key listener sees the key, so a listener could only see focus already gone.
@@ -100,6 +101,11 @@ impl FirstRun {
             "escape" if plain && on_page => {
                 self.onboarding_event(Event::Skip, window, cx);
                 true
+            }
+            // The Look step's question: its answers by number.
+            "1" | "2" | "3" if plain && on_page && step == Step::Look => {
+                let n = key.parse().unwrap_or_default();
+                self.tailor_key(n, cx)
             }
             "o" if m.platform && step == Step::Folder => {
                 self.pick_folder(cx);

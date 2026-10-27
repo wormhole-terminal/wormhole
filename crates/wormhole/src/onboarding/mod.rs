@@ -28,6 +28,7 @@ mod keys;
 mod look_step;
 mod page;
 mod steps;
+mod tailor_step;
 pub(crate) mod welcome;
 mod welcome_page;
 
@@ -51,6 +52,8 @@ use crate::style::{self, Edges, TextRole};
 
 pub(crate) use keys::init;
 pub(crate) use look_step::{offered_primaries, offered_themes};
+#[cfg(any(test, feature = "devctl"))]
+pub(crate) use tailor_step::TailorAct;
 
 /// An agent on PATH, as the third step lists it.
 #[derive(Clone)]
@@ -107,6 +110,8 @@ pub(crate) struct Intro {
     trust_later: bool,
     /// What went wrong writing an agent's hooks.
     pub(crate) problem: Option<SharedString>,
+    /// The Look step's walk through how much the window shows, once the first answer began it.
+    tailor: Option<tailor_step::Tailor>,
     /// The first run, which finishing is remembered of and starts the first terminal in the folder
     /// picked, or a replay of the intro, which changes nothing.
     pub(crate) first_run: bool,
@@ -160,6 +165,8 @@ pub(crate) struct Facts {
     pub(crate) trust: Option<TrustCard>,
     /// Whether the window's profile has Notes on, for the words and keys that name it.
     pub(crate) notes_on: bool,
+    /// Whether the window's right panel is open: where the walk through how much to show begins.
+    pub(crate) panel_open: bool,
 }
 
 /// The project folder's trust card, as the window's profile sees the project (the window asks the project
@@ -195,6 +202,9 @@ pub(crate) enum FirstRunEvent {
     /// "Trust with Touch ID…" was pressed on the project at this root: the window asks for the approval,
     /// as its profile.
     Trust(PathBuf),
+    /// The walk through how much to show wants the right panel open or closed: the panel is a window's, so
+    /// the window does it.
+    PanelOpen(bool),
 }
 
 impl EventEmitter<FirstRunEvent> for FirstRun {}
@@ -215,8 +225,12 @@ impl FirstRun {
     }
 
     /// The window's facts, before the intro is drawn.
-    pub(crate) fn set_facts(&mut self, facts: Facts) {
+    pub(crate) fn set_facts(&mut self, facts: Facts, cx: &mut Context<Self>) {
         self.facts = facts;
+        // The walk begins from the window as it is when the Look step first shows.
+        if self.on_look_step() {
+            self.begin_tailor(cx);
+        }
     }
 
     /// The intro window is over the window (its keys go to it, the window's actions wait).
@@ -352,6 +366,7 @@ impl FirstRun {
             places,
             trust_later: false,
             problem: None,
+            tailor: None,
             first_run,
             import: look_step::LookImport::default(),
         }

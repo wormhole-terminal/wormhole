@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 929] = [
+pub(crate) const IDS: [&str; 938] = [
     "notice-copied-lines", "notice-copied-characters", "notice-copied-output",
     "notice-copied-command", "notice-copied-path", "notice-copied-setting-key",
     "notice-copied-error", "notice-copied-object-id", "settings-section-advanced",
@@ -308,7 +308,10 @@ pub(crate) const IDS: [&str; 929] = [
     "tailor-dividers-on", "tailor-panel", "tailor-panel-closed",
     "tailor-panel-closed-detail", "tailor-panel-open", "tailor-panel-open-detail",
     "tailor-tools", "tailor-tools-few", "tailor-tools-few-detail",
-    "tailor-tools-all", "tailor-tools-all-detail", "terminal-size-readout",
+    "tailor-tools-all", "tailor-tools-all-detail", "tailor-heading",
+    "tailor-counter", "tailor-back", "tailor-start-over",
+    "tailor-summary", "tailor-own", "tailor-looks-good",
+    "tailor-all-set", "tailor-announce", "terminal-size-readout",
     "title-row-part-folder", "title-row-part-branch", "title-row-part-branch-status",
     "title-row-part-terminal", "title-row-part-terminal-status", "title-row-part-space",
     "title-row-part-space.description", "title-row-part-agent-gauge", "title-row-part-ports",
@@ -319,7 +322,7 @@ pub(crate) const IDS: [&str; 929] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 929] = [
+pub(crate) const TAKES_ARGS: [bool; 938] = [
     true, true, true, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
@@ -395,7 +398,8 @@ pub(crate) const TAKES_ARGS: [bool; 929] = [
     true, true, true, true, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, false, false, false, true, false, false, false,
+    false, false, false, false, false, false, false, false, false, true, false, false,
+    false, false, false, false, true, true, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false,
+    false, false,
 ];

@@ -4,6 +4,7 @@
 //! The messages of `locales/en/tailor.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Where do you want to start?"
 pub const TAILOR_START: Key = Key::new(873);
@@ -75,3 +76,31 @@ pub const TAILOR_TOOLS_FEW_DETAIL: Key = Key::new(905);
 pub const TAILOR_TOOLS_ALL: Key = Key::new(906);
 /// "Every tool the panel has, such as the history"
 pub const TAILOR_TOOLS_ALL_DETAIL: Key = Key::new(907);
+/// "How much to show"
+pub const TAILOR_HEADING: Key = Key::new(908);
+/// "Back"
+pub const TAILOR_BACK: Key = Key::new(910);
+/// "Start over"
+pub const TAILOR_START_OVER: Key = Key::new(911);
+/// "That's your window"
+pub const TAILOR_SUMMARY: Key = Key::new(912);
+/// "Your own"
+pub const TAILOR_OWN: Key = Key::new(913);
+/// "Looks good"
+pub const TAILOR_LOOKS_GOOD: Key = Key::new(914);
+/// "All set"
+pub const TAILOR_ALL_SET: Key = Key::new(915);
+
+/// ```text
+/// { $number } of { $of }
+/// ```
+pub fn tailor_counter(number: &str, of: &str) -> String {
+    crate::active::message(909, &[("number", Arg::Str(number)), ("of", Arg::Str(of))])
+}
+
+/// ```text
+/// { $question }, { $number } of { $of }
+/// ```
+pub fn tailor_announce(question: &str, number: &str, of: &str) -> String {
+    crate::active::message(916, &[("question", Arg::Str(question)), ("number", Arg::Str(number)), ("of", Arg::Str(of))])
+}

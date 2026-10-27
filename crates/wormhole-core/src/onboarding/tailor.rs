@@ -141,6 +141,16 @@ impl Question {
         }
         next
     }
+
+    /// The window as answer `ix` would draw it on this question's card: [`Question::pick`], except that
+    /// the tools question previews the panel open, as its tabs only show there.
+    pub fn preview(self, ix: usize, shown: &Shown) -> Shown {
+        let mut next = self.pick(ix, shown);
+        if self == Question::Tools {
+            next.panel_open = true;
+        }
+        next
+    }
 }
 
 /// The question asked now, and its place ("2 of 7").
@@ -182,7 +192,7 @@ impl Walk {
         Some(Step { question, number: ix + 1, of: Question::ALL.len() })
     }
 
-    /// What the window showed before the walk: what to put back if the person leaves without it.
+    /// What the window showed before the walk: what Start over puts back.
     pub fn before(&self) -> &Shown {
         &self.before
     }
@@ -286,6 +296,23 @@ mod tests {
         assert_eq!(walk.start_over(), &Shown::of(Preset::Balanced));
         assert_eq!(walk.before(), &Shown::of(Preset::Balanced));
         assert_eq!(walk.at, At::Asking(Question::Start));
+    }
+
+    /// Two answers of a question that draw the same window are no choice to look at.
+    #[test]
+    fn no_two_answers_of_a_question_preview_the_same_window() {
+        for preset in Preset::ALL {
+            let shown = Shown::of(preset);
+            for question in Question::ALL {
+                let previews: Vec<Shown> =
+                    (0..question.answers().len()).map(|ix| question.preview(ix, &shown)).collect();
+                for (a, first) in previews.iter().enumerate() {
+                    for second in &previews[a + 1..] {
+                        assert_ne!(first, second, "{question:?} from {preset:?}");
+                    }
+                }
+            }
+        }
     }
 
     #[test]

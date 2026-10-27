@@ -73,7 +73,7 @@ pub use title_row::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 840] = [
+pub const ALL: [Key; 847] = [
     NOTICE_COPIED_COMMAND, NOTICE_COPIED_PATH, NOTICE_COPIED_SETTING_KEY,
     NOTICE_COPIED_ERROR, NOTICE_COPIED_OBJECT_ID, SETTINGS_SECTION_ADVANCED,
     SETTINGS_SECTION_ADVANCED_INTRO, SETTINGS_ADVANCED_GROUP_FILES, SETTINGS_ADVANCED_OPEN_CONFIG,
@@ -347,13 +347,16 @@ pub const ALL: [Key; 840] = [
     TAILOR_PANEL, TAILOR_PANEL_CLOSED, TAILOR_PANEL_CLOSED_DETAIL,
     TAILOR_PANEL_OPEN, TAILOR_PANEL_OPEN_DETAIL, TAILOR_TOOLS,
     TAILOR_TOOLS_FEW, TAILOR_TOOLS_FEW_DETAIL, TAILOR_TOOLS_ALL,
-    TAILOR_TOOLS_ALL_DETAIL, TITLE_ROW_PART_FOLDER, TITLE_ROW_PART_BRANCH,
-    TITLE_ROW_PART_BRANCH_STATUS, TITLE_ROW_PART_TERMINAL, TITLE_ROW_PART_TERMINAL_STATUS,
-    TITLE_ROW_PART_SPACE, TITLE_ROW_PART_SPACE_DESCRIPTION, TITLE_ROW_PART_AGENT_GAUGE,
-    TITLE_ROW_PART_PORTS, TITLE_ROW_PART_PULL_REQUEST, TITLE_ROW_PART_OPEN_IN,
-    TITLE_ROW_PART_SPLITS, TITLE_ROW_MENU_HEADER, TITLE_ROW_MENU_RESET,
-    TITLE_ROW_MENU_CUSTOMIZE, TITLE_ROW_MORE_OPEN_IN_SPLIT, TITLE_ROW_MORE_OPEN_IN,
-    TITLE_ROW_MORE_SPLIT, TITLE_ROW_HIDDEN, TITLE_ROW_STATUS_IN_BAR,
+    TAILOR_TOOLS_ALL_DETAIL, TAILOR_HEADING, TAILOR_BACK,
+    TAILOR_START_OVER, TAILOR_SUMMARY, TAILOR_OWN,
+    TAILOR_LOOKS_GOOD, TAILOR_ALL_SET, TITLE_ROW_PART_FOLDER,
+    TITLE_ROW_PART_BRANCH, TITLE_ROW_PART_BRANCH_STATUS, TITLE_ROW_PART_TERMINAL,
+    TITLE_ROW_PART_TERMINAL_STATUS, TITLE_ROW_PART_SPACE, TITLE_ROW_PART_SPACE_DESCRIPTION,
+    TITLE_ROW_PART_AGENT_GAUGE, TITLE_ROW_PART_PORTS, TITLE_ROW_PART_PULL_REQUEST,
+    TITLE_ROW_PART_OPEN_IN, TITLE_ROW_PART_SPLITS, TITLE_ROW_MENU_HEADER,
+    TITLE_ROW_MENU_RESET, TITLE_ROW_MENU_CUSTOMIZE, TITLE_ROW_MORE_OPEN_IN_SPLIT,
+    TITLE_ROW_MORE_OPEN_IN, TITLE_ROW_MORE_SPLIT, TITLE_ROW_HIDDEN,
+    TITLE_ROW_STATUS_IN_BAR,
 ];
 
 /// Each message with variables formatted with sample arguments: text as `Sample`, numbers as 1 and
@@ -467,6 +470,8 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("settings-window-profiles-unreadable", settings_window_profiles_unreadable("Sample")),
         ("settings-window-nothing-matches", settings_window_nothing_matches("Sample")),
         ("settings-window-set-by-project", settings_window_set_by_project("Sample", "Sample", "Sample")),
+        ("tailor-counter", tailor_counter("Sample", "Sample")),
+        ("tailor-announce", tailor_announce("Sample", "Sample", "Sample")),
         ("terminal-size-readout", terminal_size_readout("Sample", "Sample")),
     ]
 }

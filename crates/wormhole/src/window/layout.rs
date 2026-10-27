@@ -50,14 +50,24 @@ impl Workspace {
         self.panes.reveal_panel(self.window_width);
     }
 
+    /// The right panel's toggle: it shows what the person doesn't see, and hides what they do; closing
+    /// it gives the keyboard back to the terminal.
     pub(crate) fn toggle_notes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let before = self.columns().panel;
-        if !self.panes.toggle_panel(self.window_width) {
+        if !self.set_panel_open(!self.notes_visible(), cx) {
             window.focus(&self.active_terminal().focus_handle(cx), cx);
         }
+    }
+
+    /// Open or close the right panel as asked, sliding it as the toggle does and remembering the layout.
+    /// Returns whether it is on screen afterwards. The keyboard stays where it is (the first run's walk
+    /// asks for the panel while its page is up).
+    pub(super) fn set_panel_open(&mut self, open: bool, cx: &mut Context<Self>) -> bool {
+        let before = self.columns().panel;
+        let visible = self.panes.set_panel(open, self.window_width);
         self.start_slide(Edge::Panel, before, self.columns().panel, cx);
         self.remember_panes(cx);
         self.mark_dirty(cx);
+        visible
     }
 
     /// The three columns' widths as of the last frame.

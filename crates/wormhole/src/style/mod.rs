@@ -59,6 +59,7 @@
 mod bands;
 mod buttons;
 mod checkbox;
+mod choice_card;
 mod controls;
 mod extras;
 mod find_bar;
@@ -96,11 +97,13 @@ mod tabs;
 mod tile;
 mod tint;
 mod title_drag;
+mod window_sketch;
 mod window_surfaces;
 
 pub use bands::*;
 pub use buttons::*;
 pub use checkbox::*;
+pub use choice_card::*;
 pub use controls::*;
 pub use extras::*;
 pub use find_bar::*;
@@ -133,4 +136,5 @@ pub use tab_selection::*;
 pub use tabs::*;
 pub use tile::*;
 pub(crate) use title_drag::TitleDrag;
+pub use window_sketch::*;
 pub(crate) use window_surfaces::{drag_strip, wants_blur, window_surfaces};

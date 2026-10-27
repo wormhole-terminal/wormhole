@@ -42,6 +42,19 @@ impl Workspace {
         }
     }
 
+    /// Whether the first run's Look step is up (devctl).
+    #[cfg(feature = "devctl")]
+    pub(crate) fn on_look_step(&self, cx: &App) -> bool {
+        self.first_run.read(cx).on_look_step()
+    }
+
+    /// Do `act` in the Look step's walk through how much to show, as a key or a click would (devctl and
+    /// the tests). Returns whether it did anything.
+    #[cfg(any(test, feature = "devctl"))]
+    pub(crate) fn tailor_act(&mut self, act: crate::onboarding::TailorAct, cx: &mut Context<Self>) -> bool {
+        self.first_run.update(cx, |first_run, cx| first_run.tailor_act(act, cx))
+    }
+
     /// Welcome to Wormhole (Help menu, palette): the intro again, its welcome page alone.
     pub(crate) fn show_intro(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         // With the terminal welcome on, it is the welcome: a new terminal runs it, with the cursor
@@ -90,8 +103,10 @@ impl Workspace {
             let root = self.first_run.read(cx).trust_root(active_root)?;
             (hooks.card)(&self.profile, &root, cx)
         });
+        let panel_open = self.notes_visible();
         let notes_on = crate::settings::features_in(&self.profile, cx).has(FeatureId::Notes);
-        self.first_run.update(cx, |first_run, _| first_run.set_facts(Facts { trust, notes_on }));
+        self.first_run
+            .update(cx, |first_run, cx| first_run.set_facts(Facts { trust, notes_on, panel_open }, cx));
     }
 
     /// The sidebar's note after a first run without agents, while it is up.
@@ -132,6 +147,11 @@ impl Workspace {
                 self.mark_dirty(cx);
             }
             FirstRunEvent::OpenWelcome { plan, play } => self.open_welcome_session(*plan, *play, window, cx),
+            FirstRunEvent::PanelOpen(open) => {
+                if self.notes_visible() != *open {
+                    self.set_panel_open(*open, cx);
+                }
+            }
             FirstRunEvent::Trust(root) => {
                 if let Some(approve) =
                     self.features.iter().find_map(|def| def.trust.as_ref()).map(|t| t.approve)

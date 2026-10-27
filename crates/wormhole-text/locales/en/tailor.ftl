@@ -43,3 +43,20 @@ tailor-tools-few = Changes and usage
 tailor-tools-few-detail = What changed in the repository, and the agents' plan limits
 tailor-tools-all = All of them
 tailor-tools-all-detail = Every tool the panel has, such as the history
+
+# The walk's own words, around the questions.
+tailor-heading = How much to show
+# Where the walk is. { $number } is the question's place and { $of } how many there are.
+tailor-counter = { $number } of { $of }
+tailor-back = Back
+tailor-start-over = Start over
+tailor-summary = That's your window
+# A summary line whose part the person arranged themselves, which no answer describes.
+tailor-own = Your own
+tailor-looks-good = Looks good
+# The walk once the summary was accepted.
+tailor-all-set = All set
+
+# What a screen reader says as the walk goes to a question: { $question } is its words, { $number } its place and
+# { $of } how many there are.
+tailor-announce = { $question }, { $number } of { $of }

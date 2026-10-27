@@ -131,16 +131,24 @@ impl Panes {
         }
     }
 
+    /// Open or close the panel as asked, in a window this wide. Opening a panel that is wanted but hidden
+    /// for room reveals it as the toggle does (the sidebar steps aside); closing one that is hidden for
+    /// room still ends the wish, so widening the window doesn't bring it back. Returns whether the panel
+    /// is on screen afterwards.
+    pub fn set_panel(&mut self, open: bool, window: f32) -> bool {
+        if !open {
+            self.panel_wanted = false;
+        } else if !self.panel_visible(window) {
+            self.reveal_panel(window);
+        }
+        self.panel_visible(window)
+    }
+
     /// The panel toggle: it toggles what the user sees, so with the panel hidden for lack of
     /// room it opens it rather than "closing" something already invisible. Returns whether the
     /// panel is on screen afterwards.
     pub fn toggle_panel(&mut self, window: f32) -> bool {
-        if self.panel_visible(window) {
-            self.panel_wanted = false;
-        } else {
-            self.reveal_panel(window);
-        }
-        self.panel_visible(window)
+        self.set_panel(!self.panel_visible(window), window)
     }
 
     /// What the panel's toggle shows in a window this wide.

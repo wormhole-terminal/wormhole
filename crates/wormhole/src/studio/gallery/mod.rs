@@ -20,6 +20,7 @@ mod selects;
 mod settings;
 mod shape;
 mod sidebar;
+mod sketch;
 mod syntax;
 mod terminal;
 mod tiles;
@@ -257,6 +258,15 @@ const SPECIMENS: &[Specimen] = &[
         part_gap: 0.0,
         parts: &[187.0],
         render: selects::render,
+    },
+    Specimen {
+        title: "Window sketch",
+        description: "the window drawn small, as the first run's questions offer it",
+        area: Some(Area::Settings),
+        column: Column::Right,
+        part_gap: 0.0,
+        parts: &[240.0],
+        render: sketch::render,
     },
     Specimen {
         title: "Windows",

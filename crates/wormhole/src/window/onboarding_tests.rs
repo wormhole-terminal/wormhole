@@ -472,10 +472,14 @@ fn the_notes_settings_link_is_an_action_the_app_answers_by_opening_settings(cx: 
 /// Allocations the third draw of a one-terminal window under the intro window's welcome page, and under
 /// its look step (the page with the most to draw), may make. Measured: 3,417 and 5,127 allocations
 /// (1.9 MB and 2.8 MB) while the intro was part of the `Workspace`, 3,419 and 5,129 as a child view of
-/// its own. The budget is that plus about a hundredth, so a cost per card or per frame that grows shows
+/// its own. The look step's walk through how much to show added about 8,300 to it (13,458 and 9.6 MB):
+/// three answers to a question, each a sketch of the window, and the words round them. The sketches were
+/// first boxes, some forty to each and ~29,600 allocations in all; as one canvas each they are about 400
+/// altogether, and a card of fixed height (not one that measures its text for its height) took most of
+/// the rest. The budget is that plus about a hundredth, so a cost per card or per frame that grows shows
 /// at once.
 const WELCOME_FRAME_ALLOCATIONS: u64 = 3_455;
-const LOOK_FRAME_ALLOCATIONS: u64 = 5_180;
+const LOOK_FRAME_ALLOCATIONS: u64 = 13_600;
 
 #[gpui_kit::test]
 fn a_frame_under_the_intro_window_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
@@ -502,4 +506,98 @@ fn a_frame_under_the_intro_window_stays_within_its_allocation_budget(cx: &mut Te
             drawn.allocations
         );
     }
+}
+
+// ------------------------------------------------------------------- how much to show (Look step)
+
+/// What the window shows now: the settings' parts and whether the right panel is wanted.
+fn shown_now(cx: &mut TestAppContext, window: &OpenWindow) -> wormhole_core::config::presets::Shown {
+    let panel = read_cx(cx, window, |ws, _| ws.panes.panel_wanted);
+    cx.update(|cx| {
+        wormhole_core::config::presets::Shown::read(
+            &cx.global::<crate::settings::SettingsStore>().settings,
+            panel,
+        )
+    })
+}
+
+/// Where the walk is: the number of the question asked, or `None` on the summary or before it began.
+fn question_number(cx: &mut TestAppContext, window: &OpenWindow) -> Option<usize> {
+    first_run(cx, window, |first_run| {
+        let intro = first_run.intro.as_ref()?;
+        intro.tailor_walk()?.step().map(|step| step.number)
+    })
+}
+
+#[gpui_kit::test]
+fn the_digits_answer_the_look_steps_question_and_the_window_follows(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "the_digits_answer_the_look_steps_question_and_the_window_follows") {
+        return;
+    }
+    use wormhole_core::config::presets::{Preset, Shown};
+    let window = start(cx, 1);
+    drive(cx, &window, |ws, window, cx| ws.open_onboarding(Step::Look, window, cx));
+    // The test window starts with its panel open; the rest is a first launch's.
+    let first = shown_now(cx, &window);
+    assert_eq!(Shown { panel_open: false, ..first.clone() }, Shown::of(Preset::Balanced));
+
+    // Everything: the whole window, the panel opened by the window itself.
+    key(cx, &window, "3");
+    assert_eq!(shown_now(cx, &window), Shown::of(Preset::Everything));
+    assert_eq!(question_number(cx, &window), Some(2), "on to the title row");
+
+    // Zen, from the start again: everything away and the panel closed.
+    drive(cx, &window, |ws, _, cx| ws.tailor_act(crate::onboarding::TailorAct::StartOver, cx));
+    assert_eq!(shown_now(cx, &window), first, "start over puts back what was there");
+    key(cx, &window, "1");
+    assert_eq!(shown_now(cx, &window), Shown::of(Preset::Zen));
+}
+
+#[gpui_kit::test]
+fn a_digit_past_the_answers_or_off_the_look_step_does_nothing(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "a_digit_past_the_answers_or_off_the_look_step_does_nothing") {
+        return;
+    }
+    let window = start(cx, 1);
+    drive(cx, &window, |ws, window, cx| ws.open_onboarding(Step::Folder, window, cx));
+    key(cx, &window, "1");
+    assert_eq!(question_number(cx, &window), None, "no walk on the folder step");
+
+    drive(cx, &window, |ws, window, cx| ws.open_onboarding(Step::Look, window, cx));
+    key(cx, &window, "1");
+    key(cx, &window, "1");
+    assert_eq!(question_number(cx, &window), Some(3), "Zen, then the title row's first answer");
+    // The status bar has two answers: 3 is none.
+    key(cx, &window, "3");
+    assert_eq!(question_number(cx, &window), Some(3), "no third answer");
+    // The sheet's own keys are as ever.
+    key(cx, &window, "right");
+    assert_eq!(step(cx, &window), Some(Step::Agents), "→ is the sheet's Continue");
+}
+
+#[gpui_kit::test]
+fn the_summary_is_accepted_with_looks_good_and_start_over_asks_again(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "the_summary_is_accepted_with_looks_good_and_start_over_asks_again") {
+        return;
+    }
+    use crate::onboarding::TailorAct;
+    let window = start(cx, 1);
+    drive(cx, &window, |ws, window, cx| ws.open_onboarding(Step::Look, window, cx));
+    for _ in 0..7 {
+        key(cx, &window, "1");
+    }
+    assert_eq!(question_number(cx, &window), None, "all seven answered: the summary");
+    first_run(cx, &window, |first_run| {
+        let walk = first_run.intro.as_ref().and_then(|intro| intro.tailor_walk()).expect("a walk");
+        assert_eq!(walk.at, wormhole_core::onboarding::tailor::At::Done);
+    });
+    assert!(drive_act(cx, &window, TailorAct::Settle));
+    assert!(first_run(cx, &window, |first_run| first_run.tailor_settled()));
+    assert!(drive_act(cx, &window, TailorAct::StartOver));
+    assert!(!first_run(cx, &window, |first_run| first_run.tailor_settled()));
+    assert_eq!(question_number(cx, &window), Some(1));
+}
+
+fn drive_act(cx: &mut TestAppContext, window: &OpenWindow, act: crate::onboarding::TailorAct) -> bool {
+    drive(cx, window, |ws, _, cx| ws.tailor_act(act, cx))
 }

@@ -450,6 +450,28 @@ pub(super) fn onboarding(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `onboarding-tailor <n|back|over|ok>`: the Look step's walk through how much to show, answered
+/// with answer `n` (from 1) as its digit keys do, Back, Start over, or "Looks good".
+pub(super) fn onboarding_tailor(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    use crate::onboarding::TailorAct;
+    if !ctx.workspace.on_look_step(ctx.cx) {
+        return Err(anyhow!("the walk is on the Look step: `onboarding look` first"));
+    }
+    let act = match arg.trim() {
+        "back" => TailorAct::Back,
+        "over" => TailorAct::StartOver,
+        "ok" => TailorAct::Settle,
+        n => TailorAct::Answer(
+            n.parse::<usize>()
+                .ok()
+                .and_then(|n| n.checked_sub(1))
+                .ok_or_else(|| anyhow!("expected <n>|back|over|ok, got {n:?}"))?,
+        ),
+    };
+    let moved = ctx.workspace.tailor_act(act, ctx.cx);
+    Ok((if moved { "done" } else { "nothing to do" }).to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use wormhole_core::agents::AgentId;

@@ -26,7 +26,6 @@ const FONT_FACE_W: f32 = 132.0;
 /// A theme card: its miniature and the name strip under it.
 const CARD_H: f32 = 72.0;
 const CARD_STRIP_H: f32 = 24.0;
-const CARD_RING: f32 = 2.0;
 const PREVIEW_BAR: f32 = 3.0;
 const PREVIEW_PAD: f32 = 6.0;
 const PREVIEW_GAP: f32 = 4.0;
@@ -170,6 +169,7 @@ impl FirstRun {
                     .into_any_element(),
             ))
             .child(sample)
+            .children(self.render_tailor(ui, cx))
             .into_any_element()
     }
 }
@@ -328,16 +328,9 @@ fn theme_card(ix: usize, tokens: &ThemeTokens, current: bool, ui: UiColors) -> S
         _ => t(name),
     };
     let light = tokens.appearance == Appearance::Light;
-    div()
-        .id(("onboarding-theme", ix))
+    style::choice_card(("onboarding-theme", ix), ui, current)
+        .aria_label(tokens.name.clone())
         .h(px(CARD_H))
-        .flex()
-        .flex_col()
-        .rounded(ui.radius)
-        .overflow_hidden()
-        .cursor_pointer()
-        .map(|d| if current { d.ringed(ui, ui.primary, px(CARD_RING)) } else { d.outlined(ui, ui.border) })
-        .when(!current, |d| d.hover(|d| d.border_color(ui.border_strong)))
         .child(
             div()
                 .flex_1()

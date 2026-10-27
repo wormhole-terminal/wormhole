@@ -18,6 +18,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Codex, Amp, goose and Kiro show their own logos instead of two letters.
 - OpenCode's terminal shows that it needs you when it asks a question, not only for a permission.
   Repair OpenCode's hooks in Settings → Coding agents once to get it.
+- The first run's Look step asks "How much to show" one question at a time, as a shell prompt's setup
+  wizard does: where to start (Zen, Balanced or Everything), then the title row, the status bar, the
+  minimap, the lines between the columns and the right panel with its tools. Each answer is a small
+  drawing of the window it would give; click one or press 1, 2 or 3. Every answer is applied at once,
+  Back and Start over go around, and a summary ends the walk.
 - `features` in config.json switches the right panel's optional tools off and on (`"history": false`);
   Changes and Usage always stay, and a key that switches nothing is said so. Settings has no page for it
   yet; the first run's walk through how much the window shows will set it.

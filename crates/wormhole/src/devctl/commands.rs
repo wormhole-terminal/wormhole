@@ -126,6 +126,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "sidebar-scroll" => sidebar::scroll,
         "resize" => sessions::resize,
         "onboarding" => sessions::onboarding,
+        "onboarding-tailor" => sessions::onboarding_tailor,
         "welcome" => welcome::welcome,
         "welcome-dock" => welcome::dock,
         "welcome-probe" => welcome::probe,

@@ -186,6 +186,8 @@
 //!                   window with nothing played around it, whether or not it ran before (`close` closes
 //!                   it without remembering, and presses Esc in a terminal whose welcome runs: a fresh
 //!                   data dir's first launch opens the terminal welcome while its flag is on)
+//!   onboarding-tailor <n|back|over|ok>   in the Look step's "How much to show" walk: answer with number n
+//!                   (from 1, as the digit keys do), go Back, Start over, or accept the summary ("Looks good")
 //!   welcome <cursor|portal|logo> [hidden]   replay the terminal welcome: the window leaves into the wormhole and
 //!                   comes back with a new terminal running `Wormhole welcome`, the start animation
 //!                   handing over to it as that hand-over has it (the ship docks on the mark's `>`, on

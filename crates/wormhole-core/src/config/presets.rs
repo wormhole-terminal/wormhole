@@ -152,6 +152,31 @@ impl Shown {
         settings.status_bar = self.status_bar;
         settings.minimap = self.minimap;
         settings.column_dividers = self.column_dividers;
+        self.apply_tools(settings);
+    }
+
+    /// Write into `settings` only what differs from `from`, which is what they showed: an answer that
+    /// changes the minimap writes the minimap and nothing else (not the title row's saved arrangement,
+    /// not each tool's switch). Like [`Shown::apply`], all but `panel_open`.
+    pub fn apply_changes(&self, from: &Shown, settings: &mut Settings) {
+        if self.title != from.title {
+            settings.title_row = Some(self.title.row());
+        }
+        if self.status_bar != from.status_bar {
+            settings.status_bar = self.status_bar;
+        }
+        if self.minimap != from.minimap {
+            settings.minimap = self.minimap;
+        }
+        if self.column_dividers != from.column_dividers {
+            settings.column_dividers = self.column_dividers;
+        }
+        if self.tools != from.tools {
+            self.apply_tools(settings);
+        }
+    }
+
+    fn apply_tools(&self, settings: &mut Settings) {
         for id in offered_tools(settings) {
             let on = match &self.tools {
                 ToolsShown::Few => false,
@@ -243,6 +268,23 @@ mod tests {
         Shown::of(Preset::Zen).apply(&mut settings);
         shown.apply(&mut settings);
         assert_eq!(settings, before);
+    }
+
+    #[test]
+    fn applying_the_changes_writes_only_what_differs() {
+        let mut settings = Settings::default();
+        let before = settings.clone();
+        let balanced = Shown::of(Preset::Balanced);
+        // Nothing differs: nothing is written, not even the title row's arrangement.
+        balanced.apply_changes(&balanced, &mut settings);
+        assert_eq!(settings, before);
+        // One answer, one field.
+        Shown { minimap: true, ..balanced.clone() }.apply_changes(&balanced, &mut settings);
+        assert_eq!(settings, Settings { minimap: true, ..before.clone() });
+        // And the result is what a full application of the same window makes.
+        let mut whole = before;
+        Shown { minimap: true, ..balanced }.apply(&mut whole);
+        assert_eq!(whole.minimap, settings.minimap);
     }
 
     /// A release offers only the tools it ships (no flag of theirs is on there).

@@ -115,6 +115,30 @@ fn opening_the_panel_without_room_hides_the_sidebar() {
 }
 
 #[test]
+fn setting_the_panel_says_what_it_should_be_and_returns_what_shows() {
+    let mut panes = Panes::default();
+    assert!(!panes.set_panel(false, 1440.0), "closed as asked");
+    assert!(!panes.panel_wanted);
+    assert!(!panes.set_panel(false, 1440.0), "closed twice changes nothing");
+    assert!(panes.set_panel(true, 1440.0));
+    assert!(panes.set_panel(true, 1440.0), "open twice changes nothing");
+    assert!(panes.panel_wanted && panes.sidebar_open, "with room the sidebar stays");
+}
+
+#[test]
+fn setting_the_panel_in_a_narrow_window_where_it_is_wanted_but_hidden() {
+    // Wanted but without room: not on screen. Open reveals it, the sidebar steps aside.
+    let mut waiting = Panes::default();
+    assert!(waiting.panel_wanted && !waiting.panel_visible(900.0));
+    assert!(waiting.set_panel(true, 900.0));
+    assert!(!waiting.sidebar_open);
+    // Closed ends the wish, rather than revealing what the person can't see (as the toggle would).
+    let mut waiting = Panes::default();
+    assert!(!waiting.set_panel(false, 900.0));
+    assert!(!waiting.panel_wanted && waiting.sidebar_open, "nothing else moved");
+}
+
+#[test]
 fn bringing_the_sidebar_back_hides_the_panel_again() {
     let mut panes = Panes { sidebar_open: false, ..Panes::default() };
     assert!(panes.panel_visible(670.0));
