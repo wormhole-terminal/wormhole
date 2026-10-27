@@ -171,3 +171,15 @@ pub(super) const V9_TEXT_IN_ITS_OWN_FILE: &str = "
     DROP TABLE main.scrollback;
     ALTER TABLE sessions ADD COLUMN forget_text INTEGER NOT NULL DEFAULT 0;
 ";
+
+/// Version 9 to 10: the files each terminal changed (`row_claims`), for the count on its sidebar
+/// row to survive a restart. A row per file, keyed by the terminal's session id with the repository
+/// it is in; none for anyone before.
+pub(super) const V10_ROW_CLAIMS: &str = "
+    CREATE TABLE row_claims (
+        session_id INTEGER NOT NULL,
+        root TEXT NOT NULL,
+        path TEXT NOT NULL,
+        PRIMARY KEY (session_id, root, path)
+    );
+";

@@ -1,8 +1,8 @@
 //! Defaults, the names the file uses and what older files still read as.
 
 use super::super::{
-    APP_SETTINGS, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta, PROJECT_SETTINGS,
-    Settings, SizeUnits, ThemeMode, TitleBorder, keys,
+    APP_SETTINGS, ChangesScope, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta,
+    PROJECT_SETTINGS, PlainChanges, Settings, SharedChanges, SizeUnits, ThemeMode, TitleBorder, keys,
 };
 use crate::storage::jsonc;
 use crate::theme::fonts;
@@ -426,4 +426,47 @@ fn the_feature_switches_are_the_persons_own() {
     assert!(APP_SETTINGS.contains(&"features") && !PROJECT_SETTINGS.contains(&"features"));
     let json = serde_json::to_value(Settings::default()).expect("serializes");
     assert_eq!(json["features"], serde_json::json!({}));
+}
+
+#[test]
+fn the_row_count_choices_default_to_the_terminals_own_files_and_read_by_their_words() {
+    let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
+    assert_eq!(unset.sidebar_changes_scope, ChangesScope::Terminal);
+    assert_eq!(unset.sidebar_changes_plain, PlainChanges::Finishing);
+    assert_eq!(unset.sidebar_changes_shared, SharedChanges::Each);
+    assert!(unset.sidebar_changes_remember);
+
+    let chosen: Settings = jsonc::parse(
+        r#"{ "sidebar_changes_scope": "repository", "sidebar_changes_plain": "any",
+            "sidebar_changes_shared": "none", "sidebar_changes_remember": false }"#,
+    )
+    .expect("valid jsonc");
+    assert_eq!(chosen.sidebar_changes_scope, ChangesScope::Repository);
+    assert_eq!(chosen.sidebar_changes_plain, PlainChanges::Any);
+    assert_eq!(chosen.sidebar_changes_shared, SharedChanges::None);
+    assert!(!chosen.sidebar_changes_remember);
+    let json = serde_json::to_value(&chosen).expect("serializes");
+    for (key, value) in [
+        ("sidebar_changes_scope", "repository"),
+        ("sidebar_changes_plain", "any"),
+        ("sidebar_changes_shared", "none"),
+    ] {
+        assert_eq!(json[key], value, "{key}");
+    }
+    assert_eq!(serde_json::from_value::<Settings>(json).expect("reads back"), chosen);
+}
+
+/// A word this build doesn't know (a newer build's choice, a typo) reads as the default, and the
+/// rest of the file is read: it is not a reason to call the whole file unreadable.
+#[test]
+fn a_row_count_choice_this_build_doesnt_know_reads_as_the_default() {
+    let settings: Settings = jsonc::parse(
+        r#"{ "sidebar_changes_scope": "branch", "sidebar_changes_plain": "sometimes",
+            "sidebar_changes_shared": "most", "font_size": 15.0 }"#,
+    )
+    .expect("unknown words read");
+    assert_eq!(settings.sidebar_changes_scope, ChangesScope::Terminal);
+    assert_eq!(settings.sidebar_changes_plain, PlainChanges::Finishing);
+    assert_eq!(settings.sidebar_changes_shared, SharedChanges::Each);
+    assert_eq!(settings.font_size, 15.0, "the rest of the file is read");
 }

@@ -47,6 +47,39 @@ pub(super) const SESSIONS: &[Group] = &[
             entry("sidebar-changes", SETTINGS_SESSIONS_SIDEBAR_CHANGES, &["sidebar_changes"])
                 .with_description(SETTINGS_SESSIONS_SIDEBAR_CHANGES_DESCRIPTION)
                 .with_keywords(SETTINGS_SESSIONS_SIDEBAR_CHANGES_KEYWORDS),
+            // What the count is made of: only of use while it is shown.
+            entry(
+                "sidebar-changes-scope",
+                SETTINGS_SESSIONS_SIDEBAR_CHANGES_SCOPE,
+                &["sidebar_changes_scope"],
+            )
+            .with_description(SETTINGS_SESSIONS_SIDEBAR_CHANGES_SCOPE_DESCRIPTION)
+            .with_keywords(SETTINGS_SESSIONS_SIDEBAR_CHANGES_SCOPE_KEYWORDS)
+            .with_needs(|s| s.sidebar_changes),
+            entry(
+                "sidebar-changes-plain",
+                SETTINGS_SESSIONS_SIDEBAR_CHANGES_PLAIN,
+                &["sidebar_changes_plain"],
+            )
+            .with_description(SETTINGS_SESSIONS_SIDEBAR_CHANGES_PLAIN_DESCRIPTION)
+            .with_keywords(SETTINGS_SESSIONS_SIDEBAR_CHANGES_PLAIN_KEYWORDS)
+            .with_needs(|s| s.sidebar_changes),
+            entry(
+                "sidebar-changes-shared",
+                SETTINGS_SESSIONS_SIDEBAR_CHANGES_SHARED,
+                &["sidebar_changes_shared"],
+            )
+            .with_description(SETTINGS_SESSIONS_SIDEBAR_CHANGES_SHARED_DESCRIPTION)
+            .with_keywords(SETTINGS_SESSIONS_SIDEBAR_CHANGES_SHARED_KEYWORDS)
+            .with_needs(|s| s.sidebar_changes),
+            entry(
+                "sidebar-changes-remember",
+                SETTINGS_SESSIONS_SIDEBAR_CHANGES_REMEMBER,
+                &["sidebar_changes_remember"],
+            )
+            .with_description(SETTINGS_SESSIONS_SIDEBAR_CHANGES_REMEMBER_DESCRIPTION)
+            .with_keywords(SETTINGS_SESSIONS_SIDEBAR_CHANGES_REMEMBER_KEYWORDS)
+            .with_needs(|s| s.sidebar_changes),
             entry("sidebar-dot", SETTINGS_SESSIONS_SIDEBAR_DOT, &["sidebar_status_dot"])
                 .with_description(SETTINGS_SESSIONS_SIDEBAR_DOT_DESCRIPTION)
                 .with_keywords(SETTINGS_SESSIONS_SIDEBAR_DOT_KEYWORDS),

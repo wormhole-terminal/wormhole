@@ -22,7 +22,10 @@
 //! - A file stops being a terminal's when it leaves the status (committed, reverted).
 //!
 //! Pure, with no clock of its own: callers pass the `Instant`s, so the rules are tested without
-//! waiting. It lives in memory only, so a restart of the app starts every count from nothing.
+//! waiting. It lives in memory; what the app keeps of it across restarts it hands back with
+//! [`Attribution::restore`], and the first picture of a repository after that is a baseline like any
+//! other: it attributes nothing new, but drops what has left the status meanwhile (a commit made
+//! while the app was closed).
 
 mod snapshot;
 #[cfg(test)]
@@ -34,6 +37,8 @@ use std::time::Instant;
 
 use snapshot::Prints;
 pub use snapshot::Snapshot;
+
+use crate::config::SharedChanges;
 
 /// How a terminal says it is working.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -61,6 +66,9 @@ pub enum Place<'a> {
 pub struct Attribution {
     terminals: HashMap<i64, Terminal>,
     repos: HashMap<PathBuf, Repo>,
+    /// Counts up whenever any terminal's set of files changes (not only how many): what the app
+    /// compares to know that there is something new to keep.
+    revision: u64,
 }
 
 /// What is known of one terminal's activity.
@@ -124,18 +132,66 @@ impl Attribution {
         terminal.root.is_some_and(|root| self.leave(id, &root))
     }
 
-    /// The files terminal `id` changed that are still uncommitted, if any.
-    pub fn changes_of(&self, id: i64) -> Option<usize> {
+    /// The files terminal `id` changed that are still uncommitted, if any, counted as `shared` says
+    /// for a file that more than one terminal changed. The claims are kept as they are and the
+    /// policy applies here, so changing it takes effect at once.
+    pub fn changes_of(&self, id: i64, shared: SharedChanges) -> Option<usize> {
         let root = self.terminals.get(&id)?.root.as_deref()?;
-        let count = self.repos.get(root)?.claims.get(&id)?.len();
+        let repo = self.repos.get(root)?;
+        let own = repo.claims.get(&id)?;
+        let count = match shared {
+            SharedChanges::Each => own.len(),
+            SharedChanges::None => own
+                .iter()
+                .filter(|path| {
+                    !repo.claims.iter().any(|(other, paths)| *other != id && paths.contains(*path))
+                })
+                .count(),
+        };
         (count > 0).then_some(count)
+    }
+
+    /// The repository terminal `id` is in and the files it changed there, for keeping them.
+    pub fn claims_of(&self, id: i64) -> Option<(&Path, &HashSet<String>)> {
+        let root = self.terminals.get(&id)?.root.as_deref()?;
+        Some((root, self.repos.get(root)?.claims.get(&id)?))
+    }
+
+    /// See the field: unchanged means nothing new to keep.
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+
+    /// Put back what was kept of a terminal: the files it changed in the repository at `root`.
+    /// Called as the terminal comes back, before anything is observed; the terminal is taken to be
+    /// in that repository until [`track`](Self::track) says otherwise. Ignored for a terminal the
+    /// model already knows (one that moved to another window in this run: what is in memory is newer
+    /// than what was kept).
+    pub fn restore(&mut self, id: i64, root: &Path, paths: impl IntoIterator<Item = String>) {
+        if self.terminals.contains_key(&id) {
+            return;
+        }
+        let terminal = self.terminals.entry(id).or_insert_with(|| Terminal {
+            root: None,
+            kind: Kind::Plain,
+            working: false,
+            last_working: None,
+        });
+        if terminal.root.as_deref() != Some(root) {
+            terminal.root = Some(root.to_path_buf());
+        }
+        let claims = &mut self.repos.entry(root.to_path_buf()).or_default().claims;
+        let paths: HashSet<String> = paths.into_iter().collect();
+        if !paths.is_empty() {
+            claims.entry(id).or_default().extend(paths);
+        }
     }
 
     /// Take a new picture of a repository. Returns whether any terminal's count changed. A picture
     /// taken before the last one that came in arrived late and says nothing new.
     pub fn observe(&mut self, snapshot: Snapshot) -> bool {
         let Snapshot { root, taken, prints } = snapshot;
-        let Self { terminals, repos } = self;
+        let Self { terminals, repos, revision } = self;
         let last = repos.get(&root).and_then(|repo| repo.taken);
         if last.is_some_and(|last| taken < last) {
             return false;
@@ -144,12 +200,13 @@ impl Attribution {
         let claimants = last.map(|since| claimants(terminals, &root, since));
         let repo = repos.entry(root).or_default();
         repo.taken = Some(taken);
+        let (mut changed, mut edited) = (false, false);
         match (prints, repo.baseline.take(), claimants) {
             // Too many files to say: forget what was known, the next picture starts over.
             (None, ..) => {
-                let had = !repo.claims.is_empty();
+                changed = !repo.claims.is_empty();
+                edited = changed;
                 repo.claims.clear();
-                had
             }
             (Some(now), Some(then), Some(claimants)) => {
                 let touched: Vec<&str> = now.touched_since(&then).collect();
@@ -158,35 +215,46 @@ impl Attribution {
                         repo.claims.entry(id).or_default();
                     }
                 }
-                let mut changed = false;
                 repo.claims.retain(|id, paths| {
                     let before = paths.len();
                     if claimants.contains(id) {
                         for path in &touched {
                             if !paths.contains(*path) {
                                 paths.insert((*path).to_owned());
+                                edited = true;
                             }
                         }
                     }
+                    let grown = paths.len();
                     paths.retain(|path| now.has(path));
+                    edited |= paths.len() != grown;
                     changed |= paths.len() != before;
                     !paths.is_empty()
                 });
                 repo.baseline = Some(now);
-                changed
             }
-            // The first picture: what is changed already is nobody's.
+            // The first picture: what is changed already is nobody's. What was restored is only kept
+            // for the files still changed: a commit made while the app was closed takes the rest.
             (Some(now), ..) => {
+                repo.claims.retain(|_, paths| {
+                    let before = paths.len();
+                    paths.retain(|path| now.has(path));
+                    changed |= paths.len() != before;
+                    !paths.is_empty()
+                });
+                edited = changed;
                 repo.baseline = Some(now);
-                false
             }
         }
+        *revision += u64::from(edited);
+        changed
     }
 
     /// Terminal `id` is no longer in `root`: its files there are dropped, and the repository is
     /// forgotten when no terminal is in it. Returns whether the terminal had any.
     fn leave(&mut self, id: i64, root: &Path) -> bool {
         let had = self.repos.get_mut(root).is_some_and(|repo| repo.claims.remove(&id).is_some());
+        self.revision += u64::from(had);
         if !self.terminals.values().any(|terminal| terminal.root.as_deref() == Some(root)) {
             self.repos.remove(root);
         }

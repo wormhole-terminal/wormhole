@@ -440,8 +440,24 @@ entry Sessions cmd-hints
   keywords "command keycaps shortcuts numbers hints"
 entry Sessions sidebar-changes
   label "Changed files"
-  description "±N uncommitted files this terminal changed, in its row"
+  description "±N uncommitted files in the terminal's row"
   keywords "git changes count"
+entry Sessions sidebar-changes-scope
+  label "Count"
+  description "The files this terminal changed, or everything changed in its repository, shown once, on the topmost row of that repository"
+  keywords "git changes count repository terminal own"
+entry Sessions sidebar-changes-plain
+  label "Plain terminals"
+  description "Which programs make a terminal without an agent count the files changed while they run. Commands that finish: a build, a test run, a formatter. Any program: an editor or a dev server too, which then take edits made outside the app"
+  keywords "shell command editor dev server vim ssh"
+entry Sessions sidebar-changes-shared
+  label "Files changed at once"
+  description "When two terminals worked at the same time, whose file it is can't be told: both count it, or neither does"
+  keywords "both shared overlap ambiguous agents"
+entry Sessions sidebar-changes-remember
+  label "Remember after restart"
+  description "Keep which files each terminal changed when the app quits, for the terminals that come back"
+  keywords "persist restart restore"
 entry Sessions sidebar-dot
   label "Status dot"
   description "Working, needs input, finished or idle, as the state round every terminal's status tile"

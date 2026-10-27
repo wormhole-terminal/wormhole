@@ -19,8 +19,12 @@ const FIRST_MIGRATABLE: i64 = 6;
 
 /// `MIGRATIONS[i]` takes a database from version `FIRST_MIGRATABLE + i` to the next one. All the
 /// steps a database needs run in one transaction, so a failing step leaves it as it was.
-const MIGRATIONS: &[&str] =
-    &[steps::V7_EVERY_TERMINAL_A_SESSION, steps::V8_TERMINAL_HOST, steps::V9_TEXT_IN_ITS_OWN_FILE];
+const MIGRATIONS: &[&str] = &[
+    steps::V7_EVERY_TERMINAL_A_SESSION,
+    steps::V8_TERMINAL_HOST,
+    steps::V9_TEXT_IN_ITS_OWN_FILE,
+    steps::V10_ROW_CLAIMS,
+];
 
 /// The schema version this build creates and reads.
 const VERSION: i64 = FIRST_MIGRATABLE + MIGRATIONS.len() as i64;
@@ -38,6 +42,10 @@ const VERSION: i64 = FIRST_MIGRATABLE + MIGRATIONS.len() as i64;
 ///
 /// A terminal's saved text is not here but in a file of its own (`saved_text`), keyed by the
 /// terminal's id: never in a `tabs` row, which a window save rewrites.
+///
+/// `row_claims` holds the files a terminal changed (the count on its row, `git::attribution`): a row
+/// per file with the repository it is in, keyed by the terminal's id like its notes and tasks, and
+/// forgotten with the session.
 pub(super) const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS windows (
         id INTEGER PRIMARY KEY,
@@ -84,6 +92,12 @@ pub(super) const SCHEMA: &str = "
         position INTEGER NOT NULL,
         text TEXT NOT NULL,
         done INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS row_claims (
+        session_id INTEGER NOT NULL,
+        root TEXT NOT NULL,
+        path TEXT NOT NULL,
+        PRIMARY KEY (session_id, root, path)
     );
     CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
     CREATE INDEX IF NOT EXISTS sessions_window ON sessions (window_id);

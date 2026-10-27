@@ -452,6 +452,7 @@ impl Workspace {
         cx.observe_global::<crate::settings::SettingsStore>(|this, cx| this.sync_sidebar_soon(cx)).detach();
         // A terminal's file count moves in any window.
         this.watch_changes(cx);
+        this.restore_changes(cx);
         self::regions::Regions::watch_globals(&mut this, cx);
         // The list draws itself (a hover, a rename, a menu); the window around it hears of what it draws.
         self::regions::Regions::watch_sidebar(&mut this, cx);

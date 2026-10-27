@@ -74,6 +74,12 @@ pub const APP_SETTINGS: &[&str] = &[
     "icon_animations",
     // The person's own habit: what ⌘1–9 reach, whatever project is in front.
     "sidebar_numbers",
+    // How the rows' file counts are worked out is one model for the whole app (two windows can hold
+    // terminals of one repository), and it keeps what a terminal changed: not a project's to set.
+    "sidebar_changes_scope",
+    "sidebar_changes_plain",
+    "sidebar_changes_shared",
+    "sidebar_changes_remember",
     // The window's chrome, one look for every window (where the terminals are listed too); and the
     // programs the person opens folders in.
     "terminals_in",

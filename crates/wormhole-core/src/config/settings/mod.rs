@@ -1,7 +1,8 @@
 //! The settings schema: every key of `config.json`, its default and its
 //! valid range. The struct and its defaults are here; the values some settings take are in `choices`,
 //! which keys a project may set in `keys`, the project overlay in `overlay`, the primary colour's switch
-//! in `primary`, the title row's parts in `title_row` and the colours of folders in `folder_colors`.
+//! in `primary`, the title row's parts in `title_row`, the colours of folders in `folder_colors` and what a row's file
+//! count is of in `row_changes`.
 
 use std::collections::BTreeMap;
 use std::ops::RangeInclusive;
@@ -24,6 +25,7 @@ mod folder_colors;
 mod keys;
 mod overlay;
 mod primary;
+mod row_changes;
 #[cfg(test)]
 mod tests;
 mod title_row;
@@ -36,6 +38,7 @@ pub use self::choices::{
 };
 pub use self::keys::{APP_SETTINGS, PROJECT_SETTINGS};
 pub(crate) use self::keys::{LEGACY_SETTINGS, keys};
+pub use self::row_changes::{ChangesScope, PlainChanges, SharedChanges};
 
 /// The line height multiplier [`Settings::sanitized`] keeps `line_height` within.
 pub const LINE_HEIGHT: RangeInclusive<f32> = 1.0..=2.0;
@@ -142,6 +145,14 @@ pub struct Settings {
     pub sidebar_status_dot: bool,
     /// Number of changed files.
     pub sidebar_changes: bool,
+    /// What that number is of: the terminal's own files, or the repository's.
+    pub sidebar_changes_scope: ChangesScope,
+    /// Which programs in front make a plain terminal count as working.
+    pub sidebar_changes_plain: PlainChanges,
+    /// What becomes of a file several terminals changed.
+    pub sidebar_changes_shared: SharedChanges,
+    /// Keep each terminal's changed files across restarts of the app.
+    pub sidebar_changes_remember: bool,
     /// Note icon with the number of open notes and tasks.
     pub sidebar_notes: bool,
     /// What ⌘1–9 count along: the terminal (a number stays with it) or the list (the first nine
@@ -335,6 +346,10 @@ impl Default for Settings {
             code_font_size: 13.0,
             sidebar_status_dot: true,
             sidebar_changes: true,
+            sidebar_changes_scope: ChangesScope::default(),
+            sidebar_changes_plain: PlainChanges::default(),
+            sidebar_changes_shared: SharedChanges::default(),
+            sidebar_changes_remember: true,
             sidebar_notes: false,
             sidebar_numbers: SidebarNumbers::default(),
             terminals_in: TerminalsIn::default(),

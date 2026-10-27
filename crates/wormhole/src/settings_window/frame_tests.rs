@@ -75,7 +75,9 @@ const BUDGET: [(&str, u64); 16] = [
     ("Fonts", 7459),
     ("Motion", 6340),
     ("Terminal", 9771),
-    ("Sessions", 13704),
+    // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
+    // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
+    ("Sessions", 15115),
     ("Git", 4567),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
@@ -85,12 +87,13 @@ const BUDGET: [(&str, u64); 16] = [
     ("Notifications", 7882),
     ("MenuBar", 6195),
     ("Updates", 5649),
-    ("Advanced", 4149),
+    ("Advanced", 4185),
     ("Projects", 9037),
     // The switches for Automation, Tear off, Live resize and Notice chip are four rows more.
     ("FeatureFlags", 5981),
-    // The same row is one more for the search to draw.
-    ("search", 12216),
+    // The same row is one more for the search to draw; the four keys of the Changed files choices, which
+    // every page reads as JSON each frame, are about 14 more.
+    ("search", 12250),
 ];
 
 /// What a scan finds in the visual checks' fixture home (Ghostty, iTerm2 and Alacritty settings), with the

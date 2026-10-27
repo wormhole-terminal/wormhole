@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Settings → Terminals & sidebar has choices for the changed-files count in a terminal's row: whether it
+  counts the files that terminal changed or the repository's (shown once, on the topmost row of the
+  repository), whether editors and dev servers in plain terminals count as work, what becomes of a file two
+  terminals changed at once, and whether each terminal's files are remembered after a restart (on).
 - Copying says so in a small chip that drops onto the top of the terminal, in the system's own glass:
   "Copied 3 lines", "Copied command", "Copied path". A program's copy in the terminal you're typing in
   is said there too, instead of the bar over the terminal's last rows. VoiceOver reads it out, and

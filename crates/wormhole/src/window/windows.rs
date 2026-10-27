@@ -291,6 +291,7 @@ impl Workspace {
         self.bounds = window_bounds::encode(window.window_bounds(), display);
         self.save(cx);
         self.save_scrollback(cx);
+        self.keep_changes_now(cx);
     }
 
     /// This window just became the one in front: its features look again (the project of its terminal

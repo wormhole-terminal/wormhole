@@ -5,7 +5,7 @@ use std::time::{Duration, SystemTime};
 
 use wormhole_core::agents::AgentId;
 use wormhole_core::notify::Source;
-use wormhole_core::view::sidebar::RowState;
+use wormhole_core::view::sidebar::{ListInput, Listing, RowState, SidebarNumbers, Splits, WindowSidebar};
 
 use super::Place;
 use super::label::row_label;
@@ -140,6 +140,7 @@ fn place(position: usize, of: usize, number: Option<usize>) -> Place {
         number,
         grouped: false,
         marks: wormhole_core::view::sidebar::SplitMarks::default(),
+        changes_above: false,
         bracket_draws: None,
         status: None,
     }
@@ -167,4 +168,35 @@ fn a_rows_label_says_its_name_what_it_does_and_where_it_is() {
     assert!(row_label(&failed, false, &place(1, 1, None)).contains("last command failed, exit 101"));
     let idle = info(false, RowState::Idle);
     assert!(row_label(&idle, false, &place(1, 1, None)).contains("shell, nothing running"));
+}
+
+/// With the count of the repository (not the terminal's own) every row of a repository would show the same
+/// number, so the list shows it once: on the topmost row of the repository, wherever the others are.
+#[test]
+fn a_repositorys_count_is_drawn_on_its_topmost_row_only() {
+    let repo = |name: &str| Some(std::path::PathBuf::from(name));
+    let row = |ix: usize, repo: Option<std::path::PathBuf>| RowInfo {
+        ix,
+        id: ix as i64 + 1,
+        changes: Some(3),
+        repo,
+        ..RowInfo::test_row(ix as i64 + 1)
+    };
+    // Rows 0 and 2 are one repository with another between them; row 3 has no repository to count
+    // (the terminal's own files, counted as its own).
+    let infos = [row(0, repo("/a")), row(1, repo("/b")), row(2, repo("/a")), row(3, None)];
+    let ids: Vec<i64> = infos.iter().map(|info| info.id).collect();
+    let sidebar = WindowSidebar::default();
+    let listing = Listing::build(&ListInput {
+        ids: &ids,
+        pinned: &[false; 4],
+        sidebar: &sidebar,
+        splits: Splits::default(),
+        numbers: SidebarNumbers::Terminal,
+    });
+    let above: Vec<bool> = (0..listing.entries.len())
+        .filter_map(|at| Place::of(&listing, &infos, at, 0, false))
+        .map(|place| place.changes_above)
+        .collect();
+    assert_eq!(above, [false, false, true, false]);
 }

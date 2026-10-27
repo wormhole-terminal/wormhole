@@ -6,6 +6,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use wormhole_core::config::ChangesScope;
 use wormhole_core::view::layout::Edge;
 
 use gpui_kit::prelude::*;
@@ -22,6 +23,7 @@ use crate::sidebar::{NewTerminal, RowFailure, RowInfo, Sidebar, SidebarEvent, Si
 use crate::style::traffic_light_position;
 use crate::terminal_view::Status;
 use crate::window::Workspace;
+use crate::window::session::Session;
 use crate::window::tear_off::Release;
 use crate::{sidebar::shells, style};
 
@@ -59,6 +61,26 @@ impl Workspace {
         found
     }
 
+    /// What a row counts as changed files, by Settings → Changed files → Count: the uncommitted files
+    /// this terminal changed, or the repository's (git's own list for the folder), with the repository
+    /// it is of, which the list uses to show that number once.
+    fn row_changes(&self, session: &Session, cx: &App) -> (Option<usize>, Option<PathBuf>) {
+        let settings = settings_in(&self.profile, cx);
+        match settings.sidebar_changes_scope {
+            ChangesScope::Terminal => {
+                (crate::window::repo::changes_of(session.id, settings.sidebar_changes_shared, cx), None)
+            }
+            ChangesScope::Repository => {
+                let status =
+                    session.git.status.as_ref().filter(|_| session.git.cwd == session.pane.summary.cwd);
+                (
+                    status.and_then(|status| Some(status.files.len()).filter(|&n| n > 0)),
+                    status.map(|status| status.root.clone()),
+                )
+            }
+        }
+    }
+
     /// Every terminal's row facts, in the window's (manual) order. From each pane's summary, not
     /// the terminal: a terminal's output changes nothing here.
     pub(super) fn row_infos(&self, cx: &App) -> Vec<RowInfo> {
@@ -75,6 +97,7 @@ impl Workspace {
                 let command = foreground.map(|f| f.command.clone()).filter(|_| !told);
                 let program_running = command.is_some();
                 let root = summary.cwd.as_deref().map(|cwd| session.repo_root.of(cwd));
+                let (changes, repo) = self.row_changes(session, cx);
                 RowInfo {
                     ix,
                     id: session.id,
@@ -106,7 +129,8 @@ impl Workspace {
                     pinned: self.split_pinned(ix),
                     split: session.split,
                     forget_text: session.forget_text,
-                    changes: crate::window::repo::changes_of(session.id, cx),
+                    changes,
+                    repo,
                     extra: None,
                 }
             })

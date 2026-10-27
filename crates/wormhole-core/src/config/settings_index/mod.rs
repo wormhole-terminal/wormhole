@@ -140,6 +140,9 @@ pub struct Entry {
     /// The feature flag that hides the row while it is off (an unfinished feature's setting on a page
     /// that ships): neither the page nor the search shows it then.
     flag: Option<crate::config::features::FeatureFlag>,
+    /// What the settings must say for the row to be shown (a choice beside the switch it belongs
+    /// to): neither the page nor the search shows it while it doesn't hold.
+    needs: Option<fn(&Settings) -> bool>,
 }
 
 impl Entry {
@@ -165,9 +168,10 @@ impl Entry {
     }
 
     /// Whether the row is shown for these settings: always, unless an unfinished feature's flag
-    /// that it hangs on is off in this build.
+    /// that it hangs on is off in this build, or a setting it only makes sense with is off.
     pub fn is_shown(&self, settings: &Settings) -> bool {
         self.flag.is_none_or(|flag| settings.feature_enabled(flag))
+            && self.needs.is_none_or(|needs| needs(settings))
     }
 
     /// Whether the setting is of use with these features on: always, unless it is about a feature
@@ -363,6 +367,25 @@ mod tests {
     }
 
     #[test]
+    fn the_choices_of_the_changed_files_count_are_shown_only_while_it_is_shown() {
+        let ids = [
+            "sidebar-changes-scope",
+            "sidebar-changes-plain",
+            "sidebar-changes-shared",
+            "sidebar-changes-remember",
+        ];
+        let on = Settings::default();
+        let off = Settings { sidebar_changes: false, ..Settings::default() };
+        for id in ids {
+            let (_, _, row) = entries().find(|(_, _, e)| e.id == id).expect("the row");
+            assert!(row.is_shown(&on), "{id}");
+            assert!(!row.is_shown(&off), "{id}");
+        }
+        let (_, _, switch) = entries().find(|(_, _, e)| e.id == "sidebar-changes").expect("the row");
+        assert!(switch.is_shown(&off), "the switch itself is always there");
+    }
+
+    #[test]
     fn every_config_key_has_a_row_or_is_listed_as_waiting_for_one() {
         let shown: HashSet<&str> =
             entries().flat_map(|(_, _, e)| e.keys.iter().map(|key| key_path::top(key))).collect();
@@ -518,6 +541,7 @@ mod tests {
             keys: &["density.nested"],
             feature: None,
             flag: None,
+            needs: None,
         };
         assert!(PROJECT_SETTINGS.contains(&"density"));
         assert!(set_by_project(&nested, &["density".into()]));

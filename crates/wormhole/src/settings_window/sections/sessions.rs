@@ -1,6 +1,7 @@
 //! Terminals & sidebar: the live preview, the density, the ⌘ hints, and what each row shows.
 
 use gpui_kit::*;
+use wormhole_core::config::{ChangesScope, PlainChanges, SharedChanges};
 use wormhole_core::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 #[allow(
     clippy::wildcard_imports,
@@ -38,6 +39,47 @@ pub(super) const SETTINGS: &[Setting] = &[
     ),
     toggle!("cmd-hints", sidebar_cmd_hints),
     toggle!("sidebar-changes", sidebar_changes),
+    Setting::segmented(
+        "sidebar-changes-scope",
+        &[
+            Segment::text(SETTINGS_SESSIONS_CHANGES_THIS_TERMINAL),
+            Segment::text(SETTINGS_SESSIONS_CHANGES_REPOSITORY),
+        ],
+        |s| usize::from(s.sidebar_changes_scope == ChangesScope::Repository),
+        |s, ix| {
+            s.sidebar_changes_scope = if ix == 0 { ChangesScope::Terminal } else { ChangesScope::Repository }
+        },
+    ),
+    Setting::segmented(
+        "sidebar-changes-plain",
+        &[
+            Segment::text(SETTINGS_SESSIONS_CHANGES_PLAIN_FINISHING),
+            Segment::text(SETTINGS_SESSIONS_CHANGES_PLAIN_ANY),
+            Segment::text(SETTINGS_SESSIONS_CHANGES_PLAIN_NONE),
+        ],
+        |s| match s.sidebar_changes_plain {
+            PlainChanges::Finishing => 0,
+            PlainChanges::Any => 1,
+            PlainChanges::None => 2,
+        },
+        |s, ix| {
+            s.sidebar_changes_plain = match ix {
+                0 => PlainChanges::Finishing,
+                1 => PlainChanges::Any,
+                _ => PlainChanges::None,
+            }
+        },
+    ),
+    Setting::segmented(
+        "sidebar-changes-shared",
+        &[
+            Segment::text(SETTINGS_SESSIONS_CHANGES_SHARED_EACH),
+            Segment::text(SETTINGS_SESSIONS_CHANGES_SHARED_NONE),
+        ],
+        |s| usize::from(s.sidebar_changes_shared == SharedChanges::None),
+        |s, ix| s.sidebar_changes_shared = if ix == 0 { SharedChanges::Each } else { SharedChanges::None },
+    ),
+    toggle!("sidebar-changes-remember", sidebar_changes_remember),
     toggle!("sidebar-dot", sidebar_status_dot),
     toggle!("sidebar-notes", sidebar_notes),
 ];

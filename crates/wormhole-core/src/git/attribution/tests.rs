@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 
 use super::snapshot::{Fingerprint, MAX_FILES};
 use super::{Attribution, Kind, Place, Snapshot};
+use crate::config::SharedChanges;
 use crate::git::{ChangeKind, FileChange, RepoStatus};
 
 const AGENT: i64 = 1;
@@ -61,7 +62,7 @@ impl World {
     }
 
     fn changes(&self, id: i64) -> Option<usize> {
-        self.attribution.changes_of(id)
+        self.attribution.changes_of(id, SharedChanges::Each)
     }
 }
 
@@ -390,4 +391,90 @@ fn a_terminal_leaving_does_not_forget_a_repository_another_is_in() {
     w.observe(&[("a", a)], 3);
     w.attribution.forget(SHELL);
     assert_eq!(w.changes(AGENT), Some(1), "the repository and the agent's file are kept");
+}
+
+#[test]
+fn a_file_that_several_terminals_changed_counts_for_each_or_for_nobody_as_the_policy_says() {
+    let mut w = World::new();
+    let (shared, own) = (w.print(), w.print());
+    w.observe(&[], 1);
+    w.track(AGENT, Kind::Told, true, 2);
+    w.track(OTHER_AGENT, Kind::Told, true, 2);
+    w.observe(&[("shared", shared)], 3);
+    // The first alone after the second stops: its own file is its alone.
+    w.track(OTHER_AGENT, Kind::Told, false, 3.5);
+    w.observe(&[("shared", shared)], 4);
+    w.track(AGENT, Kind::Told, true, 5);
+    w.observe(&[("shared", shared), ("own", own)], 6);
+    let count = |w: &World, id, policy| w.attribution.changes_of(id, policy);
+    assert_eq!(count(&w, AGENT, SharedChanges::Each), Some(2));
+    assert_eq!(count(&w, OTHER_AGENT, SharedChanges::Each), Some(1));
+    // Switching is instant: the claims are as they were.
+    assert_eq!(count(&w, AGENT, SharedChanges::None), Some(1), "only the file nobody else touched");
+    assert_eq!(count(&w, OTHER_AGENT, SharedChanges::None), None, "its only file is shared");
+    assert_eq!(count(&w, AGENT, SharedChanges::Each), Some(2));
+}
+
+#[test]
+fn what_was_kept_survives_the_first_picture_as_a_baseline_and_is_pruned_by_it() {
+    let mut w = World::new();
+    let (a, b, c) = (w.print(), w.print(), w.print());
+    // A terminal comes back with two files it changed; a third repository file is nobody's.
+    w.attribution.restore(AGENT, &w.root.clone(), ["a".to_string(), "b".to_string()]);
+    assert_eq!(w.changes(AGENT), Some(2), "back at once, before git has been asked");
+    assert!(w.attribution.claims_of(AGENT).is_some());
+    w.track(AGENT, Kind::Told, true, 1);
+    // `b` was committed while the app was closed; `c` was changed by something else meanwhile.
+    assert!(w.observe(&[("a", a), ("c", c)], 2), "the count dropped");
+    assert_eq!(w.changes(AGENT), Some(1), "pruned to what is still changed, `c` not taken");
+    let (_, claimed) = w.attribution.claims_of(AGENT).expect("kept");
+    assert!(claimed.contains("a") && !claimed.contains("b") && !claimed.contains("c"));
+    // From then on it is attributed as usual.
+    w.observe(&[("a", a), ("b", b), ("c", c)], 3);
+    assert_eq!(w.changes(AGENT), Some(2), "`a` kept and `b` new; `c` was in the baseline, so it is nobody's");
+}
+
+#[test]
+fn a_restored_terminal_that_is_somewhere_else_now_lets_go_of_what_was_kept() {
+    let mut w = World::new();
+    w.attribution.restore(AGENT, &w.root.clone(), ["a".to_string()]);
+    assert!(w.attribution.track(AGENT, Place::In(Path::new("/other")), Kind::Told, false, w.at(1)));
+    assert_eq!(w.changes(AGENT), None);
+    assert!(!w.attribution.repos.contains_key(&w.root), "nobody is in the repository any more");
+}
+
+#[test]
+fn the_revision_moves_when_a_terminals_files_do_and_only_then() {
+    let mut w = World::new();
+    let (a, a2) = (w.print(), w.print());
+    w.observe(&[], 1);
+    let start = w.attribution.revision();
+    w.track(AGENT, Kind::Told, true, 2);
+    w.observe(&[], 3);
+    assert_eq!(w.attribution.revision(), start, "nothing touched");
+    w.observe(&[("a", a)], 4);
+    let first = w.attribution.revision();
+    assert!(first > start);
+    // Same count, other files: committed `a`, edited `b` meanwhile.
+    w.observe(&[("b", a2)], 5);
+    assert!(w.attribution.revision() > first, "a different set of files, though as many");
+    let before = w.attribution.revision();
+    w.observe(&[("b", a2)], 6);
+    assert_eq!(w.attribution.revision(), before, "a picture of the same files");
+    w.attribution.forget(AGENT);
+    assert!(w.attribution.revision() > before, "closing it drops its files");
+}
+
+#[test]
+fn what_was_kept_is_not_put_back_over_a_terminal_the_model_knows() {
+    let mut w = World::new();
+    let a = w.print();
+    w.observe(&[], 1);
+    w.track(AGENT, Kind::Told, true, 2);
+    w.observe(&[("a", a)], 3);
+    // It moved to another window in this run, which reads what was kept: older than what is here.
+    w.attribution.restore(AGENT, &w.root.clone(), ["stale".to_string()]);
+    assert_eq!(w.changes(AGENT), Some(1));
+    let (_, claimed) = w.attribution.claims_of(AGENT).expect("kept");
+    assert!(claimed.contains("a") && !claimed.contains("stale"));
 }

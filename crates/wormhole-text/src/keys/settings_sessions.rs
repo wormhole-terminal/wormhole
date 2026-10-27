@@ -64,47 +64,85 @@ pub const SETTINGS_SESSIONS_CMD_HINTS_KEYWORDS: Key = Key::new(690);
 pub const SETTINGS_SESSIONS_GROUP_ROW_DETAILS: Key = Key::new(691);
 /// "Changed files"
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES: Key = Key::new(692);
-/// "±N uncommitted files this terminal changed, in its row"
+/// "±N uncommitted files in the terminal's row"
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_DESCRIPTION: Key = Key::new(693);
 /// "git changes count"
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_KEYWORDS: Key = Key::new(694);
+/// "Count"
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_SCOPE: Key = Key::new(695);
+/// "The files this terminal changed, or everything changed in its repository, shown once, on the topmost row of that repository"
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_SCOPE_DESCRIPTION: Key = Key::new(696);
+/// "git changes count repository terminal own"
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_SCOPE_KEYWORDS: Key = Key::new(697);
+/// "Plain terminals"
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_PLAIN: Key = Key::new(698);
+/// "Which programs make a terminal without an agent count the files changed while they run. Commands that finish: a build, a test run, a formatter. Any program: an editor or a dev server too, which then take edits made outside the app"
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_PLAIN_DESCRIPTION: Key = Key::new(699);
+/// "shell command editor dev server vim ssh"
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_PLAIN_KEYWORDS: Key = Key::new(700);
+/// "Files changed at once"
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_SHARED: Key = Key::new(701);
+/// "When two terminals worked at the same time, whose file it is can't be told: both count it, or neither does"
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_SHARED_DESCRIPTION: Key = Key::new(702);
+/// "both shared overlap ambiguous agents"
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_SHARED_KEYWORDS: Key = Key::new(703);
+/// "Remember after restart"
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_REMEMBER: Key = Key::new(704);
+/// "Keep which files each terminal changed when the app quits, for the terminals that come back"
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_REMEMBER_DESCRIPTION: Key = Key::new(705);
+/// "persist restart restore"
+pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_REMEMBER_KEYWORDS: Key = Key::new(706);
 /// "Status dot"
-pub const SETTINGS_SESSIONS_SIDEBAR_DOT: Key = Key::new(695);
+pub const SETTINGS_SESSIONS_SIDEBAR_DOT: Key = Key::new(707);
 /// "Working, needs input, finished or idle, as the state round every terminal's status tile"
-pub const SETTINGS_SESSIONS_SIDEBAR_DOT_DESCRIPTION: Key = Key::new(696);
+pub const SETTINGS_SESSIONS_SIDEBAR_DOT_DESCRIPTION: Key = Key::new(708);
 /// "status glyph agent"
-pub const SETTINGS_SESSIONS_SIDEBAR_DOT_KEYWORDS: Key = Key::new(697);
+pub const SETTINGS_SESSIONS_SIDEBAR_DOT_KEYWORDS: Key = Key::new(709);
 /// "Notes and tasks"
-pub const SETTINGS_SESSIONS_SIDEBAR_NOTES: Key = Key::new(698);
+pub const SETTINGS_SESSIONS_SIDEBAR_NOTES: Key = Key::new(710);
 /// "Note icon with the number of notes and open tasks"
-pub const SETTINGS_SESSIONS_SIDEBAR_NOTES_DESCRIPTION: Key = Key::new(699);
+pub const SETTINGS_SESSIONS_SIDEBAR_NOTES_DESCRIPTION: Key = Key::new(711);
 /// "notes tasks next steps count"
-pub const SETTINGS_SESSIONS_SIDEBAR_NOTES_KEYWORDS: Key = Key::new(700);
+pub const SETTINGS_SESSIONS_SIDEBAR_NOTES_KEYWORDS: Key = Key::new(712);
 /// "Sidebar"
-pub const SETTINGS_SESSIONS_SIDEBAR: Key = Key::new(701);
+pub const SETTINGS_SESSIONS_SIDEBAR: Key = Key::new(713);
 /// "Tabs"
-pub const SETTINGS_SESSIONS_TABS: Key = Key::new(702);
+pub const SETTINGS_SESSIONS_TABS: Key = Key::new(714);
 /// "Stay with the terminal"
-pub const SETTINGS_SESSIONS_STAY_WITH_THE_TERMINAL: Key = Key::new(703);
+pub const SETTINGS_SESSIONS_STAY_WITH_THE_TERMINAL: Key = Key::new(715);
 /// "Follow the list"
-pub const SETTINGS_SESSIONS_FOLLOW_THE_LIST: Key = Key::new(704);
+pub const SETTINGS_SESSIONS_FOLLOW_THE_LIST: Key = Key::new(716);
+/// "This terminal"
+pub const SETTINGS_SESSIONS_CHANGES_THIS_TERMINAL: Key = Key::new(717);
+/// "Repository"
+pub const SETTINGS_SESSIONS_CHANGES_REPOSITORY: Key = Key::new(718);
+/// "Commands that finish"
+pub const SETTINGS_SESSIONS_CHANGES_PLAIN_FINISHING: Key = Key::new(719);
+/// "Any program"
+pub const SETTINGS_SESSIONS_CHANGES_PLAIN_ANY: Key = Key::new(720);
+/// "None"
+pub const SETTINGS_SESSIONS_CHANGES_PLAIN_NONE: Key = Key::new(721);
+/// "Both count it"
+pub const SETTINGS_SESSIONS_CHANGES_SHARED_EACH: Key = Key::new(722);
+/// "Neither"
+pub const SETTINGS_SESSIONS_CHANGES_SHARED_NONE: Key = Key::new(723);
 /// "Live preview of the Terminals list. Hovering a density previews it under the current one"
-pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_STACKED: Key = Key::new(705);
+pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_STACKED: Key = Key::new(724);
 /// "Live preview of the Terminals list. Hovering a density previews it next to the current one"
-pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE: Key = Key::new(706);
+pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE: Key = Key::new(725);
 /// "Terminals"
-pub const SETTINGS_SESSIONS_TERMINALS: Key = Key::new(707);
+pub const SETTINGS_SESSIONS_TERMINALS: Key = Key::new(726);
 
 /// ```text
 /// Now · { $density }
 /// ```
 pub fn settings_sessions_preview_now(density: &str) -> String {
-    crate::active::message(708, &[("density", Arg::Str(density))])
+    crate::active::message(727, &[("density", Arg::Str(density))])
 }
 
 /// ```text
 /// Previewed while hovering { $density }
 /// ```
 pub fn settings_sessions_preview_hovering(density: &str) -> String {
-    crate::active::message(709, &[("density", Arg::Str(density))])
+    crate::active::message(728, &[("density", Arg::Str(density))])
 }

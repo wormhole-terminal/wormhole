@@ -48,8 +48,24 @@ settings-sessions-cmd-hints = Show ⌘1–⌘9 while ⌘ is held
 settings-sessions-group-row-details = Row details
 
 settings-sessions-sidebar-changes = Changed files
-    .description = ±N uncommitted files this terminal changed, in its row
+    .description = ±N uncommitted files in the terminal's row
     .keywords = git changes count
+
+settings-sessions-sidebar-changes-scope = Count
+    .description = The files this terminal changed, or everything changed in its repository, shown once, on the topmost row of that repository
+    .keywords = git changes count repository terminal own
+
+settings-sessions-sidebar-changes-plain = Plain terminals
+    .description = Which programs make a terminal without an agent count the files changed while they run. Commands that finish: a build, a test run, a formatter. Any program: an editor or a dev server too, which then take edits made outside the app
+    .keywords = shell command editor dev server vim ssh
+
+settings-sessions-sidebar-changes-shared = Files changed at once
+    .description = When two terminals worked at the same time, whose file it is can't be told: both count it, or neither does
+    .keywords = both shared overlap ambiguous agents
+
+settings-sessions-sidebar-changes-remember = Remember after restart
+    .description = Keep which files each terminal changed when the app quits, for the terminals that come back
+    .keywords = persist restart restore
 
 settings-sessions-sidebar-dot = Status dot
     .description = Working, needs input, finished or idle, as the state round every terminal's status tile
@@ -65,6 +81,13 @@ settings-sessions-sidebar = Sidebar
 settings-sessions-tabs = Tabs
 settings-sessions-stay-with-the-terminal = Stay with the terminal
 settings-sessions-follow-the-list = Follow the list
+settings-sessions-changes-this-terminal = This terminal
+settings-sessions-changes-repository = Repository
+settings-sessions-changes-plain-finishing = Commands that finish
+settings-sessions-changes-plain-any = Any program
+settings-sessions-changes-plain-none = None
+settings-sessions-changes-shared-each = Both count it
+settings-sessions-changes-shared-none = Neither
 
 ## settings_window/sections/preview.rs (labels, hints and notes drawn by this page's code)
 

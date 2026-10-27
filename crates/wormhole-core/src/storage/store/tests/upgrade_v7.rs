@@ -159,7 +159,7 @@ fn migrated(name: &str) -> Store {
     let dir = temp_dir(name);
     v6_fixture(&dir);
     let store = Store::open_at(&dir).expect("upgrades");
-    assert_eq!(version(&store.conn), 9);
+    assert_eq!(version(&store.conn), 10);
     assert!(store.recovered_from().is_none(), "upgraded, not moved aside");
     store
 }

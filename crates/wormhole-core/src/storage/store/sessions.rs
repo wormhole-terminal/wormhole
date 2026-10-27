@@ -122,6 +122,7 @@ pub(super) fn delete_session_rows(conn: &Connection, id: i64) -> Result<()> {
     )?;
     exec(conn, "DELETE FROM notes WHERE session_id = ?1", [id])?;
     exec(conn, "DELETE FROM tasks WHERE session_id = ?1", [id])?;
+    exec(conn, "DELETE FROM row_claims WHERE session_id = ?1", [id])?;
     exec(conn, "DELETE FROM tabs WHERE session_id = ?1", [id])?;
     exec(conn, "DELETE FROM sessions WHERE id = ?1", [id])?;
     Ok(())

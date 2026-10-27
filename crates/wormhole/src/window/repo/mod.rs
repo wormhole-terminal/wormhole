@@ -18,6 +18,7 @@ mod attribution;
 mod attribution_tests;
 pub(crate) mod job;
 mod poll;
+mod remembered;
 mod state;
 #[cfg(test)]
 mod tests;

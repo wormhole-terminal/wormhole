@@ -6,9 +6,12 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use gpui_kit::{Context, TestAppContext};
+use wormhole_core::config::{ChangesScope, SharedChanges};
+use wormhole_core::storage::store::Store;
 
 use super::changes_of;
-use crate::app_state::{OpenWindow, app};
+use crate::app_state::{OpenWindow, app, app_mut};
+use crate::settings::update_settings;
 use crate::window::Workspace;
 use crate::window::test_harness::{draw, drive, hook, isolate_in, read, read_cx, sidebar_of, start};
 
@@ -118,7 +121,7 @@ fn a_terminal_moved_to_another_window_keeps_its_count(cx: &mut TestAppContext) {
     let (window, root) = working_agent(cx, "moves");
     write(&root, "new.txt");
     read_repo(cx, &window, 1);
-    assert_eq!(cx.update(|cx| changes_of(1, cx)), Some(1));
+    assert_eq!(cx.update(|cx| changes_of(1, SharedChanges::Each, cx)), Some(1));
 
     // A state that git has not answered for (what a window made for a moved terminal starts with)
     // is not "in no repository".
@@ -126,7 +129,11 @@ fn a_terminal_moved_to_another_window_keeps_its_count(cx: &mut TestAppContext) {
         ws.sessions[0].git = Default::default();
         ws.track_changes(cx);
     });
-    assert_eq!(cx.update(|cx| changes_of(1, cx)), Some(1), "not known yet is not the same as outside");
+    assert_eq!(
+        cx.update(|cx| changes_of(1, SharedChanges::Each, cx)),
+        Some(1),
+        "not known yet is not the same as outside"
+    );
 
     // And across two windows, with the program running on.
     drive(cx, &window, |ws, window, cx| ws.tear_off_at(1, 600.0, 300.0, window, cx));
@@ -135,11 +142,15 @@ fn a_terminal_moved_to_another_window_keeps_its_count(cx: &mut TestAppContext) {
         .expect("a window of its own");
     assert_eq!(read(cx, &other, |ws| ws.sessions.iter().map(|s| s.id).collect::<Vec<_>>()), [1]);
     tick(cx, &other);
-    assert_eq!(cx.update(|cx| changes_of(1, cx)), Some(1), "its count went with it");
+    assert_eq!(cx.update(|cx| changes_of(1, SharedChanges::Each, cx)), Some(1), "its count went with it");
     assert_eq!(counts(cx, &other), [Some(1)], "and the new window's row shows it");
     read_repo(cx, &other, 0);
     tick(cx, &other);
-    assert_eq!(cx.update(|cx| changes_of(1, cx)), Some(1), "once git has answered there too");
+    assert_eq!(
+        cx.update(|cx| changes_of(1, SharedChanges::Each, cx)),
+        Some(1),
+        "once git has answered there too"
+    );
 }
 
 #[gpui_kit::test]
@@ -155,11 +166,15 @@ fn closing_a_window_lets_go_of_its_terminals(cx: &mut TestAppContext) {
         .update(|cx| app(cx).windows.iter().find(|w| w.id != window.id).cloned())
         .expect("a window of its own");
     tick(cx, &other);
-    assert_eq!(cx.update(|cx| changes_of(1, cx)), Some(1));
+    assert_eq!(cx.update(|cx| changes_of(1, SharedChanges::Each, cx)), Some(1));
 
     cx.update(|cx| other.handle.update(cx, |_, window, _| window.remove_window())).expect("open");
     cx.run_until_parked();
-    assert_eq!(cx.update(|cx| changes_of(1, cx)), None, "the window's terminals are forgotten with it");
+    assert_eq!(
+        cx.update(|cx| changes_of(1, SharedChanges::Each, cx)),
+        None,
+        "the window's terminals are forgotten with it"
+    );
     // The other window's own terminals are not.
     assert_eq!(read(cx, &window, |ws| ws.sessions.len()), 1);
 }
@@ -191,4 +206,115 @@ fn a_read_brings_a_picture_only_when_its_answer_is_applied_and_not_against_a_bra
     // Back at HEAD: the next picture sees what happened in the gap, to the one still working.
     drive(cx, &window, |ws, _, cx| ws.compare_with(0, None, cx));
     assert_eq!(counts(cx, &window)[0], Some(3));
+}
+
+/// The count can be the repository's instead: every terminal in it would show the same number, so the
+/// rows say which repository it is (the list shows it once). Switching back and forth is at once.
+#[gpui_kit::test]
+fn the_count_can_be_the_repositorys_and_switching_is_at_once(cx: &mut TestAppContext) {
+    if isolate("the_count_can_be_the_repositorys_and_switching_is_at_once") {
+        return;
+    }
+    let (window, root) = working_agent(cx, "scope");
+    write(&root, "new.txt");
+    read_repo(cx, &window, 0);
+    read_repo(cx, &window, 1);
+    assert_eq!(counts(cx, &window), [Some(1), None], "the terminal's own, by default");
+
+    cx.update(|cx| update_settings(cx, |s| s.sidebar_changes_scope = ChangesScope::Repository));
+    cx.run_until_parked();
+    assert_eq!(counts(cx, &window), [Some(1), Some(1)], "git's count, on both");
+    let told = sidebar_of(cx, &window, |sidebar| {
+        sidebar.input().rows.iter().map(|row| (row.changes, row.repo.clone())).collect::<Vec<_>>()
+    });
+    assert_eq!(told, [(Some(1), Some(root.clone())), (Some(1), Some(root.clone()))], "and the sidebar knows");
+
+    cx.update(|cx| update_settings(cx, |s| s.sidebar_changes_scope = ChangesScope::Terminal));
+    cx.run_until_parked();
+    let told = sidebar_of(cx, &window, |sidebar| {
+        sidebar.input().rows.iter().map(|row| row.changes).collect::<Vec<_>>()
+    });
+    assert_eq!(told, [Some(1), None], "back at once, without a read");
+    draw(cx, &window);
+}
+
+#[gpui_kit::test]
+fn files_changed_at_once_count_for_each_or_for_nobody_by_the_setting(cx: &mut TestAppContext) {
+    if isolate("files_changed_at_once_count_for_each_or_for_nobody_by_the_setting") {
+        return;
+    }
+    let root = repo("shared");
+    let window = start(cx, 2);
+    drive(cx, &window, |ws, _, cx| all_go(ws, &root, cx));
+    read_repo(cx, &window, 0);
+    read_repo(cx, &window, 1);
+    tick(cx, &window);
+    // Both agents work while the file appears.
+    hook(cx, &window, 1, "UserPromptSubmit", None);
+    hook(cx, &window, 2, "UserPromptSubmit", None);
+    tick(cx, &window);
+    write(&root, "new.txt");
+    read_repo(cx, &window, 0);
+    assert_eq!(counts(cx, &window), [Some(1), Some(1)], "each, by default");
+
+    cx.update(|cx| update_settings(cx, |s| s.sidebar_changes_shared = SharedChanges::None));
+    cx.run_until_parked();
+    assert_eq!(counts(cx, &window), [None, None], "nobody's, at once");
+    cx.update(|cx| update_settings(cx, |s| s.sidebar_changes_shared = SharedChanges::Each));
+    cx.run_until_parked();
+    assert_eq!(counts(cx, &window), [Some(1), Some(1)]);
+}
+
+/// What a terminal changed is kept in the profile's database while "Remember after restart" is on: back
+/// with the terminal after a restart (here, the model forgetting it and the window reading the database
+/// again), pruned by the first picture of the repository, and deleted when the setting goes off.
+#[gpui_kit::test]
+fn what_a_terminal_changed_is_kept_across_a_restart_while_the_setting_is_on(cx: &mut TestAppContext) {
+    if isolate("what_a_terminal_changed_is_kept_across_a_restart_while_the_setting_is_on") {
+        return;
+    }
+    let (window, root) = working_agent(cx, "remember");
+    cx.update(|cx| app_mut(cx).store = Some(Store::open().expect("opens the scratch database")));
+    write(&root, "new.txt");
+    write(&root, "other.txt");
+    read_repo(cx, &window, 0);
+    assert_eq!(counts(cx, &window)[0], Some(2));
+    let kept = |cx: &mut TestAppContext| -> Vec<String> {
+        cx.update(|cx| {
+            let profile = app(cx).active_profile().clone();
+            let store = app(cx).store_of(&profile).expect("a store");
+            store.claims(&[1, 2]).expect("reads").into_iter().map(|claim| claim.path).collect()
+        })
+    };
+    assert!(kept(cx).is_empty(), "written when it has been quiet, not at once");
+    drive(cx, &window, |ws, _, cx| ws.keep_changes_now(cx));
+    assert_eq!(kept(cx), ["new.txt", "other.txt"]);
+
+    // A restart: the terminal comes back (same id, from its saved session) and the model has nothing.
+    drive(cx, &window, |ws, _, cx| {
+        // Every terminal of the repository, so that the model has nothing of it, as after a launch.
+        ws.forget_changes(1, cx);
+        ws.forget_changes(2, cx);
+        ws.restore_changes(cx);
+    });
+    assert_eq!(counts(cx, &window)[0], Some(2), "its count is back before git has been asked");
+    // While the app was closed, `other.txt` was committed. The first picture prunes it, and takes
+    // nothing new: `later.txt` is nobody's.
+    git(&root, &["add", "other.txt"]);
+    git(&root, &["commit", "-q", "-m", "other"]);
+    write(&root, "later.txt");
+    drive(cx, &window, |ws, _, cx| ws.track_changes(cx));
+    read_repo(cx, &window, 0);
+    assert_eq!(counts(cx, &window)[0], Some(1), "pruned to `new.txt`");
+    drive(cx, &window, |ws, _, cx| ws.keep_changes_now(cx));
+    assert_eq!(kept(cx), ["new.txt"], "and what was committed is not kept either");
+
+    // Off: nothing is written and what is kept goes.
+    cx.update(|cx| update_settings(cx, |s| s.sidebar_changes_remember = false));
+    drive(cx, &window, |ws, _, cx| ws.keep_changes(cx));
+    assert!(kept(cx).is_empty());
+    write(&root, "again.txt");
+    read_repo(cx, &window, 0);
+    drive(cx, &window, |ws, _, cx| ws.keep_changes_now(cx));
+    assert!(kept(cx).is_empty(), "nothing is written while it is off");
 }

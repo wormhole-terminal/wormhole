@@ -10,6 +10,7 @@ use wormhole_text::keys::*;
 
 use super::{Entry, Group, NavGroup, SectionId, SectionInfo};
 use crate::config::FeatureId;
+use crate::config::Settings;
 use crate::config::features::FeatureFlag;
 
 mod advanced;
@@ -27,7 +28,7 @@ mod updates;
 /// A setting whose words are in the catalogs: `label` is the message and the quiet line under it and the
 /// search words are its attributes (`.with_description`, `.with_keywords`).
 const fn entry(id: &'static str, label: Key, keys: &'static [&'static str]) -> Entry {
-    Entry { id, label, description: None, keywords: None, keys, feature: None, flag: None }
+    Entry { id, label, description: None, keywords: None, keys, feature: None, flag: None, needs: None }
 }
 
 impl Entry {
@@ -40,6 +41,13 @@ impl Entry {
     /// Shown only while the feature flag `flag` is on (the row of a feature that is not finished).
     const fn with_flag(mut self, flag: FeatureFlag) -> Self {
         self.flag = Some(flag);
+        self
+    }
+
+    /// Shown only while `needs` holds of the settings: a choice that does nothing while the switch it
+    /// belongs to is off is not on the page (nor found by the search) until it is on.
+    const fn with_needs(mut self, needs: fn(&Settings) -> bool) -> Self {
+        self.needs = Some(needs);
         self
     }
 
