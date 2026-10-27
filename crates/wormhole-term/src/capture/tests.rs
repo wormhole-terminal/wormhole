@@ -330,4 +330,26 @@ mod blocks {
         let gone = rig.reader.capture(&spec(CaptureRange::Block(Some(9))), &mut ReadScratch::default());
         assert_eq!(gone.err(), Some(CaptureError::BlockGone));
     }
+
+    /// `run` returns what a command printed, without the prompt and the line that was typed, and nothing
+    /// for a command that printed nothing.
+    #[test]
+    fn a_blocks_output_alone_is_read_and_a_silent_command_has_none() {
+        let mut rig = Rig::new(12);
+        rig.feed(SESSION);
+        rig.feed(b"true\r\n\x1b]133;C\x07\x1b]133;D;0\x07\x1b]133;A\x07$ \x1b]133;B\x07");
+        let found = read(&rig.reader, &spec(CaptureRange::BlockOutput(1)));
+        assert_eq!(found.lines, ["a.rs", "b.rs"]);
+        assert_eq!(found.block.map(|b| b.command), Some("ls".to_string()));
+        let newest = read(&rig.reader, &spec(CaptureRange::BlockOutput(2)));
+        assert_eq!(newest.lines, ["error"]);
+        let silent = read(&rig.reader, &spec(CaptureRange::BlockOutput(3)));
+        assert!(silent.lines.is_empty() && !silent.truncated, "{:?}", silent.lines);
+        let gone = rig.reader.capture(&spec(CaptureRange::BlockOutput(9)), &mut ReadScratch::default());
+        assert_eq!(gone.err(), Some(CaptureError::BlockGone));
+        let plain = reader(10, 3, 10);
+        plain.feed(b"text\r\n");
+        let none = plain.capture(&spec(CaptureRange::BlockOutput(1)), &mut ReadScratch::default());
+        assert_eq!(none.err(), Some(CaptureError::NoIntegration));
+    }
 }

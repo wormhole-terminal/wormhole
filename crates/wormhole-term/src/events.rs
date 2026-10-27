@@ -239,6 +239,12 @@ impl Shared {
         self.exited.load(Ordering::Acquire)
     }
 
+    /// Count output that did not come through a PTY (a test's).
+    #[cfg(any(test, feature = "test-support"))]
+    pub(crate) fn count_output(&self) {
+        self.revision.fetch_add(1, Ordering::AcqRel);
+    }
+
     fn report_cwd(&self, path: PathBuf) {
         *self.cwd_report.lock().unwrap_or_else(PoisonError::into_inner) = Some(path);
     }

@@ -46,6 +46,16 @@ impl ScreenReader {
         self.shared.revision()
     }
 
+    /// Whether the shell has integration (a prompt mark has arrived), so it has command blocks.
+    pub fn has_blocks(&self) -> bool {
+        self.shared.at_prompt().is_some()
+    }
+
+    /// Whether the shell is at its prompt, as its marks say; `None` for a shell without integration.
+    pub fn at_prompt(&self) -> Option<bool> {
+        self.shared.at_prompt()
+    }
+
     /// The screen's size as `(rows, columns)`.
     pub fn size(&self) -> (usize, usize) {
         let term = self.term.lock();
@@ -75,6 +85,30 @@ impl ScreenReader {
     #[cfg(any(test, feature = "test-support"))]
     pub fn feed(&self, bytes: &[u8]) {
         self.term.lock().feed(bytes);
+    }
+
+    /// Print `bytes` as a shell with integration would: its marks (`prompts` counts the prompts, which
+    /// number the blocks) go to the command log as the PTY's thread would put them, and the output is
+    /// counted (tests of what waits for a command).
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn print_marked(&self, bytes: &[u8], prompts: &mut u64) {
+        let marks = {
+            let mut screen = self.term.lock();
+            screen.feed(bytes);
+            crate::engine::drain_marks(&mut screen, prompts)
+        };
+        for (mark, prompt) in marks {
+            self.shared.mark(mark, prompt);
+        }
+        self.shared.count_output();
+    }
+
+    /// [`feed`](Self::feed), counted as output too, as the PTY's reader counts what it parses: the
+    /// revision moves (tests of what waits for a screen to be quiet).
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn print(&self, bytes: &[u8]) {
+        self.feed(bytes);
+        self.shared.count_output();
     }
 }
 

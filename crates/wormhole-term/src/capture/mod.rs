@@ -47,6 +47,9 @@ pub enum CaptureRange {
     Lines { from: i32, to: i32 },
     /// A command block's prompt, command and output: this one, or the newest that ran.
     Block(Option<u64>),
+    /// Only the output of the block with this id (what `run` returns): no lines at all when the
+    /// command printed nothing.
+    BlockOutput(u64),
 }
 
 /// Why nothing was read.
@@ -246,21 +249,14 @@ impl ScreenReader {
             }
             CaptureRange::Lines { from, to } => (from.max(top), to.min(bottom)),
             CaptureRange::Block(id) => {
-                if self.shared.at_prompt().is_none() {
-                    return Err(CaptureError::NoIntegration);
-                }
-                let log = self.shared.commands();
-                let found = match id {
-                    Some(id) => crate::blocks::block(&term, id, &log),
-                    None => crate::blocks::newest_past_prompt(&term, &log),
-                };
-                let found = found.ok_or(if id.is_some() {
-                    CaptureError::BlockGone
-                } else {
-                    CaptureError::NoBlock
-                })?;
-                block = Some(CapturedBlock { id: found.id, command: found.command.clone() });
-                (found.start.0.max(top), found.end.0.min(bottom))
+                let (rows, found) = self.block_rows(&term, id, false, (top, bottom))?;
+                block = Some(found);
+                rows
+            }
+            CaptureRange::BlockOutput(id) => {
+                let (rows, found) = self.block_rows(&term, Some(id), true, (top, bottom))?;
+                block = Some(found);
+                rows
             }
         };
         let mut first = first;
@@ -350,5 +346,35 @@ impl ScreenReader {
             revision,
             block,
         })
+    }
+}
+
+impl ScreenReader {
+    /// The rows of a command block (`id`, or the newest that ran) and the block itself: its prompt,
+    /// command and output, or with `output_only` its output alone, which is no rows at all when the
+    /// command printed nothing.
+    fn block_rows(
+        &self,
+        term: &crate::screen::Screen,
+        id: Option<u64>,
+        output_only: bool,
+        (top, bottom): (i32, i32),
+    ) -> Result<((i32, i32), CapturedBlock), CaptureError> {
+        if self.shared.at_prompt().is_none() {
+            return Err(CaptureError::NoIntegration);
+        }
+        let log = self.shared.commands();
+        let found = match id {
+            Some(id) => crate::blocks::block(term, id, &log),
+            None => crate::blocks::newest_past_prompt(term, &log),
+        };
+        let found =
+            found.ok_or(if id.is_some() { CaptureError::BlockGone } else { CaptureError::NoBlock })?;
+        let rows = if output_only {
+            found.output_lines().map_or((0, -1), |(first, last)| (first.0.max(top), last.0.min(bottom)))
+        } else {
+            (found.start.0.max(top), found.end.0.min(bottom))
+        };
+        Ok((rows, CapturedBlock { id: found.id, command: found.command }))
     }
 }
