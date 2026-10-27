@@ -402,6 +402,13 @@ fn wait_takes_conditions_in_any_mix() {
     );
     // Fractions of a second, and units said out loud.
     assert_eq!(wait(&["wait", "--tab", "1", "--block-done", "--timeout", "0.5s"]).timeout_ms, Some(500));
+    for (given, ms) in [("1.5", 1500), ("1.001", 1001), ("0.001", 1), ("2.25s", 2250), ("90", 90_000)] {
+        assert_eq!(
+            wait(&["wait", "--tab", "1", "--block-done", "--timeout", given]).timeout_ms,
+            Some(ms),
+            "{given}"
+        );
+    }
     assert_eq!(wait(&["wait", "--tab", "1", "--stable", "250ms"]).stable_ms, Some(250));
     // `--text` stays the output format, here as on every command; the pattern is `--match`.
     assert!(parsed(&["wait", "--terminal", "3", "--match", "x", "--text"]).text);
@@ -458,7 +465,8 @@ fn wait_and_run_name_their_mistakes() {
     assert!(mistake(&["wait", "--terminal", "3", "--status", "asleep"]).contains("--status takes"));
     assert!(mistake(&["wait", "--terminal", "3", "--stable", "soon"]).contains("milliseconds"));
     assert!(mistake(&["wait", "--terminal", "3", "--after", "x"]).contains("a block's id"));
-    for bad in ["soon", "0", "-5", "nan"] {
+    // Finer than a millisecond is refused, not rounded.
+    for bad in ["soon", "0", "-5", "nan", "0.0004", "1.0005", "2.5e-4"] {
         assert!(mistake(&["wait", "--terminal", "3", "--timeout", bad]).contains("seconds"), "{bad}");
     }
     assert!(mistake(&["wait", "--terminal", "3", "--exit-code"]).contains("unknown option"));

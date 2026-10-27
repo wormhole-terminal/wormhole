@@ -424,14 +424,21 @@ fn state(word: &str) -> Result<TerminalState, String> {
     }
 }
 
-/// `--timeout`'s seconds (fractions allowed) as milliseconds.
+/// `--timeout`'s seconds as milliseconds. Fractions are allowed down to the millisecond, and no finer: a
+/// request is never rounded to something else than it says.
 fn seconds(value: &str) -> Result<u64, String> {
-    let mistake = || format!("--timeout takes seconds, not {value:?}");
+    let mistake =
+        || format!("--timeout takes seconds, in whole milliseconds at most (1.5, 90), not {value:?}");
     let secs: f64 = value.trim_end_matches('s').parse().map_err(|_| mistake())?;
     if !secs.is_finite() || secs <= 0.0 || secs > 1e9 {
         return Err(mistake());
     }
-    Ok((secs * 1000.0).round().max(1.0) as u64)
+    let ms = secs * 1000.0;
+    // (A decimal such as 1.001 is not exact in binary: a millionth of a millisecond is no rounding.)
+    if (ms - ms.round()).abs() > 1e-6 {
+        return Err(mistake());
+    }
+    Ok(ms.round() as u64)
 }
 
 /// What `read` and `blocks` were asked for, as the flags gave it.

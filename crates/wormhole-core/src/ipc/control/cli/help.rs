@@ -57,7 +57,7 @@ pub fn help_with(automation: bool) -> String {
       needs_you, finished, failed, exited), a regular expression found on its screen, one no longer
       found, no output for <ms>, or a command finishing (--after <block>: one after that block, even
       one that has finished already; take the id from `blocks` or `run` before sending the command).
-      30 s by default (at most 600); exits 124 when the time is up. --match and --gone need reading
+      30 s by default (at most 600; fractions down to a millisecond); exits 124 when the time is up. --match and --gone need reading
       to be allowed.
   {wh} run <target> [--timeout <s>] [--exit-code] ['<command>' | -- <word>...]
       Run a command at the terminal's shell prompt and wait for it: prints what it printed, and its exit
