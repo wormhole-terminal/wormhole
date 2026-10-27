@@ -1,8 +1,9 @@
 //! App-wide feature flags: features still in progress that are shown and switchable only in a
-//! development build (`cargo run`, `scripts/dev.sh`, the tests) or a release on the Unstable update
-//! channel, where testers try them in a signed build. Any other release can't turn an unfinished
-//! feature on by editing `config.json`: there each flag takes its release default, and the flag UI
-//! isn't built at all.
+//! development build (`cargo run`, `scripts/dev.sh`, the tests), a release on the Unstable update
+//! channel, where testers try them in a signed build, or a Stable release whose flags were unlocked
+//! with the Settings window's unlisted key ([`UNLOCKED_KEY`]). Any other release can't turn an
+//! unfinished feature on by editing a flag in `config.json`: there each flag takes its release
+//! default, and the flag UI isn't shown.
 //!
 //! This is not the per-project [`crate::project::Feature`] switches (which parts of a trusted
 //! `.wormhole/` a person accepts). A `FeatureFlag` gates whole features of Wormhole itself; the
@@ -195,6 +196,18 @@ pub fn dev_build() -> bool {
     cfg!(debug_assertions)
 }
 
+/// The entry in `feature_flags` that unlocks the flags in a Stable release: while it is `true`, that
+/// release shows Settings → Feature flags and reads the map as the Unstable channel does. The
+/// Settings window's unlisted key (⌃⌥⌘F) writes and removes it. It lives in the map rather than as a
+/// setting of its own so that a file shows it only once someone pressed the key: the map holds only
+/// what was chosen. No flag may have this key.
+pub const UNLOCKED_KEY: &str = "unlocked";
+
+/// Whether `flags` (the `feature_flags` map) holds the [`UNLOCKED_KEY`] entry.
+pub fn unlocked(flags: &BTreeMap<String, bool>) -> bool {
+    flags.get(UNLOCKED_KEY).copied().unwrap_or(false)
+}
+
 /// Who decides whether a flag is on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FlagMode {
@@ -202,19 +215,20 @@ pub enum FlagMode {
     /// a dev build behaves as it always has and a person must switch a flag off to see what a
     /// release user gets.
     Dev,
-    /// A release on the Unstable channel: the map too, but a flag with no entry is what the
-    /// release does, so switching to Unstable changes nothing until a tester turns a flag on.
+    /// A release on the Unstable channel, or a Stable one with the flags unlocked: the map too, but a
+    /// flag with no entry is what the release does, so switching to Unstable (or unlocking) changes
+    /// nothing until a tester turns a flag on.
     Unstable,
     /// Any other release: the flag's release default, whatever the map says.
     Release,
 }
 
 impl FlagMode {
-    pub fn of(dev_build: bool, channel: UpdateChannel) -> Self {
-        match (dev_build, channel) {
-            (true, _) => Self::Dev,
-            (false, UpdateChannel::Unstable) => Self::Unstable,
-            (false, UpdateChannel::Stable) => Self::Release,
+    pub fn of(dev_build: bool, channel: UpdateChannel, unlocked: bool) -> Self {
+        match (dev_build, channel, unlocked) {
+            (true, _, _) => Self::Dev,
+            (false, UpdateChannel::Unstable, _) | (false, UpdateChannel::Stable, true) => Self::Unstable,
+            (false, UpdateChannel::Stable, false) => Self::Release,
         }
     }
 
@@ -367,16 +381,29 @@ mod tests {
 
     #[test]
     fn unstable_reads_the_map_but_starts_from_what_a_release_does() {
-        let unstable = FlagMode::of(false, UpdateChannel::Unstable);
+        let unstable = FlagMode::of(false, UpdateChannel::Unstable, false);
         assert_eq!(unstable, FlagMode::Unstable);
         assert!(unstable.shows_switches());
         let empty = BTreeMap::new();
         assert!(!enabled_in(FeatureFlag::ProjectFolders, &empty, unstable), "off until turned on");
         let on = BTreeMap::from([("project_folders".to_string(), true)]);
         assert!(enabled_in(FeatureFlag::ProjectFolders, &on, unstable), "a tester can turn it on");
-        assert_eq!(FlagMode::of(false, UpdateChannel::Stable), FlagMode::Release);
+        assert_eq!(FlagMode::of(false, UpdateChannel::Stable, false), FlagMode::Release);
         assert!(!FlagMode::Release.shows_switches());
-        assert_eq!(FlagMode::of(true, UpdateChannel::Stable), FlagMode::Dev);
+        assert_eq!(FlagMode::of(true, UpdateChannel::Stable, false), FlagMode::Dev);
+    }
+
+    #[test]
+    fn a_stable_release_with_the_flags_unlocked_behaves_as_unstable() {
+        assert_eq!(FlagMode::of(false, UpdateChannel::Stable, true), FlagMode::Unstable);
+        assert_eq!(FlagMode::of(true, UpdateChannel::Stable, true), FlagMode::Dev, "a dev build stays one");
+        let mut flags = BTreeMap::from([("project_folders".to_string(), true)]);
+        assert!(!unlocked(&flags));
+        flags.insert(UNLOCKED_KEY.to_string(), true);
+        assert!(unlocked(&flags));
+        flags.insert(UNLOCKED_KEY.to_string(), false);
+        assert!(!unlocked(&flags), "written false by hand, it stays locked");
+        assert_eq!(FeatureFlag::from_key(UNLOCKED_KEY), None, "no flag may take the unlock entry's key");
     }
 
     #[test]

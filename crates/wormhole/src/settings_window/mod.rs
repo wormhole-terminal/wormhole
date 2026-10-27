@@ -23,6 +23,8 @@ mod preview_column;
 mod recorder;
 mod registry;
 mod sections;
+#[cfg(test)]
+mod unlock_tests;
 mod window;
 #[cfg(test)]
 mod words_tests;

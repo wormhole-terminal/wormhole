@@ -404,6 +404,9 @@ impl Render for SettingsWindow {
                 let keys = &event.keystroke;
                 if this.record_key(keys, cx) {
                     cx.stop_propagation();
+                } else if sections::is_unlock_key(keys) {
+                    this.toggle_flags_unlocked(cx);
+                    cx.stop_propagation();
                 } else if keys.modifiers.platform && keys.key == "w" {
                     window.remove_window();
                 } else if keys.key == "escape" {
@@ -439,7 +442,7 @@ impl SettingsWindow {
             return problems;
         }
         // A preview section tied to a flag says so at the top, with a way to the flags. Only a dev
-        // build ever shows such a section, so this never reaches a release.
+        // build, Unstable or unlocked flags ever show such a section, so the way is always there.
         if let Some(flag) = self.section.feature_flag() {
             problems.push(
                 style::banner(

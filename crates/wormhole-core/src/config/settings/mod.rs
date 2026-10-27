@@ -281,9 +281,9 @@ pub struct Settings {
     pub worktree_base: String,
 
     /// Features still behind a flag (see [`crate::config::features`]). The key is a [`FeatureFlag`]'s
-    /// `key`, the value whether it is on. Only a development build or the Unstable channel reads
-    /// this; otherwise a release uses each flag's release default. A key this build doesn't know
-    /// stays in the file.
+    /// `key`, the value whether it is on. Only a development build, the Unstable channel or a Stable
+    /// release with the flags unlocked (the [`features::UNLOCKED_KEY`] entry) reads this; otherwise a
+    /// release uses each flag's release default. A key this build doesn't know stays in the file.
     pub feature_flags: BTreeMap<String, bool>,
     /// The person's own switches for the features they can do without (`config::feature_table`), by
     /// the feature's key (`"notes": false`). A feature not named here is as it is by default.
@@ -392,8 +392,9 @@ impl Default for Settings {
 
 impl Settings {
     /// Whether the feature behind `flag` is on in this build: a development build reads
-    /// `feature_flags` (a flag with no entry defaults on), a release on the Unstable channel reads
-    /// it too (no entry: the release default), any other release uses the flag's release default
+    /// `feature_flags` (a flag with no entry defaults on), a release on the Unstable channel or with
+    /// the flags unlocked reads it too (no entry: the release default), any other release uses the
+    /// flag's release default
     /// (see [`crate::config::features`]).
     pub fn feature_enabled(&self, flag: FeatureFlag) -> bool {
         features::enabled_in(flag, &self.feature_flags, self.flag_mode())
@@ -401,7 +402,7 @@ impl Settings {
 
     /// Who decides the feature flags in this build with these settings.
     pub fn flag_mode(&self) -> FlagMode {
-        FlagMode::of(features::dev_build(), self.update_channel)
+        FlagMode::of(features::dev_build(), self.update_channel, features::unlocked(&self.feature_flags))
     }
 
     /// The motion choices the app draws: the person's while the Motion feature is on in this build,

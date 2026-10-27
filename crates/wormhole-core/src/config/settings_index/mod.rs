@@ -215,8 +215,8 @@ impl SectionId {
     }
 
     /// Whether this section appears in the nav (and its settings in search) for this build. The
-    /// Preview sections are gated: the feature-flag list shows only in a development build or on
-    /// the Unstable channel, and a feature's own section (Project folders) shows only while its
+    /// Preview sections are gated: the feature-flag list shows only in a development build, on the
+    /// Unstable channel or with the flags unlocked, and a feature's own section (Project folders) shows only while its
     /// flag is on, so it moves from hidden to shown the moment the flag is turned on, and vanishes
     /// in a release build where the feature isn't there. Everything else is always shown.
     pub fn is_visible(self, settings: &Settings) -> bool {
