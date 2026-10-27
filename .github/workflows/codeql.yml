@@ -4,12 +4,13 @@ name: CodeQL
 # choose: the workflows (where a mistake could reach the signing keys), the Python scripts and the
 # Rust code, none of which needs a build. The two Swift files are build helpers for the icon and the
 # DMG and would need a macOS build, so they are left out. Findings: Security → Code scanning.
+# Rust takes about 13 minutes, so a push to main skips it: pull requests and the daily run cover it.
 on:
   push:
     branches: [main]
   pull_request:
   schedule:
-    - cron: "17 4 * * 1" # Mondays: new queries find old code too
+    - cron: "17 4 * * *" # daily: main's Rust, and new queries find old code too
 
 concurrency:
   group: codeql-${{ github.event.pull_request.number || github.ref }}
@@ -29,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [actions, python, rust]
+        language: ${{ github.event_name == 'push' && fromJSON('["actions", "python"]') || fromJSON('["actions", "python", "rust"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3

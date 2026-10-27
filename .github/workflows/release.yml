@@ -82,11 +82,12 @@ jobs:
     name: Release (Apple Silicon + Intel)
     needs: gate
     if: needs.gate.outputs.skip != 'true'
-    # Releases queue one after another. A build of main gives way to a newer one, and the two
-    # channels never wait for each other.
+    # Releases queue one after another, and the two channels never wait for each other. A build of
+    # main runs to the end: cancelling it at minute ten threw the minutes away. Only one waits behind
+    # it, the newest; GitHub cancels a waiting one when a newer one arrives.
     concurrency:
       group: release-${{ needs.gate.outputs.channel }}
-      cancel-in-progress: ${{ needs.gate.outputs.channel == 'unstable' }}
+      cancel-in-progress: false
     # The signing secrets live in this environment, which only main and v* tags may use: a workflow
     # changed on any other branch can't reach them.
     environment: release
