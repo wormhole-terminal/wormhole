@@ -111,12 +111,7 @@ fn ran(reply: &Reply) -> Ran {
 }
 
 fn allow(cx: &mut TestAppContext, read: bool, write: bool) {
-    cx.update(|cx| {
-        update_settings(cx, |settings| {
-            settings.control_read = read;
-            settings.control_write = write;
-        })
-    });
+    crate::agent_access::testing::allow(cx, read, write);
 }
 
 fn print(cx: &mut TestAppContext, window: &OpenWindow, ix: usize, bytes: &[u8]) {
@@ -548,7 +543,11 @@ fn block_events_carry_their_prompts_number_even_when_marks_are_heard_in_a_batch(
     let bus = app_bus(cx);
     let spec = EventsSpec { topics: vec!["blocks".into()], ..EventsSpec::default() };
     let (stream, _) = bus
-        .subscribe(spec.filter().expect("valid"), Grant { reads_all: true, own: Vec::new() }, None)
+        .subscribe(
+            spec.filter().expect("valid"),
+            Grant { reads_all: true, own: Vec::new(), ..Grant::default() },
+            None,
+        )
         .expect("room");
     // A fast command and then an empty Enter, in one print: by the time the window hears of the first
     // command's end, the shell has marked two more prompts.

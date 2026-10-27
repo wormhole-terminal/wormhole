@@ -8,6 +8,7 @@
 //! job. The UI thread never waits, copies a screen or matches a pattern for a client.
 
 use gpui_kit::*;
+use wormhole_core::ipc::access::Access;
 use wormhole_core::ipc::bus::{Grant, Watch};
 use wormhole_core::ipc::control::{
     Error, ErrorCode, Limited, Met, Reason, Reply, RunSpec, SendTarget, Target, TerminalState, WaitPlan,
@@ -18,19 +19,24 @@ use wormhole_core::ipc::{Answer, Peer, WaitJob};
 use super::input::target_facts;
 use super::{Found, automation_off, budget, find, not_found};
 use crate::app_state::{AppState, app};
-use crate::settings::settings;
 use crate::window::{ReaderFacts, TabFacts};
 
 /// Answer `wait`. Order of the checks: the flag, the request, the terminal, the right to read what it
 /// looks at, the budget, a state that holds already, then the stream caps.
-pub(super) fn wait(spec: &WaitSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Answer {
-    match try_wait(spec, from, peer, cx) {
+pub(super) fn wait(spec: &WaitSpec, from: Option<i64>, access: Access, peer: &Peer, cx: &mut App) -> Answer {
+    match try_wait(spec, from, access, peer, cx) {
         Ok(answer) => answer,
         Err(error) => Answer::Reply(error.into()),
     }
 }
 
-fn try_wait(spec: &WaitSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Result<Answer, Error> {
+fn try_wait(
+    spec: &WaitSpec,
+    from: Option<i64>,
+    access: Access,
+    peer: &Peer,
+    cx: &mut App,
+) -> Result<Answer, Error> {
     if let Some(off) = automation_off(cx) {
         return Err(off);
     }
@@ -40,7 +46,7 @@ fn try_wait(spec: &WaitSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Re
     let TabFacts { state, shell, .. } = state_of(&found, cx).ok_or_else(|| missing(spec.target))?;
     let self_read = shell.is_some_and(|shell| peer.runs_in(shell));
     if plan.needs_read() {
-        read_check(settings(cx).control_read, self_read)?;
+        read_check(access.read, self_read)?;
     }
     if plan.block_done && !facts.reader.has_blocks() {
         return Err(Error::new(
@@ -72,7 +78,7 @@ fn try_wait(spec: &WaitSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Re
         };
         return Ok(Answer::Reply(Reply::ok(held)));
     }
-    let grant = grant_for(&plan, peer, cx);
+    let grant = grant_for(&plan, access, peer, cx);
     let bus = crate::automation::bus(cx)
         .ok_or_else(|| Error::new(ErrorCode::Failed, "there is no event bus in this app"))?;
     let (subscription, _) = bus
@@ -86,18 +92,24 @@ fn try_wait(spec: &WaitSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Re
 /// Answer `run`. Order of the checks: the flag, the switch, the request, the terminal and its shell
 /// (not the caller's own, not waiting for the user, integration, at its prompt), the budgets, the stream
 /// caps; only then is anything typed.
-pub(super) fn run(spec: &RunSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Answer {
-    match try_run(spec, from, peer, cx) {
+pub(super) fn run(spec: &RunSpec, from: Option<i64>, access: Access, peer: &Peer, cx: &mut App) -> Answer {
+    match try_run(spec, from, access, peer, cx) {
         Ok(answer) => answer,
         Err(error) => Answer::Reply(error.into()),
     }
 }
 
-fn try_run(spec: &RunSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Result<Answer, Error> {
+fn try_run(
+    spec: &RunSpec,
+    from: Option<i64>,
+    access: Access,
+    peer: &Peer,
+    cx: &mut App,
+) -> Result<Answer, Error> {
     if let Some(off) = automation_off(cx) {
         return Err(off);
     }
-    let enabled = settings(cx).control_write;
+    let enabled = access.write;
     if !enabled {
         return Err(writes_off());
     }
@@ -119,10 +131,13 @@ fn try_run(spec: &RunSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Resu
     })?;
     charge(Limited::Run, from, cx)?;
     charge(Limited::SendText, from, cx)?;
-    let reads_all = settings(cx).control_read;
-    crate::automation::sync_grants(cx, reads_all);
+    let reads_all = access.read;
     let (subscription, _) = bus
-        .wait(Watch::of_run(facts.terminal), Grant { reads_all, own: Vec::new() }, from)
+        .wait(
+            Watch::of_run(facts.terminal),
+            Grant { reads_all, own: Vec::new(), holder: access.holder },
+            from,
+        )
         .map_err(|refused| Error::new(ErrorCode::RateLimited, refused.to_string()))?;
     let tab = found.tab;
     // The prompt the command is typed at: its block, whatever the shell marks around it by the time it
@@ -175,10 +190,8 @@ fn state_of(found: &Found, cx: &App) -> Option<TabFacts> {
 
 /// What the waiter may read: every terminal while the setting allows it, and the ones the caller runs
 /// in (found by its place in the process tree, only when the plan reads text at all).
-fn grant_for(plan: &WaitPlan, peer: &Peer, cx: &mut App) -> Grant {
-    let reads_all = settings(cx).control_read;
-    // The tick would say so soon enough; a waiter must not outlive the setting by a missed tick.
-    crate::automation::sync_grants(cx, reads_all);
+fn grant_for(plan: &WaitPlan, access: Access, peer: &Peer, cx: &mut App) -> Grant {
+    let reads_all = access.read;
     let own = if plan.needs_read() {
         app(cx)
             .windows
@@ -191,5 +204,5 @@ fn grant_for(plan: &WaitPlan, peer: &Peer, cx: &mut App) -> Grant {
     } else {
         Vec::new()
     };
-    Grant { reads_all, own }
+    Grant { reads_all, own, holder: access.holder }
 }

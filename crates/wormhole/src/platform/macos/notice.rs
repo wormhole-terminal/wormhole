@@ -194,6 +194,8 @@ fn geometry(text: NSSize, chip_w: f64) -> Geometry {
 fn symbol_name(glyph: Glyph) -> &'static str {
     match glyph {
         Glyph::Copy => "doc.on.doc",
+        Glyph::Eye => "eye",
+        Glyph::Keyboard => "keyboard",
     }
 }
 

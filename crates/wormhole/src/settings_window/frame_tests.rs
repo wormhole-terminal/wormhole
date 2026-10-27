@@ -81,7 +81,9 @@ const BUDGET: [(&str, u64); 16] = [
     ("Git", 4567),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
-    // button; 668 more.
+    // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
+    // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
+    // page measured 9,501: under this, which stays.
     ("Agents", 9679),
     ("Import", 53067),
     ("Notifications", 7882),

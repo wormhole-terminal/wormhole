@@ -1,11 +1,15 @@
 //! A notice as a sentence, from the catalog (`locales/en/notices.ftl`), and so what VoiceOver hears.
 
-use wormhole_core::view::notice::{Copied, Notice};
+use wormhole_core::view::notice::{Copied, Driven, Driver, Notice};
 use wormhole_text::{keys, text, whole};
 
 /// The sentence for `notice`; `None` for a test notice, whose words come with the post.
 pub(super) fn of(notice: Notice) -> Option<String> {
-    let Notice::Copied(copied) = notice else { return None };
+    let copied = match notice {
+        Notice::Copied(copied) => copied,
+        Notice::Driven(driven) => return Some(driven_words(driven)),
+        Notice::Test(_) => return None,
+    };
     Some(match copied {
         Copied::Lines(lines) => keys::notice_copied_lines(whole(lines)),
         Copied::Characters(chars) => keys::notice_copied_characters(whole(chars)),
@@ -18,9 +22,25 @@ pub(super) fn of(notice: Notice) -> Option<String> {
     })
 }
 
+/// What a program that controls Wormhole did, as the chip says it.
+fn driven_words(driven: Driven) -> String {
+    let (typing, driver) = match driven {
+        Driven::Reading(driver) => (false, driver),
+        Driven::Typing(driver) => (true, driver),
+    };
+    match (driver, typing) {
+        (Driver::Agent(agent), true) => keys::notice_driven_typing(wormhole_core::agents::agent(agent).name),
+        (Driver::Agent(agent), false) => {
+            keys::notice_driven_reading(wormhole_core::agents::agent(agent).name)
+        }
+        (Driver::Scripts, true) => text(keys::NOTICE_DRIVEN_SCRIPTS_TYPING).to_string(),
+        (Driver::Scripts, false) => text(keys::NOTICE_DRIVEN_SCRIPTS_READING).to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use wormhole_core::view::notice::{Copied, Notice};
+    use wormhole_core::view::notice::{Copied, Driven, Driver, Notice};
     use wormhole_text::{Language, with_language};
 
     use super::of;
@@ -42,6 +62,18 @@ mod tests {
             assert_eq!(said(Copied::SettingKey), "Copied setting key");
             assert_eq!(said(Copied::Error), "Copied error");
             assert_eq!(said(Copied::ObjectId), "Copied object id");
+        });
+    }
+
+    #[test]
+    fn a_program_that_drives_a_terminal_is_named_and_a_script_is_not() {
+        use wormhole_core::agents::AgentId;
+        with_language(Language::ENGLISH, || {
+            let said = |driven| of(Notice::Driven(driven)).unwrap_or_default();
+            assert_eq!(said(Driven::Typing(Driver::Agent(AgentId::Claude))), "Claude Code is typing");
+            assert_eq!(said(Driven::Reading(Driver::Agent(AgentId::Codex))), "Codex CLI is reading");
+            assert_eq!(said(Driven::Typing(Driver::Scripts)), "A script is typing");
+            assert_eq!(said(Driven::Reading(Driver::Scripts)), "A script is reading");
         });
     }
 

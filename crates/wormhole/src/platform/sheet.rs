@@ -1,6 +1,7 @@
-//! The system's own alert as a sheet on a window, for the one question GPUI's prompt can't ask:
-//! one with a checkbox (the question before quitting). The app falls back to GPUI's prompt where
-//! there is no such sheet (`dialog`).
+//! The system's own alert as a sheet on a window, for the questions GPUI's prompt can't ask: one with a
+//! checkbox (the question before quitting) and one with several buttons and a block of monospace details
+//! (a program asking to control Wormhole). The app falls back to GPUI's prompt where there is no such
+//! sheet (`dialog`).
 
 use gpui_kit::Window;
 use smol::channel::Receiver;
@@ -31,4 +32,27 @@ pub fn ask_with_checkbox(window: &Window, question: &Question) -> Option<Receive
 #[cfg(feature = "devctl")]
 pub fn answer(window: &Window, button: isize) -> bool {
     os::answer(window, button)
+}
+
+/// A question with up to four buttons and details in a block of their own.
+pub struct Choice<'a> {
+    pub title: &'a str,
+    pub detail: &'a str,
+    /// Read-only monospace text under the detail, selectable (a path, a signer): data, never interface text.
+    pub accessory: Option<&'a str>,
+    /// The first is the default button (Return). The answer is a button's place in this list.
+    pub buttons: &'a [&'a str],
+}
+
+/// Show `choice` as a sheet on `window`. The answer arrives on the channel: the pressed button's place, or
+/// `None` when the sheet was ended without one ([`dismiss`], or the window going). `None` from the call:
+/// no sheet can go on this window.
+pub fn choose(window: &Window, choice: &Choice) -> Option<Receiver<Option<usize>>> {
+    os::choose(window, choice)
+}
+
+/// End the sheet on `window` without an answer: the question was withdrawn (it timed out). Nothing if
+/// there is none.
+pub fn dismiss(window: &Window) {
+    os::dismiss(window);
 }

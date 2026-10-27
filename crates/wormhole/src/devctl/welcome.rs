@@ -54,7 +54,7 @@ pub(super) fn probe(ctx: &mut Ctx, arg: &str) -> Result<String> {
     later(ctx, move |cx| {
         format!(
             "{}\n",
-            serde_json::to_string(&control::handle(request, &Peer::default(), cx)).unwrap_or_default()
+            serde_json::to_string(&control::handle_open(request, &Peer::default(), cx)).unwrap_or_default()
         )
     });
     Ok(String::new())

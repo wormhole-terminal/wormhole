@@ -5,8 +5,8 @@
 use anyhow::anyhow;
 
 use super::{
-    Command, a11y, ambient, blocks, control, flow, hosts, input, language, menus, notices, panels, profiling,
-    scaling, sessions, settings, shots, sidebar, studio, tear_off, title, welcome,
+    Command, a11y, agents, ambient, blocks, control, flow, hosts, input, language, menus, notices, panels,
+    profiling, scaling, sessions, settings, shots, sidebar, studio, tear_off, title, welcome,
 };
 
 /// The command called `name`, if there is one.
@@ -71,6 +71,10 @@ pub(super) fn command(name: &str) -> Option<Command> {
         #[cfg(any(feature = "inspector", debug_assertions))]
         "bounds" => shots::bounds,
         "new" => sessions::new,
+        "agents" => agents::agents,
+        "agent-ask" => agents::agent_ask,
+        "agent-script" => agents::agent_script,
+        "agent-grant" => agents::agent_grant,
         "hosts" => hosts::hosts,
         "host-kill" => hosts::host_kill,
         "detach" => hosts::detach,

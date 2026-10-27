@@ -5,6 +5,7 @@
 //! published too, so the state read here is exactly the one the first event follows.
 
 use gpui_kit::*;
+use wormhole_core::ipc::access::Access;
 use wormhole_core::ipc::bus::Grant;
 use wormhole_core::ipc::control::event::{Subscribed, Topic};
 use wormhole_core::ipc::control::{Error, ErrorCode, EventsSpec, Limited, Reply, reads_off};
@@ -12,18 +13,29 @@ use wormhole_core::ipc::{Answer, Peer};
 
 use super::{automation_off, budget, listing};
 use crate::app_state::{AppState, app};
-use crate::settings::settings;
 
 /// Answer an `events` request. Order of the checks: the flag, the request itself, what it may
 /// hear, the budget, then the stream caps.
-pub(super) fn events(spec: &EventsSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Answer {
-    match subscribe(spec, from, peer, cx) {
+pub(super) fn events(
+    spec: &EventsSpec,
+    from: Option<i64>,
+    access: Access,
+    peer: &Peer,
+    cx: &mut App,
+) -> Answer {
+    match subscribe(spec, from, access, peer, cx) {
         Ok(answer) => answer,
         Err(error) => Answer::Reply(error.into()),
     }
 }
 
-fn subscribe(spec: &EventsSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Result<Answer, Error> {
+fn subscribe(
+    spec: &EventsSpec,
+    from: Option<i64>,
+    access: Access,
+    peer: &Peer,
+    cx: &mut App,
+) -> Result<Answer, Error> {
     if let Some(off) = automation_off(cx) {
         return Err(off);
     }
@@ -51,7 +63,7 @@ fn subscribe(spec: &EventsSpec, from: Option<i64>, peer: &Peer, cx: &mut App) ->
         })
         .flatten()
         .collect();
-    let reads_all = settings(cx).control_read;
+    let reads_all = access.read;
     // What a terminal prints is for those who may read it: the setting, or the terminals the caller
     // runs in and named (the same rule that decides which streams the setting going off ends).
     if filter.topics.contains(Topic::Output) {
@@ -60,9 +72,7 @@ fn subscribe(spec: &EventsSpec, from: Option<i64>, peer: &Peer, cx: &mut App) ->
             return Err(reads_off());
         }
     }
-    // The tick would say so soon enough; a stream must not outlive the setting by a missed tick.
-    crate::automation::sync_grants(cx, reads_all);
-    let grant = Grant { reads_all, own };
+    let grant = Grant { reads_all, own, holder: access.holder };
     let (subscription, started) = bus
         .subscribe(filter.clone(), grant, from)
         .map_err(|refused| Error::new(ErrorCode::RateLimited, refused.to_string()))?;

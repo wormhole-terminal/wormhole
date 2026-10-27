@@ -72,7 +72,7 @@ fn reason(reply: &Reply) -> Option<Reason> {
 }
 
 fn allow(cx: &mut TestAppContext, write: bool) {
-    cx.update(|cx| update_settings(cx, |settings| settings.control_write = write));
+    crate::agent_access::testing::allow(cx, false, write);
 }
 
 fn split_of(target: i64, side: Side) -> SplitSpec {
@@ -98,7 +98,7 @@ fn watch(cx: &mut TestAppContext, topics: &[&str]) -> Subscription {
     });
     let spec = EventsSpec { topics: topics.iter().map(|t| t.to_string()).collect(), ..EventsSpec::default() };
     let filter = spec.filter().expect("valid topics");
-    bus.subscribe(filter, Grant { reads_all: false, own: vec![] }, None).expect("room").0
+    bus.subscribe(filter, Grant { reads_all: false, own: vec![], ..Grant::default() }, None).expect("room").0
 }
 
 fn told(subscription: &Subscription) -> Vec<Arc<Published>> {
@@ -412,7 +412,7 @@ fn shown(cx: &mut TestAppContext, id: i64) -> Vec<String> {
     let reply = match cx.update(|cx| control::answer(request, &peer, cx)) {
         Answer::Read(job) => job.run(&mut ReadScratch::default()),
         Answer::Reply(reply) => reply,
-        Answer::Stream { .. } | Answer::Wait(_) => panic!("a stream"),
+        Answer::Stream { .. } | Answer::Wait(_) | Answer::Ask(_) => panic!("a stream"),
     };
     result::<Read>(&reply).lines
 }
@@ -423,8 +423,7 @@ fn a_new_windows_command_is_typed_into_its_terminal(cx: &mut TestAppContext) {
         return;
     }
     let _window = start(cx, 1);
-    allow(cx, true);
-    cx.update(|cx| update_settings(cx, |settings| settings.control_read = true));
+    crate::agent_access::testing::allow(cx, true, true);
     let spec = NewWindowSpec { command: Some("echo opened-by-script".into()), ..Default::default() };
     let opened: WindowOpened = result(&ask(cx, Action::NewWindow(spec), None));
     let until = std::time::Instant::now() + Duration::from_secs(10);

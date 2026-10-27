@@ -22,7 +22,7 @@ use wormhole_core::agents::{self, AGENTS, Agent};
 use wormhole_core::config::profile::Profile;
 use wormhole_core::config::settings_index::SectionId as Section;
 
-use super::{agent_skills, cli_tool};
+use super::{agent_access, agent_skills, cli_tool};
 use crate::app_state::app;
 use crate::settings::UiColors;
 use crate::settings_window::registry::{Setting, toggle};
@@ -41,9 +41,11 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("agents-other", draw_others),
     Setting::block("agents-how", draw_how),
     cli_tool::SETTING,
+    // Shown while the Automation flag is off (the index row says so); with it on, Agent access decides.
     toggle!("control-write", control_write),
-    // Shown while the Automation flag is on (the index row says so).
-    toggle!("control-read", control_read),
+    // Shown while the Automation flag is on, like the rows below.
+    agent_access::MODE,
+    agent_access::PROGRAMS,
     // Shown while the Automation flag is on, like the row above.
     agent_skills::SKILLS,
     agent_skills::MCP,

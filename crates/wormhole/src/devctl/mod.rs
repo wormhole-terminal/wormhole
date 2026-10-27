@@ -99,6 +99,14 @@
 //!   new-shell <key> [dir]   a new terminal running the shell `key` names (`shells` lists the keys;
 //!                   `-` is the login shell); `state` shows each terminal's key and what it runs
 //!   shells          the shells on offer, one a line: key, name, what it runs, `default` on the default
+//!   agents          what programs that ask to control this instance are up to: `access <off|ask|open>`, one
+//!                   `approved <memory:id|stored:id> <name> <session|quit|always> <kind>` line per program let
+//!                   in, and one `asking <id> <name> <shown|waiting> <buttons>` line per question waiting
+//!   agent-ask <deny|session|quit|always>   answer the question that is up as that button does (a test
+//!                   instance shows no sheet; `WORMHOLE_AGENT_ASK=hold` or `agent-script hold` leaves
+//!                   questions waiting for this)
+//!   agent-script <hold|deny|session|quit|always>   what answers questions from now on
+//!   agent-grant scripts [quit|always]   let Scripts in, as an answer to its question does
 //!   hosts           the session hosts of this data folder, one a line: id, pid, shell pid, start (UTC),
 //!                   version and `live` or `stale` (with why), as `Wormhole sessions list` prints them
 //!   host-kill <id>  end that host as `Wormhole sessions end <id>` does (`Kill` over its socket, SIGTERM
@@ -374,6 +382,7 @@
 //!                   as the last line: a script waits for it before reading the results
 
 mod a11y;
+mod agents;
 mod ambient;
 mod batch;
 mod blocks;

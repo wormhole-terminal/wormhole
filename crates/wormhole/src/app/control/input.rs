@@ -5,6 +5,7 @@
 
 use gpui_kit::*;
 use wormhole_core::ipc::Peer;
+use wormhole_core::ipc::access::Access;
 use wormhole_core::ipc::control::{
     ErrorCode, KeysSent, Limited, MouseSpec, Reached, Reason, Reply, SendKeysSpec, SendTarget, Target,
     mouse_check, send_keys_check, send_text_check, writes_off,
@@ -12,7 +13,6 @@ use wormhole_core::ipc::control::{
 
 use super::{Found, automation_off, budget, find, not_found};
 use crate::app_state::AppState;
-use crate::settings::settings;
 use crate::terminal_view::MouseSent;
 use crate::window::TabFacts;
 
@@ -34,11 +34,12 @@ pub(super) fn send_text(
     text: &str,
     submit: bool,
     from: Option<i64>,
+    access: Access,
     peer: &Peer,
     cx: &mut App,
 ) -> Reply {
     // The switch before anything about the terminal, as the rules order it.
-    let enabled = settings(cx).control_write;
+    let enabled = access.write;
     if !enabled {
         let error = writes_off();
         return Reply::from(error);
@@ -64,11 +65,17 @@ pub(super) fn send_text(
 
 /// `send-keys`: press the keys and type the texts in the target's tab, each encoded for the modes the
 /// program has when it goes out.
-pub(super) fn send_keys(spec: &SendKeysSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Reply {
+pub(super) fn send_keys(
+    spec: &SendKeysSpec,
+    from: Option<i64>,
+    access: Access,
+    peer: &Peer,
+    cx: &mut App,
+) -> Reply {
     if let Some(off) = automation_off(cx) {
         return off.into();
     }
-    let enabled = settings(cx).control_write;
+    let enabled = access.write;
     if !enabled {
         return Reply::from(writes_off());
     }
@@ -94,11 +101,11 @@ pub(super) fn send_keys(spec: &SendKeysSpec, from: Option<i64>, peer: &Peer, cx:
 
 /// `mouse`: a click, press, release, move or wheel turn in the target's tab, for a program that asked
 /// for the mouse.
-pub(super) fn mouse(spec: &MouseSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Reply {
+pub(super) fn mouse(spec: &MouseSpec, from: Option<i64>, access: Access, peer: &Peer, cx: &mut App) -> Reply {
     if let Some(off) = automation_off(cx) {
         return off.into();
     }
-    let enabled = settings(cx).control_write;
+    let enabled = access.write;
     if !enabled {
         return Reply::from(writes_off());
     }

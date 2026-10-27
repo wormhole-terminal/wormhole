@@ -6,9 +6,11 @@
 //! root may call into it.
 
 use gpui_kit::*;
+use wormhole_core::config::AgentAccess;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::ipc;
 
+use crate::agent_access;
 use crate::app::{control, menus};
 use crate::app_state::look::apply_theme;
 use crate::app_state::{AppState, app};
@@ -83,13 +85,15 @@ pub(super) fn tick(cx: &mut App) {
         cx.refresh_windows();
     }
     apply_theme(cx);
-    // The command line reads every terminal only while the setting and the feature are on; when they go
-    // off, the streams that needed it end.
+    // Every program reads every terminal only in Allowed while open, with the feature on; when that goes
+    // (a stricter mode, or the feature off), the streams that needed it end. What one program was allowed
+    // ends its own streams when the user takes it back (`agent_access`).
     let reading = {
         let settings = crate::settings::settings(cx);
-        settings.control_read && settings.feature_enabled(FeatureFlag::Automation)
+        settings.agent_access == AgentAccess::Open && settings.feature_enabled(FeatureFlag::Automation)
     };
     crate::automation::sync_grants(cx, reading);
+    agent_access::tick(ticks, cx);
     notifications::tick(ticks, cx);
     status_item::sync(cx);
     menus::sync(cx);

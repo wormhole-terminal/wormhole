@@ -72,6 +72,12 @@ impl Workspace {
             .collect()
     }
 
+    /// The pids of the shells that run in this window's terminals: where the process chain of a caller stops
+    /// being an agent's and is a person's terminal (`agent_access`).
+    pub(crate) fn control_shell_pids(&self, cx: &App) -> Vec<u32> {
+        self.sessions.iter().filter_map(|session| session.terminal().read(cx).shell_pid()).collect()
+    }
+
     fn terminal_info(&self, ix: usize, cx: &App) -> TerminalInfo {
         let session = &self.sessions[ix];
         let terminal = session.terminal().read(cx);
@@ -109,6 +115,18 @@ impl Workspace {
                 selected: true,
                 panes: vec![PaneInfo { id: session.id }],
             }],
+        }
+    }
+
+    /// Say on `tab`'s terminal what a program that controls Wormhole is doing to it (the notice chip).
+    pub(crate) fn control_driven(
+        &mut self,
+        tab: i64,
+        notice: wormhole_core::view::notice::Notice,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(terminal) = self.pane_terminal(tab) {
+            terminal.update(cx, |terminal, cx| terminal.say(notice, cx));
         }
     }
 

@@ -7,6 +7,7 @@
 mod about;
 mod actions;
 mod active_profile;
+mod agent_access;
 mod app;
 mod app_state;
 mod automation;

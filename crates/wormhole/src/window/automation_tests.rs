@@ -39,7 +39,8 @@ fn watch(cx: &mut TestAppContext, topics: &[&str], own: Vec<i64>) -> (Arc<Bus>, 
     });
     let spec = EventsSpec { topics: topics.iter().map(|t| t.to_string()).collect(), ..EventsSpec::default() };
     let filter = spec.filter().expect("valid topics");
-    let (subscription, _) = bus.subscribe(filter, Grant { reads_all: false, own }, None).expect("room");
+    let (subscription, _) =
+        bus.subscribe(filter, Grant { reads_all: false, own, ..Grant::default() }, None).expect("room");
     (bus, subscription)
 }
 
@@ -328,7 +329,7 @@ fn a_caller_that_runs_inside_a_terminal_cannot_type_into_it_however_it_asks(cx: 
         return;
     }
     let window = start(cx, 2);
-    cx.update(|cx| update_settings(cx, |settings| settings.control_write = true));
+    crate::agent_access::testing::allow(cx, false, true);
     let shell = |cx: &mut TestAppContext, ix: usize| {
         terminal(cx, &window, ix).read_with(cx, |t, _| t.shell_pid()).expect("a shell runs")
     };
@@ -373,7 +374,7 @@ fn events_are_answered_with_the_state_and_a_stream_or_a_reason_why_not(cx: &mut 
     };
     let refusal = |answer: Answer| match answer {
         Answer::Reply(reply) => reply.error.expect("an error"),
-        Answer::Stream { .. } | Answer::Read(_) | Answer::Wait(_) => panic!("not a refusal"),
+        Answer::Stream { .. } | Answer::Read(_) | Answer::Wait(_) | Answer::Ask(_) => panic!("not a refusal"),
     };
 
     // The state as of the moment, then the stream: what happens after has a higher number.
@@ -441,7 +442,7 @@ fn what_a_caller_may_read_is_the_terminals_it_runs_in(cx: &mut TestAppContext) {
         let request = Request::new(Action::Events(EventsSpec::default()), None);
         match cx.update(|cx| control::answer(request, &peer, cx)) {
             Answer::Stream { subscription, .. } => subscription,
-            Answer::Reply(_) | Answer::Read(_) | Answer::Wait(_) => panic!("not a stream"),
+            Answer::Reply(_) | Answer::Read(_) | Answer::Wait(_) | Answer::Ask(_) => panic!("not a stream"),
         }
     };
     let inside = events_for(cx, Peer::new(900_001, vec![shell]));

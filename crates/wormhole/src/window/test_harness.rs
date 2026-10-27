@@ -77,6 +77,7 @@ pub(crate) fn isolate_in(module_path: &str, name: &str) -> bool {
         "ANDROMEDA_TAB_ID",
         "ANDROMEDA_BIN",
         "WORMHOLE_AUTH",
+        "WORMHOLE_AGENT_ASK",
         "WORMHOLE_NOTIFY",
         // The other places a terminal's settings are looked for (`import::Env::from_process`).
         "XDG_CONFIG_DIRS",

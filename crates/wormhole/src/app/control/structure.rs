@@ -11,6 +11,7 @@
 //! are for, and a close is the person's to answer either way.
 
 use gpui_kit::*;
+use wormhole_core::ipc::access::Access;
 use wormhole_core::ipc::control::structure::{launch_check, name_check, size_check};
 use wormhole_core::ipc::control::{
     CloseSpec, Error, ErrorCode, FocusSpec, Limited, NewWindowSpec, Reason, RenameSpec, Reply, SplitSpec,
@@ -19,15 +20,14 @@ use wormhole_core::ipc::control::{
 
 use super::{Found, automation_off, budget, find, not_found};
 use crate::app_state::AppState;
-use crate::settings::settings;
 use crate::window::SplitPlan;
 
 /// The flag and the switch, in that order, for every verb of this module.
-fn gate(cx: &App) -> Result<(), Reply> {
+fn gate(access: Access, cx: &App) -> Result<(), Reply> {
     if let Some(off) = automation_off(cx) {
         return Err(off.into());
     }
-    if !settings(cx).control_write {
+    if !access.write {
         return Err(writes_off().into());
     }
     Ok(())
@@ -54,8 +54,8 @@ fn unreachable_window() -> Reply {
 }
 
 /// `new-window`.
-pub(super) fn new_window(spec: &NewWindowSpec, from: Option<i64>, cx: &mut App) -> Reply {
-    if let Err(reply) = gate(cx) {
+pub(super) fn new_window(spec: &NewWindowSpec, from: Option<i64>, access: Access, cx: &mut App) -> Reply {
+    if let Err(reply) = gate(access, cx) {
         return reply;
     }
     if let Err(error) = launch_check(spec.folder.as_deref(), spec.command.as_deref()) {
@@ -84,8 +84,8 @@ pub(super) fn new_window(spec: &NewWindowSpec, from: Option<i64>, cx: &mut App) 
 }
 
 /// `split`.
-pub(super) fn split(spec: &SplitSpec, from: Option<i64>, cx: &mut App) -> Reply {
-    if let Err(reply) = gate(cx) {
+pub(super) fn split(spec: &SplitSpec, from: Option<i64>, access: Access, cx: &mut App) -> Reply {
+    if let Err(reply) = gate(access, cx) {
         return reply;
     }
     if let Err(error) =
@@ -133,8 +133,8 @@ pub(super) fn split(spec: &SplitSpec, from: Option<i64>, cx: &mut App) -> Reply 
 }
 
 /// `focus`.
-pub(super) fn focus(spec: &FocusSpec, from: Option<i64>, cx: &mut App) -> Reply {
-    if let Err(reply) = gate(cx) {
+pub(super) fn focus(spec: &FocusSpec, from: Option<i64>, access: Access, cx: &mut App) -> Reply {
+    if let Err(reply) = gate(access, cx) {
         return reply;
     }
     let found = match shown(spec.target, cx) {
@@ -158,8 +158,8 @@ pub(super) fn focus(spec: &FocusSpec, from: Option<i64>, cx: &mut App) -> Reply 
 }
 
 /// `rename`.
-pub(super) fn rename(spec: &RenameSpec, from: Option<i64>, cx: &mut App) -> Reply {
-    if let Err(reply) = gate(cx) {
+pub(super) fn rename(spec: &RenameSpec, from: Option<i64>, access: Access, cx: &mut App) -> Reply {
+    if let Err(reply) = gate(access, cx) {
         return reply;
     }
     let name = match name_check(spec.name.as_deref()) {
@@ -185,8 +185,8 @@ pub(super) fn rename(spec: &RenameSpec, from: Option<i64>, cx: &mut App) -> Repl
 }
 
 /// `close`: the question in the terminal's window, which the person answers.
-pub(super) fn close(spec: &CloseSpec, from: Option<i64>, cx: &mut App) -> Reply {
-    if let Err(reply) = gate(cx) {
+pub(super) fn close(spec: &CloseSpec, from: Option<i64>, access: Access, cx: &mut App) -> Reply {
+    if let Err(reply) = gate(access, cx) {
         return reply;
     }
     let found = match shown(spec.target, cx) {

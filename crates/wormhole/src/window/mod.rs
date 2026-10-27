@@ -48,6 +48,8 @@ use crate::settings::settings_in;
 use wormhole_core::agents::AgentId;
 use wormhole_core::storage::paths::ProfileId;
 
+#[cfg(test)]
+mod agent_access_tests;
 pub(crate) mod ambient;
 #[cfg(test)]
 mod automation_tests;

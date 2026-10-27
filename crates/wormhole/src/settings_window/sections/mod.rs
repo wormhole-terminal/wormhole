@@ -22,6 +22,7 @@ use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
 
 mod advanced;
+mod agent_access;
 mod agent_skills;
 mod agents;
 mod appearance;

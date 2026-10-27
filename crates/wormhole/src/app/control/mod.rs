@@ -26,6 +26,7 @@ mod wait;
 use std::time::Instant;
 
 use gpui_kit::*;
+use wormhole_core::ipc::access::Access;
 use wormhole_core::ipc::control::structure::launch_check;
 use wormhole_core::ipc::control::{
     Action, Error, ErrorCode, Limited, Listing, PROTOCOL_VERSION, RateLimits, Reached, Reason, Reply,
@@ -33,6 +34,7 @@ use wormhole_core::ipc::control::{
 };
 use wormhole_core::ipc::{Answer, Peer};
 
+use crate::agent_access::{self, Gate, gate};
 use crate::app_state::{AppState, OpenWindow, app};
 use crate::notifications;
 use crate::settings::settings;
@@ -43,20 +45,44 @@ struct Budgets(RateLimits);
 
 impl Global for Budgets {}
 
-/// Answer `request` for the socket thread: one reply line, or a reply and the stream that follows it.
+/// Answer `request` for the socket thread: one reply line, a reply and the stream that follows it, or a
+/// wait for the user (the gate, `agent_access`, decides whether the program may do this at all).
 pub(crate) fn answer(request: Request, peer: &Peer, cx: &mut App) -> Answer {
-    if version_error(&request).is_none() {
-        let from = request.from_tab();
-        match &request.action {
-            Action::Events(spec) => return stream::events(spec, from, peer, cx),
-            Action::Read(spec) => return read::read(spec, from, peer, cx),
-            Action::Blocks(spec) => return read::blocks(spec, from, peer, cx),
-            Action::Wait(spec) => return wait::wait(spec, from, peer, cx),
-            Action::Run(spec) => return wait::run(spec, from, peer, cx),
-            _ => {}
-        }
+    if let Some(error) = version_error(&request) {
+        return Answer::Reply(error);
     }
-    Answer::Reply(handle(request, peer, cx))
+    match gate(&request, peer, cx) {
+        Gate::Open(access, driver) => {
+            let drives = driver.and_then(|driver| {
+                agent_access::drive_of(&request.action, request.from_tab())
+                    .map(|(target, typing)| (target, typing, driver))
+            });
+            let answer = dispatch(request, access, peer, cx);
+            // Said once the handler has said yes: a refusal drives nothing.
+            if let Some((target, typing, driver)) = drives
+                && !matches!(&answer, Answer::Reply(reply) if !reply.ok)
+            {
+                agent_access::announce(target, typing, driver, cx);
+            }
+            answer
+        }
+        Gate::Reply(reply) => Answer::Reply(reply),
+        Gate::Ask(job) => Answer::Ask(job),
+    }
+}
+
+/// Carry out `request`, which `access` lets in.
+fn dispatch(request: Request, access: Access, peer: &Peer, cx: &mut App) -> Answer {
+    let from = request.from_tab();
+    match &request.action {
+        Action::Events(spec) => return stream::events(spec, from, access, peer, cx),
+        Action::Read(spec) => return read::read(spec, from, access, peer, cx),
+        Action::Blocks(spec) => return read::blocks(spec, from, access, peer, cx),
+        Action::Wait(spec) => return wait::wait(spec, from, access, peer, cx),
+        Action::Run(spec) => return wait::run(spec, from, access, peer, cx),
+        _ => {}
+    }
+    Answer::Reply(handle_open_as(request, access, peer, cx))
 }
 
 /// The answer to an action of the automation API while its flag is off in this build.
@@ -78,29 +104,51 @@ fn version_error(request: &Request) -> Option<Reply> {
     })
 }
 
-/// Answer `request` with one reply. Never fails: whatever is wrong with it is said in the reply.
+/// Answer `request` with one reply, as a program asking would be (gated: a question is refused with
+/// `approval_needed`, there being no connection to hold). Never fails: whatever is wrong with it is said in
+/// the reply.
+#[cfg(test)]
 pub(crate) fn handle(request: Request, peer: &Peer, cx: &mut App) -> Reply {
-    let from = request.from_tab();
-    tracing::debug!(?from, action = request.action.name(), "control request");
     if let Some(error) = version_error(&request) {
         return error;
     }
+    match gate(&request, peer, cx) {
+        Gate::Open(access, _) => handle_open_as(request, access, peer, cx),
+        Gate::Reply(reply) => reply,
+        Gate::Ask(_) => Reply::error(ErrorCode::NotAllowed, "the user has been asked: try again"),
+    }
+}
+
+/// [`handle`] for devctl, which is let in whole.
+#[cfg(feature = "devctl")]
+pub(crate) fn handle_open(request: Request, peer: &Peer, cx: &mut App) -> Reply {
+    if let Some(error) = version_error(&request) {
+        return error;
+    }
+    handle_open_as(request, Access::OPEN, peer, cx)
+}
+
+fn handle_open_as(request: Request, access: Access, peer: &Peer, cx: &mut App) -> Reply {
+    let from = request.from_tab();
+    tracing::debug!(?from, action = request.action.name(), "control request");
     match request.action {
         Action::List => Reply::ok(listing(cx)),
         Action::Doctor => doctor::doctor(from, peer, cx),
         Action::Status { target } => status(target, from, cx),
         Action::Notify { target, title, body } => notify(target, &title, &body, from, cx),
-        Action::SendText { target, text, submit } => input::send_text(target, &text, submit, from, peer, cx),
-        Action::SendKeys(spec) => input::send_keys(&spec, from, peer, cx),
-        Action::Mouse(spec) => input::mouse(&spec, from, peer, cx),
-        Action::NewTerminal { folder, command, worktree, window } => {
-            new_terminal(folder, command, worktree, window, from, cx)
+        Action::SendText { target, text, submit } => {
+            input::send_text(target, &text, submit, from, access, peer, cx)
         }
-        Action::NewWindow(spec) => structure::new_window(&spec, from, cx),
-        Action::Split(spec) => structure::split(&spec, from, cx),
-        Action::Focus(spec) => structure::focus(&spec, from, cx),
-        Action::Rename(spec) => structure::rename(&spec, from, cx),
-        Action::Close(spec) => structure::close(&spec, from, cx),
+        Action::SendKeys(spec) => input::send_keys(&spec, from, access, peer, cx),
+        Action::Mouse(spec) => input::mouse(&spec, from, access, peer, cx),
+        Action::NewTerminal { folder, command, worktree, window } => {
+            new_terminal(folder, command, worktree, window, from, access, cx)
+        }
+        Action::NewWindow(spec) => structure::new_window(&spec, from, access, cx),
+        Action::Split(spec) => structure::split(&spec, from, access, cx),
+        Action::Focus(spec) => structure::focus(&spec, from, access, cx),
+        Action::Rename(spec) => structure::rename(&spec, from, access, cx),
+        Action::Close(spec) => structure::close(&spec, from, access, cx),
         // Answered by `answer`, which can carry a stream or a job for the socket thread; a reply
         // alone (devctl's `control`) cannot.
         Action::Events(_) => {
@@ -203,9 +251,10 @@ fn new_terminal(
     worktree: Option<String>,
     window: Option<i64>,
     from: Option<i64>,
+    access: Access,
     cx: &mut App,
 ) -> Reply {
-    if !settings(cx).control_write {
+    if !access.write {
         let error = writes_off();
         return Reply::from(error);
     }

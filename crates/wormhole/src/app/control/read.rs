@@ -6,18 +6,18 @@
 //! terminal text for a client.
 
 use gpui_kit::*;
+use wormhole_core::ipc::access::Access;
 use wormhole_core::ipc::control::{
     BlocksSpec, Error, ErrorCode, Limited, ReadSpec, Reply, Target, read_check,
 };
 use wormhole_core::ipc::{Answer, Peer, ReadJob};
 
 use super::{automation_off, budget, find, not_found};
-use crate::settings::settings;
 use crate::window::ReaderFacts;
 
 /// Answer `read`.
-pub(super) fn read(spec: &ReadSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Answer {
-    let job = prepare(spec.target, from, peer, cx).and_then(|facts| {
+pub(super) fn read(spec: &ReadSpec, from: Option<i64>, access: Access, peer: &Peer, cx: &mut App) -> Answer {
+    let job = prepare(spec.target, from, access, peer, cx).and_then(|facts| {
         let capture = spec.capture_spec().map_err(Reply::from)?;
         budget(Limited::Read, from, cx)?;
         let ReaderFacts { terminal, reader, title, .. } = facts;
@@ -27,8 +27,14 @@ pub(super) fn read(spec: &ReadSpec, from: Option<i64>, peer: &Peer, cx: &mut App
 }
 
 /// Answer `blocks`.
-pub(super) fn blocks(spec: &BlocksSpec, from: Option<i64>, peer: &Peer, cx: &mut App) -> Answer {
-    let job = prepare(spec.target, from, peer, cx).and_then(|facts| {
+pub(super) fn blocks(
+    spec: &BlocksSpec,
+    from: Option<i64>,
+    access: Access,
+    peer: &Peer,
+    cx: &mut App,
+) -> Answer {
+    let job = prepare(spec.target, from, access, peer, cx).and_then(|facts| {
         let wanted = spec.blocks_spec().map_err(Reply::from)?;
         budget(Limited::Read, from, cx)?;
         Ok(ReadJob::blocks(facts.reader, facts.terminal, wanted))
@@ -48,6 +54,7 @@ fn answer(job: Result<ReadJob, Reply>) -> Answer {
 fn prepare(
     target: Option<Target>,
     from: Option<i64>,
+    access: Access,
     peer: &Peer,
     cx: &mut App,
 ) -> Result<ReaderFacts, Reply> {
@@ -68,6 +75,6 @@ fn prepare(
     };
     // Where the caller runs, not what it says: `from` alone would let anyone claim the terminal.
     let self_read = facts.shell.is_some_and(|shell| peer.runs_in(shell));
-    read_check(settings(cx).control_read, self_read).map_err(Reply::from)?;
+    read_check(access.read, self_read).map_err(Reply::from)?;
     Ok(facts)
 }
