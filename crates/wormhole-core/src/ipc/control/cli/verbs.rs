@@ -286,8 +286,9 @@ pub(in crate::ipc) const VERBS: &[Verb] = &[
             flag("--path", None, "show: print where the skill goes instead of the skill"),
         ])
         .offline(),
-    verb("sessions", "list|end|forget", "the terminals that keep running behind the app")
+    verb("sessions", "list|end <id>|end --all|forget <id>", "the terminals that keep running behind the app")
         .then(&["list", "end", "forget"])
+        .with(&[flag("--all", None, "end: every background terminal of this data folder, not one")])
         .offline(),
     verb("mcp", "", "serve all of this to a coding agent over MCP on stdin and stdout").offline(),
     verb("welcome", "[-- <program> [<args>...]]", "the first-run welcome, in this terminal").offline(),

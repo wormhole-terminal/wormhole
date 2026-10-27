@@ -32,6 +32,18 @@ fn request(tool: &str, arguments: Value) -> Result<Value, String> {
     }
 }
 
+fn wormhole_core_doctor_facts() -> crate::ipc::control::doctor::Facts {
+    use crate::ipc::control::doctor::{Caller, Facts};
+    Facts {
+        app_version: "1.3.0".into(),
+        protocol: 1,
+        automation: true,
+        control_write: false,
+        control_read: false,
+        caller: Some(Caller { terminal: 3, verified: true, shell_integration: Some(true) }),
+    }
+}
+
 #[test]
 fn every_tool_has_a_name_a_client_accepts_a_description_and_known_schema_keywords() {
     let tools: Vec<_> = all().collect();
@@ -43,6 +55,7 @@ fn every_tool_has_a_name_a_client_accepts_a_description_and_known_schema_keyword
             "read_terminal",
             "list_blocks",
             "notify",
+            "doctor",
             "send_text",
             "send_keys",
             "mouse",
@@ -84,7 +97,9 @@ fn every_tool_has_a_name_a_client_accepts_a_description_and_known_schema_keyword
 #[test]
 fn what_a_tool_may_do_is_said_truthfully() {
     let hints = |name: &str| find(name).expect("tool").hints;
-    for name in ["list_terminals", "terminal_status", "read_terminal", "list_blocks", "wait", "wait_events"] {
+    for name in
+        ["list_terminals", "terminal_status", "read_terminal", "list_blocks", "doctor", "wait", "wait_events"]
+    {
         assert!(hints(name).read_only && !hints(name).open_world, "{name} only looks");
     }
     // What types into programs or starts them can do anything the user can.
@@ -121,6 +136,7 @@ fn arguments_become_the_golden_requests() {
     let target = json!({"kind": "terminal", "id": 3});
     let cases: Vec<(&str, Value, Value)> = vec![
         ("list_terminals", json!({}), json!({"version": 1, "action": "list"})),
+        ("doctor", json!({}), json!({"version": 1, "action": "doctor"})),
         ("terminal_status", json!({}), json!({"version": 1, "action": "status"})),
         (
             "terminal_status",
@@ -422,6 +438,7 @@ fn every_reply_type_fits_the_output_schema_of_its_tool() {
             })
             .expect("serializes"),
         ),
+        ("doctor", serde_json::to_value(wormhole_core_doctor_facts()).expect("serializes")),
         ("notify", serde_json::to_value(Reached { tab: 3 }).expect("serializes")),
         ("send_text", serde_json::to_value(Reached { tab: 3 }).expect("serializes")),
         ("mouse", serde_json::to_value(Reached { tab: 3 }).expect("serializes")),

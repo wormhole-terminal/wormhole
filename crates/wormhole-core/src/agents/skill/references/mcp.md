@@ -3,8 +3,8 @@
 When the user has added `wh mcp` to your configuration (for Claude Code,
 `claude mcp add wormhole -- wh mcp`), the same operations are tools. They make the same requests over
 the same socket, so the switches, budgets and refusals are the same; read a refusal's text, which
-says what to turn on. Tools show as `mcp__wormhole__<name>`. `wh doctor` says whether the app is
-reachable; there is no doctor tool, run `wh doctor` in a shell if you have one.
+says what to turn on. Tools show as `mcp__wormhole__<name>`. Call `doctor` first: it says
+what is on. (`wh doctor` in a shell adds the skill's state and the fix for each problem.)
 
 | Tool | Is |
 |---|---|
@@ -13,6 +13,7 @@ reachable; there is no doctor tool, run `wh doctor` in a shell if you have one.
 | `read_terminal` | `wh read`: the screen, `last_lines`, `from_line` and `to_line`, or a `block`; `join`, `styles` |
 | `list_blocks` | `wh blocks`: `last`, `include_output` |
 | `notify` | `wh notify`: `title`, `body` |
+| `doctor` | `wh doctor`'s app half: version, protocol, the Automation flag, both switches, your own terminal and whether its shell reports commands. Call it first |
 | `send_text` | `wh send-text`: `text`, `submit` |
 | `send_keys` | `wh send-keys`: `keys` as `"ctrl-c"`, `{"text":"ls"}`, `{"text":"…","paste":true}` |
 | `mouse` | `wh mouse`: `action`, `row`, `col` |
@@ -22,11 +23,11 @@ reachable; there is no doctor tool, run `wh doctor` in a shell if you have one.
 | `run` | `wh run`: `command`, `timeout_seconds`; the result has `exit_code` and `output` |
 | `wait_events` | `wh events`, as a call |
 
-Every tool but five (`list_terminals`, `terminal_status`, `notify`, `send_text`, `new_terminal`) needs the
-Automation flag; while it is off the server lists only those five. A terminal is always `terminal`, its
+Every tool but six (`list_terminals`, `terminal_status`, `notify`, `doctor`, `send_text`, `new_terminal`) needs the
+Automation flag; while it is off the server lists only those six. A terminal is always `terminal`, its
 id from `list_terminals`.
 
-- Results carry a short text and `structuredContent` (the same JSON as `wh --json`). A refusal is an
+- Results carry a short text and `structuredContent` (the same JSON as `wh list --json` and the others). A refusal is an
   ordinary result with `isError: true`; its code, reason and message are in the text and in
   `_meta["app.getwormhole/error"]`. Wrong arguments come back as results too, so correct and retry.
 - `wait` and `run` take at most 120 seconds here, because clients time a call out. A `wait` that ran

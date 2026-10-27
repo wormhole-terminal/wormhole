@@ -334,11 +334,15 @@ pub struct Error {
     /// block still running, so the caller can `wait --after` or `read --block` it later.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub block: Option<u32>,
+    /// For `rate_limited` when the app knows: the whole seconds after which the same request may be made
+    /// again. Absent from an older app's reply, and ignored by an older command line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retry_after_s: Option<u32>,
 }
 
 impl Error {
     pub fn new(code: ErrorCode, message: impl Into<String>) -> Self {
-        Self { code, message: message.into(), reason: None, block: None }
+        Self { code, message: message.into(), reason: None, block: None, retry_after_s: None }
     }
 
     /// The same error about command block `block`.
@@ -346,6 +350,13 @@ impl Error {
     pub fn about_block(mut self, block: i64) -> Self {
         // (A shell would have to mark four billion prompts first; the field is small to keep `Reply` so.)
         self.block = Some(u32::try_from(block).unwrap_or(u32::MAX));
+        self
+    }
+
+    /// The same error with the seconds to wait before asking again.
+    #[must_use]
+    pub fn retry_after(mut self, seconds: u64) -> Self {
+        self.retry_after_s = Some(u32::try_from(seconds).unwrap_or(u32::MAX));
         self
     }
 

@@ -19,9 +19,12 @@ switch, **read** their `control_read` switch (never needed for your own terminal
   the last 200 rows of history and screen; `--lines -50:-1` grid lines (0 is the top of the screen,
   history is negative); `--block last` the newest command with its output; `--join` puts wrapped rows
   back together. `--json` also has the size, the cursor, `screen` (`alt` while a full-screen program
-  runs) and the keyboard and mouse modes. Needs flag, read.
+  runs) and the keyboard and mouse modes, and with `--styles` a `styles` list with one entry per line: the
+  runs of that line that are not in the default style, each `{"col","len","fg","bg","bold","italic",
+  "underline","inverse","dim"}` (colours `#rrggbb` or a palette number; only the set attributes). A
+  selected menu entry or a cursor bar shows as `inverse`. Needs flag, read.
 - `wh blocks [<target>] [--last <n>] [--output]` — the shell's commands: id, state, exit code, time;
-  `--output` what each printed. Needs flag, read, and a shell with integration.
+  `--output` what each printed. Each has `took_ms` (`run` says `duration_ms`). Needs flag, read, and a shell with integration.
 - `wh events [--topics <list>] [--terminal <id>]... [--window <id>]... [--output]` — a stream of what
   happens (topics: windows, terminals, status, title, folder, bell, blocks, splits, output). It does
   not return: use `wait` in a tool call, `events` where a process can run in the background. Needs flag;
@@ -42,7 +45,8 @@ switch, **read** their `control_read` switch (never needed for your own terminal
 - `wh send-keys <target> <key>... [--type <string>]... [--paste <string>]...` — presses keys in order:
   `enter`, `tab`, `escape`, `up`, `down`, `left`, `right`, `home`, `end`, `pageup`, `pagedown`, `f1` to
   `f24`, `ctrl-c`, `alt-x`, `shift-tab`, or one character. `--type` types a string key by key,
-  `--paste` pastes it. At most 64 items and 4 KiB. Needs flag, write.
+  `--paste` pastes it. Everything goes out in the order written, keys and strings mixed. At most 64 items
+  and 4 KiB. Needs flag, write.
 - `wh send-text <target> [--submit] <text>... | -` — types text as a paste; `--submit` presses Return;
   `-` reads stdin. At most 16 KiB. Needs write.
 - `wh mouse <target> click|press|release|move <row> <col> | scroll <row> <col> up|down|left|right` —
@@ -50,7 +54,8 @@ switch, **read** their `control_read` switch (never needed for your own terminal
   for a program that asked for the mouse (else `refused`, `no_mouse`). Rows and columns count from 0.
   Needs flag, write.
 - `wh new-terminal [--folder <path>] [--command <command>] [--window <id>] [--worktree <branch>]` — a
-  terminal in the front window. `--worktree` only opens a dialog for the user. Needs write.
+  terminal in the front window. `--command` is typed at the new shell's prompt once the shell is ready,
+  after the reply (see below). `--worktree` only opens a dialog for the user. Needs write.
 - `wh new-window [--folder <path>] [--command <command>] [--activate]` — a window with one terminal,
   opened behind the user's other windows without taking their keys unless `--activate`. Returns the ids.
   Needs flag, write.
@@ -67,12 +72,22 @@ switch, **read** their `control_read` switch (never needed for your own terminal
 - `wh skill install|uninstall|show [--agent <id>] [--path] [<file>]` — this skill: installs into coding
   agents' skill folders on the user's say, removes it, or shows it. Works without the app. Do not run
   `install` unasked: the user chooses it in Wormhole's settings or by running it.
-- `wh sessions list|end|forget` — terminals that keep running behind the app (persistent terminals).
-  Works without the app; `end` ends a user's terminal, so do not run it unasked.
+- `wh sessions list`, `wh sessions end <id>` or `wh sessions end --all`, `wh sessions forget <id>` — terminals that
+  keep running behind the app (persistent terminals). Works without the app; `end` ends a user's terminal,
+  so do not run it unasked.
 - `wh mcp` — serves these verbs as MCP tools on stdin and stdout; the agent's configuration starts it
   (see [mcp.md](mcp.md)); it is not for typing.
 - `wh welcome` — the first-run welcome for the user; not for agents.
 - `wh help` and `wh help --json` — the usage; the verbs, flags, exit codes and error codes as data.
+
+## `--command` of `new-terminal`, `new-window` and `split`
+
+The reply returns as soon as the terminal exists. The command is typed into its shell, and run, once the
+shell shows its first prompt (told by the shell's own mark, else when its output goes quiet, at most a few
+seconds): it is not an argument of the shell and nothing replaces the shell. A terminal whose shell
+cannot take typed input (a program that reads nothing) never runs it. To know it started: `wh wait
+--terminal 9 --match '<something the command prints>'`, `wh read --terminal 9 --last 20`, or `wh blocks
+--terminal 9 --last 1` (state `running`; needs shell integration and read).
 
 ## Keys and patterns
 

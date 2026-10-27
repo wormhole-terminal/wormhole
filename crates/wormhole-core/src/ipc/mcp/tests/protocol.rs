@@ -53,11 +53,11 @@ fn tools_list_gives_every_tool_with_the_fields_of_the_negotiated_revision() {
     let listed = client.call("tools/list", json!({}))["result"].clone();
     assert!(listed.get("nextCursor").is_none() && listed.get("ttlMs").is_none());
     let tools = &listed["tools"];
-    assert_eq!(tools.as_array().expect("tools").len(), 17);
+    assert_eq!(tools.as_array().expect("tools").len(), 18);
     let mut sorted = names(tools);
     sorted.sort_unstable();
     sorted.dedup();
-    assert_eq!(sorted.len(), 17, "names are unique");
+    assert_eq!(sorted.len(), 18, "names are unique");
     let close = tools.as_array().expect("tools").iter().find(|t| t["name"] == "close").expect("close");
     assert_eq!(close["annotations"]["destructiveHint"], json!(true));
     assert_eq!(close["annotations"]["readOnlyHint"], json!(false));
@@ -237,7 +237,7 @@ fn stateless_requests_need_no_handshake_and_carry_result_type_and_cache_hints() 
     let list = client.call("tools/list", json!({"_meta": meta()}))["result"].clone();
     assert_eq!(list["resultType"], json!("complete"));
     assert_eq!((list["ttlMs"].is_u64(), &list["cacheScope"]), (true, &json!("private")));
-    assert_eq!(list["tools"].as_array().expect("tools").len(), 17);
+    assert_eq!(list["tools"].as_array().expect("tools").len(), 18);
     assert!(list["tools"][0]["outputSchema"].is_object());
 
     let called = client
@@ -399,8 +399,8 @@ fn while_the_flag_is_off_only_the_tools_that_work_without_it_are_offered_and_the
     let listed = client.call("tools/list", json!({}))["result"]["tools"].clone();
     assert_eq!(
         names(&listed),
-        ["list_terminals", "terminal_status", "notify", "send_text", "new_terminal"],
-        "the five the command line always had"
+        ["list_terminals", "terminal_status", "notify", "doctor", "send_text", "new_terminal"],
+        "the five the command line always had, and doctor, which is about the flag"
     );
     // The stateless flow says it too, with a cache hint that lets a person turn the flag on and see the rest.
     let discovered = client.call("server/discover", json!({"_meta": meta()}))["result"].clone();
@@ -416,7 +416,7 @@ fn while_the_flag_is_off_only_the_tools_that_work_without_it_are_offered_and_the
     let mut client = Client::with_app(&app);
     let init = client.initialize("2025-11-25");
     assert!(!init["instructions"].as_str().expect("instructions").contains("flag is off"));
-    assert_eq!(client.call("tools/list", json!({}))["result"]["tools"].as_array().expect("tools").len(), 17);
+    assert_eq!(client.call("tools/list", json!({}))["result"]["tools"].as_array().expect("tools").len(), 18);
     assert_eq!(client.finish(), 0);
 }
 

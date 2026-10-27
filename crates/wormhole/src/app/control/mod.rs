@@ -254,10 +254,12 @@ fn budget(kind: Limited, from: Option<i64>, cx: &mut App) -> Result<(), Reply> {
         return Ok(());
     }
     let wait = budgets.retry_after(kind, from, now).as_secs().max(1);
-    Err(Reply::error(
+    Err(Error::new(
         ErrorCode::RateLimited,
         format!("too many requests of this kind lately; try again in {wait}s"),
-    ))
+    )
+    .retry_after(wait)
+    .into())
 }
 
 fn not_found(target: Target) -> Reply {

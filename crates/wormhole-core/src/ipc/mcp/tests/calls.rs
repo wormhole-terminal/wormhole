@@ -74,7 +74,7 @@ fn the_loop_that_reads_is_never_held_by_a_call() {
     let first = client.request("tools/call", wait_args());
     app.wait_for_requests(1);
     // Answered while the wait is still going.
-    assert_eq!(client.call("tools/list", json!({}))["result"]["tools"].as_array().expect("tools").len(), 17);
+    assert_eq!(client.call("tools/list", json!({}))["result"]["tools"].as_array().expect("tools").len(), 18);
     client.notify("notifications/cancelled", json!({"requestId": first}));
     assert_eq!(client.finish(), 0);
 }

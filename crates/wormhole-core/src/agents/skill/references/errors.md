@@ -1,7 +1,7 @@
 # Exit codes, error codes and reasons
 
 With `--json` a failure is `{"version":1,"ok":false,"error":{"code":…,"message":…,"reason":…,"block":…}}`
-(`reason` and `block` only when there is one). Act on `code` first, then `reason`; the `message` is
+(`reason`, `block` and, for `rate_limited`, `retry_after_s` only when there is one). Act on `code` first, then `reason`; the `message` is
 words for the user. A code or reason you do not know is a newer Wormhole's: treat it as a refusal and
 read the message. `wh help --json` lists them as data.
 
@@ -25,7 +25,7 @@ refusal, bad arguments or a timeout: use `--json` when it matters.
 - `not_found` (1): no such terminal, window or folder, or its shell ended (`reason: exited`). Re-read ids with `wh list --json`.
 - `not_allowed` (1): a Settings switch is off; the message names it. Ask the user; never try to get around it.
 - `refused` (1): allowed in general, not into this terminal now; see the reasons.
-- `rate_limited` (1): too many requests of this kind; the message says how many seconds to wait.
+- `rate_limited` (1): too many requests of this kind. `error.retry_after_s` is how many seconds to wait (the message says the same); wait that long, then ask less often.
 - `too_large` (1): over a size cap (16 KiB of text, 64 keys, 5000 lines). Send or ask for less.
 - `unsupported` (1): this Wormhole cannot do it now: `flag_off` or `no_integration`.
 - `failed` (1): the app tried and could not, or a wait ran out (`reason: timeout`).

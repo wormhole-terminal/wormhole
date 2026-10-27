@@ -1,5 +1,5 @@
-//! Looking: `list_terminals`, `terminal_status`, `read_terminal`, `list_blocks`, and `notify`, which tells
-//! the person at the machine.
+//! Looking: `list_terminals`, `terminal_status`, `read_terminal`, `list_blocks`, `doctor`, and `notify`,
+//! which tells the person at the machine.
 
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -87,6 +87,22 @@ pub(super) const TOOLS: &[Tool] = &[
         output: reached_output,
         build: build_notify,
     },
+    Tool {
+        name: "doctor",
+        title: "How Wormhole stands",
+        description: "What Wormhole says about itself in one call: its version and protocol, whether the Automation \
+            feature flag is on, whether the two Settings switches are (control_write: typing and opening; \
+            control_read: reading other terminals), and the terminal you run in, if you run in one, with whether \
+            its shell reports commands (shell integration, which `run`, `list_blocks` and `wait` with \
+            `block_done` need). Call it first, before relying on the other tools; a switch that is off is for the \
+            person to turn on, never for you to get around. Always allowed.",
+        hints: Hints::LOOKS,
+        long: false,
+        flag: false,
+        input: list_input,
+        output: doctor_output,
+        build: build_doctor,
+    },
 ];
 
 fn target(terminal: Option<i64>) -> Option<Target> {
@@ -129,6 +145,34 @@ fn build_list(arguments: Value, _: &Endpoint) -> Result<Call, String> {
     struct NoArguments {}
     read::<NoArguments>("list_terminals", arguments)?;
     Ok(Call::Control(Action::List))
+}
+
+// doctor
+
+fn doctor_output() -> Value {
+    output(
+        props(&[
+            ("app_version", field("string", "Wormhole's version.")),
+            ("protocol", field("integer", "The control protocol the app speaks.")),
+            ("automation", field("boolean", "The Automation feature flag.")),
+            ("control_write", field("boolean", "Typing into terminals and opening them is allowed.")),
+            ("control_read", field("boolean", "Reading terminals other than your own is allowed.")),
+            (
+                "caller",
+                json!({"type": "object", "description": "The terminal you run in: `terminal` (its id), `verified` \
+                    (found by where you run, not by what you say) and `shell_integration` (a prompt mark has come)."}),
+            ),
+        ]),
+        &["app_version", "protocol", "automation", "control_write", "control_read"],
+    )
+}
+
+fn build_doctor(arguments: Value, _: &Endpoint) -> Result<Call, String> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct NoArguments {}
+    read::<NoArguments>("doctor", arguments)?;
+    Ok(Call::Control(Action::Doctor))
 }
 
 // terminal_status

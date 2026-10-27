@@ -9,12 +9,19 @@ use serde_json::Value;
 use super::read_text::{blocks_text, read_text};
 use super::structure_text as text_of;
 use super::wait_text;
+use crate::ipc::control::doctor::{App, Facts, Report};
 use crate::ipc::control::printable::for_terminal;
 use crate::ipc::control::read::{Blocks, Read};
 use crate::ipc::control::{
     Action, Asked, CloseAsked, Focused, KeysSent, Listing, Opened, Ran, Reached, Renamed, Reply, SplitMade,
     StatusInfo, Summary, TabInfo, TerminalInfo, Waited, WindowOpened,
 };
+
+/// What the app says about itself as text, with what it can tell by itself (no skills: those are files the
+/// command line reads; `wh doctor` adds them).
+fn doctor_text(facts: &Facts) -> String {
+    crate::ipc::control::doctor::render(&Report::build(App::Answered(facts.clone()), None, Vec::new()))
+}
 
 /// The reply to `action` as a person reads it (`--json` prints the object instead). The action
 /// says what the result is: a result is read as the type that action returns, never guessed from
@@ -64,7 +71,8 @@ pub fn render_with(
         Action::Wait(_) => read::<Waited>(&result).map(|done| wait_text::waited(&done)),
         Action::Run(_) => read::<Ran>(&result).map(|done| wait_text::ran(&done)),
         // Streams and the welcome have their own words.
-        Action::Events(_) | Action::Doctor | Action::Welcome { .. } => None,
+        Action::Doctor => read::<Facts>(&result).map(|facts| doctor_text(&facts)),
+        Action::Events(_) | Action::Welcome { .. } => None,
     };
     Ok(text.unwrap_or_else(|| "ok\n".into()))
 }

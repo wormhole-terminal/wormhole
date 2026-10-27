@@ -57,7 +57,7 @@ impl ErrorCode {
                 "Allowed in general, not into this terminal now: your own terminal, one waiting for the user's answer, a shell that is not at its prompt, no room for a split. The reason says which; do not retry unchanged."
             }
             ErrorCode::RateLimited => {
-                "Too many requests of this kind lately. The message says how many seconds to wait; wait that long, then ask less often."
+                "Too many requests of this kind lately. `error.retry_after_s` says how many seconds to wait (the message says the same); wait that long, then ask less often."
             }
             ErrorCode::TooLarge => "Over a size cap (text, keys, lines). Send less.",
             ErrorCode::Unsupported => {

@@ -478,3 +478,19 @@ fn an_error_about_a_block_names_it_and_a_reason_a_newer_app_gave_still_reads() {
     let pending = Error::new(ErrorCode::Refused, "x").because(Reason::RunPending);
     assert!(serde_json::to_string(&pending).expect("serializes").contains(r#""reason":"run_pending""#));
 }
+
+#[test]
+fn a_rate_limit_can_say_how_long_to_wait_and_an_older_reply_does_not() {
+    let limited: Reply = Error::new(ErrorCode::RateLimited, "slow down").retry_after(12).into();
+    let line = serde_json::to_string(&limited).expect("serializes");
+    assert!(line.contains(r#""code":"rate_limited","message":"slow down","retry_after_s":12"#), "{line}");
+    assert_eq!(
+        serde_json::from_str::<Reply>(&line).expect("reads").err().and_then(|e| e.retry_after_s),
+        Some(12)
+    );
+    let older = r#"{"version":1,"ok":false,"error":{"code":"rate_limited","message":"slow down"}}"#;
+    assert_eq!(
+        serde_json::from_str::<Reply>(older).expect("reads").err().and_then(|e| e.retry_after_s),
+        None
+    );
+}
