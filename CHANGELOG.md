@@ -68,6 +68,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- In bash, a command's block (its gutter mark, ⌘↑ and `wh blocks`) no longer disappears after the window
+  is resized: a prompt the shell draws again without a new start mark stays the prompt.
 - A Claude Code terminal no longer shows finished (with a banner and a sound) while its agent waits
   on work it started in the background: a `Monitor`, or a build or test a subagent runs in the
   background. It stays working until that work wakes the agent. A server the agent leaves running on

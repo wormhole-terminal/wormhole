@@ -648,12 +648,10 @@ pub(super) mod tests {
 
     /// A line editor that redraws its prompt after a resize (bash's readline on SIGWINCH) and sends the
     /// prompt mark once per prompt (`PROMPT_COMMAND`), not inside the prompt string: the redraw prints the
-    /// prompt text while the engine's pen is still in the command part (`B` set it), so the row's cells
-    /// become command cells and the block loses its prompt row. `blocks` is empty; `run` then reads a
-    /// cut block and says `truncated`. Shells that put `A` inside the prompt string (kitty's, VS Code's
-    /// and iTerm2's scripts do) are redrawn with it and are fine.
+    /// prompt text with the engine's pen still in the command part, and only its `B` shows that the text
+    /// was the prompt. The engine turns it back into prompt; without that the row lost its prompt, `blocks`
+    /// was empty and `run` read a cut block (`truncated`).
     #[test]
-    #[ignore = "engine: wormhole-vt terminal/osc/marks.rs keeps the pen's part after B, so a prompt redrawn without a fresh A is tagged as command"]
     fn a_prompt_redrawn_after_a_resize_without_a_new_a_mark_keeps_its_block() {
         let (mut term, log) = shown(10, b"\x1b]133;A\x07$ \x1b]133;B\x07");
         assert_eq!(blocks(term.screen(), &log).len(), 1);
