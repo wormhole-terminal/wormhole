@@ -93,8 +93,9 @@ const BUDGET: [(&str, u64); 16] = [
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     ("Advanced", 4185),
     ("Projects", 9037),
-    // The switches for Automation, Tear off, Live resize and Notice chip are four rows more.
-    ("FeatureFlags", 5981),
+    // The switches for Automation, Tear off, Live resize and Notice chip are four rows more; the
+    // `agent_access` key, which every page reads as JSON each frame, a few more.
+    ("FeatureFlags", 5985),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     ("search", 12250),

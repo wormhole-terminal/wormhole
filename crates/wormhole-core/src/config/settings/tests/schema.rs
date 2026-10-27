@@ -2,7 +2,8 @@
 
 use super::super::{
     APP_SETTINGS, AgentAccess, ChangesScope, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound,
-    OptionAsMeta, PROJECT_SETTINGS, PlainChanges, Settings, SharedChanges, SizeUnits, ThemeMode, TitleBorder, keys,
+    OptionAsMeta, PROJECT_SETTINGS, PlainChanges, Settings, SharedChanges, SizeUnits, ThemeMode, TitleBorder,
+    keys,
 };
 use crate::storage::jsonc;
 use crate::theme::fonts;

@@ -1,7 +1,7 @@
 //! Tests of the store, by what they exercise. `use super::*` below gets the shared fixtures.
 
-mod claims;
 mod agent_grants;
+mod claims;
 mod copies;
 mod erasure;
 mod migrations;

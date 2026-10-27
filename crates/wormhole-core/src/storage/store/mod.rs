@@ -7,8 +7,8 @@
 //! batches, only when it changed. Every window saves only its own slice, so two
 //! windows never overwrite each other's sessions; `save_session` narrows that to one session.
 
-mod claims;
 mod agent_grants;
+mod claims;
 mod copies;
 mod records;
 mod saved_text;
@@ -28,8 +28,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use anyhow::{Context as _, Result};
 use rusqlite::{Connection, OptionalExtension};
 
-pub use claims::ClaimRecord;
 pub use agent_grants::{AgentGrantKey, AgentGrantRow};
+pub use claims::ClaimRecord;
 pub use records::{NoteRecord, SessionRecord, SplitRecord, TaskRecord, WindowRecord, is_blank};
 
 use crate::platform::paths;
