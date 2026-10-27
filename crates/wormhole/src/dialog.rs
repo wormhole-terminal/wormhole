@@ -14,6 +14,7 @@ use gpui_kit::component::WindowExt as _;
 use gpui_kit::component::dialog::AlertDialog;
 use gpui_kit::prelude::*;
 use gpui_kit::{App, PromptButton, PromptLevel, SharedString, Window};
+use wormhole_text::{keys, text};
 
 use crate::platform::sheet;
 use crate::settings::ui;
@@ -85,7 +86,7 @@ pub(crate) fn ask_before_closing_with(
     on_confirm: impl FnOnce(&mut Window, &mut App) + 'static,
     on_dismiss: impl FnOnce(&mut App) + 'static,
 ) {
-    ask_with_cancel(window, cx, question, "Cancel", also, on_confirm, on_dismiss);
+    ask_with_cancel(window, cx, question, text(keys::DIALOG_CANCEL), also, on_confirm, on_dismiss);
 }
 
 /// [`ask_before_closing_with`] with the last button worded `cancel`, for a question that is about
@@ -135,10 +136,13 @@ pub(crate) fn ask_keeping_terminals(
     on_dismiss: impl FnOnce(&mut App) + 'static,
 ) {
     let sheet = sheet::Question {
+        style: sheet::Style::Warning,
         title: &question.title,
         detail: &question.detail,
         confirm: question.confirm,
+        cancel: text(keys::DIALOG_CANCEL),
         checkbox: KEEP_RUNNING,
+        checked: true,
     };
     let Some(answer) = sheet::ask_with_checkbox(window, &sheet) else {
         ask_before_closing(window, cx, question, move |window, cx| on_confirm(true, window, cx), on_dismiss);
@@ -156,4 +160,25 @@ pub(crate) fn ask_keeping_terminals(
             .ok();
         })
         .detach();
+}
+
+/// Ask `question` in a sheet on `window`; `on_answer` runs with `Some(ticked)` for the confirming
+/// button and `None` for the other, and not at all if the sheet goes away unanswered (its window closing,
+/// the app quitting). `false`, and nothing asked, where this window can't show the native sheet (GPUI's
+/// prompt has no box): the caller carries on as if it were answered with no.
+pub(crate) fn ask_with_box(
+    window: &mut Window,
+    cx: &mut App,
+    question: &sheet::Question,
+    on_answer: impl FnOnce(Option<bool>, &mut Window, &mut App) + 'static,
+) -> bool {
+    let Some(answer) = sheet::ask_with_checkbox(window, question) else { return false };
+    window
+        .spawn(cx, async move |cx| {
+            if let Ok(answer) = answer.recv().await {
+                cx.update(|window, cx| on_answer(answer, window, cx)).ok();
+            }
+        })
+        .detach();
+    true
 }

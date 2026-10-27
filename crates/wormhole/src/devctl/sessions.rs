@@ -292,7 +292,7 @@ pub(super) fn close_answer(ctx: &mut Ctx, arg: &str) -> Result<String> {
         "cancel" => 99,
         other => return Err(anyhow!("close-answer takes close or cancel, not {other:?}")),
     };
-    if !crate::platform::sheet::answer(ctx.window, button) {
+    if !crate::platform::sheet::answer(ctx.window, button, None) {
         return Err(anyhow!("no question is up in this window"));
     }
     Ok(String::new())

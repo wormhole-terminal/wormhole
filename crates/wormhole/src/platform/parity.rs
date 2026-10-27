@@ -128,7 +128,7 @@ pub(super) fn signatures_match() {
     #[cfg(feature = "devctl")]
     same! {
         a11y::wake_tree: fn(&Window);
-        sheet::answer: fn(&Window, isize) -> bool;
+        sheet::answer: fn(&Window, isize, Option<bool>) -> bool;
         window::lights_opacity: fn(&Window) -> Option<(f32, bool)>;
         window::lights_state: fn(&Window) -> Option<String>;
         inspect::menu_bar: fn() -> Option<String>;

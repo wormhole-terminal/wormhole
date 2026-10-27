@@ -16,6 +16,6 @@ pub fn choose(_: &Window, _: &Choice) -> Option<Receiver<Option<usize>>> {
 pub fn dismiss(_: &Window) {}
 
 #[cfg(feature = "devctl")]
-pub fn answer(_: &Window, _: isize) -> bool {
+pub fn answer(_: &Window, _: isize, _: Option<bool>) -> bool {
     false
 }

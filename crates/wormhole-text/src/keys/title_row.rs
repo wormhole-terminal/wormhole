@@ -6,42 +6,42 @@
 use crate::key::Key;
 
 /// "Folder"
-pub const TITLE_ROW_PART_FOLDER: Key = Key::new(1138);
+pub const TITLE_ROW_PART_FOLDER: Key = Key::new(1139);
 /// "Branch"
-pub const TITLE_ROW_PART_BRANCH: Key = Key::new(1139);
+pub const TITLE_ROW_PART_BRANCH: Key = Key::new(1140);
 /// "Branch status"
-pub const TITLE_ROW_PART_BRANCH_STATUS: Key = Key::new(1140);
+pub const TITLE_ROW_PART_BRANCH_STATUS: Key = Key::new(1141);
 /// "Terminal name"
-pub const TITLE_ROW_PART_TERMINAL: Key = Key::new(1141);
+pub const TITLE_ROW_PART_TERMINAL: Key = Key::new(1142);
 /// "Terminal status"
-pub const TITLE_ROW_PART_TERMINAL_STATUS: Key = Key::new(1142);
+pub const TITLE_ROW_PART_TERMINAL_STATUS: Key = Key::new(1143);
 /// "Flexible space"
-pub const TITLE_ROW_PART_SPACE: Key = Key::new(1143);
+pub const TITLE_ROW_PART_SPACE: Key = Key::new(1144);
 /// "Parts above it sit at the left, parts below it at the right"
-pub const TITLE_ROW_PART_SPACE_DESCRIPTION: Key = Key::new(1144);
+pub const TITLE_ROW_PART_SPACE_DESCRIPTION: Key = Key::new(1145);
 /// "Agent model and context"
-pub const TITLE_ROW_PART_AGENT_GAUGE: Key = Key::new(1145);
+pub const TITLE_ROW_PART_AGENT_GAUGE: Key = Key::new(1146);
 /// "Open ports"
-pub const TITLE_ROW_PART_PORTS: Key = Key::new(1146);
+pub const TITLE_ROW_PART_PORTS: Key = Key::new(1147);
 /// "Pull request"
-pub const TITLE_ROW_PART_PULL_REQUEST: Key = Key::new(1147);
+pub const TITLE_ROW_PART_PULL_REQUEST: Key = Key::new(1148);
 /// "Open in…"
-pub const TITLE_ROW_PART_OPEN_IN: Key = Key::new(1148);
+pub const TITLE_ROW_PART_OPEN_IN: Key = Key::new(1149);
 /// "Split buttons"
-pub const TITLE_ROW_PART_SPLITS: Key = Key::new(1149);
+pub const TITLE_ROW_PART_SPLITS: Key = Key::new(1150);
 /// "Show in title row"
-pub const TITLE_ROW_MENU_HEADER: Key = Key::new(1150);
+pub const TITLE_ROW_MENU_HEADER: Key = Key::new(1151);
 /// "Reset title row"
-pub const TITLE_ROW_MENU_RESET: Key = Key::new(1151);
+pub const TITLE_ROW_MENU_RESET: Key = Key::new(1152);
 /// "Customize title row…"
-pub const TITLE_ROW_MENU_CUSTOMIZE: Key = Key::new(1152);
+pub const TITLE_ROW_MENU_CUSTOMIZE: Key = Key::new(1153);
 /// "Open in, split"
-pub const TITLE_ROW_MORE_OPEN_IN_SPLIT: Key = Key::new(1153);
+pub const TITLE_ROW_MORE_OPEN_IN_SPLIT: Key = Key::new(1154);
 /// "Open in"
-pub const TITLE_ROW_MORE_OPEN_IN: Key = Key::new(1154);
+pub const TITLE_ROW_MORE_OPEN_IN: Key = Key::new(1155);
 /// "Split"
-pub const TITLE_ROW_MORE_SPLIT: Key = Key::new(1155);
+pub const TITLE_ROW_MORE_SPLIT: Key = Key::new(1156);
 /// "Hidden"
-pub const TITLE_ROW_HIDDEN: Key = Key::new(1156);
+pub const TITLE_ROW_HIDDEN: Key = Key::new(1157);
 /// "The status bar shows it while it's on"
-pub const TITLE_ROW_STATUS_IN_BAR: Key = Key::new(1157);
+pub const TITLE_ROW_STATUS_IN_BAR: Key = Key::new(1158);
