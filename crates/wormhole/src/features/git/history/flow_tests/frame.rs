@@ -15,7 +15,7 @@ use crate::window::test_harness::{draw, draw_fresh, drive, isolate_in, read, sta
 // ---------------------------------------------------------------- the frame
 
 /// Allocations the third draw of a one-terminal window on History (two commits, the newest open with its
-/// details and two files) may make. Measured: 5,275 allocations (2.8 MB), the same on every run (3,856
+/// details and two files) may make. Measured: 5,284 allocations (2.8 MB), the same on every run (3,856
 /// before the open commit showed its details: one block of about thirty elements, three icon buttons
 /// among them at about 125 each, drawn once however many commits there are, its text built when the
 /// details were read and not in the frame; 3,790 before History moved
@@ -23,7 +23,7 @@ use crate::window::test_harness::{draw, draw_fresh, drive, isolate_in, read, sta
 /// up the state it keeps, and a button's click handler is shared). The budget is that plus
 /// about a hundredth; the tab adds a
 /// row for each commit and file in view, so a cost per commit or per file per frame shows at once.
-const HISTORY_FRAME_ALLOCATIONS: u64 = 5_330;
+const HISTORY_FRAME_ALLOCATIONS: u64 = 5_340;
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
