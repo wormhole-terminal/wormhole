@@ -1,6 +1,6 @@
 //! The status tile: a terminal's face and state in one rounded square, drawn like an app's icon:
 //! a squircle, black unless an agent has colours of its own (Claude on its orange, Gemini on its
-//! blue; the colours are tokens, picked by the agent registry), with a faint sheen across its top
+//! blue; each brand's colour is kept in the agent registry, `Agent::tile`), with a faint sheen across its top
 //! and a hairline edge. It is [`TILE`] high beside a two-line row, and [`TILE_MINI`],
 //! [`TILE_TITLE`], [`TILE_SMALL`] or [`TILE_DENSE_FOLD`] where a row, a tab, the title row or the
 //! status bar is smaller (see [`status_tile_at`]). It holds what the terminal is (an agent's logo

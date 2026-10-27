@@ -121,9 +121,8 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@google/gemini-cli"],
         monogram: "GM",
         logo: Some("agent-icons/gemini.svg"),
-        // The design's blue to violet (the boards' RF-12). Google's own sparkle has four stops, no two-stop
-        // gradient; its main blue is #3186ff.
-        tile: Tile::Gradient(0x3b7bff, 0x8f6cf5),
+        // Google's main blue, the first of the four stops in its own Gemini sparkle.
+        tile: Tile::Solid(0x3186ff),
     },
     Agent {
         id: AgentId::Copilot,
@@ -195,8 +194,9 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@qwen-code/qwen-code"],
         monogram: "QC",
         logo: Some("agent-icons/qwen.svg"),
-        // Lobe Icons' Qwen colour (Simple Icons has the like #6950ef).
-        tile: Tile::Solid(0x615ced),
+        // The saturated blue of Qwen Code's docs site: its brand purple (Lobe Icons' #615ced) sat too close
+        // to Kiro's and Crush's for a tile told apart at a glance.
+        tile: Tile::Solid(0x082dff),
     },
     Agent {
         id: AgentId::Crush,
