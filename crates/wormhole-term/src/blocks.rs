@@ -645,4 +645,22 @@ pub(super) mod tests {
         assert_eq!(readout_text(BlockState::Running { since: Instant::now() }), None);
         assert_eq!(readout_text(BlockState::Prompt), None);
     }
+
+    /// A line editor that redraws its prompt after a resize (bash's readline on SIGWINCH) and sends the
+    /// prompt mark once per prompt (`PROMPT_COMMAND`), not inside the prompt string: the redraw prints the
+    /// prompt text while the engine's pen is still in the command part (`B` set it), so the row's cells
+    /// become command cells and the block loses its prompt row. `blocks` is empty; `run` then reads a
+    /// cut block and says `truncated`. Shells that put `A` inside the prompt string (kitty's, VS Code's
+    /// and iTerm2's scripts do) are redrawn with it and are fine.
+    #[test]
+    #[ignore = "engine: wormhole-vt terminal/osc/marks.rs keeps the pen's part after B, so a prompt redrawn without a fresh A is tagged as command"]
+    fn a_prompt_redrawn_after_a_resize_without_a_new_a_mark_keeps_its_block() {
+        let (mut term, log) = shown(10, b"\x1b]133;A\x07$ \x1b]133;B\x07");
+        assert_eq!(blocks(term.screen(), &log).len(), 1);
+        term.resize(10, 10);
+        let _ = term.feed_with_marks(b"\r\x1b[K$ \x1b]133;B\x07");
+        let found = blocks(term.screen(), &log);
+        assert_eq!(found.len(), 1, "the prompt row is still the block's first row");
+        assert_eq!(found[0].command, "");
+    }
 }
