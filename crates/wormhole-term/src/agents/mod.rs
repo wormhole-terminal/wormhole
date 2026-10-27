@@ -64,6 +64,11 @@ pub struct Agent {
     /// Substrings of a script path that identify it when it runs under an
     /// interpreter, e.g. the npm package directory.
     pub packages: &'static [&'static str],
+    /// Who is expected to have signed its release binary, as (signing identifier, team id) pairs,
+    /// checked against the real release binaries and never guessed: empty where none was seen. An
+    /// agent found running under another signature is shown with a warning before it is let in
+    /// (`agent-permissions.md`, 4.3).
+    pub signers: &'static [(&'static str, &'static str)],
     /// The agent's mark: two capitals, the initials of its name's words ("CLI"
     /// aside) or a one-word name's first two letters, unless a mark is fixed for it (Codex is CX, so
     /// it isn't Claude Code's CC again; Gemini is GM). Settings and the first-run sheet show it,
@@ -96,6 +101,8 @@ pub static AGENTS: &[Agent] = &[
         command: "claude",
         executables: &["claude"],
         packages: &["@anthropic-ai/claude-code", "/.local/share/claude/versions/"],
+        // Anthropic PBC's Developer ID, read off the 2.1 release binary.
+        signers: &[("com.anthropic.claude-code", "Q6L2SF6YDW")],
         monogram: "CC",
         logo: Some("agent-icons/claude.svg"),
         // Anthropic's orange: Lobe Icons' and Simple Icons' Claude (and Claude Code) colour.
@@ -107,6 +114,8 @@ pub static AGENTS: &[Agent] = &[
         command: "codex",
         executables: &["codex"],
         packages: &["@openai/codex"],
+        // OpenAI OpCo's Developer ID, read off the 0.163 release binary.
+        signers: &[("codex", "2DC432GLL2")],
         monogram: "CX",
         logo: Some("agent-icons/codex.svg"),
         // The deep blue end of Codex's own gradient mark (Lobe Icons' colour Codex: #b1a7ff, #7a9dff,
@@ -119,6 +128,7 @@ pub static AGENTS: &[Agent] = &[
         command: "gemini",
         executables: &["gemini"],
         packages: &["@google/gemini-cli"],
+        signers: &[],
         monogram: "GM",
         logo: Some("agent-icons/gemini.svg"),
         // Google's main blue, the first of the four stops in its own Gemini sparkle.
@@ -130,6 +140,7 @@ pub static AGENTS: &[Agent] = &[
         command: "copilot",
         executables: &["copilot"],
         packages: &["@github/copilot"],
+        signers: &[],
         monogram: "GC",
         logo: Some("agent-icons/copilot.svg"),
         tile: Tile::Black,
@@ -140,6 +151,7 @@ pub static AGENTS: &[Agent] = &[
         command: "cursor-agent",
         executables: &["cursor-agent"],
         packages: &["/cursor-agent/"],
+        signers: &[],
         monogram: "CA",
         logo: Some("agent-icons/cursor.svg"),
         tile: Tile::Black,
@@ -150,6 +162,7 @@ pub static AGENTS: &[Agent] = &[
         command: "opencode",
         executables: &["opencode"],
         packages: &["opencode-ai"],
+        signers: &[],
         monogram: "OC",
         logo: Some("agent-icons/opencode.svg"),
         tile: Tile::Black,
@@ -160,6 +173,7 @@ pub static AGENTS: &[Agent] = &[
         command: "aider",
         executables: &["aider"],
         packages: &["aider-chat"],
+        signers: &[],
         monogram: "AI",
         logo: None,
         // The dark green of Aider's own app icon (its site's apple-touch-icon), under a light "a".
@@ -171,6 +185,7 @@ pub static AGENTS: &[Agent] = &[
         command: "amp",
         executables: &["amp"],
         packages: &["@ampcode/cli", "@sourcegraph/amp"],
+        signers: &[],
         monogram: "AM",
         logo: Some("agent-icons/amp.svg"),
         // Black: ampcode.com's dark theme colour #091c1e is all but black.
@@ -182,6 +197,7 @@ pub static AGENTS: &[Agent] = &[
         command: "goose",
         executables: &["goose"],
         packages: &[],
+        signers: &[],
         monogram: "GO",
         logo: Some("agent-icons/goose.svg"),
         tile: Tile::Black,
@@ -192,6 +208,7 @@ pub static AGENTS: &[Agent] = &[
         command: "qwen",
         executables: &["qwen"],
         packages: &["@qwen-code/qwen-code"],
+        signers: &[],
         monogram: "QC",
         logo: Some("agent-icons/qwen.svg"),
         // The saturated blue of Qwen Code's docs site: its brand purple (Lobe Icons' #615ced) sat too close
@@ -204,6 +221,7 @@ pub static AGENTS: &[Agent] = &[
         command: "crush",
         executables: &["crush"],
         packages: &["@charmland/crush"],
+        signers: &[],
         monogram: "CR",
         logo: None,
         // Charm's "Charple" (charmbracelet/x `exp/charmtone`), Crush's primary.
@@ -215,6 +233,7 @@ pub static AGENTS: &[Agent] = &[
         command: "droid",
         executables: &["droid"],
         packages: &["@factory/cli"],
+        signers: &[],
         monogram: "FD",
         logo: None,
         tile: Tile::Black,
@@ -225,6 +244,7 @@ pub static AGENTS: &[Agent] = &[
         command: "auggie",
         executables: &["auggie"],
         packages: &["@augmentcode/auggie"],
+        signers: &[],
         monogram: "AU",
         logo: None,
         tile: Tile::Black,
@@ -235,6 +255,7 @@ pub static AGENTS: &[Agent] = &[
         command: "kiro-cli",
         executables: &["kiro-cli", "kiro-cli-chat"],
         packages: &[],
+        signers: &[],
         monogram: "KI",
         logo: Some("agent-icons/kiro.svg"),
         // The tile of kiro.dev's own icon (icon.svg), with a white ghost on it.
@@ -246,6 +267,7 @@ pub static AGENTS: &[Agent] = &[
         command: "cline",
         executables: &["cline"],
         packages: &["@cline/cli"],
+        signers: &[],
         monogram: "CL",
         logo: Some("agent-icons/cline.svg"),
         // Black: Cline's slate (#323b43 in Lobe Icons) is all but black.
@@ -258,6 +280,7 @@ pub static AGENTS: &[Agent] = &[
         executables: &["pi"],
         // The package moved from its author's scope to Earendil's; an older install keeps the first.
         packages: &["@mariozechner/pi-coding-agent", "@earendil-works/pi-coding-agent"],
+        signers: &[],
         monogram: "PI",
         logo: Some("agent-icons/pi.svg"),
         tile: Tile::Black,
@@ -269,6 +292,7 @@ pub static AGENTS: &[Agent] = &[
         command: "fm",
         executables: &["fm"],
         packages: &[],
+        signers: &[],
         monogram: "FM",
         // Apple's marks can't be bundled: the two letters stand.
         logo: None,

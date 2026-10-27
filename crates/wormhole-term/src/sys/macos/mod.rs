@@ -5,4 +5,5 @@ pub(super) mod codesign;
 mod ports;
 mod procargs;
 pub(super) mod process;
+mod signature;
 pub(super) mod socket;

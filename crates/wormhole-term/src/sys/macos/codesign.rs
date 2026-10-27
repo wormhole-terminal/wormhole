@@ -17,6 +17,8 @@ use security_framework_sys::code_signing::{SecCSFlags, SecCodeRef, SecStaticCode
 
 use crate::sys::codesign::{Refusal, Stage};
 
+pub(crate) use super::signature::of_pid;
+
 /// `kSecCSSigningInformation`: also read the signature's details, the team id among them.
 const SIGNING_INFORMATION: SecCSFlags = 1 << 1;
 
