@@ -11,6 +11,7 @@ pub mod command;
 mod density;
 mod drop;
 pub mod group_color;
+pub mod group_folder;
 pub mod groups;
 pub mod hints;
 mod listing;

@@ -34,6 +34,17 @@ pub struct TermGroup {
     /// them). Saved with the group in the window's layout, so a layout from before it loads with none.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub folder: Option<String>,
+    /// The person was asked whether new terminals should start in a folder and said no (or took the
+    /// folder away): not asked again. Setting a folder takes it back. Saved with the group, so a layout
+    /// from before it loads as not asked.
+    #[serde(skip_serializing_if = "is_false")]
+    pub folder_declined: bool,
+    /// Only the terminals in the folder stay in the group: one that goes to a folder outside it leaves, and
+    /// none from outside can be put in (a split counts as inside when any pane is). Needs a folder, and
+    /// clearing the folder turns it off. Like a pinned group, it stays when its last terminal goes, so moving
+    /// terminals out never ends it. Saved with the group, so a layout from before it loads with it off.
+    #[serde(skip_serializing_if = "is_false")]
+    pub only_in_folder: bool,
 }
 
 fn is_false(value: &bool) -> bool {
@@ -100,6 +111,8 @@ impl Groups {
             pinned: false,
             recovered: false,
             folder: None,
+            folder_declined: false,
+            only_in_folder: false,
         });
         id
     }
@@ -156,7 +169,7 @@ impl Groups {
     }
 
     fn drop_empty(&mut self) {
-        self.0.retain(|group| group.pinned || !group.members.is_empty());
+        self.0.retain(|group| group.pinned || group.only_in_folder || !group.members.is_empty());
     }
 
     /// Rename group `id`; a blank name keeps the old one.
@@ -182,17 +195,25 @@ impl Groups {
 
     /// Set the folder new terminals in group `id` start in, or take it away (`None`, or a blank
     /// path). A group with a folder is pinned, as a project is: it is a place, so it stays when its
-    /// last terminal closes. Taking the folder away leaves it pinned; unpinning is its own choice.
+    /// last terminal closes. Taking the folder away leaves it pinned (unpinning is its own choice) and
+    /// counts as saying no to having one: the group is not asked about a folder again. A folder set
+    /// takes any earlier no back.
     pub fn set_folder(&mut self, id: u32, folder: Option<&str>) {
         let folder = folder.map(str::trim).filter(|folder| !folder.is_empty());
         if let Some(group) = self.get_mut(id) {
+            if folder.is_some() {
+                group.folder_declined = false;
+            } else {
+                group.only_in_folder = false;
+                group.folder_declined |= group.folder.is_some();
+            }
             group.folder = folder.map(str::to_string);
             group.pinned |= folder.is_some();
         }
     }
 
-    /// Where a new terminal in group `id` starts: its folder, when it has one and that is still a
-    /// directory. `None` otherwise, and the terminal starts where it would have without a folder.
+    /// The folder group `id` itself has, when that is still a directory (`start_place` goes on to
+    /// where the group was last used when it isn't).
     pub fn start_folder(&self, id: u32) -> Option<String> {
         let folder = self.get(id)?.folder.as_deref()?;
         Path::new(folder).is_dir().then(|| folder.to_string())
@@ -419,6 +440,50 @@ mod tests {
         let old: Groups = serde_json::from_str(r#"[{"id":2,"name":"Docs","color":"blue","members":[1]}]"#)
             .unwrap_or_default();
         assert_eq!(old.get(2).map(|g| g.folder.clone()), Some(None));
+    }
+
+    #[test]
+    fn a_no_to_the_folder_question_is_saved_and_a_layout_from_before_loads_as_not_asked() {
+        let mut groups = Groups::default();
+        let a = groups.create(&[1]);
+        let plain = serde_json::to_string(&groups).unwrap_or_default();
+        assert!(!plain.contains("declined"), "{plain}");
+        groups.decline_folder(a);
+        let json = serde_json::to_string(&groups).unwrap_or_default();
+        assert!(json.contains(r#""folder_declined":true"#), "{json}");
+        let back: Groups = serde_json::from_str(&json).unwrap_or_default();
+        assert_eq!(back.get(a).map(|g| g.folder_declined), Some(true));
+        let old: Groups = serde_json::from_str(r#"[{"id":2,"name":"Docs","color":"blue","members":[1]}]"#)
+            .unwrap_or_default();
+        assert_eq!(old.get(2).map(|g| (g.folder_declined, g.only_in_folder)), Some((false, false)));
+    }
+
+    #[test]
+    fn keeping_only_the_folders_terminals_is_saved_with_the_group() {
+        let mut groups = Groups::default();
+        let a = groups.create(&[1]);
+        groups.set_folder(a, Some("/tmp/work"));
+        let plain = serde_json::to_string(&groups).unwrap_or_default();
+        assert!(!plain.contains("only_in_folder"), "{plain}");
+        groups.set_only_in_folder(a, true);
+        let json = serde_json::to_string(&groups).unwrap_or_default();
+        assert!(json.contains(r#""only_in_folder":true"#), "{json}");
+        assert_eq!(serde_json::from_str::<Groups>(&json).ok(), Some(groups));
+    }
+
+    #[test]
+    fn setting_a_folder_takes_a_no_back_and_taking_it_away_is_a_no() {
+        let mut groups = Groups::default();
+        let a = groups.create(&[1]);
+        groups.decline_folder(a);
+        groups.set_folder(a, Some("/tmp/work"));
+        assert!(groups.get(a).is_some_and(|g| !g.folder_declined));
+        groups.set_folder(a, None);
+        assert!(groups.get(a).is_some_and(|g| g.folder_declined));
+        // Nothing to take away is not a no.
+        let b = groups.create(&[2]);
+        groups.set_folder(b, None);
+        assert!(groups.get(b).is_some_and(|g| !g.folder_declined));
     }
 
     #[test]
