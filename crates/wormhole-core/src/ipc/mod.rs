@@ -13,6 +13,7 @@
 //! - `message`: the wire format;
 //! - `control`: the control requests and replies, their rules, limits and the command line's verbs;
 //! - `exchange`: the command line's round trip over the control socket, and the welcome's;
+//! - `mcp`: `wh mcp`, the same requests served to coding agents over MCP (stdin and stdout);
 //! - `instance`: who serves the socket;
 //! - `read_job`: a read of a terminal's screen, run by the socket thread;
 //! - `wait_job`: a `wait` or a `run`, which a thread of its own carries out and answers once;
@@ -34,6 +35,7 @@ pub(crate) mod exchange;
 pub mod host_binary;
 pub mod hosts;
 mod instance;
+mod mcp;
 mod message;
 mod read_job;
 mod server;
@@ -52,12 +54,21 @@ use crate::platform::user::UserId;
 use crate::storage::paths::data_dir;
 
 pub use client::{Command, command, run_cli, run_status_line_cli};
-pub use exchange::run as run_control_cli;
 pub use instance::{Instance, InstanceLock, Served, acquire, start_server};
 pub use message::Message;
 pub use read_job::ReadJob;
 pub use server::{ANCESTORS_MAX, Peer};
 pub use wait_job::WaitJob;
+
+/// `Wormhole <verb> …`: the command line's round trip to the app, or, for `mcp`, the MCP server (which is not
+/// a round trip: it serves its own stdin and stdout, and makes the round trips its callers ask for). The
+/// exit code. Here, above both, so that `exchange` and `mcp` (which uses it) do not need each other.
+pub fn run_control_cli(args: &[String]) -> i32 {
+    match args.split_first() {
+        Some((verb, rest)) if verb == "mcp" => mcp::run(rest),
+        _ => exchange::run(args),
+    }
+}
 
 /// What the socket hands the app.
 #[derive(Debug)]

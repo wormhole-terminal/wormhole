@@ -94,6 +94,9 @@ Wormhole: control the running app from the command line
       A new terminal in the front window (or --window), in a folder, running a command in its shell.
 {watching}
 {sessions}
+  {wh} mcp
+      Serve all of this to a coding agent over MCP (a stdio server: the agent starts it, e.g.
+      `claude mcp add wormhole -- {wh} mcp`). Same switches, same refusals; see the docs.
   {wh} welcome [-- <program> [<args>...]]
       The first-run welcome, in this terminal; then it starts <program> (your shell) here.
 
@@ -120,7 +123,7 @@ mod tests {
 
     #[test]
     fn the_sessions_verb_is_ours_and_in_the_usage() {
-        assert!(is_verb("sessions"));
+        assert!(is_verb("sessions") && is_verb("mcp"));
         let help = help();
         for line in ["sessions list", "sessions end <id> | --all", "sessions forget <id>"] {
             assert!(help.contains(line), "{line}");

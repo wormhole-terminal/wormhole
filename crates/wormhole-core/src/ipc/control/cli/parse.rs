@@ -361,7 +361,7 @@ fn opens(verb: &str) -> bool {
 
 /// `folder` as an absolute path: `~` is `home`, a relative path is under `cwd`. Nothing is
 /// checked on disk here: the app says whether the folder exists.
-fn resolve_folder(folder: &str, cwd: &Path, home: Option<&Path>) -> String {
+pub(in crate::ipc) fn resolve_folder(folder: &str, cwd: &Path, home: Option<&Path>) -> String {
     let path = match (folder, home) {
         ("~", Some(home)) => home.to_path_buf(),
         (folder, Some(home)) if folder.starts_with("~/") => home.join(&folder[2..]),

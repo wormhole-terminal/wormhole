@@ -8,6 +8,8 @@ use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::Shutdown;
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use super::Message;
@@ -54,9 +56,72 @@ impl Exchange {
     }
 }
 
+/// A way for another thread to end an exchange that is waiting for the app's answer (the MCP server's
+/// `notifications/cancelled`). Cancelling shuts the connection, which the app's side of a `wait` or a
+/// `run` notices within a second (`stream::client_gone`) and so gives its place back. The exchange then
+/// returns [`Exchange::NoAnswer`]; whoever cancelled knows why ([`Cancel::is_cancelled`]).
+#[derive(Debug, Default)]
+pub(crate) struct Cancel {
+    cancelled: AtomicBool,
+    connection: Mutex<Option<Stream>>,
+}
+
+impl Cancel {
+    /// End the exchange, now or, if it has not connected yet, as soon as it does.
+    pub(crate) fn cancel(&self) {
+        self.cancelled.store(true, Ordering::SeqCst);
+        if let Some(connection) = self.connection().take() {
+            let _ = connection.shutdown(Shutdown::Both);
+        }
+    }
+
+    pub(crate) fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::SeqCst)
+    }
+
+    /// Keep a handle on `stream` to shut it with; `false` when the exchange was cancelled already.
+    fn attach(&self, stream: &Stream) -> bool {
+        let mut connection = self.connection();
+        if self.is_cancelled() {
+            return false;
+        }
+        *connection = stream.try_clone().ok();
+        true
+    }
+
+    fn detach(&self) {
+        self.connection().take();
+    }
+
+    fn connection(&self) -> std::sync::MutexGuard<'_, Option<Stream>> {
+        self.connection.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+}
+
 /// Send `request` to the app at `socket` and read its reply, waiting at most `wait` for it.
 pub(crate) fn exchange(socket: &Path, request: &Request, wait: Duration) -> Result<Reply, Exchange> {
+    exchange_cancellable(socket, request, wait, None)
+}
+
+/// [`exchange`], which `cancel` can end from another thread.
+pub(crate) fn exchange_cancellable(
+    socket: &Path,
+    request: &Request,
+    wait: Duration,
+    cancel: Option<&Cancel>,
+) -> Result<Reply, Exchange> {
     let mut stream = Stream::connect(socket).map_err(|_| Exchange::NotRunning)?;
+    if cancel.is_some_and(|cancel| !cancel.attach(&stream)) {
+        return Err(Exchange::NoAnswer);
+    }
+    let answer = read_answer(&mut stream, request, wait);
+    if let Some(cancel) = cancel {
+        cancel.detach();
+    }
+    answer
+}
+
+fn read_answer(stream: &mut Stream, request: &Request, wait: Duration) -> Result<Reply, Exchange> {
     let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
     let _ = stream.set_read_timeout(Some(wait));
     let line = serde_json::to_string(&Message::Control(request.clone()))
@@ -65,7 +130,7 @@ pub(crate) fn exchange(socket: &Path, request: &Request, wait: Duration) -> Resu
     // The app reads lines until the connection ends on our side; the answer comes back on it.
     let _ = stream.shutdown(Shutdown::Write);
     let mut answer = String::new();
-    match BufReader::new(stream).take(REPLY_LIMIT).read_line(&mut answer) {
+    match BufReader::new(&*stream).take(REPLY_LIMIT).read_line(&mut answer) {
         Ok(0) => Err(Exchange::NoAnswer),
         Ok(_) => {
             serde_json::from_str(&answer).map_err(|e| Exchange::Broken(format!("unreadable reply: {e}")))
@@ -144,7 +209,7 @@ fn read_stream_line(reader: &mut BufReader<Stream>, reply: bool) -> Result<Optio
 const LINE_MAX: u64 = 2 << 20;
 
 /// `Wormhole <verb> …`: do the round trip and print the answer. Returns the exit code.
-pub fn run(args: &[String]) -> i32 {
+pub(crate) fn run(args: &[String]) -> i32 {
     // Session hosts are not the app's: this works from their files, with the app closed too.
     if args.first().map(String::as_str) == Some("sessions") {
         return sessions::run(&args[1..]);
@@ -177,10 +242,8 @@ pub fn run(args: &[String]) -> i32 {
             }
         }
     }
-    // Inside one of the app's tabs: say so. An empty value is the same as none.
-    let from = super::tab_var("WORMHOLE_TAB_ID").filter(|tab| !tab.trim().is_empty());
+    let Caller { socket, from } = Caller::from_env();
     let request = Request::new(action, from);
-    let socket = super::tab_var("WORMHOLE_SOCKET").map(PathBuf::from).unwrap_or_else(super::socket_path);
     if matches!(request.action, Action::Events(_)) {
         return watch(&socket, &request, json, home.as_deref());
     }
@@ -207,10 +270,28 @@ pub fn run(args: &[String]) -> i32 {
     exit_code_of(&request.action, &reply, cli.exit_code)
 }
 
+/// Where a command line sends its requests and who it says it is: the socket of the app whose tab it
+/// runs in (or the one of this user's own instance), and that tab's id.
+#[derive(Debug, Clone)]
+pub(crate) struct Caller {
+    pub(crate) socket: PathBuf,
+    /// The tab the caller runs in (`WORMHOLE_TAB_ID`), when it runs in one. An empty value is none.
+    pub(crate) from: Option<String>,
+}
+
+impl Caller {
+    pub(crate) fn from_env() -> Self {
+        Self {
+            socket: super::tab_var("WORMHOLE_SOCKET").map(PathBuf::from).unwrap_or_else(super::socket_path),
+            from: super::tab_var("WORMHOLE_TAB_ID").filter(|tab| !tab.trim().is_empty()),
+        }
+    }
+}
+
 /// How long to wait for the app's answer: a moment, except for `wait` and `run`, which answer when they
 /// are done: their own timeout, after the moment the app takes to decide, and a margin for it to say it
 /// ran out.
-fn answer_wait(action: &Action) -> Duration {
+pub(crate) fn answer_wait(action: &Action) -> Duration {
     let patient = match action {
         Action::Wait(spec) => spec.wait_for(),
         Action::Run(spec) => spec.wait_for(),

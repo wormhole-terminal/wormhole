@@ -42,7 +42,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub use cli::{COMMAND_NAME, Cli, Parsed, help, help_with, is_verb, parse, render, render_with};
-pub(in crate::ipc) use cli::{events, json_env, print, print_err, run_parts, show_automation};
+pub(in crate::ipc) use cli::{
+    events, json_env, print, print_err, resolve_folder, run_parts, show_automation,
+};
 pub use event::{Event, EventFilter, EventsSpec, Subscribed, Topic, Topics};
 pub use facts::{
     Asked, KeysSent, Listing, Opened, PaneInfo, Reached, SplitInfo, StatusInfo, Summary, TabInfo,

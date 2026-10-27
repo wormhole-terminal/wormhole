@@ -22,6 +22,7 @@ mod wait_text;
 
 pub use help::{help, help_with};
 pub use parse::parse;
+pub(in crate::ipc) use parse::resolve_folder;
 pub use render::{render, render_with};
 pub(in crate::ipc) use wait_text::run_parts;
 
@@ -89,6 +90,7 @@ pub fn is_verb(word: &str) -> bool {
             | "close"
             | "wait"
             | "run"
+            | "mcp"
             | "sessions"
             | "help"
             | "--help"
