@@ -100,4 +100,9 @@ impl Workspace {
             self.set_agent_hidden(ix, hidden, cx);
         }
     }
+
+    /// [`toggle_agent_hidden`](Self::toggle_agent_hidden) for the terminal in front (the menu's item).
+    pub(crate) fn toggle_active_agent_hidden(&mut self, cx: &mut Context<Self>) {
+        self.toggle_agent_hidden(self.active, cx);
+    }
 }

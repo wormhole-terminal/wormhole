@@ -144,6 +144,9 @@ fn within_scope(
     // among them (it would have to ask again).
     let hears_output = matches!(&request.action, Action::Events(_))
         && Need::of(&request.action) == Need::Capability(Capability::Read);
+    // The tests' blanket `allow` lifts the scopes for a stream as it does for the terminals a request names.
+    #[cfg(test)]
+    let hears_output = hears_output && !state(cx).unscoped;
     let readable = hears_output.then(|| {
         let visible = visible_terminals(peer, cx);
         state(cx).scopes.readable(&resolved.identity, resolved.process, &own, visible)

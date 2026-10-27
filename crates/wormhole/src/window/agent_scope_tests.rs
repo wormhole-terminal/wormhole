@@ -338,7 +338,9 @@ fn list_and_status_leave_hidden_terminals_out_and_a_program_inside_one_still_rea
         return;
     }
     let window = start(cx, 3);
-    testing::allow(cx, false, false);
+    // Read is held: without it the gate asks before it looks a terminal up, and a missing id and a hidden
+    // one are refused alike (not allowed), which leaks nothing but is not what this is about.
+    testing::allow(cx, true, false);
     drive(cx, &window, |ws, _, cx| ws.set_agent_hidden(1, true, cx));
     let ids = |reply: &Reply| -> Vec<i64> {
         reply.result.as_ref().expect("a result")["windows"][0]["terminals"]
@@ -355,8 +357,8 @@ fn list_and_status_leave_hidden_terminals_out_and_a_program_inside_one_still_rea
         reply(answer(cx, request(serde_json::json!({ "version": 1, "action": "status" })), &outside()));
     assert!(summary.ok, "{summary:?}");
     assert_eq!(summary.result.as_ref().expect("a summary")["terminals"], 2, "{summary:?}");
-    // A program that runs inside the hidden terminal reads itself (Ask, nothing allowed: a read of its own
-    // terminal needs no approval), and outside it the same read finds nothing.
+    // A program that runs inside the hidden terminal reads itself (a read of its own terminal needs no
+    // approval), and outside it the same read finds nothing.
     let shell = terminal(cx, &window, 1).read_with(cx, |t, _| t.shell_pid()).expect("a shell runs");
     let inside = Peer::new(900_001, vec![shell]);
     let own = reply(answer(cx, reading(2), &inside));
@@ -393,4 +395,27 @@ fn a_hidden_terminal_comes_back_hidden_and_is_part_of_what_is_saved(cx: &mut Tes
     let shown =
         cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.sessions[0].record(cx)).expect("open"));
     assert!(!shown.agent_hidden);
+}
+
+#[gpui_kit::test]
+fn a_new_terminal_does_not_start_in_the_folder_of_a_hidden_one_in_front(cx: &mut TestAppContext) {
+    if isolate("a_new_terminal_does_not_start_in_the_folder_of_a_hidden_one_in_front") {
+        return;
+    }
+    let window = start(cx, 2);
+    testing::allow(cx, true, true);
+    let secret = std::env::temp_dir().join("hidden-terminal-folder");
+    drive(cx, &window, |ws, _, cx| {
+        let active = ws.active;
+        ws.sessions[active].terminal().update(cx, |terminal, _| terminal.cwd = Some(secret.clone()));
+        ws.set_agent_hidden(active, true, cx);
+    });
+    let opened =
+        reply(answer(cx, request(serde_json::json!({ "version": 1, "action": "new_terminal" })), &outside()));
+    assert!(opened.ok, "{opened:?}");
+    let folder = opened.result.as_ref().and_then(|result| result["folder"].as_str());
+    assert!(
+        folder.is_none_or(|folder| !folder.contains("hidden-terminal-folder")),
+        "the hidden terminal's folder was told: {folder:?}"
+    );
 }

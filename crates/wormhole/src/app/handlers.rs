@@ -17,8 +17,8 @@ use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::sidebar::TerminalsIn;
 
 use crate::actions::{
-    About, BringAllToFront, CheckForUpdates, GoToFinished, GoToWaiting, Hide, HideOthers, Licenses,
-    ManageProfiles, Minimize, MoveWindowToProfile, NewProfile, NewWindow, OpenFolder, OpenRecent,
+    About, BringAllToFront, CheckForUpdates, GoToFinished, GoToWaiting, Hide, HideFromAgents, HideOthers,
+    Licenses, ManageProfiles, Minimize, MoveWindowToProfile, NewProfile, NewWindow, OpenFolder, OpenRecent,
     OpenSettings, OpenSettingsAt, OpenWindowInProfile, PlayIntroAurora, PlayIntroCollapse, PlayIntroEmerge,
     PlayIntroFtl, PlayIntroTentacles, PlayIntroVortex, PlayIntroVoyage, PlayWelcomeCursor, PlayWelcomeLogo,
     PlayWelcomePortal, RevealSetting, ShowAll, ShowIntro, ShowKeyboardShortcuts, ShowLogs, SwitchProfile,
@@ -51,6 +51,15 @@ pub(crate) fn init(cx: &mut App) {
     // Global listeners run inside the update of the window the action came from, which is then
     // unavailable: whatever opens or acts on windows is deferred.
     cx.on_action(|_: &NewWindow, cx| cx.defer(window_lifecycle::new_window_from_front));
+    // Here and not on the window's root: a listener there is rebuilt, and allocated, in every frame. The menu
+    // greys the item where it can't act (the Automation feature is off).
+    cx.on_action(|_: &HideFromAgents, cx| {
+        cx.defer(|cx| {
+            if let Some(window) = AppState::front_window(cx) {
+                AppState::with_workspace(&window, cx, |ws, _, cx| ws.toggle_active_agent_hidden(cx));
+            }
+        });
+    });
     cx.on_action(|_: &CheckForUpdates, cx| {
         cx.defer(|cx| {
             settings_window::open_settings(Some(settings_window::Section::Updates), cx);

@@ -86,6 +86,8 @@ gpui_kit::assets::icon_assets!(
         Trash,
         // A submodule's row in the Changes and History lists.
         FolderGit2,
+        // A terminal hidden from agents, in the sidebar row.
+        Lock,
     ]
 );
 
