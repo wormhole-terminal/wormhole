@@ -125,6 +125,8 @@ mod profile_look_tests;
 mod published;
 #[cfg(test)]
 mod read_tests;
+#[cfg(test)]
+mod structure_tests;
 mod regions;
 #[cfg(test)]
 mod regions_tests;
