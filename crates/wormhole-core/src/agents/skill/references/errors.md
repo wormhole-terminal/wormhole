@@ -23,7 +23,7 @@ refusal, bad arguments or a timeout: use `--json` when it matters.
 - `version` (exit 2): the command line and the app speak different protocols. Ask the user to update Wormhole; do not retry.
 - `bad_request` (2): wrong arguments. The message says which; fix them.
 - `not_found` (1): no such terminal, window or folder, or its shell ended (`reason: exited`). Re-read ids with `wh list --json`.
-- `not_allowed` (1): a Settings switch is off; the message names it. Ask the user; never try to get around it.
+- `not_allowed` (1): the user has not let your program do this: agent access is off, or they answered Don't Allow, or a question is waiting for them; the reason says which. Ask the user; never try to get around it.
 - `refused` (1): allowed in general, not into this terminal now; see the reasons.
 - `rate_limited` (1): too many requests of this kind. `error.retry_after_s` is how many seconds to wait (the message says the same); wait that long, then ask less often.
 - `too_large` (1): over a size cap (16 KiB of text, 64 keys, 5000 lines). Send or ask for less.
@@ -42,6 +42,13 @@ refusal, bad arguments or a timeout: use `--json` when it matters.
 - `flag_off`: the Automation flag is off in this Wormhole; `wh doctor` says how to turn it on.
 - `run_pending`: a `run` is under way in that terminal; wait for it.
 - `hidden_profile`: the terminal is in a window of a profile that is not shown; leave it alone.
+- `approval_needed`: the user has not let your program in, and Wormhole has asked them in its window (the caller did not wait for the answer). Tell them a question is waiting; try once more after they have answered.
+- `ask_timed_out`: nobody answered the question within a minute; it counts as no, without being remembered. Tell the user; try again only after they say they have looked.
+- `declined`: the user chose Don't Allow. Do not retry or look for another way in; ask the user to allow it in Settings → Coding agents → Agent access.
+- `declined_recently`: the user said no a moment ago; Wormhole does not ask again for two minutes. Do not retry; ask the user.
+- `agent_access_off`: Agent access is switched off in Settings. Ask the user to turn it on.
+- `identity_changed`: the program asking changed while Wormhole looked at it; try the request once more.
+- `too_many_questions`: several questions are already waiting for the user; wait, then try again.
 
 ## The refusals that protect the user
 

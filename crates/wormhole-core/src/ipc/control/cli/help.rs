@@ -75,7 +75,7 @@ pub fn help_with(automation: bool) -> String {
         String::new()
     };
     let reading = if automation {
-        " Reading what terminals show is off until \"Let the command line read terminals\" is on;\na terminal can always read itself."
+        " Reading other terminals, typing and opening need the user's yes, asked in Wormhole's window the first\ntime (Settings → Coding agents → Agent access); a terminal can always read itself."
     } else {
         ""
     };

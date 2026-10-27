@@ -2,7 +2,7 @@
 
 When the user has added `wh mcp` to your configuration (for Claude Code,
 `claude mcp add wormhole -- wh mcp`), the same operations are tools. They make the same requests over
-the same socket, so the switches, budgets and refusals are the same; read a refusal's text, which
+the same socket, so the permissions, budgets and refusals are the same; read a refusal's text, which
 says what to turn on. Tools show as `mcp__wormhole__<name>`. Call `doctor` first: it says
 what is on. (`wh doctor` in a shell adds the skill's state and the fix for each problem.)
 
@@ -13,7 +13,7 @@ what is on. (`wh doctor` in a shell adds the skill's state and the fix for each 
 | `read_terminal` | `wh read`: the screen, `last_lines`, `from_line` and `to_line`, or a `block`; `join`, `styles` |
 | `list_blocks` | `wh blocks`: `last`, `include_output` |
 | `notify` | `wh notify`: `title`, `body` |
-| `doctor` | `wh doctor`'s app half: version, protocol, the Automation flag, both switches, your own terminal and whether its shell reports commands. Call it first |
+| `doctor` | `wh doctor`'s app half: version, protocol, the Automation flag, how agent access is set and where your program stands, your own terminal and whether its shell reports commands. Call it first |
 | `send_text` | `wh send-text`: `text`, `submit` |
 | `send_keys` | `wh send-keys`: `keys` as `"ctrl-c"`, `{"text":"ls"}`, `{"text":"…","paste":true}` |
 | `mouse` | `wh mouse`: `action`, `row`, `col` |

@@ -24,7 +24,7 @@ use super::result::Outcome;
 use crate::ipc::control::event::{EventFilter, EventLine, Notice, StreamLine, Subscribed};
 use crate::ipc::control::events::{self, Style};
 use crate::ipc::control::{Action, EventsSpec, Reply, Request};
-use crate::ipc::exchange::{Caller, Cancel, exchange_stream};
+use crate::ipc::exchange::{Caller, Cancel, asking_if_needed, exchange_stream};
 
 /// The longest one call waits for the first event, in seconds.
 pub(super) const EVENTS_WAIT_MAX: u64 = 30;
@@ -333,7 +333,7 @@ fn snapshot(at: &Endpoint, cancel: &Cancel) -> Option<Outcome> {
 
 /// The thread that drains one subscription into the buffer.
 fn pump(shared: &Shared, caller: &Caller, spec: EventsSpec, generation: u64) {
-    let request = Request::new(Action::Events(spec), caller.from.clone());
+    let request = asking_if_needed(Request::new(Action::Events(spec), caller.from.clone()));
     let current = |state: &State| state.generation == generation;
     let on_reply = |_: &str, reply: Reply| {
         let mut state = shared.lock();

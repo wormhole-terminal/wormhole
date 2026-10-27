@@ -3,8 +3,9 @@
 Every verb of `wh`, with the flags worth knowing. `wh help --json` prints all of it as data, from the
 parser's own tables; use that when this page and the program disagree. A target is
 `--terminal <id>` (`--tab` and `--pane` name the same terminal); ids come from `wh list --json`.
-Every verb takes `--json`. Needs: **flag** is the Automation flag, **write** the user's `control_write`
-switch, **read** their `control_read` switch (never needed for your own terminal).
+Every verb takes `--json`. Needs: **flag** is the Automation flag, **write** the user's permission to type,
+run and open (Settings → Coding agents → Agent access; the first request asks them), **read** their permission
+to read other terminals (never needed for your own terminal).
 
 ## Looking
 

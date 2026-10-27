@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use super::result::Outcome;
 use crate::ipc::control::{Action, Request, show_automation};
-use crate::ipc::exchange::{Caller, Cancel, answer_wait, exchange_cancellable};
+use crate::ipc::exchange::{Caller, Cancel, asking_if_needed, exchange_cancellable, request_wait};
 use crate::platform::paths;
 
 /// Where requests go, who they come from, and what a relative folder is relative to.
@@ -38,8 +38,8 @@ impl Endpoint {
 /// cancelled.
 pub(super) fn run(at: &Endpoint, action: Action, cancel: &Cancel) -> Outcome {
     // A tool waits as long as the request says (a `wait` or a `run`), and the moment the app takes to decide.
-    let request = Request::new(action, at.caller.from.clone());
-    let wait: Duration = answer_wait(&request.action);
+    let request = asking_if_needed(Request::new(action, at.caller.from.clone()));
+    let wait: Duration = request_wait(&request);
     match exchange_cancellable(&at.caller.socket, &request, wait, Some(cancel)) {
         Ok(reply) => Outcome::of_reply(&request.action, &reply, at.home.as_deref()),
         Err(failure) => Outcome::failed("unavailable", failure.words()),

@@ -103,14 +103,15 @@ fn a_tool_call_makes_the_request_wh_would_and_returns_text_and_structured_conten
     let text = result["content"][0]["text"].as_str().expect("text");
     assert!(text.contains("window 1") && text.contains("api"), "{text}");
     assert_eq!(result["content"][0]["type"], json!("text"));
-    // The request is the command line's, from this process's tab.
+    // The request is the command line's, from this process's tab; one that needs the user's approval says
+    // that it will wait for it.
     assert_eq!(app.requests(), [json!({"version": 1, "from": "7", "action": "list"})]);
 
     let response = client.tool("read_terminal", json!({"terminal": 3, "last_lines": 20}));
     assert_eq!(response["result"]["isError"], json!(false));
     assert_eq!(
         app.requests()[1],
-        json!({"version": 1, "from": "7", "action": "read", "target": {"kind": "terminal", "id": 3},
+        json!({"version": 1, "from": "7", "ask": true, "action": "read", "target": {"kind": "terminal", "id": 3},
                "range": {"kind": "last", "lines": 20}})
     );
     assert_eq!(client.finish(), 0);

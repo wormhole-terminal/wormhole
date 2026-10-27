@@ -181,6 +181,32 @@ fn every_exit_code_error_code_and_reason_is_in_the_errors_reference() {
     }
 }
 
+/// A refusal that is the user's no must tell an agent not to try again, in the reasons' advice, in the errors
+/// reference and in the skill's rules; and the skill must tell what to do while a question is on the user's
+/// screen. (The user's no is the one answer an agent must not be able to wear down.)
+#[test]
+fn the_skill_says_never_to_retry_a_no_and_what_to_do_while_the_user_is_asked() {
+    let errors = file("references/errors.md").expect("the errors reference").text;
+    let skill = file("SKILL.md").expect("the skill").text;
+    for reason in [Reason::Declined, Reason::DeclinedRecently] {
+        assert!(reason.advice().to_lowercase().contains("not retry"), "{}", reason.word());
+        let line = errors
+            .lines()
+            .find(|line| line.starts_with(&format!("- `{}`", reason.word())))
+            .unwrap_or_else(|| panic!("the errors reference has no line for `{}`", reason.word()));
+        assert!(line.to_lowercase().contains("not retry"), "{line}");
+        assert!(skill.contains(reason.word()), "SKILL.md never mentions `{}`", reason.word());
+    }
+    for word in ["approval_needed", "ask_timed_out"] {
+        assert!(skill.contains(word), "SKILL.md never mentions `{word}`");
+    }
+    // The wait is stated as the command line does it, and its length as the protocol's constant has it.
+    let flat = skill.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert!(flat.contains("waiting for your answer in Wormhole"), "{flat}");
+    assert!(flat.contains("up to a minute"), "{flat}");
+    assert_eq!(control::ASK_WAIT_S, 60, "the skill and the docs say a minute");
+}
+
 /// What a flag's value looks like in an example.
 fn sample(value: &str) -> &'static str {
     match value {

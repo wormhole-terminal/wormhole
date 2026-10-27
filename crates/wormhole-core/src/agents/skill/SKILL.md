@@ -13,9 +13,10 @@ the programs in them, are yours to drive, within what the user has switched on.
 
 ## Start here
 
-1. Run `wh doctor --json`. It says whether the app answers, whether the Automation flag and the two
-   switches (`control_write`, `control_read`) are on, which terminal you are in and whether its shell reports
-   commands, and for each problem the exact fix. Exit 0 means the app answered, 3 that it did not.
+1. Run `wh doctor --json`. It says whether the app answers, whether the Automation flag is on, how the user
+   set Agent access (`off`, `ask`, `open`) and where you stand (`not_asked`, `session`, `until_quit`,
+   `always`, `declined_recently`), which terminal you are in and whether its shell reports commands, and for
+   each problem the exact fix. Exit 0 means the app answered, 3 that it did not.
 2. Get ids from `wh list --json` (`result.windows[].terminals[].id`). A terminal is named with
    `--terminal <id>`. `wh status --json` with no target is about your own terminal.
 3. Always pass `--json` (or set `WORMHOLE_JSON=1`) and read the reply: `ok`, `result`, and on failure
@@ -24,9 +25,17 @@ the programs in them, are yours to drive, within what the user has switched on.
 
 ## Rules that are not negotiable
 
-- **Never get around a switch.** `not_allowed` means the user has not turned something on in Wormhole's
-  Settings (the message names the switch). Tell the user which one and why; do not retry, do not look for
-  another way in, do not edit `config.json`.
+- **Never get around a refusal.** `not_allowed` means the user has not let you do this: agent access is
+  off, or they answered Don't Allow (`reason` says which; the message names the setting). Tell the user
+  what you wanted to do and why; do not retry, do not look for another way in, do not edit `config.json`.
+- **A question may be waiting for the user.** The first time you read another terminal, type, run or open
+  something, Wormhole shows the user "Allow <your program> to control Wormhole?" and `wh` waits up to a
+  minute, printing "waiting for your answer in Wormhole" on stderr. Say so to the user if it takes long. On
+  `approval_needed` (a caller that cannot wait) or `ask_timed_out` the question is still on their screen:
+  tell them, and try once more after they say they have answered. On `declined` or `declined_recently` stop:
+  the user said no, and nothing you do changes that. Their answer covers you while your process runs, until
+  Wormhole quits, or for good, as they chose; a script you start is "Scripts", one identity, and is asked on
+  its own.
 - **Never answer for the user.** Do not type into a terminal that is waiting for the user's answer (an
   agent's permission prompt, a question, a password). Wormhole refuses it (`refused`); do not work around
   it. Do not approve another agent's prompts.
@@ -64,10 +73,10 @@ non-trivial job: the order of the calls matters (take a block id before you send
 ## What each call needs
 
 Most verbs need the **Automation** flag. `wh doctor` reports it; `flag_off` in an error means it is off.
-Typing, running and opening need the user's `control_write` switch; reading *other* terminals needs
-`control_read`. A terminal can always read itself. Even a split you just opened is another terminal:
-reading it needs `control_read`. Without it use `wait --status`, `--stable` and `--block-done`, which
-need nothing, and `run` still gives you the exit code.
+Typing, running, opening and reading *other* terminals need the user to have let your program in (above).
+A terminal can always read itself. Even a split you just opened is another terminal until the user allows
+reading. Without that, use `wait --status`, `--stable` and `--block-done`, which need nothing, and `run`
+still gives you the exit code. `list`, `status`, `notify` and `doctor` need nothing.
 
 ## More
 

@@ -1,4 +1,4 @@
-//! Typing and clicking: `send_text`, `send_keys` and `mouse`. All three need `control_write` and never go
+//! Typing and clicking: `send_text`, `send_keys` and `mouse`. All three need the person's permission to type and open and never go
 //! into the caller's own terminal or one that is waiting for the person: the app decides, as for `wh`.
 
 use serde::Deserialize;
@@ -21,8 +21,8 @@ pub(super) const TOOLS: &[Tool] = &[
         description: "Paste text into a terminal as the person would (wrapped in bracketed-paste markers when the \
             program asked for them); with `submit` it then presses Return. Use it to type a command or a prompt \
             into a shell or another agent. To press special keys (ctrl-c, arrows, escape) use send_keys. To run \
-            a command and get its output and exit code use `run`. Needs Settings > Coding agents > \"Let the \
-            command line type and open terminals\" (control_write). Refused for your own terminal and for a \
+            a command and get its output and exit code use `run`. Needs the person's permission to type and open (Settings > Coding \
+            agents > Agent access; the first call asks them). Refused for your own terminal and for a \
             terminal that is waiting for the person's answer (status needs_you).",
         hints: Hints::DRIVES,
         long: false,
@@ -40,7 +40,7 @@ pub(super) const TOOLS: &[Tool] = &[
             string such as \"ctrl-c\"; {\"text\": \"ls\"} types a string key by key as typing would (printable \
             characters only), {\"text\": \"...\", \"paste\": true} pastes it. A key that makes the program \
             change its modes should end the call. Use this to drive TUIs, REPLs and other agents' UIs; read \
-            the result with read_terminal. Needs control_write; same refusals as send_text.",
+            the result with read_terminal. Needs the person's permission to type and open; same refusals as send_text.",
         hints: Hints::DRIVES,
         long: false,
         flag: true,
@@ -54,7 +54,7 @@ pub(super) const TOOLS: &[Tool] = &[
         description: "Click, press, release, move (with `button` set: drag) or scroll the wheel at a cell of a \
             terminal, for a program that asked for the mouse (reported by read_terminal as modes.mouse). \
             Rows and columns count from 0 at the screen's top left. A terminal whose program did not ask for \
-            the mouse refuses (no_mouse): Wormhole does not emulate selection. Needs control_write; same \
+            the mouse refuses (no_mouse): Wormhole does not emulate selection. Needs the person's permission to type and open; same \
             refusals as send_text.",
         hints: Hints::DRIVES,
         long: false,

@@ -20,7 +20,7 @@ pub(super) const TOOLS: &[Tool] = &[
         description: "Open a new terminal (a new sidebar row) in a Wormhole window, in a folder, optionally \
             running a command in its shell. Returns its window and terminal ids; the command is typed into \
             the shell, so use `wait` or `run` to follow it. With `worktree` it asks the person to create a \
-            git worktree on that branch first and the terminal opens once they confirm. Needs control_write.",
+            git worktree on that branch first and the terminal opens once they confirm. Needs the person's permission to type and open.",
         hints: Hints::DRIVES,
         long: false,
         flag: false,
@@ -33,7 +33,7 @@ pub(super) const TOOLS: &[Tool] = &[
         title: "Open a window",
         description: "Open a new Wormhole window with one terminal, in a folder, optionally running a command. It \
             opens behind your other windows and takes no keyboard focus unless `activate`. Returns the window \
-            and terminal ids. Needs control_write.",
+            and terminal ids. Needs the person's permission to type and open.",
         hints: Hints::DRIVES,
         long: false,
         flag: true,
@@ -47,7 +47,7 @@ pub(super) const TOOLS: &[Tool] = &[
         description: "Open a new terminal beside a terminal, shown together with it in a split: in its folder and \
             shell unless `folder` is given, optionally running a command (for example a dev server next to \
             yourself). The selection and the keyboard stay where they are unless `select`. Nothing changes \
-            when the window has no room (refused, no_room). Returns the new terminal's id. Needs control_write.",
+            when the window has no room (refused, no_room). Returns the new terminal's id. Needs the person's permission to type and open.",
         hints: Hints::DRIVES,
         long: false,
         flag: true,
@@ -60,7 +60,7 @@ pub(super) const TOOLS: &[Tool] = &[
         title: "Focus a terminal",
         description: "Select a terminal in its window's sidebar and show its split. The keyboard stays where it \
             was, and no other app is interrupted, unless `activate`, which also gives the terminal the keys \
-            and brings its window forward. Needs control_write.",
+            and brings its window forward. Needs the person's permission to type and open.",
         hints: Hints::ARRANGES,
         long: false,
         flag: true,
@@ -72,7 +72,7 @@ pub(super) const TOOLS: &[Tool] = &[
         name: "rename",
         title: "Rename a terminal",
         description: "Name a terminal as the sidebar's rename does (one line, cut to 64 characters). An empty or \
-            missing `name` gives the terminal its automatic name back. Needs control_write.",
+            missing `name` gives the terminal its automatic name back. Needs the person's permission to type and open.",
         hints: Hints::ARRANGES,
         long: false,
         flag: true,
@@ -86,7 +86,7 @@ pub(super) const TOOLS: &[Tool] = &[
         description: "Ask the person whether to close a terminal. Nothing closes on your say: the result only \
             says that the question is up in the terminal's window, and it does not tell the answer (the \
             terminal disappearing from list_terminals does). Refused while a close question is already up in \
-            that window (question_open). Needs control_write.",
+            that window (question_open). Needs the person's permission to type and open.",
         hints: Hints { read_only: false, destructive: true, idempotent: false, open_world: false },
         long: false,
         flag: true,

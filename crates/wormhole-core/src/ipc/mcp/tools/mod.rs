@@ -3,7 +3,7 @@
 //! annotations that are true).
 //!
 //! There is no policy here. A tool builds the same [`Action`] the command line builds and the app decides
-//! as it does for `wh`: the switches (`control_write`, `control_read`), the budgets, the refusals and the
+//! as it does for `wh`: the person's permissions, the budgets, the refusals and the
 //! automation flag are all the app's. A tool's arguments are checked for their shape only (serde, with
 //! unknown fields refused so a misspelt one is told, not ignored); the bounds the schemas state are the
 //! app's own caps, which it enforces.

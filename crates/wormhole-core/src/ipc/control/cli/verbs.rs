@@ -11,10 +11,10 @@
 pub(in crate::ipc) enum Need {
     /// The Automation feature flag (Settings → Feature flags).
     Automation,
-    /// Settings → Coding agents → "Let the command line type and open terminals" (`control_write`).
+    /// The user's yes to typing, running and opening: Agent access (or, with the flag off, "Let the command line
+    /// type and open terminals", `control_write`).
     Write,
-    /// Settings → Coding agents → "Let the command line read terminals" (`control_read`); a terminal
-    /// can always read itself.
+    /// The user's yes to reading other terminals (Agent access); a terminal can always read itself.
     Read,
 }
 

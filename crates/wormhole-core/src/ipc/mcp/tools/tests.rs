@@ -41,6 +41,7 @@ fn wormhole_core_doctor_facts() -> crate::ipc::control::doctor::Facts {
         control_write: false,
         control_read: false,
         caller: Some(Caller { terminal: 3, verified: true, shell_integration: Some(true) }),
+        access: None,
     }
 }
 
