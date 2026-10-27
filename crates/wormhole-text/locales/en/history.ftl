@@ -20,14 +20,25 @@ history-files = { $count ->
 
 history-reading-details = Reading details…
 
-# Under a message that was cut because it is very long, or that is shown cut.
+# Under a message that is longer than what the tab draws: the copy has all of it.
 history-message-continues = The message goes on: copy it to read all of it.
+
+# Under a message that is longer than Wormhole reads, so the copy is cut too. { $short } is the commit's
+# short hash.
+history-message-too-long = This message is too long to read in full here: git show { $short } prints it.
 
 # After the branches and tags shown, how many more point at the commit. { $count } is a whole number.
 history-more-refs = +{ $count }
 
 # After the parents shown, how many more a merge has. { $count } is a whole number.
 history-more-parents = +{ $count }
+
+# After the co-authors listed, how many more there are. { $count } is a whole number.
+history-more-co-authors = +{ $count }
+
+# What a commit changed: { $files } is "2 files" (the line above), { $added } and { $removed } the lines
+# added and removed, each with its sign. The numbers are tinted where they stand.
+history-changes-line = { $files } { $added } { $removed }
 
 # After the short hash in the list: this commit has more than one parent.
 history-merge = merge

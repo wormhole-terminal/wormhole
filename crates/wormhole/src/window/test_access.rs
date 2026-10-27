@@ -3,6 +3,7 @@
 //! looks at the few things below, so no field has to be wider than the window for a test's sake.
 
 use wormhole_core::config::TabId;
+use wormhole_core::view::focus::Area;
 use wormhole_core::view::layout::Panes;
 
 use super::Workspace;
@@ -44,6 +45,16 @@ impl Workspace {
     /// F6's areas, read only.
     pub(crate) fn areas(&self) -> &FocusAreas {
         &self.areas
+    }
+
+    /// The keys go to `area`, as after a key that moved them there (`refocus` stays the window's).
+    pub(crate) fn focus_area_of(
+        &self,
+        area: Area,
+        window: &mut gpui_kit::Window,
+        cx: &mut gpui_kit::Context<Self>,
+    ) {
+        self.refocus(area, window, cx);
     }
 
     /// A "close this terminal?" question is on screen.

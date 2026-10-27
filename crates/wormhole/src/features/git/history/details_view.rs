@@ -121,8 +121,11 @@ impl HistoryView {
             if !shown.trailers.is_empty() {
                 out.push(line(ui.muted, shown.trailers.clone()).into_any_element());
             }
-            if shown.continues {
+            if shown.body_cut {
                 out.push(line(ui.muted, text(keys::HISTORY_MESSAGE_CONTINUES).into()).into_any_element());
+            }
+            if let Some(note) = &shown.message_cut {
+                out.push(line(ui.muted, note.clone()).into_any_element());
             }
         } else if !compact.is_empty() {
             out.push(line(ui.text, compact).into_any_element());

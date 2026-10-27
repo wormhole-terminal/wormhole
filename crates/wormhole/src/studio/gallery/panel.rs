@@ -322,8 +322,18 @@ pub(super) fn render(
                     .items_center()
                     .gap_2()
                     .px(px(style::CARD_INSET + style::INDENT))
-                    .child(style::more_toggle("g-commit-more", ui, "Show more", false))
-                    .child(style::hash_link("g-commit-parent", ui, "295829f", "Open parent 295829f")),
+                    .child(style::more_toggle(
+                        "g-commit-more",
+                        ui,
+                        wormhole_text::text(wormhole_text::keys::HISTORY_SHOW_MORE),
+                        false,
+                    ))
+                    .child(style::hash_link(
+                        "g-commit-parent",
+                        ui,
+                        "295829f",
+                        wormhole_text::keys::history_open_parent("295829f"),
+                    )),
             )
             .child(commit("g-commit-merge", "Merge branch 'dev' into main", "5be0a41", "2h", false, true))
     };

@@ -30,11 +30,12 @@ impl CopyWhat {
     pub(crate) const ALL: [Self; 5] =
         [Self::Hash, Self::ShortHash, Self::Message, Self::Subject, Self::Author];
 
-    /// The notice that says it was copied.
-    fn notice(self) -> Copied {
+    /// The notice that says it was copied: a message that was cut says so, not that the message was copied.
+    fn notice(self, details: Option<&CommitDetails>) -> Copied {
         match self {
             Self::Hash => Copied::CommitHash,
             Self::ShortHash => Copied::CommitShortHash,
+            Self::Message if details.is_some_and(|d| d.message_cut) => Copied::CommitMessageCut,
             Self::Message => Copied::CommitMessage,
             Self::Subject => Copied::CommitSubject,
             Self::Author => Copied::CommitAuthor,
@@ -74,8 +75,10 @@ impl History {
         let Some(state) = self.of.get_mut(&session) else { return };
         let Some(commit) = state.commits.iter().find(|c| c.sha == sha).cloned() else { return };
         let handle = window.window_handle();
-        if let Some(text) = what.text(&commit, state.details_of(sha).map(|shown| &shown.details)) {
-            put(text, what, handle, cx);
+        let kept = state.details_of(sha).map(|shown| &shown.details);
+        if let Some(text) = what.text(&commit, kept) {
+            let said = what.notice(kept);
+            put(text, said, handle, cx);
             return;
         }
         debug_assert!(what.needs_details());
@@ -95,12 +98,12 @@ impl History {
         if pending.asked.elapsed() > COPY_PATIENCE {
             return;
         }
+        let details = state.details_of(sha).map(|shown| &shown.details);
         let text =
-            state.commits.iter().find(|c| c.sha == sha).and_then(|commit| {
-                pending.what.text(commit, state.details_of(sha).map(|shown| &shown.details))
-            });
+            state.commits.iter().find(|c| c.sha == sha).and_then(|commit| pending.what.text(commit, details));
+        let said = pending.what.notice(details);
         match text {
-            Some(text) => put(text, pending.what, pending.window, cx),
+            Some(text) => put(text, said, pending.window, cx),
             None => crate::notice::post_to(pending.window, Failed::CopyCommit, None, cx),
         }
     }
@@ -122,9 +125,9 @@ impl History {
 }
 
 /// Writes `text` to the clipboard and says what it was in the window that asked.
-fn put(text: String, what: CopyWhat, window: AnyWindowHandle, cx: &mut App) {
+fn put(text: String, said: Copied, window: AnyWindowHandle, cx: &mut App) {
     crate::platform::clipboard::write(text, cx);
-    crate::notice::post_to(window, what.notice(), None, cx);
+    crate::notice::post_to(window, said, None, cx);
 }
 
 #[cfg(test)]
@@ -142,6 +145,7 @@ mod tests {
             author: "Ada".into(),
             time: 0,
             subject: "fix: it".into(),
+            refs: Vec::new(),
         }
     }
 
@@ -172,6 +176,17 @@ mod tests {
         assert_eq!(CopyWhat::Subject.text(&commit, Some(&read)), Some("first line".into()));
         assert_eq!(CopyWhat::Message.text(&commit, None), None);
         assert_eq!(CopyWhat::Author.text(&commit, None), None);
+    }
+
+    #[test]
+    fn a_message_that_was_cut_is_not_said_to_be_copied_whole() {
+        use wormhole_core::view::notice::Copied;
+        let mut cut = details();
+        assert_eq!(CopyWhat::Message.notice(Some(&cut)), Copied::CommitMessage);
+        cut.message_cut = true;
+        assert_eq!(CopyWhat::Message.notice(Some(&cut)), Copied::CommitMessageCut);
+        assert_eq!(CopyWhat::Author.notice(Some(&cut)), Copied::CommitAuthor, "only the message is cut");
+        assert_eq!(CopyWhat::Message.notice(None), Copied::CommitMessage);
     }
 
     #[test]

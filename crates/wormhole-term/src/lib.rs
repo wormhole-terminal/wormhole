@@ -122,6 +122,8 @@ pub use pty::{Launch, Shell};
 pub use row_mark::{Part, RowMark};
 use screen::Screen;
 pub use snapshot::{BlockSpan, ScreenSnapshot, SnapshotCursor, SnapshotRow};
+/// How many cells wide a character is on a terminal's screen (0, 1 or 2): the engine's own table.
+pub use wormhole_vt::unicode::width as cell_width;
 
 /// A shell in a PTY with a grid and a parser on the PTY's own thread. The grid stays behind this
 /// API (snapshots, text, selection, input), so the UI never holds the lock the parser needs for

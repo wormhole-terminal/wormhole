@@ -60,7 +60,9 @@ pub fn log(root: &Path, rev: &str, limit: usize) -> Result<Vec<Commit>> {
     let raw = GitCmd::new(root)
         .arg("log")
         .arg(format!("-n{limit}"))
-        .arg("--format=%H%x1f%h%x1f%P%x1f%an%x1f%at%x1f%s%x1e")
+        // `%D` with the full names, as the details read them: no process of its own, the refs are read once.
+        .arg("--decorate=full")
+        .arg("--format=%H%x1f%h%x1f%P%x1f%an%x1f%at%x1f%s%x1f%D%x1e")
         .revs([rev])
         .paths::<_, &str>([])
         .run()?;
@@ -128,12 +130,15 @@ mod tests {
 
     #[test]
     fn parses_log() {
-        let text = "aaa\x1fa1\x1fppp qqq\x1fAda\x1f1700000000\x1fFix: thing\x1e\nbbb\x1fb1\x1f\x1fBob\x1f1600000000\x1fInitial\x1e\n";
+        let text = "aaa\x1fa1\x1fppp qqq\x1fAda\x1f1700000000\x1fFix: thing\x1fHEAD -> refs/heads/main, tag: refs/tags/v1\x1e\nbbb\x1fb1\x1f\x1fBob\x1f1600000000\x1fInitial\x1f\x1e\n";
         let commits = parse_log(text);
         assert_eq!(commits.len(), 2);
         assert_eq!(commits[0].parent.as_deref(), Some("ppp"));
         assert!(commits[0].merge, "two parents");
         assert!(!commits[1].merge, "none");
+        let refs: Vec<_> = commits[0].refs.iter().map(|r| r.name.as_str()).collect();
+        assert_eq!(refs, ["HEAD", "main", "v1"]);
+        assert!(commits[1].refs.is_empty());
         assert_eq!(commits[0].subject, "Fix: thing");
         assert_eq!(commits[1].parent, None);
         assert_eq!(commits[1].time, 1600000000);
@@ -160,6 +165,21 @@ mod tests {
             branch_gone("fatal: bad revision 'x'\n"),
             "fatal: bad revision 'x': the branch was deleted."
         );
+    }
+
+    /// A tag or a branch that moves makes the log differ, though no commit did: that is how the open
+    /// commit's details are known to be stale, with no process of their own.
+    #[test]
+    fn a_ref_that_moves_changes_the_log() {
+        use crate::git::testing::{git, repo_with};
+        let repo = repo_with(&[("a.txt", "a")]);
+        let root = repo.path();
+        let before = log(root, "HEAD", 10).expect("log");
+        assert_eq!(before[0].refs.len(), 2, "HEAD and main: {:?}", before[0].refs);
+        git(root, &["tag", "v1"]);
+        let after = log(root, "HEAD", 10).expect("log");
+        assert_ne!(before, after);
+        assert!(after[0].refs.iter().any(|r| r.name == "v1"));
     }
 
     /// A commit on the branch History shows keeps that branch; one it hasn't got switches to

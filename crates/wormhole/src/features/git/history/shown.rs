@@ -68,7 +68,7 @@ impl Fact {
         if let Some(more) = all.len().checked_sub(CO_AUTHORS_SHOWN).filter(|&more| more > 0) {
             let from = text.len();
             text.push('\n');
-            text.push_str(&keys::history_more_parents(&more.to_string()));
+            text.push_str(&keys::history_more_co_authors(&more.to_string()));
             spans.push((from..text.len(), Tone::Muted));
         }
         let label = text_of(if all.len() == 1 { keys::HISTORY_CO_AUTHOR } else { keys::HISTORY_CO_AUTHORS });
@@ -77,13 +77,15 @@ impl Fact {
 
     /// "2 files +4 −1", the numbers in the colors of the file rows.
     pub(super) fn changes(stat: DiffStat) -> Self {
-        let files = keys::history_files(whole(stat.files));
         let (added, removed) = (format!("+{}", stat.added), format!("\u{2212}{}", stat.removed));
-        let text = format!("{files} {added} {removed}");
-        let added_at = files.len() + 1;
-        let removed_at = added_at + added.len() + 1;
-        let spans =
-            vec![(added_at..added_at + added.len(), Tone::Added), (removed_at..text.len(), Tone::Removed)];
+        let text = keys::history_changes_line(&keys::history_files(whole(stat.files)), &added, &removed);
+        // The numbers are found where the message put them: the removed ones are the last in it.
+        let removed_at = text.rfind(&removed).unwrap_or(text.len());
+        let added_at = text[..removed_at].rfind(&added).unwrap_or(removed_at);
+        let spans = vec![
+            (added_at..added_at + added.len(), Tone::Added),
+            (removed_at..removed_at + removed.len(), Tone::Removed),
+        ];
         Self { label: text_of(keys::HISTORY_CHANGES), text: text.into(), spans }
     }
 }
@@ -117,8 +119,11 @@ pub(super) struct Shown {
     /// The body's pieces as strings the text system can take without copying them.
     pub whole: SharedString,
     pub trailers: SharedString,
-    /// The message is longer than what is drawn: a line says so under it when it is shown whole.
-    pub continues: bool,
+    /// The body is longer than what is drawn: a line says so under it when it is shown whole (a copy has
+    /// all of it).
+    pub body_cut: bool,
+    /// The message is longer than Wormhole reads: a copy is cut too, and a line says so.
+    pub message_cut: Option<SharedString>,
     /// What VoiceOver reads for the block.
     pub spoken: SharedString,
     /// Author, committer (when it differs) and co-authors.
@@ -136,7 +141,7 @@ impl Shown {
     pub(super) fn new(details: CommitDetails, now: i64) -> Self {
         let body = details.body_view();
         let short: String = details.sha.chars().take(7).collect();
-        let subject: SharedString = details.subject().to_string().into();
+        let subject: SharedString = details.shown_subject().into();
         let mut people = vec![Fact::person(text(keys::HISTORY_AUTHOR), &details.author, now)];
         if details.committer_differs() {
             people.push(Fact::person(text(keys::HISTORY_COMMITTER), &details.committer, now));
@@ -165,7 +170,7 @@ impl Shown {
             .then(|| keys::history_more_refs(&(details.refs.len() - REFS_SHOWN).to_string()).into());
         let spoken = spoken::commit_details(
             &short,
-            details.subject(),
+            &details.shown_subject(),
             &details.author.name,
             &details.author.when(),
             details.parents.len(),
@@ -174,7 +179,8 @@ impl Shown {
             subject,
             whole: body.text.clone().into(),
             trailers: body.trailers.clone().into(),
-            continues: body.cut || details.message_cut,
+            body_cut: body.cut,
+            message_cut: details.message_cut.then(|| keys::history_message_too_long(&short).into()),
             spoken: spoken.into(),
             people,
             parents_label: text_of(if details.parents.len() == 1 {
@@ -199,7 +205,7 @@ impl Shown {
         if let Some(c) = kept.as_ref().filter(|c| c.line_chars == line_chars) {
             return (c.text.clone(), c.more);
         }
-        let more = self.body.more(line_chars) || self.continues;
+        let more = self.body.more(line_chars) || self.body_cut || self.message_cut.is_some();
         let text: SharedString = self.body.compact(line_chars).into();
         *kept = Some(Compacted { line_chars, text: text.clone(), more });
         (text, more)

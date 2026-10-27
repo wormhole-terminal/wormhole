@@ -238,6 +238,9 @@ pub struct Commit {
     /// Unix timestamp (seconds).
     pub time: i64,
     pub subject: String,
+    /// The branches, tags and HEAD that point at it as of the log (`%D`): when one moves, the log differs,
+    /// which is how an open commit's details are known to be out of date.
+    pub refs: Vec<CommitRef>,
 }
 
 impl Commit {
@@ -253,10 +256,11 @@ impl Commit {
             short: fields[1].to_string(),
             parent: fields[2].split(' ').next().filter(|p| !p.is_empty()).map(str::to_string),
             merge: fields[2].split(' ').filter(|p| !p.is_empty()).count() > 1,
-            author: message::plain(fields[3], 256),
+            author: message::display_line(fields[3], 256),
             time: fields[4].parse().unwrap_or(0),
             // One clean line: what a repository sends may hold escapes or text that turns round.
-            subject: message::plain(fields[5], 512),
+            subject: message::display_line(fields[5], 512),
+            refs: fields.get(6).map(|decorations| details::parse_refs(decorations)).unwrap_or_default(),
         })
     }
 }

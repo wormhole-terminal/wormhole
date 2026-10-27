@@ -231,7 +231,7 @@ impl Workspace {
 
     /// Give the keyboard back to `area` after an action that moved it (opening a terminal while
     /// browsing the list, a tab while browsing the tabs).
-    pub(crate) fn refocus(&self, area: Area, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::window) fn refocus(&self, area: Area, window: &mut Window, cx: &mut Context<Self>) {
         if let Some(handle) = self.areas.handle(area) {
             window.focus(handle, cx);
         }

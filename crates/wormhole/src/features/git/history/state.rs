@@ -365,18 +365,28 @@ impl HistoryState {
         }
     }
 
-    /// The log changed (a commit landed, HEAD moved): the refs of what was read are out of date, and any
-    /// read on its way is for the old log. All the details but the open commit's are dropped; its are kept
-    /// on screen while they are read again, and its sha is returned with the number to read them with. A
-    /// commit that left the log is not read again.
-    pub(super) fn details_stale(&mut self) -> Option<(String, u64)> {
+    /// The log changed (a commit landed, HEAD moved, a branch or tag moved): the refs of what was read are out
+    /// of date, and any read on its way is for the old log. All the details but the open commit's are
+    /// dropped; its are kept on screen while they are read again. Returns what is to be read again, with the
+    /// number to read it with: the open commit (unless it left the log) and the commit a copy waits for.
+    pub(super) fn details_stale(&mut self) -> Vec<(String, u64)> {
         let open = self.expanded.clone().filter(|sha| self.commits.iter().any(|c| &c.sha == sha));
+        let waited = self.pending_copy.as_ref().map(|pending| pending.sha.clone());
         self.details.retain(|key, _| Some(key) == open.as_ref());
         self.details_asked.clear();
-        // Whatever the copy waited for is not coming: it was read from the old log.
-        self.pending_copy = None;
-        open.filter(|sha| matches!(self.details.get(sha), Some(CommitInfo::Loaded(_) | CommitInfo::Loading)))
-            .map(|sha| (sha.clone(), self.ask_details(&sha)))
+        let reread = |this: &Self, sha: &String| {
+            matches!(this.details.get(sha), Some(CommitInfo::Loaded(_) | CommitInfo::Loading))
+        };
+        let mut again: Vec<String> = open.into_iter().filter(|sha| reread(self, sha)).collect();
+        // A copy waits for its answer: it asks again rather than being dropped without a word.
+        again.extend(waited.filter(|sha| !again.contains(sha) && self.commits.iter().any(|c| &c.sha == sha)));
+        again
+            .into_iter()
+            .map(|sha| {
+                let request = self.ask_details(&sha);
+                (sha, request)
+            })
+            .collect()
     }
 
     /// "Show more" / "Show less" on the open commit's message.

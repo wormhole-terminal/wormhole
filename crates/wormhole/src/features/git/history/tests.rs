@@ -16,6 +16,7 @@ fn commit(sha: &str) -> Commit {
         author: "a".into(),
         time: 0,
         subject: format!("commit {sha}"),
+        refs: Vec::new(),
     }
 }
 
@@ -360,7 +361,9 @@ fn a_changed_log_drops_the_details_and_reads_the_open_ones_again() {
     read(&mut history, "bbb");
     // A read on its way when the log changes is for the old log.
     let old = history.want_details("aaa").expect("asked");
-    let (sha, new) = history.details_stale().expect("the open commit is read again");
+    let again = history.details_stale();
+    assert_eq!(again.len(), 1, "the open commit is read again");
+    let (sha, new) = again[0].clone();
     assert_eq!(sha, "aaa");
     assert!(history.details_of("bbb").is_none());
     assert!(history.details_of("aaa").is_some(), "still on screen while it is read again");
@@ -368,13 +371,13 @@ fn a_changed_log_drops_the_details_and_reads_the_open_ones_again() {
     assert!(history.details_loaded("aaa", new, Ok(shown("aaa"))));
     // A commit that left the log is not read again, and nothing open reads nothing.
     history.commits = Rc::default();
-    assert_eq!(history.details_stale(), None);
+    assert!(history.details_stale().is_empty());
     assert!(history.details.is_empty());
     let mut closed = loaded();
     closed.toggle("aaa");
     read(&mut closed, "aaa");
     closed.toggle("aaa");
-    assert_eq!(closed.details_stale(), None);
+    assert!(closed.details_stale().is_empty());
 }
 
 #[test]

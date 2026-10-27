@@ -22,7 +22,7 @@ impl History {
                         let sha = history.commits.get(*ix).map(|c| c.sha.as_str());
                         item(0, Some(sha.is_some() && history.expanded.as_deref() == sha))
                     }
-                    // ↩ on the details is "Show more" / "Show less".
+                    // ↩ on the details opens their menu (the copies, Show more / Show less, the parents).
                     HistoryRow::File(_) | HistoryRow::Details(_) => item(1, None),
                     HistoryRow::Head
                     | HistoryRow::Error

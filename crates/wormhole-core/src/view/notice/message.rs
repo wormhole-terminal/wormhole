@@ -68,6 +68,8 @@ pub enum Copied {
     CommitShortHash,
     /// A commit's whole message.
     CommitMessage,
+    /// A commit's message that was too long to read whole: its start.
+    CommitMessageCut,
     /// A commit's subject line.
     CommitSubject,
     /// A commit's author, as `Name <email>`.

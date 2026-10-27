@@ -23,6 +23,7 @@ pub(super) fn of(notice: Notice) -> Option<String> {
         Copied::CommitHash => text(keys::NOTICE_COPIED_COMMIT_HASH).to_string(),
         Copied::CommitShortHash => text(keys::NOTICE_COPIED_COMMIT_SHORT_HASH).to_string(),
         Copied::CommitMessage => text(keys::NOTICE_COPIED_COMMIT_MESSAGE).to_string(),
+        Copied::CommitMessageCut => text(keys::NOTICE_COPIED_COMMIT_MESSAGE_CUT).to_string(),
         Copied::CommitSubject => text(keys::NOTICE_COPIED_COMMIT_SUBJECT).to_string(),
         Copied::CommitAuthor => text(keys::NOTICE_COPIED_COMMIT_AUTHOR).to_string(),
     })

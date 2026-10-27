@@ -103,6 +103,8 @@ pub fn commit_row(id: impl Into<ElementId>, ui: UiColors, row: CommitRow) -> Sta
     let (meta, hash) = if expanded { (ui.selected_muted, ui.selected_text) } else { (ui.muted, ui.primary) };
     div()
         .id(id)
+        .role(Role::Button)
+        .aria_expanded(expanded)
         .flex()
         .flex_col()
         .justify_center()

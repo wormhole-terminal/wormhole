@@ -52,6 +52,9 @@ notice-copied-commit-short-hash = Copied short hash
 
 notice-copied-commit-message = Copied commit message
 
+# The message was longer than Wormhole reads, so what was copied is its start.
+notice-copied-commit-message-cut = Copied the start of the message, which is cut
+
 notice-copied-commit-subject = Copied subject
 
 notice-copied-commit-author = Copied author

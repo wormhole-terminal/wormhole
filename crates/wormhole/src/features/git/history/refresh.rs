@@ -60,8 +60,10 @@ impl History {
                     let stale = state.details_stale();
                     let root = state.root.clone();
                     cx.notify();
-                    if let (Some((sha, request)), Some(root)) = (stale, root) {
-                        this.fetch_details(session, root, sha, request, cx);
+                    if let Some(root) = root {
+                        for (sha, request) in stale {
+                            this.fetch_details(session, root.clone(), sha, request, cx);
+                        }
                     }
                 }
             });

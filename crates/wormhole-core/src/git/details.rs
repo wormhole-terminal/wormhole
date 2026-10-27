@@ -10,7 +10,7 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use super::message::{self, Body, Contact, plain};
+use super::message::{self, Body, Contact, display_line};
 use super::{FileChange, GitCmd, GitError};
 
 /// What git may print for the other fields and the message together before the message is given up
@@ -83,7 +83,9 @@ pub struct CommitDetails {
     pub committer: Signature,
     /// Branches, tags and HEAD pointing at the commit, as they were when it was read.
     pub refs: Vec<CommitRef>,
-    /// The whole message, subject and body, without the newline git ends it with.
+    /// The whole message, subject and body, as git gave it (what a copy puts on the clipboard) without
+    /// the newline it ends with: nothing in it is cleaned, so draw it through [`Self::shown_subject`]
+    /// and [`Self::body_view`].
     pub message: String,
     /// The message was longer than [`MESSAGE_CAP`] (or than git was allowed to print): what is kept
     /// ends where it was cut.
@@ -103,9 +105,15 @@ impl CommitDetails {
         message::body(&self.message)
     }
 
-    /// The body ready to draw, compact or whole: see [`Body`].
+    /// The subject as a screen shows it (what a copy of the message does not do to it): see
+    /// [`Self::subject`] for the text itself.
+    pub fn shown_subject(&self) -> String {
+        display_line(self.subject(), 512)
+    }
+
+    /// The body ready to draw, compact or whole, cleaned for the screen: see [`Body`].
     pub fn body_view(&self) -> Body {
-        Body::of(self.body())
+        Body::of(&message::display_text(self.body()))
     }
 
     /// Whether the committer is someone else than the author, or committed at another time (an amend,
@@ -185,11 +193,11 @@ pub(crate) fn parse_details(raw: &str) -> CommitDetails {
     let mut next = || fields.next().unwrap_or("");
     let sha = next().trim().to_string();
     let parents = next().split_whitespace().take(LIST_CAP).map(str::to_string).collect();
-    let parents_short = next().split_whitespace().take(LIST_CAP).map(|p| plain(p, 40)).collect();
+    let parents_short = next().split_whitespace().take(LIST_CAP).map(|p| display_line(p, 40)).collect();
     let author = signature(next(), next(), next(), next());
     let committer = signature(next(), next(), next(), next());
     let refs = parse_refs(next());
-    let (message, message_cut) = message::clean(next());
+    let (message, message_cut) = message::normalize(next());
     CommitDetails {
         sha,
         parents,
@@ -205,8 +213,8 @@ pub(crate) fn parse_details(raw: &str) -> CommitDetails {
 
 fn signature(name: &str, email: &str, time: &str, zone: &str) -> Signature {
     Signature {
-        name: plain(name, 256),
-        email: plain(email, 256),
+        name: display_line(name, 256),
+        email: display_line(email, 256),
         time: time.trim().parse().unwrap_or(0),
         offset: zone_offset(zone.trim()),
     }
@@ -229,7 +237,7 @@ fn zone_offset(zone: &str) -> i32 {
 /// `%D` with `--decorate=full`: `HEAD -> refs/heads/main, tag: refs/tags/v1, refs/remotes/origin/main`.
 /// A ref name has no space, so ", " only ever separates two of them; refs of other kinds (a stash,
 /// a pull request) are left out, as a remote's own `HEAD`.
-fn parse_refs(decorations: &str) -> Vec<CommitRef> {
+pub(crate) fn parse_refs(decorations: &str) -> Vec<CommitRef> {
     let mut refs = Vec::new();
     for item in decorations.trim().split(", ") {
         let item = item.trim();
@@ -250,7 +258,7 @@ fn parse_refs(decorations: &str) -> Vec<CommitRef> {
                 .map(|name| (RefKind::Remote, name))
         };
         if let Some((kind, name)) = named.filter(|(_, name)| !name.is_empty()) {
-            refs.push(CommitRef { kind, name: plain(name, 256) });
+            refs.push(CommitRef { kind, name: display_line(name, 256) });
         }
         if refs.len() >= LIST_CAP {
             break;
@@ -317,7 +325,11 @@ mod tests {
         let details = parse_details(&record(message));
         // Only NUL ends the fields; what follows the first NUL of the message is still the message.
         assert_eq!(details.subject(), "subject");
-        assert!(details.body().starts_with("with \u{fffd} and \u{fffd} and \u{fffd} and, refs/heads/x"));
+        // The message is what git gave; the screen's body has the controls marked.
+        assert!(details.body().starts_with("with \x1f and \x1e and \0 and, refs/heads/x"));
+        assert!(
+            details.body_view().text.starts_with("with \u{fffd} and \u{fffd} and \u{fffd} and, refs/heads/x")
+        );
         assert_eq!(details.refs.len(), 5);
     }
 

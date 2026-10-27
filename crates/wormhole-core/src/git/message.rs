@@ -1,5 +1,6 @@
-//! A commit message as the History tab shows it: cleaned of what a screen must not receive, capped,
-//! split into the subject and the blocks of its body, with its `Co-authored-by:` trailers read out.
+//! A commit message as the History tab handles it: kept as git gave it for copying (capped), and for the
+//! screen cleaned by one rule of what it must not receive, split into the subject and the blocks of its
+//! body, with its `Co-authored-by:` trailers read out.
 //! Pure text, so it is tested without a repository.
 
 /// How much of a commit's message is kept; the rest is cut and
@@ -10,29 +11,45 @@ pub const MESSAGE_CAP: usize = 64 * 1024;
 /// Trailers and co-authors listed at most.
 const LIST_CAP: usize = 32;
 
-/// What a screen must not receive from a repository: control characters (escape sequences), and the
-/// characters that draw nothing or turn the text round (zero-width, bidirectional overrides).
-fn unfit(c: char) -> bool {
-    c.is_control() || wormhole_term::is_invisible(c)
-}
-
-/// The message as it is shown and copied: capped, with Windows line ends made plain and what a screen
-/// must not receive replaced (a line break and a tab stay). Whether it was cut.
-pub(crate) fn clean(message: &str) -> (String, bool) {
+/// The message as git gave it, for copying: capped, with Windows line ends made plain and the end
+/// trimmed, and nothing else touched. Whether it was cut.
+pub(crate) fn normalize(message: &str) -> (String, bool) {
     let cut = message.len() > MESSAGE_CAP;
     let kept = if cut { &message[..message.floor_char_boundary(MESSAGE_CAP)] } else { message };
-    let text: String = kept
-        .replace("\r\n", "\n")
-        .chars()
-        .map(|c| if unfit(c) && c != '\n' && c != '\t' { '\u{fffd}' } else { c })
-        .collect();
-    (text.trim_end().to_string(), cut)
+    (kept.replace("\r\n", "\n").trim_end().to_string(), cut)
 }
 
-/// One line of a name, an address or a subject: nothing a screen must not receive, at most `max`
-/// characters.
-pub(crate) fn plain(text: &str, max: usize) -> String {
-    text.chars().filter(|&c| !unfit(c)).take(max).collect()
+/// Characters that draw nothing yet are part of how text reads, so a screen keeps them: the joiners
+/// that make an emoji sequence (a person at a computer, a flag with a tag, a skin tone) one picture, the
+/// variation selectors, and the left-to-right and right-to-left marks.
+fn is_joiner(c: char) -> bool {
+    matches!(c, '\u{200C}'..='\u{200F}' | '\u{FE00}'..='\u{FE0F}' | '\u{E0100}'..='\u{E01EF}')
+}
+
+/// What the one rule for text from a repository does with `c` on a screen: nothing for what draws nothing
+/// or turns the text round (zero-width spaces, bidirectional overrides and isolates, tags), a visible
+/// replacement for a control character (an escape sequence, say), a line break and a tab as they are in
+/// `multiline` text and a space in one line. The rule of the list's rows, the heading and the body alike.
+fn shown(c: char, multiline: bool) -> Option<char> {
+    if wormhole_term::is_invisible(c) && !is_joiner(c) {
+        None
+    } else if c == '\n' || c == '\t' {
+        Some(if multiline { c } else { ' ' })
+    } else if c.is_control() {
+        Some('\u{fffd}')
+    } else {
+        Some(c)
+    }
+}
+
+/// One line of a name, an address, a ref or a subject as a screen shows it: at most `max` characters.
+pub(crate) fn display_line(text: &str, max: usize) -> String {
+    text.chars().filter_map(|c| shown(c, false)).take(max).collect()
+}
+
+/// A message or a body as a screen shows it.
+pub(crate) fn display_text(text: &str) -> String {
+    text.chars().filter_map(|c| shown(c, true)).collect()
 }
 
 /// The first line.
@@ -132,6 +149,25 @@ fn keeps_its_break(line: &str) -> bool {
     numbered || ["- ", "* ", "+ ", "> ", "```", "# ", "|"].iter().any(|marker| trimmed.starts_with(marker))
 }
 
+/// How many cells wide `text` is on a screen: wide characters (Chinese, Korean, most emoji) are two,
+/// combining and joining ones none, the rest one. What a line's room is counted in, so a line of
+/// Chinese is not taken for half as long as it is.
+fn cells(text: &str) -> usize {
+    text.chars().map(|c| usize::from(wormhole_term::cell_width(c))).sum()
+}
+
+/// The start of `line` that is at most `budget` cells wide.
+fn take_cells(line: &str, budget: usize) -> &str {
+    let mut used = 0;
+    for (at, c) in line.char_indices() {
+        used += usize::from(wormhole_term::cell_width(c));
+        if used > budget {
+            return &line[..at];
+        }
+    }
+    line
+}
+
 /// How many lines of its first paragraph a commit's body shows while it is compact.
 pub const COMPACT_LINES: usize = 3;
 
@@ -150,7 +186,7 @@ pub const DISPLAY_LINES: usize = 80;
 pub struct Body {
     /// The first block, for the compact view: empty when the body is empty or starts with its trailers.
     pub first: String,
-    /// How many characters each of the first lines of that block has (at most [`COMPACT_LINES`] + 1 are
+    /// How many cells wide each of the first lines of that block is (at most [`COMPACT_LINES`] + 1 are
     /// kept): what the compact view's height is estimated from.
     first_lines: Vec<usize>,
     /// Every block but the trailers, apart by a blank line, cut at [`DISPLAY_CAP`] characters.
@@ -171,7 +207,7 @@ impl Body {
         let first_lines = first
             .map(|block| match block {
                 Block::Paragraph(text) | Block::Lines(text) | Block::Trailers(text) => {
-                    text.split('\n').take(COMPACT_LINES + 1).map(|line| line.chars().count()).collect()
+                    text.split('\n').take(COMPACT_LINES + 1).map(cells).collect()
                 }
             })
             .unwrap_or_default();
@@ -206,7 +242,8 @@ impl Body {
     }
 
     /// Whether the compact view leaves anything out, for lines of about `line_chars` characters: a second
-    /// block, trailers, or a first block that wraps to more than [`COMPACT_LINES`] lines. The wrapping is
+    /// block, trailers, or a first block that wraps to more than [`COMPACT_LINES`] lines (`line_chars` is a
+    /// line's room in cells). The wrapping is
     /// an estimate (the view wraps by pixels), made to err towards "more": an offer that hides nothing
     /// costs a click, a missing one hides text.
     pub fn more(&self, line_chars: usize) -> bool {
@@ -227,8 +264,7 @@ impl Body {
         let mut out = String::new();
         let mut lines = self.first.split('\n').peekable();
         while let Some(line) = lines.next() {
-            let chars = line.chars().count();
-            let needs = chars.div_ceil(line_chars).max(1);
+            let needs = cells(line).div_ceil(line_chars).max(1);
             if !out.is_empty() {
                 out.push('\n');
             }
@@ -242,7 +278,7 @@ impl Body {
                 continue;
             }
             // This line does not fit what is left: cut it, at a word when one is in the last fifth.
-            let keep: String = line.chars().take(left * line_chars - 1).collect();
+            let keep = take_cells(line, left * line_chars - 1);
             let at = keep.rfind(' ').filter(|&at| at * 5 >= keep.len() * 4).unwrap_or(keep.len());
             out.push_str(keep[..at].trim_end());
             out.push('\u{2026}');
@@ -282,8 +318,8 @@ pub(crate) fn co_authors(message: &str) -> Vec<Contact> {
             }
             let (name, rest) = value.trim().rsplit_once('<')?;
             let email = rest.strip_suffix('>')?;
-            let name = plain(name.trim(), 256);
-            (!name.is_empty()).then(|| Contact { name, email: plain(email.trim(), 256) })
+            let name = display_line(name.trim(), 256);
+            (!name.is_empty()).then(|| Contact { name, email: display_line(email.trim(), 256) })
         })
         .take(LIST_CAP)
         .collect()
@@ -303,17 +339,43 @@ mod tests {
     }
 
     #[test]
-    fn control_characters_never_reach_the_screen() {
-        let (text, cut) = clean("\x1b[31mred\x1b[0m\r\nline\ttwo\x07\n\n");
-        assert_eq!(text, "\u{fffd}[31mred\u{fffd}[0m\nline\ttwo\u{fffd}");
+    fn what_is_copied_is_what_git_gave_and_what_is_shown_is_cleaned_by_one_rule() {
+        let raw = "\x1b[31mred\x1b[0m\r\nline\ttwo\u{202e}x\x07\n\n";
+        let (copy, cut) = normalize(raw);
+        assert_eq!(copy, "\x1b[31mred\x1b[0m\nline\ttwo\u{202e}x\x07");
         assert!(!cut);
-        assert_eq!(plain("A\x1b]0;x\x07da", 256), "A]0;xda");
-        assert_eq!(plain("abcdef", 3), "abc");
+        assert_eq!(display_text(&copy), "\u{fffd}[31mred\u{fffd}[0m\nline\ttwox\u{fffd}");
+        // One line: the controls are marked, a break or a tab is a space, a name is cut to its length.
+        assert_eq!(display_line("A\x1b]0;x\x07da\tb", 256), "A\u{fffd}]0;x\u{fffd}da b");
+        assert_eq!(display_line("abcdef", 3), "abc");
+    }
+
+    #[test]
+    fn emoji_sequences_survive_and_what_turns_text_round_does_not() {
+        let person_at_a_computer = "\u{1F9D1}\u{200D}\u{1F4BB}";
+        let flag = "\u{1F1EF}\u{1F1F5}";
+        let thumbs_up_medium_skin = "\u{1F44D}\u{1F3FD}";
+        let heart = "\u{2764}\u{FE0F}";
+        for sequence in [person_at_a_computer, flag, thumbs_up_medium_skin, heart] {
+            assert_eq!(display_line(sequence, 40), sequence, "{sequence:?}");
+            assert_eq!(display_text(&format!("a {sequence} b")), format!("a {sequence} b"));
+        }
+        // The row and the heading are the same text, so are the copies of before and after.
+        assert_eq!(
+            display_line(&format!("{person_at_a_computer} fix"), 40),
+            display_text(&format!("{person_at_a_computer} fix"))
+        );
+        // Bidirectional overrides and isolates, zero-width spaces and tags are gone.
+        assert_eq!(display_line("a\u{202e}b\u{2066}c\u{200b}d\u{e0041}e", 40), "abcde");
+        // The marks that only direct a language's text stay.
+        assert_eq!(display_line("a\u{200f}b", 40), "a\u{200f}b");
+        // Copying never touches them.
+        assert_eq!(normalize(person_at_a_computer).0, person_at_a_computer);
     }
 
     #[test]
     fn a_huge_message_is_cut_on_a_character() {
-        let (text, cut) = clean(&format!("subject\n\n{}", "é".repeat(MESSAGE_CAP)));
+        let (text, cut) = normalize(&format!("subject\n\n{}", "é".repeat(MESSAGE_CAP)));
         assert!(cut);
         assert!(text.len() <= MESSAGE_CAP);
         assert!(text.starts_with("subject\n\néé"));
@@ -396,6 +458,20 @@ mod tests {
     }
 
     #[test]
+    fn wide_characters_take_two_cells_of_a_lines_room() {
+        // Forty Chinese characters are two lines of forty cells, sixty-one are four.
+        assert!(!Body::of(&"字".repeat(40)).more(40));
+        assert!(!Body::of(&"字".repeat(60)).more(40), "three lines exactly");
+        assert!(Body::of(&"字".repeat(61)).more(40));
+        let cut = Body::of(&"字".repeat(100)).compact(40);
+        assert!(cut.ends_with('\u{2026}'));
+        assert!(cells(&cut) <= 3 * 40, "{} cells", cells(&cut));
+        // Wide emoji and Hangul count the same; a combining mark and a joiner take no room.
+        assert_eq!(cells("\u{1F4BB}\u{AC00}"), 4);
+        assert_eq!(cells("e\u{0301}\u{200D}"), 1);
+    }
+
+    #[test]
     fn trailers_alone_are_left_out_of_the_compact_view_and_a_note_is_not_trailers() {
         let trailers = Body::of("Signed-off-by: Ada <a@b.c>\nFixes: #4");
         assert_eq!(trailers.first, "");
@@ -425,9 +501,7 @@ mod tests {
         assert!(body.text.lines().count() <= DISPLAY_LINES, "{}", body.text.lines().count());
         assert!(body.more(80));
         // Invisible characters are gone from what a repository sends.
-        let (text, _) = clean("a\u{202e}b\u{200b}c");
-        assert_eq!(text, "a\u{fffd}b\u{fffd}c");
-        assert_eq!(plain("x\u{202e}y\u{200b}z", 10), "xyz");
+        assert_eq!(display_text("a\u{202e}b\u{200b}c"), "abc");
     }
 
     #[test]

@@ -285,7 +285,7 @@ fn the_edit_menus_copy_reaches_the_list_and_leaves_the_terminal_its_own(cx: &mut
         drive(cx, &window, |ws, window, cx| {
             ws.areas_mut().panel_at = Some((TabId::History, commit_row));
             match area {
-                Some(area) => ws.refocus(area, window, cx),
+                Some(area) => ws.focus_area_of(area, window, cx),
                 None => ws.focus_terminal(window, cx),
             }
         });
@@ -296,6 +296,79 @@ fn the_edit_menus_copy_reaches_the_list_and_leaves_the_terminal_its_own(cx: &mut
     };
     assert_eq!(copy(cx, Some(Area::PanelContent)), sha, "the keys are in the list: the commit's hash");
     assert_eq!(copy(cx, None), "sentinel", "the terminal has the keys: the list does not copy");
+}
+
+/// A message past what Wormhole reads is cut in the copy too, and the block and the notice say so rather than
+/// claim the whole message; an emoji sequence in a subject reads the same in the row, the heading and
+/// both copies.
+#[gpui_kit::test]
+fn a_cut_message_says_so_and_an_emoji_subject_reads_the_same_everywhere(cx: &mut TestAppContext) {
+    if isolate("a_cut_message_says_so_and_an_emoji_subject_reads_the_same_everywhere") {
+        return;
+    }
+    let window = start(cx, 1);
+    let root = repo("cut-and-emoji", &[("a.txt", "one\n")]);
+    let subject = "feat: \u{1F9D1}\u{200D}\u{1F4BB} pair";
+    let file = root.join("..").join("cut-and-emoji-message.txt");
+    std::fs::write(&file, format!("{subject}\n\n{}\n", "long line of a message\n".repeat(5_000)))
+        .expect("write");
+    git(&root, &["commit", "-q", "--allow-empty", "-F", file.to_str().expect("a utf-8 path")]);
+    drive(cx, &window, |ws, _, cx| {
+        go(ws, &root, cx);
+        ws.show_tab(TabId::History, cx);
+    });
+    cx.run_until_parked();
+    let sha = sha_at(cx, &window, 0);
+    assert_eq!(with_state(cx, &window, |state, _| state.commits[0].subject.clone()), subject, "the row");
+    toggle_commit(cx, &window, &sha);
+    let shown = details_of(cx, &window, &sha).expect("read");
+    assert_eq!(shown.subject, subject, "the heading");
+    assert!(shown.details.message_cut && shown.message_cut.is_some(), "past what is read");
+    assert!(shown.body_cut, "and past what is drawn");
+    draw(cx, &window);
+    let copy = |cx: &mut TestAppContext, what| {
+        drive(cx, &window, |ws, window, cx| {
+            let session = ws.active_session().id;
+            history(ws).update(cx, |history, cx| history.copy_commit(session, &sha, what, window, cx));
+        });
+        cx.run_until_parked();
+        cx.read_from_clipboard().and_then(|item| item.text()).unwrap_or_default()
+    };
+    assert_eq!(copy(cx, CopyWhat::Subject), subject);
+    let message = copy(cx, CopyWhat::Message);
+    assert!(
+        message.starts_with(subject) && message.len() <= wormhole_core::git::MESSAGE_CAP,
+        "{}",
+        message.len()
+    );
+}
+
+/// A copy waiting for a read that the log's change made out of date asks again, and is made.
+#[gpui_kit::test]
+fn a_copy_waiting_for_details_is_asked_again_when_the_log_changes(cx: &mut TestAppContext) {
+    if isolate("a_copy_waiting_for_details_is_asked_again_when_the_log_changes") {
+        return;
+    }
+    let window = start(cx, 1);
+    merged(cx, &window, "copy-asks-again");
+    let wide = sha_at(cx, &window, 1);
+    drive(cx, &window, |ws, window, cx| {
+        let session = ws.active_session().id;
+        history(ws).update(cx, |history, cx| {
+            history.copy_commit(session, &wide, CopyWhat::Message, window, cx);
+            // The log changes before the read lands: the read in flight is dropped and asked again.
+            let state = history.of.get_mut(&session).expect("a state");
+            let again = state.details_stale();
+            let root = state.root.clone().expect("a root");
+            assert_eq!(again.len(), 1, "the commit the copy waits for");
+            for (sha, request) in again {
+                history.fetch_details(session, root.clone(), sha, request, cx);
+            }
+        });
+    });
+    cx.run_until_parked();
+    let copied = cx.read_from_clipboard().and_then(|item| item.text()).unwrap_or_default();
+    assert!(copied.starts_with("feat(x): a wide change"), "{copied}");
 }
 
 #[gpui_kit::test]
