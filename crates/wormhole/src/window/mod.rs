@@ -439,6 +439,8 @@ impl Workspace {
         }
         // Saved on the first tick, so a window opened just now survives a quit.
         this.dirty = true;
+        // The terminals' file counts come back before the sidebar is told its first rows.
+        this.restore_changes(cx);
         // The sidebar is told when the window's facts change, not while it draws: now, and once at the
         // end of every update that notified the window or changed the settings.
         this.sync_sidebar(cx);
@@ -452,7 +454,6 @@ impl Workspace {
         cx.observe_global::<crate::settings::SettingsStore>(|this, cx| this.sync_sidebar_soon(cx)).detach();
         // A terminal's file count moves in any window.
         this.watch_changes(cx);
-        this.restore_changes(cx);
         self::regions::Regions::watch_globals(&mut this, cx);
         // The list draws itself (a hover, a rename, a menu); the window around it hears of what it draws.
         self::regions::Regions::watch_sidebar(&mut this, cx);

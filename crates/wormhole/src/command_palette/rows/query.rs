@@ -30,10 +30,12 @@ pub(super) fn found(snapshot: &Snapshot, scope: Scope, query: &str) -> Vec<Row> 
         // and lists them page by page, as its scope does; everything searched shows only a few
         // of them, so there the best match comes first.
         // Drop hits in a section this build hides (a Preview section whose flag is off), so a
-        // release build never lists Project folders or Feature flags rows here.
+        // release build never lists Project folders or Feature flags rows here, and rows the settings
+        // window doesn't show now (a choice beside a switch that is off).
         let hits: Vec<_> = settings_index::search(&Query::new(query))
             .into_iter()
             .filter(|hit| !snapshot.hidden_sections.contains(&hit.section))
+            .filter(|hit| !snapshot.hidden_rows.contains(&hit.entry.id))
             .collect();
         let mut ranked: Vec<Ranked> = hits
             .iter()

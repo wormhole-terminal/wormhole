@@ -60,7 +60,7 @@ settings-sessions-sidebar-changes-plain = Plain terminals
     .keywords = shell command editor dev server vim ssh
 
 settings-sessions-sidebar-changes-shared = Files changed at once
-    .description = When two terminals worked at the same time, whose file it is can't be told: both count it, or neither does
+    .description = When several terminals worked at the same time, whose file it is can't be told: each counts it, or nobody does
     .keywords = both shared overlap ambiguous agents
 
 settings-sessions-sidebar-changes-remember = Remember after restart
@@ -86,8 +86,8 @@ settings-sessions-changes-repository = Repository
 settings-sessions-changes-plain-finishing = Commands that finish
 settings-sessions-changes-plain-any = Any program
 settings-sessions-changes-plain-none = None
-settings-sessions-changes-shared-each = Both count it
-settings-sessions-changes-shared-none = Neither
+settings-sessions-changes-shared-each = Each counts it
+settings-sessions-changes-shared-none = Nobody counts it
 
 ## settings_window/sections/preview.rs (labels, hints and notes drawn by this page's code)
 

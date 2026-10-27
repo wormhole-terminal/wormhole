@@ -1,8 +1,8 @@
 //! The Sessions and Git sections: the sidebar's terminals and rows, and the Changes panel and diff view.
 
 use super::{entry, group, untitled};
-use crate::config::FeatureId;
 use crate::config::settings_index::Group;
+use crate::config::{ChangesScope, FeatureId};
 #[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
@@ -47,7 +47,8 @@ pub(super) const SESSIONS: &[Group] = &[
             entry("sidebar-changes", SETTINGS_SESSIONS_SIDEBAR_CHANGES, &["sidebar_changes"])
                 .with_description(SETTINGS_SESSIONS_SIDEBAR_CHANGES_DESCRIPTION)
                 .with_keywords(SETTINGS_SESSIONS_SIDEBAR_CHANGES_KEYWORDS),
-            // What the count is made of: only of use while it is shown.
+            // What the count is made of: only of use while it is shown. Plain terminals and Files changed at
+            // once shape the terminal's own count: with the repository's there is nothing to choose.
             entry(
                 "sidebar-changes-scope",
                 SETTINGS_SESSIONS_SIDEBAR_CHANGES_SCOPE,
@@ -63,7 +64,7 @@ pub(super) const SESSIONS: &[Group] = &[
             )
             .with_description(SETTINGS_SESSIONS_SIDEBAR_CHANGES_PLAIN_DESCRIPTION)
             .with_keywords(SETTINGS_SESSIONS_SIDEBAR_CHANGES_PLAIN_KEYWORDS)
-            .with_needs(|s| s.sidebar_changes),
+            .with_needs(|s| s.sidebar_changes && s.sidebar_changes_scope == ChangesScope::Terminal),
             entry(
                 "sidebar-changes-shared",
                 SETTINGS_SESSIONS_SIDEBAR_CHANGES_SHARED,
@@ -71,7 +72,7 @@ pub(super) const SESSIONS: &[Group] = &[
             )
             .with_description(SETTINGS_SESSIONS_SIDEBAR_CHANGES_SHARED_DESCRIPTION)
             .with_keywords(SETTINGS_SESSIONS_SIDEBAR_CHANGES_SHARED_KEYWORDS)
-            .with_needs(|s| s.sidebar_changes),
+            .with_needs(|s| s.sidebar_changes && s.sidebar_changes_scope == ChangesScope::Terminal),
             entry(
                 "sidebar-changes-remember",
                 SETTINGS_SESSIONS_SIDEBAR_CHANGES_REMEMBER,

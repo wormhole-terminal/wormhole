@@ -66,9 +66,6 @@ pub enum Place<'a> {
 pub struct Attribution {
     terminals: HashMap<i64, Terminal>,
     repos: HashMap<PathBuf, Repo>,
-    /// Counts up whenever any terminal's set of files changes (not only how many): what the app
-    /// compares to know that there is something new to keep.
-    revision: u64,
 }
 
 /// What is known of one terminal's activity.
@@ -81,6 +78,19 @@ struct Terminal {
     working: bool,
     /// The last time it was working, or stopped working: a `track` that found it so.
     last_working: Option<Instant>,
+    /// Counts up whenever its set of files changes (not only how many): what the app compares to
+    /// know that there is something new of this terminal to keep.
+    revision: u64,
+}
+
+impl Terminal {
+    fn new(kind: Kind) -> Self {
+        Self { root: None, kind, working: false, last_working: None, revision: 0 }
+    }
+
+    fn edited(&mut self) {
+        self.revision += 1;
+    }
 }
 
 /// What is known of one repository.
@@ -100,12 +110,7 @@ impl Attribution {
     /// every terminal. Returns whether a count changed, which only a terminal moving to another
     /// repository does.
     pub fn track(&mut self, id: i64, place: Place<'_>, kind: Kind, working: bool, now: Instant) -> bool {
-        let terminal = self.terminals.entry(id).or_insert_with(|| Terminal {
-            root: None,
-            kind,
-            working: false,
-            last_working: None,
-        });
+        let terminal = self.terminals.entry(id).or_insert_with(|| Terminal::new(kind));
         terminal.kind = kind;
         // The moment it stops counts too: the tick that finds it idle is the last that knows it was
         // working until just before.
@@ -157,41 +162,38 @@ impl Attribution {
         Some((root, self.repos.get(root)?.claims.get(&id)?))
     }
 
-    /// See the field: unchanged means nothing new to keep.
-    pub fn revision(&self) -> u64 {
-        self.revision
+    /// Terminal `id`'s revision: it moves when the set of its files does, so a revision that is not
+    /// the one last kept means there is something new to keep. 0 for a terminal not known.
+    pub fn revision_of(&self, id: i64) -> u64 {
+        self.terminals.get(&id).map_or(0, |terminal| terminal.revision)
     }
 
     /// Put back what was kept of a terminal: the files it changed in the repository at `root`.
     /// Called as the terminal comes back, before anything is observed; the terminal is taken to be
     /// in that repository until [`track`](Self::track) says otherwise. Ignored for a terminal the
     /// model already knows (one that moved to another window in this run: what is in memory is newer
-    /// than what was kept).
-    pub fn restore(&mut self, id: i64, root: &Path, paths: impl IntoIterator<Item = String>) {
+    /// than what was kept). Returns whether it has files again.
+    pub fn restore(&mut self, id: i64, root: &Path, paths: impl IntoIterator<Item = String>) -> bool {
         if self.terminals.contains_key(&id) {
-            return;
+            return false;
         }
-        let terminal = self.terminals.entry(id).or_insert_with(|| Terminal {
-            root: None,
-            kind: Kind::Plain,
-            working: false,
-            last_working: None,
-        });
-        if terminal.root.as_deref() != Some(root) {
-            terminal.root = Some(root.to_path_buf());
-        }
-        let claims = &mut self.repos.entry(root.to_path_buf()).or_default().claims;
+        let mut terminal = Terminal::new(Kind::Plain);
+        terminal.root = Some(root.to_path_buf());
+        self.terminals.insert(id, terminal);
         let paths: HashSet<String> = paths.into_iter().collect();
-        if !paths.is_empty() {
-            claims.entry(id).or_default().extend(paths);
+        let restored = !paths.is_empty();
+        let repo = self.repos.entry(root.to_path_buf()).or_default();
+        if restored {
+            repo.claims.insert(id, paths);
         }
+        restored
     }
 
     /// Take a new picture of a repository. Returns whether any terminal's count changed. A picture
     /// taken before the last one that came in arrived late and says nothing new.
     pub fn observe(&mut self, snapshot: Snapshot) -> bool {
         let Snapshot { root, taken, prints } = snapshot;
-        let Self { terminals, repos, revision } = self;
+        let Self { terminals, repos } = self;
         let last = repos.get(&root).and_then(|repo| repo.taken);
         if last.is_some_and(|last| taken < last) {
             return false;
@@ -200,12 +202,14 @@ impl Attribution {
         let claimants = last.map(|since| claimants(terminals, &root, since));
         let repo = repos.entry(root).or_default();
         repo.taken = Some(taken);
-        let (mut changed, mut edited) = (false, false);
+        let mut changed = false;
         match (prints, repo.baseline.take(), claimants) {
             // Too many files to say: forget what was known, the next picture starts over.
             (None, ..) => {
                 changed = !repo.claims.is_empty();
-                edited = changed;
+                for id in repo.claims.keys() {
+                    edited(terminals, *id);
+                }
                 repo.claims.clear();
             }
             (Some(now), Some(then), Some(claimants)) => {
@@ -217,18 +221,22 @@ impl Attribution {
                 }
                 repo.claims.retain(|id, paths| {
                     let before = paths.len();
+                    let mut moved = false;
                     if claimants.contains(id) {
                         for path in &touched {
                             if !paths.contains(*path) {
                                 paths.insert((*path).to_owned());
-                                edited = true;
+                                moved = true;
                             }
                         }
                     }
                     let grown = paths.len();
                     paths.retain(|path| now.has(path));
-                    edited |= paths.len() != grown;
+                    moved |= paths.len() != grown;
                     changed |= paths.len() != before;
+                    if moved {
+                        edited(terminals, *id);
+                    }
                     !paths.is_empty()
                 });
                 repo.baseline = Some(now);
@@ -236,17 +244,19 @@ impl Attribution {
             // The first picture: what is changed already is nobody's. What was restored is only kept
             // for the files still changed: a commit made while the app was closed takes the rest.
             (Some(now), ..) => {
-                repo.claims.retain(|_, paths| {
+                repo.claims.retain(|id, paths| {
                     let before = paths.len();
                     paths.retain(|path| now.has(path));
-                    changed |= paths.len() != before;
+                    let pruned = paths.len() != before;
+                    changed |= pruned;
+                    if pruned {
+                        edited(terminals, *id);
+                    }
                     !paths.is_empty()
                 });
-                edited = changed;
                 repo.baseline = Some(now);
             }
         }
-        *revision += u64::from(edited);
         changed
     }
 
@@ -254,7 +264,9 @@ impl Attribution {
     /// forgotten when no terminal is in it. Returns whether the terminal had any.
     fn leave(&mut self, id: i64, root: &Path) -> bool {
         let had = self.repos.get_mut(root).is_some_and(|repo| repo.claims.remove(&id).is_some());
-        self.revision += u64::from(had);
+        if had {
+            edited(&mut self.terminals, id);
+        }
         if !self.terminals.values().any(|terminal| terminal.root.as_deref() == Some(root)) {
             self.repos.remove(root);
         }
@@ -274,4 +286,11 @@ fn claimants(terminals: &HashMap<i64, Terminal>, root: &Path, since: Instant) ->
     let told = working.iter().any(|&(_, kind)| kind == Kind::Told);
     let wanted = if told { Kind::Told } else { Kind::Plain };
     working.into_iter().filter(|&(_, kind)| kind == wanted).map(|(id, _)| id).collect()
+}
+
+/// Terminal `id`'s files changed (a terminal the model has dropped has nothing left to keep).
+fn edited(terminals: &mut HashMap<i64, Terminal>, id: i64) {
+    if let Some(terminal) = terminals.get_mut(&id) {
+        terminal.edited();
+    }
 }

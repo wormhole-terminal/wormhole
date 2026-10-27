@@ -452,7 +452,7 @@ entry Sessions sidebar-changes-plain
   keywords "shell command editor dev server vim ssh"
 entry Sessions sidebar-changes-shared
   label "Files changed at once"
-  description "When two terminals worked at the same time, whose file it is can't be told: both count it, or neither does"
+  description "When several terminals worked at the same time, whose file it is can't be told: each counts it, or nobody does"
   keywords "both shared overlap ambiguous agents"
 entry Sessions sidebar-changes-remember
   label "Remember after restart"

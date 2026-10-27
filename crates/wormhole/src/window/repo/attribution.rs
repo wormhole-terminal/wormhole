@@ -58,7 +58,10 @@ impl Workspace {
         cx.on_release(|this, cx| {
             let ids = this.session_ids();
             shared(cx).update(cx, |changes, cx| {
-                let moved = ids.into_iter().fold(false, |moved, id| changes.model.forget(id) | moved);
+                let moved = ids.into_iter().fold(false, |moved, id| {
+                    changes.kept.remove(id);
+                    changes.model.forget(id) | moved
+                });
                 if moved {
                     cx.notify();
                 }
@@ -96,6 +99,7 @@ impl Workspace {
     /// Terminal `id` closed: its files are not counted any more.
     pub(in crate::window) fn forget_changes(&mut self, id: i64, cx: &mut Context<Self>) {
         shared(cx).update(cx, |changes, cx| {
+            changes.kept.remove(id);
             if changes.model.forget(id) {
                 cx.notify();
             }

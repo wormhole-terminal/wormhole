@@ -5,7 +5,9 @@ use std::time::{Duration, SystemTime};
 
 use wormhole_core::agents::AgentId;
 use wormhole_core::notify::Source;
-use wormhole_core::view::sidebar::{ListInput, Listing, RowState, SidebarNumbers, Splits, WindowSidebar};
+use wormhole_core::view::sidebar::{
+    Entry, ListInput, Listing, RowState, SidebarNumbers, Splits, WindowSidebar,
+};
 
 use super::Place;
 use super::label::row_label;
@@ -170,33 +172,80 @@ fn a_rows_label_says_its_name_what_it_does_and_where_it_is() {
     assert!(row_label(&idle, false, &place(1, 1, None)).contains("shell, nothing running"));
 }
 
+/// The rows of `repos` (one repository each, `None` for the terminal's own count) as the list lists them,
+/// with `pinned` and `sidebar`: each drawn row's terminal and whether its count is left out for a row above.
+fn repository_counts(repos: &[Option<&str>], pinned: &[bool], sidebar: &WindowSidebar) -> Vec<(usize, bool)> {
+    let infos: Vec<RowInfo> = repos
+        .iter()
+        .enumerate()
+        .map(|(ix, repo)| RowInfo {
+            ix,
+            id: ix as i64 + 1,
+            changes: Some(3),
+            repo: repo.map(std::path::PathBuf::from),
+            ..RowInfo::test_row(ix as i64 + 1)
+        })
+        .collect();
+    let ids: Vec<i64> = infos.iter().map(|info| info.id).collect();
+    let listing = Listing::build(&ListInput {
+        ids: &ids,
+        pinned,
+        sidebar,
+        splits: Splits::default(),
+        numbers: SidebarNumbers::Terminal,
+    });
+    (0..listing.entries.len())
+        .filter_map(|at| {
+            let place = Place::of(&listing, &infos, at, 0, false)?;
+            let Entry::Row { session, .. } = listing.entries[at] else { return None };
+            Some((session, place.changes_above))
+        })
+        .collect()
+}
+
 /// With the count of the repository (not the terminal's own) every row of a repository would show the same
 /// number, so the list shows it once: on the topmost row of the repository, wherever the others are.
 #[test]
 fn a_repositorys_count_is_drawn_on_its_topmost_row_only() {
-    let repo = |name: &str| Some(std::path::PathBuf::from(name));
-    let row = |ix: usize, repo: Option<std::path::PathBuf>| RowInfo {
-        ix,
-        id: ix as i64 + 1,
-        changes: Some(3),
-        repo,
-        ..RowInfo::test_row(ix as i64 + 1)
-    };
     // Rows 0 and 2 are one repository with another between them; row 3 has no repository to count
     // (the terminal's own files, counted as its own).
-    let infos = [row(0, repo("/a")), row(1, repo("/b")), row(2, repo("/a")), row(3, None)];
-    let ids: Vec<i64> = infos.iter().map(|info| info.id).collect();
-    let sidebar = WindowSidebar::default();
-    let listing = Listing::build(&ListInput {
-        ids: &ids,
-        pinned: &[false; 4],
-        sidebar: &sidebar,
-        splits: Splits::default(),
-        numbers: SidebarNumbers::Terminal,
-    });
-    let above: Vec<bool> = (0..listing.entries.len())
-        .filter_map(|at| Place::of(&listing, &infos, at, 0, false))
-        .map(|place| place.changes_above)
-        .collect();
-    assert_eq!(above, [false, false, true, false]);
+    let rows = repository_counts(
+        &[Some("/a"), Some("/b"), Some("/a"), None],
+        &[false; 4],
+        &WindowSidebar::default(),
+    );
+    assert_eq!(rows, [(0, false), (1, false), (2, true), (3, false)]);
+}
+
+/// The topmost row of a repository is the topmost one *drawn*: rows in a folded group are not in the list,
+/// so the number is on the next one down rather than nowhere.
+#[test]
+fn a_folded_group_holding_the_topmost_row_leaves_the_count_to_the_next_row() {
+    // Two groups of one repository: the first group is the topmost.
+    let mut sidebar = WindowSidebar::default();
+    let first = sidebar.groups.create(&[1, 2]);
+    sidebar.groups.create(&[3]);
+    let repos = [Some("/a"), Some("/a"), Some("/a")];
+    assert_eq!(
+        repository_counts(&repos, &[false; 3], &sidebar),
+        [(0, false), (1, true), (2, true)],
+        "open: the first row of the first group has it"
+    );
+    sidebar.toggle_group_fold(first);
+    assert_eq!(
+        repository_counts(&repos, &[false; 3], &sidebar),
+        [(2, false)],
+        "folded: its rows are not drawn, so the row that is has it"
+    );
+}
+
+/// A pinned row is listed first, so it is the topmost of its repository though it comes later in the window.
+#[test]
+fn a_pinned_row_is_the_topmost_of_its_repository() {
+    let rows = repository_counts(
+        &[Some("/a"), Some("/a"), Some("/b")],
+        &[false, true, false],
+        &WindowSidebar::default(),
+    );
+    assert_eq!(rows, [(1, false), (0, true), (2, false)]);
 }

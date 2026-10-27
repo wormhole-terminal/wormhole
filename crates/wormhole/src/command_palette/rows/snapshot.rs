@@ -39,6 +39,9 @@ pub(crate) struct Snapshot {
     /// Settings sections not shown in this build (a feature-flagged Preview section that is off),
     /// so the palette doesn't list or reveal their rows. Empty means nothing is hidden.
     pub hidden_sections: Vec<SectionId>,
+    /// Settings rows that are not shown now (a choice beside a switch that is off), by id: the palette
+    /// doesn't offer them either.
+    pub hidden_rows: Vec<&'static str>,
 }
 
 impl Snapshot {
@@ -124,8 +127,9 @@ impl Snapshot {
             Recent::Terminal(tab) if self.terminal(*tab).is_some() => Some(Item::Terminal(*tab)),
             Recent::Folder(path) if self.folder(path).is_some() => Some(Item::Folder(path.clone())),
             Recent::Setting(id)
-                if settings_index::entry(id)
-                    .is_some_and(|(section, _, _)| !self.hidden_sections.contains(&section)) =>
+                if settings_index::entry(id).is_some_and(|(section, _, _)| {
+                    !self.hidden_sections.contains(&section) && !self.hidden_rows.contains(id)
+                }) =>
             {
                 Some(Item::Setting(id))
             }

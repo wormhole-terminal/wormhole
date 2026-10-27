@@ -298,6 +298,9 @@ fn what_a_terminal_changed_is_kept_across_a_restart_while_the_setting_is_on(cx: 
         ws.restore_changes(cx);
     });
     assert_eq!(counts(cx, &window)[0], Some(2), "its count is back before git has been asked");
+    let told =
+        sidebar_of(cx, &window, |sidebar| sidebar.input().rows.iter().map(|r| r.changes).collect::<Vec<_>>());
+    assert_eq!(told[0], Some(2), "and the sidebar was told, not only the window's reading");
     // While the app was closed, `other.txt` was committed. The first picture prunes it, and takes
     // nothing new: `later.txt` is nobody's.
     git(&root, &["add", "other.txt"]);
@@ -309,6 +312,14 @@ fn what_a_terminal_changed_is_kept_across_a_restart_while_the_setting_is_on(cx: 
     drive(cx, &window, |ws, _, cx| ws.keep_changes_now(cx));
     assert_eq!(kept(cx), ["new.txt"], "and what was committed is not kept either");
 
+    // With the count itself switched off nothing is written for it: what is kept stays as it is.
+    cx.update(|cx| update_settings(cx, |s| s.sidebar_changes = false));
+    write(&root, "hidden.txt");
+    read_repo(cx, &window, 0);
+    drive(cx, &window, |ws, _, cx| ws.keep_changes_now(cx));
+    assert_eq!(kept(cx), ["new.txt"], "nothing is written while the count is not shown");
+    cx.update(|cx| update_settings(cx, |s| s.sidebar_changes = true));
+
     // Off: nothing is written and what is kept goes.
     cx.update(|cx| update_settings(cx, |s| s.sidebar_changes_remember = false));
     drive(cx, &window, |ws, _, cx| ws.keep_changes(cx));
@@ -317,4 +328,79 @@ fn what_a_terminal_changed_is_kept_across_a_restart_while_the_setting_is_on(cx: 
     read_repo(cx, &window, 0);
     drive(cx, &window, |ws, _, cx| ws.keep_changes_now(cx));
     assert!(kept(cx).is_empty(), "nothing is written while it is off");
+}
+
+/// A terminal that moves to another window takes with it what is not written yet: the window it is in
+/// now writes it, though that window knew nothing of it.
+#[gpui_kit::test]
+fn a_change_not_written_yet_is_written_by_the_window_the_terminal_moved_to(cx: &mut TestAppContext) {
+    if isolate("a_change_not_written_yet_is_written_by_the_window_the_terminal_moved_to") {
+        return;
+    }
+    let (window, root) = working_agent(cx, "tears");
+    cx.update(|cx| app_mut(cx).store = Some(Store::open().expect("opens the scratch database")));
+    write(&root, "new.txt");
+    read_repo(cx, &window, 0);
+    assert_eq!(counts(cx, &window)[0], Some(1));
+    // Not written: it has not been quiet yet.
+    drive(cx, &window, |ws, _, cx| ws.keep_changes(cx));
+    let kept = |cx: &mut TestAppContext| -> Vec<String> {
+        cx.update(|cx| {
+            let profile = app(cx).active_profile().clone();
+            let store = app(cx).store_of(&profile).expect("a store");
+            store.claims(&[1, 2]).expect("reads").into_iter().map(|claim| claim.path).collect()
+        })
+    };
+    assert!(kept(cx).is_empty());
+
+    drive(cx, &window, |ws, window, cx| ws.tear_off_at(1, 600.0, 300.0, window, cx));
+    let other = cx
+        .update(|cx| app(cx).windows.iter().find(|w| w.id != window.id).cloned())
+        .expect("a window of its own");
+    // The old window has nothing of it to write; the new one has.
+    drive(cx, &window, |ws, _, cx| ws.keep_changes_now(cx));
+    assert!(kept(cx).is_empty(), "the window it left writes none of its rows");
+    drive(cx, &other, |ws, _, cx| ws.keep_changes_now(cx));
+    assert_eq!(kept(cx), ["new.txt"], "the window it is in writes them");
+}
+
+/// A window that moves to another profile keeps its rows in that profile's database from then on: what
+/// its terminals changed is written there, the old database having lost them with the window's rows.
+#[gpui_kit::test]
+fn what_a_terminal_changed_follows_its_window_to_another_profile(cx: &mut TestAppContext) {
+    if isolate("what_a_terminal_changed_follows_its_window_to_another_profile") {
+        return;
+    }
+    use wormhole_core::config::profile::{NewProfile, StartFrom};
+    let (window, root) = working_agent(cx, "rehomes");
+    cx.update(|cx| app_mut(cx).store = Some(Store::open().expect("opens the scratch database")));
+    let work = cx
+        .update(|cx| {
+            let new =
+                NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults };
+            let id = crate::app_state::AppState::create_profile(new, cx)?;
+            crate::app_state::AppState::ensure_open(&id, cx);
+            Ok::<_, String>(id)
+        })
+        .expect("makes the profile");
+    // The window is in the old database, as it is once it has been saved.
+    drive(cx, &window, |ws, _, cx| ws.save(cx));
+    write(&root, "new.txt");
+    read_repo(cx, &window, 0);
+    drive(cx, &window, |ws, _, cx| ws.keep_changes_now(cx));
+    let kept_in =
+        |cx: &mut TestAppContext, profile: &wormhole_core::storage::paths::ProfileId| -> Vec<String> {
+            cx.update(|cx| {
+                let store = app(cx).store_of(profile).expect("a store");
+                store.claims(&[1, 2]).expect("reads").into_iter().map(|claim| claim.path).collect()
+            })
+        };
+    let default = wormhole_core::storage::paths::ProfileId::default_profile();
+    assert_eq!(kept_in(cx, &default), ["new.txt"]);
+
+    drive(cx, &window, |ws, _, cx| ws.rehome(&work, cx).expect("the window moves"));
+    assert!(kept_in(cx, &default).is_empty(), "the old database lost them with the window");
+    drive(cx, &window, |ws, _, cx| ws.keep_changes_now(cx));
+    assert_eq!(kept_in(cx, &work), ["new.txt"], "the new one has them");
+    assert_eq!(counts(cx, &window)[0], Some(1), "and the count is as it was");
 }

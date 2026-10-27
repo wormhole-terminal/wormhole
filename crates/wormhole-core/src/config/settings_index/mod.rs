@@ -351,7 +351,7 @@ mod tests {
 
     use super::{Entry, SectionId, UNLISTED, Values, entries, entry, reset, set_by_project};
     use super::{as_map, key_path};
-    use crate::config::{APP_SETTINGS, PROJECT_SETTINGS, Settings, keys};
+    use crate::config::{APP_SETTINGS, ChangesScope, PROJECT_SETTINGS, Settings, keys};
 
     #[test]
     fn a_row_about_a_feature_is_of_use_only_while_it_is_on() {
@@ -368,19 +368,28 @@ mod tests {
 
     #[test]
     fn the_choices_of_the_changed_files_count_are_shown_only_while_it_is_shown() {
-        let ids = [
+        let shown = |id: &str, settings: &Settings| {
+            let (_, _, row) = entries().find(|(_, _, e)| e.id == id).expect("the row");
+            row.is_shown(settings)
+        };
+        let on = Settings::default();
+        let off = Settings { sidebar_changes: false, ..Settings::default() };
+        let repository = Settings { sidebar_changes_scope: ChangesScope::Repository, ..Settings::default() };
+        for id in [
             "sidebar-changes-scope",
             "sidebar-changes-plain",
             "sidebar-changes-shared",
             "sidebar-changes-remember",
-        ];
-        let on = Settings::default();
-        let off = Settings { sidebar_changes: false, ..Settings::default() };
-        for id in ids {
-            let (_, _, row) = entries().find(|(_, _, e)| e.id == id).expect("the row");
-            assert!(row.is_shown(&on), "{id}");
-            assert!(!row.is_shown(&off), "{id}");
+        ] {
+            assert!(shown(id, &on), "{id}");
+            assert!(!shown(id, &off), "{id}");
         }
+        // With the repository's count there is nothing to choose about whose files they are.
+        assert!(
+            shown("sidebar-changes-scope", &repository) && shown("sidebar-changes-remember", &repository)
+        );
+        assert!(!shown("sidebar-changes-plain", &repository));
+        assert!(!shown("sidebar-changes-shared", &repository));
         let (_, _, switch) = entries().find(|(_, _, e)| e.id == "sidebar-changes").expect("the row");
         assert!(switch.is_shown(&off), "the switch itself is always there");
     }

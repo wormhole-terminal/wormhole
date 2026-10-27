@@ -293,3 +293,26 @@ fn a_failed_terminal_says_what_went_wrong() {
     brew.terminal.message = Some("Password:".into());
     assert_eq!(question(&brew).as_deref(), Some("brew is asking: Password:"));
 }
+
+/// A setting the settings window doesn't show now (a choice beside a switch that is off) is not offered
+/// by the palette either: not found by what it says, and not among the recent ones.
+#[test]
+fn a_setting_that_is_not_shown_is_not_offered() {
+    let ids = |snapshot: &Snapshot, scope: Scope, query: &str| -> Vec<&'static str> {
+        rows(snapshot, scope, query)
+            .iter()
+            .filter_map(|row| match row {
+                Row::Result { item: Item::Setting(id), .. } => Some(*id),
+                _ => None,
+            })
+            .collect()
+    };
+    let shown = Snapshot { recent: vec![Recent::Setting("sidebar-changes-plain")], ..snapshot() };
+    assert!(ids(&shown, Scope::Settings, "plain terminals").contains(&"sidebar-changes-plain"));
+    assert_eq!(ids(&shown, Scope::Settings, ""), ["sidebar-changes-plain"], "recent while it is shown");
+
+    let hidden = Snapshot { hidden_rows: vec!["sidebar-changes-plain"], ..shown };
+    assert!(!ids(&hidden, Scope::Settings, "plain terminals").contains(&"sidebar-changes-plain"));
+    assert!(!ids(&hidden, Scope::All, "plain terminals").contains(&"sidebar-changes-plain"));
+    assert!(ids(&hidden, Scope::Settings, "").is_empty(), "and not recent either");
+}

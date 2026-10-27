@@ -1,8 +1,8 @@
 //! The settings schema: every key of `config.json`, its default and its
 //! valid range. The struct and its defaults are here; the values some settings take are in `choices`,
 //! which keys a project may set in `keys`, the project overlay in `overlay`, the primary colour's switch
-//! in `primary`, the title row's parts in `title_row`, the colours of folders in `folder_colors` and what a row's file
-//! count is of in `row_changes`.
+//! in `primary`, the title row's parts in `title_row`, the colours of folders in `folder_colors` and what
+//! a row's file count is of in `row_changes`.
 
 use std::collections::BTreeMap;
 use std::ops::RangeInclusive;

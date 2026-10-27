@@ -187,7 +187,8 @@ fn user_version(conn: &Connection) -> Result<i64> {
 
 /// Sessions whose window row or tab row is missing would be invisible, or have no terminal, and
 /// never be cleaned up; a session naming a split that is gone is not in one, and a split nobody is
-/// in is nothing. Cheap enough to check on every open.
+/// in is nothing; the files of a terminal that is gone (`row_claims`) are of nobody. Cheap enough to
+/// check on every open.
 fn repair(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "INSERT INTO windows (id, position, active)
@@ -197,7 +198,8 @@ fn repair(conn: &Connection) -> Result<()> {
              SELECT id, id, id, 0 FROM sessions WHERE id NOT IN (SELECT session_id FROM tabs);
          UPDATE sessions SET split_id = NULL
              WHERE split_id IS NOT NULL AND split_id NOT IN (SELECT id FROM splits);
-         DELETE FROM splits WHERE id NOT IN (SELECT split_id FROM sessions WHERE split_id IS NOT NULL);",
+         DELETE FROM splits WHERE id NOT IN (SELECT split_id FROM sessions WHERE split_id IS NOT NULL);
+         DELETE FROM row_claims WHERE session_id NOT IN (SELECT id FROM sessions);",
     )?;
     Ok(())
 }

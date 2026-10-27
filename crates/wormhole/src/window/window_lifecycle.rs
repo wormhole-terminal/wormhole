@@ -326,6 +326,8 @@ impl Workspace {
         }
         state.forget_window(&from, self.window_id);
         self.profile = target.clone();
+        // What each terminal changed is written into the database it is in now.
+        self.rehomed_changes(cx);
         // The features that keep something for the profile (an open worktree dialog) follow.
         self.rehomed_features(cx);
         // What it draws with follows: its terminals read their window's profile (an open diff reads it

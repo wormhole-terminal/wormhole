@@ -87,6 +87,8 @@ const BUDGET: [(&str, u64); 16] = [
     ("Notifications", 7882),
     ("MenuBar", 6195),
     ("Updates", 5649),
+    // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
+    // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     ("Advanced", 4185),
     ("Projects", 9037),
     // The switches for Automation, Tear off, Live resize and Notice chip are four rows more.

@@ -444,25 +444,26 @@ fn a_restored_terminal_that_is_somewhere_else_now_lets_go_of_what_was_kept() {
 }
 
 #[test]
-fn the_revision_moves_when_a_terminals_files_do_and_only_then() {
+fn a_terminals_revision_moves_when_its_files_do_and_only_then() {
     let mut w = World::new();
     let (a, a2) = (w.print(), w.print());
     w.observe(&[], 1);
-    let start = w.attribution.revision();
     w.track(AGENT, Kind::Told, true, 2);
+    w.track(OTHER_AGENT, Kind::Told, false, 2);
+    let start = w.attribution.revision_of(AGENT);
     w.observe(&[], 3);
-    assert_eq!(w.attribution.revision(), start, "nothing touched");
+    assert_eq!(w.attribution.revision_of(AGENT), start, "nothing touched");
     w.observe(&[("a", a)], 4);
-    let first = w.attribution.revision();
+    let first = w.attribution.revision_of(AGENT);
     assert!(first > start);
+    assert_eq!(w.attribution.revision_of(OTHER_AGENT), 0, "another terminal's is its own");
     // Same count, other files: committed `a`, edited `b` meanwhile.
     w.observe(&[("b", a2)], 5);
-    assert!(w.attribution.revision() > first, "a different set of files, though as many");
-    let before = w.attribution.revision();
+    assert!(w.attribution.revision_of(AGENT) > first, "a different set of files, though as many");
+    let before = w.attribution.revision_of(AGENT);
     w.observe(&[("b", a2)], 6);
-    assert_eq!(w.attribution.revision(), before, "a picture of the same files");
-    w.attribution.forget(AGENT);
-    assert!(w.attribution.revision() > before, "closing it drops its files");
+    assert_eq!(w.attribution.revision_of(AGENT), before, "a picture of the same files");
+    assert_eq!(w.attribution.revision_of(99), 0, "a terminal not known");
 }
 
 #[test]

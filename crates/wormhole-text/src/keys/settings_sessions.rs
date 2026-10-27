@@ -82,7 +82,7 @@ pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_PLAIN_DESCRIPTION: Key = Key::new(69
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_PLAIN_KEYWORDS: Key = Key::new(700);
 /// "Files changed at once"
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_SHARED: Key = Key::new(701);
-/// "When two terminals worked at the same time, whose file it is can't be told: both count it, or neither does"
+/// "When several terminals worked at the same time, whose file it is can't be told: each counts it, or nobody does"
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_SHARED_DESCRIPTION: Key = Key::new(702);
 /// "both shared overlap ambiguous agents"
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_SHARED_KEYWORDS: Key = Key::new(703);
@@ -122,9 +122,9 @@ pub const SETTINGS_SESSIONS_CHANGES_PLAIN_FINISHING: Key = Key::new(719);
 pub const SETTINGS_SESSIONS_CHANGES_PLAIN_ANY: Key = Key::new(720);
 /// "None"
 pub const SETTINGS_SESSIONS_CHANGES_PLAIN_NONE: Key = Key::new(721);
-/// "Both count it"
+/// "Each counts it"
 pub const SETTINGS_SESSIONS_CHANGES_SHARED_EACH: Key = Key::new(722);
-/// "Neither"
+/// "Nobody counts it"
 pub const SETTINGS_SESSIONS_CHANGES_SHARED_NONE: Key = Key::new(723);
 /// "Live preview of the Terminals list. Hovering a density previews it under the current one"
 pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_STACKED: Key = Key::new(724);

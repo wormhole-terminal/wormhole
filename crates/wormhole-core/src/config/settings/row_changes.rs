@@ -1,7 +1,11 @@
 //! What a terminal's row counts as its changed files (Settings → Terminals & sidebar → Changed files),
 //! and how the count is worked out (`git::attribution`). Each choice is a snake_case word in
-//! `config.json`; a word this build doesn't know reads as the default, so a file written by a newer
-//! build still loads whole.
+//! `config.json`.
+//!
+//! A word this build doesn't know reads as the default (`#[serde(other)]` on each default), unlike the
+//! other choices of `choices`, which refuse it and leave the file unread until it is fixed. That is
+//! chosen: these are habits, and a newer build's value should not stop an older one loading the rest of
+//! the file. The cost is that the older build, saving, writes the default where the newer value was.
 
 use serde::{Deserialize, Serialize};
 

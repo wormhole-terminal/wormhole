@@ -152,7 +152,9 @@ fn the_remaining_steps_run_in_order_and_keep_the_data() {
     let mut conn = v6_database(&dir);
     let steps = [
         steps::V7_EVERY_TERMINAL_A_SESSION,
-        "ALTER TABLE sessions ADD COLUMN color TEXT;",
+        // (The repair that follows every upgrade reads `row_claims`, which a real step makes.)
+        "ALTER TABLE sessions ADD COLUMN color TEXT;
+         CREATE TABLE row_claims (session_id INTEGER NOT NULL, root TEXT NOT NULL, path TEXT NOT NULL);",
         "UPDATE sessions SET color = 'teal' WHERE name = 'kept';",
         "ALTER TABLE tabs ADD COLUMN title TEXT;",
     ];

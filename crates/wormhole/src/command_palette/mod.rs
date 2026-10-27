@@ -131,6 +131,10 @@ fn gather(window_id: i64, cx: &mut App) -> Snapshot {
         .into_iter()
         .filter(|section| !section.is_visible(settings(cx)))
         .collect();
+    let hidden_rows = wormhole_core::config::settings_index::entries()
+        .filter(|(_, _, entry)| !entry.is_shown(settings(cx)))
+        .map(|(_, _, entry)| entry.id)
+        .collect();
     let list = &app(cx).profiles;
     let profiles = list
         .profiles()
@@ -150,6 +154,7 @@ fn gather(window_id: i64, cx: &mut App) -> Snapshot {
         shown_profile,
         window_profile,
         hidden_sections,
+        hidden_rows,
         ..Snapshot::default()
     };
     let mut folders: Vec<FolderItem> = Vec::new();
