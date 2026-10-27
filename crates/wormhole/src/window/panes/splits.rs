@@ -305,7 +305,7 @@ impl Workspace {
     }
 
     /// Forget a session that was made for a split that did not happen.
-    fn drop_session(&mut self, ix: usize, cx: &mut Context<Self>) {
+    pub(in crate::window) fn drop_session(&mut self, ix: usize, cx: &mut Context<Self>) {
         let session = self.sessions.remove(ix);
         self.features_closed(session.id, cx);
         self.publish_terminal_closed(session.id, cx);
@@ -325,7 +325,13 @@ impl Workspace {
 
     /// Make `layout` session `anchor`'s split, with `joiner` in it: the split it had, or a new one.
     /// The joiner takes the anchor's pin (the pin is the split's) and its place beside the others.
-    fn install_layout(&mut self, anchor: usize, joiner: usize, layout: TabPanes, cx: &mut Context<Self>) {
+    pub(in crate::window) fn install_layout(
+        &mut self,
+        anchor: usize,
+        joiner: usize,
+        layout: TabPanes,
+        cx: &mut Context<Self>,
+    ) {
         let id = self.split_for(anchor, &layout, cx);
         if let Some(split) = self.split_mut(id) {
             split.layout = layout;

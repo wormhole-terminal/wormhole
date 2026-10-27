@@ -7,15 +7,15 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Copied command"
-pub const NOTICE_COPIED_COMMAND: Key = Key::new(3);
+pub const NOTICE_COPIED_COMMAND: Key = Key::new(4);
 /// "Copied path"
-pub const NOTICE_COPIED_PATH: Key = Key::new(4);
+pub const NOTICE_COPIED_PATH: Key = Key::new(5);
 /// "Copied setting key"
-pub const NOTICE_COPIED_SETTING_KEY: Key = Key::new(5);
+pub const NOTICE_COPIED_SETTING_KEY: Key = Key::new(6);
 /// "Copied error"
-pub const NOTICE_COPIED_ERROR: Key = Key::new(6);
+pub const NOTICE_COPIED_ERROR: Key = Key::new(7);
 /// "Copied object id"
-pub const NOTICE_COPIED_OBJECT_ID: Key = Key::new(7);
+pub const NOTICE_COPIED_OBJECT_ID: Key = Key::new(8);
 
 /// ```text
 /// { $count ->
@@ -24,7 +24,7 @@ pub const NOTICE_COPIED_OBJECT_ID: Key = Key::new(7);
 /// }
 /// ```
 pub fn notice_copied_lines(count: i64) -> String {
-    crate::active::message(0, &[("count", Arg::Int(count))])
+    crate::active::message(1, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -34,7 +34,7 @@ pub fn notice_copied_lines(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_characters(count: i64) -> String {
-    crate::active::message(1, &[("count", Arg::Int(count))])
+    crate::active::message(2, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -44,5 +44,5 @@ pub fn notice_copied_characters(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_output(count: i64) -> String {
-    crate::active::message(2, &[("count", Arg::Int(count))])
+    crate::active::message(3, &[("count", Arg::Int(count))])
 }

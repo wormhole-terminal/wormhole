@@ -34,6 +34,7 @@ mod policy;
 pub mod printable;
 pub mod read;
 pub mod sessions;
+pub mod structure;
 mod welcome;
 
 use serde::{Deserialize, Serialize};
@@ -43,8 +44,8 @@ pub use cli::{COMMAND_NAME, Cli, Parsed, help, help_with, is_verb, parse, render
 pub(in crate::ipc) use cli::{events, json_env, print, print_err, show_automation};
 pub use event::{Event, EventFilter, EventsSpec, Subscribed, Topic, Topics};
 pub use facts::{
-    Asked, KeysSent, Listing, Opened, PaneInfo, Reached, StatusInfo, Summary, TabInfo, TerminalInfo,
-    TerminalState, WindowInfo,
+    Asked, KeysSent, Listing, Opened, PaneInfo, Reached, SplitInfo, StatusInfo, Summary, TabInfo,
+    TerminalInfo, TerminalState, WindowInfo,
 };
 pub use keys::{KeyItem, SendKeysSpec};
 pub use limits::{Limited, RateLimits};
@@ -54,6 +55,10 @@ pub use policy::{
     send_text_check, writes_off,
 };
 pub use read::{BlocksSpec, REPLY_MAX_BYTES, ReadSpec};
+pub use structure::{
+    CloseAsked, CloseSpec, FocusSpec, Focused, NewWindowSpec, RenameSpec, Renamed, Side, SplitMade,
+    SplitSpec, WindowOpened,
+};
 pub use welcome::{
     AgentFact, AgentsFacts, FIELD_MAX_BYTES, HooksFact, ImportDone, LookFacts, NotifyFacts, PermissionFact,
     PrimaryFact, ThemeFact, WelcomeOp, WelcomeState,
@@ -136,6 +141,16 @@ pub enum Action {
     SendKeys(keys::SendKeysSpec),
     /// Pointer events for a program that asked for the mouse.
     Mouse(mouse::MouseSpec),
+    /// A window with one new terminal, opened behind the other apps' windows unless asked to come forward.
+    NewWindow(structure::NewWindowSpec),
+    /// A new terminal beside a terminal, in the same split.
+    Split(structure::SplitSpec),
+    /// Select a terminal and give it its window's keyboard.
+    Focus(structure::FocusSpec),
+    /// Name a terminal (or call it after what runs in it again).
+    Rename(structure::RenameSpec),
+    /// Ask the user whether to close a terminal; it never closes on the caller's say.
+    Close(structure::CloseSpec),
     /// The first-run welcome program asking the app that runs it (`token` is the one in its
     /// terminal's environment): state, choices, and the end.
     Welcome { token: String, op: WelcomeOp },
@@ -144,7 +159,7 @@ pub enum Action {
 impl Action {
     /// What every action is called in a request's `action` field, for [`unreadable`]: a test keeps
     /// it in step with the enum.
-    const KNOWN: [&str; 11] = [
+    const KNOWN: [&str; 16] = [
         "list",
         "status",
         "notify",
@@ -155,6 +170,11 @@ impl Action {
         "blocks",
         "send_keys",
         "mouse",
+        "new_window",
+        "split",
+        "focus",
+        "rename",
+        "close",
         "welcome",
     ];
 
@@ -171,16 +191,29 @@ impl Action {
             Action::Blocks(_) => "blocks",
             Action::SendKeys(_) => "send-keys",
             Action::Mouse(_) => "mouse",
+            Action::NewWindow(_) => "new-window",
+            Action::Split(_) => "split",
+            Action::Focus(_) => "focus",
+            Action::Rename(_) => "rename",
+            Action::Close(_) => "close",
             Action::Welcome { .. } => "welcome",
         }
     }
 
-    /// Whether the action types into a terminal or starts a program: off until `control_write`.
-    /// (`Welcome` neither types nor starts a program; its token is its switch.)
+    /// Whether the action types into a terminal, starts a program or changes the windows and terminals:
+    /// off until `control_write`. (`Welcome` is none of these; its token is its switch.)
     pub fn writes(&self) -> bool {
         matches!(
             self,
-            Action::SendText { .. } | Action::NewTerminal { .. } | Action::SendKeys(_) | Action::Mouse(_)
+            Action::SendText { .. }
+                | Action::NewTerminal { .. }
+                | Action::SendKeys(_)
+                | Action::Mouse(_)
+                | Action::NewWindow(_)
+                | Action::Split(_)
+                | Action::Focus(_)
+                | Action::Rename(_)
+                | Action::Close(_)
         )
     }
 

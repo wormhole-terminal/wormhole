@@ -1,8 +1,8 @@
 //! Opening a window: the one way the app does it, so every window gets what all of them need.
 //! `gpui_kit::open_window` itself is called nowhere else (`tests/background_rules.rs` checks).
 //!
-//! What every window gets: while background mode keeps Wormhole behind the other apps, it opens
-//! without the focus and behind their windows (`background`), and its traffic lights, if it has
+//! What every window gets: while background mode keeps Wormhole behind the other apps (or the caller asked
+//! for [`Activation::Behind`]), it opens without the focus and behind their windows (`background`), and its traffic lights, if it has
 //! any, are drawn in the theme's appearance (`platform::window::follow_theme`).
 //!
 //! A window that opens with the system's animation (a terminal window, `window::scaling`) is opened out of
@@ -10,13 +10,33 @@
 
 use gpui_kit::*;
 
+/// Whether a window comes forward as it opens.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Activation {
+    /// As every window opens: in front, with the keys, unless background mode keeps Wormhole behind.
+    Front,
+    /// Behind the other apps' windows, without the keys, and the app is not brought forward: what a script
+    /// that opens a window asks for (`wh new-window` without `--activate`).
+    Behind,
+}
+
 /// Open a window of the app and build its root view.
 pub fn open<V: Render>(
+    options: WindowOptions,
+    cx: &mut App,
+    build: impl FnOnce(&mut Window, &mut App) -> Entity<V>,
+) -> anyhow::Result<(AnyWindowHandle, Entity<V>)> {
+    open_with(Activation::Front, options, cx, build)
+}
+
+/// [`open`], coming forward as `activation` says.
+pub fn open_with<V: Render>(
+    activation: Activation,
     mut options: WindowOptions,
     cx: &mut App,
     build: impl FnOnce(&mut Window, &mut App) -> Entity<V>,
 ) -> anyhow::Result<(AnyWindowHandle, Entity<V>)> {
-    let behind = crate::background::keeps_new_windows_behind(cx);
+    let behind = activation == Activation::Behind || crate::background::keeps_new_windows_behind(cx);
     if behind {
         crate::background::open_unfocused(&mut options);
     }

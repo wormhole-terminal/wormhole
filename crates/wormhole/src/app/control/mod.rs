@@ -1,6 +1,7 @@
 //! The control protocol's app side (`wormhole_core::ipc::control`): what
 //! `Wormhole list`, `status`, `notify`, `send-text` and `new-terminal` do here (and the first-run
-//! welcome's requests go on to `welcome`).
+//! welcome's requests go on to `welcome`). Windows and splits (`new-window`, `split`, `focus`, `rename`,
+//! `close`) are `structure`.
 //!
 //! Requests come from the socket thread through `AppState`'s message task (`app::tick::dispatch_hook`),
 //! outside any window's update, so every window can be read and the one a request is about updated
@@ -17,14 +18,15 @@
 mod input;
 mod read;
 mod stream;
+mod structure;
 
-use std::path::Path;
 use std::time::Instant;
 
 use gpui_kit::*;
+use wormhole_core::ipc::control::structure::launch_check;
 use wormhole_core::ipc::control::{
     Action, Error, ErrorCode, Limited, Listing, PROTOCOL_VERSION, RateLimits, Reached, Reason, Reply,
-    Request, SEND_TEXT_MAX_BYTES, StatusInfo, Summary, Target, WindowInfo, notice_text, writes_off,
+    Request, StatusInfo, Summary, Target, WindowInfo, notice_text, writes_off,
 };
 use wormhole_core::ipc::{Answer, Peer};
 
@@ -88,6 +90,11 @@ pub(crate) fn handle(request: Request, peer: &Peer, cx: &mut App) -> Reply {
         Action::NewTerminal { folder, command, worktree, window } => {
             new_terminal(folder, command, worktree, window, from, cx)
         }
+        Action::NewWindow(spec) => structure::new_window(&spec, from, cx),
+        Action::Split(spec) => structure::split(&spec, from, cx),
+        Action::Focus(spec) => structure::focus(&spec, from, cx),
+        Action::Rename(spec) => structure::rename(&spec, from, cx),
+        Action::Close(spec) => structure::close(&spec, from, cx),
         // Answered by `answer`, which can carry a stream or a job for the socket thread; a reply
         // alone (devctl's `control`) cannot.
         Action::Events(_) => {
@@ -124,8 +131,11 @@ fn listing(cx: &App) -> Listing {
         .windows
         .iter()
         .filter_map(|window| {
-            let terminals = window.workspace.read_with(cx, |ws, cx| ws.control_terminals(cx)).ok()?;
-            Some(WindowInfo { id: window.id, front: front == Some(window.id), terminals })
+            let (terminals, splits) = window
+                .workspace
+                .read_with(cx, |ws, cx| (ws.control_terminals(cx), ws.control_splits()))
+                .ok()?;
+            Some(WindowInfo { id: window.id, front: front == Some(window.id), terminals, splits })
         })
         .collect();
     Listing { windows }
@@ -187,22 +197,8 @@ fn new_terminal(
         let error = writes_off();
         return Reply::from(error);
     }
-    if let Some(folder) = &folder {
-        let path = Path::new(folder);
-        if !path.is_absolute() || !path.is_dir() {
-            return Reply::error(ErrorCode::NotFound, format!("no folder at {folder}"));
-        }
-    }
-    if let Some(command) = &command {
-        if command.contains(['\n', '\r']) {
-            return Reply::error(ErrorCode::BadRequest, "--command takes one line");
-        }
-        if command.len() > SEND_TEXT_MAX_BYTES {
-            return Reply::error(
-                ErrorCode::TooLarge,
-                format!("--command takes at most {SEND_TEXT_MAX_BYTES} bytes"),
-            );
-        }
+    if let Err(error) = launch_check(folder.as_deref(), command.as_deref()) {
+        return error.into();
     }
     let target = match window {
         Some(id) => app(cx).windows.iter().find(|w| w.id == id).cloned(),

@@ -64,6 +64,19 @@ pub struct WindowInfo {
     /// The window in front (the one `new-terminal` opens in without `--window`).
     pub front: bool,
     pub terminals: Vec<TerminalInfo>,
+    /// The splits of the window: which terminals are shown together. Absent from an older app's reply.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub splits: Vec<SplitInfo>,
+}
+
+/// Terminals shown side by side as one.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SplitInfo {
+    pub id: i64,
+    /// Its terminals, in reading order (left to right, then top to bottom).
+    pub terminals: Vec<i64>,
+    /// The one with the keyboard when the split is shown.
+    pub focused: i64,
 }
 
 /// A sidebar terminal.
@@ -89,6 +102,9 @@ pub struct TerminalInfo {
     pub profile: Option<String>,
     /// On screen in its window.
     pub selected: bool,
+    /// The split it is in, when it is in one (see the window's `splits`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub split: Option<i64>,
     pub tabs: Vec<TabInfo>,
 }
 

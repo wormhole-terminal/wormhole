@@ -4,7 +4,9 @@
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::ipc::Peer;
-use wormhole_core::ipc::control::{Opened, PaneInfo, TabInfo, Target, TerminalInfo, TerminalState};
+use wormhole_core::ipc::control::{
+    Opened, PaneInfo, SplitInfo, TabInfo, Target, TerminalInfo, TerminalState,
+};
 use wormhole_term::Notification;
 
 use crate::app_state::app;
@@ -28,6 +30,18 @@ impl Workspace {
     /// Every terminal of this window, in the sidebar's order.
     pub(crate) fn control_terminals(&self, cx: &App) -> Vec<TerminalInfo> {
         self.session_order(cx).into_iter().map(|ix| self.terminal_info(ix, cx)).collect()
+    }
+
+    /// The window's splits, with their terminals in reading order.
+    pub(crate) fn control_splits(&self) -> Vec<SplitInfo> {
+        self.splits
+            .iter()
+            .map(|split| SplitInfo {
+                id: split.id,
+                terminals: split.layout.panes(),
+                focused: split.layout.focused(),
+            })
+            .collect()
     }
 
     pub(crate) fn control_terminal(&self, session: i64, cx: &App) -> Option<TerminalInfo> {
@@ -73,6 +87,7 @@ impl Workspace {
                     .flatten()
             },
             selected: ix == self.active,
+            split: session.split,
             // The protocol still lists tabs: a terminal has the one, itself, with its one pane.
             tabs: vec![TabInfo {
                 id: session.id,

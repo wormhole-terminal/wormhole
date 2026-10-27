@@ -7,10 +7,12 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 use super::read_text::{blocks_text, read_text};
+use super::structure_text as text_of;
 use crate::ipc::control::printable::for_terminal;
 use crate::ipc::control::read::{Blocks, Read};
 use crate::ipc::control::{
-    Action, Asked, KeysSent, Listing, Opened, Reached, Reply, StatusInfo, Summary, TabInfo, TerminalInfo,
+    Action, Asked, CloseAsked, Focused, KeysSent, Listing, Opened, Reached, Renamed, Reply, SplitMade,
+    StatusInfo, Summary, TabInfo, TerminalInfo, WindowOpened,
 };
 
 /// The reply to `action` as a person reads it (`--json` prints the object instead). The action
@@ -51,6 +53,13 @@ pub fn render_with(
         Action::Blocks(_) => read::<Blocks>(&result).map(|blocks| blocks_text(&blocks)),
         Action::SendKeys(_) => read::<KeysSent>(&result)
             .map(|sent| format!("{} {} to tab {}\n", sent.keys, plural(sent.keys, "key"), sent.tab)),
+        Action::NewWindow(_) => {
+            read::<WindowOpened>(&result).map(|opened| text_of::window_opened(&opened, home))
+        }
+        Action::Split(_) => read::<SplitMade>(&result).map(|made| text_of::split_made(&made, home)),
+        Action::Focus(_) => read::<Focused>(&result).map(|focused| text_of::focused(&focused)),
+        Action::Rename(_) => read::<Renamed>(&result).map(|renamed| text_of::renamed(&renamed)),
+        Action::Close(_) => read::<CloseAsked>(&result).map(|asked| text_of::close_asked(&asked)),
         // Streams and the welcome have their own words.
         Action::Events(_) | Action::Welcome { .. } => None,
     };
@@ -71,6 +80,16 @@ fn listing_text(listing: &Listing, home: Option<&Path>) -> String {
             for tab in &terminal.tabs {
                 out.push_str(&tab_line(tab));
             }
+        }
+        for split in &window.splits {
+            let terminals: Vec<String> = split.terminals.iter().map(i64::to_string).collect();
+            out.push_str(&format!(
+                "  split {}  {} {}  focused {}\n",
+                split.id,
+                plural(terminals.len(), "terminal"),
+                terminals.join(" "),
+                split.focused
+            ));
         }
     }
     if listing.windows.is_empty() {
@@ -141,6 +160,9 @@ fn terminal_line(terminal: &TerminalInfo, home: Option<&Path>) -> String {
             _ => parts.push(for_terminal(branch).into_owned()),
         }
     }
+    if let Some(split) = terminal.split {
+        parts.push(format!("split {split}"));
+    }
     if terminal.pinned {
         parts.push("pinned".into());
     }
@@ -202,8 +224,8 @@ mod tests {
 
     use super::{render, shorten};
     use crate::ipc::control::{
-        Action, Error, ErrorCode, Listing, Opened, PaneInfo, Reached, Reason, Reply, StatusInfo, Summary,
-        TabInfo, TerminalInfo, TerminalState, WindowInfo,
+        Action, CloseAsked, CloseSpec, Error, ErrorCode, Listing, Opened, PaneInfo, Reached, Reason, Reply,
+        SplitInfo, StatusInfo, Summary, TabInfo, Target, TerminalInfo, TerminalState, WindowInfo,
     };
 
     fn status_of() -> Action {
@@ -246,6 +268,7 @@ mod tests {
             pinned: true,
             profile: None,
             selected: true,
+            split: None,
             tabs: vec![
                 TabInfo {
                     message: Some("Allow Bash?".into()),
@@ -262,8 +285,9 @@ mod tests {
 
     #[test]
     fn a_listing_reads_as_an_indented_tree() {
-        let listing =
-            Listing { windows: vec![WindowInfo { id: 1, front: true, terminals: vec![terminal()] }] };
+        let listing = Listing {
+            windows: vec![WindowInfo { id: 1, front: true, terminals: vec![terminal()], splits: vec![] }],
+        };
         let text = render(&Action::List, &Reply::ok(listing), Some(Path::new("/Users/me"))).expect("renders");
         assert_eq!(
             text,
@@ -313,6 +337,32 @@ mod tests {
     }
 
     #[test]
+    fn splits_are_listed_with_their_members_and_each_member_names_its_split() {
+        let mut member = terminal();
+        member.split = Some(12);
+        let listing = Listing {
+            windows: vec![WindowInfo {
+                id: 1,
+                front: true,
+                terminals: vec![member],
+                splits: vec![SplitInfo { id: 12, terminals: vec![3, 9], focused: 9 }],
+            }],
+        };
+        let text = render(&Action::List, &Reply::ok(listing), Some(Path::new("/Users/me"))).expect("renders");
+        assert!(text.contains("main ±2  split 12  pinned"), "{text}");
+        assert!(text.ends_with("  split 12  terminals 3 9  focused 9\n"), "{text}");
+    }
+
+    #[test]
+    fn the_window_and_split_verbs_are_read_as_their_own_results() {
+        let ask = Action::Close(CloseSpec { target: Target::Terminal(3) });
+        let asked = Reply::ok(CloseAsked { asked: true, window: 1, terminal: 3 });
+        assert!(render(&ask, &asked, None).expect("renders").starts_with("asked in window 1"));
+        // The same object is nothing to a verb that returns something else.
+        assert_eq!(render(&Action::List, &asked, None).expect("renders"), "ok\n");
+    }
+
+    #[test]
     fn home_is_shortened_to_a_tilde() {
         let home = Some(Path::new("/Users/me"));
         assert_eq!(shorten("/Users/me", home), "~");
@@ -353,7 +403,9 @@ mod tests {
         terminal.tabs[0].command = Some(evil.into());
         terminal.tabs[0].message = Some(evil.into());
         terminal.tabs[0].shell = evil.into();
-        let listing = Listing { windows: vec![WindowInfo { id: 1, front: true, terminals: vec![terminal] }] };
+        let listing = Listing {
+            windows: vec![WindowInfo { id: 1, front: true, terminals: vec![terminal], splits: vec![] }],
+        };
         let text = render(&Action::List, &Reply::ok(listing), None).expect("renders");
         assert!(!text.contains(['\u{1b}', '\u{202e}']), "{text:?}");
         assert!(text.contains("\\u{1b}[2Jy\\u{202e}z"), "{text}");

@@ -35,6 +35,21 @@ pub fn help_with(automation: bool) -> String {
   {wh} mouse <target> scroll <row> <col> up|down|left|right [--by <n>] [--shift] [--alt] [--ctrl]
       Click, drag (move --button left) or scroll in a program that asked for the mouse (rows and
       columns count from 0).
+  {wh} new-window [--folder <path>] [--command <command>] [--activate]
+      A window with one new terminal. It opens behind your other windows and takes no keys unless
+      --activate. Prints the new window's and terminal's ids.
+  {wh} split <target> [--right|--down|--left|--up] [--size <percent>] [--folder <path>]
+        [--command <command>] [--select]
+      A new terminal beside the target (right by default), in its folder and shell unless --folder,
+      in the target's split. --size is its share of the split. The selection stays where it is
+      unless --select. Prints the ids; nothing changes if the window has no room.
+  {wh} focus <target> [--activate]
+      Select a terminal and give it its window's keyboard. The window comes forward only with --activate.
+  {wh} rename <target> <name>... | --clear
+      Name a terminal as the sidebar's rename does; --clear calls it after what runs in it again.
+  {wh} close <target>
+      Asks you, in the terminal's window, whether to close it. It never closes on a script's say; the
+      reply only says the question is up, and `events` tells if you said yes (terminal_closed).
 "
         )
     } else {

@@ -1,5 +1,5 @@
 //! `Wormhole list | status | notify | send-text | new-terminal | events | read | blocks | send-keys |
-//! mouse`: the command line's side of the
+//! mouse | new-window | split | focus | rename | close`: the command line's side of the
 //! control protocol. The arguments are read into a [`Request`](super::Request) (`parse`), the app's [`Reply`] is
 //! printed as text or, with `--json` (or `WORMHOLE_JSON`, `--text` to override it), as the one JSON
 //! object it is (`render`). The round trip over the
@@ -17,6 +17,7 @@ mod parse;
 mod parse_tests;
 mod read_text;
 mod render;
+mod structure_text;
 
 pub use help::{help, help_with};
 pub use parse::parse;
@@ -77,6 +78,11 @@ pub fn is_verb(word: &str) -> bool {
             | "blocks"
             | "send-keys"
             | "mouse"
+            | "new-window"
+            | "split"
+            | "focus"
+            | "rename"
+            | "close"
             | "sessions"
             | "help"
             | "--help"

@@ -3,6 +3,7 @@ use std::collections::BTreeSet;
 use super::keys::{KeyItem, SendKeysSpec};
 use super::mouse::{ButtonName, MouseOp, MouseSpec, Pointer};
 use super::read::{BlocksSpec, Range, ReadSpec};
+use super::structure::{CloseSpec, FocusSpec, NewWindowSpec, RenameSpec, Side, SplitSpec};
 use super::{
     Action, Error, ErrorCode, PROTOCOL_VERSION, Reason, Reply, Request, Summary, Target, TerminalState,
     WelcomeOp, event::EventsSpec, unreadable,
@@ -21,6 +22,11 @@ fn name(action: &Action) -> &'static str {
         Action::Blocks(_) => "blocks",
         Action::SendKeys(_) => "send_keys",
         Action::Mouse(_) => "mouse",
+        Action::NewWindow(_) => "new_window",
+        Action::Split(_) => "split",
+        Action::Focus(_) => "focus",
+        Action::Rename(_) => "rename",
+        Action::Close(_) => "close",
         Action::Welcome { .. } => "welcome",
     }
 }
@@ -137,6 +143,54 @@ fn golden() -> Vec<(Request, &'static str)> {
         ),
         (
             Request::new(
+                Action::NewWindow(NewWindowSpec {
+                    folder: Some("/work/app".into()),
+                    command: Some("claude".into()),
+                    activate: false,
+                }),
+                None,
+            ),
+            r#"{"version":1,"action":"new_window","folder":"/work/app","command":"claude"}"#,
+        ),
+        (
+            Request::new(Action::NewWindow(NewWindowSpec { activate: true, ..Default::default() }), None),
+            r#"{"version":1,"action":"new_window","activate":true}"#,
+        ),
+        (
+            Request::new(
+                Action::Split(SplitSpec {
+                    target: Target::Terminal(3),
+                    direction: Side::Right,
+                    size: Some(40),
+                    folder: None,
+                    command: Some("npm run dev".into()),
+                    select: false,
+                }),
+                Some("7".into()),
+            ),
+            r#"{"version":1,"from":"7","action":"split","target":{"kind":"terminal","id":3},"direction":"right","size":40,"command":"npm run dev"}"#,
+        ),
+        (
+            Request::new(Action::Focus(FocusSpec { target: Target::Terminal(3), activate: true }), None),
+            r#"{"version":1,"action":"focus","target":{"kind":"terminal","id":3},"activate":true}"#,
+        ),
+        (
+            Request::new(
+                Action::Rename(RenameSpec { target: Target::Terminal(3), name: Some("api".into()) }),
+                None,
+            ),
+            r#"{"version":1,"action":"rename","target":{"kind":"terminal","id":3},"name":"api"}"#,
+        ),
+        (
+            Request::new(Action::Rename(RenameSpec { target: Target::Terminal(3), name: None }), None),
+            r#"{"version":1,"action":"rename","target":{"kind":"terminal","id":3}}"#,
+        ),
+        (
+            Request::new(Action::Close(CloseSpec { target: Target::Terminal(3) }), None),
+            r#"{"version":1,"action":"close","target":{"kind":"terminal","id":3}}"#,
+        ),
+        (
+            Request::new(
                 Action::Welcome { token: "0123abcd".into(), op: WelcomeOp::State },
                 Some("4".into()),
             ),
@@ -161,6 +215,11 @@ fn every_action_has_a_golden_line() {
             "blocks",
             "send_keys",
             "mouse",
+            "new_window",
+            "split",
+            "focus",
+            "rename",
+            "close",
             "welcome"
         ])
     );
@@ -219,6 +278,23 @@ fn only_typing_and_starting_programs_need_the_switch() {
         }),
     });
     assert!(keys.writes() && mouse.writes() && !keys.reads() && !mouse.reads());
+    // Windows, splits, the selection, names and the close question are the switch's too.
+    for action in [
+        Action::NewWindow(NewWindowSpec::default()),
+        Action::Split(SplitSpec {
+            target: Target::Tab(1),
+            direction: Side::Down,
+            size: None,
+            folder: None,
+            command: None,
+            select: false,
+        }),
+        Action::Focus(FocusSpec { target: Target::Tab(1), activate: false }),
+        Action::Rename(RenameSpec { target: Target::Tab(1), name: None }),
+        Action::Close(CloseSpec { target: Target::Tab(1) }),
+    ] {
+        assert!(action.writes() && !action.reads(), "{}", action.name());
+    }
     let read = Action::Read(ReadSpec { target: None, range: Range::Screen, join: false, styles: false });
     assert!(read.reads() && !read.writes(), "reading is control_read's, not control_write's");
     assert!(Action::Blocks(BlocksSpec { target: None, last: None, output: false }).reads());

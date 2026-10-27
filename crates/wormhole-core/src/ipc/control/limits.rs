@@ -20,6 +20,14 @@ pub enum Limited {
     SendKeys,
     /// `mouse`.
     Mouse,
+    /// `new-window`: a window is the heaviest thing a script can open, so only a few a minute.
+    NewWindow,
+    /// `focus`: it moves the selection the person is looking at, so it is kept to a human pace.
+    Focus,
+    /// `rename`.
+    Rename,
+    /// `close`: each one puts a question in front of the user, so it is the scarcest.
+    Close,
     /// A stream of events (`events`): each one holds a thread and a place among the few streams there
     /// are, so how often one is started is held down too.
     Subscribe,
@@ -51,6 +59,10 @@ impl Limited {
             Limited::Read => 600,
             Limited::SendKeys => 240,
             Limited::Mouse => 240,
+            Limited::NewWindow => 3,
+            Limited::Focus => 60,
+            Limited::Rename => 30,
+            Limited::Close => 10,
             Limited::Subscribe => 30,
             Limited::WelcomeLook => 240,
             Limited::WelcomeInstall => 12,
@@ -133,6 +145,8 @@ mod tests {
         assert!(Limited::Notify.budget() <= 10);
         assert!(Limited::NewTerminal.budget() <= 5);
         assert!(Limited::SendText.budget() <= 30 && Limited::Subscribe.budget() <= 30);
+        assert!(Limited::NewWindow.budget() <= 3 && Limited::Close.budget() <= 10);
+        assert!(Limited::Focus.budget() <= 60 && Limited::Rename.budget() <= 30);
         assert!(Limited::WelcomeInstall.budget() <= 12 && Limited::WelcomeNotify.budget() <= 30);
         assert!(Limited::WelcomeDemo.budget() <= 120 && Limited::WelcomeFinish.budget() <= 4);
         assert!(Limited::WelcomeImport.budget() <= 6);

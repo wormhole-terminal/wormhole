@@ -265,6 +265,7 @@ mod tests {
             pinned: false,
             profile: None,
             selected: false,
+            split: None,
             tabs: vec![],
         };
         let subscribed = Subscribed {
@@ -274,15 +275,25 @@ mod tests {
             topics: vec![],
             listing: Listing {
                 windows: vec![
-                    WindowInfo { id: 1, front: true, terminals: vec![terminal(1), terminal(2)] },
-                    WindowInfo { id: 2, front: false, terminals: vec![terminal(3)] },
+                    WindowInfo {
+                        id: 1,
+                        front: true,
+                        terminals: vec![terminal(1), terminal(2)],
+                        splits: vec![],
+                    },
+                    WindowInfo { id: 2, front: false, terminals: vec![terminal(3)], splits: vec![] },
                 ],
             },
         };
         assert_eq!(header(&subscribed), "watching 2 windows, 3 terminals from #430 (ctrl-c to stop)\n");
         let one = Subscribed {
             listing: Listing {
-                windows: vec![WindowInfo { id: 1, front: true, terminals: vec![terminal(1)] }],
+                windows: vec![WindowInfo {
+                    id: 1,
+                    front: true,
+                    terminals: vec![terminal(1)],
+                    splits: vec![],
+                }],
             },
             ..subscribed
         };

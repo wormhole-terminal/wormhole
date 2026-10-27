@@ -6,7 +6,9 @@ use super::{Cli, Parsed};
 use crate::ipc::control::keys::{KeyItem, SendKeysSpec, parse_key};
 use crate::ipc::control::mouse::{ButtonName, Direction, MouseOp, MouseSpec, Pointer, Wheel};
 use crate::ipc::control::read::{BlockRef, BlocksSpec, Newest, Range, ReadSpec};
-use crate::ipc::control::{Action, EventsSpec, Target};
+use crate::ipc::control::{
+    Action, CloseSpec, EventsSpec, FocusSpec, NewWindowSpec, RenameSpec, Side, SplitSpec, Target,
+};
 
 /// Read the words after the program name (`list --json`, `send-text --tab 3 hello`) into what to
 /// do. `cwd` and `home` resolve a relative folder and a leading `~`.
@@ -27,6 +29,11 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
     let mut command = None;
     let mut worktree = None;
     let mut window = None;
+    let mut activate = false;
+    let mut select = false;
+    let mut clear = false;
+    let mut size = None;
+    let mut side: Option<Side> = None;
     let mut watch = EventsSpec::default();
     let mut look = Look::default();
     let mut items: Vec<KeyItem> = Vec::new();
@@ -120,8 +127,31 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
             }
             "--title" if verb == "notify" => title = Some(value(arg)?.to_string()),
             "--submit" if verb == "send-text" => submit = true,
-            "--folder" if verb == "new-terminal" => folder = Some(value(arg)?.to_string()),
-            "--command" if verb == "new-terminal" => command = Some(value(arg)?.to_string()),
+            "--folder" if opens(verb) => folder = Some(value(arg)?.to_string()),
+            "--command" if opens(verb) => command = Some(value(arg)?.to_string()),
+            "--activate" if matches!(verb, "new-window" | "focus") => activate = true,
+            "--select" if verb == "split" => select = true,
+            "--clear" if verb == "rename" => clear = true,
+            "--size" if verb == "split" => {
+                let value = value(arg)?;
+                size = Some(
+                    value
+                        .trim_end_matches('%')
+                        .parse::<u8>()
+                        .map_err(|_| format!("--size takes a percent (1 to 99), not {value:?}"))?,
+                );
+            }
+            "--right" | "--down" | "--left" | "--up" if verb == "split" => {
+                let one = match arg {
+                    "--right" => Side::Right,
+                    "--down" => Side::Down,
+                    "--left" => Side::Left,
+                    _ => Side::Up,
+                };
+                if side.replace(one).is_some() {
+                    return Err("split goes one way: --right, --down, --left or --up".into());
+                }
+            }
             "--worktree" if verb == "new-terminal" => worktree = Some(value(arg)?.to_string()),
             "--window" if verb == "new-terminal" => {
                 let value = value(arg)?;
@@ -169,6 +199,51 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
             let folder = folder.map(|folder| resolve_folder(&folder, cwd, home));
             Action::NewTerminal { folder, command, worktree, window }
         }
+        "new-window" => {
+            if !text.is_empty() {
+                return Err(format!("new-window takes options only, not {text:?} (did you mean --folder?)"));
+            }
+            let folder = folder.map(|folder| resolve_folder(&folder, cwd, home));
+            Action::NewWindow(NewWindowSpec { folder, command, activate })
+        }
+        "split" => {
+            let target = target.take().ok_or_else(|| needs_target("split"))?;
+            if !text.is_empty() {
+                return Err(format!("split takes options only, not {text:?}"));
+            }
+            let folder = folder.map(|folder| resolve_folder(&folder, cwd, home));
+            Action::Split(SplitSpec {
+                target,
+                direction: side.unwrap_or_default(),
+                size,
+                folder,
+                command,
+                select,
+            })
+        }
+        "focus" => {
+            let target = target.take().ok_or_else(|| needs_target("focus"))?;
+            if !text.is_empty() {
+                return Err(format!("focus takes options only, not {text:?}"));
+            }
+            Action::Focus(FocusSpec { target, activate })
+        }
+        "rename" => {
+            let target = target.take().ok_or_else(|| needs_target("rename"))?;
+            match (clear, text.trim().is_empty()) {
+                (true, false) => return Err("rename takes a name or --clear, not both".into()),
+                (false, true) => return Err("rename needs a name (or --clear)".into()),
+                _ => {}
+            }
+            Action::Rename(RenameSpec { target, name: (!clear).then_some(text) })
+        }
+        "close" => {
+            let target = target.take().ok_or_else(|| needs_target("close"))?;
+            if !text.is_empty() {
+                return Err(format!("close takes a target only, not {text:?}"));
+            }
+            Action::Close(CloseSpec { target })
+        }
         "events" => {
             if !text.is_empty() {
                 return Err(format!("events takes options only, not {text:?}"));
@@ -212,11 +287,26 @@ pub fn parse(args: &[String], cwd: &Path, home: Option<&Path>) -> Result<Parsed,
         }
         other => return Err(format!("unknown command {other:?}")),
     };
-    if target.is_some() && matches!(action, Action::List | Action::NewTerminal { .. } | Action::Events(_)) {
+    if target.is_some()
+        && matches!(
+            action,
+            Action::List | Action::NewTerminal { .. } | Action::NewWindow(_) | Action::Events(_)
+        )
+    {
         return Err(format!("{verb} takes no target"));
     }
     let stdin = matches!(&action, Action::SendText { text, .. } if text == "-");
     Ok(Parsed::Run(Cli { action, json, text: text_out, stdin, numbers: look.numbers }))
+}
+
+/// What a verb that names its target says when it has none.
+fn needs_target(verb: &str) -> String {
+    format!("{verb} needs a target: --terminal, --tab or --pane")
+}
+
+/// Whether the verb starts a terminal, and so takes the folder and the command it starts in.
+fn opens(verb: &str) -> bool {
+    matches!(verb, "new-terminal" | "new-window" | "split")
 }
 
 /// `folder` as an absolute path: `~` is `home`, a relative path is under `cwd`. Nothing is

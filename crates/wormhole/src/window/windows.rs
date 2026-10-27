@@ -6,6 +6,7 @@ use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 use wormhole_core::view::layout::RememberedPanes;
 use wormhole_core::view::sidebar::WindowSidebar;
+use wormhole_text::keys::CONTROL_CLOSE_ASKED;
 
 use crate::app_state::AppState;
 use crate::app_state::attention::{self, Attention};
@@ -19,10 +20,19 @@ use crate::window::session::{self, Session};
 use crate::window::window_lifecycle::open_workspace_window_in;
 use crate::window::{Layout, Workspace, window_bounds};
 
+/// Who asks to close a terminal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum CloseOrigin {
+    /// The person: the ×, ⌘W, a pane's Close.
+    User,
+    /// The command line.
+    Control,
+}
+
 impl Layout {
     /// A new window's layout, made from another's: the same panels, but the sidebar the way a
     /// new window starts (no groups, nothing folded).
-    fn for_new_window(json: Option<&str>) -> Option<String> {
+    pub(in crate::window) fn for_new_window(json: Option<&str>) -> Option<String> {
         let mut layout: Layout = json.and_then(|json| serde_json::from_str(json).ok()).unwrap_or_default();
         layout.sidebar = WindowSidebar::default();
         serde_json::to_string(&layout).ok()
@@ -171,13 +181,26 @@ impl Workspace {
     /// The × on a terminal's row, or ⌘W. Closing a terminal ends its shell, so it asks first
     /// while an agent or a command is running in it; notes and tasks alone don't ask.
     pub(crate) fn request_close_session(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
+        self.ask_close_session(ix, CloseOrigin::User, window, cx);
+    }
+
+    /// [`Self::request_close_session`], for `origin`. A person's close skips the question when nothing
+    /// is at stake; a script's (`wh close`) never does: it only ever puts the question in front of the
+    /// person, with a sentence saying who asked, and closes nothing by itself.
+    pub(crate) fn ask_close_session(
+        &mut self,
+        ix: usize,
+        origin: CloseOrigin,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let Some(session) = self.sessions.get(ix) else { return };
         // A feature may have more to ask (a terminal in a worktree Wormhole made asks whether the worktree
         // goes with it), which makes the window ask even when nothing is running.
         let id = session.id;
         let extras = self.close_extras(&[id], CloseOf::Terminal, cx);
         let needs = session.needs_close_confirmation(cx);
-        if extras.is_empty() && !needs {
+        if extras.is_empty() && !needs && origin == CloseOrigin::User {
             self.close_session(ix, window, cx);
             return;
         }
@@ -188,7 +211,7 @@ impl Workspace {
         // The sidebar drops the ×'s tooltip while the question is up.
         cx.notify();
         let mut detail = String::new();
-        if needs {
+        if needs || origin == CloseOrigin::Control {
             let agent = session.told_name(cx);
             let (status, command) = (session.status(cx), session.command_running(cx));
             // The agent the question names is not listed again among the programs.
@@ -206,6 +229,12 @@ impl Workspace {
             detail.push(' ');
         }
         detail.push_str(&note);
+        if origin == CloseOrigin::Control {
+            if !detail.is_empty() {
+                detail.push(' ');
+            }
+            detail.push_str(wormhole_text::text(CONTROL_CLOSE_ASKED));
+        }
         let question = dialog::CloseQuestion {
             title: session::close_session_title(&session.name()).into(),
             detail: detail.into(),

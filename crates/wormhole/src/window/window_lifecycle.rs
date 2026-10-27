@@ -8,9 +8,10 @@
 //! opened comes here.
 
 use gpui_kit::*;
+use wormhole_core::ipc::control::WindowOpened;
 use wormhole_core::ipc::control::event::{Body, Event, Topic};
 use wormhole_core::storage::paths::ProfileId;
-use wormhole_core::storage::store::WindowRecord;
+use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 use wormhole_core::view::layout::{WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
 
 use crate::app_state::look::sync_system_look;
@@ -18,6 +19,7 @@ use crate::app_state::{AppState, OpenWindow, app, app_mut};
 use crate::settings::settings_in;
 use crate::style;
 use crate::window::{Layout, Workspace, scaling, window_bounds};
+use crate::window_open::Activation;
 
 const DEFAULT_SIZE: (f32, f32) = (1320.0, 820.0);
 
@@ -39,14 +41,69 @@ pub(crate) fn open_workspace_window_in(
     source: Option<window_bounds::Source>,
     cx: &mut App,
 ) {
-    open_with_entrance(profile, record, source, Entrance::System, cx);
+    open_with_entrance(profile, record, source, Entrance::System, Activation::Front, cx);
+}
+
+/// [`open_workspace_window_in`] for a window a script asked for: with `activation` `Behind` it opens behind
+/// the other apps' windows, takes no keys and does not make Wormhole the front app, nor the window the
+/// front one (`wh new-window` without `--activate`).
+pub(crate) fn open_workspace_window_for(
+    profile: &ProfileId,
+    record: WindowRecord,
+    source: Option<window_bounds::Source>,
+    activation: Activation,
+    cx: &mut App,
+) {
+    open_with_entrance(profile, Some(record), source, Entrance::System, activation, cx);
+}
+
+/// `wh new-window`: a window like the front one (its panels, its profile, placed a step from it) with one
+/// new terminal in `folder` (where the front window's current one is without), running `command`. Opened
+/// behind the other windows and without the keys unless `activate`. The ids are known before the window is
+/// on screen; `None` when it could not be opened.
+pub(crate) fn open_control_window(
+    folder: Option<String>,
+    command: Option<&str>,
+    activate: bool,
+    cx: &mut App,
+) -> Option<WindowOpened> {
+    let front = AppState::front_window(cx);
+    let profile = front.as_ref().map_or_else(|| app(cx).active_profile().clone(), |w| w.profile.clone());
+    let (layout, start) = match &front {
+        Some(front) => front
+            .workspace
+            .read_with(cx, |ws, cx| {
+                (Layout::for_new_window(ws.window_record(cx).layout.as_deref()), ws.default_cwd(cx))
+            })
+            .unwrap_or_default(),
+        None => (Layout::remembered(&app(cx).last_panes), None),
+    };
+    let source = front.as_ref().and_then(|front| {
+        front.handle.update(cx, |_, window, cx| window_bounds::Source::of(window, cx)).ok()
+    });
+    let cwd = folder.or(start);
+    let id = app_mut(cx).alloc_window_id();
+    let terminal = AppState::alloc_id_in(&profile, cx);
+    let record = WindowRecord {
+        id,
+        layout,
+        sessions: vec![SessionRecord::new(terminal, None, cwd.clone())],
+        ..Default::default()
+    };
+    let activation = if activate { Activation::Front } else { Activation::Behind };
+    open_workspace_window_for(&profile, record, source, activation, cx);
+    let opened = app(cx).windows.iter().find(|w| w.id == id).cloned()?;
+    if let Some(command) = command.map(str::trim).filter(|command| !command.is_empty()) {
+        AppState::with_workspace(&opened, cx, |ws, _, cx| ws.control_send_text(terminal, command, true, cx));
+    }
+    Some(WindowOpened { window: id, terminal, folder: cwd })
 }
 
 /// The first window of a first launch, which the intro or the terminal welcome plays around: it never opens
 /// with the system's animation, as it is the intro's to bring in (`app::welcome`).
 pub(crate) fn open_first_workspace_window(cx: &mut App) {
     let profile = app(cx).active_profile().clone();
-    open_with_entrance(&profile, None, None, Entrance::Plain, cx);
+    open_with_entrance(&profile, None, None, Entrance::Plain, Activation::Front, cx);
 }
 
 /// How a window comes onto the screen.
@@ -64,6 +121,7 @@ fn open_with_entrance(
     record: Option<WindowRecord>,
     source: Option<window_bounds::Source>,
     entrance: Entrance,
+    activation: Activation,
     cx: &mut App,
 ) {
     let id = match &record {
@@ -104,6 +162,7 @@ fn open_with_entrance(
     // drawn (`window_open::reveal`), unless it grows from a torn-off terminal's chip, the intro brings it in,
     // or it comes back full screen or maximized, which the system's own transition handles.
     let animated = entrance == Entrance::System
+        && activation == Activation::Front
         && matches!(bounds, WindowBounds::Windowed(_))
         && scaling::terminal_window_animates(profile, crate::window::grow::active(id, cx), cx);
     let options = WindowOptions {
@@ -124,7 +183,7 @@ fn open_with_entrance(
     let owner = profile.clone();
     // Before its terminals open: a watcher hears of the window first.
     tell_window(id, Body::WindowOpened, cx);
-    match crate::window_open::open(options, cx, move |window, cx| {
+    match crate::window_open::open_with(activation, options, cx, move |window, cx| {
         cx.new(|cx| Workspace::new(record, owner, window, cx))
     }) {
         Ok((handle, workspace)) => {
@@ -142,14 +201,19 @@ fn open_with_entrance(
                 profile: profile.clone(),
                 hidden: false,
             });
-            state.front = id;
+            // A window that opened behind is not the one the person works in.
+            if activation == Activation::Front {
+                state.front = id;
+            }
             // Its own observer starts after this update, so it would not hear that it was listed.
             workspace.update(cx, |workspace, cx| workspace.app_state_changed(cx));
-            crate::background::activate(cx);
-            if animated {
-                crate::window_open::reveal(handle, cx);
-            } else {
-                let _ = handle.update(cx, |_, window, cx| crate::background::activate_window(window, cx));
+            if activation == Activation::Front {
+                crate::background::activate(cx);
+                if animated {
+                    crate::window_open::reveal(handle, cx);
+                } else {
+                    let _ = handle.update(cx, |_, window, cx| crate::background::activate_window(window, cx));
+                }
             }
         }
         Err(err) => {

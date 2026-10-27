@@ -1,7 +1,9 @@
 use std::path::Path;
 
 use super::{Cli, Parsed, parse};
-use crate::ipc::control::{Action, EventsSpec, Target};
+use crate::ipc::control::{
+    Action, CloseSpec, EventsSpec, FocusSpec, NewWindowSpec, RenameSpec, Side, SplitSpec, Target,
+};
 
 fn words(list: &[&str]) -> Vec<String> {
     list.iter().map(|s| s.to_string()).collect()
@@ -266,4 +268,86 @@ fn mistakes_are_named() {
     assert!(mistake(&["new-terminal", "/work/app"]).contains("--folder"));
     assert!(mistake(&["list", "--submit"]).contains("unknown option"), "an option of another verb");
     assert!(mistake(&["status", "--bogus"]).contains("unknown option"));
+}
+
+#[test]
+fn the_window_and_split_verbs_parse_with_their_options() {
+    assert_eq!(
+        parsed(&["new-window"]).action,
+        Action::NewWindow(NewWindowSpec { folder: None, command: None, activate: false })
+    );
+    assert_eq!(
+        parsed(&["new-window", "--folder", "~/src/app", "--command", "claude", "--activate"]).action,
+        Action::NewWindow(NewWindowSpec {
+            folder: Some("/Users/me/src/app".into()),
+            command: Some("claude".into()),
+            activate: true,
+        })
+    );
+    // The right unless told, as ⌘D splits; the size takes a percent sign too.
+    let split = |direction, size, select| {
+        Action::Split(SplitSpec {
+            target: Target::Terminal(3),
+            direction,
+            size,
+            folder: None,
+            command: None,
+            select,
+        })
+    };
+    assert_eq!(parsed(&["split", "--terminal", "3"]).action, split(Side::Right, None, false));
+    assert_eq!(
+        parsed(&["split", "--terminal", "3", "--down", "--size", "40%", "--select"]).action,
+        split(Side::Down, Some(40), true)
+    );
+    for (flag, side) in [("--right", Side::Right), ("--left", Side::Left), ("--up", Side::Up)] {
+        assert_eq!(parsed(&["split", "--terminal", "3", flag]).action, split(side, None, false), "{flag}");
+    }
+    assert_eq!(
+        parsed(&["split", "--tab", "3", "--folder", "src", "--command", "npm run dev"]).action,
+        Action::Split(SplitSpec {
+            target: Target::Tab(3),
+            direction: Side::Right,
+            size: None,
+            folder: Some("/work/here/src".into()),
+            command: Some("npm run dev".into()),
+            select: false,
+        })
+    );
+    assert_eq!(
+        parsed(&["focus", "--terminal", "3", "--activate"]).action,
+        Action::Focus(FocusSpec { target: Target::Terminal(3), activate: true })
+    );
+    assert_eq!(
+        parsed(&["rename", "--terminal", "3", "dev", "server"]).action,
+        Action::Rename(RenameSpec { target: Target::Terminal(3), name: Some("dev server".into()) })
+    );
+    assert_eq!(
+        parsed(&["rename", "--terminal", "3", "--clear"]).action,
+        Action::Rename(RenameSpec { target: Target::Terminal(3), name: None })
+    );
+    assert_eq!(
+        parsed(&["close", "--terminal", "3", "--json"]).action,
+        Action::Close(CloseSpec { target: Target::Terminal(3) })
+    );
+}
+
+#[test]
+fn the_window_and_split_verbs_name_their_mistakes() {
+    for verb in ["split", "focus", "rename", "close"] {
+        assert!(mistake(&[verb]).contains("needs a target"), "{verb}");
+    }
+    assert!(mistake(&["new-window", "--terminal", "3"]).contains("takes no target"));
+    assert!(mistake(&["new-window", "/work/app"]).contains("--folder"));
+    assert!(mistake(&["split", "--terminal", "3", "--right", "--down"]).contains("one way"));
+    assert!(mistake(&["split", "--terminal", "3", "--size", "big"]).contains("a percent"));
+    assert!(mistake(&["split", "--terminal", "3", "--size", "300"]).contains("a percent"));
+    assert!(mistake(&["split", "--terminal", "3", "stray"]).contains("options only"));
+    assert!(mistake(&["rename", "--terminal", "3"]).contains("needs a name"));
+    assert!(mistake(&["rename", "--terminal", "3", "--clear", "api"]).contains("not both"));
+    assert!(mistake(&["close", "--terminal", "3", "now"]).contains("target only"));
+    // An option of another verb is no option of these.
+    assert!(mistake(&["focus", "--terminal", "3", "--select"]).contains("unknown option"));
+    assert!(mistake(&["close", "--terminal", "3", "--activate"]).contains("unknown option"));
+    assert!(mistake(&["new-window", "--select"]).contains("unknown option"));
 }
