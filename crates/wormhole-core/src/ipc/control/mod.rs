@@ -352,6 +352,8 @@ pub enum Reason {
     Exited,
     /// The feature is still behind its flag in this build.
     FlagOff,
+    /// The terminal is in a window of a profile that is not shown: it is left alone, as if absent.
+    HiddenProfile,
     /// A reason a newer Wormhole gave.
     #[serde(other)]
     Other,

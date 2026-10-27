@@ -13,10 +13,11 @@
 use gpui_kit::*;
 use wormhole_core::ipc::control::structure::{launch_check, name_check, size_check};
 use wormhole_core::ipc::control::{
-    CloseSpec, ErrorCode, FocusSpec, Limited, NewWindowSpec, RenameSpec, Reply, SplitSpec, writes_off,
+    CloseSpec, Error, ErrorCode, FocusSpec, Limited, NewWindowSpec, Reason, RenameSpec, Reply, SplitSpec,
+    Target, writes_off,
 };
 
-use super::{automation_off, budget, find, not_found};
+use super::{Found, automation_off, budget, find, not_found};
 use crate::app_state::AppState;
 use crate::settings::settings;
 use crate::window::SplitPlan;
@@ -30,6 +31,22 @@ fn gate(cx: &App) -> Result<(), Reply> {
         return Err(writes_off().into());
     }
     Ok(())
+}
+
+/// The terminal `target` names, unless its window is of a profile that is not shown: those windows are
+/// ordered out, and the front window never means one, so nothing here is done to them (a sheet on an
+/// ordered-out window would block it, and `focus --activate` would bring it in).
+fn shown(target: Target, cx: &App) -> Result<Found, Reply> {
+    let found = find(target, cx).ok_or_else(|| not_found(target))?;
+    if found.window.hidden {
+        return Err(Error::new(
+            ErrorCode::NotFound,
+            format!("{} {} is in a profile that is not shown", target.kind(), target.id()),
+        )
+        .because(Reason::HiddenProfile)
+        .into());
+    }
+    Ok(found)
 }
 
 fn unreachable_window() -> Reply {
@@ -76,12 +93,20 @@ pub(super) fn split(spec: &SplitSpec, from: Option<i64>, cx: &mut App) -> Reply 
     {
         return error.into();
     }
-    let Some(found) = find(spec.target, cx) else { return not_found(spec.target) };
+    let found = match shown(spec.target, cx) {
+        Ok(found) => found,
+        Err(reply) => return reply,
+    };
+    // No room is a mistake that costs nothing: said before the budget is spent.
+    let tab = found.tab;
+    let fits = found.window.workspace.read_with(cx, |ws, _| ws.control_split_fits(tab, spec.direction));
+    if let Ok(Err(error)) = fits {
+        return error.into();
+    }
     // A split opens a terminal: it counts with `new-terminal`.
     if let Err(reply) = budget(Limited::NewTerminal, from, cx) {
         return reply;
     }
-    let tab = found.tab;
     let made = AppState::with_workspace(&found.window, cx, |ws, window, cx| {
         let plan = SplitPlan {
             side: spec.direction,
@@ -112,7 +137,10 @@ pub(super) fn focus(spec: &FocusSpec, from: Option<i64>, cx: &mut App) -> Reply 
     if let Err(reply) = gate(cx) {
         return reply;
     }
-    let Some(found) = find(spec.target, cx) else { return not_found(spec.target) };
+    let found = match shown(spec.target, cx) {
+        Ok(found) => found,
+        Err(reply) => return reply,
+    };
     if let Err(reply) = budget(Limited::Focus, from, cx) {
         return reply;
     }
@@ -121,7 +149,10 @@ pub(super) fn focus(spec: &FocusSpec, from: Option<i64>, cx: &mut App) -> Reply 
         ws.control_focus(tab, activate, window, cx)
     });
     match focused {
-        Some(Some(focused)) => Reply::ok(focused),
+        Some(Some(focused)) => {
+            tracing::info!(terminal = tab, ?from, activate, "control: a terminal was focused");
+            Reply::ok(focused)
+        }
         _ => unreachable_window(),
     }
 }
@@ -135,7 +166,10 @@ pub(super) fn rename(spec: &RenameSpec, from: Option<i64>, cx: &mut App) -> Repl
         Ok(name) => name,
         Err(error) => return error.into(),
     };
-    let Some(found) = find(spec.target, cx) else { return not_found(spec.target) };
+    let found = match shown(spec.target, cx) {
+        Ok(found) => found,
+        Err(reply) => return reply,
+    };
     if let Err(reply) = budget(Limited::Rename, from, cx) {
         return reply;
     }
@@ -155,11 +189,19 @@ pub(super) fn close(spec: &CloseSpec, from: Option<i64>, cx: &mut App) -> Reply 
     if let Err(reply) = gate(cx) {
         return reply;
     }
-    let Some(found) = find(spec.target, cx) else { return not_found(spec.target) };
+    let found = match shown(spec.target, cx) {
+        Ok(found) => found,
+        Err(reply) => return reply,
+    };
+    let tab = found.tab;
+    // A question already up is a refusal that costs nothing: said before the budget is spent.
+    let open = found.window.workspace.read_with(cx, |ws, cx| ws.control_close_check(tab, cx));
+    if let Ok(Err(error)) = open {
+        return error.into();
+    }
     if let Err(reply) = budget(Limited::Close, from, cx) {
         return reply;
     }
-    let tab = found.tab;
     let asked =
         AppState::with_workspace(&found.window, cx, |ws, window, cx| ws.control_ask_close(tab, window, cx));
     match asked {

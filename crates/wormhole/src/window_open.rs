@@ -2,8 +2,8 @@
 //! `gpui_kit::open_window` itself is called nowhere else (`tests/background_rules.rs` checks).
 //!
 //! What every window gets: while background mode keeps Wormhole behind the other apps (or the caller asked
-//! for [`Activation::Behind`]), it opens without the focus and behind their windows (`background`), and its traffic lights, if it has
-//! any, are drawn in the theme's appearance (`platform::window::follow_theme`).
+//! for [`Activation::Behind`]), it opens without the focus and behind their windows (`background`), and its
+//! traffic lights, if it has any, are drawn in the theme's appearance (`platform::window::follow_theme`).
 //!
 //! A window that opens with the system's animation (a terminal window, `window::scaling`) is opened out of
 //! sight, with `show: false`, and put on the screen by [`reveal`] once its first frame is drawn.

@@ -44,7 +44,8 @@ pub fn help_with(automation: bool) -> String {
       in the target's split. --size is its share of the split. The selection stays where it is
       unless --select. Prints the ids; nothing changes if the window has no room.
   {wh} focus <target> [--activate]
-      Select a terminal and give it its window's keyboard. The window comes forward only with --activate.
+      Select a terminal and show its split. The keys stay where they were; --activate gives them to the
+      terminal and brings the window forward.
   {wh} rename <target> <name>... | --clear
       Name a terminal as the sidebar's rename does; --clear calls it after what runs in it again.
   {wh} close <target>

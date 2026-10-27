@@ -1,7 +1,7 @@
 //! `Wormhole list | status | notify | send-text | new-terminal | events | read | blocks | send-keys |
 //! mouse | new-window | split | focus | rename | close`: the command line's side of the
-//! control protocol. The arguments are read into a [`Request`](super::Request) (`parse`), the app's [`Reply`] is
-//! printed as text or, with `--json` (or `WORMHOLE_JSON`, `--text` to override it), as the one JSON
+//! control protocol. The arguments are read into a [`Request`](super::Request) (`parse`), the app's
+//! [`Reply`] is printed as text or, with `--json` (or `WORMHOLE_JSON`, `--text` to override it), as the one JSON
 //! object it is (`render`). The round trip over the
 //! socket is `ipc::exchange`'s. Folders are resolved here, against the caller's working directory
 //! and home: the app cannot know where a script ran from.

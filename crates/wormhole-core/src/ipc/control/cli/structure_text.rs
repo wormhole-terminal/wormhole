@@ -22,8 +22,9 @@ pub(super) fn window_opened(opened: &WindowOpened, home: Option<&Path>) -> Strin
 }
 
 pub(super) fn split_made(made: &SplitMade, home: Option<&Path>) -> String {
+    let size = made.size.map(|size| format!(", {size}% of the split")).unwrap_or_default();
     format!(
-        "opened terminal {} in split {} in window {}{}\n",
+        "opened terminal {} in split {} in window {}{}{size}\n",
         made.terminal,
         made.split,
         made.window,
@@ -65,8 +66,12 @@ mod tests {
         assert_eq!(window_opened(&opened, home), "opened window 2 with terminal 10 at ~/src/api\n");
         let none = WindowOpened { folder: None, ..opened };
         assert_eq!(window_opened(&none, home), "opened window 2 with terminal 10\n");
-        let made = SplitMade { window: 1, split: 12, terminal: 9, folder: Some("/tmp".into()) };
-        assert_eq!(split_made(&made, home), "opened terminal 9 in split 12 in window 1 at /tmp\n");
+        let made =
+            SplitMade { window: 1, split: 12, terminal: 9, folder: Some("/tmp".into()), size: Some(40) };
+        assert_eq!(
+            split_made(&made, home),
+            "opened terminal 9 in split 12 in window 1 at /tmp, 40% of the split\n"
+        );
         assert_eq!(focused(&Focused { window: 1, terminal: 3 }), "focused terminal 3 in window 1\n");
         assert_eq!(
             renamed(&Renamed { terminal: 3, name: "api".into(), custom: true }),
@@ -88,8 +93,10 @@ mod tests {
         let evil = "x\u{1b}[2Jy\u{202e}z";
         let text = renamed(&Renamed { terminal: 1, name: evil.into(), custom: true });
         assert!(!text.contains(['\u{1b}', '\u{202e}']), "{text:?}");
-        let text =
-            split_made(&SplitMade { window: 1, split: 2, terminal: 3, folder: Some(evil.into()) }, None);
+        let text = split_made(
+            &SplitMade { window: 1, split: 2, terminal: 3, folder: Some(evil.into()), size: None },
+            None,
+        );
         assert!(!text.contains(['\u{1b}', '\u{202e}']), "{text:?}");
     }
 }

@@ -125,8 +125,6 @@ mod profile_look_tests;
 mod published;
 #[cfg(test)]
 mod read_tests;
-#[cfg(test)]
-mod structure_tests;
 mod regions;
 #[cfg(test)]
 mod regions_tests;
@@ -161,6 +159,8 @@ mod status_bar;
 #[cfg(test)]
 mod status_motion_tests;
 mod status_rolls;
+#[cfg(test)]
+mod structure_tests;
 mod summaries;
 #[cfg(test)]
 mod summary_tests;

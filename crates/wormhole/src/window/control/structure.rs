@@ -3,8 +3,8 @@
 //! budgets, which are core's (`wormhole_core::ipc::control::structure`).
 //!
 //! Nothing here takes the keyboard from the person unless it was asked to: a split leaves the selection
-//! and the keys where they are (`select` moves them, inside the window), and only `focus --activate` brings
-//! a window forward.
+//! and the keys where they are (`select` moves them, inside the window), `focus` selects without moving the
+//! keys, and only `focus --activate` gives them to the terminal and brings the window forward.
 
 use gpui_kit::*;
 use wormhole_core::ipc::control::{CloseAsked, Error, ErrorCode, Focused, Reason, Renamed, Side, SplitMade};
@@ -26,6 +26,10 @@ fn zone_of(side: Side) -> Zone {
         Side::Left => Zone::Left,
         Side::Up => Zone::Top,
     }
+}
+
+fn not_found(target: i64) -> Error {
+    Error::new(ErrorCode::NotFound, format!("no terminal {target}"))
 }
 
 /// What a `split` is asked to make.
@@ -55,23 +59,17 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> Result<SplitMade, Error> {
         let SplitPlan { side, size, folder, command, select } = plan;
-        let not_found = || Error::new(ErrorCode::NotFound, format!("no terminal {target}"));
-        let target_ix = self.find_session(target).ok_or_else(not_found)?;
+        self.control_split_fits(target, side)?;
+        let target_ix = self.find_session(target).ok_or_else(|| not_found(target))?;
         let zone = zone_of(side);
         let room = self.pane_room();
+        // Whether the target's split is what is on screen now: only then does a new pane open over it.
+        let shown = self.on_screen(target_ix);
         let before = self.split_of(target_ix).map(|split| split.layout.clone());
-        // Whether the keyboard stays where it was in the target's split (the layout moves it to the
-        // pane that joined, which is the person's to do with `select`).
+        // Where the keyboard stays in the target's split (the layout moves it to the pane that joined,
+        // which is the person's to do with `select`).
         let kept = before.as_ref().map_or(target, |layout| layout.focused());
         let mut layout = before.clone().unwrap_or_else(|| TabPanes::single(target));
-        layout.can_join(target, zone, NOT_YET, room).map_err(|refused| match refused {
-            DropError::TooSmall => Error::new(
-                ErrorCode::Refused,
-                format!("window {} has no room to split terminal {target} {}", self.window_id, side.word()),
-            )
-            .because(Reason::NoRoom),
-            DropError::Unknown | DropError::Unchanged => not_found(),
-        })?;
 
         let cwd = folder.or_else(|| self.terminal_cwd(target, cx).map(|p| p.to_string_lossy().into_owned()));
         let id = self.alloc_id(cx);
@@ -83,9 +81,9 @@ impl Workspace {
             self.drop_session(ix, cx);
             return Err(Error::new(ErrorCode::Failed, "the split could not be made"));
         }
-        if let Some(percent) = size {
-            layout.set_share(id, target, f32::from(percent), room);
-        }
+        let applied = size
+            .and_then(|percent| layout.set_share(id, target, f32::from(percent), room))
+            .map(|percent| percent.round().clamp(1.0, 99.0) as u8);
         if !select {
             layout.focus(kept);
         }
@@ -97,15 +95,33 @@ impl Workspace {
             if let Some(at) = self.find_session(id) {
                 self.activate(at, window, cx);
             }
-            self.begin_opening(before, id, cx);
+            self.begin_opening(before.filter(|_| shown), id, cx);
         }
         cx.notify();
         let split = self.find_session(id).and_then(|at| self.sessions[at].split).unwrap_or_default();
-        Ok(SplitMade { window: self.window_id, split, terminal: id, folder: cwd })
+        Ok(SplitMade { window: self.window_id, split, terminal: id, folder: cwd, size: applied })
     }
 
-    /// Select terminal `tab` and give it its window's keyboard (which shows its split). The window comes
-    /// forward, and Wormhole with it, only with `activate`, and then only as far as background mode allows.
+    /// Whether terminal `target` can be split toward `side` with the room the window has, asked before
+    /// anything is made (and before a budget is spent): `no_room` when either pane would end up under the
+    /// minimum, which is the panes' area as the last frame measured it.
+    pub(crate) fn control_split_fits(&self, target: i64, side: Side) -> Result<(), Error> {
+        let target_ix = self.find_session(target).ok_or_else(|| not_found(target))?;
+        let layout =
+            self.split_of(target_ix).map_or_else(|| TabPanes::single(target), |split| split.layout.clone());
+        layout.can_join(target, zone_of(side), NOT_YET, self.pane_room()).map_err(|refused| match refused {
+            DropError::TooSmall => Error::new(
+                ErrorCode::Refused,
+                format!("window {} has no room to split terminal {target} {}", self.window_id, side.word()),
+            )
+            .because(Reason::NoRoom),
+            DropError::Unknown | DropError::Unchanged => not_found(target),
+        })
+    }
+
+    /// Select terminal `tab`: its row, and its split shown with it. The keyboard stays where it was, even
+    /// in the key window; only `activate` gives it to the terminal and brings the window forward, Wormhole
+    /// with it, as far as background mode allows.
     pub(crate) fn control_focus(
         &mut self,
         tab: i64,
@@ -114,10 +130,14 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> Option<Focused> {
         let ix = self.find_session(tab)?;
-        self.activate(ix, window, cx);
         if activate {
+            self.activate(ix, window, cx);
             crate::background::activate(cx);
             crate::background::activate_window(window, cx);
+        } else {
+            self.select(ix, cx);
+            self.sync_resize_increments(window, cx);
+            cx.notify();
         }
         Some(Focused { window: self.window_id, terminal: tab })
     }
@@ -140,23 +160,17 @@ impl Workspace {
     }
 
     /// Whether a question is up in this window that another would pile onto: a terminal's, the window's
-    /// own or the app's about quitting.
+    /// own or the app's about quitting. (Not the update's restart question nor the worktree dialog, which
+    /// are asked from elsewhere and do not set a flag of the window's.)
     pub(crate) fn question_is_open(&self, cx: &App) -> bool {
         self.closing_session_prompt || self.closing_prompt || app(cx).quit_prompt == Some(self.window_id)
     }
 
-    /// Put the question before closing terminal `tab` in front of the person, always (also when nothing is
-    /// running in it), saying that the command line asked. Nothing closes until they answer; `terminal_closed`
-    /// follows if they say yes.
-    pub(crate) fn control_ask_close(
-        &mut self,
-        tab: i64,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Result<CloseAsked, Error> {
-        let ix = self
-            .find_session(tab)
-            .ok_or_else(|| Error::new(ErrorCode::NotFound, format!("no terminal {tab}")))?;
+    /// `question_open` while one is up, asked before a budget is spent.
+    pub(crate) fn control_close_check(&self, tab: i64, cx: &App) -> Result<(), Error> {
+        if self.find_session(tab).is_none() {
+            return Err(not_found(tab));
+        }
         if self.question_is_open(cx) {
             return Err(Error::new(
                 ErrorCode::Refused,
@@ -164,6 +178,20 @@ impl Workspace {
             )
             .because(Reason::QuestionOpen));
         }
+        Ok(())
+    }
+
+    /// Put the question before closing terminal `tab` in front of the person, always (also when nothing is
+    /// running in it), saying that the command line asked. Nothing closes until they answer;
+    /// `terminal_closed` follows if they say yes.
+    pub(crate) fn control_ask_close(
+        &mut self,
+        tab: i64,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Result<CloseAsked, Error> {
+        self.control_close_check(tab, cx)?;
+        let ix = self.find_session(tab).ok_or_else(|| not_found(tab))?;
         self.ask_close_session(ix, CloseOrigin::Control, window, cx);
         Ok(CloseAsked { asked: true, window: self.window_id, terminal: tab })
     }

@@ -15,6 +15,7 @@ use wormhole_core::view::panes::{
 };
 use wormhole_core::view::sidebar::SplitId;
 
+use crate::app_state::app_mut;
 use crate::app_state::attention::{self, Attention};
 use crate::style;
 use crate::terminal_view::TerminalView;
@@ -310,6 +311,15 @@ impl Workspace {
         self.features_closed(session.id, cx);
         self.publish_terminal_closed(session.id, cx);
         attention::tell(Attention::Seen(session.id), cx);
+        // Its session host, if it started one, ends as its terminal is dropped (`Pty`'s drop); the row
+        // that named the host (`save_host_row`) goes now, not at the next save.
+        self.dirty = true;
+        let keep = self.session_ids();
+        if let Some(store) = app_mut(cx).store_of_mut(&self.profile)
+            && let Err(err) = store.delete_sessions_except(self.window_id, &keep)
+        {
+            tracing::warn!("forgetting the rows of terminal {}: {err:#}", session.id);
+        }
     }
 
     /// The id of session `anchor`'s split, made (with `layout`) when it stands alone.

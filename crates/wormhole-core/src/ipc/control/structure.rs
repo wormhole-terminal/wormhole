@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{Error, ErrorCode, SEND_TEXT_MAX_BYTES, Target};
 
-/// The longest name `rename` gives a terminal, in characters, after it is cleaned.
+/// The longest name `rename` gives a terminal, in characters, the ellipsis of a cut one included.
 pub const NAME_MAX_CHARS: usize = 64;
 
 /// The most a command given to a new terminal or window may be: a prompt, not a file (as `send-text`).
@@ -74,8 +74,8 @@ pub struct SplitSpec {
     pub select: bool,
 }
 
-/// `focus`: select the target's row and give it its window's keyboard, which shows its split. The window
-/// is brought forward, and the app with it, only with `activate`.
+/// `focus`: select the target's row, which shows its split. The keyboard stays where it was; `activate` gives
+/// it to the terminal and brings the window forward, and the app with it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FocusSpec {
     pub target: Target,
@@ -115,6 +115,10 @@ pub struct SplitMade {
     pub terminal: i64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub folder: Option<String>,
+    /// The share of the split the new pane has, in whole percent, when `--size` was given and could be
+    /// applied: the room may have held it short of what was asked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<u8>,
 }
 
 /// `focus`' result.
@@ -176,12 +180,13 @@ pub fn size_check(size: Option<u8>) -> Result<(), Error> {
 }
 
 /// The name `rename` gives, cleaned as a notification's words are (one line, no control or invisible
-/// characters, cut at [`NAME_MAX_CHARS`] with an ellipsis): `None` to call the terminal after what runs in
+/// characters, cut to [`NAME_MAX_CHARS`] with an ellipsis): `None` to call the terminal after what runs in
 /// it again, for no name or an empty one. A name that is nothing once cleaned is a mistake, not a way to
 /// clear: it would silently undo a name.
 pub fn name_check(name: Option<&str>) -> Result<Option<String>, Error> {
     let Some(name) = name.filter(|name| !name.trim().is_empty()) else { return Ok(None) };
-    let cleaned = wormhole_term::clean(name, NAME_MAX_CHARS);
+    // `clean` keeps `max` characters and adds the ellipsis, so one fewer keeps the whole within the cap.
+    let cleaned = wormhole_term::clean(name, NAME_MAX_CHARS - 1);
     if cleaned.is_empty() {
         return Err(Error::new(
             ErrorCode::BadRequest,
@@ -236,7 +241,7 @@ mod tests {
         assert_eq!(name_check(Some("")).expect("clears"), None);
         assert_eq!(name_check(Some("   ")).expect("clears"), None);
         let cut = name_check(Some(&"n".repeat(100))).expect("fine").expect("a name");
-        assert_eq!(cut.chars().count(), NAME_MAX_CHARS + 1, "cut with an ellipsis");
+        assert_eq!(cut.chars().count(), NAME_MAX_CHARS, "cut, with its ellipsis, to the cap");
         assert!(cut.ends_with('…'));
         // Nothing left once cleaned is a mistake, not a clear.
         assert_eq!(code(name_check(Some("\u{1b}\u{200b}\u{7}"))), Some(ErrorCode::BadRequest));
