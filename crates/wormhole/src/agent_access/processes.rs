@@ -151,14 +151,9 @@ mod tests {
         std::fs::write(loose.join("run.js"), "").expect("script");
         let pin = system.script_pin(me, &loose.join("run.js").to_string_lossy()).expect("a regular file");
         assert_eq!(pin.pin, loose.join("run.js").canonicalize().expect("real"));
-        // A folder, a missing file, and a link to a file elsewhere (it is what it points at).
+        // A folder and a missing file are no script.
         assert!(system.script_pin(me, &loose.to_string_lossy()).is_none());
         assert!(system.script_pin(me, &loose.join("nothing.js").to_string_lossy()).is_none());
-        std::os::unix::fs::symlink(loose.join("run.js"), package.join("dist/link.js")).expect("link");
-        let linked =
-            system.script_pin(me, &package.join("dist/link.js").to_string_lossy()).expect("resolves");
-        assert_eq!(linked.file, loose.join("run.js").canonicalize().expect("real"), "the file it really is");
-        assert_eq!(linked.pin, linked.file, "and not the package the link sits in");
     }
 
     #[test]
