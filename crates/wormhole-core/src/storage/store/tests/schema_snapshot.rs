@@ -67,7 +67,7 @@ fn words(text: &str) -> Vec<&str> {
 
 /// What [`dump`] must give for a fresh database, compared ignoring how the lines are wrapped.
 const EXPECTED: &str = r#"
-user_version 11
+user_version 12
 table agent_grants: CREATE TABLE agent_grants (id INTEGER PRIMARY KEY, kind TEXT NOT NULL,
         agent TEXT NOT NULL DEFAULT '', identifier TEXT NOT NULL DEFAULT '',
         team_id TEXT NOT NULL DEFAULT '', pin TEXT NOT NULL DEFAULT '', label TEXT NOT NULL,
@@ -90,11 +90,12 @@ table row_claims: CREATE TABLE row_claims (session_id INTEGER NOT NULL, root TEX
 table sessions: CREATE TABLE sessions (id INTEGER PRIMARY KEY, window_id INTEGER NOT NULL,
         position INTEGER NOT NULL, name TEXT, active_tab INTEGER NOT NULL DEFAULT 0,
         tasks_collapsed INTEGER NOT NULL DEFAULT 0, notes_collapsed INTEGER NOT NULL DEFAULT 0,
-        pinned INTEGER NOT NULL DEFAULT 0, split_id INTEGER, forget_text INTEGER NOT NULL DEFAULT 0)
+        pinned INTEGER NOT NULL DEFAULT 0, split_id INTEGER, forget_text INTEGER NOT NULL DEFAULT 0,
+        agent_hidden INTEGER NOT NULL DEFAULT 0)
     columns: id INTEGER pk 1, window_id INTEGER not null, position INTEGER not null, name TEXT,
         active_tab INTEGER not null default 0, tasks_collapsed INTEGER not null default 0,
         notes_collapsed INTEGER not null default 0, pinned INTEGER not null default 0, split_id INTEGER,
-        forget_text INTEGER not null default 0
+        forget_text INTEGER not null default 0, agent_hidden INTEGER not null default 0
 table splits: CREATE TABLE splits (id INTEGER PRIMARY KEY, window_id INTEGER NOT NULL, layout TEXT)
     columns: id INTEGER pk 1, window_id INTEGER not null, layout TEXT
 table tabs: CREATE TABLE tabs (id INTEGER PRIMARY KEY, session_id INTEGER NOT NULL,

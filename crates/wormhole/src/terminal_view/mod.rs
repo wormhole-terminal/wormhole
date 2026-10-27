@@ -141,6 +141,10 @@ pub struct TerminalView {
     /// A program other than the shell held the terminal when last checked, so
     /// output can't come with a folder change.
     program_in_foreground: bool,
+    /// The person hid this terminal from the programs that control Wormhole (saved with its row): none can
+    /// list, read or type into it. Kept here, not on the window's session, so that it is one of the facts
+    /// the window reads through [`TerminalSummary`].
+    agent_hidden: bool,
     /// That program's command line and start, for a row without an agent.
     foreground: Option<Foreground>,
     /// The command that last left the foreground: the tab keeps its name while its result is
@@ -315,6 +319,7 @@ impl TerminalView {
             scroll_remainder_x: 0.0,
             cwd_check: None,
             program_in_foreground: false,
+            agent_hidden: false,
             foreground: None,
             finished_command: None,
             bar: pane_bar::State::default(),

@@ -18,9 +18,13 @@ use wormhole_text::keys::{
     AGENT_SHEET_SIGNED_NONE, AGENT_SHEET_SIGNED_OTHER, AGENT_SHEET_SIGNED_UNREADABLE,
     AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_CLOSE, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_READ,
     AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_TYPE, AGENT_SHEET_WARNING_AD_HOC, AGENT_SHEET_WARNING_CHANGED,
-    AGENT_SHEET_WARNING_ROOT, AGENT_SHEET_WARNING_UNSIGNED, agent_change_detail, agent_change_title,
-    agent_sheet_in_terminal, agent_sheet_runs_on, agent_sheet_signed_developer, agent_sheet_signed_team,
-    agent_sheet_title, agent_sheet_warning_unusual,
+    AGENT_SHEET_WARNING_ROOT, AGENT_SHEET_WARNING_UNSIGNED, AGENT_TERMINAL_DETAIL,
+    AGENT_TERMINAL_DETAIL_SCRIPTS, AGENT_TERMINAL_LABEL_FOLDER, AGENT_TERMINAL_LABEL_TERMINAL,
+    agent_change_detail, agent_change_title, agent_sheet_in_terminal, agent_sheet_runs_on,
+    agent_sheet_signed_developer, agent_sheet_signed_team, agent_sheet_title, agent_sheet_warning_unusual,
+    agent_terminal_title_open, agent_terminal_title_read, agent_terminal_title_run,
+    agent_terminal_title_scripts_open, agent_terminal_title_scripts_read, agent_terminal_title_scripts_run,
+    agent_terminal_title_scripts_type, agent_terminal_title_type,
 };
 use wormhole_text::keys::{
     SETTINGS_AGENTS_ACCESS_ASK, SETTINGS_AGENTS_ACCESS_OFF, SETTINGS_AGENTS_ACCESS_OPEN,
@@ -96,7 +100,8 @@ pub(super) fn buttons(pending: &Pending) -> Vec<Button> {
         buttons.push(Button::Session);
     }
     buttons.push(Button::Quit);
-    if resolved.identity.can_be_remembered() {
+    // A terminal is not a stable thing to approve for good: only the question about the program has Always.
+    if resolved.identity.can_be_remembered() && pending.about.is_none() {
         buttons.push(Button::Always);
     }
     buttons
@@ -104,6 +109,9 @@ pub(super) fn buttons(pending: &Pending) -> Vec<Button> {
 
 /// What the question says for `pending`.
 pub(super) fn display(pending: &Pending, cx: &App) -> Display {
+    if let Some(terminal) = pending.about {
+        return terminal_display(pending, terminal, cx);
+    }
     let resolved = &pending.resolved;
     let scripts = resolved.identity.kind == Kind::Scripts;
     let title = if scripts {
@@ -126,6 +134,41 @@ pub(super) fn display(pending: &Pending, cx: &App) -> Display {
     }
     let buttons = buttons(pending);
     Display { title, detail, accessory: facts_block(resolved, cx), buttons }
+}
+
+/// The question about a terminal the program did not open (`agent-permissions.md`, 7.3): the terminal's row
+/// title and folder, and why it asks. The answers open up that terminal only.
+fn terminal_display(pending: &Pending, terminal: i64, cx: &App) -> Display {
+    let resolved = &pending.resolved;
+    let scripts = resolved.identity.kind == Kind::Scripts;
+    let found = app(cx).windows.iter().find_map(|window| {
+        window.workspace.read_with(cx, |ws, cx| ws.control_terminal(terminal, cx)).ok().flatten()
+    });
+    // A terminal that closed while the question waited is still asked about by its number.
+    let name = found.as_ref().map_or_else(|| terminal.to_string(), |info| info.name.clone());
+    let title = match (pending.need, scripts) {
+        (Need::Capability(Capability::Type), false) => agent_terminal_title_type(&resolved.label, &name),
+        (Need::Capability(Capability::Run), false) => agent_terminal_title_run(&resolved.label, &name),
+        (Need::Capability(Capability::Open), false) => agent_terminal_title_open(&resolved.label, &name),
+        (_, false) => agent_terminal_title_read(&resolved.label, &name),
+        (Need::Capability(Capability::Type), true) => agent_terminal_title_scripts_type(&name),
+        (Need::Capability(Capability::Run), true) => agent_terminal_title_scripts_run(&name),
+        (Need::Capability(Capability::Open), true) => agent_terminal_title_scripts_open(&name),
+        (_, true) => agent_terminal_title_scripts_read(&name),
+    };
+    let detail =
+        text(if scripts { AGENT_TERMINAL_DETAIL_SCRIPTS } else { AGENT_TERMINAL_DETAIL }).to_string();
+    let mut rows = vec![(text(AGENT_TERMINAL_LABEL_TERMINAL), name)];
+    if let Some(folder) = found.and_then(|info| info.folder) {
+        rows.push((text(AGENT_TERMINAL_LABEL_FOLDER), shown_path(Path::new(&folder))));
+    }
+    let width = rows.iter().map(|(label, _)| label.chars().count()).max().unwrap_or(0);
+    let accessory = rows
+        .iter()
+        .map(|(label, value)| format!("{label:<width$}  {value}", width = width))
+        .collect::<Vec<_>>()
+        .join("\n");
+    Display { title, detail, accessory, buttons: buttons(pending) }
 }
 
 fn warnings(resolved: &Resolved, cx: &App) -> Vec<String> {

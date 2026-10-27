@@ -50,6 +50,8 @@ pub(crate) struct RowInfo {
     pub(crate) split: Option<SplitId>,
     /// Its text isn't kept for a restart.
     pub(crate) forget_text: bool,
+    /// Hidden from the programs that control Wormhole: the row wears a lock.
+    pub(crate) agent_hidden: bool,
     /// The changed files the row counts: the uncommitted files this terminal changed, or (Settings →
     /// Changed files → Count) the repository's.
     pub(crate) changes: Option<usize>,
@@ -115,6 +117,7 @@ impl RowInfo {
             pinned: false,
             split: None,
             forget_text: false,
+            agent_hidden: false,
             changes: None,
             repo: None,
             extra: None,

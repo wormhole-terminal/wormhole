@@ -50,6 +50,7 @@ impl Workspace {
             parent,
             extras: self.extra_facts(cx),
             row: settings_in(&self.profile, cx).title_row().into_owned(),
+            agent_hidden: summary.agent_hidden,
         }
     }
 
@@ -255,7 +256,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
-        let Facts { id, status, agent, told, label, .. } = &plan.facts;
+        let Facts { id, status, agent, told, label, agent_hidden, .. } = &plan.facts;
         let tile = terminal_tile(("terminal-tile", *id as u64), *agent, *told, *status, ui, cx);
         // Room round the tile: the box clips a long name sideways, and GPUI's clip is never one axis
         // only, so a box hugging the tile would cut its shadow off at the left and the bottom. The
@@ -282,6 +283,15 @@ impl Workspace {
                     .text_color(ui.text)
                     .child(label.clone()),
             )
+            // No program that controls Wormhole can list, read or type into this terminal.
+            .children(agent_hidden.then(|| {
+                div()
+                    .id("crumb-agent-hidden")
+                    .flex_none()
+                    .text_color(ui.muted)
+                    .child(style::icon(IconName::Lock))
+                    .tooltip(|window, cx| Tooltip::new("Hidden from agents").build(window, cx))
+            }))
             .into_any_element()
     }
 

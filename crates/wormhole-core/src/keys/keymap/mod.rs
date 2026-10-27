@@ -35,6 +35,9 @@ pub enum ActionId {
     NewTerminalInWorktree,
     OpenFolder,
     PinTerminal,
+    /// Hide the selected terminal from the programs that control Wormhole, or show it again (only with the
+    /// Automation feature on: the window hides the action otherwise).
+    HideFromAgents,
     RevealInFinder,
     CopyPath,
     /// The selected terminal; in a split, its pane.

@@ -6,7 +6,7 @@ use gpui_kit::*;
 use wormhole_core::config::AgentAccess;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::ipc::access::{
-    Access, Allowance, CapSet, Capability, Changed, Need, Resolved, Scope, Verdict, decide, resolve,
+    Access, Allowance, CapSet, Capability, Changed, Identity, Need, Resolved, Scope, Verdict, decide, resolve,
 };
 use wormhole_core::ipc::control::doctor::{Access as DoctorAccess, Standing};
 use wormhole_core::ipc::control::{Action, Error, ErrorCode, Reason, Reply, Request};
@@ -18,15 +18,34 @@ use super::change::reconcile;
 use super::drive::{drive_of, driver_of};
 use super::processes::System;
 use super::profile::{Reach, holder, reach, reach_front};
+use super::scopes::{opens, own_terminals, touched, visible_terminals};
 use super::{ask, state};
 use crate::app_state::{app, app_mut};
 use crate::settings::settings_in;
 
+/// A request that is let through, and what the app does besides carrying it out.
+pub(crate) struct Admit {
+    /// What it may do beyond what needs no approval.
+    pub access: Access,
+    /// Who is asking, when the app had reason to find out (the marker on the terminal it acts on says so).
+    pub driver: Option<Driver>,
+    /// The program, when the request opens terminals: what it opens is its own (`scopes`).
+    pub opener: Option<Identity>,
+    /// For a stream of what terminals print: the terminals it may hear the text of, which are the ones in the
+    /// program's scope. `None` when the access decides (Allowed while open, a request with no such stream).
+    pub readable: Option<Vec<i64>>,
+}
+
+impl Admit {
+    fn of(access: Access) -> Self {
+        Self { access, driver: None, opener: None, readable: None }
+    }
+}
+
 /// What becomes of a request.
 pub(crate) enum Gate {
-    /// Let it through, with what it may do beyond what needs no approval, and who is asking when the app
-    /// had reason to find out (the marker on the terminal it acts on says so).
-    Open(Access, Option<Driver>),
+    /// Let it through.
+    Open(Admit),
     /// Answer it with this and nothing more.
     Reply(Reply),
     /// It waits for the user: the socket holds its connection until the question is answered.
@@ -54,14 +73,20 @@ pub(super) fn gate_with(
     let reach = reach(request, cx);
     let settings = settings_in(&reach.profile, cx);
     if !settings.feature_enabled(FeatureFlag::Automation) {
-        return Gate::Open(Access { read: false, write: settings.control_write, holder: None }, None);
+        return Gate::Open(Admit::of(Access { read: false, write: settings.control_write, holder: None }));
     }
     let mode = reconcile(&reach.profile, cx);
     let need = Need::of(&request.action);
     let own = need == Need::Capability(Capability::Read) && reads_only_own(request, peer, cx);
     match decide(mode, need, own, None, false) {
         Verdict::Allow(access) => {
-            return Gate::Open(access, driver_when_shown(request, peer, access, &reach, who, cx));
+            let driver = driver_when_shown(request, peer, access, &reach, who, cx);
+            // Allowed while open asks nothing, but what a request opens is still its program's own, for the
+            // day the mode is Ask again.
+            let opener = (mode == AgentAccess::Open && opens(&request.action))
+                .then(|| who(peer, cx).ok().map(|resolved| resolved.identity))
+                .flatten();
+            return Gate::Open(Admit { access, driver, opener, readable: None });
         }
         Verdict::Refuse(error) => return Gate::Reply(error.into()),
         // Only in Ask mode, and nothing is held yet: who is it?
@@ -85,10 +110,54 @@ pub(super) fn gate_with(
     let cooling = state(cx).grants_of(reach.scope).cooling(&resolved.identity, now);
     let driver = driver_of(&resolved);
     match decide(mode, need, false, held, cooling) {
-        Verdict::Allow(access) => Gate::Open(access, Some(driver)),
+        Verdict::Allow(access) => within_scope(request, peer, resolved, access, driver, &reach, cx),
         Verdict::Refuse(error) => Gate::Reply(error.into()),
-        Verdict::Ask => ask_the_user(resolved, need, request.ask, &reach, cx),
+        Verdict::Ask => ask_the_user(resolved, need, request.ask, None, &reach, cx),
     }
+}
+
+/// The program is let in: does the request stay within the terminals it may use (the ones it opened, the one it
+/// runs in, the ones the user opened up for it)? A terminal that is not among them is asked about, one at a
+/// time, and a terminal hidden from agents is not a terminal here at all (it is not found, so there is nothing
+/// to ask about, and the handler says what it says for an id that does not exist).
+fn within_scope(
+    request: &Request,
+    peer: &Peer,
+    resolved: Resolved,
+    access: Access,
+    driver: Driver,
+    reach: &Reach,
+    cx: &mut App,
+) -> Gate {
+    let own = own_terminals(peer, cx);
+    let touched = touched(request, peer, cx);
+    #[cfg(test)]
+    let touched = if state(cx).unscoped { Vec::new() } else { touched };
+    let out = state(cx).scopes.out_of_scope(&resolved.identity, resolved.process, &own, &touched);
+    if let Some(&(terminal, capability)) = out.first() {
+        if state(cx).scopes.cooling(&resolved.identity, terminal, Instant::now()) {
+            return Gate::Reply(declined_recently(terminal).into());
+        }
+        return ask_the_user(resolved, Need::Capability(capability), request.ask, Some(terminal), reach, cx);
+    }
+    // A stream of output hears the terminals in scope, and, when it names none, those it opens later are not
+    // among them (it would have to ask again).
+    let hears_output = matches!(&request.action, Action::Events(_))
+        && Need::of(&request.action) == Need::Capability(Capability::Read);
+    let readable = hears_output.then(|| {
+        let visible = visible_terminals(peer, cx);
+        state(cx).scopes.readable(&resolved.identity, resolved.process, &own, visible)
+    });
+    let opener = opens(&request.action).then(|| resolved.identity.clone());
+    Gate::Open(Admit { access, driver: Some(driver), opener, readable })
+}
+
+fn declined_recently(terminal: i64) -> Error {
+    Error::new(
+        ErrorCode::NotAllowed,
+        format!("the user said no about terminal {terminal} a moment ago; it is not asked again for two minutes: do not retry, ask the user"),
+    )
+    .because(Reason::DeclinedRecently)
 }
 
 /// Who is behind `peer`, from the system (and from the last few seconds' answer for the same process).
@@ -167,7 +236,14 @@ fn stored(
 
 /// Queue the question for `resolved`. A caller that waits (`ask`) is held until it is answered; one that
 /// cannot is refused at once, and the question stays, so that the next attempt finds the answer.
-fn ask_the_user(resolved: Resolved, need: Need, waits: bool, reach: &Reach, cx: &mut App) -> Gate {
+fn ask_the_user(
+    resolved: Resolved,
+    need: Need,
+    waits: bool,
+    about: Option<i64>,
+    reach: &Reach,
+    cx: &mut App,
+) -> Gate {
     let label = resolved.label.clone();
     if !reach.shown || app(cx).windows.iter().all(|window| window.hidden) {
         return Gate::Reply(
@@ -180,7 +256,7 @@ fn ask_the_user(resolved: Resolved, need: Need, waits: bool, reach: &Reach, cx: 
     } else {
         (None, None)
     };
-    if state(cx).queue.push(resolved, need, reach.scope, waiter).is_err() {
+    if state(cx).queue.push(resolved, need, reach.scope, about, waiter).is_err() {
         return Gate::Reply(
             Error::new(ErrorCode::NotAllowed, "several questions are already waiting for the user")
                 .because(Reason::TooManyQuestions)
@@ -229,14 +305,7 @@ fn driver_when_shown(
 /// Whether `request` reads only terminals the caller runs inside of (by its place in the process tree,
 /// never by what it says): that needs no approval.
 fn reads_only_own(request: &Request, peer: &Peer, cx: &App) -> bool {
-    let own: Vec<i64> = app(cx)
-        .windows
-        .iter()
-        .filter_map(|window| {
-            window.workspace.read_with(cx, |ws, cx| ws.control_terminals_under(peer, cx)).ok()
-        })
-        .flatten()
-        .collect();
+    let own = own_terminals(peer, cx);
     let from = request.from_tab();
     // A read that names no terminal and has none of its own to default to reads nothing: its handler says
     // what is wrong with it, which is no business of the user's.

@@ -112,6 +112,12 @@ impl Workspace {
             extras: Default::default(),
         });
         let ix = self.sessions.len() - 1;
+        if record.agent_hidden {
+            // Before anything about the terminal is told: it came back hidden.
+            self.sessions[ix].terminal().update(cx, |terminal, cx| terminal.set_agent_hidden(true, cx));
+            crate::automation::set_hidden(cx, record.id, true);
+            self.sync_summary_at(ix, cx);
+        }
         self.features_opened(&record, window, cx);
         if !adopted {
             self.publish_terminal_opened(record.id, record.cwd.as_deref(), cx);

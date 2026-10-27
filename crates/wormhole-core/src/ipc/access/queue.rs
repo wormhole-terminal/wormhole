@@ -5,7 +5,7 @@
 use std::collections::VecDeque;
 use std::sync::mpsc::SyncSender;
 
-use super::caps::Need;
+use super::caps::{CapSet, Need};
 use super::identity::Identity;
 use super::resolve::Resolved;
 use crate::ipc::ask_job::Decision;
@@ -23,6 +23,12 @@ pub struct Pending {
     pub scope: u64,
     /// What the first request that raised it needed.
     pub need: Need,
+    /// The terminal it is about, when the program was let in but reached for one that is not its own to
+    /// use (`Scopes`): the question then is about that terminal. `None` for the one about the program.
+    pub about: Option<i64>,
+    /// What the requests that raised a question about a terminal needed of it, all together: what an
+    /// answer opens up.
+    pub caps: CapSet,
     waiters: Vec<SyncSender<Decision>>,
     shown: bool,
 }
@@ -51,23 +57,31 @@ pub struct Queue {
 }
 
 impl Queue {
-    /// Queue a question for `resolved` in `scope`, or join the one its program has open there. `waiter` is the
-    /// request that waits for the answer, if it does (told at once if the question is on the screen already).
-    /// The question's id.
+    /// Queue a question for `resolved` in `scope`, or join the one its program has open there (about the same
+    /// terminal, or about none). `waiter` is the request that waits for the answer, if it does (told at once
+    /// if the question is on the screen already). The question's id.
     pub fn push(
         &mut self,
         resolved: Resolved,
         need: Need,
         scope: u64,
+        about: Option<i64>,
         waiter: Option<SyncSender<Decision>>,
     ) -> Result<u64, Full> {
-        if let Some(open) =
-            self.pending.iter_mut().find(|p| p.scope == scope && p.resolved.identity == resolved.identity)
+        let caps = match need {
+            Need::Capability(capability) => CapSet::EMPTY.with(capability),
+            Need::Nothing | Need::Approved => CapSet::EMPTY,
+        };
+        if let Some(open) = self
+            .pending
+            .iter_mut()
+            .find(|p| p.scope == scope && p.about == about && p.resolved.identity == resolved.identity)
         {
             if let (true, Some(waiter)) = (open.shown, &waiter) {
                 let _ = waiter.try_send(Decision::Shown);
             }
             open.waiters.extend(waiter);
+            open.caps = CapSet::from_bits(open.caps.bits() | caps.bits());
             return Ok(open.id);
         }
         if self.pending.len() >= QUEUE_MAX {
@@ -79,6 +93,8 @@ impl Queue {
             resolved,
             scope,
             need,
+            about,
+            caps,
             waiters: waiter.into_iter().collect(),
             shown: false,
         });
@@ -164,8 +180,8 @@ mod tests {
     #[test]
     fn one_question_is_on_screen_at_a_time_in_the_order_they_came() {
         let mut queue = Queue::default();
-        let a = queue.push(resolved("a"), TYPE, 0, None).expect("room");
-        let b = queue.push(resolved("b"), TYPE, 0, None).expect("room");
+        let a = queue.push(resolved("a"), TYPE, 0, None, None).expect("room");
+        let b = queue.push(resolved("b"), TYPE, 0, None, None).expect("room");
         assert_eq!(queue.next_to_show().map(|p| p.id), Some(a));
         assert!(queue.next_to_show().is_none(), "a is still up");
         queue.take(a).expect("a");
@@ -177,8 +193,8 @@ mod tests {
         let mut queue = Queue::default();
         let (first, first_rx) = mpsc::sync_channel(1);
         let (second, second_rx) = mpsc::sync_channel(1);
-        let id = queue.push(resolved("a"), TYPE, 0, Some(first)).expect("room");
-        assert_eq!(queue.push(resolved("a"), TYPE, 0, Some(second)).expect("joins"), id);
+        let id = queue.push(resolved("a"), TYPE, 0, None, Some(first)).expect("room");
+        assert_eq!(queue.push(resolved("a"), TYPE, 0, None, Some(second)).expect("joins"), id);
         assert_eq!(queue.len(), 1);
         queue.take(id).expect("there").answer(|| Decision::Retry);
         assert!(matches!(first_rx.try_recv(), Ok(Decision::Retry)));
@@ -189,20 +205,20 @@ mod tests {
     fn a_waiter_is_told_when_its_question_is_shown_and_a_late_joiner_at_once() {
         let mut queue = Queue::default();
         let (first, first_rx) = mpsc::sync_channel(4);
-        let id = queue.push(resolved("a"), TYPE, 0, Some(first)).expect("room");
+        let id = queue.push(resolved("a"), TYPE, 0, None, Some(first)).expect("room");
         assert!(first_rx.try_recv().is_err(), "queued, not shown: its minute has not started");
         assert_eq!(queue.next_to_show().map(|p| p.id), Some(id));
         assert!(matches!(first_rx.try_recv(), Ok(Decision::Shown)));
         let (late, late_rx) = mpsc::sync_channel(4);
-        queue.push(resolved("a"), TYPE, 0, Some(late)).expect("joins");
+        queue.push(resolved("a"), TYPE, 0, None, Some(late)).expect("joins");
         assert!(matches!(late_rx.try_recv(), Ok(Decision::Shown)), "it joined one that is up");
     }
 
     #[test]
     fn the_same_program_in_another_scope_is_another_question_and_a_scope_can_be_taken_whole() {
         let mut queue = Queue::default();
-        let one = queue.push(resolved("a"), TYPE, 1, None).expect("room");
-        let two = queue.push(resolved("a"), TYPE, 2, None).expect("room");
+        let one = queue.push(resolved("a"), TYPE, 1, None, None).expect("room");
+        let two = queue.push(resolved("a"), TYPE, 2, None, None).expect("room");
         assert_ne!(one, two);
         let taken = queue.take_scope(2);
         assert_eq!(taken.iter().map(|p| p.id).collect::<Vec<_>>(), [two]);
@@ -210,14 +226,30 @@ mod tests {
     }
 
     #[test]
+    fn a_question_about_a_terminal_is_not_the_question_about_the_program_and_joins_only_its_own() {
+        let mut queue = Queue::default();
+        let program = queue.push(resolved("a"), TYPE, 0, None, None).expect("room");
+        let seven =
+            queue.push(resolved("a"), Need::Capability(Capability::Read), 0, Some(7), None).expect("room");
+        let eight = queue.push(resolved("a"), TYPE, 0, Some(8), None).expect("room");
+        assert_eq!(queue.len(), 3);
+        assert!(program != seven && seven != eight);
+        // Another request about terminal 7 joins its question and widens what an answer opens up.
+        assert_eq!(queue.push(resolved("a"), TYPE, 0, Some(7), None).expect("joins"), seven);
+        let question = queue.take(seven).expect("there");
+        assert_eq!(question.about, Some(7));
+        assert!(question.caps.contains(Capability::Read) && question.caps.contains(Capability::Type));
+    }
+
+    #[test]
     fn more_than_the_limit_of_different_programs_are_refused() {
         let mut queue = Queue::default();
         for n in 0..QUEUE_MAX {
-            queue.push(resolved(&n.to_string()), TYPE, 0, None).expect("room");
+            queue.push(resolved(&n.to_string()), TYPE, 0, None, None).expect("room");
         }
-        assert_eq!(queue.push(resolved("one more"), TYPE, 0, None), Err(Full));
+        assert_eq!(queue.push(resolved("one more"), TYPE, 0, None, None), Err(Full));
         // A program that is queued already can still join.
-        assert!(queue.push(resolved("0"), TYPE, 0, None).is_ok());
+        assert!(queue.push(resolved("0"), TYPE, 0, None, None).is_ok());
         assert_eq!(queue.drain().len(), QUEUE_MAX);
         assert!(queue.is_empty());
     }

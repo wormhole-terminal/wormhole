@@ -56,6 +56,8 @@ pub struct TerminalSummary {
     pub bell_rang: bool,
     /// The program's last notification of its own.
     pub notice: Option<ProgramNotice>,
+    /// Hidden from the programs that control Wormhole ("Hide from Agents").
+    pub agent_hidden: bool,
     /// The find bar, while it is open (the window draws it).
     pub find_bar: Option<Entity<FindBar>>,
 }
@@ -80,6 +82,7 @@ impl TerminalSummary {
             program_in_foreground: false,
             bell_rang: false,
             notice: None,
+            agent_hidden: false,
             find_bar: None,
         }
     }
@@ -120,6 +123,7 @@ impl TerminalSummary {
             && self.program_in_foreground == terminal.program_in_foreground
             && self.bell_rang == terminal.bell_rang()
             && self.notice.as_ref() == terminal.notice()
+            && self.agent_hidden == terminal.agent_hidden
             && self.find_bar == terminal.find_bar()
     }
 }
@@ -204,6 +208,7 @@ impl TerminalView {
             program_in_foreground: self.program_in_foreground,
             bell_rang: self.bell_rang,
             notice: self.notice.clone(),
+            agent_hidden: self.agent_hidden,
             find_bar: self.find_bar(),
         }
     }
@@ -251,6 +256,20 @@ impl TerminalView {
             if !matches!(status, Status::Done | Status::Failed) {
                 self.finished_command = None;
             }
+        }
+    }
+
+    /// Whether the person hid this terminal from the programs that control Wormhole.
+    pub fn agent_hidden(&self) -> bool {
+        self.agent_hidden
+    }
+
+    /// Hide the terminal from those programs, or show it to them again; the window is told like for any
+    /// other fact of the summary.
+    pub fn set_agent_hidden(&mut self, hidden: bool, cx: &mut Context<Self>) {
+        if self.agent_hidden != hidden {
+            self.agent_hidden = hidden;
+            self.announce_summary(cx);
         }
     }
 

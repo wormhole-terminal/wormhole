@@ -94,6 +94,17 @@ impl Grants {
             .any(|(denied, at)| denied == identity && now.saturating_duration_since(*at) < COOL_DOWN)
     }
 
+    /// Change what approval `id` allows (the switches in Settings). Whether there was one.
+    pub fn set_caps(&mut self, id: u64, caps: CapSet) -> bool {
+        match self.held.iter_mut().find(|held| held.id == id) {
+            Some(held) => {
+                held.caps = caps;
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Take approval `id` back. Whether there was one.
     pub fn revoke(&mut self, id: u64) -> bool {
         let before = self.held.len();
@@ -182,6 +193,15 @@ mod tests {
         assert!(!grants.cooling(&agent(AgentId::Claude), now), "only that program");
         grants.grant(who.clone(), "Aider".into(), Scope::UntilQuit, CapSet::STANDARD);
         assert!(!grants.cooling(&who, now), "the user changed their mind in Settings");
+    }
+
+    #[test]
+    fn what_an_approval_allows_can_be_changed_and_a_missing_one_cannot() {
+        let mut grants = Grants::default();
+        let id = grants.grant(agent(AgentId::Claude), "C".into(), Scope::UntilQuit, CapSet::STANDARD);
+        assert!(grants.set_caps(id, CapSet::EMPTY));
+        assert_eq!(grants.held()[0].caps, CapSet::EMPTY);
+        assert!(!grants.set_caps(id + 1, CapSet::STANDARD));
     }
 
     #[test]

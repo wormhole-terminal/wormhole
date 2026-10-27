@@ -7,49 +7,49 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Author"
-pub const HISTORY_AUTHOR: Key = Key::new(41);
+pub const HISTORY_AUTHOR: Key = Key::new(53);
 /// "Committer"
-pub const HISTORY_COMMITTER: Key = Key::new(42);
+pub const HISTORY_COMMITTER: Key = Key::new(54);
 /// "Co-author"
-pub const HISTORY_CO_AUTHOR: Key = Key::new(43);
+pub const HISTORY_CO_AUTHOR: Key = Key::new(55);
 /// "Co-authors"
-pub const HISTORY_CO_AUTHORS: Key = Key::new(44);
+pub const HISTORY_CO_AUTHORS: Key = Key::new(56);
 /// "Commit"
-pub const HISTORY_COMMIT: Key = Key::new(45);
+pub const HISTORY_COMMIT: Key = Key::new(57);
 /// "Parent"
-pub const HISTORY_PARENT: Key = Key::new(46);
+pub const HISTORY_PARENT: Key = Key::new(58);
 /// "Parents"
-pub const HISTORY_PARENTS: Key = Key::new(47);
+pub const HISTORY_PARENTS: Key = Key::new(59);
 /// "Changes"
-pub const HISTORY_CHANGES: Key = Key::new(48);
+pub const HISTORY_CHANGES: Key = Key::new(60);
 /// "Reading details…"
-pub const HISTORY_READING_DETAILS: Key = Key::new(50);
+pub const HISTORY_READING_DETAILS: Key = Key::new(62);
 /// "The message goes on: copy it to read all of it."
-pub const HISTORY_MESSAGE_CONTINUES: Key = Key::new(51);
+pub const HISTORY_MESSAGE_CONTINUES: Key = Key::new(63);
 /// "merge"
-pub const HISTORY_MERGE: Key = Key::new(57);
+pub const HISTORY_MERGE: Key = Key::new(69);
 /// "just now"
-pub const HISTORY_JUST_NOW: Key = Key::new(58);
+pub const HISTORY_JUST_NOW: Key = Key::new(70);
 /// "Show more"
-pub const HISTORY_SHOW_MORE: Key = Key::new(61);
+pub const HISTORY_SHOW_MORE: Key = Key::new(73);
 /// "Show less"
-pub const HISTORY_SHOW_LESS: Key = Key::new(62);
+pub const HISTORY_SHOW_LESS: Key = Key::new(74);
 /// "Copy message"
-pub const HISTORY_COPY_MESSAGE: Key = Key::new(63);
+pub const HISTORY_COPY_MESSAGE: Key = Key::new(75);
 /// "Copy hash"
-pub const HISTORY_COPY_HASH: Key = Key::new(64);
+pub const HISTORY_COPY_HASH: Key = Key::new(76);
 /// "More ways to copy"
-pub const HISTORY_MORE_COPY: Key = Key::new(65);
+pub const HISTORY_MORE_COPY: Key = Key::new(77);
 /// "Copy Hash"
-pub const HISTORY_MENU_COPY_HASH: Key = Key::new(66);
+pub const HISTORY_MENU_COPY_HASH: Key = Key::new(78);
 /// "Copy Short Hash"
-pub const HISTORY_MENU_COPY_SHORT_HASH: Key = Key::new(67);
+pub const HISTORY_MENU_COPY_SHORT_HASH: Key = Key::new(79);
 /// "Copy Message"
-pub const HISTORY_MENU_COPY_MESSAGE: Key = Key::new(68);
+pub const HISTORY_MENU_COPY_MESSAGE: Key = Key::new(80);
 /// "Copy Subject"
-pub const HISTORY_MENU_COPY_SUBJECT: Key = Key::new(69);
+pub const HISTORY_MENU_COPY_SUBJECT: Key = Key::new(81);
 /// "Copy Author"
-pub const HISTORY_MENU_COPY_AUTHOR: Key = Key::new(70);
+pub const HISTORY_MENU_COPY_AUTHOR: Key = Key::new(82);
 
 /// ```text
 /// { $count ->
@@ -58,89 +58,89 @@ pub const HISTORY_MENU_COPY_AUTHOR: Key = Key::new(70);
 /// }
 /// ```
 pub fn history_files(count: i64) -> String {
-    crate::active::message(49, &[("count", Arg::Int(count))])
+    crate::active::message(61, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// This message is too long to read in full here: git show { $short } prints it.
 /// ```
 pub fn history_message_too_long(short: &str) -> String {
-    crate::active::message(52, &[("short", Arg::Str(short))])
+    crate::active::message(64, &[("short", Arg::Str(short))])
 }
 
 /// ```text
 /// +{ $count }
 /// ```
 pub fn history_more_refs(count: &str) -> String {
-    crate::active::message(53, &[("count", Arg::Str(count))])
+    crate::active::message(65, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// +{ $count }
 /// ```
 pub fn history_more_parents(count: &str) -> String {
-    crate::active::message(54, &[("count", Arg::Str(count))])
+    crate::active::message(66, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// +{ $count }
 /// ```
 pub fn history_more_co_authors(count: &str) -> String {
-    crate::active::message(55, &[("count", Arg::Str(count))])
+    crate::active::message(67, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// { $files } { $added } { $removed }
 /// ```
 pub fn history_changes_line(files: &str, added: &str, removed: &str) -> String {
-    crate::active::message(56, &[("files", Arg::Str(files)), ("added", Arg::Str(added)), ("removed", Arg::Str(removed))])
+    crate::active::message(68, &[("files", Arg::Str(files)), ("added", Arg::Str(added)), ("removed", Arg::Str(removed))])
 }
 
 /// ```text
 /// { $age } ago
 /// ```
 pub fn history_ago(age: &str) -> String {
-    crate::active::message(59, &[("age", Arg::Str(age))])
+    crate::active::message(71, &[("age", Arg::Str(age))])
 }
 
 /// ```text
 /// { $date } · { $ago }
 /// ```
 pub fn history_date_ago(date: &str, ago: &str) -> String {
-    crate::active::message(60, &[("date", Arg::Str(date)), ("ago", Arg::Str(ago))])
+    crate::active::message(72, &[("date", Arg::Str(date)), ("ago", Arg::Str(ago))])
 }
 
 /// ```text
 /// Open Parent { $short }
 /// ```
 pub fn history_menu_open_parent(short: &str) -> String {
-    crate::active::message(71, &[("short", Arg::Str(short))])
+    crate::active::message(83, &[("short", Arg::Str(short))])
 }
 
 /// ```text
 /// Details of { $short }
 /// ```
 pub fn history_spoken_details(short: &str) -> String {
-    crate::active::message(72, &[("short", Arg::Str(short))])
+    crate::active::message(84, &[("short", Arg::Str(short))])
 }
 
 /// ```text
 /// by { $author }
 /// ```
 pub fn history_spoken_by(author: &str) -> String {
-    crate::active::message(73, &[("author", Arg::Str(author))])
+    crate::active::message(85, &[("author", Arg::Str(author))])
 }
 
 /// ```text
 /// { $count } parents
 /// ```
 pub fn history_spoken_parents(count: &str) -> String {
-    crate::active::message(74, &[("count", Arg::Str(count))])
+    crate::active::message(86, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// Open parent { $short }
 /// ```
 pub fn history_open_parent(short: &str) -> String {
-    crate::active::message(75, &[("short", Arg::Str(short))])
+    crate::active::message(87, &[("short", Arg::Str(short))])
 }

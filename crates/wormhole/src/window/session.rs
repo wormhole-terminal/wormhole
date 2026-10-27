@@ -156,6 +156,7 @@ impl Session {
             tasks: Vec::new(),
             pinned: self.pinned,
             forget_text: self.forget_text,
+            agent_hidden: self.terminal().read(cx).agent_hidden(),
             cwd: self.terminal().read(cx).cwd.as_ref().map(|p| p.to_string_lossy().into_owned()),
             shell: self.pane.shell.clone(),
             scrollback: None,

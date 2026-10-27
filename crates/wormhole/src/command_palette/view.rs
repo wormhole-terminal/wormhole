@@ -72,6 +72,7 @@ fn action_icon(id: ActionId) -> IconName {
         Settings | CheckForUpdates => IconName::Settings,
         CloseTerminal | CloseWindow => IconName::X,
         PinTerminal => IconName::Pin,
+        HideFromAgents => IconName::Lock,
         CopyPath => IconName::Copy,
         RevealInFinder => IconName::ExternalLink,
         _ => IconName::Command,

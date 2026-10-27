@@ -205,3 +205,9 @@ pub(super) const V11_AGENT_ACCESS: &str = "
     CREATE UNIQUE INDEX IF NOT EXISTS agent_grants_identity
         ON agent_grants (kind, agent, identifier, team_id, pin);
 ";
+
+/// Version 11 to 12: a terminal can be hidden from the programs that control Wormhole
+/// (`sessions.agent_hidden`, "Hide from Agents"). Every terminal that exists is not.
+pub(super) const V12_AGENT_HIDDEN: &str = "
+    ALTER TABLE sessions ADD COLUMN agent_hidden INTEGER NOT NULL DEFAULT 0;
+";

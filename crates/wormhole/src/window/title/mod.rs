@@ -76,6 +76,8 @@ pub(super) struct Facts {
     pub(super) extras: ExtraFacts,
     /// Which parts the row shows, and where (`title_row`).
     pub(super) row: TitleRow,
+    /// Hidden from the programs that control Wormhole: the name wears a lock.
+    pub(super) agent_hidden: bool,
 }
 
 /// The project's colour as the row draws it.

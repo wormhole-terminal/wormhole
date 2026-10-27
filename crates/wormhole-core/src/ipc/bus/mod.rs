@@ -13,6 +13,7 @@ mod subscription;
 mod wait;
 mod worker;
 
+use std::collections::HashSet;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
@@ -24,7 +25,7 @@ pub use wait::{LOOK_EVERY, RunClaim, Watch};
 use worker::Worker;
 pub use worker::{OUTPUT_BYTES_MAX, OUTPUT_LINES_MAX};
 
-use super::control::event::{CloseReason, Event, EventFilter, EventLine, Topic};
+use super::control::event::{Body, CloseReason, Event, EventFilter, EventLine, Topic};
 use super::control::{PROTOCOL_VERSION, printable};
 
 /// Streams open at once, for every caller together: each is a thread.
@@ -102,6 +103,9 @@ struct State {
     seq: u64,
     next_id: u64,
     subscribers: Vec<Arc<Subscriber>>,
+    /// The terminals the user hid from agents ("Hide from Agents"): nothing about them is told to a
+    /// subscriber that does not run inside them.
+    hidden: HashSet<i64>,
     /// The terminals a `run` is under way in (`Bus::claim_run`).
     runs: Vec<i64>,
 }
@@ -147,14 +151,33 @@ impl Bus {
         self.state.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    fn deliver(&self, event: Event) {
+    fn deliver(&self, mut event: Event) {
         let mut state = self.lock();
+        // A hidden terminal is not in a split's list either; a split of nothing else is not told at all.
+        if let Body::Split { terminals, focused, .. } = &mut event.body
+            && !state.hidden.is_empty()
+        {
+            let had = terminals.len();
+            terminals.retain(|id| !state.hidden.contains(id));
+            if focused.is_some_and(|id| state.hidden.contains(&id)) {
+                *focused = None;
+            }
+            if terminals.is_empty() && had > 0 {
+                return;
+            }
+        }
+        // What happens in a hidden terminal is told only to a subscriber that runs inside it.
+        let hidden = event.terminal.filter(|id| state.hidden.contains(id));
         // Text a terminal printed goes only to those who may read that terminal, now.
         let text = event.is_terminal_text();
         let listeners: Vec<Arc<Subscriber>> = state
             .subscribers
             .iter()
-            .filter(|s| s.filter.matches(&event) && (!text || s.may_read(event.terminal)))
+            .filter(|s| {
+                s.filter.matches(&event)
+                    && hidden.is_none_or(|id| s.is_inside(id))
+                    && (!text || s.may_read(event.terminal))
+            })
             .cloned()
             .collect();
         if listeners.is_empty() {
@@ -207,7 +230,38 @@ impl Bus {
     /// Whether some stream asked for what `terminal` of `window` prints and may read it. Read by the
     /// worker and by [`pulse`](Self::pulse) after the cheap check of the topic's bit.
     pub(crate) fn output_wanted(&self, window: i64, terminal: i64) -> bool {
-        self.lock().subscribers.iter().any(|s| s.wants_output_of(window, terminal))
+        let state = self.lock();
+        let hidden = state.hidden.contains(&terminal);
+        state
+            .subscribers
+            .iter()
+            .any(|s| s.wants_output_of(window, terminal) && (!hidden || s.is_inside(terminal)))
+    }
+
+    /// The user hid `terminal` from agents, or showed it again. While it is hidden nothing about it is told
+    /// to a stream of someone who does not run inside it, and a wait on it that is under way ends
+    /// (`not_allowed`) as if what let it read were taken back.
+    pub fn set_hidden(&self, terminal: i64, hidden: bool) {
+        let mut state = self.lock();
+        if !hidden {
+            state.hidden.remove(&terminal);
+            return;
+        }
+        state.hidden.insert(terminal);
+        let subscribers = state.subscribers.clone();
+        drop(state);
+        for subscriber in subscribers {
+            if subscriber.watch.is_some_and(|watch| watch.terminal == terminal)
+                && !subscriber.is_inside(terminal)
+            {
+                subscriber.queue.close(CloseReason::NotAllowed);
+            }
+        }
+    }
+
+    /// `terminal` is closed: nothing is kept about it.
+    pub fn forget_terminal(&self, terminal: i64) {
+        self.lock().hidden.remove(&terminal);
     }
 
     /// Terminal `terminal` of `window` printed. With nobody asking for output (one relaxed load) this

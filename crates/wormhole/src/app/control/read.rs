@@ -67,7 +67,7 @@ fn prepare(
             "name a terminal (--terminal, --tab or --pane); inside one of Wormhole's terminals its own is the default",
         ));
     };
-    let Some(found) = find(target, cx) else { return Err(not_found(target)) };
+    let Some(found) = find(target, peer, cx) else { return Err(not_found(target)) };
     let tab = found.tab;
     let facts = found.window.workspace.read_with(cx, |ws, cx| ws.control_reader(tab, cx)).ok().flatten();
     let Some(facts) = facts else {

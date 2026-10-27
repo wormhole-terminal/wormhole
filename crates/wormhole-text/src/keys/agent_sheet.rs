@@ -54,20 +54,28 @@ pub const AGENT_SHEET_SIGNED_OTHER: Key = Key::new(25);
 pub const AGENT_SHEET_SIGNED_NONE: Key = Key::new(26);
 /// "Could not be read"
 pub const AGENT_SHEET_SIGNED_UNREADABLE: Key = Key::new(27);
+/// "It did not open this terminal and does not run in it. “Allow for This Session” lets it use this terminal, and no other, while the program runs; “Until Wormhole Quits”, until Wormhole quits."
+pub const AGENT_TERMINAL_DETAIL: Key = Key::new(38);
+/// "Scripts did not open this terminal. Allowing it lets scripts use this terminal, and no other, until Wormhole quits."
+pub const AGENT_TERMINAL_DETAIL_SCRIPTS: Key = Key::new(39);
+/// "Terminal"
+pub const AGENT_TERMINAL_LABEL_TERMINAL: Key = Key::new(40);
+/// "Folder"
+pub const AGENT_TERMINAL_LABEL_FOLDER: Key = Key::new(41);
 /// "Don’t Allow"
-pub const AGENT_SHEET_BUTTON_DENY: Key = Key::new(30);
+pub const AGENT_SHEET_BUTTON_DENY: Key = Key::new(42);
 /// "Allow for This Session"
-pub const AGENT_SHEET_BUTTON_SESSION: Key = Key::new(31);
+pub const AGENT_SHEET_BUTTON_SESSION: Key = Key::new(43);
 /// "Until Wormhole Quits"
-pub const AGENT_SHEET_BUTTON_QUIT: Key = Key::new(32);
+pub const AGENT_SHEET_BUTTON_QUIT: Key = Key::new(44);
 /// "Always"
-pub const AGENT_SHEET_BUTTON_ALWAYS: Key = Key::new(33);
+pub const AGENT_SHEET_BUTTON_ALWAYS: Key = Key::new(45);
 /// "Don’t Keep"
-pub const AGENT_SHEET_BUTTON_DONT_KEEP: Key = Key::new(36);
+pub const AGENT_SHEET_BUTTON_DONT_KEEP: Key = Key::new(48);
 /// "Keep"
-pub const AGENT_SHEET_BUTTON_KEEP: Key = Key::new(37);
+pub const AGENT_SHEET_BUTTON_KEEP: Key = Key::new(49);
 /// "Scripts"
-pub const AGENT_SCRIPTS_LABEL: Key = Key::new(38);
+pub const AGENT_SCRIPTS_LABEL: Key = Key::new(50);
 
 /// ```text
 /// Allow “{ $name }” to control { -brand }?
@@ -112,15 +120,71 @@ pub fn agent_sheet_runs_on(name: &str, signer: &str) -> String {
 }
 
 /// ```text
+/// Allow “{ $name }” to read “{ $terminal }”?
+/// ```
+pub fn agent_terminal_title_read(name: &str, terminal: &str) -> String {
+    crate::active::message(30, &[("name", Arg::Str(name)), ("terminal", Arg::Str(terminal))])
+}
+
+/// ```text
+/// Allow “{ $name }” to type into “{ $terminal }”?
+/// ```
+pub fn agent_terminal_title_type(name: &str, terminal: &str) -> String {
+    crate::active::message(31, &[("name", Arg::Str(name)), ("terminal", Arg::Str(terminal))])
+}
+
+/// ```text
+/// Allow “{ $name }” to run commands in “{ $terminal }”?
+/// ```
+pub fn agent_terminal_title_run(name: &str, terminal: &str) -> String {
+    crate::active::message(32, &[("name", Arg::Str(name)), ("terminal", Arg::Str(terminal))])
+}
+
+/// ```text
+/// Allow “{ $name }” to rename or bring forward “{ $terminal }”?
+/// ```
+pub fn agent_terminal_title_open(name: &str, terminal: &str) -> String {
+    crate::active::message(33, &[("name", Arg::Str(name)), ("terminal", Arg::Str(terminal))])
+}
+
+/// ```text
+/// Allow scripts to read “{ $terminal }”?
+/// ```
+pub fn agent_terminal_title_scripts_read(terminal: &str) -> String {
+    crate::active::message(34, &[("terminal", Arg::Str(terminal))])
+}
+
+/// ```text
+/// Allow scripts to type into “{ $terminal }”?
+/// ```
+pub fn agent_terminal_title_scripts_type(terminal: &str) -> String {
+    crate::active::message(35, &[("terminal", Arg::Str(terminal))])
+}
+
+/// ```text
+/// Allow scripts to run commands in “{ $terminal }”?
+/// ```
+pub fn agent_terminal_title_scripts_run(terminal: &str) -> String {
+    crate::active::message(36, &[("terminal", Arg::Str(terminal))])
+}
+
+/// ```text
+/// Allow scripts to rename or bring forward “{ $terminal }”?
+/// ```
+pub fn agent_terminal_title_scripts_open(terminal: &str) -> String {
+    crate::active::message(37, &[("terminal", Arg::Str(terminal))])
+}
+
+/// ```text
 /// Agent access was changed outside { -brand } to “{ $mode }”. Keep it?
 /// ```
 pub fn agent_change_title(mode: &str) -> String {
-    crate::active::message(34, &[("mode", Arg::Str(mode))])
+    crate::active::message(46, &[("mode", Arg::Str(mode))])
 }
 
 /// ```text
 /// Something other than { -brand }’s Settings edited the file, and the new mode lets more programs in. Until you answer, “{ $previous }” stays in force; Don’t Keep puts it back in the file.
 /// ```
 pub fn agent_change_detail(previous: &str) -> String {
-    crate::active::message(35, &[("previous", Arg::Str(previous))])
+    crate::active::message(47, &[("previous", Arg::Str(previous))])
 }

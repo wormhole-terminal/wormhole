@@ -207,6 +207,25 @@ fn the_skill_says_never_to_retry_a_no_and_what_to_do_while_the_user_is_asked() {
     assert_eq!(control::ASK_WAIT_S, 60, "the skill and the docs say a minute");
 }
 
+/// The skill says which terminals an agent works in (the ones it opened and its own), that any other is asked
+/// about for that terminal alone, and that a hidden terminal is simply not found.
+#[test]
+fn the_skill_tells_which_terminals_are_in_scope_and_that_a_hidden_one_is_not_found() {
+    let errors = file("references/errors.md").expect("the errors reference").text;
+    let skill = file("SKILL.md").expect("the skill").text;
+    let flat = skill.split_whitespace().collect::<Vec<_>>().join(" ");
+    for phrase in
+        ["terminals you opened", "out of scope", "that one terminal", "hid from agents", "`not_found`"]
+    {
+        assert!(flat.contains(phrase), "SKILL.md does not say `{phrase}`");
+    }
+    let line = errors
+        .lines()
+        .find(|line| line.starts_with("- `not_found`"))
+        .expect("the errors reference has a line for `not_found`");
+    assert!(line.contains("hid from agents"), "{line}");
+}
+
 /// What a flag's value looks like in an example.
 fn sample(value: &str) -> &'static str {
     match value {

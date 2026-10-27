@@ -41,7 +41,7 @@ fn try_wait(
         return Err(off);
     }
     let plan = spec.plan()?;
-    let found = find(spec.target, cx).ok_or_else(|| missing(spec.target))?;
+    let found = find(spec.target, peer, cx).ok_or_else(|| missing(spec.target))?;
     let facts = reader_of(&found, cx)?;
     let TabFacts { state, shell, .. } = state_of(&found, cx).ok_or_else(|| missing(spec.target))?;
     let self_read = shell.is_some_and(|shell| peer.runs_in(shell));
@@ -114,7 +114,7 @@ fn try_run(
         return Err(writes_off());
     }
     let plan = spec.plan()?;
-    let found = find(spec.target, cx).ok_or_else(|| missing(spec.target))?;
+    let found = find(spec.target, peer, cx).ok_or_else(|| missing(spec.target))?;
     let facts = reader_of(&found, cx)?;
     let target: SendTarget = target_facts(&found, peer, cx).ok_or_else(|| missing(spec.target))?;
     run_check(enabled, from, target, facts.reader.at_prompt())?;

@@ -79,4 +79,25 @@ impl Workspace {
         self.save(cx);
         cx.notify();
     }
+
+    /// "Hide from Agents": the terminal can no longer be listed, read or typed into by a program that
+    /// controls Wormhole (one that runs inside it still sees itself); chosen again, it can. Saved at once,
+    /// so a restart does not bring the choice back undone. The one place the flag changes, for the row
+    /// menu, the terminal's menu, the palette and devctl.
+    pub(crate) fn set_agent_hidden(&mut self, ix: usize, hidden: bool, cx: &mut Context<Self>) {
+        let Some(session) = self.sessions.get(ix) else { return };
+        session.terminal().clone().update(cx, |terminal, cx| terminal.set_agent_hidden(hidden, cx));
+        // The row, the title row and the bus hear of it through the summary.
+        self.sync_summary_at(ix, cx);
+        self.save(cx);
+        cx.notify();
+    }
+
+    /// [`set_agent_hidden`](Self::set_agent_hidden) the other way round than the terminal is now.
+    pub(crate) fn toggle_agent_hidden(&mut self, ix: usize, cx: &mut Context<Self>) {
+        if let Some(session) = self.sessions.get(ix) {
+            let hidden = !session.terminal().read(cx).agent_hidden();
+            self.set_agent_hidden(ix, hidden, cx);
+        }
+    }
 }

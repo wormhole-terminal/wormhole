@@ -22,6 +22,7 @@ mod drive;
 mod gate;
 mod processes;
 mod profile;
+mod scopes;
 mod scripted;
 mod sheet;
 
@@ -30,7 +31,7 @@ use std::time::{Instant, SystemTime};
 
 use gpui_kit::*;
 use wormhole_core::config::AgentAccess;
-use wormhole_core::ipc::access::{Grants, Queue, Resolved};
+use wormhole_core::ipc::access::{Grants, Queue, Resolved, Scopes};
 use wormhole_core::storage::paths::ProfileId;
 
 use self::approved::Listing;
@@ -38,9 +39,9 @@ use self::processes::Signatures;
 use self::scripted::Asker;
 use crate::app_state::OpenWindow;
 
-#[cfg(any(test, feature = "devctl"))]
-pub(crate) use self::approved::Which;
-pub(crate) use self::approved::{Approved, How, approved, forget_listing, now_seconds, revoke};
+pub(crate) use self::approved::{
+    Approved, How, Which, approved, forget_listing, now_seconds, revoke, set_capability,
+};
 #[cfg(test)]
 pub(crate) use self::ask::Waiting;
 #[cfg(any(test, feature = "devctl"))]
@@ -48,6 +49,7 @@ pub(crate) use self::ask::{answer_pending, pending_questions};
 pub(crate) use self::ask::{reads_open, tick};
 pub(crate) use self::drive::{announce, drive_of};
 pub(crate) use self::gate::{Gate, gate, standing};
+pub(crate) use self::scopes::own_opened;
 #[cfg(any(test, feature = "devctl"))]
 pub(crate) use self::scripted::Script;
 #[cfg(any(test, feature = "devctl"))]
@@ -69,6 +71,12 @@ struct State {
     /// What was allowed for a session or until Wormhole quits, by profile (a profile decides for itself).
     grants: HashMap<u64, Grants>,
     queue: Queue,
+    /// The terminals each program opened, and the single terminals the user opened up for it (memory only).
+    scopes: Scopes,
+    /// A test that is not about scopes lets every terminal be in scope (`testing::allow`): what it checks is
+    /// something else, on terminals it opens itself.
+    #[cfg(test)]
+    unscoped: bool,
     shown: Option<Shown>,
     asker: Asker,
     signatures: Signatures,
@@ -98,6 +106,9 @@ impl Default for State {
         Self {
             grants: HashMap::new(),
             queue: Queue::default(),
+            scopes: Scopes::default(),
+            #[cfg(test)]
+            unscoped: false,
             shown: None,
             asker: Asker::detect(),
             signatures: Signatures::default(),
@@ -164,6 +175,18 @@ pub(crate) mod testing {
     }
 
     pub(crate) fn allow_in(cx: &mut App, read: bool, write: bool) {
+        allow_scoped_in(cx, read, write);
+        state(cx).unscoped = true;
+    }
+
+    /// [`allow`], with the scopes in force: the program reaches the terminals it opened, the one it runs in and
+    /// those the user said yes about, and asks for any other.
+    pub(crate) fn allow_scoped(cx: &mut TestAppContext, read: bool, write: bool) {
+        cx.update(|cx| allow_scoped_in(cx, read, write));
+    }
+
+    fn allow_scoped_in(cx: &mut App, read: bool, write: bool) {
+        state(cx).unscoped = false;
         update_settings(cx, |settings| settings.agent_access = AgentAccess::Ask);
         let scope = scope_of(&app(cx).active_profile().clone());
         // What was allowed before is taken back, and the streams it started end with it.
@@ -205,6 +228,16 @@ pub(crate) mod testing {
                 CapSet::STANDARD,
             )
         })
+    }
+
+    /// The terminals Scripts opened that are still open (and counted as its own).
+    pub(crate) fn owned_by_scripts(cx: &mut TestAppContext) -> Vec<i64> {
+        cx.update(|cx| state(cx).scopes.owned_by(&Identity::scripts()))
+    }
+
+    /// What a new run of Wormhole would start with: nothing held, nothing owned (none of it is stored).
+    pub(crate) fn restart(cx: &mut App) {
+        *state(cx) = super::State::default();
     }
 
     /// Nobody answers a question until the test does.

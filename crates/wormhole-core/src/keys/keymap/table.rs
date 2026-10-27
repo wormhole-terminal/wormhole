@@ -111,6 +111,7 @@ pub(super) fn entries() -> Vec<Entry> {
         row(NewTerminalInWorktree, "New Terminal in New Worktree…", &[]),
         row(OpenFolder, "Open Folder…", &[(CMD, "o")]),
         row(PinTerminal, "Pin to Top", &[]),
+        row(HideFromAgents, "Hide from Agents", &[]),
         row(RevealInFinder, "Reveal in Finder", &[]),
         row(CopyPath, "Copy Path", &[]),
         // The selected terminal, also inside a split; the menu says "Close Pane" there. No key

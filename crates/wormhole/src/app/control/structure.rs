@@ -11,6 +11,7 @@
 //! are for, and a close is the person's to answer either way.
 
 use gpui_kit::*;
+use wormhole_core::ipc::Peer;
 use wormhole_core::ipc::access::Access;
 use wormhole_core::ipc::control::structure::{launch_check, name_check, size_check};
 use wormhole_core::ipc::control::{
@@ -36,8 +37,8 @@ fn gate(access: Access, cx: &App) -> Result<(), Reply> {
 /// The terminal `target` names, unless its window is of a profile that is not shown: those windows are
 /// ordered out, and the front window never means one, so nothing here is done to them (a sheet on an
 /// ordered-out window would block it, and `focus --activate` would bring it in).
-fn shown(target: Target, cx: &App) -> Result<Found, Reply> {
-    let found = find(target, cx).ok_or_else(|| not_found(target))?;
+fn shown(target: Target, peer: &Peer, cx: &App) -> Result<Found, Reply> {
+    let found = find(target, peer, cx).ok_or_else(|| not_found(target))?;
     if found.window.hidden {
         return Err(Error::new(
             ErrorCode::NotFound,
@@ -84,7 +85,7 @@ pub(super) fn new_window(spec: &NewWindowSpec, from: Option<i64>, access: Access
 }
 
 /// `split`.
-pub(super) fn split(spec: &SplitSpec, from: Option<i64>, access: Access, cx: &mut App) -> Reply {
+pub(super) fn split(spec: &SplitSpec, from: Option<i64>, access: Access, peer: &Peer, cx: &mut App) -> Reply {
     if let Err(reply) = gate(access, cx) {
         return reply;
     }
@@ -93,7 +94,7 @@ pub(super) fn split(spec: &SplitSpec, from: Option<i64>, access: Access, cx: &mu
     {
         return error.into();
     }
-    let found = match shown(spec.target, cx) {
+    let found = match shown(spec.target, peer, cx) {
         Ok(found) => found,
         Err(reply) => return reply,
     };
@@ -133,11 +134,11 @@ pub(super) fn split(spec: &SplitSpec, from: Option<i64>, access: Access, cx: &mu
 }
 
 /// `focus`.
-pub(super) fn focus(spec: &FocusSpec, from: Option<i64>, access: Access, cx: &mut App) -> Reply {
+pub(super) fn focus(spec: &FocusSpec, from: Option<i64>, access: Access, peer: &Peer, cx: &mut App) -> Reply {
     if let Err(reply) = gate(access, cx) {
         return reply;
     }
-    let found = match shown(spec.target, cx) {
+    let found = match shown(spec.target, peer, cx) {
         Ok(found) => found,
         Err(reply) => return reply,
     };
@@ -158,7 +159,13 @@ pub(super) fn focus(spec: &FocusSpec, from: Option<i64>, access: Access, cx: &mu
 }
 
 /// `rename`.
-pub(super) fn rename(spec: &RenameSpec, from: Option<i64>, access: Access, cx: &mut App) -> Reply {
+pub(super) fn rename(
+    spec: &RenameSpec,
+    from: Option<i64>,
+    access: Access,
+    peer: &Peer,
+    cx: &mut App,
+) -> Reply {
     if let Err(reply) = gate(access, cx) {
         return reply;
     }
@@ -166,7 +173,7 @@ pub(super) fn rename(spec: &RenameSpec, from: Option<i64>, access: Access, cx: &
         Ok(name) => name,
         Err(error) => return error.into(),
     };
-    let found = match shown(spec.target, cx) {
+    let found = match shown(spec.target, peer, cx) {
         Ok(found) => found,
         Err(reply) => return reply,
     };
@@ -185,11 +192,11 @@ pub(super) fn rename(spec: &RenameSpec, from: Option<i64>, access: Access, cx: &
 }
 
 /// `close`: the question in the terminal's window, which the person answers.
-pub(super) fn close(spec: &CloseSpec, from: Option<i64>, access: Access, cx: &mut App) -> Reply {
+pub(super) fn close(spec: &CloseSpec, from: Option<i64>, access: Access, peer: &Peer, cx: &mut App) -> Reply {
     if let Err(reply) = gate(access, cx) {
         return reply;
     }
-    let found = match shown(spec.target, cx) {
+    let found = match shown(spec.target, peer, cx) {
         Ok(found) => found,
         Err(reply) => return reply,
     };

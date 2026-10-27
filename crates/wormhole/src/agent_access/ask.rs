@@ -193,17 +193,25 @@ fn settle(id: u64, outcome: Outcome, cx: &mut App) {
     let resolved = pending.resolved.clone();
     let label = resolved.label.clone();
     let scope = pending.scope;
-    match outcome {
-        Outcome::Chose(Button::Deny) => {
+    match (outcome, pending.about) {
+        (Outcome::Chose(Button::Deny), Some(terminal)) => {
+            state(cx).scopes.deny(resolved.identity, terminal, Instant::now());
+            pending.answer(|| Decision::Refuse(declined_terminal(&label, terminal).into()));
+        }
+        (Outcome::Chose(Button::Deny), None) => {
             state(cx).grants_of(scope).deny(resolved.identity, Instant::now());
             pending.answer(|| Decision::Refuse(declined(&label).into()));
         }
-        Outcome::Chose(button) => {
+        (Outcome::Chose(button), Some(terminal)) => {
+            widen(&resolved, button, terminal, pending.caps, cx);
+            pending.answer(|| Decision::Retry);
+        }
+        (Outcome::Chose(button), None) => {
             allow(&resolved, button, scope, cx);
             pending.answer(|| Decision::Retry);
         }
-        Outcome::TimedOut => pending.answer(|| Decision::Refuse(timed_out(&label).into())),
-        Outcome::Withdrawn => pending.answer(|| Decision::Refuse(not_answered(&label).into())),
+        (Outcome::TimedOut, _) => pending.answer(|| Decision::Refuse(timed_out(&label).into())),
+        (Outcome::Withdrawn, _) => pending.answer(|| Decision::Refuse(not_answered(&label).into())),
     }
     // Settings lists what is allowed.
     state(cx).listing = None;
@@ -230,6 +238,17 @@ fn allow(resolved: &access::Resolved, button: Button, scope: u64, cx: &mut App) 
             state(cx).grants_of(scope).grant(identity, label, Scope::UntilQuit, caps);
         }
     }
+}
+
+/// Open `terminal` up to `resolved` for as long as `button` says, for what the request that asked needed:
+/// "for this session" while the program runs, otherwise until Wormhole quits (a terminal is never
+/// approved for good: it is not a stable thing to approve).
+fn widen(resolved: &access::Resolved, button: Button, terminal: i64, caps: CapSet, cx: &mut App) {
+    let scope = match (button, resolved.process) {
+        (Button::Session, Some(process)) => Scope::Session(process),
+        _ => Scope::UntilQuit,
+    };
+    state(cx).scopes.widen(resolved.identity.clone(), scope, terminal, caps);
 }
 
 fn store_always(resolved: &access::Resolved, caps: CapSet, scope: u64, cx: &mut App) -> bool {
@@ -265,6 +284,14 @@ fn declined(label: &str) -> Error {
     .because(Reason::Declined)
 }
 
+fn declined_terminal(label: &str, terminal: i64) -> Error {
+    Error::new(
+        ErrorCode::NotAllowed,
+        format!("the user did not allow {label} to use terminal {terminal}, which it did not open: do not retry; tell the user what you wanted to do there and ask them"),
+    )
+    .because(Reason::Declined)
+}
+
 fn timed_out(label: &str) -> Error {
     Error::new(
         ErrorCode::NotAllowed,
@@ -296,6 +323,8 @@ pub(crate) struct Waiting {
     /// Whether it is the one on the screen.
     pub shown: bool,
     pub buttons: Vec<Button>,
+    /// The terminal it is about, when it is not the question about the program.
+    pub about: Option<i64>,
     /// What the sheet says: its title, its text and the block of facts under it.
     pub title: String,
     pub detail: String,
@@ -317,6 +346,7 @@ pub(crate) fn pending_questions(words: bool, cx: &mut App) -> Vec<Waiting> {
             Waiting {
                 id: pending.id,
                 label: pending.resolved.label.clone(),
+                about: pending.about,
                 shown: Some(pending.id) == shown,
                 buttons: sheet::buttons(pending),
                 title: said.as_ref().map(|said| said.title.clone()).unwrap_or_default(),
@@ -330,6 +360,7 @@ pub(crate) fn pending_questions(words: bool, cx: &mut App) -> Vec<Waiting> {
         waiting.push(Waiting {
             id: CHANGE_ID,
             label: String::new(),
+            about: None,
             shown: shown == Some(CHANGE_ID),
             buttons: said.buttons,
             title: said.title,
@@ -390,9 +421,12 @@ pub(crate) fn tick(ticks: u64, cx: &mut App) {
     for profile in profiles {
         settle_mode(&profile, cx);
     }
-    if ticks.is_multiple_of(5) {
+    let sweep_sessions = ticks.is_multiple_of(5);
+    if sweep_sessions {
         end_sessions_of_ended_programs(cx);
     }
+    // A closed terminal drops out of every scope; a session's opening of a terminal ends with the program.
+    super::scopes::sweep(sweep_sessions, cx);
     pump(cx);
 }
 

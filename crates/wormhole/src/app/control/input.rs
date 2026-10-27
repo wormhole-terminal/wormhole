@@ -44,7 +44,7 @@ pub(super) fn send_text(
         let error = writes_off();
         return Reply::from(error);
     }
-    let Some(found) = find(target, cx) else { return not_found(target) };
+    let Some(found) = find(target, peer, cx) else { return not_found(target) };
     let Some(facts) = target_facts(&found, peer, cx) else { return not_found(target) };
     if let Err(error) = send_text_check(enabled, text, from, facts) {
         return Reply::from(error);
@@ -79,7 +79,7 @@ pub(super) fn send_keys(
     if !enabled {
         return Reply::from(writes_off());
     }
-    let Some(found) = find(spec.target, cx) else { return not_found(spec.target) };
+    let Some(found) = find(spec.target, peer, cx) else { return not_found(spec.target) };
     let Some(facts) = target_facts(&found, peer, cx) else { return not_found(spec.target) };
     let strokes = match send_keys_check(enabled, &spec.keys, from, facts) {
         Ok(strokes) => strokes,
@@ -109,7 +109,7 @@ pub(super) fn mouse(spec: &MouseSpec, from: Option<i64>, access: Access, peer: &
     if !enabled {
         return Reply::from(writes_off());
     }
-    let Some(found) = find(spec.target, cx) else { return not_found(spec.target) };
+    let Some(found) = find(spec.target, peer, cx) else { return not_found(spec.target) };
     let Some(facts) = target_facts(&found, peer, cx) else { return not_found(spec.target) };
     if let Err(error) = mouse_check(enabled, &spec.op, from, facts) {
         return Reply::from(error);

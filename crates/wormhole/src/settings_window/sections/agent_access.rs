@@ -15,11 +15,12 @@ use gpui_kit::component::button::Button;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::AgentAccess;
-use wormhole_core::ipc::access::Kind;
+use wormhole_core::ipc::access::{Capability, Kind};
 use wormhole_core::view::sidebar::wording;
 
 use super::agents::mark;
-use crate::agent_access::{self, Approved, How};
+use crate::agent_access::{self, Approved, How, Which};
+use crate::settings::UiColors;
 use crate::settings_window::registry::{Segment, Setting};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
@@ -59,6 +60,55 @@ fn draw_programs(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEle
         .flex()
         .flex_col()
         .children(rows.into_iter().enumerate().map(|(ix, row)| program_row(ix, row, now, cx)))
+        .child(
+            div()
+                .py_2()
+                .rule_top(ui)
+                .text_caption()
+                .text_color(ui.muted)
+                .child(text(SETTINGS_AGENTS_ACCESS_CAPS_NOTE)),
+        )
+        .into_any_element()
+}
+
+/// What a program may do, one tick each. Closing is not among them: it always asks.
+const SWITCHES: [Capability; 4] = [Capability::Read, Capability::Type, Capability::Run, Capability::Open];
+
+fn capability_label(capability: Capability) -> &'static str {
+    text(match capability {
+        Capability::Read => SETTINGS_AGENTS_ACCESS_CAP_READ,
+        Capability::Type => SETTINGS_AGENTS_ACCESS_CAP_TYPE,
+        Capability::Run => SETTINGS_AGENTS_ACCESS_CAP_RUN,
+        Capability::Open | Capability::Close => SETTINGS_AGENTS_ACCESS_CAP_OPEN,
+    })
+}
+
+/// The ticks of one approved program: what it may do, changed at once and kept with the approval.
+fn switches(
+    ix: usize,
+    which: Which,
+    row: &Approved,
+    ui: UiColors,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
+    div()
+        .flex()
+        .flex_wrap()
+        .gap_x_3()
+        .pt_1()
+        .children(SWITCHES.into_iter().map(|capability| {
+            let this = cx.weak_entity();
+            style::checkbox(
+                SharedString::from(format!("agent-access-{ix}-{capability:?}")),
+                ui,
+                row.caps.contains(capability),
+            )
+            .in_form(capability_label(capability))
+            .on_change(move |on, _, cx| {
+                agent_access::set_capability(which, capability, on, cx);
+                this.update(cx, |_, cx| cx.notify()).ok();
+            })
+        }))
         .into_any_element()
 }
 
@@ -124,7 +174,8 @@ fn program_row(ix: usize, row: Approved, now: i64, cx: &mut Context<SettingsWind
                             .truncate()
                             .child(row.location.clone()),
                     )
-                }),
+                })
+                .child(switches(ix, which, &row, ui, cx)),
         )
         .child(
             Button::new(SharedString::from(format!("agent-access-revoke-{ix}")))

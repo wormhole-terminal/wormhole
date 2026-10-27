@@ -1,7 +1,8 @@
 //! A row's context menu, in a browser's words: Rename…, Add terminal to new group, Add terminal to
 //! group ▸ (the person's groups), Remove from group, Split right, Close terminal; then Show beside…
 //! (which terminal to show next to this one, making a split), Remove from split, Pin to top / Unpin,
-//! Don't keep this terminal's text (ticked when chosen; greyed out while no terminal's text is kept);
+//! Don't keep this terminal's text (ticked when chosen; greyed out while no terminal's text is kept),
+//! Hide from Agents (ticked when chosen; only offered with the Automation feature, or while hidden);
 //! Reveal in Finder, Copy path.
 //! The row it was opened on wears the focus ring until it closes. ⌃↩ opens it for the row the keys
 //! are on, and a group's own menu (`groups`) for the head they are on. The terminals "Show beside…"
@@ -37,6 +38,8 @@ struct RowFacts {
     pinned: bool,
     /// Its text isn't kept for a restart.
     forget_text: bool,
+    /// "Hide from Agents" is offered, ticked when the terminal is hidden from them.
+    agent_hide: Option<bool>,
     /// Restore terminal text after restart is on.
     restoring: bool,
     in_split: bool,
@@ -112,6 +115,7 @@ impl Sidebar {
             id,
             pinned: row.pinned,
             forget_text: row.forget_text,
+            agent_hide: (self.input.agent_hiding || row.agent_hidden).then_some(row.agent_hidden),
             restoring: settings_in(&self.input.profile, cx).restore_terminal_text,
             in_split: row.split.is_some(),
             cwd: row.cwd.clone(),
@@ -142,7 +146,7 @@ pub(crate) fn reveal_in_finder(path: &Path, cx: &App) {
 
 /// The menu of the row `facts` describe; every item acts on `this`.
 fn row_menu(facts: RowFacts, this: &WeakEntity<Sidebar>) -> Menu {
-    let RowFacts { id, pinned, forget_text, restoring, in_split, cwd, groups, beside } = facts;
+    let RowFacts { id, pinned, forget_text, agent_hide, restoring, in_split, cwd, groups, beside } = facts;
     // An item that tells the window, which finds the terminal again by its id: the list may have
     // changed while the menu was open.
     let tell = |event: fn(i64) -> SidebarEvent| platform::run_on(this, move |_, _, cx| cx.emit(event(id)));
@@ -199,6 +203,13 @@ fn row_menu(facts: RowFacts, this: &WeakEntity<Sidebar>) -> Menu {
                 .enabled(restoring)
                 .on_select(tell(SidebarEvent::ToggleForgetText)),
         )
+        .when(agent_hide.is_some(), |menu| {
+            menu.item(
+                Item::new("Hide from Agents")
+                    .checked(agent_hide == Some(true))
+                    .on_select(tell(SidebarEvent::ToggleAgentHidden)),
+            )
+        })
         .separator()
         .item(Item::new("Reveal in Finder").enabled(cwd.is_some()).on_select({
             let cwd = cwd.clone();
@@ -229,6 +240,7 @@ mod tests {
             id: 7,
             pinned: false,
             forget_text: false,
+            agent_hide: None,
             restoring: true,
             in_split: false,
             cwd: Some(PathBuf::from("/tmp")),
@@ -269,6 +281,18 @@ mod tests {
     fn the_text_choice_is_off_while_no_text_is_kept() {
         let outline = outline(RowFacts { restoring: false, ..facts() });
         assert!(outline.contains(&"- Don't keep this terminal's text [off]".to_string()), "{outline:?}");
+    }
+
+    /// "Hide from Agents" is there only when the window offers it, ticked while the terminal is hidden.
+    #[test]
+    fn hide_from_agents_is_offered_when_asked_and_ticked_while_hidden() {
+        let at = |agent_hide| {
+            let outline = outline(RowFacts { agent_hide, ..facts() });
+            outline.iter().find(|line| line.contains("Hide from Agents")).cloned()
+        };
+        assert_eq!(at(None), None);
+        assert_eq!(at(Some(false)).as_deref(), Some("- Hide from Agents"));
+        assert_eq!(at(Some(true)).as_deref(), Some("- Hide from Agents [x]"));
     }
 
     #[test]

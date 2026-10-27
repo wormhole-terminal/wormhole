@@ -4,7 +4,7 @@
 
 use anyhow::{Result, anyhow};
 use wormhole_core::config::features::FeatureFlag;
-use wormhole_core::ipc::access::{CapSet, Identity};
+use wormhole_core::ipc::access::{CapSet, Capability, Identity};
 use wormhole_core::storage::store::AgentGrantRow;
 
 use super::Ctx;
@@ -32,16 +32,32 @@ pub(super) fn agents(ctx: &mut Ctx, _: &str) -> Result<String> {
             How::UntilQuit => "quit",
             How::Always => "always",
         };
-        lines.push(format!("approved {which} {} {how} {}", row.label, row.kind.word()));
+        let caps: Vec<&str> = [
+            (Capability::Read, "read"),
+            (Capability::Type, "type"),
+            (Capability::Run, "run"),
+            (Capability::Open, "open"),
+        ]
+        .into_iter()
+        .filter(|(capability, _)| row.caps.contains(*capability))
+        .map(|(_, word)| word)
+        .collect();
+        lines.push(format!(
+            "approved {which} {} {how} {} caps={}",
+            row.label,
+            row.kind.word(),
+            caps.join(",")
+        ));
     }
     for question in agent_access::pending_questions(false, cx) {
         let buttons: Vec<&str> = question.buttons.iter().map(|button| word(*button)).collect();
         lines.push(format!(
-            "asking {} {} {} {}",
+            "asking {} {} {} {}{}",
             question.id,
             question.label,
             if question.shown { "shown" } else { "waiting" },
-            buttons.join(",")
+            buttons.join(","),
+            question.about.map(|terminal| format!(" about=terminal:{terminal}")).unwrap_or_default()
         ));
     }
     Ok(lines.join("\n"))
@@ -91,6 +107,23 @@ pub(super) fn agent_script(ctx: &mut Ctx, arg: &str) -> Result<String> {
         ),
     };
     agent_access::set_script(script, ctx.cx);
+    Ok(String::new())
+}
+
+/// `agent-hide <row> [on|off]`: hide the terminal in that row (as `state` numbers them) from the programs that
+/// control Wormhole, or show it to them again; with neither word, the other way round than it is. As
+/// "Hide from Agents" does in its menus.
+pub(super) fn agent_hide(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let mut words = arg.split_whitespace();
+    let row = words.next().ok_or_else(|| anyhow!("agent-hide takes a row, then on or off"))?;
+    let ix = super::nth(row);
+    let hidden = match words.next() {
+        Some("on") => Some(true),
+        Some("off") => Some(false),
+        None => None,
+        Some(other) => return Err(anyhow!("agent-hide takes on or off, not {other:?}")),
+    };
+    ctx.workspace.devctl_agent_hide(ix, hidden, ctx.cx).map_err(|e| anyhow!(e))?;
     Ok(String::new())
 }
 

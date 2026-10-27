@@ -60,6 +60,38 @@ agent-sheet-in-terminal = terminal “{ $title }”
 # The program an interpreter runs on. { $name } is the interpreter, e.g. node, and { $signer } its signature as above.
 agent-sheet-runs-on = { $name }, signed by { $signer }
 
+## A program that is let in reaches for a terminal it did not open
+
+# The title of the question about reading a terminal. { $name } is the program's name, e.g. Claude Code, and { $terminal } the terminal's name in the sidebar.
+agent-terminal-title-read = Allow “{ $name }” to read “{ $terminal }”?
+
+# The same about typing into it. { $name } is the program's name and { $terminal } the terminal's name in the sidebar.
+agent-terminal-title-type = Allow “{ $name }” to type into “{ $terminal }”?
+
+# The same about running commands in it. { $name } is the program's name and { $terminal } the terminal's name in the sidebar.
+agent-terminal-title-run = Allow “{ $name }” to run commands in “{ $terminal }”?
+
+# The same about renaming it or bringing it forward. { $name } is the program's name and { $terminal } the terminal's name in the sidebar.
+agent-terminal-title-open = Allow “{ $name }” to rename or bring forward “{ $terminal }”?
+
+# The same four for Scripts, which have no name. { $terminal } is the terminal's name in the sidebar.
+agent-terminal-title-scripts-read = Allow scripts to read “{ $terminal }”?
+
+# Scripts typing into a terminal. { $terminal } is the terminal's name in the sidebar.
+agent-terminal-title-scripts-type = Allow scripts to type into “{ $terminal }”?
+
+# Scripts running commands in a terminal. { $terminal } is the terminal's name in the sidebar.
+agent-terminal-title-scripts-run = Allow scripts to run commands in “{ $terminal }”?
+
+# Scripts renaming a terminal or bringing it forward. { $terminal } is the terminal's name in the sidebar.
+agent-terminal-title-scripts-open = Allow scripts to rename or bring forward “{ $terminal }”?
+
+agent-terminal-detail = It did not open this terminal and does not run in it. “Allow for This Session” lets it use this terminal, and no other, while the program runs; “Until { -brand } Quits”, until { -brand } quits.
+agent-terminal-detail-scripts = Scripts did not open this terminal. Allowing it lets scripts use this terminal, and no other, until { -brand } quits.
+
+agent-terminal-label-terminal = Terminal
+agent-terminal-label-folder = Folder
+
 ## The buttons
 
 agent-sheet-button-deny = Don’t Allow

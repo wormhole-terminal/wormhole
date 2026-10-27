@@ -35,6 +35,9 @@ pub(crate) struct SidebarInput {
     pub(crate) group_drag: Option<u32>,
     /// The terminals whose welcome program is running: the example band is drawn only for one of them.
     pub(crate) welcomes: Vec<i64>,
+    /// The row menu offers "Hide from Agents" (the window says; a hidden terminal's menu always offers it,
+    /// to let it be shown again).
+    pub(crate) agent_hiding: bool,
 }
 
 /// Whether the window says the same twice: the sidebar draws again for a different input only.
@@ -55,6 +58,7 @@ impl PartialEq for SidebarInput {
             && self.terminal_drag == other.terminal_drag
             && self.group_drag == other.group_drag
             && self.welcomes == other.welcomes
+            && self.agent_hiding == other.agent_hiding
     }
 }
 
@@ -70,6 +74,7 @@ impl Default for SidebarInput {
             terminal_drag: None,
             group_drag: None,
             welcomes: Vec::new(),
+            agent_hiding: false,
         }
     }
 }
@@ -145,6 +150,8 @@ pub(crate) enum SidebarEvent {
     TogglePin(i64),
     /// "Don't keep this terminal's text" on terminal `id`.
     ToggleForgetText(i64),
+    /// "Hide from Agents" on terminal `id`, or showing it to them again.
+    ToggleAgentHidden(i64),
     /// Terminal `other` shows beside terminal `id`.
     ShowBeside { other: i64, id: i64 },
     /// Terminal `id`'s menu was asked for at `at`: the window answers with the terminals it could show

@@ -432,6 +432,7 @@ View
   Enter Full Screen  ⌃⌘F
 Terminal
   Pin to Top
+  Hide from Agents
   ---
   Focus Terminal / Panel  ⇧⌘E
   Focus Next Area  F6

@@ -73,6 +73,21 @@ pub(crate) fn sync_grants(cx: &App, reads_allowed: bool) {
     }
 }
 
+/// The user hid terminal `terminal` from the programs that control Wormhole, or showed it again: nothing
+/// about it is told to a stream of one that does not run inside it from now on.
+pub(crate) fn set_hidden(cx: &App, terminal: i64, hidden: bool) {
+    if let Some(automation) = cx.try_global::<Automation>() {
+        automation.bus.set_hidden(terminal, hidden);
+    }
+}
+
+/// Terminal `terminal` is closed for good: the bus keeps nothing about it.
+pub(crate) fn forget_terminal(cx: &App, terminal: i64) {
+    if let Some(automation) = cx.try_global::<Automation>() {
+        automation.bus.forget_terminal(terminal);
+    }
+}
+
 /// Tell the listeners of `topic` what `build` makes; `build` does not run when nobody listens.
 pub(crate) fn publish(cx: &App, topic: Topic, build: impl FnOnce() -> Event) {
     if let Some(automation) = cx.try_global::<Automation>() {

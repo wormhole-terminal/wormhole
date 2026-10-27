@@ -99,6 +99,15 @@ impl Workspace {
         if self.active_session().pinned {
             state.checked.push(PinTerminal);
         }
+        // Only with the Automation feature, or while it is hidden (to show it again).
+        let hidden = self.active_terminal().read(cx).agent_hidden();
+        if hidden {
+            state.checked.push(HideFromAgents);
+        } else if !crate::settings::settings_in(&self.profile, cx)
+            .feature_enabled(wormhole_core::config::features::FeatureFlag::Automation)
+        {
+            state.hidden.push(HideFromAgents);
+        }
         self.pane_menu_state(&mut state);
         if self.active_terminal().read(cx).cwd.is_none() {
             state.disabled.extend([RevealInFinder, CopyPath]);

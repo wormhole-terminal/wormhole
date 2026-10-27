@@ -43,6 +43,9 @@ pub struct SessionRecord {
     /// The person asked for this terminal's text not to be kept ("Don't keep this terminal's text"):
     /// nothing of it is saved, and what was is deleted.
     pub forget_text: bool,
+    /// The person hid this terminal from the programs that control Wormhole ("Hide from Agents"): none
+    /// can list, read or type into it.
+    pub agent_hidden: bool,
     /// The terminal's working folder.
     pub cwd: Option<String>,
     /// The shell profile it was opened with (`shells`' key), `None` for the default: a restart of

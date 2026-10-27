@@ -73,6 +73,12 @@ impl Subscriber {
         self.grant.lock().unwrap_or_else(PoisonError::into_inner).clone()
     }
 
+    /// Whether the caller runs in `terminal`, by its place in the process tree: the one terminal a hidden
+    /// terminal is still seen from.
+    pub(super) fn is_inside(&self, terminal: i64) -> bool {
+        self.grant.lock().unwrap_or_else(PoisonError::into_inner).own.contains(&terminal)
+    }
+
     /// Whether it may be told `terminal`'s text now.
     pub(super) fn may_read(&self, terminal: Option<i64>) -> bool {
         self.grant.lock().unwrap_or_else(PoisonError::into_inner).can_read(terminal)

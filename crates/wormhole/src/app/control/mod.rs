@@ -52,17 +52,21 @@ pub(crate) fn answer(request: Request, peer: &Peer, cx: &mut App) -> Answer {
         return Answer::Reply(error);
     }
     match gate(&request, peer, cx) {
-        Gate::Open(access, driver) => {
-            let drives = driver.and_then(|driver| {
+        Gate::Open(admit) => {
+            let drives = admit.driver.and_then(|driver| {
                 agent_access::drive_of(&request.action, request.from_tab())
                     .map(|(target, typing)| (target, typing, driver))
             });
-            let answer = dispatch(request, access, peer, cx);
+            let answer = dispatch(request, admit.access, admit.readable, peer, cx);
             // Said once the handler has said yes: a refusal drives nothing.
             if let Some((target, typing, driver)) = drives
                 && !matches!(&answer, Answer::Reply(reply) if !reply.ok)
             {
                 agent_access::announce(target, typing, driver, cx);
+            }
+            // What a request opened is the program's own from now on (its scope).
+            if let (Some(opener), Answer::Reply(reply)) = (admit.opener, &answer) {
+                agent_access::own_opened(opener, reply, cx);
             }
             answer
         }
@@ -72,10 +76,16 @@ pub(crate) fn answer(request: Request, peer: &Peer, cx: &mut App) -> Answer {
 }
 
 /// Carry out `request`, which `access` lets in.
-fn dispatch(request: Request, access: Access, peer: &Peer, cx: &mut App) -> Answer {
+fn dispatch(
+    request: Request,
+    access: Access,
+    readable: Option<Vec<i64>>,
+    peer: &Peer,
+    cx: &mut App,
+) -> Answer {
     let from = request.from_tab();
     match &request.action {
-        Action::Events(spec) => return stream::events(spec, from, access, peer, cx),
+        Action::Events(spec) => return stream::events(spec, from, access, readable, peer, cx),
         Action::Read(spec) => return read::read(spec, from, access, peer, cx),
         Action::Blocks(spec) => return read::blocks(spec, from, access, peer, cx),
         Action::Wait(spec) => return wait::wait(spec, from, access, peer, cx),
@@ -113,7 +123,14 @@ pub(crate) fn handle(request: Request, peer: &Peer, cx: &mut App) -> Reply {
         return error;
     }
     match gate(&request, peer, cx) {
-        Gate::Open(access, _) => handle_open_as(request, access, peer, cx),
+        Gate::Open(admit) => {
+            let owner = admit.opener.clone();
+            let reply = handle_open_as(request, admit.access, peer, cx);
+            if let Some(owner) = owner {
+                agent_access::own_opened(owner, &reply, cx);
+            }
+            reply
+        }
         Gate::Reply(reply) => reply,
         Gate::Ask(_) => Reply::error(ErrorCode::NotAllowed, "the user has been asked: try again"),
     }
@@ -134,8 +151,8 @@ fn handle_open_as(request: Request, access: Access, peer: &Peer, cx: &mut App) -
     match request.action {
         Action::List => Reply::ok(listing(cx)),
         Action::Doctor => doctor::doctor(from, peer, cx),
-        Action::Status { target } => status(target, from, cx),
-        Action::Notify { target, title, body } => notify(target, &title, &body, from, cx),
+        Action::Status { target } => status(target, from, peer, cx),
+        Action::Notify { target, title, body } => notify(target, &title, &body, from, peer, cx),
         Action::SendText { target, text, submit } => {
             input::send_text(target, &text, submit, from, access, peer, cx)
         }
@@ -145,10 +162,10 @@ fn handle_open_as(request: Request, access: Access, peer: &Peer, cx: &mut App) -
             new_terminal(folder, command, worktree, window, from, access, cx)
         }
         Action::NewWindow(spec) => structure::new_window(&spec, from, access, cx),
-        Action::Split(spec) => structure::split(&spec, from, access, cx),
-        Action::Focus(spec) => structure::focus(&spec, from, access, cx),
-        Action::Rename(spec) => structure::rename(&spec, from, access, cx),
-        Action::Close(spec) => structure::close(&spec, from, access, cx),
+        Action::Split(spec) => structure::split(&spec, from, access, peer, cx),
+        Action::Focus(spec) => structure::focus(&spec, from, access, peer, cx),
+        Action::Rename(spec) => structure::rename(&spec, from, access, peer, cx),
+        Action::Close(spec) => structure::close(&spec, from, access, peer, cx),
         // Answered by `answer`, which can carry a stream or a job for the socket thread; a reply
         // alone (devctl's `control`) cannot.
         Action::Events(_) => {
@@ -193,7 +210,7 @@ fn listing(cx: &App) -> Listing {
         .filter_map(|window| {
             let (terminals, splits) = window
                 .workspace
-                .read_with(cx, |ws, cx| (ws.control_terminals(cx), ws.control_splits()))
+                .read_with(cx, |ws, cx| (ws.control_terminals(cx), ws.control_splits(cx)))
                 .ok()?;
             Some(WindowInfo { id: window.id, front: front == Some(window.id), terminals, splits })
         })
@@ -202,13 +219,13 @@ fn listing(cx: &App) -> Listing {
 }
 
 /// `status`: the target's terminal, the caller's own without one, the app's summary outside any tab.
-fn status(target: Option<Target>, from: Option<i64>, cx: &App) -> Reply {
+fn status(target: Option<Target>, from: Option<i64>, peer: &Peer, cx: &App) -> Reply {
     let Some(target) = target.or(from.map(Target::Tab)) else {
         let listing = listing(cx);
         let states = listing.windows.iter().flat_map(|w| w.terminals.iter().map(|t| t.status));
         return Reply::ok(Summary::of(listing.windows.len(), states));
     };
-    let Some(found) = find(target, cx) else { return not_found(target) };
+    let Some(found) = find(target, peer, cx) else { return not_found(target) };
     let terminal =
         found.window.workspace.read_with(cx, |ws, cx| ws.control_terminal(found.terminal, cx)).ok();
     match terminal.flatten() {
@@ -219,7 +236,14 @@ fn status(target: Option<Target>, from: Option<i64>, cx: &App) -> Reply {
 
 /// `notify`: a notification about the target's tab (the caller's own without one), in the
 /// caller's words, delivered by the notification rules like a program's own.
-fn notify(target: Option<Target>, title: &str, body: &str, from: Option<i64>, cx: &mut App) -> Reply {
+fn notify(
+    target: Option<Target>,
+    title: &str,
+    body: &str,
+    from: Option<i64>,
+    peer: &Peer,
+    cx: &mut App,
+) -> Reply {
     let Some(words) = notice_text(title, body) else {
         return Reply::error(ErrorCode::BadRequest, "nothing to say once the text is cleaned");
     };
@@ -229,7 +253,7 @@ fn notify(target: Option<Target>, title: &str, body: &str, from: Option<i64>, cx
             "name a terminal (--terminal, --tab or --pane); inside one of Wormhole's terminals its own is the default",
         );
     };
-    let Some(found) = find(target, cx) else { return not_found(target) };
+    let Some(found) = find(target, peer, cx) else { return not_found(target) };
     if let Err(reply) = budget(Limited::Notify, from, cx) {
         return reply;
     }
@@ -324,10 +348,12 @@ struct Found {
     tab: i64,
 }
 
-fn find(target: Target, cx: &App) -> Option<Found> {
+/// Where `target` is for the caller `peer`: a terminal hidden from agents is not found, as if there were none,
+/// unless the caller runs inside it. Every request that names a terminal looks it up here.
+fn find(target: Target, peer: &Peer, cx: &App) -> Option<Found> {
     app(cx).windows.iter().find_map(|window| {
         let (terminal, tab) =
-            window.workspace.read_with(cx, |ws, _| ws.control_find(target)).ok().flatten()?;
+            window.workspace.read_with(cx, |ws, cx| ws.control_find_as(target, peer, cx)).ok().flatten()?;
         Some(Found { window: window.clone(), terminal, tab })
     })
 }

@@ -20,10 +20,11 @@ pub(super) fn events(
     spec: &EventsSpec,
     from: Option<i64>,
     access: Access,
+    readable: Option<Vec<i64>>,
     peer: &Peer,
     cx: &mut App,
 ) -> Answer {
-    match subscribe(spec, from, access, peer, cx) {
+    match subscribe(spec, from, access, readable, peer, cx) {
         Ok(answer) => answer,
         Err(error) => Answer::Reply(error.into()),
     }
@@ -33,6 +34,7 @@ fn subscribe(
     spec: &EventsSpec,
     from: Option<i64>,
     access: Access,
+    readable: Option<Vec<i64>>,
     peer: &Peer,
     cx: &mut App,
 ) -> Result<Answer, Error> {
@@ -55,7 +57,7 @@ fn subscribe(
     }
     // What the caller may read of terminals' text: the ones it runs inside of, and every one while the
     // setting allows it.
-    let own: Vec<i64> = app(cx)
+    let mut own: Vec<i64> = app(cx)
         .windows
         .iter()
         .filter_map(|window| {
@@ -63,10 +65,14 @@ fn subscribe(
         })
         .flatten()
         .collect();
-    let reads_all = access.read;
+    // A program that is held to the terminals in its scope hears the text of those and no others (`readable`,
+    // which the gate worked out): they are what it may read, as the terminals it runs in always are.
+    let confined = readable.is_some();
+    own.extend(readable.unwrap_or_default());
+    let reads_all = access.read && !confined;
     // What a terminal prints is for those who may read it: the setting, or the terminals the caller
     // runs in and named (the same rule that decides which streams the setting going off ends).
-    if filter.topics.contains(Topic::Output) {
+    if filter.topics.contains(Topic::Output) && !confined {
         let only_own = !filter.terminals.is_empty() && filter.terminals.iter().all(|id| own.contains(id));
         if !reads_all && !only_own {
             return Err(reads_off());

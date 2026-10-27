@@ -197,13 +197,33 @@ pub(in crate::sidebar) fn row_face(
             .child(Icon::new(IconName::GitFork).xsmall())
             .tooltip(move |window, cx| two_line_tooltip(first.clone(), second.clone(), ui, window, cx))
     });
-    let marks = usize::from(info.pinned) + usize::from(worktree_mark.is_some());
+    // The lock: no program that controls Wormhole can list, read or type into this terminal.
+    let lock_mark = info.agent_hidden.then(|| {
+        div()
+            .id("row-agent-hidden-mark")
+            .flex()
+            .items_center()
+            .text_color(mark_color)
+            .child(Icon::new(IconName::Lock).xsmall())
+            .tooltip(move |window, cx| {
+                two_line_tooltip(
+                    "Hidden from agents".into(),
+                    "Programs that control Wormhole can't see it".into(),
+                    ui,
+                    window,
+                    cx,
+                )
+            })
+    });
+    let marks =
+        usize::from(info.pinned) + usize::from(worktree_mark.is_some()) + usize::from(lock_mark.is_some());
     let mark = (marks > 0).then(|| {
         div()
             .flex()
             .items_center()
             .gap_1()
             .children(info.pinned.then(|| Icon::new(IconName::Pin).xsmall().text_color(mark_color)))
+            .children(lock_mark)
             .children(worktree_mark)
     });
 

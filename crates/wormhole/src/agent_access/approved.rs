@@ -4,7 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
-use wormhole_core::ipc::access::{Identity, Kind, Scope};
+use wormhole_core::ipc::access::{CapSet, Capability, Identity, Kind, Scope};
 
 use super::profile::{holder, scope_of};
 use super::state;
@@ -45,6 +45,8 @@ pub(crate) struct Approved {
     pub team: String,
     /// Seconds since the epoch.
     pub last_used: Option<i64>,
+    /// What it may do: the switches Settings shows (`close` is not one: it always asks).
+    pub caps: CapSet,
 }
 
 /// What Settings lists, for the profile it is of, until something changes it.
@@ -78,6 +80,7 @@ pub(crate) fn approved(cx: &mut App) -> Vec<Approved> {
                 location: row.location,
                 team: row.key.team_id,
                 last_used: row.last_used,
+                caps: CapSet::from_bits(row.caps),
             })
         })
         .collect();
@@ -93,6 +96,7 @@ pub(crate) fn approved(cx: &mut App) -> Vec<Approved> {
         location: String::new(),
         team: held.identity.team_id.clone(),
         last_used: None,
+        caps: held.caps,
     }));
     state(cx).listing = Some(Listing { scope, rows: rows.clone() });
     rows
@@ -132,6 +136,48 @@ pub(crate) fn revoke(which: Which, cx: &mut App) {
     };
     state(cx).listing = None;
     if let Some(bus) = crate::automation::bus(cx) {
+        bus.revoke_holder(holder);
+    }
+    cx.refresh_windows();
+}
+
+/// Switch one capability of an approval on or off (the switches of its row in Settings). Taking one away
+/// closes the streams that were started under the approval, which may have been let in by it.
+pub(crate) fn set_capability(which: Which, capability: Capability, on: bool, cx: &mut App) {
+    let profile = app(cx).active_profile().clone();
+    let scope = scope_of(&profile);
+    let (holder, changed) = match which {
+        Which::Memory(id) => {
+            let caps =
+                state(cx).grants_of(scope).held().iter().find(|held| held.id == id).map(|held| held.caps);
+            let Some(caps) = caps else { return };
+            let caps = if on { caps.with(capability) } else { caps.without(capability) };
+            (holder(false, scope, id), state(cx).grants_of(scope).set_caps(id, caps))
+        }
+        Which::Stored(id) => {
+            let Some(store) = app_mut(cx).store_of_mut(&profile) else { return };
+            let caps = store
+                .agent_grants()
+                .ok()
+                .and_then(|rows| rows.into_iter().find(|row| row.id == id))
+                .map(|row| CapSet::from_bits(row.caps));
+            let Some(caps) = caps else { return };
+            let caps = if on { caps.with(capability) } else { caps.without(capability) };
+            let saved = match store.set_agent_grant_caps(id, caps.bits()) {
+                Ok(()) => true,
+                Err(err) => {
+                    tracing::error!("couldn't change what an approval allows: {err:#}");
+                    false
+                }
+            };
+            (holder(true, scope, u64::try_from(id).unwrap_or(0)), saved)
+        }
+    };
+    state(cx).listing = None;
+    if changed
+        && !on
+        && let Some(bus) = crate::automation::bus(cx)
+    {
         bus.revoke_holder(holder);
     }
     cx.refresh_windows();

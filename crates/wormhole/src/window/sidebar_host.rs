@@ -143,6 +143,7 @@ impl Workspace {
                     pinned: self.split_pinned(ix),
                     split: session.split,
                     forget_text: session.forget_text,
+                    agent_hidden: summary.agent_hidden,
                     changes,
                     repo,
                     extra: None,
@@ -164,6 +165,8 @@ impl Workspace {
             asking: self.closing_session_prompt || self.closing_prompt,
             terminal_drag: self.terminal_drag.as_ref().map(|drag| (drag.id, drag.origin)),
             group_drag: self.group_drag,
+            agent_hiding: crate::settings::settings_in(&self.profile, cx)
+                .feature_enabled(wormhole_core::config::features::FeatureFlag::Automation),
             welcomes: self
                 .sessions
                 .iter()
@@ -519,6 +522,11 @@ impl Workspace {
             &SidebarEvent::ToggleForgetText(id) => {
                 if let Some(ix) = self.find_session(id) {
                     self.toggle_forget_text(ix, cx);
+                }
+            }
+            &SidebarEvent::ToggleAgentHidden(id) => {
+                if let Some(ix) = self.find_session(id) {
+                    self.toggle_agent_hidden(ix, cx);
                 }
             }
             &SidebarEvent::ShowBeside { other, id } => self.show_beside(other, id, window, cx),

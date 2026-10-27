@@ -77,6 +77,14 @@ settings-agents-access-never-used = never used
 # What a row says it was last used. { $when } is a time ago ("3m ago").
 settings-agents-access-last-used = Used { $when }
 
+# The switches of an approved program: what it may do. Closing a terminal is not one of them: it always asks.
+settings-agents-access-cap-read = Read
+settings-agents-access-cap-type = Type
+settings-agents-access-cap-run = Run
+settings-agents-access-cap-open = Open
+# Under the list of approved programs.
+settings-agents-access-caps-note = Closing a terminal always asks. A program uses the terminals it opened and the one it runs in; for any other it asks you first.
+
 settings-agents-access-not-signed = not signed
 settings-agents-access-ad-hoc = ad hoc signature
 

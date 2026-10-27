@@ -12,8 +12,8 @@ use wormhole_core::view::sidebar::order::shortcut_target;
 use crate::actions::{
     ActualSize, Bigger, CloseTerminal, CloseWindow, CopyPath, Find, FindNext, FindPrevious, FocusNextArea,
     FocusPaneDown, FocusPaneLeft, FocusPaneRight, FocusPaneUp, FocusPreviousArea, FocusTerminalOrPanel,
-    GoToGroup, GoToTerminal, LayoutColumns, LayoutGrid, LayoutRows, LayoutSingle, LeaveSplit, NewSession,
-    NewTerminalNoGroup, NewTerminalWith, NextGroup, NextTerminal, PinTerminal, PreviousGroup,
+    GoToGroup, GoToTerminal, HideFromAgents, LayoutColumns, LayoutGrid, LayoutRows, LayoutSingle, LeaveSplit,
+    NewSession, NewTerminalNoGroup, NewTerminalWith, NextGroup, NextTerminal, PinTerminal, PreviousGroup,
     PreviousTerminal, RevealInFinder, Smaller, SplitDown, SplitRight, ToggleRightPanel, ToggleSidebar,
     UseSelectionForFind, ZoomPane,
 };
@@ -106,6 +106,9 @@ impl Workspace {
             .on_action(cx.listener(|this, _: &PreviousGroup, window, cx| this.step_group(false, window, cx)))
             .on_action(cx.listener(|this, n: &GoToGroup, window, cx| this.go_to_group(n.0, window, cx)))
             .on_action(cx.listener(|this, _: &PinTerminal, _, cx| this.toggle_pin(this.active, cx)))
+            .on_action(
+                cx.listener(|this, _: &HideFromAgents, _, cx| this.toggle_agent_hidden(this.active, cx)),
+            )
             .when(has_folder, |root| {
                 root.on_action(cx.listener(|this, _: &RevealInFinder, _, cx| {
                     if let Some(cwd) = this.active_terminal().read(cx).cwd.clone() {

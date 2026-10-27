@@ -218,6 +218,7 @@ const VIEW: &[Slot] = &[
 
 const TERMINAL: &[Slot] = &[
     A(PinTerminal),
+    A(HideFromAgents),
     Sep,
     A(FocusTerminalOrPanel),
     A(FocusNextArea),

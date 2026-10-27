@@ -2,8 +2,10 @@
 //!
 //! A request that needs more than titles and states is judged on *who* sent it: [`resolve`] walks its
 //! process chain to the agent behind it and says how that program is told from another ([`Identity`]),
-//! [`Grants`] and the store hold what the user allowed, and [`decide`] turns the mode, the request's
-//! [`Need`] and what the program holds into allow, ask or refuse. Questions wait in a [`Queue`]. Nothing
+//! [`Grants`] and the store hold what the user allowed, [`Scopes`] says which terminals that reaches (the
+//! ones the program opened, and the ones the user opened up for it), and [`decide`] turns the mode, the
+//! request's [`Need`] and what the program holds into allow, ask or refuse. Questions wait in a [`Queue`]:
+//! one about the program, or one about a terminal it reached for. Nothing
 //! here shows a question or touches a process: the app implements [`Processes`] and puts the question on
 //! the screen. Nothing a caller says counts, and no request can change what is held here.
 
@@ -13,6 +15,7 @@ mod grants;
 mod identity;
 mod queue;
 mod resolve;
+mod scope;
 
 pub use caps::{CapSet, Capability, Need};
 pub use decide::{Access, Allowance, Verdict, decide};
@@ -20,3 +23,4 @@ pub use grants::{COOL_DOWN, Grants, Held, ProcessRef, Scope};
 pub use identity::{Identity, Kind, agent_word};
 pub use queue::{Full, Pending, QUEUE_MAX, Queue};
 pub use resolve::{Changed, Processes, Program, Resolved, ScriptPin, resolve};
+pub use scope::Scopes;

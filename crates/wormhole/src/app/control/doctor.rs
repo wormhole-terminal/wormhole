@@ -48,7 +48,7 @@ fn caller(from: Option<i64>, peer: &Peer, cx: &App) -> Option<Caller> {
         (None, Some(claimed)) => (claimed, false),
         (None, None) => return None,
     };
-    let found = find(Target::Terminal(terminal), cx)?;
+    let found = find(Target::Terminal(terminal), peer, cx)?;
     // `None` once the shell has ended: there is nothing to have reported.
     let shell_integration = found
         .window

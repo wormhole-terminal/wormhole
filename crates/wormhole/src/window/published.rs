@@ -37,6 +37,14 @@ impl Workspace {
     /// Session `ix`'s summary moved from `old` to what it holds now: tell of a change of state, of
     /// title and of folder. `old` is only compared, so nothing is read unless somebody listens.
     pub(super) fn publish_summary_change(&self, ix: usize, old: &TerminalSummary, cx: &App) {
+        // Before anything is told: what happens in a terminal that was just hidden is not.
+        if old.agent_hidden != self.sessions[ix].pane.summary.agent_hidden {
+            crate::automation::set_hidden(
+                cx,
+                self.sessions[ix].id,
+                self.sessions[ix].pane.summary.agent_hidden,
+            );
+        }
         let (status, title, folder) =
             (wants(cx, Topic::Status), wants(cx, Topic::Title), wants(cx, Topic::Folder));
         if !(status || title || folder) {
@@ -82,6 +90,7 @@ impl Workspace {
     /// A terminal is closed for good.
     pub(super) fn publish_terminal_closed(&self, id: i64, cx: &App) {
         publish(cx, Topic::Terminals, || self.event(Some(id), Body::TerminalClosed));
+        crate::automation::forget_terminal(cx, id);
     }
 
     /// A terminal was named, or got the name of what runs in it again (none).

@@ -275,6 +275,25 @@ impl Workspace {
 }
 
 impl Workspace {
+    /// `agent-hide`: hide terminal `ix` from the programs that control Wormhole, show it again, or (with
+    /// `None`) the other way round than it is.
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_agent_hide(
+        &mut self,
+        ix: usize,
+        hidden: Option<bool>,
+        cx: &mut Context<Self>,
+    ) -> Result<(), String> {
+        if ix >= self.sessions.len() {
+            return Err(format!("no terminal in row {}", ix + 1));
+        }
+        match hidden {
+            Some(hidden) => self.set_agent_hidden(ix, hidden, cx),
+            None => self.toggle_agent_hidden(ix, cx),
+        }
+        Ok(())
+    }
+
     /// Quit the app (every window is saved on the way out).
     #[cfg(feature = "devctl")]
     pub(crate) fn quit(&mut self, cx: &mut Context<Self>) {
@@ -332,7 +351,7 @@ impl Workspace {
                 " "
             };
             out.push_str(&format!(
-                "{marker}{} id={} {:?} agent={:?}{}{} name={:?} cwd={:?}{}{} command={:?} shell={:?} runs={:?} {}\n",
+                "{marker}{} id={} {:?} agent={:?}{}{} name={:?} cwd={:?}{}{}{} command={:?} shell={:?} runs={:?} {}\n",
                 ix + 1,
                 session.id,
                 terminal.status(),
@@ -344,6 +363,7 @@ impl Workspace {
                 session.name(),
                 terminal.cwd,
                 if session.pinned { " pinned" } else { "" },
+                if terminal.agent_hidden() { " hidden" } else { "" },
                 session.split.map(|id| format!(" split={id}")).unwrap_or_default(),
                 terminal.foreground().map(|f| f.command.clone()),
                 session.pane.shell,

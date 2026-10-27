@@ -264,3 +264,49 @@ fn the_end_of_open_access_keeps_the_streams_of_programs_that_hold_their_own_read
     bus.publish(Topic::Bell, || bell(1));
     assert!(!matches!(held.next(NONE), Next::Closed(_)), "an approval of its own stays until it is revoked");
 }
+
+#[test]
+fn nothing_about_a_hidden_terminal_is_told_except_to_a_stream_inside_it() {
+    let bus = Bus::new();
+    let outside = subscribe(&bus, &["bell"]);
+    let inside =
+        bus.subscribe(filter(&["bell"]), Grant { own: vec![2], ..Grant::default() }, None).expect("room").0;
+    bus.set_hidden(2, true);
+    bus.publish(Topic::Bell, || bell(1));
+    bus.publish(Topic::Bell, || bell(2));
+    // The stream outside hears terminal 1 and never terminal 2; the one inside hears its own.
+    assert_eq!(seq_of(outside.next(NONE)), 1);
+    assert!(matches!(outside.next(NONE), Next::Idle), "terminal 2 was hidden");
+    assert_eq!(seq_of(inside.next(NONE)), 1);
+    assert_eq!(seq_of(inside.next(NONE)), 2);
+    // Shown again, it is told to everyone.
+    bus.set_hidden(2, false);
+    bus.publish(Topic::Bell, || bell(2));
+    assert_eq!(seq_of(outside.next(NONE)), 3);
+}
+
+#[test]
+fn a_hidden_terminal_is_not_in_a_splits_list_and_a_split_of_nothing_else_is_not_told() {
+    let bus = Bus::new();
+    let splits = subscribe(&bus, &["splits"]);
+    bus.set_hidden(3, true);
+    let split = |terminals: Vec<i64>, focused| Event {
+        window: Some(1),
+        terminal: None,
+        body: Body::Split { split: 9, terminals, focused },
+    };
+    bus.publish(Topic::Splits, || split(vec![2, 3], Some(3)));
+    bus.publish(Topic::Splits, || split(vec![3], Some(3)));
+    let Next::Event(told) = splits.next(NONE) else { panic!("the split was told") };
+    let line = told.line(false);
+    assert!(line.contains("\"terminals\":[2]") && !line.contains("\"focused\""), "{line}");
+    assert!(matches!(splits.next(NONE), Next::Idle), "a split of hidden terminals only is not told");
+}
+
+#[test]
+fn hiding_a_terminal_ends_a_wait_on_it_by_someone_outside() {
+    let bus = Bus::new();
+    let (waiter, _) = bus.wait(super::Watch::of_run(5), Grant::default(), None).expect("room");
+    bus.set_hidden(5, true);
+    assert!(matches!(waiter.next(NONE), Next::Closed(CloseReason::NotAllowed)));
+}

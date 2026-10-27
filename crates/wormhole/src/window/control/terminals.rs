@@ -27,19 +27,64 @@ impl Workspace {
         self.find_session(id).map(|ix| (self.sessions[ix].id, id))
     }
 
-    /// Every terminal of this window, in the sidebar's order.
-    pub(crate) fn control_terminals(&self, cx: &App) -> Vec<TerminalInfo> {
-        self.session_order(cx).into_iter().map(|ix| self.terminal_info(ix, cx)).collect()
+    /// [`control_find`](Self::control_find) for a caller: a terminal hidden from agents ("Hide from Agents")
+    /// is not found, as if it did not exist, unless the caller runs inside it (by its place in the process
+    /// tree, never by what it says). The one lookup every request that names a terminal goes through.
+    pub(crate) fn control_find_as(&self, target: Target, peer: &Peer, cx: &App) -> Option<(i64, i64)> {
+        let found = self.control_find(target)?;
+        let terminal = self.pane_terminal(found.1)?.read(cx);
+        (!terminal.agent_hidden() || terminal.shell_pid().is_some_and(|shell| peer.runs_in(shell)))
+            .then_some(found)
     }
 
-    /// The window's splits, with their terminals in reading order.
-    pub(crate) fn control_splits(&self) -> Vec<SplitInfo> {
+    /// Whether terminal `id` is hidden from agents (a request about it that is not from inside it is
+    /// answered as if there were no such terminal).
+    pub(crate) fn control_hidden(&self, id: i64, cx: &App) -> bool {
+        self.pane_terminal(id).is_some_and(|terminal| terminal.read(cx).agent_hidden())
+    }
+
+    /// Every terminal of this window, hidden or not: what is open, for what is kept about a terminal to be
+    /// dropped when it closes.
+    pub(crate) fn control_ids(&self) -> Vec<i64> {
+        self.sessions.iter().map(|session| session.id).collect()
+    }
+
+    /// The terminals of this window `peer` may know of: those not hidden from agents, and the one it runs
+    /// inside of.
+    pub(crate) fn control_visible_ids(&self, peer: &Peer, cx: &App) -> Vec<i64> {
+        self.sessions
+            .iter()
+            .filter(|session| {
+                let terminal = session.terminal().read(cx);
+                !terminal.agent_hidden() || terminal.shell_pid().is_some_and(|shell| peer.runs_in(shell))
+            })
+            .map(|session| session.id)
+            .collect()
+    }
+
+    /// Every terminal of this window that is not hidden from agents, in the sidebar's order.
+    pub(crate) fn control_terminals(&self, cx: &App) -> Vec<TerminalInfo> {
+        self.session_order(cx)
+            .into_iter()
+            .filter(|&ix| !self.sessions[ix].terminal().read(cx).agent_hidden())
+            .map(|ix| self.terminal_info(ix, cx))
+            .collect()
+    }
+
+    /// The window's splits, with their visible terminals in reading order: a hidden terminal is not in a
+    /// split's list, and a split of hidden terminals only is not listed, and the keyboard in a hidden pane is told as the first listed.
+    pub(crate) fn control_splits(&self, cx: &App) -> Vec<SplitInfo> {
         self.splits
             .iter()
-            .map(|split| SplitInfo {
-                id: split.id,
-                terminals: split.layout.panes(),
-                focused: split.layout.focused(),
+            .filter_map(|split| {
+                let all = split.layout.panes();
+                let terminals: Vec<i64> =
+                    all.iter().copied().filter(|&id| !self.control_hidden(id, cx)).collect();
+                let first = *terminals.first()?;
+                // Told as focused only if it is listed: the keyboard may be in a hidden pane.
+                let focused =
+                    Some(split.layout.focused()).filter(|id| terminals.contains(id)).unwrap_or(first);
+                Some(SplitInfo { id: split.id, terminals, focused })
             })
             .collect()
     }

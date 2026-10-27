@@ -95,28 +95,45 @@ fn run(
     let refuse = |stream: &mut Stream, error: Error| {
         let _ = write_reply(stream, &Reply::from(error));
     };
-    match job.wait() {
-        Some(Decision::Refuse(reply)) => {
-            let _ = write_reply(stream, &reply);
-        }
-        Some(Decision::Retry) => {
-            let mut scratch = ReadScratch::default();
-            let Some(answer) = ask_app(&request, &peer, tx, timing) else { return };
-            // A second question for the same request is a loop: it is answered with the refusal.
-            if let Outcome::Asking(_) = deliver(stream, answer, &mut scratch, timing) {
-                refuse(
-                    stream,
-                    Error::new(ErrorCode::NotAllowed, "the program is not allowed yet")
-                        .because(Reason::ApprovalNeeded),
-                );
+    // A program that is let in may then reach for a terminal that is not its own: that is a second question
+    // (and a third for another terminal). Each is answered by the user and changes what is allowed, so more
+    // than a few in a row is a loop, and is answered with the refusal.
+    let mut asked = 0;
+    let mut job = job;
+    loop {
+        match job.wait() {
+            Some(Decision::Refuse(reply)) => {
+                let _ = write_reply(stream, &reply);
+            }
+            Some(Decision::Retry) => {
+                let mut scratch = ReadScratch::default();
+                let Some(answer) = ask_app(&request, &peer, tx, timing) else { return };
+                match deliver(stream, answer, &mut scratch, timing) {
+                    Outcome::Asking(next) if asked < QUESTIONS_MAX => {
+                        asked += 1;
+                        job = next;
+                        continue;
+                    }
+                    Outcome::Asking(_) => refuse(
+                        stream,
+                        Error::new(ErrorCode::NotAllowed, "the program is not allowed yet")
+                            .because(Reason::ApprovalNeeded),
+                    ),
+                    _ => {}
+                }
+            }
+            // (`wait` never returns the "shown" signal: it is the start of the minute, not an answer.)
+            Some(Decision::Shown) | None => {
+                refuse(stream, Error::new(ErrorCode::Failed, "Wormhole did not answer in time"))
             }
         }
-        // (`wait` never returns the "shown" signal: it is the start of the minute, not an answer.)
-        Some(Decision::Shown) | None => {
-            refuse(stream, Error::new(ErrorCode::Failed, "Wormhole did not answer in time"))
-        }
+        return;
     }
 }
+
+/// How many questions one request may wait for after the first: the program, then the terminals it reaches
+/// for. (Asked again after an answer is a loop.)
+const QUESTIONS_MAX: usize = 2;
 
 #[cfg(test)]
 mod tests {
@@ -210,18 +227,27 @@ mod tests {
         assert!(reply.ok && reply.result.expect("a result")["second"] == true);
     }
 
-    /// A question that comes up again for the request it just answered is a loop, and is refused.
+    /// The program, then a terminal it reaches for, are two questions for one request and both are waited for;
+    /// a question that comes up again after those is a loop, and is refused.
     #[test]
-    fn a_request_that_must_be_asked_a_second_time_is_refused_not_asked_again() {
+    fn a_request_may_be_asked_twice_more_and_then_is_refused_not_asked_again() {
         let (_dir, socket, rx) = server();
-        let (decide, job) = AskJob::channel();
+        let (mut decide, job) = AskJob::channel();
         let waiting = ask(&socket);
         let (_, reply) = control(&rx);
         reply.send(Answer::Ask(job)).expect("waits");
+        for _ in 0..super::QUESTIONS_MAX {
+            decide.send(Decision::Retry).expect("the thread waits");
+            let (_, next_reply) = control(&rx);
+            let (next_decide, next_job) = AskJob::channel();
+            next_reply.send(Answer::Ask(next_job)).expect("the thread waits");
+            decide = next_decide;
+        }
+        // The question that is still waiting is the last it will wait for; answering it asks once more.
         decide.send(Decision::Retry).expect("the thread waits");
-        let (_, reply) = control(&rx);
-        let (_, again) = AskJob::channel();
-        reply.send(Answer::Ask(again)).expect("the thread waits");
+        let (_, again) = control(&rx);
+        let (_, loop_job) = AskJob::channel();
+        again.send(Answer::Ask(loop_job)).expect("the thread waits");
         let reply = reply_of(waiting);
         assert_eq!(reply.err().and_then(|e| e.reason), Some(Reason::ApprovalNeeded));
     }

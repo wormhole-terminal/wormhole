@@ -172,4 +172,50 @@ mod tests {
         assert_eq!(need(v("close", t)), Need::Approved);
         assert_eq!(Need::of(&Action::Doctor), Need::Nothing);
     }
+
+    /// Every action says what it needs: a capability, or it is listed here as open. A new action fails
+    /// this until it is (and `Need::of`, a match without a catch-all, does not compile until it has a
+    /// row), so no request is let through unclassified.
+    #[test]
+    fn every_action_needs_a_capability_or_is_listed_as_open() {
+        use crate::ipc::control::Request;
+        let open = ["list", "doctor", "status", "notify", "welcome"];
+        let mut needs = std::collections::BTreeMap::new();
+        for name in Action::KNOWN {
+            let mut json = serde_json::json!({ "version": 1, "action": name });
+            let target = serde_json::json!({ "kind": "terminal", "id": 1 });
+            let extra = match name {
+                "send_text" => serde_json::json!({ "target": target, "text": "x" }),
+                "read" | "blocks" | "close" | "split" | "focus" => serde_json::json!({ "target": target }),
+                "send_keys" => serde_json::json!({ "target": target, "keys": [{ "key": "enter" }] }),
+                "mouse" => {
+                    serde_json::json!({ "target": target, "op": { "kind": "move", "row": 0, "col": 0 } })
+                }
+                "rename" => serde_json::json!({ "target": target, "name": "x" }),
+                "wait" => serde_json::json!({ "target": target, "match": "x" }),
+                "run" => serde_json::json!({ "target": target, "command": "true" }),
+                "notify" => serde_json::json!({ "body": "x" }),
+                "welcome" => serde_json::json!({ "token": "t", "op": { "kind": "state" } }),
+                "events" => serde_json::json!({ "topics": ["output"] }),
+                _ => serde_json::json!({}),
+            };
+            if let (Some(base), Some(extra)) = (json.as_object_mut(), extra.as_object()) {
+                base.extend(extra.clone());
+            }
+            let request: Request = serde_json::from_value(json).unwrap_or_else(|e| panic!("{name}: {e}"));
+            needs.insert(name, Need::of(&request.action));
+        }
+        for (name, need) in &needs {
+            assert_eq!(*need == Need::Nothing, open.contains(name), "`{name}` is {need:?}");
+        }
+        assert_eq!(needs["read"], Need::Capability(Capability::Read));
+        assert_eq!(needs["events"], Need::Capability(Capability::Read), "with output, text is read");
+        assert_eq!(needs["wait"], Need::Capability(Capability::Read), "a pattern reads the screen");
+        assert_eq!(needs["mouse"], Need::Capability(Capability::Type));
+        assert_eq!(needs["run"], Need::Capability(Capability::Run));
+        for name in ["split", "focus", "rename", "new_terminal", "new_window"] {
+            assert_eq!(needs[name], Need::Capability(Capability::Open), "{name}");
+        }
+        assert_eq!(needs["close"], Need::Approved);
+    }
 }

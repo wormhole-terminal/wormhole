@@ -36,6 +36,12 @@ the programs in them, are yours to drive, within what the user has switched on.
   the user said no, and nothing you do changes that. Their answer covers you while your process runs, until
   Wormhole quits, or for good, as they chose; a script you start is "Scripts", one identity, and is asked on
   its own.
+- **You work in the terminals you opened.** What you open (`new-terminal`, `new-window`, `split`) is yours to
+  read, type into and run commands in, and so is the terminal you run in. Any other terminal is out of scope:
+  the first time you reach for one, Wormhole asks the user "Allow <your program> to read <terminal>?", and
+  their answer opens up that one terminal and nothing else. Prefer opening your own. A terminal the user hid
+  from agents is not found (`not_found`, the same as an id that does not exist): do not look for it, and do
+  not ask the user to unhide it unless the work needs it.
 - **Never answer for the user.** Do not type into a terminal that is waiting for the user's answer (an
   agent's permission prompt, a question, a password). Wormhole refuses it (`refused`); do not work around
   it. Do not approve another agent's prompts.

@@ -107,6 +107,11 @@
 //!                   questions waiting for this)
 //!   agent-script <hold|deny|session|quit|always>   what answers questions from now on
 //!   agent-grant scripts [quit|always]   let Scripts in, as an answer to its question does
+//!   agent-hide <n> [on|off]   hide the terminal in row n from the programs that control Wormhole ("Hide
+//!                   from Agents"), or show it again; `state` marks it `hidden`. A question about a terminal
+//!                   the program did not open is answered with `agent-ask` too (no Always for it);
+//!                   `agents` lists it as `asking … about=terminal:<id>`, and each approved program with its
+//!                   `caps=read,type,run,open`
 //!   hosts           the session hosts of this data folder, one a line: id, pid, shell pid, start (UTC),
 //!                   version and `live` or `stale` (with why), as `Wormhole sessions list` prints them
 //!   host-kill <id>  end that host as `Wormhole sessions end <id>` does (`Kill` over its socket, SIGTERM

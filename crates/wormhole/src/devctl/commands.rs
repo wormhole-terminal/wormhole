@@ -75,6 +75,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "agent-ask" => agents::agent_ask,
         "agent-script" => agents::agent_script,
         "agent-grant" => agents::agent_grant,
+        "agent-hide" => agents::agent_hide,
         "hosts" => hosts::hosts,
         "host-kill" => hosts::host_kill,
         "detach" => hosts::detach,
