@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 1044] = [
+pub(crate) static IDS: [&str; 1044] = [
     "agent-sheet-title", "agent-sheet-title-scripts", "agent-sheet-wants-read",
     "agent-sheet-wants-type", "agent-sheet-wants-run", "agent-sheet-wants-open",
     "agent-sheet-wants-close", "agent-sheet-detail", "agent-sheet-detail-scripts",

@@ -95,7 +95,7 @@ pub(crate) fn generate() -> Generated {
         ids_file,
         "/// Every message and attribute, in the order of the files; a `Key`'s index is a place here.\n\
          /// Each language's table is built by looking these ids up, never by position in a file.\n\
-         pub(crate) const IDS: [&str; {}] = [",
+         pub(crate) static IDS: [&str; {}] = [",
         ids.len()
     );
     push_wrapped(&mut ids_file, ids.iter().map(|id| format!("{id:?}")), 3);
