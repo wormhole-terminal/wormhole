@@ -50,3 +50,29 @@ fn short_names_drop_the_kind_of_program() {
         assert!(!agent.short_name().is_empty(), "{}", agent.name);
     }
 }
+
+/// A brand's colour carries a white logo (`tile.mark.brand`), so it must stand at least 3:1 against
+/// white, the contrast WCAG asks of a graphic. A gradient is checked at both ends.
+#[test]
+fn every_tile_colour_carries_a_white_logo() {
+    // WCAG's relative luminance of an sRGB colour.
+    fn luminance(rgb: u32) -> f64 {
+        let channel = |shift: u32| {
+            let c = f64::from((rgb >> shift) & 0xff) / 255.0;
+            if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+        };
+        0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0)
+    }
+    for a in AGENTS {
+        let colours: &[u32] = match &a.tile {
+            Tile::Black => &[],
+            Tile::Solid(c) => std::slice::from_ref(c),
+            Tile::Gradient(from, to) => &[*from, *to],
+        };
+        for &c in colours {
+            assert!(c <= 0xff_ffff, "{}: {c:#x} is not 0xRRGGBB", a.name);
+            let contrast = 1.05 / (luminance(c) + 0.05);
+            assert!(contrast >= 3.0, "{}: #{c:06x} is {contrast:.2}:1 against white", a.name);
+        }
+    }
+}

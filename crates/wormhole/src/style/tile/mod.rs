@@ -44,7 +44,7 @@ pub enum TileFace {
     /// A terminal without an agent.
     Terminal,
     /// An agent: its logo, or its monogram when it has none, on the colour the registry gives it
-    /// (`Agent::tile_color`).
+    /// (`Agent::tile`).
     Agent(AgentId),
 }
 

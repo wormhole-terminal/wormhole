@@ -62,6 +62,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## Tile colours
+
+The colour an agent's status tile is painted with is in the agent registry
+(`wormhole-term`'s `agents/mod.rs`, each entry's `tile`), with where it was read from beside it: the
+brand's own icon or site, Lobe Icons, Simple Icons, or Charm's `charmtone`. A brand that is black and
+white keeps the theme's black tile.
+
 ## Lobe Icons files — MIT License
 
 ```

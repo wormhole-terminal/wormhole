@@ -23,7 +23,7 @@ pub use path::{AgentRow, AgentsSnapshot, installed};
 // foreground queries, the program status), and are re-exported here: from the terminal crate itself,
 // not core's `terminal`, which starts shells and so sits above this module.
 pub use wormhole_term::agents::{
-    AGENTS, Agent, AgentId, Foreground, TileColor, agent, command_label, find, foreground_agent,
+    AGENTS, Agent, AgentId, Foreground, Tile, agent, command_label, find, foreground_agent,
     foreground_command, identify, shell_in_foreground,
 };
 

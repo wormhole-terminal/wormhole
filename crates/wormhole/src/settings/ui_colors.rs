@@ -149,16 +149,13 @@ pub struct UiColors {
     /// "Needs input" and "Finished" as text, also on the selected row (`agent.*.text`).
     pub attention_text: Hsla,
     pub done_text: Hsla,
-    /// A status tile: black by default, an agent's own colors (Claude's, Gemini's blue to its
-    /// violet), the mark on each, the sheen across its top and its hairline edge.
+    /// A status tile: black unless the agent has a colour of its own (the registry's, not a token),
+    /// the mark on each, the sheen across its top and its hairline edge.
     pub tile_background: Hsla,
     pub tile_mark: Hsla,
     pub tile_mark_brand: Hsla,
     pub tile_sheen: Hsla,
     pub tile_edge: Hsla,
-    pub agent_claude: Hsla,
-    pub agent_gemini: Hsla,
-    pub agent_gemini_end: Hsla,
 }
 
 /// One color field of [`UiColors`], and the token it reads.
@@ -270,9 +267,6 @@ const COLORS: &[Field] = fields! {
     tile_mark_brand = "tile.mark.brand";
     tile_sheen = "tile.sheen";
     tile_edge = "tile.edge";
-    agent_claude = "agent.claude";
-    agent_gemini = "agent.gemini";
-    agent_gemini_end = "agent.gemini.end";
 };
 
 impl UiColors {

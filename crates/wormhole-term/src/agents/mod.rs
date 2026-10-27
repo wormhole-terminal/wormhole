@@ -39,13 +39,19 @@ pub enum AgentId {
     Fm,
 }
 
-/// What colour an agent's status tile is: black unless the agent has colours of its own. The
-/// colours themselves are design tokens (`agent.claude`, `agent.gemini`), never literals.
+/// What an agent's status tile is painted with. A brand's colour is the brand's, not the theme's:
+/// the tile is the agent's app icon, which looks the same on a light sidebar and in every theme, so
+/// it is kept here beside the logo it goes with (each entry says where its colour comes from), not
+/// as a design token. What the theme does decide stays a token: the black tile (`tile.background`)
+/// and the colour of the logo on a brand's colour (`tile.mark.brand`, white).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum TileColor {
+pub enum Tile {
+    /// The theme's black tile: for a brand that is black and white.
     Black,
-    Claude,
-    Gemini,
+    /// One colour, `0xRRGGBB`.
+    Solid(u32),
+    /// From the top left to the bottom right, `0xRRGGBB` each.
+    Gradient(u32, u32),
 }
 
 pub struct Agent {
@@ -66,22 +72,14 @@ pub struct Agent {
     /// Asset key of the bundled monochrome logo, if there is one (`agent-icons/…`; core holds the
     /// bytes behind the key).
     logo: Option<&'static str>,
+    /// What its status tile is painted with (see [`Tile`]).
+    pub tile: Tile,
 }
 
 impl Agent {
     /// Asset key of the bundled monochrome logo, if there is one.
     pub fn icon(&self) -> Option<&'static str> {
         self.logo
-    }
-
-    /// The colour of the agent's status tile: Claude on its orange, Gemini on its blue, the rest
-    /// black.
-    pub fn tile_color(&self) -> TileColor {
-        match self.id {
-            AgentId::Claude => TileColor::Claude,
-            AgentId::Gemini => TileColor::Gemini,
-            _ => TileColor::Black,
-        }
     }
 
     /// The name without what kind of program it is ("Claude" for Claude Code, "Codex" for Codex
@@ -100,6 +98,8 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@anthropic-ai/claude-code", "/.local/share/claude/versions/"],
         monogram: "CC",
         logo: Some("agent-icons/claude.svg"),
+        // Anthropic's orange: Lobe Icons' and Simple Icons' Claude (and Claude Code) colour.
+        tile: Tile::Solid(0xd97757),
     },
     Agent {
         id: AgentId::Codex,
@@ -109,6 +109,9 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@openai/codex"],
         monogram: "CX",
         logo: Some("agent-icons/codex.svg"),
+        // The deep blue end of Codex's own gradient mark (Lobe Icons' colour Codex: #b1a7ff, #7a9dff,
+        // #3941ff); its lighter stops are too light for the white logo.
+        tile: Tile::Solid(0x3941ff),
     },
     Agent {
         id: AgentId::Gemini,
@@ -118,6 +121,9 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@google/gemini-cli"],
         monogram: "GM",
         logo: Some("agent-icons/gemini.svg"),
+        // The design's blue to violet (the boards' RF-12). Google's own sparkle has four stops, no two-stop
+        // gradient; its main blue is #3186ff.
+        tile: Tile::Gradient(0x3b7bff, 0x8f6cf5),
     },
     Agent {
         id: AgentId::Copilot,
@@ -127,6 +133,7 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@github/copilot"],
         monogram: "GC",
         logo: Some("agent-icons/copilot.svg"),
+        tile: Tile::Black,
     },
     Agent {
         id: AgentId::Cursor,
@@ -136,6 +143,7 @@ pub static AGENTS: &[Agent] = &[
         packages: &["/cursor-agent/"],
         monogram: "CA",
         logo: Some("agent-icons/cursor.svg"),
+        tile: Tile::Black,
     },
     Agent {
         id: AgentId::OpenCode,
@@ -145,6 +153,7 @@ pub static AGENTS: &[Agent] = &[
         packages: &["opencode-ai"],
         monogram: "OC",
         logo: Some("agent-icons/opencode.svg"),
+        tile: Tile::Black,
     },
     Agent {
         id: AgentId::Aider,
@@ -154,6 +163,8 @@ pub static AGENTS: &[Agent] = &[
         packages: &["aider-chat"],
         monogram: "AI",
         logo: None,
+        // The dark green of Aider's own app icon (its site's apple-touch-icon), under a light "a".
+        tile: Tile::Solid(0x014f2c),
     },
     Agent {
         id: AgentId::Amp,
@@ -163,6 +174,8 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@ampcode/cli", "@sourcegraph/amp"],
         monogram: "AM",
         logo: Some("agent-icons/amp.svg"),
+        // Black: ampcode.com's dark theme colour #091c1e is all but black.
+        tile: Tile::Black,
     },
     Agent {
         id: AgentId::Goose,
@@ -172,6 +185,7 @@ pub static AGENTS: &[Agent] = &[
         packages: &[],
         monogram: "GO",
         logo: Some("agent-icons/goose.svg"),
+        tile: Tile::Black,
     },
     Agent {
         id: AgentId::Qwen,
@@ -181,6 +195,8 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@qwen-code/qwen-code"],
         monogram: "QC",
         logo: Some("agent-icons/qwen.svg"),
+        // Lobe Icons' Qwen colour (Simple Icons has the like #6950ef).
+        tile: Tile::Solid(0x615ced),
     },
     Agent {
         id: AgentId::Crush,
@@ -190,6 +206,8 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@charmland/crush"],
         monogram: "CR",
         logo: None,
+        // Charm's "Charple" (charmbracelet/x `exp/charmtone`), Crush's primary.
+        tile: Tile::Solid(0x6b50ff),
     },
     Agent {
         id: AgentId::Droid,
@@ -199,6 +217,7 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@factory/cli"],
         monogram: "FD",
         logo: None,
+        tile: Tile::Black,
     },
     Agent {
         id: AgentId::Auggie,
@@ -208,6 +227,7 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@augmentcode/auggie"],
         monogram: "AU",
         logo: None,
+        tile: Tile::Black,
     },
     Agent {
         id: AgentId::Kiro,
@@ -217,6 +237,8 @@ pub static AGENTS: &[Agent] = &[
         packages: &[],
         monogram: "KI",
         logo: Some("agent-icons/kiro.svg"),
+        // The tile of kiro.dev's own icon (icon.svg), with a white ghost on it.
+        tile: Tile::Solid(0x9046ff),
     },
     Agent {
         id: AgentId::Cline,
@@ -226,6 +248,8 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@cline/cli"],
         monogram: "CL",
         logo: Some("agent-icons/cline.svg"),
+        // Black: Cline's slate (#323b43 in Lobe Icons) is all but black.
+        tile: Tile::Black,
     },
     Agent {
         id: AgentId::Pi,
@@ -236,6 +260,7 @@ pub static AGENTS: &[Agent] = &[
         packages: &["@mariozechner/pi-coding-agent", "@earendil-works/pi-coding-agent"],
         monogram: "PI",
         logo: Some("agent-icons/pi.svg"),
+        tile: Tile::Black,
     },
     Agent {
         id: AgentId::Fm,
@@ -247,6 +272,7 @@ pub static AGENTS: &[Agent] = &[
         monogram: "FM",
         // Apple's marks can't be bundled: the two letters stand.
         logo: None,
+        tile: Tile::Black,
     },
 ];
 

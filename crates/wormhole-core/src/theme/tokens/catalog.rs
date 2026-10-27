@@ -102,13 +102,11 @@ pub const UI_TOKENS: &[TokenInfo] = &[
     t("agent.attention.tint", "Agents", "Fill of a tab that waits for input (overlay)"),
     t("agent.attention.text", "Agents", "“Needs input” as text: second lines, the status bar"),
     t("agent.done.text", "Agents", "“Finished” as text: second lines"),
-    t("agent.claude", "Agents", "Claude's own color: the face of its status tile"),
-    t("agent.gemini", "Agents", "Gemini's own blue: the face of its status tile, from the top left"),
-    t("agent.gemini.end", "Agents", "Gemini's gradient ends here, at the bottom right"),
     t(
         "tile.background",
         "Agents",
-        "The status tile of a terminal, and of every agent without a color of its own",
+        "The status tile of a terminal, and of every agent without a color of its own (the agent \
+         registry holds the brands' colors)",
     ),
     t("tile.mark", "Agents", "The terminal symbol or logo on a black tile"),
     t("tile.mark.brand", "Agents", "The logo or the letters on an agent's own color"),

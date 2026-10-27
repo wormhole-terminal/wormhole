@@ -4,12 +4,9 @@ agent.attention.ring #dbbc7f47
 agent.attention.text #dbbc7f
 agent.attention.tint #dbbc7f1f
 agent.bell #ff9e64
-agent.claude #d97757
 agent.done #a7c080
 agent.done.text #a7c080
 agent.exited #716e63
-agent.gemini #3b7bff
-agent.gemini.end #8f6cf5
 agent.working #7fbbb3
 band #d3c6aa0d
 band.hover #d3c6aa14

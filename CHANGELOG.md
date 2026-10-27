@@ -16,6 +16,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   installs a small extension so its terminal shows when it is working, waiting on a question, done,
   stopped or failed.
 - Codex, Amp, goose and Kiro show their own logos instead of two letters.
+- Codex, Kiro, Qwen, Crush and Aider sit on their own colours in the sidebar, as Claude and Gemini already do.
 - `fm chat`, the chat with Apple's on-device model that comes with macOS 27, is recognised as an agent
   (Foundation Models). It has no hooks, so its status is read from the screen. `fm respond` in a
   script and `fm serve` aren't taken for an agent.
