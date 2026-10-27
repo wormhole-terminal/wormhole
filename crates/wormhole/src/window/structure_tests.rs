@@ -432,6 +432,9 @@ fn a_new_windows_command_is_typed_into_its_terminal(cx: &mut TestAppContext) {
     while !shown(cx, opened.terminal).iter().any(|line| line.contains("opened-by-script")) {
         assert!(std::time::Instant::now() < until, "the command never reached the terminal");
         std::thread::sleep(Duration::from_millis(10));
+        // The command waits for the shell's first prompt on the test's clock (`cat` says nothing, so
+        // for two seconds): that clock is moved on with each look.
+        cx.executor().advance_clock(Duration::from_millis(70));
         cx.run_until_parked();
     }
 }
