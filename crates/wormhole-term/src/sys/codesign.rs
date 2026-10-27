@@ -1,19 +1,19 @@
 //! The code signature of the program at the other end of a connection (`session-host.md`, section 9,
-//! spike 3). What a requirement says and who may connect is the policy in `peer`; reading signatures
-//! is the system's.
+//! spike 3). What a requirement says and who may connect is the policy in the host's `peer`; reading
+//! signatures is the system's, and the app reads the same way who an agent is (`agent-permissions.md`).
 
-use wormhole_term::sys::socket::Stream;
+use crate::sys::socket::Stream;
 
 #[cfg(target_os = "linux")]
 use super::linux::codesign as os;
 #[cfg(target_os = "macos")]
 use super::macos::codesign as os;
 
-pub(crate) use os::Requirement;
+pub use os::Requirement;
 
 /// Where a refusal came from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Stage {
+pub enum Stage {
     /// The socket gave no audit token.
     Token,
     /// The system found no code for the token.
@@ -23,7 +23,7 @@ pub(crate) enum Stage {
 }
 
 impl Stage {
-    pub(crate) fn describe(self) -> &'static str {
+    pub fn describe(self) -> &'static str {
         match self {
             Self::Token => "no audit token for the peer",
             Self::Code => "no code for the peer's audit token",
@@ -34,7 +34,7 @@ impl Stage {
 
 /// A peer that is not let in.
 #[derive(Debug)]
-pub(crate) struct Refusal {
+pub struct Refusal {
     pub stage: Stage,
     /// The peer's pid, when it could be told.
     pub pid: Option<u32>,
@@ -43,21 +43,21 @@ pub(crate) struct Refusal {
 }
 
 /// A requirement compiled once from its text; `None` (said in the log) when it does not parse.
-pub(crate) fn requirement(text: &str) -> Option<Requirement> {
+pub fn requirement(text: &str) -> Option<Requirement> {
     os::requirement(text)
 }
 
 /// Whether this process satisfies `requirement`.
-pub(crate) fn self_satisfies(requirement: &Requirement) -> bool {
+pub fn self_satisfies(requirement: &Requirement) -> bool {
     os::self_satisfies(requirement)
 }
 
 /// The team id in this process's own signature, if it has one.
-pub(crate) fn own_team_id() -> Option<String> {
+pub fn own_team_id() -> Option<String> {
     os::own_team_id()
 }
 
 /// Find the peer's code and check it against `requirement`.
-pub(crate) fn check_peer(stream: &Stream, requirement: &Requirement) -> Result<(), Refusal> {
+pub fn check_peer(stream: &Stream, requirement: &Requirement) -> Result<(), Refusal> {
     os::check_peer(stream, requirement)
 }

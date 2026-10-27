@@ -11,17 +11,8 @@ use std::path::{Path, PathBuf};
 const MAX_LINES: usize = 1000;
 
 /// What `[dependencies]` may name.
-const ALLOWED_DEPENDENCIES: &[&str] = &[
-    "wormhole-term",
-    "wormhole-wire",
-    "anyhow",
-    "libc",
-    "tracing",
-    "polling",
-    "security-framework",
-    "security-framework-sys",
-    "core-foundation",
-];
+const ALLOWED_DEPENDENCIES: &[&str] =
+    &["wormhole-term", "wormhole-wire", "anyhow", "libc", "tracing", "polling"];
 
 /// What the session's code must not name: sockets, files, the poller, the system, the clock.
 const SESSION_FORBIDS: &[&str] = &[

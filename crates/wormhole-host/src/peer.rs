@@ -10,7 +10,7 @@
 
 use wormhole_term::sys::socket::Stream;
 
-use crate::sys::codesign::{self, Refusal, Requirement};
+use wormhole_term::sys::codesign::{self, Refusal, Requirement};
 
 /// The identifier the app's executable is signed with: `BUNDLE_ID` in `packaging/app.env`
 /// (a test compares them). The host's own is `<this>.host`, and no host connects to a host, so
@@ -150,7 +150,7 @@ mod tests {
         use wormhole_term::sys::socket::{Listener, Stream};
 
         use super::super::{Policy, peer_requirement};
-        use crate::sys::codesign::{self, Stage};
+        use wormhole_term::sys::codesign::{self, Stage};
 
         /// A client connected to a listener in a temporary folder, and the server's side of it.
         fn connected() -> (tempfile::TempDir, Stream, Stream) {

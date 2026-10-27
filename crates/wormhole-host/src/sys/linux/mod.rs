@@ -2,5 +2,4 @@
 //! builds it yet (macOS is the only target), so the stand-ins answer as the host did here before the edge
 //! existed: no QoS, no priority policy, no code signatures.
 
-pub(super) mod codesign;
 pub(super) mod process;

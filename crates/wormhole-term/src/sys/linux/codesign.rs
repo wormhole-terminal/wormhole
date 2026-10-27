@@ -1,6 +1,6 @@
 //! No code signatures: every peer of the same user is served, as an unsigned host does on macOS.
 
-use wormhole_term::sys::socket::Stream;
+use crate::sys::socket::Stream;
 
 use crate::sys::codesign::Refusal;
 

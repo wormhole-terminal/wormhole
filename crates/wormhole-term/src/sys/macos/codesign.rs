@@ -5,6 +5,7 @@ use std::io;
 use std::os::fd::{AsRawFd as _, RawFd};
 use std::str::FromStr as _;
 
+use crate::sys::socket::Stream;
 use core_foundation::base::{CFType, TCFType as _};
 use core_foundation::data::CFData;
 use core_foundation::dictionary::{CFDictionary, CFDictionaryRef};
@@ -13,7 +14,6 @@ use security_framework::os::macos::code_signing::{
     Flags, GuestAttributes, SecCode, SecRequirement, SecStaticCode,
 };
 use security_framework_sys::code_signing::{SecCSFlags, SecCodeRef, SecStaticCodeRef};
-use wormhole_term::sys::socket::Stream;
 
 use crate::sys::codesign::{Refusal, Stage};
 
@@ -39,7 +39,7 @@ unsafe extern "C" {
 }
 
 /// A requirement a peer's signature must satisfy, compiled.
-pub(crate) struct Requirement(SecRequirement);
+pub struct Requirement(SecRequirement);
 
 /// A requirement compiled once from its text; `None` (said in the log) when it does not parse.
 pub(crate) fn requirement(text: &str) -> Option<Requirement> {

@@ -35,6 +35,13 @@ flate2 = "1.1"
 # The events from the PTY thread to the UI (what `smol::channel` is, without the rest of smol).
 async-channel = "2"
 
+# A peer's code signature (`sys::codesign`: the session host's peer check, the app's agent identity);
+# already in the lock through the app's own dependencies.
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "3.7"
+security-framework-sys = "2.17"
+core-foundation = "0.10"
+
 [features]
 # `testing`: terminals without a PTY, for the app's render tests (its dev-dependencies turn this
 # on, so the shipped build never has it).

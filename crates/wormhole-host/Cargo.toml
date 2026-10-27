@@ -25,12 +25,6 @@ tracing.workspace = true
 # The connections and the listener in one wait (kqueue on macOS); `wormhole-term` uses it already.
 polling = "3.8"
 
-# The peer's code signature (`peer.rs`); already in the lock through the app's own dependencies.
-[target.'cfg(target_os = "macos")'.dependencies]
-security-framework = "3.7"
-security-framework-sys = "2.17"
-core-foundation = "0.10"
-
 [lints]
 workspace = true
 
