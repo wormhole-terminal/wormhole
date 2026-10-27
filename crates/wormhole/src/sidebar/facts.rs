@@ -50,10 +50,9 @@ pub(crate) struct RowInfo {
     pub(crate) split: Option<SplitId>,
     /// Its text isn't kept for a restart.
     pub(crate) forget_text: bool,
-    /// The changed files the row counts.
+    /// The uncommitted files this terminal changed: not the repository's, which every terminal in
+    /// it would share.
     pub(crate) changes: Option<usize>,
-    /// The repository the changes are of, so rows of one repository count them once.
-    pub(crate) repo: Option<PathBuf>,
     /// What a feature puts on the row besides the count above, through [`RowExtras`]: the notes and
     /// tasks still open, today.
     pub(crate) extra: Option<RowExtra>,
@@ -114,7 +113,6 @@ impl RowInfo {
             split: None,
             forget_text: false,
             changes: None,
-            repo: None,
             extra: None,
         }
     }

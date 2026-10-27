@@ -257,6 +257,7 @@ impl Workspace {
         let closed = self.sessions.remove(ix);
         self.edit_sidebar_view(cx, |view| view.groups.leave(closed.id));
         self.features_closed(closed.id, cx);
+        self.forget_changes(closed.id, cx);
         self.publish_terminal_closed(closed.id, cx);
         attention::tell(Attention::Seen(closed.pane.id), cx);
         if crate::onboarding::welcome::forget(closed.id, cx) {

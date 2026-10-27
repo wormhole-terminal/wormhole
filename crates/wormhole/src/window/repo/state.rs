@@ -4,7 +4,7 @@
 //! The answer is the window's own fact about a terminal: the sidebar's rows, the title row, the status
 //! bar and the palette read it, so it is not a feature's. Features are lent it through the facts.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use wormhole_core::git::discover::{Absent, Sighting};
 use wormhole_core::git::{GitError, RepoStatus};
@@ -20,6 +20,10 @@ pub(crate) struct GitState {
     pub status: Option<RepoStatus>,
     /// The cwd the status was computed for.
     pub cwd: Option<PathBuf>,
+    /// The repository git last named for this terminal, as the status's `root` says it. Unlike the
+    /// status it is not blanked while a read is on its way (a compare branch picked, a `cd`), so
+    /// what is kept by repository (`attribution`) does not let go of the terminal for a moment.
+    root: Option<PathBuf>,
     /// Why the last refresh failed. When git failed, the status stays the last
     /// good one (while the folder is the same), so a hiccup does not blank the
     /// list; a missing git clears it.
@@ -76,6 +80,11 @@ impl GitState {
     #[cfg(any(test, feature = "devctl"))]
     pub(crate) fn loading(&self) -> bool {
         self.job.is_pending()
+    }
+
+    /// The repository git last named for the terminal, until it says there is none.
+    pub(crate) fn root(&self) -> Option<&Path> {
+        self.root.as_deref()
     }
 
     /// Why the last refresh failed, if it did.
@@ -145,6 +154,7 @@ impl GitState {
                 let changed = self.status != status || self.error.is_some() || !same_folder;
                 self.error = None;
                 self.note_absent(status.is_none());
+                self.note_root(status.as_ref().map(|status| status.root.as_path()));
                 self.status = status;
                 changed
             }
@@ -153,6 +163,7 @@ impl GitState {
                 let changed = self.status.is_some() || self.error.is_some() || !same_folder;
                 (self.status, self.error) = (None, None);
                 self.note_absent(true);
+                self.note_root(None);
                 changed
             }
             Err((error, err)) => {
@@ -167,6 +178,7 @@ impl GitState {
                 let changed = self.error.as_ref() != Some(&error) || (!keep && self.status.is_some());
                 if !keep {
                     self.status = None;
+                    self.note_root(None);
                 }
                 self.error = Some(error);
                 changed
@@ -177,6 +189,14 @@ impl GitState {
 }
 
 impl GitState {
+    /// Remember the repository git named (`None`: it said there is none). The path is only copied
+    /// when it differs, which it almost never does.
+    fn note_root(&mut self, root: Option<&Path>) {
+        if self.root.as_deref() != root {
+            self.root = root.map(Path::to_path_buf);
+        }
+    }
+
     /// Remember (or forget) that git said the folder is not in a repository. An answer that
     /// repeats keeps what the looks learned, so a `.git` git rejects is not asked about again.
     fn note_absent(&mut self, absent: bool) {

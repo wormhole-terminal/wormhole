@@ -48,7 +48,7 @@ settings-sessions-cmd-hints = Show ⌘1–⌘9 while ⌘ is held
 settings-sessions-group-row-details = Row details
 
 settings-sessions-sidebar-changes = Changed files
-    .description = ±N uncommitted changes in the terminal's row
+    .description = ±N uncommitted files this terminal changed, in its row
     .keywords = git changes count
 
 settings-sessions-sidebar-dot = Status dot

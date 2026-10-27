@@ -77,6 +77,7 @@ impl Workspace {
         }
         self.sync_close_dot(window, cx);
         self.leave_missing_tab(cx);
+        self.track_changes(cx);
         self.poll_repos(cx);
         if self.ticks % 5 == 1 {
             // A `git init` in the folder a session is already in changes its root without a `cd`.

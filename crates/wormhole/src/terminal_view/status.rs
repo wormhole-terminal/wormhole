@@ -10,7 +10,7 @@ use wormhole_core::agents::integrations::{self, Signal};
 use wormhole_core::agents::{AgentId, Foreground};
 use wormhole_core::ipc::control::event::Topic;
 use wormhole_core::notify::Source;
-use wormhole_core::view::sidebar::names;
+use wormhole_core::view::sidebar::{RowState, names};
 use wormhole_term::{Mark, Notification, PtyEvent, WindowOp};
 
 use super::find_bar::FindBar;
@@ -92,6 +92,13 @@ impl TerminalSummary {
             command: self.naming_command.as_deref(),
             shell: &self.shell,
         }
+    }
+
+    /// What the terminal's row says of it: the one reading of the status that the sidebar draws and the
+    /// repository's file counts take "working" from (`RowState::of`).
+    pub fn row_state(&self) -> RowState {
+        let told = self.source.told();
+        RowState::of(told, self.status, !told && self.foreground.is_some())
     }
 
     /// Whether this is what `terminal` shows now, without making a summary of it: this is asked

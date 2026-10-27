@@ -51,9 +51,6 @@ pub(in crate::sidebar) struct Place {
     pub(in crate::sidebar) grouped: bool,
     /// What it shows of its split.
     pub(in crate::sidebar) marks: SplitMarks,
-    /// The row above it in its card counts the same changes of the same repository, so this one
-    /// leaves them out.
-    pub(in crate::sidebar) changes_above: bool,
     /// The split's bracket along it is being drawn, in this batch of the list's motion (a split just made).
     pub(in crate::sidebar) bracket_draws: Option<u64>,
     /// Its terminal's status is changing, and how that is played.
@@ -75,19 +72,6 @@ impl Place {
             return None;
         };
         let info = infos.get(session)?;
-        // Only inside a group's card, and only for a repository the row above counts the same changes of.
-        let above = match at.checked_sub(1).and_then(|prev| listing.entries.get(prev)) {
-            Some(&Entry::Row { session: above, band: above_band, .. }) => {
-                infos.get(above).map(|i| (above_band, i))
-            }
-            _ => None,
-        };
-        let changes_above = band.is_some()
-            && info.repo.is_some()
-            && info.changes.is_some()
-            && above.is_some_and(|(above_band, i)| {
-                above_band == band && i.repo == info.repo && i.changes == info.changes
-            });
         Some(Self {
             selected: info.ix == active,
             // Only a terminal in no group is a card of its own.
@@ -97,7 +81,6 @@ impl Place {
             number,
             grouped: band.is_some(),
             marks,
-            changes_above,
             bracket_draws: None,
             status: None,
         })
@@ -150,7 +133,7 @@ pub(in crate::sidebar) fn row_face(
     });
     let changes = info
         .changes
-        .filter(|_| frame.show_changes && !place.changes_above)
+        .filter(|_| frame.show_changes)
         .map(|n| div().text_caption().tabular_nums().text_color(quiet).child(format!("±{n}")));
     // What a split says of this terminal, at the right of its first line.
     let chain = place.marks.chain.then(|| style::chain_mark(("chain", id as u64), ui));
@@ -216,9 +199,9 @@ pub(in crate::sidebar) fn row_face(
     });
 
     // Tooltip only when something is cut off: the name, or the second line.
-    // Only what is drawn: the ±N is left out when the row above counts the same changes.
+    // Only what is drawn takes room from the name.
     let details = (frame.show_notes && info.extra.is_some()) as u8
-        + (frame.show_changes && !place.changes_above && info.changes.is_some()) as u8;
+        + (frame.show_changes && info.changes.is_some()) as u8;
     let right = if hint.is_some() { KEYCAP_TRAIL_W } else { 0.0 }
         + f32::from(details) * DETAIL_W
         + if place.marks.chain { TRAIL_W } else { 0.0 };

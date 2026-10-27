@@ -64,7 +64,7 @@ pub const SETTINGS_SESSIONS_CMD_HINTS_KEYWORDS: Key = Key::new(690);
 pub const SETTINGS_SESSIONS_GROUP_ROW_DETAILS: Key = Key::new(691);
 /// "Changed files"
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES: Key = Key::new(692);
-/// "±N uncommitted changes in the terminal's row"
+/// "±N uncommitted files this terminal changed, in its row"
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_DESCRIPTION: Key = Key::new(693);
 /// "git changes count"
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_KEYWORDS: Key = Key::new(694);

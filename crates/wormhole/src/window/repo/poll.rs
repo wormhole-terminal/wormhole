@@ -2,8 +2,10 @@
 //! for a `.git` where git said there is no repository, and what the tick decides for each terminal.
 
 use std::path::PathBuf;
+use std::time::Instant;
 
 use gpui_kit::*;
+use wormhole_core::git::attribution::Snapshot;
 use wormhole_core::git::discover::{self, Sighting};
 use wormhole_core::git::{self, RepoStatus};
 
@@ -26,6 +28,8 @@ impl Workspace {
         let compare = session.git.compare.clone();
         let Some(wanted) = session.git.begin_refresh((cwd.clone(), compare.clone())) else { return };
         let (id, ticket) = (session.id, wanted.ticket());
+        // When the disk is looked at, which is what the snapshot's picture of it is dated by.
+        let asked = Instant::now();
         let task = cx.background_executor().spawn(async move {
             let observed = watched.map(Observed::of);
             // A compare branch that was deleted falls back to HEAD there, and says so. Submodules get
@@ -36,11 +40,23 @@ impl Workspace {
                     status
                 })
             });
-            (status, observed)
+            // What each changed file looks like, in the same hop: the sidebar rows count the files a
+            // terminal changed, which is what differs between two of these.
+            let snapshot = status.as_ref().ok().and_then(Option::as_ref).and_then(Snapshot::take);
+            (status, observed, snapshot)
         });
         cx.spawn(async move |this, cx| {
-            let (status, observed) = task.await;
-            let _ = this.update(cx, |this, cx| this.finish_git_refresh(id, ticket, status, observed, cx));
+            let (status, observed, snapshot) = task.await;
+            let _ = this.update(cx, |this, cx| {
+                this.finish_git_refresh(
+                    id,
+                    ticket,
+                    status,
+                    observed,
+                    snapshot.map(|snapshot| (snapshot, asked)),
+                    cx,
+                )
+            });
         })
         .detach();
     }
@@ -100,6 +116,7 @@ impl Workspace {
         ticket: Ticket,
         status: anyhow::Result<Option<RepoStatus>>,
         observed: Option<Observed>,
+        snapshot: Option<(Snapshot, Instant)>,
         cx: &mut Context<Self>,
     ) {
         let Some(ix) = self.sessions.iter().position(|s| s.id == id) else { return };
@@ -110,6 +127,9 @@ impl Workspace {
             Refreshed::Applied { changed } => {
                 if changed {
                     cx.notify();
+                }
+                if let Some((snapshot, asked)) = snapshot {
+                    self.observe_changes(snapshot, asked, cx);
                 }
                 // The features that follow the answer (an open diff) look at it, for the terminal on
                 // screen.

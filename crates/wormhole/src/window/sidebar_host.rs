@@ -12,7 +12,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::panes::Axis;
 use wormhole_core::view::sidebar::command::{OutputFacts, ends_by_itself, has_new_output};
-use wormhole_core::view::sidebar::{Listing, RowState, TerminalsIn, WindowSidebar};
+use wormhole_core::view::sidebar::{Listing, TerminalsIn, WindowSidebar};
 
 use crate::app_state::app;
 use crate::settings::settings_in;
@@ -74,7 +74,6 @@ impl Workspace {
                 let told = source.told();
                 let command = foreground.map(|f| f.command.clone()).filter(|_| !told);
                 let program_running = command.is_some();
-                let git = session.git.status.as_ref().filter(|_| session.git.cwd == summary.cwd);
                 let root = summary.cwd.as_deref().map(|cwd| session.repo_root.of(cwd));
                 RowInfo {
                     ix,
@@ -82,12 +81,11 @@ impl Workspace {
                     name: session.name(),
                     agent: summary.agent,
                     source,
-                    state: RowState::of(told, status, command.is_some()),
+                    state: summary.row_state(),
                     message: summary.agent_message.clone(),
                     since_at: summary.status_since,
                     cwd: summary.cwd.clone(),
                     worktree: root.as_deref().and_then(|root| self.worktree_of(root)),
-                    repo: root.clone(),
                     running_since: foreground
                         .filter(|f| !told && ends_by_itself(&f.command))
                         .map(|f| f.started),
@@ -108,10 +106,7 @@ impl Workspace {
                     pinned: self.split_pinned(ix),
                     split: session.split,
                     forget_text: session.forget_text,
-                    changes: git.and_then(|status| {
-                        let n = status.files.len();
-                        (n > 0).then_some(n)
-                    }),
+                    changes: crate::window::repo::changes_of(session.id, cx),
                     extra: None,
                 }
             })

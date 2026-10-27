@@ -6,17 +6,21 @@
 //!
 //! `state` is the answer kept per terminal ([`GitState`]), `poll` the reads: on the tick, when a tab
 //! is shown or asked to Retry, and the cheap look for a `.git` in a folder git said is no repository.
+//! `attribution` is what the sidebar rows count instead of the repository's files: the ones the
+//! terminal itself changed.
 //!
 //! What a read can also report is what it saw of one file ([`Observed`]): taken in the same
 //! background hop as the status, so a feature that watches a file (an open diff) does not stat it on
 //! the UI thread.
 
+mod attribution;
 pub(crate) mod job;
 mod poll;
 mod state;
 #[cfg(test)]
 mod tests;
 
+pub(crate) use attribution::changes_of;
 pub(crate) use state::GitState;
 
 use std::path::{Path, PathBuf};

@@ -309,6 +309,7 @@ impl Workspace {
     pub(in crate::window) fn drop_session(&mut self, ix: usize, cx: &mut Context<Self>) {
         let session = self.sessions.remove(ix);
         self.features_closed(session.id, cx);
+        self.forget_changes(session.id, cx);
         self.publish_terminal_closed(session.id, cx);
         attention::tell(Attention::Seen(session.id), cx);
         // Its session host, if it started one, ends as its terminal is dropped (`Pty`'s drop); the row

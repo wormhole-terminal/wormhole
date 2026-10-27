@@ -212,6 +212,26 @@ fn a_folder_that_stopped_being_a_repository_reads_as_one_that_never_was() {
     assert_eq!((session.git.status.as_ref(), session.git.error()), (None, None));
 }
 
+#[test]
+fn the_repository_is_remembered_through_a_read_in_flight_and_dropped_when_git_says_there_is_none() {
+    let mut session = session();
+    let mut exec = ManualExecutor::default();
+    assert_eq!(session.git.root(), None);
+    refresh(&mut session, &mut exec, Ok(Some(status(modified(&["a.rs"]), None))));
+    exec.deliver(0, &mut session);
+    assert_eq!(session.git.root(), Some(std::path::Path::new("/repo")));
+    // Picking a branch to compare with blanks the list until the read lands, not the repository.
+    session.git.status = None;
+    assert_eq!(session.git.root(), Some(std::path::Path::new("/repo")));
+    // A hiccup of git does not make the terminal leave its repository; no repository does.
+    refresh(&mut session, &mut exec, Err(failed("index.lock exists")));
+    exec.deliver(1, &mut session);
+    assert_eq!(session.git.root(), Some(std::path::Path::new("/repo")));
+    refresh(&mut session, &mut exec, Err(GitError::NotARepo));
+    exec.deliver(2, &mut session);
+    assert_eq!(session.git.root(), None);
+}
+
 // ------------------------------------------------------------ folders that are no repository
 
 /// Git answered "not a repository" for `/plain`; returns the state afterwards.

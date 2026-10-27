@@ -12,10 +12,14 @@
 //! app, never forced. Nothing else writes. (`pr` is not git at all: it asks the GitHub CLI for a
 //! branch's pull request, read-only, for a trusted project, with a scrubbed environment.)
 //!
+//! `attribution` says which terminal changed which file, from snapshots of the status and when each
+//! terminal was working: it reads git's answers and `stat`s the files, and asks git nothing itself.
+//!
 //! Tier 4, beside `notify`: it uses `storage`, `config` (size units), `agents` (finding `gh`)
 //! and `view` (the panels' caps and wording). Nothing it uses reads git, so the panels' data
 //! never goes round in a circle; `ipc`, `terminal` and `onboarding` sit above it.
 
+pub mod attribution;
 mod cmd;
 mod counts;
 mod diff;

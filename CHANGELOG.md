@@ -82,6 +82,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - `wh new-terminal --command` (and a command given to a new window or split) now runs: it is typed once the
   shell shows its prompt, where it used to be typed at once and was dropped while a terminal kept running
   behind the app had no shell yet, or lost to a shell still reading its startup files.
+- A terminal's row counts only the files that terminal changed, not the whole repository's: terminals
+  in one repository no longer all show the same ±N, and an agent's row shows what that agent did.
 - In bash, a command's block (its gutter mark, ⌘↑ and `wh blocks`) no longer disappears after the window
   is resized: a prompt the shell draws again without a new start mark stays the prompt.
 - A Claude Code terminal no longer shows finished (with a banner and a sound) while its agent waits

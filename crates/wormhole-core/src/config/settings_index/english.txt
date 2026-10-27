@@ -440,7 +440,7 @@ entry Sessions cmd-hints
   keywords "command keycaps shortcuts numbers hints"
 entry Sessions sidebar-changes
   label "Changed files"
-  description "±N uncommitted changes in the terminal's row"
+  description "±N uncommitted files this terminal changed, in its row"
   keywords "git changes count"
 entry Sessions sidebar-dot
   label "Status dot"
