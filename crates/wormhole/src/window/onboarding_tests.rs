@@ -572,7 +572,8 @@ fn a_digit_past_the_answers_or_off_the_look_step_does_nothing(cx: &mut TestAppCo
     assert_eq!(question_number(cx, &window), Some(3), "no third answer");
     // The sheet's own keys are as ever.
     key(cx, &window, "right");
-    assert_eq!(step(cx, &window), Some(Step::Agents), "→ is the sheet's Continue");
+    // (The tests see no installed agent, so the step after Look is the short primer.)
+    assert_eq!(step(cx, &window), Some(Step::Primer), "→ is the sheet's Continue");
 }
 
 #[gpui_kit::test]
