@@ -292,6 +292,14 @@ impl TerminalView {
         self.notice.as_ref()
     }
 
+    /// Whether a program other than the shell holds the terminal, asked of the system now: one call
+    /// (the foreground process group of the shell), unlike [`refresh_agent`](Self::refresh_agent),
+    /// which also reads the command's line and runs every fifth tick. `None` where the platform
+    /// can't tell.
+    pub fn program_in_foreground_now(&self) -> Option<bool> {
+        self.pty.as_ref()?.program_in_foreground()
+    }
+
     /// Re-detect the foreground agent and command. Returns true when either changed.
     pub fn refresh_agent(&mut self) -> bool {
         let Some(pty) = &self.pty else { return false };

@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use super::snapshot::Fingerprint;
-use super::{Attribution, Kind, MAX_FILES, Snapshot};
+use super::snapshot::{Fingerprint, MAX_FILES};
+use super::{Attribution, Kind, Place, Snapshot};
 use crate::git::{ChangeKind, FileChange, RepoStatus};
 
 const AGENT: i64 = 1;
@@ -31,8 +31,8 @@ impl World {
     }
 
     /// `secs` seconds after the start.
-    fn at(&self, secs: u64) -> Instant {
-        self.start + Duration::from_secs(secs)
+    fn at(&self, secs: impl Into<f64>) -> Instant {
+        self.start + Duration::from_secs_f64(secs.into())
     }
 
     /// A fingerprint nothing else has.
@@ -40,22 +40,24 @@ impl World {
         self.made += 1;
         let path = self.disk.path().join(format!("file-{}", self.made));
         std::fs::write(&path, b"x").expect("write");
-        Fingerprint::of(&path)
+        Fingerprint::of_path(&path)
     }
 
-    fn snapshot(&self, files: &[(&str, Fingerprint)]) -> Snapshot {
-        Snapshot::of_prints(&self.root, files.iter().map(|&(path, print)| (path.to_string(), print)))
+    /// The picture of these files, taken at second `secs`.
+    fn snapshot(&self, files: &[(&str, Fingerprint)], secs: impl Into<f64>) -> Snapshot {
+        let prints = files.iter().map(|&(path, print)| (path.to_string(), print));
+        Snapshot::of_prints(&self.root, self.at(secs), prints)
     }
 
     /// Terminal `id` is in the repository and `working` as of second `secs`.
-    fn track(&mut self, id: i64, kind: Kind, working: bool, secs: u64) -> bool {
+    fn track(&mut self, id: i64, kind: Kind, working: bool, secs: impl Into<f64>) -> bool {
         let (root, now) = (self.root.clone(), self.at(secs));
-        self.attribution.track(id, Some(&root), kind, working, now)
+        self.attribution.track(id, Place::In(&root), kind, working, now)
     }
 
-    fn observe(&mut self, files: &[(&str, Fingerprint)], secs: u64) -> bool {
-        let (snapshot, asked) = (self.snapshot(files), self.at(secs));
-        self.attribution.observe(snapshot, asked)
+    fn observe(&mut self, files: &[(&str, Fingerprint)], secs: impl Into<f64>) -> bool {
+        let snapshot = self.snapshot(files, secs);
+        self.attribution.observe(snapshot)
     }
 
     fn changes(&self, id: i64) -> Option<usize> {
@@ -99,7 +101,7 @@ fn a_working_agent_takes_the_files_that_are_new_or_look_different() {
 }
 
 #[test]
-fn an_editing_that_leaves_the_count_alone_reports_no_change() {
+fn an_edit_that_leaves_the_count_alone_reports_no_change() {
     let mut w = World::new();
     let (a1, a2) = (w.print(), w.print());
     w.observe(&[], 1);
@@ -136,11 +138,12 @@ fn an_agent_takes_the_files_before_a_plain_command_does() {
 fn a_plain_command_takes_the_files_when_no_agent_worked() {
     let mut w = World::new();
     let a = w.print();
-    w.observe(&[], 5);
+    // The agent worked and stopped before the last picture; the command runs after it.
     w.track(AGENT, Kind::Told, true, 1);
-    w.track(AGENT, Kind::Told, false, 4);
-    w.track(SHELL, Kind::Plain, true, 6);
-    w.observe(&[("a", a)], 7);
+    w.track(AGENT, Kind::Told, false, 2);
+    w.observe(&[], 3);
+    w.track(SHELL, Kind::Plain, true, 4);
+    w.observe(&[("a", a)], 5);
     assert_eq!((w.changes(AGENT), w.changes(SHELL)), (None, Some(1)));
 }
 
@@ -184,10 +187,10 @@ fn a_terminal_elsewhere_takes_nothing() {
     let mut w = World::new();
     let a = w.print();
     w.observe(&[], 1);
-    w.attribution.track(AGENT, Some(Path::new("/elsewhere")), Kind::Told, true, w.at(2));
+    w.attribution.track(AGENT, Place::In(Path::new("/elsewhere")), Kind::Told, true, w.at(2));
     w.observe(&[("a", a)], 3);
     assert_eq!(w.changes(AGENT), None);
-    w.attribution.track(AGENT, None, Kind::Told, true, w.at(4));
+    w.attribution.track(AGENT, Place::Outside, Kind::Told, true, w.at(4));
     assert_eq!(w.changes(AGENT), None);
 }
 
@@ -213,21 +216,21 @@ fn a_file_taken_again_after_it_left_the_status_is_new() {
     w.observe(&[], 1);
     w.track(AGENT, Kind::Told, true, 2);
     w.observe(&[("a", a1)], 3);
+    w.track(AGENT, Kind::Told, false, 3.5);
     w.observe(&[], 4);
     w.track(SHELL, Kind::Plain, true, 5);
-    w.track(AGENT, Kind::Told, false, 5);
     w.observe(&[("a", a2)], 6);
     assert_eq!((w.changes(AGENT), w.changes(SHELL)), (None, Some(1)));
 }
 
 #[test]
-fn a_snapshot_asked_for_before_the_last_one_is_ignored() {
+fn a_picture_taken_before_the_last_one_that_came_in_is_ignored() {
     let mut w = World::new();
     let (a, b) = (w.print(), w.print());
     w.observe(&[], 1);
     w.track(AGENT, Kind::Told, true, 2);
     w.observe(&[("a", a)], 5);
-    // Asked for at 4, answered after the one asked for at 5: it would take `a` away again.
+    // Taken at 4 but arrived after the one taken at 5: it would take `a` away again.
     assert!(!w.observe(&[("b", b)], 4));
     assert_eq!(w.changes(AGENT), Some(1));
     // And the baseline is still the one from 5: `b` is new against it.
@@ -238,8 +241,9 @@ fn a_snapshot_asked_for_before_the_last_one_is_ignored() {
 #[test]
 fn a_status_against_a_branch_is_not_a_snapshot() {
     let root = PathBuf::from("/repo");
-    assert!(Snapshot::take(&status(&root, 3, Some("main"))).is_none());
-    assert!(Snapshot::take(&status(&root, 3, None)).is_some());
+    let now = Instant::now();
+    assert!(Snapshot::take(&status(&root, 3, Some("main")), now).is_none());
+    assert!(Snapshot::take(&status(&root, 3, None), now).is_some());
 }
 
 #[test]
@@ -263,7 +267,7 @@ fn a_terminal_that_moves_to_another_repository_leaves_its_files_behind() {
     w.observe(&[], 1);
     w.track(AGENT, Kind::Told, true, 2);
     w.observe(&[("a", a)], 3);
-    assert!(w.attribution.track(AGENT, Some(Path::new("/other")), Kind::Told, true, w.at(4)));
+    assert!(w.attribution.track(AGENT, Place::In(Path::new("/other")), Kind::Told, true, w.at(4)));
     assert_eq!(w.changes(AGENT), None);
 }
 
@@ -276,8 +280,9 @@ fn a_status_with_too_many_files_says_nothing_and_the_next_is_a_baseline() {
     w.observe(&[("a", a)], 3);
     assert_eq!(w.changes(AGENT), Some(1));
 
-    let big = Snapshot::take(&status(&w.root, MAX_FILES + 1, None)).expect("a snapshot, without files");
-    assert!(w.attribution.observe(big, w.at(4)));
+    let big =
+        Snapshot::take(&status(&w.root, MAX_FILES + 1, None), w.at(4)).expect("a snapshot, without files");
+    assert!(w.attribution.observe(big));
     assert_eq!(w.changes(AGENT), None);
     // What the next picture shows was there before it, as far as anyone can tell.
     assert!(!w.observe(&[("a", a), ("b", b)], 5));
@@ -293,11 +298,96 @@ fn a_snapshot_tells_an_edited_file_from_a_deleted_one() {
     let mut status = status(repo.path(), 0, None);
     status.files =
         vec![FileChange::new("kept", ChangeKind::Modified), FileChange::new("gone", ChangeKind::Deleted)];
-    let before = Snapshot::take(&status).expect("a snapshot");
+    let before = Snapshot::take(&status, Instant::now()).expect("a snapshot");
     std::fs::write(repo.path().join("kept"), b"longer").expect("write");
-    let after = Snapshot::take(&status).expect("a snapshot");
+    let after = Snapshot::take(&status, Instant::now()).expect("a snapshot");
     let (before, after) = (before.prints.expect("files"), after.prints.expect("files"));
     // The deleted file looks the same both times, the edited one does not.
     let touched: Vec<&str> = after.touched_since(&before).collect();
     assert_eq!(touched, ["kept"]);
+}
+
+#[test]
+fn work_that_stops_between_two_samples_still_takes_its_last_edits() {
+    let mut w = World::new();
+    let a = w.print();
+    w.observe(&[], 1);
+    w.track(AGENT, Kind::Told, true, 2);
+    // A picture, then the agent stops before the tick after next could have seen it working.
+    w.observe(&[], 2.1);
+    w.track(AGENT, Kind::Told, false, 2.4);
+    assert!(w.observe(&[("a", a)], 4));
+    assert_eq!(w.changes(AGENT), Some(1));
+    // Once it has stopped it is not working again until a sample says so.
+    let b = w.print();
+    assert!(!w.observe(&[("a", a), ("b", b)], 6));
+}
+
+#[test]
+fn pictures_are_ordered_by_when_they_were_taken_not_when_they_arrive() {
+    let mut w = World::new();
+    let (a, b, c) = (w.print(), w.print(), w.print());
+    w.observe(&[], 1);
+    w.track(AGENT, Kind::Told, true, 2);
+    // Taken at 3, 5 and 4; they arrive in that order.
+    w.observe(&[("a", a)], 3);
+    w.observe(&[("a", a), ("c", c)], 5);
+    assert!(!w.observe(&[("a", a), ("b", b)], 4), "late: ignored whole");
+    assert_eq!(w.changes(AGENT), Some(2));
+    // The one after is judged against the picture taken at 5, not the late one.
+    w.track(AGENT, Kind::Told, true, 5.5);
+    w.observe(&[("a", a), ("b", b), ("c", c)], 6);
+    assert_eq!(w.changes(AGENT), Some(3));
+}
+
+#[test]
+fn an_edit_inside_a_submodule_that_was_dirty_already_is_a_touch() {
+    let mut w = World::new();
+    let dir = w.print();
+    w.observe(&[("lib", dir.with_submodule(1))], 1);
+    w.track(AGENT, Kind::Told, true, 2);
+    // The folder's own stamp and "dirty" are as they were; its checked-out commit is not.
+    w.observe(&[("lib", dir.with_submodule(2))], 3);
+    assert_eq!(w.changes(AGENT), Some(1));
+}
+
+#[test]
+fn a_picture_with_nothing_touched_leaves_no_trace() {
+    let mut w = World::new();
+    let a = w.print();
+    w.observe(&[("a", a)], 1);
+    w.track(AGENT, Kind::Told, true, 2);
+    assert!(!w.observe(&[("a", a)], 3));
+    assert!(w.attribution.repos[&w.root].claims.is_empty(), "no empty set for a terminal with nothing");
+}
+
+#[test]
+fn a_terminal_whose_place_is_not_known_yet_keeps_its_files() {
+    let mut w = World::new();
+    let a = w.print();
+    w.observe(&[], 1);
+    w.track(AGENT, Kind::Told, true, 2);
+    w.observe(&[("a", a)], 3);
+    // Moved to another window: git has not answered there yet.
+    assert!(!w.attribution.track(AGENT, Place::Unknown, Kind::Told, true, w.at(4)));
+    assert_eq!(w.changes(AGENT), Some(1));
+    // It still counts as working while it is not known where.
+    let b = w.print();
+    w.observe(&[("a", a), ("b", b)], 5);
+    assert_eq!(w.changes(AGENT), Some(2));
+    // Only an answer that it is in no repository lets them go.
+    assert!(w.attribution.track(AGENT, Place::Outside, Kind::Told, true, w.at(6)));
+    assert_eq!(w.changes(AGENT), None);
+}
+
+#[test]
+fn a_terminal_leaving_does_not_forget_a_repository_another_is_in() {
+    let mut w = World::new();
+    let a = w.print();
+    w.observe(&[], 1);
+    w.track(AGENT, Kind::Told, true, 2);
+    w.track(SHELL, Kind::Plain, false, 2);
+    w.observe(&[("a", a)], 3);
+    w.attribution.forget(SHELL);
+    assert_eq!(w.changes(AGENT), Some(1), "the repository and the agent's file are kept");
 }

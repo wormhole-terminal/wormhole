@@ -28,8 +28,6 @@ impl Workspace {
         let compare = session.git.compare.clone();
         let Some(wanted) = session.git.begin_refresh((cwd.clone(), compare.clone())) else { return };
         let (id, ticket) = (session.id, wanted.ticket());
-        // When the disk is looked at, which is what the snapshot's picture of it is dated by.
-        let asked = Instant::now();
         let task = cx.background_executor().spawn(async move {
             let observed = watched.map(Observed::of);
             // A compare branch that was deleted falls back to HEAD there, and says so. Submodules get
@@ -40,23 +38,22 @@ impl Workspace {
                     status
                 })
             });
-            // What each changed file looks like, in the same hop: the sidebar rows count the files a
-            // terminal changed, which is what differs between two of these.
-            let snapshot = status.as_ref().ok().and_then(Option::as_ref).and_then(Snapshot::take);
+            // What each changed file looks like, in the same hop, dated by when the disk was read:
+            // the sidebar rows count the files a terminal changed, which is what differs between two
+            // of these. Not for a status against a branch (Compare with): its files are not the
+            // working tree's, so while a repository's only terminal compares, no pictures come and
+            // that reads as one long gap between two.
+            let snapshot = status
+                .as_ref()
+                .ok()
+                .and_then(Option::as_ref)
+                .and_then(|status| Snapshot::take(status, Instant::now()));
             (status, observed, snapshot)
         });
         cx.spawn(async move |this, cx| {
             let (status, observed, snapshot) = task.await;
-            let _ = this.update(cx, |this, cx| {
-                this.finish_git_refresh(
-                    id,
-                    ticket,
-                    status,
-                    observed,
-                    snapshot.map(|snapshot| (snapshot, asked)),
-                    cx,
-                )
-            });
+            let _ = this
+                .update(cx, |this, cx| this.finish_git_refresh(id, ticket, status, observed, snapshot, cx));
         })
         .detach();
     }
@@ -116,7 +113,7 @@ impl Workspace {
         ticket: Ticket,
         status: anyhow::Result<Option<RepoStatus>>,
         observed: Option<Observed>,
-        snapshot: Option<(Snapshot, Instant)>,
+        snapshot: Option<Snapshot>,
         cx: &mut Context<Self>,
     ) {
         let Some(ix) = self.sessions.iter().position(|s| s.id == id) else { return };
@@ -128,8 +125,10 @@ impl Workspace {
                 if changed {
                     cx.notify();
                 }
-                if let Some((snapshot, asked)) = snapshot {
-                    self.observe_changes(snapshot, asked, cx);
+                // Only an answer that is still wanted: a stale one is a picture of a read that was
+                // superseded, and dropped like its status.
+                if let Some(snapshot) = snapshot {
+                    self.observe_changes(ix, snapshot, cx);
                 }
                 // The features that follow the answer (an open diff) look at it, for the terminal on
                 // screen.

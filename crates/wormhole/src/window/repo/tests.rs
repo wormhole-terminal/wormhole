@@ -1,9 +1,10 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 // Not `super::*`: that would pull in GPUI's `test` macro and shadow `#[test]`.
 use super::GitState;
 use super::state::{Refreshed, StatusKey};
 use crate::window::repo::job::testing::ManualExecutor;
+use wormhole_core::git::attribution::Place;
 use wormhole_core::git::discover::Sighting;
 use wormhole_core::git::{ChangeKind, FileChange, GitError, RepoStatus};
 
@@ -213,23 +214,28 @@ fn a_folder_that_stopped_being_a_repository_reads_as_one_that_never_was() {
 }
 
 #[test]
-fn the_repository_is_remembered_through_a_read_in_flight_and_dropped_when_git_says_there_is_none() {
+fn the_repository_is_not_known_until_git_has_answered_for_the_folder_and_then_survives_a_read_in_flight() {
     let mut session = session();
     let mut exec = ManualExecutor::default();
-    assert_eq!(session.git.root(), None);
+    let repo = Path::new("/repo");
+    // Before any answer, and for another folder than the answer was for: not known, which is not
+    // "in none".
+    assert_eq!(session.git.place(Some(repo)), Place::Unknown);
     refresh(&mut session, &mut exec, Ok(Some(status(modified(&["a.rs"]), None))));
     exec.deliver(0, &mut session);
-    assert_eq!(session.git.root(), Some(std::path::Path::new("/repo")));
+    assert_eq!(session.git.place(Some(repo)), Place::In(repo));
+    assert_eq!(session.git.place(Some(Path::new("/elsewhere"))), Place::Unknown);
+    assert_eq!(session.git.place(None), Place::Unknown);
     // Picking a branch to compare with blanks the list until the read lands, not the repository.
     session.git.status = None;
-    assert_eq!(session.git.root(), Some(std::path::Path::new("/repo")));
+    assert_eq!(session.git.place(Some(repo)), Place::In(repo));
     // A hiccup of git does not make the terminal leave its repository; no repository does.
     refresh(&mut session, &mut exec, Err(failed("index.lock exists")));
     exec.deliver(1, &mut session);
-    assert_eq!(session.git.root(), Some(std::path::Path::new("/repo")));
+    assert_eq!(session.git.place(Some(repo)), Place::In(repo));
     refresh(&mut session, &mut exec, Err(GitError::NotARepo));
     exec.deliver(2, &mut session);
-    assert_eq!(session.git.root(), None);
+    assert_eq!(session.git.place(Some(repo)), Place::Outside);
 }
 
 // ------------------------------------------------------------ folders that are no repository

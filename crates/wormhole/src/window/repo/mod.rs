@@ -14,6 +14,8 @@
 //! the UI thread.
 
 mod attribution;
+#[cfg(test)]
+mod attribution_tests;
 pub(crate) mod job;
 mod poll;
 mod state;

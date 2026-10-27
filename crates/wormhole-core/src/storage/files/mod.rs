@@ -321,6 +321,14 @@ impl FileStamp {
         };
         Some(Self { path: Stamp::of(&meta), target })
     }
+
+    /// [`of`](Self::of) for the path itself only: one `lstat`, and a symlink is the link, never what
+    /// it points to. For a repository's files, where git tracks a link by its text and following it
+    /// would look at (and depend on) a file outside the project.
+    pub fn of_link(path: &Path) -> Option<Self> {
+        let meta = fs::symlink_metadata(path).ok()?;
+        Some(Self { path: Stamp::of(&meta), target: None })
+    }
 }
 
 #[cfg(test)]
@@ -601,5 +609,21 @@ mod tests {
 
         fs::remove_file(&file).unwrap();
         assert_eq!(FileStamp::of(&file), None);
+    }
+
+    #[test]
+    fn a_link_stamp_without_its_target_ignores_what_the_link_points_to() {
+        let dir = tempfile::tempdir().unwrap();
+        let (target, link) = (dir.path().join("target.md"), dir.path().join("link.md"));
+        fs::write(&target, "a").unwrap();
+        symlink(&target, &link).unwrap();
+        let before = FileStamp::of_link(&link).unwrap();
+        fs::write(&target, "longer").unwrap();
+        assert_eq!(FileStamp::of_link(&link), Some(before), "the target is not looked at");
+        // A dangling link is still a link.
+        fs::remove_file(&target).unwrap();
+        assert_eq!(FileStamp::of_link(&link), Some(before));
+        fs::remove_file(&link).unwrap();
+        assert_eq!(FileStamp::of_link(&link), None);
     }
 }

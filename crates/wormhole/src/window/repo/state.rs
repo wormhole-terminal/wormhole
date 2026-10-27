@@ -6,6 +6,7 @@
 
 use std::path::{Path, PathBuf};
 
+use wormhole_core::git::attribution::Place;
 use wormhole_core::git::discover::{Absent, Sighting};
 use wormhole_core::git::{GitError, RepoStatus};
 
@@ -21,8 +22,8 @@ pub(crate) struct GitState {
     /// The cwd the status was computed for.
     pub cwd: Option<PathBuf>,
     /// The repository git last named for this terminal, as the status's `root` says it. Unlike the
-    /// status it is not blanked while a read is on its way (a compare branch picked, a `cd`), so
-    /// what is kept by repository (`attribution`) does not let go of the terminal for a moment.
+    /// status it is not blanked while a read is on its way (a compare branch picked), so what is kept
+    /// by repository (`attribution`) does not let go of the terminal for a moment.
     root: Option<PathBuf>,
     /// Why the last refresh failed. When git failed, the status stays the last
     /// good one (while the folder is the same), so a hiccup does not blank the
@@ -82,9 +83,14 @@ impl GitState {
         self.job.is_pending()
     }
 
-    /// The repository git last named for the terminal, until it says there is none.
-    pub(crate) fn root(&self) -> Option<&Path> {
-        self.root.as_deref()
+    /// Where the terminal is, for what is kept per repository (`attribution`): the repository git
+    /// named, or none, once git has answered for `cwd`; until then not known, so a terminal that was
+    /// just moved to another window (a fresh state) or has changed folder keeps what it had.
+    pub(crate) fn place(&self, cwd: Option<&Path>) -> Place<'_> {
+        if !cwd.is_some_and(|cwd| self.answered_for(cwd)) {
+            return Place::Unknown;
+        }
+        self.root.as_deref().map_or(Place::Outside, Place::In)
     }
 
     /// Why the last refresh failed, if it did.
