@@ -117,7 +117,8 @@ ISOLATED_PATH=/usr/bin:/bin:/usr/sbin:/sbin
 # $ISOLATED_PATH for a PATH and no other place to find agents' commands (WORMHOLE_AGENT_PATH
 # empty), the places other terminals keep settings (XDG_CONFIG_HOME, XDG_CONFIG_DIRS,
 # KITTY_CONFIG_DIRECTORY, WEZTERM_CONFIG_FILE) pointed into <run dir>/home or unset, Touch ID answered
-# "cancel", notifications logged instead of shown, and background mode
+# "cancel", a program that asks to control it answered "Don't Allow" (WORMHOLE_AGENT_ASK; `hold` leaves
+# the question for devctl's agent-ask: no sheet is ever shown), notifications logged instead of shown, and background mode
 # (it opens behind their windows and never takes the focus). Later VAR=value pairs win. Sets $pid
 # and writes it to <run dir>/pid; commands go to <run dir>/ctl/cmd, the app's output to
 # <run dir>/app.log.
@@ -136,7 +137,7 @@ start_isolated() {
     HOME="$home" WORMHOLE_DATA_DIR="$run/data" WORMHOLE_DEVCTL="$run/ctl" \
     WORMHOLE_AGENT_HOME="$run/agent-home" WORMHOLE_CLI_DIR="$run/cli-bin" \
     WORMHOLE_SHELL="$shell" WORMHOLE_START_DIR="$start" \
-    WORMHOLE_AUTH=cancel WORMHOLE_NOTIFY=log WORMHOLE_BACKGROUND=1 "$@" \
+    WORMHOLE_AUTH=cancel WORMHOLE_AGENT_ASK=deny WORMHOLE_NOTIFY=log WORMHOLE_BACKGROUND=1 "$@" \
     "$bin" </dev/null >"$run/app.log" 2>&1 &
   pid=$!
   echo "$pid" > "$run/pid"

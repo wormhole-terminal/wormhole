@@ -13,7 +13,8 @@
 # `pid=<pid>`. The instance keeps everything in <scratch dir>: data dir, HOME, agent home and the
 # folder the command line tool installs `wh` into (cli-bin); it gets
 # the Finder's PATH and no agent counts as installed (`--env WORMHOLE_AGENT_PATH=<dir>` with a copy
-# of cat named like one puts it back); Touch ID is answered "cancel", notifications are logged
+# of cat named like one puts it back); Touch ID is answered "cancel", a program that asks to control
+# it is answered "Don't Allow" (--env WORMHOLE_AGENT_ASK=hold|session|quit|always changes that), notifications are logged
 # instead of shown, and it runs in background mode: it opens behind your windows and never takes
 # the focus. The first terminal opens in [start dir] (default: the scratch HOME). A fresh data dir
 # is a first launch, whose first terminal runs the welcome (`Wormhole welcome`, while its feature flag
@@ -27,7 +28,7 @@ set -euo pipefail
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
-usage() { sed -n '2,26p' "$0"; exit "${1:-0}"; }
+usage() { sed -n '2,27p' "$0"; exit "${1:-0}"; }
 
 # The process <scratch>/pid names, if it is still the binary this script started there.
 own_pid() {
