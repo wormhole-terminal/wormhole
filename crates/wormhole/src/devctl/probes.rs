@@ -7,7 +7,7 @@
 use anyhow::{Result, anyhow};
 use gpui_kit::*;
 use wormhole_core::config::features::FeatureFlag;
-use wormhole_core::probe::approval::{self, ProbeState};
+use wormhole_core::probe::approval::{self, KeyProblem, ProbeState};
 use wormhole_core::probe::hidden::reveal;
 use wormhole_core::probe::manifest::is_probe_id;
 use wormhole_core::storage::paths::DataRoot;
@@ -54,8 +54,10 @@ pub(super) fn state(cx: &App) -> String {
     let mut out = String::new();
     match approval::list(&DataRoot::current()) {
         Ok(entries) => {
-            if entries.key_unavailable {
-                out.push_str("probes-key unavailable\n");
+            match entries.key_problem {
+                Some(KeyProblem::Unreadable) => out.push_str("probes-key unavailable\n"),
+                Some(KeyProblem::InRealDataFolder) => out.push_str("probes-key real-data-folder\n"),
+                None => {}
             }
             for entry in entries.entries {
                 let word = match &entry.state {

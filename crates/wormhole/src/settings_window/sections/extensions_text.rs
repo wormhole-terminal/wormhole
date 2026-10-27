@@ -38,6 +38,7 @@ pub(super) fn approve_error_text(err: &ApproveError) -> String {
         ApproveError::Store(err) => settings_extensions_err_store(&err.to_string()),
         ApproveError::Key(err) => settings_extensions_err_key(&format!("{err:#}")),
         ApproveError::Unconfirmed => text(SETTINGS_EXTENSIONS_ERR_UNCONFIRMED).to_string(),
+        ApproveError::InRealDataFolder => text(SETTINGS_EXTENSIONS_DEV_DATA_FOLDER).to_string(),
     }
 }
 

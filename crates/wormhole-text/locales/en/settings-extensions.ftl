@@ -49,6 +49,11 @@ settings-extensions-unsealed-note = An approval is stored for it that this Wormh
 # Nothing was deleted; scanning again asks the Keychain once more.
 settings-extensions-key-unavailable = Wormhole couldn't read its key from the Keychain, so extensions stay off. Unlock the Keychain or allow access when it asks, then scan again.
 
+# A notice over the list, and the error of an approval, in a development build started on the real data
+# folder: it keeps no approval keys there, so every Probe is off. Not the Keychain's doing.
+# WORMHOLE_DATA_DIR is an environment variable's name and stays as it is.
+settings-extensions-dev-data-folder = A development build keeps no extension approvals in the real data folder, so extensions stay off. Start it with WORMHOLE_DATA_DIR set to a scratch folder.
+
 settings-extensions-unsupported-note = It runs code, which this version of Wormhole does not support yet.
 
 # The reason under a Probe that can't be turned on (its state already says so). { $reason } is in English.
@@ -140,7 +145,7 @@ settings-extensions-err-copy = Its files could not be copied for it to run from:
 settings-extensions-err-store = The approval could not be saved: { $reason }
 
 # { $reason } is what the system said, in English.
-settings-extensions-err-key = The key the approval is sealed with could not be read from the Keychain: { $reason }
+settings-extensions-err-key = The key the approval is sealed with could not be made in the Keychain: { $reason }
 
 settings-extensions-err-unconfirmed = The yes was for another version of it. Open the sheet again.
 

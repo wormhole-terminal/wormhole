@@ -1,4 +1,4 @@
-//! The seal on an approval: HMAC-SHA256 under the approvals' key (`key`), so an approval that was not
+//! The seal on an approval: HMAC-SHA256 under the approval's own key (`key`), so an approval that was not
 //! written by Wormhole, or was changed after, reads as not approved.
 //!
 //! Without it, `probe-approvals.json` is a fingerprint (public: SHA-256 of files anyone can read) and the
@@ -11,9 +11,10 @@
 //! `storage::fingerprint` frames its inputs, so no two different approvals encode alike.
 //!
 //! ```text
-//! tag      "wormhole-probe-approval-v1"
+//! tag      "wormhole-probe-approval-v2"
 //! version  the store's format version (u32, little-endian)
 //! id       the Probe's id
+//! account  the account its key is kept under
 //! print    the folder's fingerprint
 //! release  the manifest's version, as shown on the page
 //! declared count (u64), then each permission id, sorted
@@ -30,9 +31,9 @@ use super::store::Approval;
 use crate::storage::secret_key::Key;
 
 /// Names what the seal is for.
-const TAG: &[u8] = b"wormhole-probe-approval-v1";
+const TAG: &[u8] = b"wormhole-probe-approval-v2";
 
-/// The approvals' key, ready to seal with and check against.
+/// An approval's key, ready to seal with and check against.
 pub(super) struct SealKey(hmac::Key);
 
 impl SealKey {
@@ -40,24 +41,32 @@ impl SealKey {
         Self(hmac::Key::new(hmac::HMAC_SHA256, key.as_ref()))
     }
 
-    /// The seal of `approval` for Probe `id` in a store of format `version`, as hex.
-    pub(super) fn seal(&self, version: u32, id: &str, approval: &Approval) -> String {
-        let tag = hmac::sign(&self.0, &encode(version, id, approval));
+    /// The seal of `approval` for Probe `id`, its key under `account`, in a store of format `version`, as hex.
+    pub(super) fn seal(&self, version: u32, id: &str, account: &str, approval: &Approval) -> String {
+        let tag = hmac::sign(&self.0, &encode(version, id, account, approval));
         tag.as_ref().iter().map(|b| format!("{b:02x}")).collect()
     }
 
     /// Whether `seal` is this key's seal of exactly this approval.
-    pub(super) fn verify(&self, version: u32, id: &str, approval: &Approval, seal: &str) -> bool {
+    pub(super) fn verify(
+        &self,
+        version: u32,
+        id: &str,
+        account: &str,
+        approval: &Approval,
+        seal: &str,
+    ) -> bool {
         let Some(tag) = unhex(seal) else { return false };
-        hmac::verify(&self.0, &encode(version, id, approval), &tag).is_ok()
+        hmac::verify(&self.0, &encode(version, id, account, approval), &tag).is_ok()
     }
 }
 
-fn encode(version: u32, id: &str, approval: &Approval) -> Vec<u8> {
+fn encode(version: u32, id: &str, account: &str, approval: &Approval) -> Vec<u8> {
     let mut out = Vec::with_capacity(256);
     field(&mut out, TAG);
     field(&mut out, &version.to_le_bytes());
     field(&mut out, id.as_bytes());
+    field(&mut out, account.as_bytes());
     field(&mut out, approval.fingerprint.as_bytes());
     field(&mut out, approval.version.as_bytes());
     list(&mut out, &approval.declared);

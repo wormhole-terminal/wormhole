@@ -14,7 +14,7 @@ use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::ipc::control::COMMAND_NAME;
-use wormhole_core::probe::approval::{self, Entry, ProbeState};
+use wormhole_core::probe::approval::{self, Entry, KeyProblem, ProbeState};
 use wormhole_core::probe::hidden::reveal;
 use wormhole_core::probe::scan::MAX_ENTRIES;
 use wormhole_core::storage::paths::DataRoot;
@@ -38,8 +38,8 @@ pub(super) const SETTINGS: &[Setting] = &[Setting::block("probes", draw_probes)]
 pub(in crate::settings_window) enum Listing {
     Probes {
         entries: Vec<Entry>,
-        /// The key approvals are checked with could not be read: every Probe is off, and the page says so.
-        key_unavailable: bool,
+        /// Why the keys approvals are checked with could not be read: every Probe is off, and the page says so.
+        key_problem: Option<KeyProblem>,
     },
     /// More entries than a list of Probes can be: none are listed.
     TooMany,
@@ -82,7 +82,7 @@ impl Extensions {
     /// Whether the last read could not read the approvals' key.
     #[cfg(test)]
     pub(in crate::settings_window) fn key_unavailable(&self) -> bool {
-        matches!(self.listing, Some(Listing::Probes { key_unavailable: true, .. }))
+        matches!(self.listing, Some(Listing::Probes { key_problem: Some(_), .. }))
     }
 
     /// Whether the row of `folder` says its stored approval is not this Wormhole's.
@@ -115,7 +115,7 @@ fn read_listing(root: &DataRoot) -> Listing {
             if let Err(err) = approval::sweep(root, listing.present().as_ref()) {
                 tracing::warn!("tidying the approved Probes: {err}");
             }
-            Listing::Probes { entries: listing.entries, key_unavailable: listing.key_unavailable }
+            Listing::Probes { entries: listing.entries, key_problem: listing.key_problem }
         }
         Err(_) => Listing::TooMany,
     }
@@ -207,7 +207,7 @@ fn draw_probes(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
             settings_extensions_too_many(&MAX_ENTRIES.to_string()),
         )
         .into_any_element(),
-        Some(Listing::Probes { entries, key_unavailable }) => {
+        Some(Listing::Probes { entries, key_problem }) => {
             let rows = if entries.is_empty() {
                 empty(ui, cx)
             } else {
@@ -217,20 +217,17 @@ fn draw_probes(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
                     .children(entries.iter().map(|entry| probe_row(ui, entry, cx)))
                     .into_any_element()
             };
-            if !*key_unavailable {
-                return rows;
-            }
+            let Some(problem) = key_problem else { return rows };
+            let notice = match problem {
+                KeyProblem::Unreadable => text(SETTINGS_EXTENSIONS_KEY_UNAVAILABLE),
+                KeyProblem::InRealDataFolder => text(SETTINGS_EXTENSIONS_DEV_DATA_FOLDER),
+            };
             // Over the rows, whatever they are: every one of them reads as off while the key can't be read.
             div()
                 .flex()
                 .flex_col()
                 .gap_2()
-                .child(style::banner(
-                    ui,
-                    style::BannerKind::Warning,
-                    false,
-                    text(SETTINGS_EXTENSIONS_KEY_UNAVAILABLE).to_string(),
-                ))
+                .child(style::banner(ui, style::BannerKind::Warning, false, notice.to_string()))
                 .child(rows)
                 .into_any_element()
         }

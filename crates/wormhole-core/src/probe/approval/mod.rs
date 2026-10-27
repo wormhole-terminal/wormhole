@@ -7,7 +7,8 @@
 //!
 //! - `store`: `probe-approvals.json`, the approvals and their grants, each with its seal.
 //! - `seal` and `key`: the HMAC that makes an entry read as approved only when Wormhole wrote it, and
-//!   where its key comes from (the login Keychain; a dev-only file in a development build).
+//!   where its key comes from (a key per approval, in the login Keychain; a dev-only file in a development
+//!   build). What the seal does not stop is in `key`'s notes.
 //! - `state`: [`ProbeState`], a scanned Probe combined with the store.
 //! - `request`: what the approval sheet shows, and the [`Confirmed`] token that approving takes.
 //! - `snapshot`: the read-only copy, its re-hash and its removal.
@@ -20,11 +21,12 @@
 //! **An approval counts only with Wormhole's seal.** [`approve`] is the one call that seals, and it takes a
 //! [`Confirmed`], so a seal comes only from the Touch ID or click path. An entry that is unsealed, or whose
 //! seal does not match, reads as `Off` and is never [`runnable`]; when the key cannot be read at all, every
-//! entry reads as `Off` and [`Listing::key_unavailable`] says why. Nothing is deleted on either account.
+//! entry reads as `Off` and [`Listing::key_problem`] says why. Nothing is deleted on either account. An
+//! approval that is withdrawn or replaced has its key deleted, so copying the old entry back gains nothing.
 //!
 //! **Threads.** The key is read in [`list`], [`read_one`], [`approve`] and [`runnable`], and reading it may
 //! block or show the Keychain's prompt: call those off the main thread, as the app does. [`turn_off`] and
-//! [`sweep`] never read it, so tidying up never prompts.
+//! [`sweep`] never read one (they only delete the keys of what they forget), so tidying up never prompts.
 //!
 //! The mutating calls ([`approve`], [`turn_off`], [`sweep`]) read the store afresh under one lock, so
 //! two windows cannot overwrite each other's approvals. Must not use anything above `storage`.
@@ -52,9 +54,9 @@ pub use list::{Entry, Listed, Listing, ReadOneError, list, read_one};
 pub use request::{Changes, Confirmed, Grants, NeedsTouchId, NotApprovable, Proof, Request};
 pub use snapshot::{Snapshot, VerifyError};
 pub use state::ProbeState;
-pub use store::{Approval, ApprovalStore, permission_id};
+pub use store::{Approval, ApprovalStore, KeyProblem, permission_id};
 
-use key::SystemKeys;
+use key::{KeySource as _, SystemKeys};
 
 use crate::probe::validate::validate;
 use crate::storage::paths::DataRoot;
@@ -71,8 +73,10 @@ pub enum ApproveError {
     Store(io::Error),
     /// The confirmation is for another request than the one approved.
     Unconfirmed,
-    /// The key the approval is sealed with could not be read or made (the Keychain said no).
+    /// The key the approval is sealed with could not be made (the Keychain said no).
     Key(anyhow::Error),
+    /// A development build on the real data folder, where it keeps no keys: set `WORMHOLE_DATA_DIR`.
+    InRealDataFolder,
 }
 
 impl fmt::Display for ApproveError {
@@ -82,6 +86,9 @@ impl fmt::Display for ApproveError {
             Self::Store(err) => write!(f, "could not save the approval: {err}"),
             Self::Unconfirmed => f.write_str("the confirmation is not for this request"),
             Self::Key(err) => write!(f, "could not get the key to seal the approval with: {err:#}"),
+            Self::InRealDataFolder => f.write_str(
+                "a development build keeps no Probe approvals in the real data folder (set WORMHOLE_DATA_DIR)",
+            ),
         }
     }
 }
@@ -90,7 +97,7 @@ impl std::error::Error for ApproveError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::Snapshot(err) | Self::Store(err) => Some(err),
-            Self::Unconfirmed => None,
+            Self::Unconfirmed | Self::InRealDataFolder => None,
             Self::Key(err) => Some(err.as_ref()),
         }
     }
@@ -106,8 +113,9 @@ fn locked() -> std::sync::MutexGuard<'static, ()> {
 /// seconds). The copy is made from the bytes the request holds, never from the folder again, so a file
 /// edited while the sheet was open shows as `Changed` afterwards instead of being approved unseen.
 ///
-/// All or nothing: the new copy is staged and swapped in, the approval is saved, and only then is the old
-/// copy deleted. If the approval cannot be saved the old copy is put back and the old approval stays.
+/// All or nothing: a new key is made, the new copy is staged and swapped in, the approval is saved, and only
+/// then are the old copy and the old approval's key deleted. If the approval cannot be saved the old copy is
+/// put back, the old approval stays and the new key is deleted.
 pub fn approve(
     root: &DataRoot,
     request: &Request,
@@ -121,18 +129,31 @@ pub fn approve(
     // The entries as stored: the others keep the seals they have (only this one is sealed now), and the
     // key comes first, so a Keychain that says no changes nothing, not even a copy.
     let mut store = ApprovalStore::load_unchecked(root);
-    let seal = store.seal_key(&SystemKeys).map_err(ApproveError::Key)?;
-    let staged = snapshot::stage(root, request.folder()).map_err(ApproveError::Snapshot)?;
-    let committed = staged.commit().map_err(ApproveError::Snapshot)?;
-    store.insert_sealed(request.id(), request.approval(confirmed.grants(), now), &seal);
+    let (account, seal) = store.new_key(&SystemKeys).map_err(|err| match KeyProblem::of(&err) {
+        KeyProblem::InRealDataFolder => ApproveError::InRealDataFolder,
+        KeyProblem::Unreadable => ApproveError::Key(err),
+    })?;
+    // From here a failure leaves the new key to no one: it is deleted again.
+    let dir = store.dir();
+    let drop_key = |err: ApproveError| {
+        if let Err(forget) = SystemKeys.forget(&dir, &account) {
+            tracing::warn!("deleting the key of an approval that was not saved: {forget:#}");
+        }
+        err
+    };
+    let staged =
+        snapshot::stage(root, request.folder()).map_err(|err| drop_key(ApproveError::Snapshot(err)))?;
+    let committed = staged.commit().map_err(|err| drop_key(ApproveError::Snapshot(err)))?;
+    store.insert_sealed(request.id(), request.approval(confirmed.grants(), now), account.clone(), &seal);
     match store.save() {
         Ok(()) => {
             committed.finish();
+            store.retire(&SystemKeys);
             Ok(())
         }
         Err(err) => {
             committed.rollback();
-            Err(ApproveError::Store(err))
+            Err(drop_key(ApproveError::Store(err)))
         }
     }
 }
@@ -145,6 +166,8 @@ pub fn turn_off(root: &DataRoot, id: &str) -> Result<(), ApproveError> {
     if store.remove(id).is_some() {
         store.save().map_err(ApproveError::Store)?;
     }
+    // Its key goes once the file no longer names it (and any a write before left behind).
+    store.retire(&SystemKeys);
     snapshot::remove(root, id).map_err(ApproveError::Snapshot)
 }
 
@@ -164,6 +187,8 @@ pub fn sweep(root: &DataRoot, present: Option<&BTreeSet<String>>) -> Result<(), 
             store.save().map_err(ApproveError::Store)?;
         }
     }
+    store.retire(&SystemKeys);
+    key::remove_stray_dev_keys(&store.dir());
     snapshot::tidy(root, &store).map_err(ApproveError::Snapshot)
 }
 

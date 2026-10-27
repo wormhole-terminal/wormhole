@@ -439,12 +439,11 @@ fn a_key_that_cannot_be_read_says_so_and_leaves_every_probe_off(cx: &mut TestApp
     cx.run_until_parked();
     assert!(!page.read_with(cx, |page, _| page.extensions.key_unavailable()));
 
-    // The development key is a file beside the approvals; a folder in its place can't be read, which is
-    // what a denied Keychain looks like to the page. A new account, so the key this process kept is not asked.
-    let key_file = root.base().join("probe-approvals-key.dev-only");
-    fs::remove_file(&key_file).expect("the dev key");
-    fs::create_dir(&key_file).expect("a folder in its place");
-    edit_approvals(|file| file["account"] = serde_json::json!("a".repeat(32)));
+    // The development keys are files in a folder beside the approvals; a file in the folder's place can't be
+    // read or written, which is what a denied Keychain looks like to the page.
+    let keys = root.base().join("probe-approval-keys.dev-only");
+    fs::remove_dir_all(&keys).expect("the dev keys");
+    fs::write(&keys, b"not a folder").expect("a file in its place");
     let stored = fs::read_to_string(approvals_file()).expect("read");
     scan(cx, &page);
 
@@ -463,5 +462,5 @@ fn a_key_that_cannot_be_read_says_so_and_leaves_every_probe_off(cx: &mut TestApp
     assert_eq!(state(cx, &page, "quiet-one"), Some(ProbeState::Off));
     assert!(sheet_open(cx, &page), "the sheet stays");
     assert!(page.read_with(cx, |page, _| page.extensions.sheet.as_ref().is_some_and(|s| s.has_error())));
-    let _ = fs::remove_dir(&key_file);
+    let _ = fs::remove_file(&keys);
 }

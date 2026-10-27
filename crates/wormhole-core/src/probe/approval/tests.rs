@@ -382,11 +382,14 @@ fn a_store_of_another_version_or_with_odd_keys_is_not_trusted() {
     let file = root.probe_approvals_file();
     fs::write(&file, r#"{"version": 99, "probes": {}}"#).expect("write");
     assert!(ApprovalStore::load(&root).is_damaged());
-    // The first format had no seal: nothing has shipped in it, so it reads as nothing approved.
-    fs::write(&file, r#"{"version": 1, "probes": {}}"#).expect("write");
-    assert!(ApprovalStore::load(&root).is_damaged());
+    // The earlier formats had no seal, or one key for all: nothing has shipped in them, so they read as
+    // nothing approved.
+    for version in [1, 2] {
+        fs::write(&file, format!(r#"{{"version": {version}, "probes": {{}}}}"#)).expect("write");
+        assert!(ApprovalStore::load(&root).is_damaged(), "{version}");
+    }
     let entry = r#"{"fingerprint":"f","version":"1","declared":[],"granted":[],"approved_at":1}"#;
-    fs::write(&file, format!(r#"{{"version": 2, "probes": {{"../escape": {entry}, "fine-one": {entry}}}}}"#))
+    fs::write(&file, format!(r#"{{"version": 3, "probes": {{"../escape": {entry}, "fine-one": {entry}}}}}"#))
         .expect("write");
     let store = ApprovalStore::load(&root);
     assert_eq!(store.ids().collect::<Vec<_>>(), ["fine-one"], "a key is an id or it is dropped");

@@ -18,4 +18,5 @@ pub(super) const PURPOSE: Purpose = Purpose {
     keeps: "terminal text",
     keychain_service: "Wormhole saved terminal text",
     dev_key_file: DEV_KEY_FILE,
+    dev_key_per_account: false,
 };

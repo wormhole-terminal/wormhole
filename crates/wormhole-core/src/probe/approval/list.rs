@@ -7,7 +7,7 @@ use std::fs;
 use super::request::{NotApprovable, Request};
 use super::snapshot::VerifyError;
 use super::state::ProbeState;
-use super::store::ApprovalStore;
+use super::store::{ApprovalStore, KeyProblem};
 use crate::probe::manifest::is_probe_id;
 use crate::probe::read::ProbeFolder;
 use crate::probe::scan::{Coverage, ScanError, Scanned, TooManyEntries, load, scan_covering};
@@ -39,7 +39,7 @@ pub struct Entry {
     /// An approval of it is stored, whatever its state: it can be forgotten.
     pub approved: bool,
     /// What is stored for it was not sealed by this Wormhole (or was changed since): it is off, "not
-    /// approved by this Wormhole". Not set when the key could not be read ([`Listing::key_unavailable`]).
+    /// approved by this Wormhole". Not set when the keys could not be read ([`Listing::key_problem`]).
     pub unsealed: bool,
     /// The approved copy is not what was approved (the state is `Changed` then).
     pub copy_problem: Option<VerifyError>,
@@ -58,9 +58,9 @@ impl Entry {
 pub struct Listing {
     pub entries: Vec<Entry>,
     pub coverage: Coverage,
-    /// The key the approvals are sealed with could not be read (denied, locked, cancelled), so every
-    /// Probe is off for now. Nothing was deleted.
-    pub key_unavailable: bool,
+    /// Why the keys the approvals are sealed with could not be read, when they could not: every Probe is
+    /// off for now. Nothing was deleted.
+    pub key_problem: Option<KeyProblem>,
 }
 
 impl Listing {
@@ -82,7 +82,7 @@ pub fn list(root: &DataRoot) -> Result<Listing, TooManyEntries> {
     Ok(Listing {
         entries: scan.found.into_iter().map(|scanned| entry(root, scanned, &store)).collect(),
         coverage: scan.coverage,
-        key_unavailable: store.key_unavailable(),
+        key_problem: store.key_problem(),
     })
 }
 
