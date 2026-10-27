@@ -28,3 +28,5 @@ e794710d7b0f893e09bab6d59613c734a379f9e7
 2397ee6fe1ba884f04d56669787b188b2fc13cb0
 # window_control.rs into window/control/
 5c05d88e96382baf30dd54ff673af297bd321169
+# the code signature module from the session host to wormhole-term sys
+a3e71b9b0ef28400923d3ddaa9a31466bf45ba42
