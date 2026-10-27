@@ -14,6 +14,7 @@
 mod icons;
 pub mod integrations;
 mod path;
+pub mod skill;
 
 pub use icons::{ICON_PREFIX, icon_bytes};
 pub(crate) use path::find_on_path;
