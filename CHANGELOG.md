@@ -6,6 +6,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Fixed
+
+- Open in Finder, from a terminal's title row, no longer launches a folder that is really a program
+  (`name.app`, `.prefPane`, `.workflow`, `.pkg`): Finder now shows such a folder instead of opening it.
+
 ## [1.4.0] - 2026-10-27
 
 ### Added

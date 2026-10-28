@@ -12,7 +12,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use gpui_kit::*;
-use wormhole_core::platform::open_file::Launch;
+use wormhole_core::platform::open_file;
 use wormhole_core::platform::open_in::{self, EDITORS, Installed, Resolved};
 
 use crate::platform::apps;
@@ -104,8 +104,9 @@ impl OpenIn {
 
 /// Open `folder` in the app with this bundle identifier (Finder shows it as a window).
 pub(crate) fn open(bundle: &str, folder: &Path) {
-    // A folder is always absolute here, so it can't be read as an option.
-    if let Err(err) = apps::launch(bundle, Launch::Open { path: folder.to_path_buf() }) {
+    // A folder is always absolute here, so it can't be read as an option. Finder is not asked to open
+    // one that is a program to the system (`x.app`): it would run it.
+    if let Err(err) = apps::launch(bundle, open_file::folder(bundle, folder)) {
         tracing::warn!("opening {} in {bundle}: {err}", folder.display());
     }
 }

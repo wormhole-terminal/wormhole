@@ -113,6 +113,18 @@ fn encode_path(path: &str) -> String {
     out
 }
 
+/// How to open the folder `path` in the app with this bundle identifier. An editor opens it as a folder.
+/// Finder is asked to show a folder that has an extension, not to open it: a folder called `x.app` (or
+/// `.prefPane`, `.workflow`, `.pkg`) is a program to the system, and `open -b com.apple.finder x.app`
+/// launches it, which a repository can plant with no quarantine prompt.
+pub fn folder(bundle: &str, path: &Path) -> Launch {
+    if bundle == FINDER.bundle && path.extension().is_some() {
+        Launch::Reveal { path: path.to_path_buf() }
+    } else {
+        Launch::Open { path: path.to_path_buf() }
+    }
+}
+
 /// The hover icon's tooltip: "Open in Zed at line 12", "Reveal in Finder".
 pub fn tooltip(bundle: &str, app: &str, line: Option<u32>) -> String {
     if bundle == FINDER.bundle {
@@ -128,7 +140,7 @@ pub fn tooltip(bundle: &str, app: &str, line: Option<u32>) -> String {
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use super::{Launch, encode_path, launch, opens_at_line, tooltip};
+    use super::{Launch, encode_path, folder, launch, opens_at_line, tooltip};
     use crate::platform::open_in::{EDITORS, FINDER};
 
     const FILE: &str = "/Users/me/code/app/src/main.rs";
@@ -246,5 +258,18 @@ mod tests {
         assert_eq!(tooltip("dev.zed.Zed", "Zed", None), "Open in Zed");
         assert_eq!(tooltip("com.panic.Nova", "Nova", Some(12)), "Open in Nova");
         assert_eq!(tooltip(FINDER.bundle, "Finder", Some(12)), "Reveal in Finder");
+    }
+
+    #[test]
+    fn a_folder_that_is_a_program_is_never_opened_by_finder() {
+        for name in ["x.app", "Pref.prefPane", "flow.workflow", "inst.pkg", "a.b", "X.APP"] {
+            let path = PathBuf::from("/repo").join(name);
+            assert_eq!(folder(FINDER.bundle, &path), Launch::Reveal { path }, "{name}");
+        }
+        let plain = PathBuf::from("/repo/docs");
+        assert_eq!(folder(FINDER.bundle, &plain), Launch::Open { path: plain.clone() });
+        // An editor opens a folder with an extension as a folder.
+        let app = PathBuf::from("/repo/x.app");
+        assert_eq!(folder("dev.zed.Zed", &app), Launch::Open { path: app });
     }
 }
