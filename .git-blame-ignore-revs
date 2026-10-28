@@ -30,3 +30,5 @@ e794710d7b0f893e09bab6d59613c734a379f9e7
 5c05d88e96382baf30dd54ff673af297bd321169
 # the code signature module from the session host to wormhole-term sys
 12d9d48563142ddaaf972dcaacfee79794c93743
+# refactor(files): core view::files becomes view::file_tree
+47f18d0229a89b6ac9a24455384d4d5c9fc6a3ee

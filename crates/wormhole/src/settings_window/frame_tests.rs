@@ -99,7 +99,7 @@ const BUDGET: [(&str, u64); 17] = [
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost
     // about 380).
-    ("FeatureFlags", 6860),
+    ("FeatureFlags", 6875),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     ("search", 12250),
