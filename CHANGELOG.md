@@ -16,6 +16,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 - Open in Finder, from a terminal's title row, no longer launches a folder that is really a program
   (`name.app`, `.prefPane`, `.workflow`, `.pkg`): Finder now shows such a folder instead of opening it.
+- Pressing Esc, or clicking outside it, to close the command palette no longer quits Wormhole while the
+  Motion feature is on and Reduce Motion is off.
 
 ## [1.4.0] - 2026-10-27
 

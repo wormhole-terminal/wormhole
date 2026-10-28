@@ -171,8 +171,17 @@ impl Workspace {
             None => window.focus(&self.active_terminal().focus_handle(cx), cx),
         }
         if overlay.view.kind == OverlayKind::Palette && self.fades_palette(cx) {
-            (overlay.view.leave)(cx);
-            self.fade_out(overlay.view, cx);
+            // After the current update: the palette's own key handler and its click-outside close it from
+            // inside its own update, and its card and its `leave` are read and written through that entity.
+            cx.defer_in(window, move |this, _, cx| {
+                // Something else opened meanwhile and took the fading one down with it.
+                if this.overlay.open.is_some() {
+                    return;
+                }
+                (overlay.view.leave)(cx);
+                this.fade_out(overlay.view, cx);
+                cx.notify();
+            });
         }
         cx.notify();
     }

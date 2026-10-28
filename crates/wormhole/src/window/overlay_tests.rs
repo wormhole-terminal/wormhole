@@ -165,3 +165,22 @@ fn the_shortcut_sheet_closes_by_a_cut(cx: &mut TestAppContext) {
     close_overlay(cx, &window);
     assert!(!leaving(cx, &window), "only the palette fades");
 }
+
+#[gpui_kit::test]
+fn escape_in_the_palette_closes_it_and_leaves_its_picture_to_fade(cx: &mut TestAppContext) {
+    if isolate("escape_in_the_palette_closes_it_and_leaves_its_picture_to_fade") {
+        return;
+    }
+    let window = open(cx);
+    open_palette(cx, &window);
+    // The palette's own key handler closes it, from inside its own update: the fade must not update the
+    // palette again from there.
+    press(cx, &window, "escape");
+    draw(cx, &window);
+    assert!(!read(cx, &window, |ws| ws.palette_open()), "Esc closes it");
+    assert!(terminal_focused(cx, &window), "the keyboard is back");
+    assert!(leaving(cx, &window), "its picture fades");
+    cx.executor().advance_clock(Duration::from_millis(300));
+    cx.run_until_parked();
+    assert!(!leaving(cx, &window));
+}
