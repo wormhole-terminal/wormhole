@@ -88,8 +88,9 @@ fn open_commit_with(cx: &mut TestAppContext, window: &OpenWindow, name: &str, me
 /// pin with messages that would otherwise be thousands of elements.
 const COMPACT_FRAME_ALLOCATIONS: u64 = 4_680;
 const WHOLE_FRAME_ALLOCATIONS: u64 = 4_490;
-/// A squash message of six thousand lines whole, and fifteen thousand one-letter paragraphs whole.
-const SQUASH_FRAME_ALLOCATIONS: u64 = 4_665;
+/// A squash message of six thousand lines whole, and fifteen thousand one-letter paragraphs whole. (The
+/// squash budget rose by 15 when the Files tab became one more tab in the bar, which a whole frame builds.)
+const SQUASH_FRAME_ALLOCATIONS: u64 = 4_680;
 const PARAGRAPHS_FRAME_ALLOCATIONS: u64 = 4_580;
 
 #[gpui_kit::test]

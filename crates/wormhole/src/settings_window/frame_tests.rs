@@ -97,7 +97,8 @@ const BUDGET: [(&str, u64); 17] = [
     ("Extensions", 2686),
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
-    ("FeatureFlags", 6478),
+    // The Files flag is one row more (about 380).
+    ("FeatureFlags", 6860),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     ("search", 12250),

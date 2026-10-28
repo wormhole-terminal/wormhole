@@ -404,8 +404,9 @@ fn crowded(cx: &mut TestAppContext) -> OpenWindow {
 /// Allocations a frame of the crowded window may make. Measured before the sidebar left the
 /// `Workspace` it was 10,709 allocations (5.95 MB, the same on every run), and 10,713 after it became a
 /// child view; a worktree lookup that hits its cache allocates nothing since (10,693). The budget is that
-/// plus a little: a cost per row per frame shows at once.
-const CROWDED_FRAME_ALLOCATIONS: u64 = 10_710;
+/// plus a little: a cost per row per frame shows at once. The Files tab, one more tab in the panel's bar,
+/// made it 10,735 and the budget 10,745.
+const CROWDED_FRAME_ALLOCATIONS: u64 = 10_745;
 
 #[gpui_kit::test]
 fn a_frame_of_twenty_terminals_in_three_groups_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
