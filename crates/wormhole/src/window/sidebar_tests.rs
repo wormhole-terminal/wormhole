@@ -405,7 +405,8 @@ fn crowded(cx: &mut TestAppContext) -> OpenWindow {
 /// `Workspace` it was 10,709 allocations (5.95 MB, the same on every run), and 10,713 after it became a
 /// child view; a worktree lookup that hits its cache allocates nothing since (10,693). The budget is that
 /// plus a little: a cost per row per frame shows at once. The Files tab, one more tab in the panel's bar,
-/// made it 10,735 and the budget 10,745.
+/// made it 10,735 (10,694 on the commit before it, measured in the same run as this: 41 more, the same 41
+/// as the squash frame's) and the budget 10,745.
 const CROWDED_FRAME_ALLOCATIONS: u64 = 10_745;
 
 #[gpui_kit::test]

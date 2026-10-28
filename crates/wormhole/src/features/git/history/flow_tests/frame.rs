@@ -89,7 +89,8 @@ fn open_commit_with(cx: &mut TestAppContext, window: &OpenWindow, name: &str, me
 const COMPACT_FRAME_ALLOCATIONS: u64 = 4_680;
 const WHOLE_FRAME_ALLOCATIONS: u64 = 4_490;
 /// A squash message of six thousand lines whole, and fifteen thousand one-letter paragraphs whole. (The
-/// squash budget rose by 15 when the Files tab became one more tab in the bar, which a whole frame builds.)
+/// squash frame made 4,634 allocations on the commit before the Files tab and makes 4,675 with it: the
+/// tab is 41 more in the bar, which a whole frame builds. The budget is that plus a few.)
 const SQUASH_FRAME_ALLOCATIONS: u64 = 4_680;
 const PARAGRAPHS_FRAME_ALLOCATIONS: u64 = 4_580;
 

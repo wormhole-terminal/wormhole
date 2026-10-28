@@ -450,6 +450,10 @@ fn the_colour_of_the_selected_terminals_group_changing_draws_the_title_row_again
 /// what is left is the root's own rebuild (the window's actions,
 /// the overlay and menu layers, the pane probe, the sidebar's column with its header and list as the
 /// replayed views it holds side by side) and the terminal.
+///
+/// With the Files tab (one more tab binding its action) it is 569 where the commit before made 571, measured
+/// in one run: the tabs' actions are bound by a typed listener that captures nothing, which allocates
+/// nothing, so each tab costs the replayed frame none.
 const REPLAYED_FRAME_ALLOCATIONS: u64 = 572;
 
 /// Allocations of a draw of the window.
