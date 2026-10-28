@@ -26,7 +26,7 @@ mod support;
 use support::{Literal, is_test_file, non_test_part, sources, src, string_literals};
 
 /// Folders and files under `src/` whose words are all in the catalogs.
-const MIGRATED: &[&str] = &["settings_window", "notice", "folder_picker"];
+const MIGRATED: &[&str] = &["settings_window", "notice", "folder_picker", "picker"];
 
 /// A marker that says a literal on its line is not interface text.
 const MARKER: &str = "// text:";

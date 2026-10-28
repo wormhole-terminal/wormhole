@@ -105,6 +105,8 @@ objc2-app-kit = { version = "0.3", features = [
     "NSImageView", "NSAnimation", "NSAnimationContext",
     # ... and the pointing hand over it while a sticky one waits for a click.
     "NSCursor",
+    # The picker's panel: the system's search field, and where its text ends (for the ghost completion).
+    "NSSearchField", "NSSearchFieldCell", "NSTextInputClient",
 ] }
 
 [dev-dependencies]

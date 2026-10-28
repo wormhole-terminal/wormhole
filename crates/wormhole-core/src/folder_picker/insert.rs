@@ -3,8 +3,8 @@
 
 use wormhole_term::input::file_drop::shell_escape;
 
-/// The text for the folder `name` under `prefix` (the typed text up to its last `/`, see
-/// [`Target::prefix`](super::Target::prefix)): `prefix` + `name` + `/`, escaped for the shell. A path that
+/// The text for the folder `name` under `prefix` (the part of the typed path that was written exactly, with its
+/// closing `/`, see [`Hit::prefix`](super::Hit::prefix)): `prefix` + `name` + `/`, escaped for the shell. A path that
 /// would begin with a dash gets `./` in front, or a command would read it as an option (`rm -rf/`). None when
 /// any of it holds a control character: what is inserted is what a shell is typed, and a control character is
 /// a key (a line break runs the line, Ctrl-U clears it), never part of a folder's name.

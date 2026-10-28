@@ -11,7 +11,7 @@
 //!
 //! It blocks on the disk: call it off the main thread.
 
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io;
 use std::path::{Component, Path, PathBuf};
@@ -84,14 +84,51 @@ pub fn stamp_below(root: &Path, relative: &Path) -> io::Result<FileStamp> {
 
 /// The entries of the folder `dir`, at most [`HARD_LIMIT`] of them.
 pub fn list(dir: &Path) -> io::Result<Listing> {
-    let mut listing = Listing::default();
-    for entry in fs::read_dir(dir)? {
-        // An entry that vanishes or can't be read while the folder is read is left out.
-        let Ok(entry) = entry else { continue };
-        if listing.entries.len() >= HARD_LIMIT {
-            listing.truncated = true;
+    let scanned = scan(dir, Limits { keep: HARD_LIMIT, scan: usize::MAX }, |_, _| true)?;
+    Ok(Listing { truncated: scanned.cut.is_some(), ..scanned.listing })
+}
+
+/// How much one [`scan`] may keep and look at.
+#[derive(Clone, Copy, Debug)]
+pub struct Limits {
+    /// The most entries kept.
+    pub keep: usize,
+    /// The most entries looked at, kept or not: a folder of a million files must not hold a read up that only
+    /// wants its few folders.
+    pub scan: usize,
+}
+
+/// Why a scan stopped before it had seen everything.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Cut {
+    /// It kept as many as it was allowed to and there were more.
+    Kept,
+    /// It looked at as many entries as it was allowed to and there were more, so some it would have kept
+    /// may be missing even when few were kept.
+    Scanned,
+}
+
+/// What [`scan`] found.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Scan {
+    pub listing: Listing,
+    pub cut: Option<Cut>,
+}
+
+/// The entries of `dir` that `keep` accepts, within `limits`: the one reader of a folder. `keep` sees each
+/// entry's name and its own type (never what a link points at: it may stat that itself, for the few entries
+/// it asks about) and is applied while the folder is read, so the cap counts what is kept and a folder far
+/// bigger than the caps can still be searched. An entry that can't be read is left out. An error is only for
+/// the folder itself: it is missing, not a folder, or not readable.
+pub fn scan(dir: &Path, limits: Limits, mut keep: impl FnMut(&OsStr, EntryKind) -> bool) -> io::Result<Scan> {
+    let mut found = Scan::default();
+    for (seen, entry) in fs::read_dir(dir)?.enumerate() {
+        if seen >= limits.scan {
+            found.cut = Some(Cut::Scanned);
             break;
         }
+        // An entry that vanishes or can't be read while the folder is read is left out.
+        let Ok(entry) = entry else { continue };
         let Ok(kind) = entry.file_type() else { continue };
         let kind = if kind.is_dir() {
             EntryKind::Folder
@@ -100,9 +137,17 @@ pub fn list(dir: &Path) -> io::Result<Listing> {
         } else {
             EntryKind::File
         };
-        listing.entries.push(DirEntry { name: entry.file_name(), kind });
+        let name = entry.file_name();
+        if !keep(&name, kind) {
+            continue;
+        }
+        if found.listing.entries.len() >= limits.keep {
+            found.cut = Some(Cut::Kept);
+            break;
+        }
+        found.listing.entries.push(DirEntry { name, kind });
     }
-    Ok(listing)
+    Ok(found)
 }
 
 #[cfg(test)]
@@ -110,7 +155,7 @@ mod tests {
     use std::fs;
     use std::path::Path;
 
-    use super::{EntryKind, list, list_below, stamp_below};
+    use super::{Cut, EntryKind, Limits, list, list_below, scan, stamp_below};
     use crate::platform::fs::symlink;
 
     fn kinds(dir: &Path, relative: &str) -> Vec<(String, EntryKind)> {
@@ -181,5 +226,23 @@ mod tests {
         fs::write(root.path().join("src/a"), b"22").unwrap();
         assert_eq!(stamp_below(root.path(), Path::new("src")).unwrap(), second);
         assert!(stamp_below(root.path(), Path::new("missing")).is_err());
+    }
+
+    #[test]
+    fn a_scan_keeps_what_it_accepts_and_says_when_it_stopped() {
+        let root = tempfile::tempdir().unwrap();
+        for n in 0..6 {
+            fs::create_dir(root.path().join(format!("d{n}"))).unwrap();
+        }
+        fs::write(root.path().join("file"), b"x").unwrap();
+        let folders = |kind: EntryKind| kind == EntryKind::Folder;
+        let all = scan(root.path(), Limits { keep: 10, scan: 100 }, |_, k| folders(k)).unwrap();
+        assert_eq!((all.listing.entries.len(), all.cut), (6, None));
+        let few = scan(root.path(), Limits { keep: 3, scan: 100 }, |_, k| folders(k)).unwrap();
+        assert_eq!((few.listing.entries.len(), few.cut), (3, Some(Cut::Kept)));
+        let short = scan(root.path(), Limits { keep: 10, scan: 2 }, |_, _| true).unwrap();
+        assert_eq!((short.listing.entries.len(), short.cut), (2, Some(Cut::Scanned)));
+        let exact = scan(root.path(), Limits { keep: 6, scan: 100 }, |_, k| folders(k)).unwrap();
+        assert_eq!(exact.cut, None, "exactly the cap's worth is not cut");
     }
 }

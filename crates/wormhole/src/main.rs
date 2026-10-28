@@ -33,6 +33,7 @@ mod onboarding;
 mod open_in;
 mod palette;
 mod perf;
+mod picker;
 mod platform;
 mod select;
 mod settings;

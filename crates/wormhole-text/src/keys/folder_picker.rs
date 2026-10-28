@@ -10,21 +10,25 @@ use crate::args::Arg;
 pub const FOLDER_PICKER_NAME: Key = Key::new(92);
 /// "Search folders"
 pub const FOLDER_PICKER_SEARCH: Key = Key::new(93);
+/// "Recent"
+pub const FOLDER_PICKER_RECENT: Key = Key::new(94);
+/// "↩ insert   ⇥ open   ← up   ⌘⌫ forget recent"
+pub const FOLDER_PICKER_HINT: Key = Key::new(95);
 /// "No folders"
-pub const FOLDER_PICKER_EMPTY: Key = Key::new(94);
+pub const FOLDER_PICKER_EMPTY: Key = Key::new(96);
 /// "Can't read this folder"
-pub const FOLDER_PICKER_UNREADABLE: Key = Key::new(95);
+pub const FOLDER_PICKER_UNREADABLE: Key = Key::new(97);
 
 /// ```text
 /// Only the first { $count } folders are listed
 /// ```
 pub fn folder_picker_cut_folders(count: &str) -> String {
-    crate::active::message(96, &[("count", Arg::Str(count))])
+    crate::active::message(98, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// Only the first { $count } entries were searched, so some folders may be missing
 /// ```
 pub fn folder_picker_cut_scanned(count: &str) -> String {
-    crate::active::message(97, &[("count", Arg::Str(count))])
+    crate::active::message(99, &[("count", Arg::Str(count))])
 }

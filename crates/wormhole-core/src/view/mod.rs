@@ -4,8 +4,8 @@
 //! panel's tabs (`panel`), drag and drop order (`reorder`), shortened text (`elide`), the panels'
 //! caps and counts (`limits`), which animation each motion runs (`motion`), the notes and next steps
 //! of a terminal (`notes`), the notice chip's rules (`notice`), where a terminal torn off the window lands
-//! (`tear_off`), the title row's extras (`title_extras`) and the folder picker at the prompt
-//! (`folder_picker`).
+//! (`tear_off`), the title row's extras (`title_extras`) and the generic picker at the prompt (`picker`:
+//! a field, rows from providers, a ghost completion; the folder picker is `crate::folder_picker`).
 //!
 //! It uses only `theme` below it (and the plain values `storage` hands over, a folder's listing): never
 //! settings, git, the store or the running app. What those know comes to it as values.
@@ -13,7 +13,6 @@
 pub mod elide;
 pub mod file_tree;
 pub mod focus;
-pub mod folder_picker;
 pub mod layout;
 pub mod limits;
 pub mod motion;
@@ -21,6 +20,7 @@ pub mod notes;
 pub mod notice;
 pub mod panel;
 pub mod panes;
+pub mod picker;
 pub mod reorder;
 pub mod search;
 pub mod sidebar;

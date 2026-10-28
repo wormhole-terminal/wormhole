@@ -1,7 +1,8 @@
 //! What opens over the window's content: the command palette and the keyboard-shortcuts
-//! sheet, one at a time, each on a scrim that takes the clicks, and the folder picker, a card at the
-//! terminal's cursor with no scrim (a click outside it closes it and reaches what it lands on). Closing one gives the
-//! keyboard back to whatever had it when it opened ("focus returns where it was").
+//! sheet, one at a time, each on a scrim that takes the clicks, and the folder picker, which has nothing of
+//! its own to draw: its panel is the system's, a window beside this one (a click outside it closes it and reaches
+//! what it lands on). Closing one gives the keyboard back to whatever had it when it opened ("focus returns where
+//! it was").
 //!
 //! With the Motion feature on the palette appears at once and fades out in [`EXIT`] when it closes (core
 //! `view::motion::overlay`). It is closed from the moment it is told to be: the keyboard is already where it
@@ -249,6 +250,10 @@ impl Workspace {
             return Some(fading(view, *card, *serial));
         }
         let open = &self.overlay.open.as_ref()?.view;
+        // The folder picker is a native panel: the overlay only holds its place.
+        if open.kind == OverlayKind::FolderPicker {
+            return None;
+        }
         let (view, name) = (open.view.clone().into_any_element(), open.kind.name());
         let overlay = div()
             .id("overlay")

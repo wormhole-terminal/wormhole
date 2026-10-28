@@ -8,6 +8,14 @@ folder-picker-name = Insert folder path
 # folders, `../` the one above, `~/` the home folder.
 folder-picker-search = Search folders
 
+# The title of the section of folders the person's terminals were in lately, under the folders of the current
+# one (with nothing typed). Their rows have a clock.
+folder-picker-recent = Recent
+
+# The line under the list, naming the keys: ↩ puts the folder's path at the cursor, ⇥ goes into it, ← goes up
+# one level, ⌘⌫ forgets a recent folder (only for a row in the Recent section).
+folder-picker-hint = ↩ insert   ⇥ open   ← up   ⌘⌫ forget recent
+
 # The one row of a list that has no folders, or none that the typed text narrows it to.
 folder-picker-empty = No folders
 

@@ -79,14 +79,20 @@
 //!                   typed (a prefix picks the scope: `@` terminals, `>` actions …; in an open palette
 //!                   it replaces what is typed), or close it; it opens after this batch
 //!   sheet [filter] | sheet close   the keyboard-shortcuts sheet over this window, filtered
-//!   folder-picker open|type <text>|tab|up|down|pick|close|state   the folder picker (⌘J) over
-//!                   this window: open it at the terminal's cursor (the Folder picker flag must be on:
-//!                   `set feature_flags={"folder_picker":true}`), type a path into its field (src/, ../
-//!                   and ~/ walk), tab completes the selected folder into the field, up and down move the
-//!                   selection, pick inserts the selected folder's path at the terminal's cursor as ↩
-//!                   does and closes (the terminal's screen then shows it), state lists the folder, the
-//!                   typed text, its filter and prefix, the rows with the selection marked and where the
-//!                   card was drawn
+//!   folder-picker open|close|type <text>|tab|right|left|accept-ghost|up|down|pageup|pagedown|enter|forget|
+//!                   click <line>|crumb <n>|scroll <lines>|state   the folder picker (⌘J) over this window:
+//!                   open it at the terminal's cursor (the Folder picker flag must be on: `set
+//!                   feature_flags={"folder_picker":true}`), type a path or part of a name into its field
+//!                   (src/, ../ and ~/ walk; pr/te finds Projects/terminal), tab goes into the selected
+//!                   folder, right (at the end of the text) and accept-ghost take the grey completion, left
+//!                   goes up one level (`left start` with the caret at the start, `left mid` in the middle
+//!                   of the text, which is the field's own), up and down move the selection, enter inserts
+//!                   the selected folder's path at the terminal's cursor and closes (the terminal's screen
+//!                   then shows it), forget forgets a selected recent folder, click <line> picks the line,
+//!                   crumb <n> goes to a step of the breadcrumb, state lists the text, the ghost, the
+//!                   crumbs, the lines (badges, chevrons, recent rows, what ↩ and ⇥ do) with the selection
+//!                   marked, the panel's place and, for a native panel, its material, frame and rows. The
+//!                   queries run off the main thread: ask `state` again while it says `busy true`
 //!   action <name>   dispatch a registered action by name (`workspace::ToggleSidebar`) through this
 //!                   window, as a click on its menu item does
 //!   available <name>   whether the focused element's path handles that action (app-wide handlers

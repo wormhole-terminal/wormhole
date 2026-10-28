@@ -20,6 +20,7 @@
 //! never goes round in a circle; `ipc`, `terminal` and `onboarding` sit above it.
 
 pub mod attribution;
+pub mod branch;
 mod cmd;
 mod counts;
 mod details;

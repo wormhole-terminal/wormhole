@@ -23,6 +23,7 @@ pub mod look;
 pub mod notice;
 pub mod notifications;
 pub mod panel;
+pub mod picker;
 pub mod pointer;
 pub mod scroller;
 pub mod sheet;

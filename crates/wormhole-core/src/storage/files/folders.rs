@@ -2,26 +2,23 @@
 //!
 //! A folder somewhere on the disk is not ours: it may hold millions of entries, sit on a share that answers
 //! slowly or hold names no shell could be handed. So the read is bounded in what it keeps and in what it
-//! looks at, skips what it can't read, and says when it stopped early.
+//! looks at, skips what it can't read, and says when it stopped early. It is the Files tab's reader
+//! ([`listing::scan`](super::listing::scan)) with the rules of a list of folders on top.
 
 use std::fs;
 use std::io;
 use std::path::Path;
 
+use super::listing::{EntryKind, Limits, scan};
+
+pub use super::listing::Cut;
+
 /// The most subfolders one read keeps.
 pub const FOLDERS_CAP: usize = 2_000;
-/// The most entries one read looks at, folders or not: a folder of a million files must not hold the
-/// reader up to find its three subfolders.
+/// The most entries one read looks at, folders or not.
 pub const SCAN_CAP: usize = 50_000;
-
-/// Why a read stopped before it had seen everything.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Cut {
-    /// It kept [`FOLDERS_CAP`] (or the asked cap of) folders and there were more.
-    Folders,
-    /// It looked at [`SCAN_CAP`] entries and there were more, so folders may be missing even with few kept.
-    Scanned,
-}
+/// The most entries [`has_folder`] looks at before it gives up: a chevron isn't worth a long read.
+const PEEK_SCAN: usize = 1_000;
 
 /// What [`list_folders`] found, in the order the disk gave it.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -45,40 +42,37 @@ pub fn list_folders(dir: &Path, cap: usize) -> io::Result<Folders> {
 /// [`list_folders`] keeping only the names `keep` accepts, so a folder with far more entries than the caps can
 /// still be searched: the cap counts what is kept, not what is seen.
 pub fn list_folders_where(dir: &Path, cap: usize, keep: impl Fn(&str) -> bool) -> io::Result<Folders> {
-    let mut found = Folders::default();
-    for (seen, entry) in fs::read_dir(dir)?.enumerate() {
-        if seen >= SCAN_CAP {
-            found.cut = Some(Cut::Scanned);
-            break;
+    folders(dir, Limits { keep: cap, scan: SCAN_CAP }, keep)
+}
+
+/// Whether `dir` has a subfolder a person would list (not a dot-folder), looked for in a bounded read. A folder
+/// that can't be read has none.
+pub fn has_folder(dir: &Path) -> bool {
+    folders(dir, Limits { keep: 1, scan: PEEK_SCAN }, |name| !name.starts_with('.'))
+        .is_ok_and(|found| !found.names.is_empty())
+}
+
+fn folders(dir: &Path, limits: Limits, keep: impl Fn(&str) -> bool) -> io::Result<Folders> {
+    let scanned = scan(dir, limits, |name, kind| {
+        let Some(name) = name.to_str() else { return false };
+        if name.chars().any(char::is_control) || !keep(name) {
+            return false;
         }
-        let Ok(entry) = entry else { continue };
-        let Ok(kind) = entry.file_type() else { continue };
-        let Ok(name) = entry.file_name().into_string() else { continue };
-        if name.chars().any(char::is_control) || !keep(&name) {
-            continue;
+        match kind {
+            EntryKind::Folder => true,
+            EntryKind::Link => fs::metadata(dir.join(name)).is_ok_and(|m| m.is_dir()),
+            EntryKind::File => false,
         }
-        let is_folder = if kind.is_symlink() {
-            fs::metadata(entry.path()).is_ok_and(|m| m.is_dir())
-        } else {
-            kind.is_dir()
-        };
-        if !is_folder {
-            continue;
-        }
-        if found.names.len() >= cap {
-            found.cut = Some(Cut::Folders);
-            break;
-        }
-        found.names.push(name);
-    }
-    Ok(found)
+    })?;
+    let names = scanned.listing.entries.into_iter().filter_map(|e| e.name.into_string().ok()).collect();
+    Ok(Folders { names, cut: scanned.cut })
 }
 
 #[cfg(test)]
 mod tests {
     use std::fs;
 
-    use super::{Cut, Folders, list_folders, list_folders_where};
+    use super::{Cut, Folders, has_folder, list_folders, list_folders_where};
 
     fn sorted(found: Folders) -> Vec<String> {
         let mut names = found.names;
@@ -118,7 +112,7 @@ mod tests {
         }
         let found = list_folders(dir.path(), 3).unwrap();
         assert_eq!(found.names.len(), 3);
-        assert_eq!(found.cut, Some(Cut::Folders));
+        assert_eq!(found.cut, Some(Cut::Kept));
         let all = list_folders(dir.path(), 5).unwrap();
         assert_eq!(all.names.len(), 5);
         assert_eq!(all.cut, None, "a folder with exactly the cap's worth is not cut");
@@ -168,5 +162,17 @@ mod tests {
         let found = list_folders_where(dir.path(), 3, |name| name.contains("rea")).unwrap();
         assert_eq!(found.names, ["react"]);
         assert_eq!(found.cut, None, "one match, under the cap");
+    }
+
+    #[test]
+    fn has_folder_looks_for_one_that_is_not_a_dot_folder() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(!has_folder(dir.path()));
+        fs::write(dir.path().join("file"), "x").unwrap();
+        fs::create_dir(dir.path().join(".git")).unwrap();
+        assert!(!has_folder(dir.path()), "only a file and a dot-folder");
+        fs::create_dir(dir.path().join("src")).unwrap();
+        assert!(has_folder(dir.path()));
+        assert!(!has_folder(&dir.path().join("missing")));
     }
 }

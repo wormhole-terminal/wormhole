@@ -14,6 +14,7 @@ use wormhole_core::theme::tokens::Appearance;
 use wormhole_core::view::motion::notice::Entrance;
 use wormhole_core::view::motion::window_animation::Behaviour;
 use wormhole_core::view::notice::Spot;
+use wormhole_core::view::panes::Rect;
 use wormhole_term::scrollbar::ScrollerStyle;
 
 use super::font_face::Seg;
@@ -124,6 +125,7 @@ pub(super) fn signatures_match() {
     #[cfg(feature = "devctl")]
     same_method! {
         notice::Chip::info: fn(&S) -> Option<super::notice::Info>;
+        picker::Panel::info: fn(&S) -> Option<super::picker::Info>;
     }
     #[cfg(feature = "devctl")]
     same! {
@@ -159,6 +161,10 @@ pub(super) fn signatures_match() {
         notice::Chip::restyle: fn(&mut S, &super::notice::Content<'_>);
         notice::Chip::place: fn(&mut S, Spot);
         notice::Chip::close: fn(S, &mut App);
+        picker::Panel::new: fn(&Window, bool, super::picker::Events) -> Option<S>;
+        picker::Panel::show: fn(&mut S, &super::picker::View<'_>, Rect, &mut App);
+        picker::Panel::update: fn(&mut S, &super::picker::View<'_>, Rect);
+        picker::Panel::close: fn(S, &mut App);
         intro::Overlay::new: fn(&Window, Setup, LogoSpot) -> anyhow::Result<Option<S>>;
         intro::Overlay::motion_at: fn(&S, f32) -> WindowMotion;
         intro::Overlay::frame: fn(&S, &Frame);

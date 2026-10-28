@@ -13,6 +13,7 @@
 pub(crate) mod attention;
 pub(crate) mod look;
 pub(crate) mod profiles;
+pub(crate) mod recent_folders;
 pub(crate) mod recent_projects;
 
 use std::collections::HashMap;

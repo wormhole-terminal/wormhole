@@ -22,7 +22,7 @@ mod private;
 mod rename;
 mod viewing;
 
-pub use folders::{Cut, FOLDERS_CAP, Folders, SCAN_CAP, list_folders, list_folders_where};
+pub use folders::{Cut, FOLDERS_CAP, Folders, SCAN_CAP, has_folder, list_folders, list_folders_where};
 pub use prefix::{Prefix, read_prefix_capped};
 pub use private::{
     PRIVATE_FILE, create_dir_all_private, create_private_file, ensure_private_dir, make_private,

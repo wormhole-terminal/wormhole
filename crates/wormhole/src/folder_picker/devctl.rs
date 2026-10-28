@@ -1,17 +1,21 @@
-//! devctl's `folder-picker` command: open the picker, type into its field, walk it with the keys, pick, and
-//! read what it lists, so a scripted check can see the folder, the filter, the rows and the selection.
+//! devctl's `folder-picker` command: open the picker, type into its field, walk it with the keys, click a row or
+//! a crumb, pick, and read what it lists, so a scripted check can see the text, the ghost, the crumbs, the rows
+//! with their badges, chevrons and recent marks, and the panel's frame. The queries run off the main thread,
+//! so `state` right after a key may still say `busy true`: ask again.
 
 use anyhow::{Result, bail};
 use gpui_kit::*;
 use wormhole_core::config::features::FeatureFlag;
+use wormhole_core::view::picker::{Field, Key};
 
 use super::{FolderPicker, open};
+use crate::platform::picker::Event;
 use crate::window::Workspace;
 
-const USAGE: &str = "folder-picker open|type <text>|tab|up|down|pick|close|state";
+const USAGE: &str = "folder-picker open|close|type <text>|tab|right [mid]|left [start|mid]|accept-ghost|up|down|\
+pageup|pagedown|enter|pick|forget|click <line>|crumb <n>|scroll <lines>|state";
 
-/// `folder-picker <what>`: see [`USAGE`]. `state` and every other word but `open` and `close` need the picker
-/// to be open.
+/// `folder-picker <what>`: see [`USAGE`]. Every word but `open` and `close` needs the picker to be open.
 pub(crate) fn devctl_folder_picker(
     ws: &mut Workspace,
     arg: &str,
@@ -38,76 +42,48 @@ pub(crate) fn devctl_folder_picker(
             ws.close_overlay(window, cx);
             return Ok(String::new());
         }
-        "type" | "tab" | "up" | "down" | "pick" | "state" => {}
+        "type" | "tab" | "right" | "left" | "accept-ghost" | "up" | "down" | "pageup" | "pagedown"
+        | "enter" | "pick" | "forget" | "click" | "crumb" | "scroll" | "state" => {}
         _ => bail!("usage: {USAGE}"),
     }
-    let Some(picker) = ws.overlay_of::<FolderPicker>() else { bail!("the folder picker is not open") };
-    // The picker closes through the workspace, which devctl is already updating: close it here, then insert.
-    if word == "pick" {
-        let (chosen, terminal) = picker.read_with(cx, |p, _| (p.state.choice(), p.terminal.clone()));
-        let Some(inserted) = chosen else { return Ok("nothing selected\n".to_string()) };
-        let there = terminal.upgrade().is_some_and(|terminal| terminal == ws.active_terminal());
-        ws.close_overlay(window, cx);
-        if !there {
-            return Ok("not the terminal in front\n".to_string());
-        }
-        let _ = terminal.update(cx, |terminal, cx| {
-            terminal.paste(&inserted);
-            cx.notify();
-        });
-        return Ok(format!("inserted {inserted}\n"));
-    }
-    let rest = rest.to_string();
-    Ok(picker.update(cx, |picker, cx| match word {
-        "type" => {
-            picker.field.update(cx, |field, cx| field.set_value(rest.clone(), window, cx));
-            picker.typed(&rest, cx);
-            String::new()
-        }
-        "tab" => {
-            picker.complete(window, cx);
-            String::new()
-        }
-        "up" | "down" => {
-            picker.step(if word == "up" { -1 } else { 1 }, cx);
-            String::new()
-        }
-        _ => picker.summary(),
-    }))
-}
-
-impl FolderPicker {
-    /// What the picker holds, for `state`: the folder listed, what narrows it, the rows with the selection
-    /// marked, and where the card was drawn.
-    fn summary(&self) -> String {
-        let target = self.state.target();
-        let mut out = format!(
-            "folder {}\ntyped {:?}\nfilter {:?}\nprefix {:?}\nloaded {}\nunreadable {}\ncut {:?}\nrows {}\n",
-            target.folder.display(),
-            self.state.typed(),
-            target.filter,
-            target.prefix,
-            self.state.loaded(),
-            self.state.unreadable(),
-            self.state.cut(),
-            self.state.rows().len(),
-        );
-        for (ix, row) in self.state.rows().iter().enumerate() {
-            let mark = if self.state.selected() == Some(ix) { '>' } else { ' ' };
-            out.push_str(&format!("{mark} {}\n", row.name));
-        }
-        match self.placed.get() {
-            Some(placed) => out.push_str(&format!(
-                "card x {:.0} y {:.0} w {:.0} h {:.0} {} rows {}\n",
-                placed.rect.x,
-                placed.rect.y,
-                placed.rect.w,
-                placed.rect.h,
-                if placed.above { "above" } else { "below" },
-                placed.rows,
-            )),
-            None => out.push_str("card not drawn yet\n"),
-        }
-        out
-    }
+    let Some(host) = ws.overlay_of::<FolderPicker>() else { bail!("the folder picker is not open") };
+    let picker = host.read(cx).picker.clone();
+    let rest = rest.trim();
+    let number = |what: &str| rest.parse::<isize>().map_err(|_| anyhow::anyhow!("{what} needs a number"));
+    picker.update(cx, |picker, cx| -> Result<String> {
+        let text = picker.model.text().to_string();
+        let at_end = Field::at_end(&text);
+        let event = match word {
+            "type" => {
+                picker.set_text(rest, cx);
+                return Ok(String::new());
+            }
+            "tab" => Event::Key(Key::Tab, at_end),
+            "accept-ghost" => Event::Key(Key::Right, at_end),
+            "right" if rest == "mid" => {
+                Event::Key(Key::Right, Field { text: text.clone(), caret: text.len() / 2, selected: 0 })
+            }
+            "right" => Event::Key(Key::Right, at_end),
+            "left" => Event::Key(
+                Key::Left,
+                match rest {
+                    "start" => Field { text, caret: 0, selected: 0 },
+                    "mid" => Field { caret: text.len() / 2, text, selected: 0 },
+                    _ => at_end,
+                },
+            ),
+            "up" => Event::Key(Key::Up, at_end),
+            "down" => Event::Key(Key::Down, at_end),
+            "pageup" => Event::Key(Key::PageUp, at_end),
+            "pagedown" => Event::Key(Key::PageDown, at_end),
+            "enter" | "pick" => Event::Key(Key::Enter, at_end),
+            "forget" => Event::Key(Key::Forget, at_end),
+            "click" => Event::Row(number("click")? as usize),
+            "crumb" => Event::Crumb(number("crumb")? as usize),
+            "scroll" => Event::Scroll(number("scroll")?),
+            _ => return Ok(crate::picker::summary(picker)),
+        };
+        picker.feed(event, cx);
+        Ok(String::new())
+    })
 }

@@ -89,6 +89,7 @@
         ],
         "style",
         "notice",
+        "picker",
         [
           "inspector",
           "intro",
@@ -148,6 +149,7 @@
           "notify",
           "probe"
         ],
+        "folder_picker",
         "ipc",
         "terminal",
         "import",

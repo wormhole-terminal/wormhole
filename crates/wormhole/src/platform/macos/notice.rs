@@ -64,7 +64,7 @@ pub fn force_material(material: Option<Material>) {
 /// What the chip is made of now: `opaque` (Reduce Transparency or Increase Contrast, as the app reads them)
 /// asks for a plain fill, otherwise
 /// Liquid Glass where the system has it and the HUD's blur where it hasn't.
-fn material(opaque: bool) -> Material {
+pub(super) fn material(opaque: bool) -> Material {
     #[cfg(feature = "devctl")]
     if let Some(forced) = FORCED.get() {
         return forced;
