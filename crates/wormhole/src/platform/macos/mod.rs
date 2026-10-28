@@ -14,6 +14,7 @@ pub mod font_face;
 pub mod fonts;
 pub mod hotkey;
 #[cfg(feature = "devctl")]
+pub mod image;
 pub mod inspect;
 pub mod intro;
 pub mod keys;
