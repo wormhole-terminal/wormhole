@@ -8,7 +8,7 @@
 <h1 align="center">Wormhole</h1>
 
 <p align="center">
-  A native Mac terminal for working with coding agents.<br>
+  A fast, native Mac terminal with agent status, git and notes built in.<br>
   <a href="https://getwormhole.app">Website</a> ·
   <a href="https://getwormhole.app/download">Download</a> ·
   <a href="https://getwormhole.app/features">Features</a> ·

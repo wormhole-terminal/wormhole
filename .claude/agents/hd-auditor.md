@@ -6,7 +6,7 @@ effort: high
 tools: Read, Bash, WebFetch, WebSearch
 color: yellow
 ---
-You audit one slice of Wormhole (a macOS terminal for AI coding agents; Rust 2024,
+You audit one slice of Wormhole (a general-purpose macOS terminal with extras built in; Rust 2024,
 GPUI, alacritty_terminal, rusqlite). Read `CLAUDE.md` and `ARCHITECTURE.md` first when they exist.
 
 Rules:
