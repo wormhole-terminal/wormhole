@@ -5,8 +5,8 @@
 use anyhow::anyhow;
 
 use super::{
-    Command, a11y, agents, ambient, blocks, control, flow, hosts, input, language, menus, notices, panels,
-    probes, profiling, scaling, sessions, settings, shots, sidebar, studio, tear_off, title, welcome,
+    Command, a11y, agents, ambient, blocks, control, files, flow, hosts, input, language, menus, notices,
+    panels, probes, profiling, scaling, sessions, settings, shots, sidebar, studio, tear_off, title, welcome,
 };
 
 /// The command called `name`, if there is one.
@@ -163,6 +163,12 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "trust-window" => panels::trust_window,
         "trust-shot" => panels::trust_shot,
         "panel-tab" => panels::panel_tab,
+        "files" => files::state,
+        "files-root" => files::root,
+        "files-follow" => files::follow,
+        "files-expand" => files::expand,
+        "files-menu" => files::menu,
+        "files-pin" => files::pin,
         "project-init" => panels::project_init,
         "project-trust" => panels::project_trust,
         "comment" => |ctx, arg| {

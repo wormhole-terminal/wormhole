@@ -252,7 +252,15 @@
 //!   settings-reset-confirm   press Advanced → Reset to defaults… (shows its question, resets nothing)
 //!   settings-cli-tool [install|uninstall]   Coding agents → Command line tool: show it, or press its
 //!                   Install / Uninstall (into the instance's own cli-bin folder, `WORMHOLE_CLI_DIR`)
-//!   panel-tab <changes|history|notes|usage|project>   show that tab of the right panel
+//!   panel-tab <changes|history|notes|usage|project|files>   show that tab of the right panel
+//!   files           the Files tab as text: its folder (following the terminal, or chosen), the pinned
+//!                   folders and each row (`v` open folder, `>` closed, `~` link, `*` selected)
+//!   files-root <path>   the tree is of that folder, as chosen in the path menu (an absolute path)
+//!   files-follow    Follow Terminal: the tree is of the terminal's folder again
+//!   files-expand <relative path>   open that folder and the ones above it
+//!   files-menu [model]   open the path menu, drawn in the window for `shot`; `model` only records it
+//!                   for `menu` and `menu-pick`
+//!   files-pin <path>   pin that folder, or unpin it; says which
 //!   project-init    what the Project tab's Create project folder button does for the active
 //!                   terminal's folder: `.wormhole/config.json` made off the UI thread (a tick
 //!                   later `title`, `rows` and the tab show the project); prints the folder
@@ -418,6 +426,7 @@ mod batch;
 mod blocks;
 mod commands;
 mod control;
+mod files;
 mod flow;
 mod hosts;
 mod input;

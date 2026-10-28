@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// A tab of the window's right panel. It is stored in the window's saved layout as its lowercase
-/// name (`"changes"`, `"history"`, `"notes"`, `"usage"`, `"project"`), the same strings every build
+/// name (`"changes"`, `"history"`, `"notes"`, `"usage"`, `"project"`, `"files"`), the same strings every build
 /// has written, so a layout saved by an older build opens here and one saved here opens there.
 ///
 /// A name this build doesn't know (a tab of a newer build) reads as [`TabId::Changes`], and the rest
@@ -20,6 +20,7 @@ pub enum TabId {
     Notes,
     Usage,
     Project,
+    Files,
     // Last because serde wants the catch-all variant there; the panel's order is `ALL`.
     #[default]
     #[serde(other)]
@@ -32,7 +33,8 @@ impl TabId {
     pub const FALLBACK: Self = Self::Changes;
 
     /// Every tab, in the order the panel lists them.
-    pub const ALL: [TabId; 5] = [Self::Changes, Self::History, Self::Notes, Self::Usage, Self::Project];
+    pub const ALL: [TabId; 6] =
+        [Self::Changes, Self::History, Self::Notes, Self::Usage, Self::Project, Self::Files];
 
     /// The name saved in the layout and typed to devctl's `panel-tab`.
     pub const fn key(self) -> &'static str {
@@ -42,6 +44,7 @@ impl TabId {
             Self::Notes => "notes",
             Self::Usage => "usage",
             Self::Project => "project",
+            Self::Files => "files",
         }
     }
 
@@ -53,6 +56,7 @@ impl TabId {
             Self::Notes => "tab-notes",
             Self::Usage => "tab-usage",
             Self::Project => "tab-project",
+            Self::Files => "tab-files",
         }
     }
 
@@ -69,7 +73,10 @@ mod tests {
     #[test]
     fn the_saved_strings_are_the_names_older_builds_wrote() {
         let saved: Vec<String> = TabId::ALL.iter().map(|tab| serde_json::to_string(tab).unwrap()).collect();
-        assert_eq!(saved, [r#""changes""#, r#""history""#, r#""notes""#, r#""usage""#, r#""project""#]);
+        assert_eq!(
+            saved,
+            [r#""changes""#, r#""history""#, r#""notes""#, r#""usage""#, r#""project""#, r#""files""#]
+        );
     }
 
     #[test]

@@ -12,6 +12,8 @@ mod control;
 #[rustfmt::skip]
 mod dialog;
 #[rustfmt::skip]
+mod files;
+#[rustfmt::skip]
 mod history;
 #[rustfmt::skip]
 mod notices;
@@ -65,6 +67,7 @@ mod zen;
 pub use agent_sheet::*;
 pub use control::*;
 pub use dialog::*;
+pub use files::*;
 pub use history::*;
 pub use notices::*;
 pub use settings::*;
@@ -94,7 +97,7 @@ pub use zen::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 1032] = [
+pub const ALL: [Key; 1047] = [
     AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_READ, AGENT_SHEET_WANTS_TYPE,
     AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_CLOSE,
     AGENT_SHEET_DETAIL, AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_WARNING_UNSIGNED,
@@ -107,7 +110,12 @@ pub const ALL: [Key; 1032] = [
     AGENT_TERMINAL_LABEL_FOLDER, AGENT_SHEET_BUTTON_DENY, AGENT_SHEET_BUTTON_SESSION,
     AGENT_SHEET_BUTTON_QUIT, AGENT_SHEET_BUTTON_ALWAYS, AGENT_SHEET_BUTTON_DONT_KEEP,
     AGENT_SHEET_BUTTON_KEEP, AGENT_SCRIPTS_LABEL, CONTROL_CLOSE_ASKED,
-    DIALOG_CANCEL, HISTORY_AUTHOR, HISTORY_COMMITTER,
+    DIALOG_CANCEL, FILES_READING, FILES_EMPTY,
+    FILES_NO_FOLDER, FILES_FOLDER_GONE, FILES_FOLDER_DENIED,
+    FILES_FOLDER_UNREADABLE, FILES_MENU_CHOOSE_FOLDER, FILES_MENU_FOLLOW_TERMINAL,
+    FILES_CHOOSE_PROMPT, FILES_ROW_OPEN_IN, FILES_ROW_REVEAL,
+    FILES_ROW_COPY_PATH, FILES_ROW_PIN_FOLDER, FILES_ROW_UNPIN_FOLDER,
+    FILES_SPOKEN_PATH_COPIED, HISTORY_AUTHOR, HISTORY_COMMITTER,
     HISTORY_CO_AUTHOR, HISTORY_CO_AUTHORS, HISTORY_COMMIT,
     HISTORY_PARENT, HISTORY_PARENTS, HISTORY_CHANGES,
     HISTORY_READING_DETAILS, HISTORY_MESSAGE_CONTINUES, HISTORY_MERGE,
@@ -462,6 +470,13 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("agent-terminal-title-scripts-open", agent_terminal_title_scripts_open("Sample")),
         ("agent-change-title", agent_change_title("Sample")),
         ("agent-change-detail", agent_change_detail("Sample")),
+        ("files-more", files_more("Sample")),
+        ("files-menu-pin", files_menu_pin("Sample")),
+        ("files-menu-unpin", files_menu_unpin("Sample")),
+        ("files-spoken-path-button", files_spoken_path_button("Sample")),
+        ("files-spoken-folder-open", files_spoken_folder_open("Sample")),
+        ("files-spoken-folder-closed", files_spoken_folder_closed("Sample")),
+        ("files-spoken-link", files_spoken_link("Sample")),
         ("history-files", history_files(1)),
         ("history-files", history_files(5)),
         ("history-message-too-long", history_message_too_long("Sample")),

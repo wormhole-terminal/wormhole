@@ -132,12 +132,12 @@ pub(super) fn trust_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
     crate::features::project::devctl_trust_shot(name, ctx.dir, ctx.cx)
 }
 
-/// `panel-tab <changes|history|notes|usage|project>`: show that tab of the right panel.
+/// `panel-tab <changes|history|notes|usage|project|files>`: show that tab of the right panel.
 pub(super) fn panel_tab(ctx: &mut Ctx, arg: &str) -> Result<String> {
     use wormhole_core::config::TabId;
     let arg = arg.trim();
     let Some(tab) = TabId::from_key(arg) else {
-        return Err(anyhow!("expected changes, history, notes, usage or project, got {arg:?}"));
+        return Err(anyhow!("expected changes, history, notes, usage, project or files, got {arg:?}"));
     };
     // A tab of a feature that is off can't be shown: say which switch to turn.
     if let Some(feature) = wormhole_core::config::FeatureId::of_tab(tab)

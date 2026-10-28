@@ -76,6 +76,8 @@ pub enum PanelTab {
     },
     History,
     Project,
+    /// The folder the terminal is in, as a tree.
+    Files,
     /// The coding agents' plan usage limits.
     Usage,
 }
@@ -103,6 +105,7 @@ pub fn panel_tab(tab: PanelTab) -> String {
         PanelTab::History => "History".to_string(),
         PanelTab::Project => "Project".to_string(),
         PanelTab::Usage => "Usage".to_string(),
+        PanelTab::Files => "Files".to_string(),
     }
 }
 
@@ -344,6 +347,7 @@ mod tests {
         assert_eq!(panel_tab(PanelTab::History), "History");
         assert_eq!(panel_tab(PanelTab::Project), "Project");
         assert_eq!(panel_tab(PanelTab::Usage), "Usage");
+        assert_eq!(panel_tab(PanelTab::Files), "Files");
     }
 
     #[test]

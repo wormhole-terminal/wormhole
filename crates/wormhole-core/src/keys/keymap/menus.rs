@@ -204,6 +204,7 @@ const VIEW: &[Slot] = &[
     A(ShowNotes),
     A(ShowUsage),
     A(ShowProject),
+    A(ShowFiles),
     Sep,
     A(ToggleTerminalTabs),
     Sep,

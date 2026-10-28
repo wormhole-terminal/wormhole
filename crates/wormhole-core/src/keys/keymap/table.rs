@@ -178,6 +178,7 @@ pub(super) fn entries() -> Vec<Entry> {
         row(ShowNotes, "Notes", &[(CTRL_CMD, "3")]).named("Show Notes").feature("notes"),
         row(ShowUsage, "Usage", &[(CTRL_CMD, "4")]).named("Show Usage"),
         row(ShowProject, "Project", &[(CTRL_CMD, "5")]).named("Show Project").feature("project"),
+        row(ShowFiles, "Files", &[(CTRL_CMD, "6")]).named("Show Files").feature("files"),
         row(ToggleTerminalTabs, "Show Terminals in Sidebar", &[])
             .toggle("Show Terminals as Tabs", "Show Terminals as Tabs / in Sidebar"),
         row(FocusTerminalOrPanel, "Focus Terminal / Panel", &[(SHIFT_CMD, "e")]),

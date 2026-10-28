@@ -128,7 +128,7 @@ sleep 1; cat "$S/ctl/out.txt"
   for a button or an action, `popover-type <text>` and `popover-key enter|escape` for its field,
   `popover-colour <name|#rrggbb>` for a dot or a colour from the Colours window, and `popover-close`.
   `popover-native [name]` draws the real AppKit controls to a PNG (`Read` it).
-- The right panel: `panel-tab notes|changes|history|project`, `project-init` (the Project tab's Create project
+- The right panel: `panel-tab notes|changes|history|project|files`, `project-init` (the Project tab's Create project
   folder button, for the active terminal's folder), `task-seed <open> <done>` and
   `task-done <n>` (next steps; the done ones are spread among the open ones), `note-add <text>`,
   `note-toggle <n>` (open or fold the n-th note), `note-seed <count> <lines>` (long notes),
@@ -136,6 +136,9 @@ sleep 1; cat "$S/ctl/out.txt"
   state by pixels; it cannot get past rows that were never measured). `scroll <x> <y> <dy>` turns
   the wheel over a point as a trackpad would, a frame between its steps, so it reaches the end of
   any list (the sidebar's, the panel's, the diff) and the rest of the batch waits for it.
+- The Files tab: `files` (its folder, pins and rows as text), `files-root <path>` and `files-follow` (choose a
+  folder, go back to the terminal's), `files-expand <relative path>`, `files-menu [model]` (the path menu, drawn
+  for `shot`) and `files-pin <path>`. Needs the `files` feature flag (on in a dev build).
 - `set key=value` writes `config.json`, which the app reads back through a file watcher: wait about a
   second before the `shot` that should show it (in a scenario, `@sleep 1500`).
 - The status bar is off by default: `set status_bar=true` shows it (`set status_bar=false` hides it

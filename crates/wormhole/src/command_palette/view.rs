@@ -64,6 +64,7 @@ fn action_icon(id: ActionId) -> IconName {
         ShowNotes => IconName::StickyNote,
         ShowProject => IconName::Folder,
         ShowUsage => IconName::Gauge,
+        ShowFiles => IconName::FolderTree,
         ToggleSidebar => IconName::PanelLeft,
         ToggleRightPanel => IconName::PanelRight,
         StashPrompt => IconName::Inbox,

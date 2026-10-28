@@ -101,6 +101,7 @@ pub enum ActionId {
     ShowHistory,
     ShowProject,
     ShowUsage,
+    ShowFiles,
     ToggleTerminalTabs,
     FocusTerminalOrPanel,
     FocusNextArea,

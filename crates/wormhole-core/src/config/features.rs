@@ -67,10 +67,14 @@ pub enum FeatureFlag {
     /// Settings → Extensions and what Probes contribute. The core can read and check a Probe
     /// already; nothing of it is switched on by this flag yet.
     Probes,
+    /// The right panel's Files tab: a file explorer for the folder the terminal is in (its
+    /// repository's root, else the folder), with a path menu, pinned folders and a row menu. Off, the
+    /// tab, its key and its menu line are not there.
+    Files,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 11] = [
+    pub const ALL: [FeatureFlag; 12] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
@@ -82,6 +86,7 @@ impl FeatureFlag {
         Self::LiveResize,
         Self::Notices,
         Self::Probes,
+        Self::Files,
     ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
@@ -98,6 +103,7 @@ impl FeatureFlag {
             Self::LiveResize => "live_resize",
             Self::Notices => "notices",
             Self::Probes => "probes",
+            Self::Files => "files",
         }
     }
 
@@ -119,6 +125,7 @@ impl FeatureFlag {
             Self::LiveResize => "Live resize",
             Self::Notices => "Notice chip",
             Self::Probes => "Probes",
+            Self::Files => "Files",
         }
     }
 
@@ -170,6 +177,10 @@ impl FeatureFlag {
                 "Extensions as folders with a probe.toml: text rules, palette commands, status items and \
                  agent definitions, each with the permissions it asks for."
             }
+            Self::Files => {
+                "The right panel's Files tab: the folder a terminal is in as a tree, with a path menu, \
+                 pinned folders and a menu on each row."
+            }
         }
     }
 
@@ -198,6 +209,8 @@ impl FeatureFlag {
             Self::Notices => true,
             // Being built: the manifest and its checks first, then what Probes contribute.
             Self::Probes => false,
+            // Phase 1 of the file explorer: no viewer yet, and not yet through its visual check.
+            Self::Files => false,
         }
     }
 }
@@ -429,6 +442,16 @@ mod tests {
         assert!(!enabled_in(flag, &BTreeMap::new(), FlagMode::Unstable));
         assert!(enabled_in(flag, &BTreeMap::new(), DEV));
         assert!(!enabled_in(flag, &BTreeMap::from([("probes".to_string(), false)]), DEV));
+    }
+
+    #[test]
+    fn files_is_off_in_a_release_and_on_in_a_dev_build() {
+        let flag = FeatureFlag::Files;
+        assert_eq!(flag.key(), "files");
+        assert_eq!(FeatureFlag::from_key("files"), Some(flag));
+        assert!(!flag.released());
+        assert!(!enabled_in(flag, &BTreeMap::from([("files".to_string(), true)]), RELEASE));
+        assert!(enabled_in(flag, &BTreeMap::new(), DEV));
     }
 
     #[test]

@@ -41,8 +41,8 @@ fn the_table_is_the_shortcut_map() {
         // View & panels
         ("Show / hide sidebar", vec![ToggleSidebar], vec!["⌘B"], vec!["⌃⌘S"]),
         ("Show / hide right panel", vec![ToggleRightPanel], vec!["⌘J"], vec!["⌥⌘I"]),
-        ("Changes · History · Notes · Usage · Project", vec![ShowChanges, ShowHistory, ShowNotes, ShowUsage, ShowProject],
-            vec!["⇧⌘G", "⇧⌘H"], vec!["⌃⌘1", "⌃⌘2", "⌃⌘3", "⌃⌘4", "⌃⌘5"]),
+        ("Changes · History · Notes · Usage · Project · Files", vec![ShowChanges, ShowHistory, ShowNotes, ShowUsage, ShowProject, ShowFiles],
+            vec!["⇧⌘G", "⇧⌘H"], vec!["⌃⌘1", "⌃⌘2", "⌃⌘3", "⌃⌘4", "⌃⌘5", "⌃⌘6"]),
         ("Focus terminal ↔ panel", vec![FocusTerminalOrPanel], vec!["⌘E"], vec!["⇧⌘E"]),
         ("Move focus to next / previous area", vec![FocusNextArea, FocusPreviousArea], vec![], vec!["F6", "⇧F6"]),
         ("Bigger · smaller · actual size", vec![Bigger, Smaller, ActualSize], vec![], vec!["⌘+", "⌘-", "⌘0"]),
@@ -420,6 +420,7 @@ View
   Notes  ⌃⌘3
   Usage  ⌃⌘4
   Project  ⌃⌘5
+  Files  ⌃⌘6
   ---
   Show Terminals in Sidebar
   ---
@@ -614,9 +615,14 @@ fn the_sheet_lists_the_keys_from_the_table() {
     };
     assert_eq!(row("Previous / next terminal"), "⌃⌘↑ ⌃⌘↓");
     assert_eq!(row("Terminals 1–9 (hold ⌘ to see them)"), "⌘1 … ⌘9");
-    assert_eq!(row("Changes · History · Notes · Usage · Project"), "⌃⌘1 … ⌃⌘5");
-    // With notes and project folders off (a release build), the row names and keys what is left.
-    let hidden = sections_without(&[ActionId::ShowNotes, ActionId::ShowProject, ActionId::NewNote]);
+    assert_eq!(row("Changes · History · Notes · Usage · Project · Files"), "⌃⌘1 … ⌃⌘6");
+    // With notes, project folders and files off (a release build), the row names and keys what is left.
+    let hidden = sections_without(&[
+        ActionId::ShowNotes,
+        ActionId::ShowProject,
+        ActionId::ShowFiles,
+        ActionId::NewNote,
+    ]);
     let tabs = hidden.iter().flat_map(|s| &s.rows).find(|r| r.label.starts_with("Changes")).expect("tab row");
     assert_eq!(
         (tabs.label.as_ref(), tabs.keys_text().as_str()),

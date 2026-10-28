@@ -102,8 +102,8 @@ const SHEET: &[(&str, &[RowSpec])] = &[
             ("Hide / show minimap", &[ToggleMinimap], Each),
             ("Zen mode", &[ToggleZenMode], Each),
             (
-                "Changes · History · Notes · Usage · Project",
-                &[ShowChanges, ShowHistory, ShowNotes, ShowUsage, ShowProject],
+                "Changes · History · Notes · Usage · Project · Files",
+                &[ShowChanges, ShowHistory, ShowNotes, ShowUsage, ShowProject, ShowFiles],
                 Range,
             ),
             ("Focus terminal / panel", &[FocusTerminalOrPanel], Each),

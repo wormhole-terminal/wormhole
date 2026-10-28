@@ -41,6 +41,10 @@ gpui_kit::assets::icon_assets!(
         GitFork,
         // A split's members that aren't together in the list.
         Link2,
+        // The Files tab: its own tab, and the mark of a link in its tree.
+        FolderTree,
+        FolderSymlink,
+        FileSymlink,
         // Settings: the Advanced and Updates nav icons, "Open config.json", the
         // diff layout's segments, "Trust with Touch ID…".
         SlidersHorizontal,

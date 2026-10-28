@@ -29,6 +29,8 @@ pub enum FeatureId {
     Project,
     /// A terminal in a worktree of its own.
     Worktrees,
+    /// The folder a terminal is in, as a tree in the right panel.
+    Files,
 }
 
 /// A feature is written as its [`FeatureInfo::key`], the name the settings file and the control commands
@@ -72,7 +74,7 @@ pub struct FeatureInfo {
 }
 
 /// Every feature, indexed by [`FeatureId`].
-pub const FEATURES: [FeatureInfo; 6] = [
+pub const FEATURES: [FeatureInfo; 7] = [
     FeatureInfo {
         id: FeatureId::Changes,
         key: "changes",
@@ -127,12 +129,21 @@ pub const FEATURES: [FeatureInfo; 6] = [
         gate: None,
         tabs: &[],
     },
+    FeatureInfo {
+        id: FeatureId::Files,
+        key: "files",
+        title: "Files",
+        description: "The folder a terminal is in as a tree: pinned folders, Open in…, Reveal in Finder.",
+        kind: FeatureKind::Optional { default_on: true },
+        gate: Some(FeatureFlag::Files),
+        tabs: &[TabId::Files],
+    },
 ];
 
 impl FeatureId {
     /// Every feature, in the table's order.
     pub const ALL: [FeatureId; FEATURES.len()] =
-        [Self::Changes, Self::History, Self::Notes, Self::Usage, Self::Project, Self::Worktrees];
+        [Self::Changes, Self::History, Self::Notes, Self::Usage, Self::Project, Self::Worktrees, Self::Files];
 
     /// What the table says of this feature.
     pub const fn info(self) -> &'static FeatureInfo {
@@ -379,7 +390,7 @@ mod tests {
 
     #[test]
     fn the_mask_matches_the_flags_the_frame_reads_today() {
-        // Notes follow `NotesAndTasks` and Project `ProjectFolders`; nothing else is gated.
+        // Notes follow `NotesAndTasks`, Project `ProjectFolders` and Files `Files`; nothing else is gated.
         let cases = [
             settings_with(&[]),
             settings_with(&[("notes_and_tasks", false)]),
@@ -391,6 +402,7 @@ mod tests {
             let mask = FeatureMask::resolve(&settings);
             assert_eq!(mask.has(FeatureId::Notes), settings.feature_enabled(FeatureFlag::NotesAndTasks));
             assert_eq!(mask.has(FeatureId::Project), settings.feature_enabled(FeatureFlag::ProjectFolders));
+            assert_eq!(mask.has(FeatureId::Files), settings.feature_enabled(FeatureFlag::Files));
             for always in [FeatureId::Changes, FeatureId::History, FeatureId::Usage, FeatureId::Worktrees] {
                 assert!(mask.has(always), "{always:?}");
             }
