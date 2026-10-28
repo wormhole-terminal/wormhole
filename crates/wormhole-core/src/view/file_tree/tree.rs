@@ -242,7 +242,7 @@ mod tests {
 
     use super::{Failure, RowKind, Tree};
     use crate::storage::files::listing::{DirEntry, EntryKind, Listing};
-    use crate::view::files::dir::{Dir, ENTRY_CAP};
+    use crate::view::file_tree::dir::{Dir, ENTRY_CAP};
 
     fn dir(entries: &[(&str, EntryKind)]) -> Dir {
         let entries =

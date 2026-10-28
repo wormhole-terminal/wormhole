@@ -5,7 +5,7 @@
 //! One [`Files`] entity per window holds, for each terminal of the window, the tree, the folder it is of
 //! and the row that is selected ([`FilesOf`]). The tree follows the terminal's folder (its repository's
 //! root, else the folder itself) until a folder is chosen from the path menu; Follow Terminal goes
-//! back. What needs no GPUI is core's (`view::files`: the tree, the order, the path menu's list, the
+//! back. What needs no GPUI is core's (`view::file_tree`: the tree, the order, the path menu's list, the
 //! cap; `storage::files::listing`: reading a folder without leaving it by a link). Here are the reads off
 //! the main thread (`read`), the rows' drawing (`view`, `row`), the menus (`menus`), the pins (`pins`),
 //! what a row hands to other apps (`open`), the keys over the rows (`keys`) and the table entry (`def`).
@@ -15,7 +15,7 @@ use std::path::PathBuf;
 
 use gpui_kit::*;
 use wormhole_core::storage::paths::ProfileId;
-use wormhole_core::view::files::{Row, Tree};
+use wormhole_core::view::file_tree::{Row, Tree};
 
 use crate::platform::Anchor;
 use crate::style::panel_list::{CardPart, Rows};

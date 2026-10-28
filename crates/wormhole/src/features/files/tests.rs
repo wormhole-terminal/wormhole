@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use gpui_kit::{TestAppContext, VisualTestContext};
 use wormhole_core::config::TabId;
 use wormhole_core::platform::open_file::Launch;
-use wormhole_core::view::files::{Row, RowKind};
+use wormhole_core::view::file_tree::{Row, RowKind};
 
 use super::{Files, open};
 use crate::app_state::OpenWindow;

@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use gpui_kit::*;
 use wormhole_core::storage::files::listing;
-use wormhole_core::view::files::{Dir, ENTRY_CAP, Failure};
+use wormhole_core::view::file_tree::{Dir, ENTRY_CAP, Failure};
 
 use super::{Files, Line, REFRESH_EVERY};
 use crate::window::facts::WindowFacts;

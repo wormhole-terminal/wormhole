@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use gpui_kit::*;
 use wormhole_core::platform::open_file::{self, Launch};
 use wormhole_core::storage::files;
-use wormhole_core::view::files::{Row, RowKind};
+use wormhole_core::view::file_tree::{Row, RowKind};
 use wormhole_text::{keys, text};
 
 use crate::platform::{a11y, background_mode, clipboard};

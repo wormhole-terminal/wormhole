@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use gpui_kit::*;
 use wormhole_core::platform::open_in::Installed;
-use wormhole_core::view::files::{PathMenu, Pin, Row};
+use wormhole_core::view::file_tree::{PathMenu, Pin, Row};
 use wormhole_text::{keys, text};
 
 use super::{Files, open};

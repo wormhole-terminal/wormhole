@@ -8,7 +8,7 @@ use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::theme::icon_theme::IconTheme;
-use wormhole_core::view::files::{Failure, Row, RowKind};
+use wormhole_core::view::file_tree::{Failure, Row, RowKind};
 use wormhole_core::view::limits::count_grouped;
 use wormhole_text::{keys, text};
 

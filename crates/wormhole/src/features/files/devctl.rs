@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Result, anyhow};
 use gpui_kit::*;
 use wormhole_core::config::TabId;
-use wormhole_core::view::files::{Row, RowKind};
+use wormhole_core::view::file_tree::{Row, RowKind};
 
 use super::Files;
 use crate::window::Workspace;

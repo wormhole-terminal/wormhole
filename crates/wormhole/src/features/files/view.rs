@@ -7,7 +7,7 @@ use std::rc::Rc;
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::view::files::{Row, RowKind};
+use wormhole_core::view::file_tree::{Row, RowKind};
 use wormhole_text::{keys, text};
 
 use super::def::typed;

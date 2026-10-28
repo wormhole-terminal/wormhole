@@ -1,5 +1,5 @@
 //! What the app's views show, as data and rules without GPUI: the sidebar's list (`sidebar`), the
-//! columns, title row and status bar (`layout`), the Files tab's tree and path menu (`files`), split panes
+//! columns, title row and status bar (`layout`), the Files tab's tree and path menu (`file_tree`), split panes
 //! (`panes`), where focus goes between areas (`focus`), the command palette's matching (`search`), VoiceOver's words (`spoken`), the
 //! panel's tabs (`panel`), drag and drop order (`reorder`), shortened text (`elide`), the panels'
 //! caps and counts (`limits`), which animation each motion runs (`motion`), the notes and next steps
@@ -10,7 +10,7 @@
 //! comes to it as values.
 
 pub mod elide;
-pub mod files;
+pub mod file_tree;
 pub mod focus;
 pub mod layout;
 pub mod limits;

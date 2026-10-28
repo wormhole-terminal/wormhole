@@ -8,7 +8,7 @@ use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::component::{Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::view::files::names::clean;
+use wormhole_core::view::file_tree::names::clean;
 use wormhole_core::view::sidebar::display_path;
 use wormhole_text::keys;
 

@@ -4,7 +4,7 @@
 //! Open in… uses) and, on the head, the path menu. The list keeps the keyboard.
 
 use gpui_kit::*;
-use wormhole_core::view::files::{Row, RowKind};
+use wormhole_core::view::file_tree::{Row, RowKind};
 use wormhole_core::view::focus::list::Item;
 
 use super::{Files, Line, open};
