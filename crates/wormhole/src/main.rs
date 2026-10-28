@@ -42,6 +42,7 @@ mod sidebar;
 mod status_item;
 mod studio;
 mod style;
+mod syntax;
 mod terminal_view;
 mod theme_bridge;
 mod update;

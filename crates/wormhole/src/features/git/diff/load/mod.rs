@@ -15,11 +15,11 @@ use gpui_kit::component::highlighter::HighlightTheme;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::highlight::Highlights;
 use super::rows::{BuildKey, Row, RowStats, build_rows, syntax_fingerprint};
 use super::{DiffView, Request};
 use crate::features::git::changes::{Changes, display_order};
 use crate::settings::{settings_in, store_in};
+use crate::syntax::highlight::Highlights;
 use crate::window::facts::WindowFacts;
 use crate::window::repo::job::{Ticket, Wanted};
 use crate::window::repo::{Observed, Stamp};

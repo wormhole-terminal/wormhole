@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use gpui_kit::*;
 
-use super::highlight::Highlights;
+use crate::syntax::highlight::Highlights;
 use wormhole_core::config::Settings;
 use wormhole_core::git::{self, DiffLine, FileDiff, LineKind, SplitRow};
 use wormhole_core::theme::tokens::{Appearance, ThemeTokens};
@@ -225,7 +225,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::{BuildKey, Cell, Row, build_rows, expand_tabs, syntax_fingerprint};
-    use crate::features::git::diff::highlight::Highlights;
+    use crate::syntax::highlight::Highlights;
     use gpui_kit::component::highlighter::HighlightTheme;
     use wormhole_core::config::Settings;
     use wormhole_core::git::{DiffLine, FileDiff, Hunk, LineKind};

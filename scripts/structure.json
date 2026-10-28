@@ -83,7 +83,10 @@
           "theme_bridge"
         ],
         "settings",
-        "fonts",
+        [
+          "fonts",
+          "syntax"
+        ],
         "style",
         "notice",
         [

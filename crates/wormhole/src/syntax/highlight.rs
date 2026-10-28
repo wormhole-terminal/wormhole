@@ -38,7 +38,7 @@ const MAX_TEXT_BYTES: usize = 8 << 20;
 type Styles = Vec<(Range<usize>, HighlightStyle)>;
 
 /// One parsed text: its tree-sitter state and where each line starts.
-pub(super) struct Parsed {
+pub(crate) struct Parsed {
     // `styles` takes `&self`, but a tree-sitter parser is not `Sync`; the lock is
     // taken per line and never contended (one build runs at a time per text).
     highlighter: Mutex<SyntaxHighlighter>,
@@ -90,7 +90,7 @@ struct Limits {
 
 /// What the cache did, for tests (and a glance in a debugger).
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
-pub(super) struct Stats {
+pub(crate) struct Stats {
     /// Highlighters built from scratch: one query compile each.
     pub compiles: usize,
     /// Texts parsed.
@@ -193,7 +193,7 @@ fn parse_in(cache: &Mutex<Cache>, text: &str, language: &'static str) -> Arc<Par
 }
 
 /// The syntax colors of a diff's two files.
-pub(super) struct Highlights {
+pub(crate) struct Highlights {
     old: Option<Arc<Parsed>>,
     new: Option<Arc<Parsed>>,
     theme: Arc<HighlightTheme>,
@@ -202,7 +202,7 @@ pub(super) struct Highlights {
 impl Highlights {
     /// `None` for a file without a grammar (plain text, unknown extensions):
     /// its lines get no colors and nothing is parsed.
-    pub(super) fn for_diff(diff: &FileDiff, path: &str, theme: &Arc<HighlightTheme>) -> Option<Self> {
+    pub(crate) fn for_diff(diff: &FileDiff, path: &str, theme: &Arc<HighlightTheme>) -> Option<Self> {
         Self::for_diff_in(&CACHE, diff, path, theme)
     }
 
@@ -227,7 +227,7 @@ impl Highlights {
 
     /// Colors for one diff line, relative to its text: a removed line from the
     /// old file, any other from the new one (the old one when the new is missing).
-    pub(super) fn line(&self, line: &DiffLine) -> Styles {
+    pub(crate) fn line(&self, line: &DiffLine) -> Styles {
         let source = match line.kind {
             LineKind::Removed => self.old.as_ref().zip(line.old),
             _ => self.new.as_ref().zip(line.new).or(self.old.as_ref().zip(line.old)),
