@@ -14,6 +14,7 @@
 //! [`FileStamp`] tells, from metadata alone, whether a file may have changed since it was read,
 //! so pollers re-read only what changed.
 
+pub mod listing;
 mod private;
 
 pub use private::{
@@ -215,20 +216,29 @@ fn locate_for_write(path: &Path, policy: LinkPolicy<'_>) -> io::Result<(PathBuf,
 /// must still be inside `root`, so a link a cloned repository planted can't point an editor at a
 /// file elsewhere on the disk. The result is the resolved path, which is what was checked.
 pub fn resolve_within(root: &Path, relative: &str) -> io::Result<PathBuf> {
-    use std::path::Component;
-    let plain = !relative.is_empty()
-        && !relative.contains('\0')
-        && Path::new(relative).components().all(|part| matches!(part, Component::Normal(_)));
-    if !plain {
+    if relative.contains('\0') {
         return Err(escapes(Path::new(relative), root));
+    }
+    let real = resolve_path_within(root, Path::new(relative))?;
+    if !fs::metadata(&real)?.is_file() {
+        return Err(refuse(&root.join(relative), Refusal::NotRegularFile));
+    }
+    Ok(real)
+}
+
+/// [`resolve_within`] for whatever `relative` names: a file or a folder. For a path that comes from
+/// the disk and need not be UTF-8 (the Files tab's rows). The caller looks at what the real path is.
+pub fn resolve_path_within(root: &Path, relative: &Path) -> io::Result<PathBuf> {
+    use std::path::Component;
+    let plain = !relative.as_os_str().is_empty()
+        && relative.components().all(|part| matches!(part, Component::Normal(_)));
+    if !plain {
+        return Err(escapes(relative, root));
     }
     let wanted = root.join(relative);
     let real = fs::canonicalize(&wanted)?;
     if !real.starts_with(fs::canonicalize(root)?) {
         return Err(escapes(&wanted, root));
-    }
-    if !fs::metadata(&real)?.is_file() {
-        return Err(refuse(&wanted, Refusal::NotRegularFile));
     }
     Ok(real)
 }

@@ -281,9 +281,10 @@ pub fn entry(id: &str) -> Option<(SectionId, &'static Group, &'static Entry)> {
 
 /// `config.json` keys without a row of their own: `notifications` is the master switch, which
 /// the Notifications section's switches set (on while any kind is on); `folder_colors` is a list the
-/// Project tab sets, with nothing to set in a form; `features`, the person's switches for optional
-/// features, which the first run's walk sets until Settings has a page of them.
-pub const UNLISTED: &[&str] = &["notifications", "folder_colors", "features"];
+/// Project tab sets, and `files_pinned` one the Files tab sets, with nothing to set in a form;
+/// `features`, the person's switches for optional features, which the first run's walk sets until
+/// Settings has a page of them.
+pub const UNLISTED: &[&str] = &["notifications", "folder_colors", "files_pinned", "features"];
 
 fn as_map(settings: &Settings) -> Map<String, Value> {
     match serde_json::to_value(settings) {

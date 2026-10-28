@@ -137,6 +137,8 @@ pub const APP_SETTINGS: &[&str] = &[
     // Which colour each folder wears is the person's too: a repository can tint its own title row
     // (`project_color`), not recolour the folders in everyone's windows.
     "folder_colors",
+    // The folders pinned in the Files tab are the person's own list, not a repository's.
+    "files_pinned",
     // Which in-progress features are on is the person's own choice (a dev build, or Unstable), never a
     // project's.
     "feature_flags",

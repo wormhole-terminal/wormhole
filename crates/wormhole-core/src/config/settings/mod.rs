@@ -21,6 +21,7 @@ use crate::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 
 mod branch_color;
 mod choices;
+mod files_pinned;
 mod folder_colors;
 mod keys;
 mod overlay;
@@ -165,6 +166,10 @@ pub struct Settings {
     /// One list for every window; the Project tab sets it, there is no row for it in Settings. A
     /// name this build doesn't know stays in the file and colours nothing.
     pub folder_colors: BTreeMap<String, String>,
+    /// The folders pinned in the Files tab's path menu (absolute paths, in the order they were
+    /// pinned). One list for every window; the tab pins and unpins them, there is no row for it in
+    /// Settings.
+    pub files_pinned: Vec<String>,
     /// Holding ⌘ shows the ⌘1–9 keycaps on the sidebar's terminals.
     pub sidebar_cmd_hints: bool,
 
@@ -355,6 +360,7 @@ impl Default for Settings {
             sidebar_numbers: SidebarNumbers::default(),
             terminals_in: TerminalsIn::default(),
             folder_colors: BTreeMap::new(),
+            files_pinned: Vec::new(),
             sidebar_cmd_hints: true,
             theme_mode: ThemeMode::default(),
             theme_light: DEFAULT_THEME_LIGHT.into(),
@@ -519,6 +525,7 @@ impl Settings {
                 self.folder_colors.insert(folder_color_key(Path::new(&folder)), color);
             }
         }
+        self.sanitize_pinned();
         self
     }
 }
