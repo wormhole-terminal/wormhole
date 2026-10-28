@@ -253,6 +253,10 @@ pub struct Entry {
     /// action is hidden from the menus, the palette and the sheet (`config::FeatureMask::hidden_actions`).
     /// A key, not a `FeatureId`, because `config` is above this layer.
     pub feature: Option<&'static str>,
+    /// The feature flag (`config::FeatureFlag::key`) that gates it while the feature is unfinished: with the
+    /// flag off the action is hidden from the menus, the palette and the sheet, as with `feature`. A key, as
+    /// `feature` is, because `config` is above this layer.
+    pub flag: Option<&'static str>,
 }
 
 impl Entry {

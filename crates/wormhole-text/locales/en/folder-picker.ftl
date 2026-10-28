@@ -14,6 +14,10 @@ folder-picker-empty = No folders
 # The one row when the folder being listed can't be read: it isn't there, isn't a folder, or macOS refuses.
 folder-picker-unreadable = Can't read this folder
 
-# The last row of a list that was cut short because the folder has very many folders. { $count } is a
-# number, written with its thousands separator.
-folder-picker-cut = Only the first { $count } folders are listed
+# The last row of a list that was cut short because the folder has very many folders (or, once something is
+# typed, very many that match). { $count } is a number, written with its thousands separator.
+folder-picker-cut-folders = Only the first { $count } folders are listed
+
+# The last row of a list that was cut short because the folder has very many entries, folders or not, and
+# only the first of them were searched. { $count } is a number, written with its thousands separator.
+folder-picker-cut-scanned = Only the first { $count } entries were searched, so some folders may be missing

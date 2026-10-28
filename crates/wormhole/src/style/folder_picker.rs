@@ -82,8 +82,9 @@ pub fn folder_picker_row(
     let marks: Vec<Range<usize>> = mark.into_iter().collect();
     div()
         .id(id)
-        .role(Role::Button)
+        .role(Role::ListBoxOption)
         .aria_label(name.clone())
+        .aria_selected(selected)
         .flex()
         .items_center()
         .gap_2()

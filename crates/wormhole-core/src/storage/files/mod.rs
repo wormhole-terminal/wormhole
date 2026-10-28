@@ -19,7 +19,7 @@ mod folders;
 pub mod listing;
 mod private;
 
-pub use folders::{FOLDERS_CAP, Folders, SCAN_CAP, list_folders};
+pub use folders::{Cut, FOLDERS_CAP, Folders, SCAN_CAP, list_folders, list_folders_where};
 pub use private::{
     PRIVATE_FILE, create_dir_all_private, create_private_file, ensure_private_dir, make_private,
     make_tree_private,

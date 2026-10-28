@@ -10,6 +10,20 @@ pub struct Row {
     pub mark: Option<Range<usize>>,
 }
 
+/// Whether `name` is one `filter` lets through: a name that begins with a dot only when `filter` begins with
+/// one, and then any name that contains the filter, ignoring case. The empty filter lets through every name
+/// that is not a dot-folder. [`rows`] is this, ordered; a read of a huge folder asks it name by name.
+pub fn matches(name: &str, filter: &str) -> bool {
+    (filter.starts_with('.') || !name.starts_with('.')) && (filter.is_empty() || find(name, filter).is_some())
+}
+
+/// Whether a read that applies `filter` while it scans keeps `name`: every name for the empty filter (the
+/// dot-folders too, which [`rows`] leaves out until a dot is typed but a listing must hold for when it is),
+/// else [`matches`].
+pub fn keeps(name: &str, filter: &str) -> bool {
+    filter.is_empty() || matches(name, filter)
+}
+
 /// The rows for `filter` out of `names`, which are in the order `ls` lists them. A name that begins with a
 /// dot is left out unless `filter` begins with one. Without a filter that is all of them; with one, the names
 /// that begin with it come first and then those that contain it, each group in the order it came in. The

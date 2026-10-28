@@ -22,7 +22,7 @@ pub(crate) fn devctl_folder_picker(
     let (word, rest) = arg.split_once(' ').unwrap_or((arg, ""));
     match word {
         "open" => {
-            if !ws.folder_picker_on(cx) {
+            if !super::flag_on(ws, cx) {
                 bail!(
                     "the {} flag is off: `set feature_flags={{\"{}\":true}}`",
                     FeatureFlag::FolderPicker.title(),
@@ -46,7 +46,11 @@ pub(crate) fn devctl_folder_picker(
     if word == "pick" {
         let (chosen, terminal) = picker.read_with(cx, |p, _| (p.state.choice(), p.terminal.clone()));
         let Some(inserted) = chosen else { return Ok("nothing selected\n".to_string()) };
+        let there = terminal.upgrade().is_some_and(|terminal| terminal == ws.active_terminal());
         ws.close_overlay(window, cx);
+        if !there {
+            return Ok("not the terminal in front\n".to_string());
+        }
         let _ = terminal.update(cx, |terminal, cx| {
             terminal.paste(&inserted);
             cx.notify();
@@ -78,7 +82,7 @@ impl FolderPicker {
     fn summary(&self) -> String {
         let target = self.state.target();
         let mut out = format!(
-            "folder {}\ntyped {:?}\nfilter {:?}\nprefix {:?}\nloaded {}\nunreadable {}\ncut {}\nrows {}\n",
+            "folder {}\ntyped {:?}\nfilter {:?}\nprefix {:?}\nloaded {}\nunreadable {}\ncut {:?}\nrows {}\n",
             target.folder.display(),
             self.state.typed(),
             target.filter,

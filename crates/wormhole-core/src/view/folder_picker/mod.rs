@@ -18,5 +18,5 @@ pub use collate::collate;
 pub use insert::{inserted, shell_form};
 pub use picker::Picker;
 pub use place::{Card, GAP, MARGIN, Placed, place};
-pub use rows::{Row, rows};
+pub use rows::{Row, keeps, matches, rows};
 pub use target::{Target, resolve};

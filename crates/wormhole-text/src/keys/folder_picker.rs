@@ -18,6 +18,13 @@ pub const FOLDER_PICKER_UNREADABLE: Key = Key::new(79);
 /// ```text
 /// Only the first { $count } folders are listed
 /// ```
-pub fn folder_picker_cut(count: &str) -> String {
+pub fn folder_picker_cut_folders(count: &str) -> String {
     crate::active::message(80, &[("count", Arg::Str(count))])
+}
+
+/// ```text
+/// Only the first { $count } entries were searched, so some folders may be missing
+/// ```
+pub fn folder_picker_cut_scanned(count: &str) -> String {
+    crate::active::message(81, &[("count", Arg::Str(count))])
 }

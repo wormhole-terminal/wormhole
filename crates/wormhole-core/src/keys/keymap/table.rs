@@ -47,6 +47,7 @@ fn row(id: ActionId, title: &'static str, keys: &[(KeyMods, &str)]) -> Entry {
         debug_only: false,
         persistent_only: false,
         feature: None,
+        flag: None,
     }
 }
 
@@ -90,6 +91,12 @@ impl Entry {
 
     fn persistent_only(mut self) -> Self {
         self.persistent_only = true;
+        self
+    }
+
+    /// Gated by the feature flag with this key (`FeatureFlag::key`): hidden while it is off.
+    fn flag(mut self, key: &'static str) -> Self {
+        self.flag = Some(key);
         self
     }
 
@@ -220,7 +227,10 @@ pub(super) fn entries() -> Vec<Entry> {
         row(RerunCommand, "Put Command at Prompt", &[]).scope(Scope::Terminal),
         // J for "jump": the picker walks the folders below the terminal's and inserts a path, it never cd's.
         // Hidden with its feature flag off (the window says which actions are).
-        row(InsertFolderPath, "Insert Folder Path…", &[(CMD, "j")]),
+        // The key works while a terminal has the keyboard: from the notes or a search field it is theirs.
+        row(InsertFolderPath, "Insert Folder Path…", &[(CMD, "j")])
+            .scope(Scope::Terminal)
+            .flag("folder_picker"),
         // Notes.
         row(NewNote, "New Note", &[(ALT_CMD, "n")]).feature("notes"),
         row(StashPrompt, "Stash Prompt", &[(ALT_CMD, "s")]).feature("notes"),
