@@ -16,6 +16,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 - Open in Finder, from a terminal's title row, no longer launches a folder that is really a program
   (`name.app`, `.prefPane`, `.workflow`, `.pkg`): Finder now shows such a folder instead of opening it.
+- The diff shows characters you can't see as visible marks: control characters as their symbols, and
+  the marks that change text direction (as in a "Trojan Source" trick) as `<U+202E>` and the like, so
+  code in a diff reads as it really is.
 - Pressing Esc, or clicking outside it, to close the command palette no longer quits Wormhole while the
   Motion feature is on and Reduce Motion is off.
 
