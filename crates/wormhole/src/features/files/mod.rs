@@ -1,13 +1,14 @@
-//! Files: the folder a terminal is in, as a tree in the right panel. Always read-only: it lists, opens
-//! folders and hands a file to the app Open in… uses; nothing writes to a file (a viewer and Rename are
-//! the next phase).
+//! Files: the folder a terminal is in, as a tree in the right panel. A file opens in the viewer, a card laid
+//! over the terminal as a diff is (`viewer`); Open in… hands it to an editor. The one write is Rename
+//! (`rename`); nothing else changes a file or a folder.
 //!
 //! One [`Files`] entity per window holds, for each terminal of the window, the tree, the folder it is of
 //! and the row that is selected ([`FilesOf`]). The tree follows the terminal's folder (its repository's
 //! root, else the folder itself) until a folder is chosen from the path menu; Follow Terminal goes
 //! back. What needs no GPUI is core's (`view::file_tree`: the tree, the order, the path menu's list, the
 //! cap; `storage::files::listing`: reading a folder without leaving it by a link). Here are the reads off
-//! the main thread (`read`), the rows' drawing (`view`, `row`), the menus (`menus`), the pins (`pins`),
+//! the main thread (`read`), the rows' drawing (`view`, `row`), the menus (`menus`), the pins (`pins`), the viewer (`viewer`), Rename
+//! (`rename`),
 //! what a row hands to other apps (`open`), the keys over the rows (`keys`) and the table entry (`def`).
 
 use std::collections::{HashMap, HashSet};
@@ -32,10 +33,14 @@ mod menus;
 mod open;
 mod pins;
 mod read;
+mod rename;
+#[cfg(test)]
+mod rename_tests;
 mod row;
 #[cfg(test)]
 mod tests;
 mod view;
+mod viewer;
 
 pub(crate) use def::DEF;
 
@@ -70,6 +75,12 @@ pub(crate) struct Files {
     /// cannot be cancelled, so one that hangs (a dead share) must not be started again each time the tree
     /// goes back to that root. Kept across roots and terminals.
     in_flight: HashSet<PathBuf>,
+    /// The file shown in the terminal's place, if any: one for the window.
+    viewer: Option<viewer::Viewer>,
+    /// Counts the files shown, so a read for an earlier one is dropped.
+    viewers: u64,
+    /// The row whose name is being edited, if any: one for the window.
+    renaming: Option<rename::Renaming>,
 }
 
 impl EventEmitter<FeatureEvent> for Files {}
@@ -118,7 +129,14 @@ impl FilesOf {
 
 impl Files {
     pub(crate) fn new() -> Self {
-        Self { of: HashMap::new(), profile: ProfileId::default_profile(), in_flight: HashSet::new() }
+        Self {
+            of: HashMap::new(),
+            profile: ProfileId::default_profile(),
+            in_flight: HashSet::new(),
+            viewer: None,
+            viewers: 0,
+            renaming: None,
+        }
     }
 
     pub(super) fn of_mut(&mut self, session: i64) -> &mut FilesOf {
@@ -133,7 +151,17 @@ impl Files {
     }
 
     /// A terminal is gone from this window (closed, or moved to another).
-    pub(super) fn forget(&mut self, session: i64) {
+    pub(super) fn forget(&mut self, session: i64, cx: &mut Context<Self>) {
         self.of.remove(&session);
+        self.forget_viewer(session, cx);
+        if self.renaming.as_ref().is_some_and(|r| r.session() == session) {
+            self.cancel_rename(cx);
+        }
+    }
+
+    /// Another terminal was selected: its viewer and its rename belonged to the one before.
+    pub(super) fn selected(&mut self, cx: &mut Context<Self>) {
+        self.dismiss_viewer(cx);
+        self.cancel_rename(cx);
     }
 }

@@ -8,8 +8,7 @@ pub(super) fn of(notice: Notice) -> Option<String> {
     let copied = match notice {
         Notice::Copied(copied) => copied,
         Notice::Driven(driven) => return Some(driven_words(driven)),
-        Notice::Failed(Failed::CopyCommit) => return Some(text(keys::NOTICE_FAILED_COPY_COMMIT).to_string()),
-        Notice::Failed(Failed::CopyPath) => return Some(text(keys::NOTICE_FAILED_COPY_PATH).to_string()),
+        Notice::Failed(failed) => return Some(text(failed_key(failed)).to_string()),
         Notice::Warned(Warning::HostFallback) => {
             return Some(text(keys::NOTICE_WARNED_HOST_FALLBACK).to_string());
         }
@@ -46,6 +45,19 @@ pub(super) fn spoken(notice: Notice) -> Option<String> {
 /// the chip shows.
 pub(crate) fn host_fallback_detail() -> String {
     text(keys::NOTICE_WARNED_HOST_FALLBACK_DETAIL).to_string()
+}
+
+/// The sentence of something that could not be done.
+fn failed_key(failed: Failed) -> wormhole_text::Key {
+    match failed {
+        Failed::CopyCommit => keys::NOTICE_FAILED_COPY_COMMIT,
+        Failed::CopyPath => keys::NOTICE_FAILED_COPY_PATH,
+        Failed::RenameName => keys::NOTICE_FAILED_RENAME_NAME,
+        Failed::RenameExists => keys::NOTICE_FAILED_RENAME_EXISTS,
+        Failed::RenameDenied => keys::NOTICE_FAILED_RENAME_DENIED,
+        Failed::RenameGone => keys::NOTICE_FAILED_RENAME_GONE,
+        Failed::RenameFailed => keys::NOTICE_FAILED_RENAME_FAILED,
+    }
 }
 
 /// What a program that controls Wormhole did, as the chip says it.

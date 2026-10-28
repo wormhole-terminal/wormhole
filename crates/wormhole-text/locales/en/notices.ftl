@@ -69,6 +69,20 @@ notice-failed-copy-commit = Couldn't copy: git could not read the commit
 # a terminal), or that is not text.
 notice-failed-copy-path = Not copied: the path has characters that would act when pasted
 
+# A rename in the Files tab that was refused: the name can't be one (empty, a slash, a control
+# character, too long).
+notice-failed-rename-name = Not renamed: that isn't a usable name
+
+# The same, because something is called that already.
+notice-failed-rename-exists = Not renamed: something with that name exists already
+
+notice-failed-rename-denied = Not renamed: Wormhole isn't allowed to change it
+
+# The file or folder, or the folder it is in, is gone, or the path leads through a link.
+notice-failed-rename-gone = Not renamed: it isn't there any more
+
+notice-failed-rename-failed = Couldn't rename it
+
 ## Warnings, which stay on the chip until it is clicked
 
 # The chip when the helper that keeps terminals running couldn't start: this terminal runs inside the app

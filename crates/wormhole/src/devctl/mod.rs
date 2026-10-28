@@ -269,6 +269,13 @@
 //!   files-menu [model]   open the path menu, drawn in the window for `shot`; `model` only records it
 //!                   for `menu` and `menu-pick`
 //!   files-pin <path>   pin that folder, or unpin it; says which
+//!   files-open <relative path>   show that file in the viewer, as a click on its row does (`files` then
+//!                   lists a `viewer:` line: what was read, and whether it is colored yet)
+//!   files-rename-start <relative path>   turn that row's name into its rename field (a `renaming:` line in
+//!                   `files`), for a `shot`; renames nothing
+//!   files-rename <relative path> <new name>   rename that row as typing the name and pressing ↩ does. The
+//!                   path has no space; the name is the rest of the line. Refused unless this is a test
+//!                   instance whose data dir and folder are both inside a temp folder: never a real one
 //!   project-init    what the Project tab's Create project folder button does for the active
 //!                   terminal's folder: `.wormhole/config.json` made off the UI thread (a tick
 //!                   later `title`, `rows` and the tab show the project); prints the folder

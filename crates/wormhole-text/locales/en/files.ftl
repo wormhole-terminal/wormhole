@@ -40,6 +40,9 @@ files-row-copy-path = Copy Path
 files-row-pin-folder = Pin Folder
 files-row-unpin-folder = Unpin Folder
 
+# Turns the row's name into a field, with the name selected.
+files-row-rename = Rename…
+
 ## Read out by VoiceOver
 
 # The button that opens the path menu. { $name } is the folder's name.
@@ -56,3 +59,36 @@ files-spoken-link = { $name }, link
 
 # After the path is copied.
 files-spoken-path-copied = Path copied
+
+# The name field that stands in a row's place while it is renamed.
+files-spoken-rename-field = New name, text field
+
+# After a rename. { $name } is the new name.
+files-spoken-renamed = Renamed to { $name }
+
+## The viewer: a file shown in place of the terminal
+
+# The close button's tooltip and VoiceOver label.
+files-viewer-close = Close file (esc)
+
+# The viewer's card, for VoiceOver. { $name } is the file's name.
+files-spoken-viewer = { $name }, file viewer
+
+# The line under the text of a file that is larger than what is read. { $shown } and { $size } are sizes,
+# already written ("2 MB").
+files-viewer-truncated = Showing the first { $shown } of { $size }
+
+files-viewer-empty = This file is empty.
+
+# The panel for a file that is not text. { $size } is its size, already written ("48.2 KB").
+files-viewer-binary = Binary file, { $size }
+
+# The button on that panel, as Open in… is elsewhere.
+files-viewer-open-in = Open in…
+
+files-viewer-image-failed = This picture can't be shown.
+files-viewer-gone = This file was deleted.
+files-viewer-outside = This is a link that leads out of the folder, so it isn't shown.
+files-viewer-not-file = This isn't a regular file.
+files-viewer-denied = Wormhole isn't allowed to read this file.
+files-viewer-unreadable = This file can't be read.

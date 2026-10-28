@@ -55,3 +55,35 @@ pub(super) fn menu(ctx: &mut Ctx, arg: &str) -> Result<String> {
 pub(super) fn pin(ctx: &mut Ctx, arg: &str) -> Result<String> {
     files::pin(ctx.workspace, &folder(arg)?, ctx.cx)
 }
+
+/// A path below the tree's root named in a command: relative and plain.
+fn relative(arg: &str) -> Result<PathBuf> {
+    let path = PathBuf::from(arg.trim());
+    if path.as_os_str().is_empty()
+        || path.is_absolute()
+        || path.components().any(|c| !matches!(c, std::path::Component::Normal(_)))
+    {
+        bail!("expected a relative path below the root, got {:?}", arg.trim());
+    }
+    Ok(path)
+}
+
+/// `files-open <relative path>`: shows that file in the viewer.
+pub(super) fn open(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    files::open(ctx.workspace, &relative(arg)?, ctx.cx)?;
+    Ok(String::new())
+}
+
+/// `files-rename-start <relative path>`: opens the row's rename field, renames nothing.
+pub(super) fn rename_start(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    files::rename_start(ctx.workspace, &relative(arg)?, ctx.window, ctx.cx)?;
+    Ok(String::new())
+}
+
+/// `files-rename <relative path> <new name>`: the path has no space in it, the name is the rest of the line.
+pub(super) fn rename(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let (path, name) =
+        arg.trim().split_once(' ').ok_or_else(|| anyhow::anyhow!("expected <path> <new name>"))?;
+    files::rename(ctx.workspace, &relative(path)?, name, ctx.window, ctx.cx)?;
+    Ok(String::new())
+}

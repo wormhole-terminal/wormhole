@@ -34,8 +34,30 @@ pub const FILES_ROW_COPY_PATH: Key = Key::new(68);
 pub const FILES_ROW_PIN_FOLDER: Key = Key::new(69);
 /// "Unpin Folder"
 pub const FILES_ROW_UNPIN_FOLDER: Key = Key::new(70);
+/// "Rename…"
+pub const FILES_ROW_RENAME: Key = Key::new(71);
 /// "Path copied"
-pub const FILES_SPOKEN_PATH_COPIED: Key = Key::new(75);
+pub const FILES_SPOKEN_PATH_COPIED: Key = Key::new(76);
+/// "New name, text field"
+pub const FILES_SPOKEN_RENAME_FIELD: Key = Key::new(77);
+/// "Close file (esc)"
+pub const FILES_VIEWER_CLOSE: Key = Key::new(79);
+/// "This file is empty."
+pub const FILES_VIEWER_EMPTY: Key = Key::new(82);
+/// "Open in…"
+pub const FILES_VIEWER_OPEN_IN: Key = Key::new(84);
+/// "This picture can't be shown."
+pub const FILES_VIEWER_IMAGE_FAILED: Key = Key::new(85);
+/// "This file was deleted."
+pub const FILES_VIEWER_GONE: Key = Key::new(86);
+/// "This is a link that leads out of the folder, so it isn't shown."
+pub const FILES_VIEWER_OUTSIDE: Key = Key::new(87);
+/// "This isn't a regular file."
+pub const FILES_VIEWER_NOT_FILE: Key = Key::new(88);
+/// "Wormhole isn't allowed to read this file."
+pub const FILES_VIEWER_DENIED: Key = Key::new(89);
+/// "This file can't be read."
+pub const FILES_VIEWER_UNREADABLE: Key = Key::new(90);
 
 /// ```text
 /// { $count } more
@@ -69,26 +91,54 @@ pub fn files_menu_unpin(name: &str) -> String {
 /// { $name }, folder, opens the path menu
 /// ```
 pub fn files_spoken_path_button(name: &str) -> String {
-    crate::active::message(71, &[("name", Arg::Str(name))])
+    crate::active::message(72, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, folder, expanded
 /// ```
 pub fn files_spoken_folder_open(name: &str) -> String {
-    crate::active::message(72, &[("name", Arg::Str(name))])
+    crate::active::message(73, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, folder, collapsed
 /// ```
 pub fn files_spoken_folder_closed(name: &str) -> String {
-    crate::active::message(73, &[("name", Arg::Str(name))])
+    crate::active::message(74, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, link
 /// ```
 pub fn files_spoken_link(name: &str) -> String {
-    crate::active::message(74, &[("name", Arg::Str(name))])
+    crate::active::message(75, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// Renamed to { $name }
+/// ```
+pub fn files_spoken_renamed(name: &str) -> String {
+    crate::active::message(78, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// { $name }, file viewer
+/// ```
+pub fn files_spoken_viewer(name: &str) -> String {
+    crate::active::message(80, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// Showing the first { $shown } of { $size }
+/// ```
+pub fn files_viewer_truncated(shown: &str, size: &str) -> String {
+    crate::active::message(81, &[("shown", Arg::Str(shown)), ("size", Arg::Str(size))])
+}
+
+/// ```text
+/// Binary file, { $size }
+/// ```
+pub fn files_viewer_binary(size: &str) -> String {
+    crate::active::message(83, &[("size", Arg::Str(size))])
 }

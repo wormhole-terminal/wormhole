@@ -46,6 +46,16 @@ pub enum Failed {
     /// A copy of a path with characters in it that would act when pasted into a terminal (a newline), or
     /// that is not text.
     CopyPath,
+    /// A rename (Files tab) with a name that can't be one.
+    RenameName,
+    /// A rename onto a name that something has already.
+    RenameExists,
+    /// A rename the system does not allow.
+    RenameDenied,
+    /// A rename of something that is gone, or whose folder is, or that is behind a link.
+    RenameGone,
+    /// Any other failure of a rename.
+    RenameFailed,
 }
 
 /// What the person is warned about.

@@ -44,9 +44,9 @@ fn path_hash(path: &Path) -> u64 {
     hasher.finish()
 }
 
-/// The row, to add `.on_click(…)` and a menu to.
+/// The row, to add `.on_click(…)` and a menu to. `field` stands in the name's place (a rename).
 #[track_caller]
-pub(super) fn entry_row(row: &Row, look: &RowLook<'_>) -> Stateful<Div> {
+pub(super) fn entry_row(row: &Row, look: &RowLook<'_>, field: Option<AnyElement>) -> Stateful<Div> {
     let RowLook { ui, icons, selected } = look;
     let (ui, selected) = (*ui, *selected);
     let muted = if selected { ui.selected_muted } else { ui.muted };
@@ -91,8 +91,17 @@ pub(super) fn entry_row(row: &Row, look: &RowLook<'_>) -> Stateful<Div> {
         RowKind::Folder { open } => base.aria_expanded(open).child(style::lead(style::disclosure(ui, !open))),
         _ => base,
     };
-    base.child(style::lead(icon))
-        .child(div().min_w_0().truncate().when(selected, |d| d.font_weight(FontWeight::SEMIBOLD)).child(name))
+    let name = match field {
+        // While it is renamed the name is a text field.
+        Some(field) => field,
+        None => div()
+            .min_w_0()
+            .truncate()
+            .when(selected, |d| d.font_weight(FontWeight::SEMIBOLD))
+            .child(name)
+            .into_any_element(),
+    };
+    base.child(style::lead(icon)).child(name)
 }
 
 /// A muted line about a folder: it is being read, empty, can't be read, or has more than is listed.

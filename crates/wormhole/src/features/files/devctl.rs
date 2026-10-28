@@ -1,10 +1,11 @@
 //! What devctl's Files commands do (`files`, `files-root`, `files-follow`, `files-expand`, `files-menu`,
-//! `files-pin`): the selected terminal's tree, through the window's `Files` entity like the keys do.
+//! `files-pin`, `files-open`, `files-rename-start`, `files-rename`): the selected terminal's tree, through
+//! the window's `Files` entity like the keys do.
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use gpui_kit::*;
 use wormhole_core::config::TabId;
 use wormhole_core::view::file_tree::{Row, RowKind};
@@ -78,6 +79,79 @@ pub(crate) fn pin(ws: &Workspace, folder: &Path, cx: &mut Context<Workspace>) ->
     })
 }
 
+/// `files-open <relative path>`: shows that file in the viewer, as a click on its row does.
+pub(crate) fn open(ws: &mut Workspace, relative: &Path, cx: &mut Context<Workspace>) -> Result<()> {
+    ws.show_tab(TabId::Files, cx);
+    run(ws, cx, |files, session, cx| files.show_file(session, relative, cx))
+}
+
+/// The row of the tree that shows `relative`, if it is on screen (its folders open and read).
+fn row_of(files: &Files, session: i64, relative: &Path) -> Result<Row> {
+    let of = files.of.get(&session).ok_or_else(|| anyhow!("the tree is not looked at yet"))?;
+    (of.tree.rows().into_iter())
+        .find(|row| row.is_entry() && row.path == relative)
+        .ok_or_else(|| anyhow!("{} is not a row of the tree: expand its folder first", relative.display()))
+}
+
+/// `files-rename-start <relative path>`: the row's name becomes the field, as Rename… in its menu does.
+/// Renames nothing.
+pub(crate) fn rename_start(
+    ws: &mut Workspace,
+    relative: &Path,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) -> Result<()> {
+    ws.show_tab(TabId::Files, cx);
+    run(ws, cx, |files, session, fcx| {
+        let row = row_of(files, session, relative)?;
+        files.start_rename(session, &row, window, fcx);
+        Ok(())
+    })?
+}
+
+/// Whether devctl may change files below `root`: only in a test instance whose data folder is a scratch
+/// one (named by `WORMHOLE_DATA_DIR` and inside a temp folder), and only below that scratch folder or a
+/// temp folder. A real folder of the person's is never renamed from here.
+fn in_scratch(root: &Path) -> bool {
+    if !crate::platform::background_mode::on() {
+        return false;
+    }
+    let temps = [
+        std::fs::canonicalize("/private/tmp").ok(),
+        std::fs::canonicalize(wormhole_core::platform::paths::temp()).ok(),
+    ];
+    let inside_temp = |path: &Path| temps.iter().flatten().any(|temp| path.starts_with(temp));
+    let Some(data) = std::env::var_os("WORMHOLE_DATA_DIR").map(PathBuf::from) else { return false };
+    let Ok(data) = std::fs::canonicalize(data) else { return false };
+    let Ok(root) = std::fs::canonicalize(root) else { return false };
+    inside_temp(&data) && inside_temp(&root)
+}
+
+/// `files-rename <relative path> <new name>`: renames the row as typing the name in its field and pressing
+/// ↩ does (the rename is made in the background; `files` shows the result). Only inside a scratch folder of
+/// a test instance.
+pub(crate) fn rename(
+    ws: &mut Workspace,
+    relative: &Path,
+    new_name: &str,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) -> Result<()> {
+    ws.show_tab(TabId::Files, cx);
+    run(ws, cx, |files, session, fcx| {
+        let root =
+            files.of.get(&session).and_then(|of| of.root.clone()).ok_or_else(|| anyhow!("no folder"))?;
+        if !in_scratch(&root) {
+            bail!("devctl renames only inside the scratch folder of a test instance, not {}", root.display());
+        }
+        let row = row_of(files, session, relative)?;
+        files.start_rename(session, &row, window, fcx);
+        files.type_rename(new_name, window, fcx);
+        files.commit_rename(window, fcx);
+        Ok(())
+    })?
+}
+
 /// `files`: the terminal's tree as text.
 pub(crate) fn describe(ws: &Workspace, cx: &mut Context<Workspace>) -> Result<String> {
     let files = ws.feature::<Files>().ok_or_else(|| anyhow!("the window has no Files"))?;
@@ -88,6 +162,12 @@ pub(crate) fn describe(ws: &Workspace, cx: &mut Context<Workspace>) -> Result<St
     let Some(root) = &of.root else { return Ok("files: no folder\n".into()) };
     let mode = if of.chosen.is_some() { "chosen" } else { "following" };
     let mut out = format!("files: {} ({mode}) pinned={}\n", root.display(), join(&pinned));
+    if let Some(viewer) = files.viewer.as_ref().filter(|viewer| viewer.session == session) {
+        let _ = writeln!(out, "viewer: {}", viewer.describe());
+    }
+    if let Some(renaming) = files.renaming_of(session, cx) {
+        let _ = writeln!(out, "renaming: {renaming}");
+    }
     for row in of.tree.rows() {
         let selected = of.selected.as_deref() == Some(row.path.as_path()) && row.is_entry();
         let _ = writeln!(out, "{}", line(&row, selected));

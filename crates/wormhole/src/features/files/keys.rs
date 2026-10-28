@@ -1,15 +1,14 @@
 //! The keys over the tab's rows (F-70, as for the Changes list) and the actions they and the mouse share.
 //! The path button is the card's head, a ⇥ stop; ↑ ↓ move over the entries, → opens a folder and ← closes
-//! it (on an entry inside a folder it goes to the folder), ↩ opens a folder or a file (a file in the app
-//! Open in… uses) and, on the head, the path menu. The list keeps the keyboard.
+//! it (on an entry inside a folder it goes to the folder), ↩ opens a folder or shows a file in the viewer
+//! and, on the head, the path menu. The list keeps the keyboard.
 
 use gpui_kit::*;
 use wormhole_core::view::file_tree::{Row, RowKind};
 use wormhole_core::view::focus::list::Item;
 
-use super::{Files, Line, open};
+use super::{Files, Line};
 use crate::focus_keys::{Activate, key_menu_origin};
-use crate::open_in::OpenIn;
 use crate::window::feature::{WalkFns, Walkable};
 
 impl Files {
@@ -59,31 +58,33 @@ impl Files {
         cx.notify();
     }
 
-    /// Opens a file in the app Open in… uses when that is an editor Wormhole knows, else shows it in
-    /// Finder: a file from a repository is never handed to a terminal, which would run it.
-    pub(super) fn open_default(&mut self, session: i64, row: &Row, cx: &mut Context<Self>) {
-        let Some(root) = self.of.get(&session).and_then(|of| of.root.clone()) else { return };
-        let resolved = OpenIn::resolved(cx).app.bundle;
-        open::open_in(open::default_bundle(&resolved), &root, row, cx);
-    }
-
-    /// ↩ on a row: the path menu on the head, a folder opens or closes, a file opens in the editor.
-    fn press_row(&mut self, session: i64, row: usize, window: &mut Window, cx: &mut Context<Self>) -> bool {
+    /// ↩ on a row: the path menu on the head, a folder opens or closes, a file opens in the viewer. With
+    /// `following` (the viewer is up and the keys only moved onto the row) a file shows in it and nothing
+    /// else happens: a folder is not opened by walking over it.
+    fn press_row(
+        &mut self,
+        session: i64,
+        row: usize,
+        following: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
         match self.line(session, row) {
+            Some(Line::Head) if following => {}
             Some(Line::Head) => {
                 let Some(of) = self.of.get(&session) else { return true };
                 let at = (of.list.state().bounds_for_item(row))
                     .map_or_else(|| of.head_at.below(), key_menu_origin);
                 self.show_path_menu(session, at, window, cx);
             }
-            Some(Line::Row(entry)) => {
-                self.select(session, &entry, cx);
-                match entry.kind {
-                    RowKind::Folder { .. } => self.toggle(session, &entry, cx),
-                    RowKind::File => self.open_default(session, &entry, cx),
-                    _ => {}
+            Some(Line::Row(entry)) => match entry.kind {
+                RowKind::File => self.show_file(session, &entry.path, cx),
+                RowKind::Folder { .. } if !following => {
+                    self.select(session, &entry, cx);
+                    self.toggle(session, &entry, cx);
                 }
-            }
+                _ => self.select(session, &entry, cx),
+            },
             _ => {}
         }
         true
@@ -116,8 +117,8 @@ pub(super) const WALK: WalkFns = WalkFns {
         let files = super::def::typed(entity);
         facts.active().map(|active| files.read(cx).walkable(active.id)).unwrap_or_default()
     },
-    press: |entity, _, session, row, _: Activate, _, window, cx| {
-        super::def::typed(entity).update(cx, |files, cx| files.press_row(session, row, window, cx))
+    press: |entity, _, session, row, _: Activate, following, window, cx| {
+        super::def::typed(entity).update(cx, |files, cx| files.press_row(session, row, following, window, cx))
     },
     fold: |entity, _, session, row, cx| {
         super::def::typed(entity).update(cx, |files, cx| files.fold_row(session, row, cx));

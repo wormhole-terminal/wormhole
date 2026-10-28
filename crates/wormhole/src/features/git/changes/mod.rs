@@ -120,6 +120,12 @@ impl Changes {
         self.of.get(&session).map(|of| &of.review)
     }
 
+    /// Whether a diff is open, for the tests of what covers the terminal.
+    #[cfg(test)]
+    pub(crate) fn diff_open(&self) -> bool {
+        self.diff.is_some()
+    }
+
     /// Another terminal was selected: the diff and the picker belonged to the one before.
     pub(super) fn selected(&mut self, cx: &mut Context<Self>) {
         let had_diff = self.diff.take().is_some();

@@ -171,6 +171,9 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "files-expand" => files::expand,
         "files-menu" => files::menu,
         "files-pin" => files::pin,
+        "files-open" => files::open,
+        "files-rename-start" => files::rename_start,
+        "files-rename" => files::rename,
         "project-init" => panels::project_init,
         "project-trust" => panels::project_trust,
         "comment" => |ctx, arg| {

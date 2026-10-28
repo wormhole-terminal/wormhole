@@ -7,39 +7,49 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Copied command"
-pub const NOTICE_COPIED_COMMAND: Key = Key::new(120);
+pub const NOTICE_COPIED_COMMAND: Key = Key::new(135);
 /// "Copied path"
-pub const NOTICE_COPIED_PATH: Key = Key::new(121);
+pub const NOTICE_COPIED_PATH: Key = Key::new(136);
 /// "Copied setting key"
-pub const NOTICE_COPIED_SETTING_KEY: Key = Key::new(122);
+pub const NOTICE_COPIED_SETTING_KEY: Key = Key::new(137);
 /// "Copied error"
-pub const NOTICE_COPIED_ERROR: Key = Key::new(123);
+pub const NOTICE_COPIED_ERROR: Key = Key::new(138);
 /// "Copied object id"
-pub const NOTICE_COPIED_OBJECT_ID: Key = Key::new(124);
+pub const NOTICE_COPIED_OBJECT_ID: Key = Key::new(139);
 /// "A script is typing"
-pub const NOTICE_DRIVEN_SCRIPTS_TYPING: Key = Key::new(127);
+pub const NOTICE_DRIVEN_SCRIPTS_TYPING: Key = Key::new(142);
 /// "A script is reading"
-pub const NOTICE_DRIVEN_SCRIPTS_READING: Key = Key::new(128);
+pub const NOTICE_DRIVEN_SCRIPTS_READING: Key = Key::new(143);
 /// "Copied commit hash"
-pub const NOTICE_COPIED_COMMIT_HASH: Key = Key::new(129);
+pub const NOTICE_COPIED_COMMIT_HASH: Key = Key::new(144);
 /// "Copied short hash"
-pub const NOTICE_COPIED_COMMIT_SHORT_HASH: Key = Key::new(130);
+pub const NOTICE_COPIED_COMMIT_SHORT_HASH: Key = Key::new(145);
 /// "Copied commit message"
-pub const NOTICE_COPIED_COMMIT_MESSAGE: Key = Key::new(131);
+pub const NOTICE_COPIED_COMMIT_MESSAGE: Key = Key::new(146);
 /// "Copied the start of the message, which is cut"
-pub const NOTICE_COPIED_COMMIT_MESSAGE_CUT: Key = Key::new(132);
+pub const NOTICE_COPIED_COMMIT_MESSAGE_CUT: Key = Key::new(147);
 /// "Copied subject"
-pub const NOTICE_COPIED_COMMIT_SUBJECT: Key = Key::new(133);
+pub const NOTICE_COPIED_COMMIT_SUBJECT: Key = Key::new(148);
 /// "Copied author"
-pub const NOTICE_COPIED_COMMIT_AUTHOR: Key = Key::new(134);
+pub const NOTICE_COPIED_COMMIT_AUTHOR: Key = Key::new(149);
 /// "Couldn't copy: git could not read the commit"
-pub const NOTICE_FAILED_COPY_COMMIT: Key = Key::new(135);
+pub const NOTICE_FAILED_COPY_COMMIT: Key = Key::new(150);
 /// "Not copied: the path has characters that would act when pasted"
-pub const NOTICE_FAILED_COPY_PATH: Key = Key::new(136);
+pub const NOTICE_FAILED_COPY_PATH: Key = Key::new(151);
+/// "Not renamed: that isn't a usable name"
+pub const NOTICE_FAILED_RENAME_NAME: Key = Key::new(152);
+/// "Not renamed: something with that name exists already"
+pub const NOTICE_FAILED_RENAME_EXISTS: Key = Key::new(153);
+/// "Not renamed: Wormhole isn't allowed to change it"
+pub const NOTICE_FAILED_RENAME_DENIED: Key = Key::new(154);
+/// "Not renamed: it isn't there any more"
+pub const NOTICE_FAILED_RENAME_GONE: Key = Key::new(155);
+/// "Couldn't rename it"
+pub const NOTICE_FAILED_RENAME_FAILED: Key = Key::new(156);
 /// "This terminal ends when Wormhole quits"
-pub const NOTICE_WARNED_HOST_FALLBACK: Key = Key::new(137);
+pub const NOTICE_WARNED_HOST_FALLBACK: Key = Key::new(157);
 /// "This terminal runs inside Wormhole and ends when it quits: the helper that keeps terminals running couldn't start."
-pub const NOTICE_WARNED_HOST_FALLBACK_DETAIL: Key = Key::new(138);
+pub const NOTICE_WARNED_HOST_FALLBACK_DETAIL: Key = Key::new(158);
 
 /// ```text
 /// { $count ->
@@ -48,7 +58,7 @@ pub const NOTICE_WARNED_HOST_FALLBACK_DETAIL: Key = Key::new(138);
 /// }
 /// ```
 pub fn notice_copied_lines(count: i64) -> String {
-    crate::active::message(117, &[("count", Arg::Int(count))])
+    crate::active::message(132, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -58,7 +68,7 @@ pub fn notice_copied_lines(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_characters(count: i64) -> String {
-    crate::active::message(118, &[("count", Arg::Int(count))])
+    crate::active::message(133, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -68,19 +78,19 @@ pub fn notice_copied_characters(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_output(count: i64) -> String {
-    crate::active::message(119, &[("count", Arg::Int(count))])
+    crate::active::message(134, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { $name } is typing
 /// ```
 pub fn notice_driven_typing(name: &str) -> String {
-    crate::active::message(125, &[("name", Arg::Str(name))])
+    crate::active::message(140, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name } is reading
 /// ```
 pub fn notice_driven_reading(name: &str) -> String {
-    crate::active::message(126, &[("name", Arg::Str(name))])
+    crate::active::message(141, &[("name", Arg::Str(name))])
 }

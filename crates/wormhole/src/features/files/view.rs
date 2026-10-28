@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use gpui_kit::assets::IconName;
+use gpui_kit::component::input::InputState;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::file_tree::{Row, RowKind};
@@ -12,6 +13,7 @@ use wormhole_text::{keys, text};
 
 use super::def::typed;
 use super::head::{HeadFacts, path_button};
+use super::rename;
 use super::row::{RowLook, entry_row, note_row};
 use super::{Files, Line};
 use crate::platform::Anchor;
@@ -35,6 +37,8 @@ struct FilesView {
     selected: Option<PathBuf>,
     head: HeadFacts,
     head_at: Anchor,
+    /// The row whose name is a field now.
+    rename: Option<(PathBuf, Entity<InputState>)>,
     this: WeakEntity<Files>,
 }
 
@@ -63,6 +67,7 @@ impl Files {
             head: HeadFacts::of(&root, crate::platform::boot_volume_name),
             selected: of.selected.clone(),
             head_at: of.head_at.clone(),
+            rename: self.renaming.as_ref().filter(|r| r.session() == session).map(|r| r.target()),
             this: cx.weak_entity(),
         });
         let ring = facts.panel_cursor.map(|(row, shown)| (row, shown.then_some(ui)));
@@ -111,7 +116,10 @@ impl FilesView {
         };
         let (clicked, menu_row) = (row.clone(), row.clone());
         let (this, menu_this) = (self.this.clone(), self.this.clone());
-        entry_row(row, &look)
+        let field = (self.rename.as_ref())
+            .filter(|(path, _)| *path == row.path)
+            .map(|(_, input)| rename::field(self.this.clone(), input));
+        entry_row(row, &look, field)
             .on_mouse_down(MouseButton::Right, move |event, window, cx| {
                 cx.stop_propagation();
                 let row = menu_row.clone();
@@ -125,22 +133,22 @@ impl FilesView {
                     return;
                 }
                 let row = clicked.clone();
-                let double = event.click_count() == 2;
-                this.update(cx, |files, cx| files.click(session, &row, double, cx)).ok();
+                this.update(cx, |files, cx| files.click(session, &row, cx)).ok();
             })
             .into_any_element()
     }
 }
 
 impl Files {
-    /// A click on an entry: it is selected; a folder opens or closes, a double-click on a file opens it
-    /// in the app Open in… uses.
-    pub(super) fn click(&mut self, session: i64, row: &Row, double: bool, cx: &mut Context<Self>) {
-        self.select(session, row, cx);
+    /// A click on an entry: it is selected; a folder opens or closes, a file shows in the viewer.
+    pub(super) fn click(&mut self, session: i64, row: &Row, cx: &mut Context<Self>) {
         match row.kind {
-            RowKind::Folder { .. } if !double => self.toggle(session, row, cx),
-            RowKind::File if double => self.open_default(session, row, cx),
-            _ => {}
+            RowKind::File => self.show_file(session, &row.path, cx),
+            RowKind::Folder { .. } => {
+                self.select(session, row, cx);
+                self.toggle(session, row, cx);
+            }
+            _ => self.select(session, row, cx),
         }
     }
 }

@@ -32,6 +32,16 @@ impl Workspace {
         self.panes
     }
 
+    /// Whether a feature has something laid over the terminal (a diff, a file's viewer).
+    pub(crate) fn is_covered(&self, cx: &gpui_kit::App) -> bool {
+        self.covered(cx)
+    }
+
+    /// Whether a text field of a feature has the keys (`FeatureEvent::Editing`).
+    pub(crate) fn is_editing(&self) -> bool {
+        self.feature_editing
+    }
+
     /// The tick the window is at, which a test sets to meet a feature's "every n ticks".
     pub(crate) fn set_ticks(&mut self, ticks: u64) {
         self.ticks = ticks;

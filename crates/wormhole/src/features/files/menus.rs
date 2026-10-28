@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use gpui_kit::*;
 use wormhole_core::platform::open_in::Installed;
-use wormhole_core::view::file_tree::{PathMenu, Pin, Row, on_boot_volume};
+use wormhole_core::view::file_tree::{PathMenu, Pin, Row, RowKind, on_boot_volume};
 use wormhole_text::{keys, text};
 
 use super::{Files, open};
@@ -61,7 +61,7 @@ impl Files {
             })
             .collect();
         let chosen = OpenIn::resolved(cx).app.bundle;
-        let menu = row_menu(&row, RowMenu { root, apps, chosen, pinned }, &cx.weak_entity());
+        let menu = row_menu(&row, RowMenu { session, root, apps, chosen, pinned }, &cx.weak_entity());
         platform::show_menu(menu, at, window, cx);
     }
 
@@ -156,6 +156,8 @@ pub(super) fn path_menu(model: PathMenu, session: i64, this: &WeakEntity<Files>)
 
 /// What the menu of a row needs besides the row.
 pub(super) struct RowMenu {
+    /// The terminal whose tree the row is in.
+    pub session: i64,
     /// The tree's root, which the row's path is below.
     pub root: PathBuf,
     /// The apps Open in… offers, with their icons.
@@ -168,7 +170,7 @@ pub(super) struct RowMenu {
 
 /// The menu of `row`: Open in (the apps), Reveal in Finder, Copy Path and, on a folder, Pin or Unpin.
 pub(super) fn row_menu(row: &Row, facts: RowMenu, this: &WeakEntity<Files>) -> Menu {
-    let RowMenu { root, apps, chosen, pinned } = facts;
+    let RowMenu { session, root, apps, chosen, pinned } = facts;
     let title = text(keys::FILES_ROW_OPEN_IN);
     let open_in = if open::can_open(row) {
         let apps = apps.into_iter().fold(Menu::new(), |menu, (app, icon)| {
@@ -200,6 +202,17 @@ pub(super) fn row_menu(row: &Row, facts: RowMenu, this: &WeakEntity<Files>) -> M
             Item::new(text(keys::FILES_ROW_COPY_PATH))
                 .on_select(move |window, cx| open::copy_path(&copy_root, &copy_row, window, cx)),
         );
+    let menu = if matches!(row.kind, RowKind::File | RowKind::Folder { .. } | RowKind::Link) {
+        let renamed = row.clone();
+        menu.separator().item(
+            Item::new(text(keys::FILES_ROW_RENAME))
+                .on_select(platform::run_on(this, move |files, window, cx| {
+                    files.start_rename(session, &renamed, window, cx)
+                })),
+        )
+    } else {
+        menu
+    };
     if !row.is_folder() {
         return menu;
     }
