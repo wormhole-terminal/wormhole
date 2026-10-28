@@ -92,3 +92,38 @@ notice-warned-host-fallback = This terminal ends when { -brand } quits
 # The same, in full: what VoiceOver says when the chip appears, and the banner of a window whose chip is
 # switched off.
 notice-warned-host-fallback-detail = This terminal runs inside { -brand } and ends when it quits: the helper that keeps terminals running couldn't start.
+
+## The buttons of a warning that stays
+
+# The × on the chip, which closes the warning for good. Its tooltip, and what VoiceOver calls it.
+notice-close = Close
+
+# The ⓘ on the chip, which opens the explanation of the warning. Its tooltip, and what VoiceOver calls it.
+notice-info = More about this warning
+
+## What the explanation says when a terminal's helper could not start
+
+# The heading of the explanation, which opens from the ⓘ or a click on the chip.
+notice-info-host-heading = This terminal can't outlive { -brand }
+
+# What happened and what it means. The helper is the small program that keeps a terminal running when
+# { -brand } quits (the session host); the main text avoids that word.
+notice-info-host-what = { -brand } normally keeps each terminal running in a small helper, so your work carries on after you quit { -brand } and is waiting when you open it again. The helper for this terminal couldn't start, so the terminal runs inside { -brand } instead and closes when { -brand } quits.
+
+# That the problem is this terminal's alone.
+notice-info-host-others = Other terminals that already run in a helper are not affected.
+
+# What to do. A new terminal does try to start a helper again; the warning is said once each time
+# { -brand } starts.
+notice-info-host-try = Finish what is running here before you quit. Each new terminal tries to start its helper again, and { -brand } says this once each time it starts.
+
+# Above the line with the error's own words, which can be selected and copied.
+notice-info-host-reason = What went wrong, if you want to report it:
+
+# The button that shows the folder with the log files in Finder.
+notice-info-logs = Open Logs Folder
+
+# The button that copies the error's words, and what it says for a moment after.
+notice-info-copy = Copy reason
+
+notice-info-copied = Copied

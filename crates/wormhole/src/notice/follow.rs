@@ -11,8 +11,8 @@ use std::time::Duration;
 use gpui_kit::*;
 use wormhole_core::view::motion::notice::Entrance;
 
-use super::chips::{Chips, Facts, Where, spot_for, withdraw};
-use crate::platform::notice::{Chip, Content};
+use super::chips::{Chips, Facts, Where, content, spot_for, withdraw};
+use crate::platform::notice::Chip;
 use crate::settings::store_in;
 
 /// How often a held warning looks at where its terminal is: short enough that a chip does not stay over the
@@ -74,7 +74,8 @@ fn step(window: &mut Window, cx: &mut App) -> bool {
             entry.look = Some(look);
             entry.theme = Some(look.0);
             let (words, glyph) = (entry.words.clone(), entry.glyph);
-            let content = glyph.map(|glyph| Content { glyph, text: &words, appearance: look.0 });
+            let buttons = entry.rules.buttons();
+            let content = glyph.map(|glyph| content(glyph, &words, look.0, buttons));
             if look.1 != old_opaque {
                 // Another material is another view: the panel is made again, and fades in at once.
                 if let Some(chip) = entry.chip.take() {

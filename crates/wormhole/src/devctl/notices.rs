@@ -10,6 +10,7 @@ use gpui_kit::*;
 use super::Ctx;
 use crate::app_state::app;
 use crate::platform::notice::Material;
+use wormhole_core::view::notice::Press;
 
 /// `notice <text>`: put a notice that says `<text>` in this window, as a copy would. Does nothing with the
 /// Notices flag off (`set feature_flags={"notices":true}`).
@@ -19,21 +20,29 @@ use crate::platform::notice::Material;
 /// words; with `<text>` a warning that says that. A dismissed one is not said again by the same words.
 pub(super) fn notice(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let arg = arg.trim();
-    if arg == "sticky" {
-        crate::notice::test_sticky(ctx.window, None, ctx.cx);
+    if arg == "sticky" || arg == "sticky again" {
+        crate::notice::test_sticky(ctx.window, None, arg.ends_with("again"), ctx.cx);
     } else if let Some(words) = arg.strip_prefix("sticky ") {
-        crate::notice::test_sticky(ctx.window, Some(words.trim()), ctx.cx);
+        crate::notice::test_sticky(ctx.window, Some(words.trim()), false, ctx.cx);
     } else {
         crate::notice::test_notice(ctx.window, arg, ctx.cx);
     }
     Ok(String::new())
 }
 
-/// `notice-click`: click this window's chip as a person does, over the channel the panel uses. A sticky
-/// notice goes; a copy's chip takes no click, and nothing happens. Needs a panel (a real window, not a test).
-pub(super) fn click(ctx: &mut Ctx, _: &str) -> Result<String> {
+/// `notice-click [close|info|body]`: click this window's chip at the × (the default), at the ⓘ or on the
+/// capsule, as a person does, over the channel the panel uses. The × dismisses a sticky notice; the ⓘ and
+/// the capsule open its explanation, or dismiss it where it has none; a copy's chip takes no click, and
+/// nothing happens. Needs a chip (a real window, not a test).
+pub(super) fn click(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let press = match arg.trim() {
+        "" | "close" => Press::Close,
+        "info" => Press::Info,
+        "body" => Press::Body,
+        other => return Err(anyhow!("expected close, info or body, got {other:?}")),
+    };
     let id = ctx.window.window_handle().window_id();
-    if crate::notice::click(id, ctx.cx) {
+    if crate::notice::click(id, press, ctx.cx) {
         Ok(String::new())
     } else {
         Err(anyhow!("no chip to click in this window"))
@@ -54,6 +63,15 @@ pub(super) fn notices(ctx: &mut Ctx, _: &str) -> Result<String> {
         }
         if report.clickable {
             out.push_str(" clickable");
+        }
+        if report.buttons.info {
+            out.push_str(" info");
+        }
+        if report.buttons.close {
+            out.push_str(" close");
+        }
+        if report.info_open {
+            out.push_str(" info-open");
         }
         if report.hidden {
             out.push_str(" hidden");

@@ -30,6 +30,10 @@ impl Chip {
 
     pub fn set_clickable(&mut self, _clickable: bool) {}
 
+    pub fn info_bounds(&self) -> Option<gpui_kit::Bounds<gpui_kit::Pixels>> {
+        None
+    }
+
     pub fn set_hidden(&mut self, _hidden: bool, _cx: &mut App) {}
 
     pub fn restyle(&mut self, _content: &Content<'_>) {}

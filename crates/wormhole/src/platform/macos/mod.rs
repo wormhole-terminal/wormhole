@@ -24,6 +24,7 @@ pub mod look;
 pub mod menu;
 pub mod notice;
 mod notice_click;
+mod notice_layout;
 mod notice_motion;
 pub mod notifications;
 pub mod panel;

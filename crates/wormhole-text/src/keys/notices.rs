@@ -50,6 +50,26 @@ pub const NOTICE_FAILED_RENAME_FAILED: Key = Key::new(157);
 pub const NOTICE_WARNED_HOST_FALLBACK: Key = Key::new(158);
 /// "This terminal runs inside Wormhole and ends when it quits: the helper that keeps terminals running couldn't start."
 pub const NOTICE_WARNED_HOST_FALLBACK_DETAIL: Key = Key::new(159);
+/// "Close"
+pub const NOTICE_CLOSE: Key = Key::new(160);
+/// "More about this warning"
+pub const NOTICE_INFO: Key = Key::new(161);
+/// "This terminal can't outlive Wormhole"
+pub const NOTICE_INFO_HOST_HEADING: Key = Key::new(162);
+/// "Wormhole normally keeps each terminal running in a small helper, so your work carries on after you quit Wormhole and is waiting when you open it again. The helper for this terminal couldn't start, so the terminal runs inside Wormhole instead and closes when Wormhole quits."
+pub const NOTICE_INFO_HOST_WHAT: Key = Key::new(163);
+/// "Other terminals that already run in a helper are not affected."
+pub const NOTICE_INFO_HOST_OTHERS: Key = Key::new(164);
+/// "Finish what is running here before you quit. Each new terminal tries to start its helper again, and Wormhole says this once each time it starts."
+pub const NOTICE_INFO_HOST_TRY: Key = Key::new(165);
+/// "What went wrong, if you want to report it:"
+pub const NOTICE_INFO_HOST_REASON: Key = Key::new(166);
+/// "Open Logs Folder"
+pub const NOTICE_INFO_LOGS: Key = Key::new(167);
+/// "Copy reason"
+pub const NOTICE_INFO_COPY: Key = Key::new(168);
+/// "Copied"
+pub const NOTICE_INFO_COPIED: Key = Key::new(169);
 
 /// ```text
 /// { $count ->

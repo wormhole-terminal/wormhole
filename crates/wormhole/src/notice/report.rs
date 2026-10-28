@@ -2,7 +2,7 @@
 //! notice posted by hand.
 
 use gpui_kit::*;
-use wormhole_core::view::notice::{Phase, Spot};
+use wormhole_core::view::notice::{Buttons, Phase, Press, Spot};
 
 use super::chips::Chips;
 #[cfg(feature = "devctl")]
@@ -14,6 +14,10 @@ pub(crate) struct Report {
     pub(crate) phase: Phase,
     /// What it says now, or said last.
     pub(crate) words: String,
+    /// The buttons the chip shows now.
+    pub(crate) buttons: Buttons,
+    /// The explanation's popover is open.
+    pub(crate) info_open: bool,
     /// A sticky notice is up (its words may be under a copy's for a moment).
     pub(crate) sticky: bool,
     /// The chip takes a click now: it shows a sticky notice's own words.
@@ -43,16 +47,25 @@ pub(crate) fn test_notice(window: &Window, words: &str, cx: &mut App) {
     super::chips::post_words(window, Notice::Test(hash.finish()), words.to_string(), cx);
 }
 
-/// Say a sticky notice in `window`: the real warning about a terminal that lost its host when `words` is
-/// `None`, otherwise a warning that says `words`. Once dismissed, the same one is not said again.
+/// The error text the real warning carries when devctl posts it: a sample of what a failed helper says.
 #[cfg(feature = "devctl")]
-pub(crate) fn test_sticky(window: &Window, words: Option<&str>, cx: &mut App) {
+const SAMPLE_REASON: &str = "couldn't start the helper process: No such file or directory (os error 2)"; // text: not shown (a made-up error for devctl's sample warning)
+
+/// Say a sticky notice in `window`: the real warning about a terminal that lost its host when `words` is
+/// `None` (with a sample error for its explanation; `again`: even if it was dismissed before), otherwise a
+/// warning that says `words`, which has no explanation. Once dismissed, the same one is not said again.
+#[cfg(feature = "devctl")]
+pub(crate) fn test_sticky(window: &Window, words: Option<&str>, again: bool, cx: &mut App) {
     use std::hash::{DefaultHasher, Hash as _, Hasher as _};
 
     use wormhole_core::view::notice::{Notice, Warning};
 
     let Some(words) = words else {
-        super::chips::post_notice(window, Notice::Warned(Warning::HostFallback), cx);
+        if again {
+            super::chips::forget_dismissed(window.window_handle().window_id(), cx);
+        }
+        let detail = Some(SAMPLE_REASON.to_string());
+        super::chips::post_notice(window, Notice::Warned(Warning::HostFallback), detail, cx);
         return;
     };
     let mut hash = DefaultHasher::new();
@@ -60,9 +73,9 @@ pub(crate) fn test_sticky(window: &Window, words: Option<&str>, cx: &mut App) {
     super::chips::post_words(window, Notice::Warned(Warning::Test(hash.finish())), words.to_string(), cx);
 }
 
-/// Click `window`'s chip as a person does. `false`: it has none.
-pub(crate) fn click(window: WindowId, cx: &App) -> bool {
-    super::chips::press(window, cx)
+/// Click `window`'s chip at `press` as a person does. `false`: it has none.
+pub(crate) fn click(window: WindowId, press: Press, cx: &App) -> bool {
+    super::chips::press(window, press, cx)
 }
 
 /// Every window that has had a chip.
@@ -77,6 +90,8 @@ pub(crate) fn notices(cx: &App) -> Vec<Report> {
             words: entry.words.clone(),
             sticky: entry.rules.held().is_some(),
             clickable: entry.rules.clickable(),
+            buttons: entry.rules.buttons(),
+            info_open: entry.info.is_some(),
             hidden: entry.hidden,
             look: entry.look,
             spot: entry.spot,

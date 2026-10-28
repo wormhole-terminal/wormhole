@@ -182,7 +182,7 @@ impl TerminalView {
                         "couldn't start a session host, the terminal runs in the app: {err:#}"
                     );
                     if !FALLBACK_TOLD.swap(true, Ordering::Relaxed) {
-                        self.tell_fallback(cx);
+                        self.tell_fallback(&err, cx);
                     }
                 }
                 match wormhole_core::terminal::spawn(self.painted_size().unwrap_or(size), options) {
@@ -196,11 +196,11 @@ impl TerminalView {
     }
 
     /// Say that this terminal ends when the app quits, because its host couldn't start: on the notice chip,
-    /// which stays until it is clicked, and where the window's profile has the chip off, as the banner
-    /// over the pane (`render_host_notice`).
-    fn tell_fallback(&mut self, cx: &mut Context<Self>) {
+    /// which stays until it is closed and explains itself (`err` is all it keeps of what went wrong), and
+    /// where the window's profile has the chip off, as the banner over the pane (`render_host_notice`).
+    fn tell_fallback(&mut self, err: &anyhow::Error, cx: &mut Context<Self>) {
         if crate::notice::enabled(&self.profile, cx) {
-            self.say(Notice::Warned(Warning::HostFallback), cx);
+            self.say_with(Notice::Warned(Warning::HostFallback), format!("{err:#}"), cx);
         } else {
             self.host.notice = Some(crate::notice::host_fallback_detail().into());
         }
@@ -209,7 +209,7 @@ impl TerminalView {
     /// Its host could not start: tell it as `host_ready` does, once per run.
     #[cfg(test)]
     pub(crate) fn tell_fallback_for_test(&mut self, cx: &mut Context<Self>) {
-        self.tell_fallback(cx);
+        self.tell_fallback(&anyhow::anyhow!("spawn failed").context("couldn't start the helper"), cx);
     }
 
     /// The banner over the pane about a host that could not start, while it shows.

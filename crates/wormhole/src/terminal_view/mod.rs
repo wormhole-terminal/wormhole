@@ -544,17 +544,31 @@ impl TerminalView {
 
     /// Say `notice` in this terminal's window, about this terminal: the chip drops from its top edge.
     pub(crate) fn say(&self, notice: impl Into<wormhole_core::view::notice::Notice>, cx: &mut Context<Self>) {
-        // Weak: the chip may outlive the terminal (a warning waits for a click), and must not keep a closed
-        // terminal's view, and with it its shell, alive.
+        crate::notice::post_to(self.window, notice, Some(Self::notice_anchor(cx)), cx);
+    }
+
+    /// [`Self::say`] for a notice with an explanation, which says `detail` of what went wrong (an error's
+    /// words, never anything the terminal showed).
+    pub(crate) fn say_with(
+        &self,
+        notice: impl Into<wormhole_core::view::notice::Notice>,
+        detail: String,
+        cx: &mut Context<Self>,
+    ) {
+        crate::notice::post_to_with(self.window, notice, Some(Self::notice_anchor(cx)), detail, cx);
+    }
+
+    /// Where this terminal is, for a chip about it. Weak: the chip may outlive the terminal (a warning waits
+    /// for a click), and must not keep a closed terminal's view, and with it its shell, alive.
+    fn notice_anchor(cx: &mut Context<Self>) -> crate::notice::Anchor {
         let this = cx.weak_entity();
-        let anchor: crate::notice::Anchor = std::rc::Rc::new(move |cx: &App| {
+        std::rc::Rc::new(move |cx: &App| {
             this.read_with(cx, |terminal, _| crate::notice::Where::At {
                 bounds: terminal.pane_bounds(),
                 terminal: this.entity_id(),
             })
             .unwrap_or(crate::notice::Where::Gone)
-        });
-        crate::notice::post_to(self.window, notice, Some(anchor), cx);
+        })
     }
 
     /// The selected text, if anything is selected.

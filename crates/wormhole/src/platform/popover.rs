@@ -139,6 +139,13 @@ pub struct Colours {
 
 #[derive(Clone)]
 pub enum Row {
+    /// A heading: one line in the heavier weight.
+    Heading(SharedString),
+    /// A paragraph of words, wrapped.
+    Text(SharedString),
+    /// Words that are read out and copied as they are (an error's text): monospaced, wrapped anywhere,
+    /// selectable.
+    Code(SharedString),
     /// A path, wrapped where it has to be.
     Path(SharedString),
     Field(Field),
@@ -215,6 +222,9 @@ impl Popover {
         )];
         for row in &self.rows {
             match row {
+                Row::Heading(text) => out.push(format!("## {text}")),
+                Row::Text(text) => out.push(format!("text: {text}")),
+                Row::Code(text) => out.push(format!("code: {text}")),
                 Row::Path(text) => out.push(format!("# {text}")),
                 Row::Field(field) => out.push(format!(
                     "field {:?}{}",

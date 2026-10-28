@@ -16,7 +16,7 @@ use std::rc::Rc;
 #[cfg(feature = "devctl")]
 use std::cell::Cell;
 
-use gpui_kit::{App, Window};
+use gpui_kit::{App, Bounds, Pixels, Window, point, px, size};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyClass, Bool};
@@ -30,22 +30,16 @@ use objc2_app_kit::{
 use objc2_foundation::{NSEdgeInsets, NSPoint, NSRect, NSSize, NSString};
 use objc2_quartz_core::{CALayer, CAMediaTiming as _, CATransition, kCATransitionFade};
 use wormhole_core::view::motion::notice::{Entrance, FADE_EASE, FADE_IN, FADE_OUT, SWAP, UP, UP_EASE};
-use wormhole_core::view::notice::{Glyph, Placed, Spot, place};
+use wormhole_core::view::notice::{Buttons, Glyph, Placed, Press, Spot, place};
 use wormhole_core::view::panes::Rect;
 
 use super::appearance;
 use super::appkit::{ns_window, symbol};
 use super::notice_click::{ClickView, click_view};
+use super::notice_layout::{Geometry, HEIGHT, fixed, geometry, picture};
 use super::notice_motion::{drop_in, fade, rest, slide, translation};
 use crate::platform::notice::{Clicks, Content, Material};
 
-/// The chip's own metrics, AppKit's native ones for a small capsule (the app's style scale is for what
-/// GPUI draws; this is system chrome, like a menu row in `rows`).
-const HEIGHT: f64 = 34.0;
-/// Beside the symbol and the words.
-const PAD: f64 = 14.0;
-const ICON: f64 = 15.0;
-const GAP: f64 = 7.0;
 /// Under the chip, inside the panel: where the glass's shadow falls.
 const SHADOW_ROOM: f64 = 14.0;
 /// What the panel keeps around the capsule while it is clickable, the least the glass's shadow needs: at
@@ -170,30 +164,6 @@ fn capsule() -> Retained<NSImage> {
     image
 }
 
-/// Where everything sits in a capsule `chip_w` wide, for words `text` big.
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Geometry {
-    /// In the label's own space.
-    icon: NSRect,
-    text: NSRect,
-}
-
-/// What the capsule needs beside its words.
-const FIXED: f64 = PAD + ICON + GAP + PAD;
-
-fn geometry(text: NSSize, chip_w: f64) -> Geometry {
-    // A capsule too narrow for them cuts the words (the label truncates the tail); the symbol stays.
-    let words = text.width.min((chip_w - FIXED).max(0.0)).ceil();
-    let centred = |side: f64| ((HEIGHT - side) / 2.0).floor();
-    Geometry {
-        icon: NSRect::new(NSPoint::new(PAD, centred(ICON)), NSSize::new(ICON, ICON)),
-        text: NSRect::new(
-            NSPoint::new(PAD + ICON + GAP, centred(text.height)),
-            NSSize::new(words, text.height.ceil()),
-        ),
-    }
-}
-
 /// The SF Symbol for a glyph.
 fn symbol_name(glyph: Glyph) -> &'static str {
     match glyph {
@@ -213,8 +183,16 @@ pub struct Chip {
     label: Retained<NSView>,
     icon: Retained<NSImageView>,
     text: Retained<NSTextField>,
-    /// Lies over the capsule and takes the click, while the chip is clickable.
+    /// The ⓘ and × pictures, in the label.
+    info_icon: Retained<NSImageView>,
+    close_icon: Retained<NSImageView>,
+    /// Lie over the capsule and over each button and take the click, while the chip is clickable.
     press: Retained<ClickView>,
+    info_press: Retained<ClickView>,
+    close_press: Retained<ClickView>,
+    /// Which buttons the chip shows, and where they sit as last laid out.
+    buttons: Buttons,
+    geometry: Geometry,
     /// The chip takes a click now: the panel is only as wide as the capsule (`set_clickable`).
     clickable: bool,
     /// The panel is ordered out while the terminal the chip is about is not on screen (`set_hidden`).
@@ -281,18 +259,32 @@ impl Chip {
         label.addSubview(&text);
         backdrop.hold(&label);
 
+        // The two buttons' pictures, which light up and click through the views over them.
+        let button_icon = || {
+            let view = NSImageView::initWithFrame(mtm.alloc(), NSRect::ZERO);
+            view.setImageScaling(NSImageScaling::ScaleProportionallyUpOrDown);
+            view.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
+            view.setHidden(true);
+            label.addSubview(&view);
+            view
+        };
+        let (info_icon, close_icon) = (button_icon(), button_icon());
+
         // Over the capsule, above the glass, and out of the way until the chip is clickable. The channel is
         // the app's to read: a press can come at any moment of the event loop, outside any GPUI update.
-        let press = click_view(
-            mtm,
-            "",
-            Rc::new(move || {
-                // Unbounded: it never waits, and it only fails when the app has stopped listening.
-                clicks.try_send(()).ok();
-            }),
-        );
-        press.setHidden(true);
-        holder.addSubview(&press);
+        let tell: Rc<dyn Fn(Press)> = Rc::new(move |press| {
+            // Unbounded: it never waits, and it only fails when the app has stopped listening.
+            clicks.try_send(press).ok();
+        });
+        let view = |which, lights| {
+            let view = click_view(mtm, "", which, lights, tell.clone());
+            view.setHidden(true);
+            holder.addSubview(&view);
+            view
+        };
+        // The body first, so the buttons are over it and take their own clicks.
+        let (press, info_press, close_press) =
+            (view(Press::Body, false), view(Press::Info, true), view(Press::Close, true));
 
         let placed = Placed { top: 0.0, chip: Rect::new(0.0, 0.0, 0.0, 0.0), cut: false };
         Some(Self {
@@ -303,7 +295,13 @@ impl Chip {
             label,
             icon,
             text,
+            info_icon,
+            close_icon,
             press,
+            info_press,
+            close_press,
+            buttons: Buttons::NONE,
+            geometry: Geometry::default(),
             clickable: false,
             hidden: false,
             placed,
@@ -387,8 +385,29 @@ impl Chip {
     /// clear view over the capsule takes the click. A click anywhere else is not over the panel at all.
     pub fn set_clickable(&mut self, clickable: bool) {
         self.clickable = clickable;
-        self.press.setHidden(!clickable);
-        self.panel.setIgnoresMouseEvents(!clickable);
+        self.sync_press();
+    }
+
+    /// The views that take clicks show while the chip is clickable, a button's only where it is there; the
+    /// panel takes the mouse only then.
+    fn sync_press(&self) {
+        self.press.setHidden(!self.clickable);
+        self.info_press.setHidden(!(self.clickable && self.buttons.info));
+        self.close_press.setHidden(!(self.clickable && self.buttons.close));
+        self.panel.setIgnoresMouseEvents(!self.clickable);
+    }
+
+    /// The ⓘ button in the window's space (points from its top left), where the explanation's arrow points.
+    /// `None` when the chip has no such button.
+    pub fn info_bounds(&self) -> Option<Bounds<Pixels>> {
+        let square = self.geometry.info?;
+        let chip = self.placed.chip;
+        // The label's y runs up from the capsule's bottom; the window's runs down from its top.
+        let top = f64::from(chip.y) + HEIGHT - (square.origin.y + square.size.height);
+        Some(Bounds::new(
+            point(px(chip.x + square.origin.x as f32), px(top as f32)),
+            size(px(square.size.width as f32), px(square.size.height as f32)),
+        ))
     }
 
     /// The terminal the chip is about is off screen, or something covers it (`hidden`): the panel is ordered
@@ -463,10 +482,20 @@ impl Chip {
     }
 
     fn set_content(&mut self, content: &Content<'_>) {
-        let Content { glyph, text, appearance: theme } = *content;
+        let Content { glyph, text, appearance: theme, buttons, close_label, info_label } = *content;
         self.text.setStringValue(&NSString::from_str(text));
         self.press.setAccessibilityLabel(Some(&NSString::from_str(text)));
         self.icon.setImage(symbol(symbol_name(glyph), text).as_deref());
+        self.buttons = buttons;
+        self.info_icon.setImage(symbol("info.circle", info_label).as_deref());
+        self.close_icon.setImage(symbol("xmark", close_label).as_deref());
+        self.info_icon.setHidden(!buttons.info);
+        self.close_icon.setHidden(!buttons.close);
+        self.info_press.setAccessibilityLabel(Some(&NSString::from_str(info_label)));
+        self.close_press.setAccessibilityLabel(Some(&NSString::from_str(close_label)));
+        self.info_press.setToolTip(Some(&NSString::from_str(info_label)));
+        self.close_press.setToolTip(Some(&NSString::from_str(close_label)));
+        self.sync_press();
         // The theme's appearance on everything in the chip, whatever the system's is.
         appearance::set_on(&self.holder, theme);
     }
@@ -476,10 +505,11 @@ impl Chip {
     fn lay_out(&mut self, spot: Spot, animated: bool) {
         self.text.sizeToFit();
         let words = self.text.frame().size;
-        let natural = ((FIXED + words.width.ceil()) as f32, HEIGHT as f32);
+        let natural = ((fixed(self.buttons) + words.width.ceil()) as f32, HEIGHT as f32);
         self.placed = place(spot, natural);
         let Placed { top, chip, .. } = self.placed;
-        let geometry = geometry(words, f64::from(chip.w));
+        let geometry = geometry(words, f64::from(chip.w), self.buttons);
+        self.geometry = geometry;
 
         let parent = self.parent.frame();
         // Under the capsule the panel keeps the glass's shadow: less of it while it takes clicks.
@@ -513,7 +543,23 @@ impl Chip {
         let inside = NSRect::new(NSPoint::ZERO, capsule);
         self.icon.setFrame(geometry.icon);
         self.text.setFrame(geometry.text);
+        // The views over the capsule and its buttons, in the panel's space.
+        let over = |square: NSRect| {
+            NSRect::new(
+                NSPoint::new(at.origin.x + square.origin.x, at.origin.y + square.origin.y),
+                square.size,
+            )
+        };
         self.press.setFrame(at);
+        for (square, icon, press) in [
+            (geometry.info, &self.info_icon, &self.info_press),
+            (geometry.close, &self.close_icon, &self.close_press),
+        ] {
+            if let Some(square) = square {
+                icon.setFrame(picture(square));
+                press.setFrame(over(square));
+            }
+        }
         if animated {
             // The capsule and the label's frame move together, so the words are never ahead of the glass.
             NSAnimationContext::beginGrouping();
@@ -551,40 +597,4 @@ fn take_down(parent: &NSWindow, panel: &NSPanel) {
     parent.removeChildWindow(panel);
     panel.orderOut(None);
     panel.close();
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn words(width: f64) -> NSSize {
-        NSSize::new(width, 16.0)
-    }
-
-    #[test]
-    fn the_words_get_what_the_capsule_has_beside_the_symbol() {
-        let g = geometry(words(80.0), FIXED + 80.0);
-        assert_eq!(g.text.size.width, 80.0);
-    }
-
-    #[test]
-    fn the_symbol_and_the_words_sit_in_the_middle_of_the_height() {
-        let g = geometry(words(80.0), FIXED + 80.0);
-        assert_eq!(g.icon.origin.y, ((HEIGHT - ICON) / 2.0).floor());
-        assert_eq!(g.text.origin.y, ((HEIGHT - 16.0) / 2.0).floor());
-        assert!(g.icon.origin.x + g.icon.size.width + GAP <= g.text.origin.x + 1e-9);
-    }
-
-    #[test]
-    fn words_wider_than_the_capsule_are_cut_and_the_symbol_stays() {
-        let g = geometry(words(2000.0), 300.0);
-        assert_eq!(g.text.size.width, 300.0 - FIXED);
-        assert_eq!(g.icon.size.width, ICON);
-    }
-
-    #[test]
-    fn a_capsule_with_no_room_for_words_has_none() {
-        let g = geometry(words(50.0), 0.0);
-        assert_eq!(g.text.size.width, 0.0);
-    }
 }

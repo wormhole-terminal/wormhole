@@ -10,13 +10,13 @@
 //! to make (a system without one, a window without a native view, a test) [`Chip::new`] answers `None`.
 
 use wormhole_core::theme::tokens::Appearance;
-use wormhole_core::view::notice::Glyph;
+use wormhole_core::view::notice::{Buttons, Glyph, Press};
 
 pub use super::os::notice::Chip;
 
 /// Where a click on a clickable chip goes: the app reads it (`crate::notice`) and decides what it means.
 /// A channel and not a callback, because AppKit calls from its event loop, outside any GPUI update.
-pub type Clicks = smol::channel::Sender<()>;
+pub type Clicks = smol::channel::Sender<Press>;
 
 /// What the chip shows.
 #[derive(Clone, Copy, Debug)]
@@ -25,6 +25,10 @@ pub struct Content<'a> {
     pub text: &'a str,
     /// The theme's appearance, which the chip is drawn in whatever the system's is.
     pub appearance: Appearance,
+    /// The buttons beside the words, and what the platform calls them (VoiceOver, the tooltip).
+    pub buttons: Buttons,
+    pub close_label: &'a str,
+    pub info_label: &'a str,
 }
 
 /// What the chip is made of.

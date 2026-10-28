@@ -148,7 +148,8 @@ impl Render for Layer {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(open) = &self.open else { return Empty.into_any_element() };
         let ui = ui(cx);
-        let has_path = open.popover.rows.iter().any(|row| matches!(row, Row::Path(_)));
+        let has_path =
+            open.popover.rows.iter().any(|row| matches!(row, Row::Path(_) | Row::Text(_) | Row::Code(_)));
         let transient = open.popover.behavior == Behavior::Transient;
         let mut card = style::palette_surface(ui, true)
             .id("popover-card")
@@ -181,6 +182,21 @@ impl Render for Layer {
         let mut button_ix = 0;
         for (row_ix, row) in open.popover.rows.iter().enumerate() {
             card = match row {
+                Row::Heading(text) => card.child(
+                    div()
+                        .text_body()
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_color(ui.text)
+                        .child(text.clone()),
+                ),
+                Row::Text(text) => card.child(div().text_body().text_color(ui.text).child(text.clone())),
+                Row::Code(text) => card.child(
+                    div()
+                        .text_caption()
+                        .font_family(crate::fonts::code_font(cx).0)
+                        .text_color(ui.text)
+                        .child(text.clone()),
+                ),
                 Row::Path(text) => card.child(path_line(text, ui)),
                 Row::Field(_) => card.children(open.field.as_ref().map(|input| Input::new(input).small())),
                 Row::Buttons(buttons) => {

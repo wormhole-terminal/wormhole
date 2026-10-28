@@ -154,6 +154,7 @@ pub(super) fn signatures_match() {
         notice::Chip::swap: fn(&mut S, &super::notice::Content<'_>, Spot, bool);
         notice::Chip::hide: fn(&mut S, Entrance);
         notice::Chip::set_clickable: fn(&mut S, bool);
+        notice::Chip::info_bounds: fn(&S) -> Option<gpui_kit::Bounds<gpui_kit::Pixels>>;
         notice::Chip::set_hidden: fn(&mut S, bool, &mut App);
         notice::Chip::restyle: fn(&mut S, &super::notice::Content<'_>);
         notice::Chip::place: fn(&mut S, Spot);

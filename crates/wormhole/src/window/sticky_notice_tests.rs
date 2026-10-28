@@ -12,7 +12,7 @@ use std::time::Duration;
 use gpui_kit::TestAppContext;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::view::motion::notice::{LIFE, UP};
-use wormhole_core::view::notice::Phase;
+use wormhole_core::view::notice::{Buttons, Phase, Press};
 use wormhole_core::view::panes::Rect;
 use wormhole_text::{Language, with_language};
 
@@ -48,8 +48,12 @@ fn lost_host(cx: &mut TestAppContext, window: &OpenWindow) {
 }
 
 fn click(cx: &mut TestAppContext, window: &OpenWindow) -> bool {
+    press(cx, window, Press::Close)
+}
+
+fn press(cx: &mut TestAppContext, window: &OpenWindow, press: Press) -> bool {
     let id = window.handle.window_id();
-    let sent = cx.update(|cx| crate::notice::click(id, cx));
+    let sent = cx.update(|cx| crate::notice::click(id, press, cx));
     cx.run_until_parked();
     sent
 }
@@ -278,5 +282,89 @@ fn a_held_warning_takes_the_look_the_system_changes_to(cx: &mut TestAppContext) 
         cx.run_until_parked();
         look(cx);
         assert_eq!(looks(cx), Some((theme, true)), "Reduce Transparency: the chip is made again, plain");
+    });
+}
+
+/// The buttons the chip shows and whether the explanation is open.
+fn buttons(cx: &mut TestAppContext) -> (Buttons, bool) {
+    cx.update(|cx| {
+        let report = crate::notice::notices(cx).into_iter().next().expect("a chip");
+        (report.buttons, report.info_open)
+    })
+}
+
+/// The explanation as the platform was asked to show it, as lines.
+fn explanation() -> Option<Vec<String>> {
+    crate::platform::record::open_popover().map(|popover| popover.outline())
+}
+
+#[gpui_kit::test]
+fn a_warning_has_a_cross_and_an_info_and_a_copy_has_neither(cx: &mut TestAppContext) {
+    if isolate("a_warning_has_a_cross_and_an_info_and_a_copy_has_neither") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        lost_host(cx, window);
+        assert_eq!(buttons(cx).0, Buttons { info: true, close: true });
+        copy(cx, window, "twelve chars");
+        assert_eq!(buttons(cx).0, Buttons::NONE, "a copy's words over the warning have none");
+        wait(cx, LIFE + Duration::from_millis(10));
+        assert_eq!(buttons(cx).0, Buttons { info: true, close: true }, "and they come back with the warning");
+    });
+}
+
+#[gpui_kit::test]
+fn the_cross_closes_the_warning_and_the_info_and_the_body_open_the_explanation(cx: &mut TestAppContext) {
+    if isolate("the_cross_closes_the_warning_and_the_info_and_the_body_open_the_explanation") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        lost_host(cx, window);
+        assert!(press(cx, window, Press::Info));
+        assert_eq!(chip(cx).map(|c| c.0), Some(Phase::Showing), "the ⓘ does not close it");
+        assert!(buttons(cx).1, "the explanation is open");
+        let lines = explanation().expect("shown");
+        assert_eq!(lines[1], "## This terminal can't outlive Wormhole");
+        assert!(
+            lines.iter().any(|line| line == "code: couldn't start the helper: spawn failed"),
+            "the error's own words: {lines:?}"
+        );
+
+        // The ⓘ again closes it.
+        wait(cx, Duration::from_secs(1));
+        assert!(press(cx, window, Press::Info));
+        assert!(!buttons(cx).1, "closed again");
+        assert_eq!(explanation(), None);
+
+        // A click on the capsule opens it, and does not close the warning either.
+        wait(cx, Duration::from_secs(1));
+        assert!(press(cx, window, Press::Body));
+        assert!(buttons(cx).1);
+        assert_eq!(chip(cx).map(|c| c.0), Some(Phase::Showing), "the body no longer closes it");
+
+        // The × closes the warning, and the explanation with it.
+        assert!(press(cx, window, Press::Close));
+        assert_eq!(chip(cx).map(|c| c.0), Some(Phase::Leaving));
+        assert_eq!(explanation(), None, "nothing is left open under a chip that is gone");
+    });
+}
+
+#[gpui_kit::test]
+fn the_explanation_goes_when_its_terminal_does(cx: &mut TestAppContext) {
+    if isolate("the_explanation_goes_when_its_terminal_does") {
+        return;
+    }
+    with_language(Language::ENGLISH, || {
+        let window = start(cx, 2);
+        set_notices(cx, true);
+        draw(cx, &window);
+        draw(cx, &window);
+        lost_host(cx, &window);
+        assert!(press(cx, &window, Press::Info));
+        assert!(explanation().is_some());
+        drive(cx, &window, |ws, window, cx| ws.close_session(0, window, cx));
+        cx.run_until_parked();
+        look(cx);
+        assert_eq!(explanation(), None);
     });
 }

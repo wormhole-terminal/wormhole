@@ -22,9 +22,10 @@ use objc2::{
 use objc2_app_kit::{
     NSAccessibility as _, NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua,
     NSAppearanceNameDarkAqua, NSBezelStyle, NSBox, NSBoxType, NSButton, NSCellImagePosition, NSControl,
-    NSControlSize, NSControlTextEditingDelegate, NSEvent, NSLayoutAttribute, NSLineBreakMode, NSPopover,
-    NSPopoverBehavior, NSPopoverDelegate, NSStackView, NSTextField, NSTextFieldDelegate, NSTextView,
-    NSTrackingArea, NSTrackingAreaOptions, NSUserInterfaceLayoutOrientation, NSView, NSViewController,
+    NSControlSize, NSControlTextEditingDelegate, NSEvent, NSFont, NSLayoutAttribute, NSLineBreakMode,
+    NSPopover, NSPopoverBehavior, NSPopoverDelegate, NSStackView, NSTextField, NSTextFieldDelegate,
+    NSTextView, NSTrackingArea, NSTrackingAreaOptions, NSUserInterfaceLayoutOrientation, NSView,
+    NSViewController,
 };
 use objc2_foundation::{NSEdgeInsets, NSNotification, NSRect, NSRectEdge, NSSize, NSString};
 use wormhole_core::theme::tokens::Appearance;
@@ -39,6 +40,11 @@ const PAD: f64 = 12.0;
 const GAP: f64 = 8.0;
 const MIN_WIDTH: f64 = 276.0;
 const PATH_WIDTH: f64 = 392.0;
+/// A paragraph's width: a few short lines, not a wide card.
+const TEXT_WIDTH: f64 = 320.0;
+/// `NSFontWeightRegular` and `NSFontWeightSemibold`, which AppKit gives as numbers from -1 to 1.
+const REGULAR: f64 = 0.0;
+const SEMIBOLD: f64 = 0.3;
 
 /// What a control did, as the app's task is told.
 enum Event {
@@ -342,8 +348,35 @@ fn build(mtm: MainThreadMarker, popover: &Popover, target: &Target, tx: &Tx) -> 
     let mut actions: Vec<Action> = Vec::new();
     let mut field = None;
     let mut colours = None;
+    // The paragraphs wrap at their own width, which the card must have.
+    let mut least = MIN_WIDTH;
     for row in &popover.rows {
         match row {
+            Row::Heading(text) => {
+                let label = NSTextField::labelWithString(&NSString::from_str(text), mtm);
+                label.setFont(Some(&NSFont::systemFontOfSize_weight(NSFont::systemFontSize(), SEMIBOLD)));
+                stack.addArrangedSubview(&label);
+            }
+            Row::Text(text) => {
+                let label = NSTextField::wrappingLabelWithString(&NSString::from_str(text), mtm);
+                label.setFont(Some(&NSFont::systemFontOfSize(NSFont::smallSystemFontSize())));
+                label.setPreferredMaxLayoutWidth(TEXT_WIDTH);
+                label.setSelectable(true);
+                stack.addArrangedSubview(&label);
+                least = least.max(TEXT_WIDTH + 2.0 * PAD);
+            }
+            Row::Code(text) => {
+                let label = NSTextField::wrappingLabelWithString(&NSString::from_str(text), mtm);
+                label.setFont(Some(&NSFont::monospacedSystemFontOfSize_weight(
+                    NSFont::smallSystemFontSize(),
+                    REGULAR,
+                )));
+                label.setPreferredMaxLayoutWidth(TEXT_WIDTH);
+                label.setLineBreakMode(NSLineBreakMode::ByCharWrapping);
+                label.setSelectable(true);
+                stack.addArrangedSubview(&label);
+                least = least.max(TEXT_WIDTH + 2.0 * PAD);
+            }
             Row::Path(text) => {
                 let label = NSTextField::wrappingLabelWithString(&NSString::from_str(text), mtm);
                 label.setPreferredMaxLayoutWidth(PATH_WIDTH);
@@ -452,7 +485,7 @@ fn build(mtm: MainThreadMarker, popover: &Popover, target: &Target, tx: &Tx) -> 
         };
         stack.addTrackingArea(&area);
     }
-    min_width(&stack, MIN_WIDTH);
+    min_width(&stack, least);
     stack.layoutSubtreeIfNeeded();
     let size = stack.fittingSize();
     stack.setFrameSize(size);

@@ -339,13 +339,17 @@
 //!   notice <text>   put a notice (the chip that drops from the top edge of a terminal) in this window, about its
 //!                   selected terminal, that says <text>
 //!                   (the Notices feature flag must be on: `set feature_flags={"notices":true}`)
-//!   notice sticky [<text>]   put a sticky notice: no life, it stays until clicked, and while it shows the
-//!                   panel takes a click on the capsule. Bare, it is the real warning that a terminal's
-//!                   session host couldn't start, with its own words; with <text>, a warning that says that.
-//!                   Dismissed once, the same one is not said again
-//!   notice-click    click this window's chip as a person does (the click goes over the panel's own
-//!                   channel): a sticky notice is dismissed, a copy's chip takes no click
+//!   notice sticky [<text>]   put a sticky notice: no life, it stays until closed, and while it shows the
+//!                   panel takes clicks. Bare, it is the real warning that a terminal's helper (session
+//!                   host) couldn't start, with its own words, its ⓘ explanation and a sample error;
+//!                   with <text>, a warning that says that, which has a × and no ⓘ. Dismissed once, the
+//!                   same one is not said again, except by `notice sticky again`
+//!   notice-click [close|info|body]   click this window's chip as a person does (the click goes over the
+//!                   panel's own channel): the × (the default) dismisses a sticky notice, the ⓘ and the
+//!                   capsule open its explanation (the `popover` command shows it; in a background instance
+//!                   it is recorded and not shown), a copy's chip takes no click
 //!   notices         each window's chip, a line each: its number, phase (Hidden, Showing, Leaving), words,
+//!                   `info` and `close` (the buttons it shows), `info-open` (the explanation is open),
 //!                   `sticky` (one is up), `clickable` (it shows the sticky one's own words) and `hidden` (the
 //!                   sticky one waits out of sight: its terminal is off screen or an overlay covers the window), `look <appearance> [plain]` (what the chip was
 //!                   made in; `plain`: no transparency), the

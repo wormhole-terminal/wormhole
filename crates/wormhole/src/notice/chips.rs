@@ -18,11 +18,13 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::theme::tokens::Appearance;
 use wormhole_core::view::motion::notice::Entrance;
-use wormhole_core::view::notice::{ChipRules, Effect, Glyph, Notice, Spot};
+use wormhole_core::view::notice::{Buttons, ChipRules, Effect, Glyph, Notice, Press, Reaction, Spot};
 use wormhole_core::view::panes::Rect;
+use wormhole_text::{keys, text};
 
 use crate::platform;
 use crate::platform::notice::{Chip, Clicks, Content};
+use crate::platform::popover::Handle;
 use crate::settings::{settings_in, store_in};
 
 /// How a terminal's bounds in its window are read again whenever the chip is placed: a chip about a
@@ -90,6 +92,15 @@ pub(super) struct Entry {
     pub(super) anchor: Option<Anchor>,
     /// What the sticky notice says, kept for when a copy's words give way to it.
     pub(super) sticky_words: Option<String>,
+    /// What the sticky notice's explanation says went wrong, in the error's own words (core's `reason`).
+    pub(super) sticky_detail: Option<String>,
+    /// The explanation, while its popover is open: which opening it is, and how to close it from here.
+    pub(super) info: Option<(u64, Handle)>,
+    /// How many have been opened, so a close that comes late is not taken for the newest's.
+    pub(super) opened: u64,
+    /// When the explanation last closed by itself (a click outside it): the click on ⓘ that closed it is
+    /// the same click that would open it again.
+    pub(super) info_closed: Option<std::time::Instant>,
     /// Where the sticky notice is about: its chip goes back there when a copy's words give way to it.
     pub(super) sticky_anchor: Option<Anchor>,
     /// Where the panel says it was clicked, once there is a panel; the task reads the other end.
@@ -138,10 +149,13 @@ pub(crate) fn register(window: &Window, home: Home, cx: &mut App) {
 fn close(cx: &mut App, id: WindowId) {
     cx.update_global::<Chips, _>(|chips, cx| {
         chips.homes.remove(&id);
-        if let Some(entry) = chips.windows.remove(&id)
-            && let Some(chip) = entry.chip
-        {
-            chip.close(cx);
+        if let Some(mut entry) = chips.windows.remove(&id) {
+            if let Some((_, info)) = entry.info.take() {
+                info.close(cx);
+            }
+            if let Some(chip) = entry.chip.take() {
+                chip.close(cx);
+            }
         }
     });
 }
@@ -164,29 +178,41 @@ pub(crate) fn post_to(
     anchor: Option<Anchor>,
     cx: &mut App,
 ) {
-    queue(window, notice.into(), None, anchor, cx);
+    queue(window, notice.into(), None, anchor, None, cx);
+}
+
+/// [`post_to`] for a notice with an explanation (`Notice::has_info`), which says `detail` of what went
+/// wrong: an error's own words, never anything a terminal showed.
+pub(crate) fn post_to_with(
+    window: AnyWindowHandle,
+    notice: impl Into<Notice>,
+    anchor: Option<Anchor>,
+    detail: String,
+    cx: &mut App,
+) {
+    queue(window, notice.into(), None, anchor, Some(detail), cx);
 }
 
 /// Say `notice` with `words` of its own (devctl's).
 #[cfg(feature = "devctl")]
 pub(super) fn post_words(window: &Window, notice: Notice, words: String, cx: &mut App) {
-    queue(window.window_handle(), notice, Some(words), None, cx);
+    queue(window.window_handle(), notice, Some(words), None, None, cx);
 }
 
-/// Say a notice that has words in the catalog (devctl's `notice sticky`).
+/// Say a notice that has words in the catalog, with `detail` for its explanation (devctl's `notice sticky`).
 #[cfg(feature = "devctl")]
-pub(super) fn post_notice(window: &Window, notice: Notice, cx: &mut App) {
-    queue(window.window_handle(), notice, None, None, cx);
+pub(super) fn post_notice(window: &Window, notice: Notice, detail: Option<String>, cx: &mut App) {
+    queue(window.window_handle(), notice, None, None, detail, cx);
 }
 
 /// Click the chip of `window` as the panel does: the click goes over the same channel. `false` when the
 /// window has no chip yet (a chip in a test has no panel, and the channel is the same).
 #[cfg(any(test, feature = "devctl"))]
-pub(super) fn press(window: WindowId, cx: &App) -> bool {
+pub(super) fn press(window: WindowId, press: Press, cx: &App) -> bool {
     cx.try_global::<Chips>()
         .and_then(|chips| chips.windows.get(&window))
         .and_then(|entry| entry.clicks.as_ref())
-        .is_some_and(|clicks| clicks.try_send(()).is_ok())
+        .is_some_and(|clicks| clicks.try_send(press).is_ok())
 }
 
 fn queue(
@@ -194,15 +220,23 @@ fn queue(
     notice: Notice,
     words: Option<String>,
     anchor: Option<Anchor>,
+    detail: Option<String>,
     cx: &mut App,
 ) {
     cx.defer(move |cx| {
-        window.update(cx, |_, window, cx| say(window, notice, words, anchor, cx)).ok();
+        window.update(cx, |_, window, cx| say(window, notice, words, anchor, detail, cx)).ok();
     });
 }
 
 /// Say it, now that nothing of the poster is borrowed.
-fn say(window: &mut Window, notice: Notice, words: Option<String>, anchor: Option<Anchor>, cx: &mut App) {
+fn say(
+    window: &mut Window,
+    notice: Notice,
+    words: Option<String>,
+    anchor: Option<Anchor>,
+    detail: Option<String>,
+    cx: &mut App,
+) {
     let id = window.window_handle().window_id();
     // A window that has not said who it is gets nothing: better no chip than one in the wrong place.
     let Some(facts) =
@@ -232,6 +266,7 @@ fn say(window: &mut Window, notice: Notice, words: Option<String>, anchor: Optio
         if notice.is_sticky() {
             entry.sticky_words = Some(words.clone());
             entry.sticky_anchor = anchor.clone();
+            entry.sticky_detail = detail.map(|detail| wormhole_core::view::notice::reason(&detail));
         }
         entry.words = words;
         entry.theme = Some(theme);
@@ -239,7 +274,7 @@ fn say(window: &mut Window, notice: Notice, words: Option<String>, anchor: Optio
         entry.look = Some((theme, opaque));
         entry.anchor = anchor;
         entry.spot = Some(spot);
-        let content = Content { glyph: notice.glyph(), text: &entry.words, appearance: theme };
+        let content = content(notice.glyph(), &entry.words, theme, entry.rules.buttons());
         match effect {
             Effect::Show => {
                 entry.entrance = Some(entrance);
@@ -291,6 +326,29 @@ fn say(window: &mut Window, notice: Notice, words: Option<String>, anchor: Optio
     });
 }
 
+/// Forget which sticky notices of `window` were dismissed, so devctl can show one again.
+#[cfg(feature = "devctl")]
+pub(super) fn forget_dismissed(window: WindowId, cx: &mut App) {
+    if cx.try_global::<Chips>().is_none() {
+        return;
+    }
+    if let Some(entry) = cx.global_mut::<Chips>().windows.get_mut(&window) {
+        entry.rules.forget_dismissed();
+    }
+}
+
+/// What the chip shows: `glyph`, `words`, the look of the theme, and the buttons with their names.
+pub(super) fn content<'a>(glyph: Glyph, words: &'a str, theme: Appearance, buttons: Buttons) -> Content<'a> {
+    Content {
+        glyph,
+        text: words,
+        appearance: theme,
+        buttons,
+        close_label: text(keys::NOTICE_CLOSE),
+        info_label: text(keys::NOTICE_INFO),
+    }
+}
+
 /// What VoiceOver says for `notice`, whose words on the chip are `words`.
 fn spoken(notice: Notice, words: &str) -> String {
     super::words::spoken(notice).unwrap_or_else(|| words.to_string())
@@ -300,14 +358,31 @@ fn spoken(notice: Notice, words: &str) -> String {
 fn listen(id: WindowId, cx: &mut App) -> (Clicks, Task<()>) {
     let (clicks, heard) = smol::channel::unbounded();
     let listener = cx.spawn(async move |cx| {
-        while heard.recv().await.is_ok() {
-            cx.update(|cx| dismiss(id, cx));
+        while let Ok(press) = heard.recv().await {
+            cx.update(|cx| pressed(id, press, cx));
         }
     });
     (clicks, listener)
 }
 
-/// The person clicked the chip: a sticky notice goes, and the rules say whether this chip had one to lose.
+/// The person clicked the chip at `press`: the rules say what that comes to for the buttons it has.
+pub(super) fn pressed(id: WindowId, press: Press, cx: &mut App) {
+    let reaction = cx
+        .try_global::<Chips>()
+        .and_then(|chips| chips.windows.get(&id))
+        .map_or(Reaction::Nothing, |entry| entry.rules.buttons().react(press));
+    match reaction {
+        Reaction::Dismiss => dismiss(id, cx),
+        Reaction::ShowInfo => {
+            if let Some(window) = cx.windows().into_iter().find(|window| window.window_id() == id) {
+                window.update(cx, |_, window, cx| super::explain::toggle(window, cx)).ok();
+            }
+        }
+        Reaction::Nothing => {}
+    }
+}
+
+/// The × was clicked: a sticky notice goes, and the rules say whether this chip had one to lose.
 pub(super) fn dismiss(id: WindowId, cx: &mut App) {
     let now = cx.background_executor().now();
     take_away(id, cx, |rules, leave| rules.dismiss(now, leave));
@@ -331,8 +406,12 @@ fn take_away(id: WindowId, cx: &mut App, how: impl FnOnce(&mut ChipRules, Durati
         if matches!(how(&mut entry.rules, entrance.exit_duration()), Effect::Hide) {
             entry.sticky_words = None;
             entry.sticky_anchor = None;
+            entry.sticky_detail = None;
             entry.anchor = None;
             entry.follow = None;
+            if let Some((_, info)) = entry.info.take() {
+                info.close(cx);
+            }
             if let Some(chip) = &mut entry.chip {
                 chip.set_clickable(false);
                 chip.hide(entrance);
@@ -437,6 +516,9 @@ fn advance(id: WindowId, cx: &mut App) {
                 entry.settle = None;
                 entry.follow = None;
                 entry.hidden = false;
+                if let Some((_, info)) = entry.info.take() {
+                    info.close(cx);
+                }
             }
             Effect::Restore => {
                 restore(entry);
@@ -463,7 +545,7 @@ fn restore(entry: &mut Entry) {
     entry.words = words;
     entry.anchor = entry.sticky_anchor.clone();
     entry.glyph = Some(held.glyph());
-    let content = Content { glyph: held.glyph(), text: &entry.words, appearance: theme };
+    let content = content(held.glyph(), &entry.words, theme, Buttons::of(held));
     if let (Some(chip), Some(spot)) = (&mut entry.chip, entry.spot) {
         chip.swap(&content, spot, true);
     }

@@ -9,8 +9,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 ### Changed
 
 - When the helper that keeps terminals running can't start, the warning that the terminal ends when Wormhole
-  quits is a chip on the terminal instead of a banner over it. It stays until you click it, and a copy's
-  chip shows over it for a moment and then gives it back. Where the notice chip is off, the banner stays.
+  quits is a chip on the terminal instead of a banner over it. It stays until you close it with its ×,
+  explains itself in plain words from its ⓘ or a click on the chip (what happened, what to do, and the error's
+  own words to copy and report, with a button to the logs folder), follows its terminal as the layout moves
+  it, and waits out of sight while the terminal isn't on screen or the command palette is open. A copy's chip
+  shows over it for a moment and then gives it back. Where the notice chip is off, the banner stays.
 
 ### Fixed
 

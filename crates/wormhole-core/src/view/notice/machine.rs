@@ -7,6 +7,7 @@
 
 use std::time::{Duration, Instant};
 
+use super::buttons::Buttons;
 use super::message::Notice;
 use crate::view::motion::notice::{DEDUPE, LIFE};
 
@@ -137,6 +138,11 @@ impl ChipRules {
         Effect::Hide
     }
 
+    /// Forget which sticky messages were dismissed: devctl's way to see one again.
+    pub fn forget_dismissed(&mut self) {
+        self.dismissed.clear();
+    }
+
     /// What the sticky message is about is gone (its terminal was closed): the chip takes it away, even
     /// with a copy's words on it. Unlike a dismissal it is not remembered as seen.
     pub fn withdraw(&mut self, now: Instant, leave: Duration) -> Effect {
@@ -175,6 +181,16 @@ impl ChipRules {
     #[must_use]
     pub fn held(&self) -> Option<Notice> {
         self.sticky
+    }
+
+    /// The buttons the chip shows now: those of the sticky message while its own words are on the chip, and
+    /// none under a copy's (which ignores the mouse).
+    #[must_use]
+    pub fn buttons(&self) -> Buttons {
+        match self.sticky {
+            Some(notice) if self.clickable() => Buttons::of(notice),
+            _ => Buttons::NONE,
+        }
     }
 
     /// The chip shows a sticky message's own words, so it takes a click (and only then: a copy's chip
@@ -295,6 +311,22 @@ mod tests {
         assert_eq!(chip.held(), Some(warned()));
         assert_eq!(chip.advance(t0 + MS(60_000), LEAVE), Effect::Ignore, "a minute on, it is still there");
         assert_eq!(chip.phase(), Phase::Showing);
+    }
+
+    #[test]
+    fn the_buttons_are_the_warnings_while_its_own_words_show_and_none_under_a_copy() {
+        let (mut chip, t0) = (ChipRules::default(), Instant::now());
+        assert_eq!(chip.buttons(), Buttons::NONE);
+        chip.post(path(), t0);
+        assert_eq!(chip.buttons(), Buttons::NONE, "a copy has none");
+        chip.post(warned(), t0 + MS(10));
+        assert_eq!(chip.buttons(), Buttons { info: true, close: true });
+        chip.post(lines(2), t0 + MS(20));
+        assert_eq!(chip.buttons(), Buttons::NONE, "a copy's words over the warning have none");
+        chip.advance(t0 + MS(20) + LIFE, LEAVE);
+        assert_eq!(chip.buttons().count(), 2, "and the warning's come back with its words");
+        chip.dismiss(t0 + MS(5000), LEAVE);
+        assert_eq!(chip.buttons(), Buttons::NONE);
     }
 
     #[test]
