@@ -132,6 +132,12 @@ impl Notice {
     pub fn is_sticky(self) -> bool {
         matches!(self, Self::Warned(_))
     }
+
+    /// There is more to say about it than the chip's line: an ⓘ opens it.
+    #[must_use]
+    pub fn has_info(self) -> bool {
+        matches!(self, Self::Warned(Warning::HostFallback))
+    }
 }
 
 impl Copied {

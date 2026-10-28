@@ -40,6 +40,8 @@ fn host_fallback(reason: Option<&str>, logs: PathBuf, appearance: Appearance) ->
             .row(Row::Text(text(keys::NOTICE_INFO_HOST_REASON).into()))
             .row(Row::Code(reason.to_string().into()));
     }
+    // GPUI's test platform panics on `open_with_system` (gpui-pre 0.3.9, `platform/test/platform.rs`), so a
+    // test that presses this needs a stand-in first.
     let mut buttons = vec![Button::new(text(keys::NOTICE_INFO_LOGS), Some(Glyph::Folder), move |_, cx| {
         cx.open_with_system(&logs);
     })];

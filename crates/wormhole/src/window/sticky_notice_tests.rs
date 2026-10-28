@@ -368,3 +368,79 @@ fn the_explanation_goes_when_its_terminal_does(cx: &mut TestAppContext) {
         assert_eq!(explanation(), None);
     });
 }
+
+#[gpui_kit::test]
+fn the_explanation_closes_when_the_chip_is_not_where_it_pointed(cx: &mut TestAppContext) {
+    if isolate("the_explanation_closes_when_the_chip_is_not_where_it_pointed") {
+        return;
+    }
+    with_language(Language::ENGLISH, || {
+        let window = start(cx, 2);
+        set_notices(cx, true);
+        draw(cx, &window);
+        draw(cx, &window);
+        lost_host(cx, &window);
+
+        // Another terminal is selected: the chip waits out of sight, and the explanation with it.
+        assert!(press(cx, &window, Press::Info));
+        assert!(explanation().is_some());
+        drive(cx, &window, |ws, window, cx| ws.activate(1, window, cx));
+        draw(cx, &window);
+        look(cx);
+        assert_eq!(explanation(), None, "its terminal is off screen");
+        assert!(!buttons(cx).1);
+
+        // Back, and a copy's words take the chip over: the arrow would point at words that are not the warning.
+        drive(cx, &window, |ws, window, cx| ws.activate(0, window, cx));
+        draw(cx, &window);
+        look(cx);
+        assert!(press(cx, &window, Press::Info));
+        assert!(explanation().is_some());
+        copy(cx, &window, "twelve chars");
+        assert_eq!(explanation(), None, "a copy has no ⓘ");
+    });
+}
+
+#[gpui_kit::test]
+fn a_click_right_after_the_explanation_closed_by_itself_does_not_open_it_again(cx: &mut TestAppContext) {
+    if isolate("a_click_right_after_the_explanation_closed_by_itself_does_not_open_it_again") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        lost_host(cx, window);
+        assert!(press(cx, window, Press::Info));
+        assert!(buttons(cx).1);
+
+        // A click outside the popover (on the ⓘ, say) closes it, as AppKit does; the press that did it
+        // reaches the button a moment after.
+        let callbacks = crate::platform::record::popover_close(true).expect("it is open");
+        cx.update(|cx| {
+            window.handle.update(cx, |_, window, cx| callbacks.iter().for_each(|run| run(window, cx))).ok();
+        });
+        cx.run_until_parked();
+        assert!(!buttons(cx).1, "closed by itself");
+        assert!(press(cx, window, Press::Info));
+        assert!(!buttons(cx).1, "the press that closed it does not open it again");
+
+        // A press of its own, later, does.
+        wait(cx, Duration::from_millis(400));
+        assert!(press(cx, window, Press::Info));
+        assert!(buttons(cx).1);
+    });
+}
+
+#[gpui_kit::test]
+fn closing_the_window_closes_the_explanation(cx: &mut TestAppContext) {
+    if isolate("closing_the_window_closes_the_explanation") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        lost_host(cx, window);
+        assert!(press(cx, window, Press::Info));
+        assert!(explanation().is_some());
+        cx.update(|cx| window.handle.update(cx, |_, window, _| window.remove_window()).ok());
+        cx.run_until_parked();
+        assert_eq!(explanation(), None);
+        assert!(cx.update(|cx| crate::notice::notices(cx).is_empty()), "and the chip with it");
+    });
+}

@@ -2,7 +2,7 @@
 //! ⓘ, and a click on the capsule, open it; a click on the ⓘ while it is open closes it; the chip going
 //! away (the × or the terminal's end) closes it too.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use gpui_kit::*;
 use wormhole_core::view::notice::Spot;
@@ -11,22 +11,21 @@ use super::chips::Chips;
 use crate::platform::notice::Chip;
 use crate::settings::store_in;
 
-/// A click on the ⓘ that came right after the explanation closed by itself is the click that closed it
-/// (a popover goes away on the mouse's press outside it, and the release reaches the button after): it
-/// does not open it again.
+/// A click on the ⓘ that began about when the explanation closed is the click that closed it (a popover goes
+/// away on the mouse's press outside it, and the release reaches the button after): it does not open it
+/// again. Told by when the press began, so a long press does not open it on release.
 const SAME_CLICK: Duration = Duration::from_millis(250);
 
 /// Open the explanation of `window`'s warning, or close it when it is open.
-pub(super) fn toggle(window: &mut Window, cx: &mut App) {
+pub(super) fn toggle(window: &mut Window, down: Instant, cx: &mut App) {
     let id = window.window_handle().window_id();
-    let now = cx.background_executor().now();
     let Some(chips) = cx.try_global::<Chips>() else { return };
     let Some(entry) = chips.windows.get(&id) else { return };
     if let Some((_, open)) = entry.info.clone() {
         open.close(cx);
         return;
     }
-    if entry.info_closed.is_some_and(|at| now.saturating_duration_since(at) < SAME_CLICK) {
+    if entry.info_closed.is_some_and(|at| at.max(down) - at.min(down) < SAME_CLICK) {
         return;
     }
     let Some(notice) = entry.rules.held() else { return };
@@ -34,7 +33,7 @@ pub(super) fn toggle(window: &mut Window, cx: &mut App) {
         return;
     };
     let appearance = store_in(&profile, cx).tokens.appearance;
-    let logs = wormhole_core::storage::paths::data_dir().join("logs");
+    let logs = wormhole_core::storage::paths::DataRoot::current().logs_dir();
     let Some(popover) = super::info::popover(notice, entry.sticky_detail.as_deref(), logs, appearance) else {
         return;
     };

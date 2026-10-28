@@ -16,7 +16,14 @@ pub use super::os::notice::Chip;
 
 /// Where a click on a clickable chip goes: the app reads it (`crate::notice`) and decides what it means.
 /// A channel and not a callback, because AppKit calls from its event loop, outside any GPUI update.
-pub type Clicks = smol::channel::Sender<Press>;
+pub type Clicks = smol::channel::Sender<Click>;
+
+/// A click on the chip: where on it, and when it began (a long press is told by its start).
+#[derive(Clone, Copy, Debug)]
+pub struct Click {
+    pub press: Press,
+    pub down: std::time::Instant,
+}
 
 /// What the chip shows.
 #[derive(Clone, Copy, Debug)]

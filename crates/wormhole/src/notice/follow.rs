@@ -11,7 +11,7 @@ use std::time::Duration;
 use gpui_kit::*;
 use wormhole_core::view::motion::notice::Entrance;
 
-use super::chips::{Chips, Facts, Where, content, spot_for, withdraw};
+use super::chips::{Chips, Facts, Where, close_info, content, spot_for, withdraw};
 use crate::platform::notice::Chip;
 use crate::settings::store_in;
 
@@ -78,6 +78,7 @@ fn step(window: &mut Window, cx: &mut App) -> bool {
             let content = glyph.map(|glyph| content(glyph, &words, look.0, buttons));
             if look.1 != old_opaque {
                 // Another material is another view: the panel is made again, and fades in at once.
+                close_info(entry, cx);
                 if let Some(chip) = entry.chip.take() {
                     chip.close(cx);
                 }
@@ -93,6 +94,10 @@ fn step(window: &mut Window, cx: &mut App) -> bool {
             }
         }
         // A copy's words keep the place they came with; the warning is what follows its terminal.
+        // The explanation's arrow points at the chip where it is: out of sight or moved, it closes.
+        if clickable && (away || entry.spot != Some(spot)) {
+            close_info(entry, cx);
+        }
         if clickable {
             if let Some(chip) = &mut entry.chip {
                 if away != entry.hidden {

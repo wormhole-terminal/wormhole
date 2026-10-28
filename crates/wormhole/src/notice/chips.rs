@@ -23,7 +23,7 @@ use wormhole_core::view::panes::Rect;
 use wormhole_text::{keys, text};
 
 use crate::platform;
-use crate::platform::notice::{Chip, Clicks, Content};
+use crate::platform::notice::{Chip, Click, Clicks, Content};
 use crate::platform::popover::Handle;
 use crate::settings::{settings_in, store_in};
 
@@ -98,8 +98,8 @@ pub(super) struct Entry {
     pub(super) info: Option<(u64, Handle)>,
     /// How many have been opened, so a close that comes late is not taken for the newest's.
     pub(super) opened: u64,
-    /// When the explanation last closed by itself (a click outside it): the click on ⓘ that closed it is
-    /// the same click that would open it again.
+    /// When the explanation last closed, by itself (a click outside it) or from here: a click on ⓘ that
+    /// began about then is the click that closed it, and must not open it again.
     pub(super) info_closed: Option<std::time::Instant>,
     /// Where the sticky notice is about: its chip goes back there when a copy's words give way to it.
     pub(super) sticky_anchor: Option<Anchor>,
@@ -150,9 +150,7 @@ fn close(cx: &mut App, id: WindowId) {
     cx.update_global::<Chips, _>(|chips, cx| {
         chips.homes.remove(&id);
         if let Some(mut entry) = chips.windows.remove(&id) {
-            if let Some((_, info)) = entry.info.take() {
-                info.close(cx);
-            }
+            close_info(&mut entry, cx);
             if let Some(chip) = entry.chip.take() {
                 chip.close(cx);
             }
@@ -209,10 +207,11 @@ pub(super) fn post_notice(window: &Window, notice: Notice, detail: Option<String
 /// window has no chip yet (a chip in a test has no panel, and the channel is the same).
 #[cfg(any(test, feature = "devctl"))]
 pub(super) fn press(window: WindowId, press: Press, cx: &App) -> bool {
+    let now = cx.background_executor().now();
     cx.try_global::<Chips>()
         .and_then(|chips| chips.windows.get(&window))
         .and_then(|entry| entry.clicks.as_ref())
-        .is_some_and(|clicks| clicks.try_send(press).is_ok())
+        .is_some_and(|clicks| clicks.try_send(Click { press, down: now }).is_ok())
 }
 
 fn queue(
@@ -274,6 +273,8 @@ fn say(
         entry.look = Some((theme, opaque));
         entry.anchor = anchor;
         entry.spot = Some(spot);
+        // The explanation points at the warning's own words, in the place they were: neither holds now.
+        close_info(entry, cx);
         let content = content(notice.glyph(), &entry.words, theme, entry.rules.buttons());
         match effect {
             Effect::Show => {
@@ -349,6 +350,14 @@ pub(super) fn content<'a>(glyph: Glyph, words: &'a str, theme: Appearance, butto
     }
 }
 
+/// Close the explanation, if it is open: its arrow points at a chip that is going, moving or saying
+/// something else.
+pub(super) fn close_info(entry: &mut Entry, cx: &mut App) {
+    if let Some((_, info)) = entry.info.take() {
+        info.close(cx);
+    }
+}
+
 /// What VoiceOver says for `notice`, whose words on the chip are `words`.
 fn spoken(notice: Notice, words: &str) -> String {
     super::words::spoken(notice).unwrap_or_else(|| words.to_string())
@@ -358,15 +367,15 @@ fn spoken(notice: Notice, words: &str) -> String {
 fn listen(id: WindowId, cx: &mut App) -> (Clicks, Task<()>) {
     let (clicks, heard) = smol::channel::unbounded();
     let listener = cx.spawn(async move |cx| {
-        while let Ok(press) = heard.recv().await {
-            cx.update(|cx| pressed(id, press, cx));
+        while let Ok(click) = heard.recv().await {
+            cx.update(|cx| pressed(id, click, cx));
         }
     });
     (clicks, listener)
 }
 
-/// The person clicked the chip at `press`: the rules say what that comes to for the buttons it has.
-pub(super) fn pressed(id: WindowId, press: Press, cx: &mut App) {
+/// The person clicked the chip: the rules say what that comes to for the buttons it has.
+pub(super) fn pressed(id: WindowId, Click { press, down }: Click, cx: &mut App) {
     let reaction = cx
         .try_global::<Chips>()
         .and_then(|chips| chips.windows.get(&id))
@@ -375,7 +384,7 @@ pub(super) fn pressed(id: WindowId, press: Press, cx: &mut App) {
         Reaction::Dismiss => dismiss(id, cx),
         Reaction::ShowInfo => {
             if let Some(window) = cx.windows().into_iter().find(|window| window.window_id() == id) {
-                window.update(cx, |_, window, cx| super::explain::toggle(window, cx)).ok();
+                window.update(cx, |_, window, cx| super::explain::toggle(window, down, cx)).ok();
             }
         }
         Reaction::Nothing => {}
@@ -409,9 +418,7 @@ fn take_away(id: WindowId, cx: &mut App, how: impl FnOnce(&mut ChipRules, Durati
             entry.sticky_detail = None;
             entry.anchor = None;
             entry.follow = None;
-            if let Some((_, info)) = entry.info.take() {
-                info.close(cx);
-            }
+            close_info(entry, cx);
             if let Some(chip) = &mut entry.chip {
                 chip.set_clickable(false);
                 chip.hide(entrance);
@@ -471,11 +478,19 @@ fn refit(window: &mut Window, cx: &mut App) {
         .and_then(|anchor| anchor(cx).bounds())
         .or_else(|| chips.homes.get(&id).and_then(|home| home(cx)).and_then(|facts| facts.selected));
     let spot = spot_for(window, bounds);
+    let mut moved = None;
     if let Some(entry) = cx.global_mut::<Chips>().windows.get_mut(&id)
         && let Some(chip) = entry.chip.as_mut()
     {
         chip.place(spot);
+        if entry.spot != Some(spot) {
+            moved = entry.info.take();
+        }
         entry.spot = Some(spot);
+    }
+    // The chip moved from under the explanation's arrow.
+    if let Some((_, info)) = moved {
+        info.close(cx);
     }
 }
 
@@ -516,9 +531,7 @@ fn advance(id: WindowId, cx: &mut App) {
                 entry.settle = None;
                 entry.follow = None;
                 entry.hidden = false;
-                if let Some((_, info)) = entry.info.take() {
-                    info.close(cx);
-                }
+                close_info(entry, cx);
             }
             Effect::Restore => {
                 restore(entry);

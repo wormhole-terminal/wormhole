@@ -148,7 +148,7 @@ impl Render for Layer {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(open) = &self.open else { return Empty.into_any_element() };
         let ui = ui(cx);
-        let has_path =
+        let wide =
             open.popover.rows.iter().any(|row| matches!(row, Row::Path(_) | Row::Text(_) | Row::Code(_)));
         let transient = open.popover.behavior == Behavior::Transient;
         let mut card = style::palette_surface(ui, true)
@@ -157,7 +157,7 @@ impl Render for Layer {
             .key_context("Popover")
             // Over the terminal: it takes the pointer, the clicks and the wheel from it.
             .occlude()
-            .w(px(if has_path { WIDTH_PATH } else { WIDTH }))
+            .w(px(if wide { WIDTH_PATH } else { WIDTH }))
             .gap_3()
             .p_3()
             .cursor(CursorStyle::Arrow)

@@ -3,7 +3,7 @@
 //! explanation; the rest of the capsule is a larger target for the same explanation, and closes the chip
 //! only where there is none.
 
-use super::message::{Notice, Warning};
+use super::message::Notice;
 
 /// Which buttons the chip shows beside its words.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -64,18 +64,10 @@ impl Buttons {
     }
 }
 
-impl Notice {
-    /// There is more to say about it than the chip's line: an ⓘ opens it.
-    #[must_use]
-    pub fn has_info(self) -> bool {
-        matches!(self, Self::Warned(Warning::HostFallback))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::view::notice::{Copied, Failed};
+    use crate::view::notice::{Copied, Failed, Warning};
 
     fn warned() -> Notice {
         Notice::Warned(Warning::HostFallback)

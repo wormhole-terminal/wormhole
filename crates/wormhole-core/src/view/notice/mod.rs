@@ -8,13 +8,13 @@
 //! shared can't leak through it. The timings are `view::motion::notice`.
 
 mod buttons;
-mod info;
 mod machine;
 mod message;
 mod place;
+mod reason;
 
 pub use buttons::{Buttons, Press, Reaction};
-pub use info::{REASON_MAX, reason};
 pub use machine::{ChipRules, Effect, Phase};
 pub use message::{Copied, Driven, Driver, Failed, Glyph, Notice, Warning};
 pub use place::{Placed, Spot, WINDOW_MARGIN, place};
+pub use reason::{REASON_MAX, reason};

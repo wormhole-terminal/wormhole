@@ -12,6 +12,7 @@
 //! one as the system's).
 
 use std::rc::Rc;
+use std::time::Instant;
 
 #[cfg(feature = "devctl")]
 use std::cell::Cell;
@@ -21,11 +22,11 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyClass, Bool};
 use objc2_app_kit::{
-    NSAccessibility as _, NSAnimatablePropertyContainer as _, NSAnimationContext, NSBackingStoreType,
-    NSBezierPath, NSBox, NSBoxType, NSColor, NSFont, NSGlassEffectView, NSImage, NSImageResizingMode,
-    NSImageScaling, NSImageView, NSLineBreakMode, NSPanel, NSTextField, NSTitlePosition, NSView,
-    NSVisualEffectBlendingMode, NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView, NSWindow,
-    NSWindowCollectionBehavior, NSWindowOrderingMode, NSWindowStyleMask,
+    NSAnimatablePropertyContainer as _, NSAnimationContext, NSBackingStoreType, NSBezierPath, NSBox,
+    NSBoxType, NSColor, NSFont, NSGlassEffectView, NSImage, NSImageResizingMode, NSImageScaling, NSImageView,
+    NSLineBreakMode, NSPanel, NSTextField, NSTitlePosition, NSView, NSVisualEffectBlendingMode,
+    NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView, NSWindow, NSWindowCollectionBehavior,
+    NSWindowOrderingMode, NSWindowStyleMask,
 };
 use objc2_foundation::{NSEdgeInsets, NSPoint, NSRect, NSSize, NSString};
 use objc2_quartz_core::{CALayer, CAMediaTiming as _, CATransition, kCATransitionFade};
@@ -35,10 +36,10 @@ use wormhole_core::view::panes::Rect;
 
 use super::appearance;
 use super::appkit::{ns_window, symbol};
-use super::notice_click::{ClickView, click_view};
+use super::notice_click::Presses;
 use super::notice_layout::{Geometry, HEIGHT, fixed, geometry, picture};
 use super::notice_motion::{drop_in, fade, rest, slide, translation};
-use crate::platform::notice::{Clicks, Content, Material};
+use crate::platform::notice::{Click, Clicks, Content, Material};
 
 /// Under the chip, inside the panel: where the glass's shadow falls.
 const SHADOW_ROOM: f64 = 14.0;
@@ -187,9 +188,7 @@ pub struct Chip {
     info_icon: Retained<NSImageView>,
     close_icon: Retained<NSImageView>,
     /// Lie over the capsule and over each button and take the click, while the chip is clickable.
-    press: Retained<ClickView>,
-    info_press: Retained<ClickView>,
-    close_press: Retained<ClickView>,
+    presses: Presses,
     /// Which buttons the chip shows, and where they sit as last laid out.
     buttons: Buttons,
     geometry: Geometry,
@@ -272,19 +271,11 @@ impl Chip {
 
         // Over the capsule, above the glass, and out of the way until the chip is clickable. The channel is
         // the app's to read: a press can come at any moment of the event loop, outside any GPUI update.
-        let tell: Rc<dyn Fn(Press)> = Rc::new(move |press| {
+        let tell: Rc<dyn Fn(Press, Instant)> = Rc::new(move |press, down| {
             // Unbounded: it never waits, and it only fails when the app has stopped listening.
-            clicks.try_send(press).ok();
+            clicks.try_send(Click { press, down }).ok();
         });
-        let view = |which, lights| {
-            let view = click_view(mtm, "", which, lights, tell.clone());
-            view.setHidden(true);
-            holder.addSubview(&view);
-            view
-        };
-        // The body first, so the buttons are over it and take their own clicks.
-        let (press, info_press, close_press) =
-            (view(Press::Body, false), view(Press::Info, true), view(Press::Close, true));
+        let presses = Presses::new(mtm, &holder, &tell);
 
         let placed = Placed { top: 0.0, chip: Rect::new(0.0, 0.0, 0.0, 0.0), cut: false };
         Some(Self {
@@ -297,9 +288,7 @@ impl Chip {
             text,
             info_icon,
             close_icon,
-            press,
-            info_press,
-            close_press,
+            presses,
             buttons: Buttons::NONE,
             geometry: Geometry::default(),
             clickable: false,
@@ -391,9 +380,7 @@ impl Chip {
     /// The views that take clicks show while the chip is clickable, a button's only where it is there; the
     /// panel takes the mouse only then.
     fn sync_press(&self) {
-        self.press.setHidden(!self.clickable);
-        self.info_press.setHidden(!(self.clickable && self.buttons.info));
-        self.close_press.setHidden(!(self.clickable && self.buttons.close));
+        self.presses.show(self.clickable, self.buttons);
         self.panel.setIgnoresMouseEvents(!self.clickable);
     }
 
@@ -423,6 +410,7 @@ impl Chip {
         // Ordering a child window tells the parent, whose view tells GPUI: from a task, as `show` does.
         let (parent, panel) = (self.parent.clone(), self.panel.clone());
         if hidden {
+            self.presses.cool();
             cx.spawn(async move |_| {
                 parent.removeChildWindow(&panel);
                 panel.orderOut(None);
@@ -484,17 +472,13 @@ impl Chip {
     fn set_content(&mut self, content: &Content<'_>) {
         let Content { glyph, text, appearance: theme, buttons, close_label, info_label } = *content;
         self.text.setStringValue(&NSString::from_str(text));
-        self.press.setAccessibilityLabel(Some(&NSString::from_str(text)));
         self.icon.setImage(symbol(symbol_name(glyph), text).as_deref());
         self.buttons = buttons;
         self.info_icon.setImage(symbol("info.circle", info_label).as_deref());
         self.close_icon.setImage(symbol("xmark", close_label).as_deref());
         self.info_icon.setHidden(!buttons.info);
         self.close_icon.setHidden(!buttons.close);
-        self.info_press.setAccessibilityLabel(Some(&NSString::from_str(info_label)));
-        self.close_press.setAccessibilityLabel(Some(&NSString::from_str(close_label)));
-        self.info_press.setToolTip(Some(&NSString::from_str(info_label)));
-        self.close_press.setToolTip(Some(&NSString::from_str(close_label)));
+        self.presses.label(text, info_label, close_label);
         self.sync_press();
         // The theme's appearance on everything in the chip, whatever the system's is.
         appearance::set_on(&self.holder, theme);
@@ -550,14 +534,10 @@ impl Chip {
                 square.size,
             )
         };
-        self.press.setFrame(at);
-        for (square, icon, press) in [
-            (geometry.info, &self.info_icon, &self.info_press),
-            (geometry.close, &self.close_icon, &self.close_press),
-        ] {
+        self.presses.place(at, geometry.info.map(over), geometry.close.map(over));
+        for (square, icon) in [(geometry.info, &self.info_icon), (geometry.close, &self.close_icon)] {
             if let Some(square) = square {
                 icon.setFrame(picture(square));
-                press.setFrame(over(square));
             }
         }
         if animated {

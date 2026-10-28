@@ -353,9 +353,12 @@ fn build(mtm: MainThreadMarker, popover: &Popover, target: &Target, tx: &Tx) -> 
     for row in &popover.rows {
         match row {
             Row::Heading(text) => {
-                let label = NSTextField::labelWithString(&NSString::from_str(text), mtm);
+                let label = NSTextField::wrappingLabelWithString(&NSString::from_str(text), mtm);
                 label.setFont(Some(&NSFont::systemFontOfSize_weight(NSFont::systemFontSize(), SEMIBOLD)));
+                label.setPreferredMaxLayoutWidth(TEXT_WIDTH);
+                label.setSelectable(true);
                 stack.addArrangedSubview(&label);
+                least = least.max(TEXT_WIDTH + 2.0 * PAD);
             }
             Row::Text(text) => {
                 let label = NSTextField::wrappingLabelWithString(&NSString::from_str(text), mtm);

@@ -6,6 +6,7 @@
 
 use std::cell::Cell;
 use std::rc::Rc;
+use std::time::Instant;
 
 use objc2::rc::Retained;
 use objc2::runtime::NSObjectProtocol;
@@ -15,13 +16,15 @@ use objc2_app_kit::{
     NSTrackingArea, NSTrackingAreaOptions, NSView,
 };
 use objc2_foundation::{NSRect, NSString};
-use wormhole_core::view::notice::Press;
+use wormhole_core::view::notice::{Buttons, Press};
 
 /// How much of the label colour the circle under a hovered button takes.
 const HOVER_ALPHA: f64 = 0.14;
 
 pub struct ClickIvars {
-    press: Rc<dyn Fn(Press)>,
+    press: Rc<dyn Fn(Press, Instant)>,
+    /// When the button last went down: a long press is told by when it began, not when it came up.
+    down: Cell<Instant>,
     /// What a click on this view is.
     which: Press,
     /// Lights up a circle under the pointer: a button's, not the capsule's.
@@ -56,7 +59,9 @@ define_class!(
 
         // Taken, so the press is ours until the button comes up.
         #[unsafe(method(mouseDown:))]
-        fn mouse_down(&self, _event: &NSEvent) {}
+        fn mouse_down(&self, _event: &NSEvent) {
+            self.ivars().down.set(Instant::now());
+        }
 
         #[unsafe(method(mouseUp:))]
         fn mouse_up(&self, event: &NSEvent) {
@@ -89,6 +94,7 @@ define_class!(
 
         #[unsafe(method(accessibilityPerformPress))]
         fn accessibility_perform_press(&self) -> bool {
+            self.ivars().down.set(Instant::now());
             self.press();
             true
         }
@@ -100,7 +106,22 @@ define_class!(
 impl ClickView {
     fn press(&self) {
         let ivars = self.ivars();
-        (ivars.press)(ivars.which);
+        (ivars.press)(ivars.which, ivars.down.get());
+    }
+
+    /// Put out the circle under the pointer: a view that is hidden gets no `mouseExited:` to do it.
+    fn cool(&self) {
+        let ivars = self.ivars();
+        if ivars.lights && ivars.hovered.replace(false) {
+            self.setNeedsDisplay(true);
+        }
+    }
+
+    fn set_shown(&self, shown: bool) {
+        self.setHidden(!shown);
+        if !shown {
+            self.cool();
+        }
     }
 
     fn hover(&self, hovered: bool) {
@@ -111,7 +132,7 @@ impl ClickView {
     }
 }
 
-/// A view that calls `press` with `which` when it is clicked, `label` for VoiceOver; `lights`: a circle
+/// A view that calls `press` with `which` (and when the click began) when it is clicked, `label` for VoiceOver; `lights`: a circle
 /// shows under the pointer. It has no frame yet.
 #[allow(unsafe_code)]
 pub fn click_view(
@@ -119,10 +140,15 @@ pub fn click_view(
     label: &str,
     which: Press,
     lights: bool,
-    press: Rc<dyn Fn(Press)>,
+    press: Rc<dyn Fn(Press, Instant)>,
 ) -> Retained<ClickView> {
-    let this =
-        ClickView::alloc(mtm).set_ivars(ClickIvars { press, which, lights, hovered: Cell::new(false) });
+    let this = ClickView::alloc(mtm).set_ivars(ClickIvars {
+        press,
+        down: Cell::new(Instant::now()),
+        which,
+        lights,
+        hovered: Cell::new(false),
+    });
     // SAFETY: `-[NSView initWithFrame:]` is the designated initializer of the superclass, and the ivars
     // are set before it.
     let view: Retained<ClickView> = unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] };
@@ -146,4 +172,63 @@ pub fn click_view(
     };
     view.addTrackingArea(&area);
     view
+}
+
+/// The three views over the chip: one over the whole capsule and one over each button, the buttons above it so
+/// they take their own clicks. All out of the way until the chip is clickable.
+pub struct Presses {
+    body: Retained<ClickView>,
+    info: Retained<ClickView>,
+    close: Retained<ClickView>,
+}
+
+impl Presses {
+    /// Put the views in `holder`; a click anywhere on them calls `tell`.
+    pub fn new(mtm: MainThreadMarker, holder: &NSView, tell: &Rc<dyn Fn(Press, Instant)>) -> Self {
+        let view = |which, lights| {
+            let view = click_view(mtm, "", which, lights, tell.clone());
+            view.setHidden(true);
+            holder.addSubview(&view);
+            view
+        };
+        // The body first, so the buttons are over it.
+        Self {
+            body: view(Press::Body, false),
+            info: view(Press::Info, true),
+            close: view(Press::Close, true),
+        }
+    }
+
+    /// The views show while the chip is clickable, a button's only where it is there. A view that goes out
+    /// of sight puts out its circle.
+    pub fn show(&self, clickable: bool, buttons: Buttons) {
+        self.body.set_shown(clickable);
+        self.info.set_shown(clickable && buttons.info);
+        self.close.set_shown(clickable && buttons.close);
+    }
+
+    /// What VoiceOver (and a tooltip) calls the capsule and each button.
+    pub fn label(&self, body: &str, info: &str, close: &str) {
+        self.body.setAccessibilityLabel(Some(&NSString::from_str(body)));
+        for (view, text) in [(&self.info, info), (&self.close, close)] {
+            view.setAccessibilityLabel(Some(&NSString::from_str(text)));
+            view.setToolTip(Some(&NSString::from_str(text)));
+        }
+    }
+
+    /// Where the views are, in the panel's space: the capsule, and the buttons that are there.
+    pub fn place(&self, capsule: NSRect, info: Option<NSRect>, close: Option<NSRect>) {
+        self.body.setFrame(capsule);
+        for (view, frame) in [(&self.info, info), (&self.close, close)] {
+            if let Some(frame) = frame {
+                view.setFrame(frame);
+            }
+        }
+    }
+
+    /// The panel went out of sight under the pointer: no circle stays lit.
+    pub fn cool(&self) {
+        self.info.cool();
+        self.close.cool();
+    }
 }
