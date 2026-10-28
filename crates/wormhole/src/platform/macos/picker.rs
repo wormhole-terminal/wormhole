@@ -1,50 +1,58 @@
 //! AppKit's side of `platform::picker`: a borderless, non-activating panel that is a child of the app window's
 //! `NSWindow`, of Liquid Glass on macOS 26 and later, the HUD's frosted blur before it, a plain fill under
-//! Reduce Transparency or Increase Contrast (the notice chip's choice of material, `notice::material`).
+//! Reduce Transparency or Increase Contrast (`picker_backdrop`).
 //!
-//! Inside it, from the top: the breadcrumb (borderless buttons), a real `NSSearchField` (so the system's own
-//! editing, input methods and look), the list (a few reusable row views over a view that takes the wheel) and
-//! a hint line. The ghost completion is a label laid over the field where the system says the text ends.
+//! Inside it, from the top: the breadcrumb (`picker_crumbs`), a real `NSSearchField` (so the system's own
+//! editing, input methods and look), the list (a few reusable row views, `picker_slot`, over a view that takes
+//! the wheel) and a hint line. The ghost completion is a label laid over the field where the system says the
+//! text ends.
 //!
-//! The panel takes the keys and the app window doesn't have them while it is up. It does it without
-//! activating the app (the style is `NonactivatingPanel`), so it never comes over other apps, and in a
-//! background-mode instance it only orders in, as a child of a window that is itself behind the others.
-//! When it stops being the key window (a click on the terminal, another app) it tells the app (`Resigned`),
-//! which closes the picker; a closing picker gives the key back to the app window.
+//! The panel takes the keys and the app window doesn't have them while it is up, without activating the app
+//! (the style is `NonactivatingPanel`). That is only done when the app is the active one and this is not a
+//! background-mode instance ([`arrival`]): taking the keys from whoever is in front is not what a test instance
+//! or an app that was switched away from meanwhile may do. In background mode the panel is not shown at all, so
+//! it can come over nothing and takes no keystroke; in an app that is no longer active it is not shown either
+//! and the picker is told it is over. When the panel stops being the key window (a click on the terminal,
+//! another app) it tells the app (`Resigned`), which closes the picker.
+//!
+//! A panel is taken down once, from a task and never from inside GPUI's release of the entity that holds it:
+//! ordering windows tells GPUI, and handing the key back would be a key change in the middle of a release. What
+//! the deferred ordering-in does is checked against that: a picker that was closed before it ran leaves the
+//! panel closed.
 //!
 //! The theme's appearance goes on the panel's views and never on the `NSWindow`, whose appearance GPUI reads
 //! as the system's (`appearance`).
 
-use gpui_kit::{App, Window};
+use std::cell::Cell;
+use std::rc::Rc;
+
+use gpui_kit::{App, ForegroundExecutor, Window};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use objc2::runtime::{Bool, ProtocolObject};
+use objc2::runtime::ProtocolObject;
 use objc2::sel;
 use objc2_app_kit::{
     NSAccessibility as _, NSAccessibilityListRole, NSAccessibilityPostNotification,
-    NSAccessibilitySelectedChildrenChangedNotification, NSBezierPath, NSBox, NSBoxType, NSButton, NSColor,
-    NSFocusRingType, NSFont, NSGlassEffectView, NSImage, NSImageResizingMode, NSImageScaling, NSImageView,
-    NSLineBreakMode, NSSearchField, NSTextField, NSTextInputClient as _, NSTextView, NSTitlePosition, NSView,
-    NSVisualEffectBlendingMode, NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView, NSWindow,
+    NSAccessibilitySelectedChildrenChangedNotification, NSApplication, NSColor, NSFocusRingType, NSFont,
+    NSLineBreakMode, NSSearchField, NSTextField, NSTextInputClient as _, NSTextView, NSView, NSWindow,
     NSWindowCollectionBehavior, NSWindowOrderingMode,
 };
-use objc2_foundation::{NSEdgeInsets, NSPoint, NSRange, NSRect, NSSize, NSString};
+use objc2_foundation::{NSPoint, NSRange, NSRect, NSSize, NSString};
 use wormhole_core::view::panes::Rect;
 
 use super::appearance;
-use super::appkit::{ns_window, symbol};
+use super::appkit::ns_window;
 use super::notice::material;
+use super::picker_backdrop::Backdrop;
+use super::picker_crumbs::{self, HEIGHT as CRUMBS_H};
 use super::picker_slot::Slot;
-use super::picker_views::{PickerPanel, Target};
-use crate::platform::picker::{Events, Line, Material, ROW, View};
+use super::picker_views::{PickerPanel, Target, WheelView};
+use crate::platform::background_mode;
+use crate::platform::picker::{Event, Events, Line, ROW, View};
 
-/// The panel's corners, and the border of the plain fill (the glass has an edge of its own).
-const RADIUS: f64 = 18.0;
-const EDGE: f64 = 1.0;
 /// From the panel's top and sides to what is in it, and what each part is as tall as.
 const PAD: f64 = 8.0;
 const SIDE: f64 = 10.0;
-const CRUMBS_H: f64 = 24.0;
 const FIELD_H: f64 = 30.0;
 const HINT_H: f64 = 20.0;
 /// Between the parts: after the breadcrumb, after the field.
@@ -52,89 +60,27 @@ const AFTER_CRUMBS: f64 = 2.0;
 const AFTER_FIELD: f64 = 6.0;
 /// The list's inset from the panel's sides, so a row's selection doesn't touch the glass's edge.
 const LIST_SIDE: f64 = 6.0;
-/// What the breadcrumb leaves out at its start, and between steps.
-const ELLIPSIS_W: f64 = 16.0;
-const SEPARATOR_W: f64 = 12.0;
 
-/// The material's view and what holds the content.
-enum Backdrop {
-    Glass(Retained<NSGlassEffectView>),
-    Frosted(Retained<NSVisualEffectView>),
-    Solid(Retained<NSBox>),
+/// What becomes of the panel when it is time to put it on screen.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Arrival {
+    /// It is not shown: a background-mode instance never comes over anything and takes no keys.
+    Hidden,
+    /// It is not shown and the picker is over: the app was switched away from since the picker opened.
+    TooLate,
+    /// It is ordered in over the app's window and takes the keys.
+    Key,
 }
 
-impl Backdrop {
-    fn make(material: Material, mtm: MainThreadMarker) -> Self {
-        match material {
-            Material::Glass => {
-                let glass = NSGlassEffectView::initWithFrame(mtm.alloc(), NSRect::ZERO);
-                glass.setCornerRadius(RADIUS);
-                Self::Glass(glass)
-            }
-            Material::Frosted => {
-                let view = NSVisualEffectView::initWithFrame(mtm.alloc(), NSRect::ZERO);
-                view.setMaterial(NSVisualEffectMaterial::Popover);
-                view.setBlendingMode(NSVisualEffectBlendingMode::BehindWindow);
-                // Active, so the blur doesn't go flat while the app is in the background.
-                view.setState(NSVisualEffectState::Active);
-                view.setMaskImage(Some(&rounded()));
-                Self::Frosted(view)
-            }
-            Material::Solid => {
-                let fill = NSBox::initWithFrame(mtm.alloc(), NSRect::ZERO);
-                fill.setBoxType(NSBoxType::Custom);
-                fill.setTitlePosition(NSTitlePosition::NoTitle);
-                fill.setBorderWidth(EDGE);
-                fill.setCornerRadius(RADIUS);
-                fill.setContentViewMargins(NSSize::new(0.0, 0.0));
-                fill.setFillColor(&NSColor::windowBackgroundColor());
-                fill.setBorderColor(&NSColor::separatorColor());
-                Self::Solid(fill)
-            }
-        }
+/// What to do with the panel for an instance in background mode (or not) whose app is active (or not).
+fn arrival(background: bool, app_active: bool) -> Arrival {
+    if background {
+        Arrival::Hidden
+    } else if app_active {
+        Arrival::Key
+    } else {
+        Arrival::TooLate
     }
-
-    fn material(&self) -> Material {
-        match self {
-            Self::Glass(_) => Material::Glass,
-            Self::Frosted(_) => Material::Frosted,
-            Self::Solid(_) => Material::Solid,
-        }
-    }
-
-    fn view(&self) -> &NSView {
-        match self {
-            Self::Glass(view) => view,
-            Self::Frosted(view) => view,
-            Self::Solid(view) => view,
-        }
-    }
-
-    fn hold(&self, body: &NSView) {
-        match self {
-            Self::Glass(glass) => glass.setContentView(Some(body)),
-            Self::Frosted(effect) => effect.addSubview(body),
-            Self::Solid(fill) => {
-                if let Some(content) = fill.contentView() {
-                    content.addSubview(body);
-                }
-            }
-        }
-    }
-}
-
-/// An opaque rounded rectangle that stretches in the middle: the blur behind a window is cut by a mask image.
-fn rounded() -> Retained<NSImage> {
-    let handler = block2::RcBlock::new(move |bounds: NSRect| -> Bool {
-        NSColor::blackColor().set();
-        NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(bounds, RADIUS, RADIUS).fill();
-        Bool::YES
-    });
-    let side = 2.0 * RADIUS + 2.0;
-    let image = NSImage::imageWithSize_flipped_drawingHandler(NSSize::new(side, side), false, &handler);
-    image.setCapInsets(NSEdgeInsets { top: RADIUS, left: RADIUS, bottom: RADIUS, right: RADIUS });
-    image.setResizingMode(NSImageResizingMode::Stretch);
-    image
 }
 
 /// Where each part goes in a panel `size` big, in the panel's space (AppKit's: from the bottom left).
@@ -177,18 +123,23 @@ pub struct Panel {
     crumbs: Retained<NSView>,
     field: Retained<NSSearchField>,
     ghost: Retained<NSTextField>,
-    list: Retained<super::picker_views::WheelView>,
+    list: Retained<WheelView>,
     hint: Retained<NSTextField>,
     slots: Vec<Slot>,
     tx: Events,
+    /// Runs what must wait for GPUI to be free of the panel's owner.
+    executor: ForegroundExecutor,
     /// What was last shown, to change only what changed.
     epoch: Option<u64>,
     crumb_labels: Vec<String>,
+    crumb_room: f64,
     theme: Option<wormhole_core::theme::tokens::Appearance>,
     selected: Option<usize>,
-    /// The panel has been given to the parent window.
+    /// The panel has been given to the parent window (asked to be).
     entered: bool,
-    taken_down: bool,
+    /// The panel has been taken down, or will be before anything else runs: a deferred ordering-in is
+    /// cancelled by it. Shared with that task.
+    gone: Rc<Cell<bool>>,
     /// Where the panel is in the window's space, as last placed.
     rect: Rect,
     shown_rows: Vec<String>,
@@ -198,7 +149,7 @@ pub struct Panel {
 impl Panel {
     /// A panel for `window`'s picker, not yet on screen: `opaque` for a plain fill. What happens in it goes to
     /// `events`. `None` for a window without a native one.
-    pub fn new(window: &Window, opaque: bool, events: Events) -> Option<Self> {
+    pub fn new(window: &Window, opaque: bool, events: Events, cx: &App) -> Option<Self> {
         let mtm = MainThreadMarker::new()?;
         let parent = ns_window(window)?;
         let panel = PickerPanel::new(mtm);
@@ -252,7 +203,7 @@ impl Panel {
         // The ghost is decoration: VoiceOver reads the field and the list, not a second copy of the text.
         ghost.setAccessibilityElement(false);
 
-        let list = super::picker_views::WheelView::new(mtm, events.clone());
+        let list = WheelView::new(mtm, events.clone());
         list.setAccessibilityElement(true);
         // SAFETY: a constant AppKit defines, read on the main thread.
         #[allow(unsafe_code)]
@@ -284,19 +235,22 @@ impl Panel {
             hint,
             slots: Vec::new(),
             tx: events,
+            executor: cx.foreground_executor().clone(),
             epoch: None,
             crumb_labels: Vec::new(),
+            crumb_room: 0.0,
             theme: None,
             selected: None,
             entered: false,
-            taken_down: false,
+            gone: Rc::new(Cell::new(false)),
             rect: Rect::new(0.0, 0.0, 0.0, 0.0),
             shown_rows: Vec::new(),
             shown_ghost: String::new(),
         })
     }
 
-    /// Bring the panel up with `view`, at `rect` in the window's space, and the keyboard into its field.
+    /// Bring the panel up with `view`, at `rect` in the window's space, and the keyboard into its field (see
+    /// [`arrival`] for when it does and does not).
     pub fn show(&mut self, view: &View<'_>, rect: Rect, cx: &mut App) {
         self.update(view, rect);
         if !self.entered {
@@ -304,7 +258,8 @@ impl Panel {
             // Ordering a child window makes AppKit tell the parent, whose view tells GPUI: done from a task,
             // outside this update, so GPUI is free to hear. The keys come to the panel after it is up.
             let (parent, panel, field) = (self.parent.clone(), self.panel.clone(), self.field.clone());
-            cx.spawn(async move |_| adopt(&parent, &panel, &field)).detach();
+            let (gone, tx) = (self.gone.clone(), self.tx.clone());
+            cx.spawn(async move |_| adopt(&parent, &panel, &field, &gone, &tx)).detach();
         }
     }
 
@@ -315,7 +270,7 @@ impl Panel {
             self.theme = Some(view.appearance);
             appearance::set_on(&self.holder, view.appearance);
         }
-        self.place(rect, !view.crumbs.is_empty(), view.shown);
+        self.place(rect, !view.crumbs.is_empty(), view.lines.len());
         self.set_text(view);
         self.set_crumbs(view);
         self.set_rows(view);
@@ -327,12 +282,10 @@ impl Panel {
         self.set_ghost(view);
     }
 
-    /// Take the panel down and give the key back to the app window. Closing a window tells its parent and
-    /// AppKit may tell GPUI, so it is done from a task, outside whatever update this is called in.
-    pub fn close(mut self, cx: &mut App) {
-        self.taken_down = true;
-        let (parent, panel) = (self.parent.clone(), self.panel.clone());
-        cx.spawn(async move |_| take_down(&parent, &panel)).detach();
+    /// Take the panel down and give the key back to the app window, from a task.
+    pub fn close(self, _cx: &mut App) {
+        // Dropping does it: one way to take the panel down, whoever lets go of it.
+        drop(self);
     }
 
     #[cfg(feature = "devctl")]
@@ -341,6 +294,7 @@ impl Panel {
             material: self.backdrop.material(),
             frame: [self.rect.x, self.rect.y, self.rect.w, self.rect.h],
             key: self.panel.isKeyWindow(),
+            visible: self.panel.isVisible(),
             window_number: self.panel.windowNumber() as i64,
             parent_number: self.parent.windowNumber() as i64,
             ghost: self.shown_ghost.clone(),
@@ -387,71 +341,39 @@ impl Panel {
             return;
         }
         self.epoch = Some(view.epoch);
+        // Edits the field reports from now on are of this text, which is how an edit that was on its way from
+        // the text it replaced is told apart (`Event::Typed`).
+        self.target.set_epoch(view.epoch);
         self.field.setStringValue(&NSString::from_str(view.text));
         if let Some(editor) = self.field.currentEditor() {
             editor.setSelectedRange(NSRange::new(view.text.encode_utf16().count(), 0));
         }
     }
 
+    /// The breadcrumb, laid out again when its steps or the room for them changed.
     fn set_crumbs(&mut self, view: &View<'_>) {
         let labels: Vec<String> = view.crumbs.iter().map(|c| c.label.clone()).collect();
-        if labels == self.crumb_labels {
+        let room = self.crumbs.frame().size.width;
+        if labels == self.crumb_labels && (room - self.crumb_room).abs() < 0.5 {
             return;
         }
         self.crumb_labels = labels;
-        let Some(mtm) = MainThreadMarker::new() else { return };
-        for old in self.crumbs.subviews().iter() {
-            old.removeFromSuperview();
-        }
-        let buttons: Vec<Retained<NSButton>> = view
-            .crumbs
-            .iter()
-            .enumerate()
-            .map(|(at, crumb)| crumb_button(mtm, &crumb.label, at, at + 1 == view.crumbs.len(), &self.target))
-            .collect();
-        let widths: Vec<f64> = buttons.iter().map(|b| b.frame().size.width).collect();
-        let room = self.crumbs.frame().size.width;
-        let first = first_crumb(&widths, room);
-        let mut x = 0.0;
-        if first > 0 {
-            let dots = NSTextField::labelWithString(&NSString::from_str("…"), mtm);
-            dots.setFont(Some(&NSFont::systemFontOfSize(12.0)));
-            dots.setTextColor(Some(&NSColor::tertiaryLabelColor()));
-            dots.setFrame(NSRect::new(NSPoint::new(x, 3.0), NSSize::new(ELLIPSIS_W, 17.0)));
-            self.crumbs.addSubview(&dots);
-            x += ELLIPSIS_W;
-        }
-        for (at, button) in buttons.iter().enumerate().skip(first) {
-            if at > first {
-                let chevron = NSImageView::initWithFrame(mtm.alloc(), NSRect::ZERO);
-                chevron.setImageScaling(NSImageScaling::ScaleProportionallyUpOrDown);
-                chevron.setImage(symbol("chevron.right", "").as_deref());
-                chevron.setContentTintColor(Some(&NSColor::tertiaryLabelColor()));
-                chevron.setFrame(NSRect::new(NSPoint::new(x + 2.0, 7.0), NSSize::new(8.0, 10.0)));
-                chevron.setAccessibilityElement(false);
-                self.crumbs.addSubview(&chevron);
-                x += SEPARATOR_W;
-            }
-            let size = button.frame().size;
-            button.setFrame(NSRect::new(NSPoint::new(x, ((CRUMBS_H - size.height) / 2.0).floor()), size));
-            self.crumbs.addSubview(button);
-            x += size.width;
-        }
+        self.crumb_room = room;
+        picker_crumbs::fill(&self.crumbs, view.crumbs, &self.target, room);
     }
 
+    /// The lines in view, which are all `view` has, from line number `view.top`.
     fn set_rows(&mut self, view: &View<'_>) {
         let Some(mtm) = MainThreadMarker::new() else { return };
         let width = self.list.frame().size.width;
-        let end = (view.top + view.shown).min(view.lines.len());
-        let in_view = view.lines.get(view.top.min(end)..end).unwrap_or_default();
-        while self.slots.len() < in_view.len() {
+        while self.slots.len() < view.lines.len() {
             let slot = Slot::new(mtm, self.tx.clone());
             self.list.addSubview(&slot.view);
             self.slots.push(slot);
         }
         self.shown_rows.clear();
         for (i, slot) in self.slots.iter().enumerate() {
-            let Some(line) = in_view.get(i) else {
+            let Some(line) = view.lines.get(i) else {
                 slot.view.setHidden(true);
                 continue;
             };
@@ -521,71 +443,49 @@ impl Panel {
     }
 }
 
-/// A borderless button for a step of the breadcrumb: the current one in the text colour, the others quieter.
-fn crumb_button(
-    mtm: MainThreadMarker,
-    label: &str,
-    at: usize,
-    current: bool,
-    target: &Target,
-) -> Retained<NSButton> {
-    // SAFETY: `crumb:` is defined on `Target` with the `(id)sender` signature of an action; the panel keeps
-    // the target alive, and AppKit holds it weakly.
-    #[allow(unsafe_code)]
-    let button = unsafe {
-        NSButton::buttonWithTitle_target_action(
-            &NSString::from_str(label),
-            Some(target),
-            Some(sel!(crumb:)),
-            mtm,
-        )
-    };
-    button.setBordered(false);
-    button.setFont(Some(&NSFont::systemFontOfSize(12.0)));
-    button.setTag(at as isize);
-    let tint = if current { NSColor::labelColor() } else { NSColor::secondaryLabelColor() };
-    button.setContentTintColor(Some(&tint));
-    button.sizeToFit();
-    button
-}
-
-/// Which step the breadcrumb starts at so the steps from it fit in `room`: all of them when they do, else the
-/// last ones with room for the ellipsis that stands for the rest (and always at least the last).
-fn first_crumb(widths: &[f64], room: f64) -> usize {
-    for first in 0..widths.len() {
-        let steps = widths[first..].iter().sum::<f64>() + SEPARATOR_W * (widths.len() - first - 1) as f64;
-        let dots = if first > 0 { ELLIPSIS_W } else { 0.0 };
-        if steps + dots <= room {
-            return first;
-        }
-    }
-    widths.len().saturating_sub(1)
-}
-
 impl Drop for Panel {
+    /// The one way the panel is taken down: from a task, after whatever update this is part of, so GPUI is not
+    /// told of a window going or of the key moving while it releases the entity that held the panel.
     fn drop(&mut self) {
-        if !self.taken_down {
-            take_down(&self.parent, &self.panel);
+        if self.gone.replace(true) {
+            return;
+        }
+        let (parent, panel) = (self.parent.clone(), self.panel.clone());
+        self.executor.spawn(async move { take_down(&parent, &panel) }).detach();
+    }
+}
+
+/// Give `panel` to `parent` as a child, above it, and the keyboard to `field`, if the panel is still wanted and
+/// [`arrival`] says so.
+#[allow(unsafe_code)]
+fn adopt(parent: &NSWindow, panel: &PickerPanel, field: &NSSearchField, gone: &Cell<bool>, tx: &Events) {
+    // A picker closed before this ran has no panel to show: ordering it in would leave a window nobody owns.
+    if gone.get() {
+        return;
+    }
+    let active = MainThreadMarker::new().is_some_and(|mtm| NSApplication::sharedApplication(mtm).isActive());
+    match arrival(background_mode::on(), active) {
+        Arrival::Hidden => {}
+        Arrival::TooLate => {
+            tx.try_send(Event::Resigned).ok();
+        }
+        Arrival::Key => {
+            // SAFETY: both windows are live and on the main thread (the executor's).
+            unsafe { parent.addChildWindow_ordered(panel, NSWindowOrderingMode::Above) };
+            panel.makeKeyAndOrderFront(None);
+            panel.makeFirstResponder(Some(field));
         }
     }
 }
 
-/// Give `panel` to `parent` as a child, above it, and the keyboard to `field`.
-#[allow(unsafe_code)]
-fn adopt(parent: &NSWindow, panel: &PickerPanel, field: &NSSearchField) {
-    // SAFETY: both windows are live and on the main thread (the executor's).
-    unsafe { parent.addChildWindow_ordered(panel, NSWindowOrderingMode::Above) };
-    panel.makeKeyAndOrderFront(None);
-    panel.makeFirstResponder(Some(field));
-}
-
-/// Take `panel` off `parent` and close it; the app window is the key window again if the panel was.
+/// Take `panel` off `parent` and close it; the app window is the key window again if the panel was, and it is
+/// on screen to take it.
 fn take_down(parent: &NSWindow, panel: &PickerPanel) {
     let had_the_key = panel.isKeyWindow();
     parent.removeChildWindow(panel);
     panel.orderOut(None);
     panel.close();
-    if had_the_key {
+    if had_the_key && parent.isVisible() {
         parent.makeKeyWindow();
     }
 }
@@ -594,7 +494,7 @@ fn take_down(parent: &NSWindow, panel: &PickerPanel) {
 mod tests {
     use objc2_foundation::NSSize;
 
-    use super::{CRUMBS_H, ELLIPSIS_W, FIELD_H, PAD, SEPARATOR_W, first_crumb, layout};
+    use super::{Arrival, CRUMBS_H, FIELD_H, PAD, arrival, layout};
     use crate::platform::picker::{ROW, card};
 
     #[test]
@@ -625,17 +525,15 @@ mod tests {
         assert_eq!(l.list.origin.y - (l.hint.origin.y + l.hint.size.height), 4.0);
     }
 
+    /// The panel takes the keys only in an app that is active and not in background mode: a test instance
+    /// never takes a keystroke from the person's own app, and an app switched away from meanwhile does not
+    /// either.
     #[test]
-    fn a_breadcrumb_that_fits_starts_at_its_first_step_and_a_long_one_drops_its_start() {
-        let widths = [20.0, 60.0, 80.0, 70.0];
-        assert_eq!(first_crumb(&widths, 400.0), 0);
-        let all = 20.0 + 60.0 + 80.0 + 70.0 + 3.0 * SEPARATOR_W;
-        assert_eq!(
-            first_crumb(&widths, all - 1.0),
-            1,
-            "the ellipsis takes {ELLIPSIS_W} of what the first gave back"
-        );
-        assert_eq!(first_crumb(&widths, 10.0), 3, "at least the last step");
-        assert_eq!(first_crumb(&[], 10.0), 0);
+    fn background_mode_never_gets_the_keys_whatever_the_app_is_doing() {
+        for active in [true, false] {
+            assert_eq!(arrival(true, active), Arrival::Hidden, "background mode, active {active}");
+        }
+        assert_eq!(arrival(false, true), Arrival::Key);
+        assert_eq!(arrival(false, false), Arrival::TooLate, "switched away from since it opened: not shown");
     }
 }

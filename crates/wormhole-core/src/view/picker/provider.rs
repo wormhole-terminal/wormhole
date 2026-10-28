@@ -39,6 +39,12 @@ pub trait Provider: Send + Sync {
 /// Something that finds out more about rows already listed (a badge, whether there is more behind a row),
 /// slower than listing them: asked only for the rows in view.
 pub trait Decorator: Send + Sync {
+    /// The kinds of row (`Row::kind`) it knows something about; none named means every kind. It is asked only
+    /// about those, so a decorator that reads keys as paths never gets another provider's keys.
+    fn kinds(&self) -> &[&'static str] {
+        &[]
+    }
+
     /// What is known about the rows with these keys; a key it knows nothing about is left out.
     fn decorate(&self, keys: &[String], cancel: &Cancel) -> Vec<Decoration>;
 }

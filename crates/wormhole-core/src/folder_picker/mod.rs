@@ -25,15 +25,16 @@ use std::sync::{Arc, Mutex};
 pub use collate::collate;
 pub use insert::{inserted, shell_form};
 pub use recent::{CAP as RECENT_CAP, RecentFolders, keep_out};
-pub use source::{Branches, Chevrons, Recent, Subfolders, display, path_crumbs};
+pub use source::{Branches, Chevrons, KIND, Recent, Subfolders, display, path_crumbs};
 pub use typed::{Typed, parse, tidy, up};
 pub use walk::{Found, Hit, Limits, walk};
 
-use crate::view::picker::{Compose, Decorator, Provider};
+use crate::view::picker::{Decorator, Provider};
 
-/// What the folder picker plugs into the generic one.
+/// What the folder picker plugs into the generic one: each provider is asked on its own, so the folders of
+/// the current folder never wait for a recent folder on a share that does not answer.
 pub struct Parts {
-    pub provider: Arc<dyn Provider>,
+    pub providers: Vec<Arc<dyn Provider>>,
     pub decorators: Vec<Arc<dyn Decorator>>,
 }
 
@@ -41,10 +42,7 @@ pub struct Parts {
 /// `recent_title`, shown when nothing is typed), and the chevron and the branch badge.
 pub fn parts(recents: Arc<Mutex<RecentFolders>>, recent_title: &str) -> Parts {
     Parts {
-        provider: Arc::new(Compose(vec![
-            Arc::new(Subfolders::default()),
-            Arc::new(Recent::new(recents, recent_title)),
-        ])),
+        providers: vec![Arc::new(Subfolders::default()), Arc::new(Recent::new(recents, recent_title))],
         decorators: vec![Arc::new(Chevrons), Arc::new(Branches)],
     }
 }

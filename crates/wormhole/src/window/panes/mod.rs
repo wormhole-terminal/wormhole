@@ -73,9 +73,8 @@ impl Workspace {
     ) {
         let Some(ix) = self.find_session(id) else { return };
         match event {
-            // Taken when the terminal notified (`Pane::new`), which is also when it said so. A folder it
-            // moved to counts as a visit for the folder picker's Recent rows, while that is on.
-            TerminalEvent::SummaryChanged => self.remember_folder(ix, cx),
+            // Taken when the terminal notified (`Pane::new`), which is also when it said so.
+            TerminalEvent::SummaryChanged => {}
             // Its row names the host it has now (none, after a fallback or a lost host).
             TerminalEvent::HostChanged => self.dirty = true,
             // Not left for the next minute's save: what was cleared may have been a secret. Only
@@ -120,19 +119,6 @@ impl Workspace {
                     self.request_close_session(ix, window, cx);
                 }
             }
-        }
-    }
-
-    /// The folder terminal `ix` is in now is a place worked in lately (the folder picker's Recent rows), kept
-    /// only with the picker's flag on: the list is of use to nothing else.
-    fn remember_folder(&self, ix: usize, cx: &mut Context<Self>) {
-        let on = crate::settings::settings_in(&self.profile, cx)
-            .feature_enabled(wormhole_core::config::features::FeatureFlag::FolderPicker);
-        if !on {
-            return;
-        }
-        if let Some(folder) = self.sessions[ix].terminal().read(cx).cwd.clone() {
-            crate::app_state::recent_folders::record(app(cx), &self.profile, &folder);
         }
     }
 

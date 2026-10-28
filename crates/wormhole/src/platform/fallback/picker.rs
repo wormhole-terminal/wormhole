@@ -9,7 +9,7 @@ use crate::platform::picker::{Events, View};
 pub struct Panel;
 
 impl Panel {
-    pub fn new(_window: &Window, _opaque: bool, _events: Events) -> Option<Self> {
+    pub fn new(_window: &Window, _opaque: bool, _events: Events, _cx: &App) -> Option<Self> {
         None
     }
 

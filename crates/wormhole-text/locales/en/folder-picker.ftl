@@ -16,6 +16,10 @@ folder-picker-recent = Recent
 # one level, ⌘⌫ forgets a recent folder (only for a row in the Recent section).
 folder-picker-hint = ↩ insert   ⇥ open   ← up   ⌘⌫ forget recent
 
+# The last row of a list while a source of folders (the recent ones, or a folder on a network volume) has not
+# answered for a while: the folders that are listed are not all there is yet, and can be picked meanwhile.
+folder-picker-reading = Still reading…
+
 # The one row of a list that has no folders, or none that the typed text narrows it to.
 folder-picker-empty = No folders
 

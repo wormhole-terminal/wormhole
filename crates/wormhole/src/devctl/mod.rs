@@ -79,12 +79,14 @@
 //!                   typed (a prefix picks the scope: `@` terminals, `>` actions …; in an open palette
 //!                   it replaces what is typed), or close it; it opens after this batch
 //!   sheet [filter] | sheet close   the keyboard-shortcuts sheet over this window, filtered
-//!   folder-picker open|close|type <text>|tab|right|left|accept-ghost|up|down|pageup|pagedown|enter|forget|
+//!   folder-picker open|close|type <text>|tab|right [mid]|left [start|mid]|accept-ghost|up|down|pageup|
+//!                   pagedown|enter|pick|forget|
 //!                   click <line>|crumb <n>|scroll <lines>|state   the folder picker (⌘J) over this window:
 //!                   open it at the terminal's cursor (the Folder picker flag must be on: `set
 //!                   feature_flags={"folder_picker":true}`), type a path or part of a name into its field
 //!                   (src/, ../ and ~/ walk; pr/te finds Projects/terminal), tab goes into the selected
-//!                   folder, right (at the end of the text) and accept-ghost take the grey completion, left
+//!                   folder, right (at the end of the text; `right mid` with the caret in the middle, which is the field's
+//!                   own) and accept-ghost take the grey completion, pick is enter, left
 //!                   goes up one level (`left start` with the caret at the start, `left mid` in the middle
 //!                   of the text, which is the field's own), up and down move the selection, enter inserts
 //!                   the selected folder's path at the terminal's cursor and closes (the terminal's screen
@@ -92,7 +94,9 @@
 //!                   crumb <n> goes to a step of the breadcrumb, state lists the text, the ghost, the
 //!                   crumbs, the lines (badges, chevrons, recent rows, what ↩ and ⇥ do) with the selection
 //!                   marked, the panel's place and, for a native panel, its material, frame and rows. The
-//!                   queries run off the main thread: ask `state` again while it says `busy true`
+//!                   queries run off the main thread: ask `state` again while it says `busy true`. In a
+//!                   background-mode instance the panel is never shown (`visible false`, `key false`): it
+//!                   takes no keystroke from the person's own apps, and everything else works as it would
 //!   action <name>   dispatch a registered action by name (`workspace::ToggleSidebar`) through this
 //!                   window, as a click on its menu item does
 //!   available <name>   whether the focused element's path handles that action (app-wide handlers

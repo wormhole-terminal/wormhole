@@ -122,14 +122,18 @@ fn key(cx: &mut TestAppContext, window: &OpenWindow, key: Key) {
 
 /// Type `text` into the field (the whole text, as the field would report it), and wait for the list.
 fn typed(cx: &mut TestAppContext, window: &OpenWindow, text: &str) {
-    feed(cx, window, Event::Typed(Field::at_end(text)));
+    let epoch = {
+        let picker = picker(cx, window);
+        cx.update(|cx| picker.read(cx).model.epoch())
+    };
+    feed(cx, window, Event::Typed(Field::at_end(text), epoch));
     settle(cx, window);
     draw(cx, window);
 }
 
 fn items(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<Item> {
     let picker = picker(cx, window);
-    cx.update(|cx| picker.read(cx).model.snapshot().items)
+    cx.update(|cx| picker.read(cx).model.items().to_vec())
 }
 
 /// What the open picker lists, as devctl's `state` would.
@@ -498,12 +502,12 @@ fn recent_folders_are_listed_after_the_subfolders_ranked_in_when_typed_and_forgo
         let store =
             wormhole_core::storage::store::Store::open_at(&scratch.join("picker-db")).expect("a store");
         crate::app_state::app_mut(cx).store = Some(store);
-        recent_folders::record(app(cx), &profile, &src);
+        recent_folders::record(cx, &profile, &src);
         // The data folder and the temporary folders are never recorded.
-        recent_folders::record(app(cx), &profile, dir.path());
-        recent_folders::record(app(cx), &profile, &std::env::temp_dir());
+        recent_folders::record(cx, &profile, dir.path());
+        recent_folders::record(cx, &profile, &std::env::temp_dir());
         std::thread::sleep(Duration::from_millis(5));
-        recent_folders::record(app(cx), &profile, &tests);
+        recent_folders::record(cx, &profile, &tests);
     });
     open_picker(cx, &window);
     let lines = items(cx, &window);
@@ -534,6 +538,109 @@ fn recent_folders_are_listed_after_the_subfolders_ranked_in_when_typed_and_forgo
     key(cx, &window, Key::Forget);
     settle(cx, &window);
     assert!(rows(cx, &window).is_empty(), "forgotten: {:?}", rows(cx, &window));
-    let kept = cx.update(|cx| recent_folders::load(app(cx), &profile).len());
+    let kept = cx.update(|cx| recent_folders::stored(app(cx), &profile).len());
     assert_eq!(kept, 1, "and gone from the store");
+}
+
+/// Move terminal 1 to `folder`, as a `cd` would, and let the window take the new summary.
+fn go_to(cx: &mut TestAppContext, window: &OpenWindow, folder: &Path) {
+    let terminal = terminal(cx, window);
+    let folder = folder.to_path_buf();
+    cx.update(|cx| terminal.update(cx, |terminal, _| terminal.cwd = Some(folder)));
+    drive(cx, window, |ws, _, cx| _ = ws.sync_summaries(cx));
+}
+
+/// The score of every folder kept for the window's profile now.
+fn kept(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<(String, f64)> {
+    let profile = read(cx, window, |ws| ws.profile().clone());
+    cx.update(|cx| {
+        let list = recent_folders::shared(cx, &profile);
+        let list = list.lock().expect("the list");
+        list.ranked(recent_folders::now()).into_iter().map(|(p, s)| (p.to_string(), s)).collect()
+    })
+}
+
+#[gpui_kit::test]
+fn a_folder_is_a_visit_when_the_terminal_moves_there_and_not_each_time_it_says_something(
+    cx: &mut TestAppContext,
+) {
+    if isolate("a_folder_is_a_visit_when_the_terminal_moves_there_and_not_each_time_it_says_something") {
+        return;
+    }
+    let dir = tree();
+    let (src, tests) = real_folders();
+    let window = open_in(cx, dir.path());
+    go_to(cx, &window, &src);
+    let first = kept(cx, &window);
+    assert_eq!(first.len(), 1);
+    assert!(first[0].1 > 0.9 && first[0].1 < 1.1, "one visit: {first:?}");
+    // The terminal says other things about itself while it stays in the folder: a title, a status.
+    let terminal = terminal(cx, &window);
+    for title in ["one", "two", "three"] {
+        cx.update(|cx| terminal.update(cx, |terminal, _| terminal.title = Some(title.into())));
+        drive(cx, &window, |ws, _, cx| _ = ws.sync_summaries(cx));
+    }
+    let again = kept(cx, &window);
+    assert_eq!(again.len(), 1);
+    assert!(again[0].1 < 1.1, "still one visit: {again:?}");
+    // Another folder is another.
+    go_to(cx, &window, &tests);
+    assert_eq!(kept(cx, &window).len(), 2);
+}
+
+#[gpui_kit::test]
+fn with_the_flag_off_nothing_is_kept_and_what_was_kept_is_cleared(cx: &mut TestAppContext) {
+    if isolate("with_the_flag_off_nothing_is_kept_and_what_was_kept_is_cleared") {
+        return;
+    }
+    let dir = tree();
+    let (src, tests) = real_folders();
+    let window = open_in(cx, dir.path());
+    go_to(cx, &window, &src);
+    assert_eq!(kept(cx, &window).len(), 1);
+    flag(cx, false);
+    go_to(cx, &window, &tests);
+    assert!(kept(cx, &window).is_empty(), "turning the picker off forgot what it had learned");
+    go_to(cx, &window, &src);
+    assert!(kept(cx, &window).is_empty(), "and nothing more is kept while it is off");
+}
+
+#[gpui_kit::test]
+fn closing_in_the_batch_that_opened_leaves_nothing_behind(cx: &mut TestAppContext) {
+    if isolate("closing_in_the_batch_that_opened_leaves_nothing_behind") {
+        return;
+    }
+    let dir = tree();
+    let window = open_in(cx, dir.path());
+    // Open and close with no task in between, as a devctl batch or a double press of ⌘J can.
+    drive(cx, &window, |ws, window, cx| {
+        super::open(ws, window, cx);
+        ws.close_overlay(window, cx);
+    });
+    draw(cx, &window);
+    assert!(!is_open(cx, &window));
+    assert!(terminal_focused(cx, &window));
+    // It can be opened again, and the first open left no query behind to answer into the new one.
+    open_picker(cx, &window);
+    assert_eq!(rows(cx, &window), ["alpha", "beta", "My Folder"]);
+    key(cx, &window, Key::Escape);
+    assert!(!is_open(cx, &window));
+}
+
+#[gpui_kit::test]
+fn closing_the_picker_takes_its_panel_down_once_and_a_second_close_is_nothing(cx: &mut TestAppContext) {
+    if isolate("closing_the_picker_takes_its_panel_down_once_and_a_second_close_is_nothing") {
+        return;
+    }
+    let dir = tree();
+    let window = open_in(cx, dir.path());
+    open_picker(cx, &window);
+    let picker = picker(cx, &window);
+    cx.update(|cx| picker.update(cx, |picker, cx| picker.close(cx)));
+    cx.update(|cx| picker.update(cx, |picker, cx| picker.close(cx)));
+    assert!(!cx.update(|cx| picker.read(cx).has_panel()), "the panel is the picker's no more");
+    // Keys that arrive after (the queue can hold some) change nothing and don't panic.
+    feed(cx, &window, Event::Key(Key::Down, Field::default()));
+    key(cx, &window, Key::Escape);
+    assert!(!is_open(cx, &window));
 }

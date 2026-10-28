@@ -17,7 +17,7 @@
 //! [`Facts`](wormhole_core::view::picker::Facts) it was last given.
 
 use wormhole_core::theme::tokens::Appearance;
-use wormhole_core::view::picker::{Card, Crumb, Facts, Field, Key, Row};
+use wormhole_core::view::picker::{Card, Crumb, Do, Facts, Field, Key, Row};
 
 pub use super::os::picker::Panel;
 
@@ -27,9 +27,14 @@ pub type Events = smol::channel::Sender<Event>;
 /// Something the person did in the panel.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Event {
-    /// The text in the field changed (typed, pasted, cleared).
-    Typed(Field),
-    /// A key the picker takes, with the field as it was.
+    /// The text in the field changed (typed, pasted, cleared), in a field that showed the picker's text of this
+    /// epoch (`View::epoch`): an edit of text the picker has since replaced is told apart by it.
+    Typed(Field, u64),
+    /// What a key the picker takes was decided to do: the panel asked `decide` with the facts it had, before
+    /// the key returned, and this is that answer, which the app does as it is.
+    Do(Do),
+    /// A key with the field as it was, for a caller that has no panel to have decided (a test, devctl): the
+    /// picker decides.
     Key(Key, Field),
     /// A click on the line at this place in the list.
     Row(usize),
@@ -52,11 +57,11 @@ pub enum Line<'a> {
 /// Everything the panel shows.
 #[derive(Clone, Copy, Debug)]
 pub struct View<'a> {
-    /// Every line of the list; only `top..top + shown` is in view.
+    /// The lines in view, and nothing else: a list of hundreds costs the panel its few lines.
     pub lines: &'a [Line<'a>],
+    /// Where `lines` start in the whole list: what a click on one reports (`Event::Row`).
     pub top: usize,
-    pub shown: usize,
-    /// The selected row's place in `lines`.
+    /// The selected row's place in the whole list.
     pub selected: Option<usize>,
     pub crumbs: &'a [Crumb],
     /// The field's text, which replaces what is in it when `epoch` is not the one it showed last.
@@ -103,6 +108,8 @@ pub struct Info {
     pub frame: [f32; 4],
     /// The panel is the key window: the field has the keyboard.
     pub key: bool,
+    /// The panel is on screen. A background-mode instance never shows it.
+    pub visible: bool,
     pub window_number: i64,
     pub parent_number: i64,
     /// What the ghost label says, and the rows' labels in view, as the panel shows them.

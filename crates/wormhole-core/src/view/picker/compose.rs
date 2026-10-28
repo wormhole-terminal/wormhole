@@ -5,7 +5,8 @@ use std::sync::Arc;
 use super::provider::{Cancel, Provider};
 use super::types::{Answer, Query, Row};
 
-/// The providers of one picker, asked in turn.
+/// Several providers as one provider, asked in turn. The picker's driver asks each provider on its own so a
+/// slow one holds back only its rows (see `Model::deliver`); this is for a caller that wants one answer.
 pub struct Compose(pub Vec<Arc<dyn Provider>>);
 
 impl Provider for Compose {
@@ -44,8 +45,9 @@ pub fn merge(answers: Vec<Answer>) -> Answer {
             add(&mut merged.rows, row);
         }
         merged.notes.extend(answer.notes);
-        if merged.up.is_none() {
+        if merged.up.is_none() && answer.up.is_some() {
             merged.up = answer.up;
+            merged.up_at_end = answer.up_at_end;
         }
         if merged.crumbs.is_empty() {
             merged.crumbs = answer.crumbs;

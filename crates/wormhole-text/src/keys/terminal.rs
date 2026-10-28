@@ -10,5 +10,5 @@ use crate::args::Arg;
 /// { $columns } × { $rows }
 /// ```
 pub fn terminal_size_readout(columns: &str, rows: &str) -> String {
-    crate::active::message(1227, &[("columns", Arg::Str(columns)), ("rows", Arg::Str(rows))])
+    crate::active::message(1228, &[("columns", Arg::Str(columns)), ("rows", Arg::Str(rows))])
 }

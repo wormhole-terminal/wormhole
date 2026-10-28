@@ -32,6 +32,11 @@ impl Workspace {
         if moved {
             // A group that keeps only its folder's terminals lets this one go if it left the folder.
             self.folder_changed(self.sessions[ix].id, cx);
+            // Where terminals go is what the folder picker's Recent rows are made of: a visit, once, when the
+            // folder changed (not whenever the terminal says something about itself).
+            if let Some(folder) = self.sessions[ix].pane.summary.cwd.clone() {
+                crate::app_state::recent_folders::visited(cx, &self.profile, &folder);
+            }
         }
         cx.notify();
         true

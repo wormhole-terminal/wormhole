@@ -51,6 +51,8 @@ impl Field {
 pub struct Facts {
     /// There is a level up from this list.
     pub up: bool,
+    /// ← at the end of the text goes up (the provider says the text ends at a level).
+    pub up_at_end: bool,
     /// The selected row can be gone into.
     pub descends: bool,
     /// The field shows a ghost completion.
@@ -81,8 +83,9 @@ pub const PAGE: isize = 8;
 /// - ⇥ goes into the selected row (which is also accepting the ghost, the ghost being its name).
 /// - → goes into the selected row only with the caret after the last character, nothing selected (otherwise
 ///   it moves the caret), and only when there is something to go into or complete.
-/// - ← goes up one level only with nothing selected and the caret at the very start of the field, or after a
-///   closing `/` at its end, so it still moves the caret while a name is being edited.
+/// - ← goes up one level only with nothing selected and the caret at the very start of the field, or at its end
+///   when the provider says the text ends at a level (a path's closing `/`), so it still moves the caret while
+///   a name is being edited.
 /// - ⌘⌫ forgets the selected row when it can be forgotten, and otherwise deletes in the field as it does.
 pub fn decide(key: Key, field: &Field, facts: &Facts) -> Do {
     match key {
@@ -94,9 +97,7 @@ pub fn decide(key: Key, field: &Field, facts: &Facts) -> Do {
         Key::Enter => Do::Pick,
         Key::Tab => Do::Descend,
         Key::Right if field.caret_at_end() && (facts.ghost || facts.descends) => Do::Descend,
-        Key::Left
-            if facts.up && (field.caret_at_start() || field.caret_at_end() && field.text.ends_with('/')) =>
-        {
+        Key::Left if facts.up && (field.caret_at_start() || field.caret_at_end() && facts.up_at_end) => {
             Do::Up
         }
         Key::Forget if facts.forgettable => Do::Forget,
@@ -108,7 +109,7 @@ pub fn decide(key: Key, field: &Field, facts: &Facts) -> Do {
 mod tests {
     use super::{Do, Facts, Field, Key, decide};
 
-    const ALL: Facts = Facts { up: true, descends: true, ghost: true, forgettable: true };
+    const ALL: Facts = Facts { up: true, up_at_end: true, descends: true, ghost: true, forgettable: true };
 
     fn at(text: &str, caret: usize) -> Field {
         Field { text: text.into(), caret, selected: 0 }
@@ -141,7 +142,9 @@ mod tests {
         assert_eq!(decide(Key::Left, &at("", 0), &ALL), Do::Up, "an empty field");
         assert_eq!(decide(Key::Left, &at("src", 0), &ALL), Do::Up, "at the start");
         assert_eq!(decide(Key::Left, &at("src/", 4), &ALL), Do::Up, "after the slash at the end");
-        assert_eq!(decide(Key::Left, &at("src/ui", 6), &ALL), Do::Pass, "editing a name");
+        let editing = Facts { up_at_end: false, ..ALL };
+        assert_eq!(decide(Key::Left, &at("src/ui", 6), &editing), Do::Pass, "editing a name");
+        assert_eq!(decide(Key::Left, &at("src/ui", 0), &editing), Do::Up, "the start is always a level");
         assert_eq!(decide(Key::Left, &at("src/ui", 3), &ALL), Do::Pass);
         assert_eq!(
             decide(Key::Left, &at("src/", 2), &ALL),

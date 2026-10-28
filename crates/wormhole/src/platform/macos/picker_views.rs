@@ -80,6 +80,8 @@ pub struct TargetIvars {
     tx: Events,
     /// What the keys depend on, as the model last said.
     facts: Cell<Facts>,
+    /// Which text of the picker's the field shows (`View::epoch`): what an edit says it was made to.
+    epoch: Cell<u64>,
     field: RefCell<Option<Retained<NSSearchField>>>,
 }
 
@@ -138,7 +140,12 @@ define_class!(
 impl Target {
     #[allow(unsafe_code)]
     pub fn new(mtm: MainThreadMarker, tx: Events) -> Retained<Self> {
-        let ivars = TargetIvars { tx, facts: Cell::new(Facts::default()), field: RefCell::new(None) };
+        let ivars = TargetIvars {
+            tx,
+            facts: Cell::new(Facts::default()),
+            epoch: Cell::new(0),
+            field: RefCell::new(None),
+        };
         let this = Self::alloc(mtm).set_ivars(ivars);
         // SAFETY: `-[NSObject init]` is the designated initializer of the superclass.
         unsafe { msg_send![super(this), init] }
@@ -154,6 +161,11 @@ impl Target {
         self.ivars().facts.set(facts);
     }
 
+    /// The field shows the picker's text of `epoch` from now on.
+    pub fn set_epoch(&self, epoch: u64) {
+        self.ivars().epoch.set(epoch);
+    }
+
     /// Never blocks and never runs app code: the receiver is GPUI's task.
     fn send(&self, event: Event) {
         self.ivars().tx.try_send(event).ok();
@@ -163,10 +175,13 @@ impl Target {
     fn command(&self, text_view: &NSTextView, command: Sel) -> bool {
         let Some(key) = key_of(command) else { return false };
         let field = field_of(&text_view.string().to_string(), text_view.selectedRange());
-        if decide(key, &field, &self.ivars().facts.get()) == Do::Pass {
+        // Decided here, once, with the facts the panel has, and what was decided is what the app does: a
+        // key the field was refused is never one the app then declines.
+        let what = decide(key, &field, &self.ivars().facts.get());
+        if what == Do::Pass {
             return false;
         }
-        self.send(Event::Key(key, field));
+        self.send(Event::Do(what));
         true
     }
 
@@ -177,7 +192,7 @@ impl Target {
         let selection = field
             .currentEditor()
             .map_or(NSRange::new(text.encode_utf16().count(), 0), |editor| editor.selectedRange());
-        self.send(Event::Typed(field_of(&text, selection)));
+        self.send(Event::Typed(field_of(&text, selection), self.ivars().epoch.get()));
     }
 }
 

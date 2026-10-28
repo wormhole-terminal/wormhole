@@ -8,6 +8,8 @@
 //! forgivingly, [`Limits::beam`] places are carried from one step to the next, [`Limits::reads`] folders are read
 //! in all and at most [`Limits::rows`] folders come back. The reader checks [`Cancel`] before each read.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 
@@ -102,13 +104,21 @@ struct Named {
 /// The folders of `dir` that fit `step`, best first, ties in the order `ls` lists them; and why the read
 /// stopped early, if it did.
 fn fitting(dir: &Path, step: &str, cap: usize) -> std::io::Result<(Vec<Named>, Option<Cut>)> {
-    let read = list_folders_where(dir, cap, |name| shown(name, step) && fit(name, step).is_some())?;
+    // The read keeps what fits; how it fits is worked out once, there.
+    let fits = RefCell::new(HashMap::new());
+    let read = list_folders_where(dir, cap, |name| {
+        if !shown(name, step) {
+            return false;
+        }
+        fit(name, step).is_some_and(|found| fits.borrow_mut().insert(name.to_string(), found).is_none())
+    })?;
+    let mut fits = fits.into_inner();
     let mut names = read.names;
     names.sort_by(|a, b| collate(a, b));
     let mut found: Vec<Named> = names
         .into_iter()
         .filter_map(|name| {
-            let f = fit(&name, step)?;
+            let f = fits.remove(&name)?;
             Some(Named { name, score: f.score, marks: f.marks })
         })
         .collect();

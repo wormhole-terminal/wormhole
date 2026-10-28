@@ -3,6 +3,8 @@
 
 use wormhole_term::input::file_drop::shell_escape;
 
+use crate::storage::files::hostile_char;
+
 /// The text for the folder `name` under `prefix` (the part of the typed path that was written exactly, with its
 /// closing `/`, see [`Hit::prefix`](super::Hit::prefix)): `prefix` + `name` + `/`, escaped for the shell. A path that
 /// would begin with a dash gets `./` in front, or a command would read it as an option (`rm -rf/`). None when
@@ -10,7 +12,7 @@ use wormhole_term::input::file_drop::shell_escape;
 /// a key (a line break runs the line, Ctrl-U clears it), never part of a folder's name.
 pub fn inserted(prefix: &str, name: &str) -> Option<String> {
     let path = format!("{prefix}{name}/");
-    if path.chars().any(char::is_control) {
+    if path.chars().any(hostile_char) {
         return None;
     }
     Some(shell_form(&if path.starts_with('-') { format!("./{path}") } else { path }))

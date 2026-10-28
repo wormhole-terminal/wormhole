@@ -23,11 +23,17 @@ use crate::view::picker::{Answer, Cancel, Crumb, Decoration, Decorator, Note, Pr
 
 /// The SF Symbols the rows wear.
 const FOLDER: &str = "folder";
+/// What the rows are, for the decorators that know what a key of that kind is (a path).
+pub const KIND: &str = "folder";
 const CLOCK: &str = "clock.arrow.circlepath";
 
 /// Most recent folders listed with nothing typed, and when something is.
 const RECENT_IDLE: usize = 12;
 const RECENT_TYPED: usize = 30;
+/// The most recent folders looked at on the disk in one answer: a folder on a share that went away can make a
+/// look wait, so there are few, and this provider answers on its own (the rows of the current folder never wait
+/// for it).
+const LOOKS: usize = 40;
 
 /// The folders below the one the typed path walks to.
 #[derive(Default)]
@@ -54,6 +60,8 @@ impl Provider for Subfolders {
             rows: found.hits.iter().filter_map(row).collect(),
             notes,
             up: up(&query.text, &cx.cwd, &cx.home),
+            // A path ends at a level where it ends in a slash; a name still being typed does not.
+            up_at_end: query.text.ends_with('/'),
             crumbs: crumbs(&found, &cx.home),
             ..Answer::default()
         }
@@ -64,6 +72,7 @@ fn row(hit: &Hit) -> Option<Row> {
     Some(Row {
         marks: hit.marks.clone(),
         icon: FOLDER.into(),
+        kind: KIND.into(),
         descend: Some(format!("{}{}/", hit.prefix, hit.label)),
         insert: Some(inserted(&hit.prefix, &hit.label)?),
         score: hit.score,
@@ -161,6 +170,7 @@ impl Provider for Recent {
         let wanted: Vec<&str> = typed.split('/').filter(|s| !s.is_empty()).collect();
         let cap = if idle { RECENT_IDLE } else { RECENT_TYPED };
         let mut rows = Vec::new();
+        let mut looks = 0;
         for (path, frecency) in ranked {
             if rows.len() >= cap || cancel.is_cancelled() {
                 break;
@@ -178,6 +188,10 @@ impl Provider for Recent {
                 }
             };
             // A folder that is gone is not offered (and costs one look).
+            looks += 1;
+            if looks > LOOKS {
+                break;
+            }
             if !path.is_dir() {
                 continue;
             }
@@ -238,6 +252,7 @@ fn recent_row(path: &Path, home: &Path, score: i32, marks: Vec<std::ops::Range<u
     Some(Row {
         marks,
         icon: CLOCK.into(),
+        kind: KIND.into(),
         detail,
         descend: Some(format!("{shown}/")),
         insert: Some(insert),
@@ -251,6 +266,10 @@ fn recent_row(path: &Path, home: &Path, score: i32, marks: Vec<std::ops::Range<u
 pub struct Chevrons;
 
 impl Decorator for Chevrons {
+    fn kinds(&self) -> &[&'static str] {
+        &[KIND]
+    }
+
     fn decorate(&self, keys: &[String], cancel: &Cancel) -> Vec<Decoration> {
         let mut out = Vec::new();
         for key in keys {
@@ -267,6 +286,10 @@ impl Decorator for Chevrons {
 pub struct Branches;
 
 impl Decorator for Branches {
+    fn kinds(&self) -> &[&'static str] {
+        &[KIND]
+    }
+
     fn decorate(&self, keys: &[String], cancel: &Cancel) -> Vec<Decoration> {
         let mut out = Vec::new();
         for key in keys {
@@ -329,6 +352,8 @@ mod tests {
         assert_eq!(space.icon, "folder");
         assert_eq!(space.key, root.path().join("with space").to_string_lossy());
         assert_eq!(a.up.as_deref(), Some("../"));
+        assert!(!a.up_at_end, "nothing typed: the text doesn't end at a level");
+        assert!(a.rows.iter().all(|r| r.kind == "folder"), "the rows say what they are");
         assert_eq!(a.sections, [""]);
     }
 
@@ -341,6 +366,7 @@ mod tests {
         assert_eq!(a.rows[0].insert.as_deref(), Some("~/src/core/"));
         assert_eq!(a.rows[0].descend.as_deref(), Some("~/src/core/"));
         assert_eq!(a.up.as_deref(), Some("~/"));
+        assert!(a.up_at_end, "a path that ends in a slash ends at a level");
         let crumbs: Vec<_> = a.crumbs.iter().map(|c| (c.label.as_str(), c.text.as_str())).collect();
         assert_eq!(crumbs, [("~", "~/"), ("src", "~/src/")]);
     }

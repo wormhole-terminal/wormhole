@@ -17,11 +17,10 @@ mod tests;
 
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 
 use gpui_kit::*;
 use wormhole_core::config::features::FeatureFlag;
-use wormhole_core::folder_picker::{RecentFolders, parts};
+use wormhole_core::folder_picker::parts;
 use wormhole_core::platform::paths;
 use wormhole_core::storage::files::{FOLDERS_CAP, SCAN_CAP};
 use wormhole_core::storage::paths::ProfileId;
@@ -30,7 +29,7 @@ use wormhole_core::view::panes::Rect;
 use wormhole_core::view::picker::{Context as Where, Note};
 use wormhole_text::{keys, text};
 
-use crate::app_state::{app, recent_folders};
+use crate::app_state::recent_folders;
 use crate::picker::{Picker, PickerEvent, Sources, Words};
 use crate::settings::settings_in;
 use crate::style;
@@ -47,8 +46,6 @@ pub(crate) struct FolderPicker {
     /// becomes the one in front, so it is also the one in front when the path arrives.
     terminal: WeakEntity<TerminalView>,
     picker: Entity<Picker>,
-    /// The recent folders, shared with the provider that lists them: forgetting one here is forgetting it there.
-    recents: Arc<Mutex<RecentFolders>>,
     profile: ProfileId,
     _subscriptions: Vec<Subscription>,
 }
@@ -105,7 +102,7 @@ fn open(ws: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
     let home = home.unwrap_or_else(|| cwd.clone());
     let profile = ws.profile().clone();
     // The folder the picker opened in counts as a visit: a terminal that was started there never reported it.
-    recent_folders::record(app(cx), &profile, &cwd);
+    recent_folders::record(cx, &profile, &cwd);
     let return_focus = ws.end_overlay(window, cx);
     let workspace = cx.entity();
     let host =
@@ -114,12 +111,15 @@ fn open(ws: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
 }
 
 /// What a note under the rows says.
-fn note(note: Note) -> String {
+fn note(note: &Note) -> String {
     match note {
         Note::Empty => text(keys::FOLDER_PICKER_EMPTY).to_string(),
         Note::Failed => text(keys::FOLDER_PICKER_UNREADABLE).to_string(),
-        Note::Limited(count) => keys::folder_picker_cut_folders(&count_grouped(count.min(FOLDERS_CAP))),
-        Note::Searched(count) => keys::folder_picker_cut_scanned(&count_grouped(count.min(SCAN_CAP))),
+        Note::Limited(count) => keys::folder_picker_cut_folders(&count_grouped((*count).min(FOLDERS_CAP))),
+        Note::Searched(count) => keys::folder_picker_cut_scanned(&count_grouped((*count).min(SCAN_CAP))),
+        Note::Reading => text(keys::FOLDER_PICKER_READING).to_string(),
+        // The folder providers have nothing of their own to say; a provider that does says it in its words.
+        Note::Custom(words) => words.clone(),
     }
 }
 
@@ -164,9 +164,8 @@ impl FolderPicker {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let recents = Arc::new(Mutex::new(recent_folders::load(app(cx), &profile)));
-        let folders = parts(recents.clone(), text(keys::FOLDER_PICKER_RECENT));
-        let sources = Sources { provider: folders.provider, decorators: folders.decorators };
+        let folders = parts(recent_folders::shared(cx, &profile), text(keys::FOLDER_PICKER_RECENT));
+        let sources = Sources { providers: folders.providers, decorators: folders.decorators };
         let words = Words {
             placeholder: text(keys::FOLDER_PICKER_SEARCH).to_string(),
             name: text(keys::FOLDER_PICKER_NAME).to_string(),
@@ -196,7 +195,6 @@ impl FolderPicker {
             workspace: workspace.downgrade(),
             terminal,
             picker,
-            recents,
             profile,
             _subscriptions: vec![heard, moved],
         }
@@ -230,12 +228,9 @@ impl FolderPicker {
         true
     }
 
-    /// Forget a recent folder: gone from the list kept in the store and from this picker's rows.
+    /// Forget a recent folder: gone from the list the picker and the store share, and from this picker's rows.
     fn forget(&mut self, key: &str, cx: &mut Context<Self>) {
-        let changed = self.recents.lock().is_ok_and(|mut recents| recents.forget(key));
-        if changed && let Ok(recents) = self.recents.lock() {
-            recent_folders::save(app(cx), &self.profile, &recents);
-        }
+        recent_folders::forget(cx, &self.profile, key);
         self.picker.update(cx, |picker, cx| picker.refresh(cx));
     }
 
@@ -251,6 +246,8 @@ impl FolderPicker {
 
     /// Take the picker down, if it is what is over the window.
     fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // The panel goes first, from a task of its own: the overlay's release would take it down inside GPUI's.
+        self.picker.update(cx, |picker, cx| picker.close(cx));
         let _ = self.workspace.update(cx, |ws, cx| {
             if ws.folder_picker_open() {
                 ws.close_overlay(window, cx);

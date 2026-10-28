@@ -50,6 +50,8 @@ pub struct Row {
     pub section: usize,
     /// The person can ask to forget this row (⌘⌫).
     pub forgettable: bool,
+    /// What kind of thing the row is (`folder`): a decorator is asked only about the kinds it names.
+    pub kind: String,
     /// How well it fits the text; higher first. Rows of one section are ordered by it, stably.
     pub score: i32,
 }
@@ -69,7 +71,7 @@ pub struct Crumb {
 }
 
 /// Something the list says besides its rows.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Note {
     /// Nothing to list. Added by the picker when an answer has no rows.
     Empty,
@@ -79,6 +81,10 @@ pub enum Note {
     Limited(usize),
     /// Only this many entries were searched, so rows may be missing.
     Searched(usize),
+    /// Some provider has not answered yet and the wait is long: added by the picker.
+    Reading,
+    /// What a provider has to say in its own words (plain text, in the language it chose).
+    Custom(String),
 }
 
 /// What a provider answers to a [`Query`].
@@ -91,6 +97,9 @@ pub struct Answer {
     /// The text that goes in the field to go one level up from this answer, if there is a level up
     /// (← uses it).
     pub up: Option<String>,
+    /// ← at the end of the text goes up too, because the text ends where a level does (a path's closing
+    /// `/`): the provider knows what its text means, the picker doesn't.
+    pub up_at_end: bool,
     /// Where the person is, from the outermost step in.
     pub crumbs: Vec<Crumb>,
 }
@@ -102,6 +111,7 @@ impl Default for Answer {
             rows: Vec::new(),
             notes: Vec::new(),
             up: None,
+            up_at_end: false,
             crumbs: Vec::new(),
         }
     }

@@ -15,10 +15,13 @@
 //!    the picker). A row with no `insert` is listed but can't be picked; one with no `descend` can't be gone
 //!    into. A row that is listed again is the same row: the selection, decorations and forgetting go by its key.
 //! 3. Optionally implement [`Decorator`] for what is slower than listing (a badge, whether there is more behind
-//!    a row). It is asked only for the rows in view, a few at a time.
-//! 4. Several providers are one with [`Compose`]: rows that answer into the same section are ranked together
-//!    by `score`, a section with a new title follows the ones before it, and a row two providers list is
-//!    listed once.
+//!    a row). It is asked only for the rows in view, a few at a time, and only about the kinds of row
+//!    (`Row::kind`) it names.
+//! 4. The model is given all its providers ([`Model::new`]) and each is asked on its own: the list is made of the
+//!    answers that are in ([`merge`]): rows that answer into the same section are ranked together by `score`, a
+//!    section with a new title follows the ones before it, and a row two providers list is listed once. A slow
+//!    provider holds back only its own rows ([`Model::slow`]). [`Compose`] is the same merge behind one provider,
+//!    for a caller that wants a single answer.
 //!
 //! Every type a provider sees or returns is plain, owned and `serde`-shaped (no closures, no handles), so a
 //! provider written outside this crate, a Probe, could answer in the same words over any channel.
@@ -49,8 +52,8 @@ pub use compose::{Compose, merge};
 pub use fuzzy::{Fit, fit};
 pub use ghost::ghost;
 pub use keys::{Do, Facts, Field, Key, PAGE, decide};
-pub use model::{DecorationRequest, Model, Outcome, Request, Snapshot};
+pub use model::{DecorationRequest, Model, Outcome, Request, Snapshot, Target};
 pub use place::{Card, GAP, MARGIN, Placed, place};
 pub use provider::{Cancel, Decorator, Provider};
-pub use shown::{Item, Shown};
+pub use shown::{Item, Reading, Shown};
 pub use types::{Answer, Context, Crumb, Decoration, Note, Query, Row};

@@ -2,14 +2,19 @@
 //! (the folder picker's) asks about many, and each answer is two small reads.
 //!
 //! A folder is a repository's top when it has a `.git` of its own: a folder (an ordinary repository), or a
-//! file that names the git dir (a linked worktree or a submodule). Nothing is followed but that one named
-//! path, and `HEAD` is read under a small cap and only as a regular file. A repository is hostile input: its
-//! branch name is shown as text, cut short and cleaned of control characters.
+//! file that names the git dir (a linked worktree or a submodule). A repository is hostile input, so:
+//! - a `.git` file is followed only to a git dir of the shape git makes (`…/.git/worktrees/<name>` or
+//!   `…/.git/modules/…`) that is in the same part of the disk as the folder (its first two path components are
+//!   the folder's: `/Users/me`, `/private/tmp`). A pointer to `/net/host/share` or to `../../../x` makes the
+//!   app touch nothing: browsing a folder must not reach for a network mount or any place the repository
+//!   chose. (Git writes an absolute pointer for a worktree, so an absolute one is followed when it passes.)
+//! - `HEAD` is read under a small cap and only as a regular file;
+//! - the branch name is shown as text, cut short and cleaned of control and invisible characters.
 
 use std::path::{Path, PathBuf};
 
 use super::head::{POINTER_CAP, normalize, pointed_dir};
-use crate::storage::files::{LinkPolicy, read_capped};
+use crate::storage::files::{LinkPolicy, hostile_char, read_capped};
 
 /// `HEAD` is one line.
 const HEAD_CAP: u64 = 1024;
@@ -60,7 +65,34 @@ fn git_dir_of(dir: &Path) -> Option<PathBuf> {
     }
     let pointer = read_capped(&dot_git, POINTER_CAP, LinkPolicy::Within(dir)).ok()?;
     let named = pointed_dir(&String::from_utf8_lossy(&pointer))?.to_string();
-    Some(normalize(&dir.join(named)))
+    let git_dir = normalize(&dir.join(named));
+    (shaped_like_a_git_dir(&git_dir) && same_area(&git_dir, dir)).then_some(git_dir)
+}
+
+/// Whether `git_dir` ends as the git dir of a linked worktree (`.git/worktrees/<name>`) or of a submodule
+/// (`.git/modules/…`) does.
+fn shaped_like_a_git_dir(git_dir: &Path) -> bool {
+    let names: Vec<_> = git_dir.components().filter_map(|c| c.as_os_str().to_str()).collect();
+    names.windows(2).enumerate().any(|(at, pair)| {
+        let after = names.len() - at - 2;
+        pair[0] == ".git" && ((pair[1] == "worktrees" && after == 1) || (pair[1] == "modules" && after >= 1))
+    })
+}
+
+/// Whether `a` and `b` start with the same two folders: in one part of the disk (a home, a volume's
+/// folder), not across mounts the repository could name.
+fn same_area(a: &Path, b: &Path) -> bool {
+    let head = |p: &Path| -> Vec<std::ffi::OsString> {
+        p.components()
+            .filter_map(|c| match c {
+                std::path::Component::Normal(n) => Some(n.to_os_string()),
+                _ => None,
+            })
+            .take(2)
+            .collect()
+    };
+    let (a, b) = (head(a), head(b));
+    a.len() == 2 && a == b
 }
 
 /// What the text of a `HEAD` file says.
@@ -68,7 +100,7 @@ pub fn parse_head(text: &str) -> Option<Head> {
     let line = text.lines().next()?.trim();
     if let Some(target) = line.strip_prefix("ref:") {
         let name = target.trim().strip_prefix("refs/heads/")?;
-        let name: String = name.chars().filter(|c| !c.is_control()).collect();
+        let name: String = name.chars().filter(|&c| !hostile_char(c)).collect();
         if name.is_empty() {
             return None;
         }
@@ -110,6 +142,7 @@ mod tests {
     #[test]
     fn a_branch_name_is_cleaned_and_cut() {
         assert_eq!(parse_head("ref: refs/heads/a\u{1b}[2Jb\n"), Some(Head::Branch("a[2Jb".into())));
+        assert_eq!(parse_head("ref: refs/heads/rel\u{202e}txt\n"), Some(Head::Branch("reltxt".into())));
         let long = format!("ref: refs/heads/{}\n", "x".repeat(100));
         let Some(Head::Branch(name)) = parse_head(&long) else { panic!("a branch") };
         assert_eq!(name.chars().count(), 40);
@@ -138,6 +171,43 @@ mod tests {
         fs::create_dir_all(&plain).unwrap();
         assert!(!is_repository_top(&plain));
         assert_eq!(head_of(&plain), None);
+    }
+
+    #[test]
+    fn a_git_file_is_followed_only_to_a_git_dir_shaped_like_git_makes_in_the_same_part_of_the_disk() {
+        let root = tempfile::tempdir().unwrap();
+        let tree = root.path().join("tree");
+        fs::create_dir_all(&tree).unwrap();
+        let pointing = |to: &str| {
+            fs::write(tree.join(".git"), format!("gitdir: {to}\n")).unwrap();
+            head_of(&tree)
+        };
+        // A real worktree's git dir, named relatively and by its absolute path (which git writes).
+        let real = root.path().join("repo/.git/worktrees/tree");
+        fs::create_dir_all(&real).unwrap();
+        fs::write(real.join("HEAD"), "ref: refs/heads/topic\n").unwrap();
+        assert_eq!(pointing("../repo/.git/worktrees/tree"), Some(Head::Branch("topic".into())));
+        assert_eq!(pointing(&real.to_string_lossy()), Some(Head::Branch("topic".into())));
+        // Anything else makes the app touch nothing.
+        assert_eq!(pointing("/net/evil.example/.git/worktrees/x"), None, "an absolute pointer elsewhere");
+        assert_eq!(pointing("../../../../../../../etc"), None, "one that climbs out");
+        assert_eq!(pointing("../repo/.git"), None, "not a worktree's or a submodule's git dir");
+        assert_eq!(pointing("../repo/.git/worktrees/tree/extra"), None);
+        assert_eq!(pointing("/etc"), None);
+    }
+
+    #[test]
+    fn shapes_and_areas() {
+        use super::{same_area, shaped_like_a_git_dir};
+        use std::path::Path;
+        assert!(shaped_like_a_git_dir(Path::new("/w/app/.git/worktrees/badge")));
+        assert!(shaped_like_a_git_dir(Path::new("/w/app/.git/modules/sub/deeper")));
+        assert!(!shaped_like_a_git_dir(Path::new("/w/app/.git/worktrees")));
+        assert!(!shaped_like_a_git_dir(Path::new("/w/app/.git")));
+        assert!(!shaped_like_a_git_dir(Path::new("/etc")));
+        assert!(same_area(Path::new("/Users/me/a/b"), Path::new("/Users/me/c")));
+        assert!(!same_area(Path::new("/net/host/x"), Path::new("/Users/me/c")));
+        assert!(!same_area(Path::new("/Users"), Path::new("/Users")), "too short to be an area");
     }
 
     #[test]

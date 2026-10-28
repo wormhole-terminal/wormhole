@@ -29,6 +29,8 @@ mod notice_motion;
 pub mod notifications;
 pub mod panel;
 pub mod picker;
+mod picker_backdrop;
+mod picker_crumbs;
 mod picker_slot;
 mod picker_views;
 pub mod pointer;

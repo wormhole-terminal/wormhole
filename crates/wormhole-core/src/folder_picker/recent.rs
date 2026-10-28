@@ -13,6 +13,9 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use super::typed::tidy;
+use crate::storage::files::hostile_char;
+
 /// The most folders kept.
 pub const CAP: usize = 200;
 /// How long it takes a score to halve.
@@ -60,7 +63,7 @@ fn allowed(path: &str, keep_out: &[PathBuf]) -> bool {
     let p = Path::new(path);
     p.is_absolute()
         && path.len() <= PATH_CAP
-        && !path.chars().any(char::is_control)
+        && !path.chars().any(hostile_char)
         && !keep_out.iter().any(|out| p.starts_with(out))
 }
 
@@ -81,6 +84,9 @@ impl RecentFolders {
     /// A visit to `path` at `now` (seconds since the epoch). Whether the list changed: a place that is not
     /// recorded (see the module's words) and a repeat within seconds change nothing.
     pub fn record(&mut self, path: &Path, now: u64, keep_out: &[PathBuf]) -> bool {
+        // A shell reports the path it was told, `..` and all: the place is what the steps come to, so a path
+        // can't be spelled to get past the places that are never kept.
+        let path = tidy(path);
         let Some(path) = path.to_str().map(|p| p.trim_end_matches('/')) else { return false };
         let path = if path.is_empty() { "/" } else { path };
         if !allowed(path, keep_out) {
@@ -200,6 +206,8 @@ mod tests {
             "/private/var/folders/ab",
             "relative/path",
             "/has\nnewline",
+            "/Users/me/Documents/../Library/Application Support/Wormhole/hosts",
+            "/work/\u{202e}x",
         ] {
             assert!(!r.record(Path::new(p), 1000, &out()), "{p}");
         }

@@ -161,7 +161,7 @@ pub(super) fn signatures_match() {
         notice::Chip::restyle: fn(&mut S, &super::notice::Content<'_>);
         notice::Chip::place: fn(&mut S, Spot);
         notice::Chip::close: fn(S, &mut App);
-        picker::Panel::new: fn(&Window, bool, super::picker::Events) -> Option<S>;
+        picker::Panel::new: fn(&Window, bool, super::picker::Events, &App) -> Option<S>;
         picker::Panel::show: fn(&mut S, &super::picker::View<'_>, Rect, &mut App);
         picker::Panel::update: fn(&mut S, &super::picker::View<'_>, Rect);
         picker::Panel::close: fn(S, &mut App);

@@ -9,6 +9,7 @@ use super::Picker;
 /// The picker as plain lines of text.
 pub(crate) fn summary(picker: &Picker) -> String {
     let s = picker.model.snapshot();
+    let items = picker.model.items();
     let mut out = format!(
         "typed {:?}\nghost {:?}\nbusy {}\ncrumbs {}\nfacts up {} descends {} ghost {} forgettable {}\nlines {} top {} shown {}\n",
         s.text,
@@ -19,11 +20,11 @@ pub(crate) fn summary(picker: &Picker) -> String {
         s.facts.descends,
         s.facts.ghost,
         s.facts.forgettable,
-        s.items.len(),
+        s.lines,
         s.top,
-        s.shown,
+        s.items.len(),
     );
-    for (at, item) in s.items.iter().enumerate() {
+    for (at, item) in items.iter().enumerate() {
         let mark = if s.selected == Some(at) { '>' } else { ' ' };
         match item {
             Item::Header(title) => out.push_str(&format!("{mark} # {title}\n")),
@@ -68,9 +69,10 @@ pub(crate) fn summary(picker: &Picker) -> String {
     }
     match picker.panel_info() {
         Some(info) => out.push_str(&format!(
-            "native {} key {} window {} parent {} frame {:?}\nnative rows {:?}\nnative ghost {:?}\nnative crumbs {:?}\n",
+            "native {} key {} visible {} window {} parent {} frame {:?}\nnative rows {:?}\nnative ghost {:?}\nnative crumbs {:?}\n",
             info.material.name(),
             info.key,
+            info.visible,
             info.window_number,
             info.parent_number,
             info.frame,
