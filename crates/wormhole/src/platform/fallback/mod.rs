@@ -12,8 +12,8 @@ pub mod dock;
 pub mod font_face;
 pub mod fonts;
 pub mod hotkey;
-#[cfg(feature = "devctl")]
 pub mod image;
+#[cfg(feature = "devctl")]
 pub mod inspect;
 pub mod intro;
 pub mod keys;
