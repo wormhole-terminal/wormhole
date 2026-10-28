@@ -266,7 +266,7 @@ fn decorations_are_asked_for_the_rows_in_view_once_and_kept_for_when_they_come_b
 }
 
 #[test]
-fn rows_decorated_while_the_text_moves_on_still_get_what_was_found_and_a_lost_answer_is_asked_again() {
+fn rows_decorated_while_the_text_moves_on_still_get_what_was_found_and_a_lost_answer_is_given_up_on() {
     let (mut model, fruit) = (model(), Fruit(FRUIT));
     settle(&mut model, &fruit);
     let request = model.decorations_wanted().expect("rows are in view");
@@ -283,13 +283,16 @@ fn rows_decorated_while_the_text_moves_on_still_get_what_was_found_and_a_lost_an
         })
         .collect();
     assert!(sweet.contains(&"apple".to_string()), "decorated although the text moved on: {sweet:?}");
-    // A request whose answer never came: its rows are open again.
+    // A request whose answer never came: its rows are given up on, not asked about again (each ask is a thread).
     let mut model = Model::new(Context::default(), 9, 1);
     settle(&mut model, &fruit);
     let lost = model.decorations_wanted().expect("rows are in view");
     assert!(model.decorations_wanted().is_none());
     model.decorations_lost(&lost);
-    assert_eq!(model.decorations_wanted().expect("asked again").keys(), lost.keys());
+    assert!(model.decorations_wanted().is_none(), "none of them again");
+    model.typed("a");
+    settle(&mut model, &fruit);
+    assert!(model.decorations_wanted().is_none(), "nor when they are listed again");
 }
 
 #[test]

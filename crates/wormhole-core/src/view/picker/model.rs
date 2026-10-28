@@ -348,10 +348,13 @@ impl Model {
         }
     }
 
-    /// The answer to `request` was lost (the job ended without one): its rows are open to be asked about again.
+    /// The answer to `request` did not come in time (a folder on a share that never answers): its rows are done
+    /// with, with nothing found. They are not asked about again: asking is what costs a thread that stays
+    /// blocked, and a chevron is not worth one every few seconds.
     pub fn decorations_lost(&mut self, request: &DecorationRequest) {
         for target in &request.rows {
             self.asking.remove(&target.key);
+            self.decorated.insert(target.key.clone());
         }
     }
 

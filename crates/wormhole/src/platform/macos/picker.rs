@@ -72,12 +72,16 @@ enum Arrival {
     Key,
 }
 
-/// What to do with the panel for an instance in background mode (or not) whose app is active (or not).
+/// What to do with the panel for an instance in background mode (or not) whose app is active (or not). The
+/// app's own rule for background mode (`background::comes_forward`: an instance kept behind comes forward only
+/// once the person has made it the active app) says whether it may; the platform is below that module, so the
+/// rule is written here as it is there, and a test pins the two together. Taking the keys also needs the app to
+/// be the active one: that is the one thing a picker that was opened a moment ago may no longer be.
 fn arrival(background: bool, app_active: bool) -> Arrival {
-    if background {
-        Arrival::Hidden
-    } else if app_active {
+    if app_active {
         Arrival::Key
+    } else if background {
+        Arrival::Hidden
     } else {
         Arrival::TooLate
     }
@@ -525,15 +529,28 @@ mod tests {
         assert_eq!(l.list.origin.y - (l.hint.origin.y + l.hint.size.height), 4.0);
     }
 
-    /// The panel takes the keys only in an app that is active and not in background mode: a test instance
-    /// never takes a keystroke from the person's own app, and an app switched away from meanwhile does not
-    /// either.
+    /// The panel takes the keys only in an app that is the active one: a test instance kept behind never takes
+    /// a keystroke from the person's own app, and one the person has brought forward is theirs to type in. An
+    /// app switched away from meanwhile does not show it.
     #[test]
-    fn background_mode_never_gets_the_keys_whatever_the_app_is_doing() {
-        for active in [true, false] {
-            assert_eq!(arrival(true, active), Arrival::Hidden, "background mode, active {active}");
-        }
+    fn the_panel_takes_the_keys_only_in_the_active_app_and_background_mode_never_shows_it_behind() {
+        assert_eq!(arrival(true, false), Arrival::Hidden, "kept behind: shown to nobody");
+        assert_eq!(arrival(true, true), Arrival::Key, "brought forward by the person: theirs");
         assert_eq!(arrival(false, true), Arrival::Key);
         assert_eq!(arrival(false, false), Arrival::TooLate, "switched away from since it opened: not shown");
+    }
+
+    /// Taking the keys is coming forward (the app's own rule, `background::comes_forward`) for an app that is
+    /// the active one: an app that is not is never given the keys, whatever the rule says.
+    #[test]
+    fn it_agrees_with_the_apps_rule_for_background_mode() {
+        for (background, active) in [(true, true), (true, false), (false, true), (false, false)] {
+            let forward = crate::background::comes_forward(background, active);
+            assert_eq!(
+                arrival(background, active) == Arrival::Key,
+                forward && active,
+                "{background} {active}"
+            );
+        }
     }
 }

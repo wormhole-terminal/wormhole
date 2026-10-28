@@ -15,6 +15,7 @@
 
 mod collate;
 mod insert;
+mod looks;
 mod recent;
 mod source;
 mod typed;

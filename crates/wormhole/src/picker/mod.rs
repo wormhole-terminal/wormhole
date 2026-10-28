@@ -97,8 +97,9 @@ pub(crate) struct Picker {
     decoration: u64,
     /// An answer has come: from then on a new query waits for the text to rest.
     answered: bool,
-    /// The wait before a query for text that moved on; replaced (and so cancelled) by the next key.
-    pause: Option<Task<()>>,
+    /// The wait before a query for text that moved on, and which question it is for: replaced (and so
+    /// cancelled) by the next key, but not by a push that changed nothing the text.
+    pause: Option<(u64, Task<()>)>,
     _tasks: Vec<Task<()>>,
     _subscriptions: Vec<Subscription>,
 }
@@ -262,15 +263,24 @@ impl Picker {
             self.start(cx);
             return;
         }
+        // The wait is for this question: whatever else made the picker go (a scroll, a decoration) leaves it
+        // running, or a busy list would never be asked.
+        let generation = self.model.generation();
+        if self.pause.as_ref().is_some_and(|(waiting, _)| *waiting == generation) {
+            return;
+        }
         // Replacing the task cancels the wait of the last key: only the text that rests is asked.
-        self.pause = Some(cx.spawn(async move |this, cx| {
-            cx.background_executor().timer(PAUSE).await;
-            this.update(cx, |this, cx| {
-                this.start(cx);
-                this.go(cx);
-            })
-            .ok();
-        }));
+        self.pause = Some((
+            generation,
+            cx.spawn(async move |this, cx| {
+                cx.background_executor().timer(PAUSE).await;
+                this.update(cx, |this, cx| {
+                    this.start(cx);
+                    this.go(cx);
+                })
+                .ok();
+            }),
+        ));
     }
 
     /// One job for each provider, each on its own: an answer is merged when it comes, and the deadline names

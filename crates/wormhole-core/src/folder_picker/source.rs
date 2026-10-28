@@ -14,6 +14,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::insert::inserted;
+use super::looks::{guarded, is_hung};
 use super::recent::RecentFolders;
 use super::typed::{parse, tidy, up};
 use super::walk::{Found, Hit, Limits, walk};
@@ -187,12 +188,16 @@ impl Provider for Recent {
                     None => continue,
                 }
             };
-            // A folder that is gone is not offered (and costs one look).
+            // A folder that is gone is not offered (and costs one look, which a share that stopped answering
+            // is not given twice: such a path is skipped, and no thread is sent to wait on it again).
+            if is_hung(path) {
+                continue;
+            }
             looks += 1;
             if looks > LOOKS {
                 break;
             }
-            if !path.is_dir() {
+            if !guarded(path, || path.is_dir()).unwrap_or(false) {
                 continue;
             }
             if let Some(row) = recent_row(path, &cx.home, score, marks) {
@@ -276,7 +281,10 @@ impl Decorator for Chevrons {
             if cancel.is_cancelled() {
                 break;
             }
-            out.push(Decoration { key: key.clone(), chevron: Some(has_folder(Path::new(key))), badge: None });
+            // Nothing for a path that hangs: no chevron is better than a thread that never comes back.
+            if let Some(has) = guarded(Path::new(key), || has_folder(Path::new(key))) {
+                out.push(Decoration { key: key.clone(), chevron: Some(has), badge: None });
+            }
         }
         out
     }
@@ -297,9 +305,8 @@ impl Decorator for Branches {
                 break;
             }
             let path = Path::new(key);
-            if is_repository_top(path)
-                && let Some(head) = head_of(path)
-            {
+            let head = guarded(path, || if is_repository_top(path) { head_of(path) } else { None }).flatten();
+            if let Some(head) = head {
                 out.push(Decoration {
                     key: key.clone(),
                     badge: Some(head.label().to_string()),
@@ -478,5 +485,21 @@ mod tests {
         let cancelled = Cancel::new();
         cancelled.cancel();
         assert!(Chevrons.decorate(&keys, &cancelled).is_empty());
+    }
+
+    #[test]
+    fn a_path_that_hangs_is_skipped_by_every_reader_and_costs_no_second_thread() {
+        let root = make(&["fine/child", "dead/child"]);
+        let (fine, dead) = (root.path().join("fine"), root.path().join("dead"));
+        crate::folder_picker::looks::mark_hung(&dead);
+        let list = recents(&[&fine, &dead]);
+        let provider = Recent::new(list, "Recent").at(|| 2_000);
+        let a = provider.query(&query("", Path::new("/elsewhere"), Path::new("/h")), &Cancel::new());
+        assert_eq!(labels(&a), ["fine"], "the recent folder that hangs is not offered");
+        let keys = vec![fine.to_string_lossy().into_owned(), dead.to_string_lossy().into_owned()];
+        let chevrons = Chevrons.decorate(&keys, &Cancel::new());
+        assert_eq!(chevrons.len(), 1, "and gets no chevron");
+        assert_eq!(chevrons[0].key, keys[0]);
+        assert!(Branches.decorate(&keys[1..], &Cancel::new()).is_empty());
     }
 }

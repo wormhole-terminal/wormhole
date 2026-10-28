@@ -66,7 +66,26 @@ fn git_dir_of(dir: &Path) -> Option<PathBuf> {
     let pointer = read_capped(&dot_git, POINTER_CAP, LinkPolicy::Within(dir)).ok()?;
     let named = pointed_dir(&String::from_utf8_lossy(&pointer))?.to_string();
     let git_dir = normalize(&dir.join(named));
-    (shaped_like_a_git_dir(&git_dir) && same_area(&git_dir, dir)).then_some(git_dir)
+    (shaped_like_a_git_dir(&git_dir) && same_area(&git_dir, dir) && !through_a_link(&git_dir))
+        .then_some(git_dir)
+}
+
+/// Whether the way to `git_dir` goes through a symbolic link below its first two folders (where [`same_area`] has
+/// looked): a pointer through `lnk`, which the repository made to point at a network mount, would otherwise
+/// pass for a place in the same part of the disk. One `lstat` for each step, all of them local.
+fn through_a_link(git_dir: &Path) -> bool {
+    let mut at = PathBuf::new();
+    let mut named = 0;
+    for part in git_dir.components() {
+        at.push(part);
+        if matches!(part, std::path::Component::Normal(_)) {
+            named += 1;
+            if named > 2 && std::fs::symlink_metadata(&at).is_ok_and(|m| m.file_type().is_symlink()) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// Whether `git_dir` ends as the git dir of a linked worktree (`.git/worktrees/<name>`) or of a submodule
@@ -194,6 +213,25 @@ mod tests {
         assert_eq!(pointing("../repo/.git"), None, "not a worktree's or a submodule's git dir");
         assert_eq!(pointing("../repo/.git/worktrees/tree/extra"), None);
         assert_eq!(pointing("/etc"), None);
+    }
+
+    #[test]
+    fn a_pointer_through_a_link_inside_the_folder_is_not_followed() {
+        let root = tempfile::tempdir().unwrap();
+        let elsewhere = tempfile::tempdir().unwrap();
+        let real = elsewhere.path().join(".git/worktrees/w");
+        fs::create_dir_all(&real).unwrap();
+        fs::write(real.join("HEAD"), "ref: refs/heads/far\n").unwrap();
+        let tree = root.path().join("tree");
+        fs::create_dir_all(&tree).unwrap();
+        crate::platform::fs::symlink(elsewhere.path(), tree.join("lnk")).unwrap();
+        fs::write(tree.join(".git"), "gitdir: lnk/.git/worktrees/w\n").unwrap();
+        assert_eq!(head_of(&tree), None, "the text says it is under the folder, the link says it is not");
+        // The same pointer through a real folder is followed.
+        fs::remove_file(tree.join("lnk")).unwrap();
+        fs::create_dir_all(tree.join("lnk/.git/worktrees/w")).unwrap();
+        fs::write(tree.join("lnk/.git/worktrees/w/HEAD"), "ref: refs/heads/near\n").unwrap();
+        assert_eq!(head_of(&tree), Some(Head::Branch("near".into())));
     }
 
     #[test]
