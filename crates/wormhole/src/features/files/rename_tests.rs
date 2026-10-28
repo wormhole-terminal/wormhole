@@ -248,7 +248,7 @@ fn a_rename_that_comes_back_for_a_closed_terminal_makes_nothing_for_it(cx: &mut 
         feature(ws).update(cx, |files, fcx| {
             // A terminal that is gone: no entry of its own comes back.
             files.followed_rename(99, Path::new("a"), Path::new("b"), fcx);
-            assert!(files.of.get(&99).is_none());
+            assert!(!files.of.contains_key(&99));
         });
     });
 }

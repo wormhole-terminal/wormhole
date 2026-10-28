@@ -22,8 +22,6 @@ struct Span {
 
 /// The colors of every line of a text, for one syntax theme.
 pub(super) struct Colors {
-    /// The theme they were made with, by identity: another theme (a new color scheme) makes them again.
-    theme: usize,
     /// The distinct styles; a theme has a few dozen.
     styles: Vec<HighlightStyle>,
     lines: Vec<Vec<Span>>,
@@ -66,12 +64,7 @@ impl Colors {
                 .collect();
             per_line.push(spans);
         }
-        Some(Self { theme: theme_key(theme), styles, lines: per_line })
-    }
-
-    /// Whether these were made with `theme`.
-    pub(super) fn is_for(&self, theme: &Arc<HighlightTheme>) -> bool {
-        self.theme == theme_key(theme)
+        Some(Self { styles, lines: per_line })
     }
 
     /// The spans of line `index`, as byte ranges of the line's drawn part (before tabs are expanded).
@@ -97,7 +90,6 @@ mod tests {
         let colors = Colors::make(&lines, "a.rs", &theme).expect("rust has a grammar");
         assert!(colors.line(1).any(|(range, style)| range.start == 4 && style.color.is_some()), "`let`");
         assert_eq!(colors.line(99).count(), 0);
-        assert!(colors.is_for(&theme) && !colors.is_for(&HighlightTheme::default_light()));
         assert!(Colors::make(&lines, "notes.txt", &theme).is_none());
     }
 
