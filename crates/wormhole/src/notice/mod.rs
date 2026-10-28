@@ -15,11 +15,14 @@
 //! The words are never the copied text, only what it was and how much (core's `Copied`).
 
 mod chips;
+mod follow;
 #[cfg(any(test, feature = "devctl"))]
 mod report;
 mod words;
 
-pub(crate) use chips::{Anchor, Facts, enabled, post, post_to, register};
+pub(crate) use chips::{Anchor, Facts, Where, enabled, post, post_to, register};
+#[cfg(test)]
+pub(crate) use follow::EVERY as FOLLOW_EVERY;
 #[cfg(any(test, feature = "devctl"))]
 pub(crate) use report::{click, notices};
 #[cfg(feature = "devctl")]

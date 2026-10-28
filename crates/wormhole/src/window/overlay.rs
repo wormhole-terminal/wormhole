@@ -109,6 +109,12 @@ impl Overlays {
         self.open.is_some()
     }
 
+    /// Whether something is drawn over the window's content: an overlay that is open, or one fading out
+    /// (which still takes the pointer). A native panel over the same place would take clicks from it.
+    pub(super) fn is_shown(&self) -> bool {
+        self.open.is_some() || self.leaving.is_some()
+    }
+
     /// Whether a palette is on its way out, drawn and taking nothing.
     #[cfg(test)]
     pub(super) fn is_leaving(&self) -> bool {

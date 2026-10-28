@@ -19,7 +19,7 @@ use std::cell::Cell;
 use gpui_kit::{App, Window};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use objc2::runtime::{AnyClass, AnyObject, Bool};
+use objc2::runtime::{AnyClass, Bool};
 use objc2_app_kit::{
     NSAccessibility as _, NSAnimatablePropertyContainer as _, NSAnimationContext, NSBackingStoreType,
     NSBezierPath, NSBox, NSBoxType, NSColor, NSFont, NSGlassEffectView, NSImage, NSImageResizingMode,
@@ -27,20 +27,16 @@ use objc2_app_kit::{
     NSVisualEffectBlendingMode, NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView, NSWindow,
     NSWindowCollectionBehavior, NSWindowOrderingMode, NSWindowStyleMask,
 };
-use objc2_core_foundation::CGAffineTransform;
-use objc2_foundation::{NSEdgeInsets, NSNumber, NSPoint, NSRect, NSSize, NSString};
-use objc2_quartz_core::{
-    CAAnimation, CABasicAnimation, CALayer, CAMediaTiming as _, CAMediaTimingFunction, CASpringAnimation,
-    CATransition, kCATransitionFade,
-};
-use wormhole_core::view::motion::CubicBezier;
-use wormhole_core::view::motion::notice::{DROP, Entrance, FADE_EASE, FADE_IN, FADE_OUT, SWAP, UP, UP_EASE};
+use objc2_foundation::{NSEdgeInsets, NSPoint, NSRect, NSSize, NSString};
+use objc2_quartz_core::{CALayer, CAMediaTiming as _, CATransition, kCATransitionFade};
+use wormhole_core::view::motion::notice::{Entrance, FADE_EASE, FADE_IN, FADE_OUT, SWAP, UP, UP_EASE};
 use wormhole_core::view::notice::{Glyph, Placed, Spot, place};
 use wormhole_core::view::panes::Rect;
 
 use super::appearance;
 use super::appkit::{ns_window, symbol};
 use super::notice_click::{ClickView, click_view};
+use super::notice_motion::{drop_in, fade, rest, slide, translation};
 use crate::platform::notice::{Clicks, Content, Material};
 
 /// The chip's own metrics, AppKit's native ones for a small capsule (the app's style scale is for what
@@ -52,9 +48,10 @@ const ICON: f64 = 15.0;
 const GAP: f64 = 7.0;
 /// Under the chip, inside the panel: where the glass's shadow falls.
 const SHADOW_ROOM: f64 = 14.0;
-/// How far the panel reaches past each side of the capsule while it is clickable: where the glass's
-/// shadow falls. A click there is the panel's, and does nothing.
-const SIDE_ROOM: f64 = 10.0;
+/// What the panel keeps around the capsule while it is clickable, the least the glass's shadow needs: at
+/// each side, and under it. A click on that clear margin is the panel's, and does nothing.
+const SIDE_ROOM: f64 = 6.0;
+const CLICK_SHADOW_ROOM: f64 = 8.0;
 /// The border of the plain fill, which has no glass edge to show where it ends.
 const EDGE: f64 = 1.0;
 
@@ -220,6 +217,8 @@ pub struct Chip {
     press: Retained<ClickView>,
     /// The chip takes a click now: the panel is only as wide as the capsule (`set_clickable`).
     clickable: bool,
+    /// The panel is ordered out while the terminal the chip is about is not on screen (`set_hidden`).
+    hidden: bool,
     /// Where the chip is, as last laid out.
     placed: Placed,
     /// The chip is on its way out (or gone): the holder is mid-animation and is left alone until it comes back.
@@ -306,6 +305,7 @@ impl Chip {
             text,
             press,
             clickable: false,
+            hidden: false,
             placed,
             leaving: false,
             entered: false,
@@ -391,6 +391,34 @@ impl Chip {
         self.panel.setIgnoresMouseEvents(!clickable);
     }
 
+    /// The terminal the chip is about is off screen, or something covers it (`hidden`): the panel is ordered
+    /// out, and comes back when it is not. A chip that is hidden keeps its place, its words and its life.
+    pub fn set_hidden(&mut self, hidden: bool, cx: &mut App) {
+        if hidden == self.hidden {
+            return;
+        }
+        self.hidden = hidden;
+        if !self.entered {
+            return;
+        }
+        // Ordering a child window tells the parent, whose view tells GPUI: from a task, as `show` does.
+        let (parent, panel) = (self.parent.clone(), self.panel.clone());
+        if hidden {
+            cx.spawn(async move |_| {
+                parent.removeChildWindow(&panel);
+                panel.orderOut(None);
+            })
+            .detach();
+        } else {
+            cx.spawn(async move |_| adopt(&parent, &panel)).detach();
+        }
+    }
+
+    /// The same words in another look: the theme changed its appearance. (A different material is a new chip.)
+    pub fn restyle(&mut self, content: &Content<'_>) {
+        self.set_content(content);
+    }
+
     /// Put the chip at `spot` again: the window was resized, went full screen or came back, or the terminal it
     /// is about moved. A chip that is leaving is left to go.
     pub fn place(&mut self, spot: Spot) {
@@ -454,7 +482,9 @@ impl Chip {
         let geometry = geometry(words, f64::from(chip.w));
 
         let parent = self.parent.frame();
-        let height = f64::from(chip.h + self.gap()) + SHADOW_ROOM;
+        // Under the capsule the panel keeps the glass's shadow: less of it while it takes clicks.
+        let shadow = if self.clickable { CLICK_SHADOW_ROOM } else { SHADOW_ROOM };
+        let height = f64::from(chip.h + self.gap()) + shadow;
         // Wide as the window, or, while it takes a click, as the capsule and its room: see `set_clickable`.
         let (left, width, inset) = if self.clickable {
             (f64::from(chip.x) - SIDE_ROOM, f64::from(chip.w) + 2.0 * SIDE_ROOM, SIDE_ROOM)
@@ -479,7 +509,7 @@ impl Chip {
         }
 
         let capsule = NSSize::new(f64::from(chip.w), f64::from(chip.h));
-        let at = NSRect::new(NSPoint::new(inset, SHADOW_ROOM), capsule);
+        let at = NSRect::new(NSPoint::new(inset, shadow), capsule);
         let inside = NSRect::new(NSPoint::ZERO, capsule);
         self.icon.setFrame(geometry.icon);
         self.text.setFrame(geometry.text);
@@ -521,61 +551,6 @@ fn take_down(parent: &NSWindow, panel: &NSPanel) {
     parent.removeChildWindow(panel);
     panel.orderOut(None);
     panel.close();
-}
-
-/// Where the holder's layer sits when the chip is at rest and whole.
-fn rest(layer: &CALayer) {
-    layer.setAffineTransform(translation(0.0));
-    layer.setOpacity(1.0);
-}
-
-/// Up by `y` points (a layer's y runs up in a view that isn't flipped).
-fn translation(y: f64) -> CGAffineTransform {
-    CGAffineTransform { a: 1.0, b: 0.0, c: 0.0, d: 1.0, tx: 0.0, ty: y }
-}
-
-/// The drop: from `from` points above its place to it, on core's spring (mass 1).
-fn drop_in(layer: &CALayer, from: f64) {
-    let spring =
-        CASpringAnimation::animationWithKeyPath(Some(&NSString::from_str("transform.translation.y")));
-    spring.setMass(1.0);
-    spring.setStiffness(f64::from(DROP.stiffness));
-    spring.setDamping(f64::from(DROP.damping));
-    set_range(&spring, from, 0.0);
-    spring.setDuration(spring.settlingDuration());
-    layer.addAnimation_forKey(&spring, Some(&NSString::from_str("notice")));
-}
-
-/// A slide along y from `from` to `to`.
-fn slide(layer: &CALayer, from: f64, to: f64, seconds: f64, curve: CubicBezier) {
-    let slide = CABasicAnimation::animationWithKeyPath(Some(&NSString::from_str("transform.translation.y")));
-    set_range(&slide, from, to);
-    timed(&slide, seconds, curve);
-    layer.addAnimation_forKey(&slide, Some(&NSString::from_str("notice")));
-}
-
-/// The opacity from `from` to `to`.
-fn fade(layer: &CALayer, from: f64, to: f64, time: std::time::Duration, curve: CubicBezier) {
-    let fade = CABasicAnimation::animationWithKeyPath(Some(&NSString::from_str("opacity")));
-    set_range(&fade, from, to);
-    timed(&fade, time.as_secs_f64(), curve);
-    layer.addAnimation_forKey(&fade, Some(&NSString::from_str("notice")));
-}
-
-#[allow(unsafe_code)]
-fn set_range(animation: &CABasicAnimation, from: f64, to: f64) {
-    let (from, to) = (NSNumber::new_f64(from), NSNumber::new_f64(to));
-    let (from, to): (&AnyObject, &AnyObject) = (&from, &to);
-    // SAFETY: the animated key paths are numbers, which is what the values are.
-    unsafe {
-        animation.setFromValue(Some(from));
-        animation.setToValue(Some(to));
-    }
-}
-
-fn timed(animation: &CAAnimation, seconds: f64, CubicBezier(x1, y1, x2, y2): CubicBezier) {
-    animation.setDuration(seconds);
-    animation.setTimingFunction(Some(&CAMediaTimingFunction::functionWithControlPoints(x1, y1, x2, y2)));
 }
 
 #[cfg(test)]

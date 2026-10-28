@@ -30,6 +30,10 @@ impl Chip {
 
     pub fn set_clickable(&mut self, _clickable: bool) {}
 
+    pub fn set_hidden(&mut self, _hidden: bool, _cx: &mut App) {}
+
+    pub fn restyle(&mut self, _content: &Content<'_>) {}
+
     pub fn place(&mut self, _spot: Spot) {}
 
     pub fn close(self, _cx: &mut App) {}

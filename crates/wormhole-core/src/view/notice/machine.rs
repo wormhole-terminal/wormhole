@@ -83,7 +83,8 @@ impl ChipRules {
     }
 
     /// A message that stays. It is not held against `last` (that is for copies said twice); it is said
-    /// once while it is up, and not again once it was dismissed.
+    /// once while it is up, and not again once it was dismissed. A different sticky message replaces the
+    /// one held: the chip says one warning at a time, the newest, and the replaced one is not remembered.
     fn post_sticky(&mut self, notice: Notice) -> Effect {
         if self.sticky == Some(notice) || self.dismissed.contains(&notice) {
             return Effect::Ignore;
@@ -134,6 +135,21 @@ impl ChipRules {
         }
         self.state = State::Leaving { until: now + leave };
         Effect::Hide
+    }
+
+    /// What the sticky message is about is gone (its terminal was closed): the chip takes it away, even
+    /// with a copy's words on it. Unlike a dismissal it is not remembered as seen.
+    pub fn withdraw(&mut self, now: Instant, leave: Duration) -> Effect {
+        if self.sticky.take().is_none() {
+            return Effect::Ignore;
+        }
+        match self.state {
+            State::Showing { .. } => {
+                self.state = State::Leaving { until: now + leave };
+                Effect::Hide
+            }
+            State::Hidden | State::Leaving { .. } => Effect::Ignore,
+        }
     }
 
     /// When [`Self::advance`] next has something to do, if it does: the caller sets a timer for it. A
@@ -380,5 +396,40 @@ mod tests {
         assert_eq!(chip.post(warned(), t0 + LIFE + MS(50)), Effect::Show);
         assert_eq!(chip.advance(t0 + LIFE + LEAVE, LEAVE), Effect::Ignore);
         assert!(chip.clickable());
+    }
+
+    #[test]
+    fn a_different_sticky_message_replaces_the_held_one_and_the_old_is_not_remembered() {
+        let (mut chip, t0) = (ChipRules::default(), Instant::now());
+        let other = Notice::Warned(Warning::Test(2));
+        chip.post(warned(), t0);
+        assert_eq!(
+            chip.post(other, t0 + MS(1)),
+            Effect::Swap,
+            "the words change, the chip does not drop again"
+        );
+        assert_eq!(chip.held(), Some(other));
+        assert!(chip.clickable());
+        chip.dismiss(t0 + MS(2), LEAVE);
+        chip.advance(t0 + MS(2) + LEAVE, LEAVE);
+        assert_eq!(chip.post(warned(), t0 + MS(3000)), Effect::Show, "the replaced one was never dismissed");
+        assert_eq!(
+            chip.post(other, t0 + MS(3001)),
+            Effect::Ignore,
+            "while the dismissed one is not said again"
+        );
+    }
+
+    #[test]
+    fn withdrawing_takes_the_chip_away_even_under_a_copy_and_is_not_a_dismissal() {
+        let (mut chip, t0) = (ChipRules::default(), Instant::now());
+        chip.post(warned(), t0);
+        chip.post(path(), t0 + MS(100));
+        assert_eq!(chip.withdraw(t0 + MS(200), LEAVE), Effect::Hide);
+        assert_eq!((chip.phase(), chip.held(), chip.clickable()), (Phase::Leaving, None, false));
+        assert_eq!(chip.advance(t0 + MS(200) + LEAVE, LEAVE), Effect::Remove);
+        assert_eq!(chip.post(warned(), t0 + MS(5000)), Effect::Show, "what is about may be said again");
+        assert_eq!(chip.withdraw(t0 + MS(5001), LEAVE), Effect::Hide);
+        assert_eq!(chip.withdraw(t0 + MS(5002), LEAVE), Effect::Ignore, "nothing held, nothing to take");
     }
 }

@@ -2,7 +2,10 @@
 //! about the terminal whose host couldn't start, stays until it is clicked, gives its words to a copy for a
 //! moment and takes them back, and is not said again once it was dismissed. Where the chip is off the old
 //! banner says it. The panel is native and not made in a test, so the click goes over the same channel the
-//! panel uses (`notice::click`) and what is read is the chip's rules (`notice::notices`).
+//! panel uses (`notice::click`) and what is read is the chip's rules (`notice::notices`). A warning keeps to
+//! its terminal: it waits out of sight while the terminal is off screen or an overlay covers the window,
+//! follows the terminal when the layout moves it, and goes when the terminal is closed (without the chip
+//! keeping the closed terminal alive).
 
 use std::time::Duration;
 
@@ -10,11 +13,13 @@ use gpui_kit::TestAppContext;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::view::motion::notice::{LIFE, UP};
 use wormhole_core::view::notice::Phase;
+use wormhole_core::view::panes::Rect;
 use wormhole_text::{Language, with_language};
 
 use super::reported_tests::terminal;
-use super::test_harness::{draw, isolate_in, start};
+use super::test_harness::{draw, drive, isolate_in, start};
 use crate::app_state::OpenWindow;
+use crate::notice::FOLLOW_EVERY;
 use crate::settings::update_settings;
 
 const SHORT: &str = "This terminal ends when Wormhole quits";
@@ -139,5 +144,139 @@ fn with_the_chip_off_the_banner_says_it(cx: &mut TestAppContext) {
                 "This terminal runs inside Wormhole and ends when it quits: the helper that keeps terminals running couldn't start."
             )
         );
+    });
+}
+
+/// Whether the warning waits out of sight, and the terminal's area it is placed for.
+fn kept(cx: &mut TestAppContext) -> (bool, Option<Rect>) {
+    cx.update(|cx| {
+        let report = crate::notice::notices(cx).into_iter().next().expect("a chip");
+        (report.hidden, report.spot.map(|spot| spot.anchor))
+    })
+}
+
+/// Time for the warning to look again at where its terminal is.
+fn look(cx: &mut TestAppContext) {
+    wait(cx, FOLLOW_EVERY + Duration::from_millis(10));
+}
+
+#[gpui_kit::test]
+fn closing_the_terminal_a_warning_is_about_takes_it_away_and_lets_the_terminal_go(cx: &mut TestAppContext) {
+    if isolate("closing_the_terminal_a_warning_is_about_takes_it_away_and_lets_the_terminal_go") {
+        return;
+    }
+    with_language(Language::ENGLISH, || {
+        let window = start(cx, 2);
+        set_notices(cx, true);
+        draw(cx, &window);
+        draw(cx, &window);
+        lost_host(cx, &window);
+        assert_eq!(chip(cx).map(|c| c.0), Some(Phase::Showing));
+        let closed = terminal(cx, &window, 0).downgrade();
+
+        drive(cx, &window, |ws, window, cx| ws.close_session(0, window, cx));
+        cx.run_until_parked();
+        look(cx);
+        assert!(closed.upgrade().is_none(), "the chip does not keep a closed terminal (and its shell) alive");
+        assert_eq!(chip(cx).map(|c| (c.0, c.2)), Some((Phase::Leaving, false)), "its warning goes");
+        wait(cx, UP + Duration::from_millis(10));
+        assert_eq!(chip(cx).map(|c| c.0), Some(Phase::Hidden));
+    });
+}
+
+#[gpui_kit::test]
+fn a_warning_waits_out_of_sight_while_its_terminal_is_off_screen(cx: &mut TestAppContext) {
+    if isolate("a_warning_waits_out_of_sight_while_its_terminal_is_off_screen") {
+        return;
+    }
+    with_language(Language::ENGLISH, || {
+        let window = start(cx, 2);
+        set_notices(cx, true);
+        draw(cx, &window);
+        draw(cx, &window);
+        lost_host(cx, &window);
+        look(cx);
+        assert!(!kept(cx).0, "its terminal is the selected one");
+
+        drive(cx, &window, |ws, window, cx| ws.activate(1, window, cx));
+        draw(cx, &window);
+        look(cx);
+        assert!(kept(cx).0, "another terminal is selected: the warning waits");
+        assert_eq!(chip(cx).map(|c| (c.0, c.3)), Some((Phase::Showing, true)), "it is still held");
+
+        drive(cx, &window, |ws, window, cx| ws.activate(0, window, cx));
+        draw(cx, &window);
+        look(cx);
+        assert!(!kept(cx).0, "and comes back with its terminal");
+    });
+}
+
+#[gpui_kit::test]
+fn a_warning_waits_out_of_sight_under_an_overlay_and_a_copy_still_shows(cx: &mut TestAppContext) {
+    if isolate("a_warning_waits_out_of_sight_under_an_overlay_and_a_copy_still_shows") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        lost_host(cx, window);
+        cx.update(|cx| crate::command_palette::open_in(window, "", cx));
+        cx.run_until_parked();
+        draw(cx, window);
+        look(cx);
+        assert!(kept(cx).0, "its panel would take clicks from the palette");
+        drive(cx, window, |ws, window, cx| ws.close_overlay(window, cx));
+        draw(cx, window);
+        wait(cx, Duration::from_secs(1));
+        look(cx);
+        assert!(!kept(cx).0);
+    });
+}
+
+#[gpui_kit::test]
+fn a_warning_follows_its_terminal_when_the_layout_moves_it(cx: &mut TestAppContext) {
+    if isolate("a_warning_follows_its_terminal_when_the_layout_moves_it") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        lost_host(cx, window);
+        let before = kept(cx).1.expect("placed");
+        drive(cx, window, |ws, _, cx| ws.toggle_sidebar(cx));
+        draw(cx, window);
+        draw(cx, window);
+        look(cx);
+        let after = kept(cx).1.expect("placed");
+        assert_ne!(before, after, "the sidebar left, the terminal moved");
+        assert_eq!(after, pane(cx, window), "and the warning is placed for where it is now");
+    });
+}
+
+/// The first terminal as the last frame drew it.
+fn pane(cx: &mut TestAppContext, window: &OpenWindow) -> Rect {
+    let bounds = terminal(cx, window, 0).read_with(cx, |t, _| t.pane_bounds());
+    Rect::new(
+        f32::from(bounds.origin.x),
+        f32::from(bounds.origin.y),
+        f32::from(bounds.size.width),
+        f32::from(bounds.size.height),
+    )
+}
+
+#[gpui_kit::test]
+fn a_held_warning_takes_the_look_the_system_changes_to(cx: &mut TestAppContext) {
+    if isolate("a_held_warning_takes_the_look_the_system_changes_to") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        lost_host(cx, window);
+        let looks = |cx: &mut TestAppContext| {
+            cx.update(|cx| crate::notice::notices(cx).into_iter().next().and_then(|r| r.look))
+        };
+        let (theme, opaque) = looks(cx).expect("a look");
+        assert!(!opaque);
+        let system = cx.update(|cx| cx.global::<crate::settings::SettingsStore>().system());
+        let flipped = crate::settings::SystemLook { reduce_transparency: true, ..system };
+        cx.update(|cx| crate::settings::SettingsStore::set_system(cx, flipped));
+        cx.run_until_parked();
+        look(cx);
+        assert_eq!(looks(cx), Some((theme, true)), "Reduce Transparency: the chip is made again, plain");
     });
 }

@@ -544,9 +544,16 @@ impl TerminalView {
 
     /// Say `notice` in this terminal's window, about this terminal: the chip drops from its top edge.
     pub(crate) fn say(&self, notice: impl Into<wormhole_core::view::notice::Notice>, cx: &mut Context<Self>) {
-        let this = cx.entity();
-        let anchor: crate::notice::Anchor =
-            std::rc::Rc::new(move |cx: &App| Some(this.read(cx).pane_bounds()));
+        // Weak: the chip may outlive the terminal (a warning waits for a click), and must not keep a closed
+        // terminal's view, and with it its shell, alive.
+        let this = cx.weak_entity();
+        let anchor: crate::notice::Anchor = std::rc::Rc::new(move |cx: &App| {
+            this.read_with(cx, |terminal, _| crate::notice::Where::At {
+                bounds: terminal.pane_bounds(),
+                terminal: this.entity_id(),
+            })
+            .unwrap_or(crate::notice::Where::Gone)
+        });
         crate::notice::post_to(self.window, notice, Some(anchor), cx);
     }
 

@@ -41,7 +41,7 @@ pub(super) fn click(ctx: &mut Ctx, _: &str) -> Result<String> {
 }
 
 /// `notices`: each window's chip, a line each: its number, the phase (`Hidden`, `Showing`, `Leaving`), the
-/// words, `sticky` and `clickable` when they are so, the terminal it is about (its pane's x y w h, and the window's size) and the panel if there is one: the chip's frame at rest in the window's points (x y w h), its
+/// words, `sticky`, `clickable` and `hidden` (the panel waits out of sight) when they are so, `look <appearance> [plain]`, the terminal it is about (its pane's x y w h, and the window's size) and the panel if there is one: the chip's frame at rest in the window's points (x y w h), its
 /// material, its window number and the app window's.
 pub(super) fn notices(ctx: &mut Ctx, _: &str) -> Result<String> {
     let windows: Vec<WindowId> = app(ctx.cx).windows.iter().map(|w| w.handle.window_id()).collect();
@@ -54,6 +54,12 @@ pub(super) fn notices(ctx: &mut Ctx, _: &str) -> Result<String> {
         }
         if report.clickable {
             out.push_str(" clickable");
+        }
+        if report.hidden {
+            out.push_str(" hidden");
+        }
+        if let Some((theme, plain)) = report.look {
+            write!(out, " look {theme:?}{}", if plain { " plain" } else { "" })?;
         }
         if let Some(spot) = report.spot {
             let r = spot.anchor;

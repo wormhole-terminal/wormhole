@@ -339,7 +339,9 @@
 //!   notice-click    click this window's chip as a person does (the click goes over the panel's own
 //!                   channel): a sticky notice is dismissed, a copy's chip takes no click
 //!   notices         each window's chip, a line each: its number, phase (Hidden, Showing, Leaving), words,
-//!                   `sticky` (one is up) and `clickable` (it shows the sticky one's own words), the
+//!                   `sticky` (one is up), `clickable` (it shows the sticky one's own words) and `hidden` (the
+//!                   sticky one waits out of sight: its terminal is off screen or an overlay covers the window), `look <appearance> [plain]` (what the chip was
+//!                   made in; `plain`: no transparency), the
 //!                   `terminal x y w h` it is about (its pane, in the window's points) and, while the
 //!                   native panel is up, `frame x y w h` (the chip at rest, in the window's points),
 //!                   `material` (glass, frosted or solid), `mouse` (the panel takes the mouse: only while

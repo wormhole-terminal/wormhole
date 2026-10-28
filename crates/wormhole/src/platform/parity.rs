@@ -154,6 +154,8 @@ pub(super) fn signatures_match() {
         notice::Chip::swap: fn(&mut S, &super::notice::Content<'_>, Spot, bool);
         notice::Chip::hide: fn(&mut S, Entrance);
         notice::Chip::set_clickable: fn(&mut S, bool);
+        notice::Chip::set_hidden: fn(&mut S, bool, &mut App);
+        notice::Chip::restyle: fn(&mut S, &super::notice::Content<'_>);
         notice::Chip::place: fn(&mut S, Spot);
         notice::Chip::close: fn(S, &mut App);
         intro::Overlay::new: fn(&Window, Setup, LogoSpot) -> anyhow::Result<Option<S>>;

@@ -18,6 +18,11 @@ pub(crate) struct Report {
     pub(crate) sticky: bool,
     /// The chip takes a click now: it shows a sticky notice's own words.
     pub(crate) clickable: bool,
+    /// The look the chip was made or last restyled in: the theme's appearance, and a plain fill (the system
+    /// asks for no transparency or more contrast).
+    pub(crate) look: Option<(wormhole_core::theme::tokens::Appearance, bool)>,
+    /// The panel is out of sight: its terminal is off screen or an overlay covers the window.
+    pub(crate) hidden: bool,
     /// Where the chip was last put: the terminal it is about and the window.
     pub(crate) spot: Option<Spot>,
     /// The panel, while there is one.
@@ -72,6 +77,8 @@ pub(crate) fn notices(cx: &App) -> Vec<Report> {
             words: entry.words.clone(),
             sticky: entry.rules.held().is_some(),
             clickable: entry.rules.clickable(),
+            hidden: entry.hidden,
+            look: entry.look,
             spot: entry.spot,
             #[cfg(feature = "devctl")]
             panel: entry.chip.as_ref().and_then(|chip| chip.info()),

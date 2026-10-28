@@ -18,7 +18,7 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::theme::tokens::Appearance;
 use wormhole_core::view::motion::notice::Entrance;
-use wormhole_core::view::notice::{ChipRules, Effect, Notice, Spot};
+use wormhole_core::view::notice::{ChipRules, Effect, Glyph, Notice, Spot};
 use wormhole_core::view::panes::Rect;
 
 use crate::platform;
@@ -26,8 +26,27 @@ use crate::platform::notice::{Chip, Clicks, Content};
 use crate::settings::{settings_in, store_in};
 
 /// How a terminal's bounds in its window are read again whenever the chip is placed: a chip about a
-/// terminal that moves (a split dragged, a window resized) follows it.
-pub(crate) type Anchor = Rc<dyn Fn(&App) -> Option<Bounds<Pixels>>>;
+/// terminal that moves (a split dragged, a window resized) follows it. It holds the terminal weakly: a
+/// closed terminal is [`Where::Gone`], and nothing here keeps it (or its shell) alive.
+pub(crate) type Anchor = Rc<dyn Fn(&App) -> Where>;
+
+/// Where the terminal a notice is about is.
+pub(crate) enum Where {
+    /// In its window at `bounds` as the last frame drew it. `terminal` is its entity, which the window's
+    /// [`Facts::shown`] names when it is on screen.
+    At { bounds: Bounds<Pixels>, terminal: EntityId },
+    /// Closed.
+    Gone,
+}
+
+impl Where {
+    fn bounds(&self) -> Option<Bounds<Pixels>> {
+        match self {
+            Self::At { bounds, .. } => Some(*bounds),
+            Self::Gone => None,
+        }
+    }
+}
 
 /// What a window tells the chips about itself.
 pub(crate) struct Facts {
@@ -35,6 +54,11 @@ pub(crate) struct Facts {
     pub(crate) profile: ProfileId,
     /// Where its selected terminal is, for a notice that is not about a terminal of its own.
     pub(crate) selected: Option<Bounds<Pixels>>,
+    /// The terminals on screen (the selected one and the panes shown with it), by entity.
+    pub(crate) shown: Vec<EntityId>,
+    /// Something is drawn over the content (the command palette, the shortcut sheet, the folder picker): a
+    /// chip taking clicks would take them from it.
+    pub(crate) covered: bool,
 }
 
 /// A window's way of telling [`Facts`], read when a notice is said or placed.
@@ -53,21 +77,29 @@ pub(super) struct Entry {
     /// What the chip says now (or said last).
     pub(super) words: String,
     /// The theme's appearance the chip was last drawn in, for words put back without a post.
-    theme: Option<Appearance>,
+    pub(super) theme: Option<Appearance>,
+    /// The picture beside the words now, for the same.
+    pub(super) glyph: Option<Glyph>,
+    /// The look the chip was made in: the theme's appearance and whether the system asks for a plain fill.
+    pub(super) look: Option<(Appearance, bool)>,
+    /// The panel is out while the sticky chip's terminal is off screen or covered (`follow`).
+    pub(super) hidden: bool,
+    /// Keeps a sticky chip at its terminal; dropping it stops it.
+    pub(super) follow: Option<Task<()>>,
     /// Where the chip is about, as the poster said.
-    anchor: Option<Anchor>,
+    pub(super) anchor: Option<Anchor>,
     /// What the sticky notice says, kept for when a copy's words give way to it.
-    sticky_words: Option<String>,
+    pub(super) sticky_words: Option<String>,
     /// Where the sticky notice is about: its chip goes back there when a copy's words give way to it.
-    sticky_anchor: Option<Anchor>,
+    pub(super) sticky_anchor: Option<Anchor>,
     /// Where the panel says it was clicked, once there is a panel; the task reads the other end.
-    clicks: Option<Clicks>,
+    pub(super) clicks: Option<Clicks>,
     /// Dismisses the chip when it is clicked; dropping it stops listening.
     listener: Option<Task<()>>,
     /// Where the chip was last put.
     pub(super) spot: Option<Spot>,
     /// How it came, so it goes the same way.
-    entrance: Option<Entrance>,
+    pub(super) entrance: Option<Entrance>,
     /// Wakes the rules when a life or a leaving is over; dropping it cancels it.
     timer: Option<Task<()>>,
     /// Places the chip once more when the window has stopped changing; dropping it cancels it.
@@ -83,7 +115,7 @@ struct Watch;
 #[derive(Default)]
 pub(super) struct Chips {
     pub(super) windows: HashMap<WindowId, Entry>,
-    homes: HashMap<WindowId, Home>,
+    pub(super) homes: HashMap<WindowId, Home>,
     /// Hears every window close, for the chips and homes of the closed.
     closed: Option<Subscription>,
 }
@@ -185,7 +217,10 @@ fn say(window: &mut Window, notice: Notice, words: Option<String>, anchor: Optio
     let store = store_in(&facts.profile, cx);
     let (theme, opaque) = (store.tokens.appearance, store.system().opaque());
     let entrance = Entrance::of(cx.reduce_motion());
-    let spot = spot_for(window, anchor.as_ref().and_then(|anchor| anchor(cx)).or(facts.selected));
+    let placed = anchor.as_ref().map(|anchor| anchor(cx));
+    let spot = spot_for(window, placed.as_ref().and_then(Where::bounds).or(facts.selected));
+    // A warning about a terminal that is not on screen, or under an overlay, waits out of sight.
+    let hidden = notice.is_sticky() && super::follow::hidden(&facts, placed.as_ref());
     let now = cx.background_executor().now();
     cx.update_global::<Chips, _>(|chips, cx| {
         // The windows that closed with a chip up are gone already (`close`); this is for one a test closed.
@@ -200,6 +235,8 @@ fn say(window: &mut Window, notice: Notice, words: Option<String>, anchor: Optio
         }
         entry.words = words;
         entry.theme = Some(theme);
+        entry.glyph = Some(notice.glyph());
+        entry.look = Some((theme, opaque));
         entry.anchor = anchor;
         entry.spot = Some(spot);
         let content = Content { glyph: notice.glyph(), text: &entry.words, appearance: theme };
@@ -216,8 +253,13 @@ fn say(window: &mut Window, notice: Notice, words: Option<String>, anchor: Optio
                 {
                     entry.chip = Chip::new(window, opaque, clicks);
                 }
+                entry.hidden = false;
                 if let Some(chip) = &mut entry.chip {
                     chip.show(&content, spot, entrance, entry.rules.clickable(), cx);
+                    if hidden {
+                        chip.set_hidden(true, cx);
+                        entry.hidden = true;
+                    }
                 }
                 if entry.watch.is_none() {
                     let watch = cx.new(|_| Watch);
@@ -231,12 +273,20 @@ fn say(window: &mut Window, notice: Notice, words: Option<String>, anchor: Optio
             Effect::Swap => {
                 if let Some(chip) = &mut entry.chip {
                     chip.swap(&content, spot, entry.rules.clickable());
+                    // A copy is about a terminal in view, and a new warning says itself where it is wanted.
+                    if entry.hidden != hidden {
+                        chip.set_hidden(hidden, cx);
+                        entry.hidden = hidden;
+                    }
                 }
             }
             Effect::Hide | Effect::Remove | Effect::Restore | Effect::Ignore => {}
         }
         // VoiceOver hears it once, as the chip appears or its words change.
         platform::a11y::announce(&spoken(notice, &entry.words), false);
+        if entry.rules.held().is_some() && entry.follow.is_none() {
+            entry.follow = Some(super::follow::watch(window.window_handle(), cx));
+        }
         wake(id, entry, cx);
     });
 }
@@ -259,18 +309,34 @@ fn listen(id: WindowId, cx: &mut App) -> (Clicks, Task<()>) {
 
 /// The person clicked the chip: a sticky notice goes, and the rules say whether this chip had one to lose.
 pub(super) fn dismiss(id: WindowId, cx: &mut App) {
+    let now = cx.background_executor().now();
+    take_away(id, cx, |rules, leave| rules.dismiss(now, leave));
+}
+
+/// What the sticky notice is about is gone: the chip takes it away.
+pub(super) fn withdraw(id: WindowId, cx: &mut App) {
+    let now = cx.background_executor().now();
+    take_away(id, cx, |rules, leave| rules.withdraw(now, leave));
+}
+
+/// Let the rules take the sticky notice away (`how`), and when they do, send the chip off and let go of
+/// everything it held about its terminal.
+fn take_away(id: WindowId, cx: &mut App, how: impl FnOnce(&mut ChipRules, Duration) -> Effect) {
     if cx.try_global::<Chips>().is_none() {
         return;
     }
-    let now = cx.background_executor().now();
     cx.update_global::<Chips, _>(|chips, cx| {
         let Some(entry) = chips.windows.get_mut(&id) else { return };
         let entrance = entry.entrance.unwrap_or(Entrance::Drop);
-        if matches!(entry.rules.dismiss(now, entrance.exit_duration()), Effect::Hide)
-            && let Some(chip) = &mut entry.chip
-        {
-            chip.set_clickable(false);
-            chip.hide(entrance);
+        if matches!(how(&mut entry.rules, entrance.exit_duration()), Effect::Hide) {
+            entry.sticky_words = None;
+            entry.sticky_anchor = None;
+            entry.anchor = None;
+            entry.follow = None;
+            if let Some(chip) = &mut entry.chip {
+                chip.set_clickable(false);
+                chip.hide(entrance);
+            }
         }
         wake(id, entry, cx);
     });
@@ -278,7 +344,7 @@ pub(super) fn dismiss(id: WindowId, cx: &mut App) {
 
 /// Where the chip goes for a terminal at `bounds`: its top edge, centred on it; where it is not known (a
 /// window that has not drawn, a test), the whole window below the title row.
-fn spot_for(window: &Window, bounds: Option<Bounds<Pixels>>) -> Spot {
+pub(super) fn spot_for(window: &Window, bounds: Option<Bounds<Pixels>>) -> Spot {
     let view = window.viewport_size();
     let (w, h) = (f32::from(view.width), f32::from(view.height));
     let title_row = crate::style::TITLE_ROW_H;
@@ -323,7 +389,7 @@ fn refit(window: &mut Window, cx: &mut App) {
     let bounds = entry
         .anchor
         .as_ref()
-        .and_then(|anchor| anchor(cx))
+        .and_then(|anchor| anchor(cx).bounds())
         .or_else(|| chips.homes.get(&id).and_then(|home| home(cx)).and_then(|facts| facts.selected));
     let spot = spot_for(window, bounds);
     if let Some(entry) = cx.global_mut::<Chips>().windows.get_mut(&id)
@@ -369,6 +435,8 @@ fn advance(id: WindowId, cx: &mut App) {
                 }
                 entry.watch = None;
                 entry.settle = None;
+                entry.follow = None;
+                entry.hidden = false;
             }
             Effect::Restore => {
                 restore(entry);
@@ -394,6 +462,7 @@ fn restore(entry: &mut Entry) {
     let (Some(words), Some(theme)) = (entry.sticky_words.clone(), entry.theme) else { return };
     entry.words = words;
     entry.anchor = entry.sticky_anchor.clone();
+    entry.glyph = Some(held.glyph());
     let content = Content { glyph: held.glyph(), text: &entry.words, appearance: theme };
     if let (Some(chip), Some(spot)) = (&mut entry.chip, entry.spot) {
         chip.swap(&content, spot, true);
