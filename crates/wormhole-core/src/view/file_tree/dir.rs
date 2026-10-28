@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 
 use super::names::{clean, natural_cmp};
-use crate::storage::files::listing::{EntryKind, Listing};
+use crate::storage::files::listing::{DirEntry, EntryKind, Listing};
 
 /// The most entries of one folder the tab lists; the rest are a count ("120 more").
 pub const ENTRY_CAP: usize = 5_000;
@@ -59,6 +59,24 @@ impl Dir {
             keyed.into_iter().map(|(lossy, kind, name)| Entry { label: clean(&lossy), name, kind }).collect();
         let index = entries.iter().enumerate().map(|(at, entry)| (entry.name.clone(), at)).collect();
         Self { entries, more, at_least: truncated, index }
+    }
+
+    /// This folder with the entry `from` called `to` instead, in its place by the new name; `None` when
+    /// there is no entry `from`. What the disk will say once a rename is made, so the tree need not wait
+    /// for the next read to be true.
+    pub fn renamed(&self, from: &OsStr, to: &OsStr) -> Option<Self> {
+        self.get(from)?;
+        let entries = self
+            .entries
+            .iter()
+            .map(|entry| DirEntry {
+                name: if entry.name == from { to.to_os_string() } else { entry.name.clone() },
+                kind: entry.kind,
+            })
+            .collect();
+        let mut renamed = Self::from_listing(Listing { entries, truncated: self.at_least }, usize::MAX);
+        renamed.more = self.more;
+        Some(renamed)
     }
 
     /// The entry called `name`.

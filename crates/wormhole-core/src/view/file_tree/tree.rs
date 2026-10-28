@@ -139,6 +139,28 @@ impl Tree {
         }
     }
 
+    /// The entry `from` was renamed to `to`, in the same folder: the folder's entry takes the new name, and
+    /// what the tree knew of the renamed folder (that it is open, what it held, the folders open in it)
+    /// moves with it, so it does not close.
+    pub fn renamed(&mut self, from: &Path, to: &Path) {
+        let (Some(parent), Some(old), Some(new)) = (from.parent(), from.file_name(), to.file_name()) else {
+            return;
+        };
+        if to.parent() != Some(parent) {
+            return;
+        }
+        if let Some(Slot::Ready(dir)) = self.slots.get_mut(parent)
+            && let Some(renamed) = dir.renamed(old, new)
+        {
+            *dir = renamed;
+        }
+        let moved = |path: &Path| path.strip_prefix(from).ok().map(|rest| to.join(rest));
+        let slots = std::mem::take(&mut self.slots);
+        self.slots = slots.into_iter().map(|(path, slot)| (moved(&path).unwrap_or(path), slot)).collect();
+        let open = std::mem::take(&mut self.open);
+        self.open = open.into_iter().map(|path| moved(&path).unwrap_or(path)).collect();
+    }
+
     /// The folders to read now to keep what is shown true: the root and each open folder that shows,
     /// the ones above first. Run again on every refresh, it is also what finds an open folder that
     /// has not been read yet.
@@ -394,5 +416,32 @@ mod tests {
         assert_eq!(kinds(&tree), [(0, RowKind::Unreadable(Failure::Gone))]);
         tree.set(Path::new(""), Ok(dir(&[])));
         assert_eq!(kinds(&tree), [(0, RowKind::Empty)]);
+    }
+
+    #[test]
+    fn a_renamed_folder_keeps_what_was_open_in_it() {
+        use EntryKind::{File, Folder};
+        let mut tree = sample();
+        tree.toggle(Path::new("src"));
+        tree.set(Path::new("src"), Ok(dir(&[("lib", Folder), ("main.rs", File)])));
+        tree.toggle(Path::new("src/lib"));
+        tree.set(Path::new("src/lib"), Ok(dir(&[("a.rs", File)])));
+        assert_eq!(labels(&tree), ["docs", "src", "  lib", "    a.rs", "  main.rs", "Cargo.toml"]);
+
+        tree.renamed(Path::new("src"), Path::new("code"));
+        // At once, without a read: the folder is where its name sorts, open, with the same inside.
+        assert_eq!(labels(&tree), ["code", "  lib", "    a.rs", "  main.rs", "docs", "Cargo.toml"]);
+        assert!(tree.is_open(Path::new("code")) && tree.is_open(Path::new("code/lib")));
+        assert!(!tree.is_open(Path::new("src")));
+        // The read that follows finds the same and changes nothing.
+        let same = dir(&[("code", Folder), ("docs", Folder), ("Cargo.toml", File)]);
+        assert!(!tree.set(Path::new(""), Ok(same)));
+        assert_eq!(labels(&tree).len(), 6);
+
+        // A file, or a path that moves out of its folder, is not this tree's business.
+        tree.renamed(Path::new("Cargo.toml"), Path::new("Cargo.lock"));
+        assert_eq!(labels(&tree).last().map(String::as_str), Some("Cargo.lock"));
+        tree.renamed(Path::new("docs"), Path::new("code/docs"));
+        assert!(labels(&tree).contains(&"docs".to_string()));
     }
 }

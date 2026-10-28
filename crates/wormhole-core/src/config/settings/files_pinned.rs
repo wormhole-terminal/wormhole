@@ -32,6 +32,20 @@ impl Settings {
         }
     }
 
+    /// A folder was renamed from `from` to `to`: its pin, and the pins of folders below it, name the new
+    /// place, each keeping its place in the list. Returns whether any did.
+    pub fn move_pinned(&mut self, from: &Path, to: &Path) -> bool {
+        let mut moved = false;
+        for key in &mut self.files_pinned {
+            let Ok(rest) = Path::new(key.as_str()).strip_prefix(from) else { continue };
+            if let Some(new) = pinned_key(&to.join(rest)) {
+                *key = new;
+                moved = true;
+            }
+        }
+        moved
+    }
+
     /// The pinned folders as paths, in the order they were pinned.
     pub fn pinned_folders(&self) -> Vec<PathBuf> {
         self.files_pinned.iter().map(PathBuf::from).collect()
@@ -75,6 +89,17 @@ mod tests {
         assert!(!settings.set_pinned(Path::new("/w/b"), false), "nothing to unpin");
         assert!(settings.set_pinned(Path::new("/w/a/"), false));
         assert!(settings.files_pinned.is_empty());
+    }
+
+    #[test]
+    fn a_renamed_folder_keeps_its_pin_and_the_pins_below_it_in_place() {
+        let mut settings = Settings::default();
+        for folder in ["/w/a", "/w/src", "/w/src/deep", "/w/srcx", "/w/z"] {
+            settings.set_pinned(Path::new(folder), true);
+        }
+        assert!(settings.move_pinned(Path::new("/w/src"), Path::new("/w/code")));
+        assert_eq!(settings.files_pinned, ["/w/a", "/w/code", "/w/code/deep", "/w/srcx", "/w/z"]);
+        assert!(!settings.move_pinned(Path::new("/w/none"), Path::new("/w/x")));
     }
 
     #[test]

@@ -298,6 +298,12 @@ fn open_regular(path: &Path, policy: LinkPolicy<'_>) -> io::Result<File> {
             real
         }
     };
+    // Not even opened unless it is a regular file: opening a device or a FIFO can have effects of its own
+    // (a tty, a tape, a socket's peer). `O_NONBLOCK` and the look at the open file below stay as the
+    // guard for a path swapped for one of those in between.
+    if !fs::metadata(&open_path)?.is_file() {
+        return Err(refuse(path, Refusal::NotRegularFile));
+    }
     let file = options.open(&open_path)?;
     if !file.metadata()?.is_file() {
         return Err(refuse(path, Refusal::NotRegularFile));

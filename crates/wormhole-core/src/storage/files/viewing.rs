@@ -260,6 +260,23 @@ mod tests {
     }
 
     #[test]
+    fn a_fifo_or_a_device_is_refused_before_it_is_opened() {
+        let root = tempfile::tempdir().unwrap();
+        let made = std::process::Command::new("mkfifo").arg(root.path().join("pipe")).status();
+        if made.is_ok_and(|status| status.success()) {
+            // Opening it for reading would wait for a writer (or, a named pipe in a repository, hang the reader).
+            assert_eq!(load(root.path(), Path::new("pipe")), Loaded::Unavailable(Problem::NotAFile));
+        }
+        // A device inside a folder is a link here, for a plain folder cannot hold one; the system's own is
+        // refused by type all the same.
+        assert_eq!(
+            load(Path::new("/dev"), Path::new("null")),
+            Loaded::Unavailable(Problem::NotAFile),
+            "a character device"
+        );
+    }
+
+    #[test]
     fn a_link_out_of_the_root_is_refused() {
         let root = tempfile::tempdir().unwrap();
         let outside = root_with("secret.txt", b"secret");

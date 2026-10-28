@@ -4,10 +4,10 @@
 //! - the new name is one plain name ([`check_name`]): no separator, control or bidirectional-control
 //!   character (which can make a name read as another), nothing the system would read as `.` or `..`;
 //! - the folder it is in is a real path inside the root with no link on the way ([`resolve_path_within`]
-//!   resolves links, so the resolved folder must also be the one the plain path spells);
-//! - nothing is replaced: the system call refuses a target that exists ([`rename_no_replace`]). The one
-//!   exception is a rename that only changes case on a volume that ignores it, where the target is the
-//!   entry itself.
+//!   resolves links, so the resolved folder must also be the one the plain path spells), and it is the
+//!   folder that gets opened;
+//! - nothing is replaced, ever: the system call refuses a target that exists, in a folder opened once so no
+//!   path is walked again. A rename that only changes case goes by a temporary name, two such calls.
 //!
 //! A link is renamed as the link it is; what it points at is never looked at.
 
@@ -18,8 +18,7 @@ use std::io;
 use std::path::{Component, Path, PathBuf};
 
 use super::resolve_path_within;
-use crate::platform::fs::same_file;
-use crate::platform::rename::{rename_no_replace, rename_same_entry};
+use crate::platform::rename::Folder;
 
 /// The longest name a file system keeps (APFS and HFS+ both): in bytes.
 pub const MAX_NAME_BYTES: usize = 255;
@@ -140,7 +139,9 @@ fn real_parent(root: &Path, parent: &Path) -> Result<PathBuf, RenameError> {
 /// Returns its new path below `root`. Blocks on the disk: not for the main thread.
 ///
 /// Nothing is replaced, nothing is renamed through a link, and the root itself can't be renamed. The
-/// same name again is not an error and changes nothing.
+/// same name again is not an error and changes nothing. The folder is opened once and what was checked
+/// is the folder that was opened (`Folder::real_path`), so the folder swapped for a link in between is
+/// not followed; the rename is by name inside it.
 pub fn rename_within(root: &Path, from: &Path, new_name: &OsStr) -> Result<PathBuf, RenameError> {
     let name = check_name(new_name).map_err(RenameError::Name)?;
     let mut parts = from.components();
@@ -150,38 +151,36 @@ pub fn rename_within(root: &Path, from: &Path, new_name: &OsStr) -> Result<PathB
     if !parent.components().all(|part| matches!(part, Component::Normal(_))) {
         return Err(RenameError::Outside);
     }
-    let folder = real_parent(root, parent)?;
-    let (source, target) = (folder.join(old_name), folder.join(name));
+    let expected = real_parent(root, parent)?;
+    let folder = Folder::open(&expected).map_err(|err| match err.kind() {
+        io::ErrorKind::NotFound => RenameError::Missing,
+        // A link at the last step (swapped in since the check) is not a folder to enter.
+        _ => RenameError::Outside,
+    })?;
+    // What is open is where it was checked to be.
+    if folder.real_path()? != expected {
+        return Err(RenameError::Outside);
+    }
     let new_relative = parent.join(name);
     if old_name == OsStr::new(name) {
         // Nothing to do, but a name that is not there is still an error.
-        fs::symlink_metadata(&source)?;
-        return Ok(new_relative);
+        return if folder.has(old_name)? { Ok(new_relative) } else { Err(RenameError::Missing) };
     }
-    match rename_no_replace(&source, &target) {
+    match folder.rename_no_replace(old_name, OsStr::new(name)) {
         Ok(()) => Ok(new_relative),
-        Err(err)
-            if err.kind() == io::ErrorKind::AlreadyExists
-                && only_case_differs(&source, &target, name, old_name) =>
-        {
-            rename_same_entry(&source, &target)?;
+        // A volume that ignores case calls `README.md` the same as `readme.md`: the rename goes by a
+        // temporary name, each step refusing to replace, and is undone if the target is another entry.
+        Err(err) if err.kind() == io::ErrorKind::AlreadyExists && differs_only_in_case(old_name, name) => {
+            folder.rename_case(old_name, OsStr::new(name))?;
             Ok(new_relative)
         }
         Err(err) => Err(err.into()),
     }
 }
 
-/// Whether `target` is `source` itself under another case: the same entry on disk, and names that differ
-/// only in case. What a volume that ignores case answers when `readme.md` is renamed to `README.md`.
-fn only_case_differs(source: &Path, target: &Path, name: &str, old_name: &OsStr) -> bool {
-    let Some(old) = old_name.to_str() else { return false };
-    if name.to_lowercase() != old.to_lowercase() {
-        return false;
-    }
-    match (fs::symlink_metadata(source), fs::symlink_metadata(target)) {
-        (Ok(a), Ok(b)) => same_file(&a, &b),
-        _ => false,
-    }
+/// Whether the two names are the same up to case (and not the same).
+fn differs_only_in_case(old: &OsStr, new: &str) -> bool {
+    old.to_str().is_some_and(|old| old != new && old.to_lowercase() == new.to_lowercase())
 }
 
 #[cfg(test)]
