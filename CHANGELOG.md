@@ -6,6 +6,14 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Added
+
+- A right-click (or ⌃-click) on a terminal opens a menu with Copy, Paste, Select All, Find, Split Right,
+  Split Down and Clear Buffer, each with its shortcut and a small picture. Over a link it adds Open Link and
+  Copy Link, and over a finished command in a shell with integration, Copy Command, Copy Output and Put
+  Command at Prompt. In a program that uses the mouse, the click still goes to the program; hold ⇧ for the
+  menu.
+
 ### Changed
 
 - When the helper that keeps terminals running can't start, the warning that the terminal ends when Wormhole

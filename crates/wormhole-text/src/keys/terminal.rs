@@ -3,8 +3,33 @@
 //!
 //! The messages of `locales/en/terminal.ftl`.
 
+use crate::key::Key;
 use crate::args::Arg;
 
+/// "Copy"
+pub const TERMINAL_MENU_COPY: Key = Key::new(1229);
+/// "Paste"
+pub const TERMINAL_MENU_PASTE: Key = Key::new(1230);
+/// "Select All"
+pub const TERMINAL_MENU_SELECT_ALL: Key = Key::new(1231);
+/// "Find…"
+pub const TERMINAL_MENU_FIND: Key = Key::new(1232);
+/// "Open Link"
+pub const TERMINAL_MENU_OPEN_LINK: Key = Key::new(1233);
+/// "Copy Link"
+pub const TERMINAL_MENU_COPY_LINK: Key = Key::new(1234);
+/// "Copy Command"
+pub const TERMINAL_MENU_COPY_COMMAND: Key = Key::new(1235);
+/// "Copy Output"
+pub const TERMINAL_MENU_COPY_OUTPUT: Key = Key::new(1236);
+/// "Put Command at Prompt"
+pub const TERMINAL_MENU_PUT_COMMAND_AT_PROMPT: Key = Key::new(1237);
+/// "Split Right"
+pub const TERMINAL_MENU_SPLIT_RIGHT: Key = Key::new(1238);
+/// "Split Down"
+pub const TERMINAL_MENU_SPLIT_DOWN: Key = Key::new(1239);
+/// "Clear Buffer"
+pub const TERMINAL_MENU_CLEAR: Key = Key::new(1240);
 
 /// ```text
 /// { $columns } × { $rows }

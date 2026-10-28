@@ -35,6 +35,9 @@ pub enum Icon {
     /// Two letters in a small rounded square, for an app whose icon can't be had (where there is
     /// no icon service to ask, the fallback menu draws it; the native one has the icon).
     Monogram(SharedString),
+    /// An SF Symbol by name, as Apple's own menus carry (`doc.on.doc` beside Copy). A template
+    /// image, so the menu tints it; where there are no symbols, no picture is drawn.
+    Symbol(&'static str),
 }
 
 /// An item's check mark.

@@ -152,6 +152,17 @@ impl TerminalView {
         pty.blocks().into_iter().rev().find(|block| block.state.ran())
     }
 
+    /// The command block whose rows are under `position` (one that ran), for the context menu.
+    pub(super) fn block_under(&self, position: Point<Pixels>) -> Option<Block> {
+        let row = block_row(&self.layout.get(), position)?;
+        let id = {
+            let state = self.render_state.borrow();
+            let span = state.snapshot().block_at_row(row)?;
+            span.state.ran().then_some(span.id)?
+        };
+        self.pty.as_ref()?.block(id)
+    }
+
     /// One of the Edit menu's block actions on the target block.
     pub(super) fn block_action(&mut self, action: BlockAction, cx: &mut Context<Self>) {
         if let Some(block) = self.target_block() {
@@ -161,8 +172,14 @@ impl TerminalView {
 
     /// The readout's button: Copy Output for the hovered block.
     pub(super) fn copy_block_output(&mut self, id: u64, cx: &mut Context<Self>) {
+        self.block_action_on(id, BlockAction::CopyOutput, cx);
+    }
+
+    /// `action` on block `id`, looked up now: a menu chosen from may be a while after it opened,
+    /// when the block's rows can have moved or gone.
+    pub(super) fn block_action_on(&mut self, id: u64, action: BlockAction, cx: &mut Context<Self>) {
         if let Some(block) = self.pty.as_ref().and_then(|pty| pty.block(id)) {
-            self.run_block_action(&block, BlockAction::CopyOutput, cx);
+            self.run_block_action(&block, action, cx);
         }
     }
 

@@ -5,7 +5,7 @@
 
 use std::ops::Range;
 
-use gpui_kit::{Context, Pixels, Point};
+use gpui_kit::{App, Context, Pixels, Point};
 use wormhole_term::types::Line;
 use wormhole_term::{Link, Openable};
 
@@ -25,16 +25,13 @@ impl TerminalView {
     /// click does what it would otherwise.
     pub(super) fn open_link(&mut self, position: Point<Pixels>, cx: &mut Context<Self>) -> bool {
         let Some(link) = self.link_under(position) else { return false };
-        match Openable::from_uri(&link.uri) {
-            Some(Openable::Url(url)) => cx.open_url(&url),
-            Some(Openable::Reveal(path)) => cx.reveal_path(&path),
-            None => {
-                // The scheme only: the rest of a link can be private.
-                let scheme = link.uri.split(':').next().unwrap_or_default();
-                tracing::info!(scheme, "a terminal link wasn't opened: not a kind that's allowed");
-            }
-        }
+        open_uri(&link.uri, cx);
         true
+    }
+
+    /// The address of the link under `position`, for the context menu.
+    pub(super) fn link_uri_under(&self, position: Point<Pixels>) -> Option<String> {
+        self.link_under(position).map(|link| link.uri)
     }
 
     fn link_under(&self, position: Point<Pixels>) -> Option<Link> {
@@ -55,6 +52,19 @@ impl TerminalView {
                 Some((row, link.columns_on(line, layout.cols)?))
             })
             .collect()
+    }
+}
+
+/// Open a link the way ⌘-click does: only the kinds core allows, a refused one is logged.
+pub(super) fn open_uri(uri: &str, cx: &mut App) {
+    match Openable::from_uri(uri) {
+        Some(Openable::Url(url)) => cx.open_url(&url),
+        Some(Openable::Reveal(path)) => cx.reveal_path(&path),
+        None => {
+            // The scheme only: the rest of a link can be private.
+            let scheme = uri.split(':').next().unwrap_or_default();
+            tracing::info!(scheme, "a terminal link wasn't opened: not a kind that's allowed");
+        }
     }
 }
 

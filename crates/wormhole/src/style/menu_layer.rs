@@ -151,6 +151,8 @@ fn with_icon(icon: &Icon, title: SharedString, cx: &App) -> AnyElement {
             .text_caption()
             .child(letters.clone())
             .into_any_element(),
+        // SF Symbols are Apple's: this menu has no picture for one, only the title.
+        Icon::Symbol(_) => return title.into_any_element(),
     };
     div().flex().items_center().gap_2().child(picture).child(title).into_any_element()
 }

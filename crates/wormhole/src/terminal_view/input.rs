@@ -12,6 +12,7 @@ use wormhole_term::types::LineSize;
 use wormhole_term::types::{Column, Line, Modes, Point as GridPoint, Scroll, SelectionType, Side};
 use wormhole_term::{Direction, KeySent};
 
+use super::context_menu;
 use super::status::TerminalEvent;
 use super::{Layout, TerminalView};
 use crate::settings::settings_in;
@@ -342,6 +343,13 @@ impl TerminalView {
         cx: &mut Context<Self>,
     ) {
         window.focus(&self.focus_handle, cx);
+        // The selection is left alone; the release has nothing to end (`mouse_button` stays unset).
+        if self.pty.is_some()
+            && context_menu::opens_menu(event.button, event.modifiers, self.program_takes_mouse())
+        {
+            self.open_context_menu(event.position, window, cx);
+            return;
+        }
         if event.button == MouseButton::Left && event.modifiers.platform && self.open_link(event.position, cx)
         {
             return;

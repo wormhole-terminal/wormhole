@@ -273,6 +273,11 @@ fn image(icon: &Icon) -> Option<Retained<NSImage>> {
         Icon::Folder => appkit::folder_icon(IMAGE_SIDE),
         // Only where there is no icon service; the app has a file icon here.
         Icon::Monogram(_) => None,
+        // A name the system doesn't know gives `None`: the row simply has no picture. Symbols are
+        // template images already, which is what makes the menu tint them like its text.
+        Icon::Symbol(name) => {
+            NSImage::imageWithSystemSymbolName_accessibilityDescription(&NSString::from_str(name), None)
+        }
         Icon::Image(file) => {
             if file.bytes.is_empty() {
                 return None;

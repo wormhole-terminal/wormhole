@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) static IDS: [&str; 1254] = [
+pub(crate) static IDS: [&str; 1266] = [
     "agent-sheet-title", "agent-sheet-title-scripts", "agent-sheet-wants-read",
     "agent-sheet-wants-type", "agent-sheet-wants-run", "agent-sheet-wants-open",
     "agent-sheet-wants-close", "agent-sheet-detail", "agent-sheet-detail-scripts",
@@ -415,7 +415,11 @@ pub(crate) static IDS: [&str; 1254] = [
     "tailor-all-set", "tailor-welcome-note", "tailor-welcome-continue",
     "tailor-welcome-continue-detail", "tailor-welcome-key-pick", "tailor-welcome-key-move",
     "tailor-welcome-key-continue", "tailor-welcome-key-start-over", "tailor-welcome-unavailable",
-    "tailor-announce", "terminal-size-readout", "title-row-part-folder",
+    "tailor-announce", "terminal-size-readout", "terminal-menu-copy",
+    "terminal-menu-paste", "terminal-menu-select-all", "terminal-menu-find",
+    "terminal-menu-open-link", "terminal-menu-copy-link", "terminal-menu-copy-command",
+    "terminal-menu-copy-output", "terminal-menu-put-command-at-prompt", "terminal-menu-split-right",
+    "terminal-menu-split-down", "terminal-menu-clear", "title-row-part-folder",
     "title-row-part-branch", "title-row-part-branch-status", "title-row-part-terminal",
     "title-row-part-terminal-status", "title-row-part-space", "title-row-part-space.description",
     "title-row-part-agent-gauge", "title-row-part-ports", "title-row-part-pull-request",
@@ -427,7 +431,7 @@ pub(crate) static IDS: [&str; 1254] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 1254] = [
+pub(crate) const TAKES_ARGS: [bool; 1266] = [
     true, false, false, false, false, false, false, false, false, true, false, false,
     false, false, false, false, false, false, false, false, false, true, true, false,
     false, false, false, false, true, true, true, true, true, true, true, true,
@@ -531,6 +535,7 @@ pub(crate) const TAKES_ARGS: [bool; 1254] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     true, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, true, true, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false,
 ];

@@ -340,7 +340,17 @@ pub(crate) fn bindings() -> Vec<KeyBinding> {
 mod tests {
     use wormhole_core::keys::keymap::{ActionId, Scope, Stage, entries};
 
-    use super::{bindings, gpui_action};
+    use gpui_kit::Action;
+
+    use super::{SplitDown, SplitRight, bindings, gpui_action};
+    use crate::terminal_view::context_menu::{SPLIT_DOWN, SPLIT_RIGHT};
+
+    /// The terminal's context menu names the split actions by string (it may not use this module).
+    #[test]
+    fn the_terminals_menu_names_the_split_actions_truly() {
+        assert_eq!(SplitRight::name_for_type(), SPLIT_RIGHT);
+        assert_eq!(SplitDown::name_for_type(), SPLIT_DOWN);
+    }
 
     #[test]
     fn every_live_action_has_a_gpui_action() {

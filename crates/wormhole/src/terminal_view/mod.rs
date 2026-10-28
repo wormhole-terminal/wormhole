@@ -20,6 +20,7 @@ use wormhole_term::program_status::Summary as Reported;
 use wormhole_term::{GridSize, Pty, WindowGeometry};
 
 mod blocks;
+pub(crate) mod context_menu;
 mod control_input;
 mod failed;
 mod find;
