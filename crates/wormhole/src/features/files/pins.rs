@@ -25,4 +25,13 @@ impl Files {
         });
         cx.notify();
     }
+
+    /// A folder was renamed: pins of it, and of folders below it, name its new place.
+    pub(super) fn move_pins(&mut self, from: &Path, to: &Path, cx: &mut Context<Self>) {
+        if self.pinned(cx).iter().any(|pin| pin.starts_with(from)) {
+            update_in(&self.profile, cx, |settings| {
+                settings.move_pinned(from, to);
+            });
+        }
+    }
 }

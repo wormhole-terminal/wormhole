@@ -81,6 +81,15 @@ pub(crate) struct Files {
     viewers: u64,
     /// The row whose name is being edited, if any: one for the window.
     renaming: Option<rename::Renaming>,
+    /// A read of the open file is on its way: one at a time for the window, the latest request wins.
+    fetching: bool,
+    /// The syntax colors of the shown text are being made: likewise.
+    colouring: bool,
+    /// The window these are shown in, to drop a picture from its atlas.
+    window: AnyWindowHandle,
+    /// How many reads and syntax-color jobs were started, for the tests of one at a time.
+    #[cfg(test)]
+    started: (u64, u64),
 }
 
 impl EventEmitter<FeatureEvent> for Files {}
@@ -128,7 +137,7 @@ impl FilesOf {
 }
 
 impl Files {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(window: AnyWindowHandle) -> Self {
         Self {
             of: HashMap::new(),
             profile: ProfileId::default_profile(),
@@ -136,6 +145,11 @@ impl Files {
             viewer: None,
             viewers: 0,
             renaming: None,
+            fetching: false,
+            colouring: false,
+            window,
+            #[cfg(test)]
+            started: (0, 0),
         }
     }
 

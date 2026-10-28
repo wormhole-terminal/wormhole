@@ -7,24 +7,24 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Insert folder path"
-pub const FOLDER_PICKER_NAME: Key = Key::new(91);
+pub const FOLDER_PICKER_NAME: Key = Key::new(92);
 /// "Search folders"
-pub const FOLDER_PICKER_SEARCH: Key = Key::new(92);
+pub const FOLDER_PICKER_SEARCH: Key = Key::new(93);
 /// "No folders"
-pub const FOLDER_PICKER_EMPTY: Key = Key::new(93);
+pub const FOLDER_PICKER_EMPTY: Key = Key::new(94);
 /// "Can't read this folder"
-pub const FOLDER_PICKER_UNREADABLE: Key = Key::new(94);
+pub const FOLDER_PICKER_UNREADABLE: Key = Key::new(95);
 
 /// ```text
 /// Only the first { $count } folders are listed
 /// ```
 pub fn folder_picker_cut_folders(count: &str) -> String {
-    crate::active::message(95, &[("count", Arg::Str(count))])
+    crate::active::message(96, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// Only the first { $count } entries were searched, so some folders may be missing
 /// ```
 pub fn folder_picker_cut_scanned(count: &str) -> String {
-    crate::active::message(96, &[("count", Arg::Str(count))])
+    crate::active::message(97, &[("count", Arg::Str(count))])
 }

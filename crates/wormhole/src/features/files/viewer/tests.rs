@@ -207,7 +207,7 @@ fn binary_files_and_pictures_get_their_own_cards(cx: &mut TestAppContext) {
     assert_eq!(shown(cx, &window).as_deref(), Some("tool.bin (binary 10 bytes)"));
     assert!(drawn(cx, &window, "file-viewer"));
     open(cx, &window, "dot.png");
-    assert_eq!(shown(cx, &window), Some(format!("dot.png (image {} bytes)", png.len())));
+    assert_eq!(shown(cx, &window), Some(format!("dot.png (image {} bytes, shown at 1x1)", png.len())));
     assert!(drawn(cx, &window, "file-viewer"));
 }
 
@@ -277,4 +277,186 @@ fn selecting_another_terminal_closes_the_viewer(cx: &mut TestAppContext) {
     assert!(!covered(cx, &window), "the viewer belonged to the first terminal");
     drive(cx, &window, |ws, window, cx| ws.activate(0, window, cx));
     assert!(!covered(cx, &window), "and does not come back");
+}
+
+/// How many reads and color jobs were started so far.
+fn started(cx: &mut TestAppContext, window: &OpenWindow) -> (u64, u64) {
+    read_cx(cx, window, |ws, cx| feature(ws).read(cx).started)
+}
+
+#[gpui_kit::test]
+fn walking_over_files_starts_one_read_at_a_time_and_the_latest_wins(cx: &mut TestAppContext) {
+    if isolate("walking_over_files_starts_one_read_at_a_time_and_the_latest_wins") {
+        return;
+    }
+    let window = start(cx, 1);
+    let repo = repo("project");
+    for n in 0..6 {
+        fs::write(repo.join(format!("f{n}.txt")), format!("file {n}\n")).unwrap();
+    }
+    go(cx, &window, &repo);
+    let before = started(cx, &window);
+    // The arrow keys ask for a file per row, faster than a read comes back.
+    drive(cx, &window, |ws, _, cx| {
+        let session = ws.active_session().id;
+        feature(ws).update(cx, |files, fcx| {
+            for n in 0..6 {
+                files.show_file(session, Path::new(&format!("f{n}.txt")), fcx);
+            }
+        });
+    });
+    cx.run_until_parked();
+    let after = started(cx, &window);
+    assert_eq!(after.0 - before.0, 2, "the first, then the one wanted when it came back: not six");
+    assert!(
+        shown(cx, &window).is_some_and(|text| text.starts_with("f5.txt (text 1 lines")),
+        "the latest request is what is shown: {:?}",
+        shown(cx, &window)
+    );
+}
+
+#[gpui_kit::test]
+fn colors_are_made_one_job_at_a_time_and_not_again_for_a_file_without_a_grammar(cx: &mut TestAppContext) {
+    if isolate("colors_are_made_one_job_at_a_time_and_not_again_for_a_file_without_a_grammar") {
+        return;
+    }
+    let window = start(cx, 1);
+    let repo = repo("project");
+    go(cx, &window, &repo);
+    open(cx, &window, "src/main.rs");
+    let colored = started(cx, &window).1;
+    assert!(colored >= 1);
+    // Asked for again, with the colors in: nothing starts. A file without a grammar is not retried.
+    drive(cx, &window, |ws, _, cx| {
+        feature(ws).update(cx, |files, fcx| {
+            files.colour_viewer(fcx);
+            files.colour_viewer(fcx);
+        });
+    });
+    assert_eq!(started(cx, &window).1, colored);
+    open(cx, &window, "README.md");
+    let plain = started(cx, &window).1;
+    drive(cx, &window, |ws, _, cx| {
+        feature(ws).update(cx, |files, fcx| {
+            files.colour_viewer(fcx);
+            files.colour_viewer(fcx);
+        });
+    });
+    assert_eq!(started(cx, &window).1, plain, "a second look at the same file starts nothing");
+}
+
+#[gpui_kit::test]
+fn nothing_is_read_or_polled_while_the_feature_is_off(cx: &mut TestAppContext) {
+    use wormhole_core::config::{FeatureId, TabId};
+    if isolate("nothing_is_read_or_polled_while_the_feature_is_off") {
+        return;
+    }
+    let window = start(cx, 1);
+    let repo = repo("project");
+    go(cx, &window, &repo);
+    open(cx, &window, "README.md");
+    let first = lines_of(cx, &window).expect("text");
+    fs::write(repo.join("README.md"), b"changed\nlines\n").unwrap();
+    let tick = |cx: &mut TestAppContext, on: bool, ticks: u64| {
+        drive(cx, &window, |ws, _, cx| {
+            let mut facts = ws.facts(cx);
+            facts.tab = TabId::Files;
+            facts.ticks = ticks;
+            facts.features = facts.features.with(FeatureId::Files, on);
+            feature(ws).update(cx, |files, fcx| files.tick_viewer(&facts, fcx));
+        });
+    };
+    let reads = started(cx, &window);
+    tick(cx, false, 2);
+    tick(cx, false, 4);
+    assert_eq!(started(cx, &window), reads, "no read while the flag is off");
+    assert!(Rc::ptr_eq(&first, &lines_of(cx, &window).unwrap()));
+    tick(cx, true, 4);
+    assert!(!Rc::ptr_eq(&first, &lines_of(cx, &window).unwrap()), "and the same tick reads when it is on");
+}
+
+#[gpui_kit::test]
+fn a_picture_is_dropped_from_the_atlas_when_it_is_replaced_or_the_viewer_goes(cx: &mut TestAppContext) {
+    if isolate("a_picture_is_dropped_from_the_atlas_when_it_is_replaced_or_the_viewer_goes") {
+        return;
+    }
+    let window = start(cx, 1);
+    let repo = repo("project");
+    write_png(&repo.join("a.png"), 8, 8);
+    write_png(&repo.join("b.png"), 8, 8);
+    go(cx, &window, &repo);
+    let image_of = |cx: &mut TestAppContext| {
+        read_cx(cx, &window, |ws, cx| match &feature(ws).read(cx).viewer.as_ref()?.content {
+            Content::Image { image: Ok(image), .. } => Some(image.clone()),
+            _ => None,
+        })
+    };
+    let in_atlas = |cx: &mut TestAppContext, image: &std::sync::Arc<gpui_kit::RenderImage>| {
+        cx.update(|cx| window.handle.update(cx, |_, window, _| window.has_image_atlas_entry(image)).unwrap())
+    };
+
+    open(cx, &window, "a.png");
+    draw(cx, &window);
+    let first = image_of(cx).expect("the picture was decoded");
+    assert!(in_atlas(cx, &first), "drawing put it in the atlas");
+
+    // Another file replaces it: the first picture's tile goes.
+    open(cx, &window, "b.png");
+    cx.run_until_parked();
+    draw(cx, &window);
+    assert!(!in_atlas(cx, &first), "replaced: dropped from the atlas");
+    let second = image_of(cx).expect("the second picture");
+    assert!(in_atlas(cx, &second));
+
+    // Esc closes the viewer: the second one goes too.
+    press(cx, &window, "escape");
+    cx.run_until_parked();
+    assert!(!in_atlas(cx, &second), "closed: dropped from the atlas");
+}
+
+/// A `width` x `height` PNG of one color.
+fn write_png(path: &Path, width: u32, height: u32) {
+    let buffer = image::RgbaImage::from_pixel(width, height, image::Rgba([200, 40, 40, 255]));
+    buffer.save_with_format(path, image::ImageFormat::Png).expect("writes a PNG");
+}
+
+#[gpui_kit::test]
+fn one_very_long_line_opens_and_draws_without_shaping_all_of_it(cx: &mut TestAppContext) {
+    if isolate("one_very_long_line_opens_and_draws_without_shaping_all_of_it") {
+        return;
+    }
+    let window = start(cx, 1);
+    let repo = repo("project");
+    // A minified bundle: one line of 1.5 million characters, with something to color.
+    let long = format!("var a = [{}];", "1,".repeat(750_000));
+    fs::write(repo.join("bundle.js"), long).unwrap();
+    go(cx, &window, &repo);
+    open(cx, &window, "bundle.js");
+    cx.run_until_parked();
+    let started = std::time::Instant::now();
+    assert!(drawn(cx, &window, "file-viewer"));
+    draw(cx, &window);
+    assert!(started.elapsed() < std::time::Duration::from_secs(5), "{:?}", started.elapsed());
+    assert!(shown(cx, &window).is_some_and(|text| text.contains("text 1 lines")), "{:?}", shown(cx, &window));
+}
+
+#[gpui_kit::test]
+fn a_picture_that_declares_an_absurd_size_is_refused_not_decoded(cx: &mut TestAppContext) {
+    if isolate("a_picture_that_declares_an_absurd_size_is_refused_not_decoded") {
+        return;
+    }
+    let window = start(cx, 1);
+    let repo = repo("project");
+    // A few bytes of PNG header that declare 100,000 x 100,000 pixels: no pixel data follows.
+    fs::write(repo.join("bomb.png"), crate::platform::image::crafted::png_declaring(100_000, 100_000))
+        .unwrap();
+    go(cx, &window, &repo);
+    open(cx, &window, "bomb.png");
+    assert!(
+        shown(cx, &window)
+            .is_some_and(|text| text.contains("too large") || text.contains("can't be decoded")),
+        "{:?}",
+        shown(cx, &window)
+    );
+    assert!(drawn(cx, &window, "file-viewer"));
 }

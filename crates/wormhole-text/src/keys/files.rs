@@ -48,16 +48,18 @@ pub const FILES_VIEWER_EMPTY: Key = Key::new(82);
 pub const FILES_VIEWER_OPEN_IN: Key = Key::new(84);
 /// "This picture can't be shown."
 pub const FILES_VIEWER_IMAGE_FAILED: Key = Key::new(85);
+/// "This picture is too large to show."
+pub const FILES_VIEWER_IMAGE_TOO_LARGE: Key = Key::new(86);
 /// "This file was deleted."
-pub const FILES_VIEWER_GONE: Key = Key::new(86);
+pub const FILES_VIEWER_GONE: Key = Key::new(87);
 /// "This is a link that leads out of the folder, so it isn't shown."
-pub const FILES_VIEWER_OUTSIDE: Key = Key::new(87);
+pub const FILES_VIEWER_OUTSIDE: Key = Key::new(88);
 /// "This isn't a regular file."
-pub const FILES_VIEWER_NOT_FILE: Key = Key::new(88);
+pub const FILES_VIEWER_NOT_FILE: Key = Key::new(89);
 /// "Wormhole isn't allowed to read this file."
-pub const FILES_VIEWER_DENIED: Key = Key::new(89);
+pub const FILES_VIEWER_DENIED: Key = Key::new(90);
 /// "This file can't be read."
-pub const FILES_VIEWER_UNREADABLE: Key = Key::new(90);
+pub const FILES_VIEWER_UNREADABLE: Key = Key::new(91);
 
 /// ```text
 /// { $count } more

@@ -69,7 +69,8 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
 
 const STATE: StateDef = StateDef {
     make: |window, cx| {
-        let entity = cx.new(|_| Files::new());
+        let handle = window.window_handle();
+        let entity = cx.new(|_| Files::new(handle));
         Workspace::listen(&entity, window, cx)
     },
     selected: Some(|entity, _, cx| typed(entity).update(cx, |files, cx| files.selected(cx))),

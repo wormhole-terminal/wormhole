@@ -19,7 +19,7 @@ use wormhole_core::storage::files::{RenameError, rename_within};
 use wormhole_core::view::file_tree::names::stem_len;
 use wormhole_core::view::file_tree::{Row, RowKind};
 use wormhole_core::view::notice::Failed;
-use wormhole_text::{Key, keys, text};
+use wormhole_text::{keys, text};
 
 use super::Files;
 use crate::platform::a11y;
@@ -36,14 +36,14 @@ pub(super) struct Renaming {
     _events: Subscription,
 }
 
-/// What the notice chip and VoiceOver say of a refused rename.
-fn failure(error: &RenameError) -> (Failed, Key) {
+/// What the notice chip says of a refused rename (it is announced by VoiceOver with the chip).
+fn failure(error: &RenameError) -> Failed {
     match error {
-        RenameError::Name(_) => (Failed::RenameName, keys::NOTICE_FAILED_RENAME_NAME),
-        RenameError::Exists => (Failed::RenameExists, keys::NOTICE_FAILED_RENAME_EXISTS),
-        RenameError::Denied => (Failed::RenameDenied, keys::NOTICE_FAILED_RENAME_DENIED),
-        RenameError::Missing | RenameError::Outside => (Failed::RenameGone, keys::NOTICE_FAILED_RENAME_GONE),
-        RenameError::Failed(_) => (Failed::RenameFailed, keys::NOTICE_FAILED_RENAME_FAILED),
+        RenameError::Name(_) => Failed::RenameName,
+        RenameError::Exists => Failed::RenameExists,
+        RenameError::Denied => Failed::RenameDenied,
+        RenameError::Missing | RenameError::Outside => Failed::RenameGone,
+        RenameError::Failed(_) => Failed::RenameFailed,
     }
 }
 
@@ -176,10 +176,8 @@ impl Files {
                 {
                     renaming.busy = false;
                 }
-                let (notice, words) = failure(&error);
                 tracing::info!("not renaming {}: {error}", from.display());
-                crate::notice::post_to(window, notice, None, cx);
-                a11y::announce(text(words), false);
+                crate::notice::post_to(window, failure(&error), None, cx);
                 cx.notify();
             }
             Ok(to) => {
@@ -191,20 +189,23 @@ impl Files {
         }
     }
 
-    /// The selection, an open viewer and the folder's listing follow a rename of `from` to `to`.
-    fn followed_rename(&mut self, session: i64, from: &Path, to: &Path, cx: &mut Context<Self>) {
+    /// The selection, the folder's open state, its pins, an open viewer and the folder's listing follow a
+    /// rename of `from` to `to`. A terminal that was closed meanwhile has no tree to follow: nothing is
+    /// made for it.
+    pub(super) fn followed_rename(&mut self, session: i64, from: &Path, to: &Path, cx: &mut Context<Self>) {
         let parent = to.parent().map(Path::to_path_buf).unwrap_or_default();
-        let of = self.of_mut(session);
-        if of.selected.as_deref().is_some_and(|selected| selected.starts_with(from)) {
-            of.selected = of
-                .selected
-                .take()
-                .and_then(|selected| selected.strip_prefix(from).ok().map(|rest| to.join(rest)));
+        let Some(of) = self.of.get_mut(&session) else { return };
+        let Some(root) = of.root.clone() else { return };
+        if let Some(selected) = of.selected.as_ref().and_then(|selected| selected.strip_prefix(from).ok()) {
+            of.selected = Some(to.join(selected));
         }
+        // What was open in a renamed folder stays open, under its new name, until the read finds the same.
+        of.tree.renamed(from, to);
         // The folder changed: it is listed again at once, not at the next look.
         of.stamps.remove(&parent);
         of.stale = true;
-        self.viewer_renamed(session, from, to, cx);
+        self.move_pins(&root.join(from), &root.join(to), cx);
+        self.viewer_renamed(session, &root, from, to, cx);
         self.read(session, parent, cx);
         let name = to.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
         a11y::announce(&keys::files_spoken_renamed(&name), false);

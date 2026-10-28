@@ -14,12 +14,14 @@ use wormhole_core::platform::open_file;
 use wormhole_core::platform::open_in;
 use wormhole_core::storage::files::Problem;
 use wormhole_core::theme::fonts::FontSlot;
+use wormhole_core::view::file_tree::names::clean;
 use wormhole_text::{keys, text};
 
 use super::{Content, TextShown, Viewer};
 use crate::features::files::{Files, open};
 use crate::fonts::font_in;
 use crate::open_in::OpenIn;
+use crate::platform::image::Refused;
 use crate::settings::{UiColors, settings_in, store_in, ui_in};
 use crate::style::{self, Edges as _, TextRole as _, panel_list};
 use crate::theme_bridge::token;
@@ -72,7 +74,7 @@ impl Files {
             .rounded(ui.radius_lg)
             .outlined(ui, ui.border)
             .bg(surface)
-            .aria_label(SharedString::from(keys::files_spoken_viewer(&viewer.name())))
+            .aria_label(SharedString::from(keys::files_spoken_viewer(&clean(&viewer.name()))))
             .child(header)
             .child(body);
         Some(
@@ -90,7 +92,8 @@ impl Files {
         let (family, _) = font_in(&self.profile, FontSlot::Terminal, cx);
         let name = viewer.name();
         let dir = match viewer.path.parent() {
-            Some(dir) if !dir.as_os_str().is_empty() => format!("{}/", dir.display()),
+            // A folder's name is whatever its maker chose: cleaned like the name after it.
+            Some(dir) if !dir.as_os_str().is_empty() => clean(&format!("{}/", dir.display())),
             _ => String::new(),
         };
         let units = settings_in(&self.profile, cx).size_units;
@@ -144,7 +147,7 @@ impl Files {
                                     .flex_shrink(0.01)
                                     .truncate()
                                     .text_color(ui.text)
-                                    .child(wormhole_core::view::file_tree::names::clean(&name)),
+                                    .child(clean(&name)),
                             ),
                     )
                     .children(size.map(|size| {
@@ -189,15 +192,19 @@ impl Files {
                 let words = keys::files_viewer_binary(&wormhole_core::git::byte_size(*size, units));
                 body.child(self.render_panel(ui, words, true, cx))
             }
-            Content::Image { image: Some(image), .. } => {
+            Content::Image { image: Ok(image), .. } => {
                 body.child(
                     div().flex_1().min_h_0().p_4().child(
                         img(image.clone()).id("file-image").size_full().object_fit(ObjectFit::ScaleDown),
                     ),
                 )
             }
-            Content::Image { image: None, .. } => {
-                body.child(self.render_panel(ui, text(keys::FILES_VIEWER_IMAGE_FAILED).to_string(), true, cx))
+            Content::Image { image: Err(refused), .. } => {
+                let words = match refused {
+                    Refused::TooLarge { .. } => keys::FILES_VIEWER_IMAGE_TOO_LARGE,
+                    Refused::Unreadable => keys::FILES_VIEWER_IMAGE_FAILED,
+                };
+                body.child(self.render_panel(ui, text(words).to_string(), true, cx))
             }
             Content::Unavailable(problem) => {
                 let words = match problem {
@@ -279,12 +286,12 @@ impl Files {
             text: ui.text,
         };
         let (lines, colors, cache) = (shown.lines.clone(), shown.colors.clone(), shown.rows.clone());
-        let (theme, tab_width) = (store.highlight.clone(), settings_in(&self.profile, cx).tab_width);
+        let (tab_width, dim) = (settings_in(&self.profile, cx).tab_width, style.number);
         let style = Rc::new(style);
         let mut list = uniform_list("file-lines", lines.len(), move |range, _, _| {
             range
                 .map(|ix| {
-                    let row = cache.row(ix, &lines, colors.as_deref(), &theme, tab_width);
+                    let row = cache.row(ix, &lines, colors.as_deref(), tab_width, dim);
                     line(ix, &row, &style).into_any_element()
                 })
                 .collect()

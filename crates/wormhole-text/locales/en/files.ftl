@@ -87,6 +87,7 @@ files-viewer-binary = Binary file, { $size }
 files-viewer-open-in = Open in…
 
 files-viewer-image-failed = This picture can't be shown.
+files-viewer-image-too-large = This picture is too large to show.
 files-viewer-gone = This file was deleted.
 files-viewer-outside = This is a link that leads out of the folder, so it isn't shown.
 files-viewer-not-file = This isn't a regular file.

@@ -208,3 +208,76 @@ fn a_link_is_renamed_and_not_what_it_points_at(cx: &mut TestAppContext) {
     assert!(fs::symlink_metadata(repo.join("pointer")).unwrap().file_type().is_symlink());
     assert_eq!(fs::read_to_string(repo.join("README.md")).unwrap(), "hello");
 }
+
+#[gpui_kit::test]
+fn a_renamed_folder_stays_open_and_its_pin_follows_it(cx: &mut TestAppContext) {
+    if isolate("a_renamed_folder_stays_open_and_its_pin_follows_it") {
+        return;
+    }
+    let window = start(cx, 1);
+    let repo = repo("project");
+    go(cx, &window, &repo);
+    click(cx, &window, "src");
+    cx.run_until_parked();
+    drive(cx, &window, |ws, _, cx| {
+        feature(ws).update(cx, |files, fcx| {
+            files.set_pinned(&repo.join("src"), true, fcx);
+            files.set_pinned(&repo.join("docs"), true, fcx);
+        });
+    });
+    assert!(rows(cx, &window).contains(&"v src".to_string()));
+
+    start_rename(cx, &window, "src");
+    type_and_commit(cx, &window, "code");
+    let shown = rows(cx, &window);
+    let at = shown.iter().position(|line| line == "v code").expect("still open under its new name");
+    assert_eq!(&shown[at + 1..at + 3], ["lib.rs", "main.rs"], "with what it held: {shown:?}");
+    let pinned = read_cx(cx, &window, |ws, cx| feature(ws).read(cx).pinned(cx));
+    assert_eq!(pinned, [repo.join("code"), repo.join("docs")], "the pin moved and kept its place");
+}
+
+#[gpui_kit::test]
+fn a_rename_that_comes_back_for_a_closed_terminal_makes_nothing_for_it(cx: &mut TestAppContext) {
+    if isolate("a_rename_that_comes_back_for_a_closed_terminal_makes_nothing_for_it") {
+        return;
+    }
+    let window = start(cx, 1);
+    let repo = repo("project");
+    go(cx, &window, &repo);
+    drive(cx, &window, |ws, _, cx| {
+        feature(ws).update(cx, |files, fcx| {
+            // A terminal that is gone: no entry of its own comes back.
+            files.followed_rename(99, Path::new("a"), Path::new("b"), fcx);
+            assert!(files.of.get(&99).is_none());
+        });
+    });
+}
+
+#[gpui_kit::test]
+fn a_viewer_follows_a_rename_only_in_the_folder_it_was_opened_in(cx: &mut TestAppContext) {
+    if isolate("a_viewer_follows_a_rename_only_in_the_folder_it_was_opened_in") {
+        return;
+    }
+    let window = start(cx, 1);
+    let repo = repo("project");
+    go(cx, &window, &repo);
+    click(cx, &window, "README.md");
+    cx.run_until_parked();
+    let path = |cx: &mut TestAppContext| {
+        read_cx(cx, &window, |ws, cx| feature(ws).read(cx).viewer.as_ref().map(|v| v.path.clone()))
+    };
+    // The same relative path, in another folder (the terminal was pointed elsewhere): not this viewer's.
+    drive(cx, &window, |ws, _, cx| {
+        let session = ws.active_session().id;
+        feature(ws).update(cx, |files, fcx| {
+            files.viewer_renamed(
+                session,
+                Path::new("/elsewhere"),
+                Path::new("README.md"),
+                Path::new("X.md"),
+                fcx,
+            );
+        });
+    });
+    assert_eq!(path(cx), Some(PathBuf::from("README.md")));
+}
