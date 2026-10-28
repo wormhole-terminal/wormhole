@@ -58,7 +58,14 @@ BENCHMARK OPTIONS
   --trace <file>  every write as a JSON line (test, run, time, bytes, how long it blocked)
   --no-verify     don't check that the terminal parsed everything: no checkpoints in the payload
                   (the numbers are then marked unverified)
-  --verify-every <KiB>  about how far apart the input check's checkpoints are (default 256)
+  --verify-every <KiB>
+                  about how far apart the input check's checkpoints are (default 256, 4 to 65536);
+                  never more than a 32nd of the payload
+  --verify-seed <n>
+                  put the checkpoints where an earlier invocation had them: n is that invocation's
+                  seed (`check_seed` in its --save file, the first line of its --trace, --details),
+                  not a run's. With the same options and terminal size, every test's runs get the same
+                  places whatever else is run with them. By default they fall differently every time
   --only <a,b>    (bench) run only these benchmarks, or a group: realistic, stress, all
   --suite <name>  (bench) the same as --only <name>: realistic, stress or all
 ";
@@ -259,6 +266,7 @@ fn bench_options(args: &[String]) -> io::Result<bench::BenchOptions> {
         details: false,
         trace: None,
         verify_every: Some(bench::DEFAULT_VERIFY_EVERY),
+        verify_seed: None,
     };
     let mut i = 0;
     while i < args.len() {
@@ -277,6 +285,16 @@ fn bench_options(args: &[String]) -> io::Result<bench::BenchOptions> {
                 }
                 o.verify_every = Some((kib * 1024.0) as usize);
             }
+            "--verify-seed" => {
+                let seed = value(args, &mut i)?.parse::<u64>().ok();
+                o.verify_seed =
+                    Some(seed.filter(|n| (1..=bench::MAX_VERIFY_SEED).contains(n)).ok_or_else(|| {
+                        io::Error::other(format!(
+                            "--verify-seed must be a whole number from 1 to {}",
+                            bench::MAX_VERIFY_SEED
+                        ))
+                    })?);
+            }
             "--suite" => o.only = vec![value(args, &mut i)?.to_string()],
             "--trace" => o.trace = Some(PathBuf::from(value(args, &mut i)?)),
             "--save" => o.save = Some(PathBuf::from(value(args, &mut i)?)),
@@ -285,6 +303,9 @@ fn bench_options(args: &[String]) -> io::Result<bench::BenchOptions> {
             other => return Err(io::Error::other(format!("unknown option {other}"))),
         }
         i += 1;
+    }
+    if o.verify_seed.is_some() && o.verify_every.is_none() {
+        return Err(io::Error::other("--verify-seed has nothing to place with --no-verify"));
     }
     Ok(o)
 }
@@ -337,7 +358,28 @@ fn flood_options(args: &[String]) -> io::Result<bench::FloodOptions> {
 
 #[cfg(test)]
 mod tests {
-    use super::{command_name, names};
+    use super::{bench_options, command_name, names};
+
+    fn args(list: &[&str]) -> Vec<String> {
+        list.iter().map(|a| a.to_string()).collect()
+    }
+
+    #[test]
+    fn the_checkpoint_seed_is_a_whole_number_a_results_file_can_hold() {
+        assert_eq!(
+            bench_options(&args(&["--verify-seed", "12345"])).map(|o| o.verify_seed).ok(),
+            Some(Some(12345))
+        );
+        assert_eq!(bench_options(&args(&[])).map(|o| o.verify_seed).ok(), Some(None));
+        for bad in ["0", "-3", "1.5", "x", "9007199254740992"] {
+            assert!(bench_options(&args(&["--verify-seed", bad])).is_err(), "{bad}");
+        }
+        assert!(bench_options(&args(&["--verify-seed"])).is_err());
+        // With the check off there are no checkpoints to place: an error, not an option ignored.
+        assert!(bench_options(&args(&["--verify-seed", "5", "--no-verify"])).is_err());
+        assert!(bench_options(&args(&["--no-verify", "--verify-seed", "5"])).is_err());
+        assert!(bench_options(&args(&["--no-verify"])).is_ok());
+    }
 
     /// The commands `run` matches before any animation or benchmark.
     const BUILT_IN: [&str; 7] = ["showcase", "bench", "flood", "compare", "list", "names", "help"];

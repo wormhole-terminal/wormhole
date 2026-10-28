@@ -27,6 +27,9 @@ pub(crate) enum Mode {
     Twice,
     /// Holds its DSR 5 answers back until after the next cursor report.
     Late,
+    /// Answers in time the DSR 5 queries up to the `n`th it is ever sent, and holds the rest back until
+    /// after the next cursor report.
+    HoldAfter(u64),
     /// Throws away all input except the queries, and answers those: what a terminal written to pass
     /// would do. The check cannot tell it from a faithful one.
     PicksQueriesOut,
@@ -112,8 +115,13 @@ impl Fake {
             Mode::Twice => 2,
             _ => 1,
         };
+        let hold = match self.mode {
+            Mode::Late => true,
+            Mode::HoldAfter(n) => self.dsr5_seen > n,
+            _ => false,
+        };
         for _ in 0..copies {
-            if self.mode == Mode::Late {
+            if hold {
                 self.held.extend_from_slice(REPLY);
             } else {
                 self.send(REPLY);

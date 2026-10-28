@@ -44,10 +44,15 @@ pub struct BenchOptions {
     /// About how many bytes apart the input check's checkpoints are (`--verify-every <KiB>`); `None`
     /// turns the check off (`--no-verify`).
     pub verify_every: Option<usize>,
+    /// Where the checkpoints' random places start (`--verify-seed <n>`); `None` draws one from the
+    /// clock. The same seed with the same options puts them in the same places.
+    pub verify_seed: Option<u64>,
 }
 
 /// The input check's default distance between checkpoints, in bytes.
 pub const DEFAULT_VERIFY_EVERY: usize = integrity::DEFAULT_EVERY;
+/// The largest `--verify-seed`.
+pub const MAX_VERIFY_SEED: u64 = integrity::MAX_SEED;
 
 /// The tests in a named group (`realistic`, `stress` or `all`), in running order.
 pub fn suite(name: &str) -> Option<Vec<&'static str>> {
@@ -102,7 +107,7 @@ pub fn run(opts: &BenchOptions) -> io::Result<()> {
         None => None,
     };
 
-    let (tests, size, interrupted) = {
+    let (tests, size, interrupted, check_seed) = {
         let _raw = RawMode::enter()?;
         let _screen = AltScreen::enter()?;
         let mut input = Input::start();
@@ -116,8 +121,13 @@ pub fn run(opts: &BenchOptions) -> io::Result<()> {
             plain: opts.plain,
             process: process.clone(),
             trace,
-            verifier: integrity::Verifier::new(opts.verify_every),
+            verifier: integrity::Verifier::new(opts.verify_every, opts.verify_seed),
         };
+        if let (Some(trace), Some(seed), Some(every)) =
+            (&mut runner.trace, runner.verifier.seed(), opts.verify_every)
+        {
+            diag::write_trace_header(trace, seed, every)?;
+        }
         let mut tests = Vec::new();
         let mut interrupted = false;
         for (i, name) in names.iter().enumerate() {
@@ -132,7 +142,7 @@ pub fn run(opts: &BenchOptions) -> io::Result<()> {
         if let Some(trace) = &mut runner.trace {
             trace.flush()?;
         }
-        (tests, size, interrupted)
+        (tests, size, interrupted, runner.verifier.seed())
     };
 
     let results = Results {
@@ -146,6 +156,7 @@ pub fn run(opts: &BenchOptions) -> io::Result<()> {
         size_mb: opts.size_mb,
         runs: opts.runs,
         check_every: opts.verify_every.map(|n| n as u64),
+        check_seed,
         process,
         tests,
     };

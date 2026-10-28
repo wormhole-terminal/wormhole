@@ -36,6 +36,8 @@ pub struct Timed {
     pub secs: f64,
     pub dsr_wait_s: f64,
     pub writes: Vec<WriteEvent>,
+    /// What the input check's checkpoints in this run were drawn from (`integrity::Plan::seed`).
+    pub seed: Option<u64>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -68,6 +70,8 @@ pub struct RunDiag {
     pub cpu_s: Option<f64>,
     pub rss_start_kb: Option<u64>,
     pub rss_end_kb: Option<u64>,
+    /// What the run's checkpoints were drawn from; `--verify-seed` replays them.
+    pub seed: Option<u64>,
 }
 
 impl RunDiag {
@@ -103,6 +107,7 @@ impl RunDiag {
             cpu_s: before.zip(after).map(|(b, a)| (a.cpu_s - b.cpu_s).max(0.0)),
             rss_start_kb: before.map(|s| s.rss_kb),
             rss_end_kb: after.map(|s| s.rss_kb),
+            seed: t.seed,
         }
     }
 
@@ -195,7 +200,8 @@ fn run_json(r: &RunDiag) -> String {
          \"write_us\": {{\"p50\": {}, \"p99\": {}, \"max\": {}}}, \
          \"stalls\": {{\"over_ms\": {}, \"count\": {}, \"total_s\": {}, \"longest\": [{}]}}, \
          \"timeline\": {{\"bucket_ms\": {}, \"mb_per_s\": [{}]}}, \
-         \"terminal\": {{\"cpu_s\": {}, \"rss_start_kb\": {}, \"rss_end_kb\": {}}}}}",
+         \"terminal\": {{\"cpu_s\": {}, \"rss_start_kb\": {}, \"rss_end_kb\": {}}}, \
+         \"checkpoint_seed\": {}}}",
         json::number(r.secs),
         json::number(r.write_blocked_s),
         json::number(r.dsr_wait_s),
@@ -212,6 +218,8 @@ fn run_json(r: &RunDiag) -> String {
         opt(r.cpu_s),
         opt(r.rss_start_kb.map(|k| k as f64)),
         opt(r.rss_end_kb.map(|k| k as f64)),
+        // A whole number: `opt` rounds to thousandths, which loses the low digits of a large seed.
+        r.seed.map_or("null".to_string(), |n| n.to_string()),
     )
 }
 
@@ -250,11 +258,26 @@ fn run_from_value(v: &Value) -> RunDiag {
         cpu_s: n(term, "cpu_s"),
         rss_start_kb: n(term, "rss_start_kb").map(|k| k as u64),
         rss_end_kb: n(term, "rss_end_kb").map(|k| k as u64),
+        seed: v.get("checkpoint_seed").and_then(Value::as_f64).map(|n| n as u64),
     }
+}
+
+/// The first line of a `--trace` file when the input check is on: the seed `--verify-seed` takes back and
+/// the distance asked for, which the places of every run's checkpoints follow from.
+pub fn write_trace_header(out: &mut impl Write, seed: u64, every_bytes: usize) -> io::Result<()> {
+    writeln!(out, "{{\"event\":\"check\",\"verify_seed\":{seed},\"verify_every_bytes\":{every_bytes}}}")
 }
 
 /// Every write of a run as JSON Lines, then the wait for the answer: the `--trace` file.
 pub fn write_trace(out: &mut impl Write, test: &str, run: usize, t: &Timed) -> io::Result<()> {
+    if let Some(seed) = t.seed {
+        let checkpoints: u32 = t.writes.iter().map(|w| w.checkpoints).sum();
+        writeln!(
+            out,
+            "{{\"test\":{},\"run\":{run},\"event\":\"plan\",\"checkpoint_seed\":{seed},\"checkpoints\":{checkpoints}}}",
+            json::quote(test),
+        )?;
+    }
     let mut cum = 0u64;
     for w in &t.writes {
         cum += w.bytes as u64;
@@ -438,6 +461,7 @@ mod tests {
                 ev(520.0, 10.0, 100),
                 ev(900.0, 60.0, 100),
             ],
+            ..Timed::default()
         };
         let d = RunDiag::from_timed(&t, None, None);
         assert_eq!((d.writes, d.stalls), (4, 2));
@@ -454,7 +478,7 @@ mod tests {
     #[test]
     fn only_the_longest_stalls_are_kept() {
         let writes = (0..20).map(|i| ev(100.0 * (i + 1) as f64, 30.0 + i as f64, 10)).collect();
-        let d = RunDiag::from_timed(&Timed { secs: 2.5, dsr_wait_s: 0.0, writes }, None, None);
+        let d = RunDiag::from_timed(&Timed { secs: 2.5, writes, ..Timed::default() }, None, None);
         assert_eq!((d.stalls, d.longest.len()), (20, KEEP_STALLS));
         assert!(d.longest.iter().all(|s| s.ms >= 42.0));
     }
@@ -479,7 +503,7 @@ mod tests {
 
     #[test]
     fn cpu_and_memory_come_from_two_samples() {
-        let t = Timed { secs: 2.0, dsr_wait_s: 0.0, writes: vec![] };
+        let t = Timed { secs: 2.0, ..Timed::default() };
         let (a, b) = (ProcSample { cpu_s: 10.0, rss_kb: 1000 }, ProcSample { cpu_s: 13.0, rss_kb: 3000 });
         let d = RunDiag::from_timed(&t, Some(a), Some(b));
         assert_eq!((d.cpu_s, d.cpu_share(), d.rss_growth_kb()), (Some(3.0), Some(1.5), Some(2000)));
@@ -578,7 +602,12 @@ mod tests {
 
     #[test]
     fn the_diagnostics_survive_the_file() {
-        let t = Timed { secs: 1.0, dsr_wait_s: 0.1, writes: vec![ev(10.0, 1.0, 100), ev(500.0, 300.0, 100)] };
+        let t = Timed {
+            secs: 1.0,
+            dsr_wait_s: 0.1,
+            writes: vec![ev(10.0, 1.0, 100), ev(500.0, 300.0, 100)],
+            seed: Some(7_624_267_924_332_224),
+        };
         let a = ProcSample { cpu_s: 1.0, rss_kb: 1000 };
         let d = TestDiag {
             composition: Composition { bytes: 200, writes: 2, sgr: 3, ..Composition::default() },
@@ -589,12 +618,24 @@ mod tests {
         let back = TestDiag::from_value(&v).expect("reads back");
         // Numbers are written to three decimals, so compare what a second trip writes.
         assert_eq!(back.to_json(), d.to_json());
-        assert_eq!((back.composition, back.median_run, back.runs.len()), (d.composition, 1, 2));
+        assert_eq!(
+            (back.composition.clone(), back.median_run, back.runs.len()),
+            (d.composition.clone(), 1, 2)
+        );
+        // A seed is written as the whole number it is: rounding to thousandths, as for the other numbers,
+        // turned this one into ...225.
+        assert!(d.to_json().contains("\"checkpoint_seed\": 7624267924332224"), "{}", d.to_json());
+        assert_eq!(back.runs[0].seed, Some(7_624_267_924_332_224));
     }
 
     #[test]
     fn the_trace_has_a_line_per_write_and_one_for_the_answer() {
-        let t = Timed { secs: 0.5, dsr_wait_s: 0.1, writes: vec![ev(10.0, 2.0, 100), ev(30.0, 20.0, 50)] };
+        let t = Timed {
+            secs: 0.5,
+            dsr_wait_s: 0.1,
+            writes: vec![ev(10.0, 2.0, 100), ev(30.0, 20.0, 50)],
+            ..Timed::default()
+        };
         let mut out = Vec::new();
         write_trace(&mut out, "logflood", 2, &t).expect("writes to a vec");
         let text = String::from_utf8_lossy(&out);
@@ -606,5 +647,34 @@ mod tests {
         );
         assert!(lines[2].contains("\"event\":\"dsr\"") && lines[2].contains("\"wait_ms\":100.000"));
         assert!(lines.iter().all(|l| json::parse(l).is_ok()));
+    }
+
+    #[test]
+    fn the_trace_starts_with_the_seed_of_the_invocation() {
+        let mut out = Vec::new();
+        write_trace_header(&mut out, 7_624_267_924_332_224, 262_144).expect("writes to a vec");
+        let text = String::from_utf8_lossy(&out);
+        assert_eq!(
+            text.trim_end(),
+            "{\"event\":\"check\",\"verify_seed\":7624267924332224,\"verify_every_bytes\":262144}"
+        );
+        assert!(json::parse(&text).is_ok());
+    }
+
+    #[test]
+    fn the_trace_says_which_checkpoints_a_run_had() {
+        let mut writes = vec![ev(10.0, 2.0, 100), ev(30.0, 20.0, 50)];
+        writes[1].checkpoints = 2;
+        let t = Timed { secs: 0.5, dsr_wait_s: 0.1, writes, seed: Some(4242) };
+        let mut out = Vec::new();
+        write_trace(&mut out, "logflood", 1, &t).expect("writes to a vec");
+        let text = String::from_utf8_lossy(&out);
+        assert_eq!(
+            text.lines().next(),
+            Some(
+                "{\"test\":\"logflood\",\"run\":1,\"event\":\"plan\",\"checkpoint_seed\":4242,\"checkpoints\":2}"
+            )
+        );
+        assert!(text.lines().all(|l| json::parse(l).is_ok()));
     }
 }

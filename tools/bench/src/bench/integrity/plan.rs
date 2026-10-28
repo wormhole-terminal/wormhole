@@ -36,6 +36,9 @@ fn may_split(before: u8, after: u8, ground: bool) -> bool {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Plan {
     pub cuts: Vec<usize>,
+    /// What the gaps were drawn from: the same seed, payload and distance give the same checkpoints.
+    /// `None` for a run without any.
+    pub seed: Option<u64>,
 }
 
 impl Plan {
@@ -73,13 +76,13 @@ impl Plan {
                 next = at + gap();
             }
         }
-        Self { cuts }
+        Self { cuts, seed: Some(seed) }
     }
 }
 
 /// One write of a payload: the data and the queries inside it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Step<'a> {
+pub struct Chunk<'a> {
     pub data: &'a [u8],
     /// Where `data` starts in the payload.
     base: usize,
@@ -87,30 +90,30 @@ pub struct Step<'a> {
     cuts: &'a [usize],
 }
 
-impl Step<'_> {
+impl Chunk<'_> {
     /// How many queries the write carries.
     pub fn queries(&self) -> usize {
         self.cuts.len()
     }
 
     #[cfg(test)]
-    pub fn plain(data: &[u8]) -> Step<'_> {
-        Step { data, base: 0, cuts: &[] }
+    pub fn plain(data: &[u8]) -> Chunk<'_> {
+        Chunk { data, base: 0, cuts: &[] }
     }
 
     #[cfg(test)]
-    pub fn with_cuts<'a>(data: &'a [u8], cuts: &'a [usize]) -> Step<'a> {
-        Step { data, base: 0, cuts }
+    pub fn with_cuts<'a>(data: &'a [u8], cuts: &'a [usize]) -> Chunk<'a> {
+        Chunk { data, base: 0, cuts }
     }
 }
 
 /// The writes of `payload` with the plan's queries in them: the same writes as without the plan, each
 /// with four more bytes for every query inside it.
-pub fn steps<'a>(payload: &'a Payload, plan: &'a Plan) -> Steps<'a> {
-    Steps { writes: payload.writes(), cuts: &plan.cuts, used: 0, pos: 0 }
+pub fn chunks<'a>(payload: &'a Payload, plan: &'a Plan) -> Chunks<'a> {
+    Chunks { writes: payload.writes(), cuts: &plan.cuts, used: 0, pos: 0 }
 }
 
-pub struct Steps<'a> {
+pub struct Chunks<'a> {
     writes: Writes<'a>,
     cuts: &'a [usize],
     /// How many of the cuts went out already.
@@ -119,41 +122,41 @@ pub struct Steps<'a> {
     pos: usize,
 }
 
-impl<'a> Iterator for Steps<'a> {
-    type Item = Step<'a>;
+impl<'a> Iterator for Chunks<'a> {
+    type Item = Chunk<'a>;
 
-    fn next(&mut self) -> Option<Step<'a>> {
+    fn next(&mut self) -> Option<Chunk<'a>> {
         let data = self.writes.next()?;
         let end = self.pos + data.len();
         let carried = self.cuts[self.used..].iter().take_while(|&&at| at <= end).count();
         let cuts = &self.cuts[self.used..self.used + carried];
         debug_assert!(cuts.iter().all(|&at| at > self.pos), "a cut that no write can carry");
-        let step = Step { data, base: self.pos, cuts };
+        let chunk = Chunk { data, base: self.pos, cuts };
         self.used += carried;
         self.pos = end;
-        Some(step)
+        Some(chunk)
     }
 }
 
-/// Writes a step in one call to the kernel, queries and all (`writev`), so a checkpoint costs no write
+/// Writes a chunk in one call to the kernel, queries and all (`writev`), so a checkpoint costs no write
 /// of its own and the write keeps its place in the stream.
-pub fn write_step(out: &mut impl Write, step: Step<'_>) -> io::Result<()> {
-    if step.cuts.is_empty() {
-        return out.write_all(step.data);
+pub fn write_chunk(out: &mut impl Write, chunk: Chunk<'_>) -> io::Result<()> {
+    if chunk.cuts.is_empty() {
+        return out.write_all(chunk.data);
     }
     // Only non-empty buffers: an empty one at the front would look like a write of nothing.
-    let mut bufs = Vec::with_capacity(2 * step.cuts.len() + 1);
+    let mut bufs = Vec::with_capacity(2 * chunk.cuts.len() + 1);
     let mut from = 0;
-    for &at in step.cuts {
-        let k = at - step.base;
+    for &at in chunk.cuts {
+        let k = at - chunk.base;
         if k > from {
-            bufs.push(IoSlice::new(&step.data[from..k]));
+            bufs.push(IoSlice::new(&chunk.data[from..k]));
         }
         bufs.push(IoSlice::new(QUERY));
         from = k;
     }
-    if from < step.data.len() {
-        bufs.push(IoSlice::new(&step.data[from..]));
+    if from < chunk.data.len() {
+        bufs.push(IoSlice::new(&chunk.data[from..]));
     }
     let mut bufs: &mut [IoSlice<'_>] = &mut bufs;
     while !bufs.is_empty() {
@@ -182,12 +185,12 @@ mod tests {
         }
     }
 
-    /// The payload and the queries as the steps send them: the bytes of the stream, and for each
+    /// The payload and the queries as the chunks send them: the bytes of the stream, and for each
     /// query the payload offset it sits at.
     fn replayed(p: &Payload, plan: &Plan) -> (Vec<u8>, Vec<usize>) {
         let mut out = Recorder::default();
-        for s in steps(p, plan) {
-            write_step(&mut out, s).expect("write");
+        for s in chunks(p, plan) {
+            write_chunk(&mut out, s).expect("write");
         }
         let mut data = Vec::new();
         let mut cuts = Vec::new();
@@ -245,6 +248,7 @@ mod tests {
         // Another seed puts them elsewhere, the same seed in the same places.
         assert_ne!(plan, Plan::new(&p, 100_000, 8));
         assert_eq!(plan, Plan::new(&p, 100_000, 7));
+        assert_eq!(plan.seed, Some(7));
         // Never one at the very end, where a terminal that drops input still answers.
         assert!(plan.cuts.iter().all(|&c| c < p.bytes.len()));
     }
@@ -253,7 +257,7 @@ mod tests {
     fn a_small_payload_is_checked_about_as_often_and_an_empty_one_not_at_all() {
         let plan = Plan::new(&text(100_000), DEFAULT_EVERY, 1);
         assert!((25..=50).contains(&plan.len()), "{}", plan.len());
-        assert_eq!(Plan::new(&Payload::default(), DEFAULT_EVERY, 1), Plan::none());
+        assert!(Plan::new(&Payload::default(), DEFAULT_EVERY, 1).cuts.is_empty());
     }
 
     #[test]
@@ -266,13 +270,13 @@ mod tests {
             assert_eq!(cuts, plan.cuts);
             // Same number of writes, each with its own bytes; the queries are the four extra.
             let plain: Vec<usize> = p.writes().map(|w| w.len()).collect();
-            let with: Vec<usize> = steps(&p, &plan).map(|s| s.data.len()).collect();
+            let with: Vec<usize> = chunks(&p, &plan).map(|s| s.data.len()).collect();
             assert_eq!(plain, with);
-            assert_eq!(steps(&p, &plan).map(|s| s.queries()).sum::<usize>(), plan.len());
+            assert_eq!(chunks(&p, &plan).map(|s| s.queries()).sum::<usize>(), plan.len());
         }
         let p = text(workloads::CHUNK * 3 + 17);
         let none = Plan::none();
-        assert!(steps(&p, &none).map(|s| s.data).eq(p.writes()));
+        assert!(chunks(&p, &none).map(|s| s.data).eq(p.writes()));
     }
 
     #[test]
@@ -281,8 +285,8 @@ mod tests {
         let plan = Plan::new(&p, 20_000, 3);
         assert!(plan.len() > 20, "{}", plan.len());
         let mut out = Recorder::default();
-        for s in steps(&p, &plan) {
-            write_step(&mut out, s).expect("write");
+        for s in chunks(&p, &plan) {
+            write_chunk(&mut out, s).expect("write");
         }
         // Many writes carry two or three queries; none takes more than its one call.
         assert_eq!(out.calls, p.write_count());
@@ -304,7 +308,7 @@ mod tests {
         let p = Payload { bytes, frames: 0, chunks: Some(sizes.clone()) };
         let plan = Plan::new(&p, 4000, 3);
         assert!(plan.len() >= 16, "{}", plan.len());
-        assert_eq!(steps(&p, &plan).map(|s| s.data.len()).collect::<Vec<_>>(), sizes);
+        assert_eq!(chunks(&p, &plan).map(|s| s.data.len()).collect::<Vec<_>>(), sizes);
         assert_eq!(replayed(&p, &plan).0, p.bytes);
         // Some query sits inside a token: the rule is about bytes, not about where writes end.
         let ends: Vec<usize> = sizes
@@ -386,6 +390,21 @@ mod tests {
         assert!(total > 0);
     }
 
+    /// The checks that count answers and tell a query of ours from the payload's own rely on the payload
+    /// never asking for a status or a cursor report itself.
+    #[test]
+    fn no_payload_asks_the_terminal_a_question_of_its_own() {
+        let size = Size { cols: 120, rows: 40, px_w: 0, px_h: 0 };
+        for name in workloads::NAMES.iter().filter(|n| **n != "roundtrip") {
+            for target in [50_000, 1_000_000, 4_000_000] {
+                let Some(p) = workloads::payload(name, size, target) else { panic!("no payload {name}") };
+                for query in [QUERY, b"\x1b[6n"] {
+                    assert!(!p.bytes.windows(query.len()).any(|w| w == query), "{name} at {target} bytes");
+                }
+            }
+        }
+    }
+
     #[test]
     fn every_payload_gets_enough_checkpoints_at_the_default_size_and_a_small_one() {
         let size = Size { cols: 120, rows: 40, px_w: 0, px_h: 0 };
@@ -413,10 +432,10 @@ mod tests {
             }
         }
         let mut out = Dribble(Vec::new());
-        write_step(&mut out, Step::with_cuts(b"hello world", &[5, 11])).expect("write");
+        write_chunk(&mut out, Chunk::with_cuts(b"hello world", &[5, 11])).expect("write");
         assert_eq!(out.0, b"hello\x1b[5n world\x1b[5n");
         let mut out = Dribble(Vec::new());
-        write_step(&mut out, Step::plain(b"plain")).expect("write");
+        write_chunk(&mut out, Chunk::plain(b"plain")).expect("write");
         assert_eq!(out.0, b"plain");
     }
 

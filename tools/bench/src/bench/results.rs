@@ -1,7 +1,7 @@
 //! What a benchmark run produced, and its JSON file (`--save`, read back by `compare`).
 
 use super::diag::{DIAG_VERSION, TestDiag};
-use super::integrity::Check;
+use super::integrity::{Check, Why};
 use super::json::{self, Value};
 use super::procinfo::Terminal;
 use super::sysinfo::Machine;
@@ -63,11 +63,14 @@ pub struct TestResult {
     /// More numbers worth keeping: p90 and p99 for latency, MB/s for frames, writes per second for
     /// `agentstream`.
     pub extra: Vec<(String, f64)>,
-    /// Where the time went, run by run (`None` for latency and for files saved before 1.2).
+    /// Where the time went, run by run (`None` for latency and for files saved before 1.1.0).
     pub diag: Option<TestDiag>,
     /// Whether the terminal parsed everything (`integrity`); `None` for latency, for a timeout and for
     /// files saved before the check existed.
     pub check: Option<Check>,
+    /// The seeds of the checkpoints of the two tries of a test that came out dropped, which has no
+    /// diagnostics to hold them (otherwise each run's is in `diag`). Empty otherwise.
+    pub seeds: Vec<u64>,
 }
 
 impl TestResult {
@@ -131,6 +134,9 @@ pub struct Results {
     /// The distance between checkpoints in bytes (`integrity`), `None` when the check was off or the
     /// file is older than the check.
     pub check_every: Option<u64>,
+    /// What the checkpoints of the whole invocation were drawn from (`--verify-seed` takes it back);
+    /// `None` under the same conditions.
+    pub check_seed: Option<u64>,
     /// The terminal's process, when it could be found.
     pub process: Option<Terminal>,
     pub tests: Vec<TestResult>,
@@ -164,6 +170,7 @@ impl Results {
         field("runs", self.runs.to_string());
         field("diag_version", DIAG_VERSION.to_string());
         field("check_every_bytes", self.check_every.map_or("null".to_string(), |n| n.to_string()));
+        field("check_seed", self.check_seed.map_or("null".to_string(), |n| n.to_string()));
         field("terminal_process", self.process.as_ref().map_or("null".to_string(), Terminal::to_json));
         s.push_str("  \"tests\": [\n");
         for (i, t) in self.tests.iter().enumerate() {
@@ -171,7 +178,7 @@ impl Results {
                 t.extra.iter().map(|(k, v)| format!("{}: {}", json::quote(k), json::number(*v))).collect();
             s.push_str(&format!(
                 "    {{\"name\": {}, \"unit\": {}, \"median\": {}, \"min\": {}, \"max\": {}, \"secs\": {}, \
-                 \"bytes\": {}, \"timeout\": {}, \"extra\": {{{}}}, \"diag\": {}, \"check\": {}}}{}\n",
+                 \"bytes\": {}, \"timeout\": {}, \"extra\": {{{}}}, \"diag\": {}, \"check\": {}, \"check_seeds\": [{}]}}{}\n",
                 json::quote(&t.name),
                 json::quote(t.unit.json_name()),
                 json::number(t.median),
@@ -183,6 +190,8 @@ impl Results {
                 extra.join(", "),
                 t.diag.as_ref().map_or("null".to_string(), TestDiag::to_json),
                 t.check.as_ref().map_or("null".to_string(), Check::to_json),
+                // Whole numbers, not `json::number`, which rounds to thousandths and so cannot hold a seed.
+                t.seeds.iter().map(u64::to_string).collect::<Vec<_>>().join(", "),
                 if i + 1 < self.tests.len() { "," } else { "" }
             ));
         }
@@ -211,6 +220,9 @@ impl Results {
             }
             None => Machine::default(),
         };
+        // The input check was written by builds of the 1.1.0 development, before 1.2.0 settled what its
+        // fields mean; a file that says 1.1.0 and carries a check is read as unverified.
+        let dev_check = text_of("tool_version") == "1.1.0";
         let mut tests = Vec::new();
         for t in v.get("tests").and_then(Value::as_arr).ok_or("no `tests` list")? {
             let n = |k: &str| t.get(k).and_then(Value::as_f64).unwrap_or(0.0);
@@ -234,7 +246,15 @@ impl Results {
                     _ => Vec::new(),
                 },
                 diag: t.get("diag").and_then(TestDiag::from_value),
-                check: t.get("check").and_then(Check::from_value),
+                check: t
+                    .get("check")
+                    .and_then(Check::from_value)
+                    .map(|c| if dev_check { Check::Unchecked(Why::Unknown) } else { c }),
+                seeds: t
+                    .get("check_seeds")
+                    .and_then(Value::as_arr)
+                    .map(|a| a.iter().filter_map(Value::as_f64).map(|n| n as u64).collect())
+                    .unwrap_or_default(),
             });
         }
         let terminal = text_of("terminal");
@@ -250,6 +270,7 @@ impl Results {
             size_mb: num_of("size_mb"),
             runs: num_of("runs") as usize,
             check_every: v.get("check_every_bytes").and_then(Value::as_f64).map(|n| n as u64),
+            check_seed: v.get("check_seed").and_then(Value::as_f64).map(|n| n as u64),
             process: v.get("terminal_process").and_then(Terminal::from_value),
             tests,
         })
@@ -270,6 +291,7 @@ pub fn sample(label: &str, scale: f64) -> Results {
         extra: vec![("p99".to_string(), v * 2.0)],
         diag: None,
         check: (unit != Unit::Micros).then_some(Check::Verified { checkpoints: 60 }),
+        seeds: Vec::new(),
     };
     Results {
         label: label.to_string(),
@@ -288,6 +310,7 @@ pub fn sample(label: &str, scale: f64) -> Results {
         size_mb: 16.0,
         runs: 3,
         check_every: None,
+        check_seed: None,
         process: None,
         tests: vec![
             t("logflood", Unit::MBps, 800.0),
@@ -307,6 +330,46 @@ mod tests {
         let r = sample("Wormhole", 1.0);
         let back = Results::from_json(&r.to_json()).expect("reads back");
         assert_eq!(back, r);
+    }
+
+    #[test]
+    fn the_seed_of_the_checkpoints_survives_the_file() {
+        let mut r = sample("x", 1.0);
+        r.check_every = Some(262_144);
+        r.check_seed = Some(9_007_199_254_740_991);
+        let back = Results::from_json(&r.to_json()).expect("reads back");
+        assert_eq!(back.check_seed, Some(9_007_199_254_740_991));
+        // Files from before it have none.
+        let old = r.to_json().replace("\"check_seed\"", "\"x_check_seed\"");
+        assert_eq!(Results::from_json(&old).expect("reads").check_seed, None);
+        // The seeds of a dropped test's two tries are kept to the digit.
+        r.tests[0].seeds = vec![7_624_267_924_332_224, 1];
+        let back = Results::from_json(&r.to_json()).expect("reads back");
+        assert_eq!(back.tests[0].seeds, vec![7_624_267_924_332_224, 1]);
+        assert!(back.tests[1].seeds.is_empty());
+    }
+
+    #[test]
+    fn a_check_in_a_file_of_the_1_1_0_development_is_not_trusted() {
+        let r = sample("x", 1.0);
+        assert!(matches!(r.tests[0].check, Some(Check::Verified { .. })));
+        let dev = r.to_json().replace("\"tool_version\": \"0.1.0\"", "\"tool_version\": \"1.1.0\"");
+        let back = Results::from_json(&dev).expect("reads");
+        assert_eq!(back.version, "1.1.0");
+        assert_eq!(back.tests[0].check, Some(Check::Unchecked(Why::Unknown)));
+        // Latency never had one, and a file without one stays without.
+        assert_eq!(back.tests[3].check, None);
+        let none = dev.replace(
+            "\"check\": {\"status\": \"verified\", \"checkpoints\": 60, \"answered\": 60}",
+            "\"check\": null",
+        );
+        assert_eq!(Results::from_json(&none).expect("reads").tests[0].check, None);
+        // From 1.2.0 on, it is read as written.
+        let new = r.to_json().replace("\"tool_version\": \"0.1.0\"", "\"tool_version\": \"1.2.0\"");
+        assert!(matches!(
+            Results::from_json(&new).expect("reads").tests[0].check,
+            Some(Check::Verified { .. })
+        ));
     }
 
     #[test]

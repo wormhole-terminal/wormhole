@@ -17,7 +17,7 @@ use std::time::{Duration, Instant};
 
 use super::compose;
 use super::diag::{self, RunDiag, TestDiag, Timed, WriteEvent};
-use super::integrity::{self, Check, Plan, Verifier};
+use super::integrity::{self, Check, Plan, Slot, Verifier};
 use super::procinfo::{self, Terminal};
 use super::results::{TestResult, Unit};
 use super::stats;
@@ -118,28 +118,26 @@ impl<W: Write> Runner<'_, W> {
             if self.interrupted() {
                 return Ok(Step::Interrupted);
             }
-            let Some(mut got) = self.attempt(&main, unchecked.is_none(), false)? else {
+            let Some(mut got) = self.attempt(name, run, &main, unchecked.is_none(), false)? else {
                 return Ok(Step::Done(Box::new(timeout_result(name, &main))));
             };
             // "Dropped input" is an accusation: before it is made, wait longer for the answers still
-            // on their way, and if some are really missing, measure the run again, patiently, once.
-            if got.check.as_ref().is_some_and(Check::is_dropped) {
+            // on their way and measure the run again, patiently, once. The first try's number is not
+            // kept even when they all come: its time ended before they did.
+            if let Some(first) = got.check.clone().filter(Check::is_dropped) {
                 self.status(&format!("{head}  answers missing, looking again"))?;
-                match self.verifier.late_answers(self.input, got.asked) {
-                    Some(check) => got.check = Some(check),
-                    None => {
-                        let Some(mut again) = self.attempt(&main, true, true)? else {
-                            return Ok(Step::Done(Box::new(timeout_result(name, &main))));
-                        };
-                        again.check = again.check.map(integrity::after_retry);
-                        if let Some(check) = &again.check
-                            && check.is_dropped()
-                        {
-                            return Ok(Step::Done(Box::new(dropped_result(name, &main, check.clone()))));
-                        }
-                        got = again;
-                    }
+                self.verifier.await_stragglers(self.input, got.asked);
+                let Some(mut again) = self.attempt(name, run, &main, true, true)? else {
+                    return Ok(Step::Done(Box::new(timeout_result(name, &main))));
+                };
+                again.check = again.check.map(|second| integrity::after_retry(&first, second));
+                if let Some(check) = &again.check
+                    && check.is_dropped()
+                {
+                    let seeds = [got.timed.seed, again.timed.seed].into_iter().flatten().collect();
+                    return Ok(Step::Done(Box::new(dropped_result(name, &main, check.clone(), seeds))));
                 }
+                got = again;
             }
             unwritten += got.unwritten;
             checks.extend(got.check);
@@ -174,14 +172,23 @@ impl<W: Write> Runner<'_, W> {
         Ok(Step::Done(Box::new(result)))
     }
 
-    /// One timed run of `main` from a reset screen, and (when `verify`) the verdict on its checkpoints.
-    /// `None` when it timed out. `patient` gives the answers longer to arrive, for a repeat.
-    fn attempt(&mut self, main: &Payload, verify: bool, patient: bool) -> io::Result<Option<Attempt>> {
+    /// One timed run (number `run`) of the test `name`, whose payload is `main`, from a reset screen, and
+    /// (when `verify`) the verdict on its checkpoints. `None` when it timed out. `patient` gives the
+    /// answers longer to arrive, for a repeat.
+    fn attempt(
+        &mut self,
+        name: &str,
+        run: usize,
+        main: &Payload,
+        verify: bool,
+        patient: bool,
+    ) -> io::Result<Option<Attempt>> {
+        // Planned before the screen is reset, so that the clock starts as soon as the reset is over, as
+        // it does without the check: finding the places takes a pass over the payload.
+        let plan = self.verifier.plan(main, verify, Slot { test: name, run, attempt: usize::from(patient) });
         if !self.reset()? {
             return Ok(None);
         }
-        // Planned before the clock starts: finding the places takes a pass over the payload.
-        let plan = self.verifier.plan(main, verify);
         self.verifier.begin(self.input);
         let before = self.process.as_ref().and_then(|p| procinfo::sample(p.pid));
         let Some(timed) = time_payload(self.input, &mut self.out, main, &plan, RUN_TIMEOUT)? else {
@@ -193,13 +200,8 @@ impl<W: Write> Runner<'_, W> {
         // no write carried is counted and reported, not held against it.
         let asked: u64 = timed.writes.iter().map(|w| u64::from(w.checkpoints)).sum();
         let unwritten = (plan.len() as u64).saturating_sub(asked);
-        let check = verify.then(|| {
-            if patient {
-                self.verifier.finish_patiently(self.input, asked)
-            } else {
-                self.verifier.finish(self.input, asked)
-            }
-        });
+        let wait = if patient { self.verifier.patience() } else { self.verifier.settle() };
+        let check = verify.then(|| self.verifier.finish(self.input, asked, wait));
         Ok(Some(Attempt { timed, before, after, check, asked, unwritten }))
     }
 
@@ -242,15 +244,15 @@ pub fn time_payload(
     let start = Instant::now();
     let deadline = start + timeout;
     let mut last = start;
-    for step in integrity::steps(payload, plan) {
-        integrity::write_step(out, step)?;
+    for chunk in integrity::chunks(payload, plan) {
+        integrity::write_chunk(out, chunk)?;
         out.flush()?;
         let now = Instant::now();
         events.push(WriteEvent {
             end_ns: (now - start).as_nanos() as u64,
             took_ns: (now - last).as_nanos() as u64,
-            bytes: step.data.len(),
-            checkpoints: step.queries() as u32,
+            bytes: chunk.data.len(),
+            checkpoints: chunk.queries() as u32,
         });
         last = now;
         if now > deadline {
@@ -267,6 +269,7 @@ pub fn time_payload(
             secs: (done - start).as_secs_f64(),
             dsr_wait_s: (done - written).as_secs_f64(),
             writes: events,
+            seed: plan.seed,
         }
     }))
 }
@@ -328,6 +331,7 @@ fn throughput_result(
         extra,
         diag,
         check: None,
+        seeds: Vec::new(),
     }
 }
 
@@ -344,12 +348,13 @@ fn timeout_result(name: &str, p: &Payload) -> TestResult {
         extra: Vec::new(),
         diag: None,
         check: None,
+        seeds: Vec::new(),
     }
 }
 
 /// A run whose checkpoints went unanswered: no speed is reported, because the time measured how fast
-/// the terminal threw input away.
-fn dropped_result(name: &str, p: &Payload, check: Check) -> TestResult {
+/// the terminal threw input away. `seeds` are those of its two tries, which have no diagnostics to hold them.
+fn dropped_result(name: &str, p: &Payload, check: Check, seeds: Vec<u64>) -> TestResult {
     TestResult {
         name: name.to_string(),
         unit: unit_of(name),
@@ -362,6 +367,7 @@ fn dropped_result(name: &str, p: &Payload, check: Check) -> TestResult {
         extra: Vec::new(),
         diag: None,
         check: Some(check),
+        seeds,
     }
 }
 
@@ -378,6 +384,7 @@ fn latency_timeout() -> TestResult {
         extra: Vec::new(),
         diag: None,
         check: None,
+        seeds: Vec::new(),
     }
 }
 
@@ -401,6 +408,7 @@ fn latency_result(micros: &[f64]) -> TestResult {
         ],
         diag: None,
         check: None,
+        seeds: Vec::new(),
     }
 }
 
@@ -410,8 +418,12 @@ mod tests {
     use crate::bench::integrity::Why;
     use crate::bench::integrity::fake::{Fake, Mode};
 
-    /// A throughput test of 300 KB against a stand-in terminal, as `bench` runs it.
-    fn bench_once(mode: Mode) -> TestResult {
+    /// A throughput test of 300 KB against a stand-in terminal, as `bench` runs it, and the terminal.
+    fn bench_with(mode: Mode) -> (TestResult, Fake) {
+        bench_seeded(mode, Verifier::for_test(PLAN_EVERY))
+    }
+
+    fn bench_seeded(mode: Mode, verifier: Verifier) -> (TestResult, Fake) {
         let (mut input, term) = Fake::new(mode, 0..0);
         let mut runner = Runner {
             input: &mut input,
@@ -422,12 +434,17 @@ mod tests {
             plain: true,
             process: None,
             trace: None,
-            verifier: Verifier::for_test(PLAN_EVERY),
+            verifier,
         };
-        match runner.run_test("logflood", 0, 1).expect("run") {
+        let result = match runner.run_test("logflood", 0, 1).expect("run") {
             Step::Done(r) => *r,
             Step::Interrupted => panic!("interrupted"),
-        }
+        };
+        (result, runner.out)
+    }
+
+    fn bench_once(mode: Mode) -> TestResult {
+        bench_with(mode).0
     }
 
     const PLAN_EVERY: usize = 64 * 1024;
@@ -438,6 +455,40 @@ mod tests {
         assert!(matches!(r.check, Some(Check::Verified { .. })), "{:?}", r.check);
         assert!(r.median > 0.0);
         assert!(r.extra("checkpoint_distance").is_some_and(|d| d > 0.0));
+        // The run's seed is kept with it.
+        let seed = r.diag.as_ref().and_then(|d| d.median()).and_then(|run| run.seed);
+        assert!(seed.is_some_and(|s| s > 0), "{seed:?}");
+    }
+
+    fn run_seed(r: &TestResult) -> Option<u64> {
+        r.diag.as_ref().and_then(|d| d.median()).and_then(|run| run.seed)
+    }
+
+    /// What the reviewer found: every invocation got the same seed, so the same places.
+    #[test]
+    fn two_invocations_without_a_seed_place_the_checkpoints_differently() {
+        let run = || bench_seeded(Mode::Faithful, Verifier::new(Some(PLAN_EVERY), None)).0;
+        let first = run();
+        std::thread::sleep(Duration::from_millis(2));
+        let second = run();
+        assert_ne!(run_seed(&first), run_seed(&second));
+    }
+
+    #[test]
+    fn a_given_seed_puts_a_runs_checkpoints_where_they_were() {
+        let run = |seed| bench_seeded(Mode::Faithful, Verifier::new(Some(PLAN_EVERY), Some(seed))).0;
+        let (a, b, c) = (run(77), run(77), run(78));
+        assert!(run_seed(&a).is_some());
+        assert_eq!(run_seed(&a), run_seed(&b));
+        assert_ne!(run_seed(&a), run_seed(&c));
+    }
+
+    #[test]
+    fn a_dropped_test_keeps_the_seeds_of_both_its_tries() {
+        let r = bench_once(Mode::TailOfEachCall { keep: 4096 });
+        assert_eq!(r.seeds.len(), 2, "{:?}", r.seeds);
+        assert_ne!(r.seeds[0], r.seeds[1]);
+        assert!(r.diag.is_none());
     }
 
     #[test]
@@ -451,9 +502,41 @@ mod tests {
     fn a_terminal_with_one_bad_moment_is_not_accused() {
         // The warm-up takes big writes 0..4, the first try 4..9: those lose input, the repeat does not.
         let r = bench_once(Mode::BadMoment { from: 4, to: 9 });
-        assert_eq!(r.check, Some(Check::Unchecked(Why::Retried)));
+        let Some(Check::Unchecked(Why::Retried { answered, checkpoints })) = r.check else {
+            panic!("{:?}", r.check)
+        };
+        // The first try's count is kept.
+        assert!(answered < checkpoints, "{answered} of {checkpoints}");
         assert!(r.median > 0.0 && r.unusable().is_none());
         assert!(r.unverified());
+    }
+
+    #[test]
+    fn a_terminal_whose_answers_come_after_the_cursor_report_gets_an_unverified_number() {
+        let r = bench_once(Mode::Late);
+        assert!(
+            matches!(r.check, Some(Check::Unchecked(Why::OutOfOrder { before_report: 0, .. }))),
+            "{:?}",
+            r.check
+        );
+        assert!(r.median > 0.0 && r.unverified());
+    }
+
+    /// What the reviewer found: when the answers all came late, the first try's time was kept. It ended
+    /// before the answers did, so the run is measured again.
+    #[test]
+    fn a_run_whose_answers_all_came_late_is_measured_again_and_not_called_dropped() {
+        let (once, faithful) = bench_with(Mode::Faithful);
+        assert!(matches!(once.check, Some(Check::Verified { .. })));
+        let (r, late) = bench_with(Mode::Delayed { ms: 200 });
+        assert!(
+            matches!(r.check, Some(Check::Unchecked(Why::OutOfOrder { before_report: 0, .. }))),
+            "{:?}",
+            r.check
+        );
+        assert!(r.median > 0.0 && r.unusable().is_none());
+        // The payload went out twice: once the first look found answers missing, once more, patiently.
+        assert!(late.sent > faithful.sent + 300_000, "{} against {}", late.sent, faithful.sent);
     }
 
     #[test]

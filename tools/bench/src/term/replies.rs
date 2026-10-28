@@ -176,17 +176,34 @@ pub fn escape(bytes: &[u8]) -> String {
     s
 }
 
+/// The device status report a terminal that is all right sends for DSR 5.
+const STATUS_REPORT: &[u8] = b"\x1b[0n";
+
+/// How many `ESC [ 0 n` there are in `bytes`, leaving them where they are.
+pub(super) fn count_status_reports(bytes: &[u8]) -> u64 {
+    let mut found = 0;
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i..].starts_with(STATUS_REPORT) {
+            found += 1;
+            i += STATUS_REPORT.len();
+        } else {
+            i += 1;
+        }
+    }
+    found
+}
+
 /// Removes every `ESC [ 0 n` from `buf` and returns how many there were. A report cut in two stays
 /// in the buffer until the rest arrives (the caller appends to the same buffer).
 pub(super) fn strip_status_replies(buf: &mut Vec<u8>) -> u64 {
-    const REPORT: &[u8] = b"\x1b[0n";
     let mut found = 0;
     let mut kept = 0;
     let mut i = 0;
     while i < buf.len() {
-        if buf[i..].starts_with(REPORT) {
+        if buf[i..].starts_with(STATUS_REPORT) {
             found += 1;
-            i += REPORT.len();
+            i += STATUS_REPORT.len();
         } else {
             buf[kept] = buf[i];
             kept += 1;
@@ -228,11 +245,6 @@ pub(super) fn parse_cpr(buf: &[u8]) -> Option<Cpr> {
     None
 }
 
-/// The end of the first cursor position report in `buf`.
-pub(super) fn find_cpr(buf: &[u8]) -> Option<usize> {
-    parse_cpr(buf).map(|c| c.end)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,8 +255,8 @@ mod tests {
 
     #[test]
     fn finds_a_cursor_report_among_other_bytes() {
-        assert_eq!(find_cpr(b"q\x1b[12;40R"), Some(9));
-        assert_eq!(find_cpr(b"\x1b[12;40"), None);
+        assert_eq!(parse_cpr(b"q\x1b[12;40R").map(|c| (c.start, c.end)), Some((1, 9)));
+        assert!(parse_cpr(b"\x1b[12;40").is_none());
     }
 
     #[test]
@@ -259,6 +271,9 @@ mod tests {
         // Other reports that look alike are left alone.
         let mut other = b"\x1b[3n\x1b[?0n\x1b[10n".to_vec();
         assert_eq!(strip_status_replies(&mut other), 0);
+        // Counting leaves the bytes where they are.
+        assert_eq!(count_status_reports(b"\x1b[0nx\x1b[0n\x1b[0"), 2);
+        assert_eq!(count_status_reports(&other), 0);
     }
 
     #[test]
