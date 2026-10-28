@@ -18,6 +18,20 @@ fn hidden(c: char) -> bool {
     c.is_control() || matches!(c, '\u{2028}' | '\u{2029}') || wormhole_term::is_invisible(c)
 }
 
+/// How many bytes of `name` come before its extension: what a rename selects, as Finder does, so typing
+/// replaces the name and keeps `.rs`. Only the last extension (`archive.tar` of `archive.tar.gz`); a name
+/// that starts with its only dot (`.gitignore`) or ends with one has no extension, and a folder's name is
+/// all name (`is_folder`).
+pub fn stem_len(name: &str, is_folder: bool) -> usize {
+    if is_folder {
+        return name.len();
+    }
+    match name.rfind('.') {
+        Some(dot) if dot > 0 && dot + 1 < name.len() => dot,
+        _ => name.len(),
+    }
+}
+
 /// Case-insensitive natural order: `file2` before `file10`, `A` and `a` together. Names that are the
 /// same up to case and leading zeros still order the same way every time (by their bytes), so a sort
 /// never shuffles them.
@@ -61,7 +75,7 @@ fn split_digits(text: &str) -> (&str, &str) {
 mod tests {
     use std::cmp::Ordering;
 
-    use super::{clean, natural_cmp};
+    use super::{clean, natural_cmp, stem_len};
 
     fn sorted(names: &[&str]) -> Vec<String> {
         let mut names: Vec<String> = names.iter().map(|name| name.to_string()).collect();
@@ -117,5 +131,16 @@ mod tests {
         for name in ["archive.tar.gz", "Ünïcode ファイル.txt", ".env.local", "no extension", "a b.md"] {
             assert_eq!(clean(name), name);
         }
+    }
+
+    #[test]
+    fn a_rename_selects_the_name_and_not_the_extension() {
+        assert_eq!(stem_len("main.rs", false), 4);
+        assert_eq!(stem_len("archive.tar.gz", false), 11);
+        assert_eq!(stem_len(".gitignore", false), ".gitignore".len());
+        assert_eq!(stem_len("Makefile", false), 8);
+        assert_eq!(stem_len("trailing.", false), 9);
+        assert_eq!(stem_len("v1.2", true), 4, "a folder is all name");
+        assert_eq!(stem_len("ärger.txt", false), "ärger".len(), "bytes, on a character boundary");
     }
 }
