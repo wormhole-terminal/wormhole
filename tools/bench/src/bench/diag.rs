@@ -25,6 +25,8 @@ pub struct WriteEvent {
     pub end_ns: u64,
     pub took_ns: u64,
     pub bytes: usize,
+    /// How many of the input check's queries (`integrity`) the write carried inside its data.
+    pub checkpoints: u32,
 }
 
 /// A timed run: how long until the terminal had answered, how much of that was waiting for the
@@ -258,11 +260,12 @@ pub fn write_trace(out: &mut impl Write, test: &str, run: usize, t: &Timed) -> i
         cum += w.bytes as u64;
         writeln!(
             out,
-            "{{\"test\":{},\"run\":{run},\"event\":\"write\",\"t_ms\":{:.3},\"bytes\":{},\"write_ms\":{:.3},\"cum_bytes\":{cum}}}",
+            "{{\"test\":{},\"run\":{run},\"event\":\"write\",\"t_ms\":{:.3},\"bytes\":{},\"write_ms\":{:.3},\"cum_bytes\":{cum},\"checkpoints\":{}}}",
             json::quote(test),
             w.end_ns as f64 / 1e6,
             w.bytes,
             w.took_ns as f64 / 1e6,
+            w.checkpoints,
         )?;
     }
     writeln!(
@@ -421,7 +424,7 @@ mod tests {
     use super::*;
 
     fn ev(end_ms: f64, took_ms: f64, bytes: usize) -> WriteEvent {
-        WriteEvent { end_ns: (end_ms * 1e6) as u64, took_ns: (took_ms * 1e6) as u64, bytes }
+        WriteEvent { end_ns: (end_ms * 1e6) as u64, took_ns: (took_ms * 1e6) as u64, bytes, checkpoints: 0 }
     }
 
     #[test]
@@ -599,7 +602,7 @@ mod tests {
         assert_eq!(lines.len(), 3);
         assert_eq!(
             lines[1],
-            "{\"test\":\"logflood\",\"run\":2,\"event\":\"write\",\"t_ms\":30.000,\"bytes\":50,\"write_ms\":20.000,\"cum_bytes\":150}"
+            "{\"test\":\"logflood\",\"run\":2,\"event\":\"write\",\"t_ms\":30.000,\"bytes\":50,\"write_ms\":20.000,\"cum_bytes\":150,\"checkpoints\":0}"
         );
         assert!(lines[2].contains("\"event\":\"dsr\"") && lines[2].contains("\"wait_ms\":100.000"));
         assert!(lines.iter().all(|l| json::parse(l).is_ok()));

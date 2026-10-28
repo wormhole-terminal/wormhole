@@ -1,6 +1,7 @@
 //! What a benchmark run produced, and its JSON file (`--save`, read back by `compare`).
 
 use super::diag::{DIAG_VERSION, TestDiag};
+use super::integrity::Check;
 use super::json::{self, Value};
 use super::procinfo::Terminal;
 use super::sysinfo::Machine;
@@ -64,16 +65,52 @@ pub struct TestResult {
     pub extra: Vec<(String, f64)>,
     /// Where the time went, run by run (`None` for latency and for files saved before 1.2).
     pub diag: Option<TestDiag>,
+    /// Whether the terminal parsed everything (`integrity`); `None` for latency, for a timeout and for
+    /// files saved before the check existed.
+    pub check: Option<Check>,
 }
 
 impl TestResult {
+    /// Why this result has no number to compare: it timed out, or the terminal dropped input.
+    pub fn unusable(&self) -> Option<&'static str> {
+        if self.timeout {
+            Some("timed out")
+        } else if self.check.as_ref().is_some_and(Check::is_dropped) {
+            Some("dropped input")
+        } else {
+            None
+        }
+    }
+
     pub fn extra(&self, key: &str) -> Option<f64> {
         self.extra.iter().find(|(k, _)| k == key).map(|(_, v)| *v)
     }
 
+    /// Whether the test sends a payload to be checked (`roundtrip` sends only questions).
+    pub fn has_payload(&self) -> bool {
+        self.unit != Unit::Micros
+    }
+
+    /// Whether the input check vouched for this number. `roundtrip` sends no payload, so there is
+    /// nothing to vouch for; every other test is verified only when its check says so. A result the
+    /// check could not decide for (it was off, the terminal can't answer, too few checkpoints), and one
+    /// from a file saved before the check existed, is not.
+    pub fn verified(&self) -> bool {
+        !self.has_payload() || matches!(self.check, Some(Check::Verified { .. }))
+    }
+
+    /// The opposite of [`verified`](Self::verified), for a number that has one: shown with a dagger,
+    /// and ranked only among results of the same kind.
+    pub fn unverified(&self) -> bool {
+        self.unusable().is_none() && !self.verified()
+    }
+
     /// How many times better this is than `base` (above 1 is better, whichever way the unit goes).
+    /// Only a number of the same kind can be compared: a verified one is never set against an unverified
+    /// one, in either direction.
     pub fn better_than(&self, base: &TestResult) -> Option<f64> {
-        if self.timeout || base.timeout || self.median <= 0.0 || base.median <= 0.0 {
+        let usable = |t: &TestResult| t.unusable().is_none() && t.median > 0.0;
+        if !usable(self) || !usable(base) || self.verified() != base.verified() {
             return None;
         }
         Some(if self.unit.higher_is_better() { self.median / base.median } else { base.median / self.median })
@@ -91,6 +128,9 @@ pub struct Results {
     pub version: String,
     pub size_mb: f64,
     pub runs: usize,
+    /// The distance between checkpoints in bytes (`integrity`), `None` when the check was off or the
+    /// file is older than the check.
+    pub check_every: Option<u64>,
     /// The terminal's process, when it could be found.
     pub process: Option<Terminal>,
     pub tests: Vec<TestResult>,
@@ -123,6 +163,7 @@ impl Results {
         field("size_mb", json::number(self.size_mb));
         field("runs", self.runs.to_string());
         field("diag_version", DIAG_VERSION.to_string());
+        field("check_every_bytes", self.check_every.map_or("null".to_string(), |n| n.to_string()));
         field("terminal_process", self.process.as_ref().map_or("null".to_string(), Terminal::to_json));
         s.push_str("  \"tests\": [\n");
         for (i, t) in self.tests.iter().enumerate() {
@@ -130,7 +171,7 @@ impl Results {
                 t.extra.iter().map(|(k, v)| format!("{}: {}", json::quote(k), json::number(*v))).collect();
             s.push_str(&format!(
                 "    {{\"name\": {}, \"unit\": {}, \"median\": {}, \"min\": {}, \"max\": {}, \"secs\": {}, \
-                 \"bytes\": {}, \"timeout\": {}, \"extra\": {{{}}}, \"diag\": {}}}{}\n",
+                 \"bytes\": {}, \"timeout\": {}, \"extra\": {{{}}}, \"diag\": {}, \"check\": {}}}{}\n",
                 json::quote(&t.name),
                 json::quote(t.unit.json_name()),
                 json::number(t.median),
@@ -141,6 +182,7 @@ impl Results {
                 t.timeout,
                 extra.join(", "),
                 t.diag.as_ref().map_or("null".to_string(), TestDiag::to_json),
+                t.check.as_ref().map_or("null".to_string(), Check::to_json),
                 if i + 1 < self.tests.len() { "," } else { "" }
             ));
         }
@@ -192,6 +234,7 @@ impl Results {
                     _ => Vec::new(),
                 },
                 diag: t.get("diag").and_then(TestDiag::from_value),
+                check: t.get("check").and_then(Check::from_value),
             });
         }
         let terminal = text_of("terminal");
@@ -206,6 +249,7 @@ impl Results {
             version: text_of("tool_version"),
             size_mb: num_of("size_mb"),
             runs: num_of("runs") as usize,
+            check_every: v.get("check_every_bytes").and_then(Value::as_f64).map(|n| n as u64),
             process: v.get("terminal_process").and_then(Terminal::from_value),
             tests,
         })
@@ -225,6 +269,7 @@ pub fn sample(label: &str, scale: f64) -> Results {
         timeout: false,
         extra: vec![("p99".to_string(), v * 2.0)],
         diag: None,
+        check: (unit != Unit::Micros).then_some(Check::Verified { checkpoints: 60 }),
     };
     Results {
         label: label.to_string(),
@@ -242,6 +287,7 @@ pub fn sample(label: &str, scale: f64) -> Results {
         version: "0.1.0".to_string(),
         size_mb: 16.0,
         runs: 3,
+        check_every: None,
         process: None,
         tests: vec![
             t("logflood", Unit::MBps, 800.0),

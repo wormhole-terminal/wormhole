@@ -56,6 +56,9 @@ BENCHMARK OPTIONS
   --details       after the results, why: stalls, read vs parse time, the terminal's CPU and memory,
                   what the workload contains, and findings in plain words
   --trace <file>  every write as a JSON line (test, run, time, bytes, how long it blocked)
+  --no-verify     don't check that the terminal parsed everything: no checkpoints in the payload
+                  (the numbers are then marked unverified)
+  --verify-every <KiB>  about how far apart the input check's checkpoints are (default 256)
   --only <a,b>    (bench) run only these benchmarks, or a group: realistic, stress, all
   --suite <name>  (bench) the same as --only <name>: realistic, stress or all
 ";
@@ -255,6 +258,7 @@ fn bench_options(args: &[String]) -> io::Result<bench::BenchOptions> {
         plain: false,
         details: false,
         trace: None,
+        verify_every: Some(bench::DEFAULT_VERIFY_EVERY),
     };
     let mut i = 0;
     while i < args.len() {
@@ -265,6 +269,14 @@ fn bench_options(args: &[String]) -> io::Result<bench::BenchOptions> {
             }
             "--plain" => o.plain = true,
             "--details" => o.details = true,
+            "--no-verify" => o.verify_every = None,
+            "--verify-every" => {
+                let kib = number(value(args, &mut i)?)?;
+                if !(4.0..=65536.0).contains(&kib) {
+                    return Err(io::Error::other("--verify-every must be between 4 and 65536 KiB"));
+                }
+                o.verify_every = Some((kib * 1024.0) as usize);
+            }
             "--suite" => o.only = vec![value(args, &mut i)?.to_string()],
             "--trace" => o.trace = Some(PathBuf::from(value(args, &mut i)?)),
             "--save" => o.save = Some(PathBuf::from(value(args, &mut i)?)),

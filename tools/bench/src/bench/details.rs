@@ -4,6 +4,7 @@
 
 use super::compose::Composition;
 use super::diag::{self, RunDiag, STALL_MS};
+use super::integrity::{Check, QUERY_BYTES};
 use super::results::{Results, TestResult};
 
 const SPARK_WIDTH: usize = 60;
@@ -114,6 +115,49 @@ fn run_lines(d: &RunDiag, mb: f64) -> Vec<String> {
     v
 }
 
+/// What the input check found for a test, in words, and what it cost.
+fn check_lines(t: &TestResult, r: &Results) -> Vec<String> {
+    let Some(check) = &t.check else {
+        return vec![
+            "input check: not made (this test has none, or the file is from before the check)".to_string(),
+        ];
+    };
+    // The distance the checkpoints really had, which a small payload or one with few places for a query
+    // makes shorter or longer than the one asked for.
+    let every = match (t.extra("checkpoint_distance"), r.check_every) {
+        (Some(d), _) => format!(", about one per {:.0} KiB", d / 1024.0),
+        (None, Some(n)) => format!(", asked for one per {} KiB", n / 1024),
+        (None, None) => String::new(),
+    };
+    let mut lines = match check {
+        Check::Verified { checkpoints } => vec![
+            format!(
+                "input check: verified, {checkpoints} checkpoints in {} runs{every}, all answered",
+                r.runs
+            ),
+            format!(
+                "  cost: {} bytes sent and {} received per run besides the payload, one terminal reply each; \
+                 to see what it costs this terminal, run again with --no-verify and compare",
+                QUERY_BYTES * checkpoints / r.runs.max(1) as u64,
+                QUERY_BYTES * checkpoints / r.runs.max(1) as u64,
+            ),
+        ],
+        Check::Dropped { answered, checkpoints } => vec![
+            format!("input check: DROPPED INPUT, {answered} of {checkpoints} checkpoints answered{every}"),
+            "  The terminal read the bytes but did not parse all of them (or did not answer for them), so the time \
+             measured how fast it discarded input, and no number is given."
+                .to_string(),
+        ],
+        Check::Unchecked(why) => vec![format!("input check: not verified, {}", why.sentence())],
+    };
+    if let Some(n) = t.extra("checkpoints_unwritten") {
+        lines.push(format!(
+            "  note: {n:.0} planned checkpoints were never written and are not held against the terminal"
+        ));
+    }
+    lines
+}
+
 fn test_section(t: &TestResult, r: &Results) -> Option<String> {
     let d = t.diag.as_ref()?;
     let run = d.median()?;
@@ -126,7 +170,8 @@ fn test_section(t: &TestResult, r: &Results) -> Option<String> {
         d.median_run + 1,
         d.runs.len()
     );
-    for l in composition_lines(&d.composition).into_iter().chain(run_lines(run, mb)) {
+    for l in composition_lines(&d.composition).into_iter().chain(run_lines(run, mb)).chain(check_lines(t, r))
+    {
         s.push_str("  ");
         s.push_str(&l);
         s.push('\n');
@@ -160,6 +205,12 @@ pub fn details(r: &Results) -> String {
         if let Some(section) = test_section(t, r) {
             s.push('\n');
             s.push_str(&section);
+        } else if t.check.as_ref().is_some_and(Check::is_dropped) {
+            // No diagnostics for a run that was stopped, but the finding is the point.
+            s.push_str(&format!("\n{}  dropped input\n", t.name));
+            for l in check_lines(t, r) {
+                s.push_str(&format!("  {l}\n"));
+            }
         }
     }
     s
@@ -232,5 +283,35 @@ mod tests {
         let mut r = with_diag();
         r.process = None;
         assert!(details(&r).contains("not found"));
+    }
+
+    #[test]
+    fn unwritten_checkpoints_are_noted_not_held_against_the_terminal() {
+        let mut r = with_diag();
+        r.tests[0].check = Some(Check::Verified { checkpoints: 48 });
+        r.tests[0].extra.push(("checkpoints_unwritten".to_string(), 2.0));
+        assert!(details(&r).contains("2 planned checkpoints were never written"));
+    }
+
+    #[test]
+    fn the_input_check_is_told_in_words_with_its_cost() {
+        use super::super::integrity::Why;
+        let mut r = with_diag();
+        r.check_every = Some(256 * 1024);
+        r.tests[0].check = Some(Check::Verified { checkpoints: 48 });
+        r.tests[0].extra.push(("checkpoint_distance".to_string(), 300_000.0));
+        let text = details(&r);
+        assert!(
+            text.contains("input check: verified, 48 checkpoints in 3 runs, about one per 293 KiB"),
+            "{text}"
+        );
+        assert!(text.contains("--no-verify"), "{text}");
+        r.tests[0].check = Some(Check::Unchecked(Why::Silent));
+        assert!(details(&r).contains("not verified, the terminal does not answer DSR 5"));
+        // A dropped run has no diagnostics but is still told.
+        r.tests[0].diag = None;
+        r.tests[0].check = Some(Check::Dropped { answered: 3, checkpoints: 48 });
+        let text = details(&r);
+        assert!(text.contains("logflood  dropped input") && text.contains("3 of 48"), "{text}");
     }
 }

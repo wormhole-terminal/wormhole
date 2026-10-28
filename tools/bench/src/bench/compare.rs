@@ -3,9 +3,9 @@
 //! than the first file each one is. `--markdown` prints the same as a table to paste into an issue
 //! or a README instead.
 
-use super::report::{push_value, value_parts};
+use super::report::value_parts;
 use super::results::{Results, TestResult};
-use super::ui::{BAD, DIM, FAINT, GOOD, Line, Panel, TEXT, fit};
+use super::ui::{ACCENT, BAD, DIM, FAINT, GOOD, Line, Panel, TEXT, fit, wrap};
 use super::workloads;
 
 const VALUE_W: usize = 12;
@@ -30,13 +30,23 @@ fn find<'a>(r: &'a Results, name: &str) -> Option<&'a TestResult> {
     r.tests.iter().find(|t| t.name == name)
 }
 
-/// The index of the best result among `all` for `name`; the first wins a tie.
+/// A result with a number to put in a row.
+fn usable(t: &TestResult) -> bool {
+    t.unusable().is_none() && t.median > 0.0
+}
+
+/// The index of the best result among `all` for `name`; the first wins a tie. Verified numbers compete
+/// with each other; an unverified one is never better than a verified one. Only in a row without a
+/// verified number do the unverified ones compete, among themselves.
 fn best_of(all: &[Results], name: &str) -> Option<usize> {
+    let found: Vec<(usize, &TestResult)> = all
+        .iter()
+        .enumerate()
+        .filter_map(|(i, r)| find(r, name).filter(|t| usable(t)).map(|t| (i, t)))
+        .collect();
+    let kind = found.iter().any(|(_, t)| t.verified());
     let mut best: Option<(usize, &TestResult)> = None;
-    for (i, r) in all.iter().enumerate() {
-        let Some(t) = find(r, name).filter(|t| !t.timeout && t.median > 0.0) else {
-            continue;
-        };
+    for (i, t) in found.into_iter().filter(|(_, t)| t.verified() == kind) {
         let better = match best {
             None => true,
             Some((_, b)) => t.better_than(b).is_some_and(|x| x > 1.0),
@@ -52,14 +62,52 @@ fn ratio_text(x: f64) -> String {
     if x >= 100.0 { format!("×{x:.0}") } else { format!("×{x:.2}") }
 }
 
-/// The geometric mean of how many times better `r` is than `base` over the tests both completed.
-fn overall(r: &Results, base: &Results) -> Option<f64> {
-    let ratios: Vec<f64> =
-        r.tests.iter().filter_map(|t| find(base, &t.name).and_then(|b| t.better_than(b))).collect();
+/// An overall ratio, and whether it was worked out from unverified numbers.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Score {
+    value: f64,
+    unverified: bool,
+}
+
+impl Score {
+    fn text(self) -> String {
+        format!("{}{}", ratio_text(self.value), if self.unverified { " †" } else { "" })
+    }
+}
+
+/// The geometric mean of how many times better `r` is than `base` over the tests both completed, among
+/// the verified numbers; when there are none, among the unverified ones, marked as such. The two kinds
+/// are never mixed in one mean.
+fn overall(r: &Results, base: &Results) -> Option<Score> {
+    // `roundtrip` sends no payload, so it has no kind and counts in whichever mean is worked out.
+    let (mut verified, mut unverified, mut neutral) = (Vec::new(), Vec::new(), Vec::new());
+    for t in &r.tests {
+        if let Some(x) = find(base, &t.name).and_then(|b| t.better_than(b)) {
+            if !t.has_payload() {
+                neutral.push(x)
+            } else if t.verified() {
+                verified.push(x)
+            } else {
+                unverified.push(x)
+            }
+        }
+    }
+    let (mut ratios, unverified) = match (verified.is_empty(), unverified.is_empty()) {
+        (false, _) => (verified, false),
+        (true, false) => (unverified, true),
+        (true, true) => (Vec::new(), false),
+    };
+    ratios.extend(neutral);
     if ratios.is_empty() {
         return None;
     }
-    Some((ratios.iter().map(|x| x.ln()).sum::<f64>() / ratios.len() as f64).exp())
+    let value = (ratios.iter().map(|x| x.ln()).sum::<f64>() / ratios.len() as f64).exp();
+    Some(Score { value, unverified })
+}
+
+/// Which scores compete: the verified ones, or when there are none, the unverified ones.
+fn leading_kind_unverified(scores: &[Option<Score>]) -> bool {
+    !scores.iter().flatten().any(|s| !s.unverified)
 }
 
 fn ratio_color(x: f64) -> super::super::canvas::Rgb {
@@ -110,13 +158,21 @@ fn terminal_row(
     match (bar, t) {
         (Some((frac, dim)), Some(t)) => {
             l.bar(frac, c.bar, dim).pad(2);
+            let (num, unit) = value_parts(t);
+            let dagger = if t.unverified() { " †" } else { "" };
+            let used = num.chars().count() + 1 + unit.chars().count() + dagger.chars().count();
+            l.pad(VALUE_W.saturating_sub(used));
             if best {
-                push_value(&mut l, t, VALUE_W);
+                l.bold(&num, TEXT).text(&format!(" {unit}{dagger}"), DIM);
             } else {
-                let (num, unit) = value_parts(t);
-                let used = num.chars().count() + 1 + unit.chars().count();
-                l.pad(VALUE_W.saturating_sub(used)).text(&format!("{num} {unit}"), DIM);
+                l.text(&format!("{num} {unit}{dagger}"), DIM);
             }
+        }
+        (None, Some(t)) => {
+            l.text(&fit(note, c.bar), ACCENT).pad_to(2 + 2 + c.label + 1 + c.bar).pad(2);
+            let (num, unit) = value_parts(t);
+            let shown = format!("{num} {unit} †");
+            l.pad(VALUE_W.saturating_sub(shown.chars().count())).text(&shown, DIM);
         }
         _ => {
             l.text(&fit(note, c.bar + 2 + VALUE_W), BAD);
@@ -134,15 +190,22 @@ fn terminal_row(
 }
 
 /// What makes the files hard to compare: different machines or window sizes.
-fn warnings(all: &[Results]) -> Vec<&'static str> {
+fn warnings(all: &[Results]) -> Vec<String> {
     let base = &all[0];
     let same = |f: fn(&Results) -> String| all.iter().all(|r| f(r) == f(base));
     let mut warnings = Vec::new();
     if !same(|r| r.machine.cpu.clone()) {
-        warnings.push("These results come from different machines.");
+        warnings.push("These results come from different machines.".to_string());
     }
     if !same(|r| format!("{}×{}", r.cols, r.rows)) {
-        warnings.push("Terminal sizes differ, which changes the scrolling, cursor and frame tests.");
+        warnings
+            .push("Terminal sizes differ, which changes the scrolling, cursor and frame tests.".to_string());
+    }
+    if all.iter().flat_map(|r| &r.tests).any(TestResult::unverified) {
+        warnings.push(
+            "Numbers marked † are not verified (the input check was off, or could not decide, or the file was saved before the check existed). They rank only among themselves: never above a verified number, with no ratio against one, and the overall ratio is worked out within each kind."
+                .to_string(),
+        );
     }
     warnings
 }
@@ -155,10 +218,12 @@ fn escape_cell(s: &str) -> String {
 fn markdown_cell(t: Option<&TestResult>, best: bool) -> String {
     match t {
         None => "—".to_string(),
-        Some(t) if t.timeout => "timed out".to_string(),
+        Some(t) if t.unusable().is_some() => t.unusable().unwrap_or_default().to_string(),
         Some(t) => {
             let (num, unit) = value_parts(t);
-            if best { format!("**{num} {unit}**") } else { format!("{num} {unit}") }
+            // A number the input check could not vouch for carries a dagger; the note says what it means.
+            let mark = if t.unverified() { " †" } else { "" };
+            if best { format!("**{num} {unit}**{mark}") } else { format!("{num} {unit}{mark}") }
         }
     }
 }
@@ -181,13 +246,17 @@ pub fn compare_markdown(all: &[Results]) -> String {
             all.iter().enumerate().map(|(i, r)| markdown_cell(find(r, &name), best == Some(i))).collect();
         s.push_str(&format!("| {} | {} |\n", escape_cell(&name), cells.join(" | ")));
     }
-    let scores: Vec<Option<f64>> = all.iter().map(|r| overall(r, &all[0])).collect();
-    let top = scores.iter().flatten().cloned().fold(0.0f64, f64::max);
+    let scores: Vec<Option<Score>> = all.iter().map(|r| overall(r, &all[0])).collect();
+    let kind = leading_kind_unverified(&scores);
+    let top =
+        scores.iter().flatten().filter(|s| s.unverified == kind).map(|s| s.value).fold(0.0f64, f64::max);
     let cells: Vec<String> = scores
         .iter()
         .map(|sc| match sc {
-            Some(x) if *x >= top && top > 0.0 => format!("**{}**", ratio_text(*x)),
-            Some(x) => ratio_text(*x),
+            Some(s) if s.unverified == kind && s.value >= top && top > 0.0 => {
+                format!("**{}**", ratio_text(s.value)) + if s.unverified { " †" } else { "" }
+            }
+            Some(s) => s.text(),
             None => "—".to_string(),
         })
         .collect();
@@ -224,9 +293,11 @@ pub fn compare_panel(all: &[Results], width: usize) -> Panel {
     }
     let warnings = warnings(all);
     for w in warnings {
-        let mut l = Line::new();
-        l.pad(2).text(&fit(w, inner), BAD);
-        p.push(l);
+        for text in wrap(&w, inner) {
+            let mut l = Line::new();
+            l.pad(2).text(&text, BAD);
+            p.push(l);
+        }
     }
     p.blank();
     p.rule(2);
@@ -253,7 +324,7 @@ pub fn compare_panel(all: &[Results], width: usize) -> Panel {
             let t = find(r, &name);
             let ratio = t.zip(base_t).and_then(|(t, b)| t.better_than(b));
             let row = match (t, best_t) {
-                (Some(t), Some(b)) if !t.timeout && t.median > 0.0 => {
+                (Some(t), Some(b)) if usable(t) && t.verified() == b.verified() => {
                     // The best fills the bar; the others are as long as they are good compared with it.
                     let frac = b.better_than(t).map(|x| 1.0 / x).unwrap_or(0.0).clamp(0.0, 1.0);
                     let is_best = best == Some(i);
@@ -267,7 +338,13 @@ pub fn compare_panel(all: &[Results], width: usize) -> Panel {
                         "",
                     )
                 }
-                (Some(t), _) if t.timeout => terminal_row(&c, &r.label, false, None, None, None, "timed out"),
+                (Some(t), _) if t.unusable().is_some() => {
+                    terminal_row(&c, &r.label, false, None, None, None, t.unusable().unwrap_or_default())
+                }
+                // A number without the input check's word: shown, not ranked, no bar.
+                (Some(t), _) if usable(t) => {
+                    terminal_row(&c, &r.label, false, None, Some(t), None, "unverified, not ranked")
+                }
                 _ => terminal_row(&c, &r.label, false, None, None, None, "not measured"),
             };
             p.push(row);
@@ -284,15 +361,18 @@ pub fn compare_panel(all: &[Results], width: usize) -> Panel {
         FAINT,
     );
     p.push(l);
-    let scores: Vec<Option<f64>> = all.iter().map(|r| overall(r, base)).collect();
-    let top = scores.iter().flatten().cloned().fold(0.0f64, f64::max);
+    let scores: Vec<Option<Score>> = all.iter().map(|r| overall(r, base)).collect();
+    // Only scores of the leading kind compete; a score of the other kind is shown, with its dagger.
+    let kind = leading_kind_unverified(&scores);
+    let counts = |s: &Score| s.unverified == kind;
+    let top = scores.iter().flatten().filter(|s| counts(s)).map(|s| s.value).fold(0.0f64, f64::max);
     let wins: Vec<usize> = (0..all.len())
         .map(|i| test_names(all).iter().filter(|n| best_of(all, n) == Some(i)).count())
         .collect();
     for (i, r) in all.iter().enumerate() {
         let mut l = Line::new();
         l.pad(2);
-        let leader = scores[i].is_some_and(|s| s >= top && top > 0.0);
+        let leader = scores[i].is_some_and(|s| counts(&s) && s.value >= top && top > 0.0);
         if leader {
             l.bold("▸ ", GOOD)
         } else {
@@ -305,14 +385,14 @@ pub fn compare_panel(all: &[Results], width: usize) -> Panel {
             l.text(&name, DIM)
         };
         l.pad(1);
-        let frac = scores[i].map(|s| s / top.max(1e-9)).unwrap_or(0.0);
+        let frac = scores[i].filter(counts).map(|s| s.value / top.max(1e-9)).unwrap_or(0.0);
         l.bar(frac, c.bar, if leader { 1.0 } else { 0.55 }).pad(2);
         let w = format!("{} {}", wins[i], if wins[i] == 1 { "win" } else { "wins" });
         l.right(&w, if leader { TEXT } else { DIM }, 2 + 2 + c.label + 1 + c.bar + 2 + VALUE_W);
         l.pad(2);
         let end = 2 + 2 + c.label + 1 + c.bar + 2 + VALUE_W + 2 + RATIO_W;
         match scores[i] {
-            Some(s) => l.right(&ratio_text(s), ratio_color(s), end),
+            Some(s) => l.right(&s.text(), ratio_color(s.value), end),
             None => l.right("—", FAINT, end),
         };
         p.push(l);
@@ -361,10 +441,10 @@ mod tests {
     #[test]
     fn overall_is_a_geometric_mean() {
         let all = three();
-        let s = overall(&all[1], &all[0]).unwrap_or(0.0);
+        let s = overall(&all[1], &all[0]).map_or(0.0, |s| s.value);
         // Three throughput/fps tests at x2 and a latency test at x0.5: (2*2*2*0.5)^(1/4).
         assert!((s - 2f64.sqrt()).abs() < 1e-9, "{s}");
-        assert!((overall(&all[0], &all[0]).unwrap_or(0.0) - 1.0).abs() < 1e-9);
+        assert!((overall(&all[0], &all[0]).map_or(0.0, |s| s.value) - 1.0).abs() < 1e-9);
     }
 
     #[test]
@@ -427,5 +507,108 @@ mod tests {
         let mut odd = three();
         odd[0].label = "a|b".to_string();
         assert!(compare_markdown(&odd).contains("a\\|b"));
+    }
+
+    #[test]
+    fn dropped_input_never_wins_and_unverified_numbers_carry_a_dagger() {
+        use super::super::integrity::{Check, Why};
+        let mut all = three();
+        // The fast file dropped input: its (absurd) number is gone and the slower ones compare alone.
+        all[1].tests[0].check = Some(Check::Dropped { answered: 1, checkpoints: 48 });
+        all[1].tests[0].median = 0.0;
+        all[0].tests[1].check = Some(Check::Unchecked(Why::Silent));
+        assert_eq!(best_of(&all, "logflood"), Some(0));
+        let md = compare_markdown(&all);
+        let logflood = md.lines().find(|l| l.starts_with("| logflood")).unwrap_or_default();
+        assert!(logflood.contains("dropped input") && logflood.contains("**800 MB/s**"), "{logflood}");
+        let colorflood = md.lines().find(|l| l.starts_with("| colorflood")).unwrap_or_default();
+        assert!(colorflood.contains("†"), "{colorflood}");
+        assert!(md.contains("> Note: Numbers marked †"), "{md}");
+        let mut out = Vec::new();
+        compare_panel(&all, 100).write(&mut out);
+        assert!(String::from_utf8_lossy(&out).contains("dropped input"));
+    }
+
+    /// Marks every throughput test of a file as unverified (the check was off).
+    fn unverify(r: &mut Results) {
+        for t in &mut r.tests {
+            if t.unit != super::super::results::Unit::Micros {
+                t.check = Some(super::super::integrity::Check::Unchecked(super::super::integrity::Why::Off));
+            }
+        }
+    }
+
+    #[test]
+    fn a_row_without_a_verified_number_ranks_its_unverified_ones_among_themselves() {
+        // Two files run with --no-verify (the README's way to see what the check costs).
+        let mut all = vec![sample("a", 1.0), sample("b", 2.0)];
+        all.iter_mut().for_each(unverify);
+        assert_eq!(best_of(&all, "logflood"), Some(1));
+        assert_eq!(all[1].tests[0].better_than(&all[0].tests[0]), Some(2.0));
+        let score = overall(&all[1], &all[0]).expect("overall");
+        assert!(score.unverified && score.value > 1.0);
+        let md = compare_markdown(&all);
+        let row = md.lines().find(|l| l.starts_with("| logflood")).unwrap_or_default();
+        assert!(row.contains("**1600 MB/s** †") && row.contains("| 800 MB/s † |"), "{row}");
+        let overall_row = md.lines().last().unwrap_or_default();
+        assert!(overall_row.contains("†"), "{overall_row}");
+        let mut out = Vec::new();
+        compare_panel(&all, 100).write(&mut out);
+        let screen = String::from_utf8_lossy(&out);
+        assert!(screen.contains("†") && !screen.contains("unverified, not ranked"), "{screen}");
+    }
+
+    #[test]
+    fn an_unverified_number_never_wins_a_row_that_has_a_verified_one() {
+        // The fast file switched the check off; the slower ones were verified.
+        let mut all = three();
+        unverify(&mut all[1]);
+        assert_eq!(best_of(&all, "logflood"), Some(0));
+        assert_eq!(all[1].tests[0].better_than(&all[0].tests[0]), None);
+        assert_eq!(all[0].tests[0].better_than(&all[1].tests[0]), None);
+        let mut out = Vec::new();
+        compare_panel(&all, 100).write(&mut out);
+        let screen = String::from_utf8_lossy(&out);
+        assert!(screen.contains("unverified, not ranked") && screen.contains(" †"), "{screen}");
+        // The dagger is explained, in full, on lines of their own.
+        assert!(screen.contains("Numbers marked †") && screen.contains("within each kind."), "{screen}");
+        let md = compare_markdown(&all);
+        let row = md.lines().find(|l| l.starts_with("| logflood")).unwrap_or_default();
+        assert!(row.contains("1600 MB/s †") && !row.contains("**1600"), "{row}");
+    }
+
+    #[test]
+    fn the_overall_ratio_is_worked_out_within_each_kind() {
+        let mut all = three();
+        unverify(&mut all[1]);
+        // The fast file has no number of the base's kind to set against it: only the latency, which has
+        // no kind, is left, and nothing is claimed for the unverified throughput numbers.
+        assert_eq!(overall(&all[1], &all[0]).map(|s| (s.value, s.unverified)), Some((0.5, false)));
+        // Half verified, half not: the verified half decides, and the other is not mixed in.
+        let mut mixed = [sample("base", 1.0), sample("m", 2.0)];
+        mixed[1].tests[0].check =
+            Some(super::super::integrity::Check::Unchecked(super::super::integrity::Why::Off));
+        mixed[1].tests[0].median = 1.0; // would pull a mixed mean down
+        let s = overall(&mixed[1], &mixed[0]).expect("overall");
+        assert!(!s.unverified);
+        let verified_only: f64 = (2.0f64 * 2.0 * 0.5).powf(1.0 / 3.0);
+        assert!((s.value - verified_only).abs() < 1e-9, "{}", s.value);
+    }
+
+    #[test]
+    fn files_from_before_the_check_are_unverified_and_the_note_says_why() {
+        let mut all = three();
+        for t in &mut all[0].tests {
+            t.check = None;
+        }
+        let md = compare_markdown(&all);
+        assert!(md.contains("saved before the check existed"), "{md}");
+        let row = md.lines().find(|l| l.starts_with("| logflood")).unwrap_or_default();
+        // The old file's number is daggered and the verified ones win the row.
+        assert!(row.contains("800 MB/s †") && row.contains("**1600 MB/s**"), "{row}");
+        // roundtrip has no payload and no check: never daggered.
+        let rt = md.lines().find(|l| l.starts_with("| roundtrip")).unwrap_or_default();
+        assert!(!rt.contains('†'), "{rt}");
+        assert!(!compare_markdown(&three()).contains("†"));
     }
 }

@@ -2,9 +2,10 @@
 //! test. It is built to be screenshotted, so it paints its own dark panel and looks the
 //! same in any theme.
 
+use super::integrity::{self, Check, Level};
 use super::results::{Results, TestResult, Unit};
 use super::stats;
-use super::ui::{BAD, DIM, FAINT, Line, Panel, TEXT, fit};
+use super::ui::{ACCENT, BAD, DIM, FAINT, GOOD, Line, Panel, TEXT, fit, wrap};
 
 /// The width the panel aims for: wide enough for the bars to breathe, narrow enough to screenshot.
 pub fn panel_width(cols: u16) -> usize {
@@ -110,8 +111,14 @@ fn spread_text(t: &TestResult) -> String {
 fn row(t: &TestResult, lay: &Layout) -> Line {
     let mut l = Line::new();
     l.pad(2).text(&format!("{:<NAME_W$}", fit(&t.name, NAME_W)), TEXT).pad(1);
-    if t.timeout {
-        l.text("timed out", BAD);
+    if let Some(why) = t.unusable() {
+        let counts = match &t.check {
+            Some(Check::Dropped { answered, checkpoints }) => {
+                format!(" ({answered} of {checkpoints} answered)")
+            }
+            _ => String::new(),
+        };
+        l.text(&format!("{why}{counts}"), BAD);
         return l;
     }
     if lay.bar > 0 {
@@ -119,13 +126,29 @@ fn row(t: &TestResult, lay: &Layout) -> Line {
     } else {
         l.pad(1);
     }
-    push_value(&mut l, t, VALUE_W);
+    if t.unverified() {
+        // The number, with a dagger: the check did not vouch for it (the line under the header says why).
+        let (num, unit) = value_parts(t);
+        let shown = format!("{num} {unit} †");
+        l.pad(VALUE_W.saturating_sub(shown.chars().count()))
+            .bold(&num, TEXT)
+            .text(&format!(" {unit} †"), ACCENT);
+    } else {
+        push_value(&mut l, t, VALUE_W);
+    }
     if lay.spread {
         l.pad(2);
         let s = spread_text(t);
         l.pad(SPREAD_W.saturating_sub(s.chars().count())).text(&s, DIM);
     }
     l
+}
+
+/// What the input checks of all the tests add up to (`integrity`).
+fn check_summary(r: &Results) -> Option<(Level, String)> {
+    let checks: Vec<_> =
+        r.tests.iter().filter_map(|t| t.check.as_ref().map(|c| (t.name.as_str(), c))).collect();
+    integrity::summary(&checks)
 }
 
 /// The machine line, dropping the least useful parts from the end until it fits.
@@ -170,6 +193,18 @@ pub fn results_panel(r: &Results, width: usize, saved: Option<&str>) -> Panel {
     let runs = format!("{} MB per test  ·  median of {} runs  ·  v{}", r.size_mb, r.runs, r.version);
     l.pad(2).text(&fit(&runs, inner), DIM);
     p.push(l);
+    if let Some((level, text)) = check_summary(r) {
+        let color = match level {
+            Level::Good => GOOD,
+            Level::Warn => ACCENT,
+            Level::Bad => BAD,
+        };
+        for line in wrap(&text, inner) {
+            let mut l = Line::new();
+            l.pad(2).text(&line, color);
+            p.push(l);
+        }
+    }
     p.blank();
     p.rule(2);
 
@@ -212,10 +247,19 @@ pub fn results_plain(r: &Results, saved: Option<&str>) -> String {
         "{} MB per test  ·  median of {} runs  ·  ttystorm {}\n\n",
         r.size_mb, r.runs, r.version
     ));
+    if let Some((_, text)) = check_summary(r) {
+        s.push_str(&text);
+        s.push_str("\n\n");
+    }
     for t in &r.tests {
         let (num, unit) = value_parts(t);
         let detail = match t.unit {
-            _ if t.timeout => String::new(),
+            _ if t.unusable().is_some() => match &t.check {
+                Some(Check::Dropped { answered, checkpoints }) => {
+                    format!("{answered} of {checkpoints} checkpoints answered")
+                }
+                _ => String::new(),
+            },
             Unit::Micros => format!(
                 "p90 {:.0}  p99 {:.0}",
                 t.extra("p90").unwrap_or(t.max),
@@ -223,8 +267,16 @@ pub fn results_plain(r: &Results, saved: Option<&str>) -> String {
             ),
             _ => format!("min {:.1}  max {:.1}", t.min, t.max),
         };
-        let value = if t.timeout { "timed out".to_string() } else { format!("{num:>8} {unit:<5}") };
-        s.push_str(format!("{:<NAME_W$} {value}  {detail}", t.name).trim_end());
+        let value = match t.unusable() {
+            Some(why) => why.to_string(),
+            None => format!("{num:>8} {unit:<5}"),
+        };
+        // A number the check could not vouch for says so on its line.
+        let note = match &t.check {
+            Some(c) if !c.is_dropped() => c.badge().map(|b| format!("  ({b})")).unwrap_or_default(),
+            _ => String::new(),
+        };
+        s.push_str(format!("{:<NAME_W$} {value}  {detail}{note}", t.name).trim_end());
         s.push('\n');
     }
     if let Some(path) = saved {
@@ -248,6 +300,43 @@ mod tests {
             assert!(text.lines().any(|l| l.starts_with(t.name.as_str())), "{}: {text}", t.name);
         }
         assert!(text.contains("timed out") && text.contains("p99") && text.contains("w.json"), "{text}");
+    }
+
+    #[test]
+    fn a_dropped_run_has_no_number_and_the_screen_and_text_say_so() {
+        use super::super::integrity::Check;
+        let mut r = sample("x", 1.0);
+        r.tests[0].check = Some(Check::Dropped { answered: 2, checkpoints: 48 });
+        r.tests[0].median = 0.0;
+        let text = results_plain(&r, None);
+        assert!(text.contains("Dropped input in logflood"), "{text}");
+        let line = text.lines().find(|l| l.starts_with("logflood")).unwrap_or("");
+        assert!(line.matches("dropped input").count() == 1 && line.contains("2 of 48"), "{line}");
+        assert!(!line.contains("MB/s"), "{line}");
+        let mut out = Vec::new();
+        results_panel(&r, 80, None).write(&mut out);
+        let screen = String::from_utf8_lossy(&out);
+        assert!(screen.contains("dropped input") && screen.contains("Dropped input in logflood"), "{screen}");
+    }
+
+    #[test]
+    fn an_unverified_number_is_marked_and_a_verified_run_says_so_once() {
+        use super::super::integrity::{Check, Why};
+        let mut r = sample("x", 1.0);
+        for t in &mut r.tests[..3] {
+            t.check = Some(Check::Verified { checkpoints: 16 });
+        }
+        assert!(results_plain(&r, None).contains("Input verified: all 48 checkpoints answered"));
+        r.tests[1].check = Some(Check::Unchecked(Why::Silent));
+        let text = results_plain(&r, None);
+        assert!(text.contains("Not verified (colorflood): the terminal does not answer DSR 5"), "{text}");
+        let line = text.lines().find(|l| l.starts_with("colorflood")).unwrap_or("");
+        assert!(line.contains("MB/s") && line.contains("(unverified)"), "{line}");
+        for width in [56, 80, 100] {
+            for (i, line) in results_panel(&r, width, None).lines().iter().enumerate() {
+                assert!(line.width() <= width, "width {width}, line {i}");
+            }
+        }
     }
 
     #[test]

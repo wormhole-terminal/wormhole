@@ -6,6 +6,7 @@ mod compose;
 mod details;
 mod diag;
 mod flood;
+mod integrity;
 pub(crate) mod json;
 mod procinfo;
 mod report;
@@ -40,7 +41,13 @@ pub struct BenchOptions {
     pub details: bool,
     /// Every write of every measured run, as JSON Lines (`--trace <file>`).
     pub trace: Option<PathBuf>,
+    /// About how many bytes apart the input check's checkpoints are (`--verify-every <KiB>`); `None`
+    /// turns the check off (`--no-verify`).
+    pub verify_every: Option<usize>,
 }
+
+/// The input check's default distance between checkpoints, in bytes.
+pub const DEFAULT_VERIFY_EVERY: usize = integrity::DEFAULT_EVERY;
 
 /// The tests in a named group (`realistic`, `stress` or `all`), in running order.
 pub fn suite(name: &str) -> Option<Vec<&'static str>> {
@@ -109,6 +116,7 @@ pub fn run(opts: &BenchOptions) -> io::Result<()> {
             plain: opts.plain,
             process: process.clone(),
             trace,
+            verifier: integrity::Verifier::new(opts.verify_every),
         };
         let mut tests = Vec::new();
         let mut interrupted = false;
@@ -137,6 +145,7 @@ pub fn run(opts: &BenchOptions) -> io::Result<()> {
         version: env!("CARGO_PKG_VERSION").to_string(),
         size_mb: opts.size_mb,
         runs: opts.runs,
+        check_every: opts.verify_every.map(|n| n as u64),
         process,
         tests,
     };
