@@ -149,10 +149,11 @@ pub(super) fn signatures_match() {
         intro::dock_frames: fn(&Window, wormhole_core::onboarding::intro::voyage::Landing, [[f32; 4]; 3], &Path, &str) -> anyhow::Result<String>;
     }
     same_method! {
-        notice::Chip::new: fn(&Window, bool) -> Option<S>;
-        notice::Chip::show: fn(&mut S, &super::notice::Content<'_>, Spot, Entrance, &mut App);
-        notice::Chip::swap: fn(&mut S, &super::notice::Content<'_>, Spot);
+        notice::Chip::new: fn(&Window, bool, super::notice::Clicks) -> Option<S>;
+        notice::Chip::show: fn(&mut S, &super::notice::Content<'_>, Spot, Entrance, bool, &mut App);
+        notice::Chip::swap: fn(&mut S, &super::notice::Content<'_>, Spot, bool);
         notice::Chip::hide: fn(&mut S, Entrance);
+        notice::Chip::set_clickable: fn(&mut S, bool);
         notice::Chip::place: fn(&mut S, Spot);
         notice::Chip::close: fn(S, &mut App);
         intro::Overlay::new: fn(&Window, Setup, LogoSpot) -> anyhow::Result<Option<S>>;

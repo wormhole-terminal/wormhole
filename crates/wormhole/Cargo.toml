@@ -103,6 +103,8 @@ objc2-app-kit = { version = "0.3", features = [
     "NSBitmapImageRep", "NSImageRep", "NSLayoutGuide", "NSControl", "NSButtonCell",
     # The notice chip: a symbol beside its words, a width that follows them, a capsule cut for the blur.
     "NSImageView", "NSAnimation", "NSAnimationContext",
+    # ... and the pointing hand over it while a sticky one waits for a click.
+    "NSCursor",
 ] }
 
 [dev-dependencies]

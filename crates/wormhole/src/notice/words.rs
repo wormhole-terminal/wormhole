@@ -1,6 +1,6 @@
 //! A notice as a sentence, from the catalog (`locales/en/notices.ftl`), and so what VoiceOver hears.
 
-use wormhole_core::view::notice::{Copied, Driven, Driver, Failed, Notice};
+use wormhole_core::view::notice::{Copied, Driven, Driver, Failed, Notice, Warning};
 use wormhole_text::{keys, text, whole};
 
 /// The sentence for `notice`; `None` for a test notice, whose words come with the post.
@@ -10,7 +10,10 @@ pub(super) fn of(notice: Notice) -> Option<String> {
         Notice::Driven(driven) => return Some(driven_words(driven)),
         Notice::Failed(Failed::CopyCommit) => return Some(text(keys::NOTICE_FAILED_COPY_COMMIT).to_string()),
         Notice::Failed(Failed::CopyPath) => return Some(text(keys::NOTICE_FAILED_COPY_PATH).to_string()),
-        Notice::Test(_) => return None,
+        Notice::Warned(Warning::HostFallback) => {
+            return Some(text(keys::NOTICE_WARNED_HOST_FALLBACK).to_string());
+        }
+        Notice::Warned(Warning::Test(_)) | Notice::Test(_) => return None,
     };
     Some(match copied {
         Copied::Lines(lines) => keys::notice_copied_lines(whole(lines)),
@@ -28,6 +31,21 @@ pub(super) fn of(notice: Notice) -> Option<String> {
         Copied::CommitSubject => text(keys::NOTICE_COPIED_COMMIT_SUBJECT).to_string(),
         Copied::CommitAuthor => text(keys::NOTICE_COPIED_COMMIT_AUTHOR).to_string(),
     })
+}
+
+/// What VoiceOver says for `notice` when the chip's one line is not all there is to say: the reason in
+/// full. `None` where the chip's words are what is spoken.
+pub(super) fn spoken(notice: Notice) -> Option<String> {
+    match notice {
+        Notice::Warned(Warning::HostFallback) => Some(host_fallback_detail()),
+        _ => None,
+    }
+}
+
+/// Why the terminal ends when Wormhole quits, in full: spoken, and written in the banner a window without
+/// the chip shows.
+pub(crate) fn host_fallback_detail() -> String {
+    text(keys::NOTICE_WARNED_HOST_FALLBACK_DETAIL).to_string()
 }
 
 /// What a program that controls Wormhole did, as the chip says it.
@@ -48,10 +66,10 @@ fn driven_words(driven: Driven) -> String {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::view::notice::{Copied, Driven, Driver, Failed, Notice};
+    use wormhole_core::view::notice::{Copied, Driven, Driver, Failed, Notice, Warning};
     use wormhole_text::{Language, with_language};
 
-    use super::of;
+    use super::{of, spoken};
 
     fn said(copied: Copied) -> String {
         of(Notice::Copied(copied)).unwrap_or_default()
@@ -102,7 +120,21 @@ mod tests {
     }
 
     #[test]
+    fn a_warning_is_one_short_line_and_says_the_reason_in_full_to_voiceover() {
+        with_language(Language::ENGLISH, || {
+            let warned = Notice::Warned(Warning::HostFallback);
+            let short = of(warned).unwrap_or_default();
+            assert_eq!(short, "This terminal ends when Wormhole quits");
+            let long = spoken(warned).unwrap_or_default();
+            assert!(long.contains("helper that keeps terminals running couldn't start"), "{long}");
+            assert!(long.len() > short.len());
+            assert_eq!(spoken(Notice::Copied(Copied::Path)), None);
+        });
+    }
+
+    #[test]
     fn a_test_notice_has_no_words_of_its_own() {
         assert_eq!(of(Notice::Test(7)), None);
+        assert_eq!(of(Notice::Warned(Warning::Test(7))), None);
     }
 }

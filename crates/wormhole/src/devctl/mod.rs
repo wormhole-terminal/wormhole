@@ -324,10 +324,18 @@
 //!   notice <text>   put a notice (the chip that drops from the top edge of a terminal) in this window, about its
 //!                   selected terminal, that says <text>
 //!                   (the Notices feature flag must be on: `set feature_flags={"notices":true}`)
-//!   notices         each window's chip, a line each: its number, phase (Hidden, Showing, Leaving), words, the
+//!   notice sticky [<text>]   put a sticky notice: no life, it stays until clicked, and while it shows the
+//!                   panel takes a click on the capsule. Bare, it is the real warning that a terminal's
+//!                   session host couldn't start, with its own words; with <text>, a warning that says that.
+//!                   Dismissed once, the same one is not said again
+//!   notice-click    click this window's chip as a person does (the click goes over the panel's own
+//!                   channel): a sticky notice is dismissed, a copy's chip takes no click
+//!   notices         each window's chip, a line each: its number, phase (Hidden, Showing, Leaving), words,
+//!                   `sticky` (one is up) and `clickable` (it shows the sticky one's own words), the
 //!                   `terminal x y w h` it is about (its pane, in the window's points) and, while the
 //!                   native panel is up, `frame x y w h` (the chip at rest, in the window's points),
-//!                   `material` (glass, frosted or solid), `panel <n>`, the panel's window number, and
+//!                   `material` (glass, frosted or solid), `mouse` (the panel takes the mouse: only while
+//!                   the chip is clickable), `panel <n>`, the panel's window number, and
 //!                   `window <n>`, the app window's: the chip is no part of a `shot`, so capture either
 //!                   with `screencapture -l <n> -o file.png`
 //!   notice-material glass|frosted|solid|system   make the next chip of that material (`system`: as the

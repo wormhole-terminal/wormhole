@@ -1,5 +1,6 @@
 # The notice chip: the short messages that drop onto the top of a terminal ("Copied 3 lines"). What was
-# copied is never in them, only what it was and how much. VoiceOver says the same words.
+# copied is never in them, only what it was and how much. VoiceOver says the same words, except where a
+# message has a longer one beside it.
 
 ## What was copied
 
@@ -67,3 +68,13 @@ notice-failed-copy-commit = Couldn't copy: git could not read the commit
 # A path that has a control character in its name (a newline would run what follows it when pasted into
 # a terminal), or that is not text.
 notice-failed-copy-path = Not copied: the path has characters that would act when pasted
+
+## Warnings, which stay on the chip until it is clicked
+
+# The chip when the helper that keeps terminals running couldn't start: this terminal runs inside the app
+# and ends when it quits. One line, so it is short; the reason is the next message.
+notice-warned-host-fallback = This terminal ends when { -brand } quits
+
+# The same, in full: what VoiceOver says when the chip appears, and the banner of a window whose chip is
+# switched off.
+notice-warned-host-fallback-detail = This terminal runs inside { -brand } and ends when it quits: the helper that keeps terminals running couldn't start.

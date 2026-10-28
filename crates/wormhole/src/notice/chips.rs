@@ -2,6 +2,9 @@
 //! keyed by the window. Nothing here draws; a window with no native panel (a test) still runs the rules, so
 //! what was said and when can be asked of it.
 //!
+//! A sticky notice (a warning) stays until the person clicks the chip: the platform's panel says so over a
+//! channel, a task here reads it and asks the rules to dismiss.
+//!
 //! Every post names its window and, for a notice about one terminal, that terminal (an [`Anchor`]); the work is
 //! done a turn later, outside any update of the poster, so the window's own state can be read then. The
 //! clock is GPUI's, so a test moves it.
@@ -13,12 +16,13 @@ use std::time::Duration;
 use gpui_kit::*;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::storage::paths::ProfileId;
+use wormhole_core::theme::tokens::Appearance;
 use wormhole_core::view::motion::notice::Entrance;
 use wormhole_core::view::notice::{ChipRules, Effect, Notice, Spot};
 use wormhole_core::view::panes::Rect;
 
 use crate::platform;
-use crate::platform::notice::{Chip, Content};
+use crate::platform::notice::{Chip, Clicks, Content};
 use crate::settings::{settings_in, store_in};
 
 /// How a terminal's bounds in its window are read again whenever the chip is placed: a chip about a
@@ -48,8 +52,18 @@ pub(super) struct Entry {
     pub(super) chip: Option<Chip>,
     /// What the chip says now (or said last).
     pub(super) words: String,
+    /// The theme's appearance the chip was last drawn in, for words put back without a post.
+    theme: Option<Appearance>,
     /// Where the chip is about, as the poster said.
     anchor: Option<Anchor>,
+    /// What the sticky notice says, kept for when a copy's words give way to it.
+    sticky_words: Option<String>,
+    /// Where the sticky notice is about: its chip goes back there when a copy's words give way to it.
+    sticky_anchor: Option<Anchor>,
+    /// Where the panel says it was clicked, once there is a panel; the task reads the other end.
+    clicks: Option<Clicks>,
+    /// Dismisses the chip when it is clicked; dropping it stops listening.
+    listener: Option<Task<()>>,
     /// Where the chip was last put.
     pub(super) spot: Option<Spot>,
     /// How it came, so it goes the same way.
@@ -127,6 +141,22 @@ pub(super) fn post_words(window: &Window, notice: Notice, words: String, cx: &mu
     queue(window.window_handle(), notice, Some(words), None, cx);
 }
 
+/// Say a notice that has words in the catalog (devctl's `notice sticky`).
+#[cfg(feature = "devctl")]
+pub(super) fn post_notice(window: &Window, notice: Notice, cx: &mut App) {
+    queue(window.window_handle(), notice, None, None, cx);
+}
+
+/// Click the chip of `window` as the panel does: the click goes over the same channel. `false` when the
+/// window has no chip yet (a chip in a test has no panel, and the channel is the same).
+#[cfg(any(test, feature = "devctl"))]
+pub(super) fn press(window: WindowId, cx: &App) -> bool {
+    cx.try_global::<Chips>()
+        .and_then(|chips| chips.windows.get(&window))
+        .and_then(|entry| entry.clicks.as_ref())
+        .is_some_and(|clicks| clicks.try_send(()).is_ok())
+}
+
 fn queue(
     window: AnyWindowHandle,
     notice: Notice,
@@ -164,18 +194,30 @@ fn say(window: &mut Window, notice: Notice, words: Option<String>, anchor: Optio
         if matches!(effect, Effect::Ignore) {
             return;
         }
+        if notice.is_sticky() {
+            entry.sticky_words = Some(words.clone());
+            entry.sticky_anchor = anchor.clone();
+        }
         entry.words = words;
+        entry.theme = Some(theme);
         entry.anchor = anchor;
         entry.spot = Some(spot);
         let content = Content { glyph: notice.glyph(), text: &entry.words, appearance: theme };
         match effect {
             Effect::Show => {
                 entry.entrance = Some(entrance);
-                if entry.chip.is_none() {
-                    entry.chip = Chip::new(window, opaque);
+                if entry.clicks.is_none() {
+                    let (clicks, listener) = listen(id, cx);
+                    entry.clicks = Some(clicks);
+                    entry.listener = Some(listener);
+                }
+                if entry.chip.is_none()
+                    && let Some(clicks) = entry.clicks.clone()
+                {
+                    entry.chip = Chip::new(window, opaque, clicks);
                 }
                 if let Some(chip) = &mut entry.chip {
-                    chip.show(&content, spot, entrance, cx);
+                    chip.show(&content, spot, entrance, entry.rules.clickable(), cx);
                 }
                 if entry.watch.is_none() {
                     let watch = cx.new(|_| Watch);
@@ -188,13 +230,48 @@ fn say(window: &mut Window, notice: Notice, words: Option<String>, anchor: Optio
             }
             Effect::Swap => {
                 if let Some(chip) = &mut entry.chip {
-                    chip.swap(&content, spot);
+                    chip.swap(&content, spot, entry.rules.clickable());
                 }
             }
-            Effect::Hide | Effect::Remove | Effect::Ignore => {}
+            Effect::Hide | Effect::Remove | Effect::Restore | Effect::Ignore => {}
         }
         // VoiceOver hears it once, as the chip appears or its words change.
-        platform::a11y::announce(&entry.words, false);
+        platform::a11y::announce(&spoken(notice, &entry.words), false);
+        wake(id, entry, cx);
+    });
+}
+
+/// What VoiceOver says for `notice`, whose words on the chip are `words`.
+fn spoken(notice: Notice, words: &str) -> String {
+    super::words::spoken(notice).unwrap_or_else(|| words.to_string())
+}
+
+/// The channel a window's panel says its clicks over, and the task that dismisses the chip on each.
+fn listen(id: WindowId, cx: &mut App) -> (Clicks, Task<()>) {
+    let (clicks, heard) = smol::channel::unbounded();
+    let listener = cx.spawn(async move |cx| {
+        while heard.recv().await.is_ok() {
+            cx.update(|cx| dismiss(id, cx));
+        }
+    });
+    (clicks, listener)
+}
+
+/// The person clicked the chip: a sticky notice goes, and the rules say whether this chip had one to lose.
+pub(super) fn dismiss(id: WindowId, cx: &mut App) {
+    if cx.try_global::<Chips>().is_none() {
+        return;
+    }
+    let now = cx.background_executor().now();
+    cx.update_global::<Chips, _>(|chips, cx| {
+        let Some(entry) = chips.windows.get_mut(&id) else { return };
+        let entrance = entry.entrance.unwrap_or(Entrance::Drop);
+        if matches!(entry.rules.dismiss(now, entrance.exit_duration()), Effect::Hide)
+            && let Some(chip) = &mut entry.chip
+        {
+            chip.set_clickable(false);
+            chip.hide(entrance);
+        }
         wake(id, entry, cx);
     });
 }
@@ -275,6 +352,7 @@ fn advance(id: WindowId, cx: &mut App) {
         return;
     }
     let now = cx.background_executor().now();
+    let mut restored = false;
     cx.update_global::<Chips, _>(|chips, cx| {
         let Some(entry) = chips.windows.get_mut(&id) else { return };
         let entrance = entry.entrance.unwrap_or(Entrance::Drop);
@@ -292,8 +370,33 @@ fn advance(id: WindowId, cx: &mut App) {
                 entry.watch = None;
                 entry.settle = None;
             }
+            Effect::Restore => {
+                restore(entry);
+                restored = true;
+            }
             Effect::Show | Effect::Swap | Effect::Ignore => {}
         }
         wake(id, entry, cx);
     });
+    if restored {
+        // A copy about another terminal may have moved the chip: the sticky notice goes back to its own.
+        if let Some(window) = cx.windows().into_iter().find(|window| window.window_id() == id) {
+            cx.defer(move |cx| {
+                window.update(cx, |_, window, cx| refit(window, cx)).ok();
+            });
+        }
+    }
+}
+
+/// A copy's words are done and the sticky ones come back, with the glass it was in.
+fn restore(entry: &mut Entry) {
+    let Some(held) = entry.rules.held() else { return };
+    let (Some(words), Some(theme)) = (entry.sticky_words.clone(), entry.theme) else { return };
+    entry.words = words;
+    entry.anchor = entry.sticky_anchor.clone();
+    let content = Content { glyph: held.glyph(), text: &entry.words, appearance: theme };
+    if let (Some(chip), Some(spot)) = (&mut entry.chip, entry.spot) {
+        chip.swap(&content, spot, true);
+    }
+    platform::a11y::announce(&spoken(held, &entry.words), false);
 }

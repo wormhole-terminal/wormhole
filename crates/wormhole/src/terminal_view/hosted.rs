@@ -10,6 +10,7 @@ use gpui_kit::component::Sizable as _;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
 use wormhole_core::terminal::SpawnOptions;
+use wormhole_core::view::notice::{Notice, Warning};
 use wormhole_term::PtyEvents;
 use wormhole_term::{GridSize, Pty};
 
@@ -46,11 +47,11 @@ pub(super) struct HostState {
     /// The options it was started with, for attaching again (`reattach`): the replica must have
     /// the same history and window rules as the host.
     options: Option<SpawnOptions>,
-    /// The one-time notice that the host could not start, while it shows.
+    /// The banner that the host could not start, while it shows: only where the notice chip is off.
     notice: Option<SharedString>,
 }
 
-/// The notice that a host could not start is shown once per run: when one fails, the next would
+/// The warning that a host could not start is shown once per run: when one fails, the next would
 /// for the same reason, and every new terminal would say it again.
 static FALLBACK_TOLD: AtomicBool = AtomicBool::new(false);
 
@@ -181,11 +182,7 @@ impl TerminalView {
                         "couldn't start a session host, the terminal runs in the app: {err:#}"
                     );
                     if !FALLBACK_TOLD.swap(true, Ordering::Relaxed) {
-                        self.host.notice = Some(
-                            "This terminal runs inside Wormhole and ends when it quits: \
-                             the helper that keeps terminals running couldn't start."
-                                .into(),
-                        );
+                        self.tell_fallback(cx);
                     }
                 }
                 match wormhole_core::terminal::spawn(self.painted_size().unwrap_or(size), options) {
@@ -196,6 +193,29 @@ impl TerminalView {
             }
         }
         cx.notify();
+    }
+
+    /// Say that this terminal ends when the app quits, because its host couldn't start: on the notice chip,
+    /// which stays until it is clicked, and where the window's profile has the chip off, as the banner
+    /// over the pane (`render_host_notice`).
+    fn tell_fallback(&mut self, cx: &mut Context<Self>) {
+        if crate::notice::enabled(&self.profile, cx) {
+            self.say(Notice::Warned(Warning::HostFallback), cx);
+        } else {
+            self.host.notice = Some(crate::notice::host_fallback_detail().into());
+        }
+    }
+
+    /// Its host could not start: tell it as `host_ready` does, once per run.
+    #[cfg(test)]
+    pub(crate) fn tell_fallback_for_test(&mut self, cx: &mut Context<Self>) {
+        self.tell_fallback(cx);
+    }
+
+    /// The banner over the pane about a host that could not start, while it shows.
+    #[cfg(test)]
+    pub(crate) fn host_banner_for_test(&self) -> Option<&str> {
+        self.host.notice.as_deref()
     }
 
     /// The terminal's `Pty` is ready: listen to it, and give it the pane's size when a frame has

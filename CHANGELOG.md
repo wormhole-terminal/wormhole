@@ -6,6 +6,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Changed
+
+- When the helper that keeps terminals running can't start, the warning that the terminal ends when Wormhole
+  quits is a chip on the terminal instead of a banner over it. It stays until you click it, and a copy's
+  chip shows over it for a moment and then gives it back. Where the notice chip is off, the banner stays.
+
 ### Fixed
 
 - Open in Finder, from a terminal's title row, no longer launches a folder that is really a program

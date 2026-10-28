@@ -5,20 +5,30 @@ use gpui_kit::{App, Window};
 use wormhole_core::view::motion::notice::Entrance;
 use wormhole_core::view::notice::Spot;
 
-use crate::platform::notice::Content;
+use crate::platform::notice::{Clicks, Content};
 
 pub struct Chip;
 
 impl Chip {
-    pub fn new(_window: &Window, _opaque: bool) -> Option<Self> {
+    pub fn new(_window: &Window, _opaque: bool, _clicks: Clicks) -> Option<Self> {
         None
     }
 
-    pub fn show(&mut self, _content: &Content<'_>, _spot: Spot, _entrance: Entrance, _cx: &mut App) {}
+    pub fn show(
+        &mut self,
+        _content: &Content<'_>,
+        _spot: Spot,
+        _entrance: Entrance,
+        _clickable: bool,
+        _cx: &mut App,
+    ) {
+    }
 
-    pub fn swap(&mut self, _content: &Content<'_>, _spot: Spot) {}
+    pub fn swap(&mut self, _content: &Content<'_>, _spot: Spot, _clickable: bool) {}
 
     pub fn hide(&mut self, _entrance: Entrance) {}
+
+    pub fn set_clickable(&mut self, _clickable: bool) {}
 
     pub fn place(&mut self, _spot: Spot) {}
 

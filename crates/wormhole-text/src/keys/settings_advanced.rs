@@ -7,63 +7,63 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Advanced"
-pub const SETTINGS_SECTION_ADVANCED: Key = Key::new(131);
+pub const SETTINGS_SECTION_ADVANCED: Key = Key::new(133);
 /// "Files, folders and a way back to the defaults."
-pub const SETTINGS_SECTION_ADVANCED_INTRO: Key = Key::new(132);
+pub const SETTINGS_SECTION_ADVANCED_INTRO: Key = Key::new(134);
 /// "Files"
-pub const SETTINGS_ADVANCED_GROUP_FILES: Key = Key::new(133);
+pub const SETTINGS_ADVANCED_GROUP_FILES: Key = Key::new(135);
 /// "Settings file"
-pub const SETTINGS_ADVANCED_OPEN_CONFIG: Key = Key::new(134);
+pub const SETTINGS_ADVANCED_OPEN_CONFIG: Key = Key::new(136);
 /// "config.json: edits apply live"
-pub const SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION: Key = Key::new(135);
+pub const SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION: Key = Key::new(137);
 /// "json config"
-pub const SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS: Key = Key::new(136);
+pub const SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS: Key = Key::new(138);
 /// "Data folder"
-pub const SETTINGS_ADVANCED_OPEN_DATA: Key = Key::new(137);
+pub const SETTINGS_ADVANCED_OPEN_DATA: Key = Key::new(139);
 /// "Terminals, notes, themes, logs"
-pub const SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION: Key = Key::new(138);
+pub const SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION: Key = Key::new(140);
 /// "finder database"
-pub const SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS: Key = Key::new(139);
+pub const SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS: Key = Key::new(141);
 /// "Logs"
-pub const SETTINGS_ADVANCED_OPEN_LOGS: Key = Key::new(140);
+pub const SETTINGS_ADVANCED_OPEN_LOGS: Key = Key::new(142);
 /// "Set WORMHOLE_LOG=debug for more detail"
-pub const SETTINGS_ADVANCED_OPEN_LOGS_DESCRIPTION: Key = Key::new(141);
+pub const SETTINGS_ADVANCED_OPEN_LOGS_DESCRIPTION: Key = Key::new(143);
 /// "debug log"
-pub const SETTINGS_ADVANCED_OPEN_LOGS_KEYWORDS: Key = Key::new(142);
+pub const SETTINGS_ADVANCED_OPEN_LOGS_KEYWORDS: Key = Key::new(144);
 /// "Reset all settings"
-pub const SETTINGS_ADVANCED_RESET_SETTINGS: Key = Key::new(143);
+pub const SETTINGS_ADVANCED_RESET_SETTINGS: Key = Key::new(145);
 /// "Your terminals, notes and themes are kept"
-pub const SETTINGS_ADVANCED_RESET_SETTINGS_DESCRIPTION: Key = Key::new(144);
+pub const SETTINGS_ADVANCED_RESET_SETTINGS_DESCRIPTION: Key = Key::new(146);
 /// "defaults reset restore"
-pub const SETTINGS_ADVANCED_RESET_SETTINGS_KEYWORDS: Key = Key::new(145);
+pub const SETTINGS_ADVANCED_RESET_SETTINGS_KEYWORDS: Key = Key::new(147);
 /// "Tips"
-pub const SETTINGS_ADVANCED_GROUP_TIPS: Key = Key::new(146);
+pub const SETTINGS_ADVANCED_GROUP_TIPS: Key = Key::new(148);
 /// "Closed tips"
-pub const SETTINGS_ADVANCED_RESET_TIPS: Key = Key::new(147);
+pub const SETTINGS_ADVANCED_RESET_TIPS: Key = Key::new(149);
 /// "Bring back the tips closed with “Don't show again”, such as the sidebar's coding agents note"
-pub const SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION: Key = Key::new(148);
+pub const SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION: Key = Key::new(150);
 /// "hints tips reset show again dismissed"
-pub const SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS: Key = Key::new(149);
+pub const SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS: Key = Key::new(151);
 /// "Open"
-pub const SETTINGS_ADVANCED_OPEN: Key = Key::new(150);
+pub const SETTINGS_ADVANCED_OPEN: Key = Key::new(152);
 /// "Show in Finder"
-pub const SETTINGS_ADVANCED_SHOW_IN_FINDER: Key = Key::new(151);
+pub const SETTINGS_ADVANCED_SHOW_IN_FINDER: Key = Key::new(153);
 /// "Reset tips"
-pub const SETTINGS_ADVANCED_RESET_TIPS_BUTTON: Key = Key::new(152);
+pub const SETTINGS_ADVANCED_RESET_TIPS_BUTTON: Key = Key::new(154);
 /// "No tip was closed for good"
-pub const SETTINGS_ADVANCED_NO_TIP_WAS_CLOSED_FOR_GOOD: Key = Key::new(153);
+pub const SETTINGS_ADVANCED_NO_TIP_WAS_CLOSED_FOR_GOOD: Key = Key::new(155);
 /// "They show again where they belong"
-pub const SETTINGS_ADVANCED_THEY_SHOW_AGAIN_WHERE_THEY_BELONG: Key = Key::new(154);
+pub const SETTINGS_ADVANCED_THEY_SHOW_AGAIN_WHERE_THEY_BELONG: Key = Key::new(156);
 /// "Reset to defaults…"
-pub const SETTINGS_ADVANCED_RESET_TO_DEFAULTS: Key = Key::new(155);
+pub const SETTINGS_ADVANCED_RESET_TO_DEFAULTS: Key = Key::new(157);
 /// "Every setting is at its default"
-pub const SETTINGS_ADVANCED_EVERY_SETTING_IS_AT_ITS_DEFAULT: Key = Key::new(156);
+pub const SETTINGS_ADVANCED_EVERY_SETTING_IS_AT_ITS_DEFAULT: Key = Key::new(158);
 /// "Asks first"
-pub const SETTINGS_ADVANCED_ASKS_FIRST: Key = Key::new(157);
+pub const SETTINGS_ADVANCED_ASKS_FIRST: Key = Key::new(159);
 /// "Cancel"
-pub const SETTINGS_ADVANCED_CANCEL: Key = Key::new(158);
+pub const SETTINGS_ADVANCED_CANCEL: Key = Key::new(160);
 /// "Reset"
-pub const SETTINGS_ADVANCED_RESET: Key = Key::new(159);
+pub const SETTINGS_ADVANCED_RESET: Key = Key::new(161);
 
 /// ```text
 /// { $count ->
@@ -72,5 +72,5 @@ pub const SETTINGS_ADVANCED_RESET: Key = Key::new(159);
 /// }
 /// ```
 pub fn settings_advanced_reset_question(count: i64) -> String {
-    crate::active::message(160, &[("count", Arg::Int(count))])
+    crate::active::message(162, &[("count", Arg::Int(count))])
 }

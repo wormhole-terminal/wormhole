@@ -13,13 +13,35 @@ use crate::platform::notice::Material;
 
 /// `notice <text>`: put a notice that says `<text>` in this window, as a copy would. Does nothing with the
 /// Notices flag off (`set feature_flags={"notices":true}`).
+///
+/// `notice sticky [<text>]` puts a sticky one: it has no life and stays until it is clicked (`notice-click`).
+/// Without `<text>` it is the real warning that a terminal's session host couldn't start, with its own
+/// words; with `<text>` a warning that says that. A dismissed one is not said again by the same words.
 pub(super) fn notice(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::notice::test_notice(ctx.window, arg.trim(), ctx.cx);
+    let arg = arg.trim();
+    if arg == "sticky" {
+        crate::notice::test_sticky(ctx.window, None, ctx.cx);
+    } else if let Some(words) = arg.strip_prefix("sticky ") {
+        crate::notice::test_sticky(ctx.window, Some(words.trim()), ctx.cx);
+    } else {
+        crate::notice::test_notice(ctx.window, arg, ctx.cx);
+    }
     Ok(String::new())
 }
 
+/// `notice-click`: click this window's chip as a person does, over the channel the panel uses. A sticky
+/// notice goes; a copy's chip takes no click, and nothing happens. Needs a panel (a real window, not a test).
+pub(super) fn click(ctx: &mut Ctx, _: &str) -> Result<String> {
+    let id = ctx.window.window_handle().window_id();
+    if crate::notice::click(id, ctx.cx) {
+        Ok(String::new())
+    } else {
+        Err(anyhow!("no chip to click in this window"))
+    }
+}
+
 /// `notices`: each window's chip, a line each: its number, the phase (`Hidden`, `Showing`, `Leaving`), the
-/// words, the terminal it is about (its pane's x y w h, and the window's size) and the panel if there is one: the chip's frame at rest in the window's points (x y w h), its
+/// words, `sticky` and `clickable` when they are so, the terminal it is about (its pane's x y w h, and the window's size) and the panel if there is one: the chip's frame at rest in the window's points (x y w h), its
 /// material, its window number and the app window's.
 pub(super) fn notices(ctx: &mut Ctx, _: &str) -> Result<String> {
     let windows: Vec<WindowId> = app(ctx.cx).windows.iter().map(|w| w.handle.window_id()).collect();
@@ -27,6 +49,12 @@ pub(super) fn notices(ctx: &mut Ctx, _: &str) -> Result<String> {
     for report in crate::notice::notices(ctx.cx) {
         let number = windows.iter().position(|id| *id == report.window).map_or(0, |ix| ix + 1);
         write!(out, "window {number} {:?} {:?}", report.phase, report.words)?;
+        if report.sticky {
+            out.push_str(" sticky");
+        }
+        if report.clickable {
+            out.push_str(" clickable");
+        }
         if let Some(spot) = report.spot {
             let r = spot.anchor;
             write!(out, " terminal {} {} {} {} in {}x{}", r.x, r.y, r.w, r.h, spot.window.0, spot.window.1)?;
@@ -38,8 +66,9 @@ pub(super) fn notices(ctx: &mut Ctx, _: &str) -> Result<String> {
             let [x, y, w, h] = panel.frame;
             write!(
                 out,
-                " frame {x} {y} {w} {h} material {} panel {} window {}",
+                " frame {x} {y} {w} {h} material {}{} panel {} window {}",
                 panel.material.name(),
+                if panel.takes_mouse { " mouse" } else { "" },
                 panel.window_number,
                 panel.parent_number
             )?;

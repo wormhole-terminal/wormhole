@@ -102,6 +102,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "reveal-test" => scaling::reveal_test,
         "notice" => notices::notice,
         "notices" => notices::notices,
+        "notice-click" => notices::click,
         "notice-material" => notices::material,
         "pane-split" => sessions::pane_split,
         "pane-close" => sessions::pane_close,

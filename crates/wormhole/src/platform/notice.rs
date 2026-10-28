@@ -1,18 +1,22 @@
 //! The notice chip's panel: a small capsule of the system's own glass that drops from the top edge of a
 //! terminal to say "Copied 3 lines". GPUI draws only inside its window and has no system material, so the
 //! chip is a window of its own, a child of the app window's (it moves, minimises and enters full screen with
-//! it), that ignores the mouse and never takes the keys. Core Animation plays the drop, so nothing is drawn
-//! per frame.
+//! it) that ignores the mouse, except over its capsule while a sticky message waits for a click, and never
+//! takes the keys. Core Animation plays the drop, so nothing is drawn per frame.
 //!
 //! What it says, when, and for how long is the app's (`crate::notice`, with core's `view::notice` rules);
-//! this only shows what it is handed. A [`Chip`] is one window's panel: making one has it appear,
-//! [`Chip::hide`] sends it away, and dropping it closes the panel. Where there is no panel to make (a
-//! system without one, a window without a native view, a test) [`Chip::new`] answers `None`.
+//! this only shows what it is handed, and says when it is clicked. A [`Chip`] is one window's panel: making
+//! one has it appear, [`Chip::hide`] sends it away, and dropping it closes the panel. Where there is no panel
+//! to make (a system without one, a window without a native view, a test) [`Chip::new`] answers `None`.
 
 use wormhole_core::theme::tokens::Appearance;
 use wormhole_core::view::notice::Glyph;
 
 pub use super::os::notice::Chip;
+
+/// Where a click on a clickable chip goes: the app reads it (`crate::notice`) and decides what it means.
+/// A channel and not a callback, because AppKit calls from its event loop, outside any GPUI update.
+pub type Clicks = smol::channel::Sender<()>;
 
 /// What the chip shows.
 #[derive(Clone, Copy, Debug)]
@@ -53,6 +57,8 @@ pub struct Info {
     pub material: Material,
     /// The chip at rest, in the window's own space (points from its top left): x, y, width, height.
     pub frame: [f32; 4],
+    /// The panel takes the mouse (only while the chip is clickable); otherwise every click passes through it.
+    pub takes_mouse: bool,
     /// The panel's window number, for a capture of that one window (`screencapture -l`).
     pub window_number: i64,
     /// The app window's, for a capture of that one.

@@ -1,5 +1,6 @@
 //! AppKit's side of `platform::notice`: a borderless, non-activating panel that is a child of the app window's
-//! `NSWindow`, wide as that window and as tall as the chip with the gap it rests at and room below for the
+//! `NSWindow`, wide as that window (but see `Chip::set_clickable`: it ignores the mouse, and while a sticky
+//! message waits for a click it shrinks to the capsule) and as tall as the chip with the gap it rests at and room below for the
 //! glass's shadow, whose top edge sits on the top edge of the terminal the chip is about (core's `place` says
 //! where the chip is in it). The panel's own edge is the clip: the chip drops in from above it and goes back up
 //! behind it.
@@ -10,6 +11,8 @@
 //! nothing while it plays. The theme's appearance goes on the holder (never on an `NSWindow`: GPUI reads that
 //! one as the system's).
 
+use std::rc::Rc;
+
 #[cfg(feature = "devctl")]
 use std::cell::Cell;
 
@@ -18,11 +21,11 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyClass, AnyObject, Bool};
 use objc2_app_kit::{
-    NSAnimatablePropertyContainer as _, NSAnimationContext, NSBackingStoreType, NSBezierPath, NSBox,
-    NSBoxType, NSColor, NSFont, NSGlassEffectView, NSImage, NSImageResizingMode, NSImageScaling, NSImageView,
-    NSLineBreakMode, NSPanel, NSTextField, NSTitlePosition, NSView, NSVisualEffectBlendingMode,
-    NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView, NSWindow, NSWindowCollectionBehavior,
-    NSWindowOrderingMode, NSWindowStyleMask,
+    NSAccessibility as _, NSAnimatablePropertyContainer as _, NSAnimationContext, NSBackingStoreType,
+    NSBezierPath, NSBox, NSBoxType, NSColor, NSFont, NSGlassEffectView, NSImage, NSImageResizingMode,
+    NSImageScaling, NSImageView, NSLineBreakMode, NSPanel, NSTextField, NSTitlePosition, NSView,
+    NSVisualEffectBlendingMode, NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView, NSWindow,
+    NSWindowCollectionBehavior, NSWindowOrderingMode, NSWindowStyleMask,
 };
 use objc2_core_foundation::CGAffineTransform;
 use objc2_foundation::{NSEdgeInsets, NSNumber, NSPoint, NSRect, NSSize, NSString};
@@ -37,7 +40,8 @@ use wormhole_core::view::panes::Rect;
 
 use super::appearance;
 use super::appkit::{ns_window, symbol};
-use crate::platform::notice::{Content, Material};
+use super::notice_click::{ClickView, click_view};
+use crate::platform::notice::{Clicks, Content, Material};
 
 /// The chip's own metrics, AppKit's native ones for a small capsule (the app's style scale is for what
 /// GPUI draws; this is system chrome, like a menu row in `rows`).
@@ -48,6 +52,9 @@ const ICON: f64 = 15.0;
 const GAP: f64 = 7.0;
 /// Under the chip, inside the panel: where the glass's shadow falls.
 const SHADOW_ROOM: f64 = 14.0;
+/// How far the panel reaches past each side of the capsule while it is clickable: where the glass's
+/// shadow falls. A click there is the panel's, and does nothing.
+const SIDE_ROOM: f64 = 10.0;
 /// The border of the plain fill, which has no glass edge to show where it ends.
 const EDGE: f64 = 1.0;
 
@@ -196,6 +203,7 @@ fn symbol_name(glyph: Glyph) -> &'static str {
         Glyph::Copy => "doc.on.doc",
         Glyph::Eye => "eye",
         Glyph::Keyboard => "keyboard",
+        Glyph::Warning => "exclamationmark.triangle",
     }
 }
 
@@ -208,6 +216,10 @@ pub struct Chip {
     label: Retained<NSView>,
     icon: Retained<NSImageView>,
     text: Retained<NSTextField>,
+    /// Lies over the capsule and takes the click, while the chip is clickable.
+    press: Retained<ClickView>,
+    /// The chip takes a click now: the panel is only as wide as the capsule (`set_clickable`).
+    clickable: bool,
     /// Where the chip is, as last laid out.
     placed: Placed,
     /// The chip is on its way out (or gone): the holder is mid-animation and is left alone until it comes back.
@@ -220,8 +232,9 @@ pub struct Chip {
 
 impl Chip {
     /// A panel for `window`'s chip, not yet on screen: `opaque` for a plain fill (the person asked the
-    /// system for no transparency or more contrast). `None` for a window without a native one.
-    pub fn new(window: &Window, opaque: bool) -> Option<Self> {
+    /// system for no transparency or more contrast). A click on the chip, while it takes one, is sent to
+    /// `clicks`. `None` for a window without a native one.
+    pub fn new(window: &Window, opaque: bool, clicks: Clicks) -> Option<Self> {
         let mtm = MainThreadMarker::new()?;
         let parent = ns_window(window)?;
         let panel = NSPanel::initWithContentRect_styleMask_backing_defer(
@@ -269,6 +282,19 @@ impl Chip {
         label.addSubview(&text);
         backdrop.hold(&label);
 
+        // Over the capsule, above the glass, and out of the way until the chip is clickable. The channel is
+        // the app's to read: a press can come at any moment of the event loop, outside any GPUI update.
+        let press = click_view(
+            mtm,
+            "",
+            Rc::new(move || {
+                // Unbounded: it never waits, and it only fails when the app has stopped listening.
+                clicks.try_send(()).ok();
+            }),
+        );
+        press.setHidden(true);
+        holder.addSubview(&press);
+
         let placed = Placed { top: 0.0, chip: Rect::new(0.0, 0.0, 0.0, 0.0), cut: false };
         Some(Self {
             parent,
@@ -278,6 +304,8 @@ impl Chip {
             label,
             icon,
             text,
+            press,
+            clickable: false,
             placed,
             leaving: false,
             entered: false,
@@ -286,9 +314,17 @@ impl Chip {
     }
 
     /// Bring the chip in with `content`, at `spot`.
-    pub fn show(&mut self, content: &Content<'_>, spot: Spot, entrance: Entrance, cx: &mut App) {
+    pub fn show(
+        &mut self,
+        content: &Content<'_>,
+        spot: Spot,
+        entrance: Entrance,
+        clickable: bool,
+        cx: &mut App,
+    ) {
         self.leaving = false;
         self.set_content(content);
+        self.set_clickable(clickable);
         self.lay_out(spot, false);
         let layer = self.layer();
         layer.removeAllAnimations();
@@ -307,7 +343,7 @@ impl Chip {
     }
 
     /// New words in the chip that is up: they crossfade and the capsule's width follows.
-    pub fn swap(&mut self, content: &Content<'_>, spot: Spot) {
+    pub fn swap(&mut self, content: &Content<'_>, spot: Spot, clickable: bool) {
         // The old picture fades into the new: a transition on the label's layer snapshots both.
         if let Some(layer) = self.label.layer() {
             let fade = CATransition::animation();
@@ -318,7 +354,11 @@ impl Chip {
             layer.addAnimation_forKey(&fade, Some(&NSString::from_str("notice-swap")));
         }
         self.set_content(content);
-        self.lay_out(spot, true);
+        // The capsule's width follows the words only inside a panel as wide as the window: a panel that
+        // changes its own width (a copy over a sticky message, or the sticky one back) has it snap.
+        let snap = self.clickable || clickable;
+        self.set_clickable(clickable);
+        self.lay_out(spot, !snap);
     }
 
     /// Send the chip away; the panel stays until the chip is closed.
@@ -338,6 +378,17 @@ impl Chip {
                 fade(&layer, 1.0, 0.0, FADE_OUT, FADE_EASE);
             }
         }
+    }
+
+    /// Whether the chip takes a click on its capsule (and shows the pointing hand over it). A copy's chip
+    /// ignores the mouse, so every click goes through the panel to the window under it. The panel spans the
+    /// window, though, and AppKit gives a window that takes the mouse every click in its frame, so while the
+    /// chip is clickable the panel is cut down to the capsule and a little room around it (`lay_out`), and the
+    /// clear view over the capsule takes the click. A click anywhere else is not over the panel at all.
+    pub fn set_clickable(&mut self, clickable: bool) {
+        self.clickable = clickable;
+        self.press.setHidden(!clickable);
+        self.panel.setIgnoresMouseEvents(!clickable);
     }
 
     /// Put the chip at `spot` again: the window was resized, went full screen or came back, or the terminal it
@@ -362,6 +413,7 @@ impl Chip {
         Some(crate::platform::notice::Info {
             material: self.backdrop.material(),
             frame: [chip.x, chip.y, chip.w, chip.h],
+            takes_mouse: !self.panel.ignoresMouseEvents(),
             window_number: self.panel.windowNumber() as i64,
             parent_number: self.parent.windowNumber() as i64,
         })
@@ -385,6 +437,7 @@ impl Chip {
     fn set_content(&mut self, content: &Content<'_>) {
         let Content { glyph, text, appearance: theme } = *content;
         self.text.setStringValue(&NSString::from_str(text));
+        self.press.setAccessibilityLabel(Some(&NSString::from_str(text)));
         self.icon.setImage(symbol(symbol_name(glyph), text).as_deref());
         // The theme's appearance on everything in the chip, whatever the system's is.
         appearance::set_on(&self.holder, theme);
@@ -402,9 +455,18 @@ impl Chip {
 
         let parent = self.parent.frame();
         let height = f64::from(chip.h + self.gap()) + SHADOW_ROOM;
+        // Wide as the window, or, while it takes a click, as the capsule and its room: see `set_clickable`.
+        let (left, width, inset) = if self.clickable {
+            (f64::from(chip.x) - SIDE_ROOM, f64::from(chip.w) + 2.0 * SIDE_ROOM, SIDE_ROOM)
+        } else {
+            (0.0, parent.size.width, f64::from(chip.x))
+        };
         let panel = NSRect::new(
-            NSPoint::new(parent.origin.x, parent.origin.y + parent.size.height - f64::from(top) - height),
-            NSSize::new(parent.size.width, height),
+            NSPoint::new(
+                parent.origin.x + left,
+                parent.origin.y + parent.size.height - f64::from(top) - height,
+            ),
+            NSSize::new(width, height),
         );
         if self.panel.frame() != panel {
             self.panel.setFrame_display(panel, true);
@@ -417,10 +479,11 @@ impl Chip {
         }
 
         let capsule = NSSize::new(f64::from(chip.w), f64::from(chip.h));
-        let at = NSRect::new(NSPoint::new(f64::from(chip.x), SHADOW_ROOM), capsule);
+        let at = NSRect::new(NSPoint::new(inset, SHADOW_ROOM), capsule);
         let inside = NSRect::new(NSPoint::ZERO, capsule);
         self.icon.setFrame(geometry.icon);
         self.text.setFrame(geometry.text);
+        self.press.setFrame(at);
         if animated {
             // The capsule and the label's frame move together, so the words are never ahead of the glass.
             NSAnimationContext::beginGrouping();

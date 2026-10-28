@@ -9,6 +9,9 @@
 //! that terminal is (`Anchor`). A window tells the module who it is once (`register`). It does nothing unless
 //! the Notices feature flag is on in the window's profile.
 //!
+//! A warning (core's `Notice::Warned`) is sticky: the chip stays until the person clicks it, and the click
+//! comes back from the panel over a channel this module reads.
+//!
 //! The words are never the copied text, only what it was and how much (core's `Copied`).
 
 mod chips;
@@ -18,6 +21,7 @@ mod words;
 
 pub(crate) use chips::{Anchor, Facts, enabled, post, post_to, register};
 #[cfg(any(test, feature = "devctl"))]
-pub(crate) use report::notices;
+pub(crate) use report::{click, notices};
 #[cfg(feature = "devctl")]
-pub(crate) use report::test_notice;
+pub(crate) use report::{test_notice, test_sticky};
+pub(crate) use words::host_fallback_detail;

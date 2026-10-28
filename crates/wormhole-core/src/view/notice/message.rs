@@ -11,6 +11,9 @@ pub enum Notice {
     Driven(Driven),
     /// Something the person asked for could not be done.
     Failed(Failed),
+    /// Something the person should know and that stays until they have seen it: the chip waits for a
+    /// click (see [`Notice::is_sticky`]).
+    Warned(Warning),
     /// A message devctl made up (`notice <text>`, which has no sentence in the catalog); the number tells
     /// one from another and the words come with the post. Nothing but devctl makes one.
     Test(u64),
@@ -43,6 +46,16 @@ pub enum Failed {
     /// A copy of a path with characters in it that would act when pasted into a terminal (a newline), or
     /// that is not text.
     CopyPath,
+}
+
+/// What the person is warned about.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Warning {
+    /// The helper that keeps terminals running couldn't start, so this terminal ends when Wormhole quits.
+    HostFallback,
+    /// A sticky message devctl made up (`notice sticky <text>`); the number tells one from another and the
+    /// words come with the post. Nothing but devctl makes one.
+    Test(u64),
 }
 
 /// What was copied, and how much.
@@ -88,6 +101,8 @@ pub enum Glyph {
     Eye,
     /// A keyboard: something types into the terminal.
     Keyboard,
+    /// A triangle with an exclamation mark: a warning.
+    Warning,
 }
 
 impl Notice {
@@ -97,7 +112,15 @@ impl Notice {
             Self::Copied(_) | Self::Failed(_) | Self::Test(_) => Glyph::Copy,
             Self::Driven(Driven::Reading(_)) => Glyph::Eye,
             Self::Driven(Driven::Typing(_)) => Glyph::Keyboard,
+            Self::Warned(_) => Glyph::Warning,
         }
+    }
+
+    /// The chip keeps this one until the person clicks it, instead of leaving after its life. Only a
+    /// warning is sticky: a copy says what happened and is gone.
+    #[must_use]
+    pub fn is_sticky(self) -> bool {
+        matches!(self, Self::Warned(_))
     }
 }
 
@@ -157,6 +180,16 @@ mod tests {
         let agent = Driver::Agent(AgentId::Claude);
         assert_eq!(Notice::Driven(Driven::Reading(agent)).glyph(), Glyph::Eye);
         assert_eq!(Notice::Driven(Driven::Typing(Driver::Scripts)).glyph(), Glyph::Keyboard);
+    }
+
+    #[test]
+    fn only_a_warning_is_sticky_and_it_has_the_warning_glyph() {
+        let warned = Notice::Warned(Warning::HostFallback);
+        assert!(warned.is_sticky());
+        assert_eq!(warned.glyph(), Glyph::Warning);
+        assert!(!Notice::from(Copied::Path).is_sticky());
+        assert!(!Notice::from(Failed::CopyCommit).is_sticky());
+        assert!(!Notice::Test(1).is_sticky());
     }
 
     #[test]

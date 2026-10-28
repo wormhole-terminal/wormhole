@@ -167,6 +167,8 @@ mod status_bar;
 mod status_motion_tests;
 mod status_rolls;
 #[cfg(test)]
+mod sticky_notice_tests;
+#[cfg(test)]
 mod structure_tests;
 mod summaries;
 #[cfg(test)]

@@ -36,6 +36,10 @@ pub const NOTICE_COPIED_COMMIT_AUTHOR: Key = Key::new(128);
 pub const NOTICE_FAILED_COPY_COMMIT: Key = Key::new(129);
 /// "Not copied: the path has characters that would act when pasted"
 pub const NOTICE_FAILED_COPY_PATH: Key = Key::new(130);
+/// "This terminal ends when Wormhole quits"
+pub const NOTICE_WARNED_HOST_FALLBACK: Key = Key::new(131);
+/// "This terminal runs inside Wormhole and ends when it quits: the helper that keeps terminals running couldn't start."
+pub const NOTICE_WARNED_HOST_FALLBACK_DETAIL: Key = Key::new(132);
 
 /// ```text
 /// { $count ->
