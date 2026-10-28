@@ -5,3 +5,4 @@
 //! below `style`.
 
 pub(crate) mod highlight;
+pub(crate) mod tabs;

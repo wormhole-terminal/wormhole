@@ -192,6 +192,32 @@ fn parse_in(cache: &Mutex<Cache>, text: &str, language: &'static str) -> Arc<Par
     lock(cache).insert(key, parsed)
 }
 
+/// The language a file's name says it is, if there is a grammar for it.
+fn language_of(path: &str) -> Option<&'static str> {
+    let extension = Path::new(path).extension().and_then(|e| e.to_str()).unwrap_or("");
+    let language = Language::from_str(extension).name();
+    (language != Language::Plain.name()).then_some(language)
+}
+
+/// The syntax colors of one text shown whole, a file in the Files viewer.
+pub(crate) struct TextHighlights {
+    parsed: Arc<Parsed>,
+}
+
+impl TextHighlights {
+    /// Parses `text` as the language `path` names; `None` for a file without a grammar. Takes long for a
+    /// large text: not for the main thread.
+    pub(crate) fn for_text(text: &str, path: &str) -> Option<Self> {
+        Some(Self { parsed: parse_in(&CACHE, text, language_of(path)?) })
+    }
+
+    /// Colors for line `index` (0-based), whose text is `line` without its line break, relative to the
+    /// line. Empty if the parsed text has other text there.
+    pub(crate) fn line(&self, index: usize, line: &str, theme: &HighlightTheme) -> Styles {
+        self.parsed.line(index, line, theme)
+    }
+}
+
 /// The syntax colors of a diff's two files.
 pub(crate) struct Highlights {
     old: Option<Arc<Parsed>>,
@@ -212,11 +238,7 @@ impl Highlights {
         path: &str,
         theme: &Arc<HighlightTheme>,
     ) -> Option<Self> {
-        let extension = Path::new(path).extension().and_then(|e| e.to_str()).unwrap_or("");
-        let language = Language::from_str(extension).name();
-        if language == Language::Plain.name() {
-            return None;
-        }
+        let language = language_of(path)?;
         let parse = |text: &String| parse_in(cache, text, language);
         Some(Self {
             old: diff.old_text.as_ref().map(parse),
@@ -242,7 +264,7 @@ impl Highlights {
 mod tests {
     use std::sync::{Arc, Mutex};
 
-    use super::{Cache, Highlights, Limits, Stats, lock, parse_in};
+    use super::{Cache, Highlights, Limits, Stats, TextHighlights, lock, parse_in};
     use gpui_kit::component::highlighter::HighlightTheme;
     use wormhole_core::git::{DiffLine, FileDiff, LineKind};
 
@@ -385,5 +407,18 @@ mod tests {
         assert!(highlights.line(&removed(9, "fn old() {}")).is_empty());
         // Line numbers count from 1; 0 must not underflow.
         assert!(highlights.line(&removed(0, "fn old() {}")).is_empty());
+    }
+
+    #[test]
+    fn a_whole_text_is_colored_line_by_line_and_only_if_it_has_a_grammar() {
+        let theme = HighlightTheme::default_dark();
+        let text = "fn whole_text_test() {\n    let x = 1;\n}\n";
+        let colors = TextHighlights::for_text(text, "src/a.rs").expect("rust has a grammar");
+        assert!(colors.line(1, "    let x = 1;", &theme).iter().any(|(_, style)| style.color.is_some()));
+        // Text that is not what was parsed gets nothing.
+        assert!(colors.line(1, "    let y = 1;", &theme).is_empty());
+        assert!(colors.line(9, "    let x = 1;", &theme).is_empty());
+        assert!(TextHighlights::for_text(text, "notes.txt").is_none());
+        assert!(TextHighlights::for_text(text, "Makefile").is_none());
     }
 }
