@@ -23,7 +23,7 @@ pub fn dropped_text<P: AsRef<Path>>(paths: &[P]) -> String {
 /// (no shell treats them specially, and macOS screenshots put a narrow no-break space in their
 /// names that agents match literally). A backslash can't express a control character (a
 /// backslash-newline vanishes), so those paths are single-quoted instead.
-pub(crate) fn shell_escape(path: &str) -> String {
+pub fn shell_escape(path: &str) -> String {
     if path.chars().any(char::is_control) {
         return format!("'{}'", path.replace('\'', r"'\''"));
     }

@@ -138,6 +138,9 @@ pub enum ActionId {
     /// "Put Command at Prompt": it once ran the command ("Rerun Command"), and the id stays so a
     /// key bound to it keeps working.
     RerunCommand,
+    /// The folder picker at the prompt: a list of the folders below the terminal's, whose pick puts a path at
+    /// the cursor (only with the Folder picker feature flag on: the window hides the action otherwise).
+    InsertFolderPath,
     // Notes.
     NewNote,
     StashPrompt,

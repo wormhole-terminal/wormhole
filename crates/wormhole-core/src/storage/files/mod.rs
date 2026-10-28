@@ -11,12 +11,15 @@
 //!   anything that is not a regular file (a FIFO would block forever) and, with
 //!   [`LinkPolicy::Within`], refuses paths that resolve outside the project root.
 //!
-//! [`FileStamp`] tells, from metadata alone, whether a file may have changed since it was read,
-//! so pollers re-read only what changed.
+//! [`list_folders`] reads a folder's subfolders for a list to pick from, under caps. [`FileStamp`] tells,
+//! from metadata alone, whether a file may have changed since it was read, so pollers re-read only what
+//! changed.
 
+mod folders;
 pub mod listing;
 mod private;
 
+pub use folders::{FOLDERS_CAP, Folders, SCAN_CAP, list_folders};
 pub use private::{
     PRIVATE_FILE, create_dir_all_private, create_private_file, ensure_private_dir, make_private,
     make_tree_private,

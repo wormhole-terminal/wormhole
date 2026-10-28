@@ -79,6 +79,14 @@
 //!                   typed (a prefix picks the scope: `@` terminals, `>` actions …; in an open palette
 //!                   it replaces what is typed), or close it; it opens after this batch
 //!   sheet [filter] | sheet close   the keyboard-shortcuts sheet over this window, filtered
+//!   folder-picker open|type <text>|tab|up|down|pick|close|state   the folder picker (⌘J) over
+//!                   this window: open it at the terminal's cursor (the Folder picker flag must be on:
+//!                   `set feature_flags={"folder_picker":true}`), type a path into its field (src/, ../
+//!                   and ~/ walk), tab completes the selected folder into the field, up and down move the
+//!                   selection, pick inserts the selected folder's path at the terminal's cursor as ↩
+//!                   does and closes (the terminal's screen then shows it), state lists the folder, the
+//!                   typed text, its filter and prefix, the rows with the selection marked and where the
+//!                   card was drawn
 //!   action <name>   dispatch a registered action by name (`workspace::ToggleSidebar`) through this
 //!                   window, as a click on its menu item does
 //!   available <name>   whether the focused element's path handles that action (app-wide handlers

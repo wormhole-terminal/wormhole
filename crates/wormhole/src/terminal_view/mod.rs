@@ -530,6 +530,18 @@ impl TerminalView {
         self.layout.get().area
     }
 
+    /// The cursor's cell as the last frame drew it, in the window's space. None before the first frame, with the
+    /// cursor hidden (a full-screen program hides its own) and with it scrolled out of the screen.
+    pub fn cursor_cell(&self) -> Option<Bounds<Pixels>> {
+        let layout = self.layout.get();
+        let at = self.render_state.borrow().snapshot().cursor?;
+        let corner = point(
+            layout.origin.x + layout.cell.width * at.col as f32,
+            layout.origin.y + layout.cell.height * at.row as f32,
+        );
+        Some(Bounds::new(corner, layout.cell))
+    }
+
     /// Say `notice` in this terminal's window, about this terminal: the chip drops from its top edge.
     pub(crate) fn say(&self, notice: impl Into<wormhole_core::view::notice::Notice>, cx: &mut Context<Self>) {
         let this = cx.entity();

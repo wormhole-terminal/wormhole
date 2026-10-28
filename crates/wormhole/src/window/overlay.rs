@@ -1,5 +1,6 @@
 //! What opens over the window's content: the command palette and the keyboard-shortcuts
-//! sheet, one at a time, each on a scrim that takes the clicks. Closing one gives the
+//! sheet, one at a time, each on a scrim that takes the clicks, and the folder picker, a card at the
+//! terminal's cursor with no scrim (a click outside it closes it and reaches what it lands on). Closing one gives the
 //! keyboard back to whatever had it when it opened ("focus returns where it was").
 //!
 //! With the Motion feature on the palette appears at once and fades out in [`EXIT`] when it closes (core
@@ -22,6 +23,7 @@ use crate::window::Workspace;
 pub(crate) enum OverlayKind {
     Palette,
     Sheet,
+    FolderPicker,
 }
 
 impl OverlayKind {
@@ -30,6 +32,7 @@ impl OverlayKind {
         match self {
             OverlayKind::Palette => "Command palette",
             OverlayKind::Sheet => "Keyboard shortcuts",
+            OverlayKind::FolderPicker => wormhole_text::text(wormhole_text::keys::FOLDER_PICKER_NAME),
         }
     }
 }
@@ -203,10 +206,26 @@ impl Workspace {
         self.overlay_is(OverlayKind::Sheet)
     }
 
+    pub(crate) fn folder_picker_open(&self) -> bool {
+        self.overlay_is(OverlayKind::FolderPicker)
+    }
+
     /// Whether the first-run sheet is up: it holds the keyboard until it is done, so no overlay
     /// opens over it.
     pub(crate) fn first_run_open(&self, cx: &App) -> bool {
         self.first_run.read(cx).is_open()
+    }
+
+    /// Whether the folder picker's feature flag is on for this window's profile (`FeatureFlag::FolderPicker`).
+    pub(crate) fn folder_picker_on(&self, cx: &App) -> bool {
+        settings_in(&self.profile, cx)
+            .feature_enabled(wormhole_core::config::features::FeatureFlag::FolderPicker)
+    }
+
+    /// Whether the folder picker may open over this window now: its flag is on, the first-run sheet isn't up
+    /// and no diff covers the terminal (there is no cursor to put a path at).
+    pub(crate) fn can_pick_folder(&self, cx: &App) -> bool {
+        self.folder_picker_on(cx) && !self.first_run_open(cx) && !self.covered(cx)
     }
 
     /// The open overlay as a `T`, if it is one (devctl types into the palette and the sheet).
@@ -250,9 +269,14 @@ impl Workspace {
     }
 }
 
-/// Whether an overlay fades in as it opens: all of them but the palette with motion on, which is there at once.
+/// Whether an overlay fades in as it opens: the sheet, and the palette unless motion is on, when it is there at
+/// once. The folder picker is a popover at the cursor, there as the key is pressed.
 fn fades_in(kind: OverlayKind, motion_on: bool) -> bool {
-    !(kind == OverlayKind::Palette && motion_on)
+    match kind {
+        OverlayKind::Palette => !motion_on,
+        OverlayKind::Sheet => true,
+        OverlayKind::FolderPicker => false,
+    }
 }
 
 /// A palette that was closed, drawn fading: its scrim and card as they were. The card is under a shield that

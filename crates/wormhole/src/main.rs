@@ -19,6 +19,7 @@ mod devctl;
 mod dialog;
 mod features;
 mod focus_keys;
+mod folder_picker;
 mod fonts;
 mod hotkey;
 mod icons;

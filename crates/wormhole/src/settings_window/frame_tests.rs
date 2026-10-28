@@ -45,6 +45,7 @@
 //! flags and the search. The Import page is measured over the visual checks' fixture home (three terminals,
 //! Ghostty's card open with its 13 rows and what doesn't carry over, and the comparison), not over the
 //! "Looking for terminals" line a fresh page shows.
+//! Feature flags rose by about 380 when the page gained a row for the Folder picker flag (6,874 measured).
 //! On main's frame (the strip fills, the icon motions and the Motion page) it measured 53,067.
 //! Agents fell from 26,827 to 9,011 when the tests stopped seeing the agents installed on the Mac that
 //! runs them (`WORMHOLE_AGENT_PATH` empty): an installed agent's row draws its hooks and logins, so the
@@ -98,8 +99,8 @@ const BUDGET: [(&str, u64); 17] = [
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost
-    // about 380).
-    ("FeatureFlags", 6875),
+    // about 380); the Folder picker flag one more again (about 385).
+    ("FeatureFlags", 7260),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     ("search", 12250),

@@ -18,12 +18,12 @@ use wormhole_core::view::sidebar::TerminalsIn;
 
 use crate::actions::{
     About, BringAllToFront, CheckForUpdates, GoToFinished, GoToWaiting, Hide, HideFromAgents, HideOthers,
-    Licenses, ManageProfiles, Minimize, MoveWindowToProfile, NewProfile, NewWindow, OpenFolder, OpenRecent,
-    OpenSettings, OpenSettingsAt, OpenWindowInProfile, PlayIntroAurora, PlayIntroCollapse, PlayIntroEmerge,
-    PlayIntroFtl, PlayIntroTentacles, PlayIntroVortex, PlayIntroVoyage, PlayWelcomeCursor, PlayWelcomeLogo,
-    PlayWelcomePortal, RevealSetting, ShowAll, ShowIntro, ShowKeyboardShortcuts, ShowLogs, SwitchProfile,
-    ToggleCommandPalette, ToggleFullScreen, ToggleMinimap, ToggleStatusBar, ToggleTerminalTabs,
-    ToggleThemeStudio, ToggleZenMode, Zoom,
+    InsertFolderPath, Licenses, ManageProfiles, Minimize, MoveWindowToProfile, NewProfile, NewWindow,
+    OpenFolder, OpenRecent, OpenSettings, OpenSettingsAt, OpenWindowInProfile, PlayIntroAurora,
+    PlayIntroCollapse, PlayIntroEmerge, PlayIntroFtl, PlayIntroTentacles, PlayIntroVortex, PlayIntroVoyage,
+    PlayWelcomeCursor, PlayWelcomeLogo, PlayWelcomePortal, RevealSetting, ShowAll, ShowIntro,
+    ShowKeyboardShortcuts, ShowLogs, SwitchProfile, ToggleCommandPalette, ToggleFullScreen, ToggleMinimap,
+    ToggleStatusBar, ToggleTerminalTabs, ToggleThemeStudio, ToggleZenMode, Zoom,
 };
 use crate::app::menus;
 use crate::app_state::{AppState, app};
@@ -37,7 +37,7 @@ use crate::update;
 use crate::window::window_lifecycle::with_front_workspace;
 use crate::window::{ambient, window_lifecycle};
 use crate::{about, studio};
-use crate::{command_palette, shortcut_sheet, status_item};
+use crate::{command_palette, folder_picker, shortcut_sheet, status_item};
 
 /// Bind the keys, let project keys go first, and handle the actions that aren't one window's.
 /// Before the menus are set: they read the bindings for their key equivalents.
@@ -117,6 +117,8 @@ pub(crate) fn init(cx: &mut App) {
     // ⇧⌘P and ⌥⌘/: over the window in front, from any window and the terminal too.
     cx.on_action(|_: &ToggleCommandPalette, cx| cx.defer(command_palette::toggle));
     cx.on_action(|_: &ShowKeyboardShortcuts, cx| cx.defer(shortcut_sheet::toggle));
+    // ⌘J: the folder picker at the terminal's cursor in the window in front (behind its feature flag).
+    cx.on_action(|_: &InsertFolderPath, cx| cx.defer(folder_picker::toggle));
     // While Zen mode is on these two have nothing to show (it hides both): they would only change what
     // comes back when it ends, unseen, so the menu greys them out and the keys do nothing.
     cx.on_action(|_: &ToggleStatusBar, cx| {

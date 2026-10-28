@@ -135,6 +135,8 @@ fn backlog_and_freed_keys_are_not_taken() {
         ("⌘D", ActionId::SplitRight),
         ("⇧⌘D", ActionId::SplitDown),
         ("⇧⌘↩", ActionId::ZoomPane),
+        // The folder picker's key (J for jump), taken on purpose after the remap freed it.
+        ("⌘J", ActionId::InsertFolderPath),
     ] {
         assert!(matches!(uses(&spec(key)), Some(KeyUse::Action(e, _)) if e.id == id), "{key}");
     }
@@ -143,7 +145,7 @@ fn backlog_and_freed_keys_are_not_taken() {
     assert_eq!(terminal_action(&spec("⌥⌘←")), Some(ActionId::FocusPaneLeft));
     assert_eq!(list_action(&spec("⌥⌘↑")), Some(ActionId::MoveItemUp));
     assert!(!terminal_yields(&spec("⌥⌘↑")), "a terminal-scope key: the terminal's interceptor sees it first");
-    for key in ["⌘B", "⌘J", "⌥⌘T", "⌥⌘W", "⌥⌘]", "⌥⌘[", "⌥⌘1", "⌥⌘9"] {
+    for key in ["⌘B", "⌥⌘T", "⌥⌘W", "⌥⌘]", "⌥⌘[", "⌥⌘1", "⌥⌘9"] {
         assert_eq!(uses(&spec(key)), None, "{key} was freed by the remap");
     }
     // The global hotkey's example and the project actions' examples are free.
@@ -445,6 +447,8 @@ Terminal
   ---
   Reveal in Finder
   Copy Path
+  ---
+  Insert Folder Path…  ⌘J
 Window
   Minimize  ⌘M
   Zoom

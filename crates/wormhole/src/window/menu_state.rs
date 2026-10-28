@@ -108,6 +108,10 @@ impl Workspace {
         {
             state.hidden.push(HideFromAgents);
         }
+        // Only with the Folder picker flag on: with it off the action isn't in the menu, the palette or the sheet.
+        if !self.folder_picker_on(cx) {
+            state.hidden.push(InsertFolderPath);
+        }
         self.pane_menu_state(&mut state);
         if self.active_terminal().read(cx).cwd.is_none() {
             state.disabled.extend([RevealInFinder, CopyPath]);

@@ -218,6 +218,9 @@ pub(super) fn entries() -> Vec<Entry> {
         row(CopyOutput, "Copy Output", &[]).scope(Scope::Terminal),
         row(CopyCommand, "Copy Command", &[]).scope(Scope::Terminal),
         row(RerunCommand, "Put Command at Prompt", &[]).scope(Scope::Terminal),
+        // J for "jump": the picker walks the folders below the terminal's and inserts a path, it never cd's.
+        // Hidden with its feature flag off (the window says which actions are).
+        row(InsertFolderPath, "Insert Folder Path…", &[(CMD, "j")]),
         // Notes.
         row(NewNote, "New Note", &[(ALT_CMD, "n")]).feature("notes"),
         row(StashPrompt, "Stash Prompt", &[(ALT_CMD, "s")]).feature("notes"),

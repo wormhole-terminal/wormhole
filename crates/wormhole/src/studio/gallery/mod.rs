@@ -9,6 +9,7 @@ mod buttons;
 mod chrome;
 mod diff;
 mod find;
+mod folder_picker;
 mod inputs;
 mod labels;
 mod layout;
@@ -186,6 +187,15 @@ const SPECIMENS: &[Specimen] = &[
         part_gap: 0.0,
         parts: &[177.0],
         render: find::render,
+    },
+    Specimen {
+        title: "Folder picker",
+        description: "the card at the cursor: folders, the selected one, the typed text marked, and an empty list",
+        area: Some(Area::Chrome),
+        column: Column::Both,
+        part_gap: 0.0,
+        parts: &[170.0],
+        render: folder_picker::render,
     },
     Specimen {
         title: "Panes",

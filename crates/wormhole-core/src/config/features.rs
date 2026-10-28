@@ -71,10 +71,14 @@ pub enum FeatureFlag {
     /// repository's root, else the folder), with a path menu, pinned folders and a row menu. Off, the
     /// tab, its key and its menu line are not there.
     Files,
+    /// ⌘J at the prompt: a list of the folders below the terminal's own, found by typing a path, that puts
+    /// the picked folder's path at the cursor (it never changes directory). Off, ⌘J does nothing and the
+    /// menu and the palette don't list it.
+    FolderPicker,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 12] = [
+    pub const ALL: [FeatureFlag; 13] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
@@ -87,6 +91,7 @@ impl FeatureFlag {
         Self::Notices,
         Self::Probes,
         Self::Files,
+        Self::FolderPicker,
     ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
@@ -104,6 +109,7 @@ impl FeatureFlag {
             Self::Notices => "notices",
             Self::Probes => "probes",
             Self::Files => "files",
+            Self::FolderPicker => "folder_picker",
         }
     }
 
@@ -126,6 +132,7 @@ impl FeatureFlag {
             Self::Notices => "Notice chip",
             Self::Probes => "Probes",
             Self::Files => "Files",
+            Self::FolderPicker => "Folder picker",
         }
     }
 
@@ -181,6 +188,10 @@ impl FeatureFlag {
                 "The right panel's Files tab: the folder a terminal is in as a tree, with a path menu, \
                  pinned folders and a menu on each row."
             }
+            Self::FolderPicker => {
+                "⌘J at the prompt: pick a folder below the current one, or walk a path, and its path is put \
+                 at the cursor."
+            }
         }
     }
 
@@ -211,6 +222,8 @@ impl FeatureFlag {
             Self::Probes => false,
             // Phase 1 of the file explorer: no viewer yet, and not yet through its visual check.
             Self::Files => false,
+            // New: off until it has been through its visual check and approved.
+            Self::FolderPicker => false,
         }
     }
 }

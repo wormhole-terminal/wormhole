@@ -107,6 +107,8 @@ actions!(
         PlayWelcomeLogo,
         ToggleCommandPalette,
         ShowKeyboardShortcuts,
+        /// ⌘J: the folder picker over the window in front, which puts a folder's path at its terminal's cursor.
+        InsertFolderPath,
         NewProfile,
         ManageProfiles,
         /// The greyed line in an empty submenu ("No Recent Folders"): nothing handles it, so
@@ -277,6 +279,7 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
         A::GoToFinished => Box::new(GoToFinished),
         A::CommandPalette => Box::new(ToggleCommandPalette),
         A::KeyboardShortcuts => Box::new(ShowKeyboardShortcuts),
+        A::InsertFolderPath => Box::new(InsertFolderPath),
         A::NewProfile => Box::new(NewProfile),
         A::ManageProfiles => Box::new(ManageProfiles),
         // These three act on the profile a menu item or palette row names: `SwitchProfile(id)`.

@@ -117,6 +117,7 @@
         "settings_window",
         [
           "command_palette",
+          "folder_picker",
           "shortcut_sheet",
           "status_item"
         ],

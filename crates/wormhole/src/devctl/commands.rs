@@ -56,6 +56,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "popover-real-close" => menus::popover_real_close,
         "palette" => menus::palette,
         "sheet" => menus::sheet,
+        "folder-picker" => menus::folder_picker,
         "action" => menus::action,
         "available" => menus::available,
         "about" => |ctx, arg| menus::about(ctx, "about", arg),

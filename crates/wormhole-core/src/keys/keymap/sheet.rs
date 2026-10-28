@@ -122,6 +122,7 @@ const SHEET: &[(&str, &[RowSpec])] = &[
             ("Find next / previous", &[FindNext, FindPrevious], Each),
             ("Use selection for find", &[UseSelectionForFind], Each),
             ("Previous / next prompt", &[PreviousPrompt, NextPrompt], Each),
+            ("Insert folder path", &[InsertFolderPath], Each),
         ],
     ),
     (

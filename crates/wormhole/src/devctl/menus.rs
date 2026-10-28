@@ -49,6 +49,11 @@ pub(super) fn sheet(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `folder-picker open|type <text>|tab|up|down|pick|close|state`: the folder picker over this window.
+pub(super) fn folder_picker(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    crate::folder_picker::devctl_folder_picker(ctx.workspace, arg, ctx.window, ctx.cx)
+}
+
 /// `menu`: the last menu a right-click or a menu button opened, one row a line (items numbered).
 /// A native menu can't be screenshotted, so the scripted checks read the model instead.
 pub(super) fn menu(_: &mut Ctx, _: &str) -> Result<String> {

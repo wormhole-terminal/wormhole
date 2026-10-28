@@ -230,6 +230,8 @@ const TERMINAL: &[Slot] = &[
     Sep,
     A(RevealInFinder),
     A(CopyPath),
+    Sep,
+    A(InsertFolderPath),
 ];
 
 /// The system adds the list of open windows at the end.
