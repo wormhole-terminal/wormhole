@@ -33,4 +33,4 @@ e794710d7b0f893e09bab6d59613c734a379f9e7
 # refactor(files): core view::files becomes view::file_tree
 47f18d0229a89b6ac9a24455384d4d5c9fc6a3ee
 # refactor(syntax): the tree-sitter highlighting moves from the diff to syntax
-ec740f0c63f82a5fe0976792a9517bb264c80245
+bef7e035969b3440e7ed568252d6e20265f44c19
