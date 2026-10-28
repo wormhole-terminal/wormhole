@@ -46,6 +46,16 @@ pub(crate) fn redraw_windows_of(profile: &ProfileId, cx: &mut App) {
     });
 }
 
+/// The listener of a tab's action (`TabDef::show`): shows the tab whose action ran. Typed and without
+/// captures, so binding it allocates nothing; the window and the tab are found when the action runs.
+pub(crate) fn show_tab<A: Action>(action: &A, window: &mut Window, cx: &mut App) {
+    let handle = window.window_handle();
+    let found = app(cx).windows.iter().find(|open| open.handle == handle).map(|open| open.workspace.clone());
+    if let Some(workspace) = found {
+        workspace.update(cx, |ws, cx| ws.show_tab_of_action(action, cx)).ok();
+    }
+}
+
 /// A feature's entity and the window's hold on its events. Dropping it unsubscribes. The only way to
 /// make one is [`Workspace::listen`] (the subscription field is private to this module), so the
 /// subscription is the window's and no feature can forget it or keep the entity without it.
@@ -250,6 +260,16 @@ impl Workspace {
             .is_some_and(|(at, entry)| facts.features.has(self.features[at].id) && (entry.shown)(facts, cx))
     }
 
+    /// Shows the tab whose action is `action`: what the key or the menu line of a tab does.
+    fn show_tab_of_action(&mut self, action: &dyn Action, cx: &mut Context<Self>) {
+        let tab = (self.features.iter().flat_map(|def| def.tabs))
+            .find(|tab| gpui_action(tab.action).is_some_and(|shows| shows.partial_eq(action)))
+            .map(|tab| tab.id);
+        if let Some(tab) = tab {
+            self.show_tab(tab, cx);
+        }
+    }
+
     /// The window's actions for the table's tabs and its features' own, bound on `root`: every
     /// offered tab's action shows the tab, then each feature's `bind` adds the rest.
     pub(in crate::window) fn bind_features(&self, mut root: Root, cx: &mut Context<Self>) -> Root {
@@ -259,14 +279,9 @@ impl Workspace {
                 continue;
             }
             for tab in def.tabs {
-                let Some(action) = gpui_action(tab.action).filter(|_| (tab.shown)(&facts, cx)) else {
-                    continue;
-                };
-                let id = tab.id;
-                root = root.on_boxed_action(
-                    &*action,
-                    cx.listener(move |this, _: &dyn Action, _, cx| this.show_tab(id, cx)),
-                );
+                if (tab.shown)(&facts, cx) {
+                    root = (tab.show)(root);
+                }
             }
             if let (Some(bind), Some(entity)) = (def.bind, self.feature_entity(at)) {
                 root = bind(entity, &facts, root, cx);

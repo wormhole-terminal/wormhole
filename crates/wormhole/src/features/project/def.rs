@@ -12,10 +12,12 @@ use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::spoken::{self, PanelTab};
 
 use super::{Project, detect, hub_of, hubs, panel, project_folders_on};
-use crate::actions::RunProjectAction;
+use crate::actions::{RunProjectAction, ShowProject};
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{FeatureDef, ProfileHooks, Root, StateDef, TabDef, TrustHooks, WorktreeHooks};
+use crate::window::feature::{
+    FeatureDef, ProfileHooks, Root, StateDef, TabDef, TrustHooks, WorktreeHooks, show_tab,
+};
 
 /// The window's `Project`, from the handle the window keeps. The entry makes it, so it is one.
 fn typed(entity: &AnyEntity) -> Entity<Project> {
@@ -29,6 +31,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         icon: IconName::Folder,
         label: "Project",
         action: ActionId::ShowProject,
+        show: |root| root.on_action(show_tab::<ShowProject>),
         on_show: Some(|entity, facts, _, cx| look(entity, facts, cx)),
         // Whenever the terminal has a folder: its colour is set there, and its project made. It stays while
         // it is the tab on show, so a terminal whose folder isn't known for a moment doesn't pull it out

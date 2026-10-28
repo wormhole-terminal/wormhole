@@ -2,6 +2,7 @@
 //! on screen, redrawn every so often while it shows, and its key and menu line hidden when it is not
 //! offered. The entity is the app's reports (`state`); it holds no per-terminal state, so the
 //! terminal hooks of its `StateDef` have nothing to do.
+use gpui_kit::InteractiveElement as _;
 use gpui_kit::assets::IconName;
 use wormhole_core::config::{FeatureId, TabId};
 use wormhole_core::keys::keymap::ActionId;
@@ -9,8 +10,9 @@ use wormhole_core::view::spoken::{self, PanelTab};
 
 use super::state::{self, profile_deleted, profile_shown};
 use super::view;
+use crate::actions::ShowUsage;
 use crate::window::Workspace;
-use crate::window::feature::{FeatureDef, ProfileHooks, StateDef, TabDef};
+use crate::window::feature::{FeatureDef, ProfileHooks, StateDef, TabDef, show_tab};
 
 /// "resets 34m" and "Updated 2m ago" move on: the tab redraws this often while it shows, in ticks of
 /// the window (400 ms each).
@@ -23,6 +25,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         icon: IconName::Gauge,
         label: "Usage",
         action: ActionId::ShowUsage,
+        show: |root| root.on_action(show_tab::<ShowUsage>),
         on_show: None,
         // It reads the same `TerminalView::agent` the title row's context status is keyed on.
         shown: |facts, _| facts.agent_on_screen(),

@@ -9,8 +9,9 @@ use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::view::spoken::{self, PanelTab};
 
 use super::{History, HistoryState, keys, view};
+use crate::actions::ShowHistory;
 use crate::window::Workspace;
-use crate::window::feature::{FeatureDef, StateDef, TabDef};
+use crate::window::feature::{FeatureDef, StateDef, TabDef, show_tab};
 
 /// The window's `History`, from the handle the window keeps. The entry makes it, so it is one.
 pub(super) fn typed(entity: &AnyEntity) -> Entity<History> {
@@ -29,6 +30,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         icon: IconName::GitCommitHorizontal,
         label: "History",
         action: ActionId::ShowHistory,
+        show: |root| root.on_action(show_tab::<ShowHistory>),
         on_show: Some(|entity, facts, session, cx| {
             typed(entity).update(cx, |history, cx| history.shown(facts, session, cx));
         }),

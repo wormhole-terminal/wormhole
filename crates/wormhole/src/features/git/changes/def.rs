@@ -9,10 +9,13 @@ use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::view::spoken::{self, PanelTab};
 
 use super::{Changes, list, view};
+use crate::actions::ShowChanges;
 use crate::features::git::diff::DiffView;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{BranchChip, CoverDef, FeatureDef, FeatureEvent, RepoRequest, StateDef, TabDef};
+use crate::window::feature::{
+    BranchChip, CoverDef, FeatureDef, FeatureEvent, RepoRequest, StateDef, TabDef, show_tab,
+};
 
 /// The window's `Changes`, from the handle the window keeps. The entry makes it, so it is one.
 pub(super) fn typed(entity: &AnyEntity) -> Entity<Changes> {
@@ -33,6 +36,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         icon: IconName::GitCompare,
         label: "Changes",
         action: ActionId::ShowChanges,
+        show: |root| root.on_action(show_tab::<ShowChanges>),
         // Showing the tab reads the repository again (the picker of an earlier visit is closed by
         // `tab_changed`, which the window runs first).
         on_show: Some(|entity, _, session, cx| {

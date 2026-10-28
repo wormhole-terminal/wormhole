@@ -7,11 +7,11 @@ use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::view::notes::stake;
 
 use super::{Notes, list, view};
-use crate::actions::{NewNote, StashPrompt};
+use crate::actions::{NewNote, ShowNotes, StashPrompt};
 use crate::sidebar::{RowExtra, RowExtras};
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{CloseHooks, FeatureDef, Root, Stake, StateDef, TabDef};
+use crate::window::feature::{CloseHooks, FeatureDef, Root, Stake, StateDef, TabDef, show_tab};
 
 /// The window's `Notes`, from the handle the window keeps. The entry makes it, so it is one.
 pub(super) fn typed(entity: &AnyEntity) -> Entity<Notes> {
@@ -27,6 +27,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         icon: IconName::FileText,
         label: "Notes",
         action: ActionId::ShowNotes,
+        show: |root| root.on_action(show_tab::<ShowNotes>),
         on_show: None,
         shown: |_, _| true,
         count: None,

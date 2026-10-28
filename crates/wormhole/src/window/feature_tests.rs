@@ -3,6 +3,7 @@
 
 use std::collections::HashSet;
 
+use gpui_kit::InteractiveElement as _;
 use gpui_kit::assets::IconName;
 use gpui_kit::{
     AnyElement, AnyEntity, AppContext as _, Entity, EventEmitter, IntoElement as _, Keystroke, Styled as _,
@@ -27,7 +28,9 @@ use crate::settings::update_settings;
 use crate::sidebar::{RowExtra, RowExtras, RowInfo};
 use crate::window::Workspace;
 use crate::window::feature::Walkable;
-use crate::window::feature::{CloseHooks, FeatureDef, FeatureEvent, Stake, StateDef, TabDef, WalkFns};
+use crate::window::feature::{
+    CloseHooks, FeatureDef, FeatureEvent, Stake, StateDef, TabDef, WalkFns, show_tab,
+};
 use crate::window::test_harness::{
     draw, draw_fresh, drive, isolate_in, read, start, start_with_table, with_window,
 };
@@ -80,6 +83,7 @@ static STAND_IN: &[FeatureDef] = &[
             icon: IconName::PanelRight,
             label: "Stand-in",
             action: ActionId::ShowUsage,
+            show: |root| root.on_action(show_tab::<crate::actions::ShowUsage>),
             on_show: Some(|entity, _, session, cx| {
                 marker(entity).update(cx, |m, _| m.asked.push(format!("shown:{session}")));
             }),
@@ -690,7 +694,7 @@ fn many_changes(n: usize) -> RepoStatus {
 /// A feature of the same shape as the stand-in above in another slot, for the crowd the table's loops
 /// are measured over (tab bar, bindings, panel body). Its tab shows, counts and says its words.
 macro_rules! crowd_member {
-    ($id:expr, $tab:expr, $action:expr) => {
+    ($id:expr, $tab:expr, $action:expr, $shows:ty) => {
         FeatureDef {
             id: $id,
             tabs: &[TabDef {
@@ -698,6 +702,7 @@ macro_rules! crowd_member {
                 icon: IconName::PanelRight,
                 label: "Crowd",
                 action: $action,
+                show: |root| root.on_action(show_tab::<$shows>),
                 on_show: None,
                 shown: |facts, _| facts.active().is_some(),
                 count: Some(|entity, facts, cx| {
@@ -739,9 +744,9 @@ macro_rules! crowd_member {
 /// Changes and three stand-ins: what the loops are measured over.
 static CROWD: &[FeatureDef] = &[
     changes::DEF,
-    crowd_member!(FeatureId::History, TabId::History, ActionId::ShowHistory),
-    crowd_member!(FeatureId::Usage, TabId::Usage, ActionId::ShowUsage),
-    crowd_member!(FeatureId::Project, TabId::Project, ActionId::ShowProject),
+    crowd_member!(FeatureId::History, TabId::History, ActionId::ShowHistory, crate::actions::ShowHistory),
+    crowd_member!(FeatureId::Usage, TabId::Usage, ActionId::ShowUsage, crate::actions::ShowUsage),
+    crowd_member!(FeatureId::Project, TabId::Project, ActionId::ShowProject, crate::actions::ShowProject),
 ];
 
 /// Allocations the table's loops make in one frame, for 50 changed files and three stand-in features:

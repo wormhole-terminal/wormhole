@@ -38,6 +38,7 @@ use crate::sidebar::RowExtras;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
 use crate::window::feature_host::FeatureState;
+pub(crate) use crate::window::feature_host::show_tab;
 use crate::window::repo::Observed;
 
 /// The features the app has, in the order of their tabs. The app installs it once at launch
@@ -381,6 +382,11 @@ pub(crate) struct TabDef {
     /// The action that shows it: its key and its menu line are core's keymap's, and the window binds
     /// it ([`gpui_action`](crate::actions::gpui_action)) while the tab is offered.
     pub action: ActionId,
+    /// Binds [`Self::action`] on the window's root: `|root| root.on_action(show_tab::<ShowX>)`. The listener
+    /// is typed and captures nothing, which is why the tab names its action's type here and not only its
+    /// id: a closure that held the window and the tab would be a box on every frame for each tab, and a
+    /// tab more would make the frame cost one allocation more.
+    pub show: fn(Root) -> Root,
     /// What showing the tab does besides switching to it, for the session shown. The window calls it
     /// from `show_tab`, after the switch. It takes no `Window`: `show_tab` is called from places that
     /// have none (a notification, a title chip's click handler off the render path).
