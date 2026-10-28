@@ -6,6 +6,7 @@
 //! opens, steps and closes it.
 
 mod header;
+mod highlight;
 mod load;
 mod notes;
 pub(crate) mod render;

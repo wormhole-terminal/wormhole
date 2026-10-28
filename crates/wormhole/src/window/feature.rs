@@ -339,8 +339,9 @@ pub(crate) struct CoverDef {
     pub title: CoverTitleFn,
     /// Esc, and the feature's own close buttons: takes it down and gives the keyboard to the terminal.
     pub close: CoverCloseFn,
-    /// Takes it down without touching the keyboard: another feature laid its cover over the terminal, or
-    /// another terminal was selected.
+    /// Takes it down without touching the keyboard: another feature laid its cover over the terminal (the
+    /// window calls it for every other feature's cover on [`FeatureEvent::CoverOpened`]). Another terminal
+    /// being selected is not this: that is the state's `selected` hook.
     pub dismiss: fn(&AnyEntity, &mut App),
     /// Its part in the window's reading of the repository, for a cover that is a file of it (a diff).
     pub repo: Option<CoverRepo>,

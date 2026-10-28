@@ -26,7 +26,6 @@ use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 use gpui_kit::component::highlighter::{HighlightTheme, Language, SyntaxHighlighter};
 use gpui_kit::component::input::Rope;
 use gpui_kit::*;
-use wormhole_core::git::{DiffLine, FileDiff, LineKind};
 
 /// Texts kept per language: a diff has two sides.
 const PER_LANGUAGE: usize = 2;
@@ -218,55 +217,12 @@ impl TextHighlights {
     }
 }
 
-/// The syntax colors of a diff's two files.
-pub(crate) struct Highlights {
-    old: Option<Arc<Parsed>>,
-    new: Option<Arc<Parsed>>,
-    theme: Arc<HighlightTheme>,
-}
-
-impl Highlights {
-    /// `None` for a file without a grammar (plain text, unknown extensions):
-    /// its lines get no colors and nothing is parsed.
-    pub(crate) fn for_diff(diff: &FileDiff, path: &str, theme: &Arc<HighlightTheme>) -> Option<Self> {
-        Self::for_diff_in(&CACHE, diff, path, theme)
-    }
-
-    fn for_diff_in(
-        cache: &Mutex<Cache>,
-        diff: &FileDiff,
-        path: &str,
-        theme: &Arc<HighlightTheme>,
-    ) -> Option<Self> {
-        let language = language_of(path)?;
-        let parse = |text: &String| parse_in(cache, text, language);
-        Some(Self {
-            old: diff.old_text.as_ref().map(parse),
-            new: diff.new_text.as_ref().map(parse),
-            theme: theme.clone(),
-        })
-    }
-
-    /// Colors for one diff line, relative to its text: a removed line from the
-    /// old file, any other from the new one (the old one when the new is missing).
-    pub(crate) fn line(&self, line: &DiffLine) -> Styles {
-        let source = match line.kind {
-            LineKind::Removed => self.old.as_ref().zip(line.old),
-            _ => self.new.as_ref().zip(line.new).or(self.old.as_ref().zip(line.old)),
-        };
-        let Some((parsed, number)) = source else { return Vec::new() };
-        let Some(index) = (number as usize).checked_sub(1) else { return Vec::new() };
-        parsed.line(index, &line.text, &self.theme)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::sync::{Arc, Mutex};
 
-    use super::{Cache, Highlights, Limits, Stats, TextHighlights, lock, parse_in};
+    use super::{Cache, Limits, Stats, TextHighlights, lock, parse_in};
     use gpui_kit::component::highlighter::HighlightTheme;
-    use wormhole_core::git::{DiffLine, FileDiff, LineKind};
 
     fn cache(per_language: usize, entries: usize, text_bytes: usize) -> Mutex<Cache> {
         Mutex::new(Cache::new(Limits { per_language, entries, text_bytes }))
@@ -285,10 +241,6 @@ mod tests {
     fn shape(cache: &Mutex<Cache>) -> (usize, usize) {
         let cache = lock(cache);
         (cache.entries.len(), cache.bytes)
-    }
-
-    fn removed(old: u32, text: &str) -> DiffLine {
-        DiffLine { kind: LineKind::Removed, old: Some(old), new: None, text: text.into(), no_newline: false }
     }
 
     const SOURCE: &str = "fn main() {\n    let x = 1;\n}\n";
@@ -377,36 +329,6 @@ mod tests {
         parse_in(&cache, "fn c() {}\n", "rust");
         assert!(Arc::ptr_eq(&a, &parse_in(&cache, "fn a() {}\n", "rust")));
         assert_eq!(stats(&cache).parses, 3);
-    }
-
-    #[test]
-    fn plain_text_is_not_parsed_at_all() {
-        let cache = roomy(2);
-        let theme = HighlightTheme::default_dark();
-        let diff =
-            FileDiff { old_text: Some("a\n".into()), new_text: Some("b\n".into()), ..FileDiff::default() };
-        assert!(Highlights::for_diff_in(&cache, &diff, "notes.unknownext", &theme).is_none());
-        assert!(Highlights::for_diff_in(&cache, &diff, "Makefile", &theme).is_none());
-        assert_eq!(stats(&cache), Stats::default());
-    }
-
-    #[test]
-    fn lines_get_colors_from_their_own_side_and_only_if_the_text_matches() {
-        let cache = roomy(2);
-        let theme = HighlightTheme::default_dark();
-        let diff = FileDiff {
-            old_text: Some("fn old() {}\n".into()),
-            new_text: Some("fn new() {}\n".into()),
-            ..FileDiff::default()
-        };
-        let highlights = Highlights::for_diff_in(&cache, &diff, "a.rs", &theme).expect("rust has a grammar");
-        // A removed line is read from the old file, at its old line number.
-        assert!(!highlights.line(&removed(1, "fn old() {}")).is_empty());
-        // The line the diff holds is not what the file has there: no colors, no panic.
-        assert!(highlights.line(&removed(1, "fn other() {}")).is_empty());
-        assert!(highlights.line(&removed(9, "fn old() {}")).is_empty());
-        // Line numbers count from 1; 0 must not underflow.
-        assert!(highlights.line(&removed(0, "fn old() {}")).is_empty());
     }
 
     #[test]

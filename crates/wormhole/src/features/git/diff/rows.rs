@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use gpui_kit::*;
 
-use crate::syntax::highlight::Highlights;
-use crate::syntax::tabs::expand_tabs;
+use super::highlight::Highlights;
+use crate::syntax::visible::visible;
 use wormhole_core::config::Settings;
 use wormhole_core::git::{self, DiffLine, FileDiff, LineKind, SplitRow};
 use wormhole_core::theme::tokens::{Appearance, ThemeTokens};
@@ -112,7 +112,7 @@ pub(super) fn build_rows(
         }
     }
     let render = |line: &DiffLine| -> Arc<RenderedLine> {
-        let expanded = expand_tabs(&line.text, key.tab_width);
+        let expanded = visible(&line.text, key.tab_width);
         let colors = highlights.map(|h| h.line(line)).unwrap_or_default();
         let highlights = colors
             .into_iter()
@@ -181,7 +181,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::{BuildKey, Cell, Row, build_rows, syntax_fingerprint};
-    use crate::syntax::highlight::Highlights;
+    use crate::features::git::diff::highlight::Highlights;
     use gpui_kit::component::highlighter::HighlightTheme;
     use wormhole_core::config::Settings;
     use wormhole_core::git::{DiffLine, FileDiff, Hunk, LineKind};
