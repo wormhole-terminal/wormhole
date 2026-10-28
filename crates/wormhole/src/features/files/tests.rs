@@ -8,10 +8,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use gpui_kit::{TestAppContext, VisualTestContext};
-use wormhole_core::config::TabId;
+use wormhole_core::config::{FeatureId, TabId};
 use wormhole_core::platform::open_file::Launch;
 use wormhole_core::view::file_tree::{Row, RowKind};
 
+use super::read::Read;
 use super::{Files, open};
 use crate::app_state::OpenWindow;
 use crate::window::Workspace;
@@ -232,13 +233,13 @@ fn a_folder_opens_on_a_click_and_a_link_to_a_folder_never_does(cx: &mut TestAppC
     fs::write(outside.join("secret.txt"), b"").unwrap();
     wormhole_core::platform::fs::symlink(&outside, repo.join("escape")).unwrap();
     go(cx, &window, &repo);
-    assert_eq!(rows(cx, &window), ["> .git", "> docs", "~ escape", "> src", "README.md"].map(String::from));
+    assert_eq!(rows(cx, &window), ["> .git", "> docs", "> src", "~ escape", "README.md"].map(String::from));
 
     click(cx, &window, "src", false);
     cx.run_until_parked();
     assert_eq!(
         rows(cx, &window),
-        ["> .git", "> docs", "~ escape", "v src", "lib.rs", "main.rs", "README.md"].map(String::from)
+        ["> .git", "> docs", "v src", "lib.rs", "main.rs", "~ escape", "README.md"].map(String::from)
     );
     click(cx, &window, "src", false);
     assert_eq!(rows(cx, &window).len(), 5, "closed again");
@@ -247,7 +248,7 @@ fn a_folder_opens_on_a_click_and_a_link_to_a_folder_never_does(cx: &mut TestAppC
     click(cx, &window, "escape", true);
     cx.run_until_parked();
     assert!(!rows(cx, &window).iter().any(|line| line.contains("secret")), "the link was not entered");
-    assert!(matches!(row(cx, &window, "escape").kind, RowKind::Link { to_folder: true }));
+    assert!(matches!(row(cx, &window, "escape").kind, RowKind::Link));
 }
 
 #[gpui_kit::test]
@@ -356,4 +357,116 @@ fn the_key_shows_the_tab_and_a_terminal_without_a_folder_says_so(cx: &mut TestAp
     cx.run_until_parked();
     assert_eq!(read_cx(cx, &window, |ws, _| ws.right_tab()), TabId::Files, "⌃⌘6");
     assert!(drawn(cx, &window, "files-no-folder"), "the shell has not said where it is yet");
+}
+
+#[test]
+fn a_file_is_opened_only_in_a_known_editor_and_a_folder_in_any_app() {
+    let file = Row { path: "a.sh".into(), depth: 0, label: "a.sh".into(), kind: RowKind::File };
+    let folder = Row { path: "d".into(), depth: 0, label: "d".into(), kind: RowKind::Folder { open: false } };
+    assert!(open::may_open_in("dev.zed.Zed", &file) && open::may_open_in("com.apple.finder", &file));
+    assert!(!open::may_open_in("com.apple.Terminal", &file), "a terminal would run it");
+    assert!(open::may_open_in("com.apple.Terminal", &folder));
+    assert_eq!(open::default_bundle("dev.zed.Zed"), "dev.zed.Zed");
+    assert_eq!(open::default_bundle("com.googlecode.iterm2"), "com.apple.finder", "shown, not opened");
+    assert_eq!(open::default_bundle(""), "com.apple.finder");
+}
+
+#[test]
+fn a_path_with_a_control_character_or_that_is_not_text_is_not_pasteable() {
+    assert_eq!(open::pasteable(Path::new("/w/my project/a.rs")), Some("/w/my project/a.rs"));
+    for bad in ["/w/a\nrm -rf ~", "/w/a\tb", "/w/a\u{7f}", "/w/a\u{1b}[31m", "/w/a\u{85}"] {
+        assert_eq!(open::pasteable(Path::new(bad)), None, "{bad:?}");
+    }
+    assert_eq!(open::pasteable(wormhole_core::platform::fs::path_from_bytes(b"/w/bad-\xff")), None);
+}
+
+#[gpui_kit::test]
+fn finder_is_never_asked_to_open_a_folder_that_is_a_program(cx: &mut TestAppContext) {
+    if isolate("finder_is_never_asked_to_open_a_folder_that_is_a_program") {
+        return;
+    }
+    let window = start(cx, 1);
+    let repo = repo("project");
+    fs::create_dir(repo.join("x.app")).unwrap();
+    go(cx, &window, &repo);
+    open::record::take();
+    for name in ["x.app", "docs"] {
+        let target = row(cx, &window, name);
+        cx.update(|cx| open::open_in("com.apple.finder", &repo, &target, cx));
+        cx.run_until_parked();
+    }
+    let launched = open::record::take();
+    assert_eq!(launched.len(), 2, "{launched:?}");
+    for (bundle, launch) in &launched {
+        assert!(
+            matches!(launch, Launch::Reveal { .. }),
+            "Finder ({bundle}) is shown a folder, never asked to open one: {launch:?}"
+        );
+    }
+    // An editor opens a folder as a folder, `x.app` too.
+    let target = row(cx, &window, "x.app");
+    cx.update(|cx| open::open_in("dev.zed.Zed", &repo, &target, cx));
+    cx.run_until_parked();
+    assert!(matches!(open::record::take().as_slice(), [(_, Launch::Open { .. })]));
+}
+
+#[gpui_kit::test]
+fn nothing_is_read_while_the_feature_is_off_even_with_the_tab_saved_as_shown(cx: &mut TestAppContext) {
+    if isolate("nothing_is_read_while_the_feature_is_off_even_with_the_tab_saved_as_shown") {
+        return;
+    }
+    let window = start(cx, 1);
+    let repo = repo("project");
+    go(cx, &window, &repo);
+    fs::write(repo.join("new.md"), b"").unwrap();
+    // The window as a release build draws it: the tab saved as the panel's, the feature off.
+    let off = |cx: &mut TestAppContext, on: bool, again: bool| {
+        drive(cx, &window, |ws, _, cx| {
+            let mut facts = ws.facts(cx);
+            facts.tab = TabId::Files;
+            facts.features = facts.features.with(FeatureId::Files, on);
+            feature(ws).update(cx, |files, fcx| {
+                if again {
+                    files.look_again(&facts, fcx);
+                } else {
+                    files.tick(&facts, fcx);
+                }
+            });
+        });
+    };
+    off(cx, false, false);
+    off(cx, false, true);
+    assert!(!rows(cx, &window).contains(&"new.md".to_string()), "no read while the feature is off");
+    off(cx, true, false);
+    assert!(rows(cx, &window).contains(&"new.md".to_string()), "and the same tick reads when it is on");
+}
+
+#[gpui_kit::test]
+fn an_answer_for_a_root_the_tree_has_left_is_dropped(cx: &mut TestAppContext) {
+    use wormhole_core::storage::files::listing::{DirEntry, EntryKind, Listing};
+    use wormhole_core::view::file_tree::{Dir, ENTRY_CAP};
+
+    if isolate("an_answer_for_a_root_the_tree_has_left_is_dropped") {
+        return;
+    }
+    let window = start(cx, 1);
+    let (one, two) = (repo("one"), scratch("two"));
+    go(cx, &window, &one);
+    let old = read_cx(cx, &window, |ws, cx| {
+        let session = ws.active_session().id;
+        feature(ws).read(cx).of[&session].generation
+    });
+    go(cx, &window, &two);
+    let ghost =
+        Listing { entries: vec![DirEntry { name: "ghost".into(), kind: EntryKind::File }], truncated: false };
+    drive(cx, &window, |ws, _, cx| {
+        let session = ws.active_session().id;
+        feature(ws).update(cx, |files, fcx| {
+            files.in_flight.insert(one.clone());
+            let answer = Some(Read { dir: Ok(Dir::from_listing(ghost, ENTRY_CAP)), stamp: None });
+            files.arrived(session, old, &one, PathBuf::new(), answer, fcx);
+            assert!(!files.in_flight.contains(&one), "the read is over, whoever wanted it");
+        });
+    });
+    assert!(!rows(cx, &window).contains(&"ghost".to_string()), "the answer was for the old root");
 }

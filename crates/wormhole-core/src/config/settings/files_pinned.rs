@@ -10,17 +10,14 @@ const MAX_PINNED: usize = 24;
 impl Settings {
     /// Whether `folder` is pinned.
     pub fn is_pinned(&self, folder: &Path) -> bool {
-        let key = pinned_key(folder);
-        self.files_pinned.contains(&key)
+        pinned_key(folder).is_some_and(|key| self.files_pinned.contains(&key))
     }
 
     /// Pins `folder` (at the end of the list), or takes it off again. Returns whether anything
-    /// changed: a relative path is never pinned, and a full list takes no more.
+    /// changed: a relative path or one that is not UTF-8 is never pinned (the list is text), and a full
+    /// list takes no more.
     pub fn set_pinned(&mut self, folder: &Path, pinned: bool) -> bool {
-        if !folder.is_absolute() {
-            return false;
-        }
-        let key = pinned_key(folder);
+        let Some(key) = pinned_key(folder).filter(|_| folder.is_absolute()) else { return false };
         let at = self.files_pinned.iter().position(|existing| *existing == key);
         match (pinned, at) {
             (true, None) if self.files_pinned.len() < MAX_PINNED => {
@@ -45,7 +42,7 @@ impl Settings {
     pub(super) fn sanitize_pinned(&mut self) {
         let listed = std::mem::take(&mut self.files_pinned);
         for folder in listed {
-            let key = pinned_key(Path::new(&folder));
+            let Some(key) = pinned_key(Path::new(&folder)) else { continue };
             if Path::new(&key).is_absolute()
                 && !self.files_pinned.contains(&key)
                 && self.files_pinned.len() < MAX_PINNED
@@ -57,9 +54,10 @@ impl Settings {
 }
 
 /// How a folder is written in `files_pinned`: without a trailing slash or `.` parts, so the folder
-/// picked in a panel and the one a terminal reports are the same entry.
-fn pinned_key(folder: &Path) -> String {
-    folder.components().collect::<PathBuf>().to_string_lossy().into_owned()
+/// picked in a panel and the one a terminal reports are the same entry. `None` for a path that is not
+/// UTF-8: it would not come back as the same folder.
+fn pinned_key(folder: &Path) -> Option<String> {
+    folder.components().collect::<PathBuf>().to_str().map(str::to_string)
 }
 
 #[cfg(test)]
@@ -87,6 +85,15 @@ mod tests {
             assert!(settings.set_pinned(Path::new(&format!("/w/{n}")), true));
         }
         assert!(!settings.set_pinned(Path::new("/w/extra"), true));
+    }
+
+    #[test]
+    fn a_path_that_is_not_utf8_is_not_pinned() {
+        let odd = crate::platform::fs::path_from_bytes(b"/w/bad-\xff-name");
+        let mut settings = Settings::default();
+        assert!(!settings.set_pinned(odd, true));
+        assert!(!settings.is_pinned(odd));
+        assert!(settings.files_pinned.is_empty());
     }
 
     #[test]

@@ -22,40 +22,39 @@ fn hidden(c: char) -> bool {
 /// same up to case and leading zeros still order the same way every time (by their bytes), so a sort
 /// never shuffles them.
 pub fn natural_cmp(a: &str, b: &str) -> Ordering {
-    let (mut left, mut right) = (a.chars().peekable(), b.chars().peekable());
+    let (mut left, mut right) = (a, b);
     loop {
-        match (left.peek().copied(), right.peek().copied()) {
-            (None, None) => return a.cmp(b),
-            (None, Some(_)) => return Ordering::Less,
-            (Some(_), None) => return Ordering::Greater,
-            (Some(x), Some(y)) if x.is_ascii_digit() && y.is_ascii_digit() => {
-                let (x, y) = (digits(&mut left), digits(&mut right));
-                let (x, y) = (x.trim_start_matches('0'), y.trim_start_matches('0'));
-                // More digits is a bigger number; the same number of digits compares as text.
-                match x.len().cmp(&y.len()).then_with(|| x.cmp(y)) {
-                    Ordering::Equal => {}
-                    other => return other,
-                }
+        let (Some(x), Some(y)) = (left.chars().next(), right.chars().next()) else {
+            // One ended: it comes first; both: they are the same by this order, so by their bytes.
+            return match (left.is_empty(), right.is_empty()) {
+                (true, true) => a.cmp(b),
+                (true, false) => Ordering::Less,
+                _ => Ordering::Greater,
+            };
+        };
+        if x.is_ascii_digit() && y.is_ascii_digit() {
+            let (number_x, rest_x) = split_digits(left);
+            let (number_y, rest_y) = split_digits(right);
+            // More digits is a bigger number; the same number of digits compares as text.
+            let (digits_x, digits_y) = (number_x.trim_start_matches('0'), number_y.trim_start_matches('0'));
+            match digits_x.len().cmp(&digits_y.len()).then_with(|| digits_x.cmp(digits_y)) {
+                Ordering::Equal => {}
+                other => return other,
             }
-            (Some(x), Some(y)) => {
-                left.next();
-                right.next();
-                match x.to_lowercase().cmp(y.to_lowercase()) {
-                    Ordering::Equal => {}
-                    other => return other,
-                }
+            (left, right) = (rest_x, rest_y);
+        } else {
+            match x.to_lowercase().cmp(y.to_lowercase()) {
+                Ordering::Equal => {}
+                other => return other,
             }
+            (left, right) = (&left[x.len_utf8()..], &right[y.len_utf8()..]);
         }
     }
 }
 
-/// Takes a run of ASCII digits off the front.
-fn digits(chars: &mut std::iter::Peekable<std::str::Chars<'_>>) -> String {
-    let mut run = String::new();
-    while let Some(c) = chars.next_if(char::is_ascii_digit) {
-        run.push(c);
-    }
-    run
+/// The run of ASCII digits at the front of `text`, and what follows it: slices, nothing copied.
+fn split_digits(text: &str) -> (&str, &str) {
+    text.split_at(text.bytes().take_while(u8::is_ascii_digit).count())
 }
 
 #[cfg(test)]

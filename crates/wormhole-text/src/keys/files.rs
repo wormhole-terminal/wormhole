@@ -19,23 +19,23 @@ pub const FILES_FOLDER_DENIED: Key = Key::new(57);
 /// "This folder can't be read."
 pub const FILES_FOLDER_UNREADABLE: Key = Key::new(58);
 /// "Choose Folder…"
-pub const FILES_MENU_CHOOSE_FOLDER: Key = Key::new(62);
+pub const FILES_MENU_CHOOSE_FOLDER: Key = Key::new(63);
 /// "Follow Terminal"
-pub const FILES_MENU_FOLLOW_TERMINAL: Key = Key::new(63);
+pub const FILES_MENU_FOLLOW_TERMINAL: Key = Key::new(64);
 /// "Choose"
-pub const FILES_CHOOSE_PROMPT: Key = Key::new(64);
+pub const FILES_CHOOSE_PROMPT: Key = Key::new(65);
 /// "Open in"
-pub const FILES_ROW_OPEN_IN: Key = Key::new(65);
+pub const FILES_ROW_OPEN_IN: Key = Key::new(66);
 /// "Reveal in Finder"
-pub const FILES_ROW_REVEAL: Key = Key::new(66);
+pub const FILES_ROW_REVEAL: Key = Key::new(67);
 /// "Copy Path"
-pub const FILES_ROW_COPY_PATH: Key = Key::new(67);
+pub const FILES_ROW_COPY_PATH: Key = Key::new(68);
 /// "Pin Folder"
-pub const FILES_ROW_PIN_FOLDER: Key = Key::new(68);
+pub const FILES_ROW_PIN_FOLDER: Key = Key::new(69);
 /// "Unpin Folder"
-pub const FILES_ROW_UNPIN_FOLDER: Key = Key::new(69);
+pub const FILES_ROW_UNPIN_FOLDER: Key = Key::new(70);
 /// "Path copied"
-pub const FILES_SPOKEN_PATH_COPIED: Key = Key::new(74);
+pub const FILES_SPOKEN_PATH_COPIED: Key = Key::new(75);
 
 /// ```text
 /// { $count } more
@@ -45,43 +45,50 @@ pub fn files_more(count: &str) -> String {
 }
 
 /// ```text
+/// { $count }+ more
+/// ```
+pub fn files_more_at_least(count: &str) -> String {
+    crate::active::message(60, &[("count", Arg::Str(count))])
+}
+
+/// ```text
 /// Pin “{ $name }”
 /// ```
 pub fn files_menu_pin(name: &str) -> String {
-    crate::active::message(60, &[("name", Arg::Str(name))])
+    crate::active::message(61, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Unpin “{ $name }”
 /// ```
 pub fn files_menu_unpin(name: &str) -> String {
-    crate::active::message(61, &[("name", Arg::Str(name))])
+    crate::active::message(62, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, folder, opens the path menu
 /// ```
 pub fn files_spoken_path_button(name: &str) -> String {
-    crate::active::message(70, &[("name", Arg::Str(name))])
+    crate::active::message(71, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, folder, expanded
 /// ```
 pub fn files_spoken_folder_open(name: &str) -> String {
-    crate::active::message(71, &[("name", Arg::Str(name))])
+    crate::active::message(72, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, folder, collapsed
 /// ```
 pub fn files_spoken_folder_closed(name: &str) -> String {
-    crate::active::message(72, &[("name", Arg::Str(name))])
+    crate::active::message(73, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, link
 /// ```
 pub fn files_spoken_link(name: &str) -> String {
-    crate::active::message(73, &[("name", Arg::Str(name))])
+    crate::active::message(74, &[("name", Arg::Str(name))])
 }

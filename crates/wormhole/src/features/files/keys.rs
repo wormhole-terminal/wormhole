@@ -59,11 +59,12 @@ impl Files {
         cx.notify();
     }
 
-    /// Opens a file in the app Open in… uses.
+    /// Opens a file in the app Open in… uses when that is an editor Wormhole knows, else shows it in
+    /// Finder: a file from a repository is never handed to a terminal, which would run it.
     pub(super) fn open_default(&mut self, session: i64, row: &Row, cx: &mut Context<Self>) {
         let Some(root) = self.of.get(&session).and_then(|of| of.root.clone()) else { return };
-        let bundle = OpenIn::resolved(cx).app.bundle;
-        open::open_in(&bundle, &root, row);
+        let resolved = OpenIn::resolved(cx).app.bundle;
+        open::open_in(open::default_bundle(&resolved), &root, row, cx);
     }
 
     /// ↩ on a row: the path menu on the head, a folder opens or closes, a file opens in the editor.

@@ -72,7 +72,7 @@ pub(crate) fn menu(
 /// `files-pin <path>`: pins the folder, or unpins it if it was pinned. Says which.
 pub(crate) fn pin(ws: &Workspace, folder: &Path, cx: &mut Context<Workspace>) -> Result<String> {
     run(ws, cx, |files, _, cx| {
-        let was = Files::pinned(cx).iter().any(|pinned| pinned == folder);
+        let was = files.pinned(cx).iter().any(|pinned| pinned == folder);
         files.set_pinned(folder, !was, cx);
         if was { format!("unpinned {}", folder.display()) } else { format!("pinned {}", folder.display()) }
     })
@@ -82,8 +82,8 @@ pub(crate) fn pin(ws: &Workspace, folder: &Path, cx: &mut Context<Workspace>) ->
 pub(crate) fn describe(ws: &Workspace, cx: &mut Context<Workspace>) -> Result<String> {
     let files = ws.feature::<Files>().ok_or_else(|| anyhow!("the window has no Files"))?;
     let session = ws.active_session().id;
-    let pinned = Files::pinned(cx);
     let files = files.read(cx);
+    let pinned = files.pinned(cx);
     let Some(of) = files.of.get(&session) else { return Ok("files: not looked at yet\n".into()) };
     let Some(root) = &of.root else { return Ok("files: no folder\n".into()) };
     let mode = if of.chosen.is_some() { "chosen" } else { "following" };
@@ -108,8 +108,8 @@ fn line(row: &Row, selected: bool) -> String {
         RowKind::Folder { open: true } => format!("v {}", row.label),
         RowKind::Folder { open: false } => format!("> {}", row.label),
         RowKind::File => format!("  {}", row.label),
-        RowKind::Link { .. } => format!("~ {}", row.label),
-        RowKind::More(count) => format!("+ {count} more"),
+        RowKind::Link => format!("~ {}", row.label),
+        RowKind::More { count, at_least } => format!("+ {count}{} more", if *at_least { "+" } else { "" }),
         RowKind::Reading => "… reading".to_string(),
         RowKind::Empty => "(empty)".to_string(),
         RowKind::Unreadable(failure) => format!("(can't read: {failure:?})"),

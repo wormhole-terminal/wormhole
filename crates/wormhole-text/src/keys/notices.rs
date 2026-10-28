@@ -7,33 +7,35 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Copied command"
-pub const NOTICE_COPIED_COMMAND: Key = Key::new(113);
+pub const NOTICE_COPIED_COMMAND: Key = Key::new(114);
 /// "Copied path"
-pub const NOTICE_COPIED_PATH: Key = Key::new(114);
+pub const NOTICE_COPIED_PATH: Key = Key::new(115);
 /// "Copied setting key"
-pub const NOTICE_COPIED_SETTING_KEY: Key = Key::new(115);
+pub const NOTICE_COPIED_SETTING_KEY: Key = Key::new(116);
 /// "Copied error"
-pub const NOTICE_COPIED_ERROR: Key = Key::new(116);
+pub const NOTICE_COPIED_ERROR: Key = Key::new(117);
 /// "Copied object id"
-pub const NOTICE_COPIED_OBJECT_ID: Key = Key::new(117);
+pub const NOTICE_COPIED_OBJECT_ID: Key = Key::new(118);
 /// "A script is typing"
-pub const NOTICE_DRIVEN_SCRIPTS_TYPING: Key = Key::new(120);
+pub const NOTICE_DRIVEN_SCRIPTS_TYPING: Key = Key::new(121);
 /// "A script is reading"
-pub const NOTICE_DRIVEN_SCRIPTS_READING: Key = Key::new(121);
+pub const NOTICE_DRIVEN_SCRIPTS_READING: Key = Key::new(122);
 /// "Copied commit hash"
-pub const NOTICE_COPIED_COMMIT_HASH: Key = Key::new(122);
+pub const NOTICE_COPIED_COMMIT_HASH: Key = Key::new(123);
 /// "Copied short hash"
-pub const NOTICE_COPIED_COMMIT_SHORT_HASH: Key = Key::new(123);
+pub const NOTICE_COPIED_COMMIT_SHORT_HASH: Key = Key::new(124);
 /// "Copied commit message"
-pub const NOTICE_COPIED_COMMIT_MESSAGE: Key = Key::new(124);
+pub const NOTICE_COPIED_COMMIT_MESSAGE: Key = Key::new(125);
 /// "Copied the start of the message, which is cut"
-pub const NOTICE_COPIED_COMMIT_MESSAGE_CUT: Key = Key::new(125);
+pub const NOTICE_COPIED_COMMIT_MESSAGE_CUT: Key = Key::new(126);
 /// "Copied subject"
-pub const NOTICE_COPIED_COMMIT_SUBJECT: Key = Key::new(126);
+pub const NOTICE_COPIED_COMMIT_SUBJECT: Key = Key::new(127);
 /// "Copied author"
-pub const NOTICE_COPIED_COMMIT_AUTHOR: Key = Key::new(127);
+pub const NOTICE_COPIED_COMMIT_AUTHOR: Key = Key::new(128);
 /// "Couldn't copy: git could not read the commit"
-pub const NOTICE_FAILED_COPY_COMMIT: Key = Key::new(128);
+pub const NOTICE_FAILED_COPY_COMMIT: Key = Key::new(129);
+/// "Not copied: the path has characters that would act when pasted"
+pub const NOTICE_FAILED_COPY_PATH: Key = Key::new(130);
 
 /// ```text
 /// { $count ->
@@ -42,7 +44,7 @@ pub const NOTICE_FAILED_COPY_COMMIT: Key = Key::new(128);
 /// }
 /// ```
 pub fn notice_copied_lines(count: i64) -> String {
-    crate::active::message(110, &[("count", Arg::Int(count))])
+    crate::active::message(111, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -52,7 +54,7 @@ pub fn notice_copied_lines(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_characters(count: i64) -> String {
-    crate::active::message(111, &[("count", Arg::Int(count))])
+    crate::active::message(112, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -62,19 +64,19 @@ pub fn notice_copied_characters(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_output(count: i64) -> String {
-    crate::active::message(112, &[("count", Arg::Int(count))])
+    crate::active::message(113, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { $name } is typing
 /// ```
 pub fn notice_driven_typing(name: &str) -> String {
-    crate::active::message(118, &[("name", Arg::Str(name))])
+    crate::active::message(119, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name } is reading
 /// ```
 pub fn notice_driven_reading(name: &str) -> String {
-    crate::active::message(119, &[("name", Arg::Str(name))])
+    crate::active::message(120, &[("name", Arg::Str(name))])
 }

@@ -9,6 +9,7 @@ pub(super) fn of(notice: Notice) -> Option<String> {
         Notice::Copied(copied) => copied,
         Notice::Driven(driven) => return Some(driven_words(driven)),
         Notice::Failed(Failed::CopyCommit) => return Some(text(keys::NOTICE_FAILED_COPY_COMMIT).to_string()),
+        Notice::Failed(Failed::CopyPath) => return Some(text(keys::NOTICE_FAILED_COPY_PATH).to_string()),
         Notice::Test(_) => return None,
     };
     Some(match copied {
@@ -92,6 +93,10 @@ mod tests {
             assert_eq!(
                 of(Notice::Failed(Failed::CopyCommit)).as_deref(),
                 Some("Couldn't copy: git could not read the commit")
+            );
+            assert_eq!(
+                of(Notice::Failed(Failed::CopyPath)).as_deref(),
+                Some("Not copied: the path has characters that would act when pasted")
             );
         });
     }

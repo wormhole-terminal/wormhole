@@ -63,3 +63,7 @@ notice-copied-commit-author = Copied author
 
 # A copy that needed the commit's details, which git could not read.
 notice-failed-copy-commit = Couldn't copy: git could not read the commit
+
+# A path that has a control character in its name (a newline would run what follows it when pasted into
+# a terminal), or that is not text.
+notice-failed-copy-path = Not copied: the path has characters that would act when pasted

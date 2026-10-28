@@ -11,5 +11,5 @@ pub mod names;
 pub mod tree;
 
 pub use dir::{Dir, ENTRY_CAP, Entry};
-pub use menu::{PathMenu, Pin, PinnedFolder};
+pub use menu::{PathMenu, Pin, PinnedFolder, on_boot_volume};
 pub use tree::{Failure, Row, RowKind, Tree};

@@ -81,6 +81,17 @@ pub fn file_icon(path: &Path, side: f64) -> Option<Retained<NSImage>> {
     Some(icon)
 }
 
+/// The generic folder's icon, `side` points square: for a folder whose own icon is not to be asked for.
+pub fn folder_icon(side: f64) -> Option<Retained<NSImage>> {
+    MainThreadMarker::new()?;
+    // `public.folder` as a file type: no file is looked at.
+    #[allow(deprecated)]
+    let icon = NSWorkspace::sharedWorkspace().iconForFileType(&NSString::from_str("public.folder"));
+    let icon = icon.copy();
+    icon.setSize(NSSize::new(side, side));
+    Some(icon)
+}
+
 /// What Finder calls the volume the system starts from ("Macintosh HD").
 pub fn boot_volume_name() -> Option<String> {
     MainThreadMarker::new()?;

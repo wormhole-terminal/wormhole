@@ -528,6 +528,43 @@ fn the_show_changes_key_is_bound_by_the_window_from_the_table(cx: &mut TestAppCo
     assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes);
 }
 
+/// Every tab of the real table is shown by its own action: `TabDef::show` (the typed listener the window binds)
+/// and `TabDef::action` (the key and the menu line) can't name different tabs.
+#[gpui_kit::test]
+fn every_tabs_action_shows_that_tab(cx: &mut TestAppContext) {
+    use wormhole_core::agents::AgentId;
+
+    if isolate("every_tabs_action_shows_that_tab") {
+        return;
+    }
+    let window = start(cx, 1);
+    // Every tab offered: an agent on screen (Usage) and a folder (Project).
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions()[0].terminal().update(cx, |terminal, cx| {
+            terminal.agent = Some(AgentId::Claude);
+            terminal.cwd = Some(std::env::temp_dir());
+            cx.notify();
+        });
+        ws.sync_summaries(cx);
+    });
+    let tabs: Vec<(TabId, ActionId)> =
+        TABLE.iter().flat_map(|def| def.tabs).map(|tab| (tab.id, tab.action)).collect();
+    assert!(tabs.len() >= 6, "{tabs:?}");
+    for &(tab, action) in &tabs {
+        // From another tab, with the keys in the terminal, as a key is pressed there.
+        let elsewhere = if tab == TabId::Notes { TabId::Changes } else { TabId::Notes };
+        drive(cx, &window, |ws, window, cx| {
+            ws.show_tab(elsewhere, cx);
+            ws.focus_terminal(window, cx);
+        });
+        draw(cx, &window);
+        let action = crate::actions::gpui_action(action).expect("a tab's action is a GPUI action");
+        with_window(cx, &window, |window, cx| window.dispatch_action(action, cx));
+        cx.run_until_parked();
+        assert_eq!(read(cx, &window, |ws| ws.right_tab), tab, "the action of {tab:?}");
+    }
+}
+
 #[gpui_kit::test]
 fn showing_a_tab_runs_the_features_on_show_hook(cx: &mut TestAppContext) {
     if isolate("showing_a_tab_runs_the_features_on_show_hook") {

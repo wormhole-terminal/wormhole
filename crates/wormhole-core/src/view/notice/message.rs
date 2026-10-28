@@ -40,6 +40,9 @@ pub enum Driver {
 pub enum Failed {
     /// A copy of a commit's message or author, which needed details git could not read.
     CopyCommit,
+    /// A copy of a path with characters in it that would act when pasted into a terminal (a newline), or
+    /// that is not text.
+    CopyPath,
 }
 
 /// What was copied, and how much.

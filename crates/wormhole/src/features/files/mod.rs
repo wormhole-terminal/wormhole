@@ -14,6 +14,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use gpui_kit::*;
+use wormhole_core::storage::files::FileStamp;
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::file_tree::{Row, Tree};
 
@@ -63,8 +64,12 @@ impl Line {
 /// The window's Files: every terminal's tree.
 pub(crate) struct Files {
     of: HashMap<i64, FilesOf>,
-    /// The window as the feature last heard it, for the settings the rows are drawn with.
+    /// The window's profile as the feature last heard it: whose pinned folders the menus show and change.
     profile: ProfileId,
+    /// The folders being read now, by their full path and whichever root they were asked for: a read
+    /// cannot be cancelled, so one that hangs (a dead share) must not be started again each time the tree
+    /// goes back to that root. Kept across roots and terminals.
+    in_flight: HashSet<PathBuf>,
 }
 
 impl EventEmitter<FeatureEvent> for Files {}
@@ -85,8 +90,9 @@ pub(super) struct FilesOf {
     followed: Option<PathBuf>,
     /// The selected row's path below the root.
     selected: Option<PathBuf>,
-    /// Folders being read now, so a slow one is not asked for again every tick.
-    reading: HashSet<PathBuf>,
+    /// What each folder read looked like from outside when it was read (`listing::stamp_below`), by its
+    /// path below the root: a folder that still looks so is not listed again.
+    stamps: HashMap<PathBuf, FileStamp>,
     /// Counts the roots the tree has been of: an answer for an earlier one is dropped.
     generation: u64,
     /// Where the path button is, for the menu its keys open.
@@ -103,7 +109,7 @@ impl FilesOf {
             stale: true,
             followed: None,
             selected: None,
-            reading: HashSet::new(),
+            stamps: HashMap::new(),
             generation: 0,
             head_at: Anchor::default(),
         }
@@ -112,7 +118,7 @@ impl FilesOf {
 
 impl Files {
     pub(crate) fn new() -> Self {
-        Self { of: HashMap::new(), profile: ProfileId::default_profile() }
+        Self { of: HashMap::new(), profile: ProfileId::default_profile(), in_flight: HashSet::new() }
     }
 
     pub(super) fn of_mut(&mut self, session: i64) -> &mut FilesOf {

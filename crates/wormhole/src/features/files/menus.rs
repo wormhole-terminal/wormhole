@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use gpui_kit::*;
 use wormhole_core::platform::open_in::Installed;
-use wormhole_core::view::file_tree::{PathMenu, Pin, Row};
+use wormhole_core::view::file_tree::{PathMenu, Pin, Row, on_boot_volume};
 use wormhole_text::{keys, text};
 
 use super::{Files, open};
@@ -21,7 +21,7 @@ impl Files {
         let model = PathMenu::of(
             of.root.as_deref()?,
             &platform::boot_volume_name(),
-            &Self::pinned(cx),
+            &self.pinned(cx),
             of.chosen.is_some(),
             crate::style::home_dir(),
         );
@@ -51,9 +51,10 @@ impl Files {
         cx: &mut Context<Self>,
     ) {
         let Some(root) = self.of.get(&session).and_then(|of| of.root.clone()) else { return };
-        let pinned = row.is_folder() && Self::pinned(cx).contains(&root.join(&row.path));
+        let pinned = row.is_folder() && self.pinned(cx).contains(&root.join(&row.path));
         let apps = OpenIn::apps(cx)
             .into_iter()
+            .filter(|app| open::may_open_in(&app.bundle, &row))
             .map(|app| {
                 let icon = OpenIn::menu_icon(cx, &app);
                 (app, icon)
@@ -99,6 +100,13 @@ impl Files {
     }
 }
 
+/// The icon of a folder in the path menu: the one Finder shows for it, unless it is not on this Mac's own disk
+/// (a share, another volume): asking the system for that icon would touch the share, so it gets the generic
+/// folder's.
+fn folder_icon(path: &Path) -> Icon {
+    if on_boot_volume(path) { Icon::File(path.to_path_buf()) } else { Icon::Folder }
+}
+
 /// The path menu for `model`: the folder (checked) and its parents with Finder's icons, the pins, then
 /// the pin command, Choose Folder… and, if a folder was chosen, Follow Terminal.
 pub(super) fn path_menu(model: PathMenu, session: i64, this: &WeakEntity<Files>) -> Menu {
@@ -110,7 +118,7 @@ pub(super) fn path_menu(model: PathMenu, session: i64, this: &WeakEntity<Files>)
     for (at, folder) in model.folders.iter().enumerate() {
         menu = menu.item(
             Item::new(folder.name.clone())
-                .icon(Some(Icon::File(folder.path.clone())))
+                .icon(Some(folder_icon(&folder.path)))
                 .checked(at == 0)
                 .on_select(go(&folder.path)),
         );
@@ -118,9 +126,7 @@ pub(super) fn path_menu(model: PathMenu, session: i64, this: &WeakEntity<Files>)
     menu = menu.separator();
     for pinned in &model.pinned {
         menu = menu.item(
-            Item::new(pinned.title.clone())
-                .icon(Some(Icon::File(pinned.path.clone())))
-                .on_select(go(&pinned.path)),
+            Item::new(pinned.title.clone()).icon(Some(folder_icon(&pinned.path))).on_select(go(&pinned.path)),
         );
     }
     let shown = model.folders.first().map(|folder| folder.path.clone());
@@ -171,7 +177,7 @@ pub(super) fn row_menu(row: &Row, facts: RowMenu, this: &WeakEntity<Files>) -> M
                 Item::new(app.name)
                     .icon(icon)
                     .checked(app.bundle == chosen)
-                    .on_select(move |_, _| open::open_in(&bundle, &root, &row)),
+                    .on_select(move |_, cx| open::open_in(&bundle, &root, &row, cx)),
             )
         });
         Some(apps)
@@ -188,11 +194,11 @@ pub(super) fn row_menu(row: &Row, facts: RowMenu, this: &WeakEntity<Files>) -> M
     let menu = menu
         .item(
             Item::new(text(keys::FILES_ROW_REVEAL))
-                .on_select(move |_, cx| open::reveal(&reveal_root, &reveal_row, cx)),
+                .on_select(move |_, _| open::reveal(&reveal_root, &reveal_row)),
         )
         .item(
             Item::new(text(keys::FILES_ROW_COPY_PATH))
-                .on_select(move |_, cx| open::copy_path(&copy_root, &copy_row, cx)),
+                .on_select(move |window, cx| open::copy_path(&copy_root, &copy_row, window, cx)),
         );
     if !row.is_folder() {
         return menu;

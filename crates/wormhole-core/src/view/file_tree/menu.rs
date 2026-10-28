@@ -52,6 +52,15 @@ impl PathMenu {
     }
 }
 
+/// Whether `path` is on the disk the system starts from, as far as its name says: not under `/Volumes`
+/// (another disk, or a network share) or `/net` and `/Network` (automounted). Only for a path that is
+/// shown: asking the system for the icon of a folder on a share would touch the share.
+pub fn on_boot_volume(path: &Path) -> bool {
+    !["/Volumes", "/net", "/Network", "/System/Volumes/Data/Volumes", "/System/Volumes/Data/net"]
+        .iter()
+        .any(|prefix| path.starts_with(prefix))
+}
+
 fn pinned_lines(pinned: &[PathBuf], volume: &str, home: Option<&Path>) -> Vec<PinnedFolder> {
     let name_of = |path: &Path| match path.file_name() {
         Some(name) => name.to_string_lossy().into_owned(),
@@ -110,6 +119,17 @@ mod tests {
         assert_eq!(titles, ["app — ~/a", "app — ~/b", "www"]);
         assert_eq!(menu.folders.len(), 1, "the disk alone");
         assert_eq!(menu.pin, Pin::Pin("Macintosh HD".into()));
+    }
+
+    #[test]
+    fn a_share_or_another_disk_is_not_the_boot_volume() {
+        use super::on_boot_volume;
+        for path in ["/Users/ben/code", "/tmp", "/", "/Volumesx/a"] {
+            assert!(on_boot_volume(Path::new(path)), "{path}");
+        }
+        for path in ["/Volumes/Work/a", "/Volumes", "/net/host/share", "/Network/Servers/x"] {
+            assert!(!on_boot_volume(Path::new(path)), "{path}");
+        }
     }
 
     #[test]

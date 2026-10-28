@@ -3,6 +3,8 @@
 //! the icon theme in force; a link has the link mark in place of its kind's icon. A note (an empty folder,
 //! "N more") is a muted line under the folder it is about.
 
+use std::path::Path;
+
 use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
@@ -28,10 +30,18 @@ pub(super) struct RowLook<'a> {
 fn indent(row: &Row) -> f32 {
     let steps = match row.kind {
         RowKind::Folder { .. } => row.depth,
-        RowKind::File | RowKind::Link { .. } => row.depth + 1,
+        RowKind::File | RowKind::Link => row.depth + 1,
         _ => row.depth + 2,
     };
     CARD_INSET + steps as f32 * INDENT
+}
+
+/// A number for a path, to tell rows apart: the same path always the same number.
+fn path_hash(path: &Path) -> u64 {
+    use std::hash::{DefaultHasher, Hash as _, Hasher as _};
+    let mut hasher = DefaultHasher::new();
+    path.hash(&mut hasher);
+    hasher.finish()
 }
 
 /// The row, to add `.on_click(…)` and a menu to.
@@ -40,7 +50,8 @@ pub(super) fn entry_row(row: &Row, look: &RowLook<'_>) -> Stateful<Div> {
     let RowLook { ui, icons, selected } = look;
     let (ui, selected) = (*ui, *selected);
     let muted = if selected { ui.selected_muted } else { ui.muted };
-    let id = SharedString::from(format!("files-{}", row.path.display()));
+    // By a hash of the path, not its text: a name is whatever its maker chose.
+    let id = ElementId::from(("files-row", path_hash(&row.path)));
     let name = row.label.clone();
     let (icon, spoken) = match row.kind {
         RowKind::Folder { open } => {
@@ -53,10 +64,12 @@ pub(super) fn entry_row(row: &Row, look: &RowLook<'_>) -> Stateful<Div> {
             };
             (icon, words)
         }
-        RowKind::Link { to_folder } => {
-            let mark = if to_folder { IconName::FolderSymlink } else { IconName::FileSymlink };
-            (style::icon(mark).text_color(muted).into_any_element(), keys::files_spoken_link(&name))
-        }
+        // What a link points at is never looked at, so it is not known to be a folder or a file: the link's
+        // own mark.
+        RowKind::Link => (
+            style::icon(IconName::Link2).text_color(muted).into_any_element(),
+            keys::files_spoken_link(&name),
+        ),
         _ => {
             let icon = crate::icons::file(*icons, &name, muted)
                 .unwrap_or_else(|| style::icon(IconName::File).text_color(muted).into_any_element());
@@ -88,11 +101,12 @@ pub(super) fn note_row(row: &Row, ui: UiColors) -> Div {
     let words = match &row.kind {
         RowKind::Reading => text(keys::FILES_READING).to_string(),
         RowKind::Empty => text(keys::FILES_EMPTY).to_string(),
-        RowKind::More(count) => keys::files_more(&count_grouped(*count)),
+        RowKind::More { count, at_least: false } => keys::files_more(&count_grouped(*count)),
+        RowKind::More { count, at_least: true } => keys::files_more_at_least(&count_grouped(*count)),
         RowKind::Unreadable(Failure::Gone) => text(keys::FILES_FOLDER_GONE).to_string(),
         RowKind::Unreadable(Failure::Denied) => text(keys::FILES_FOLDER_DENIED).to_string(),
         RowKind::Unreadable(Failure::Other) => text(keys::FILES_FOLDER_UNREADABLE).to_string(),
-        RowKind::Folder { .. } | RowKind::File | RowKind::Link { .. } => String::new(),
+        RowKind::Folder { .. } | RowKind::File | RowKind::Link => String::new(),
     };
     div()
         .w_full()

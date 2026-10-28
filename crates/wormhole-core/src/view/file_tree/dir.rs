@@ -1,7 +1,8 @@
 //! One folder's entries as the tab lists them: folders first, then files, each group in natural order,
 //! cut at a cap with a count of what was left out.
 
-use std::ffi::OsString;
+use std::collections::HashMap;
+use std::ffi::{OsStr, OsString};
 
 use super::names::{clean, natural_cmp};
 use crate::storage::files::listing::{EntryKind, Listing};
@@ -31,6 +32,11 @@ pub struct Dir {
     pub entries: Vec<Entry>,
     /// Entries left out: past the cap, or past what was read at all.
     pub more: usize,
+    /// The reader stopped before the end of the folder, so `more` counts only what it saw: there are at
+    /// least that many.
+    pub at_least: bool,
+    /// Each entry's place, by its real name: looking one up is not a walk of the list.
+    index: HashMap<OsString, usize>,
 }
 
 impl Dir {
@@ -38,37 +44,43 @@ impl Dir {
     /// cut after sorting, so the cap keeps the front of the alphabet and not whatever the disk listed
     /// first). Run it where the folder was read: sorting a big folder takes a moment.
     pub fn from_listing(listing: Listing, cap: usize) -> Self {
-        let Listing { entries, unread } = listing;
-        // A link to a folder is listed with the folders, as Finder does, though it never opens.
-        let is_folder =
-            |kind: EntryKind| matches!(kind, EntryKind::Folder | EntryKind::Link { to_folder: true });
+        let Listing { entries, truncated } = listing;
         let mut keyed: Vec<(String, EntryKind, OsString)> = entries
             .into_iter()
             .map(|entry| (entry.name.to_string_lossy().into_owned(), entry.kind, entry.name))
             .collect();
-        keyed.sort_by(|a, b| is_folder(b.1).cmp(&is_folder(a.1)).then_with(|| natural_cmp(&a.0, &b.0)));
-        let more = keyed.len().saturating_sub(cap) + unread;
+        // A link is listed with the files: what it points at is not looked at, so it is not known to be
+        // a folder (and it never opens).
+        let folder = |kind: EntryKind| kind == EntryKind::Folder;
+        keyed.sort_by(|a, b| folder(b.1).cmp(&folder(a.1)).then_with(|| natural_cmp(&a.0, &b.0)));
+        let more = keyed.len().saturating_sub(cap);
         keyed.truncate(cap);
-        let entries =
+        let entries: Vec<Entry> =
             keyed.into_iter().map(|(lossy, kind, name)| Entry { label: clean(&lossy), name, kind }).collect();
-        Self { entries, more }
+        let index = entries.iter().enumerate().map(|(at, entry)| (entry.name.clone(), at)).collect();
+        Self { entries, more, at_least: truncated, index }
+    }
+
+    /// The entry called `name`.
+    pub fn get(&self, name: &OsStr) -> Option<&Entry> {
+        self.entries.get(*self.index.get(name)?)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::ffi::OsString;
+    use std::ffi::{OsStr, OsString};
 
     use super::{Dir, ENTRY_CAP};
     use crate::storage::files::listing::{DirEntry, EntryKind, Listing};
 
-    fn listing(entries: &[(&str, EntryKind)], unread: usize) -> Listing {
+    fn listing(entries: &[(&str, EntryKind)], truncated: bool) -> Listing {
         Listing {
             entries: entries
                 .iter()
                 .map(|&(name, kind)| DirEntry { name: OsString::from(name), kind })
                 .collect(),
-            unread,
+            truncated,
         }
     }
 
@@ -89,30 +101,22 @@ mod tests {
                     ("Docs", Folder),
                     ("README.md", File),
                 ],
-                0,
+                false,
             ),
             ENTRY_CAP,
         );
         assert_eq!(labels(&dir), [".git", "Docs", "src", "file2.txt", "file10.txt", "README.md"]);
-        assert_eq!(dir.more, 0);
+        assert_eq!((dir.more, dir.at_least), (0, false));
     }
 
     #[test]
-    fn a_link_to_a_folder_sorts_with_the_folders_but_is_not_one() {
+    fn a_link_sorts_with_the_files_and_never_opens() {
         use EntryKind::{File, Folder, Link};
         let dir = Dir::from_listing(
-            listing(
-                &[
-                    ("a", File),
-                    ("z", Link { to_folder: true }),
-                    ("m", Folder),
-                    ("b", Link { to_folder: false }),
-                ],
-                0,
-            ),
+            listing(&[("a", File), ("z", Link), ("m", Folder), ("b", Link)], false),
             ENTRY_CAP,
         );
-        assert_eq!(labels(&dir), ["m", "z", "a", "b"]);
+        assert_eq!(labels(&dir), ["m", "a", "b", "z"]);
         let flags: Vec<bool> = dir.entries.iter().map(|entry| entry.is_folder()).collect();
         assert_eq!(flags, [true, false, false, false], "only a real folder opens");
     }
@@ -121,14 +125,26 @@ mod tests {
     fn the_cap_keeps_the_front_of_the_alphabet_and_counts_the_rest() {
         let names: Vec<String> = (0..12).rev().map(|n| format!("f{n}")).collect();
         let entries: Vec<(&str, EntryKind)> = names.iter().map(|n| (n.as_str(), EntryKind::File)).collect();
-        let dir = Dir::from_listing(listing(&entries, 3), 5);
+        let dir = Dir::from_listing(listing(&entries, true), 5);
         assert_eq!(labels(&dir), ["f0", "f1", "f2", "f3", "f4"]);
-        assert_eq!(dir.more, 7 + 3, "seven past the cap and three the reader left unread");
+        assert_eq!(dir.more, 7, "seven past the cap");
+        assert!(dir.at_least, "and the reader stopped before the end, so there may be more");
+    }
+
+    #[test]
+    fn an_entry_is_found_by_its_real_name() {
+        let dir = Dir::from_listing(
+            listing(&[("a\nb", EntryKind::Folder), ("c", EntryKind::File)], false),
+            ENTRY_CAP,
+        );
+        assert!(dir.get(OsStr::new("a\nb")).is_some_and(|entry| entry.is_folder()));
+        assert!(dir.get(OsStr::new("c")).is_some());
+        assert!(dir.get(OsStr::new("d")).is_none());
     }
 
     #[test]
     fn a_hostile_name_is_cleaned_for_the_label_and_kept_for_the_path() {
-        let dir = Dir::from_listing(listing(&[("a\nb", EntryKind::File)], 0), ENTRY_CAP);
+        let dir = Dir::from_listing(listing(&[("a\nb", EntryKind::File)], false), ENTRY_CAP);
         assert_eq!(dir.entries[0].label, "a\u{FFFD}b");
         assert_eq!(dir.entries[0].name, OsString::from("a\nb"));
     }

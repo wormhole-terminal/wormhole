@@ -139,7 +139,7 @@ fn with_icon(icon: &Icon, title: SharedString, cx: &App) -> AnyElement {
     let picture = match icon {
         Icon::Image(file) => img(file.clone()).size_4().into_any_element(),
         // No icon service here: the folder glyph stands for any file.
-        Icon::File(_) => crate::style::icon(IconName::Folder).into_any_element(),
+        Icon::File(_) | Icon::Folder => crate::style::icon(IconName::Folder).into_any_element(),
         Icon::Monogram(letters) => div()
             .flex_none()
             .size_4()

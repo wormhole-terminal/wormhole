@@ -14,6 +14,10 @@ files-folder-unreadable = This folder can't be read.
 # already formatted.
 files-more = { $count } more
 
+# The same when the reader stopped before the end of a very large folder, so there are at least that many.
+# { $count } is a whole number, already formatted.
+files-more-at-least = { $count }+ more
+
 ## The path menu at the top of the tab
 
 # A line of the path menu: pins the folder the tab shows. { $name } is the folder's name.

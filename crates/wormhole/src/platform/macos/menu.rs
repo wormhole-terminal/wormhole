@@ -270,6 +270,7 @@ fn item_for(
 fn image(icon: &Icon) -> Option<Retained<NSImage>> {
     match icon {
         Icon::File(path) => appkit::file_icon(path, IMAGE_SIDE),
+        Icon::Folder => appkit::folder_icon(IMAGE_SIDE),
         // Only where there is no icon service; the app has a file icon here.
         Icon::Monogram(_) => None,
         Icon::Image(file) => {

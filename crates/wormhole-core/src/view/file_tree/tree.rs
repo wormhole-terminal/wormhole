@@ -6,7 +6,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use super::dir::Dir;
+use super::dir::{Dir, Entry};
 use crate::storage::files::listing::EntryKind;
 
 /// Why a folder could not be listed.
@@ -52,12 +52,13 @@ pub enum RowKind {
         open: bool,
     },
     File,
-    /// A link; it never opens, whatever it points to.
-    Link {
-        to_folder: bool,
+    /// A link; it never opens, and what it points at is never looked at.
+    Link,
+    /// "N more": entries the folder has that are not listed; `at_least` when that is only what was seen.
+    More {
+        count: usize,
+        at_least: bool,
     },
-    /// "N more": entries the folder has that are not listed.
-    More(usize),
     /// An open folder not answered yet.
     Reading,
     /// An open folder with nothing in it.
@@ -81,7 +82,7 @@ pub struct Row {
 impl Row {
     /// Whether the row stands for something on the disk (the keys and the menu act on it).
     pub fn is_entry(&self) -> bool {
-        matches!(self.kind, RowKind::Folder { .. } | RowKind::File | RowKind::Link { .. })
+        matches!(self.kind, RowKind::Folder { .. } | RowKind::File | RowKind::Link)
     }
 
     pub fn is_folder(&self) -> bool {
@@ -108,15 +109,19 @@ impl Tree {
     /// The entry `path` stands for, if the tree has read its folder.
     pub fn entry(&self, path: &Path) -> Option<&super::dir::Entry> {
         let Some(Slot::Ready(dir)) = self.slots.get(path.parent()?) else { return None };
-        let name = path.file_name()?;
-        dir.entries.iter().find(|entry| entry.name == name)
+        dir.get(path.file_name()?)
+    }
+
+    /// Whether the folder `path` has been read (or failed to be), so its slot holds an answer.
+    pub fn answered(&self, path: &Path) -> bool {
+        self.slots.contains_key(path)
     }
 
     /// Opens a folder, or closes it. Whether the folder now needs reading (it was just opened and the
     /// tree has not read it). A path that is not a real folder of a folder already read (a file, a
     /// link, anything unknown) does nothing: this is where a link is never entered.
     pub fn toggle(&mut self, path: &Path) -> bool {
-        if !self.entry(path).is_some_and(super::dir::Entry::is_folder) {
+        if !self.entry(path).is_some_and(Entry::is_folder) {
             return false;
         }
         if self.open.remove(path) {
@@ -176,9 +181,9 @@ impl Tree {
     /// anything went.
     fn prune(&mut self) -> bool {
         let stale = |tree: &Self, path: &Path| match path.parent().and_then(|parent| tree.slots.get(parent)) {
-            Some(Slot::Ready(dir)) => !dir.entries.iter().any(|entry| {
-                entry.kind == EntryKind::Folder && Some(entry.name.as_os_str()) == path.file_name()
-            }),
+            Some(Slot::Ready(dir)) => {
+                !path.file_name().and_then(|name| dir.get(name)).is_some_and(Entry::is_folder)
+            }
             // The parent is unknown, failed or being read: nothing says the child is gone.
             _ => false,
         };
@@ -219,7 +224,7 @@ impl Tree {
                     let kind = match entry.kind {
                         EntryKind::Folder => RowKind::Folder { open: self.open.contains(&path) },
                         EntryKind::File => RowKind::File,
-                        EntryKind::Link { to_folder } => RowKind::Link { to_folder },
+                        EntryKind::Link => RowKind::Link,
                     };
                     let open = matches!(kind, RowKind::Folder { open: true });
                     rows.push(Row { path: path.clone(), depth, label: entry.label.clone(), kind });
@@ -228,7 +233,7 @@ impl Tree {
                     }
                 }
                 if dir.more > 0 {
-                    rows.push(note(RowKind::More(dir.more)));
+                    rows.push(note(RowKind::More { count: dir.more, at_least: dir.at_least }));
                 }
             }
         }
@@ -247,7 +252,7 @@ mod tests {
     fn dir(entries: &[(&str, EntryKind)]) -> Dir {
         let entries =
             entries.iter().map(|&(name, kind)| DirEntry { name: OsString::from(name), kind }).collect();
-        Dir::from_listing(Listing { entries, unread: 0 }, ENTRY_CAP)
+        Dir::from_listing(Listing { entries, truncated: false }, ENTRY_CAP)
     }
 
     fn labels(tree: &Tree) -> Vec<String> {
@@ -284,7 +289,7 @@ mod tests {
     fn a_link_and_a_file_never_open() {
         use EntryKind::{File, Link};
         let mut tree = Tree::new();
-        tree.set(Path::new(""), Ok(dir(&[("out", Link { to_folder: true }), ("a", File)])));
+        tree.set(Path::new(""), Ok(dir(&[("out", Link), ("a", File)])));
         assert!(!tree.toggle(Path::new("out")));
         assert!(!tree.toggle(Path::new("a")));
         assert!(!tree.toggle(Path::new("unknown")));
@@ -314,7 +319,7 @@ mod tests {
                 RowKind::Folder { open: true },
                 RowKind::Unreadable(Failure::Denied),
                 RowKind::Folder { open: true },
-                RowKind::More(7),
+                RowKind::More { count: 7, at_least: false },
             ]
         );
     }
