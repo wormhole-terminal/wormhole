@@ -263,7 +263,7 @@ mod tests {
     fn a_link_out_of_the_root_is_refused() {
         let root = tempfile::tempdir().unwrap();
         let outside = root_with("secret.txt", b"secret");
-        symlink(&outside.path().join("secret.txt"), &root.path().join("l.txt")).unwrap();
+        symlink(outside.path().join("secret.txt"), root.path().join("l.txt")).unwrap();
         assert_eq!(load(root.path(), Path::new("l.txt")), Loaded::Unavailable(Problem::Outside));
         // A folder and a missing file are told apart.
         fs::create_dir(root.path().join("d")).unwrap();

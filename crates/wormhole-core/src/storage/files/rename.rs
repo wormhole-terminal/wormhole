@@ -288,13 +288,13 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let outside = tempfile::tempdir().unwrap();
         fs::write(outside.path().join("secret"), "").unwrap();
-        symlink(outside.path(), &root.path().join("out")).unwrap();
+        symlink(outside.path(), root.path().join("out")).unwrap();
         // A link out of the root.
         assert!(matches!(rename(root.path(), "out/secret", "x"), Err(RenameError::Outside)));
         // A link to a folder inside it is a link all the same.
         fs::create_dir(root.path().join("real")).unwrap();
         fs::write(root.path().join("real/f"), "").unwrap();
-        symlink(&root.path().join("real"), &root.path().join("alias")).unwrap();
+        symlink(root.path().join("real"), root.path().join("alias")).unwrap();
         assert!(matches!(rename(root.path(), "alias/f", "g"), Err(RenameError::Outside)));
         assert_eq!(names(outside.path()), ["secret"]);
         assert_eq!(names(&root.path().join("real")), ["f"]);
@@ -305,7 +305,7 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let outside = tempfile::tempdir().unwrap();
         fs::write(outside.path().join("target"), "t").unwrap();
-        symlink(&outside.path().join("target"), &root.path().join("link")).unwrap();
+        symlink(outside.path().join("target"), root.path().join("link")).unwrap();
         assert_eq!(rename(root.path(), "link", "renamed").unwrap(), Path::new("renamed"));
         assert!(fs::symlink_metadata(root.path().join("renamed")).unwrap().file_type().is_symlink());
         assert!(fs::symlink_metadata(root.path().join("link")).is_err());
