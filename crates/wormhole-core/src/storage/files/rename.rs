@@ -264,10 +264,9 @@ mod tests {
 
     #[test]
     fn a_name_that_is_not_text_is_refused() {
-        use std::os::unix::ffi::OsStrExt as _;
         let root = tempfile::tempdir().unwrap();
         fs::write(root.path().join("a"), "").unwrap();
-        let bad = OsStr::from_bytes(b"caf\xe9");
+        let bad = crate::platform::fs::path_from_bytes(b"caf\xe9").as_os_str();
         assert!(matches!(
             rename_within(root.path(), Path::new("a"), bad),
             Err(RenameError::Name(NameProblem::NotText))
