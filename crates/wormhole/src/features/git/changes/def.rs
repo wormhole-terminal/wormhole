@@ -14,7 +14,7 @@ use crate::features::git::diff::DiffView;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
 use crate::window::feature::{
-    BranchChip, CoverDef, FeatureDef, FeatureEvent, RepoRequest, StateDef, TabDef, show_tab,
+    BranchChip, CoverDef, CoverRepo, FeatureDef, FeatureEvent, RepoRequest, StateDef, TabDef, show_tab,
 };
 
 /// The window's `Changes`, from the handle the window keeps. The entry makes it, so it is one.
@@ -72,10 +72,20 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
                 typed(entity).update(cx, |changes, cx| changes.close_diff(active.terminal, window, cx));
             }
         },
-        watch: |entity, cx| typed(entity).read(cx).diff.as_ref().and_then(DiffView::watched_path),
-        read: |entity, facts, session, observed, cx| {
-            typed(entity).update(cx, |changes, cx| changes.refresh_open_diff(facts, session, observed, cx));
+        dismiss: |entity, cx| {
+            typed(entity).update(cx, |changes, cx| {
+                if changes.diff.take().is_some() {
+                    cx.notify();
+                }
+            });
         },
+        repo: Some(CoverRepo {
+            watch: |entity, cx| typed(entity).read(cx).diff.as_ref().and_then(DiffView::watched_path),
+            read: |entity, facts, session, observed, cx| {
+                typed(entity)
+                    .update(cx, |changes, cx| changes.refresh_open_diff(facts, session, observed, cx));
+            },
+        }),
     }),
     // Any tab being shown closes the picker of this one.
     tab_changed: Some(|entity, _, cx| {

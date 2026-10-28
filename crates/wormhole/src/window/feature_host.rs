@@ -125,6 +125,7 @@ impl Workspace {
                 self.open_terminals(terminals.clone(), window, cx);
             }
             FeatureEvent::Repo(request) => self.on_repo_request(request, cx),
+            FeatureEvent::CoverOpened(id) => self.dismiss_covers_but(*id, cx),
         }
     }
 
@@ -140,6 +141,17 @@ impl Workspace {
                 if let Some(ix) = self.find_session(*session) {
                     self.compare_with(ix, branch.clone(), cx);
                 }
+            }
+        }
+    }
+
+    /// A feature laid its cover over the terminal: every other feature's comes down.
+    fn dismiss_covers_but(&self, opened: FeatureId, cx: &mut App) {
+        for (at, def) in self.features.iter().enumerate() {
+            if let (Some(cover), Some(entity), true) =
+                (def.cover.as_ref(), self.feature_entity(at), def.id != opened)
+            {
+                (cover.dismiss)(entity, cx);
             }
         }
     }
@@ -163,7 +175,7 @@ impl Workspace {
     #[cfg(any(test, debug_assertions))]
     pub(in crate::window) fn cover_file(&self, cx: &App) -> Option<std::path::PathBuf> {
         let (cover, entity) = self.open_cover(cx)?;
-        (cover.watch)(entity, cx)
+        (cover.repo.as_ref()?.watch)(entity, cx)
     }
 
     /// What is laid over the terminal, built for this frame.
@@ -202,7 +214,7 @@ impl Workspace {
     /// on screen.
     pub(in crate::window) fn repo_watched(&self, cx: &App) -> Option<std::path::PathBuf> {
         self.features.iter().enumerate().find_map(|(at, def)| {
-            let (cover, entity) = (def.cover.as_ref()?, self.feature_entity(at)?);
+            let (cover, entity) = (def.cover.as_ref()?.repo.as_ref()?, self.feature_entity(at)?);
             (cover.watch)(entity, cx)
         })
     }
@@ -217,7 +229,9 @@ impl Workspace {
     ) {
         let facts = self.facts(cx);
         for (at, def) in self.features.iter().enumerate() {
-            if let (Some(cover), Some(entity)) = (def.cover.as_ref(), self.feature_entity(at)) {
+            if let (Some(cover), Some(entity)) =
+                (def.cover.as_ref().and_then(|cover| cover.repo.as_ref()), self.feature_entity(at))
+            {
                 (cover.read)(entity, &facts, session, observed.as_ref(), cx);
             }
         }

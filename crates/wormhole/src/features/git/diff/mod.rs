@@ -29,10 +29,12 @@ use crate::features::git::open_file::{OpenFile, OpenTarget};
 use crate::settings::SettingsStore;
 use crate::settings::{settings_in, store_in, ui_in};
 use crate::terminal_view::TerminalView;
+use crate::window::feature::FeatureEvent;
 use crate::window::repo::Stamp;
 use crate::window::repo::job::Job;
 use load::Ask;
 use rows::{BuildKey, Row, RowStats};
+use wormhole_core::config::FeatureId;
 use wormhole_core::git::{self, DiffLimits, DiffSpec, FileChange, FileDiff, Side, SubmoduleLog};
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::limits;
@@ -230,6 +232,8 @@ impl Changes {
         let build = BuildKey::of(&store.settings, split_fits, view.syntax(store.revision, &store.tokens));
         let started = view.begin_load(build);
         self.diff = Some(view);
+        // The window shows one cover at a time: a file's viewer that was up comes down.
+        cx.emit(FeatureEvent::CoverOpened(FeatureId::Changes));
         if let Some((wanted, work)) = started {
             self.spawn_diff_work(wanted, work, build, cx);
         }

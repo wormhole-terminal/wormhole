@@ -141,6 +141,10 @@ pub(crate) enum FeatureEvent {
     /// repository. The window owns that read (the sidebar's rows, the title row and the status bar
     /// show its answer), so a feature asks for it and finds the answer in the facts.
     Repo(RepoRequest),
+    /// The feature just laid something over the terminal (a diff, a file): another feature's cover that
+    /// is up comes down, since the window shows one at a time. The window asks the others to dismiss
+    /// theirs (`CoverDef::dismiss`); a feature names itself, so none names another.
+    CoverOpened(FeatureId),
 }
 
 /// What a feature asks of the window's reading of a terminal's repository ([`FeatureEvent::Repo`]).
@@ -321,11 +325,11 @@ impl FeatureDef {
     };
 }
 
-/// What a feature lays over the terminal: the card of a diff. The window draws it in place of the
-/// terminal and its panes, gives the title row the feature's entry in place of the breadcrumb, takes
-/// the find shortcuts and the tab bar's focus stop away while it is up, and has Esc close it before
-/// anything else. What it lays over is a file of the terminal's repository, so it also takes part in the
-/// window's reading of that repository (`window::repo`).
+/// What a feature lays over the terminal: the card of a diff, a file's viewer. The window draws it in place
+/// of the terminal and its panes, gives the title row the feature's entry in place of the breadcrumb,
+/// takes the find shortcuts and the tab bar's focus stop away while it is up, and has Esc close it before
+/// anything else. One at a time: a feature that lays something over the terminal says so
+/// ([`FeatureEvent::CoverOpened`]) and the others' come down.
 pub(crate) struct CoverDef {
     /// Whether the feature has something over the terminal now. Asked each frame and at keys: a read.
     pub open: fn(&AnyEntity, &App) -> bool,
@@ -335,6 +339,15 @@ pub(crate) struct CoverDef {
     pub title: CoverTitleFn,
     /// Esc, and the feature's own close buttons: takes it down and gives the keyboard to the terminal.
     pub close: CoverCloseFn,
+    /// Takes it down without touching the keyboard: another feature laid its cover over the terminal, or
+    /// another terminal was selected.
+    pub dismiss: fn(&AnyEntity, &mut App),
+    /// Its part in the window's reading of the repository, for a cover that is a file of it (a diff).
+    pub repo: Option<CoverRepo>,
+}
+
+/// What a cover that shows a file of the terminal's repository asks of the window's reading of it.
+pub(crate) struct CoverRepo {
     /// A file to look at in the same background hop as the status, when the read is for the terminal
     /// on screen: what an open diff of the working tree watches.
     pub watch: WatchFn,
