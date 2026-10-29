@@ -75,6 +75,9 @@ pub struct Settings {
     /// Background opacity, 0.3..=1.0.
     pub opacity: f32,
     pub blur: bool,
+    /// Liquid Glass under the sidebar's and the panel's cards (macOS 26 and later), a beta: off,
+    /// every surface is painted; see [`Settings::glass_on`].
+    pub liquid_glass: bool,
     /// Liquid Glass under the sidebar's and the panel's cards (macOS 26 and later). Off, every
     /// surface is painted; see [`Settings::glass_on`].
 
@@ -323,6 +326,7 @@ impl Default for Settings {
             line_height: 1.3,
             opacity: 0.8,
             blur: true,
+            liquid_glass: false,
             density: Density::default(),
             show_groups_as_cards: true,
             fade_group_colors: false,
@@ -446,11 +450,11 @@ impl Settings {
         self.feature_enabled(FeatureFlag::Motion)
     }
 
-    /// Whether the sidebar's and the panel's cards sit on Liquid Glass: its feature flag is on,
-    /// the Mac has it (macOS 26 and later), and the system doesn't want windows opaque (Reduce
-    /// Transparency, Increase Contrast). Otherwise every surface paints itself.
+    /// Whether the sidebar's and the panel's cards sit on Liquid Glass: asked for, the Mac has it
+    /// (macOS 26 and later), and the system doesn't want windows opaque (Reduce Transparency,
+    /// Increase Contrast). Otherwise every surface paints itself.
     pub fn glass_on(&self, mac_has_glass: bool, system_opaque: bool) -> bool {
-        self.feature_enabled(FeatureFlag::LiquidGlass) && mac_has_glass && !system_opaque
+        self.liquid_glass && mac_has_glass && !system_opaque
     }
 }
 

@@ -6,6 +6,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Added
+
+- Liquid Glass, as a beta: on macOS 26 and later, Settings → Appearance has a Liquid Glass switch, marked
+  Beta, that puts glass under the sidebar's and the panel's cards. It is off until you turn it on, and stays
+  painted while Reduce Transparency or Increase Contrast is on.
+
 ## [1.5.0] - 2026-10-29
 
 ### Added

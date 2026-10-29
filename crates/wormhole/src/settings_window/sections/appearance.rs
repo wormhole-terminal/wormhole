@@ -1,6 +1,6 @@
 //! Appearance: the live preview, the mode and the theme cards, the primary and the branch
-//! color as swatches, the window's opacity, blur and status bar, the title row's parts
-//! (`title_row`), the file icons. Under Reduce
+//! color as swatches, the window's opacity, blur, Liquid Glass (a beta, from macOS 26) and status bar,
+//! the title row's parts (`title_row`), the file icons. Under Reduce
 //! Transparency the opacity slider is off and says why; with the blur off below 95 % the
 //! blur's row warns.
 
@@ -71,6 +71,9 @@ pub(super) const SETTINGS: &[Setting] = &[
     .below(draw_branch_swatches),
     Setting::custom("opacity", draw_opacity).below(reduced_transparency_note),
     toggle!("blur", blur).below(blur_off_warning),
+    toggle!("liquid-glass", liquid_glass)
+        .chip(|_, _| Some(text(SETTINGS_APPEARANCE_LIQUID_GLASS_BETA).into()))
+        .below(glass_held_note),
     Setting::custom("translucent", draw_translucent),
     Setting::segmented(
         "title-border",
@@ -237,6 +240,19 @@ fn blur_off_warning(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
                     .on_click(|_, _, cx| update_settings(cx, |s| s.blur = true)),
             )
             .into_any_element()
+    })
+}
+
+/// Under Reduce Transparency or Increase Contrast the switch can be on and still show no glass: say why.
+fn glass_held_note(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
+    (settings(cx).liquid_glass && cx.global::<SettingsStore>().system().opaque()).then(|| {
+        style::banner(
+            ui(cx),
+            style::BannerKind::Info,
+            false,
+            text(SETTINGS_APPEARANCE_GLASS_HELD_BY_ACCESSIBILITY),
+        )
+        .into_any_element()
     })
 }
 

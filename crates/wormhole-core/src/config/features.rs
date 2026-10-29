@@ -8,7 +8,7 @@
 //! This is not the per-project [`crate::project::Feature`] switches (which parts of a trusted
 //! `.wormhole/` a person accepts). A `FeatureFlag` gates whole features of Wormhole itself; the
 //! first one gates the entire project-folder feature and its sidebar module, another the first-run
-//! welcome that runs in the terminal itself, another Liquid Glass.
+//! welcome that runs in the terminal itself.
 
 use std::collections::BTreeMap;
 
@@ -36,10 +36,6 @@ pub enum FeatureFlag {
     /// quitting, crashing or updating Wormhole detaches from them and the next launch attaches
     /// again to the same screen and the same running programs (`repo-docs/docs/session-host.md`).
     PersistentTerminals,
-    /// Liquid Glass under the sidebar's and the panel's cards on macOS 26 and later, where the
-    /// system allows it (not with Reduce Transparency or Increase Contrast). Off, every surface
-    /// paints itself. It was a setting (`liquid_glass`) until 2026-10-25.
-    LiquidGlass,
     /// Driving Wormhole from scripts and coding agents beyond `list`, `status`, `notify`, `send-text`
     /// and `new-terminal`: `wh events` and, as the phases land, reading terminals, keys and mouse,
     /// windows and splits, waiting and running, and `wh mcp` (`repo-docs/docs/automation.md`). Off,
@@ -78,12 +74,11 @@ pub enum FeatureFlag {
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 13] = [
+    pub const ALL: [FeatureFlag; 12] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
         Self::PersistentTerminals,
-        Self::LiquidGlass,
         Self::Automation,
         Self::Motion,
         Self::TearOff,
@@ -101,7 +96,6 @@ impl FeatureFlag {
             Self::TerminalWelcome => "terminal_welcome",
             Self::NotesAndTasks => "notes_and_tasks",
             Self::PersistentTerminals => "persistent_terminals",
-            Self::LiquidGlass => "liquid_glass",
             Self::Automation => "automation",
             Self::Motion => "motion",
             Self::TearOff => "tear_off",
@@ -124,7 +118,6 @@ impl FeatureFlag {
             Self::TerminalWelcome => "Terminal welcome",
             Self::NotesAndTasks => "Notes and tasks",
             Self::PersistentTerminals => "Persistent terminals",
-            Self::LiquidGlass => "Liquid Glass",
             Self::Automation => "Automation",
             Self::Motion => "Motion",
             Self::TearOff => "Tear off a terminal",
@@ -154,10 +147,6 @@ impl FeatureFlag {
             Self::PersistentTerminals => {
                 "Terminals keep running when Wormhole quits or updates, and the next launch picks them \
                  up again with their screen and programs."
-            }
-            Self::LiquidGlass => {
-                "Glass under the sidebar's and the panel's cards on macOS 26 and later, unless Reduce \
-                 Transparency or Increase Contrast is on. Off: every surface painted."
             }
             Self::Automation => {
                 "The command line and coding agents watch and drive Wormhole: wh events, and later \
@@ -206,8 +195,6 @@ impl FeatureFlag {
             Self::NotesAndTasks => false,
             // Off until the host has been through its phases and the user has approved it.
             Self::PersistentTerminals => false,
-            // Unfinished: glass behind every surface still needs its polish.
-            Self::LiquidGlass => false,
             // Until its last phase has landed and the user has approved it.
             Self::Automation => false,
             // Unfinished: only the page and its previews exist, the animations are still to come.
@@ -418,15 +405,17 @@ mod tests {
 
     #[test]
     fn a_retired_flags_key_in_config_json_changes_nothing() {
-        // The own engine was a flag until it became the only engine; a config.json from then may
-        // still carry its key.
+        // The own engine was a flag until it became the only engine, and Liquid Glass until it became
+        // a setting again; a config.json from then may still carry their keys.
         let old = BTreeMap::from([
             ("own_engine".to_string(), false),
             ("sidebar_filter".to_string(), false),
+            ("liquid_glass".to_string(), true),
             ("project_folders".to_string(), false),
         ]);
         assert_eq!(FeatureFlag::from_key("own_engine"), None);
         assert_eq!(FeatureFlag::from_key("sidebar_filter"), None, "the sidebar's funnel is gone");
+        assert_eq!(FeatureFlag::from_key("liquid_glass"), None, "a setting in Appearance");
         assert!(!enabled_in(FeatureFlag::ProjectFolders, &old, DEV));
         assert!(enabled_in(FeatureFlag::TerminalWelcome, &old, DEV));
     }

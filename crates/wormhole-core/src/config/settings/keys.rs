@@ -86,6 +86,7 @@ pub const APP_SETTINGS: &[&str] = &[
     "title_border",
     "open_in",
     // The glass is a look of the whole window, and a repository must not switch it on.
+    "liquid_glass",
     // What the title row shows is the person's own choice. The pull request also runs `gh`, which
     // a repository must not be able to switch on for itself.
     "title_row",

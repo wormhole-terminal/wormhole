@@ -47,6 +47,10 @@ settings-appearance-blur = Blur what's behind the window
     .description = Only visible below 100 % opacity
     .keywords = vibrancy frosted
 
+settings-appearance-liquid-glass = Liquid Glass
+    .description = Glass under the sidebar's and the panel's cards. Off: every surface painted.
+    .keywords = glass translucent material apple tahoe cards beta
+
 
 settings-appearance-translucent = Also translucent
     .description = Use the opacity and blur above for these windows too
@@ -118,6 +122,8 @@ settings-appearance-opaque-reduce-transparency = Reduce Transparency is on in Sy
 settings-appearance-opaque-increase-contrast = Increase Contrast is on in System Settings, so every window is opaque. Your opacity applies again when it's off.
 settings-appearance-blur-off-warning = Without blur the desktop shows sharp behind the text: below 95 % opacity it may not read.
 settings-appearance-turn-on-blur = Turn on blur
+settings-appearance-liquid-glass-beta = Beta
+settings-appearance-glass-held-by-accessibility = Reduce Transparency or Increase Contrast is on in System Settings, so every surface stays painted. The glass returns when it's off.
 settings-appearance-settings = Settings
 settings-appearance-theme-studio = Theme Studio
 settings-appearance-project-settings = Project settings

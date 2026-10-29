@@ -315,9 +315,6 @@ fn notice(text: &str) -> Option<String> {
         .filter(|key| !settings::LEGACY_SETTINGS.contains(&key.as_str()))
         .map(|key| match key.as_str() {
             "accent_color" => "`accent_color` is now `primary_color`".to_string(),
-            "liquid_glass" => {
-                "`liquid_glass` is now a feature flag: `feature_flags` → `liquid_glass`".to_string()
-            }
             _ => format!("unknown setting `{key}`{}", did_you_mean(key, known.iter().map(String::as_str))),
         })
         .collect();
@@ -666,12 +663,9 @@ mod tests {
         );
         let (_dir, path) = config_file(r#"{ "theme": "Nord", "$schema": "s" }"#);
         assert_eq!(Config::load_from(path.clone(), themes_dir(&path)).error, None);
-        // A setting that became a feature flag says where it went.
+        // Liquid Glass was a feature flag for a while and is a setting again.
         let (_dir, path) = config_file(r#"{ "liquid_glass": true }"#);
-        assert_eq!(
-            Config::load_from(path.clone(), themes_dir(&path)).error.as_deref(),
-            Some("config.json: `liquid_glass` is now a feature flag: `feature_flags` → `liquid_glass`")
-        );
+        assert_eq!(Config::load_from(path.clone(), themes_dir(&path)).error, None);
     }
 
     #[test]

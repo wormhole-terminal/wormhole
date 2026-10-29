@@ -9,7 +9,7 @@ use crate::window::Workspace;
 
 impl Workspace {
     /// Whether the sidebar's cards, the tab bars and the terminal's surface sit on glass: the
-    /// Liquid Glass feature flag is on, the Mac has it and the system doesn't want windows opaque
+    /// Liquid Glass setting is on, the Mac has it and the system doesn't want windows opaque
     /// (Reduce Transparency, Increase Contrast), whatever the window's own blur and opacity are;
     /// without the blur the window gets a plain fill under the glass (`Blur::set_backing`). Else
     /// everything paints its own surface (the window's opacity and blur keep working as before).

@@ -17,7 +17,8 @@
 //! window's miniature; Appearance rose by about 300 with each theme card's hide button and menu.
 //! Every page rose by about 100 when the nav got a row more, Motion; its own page, behind a feature flag,
 //! draws a select under each of its four choices and a preview (a view of its own, about 450) under each, with its caption (6,250).
-//! Liquid Glass moved from Appearance (one row fewer) to Feature flags (one row more); Feature flags rose by
+//! Liquid Glass moved from Appearance (one row fewer) to Feature flags (one row more), and back as a beta
+//! (on macOS 26 and later only: [`GLASS_ROW`] is what its row adds there); Feature flags rose by
 //! 392 (4,333 to 4,725, measured with the row left out and in) with one more, Tear off a terminal: a switch,
 //! its name, its line of words and its dot. It rose by 358 more (4,725 to 5,083) with Live resize, the same row
 //! again, and by about 392 more with Notice chip.
@@ -72,7 +73,8 @@ const SLACK: u64 = 20;
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 17] = [
     ("Profile", 6862),
-    ("Appearance", 16810),
+    // With the Liquid Glass row (16,810 before it came back).
+    ("Appearance", 17241),
     ("Fonts", 7560),
     ("Motion", 6441),
     ("Terminal", 9872),
@@ -99,12 +101,23 @@ const BUDGET: [(&str, u64); 17] = [
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost
-    // about 380); the Folder picker flag one more again (about 385).
-    ("FeatureFlags", 7260),
+    // about 380); the Folder picker flag one more again (about 385). Liquid Glass went back to Appearance:
+    // 6,912 measured, a row fewer.
+    ("FeatureFlags", 6912),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     ("search", 12250),
 ];
+
+/// What Appearance's Liquid Glass row adds, a switch with its line and Beta chip: it is on the page on
+/// macOS 26 and later only, so a Mac before that draws the page without it.
+const GLASS_ROW: u64 = 431;
+
+/// `budget` of the page `name` on this Mac.
+fn budget_here(name: &str, budget: u64) -> u64 {
+    let without_glass = name == "Appearance" && !wormhole_core::platform::system::has_liquid_glass();
+    budget - if without_glass { GLASS_ROW } else { 0 }
+}
 
 /// What a scan finds in the visual checks' fixture home (Ghostty, iTerm2 and Alacritty settings), with the
 /// fonts asked of the system as the page's own scan does: never this Mac's own home.
@@ -177,10 +190,9 @@ fn a_settings_frame_stays_within_its_allocation_budget(cx: &mut TestAppContext) 
     let over: Vec<String> = measured
         .iter()
         .zip(BUDGET)
-        .filter(|((_, drawn), (_, budget))| drawn.allocations > budget + SLACK)
-        .map(|((name, drawn), (_, budget))| {
-            format!("{name}: {} (budget {})", drawn.allocations, budget + SLACK)
-        })
+        .map(|((name, drawn), (_, budget))| (name, drawn, budget_here(name, budget) + SLACK))
+        .filter(|(_, drawn, budget)| drawn.allocations > *budget)
+        .map(|(name, drawn, budget)| format!("{name}: {} (budget {budget})", drawn.allocations))
         .collect();
     assert!(over.is_empty(), "frames over their budget:\n{}\nall:\n{}", over.join("\n"), table.join("\n"));
 }

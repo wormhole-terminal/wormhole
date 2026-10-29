@@ -14,3 +14,27 @@ use super::macos::system as os;
 pub fn macos_version_text() -> Option<String> {
     os::version_text()
 }
+
+/// Whether this is macOS 26 or later, the first with Liquid Glass. Read once: Settings asks on every
+/// frame, and the version doesn't change while the app runs.
+pub fn has_liquid_glass() -> bool {
+    static HAS: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *HAS.get_or_init(|| macos_version_text().as_deref().is_some_and(major_has_liquid_glass))
+}
+
+fn major_has_liquid_glass(version: &str) -> bool {
+    version.split('.').next().and_then(|major| major.parse::<u64>().ok()).is_some_and(|major| major >= 26)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::major_has_liquid_glass;
+
+    #[test]
+    fn liquid_glass_starts_with_macos_26() {
+        assert!(!major_has_liquid_glass("15.6.1"));
+        assert!(major_has_liquid_glass("26.0"));
+        assert!(major_has_liquid_glass("27.2"));
+        assert!(!major_has_liquid_glass(""), "an unreadable version has no glass");
+    }
+}
