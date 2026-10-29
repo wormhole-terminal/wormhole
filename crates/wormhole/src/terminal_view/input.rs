@@ -347,7 +347,11 @@ impl TerminalView {
         if self.pty.is_some()
             && context_menu::opens_menu(event.button, event.modifiers, self.program_takes_mouse())
         {
-            self.open_context_menu(event.position, window, cx);
+            // The window selects this pane first (it hears the emit before the deferred call runs),
+            // or the menu would ask about, and split, the pane that had the keyboard before.
+            cx.emit(TerminalEvent::Activate);
+            let position = event.position;
+            cx.defer_in(window, move |this, window, cx| this.open_context_menu(position, window, cx));
             return;
         }
         if event.button == MouseButton::Left && event.modifiers.platform && self.open_link(event.position, cx)

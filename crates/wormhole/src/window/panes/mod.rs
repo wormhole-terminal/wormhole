@@ -113,6 +113,7 @@ impl Workspace {
             TerminalEvent::Bell => self.publish_bell(id, cx),
             TerminalEvent::Command(mark) => self.publish_command(id, mark, cx),
             TerminalEvent::Printed => self.publish_printed(ix, cx),
+            TerminalEvent::Activate => self.focus_pane(id, window, cx),
             // The bar is only on screen in the shown terminals.
             TerminalEvent::Close => {
                 if self.on_screen(ix) {

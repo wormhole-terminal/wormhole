@@ -6,8 +6,10 @@ use wormhole_core::view::panes::{Axis, DropError, Preset, TabPanes, Zone};
 use wormhole_core::view::sidebar::{Bracket, Drop, Landing, Part};
 
 use crate::app_state::OpenWindow;
-use crate::terminal_view::Status;
-use crate::window::test_harness::{draw, drive, hook, isolate_in, press, read, start, start_with};
+use crate::terminal_view::{Status, TerminalEvent};
+use crate::window::test_harness::{
+    draw, drive, hook, isolate_in, press, read, start, start_with, with_window,
+};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -397,4 +399,32 @@ fn closing_a_terminal_of_a_split_keeps_the_rest_of_it(cx: &mut TestAppContext) {
         assert!(ws.splits.is_empty());
         assert_eq!((ws.sessions.len(), ws.active_session().id, ws.sessions[0].split), (1, 3, None));
     });
+}
+
+/// A right-click on the pane that does not have the keyboard: the terminal asks the window to select it
+/// before its menu is built, so Split Right splits the pane that was clicked, not the one focused before.
+#[gpui_kit::test]
+fn the_context_menus_split_acts_on_the_pane_that_was_clicked(cx: &mut TestAppContext) {
+    if isolate("the_context_menus_split_acts_on_the_pane_that_was_clicked") {
+        return;
+    }
+    let mut layout = TabPanes::single(1);
+    assert!(layout.split(Axis::Row, 2) && layout.focus(1));
+    let window = start_with(cx, split_of_two(&layout));
+    cx.simulate_window_resize(window.handle, gpui_kit::size(gpui_kit::px(1500.0), gpui_kit::px(900.0)));
+    for _ in 0..3 {
+        draw(cx, &window);
+        cx.run_until_parked();
+    }
+    assert_eq!(panes(cx, &window).1, 1, "pane 1 has the keyboard");
+    let clicked = read(cx, &window, |ws| ws.pane_terminal(2).expect("pane 2"));
+    cx.update(|cx| clicked.update(cx, |_, cx| cx.emit(TerminalEvent::Activate)));
+    cx.run_until_parked();
+    assert_eq!((panes(cx, &window).1, selected(cx, &window)), (2, 2), "the clicked pane is the selected one");
+    draw(cx, &window);
+    with_window(cx, &window, |window, cx| window.dispatch_action(Box::new(crate::actions::SplitRight), cx));
+    cx.run_until_parked();
+    let (order, ..) = panes(cx, &window);
+    assert_eq!(order.len(), 3, "{order:?}");
+    assert_eq!((order[0], order[1]), (1, 2), "the new pane is beside pane 2: {order:?}");
 }

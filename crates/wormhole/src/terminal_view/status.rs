@@ -168,6 +168,10 @@ pub enum TerminalEvent {
     /// window pulses the bus (its output worker, the waiters) and does nothing else: nothing is notified
     /// or drawn for it.
     Printed,
+    /// A click is about to open the context menu: the window makes this terminal the selected one
+    /// first, since the menu's splits act on the selected pane and GPUI tells the window about the
+    /// focus it just took only later.
+    Activate,
 }
 
 /// A moment in a command's life, as the shell's marks tell it.
