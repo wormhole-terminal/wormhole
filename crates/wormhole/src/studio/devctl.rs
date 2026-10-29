@@ -213,14 +213,53 @@ impl StudioWindow {
         }
     }
 
-    /// `studio-menu [save|copy|switch|json|project]`: open the Save theme menu, or pick
+    /// `studio-open own:<file stem>|builtin:<name>|new|project`: choose that in the theme menu.
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_open(&mut self, arg: &str, window: &mut Window, cx: &mut Context<Self>) {
+        use super::opening::Target;
+        let target = match arg.split_once(':') {
+            Some(("own", stem)) => {
+                let dir = crate::active_profile::paths().themes_dir();
+                Target::Own(dir.join(format!("{stem}.json")))
+            }
+            Some(("builtin", name)) => Target::Builtin(name.to_string()),
+            _ if arg == "project" => Target::Project,
+            _ => Target::New,
+        };
+        self.open_target(&target, window, cx);
+    }
+
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_theme_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.open_theme_menu(window, cx);
+    }
+
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_undo(&mut self, redo: bool, window: &mut Window, cx: &mut Context<Self>) {
+        if redo { self.redo(window, cx) } else { self.undo(window, cx) }
+    }
+
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_revert(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.discard_changes(window, cx);
+    }
+
+    /// `studio-rename <name>`: Rename, as the theme menu's item and the name field do it.
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_rename(&mut self, name: &str, window: &mut Window, cx: &mut Context<Self>) {
+        self.start_rename(window, cx);
+        let name = name.to_string();
+        self.name.update(cx, |input, cx| input.set_value(name, window, cx));
+        self.commit_name(window, cx);
+    }
+
+    /// `studio-menu [save|duplicate|json|project]`: open the Save theme menu, or pick
     /// one of its entries (Export's file dialog is the person's to answer, so it isn't one).
     #[cfg(feature = "devctl")]
     pub(crate) fn devctl_menu(&mut self, arg: &str, cx: &mut Context<Self>) {
         let action = match arg {
             "save" => Some(SaveAction::Save),
-            "copy" => Some(SaveAction::SaveCopy),
-            "switch" => Some(SaveAction::SaveCopyAndSwitch),
+            "duplicate" => Some(SaveAction::Duplicate),
             "json" => Some(SaveAction::CopyJson),
             "project" => Some(SaveAction::UseInProject),
             _ => None,

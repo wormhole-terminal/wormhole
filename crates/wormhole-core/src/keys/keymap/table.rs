@@ -279,7 +279,7 @@ pub(super) fn entries() -> Vec<Entry> {
             .not_in_palette(),
         // The Theme Studio's own window reads these (`studio_action`); the sheet lists them.
         row(SaveTheme, "Save Theme", &[(CMD, "s")]).scope(Scope::Studio).not_in_palette(),
-        row(SaveThemeCopy, "Save Copy", &[(SHIFT_CMD, "s")]).scope(Scope::Studio).not_in_palette(),
+        row(DuplicateTheme, "Duplicate", &[(SHIFT_CMD, "s")]).scope(Scope::Studio).not_in_palette(),
     ]);
     rows
 }
