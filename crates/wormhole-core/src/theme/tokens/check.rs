@@ -62,6 +62,12 @@ fn known_names() -> impl Iterator<Item = String> {
         .chain(syntax_keys().map(|k| format!("syntax.{k}")))
 }
 
+/// Whether `name` is a color this version has (the reader of a newer file drops a value that
+/// refers to one it lacks).
+pub(super) fn is_known_node(name: &str) -> bool {
+    known_names().any(|k| k == name)
+}
+
 fn terminal_names() -> impl Iterator<Item = String> {
     TERMINAL_KEYS.iter().map(|k| format!("terminal.{k}")).chain((0..16).map(|i| format!("terminal.ansi.{i}")))
 }

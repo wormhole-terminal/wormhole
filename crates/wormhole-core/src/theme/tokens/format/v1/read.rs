@@ -17,6 +17,8 @@ use super::super::slug;
 use super::super::{BaseLayer, CURRENT_VERSION, ReadReport};
 use crate::storage::jsonc::suggest::did_you_mean;
 use crate::theme::tokens::catalog::UI_TOKENS;
+use crate::theme::tokens::check::is_known_node;
+use crate::theme::tokens::uses::refers_to;
 use crate::theme::tokens::expr::parse_expr;
 use crate::theme::tokens::file::{MetricsFile, SyntaxOverride, TerminalFile, ThemeFile, ThemeVariant};
 use crate::theme::tokens::model::Appearance;
@@ -272,6 +274,10 @@ impl Reader {
         match renamed {
             Ok(text) if self.lenient && parse_expr(&text).is_err() => {
                 self.reject(|| format!("{ctx}: not an expression"))
+            }
+            // A color a newer Wormhole added: this one cannot draw with it.
+            Ok(text) if self.lenient && refers_to(&text).iter().any(|n| !is_known_node(n)) => {
+                self.reject(|| format!("{ctx}: refers to a color this version does not have"))
             }
             Ok(text) => Ok(Some(text)),
             Err(why) => self.reject(|| why),
