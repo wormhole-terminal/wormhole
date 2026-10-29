@@ -64,6 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
       - name: Structure (module rules, OS edge, file sizes)
         run: |
@@ -111,6 +112,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Rust (the version in rust-toolchain.toml)
         run: rustup toolchain install
       - run: cargo fmt --all --check
@@ -126,13 +129,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Rust (the version in rust-toolchain.toml)
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: clippy
           save-if: ${{ github.ref == 'refs/heads/main' && needs.scope.outputs.full == 'true' }}
-      - run: cargo clippy ${{ needs.scope.outputs.clippy }} --locked -- -D warnings
+      # Through the environment, not spliced into the script (zizmor: template-injection): the
+      # arguments are Scope's own table, and they split into words on purpose.
+      - env:
+          CLIPPY_ARGS: ${{ needs.scope.outputs.clippy }}
+        run: |
+          # shellcheck disable=SC2086 # the arguments split into words on purpose
+          cargo clippy $CLIPPY_ARGS --locked -- -D warnings
 
   test:
     name: macOS (tests)
@@ -142,6 +153,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Rust (the version in rust-toolchain.toml)
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -154,7 +167,11 @@ jobs:
       # devctl turns on GPUI's test support: the settings and view tests only compile with it.
       # nextest runs every test in its own process and bounds the slow ones (.config/nextest.toml);
       # it runs no doctests, and the workspace has none (the one fenced block is `text`).
-      - run: cargo nextest run ${{ needs.scope.outputs.test }} --locked --profile ci
+      - env:
+          TEST_ARGS: ${{ needs.scope.outputs.test }}
+        run: |
+          # shellcheck disable=SC2086 # the arguments split into words on purpose
+          cargo nextest run $TEST_ARGS --locked --profile ci
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
@@ -179,6 +196,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Selftests
@@ -222,7 +240,35 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+
+  # The shell scripts and the workflows, linted in seconds with nothing built (scripts/lint-scripts.sh:
+  # shellcheck, actionlint, zizmor), on every run: a broken or unsafe workflow otherwise shows only
+  # when it runs. Zed runs the same three.
+  scripts:
+    name: Workflows & scripts
+    if: ${{ !inputs.build_only && (github.event_name == 'workflow_dispatch' || !github.event.repository.private) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: shellcheck@0.11.0,zizmor@1.30.1
+      # install-action has no actionlint: the release's own binary, checked against its published SHA-256.
+      - name: actionlint 1.7.12
+        run: |
+          v=1.7.12 sum=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+          curl -fsSL -o "$RUNNER_TEMP/actionlint.tar.gz" \
+            "https://github.com/rhysd/actionlint/releases/download/v$v/actionlint_${v}_linux_amd64.tar.gz"
+          echo "$sum  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - run: scripts/lint-scripts.sh --require
 
   # One result for the whole run: every check passed, or was skipped because the change doesn't reach
   # it (Scope) or the event doesn't need it. A failed or cancelled job fails this one, and so does a
@@ -231,7 +277,7 @@ jobs:
   check:
     name: Check
     if: ${{ always() }}
-    needs: [scope, fmt, clippy, test, history, deny]
+    needs: [scope, fmt, clippy, test, history, deny, scripts]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -259,6 +305,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Rust (the version in rust-toolchain.toml)
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2

@@ -27,13 +27,17 @@ on:
         description: "Run the whole test suite on the runner first (off: the local gate already ran it)"
         type: boolean
         default: false
-  workflow_run:
+  # workflow_run runs with this repository's secrets whatever started CI (zizmor: dangerous-triggers).
+  # The gate below builds only a push to main in this repository that passed CI, and checks out that
+  # commit of main, never a pull request's code.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows: [CI]
     types: [completed]
     branches: [main]
 
+# Read-only for every job; the release job asks for what it writes (zizmor: excessive-permissions).
 permissions:
-  contents: write # gh release create
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -50,6 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           # Strings: a bare 0 is false in an expression, so `&& 0 || 1` always gave 1, and the gate saw
           # no tags. The whole history brings the tags along, which the check below reads.
@@ -118,6 +123,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           ref: ${{ env.BUILD_SHA }}
           fetch-depth: 0 # the annotated tag object must be fetchable; dev_version counts commits
 
@@ -201,9 +207,12 @@ jobs:
         run: |
           rustup toolchain install
           rustup target add x86_64-apple-darwin
-      # Restores from main's cache (a tag run can read it); only a run on main writes one, since a
-      # cache saved under a tag is never found again and would just eat the repository's cache quota.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      # Only a build of main (Unstable) restores and saves the cache. A release builds from nothing: what it
+      # signs and publishes must not depend on what an earlier run left in the cache (zizmor:
+      # cache-poisoning). The cache is main's alone (save-if), so the risk left for Unstable is a
+      # compromised run on main, which could publish to Unstable directly anyway.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2 # zizmor: ignore[cache-poisoning]
+        if: env.CHANNEL == 'unstable'
         with:
           key: release
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -234,7 +243,9 @@ jobs:
           APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           IDENTITY_OVERRIDE: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-        run: |
+        # GITHUB_ENV gets values from this workflow's own secrets (the certificate's identity, the
+        # profile's path), nothing a pull request or a commit can set (zizmor: github-env).
+        run: | # zizmor: ignore[github-env]
           if [ -z "$APPLE_CERTIFICATE_P12" ]; then
             echo "::notice::No APPLE_CERTIFICATE_P12: bundle.sh will sign ad-hoc"
             exit 0
@@ -276,7 +287,7 @@ jobs:
       - name: Install provisioning profile
         env:
           APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
-        run: |
+        run: | # zizmor: ignore[github-env] (see the certificate step)
           if [ -z "$APPLE_PROVISIONING_PROFILE" ]; then
             echo "::notice::No APPLE_PROVISIONING_PROFILE: no Time Sensitive entitlement, 'needs you' is delivered at Active"
             exit 0
@@ -425,8 +436,10 @@ jobs:
           git clone -q --depth 1 "https://x-access-token:$TAP_TOKEN@github.com/wormhole-terminal/homebrew-tap.git" "$tap"
           cask="$tap/Casks/wormhole-terminal.rb"
           sed -i '' -e "s/^  version \".*\"$/  version \"$VERSION\"/" -e "s/^  sha256 \".*\"$/  sha256 \"$sha\"/" "$cask"
-          grep -q "version \"$VERSION\"" "$cask" && grep -q "sha256 \"$sha\"" "$cask" \
-            || { echo "::error::could not set version and sha256 in Casks/wormhole-terminal.rb"; exit 1; }
+          if ! grep -q "version \"$VERSION\"" "$cask" || ! grep -q "sha256 \"$sha\"" "$cask"; then
+            echo "::error::could not set version and sha256 in Casks/wormhole-terminal.rb"
+            exit 1
+          fi
           if git -C "$tap" diff --quiet; then echo "The cask is at $VERSION already"; exit 0; fi
           git -C "$tap" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -q -am "wormhole-terminal $VERSION"

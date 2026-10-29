@@ -68,6 +68,8 @@ scope_of() {
     scripts/*|tools/visual/*|.claude/skills/*|.claude/agents/*|.claude/rules/*) echo text ;;
     README.md|CONTRIBUTING.md|SECURITY.md|CODE_OF_CONDUCT.md|ACCESSIBILITY.md|CHANGELOG.md) echo text ;;
     .github/*|.claude/hooks/*|.claude/settings*.json|.claude/worktrees/*|.gitignore|LICENSE|packaging/*) echo none ;;
+    # The settings of the script linter: scripts/lint-scripts.sh runs whenever it changes, nothing builds.
+    .shellcheckrc) echo none ;;
     # Its own workspace, built and checked on its own (tools/bench/README.md).
     tools/bench/*) echo none ;;
     # The download server's counter, a Cloudflare Worker with its own tests (bun test there).
@@ -176,6 +178,10 @@ grep -qx 'scripts/check.sh' <<<"$changed" && history+=("scripts/check.sh --selft
 grep -qx 'scripts/changelog.py' <<<"$changed" && history+=("python3 scripts/changelog.py selftest")
 grep -qx 'scripts/commits.py' <<<"$changed" && history+=("python3 scripts/commits.py selftest")
 grep -qx 'scripts/perf_tools.py' <<<"$changed" && history+=("python3 -I scripts/perf_tools.py selftest")
+# The workflows and the shell scripts are linted (shellcheck, actionlint, zizmor) whatever the scope,
+# `none` included: a workflow change builds nothing, so this is the only check it gets before it runs.
+grep -Eq '^(\.github/workflows/|scripts/|tools/visual/|\.claude/hooks/|\.claude/skills/[^/]+/scripts/|packaging/.*\.sh$|\.shellcheckrc$)' <<<"$changed" \
+  && history+=("scripts/lint-scripts.sh")
 # The structure check reads the sources as text, so it comes before the first compile too.
 structure=()
 if [ "$scope" != none ]; then

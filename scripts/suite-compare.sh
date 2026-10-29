@@ -70,7 +70,7 @@ set -euo pipefail
 VT_COMPARE="${VT_COMPARE:-$ROOT/../wormhole-vt/tools/vt-compare}"
 [ -d "$VT_COMPARE/suites" ] || die "no tools/vt-compare at $VT_COMPARE: clone wormhole-terminal/wormhole-vt next to this checkout, or set VT_COMPARE"
 SUITES_DIR="$VT_COMPARE/suites"
-max_load=4 only="" out="" cols=80 rows=25 font=Menlo font_size=13 wormhole_bin="" timeout_s=1800 list=0
+max_load=4 only="" out="" cols=80 rows=25 font=Menlo font_size=13 wormhole_bin="" timeout_s=1800 list_only=0
 iterm2_args="-NoSyncDisableDECRQCRA NO"
 suites="esctest ucs-detect" esctest_include=".*" esctest_args="" ucs_args="" report_only=0 probe_only=0
 while [ $# -gt 0 ]; do
@@ -91,7 +91,7 @@ while [ $# -gt 0 ]; do
     --timeout) timeout_s="${2:?--timeout needs seconds}"; shift ;;
     --max-load) max_load="${2:?--max-load needs a number}"; shift ;;
     --report-only) report_only=1 ;;
-    --list) list=1 ;;
+    --list) list_only=1 ;;
     -h|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d'; exit 0 ;;
     -*) die "unknown option: $1 (see --help)" ;;
     *) die "unexpected argument: $1" ;;
@@ -108,7 +108,7 @@ if [ -n "$only" ]; then
   check_terminals "$terminals"
 fi
 [ "$(uname -s)" = Darwin ] || die "this drives macOS apps and needs a display"
-if [ "$list" = 1 ]; then
+if [ "$list_only" = 1 ]; then
   list_terminals
   exit 0
 fi

@@ -62,7 +62,7 @@ set -euo pipefail
 # shellcheck source=terminal-apps.sh
 . "$(dirname "$0")/terminal-apps.sh"
 
-max_load=4 only="" out="" cols=120 rows=40 font=Menlo font_size=13 bench_args="" wormhole_bin="" timeout_s=1500 list=0
+max_load=4 only="" out="" cols=120 rows=40 font=Menlo font_size=13 bench_args="" wormhole_bin="" timeout_s=1500 list_only=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --only) only="${2:?--only needs a list}"; shift ;;
@@ -75,7 +75,7 @@ while [ $# -gt 0 ]; do
     --wormhole-bin) wormhole_bin="${2:?--wormhole-bin needs a path}"; shift ;;
     --timeout) timeout_s="${2:?--timeout needs seconds}"; shift ;;
     --max-load) max_load="${2:?--max-load needs a number}"; shift ;;
-    --list) list=1 ;;
+    --list) list_only=1 ;;
     -h|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d'; exit 0 ;;
     -*) die "unknown option: $1 (see --help)" ;;
     *) die "unexpected argument: $1" ;;
@@ -90,7 +90,7 @@ if [ -n "$only" ]; then
   check_terminals "$terminals"
 fi
 
-if [ "$list" = 1 ]; then
+if [ "$list_only" = 1 ]; then
   list_terminals
   exit 0
 fi
