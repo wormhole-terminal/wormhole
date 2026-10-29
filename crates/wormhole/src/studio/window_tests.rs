@@ -21,7 +21,7 @@ fn builtins_only(file: &ThemeFile) -> Result<ThemeTokens, String> {
 /// A themes folder that is not the user's: no file is read, and "saving" fails with a
 /// word the tests recognise.
 pub(super) fn themes() -> Themes {
-    Themes { resolve: builtins_only, saved_path: |_| None, save: |_| Err("stub".into()) }
+    Themes { resolve: builtins_only, saved_path: |_| None, save: |_| Err("stub".into()), selects: |_, _| false }
 }
 
 fn open(cx: &mut TestAppContext) -> (AnyWindowHandle, Entity<StudioWindow>) {
@@ -349,7 +349,7 @@ fn save_copy_and_switch_goes_on_editing_the_copy(cx: &mut TestAppContext) {
         studio.save_copy(true, cx);
         assert_eq!(studio.draft.name.as_deref(), Some(format!("{name} copy").as_str()));
         assert!(!studio.dirty);
-        assert_eq!(cx.global::<SettingsStore>().settings.theme, format!("{name} copy"));
+        assert_eq!(cx.global::<SettingsStore>().settings.theme, format!("/themes/{name} copy.json"));
         assert!(studio.should_close(window, cx), "nothing left to lose");
     });
 }
@@ -363,5 +363,43 @@ fn use_in_this_project_needs_a_project(cx: &mut TestAppContext) {
         assert!(studio.project_for_theme(cx).is_err());
         studio.use_in_project(cx);
         assert_eq!(studio.notice, failed("Open a terminal in a project first."));
+    });
+}
+
+fn saving() -> Themes {
+    Themes { save: |_| Ok("/themes/mine.json".into()), ..themes() }
+}
+
+/// Dark default, Light mode: a saved light theme is the light pick, the dark one stays.
+#[gpui_kit::test]
+fn save_in_light_mode_sets_the_light_pick(cx: &mut TestAppContext) {
+    use wormhole_core::config::ThemeMode;
+    let (handle, studio) = open_with(cx, saving());
+    cx.update(|cx| {
+        SettingsStore::update(cx, |s| s.theme_mode = ThemeMode::Light);
+    });
+    let dark_pick = cx.update(|cx| cx.global::<SettingsStore>().settings.theme.clone());
+    with(cx, handle, &studio, |studio, window, cx| {
+        edit(studio, window, cx);
+        studio.request_save(window, cx);
+        let s = &cx.global::<SettingsStore>().settings;
+        assert_eq!(s.theme_light, "/themes/mine.json");
+        assert_eq!(s.theme, dark_pick, "the dark pick is not touched");
+    });
+}
+
+#[gpui_kit::test]
+fn saving_a_theme_that_is_a_pick_changes_no_pick(cx: &mut TestAppContext) {
+    let (handle, studio) =
+        open_with(cx, Themes { selects: |setting, _| setting == "Wormhole Light", ..saving() });
+    let before = cx.update(|cx| {
+        SettingsStore::update(cx, |s| s.theme_light = "Wormhole Light".into());
+        cx.global::<SettingsStore>().settings.clone()
+    });
+    with(cx, handle, &studio, |studio, window, cx| {
+        edit(studio, window, cx);
+        studio.request_save(window, cx);
+        let s = &cx.global::<SettingsStore>().settings;
+        assert_eq!((&s.theme, &s.theme_light), (&before.theme, &before.theme_light));
     });
 }

@@ -23,6 +23,7 @@
 mod derive;
 pub(crate) mod import;
 mod overlay;
+pub(crate) mod picks;
 mod profile;
 mod ui_colors;
 mod zen;
