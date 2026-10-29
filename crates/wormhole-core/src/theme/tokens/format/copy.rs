@@ -62,7 +62,9 @@ pub fn copy_base(
 /// A base copied from a built-in theme, by slug (`wormhole.light`, `nord`).
 pub fn copy_builtin_base(from: &str, lookup: Lookup<'_>, copied: &str) -> Result<BaseLayer, String> {
     let name = slug::builtin_name(from).ok_or_else(|| format!("no built-in theme {from:?}"))?;
-    let by_name = ThemeFile { extends: Some(name.to_string()), ..ThemeFile::default() };
+    // Named like the built-in, so a user theme of that name is not what it copies.
+    let by_name =
+        ThemeFile { extends: Some(name.to_string()), name: Some(name.to_string()), ..ThemeFile::default() };
     // The slug a family means is its first version; the base says which one it is.
     copy_base(slug::builtin_slug(name).unwrap_or(from), &by_name, lookup, copied)
 }
@@ -84,7 +86,13 @@ pub fn convert_to_v1(
     // Without an `extends` a version 0 theme stands on Tokyo Night; the base says so.
     let root = |extends: Option<&str>| -> Result<BaseLayer, String> {
         let name = extends.unwrap_or("Tokyo Night");
-        let by_name = ThemeFile { extends: Some(name.to_string()), ..ThemeFile::default() };
+        // Carrying the theme's own name makes a theme that extends the one it is called (a
+        // user "Nord" over the built-in) reach the built-in, not its own file.
+        let by_name = ThemeFile {
+            extends: Some(name.to_string()),
+            name: file.name.clone(),
+            ..ThemeFile::default()
+        };
         copy_base(&slug_of(name), &by_name, lookup, copied)
     };
     let mut out = ThemeFile {
