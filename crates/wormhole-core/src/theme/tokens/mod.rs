@@ -88,7 +88,8 @@ pub use self::contrast::{CONTRAST_PAIRS, ContrastPair};
 use self::extends::MAX_SYNTAX_KEYS;
 pub use self::extends::resolve;
 pub use self::file::{
-    MAX_THEME_BYTES, MetricsFile, SyntaxOverride, TerminalFile, ThemeFile, ThemeVariant, parse_theme_file,
+    MAX_THEME_BYTES, MetricsFile, SyntaxOverride, TerminalFile, ThemeFile, ThemeVariant, ansi_index,
+    parse_theme_file,
 };
 pub use self::fixes::{ContrastCheck, ContrastFix, ContrastIssue, contrast_issues};
 pub use self::format::{
