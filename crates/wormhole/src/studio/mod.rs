@@ -557,6 +557,8 @@ fn t(tokens: &ThemeTokens, name: &str) -> Hsla {
 
 #[cfg(all(test, feature = "devctl"))]
 mod draw_tests;
+#[cfg(all(test, feature = "devctl"))]
+mod guard_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(all(test, feature = "devctl"))]
