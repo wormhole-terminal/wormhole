@@ -12,6 +12,7 @@ mod completion;
 mod contrast;
 #[cfg(feature = "devctl")]
 pub(crate) mod devctl;
+mod document;
 mod draft;
 mod gallery;
 mod save;
@@ -28,7 +29,7 @@ use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::component::slider::{SliderEvent, SliderState};
 use gpui_kit::*;
 use wormhole_core::keys::keyspec::KeySpec;
-use wormhole_core::theme::tokens::{Color, ThemeFile, ThemeTokens};
+use wormhole_core::theme::tokens::{Color, ThemeTokens};
 
 use crate::app_state::{AppState, app, app_mut};
 use crate::aux_window;
@@ -37,7 +38,8 @@ use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges};
 use crate::terminal_view::keystroke_spec;
 use crate::theme_bridge::{self, hsla, token};
-use draft::{Themes, draft_for, group_of, is_metric, number, override_of, set_override};
+use document::{Document, is_metric, number, override_of, set_override};
+use draft::{Themes, draft_for, group_of};
 use gallery::{Area, GalleryView};
 use save::Notice;
 use title::SaveAction;
@@ -61,10 +63,8 @@ fn ui(cx: &App) -> UiColors {
 }
 
 pub(crate) struct StudioWindow {
-    /// The theme being edited, as overrides on top of `draft.extends`.
-    draft: ThemeFile,
-    /// The draft when the window opened or was last saved: what counts as a change.
-    initial: ThemeFile,
+    /// The theme being edited, as overrides on top of its `extends`, and the file as last saved.
+    doc: Document,
     selected: Option<String>,
     picker: Entity<ColorPickerState>,
     expression: Entity<InputState>,
@@ -96,8 +96,6 @@ pub(crate) struct StudioWindow {
     menu_project: bool,
     /// What the last save, export or copy did, under the title row.
     notice: Option<Notice>,
-    /// The draft has edits that are not saved as a theme.
-    dirty: bool,
     /// A sheet (the close question, a name clash) is up, waiting for its answer.
     asking: bool,
     /// The sheet's answer, on its way.
@@ -197,6 +195,11 @@ pub(crate) fn open_studio(cx: &mut App) {
 }
 
 impl StudioWindow {
+    /// The file has edits that are not saved.
+    fn dirty(&self) -> bool {
+        self.doc.dirty()
+    }
+
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         Self::with_themes(Themes::USER, window, cx)
     }
@@ -264,8 +267,7 @@ impl StudioWindow {
             this.update(cx, |studio, cx| studio.should_close(window, cx)).unwrap_or(true)
         });
         let mut studio = Self {
-            initial: draft.clone(),
-            draft,
+            doc: Document::new(draft),
             selected: None,
             picker,
             expression,
@@ -282,7 +284,6 @@ impl StudioWindow {
             save_menu: false,
             menu_project: false,
             notice: None,
-            dirty: false,
             asking: false,
             question: None,
             themes,
@@ -314,7 +315,7 @@ impl StudioWindow {
     /// pointer mid-drag.
     fn show_token(&mut self, name: &str, picker: bool, window: &mut Window, cx: &mut Context<Self>) {
         let tokens = cx.global::<SettingsStore>().tokens.clone();
-        let current = override_of(&self.draft, name).unwrap_or_else(|| {
+        let current = override_of(&self.doc.file, name).unwrap_or_else(|| {
             tokens
                 .get(name)
                 .map(|c| c.to_hex())
@@ -356,7 +357,7 @@ impl StudioWindow {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let mut draft = self.draft.clone();
+        let mut draft = self.doc.file.clone();
         if let Err(err) = set_override(&mut draft, name, value) {
             self.field_error = Some(FieldError::plain(err));
             cx.notify();
@@ -364,9 +365,8 @@ impl StudioWindow {
         }
         match (self.themes.resolve)(&draft) {
             Ok(resolved) => {
-                self.draft = draft;
+                self.doc.file = draft;
                 self.revision += 1;
-                self.dirty = true;
                 self.field_error = None;
                 self.notice = None;
                 SettingsStore::preview_tokens(cx, Some(resolved));
@@ -387,7 +387,7 @@ impl StudioWindow {
     /// if it is answered).
     fn should_close(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
         let quitting = cx.try_global::<AppState>().is_some_and(|app| app.quitting);
-        match closing(self.dirty, self.asking, quitting) {
+        match closing(self.dirty(), self.asking, quitting) {
             Closing::Now => true,
             Closing::Ask => {
                 self.ask_before_closing(window, cx);
@@ -409,13 +409,11 @@ impl StudioWindow {
     /// Discard: back to the theme the draft started from.
     fn discard_changes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let base = cx.global::<SettingsStore>().base_tokens().clone();
-        self.draft = draft_for(&base, self.themes.resolve);
-        self.initial = self.draft.clone();
+        self.doc = Document::new(draft_for(&base, self.themes.resolve));
         self.revision += 1;
-        self.dirty = false;
         self.field_error = None;
         self.notice = None;
-        let name = self.draft.name.clone().unwrap_or_default();
+        let name = self.doc.file.name.clone().unwrap_or_default();
         self.name.update(cx, |input, cx| input.set_value(name, window, cx));
         SettingsStore::preview_tokens(cx, None);
         cx.refresh_windows();

@@ -3,15 +3,13 @@
 //! list's groups and filters, and the names a save or an export uses. Pure, so it is
 //! tested without a window.
 
-use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use wormhole_core::config::Config;
 use wormhole_core::theme::registry::{ThemeId, UserThemes};
 use wormhole_core::theme::tokens::{
-    Appearance, Area, METRIC_TOKENS, SyntaxOverride, ThemeFile, ThemeTokens, UI_TOKENS, default_rule,
-    syntax_keys, used_in,
+    Appearance, Area, METRIC_TOKENS, ThemeFile, ThemeTokens, UI_TOKENS, default_rule, syntax_keys, used_in,
 };
 
 /// What the Studio asks of the themes folder, as functions, so a test can stand in and never
@@ -30,8 +28,7 @@ pub(super) struct Themes {
 
 impl Themes {
     /// The user's themes folder.
-    pub(super) const USER: Themes =
-        Themes {
+    pub(super) const USER: Themes = Themes {
         resolve: resolve_in_profile,
         saved_path: saved_in_profile,
         save: save_in_profile,
@@ -108,148 +105,6 @@ pub(super) fn draft_for(base: &ThemeTokens, resolve: Resolve) -> ThemeFile {
         }
     }
     draft
-}
-
-/// Whether `name` is a metric (`metrics.radius_chip`) rather than a color.
-pub(super) fn is_metric(name: &str) -> bool {
-    name.starts_with("metrics.")
-}
-
-/// A metric as the token editor shows and takes it: pixels without a unit.
-pub(super) fn number(value: f32) -> String {
-    format!("{value}")
-}
-
-/// The draft's own value for a token (not the extended or derived one).
-pub(super) fn override_of(draft: &ThemeFile, name: &str) -> Option<String> {
-    if is_metric(name) {
-        return draft.metrics.get(name).map(number);
-    }
-    if let Some(index) = name.strip_prefix("terminal.ansi.") {
-        return draft.terminal.ansi.get(index).cloned();
-    }
-    if let Some(key) = name.strip_prefix("syntax.") {
-        return match draft.syntax.get(key)? {
-            SyntaxOverride::Color(color) => Some(color.clone()),
-            SyntaxOverride::Style { color, .. } => color.clone(),
-        };
-    }
-    match name {
-        "terminal.background" => draft.terminal.background.clone(),
-        "terminal.foreground" => draft.terminal.foreground.clone(),
-        "terminal.cursor" => draft.terminal.cursor.clone(),
-        "terminal.selection_background" => draft.terminal.selection_background.clone(),
-        _ => draft.ui.get(name).cloned(),
-    }
-}
-
-pub(super) fn set_override(draft: &mut ThemeFile, name: &str, value: Option<String>) -> Result<(), String> {
-    fn put(slot: &mut Option<String>, value: Option<String>) {
-        *slot = value;
-    }
-    if is_metric(name) {
-        let value = match value {
-            Some(v) => Some(
-                v.trim_end_matches("px")
-                    .trim()
-                    .parse::<f32>()
-                    .ok()
-                    .filter(|v| v.is_finite() && *v >= 0.0)
-                    .ok_or_else(|| format!("{name}: {v:?} is not a number of pixels"))?,
-            ),
-            None => None,
-        };
-        draft.metrics.set(name, value);
-        return Ok(());
-    }
-    if let Some(index) = name.strip_prefix("terminal.ansi.") {
-        match value {
-            Some(v) => draft.terminal.ansi.insert(index.to_string(), v),
-            None => draft.terminal.ansi.remove(index),
-        };
-        return Ok(());
-    }
-    if let Some(key) = name.strip_prefix("syntax.") {
-        set_syntax_color(draft, key, value);
-        return Ok(());
-    }
-    match name {
-        "terminal.background" => put(&mut draft.terminal.background, value),
-        "terminal.foreground" => put(&mut draft.terminal.foreground, value),
-        "terminal.cursor" => put(&mut draft.terminal.cursor, value),
-        "terminal.selection_background" => put(&mut draft.terminal.selection_background, value),
-        _ => {
-            match value {
-                Some(v) => draft.ui.insert(name.to_string(), v),
-                None => draft.ui.remove(name),
-            };
-        }
-    }
-    Ok(())
-}
-
-/// A syntax key's color, keeping the bold and italic a theme may have set next to it.
-fn set_syntax_color(draft: &mut ThemeFile, key: &str, value: Option<String>) {
-    let style = match draft.syntax.remove(key) {
-        Some(SyntaxOverride::Style { bold, italic, .. }) if bold.is_some() || italic.is_some() => {
-            Some(SyntaxOverride::Style { color: value, bold, italic })
-        }
-        _ => value.map(SyntaxOverride::Color),
-    };
-    if let Some(style) = style {
-        draft.syntax.insert(key.to_string(), style);
-    }
-}
-
-/// Every value the draft sets itself, by token name (bold and italic as their own entries).
-fn own_values(draft: &ThemeFile) -> BTreeMap<String, String> {
-    let mut values: BTreeMap<String, String> = draft.ui.clone();
-    let t = &draft.terminal;
-    let fields = [
-        ("foreground", &t.foreground),
-        ("background", &t.background),
-        ("cursor", &t.cursor),
-        ("cursor_text", &t.cursor_text),
-        ("selection_background", &t.selection_background),
-        ("selection_foreground", &t.selection_foreground),
-    ];
-    for (key, value) in fields {
-        if let Some(value) = value {
-            values.insert(format!("terminal.{key}"), value.clone());
-        }
-    }
-    for (key, value) in &t.ansi {
-        values.insert(format!("terminal.ansi.{key}"), value.clone());
-    }
-    for info in METRIC_TOKENS {
-        if let Some(value) = draft.metrics.get(info.name) {
-            values.insert(info.name.to_string(), number(value));
-        }
-    }
-    for (key, style) in &draft.syntax {
-        let (color, bold, italic) = match style {
-            SyntaxOverride::Color(color) => (Some(color), None, None),
-            SyntaxOverride::Style { color, bold, italic } => (color.as_ref(), *bold, *italic),
-        };
-        if let Some(color) = color {
-            values.insert(format!("syntax.{key}"), color.clone());
-        }
-        if let Some(bold) = bold {
-            values.insert(format!("syntax.{key}:bold"), bold.to_string());
-        }
-        if let Some(italic) = italic {
-            values.insert(format!("syntax.{key}:italic"), italic.to_string());
-        }
-    }
-    values
-}
-
-/// How many values `draft` sets differently from `initial` (added, changed or removed):
-/// what closing without saving would lose.
-pub(super) fn changes(initial: &ThemeFile, draft: &ThemeFile) -> usize {
-    let (before, after) = (own_values(initial), own_values(draft));
-    let names: BTreeSet<&String> = before.keys().chain(after.keys()).collect();
-    names.into_iter().filter(|name| before.get(*name) != after.get(*name)).count()
 }
 
 /// The draft as Export and Copy JSON write it: the theme file itself, so only what the draft
@@ -388,13 +243,13 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     use wormhole_core::theme::tokens::{
-        Area, METRIC_TOKENS, SyntaxOverride, ThemeFile, ThemeTokens, UI_TOKENS, builtin_tokens,
-        parse_theme_file, resolve,
+        Area, METRIC_TOKENS, ThemeFile, ThemeTokens, UI_TOKENS, builtin_tokens, parse_theme_file, resolve,
     };
 
+    use super::super::document::set_override;
     use super::{
-        Show, changes, copy_name, draft_for, export_dir, export_file_name, export_json, group_of, group_size,
-        groups, is_metric, number, override_of, set_override, visible,
+        Show, copy_name, draft_for, export_dir, export_file_name, export_json, group_of, group_size, groups,
+        visible,
     };
 
     /// Resolves a draft against the built-in themes only (no user themes dir).
@@ -432,7 +287,8 @@ mod tests {
         let mut base = tokyo_night();
         base.name = "Somewhere else".into();
         base.terminal.cursor_text = Some(wormhole_core::theme::tokens::Color::from_rgb_u32(0x112233));
-        base.terminal.selection_foreground = Some(wormhole_core::theme::tokens::Color::from_rgb_u32(0x445566));
+        base.terminal.selection_foreground =
+            Some(wormhole_core::theme::tokens::Color::from_rgb_u32(0x445566));
         let draft = draft_for(&base, builtins_only);
         assert_eq!(draft.terminal.cursor_text.as_deref(), Some("#112233"));
         assert_eq!(draft.terminal.selection_foreground.as_deref(), Some("#445566"));
@@ -442,82 +298,6 @@ mod tests {
         base.terminal.selection_foreground = None;
         let draft = draft_for(&base, builtins_only);
         assert_eq!((&draft.terminal.cursor_text, &draft.terminal.selection_foreground), (&None, &None));
-    }
-
-    #[test]
-    fn colors_are_set_read_and_reset() {
-        let mut draft = ThemeFile::default();
-        assert_eq!(override_of(&draft, "primary"), None);
-        set_override(&mut draft, "primary", Some("#ff8800".into())).expect("sets");
-        assert_eq!(override_of(&draft, "primary").as_deref(), Some("#ff8800"));
-        set_override(&mut draft, "primary", None).expect("resets");
-        assert_eq!(override_of(&draft, "primary"), None);
-        assert!(draft.ui.is_empty());
-    }
-
-    #[test]
-    fn terminal_colors_and_ansi_slots_have_their_own_homes() {
-        let mut draft = ThemeFile::default();
-        set_override(&mut draft, "terminal.background", Some("#101010".into())).expect("sets");
-        set_override(&mut draft, "terminal.ansi.5", Some("#aa00aa".into())).expect("sets");
-        assert_eq!(override_of(&draft, "terminal.background").as_deref(), Some("#101010"));
-        assert_eq!(override_of(&draft, "terminal.ansi.5").as_deref(), Some("#aa00aa"));
-        assert_eq!(override_of(&draft, "terminal.ansi.6"), None);
-        assert!(draft.ui.is_empty(), "terminal colors are not UI tokens");
-        set_override(&mut draft, "terminal.ansi.5", None).expect("resets");
-        assert_eq!(override_of(&draft, "terminal.ansi.5"), None);
-    }
-
-    #[test]
-    fn syntax_colors_keep_the_style_beside_them() {
-        let mut draft = parse_theme_file(r#"{"syntax": {"keyword": {"bold": true}}}"#).expect("parses");
-        assert_eq!(override_of(&draft, "syntax.keyword"), None);
-        set_override(&mut draft, "syntax.keyword", Some("#ff00ff".into())).expect("sets");
-        assert_eq!(override_of(&draft, "syntax.keyword").as_deref(), Some("#ff00ff"));
-        assert_eq!(
-            draft.syntax["keyword"],
-            SyntaxOverride::Style { color: Some("#ff00ff".into()), bold: Some(true), italic: None }
-        );
-        set_override(&mut draft, "syntax.keyword", None).expect("resets");
-        assert_eq!(override_of(&draft, "syntax.keyword"), None);
-        assert!(draft.syntax.contains_key("keyword"), "the bold stays");
-        set_override(&mut draft, "syntax.string", Some("#00ff00".into())).expect("sets");
-        assert_eq!(draft.syntax["string"], SyntaxOverride::Color("#00ff00".into()));
-        assert!(builtins_only(&draft).is_ok());
-    }
-
-    #[test]
-    fn metrics_take_pixels_with_or_without_a_unit() {
-        let mut draft = ThemeFile::default();
-        assert!(is_metric("metrics.radius"));
-        assert!(!is_metric("primary"));
-        set_override(&mut draft, "metrics.radius", Some("6px".into())).expect("sets");
-        assert_eq!(override_of(&draft, "metrics.radius").as_deref(), Some("6"));
-        set_override(&mut draft, "metrics.radius", Some(" 8 ".into())).expect("sets");
-        assert_eq!(override_of(&draft, "metrics.radius").as_deref(), Some("8"));
-        let err = set_override(&mut draft, "metrics.radius", Some("round".into())).expect_err("not a number");
-        assert!(err.contains("metrics.radius") && err.contains("round"), "{err}");
-        assert!(set_override(&mut draft, "metrics.radius", Some("-2".into())).is_err(), "not negative");
-        // A failed edit leaves the draft alone.
-        assert_eq!(override_of(&draft, "metrics.radius").as_deref(), Some("8"));
-        set_override(&mut draft, "metrics.radius", None).expect("resets");
-        assert_eq!(override_of(&draft, "metrics.radius"), None);
-        assert_eq!(number(6.5), "6.5");
-    }
-
-    #[test]
-    fn changes_count_what_differs_from_the_start() {
-        let initial = draft_for(&tokyo_night(), builtins_only);
-        let mut draft = initial.clone();
-        assert_eq!(changes(&initial, &draft), 0);
-        set_override(&mut draft, "primary", Some("#3d59a1".into())).expect("sets");
-        set_override(&mut draft, "metrics.radius_chip", Some("6".into())).expect("sets");
-        set_override(&mut draft, "terminal.ansi.2", Some("#00ff00".into())).expect("sets");
-        assert_eq!(changes(&initial, &draft), 3);
-        // Back to where it started is no change, and the name alone isn't one.
-        set_override(&mut draft, "terminal.ansi.2", None).expect("resets");
-        draft.name = Some("Elsewhere".into());
-        assert_eq!(changes(&initial, &draft), 2);
     }
 
     /// Export writes the draft itself: what it overrides, expressions as typed, and nothing it

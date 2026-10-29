@@ -103,7 +103,7 @@ pub(crate) fn frames(frames: usize, mode: &str, out: std::path::PathBuf, cx: &mu
 pub(crate) fn state(cx: &App) -> Option<String> {
     let (_, studio) = super::current_window(cx)?;
     let studio = studio.read(cx);
-    Some(format!("studio dirty={} asking={}", studio.dirty, studio.asking))
+    Some(format!("studio dirty={} asking={}", studio.dirty(), studio.asking))
 }
 
 /// Run `f` on the open Studio (devctl drives it from a window's tick).

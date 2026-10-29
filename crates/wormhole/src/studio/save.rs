@@ -14,7 +14,8 @@ use wormhole_core::project::ProjectFolder;
 use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::tokens::{Appearance, ThemeFile};
 
-use super::draft::{changes, copy_name, export_dir, export_file_name, export_json};
+use super::document::changes;
+use super::draft::{copy_name, export_dir, export_file_name, export_json};
 use super::{StudioWindow, ui};
 use crate::app_state::AppState;
 use crate::features::project;
@@ -48,7 +49,7 @@ pub(super) enum Notice {
 impl StudioWindow {
     /// The name the draft is saved under, or why there is none.
     pub(super) fn theme_name(&mut self, cx: &mut Context<Self>) -> Option<String> {
-        let name = self.draft.name.clone().unwrap_or_default().trim().to_string();
+        let name = self.doc.file.name.clone().unwrap_or_default().trim().to_string();
         if name.is_empty() {
             self.notice = Some(Notice::Failed("Give the theme a name first.".into()));
             cx.notify();
@@ -80,15 +81,15 @@ impl StudioWindow {
             return;
         }
         self.write_theme(name, cx);
-        if then_close && !self.dirty {
+        if then_close && !self.dirty() {
             window.remove_window();
         }
     }
 
     /// Save the draft as `name`, switch to it, and stop previewing.
     pub(super) fn write_theme(&mut self, name: String, cx: &mut Context<Self>) {
-        self.draft.name = Some(name.clone());
-        match (self.themes.save)(&self.draft) {
+        self.doc.file.name = Some(name.clone());
+        match (self.themes.save)(&self.doc.file) {
             Ok(path) => {
                 self.switched_to(&path, cx);
                 let text = format!("Saved to {} and set as your theme.", display_path(&path));
@@ -103,10 +104,9 @@ impl StudioWindow {
     /// appearance unless it is a pick already, the preview ends (the theme itself shows now), and
     /// there is nothing left to lose.
     fn switched_to(&mut self, path: &Path, cx: &mut Context<Self>) {
-        self.dirty = false;
-        self.initial = self.draft.clone();
+        self.doc.mark_saved();
         self.revision += 1;
-        let appearance = (self.themes.resolve)(&self.draft).map_or(Appearance::Dark, |t| t.appearance);
+        let appearance = (self.themes.resolve)(&self.doc.file).map_or(Appearance::Dark, |t| t.appearance);
         let (value, selects) = (path.to_string_lossy().into_owned(), self.themes.selects);
         let path = path.to_path_buf();
         SettingsStore::update(cx, |s| {
@@ -123,10 +123,10 @@ impl StudioWindow {
         let Some(name) = self.theme_name(cx) else { return };
         let taken = self.themes.saved_path;
         let copy = copy_name(&name, |candidate| taken(candidate).is_some());
-        let file = ThemeFile { name: Some(copy.clone()), ..self.draft.clone() };
+        let file = ThemeFile { name: Some(copy.clone()), ..self.doc.file.clone() };
         self.notice = Some(match (self.themes.save)(&file) {
             Ok(path) if switch => {
-                self.draft = file;
+                self.doc.file = file;
                 self.switched_to(&path, cx);
                 let text = format!(
                     "Saved a copy as \u{201c}{copy}\u{201d} to {} and set as your theme.",
@@ -146,8 +146,8 @@ impl StudioWindow {
     /// Export JSON…: the draft as a theme file, where the person picks. The dialog asks every
     /// time and starts where the last export went, the home folder the first time.
     pub(super) fn export(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
-        let json = export_json(&self.draft);
-        let file_name = export_file_name(self.draft.name.as_deref().unwrap_or("theme"));
+        let json = export_json(&self.doc.file);
+        let file_name = export_file_name(self.doc.file.name.as_deref().unwrap_or("theme"));
         let remembered = store(cx).and_then(|store| store.meta(EXPORT_DIR_KEY).ok().flatten());
         let home = paths::home();
         let dir = export_dir(remembered.as_deref(), home, |dir| dir.is_dir());
@@ -179,7 +179,7 @@ impl StudioWindow {
 
     /// Copy JSON: the same file, on the clipboard.
     pub(super) fn copy_json(&mut self, cx: &mut Context<Self>) {
-        crate::platform::clipboard::write(export_json(&self.draft), cx);
+        crate::platform::clipboard::write(export_json(&self.doc.file), cx);
         self.notice = Some(Notice::Done("Copied the theme's JSON.".into()));
         cx.notify();
     }
@@ -195,11 +195,11 @@ impl StudioWindow {
                 return;
             }
         };
-        self.notice = Some(match folder.write_theme(&export_json(&self.draft)) {
+        self.notice = Some(match folder.write_theme(&export_json(&self.doc.file)) {
             Ok(path) => {
                 // Saved where it applies: closing no longer loses it.
-                self.dirty = false;
-                self.initial = self.draft.clone();
+
+                self.doc.mark_saved();
                 self.revision += 1;
                 let text = format!("Saved to {}: terminals in this project use it.", display_path(&path));
                 Notice::Saved { path, text: text.into() }
@@ -251,8 +251,8 @@ impl StudioWindow {
     /// is modal for the window, so nothing else in the Studio runs until it is answered.
     pub(super) fn ask_before_closing(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.asking = true;
-        let name = self.draft.name.clone().unwrap_or_default();
-        let count = changes(&self.initial, &self.draft);
+        let name = self.doc.file.name.clone().unwrap_or_default();
+        let count = changes(&self.doc.saved, &self.doc.file);
         let base = cx.global::<SettingsStore>().base_tokens().name.clone();
         let message = format!("Do you want to save the changes to \u{201c}{name}\u{201d}?");
         let detail = format!(
@@ -273,7 +273,7 @@ impl StudioWindow {
                 match answer {
                     Some(CLOSE_SAVE) => studio.save(true, window, cx),
                     Some(CLOSE_DONT_SAVE) => {
-                        studio.dirty = false;
+                        studio.doc.mark_saved();
                         window.remove_window();
                     }
                     _ => {}
@@ -304,7 +304,7 @@ impl StudioWindow {
                 studio.asking = false;
                 if replace {
                     studio.write_theme(name, cx);
-                    if then_close && !studio.dirty {
+                    if then_close && !studio.dirty() {
                         window.remove_window();
                     }
                 }

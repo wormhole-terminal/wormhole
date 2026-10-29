@@ -175,8 +175,8 @@ impl TokenListView {
         }
         let low = self.low.as_ref().map(|(_, low)| low).expect("just found");
         let built = build(&Inputs {
-            draft: &studio.draft,
-            initial: &studio.initial,
+            draft: &studio.doc.file,
+            initial: &studio.doc.saved,
             tokens,
             low,
             show: self.show,
