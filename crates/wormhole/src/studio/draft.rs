@@ -6,58 +6,11 @@
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
-use wormhole_core::config::Config;
-use wormhole_core::theme::registry::{ThemeId, UserThemes};
 use wormhole_core::theme::tokens::{
     Appearance, Area, METRIC_TOKENS, ThemeFile, ThemeTokens, UI_TOKENS, default_rule, syntax_keys, used_in,
 };
 
-/// What the Studio asks of the themes folder, as functions, so a test can stand in and never
-/// read or write the user's.
-#[derive(Clone, Copy)]
-pub(super) struct Themes {
-    /// Turns a draft into tokens, with the user's themes available for `extends`.
-    pub(super) resolve: Resolve,
-    /// The file a theme saved under this name would replace, if the folder has one.
-    pub(super) saved_path: fn(&str) -> Option<PathBuf>,
-    /// Writes the draft into the folder and says where it went.
-    pub(super) save: fn(&ThemeFile) -> Result<PathBuf, String>,
-    /// Whether a pick's value (a name, a path or a slug) names the theme saved at this path.
-    pub(super) selects: fn(&str, &Path) -> bool,
-}
-
-impl Themes {
-    /// The user's themes folder.
-    pub(super) const USER: Themes = Themes {
-        resolve: resolve_in_profile,
-        saved_path: saved_in_profile,
-        save: save_in_profile,
-        selects: selects_in_profile,
-    };
-}
-
-// The Studio edits the themes of the profile Wormhole is in (RF-21): its own folder, not Default's.
-fn resolve_in_profile(file: &ThemeFile) -> Result<ThemeTokens, String> {
-    wormhole_core::config::resolve_theme_file_in(&crate::active_profile::paths().themes_dir(), file)
-}
-
-fn saved_in_profile(name: &str) -> Option<PathBuf> {
-    Config::saved_theme_path_in(&crate::active_profile::paths().themes_dir(), name)
-}
-
-fn save_in_profile(file: &ThemeFile) -> Result<PathBuf, String> {
-    Config::save_theme_to(&crate::active_profile::paths().themes_dir(), file)
-}
-
-fn selects_in_profile(setting: &str, path: &Path) -> bool {
-    let themes = UserThemes::read(&crate::active_profile::paths().themes_dir());
-    themes.select(setting) == Some(ThemeId::File(path.to_path_buf()))
-}
-
-/// Turns a draft into tokens. The Studio resolves with the user's themes available for
-/// `extends` (`wormhole_core::config::resolve_theme_file`); a test passes one that
-/// reads nothing from disk.
-pub(super) type Resolve = fn(&ThemeFile) -> Result<ThemeTokens, String>;
+use super::themes::Resolve;
 
 /// Terminal colors the token editor can edit, as `terminal.*` token names.
 pub(super) const TERMINAL_TOKENS: &[&str] =
@@ -107,10 +60,14 @@ pub(super) fn draft_for(base: &ThemeTokens, resolve: Resolve) -> ThemeFile {
     draft
 }
 
-/// The draft as Export and Copy JSON write it: the theme file itself, so only what the draft
-/// sets, and expressions exactly as typed.
-pub(super) fn export_json(draft: &ThemeFile) -> String {
-    draft.to_json_pretty()
+/// The theme as Export, Copy JSON and a project's `theme.json` write it, in the older format that
+/// every release reads: a version 0 file as it is (only what it sets, expressions as typed), a
+/// version 1 file as the one standalone theme it works out to.
+pub(super) fn export_json(file: &ThemeFile, resolve: Resolve) -> Result<String, String> {
+    if file.version.is_none() {
+        return Ok(file.to_json_pretty());
+    }
+    Ok(wormhole_core::theme::tokens::export::write_standalone_v0(&resolve(file)?))
 }
 
 /// The file name Export suggests: the theme's name in lower case with dashes.
@@ -308,7 +265,7 @@ mod tests {
         let typed = "readable(text.muted, sidebar.row.selected, 4.5)";
         set_override(&mut draft, "sidebar.row.selected.muted", Some(typed.into())).expect("sets");
         set_override(&mut draft, "metrics.radius_chip", Some("6".into())).expect("sets");
-        let json = export_json(&draft);
+        let json = export_json(&draft, builtins_only).expect("exports");
         let value: serde_json::Value = serde_json::from_str(&json).expect("valid JSON");
         assert_eq!(
             value,

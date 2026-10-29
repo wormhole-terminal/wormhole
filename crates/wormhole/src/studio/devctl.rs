@@ -104,9 +104,10 @@ pub(crate) fn state(cx: &App) -> Option<String> {
     let (_, studio) = super::current_window(cx)?;
     let studio = studio.read(cx);
     Some(format!(
-        "studio dirty={} asking={} undo={} redo={}",
+        "studio dirty={} asking={} subject={} undo={} redo={}",
         studio.dirty(),
         studio.asking,
+        studio.doc.subject.word(),
         studio.history.undo_len(),
         studio.history.redo_len()
     ))
@@ -152,7 +153,12 @@ impl StudioWindow {
         }
         let name = name.to_string();
         self.name.update(cx, |i, cx| i.set_value(name.clone(), window, cx));
-        self.write_theme(name, cx);
+        self.doc.file.name = Some(name.clone());
+        match self.doc.subject.clone() {
+            super::document::Subject::Own { path } => self.write_own(path, false, false, window, cx),
+            super::document::Subject::Untitled { .. } => self.write_new(name, cx),
+            super::document::Subject::Project { .. } => self.use_in_project(cx),
+        }
     }
 
     #[cfg(feature = "devctl")]

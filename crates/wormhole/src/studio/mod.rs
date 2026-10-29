@@ -15,8 +15,11 @@ pub(crate) mod devctl;
 mod document;
 mod draft;
 mod gallery;
+mod names;
+mod opening;
 mod save;
 mod shell;
+mod themes;
 mod title;
 mod token_editor;
 mod token_list;
@@ -41,9 +44,10 @@ use crate::terminal_view::keystroke_spec;
 use crate::theme_bridge::{self, hsla, token};
 use document::history::{StepLabel, UndoStack};
 use document::{Document, is_metric, number, override_of, set_override};
-use draft::{Themes, draft_for, group_of};
+use draft::group_of;
 use gallery::{Area, GalleryView};
 use save::Notice;
+use themes::Themes;
 use title::SaveAction;
 use token_editor::{FieldError, TokenEditorView};
 use token_list::TokenListView;
@@ -80,6 +84,9 @@ pub(crate) struct StudioWindow {
     /// The draft's name, edited in place in the title row.
     name: Entity<InputState>,
     renaming: bool,
+    /// The name being asked for before a copy with no file yet is saved: whether the window closes
+    /// once it is. Return gives the name and saves; Esc leaves the copy unsaved.
+    naming: Option<bool>,
     /// The gallery's filter (All, Sidebar, Panel, …), which narrows the token list too.
     area: Area,
     /// The three columns, each a view of its own so that scrolling or animating one redraws
@@ -195,13 +202,30 @@ pub(crate) fn open_studio(cx: &mut App) {
     // Deferred: the new window renders right away, and this may run inside
     // another window's update.
     cx.defer(move |cx| {
-        let opened =
-            crate::window_open::open(options, cx, |window, cx| cx.new(|cx| StudioWindow::new(window, cx)));
+        // Read before the window exists: the front window's project is looked at here, never while
+        // this window draws.
+        let doc = opening::open_document(&opening_inputs(cx), &Themes::USER);
+        let opened = crate::window_open::open(options, cx, |window, cx| {
+            cx.new(|cx| StudioWindow::with_themes(Themes::USER, doc, window, cx))
+        });
         match opened {
             Ok((handle, studio)) => app_mut(cx).studio_window = Some((handle, studio.downgrade().into())),
             Err(err) => tracing::error!("opening the Theme Studio window failed: {err:#}"),
         }
     });
+}
+
+/// What the theme in use says to open the Studio on.
+fn opening_inputs(cx: &App) -> opening::Inputs {
+    let store = cx.global::<SettingsStore>();
+    let shown = settings(cx).shown_theme(store.system().appearance).to_string();
+    // A project's theme is edited only while it is in effect and the project may be written to.
+    let project =
+        store.has_project_theme().then(|| save::project_for_theme(cx).ok()).flatten().and_then(|folder| {
+            let text = folder.theme_json().ok().flatten()?.to_string();
+            Some(opening::ProjectTheme { root: folder.root, text })
+        });
+    opening::Inputs { shown, project, in_use: store.base_tokens().clone() }
 }
 
 impl StudioWindow {
@@ -210,19 +234,12 @@ impl StudioWindow {
         self.doc.dirty()
     }
 
-    fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        Self::with_themes(Themes::USER, window, cx)
-    }
-
-    fn with_themes(themes: Themes, window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let base = cx.global::<SettingsStore>().base_tokens().clone();
-        let draft = draft_for(&base, themes.resolve);
-
+    /// A window on `doc`, the theme that was in use when it was asked for.
+    fn with_themes(themes: Themes, doc: Document, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let picker = cx.new(|cx| ColorPickerState::new(window, cx));
         let expression =
             cx.new(|cx| InputState::new(window, cx).placeholder("#hex or expression, e.g. primary / 15%"));
-        let name =
-            cx.new(|cx| InputState::new(window, cx).default_value(draft.name.clone().unwrap_or_default()));
+        let name = cx.new(|cx| InputState::new(window, cx).default_value(doc.name().to_string()));
         let slider = cx.new(|_| SliderState::new().min(0.0).max(token_editor::METRIC_MAX).step(1.0));
         let this = cx.entity();
         let list = cx.new(|cx| TokenListView::new(&this, window, cx));
@@ -264,8 +281,13 @@ impl StudioWindow {
                 }
             }),
             cx.subscribe_in(&name, window, |this, _, event: &InputEvent, window, cx| match event {
-                InputEvent::PressEnter { .. } | InputEvent::Blur => {
+                InputEvent::PressEnter { .. } => {
                     this.typing.name = false;
+                    this.commit_name(window, cx);
+                }
+                InputEvent::Blur => {
+                    this.typing.name = false;
+                    this.naming = None;
                     this.finish_rename(window, cx);
                 }
                 InputEvent::Change => this.typing.name = true,
@@ -298,7 +320,7 @@ impl StudioWindow {
             this.update(cx, |studio, cx| studio.should_close(window, cx)).unwrap_or(true)
         });
         let mut studio = Self {
-            doc: Document::new(draft),
+            doc,
             selected: None,
             picker,
             expression,
@@ -307,6 +329,7 @@ impl StudioWindow {
             slider,
             name,
             renaming: false,
+            naming: None,
             area: Area::All,
             list,
             gallery,
@@ -451,15 +474,15 @@ impl StudioWindow {
         }
     }
 
-    /// Discard: back to the theme the draft started from.
+    /// Revert to Saved: back to the file as it was last read or saved, as one step to undo.
     fn discard_changes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let base = cx.global::<SettingsStore>().base_tokens().clone();
         self.record_step(StepLabel::Revert, false, cx);
-        self.doc = Document::new(draft_for(&base, self.themes.resolve));
+        self.doc.revert();
         self.revision += 1;
         self.field_error = None;
         self.notice = None;
-        let name = self.doc.file.name.clone().unwrap_or_default();
+        self.publish_edit_titles(cx);
+        let name = self.doc.name().to_string();
         self.name.update(cx, |input, cx| input.set_value(name, window, cx));
         SettingsStore::preview_tokens(cx, None);
         cx.refresh_windows();
