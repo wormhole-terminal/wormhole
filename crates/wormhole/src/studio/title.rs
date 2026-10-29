@@ -63,7 +63,8 @@ impl StudioWindow {
         let ui = ui(cx);
         let tokens = &cx.global::<SettingsStore>().tokens;
         let appearance = if tokens.appearance == tokens::Appearance::Light { "light" } else { "dark" };
-        let extends = match (&self.doc.file.base, &self.doc.file.extends) {
+        let base = super::document::places::base_under(&self.doc.file, self.doc.shown.as_deref());
+        let extends = match (base, &self.doc.file.extends) {
             (Some(base), _) => {
                 let from = wormhole_core::theme::tokens::slug::builtin_name(&base.from).unwrap_or(&base.from);
                 let day = base.copied.as_deref().map(names::display_date).unwrap_or_default();
