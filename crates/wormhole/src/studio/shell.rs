@@ -44,6 +44,7 @@ impl Render for StudioWindow {
             .flex()
             .flex_col()
             .text_color(ui.text)
+            .relative()
             .child(self.render_title_bar(surfaces.panel, style::lights_end(window), cx))
             .children(self.render_notice(surfaces.background, cx))
             .child(
@@ -66,5 +67,6 @@ impl Render for StudioWindow {
                             .cached(StyleRefinement::default().w(px(EDITOR_W)).h_full().flex_none()),
                     ),
             )
+            .children(self.render_modal(cx))
     }
 }

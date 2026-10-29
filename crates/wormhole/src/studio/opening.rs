@@ -5,13 +5,15 @@
 
 use std::path::PathBuf;
 
-use wormhole_core::theme::tokens::{ThemeFile, ThemeTokens, builtin_tokens, copy, read_theme_file, slug};
+use wormhole_core::theme::tokens::{
+    ThemeFile, ThemeTokens, builtin_tokens, copy, read_theme_file, slug, starter::starter,
+};
 
 use super::document::subject::subject_for;
 use super::document::{Document, Subject};
 use super::draft::draft_for;
 use super::names::{today, untitled_name};
-use super::themes::{Loaded, Themes};
+use super::themes::{Found, Loaded, Themes};
 
 /// A trusted project's theme file, read.
 pub(super) struct ProjectTheme {
@@ -36,8 +38,10 @@ pub(super) enum Target {
     Own(PathBuf),
     /// A built-in, by name, as a copy to name.
     Builtin(String),
-    /// A new theme: a copy of the theme in use.
+    /// A new theme from nothing: a neutral palette of the appearance in use, no base.
     New,
+    /// A new theme with this theme file of the person's copied into its base.
+    CopyOf(PathBuf),
     /// The project's theme.
     Project,
 }
@@ -54,7 +58,18 @@ pub(super) fn open_target(target: &Target, inputs: &Inputs, themes: &Themes) -> 
             let tokens = builtin_tokens().into_iter().find(|t| &t.name == name)?;
             Some(untitled(name, &tokens, themes))
         }
-        Target::New => Some(untitled(&inputs.in_use.name, &inputs.in_use, themes)),
+        Target::New => Some(blank(&inputs.in_use)),
+        Target::CopyOf(path) => {
+            let Loaded { file, .. } = (themes.read)(path).ok()?;
+            let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned());
+            let file = named(file, stem);
+            let name = file.name.clone().unwrap_or_default();
+            let id = file.id.clone().unwrap_or_else(|| slug::derive_id(&name));
+            Some(match (themes.fresh_base)(&id) {
+                Some(base) => with_base(&name, base),
+                None => untitled(&name, &(themes.resolve)(&file).ok()?, themes),
+            })
+        }
         Target::Project => {
             let project = inputs.project.as_ref()?;
             let file = read_theme_file(&project.text).ok()?;
@@ -82,7 +97,15 @@ pub(super) fn open_document(inputs: &Inputs, themes: &Themes) -> Document {
         Subject::Untitled { .. } => None,
     };
     match opened {
-        Some((file, stamp)) => Document::new(file, subject, stamp),
+        Some((file, stamp)) => {
+            let mut doc = Document::new(file, subject, stamp);
+            // The pick may be one appearance of a pair: that is the one shown.
+            if let Found::Variant(_, short) = (themes.locate)(&inputs.shown) {
+                doc.shown = Some(short);
+                doc.settle_shown();
+            }
+            doc
+        }
         None => {
             // A pick that is not a file we can edit: a copy of the theme in use.
             let from = match subject {
@@ -102,20 +125,35 @@ fn named(mut file: ThemeFile, stem: Option<String>) -> ThemeFile {
     file
 }
 
+/// A new theme from nothing: the neutral starter of the appearance in use, nothing under it.
+fn blank(in_use: &ThemeTokens) -> Document {
+    let file = ThemeFile {
+        name: Some(wormhole_text::text(wormhole_text::keys::STUDIO_UNTITLED).to_string()),
+        ..starter(in_use.appearance)
+    };
+    Document::new(file, Subject::Untitled { from: String::new() }, None)
+}
+
+/// "Untitled (from X)" with `base` copied from X.
+fn with_base(from: &str, base: wormhole_core::theme::tokens::BaseLayer) -> Document {
+    let file = ThemeFile {
+        version: Some(wormhole_core::theme::tokens::CURRENT_VERSION),
+        name: Some(untitled_name(from)),
+        base: Some(Box::new(base)),
+        ..ThemeFile::default()
+    };
+    Document::new(file, Subject::Untitled { from: from.to_string() }, None)
+}
+
 /// "Untitled (from X)": a built-in as a copy (its colours in a `base`, nothing of its own on top),
 /// or any other theme in use as a palette. Not dirty until the first edit.
 fn untitled(from: &str, in_use: &ThemeTokens, themes: &Themes) -> Document {
-    let subject = Subject::Untitled { from: from.to_string() };
     let base = slug::builtin_slug(from).and_then(|s| copy::copy_builtin_base(s, &|_| None, &today()).ok());
-    let file = match base {
-        Some(base) => ThemeFile {
-            version: Some(wormhole_core::theme::tokens::CURRENT_VERSION),
-            name: Some(untitled_name(from)),
-            base: Some(Box::new(base)),
-            ..ThemeFile::default()
-        },
-        None => ThemeFile { name: Some(untitled_name(from)), ..draft_for(in_use, themes.resolve) },
-    };
+    if let Some(base) = base {
+        return with_base(from, base);
+    }
+    let subject = Subject::Untitled { from: from.to_string() };
+    let file = ThemeFile { name: Some(untitled_name(from)), ..draft_for(in_use, themes.resolve) };
     Document::new(file, subject, None)
 }
 
@@ -154,6 +192,9 @@ mod tests {
                 copy::convert_to_v1(file, &|_| None, &|n| slug::derive_id(n), id, "2026-10-29")
             },
             selects: |_, _| false,
+            fresh_base: |_| None,
+            versions: |_, _| Vec::new(),
+            read_version: |_| Err("stub".into()),
         }
     }
 
@@ -173,6 +214,18 @@ mod tests {
         // It looks exactly like the theme it was copied from.
         let resolved = (themes().resolve)(&doc.file).expect("resolves");
         assert_eq!(resolved.terminal, nord().terminal);
+    }
+
+    #[test]
+    fn a_new_theme_is_a_neutral_palette_with_nothing_under_it() {
+        let doc = open_target(&Target::New, &inputs("Nord"), &themes()).expect("opens");
+        assert_eq!(doc.subject, Subject::Untitled { from: String::new() });
+        assert_eq!(doc.name(), "Untitled");
+        assert!(doc.file.base.is_none() && doc.file.extends.is_none() && doc.file.version.is_some());
+        assert!(!doc.dirty());
+        let resolved = (themes().resolve)(&doc.file).expect("resolves on its own");
+        assert_ne!(resolved.terminal, nord().terminal);
+        assert_eq!(resolved.appearance, nord().appearance, "the appearance in use");
     }
 
     #[test]

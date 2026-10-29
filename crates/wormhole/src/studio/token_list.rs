@@ -1,4 +1,4 @@
-//! The token list: a filter field and All / Changed / Low contrast over
+//! The token list: a filter field and All / Yours / Base / Low contrast over
 //! the tokens in folder bands, read like the sidebar: a swatch or shape at x 16, the name in
 //! the code font at x 40, the value faint on the right.
 //!
@@ -18,10 +18,15 @@ use style::{BandKind, BandParts, Section};
 use wormhole_core::theme::tokens::ThemeTokens;
 
 use super::draft::Show;
+use super::origin_tag::{origin_tag, reach_chip};
 use super::token_rows::{Band, Chip, Inputs, ListRow, TokenRow, build};
 use super::{StudioWindow, color_chip, contrast, gallery, metric_chip, tokens_of, ui};
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
+use wormhole_text::keys::{
+    STUDIO_FILTER_PLACEHOLDER, STUDIO_SHOW_ALL, studio_show_base, studio_show_low, studio_show_yours,
+};
+use wormhole_text::text;
 
 /// The token list's width.
 pub(super) const LIST_W: f32 = 300.0;
@@ -76,8 +81,10 @@ pub(super) struct TokenListView {
     open_groups: BTreeSet<&'static str>,
     state: ListState,
     rows: Vec<ListRow>,
-    /// The Changed and Low contrast counts.
-    shown_counts: (usize, usize),
+    /// The Yours, Base and Low contrast counts.
+    shown_counts: (usize, usize, usize),
+    /// The appearance being edited (`light`, `dark`), for the chips of a pair.
+    shown_appearance: String,
     key: Option<Key>,
     /// The tokens that fall short of a contrast minimum, found for these tokens.
     low: Option<(Arc<ThemeTokens>, BTreeSet<String>)>,
@@ -89,7 +96,7 @@ pub(super) struct TokenListView {
 
 impl TokenListView {
     pub(super) fn new(studio: &Entity<StudioWindow>, window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let filter = cx.new(|cx| InputState::new(window, cx).placeholder("Filter tokens"));
+        let filter = cx.new(|cx| InputState::new(window, cx).placeholder(text(STUDIO_FILTER_PLACEHOLDER)));
         Self {
             studio: studio.downgrade(),
             _subscriptions: vec![
@@ -103,7 +110,8 @@ impl TokenListView {
             open_groups: BTreeSet::new(),
             state: ListState::new(0, ListAlignment::Top, px(OVERDRAW)),
             rows: Vec::new(),
-            shown_counts: (0, 0),
+            shown_counts: (0, 0, 0),
+            shown_appearance: String::new(),
             key: None,
             low: None,
             #[cfg(test)]
@@ -136,7 +144,7 @@ impl TokenListView {
         cx.notify();
     }
 
-    /// devctl `studio-filter <all|changed|low> [text]`.
+    /// devctl `studio-filter <all|yours|base|low> [text]`.
     #[cfg(feature = "devctl")]
     pub(super) fn devctl_filter(
         &mut self,
@@ -177,6 +185,7 @@ impl TokenListView {
         let built = build(&Inputs {
             draft: &studio.doc.file,
             initial: &studio.doc.saved,
+            shown: studio.doc.shown.as_deref(),
             tokens,
             low,
             show: self.show,
@@ -198,7 +207,8 @@ impl TokenListView {
             .take_while(|(a, b)| a.same_line(b))
             .count();
         self.state.splice(head..old.len() - tail, new.len() - head - tail);
-        self.shown_counts = (built.changed_count, built.low_count);
+        self.shown_appearance = studio.doc.shown.clone().unwrap_or_default();
+        self.shown_counts = (built.yours_count, built.base_count, built.low_count);
         self.rows = built.rows;
         self.key = Some(key);
     }
@@ -249,7 +259,7 @@ impl TokenListView {
         .into_any_element()
     }
 
-    fn token_row(&self, row: &TokenRow, code_font: SharedString, ui: UiColors) -> AnyElement {
+    fn token_row(&self, row: &TokenRow, code_font: SharedString, ui: UiColors, shown: &str) -> AnyElement {
         let name = row.name.as_str();
         let selected = row.selected;
         let preview = match row.chip {
@@ -259,6 +269,10 @@ impl TokenListView {
         // The window's own update, not this view's: selecting opens the token's band here.
         let studio = self.studio.clone();
         let picked = row.name.clone();
+        let (origin, reach, studio_for_chip) = (row.origin, row.reach, self.studio.clone());
+        let shown_name = shown.to_string();
+        let chip_name = row.name.clone();
+        let tag_color = if selected { ui.selected_muted } else { ui.faint };
         style::flush_row(SharedString::from(format!("token-{name}")), ui, selected)
             .h(px(style::ROW_H))
             .on_click(move |_, window, cx| {
@@ -286,6 +300,12 @@ impl TokenListView {
                         d.child(style::changed_dot(ui).when(selected, |d| d.bg(ui.selected_text)))
                     }),
             )
+            .child(origin_tag(origin, tag_color))
+            .children(reach.map(|reach| {
+                reach_chip(&chip_name, reach, &shown_name, tag_color, ui, move |name, window, cx| {
+                    studio_for_chip.update(cx, |studio, cx| studio.toggle_reach(&name, window, cx)).ok();
+                })
+            }))
             .child(
                 div()
                     .flex_none()
@@ -322,7 +342,7 @@ impl TokenListView {
             ListRow::Band(band) => self.band(band, ui, cx),
             ListRow::Token(token) => {
                 let (code_font, _) = crate::fonts::code_font(cx);
-                self.token_row(token, code_font, ui)
+                self.token_row(token, code_font, ui, &self.shown_appearance)
             }
         };
         // Items are laid out at their content width unless told otherwise.
@@ -339,7 +359,7 @@ impl Render for TokenListView {
         let ui = ui(cx);
         let panel = style::window_surfaces(cx, settings(cx).studio_translucent).panel;
         self.sync(&tokens_of(cx), cx);
-        let (changed_count, low_count) = self.shown_counts;
+        let (yours_count, base_count, low_count) = self.shown_counts;
         let show = |id: &'static str, label: String, value: Show| {
             style::segment(id, ui, label, self.show == value)
                 .on_click(cx.listener(move |this, _, _, cx| this.set_show(value, cx)))
@@ -359,9 +379,18 @@ impl Render for TokenListView {
             )
             .child(
                 style::segmented(ui)
-                    .child(show("studio-show-all", "All".into(), Show::All))
-                    .child(show("studio-show-changed", format!("Changed · {changed_count}"), Show::Changed))
-                    .child(show("studio-show-low", format!("Low contrast · {low_count}"), Show::LowContrast)),
+                    .child(show("studio-show-all", text(STUDIO_SHOW_ALL).into(), Show::All))
+                    .child(show(
+                        "studio-show-yours",
+                        studio_show_yours(&yours_count.to_string()),
+                        Show::Yours,
+                    ))
+                    .child(show("studio-show-base", studio_show_base(&base_count.to_string()), Show::Base))
+                    .child(show(
+                        "studio-show-low",
+                        studio_show_low(&low_count.to_string()),
+                        Show::LowContrast,
+                    )),
             );
         div()
             .id("studio-token-list")

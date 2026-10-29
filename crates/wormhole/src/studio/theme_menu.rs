@@ -5,8 +5,9 @@
 use gpui_kit::WeakEntity;
 use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_text::keys::{
-    STUDIO_MENU_BUILT_IN, STUDIO_MENU_NEW, STUDIO_MENU_PROJECT_THEME, STUDIO_MENU_RENAME, STUDIO_MENU_REVERT,
-    STUDIO_MENU_THIS_PROJECT, STUDIO_MENU_YOUR_THEMES, studio_menu_duplicate,
+    STUDIO_MENU_ADD_DARK, STUDIO_MENU_ADD_LIGHT, STUDIO_MENU_BUILT_IN, STUDIO_MENU_NEW, STUDIO_MENU_NEW_FROM,
+    STUDIO_MENU_PROJECT_THEME, STUDIO_MENU_RENAME, STUDIO_MENU_REVERT, STUDIO_MENU_REVERT_TO,
+    STUDIO_MENU_THIS_PROJECT, STUDIO_MENU_VERSIONS, STUDIO_MENU_YOUR_THEMES, studio_menu_duplicate,
 };
 use wormhole_text::text;
 
@@ -16,12 +17,17 @@ use super::opening::Target;
 use super::theme_list::{Choice, ThemeList};
 use crate::menubar::model::KeyEquivalent;
 use crate::platform::menu::{Item, Menu, run_on};
+use wormhole_core::theme::tokens::Appearance;
 
 /// What the menu shows about the theme being edited.
 pub(super) struct Facts<'a> {
     pub(super) subject: &'a Subject,
     pub(super) name: &'a str,
     pub(super) dirty: bool,
+    /// The appearance Add Appearance would add: the one a single theme lacks.
+    pub(super) addable: Option<Appearance>,
+    /// The theme has earlier saves to browse (it is a file of its own).
+    pub(super) versions: bool,
 }
 
 fn open(
@@ -32,6 +38,30 @@ fn open(
 
 fn choice(choice: &Choice, this: &WeakEntity<StudioWindow>, checked: bool) -> Item {
     Item::new(choice.name.clone()).checked(checked).on_select(run_on(this, open(choice.target.clone())))
+}
+
+/// New Theme From: the person's themes, then the built-ins (a family once), each a copy to start from.
+fn new_from(list: &ThemeList, this: &WeakEntity<StudioWindow>) -> Menu {
+    let mut menu = Menu::new();
+    for own in &list.own {
+        if let Target::Own(path) = &own.target {
+            let from = Choice { name: own.name.clone(), target: Target::CopyOf(path.clone()) };
+            menu = menu.item(choice(&from, this, false));
+        }
+    }
+    if !list.own.is_empty() {
+        menu = menu.separator();
+    }
+    for family in &list.builtins {
+        menu = match family.choices.as_slice() {
+            [only] => menu.item(choice(only, this, false)),
+            many => menu.submenu(
+                family.name.clone(),
+                many.iter().fold(Menu::new(), |sub, c| sub.item(choice(c, this, false))),
+            ),
+        };
+    }
+    menu
 }
 
 pub(super) fn build(list: &ThemeList, facts: &Facts<'_>, this: &WeakEntity<StudioWindow>) -> Menu {
@@ -62,8 +92,20 @@ pub(super) fn build(list: &ThemeList, facts: &Facts<'_>, this: &WeakEntity<Studi
         };
     }
     let duplicate_key = keymap::key(ActionId::DuplicateTheme).and_then(KeyEquivalent::from_spec);
-    menu.separator()
+    let menu = menu.separator();
+    let add = facts.addable.map(|to| {
+        let label = if to == Appearance::Light { STUDIO_MENU_ADD_LIGHT } else { STUDIO_MENU_ADD_DARK };
+        Item::new(text(label))
+            .on_select(run_on(this, move |studio, window, cx| studio.add_appearance(to, window, cx)))
+    });
+    let revert_to = Menu::new().item(
+        Item::new(text(STUDIO_MENU_VERSIONS))
+            .enabled(facts.versions)
+            .on_select(run_on(this, |studio, _, cx| studio.open_versions(cx))),
+    );
+    let mut menu = menu
         .item(Item::new(text(STUDIO_MENU_NEW)).on_select(run_on(this, open(Target::New))))
+        .submenu(text(STUDIO_MENU_NEW_FROM), new_from(list, this))
         .item(
             Item::new(studio_menu_duplicate(facts.name))
                 .key(duplicate_key)
@@ -72,13 +114,17 @@ pub(super) fn build(list: &ThemeList, facts: &Facts<'_>, this: &WeakEntity<Studi
         .item(
             Item::new(text(STUDIO_MENU_RENAME))
                 .on_select(run_on(this, |studio, window, cx| studio.start_rename(window, cx))),
-        )
-        .separator()
+        );
+    if let Some(add) = add {
+        menu = menu.item(add);
+    }
+    menu.separator()
         .item(
             Item::new(text(STUDIO_MENU_REVERT))
                 .enabled(facts.dirty)
                 .on_select(run_on(this, |studio, window, cx| studio.discard_changes(window, cx))),
         )
+        .submenu(text(STUDIO_MENU_REVERT_TO), revert_to)
 }
 
 #[cfg(test)]
@@ -114,7 +160,13 @@ mod tests {
     #[test]
     fn the_menu_lists_your_themes_the_project_the_built_ins_and_what_to_do() {
         let subject = Subject::Own { path: "/themes/mine.json".into() };
-        let facts = Facts { subject: &subject, name: "Mine", dirty: true };
+        let facts = Facts {
+            subject: &subject,
+            name: "Mine",
+            dirty: true,
+            addable: Some(Appearance::Light),
+            versions: true,
+        };
         let menu = build(&list(), &facts, &WeakEntity::new_invalid());
         assert_eq!(
             menu.outline(),
@@ -131,10 +183,21 @@ mod tests {
                 "- Nord",
                 "---",
                 "- New Theme\u{2026}",
+                "> New Theme From",
+                "  - Dusk",
+                "  - Mine",
+                "  ---",
+                "  > Wormhole",
+                "    - Dark",
+                "    - Light",
+                "  - Nord",
                 "- Duplicate \u{201c}Mine\u{201d}",
                 "- Rename\u{2026}",
+                "- Add Light Appearance",
                 "---",
                 "- Revert to Saved",
+                "> Revert To",
+                "  - Browse All Versions\u{2026}",
             ]
         );
     }
@@ -142,11 +205,19 @@ mod tests {
     #[test]
     fn revert_is_off_without_edits_and_a_copy_checks_nothing() {
         let subject = Subject::Untitled { from: "Nord".into() };
-        let facts = Facts { subject: &subject, name: "Untitled (from Nord)", dirty: false };
+        let facts = Facts {
+            subject: &subject,
+            name: "Untitled (from Nord)",
+            dirty: false,
+            addable: None,
+            versions: false,
+        };
         let menu = build(&ThemeList { project: false, ..list() }, &facts, &WeakEntity::new_invalid());
         let lines = menu.outline();
         assert!(lines.contains(&"- Revert to Saved [off]".to_string()), "{lines:?}");
         assert!(!lines.iter().any(|l| l.contains("[x]")), "{lines:?}");
         assert!(!lines.contains(&"# This Project".to_string()));
+        assert!(lines.contains(&"  - Browse All Versions\u{2026} [off]".to_string()), "{lines:?}");
+        assert!(!lines.iter().any(|l| l.contains("Appearance")), "{lines:?}");
     }
 }

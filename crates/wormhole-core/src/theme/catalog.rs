@@ -24,6 +24,9 @@ pub struct ThemeEntry {
     pub family: Option<(String, String)>,
     /// Which theme this is (labels can repeat).
     pub id: ThemeId,
+    /// A theme file made with a newer Wormhole than this one: how many entries of it this version
+    /// does not know and so skipped.
+    pub newer: Option<usize>,
     /// The themes this catalog was built from, to tell what a name selects.
     themes: Arc<UserThemes>,
 }
@@ -57,6 +60,7 @@ pub fn catalog_in(dir: &Path) -> Vec<ThemeEntry> {
             builtin: true,
             family: tokens::builtin_family(&tokens.name).map(|(f, v)| (f.to_string(), v.to_string())),
             id: ThemeId::Builtin(&tokens.name),
+            newer: None,
             themes: Arc::clone(&themes),
         })
         .collect();
@@ -79,6 +83,7 @@ pub fn catalog_in(dir: &Path) -> Vec<ThemeEntry> {
                 builtin: false,
                 family: theme.family.clone(),
                 id: theme.id(),
+                newer: theme.source().filter(|f| f.read.newer).map(|f| f.read.skipped),
                 themes: Arc::clone(&themes),
             }),
             Err(err) => {

@@ -389,7 +389,7 @@
 //!                   sheet, which no shot shows; `state` says `asking=true`)
 //!   studio-type <text>   type into the token editor's field without Return: what it offers
 //!                   for the name so far shows under it
-//!   studio-filter <all|changed|low> [text]   what the token list shows, and its filter text
+//!   studio-filter <all|yours|base|low> [text]   what the token list shows, and its filter text
 //!   studio-area <all|sidebar|panel|chrome|settings|ambient>   the gallery's filter, and the token
 //!                   list's with it (only what that part of the app draws with)
 //!   studio-frames <n> [tick|scroll]   draw the Studio window n times and append the timings to
@@ -402,6 +402,16 @@
 //!   studio-theme-menu   open the theme menu (the name in the title row; `menu` lists it, `menu-pick` chooses)
 //!   studio-open own:<file stem>|builtin:<name>|new|project   choose that in the theme menu
 //!   studio-rename <name> | studio-undo | studio-redo | studio-revert   Rename, Undo, Redo, Revert to Saved
+//!   studio-appearance light|dark   the appearance of a light and dark pair being edited
+//!   studio-add-appearance [light|dark]   the theme menu's Add Light / Dark Appearance (the one it lacks)
+//!   studio-chip [token]   move the token's value (default: the selected one) between both appearances
+//!                   and the one shown, as the chip on its row does
+//!   studio-update-from [apply|cancel]   open the Update from sheet, then apply or cancel it
+//!   studio-versions [select <n>|restore [<n>]|close]   open the Versions panel (row 0 is the file now),
+//!                   select a row, restore the selected (or the nth) one, close it
+//!   studio-use   the "Previewing, not in use" chip's Use (saves first when there is something to save)
+//!   `state` ends the studio line with `format=`, `shown=`, `update=`, `modal=`, `inuse=` and, for the
+//!   selected token, `token=<name> origin=yours|base|worked_out reach=both|this|-`
 //!   hook [--agent <id>] <tab> <event> [message]   an agent's hook event for a tab (ids as `state`
 //!                   lists them; the agent defaults to claude), e.g. `hook 1 Notification Allow?`.
 //!                   With `/bin/cat` for a shell the status lasts until the next agent check (~2 s)

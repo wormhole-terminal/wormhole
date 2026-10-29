@@ -30,6 +30,12 @@ pub(super) fn with(ctx: &mut Ctx, command: &str, arg: &str) -> Result<String> {
         "studio-undo" => studio.devctl_undo(false, window, cx),
         "studio-redo" => studio.devctl_undo(true, window, cx),
         "studio-revert" => studio.devctl_revert(window, cx),
+        "studio-appearance"
+        | "studio-add-appearance"
+        | "studio-chip"
+        | "studio-update-from"
+        | "studio-versions"
+        | "studio-use" => studio.devctl_appearances(&command, &arg, window, cx),
         _ => studio.devctl_set(&arg, window, cx),
     })?;
     Ok(String::new())

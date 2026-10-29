@@ -227,3 +227,13 @@ pub fn settings_appearance_show_all_themes(total: &str) -> String {
 pub fn settings_appearance_hidden_themes(count: &str) -> String {
     crate::active::message(415, &[("count", Arg::Str(count))])
 }
+
+/// ```text
+/// { $count ->
+///     [one] Made with a newer Wormhole: 1 value was skipped
+///    *[other] Made with a newer Wormhole: { $count } values were skipped
+/// }
+/// ```
+pub fn settings_appearance_theme_newer(count: i64) -> String {
+    crate::active::message(416, &[("count", Arg::Int(count))])
+}

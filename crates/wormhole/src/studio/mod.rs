@@ -8,6 +8,7 @@
 //! The resolved draft is previewed app-wide through `SettingsStore`, so the
 //! main window follows along; closing the Studio window drops the preview.
 
+mod commit;
 mod completion;
 mod contrast;
 mod convert;
@@ -16,8 +17,10 @@ pub(crate) mod devctl;
 mod document;
 mod draft;
 mod gallery;
+mod modal;
 mod names;
 mod opening;
+mod origin_tag;
 mod save;
 mod shell;
 mod switch;
@@ -25,10 +28,14 @@ mod theme_list;
 mod theme_menu;
 mod themes;
 mod title;
+mod title_chips;
 mod token_editor;
 mod token_list;
 mod token_rows;
 mod undo;
+mod update_from;
+mod use_theme;
+mod versions;
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -49,7 +56,7 @@ use crate::style::{self, Edges};
 use crate::terminal_view::keystroke_spec;
 use crate::theme_bridge::{self, hsla, token};
 use document::history::{StepLabel, UndoStack};
-use document::{Document, is_metric, number, override_of, set_override};
+use document::{Document, is_metric, number, places};
 use draft::group_of;
 use gallery::{Area, GalleryView};
 use save::Notice;
@@ -110,6 +117,10 @@ pub(crate) struct StudioWindow {
     gesture_timer: Option<Task<()>>,
     /// This is the window in front, so the Edit menu speaks of its history.
     active: bool,
+    /// The sheet or panel over the window, if one is open.
+    modal: Option<modal::Modal>,
+    /// What the base was last compared with its source as.
+    update_check: update_from::Check,
     /// How many times an edit changed the draft or its starting point, for what is made from
     /// them (the token list's rows) to know when to be made again.
     revision: u64,
@@ -351,6 +362,8 @@ impl StudioWindow {
             typing: undo::Typing::default(),
             gesture_timer: None,
             active: window.is_window_active(),
+            modal: None,
+            update_check: update_from::Check::default(),
             revision: 0,
             save_menu: false,
             menu_project: false,
@@ -365,6 +378,7 @@ impl StudioWindow {
         };
         // The Studio opens on the main accent color, so its editor is never empty and the
         // gallery already outlines something.
+        studio.refresh_update_check();
         studio.select_token(FIRST_TOKEN, window, cx);
         studio
     }
@@ -388,7 +402,7 @@ impl StudioWindow {
     /// pointer mid-drag.
     fn show_token(&mut self, name: &str, picker: bool, window: &mut Window, cx: &mut Context<Self>) {
         let tokens = cx.global::<SettingsStore>().tokens.clone();
-        let current = override_of(&self.doc.file, name).unwrap_or_else(|| {
+        let current = self.doc.own(name).unwrap_or_else(|| {
             tokens
                 .get(name)
                 .map(|c| c.to_hex())
@@ -432,12 +446,12 @@ impl StudioWindow {
     ) {
         let mut draft = self.doc.file.clone();
         let reset = value.is_none();
-        if let Err(err) = set_override(&mut draft, name, value) {
+        if let Err(err) = places::set_own(&mut draft, self.doc.shown.as_deref(), name, value) {
             self.field_error = Some(FieldError::plain(err));
             cx.notify();
             return;
         }
-        match (self.themes.resolve)(&draft) {
+        match (self.themes.resolve)(&places::folded(&draft, self.doc.shown.as_deref())) {
             Ok(resolved) => {
                 let label = if reset {
                     StepLabel::Reset(name.to_string())
@@ -446,7 +460,7 @@ impl StudioWindow {
                 };
                 self.record_step(label, from == Edit::Picker, cx);
                 self.doc.file = draft;
-                self.revision += 1;
+                self.touched();
                 self.field_error = None;
                 self.notice = None;
                 SettingsStore::preview_tokens(cx, Some(resolved));
@@ -491,7 +505,8 @@ impl StudioWindow {
     fn discard_changes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.record_step(StepLabel::Revert, false, cx);
         self.doc.revert();
-        self.revision += 1;
+        self.doc.settle_shown();
+        self.touched();
         self.field_error = None;
         self.notice = None;
         self.publish_edit_titles(cx);
@@ -509,6 +524,11 @@ impl StudioWindow {
     fn on_key(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         let keys = &event.keystroke;
         let m = &keys.modifiers;
+        // A sheet or panel is open: it takes the arrows, Return and Esc.
+        if !m.modified() && self.modal_key(keys.key.as_str(), window, cx) {
+            cx.stop_propagation();
+            return;
+        }
         if let Some(action) = save_key(&keystroke_spec(keys)) {
             self.run_save_action(action, window, cx);
             cx.stop_propagation();
@@ -575,3 +595,5 @@ fn tests_support_dump(t: &ThemeTokens) -> String {
     }
     out
 }
+#[cfg(all(test, feature = "devctl"))]
+mod window_tests_v1;

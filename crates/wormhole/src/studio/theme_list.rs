@@ -29,13 +29,21 @@ pub(super) struct ThemeList {
     pub(super) builtins: Vec<Family>,
 }
 
-/// The list for a catalog. A file that ships several versions is left out until the Studio can
-/// edit those.
+/// The list for a catalog.
 pub(super) fn theme_list(catalog: &[ThemeEntry], project: bool) -> ThemeList {
     let mut list = ThemeList { project, ..ThemeList::default() };
+    let mut families = std::collections::BTreeSet::new();
     for entry in catalog.iter().filter(|e| !e.builtin) {
-        if let ThemeId::File(path) = &entry.id {
-            list.own.push(Choice { name: entry.label.clone(), target: Target::Own(path.clone()) });
+        match &entry.id {
+            ThemeId::File(path) => {
+                list.own.push(Choice { name: entry.label.clone(), target: Target::Own(path.clone()) });
+            }
+            // A file that ships several appearances is one theme: listed once, by its family's name.
+            ThemeId::Variant(path, _) if families.insert(path.clone()) => {
+                list.own
+                    .push(Choice { name: entry.card_label().to_string(), target: Target::Own(path.clone()) });
+            }
+            _ => {}
         }
     }
     list.own.sort_by_key(|c| c.name.to_lowercase());
@@ -72,7 +80,11 @@ mod tests {
         .expect("write");
         let list = theme_list(&catalog_in(&dir), true);
         std::fs::remove_dir_all(&dir).expect("clean up");
-        assert_eq!(list.own.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(), ["Dusk"]);
+        assert_eq!(
+            list.own.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(),
+            ["Dusk", "Pair"],
+            "a pair once"
+        );
         assert!(list.project);
         let wormhole = list.builtins.iter().find(|f| f.name == "Wormhole").expect("a Wormhole family");
         assert_eq!(wormhole.choices.iter().map(|c| c.name.as_str()).collect::<Vec<_>>(), ["Dark", "Light"]);

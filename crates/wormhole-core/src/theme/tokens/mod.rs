@@ -93,8 +93,8 @@ pub use self::file::{
 };
 pub use self::fixes::{ContrastCheck, ContrastFix, ContrastIssue, contrast_issues};
 pub use self::format::{
-    ANSI_RULE, BaseLayer, CURRENT_VERSION, KEY_TABLE, KeyRename, ReadReport, copy, export, migrate, new_key,
-    old_key, read_theme_file, slug, write_v1,
+    ANSI_RULE, BaseLayer, CURRENT_VERSION, KEY_TABLE, KeyRename, ReadReport, appearance, copy, export,
+    migrate, new_key, old_key, read_theme_file, slug, starter, write_v1,
 };
 pub use self::high_contrast::HIGH_CONTRAST_RING;
 use self::model::auto_appearance;

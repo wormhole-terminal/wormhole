@@ -173,3 +173,9 @@ settings-appearance-show-theme = Show
 
 # The disclosure under the theme cards that lists the hidden ones. { $count } is how many.
 settings-appearance-hidden-themes = Hidden themes ({ $count })
+
+# On a theme card: the file was made with a newer Wormhole. { $count } is how many entries were skipped.
+settings-appearance-theme-newer = { $count ->
+    [one] Made with a newer Wormhole: 1 value was skipped
+   *[other] Made with a newer Wormhole: { $count } values were skipped
+}

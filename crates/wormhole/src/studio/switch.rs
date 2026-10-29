@@ -30,7 +30,13 @@ impl StudioWindow {
     pub(super) fn open_theme_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let catalog = (self.themes.catalog)();
         let list = theme_list(&catalog, project_theme(cx).is_some());
-        let facts = Facts { subject: &self.doc.subject, name: self.doc.name(), dirty: self.dirty() };
+        let facts = Facts {
+            subject: &self.doc.subject,
+            name: self.doc.name(),
+            dirty: self.dirty(),
+            addable: self.missing_appearance().filter(|_| !self.doc.is_newer()),
+            versions: matches!(self.doc.subject, Subject::Own { .. }),
+        };
         let menu = theme_menu::build(&list, &facts, &cx.weak_entity());
         platform::show_menu(menu, self.name_bounds.get().bottom_left(), window, cx);
     }
@@ -79,10 +85,10 @@ impl StudioWindow {
         self.completion = None;
         self.field_error = None;
         self.notice = None;
-        self.revision += 1;
+        self.touched();
         let name = doc.name().to_string();
         self.name.update(cx, |input, cx| input.set_value(name, window, cx));
-        let resolved = (self.themes.resolve)(&doc.file).ok();
+        let resolved = (self.themes.resolve)(&doc.folded()).ok();
         self.doc = doc;
         SettingsStore::preview_tokens(cx, resolved);
         cx.refresh_windows();

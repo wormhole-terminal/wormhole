@@ -10,6 +10,7 @@ use wormhole_core::theme::tokens::{
     Appearance, Area, METRIC_TOKENS, ThemeFile, ThemeTokens, UI_TOKENS, default_rule, syntax_keys, used_in,
 };
 
+use super::document::places::Origin;
 use super::themes::Resolve;
 
 /// Terminal colors the token editor can edit, as `terminal.*` token names.
@@ -142,13 +143,16 @@ pub(super) fn group_of(name: &str) -> Option<&'static str> {
     groups().iter().find(|g| g.tokens.iter().any(|t| t == name)).map(|g| g.name)
 }
 
-/// What the token list shows: every token, the draft's own values, or the
-/// tokens that fall short of a contrast minimum.
+/// What the token list shows: every token, the theme's own values, the ones still as copied, or
+/// the tokens that fall short of a contrast minimum.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(super) enum Show {
     #[default]
     All,
-    Changed,
+    /// What the theme sets itself.
+    Yours,
+    /// What it still has as it was copied.
+    Base,
     LowContrast,
 }
 
@@ -170,7 +174,7 @@ pub(super) fn visible<'a>(
     show: Show,
     area: Option<Area>,
     query: &str,
-    changed: &dyn Fn(&str) -> bool,
+    origin: &dyn Fn(&str) -> Origin,
     low: &dyn Fn(&str) -> bool,
 ) -> Vec<(&'a Group, Vec<&'a str>)> {
     let query = query.trim().to_lowercase();
@@ -185,7 +189,8 @@ pub(super) fn visible<'a>(
                 .filter(|name| in_area(name, area))
                 .filter(|name| match show {
                     Show::All => true,
-                    Show::Changed => changed(name),
+                    Show::Yours => origin(name) == Origin::Yours,
+                    Show::Base => origin(name) == Origin::Base,
                     Show::LowContrast => low(name),
                 })
                 .filter(|name| query.is_empty() || group_hit || name.to_lowercase().contains(&query))
@@ -203,6 +208,7 @@ mod tests {
         Area, METRIC_TOKENS, ThemeFile, ThemeTokens, UI_TOKENS, builtin_tokens, parse_theme_file, resolve,
     };
 
+    use super::super::document::places::Origin;
     use super::super::document::set_override;
     use super::{
         Show, copy_name, draft_for, export_dir, export_file_name, export_json, group_of, group_size, groups,
@@ -335,27 +341,30 @@ mod tests {
     #[test]
     fn the_list_filters_by_show_and_text() {
         let nothing = |_: &str| false;
-        let all = visible(Show::All, None, "", &nothing, &nothing);
+        let worked = |_: &str| Origin::WorkedOut;
+        let all = visible(Show::All, None, "", &worked, &nothing);
         assert_eq!(all.len(), groups().len());
 
-        let changed = |name: &str| name == "primary" || name == "metrics.radius_chip";
-        let shown = visible(Show::Changed, None, "", &changed, &nothing);
+        let changed = |name: &str| {
+            if name == "primary" || name == "metrics.radius_chip" { Origin::Yours } else { Origin::WorkedOut }
+        };
+        let shown = visible(Show::Yours, None, "", &changed, &nothing);
         let names: Vec<(&str, Vec<&str>)> = shown.iter().map(|(g, t)| (g.name, t.clone())).collect();
         assert_eq!(names, [("Primary", vec!["primary"]), ("Shape", vec!["metrics.radius_chip"])]);
 
         let low = |name: &str| name == "text.link";
-        let shown = visible(Show::LowContrast, None, "", &nothing, &low);
+        let shown = visible(Show::LowContrast, None, "", &worked, &low);
         assert_eq!(shown.len(), 1);
         assert_eq!(shown[0].1, ["text.link"]);
 
         // Text matches a token's name in any case, or its whole group.
-        let shown = visible(Show::All, None, "ROW.SEL", &nothing, &nothing);
+        let shown = visible(Show::All, None, "ROW.SEL", &worked, &nothing);
         assert!(shown.iter().all(|(_, t)| t.iter().all(|n| n.contains("row.sel"))));
         assert!(shown.iter().any(|(g, _)| g.name == "Chrome"));
-        let shown = visible(Show::All, None, "banners", &nothing, &nothing);
+        let shown = visible(Show::All, None, "banners", &worked, &nothing);
         assert_eq!(shown.len(), 1);
         assert_eq!(shown[0].1.len(), 8);
-        assert!(visible(Show::Changed, None, "border", &changed, &nothing).is_empty());
+        assert!(visible(Show::Yours, None, "border", &changed, &nothing).is_empty());
     }
 
     /// The gallery's area filter narrows the list to what that part's components draw with, and
@@ -363,7 +372,8 @@ mod tests {
     #[test]
     fn the_list_keeps_to_the_area() {
         let nothing = |_: &str| false;
-        let sidebar = visible(Show::All, Some(Area::Sidebar), "", &nothing, &nothing);
+        let worked = |_: &str| Origin::WorkedOut;
+        let sidebar = visible(Show::All, Some(Area::Sidebar), "", &worked, &nothing);
         let names: Vec<&str> = sidebar.iter().flat_map(|(_, t)| t.iter().copied()).collect();
         assert!(
             names.contains(&"sidebar.row.selected") && names.contains(&"metrics.radius_chip"),
@@ -379,11 +389,13 @@ mod tests {
         assert!(group_size(chrome, Some(Area::Sidebar)) < group_size(chrome, None));
         assert_eq!(group_size(chrome, None), chrome.tokens.len());
 
-        let changed = |name: &str| name == "primary" || name == "resize.handle.hover";
-        let shown = visible(Show::Changed, Some(Area::Sidebar), "", &changed, &nothing);
+        let changed = |name: &str| {
+            if name == "primary" || name == "resize.handle.hover" { Origin::Yours } else { Origin::WorkedOut }
+        };
+        let shown = visible(Show::Yours, Some(Area::Sidebar), "", &changed, &nothing);
         let names: Vec<(&str, Vec<&str>)> = shown.iter().map(|(g, t)| (g.name, t.clone())).collect();
         assert_eq!(names, [("Primary", vec!["primary"])], "the resize handle is the ambient part's");
-        assert!(visible(Show::All, Some(Area::Ambient), "sidebar.row", &nothing, &nothing).is_empty());
-        assert_eq!(visible(Show::All, None, "", &nothing, &nothing).len(), groups().len());
+        assert!(visible(Show::All, Some(Area::Ambient), "sidebar.row", &worked, &nothing).is_empty());
+        assert_eq!(visible(Show::All, None, "", &worked, &nothing).len(), groups().len());
     }
 }

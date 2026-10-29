@@ -3,14 +3,21 @@
 
 pub(super) mod history;
 pub(super) mod layers;
+pub(super) mod places;
 pub(super) mod subject;
 
 use wormhole_core::theme::tokens::ThemeFile;
 
 use super::themes::Stamp;
 
-pub(super) use layers::{changes, is_metric, number, override_of, set_override};
+pub(super) use layers::{changed_tokens, changes, is_metric, number, override_of, set_override};
 pub(super) use subject::Subject;
+
+/// The appearance a pair opens on: the dark one, else the first.
+fn default_shown(file: &ThemeFile) -> Option<String> {
+    let names = file.variants.iter().map(|v| v.name.as_str());
+    names.clone().find(|n| *n == "dark").or_else(|| names.clone().next()).map(str::to_string)
+}
 
 /// The theme under edit.
 pub(super) struct Document {
@@ -22,11 +29,42 @@ pub(super) struct Document {
     pub(super) subject: Subject,
     /// The file as it was when read or last written: a write over a different one asks first.
     pub(super) stamp: Option<Stamp>,
+    /// The appearance being edited, by its name in the file, while the file is a pair.
+    pub(super) shown: Option<String>,
 }
 
 impl Document {
     pub(super) fn new(file: ThemeFile, subject: Subject, stamp: Option<Stamp>) -> Self {
-        Self { saved: file.clone(), file, subject, stamp }
+        let shown = default_shown(&file);
+        Self { saved: file.clone(), file, subject, stamp, shown }
+    }
+
+    /// The file as the shown appearance sees it: one theme, to resolve and preview.
+    pub(super) fn folded(&self) -> ThemeFile {
+        places::folded(&self.file, self.shown.as_deref())
+    }
+
+    /// The shown appearance is one the file has; else the one a pair opens on.
+    pub(super) fn settle_shown(&mut self) {
+        if !self.file.variants.iter().any(|v| Some(&v.name) == self.shown.as_ref()) {
+            self.shown = default_shown(&self.file);
+        }
+    }
+
+    /// The value the file sets itself for `name` in the shown appearance (or shared by both).
+    pub(super) fn own(&self, name: &str) -> Option<String> {
+        places::own_value(&self.file, self.shown.as_deref(), name)
+    }
+
+    /// Whether the file is a pair of appearances (the chips and the Light | Dark control show).
+    pub(super) fn is_pair(&self) -> bool {
+        places::is_pair(&self.file)
+    }
+
+    /// Made with a newer Wormhole than this one: it is read for what this one knows, and not
+    /// written back over.
+    pub(super) fn is_newer(&self) -> bool {
+        self.file.read.newer
     }
 
     /// Whether the file has edits that are not saved. Compared with the saved file, so undoing

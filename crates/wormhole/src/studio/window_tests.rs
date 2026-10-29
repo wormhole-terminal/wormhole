@@ -43,6 +43,9 @@ pub(super) fn themes() -> Themes {
             )
         },
         selects: |_, _| false,
+        fresh_base: |_| None,
+        versions: |_, _| Vec::new(),
+        read_version: |_| Err("stub".into()),
     }
 }
 
