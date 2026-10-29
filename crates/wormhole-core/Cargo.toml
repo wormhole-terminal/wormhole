@@ -19,7 +19,6 @@ wormhole-text.workspace = true
 anyhow.workspace = true
 # Agent reports carry RFC 3339 timestamps; compare source times across concurrent terminals.
 chrono = { version = "0.4", default-features = false, features = ["std"] }
-dirs.workspace = true
 libc.workspace = true
 plist.workspace = true
 rusqlite.workspace = true
