@@ -1,0 +1,11 @@
+{
+  "name": "Fixture Paper",
+  "terminal": {
+    "foreground": "#222222", "background": "#fafafa", "cursor": "#0066cc",
+    "selection_background": "#cce0ff",
+    "ansi": { "0": "#222222", "1": "#cc0000", "2": "#009900", "3": "#997700", "4": "#0055cc", "5": "#880088", "6": "#007788", "7": "#888888",
+              "8": "#444444", "9": "#ee2222", "10": "#22bb22", "11": "#bb9900", "12": "#2277ee", "13": "#aa22aa", "14": "#2299aa", "15": "#aaaaaa" }
+  },
+  "ui": { "primary": "#0066cc" },
+  "metrics": { "radius": 4, "border_width": 2 }
+}

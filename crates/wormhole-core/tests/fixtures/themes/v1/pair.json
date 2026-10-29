@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "fixture_pair",
+  "name": "Fixture Pair",
+  "ui": { "primary": "#c2410c" },
+  "metrics": { "radius": 8 },
+  "variants": [
+    {
+      "name": "light",
+      "base": { "from": "github_light", "copied": "2026-10-29", "appearance": "light",
+        "terminal": { "background": "#ffffff", "foreground": "#1f2328", "cursor": "#0969da", "selection.background": "#b6e3ff",
+          "ansi.0": "#24292f", "ansi.1": "#cf222e", "ansi.2": "#116329", "ansi.3": "#4d2d00", "ansi.4": "#0969da", "ansi.5": "#8250df", "ansi.6": "#1b7c83", "ansi.7": "#6e7781",
+          "ansi.8": "#57606a", "ansi.9": "#a40e26", "ansi.10": "#1a7f37", "ansi.11": "#633c01", "ansi.12": "#218bff", "ansi.13": "#a475f9", "ansi.14": "#3192aa", "ansi.15": "#8c959f" } },
+      "ui": { "git.branch": "#7a3cc4" }
+    },
+    {
+      "name": "dark",
+      "base": { "from": "github_dark", "copied": "2026-10-29", "appearance": "dark",
+        "terminal": { "background": "#0d1117", "foreground": "#e6edf3", "cursor": "#2f81f7", "selection.background": "#264f78",
+          "ansi.0": "#484f58", "ansi.1": "#ff7b72", "ansi.2": "#3fb950", "ansi.3": "#d29922", "ansi.4": "#58a6ff", "ansi.5": "#bc8cff", "ansi.6": "#39c5cf", "ansi.7": "#b1bac4",
+          "ansi.8": "#6e7681", "ansi.9": "#ffa198", "ansi.10": "#56d364", "ansi.11": "#e3b341", "ansi.12": "#79c0ff", "ansi.13": "#d2a8ff", "ansi.14": "#56d4dd", "ansi.15": "#f0f6fc" } },
+      "ui": { "git.branch": "#b78cff" }
+    }
+  ]
+}

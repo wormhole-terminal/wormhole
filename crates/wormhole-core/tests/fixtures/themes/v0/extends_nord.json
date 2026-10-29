@@ -1,0 +1,10 @@
+{
+  // A hand-written version 0 theme: no version, extends by display name.
+  "name": "Fixture Night",
+  "extends": "Nord",
+  "appearance": "dark",
+  "terminal": { "background": "#101820", "cursor_text": "#101820", "selection_background": "#264060", "ansi": { "4": "#5599ff", "bright_red": "#ff6677" } },
+  "ui": { "primary": "#e07020", "accent.hover": "#f09040", "border": "mix(accent, terminal.background, 30%)" },
+  "syntax": { "keyword": { "color": "#cc88ff", "italic": true }, "string": "#88cc66" },
+  "metrics": { "radius": 9, "radius_sm": 3, "focus_ring_width": 3, "ui_font_family": "Inter" }
+}

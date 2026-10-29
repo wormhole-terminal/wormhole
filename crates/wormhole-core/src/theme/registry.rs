@@ -20,6 +20,7 @@ use std::time::SystemTime;
 
 use crate::storage::files::{self, LinkPolicy};
 use crate::theme;
+use crate::theme::tokens::slug;
 use crate::theme::tokens::{self, ThemeFile, ThemeTokens};
 
 /// The dark and light themes a fresh config starts with: Wormhole's own, in the app icon's blue.
@@ -56,6 +57,12 @@ pub struct UserTheme {
     content: Arc<Content>,
     /// Which of the file's versions this is.
     index: usize,
+    /// The slug that selects it (`my_theme`, or `my_theme.dark` for a version): the `id` the
+    /// file stores, else one made from its name, changed when it clashes with another's or a
+    /// built-in's (see [`slug::assign_ids`]).
+    pub slug: String,
+    /// Set when the file's own id was not given: another theme or a built-in has it.
+    pub id_clash: Option<slug::Clash>,
 }
 
 #[derive(Debug)]
@@ -102,7 +109,8 @@ impl UserTheme {
     /// file's first version also answers to the family's name and the file stem.
     fn answers_to(&self, name: &str) -> bool {
         let stem = || self.path.file_stem().is_some_and(|s| s == name);
-        self.name.eq_ignore_ascii_case(name)
+        self.slug == name
+            || self.name.eq_ignore_ascii_case(name)
             || match &self.family {
                 None => stem(),
                 Some((family, _)) => self.index == 0 && (family.eq_ignore_ascii_case(name) || stem()),
@@ -145,6 +153,8 @@ impl UserThemes {
                     family: None,
                     content: Arc::clone(&content),
                     index: 0,
+                    slug: String::new(),
+                    id_clash: None,
                 });
             }
             for (index, v) in versions.iter().enumerate() {
@@ -154,12 +164,15 @@ impl UserThemes {
                     family: Some((name.clone(), v.short.clone())),
                     content: Arc::clone(&content),
                     index,
+                    slug: String::new(),
+                    id_clash: None,
                 });
             }
             fresh.insert(path, Cached { len, modified, content });
         }
         // Only what the dir holds now stays cached.
         cache.insert(dir.to_path_buf(), fresh);
+        assign_slugs(&mut themes);
         Self { themes }
     }
 
@@ -209,6 +222,42 @@ impl ThemeSource for UserThemes {
     }
 }
 
+/// Give each file a slug nobody else has (files in path order, a stored id first), and each
+/// version of a file `<slug>.<version>`.
+fn assign_slugs(themes: &mut [UserTheme]) {
+    let mut files: Vec<usize> = Vec::new();
+    for (i, t) in themes.iter().enumerate() {
+        if files.last().is_none_or(|&f| themes[f].path != t.path) {
+            files.push(i);
+        }
+    }
+    let requests: Vec<slug::IdRequest<'_>> = files
+        .iter()
+        .map(|&i| {
+            let t = &themes[i];
+            let stored = match &*t.content {
+                Content::Json(Ok(json)) => json.file.id.as_deref(),
+                _ => None,
+            };
+            let name = t.family.as_ref().map_or(t.name.as_str(), |(family, _)| family.as_str());
+            slug::IdRequest { stored, name }
+        })
+        .collect();
+    let assigned = slug::assign_ids(&requests);
+    let mut by_path: HashMap<PathBuf, slug::Assigned> = HashMap::new();
+    for (&i, a) in files.iter().zip(assigned) {
+        by_path.insert(themes[i].path.clone(), a);
+    }
+    for t in themes {
+        let Some(a) = by_path.get(&t.path) else { continue };
+        t.slug = match &t.family {
+            Some((_, short)) => slug::version_slug(&a.id, &slug::part_from(short, "version")),
+            None => a.id.clone(),
+        };
+        t.id_clash = a.clash.clone();
+    }
+}
+
 /// The built-in theme called `name`: exactly, else in any case, else the first version of the
 /// built-in family called `name`.
 pub fn builtin_named(name: &str) -> Option<&'static ThemeTokens> {
@@ -216,7 +265,10 @@ pub fn builtin_named(name: &str) -> Option<&'static ThemeTokens> {
     let exact = |name: &str| {
         all.iter().find(|t| t.name == name).or_else(|| all.iter().find(|t| t.name.eq_ignore_ascii_case(name)))
     };
-    exact(name).or_else(|| tokens::builtin_family_default(name).and_then(exact))
+    exact(name)
+        .or_else(|| tokens::builtin_family_default(name).and_then(exact))
+        // A slug (`wormhole.light`, `nord`), also a family's.
+        .or_else(|| slug::builtin_name(name).and_then(exact))
 }
 
 /// The files in `dir` that can be themes (not hidden), with their sizes and
