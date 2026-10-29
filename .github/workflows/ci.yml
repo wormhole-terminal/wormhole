@@ -89,8 +89,11 @@ jobs:
           echo "scope: $scope (base: ${base:-none})"
           case "$scope" in
             all)  clippy="--workspace --all-targets --features devctl"; test="--workspace --features devctl" ;;
-            app)  clippy="-p wormhole --all-targets --features devctl";  test="-p wormhole --features devctl" ;;
-            text) clippy="";                                             test="-p wormhole-rules --test design_rules" ;;
+            # The source checks (wormhole-rules) read the app's sources, so an app change runs them too.
+            app)  clippy="-p wormhole -p wormhole-rules --all-targets --features wormhole/devctl"
+                  test="-p wormhole -p wormhole-rules --features wormhole/devctl" ;;
+            # They link std alone: a wording or rule change compiles nothing of the app.
+            text) clippy="-p wormhole-rules --all-targets";               test="-p wormhole-rules" ;;
             none) clippy="";                                             test="" ;;
             *)    echo "::warning::unknown scope '$scope': checking everything"; scope=all
                   clippy="--workspace --all-targets --features devctl"; test="--workspace --features devctl" ;;

@@ -15,9 +15,11 @@
 #         package.sh, packaging/icon), or any path not listed here: the whole gate (the app builds on
 #         core, so a core change can break it). Plus `cargo deny check` for dependencies.
 #   app   crates/wormhole/** or a packaging file only the app includes: fmt, clippy, tests and the
-#         no-devctl check for the app alone. Core's tests can't see the app, so they're skipped.
-#   text  skills, agents, rules, scripts, tools/visual, the top-level .md files (CHANGELOG.md too): only
-#         design_rules (it scans their wording), never a compile of either crate.
+#         no-devctl check for the app, and the source checks (wormhole-rules), which read the app's
+#         sources. Core's tests can't see the app, so they're skipped.
+#   text  the source checks themselves (crates/wormhole-rules), skills, agents, rules, scripts,
+#         tools/visual, the top-level .md files (CHANGELOG.md too): the source checks (they scan the
+#         wording), which link std alone, so nothing of the app or core compiles.
 #   none  .github, .claude/hooks and settings, .gitignore, the rest of packaging, tools/bench (its
 #         own workspace) and tools/feed-counter (bun test there): nothing to run.
 # Whatever the scope, first the history (cheap, before any cargo): the commits since the base follow
@@ -58,6 +60,8 @@ scope_of() {
     # packaging/icon: core's intro tests include the iconset script and the chevron.
     scripts/lib.sh|scripts/package.sh|packaging/icon/*) echo all ;;
     crates/wormhole/*) echo app ;;
+    # The checks read the app's sources and the repository's text; they link nothing of the workspace.
+    crates/wormhole-rules/*) echo text ;;
     # include_bytes!/include_str!'d by the app alone.
     packaging/app.env|packaging/updater.pub) echo app ;;
     # Scanned for wording by crates/wormhole-rules/tests/design_rules.rs (banned words, the devctl docs).
@@ -149,14 +153,16 @@ case "$scope" in
     ;;
   app)
     steps+=("cargo fmt --all")
-    steps+=("cargo clippy --quiet -p wormhole --all-targets --features devctl -- -D warnings")
-    steps+=("cargo test --quiet -p wormhole --features devctl")
+    steps+=("cargo clippy --quiet -p wormhole -p wormhole-rules --all-targets --features wormhole/devctl -- -D warnings")
+    steps+=("cargo test --quiet -p wormhole -p wormhole-rules --features wormhole/devctl")
     steps+=("cargo check --quiet -p wormhole")
     ;;
   text)
-    [ "$rust_changed" = 1 ] && steps+=("cargo fmt --all")
-    # devctl like the other scopes, so the app the test target links is the one already built.
-    steps+=("cargo test --quiet -p wormhole-rules --test design_rules")
+    if [ "$rust_changed" = 1 ]; then
+      steps+=("cargo fmt --all")
+      steps+=("cargo clippy --quiet -p wormhole-rules --all-targets -- -D warnings")
+    fi
+    steps+=("cargo test --quiet -p wormhole-rules")
     ;;
 esac
 [ "$deps" = 1 ] && steps+=("cargo deny check")
