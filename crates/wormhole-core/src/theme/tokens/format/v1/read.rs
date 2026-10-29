@@ -18,10 +18,10 @@ use super::super::{BaseLayer, CURRENT_VERSION, ReadReport};
 use crate::storage::jsonc::suggest::did_you_mean;
 use crate::theme::tokens::catalog::UI_TOKENS;
 use crate::theme::tokens::check::is_known_node;
-use crate::theme::tokens::uses::refers_to;
 use crate::theme::tokens::expr::parse_expr;
 use crate::theme::tokens::file::{MetricsFile, SyntaxOverride, TerminalFile, ThemeFile, ThemeVariant};
 use crate::theme::tokens::model::Appearance;
+use crate::theme::tokens::uses::refers_to;
 use crate::theme::tokens::variants::MAX_VARIANTS;
 
 const TOP_KEYS: &[&str] = &[

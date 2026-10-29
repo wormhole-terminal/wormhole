@@ -13,8 +13,10 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::theme::tokens;
 
+use super::document::Subject;
 use super::document::history::StepLabel;
 use super::names;
+use super::save::Notice;
 use super::{StudioWindow, ui};
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::TitleDrag as _;
@@ -264,7 +266,15 @@ impl StudioWindow {
         }
         self.renaming = false;
         let name = self.name.read(cx).value().trim().to_string();
-        if !name.is_empty() && self.doc.file.name.as_deref() != Some(name.as_str()) {
+        if !name.is_empty()
+            && self.doc.file.name.as_deref() != Some(name.as_str())
+            && let Some(why) = self.rename_clash(&name)
+        {
+            // Two themes with one name would pick each other's file: the old name stays.
+            self.notice = Some(Notice::Failed(why.into()));
+            let old = self.doc.name().to_string();
+            self.name.update(cx, |input, cx| input.set_value(old, window, cx));
+        } else if !name.is_empty() && self.doc.file.name.as_deref() != Some(name.as_str()) {
             self.record_step(StepLabel::Rename, false, cx);
             self.doc.file.name = Some(name);
             self.publish_edit_titles(cx);
@@ -273,6 +283,20 @@ impl StudioWindow {
         }
         window.focus(&self.focus_handle, cx);
         cx.notify();
+    }
+
+    /// Why `name` can't be the name of the theme being edited: another theme (or a version of
+    /// one) has it. Only a theme with a file of its own is checked here; a copy meets the same
+    /// question when it is saved.
+    fn rename_clash(&self, name: &str) -> Option<String> {
+        let Subject::Own { path } = &self.doc.subject else { return None };
+        if (self.themes.version_named)(name) {
+            return Some(wormhole_text::keys::studio_name_is_a_version(name));
+        }
+        match (self.themes.saved_path)(name) {
+            Some(other) if other != *path => Some(wormhole_text::keys::studio_name_taken(name)),
+            _ => None,
+        }
     }
 
     /// Return in the name field while the name is being asked for: keep the name and save.

@@ -19,8 +19,10 @@ use crate::settings::SettingsStore;
 pub(super) enum Then {
     /// Esc, ⌘W or the red light: close the window.
     Close,
-    /// Another theme was chosen.
-    Switch(Box<Document>),
+    /// Another theme was chosen. It is read after the question is answered, not before: a Save
+    /// writes the file first, and a copy read earlier would be the one from before it. `String` is
+    /// what the question calls it.
+    Switch(Target, String),
 }
 
 impl StudioWindow {
@@ -35,27 +37,36 @@ impl StudioWindow {
 
     /// A choice of the theme menu.
     pub(super) fn open_target(&mut self, target: &Target, window: &mut Window, cx: &mut Context<Self>) {
-        let inputs = opening_inputs(cx);
-        let inputs = super::opening::Inputs { project: project_theme(cx), ..inputs };
-        match open_target(target, &inputs, &self.themes) {
-            Some(doc) => self.switch_to(doc, window, cx),
-            None => {
-                self.notice = Some(Notice::Failed(wormhole_text::text(STUDIO_OPEN_FAILED).into()));
-                cx.notify();
-            }
-        }
-    }
-
-    /// Open `doc` in the window: at once when nothing would be lost, otherwise after the question.
-    pub(super) fn switch_to(&mut self, doc: Document, window: &mut Window, cx: &mut Context<Self>) {
         if self.asking {
             return;
         }
+        // The theme already being edited: nothing to open, and no question about its edits.
+        if matches!((target, &self.doc.subject), (Target::Own(path), Subject::Own { path: own }) if path == own)
+        {
+            return;
+        }
+        let Some(doc) = self.read_target(target, cx) else {
+            self.notice = Some(Notice::Failed(wormhole_text::text(STUDIO_OPEN_FAILED).into()));
+            cx.notify();
+            return;
+        };
         if self.dirty() {
-            self.ask_unsaved(Then::Switch(Box::new(doc)), window, cx);
+            // A copy of a theme is called by the theme it is made from: that is what was chosen.
+            let called = match &doc.subject {
+                Subject::Untitled { from } => from.clone(),
+                _ => doc.name().to_string(),
+            };
+            self.ask_unsaved(Then::Switch(target.clone(), called), window, cx);
         } else {
             self.load(doc, window, cx);
         }
+    }
+
+    /// What `target` opens as now; `None` when it can't be read.
+    fn read_target(&self, target: &Target, cx: &App) -> Option<Document> {
+        let inputs = opening_inputs(cx);
+        let inputs = super::opening::Inputs { project: project_theme(cx), ..inputs };
+        open_target(target, &inputs, &self.themes)
     }
 
     /// The window edits `doc` from now on, with a history of its own; the preview follows.
@@ -88,10 +99,7 @@ impl StudioWindow {
         let message = match &then {
             Then::Close => format!("Do you want to save the changes to \u{201c}{name}\u{201d}?"),
             // A copy of a theme is called by the theme it is made from: that is what was chosen.
-            Then::Switch(next) => match &next.subject {
-                Subject::Untitled { from } => studio_switch_message(&name, from),
-                _ => studio_switch_message(&name, next.name()),
-            },
+            Then::Switch(_, called) => studio_switch_message(&name, called),
         };
         let detail = format!(
             "{count} {}. Your changes are lost if you don\u{2019}t save them.",
@@ -110,19 +118,33 @@ impl StudioWindow {
                 studio.asking = false;
                 match (answer, then) {
                     (Some(super::save::CLOSE_SAVE), Then::Close) => studio.save(true, window, cx),
-                    (Some(super::save::CLOSE_SAVE), Then::Switch(next)) => {
+                    (Some(super::save::CLOSE_SAVE), Then::Switch(target, _)) => {
                         studio.save(false, window, cx);
                         // A save that failed, or waits for a name, leaves things as they are.
                         if !studio.dirty() && !studio.asking && !studio.renaming {
-                            studio.load(*next, window, cx);
+                            match studio.read_target(&target, cx) {
+                                Some(next) => studio.load(next, window, cx),
+                                None => {
+                                    studio.notice =
+                                        Some(Notice::Failed(wormhole_text::text(STUDIO_OPEN_FAILED).into()));
+                                    cx.notify();
+                                }
+                            }
                         }
                     }
                     (Some(super::save::CLOSE_DONT_SAVE), Then::Close) => {
                         studio.doc.mark_saved();
                         window.remove_window();
                     }
-                    (Some(super::save::CLOSE_DONT_SAVE), Then::Switch(next)) => {
-                        studio.load(*next, window, cx)
+                    (Some(super::save::CLOSE_DONT_SAVE), Then::Switch(target, _)) => {
+                        match studio.read_target(&target, cx) {
+                            Some(next) => studio.load(next, window, cx),
+                            None => {
+                                studio.notice =
+                                    Some(Notice::Failed(wormhole_text::text(STUDIO_OPEN_FAILED).into()));
+                                cx.notify();
+                            }
+                        }
                     }
                     _ => {}
                 }

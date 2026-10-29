@@ -466,7 +466,11 @@ fn converting_a_theme_that_extends_the_built_in_it_is_called() {
     let v1 = convert_to_v1(&mine, &lookup, &slug_of, "nord_2", "d").unwrap();
     let base = v1.base.as_ref().unwrap();
     assert_eq!(base.from, "nord");
-    assert_ne!(base.file.ui.get("primary").map(String::as_str), Some("#ff0000"), "the base is the built-in's");
+    assert_ne!(
+        base.file.ui.get("primary").map(String::as_str),
+        Some("#ff0000"),
+        "the base is the built-in's"
+    );
     assert_eq!(snapshot(&resolve(&mine, &lookup).unwrap()), snapshot(&resolve(&v1, &no_lookup).unwrap()));
     // The same for a version that reaches outside the file.
     let family = read(

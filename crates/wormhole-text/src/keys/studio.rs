@@ -36,6 +36,8 @@ pub const STUDIO_SAVED_CONVERTED: Key = Key::new(1201);
 pub const STUDIO_SAVED_COMMENTS: Key = Key::new(1202);
 /// "Could not convert this theme safely, so it was not changed."
 pub const STUDIO_CONVERT_FAILED: Key = Key::new(1203);
+/// "This theme was made by a newer Wormhole. Saving here would lose what this version doesn’t understand, so it was not changed. Duplicate keeps a copy."
+pub const STUDIO_NEWER_FILE: Key = Key::new(1206);
 
 /// ```text
 /// Change “{ $token }”
@@ -70,4 +72,18 @@ pub fn studio_menu_duplicate(name: &str) -> String {
 /// ```
 pub fn studio_switch_message(current: &str, next: &str) -> String {
     crate::active::message(1199, &[("current", Arg::Str(current)), ("next", Arg::Str(next))])
+}
+
+/// ```text
+/// “{ $name }” is the name of one version of a theme that comes in several. Choose another name.
+/// ```
+pub fn studio_name_is_a_version(name: &str) -> String {
+    crate::active::message(1204, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// Another theme is already called “{ $name }”. Choose another name.
+/// ```
+pub fn studio_name_taken(name: &str) -> String {
+    crate::active::message(1205, &[("name", Arg::Str(name))])
 }
