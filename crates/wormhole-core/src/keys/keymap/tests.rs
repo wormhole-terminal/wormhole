@@ -319,6 +319,8 @@ fn front_window() -> MenuState {
         profiles: vec!["Default".into(), "Work".into()],
         current_profile: Some(0),
         window_profile: Some(0),
+        undo: None,
+        redo: None,
         split: false,
         debug: true,
         persistent: false,
@@ -510,6 +512,21 @@ fn quit_and_end_all_terminals_needs_persistent_terminals() {
     assert!(palette::actions(&state).iter().any(|a| a.id == ActionId::QuitAndEndAll));
     assert!(keys_of(ActionId::QuitAndEndAll).is_empty(), "no key");
     assert!(dump(&menus(&state)).contains("  Quit Wormhole  ⌘Q\n  Quit and End All Terminals\n"));
+}
+
+#[test]
+fn undo_and_redo_say_what_they_would_undo() {
+    let mut state = front_window();
+    let plain = dump(&menus(&state));
+    assert!(plain.contains("Undo  ⌘Z") && plain.contains("Redo  ⇧⌘Z"), "{plain}");
+    state.undo = Some("Change \u{201c}primary\u{201d}".into());
+    let text = dump(&menus(&state));
+    assert!(text.contains("Undo Change \u{201c}primary\u{201d}  ⌘Z"), "{text}");
+    assert!(text.contains("Redo  ⇧⌘Z"), "redo has nothing to say");
+    assert!(
+        front_window().differs_only_in_names(&MenuState { terminals: vec!["a".into(); 5], ..front_window() })
+    );
+    assert!(!front_window().differs_only_in_names(&state), "a new title is a real change");
 }
 
 #[test]
