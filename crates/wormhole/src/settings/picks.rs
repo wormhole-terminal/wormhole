@@ -40,7 +40,12 @@ mod tests {
     use super::*;
 
     fn settings(mode: ThemeMode) -> Settings {
-        Settings { theme_mode: mode, theme: "dark-pick".into(), theme_light: "light-pick".into(), ..Settings::default() }
+        Settings {
+            theme_mode: mode,
+            theme: "dark-pick".into(),
+            theme_light: "light-pick".into(),
+            ..Settings::default()
+        }
     }
 
     #[test]

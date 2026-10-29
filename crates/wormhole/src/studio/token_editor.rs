@@ -17,7 +17,8 @@ use wormhole_core::theme::tokens::{
 };
 use wormhole_core::theme::tokens::{METRIC_TOKENS, ThemeFile, ThemeTokens, UI_TOKENS};
 
-use super::draft::{self, is_metric, number, override_of, set_override};
+use super::document::{is_metric, number, override_of, set_override};
+use super::draft;
 use super::{Edit, StudioWindow, tokens_of, ui};
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
@@ -174,7 +175,7 @@ impl StudioWindow {
                     .into_any_element(),
             ],
         };
-        let issues = contrast_issues(&tokens, &self.draft.ui);
+        let issues = contrast_issues(&tokens, &self.doc.file.ui);
         div()
             .id("studio-token-editor")
             .size_full()
@@ -244,7 +245,7 @@ impl StudioWindow {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let metric = is_metric(name);
-        let overridden = override_of(&self.draft, name).is_some();
+        let overridden = override_of(&self.doc.file, name).is_some();
         let rule = default_rule(name, tokens.appearance);
         let (tag, tag_color) = if self.field_error.is_some() {
             ("last good value", ui.warning_text)
@@ -291,7 +292,7 @@ impl StudioWindow {
                                 .flex_col()
                                 .child(div().truncate().text_body().font_family(code_font.clone()).child(
                                     value_line(
-                                        override_of(&self.draft, name),
+                                        override_of(&self.doc.file, name),
                                         color.to_hex(),
                                         rule.as_deref(),
                                         self.field_error.is_some(),
@@ -407,7 +408,7 @@ impl StudioWindow {
                 .ok();
             }
         };
-        let following = override_of(&self.draft, name).is_none();
+        let following = override_of(&self.doc.file, name).is_none();
         let follow = rule.map(|source| {
             let source_value = tokens.metrics.get(&format!("metrics.{source}")).unwrap_or_default();
             let this = cx.weak_entity();
@@ -487,7 +488,7 @@ impl StudioWindow {
         ui: UiColors,
     ) -> AnyElement {
         let rule = default_rule(name, tokens.appearance);
-        let overridden = override_of(&self.draft, name).is_some();
+        let overridden = override_of(&self.doc.file, name).is_some();
         let explanation = match (&rule, overridden) {
             (Some(_), true) => {
                 "This theme sets it, so the rule isn't used; Reset goes back to the rule.".to_string()

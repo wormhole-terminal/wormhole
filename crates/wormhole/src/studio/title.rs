@@ -59,11 +59,11 @@ impl StudioWindow {
         let ui = ui(cx);
         let tokens = &cx.global::<SettingsStore>().tokens;
         let appearance = if tokens.appearance == tokens::Appearance::Light { "light" } else { "dark" };
-        let extends = match &self.draft.extends {
+        let extends = match &self.doc.file.extends {
             Some(base) => format!("extends {base} · {appearance}"),
             None => format!("its own palette · {appearance}"),
         };
-        let name: SharedString = self.draft.name.clone().unwrap_or_default().into();
+        let name: SharedString = self.doc.file.name.clone().unwrap_or_default().into();
         let title_name = if self.renaming {
             div().flex_none().w(px(NAME_FIELD_W)).child(Input::new(&self.name).small()).into_any_element()
         } else {
@@ -108,7 +108,7 @@ impl StudioWindow {
             .child(div().flex_none().text_color(ui.faint).child("/"))
             .child(title_name)
             .child(div().min_w_0().truncate().text_caption().text_color(ui.faint).child(extends))
-            .when(self.dirty, |d| {
+            .when(self.dirty(), |d| {
                 d.child(
                     div()
                         .flex_none()
@@ -127,7 +127,7 @@ impl StudioWindow {
                     .ghost()
                     .small()
                     .label("Discard")
-                    .disabled(!self.dirty)
+                    .disabled(!self.dirty())
                     .on_click(cx.listener(|this, _, window, cx| this.discard_changes(window, cx))),
             )
             .child(
@@ -238,7 +238,7 @@ impl StudioWindow {
     /// Click on the name (or Rename in the name-clash notice): edit it in place.
     pub(super) fn start_rename(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.renaming = true;
-        let name = self.draft.name.clone().unwrap_or_default();
+        let name = self.doc.file.name.clone().unwrap_or_default();
         self.name.update(cx, |input, cx| {
             input.set_value(name, window, cx);
             input.focus(window, cx);
@@ -254,8 +254,8 @@ impl StudioWindow {
         }
         self.renaming = false;
         let name = self.name.read(cx).value().trim().to_string();
-        if !name.is_empty() && self.draft.name.as_deref() != Some(name.as_str()) {
-            self.draft.name = Some(name);
+        if !name.is_empty() && self.doc.file.name.as_deref() != Some(name.as_str()) {
+            self.doc.file.name = Some(name);
             // A new name clears a clash with the old one.
             self.notice = None;
         }
