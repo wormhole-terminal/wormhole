@@ -167,7 +167,7 @@ case "$scope" in
     steps+=("cargo test --quiet -p wormhole-rules")
     ;;
 esac
-[ "$deps" = 1 ] && steps+=("cargo deny check")
+[ "$deps" = 1 ] && steps+=("cargo deny check" "cargo shear")
 
 # The history steps go first. They read the git history, so they run for every scope, `none` included.
 history=("python3 scripts/commits.py check-range $base..HEAD"
@@ -207,6 +207,10 @@ for step in "${steps[@]}"; do
   start=$SECONDS
   if [ "$step" = "cargo deny check" ] && ! command -v cargo-deny >/dev/null 2>&1; then
     warn "cargo-deny is not installed (cargo install cargo-deny): dependencies and licenses are unchecked"
+    continue
+  fi
+  if [ "$step" = "cargo shear" ] && ! command -v cargo-shear >/dev/null 2>&1; then
+    warn "cargo-shear is not installed (brew install cargo-shear): unused dependencies are unchecked"
     continue
   fi
   # Word splitting is intended: every step is a plain command line without quoting.
