@@ -37,8 +37,14 @@ pub fn copy_base(
         merged = merged.layered_over(parent);
     }
     let set: Vec<String> = merged.terminal.entries()?.into_iter().map(|(node, _)| node).collect();
+    // Cursor text and selection foreground follow the background and foreground unless the
+    // source sets them: copying the worked-out value would freeze them.
+    let follows = |node: &str| {
+        (node == "terminal.cursor_text" && tokens.terminal.cursor_text.is_none())
+            || (node == "terminal.selection_foreground" && tokens.terminal.selection_foreground.is_none())
+    };
     for (node, color) in tokens.terminal.named() {
-        if !set.contains(&node) {
+        if !set.contains(&node) && !follows(&node) {
             merged.terminal.insert(&node["terminal.".len()..], color.to_hex());
         }
     }
