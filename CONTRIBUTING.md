@@ -196,7 +196,9 @@ universal (`Wormhole-<v>-macos.dmg`, the website's default download and Homebrew
 (`-macos-aarch64`) and Intel (`-macos-x86_64`). It signs each with the Developer ID certificate,
 notarizes, signs the two update archives with minisign (`latest.json` gives each Mac the one of its
 architecture, and names each DMG and its size under `dmgs` for the website) and publishes everything as the GitHub Release `v0.4.0`, with the notes from CHANGELOG.md (it fails when the version has no
-section). A version with a Security entry gets `"security": {"severity": …, "advisories": […]}` in
+section). Each DMG and update archive gets a build provenance attestation:
+`gh attestation verify Wormhole-0.4.0-macos.dmg -R wormhole-terminal/wormhole` shows that the Release
+workflow built it from the tagged commit. A version with a Security entry gets `"security": {"severity": …, "advisories": […]}` in
 `latest.json`, and the Release page opens with a security notice. The app checks
 `https://downloads.getwormhole.app/stable/latest.json`, which redirects to the latest release's
 `latest.json`; a version with a suffix (`0.4.0-beta.1`) is published as a prerelease and is never

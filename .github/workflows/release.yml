@@ -99,6 +99,11 @@ jobs:
     # The signing secrets live in this environment, which only main and v* tags may use: a workflow
     # changed on any other branch can't reach them.
     environment: release
+    # A job's permissions replace the workflow's, so contents: write is repeated here.
+    permissions:
+      contents: write # gh release create
+      id-token: write # the attestation's signing certificate, from GitHub's OIDC token
+      attestations: write # the attestation is stored with the repository
     runs-on: macos-latest
     timeout-minutes: 120
     env:
@@ -369,6 +374,19 @@ jobs:
               | minisign -G -f -p packaging/dev-updater.pub -s packaging/dev-updater.key >/dev/null
           fi
           scripts/package.sh target/release/Wormhole.app target/release/aarch64/Wormhole.app target/release/x86_64/Wormhole.app
+
+      # Build provenance for what people download: `gh attestation verify <file> -R wormhole-terminal/wormhole`
+      # shows that this workflow built the file from this commit. The update archives also carry a
+      # minisign signature the app checks; the attestation is for anyone checking a download by hand.
+      - name: Attest build provenance
+        if: env.PUBLISH == 'true'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            target/release/dist/*.dmg
+            target/release/dist/*.tar.gz
+          # The storage record is for packages pushed to a registry; these go to a GitHub Release.
+          create-storage-record: false
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
