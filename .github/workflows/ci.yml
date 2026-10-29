@@ -19,6 +19,10 @@ on:
       - ".github/pull_request_template.md"
       - ".github/readme/**"
   pull_request:
+  # Every day, the whole workspace whatever changed: pushes to main are scoped (Scope), so this is the
+  # net under the scope table. Zed scopes pull requests and runs everything on main; we push to main.
+  schedule:
+    - cron: "41 3 * * *"
   workflow_dispatch:
     inputs:
       build_only:
