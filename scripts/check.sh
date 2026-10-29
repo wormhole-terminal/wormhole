@@ -7,13 +7,14 @@
 #   scripts/check.sh --all            # the whole gate, whatever changed (after a rebase; when unsure)
 #   scripts/check.sh --plan           # print what would run and why, run nothing
 #   scripts/check.sh --scope          # print only `scope=<name>` and `deps=<0|1>` (CI reads these), run nothing
+#   scripts/check.sh --selftest       # check the scope table below against the crates and what they include
 #
 # Scopes, widest first; the widest one any changed file needs wins:
-#   all   crates/wormhole-core/** and crates/wormhole-term/**, Cargo.toml/Cargo.lock, toolchain, lint and build config, a script
-#         core includes (lib.sh, package.sh), or any path not listed here: the whole gate (the app
-#         builds on core, so a core change can break it). Plus `cargo deny check` for dependencies.
-#   wire  crates/wormhole-wire/** alone (nothing depends on it yet): fmt, clippy and tests of that crate.
-#   app   crates/wormhole/** or a packaging file the app includes: fmt, clippy, tests and the
+#   all   every crate but the app (the others depend on each other: wire is term's, host's and core's),
+#         Cargo.toml/Cargo.lock, toolchain, lint and build config, a file core includes (lib.sh,
+#         package.sh, packaging/icon), or any path not listed here: the whole gate (the app builds on
+#         core, so a core change can break it). Plus `cargo deny check` for dependencies.
+#   app   crates/wormhole/** or a packaging file only the app includes: fmt, clippy, tests and the
 #         no-devctl check for the app alone. Core's tests can't see the app, so they're skipped.
 #   text  skills, agents, rules, scripts, tools/visual, the top-level .md files (CHANGELOG.md too): only
 #         design_rules (it scans their wording), never a compile of either crate.
@@ -33,14 +34,15 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 . scripts/lib.sh
 
-base="" plan=0 force_all=0 scope_only=0
+base="" plan=0 force_all=0 scope_only=0 selftest=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --base) base="${2:?--base needs a revision}"; shift ;;
     --all) force_all=1 ;;
     --plan) plan=1 ;;
     --scope) scope_only=1 ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    --selftest) selftest=1 ;;
+    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
     *) die "unknown argument: $1 (see --help)" ;;
   esac
   shift
@@ -51,13 +53,13 @@ scope_of() {
   case "$1" in
     Cargo.toml|Cargo.lock|deny.toml|crates/*/Cargo.toml) echo "all deps" ;;
     rust-toolchain*|rustfmt.toml|clippy.toml|.cargo/*|.config/nextest.toml) echo all ;;
-    crates/wormhole-core/*|crates/wormhole-term/*) echo all ;;
+    crates/wormhole-core/*|crates/wormhole-term/*|crates/wormhole-host/*|crates/wormhole-wire/*|crates/wormhole-text/*) echo all ;;
     # include_str!'d by core's updater tests; lib.sh also runs in the app's isolated_instance test.
-    scripts/lib.sh|scripts/package.sh) echo all ;;
-    crates/wormhole-wire/*) echo wire ;;
+    # packaging/icon: core's intro tests include the iconset script and the chevron.
+    scripts/lib.sh|scripts/package.sh|packaging/icon/*) echo all ;;
     crates/wormhole/*) echo app ;;
-    # include_bytes!/include_str!'d by the app.
-    packaging/app.env|packaging/updater.pub|packaging/icon/*) echo app ;;
+    # include_bytes!/include_str!'d by the app alone.
+    packaging/app.env|packaging/updater.pub) echo app ;;
     # Scanned for wording by crates/wormhole/tests/design_rules.rs (banned words, the devctl docs).
     scripts/*|tools/visual/*|.claude/skills/*|.claude/agents/*|.claude/rules/*) echo text ;;
     README.md|CONTRIBUTING.md|SECURITY.md|CODE_OF_CONDUCT.md|ACCESSIBILITY.md|CHANGELOG.md) echo text ;;
@@ -70,7 +72,45 @@ scope_of() {
   esac
 }
 
-rank() { case "$1" in all) echo 4 ;; app) echo 3 ;; wire) echo 2 ;; text) echo 1 ;; *) echo 0 ;; esac; }
+rank() { case "$1" in all) echo 4 ;; app) echo 3 ;; text) echo 1 ;; *) echo 0 ;; esac; }
+
+# The table above is only safe while two things hold, both read from the sources (no cargo):
+# - a crate whose own scope is narrower than `all` is a dependency of no other crate in the workspace;
+# - a file a crate include_str!/include_bytes!s from outside itself is in a scope that runs that
+#   crate's tests (`all`, or the crate's own scope).
+# Wire, once wire-only, broke the first; packaging/icon, once app-only, the second.
+if [ "$selftest" = 1 ]; then
+  bad=0 checked=0
+  for dir in crates/*/; do
+    dir="${dir%/}" name="${dir#crates/}"
+    s="$(scope_of "$dir/src/lib.rs" | cut -d' ' -f1)"
+    [ "$s" = all ] && continue
+    for toml in crates/*/Cargo.toml; do
+      [ "$toml" = "$dir/Cargo.toml" ] && continue
+      if grep -Eq "^${name}(\.workspace)? *=" "$toml"; then
+        echo "scope table: $dir is '$s', but ${toml%/Cargo.toml} depends on it (its changes must be 'all')" >&2
+        bad=1
+      fi
+    done
+  done
+  while IFS=: read -r file target; do
+    [ -n "$file" ] || continue
+    crate="$(cut -d/ -f1-2 <<<"$file")"
+    resolved="$(cd "$(dirname "$file")/$(dirname "$target")" 2>/dev/null && pwd)/$(basename "$target")" || continue
+    rel="${resolved#"$PWD"/}"
+    case "$rel" in "$crate"/*) continue ;; esac
+    checked=$((checked + 1))
+    need="$(scope_of "$file" | cut -d' ' -f1)" got="$(scope_of "$rel" | cut -d' ' -f1)"
+    if [ "$got" != all ] && [ "$got" != "$need" ]; then
+      echo "scope table: $file includes $rel, which is '$got' (needs '$need'$([ "$need" = all ] || echo " or 'all'"))" >&2
+      bad=1
+    fi
+  done < <(grep -rHoE --include='*.rs' 'include_(str|bytes)!\("[^"]+"\)' crates \
+             | sed -E 's/^([^:]+):include_(str|bytes)!\("([^"]+)"\)$/\1:\3/')
+  [ "$checked" -gt 0 ] || { echo "scope table: found no include_str!/include_bytes! to check" >&2; bad=1; }
+  [ "$bad" = 0 ] && echo "scope table: ok ($checked includes from outside their crate)" >&2
+  exit "$bad"
+fi
 
 if [ -z "$base" ]; then
   upstream=origin/main
@@ -107,11 +147,6 @@ case "$scope" in
     steps+=("cargo test --quiet --workspace --features devctl")
     steps+=("cargo check --quiet --workspace")
     ;;
-  wire)
-    steps+=("cargo fmt --all")
-    steps+=("cargo clippy --quiet -p wormhole-wire --all-targets -- -D warnings")
-    steps+=("cargo test --quiet -p wormhole-wire")
-    ;;
   app)
     steps+=("cargo fmt --all")
     steps+=("cargo clippy --quiet -p wormhole --all-targets --features devctl -- -D warnings")
@@ -131,6 +166,7 @@ history=("python3 scripts/commits.py check-range $base..HEAD"
          "python3 scripts/commits.py changelog-needed --include-worktree $base..HEAD")
 grep -qx 'CHANGELOG.md' <<<"$changed" && history+=("python3 scripts/changelog.py check")
 grep -Eqx '(scripts/worktree\.sh|crates/[^/]+/Cargo\.toml)' <<<"$changed" && history+=("scripts/worktree.sh --selftest")
+grep -qx 'scripts/check.sh' <<<"$changed" && history+=("scripts/check.sh --selftest")
 grep -qx 'scripts/changelog.py' <<<"$changed" && history+=("python3 scripts/changelog.py selftest")
 grep -qx 'scripts/commits.py' <<<"$changed" && history+=("python3 scripts/commits.py selftest")
 grep -qx 'scripts/perf_tools.py' <<<"$changed" && history+=("python3 -I scripts/perf_tools.py selftest")

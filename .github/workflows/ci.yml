@@ -69,6 +69,8 @@ jobs:
         run: |
           python3 scripts/structure.py selftest
           python3 scripts/structure.py check
+      - name: The scope table matches the crates and what they include
+        run: scripts/check.sh --selftest
       - id: scope
         env:
           EVENT: ${{ github.event_name }}
@@ -88,7 +90,6 @@ jobs:
           case "$scope" in
             all)  clippy="--workspace --all-targets --features devctl"; test="--workspace --features devctl" ;;
             app)  clippy="-p wormhole --all-targets --features devctl";  test="-p wormhole --features devctl" ;;
-            wire) clippy="-p wormhole-wire --all-targets";               test="-p wormhole-wire" ;;
             text) clippy="";                                             test="-p wormhole --features devctl --test design_rules" ;;
             none) clippy="";                                             test="" ;;
             *)    echo "::warning::unknown scope '$scope': checking everything"; scope=all
