@@ -94,6 +94,7 @@ impl StudioWindow {
                 .relative()
                 .flex()
                 .min_w_0()
+                .overflow_hidden()
                 .max_w(px(NAME_MAX_W))
                 .child(canvas(move |at, _, _| bounds.set(at), |_, _, _, _| {}).absolute().size_full())
                 .child(

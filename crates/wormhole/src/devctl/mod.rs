@@ -410,7 +410,7 @@
 //!   studio-update-from [apply|cancel]   open the Update from sheet, then apply or cancel it
 //!   studio-versions [select <n>|restore [<n>]|close]   open the Versions panel (row 0 is the file now),
 //!                   select a row, restore the selected (or the nth) one, close it
-//!   studio-use   the "Previewing, not in use" chip's Use (saves first when there is something to save)
+//!   studio-use   the "Preview" chip's Use (saves first when there is something to save)
 //!                   `state` ends the studio line with `format=`, `shown=`, `update=`, `modal=`, `inuse=` and,
 //!                   for the selected token, `token=<name> origin=yours|base|worked_out reach=both|this|-`
 //!   hook [--agent <id>] <tab> <event> [message]   an agent's hook event for a tab (ids as `state`
