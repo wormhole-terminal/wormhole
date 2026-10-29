@@ -220,6 +220,28 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
 
+  # One result for the whole run: every check passed, or was skipped because the change doesn't reach
+  # it (Scope) or the event doesn't need it. A failed or cancelled job fails this one, and so does a
+  # failed Scope, whose skipped macOS jobs would otherwise look like a pass. If main ever requires a
+  # status check, this is the one to require: its name stays while the jobs behind it change.
+  check:
+    name: Check
+    if: ${{ always() }}
+    needs: [scope, fmt, clippy, test, history, deny]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every job passed or was skipped
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          failed="$(jq -r 'to_entries[] | select(.value.result != "success" and .value.result != "skipped") | "\(.key): \(.value.result)"' <<<"$RESULTS")"
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<<"$RESULTS"
+          if [ -n "$failed" ]; then
+            echo "::error::not passed: $(tr '\n' ' ' <<<"$failed")"
+            exit 1
+          fi
+
   # Ad-hoc signed app, built on demand (Actions > CI > Run workflow, "Only build" is on by default,
   # `gh workflow run CI -f build_only=false` adds the checks): download it
   # from the run's Artifacts (GitHub login required). Unzip the artifact, then the
