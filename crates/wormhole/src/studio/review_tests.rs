@@ -18,7 +18,7 @@ use super::save::Notice;
 use super::themes::{Found, Loaded, Stamp, Themes, test_dir};
 use super::update_from::{Check, State};
 use super::v1_tests::{DUSK, builtin_themes, own_dusk};
-use super::window_tests::{edit, open_doc, open_with, with};
+use super::window_tests::{open_doc, open_with, with};
 use super::{Edit, StudioWindow};
 use crate::settings::SettingsStore;
 
