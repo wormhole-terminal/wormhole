@@ -35,8 +35,8 @@ impl TestTerm {
     }
 
     /// Bring `out` up to date with the screen, as `Pty::snapshot` does (block states aside).
-    pub fn snapshot(&mut self, out: &mut ScreenSnapshot, above: usize) {
-        out.update(self.screen_mut(), above);
+    pub fn snapshot(&mut self, out: &mut ScreenSnapshot) {
+        out.update(self.screen_mut());
     }
 
     pub fn resize(&mut self, cols: u16, rows: u16) {

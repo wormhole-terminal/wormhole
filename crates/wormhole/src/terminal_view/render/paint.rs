@@ -1,7 +1,7 @@
 //! The second half of a frame (the canvas's paint): the layers of a grid, in order, from what
 //! prepaint built.
 //!
-//! The order is the design: the faint rows above the viewport, the command blocks' tint, then
+//! The order is the design: the command blocks' tint, then
 //! the cells' backgrounds (one layer), the pictures under the text, box drawing and block
 //! elements (one layer), the cursor, the text (one layer), the pictures over it, the lines through
 //! and under the text (one layer), links, the cursor's character and find's ticks. Every per-cell
@@ -21,7 +21,7 @@ use super::outline::Outlines;
 use super::overlays::{drag_outside_listener, paint_blocks, paint_ticks};
 use super::prepare::Frame;
 use super::underline::{self, paint_underlines, underline_paint};
-use super::{RenderState, blink, blur, rows, sized};
+use super::{RenderState, blink, rows, sized};
 use crate::settings::UiColors;
 use crate::terminal_view::TerminalView;
 
@@ -40,7 +40,7 @@ pub(super) struct Paint {
     pub view: WeakEntity<TerminalView>,
 }
 
-type Cache = FrameCache<super::shaping::ShapeKey, Vec<super::words::Glyph>, gpui_kit::ShapedLine>;
+type Cache = FrameCache<super::shaping::ShapeKey, Vec<super::words::Glyph>>;
 
 impl Paint {
     pub fn run(&self, bounds: Bounds<Pixels>, frame: &Frame, window: &mut Window, cx: &mut App) {
@@ -49,13 +49,6 @@ impl Paint {
         let mut state = self.state.borrow_mut();
         let RenderState { frame: cache, outlines, .. } = &mut *state;
         let (origin, line_height) = (frame.geometry.origin, frame.geometry.line_height);
-        for (k, line) in cache.blurred() {
-            let row_origin = point(origin.x, origin.y - line_height * k as f32);
-            for (dx, dy) in blur::BLUR_TAPS {
-                let tap = point(row_origin.x + px(dx), row_origin.y + px(dy));
-                let _ = line.paint(tap, line_height, TextAlign::Left, None, window, cx);
-            }
-        }
         paint_blocks(&cache.snapshot, self.hovered_block, self.ui, bounds, origin, line_height, window);
         // Each quad painted outside a layer goes into the scene's bounds tree to find its
         // z-order, and a screen of colored cells is thousands of them: in a full-screen

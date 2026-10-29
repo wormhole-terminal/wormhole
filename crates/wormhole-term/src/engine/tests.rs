@@ -106,7 +106,7 @@ fn a_kitty_picture_is_decoded_kept_placed_and_freed() {
     wait_until("the output", || pty.screen_text().contains("done"));
     let mut snapshot = ScreenSnapshot::default();
     wait_until("the reservation", || pty.images().len() == 1);
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     let [placement] = snapshot.placements() else { panic!("one placement: {:?}", snapshot.placements()) };
     assert_eq!((placement.cols, placement.rows, placement.line, placement.column), (3, 2, Line(0), 0));
     let key = crate::images::key_of(placement.image);
@@ -121,7 +121,7 @@ fn a_kitty_picture_is_decoded_kept_placed_and_freed() {
     pty.write(b"\n".to_vec());
     wait_until("the delete", || pty.screen_text().contains("freed"));
     wait_until("the pixels to go", || pty.images().is_empty());
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     assert!(snapshot.placements().is_empty());
 }
 
@@ -134,7 +134,7 @@ fn raw_pixels_and_sixel_are_kept_without_a_decoder_and_a_bad_picture_is_refused(
     let (pty, _events) = spawn(script);
     wait_until("the pictures", || pty.images().len() == 2);
     let mut snapshot = ScreenSnapshot::default();
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     assert_eq!(snapshot.placements().len(), 2);
     // The refusal reaches the program (kitty's `ENODATA`), after the decode failed.
     // (The terminal echoes the reply, as it does what a program did not read.)
@@ -156,7 +156,7 @@ fn placeholder_cells_find_their_picture_through_the_virtual_placement() {
     assert!(pty.images().contains(tiles.key));
     assert_eq!(pty.virtual_placement(6, 0), None);
     let mut snapshot = ScreenSnapshot::default();
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     assert!(snapshot.placements().is_empty(), "virtual placements are drawn from their cells");
     let first = &snapshot.rows()[0];
     let cell = first.cells()[0];
@@ -190,7 +190,7 @@ fn deccolm_clears_the_screen_and_the_grid_keeps_the_ptys_width() {
     let (pty, _events) = spawn(script);
     wait_until("the output", || pty.screen_text().contains("after"));
     let mut snapshot = ScreenSnapshot::default();
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     assert_eq!(snapshot.columns(), 80, "the PTY is 80 columns wide, and so is the grid");
     assert!(!pty.screen_text().contains("before"), "132 columns clears the screen");
 }
@@ -200,14 +200,14 @@ fn a_synchronized_update_keeps_the_last_frame_until_it_ends() {
     let mut term = TestTerm::new(20, 3, 10);
     let mut snapshot = ScreenSnapshot::default();
     term.feed(b"first");
-    term.snapshot(&mut snapshot, 0);
+    term.snapshot(&mut snapshot);
     assert_eq!(snapshot.rows()[0].cells()[0].c, 'f');
     term.feed(b"\x1b[?2026h\x1b[H\x1b[2Jsecond");
-    term.snapshot(&mut snapshot, 0);
+    term.snapshot(&mut snapshot);
     assert_eq!(snapshot.rows()[0].cells()[0].c, 'f', "held back");
     assert!(!snapshot.rows()[0].changed());
     term.feed(b"\x1b[?2026l");
-    term.snapshot(&mut snapshot, 0);
+    term.snapshot(&mut snapshot);
     assert_eq!(snapshot.rows()[0].cells()[0].c, 's');
     assert!(snapshot.rows()[0].changed());
 }

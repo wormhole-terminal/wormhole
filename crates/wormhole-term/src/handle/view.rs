@@ -10,9 +10,9 @@ impl Pty {
         self.term.lock().mode()
     }
 
-    /// Bring `out` up to date with the screen and `above` rows of history over it.
-    pub fn snapshot(&self, out: &mut ScreenSnapshot, above: usize) {
-        out.update(&mut self.term.lock(), above);
+    /// Bring `out` up to date with the screen.
+    pub fn snapshot(&self, out: &mut ScreenSnapshot) {
+        out.update(&mut self.term.lock());
         if !out.block_spans().is_empty() {
             let log = self.shared.commands();
             out.set_block_states(|id| log.state(id));

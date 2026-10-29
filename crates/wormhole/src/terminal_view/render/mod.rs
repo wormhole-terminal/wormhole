@@ -1,4 +1,4 @@
-//! Painting the terminal grid (and the blurred lines under the title bar).
+//! Painting the terminal grid.
 //!
 //! A frame takes one short lock to bring a `ScreenSnapshot` up to date (only
 //! rows the engine reports changed are copied), then builds only rows whose
@@ -13,13 +13,12 @@
 //!
 //! - a frame: `prepare` (layout, snapshot, rows, the cursor and pictures), then `paint` (the
 //!   layers in order); `frame`, `cache`, `rows`, `words` and `shaping` are what they build on
-//! - the grid's parts: `glyphs` (box drawing), `underline`, `cursor`, `images`, `blink`, `blur`,
+//! - the grid's parts: `glyphs` (box drawing), `underline`, `cursor`, `images`, `blink`,
 //!   `sized` (double-width and double-height rows)
 //! - beside the grid: `overlays` (block marks, find ticks, the bell, the drag), `scrollbar`,
 //!   `minimap`, `exited` (the bar of a finished shell)
 
 mod blink;
-mod blur;
 mod cache;
 mod cursor;
 mod exited;
@@ -84,7 +83,7 @@ pub(crate) static PAINTS: std::sync::atomic::AtomicU64 = std::sync::atomic::Atom
 /// What the canvas keeps between frames.
 #[derive(Default)]
 pub(super) struct RenderState {
-    frame: FrameCache<ShapeKey, Vec<Glyph>, ShapedLine>,
+    frame: FrameCache<ShapeKey, Vec<Glyph>>,
     words: WordCache<WordsKey>,
     minimap: wormhole_term::minimap::MinimapSnapshot,
     /// Where the minimap was last drawn, for clicks on it.

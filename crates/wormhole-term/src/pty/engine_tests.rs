@@ -104,7 +104,7 @@ fn a_synchronized_update_that_never_ends_wakes_the_ui_again_when_it_times_out() 
         matches!(events.try_recv(), Some(PtyEvent::Output))
     });
     let mut snapshot = ScreenSnapshot::default();
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     assert_eq!(snapshot.rows()[0].cells()[0].c, 'h', "the screen is shown now");
 }
 
@@ -114,11 +114,11 @@ fn a_program_that_exits_inside_a_synchronized_update_leaves_its_last_screen_show
     // the exit to give up on one: its timeout (150 ms) is far longer than the program lives.
     let (pty, events) = spawn(r"sleep 0.3; printf '\033[?2026h'; printf 'last words'");
     let mut snapshot = ScreenSnapshot::default();
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     wait_until("the exit", Duration::from_secs(10), || {
         matches!(events.try_recv(), Some(PtyEvent::Exited(_)))
     });
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     assert_eq!(snapshot.rows()[0].cells()[0].c, 'l', "the screen is shown, not the frame from before");
 }
 
@@ -152,7 +152,7 @@ fn a_flood_does_not_keep_the_ui_from_the_screen() {
         let _ = pty.mode();
         waits.push(asked.elapsed());
         let asked = Instant::now();
-        pty.snapshot(&mut snapshot, 0);
+        pty.snapshot(&mut snapshot);
         waits.push(asked.elapsed());
         snapshots += 1;
         if let Some(PtyEvent::Exited(code)) = events.try_recv() {
@@ -186,6 +186,6 @@ fn resizing_changes_the_screen_and_the_programs_size() {
         pty.screen_text().contains("size:40 120")
     });
     let mut snapshot = crate::ScreenSnapshot::default();
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     assert_eq!((snapshot.columns(), snapshot.rows().len()), (120, 40));
 }

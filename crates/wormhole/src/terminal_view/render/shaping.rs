@@ -1,11 +1,10 @@
 //! Handing text to GPUI's text system: what cached rows and words were shaped with, and the
-//! shaping calls themselves (a word of a row, a faint row above the viewport).
+//! shaping calls themselves (a word of a row).
 
 use std::rc::Rc;
 
 use gpui_kit::{
-    Font, FontId, FontStyle, FontWeight, Hsla, Pixels, ShapedLine, StrikethroughStyle, TextRun,
-    WindowTextSystem, px,
+    Font, FontId, FontStyle, FontWeight, Pixels, StrikethroughStyle, TextRun, WindowTextSystem, px,
 };
 use wormhole_term::types::{COLOR_COUNT, Colors};
 
@@ -114,29 +113,6 @@ pub(super) fn shape_word(
             })
         })
         .collect()
-}
-
-/// Shape a faint row above the viewport.
-pub(super) fn shape_blurred(
-    text: String,
-    runs: Vec<(usize, Hsla)>,
-    text_system: &WindowTextSystem,
-    base_font: &Font,
-    font_size: Pixels,
-    cell_width: Pixels,
-) -> ShapedLine {
-    let runs: Vec<TextRun> = runs
-        .into_iter()
-        .map(|(len, color)| TextRun {
-            len,
-            font: base_font.clone(),
-            color,
-            background_color: None,
-            underline: None,
-            strikethrough: None,
-        })
-        .collect();
-    text_system.shape_line(text.into(), font_size, &runs, Some(cell_width))
 }
 
 #[cfg(test)]

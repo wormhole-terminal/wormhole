@@ -76,7 +76,6 @@ fn fed(text: String, runs: Vec<TextRun>) -> Fed {
 struct FrameCounts {
     rows_built: usize,
     rows_placed: usize,
-    blurred_built: usize,
     lines_shaped: usize,
     glyphs_shaped: usize,
     quads: usize,
@@ -96,37 +95,16 @@ fn frame(
         scale: 2.0,
         font_size: 14.0,
     };
-    term.snapshot(&mut cache.snapshot, 3);
+    term.snapshot(&mut cache.snapshot);
     let mut counts = FrameCounts::default();
-    let stats = cache.prepare(
-        0,
-        geometry,
-        palette,
-        &[],
-        |segment, _| {
-            counts.lines_shaped += 1;
-            counts.glyphs_shaped += segment.text.chars().count();
-            let runs = word_runs(segment, base_font);
-            (fed(segment.text.clone(), runs), true)
-        },
-        |text, runs| {
-            let runs = runs
-                .into_iter()
-                .map(|(len, color)| TextRun {
-                    len,
-                    font: base_font.clone(),
-                    color,
-                    background_color: None,
-                    underline: None,
-                    strikethrough: None,
-                })
-                .collect();
-            fed(text, runs)
-        },
-    );
+    let stats = cache.prepare(0, geometry, palette, &[], |segment, _| {
+        counts.lines_shaped += 1;
+        counts.glyphs_shaped += segment.text.chars().count();
+        let runs = word_runs(segment, base_font);
+        (fed(segment.text.clone(), runs), true)
+    });
     counts.rows_built = stats.rows.built;
     counts.rows_placed = stats.rows_placed;
-    counts.blurred_built = stats.blurred_built;
     counts.quads = cache.rows().map(|(_, row)| row.quads.len()).sum();
     counts
 }

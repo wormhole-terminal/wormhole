@@ -85,8 +85,6 @@ pub struct SnapshotCursor {
 pub struct ScreenSnapshot {
     cols: usize,
     rows: Vec<SnapshotRow>,
-    /// Rows just above the viewport, nearest first (drawn blurred under the title bar).
-    above: Vec<Vec<Cell>>,
     /// Scratch: which rows the terminal reported damaged.
     damage: Damage,
     pub cursor: Option<SnapshotCursor>,
@@ -110,7 +108,6 @@ impl Default for ScreenSnapshot {
         Self {
             cols: 0,
             rows: Vec::new(),
-            above: Vec::new(),
             damage: Damage::new(),
             cursor: None,
             selection: None,
@@ -159,11 +156,6 @@ impl ScreenSnapshot {
         }
     }
 
-    /// Up to `n` rows above the viewport, nearest first.
-    pub fn above(&self) -> &[Vec<Cell>] {
-        &self.above
-    }
-
     /// Whether earlier output sits above the visible screen.
     pub fn has_content_above(&self) -> bool {
         self.history_size > self.display_offset
@@ -184,10 +176,9 @@ impl ScreenSnapshot {
         (first <= last).then_some((first, last))
     }
 
-    /// Bring the copy up to date with the screen. `above` is how many rows above
-    /// the viewport to copy as well. This reads and resets the screen's
+    /// Bring the copy up to date with the screen. This reads and resets the screen's
     /// damage, so only one snapshot may follow a terminal (`Pty::snapshot`).
-    pub(super) fn update(&mut self, screen: &mut Screen, above: usize) {
+    pub(super) fn update(&mut self, screen: &mut Screen) {
         let (cols, lines) = (screen.columns(), screen.screen_lines());
         // A synchronized update shows nothing until it ends; the damage waits in the screen.
         if screen.held_back() && cols == self.cols && lines == self.rows.len() {
@@ -215,22 +206,6 @@ impl ScreenSnapshot {
             }
         }
         self.resolve_blocks(screen);
-
-        self.above.truncate(above);
-        let topmost = screen.topmost_line().0;
-        let mut kept = 0;
-        for k in 1..=above as i32 {
-            let line = -(display_offset as i32) - k;
-            if line < topmost {
-                break;
-            }
-            if self.above.len() <= kept {
-                self.above.push(Vec::with_capacity(cols));
-            }
-            screen.copy_row(Line(line), &mut self.above[kept], None);
-            kept += 1;
-        }
-        self.above.truncate(kept);
 
         self.mode = screen.mode();
         self.selection = screen.selection_range();
@@ -330,16 +305,16 @@ mod tests {
         let mut term = term(10, 4);
         feed(&mut term, b"one\r\ntwo\r\n$ ");
         let mut snapshot = ScreenSnapshot::default();
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert_eq!(changed(&snapshot), [0, 1, 2, 3], "the first copy is complete");
         assert_eq!(row_text(&snapshot, 1), "two");
 
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         // Nothing printed: at most the cursor's row is reported.
         assert!(changed(&snapshot).iter().all(|&row| row == 2));
 
         feed(&mut term, b"ls");
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert_eq!(changed(&snapshot), [2]);
         assert_eq!(row_text(&snapshot, 2), "$ ls");
         assert_eq!(row_text(&snapshot, 0), "one", "untouched rows keep their copy");
@@ -350,24 +325,21 @@ mod tests {
         let mut term = term(10, 3);
         let mut snapshot = ScreenSnapshot::default();
         feed(&mut term, b"1\r\n2\r\n3\r\n4\r\n5");
-        term.snapshot(&mut snapshot, 2);
+        term.snapshot(&mut snapshot);
         assert_eq!(row_text(&snapshot, 0), "3");
         assert!(snapshot.has_content_above());
-        let above: Vec<char> = snapshot.above().iter().map(|row| row[0].c).collect();
-        assert_eq!(above, ['2', '1'], "nearest first");
 
         term.scroll_display(Scroll::Delta(1));
-        term.snapshot(&mut snapshot, 2);
+        term.snapshot(&mut snapshot);
         assert_eq!(changed(&snapshot), [0, 1, 2]);
         assert_eq!(row_text(&snapshot, 0), "2");
         assert_eq!(snapshot.display_offset, 1);
 
         term.clear_history();
-        term.snapshot(&mut snapshot, 2);
+        term.snapshot(&mut snapshot);
         assert_eq!(changed(&snapshot), [0, 1, 2], "the view moved without damage");
         assert_eq!(row_text(&snapshot, 0), "3");
         assert!(!snapshot.has_content_above());
-        assert!(snapshot.above().is_empty());
     }
 
     #[test]
@@ -391,7 +363,7 @@ mod tests {
         term.start_selection(SelectionType::Simple, Point::new(Line(0), Column(2)), Side::Left);
         term.update_selection(Point::new(Line(1), Column(1)), Side::Right);
         let mut snapshot = ScreenSnapshot::default();
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert_eq!(snapshot.selected_columns(0), Some((2, 9)));
         assert_eq!(snapshot.selected_columns(1), Some((0, 1)));
         assert_eq!(snapshot.selected_columns(2), None);
@@ -407,7 +379,7 @@ mod tests {
         use crate::blocks::tests::{SESSION, shown};
         let (mut term, _) = shown(10, SESSION);
         let mut snapshot = ScreenSnapshot::default();
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         // Rows: `$ ls` / a.rs / b.rs / `$ make` / error / blank / `$ ` / blank …: the blank row
         // after `error` is the block's (a blank line it printed), the rows under the prompt nobody's.
         assert_eq!(spans(&snapshot), [(1, 0..3, true), (2, 3..6, true), (3, 6..7, true)]);
@@ -415,7 +387,7 @@ mod tests {
         assert_eq!(snapshot.block_at_row(8), None);
         // A full-screen program: no blocks.
         feed(&mut term, b"\x1b[?1049hvim");
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert!(snapshot.block_spans().is_empty());
     }
 
@@ -425,16 +397,16 @@ mod tests {
         let (mut term, _) = shown(3, SESSION);
         let mut snapshot = ScreenSnapshot::default();
         // The live screen shows `error`, blank, `$ `: the first row is inside block 2.
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert_eq!(spans(&snapshot), [(2, 0..2, false), (3, 2..3, true)]);
         // Scrolled up by one: `$ make` is the top row and starts its block in view.
         term.scroll_display(Scroll::Delta(1));
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert_eq!(spans(&snapshot), [(2, 0..3, true)]);
         // Scrolled to the top: `$ ls` and its output.
         term.scroll_display(Scroll::Bottom);
         term.scroll_display(Scroll::Delta(4));
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert_eq!(spans(&snapshot), [(1, 0..3, true)]);
     }
 
@@ -443,7 +415,7 @@ mod tests {
         let mut term = term(10, 3);
         feed(&mut term, b"plain\r\noutput");
         let mut snapshot = ScreenSnapshot::default();
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert!(!snapshot.saw_marks && snapshot.block_spans().is_empty());
     }
 
@@ -452,12 +424,12 @@ mod tests {
         let mut term = term(10, 3);
         feed(&mut term, "1\r\n2\r\n3\r\n日".as_bytes());
         let mut snapshot = ScreenSnapshot::default();
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         let cursor = snapshot.cursor.expect("cursor");
         assert_eq!((cursor.row, cursor.col, cursor.wide), (2, 2, false));
         // Scrolled up far enough, the cursor's row leaves the screen.
         term.scroll_display(Scroll::Delta(1));
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert_eq!(snapshot.cursor, None);
     }
 
@@ -467,11 +439,11 @@ mod tests {
         let mut term = term(10, 4);
         feed(&mut term, b"one\r\ntwo\r\nthree");
         let mut snapshot = ScreenSnapshot::default();
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert!(snapshot.rows().iter().all(|row| row.size() == LineSize::Single));
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         feed(&mut term, b"\x1b[2;1H\x1b#3\x1b[3;1H\x1b#4");
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert_eq!(changed(&snapshot), [1, 2], "only the rows whose size changed");
         let sizes: Vec<LineSize> = snapshot.rows().iter().map(|row| row.size()).collect();
         assert_eq!(
@@ -480,7 +452,7 @@ mod tests {
         );
         // A row the size left stays as copied while the rows around it change.
         feed(&mut term, b"\x1b[4;1Hx");
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert_eq!(snapshot.rows()[1].size(), LineSize::DoubleHeightTop);
     }
 
@@ -529,12 +501,12 @@ mod tests {
             let mut term = term(200, 60);
             feed(&mut term, &bytes);
             let mut snapshot = ScreenSnapshot::default();
-            term.snapshot(&mut snapshot, 3);
+            term.snapshot(&mut snapshot);
             let rounds = 20_000;
             let start = std::time::Instant::now();
             for round in 0..rounds {
                 term.scroll_display(Scroll::Delta(if round % 2 == 0 { 1 } else { -1 }));
-                term.snapshot(&mut snapshot, 3);
+                term.snapshot(&mut snapshot);
             }
             let per_copy = start.elapsed() / rounds;
             eprintln!(

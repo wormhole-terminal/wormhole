@@ -13,7 +13,7 @@ pub(crate) mod allocations;
 pub(crate) mod report;
 
 /// A part of the terminal's frame, as `report` lists them. `Prepare` holds `Snapshot`, `Rows` and
-/// `Images`; `Rows` holds `Shape` and `Blur`; `Paint` is the second half.
+/// `Images`; `Rows` holds `Shape`; `Paint` is the second half.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Part {
     /// The canvas's prepaint: lay out, snapshot, build rows, the cursor and the pictures.
@@ -24,8 +24,6 @@ pub(crate) enum Part {
     Rows,
     /// Shaping new words with the text system (inside `Rows`).
     Shape,
-    /// Shaping the blurred lines under the title bar, whole lines at a time (inside `Rows`).
-    Blur,
     /// The inline pictures' tiles and placements.
     Images,
     /// Painting the layers.
@@ -34,8 +32,8 @@ pub(crate) enum Part {
 
 #[cfg(any(test, feature = "devctl"))]
 impl Part {
-    pub(crate) const ALL: [Part; 7] =
-        [Part::Prepare, Part::Snapshot, Part::Rows, Part::Shape, Part::Blur, Part::Images, Part::Paint];
+    pub(crate) const ALL: [Part; 6] =
+        [Part::Prepare, Part::Snapshot, Part::Rows, Part::Shape, Part::Images, Part::Paint];
 
     /// The part's name in the report.
     pub(crate) fn name(self) -> &'static str {
@@ -44,7 +42,6 @@ impl Part {
             Part::Snapshot => "snapshot",
             Part::Rows => "rows",
             Part::Shape => "shape",
-            Part::Blur => "blur",
             Part::Images => "images",
             Part::Paint => "paint",
         }
@@ -56,7 +53,7 @@ impl Part {
         match self {
             Part::Prepare | Part::Paint => 0,
             Part::Snapshot | Part::Rows | Part::Images => 1,
-            Part::Shape | Part::Blur => 2,
+            Part::Shape => 2,
         }
     }
 }

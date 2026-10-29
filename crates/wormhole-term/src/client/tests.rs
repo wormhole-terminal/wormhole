@@ -361,13 +361,13 @@ fn a_lost_host_inside_a_synchronized_update_leaves_the_last_screen_shown() {
     let (pty, events, mut script) = connected(StreamMode::Raw);
     // The UI keeps its copy of the frame from before an update until it ends.
     let mut snapshot = ScreenSnapshot::default();
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     script.send(&Message::Out(wire::Out { offset: 0, bytes: b"\x1b[?2026hlast words" }));
     wait_for("the update's text", || pty.screen_text().contains("last words"));
     drop(script);
     next_event(&events, "exit", |e| matches!(e, PtyEvent::Exited(None)));
     // At once: the update's own timeout (150 ms) would show it too, but nothing runs for it now.
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     assert_eq!(snapshot.rows()[0].cells()[0].c, 'l', "the screen is shown, not the frame from before");
 }
 
@@ -375,7 +375,7 @@ fn a_lost_host_inside_a_synchronized_update_leaves_the_last_screen_shown() {
 fn the_end_after_the_programs_exit_inside_a_synchronized_update_leaves_the_last_screen_shown() {
     let (pty, events, mut script) = connected(StreamMode::Raw);
     let mut snapshot = ScreenSnapshot::default();
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     script.send(&Message::Out(wire::Out { offset: 0, bytes: b"\x1b[?2026hlast words" }));
     wait_for("the update's text", || pty.screen_text().contains("last words"));
     // The exit is heard first, then the connection ends: the update is still held.
@@ -384,7 +384,7 @@ fn the_end_after_the_programs_exit_inside_a_synchronized_update_leaves_the_last_
     drop(script);
     // Letting go of the held update wakes the proxy: that output event is the release.
     next_event(&events, "release", |e| matches!(e, PtyEvent::Output));
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     assert_eq!(snapshot.rows()[0].cells()[0].c, 'l', "the screen is shown, not the frame from before");
 }
 

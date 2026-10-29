@@ -18,6 +18,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
+- The terminal no longer draws a faint, blurred copy of the lines that scrolled out above it under the title
+  row: the top of the terminal is just the terminal.
 - When the helper that keeps terminals running can't start, the warning that the terminal ends when Wormhole
   quits is a chip on the terminal instead of a banner over it. It stays until you close it with its ×,
   explains itself in plain words from its ⓘ or a click on the chip (what happened, what to do, and the error's

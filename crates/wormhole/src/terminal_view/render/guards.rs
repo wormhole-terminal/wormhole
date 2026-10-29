@@ -44,7 +44,7 @@ impl Rng {
 /// The renderer's caches with a shaper that counts what it is asked to shape.
 struct Renderer {
     term: TestTerm,
-    frame: FrameCache<u8, Vec<Glyph>, String>,
+    frame: FrameCache<u8, Vec<Glyph>>,
     words: WordCache<u8>,
     palette: Palette,
 }
@@ -64,24 +64,17 @@ impl Renderer {
     /// Feed `bytes` and build the frame; returns how many words (or parts of words) were shaped.
     fn frame(&mut self, bytes: &[u8]) -> usize {
         self.term.feed(bytes);
-        self.term.snapshot(&mut self.frame.snapshot, 0);
+        self.term.snapshot(&mut self.frame.snapshot);
         let shaped = Cell::new(0);
         let words = &mut self.words;
-        self.frame.prepare(
-            0,
-            GEOMETRY,
-            &self.palette,
-            &[],
-            |segment, spare| {
-                let glyphs =
-                    words.glyphs_into(segment, GEOMETRY.cell_width, spare.unwrap_or_default(), |segment| {
-                        shaped.set(shaped.get() + 1);
-                        one_glyph_per_char(segment)
-                    });
-                (glyphs, true)
-            },
-            |text, _| text,
-        );
+        self.frame.prepare(0, GEOMETRY, &self.palette, &[], |segment, spare| {
+            let glyphs =
+                words.glyphs_into(segment, GEOMETRY.cell_width, spare.unwrap_or_default(), |segment| {
+                    shaped.set(shaped.get() + 1);
+                    one_glyph_per_char(segment)
+                });
+            (glyphs, true)
+        });
         shaped.get()
     }
 }
@@ -203,15 +196,8 @@ fn an_unchanged_screen_rebuilds_nothing() {
     renderer.frame(&katakana_rain(&mut rng));
     for _ in 0..5 {
         let stats = {
-            renderer.term.snapshot(&mut renderer.frame.snapshot, 0);
-            renderer.frame.prepare(
-                0,
-                GEOMETRY,
-                &renderer.palette,
-                &[],
-                |_, _| (Vec::new(), true),
-                |text, _| text,
-            )
+            renderer.term.snapshot(&mut renderer.frame.snapshot);
+            renderer.frame.prepare(0, GEOMETRY, &renderer.palette, &[], |_, _| (Vec::new(), true))
         };
         assert_eq!((stats.rows.built, stats.rows_placed), (0, 0), "{stats:?}");
     }
@@ -239,9 +225,8 @@ fn blinking_text_and_overlines_reach_the_painter_and_a_phase_change_rebuilds_not
     assert_eq!(overlined, [(18, 22)], "SGR 53 until 55");
     // The clock turning (any number of times) is the same frame to the caches.
     for _ in 0..4 {
-        renderer.term.snapshot(&mut renderer.frame.snapshot, 0);
-        let stats =
-            renderer.frame.prepare(0, GEOMETRY, &renderer.palette, &[], |_, _| (Vec::new(), true), |t, _| t);
+        renderer.term.snapshot(&mut renderer.frame.snapshot);
+        let stats = renderer.frame.prepare(0, GEOMETRY, &renderer.palette, &[], |_, _| (Vec::new(), true));
         assert_eq!((stats.rows.built, stats.rows.moved, stats.rows_placed), (0, 0, 0), "{stats:?}");
     }
 }

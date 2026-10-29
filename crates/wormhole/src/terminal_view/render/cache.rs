@@ -199,7 +199,7 @@ mod tests {
     /// Syncs a cache of row texts and returns what it did.
     fn sync(cache: &mut RowCache<u32, String>, term: &mut TestTerm, key: u32) -> SyncStats {
         let mut snapshot = ScreenSnapshot::default();
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         let stats =
             cache.sync(key, &snapshot, &[], |_| false, |cells, _, _, _| cells.iter().map(|c| c.c).collect());
         for (row, text) in cache.rows() {
@@ -253,9 +253,9 @@ mod tests {
         let mut cache: RowCache<u32, String> = RowCache::default();
         feed(&mut term, b"a\r\nb\r\nc\r\nd");
         let mut snapshot = ScreenSnapshot::default();
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         let mut sync = |found: &[Vec<(usize, usize, bool)>]| {
-            term.snapshot(&mut snapshot, 0);
+            term.snapshot(&mut snapshot);
             cache
                 .sync(0, &snapshot, found, |_| false, |cells, _, _, _| cells.iter().map(|c| c.c).collect())
                 .built
@@ -274,7 +274,7 @@ mod tests {
         feed(&mut term, b"a\r\nb\r\nc");
         let mut cache: RowCache<u32, String> = RowCache::default();
         let mut snapshot = ScreenSnapshot::default();
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         // Row 1 ("b") is drawn provisionally.
         fn build(cells: &[Cell], _: &RowExtras, _: &Marks, _: Option<String>) -> String {
             let text: String = cells.iter().map(|c| c.c).collect();
@@ -282,10 +282,10 @@ mod tests {
         }
         let redo = |value: &String| value.ends_with('?');
         assert_eq!(cache.sync(0, &snapshot, &[], redo, build).built, 3);
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         let stats = cache.sync(0, &snapshot, &[], redo, |cells, _, _, _| cells.iter().map(|c| c.c).collect());
         assert_eq!((stats.built, stats.kept + stats.moved), (1, 2), "the provisional row, though unchanged");
-        term.snapshot(&mut snapshot, 0);
+        term.snapshot(&mut snapshot);
         assert_eq!(cache.sync(0, &snapshot, &[], redo, build).built, 0, "built in full now");
     }
 
@@ -325,7 +325,7 @@ mod tests {
         // Syncs, noting for each build whether it was handed a spare.
         fn sync(cache: &mut RowCache<u32, String>, term: &mut TestTerm, spares: &mut Vec<bool>) -> SyncStats {
             let mut snapshot = ScreenSnapshot::default();
-            term.snapshot(&mut snapshot, 0);
+            term.snapshot(&mut snapshot);
             cache.sync(
                 0,
                 &snapshot,

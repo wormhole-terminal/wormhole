@@ -14,7 +14,7 @@ use wormhole_term::images::Tiles;
 use super::cursor::{CursorPaint, cursor_frame};
 use super::frame::Geometry;
 use super::rows::Style;
-use super::shaping::{ShapeKey, colors_key, shape_blurred, shape_word, text_run};
+use super::shaping::{ShapeKey, colors_key, shape_word, text_run};
 use super::{RenderState, blink, images, words};
 use crate::palette::Palette;
 use crate::perf::{self, Count, Part};
@@ -135,9 +135,6 @@ impl Prepare {
                 frame,
             },
         );
-        // Rows just above the viewport, kept for the soft edge at the top.
-        let overscan = (PADDING_Y / f32::from(line_height)).ceil() as usize;
-
         let mut state = self.state.borrow_mut();
         let RenderState { frame: cache, images: image_cache, words, outlines, .. } = &mut *state;
         let mut found = Vec::new();
@@ -148,7 +145,7 @@ impl Prepare {
             this.share_window(geometry);
             let Some(pty) = &this.pty else { return false };
             let span = perf::span();
-            pty.snapshot(&mut cache.snapshot, overscan);
+            pty.snapshot(&mut cache.snapshot);
             span.end(Part::Snapshot);
             found = this.found_rows(&cache.snapshot);
             ticks = this.found_ticks(&cache.snapshot);
@@ -180,29 +177,16 @@ impl Prepare {
         words.start_frame(Some(std::time::Instant::now() + words::SHAPE_BUDGET));
         let base_font = &self.base_font;
         let rows_span = perf::span();
-        let stats = cache.prepare(
-            key,
-            geometry,
-            palette,
-            &found,
-            |segment, spare| {
-                let glyphs = words.glyphs_into(segment, cell_width, spare.unwrap_or_default(), |segment| {
-                    let span = perf::span();
-                    let shaped =
-                        shape_word(segment, &text_system, base_font, font_size, cell_width, outlines);
-                    span.end(Part::Shape);
-                    perf::count(Count::WordsShaped, 1);
-                    shaped
-                });
-                (glyphs, !words.take_deferred())
-            },
-            |text, runs| {
+        let stats = cache.prepare(key, geometry, palette, &found, |segment, spare| {
+            let glyphs = words.glyphs_into(segment, cell_width, spare.unwrap_or_default(), |segment| {
                 let span = perf::span();
-                let shaped = shape_blurred(text, runs, &text_system, base_font, font_size, cell_width);
-                span.end(Part::Blur);
+                let shaped = shape_word(segment, &text_system, base_font, font_size, cell_width, outlines);
+                span.end(Part::Shape);
+                perf::count(Count::WordsShaped, 1);
                 shaped
-            },
-        );
+            });
+            (glyphs, !words.take_deferred())
+        });
         rows_span.end(Part::Rows);
         perf::count(Count::RowsBuilt, stats.rows.built);
         // Words the budget didn't reach are shaped in the next frame, also when nothing

@@ -4,9 +4,8 @@
 
 use gpui_kit::{Bounds, Hsla, Path, Pixels, Point};
 use wormhole_term::ScreenSnapshot;
-use wormhole_term::types::{Cell, LineSize};
+use wormhole_term::types::LineSize;
 
-use super::blur::blurred_row;
 use super::cache::{RowCache, SyncStats};
 use super::glyphs::GlyphPainter;
 use super::rows::{ImageRun, RowBuilder, Segment, Underline};
@@ -68,54 +67,42 @@ impl<L> Default for PaintedRow<L> {
     }
 }
 
-struct Blurred<B> {
-    cells: Vec<Cell>,
-    line: Option<B>,
-}
-
 /// What changed in one `prepare`.
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct FrameStats {
     pub rows: SyncStats,
     pub rows_placed: usize,
-    pub blurred_built: usize,
     /// Rows drawn before all their words were shaped, which the next frame builds again.
     pub provisional: usize,
 }
 
-/// `L` is a word as painted, `B` a faint row above the viewport.
-pub(super) struct FrameCache<K, L, B = L> {
+/// `L` is a word as painted.
+pub(super) struct FrameCache<K, L> {
     pub snapshot: ScreenSnapshot,
     rows: RowCache<K, PaintedRow<L>>,
     /// Builds each row's words, keeping the buffers of the last row for the next.
     builder: RowBuilder,
     /// Lines of the row being rebuilt that are free to be shaped into again.
     lines: Vec<L>,
-    above: Vec<Blurred<B>>,
-    above_key: Option<K>,
     painter: GlyphPainter,
 }
 
-impl<K, L, B> Default for FrameCache<K, L, B> {
+impl<K, L> Default for FrameCache<K, L> {
     fn default() -> Self {
         Self {
             snapshot: ScreenSnapshot::default(),
             rows: RowCache::default(),
             builder: RowBuilder::default(),
             lines: Vec::new(),
-            above: Vec::new(),
-            above_key: None,
             painter: GlyphPainter::default(),
         }
     }
 }
 
-impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
+impl<K: Clone + PartialEq, L> FrameCache<K, L> {
     /// Bring everything in line with `snapshot` (already updated). `key` is what
     /// shaping depends on; `found` is find's matches on each viewport row; `shape` shapes one
-    /// segment, and says whether it shaped all of it (`false`: some of it waits for a later frame),
-    /// `shape_blurred` one faint row above the viewport.
-    #[allow(clippy::too_many_arguments)]
+    /// segment, and says whether it shaped all of it (`false`: some of it waits for a later frame).
     pub fn prepare(
         &mut self,
         key: K,
@@ -123,7 +110,6 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
         palette: &Palette,
         found: &[Vec<(usize, usize, bool)>],
         mut shape: impl FnMut(&Segment, Option<L>) -> (L, bool),
-        mut shape_blurred: impl FnMut(String, Vec<(usize, Hsla)>) -> B,
     ) -> FrameStats {
         let mut stats = FrameStats::default();
         let colors = self.snapshot.colors;
@@ -183,24 +169,6 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
             stats.rows_placed += 1;
         }
 
-        if self.above_key.as_ref() != Some(&key) {
-            self.above.clear();
-            self.above_key = Some(key);
-        }
-        let above = self.snapshot.above();
-        self.above.truncate(above.len());
-        for (k, cells) in above.iter().enumerate() {
-            if self.above.get(k).is_some_and(|blurred| blurred.cells == *cells) {
-                continue;
-            }
-            let line = blurred_row(cells, palette, &colors).map(|(text, runs)| shape_blurred(text, runs));
-            stats.blurred_built += 1;
-            let blurred = Blurred { cells: cells.clone(), line };
-            match self.above.get_mut(k) {
-                Some(slot) => *slot = blurred,
-                None => self.above.push(blurred),
-            }
-        }
         stats
     }
 
@@ -221,11 +189,6 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
             .rows()
             .filter(|(_, painted)| !painted.size.is_double())
             .flat_map(|(row, painted)| painted.images.iter().map(move |run| (row, run)))
-    }
-
-    /// The faint rows above the viewport, nearest first, by distance (1 = just above).
-    pub fn blurred(&self) -> impl Iterator<Item = (usize, &B)> {
-        self.above.iter().enumerate().filter_map(|(k, blurred)| Some((k + 1, blurred.line.as_ref()?)))
     }
 }
 
@@ -256,8 +219,8 @@ mod tests {
 
     fn prepare(cache: &mut FrameCache<u8, String>, term: &mut TestTerm, geometry: Geometry) -> FrameStats {
         let palette = Palette::from_theme(&theme::builtin()[0]);
-        term.snapshot(&mut cache.snapshot, 2);
-        cache.prepare(0, geometry, &palette, &[], |segment, _| (segment.text.clone(), true), |text, _| text)
+        term.snapshot(&mut cache.snapshot);
+        cache.prepare(0, geometry, &palette, &[], |segment, _| (segment.text.clone(), true))
     }
 
     #[test]
@@ -280,18 +243,5 @@ mod tests {
         // The pane moved: every row with shapes is placed again.
         let shifted = Geometry { origin: point(px(20.0), px(42.0)), ..GEOMETRY };
         assert_eq!(prepare(&mut cache, &mut term, shifted).rows_placed, 1);
-    }
-
-    #[test]
-    fn blurred_rows_are_built_once_per_content() {
-        let mut term = term();
-        let mut cache = FrameCache::default();
-        feed(&mut term, b"1\r\n2\r\n3\r\n4\r\n5\r\n6");
-        assert_eq!(prepare(&mut cache, &mut term, GEOMETRY).blurred_built, 2);
-        assert_eq!(prepare(&mut cache, &mut term, GEOMETRY).blurred_built, 0);
-        let blurred: Vec<(usize, String)> = cache.blurred().map(|(k, text)| (k, text.clone())).collect();
-        assert_eq!(blurred, [(1, "2".to_string()), (2, "1".to_string())]);
-        feed(&mut term, b"\r\n7");
-        assert_eq!(prepare(&mut cache, &mut term, GEOMETRY).blurred_built, 2);
     }
 }

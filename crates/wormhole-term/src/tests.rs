@@ -298,7 +298,7 @@ fn prompt_marks_give_the_exit_code_the_prompt_state_and_the_prompt_lines() {
     assert_eq!(pty.block_at(Line(1)).map(|b| b.id), Some(1));
     assert_eq!(pty.block(2).map(|b| b.start), Some(Line(2)));
     let mut snapshot = super::ScreenSnapshot::default();
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     let spans: Vec<(u64, bool)> = snapshot.block_spans().iter().map(|s| (s.id, s.state.failed())).collect();
     assert_eq!(spans, [(1, true), (2, false)]);
 }
@@ -314,7 +314,7 @@ fn prompt_marks_follow_their_lines_into_the_history() {
     let (pty, _events) = Pty::spawn_program(SIZE, &options, "/bin/sh", &["-c", &script]).expect("spawn");
     wait_until("the second prompt", || pty.screen_text().contains("$ ready"));
     let mut snapshot = super::ScreenSnapshot::default();
-    pty.snapshot(&mut snapshot, 0);
+    pty.snapshot(&mut snapshot);
     let history = snapshot.history_size as i32;
     assert!(history > 0, "the first prompt scrolled off the screen");
     // The first prompt is at the top of everything, the second on the screen's last used row.
