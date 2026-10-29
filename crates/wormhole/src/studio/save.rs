@@ -12,13 +12,13 @@ use style::BannerKind;
 use wormhole_core::platform::paths;
 use wormhole_core::project::ProjectFolder;
 use wormhole_core::storage::files::{self, LinkPolicy};
-use wormhole_core::theme::tokens::ThemeFile;
+use wormhole_core::theme::tokens::{Appearance, ThemeFile};
 
 use super::draft::{changes, copy_name, export_dir, export_file_name, export_json};
 use super::{StudioWindow, ui};
 use crate::app_state::AppState;
 use crate::features::project;
-use crate::settings::SettingsStore;
+use crate::settings::{SettingsStore, picks};
 use crate::style::{self, Edges};
 
 /// The app record (`Store::meta`) of the folder the last export went to, so the next one's
@@ -90,7 +90,7 @@ impl StudioWindow {
         self.draft.name = Some(name.clone());
         match (self.themes.save)(&self.draft) {
             Ok(path) => {
-                self.switched_to(&name, cx);
+                self.switched_to(&path, cx);
                 let text = format!("Saved to {} and set as your theme.", display_path(&path));
                 self.notice = Some(Notice::Saved { path, text: text.into() });
             }
@@ -99,13 +99,19 @@ impl StudioWindow {
         cx.notify();
     }
 
-    /// The draft, as it stands, is now the theme `name` in the themes folder: the app switches
-    /// to it, the preview ends (the theme itself shows now), and there is nothing left to lose.
-    fn switched_to(&mut self, name: &str, cx: &mut Context<Self>) {
+    /// The draft, as it stands, is now the theme saved at `path`: it becomes the pick of its own
+    /// appearance unless it is a pick already, the preview ends (the theme itself shows now), and
+    /// there is nothing left to lose.
+    fn switched_to(&mut self, path: &Path, cx: &mut Context<Self>) {
         self.dirty = false;
         self.initial = self.draft.clone();
         self.revision += 1;
-        SettingsStore::update(cx, |s| s.theme = name.to_string());
+        let appearance = (self.themes.resolve)(&self.draft).map_or(Appearance::Dark, |t| t.appearance);
+        let (value, selects) = (path.to_string_lossy().into_owned(), self.themes.selects);
+        let path = path.to_path_buf();
+        SettingsStore::update(cx, |s| {
+            picks::pick_after_save(s, value, appearance, &|setting| selects(setting, &path));
+        });
         SettingsStore::preview_tokens(cx, None);
         cx.refresh_windows();
     }
@@ -121,7 +127,7 @@ impl StudioWindow {
         self.notice = Some(match (self.themes.save)(&file) {
             Ok(path) if switch => {
                 self.draft = file;
-                self.switched_to(&copy, cx);
+                self.switched_to(&path, cx);
                 let text = format!(
                     "Saved a copy as \u{201c}{copy}\u{201d} to {} and set as your theme.",
                     display_path(&path)
