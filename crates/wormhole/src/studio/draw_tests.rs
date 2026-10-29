@@ -9,7 +9,7 @@ use gpui_kit::{
 
 use super::draft::groups;
 use super::gallery;
-use super::window_tests::themes;
+use super::window_tests::{opened, themes};
 use super::{StudioWindow, token_list};
 use crate::settings::SettingsStore;
 
@@ -20,8 +20,9 @@ fn open(cx: &mut TestAppContext) -> (AnyWindowHandle, Entity<StudioWindow>) {
         let bounds = Bounds::centered(None, size(px(1400.0), px(900.0)), cx);
         let options =
             WindowOptions { window_bounds: Some(WindowBounds::Windowed(bounds)), ..Default::default() };
+        let doc = opened(&themes(), cx);
         gpui_kit::open_window(options, cx, |window, cx| {
-            cx.new(|cx| StudioWindow::with_themes(themes(), window, cx))
+            cx.new(|cx| StudioWindow::with_themes(themes(), doc, window, cx))
         })
         .expect("opens the window")
     })

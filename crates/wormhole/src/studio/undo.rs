@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use gpui_kit::component::input;
 use gpui_kit::*;
-use wormhole_text::keys::*;
+use wormhole_text::keys::{STUDIO_UNDO_RENAME, STUDIO_UNDO_REVERT, studio_undo_change, studio_undo_reset};
 
 use super::StudioWindow;
 use super::document::history::{Step, StepLabel};

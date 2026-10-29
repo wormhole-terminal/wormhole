@@ -15,6 +15,7 @@ use gpui_kit::*;
 use wormhole_core::theme::tokens;
 
 use super::document::history::StepLabel;
+use super::names;
 use super::{StudioWindow, ui};
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::TitleDrag as _;
@@ -60,11 +61,16 @@ impl StudioWindow {
         let ui = ui(cx);
         let tokens = &cx.global::<SettingsStore>().tokens;
         let appearance = if tokens.appearance == tokens::Appearance::Light { "light" } else { "dark" };
-        let extends = match &self.doc.file.extends {
-            Some(base) => format!("extends {base} · {appearance}"),
-            None => format!("its own palette · {appearance}"),
+        let extends = match (&self.doc.file.base, &self.doc.file.extends) {
+            (Some(base), _) => {
+                let from = wormhole_core::theme::tokens::slug::builtin_name(&base.from).unwrap_or(&base.from);
+                let day = base.copied.as_deref().map(names::display_date).unwrap_or_default();
+                format!("based on {from} · copied {day} · {appearance}")
+            }
+            (None, Some(base)) => format!("extends {base} · {appearance}"),
+            (None, None) => format!("its own palette · {appearance}"),
         };
-        let name: SharedString = self.doc.file.name.clone().unwrap_or_default().into();
+        let name: SharedString = self.doc.name().to_string().into();
         let title_name = if self.renaming {
             div().flex_none().w(px(NAME_FIELD_W)).child(Input::new(&self.name).small()).into_any_element()
         } else {
@@ -108,6 +114,15 @@ impl StudioWindow {
             )
             .child(div().flex_none().text_color(ui.faint).child("/"))
             .child(title_name)
+            .when(self.naming.is_some(), |d| {
+                d.child(
+                    div()
+                        .flex_none()
+                        .text_caption()
+                        .text_color(ui.faint)
+                        .child(wormhole_text::text(wormhole_text::keys::STUDIO_NAME_PROMPT)),
+                )
+            })
             .child(div().min_w_0().truncate().text_caption().text_color(ui.faint).child(extends))
             .when(self.dirty(), |d| {
                 d.child(
@@ -239,7 +254,7 @@ impl StudioWindow {
     /// Click on the name (or Rename in the name-clash notice): edit it in place.
     pub(super) fn start_rename(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.renaming = true;
-        let name = self.doc.file.name.clone().unwrap_or_default();
+        let name = self.doc.name().to_string();
         self.name.update(cx, |input, cx| {
             input.set_value(name, window, cx);
             input.focus(window, cx);
@@ -266,7 +281,17 @@ impl StudioWindow {
         cx.notify();
     }
 
+    /// Return in the name field while the name is being asked for: keep the name and save.
+    pub(super) fn commit_name(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let then_close = self.naming.take();
+        self.finish_rename(window, cx);
+        if let Some(then_close) = then_close {
+            self.save_named(then_close, window, cx);
+        }
+    }
+
     pub(super) fn cancel_rename(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.naming = None;
         self.renaming = false;
         window.focus(&self.focus_handle, cx);
         cx.notify();

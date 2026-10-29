@@ -9,3 +9,11 @@ studio-undo-change = Change “{ $token }”
 studio-undo-reset = Reset “{ $token }”
 studio-undo-rename = Rename
 studio-undo-revert = Revert to Saved
+
+## Opening on a built-in theme
+
+# { $from } is the name of the theme it starts from, e.g. Nord.
+studio-untitled-from = Untitled (from { $from })
+
+# Under the title row when a theme with no name yet is saved.
+studio-name-prompt = Name your theme, then press Return.
