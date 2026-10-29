@@ -397,8 +397,11 @@
 //!                   in the gallery, with `scroll` a wheel tick over it (40 px further down); run it
 //!                   once the window has drawn
 //!   studio-resize <w> <h>   the Studio window's size (the window minimum still applies)
-//!   studio-menu [save|copy|switch|json|project]   open the Save theme menu, or pick Save
-//!                   theme, Save Copy, Save Copy and Switch, Copy JSON or Use in this project from it
+//!   studio-menu [save|duplicate|json|project]   open the Save theme menu, or pick Save
+//!                   theme, Duplicate, Copy JSON or Use in this project from it
+//!   studio-theme-menu   open the theme menu (the name in the title row; `menu` lists it, `menu-pick` chooses)
+//!   studio-open own:<file stem>|builtin:<name>|new|project   choose that in the theme menu
+//!   studio-rename <name> | studio-undo | studio-redo | studio-revert   Rename, Undo, Redo, Revert to Saved
 //!   hook [--agent <id>] <tab> <event> [message]   an agent's hook event for a tab (ids as `state`
 //!                   lists them; the agent defaults to claude), e.g. `hook 1 Notification Allow?`.
 //!                   With `/bin/cat` for a shell the status lasts until the next agent check (~2 s)

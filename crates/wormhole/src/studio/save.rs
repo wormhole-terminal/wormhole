@@ -14,8 +14,9 @@ use wormhole_core::project::ProjectFolder;
 use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::tokens::{Appearance, ThemeFile};
 
-use super::document::{Subject, changes};
+use super::document::{Document, Subject};
 use super::draft::{copy_name, export_dir, export_file_name, export_json};
+use super::switch::Then;
 use super::themes::{SaveError, Saved};
 use super::{StudioWindow, ui};
 use crate::app_state::AppState;
@@ -29,8 +30,8 @@ const EXPORT_DIR_KEY: &str = "studio_export_dir";
 
 /// The close question's answers, by position: Save is the default (Return), Cancel takes Esc,
 /// and Don't Save is the one that loses the edits.
-const CLOSE_SAVE: usize = 0;
-const CLOSE_DONT_SAVE: usize = 2;
+pub(super) const CLOSE_SAVE: usize = 0;
+pub(super) const CLOSE_DONT_SAVE: usize = 2;
 /// The name clash's answers: Replace is the default, Cancel takes Esc.
 const REPLACE: usize = 0;
 /// The changed-on-disk question's: Cancel is the default (Return), Overwrite the second button.
@@ -122,9 +123,31 @@ impl StudioWindow {
         cx: &mut Context<Self>,
     ) {
         let expected = if check { self.doc.stamp } else { None };
-        match (self.themes.overwrite)(&path, &self.doc.file, expected) {
+        let to_write = match self.file_to_write(&path) {
+            Ok(to_write) => to_write,
+            Err(why) => {
+                self.notice = Some(Notice::Failed(why.into()));
+                cx.notify();
+                return;
+            }
+        };
+        let was = self.doc.saved.clone();
+        match (self.themes.overwrite)(&path, &to_write.file, expected) {
             Ok(saved) => {
-                self.saved_as(saved, false, cx);
+                // A pick that named the theme by a name it may no longer have names its id (the
+                // theme is in the new format now) or its file (it was renamed): nothing is lost.
+                let mut old_names: Vec<String> = was.name.iter().cloned().collect();
+                old_names.extend(path.file_stem().map(|s| s.to_string_lossy().into_owned()));
+                if to_write.converted {
+                    if let Some(id) = &to_write.file.id {
+                        follow_name(&old_names, id, cx);
+                    }
+                } else if was.name != to_write.file.name {
+                    follow_name(&old_names[..1], &saved.path.to_string_lossy(), cx);
+                }
+                let converted = to_write.converted;
+                self.doc.file = to_write.file;
+                self.saved_as(saved, false, converted, cx);
                 if then_close && !self.dirty() {
                     window.remove_window();
                 }
@@ -143,12 +166,12 @@ impl StudioWindow {
         let mut file = self.doc.file.clone();
         file.name = Some(name.clone());
         if file.version.is_some() && file.id.is_none() {
-            file.id = Some((self.themes.new_id)(&name));
+            file.id = Some((self.themes.new_id)(&name, None));
         }
         match (self.themes.save_new)(&file) {
             Ok(saved) => {
                 self.doc.file = file;
-                self.saved_as(saved, true, cx);
+                self.saved_as(saved, true, false, cx);
             }
             Err(err) => self.notice = Some(Notice::Failed(format!("Could not save: {err}").into())),
         }
@@ -156,19 +179,27 @@ impl StudioWindow {
     }
 
     /// The file as it stands is now what `saved` holds. `new`: it has a file for the first time.
-    fn saved_as(&mut self, saved: Saved, new: bool, cx: &mut Context<Self>) {
-        let Saved { path, stamp } = saved;
+    fn saved_as(&mut self, saved: Saved, new: bool, converted: bool, cx: &mut Context<Self>) {
+        let Saved { path, stamp, lost_comments } = saved;
         if new {
             self.doc.subject = Subject::Own { path: path.clone() };
         }
         self.doc.stamp = stamp;
         self.doc.mark_saved();
         let set = self.switched_to(&path, cx);
-        let text = if set {
+        let mut text = if set {
             format!("Saved to {} and set as your theme.", display_path(&path))
         } else {
             format!("Saved to {}.", display_path(&path))
         };
+        // Older releases of Wormhole can't read a file in the new format, and a rewritten file has
+        // no comments: said once, on the save that does it.
+        if converted {
+            text = format!("{text} {}", wormhole_text::text(wormhole_text::keys::STUDIO_SAVED_CONVERTED));
+        }
+        if lost_comments {
+            text = format!("{text} {}", wormhole_text::text(wormhole_text::keys::STUDIO_SAVED_COMMENTS));
+        }
         self.notice = Some(Notice::Saved { path, text: text.into() });
     }
 
@@ -190,34 +221,29 @@ impl StudioWindow {
         set
     }
 
-    /// Save Copy (⇧⌘S) and Save Copy and Switch: the draft under a free "… copy" name.
-    /// Plain, the theme in use and the draft stay as they are; with `switch`, the app starts
-    /// using the copy and the window goes on editing it.
-    pub(super) fn save_copy(&mut self, switch: bool, cx: &mut Context<Self>) {
+    /// Duplicate (⇧⌘S): the theme as it stands, edits and all, under a free "… copy" name in a file
+    /// of its own, which the window goes on editing. The original stays as it was saved. Picks do not
+    /// change.
+    pub(super) fn duplicate(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.asking {
+            return;
+        }
         let Some(name) = self.theme_name(cx) else { return };
         let taken = self.themes.saved_path;
         let copy = copy_name(&name, |candidate| taken(candidate).is_some());
         let mut file = ThemeFile { name: Some(copy.clone()), id: None, ..self.doc.file.clone() };
         if file.version.is_some() {
-            file.id = Some((self.themes.new_id)(&copy));
+            file.id = Some((self.themes.new_id)(&copy, None));
         }
-        self.notice = Some(match (self.themes.save_new)(&file).map(|saved| saved.path) {
-            Ok(path) if switch => {
-                self.doc.file = file;
-                self.doc.mark_saved();
-                self.switched_to(&path, cx);
-                let text = format!(
-                    "Saved a copy as \u{201c}{copy}\u{201d} to {} and set as your theme.",
-                    display_path(&path)
-                );
-                Notice::Saved { path, text: text.into() }
-            }
-            Ok(path) => {
+        match (self.themes.save_new)(&file) {
+            Ok(Saved { path, stamp, .. }) => {
                 let text = format!("Saved a copy as \u{201c}{copy}\u{201d} to {}.", display_path(&path));
-                Notice::Saved { path, text: text.into() }
+                let doc = Document::new(file, Subject::Own { path: path.clone() }, stamp);
+                self.load(doc, window, cx);
+                self.notice = Some(Notice::Saved { path, text: text.into() });
             }
-            Err(err) => Notice::Failed(format!("Could not save a copy: {err}").into()),
-        });
+            Err(err) => self.notice = Some(Notice::Failed(format!("Could not save a copy: {err}").into())),
+        }
         cx.notify();
     }
 
@@ -337,36 +363,7 @@ impl StudioWindow {
     /// Return saves, Esc cancels, and Don't Save closes with the edits lost. The sheet
     /// is modal for the window, so nothing else in the Studio runs until it is answered.
     pub(super) fn ask_before_closing(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.asking = true;
-        let name = self.doc.name().to_string();
-        let count = changes(&self.doc.saved, &self.doc.file);
-        let message = format!("Do you want to save the changes to \u{201c}{name}\u{201d}?");
-        let detail = format!(
-            "{count} {}. Your changes are lost if you don\u{2019}t save them.",
-            if count == 1 { "change" } else { "changes" }
-        );
-        let buttons = [
-            PromptButton::ok("Save"),
-            PromptButton::cancel("Cancel"),
-            PromptButton::new("Don\u{2019}t Save"),
-        ];
-        let answer = window.prompt(PromptLevel::Warning, &message, Some(&detail), &buttons, cx);
-        self.question = Some(cx.spawn_in(window, async move |this, cx| {
-            // The window going first (the app quitting) answers with nothing: as Cancel.
-            let answer = answer.await.ok();
-            this.update_in(cx, |studio, window, cx| {
-                studio.asking = false;
-                match answer {
-                    Some(CLOSE_SAVE) => studio.save(true, window, cx),
-                    Some(CLOSE_DONT_SAVE) => {
-                        studio.doc.mark_saved();
-                        window.remove_window();
-                    }
-                    _ => {}
-                }
-            })
-            .ok();
-        }));
+        self.ask_unsaved(Then::Close, window, cx);
     }
 
     /// The theme's file is not what it was when it was read: another program wrote it. A sheet
@@ -456,4 +453,16 @@ pub(super) fn project_for_theme(cx: &App) -> Result<ProjectFolder, &'static str>
         .ok_or("The terminal in front isn't in a project with a .wormhole folder.")?;
     // The trust of the profile the window in front lives in, shown or not.
     project::api::theme_target(&front.profile, &root, cx)
+}
+
+/// A pick that names a theme by one of `old` (a name or a file stem) is changed to `value` (its id,
+/// or its file): only those picks. Picks that name a file or an id are not touched.
+fn follow_name(old: &[String], value: &str, cx: &mut App) {
+    SettingsStore::update(cx, |s| {
+        for pick in [&mut s.theme, &mut s.theme_light] {
+            if old.iter().any(|name| pick.eq_ignore_ascii_case(name)) {
+                *pick = value.to_string();
+            }
+        }
+    });
 }

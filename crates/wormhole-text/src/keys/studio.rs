@@ -12,6 +12,30 @@ pub const STUDIO_UNDO_RENAME: Key = Key::new(1186);
 pub const STUDIO_UNDO_REVERT: Key = Key::new(1187);
 /// "Name your theme, then press Return."
 pub const STUDIO_NAME_PROMPT: Key = Key::new(1189);
+/// "Your Themes"
+pub const STUDIO_MENU_YOUR_THEMES: Key = Key::new(1190);
+/// "This Project"
+pub const STUDIO_MENU_THIS_PROJECT: Key = Key::new(1191);
+/// "The project’s theme"
+pub const STUDIO_MENU_PROJECT_THEME: Key = Key::new(1192);
+/// "Built-in"
+pub const STUDIO_MENU_BUILT_IN: Key = Key::new(1193);
+/// "New Theme…"
+pub const STUDIO_MENU_NEW: Key = Key::new(1194);
+/// "Rename…"
+pub const STUDIO_MENU_RENAME: Key = Key::new(1196);
+/// "Revert to Saved"
+pub const STUDIO_MENU_REVERT: Key = Key::new(1197);
+/// "Open a theme, or duplicate, rename and revert this one"
+pub const STUDIO_TOOLTIP_MENU: Key = Key::new(1198);
+/// "That theme could not be opened."
+pub const STUDIO_OPEN_FAILED: Key = Key::new(1200);
+/// "Saved in the new theme format: older releases of Wormhole can’t open this file. The previous file is kept in the theme’s saved versions."
+pub const STUDIO_SAVED_CONVERTED: Key = Key::new(1201);
+/// "Comments in the file were not kept."
+pub const STUDIO_SAVED_COMMENTS: Key = Key::new(1202);
+/// "Could not convert this theme safely, so it was not changed."
+pub const STUDIO_CONVERT_FAILED: Key = Key::new(1203);
 
 /// ```text
 /// Change “{ $token }”
@@ -32,4 +56,18 @@ pub fn studio_undo_reset(token: &str) -> String {
 /// ```
 pub fn studio_untitled_from(from: &str) -> String {
     crate::active::message(1188, &[("from", Arg::Str(from))])
+}
+
+/// ```text
+/// Duplicate “{ $name }”
+/// ```
+pub fn studio_menu_duplicate(name: &str) -> String {
+    crate::active::message(1195, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// Do you want to save the changes to “{ $current }” before opening “{ $next }”?
+/// ```
+pub fn studio_switch_message(current: &str, next: &str) -> String {
+    crate::active::message(1199, &[("current", Arg::Str(current)), ("next", Arg::Str(next))])
 }

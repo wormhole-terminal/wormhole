@@ -1,6 +1,6 @@
-//! The Studio's title row: the lights, "Theme Studio / <the draft's name>"
-//! (click the name to rename it), what it extends, Unsaved; then Discard, Export… and the
-//! Save theme split, whose menu has the other ways to save.
+//! The Studio's title row: the lights, "Theme Studio / <the theme's name> ▾" (the name opens the
+//! theme menu), what it is based on, Unsaved; then Revert to Saved, Export… and the Save theme
+//! split, whose menu has the other ways to write the theme out.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
@@ -9,7 +9,6 @@ use gpui_kit::component::button::ButtonGroup;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::Input;
 use gpui_kit::component::popover::Popover;
-use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::theme::tokens;
@@ -30,22 +29,18 @@ const MENU_W: f32 = 240.0;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum SaveAction {
     Save,
-    SaveCopy,
-    /// Save Copy, then the app uses the copy and the window edits it.
-    SaveCopyAndSwitch,
+    /// ⇧⌘S: a copy in a file of its own, which the window edits from then on.
+    Duplicate,
     Export,
     CopyJson,
     UseInProject,
 }
 
 impl SaveAction {
-    /// The menu, with Save as a copy as two entries: what to show, its
-    /// key, and the separator before it.
-    const MENU: [(SaveAction, &'static str, Option<&'static str>, bool); 6] = [
-        (SaveAction::Save, "Save theme", Some("⌘S"), false),
-        (SaveAction::SaveCopy, "Save Copy", Some("⇧⌘S"), false),
-        (SaveAction::SaveCopyAndSwitch, "Save Copy and Switch", None, false),
-        (SaveAction::Export, "Export JSON…", None, true),
+    /// The ways to write the theme out besides saving it: what to show, its key, and the
+    /// separator before it.
+    const MENU: [(SaveAction, &'static str, Option<&'static str>, bool); 3] = [
+        (SaveAction::Export, "Export JSON…", None, false),
         (SaveAction::CopyJson, "Copy JSON", None, false),
         (SaveAction::UseInProject, "Use in this project…", None, true),
     ];
@@ -74,21 +69,21 @@ impl StudioWindow {
         let title_name = if self.renaming {
             div().flex_none().w(px(NAME_FIELD_W)).child(Input::new(&self.name).small()).into_any_element()
         } else {
+            // The name is the menu's trigger; its bounds are kept for the menu to hang from.
+            let bounds = self.name_bounds.clone();
             div()
-                .id("studio-name")
+                .relative()
                 .flex_none()
-                .flex()
-                .items_center()
-                .h(px(style::CONTROL_H))
-                .px_2()
-                .rounded(ui.radius)
-                .text_body()
-                .font_weight(FontWeight::SEMIBOLD)
-                .cursor_pointer()
-                .hover(move |d| d.bg(ui.hover))
-                .tooltip(|window, cx| Tooltip::new("Rename the theme").build(window, cx))
-                .on_click(cx.listener(|this, _, window, cx| this.start_rename(window, cx)))
-                .child(name)
+                .child(canvas(move |at, _, _| bounds.set(at), |_, _, _, _| {}).absolute().size_full())
+                .child(
+                    Button::new("studio-name")
+                        .ghost()
+                        .small()
+                        .label(name)
+                        .icon(IconName::ChevronDown)
+                        .tooltip(wormhole_text::text(wormhole_text::keys::STUDIO_TOOLTIP_MENU))
+                        .on_click(cx.listener(|this, _, window, cx| this.open_theme_menu(window, cx))),
+                )
                 .into_any_element()
         };
         div()
@@ -142,7 +137,7 @@ impl StudioWindow {
                 Button::new("studio-discard")
                     .ghost()
                     .small()
-                    .label("Discard")
+                    .label(wormhole_text::text(wormhole_text::keys::STUDIO_MENU_REVERT))
                     .disabled(!self.dirty())
                     .on_click(cx.listener(|this, _, window, cx| this.discard_changes(window, cx))),
             )
@@ -242,8 +237,7 @@ impl StudioWindow {
         self.save_menu = false;
         match action {
             SaveAction::Save => self.request_save(window, cx),
-            SaveAction::SaveCopy => self.save_copy(false, cx),
-            SaveAction::SaveCopyAndSwitch => self.save_copy(true, cx),
+            SaveAction::Duplicate => self.duplicate(window, cx),
             SaveAction::Export => self.export(window, cx),
             SaveAction::CopyJson => self.copy_json(cx),
             SaveAction::UseInProject => self.use_in_project(cx),

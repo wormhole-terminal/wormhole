@@ -24,6 +24,12 @@ pub(super) fn with(ctx: &mut Ctx, command: &str, arg: &str) -> Result<String> {
         "studio-area" => studio.devctl_area(&arg, cx),
         "studio-resize" => studio.devctl_resize(&arg, window),
         "studio-menu" => studio.devctl_menu(&arg, cx),
+        "studio-theme-menu" => studio.devctl_theme_menu(window, cx),
+        "studio-open" => studio.devctl_open(&arg, window, cx),
+        "studio-rename" => studio.devctl_rename(&arg, window, cx),
+        "studio-undo" => studio.devctl_undo(false, window, cx),
+        "studio-redo" => studio.devctl_undo(true, window, cx),
+        "studio-revert" => studio.devctl_revert(window, cx),
         _ => studio.devctl_set(&arg, window, cx),
     })?;
     Ok(String::new())

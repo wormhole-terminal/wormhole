@@ -105,7 +105,7 @@ sleep 1; cat "$S/ctl/out.txt"
   `appearance dark` (under Match system, the default, a Mac in Light Mode shows the light pick),
   `studio`, `studio-shot`, `studio-select <token>`, `studio-set <value>` (typed into the token editor's
   field, Return pressed: an expression that doesn't work keeps its error), `studio-filter <all|changed|low>`,
-  `studio-area <area>`, `studio-menu [save|copy|json|project]`, `set key=value` (JSON value), `quit`.
+  `studio-area <area>`, `studio-menu [save|duplicate|json|project]`, `studio-theme-menu`, `studio-open own:<stem>|builtin:<name>|new|project`, `studio-rename <name>`, `studio-undo`, `studio-redo`, `studio-revert`, `set key=value` (JSON value), `quit`.
 - The sidebar: `new ~/dir` (a terminal in another folder), `rename <n> <name>`,
   `group-new <name> <row>…` (a group of those terminals), `sidebar-fold <group>`, `pin <n>`,
   `folder-color [path] <name|none>` (a folder's colour: its terminals' title row is tinted; written to
