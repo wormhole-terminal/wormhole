@@ -8,6 +8,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Drag a terminal's row out of the sidebar to tear it off: let go over the desktop and it opens in a window
+  of its own, let go over another Wormhole window and it moves there, still running.
 - A right-click (or ⌃-click) on a terminal opens a menu with Copy, Paste, Select All, Find, Split Right,
   Split Down and Clear Buffer, each with its shortcut and a small picture. Over a link it adds Open Link and
   Copy Link, and over a finished command in a shell with integration, Copy Command, Copy Output and Put

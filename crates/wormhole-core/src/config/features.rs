@@ -212,8 +212,8 @@ impl FeatureFlag {
             Self::Automation => false,
             // Unfinished: only the page and its previews exist, the animations are still to come.
             Self::Motion => false,
-            // New, and it moves live terminals between windows: off until it has been through its visual check.
-            Self::TearOff => false,
+            // Tried and approved by the user.
+            Self::TearOff => true,
             // Rests on what AppKit does while a person drags a window's edge, which only a real mouse tries.
             Self::LiveResize => false,
             // Through its visual check (small windows, narrow splits, both appearances) and approved.
@@ -392,6 +392,19 @@ mod tests {
         assert!(enabled_in(flag, &off, RELEASE), "a release ignores the map");
         assert!(!enabled_in(flag, &off, FlagMode::Unstable), "a tester can turn it off");
         assert_eq!(FeatureFlag::from_key("notices"), Some(flag));
+    }
+
+    #[test]
+    fn tear_off_is_on_in_a_dev_build_and_in_a_release() {
+        let flag = FeatureFlag::TearOff;
+        assert_eq!(flag.key(), "tear_off");
+        assert!(flag.released());
+        assert!(enabled_in(flag, &BTreeMap::new(), DEV));
+        assert!(enabled_in(flag, &BTreeMap::new(), RELEASE));
+        let off = BTreeMap::from([("tear_off".to_string(), false)]);
+        assert!(enabled_in(flag, &off, RELEASE), "a release ignores the map");
+        assert!(!enabled_in(flag, &off, FlagMode::Unstable), "a tester can turn it off");
+        assert_eq!(FeatureFlag::from_key("tear_off"), Some(flag));
     }
 
     #[test]
