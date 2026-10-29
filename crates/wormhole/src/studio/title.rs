@@ -21,6 +21,8 @@ use super::{StudioWindow, ui};
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::TitleDrag as _;
 use crate::style::{self, Edges, TextRole};
+use wormhole_text::keys::*;
+use wormhole_text::text;
 
 /// The name field while renaming.
 const NAME_FIELD_W: f32 = 200.0;
@@ -41,10 +43,10 @@ pub(super) enum SaveAction {
 impl SaveAction {
     /// The ways to write the theme out besides saving it: what to show, its key, and the
     /// separator before it.
-    const MENU: [(SaveAction, &'static str, Option<&'static str>, bool); 3] = [
-        (SaveAction::Export, "Export JSON…", None, false),
-        (SaveAction::CopyJson, "Copy JSON", None, false),
-        (SaveAction::UseInProject, "Use in this project…", None, true),
+    const MENU: [(SaveAction, wormhole_text::Key, Option<&'static str>, bool); 3] = [
+        (SaveAction::Export, STUDIO_EXPORT_JSON, None, false),
+        (SaveAction::CopyJson, STUDIO_COPY_JSON, None, false),
+        (SaveAction::UseInProject, STUDIO_USE_IN_PROJECT, None, true),
     ];
 }
 
@@ -62,10 +64,10 @@ impl StudioWindow {
             (Some(base), _) => {
                 let from = wormhole_core::theme::tokens::slug::builtin_name(&base.from).unwrap_or(&base.from);
                 let day = base.copied.as_deref().map(names::display_date).unwrap_or_default();
-                format!("based on {from} · copied {day} · {appearance}")
+                studio_title_based_on(from, &day, appearance)
             }
-            (None, Some(base)) => format!("extends {base} · {appearance}"),
-            (None, None) => format!("its own palette · {appearance}"),
+            (None, Some(base)) => studio_title_extends(base, appearance),
+            (None, None) => studio_title_own(appearance),
         };
         let name: SharedString = self.doc.name().to_string().into();
         let title_name = if self.renaming {
@@ -107,7 +109,7 @@ impl StudioWindow {
                     .text_label()
                     .font_weight(FontWeight::MEDIUM)
                     .text_color(ui.muted)
-                    .child("Theme Studio"),
+                    .child(text(STUDIO_TITLE)),
             )
             .child(div().flex_none().text_color(ui.faint).child("/"))
             .child(title_name)
@@ -132,7 +134,7 @@ impl StudioWindow {
                         .text_caption()
                         .text_color(ui.warning_text)
                         .child(div().size(px(style::MARK_DOT)).rounded_full().bg(ui.warning))
-                        .child("Unsaved"),
+                        .child(text(STUDIO_UNSAVED)),
                 )
             })
             .child(div().flex_1())
@@ -149,7 +151,7 @@ impl StudioWindow {
                     .outline()
                     .small()
                     .icon(IconName::Upload)
-                    .label("Export…")
+                    .label(text(STUDIO_EXPORT))
                     .on_click(cx.listener(|this, _, window, cx| this.export(window, cx))),
             )
             .child(self.save_split(ui, cx))
@@ -164,7 +166,7 @@ impl StudioWindow {
             .small()
             .child(
                 Button::new("studio-save")
-                    .label("Save theme")
+                    .label(text(STUDIO_SAVE_THEME))
                     .on_click(cx.listener(|this, _, window, cx| this.request_save(window, cx))),
             )
             .child(
@@ -201,7 +203,7 @@ impl StudioWindow {
                     list = list.child(
                         style::row(SharedString::from(format!("studio-menu-{action:?}")), ui, false)
                             .when(!enabled, |d| d.text_color(ui.faint).cursor_default())
-                            .child(div().flex_1().child(label))
+                            .child(div().flex_1().child(text(label)))
                             .children(
                                 keys.map(|k| {
                                     div().text_caption().tabular_nums().text_color(ui.faint).child(k)

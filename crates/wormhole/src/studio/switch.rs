@@ -3,7 +3,11 @@
 //! theme starts with a history of its own.
 
 use gpui_kit::*;
-use wormhole_text::keys::{STUDIO_OPEN_FAILED, studio_switch_message};
+use wormhole_text::keys::{
+    STUDIO_CANCEL, STUDIO_DONT_SAVE, STUDIO_OPEN_FAILED, STUDIO_SAVE, studio_close_message,
+    studio_switch_message, studio_unsaved_detail,
+};
+use wormhole_text::text;
 
 use super::document::history::UndoStack;
 use super::document::{Document, Subject};
@@ -103,18 +107,15 @@ impl StudioWindow {
         let name = self.doc.name().to_string();
         let count = super::document::changes(&self.doc.saved, &self.doc.file);
         let message = match &then {
-            Then::Close => format!("Do you want to save the changes to \u{201c}{name}\u{201d}?"),
+            Then::Close => studio_close_message(&name),
             // A copy of a theme is called by the theme it is made from: that is what was chosen.
             Then::Switch(_, called) => studio_switch_message(&name, called),
         };
-        let detail = format!(
-            "{count} {}. Your changes are lost if you don\u{2019}t save them.",
-            if count == 1 { "change" } else { "changes" }
-        );
+        let detail = studio_unsaved_detail(i64::try_from(count).unwrap_or(i64::MAX));
         let buttons = [
-            PromptButton::ok("Save"),
-            PromptButton::cancel("Cancel"),
-            PromptButton::new("Don\u{2019}t Save"),
+            PromptButton::ok(text(STUDIO_SAVE)),
+            PromptButton::cancel(text(STUDIO_CANCEL)),
+            PromptButton::new(text(STUDIO_DONT_SAVE)),
         ];
         let answer = window.prompt(PromptLevel::Warning, &message, Some(&detail), &buttons, cx);
         self.question = Some(cx.spawn_in(window, async move |this, cx| {

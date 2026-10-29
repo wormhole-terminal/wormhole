@@ -30,6 +30,7 @@ mod themes;
 mod title;
 mod title_chips;
 mod token_editor;
+mod token_field;
 mod token_list;
 mod token_rows;
 mod undo;
@@ -62,7 +63,8 @@ use gallery::{Area, GalleryView};
 use save::Notice;
 use themes::Themes;
 use title::SaveAction;
-use token_editor::{FieldError, TokenEditorView};
+use token_editor::TokenEditorView;
+use token_field::FieldError;
 use token_list::TokenListView;
 
 /// The window's size, and the smallest it may get: the token list

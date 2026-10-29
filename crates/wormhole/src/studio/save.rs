@@ -14,7 +14,8 @@ use wormhole_core::platform::paths;
 use wormhole_core::project::ProjectFolder;
 use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::tokens::{Appearance, ThemeFile};
-use wormhole_text::keys::{STUDIO_NEWER_FILE, studio_name_is_a_version};
+use wormhole_text::keys::*;
+use wormhole_text::text;
 
 use super::document::{Document, Subject};
 use super::draft::{copy_name, export_dir, export_file_name, export_json};
@@ -62,7 +63,7 @@ impl StudioWindow {
     pub(super) fn theme_name(&mut self, cx: &mut Context<Self>) -> Option<String> {
         let name = self.doc.name().trim().to_string();
         if name.is_empty() {
-            self.notice = Some(Notice::Failed("Give the theme a name first.".into()));
+            self.notice = Some(Notice::Failed(text(STUDIO_NAME_FIRST).into()));
             cx.notify();
             return None;
         }
@@ -178,7 +179,7 @@ impl StudioWindow {
             }
             Err(SaveError::ChangedOnDisk) => self.ask_to_overwrite(path, then_close, window, cx),
             Err(SaveError::Other(err)) => {
-                self.notice = Some(Notice::Failed(format!("Could not save: {err}").into()));
+                self.notice = Some(Notice::Failed(studio_save_failed(&err.to_string()).into()));
             }
         }
         cx.notify();
@@ -199,7 +200,7 @@ impl StudioWindow {
                 self.doc.file = file;
                 self.saved_as(saved, true, false, cx);
             }
-            Err(err) => self.notice = Some(Notice::Failed(format!("Could not save: {err}").into())),
+            Err(err) => self.notice = Some(Notice::Failed(studio_save_failed(&err.to_string()).into())),
         }
         cx.notify();
     }
@@ -213,11 +214,8 @@ impl StudioWindow {
         self.doc.stamp = stamp;
         self.doc.mark_saved();
         let set = self.switched_to(&path, cx);
-        let mut text = if set {
-            format!("Saved to {} and set as your theme.", display_path(&path))
-        } else {
-            format!("Saved to {}.", display_path(&path))
-        };
+        let mut text =
+            if set { studio_saved_set(&display_path(&path)) } else { studio_saved(&display_path(&path)) };
         // Older releases of Wormhole can't read a file in the new format, and a rewritten file has
         // no comments: said once, on the save that does it.
         if converted {
@@ -269,12 +267,12 @@ impl StudioWindow {
         }
         match (self.themes.save_new)(&file) {
             Ok(Saved { path, stamp, .. }) => {
-                let text = format!("Saved a copy as \u{201c}{copy}\u{201d} to {}.", display_path(&path));
+                let text = studio_copy_saved(&copy, &display_path(&path));
                 let doc = Document::new(file, Subject::Own { path: path.clone() }, stamp);
                 self.load(doc, window, cx);
                 self.notice = Some(Notice::Saved { path, text: text.into() });
             }
-            Err(err) => self.notice = Some(Notice::Failed(format!("Could not save a copy: {err}").into())),
+            Err(err) => self.notice = Some(Notice::Failed(studio_copy_failed(&err.to_string()).into())),
         }
         cx.notify();
     }
@@ -285,7 +283,7 @@ impl StudioWindow {
         let json = match export_json(&self.doc.folded(), self.themes.resolve) {
             Ok(json) => json,
             Err(err) => {
-                self.notice = Some(Notice::Failed(format!("Could not export: {err}").into()));
+                self.notice = Some(Notice::Failed(studio_export_failed(&err.to_string()).into()));
                 cx.notify();
                 return;
             }
@@ -300,10 +298,10 @@ impl StudioWindow {
             // The person's own file: a link there is theirs to keep.
             let notice = match files::write_atomic(&path, json.as_bytes(), LinkPolicy::Follow) {
                 Ok(()) => {
-                    let text = format!("Exported to {}.", display_path(&path));
+                    let text = studio_exported(&display_path(&path));
                     Notice::Saved { path, text: text.into() }
                 }
-                Err(err) => Notice::Failed(format!("Could not export: {err}").into()),
+                Err(err) => Notice::Failed(studio_export_failed(&err.to_string()).into()),
             };
             this.update(cx, |studio, cx| {
                 if let Notice::Saved { path, .. } = &notice
@@ -325,9 +323,9 @@ impl StudioWindow {
         self.notice = Some(match export_json(&self.doc.folded(), self.themes.resolve) {
             Ok(json) => {
                 crate::platform::clipboard::write(json, cx);
-                Notice::Done("Copied the theme's JSON.".into())
+                Notice::Done(text(STUDIO_COPIED_JSON).into())
             }
-            Err(err) => Notice::Failed(format!("Could not copy: {err}").into()),
+            Err(err) => Notice::Failed(studio_copy_json_failed(&err.to_string()).into()),
         });
         cx.notify();
     }
@@ -346,7 +344,7 @@ impl StudioWindow {
         };
         let project_subject = matches!(&self.doc.subject, Subject::Project { root } if *root == folder.root);
         if matches!(self.doc.subject, Subject::Project { .. }) && !project_subject {
-            self.notice = Some(Notice::Failed("The terminal in front is in another project.".into()));
+            self.notice = Some(Notice::Failed(text(STUDIO_OTHER_PROJECT).into()));
             cx.notify();
             return;
         }
@@ -360,10 +358,10 @@ impl StudioWindow {
                     self.doc.mark_saved();
                 }
                 self.touched();
-                let text = format!("Saved to {}: terminals in this project use it.", display_path(&path));
+                let text = studio_project_saved(&display_path(&path));
                 Notice::Saved { path, text: text.into() }
             }
-            Err(err) => Notice::Failed(format!("Could not save to the project: {err}").into()),
+            Err(err) => Notice::Failed(studio_project_failed(&err.to_string()).into()),
         });
         cx.notify();
     }
@@ -383,7 +381,7 @@ impl StudioWindow {
                     Button::new("studio-reveal")
                         .ghost()
                         .small()
-                        .label("Reveal in Finder")
+                        .label(wormhole_text::text(STUDIO_REVEAL))
                         .on_click(move |_, _, cx| cx.reveal_path(&path)),
                 )
                 .when(self.can_follow_system(cx), |banner| {
@@ -432,10 +430,9 @@ impl StudioWindow {
         cx: &mut Context<Self>,
     ) {
         self.asking = true;
-        let message = format!("\u{201c}{}\u{201d} was changed by another application.", self.doc.name());
-        let detail = "Saving replaces those changes. The file as it is now is kept in the theme\u{2019}s \
-                      saved versions.";
-        let buttons = [PromptButton::cancel("Cancel"), PromptButton::ok("Overwrite")];
+        let message = studio_changed_message(self.doc.name());
+        let detail = text(STUDIO_CHANGED_DETAIL);
+        let buttons = [PromptButton::cancel(text(STUDIO_CANCEL)), PromptButton::ok(text(STUDIO_OVERWRITE))];
         let answer = window.prompt(PromptLevel::Warning, &message, Some(detail), &buttons, cx);
         self.question = Some(cx.spawn_in(window, async move |this, cx| {
             let overwrite = answer.await.ok() == Some(OVERWRITE);
@@ -459,10 +456,9 @@ impl StudioWindow {
         cx: &mut Context<Self>,
     ) {
         self.asking = true;
-        let message = format!("\u{201c}{name}\u{201d} already exists. Do you want to replace it?");
-        let detail = "A theme with the same name is in your themes folder. \
-                      Replacing it overwrites that theme with this draft.";
-        let buttons = [PromptButton::ok("Replace"), PromptButton::cancel("Cancel")];
+        let message = studio_exists_message(&name);
+        let detail = text(STUDIO_EXISTS_DETAIL);
+        let buttons = [PromptButton::ok(text(STUDIO_REPLACE)), PromptButton::cancel(text(STUDIO_CANCEL))];
         let answer = window.prompt(PromptLevel::Warning, &message, Some(detail), &buttons, cx);
         self.question = Some(cx.spawn_in(window, async move |this, cx| {
             let replace = answer.await.ok() == Some(REPLACE);
@@ -496,7 +492,7 @@ fn display_path(path: &Path) -> String {
 /// Otherwise what stands in the way, in the person's words. Reads the front window's workspace, so
 /// it never runs during this window's own draw or update.
 pub(super) fn project_for_theme(cx: &App) -> Result<ProjectFolder, &'static str> {
-    let no_terminal = "Open a terminal in a project first.";
+    let no_terminal = text(STUDIO_NO_TERMINAL);
     if cx.try_global::<AppState>().is_none() {
         return Err(no_terminal);
     }
@@ -506,7 +502,7 @@ pub(super) fn project_for_theme(cx: &App) -> Result<ProjectFolder, &'static str>
         .read_with(cx, project::api::active_root)
         .ok()
         .flatten()
-        .ok_or("The terminal in front isn't in a project with a .wormhole folder.")?;
+        .ok_or(text(STUDIO_NO_PROJECT_FOLDER))?;
     // The trust of the profile the window in front lives in, shown or not.
     project::api::theme_target(&front.profile, &root, cx)
 }

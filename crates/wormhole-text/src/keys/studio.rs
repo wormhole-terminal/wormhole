@@ -132,6 +132,46 @@ pub const STUDIO_VERSIONS_JUST_NOW: Key = Key::new(1273);
 pub const STUDIO_MENU_NEW_FROM: Key = Key::new(1276);
 /// "Untitled"
 pub const STUDIO_UNTITLED: Key = Key::new(1277);
+/// "Give the theme a name first."
+pub const STUDIO_NAME_FIRST: Key = Key::new(1278);
+/// "Copied the theme's JSON."
+pub const STUDIO_COPIED_JSON: Key = Key::new(1286);
+/// "The terminal in front is in another project."
+pub const STUDIO_OTHER_PROJECT: Key = Key::new(1288);
+/// "Open a terminal in a project first."
+pub const STUDIO_NO_TERMINAL: Key = Key::new(1291);
+/// "The terminal in front isn't in a project with a .wormhole folder."
+pub const STUDIO_NO_PROJECT_FOLDER: Key = Key::new(1292);
+/// "Reveal in Finder"
+pub const STUDIO_REVEAL: Key = Key::new(1293);
+/// "Saving replaces those changes. The file as it is now is kept in the theme’s saved versions."
+pub const STUDIO_CHANGED_DETAIL: Key = Key::new(1295);
+/// "Overwrite"
+pub const STUDIO_OVERWRITE: Key = Key::new(1296);
+/// "A theme with the same name is in your themes folder. Replacing it overwrites that theme with this draft."
+pub const STUDIO_EXISTS_DETAIL: Key = Key::new(1298);
+/// "Replace"
+pub const STUDIO_REPLACE: Key = Key::new(1299);
+/// "Cancel"
+pub const STUDIO_CANCEL: Key = Key::new(1300);
+/// "Save"
+pub const STUDIO_SAVE: Key = Key::new(1301);
+/// "Don’t Save"
+pub const STUDIO_DONT_SAVE: Key = Key::new(1302);
+/// "Theme Studio"
+pub const STUDIO_TITLE: Key = Key::new(1305);
+/// "Unsaved"
+pub const STUDIO_UNSAVED: Key = Key::new(1306);
+/// "Export…"
+pub const STUDIO_EXPORT: Key = Key::new(1307);
+/// "Save theme"
+pub const STUDIO_SAVE_THEME: Key = Key::new(1308);
+/// "Export JSON…"
+pub const STUDIO_EXPORT_JSON: Key = Key::new(1309);
+/// "Copy JSON"
+pub const STUDIO_COPY_JSON: Key = Key::new(1310);
+/// "Use in this project…"
+pub const STUDIO_USE_IN_PROJECT: Key = Key::new(1311);
 
 /// ```text
 /// Change “{ $token }”
@@ -321,4 +361,147 @@ pub fn studio_versions_minutes_ago(count: i64) -> String {
 /// ```
 pub fn studio_versions_hours_ago(count: i64) -> String {
     crate::active::message(1275, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// Could not save: { $error }
+/// ```
+pub fn studio_save_failed(error: &str) -> String {
+    crate::active::message(1279, &[("error", Arg::Str(error))])
+}
+
+/// ```text
+/// Saved to { $path } and set as your theme.
+/// ```
+pub fn studio_saved_set(path: &str) -> String {
+    crate::active::message(1280, &[("path", Arg::Str(path))])
+}
+
+/// ```text
+/// Saved to { $path }.
+/// ```
+pub fn studio_saved(path: &str) -> String {
+    crate::active::message(1281, &[("path", Arg::Str(path))])
+}
+
+/// ```text
+/// Saved a copy as “{ $name }” to { $path }.
+/// ```
+pub fn studio_copy_saved(name: &str, path: &str) -> String {
+    crate::active::message(1282, &[("name", Arg::Str(name)), ("path", Arg::Str(path))])
+}
+
+/// ```text
+/// Could not save a copy: { $error }
+/// ```
+pub fn studio_copy_failed(error: &str) -> String {
+    crate::active::message(1283, &[("error", Arg::Str(error))])
+}
+
+/// ```text
+/// Could not export: { $error }
+/// ```
+pub fn studio_export_failed(error: &str) -> String {
+    crate::active::message(1284, &[("error", Arg::Str(error))])
+}
+
+/// ```text
+/// Exported to { $path }.
+/// ```
+pub fn studio_exported(path: &str) -> String {
+    crate::active::message(1285, &[("path", Arg::Str(path))])
+}
+
+/// ```text
+/// Could not copy: { $error }
+/// ```
+pub fn studio_copy_json_failed(error: &str) -> String {
+    crate::active::message(1287, &[("error", Arg::Str(error))])
+}
+
+/// ```text
+/// Saved to { $path }: terminals in this project use it.
+/// ```
+pub fn studio_project_saved(path: &str) -> String {
+    crate::active::message(1289, &[("path", Arg::Str(path))])
+}
+
+/// ```text
+/// Could not save to the project: { $error }
+/// ```
+pub fn studio_project_failed(error: &str) -> String {
+    crate::active::message(1290, &[("error", Arg::Str(error))])
+}
+
+/// ```text
+/// “{ $name }” was changed by another application.
+/// ```
+pub fn studio_changed_message(name: &str) -> String {
+    crate::active::message(1294, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// “{ $name }” already exists. Do you want to replace it?
+/// ```
+pub fn studio_exists_message(name: &str) -> String {
+    crate::active::message(1297, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// Do you want to save the changes to “{ $name }”?
+/// ```
+pub fn studio_close_message(name: &str) -> String {
+    crate::active::message(1303, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] 1 change. Your changes are lost if you don’t save them.
+///    *[other] { $count } changes. Your changes are lost if you don’t save them.
+/// }
+/// ```
+pub fn studio_unsaved_detail(count: i64) -> String {
+    crate::active::message(1304, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// based on { $from } · copied { $day } · { $appearance }
+/// ```
+pub fn studio_title_based_on(from: &str, day: &str, appearance: &str) -> String {
+    crate::active::message(1312, &[("from", Arg::Str(from)), ("day", Arg::Str(day)), ("appearance", Arg::Str(appearance))])
+}
+
+/// ```text
+/// extends { $base } · { $appearance }
+/// ```
+pub fn studio_title_extends(base: &str, appearance: &str) -> String {
+    crate::active::message(1313, &[("base", Arg::Str(base)), ("appearance", Arg::Str(appearance))])
+}
+
+/// ```text
+/// its own palette · { $appearance }
+/// ```
+pub fn studio_title_own(appearance: &str) -> String {
+    crate::active::message(1314, &[("appearance", Arg::Str(appearance))])
+}
+
+/// ```text
+/// { $day } { $month ->
+///     [one] Jan
+///     [2] Feb
+///     [3] Mar
+///     [4] Apr
+///     [5] May
+///     [6] Jun
+///     [7] Jul
+///     [8] Aug
+///     [9] Sep
+///     [10] Oct
+///     [11] Nov
+///     [12] Dec
+///    *[other] { $month }
+/// } { $year }
+/// ```
+pub fn studio_date(day: &str, month: i64, year: &str) -> String {
+    crate::active::message(1315, &[("day", Arg::Str(day)), ("month", Arg::Int(month)), ("year", Arg::Str(year))])
 }

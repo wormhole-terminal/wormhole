@@ -172,3 +172,85 @@ studio-versions-hours-ago = { $count ->
 studio-menu-new-from = New Theme From
 # The name a new theme has until it is named.
 studio-untitled = Untitled
+
+## What saving, exporting and copying say
+
+studio-name-first = Give the theme a name first.
+# { $error } is why it failed.
+studio-save-failed = Could not save: { $error }
+# { $path } is where the theme was written.
+studio-saved-set = Saved to { $path } and set as your theme.
+# { $path } is where the theme was written.
+studio-saved = Saved to { $path }.
+# { $name } is the copy's name, { $path } where it was written.
+studio-copy-saved = Saved a copy as “{ $name }” to { $path }.
+# { $error } is why it failed.
+studio-copy-failed = Could not save a copy: { $error }
+# { $error } is why it failed.
+studio-export-failed = Could not export: { $error }
+# { $path } is where the file was written.
+studio-exported = Exported to { $path }.
+studio-copied-json = Copied the theme's JSON.
+# { $error } is why it failed.
+studio-copy-json-failed = Could not copy: { $error }
+studio-other-project = The terminal in front is in another project.
+# { $path } is where the theme was written.
+studio-project-saved = Saved to { $path }: terminals in this project use it.
+# { $error } is why it failed.
+studio-project-failed = Could not save to the project: { $error }
+studio-no-terminal = Open a terminal in a project first.
+studio-no-project-folder = The terminal in front isn't in a project with a .wormhole folder.
+studio-reveal = Reveal in Finder
+
+## Questions on the window
+
+# { $name } is the theme's name.
+studio-changed-message = “{ $name }” was changed by another application.
+studio-changed-detail = Saving replaces those changes. The file as it is now is kept in the theme’s saved versions.
+studio-overwrite = Overwrite
+# { $name } is the theme's name.
+studio-exists-message = “{ $name }” already exists. Do you want to replace it?
+studio-exists-detail = A theme with the same name is in your themes folder. Replacing it overwrites that theme with this draft.
+studio-replace = Replace
+studio-cancel = Cancel
+studio-save = Save
+studio-dont-save = Don’t Save
+# { $name } is the theme's name.
+studio-close-message = Do you want to save the changes to “{ $name }”?
+# { $count } is how many values changed.
+studio-unsaved-detail = { $count ->
+    [one] 1 change. Your changes are lost if you don’t save them.
+   *[other] { $count } changes. Your changes are lost if you don’t save them.
+}
+
+## The title row
+
+studio-title = Theme Studio
+studio-unsaved = Unsaved
+studio-export = Export…
+studio-save-theme = Save theme
+studio-export-json = Export JSON…
+studio-copy-json = Copy JSON
+studio-use-in-project = Use in this project…
+# { $from } is the theme it was copied from, { $day } when, { $appearance } light or dark.
+studio-title-based-on = based on { $from } · copied { $day } · { $appearance }
+# { $base } is the theme it extends, { $appearance } light or dark.
+studio-title-extends = extends { $base } · { $appearance }
+# { $appearance } is light or dark.
+studio-title-own = its own palette · { $appearance }
+# { $day } { $month } { $year } as a date: 29 Oct 2026.
+studio-date = { $day } { $month ->
+    [one] Jan
+    [2] Feb
+    [3] Mar
+    [4] Apr
+    [5] May
+    [6] Jun
+    [7] Jul
+    [8] Aug
+    [9] Sep
+    [10] Oct
+    [11] Nov
+    [12] Dec
+   *[other] { $month }
+} { $year }

@@ -36,14 +36,12 @@ fn civil(days: i64) -> (i64, u32, u32) {
 
 /// `2026-10-29` as "29 Oct 2026"; anything else as it is.
 pub(super) fn display_date(day: &str) -> String {
-    const MONTHS: [&str; 12] =
-        ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     let mut parts = day.split('-');
     let (Some(y), Some(m), Some(d), None) = (parts.next(), parts.next(), parts.next(), parts.next()) else {
         return day.to_string();
     };
-    match (m.parse::<usize>(), d.parse::<u32>()) {
-        (Ok(m @ 1..=12), Ok(d)) => format!("{d} {} {y}", MONTHS[m - 1]),
+    match (m.parse::<i64>(), d.parse::<u32>()) {
+        (Ok(m @ 1..=12), Ok(d)) => wormhole_text::keys::studio_date(&d.to_string(), m, y),
         _ => day.to_string(),
     }
 }
