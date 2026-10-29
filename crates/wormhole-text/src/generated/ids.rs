@@ -406,7 +406,7 @@ pub(crate) static IDS: [&str; 1456] = [
     "studio-undo-change", "studio-undo-reset", "studio-undo-rename",
     "studio-undo-revert", "studio-untitled-from", "studio-name-prompt",
     "studio-menu-your-themes", "studio-menu-this-project", "studio-menu-project-theme",
-    "studio-menu-built-in", "studio-menu-new", "studio-menu-duplicate",
+    "studio-menu-wormhole", "studio-menu-new", "studio-menu-duplicate",
     "studio-menu-rename", "studio-menu-revert", "studio-tooltip-menu",
     "studio-switch-message", "studio-open-failed", "studio-saved-converted",
     "studio-saved-comments", "studio-convert-failed", "studio-name-is-a-version",

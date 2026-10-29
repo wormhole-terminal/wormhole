@@ -547,9 +547,9 @@ fn the_name_opens_the_theme_menu_and_a_choice_opens_that_theme(cx: &mut TestAppC
     with(cx, handle, &studio, |studio, window, cx| studio.open_theme_menu(window, cx));
     let menu = crate::platform::record::open().expect("the menu opened");
     let outline = menu.outline();
-    assert!(
-        outline.contains(&"# Built-in".to_string()) && outline.contains(&"- New Theme\u{2026}".to_string())
-    );
+    assert!(outline.contains(&"- New Theme\u{2026}".to_string()), "{outline:?}");
+    assert!(!outline.contains(&"# Built-in".to_string()), "no built-ins at the top level: {outline:?}");
+    assert!(!outline.contains(&"- Nord".to_string()), "Nord is under New Theme From only: {outline:?}");
     assert!(outline.contains(&"- Revert to Saved [off]".to_string()), "no edits: {outline:?}");
     pick_from_menu(cx, handle, "Nord");
     with(cx, handle, &studio, |studio, _, _| {

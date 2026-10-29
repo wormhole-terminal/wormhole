@@ -23,7 +23,7 @@ studio-name-prompt = Name your theme, then press Return.
 studio-menu-your-themes = Your Themes
 studio-menu-this-project = This Project
 studio-menu-project-theme = The project’s theme
-studio-menu-built-in = Built-in
+studio-menu-wormhole = Wormhole
 studio-menu-new = New Theme…
 # { $name } is the name of the theme being edited.
 studio-menu-duplicate = Duplicate “{ $name }”

@@ -18,8 +18,8 @@ pub const STUDIO_MENU_YOUR_THEMES: Key = Key::new(1197);
 pub const STUDIO_MENU_THIS_PROJECT: Key = Key::new(1198);
 /// "The project’s theme"
 pub const STUDIO_MENU_PROJECT_THEME: Key = Key::new(1199);
-/// "Built-in"
-pub const STUDIO_MENU_BUILT_IN: Key = Key::new(1200);
+/// "Wormhole"
+pub const STUDIO_MENU_WORMHOLE: Key = Key::new(1200);
 /// "New Theme…"
 pub const STUDIO_MENU_NEW: Key = Key::new(1201);
 /// "Rename…"

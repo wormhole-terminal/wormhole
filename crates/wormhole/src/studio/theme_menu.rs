@@ -1,21 +1,21 @@
 //! The theme menu: the name in the title row opens it as a native menu. Your themes (the one being
-//! edited checked), the project's theme, the built-ins to start a copy from, then New Theme,
-//! Duplicate, Rename and Revert to Saved.
+//! edited checked), the project's theme, then New Theme, New Theme From (your themes, then the
+//! built-ins, Wormhole's own together), Duplicate, Rename and Revert to Saved.
 
 use gpui_kit::WeakEntity;
 use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_text::keys::{
-    STUDIO_MENU_ADD_DARK, STUDIO_MENU_ADD_LIGHT, STUDIO_MENU_BUILT_IN, STUDIO_MENU_NEW, STUDIO_MENU_NEW_FROM,
+    STUDIO_MENU_ADD_DARK, STUDIO_MENU_ADD_LIGHT, STUDIO_MENU_NEW, STUDIO_MENU_NEW_FROM,
     STUDIO_MENU_PROJECT_THEME, STUDIO_MENU_RENAME, STUDIO_MENU_REVERT, STUDIO_MENU_REVERT_TO,
-    STUDIO_MENU_THIS_PROJECT, STUDIO_MENU_VERSIONS, STUDIO_MENU_YOUR_THEMES, studio_menu_duplicate,
-    studio_menu_update_current, studio_menu_update_missing, studio_update_from,
+    STUDIO_MENU_THIS_PROJECT, STUDIO_MENU_VERSIONS, STUDIO_MENU_WORMHOLE, STUDIO_MENU_YOUR_THEMES,
+    studio_menu_duplicate, studio_menu_update_current, studio_menu_update_missing, studio_update_from,
 };
 use wormhole_text::text;
 
 use super::StudioWindow;
 use super::document::Subject;
 use super::opening::Target;
-use super::theme_list::{Choice, ThemeList};
+use super::theme_list::{Choice, Family, ThemeList};
 use super::update_from::State;
 use crate::menubar::model::KeyEquivalent;
 use crate::platform::menu::{Item, Menu, run_on};
@@ -45,6 +45,21 @@ fn choice(choice: &Choice, this: &WeakEntity<StudioWindow>, checked: bool) -> It
     Item::new(choice.name.clone()).checked(checked).on_select(run_on(this, open(choice.target.clone())))
 }
 
+fn is_wormhole_family(name: &str) -> bool {
+    name == "Wormhole" || name.starts_with("Wormhole ") // text: name (a built-in theme's own name)
+}
+
+/// A built-in family as one item, or a submenu of its appearances.
+fn family_entry(menu: Menu, family: &Family, this: &WeakEntity<StudioWindow>) -> Menu {
+    match family.choices.as_slice() {
+        [only] => menu.item(choice(only, this, false)),
+        many => menu.submenu(
+            family.name.clone(),
+            many.iter().fold(Menu::new(), |sub, c| sub.item(choice(c, this, false))),
+        ),
+    }
+}
+
 /// New Theme From: the person's themes, then the built-ins (a family once), each a copy to start from.
 fn new_from(list: &ThemeList, this: &WeakEntity<StudioWindow>) -> Menu {
     let mut menu = Menu::new();
@@ -57,14 +72,15 @@ fn new_from(list: &ThemeList, this: &WeakEntity<StudioWindow>) -> Menu {
     if !list.own.is_empty() {
         menu = menu.separator();
     }
-    for family in &list.builtins {
-        menu = match family.choices.as_slice() {
-            [only] => menu.item(choice(only, this, false)),
-            many => menu.submenu(
-                family.name.clone(),
-                many.iter().fold(Menu::new(), |sub, c| sub.item(choice(c, this, false))),
-            ),
-        };
+    // Wormhole's own families (the accent ones and Wormhole itself) go under one name.
+    let (own_families, others): (Vec<&Family>, Vec<&Family>) =
+        list.builtins.iter().partition(|f| is_wormhole_family(&f.name));
+    if !own_families.is_empty() {
+        let sub = own_families.iter().fold(Menu::new(), |sub, f| family_entry(sub, f, this));
+        menu = menu.submenu(text(STUDIO_MENU_WORMHOLE), sub);
+    }
+    for family in others {
+        menu = family_entry(menu, family, this);
     }
     menu
 }
@@ -85,16 +101,6 @@ pub(super) fn build(list: &ThemeList, facts: &Facts<'_>, this: &WeakEntity<Studi
                 .checked(checked)
                 .on_select(run_on(this, open(Target::Project))),
         );
-    }
-    menu = menu.header(text(STUDIO_MENU_BUILT_IN));
-    for family in &list.builtins {
-        menu = match family.choices.as_slice() {
-            [only] => menu.item(choice(only, this, false)),
-            many => menu.submenu(
-                family.name.clone(),
-                many.iter().fold(Menu::new(), |sub, c| sub.item(choice(c, this, false))),
-            ),
-        };
     }
     let duplicate_key = keymap::key(ActionId::DuplicateTheme).and_then(KeyEquivalent::from_spec);
     let menu = menu.separator();
@@ -151,7 +157,6 @@ mod tests {
     use gpui_kit::WeakEntity;
 
     use super::*;
-    use crate::studio::theme_list::Family;
 
     fn list() -> ThemeList {
         ThemeList {
@@ -169,6 +174,19 @@ mod tests {
                     ],
                 },
                 Family {
+                    name: "Wormhole Electric Blue".into(),
+                    choices: vec![
+                        Choice {
+                            name: "Dark".into(),
+                            target: Target::Builtin("Wormhole Electric Blue Dark".into()),
+                        },
+                        Choice {
+                            name: "Light".into(),
+                            target: Target::Builtin("Wormhole Electric Blue Light".into()),
+                        },
+                    ],
+                },
+                Family {
                     name: "Nord".into(),
                     choices: vec![Choice { name: "Nord".into(), target: Target::Builtin("Nord".into()) }],
                 },
@@ -177,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn the_menu_lists_your_themes_the_project_the_built_ins_and_what_to_do() {
+    fn the_top_level_has_no_built_ins_and_new_theme_from_groups_the_wormhole_families() {
         let subject = Subject::Own { path: "/themes/mine.json".into() };
         let facts = Facts {
             subject: &subject,
@@ -196,11 +214,6 @@ mod tests {
                 "- Mine [x]",
                 "# This Project",
                 "- The project\u{2019}s theme",
-                "# Built-in",
-                "> Wormhole",
-                "  - Dark",
-                "  - Light",
-                "- Nord",
                 "---",
                 "- New Theme\u{2026}",
                 "> New Theme From",
@@ -208,8 +221,12 @@ mod tests {
                 "  - Mine",
                 "  ---",
                 "  > Wormhole",
-                "    - Dark",
-                "    - Light",
+                "    > Wormhole",
+                "      - Dark",
+                "      - Light",
+                "    > Wormhole Electric Blue",
+                "      - Dark",
+                "      - Light",
                 "  - Nord",
                 "- Duplicate \u{201c}Mine\u{201d}",
                 "- Rename\u{2026}",

@@ -102,8 +102,15 @@ impl StudioWindow {
                         .ghost()
                         .small()
                         .min_w_0()
-                        .child(div().min_w_0().truncate().child(name))
-                        .icon(IconName::ChevronDown)
+                        .child(
+                            div()
+                                .min_w_0()
+                                .flex()
+                                .items_center()
+                                .gap_1()
+                                .child(div().min_w_0().truncate().child(name))
+                                .child(style::icon(IconName::ChevronDown).flex_none()),
+                        )
                         .tooltip(wormhole_text::text(wormhole_text::keys::STUDIO_TOOLTIP_MENU))
                         .on_click(cx.listener(|this, _, window, cx| this.open_theme_menu(window, cx))),
                 )
