@@ -296,6 +296,11 @@ mod tests {
         }
     }
 
+    /// A version 1 file with a complete palette and `rest` after it.
+    fn v1(rest: &str) -> String {
+        crate::theme::tokens::test_support::v1_text(rest)
+    }
+
     #[test]
     fn unknown_references_and_cycles() {
         let e = resolve_str(r#"{"ui": {"border": "primry / 10%"}}"#).unwrap_err();
@@ -312,9 +317,15 @@ mod tests {
         let e = resolve_str(r#"{"ui": {"border": "lighten(border, 5%)"}}"#).unwrap_err();
         assert!(e.contains("reference cycle: border -> border"), "{e}");
 
-        let e = resolve_str(r##"{"ui": {"accent": "#fff"}}"##).unwrap_err();
+        // A version 0 file with a replaced token is migrated on reading (see `format::migrate`);
+        // only a file that is not migrated, a version 1 one, reaches the resolver's message.
+        assert_eq!(
+            resolve_str(r##"{"ui": {"accent": "#fff"}}"##).unwrap().get("primary").unwrap().to_hex(),
+            "#ffffff"
+        );
+        let e = resolve_str(&v1(r##""ui": {"accent": "#fff"}"##)).unwrap_err();
         assert!(e.contains("\"accent\" no longer exists: use `primary`"), "{e}");
-        let e = resolve_str(r##"{"ui": {"button.primary.text": "#fff"}}"##).unwrap_err();
+        let e = resolve_str(&v1(r##""ui": {"button.primary.text": "#fff"}"##)).unwrap_err();
         assert!(e.contains("removed; primary buttons use"), "{e}");
 
         let e = resolve_str(r##"{"ui": {"primry": "#fff"}}"##).unwrap_err();
