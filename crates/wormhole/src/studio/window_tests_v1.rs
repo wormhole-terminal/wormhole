@@ -202,7 +202,7 @@ fn a_newer_theme_will_not_be_saved_over(cx: &mut TestAppContext) {
         assert!(studio.doc.is_newer());
         edit(studio, window, cx);
         studio.request_save(window, cx);
-        assert!(matches!(studio.notice, Some(Notice::Newer(_))));
+        assert!(matches!(studio.notice, Some(Notice::Failed(_))));
         assert!(studio.dirty());
         assert!(studio.missing_appearance().is_some());
     });

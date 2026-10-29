@@ -147,7 +147,6 @@ studio-newer-explain = { $count ->
     [one] 1 value this version doesn’t know was skipped.
    *[other] { $count } values this version doesn’t know were skipped.
 } It shows what it can; the rest is worked out. Saving would drop them, so Theme Studio won’t save over it.
-studio-newer-save-blocked = This theme was made with a newer Wormhole; saving would drop what this version doesn’t know. Duplicate it to keep your edits.
 studio-newer-duplicate = Duplicate
 
 ## Previewing a theme that is not in use

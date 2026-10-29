@@ -53,8 +53,6 @@ pub(super) enum Notice {
     /// A value moved between both appearances and one and a clash was settled: says which value
     /// stayed. Undo takes it back.
     Moved(SharedString),
-    /// The theme was made with a newer Wormhole and is not written over; Duplicate keeps the edits.
-    Newer(SharedString),
     Failed(SharedString),
 }
 
@@ -82,14 +80,6 @@ impl StudioWindow {
     pub(super) fn save(&mut self, then_close: bool, window: &mut Window, cx: &mut Context<Self>) {
         // A sheet is up: it has to be answered first.
         if self.asking {
-            return;
-        }
-        // Writing it back would drop what this version does not know.
-        if self.doc.is_newer() && !matches!(self.doc.subject, Subject::Project { .. }) {
-            self.notice = Some(Notice::Newer(
-                wormhole_text::text(wormhole_text::keys::STUDIO_NEWER_SAVE_BLOCKED).into(),
-            ));
-            cx.notify();
             return;
         }
         if self.renaming {
@@ -401,14 +391,17 @@ impl StudioWindow {
                     .label(wormhole_text::text(wormhole_text::keys::STUDIO_MOVED_UNDO))
                     .on_click(cx.listener(|this, _, window, cx| this.undo(window, cx))),
             ),
-            Notice::Failed(text) => style::banner(ui, BannerKind::Danger, false, text),
-            Notice::Newer(text) => style::banner(ui, BannerKind::Warning, false, text).child(
-                Button::new("studio-newer-duplicate")
-                    .ghost()
-                    .small()
-                    .label(wormhole_text::text(wormhole_text::keys::STUDIO_NEWER_DUPLICATE))
-                    .on_click(cx.listener(|this, _, window, cx| this.duplicate(window, cx))),
-            ),
+            Notice::Failed(text) => {
+                style::banner(ui, BannerKind::Danger, false, text).when(self.doc.is_newer(), |banner| {
+                    banner.child(
+                        Button::new("studio-newer-duplicate")
+                            .ghost()
+                            .small()
+                            .label(wormhole_text::text(wormhole_text::keys::STUDIO_NEWER_DUPLICATE))
+                            .on_click(cx.listener(|this, _, window, cx| this.duplicate(window, cx))),
+                    )
+                })
+            }
         };
         Some(div().flex_none().px_4().py_3().bg(background).rule_bottom(ui).child(banner).into_any_element())
     }
