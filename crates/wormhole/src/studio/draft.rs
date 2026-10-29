@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use wormhole_core::config::Config;
+use wormhole_core::theme::registry::{ThemeId, UserThemes};
 use wormhole_core::theme::tokens::{
     Appearance, Area, METRIC_TOKENS, SyntaxOverride, ThemeFile, ThemeTokens, UI_TOKENS, default_rule,
     syntax_keys, used_in,
@@ -23,12 +24,19 @@ pub(super) struct Themes {
     pub(super) saved_path: fn(&str) -> Option<PathBuf>,
     /// Writes the draft into the folder and says where it went.
     pub(super) save: fn(&ThemeFile) -> Result<PathBuf, String>,
+    /// Whether a pick's value (a name, a path or a slug) names the theme saved at this path.
+    pub(super) selects: fn(&str, &Path) -> bool,
 }
 
 impl Themes {
     /// The user's themes folder.
     pub(super) const USER: Themes =
-        Themes { resolve: resolve_in_profile, saved_path: saved_in_profile, save: save_in_profile };
+        Themes {
+        resolve: resolve_in_profile,
+        saved_path: saved_in_profile,
+        save: save_in_profile,
+        selects: selects_in_profile,
+    };
 }
 
 // The Studio edits the themes of the profile Wormhole is in (RF-21): its own folder, not Default's.
@@ -42,6 +50,11 @@ fn saved_in_profile(name: &str) -> Option<PathBuf> {
 
 fn save_in_profile(file: &ThemeFile) -> Result<PathBuf, String> {
     Config::save_theme_to(&crate::active_profile::paths().themes_dir(), file)
+}
+
+fn selects_in_profile(setting: &str, path: &Path) -> bool {
+    let themes = UserThemes::read(&crate::active_profile::paths().themes_dir());
+    themes.select(setting) == Some(ThemeId::File(path.to_path_buf()))
 }
 
 /// Turns a draft into tokens. The Studio resolves with the user's themes available for
