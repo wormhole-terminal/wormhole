@@ -67,7 +67,7 @@ impl Buttons {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::view::notice::{Copied, Failed, Warning};
+    use crate::view::notice::{Copied, Failed, Refused, Warning};
 
     fn warned() -> Notice {
         Notice::Warned(Warning::HostFallback)
@@ -87,7 +87,13 @@ mod tests {
 
     #[test]
     fn a_copy_or_a_failure_has_no_buttons() {
-        for notice in [Notice::from(Copied::Path), Notice::from(Failed::CopyCommit), Notice::Test(1)] {
+        for notice in [
+            Notice::from(Copied::Path),
+            Notice::from(Copied::by_program("x")),
+            Notice::from(Failed::CopyCommit),
+            Notice::from(Failed::PutAtPrompt(Refused::Lines)),
+            Notice::Test(1),
+        ] {
             assert_eq!(Buttons::of(notice), Buttons::NONE);
             assert_eq!(Buttons::of(notice).count(), 0);
         }

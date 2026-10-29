@@ -151,8 +151,9 @@ pub struct TerminalView {
     /// The command that last left the foreground: the tab keeps its name while its result is
     /// unseen ("cargo test ✓").
     finished_command: Option<String>,
-    /// The bar along the pane's bottom: a program's question about reading the clipboard (OSC 52)
-    /// and short notices.
+    /// The bar along the pane's bottom: a program's question about reading the clipboard (OSC 52), and, only
+    /// where the notice chip is off, what the chip would have said (a program's write to the clipboard, a
+    /// refused Put at Prompt).
     bar: pane_bar::State,
     /// The terminal is shown in a window in front, as of the workspace's last tick: the state in
     /// which a program's clipboard read may be asked about at all.
@@ -546,6 +547,21 @@ impl TerminalView {
     /// Say `notice` in this terminal's window, about this terminal: the chip drops from its top edge.
     pub(crate) fn say(&self, notice: impl Into<wormhole_core::view::notice::Notice>, cx: &mut Context<Self>) {
         crate::notice::post_to(self.window, notice, Some(Self::notice_anchor(cx)), cx);
+    }
+
+    /// [`Self::say`] with the poster's own `words`, for a sentence that holds more than the notice does (the
+    /// name of a program). Without `words` the notice's own sentence is said.
+    pub(crate) fn say_words(
+        &self,
+        notice: impl Into<wormhole_core::view::notice::Notice>,
+        words: Option<String>,
+        cx: &mut Context<Self>,
+    ) {
+        let anchor = Some(Self::notice_anchor(cx));
+        match words {
+            Some(words) => crate::notice::post_to_words(self.window, notice, words, anchor, cx),
+            None => crate::notice::post_to(self.window, notice, anchor, cx),
+        }
     }
 
     /// [`Self::say`] for a notice with an explanation, which says `detail` of what went wrong (an error's

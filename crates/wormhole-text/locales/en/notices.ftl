@@ -23,6 +23,32 @@ notice-copied-output = { $count ->
    *[other] Copied output, { $count } lines
 }
 
+# The same two, when a program in a terminal the person isn't typing in wrote to the clipboard: the chip is on
+# that terminal, so it is a program of it. { $count } is a whole number of lines.
+notice-copied-program-lines = { $count ->
+    [one] A program copied { $count } line
+   *[other] A program copied { $count } lines
+}
+
+# { $count } is a whole number of characters.
+notice-copied-program-characters = { $count ->
+    [one] A program copied { $count } character
+   *[other] A program copied { $count } characters
+}
+
+# The same, when the program is known: { $program } is its name as the sidebar shows it, e.g. ssh. { $count }
+# is a whole number of lines.
+notice-copied-named-lines = { $count ->
+    [one] { $program } copied { $count } line
+   *[other] { $program } copied { $count } lines
+}
+
+# { $program } is the program's name, e.g. ssh. { $count } is a whole number of characters.
+notice-copied-named-characters = { $count ->
+    [one] { $program } copied { $count } character
+   *[other] { $program } copied { $count } characters
+}
+
 notice-copied-command = Copied command
 
 notice-copied-path = Copied path
@@ -82,6 +108,17 @@ notice-failed-rename-denied = Not renamed: Wormhole isn't allowed to change it
 notice-failed-rename-gone = Not renamed: it isn't there any more
 
 notice-failed-rename-failed = Couldn't rename it
+
+# A finished command that Put at Prompt refused to type, because of what it would do there. The four that
+# follow say why, each after the same start; they are short, as the chip cuts a long line.
+notice-failed-put-concealed = Not put at the prompt: part of it is concealed
+
+notice-failed-put-same-color = Not put at the prompt: part of it is in its background's color
+
+notice-failed-put-invisible = Not put at the prompt: it has characters you can't see
+
+# The shell doesn't take a paste as one piece, so a command of several lines would run line by line.
+notice-failed-put-lines = Not put at the prompt: each line would run in this shell
 
 ## Warnings, which stay on the chip until it is clicked
 

@@ -11,6 +11,7 @@ use std::path::Path;
 
 use gpui_kit::*;
 use wormhole_core::view::layout::path_menu::{self, PathFolder};
+use wormhole_text::{keys, text};
 
 use crate::platform::{self, Icon, Item, Menu};
 use crate::terminal_view::Status;
@@ -36,8 +37,14 @@ fn path_menu(folder: &Path, shown: &str, volume: &str, exited: bool, this: &Weak
     let menu = Menu::new()
         .header(shown.to_string())
         .separator()
-        .item(Item::new("Open in Finder").on_select(move |_, cx| cx.open_with_system(&open_of)))
-        .item(Item::new("Copy path").on_select(move |_, cx| Workspace::copy_path(&copy_of, cx)))
+        .item(
+            Item::new(text(keys::TITLE_ROW_PATH_OPEN_IN_FINDER))
+                .on_select(move |_, cx| cx.open_with_system(&open_of)),
+        )
+        .item(
+            Item::new(text(keys::TITLE_ROW_PATH_COPY))
+                .on_select(platform::run_on(this, move |ws, _, cx| ws.copy_path_from_menu(&copy_of, cx))),
+        )
         .item(
             Item::new("Insert into terminal")
                 .enabled(!exited)

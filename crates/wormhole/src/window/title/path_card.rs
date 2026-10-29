@@ -11,6 +11,8 @@ use std::path::Path;
 
 use gpui_kit::*;
 use wormhole_core::platform::shell;
+use wormhole_core::view::notice::Copied;
+use wormhole_text::{keys, text};
 
 use crate::platform::popover::{Behavior, Button, Glyph, Handle, Popover, Row};
 use crate::platform::{self};
@@ -127,10 +129,23 @@ impl Workspace {
         cx.notify();
     }
 
-    /// Copy path: the plain absolute path, unquoted, on the clipboard; VoiceOver says so.
-    pub(in crate::window) fn copy_path(folder: &Path, cx: &mut App) {
+    /// The card's Copy path: the plain absolute path, unquoted, on the clipboard. The button says "Copied"
+    /// where it was clicked, and a chip would hang over the card: VoiceOver is told here.
+    pub(in crate::window) fn copy_path_from_card(folder: &Path, cx: &mut App) {
         crate::platform::clipboard::write(folder.to_string_lossy().into_owned(), cx);
-        crate::platform::a11y::announce("Path copied", false);
+        crate::platform::a11y::announce(text(keys::TITLE_ROW_PATH_SPOKEN_COPIED), false);
+    }
+
+    /// The menu's Copy path: the same path on the clipboard. The menu closes at once, so the chip says so
+    /// on the terminal whose folder it is (and VoiceOver hears it from there); with the chip off VoiceOver
+    /// still hears the same words.
+    pub(in crate::window) fn copy_path_from_menu(&mut self, folder: &Path, cx: &mut Context<Self>) {
+        crate::platform::clipboard::write(folder.to_string_lossy().into_owned(), cx);
+        if crate::notice::enabled(&self.profile, cx) {
+            self.active_terminal().update(cx, |terminal, cx| terminal.say(Copied::Path, cx));
+        } else if let Some(words) = crate::notice::sentence(Copied::Path.into()) {
+            crate::platform::a11y::announce(&words, false);
+        }
     }
 
     /// Insert into terminal: the folder's absolute path, in single quotes, typed at the focused
@@ -165,9 +180,17 @@ fn path_popover(
     Popover::new(Behavior::Hover, appearance)
         .row(Row::Path(shown.to_string().into()))
         .row(Row::Buttons(vec![
-            Button::new("Open in Finder", Some(Glyph::Folder), move |_, cx| cx.open_with_system(&open_of)),
-            Button::new("Copy path", Some(Glyph::Copy), move |_, cx| Workspace::copy_path(&copy_of, cx))
-                .then_says("Copied", Some(Glyph::Check), PATH_CARD_COPIED_FOR),
+            Button::new(text(keys::TITLE_ROW_PATH_OPEN_IN_FINDER), Some(Glyph::Folder), move |_, cx| {
+                cx.open_with_system(&open_of)
+            }),
+            Button::new(text(keys::TITLE_ROW_PATH_COPY), Some(Glyph::Copy), move |_, cx| {
+                Workspace::copy_path_from_card(&copy_of, cx)
+            })
+            .then_says(
+                text(keys::TITLE_ROW_PATH_COPIED),
+                Some(Glyph::Check),
+                PATH_CARD_COPIED_FOR,
+            ),
             Button::new(
                 "Insert into terminal",
                 Some(Glyph::Terminal),

@@ -32,3 +32,17 @@ title-row-more-split = Split
 title-row-hidden = Hidden
 # Beside Terminal status while the status bar is on, which says it instead.
 title-row-status-in-bar = The status bar shows it while it's on
+
+## The card under the folder in the title row, and the menu of a right-click on it
+
+# Button on the card and item in the menu: shows the folder in Finder.
+title-row-path-open-in-finder = Open in Finder
+
+# Button on the card and item in the menu: puts the folder's whole path on the clipboard.
+title-row-path-copy = Copy path
+
+# The card's Copy path button for a moment after it was clicked.
+title-row-path-copied = Copied
+
+# What VoiceOver says after the card's Copy path button was clicked.
+title-row-path-spoken-copied = Path copied

@@ -1,10 +1,10 @@
 //! A notice as a sentence, from the catalog (`locales/en/notices.ftl`), and so what VoiceOver hears.
 
-use wormhole_core::view::notice::{Copied, Driven, Driver, Failed, Notice, Warning};
+use wormhole_core::view::notice::{Copied, Driven, Driver, Failed, Notice, Refused, Warning};
 use wormhole_text::{keys, text, whole};
 
 /// The sentence for `notice`; `None` for a test notice, whose words come with the post.
-pub(super) fn of(notice: Notice) -> Option<String> {
+pub(crate) fn of(notice: Notice) -> Option<String> {
     let copied = match notice {
         Notice::Copied(copied) => copied,
         Notice::Driven(driven) => return Some(driven_words(driven)),
@@ -17,6 +17,8 @@ pub(super) fn of(notice: Notice) -> Option<String> {
     Some(match copied {
         Copied::Lines(lines) => keys::notice_copied_lines(whole(lines)),
         Copied::Characters(chars) => keys::notice_copied_characters(whole(chars)),
+        Copied::ProgramLines(lines) => keys::notice_copied_program_lines(whole(lines)),
+        Copied::ProgramCharacters(chars) => keys::notice_copied_program_characters(whole(chars)),
         Copied::Output { lines } => keys::notice_copied_output(whole(lines)),
         Copied::Command => text(keys::NOTICE_COPIED_COMMAND).to_string(),
         Copied::Path => text(keys::NOTICE_COPIED_PATH).to_string(),
@@ -30,6 +32,16 @@ pub(super) fn of(notice: Notice) -> Option<String> {
         Copied::CommitSubject => text(keys::NOTICE_COPIED_COMMIT_SUBJECT).to_string(),
         Copied::CommitAuthor => text(keys::NOTICE_COPIED_COMMIT_AUTHOR).to_string(),
     })
+}
+
+/// A program's write to the clipboard, told with the program's name (`program` as the sidebar shows it, already
+/// cleaned and cut); `None` for any other notice, which has no name in it.
+pub(crate) fn program_copy(program: &str, copied: Copied) -> Option<String> {
+    match copied {
+        Copied::ProgramLines(lines) => Some(keys::notice_copied_named_lines(whole(lines), program)),
+        Copied::ProgramCharacters(chars) => Some(keys::notice_copied_named_characters(whole(chars), program)),
+        _ => None,
+    }
 }
 
 /// What VoiceOver says for `notice` when the chip's one line is not all there is to say: the reason in
@@ -57,6 +69,10 @@ fn failed_key(failed: Failed) -> wormhole_text::Key {
         Failed::RenameDenied => keys::NOTICE_FAILED_RENAME_DENIED,
         Failed::RenameGone => keys::NOTICE_FAILED_RENAME_GONE,
         Failed::RenameFailed => keys::NOTICE_FAILED_RENAME_FAILED,
+        Failed::PutAtPrompt(Refused::Concealed) => keys::NOTICE_FAILED_PUT_CONCEALED,
+        Failed::PutAtPrompt(Refused::SameColor) => keys::NOTICE_FAILED_PUT_SAME_COLOR,
+        Failed::PutAtPrompt(Refused::Invisible) => keys::NOTICE_FAILED_PUT_INVISIBLE,
+        Failed::PutAtPrompt(Refused::Lines) => keys::NOTICE_FAILED_PUT_LINES,
     }
 }
 
@@ -78,10 +94,10 @@ fn driven_words(driven: Driven) -> String {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::view::notice::{Copied, Driven, Driver, Failed, Notice, Warning};
+    use wormhole_core::view::notice::{Copied, Driven, Driver, Failed, Notice, Refused, Warning};
     use wormhole_text::{Language, with_language};
 
-    use super::{of, spoken};
+    use super::{of, program_copy, spoken};
 
     fn said(copied: Copied) -> String {
         of(Notice::Copied(copied)).unwrap_or_default()
@@ -95,6 +111,9 @@ mod tests {
             assert_eq!(said(Copied::Characters(1)), "Copied 1 character");
             assert_eq!(said(Copied::Output { lines: 1 }), "Copied output, 1 line");
             assert_eq!(said(Copied::Output { lines: 8 }), "Copied output, 8 lines");
+            assert_eq!(said(Copied::ProgramCharacters(12)), "A program copied 12 characters");
+            assert_eq!(said(Copied::ProgramCharacters(1)), "A program copied 1 character");
+            assert_eq!(said(Copied::ProgramLines(3)), "A program copied 3 lines");
             assert_eq!(said(Copied::Command), "Copied command");
             assert_eq!(said(Copied::Path), "Copied path");
             assert_eq!(said(Copied::SettingKey), "Copied setting key");
@@ -128,6 +147,37 @@ mod tests {
                 of(Notice::Failed(Failed::CopyPath)).as_deref(),
                 Some("Not copied: the path has characters that would act when pasted")
             );
+        });
+    }
+
+    #[test]
+    fn a_programs_copy_names_the_program_when_it_is_known() {
+        with_language(Language::ENGLISH, || {
+            assert_eq!(
+                program_copy("ssh", Copied::ProgramCharacters(120)).as_deref(),
+                Some("ssh copied 120 characters")
+            );
+            assert_eq!(
+                program_copy("ssh", Copied::ProgramCharacters(1)).as_deref(),
+                Some("ssh copied 1 character")
+            );
+            assert_eq!(program_copy("ssh", Copied::ProgramLines(3)).as_deref(), Some("ssh copied 3 lines"));
+            assert_eq!(program_copy("ssh", Copied::Characters(3)), None, "a person's copy has no program");
+        });
+    }
+
+    #[test]
+    fn a_refused_put_at_the_prompt_says_why_in_its_own_words() {
+        with_language(Language::ENGLISH, || {
+            let said = |refused| of(Notice::Failed(Failed::PutAtPrompt(refused))).unwrap_or_default();
+            assert_eq!(said(Refused::Concealed), "Not put at the prompt: part of it is concealed");
+            assert_eq!(
+                said(Refused::SameColor),
+                "Not put at the prompt: part of it is in its background's color"
+            );
+            assert_eq!(said(Refused::Invisible), "Not put at the prompt: it has characters you can't see");
+            assert_eq!(said(Refused::Lines), "Not put at the prompt: each line would run in this shell");
+            assert_eq!(spoken(Notice::Failed(Failed::PutAtPrompt(Refused::Lines))), None, "the chip's words");
         });
     }
 

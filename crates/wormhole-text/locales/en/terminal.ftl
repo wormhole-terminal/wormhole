@@ -43,3 +43,11 @@ terminal-menu-split-down = Split Down
 
 # Context menu: erases the terminal's history and has the shell draw a clean prompt.
 terminal-menu-clear = Clear Buffer
+
+# What a program is called when Wormhole can't tell which one it is, in the sentences that name a program
+# ("A program wants to read the clipboard").
+terminal-program-unnamed = A program
+
+# The bar over a terminal when a program asks to read the clipboard, and what VoiceOver says for it. { $program }
+# is the program's name as the sidebar shows it, e.g. ssh, or the message above.
+terminal-clipboard-ask = { $program } wants to read the clipboard

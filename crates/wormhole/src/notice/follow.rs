@@ -35,11 +35,15 @@ pub(super) fn watch(window: AnyWindowHandle, cx: &mut App) -> Task<()> {
 /// Whether a warning about the terminal `placed` says (`None`: about no terminal in particular) waits out of
 /// sight in a window that tells `facts`.
 pub(super) fn hidden(facts: &Facts, placed: Option<&Where>) -> bool {
-    let off_screen = match placed {
+    facts.covered || hidden_terminal(facts, placed)
+}
+
+/// Whether `placed` is a terminal that is not on screen in a window that tells `facts`.
+pub(super) fn hidden_terminal(facts: &Facts, placed: Option<&Where>) -> bool {
+    match placed {
         Some(Where::At { terminal, .. }) => !facts.shown.contains(terminal),
         Some(Where::Gone) | None => false,
-    };
-    facts.covered || off_screen
+    }
 }
 
 /// One look. `false` when there is nothing more to keep an eye on.

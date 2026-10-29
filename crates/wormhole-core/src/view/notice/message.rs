@@ -56,6 +56,23 @@ pub enum Failed {
     RenameGone,
     /// Any other failure of a rename.
     RenameFailed,
+    /// A finished command that was not put back at the prompt, because of what its text might do there.
+    /// Not a copy, and it does not stay: it says what happened and goes.
+    PutAtPrompt(Refused),
+}
+
+/// Why a command was not put at the prompt: the engine's own refusals, as a value of the view (the app
+/// maps one to the other), so a notice holds no type of the terminal layer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Refused {
+    /// Some of it is concealed (SGR 8).
+    Concealed,
+    /// Some of it is drawn in the color of its own background.
+    SameColor,
+    /// It holds characters that draw nothing.
+    Invisible,
+    /// It has several lines and the shell does not take a paste as one: each line would run.
+    Lines,
 }
 
 /// What the person is warned about.
@@ -76,6 +93,11 @@ pub enum Copied {
     /// A single line of it, told by its characters. Only what is said is kept: two copies that say the
     /// same words are the same notice.
     Characters(usize),
+    /// [`Self::Lines`], for a write that a program made in a terminal the person is not typing in: it
+    /// is the program that copied, and the chip says so.
+    ProgramLines(usize),
+    /// [`Self::Characters`], by a program in the same way.
+    ProgramCharacters(usize),
     /// A command block's output.
     Output { lines: usize },
     /// A command block's command line.
@@ -119,6 +141,8 @@ impl Notice {
     #[must_use]
     pub fn glyph(self) -> Glyph {
         match self {
+            // A refusal has nothing to do with copying; it still goes by itself (it is not `is_sticky`).
+            Self::Failed(Failed::PutAtPrompt(_)) => Glyph::Warning,
             Self::Copied(_) | Self::Failed(_) | Self::Test(_) => Glyph::Copy,
             Self::Driven(Driven::Reading(_)) => Glyph::Eye,
             Self::Driven(Driven::Typing(_)) => Glyph::Keyboard,
@@ -147,6 +171,15 @@ impl Copied {
         match text.lines().count() {
             0 | 1 => Self::Characters(text.chars().count()),
             lines => Self::Lines(lines),
+        }
+    }
+
+    /// [`Self::text`] for what a program wrote to the clipboard.
+    #[must_use]
+    pub fn by_program(text: &str) -> Self {
+        match text.lines().count() {
+            0 | 1 => Self::ProgramCharacters(text.chars().count()),
+            lines => Self::ProgramLines(lines),
         }
     }
 
@@ -185,6 +218,14 @@ mod tests {
     }
 
     #[test]
+    fn a_programs_write_is_counted_like_a_copy_but_is_its_own_notice() {
+        assert_eq!(Copied::by_program("one"), Copied::ProgramCharacters(3));
+        assert_eq!(Copied::by_program("a\nb"), Copied::ProgramLines(2));
+        assert_ne!(Notice::from(Copied::by_program("abc")), Notice::from(Copied::text("abc")));
+        assert_eq!(Notice::from(Copied::by_program("abc")).glyph(), Glyph::Copy);
+    }
+
+    #[test]
     fn every_copy_has_the_copy_glyph() {
         for copied in [Copied::Command, Copied::Path, Copied::SettingKey, Copied::Error, Copied::ObjectId] {
             assert_eq!(Notice::from(copied).glyph(), Glyph::Copy);
@@ -206,6 +247,17 @@ mod tests {
         assert!(!Notice::from(Copied::Path).is_sticky());
         assert!(!Notice::from(Failed::CopyCommit).is_sticky());
         assert!(!Notice::Test(1).is_sticky());
+    }
+
+    #[test]
+    fn a_refused_put_at_the_prompt_has_the_warning_glyph_and_still_goes_by_itself() {
+        for refused in [Refused::Concealed, Refused::SameColor, Refused::Invisible, Refused::Lines] {
+            let notice = Notice::from(Failed::PutAtPrompt(refused));
+            assert_eq!(notice.glyph(), Glyph::Warning);
+            assert!(!notice.is_sticky(), "it is not a warning that waits for a click");
+            assert!(!notice.has_info());
+        }
+        assert_eq!(Notice::from(Failed::CopyPath).glyph(), Glyph::Copy, "a failed copy keeps the copy");
     }
 
     #[test]

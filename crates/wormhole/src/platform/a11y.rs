@@ -57,6 +57,12 @@ pub fn recent() -> Vec<(String, bool)> {
     devctl::recent()
 }
 
+/// Forget the announcements made so far, for a test that reads what one action says.
+#[cfg(all(test, feature = "devctl"))]
+pub fn forget_recent() {
+    devctl::forget();
+}
+
 /// Wake the window's accessibility tree, as VoiceOver or Accessibility Inspector would by asking
 /// for it: GPUI builds the tree only once something has. It is there from the next frame on.
 #[cfg(feature = "devctl")]
@@ -85,6 +91,11 @@ mod devctl {
             }
             said.push_back((text.to_string(), interrupt));
         });
+    }
+
+    #[cfg(test)]
+    pub(super) fn forget() {
+        SAID.with_borrow_mut(VecDeque::clear);
     }
 
     pub(super) fn recent() -> Vec<(String, bool)> {

@@ -158,8 +158,9 @@ fn close(cx: &mut App, id: WindowId) {
     });
 }
 
-/// Whether the chip is on for a window of `profile`: its feature flag. Off, a copy says nothing (and a
-/// program's clipboard write keeps the pane bar's notice, which the chip replaces when it is on).
+/// Whether the chip is on for a window of `profile`: its feature flag. Off, a post says nothing: what a
+/// person must still hear (a program's clipboard write, a refused Put at Prompt, a path copied from the
+/// menu) is the poster's to say another way.
 pub(crate) fn enabled(profile: &ProfileId, cx: &App) -> bool {
     settings_in(profile, cx).feature_enabled(FeatureFlag::Notices)
 }
@@ -177,6 +178,18 @@ pub(crate) fn post_to(
     cx: &mut App,
 ) {
     queue(window, notice.into(), None, anchor, None, cx);
+}
+
+/// [`post_to`] for a notice whose sentence the poster made, because it holds something the notice does not
+/// (a program's name). The notice still decides what is the same message.
+pub(crate) fn post_to_words(
+    window: AnyWindowHandle,
+    notice: impl Into<Notice>,
+    words: String,
+    anchor: Option<Anchor>,
+    cx: &mut App,
+) {
+    queue(window, notice.into(), Some(words), anchor, None, cx);
 }
 
 /// [`post_to`] for a notice with an explanation (`Notice::has_info`), which says `detail` of what went
@@ -250,7 +263,21 @@ fn say(
     let store = store_in(&facts.profile, cx);
     let (theme, opaque) = (store.tokens.appearance, store.system().opaque());
     let entrance = Entrance::of(cx.reduce_motion());
-    let placed = anchor.as_ref().map(|anchor| anchor(cx));
+    let mut anchor = anchor;
+    let mut placed = anchor.as_ref().map(|anchor| anchor(cx));
+    // A message about a terminal that is not on screen, or that is closed, is dropped: the chip would sit
+    // where that terminal was last drawn, over another one (the bar this replaces showed in the pane where
+    // nobody looked). A warning is different, it stays and waits out of sight (`hidden`). So is a program
+    // acting on a terminal (`Driven`), the only sign that it does: it shows for the window, at the selected
+    // terminal, as a post about no terminal in particular.
+    let unseen =
+        matches!(placed, Some(Where::Gone)) || super::follow::hidden_terminal(&facts, placed.as_ref());
+    if !notice.is_sticky() && unseen {
+        if !matches!(notice, Notice::Driven(_)) {
+            return;
+        }
+        (anchor, placed) = (None, None);
+    }
     let spot = spot_for(window, placed.as_ref().and_then(Where::bounds).or(facts.selected));
     // A warning about a terminal that is not on screen, or under an overlay, waits out of sight.
     let hidden = notice.is_sticky() && super::follow::hidden(&facts, placed.as_ref());

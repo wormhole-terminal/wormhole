@@ -12,6 +12,9 @@
 //! A warning (core's `Notice::Warned`) is sticky: the chip stays until the person clicks it, and the click
 //! comes back from the panel over a channel this module reads.
 //!
+//! A message about a terminal that is not on screen (another terminal selected, a split's pane zoomed away) is
+//! dropped, never queued: the person could not tell which terminal it is about. A warning waits out of sight.
+//!
 //! The words are never the copied text, only what it was and how much (core's `Copied`).
 
 mod chips;
@@ -22,11 +25,11 @@ mod info;
 mod report;
 mod words;
 
-pub(crate) use chips::{Anchor, Facts, Where, enabled, post, post_to, post_to_with, register};
+pub(crate) use chips::{Anchor, Facts, Where, enabled, post, post_to, post_to_with, post_to_words, register};
 #[cfg(test)]
 pub(crate) use follow::EVERY as FOLLOW_EVERY;
 #[cfg(any(test, feature = "devctl"))]
 pub(crate) use report::{click, notices};
 #[cfg(feature = "devctl")]
 pub(crate) use report::{test_notice, test_sticky};
-pub(crate) use words::host_fallback_detail;
+pub(crate) use words::{host_fallback_detail, of as sentence, program_copy};

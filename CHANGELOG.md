@@ -26,6 +26,15 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   own words to copy and report, with a button to the logs folder), follows its terminal as the layout moves
   it, and waits out of sight while the terminal isn't on screen or the command palette is open. A copy's chip
   shows over it for a moment and then gives it back. Where the notice chip is off, the banner stays.
+- Copying the folder's path from its right-click menu, a refused Put Command at Prompt and a program copying
+  to the clipboard now show on the notice chip. The chip says why a command was not put at the prompt, and in
+  a terminal you aren't typing in it names the program that copied ("ssh copied 120 characters"; "Copied 120
+  characters" in the one you are typing in). A program's copy in a terminal that isn't on screen is not
+  shown, since nobody could tell which terminal it was; when a program is typing in or reading a terminal
+  that isn't on screen, its marker still shows, on the terminal you are looking at. The folder card's own
+  Copy path button still says "Copied" in place, and VoiceOver announces it. Where the notice chip is off,
+  the bar over the pane still says that a program copied or that a command was refused, and VoiceOver
+  hears the refusal and the menu's copy.
 
 ### Fixed
 

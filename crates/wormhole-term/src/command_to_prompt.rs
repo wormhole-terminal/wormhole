@@ -27,18 +27,6 @@ pub enum Refusal {
     Lines,
 }
 
-impl Refusal {
-    /// What the notice says, to follow "Not put at the prompt: ".
-    pub fn reason(self) -> &'static str {
-        match self {
-            Refusal::Concealed => "part of the command is concealed",
-            Refusal::SameColor => "part of the command is drawn in its background's color",
-            Refusal::Invisible => "the command has characters that cannot be seen",
-            Refusal::Lines => "it has several lines and this shell does not take a paste",
-        }
-    }
-}
-
 /// The bytes that put `command`, whose cells are `cells`, at the prompt: ⌃U and the text as a paste
 /// in `mode`; never a Return. `resolve` turns a cell's colors into what is drawn (the theme and
 /// what the program set), so two names for one color count as the same.

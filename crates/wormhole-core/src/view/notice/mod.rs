@@ -15,6 +15,6 @@ mod reason;
 
 pub use buttons::{Buttons, Press, Reaction};
 pub use machine::{ChipRules, Effect, Phase};
-pub use message::{Copied, Driven, Driver, Failed, Glyph, Notice, Warning};
+pub use message::{Copied, Driven, Driver, Failed, Glyph, Notice, Refused, Warning};
 pub use place::{Placed, Spot, WINDOW_MARGIN, place};
 pub use reason::{REASON_MAX, reason};

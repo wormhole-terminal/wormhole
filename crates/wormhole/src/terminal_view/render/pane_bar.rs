@@ -1,5 +1,5 @@
 //! The bar along the bottom of a pane: a program asks to read the clipboard (three buttons), or a
-//! notice that goes by itself (a copy, a refusal).
+//! notice that goes by itself (what the notice chip would say, where it is off).
 
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::Button;
@@ -10,7 +10,7 @@ use wormhole_core::config::clipboard::Choice;
 use crate::settings::store_in;
 use crate::style::{self, BannerKind};
 use crate::terminal_view::TerminalView;
-use crate::terminal_view::pane_bar::Bar;
+use crate::terminal_view::pane_bar::{Bar, ask_words};
 
 /// A grid at least this wide has room for the long label of the second button.
 const ROOMY_PX: f32 = 560.0;
@@ -24,13 +24,7 @@ impl TerminalView {
         let layout = self.layout.get();
         let roomy = layout.cols as f32 * f32::from(layout.cell.width) >= ROOMY_PX;
         let frame = match bar {
-            Bar::Ask(program) => style::banner(
-                ui,
-                BannerKind::Warning,
-                false,
-                format!("{program} wants to read the clipboard"),
-            )
-            .child(
+            Bar::Ask(program) => style::banner(ui, BannerKind::Warning, false, ask_words(program)).child(
                 div()
                     .flex()
                     .flex_none()

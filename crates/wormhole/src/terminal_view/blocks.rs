@@ -7,10 +7,10 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::view::notice::Copied;
+use wormhole_core::view::notice::{Copied, Failed, Refused};
 use wormhole_core::view::spoken;
 use wormhole_term::types::{Line, Scroll};
-use wormhole_term::{Block, BlockState, Direction, command_to_prompt, took_text};
+use wormhole_term::{Block, BlockState, Direction, Refusal, command_to_prompt, took_text};
 
 use super::{Layout, TerminalView};
 use crate::settings::{UiColors, store_in};
@@ -188,7 +188,7 @@ impl TerminalView {
     /// (the line the shell has so far cleared with ⌃U, as ⌘⌫ does) without running it, only while
     /// the shell is at its prompt, since a running program would get the text as input, and only
     /// when the whole command is shown as it is typed: text a program drew hidden, in its
-    /// background's color or as invisible characters is refused, and the bar says so.
+    /// background's color or as invisible characters is refused, and the chip says so.
     pub(super) fn run_block_action(&mut self, block: &Block, action: BlockAction, cx: &mut Context<Self>) {
         let Some(pty) = &self.pty else { return };
         match action {
@@ -234,13 +234,20 @@ impl TerminalView {
                         self.write_input(bytes);
                         cx.notify();
                     }
-                    Err(refusal) => {
-                        let text = format!("Not put at the prompt: {}", refusal.reason());
-                        crate::platform::a11y::announce(&text, false);
-                        self.say_in_bar(BannerKind::Warning, text, cx);
-                    }
+                    Err(refusal) => self.say_refusal(Failed::PutAtPrompt(refused(refusal)), cx),
                 }
             }
+        }
+    }
+
+    /// Say that Put at Prompt refused, on the chip, which VoiceOver hears from. Where the chip is off the
+    /// person still has to learn why nothing was typed: the bar says it, and VoiceOver does.
+    fn say_refusal(&mut self, failed: Failed, cx: &mut Context<Self>) {
+        if crate::notice::enabled(&self.profile, cx) {
+            self.say(failed, cx);
+        } else if let Some(words) = crate::notice::sentence(failed.into()) {
+            crate::platform::a11y::announce(&words, false);
+            self.say_in_bar(BannerKind::Warning, words, cx);
         }
     }
 
@@ -341,6 +348,17 @@ impl TerminalView {
     }
 }
 
+/// The view's name for why the engine refused to put a command at the prompt. Spelled out, so a new
+/// refusal is a compile error here until the chip has words for it.
+fn refused(refusal: Refusal) -> Refused {
+    match refusal {
+        Refusal::Concealed => Refused::Concealed,
+        Refusal::SameColor => Refused::SameColor,
+        Refusal::Invisible => Refused::Invisible,
+        Refusal::Lines => Refused::Lines,
+    }
+}
+
 /// The viewport row under `position`: anywhere across the pane (the gutter included) within the
 /// grid's rows.
 fn block_row(layout: &Layout, position: Point<Pixels>) -> Option<usize> {
@@ -351,6 +369,28 @@ fn block_row(layout: &Layout, position: Point<Pixels>) -> Option<usize> {
     let cell_h = f32::from(layout.cell.height).max(1.0);
     let x = f32::from(position.x - layout.origin.x);
     (y >= 0.0 && y < cell_h * layout.rows as f32 && x >= -layout.gutter).then(|| (y / cell_h) as usize)
+}
+
+/// What the tests of the window do to the blocks.
+#[cfg(test)]
+impl TerminalView {
+    /// Put Command at Prompt on the first block, as the Edit menu does. Whether there was a block.
+    pub(crate) fn put_first_block_at_prompt_for_test(&mut self, cx: &mut Context<Self>) -> bool {
+        let Some(block) = self.pty.as_ref().and_then(|pty| pty.blocks().into_iter().next()) else {
+            return false;
+        };
+        self.run_block_action(&block, BlockAction::PutAtPrompt, cx);
+        true
+    }
+
+    /// Whether the first block has finished and the shell is at its next prompt: Put Command at Prompt
+    /// can act.
+    pub(crate) fn ready_to_put_for_test(&self) -> bool {
+        let Some(pty) = &self.pty else { return false };
+        let finished =
+            pty.blocks().first().is_some_and(|block| matches!(block.state, BlockState::Finished { .. }));
+        finished && pty.at_prompt() == Some(true)
+    }
 }
 
 #[cfg(test)]

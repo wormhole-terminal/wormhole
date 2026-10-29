@@ -20,7 +20,8 @@
 //!   block <n> <select|copy-output|copy-command|to-prompt>   the Edit menu's action on the n-th block as
 //!                   `blocks` lists them (`key cmd-up` / `key cmd-down` jump between the prompts)
 //!   pane-bar        what the bar over the active terminal says: a program's question about reading
-//!                   the clipboard (OSC 52), a notice (a copy it made, a refusal), or `none`
+//!                   the clipboard (OSC 52), a notice (a program's write to the clipboard or a refused Put at
+//!                   Prompt, which the bar says only with the notice chip off), or `none`
 //!   clipboard-answer <once|always|deny>   the bar's three buttons
 //!   close-answer <close|cancel>   answer the question before closing a terminal or window (or quitting) as
 //!                   its buttons do, through the native sheet on this window; `wh close` and ⌘W ask it, and an

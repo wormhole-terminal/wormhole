@@ -1,5 +1,6 @@
-//! The bar along the bottom of a pane: a program's question about the clipboard, and the short
-//! notices a terminal gives about what a program (or a block's action) did or was refused.
+//! The bar along the bottom of a pane: a program's question about the clipboard, and the two notices that
+//! stay here when the notice chip is switched off, because a person should still see them: that a program
+//! wrote to the clipboard, and that Put at Prompt refused a command.
 //!
 //! A program may set the clipboard by default and the bar says so; reading it is asked about
 //! (core's [`ReadGate`] decides, `clipboard_read` is the setting). The question holds the engine's
@@ -16,6 +17,7 @@ use wormhole_core::config::clipboard::{
 use wormhole_core::view::notice::Copied;
 use wormhole_core::view::sidebar::names::command_name;
 use wormhole_term::{BODY_MAX_CHARS, Reply, TextFormatter, clean};
+use wormhole_text::{keys, text};
 
 use super::TerminalView;
 use crate::settings::settings_in;
@@ -30,7 +32,7 @@ pub(super) struct State {
     gate: ReadGate,
     /// The question that is out.
     ask: Option<Ask>,
-    /// The last notice, until it is old.
+    /// What the chip would have said, until it is old.
     note: Option<Note>,
     /// Counts the notices, so an old one's timer leaves a newer one alone.
     notes: u64,
@@ -58,6 +60,7 @@ struct Note {
 pub(super) enum Bar<'a> {
     /// A program wants to read the clipboard.
     Ask(&'a str),
+    /// What the chip would have said, where it is off.
     Notice(BannerKind, &'a str),
 }
 
@@ -68,8 +71,7 @@ impl TerminalView {
             tracing::info!("a program's clipboard write was refused (clipboard_write is deny)");
             return;
         }
-        let chars = text.chars().count();
-        let copied = Copied::text(&text);
+        let (copied, by_program) = (Copied::text(&text), Copied::by_program(&text));
         // A copy on select takes the clipboard; keep what it held for ⌘V over the selection.
         let replaced = self
             .app_selection
@@ -79,15 +81,24 @@ impl TerminalView {
         if let Some(replaced) = replaced {
             self.app_selection.copied(text, replaced);
         }
-        // The chip says it for the terminal the person is typing in (its window active, it focused), and then
-        // the bar doesn't: never both. Any other terminal's write is the bar's, as ever.
-        if self.focus_reported && crate::notice::enabled(&self.profile, cx) {
-            self.say(copied, cx);
+        let program = self.foreground_name();
+        if crate::notice::enabled(&self.profile, cx) {
+            // The chip says it, about this terminal: never the bar as well. In the terminal the person is
+            // typing in the copy is "Copied 12 characters", as any copy; anywhere else it says which program
+            // did it, as the person did not. (A terminal that is not on screen gets no chip: see `notice`.)
+            if self.focus_reported {
+                self.say(copied, cx);
+            } else {
+                let words = program.and_then(|name| crate::notice::program_copy(&name, by_program));
+                self.say_words(by_program, words, cx);
+            }
             return;
         }
-        let what = if chars == 1 { "1 character".to_string() } else { format!("{chars} characters") };
-        let text = format!("{} copied {what} to the clipboard", self.program_label());
-        self.say_in_bar(BannerKind::Info, text, cx);
+        // The chip is off in this window: a program silently writing to the clipboard is worth seeing.
+        let named = program.and_then(|name| crate::notice::program_copy(&name, by_program));
+        if let Some(words) = named.or_else(|| crate::notice::sentence(by_program.into())) {
+            self.say_in_bar(BannerKind::Info, words, cx);
+        }
     }
 
     /// Say `text` in the bar for a few seconds.
@@ -129,7 +140,7 @@ impl TerminalView {
                     this.update(cx, |this, cx| this.settle_ask(id, Choice::Deny, cx)).ok();
                 });
                 let program = self.program_label();
-                crate::platform::a11y::announce(&format!("{program} wants to read the clipboard"), true);
+                crate::platform::a11y::announce(&ask_words(&program), true);
                 self.bar.ask = Some(Ask { id, format, reply, program, _timeout: timeout });
                 cx.notify();
             }
@@ -169,13 +180,17 @@ impl TerminalView {
         }
     }
 
-    /// Who the bar names: the program in front, as the sidebar names it, else "A program".
-    fn program_label(&self) -> String {
+    /// The program in front as the sidebar names it, cleaned and cut; `None` when there is none.
+    fn foreground_name(&self) -> Option<String> {
         self.foreground
             .as_ref()
             .map(|foreground| clean(&command_name(&foreground.command), BODY_MAX_CHARS.min(40)))
             .filter(|name| !name.is_empty())
-            .unwrap_or_else(|| "A program".to_string())
+    }
+
+    /// Who the question names: the program in front, else "A program".
+    fn program_label(&self) -> String {
+        self.foreground_name().unwrap_or_else(|| text(keys::TERMINAL_PROGRAM_UNNAMED).to_string())
     }
 
     /// The terminal is shown in a window in front (set by the workspace's tick): the only state
@@ -183,6 +198,11 @@ impl TerminalView {
     pub fn set_in_front(&mut self, in_front: bool) {
         self.in_front = in_front;
     }
+}
+
+/// What the question says (the bar, VoiceOver, devctl): `program` wants to read the clipboard.
+pub(super) fn ask_words(program: &str) -> String {
+    keys::terminal_clipboard_ask(program)
 }
 
 /// What the tests of the window do to the bar.
@@ -195,6 +215,14 @@ impl TerminalView {
         self.set_in_front(true);
         let format: TextFormatter = std::sync::Arc::new(|text: &str| text.to_string());
         self.event_for_test(PtyEvent::ClipboardLoad(format, Reply::detached()), cx);
+    }
+
+    /// Which program is in front, as the sidebar would show it.
+    pub(crate) fn set_foreground_for_test(&mut self, command: &str) {
+        self.foreground = Some(wormhole_core::agents::Foreground {
+            command: command.to_string(),
+            started: std::time::SystemTime::now(),
+        });
     }
 
     /// What the bar's notice says, if it has one.
@@ -234,7 +262,7 @@ impl TerminalView {
     /// `pane-bar`: what the bar over the pane says, or "none".
     pub fn devctl_pane_bar(&self) -> String {
         match self.pane_bar() {
-            Some(Bar::Ask(program)) => format!("ask: {program} wants to read the clipboard"),
+            Some(Bar::Ask(program)) => format!("ask: {}", ask_words(program)),
             Some(Bar::Notice(_, text)) => format!("notice: {text}"),
             None => "none".to_string(),
         }
