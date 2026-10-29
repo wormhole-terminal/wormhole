@@ -5,8 +5,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use super::format::{BaseLayer, ReadReport};
 use super::model::{Appearance, Metrics};
-use crate::storage::jsonc;
 use crate::theme::ANSI_NAMES;
 
 /// Terminal overrides. Keys: `foreground`, `background`, `cursor`,
@@ -85,7 +85,7 @@ impl TerminalFile {
 }
 
 /// The palette index an `ansi` key names: `"0"`..`"15"` or `"black"`..`"bright_white"`.
-fn ansi_index(key: &str) -> Option<usize> {
+pub(super) fn ansi_index(key: &str) -> Option<usize> {
     key.parse::<usize>().ok().filter(|i| *i < 16).or_else(|| {
         let (bright, base) = key.strip_prefix("bright_").map_or((0, key), |b| (8, b));
         ANSI_NAMES.iter().position(|n| *n == base).map(|i| i + bright)
@@ -335,12 +335,29 @@ pub struct ThemeFile {
     /// The JSON Schema editors validate the file with; kept, not used.
     #[serde(rename = "$schema", default, skip_serializing_if = "Option::is_none")]
     pub schema: Option<String>,
+    /// The format version the file says it is (see [`super::format`]). Absent is version 0, every
+    /// file written before the field existed; a file read in memory as version 1 says `1`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     /// A built-in theme name or another theme file's name. Without it, the
-    /// default built-in (Tokyo Night) supplies whatever is not overridden.
+    /// default built-in (Tokyo Night) supplies whatever is not overridden. Version 0 only: a
+    /// version 1 file has a [`base`](Self::base) instead.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extends: Option<String>,
+    /// Version 1: the theme's slug, written once (see [`super::slug`]); kept when the theme is
+    /// renamed.
+    #[serde(skip)]
+    pub id: Option<String>,
+    /// Version 1: the values copied from the theme this one started from. The file's own
+    /// layers go on top of it, and nothing underneath it: a version 1 theme never falls back to
+    /// Tokyo Night.
+    #[serde(skip)]
+    pub base: Option<Box<BaseLayer>>,
+    /// What reading the file had to do (not part of the file).
+    #[serde(skip)]
+    pub read: ReadReport,
     /// Chooses the light or dark rule set; auto-detected from the final
     /// terminal background when no file in the chain sets it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -368,6 +385,9 @@ pub struct ThemeVariant {
     pub name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extends: Option<String>,
+    /// Version 1: this version's own base, instead of the file's.
+    #[serde(skip)]
+    pub base: Option<Box<BaseLayer>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub appearance: Option<Appearance>,
     #[serde(default, skip_serializing_if = "TerminalFile::is_empty")]
@@ -398,6 +418,7 @@ impl ThemeVariant {
     /// The layers of `file` (a single theme) as this variant's, keeping its name.
     pub fn set_layers(&mut self, file: &ThemeFile) {
         self.extends.clone_from(&file.extends);
+        self.base.clone_from(&file.base);
         self.appearance = file.appearance;
         self.terminal = file.terminal.clone();
         self.ui = file.ui.clone();
@@ -425,6 +446,10 @@ impl ThemeFile {
         metrics.merge(&self.metrics);
         ThemeFile {
             schema: self.schema.clone().or_else(|| parent.schema.clone()),
+            version: self.version.or(parent.version),
+            id: self.id.clone().or_else(|| parent.id.clone()),
+            base: self.base.clone().or_else(|| parent.base.clone()),
+            read: ReadReport::default(),
             name: self.name.clone().or_else(|| parent.name.clone()),
             extends: parent.extends.clone(),
             appearance: self.appearance.or(parent.appearance),
@@ -437,7 +462,12 @@ impl ThemeFile {
         }
     }
 
+    /// The file as text: in the version it was read in or made as (version 1 is written by
+    /// [`super::format::write_v1`], anything else as before).
     pub fn to_json_pretty(&self) -> String {
+        if self.version == Some(super::format::CURRENT_VERSION) {
+            return super::format::write_v1(self);
+        }
         // Serializing plain structs and string-keyed maps cannot fail (NaN
         // metrics become `null`), so the fallback is never taken.
         serde_json::to_string_pretty(self).unwrap_or_else(|_| "{}".into()) + "\n"
@@ -452,11 +482,9 @@ impl ThemeFile {
 /// work an untrusted file (a repository's `.wormhole/theme.json`) can cause.
 pub const MAX_THEME_BYTES: usize = 256 * 1024;
 
+/// Read a theme file of any version (see [`super::format::read_theme_file`]).
 pub fn parse_theme_file(text: &str) -> Result<ThemeFile, String> {
-    if text.len() > MAX_THEME_BYTES {
-        return Err(format!("theme file is larger than {} KiB", MAX_THEME_BYTES / 1024));
-    }
-    jsonc::parse(text)
+    super::format::read_theme_file(text)
 }
 
 #[cfg(test)]

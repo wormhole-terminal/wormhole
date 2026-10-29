@@ -8,6 +8,7 @@
 //! `extends`, the picker, the Studio and `settings.theme` need nothing new.
 
 use super::file::{ThemeFile, ThemeVariant};
+use super::format::{CURRENT_VERSION, slug};
 
 /// Most versions one file may ship. A family has a handful; the cap bounds the work an
 /// untrusted file (a project's `.wormhole/theme.json`) can cause.
@@ -23,6 +24,8 @@ pub struct Variant {
     /// Its layers over the siblings it extends and the file's shared ones, with what the last
     /// of them extends outside the file.
     pub file: ThemeFile,
+    /// Version 1: the slug that selects it (`my_theme.dark`), when the file has an `id`.
+    pub slug: Option<String>,
 }
 
 /// The name a variant `short` of the theme `family` is selected by.
@@ -49,7 +52,47 @@ pub fn variants(file: &ThemeFile, family: &str) -> Result<Vec<Variant>, String> 
         }
     }
     let shared = ThemeFile { variants: Vec::new(), ..file.clone() };
+    if file.version == Some(CURRENT_VERSION) {
+        return file.variants.iter().map(|v| fold_v1(&shared, v, family)).collect();
+    }
     file.variants.iter().map(|v| fold(&shared, &file.variants, v, family)).collect()
+}
+
+/// What a version 1 version is called where people read it: its own name, lowercase in the
+/// file, with a capital and spaces (`light_minimal` is "Light Minimal").
+pub fn display_short(short: &str) -> String {
+    short
+        .split('_')
+        .filter(|w| !w.is_empty())
+        .map(|w| {
+            let mut c = w.chars();
+            c.next().map_or_else(String::new, |f| f.to_uppercase().chain(c).collect())
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// A version 1 version: the base it brings (or else the file's), the file's own layers, then
+/// its own. A version has no `extends`: what it starts from is a base.
+fn fold_v1(shared: &ThemeFile, v: &ThemeVariant, family: &str) -> Result<Variant, String> {
+    let under = v.base.as_deref().or(shared.base.as_deref());
+    let shared_own = ThemeFile { base: None, ..shared.clone() };
+    let mut folded = match under {
+        Some(base) => {
+            let base = ThemeFile { extends: None, base: None, variants: Vec::new(), ..base.file.clone() };
+            shared_own.layered_over(&base)
+        }
+        None => shared_own,
+    };
+    folded = ThemeFile { extends: None, ..v.to_file() }.layered_over(&folded);
+    let short = display_short(&v.name);
+    let name = variant_name(family, &short);
+    folded.name = Some(name.clone());
+    folded.version = Some(CURRENT_VERSION);
+    folded.base = None;
+    let slug = shared.id.as_ref().map(|id| slug::version_slug(id, &v.name));
+    folded.id = slug.clone();
+    Ok(Variant { name, short: v.name.clone(), file: folded, slug })
 }
 
 /// `v` over the siblings it extends, nearest last, over `shared`.
@@ -82,7 +125,7 @@ fn fold(shared: &ThemeFile, all: &[ThemeVariant], v: &ThemeVariant, family: &str
     }
     let name = variant_name(family, &v.name);
     folded.name = Some(name.clone());
-    Ok(Variant { name, short: v.name.clone(), file: folded })
+    Ok(Variant { name, short: v.name.clone(), file: folded, slug: None })
 }
 
 #[cfg(test)]

@@ -62,6 +62,7 @@ mod expr;
 mod extends;
 mod file;
 mod fixes;
+mod format;
 mod high_contrast;
 mod model;
 mod own;
@@ -90,6 +91,10 @@ pub use self::file::{
     MAX_THEME_BYTES, MetricsFile, SyntaxOverride, TerminalFile, ThemeFile, ThemeVariant, parse_theme_file,
 };
 pub use self::fixes::{ContrastCheck, ContrastFix, ContrastIssue, contrast_issues};
+pub use self::format::{
+    ANSI_RULE, BaseLayer, CURRENT_VERSION, KEY_TABLE, KeyRename, ReadReport, copy, export, migrate, new_key,
+    old_key, read_theme_file, slug, write_v1,
+};
 pub use self::high_contrast::HIGH_CONTRAST_RING;
 use self::model::auto_appearance;
 pub use self::model::{Appearance, Metrics, SyntaxStyle, TerminalColors};
@@ -98,7 +103,7 @@ pub use self::rules::default_rule;
 pub use self::theme_tokens::{BranchTint, ColorChoices, ThemeTokens};
 pub use self::translucent::{BLUR_OFF_MIN_OPACITY, OPAQUE, Translucency, TranslucentColors};
 pub use self::uses::{Area, TOKEN_USES, TokenUse, followers, refers_to, used_in, uses_of};
-pub use self::variants::{MAX_VARIANTS, Variant, variant_name, variants};
+pub use self::variants::{MAX_VARIANTS, Variant, display_short, variant_name, variants};
 use crate::theme;
 pub use crate::theme::tokens::color::Color;
 
