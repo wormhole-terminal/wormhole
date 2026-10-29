@@ -5,7 +5,7 @@
 use std::path::{Path, PathBuf};
 
 pub(crate) fn src() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("src")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../wormhole/src")
 }
 
 pub(crate) fn sources(dir: &Path, out: &mut Vec<PathBuf>) {

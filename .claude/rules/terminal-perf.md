@@ -16,7 +16,7 @@ the app leads the other terminals overall in `scripts/terminal-compare.sh`. Keep
 
 - **Paint the grid's cells inside `window.paint_layer(…)`.** A quad or glyph painted outside a
   layer goes into GPUI's bounds tree, one by one; a screen of colored cells is thousands of them.
-  `tests/design_rules.rs` fails on a per-cell paint in a `cache.rows()` loop outside a layer. Keep
+  `crates/wormhole-rules/tests/design_rules.rs` fails on a per-cell paint in a `cache.rows()` loop outside a layer. Keep
   the layers' order: backgrounds, images, box quads and strokes, glyphs, lines through and under
   the text; the cursor's character, link underlines and find ticks after them.
 - **Shape only what is new.** Rows are rebuilt only where the snapshot says they changed

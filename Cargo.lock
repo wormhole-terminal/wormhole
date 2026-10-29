@@ -9504,6 +9504,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "wormhole-rules"
+version = "1.5.0"
+
+[[package]]
 name = "wormhole-term"
 version = "1.5.0"
 dependencies = [

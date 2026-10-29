@@ -60,7 +60,7 @@ scope_of() {
     crates/wormhole/*) echo app ;;
     # include_bytes!/include_str!'d by the app alone.
     packaging/app.env|packaging/updater.pub) echo app ;;
-    # Scanned for wording by crates/wormhole/tests/design_rules.rs (banned words, the devctl docs).
+    # Scanned for wording by crates/wormhole-rules/tests/design_rules.rs (banned words, the devctl docs).
     scripts/*|tools/visual/*|.claude/skills/*|.claude/agents/*|.claude/rules/*) echo text ;;
     README.md|CONTRIBUTING.md|SECURITY.md|CODE_OF_CONDUCT.md|ACCESSIBILITY.md|CHANGELOG.md) echo text ;;
     .github/*|.claude/hooks/*|.claude/settings*.json|.claude/worktrees/*|.gitignore|LICENSE|packaging/*) echo none ;;
@@ -156,7 +156,7 @@ case "$scope" in
   text)
     [ "$rust_changed" = 1 ] && steps+=("cargo fmt --all")
     # devctl like the other scopes, so the app the test target links is the one already built.
-    steps+=("cargo test --quiet -p wormhole --features devctl --test design_rules")
+    steps+=("cargo test --quiet -p wormhole-rules --test design_rules")
     ;;
 esac
 [ "$deps" = 1 ] && steps+=("cargo deny check")

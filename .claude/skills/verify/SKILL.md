@@ -43,7 +43,7 @@ Run it once when the work is done, not after every edit; while working, use the 
 - Whole workspace type-check: `cargo check --workspace --features devctl`
 - One app test: `cargo test -p wormhole --features devctl <name filter>` (with devctl it reuses the
   gate's build; without, the app compiles a second time)
-- One test file: `cargo test -p wormhole --features devctl --test design_rules`
+- One test file: `cargo test -p wormhole-rules --test design_rules`
 
 ## macOS vs Linux
 

@@ -1,0 +1,17 @@
+[package]
+name = "wormhole-rules"
+description = "Checks over the repository's sources and scripts, read as text: the app's design, words and window rules, and the test instance launcher. Nothing here links the app."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+doctest = false
+
+# None on purpose: the checks read files, so a change to them compiles std and nothing else.
+[dependencies]
+
+[lints]
+workspace = true

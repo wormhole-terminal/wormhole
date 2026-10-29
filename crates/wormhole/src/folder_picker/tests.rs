@@ -480,7 +480,7 @@ fn folders_with_folders_get_a_chevron_and_a_repository_its_branch(cx: &mut TestA
 /// Folders outside the scratch data folder and the temporary ones (which are never recorded): this crate's own.
 fn real_folders() -> (PathBuf, PathBuf) {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    (manifest.join("src"), manifest.join("tests"))
+    (manifest.join("src"), manifest.join("assets"))
 }
 
 #[gpui_kit::test]
@@ -493,7 +493,7 @@ fn recent_folders_are_listed_after_the_subfolders_ranked_in_when_typed_and_forgo
         return;
     }
     let dir = tree();
-    let (src, tests) = real_folders();
+    let (src, assets) = real_folders();
     let window = open_in(cx, dir.path());
     let profile = read(cx, &window, |ws| ws.profile().clone());
     cx.update(|cx| {
@@ -507,7 +507,7 @@ fn recent_folders_are_listed_after_the_subfolders_ranked_in_when_typed_and_forgo
         recent_folders::record(cx, &profile, dir.path());
         recent_folders::record(cx, &profile, &std::env::temp_dir());
         std::thread::sleep(Duration::from_millis(5));
-        recent_folders::record(cx, &profile, &tests);
+        recent_folders::record(cx, &profile, &assets);
     });
     open_picker(cx, &window);
     let lines = items(cx, &window);
@@ -520,18 +520,18 @@ fn recent_folders_are_listed_after_the_subfolders_ranked_in_when_typed_and_forgo
         })
         .collect();
     assert_eq!(recent.len(), 2, "only the two real folders: {recent:?}");
-    assert!(recent.contains(&"src") && recent.contains(&"tests"));
+    assert!(recent.contains(&"src") && recent.contains(&"assets"));
     assert!(
         lines[..at].iter().filter(|i| matches!(i, Item::Row(_))).count() == 3,
         "the subfolders come first"
     );
 
     // Typed, they are ranked in with the rest, with no section of their own.
-    typed(cx, &window, "tests");
+    typed(cx, &window, "assets");
     let lines = items(cx, &window);
     assert!(!lines.iter().any(|i| matches!(i, Item::Header(_))));
     assert!(
-        matches!(&lines[0], Item::Row(row) if row.label == "tests" && row.icon == "clock.arrow.circlepath")
+        matches!(&lines[0], Item::Row(row) if row.label == "assets" && row.icon == "clock.arrow.circlepath")
     );
 
     // ⌘⌫ forgets the selected recent folder.
@@ -568,7 +568,7 @@ fn a_folder_is_a_visit_when_the_terminal_moves_there_and_not_each_time_it_says_s
         return;
     }
     let dir = tree();
-    let (src, tests) = real_folders();
+    let (src, assets) = real_folders();
     let window = open_in(cx, dir.path());
     go_to(cx, &window, &src);
     let first = kept(cx, &window);
@@ -584,7 +584,7 @@ fn a_folder_is_a_visit_when_the_terminal_moves_there_and_not_each_time_it_says_s
     assert_eq!(again.len(), 1);
     assert!(again[0].1 < 1.1, "still one visit: {again:?}");
     // Another folder is another.
-    go_to(cx, &window, &tests);
+    go_to(cx, &window, &assets);
     assert_eq!(kept(cx, &window).len(), 2);
 }
 
@@ -594,12 +594,12 @@ fn with_the_flag_off_nothing_is_kept_and_what_was_kept_is_cleared(cx: &mut TestA
         return;
     }
     let dir = tree();
-    let (src, tests) = real_folders();
+    let (src, assets) = real_folders();
     let window = open_in(cx, dir.path());
     go_to(cx, &window, &src);
     assert_eq!(kept(cx, &window).len(), 1);
     flag(cx, false);
-    go_to(cx, &window, &tests);
+    go_to(cx, &window, &assets);
     assert!(kept(cx, &window).is_empty(), "turning the picker off forgot what it had learned");
     go_to(cx, &window, &src);
     assert!(kept(cx, &window).is_empty(), "and nothing more is kept while it is off");
