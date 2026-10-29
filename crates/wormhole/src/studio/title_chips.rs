@@ -6,11 +6,12 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::*;
 use wormhole_core::theme::tokens::appearance::{DARK, LIGHT};
 use wormhole_text::keys::{
     STUDIO_APPEARANCE_LABEL, STUDIO_NEWER_CHIP, STUDIO_PREVIEW_CHIP, STUDIO_PREVIEW_TOOLTIP,
-    STUDIO_PREVIEW_USE, studio_update_from,
+    STUDIO_PREVIEW_USE, studio_newer_explain, studio_update_from,
 };
 use wormhole_text::text;
 
@@ -32,12 +33,18 @@ impl StudioWindow {
             chips.push(button);
         }
         if self.doc.is_newer() {
-            chips.push(
+            chips.push({
+                // Why Studio won't save: what this version skipped of the file.
+                let tip: SharedString =
+                    studio_newer_explain(i64::try_from(self.doc.file.read.skipped).unwrap_or(i64::MAX))
+                        .into();
                 div()
+                    .id("studio-newer")
                     .flex_none()
                     .child(style::status_badge(ui, ui.warning_text, text(STUDIO_NEWER_CHIP)))
-                    .into_any_element(),
-            );
+                    .tooltip(move |window, cx| Tooltip::new(tip.clone()).build(window, cx))
+                    .into_any_element()
+            });
         }
         if !self.in_use(cx) {
             chips.push(self.preview_chip(ui, cx));

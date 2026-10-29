@@ -15,7 +15,7 @@ use gpui_kit::component::input::{Input, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::{BandKind, BandParts, Section};
-use wormhole_core::theme::tokens::ThemeTokens;
+use wormhole_core::theme::tokens::{ThemeTokens, slug};
 
 use super::draft::Show;
 use super::origin_tag::{origin_tag, reach_chip};
@@ -85,6 +85,8 @@ pub(super) struct TokenListView {
     shown_counts: (usize, usize, usize),
     /// The appearance being edited (`light`, `dark`), for the chips of a pair.
     shown_appearance: String,
+    /// The theme the shown base was copied from, by name, for the base tag's tooltip.
+    base_from: String,
     key: Option<Key>,
     /// The tokens that fall short of a contrast minimum, found for these tokens.
     low: Option<(Arc<ThemeTokens>, BTreeSet<String>)>,
@@ -112,6 +114,7 @@ impl TokenListView {
             rows: Vec::new(),
             shown_counts: (0, 0, 0),
             shown_appearance: String::new(),
+            base_from: String::new(),
             key: None,
             low: None,
             #[cfg(test)]
@@ -208,6 +211,9 @@ impl TokenListView {
             .count();
         self.state.splice(head..old.len() - tail, new.len() - head - tail);
         self.shown_appearance = studio.doc.shown.clone().unwrap_or_default();
+        self.base_from = super::document::places::base_under(&studio.doc.file, studio.doc.shown.as_deref())
+            .map(|base| slug::builtin_name(&base.from).unwrap_or(&base.from).to_string())
+            .unwrap_or_default();
         self.shown_counts = (built.yours_count, built.base_count, built.low_count);
         self.rows = built.rows;
         self.key = Some(key);
@@ -300,7 +306,7 @@ impl TokenListView {
                         d.child(style::changed_dot(ui).when(selected, |d| d.bg(ui.selected_text)))
                     }),
             )
-            .child(origin_tag(origin, tag_color))
+            .child(origin_tag(&chip_name, origin, &self.base_from, tag_color))
             .children(reach.map(|reach| {
                 reach_chip(&chip_name, reach, &shown_name, tag_color, ui, move |name, window, cx| {
                     studio_for_chip.update(cx, |studio, cx| studio.toggle_reach(&name, window, cx)).ok();

@@ -739,8 +739,6 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("studio-update-count", studio_update_count(5, "Sample")),
         ("studio-versions-title", studio_versions_title("Sample")),
         ("studio-versions-original", studio_versions_original("Sample")),
-        ("studio-versions-changed", studio_versions_changed(1)),
-        ("studio-versions-changed", studio_versions_changed(5)),
         ("studio-versions-label", studio_versions_label("Sample", "Sample")),
         ("studio-newer-explain", studio_newer_explain(1)),
         ("studio-newer-explain", studio_newer_explain(5)),
