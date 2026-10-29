@@ -72,6 +72,9 @@ pub(in crate::studio) struct Themes {
     pub(in crate::studio) resolve: Resolve,
     /// The file a theme saved under this name would replace, if the folder has one.
     pub(in crate::studio) saved_path: fn(&str) -> Option<PathBuf>,
+    /// Whether the name is that of one version of a theme file that ships several: the Studio
+    /// never writes such a file, so a save under that name is refused.
+    pub(in crate::studio) version_named: fn(&str) -> bool,
     /// Every theme there is to open, built-ins first.
     pub(in crate::studio) catalog: fn() -> Vec<ThemeEntry>,
     /// What a pick's value selects.
@@ -96,6 +99,7 @@ impl Themes {
     pub(in crate::studio) const USER: Themes = Themes {
         resolve: resolve_in_profile,
         saved_path: saved_in_profile,
+        version_named: version_named_in_profile,
         catalog: catalog_in_profile,
         locate: locate_in_profile,
         read: read_in_profile,
@@ -120,12 +124,26 @@ fn saved_in_profile(name: &str) -> Option<PathBuf> {
     Config::saved_theme_path_in(&dir(), name)
 }
 
+fn version_named_in_profile(name: &str) -> bool {
+    version_named_in(&dir(), name)
+}
+
+fn version_named_in(dir: &Path, name: &str) -> bool {
+    UserThemes::read(dir).themes.iter().any(|t| t.family.is_some() && t.name.eq_ignore_ascii_case(name))
+}
+
 fn catalog_in_profile() -> Vec<ThemeEntry> {
     catalog_in(&dir())
 }
 
 fn locate_in_profile(setting: &str) -> Found {
-    match UserThemes::read(&dir()).select(setting) {
+    locate_in(&dir(), setting)
+}
+
+/// What `setting` selects among the themes of `dir`: a name, a slug or a path to one of its files
+/// (what the Settings picker and a Studio save store for a single-file theme).
+fn locate_in(dir: &Path, setting: &str) -> Found {
+    match UserThemes::read(dir).select_or_path(setting) {
         Some(ThemeId::File(path)) => Found::File(path),
         Some(ThemeId::Variant(path, _)) => Found::Variant(path),
         Some(ThemeId::Builtin(name)) => Found::Builtin(name.to_string()),
@@ -140,7 +158,11 @@ fn read_in_profile(path: &Path) -> Result<Loaded, String> {
 }
 
 fn selects_in_profile(setting: &str, path: &Path) -> bool {
-    UserThemes::read(&dir()).select(setting) == Some(ThemeId::File(path.to_path_buf()))
+    selects_in(&dir(), setting, path)
+}
+
+fn selects_in(dir: &Path, setting: &str, path: &Path) -> bool {
+    UserThemes::read(dir).select_or_path(setting) == Some(ThemeId::File(path.to_path_buf()))
 }
 
 fn new_id_in_profile(name: &str, itself: Option<&Path>) -> String {
@@ -209,14 +231,21 @@ fn keep_old(themes: &Path, path: &Path, file: &ThemeFile) -> bool {
 }
 
 fn save_new_in_profile(file: &ThemeFile) -> Result<Saved, String> {
-    let dir = dir();
+    save_new_in(&dir(), file)
+}
+
+fn save_new_in(dir: &Path, file: &ThemeFile) -> Result<Saved, String> {
+    // Defence in depth: the core's save would write into the version of a file that ships several.
+    if file.name.as_deref().is_some_and(|n| version_named_in(dir, n)) {
+        return Err(wormhole_text::keys::studio_name_is_a_version(file.name.as_deref().unwrap_or_default()));
+    }
     // A theme of the same name is replaced in its own file: the old one is kept first.
     let lost_comments = file
         .name
         .as_deref()
-        .and_then(|n| Config::saved_theme_path_in(&dir, n))
-        .is_some_and(|existing| keep_old(&dir, &existing, file));
-    let path = Config::save_theme_to(&dir, file)?;
+        .and_then(|n| Config::saved_theme_path_in(dir, n))
+        .is_some_and(|existing| keep_old(dir, &existing, file));
+    let path = Config::save_theme_to(dir, file)?;
     Ok(Saved { stamp: Stamp::of(&path), path, lost_comments })
 }
 
@@ -232,7 +261,54 @@ fn overwrite_in_profile(path: &Path, file: &ThemeFile, expected: Option<Stamp>) 
 
 #[cfg(test)]
 mod tests {
-    use super::has_comments;
+    use super::{Found, has_comments, locate_in, save_new_in, selects_in, version_named_in};
+
+    /// A Studio save never writes a file that ships several versions, whatever it is called.
+    #[test]
+    fn saving_under_a_versions_name_leaves_the_family_file_as_it_was() {
+        let dir = std::env::temp_dir().join(format!("wormhole-studio-keep-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let family = r##"{"name": "Pair", "extends": "Nord", "variants": [{"name": "Light", "appearance": "light"}, {"name": "Dark"}]}"##;
+        let path = dir.join("pair.json");
+        std::fs::write(&path, family).expect("write");
+        for name in ["Pair Light", "pair dark"] {
+            let file = wormhole_core::theme::tokens::parse_theme_file(&format!(r#"{{"name": "{name}"}}"#))
+                .expect("parses");
+            assert!(save_new_in(&dir, &file).is_err(), "{name}");
+        }
+        assert_eq!(std::fs::read_to_string(&path).expect("read"), family, "byte for byte");
+        assert_eq!(std::fs::read_dir(&dir).expect("list").count(), 1, "no other file or version appeared");
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn a_name_taken_by_a_version_is_known() {
+        let dir = std::env::temp_dir().join(format!("wormhole-studio-family-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        std::fs::write(
+            dir.join("pair.json"),
+            r#"{"name": "Pair", "variants": [{"name": "Light"}, {"name": "Dark"}]}"#,
+        )
+        .expect("write");
+        assert!(version_named_in(&dir, "pair dark"));
+        assert!(!version_named_in(&dir, "Pair"), "the family's own name is not a version's");
+        assert!(!version_named_in(&dir, "Other"));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn a_path_pick_is_the_file_it_names() {
+        let dir = std::env::temp_dir().join(format!("wormhole-studio-pick-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let file = dir.join("dusk.json");
+        std::fs::write(&file, r#"{"name": "Evening"}"#).expect("write");
+        let by_path = file.to_string_lossy().into_owned();
+        assert_eq!(locate_in(&dir, &by_path), Found::File(file.clone()));
+        assert!(selects_in(&dir, &by_path, &file));
+        assert!(!selects_in(&dir, "/nowhere/dusk.json", &file));
+        assert_eq!(locate_in(&dir, "/nowhere/dusk.json"), Found::Missing);
+        std::fs::remove_dir_all(&dir).ok();
+    }
 
     #[test]
     fn comments_are_found_outside_strings_only() {

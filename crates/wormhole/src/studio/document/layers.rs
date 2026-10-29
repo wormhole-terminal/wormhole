@@ -50,7 +50,12 @@ pub(in crate::studio) fn override_of(file: &ThemeFile, name: &str) -> Option<Str
         if let Some(index) = key.strip_prefix("ansi.") {
             // A hand-written file may call the slot by name (`blue`, `bright_white`).
             let slot = index.parse::<usize>().ok().filter(|i| *i < 16)?;
-            return file.terminal.ansi.iter().find(|(k, _)| ansi_index(k) == Some(slot)).map(|(_, v)| v.clone());
+            return file
+                .terminal
+                .ansi
+                .iter()
+                .find(|(k, _)| ansi_index(k) == Some(slot))
+                .map(|(_, v)| v.clone());
         }
         return terminal_get(&file.terminal, key).cloned().flatten();
     }

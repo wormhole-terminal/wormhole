@@ -134,6 +134,7 @@ mod tests {
         Themes {
             resolve: |f| resolve(f, &|_| None),
             saved_path: |_| None,
+            version_named: |_| false,
             catalog: Vec::new,
             locate: |setting| match setting {
                 "mine" => Found::File("/themes/mine.json".into()),

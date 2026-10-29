@@ -13,6 +13,7 @@ use wormhole_core::platform::paths;
 use wormhole_core::project::ProjectFolder;
 use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::tokens::{Appearance, ThemeFile};
+use wormhole_text::keys::{STUDIO_NEWER_FILE, studio_name_is_a_version};
 
 use super::document::{Document, Subject};
 use super::draft::{copy_name, export_dir, export_file_name, export_json};
@@ -102,6 +103,11 @@ impl StudioWindow {
     /// name, which a sheet asks about first.
     pub(super) fn save_named(&mut self, then_close: bool, window: &mut Window, cx: &mut Context<Self>) {
         let Some(name) = self.theme_name(cx) else { return };
+        if (self.themes.version_named)(&name) {
+            self.notice = Some(Notice::Failed(studio_name_is_a_version(&name).into()));
+            cx.notify();
+            return;
+        }
         if (self.themes.saved_path)(&name).is_some() {
             self.ask_to_replace(name, then_close, window, cx);
             return;
@@ -122,6 +128,13 @@ impl StudioWindow {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        // A file from a newer Wormhole holds values this one dropped on reading: writing it back
+        // would lose them for good. Duplicate still saves a copy.
+        if self.doc.file.read.newer {
+            self.notice = Some(Notice::Failed(wormhole_text::text(STUDIO_NEWER_FILE).into()));
+            cx.notify();
+            return;
+        }
         let expected = if check { self.doc.stamp } else { None };
         let to_write = match self.file_to_write(&path) {
             Ok(to_write) => to_write,
@@ -134,16 +147,13 @@ impl StudioWindow {
         let was = self.doc.saved.clone();
         match (self.themes.overwrite)(&path, &to_write.file, expected) {
             Ok(saved) => {
-                // A pick that named the theme by a name it may no longer have names its id (the
-                // theme is in the new format now) or its file (it was renamed): nothing is lost.
-                let mut old_names: Vec<String> = was.name.iter().cloned().collect();
-                old_names.extend(path.file_stem().map(|s| s.to_string_lossy().into_owned()));
-                if to_write.converted {
-                    if let Some(id) = &to_write.file.id {
-                        follow_name(&old_names, id, cx);
-                    }
-                } else if was.name != to_write.file.name {
-                    follow_name(&old_names[..1], &saved.path.to_string_lossy(), cx);
+                // A pick that named the theme by a name it no longer has (it was renamed) names its
+                // file: nothing is lost.
+                let old_names: Vec<String> = was.name.iter().cloned().collect();
+                // Otherwise a pick stays as it is, a converted theme's too: an older release can't
+                // read an id, and the file keeps its name and `name`, which still select it.
+                if was.name != to_write.file.name {
+                    follow_name(&old_names, &saved.path.to_string_lossy(), cx);
                 }
                 let converted = to_write.converted;
                 self.doc.file = to_write.file;
@@ -166,7 +176,9 @@ impl StudioWindow {
         let mut file = self.doc.file.clone();
         file.name = Some(name.clone());
         if file.version.is_some() && file.id.is_none() {
-            file.id = Some((self.themes.new_id)(&name, None));
+            // Replacing a theme's file keeps the id that file has: it does not count against itself.
+            let replaced = (self.themes.saved_path)(&name);
+            file.id = Some((self.themes.new_id)(&name, replaced.as_deref()));
         }
         match (self.themes.save_new)(&file) {
             Ok(saved) => {
@@ -231,7 +243,13 @@ impl StudioWindow {
         let Some(name) = self.theme_name(cx) else { return };
         let taken = self.themes.saved_path;
         let copy = copy_name(&name, |candidate| taken(candidate).is_some());
-        let mut file = ThemeFile { name: Some(copy.clone()), id: None, ..self.doc.file.clone() };
+        // The copy is written by this version: it is no longer "from a newer Wormhole".
+        let mut file = ThemeFile {
+            name: Some(copy.clone()),
+            id: None,
+            read: Default::default(),
+            ..self.doc.file.clone()
+        };
         if file.version.is_some() {
             file.id = Some((self.themes.new_id)(&copy, None));
         }

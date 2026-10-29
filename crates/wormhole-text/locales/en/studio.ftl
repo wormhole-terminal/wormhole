@@ -44,3 +44,10 @@ studio-saved-converted = Saved in the new theme format: older releases of Wormho
 # Added when the file that was replaced had comments.
 studio-saved-comments = Comments in the file were not kept.
 studio-convert-failed = Could not convert this theme safely, so it was not changed.
+# Saving under the name of one version of a theme that ships several (a light and a dark one): a file
+# of several versions is never written over by the Studio. { $name } is the name.
+studio-name-is-a-version = “{ $name }” is the name of one version of a theme that comes in several. Choose another name.
+# Saving or renaming to the name another theme has. { $name } is the name.
+studio-name-taken = Another theme is already called “{ $name }”. Choose another name.
+# Saving a theme file made by a newer Wormhole: this one would drop what it doesn’t understand.
+studio-newer-file = This theme was made by a newer Wormhole. Saving here would lose what this version doesn’t understand, so it was not changed. Duplicate keeps a copy.
