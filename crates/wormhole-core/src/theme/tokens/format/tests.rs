@@ -242,6 +242,16 @@ fn a_newer_file_drops_an_expression_that_names_a_color_this_version_lacks() {
 }
 
 #[test]
+fn a_copied_date_over_the_cap_is_an_error_in_version_1_and_dropped_in_a_newer_one() {
+    let long = "x".repeat(300);
+    let text = format!(r#"{{"version": 1, "id": "a", "base": {{"from": "nord", "copied": "{long}"}}}}"#);
+    let e = read_theme_file(&text).unwrap_err();
+    assert!(e.contains("base.copied") && e.contains("256"), "{e}");
+    let f = read(&text.replace("\"version\": 1", "\"version\": 3"));
+    assert_eq!((f.base.expect("base").copied, f.read.skipped), (None, 1));
+}
+
+#[test]
 fn a_newer_file_keeps_the_caps() {
     let big = format!(r#"{{"version": 9, "name": "{}"}}"#, "x".repeat(MAX_THEME_BYTES));
     assert!(read_theme_file(&big).unwrap_err().contains("larger than"));
