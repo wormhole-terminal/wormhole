@@ -174,22 +174,21 @@ fn a_file_changed_on_disk_is_not_overwritten_without_asking(cx: &mut TestAppCont
 }
 
 /// A write that fails leaves the original in place and the draft unsaved.
-#[cfg(unix)]
 #[gpui_kit::test]
 fn a_failed_write_leaves_the_original_in_place(cx: &mut TestAppContext) {
-    use std::os::unix::fs::PermissionsExt;
+    use wormhole_term::sys::fs::set_mode;
     let _turn = TURN.lock().unwrap_or_else(|e| e.into_inner());
     let s = Scratch::new("failed");
     s.put("dusk.json", DUSK);
     let (handle, studio) = open_on(cx, "Dusk", None);
-    std::fs::set_permissions(&s.themes, std::fs::Permissions::from_mode(0o555)).expect("chmod");
+    set_mode(&s.themes, 0o555).expect("chmod");
     with(cx, handle, &studio, |studio, window, cx| {
         studio.set_value("primary", Some("#aa0000".into()), Edit::Field, window, cx);
         studio.request_save(window, cx);
         eprintln!("PROOF failed write: notice {:?}, dirty {}", studio.notice, studio.dirty());
         assert!(studio.dirty(), "{:?}", studio.notice);
     });
-    std::fs::set_permissions(&s.themes, std::fs::Permissions::from_mode(0o755)).expect("chmod back");
+    set_mode(&s.themes, 0o755).expect("chmod back");
     assert_eq!(s.text("dusk.json"), DUSK, "original byte for byte");
     let leftovers: Vec<_> = std::fs::read_dir(&s.themes)
         .expect("dir")
