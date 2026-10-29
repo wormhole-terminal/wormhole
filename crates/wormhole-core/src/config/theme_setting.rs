@@ -79,7 +79,7 @@ impl Settings {
 
     /// Whether the theme picker leaves `value` (a theme as `theme` names it) out.
     pub fn theme_hidden(&self, value: &str) -> bool {
-        self.hidden_themes.iter().any(|hidden| hidden == value)
+        self.hidden_themes.iter().any(|hidden| same_theme(hidden, value))
     }
 
     /// Leave `value` out of the theme picker, or bring it back. Hidden once, however often it is
@@ -91,10 +91,18 @@ impl Settings {
         if hidden {
             self.hidden_themes.push(value.to_string());
         } else {
-            self.hidden_themes.retain(|v| v != value);
+            self.hidden_themes.retain(|v| !same_theme(v, value));
         }
         true
     }
+}
+
+/// Whether two `theme` values mean one theme: the same text, or the same built-in by its name
+/// or its slug (`"Nord"` and `"nord"`). A user theme's slug needs the themes folder to be
+/// understood, so it is matched where that is at hand (`UserThemes::select`).
+fn same_theme(a: &str, b: &str) -> bool {
+    let builtin = |v: &str| registry::builtin_named(v).map(|t| t.name.as_str());
+    a == b || builtin(a).is_some_and(|x| builtin(b) == Some(x))
 }
 
 /// The JSON theme in `themes` whose name is `name` (any case). A file that
