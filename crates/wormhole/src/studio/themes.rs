@@ -94,7 +94,8 @@ pub(in crate::studio) struct Themes {
     pub(in crate::studio) convert: fn(&ThemeFile, &str) -> Result<ThemeFile, String>,
     /// Whether a pick's value (a name, a path or a slug) names the theme saved at this path.
     pub(in crate::studio) selects: fn(&str, &Path) -> bool,
-    /// The base a theme copied from `slug` would have now (to compare with the one it has).
+    /// The base a theme copied from this would have now (to compare with the one it has): a slug,
+    /// or the path of one of the person's theme files.
     pub(in crate::studio) fresh_base: fn(&str) -> Option<BaseLayer>,
     /// The earlier saves of the theme at this path, newest first.
     pub(in crate::studio) versions: fn(&Path, &ThemeFile) -> Vec<SavedVersion>,
@@ -123,7 +124,36 @@ impl Themes {
 
 // The Studio edits the themes of the profile Wormhole is in (RF-21): its own folder, not Default's.
 fn dir() -> PathBuf {
+    #[cfg(test)]
+    if let Some(dir) = test_dir::get() {
+        return dir;
+    }
     crate::active_profile::paths().themes_dir()
+}
+
+/// A test's own themes folder in place of the profile's, for the thread it runs on: with it a
+/// test can use [`Themes::USER`] itself, the real rules over a folder it made.
+#[cfg(test)]
+pub(in crate::studio) mod test_dir {
+    use std::cell::RefCell;
+    use std::path::PathBuf;
+
+    thread_local! {
+        static DIR: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
+    }
+
+    pub(in crate::studio) fn get() -> Option<PathBuf> {
+        DIR.with(|d| d.borrow().clone())
+    }
+
+    /// A new empty folder to be the themes folder of this thread.
+    pub(in crate::studio) fn make(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("wormhole-studio-{name}-{}", std::process::id()));
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(&dir).expect("themes folder");
+        DIR.with(|d| *d.borrow_mut() = Some(dir.clone()));
+        dir
+    }
 }
 
 fn resolve_in_profile(file: &ThemeFile) -> Result<ThemeTokens, String> {
@@ -171,8 +201,13 @@ fn selects_in_profile(setting: &str, path: &Path) -> bool {
     selects_in(&dir(), setting, path)
 }
 
-fn selects_in(dir: &Path, setting: &str, path: &Path) -> bool {
-    UserThemes::read(dir).select_or_path(setting) == Some(ThemeId::File(path.to_path_buf()))
+/// Whether `setting` names the theme in the file at `path`: the file itself, or, for a pair, either
+/// of its appearances (by their slug or their name, "Mine Dark").
+pub(in crate::studio) fn selects_in(dir: &Path, setting: &str, path: &Path) -> bool {
+    match UserThemes::read(dir).select_or_path(setting) {
+        Some(ThemeId::File(file) | ThemeId::Variant(file, _)) => file == path,
+        _ => false,
+    }
 }
 
 fn new_id_in_profile(name: &str, itself: Option<&Path>) -> String {
@@ -255,7 +290,16 @@ fn read_version_of(version: &SavedVersion) -> Result<ThemeFile, String> {
 }
 
 fn fresh_base_in_profile(from: &str) -> Option<BaseLayer> {
-    let themes = UserThemes::read(&dir());
+    fresh_base_in(&dir(), from)
+}
+
+/// The base a copy of `from` would have now: a built-in's slug, the slug of a user theme, or the
+/// path of its file (a theme the menu lists by its file, since two may be called alike and a name
+/// can be a built-in's too).
+pub(in crate::studio) fn fresh_base_in(dir: &Path, from: &str) -> Option<BaseLayer> {
+    let themes = UserThemes::read(dir);
+    let by_path = themes.by_path(from).map(|t| t.slug.clone());
+    let from = by_path.as_deref().unwrap_or(from);
     let lookup = |name: &str| themes.theme_file(name);
     if slug::builtin_name(from).is_some() {
         return copy::copy_builtin_base(from, &lookup, &today()).ok();
@@ -295,7 +339,7 @@ fn overwrite_in_profile(path: &Path, file: &ThemeFile, expected: Option<Stamp>) 
 
 #[cfg(test)]
 mod tests {
-    use super::{Found, has_comments, locate_in, save_new_in, selects_in, version_named_in};
+    use super::{Found, fresh_base_in, has_comments, locate_in, save_new_in, selects_in, version_named_in};
 
     /// A Studio save never writes a file that ships several versions, whatever it is called.
     #[test]
@@ -341,6 +385,44 @@ mod tests {
         assert!(selects_in(&dir, &by_path, &file));
         assert!(!selects_in(&dir, "/nowhere/dusk.json", &file));
         assert_eq!(locate_in(&dir, "/nowhere/dusk.json"), Found::Missing);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// A pick of either appearance of a pair is a pick of the file; one of another file is not.
+    #[test]
+    fn a_pair_is_selected_by_either_appearance() {
+        let dir = std::env::temp_dir().join(format!("wormhole-studio-pair-pick-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let file = dir.join("mine.json");
+        let other = dir.join("other.json");
+        std::fs::write(
+            &file,
+            r#"{"version": 1, "id": "mine", "name": "Mine", "base": {"from": "nord"}, "variants": [{"name": "light"}, {"name": "dark"}]}"#,
+        )
+        .expect("write");
+        std::fs::write(&other, r#"{"name": "Other"}"#).expect("write");
+        for pick in ["mine.light", "mine.dark", "Mine light", "Mine Dark", &file.to_string_lossy()] {
+            assert!(selects_in(&dir, pick, &file), "{pick}");
+            assert!(!selects_in(&dir, pick, &other), "{pick} is not Other");
+        }
+        assert!(!selects_in(&dir, "other", &file));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// The base of a copy of a file is of that file, not of whatever its name is also the name of.
+    #[test]
+    fn a_copy_is_made_of_the_file_it_names() {
+        let dir = std::env::temp_dir().join(format!("wormhole-studio-fresh-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let file = dir.join("dracula.json");
+        std::fs::write(&file, r##"{"name": "Dracula", "extends": "Nord", "ui": {"primary": "#123456"}}"##)
+            .expect("write");
+        let ours = fresh_base_in(&dir, &file.to_string_lossy()).expect("a base");
+        assert_eq!(ours.from, "dracula_2");
+        assert_eq!(ours.file.ui.get("primary").map(String::as_str), Some("#123456"));
+        let builtin = fresh_base_in(&dir, "dracula").expect("a base");
+        assert_eq!(builtin.from, "dracula");
+        assert_ne!(builtin.file.ui.get("primary").map(String::as_str), Some("#123456"));
         std::fs::remove_dir_all(&dir).ok();
     }
 

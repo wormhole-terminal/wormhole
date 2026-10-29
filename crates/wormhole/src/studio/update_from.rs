@@ -5,6 +5,7 @@
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_core::theme::tokens::appearance::as_variant_base;
 use wormhole_core::theme::tokens::copy::{BaseChange, diff_base};
 use wormhole_core::theme::tokens::slug::builtin_name;
 use wormhole_core::theme::tokens::{BaseLayer, Color, ThemeFile};
@@ -43,13 +44,25 @@ pub(super) enum State {
 }
 
 impl Check {
-    fn run(file: &ThemeFile, shown: Option<&str>, themes: &Themes) -> Self {
+    pub(super) fn run(file: &ThemeFile, shown: Option<&str>, themes: &Themes) -> Self {
         let Some(base) = places::base_under(file, shown) else { return Self::default() };
         let key = Some((base.from.clone(), base.copied.clone(), shown.map(str::to_string)));
-        let Some(fresh) = (themes.fresh_base)(&base.from) else {
+        // A base made by Wormhole (the other appearance, generated from the first) was never
+        // copied from its source: there is no copy to bring up to date.
+        if base.copied.is_none() {
+            return Self { key, ..Self::default() };
+        }
+        let Some(mut fresh) = (themes.fresh_base)(&base.from) else {
             return Self { key, state: State::SourceMissing, ..Self::default() };
         };
-        let changes = diff_base(base, &fresh, &places::own_layers(file, shown));
+        // The base of an appearance of a pair is held without the accent (the theme's, shared) and
+        // with the appearance it is for. A fresh copy is compared, and replaces it, in that form.
+        let mut stored = base.clone();
+        if places::is_pair(file) {
+            as_variant_base(&mut stored, base.file.appearance);
+            as_variant_base(&mut fresh, base.file.appearance);
+        }
+        let changes = diff_base(&stored, &fresh, &places::own_layers(file, shown));
         let state = if changes.is_empty() { State::UpToDate } else { State::Changed(changes.len()) };
         Self { key, state, changes, fresh: Some(fresh) }
     }

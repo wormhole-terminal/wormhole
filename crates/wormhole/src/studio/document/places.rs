@@ -4,9 +4,9 @@
 //! chip on a row says which, and moving it is one change. Pure, tested without a window.
 
 use wormhole_core::theme::tokens::appearance::{Scope, token_scope};
-use wormhole_core::theme::tokens::{BaseLayer, ThemeFile, variants};
+use wormhole_core::theme::tokens::{BaseLayer, ThemeFile, ThemeTokens, variants};
 
-use super::{override_of, set_override};
+use super::{is_metric, number, override_of, set_override};
 
 /// Where a value is written in the file.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -167,31 +167,48 @@ pub(in crate::studio) struct Moved {
     pub(in crate::studio) removed: Vec<(String, String)>,
 }
 
+/// What `name` works out to in a theme, as the text a file holds it as: a metric's number, else a
+/// colour's hex.
+pub(in crate::studio) fn value_text(tokens: &ThemeTokens, name: &str) -> String {
+    tokens
+        .metrics
+        .get(name)
+        .filter(|_| is_metric(name))
+        .map(number)
+        .or_else(|| tokens.get(name).map(|c| c.to_hex()))
+        .unwrap_or_default()
+}
+
 /// Move the value of `name` between both appearances and the shown one. Both to one: the other
-/// appearances keep the look they have (they get the value themselves), so nothing else changes.
+/// appearances keep the look they have (each gets what the token works out to in that appearance,
+/// `worked_out(file, appearance)`, when the file sets no value for it), so nothing else changes.
 /// One to both: the shown value is kept for all, and another appearance's own value is removed
-/// and reported. A token with no value of its own gets `current` (what it works out to) in the
-/// place it was not.
+/// and reported. A token with no value of its own gets what it works out to in the place it was not.
 pub(in crate::studio) fn move_value(
     file: &mut ThemeFile,
     shown: Option<&str>,
     name: &str,
-    current: &str,
+    worked_out: &dyn Fn(&ThemeFile, &str) -> String,
 ) -> Result<Moved, String> {
     let Some(here) = variant_at(file, shown).filter(|_| is_pair(file)) else { return Ok(Moved::default()) };
+    let before = file.clone();
     let mut moved = Moved::default();
     match place_of(file, shown, name) {
         Place::Top => {
-            let value = read_at(file, Place::Top, name).unwrap_or_else(|| current.to_string());
+            let top = read_at(file, Place::Top, name);
             for ix in 0..file.variants.len() {
                 if read_at(file, Place::Variant(ix), name).is_none() {
-                    write_at(file, Place::Variant(ix), name, Some(value.clone()))?;
+                    // The top's value is what every appearance without its own sees; with none,
+                    // each keeps what it works out to itself.
+                    let value = top.clone().unwrap_or_else(|| worked_out(&before, &before.variants[ix].name));
+                    write_at(file, Place::Variant(ix), name, Some(value))?;
                 }
             }
             write_at(file, Place::Top, name, None)?;
         }
         Place::Variant(_) => {
-            let value = read_at(file, Place::Variant(here), name).unwrap_or_else(|| current.to_string());
+            let value = read_at(file, Place::Variant(here), name)
+                .unwrap_or_else(|| worked_out(&before, &before.variants[here].name));
             for ix in 0..file.variants.len() {
                 if let Some(other) = read_at(file, Place::Variant(ix), name) {
                     if ix != here && other != value {
@@ -247,6 +264,11 @@ mod tests {
         resolve(&folded(file, Some(shown)), &|_| None).expect("resolves")
     }
 
+    /// What a token works out to in an appearance of a file, as the chip asks.
+    fn works_out(name: &'static str) -> impl Fn(&ThemeFile, &str) -> String {
+        move |file, shown| value_text(&look(file, shown), name)
+    }
+
     #[test]
     fn a_value_is_yours_base_or_worked_out() {
         let mut file = pair();
@@ -282,7 +304,7 @@ mod tests {
     fn moving_to_this_appearance_keeps_both_looks() {
         let mut file = pair();
         let before = (look(&file, "light"), look(&file, "dark"));
-        move_value(&mut file, Some("dark"), "primary", "#ff8800").expect("moves");
+        move_value(&mut file, Some("dark"), "primary", &works_out("primary")).expect("moves");
         assert_eq!(reach(&file, Some("dark"), "primary"), Reach::ThisAppearance);
         assert_eq!(read_at(&file, Place::Top, "primary"), None, "a value lives in one place");
         assert_eq!((look(&file, "light"), look(&file, "dark")), before);
@@ -294,15 +316,15 @@ mod tests {
     #[test]
     fn moving_to_both_keeps_the_shown_value_and_reports_the_one_it_removed() {
         let mut file = pair();
-        move_value(&mut file, Some("dark"), "primary", "#ff8800").expect("moves");
+        move_value(&mut file, Some("dark"), "primary", &works_out("primary")).expect("moves");
         set_own(&mut file, Some("dark"), "primary", Some("#0000ff".into())).expect("sets");
-        let moved = move_value(&mut file, Some("dark"), "primary", "").expect("moves");
+        let moved = move_value(&mut file, Some("dark"), "primary", &works_out("primary")).expect("moves");
         assert_eq!(moved.removed, [("light".to_string(), "#ff8800".to_string())]);
         assert_eq!(read_at(&file, Place::Top, "primary").as_deref(), Some("#0000ff"));
         assert_eq!(look(&file, "light").get("primary").map(|c| c.to_hex()).as_deref(), Some("#0000ff"));
         // Without a clash nothing is reported.
-        move_value(&mut file, Some("light"), "primary", "").expect("moves");
-        let moved = move_value(&mut file, Some("light"), "primary", "").expect("moves");
+        move_value(&mut file, Some("light"), "primary", &works_out("primary")).expect("moves");
+        let moved = move_value(&mut file, Some("light"), "primary", &works_out("primary")).expect("moves");
         assert!(moved.removed.is_empty());
     }
 
@@ -311,7 +333,24 @@ mod tests {
         let mut file = pair();
         let tokens = builtin_tokens();
         assert!(!tokens.is_empty());
-        move_value(&mut file, Some("dark"), "surface.window", "#123456").expect("moves");
+        move_value(&mut file, Some("dark"), "surface.window", &|_, _| "#123456".into()).expect("moves");
         assert_eq!(read_at(&file, Place::Top, "surface.window").as_deref(), Some("#123456"));
+    }
+
+    /// The chip on a value that works out differently in each appearance (the syntax colours of
+    /// Wormhole's dark and light) leaves each as it was: the other one never takes the shown value.
+    #[test]
+    fn moving_a_worked_out_value_to_this_appearance_keeps_what_each_appearance_shows() {
+        let mut file = pair();
+        let (light, dark) = (look(&file, "light"), look(&file, "dark"));
+        let token = "syntax.keyword";
+        assert_ne!(light.get(token), dark.get(token), "the two differ, or this proves nothing");
+        assert_eq!(reach(&file, Some("dark"), token), Reach::Both);
+        move_value(&mut file, Some("dark"), token, &works_out(token)).expect("moves");
+        assert_eq!(reach(&file, Some("dark"), token), Reach::ThisAppearance);
+        assert_eq!(look(&file, "light").get(token), light.get(token), "light as it was");
+        assert_eq!(look(&file, "dark").get(token), dark.get(token), "dark as it was");
+        assert_eq!(read_at(&file, Place::Variant(0), token), light.get(token).map(|c| c.to_hex()));
+        assert_eq!(read_at(&file, Place::Variant(1), token), dark.get(token).map(|c| c.to_hex()));
     }
 }

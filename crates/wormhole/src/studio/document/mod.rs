@@ -19,6 +19,12 @@ fn default_shown(file: &ThemeFile) -> Option<String> {
     names.clone().find(|n| *n == "dark").or_else(|| names.clone().next()).map(str::to_string)
 }
 
+/// `shown` if the file has an appearance of that name, else the one a pair opens on (what the
+/// window will show of `file`, to be known before it is put in the document).
+pub(super) fn settled_shown(file: &ThemeFile, shown: Option<String>) -> Option<String> {
+    if file.variants.iter().any(|v| Some(&v.name) == shown.as_ref()) { shown } else { default_shown(file) }
+}
+
 /// The theme under edit.
 pub(super) struct Document {
     /// The file as edited now.
@@ -46,9 +52,7 @@ impl Document {
 
     /// The shown appearance is one the file has; else the one a pair opens on.
     pub(super) fn settle_shown(&mut self) {
-        if !self.file.variants.iter().any(|v| Some(&v.name) == self.shown.as_ref()) {
-            self.shown = default_shown(&self.file);
-        }
+        self.shown = settled_shown(&self.file, self.shown.take());
     }
 
     /// The value the file sets itself for `name` in the shown appearance (or shared by both).

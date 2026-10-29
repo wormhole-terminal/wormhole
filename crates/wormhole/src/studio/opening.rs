@@ -70,8 +70,9 @@ pub(super) fn open_target(target: &Target, inputs: &Inputs, themes: &Themes) -> 
             let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned());
             let file = named(file, stem);
             let name = file.name.clone().unwrap_or_default();
-            let id = file.id.clone().unwrap_or_else(|| slug::derive_id(&name));
-            Some(match (themes.fresh_base)(&id) {
+            // By its file: the id a name would make is another theme's when two share a name, or a
+            // built-in has it.
+            Some(match (themes.fresh_base)(&path.to_string_lossy()) {
                 Some(base) => with_base(&name, base),
                 None => untitled(&name, &(themes.resolve)(&file).ok()?, themes),
             })

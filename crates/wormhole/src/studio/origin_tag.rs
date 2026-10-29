@@ -33,12 +33,7 @@ pub(super) fn reach_chip(
     ui: UiColors,
     on_click: impl Fn(String, &mut Window, &mut App) + 'static,
 ) -> Stateful<Div> {
-    let word = match (reach, shown) {
-        (Reach::Both, _) => text(STUDIO_REACH_BOTH),
-        (Reach::ThisAppearance, DARK) => text(STUDIO_REACH_DARK),
-        (Reach::ThisAppearance, LIGHT) => text(STUDIO_REACH_LIGHT),
-        (Reach::ThisAppearance, _) => text(STUDIO_REACH_BOTH),
-    };
+    let word = reach_word(reach, shown);
     let token = token.to_string();
     div()
         .id(SharedString::from(format!("studio-reach-{token}")))
@@ -46,4 +41,28 @@ pub(super) fn reach_chip(
         .cursor_pointer()
         .child(crate::style::status_badge(ui, color, word))
         .on_click(move |_, window, cx| on_click(token.clone(), window, cx))
+}
+
+/// What the chip says: "both", or the appearance the value is for alone. An appearance that is
+/// neither light nor dark (a hand-written file's) is called by its own name.
+pub(super) fn reach_word(reach: Reach, shown: &str) -> SharedString {
+    match (reach, shown) {
+        (Reach::Both, _) => text(STUDIO_REACH_BOTH).into(),
+        (Reach::ThisAppearance, DARK) => text(STUDIO_REACH_DARK).into(),
+        (Reach::ThisAppearance, LIGHT) => text(STUDIO_REACH_LIGHT).into(),
+        (Reach::ThisAppearance, other) => other.to_string().into(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Reach, reach_word};
+
+    #[test]
+    fn a_value_for_one_appearance_is_called_by_that_appearance() {
+        assert_eq!(reach_word(Reach::Both, "evening"), "both");
+        assert_eq!(reach_word(Reach::ThisAppearance, "light"), "light");
+        assert_eq!(reach_word(Reach::ThisAppearance, "dark"), "dark");
+        assert_eq!(reach_word(Reach::ThisAppearance, "evening"), "evening", "not \"both\"");
+    }
 }

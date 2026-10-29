@@ -8,6 +8,7 @@ use wormhole_text::keys::{
     STUDIO_MENU_ADD_DARK, STUDIO_MENU_ADD_LIGHT, STUDIO_MENU_BUILT_IN, STUDIO_MENU_NEW, STUDIO_MENU_NEW_FROM,
     STUDIO_MENU_PROJECT_THEME, STUDIO_MENU_RENAME, STUDIO_MENU_REVERT, STUDIO_MENU_REVERT_TO,
     STUDIO_MENU_THIS_PROJECT, STUDIO_MENU_VERSIONS, STUDIO_MENU_YOUR_THEMES, studio_menu_duplicate,
+    studio_menu_update_current, studio_menu_update_missing, studio_update_from,
 };
 use wormhole_text::text;
 
@@ -15,6 +16,7 @@ use super::StudioWindow;
 use super::document::Subject;
 use super::opening::Target;
 use super::theme_list::{Choice, ThemeList};
+use super::update_from::State;
 use crate::menubar::model::KeyEquivalent;
 use crate::platform::menu::{Item, Menu, run_on};
 use wormhole_core::theme::tokens::Appearance;
@@ -28,6 +30,9 @@ pub(super) struct Facts<'a> {
     pub(super) addable: Option<Appearance>,
     /// The theme has earlier saves to browse (it is a file of its own).
     pub(super) versions: bool,
+    /// The theme it was copied from (as people know it) and how the copy compares, when the
+    /// shown appearance was copied from one.
+    pub(super) update: Option<(String, State)>,
 }
 
 fn open(
@@ -118,6 +123,20 @@ pub(super) fn build(list: &ThemeList, facts: &Facts<'_>, this: &WeakEntity<Studi
     if let Some(add) = add {
         menu = menu.item(add);
     }
+    if let Some((from, state)) = &facts.update {
+        let item = match state {
+            State::NoBase => None,
+            State::Changed(_) => Some(
+                Item::new(studio_update_from(from))
+                    .on_select(run_on(this, |studio, _, cx| studio.open_update_from(cx))),
+            ),
+            State::UpToDate => Some(Item::new(studio_menu_update_current(from)).enabled(false)),
+            State::SourceMissing => Some(Item::new(studio_menu_update_missing(from)).enabled(false)),
+        };
+        if let Some(item) = item {
+            menu = menu.item(item);
+        }
+    }
     menu.separator()
         .item(
             Item::new(text(STUDIO_MENU_REVERT))
@@ -166,6 +185,7 @@ mod tests {
             dirty: true,
             addable: Some(Appearance::Light),
             versions: true,
+            update: None,
         };
         let menu = build(&list(), &facts, &WeakEntity::new_invalid());
         assert_eq!(
@@ -211,6 +231,7 @@ mod tests {
             dirty: false,
             addable: None,
             versions: false,
+            update: None,
         };
         let menu = build(&ThemeList { project: false, ..list() }, &facts, &WeakEntity::new_invalid());
         let lines = menu.outline();
@@ -219,5 +240,25 @@ mod tests {
         assert!(!lines.contains(&"# This Project".to_string()));
         assert!(lines.contains(&"  - Browse All Versions\u{2026} [off]".to_string()), "{lines:?}");
         assert!(!lines.iter().any(|l| l.contains("Appearance")), "{lines:?}");
+    }
+
+    #[test]
+    fn update_from_is_in_the_menu_and_off_unless_the_source_changed() {
+        let subject = Subject::Own { path: "/themes/mine.json".into() };
+        let lines = |state| {
+            let facts = Facts {
+                subject: &subject,
+                name: "Mine",
+                dirty: false,
+                addable: None,
+                versions: true,
+                update: Some(("Nord".into(), state)),
+            };
+            build(&list(), &facts, &WeakEntity::new_invalid()).outline()
+        };
+        assert!(lines(State::Changed(2)).contains(&"- Update from Nord\u{2026}".to_string()));
+        assert!(lines(State::UpToDate).contains(&"- Up to date with Nord [off]".to_string()));
+        assert!(lines(State::SourceMissing).contains(&"- Nord is unavailable [off]".to_string()));
+        assert!(!lines(State::NoBase).iter().any(|l| l.contains("Update from") || l.contains("Up to date")));
     }
 }

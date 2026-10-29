@@ -71,6 +71,22 @@ pub(super) fn open_with(cx: &mut TestAppContext, themes: Themes) -> (AnyWindowHa
     })
 }
 
+/// The window on a document of the test's own making.
+pub(super) fn open_doc(
+    cx: &mut TestAppContext,
+    themes: Themes,
+    doc: Document,
+) -> (AnyWindowHandle, Entity<StudioWindow>) {
+    cx.update(|cx| {
+        gpui_kit::init(cx);
+        cx.set_global(SettingsStore::for_test());
+        gpui_kit::open_window(WindowOptions::default(), cx, |window, cx| {
+            cx.new(|cx| StudioWindow::with_themes(themes, doc, window, cx))
+        })
+        .expect("opens the window")
+    })
+}
+
 /// Run `f` on the Studio inside its window.
 pub(super) fn with<R>(
     cx: &mut TestAppContext,

@@ -106,7 +106,7 @@ pub use zen::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 1215] = [
+pub const ALL: [Key; 1212] = [
     AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_READ, AGENT_SHEET_WANTS_TYPE,
     AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_CLOSE,
     AGENT_SHEET_DETAIL, AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_WARNING_UNSIGNED,
@@ -458,10 +458,9 @@ pub const ALL: [Key; 1215] = [
     STUDIO_APPEARANCE_DARK, STUDIO_APPEARANCE_LABEL, STUDIO_REACH_BOTH,
     STUDIO_REACH_LIGHT, STUDIO_REACH_DARK, STUDIO_MENU_ADD_DARK,
     STUDIO_MENU_ADD_LIGHT, STUDIO_ADD_FAILED, STUDIO_MOVED_UNDO,
-    STUDIO_UNDO_ADD_APPEARANCE, STUDIO_USE_WITH_MATCH_SYSTEM, STUDIO_UPDATE_UP_TO_DATE,
-    STUDIO_UPDATE_SOURCE_MISSING, STUDIO_UPDATE_KEPT, STUDIO_UPDATE_CANCEL,
-    STUDIO_UPDATE_APPLY, STUDIO_UNDO_UPDATE_FROM, STUDIO_MENU_REVERT_TO,
-    STUDIO_MENU_VERSIONS, STUDIO_VERSIONS_CURRENT, STUDIO_VERSIONS_ORIGINAL,
+    STUDIO_UNDO_ADD_APPEARANCE, STUDIO_USE_WITH_MATCH_SYSTEM, STUDIO_UPDATE_KEPT,
+    STUDIO_UPDATE_CANCEL, STUDIO_UPDATE_APPLY, STUDIO_UNDO_UPDATE_FROM,
+    STUDIO_MENU_REVERT_TO, STUDIO_MENU_VERSIONS, STUDIO_VERSIONS_CURRENT,
     STUDIO_VERSIONS_RESTORE, STUDIO_VERSIONS_DONE, STUDIO_VERSIONS_NOTE,
     STUDIO_VERSIONS_EMPTY, STUDIO_VERSIONS_UNREADABLE, STUDIO_VERSIONS_FIRST,
     STUDIO_UNDO_RESTORE, STUDIO_NEWER_CHIP, STUDIO_NEWER_DUPLICATE,
@@ -734,10 +733,13 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("studio-undo-move", studio_undo_move("Sample")),
         ("studio-pair-used", studio_pair_used("Sample")),
         ("studio-update-from", studio_update_from("Sample")),
+        ("studio-menu-update-current", studio_menu_update_current("Sample")),
+        ("studio-menu-update-missing", studio_menu_update_missing("Sample")),
         ("studio-update-title", studio_update_title("Sample")),
         ("studio-update-count", studio_update_count(1, "Sample")),
         ("studio-update-count", studio_update_count(5, "Sample")),
         ("studio-versions-title", studio_versions_title("Sample")),
+        ("studio-versions-original", studio_versions_original("Sample")),
         ("studio-versions-changed", studio_versions_changed(1)),
         ("studio-versions-changed", studio_versions_changed(5)),
         ("studio-versions-label", studio_versions_label("Sample", "Sample")),
@@ -754,6 +756,7 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("studio-copy-failed", studio_copy_failed("Sample")),
         ("studio-export-failed", studio_export_failed("Sample")),
         ("studio-exported", studio_exported("Sample")),
+        ("studio-only-shown", studio_only_shown("Sample")),
         ("studio-copy-json-failed", studio_copy_json_failed("Sample")),
         ("studio-project-saved", studio_project_saved("Sample")),
         ("studio-project-failed", studio_project_failed("Sample")),
@@ -764,6 +767,7 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("studio-unsaved-detail", studio_unsaved_detail(5)),
         ("studio-title-based-on", studio_title_based_on("Sample", "Sample", "Sample")),
         ("studio-title-extends", studio_title_extends("Sample", "Sample")),
+        ("studio-title-generated", studio_title_generated("Sample", "Sample")),
         ("studio-title-own", studio_title_own("Sample")),
         ("studio-date", studio_date("Sample", 1, "Sample")),
         ("studio-date", studio_date("Sample", 5, "Sample")),
