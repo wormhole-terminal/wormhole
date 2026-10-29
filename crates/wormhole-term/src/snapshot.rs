@@ -371,6 +371,20 @@ mod tests {
     }
 
     #[test]
+    fn clear_buffer_then_the_shells_ctrl_l_leaves_no_history_and_a_clean_screen() {
+        // Clear Buffer (⌘K) empties the history and sends ^L; zsh answers ^L with these bytes
+        // (captured from `zsh -f` on macOS) and redraws its prompt. The screen it cleared must not
+        // be saved into the history that was just emptied.
+        let mut term = term(10, 3);
+        feed(&mut term, b"1\r\n2\r\n3\r\n4\r\n% ");
+        assert!(term.history_size() > 0);
+        term.clear_history();
+        feed(&mut term, b"\x1b[H\x1b[2J\x1b[0m\x1b[27m\x1b[24m\x1b[J\x1b[K% ");
+        assert_eq!(term.history_size(), 0);
+        assert_eq!(term.screen_text().trim(), "%");
+    }
+
+    #[test]
     fn selection_spans_per_row() {
         let mut term = term(10, 3);
         feed(&mut term, b"aaaa\r\nbbbb\r\ncccc");

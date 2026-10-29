@@ -48,6 +48,9 @@ pub enum Message<'a> {
     SetLimits(Limits),
     SetOptions(Options),
     SetColorScheme(ColorScheme),
+    /// Empty the host engine's history (the app's "clear buffer"), added in minor 2. It counts as
+    /// `ED 3` for the `ED 2` that follows, so a ^L sent right after leaves nothing in it.
+    ClearHistory,
     /// End the session: hang up the shell, wait `grace_ms` before killing it.
     Close {
         grace_ms: u32,
@@ -109,6 +112,7 @@ impl Message<'_> {
             Self::SetLimits(_) => ty::SET_LIMITS,
             Self::SetOptions(_) => ty::SET_OPTIONS,
             Self::SetColorScheme(_) => ty::SET_COLOR_SCHEME,
+            Self::ClearHistory => ty::CLEAR_HISTORY,
             Self::Close { .. } => ty::CLOSE,
             Self::ClipboardReply(_) => ty::CLIPBOARD_REPLY,
             Self::Hook(_) => ty::HOOK,
@@ -134,7 +138,7 @@ impl Message<'_> {
             Self::Hello(m) => m.encode(w)?,
             Self::Welcome(m) | Self::Info(m) => m.encode(w)?,
             Self::Incompatible(m) => m.encode(w),
-            Self::GetInfo | Self::Kill | Self::Detach => {}
+            Self::GetInfo | Self::Kill | Self::Detach | Self::ClearHistory => {}
             Self::Detached(r) => w.u8(r.to_wire()),
             Self::Ping(n) => w.u64(*n),
             Self::Pong { n, pty_progress } => {
@@ -198,6 +202,7 @@ impl<'a> Message<'a> {
             ty::SET_LIMITS => Self::SetLimits(Limits::decode(r)?),
             ty::SET_OPTIONS => Self::SetOptions(Options::read(r)?),
             ty::SET_COLOR_SCHEME => Self::SetColorScheme(ColorScheme::from_wire(r.u8()?)),
+            ty::CLEAR_HISTORY => Self::ClearHistory,
             ty::CLOSE => Self::Close { grace_ms: r.u32()? },
             ty::CLIPBOARD_REPLY => Self::ClipboardReply(ClipboardReply::decode(r)?),
             ty::HOOK => Self::Hook(Hook::decode(r)?),
@@ -246,6 +251,7 @@ fn type_name(t: u8) -> &'static str {
         ty::SET_LIMITS => "SetLimits",
         ty::SET_OPTIONS => "SetOptions",
         ty::SET_COLOR_SCHEME => "SetColorScheme",
+        ty::CLEAR_HISTORY => "ClearHistory",
         ty::CLOSE => "Close",
         ty::CLIPBOARD_REPLY => "ClipboardReply",
         ty::HOOK => "Hook",

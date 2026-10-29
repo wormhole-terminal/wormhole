@@ -188,6 +188,7 @@ pub fn all() -> Vec<(&'static str, Message<'static>)> {
         ("set_limits", Message::SetLimits(Limits { history_bytes: 1 << 30, ring_bytes: 1 << 20 })),
         ("set_options", Message::SetOptions(Options { scrollback_lines: 2_000, flags: 1 })),
         ("set_color_scheme", Message::SetColorScheme(ColorScheme::Light)),
+        ("clear_history", Message::ClearHistory),
         ("close", Message::Close { grace_ms: 3000 }),
         ("clipboard_reply", Message::ClipboardReply(ClipboardReply { ticket: 17, data: b"hello" })),
         ("hook", Message::Hook(Hook { name: "needs_you", payload: br#"{"a":1}"# })),

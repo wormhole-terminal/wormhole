@@ -73,6 +73,11 @@ impl Pty {
     /// Erase the history (the screen stays).
     pub fn clear_history(&self) {
         self.term.lock().clear_history();
+        // A hosted terminal's history lives in the host too, and comes back from there on the
+        // next attach or repaint; the host's engine is told, ahead of any ^L typed after this.
+        if let Backend::Hosted(host) = &self.io {
+            host.clear_history();
+        }
     }
 
     /// The grid's last line (the live screen's bottom row).

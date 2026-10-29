@@ -201,6 +201,7 @@ impl State {
                         self.queue(&Message::SetColorScheme(scheme));
                     }
                 }
+                Cmd::ClearHistory => self.queue(&Message::ClearHistory),
                 Cmd::Clipboard { ticket, data } => {
                     self.queue(&Message::ClipboardReply(wire::ClipboardReply { ticket, data: &data }))
                 }

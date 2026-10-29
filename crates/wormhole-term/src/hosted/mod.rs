@@ -316,6 +316,12 @@ impl HostedTerminal {
         }
     }
 
+    /// The app's "clear buffer": the history goes, and the ^L that follows finds the screen cleared
+    /// without saving it back (the engine counts this as ED 3).
+    pub fn clear_history(&self) {
+        self.screen.lock().clear_history();
+    }
+
     pub fn set_options(&self, options: &wire::Options) {
         let mut screen = self.screen.lock();
         apply_options(&mut screen, options);

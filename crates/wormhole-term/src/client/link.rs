@@ -22,8 +22,12 @@ pub(crate) enum Cmd {
     Colors(Box<[Rgb; COLOR_COUNT]>),
     /// The theme is light or dark, for the host's answers and its reports of a change.
     ColorScheme(ColorScheme),
+    ClearHistory,
     /// The answer to the host's `ClipboardLoad{ticket}`.
-    Clipboard { ticket: u32, data: Vec<u8> },
+    Clipboard {
+        ticket: u32,
+        data: Vec<u8>,
+    },
     /// On screen (`Sync`, a replica fed) or not (`None`, headless).
     Visible(bool),
     /// Let go of the host, which keeps running.
@@ -127,6 +131,10 @@ impl Hosted {
 
     pub(crate) fn set_color_scheme(&self, scheme: ColorScheme) {
         self.link.send(Cmd::ColorScheme(scheme));
+    }
+
+    pub(crate) fn clear_history(&self) {
+        self.link.send(Cmd::ClearHistory);
     }
 
     pub(crate) fn set_visible(&self, visible: bool) {

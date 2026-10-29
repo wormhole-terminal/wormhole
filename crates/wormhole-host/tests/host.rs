@@ -94,6 +94,30 @@ fn an_attach_after_a_detach_repaints_the_screen_the_first_client_had() {
 }
 
 #[test]
+fn clearing_the_history_empties_the_hosts_so_an_attach_does_not_bring_it_back() {
+    let host = Host::start();
+    let (mut first, _) = host.spawn("/bin/cat", &[]);
+    for i in 0..40 {
+        first.input(format!("line {i}\r").as_bytes());
+    }
+    first.until_text("line 39");
+    first.drain(Duration::from_millis(300));
+    assert!(first.replica.history_len() > 0, "enough output to scroll");
+    // The Ping's Pong says the host has handled the ClearHistory before it.
+    first.send(&Message::ClearHistory);
+    first.send(&Message::Ping(1));
+    first.until("Pong", |g| matches!(g, Got::Pong(1, _)));
+    first.send(&Message::Detach);
+    first.until_closed();
+
+    let mut second = host.connect(Role::Controller);
+    second.attach(StreamMode::Sync, 0);
+    second.until("the repaint's last part", |g| matches!(g, Got::Repaint { last: true, .. }));
+    assert_eq!(second.replica.history_len(), 0, "the host's history is gone");
+    assert!(second.screen_text().contains("line 39"), "the screen stays");
+}
+
+#[test]
 fn a_resize_is_in_the_stream_where_it_was_applied() {
     let host = Host::start();
     let (mut client, _) = host.spawn("/bin/sh", &["-c", "while read line; do stty size; done"]);

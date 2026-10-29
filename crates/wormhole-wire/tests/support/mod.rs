@@ -179,7 +179,7 @@ fn welcome(rng: &mut Rng) -> Welcome {
 
 /// A random message of any kind, with every field random, borrowing from `p`.
 pub(crate) fn message<'a>(rng: &mut Rng, p: &'a Pool) -> Message<'a> {
-    match rng.below(35) {
+    match rng.below(36) {
         0 => {
             let min = 1 + rng.u16() % 100;
             Message::Hello(Hello {
@@ -299,6 +299,7 @@ pub(crate) fn message<'a>(rng: &mut Rng, p: &'a Pool) -> Message<'a> {
             }
         }
         33 => Message::SetColorScheme(ColorScheme::from_wire(rng.u8() % 4)),
+        34 => Message::ClearHistory,
         _ => Message::FindCancel { id: rng.u32() },
     }
 }

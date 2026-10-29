@@ -32,6 +32,8 @@ pub trait Program {
     fn set_colors(&mut self, colors: &wire::Colors<'_>);
     fn set_color_scheme(&mut self, scheme: wire::ColorScheme);
     fn set_options(&mut self, options: &wire::Options);
+    /// The app's "clear buffer": the engine's history is emptied.
+    fn clear_history(&mut self);
     fn set_controller(&self, attached: bool);
     fn clipboard_reply(&self, ticket: u32, data: &[u8]);
     /// Answer the clipboard reads that are out of time; when the next one is.
@@ -111,6 +113,9 @@ impl Program for HostedTerminal {
     }
     fn set_options(&mut self, options: &wire::Options) {
         HostedTerminal::set_options(self, options);
+    }
+    fn clear_history(&mut self) {
+        HostedTerminal::clear_history(self);
     }
     fn set_controller(&self, attached: bool) {
         HostedTerminal::set_controller(self, attached);

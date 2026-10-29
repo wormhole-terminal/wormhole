@@ -112,6 +112,7 @@ impl Program for Fake {
     fn set_colors(&mut self, _: &wire::Colors<'_>) {}
     fn set_color_scheme(&mut self, _: wire::ColorScheme) {}
     fn set_options(&mut self, _: &wire::Options) {}
+    fn clear_history(&mut self) {}
     fn set_controller(&self, attached: bool) {
         self.state.borrow_mut().controller = attached;
     }
