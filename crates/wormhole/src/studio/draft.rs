@@ -99,6 +99,10 @@ pub(super) fn draft_for(base: &ThemeTokens, resolve: Resolve) -> ThemeFile {
         draft.terminal.background = Some(t.background.to_hex());
         draft.terminal.cursor = Some(t.cursor.to_hex());
         draft.terminal.selection_background = Some(t.selection_background.to_hex());
+        // Set only when the theme sets them: otherwise they keep following the background and
+        // foreground, as they do in the theme being copied.
+        draft.terminal.cursor_text = t.cursor_text.map(|c| c.to_hex());
+        draft.terminal.selection_foreground = t.selection_foreground.map(|c| c.to_hex());
         for (i, color) in t.ansi.iter().enumerate() {
             draft.terminal.ansi.insert(i.to_string(), color.to_hex());
         }
@@ -421,6 +425,23 @@ mod tests {
         assert_eq!(draft.terminal.foreground.as_deref(), Some(base.terminal.foreground.to_hex().as_str()));
         assert_eq!(draft.terminal.ansi.len(), 16);
         assert_eq!(builtins_only(&draft).expect("resolves").terminal, base.terminal);
+    }
+
+    #[test]
+    fn a_copied_palette_keeps_cursor_text_and_selection_foreground() {
+        let mut base = tokyo_night();
+        base.name = "Somewhere else".into();
+        base.terminal.cursor_text = Some(wormhole_core::theme::tokens::Color::from_rgb_u32(0x112233));
+        base.terminal.selection_foreground = Some(wormhole_core::theme::tokens::Color::from_rgb_u32(0x445566));
+        let draft = draft_for(&base, builtins_only);
+        assert_eq!(draft.terminal.cursor_text.as_deref(), Some("#112233"));
+        assert_eq!(draft.terminal.selection_foreground.as_deref(), Some("#445566"));
+        assert_eq!(builtins_only(&draft).expect("resolves").terminal, base.terminal);
+        // Left unset, they stay unset and keep following.
+        base.terminal.cursor_text = None;
+        base.terminal.selection_foreground = None;
+        let draft = draft_for(&base, builtins_only);
+        assert_eq!((&draft.terminal.cursor_text, &draft.terminal.selection_foreground), (&None, &None));
     }
 
     #[test]
