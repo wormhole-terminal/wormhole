@@ -15,6 +15,7 @@ pub mod folder_color;
 pub mod fonts;
 pub mod icon_theme;
 pub mod registry;
+pub mod saved_versions;
 pub mod tokens;
 
 use std::path::Path;
