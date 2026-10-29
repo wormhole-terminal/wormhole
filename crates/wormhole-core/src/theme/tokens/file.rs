@@ -85,7 +85,7 @@ impl TerminalFile {
 }
 
 /// The palette index an `ansi` key names: `"0"`..`"15"` or `"black"`..`"bright_white"`.
-pub(super) fn ansi_index(key: &str) -> Option<usize> {
+pub fn ansi_index(key: &str) -> Option<usize> {
     key.parse::<usize>().ok().filter(|i| *i < 16).or_else(|| {
         let (bright, base) = key.strip_prefix("bright_").map_or((0, key), |b| (8, b));
         ANSI_NAMES.iter().position(|n| *n == base).map(|i| i + bright)
