@@ -5,7 +5,7 @@
 //!
 //! Test code does not count as a use: a message only a test asks for is still one nobody sees. A file of
 //! tests (`tests.rs`, `*_tests.rs`, a `tests/` folder under `src`) and an inline `#[cfg(test)] mod … {`
-//! are left out, as `crates/wormhole/tests/support/mod.rs` does for its scans (copied: a different crate).
+//! are left out, as `crates/wormhole-rules/tests/support/mod.rs` does for its scans (copied: a different crate).
 //!
 //! A message that is no longer used is deleted from `locales/en/` (and blessed away), or a translator is
 //! made to translate a sentence the interface never shows.

@@ -195,7 +195,7 @@ fn counts(cx: &mut TestAppContext) {
   `section_label`, `count_badge`, `card`, `icon_button`, …). Use icons, not text
   glyphs.
 - A new shared component goes into `style/` and the Studio gallery;
-  `tests/design_rules.rs` enforces both.
+  `crates/wormhole-rules/tests/design_rules.rs` enforces both.
 - Buttons are `gpui_kit::component::button::Button`: `small` in forms, `xsmall`
   in panels, `ghost` for chrome, `primary` for the one main action.
 - App-wide state is `AppState` via `app(cx)` / `app_mut(cx)`. Never hold that

@@ -36,7 +36,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   - `setting.rs`: `setting_row`, `toggle`, `choice`, `stepper`
   - `reorder.rs`: drag ghosts
 
-  Build with these before writing a styled `div`. `tests/design_rules.rs`
+  Build with these before writing a styled `div`. `crates/wormhole-rules/tests/design_rules.rs`
   fails on off-grid values.
 - A `RenderOnce` component (`#[derive(IntoElement)]` + `impl RenderOnce`) and
   a `Popover`: `SelectTrigger` and the menu in `select/mod.rs`.
@@ -82,7 +82,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   `features/git/diff/highlight.rs`.
 - Every component in one place, with each theme applied: the Studio gallery
   in `studio/gallery/` (one specimen per file). A new shared
-  component goes there too; `tests/design_rules.rs` checks it.
+  component goes there too; `crates/wormhole-rules/tests/design_rules.rs` checks it.
 
 ## Async
 

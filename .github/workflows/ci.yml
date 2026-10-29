@@ -90,7 +90,7 @@ jobs:
           case "$scope" in
             all)  clippy="--workspace --all-targets --features devctl"; test="--workspace --features devctl" ;;
             app)  clippy="-p wormhole --all-targets --features devctl";  test="-p wormhole --features devctl" ;;
-            text) clippy="";                                             test="-p wormhole --features devctl --test design_rules" ;;
+            text) clippy="";                                             test="-p wormhole-rules --test design_rules" ;;
             none) clippy="";                                             test="" ;;
             *)    echo "::warning::unknown scope '$scope': checking everything"; scope=all
                   clippy="--workspace --all-targets --features devctl"; test="--workspace --features devctl" ;;

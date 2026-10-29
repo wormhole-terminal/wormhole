@@ -1,5 +1,5 @@
 //! Opening a window: the one way the app does it, so every window gets what all of them need.
-//! `gpui_kit::open_window` itself is called nowhere else (`tests/background_rules.rs` checks).
+//! `gpui_kit::open_window` itself is called nowhere else (`crates/wormhole-rules/tests/background_rules.rs` checks).
 //!
 //! What every window gets: while background mode keeps Wormhole behind the other apps (or the caller asked
 //! for [`Activation::Behind`]), it opens without the focus and behind their windows (`background`), and its
