@@ -142,6 +142,7 @@ for l in $loads; do
       # unlocked key lets a flag be turned on in one (as on the Unstable channel). No update check
       # should run meanwhile. The stream's first line (its answer) is kept, the rest is read and dropped.
       workload_setup=('set auto_update=false' 'set feature_flags={"automation":true,"unlocked":true}')
+      # shellcheck disable=SC2016 # expanded later, by the shell inside the test instance
       workload_watchers='{ "$WORMHOLE_BIN" events --terminal "$WORMHOLE_TAB_ID" --output --json 2>"$WORKLOAD_DIR/events.err" |
   { head -n 1 >"$WORKLOAD_DIR/events.out"; cat >/dev/null; }; } &
 echo $! >"$WORKLOAD_DIR/events.pid"

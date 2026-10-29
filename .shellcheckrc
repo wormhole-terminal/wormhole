@@ -1,0 +1,4 @@
+# Follow what a script sources (scripts/lib.sh, perf_lib.sh), so the variables they set are known, and
+# find those files next to the script itself, as the scripts do (`. "$(dirname "$0")/lib.sh"`).
+external-sources=true
+source-path=SCRIPTDIR
