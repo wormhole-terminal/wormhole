@@ -227,7 +227,6 @@ mod tests {
         assert!(t.join(VERSIONS_DIR).is_dir());
     }
 
-    #[cfg(unix)]
     #[test]
     fn a_linked_versions_folder_is_never_followed() {
         let dir = tempfile::tempdir().unwrap();
@@ -236,7 +235,7 @@ mod tests {
         std::fs::create_dir(t.join(VERSIONS_DIR)).unwrap();
         let old = elsewhere.path().join("2026-01-01T00-00-00.json");
         std::fs::write(&old, "{}").unwrap();
-        std::os::unix::fs::symlink(elsewhere.path(), t.join(VERSIONS_DIR).join("a")).unwrap();
+        crate::platform::fs::symlink(elsewhere.path(), &t.join(VERSIONS_DIR).join("a")).unwrap();
         assert!(keep_version(t, "a", "{}", NOW).is_err());
         assert!(list_versions(t, "a").is_empty());
         thin(t, "a", NOW);
