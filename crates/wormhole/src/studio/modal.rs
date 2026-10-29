@@ -14,7 +14,7 @@ use crate::style::{Edges as _, TextRole as _};
 const CARD_W: f32 = 520.0;
 
 pub(super) enum Modal {
-    Update(Sheet),
+    Update(Box<Sheet>),
     Versions(Panel),
 }
 

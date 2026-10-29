@@ -21,7 +21,10 @@ use super::{StudioWindow, ui};
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::TitleDrag as _;
 use crate::style::{self, Edges, TextRole};
-use wormhole_text::keys::*;
+use wormhole_text::keys::{
+    STUDIO_COPY_JSON, STUDIO_EXPORT, STUDIO_EXPORT_JSON, STUDIO_SAVE_THEME, STUDIO_TITLE, STUDIO_UNSAVED,
+    STUDIO_USE_IN_PROJECT, studio_title_based_on, studio_title_extends, studio_title_own,
+};
 use wormhole_text::text;
 
 /// The name field while renaming.
