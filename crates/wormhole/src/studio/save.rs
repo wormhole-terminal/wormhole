@@ -14,7 +14,14 @@ use wormhole_core::platform::paths;
 use wormhole_core::project::ProjectFolder;
 use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::tokens::{Appearance, ThemeFile};
-use wormhole_text::keys::*;
+use wormhole_text::keys::{
+    STUDIO_CANCEL, STUDIO_CHANGED_DETAIL, STUDIO_COPIED_JSON, STUDIO_EXISTS_DETAIL, STUDIO_NAME_FIRST,
+    STUDIO_NEWER_FILE, STUDIO_NO_PROJECT_FOLDER, STUDIO_NO_TERMINAL, STUDIO_OTHER_PROJECT, STUDIO_OVERWRITE,
+    STUDIO_REPLACE, STUDIO_REVEAL, studio_changed_message, studio_copy_failed, studio_copy_json_failed,
+    studio_copy_saved, studio_exists_message, studio_export_failed, studio_exported,
+    studio_name_is_a_version, studio_project_failed, studio_project_saved, studio_save_failed, studio_saved,
+    studio_saved_set,
+};
 use wormhole_text::text;
 
 use super::document::{Document, Subject};

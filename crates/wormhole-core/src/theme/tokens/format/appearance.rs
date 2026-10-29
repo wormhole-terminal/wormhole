@@ -83,10 +83,11 @@ fn flipped(base: &BaseLayer, to: Appearance) -> BaseLayer {
         &mut t.cursor_text,
         &mut t.selection_background,
         &mut t.selection_foreground,
-    ] {
-        if let Some(v) = slot {
-            *v = flip_value(v);
-        }
+    ]
+    .into_iter()
+    .flatten()
+    {
+        *slot = flip_value(slot);
     }
     t.ansi.values_mut().for_each(|v| *v = flip_value(v));
     // The accent comes from the theme being kept, so it is not in the new appearance's base.
@@ -221,7 +222,7 @@ mod tests {
         let names: Vec<_> = pair.variants.iter().map(|v| v.name.as_str()).collect();
         assert_eq!(names, ["light", "dark"]);
         assert_eq!(pair.ui.get("primary").map(String::as_str), Some("#ff8800"), "shared");
-        assert!(pair.ui.get("surface.panel").is_none(), "an appearance's own value moved into it");
+        assert!(!pair.ui.contains_key("surface.panel"), "an appearance's own value moved into it");
         let all = variants(&pair, "Mine").unwrap();
         let dark = resolve(&all[1].file, &|_| None).unwrap();
         assert_eq!(dark.get("surface.panel").unwrap().to_hex(), "#101010");

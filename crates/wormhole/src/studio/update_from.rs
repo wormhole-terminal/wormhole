@@ -90,12 +90,12 @@ impl StudioWindow {
         if self.update_check.changes.is_empty() {
             return;
         }
-        self.modal = Some(Modal::Update(Sheet {
+        self.modal = Some(Modal::Update(Box::new(Sheet {
             from: source_name(&base.from),
             date: base.copied.as_deref().map(display_date).unwrap_or_default(),
             changes: self.update_check.changes.clone(),
             fresh,
-        }));
+        })));
         cx.notify();
     }
 
