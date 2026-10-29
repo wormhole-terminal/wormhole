@@ -102,8 +102,10 @@ studio-pair-used = “{ $name }” follows the system’s light and dark.
 
 # { $from } is the theme this one was copied from.
 studio-update-from = Update from { $from }…
-studio-update-up-to-date = Up to date
-studio-update-source-missing = Source unavailable
+# { $from } is the theme this one was copied from.
+studio-menu-update-current = Up to date with { $from }
+# { $from } is the theme this one was copied from.
+studio-menu-update-missing = { $from } is unavailable
 # { $from } is the theme this one was copied from.
 studio-update-title = Update from { $from }?
 # { $count } values changed; { $date } is the day it was copied.
@@ -123,7 +125,8 @@ studio-menu-versions = Browse All Versions…
 # { $name } is the theme's name.
 studio-versions-title = Versions of “{ $name }”
 studio-versions-current = current
-studio-versions-original = original file
+# { $when } is when the save was made.
+studio-versions-original = { $when } · original file
 studio-versions-restore = Restore
 studio-versions-done = Done
 studio-versions-note = Older saves thin out to one an hour, then one a day. The original file is always kept.
@@ -151,7 +154,7 @@ studio-newer-duplicate = Duplicate
 
 ## Previewing a theme that is not in use
 
-studio-preview-chip = Previewing, not in use
+studio-preview-chip = Preview
 studio-preview-use = Use
 studio-preview-tooltip = Every window shows this theme while Theme Studio is open. Closing Theme Studio puts your theme back.
 studio-versions-just-now = just now
@@ -190,6 +193,8 @@ studio-export-failed = Could not export: { $error }
 # { $path } is where the file was written.
 studio-exported = Exported to { $path }.
 studio-copied-json = Copied the theme's JSON.
+# { $appearance } is Light or Dark.
+studio-only-shown = Only the { $appearance } appearance of this theme was written.
 # { $error } is why it failed.
 studio-copy-json-failed = Could not copy: { $error }
 studio-other-project = The terminal in front is in another project.
@@ -231,11 +236,13 @@ studio-save-theme = Save theme
 studio-export-json = Export JSON…
 studio-copy-json = Copy JSON
 studio-use-in-project = Use in this project…
-# { $from } is the theme it was copied from, { $day } when, { $appearance } light or dark.
+# { $from } is the theme it was copied from, { $day } when, { $appearance } Light or Dark.
 studio-title-based-on = based on { $from } · copied { $day } · { $appearance }
-# { $base } is the theme it extends, { $appearance } light or dark.
+# { $base } is the theme it extends, { $appearance } Light or Dark.
 studio-title-extends = extends { $base } · { $appearance }
-# { $appearance } is light or dark.
+# { $from } is the theme it was generated from, { $appearance } Light or Dark.
+studio-title-generated = generated from { $from } · { $appearance }
+# { $appearance } is Light or Dark.
 studio-title-own = its own palette · { $appearance }
 # { $day } { $month } { $year } as a date: 29 Oct 2026.
 studio-date = { $day } { $month ->

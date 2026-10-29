@@ -10,24 +10,29 @@ use wormhole_text::keys::{
 };
 use wormhole_text::text;
 
+use super::StudioWindow;
 use super::document::history::StepLabel;
-use super::document::places;
+use super::document::{places, settled_shown};
 use super::names::today;
 use super::save::Notice;
-use super::{StudioWindow, number};
 use crate::settings::SettingsStore;
 
-/// The appearance's name as people read it.
-pub(super) fn appearance_word(name: &str) -> &'static str {
-    if name == LIGHT { text(STUDIO_APPEARANCE_LIGHT) } else { text(STUDIO_APPEARANCE_DARK) }
+/// The appearance's name as people read it: Light, Dark, or the name a hand-written file gave it.
+pub(super) fn appearance_word(name: &str) -> String {
+    match name {
+        LIGHT => text(STUDIO_APPEARANCE_LIGHT).to_string(),
+        DARK => text(STUDIO_APPEARANCE_DARK).to_string(),
+        other => other.to_string(),
+    }
 }
 
 impl StudioWindow {
     /// The file changed: the rows are made again, and what is derived from the file is checked
     /// again.
-    pub(super) fn touched(&mut self) {
+    pub(super) fn touched(&mut self, cx: &App) {
         self.revision += 1;
         self.refresh_update_check();
+        self.refresh_own_in_use(cx);
     }
 
     /// Show `tokens` everywhere (the whole app follows while the Studio is open).
@@ -47,13 +52,15 @@ impl StudioWindow {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Result<(), String> {
+        // The appearance the window will show first, then what is previewed: the file's own
+        // (a theme made a pair has no appearance shown until it is one).
+        let shown = settled_shown(&file, shown);
         let resolved = (self.themes.resolve)(&places::folded(&file, shown.as_deref()))?;
         self.record_step(label, false, cx);
         self.end_gesture(cx);
         self.doc.file = file;
         self.doc.shown = shown;
-        self.doc.settle_shown();
-        self.touched();
+        self.touched(cx);
         self.field_error = None;
         self.notice = None;
         SettingsStore::preview_tokens(cx, Some(resolved));
@@ -74,7 +81,7 @@ impl StudioWindow {
             return;
         }
         self.doc.shown = Some(name.to_string());
-        self.touched();
+        self.touched(cx);
         self.preview_file(&self.doc.file, cx);
         if let Some(token) = self.selected.clone() {
             self.show_token(&token, true, window, cx);
@@ -84,17 +91,17 @@ impl StudioWindow {
 
     /// The chip of a row: the value moves between both appearances and the shown one.
     pub(super) fn toggle_reach(&mut self, token: &str, window: &mut Window, cx: &mut Context<Self>) {
-        let tokens = cx.global::<SettingsStore>().tokens.clone();
-        let current = tokens
-            .metrics
-            .get(token)
-            .filter(|_| super::is_metric(token))
-            .map(number)
-            .or_else(|| tokens.get(token).map(|c| c.to_hex()))
-            .unwrap_or_default();
         let shown = self.doc.shown.clone();
         let mut file = self.doc.file.clone();
-        let moved = match places::move_value(&mut file, shown.as_deref(), token, &current) {
+        // What each appearance works out to itself, from the file: not from what the app shows
+        // (which has Increase Contrast and the user's colour choices on it, and is one appearance).
+        let resolve = self.themes.resolve;
+        let worked_out = |file: &ThemeFile, appearance: &str| {
+            resolve(&places::folded(file, Some(appearance)))
+                .map(|tokens| places::value_text(&tokens, token))
+                .unwrap_or_default()
+        };
+        let moved = match places::move_value(&mut file, shown.as_deref(), token, &worked_out) {
             Ok(moved) => moved,
             Err(err) => {
                 self.field_error = Some(super::FieldError::plain(err));
@@ -108,9 +115,9 @@ impl StudioWindow {
             return;
         }
         if let Some((gone, value)) = moved.removed.first() {
-            let kept = shown.as_deref().map_or("", appearance_word);
+            let kept = shown.as_deref().map(appearance_word).unwrap_or_default();
             self.notice =
-                Some(Notice::Moved(studio_moved_kept(kept, token, appearance_word(gone), value).into()));
+                Some(Notice::Moved(studio_moved_kept(&kept, token, &appearance_word(gone), value).into()));
         }
         cx.notify();
     }

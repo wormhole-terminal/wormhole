@@ -10,11 +10,13 @@ use wormhole_text::keys::{
 use wormhole_text::text;
 
 use super::document::history::UndoStack;
+use super::document::places;
 use super::document::{Document, Subject};
 use super::opening::{Target, open_target};
 use super::save::Notice;
 use super::theme_list::theme_list;
 use super::theme_menu::{self, Facts};
+use super::update_from;
 use super::{FIRST_TOKEN, StudioWindow, opening_inputs, project_theme};
 use crate::platform;
 use crate::settings::SettingsStore;
@@ -40,6 +42,8 @@ impl StudioWindow {
             dirty: self.dirty(),
             addable: self.missing_appearance().filter(|_| !self.doc.is_newer()),
             versions: matches!(self.doc.subject, Subject::Own { .. }),
+            update: places::base_under(&self.doc.file, self.doc.shown.as_deref())
+                .map(|base| (update_from::source_name(&base.from), self.update_check.state)),
         };
         let menu = theme_menu::build(&list, &facts, &cx.weak_entity());
         platform::show_menu(menu, self.name_bounds.get().bottom_left(), window, cx);
@@ -93,7 +97,7 @@ impl StudioWindow {
         self.name.update(cx, |input, cx| input.set_value(name, window, cx));
         let resolved = (self.themes.resolve)(&doc.folded()).ok();
         self.doc = doc;
-        self.touched();
+        self.touched(cx);
         SettingsStore::preview_tokens(cx, resolved);
         cx.refresh_windows();
         self.publish_edit_titles(cx);

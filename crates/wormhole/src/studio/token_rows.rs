@@ -101,7 +101,11 @@ pub(super) struct Built {
 
 pub(super) fn build(inputs: &Inputs) -> Built {
     let Inputs { draft, initial, tokens, low, show, area, query, .. } = *inputs;
-    let changed = |name: &str| override_of(draft, name) != override_of(initial, name);
+    // Changed where the value lives: the shown appearance's own, and the top's both.
+    let changed = |name: &str| {
+        places::own_value(draft, inputs.shown, name) != places::own_value(initial, inputs.shown, name)
+            || override_of(draft, name) != override_of(initial, name)
+    };
     let pair = places::is_pair(draft);
     let origin = |name: &str| places::origin(draft, inputs.shown, name);
     let shown = visible(show, area, query, &origin, &|name| low.contains(name));
@@ -280,5 +284,53 @@ mod tests {
         assert_eq!(a.rows.len(), b.rows.len());
         assert!(a.rows.iter().zip(&b.rows).all(|(x, y)| x.same_line(y)));
         assert_ne!(a.rows, b.rows, "the selection is a content change");
+    }
+
+    /// An edit of a pair lives in an appearance's own layer, not the top of the file: the dot is for
+    /// the appearance it was made in.
+    #[test]
+    fn an_edit_in_one_appearance_marks_its_row_changed_there() {
+        use super::super::document::places;
+        use super::super::draft::group_of;
+        use wormhole_core::theme::tokens::{Appearance, appearance::add_appearance, copy};
+
+        let base = copy::copy_builtin_base("wormhole.dark", &|_| None, "2026-10-30").expect("base");
+        let single = ThemeFile {
+            version: Some(1),
+            id: Some("p".into()),
+            base: Some(Box::new(base)),
+            ..ThemeFile::default()
+        };
+        let have = resolve(&single, &|_| None).expect("resolves");
+        let initial =
+            add_appearance(&single, &have, Appearance::Light, &|_| None, "2026-10-30").expect("pair");
+        let mut draft = initial.clone();
+        places::set_own(&mut draft, Some("dark"), "surface.panel", Some("#101010".into())).expect("sets");
+        assert_eq!(places::read_at(&draft, places::Place::Top, "surface.panel"), None, "in the variant");
+
+        let changed = |shown: &str, token: &str| {
+            let tokens = resolve(&places::folded(&draft, Some(shown)), &|_| None).expect("resolves");
+            let open: BTreeSet<&'static str> = group_of(token).into_iter().collect();
+            let built = build(&Inputs {
+                draft: &draft,
+                initial: &initial,
+                shown: Some(shown),
+                tokens: &tokens,
+                low: &BTreeSet::new(),
+                show: Show::All,
+                area: None,
+                area_label: "",
+                query: "",
+                open_groups: &open,
+                selected: None,
+            });
+            built.rows.iter().find_map(|row| match row {
+                ListRow::Token(t) if t.name == token => Some(t.changed),
+                _ => None,
+            })
+        };
+        assert_eq!(changed("dark", "surface.panel"), Some(true));
+        assert_eq!(changed("dark", "surface.window"), Some(false), "only what was edited");
+        assert_eq!(changed("light", "surface.panel"), Some(false), "the other appearance is as it was");
     }
 }

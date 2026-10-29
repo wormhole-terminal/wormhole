@@ -17,7 +17,7 @@ use crate::settings::{SettingsStore, picks, settings};
 impl StudioWindow {
     /// What a pick holds to select the theme being edited as the appearance `shown` of it: the id
     /// of a pair's appearance, else the file.
-    fn pick_value(&self, shown: Option<&str>) -> Option<String> {
+    pub(super) fn pick_value(&self, shown: Option<&str>) -> Option<String> {
         let Subject::Own { path } = &self.doc.subject else { return None };
         match (&self.doc.file.id, shown, self.doc.is_pair()) {
             (Some(id), Some(shown), true) => Some(version_slug(id, shown)),
@@ -25,11 +25,32 @@ impl StudioWindow {
         }
     }
 
-    /// Whether the app shows this theme (apart from the edits being previewed).
+    /// Whether the app shows this theme (apart from the edits being previewed). Read from what was
+    /// worked out when the document or the pick last changed: finding out whether a pick names a
+    /// file reads the themes folder, which a draw never does.
     pub(super) fn in_use(&self, cx: &App) -> bool {
-        let store = cx.global::<SettingsStore>();
-        let pick = settings(cx).shown_theme(store.system().appearance).to_string();
         match &self.doc.subject {
+            Subject::Own { .. } => self.own_in_use,
+            Subject::Untitled { from } => {
+                let store = cx.global::<SettingsStore>();
+                !self.dirty()
+                    && settings(cx).shown_theme(store.system().appearance).eq_ignore_ascii_case(from)
+            }
+            // The project's theme is in effect while it is edited.
+            Subject::Project { .. } => true,
+        }
+    }
+
+    /// The pick the app shows now.
+    fn current_pick(cx: &App) -> String {
+        let store = cx.global::<SettingsStore>();
+        settings(cx).shown_theme(store.system().appearance).to_string()
+    }
+
+    /// Work out again whether a pick names the file being edited (see [`Self::in_use`]).
+    pub(super) fn refresh_own_in_use(&mut self, cx: &App) {
+        let pick = Self::current_pick(cx);
+        self.own_in_use = match &self.doc.subject {
             Subject::Own { path } => {
                 let selects = self.themes.selects;
                 selects(&pick, path)
@@ -37,9 +58,17 @@ impl StudioWindow {
                         pick == id || pick.strip_prefix(id).is_some_and(|rest| rest.starts_with('.'))
                     })
             }
-            Subject::Untitled { from } => !self.dirty() && pick.eq_ignore_ascii_case(from),
-            // The project's theme is in effect while it is edited.
-            Subject::Project { .. } => true,
+            _ => false,
+        };
+        self.shown_pick = pick;
+    }
+
+    /// The settings changed: only another pick is worth a look (an edit's preview changes them
+    /// too, many times a second).
+    pub(super) fn settings_changed(&mut self, cx: &mut Context<Self>) {
+        if Self::current_pick(cx) != self.shown_pick {
+            self.refresh_own_in_use(cx);
+            cx.notify();
         }
     }
 

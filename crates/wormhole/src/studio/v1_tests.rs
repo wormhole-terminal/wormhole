@@ -18,14 +18,14 @@ use super::window_tests::{edit, open_with, themes, with};
 use crate::settings::SettingsStore;
 
 /// Wormhole Dark is in use, so the Studio opens on it as a copy with nothing of its own yet.
-fn builtin_themes() -> Themes {
+pub(super) fn builtin_themes() -> Themes {
     Themes { fresh_base: |from| copy::copy_builtin_base(from, &|_| None, "2026-10-30").ok(), ..themes() }
 }
 
-const DUSK: &str = r##"{"name": "Dusk", "extends": "Nord"}"##;
+pub(super) const DUSK: &str = r##"{"name": "Dusk", "extends": "Nord"}"##;
 
 /// Dusk, a file of the person's own, is in use.
-fn own_dusk() -> Themes {
+pub(super) fn own_dusk() -> Themes {
     Themes {
         locate: |_| Found::File("/themes/dusk.json".into()),
         read: |_| Ok(Loaded { file: read_theme_file(DUSK)?, stamp: None }),
@@ -84,13 +84,27 @@ fn a_value_edited_in_one_appearance_leaves_the_other_alone(cx: &mut TestAppConte
     let (handle, studio) = open_with(cx, builtin_themes());
     with(cx, handle, &studio, |studio, window, cx| {
         studio.add_appearance(wormhole_core::theme::tokens::Appearance::Light, window, cx);
+        let look = |studio: &super::StudioWindow, shown: &str| {
+            let file = super::document::places::folded(&studio.doc.file, Some(shown));
+            (studio.themes.resolve)(&file).expect("resolves")
+        };
+        let dark_before = look(studio, "dark");
+        // A surface is an appearance's own: the light one is edited and the dark one is as it was.
+        studio.select_token("terminal.background", window, cx);
         studio.set_selected_value(Some("#112233".into()), Edit::Field, window, cx);
-        let _ = edit;
-        let shown = primary(studio, cx);
-        assert_eq!(shown, "#112233");
+        assert_eq!(studio.doc.shown.as_deref(), Some("light"));
+        assert_eq!(look(studio, "light").terminal.background.to_hex(), "#112233");
+        assert_eq!(studio.doc.own("terminal.background").as_deref(), Some("#112233"));
+        assert_eq!(look(studio, "dark"), dark_before, "the dark appearance is untouched");
         studio.set_shown("dark", window, cx);
         assert_eq!(origin(&studio.doc.file, Some("dark"), "terminal.background"), Origin::Base);
-        studio.set_selected_value(None, Edit::Field, window, cx);
+        assert_eq!(studio.doc.own("terminal.background"), None);
+
+        // The accent is shared: editing it changes both.
+        studio.select_token("primary", window, cx);
+        studio.set_selected_value(Some("#445566".into()), Edit::Field, window, cx);
+        assert_eq!(look(studio, "light").get("primary").map(|c| c.to_hex()).as_deref(), Some("#445566"));
+        assert_eq!(look(studio, "dark").get("primary").map(|c| c.to_hex()).as_deref(), Some("#445566"));
     });
 }
 
@@ -232,11 +246,15 @@ fn a_loaded_file_flags_what_it_skipped() {
 
 #[gpui_kit::test]
 fn new_theme_is_blank_and_new_theme_from_copies_into_the_base(cx: &mut TestAppContext) {
-    let themes = Themes {
-        catalog: || wormhole_core::theme::catalog::catalog_in(std::path::Path::new("/no/such/themes/folder")),
-        ..builtin_themes()
-    };
-    let (handle, studio) = open_with(cx, themes);
+    // The person's own themes folder, with a theme of the same name as a built-in in it: New Theme
+    // From lists it, and copying it is `CopyOf`, not the built-in.
+    let dir = super::themes::test_dir::make("new-from");
+    std::fs::write(
+        dir.join("dracula.json"),
+        r##"{"name": "Dracula", "extends": "Nord", "ui": {"primary": "#123456"}}"##,
+    )
+    .expect("write");
+    let (handle, studio) = open_with(cx, Themes::USER);
     with(cx, handle, &studio, |studio, window, cx| studio.open_theme_menu(window, cx));
     let outline = crate::platform::record::open().expect("the menu opened").outline();
     assert!(outline.contains(&"> New Theme From".to_string()), "{outline:?}");
@@ -250,11 +268,21 @@ fn new_theme_is_blank_and_new_theme_from_copies_into_the_base(cx: &mut TestAppCo
     });
 
     with(cx, handle, &studio, |studio, window, cx| studio.open_theme_menu(window, cx));
-    super::window_tests::pick_from_menu(cx, handle, "Nord");
+    super::window_tests::pick_from_menu(cx, handle, "New Theme From > Nord");
     with(cx, handle, &studio, |studio, _, _| {
         assert_eq!(studio.doc.name(), "Untitled (from Nord)");
         assert_eq!(studio.doc.file.base.as_ref().map(|b| b.from.as_str()), Some("nord"));
     });
+
+    with(cx, handle, &studio, |studio, window, cx| studio.open_theme_menu(window, cx));
+    super::window_tests::pick_from_menu(cx, handle, "New Theme From > Dracula");
+    with(cx, handle, &studio, |studio, _, _| {
+        assert_eq!(studio.doc.name(), "Untitled (from Dracula)");
+        let base = studio.doc.file.base.as_ref().expect("a base");
+        assert_eq!(base.from, "dracula_2", "the person's theme, not the built-in Dracula");
+        assert_eq!(base.file.ui.get("primary").map(String::as_str), Some("#123456"));
+    });
+    std::fs::remove_dir_all(&dir).ok();
 }
 
 #[gpui_kit::test]

@@ -13,14 +13,14 @@ use style::BannerKind;
 use wormhole_core::platform::paths;
 use wormhole_core::project::ProjectFolder;
 use wormhole_core::storage::files::{self, LinkPolicy};
-use wormhole_core::theme::tokens::{Appearance, ThemeFile};
+use wormhole_core::theme::tokens::{Appearance, ThemeFile, variant_name};
 use wormhole_text::keys::{
     STUDIO_CANCEL, STUDIO_CHANGED_DETAIL, STUDIO_COPIED_JSON, STUDIO_EXISTS_DETAIL, STUDIO_NAME_FIRST,
     STUDIO_NEWER_FILE, STUDIO_NO_PROJECT_FOLDER, STUDIO_NO_TERMINAL, STUDIO_OTHER_PROJECT, STUDIO_OVERWRITE,
     STUDIO_REPLACE, STUDIO_REVEAL, studio_changed_message, studio_copy_failed, studio_copy_json_failed,
     studio_copy_saved, studio_exists_message, studio_export_failed, studio_exported,
-    studio_name_is_a_version, studio_project_failed, studio_project_saved, studio_save_failed, studio_saved,
-    studio_saved_set,
+    studio_name_is_a_version, studio_only_shown, studio_project_failed, studio_project_saved,
+    studio_save_failed, studio_saved, studio_saved_set,
 };
 use wormhole_text::text;
 
@@ -161,11 +161,12 @@ impl StudioWindow {
             Ok(saved) => {
                 // A pick that named the theme by a name it no longer has (it was renamed) names its
                 // file: nothing is lost.
-                let old_names: Vec<String> = was.name.iter().cloned().collect();
                 // Otherwise a pick stays as it is, a converted theme's too: an older release can't
                 // read an id, and the file keeps its name and `name`, which still select it.
-                if was.name != to_write.file.name {
-                    follow_name(&old_names, &saved.path.to_string_lossy(), cx);
+                let renamed = (was.name != to_write.file.name)
+                    .then(|| self.renamed_picks(&was, &to_write.file, &saved.path));
+                if let Some(picks) = renamed {
+                    follow_name(&picks, cx);
                 }
                 let converted = to_write.converted;
                 self.doc.file = to_write.file;
@@ -227,9 +228,13 @@ impl StudioWindow {
     /// The theme saved at `path` becomes the pick of its own appearance unless it is a pick
     /// already; the preview ends (the theme itself shows now). Whether a pick was set.
     fn switched_to(&mut self, path: &Path, cx: &mut Context<Self>) -> bool {
-        self.touched();
+        self.touched(cx);
         let appearance = (self.themes.resolve)(&self.doc.folded()).map_or(Appearance::Dark, |t| t.appearance);
-        let (value, selects) = (path.to_string_lossy().into_owned(), self.themes.selects);
+        // A pair is a pick by the appearance shown (its id and that appearance's name), never by its
+        // file, which names the first appearance: the Dark edited would be Light when picked.
+        let value =
+            self.pick_value(self.doc.shown.as_deref()).unwrap_or_else(|| path.to_string_lossy().into_owned());
+        let selects = self.themes.selects;
         let path = path.to_path_buf();
         let mut set = false;
         SettingsStore::update(cx, |s| {
@@ -286,6 +291,7 @@ impl StudioWindow {
             }
         };
         let file_name = export_file_name(self.doc.file.name.as_deref().unwrap_or("theme"));
+        let only_shown = self.only_shown_note();
         let remembered = store(cx).and_then(|store| store.meta(EXPORT_DIR_KEY).ok().flatten());
         let home = paths::home();
         let dir = export_dir(remembered.as_deref(), home, |dir| dir.is_dir());
@@ -295,7 +301,7 @@ impl StudioWindow {
             // The person's own file: a link there is theirs to keep.
             let notice = match files::write_atomic(&path, json.as_bytes(), LinkPolicy::Follow) {
                 Ok(()) => {
-                    let text = studio_exported(&display_path(&path));
+                    let text = with_shown_only(studio_exported(&display_path(&path)), only_shown.as_deref());
                     Notice::Saved { path, text: text.into() }
                 }
                 Err(err) => Notice::Failed(studio_export_failed(&err.to_string()).into()),
@@ -320,7 +326,10 @@ impl StudioWindow {
         self.notice = Some(match export_json(&self.doc.folded(), self.themes.resolve) {
             Ok(json) => {
                 crate::platform::clipboard::write(json, cx);
-                Notice::Done(text(STUDIO_COPIED_JSON).into())
+                Notice::Done(
+                    with_shown_only(text(STUDIO_COPIED_JSON).to_string(), self.only_shown_note().as_deref())
+                        .into(),
+                )
             }
             Err(err) => Notice::Failed(studio_copy_json_failed(&err.to_string()).into()),
         });
@@ -354,8 +363,11 @@ impl StudioWindow {
                 if project_subject {
                     self.doc.mark_saved();
                 }
-                self.touched();
-                let text = studio_project_saved(&display_path(&path));
+                self.touched(cx);
+                let text = with_shown_only(
+                    studio_project_saved(&display_path(&path)),
+                    self.only_shown_note().as_deref(),
+                );
                 Notice::Saved { path, text: text.into() }
             }
             Err(err) => Notice::Failed(studio_project_failed(&err.to_string()).into()),
@@ -507,14 +519,49 @@ pub(super) fn project_for_theme(cx: &App) -> Result<ProjectFolder, &'static str>
     project::api::theme_target(&front.profile, &root, cx)
 }
 
-/// A pick that names a theme by one of `old` (a name or a file stem) is changed to `value` (its id,
-/// or its file): only those picks. Picks that name a file or an id are not touched.
-fn follow_name(old: &[String], value: &str, cx: &mut App) {
+/// A pick that is one of `renames` (a name the theme had, or a file stem) is changed to what
+/// replaces it: only those picks. Picks that name a file or an id are not touched.
+fn follow_name(renames: &[(String, String)], cx: &mut App) {
     SettingsStore::update(cx, |s| {
         for pick in [&mut s.theme, &mut s.theme_light] {
-            if old.iter().any(|name| pick.eq_ignore_ascii_case(name)) {
-                *pick = value.to_string();
+            if let Some((_, to)) = renames.iter().find(|(old, _)| pick.eq_ignore_ascii_case(old)) {
+                *pick = to.clone();
             }
         }
     });
+}
+
+/// `text`, and for a pair the sentence saying only one appearance went out.
+fn with_shown_only(text: String, note: Option<&str>) -> String {
+    match note {
+        Some(note) => format!("{text} {note}"),
+        None => text,
+    }
+}
+
+impl StudioWindow {
+    /// Export, Copy JSON and Use in this project write one theme: the appearance shown, as a theme
+    /// of its own. For a pair, the sentence that says so.
+    fn only_shown_note(&self) -> Option<String> {
+        let shown = self.doc.shown.as_deref().filter(|_| self.doc.is_pair())?;
+        Some(studio_only_shown(&super::commit::appearance_word(shown)))
+    }
+
+    /// What the picks that named the theme by the name it had (`was`) become now it is `file`, saved
+    /// at `path`. A single theme: its file. A pair is picked by appearance: "Old" is its first
+    /// appearance, "Old Light" and "Old Dark" are those, and each becomes the id of the same one.
+    fn renamed_picks(&self, was: &ThemeFile, file: &ThemeFile, path: &Path) -> Vec<(String, String)> {
+        let old = was.name.clone().unwrap_or_default();
+        let by_file = path.to_string_lossy().into_owned();
+        if file.variants.len() < 2 || file.id.is_none() {
+            return vec![(old, by_file)];
+        }
+        let value_of = |variant: &str| self.pick_value(Some(variant)).unwrap_or_else(|| by_file.clone());
+        let mut renames: Vec<(String, String)> =
+            file.variants.iter().map(|v| (variant_name(&old, &v.name), value_of(&v.name))).collect();
+        if let Some(first) = file.variants.first() {
+            renames.push((old, value_of(&first.name)));
+        }
+        renames
+    }
 }

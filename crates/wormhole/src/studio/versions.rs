@@ -13,9 +13,9 @@ use wormhole_core::theme::saved_versions::SavedVersion;
 use wormhole_core::theme::tokens::ThemeFile;
 use wormhole_text::keys::{
     STUDIO_VERSIONS_CURRENT, STUDIO_VERSIONS_DONE, STUDIO_VERSIONS_EMPTY, STUDIO_VERSIONS_FIRST,
-    STUDIO_VERSIONS_JUST_NOW, STUDIO_VERSIONS_NOTE, STUDIO_VERSIONS_ORIGINAL, STUDIO_VERSIONS_RESTORE,
-    STUDIO_VERSIONS_UNREADABLE, studio_versions_hours_ago, studio_versions_label,
-    studio_versions_minutes_ago, studio_versions_title,
+    STUDIO_VERSIONS_JUST_NOW, STUDIO_VERSIONS_NOTE, STUDIO_VERSIONS_RESTORE, STUDIO_VERSIONS_UNREADABLE,
+    studio_versions_hours_ago, studio_versions_label, studio_versions_minutes_ago, studio_versions_original,
+    studio_versions_title,
 };
 use wormhole_text::text;
 
@@ -85,7 +85,7 @@ impl Row {
             None => text(STUDIO_VERSIONS_CURRENT).to_string(),
             Some(v) => {
                 let when = when(v.saved, now);
-                if v.pinned { format!("{when} \u{b7} {}", text(STUDIO_VERSIONS_ORIGINAL)) } else { when }
+                if v.pinned { studio_versions_original(&when) } else { when }
             }
         }
     }
@@ -144,7 +144,12 @@ impl StudioWindow {
     pub(super) fn restore_version(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(Modal::Versions(panel)) = self.modal.as_ref() else { return };
         let ix = panel.selected;
-        let Some(Ok(file)) = panel.rows.get(ix).filter(|_| ix > 0).map(|r| r.file.clone()) else { return };
+        let Some(Ok(mut file)) = panel.rows.get(ix).filter(|_| ix > 0).map(|r| r.file.clone()) else {
+            return;
+        };
+        // What reading the file on disk found stays true of it: a file from a newer Wormhole is one
+        // this version won't write over, whatever an earlier save of it said.
+        file.read = self.doc.file.read.clone();
         self.modal = None;
         let shown = self.doc.shown.clone();
         if let Err(err) = self.commit(StepLabel::Restore, file, shown, window, cx) {

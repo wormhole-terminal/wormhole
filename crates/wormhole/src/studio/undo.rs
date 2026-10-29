@@ -13,7 +13,7 @@ use wormhole_text::keys::{
 
 use super::StudioWindow;
 use super::document::history::{Step, StepLabel};
-use super::document::places;
+use super::document::{places, settled_shown};
 use crate::settings::SettingsStore;
 use crate::window::menu_state::{EditTitles, set_edit_titles};
 
@@ -76,13 +76,14 @@ impl StudioWindow {
     /// Put a step's file back: the preview, the name and the editor follow, and the editor jumps to
     /// the token that was selected when the change was made.
     fn restore(&mut self, step: Step, window: &mut Window, cx: &mut Context<Self>) {
-        let Ok(resolved) = (self.themes.resolve)(&places::folded(&step.file, self.doc.shown.as_deref()))
-        else {
+        // Which appearance is shown with the step's file first, then what is previewed.
+        let shown = settled_shown(&step.file, self.doc.shown.clone());
+        let Ok(resolved) = (self.themes.resolve)(&places::folded(&step.file, shown.as_deref())) else {
             return;
         };
         self.doc.file = step.file;
-        self.doc.settle_shown();
-        self.touched();
+        self.doc.shown = shown;
+        self.touched(cx);
         self.field_error = None;
         self.notice = None;
         self.gesture_timer = None;

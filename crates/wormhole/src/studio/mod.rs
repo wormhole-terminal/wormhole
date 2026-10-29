@@ -123,6 +123,10 @@ pub(crate) struct StudioWindow {
     modal: Option<modal::Modal>,
     /// What the base was last compared with its source as.
     update_check: update_from::Check,
+    /// Whether the pick the app shows names the file being edited, and which pick that was. Worked
+    /// out when the document or the pick changes, never in a draw (it reads the themes folder).
+    own_in_use: bool,
+    shown_pick: String,
     /// How many times an edit changed the draft or its starting point, for what is made from
     /// them (the token list's rows) to know when to be made again.
     revision: u64,
@@ -324,6 +328,7 @@ impl StudioWindow {
                 InputEvent::Change => this.typing.filter = true,
                 _ => this.typing.filter = false,
             }),
+            cx.observe_global::<SettingsStore>(|this, cx| this.settings_changed(cx)),
             cx.observe_window_activation(window, |this, window, cx| {
                 this.active = window.is_window_active();
                 this.publish_edit_titles(cx);
@@ -368,6 +373,8 @@ impl StudioWindow {
             active: window.is_window_active(),
             modal: None,
             update_check: update_from::Check::default(),
+            own_in_use: false,
+            shown_pick: String::new(),
             revision: 0,
             save_menu: false,
             menu_project: false,
@@ -383,6 +390,7 @@ impl StudioWindow {
         // The Studio opens on the main accent color, so its editor is never empty and the
         // gallery already outlines something.
         studio.refresh_update_check();
+        studio.refresh_own_in_use(cx);
         studio.select_token(FIRST_TOKEN, window, cx);
         studio
     }
@@ -464,7 +472,7 @@ impl StudioWindow {
                 };
                 self.record_step(label, from == Edit::Picker, cx);
                 self.doc.file = draft;
-                self.touched();
+                self.touched(cx);
                 self.field_error = None;
                 self.notice = None;
                 SettingsStore::preview_tokens(cx, Some(resolved));
@@ -510,7 +518,7 @@ impl StudioWindow {
         self.record_step(StepLabel::Revert, false, cx);
         self.doc.revert();
         self.doc.settle_shown();
-        self.touched();
+        self.touched(cx);
         self.field_error = None;
         self.notice = None;
         self.publish_edit_titles(cx);
@@ -599,5 +607,7 @@ fn tests_support_dump(t: &ThemeTokens) -> String {
     }
     out
 }
+#[cfg(all(test, feature = "devctl"))]
+mod review_tests;
 #[cfg(all(test, feature = "devctl"))]
 mod v1_tests;

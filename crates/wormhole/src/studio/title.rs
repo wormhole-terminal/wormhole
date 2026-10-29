@@ -22,13 +22,17 @@ use crate::settings::{SettingsStore, UiColors};
 use crate::style::TitleDrag as _;
 use crate::style::{self, Edges, TextRole};
 use wormhole_text::keys::{
-    STUDIO_COPY_JSON, STUDIO_EXPORT, STUDIO_EXPORT_JSON, STUDIO_SAVE_THEME, STUDIO_TITLE, STUDIO_UNSAVED,
-    STUDIO_USE_IN_PROJECT, studio_title_based_on, studio_title_extends, studio_title_own,
+    STUDIO_APPEARANCE_DARK, STUDIO_APPEARANCE_LIGHT, STUDIO_COPY_JSON, STUDIO_EXPORT, STUDIO_EXPORT_JSON,
+    STUDIO_SAVE_THEME, STUDIO_TITLE, STUDIO_UNSAVED, STUDIO_USE_IN_PROJECT, studio_title_based_on,
+    studio_title_extends, studio_title_generated, studio_title_own,
 };
 use wormhole_text::text;
 
 /// The name field while renaming.
 const NAME_FIELD_W: f32 = 200.0;
+/// The most room the theme's name takes in the title row: a longer one is cut with "…", before
+/// anything else in the row gives way.
+const NAME_MAX_W: f32 = 260.0;
 /// The Save theme menu.
 const MENU_W: f32 = 240.0;
 
@@ -62,13 +66,20 @@ impl StudioWindow {
     ) -> AnyElement {
         let ui = ui(cx);
         let tokens = &cx.global::<SettingsStore>().tokens;
-        let appearance = if tokens.appearance == tokens::Appearance::Light { "light" } else { "dark" };
+        let appearance = if tokens.appearance == tokens::Appearance::Light {
+            text(STUDIO_APPEARANCE_LIGHT)
+        } else {
+            text(STUDIO_APPEARANCE_DARK)
+        };
         let base = super::document::places::base_under(&self.doc.file, self.doc.shown.as_deref());
         let extends = match (base, &self.doc.file.extends) {
             (Some(base), _) => {
                 let from = wormhole_core::theme::tokens::slug::builtin_name(&base.from).unwrap_or(&base.from);
-                let day = base.copied.as_deref().map(names::display_date).unwrap_or_default();
-                studio_title_based_on(from, &day, appearance)
+                match base.copied.as_deref() {
+                    Some(day) => studio_title_based_on(from, &names::display_date(day), appearance),
+                    // Made by Wormhole from the other appearance: it was not copied on a day.
+                    None => studio_title_generated(from, appearance),
+                }
             }
             (None, Some(base)) => studio_title_extends(base, appearance),
             (None, None) => studio_title_own(appearance),
@@ -81,13 +92,16 @@ impl StudioWindow {
             let bounds = self.name_bounds.clone();
             div()
                 .relative()
-                .flex_none()
+                .flex()
+                .min_w_0()
+                .max_w(px(NAME_MAX_W))
                 .child(canvas(move |at, _, _| bounds.set(at), |_, _, _, _| {}).absolute().size_full())
                 .child(
                     Button::new("studio-name")
                         .ghost()
                         .small()
-                        .label(name)
+                        .min_w_0()
+                        .child(div().min_w_0().truncate().child(name))
                         .icon(IconName::ChevronDown)
                         .tooltip(wormhole_text::text(wormhole_text::keys::STUDIO_TOOLTIP_MENU))
                         .on_click(cx.listener(|this, _, window, cx| this.open_theme_menu(window, cx))),
@@ -107,58 +121,75 @@ impl StudioWindow {
             .bg(background)
             .rule_bottom(ui)
             .title_drag()
+            // The left side gives way (the caption, then the name, then the marks are cut off) and
+            // the right side, with Save theme, never does.
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .overflow_hidden()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .child(
+                        div()
+                            .flex_none()
+                            .text_label()
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(ui.muted)
+                            .child(text(STUDIO_TITLE)),
+                    )
+                    .child(div().flex_none().text_color(ui.faint).child("/"))
+                    .child(title_name)
+                    .when(self.naming.is_some(), |d| {
+                        d.child(
+                            div()
+                                .flex_none()
+                                .text_caption()
+                                .text_color(ui.faint)
+                                .child(wormhole_text::text(wormhole_text::keys::STUDIO_NAME_PROMPT)),
+                        )
+                    })
+                    .child(div().min_w_0().truncate().text_caption().text_color(ui.faint).child(extends))
+                    .children(self.title_chips(ui, cx))
+                    .when(self.dirty(), |d| {
+                        d.child(
+                            div()
+                                .flex_none()
+                                .flex()
+                                .items_center()
+                                .gap_1()
+                                .text_caption()
+                                .text_color(ui.warning_text)
+                                .child(div().size(px(style::MARK_DOT)).rounded_full().bg(ui.warning))
+                                .child(text(STUDIO_UNSAVED)),
+                        )
+                    }),
+            )
             .child(
                 div()
                     .flex_none()
-                    .text_label()
-                    .font_weight(FontWeight::MEDIUM)
-                    .text_color(ui.muted)
-                    .child(text(STUDIO_TITLE)),
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .child(
+                        Button::new("studio-discard")
+                            .ghost()
+                            .small()
+                            .label(wormhole_text::text(wormhole_text::keys::STUDIO_MENU_REVERT))
+                            .disabled(!self.dirty())
+                            .on_click(cx.listener(|this, _, window, cx| this.discard_changes(window, cx))),
+                    )
+                    .child(
+                        Button::new("studio-export")
+                            .outline()
+                            .small()
+                            .icon(IconName::Upload)
+                            .label(text(STUDIO_EXPORT))
+                            .on_click(cx.listener(|this, _, window, cx| this.export(window, cx))),
+                    )
+                    .child(self.save_split(ui, cx)),
             )
-            .child(div().flex_none().text_color(ui.faint).child("/"))
-            .child(title_name)
-            .when(self.naming.is_some(), |d| {
-                d.child(
-                    div()
-                        .flex_none()
-                        .text_caption()
-                        .text_color(ui.faint)
-                        .child(wormhole_text::text(wormhole_text::keys::STUDIO_NAME_PROMPT)),
-                )
-            })
-            .child(div().min_w_0().truncate().text_caption().text_color(ui.faint).child(extends))
-            .children(self.title_chips(ui, cx))
-            .when(self.dirty(), |d| {
-                d.child(
-                    div()
-                        .flex_none()
-                        .flex()
-                        .items_center()
-                        .gap_1()
-                        .text_caption()
-                        .text_color(ui.warning_text)
-                        .child(div().size(px(style::MARK_DOT)).rounded_full().bg(ui.warning))
-                        .child(text(STUDIO_UNSAVED)),
-                )
-            })
-            .child(div().flex_1())
-            .child(
-                Button::new("studio-discard")
-                    .ghost()
-                    .small()
-                    .label(wormhole_text::text(wormhole_text::keys::STUDIO_MENU_REVERT))
-                    .disabled(!self.dirty())
-                    .on_click(cx.listener(|this, _, window, cx| this.discard_changes(window, cx))),
-            )
-            .child(
-                Button::new("studio-export")
-                    .outline()
-                    .small()
-                    .icon(IconName::Upload)
-                    .label(text(STUDIO_EXPORT))
-                    .on_click(cx.listener(|this, _, window, cx| this.export(window, cx))),
-            )
-            .child(self.save_split(ui, cx))
             .into_any_element()
     }
 
