@@ -21,6 +21,7 @@ mod title;
 mod token_editor;
 mod token_list;
 mod token_rows;
+mod undo;
 
 use std::sync::Arc;
 
@@ -38,6 +39,7 @@ use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges};
 use crate::terminal_view::keystroke_spec;
 use crate::theme_bridge::{self, hsla, token};
+use document::history::{StepLabel, UndoStack};
 use document::{Document, is_metric, number, override_of, set_override};
 use draft::{Themes, draft_for, group_of};
 use gallery::{Area, GalleryView};
@@ -85,6 +87,14 @@ pub(crate) struct StudioWindow {
     list: Entity<TokenListView>,
     gallery: Entity<GalleryView>,
     editor: Entity<TokenEditorView>,
+    /// Every change to the file, to undo and redo; kept across a save.
+    history: UndoStack,
+    /// The text fields that hold typing which is not a step yet.
+    typing: undo::Typing,
+    /// Ends a drag of a colour after a pause in it.
+    gesture_timer: Option<Task<()>>,
+    /// This is the window in front, so the Edit menu speaks of its history.
+    active: bool,
     /// How many times an edit changed the draft or its starting point, for what is made from
     /// them (the token list's rows) to know when to be made again.
     revision: u64,
@@ -218,6 +228,7 @@ impl StudioWindow {
         let list = cx.new(|cx| TokenListView::new(&this, window, cx));
         let gallery = cx.new(|cx| GalleryView::new(&this, window, cx));
         let editor = cx.new(|cx| TokenEditorView::new(&this, cx));
+        let filter = list.read(cx).filter.clone();
         let subscriptions = vec![
             cx.subscribe_in(&picker, window, |this, _, event: &ColorPickerEvent, window, cx| {
                 let ColorPickerEvent::Change(Some(color)) = event else { return };
@@ -225,20 +236,27 @@ impl StudioWindow {
             }),
             cx.subscribe_in(&expression, window, |this, input, event: &InputEvent, window, cx| match event {
                 InputEvent::Change => {
+                    this.typing.expression = true;
                     let value = input.read(cx).value().to_string();
                     this.check_field(&value, cx);
                     this.refresh_completions(cx);
                 }
                 // Return takes the highlighted name while the list is up; otherwise it applies.
                 InputEvent::PressEnter { .. } if this.completion.is_some() => {
+                    this.typing.expression = false;
                     this.take_completion(None, window, cx);
                 }
                 InputEvent::PressEnter { .. } => {
+                    // Return makes the typing a step of the file: ⌘Z undoes that, not the typing.
+                    this.typing.expression = false;
                     let value = input.read(cx).value().trim().to_string();
                     this.apply_field(value, window, cx);
                 }
-                InputEvent::Blur => this.close_completions(cx),
-                InputEvent::Focus => {}
+                InputEvent::Blur => {
+                    this.typing.expression = false;
+                    this.close_completions(cx);
+                }
+                InputEvent::Focus => this.typing.expression = false,
             }),
             cx.subscribe_in(&slider, window, |this, _, event: &SliderEvent, window, cx| {
                 if let SliderEvent::Change(value) = event {
@@ -246,12 +264,25 @@ impl StudioWindow {
                 }
             }),
             cx.subscribe_in(&name, window, |this, _, event: &InputEvent, window, cx| match event {
-                InputEvent::PressEnter { .. } | InputEvent::Blur => this.finish_rename(window, cx),
-                _ => {}
+                InputEvent::PressEnter { .. } | InputEvent::Blur => {
+                    this.typing.name = false;
+                    this.finish_rename(window, cx);
+                }
+                InputEvent::Change => this.typing.name = true,
+                InputEvent::Focus => this.typing.name = false,
+            }),
+            cx.subscribe(&filter, |this, _, event: &InputEvent, _| match event {
+                InputEvent::Change => this.typing.filter = true,
+                _ => this.typing.filter = false,
+            }),
+            cx.observe_window_activation(window, |this, window, cx| {
+                this.active = window.is_window_active();
+                this.publish_edit_titles(cx);
             }),
             // However the window goes away (⌘W, Esc, the close button), unsaved
             // edits must stop showing everywhere else.
             cx.on_release(|_, cx| {
+                crate::window::menu_state::set_edit_titles(Default::default(), cx);
                 SettingsStore::preview_tokens(cx, None);
                 cx.refresh_windows();
             }),
@@ -280,6 +311,10 @@ impl StudioWindow {
             list,
             gallery,
             editor,
+            history: UndoStack::default(),
+            typing: undo::Typing::default(),
+            gesture_timer: None,
+            active: window.is_window_active(),
             revision: 0,
             save_menu: false,
             menu_project: false,
@@ -303,6 +338,8 @@ impl StudioWindow {
     fn select_token(&mut self, name: &str, window: &mut Window, cx: &mut Context<Self>) {
         self.selected = Some(name.to_string());
         self.field_error = None;
+        self.history.end_gesture();
+        self.gesture_timer = None;
         if let Some(group) = group_of(name) {
             self.list.update(cx, |list, cx| list.open_group(group, cx));
         }
@@ -358,6 +395,7 @@ impl StudioWindow {
         cx: &mut Context<Self>,
     ) {
         let mut draft = self.doc.file.clone();
+        let reset = value.is_none();
         if let Err(err) = set_override(&mut draft, name, value) {
             self.field_error = Some(FieldError::plain(err));
             cx.notify();
@@ -365,12 +403,19 @@ impl StudioWindow {
         }
         match (self.themes.resolve)(&draft) {
             Ok(resolved) => {
+                let label = if reset {
+                    StepLabel::Reset(name.to_string())
+                } else {
+                    StepLabel::Token(name.to_string())
+                };
+                self.record_step(label, from == Edit::Picker, cx);
                 self.doc.file = draft;
                 self.revision += 1;
                 self.field_error = None;
                 self.notice = None;
                 SettingsStore::preview_tokens(cx, Some(resolved));
                 cx.refresh_windows();
+                self.publish_edit_titles(cx);
                 if self.selected.as_deref() == Some(name) {
                     self.show_token(name, from == Edit::Field, window, cx);
                 }
@@ -409,6 +454,7 @@ impl StudioWindow {
     /// Discard: back to the theme the draft started from.
     fn discard_changes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let base = cx.global::<SettingsStore>().base_tokens().clone();
+        self.record_step(StepLabel::Revert, false, cx);
         self.doc = Document::new(draft_for(&base, self.themes.resolve));
         self.revision += 1;
         self.field_error = None;

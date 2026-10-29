@@ -3,6 +3,7 @@
 //! the shell can be redrawn without the gallery, the list and the editor, and each of those
 //! alone.
 
+use gpui_kit::component::input;
 use gpui_kit::*;
 
 use super::gallery::Area;
@@ -31,6 +32,14 @@ impl Render for StudioWindow {
             .track_focus(&self.focus_handle)
             .key_context("StudioWindow")
             .on_key_down(cx.listener(Self::on_key))
+            // ⌘Z and ⇧⌘Z come here before the focused field: it keeps what it was typed.
+            .capture_action(
+                cx.listener(|this, _: &input::Undo, window, cx| this.route_undo(false, window, cx)),
+            )
+            .capture_action(
+                cx.listener(|this, _: &input::Redo, window, cx| this.route_undo(true, window, cx)),
+            )
+            .on_mouse_up(MouseButton::Left, cx.listener(|this, _, _, cx| this.end_gesture(cx)))
             .size_full()
             .flex()
             .flex_col()

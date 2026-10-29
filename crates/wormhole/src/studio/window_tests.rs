@@ -408,3 +408,92 @@ fn saving_a_theme_that_is_a_pick_changes_no_pick(cx: &mut TestAppContext) {
         assert_eq!((&s.theme, &s.theme_light), (&before.theme, &before.theme_light));
     });
 }
+
+/// Undo puts the file back and redo returns it; back at the saved file nothing is unsaved.
+#[gpui_kit::test]
+fn undo_and_redo_walk_the_edits_and_clear_unsaved(cx: &mut TestAppContext) {
+    let (handle, studio) = open(cx);
+    with(cx, handle, &studio, |studio, window, cx| {
+        edit(studio, window, cx);
+        studio.set_selected_value(Some("#aa0000".into()), Edit::Field, window, cx);
+        assert_eq!(studio.history.undo_len(), 2);
+        studio.undo(window, cx);
+        assert_eq!(studio.doc.file.ui.get("primary").map(String::as_str), Some("#3d59a1"));
+        studio.undo(window, cx);
+        assert!(!studio.dirty(), "undone to the saved file");
+        studio.redo(window, cx);
+        assert_eq!(studio.doc.file.ui.get("primary").map(String::as_str), Some("#3d59a1"));
+        assert!(studio.dirty());
+        // A new edit drops what could be redone.
+        studio.set_selected_value(Some("#00aa00".into()), Edit::Field, window, cx);
+        assert_eq!(studio.history.redo_len(), 0);
+    });
+}
+
+/// The picker and the slider report every value on the way; a drag is one step.
+#[gpui_kit::test]
+fn a_picker_drag_is_one_undo_step(cx: &mut TestAppContext) {
+    let (handle, studio) = open(cx);
+    with(cx, handle, &studio, |studio, window, cx| {
+        for hex in ["#111111", "#222222", "#333333"] {
+            studio.set_selected_value(Some(hex.into()), Edit::Picker, window, cx);
+        }
+        assert_eq!(studio.history.undo_len(), 1);
+        studio.end_gesture(cx);
+        studio.set_selected_value(Some("#444444".into()), Edit::Picker, window, cx);
+        assert_eq!(studio.history.undo_len(), 2);
+        studio.undo(window, cx);
+        assert_eq!(studio.doc.file.ui.get("primary").map(String::as_str), Some("#333333"));
+        studio.undo(window, cx);
+        assert!(!studio.dirty());
+    });
+}
+
+#[gpui_kit::test]
+fn undo_survives_save(cx: &mut TestAppContext) {
+    let (handle, studio) = open_with(cx, saving());
+    with(cx, handle, &studio, |studio, window, cx| {
+        edit(studio, window, cx);
+        studio.request_save(window, cx);
+        assert!(!studio.dirty());
+        assert_eq!(studio.history.undo_len(), 1, "saving keeps the history");
+        studio.undo(window, cx);
+        assert!(studio.dirty(), "the saved file now differs from the undone one");
+    });
+}
+
+/// A field with typing in it keeps ⌘Z for itself; otherwise the file is undone.
+#[gpui_kit::test]
+fn undo_in_a_field_undoes_typing_then_the_step(cx: &mut TestAppContext) {
+    let (handle, studio) = open(cx);
+    with(cx, handle, &studio, |studio, window, cx| {
+        edit(studio, window, cx);
+        studio.expression.update(cx, |e, cx| e.focus(window, cx));
+        studio.typing.expression = true;
+        studio.route_undo(false, window, cx);
+        assert_eq!(studio.history.undo_len(), 1, "the field takes it");
+        studio.typing.expression = false;
+        studio.route_undo(false, window, cx);
+        assert_eq!(studio.history.undo_len(), 0, "the step is undone");
+        assert!(!studio.dirty());
+    });
+}
+
+/// The Edit menu says what Undo would undo, while this window is the one in front.
+#[gpui_kit::test]
+fn the_edit_menu_titles_follow_the_history(cx: &mut TestAppContext) {
+    use crate::window::menu_state::EditTitles;
+    let (handle, studio) = open(cx);
+    with(cx, handle, &studio, |studio, window, cx| {
+        studio.active = true;
+        edit(studio, window, cx);
+    });
+    cx.run_until_parked();
+    let titles = cx.update(|cx| cx.try_global::<EditTitles>().cloned()).expect("titles were set");
+    assert_eq!(titles.undo.as_deref(), Some("Change \u{201c}primary\u{201d}"));
+    assert_eq!(titles.redo, None);
+    with(cx, handle, &studio, |studio, window, cx| studio.undo(window, cx));
+    cx.run_until_parked();
+    let titles = cx.update(|cx| cx.global::<EditTitles>().clone());
+    assert_eq!((titles.undo, titles.redo.as_deref()), (None, Some("Change \u{201c}primary\u{201d}")));
+}

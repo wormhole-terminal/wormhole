@@ -78,6 +78,10 @@ pub struct MenuState {
     pub window_profile: Option<usize>,
     /// The selected terminal is in a split: ⌘W closes its pane.
     pub split: bool,
+    /// What the Edit menu's Undo and Redo would undo and redo in the key window (`Change “primary”`),
+    /// for a window that keeps its own history: the title reads "Undo Change “primary”".
+    pub undo: Option<String>,
+    pub redo: Option<String>,
     /// A debug build: the Developer menu is there.
     pub debug: bool,
     /// Persistent terminals are on: the items about terminals that outlive the app are there.
@@ -101,6 +105,8 @@ impl MenuState {
             && self.profiles == other.profiles
             && self.current_profile == other.current_profile
             && self.window_profile == other.window_profile
+            && self.undo == other.undo
+            && self.redo == other.redo
             && self.split == other.split
             && self.debug == other.debug
             && self.persistent == other.persistent
@@ -401,9 +407,13 @@ fn action_item(id: ActionId, state: &MenuState) -> Option<Item> {
     } else {
         entry.title_for(!state.off.contains(&id))
     };
+    let title = match (id, &state.undo, &state.redo) {
+        (Undo, Some(what), _) | (Redo, _, Some(what)) => format!("{title} {what}"),
+        _ => title.to_string(),
+    };
     Some(Item::Action {
         command: Command::Action(id),
-        title: title.to_string(),
+        title,
         key: entry.key().cloned(),
         checked: state.checked.contains(&id),
         enabled: !state.disabled.contains(&id),
