@@ -7,33 +7,33 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Copy"
-pub const TERMINAL_MENU_COPY: Key = Key::new(1233);
+pub const TERMINAL_MENU_COPY: Key = Key::new(1235);
 /// "Paste"
-pub const TERMINAL_MENU_PASTE: Key = Key::new(1234);
+pub const TERMINAL_MENU_PASTE: Key = Key::new(1236);
 /// "Select All"
-pub const TERMINAL_MENU_SELECT_ALL: Key = Key::new(1235);
+pub const TERMINAL_MENU_SELECT_ALL: Key = Key::new(1237);
 /// "Find…"
-pub const TERMINAL_MENU_FIND: Key = Key::new(1236);
+pub const TERMINAL_MENU_FIND: Key = Key::new(1238);
 /// "Open Link"
-pub const TERMINAL_MENU_OPEN_LINK: Key = Key::new(1237);
+pub const TERMINAL_MENU_OPEN_LINK: Key = Key::new(1239);
 /// "Copy Link"
-pub const TERMINAL_MENU_COPY_LINK: Key = Key::new(1238);
+pub const TERMINAL_MENU_COPY_LINK: Key = Key::new(1240);
 /// "Copy Command"
-pub const TERMINAL_MENU_COPY_COMMAND: Key = Key::new(1239);
+pub const TERMINAL_MENU_COPY_COMMAND: Key = Key::new(1241);
 /// "Copy Output"
-pub const TERMINAL_MENU_COPY_OUTPUT: Key = Key::new(1240);
+pub const TERMINAL_MENU_COPY_OUTPUT: Key = Key::new(1242);
 /// "Put Command at Prompt"
-pub const TERMINAL_MENU_PUT_COMMAND_AT_PROMPT: Key = Key::new(1241);
+pub const TERMINAL_MENU_PUT_COMMAND_AT_PROMPT: Key = Key::new(1243);
 /// "Split Right"
-pub const TERMINAL_MENU_SPLIT_RIGHT: Key = Key::new(1242);
+pub const TERMINAL_MENU_SPLIT_RIGHT: Key = Key::new(1244);
 /// "Split Down"
-pub const TERMINAL_MENU_SPLIT_DOWN: Key = Key::new(1243);
+pub const TERMINAL_MENU_SPLIT_DOWN: Key = Key::new(1245);
 /// "Clear Buffer"
-pub const TERMINAL_MENU_CLEAR: Key = Key::new(1244);
+pub const TERMINAL_MENU_CLEAR: Key = Key::new(1246);
 
 /// ```text
 /// { $columns } × { $rows }
 /// ```
 pub fn terminal_size_readout(columns: &str, rows: &str) -> String {
-    crate::active::message(1232, &[("columns", Arg::Str(columns)), ("rows", Arg::Str(rows))])
+    crate::active::message(1234, &[("columns", Arg::Str(columns)), ("rows", Arg::Str(rows))])
 }

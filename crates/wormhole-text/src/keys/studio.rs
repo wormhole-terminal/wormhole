@@ -10,6 +10,8 @@ use crate::args::Arg;
 pub const STUDIO_UNDO_RENAME: Key = Key::new(1178);
 /// "Revert to Saved"
 pub const STUDIO_UNDO_REVERT: Key = Key::new(1179);
+/// "Name your theme, then press Return."
+pub const STUDIO_NAME_PROMPT: Key = Key::new(1181);
 
 /// ```text
 /// Change “{ $token }”
@@ -23,4 +25,11 @@ pub fn studio_undo_change(token: &str) -> String {
 /// ```
 pub fn studio_undo_reset(token: &str) -> String {
     crate::active::message(1177, &[("token", Arg::Str(token))])
+}
+
+/// ```text
+/// Untitled (from { $from })
+/// ```
+pub fn studio_untitled_from(from: &str) -> String {
+    crate::active::message(1180, &[("from", Arg::Str(from))])
 }
