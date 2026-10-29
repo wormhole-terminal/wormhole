@@ -14,6 +14,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::theme::tokens;
 
+use super::document::history::StepLabel;
 use super::{StudioWindow, ui};
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::TitleDrag as _;
@@ -255,7 +256,9 @@ impl StudioWindow {
         self.renaming = false;
         let name = self.name.read(cx).value().trim().to_string();
         if !name.is_empty() && self.doc.file.name.as_deref() != Some(name.as_str()) {
+            self.record_step(StepLabel::Rename, false, cx);
             self.doc.file.name = Some(name);
+            self.publish_edit_titles(cx);
             // A new name clears a clash with the old one.
             self.notice = None;
         }
