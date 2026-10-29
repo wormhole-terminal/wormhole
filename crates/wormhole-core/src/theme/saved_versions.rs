@@ -70,6 +70,12 @@ fn dir_for(themes: &Path, id: &str) -> Result<PathBuf, String> {
     Ok(themes.join(VERSIONS_DIR).join(id))
 }
 
+/// Whether `dir` is a real folder: a link at `.versions/<id>` (or `.versions`) is never followed,
+/// so a save and its thinning stay inside the themes folder.
+fn is_real_dir(dir: &Path) -> bool {
+    std::fs::symlink_metadata(dir).is_ok_and(|m| m.is_dir())
+}
+
 fn file_name(saved: i64, pinned: bool, n: usize) -> Option<String> {
     let t = DateTime::from_timestamp(saved, 0)?.format("%Y-%m-%dT%H-%M-%S");
     let n = if n > 0 { format!("-{n}") } else { String::new() };
@@ -87,6 +93,9 @@ fn parse_name(name: &str) -> Option<(i64, bool)> {
 /// The saved versions of theme `id`, newest first.
 pub fn list_versions(themes: &Path, id: &str) -> Vec<SavedVersion> {
     let Ok(dir) = dir_for(themes, id) else { return Vec::new() };
+    if !is_real_dir(&dir) {
+        return Vec::new();
+    }
     let Ok(listing) = listing::list(&dir) else { return Vec::new() };
     let mut all: Vec<SavedVersion> = listing
         .entries
@@ -107,6 +116,9 @@ pub fn list_versions(themes: &Path, id: &str) -> Vec<SavedVersion> {
 pub fn keep_version(themes: &Path, id: &str, previous: &str, now: i64) -> Result<SavedVersion, String> {
     let dir = dir_for(themes, id)?;
     files::ensure_private_dir(&themes.join(VERSIONS_DIR)).map_err(|e| e.to_string())?;
+    if std::fs::symlink_metadata(&dir).is_ok() && !is_real_dir(&dir) {
+        return Err(format!("{} is a link", dir.display()));
+    }
     files::ensure_private_dir(&dir).map_err(|e| e.to_string())?;
     let existing = list_versions(themes, id);
     let is_v0 = tokens::read_theme_file(previous).is_ok_and(|f| f.read.source_version == 0);
@@ -126,8 +138,9 @@ pub fn keep_version(themes: &Path, id: &str, previous: &str, now: i64) -> Result
 fn thin(themes: &Path, id: &str, now: i64) {
     let all = list_versions(themes, id);
     let keep = keep_policy(&all.iter().map(|v| (v.saved, v.pinned)).collect::<Vec<_>>(), now);
+    let Ok(dir) = dir_for(themes, id) else { return };
     for (v, keep) in all.iter().zip(keep) {
-        if !keep && let Err(e) = std::fs::remove_file(&v.path) {
+        if !keep && let Err(e) = files::remove_file_within(&dir, &v.path) {
             tracing::warn!("saved theme version {}: {e}", v.path.display());
         }
     }
@@ -212,6 +225,23 @@ mod tests {
         assert!(all.iter().any(|v| v.pinned) && all.windows(2).all(|w| w[0].saved >= w[1].saved));
         assert_eq!(read_version(&first).unwrap(), v0);
         assert!(t.join(VERSIONS_DIR).is_dir());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_linked_versions_folder_is_never_followed() {
+        let dir = tempfile::tempdir().unwrap();
+        let elsewhere = tempfile::tempdir().unwrap();
+        let t = dir.path();
+        std::fs::create_dir(t.join(VERSIONS_DIR)).unwrap();
+        let old = elsewhere.path().join("2026-01-01T00-00-00.json");
+        std::fs::write(&old, "{}").unwrap();
+        std::os::unix::fs::symlink(elsewhere.path(), t.join(VERSIONS_DIR).join("a")).unwrap();
+        assert!(keep_version(t, "a", "{}", NOW).is_err());
+        assert!(list_versions(t, "a").is_empty());
+        thin(t, "a", NOW);
+        assert!(old.exists(), "nothing outside the themes folder is touched");
+        assert_eq!(std::fs::read_dir(elsewhere.path()).unwrap().count(), 1);
     }
 
     #[test]
