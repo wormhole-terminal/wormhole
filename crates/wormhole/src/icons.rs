@@ -100,14 +100,17 @@ pub mod glyph {
     pub const CHECK: &str = "wormhole/glyphs/check.svg";
     pub const BELL: &str = "wormhole/glyphs/bell.svg";
     pub const FAILED: &str = "wormhole/glyphs/failed.svg";
+    /// The "!" of a badge that asks for the person: a bar and a dot, centred on the grid as the others.
+    pub const NEEDS_YOU: &str = "wormhole/glyphs/needs-you.svg";
     pub const TERMINAL: &str = "wormhole/glyphs/terminal.svg";
 }
 
-const GLYPHS: [(&str, &[u8]); 5] = [
+const GLYPHS: [(&str, &[u8]); 6] = [
     (glyph::SPINNER, include_bytes!("../assets/glyphs/spinner.svg")),
     (glyph::CHECK, include_bytes!("../assets/glyphs/check.svg")),
     (glyph::BELL, include_bytes!("../assets/glyphs/bell.svg")),
     (glyph::FAILED, include_bytes!("../assets/glyphs/failed.svg")),
+    (glyph::NEEDS_YOU, include_bytes!("../assets/glyphs/needs-you.svg")),
     (glyph::TERMINAL, include_bytes!("../assets/glyphs/terminal.svg")),
 ];
 
@@ -351,7 +354,9 @@ mod tests {
 
     #[test]
     fn every_status_glyph_is_served() {
-        for path in [glyph::SPINNER, glyph::CHECK, glyph::BELL, glyph::FAILED, glyph::TERMINAL] {
+        for path in
+            [glyph::SPINNER, glyph::CHECK, glyph::BELL, glyph::FAILED, glyph::NEEDS_YOU, glyph::TERMINAL]
+        {
             let bytes = Assets.load(path).expect("loads").expect("is there");
             assert!(bytes.starts_with(b"<svg"), "{path}");
         }

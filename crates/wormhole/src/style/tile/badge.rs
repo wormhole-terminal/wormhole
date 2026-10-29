@@ -40,23 +40,12 @@ pub(super) fn grown(
     }
     let size = if tile < LINE_THIN_BELOW { BADGE_MINI } else { BADGE };
     let mark = size - 2.0 * BADGE_RIM - 2.0;
-    // The "!" is text, and GPUI keeps a glyph in its atlas for every size it is drawn at and never lets it
-    // go: a size that changed by a fraction every frame of a pop would add a glyph a frame. So it is set in
-    // whole points, a handful of sizes the atlas keeps for good. A whole badge is as it always was.
-    let mark_text = ((mark + 2.0) * scale).round().max(1.0);
     let (fill, inside): (Hsla, Option<AnyElement>) = match state {
-        StatusGlyph::NeedsYou => (
-            ui.agent_attention,
-            Some(
-                div()
-                    .text_size(px(mark_text))
-                    .line_height(px(mark_text))
-                    .font_weight(FontWeight::BLACK)
-                    .text_color(surface)
-                    .child("!")
-                    .into_any_element(),
-            ),
-        ),
+        // A drawn "!", not the character: a font's "!" sits on its own side bearing and baseline, off the
+        // badge's middle.
+        StatusGlyph::NeedsYou => {
+            (ui.agent_attention, Some(badge_mark(glyph::NEEDS_YOU, mark * scale, surface)))
+        }
         StatusGlyph::Done => (ui.agent_done, Some(badge_mark(glyph::CHECK, mark * scale, surface))),
         StatusGlyph::Failed => (ui.danger, Some(badge_mark(glyph::FAILED, mark * scale, surface))),
         StatusGlyph::Bell => (ui.agent_bell, Some(badge_mark(glyph::BELL, mark * scale, surface))),

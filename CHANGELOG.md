@@ -27,6 +27,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- The "!" on a terminal's badge when it needs you sits in the middle of the badge instead of off to its
+  left.
 - Clear Buffer (⌘K) leaves the terminal cleared: the lines above no longer come back when the shell redraws
   its screen, and in a terminal kept by the session helper they stay gone when you reopen the window.
 - Open in Finder, from a terminal's title row, no longer launches a folder that is really a program
