@@ -1,6 +1,7 @@
 //! What the Studio edits: a theme file and the state it was last saved in. Pure, with no GPUI,
 //! so it is tested without a window. `layers` reads and writes the file's values by token name.
 
+pub(super) mod history;
 pub(super) mod layers;
 
 use wormhole_core::theme::tokens::ThemeFile;

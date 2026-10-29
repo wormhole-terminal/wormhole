@@ -30,6 +30,26 @@ pub(crate) fn menus_changed(cx: &mut App) {
     cx.set_global(MenusChanged);
 }
 
+/// What the Edit menu's Undo and Redo would do in a window that keeps its own history (the Theme
+/// Studio's), while that window is the key one. A window says it, and clears it when it is no longer
+/// key; the window layer cannot name that window, so it only holds the words.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct EditTitles {
+    pub(crate) undo: Option<String>,
+    pub(crate) redo: Option<String>,
+}
+
+impl Global for EditTitles {}
+
+/// Set what Undo and Redo say (or clear it with the default), and put the menus up again when that
+/// changed.
+pub(crate) fn set_edit_titles(titles: EditTitles, cx: &mut App) {
+    if cx.try_global::<EditTitles>() != Some(&titles) {
+        cx.set_global(titles);
+        menus_changed(cx);
+    }
+}
+
 /// What the menus show for the window in front (the command palette offers the same actions).
 pub(crate) fn front_window_state(cx: &mut App) -> MenuState {
     let front = AppState::front_window(cx);
@@ -74,6 +94,9 @@ pub(crate) fn front_window_state(cx: &mut App) -> MenuState {
     state.current_profile = list.profiles().iter().position(|p| &p.id == list.active_id());
     state.window_profile = AppState::front_window(cx)
         .and_then(|front| list.profiles().iter().position(|p| p.id == front.profile));
+    if let Some(titles) = cx.try_global::<EditTitles>() {
+        (state.undo, state.redo) = (titles.undo.clone(), titles.redo.clone());
+    }
     state.debug = DEBUG;
     state.persistent = crate::window::windows::persistent_terminals_on(cx);
     state
