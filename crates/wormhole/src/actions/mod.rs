@@ -289,7 +289,7 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
             return None;
         }
         // The Theme Studio's window reads its keys from the table (`keymap::studio_action`).
-        A::SaveTheme | A::SaveThemeCopy => return None,
+        A::SaveTheme | A::DuplicateTheme => return None,
     })
 }
 
@@ -364,7 +364,7 @@ mod tests {
                     | ActionId::MoveItemDown
                     | ActionId::RowMenu
                     | ActionId::SaveTheme
-                    | ActionId::SaveThemeCopy
+                    | ActionId::DuplicateTheme
                     | ActionId::SwitchProfile
                     | ActionId::OpenWindowInProfile
                     | ActionId::MoveWindowToProfile

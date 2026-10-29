@@ -79,10 +79,12 @@ impl UndoStack {
         self.redo.last().map(|s| &s.label)
     }
 
+    #[cfg(any(test, feature = "devctl"))]
     pub(in crate::studio) fn undo_len(&self) -> usize {
         self.undo.len()
     }
 
+    #[cfg(any(test, feature = "devctl"))]
     pub(in crate::studio) fn redo_len(&self) -> usize {
         self.redo.len()
     }

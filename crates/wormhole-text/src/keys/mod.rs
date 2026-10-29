@@ -103,7 +103,7 @@ pub use zen::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 1108] = [
+pub const ALL: [Key; 1120] = [
     AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_READ, AGENT_SHEET_WANTS_TYPE,
     AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_CLOSE,
     AGENT_SHEET_DETAIL, AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_WARNING_UNSIGNED,
@@ -442,7 +442,11 @@ pub const ALL: [Key; 1108] = [
     SETTINGS_NAV_WORK, SETTINGS_NAV_AGENTS, SETTINGS_NAV_APP,
     SETTINGS_NAV_PREVIEW, SIDEBAR_FOLDER_ASK_USE, SIDEBAR_FOLDER_ASK_DECLINE,
     SIDEBAR_FOLDER_ASK_ONLY, SIDEBAR_GROUP_ONLY_IN_FOLDER, STUDIO_UNDO_RENAME,
-    STUDIO_UNDO_REVERT, STUDIO_NAME_PROMPT, TAILOR_START,
+    STUDIO_UNDO_REVERT, STUDIO_NAME_PROMPT, STUDIO_MENU_YOUR_THEMES,
+    STUDIO_MENU_THIS_PROJECT, STUDIO_MENU_PROJECT_THEME, STUDIO_MENU_BUILT_IN,
+    STUDIO_MENU_NEW, STUDIO_MENU_RENAME, STUDIO_MENU_REVERT,
+    STUDIO_TOOLTIP_MENU, STUDIO_OPEN_FAILED, STUDIO_SAVED_CONVERTED,
+    STUDIO_SAVED_COMMENTS, STUDIO_CONVERT_FAILED, TAILOR_START,
     TAILOR_ZEN, TAILOR_ZEN_DETAIL, TAILOR_BALANCED,
     TAILOR_BALANCED_DETAIL, TAILOR_EVERYTHING, TAILOR_EVERYTHING_DETAIL,
     TAILOR_TITLE_ROW, TAILOR_TITLE_NAME, TAILOR_TITLE_NAME_DETAIL,
@@ -679,6 +683,8 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("studio-undo-change", studio_undo_change("Sample")),
         ("studio-undo-reset", studio_undo_reset("Sample")),
         ("studio-untitled-from", studio_untitled_from("Sample")),
+        ("studio-menu-duplicate", studio_menu_duplicate("Sample")),
+        ("studio-switch-message", studio_switch_message("Sample", "Sample")),
         ("tailor-counter", tailor_counter("Sample", "Sample")),
         ("tailor-announce", tailor_announce("Sample", "Sample", "Sample")),
         ("terminal-size-readout", terminal_size_readout("Sample", "Sample")),

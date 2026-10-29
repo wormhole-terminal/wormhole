@@ -141,7 +141,7 @@ const SHEET: &[(&str, &[RowSpec])] = &[
             ("Theme Studio", &[ThemeStudio], Each),
             // The Studio's own keys, so they can be found here too.
             ("Save theme (in the Studio)", &[SaveTheme], Each),
-            ("Save Copy (in the Studio)", &[SaveThemeCopy], Each),
+            ("Duplicate (in the Studio)", &[DuplicateTheme], Each),
             ("Hide Wormhole", &[Hide], Each),
             ("Quit", &[Quit], Each),
         ],

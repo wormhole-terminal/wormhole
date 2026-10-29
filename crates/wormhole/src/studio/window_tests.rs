@@ -26,11 +26,21 @@ pub(super) fn themes() -> Themes {
     Themes {
         resolve: builtins_only,
         saved_path: |_| None,
+        catalog: Vec::new,
         locate: |setting| Found::Builtin(setting.to_string()),
         read: |_| Err("stub".into()),
         save_new: |_| Err("stub".into()),
         overwrite: |_, _, _| Err(SaveError::Other("stub".into())),
-        new_id: |name| wormhole_core::theme::tokens::slug::derive_id(name),
+        new_id: |name, _| wormhole_core::theme::tokens::slug::derive_id(name),
+        convert: |file, id| {
+            wormhole_core::theme::tokens::copy::convert_to_v1(
+                file,
+                &|_| None,
+                &|n| wormhole_core::theme::tokens::slug::derive_id(n),
+                id,
+                "2026-10-29",
+            )
+        },
         selects: |_, _| false,
     }
 }
@@ -389,7 +399,7 @@ fn saving_your_own_theme_writes_over_its_file_without_asking(cx: &mut TestAppCon
         },
         overwrite: |path, file, _| {
             assert_eq!(file.name.as_deref(), Some("Dusk 2"), "a rename changes the name only");
-            Ok(Saved { path: path.to_path_buf(), stamp: None })
+            Ok(Saved { path: path.to_path_buf(), stamp: None, lost_comments: false })
         },
         ..themes()
     };
@@ -427,7 +437,7 @@ fn a_file_changed_on_disk_asks_before_it_is_overwritten(cx: &mut TestAppContext)
             if WRITES.with(Cell::get) == 1 && expected.is_none() {
                 return Err(SaveError::ChangedOnDisk);
             }
-            Ok(Saved { path: path.to_path_buf(), stamp: None })
+            Ok(Saved { path: path.to_path_buf(), stamp: None, lost_comments: false })
         },
         ..themes()
     };
@@ -444,33 +454,181 @@ fn a_file_changed_on_disk_asks_before_it_is_overwritten(cx: &mut TestAppContext)
     with(cx, handle, &studio, |studio, _, _| assert!(!studio.dirty() && !studio.asking));
 }
 
-/// Save Copy leaves the draft and the theme in use alone; Save Copy and Switch makes the
-/// copy the theme in use and the one the window edits, with nothing left to lose.
+/// Duplicate writes the theme, edits and all, as "… copy" and goes on editing that; the picks
+/// stay, and the copy has nothing left to lose.
 #[gpui_kit::test]
-fn save_copy_and_switch_goes_on_editing_the_copy(cx: &mut TestAppContext) {
+fn duplicate_goes_on_editing_the_copy_and_changes_no_pick(cx: &mut TestAppContext) {
     let saving = Themes {
         save_new: |file| {
             Ok(Saved {
                 path: format!("/themes/{}.json", file.name.clone().unwrap_or_default()).into(),
                 stamp: None,
+                lost_comments: false,
             })
         },
         ..themes()
     };
     let (handle, studio) = open_with(cx, saving);
+    let before = cx.update(|cx| cx.global::<SettingsStore>().settings.clone());
     with(cx, handle, &studio, |studio, window, cx| {
         edit(studio, window, cx);
         let name = studio.doc.name().to_string();
-        studio.save_copy(false, cx);
-        assert_eq!(studio.doc.name(), name, "the draft keeps its name");
-        assert!(studio.dirty(), "and its edits are still unsaved");
-        assert_ne!(cx.global::<SettingsStore>().settings.theme, format!("{name} copy"));
-
-        studio.save_copy(true, cx);
+        studio.duplicate(window, cx);
         assert_eq!(studio.doc.name(), format!("{name} copy"));
+        assert_eq!(
+            studio.doc.file.ui.get("primary").map(String::as_str),
+            Some("#3d59a1"),
+            "the edits travel"
+        );
         assert!(!studio.dirty());
-        assert_eq!(cx.global::<SettingsStore>().settings.theme, format!("/themes/{name} copy.json"));
+        assert!(matches!(studio.doc.subject, Subject::Own { .. }));
+        assert_eq!(studio.history.undo_len(), 0, "the copy has a history of its own");
+        let s = &cx.global::<SettingsStore>().settings;
+        assert_eq!((&s.theme, &s.theme_light), (&before.theme, &before.theme_light));
         assert!(studio.should_close(window, cx), "nothing left to lose");
+    });
+}
+
+fn own_themes() -> Themes {
+    Themes {
+        catalog: || wormhole_core::theme::catalog::catalog_in(std::path::Path::new("/no/such/themes/folder")),
+        read: |path| {
+            let file =
+                wormhole_core::theme::tokens::parse_theme_file(r##"{"name": "Dusk", "extends": "Nord"}"##)?;
+            assert_eq!(path, std::path::Path::new("/themes/dusk.json"));
+            Ok(super::themes::Loaded { file, stamp: None })
+        },
+        ..themes()
+    }
+}
+
+/// Choose a theme of the open theme menu, as a click on it would.
+fn pick_from_menu(cx: &mut TestAppContext, handle: AnyWindowHandle, title: &str) {
+    let (_, callbacks) = crate::platform::record::pick(title).expect("the item is there");
+    cx.update(|cx| {
+        handle
+            .update(cx, |_, window, cx| {
+                for callback in &callbacks {
+                    callback(window, cx);
+                }
+            })
+            .expect("the window is open");
+    });
+}
+
+#[gpui_kit::test]
+fn the_name_opens_the_theme_menu_and_a_choice_opens_that_theme(cx: &mut TestAppContext) {
+    let (handle, studio) = open_with(cx, own_themes());
+    with(cx, handle, &studio, |studio, window, cx| studio.open_theme_menu(window, cx));
+    let menu = crate::platform::record::open().expect("the menu opened");
+    let outline = menu.outline();
+    assert!(
+        outline.contains(&"# Built-in".to_string()) && outline.contains(&"- New Theme\u{2026}".to_string())
+    );
+    assert!(outline.contains(&"- Revert to Saved [off]".to_string()), "no edits: {outline:?}");
+    pick_from_menu(cx, handle, "Nord");
+    with(cx, handle, &studio, |studio, _, _| {
+        assert_eq!(studio.doc.subject, Subject::Untitled { from: "Nord".into() });
+        assert_eq!(studio.doc.name(), "Untitled (from Nord)");
+        assert!(!studio.dirty());
+    });
+    assert!(!cx.has_pending_prompt(), "nothing to lose: no question");
+}
+
+/// With edits, choosing another theme asks Save, Cancel or Don't Save.
+#[gpui_kit::test]
+fn switching_with_edits_asks_save_dont_save_cancel(cx: &mut TestAppContext) {
+    let (handle, studio) = open_with(cx, own_themes());
+    let before = cx.update(|cx| cx.global::<SettingsStore>().settings.clone());
+    let choose_nord = |cx: &mut TestAppContext| {
+        with(cx, handle, &studio, |studio, window, cx| {
+            if !studio.dirty() {
+                edit(studio, window, cx);
+            }
+            studio.open_theme_menu(window, cx);
+        });
+        pick_from_menu(cx, handle, "Nord");
+    };
+    // Cancel: the window stays on its theme with its edits.
+    choose_nord(cx);
+    let (message, detail) = cx.pending_prompt().expect("the question");
+    assert_eq!(
+        message,
+        "Do you want to save the changes to \u{201c}Untitled (from Wormhole Dark)\u{201d} before opening \u{201c}Nord\u{201d}?"
+    );
+    assert_eq!(detail, "1 change. Your changes are lost if you don\u{2019}t save them.");
+    cx.simulate_prompt_answer("Cancel");
+    cx.run_until_parked();
+    with(cx, handle, &studio, |studio, _, _| {
+        assert!(studio.dirty() && !studio.asking);
+        assert_eq!(studio.doc.name(), "Untitled (from Wormhole Dark)");
+    });
+    // Don't Save: Nord opens, the edits are gone, the history is fresh.
+    choose_nord(cx);
+    cx.simulate_prompt_answer("Don\u{2019}t Save");
+    cx.run_until_parked();
+    with(cx, handle, &studio, |studio, _, _| {
+        assert_eq!(studio.doc.name(), "Untitled (from Nord)");
+        assert!(!studio.dirty());
+        assert_eq!(studio.history.undo_len(), 0);
+    });
+    // Save: a copy with no file yet is named first, and Nord waits for that to go through.
+    choose_nord(cx);
+    cx.simulate_prompt_answer("Save");
+    cx.run_until_parked();
+    with(cx, handle, &studio, |studio, _, _| {
+        assert!(studio.renaming && studio.dirty(), "the name is asked for; the switch waits");
+    });
+    let after = cx.update(|cx| cx.global::<SettingsStore>().settings.clone());
+    assert_eq!((&after.theme, &after.theme_light), (&before.theme, &before.theme_light), "no pick changed");
+}
+
+#[gpui_kit::test]
+fn switching_without_edits_does_not_ask(cx: &mut TestAppContext) {
+    let (handle, studio) = open_with(cx, own_themes());
+    with(cx, handle, &studio, |studio, window, cx| {
+        studio.open_target(&super::opening::Target::Own("/themes/dusk.json".into()), window, cx);
+        assert_eq!(studio.doc.subject, Subject::Own { path: "/themes/dusk.json".into() });
+        assert!(!studio.asking);
+    });
+    assert!(!cx.has_pending_prompt());
+}
+
+/// Rename changes the display name only: the file stays, and a pick that named the theme by its
+/// old name names its file instead of losing it.
+#[gpui_kit::test]
+fn renaming_keeps_the_file_and_the_pick(cx: &mut TestAppContext) {
+    let renamed = Themes {
+        overwrite: |path, file, _| {
+            assert_eq!(file.name.as_deref(), Some("Dusk 2"));
+            Ok(Saved { path: path.to_path_buf(), stamp: None, lost_comments: false })
+        },
+        ..own_themes()
+    };
+    let (handle, studio) = open_with(cx, renamed);
+    cx.update(|cx| SettingsStore::update(cx, |s| s.theme = "dusk".into()));
+    with(cx, handle, &studio, |studio, window, cx| {
+        studio.open_target(&super::opening::Target::Own("/themes/dusk.json".into()), window, cx);
+        studio.start_rename(window, cx);
+        studio.name.update(cx, |input, cx| input.set_value("Dusk 2", window, cx));
+        studio.finish_rename(window, cx);
+        assert_eq!(studio.history.undo_label(), Some(&super::document::history::StepLabel::Rename));
+        studio.request_save(window, cx);
+        assert_eq!(studio.doc.subject, Subject::Own { path: "/themes/dusk.json".into() });
+        assert_eq!(cx.global::<SettingsStore>().settings.theme, "/themes/dusk.json");
+    });
+}
+
+/// Revert to Saved is one step to undo.
+#[gpui_kit::test]
+fn revert_to_saved_is_one_undoable_step(cx: &mut TestAppContext) {
+    let (handle, studio) = open(cx);
+    with(cx, handle, &studio, |studio, window, cx| {
+        edit(studio, window, cx);
+        studio.discard_changes(window, cx);
+        assert!(!studio.dirty());
+        studio.undo(window, cx);
+        assert!(studio.dirty(), "the edit is back");
     });
 }
 
@@ -487,7 +645,10 @@ fn use_in_this_project_needs_a_project(cx: &mut TestAppContext) {
 }
 
 fn saving() -> Themes {
-    Themes { save_new: |_| Ok(Saved { path: "/themes/mine.json".into(), stamp: None }), ..themes() }
+    Themes {
+        save_new: |_| Ok(Saved { path: "/themes/mine.json".into(), stamp: None, lost_comments: false }),
+        ..themes()
+    }
 }
 
 /// Dark default, Light mode: a saved light theme is the light pick, the dark one stays.
@@ -611,4 +772,73 @@ fn the_edit_menu_titles_follow_the_history(cx: &mut TestAppContext) {
     cx.run_until_parked();
     let titles = cx.update(|cx| cx.global::<EditTitles>().clone());
     assert_eq!((titles.undo, titles.redo.as_deref()), (None, Some("Change \u{201c}primary\u{201d}")));
+}
+
+/// Saving a theme in the older format writes the new one: its base copied from what it extends, its
+/// own values on top, an id; the picks that named it by name name its id; the notice says what changed.
+#[gpui_kit::test]
+fn the_first_save_of_an_older_theme_writes_the_new_format(cx: &mut TestAppContext) {
+    use std::cell::RefCell;
+    thread_local!(static WRITTEN: RefCell<Option<ThemeFile>> = const { RefCell::new(None) });
+    let own = Themes {
+        overwrite: |path, file, _| {
+            WRITTEN.with(|w| *w.borrow_mut() = Some(file.clone()));
+            Ok(Saved { path: path.to_path_buf(), stamp: None, lost_comments: true })
+        },
+        ..own_themes()
+    };
+    let (handle, studio) = open_with(cx, own);
+    cx.update(|cx| SettingsStore::update(cx, |s| s.theme_light = "Dusk".into()));
+    with(cx, handle, &studio, |studio, window, cx| {
+        studio.open_target(&super::opening::Target::Own("/themes/dusk.json".into()), window, cx);
+        assert_eq!(studio.doc.file.version, None, "read as the older format");
+        let before = builtins_only(&studio.doc.file).expect("resolves");
+        studio.set_value("primary", Some("#aa0000".into()), Edit::Field, window, cx);
+        let edited = builtins_only(&studio.doc.file).expect("resolves");
+        studio.request_save(window, cx);
+        let written = WRITTEN.with(|w| w.borrow().clone()).expect("written");
+        assert_eq!((written.version, written.id.as_deref()), (Some(1), Some("dusk")));
+        assert_eq!(written.base.as_ref().map(|b| b.from.as_str()), Some("nord"));
+        assert_eq!(
+            written.ui.get("primary").map(String::as_str),
+            Some("#aa0000"),
+            "the person's own value stays on top"
+        );
+        assert_eq!(builtins_only(&written).expect("resolves"), edited, "nothing on screen changes");
+        assert_ne!(before, edited);
+        assert_eq!(studio.doc.file, written);
+        assert!(!studio.dirty());
+        assert_eq!(cx.global::<SettingsStore>().settings.theme_light, "dusk", "the pick follows to the id");
+        let Some(Notice::Saved { text, .. }) = studio.notice.clone() else { panic!("{:?}", studio.notice) };
+        assert!(text.contains("older releases of Wormhole can\u{2019}t open this file"), "{text}");
+        assert!(text.contains("Comments in the file were not kept."), "{text}");
+    });
+}
+
+/// A conversion that would change how the theme looks is not written.
+#[gpui_kit::test]
+fn a_conversion_that_changes_the_look_is_not_written(cx: &mut TestAppContext) {
+    let own = Themes {
+        convert: |file, id| {
+            let mut converted = wormhole_core::theme::tokens::copy::convert_to_v1(
+                file,
+                &|_| None,
+                &|n| wormhole_core::theme::tokens::slug::derive_id(n),
+                id,
+                "2026-10-29",
+            )?;
+            converted.ui.insert("primary".into(), "#010203".into());
+            Ok(converted)
+        },
+        overwrite: |_, _, _| panic!("nothing may be written"),
+        ..own_themes()
+    };
+    let (handle, studio) = open_with(cx, own);
+    with(cx, handle, &studio, |studio, window, cx| {
+        studio.open_target(&super::opening::Target::Own("/themes/dusk.json".into()), window, cx);
+        studio.set_value("border", Some("#aa0000".into()), Edit::Field, window, cx);
+        studio.request_save(window, cx);
+        assert_eq!(studio.notice, failed("Could not convert this theme safely, so it was not changed."),);
+        assert!(studio.dirty() && studio.doc.file.version.is_none());
+    });
 }

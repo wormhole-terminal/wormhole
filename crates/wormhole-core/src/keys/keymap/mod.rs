@@ -183,7 +183,7 @@ pub enum ActionId {
     ExportText,
     // The Theme Studio's window.
     SaveTheme,
-    SaveThemeCopy,
+    DuplicateTheme,
 }
 
 /// Where a key works. App keys work everywhere in a window, so they collide with every other
