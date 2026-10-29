@@ -313,6 +313,19 @@ fn open_regular(path: &Path, policy: LinkPolicy<'_>) -> io::Result<File> {
     Ok(file)
 }
 
+/// Remove the file `path`, a direct child of the real folder `dir`: nothing is removed when `dir`
+/// is a link (to somewhere else), when `path` is not directly in it, or when it is a folder. A link
+/// at `path` is removed itself, never what it points to.
+pub fn remove_file_within(dir: &Path, path: &Path) -> io::Result<()> {
+    if !fs::symlink_metadata(dir)?.is_dir() {
+        return Err(refuse(dir, Refusal::OutsideRoot(dir.to_path_buf())));
+    }
+    if path.parent() != Some(dir) || fs::symlink_metadata(path)?.is_dir() {
+        return Err(refuse(path, Refusal::OutsideRoot(dir.to_path_buf())));
+    }
+    fs::remove_file(path)
+}
+
 /// [`read_capped`] as UTF-8 text.
 pub fn read_to_string_capped(path: &Path, cap: u64, policy: LinkPolicy<'_>) -> io::Result<String> {
     String::from_utf8(read_capped(path, cap, policy)?).map_err(|_| refuse(path, Refusal::NotUtf8))
