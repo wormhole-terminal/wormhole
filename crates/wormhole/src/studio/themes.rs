@@ -100,6 +100,8 @@ pub(in crate::studio) struct Themes {
     /// The earlier saves of the theme at this path, newest first.
     pub(in crate::studio) versions: fn(&Path, &ThemeFile) -> Vec<SavedVersion>,
     pub(in crate::studio) read_version: fn(&SavedVersion) -> Result<ThemeFile, String>,
+    /// Move a theme's file to the Trash (its saved versions stay where they are).
+    pub(in crate::studio) trash: crate::settings::theme_trash::Trash,
 }
 
 impl Themes {
@@ -119,6 +121,7 @@ impl Themes {
         fresh_base: fresh_base_in_profile,
         versions: versions_in_profile,
         read_version: read_version_of,
+        trash: crate::platform::trash::move_to_trash,
     };
 }
 

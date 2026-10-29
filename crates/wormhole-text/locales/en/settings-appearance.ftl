@@ -169,6 +169,19 @@ settings-appearance-show-all-themes = Show all { $total }
 
 settings-appearance-hide-theme = Hide theme
 settings-appearance-move-to-trash = Move to Trash
+# The question before a theme file goes to the Trash (the Settings card and the Theme Studio both ask it).
+# { $name } is the theme.
+settings-appearance-trash-message = Move “{ $name }” to the Trash?
+settings-appearance-trash-detail = You can get it back from the Trash.
+# Which pick changes when the theme is one: { $to } is the theme the app falls back to.
+settings-appearance-trash-dark = Your dark theme changes to { $to }.
+# { $to } is the theme the app falls back to.
+settings-appearance-trash-light = Your light theme changes to { $to }.
+# { $dark } and { $light } are the themes the app falls back to.
+settings-appearance-trash-both = Your dark theme changes to { $dark } and your light theme to { $light }.
+settings-appearance-trash-edits = Its unsaved changes are lost.
+# { $name } is the theme.
+settings-appearance-trash-failed = “{ $name }” could not be moved to the Trash.
 settings-appearance-show-theme = Show
 
 # The disclosure under the theme cards that lists the hidden ones. { $count } is how many.

@@ -33,6 +33,7 @@ mod token_editor;
 mod token_field;
 mod token_list;
 mod token_rows;
+mod trash;
 mod undo;
 mod update_from;
 mod use_theme;
@@ -595,6 +596,8 @@ mod guard_tests;
 mod proof_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(all(test, feature = "devctl"))]
+mod trash_tests;
 #[cfg(all(test, feature = "devctl"))]
 mod window_tests;
 
