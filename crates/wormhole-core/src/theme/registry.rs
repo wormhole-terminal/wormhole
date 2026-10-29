@@ -109,8 +109,7 @@ impl UserTheme {
     /// file's first version also answers to the family's name and the file stem.
     fn answers_to(&self, name: &str) -> bool {
         let stem = || self.path.file_stem().is_some_and(|s| s == name);
-        self.slug == name
-            || self.name.eq_ignore_ascii_case(name)
+        self.name.eq_ignore_ascii_case(name)
             || match &self.family {
                 None => stem(),
                 Some((family, _)) => self.index == 0 && (family.eq_ignore_ascii_case(name) || stem()),
@@ -179,13 +178,23 @@ impl UserThemes {
     /// The JSON theme `extends` reaches as `name`: the first by path that
     /// answers to it and parses.
     pub fn extends_target(&self, name: &str) -> Option<&UserTheme> {
-        self.themes.iter().find(|t| t.file().is_some() && t.answers_to(name))
+        self.first_answering(name, |t| t.file().is_some())
+    }
+
+    /// The first theme that `keep`s and answers to `name`: by name or file stem first, and by
+    /// slug only when none does, so a slug that happens to equal another theme's literal name
+    /// never takes it over.
+    fn first_answering(&self, name: &str, keep: impl Fn(&UserTheme) -> bool) -> Option<&UserTheme> {
+        self.themes
+            .iter()
+            .find(|t| keep(t) && t.answers_to(name))
+            .or_else(|| self.themes.iter().find(|t| keep(t) && t.slug == name))
     }
 
     /// The user theme a bare `settings.theme` value selects: the first by path
     /// that answers to it, whatever its format (a broken one reports why).
     pub fn named(&self, name: &str) -> Option<&UserTheme> {
-        self.themes.iter().find(|t| t.answers_to(name))
+        self.first_answering(name, |_| true)
     }
 
     /// Which theme a bare name selects: a user theme first, then a built-in.
@@ -391,6 +400,23 @@ mod tests {
         // It may still extend the built-in it shadows.
         let tokens = user.resolve(user.named("Nord").expect("mine")).expect("resolves");
         assert_eq!(tokens.get("primary").map(|c| c.to_hex()).as_deref(), Some("#ff0000"));
+    }
+
+    #[test]
+    fn an_exact_name_beats_another_themes_slug() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        // "a.json" derives the slug "foo_bar"; "b.json" is literally named "foo_bar".
+        write(dir.path(), "a.json", r#"{ "name": "Foo Bar" }"#);
+        write(dir.path(), "b.json", r#"{ "name": "foo_bar" }"#);
+        let user = UserThemes::read(dir.path());
+        assert_eq!(user.select("foo_bar"), Some(ThemeId::File(dir.path().join("b.json"))));
+        assert_eq!(user.extends_target("foo_bar").map(|t| t.path.clone()), Some(dir.path().join("b.json")));
+        // The slug still selects when nothing is called that.
+        assert_eq!(user.select("foo bar"), Some(ThemeId::File(dir.path().join("a.json"))));
+        let only = tempfile::tempdir().expect("temp dir");
+        write(only.path(), "a.json", r#"{ "name": "Foo Bar" }"#);
+        let user = UserThemes::read(only.path());
+        assert_eq!(user.select("foo_bar"), Some(ThemeId::File(only.path().join("a.json"))));
     }
 
     #[test]
