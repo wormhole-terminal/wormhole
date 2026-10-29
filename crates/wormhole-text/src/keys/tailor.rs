@@ -7,116 +7,116 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Where do you want to start?"
-pub const TAILOR_START: Key = Key::new(1316);
+pub const TAILOR_START: Key = Key::new(1359);
 /// "Zen"
-pub const TAILOR_ZEN: Key = Key::new(1317);
+pub const TAILOR_ZEN: Key = Key::new(1360);
 /// "The terminal list and the terminal: its name and the splits on top, nothing else"
-pub const TAILOR_ZEN_DETAIL: Key = Key::new(1318);
+pub const TAILOR_ZEN_DETAIL: Key = Key::new(1361);
 /// "Balanced"
-pub const TAILOR_BALANCED: Key = Key::new(1319);
+pub const TAILOR_BALANCED: Key = Key::new(1362);
 /// "Wormhole as it comes"
-pub const TAILOR_BALANCED_DETAIL: Key = Key::new(1320);
+pub const TAILOR_BALANCED_DETAIL: Key = Key::new(1363);
 /// "Everything"
-pub const TAILOR_EVERYTHING: Key = Key::new(1321);
+pub const TAILOR_EVERYTHING: Key = Key::new(1364);
 /// "Every part shown: the whole title row, the status bar and the minimap"
-pub const TAILOR_EVERYTHING_DETAIL: Key = Key::new(1322);
+pub const TAILOR_EVERYTHING_DETAIL: Key = Key::new(1365);
 /// "What should the title row show?"
-pub const TAILOR_TITLE_ROW: Key = Key::new(1323);
+pub const TAILOR_TITLE_ROW: Key = Key::new(1366);
 /// "Just the name"
-pub const TAILOR_TITLE_NAME: Key = Key::new(1324);
+pub const TAILOR_TITLE_NAME: Key = Key::new(1367);
 /// "The terminal's name and the split buttons"
-pub const TAILOR_TITLE_NAME_DETAIL: Key = Key::new(1325);
+pub const TAILOR_TITLE_NAME_DETAIL: Key = Key::new(1368);
 /// "Where you are"
-pub const TAILOR_TITLE_PATH: Key = Key::new(1326);
+pub const TAILOR_TITLE_PATH: Key = Key::new(1369);
 /// "Folder, branch and the terminal, with Open in… and the splits"
-pub const TAILOR_TITLE_PATH_DETAIL: Key = Key::new(1327);
+pub const TAILOR_TITLE_PATH_DETAIL: Key = Key::new(1370);
 /// "Everything"
-pub const TAILOR_TITLE_EVERYTHING: Key = Key::new(1328);
+pub const TAILOR_TITLE_EVERYTHING: Key = Key::new(1371);
 /// "Also the agent's model and context, open ports and the pull request"
-pub const TAILOR_TITLE_EVERYTHING_DETAIL: Key = Key::new(1329);
+pub const TAILOR_TITLE_EVERYTHING_DETAIL: Key = Key::new(1372);
 /// "Off"
-pub const TAILOR_OFF: Key = Key::new(1330);
+pub const TAILOR_OFF: Key = Key::new(1373);
 /// "On"
-pub const TAILOR_ON: Key = Key::new(1331);
+pub const TAILOR_ON: Key = Key::new(1374);
 /// "A status bar along the bottom?"
-pub const TAILOR_STATUS_BAR: Key = Key::new(1332);
+pub const TAILOR_STATUS_BAR: Key = Key::new(1375);
 /// "Nothing under the terminal"
-pub const TAILOR_STATUS_BAR_OFF: Key = Key::new(1333);
+pub const TAILOR_STATUS_BAR_OFF: Key = Key::new(1376);
 /// "Branch, agents and the terminal's size along the bottom of the window"
-pub const TAILOR_STATUS_BAR_ON: Key = Key::new(1334);
+pub const TAILOR_STATUS_BAR_ON: Key = Key::new(1377);
 /// "A minimap beside each terminal?"
-pub const TAILOR_MINIMAP: Key = Key::new(1335);
+pub const TAILOR_MINIMAP: Key = Key::new(1378);
 /// "The terminal runs to its edge"
-pub const TAILOR_MINIMAP_OFF: Key = Key::new(1336);
+pub const TAILOR_MINIMAP_OFF: Key = Key::new(1379);
 /// "An overview of the scrollback along the terminal's right edge"
-pub const TAILOR_MINIMAP_ON: Key = Key::new(1337);
+pub const TAILOR_MINIMAP_ON: Key = Key::new(1380);
 /// "Lines between the columns?"
-pub const TAILOR_DIVIDERS: Key = Key::new(1338);
+pub const TAILOR_DIVIDERS: Key = Key::new(1381);
 /// "The sidebar, the terminal and the panel meet without a line"
-pub const TAILOR_DIVIDERS_OFF: Key = Key::new(1339);
+pub const TAILOR_DIVIDERS_OFF: Key = Key::new(1382);
 /// "A thin line between the sidebar, the terminal and the panel"
-pub const TAILOR_DIVIDERS_ON: Key = Key::new(1340);
+pub const TAILOR_DIVIDERS_ON: Key = Key::new(1383);
 /// "Should the right panel be open?"
-pub const TAILOR_PANEL: Key = Key::new(1341);
+pub const TAILOR_PANEL: Key = Key::new(1384);
 /// "Closed"
-pub const TAILOR_PANEL_CLOSED: Key = Key::new(1342);
+pub const TAILOR_PANEL_CLOSED: Key = Key::new(1385);
 /// "Open it when you want it, with its button at the window's top right"
-pub const TAILOR_PANEL_CLOSED_DETAIL: Key = Key::new(1343);
+pub const TAILOR_PANEL_CLOSED_DETAIL: Key = Key::new(1386);
 /// "Open"
-pub const TAILOR_PANEL_OPEN: Key = Key::new(1344);
+pub const TAILOR_PANEL_OPEN: Key = Key::new(1387);
 /// "What changed, and the panel's other tools, beside the terminal"
-pub const TAILOR_PANEL_OPEN_DETAIL: Key = Key::new(1345);
+pub const TAILOR_PANEL_OPEN_DETAIL: Key = Key::new(1388);
 /// "Which tools should the right panel have?"
-pub const TAILOR_TOOLS: Key = Key::new(1346);
+pub const TAILOR_TOOLS: Key = Key::new(1389);
 /// "Changes and usage"
-pub const TAILOR_TOOLS_FEW: Key = Key::new(1347);
+pub const TAILOR_TOOLS_FEW: Key = Key::new(1390);
 /// "What changed in the repository, and the agents' plan limits"
-pub const TAILOR_TOOLS_FEW_DETAIL: Key = Key::new(1348);
+pub const TAILOR_TOOLS_FEW_DETAIL: Key = Key::new(1391);
 /// "All of them"
-pub const TAILOR_TOOLS_ALL: Key = Key::new(1349);
+pub const TAILOR_TOOLS_ALL: Key = Key::new(1392);
 /// "Every tool the panel has, such as the history"
-pub const TAILOR_TOOLS_ALL_DETAIL: Key = Key::new(1350);
+pub const TAILOR_TOOLS_ALL_DETAIL: Key = Key::new(1393);
 /// "How much to show"
-pub const TAILOR_HEADING: Key = Key::new(1351);
+pub const TAILOR_HEADING: Key = Key::new(1394);
 /// "Back"
-pub const TAILOR_BACK: Key = Key::new(1353);
+pub const TAILOR_BACK: Key = Key::new(1396);
 /// "Start over"
-pub const TAILOR_START_OVER: Key = Key::new(1354);
+pub const TAILOR_START_OVER: Key = Key::new(1397);
 /// "That's your window"
-pub const TAILOR_SUMMARY: Key = Key::new(1355);
+pub const TAILOR_SUMMARY: Key = Key::new(1398);
 /// "Your own"
-pub const TAILOR_OWN: Key = Key::new(1356);
+pub const TAILOR_OWN: Key = Key::new(1399);
 /// "Looks good"
-pub const TAILOR_LOOKS_GOOD: Key = Key::new(1357);
+pub const TAILOR_LOOKS_GOOD: Key = Key::new(1400);
 /// "All set"
-pub const TAILOR_ALL_SET: Key = Key::new(1358);
+pub const TAILOR_ALL_SET: Key = Key::new(1401);
 /// "Each answer changes the window around this terminal as you give it."
-pub const TAILOR_WELCOME_NOTE: Key = Key::new(1359);
+pub const TAILOR_WELCOME_NOTE: Key = Key::new(1402);
 /// "Continue"
-pub const TAILOR_WELCOME_CONTINUE: Key = Key::new(1360);
+pub const TAILOR_WELCOME_CONTINUE: Key = Key::new(1403);
 /// "the rest stays as it is"
-pub const TAILOR_WELCOME_CONTINUE_DETAIL: Key = Key::new(1361);
+pub const TAILOR_WELCOME_CONTINUE_DETAIL: Key = Key::new(1404);
 /// "pick"
-pub const TAILOR_WELCOME_KEY_PICK: Key = Key::new(1362);
+pub const TAILOR_WELCOME_KEY_PICK: Key = Key::new(1405);
 /// "move"
-pub const TAILOR_WELCOME_KEY_MOVE: Key = Key::new(1363);
+pub const TAILOR_WELCOME_KEY_MOVE: Key = Key::new(1406);
 /// "continue"
-pub const TAILOR_WELCOME_KEY_CONTINUE: Key = Key::new(1364);
+pub const TAILOR_WELCOME_KEY_CONTINUE: Key = Key::new(1407);
 /// "start over"
-pub const TAILOR_WELCOME_KEY_START_OVER: Key = Key::new(1365);
+pub const TAILOR_WELCOME_KEY_START_OVER: Key = Key::new(1408);
 /// "The window's settings can't be changed from here, so the answers show only what they would do."
-pub const TAILOR_WELCOME_UNAVAILABLE: Key = Key::new(1366);
+pub const TAILOR_WELCOME_UNAVAILABLE: Key = Key::new(1409);
 
 /// ```text
 /// { $number } of { $of }
 /// ```
 pub fn tailor_counter(number: &str, of: &str) -> String {
-    crate::active::message(1352, &[("number", Arg::Str(number)), ("of", Arg::Str(of))])
+    crate::active::message(1395, &[("number", Arg::Str(number)), ("of", Arg::Str(of))])
 }
 
 /// ```text
 /// { $question }, { $number } of { $of }
 /// ```
 pub fn tailor_announce(question: &str, number: &str, of: &str) -> String {
-    crate::active::message(1367, &[("question", Arg::Str(question)), ("number", Arg::Str(number)), ("of", Arg::Str(of))])
+    crate::active::message(1410, &[("question", Arg::Str(question)), ("number", Arg::Str(number)), ("of", Arg::Str(of))])
 }

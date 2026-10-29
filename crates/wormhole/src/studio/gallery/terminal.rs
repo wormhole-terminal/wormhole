@@ -45,16 +45,16 @@ pub(super) fn render(
                 .child(div().text_color(hsla(term.ansi[2])).child("➜"))
                 .child(div().text_color(hsla(term.ansi[6])).child("wormhole"))
                 .child(div().text_color(hsla(term.ansi[4])).child("git:(main)"))
-                .child("cargo test"),
+                .child("cargo test"), // text: sample (the gallery's specimen)
         )
-        .child(div().text_color(hsla(term.ansi[2])).child("test result: ok. 57 passed"))
-        .child(div().text_color(hsla(term.ansi[3])).child("warning: unused variable"))
-        .child(div().text_color(hsla(term.ansi[1])).child("error[E0425]: cannot find value"))
+        .child(div().text_color(hsla(term.ansi[2])).child("test result: ok. 57 passed")) // text: sample (the gallery's specimen)
+        .child(div().text_color(hsla(term.ansi[3])).child("warning: unused variable")) // text: sample (the gallery's specimen)
+        .child(div().text_color(hsla(term.ansi[1])).child("error[E0425]: cannot find value")) // text: sample (the gallery's specimen)
         .child(
             div()
                 .flex()
-                .child(div().bg(hsla(term.selection_background)).child("selected text"))
-                .child(" and a cursor ")
+                .child(div().bg(hsla(term.selection_background)).child("selected text")) // text: sample (the gallery's specimen)
+                .child(" and a cursor ") // text: sample (the gallery's specimen)
                 .child(div().w(px(9.0)).h(px(18.0)).bg(hsla(term.cursor))),
         );
     div().flex().flex_col().gap_2().child(ansi).child(env.mark("terminal", sample)).into_any_element()

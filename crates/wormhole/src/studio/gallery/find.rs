@@ -39,9 +39,9 @@ pub(super) fn render(
         .flex_col()
         .gap_1()
         .child(
-            div().flex().child("test git::").child(found("split", false)).child("::tests::pairs ... FAILED"),
+            div().flex().child("test git::").child(found("split", false)).child("::tests::pairs ... FAILED"), // text: sample (the gallery's specimen)
         )
-        .child(div().flex().child("panicked at src/git/").child(found("split", true)).child(".rs:212:9"));
+        .child(div().flex().child("panicked at src/git/").child(found("split", true)).child(".rs:212:9")); // text: sample (the gallery's specimen)
     // Pressed toggles show the primary's tint, as the panel's do.
     let options = FindOptions { match_case: true, ..FindOptions::default() };
     let bar = style::find_bar(
@@ -50,7 +50,7 @@ pub(super) fn render(
         style::FindBarParts {
             field: div().text_body().text_color(ui.text).child("split").into_any_element(),
             focused: true,
-            count: "2 of 11".into(),
+            count: "2 of 11".into(), // text: sample (the gallery's specimen)
             invalid: false,
             options,
             on_option: Rc::new(|_, _, _| {}),
@@ -64,7 +64,7 @@ pub(super) fn render(
         style::FindBarParts {
             field: div().text_body().text_color(ui.text).child("error[").into_any_element(),
             focused: false,
-            count: "Not a valid pattern".into(),
+            count: "Not a valid pattern".into(), // text: sample (the gallery's specimen)
             invalid: true,
             options: FindOptions { regex: true, ..FindOptions::default() },
             on_option: Rc::new(|_, _, _| {}),

@@ -75,8 +75,8 @@ impl GalleryView {
             columns: Columns::default(),
             measures: Rc::default(),
             scroll: ScrollHandle::new(),
-            sample_input: cx.new(|cx| InputState::new(window, cx).placeholder("Search themes")),
-            item_editor: cx.new(|cx| InputState::new(window, cx).default_value("Rename this task")),
+            sample_input: cx.new(|cx| InputState::new(window, cx).placeholder("Search themes")), // text: sample (the gallery's specimen)
+            item_editor: cx.new(|cx| InputState::new(window, cx).default_value("Rename this task")), // text: sample (the gallery's specimen)
             sample: RefCell::new(None),
             #[cfg(feature = "devctl")]
             scroll_to: None,
@@ -168,9 +168,9 @@ impl GalleryView {
         }
         let count = self.selected.as_ref().map(|name| {
             let text = match uses.len() {
-                0 => format!("Nothing draws {name} directly"),
-                1 => format!("1 use of {name}"),
-                n => format!("{n} uses of {name}"),
+                0 => format!("Nothing draws {name} directly"), // text: sample (the gallery's specimen)
+                1 => format!("1 use of {name}"),               // text: sample (the gallery's specimen)
+                n => format!("{n} uses of {name}"),            // text: sample (the gallery's specimen)
             };
             div()
                 .min_w_0()

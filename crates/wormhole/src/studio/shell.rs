@@ -30,7 +30,7 @@ impl Render for StudioWindow {
         div()
             .id("studio-window")
             .track_focus(&self.focus_handle)
-            .key_context("StudioWindow")
+            .key_context("StudioWindow") // text: not shown (a key context)
             .on_key_down(cx.listener(Self::on_key))
             // ⌘Z and ⇧⌘Z come here before the focused field: it keeps what it was typed.
             .capture_action(

@@ -19,20 +19,20 @@ pub(super) fn render(
     let tabs = div()
         .flex()
         .gap_1()
-        .child(style::pill("g-tab-usage", ui, true, true).child("Usage"))
+        .child(style::pill("g-tab-usage", ui, true, true).child("Usage")) // text: sample (the gallery's specimen)
         .child(
-            style::pill("g-tab-changes", ui, false, true).child("Changes").child(style::count_badge(ui, "3")),
+            style::pill("g-tab-changes", ui, false, true).child("Changes").child(style::count_badge(ui, "3")), // text: sample (the gallery's specimen)
         )
-        .child(style::pill("g-tab-history", ui, false, true).child("History"));
+        .child(style::pill("g-tab-history", ui, false, true).child("History")); // text: sample (the gallery's specimen)
     // The right panel's tabs.
     let icon_tabs = div()
         .flex()
         .items_center()
         .gap_1()
-        .child(style::icon_tab("g-itab-usage", ui, IconName::Gauge, "Usage", false, Some(2)))
+        .child(style::icon_tab("g-itab-usage", ui, IconName::Gauge, "Usage", false, Some(2))) // text: sample (the gallery's specimen)
         // Active with a count: the tab is the selected tint, its badge `state.selected.inset`.
-        .child(style::icon_tab("g-itab-changes", ui, IconName::GitCompare, "Changes", true, Some(3)))
-        .child(style::icon_tab("g-itab-history", ui, IconName::GitCommitHorizontal, "History", false, None));
+        .child(style::icon_tab("g-itab-changes", ui, IconName::GitCompare, "Changes", true, Some(3))) // text: sample (the gallery's specimen)
+        .child(style::icon_tab("g-itab-history", ui, IconName::GitCommitHorizontal, "History", false, None)); // text: sample (the gallery's specimen)
     // The same tabs with the selection as one shape that springs between them (Motion on): the selected
     // tab has no fill of its own.
     let sliding_tabs = style::selection_bar(
@@ -41,11 +41,11 @@ pub(super) fn render(
         Some(1),
         &style::TabSlots::default(),
         [
-            style::icon_tab("g-stab-usage", ui, IconName::Gauge, "Usage", false, Some(2)).into_any_element(),
-            style::icon_tab("g-stab-changes", ui, IconName::GitCompare, "Changes", true, Some(3))
+            style::icon_tab("g-stab-usage", ui, IconName::Gauge, "Usage", false, Some(2)).into_any_element(), // text: sample (the gallery's specimen)
+            style::icon_tab("g-stab-changes", ui, IconName::GitCompare, "Changes", true, Some(3)) // text: sample (the gallery's specimen)
                 .bg(transparent_black())
                 .into_any_element(),
-            style::icon_tab("g-stab-history", ui, IconName::GitCommitHorizontal, "History", false, None)
+            style::icon_tab("g-stab-history", ui, IconName::GitCommitHorizontal, "History", false, None) // text: sample (the gallery's specimen)
                 .into_any_element(),
         ],
     );
@@ -69,7 +69,7 @@ pub(super) fn render(
         .child(
             style::title_tab("g-ttab-cargo", ui, false, false)
                 .child(glyph("g-ttab-run", style::StatusGlyph::Running))
-                .child("cargo test"),
+                .child("cargo test"), // text: sample (the gallery's specimen)
         )
         .child(
             style::title_tab("g-ttab-waiting", ui, false, true)
@@ -79,9 +79,9 @@ pub(super) fn render(
     let chips = div()
         .flex()
         .gap_2()
-        .child(style::pill("g-chip-a", ui, true, false).child("Tokyo Night"))
-        .child(style::pill("g-chip-b", ui, false, false).child("Nord"))
-        .child(style::pill("g-chip-c", ui, false, false).child("Dracula"));
+        .child(style::pill("g-chip-a", ui, true, false).child("Tokyo Night")) // text: sample (the gallery's specimen)
+        .child(style::pill("g-chip-b", ui, false, false).child("Nord")) // text: sample (the gallery's specimen)
+        .child(style::pill("g-chip-c", ui, false, false).child("Dracula")); // text: sample (the gallery's specimen)
     let list = div()
         .flex()
         .flex_col()
@@ -94,8 +94,8 @@ pub(super) fn render(
                 .gap_2()
                 .px_2()
                 .pt_1()
-                .child(style::drag_ghost(ui, None, "Wire up the CLI".into()).flex_none())
-                .child(div().text_caption().text_color(ui.muted).child("← an item being dragged")),
+                .child(style::drag_ghost(ui, None, "Wire up the CLI".into()).flex_none()) // text: sample (the gallery's specimen)
+                .child(div().text_caption().text_color(ui.muted).child("← an item being dragged")), // text: sample (the gallery's specimen)
         )
         .child(
             div()
@@ -108,11 +108,11 @@ pub(super) fn render(
                     style::drag_ghost(
                         ui,
                         Some(glyph("g-drag-glyph", style::StatusGlyph::NeedsYou)),
-                        "diff perf".into(),
+                        "diff perf".into(), // text: sample (the gallery's specimen)
                     )
                     .flex_none(),
                 )
-                .child(div().text_caption().text_color(ui.muted).child("← a terminal being dragged")),
+                .child(div().text_caption().text_color(ui.muted).child("← a terminal being dragged")), // text: sample (the gallery's specimen)
         )
         .child(
             div()
@@ -122,10 +122,10 @@ pub(super) fn render(
                 .px_2()
                 .pt_1()
                 .child(
-                    style::drag_lift(style::drag_ghost(ui, None, "Wire up the CLI".into()), ui, 1.0)
+                    style::drag_lift(style::drag_ghost(ui, None, "Wire up the CLI".into()), ui, 1.0) // text: sample (the gallery's specimen)
                         .flex_none(),
                 )
-                .child(div().text_caption().text_color(ui.muted).child("← lifted off the list")),
+                .child(div().text_caption().text_color(ui.muted).child("← lifted off the list")), // text: sample (the gallery's specimen)
         )
         .child(
             div().px_2().pt_1().child(style::card_lifted(
@@ -140,7 +140,7 @@ pub(super) fn render(
                     .items_center()
                     .text_body()
                     .text_color(ui.text)
-                    .child("A row, lifted"),
+                    .child("A row, lifted"), // text: sample (the gallery's specimen)
             )),
         )
         .child(
@@ -151,10 +151,10 @@ pub(super) fn render(
                 .mt_1()
                 .child(style::row_drop_target(ui))
                 .child(style::split_mark(ui))
-                .child(div().px_2().text_body().text_color(ui.text).child("A row that takes a split")),
+                .child(div().px_2().text_body().text_color(ui.text).child("A row that takes a split")), // text: sample (the gallery's specimen)
         )
-        .child(style::row("g-row-a", ui, true).child("A selected row"))
-        .child(style::row("g-row-b", ui, false).child("A row"))
+        .child(style::row("g-row-a", ui, true).child("A selected row")) // text: sample (the gallery's specimen)
+        .child(style::row("g-row-b", ui, false).child("A row")) // text: sample (the gallery's specimen)
         .child(
             div()
                 .flex()
@@ -162,7 +162,7 @@ pub(super) fn render(
                 .gap_2()
                 .px_2()
                 .pt_2()
-                .child(div().text_caption().text_color(ui.muted).child("Close the diff"))
+                .child(div().text_caption().text_color(ui.muted).child("Close the diff")) // text: sample (the gallery's specimen)
                 .child(env.mark("keycap", style::keycap(ui, "esc"))),
         );
     let badges = div()
@@ -173,24 +173,24 @@ pub(super) fn render(
         .child(style::count_badge(ui, "12"))
         .child(style::status_badge(ui, ui.success_text, "installed"))
         .child(style::status_badge(ui, ui.warning_text, "changed"))
-        .child(style::status_badge(ui, ui.muted, "not installed"))
+        .child(style::status_badge(ui, ui.muted, "not installed")) // text: sample (the gallery's specimen)
         .child(style::keycap(ui, "esc"));
     // What a token is used by (the inspector's "Used by"): grey, unlike an override's tint chip.
     let neutral = div()
         .flex()
         .flex_wrap()
         .gap_1()
-        .child(env.mark("neutral.chip", style::neutral_chip(ui, "sidebar row")))
-        .child(style::neutral_chip(ui, "folder band"))
-        .child(style::neutral_chip(ui, "settings nav"));
+        .child(env.mark("neutral.chip", style::neutral_chip(ui, "sidebar row"))) // text: sample (the gallery's specimen)
+        .child(style::neutral_chip(ui, "folder band")) // text: sample (the gallery's specimen)
+        .child(style::neutral_chip(ui, "settings nav")); // text: sample (the gallery's specimen)
     let card = style::card(ui, ui.border)
         .w_full()
         .max_w(px(280.0))
         .flex()
         .flex_col()
         .gap_1()
-        .child(div().text_body().child("A card sets a few lines apart"))
-        .child(div().text_caption().text_color(ui.muted).child("Release notes, a hint."));
+        .child(div().text_body().child("A card sets a few lines apart")) // text: sample (the gallery's specimen)
+        .child(div().text_caption().text_color(ui.muted).child("Release notes, a hint.")); // text: sample (the gallery's specimen)
     let navigation = div()
         .flex()
         .flex_col()
@@ -215,7 +215,7 @@ pub(super) fn render(
                     .text_caption()
                     .bg(tk("tooltip.background"))
                     .text_color(tk("tooltip.text"))
-                    .child("A tooltip explains a control"),
+                    .child("A tooltip explains a control"), // text: sample (the gallery's specimen)
             ),
         );
     navigation.into_any_element()

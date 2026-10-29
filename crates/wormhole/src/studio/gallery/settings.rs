@@ -15,6 +15,9 @@ use crate::settings::UiColors;
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge;
 
+/// The letters of the sample row's tiles.
+const LETTERS: &str = "DWPCSRABX"; // text: sample (the gallery's specimen)
+
 /// The settings content column and the nav, as wide as in the app.
 const COLUMN_W: f32 = 560.0;
 const NAV_W: f32 = 220.0;
@@ -55,34 +58,32 @@ fn profile_marks(env: &Env) -> Div {
         .flex()
         .flex_col()
         .gap_3()
-        .child(
-            div().flex().items_center().gap_2().children(
-                colors.iter().zip("DWPCSRABX".chars()).map(|((_, color), letter)| {
-                    style::profile_avatar(ui, *color, letter, style::TITLE_GLYPH)
-                }),
-            ),
-        )
-        .child(
-            div().flex().items_center().gap_2().children(
-                colors.iter().zip("DWPCSRABX".chars()).take(3).map(|((_, color), letter)| {
-                    style::profile_avatar(ui, *color, letter, PROFILE_AVATAR_LARGE)
-                }),
-            ),
-        )
+        .child(div().flex().items_center().gap_2().children(colors.iter().zip(LETTERS.chars()).map(
+            |((_, color), letter)| {
+                // text: sample (the gallery's specimen)
+                style::profile_avatar(ui, *color, letter, style::TITLE_GLYPH)
+            },
+        )))
+        .child(div().flex().items_center().gap_2().children(colors.iter().zip(LETTERS.chars()).take(3).map(
+            |((_, color), letter)| {
+                // text: sample (the gallery's specimen)
+                style::profile_avatar(ui, *color, letter, PROFILE_AVATAR_LARGE)
+            },
+        )))
         .child(
             div()
                 .flex()
                 .flex_col()
-                .child(style::choice_row("g-choice-copy", ui, "A copy of Default", true))
-                .child(style::choice_row("g-choice-defaults", ui, "Wormhole's defaults", false)),
+                .child(style::choice_row("g-choice-copy", ui, "A copy of Default", true)) // text: sample (the gallery's specimen)
+                .child(style::choice_row("g-choice-defaults", ui, "Wormhole's defaults", false)), // text: sample (the gallery's specimen)
         )
         .child(div().flex().items_center().gap_3().child(style::profile_chip(
             "g-profile-chip",
             ui,
             colors[1].1,
             'W',
-            "Work",
-            "Profile Work, switch profile",
+            "Work",                         // text: sample (the gallery's specimen)
+            "Profile Work, switch profile", // text: sample (the gallery's specimen)
         )))
         .child(
             div()
@@ -91,7 +92,7 @@ fn profile_marks(env: &Env) -> Div {
                 .rounded(ui.radius_lg)
                 .bg(ui.elevated)
                 .outlined(ui, ui.border_strong)
-                .child(style::popover_heading(ui, "Switch Wormhole to"))
+                .child(style::popover_heading(ui, "Switch Wormhole to")) // text: sample (the gallery's specimen)
                 .child(style::popover_row(
                     "g-menu-default",
                     ui,
@@ -100,8 +101,8 @@ fn profile_marks(env: &Env) -> Div {
                             style::profile_avatar(ui, colors[0].1, 'D', style::TITLE_GLYPH)
                                 .into_any_element(),
                         ),
-                        note: Some("every window switches".into()),
-                        ..style::PopoverRow::new("Default")
+                        note: Some("every window switches".into()), // text: sample (the gallery's specimen)
+                        ..style::PopoverRow::new("Default")         // text: sample (the gallery's specimen)
                     },
                 ))
                 .child(style::popover_row(
@@ -114,14 +115,14 @@ fn profile_marks(env: &Env) -> Div {
                         ),
                         note: Some("current".into()),
                         current: true,
-                        ..style::PopoverRow::new("Work")
+                        ..style::PopoverRow::new("Work") // text: sample (the gallery's specimen)
                     },
                 ))
                 .child(style::popover_rule(ui))
                 .child(style::popover_row(
                     "g-menu-settings",
                     ui,
-                    style::PopoverRow { key: Some("⌘,".into()), ..style::PopoverRow::new("Settings…") },
+                    style::PopoverRow { key: Some("⌘,".into()), ..style::PopoverRow::new("Settings…") }, // text: sample (the gallery's specimen)
                 )),
         )
         .child(
@@ -174,11 +175,11 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
         .flex_col()
         .w_full()
         .max_w(px(COLUMN_W))
-        .child(style::setting_group_head(ui, "Window", Some("A note at the right of the head")))
+        .child(style::setting_group_head(ui, "Window", Some("A note at the right of the head"))) // text: sample (the gallery's specimen)
         .child(row(
             "g-setting-default",
-            "Blur what's behind the window",
-            "Only visible below 100 % opacity",
+            "Blur what's behind the window", // text: sample (the gallery's specimen)
+            "Only visible below 100 % opacity", // text: sample (the gallery's specimen)
             "blur",
             SettingState::Default,
             None,
@@ -186,8 +187,8 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
         ))
         .child(row(
             "g-setting-changed",
-            "Line height",
-            "Terminal rows, as a multiple of the font size",
+            "Line height", // text: sample (the gallery's specimen)
+            "Terminal rows, as a multiple of the font size", // text: sample (the gallery's specimen)
             "line_height",
             SettingState::Changed,
             None,
@@ -196,17 +197,17 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
         ))
         .child(row(
             "g-setting-project",
-            "Theme",
-            "Set by api-server/.wormhole/theme.json while this terminal is active",
+            "Theme", // text: sample (the gallery's specimen)
+            "Set by api-server/.wormhole/theme.json while this terminal is active", // text: sample (the gallery's specimen)
             "theme",
             SettingState::Project("api-server".into()),
             None,
-            style::link_button("g-setting-edit", ui, "Edit in project", false).into_any_element(),
+            style::link_button("g-setting-edit", ui, "Edit in project", false).into_any_element(), // text: sample (the gallery's specimen)
         ))
         .child(row(
             "g-setting-slider",
-            "Background opacity",
-            "30–100 %. Below 100 % the desktop shows through",
+            "Background opacity", // text: sample (the gallery's specimen)
+            "30–100 %. Below 100 % the desktop shows through", // text: sample (the gallery's specimen)
             "opacity",
             SettingState::Default,
             None,
@@ -215,17 +216,17 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
         ))
         .child(row(
             "g-setting-link",
-            "Font",
-            "JetBrains Mono 14 pt · line height 1.30",
+            "Font",                                    // text: sample (the gallery's specimen)
+            "JetBrains Mono 14 pt · line height 1.30", // text: sample (the gallery's specimen)
             "",
             SettingState::Default,
             None,
-            style::link_button("g-setting-fonts", ui, "Edit in Fonts", true).into_any_element(),
+            style::link_button("g-setting-fonts", ui, "Edit in Fonts", true).into_any_element(), // text: sample (the gallery's specimen)
         ))
         .child(row(
             "g-setting-found",
-            "Wrap long lines",
-            "Otherwise the diff scrolls sideways",
+            "Wrap long lines",                     // text: sample (the gallery's specimen)
+            "Otherwise the diff scrolls sideways", // text: sample (the gallery's specimen)
             "diff_wrap",
             SettingState::Default,
             Some(10..14),
@@ -233,8 +234,8 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
         ))
         .child(row(
             "g-setting-disabled",
-            "Terminal layout",
-            "No layout.json in this project",
+            "Terminal layout",                // text: sample (the gallery's specimen)
+            "No layout.json in this project", // text: sample (the gallery's specimen)
             "layout",
             SettingState::Disabled,
             None,
@@ -269,15 +270,15 @@ fn nav(ui: UiColors) -> Div {
         .bg(ui.panel)
         .outlined(ui, ui.border)
         .p_2()
-        .child(style::nav_group_label(ui, "Look"))
-        .child(style::nav_row("g-nav-look", ui, IconName::Palette, "Appearance", false, NavMark::None))
-        .child(style::nav_row("g-nav-fonts", ui, IconName::ALargeSmall, "Fonts", true, NavMark::None))
-        .child(style::nav_group_label(ui, "Agents"))
+        .child(style::nav_group_label(ui, "Look")) // text: sample (the gallery's specimen)
+        .child(style::nav_row("g-nav-look", ui, IconName::Palette, "Appearance", false, NavMark::None)) // text: sample (the gallery's specimen)
+        .child(style::nav_row("g-nav-fonts", ui, IconName::ALargeSmall, "Fonts", true, NavMark::None)) // text: sample (the gallery's specimen)
+        .child(style::nav_group_label(ui, "Agents")) // text: sample (the gallery's specimen)
         .child(style::nav_row(
             "g-nav-agents",
             ui,
             IconName::Sparkles,
-            "Coding agents",
+            "Coding agents", // text: sample (the gallery's specimen)
             false,
             NavMark::Attention,
         ))
@@ -285,16 +286,16 @@ fn nav(ui: UiColors) -> Div {
             "g-nav-hits",
             ui,
             IconName::SquareTerminal,
-            "Terminal",
+            "Terminal", // text: sample (the gallery's specimen)
             false,
             NavMark::Hits(1),
         ))
-        .child(style::nav_row("g-nav-none", ui, IconName::ArrowDown, "Updates", false, NavMark::NoHits))
+        .child(style::nav_row("g-nav-none", ui, IconName::ArrowDown, "Updates", false, NavMark::NoHits)) // text: sample (the gallery's specimen)
         .child(style::nav_row(
             "g-nav-preview",
             ui,
             IconName::FlaskConical,
-            "Project folders",
+            "Project folders", // text: sample (the gallery's specimen)
             false,
             NavMark::Preview,
         ))
@@ -319,18 +320,18 @@ fn controls(env: &Env) -> Div {
                 .gap_4()
                 .child(
                     style::segmented_form(ui)
-                        .child(style::form_segment("g-form-split", ui, None, "Split", true))
-                        .child(style::form_segment("g-form-unified", ui, None, "Unified", false)),
+                        .child(style::form_segment("g-form-split", ui, None, "Split", true)) // text: sample (the gallery's specimen)
+                        .child(style::form_segment("g-form-unified", ui, None, "Unified", false)), // text: sample (the gallery's specimen)
                 )
                 .child(
                     style::segmented_form(ui)
-                        .child(mode("g-form-dark", IconName::Moon, "Dark", false))
-                        .child(mode("g-form-light", IconName::Sun, "Light", false))
-                        .child(mode("g-form-system", IconName::Monitor, "Match system", true)),
+                        .child(mode("g-form-dark", IconName::Moon, "Dark", false)) // text: sample (the gallery's specimen)
+                        .child(mode("g-form-light", IconName::Sun, "Light", false)) // text: sample (the gallery's specimen)
+                        .child(mode("g-form-system", IconName::Monitor, "Match system", true)), // text: sample (the gallery's specimen)
                 )
                 .child(env.mark(
                     "stepper",
-                    style::stepper(ui, "g-form-size", "14 pt".into(), |_, _, _| {}, |_, _, _| {}),
+                    style::stepper(ui, "g-form-size", "14 pt".into(), |_, _, _| {}, |_, _, _| {}), // text: sample (the gallery's specimen)
                 )),
         )
         .child(
@@ -346,7 +347,7 @@ fn controls(env: &Env) -> Div {
                         .map(|(ix, color)| style::swatch(("g-swatch", ix), ui, color, ix == 0)),
                 )
                 .child(env.mark("tint.chip", style::tint_chip(ui, Some(IconName::Folder), "api-server")))
-                .child(style::tint_chip(ui, None, "Bundled"))
+                .child(style::tint_chip(ui, None, "Bundled")) // text: sample (the gallery's specimen)
                 .child(style::changed_dot(ui))
                 .child(style::keycap(ui, "⇧⌘P"))
                 .child(style::keycap(ui, "esc"))
@@ -359,7 +360,7 @@ fn controls(env: &Env) -> Div {
                         .p_3()
                         .text_caption()
                         .text_color(ui.muted)
-                        .child("A preview's stage: its parts are placed by their distance from the top"),
+                        .child("A preview's stage: its parts are placed by their distance from the top"), // text: sample (the gallery's specimen)
                 ),
             ),
         )
@@ -369,7 +370,7 @@ fn controls(env: &Env) -> Div {
                     .p_3()
                     .text_caption()
                     .text_color(ui.muted)
-                    .child("A preview's surface: the panel a list stands on, on its own"),
+                    .child("A preview's surface: the panel a list stands on, on its own"), // text: sample (the gallery's specimen)
             ),
         )
         .child(
@@ -385,7 +386,7 @@ fn controls(env: &Env) -> Div {
                 .child(style::shortcut_recorder(
                     "g-rec-set",
                     ui,
-                    RecorderState::Set(vec!["⇧".into(), "⌘".into(), "Space".into()]),
+                    RecorderState::Set(vec!["⇧".into(), "⌘".into(), "Space".into()]), // text: sample (the gallery's specimen)
                     None,
                 ))
                 .child(style::shortcut_recorder(
@@ -402,11 +403,11 @@ fn controls(env: &Env) -> Div {
                         .child(style::shortcut_recorder(
                             "g-rec-conflict",
                             ui,
-                            RecorderState::Conflict(vec!["⌘".into(), "Space".into()]),
+                            RecorderState::Conflict(vec!["⌘".into(), "Space".into()]), // text: sample (the gallery's specimen)
                             None,
                         ))
                         .child(
-                            div().text_caption().text_color(ui.warning_text).child("Spotlight uses ⌘Space"),
+                            div().text_caption().text_color(ui.warning_text).child("Spotlight uses ⌘Space"), // text: sample (the gallery's specimen)
                         ),
                 ),
         )
@@ -446,16 +447,16 @@ fn arranged(ui: UiColors) -> Div {
         .flex_col()
         .w_full()
         .max_w(px(COLUMN_W))
-        .child(row("g-arrange-folder", IconName::Folder, "Folder", None, false, true))
+        .child(row("g-arrange-folder", IconName::Folder, "Folder", None, false, true)) // text: sample (the gallery's specimen)
         .child(row(
             "g-arrange-space",
             IconName::ArrowRightLeft,
-            "Flexible space",
-            Some("Left above, right below"),
+            "Flexible space",                // text: sample (the gallery's specimen)
+            Some("Left above, right below"), // text: sample (the gallery's specimen)
             false,
             false,
         ))
-        .child(row("g-arrange-ports", IconName::Globe, "Open ports", None, true, false))
+        .child(row("g-arrange-ports", IconName::Globe, "Open ports", None, true, false)) // text: sample (the gallery's specimen)
 }
 
 /// Inline banners of each kind, and the flush one of a panel.
@@ -474,30 +475,30 @@ fn banners(ui: UiColors) -> Div {
                 ui,
                 BannerKind::Info,
                 false,
-                "This terminal shows its project's theme. Your own is kept.",
+                "This terminal shows its project's theme. Your own is kept.", // text: sample (the gallery's specimen)
             )
-            .child(small("g-banner-info", "Project settings", false)),
+            .child(small("g-banner-info", "Project settings", false)), // text: sample (the gallery's specimen)
         )
         .child(
             style::banner(
                 ui,
                 BannerKind::Warning,
                 false,
-                "config.json line 12: expected “,”. Using the last good settings.",
+                "config.json line 12: expected “,”. Using the last good settings.", // text: sample (the gallery's specimen)
             )
-            .child(small("g-banner-warning", "Open", true)),
+            .child(small("g-banner-warning", "Open", true)), // text: sample (the gallery's specimen)
         )
         .child(style::banner(
             ui,
             BannerKind::Danger,
             false,
-            "Couldn't write ~/.gemini/settings.json: permission denied.",
+            "Couldn't write ~/.gemini/settings.json: permission denied.", // text: sample (the gallery's specimen)
         ))
-        .child(style::banner(ui, BannerKind::Success, false, "Status hooks installed for Claude Code."))
+        .child(style::banner(ui, BannerKind::Success, false, "Status hooks installed for Claude Code.")) // text: sample (the gallery's specimen)
         .child(style::banner(
             ui,
             BannerKind::Warning,
             true,
-            "The settings file changed on disk. Reload to use it.",
+            "The settings file changed on disk. Reload to use it.", // text: sample (the gallery's specimen)
         ))
 }

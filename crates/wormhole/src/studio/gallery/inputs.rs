@@ -26,7 +26,7 @@ pub(super) fn render(
                 .flex()
                 .gap_2()
                 .child(env.mark("input", div().w(px(220.0)).child(Input::new(&studio.sample_input).small())))
-                .child(div().text_caption().text_color(ui.muted).child("← a real input")),
+                .child(div().text_caption().text_color(ui.muted).child("← a real input")), // text: sample (the gallery's specimen)
         )
         .child(
             div()
@@ -41,11 +41,11 @@ pub(super) fn render(
                         div()
                             .flex()
                             .gap_4()
-                            .child(style::checkbox("g-check-off", ui, false).in_form("Checkbox"))
-                            .child(style::checkbox("g-check-on", ui, true).in_form("Checked"))
+                            .child(style::checkbox("g-check-off", ui, false).in_form("Checkbox")) // text: sample (the gallery's specimen)
+                            .child(style::checkbox("g-check-on", ui, true).in_form("Checked")) // text: sample (the gallery's specimen)
                             .child(
                                 style::checkbox("g-check-ring", ui, false)
-                                    .in_form("Focused")
+                                    .in_form("Focused") // text: sample (the gallery's specimen)
                                     .focus_ring(true),
                             ),
                     ),
@@ -56,12 +56,12 @@ pub(super) fn render(
                         div()
                             .flex()
                             .gap_4()
-                            .child(Switch::new("g-switch-off").label("Switch"))
-                            .child(Switch::new("g-switch-on").checked(true).label("On")),
+                            .child(Switch::new("g-switch-off").label("Switch")) // text: sample (the gallery's specimen)
+                            .child(Switch::new("g-switch-on").checked(true).label("On")), // text: sample (the gallery's specimen)
                     ),
                 )
-                .child(Radio::new("g-radio-off").label("Radio"))
-                .child(Radio::new("g-radio-on").checked(true).label("Selected")),
+                .child(Radio::new("g-radio-off").label("Radio")) // text: sample (the gallery's specimen)
+                .child(Radio::new("g-radio-on").checked(true).label("Selected")), // text: sample (the gallery's specimen)
         );
     inputs.into_any_element()
 }

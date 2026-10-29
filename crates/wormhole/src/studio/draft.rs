@@ -40,7 +40,8 @@ pub(super) const ANSI_NAMES: [&str; 16] = [
 /// A draft that starts out identical to `base`: extend it by name if it can be
 /// resolved that way (built-in or saved JSON theme), otherwise copy its palette.
 pub(super) fn draft_for(base: &ThemeTokens, resolve: Resolve) -> ThemeFile {
-    let mut draft = ThemeFile { name: Some(format!("{} Custom", base.name)), ..Default::default() };
+    let mut draft =
+        ThemeFile { name: Some(wormhole_text::keys::studio_custom_name(&base.name)), ..Default::default() };
     let by_name = ThemeFile { extends: Some(base.name.clone()), ..Default::default() };
     if resolve(&by_name).is_ok_and(|t| t.terminal == base.terminal) {
         draft.extends = Some(base.name.clone());
@@ -98,12 +99,19 @@ pub(super) fn export_dir(
 
 /// The name Save Copy gives: "<name> copy", then "<name> copy 2" and on while `taken`.
 pub(super) fn copy_name(name: &str, taken: impl Fn(&str) -> bool) -> String {
-    let first = format!("{name} copy");
+    let first = wormhole_text::keys::studio_copy_name(name);
     if !taken(&first) {
         return first;
     }
-    (2..).map(|n| format!("{name} copy {n}")).find(|candidate| !taken(candidate)).unwrap_or(first)
+    (2..)
+        .map(|n| wormhole_text::keys::studio_copy_name_n(name, &n.to_string()))
+        .find(|candidate| !taken(candidate))
+        .unwrap_or(first)
 }
+
+const TERMINAL_BAND: &str = "Terminal"; // text: a band title, as the core's groups are
+const ANSI_BAND: &str = "Terminal ANSI"; // text: a band title
+const SYNTAX_BAND: &str = "Syntax"; // text: a band title
 
 /// A group of the token list: its band's title and the tokens in it, in list order.
 pub(super) struct Group {
@@ -124,15 +132,15 @@ pub(super) fn groups() -> &'static [Group] {
             }
         }
         let names = |list: &[&str]| list.iter().map(|n| n.to_string()).collect();
-        groups.push(Group { name: "Terminal", tokens: names(TERMINAL_TOKENS) });
-        groups.push(Group { name: "Terminal ANSI", tokens: names(&ANSI_NAMES) });
+        groups.push(Group { name: TERMINAL_BAND, tokens: names(TERMINAL_TOKENS) });
+        groups.push(Group { name: ANSI_BAND, tokens: names(&ANSI_NAMES) });
         let syntax = syntax_keys()
             .map(|key| format!("syntax.{key}"))
             .filter(|node| {
                 default_rule(node, Appearance::Dark).is_some_and(|rule| !rule.starts_with("syntax."))
             })
             .collect();
-        groups.push(Group { name: "Syntax", tokens: syntax });
+        groups.push(Group { name: SYNTAX_BAND, tokens: syntax });
         groups
     });
     &GROUPS

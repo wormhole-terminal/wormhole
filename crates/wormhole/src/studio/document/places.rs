@@ -64,7 +64,7 @@ pub(in crate::studio) fn write_at(
     match place {
         Place::Top => set_override(file, name, value),
         Place::Variant(ix) => {
-            let Some(variant) = file.variants.get_mut(ix) else { return Err("no such appearance".into()) };
+            let Some(variant) = file.variants.get_mut(ix) else { return Err("no such appearance".into()) }; // text: error (logged, not shown)
             let mut layers = variant.to_file();
             set_override(&mut layers, name, value)?;
             // The variant's own base is not one of the layers `to_file` carries.
@@ -212,7 +212,7 @@ pub(in crate::studio) fn folded(file: &ThemeFile, shown: Option<&str>) -> ThemeF
     if file.variants.is_empty() {
         return file.clone();
     }
-    let family = file.name.as_deref().unwrap_or("Theme");
+    let family = file.name.as_deref().unwrap_or("Theme"); // text: not shown (a name for the folded variants)
     variants(file, family)
         .ok()
         .and_then(|all| {

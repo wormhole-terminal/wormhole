@@ -14,10 +14,10 @@ use crate::style::{self, TextRole};
 /// The value forms the field takes, shown while what is typed doesn't work.
 const FORMS: [(&str, &str); 5] = [
     ("#7aa2f7", "hex"),
-    ("primary / 20%", "alpha"),
-    ("mix(a, b, 30%)", "mix"),
-    ("lighten(a, 10%)", "lighter"),
-    ("readable(a, bg, 4.5)", "contrast"),
+    ("primary / 20%", "alpha"),           // text: code sample
+    ("mix(a, b, 30%)", "mix"),            // text: code sample
+    ("lighten(a, 10%)", "lighter"),       // text: code sample
+    ("readable(a, bg, 4.5)", "contrast"), // text: code sample,
 ];
 
 /// What is wrong with the value in the field.
@@ -125,7 +125,7 @@ impl StudioWindow {
                     .pl_6()
                     .text_caption()
                     .text_color(ui.muted)
-                    .child("Did you mean")
+                    .child(wormhole_text::text(wormhole_text::keys::STUDIO_DID_YOU_MEAN))
                     .child(
                         style::link_button("studio-did-you-mean", ui, name, false)
                             .font_family(code_font.clone())
@@ -144,7 +144,11 @@ impl StudioWindow {
                     .rounded(ui.radius)
                     .bg(ui.hover)
                     .text_caption()
-                    .child(div().text_color(ui.muted).child("Forms"))
+                    .child(
+                        div()
+                            .text_color(ui.muted)
+                            .child(wormhole_text::text(wormhole_text::keys::STUDIO_FORMS)),
+                    )
                     .children(forms),
             )
             .into_any_element()

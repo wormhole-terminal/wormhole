@@ -253,3 +253,78 @@ studio-date = { $day } { $month ->
     [12] Dec
    *[other] { $month }
 } { $year }
+
+## The token editor and the contrast cards
+
+studio-pick-a-token = Pick a token in the list, or click a color in the gallery, to edit it here.
+# { $description } says what the token is for, { $count } how many tokens follow it.
+studio-followers = { $count ->
+    [one] { $description }. 1 token follows it.
+   *[other] { $description }. { $count } tokens follow it.
+}
+studio-tag-last-good = last good value
+studio-section-value = Value
+studio-srgb-opaque = sRGB · opaque
+# { $percent } is the opacity, e.g. 40.
+studio-srgb-alpha = sRGB · { $percent }% alpha
+# { $source } is another metric, { $value } its size in points.
+studio-metric-follow = Follow { $source } ({ $value } px)
+studio-metric-help-width = A number of pixels. No color picker for metrics.
+studio-metric-help-radius = A number of pixels; a radius above half the height is fully round. No color picker for metrics.
+# { $value } is a size in points.
+studio-metric-px = { $value } px
+# { $value } is a size in points.
+studio-metric-preview = Preview at { $value }
+# { $count } is how many components use the token.
+studio-metric-uses = { $count ->
+    [one] 1 use
+   *[other] { $count } uses
+}
+studio-rule-set-here = This theme sets it, so the rule isn't used; Reset goes back to the rule.
+studio-rule-fixed = A fixed value. Typing a value overrides it; Reset goes back to the rule.
+# { $names } are the tokens it follows, in words.
+studio-rule-follows = Follows { $names }. Typing a value overrides it; Reset goes back to the rule.
+# { $theme } is the theme whose palette it comes from.
+studio-rule-palette = From the palette of { $theme }. Typing a value overrides it.
+studio-section-rule = Rule
+studio-section-used-by = Used by
+studio-used-by-none = No component draws with it directly; what follows it does.
+studio-used-by-outlined = Outlined in the gallery while selected.
+# { $slot } is 0 to 15.
+studio-describe-ansi = Terminal palette color { $slot }
+# { $key } is a syntax key, e.g. keyword.
+studio-describe-syntax = Code highlighting: { $key }
+studio-describe-background = The terminal's background
+studio-describe-foreground = The terminal's text
+studio-describe-cursor = The terminal's cursor
+studio-describe-selection = Selected text in the terminal
+# { $rest } are names joined by commas, { $last } the final one.
+studio-and-list = { $rest } and { $last }
+studio-did-you-mean = Did you mean
+studio-forms = Forms
+studio-expression-placeholder = #hex or expression, e.g. primary / 15%
+# { $name } is a token, { $area } the part of the app the gallery shows.
+studio-not-in-area = { $name } isn’t used in { $area }.
+# { $name } is a metric, { $value } what was typed.
+studio-not-pixels = { $name }: “{ $value }” is not a number of pixels
+# { $count } tokens fall short of a contrast minimum.
+studio-low-contrast-count = Low contrast · { $count }
+studio-contrast-show = Show
+# { $token } is the token whose fix also clears this.
+studio-contrast-follows = Follows { $token }: its fix clears this too.
+# { $background } is the colour it is drawn on.
+studio-contrast-on = on { $background }
+studio-contrast-on-fill = Contrast on this fill
+studio-contrast = Contrast
+# { $ratio } is the minimum ratio.
+studio-contrast-min = min { $ratio }
+
+## Names a theme gets
+
+# { $base } is the theme it started from.
+studio-custom-name = { $base } Custom
+# { $name } is the theme copied.
+studio-copy-name = { $name } copy
+# { $name } is the theme copied, { $n } which copy.
+studio-copy-name-n = { $name } copy { $n }
+studio-default-name = Theme

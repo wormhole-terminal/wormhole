@@ -82,7 +82,7 @@ pub(in crate::studio) fn set_override(
                     .parse::<f32>()
                     .ok()
                     .filter(|v| v.is_finite() && *v >= 0.0)
-                    .ok_or_else(|| format!("{name}: {v:?} is not a number of pixels"))?,
+                    .ok_or_else(|| wormhole_text::keys::studio_not_pixels(name, &v))?,
             ),
             None => None,
         };
@@ -92,7 +92,7 @@ pub(in crate::studio) fn set_override(
     if let Some(key) = name.strip_prefix("terminal.") {
         if let Some(index) = key.strip_prefix("ansi.") {
             let Some(slot) = index.parse::<usize>().ok().filter(|i| *i < 16) else {
-                return Err(format!("{name}: no such palette slot"));
+                return Err(format!("{name}: no such palette slot")); // text: error (logged, not shown)
             };
             // Under whatever name the file gives it: two keys for one slot would fight.
             file.terminal.ansi.retain(|k, _| ansi_index(k) != Some(slot));

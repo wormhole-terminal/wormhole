@@ -55,7 +55,7 @@ pub(super) fn render(
                 detail: None,
                 count: count.map(SharedString::from),
                 waiting: None,
-                add: Some(("Add", Box::new(|_, _, _| {}))),
+                add: Some(("Add", Box::new(|_, _, _| {}))), // text: sample (the gallery's specimen)
                 on_toggle: Some(Box::new(|_, _, _| {})),
                 drop_target: false,
                 sticky: false,
@@ -66,8 +66,8 @@ pub(super) fn render(
     };
     let actions = |id: &'static str| {
         vec![
-            style::item_action((id, 0usize), ui, IconName::ArrowUpRight, "Send to terminal", |_, _, _| {}),
-            style::item_action((id, 1usize), ui, IconName::X, "Delete", |_, _, _| {}),
+            style::item_action((id, 0usize), ui, IconName::ArrowUpRight, "Send to terminal", |_, _, _| {}), // text: sample (the gallery's specimen)
+            style::item_action((id, 1usize), ui, IconName::X, "Delete", |_, _, _| {}), // text: sample (the gallery's specimen)
         ]
     };
     let check = |id: &'static str, done: bool| style::checkbox(id, ui, done).into_any_element();
@@ -124,53 +124,52 @@ pub(super) fn render(
         )
     };
 
-    let notes =
-        || {
-            div()
-                .flex()
-                .flex_col()
-                .child(env.mark("panel.band", section("g-sec-steps", "Next steps", Section::Open, Some("2"))))
-                .child(env.mark(
-                    "panel.item",
-                    task("g-flush-task", "Update README with setup steps", false, Some(0)),
-                ))
-                .child(task("g-flush-done", "Fix the flaky login test", true, Some(1)))
-                // Being edited: the editor in place of the label, the fill and the actions stay on.
-                .child(style::item_row(
-                    "g-flush-editing",
-                    ui,
-                    ItemParts {
-                        lead: check("g-flush-editing-check", false),
-                        main: style::item_editor(Input::new(&studio.item_editor).appearance(false).small())
-                            .into_any_element(),
-                        actions: actions("g-flush-editing"),
-                        body: None,
-                        active: true,
-                        reorder: None,
-                    },
-                ))
-                // More done steps than five fold into one row after the open ones.
-                .child(
-                    style::flush_row("g-done-fold", ui, false)
-                        .child(style::lead(style::disclosure(ui, true)))
-                        .child(div().text_color(ui.muted).child("12 done")),
-                )
-                .child(section("g-sec-notes", "Notes", Section::Open, Some("2")))
-                .child(note("g-flush-note-closed", "Release checklist", None))
-                .child(note(
-                    "g-flush-note-open",
-                    "Sidebar ideas",
-                    Some("Drop the idle line on quiet rows.\nBranch as a chip next to the folder name."),
-                ))
-                .child(section("g-sec-folded", "Notes", Section::Collapsed, Some("2")))
-                .child(section("g-sec-empty", "Notes", Section::Empty, None))
-        };
+    let notes = || {
+        div()
+            .flex()
+            .flex_col()
+            .child(env.mark("panel.band", section("g-sec-steps", "Next steps", Section::Open, Some("2")))) // text: sample (the gallery's specimen)
+            .child(env.mark(
+                "panel.item",
+                task("g-flush-task", "Update README with setup steps", false, Some(0)), // text: sample (the gallery's specimen)
+            ))
+            .child(task("g-flush-done", "Fix the flaky login test", true, Some(1))) // text: sample (the gallery's specimen)
+            // Being edited: the editor in place of the label, the fill and the actions stay on.
+            .child(style::item_row(
+                "g-flush-editing",
+                ui,
+                ItemParts {
+                    lead: check("g-flush-editing-check", false),
+                    main: style::item_editor(Input::new(&studio.item_editor).appearance(false).small())
+                        .into_any_element(),
+                    actions: actions("g-flush-editing"),
+                    body: None,
+                    active: true,
+                    reorder: None,
+                },
+            ))
+            // More done steps than five fold into one row after the open ones.
+            .child(
+                style::flush_row("g-done-fold", ui, false)
+                    .child(style::lead(style::disclosure(ui, true)))
+                    .child(div().text_color(ui.muted).child("12 done")), // text: sample (the gallery's specimen)
+            )
+            .child(section("g-sec-notes", "Notes", Section::Open, Some("2"))) // text: sample (the gallery's specimen)
+            .child(note("g-flush-note-closed", "Release checklist", None)) // text: sample (the gallery's specimen)
+            .child(note(
+                "g-flush-note-open",
+                "Sidebar ideas", // text: sample (the gallery's specimen)
+                Some("Drop the idle line on quiet rows.\nBranch as a chip next to the folder name."), // text: sample (the gallery's specimen)
+            ))
+            .child(section("g-sec-folded", "Notes", Section::Collapsed, Some("2"))) // text: sample (the gallery's specimen)
+            .child(section("g-sec-empty", "Notes", Section::Empty, None)) // text: sample (the gallery's specimen)
+    };
 
     let changes = || {
         div()
             .flex()
             .flex_col()
-            .child(section("g-sec-changes", "Changes", Section::Open, Some("6")))
+            .child(section("g-sec-changes", "Changes", Section::Open, Some("6"))) // text: sample (the gallery's specimen)
             .child(file(
                 "g-file-m",
                 "style.rs",
@@ -238,12 +237,12 @@ pub(super) fn render(
                 style::SubmoduleRow {
                     name: "wormhole-vt".into(),
                     folder: "crates".into(),
-                    what: "2 new commits · uncommitted changes".into(),
+                    what: "2 new commits · uncommitted changes".into(), // text: sample (the gallery's specimen)
                     kind: ChangeKind::Modified,
                     depth: 0,
                     selected: false,
                     enter: Some(style::Enter {
-                        tooltip: "Open a terminal in wormhole-vt".into(),
+                        tooltip: "Open a terminal in wormhole-vt".into(), // text: sample (the gallery's specimen)
                         on_click: Box::new(|_, _, _| {}),
                     }),
                 },
@@ -276,7 +275,7 @@ pub(super) fn render(
                 style::CommitRow {
                     subject: subject.into(),
                     sha: sha.into(),
-                    author: "Ada".into(),
+                    author: "Ada".into(), // text: sample (the gallery's specimen)
                     age: age.into(),
                     code_font: crate::fonts::code_font(cx).0,
                     expanded,
@@ -292,7 +291,7 @@ pub(super) fn render(
                 "commit.row",
                 commit(
                     "g-commit-open",
-                    "feat(ui): unify design system across panels",
+                    "feat(ui): unify design system across panels", // text: sample (the gallery's specimen)
                     "adcd556",
                     "30m",
                     true,
@@ -310,7 +309,7 @@ pub(super) fn render(
             ))
             .child(commit(
                 "g-commit",
-                "chore(dev): add watch-and-relaunch dev script",
+                "chore(dev): add watch-and-relaunch dev script", // text: sample (the gallery's specimen)
                 "19601d4",
                 "31m",
                 false,
@@ -335,7 +334,7 @@ pub(super) fn render(
                         wormhole_text::keys::history_open_parent("295829f"),
                     )),
             )
-            .child(commit("g-commit-merge", "Merge branch 'dev' into main", "5be0a41", "2h", false, true))
+            .child(commit("g-commit-merge", "Merge branch 'dev' into main", "5be0a41", "2h", false, true)) // text: sample (the gallery's specimen)
     };
 
     let two_line = |id: &'static str, icon, title: &'static str, detail: SharedString, warn: bool| {
@@ -367,12 +366,12 @@ pub(super) fn render(
                     style::callout(
                         ui,
                         style::BannerKind::Warning,
-                        "Trust this project?",
+                        "Trust this project?", // text: sample (the gallery's specimen)
                         [
                             div()
                                 .text_caption()
                                 .text_color(ui.muted)
-                                .child("It wants to run these commands. Nothing runs until you approve.")
+                                .child("It wants to run these commands. Nothing runs until you approve.") // text: sample (the gallery's specimen)
                                 .into_any_element(),
                             div()
                                 .p_2()
@@ -380,37 +379,37 @@ pub(super) fn render(
                                 .bg(ui.hover)
                                 .text_caption()
                                 .font_family(code)
-                                .child("cargo test --workspace")
+                                .child("cargo test --workspace") // text: sample (the gallery's specimen)
                                 .into_any_element(),
                             Button::new("g-trust")
                                 .primary()
                                 .small()
-                                .label("Trust with Touch ID")
+                                .label("Trust with Touch ID") // text: sample (the gallery's specimen)
                                 .into_any_element(),
                         ],
                     ),
                 ),
             )
-            .child(section("g-sec-use", "Use from this project", Section::Open, None))
+            .child(section("g-sec-use", "Use from this project", Section::Open, None)) // text: sample (the gallery's specimen)
             .child(two_line(
                 "g-feature-settings",
                 IconName::Settings,
-                "Settings",
-                "Setting overrides and shell".into(),
+                "Settings",                           // text: sample (the gallery's specimen)
+                "Setting overrides and shell".into(), // text: sample (the gallery's specimen)
                 false,
             ))
             // A file that sets nothing yet reads in the plain colour; what trust holds back, in the warning one.
             .child(two_line(
                 "g-feature-layout",
                 IconName::SquareTerminal,
-                "Terminal layout",
+                "Terminal layout", // text: sample (the gallery's specimen)
                 hint(FeatureStanding::Empty, Feature::Layout),
                 false,
             ))
             .child(two_line(
                 "g-feature-actions",
                 IconName::Play,
-                "Actions",
+                "Actions", // text: sample (the gallery's specimen)
                 hint(FeatureStanding::NeedsTrust, Feature::Actions),
                 true,
             ))
@@ -419,8 +418,8 @@ pub(super) fn render(
                 ui,
                 style::TwoLineRow {
                     lead: style::icon(IconName::File).text_color(ui.muted).into_any_element(),
-                    title: "Review the diff".into(),
-                    detail: Some("Point out bugs, then simplifications".into()),
+                    title: "Review the diff".into(), // text: sample (the gallery's specimen)
+                    detail: Some("Point out bugs, then simplifications".into()), // text: sample (the gallery's specimen)
                     detail_color: None,
                     trailing: None,
                     actions: actions("g-prompt"),
@@ -434,16 +433,16 @@ pub(super) fn render(
             .items_center()
             .gap_1()
             .when(notes_on, |d| {
-                d.child(style::icon_tab("g-ftab-notes", ui, IconName::FileText, "Notes", false, None))
+                d.child(style::icon_tab("g-ftab-notes", ui, IconName::FileText, "Notes", false, None)) // text: sample (the gallery's specimen)
             })
-            .child(style::icon_tab("g-ftab-changes", ui, IconName::GitCompare, "Changes", false, Some(3)))
+            .child(style::icon_tab("g-ftab-changes", ui, IconName::GitCompare, "Changes", false, Some(3))) // text: sample (the gallery's specimen)
             .child(env.mark(
                 "icon.tab",
                 style::icon_tab(
                     "g-ftab-history",
                     ui,
                     IconName::GitCommitHorizontal,
-                    "History",
+                    "History", // text: sample (the gallery's specimen)
                     true,
                     Some(3),
                 ),
@@ -452,7 +451,7 @@ pub(super) fn render(
     };
 
     // A note where a list would be, in a card of its own.
-    let note_card = || style::panel_card(ui, style::empty_note(ui, "No changes. Working tree is clean."));
+    let note_card = || style::panel_card(ui, style::empty_note(ui, "No changes. Working tree is clean.")); // text: sample (the gallery's specimen)
 
     // A plain band (the Theme Studio's groups), as the panel drew its sections before the cards.
     let flat_band = || {
@@ -462,7 +461,7 @@ pub(super) fn render(
             BandParts {
                 kind: BandKind::Section,
                 section: Section::Open,
-                title: "Plain band".into(),
+                title: "Plain band".into(), // text: sample (the gallery's specimen)
                 detail: None,
                 count: Some("3".into()),
                 waiting: None,
