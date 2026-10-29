@@ -54,7 +54,7 @@ pub(super) fn render(
             true,
             false,
             None,
-            row("g-card-1", StatusGlyph::Working, "sidebar polish", "Editing tabs.rs", RowTone::Plain, true),
+            row("g-card-1", StatusGlyph::Working, "sidebar polish", "Editing tabs.rs", RowTone::Plain, true), // text: sample (the gallery's specimen)
         ))
         .child(style::card_segment(
             ui,
@@ -62,7 +62,7 @@ pub(super) fn render(
             false,
             true,
             None,
-            row("g-card-2", StatusGlyph::NeedsYou, "diff perf", "Waiting for you", RowTone::Attention, false),
+            row("g-card-2", StatusGlyph::NeedsYou, "diff perf", "Waiting for you", RowTone::Attention, false), // text: sample (the gallery's specimen)
         ));
 
     let tab = |id: &'static str, glyph: StatusGlyph, name: &'static str, selected| {
@@ -93,9 +93,9 @@ pub(super) fn render(
             id,
             ui,
             style::GroupSwitch {
-                name: "Release 1.2".into(),
+                name: "Release 1.2".into(), // text: sample (the gallery's specimen)
                 alert,
-                spoken: "Group Release 1.2, 3 terminals".into(),
+                spoken: "Group Release 1.2, 3 terminals".into(), // text: sample (the gallery's specimen)
             },
         )
     };
@@ -107,27 +107,27 @@ pub(super) fn render(
         .py_2()
         .child(switch("g-switch", true))
         .child(style::tab_divider(ui, 16.0))
-        .child(tab("g-tab-1", StatusGlyph::Working, "sidebar polish", true))
+        .child(tab("g-tab-1", StatusGlyph::Working, "sidebar polish", true)) // text: sample (the gallery's specimen)
         .child(tab("g-tab-2", StatusGlyph::Done, "release", false))
         .child(style::tab_divider(ui, 14.0))
-        .child(tab("g-tab-3", StatusGlyph::Idle, "cargo test", false));
+        .child(tab("g-tab-3", StatusGlyph::Idle, "cargo test", false)); // text: sample (the gallery's specimen)
 
     div()
         .flex()
         .flex_col()
         .gap_2()
-        .child(caption(ui, "Status tiles · every state at 32, 20, 18, 16 and 14 pt"))
+        .child(caption(ui, "Status tiles · every state at 32, 20, 18, 16 and 14 pt")) // text: sample (the gallery's specimen)
         .child(env.mark("status.tile", tiles))
         .child(caption(
             ui,
-            "A status change · working to needs input, a third of the way through each variant",
+            "A status change · working to needs input, a third of the way through each variant", // text: sample (the gallery's specimen)
         ))
         .child(status_changes(ui, app))
-        .child(caption(ui, "A count turning over · 12 to 13, 19 to 20 and 20 to 19, half way"))
+        .child(caption(ui, "A count turning over · 12 to 13, 19 to 20 and 20 to 19, half way")) // text: sample (the gallery's specimen)
         .child(rolling_counts(ui))
-        .child(caption(ui, "A card of terminals"))
+        .child(caption(ui, "A card of terminals")) // text: sample (the gallery's specimen)
         .child(card)
-        .child(caption(ui, "Tab bar · the group switcher with its amber dot, the open tab and the others"))
+        .child(caption(ui, "Tab bar · the group switcher with its amber dot, the open tab and the others")) // text: sample (the gallery's specimen)
         .child(tabs)
         .into_any_element()
 }
@@ -191,9 +191,9 @@ fn tile_states(ui: UiColors, app: &App) -> Div {
     };
     let mut column = div().flex().flex_col().gap_1().px_2().py_1();
     for (label, size) in sizes {
-        column = column.child(line(format!("{label} pt"), false, size));
+        column = column.child(line(format!("{label} pt"), false, size)); // text: sample (the gallery's specimen)
     }
-    column.child(line("32 pt on a selected row".to_string(), true, TILE))
+    column.child(line("32 pt on a selected row".to_string(), true, TILE)) // text: sample (the gallery's specimen)
 }
 
 /// Each variant of a status change (Classic is a cut, so there is nothing of it to catch) with its tile
@@ -239,7 +239,7 @@ fn status_changes(ui: UiColors, app: &App) -> Div {
 
 /// Counts caught half way through turning over: one place, two that turn up and two that turn down.
 fn rolling_counts(ui: UiColors) -> Div {
-    let count = |id: &'static str, from: usize, to: usize| {
+    let rolling = |id: &'static str, from: usize, to: usize| {
         div().text_caption().tabular_nums().text_color(ui.text).child(style::rolling_number(
             id,
             to,
@@ -252,7 +252,7 @@ fn rolling_counts(ui: UiColors) -> Div {
         .gap_4()
         .px_4()
         .py_2()
-        .child(count("g-roll-1", 12, 13))
-        .child(count("g-roll-2", 19, 20))
-        .child(count("g-roll-3", 20, 19))
+        .child(rolling("g-roll-1", 12, 13)) // text: sample (the gallery's specimen)
+        .child(rolling("g-roll-2", 19, 20)) // text: sample (the gallery's specimen)
+        .child(rolling("g-roll-3", 20, 19)) // text: sample (the gallery's specimen)
 }

@@ -30,11 +30,11 @@ pub(super) fn render(
                     .truncate()
                     .font_weight(FontWeight::NORMAL)
                     .text_color(ui.faint)
-                    .child("~/Projects/terminal"),
+                    .child("~/Projects/terminal"), // text: sample (the gallery's specimen)
             )
             .child(div().flex_1())
-            .child(style::icon_button((id, 2u64), ui, IconName::Maximize, "Zoom pane").in_row())
-            .child(style::icon_button((id, 3u64), ui, IconName::Ellipsis, "Pane menu").in_row())
+            .child(style::icon_button((id, 2u64), ui, IconName::Maximize, "Zoom pane").in_row()) // text: sample (the gallery's specimen)
+            .child(style::icon_button((id, 3u64), ui, IconName::Ellipsis, "Pane menu").in_row()) // text: sample (the gallery's specimen)
             .child(style::hit_area(
                 (id, 4u64),
                 style::CONTROL_H_SM,
@@ -62,7 +62,7 @@ pub(super) fn render(
                         .flex()
                         .flex_col()
                         .child(header("g-pane-focused", true, style::StatusGlyph::Working, "claude"))
-                        .child(body("← focused: semibold, full strength, the primary line")),
+                        .child(body("← focused: semibold, full strength, the primary line")), // text: sample (the gallery's specimen)
                 )
                 .child(
                     div()
@@ -72,7 +72,7 @@ pub(super) fn render(
                         .flex()
                         .flex_col()
                         .child(header("g-pane-other", false, style::StatusGlyph::Terminal { unread: false }, "zsh"))
-                        .child(body("← another pane: muted, its text at 72 %").opacity(style::PANE_DIM))
+                        .child(body("← another pane: muted, its text at 72 %").opacity(style::PANE_DIM)) // text: sample (the gallery's specimen)
                         .child(style::pane_divider("g-divider-rest", ui, Axis::Row, style::DividerLook::Rest, false)),
                 ),
         )
@@ -102,7 +102,7 @@ pub(super) fn render(
                     div()
                         .text_caption()
                         .text_color(ui.muted)
-                        .child("← dividers: hovered, dragged, and a horizontal one (drag to resize, double-click to equalize)"),
+                        .child("← dividers: hovered, dragged, and a horizontal one (drag to resize, double-click to equalize)"), // text: sample (the gallery's specimen)
                 ),
         )
         .child(
@@ -117,7 +117,7 @@ pub(super) fn render(
                     div()
                         .text_caption()
                         .text_color(ui.muted)
-                        .child("← split gaps on: the focused pane's outline, and another's"),
+                        .child("← split gaps on: the focused pane's outline, and another's"), // text: sample (the gallery's specimen)
                 ),
         )
         .child(
@@ -144,7 +144,7 @@ pub(super) fn render(
                     div()
                         .text_caption()
                         .text_color(ui.muted)
-                        .child("← the lines between the sidebar, the terminal and the panel"),
+                        .child("← the lines between the sidebar, the terminal and the panel"), // text: sample (the gallery's specimen)
                 ),
         )
         .child(drop_zones(ui))
@@ -152,7 +152,7 @@ pub(super) fn render(
             div()
                 .text_caption()
                 .text_color(ui.muted)
-                .child("↑ a terminal dragged over a pane: where it would land, and the other sides"),
+                .child("↑ a terminal dragged over a pane: where it would land, and the other sides"), // text: sample (the gallery's specimen)
         )
         .into_any_element()
 }
@@ -186,7 +186,7 @@ fn drop_zones(ui: UiColors) -> Div {
                 .top_0()
                 .w(px(DROP_SAMPLE_W / 2.0))
                 .h(px(DROP_SAMPLE_H))
-                .child(style::drop_hint(ui, "Show on the right")),
+                .child(style::drop_hint(ui, "Show on the right")), // text: sample (the gallery's specimen)
         )
 }
 

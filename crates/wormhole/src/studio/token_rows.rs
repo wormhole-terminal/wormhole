@@ -107,14 +107,14 @@ pub(super) fn build(inputs: &Inputs) -> Built {
     let shown = visible(show, area, query, &origin, &|name| low.contains(name));
     // Filtering shows what it found: every group that has a hit, open.
     let filtering = show != Show::All || area.is_some() || !query.trim().is_empty();
-    let count =
+    let tally =
         |show| visible(show, area, "", &origin, &|_| false).iter().map(|(_, t)| t.len()).sum::<usize>();
-    let (yours_count, base_count) = (count(Show::Yours), count(Show::Base));
+    let (yours_count, base_count) = (tally(Show::Yours), tally(Show::Base));
     let low_count = low.iter().filter(|name| in_area(name, area)).count();
 
     let mut rows = Vec::new();
     if let Some(name) = inputs.selected.filter(|name| !in_area(name, area)) {
-        rows.push(ListRow::NotInArea(format!("{name} isn\u{2019}t used in {}.", inputs.area_label)));
+        rows.push(ListRow::NotInArea(wormhole_text::keys::studio_not_in_area(name, inputs.area_label)));
     }
     let mut joined = false;
     for (group, names) in shown {

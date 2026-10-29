@@ -9,7 +9,7 @@ use super::view::GalleryView;
 use crate::style::{self, Edges, TextRole};
 
 /// The names under the sketches; the Studio's gallery is not interface text.
-const NAMES: [&str; 3] = ["Zen", "Balanced", "Everything"];
+const NAMES: [&str; 3] = ["Zen", "Balanced", "Everything"]; // text: sample (the gallery's specimen)
 /// The tabs "all of the tools" draws in a sketch.
 const TOOLS: usize = 4;
 

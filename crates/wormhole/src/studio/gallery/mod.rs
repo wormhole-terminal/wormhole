@@ -83,12 +83,12 @@ impl Area {
 
     pub(super) fn label(self) -> &'static str {
         match self {
-            Area::All => "All",
-            Area::Sidebar => "Sidebar",
-            Area::Panel => "Panel",
-            Area::Chrome => "Chrome",
-            Area::Settings => "Settings",
-            Area::Ambient => "Ambient",
+            Area::All => "All",           // text: sample (the gallery's specimen)
+            Area::Sidebar => "Sidebar",   // text: sample (the gallery's specimen)
+            Area::Panel => "Panel",       // text: sample (the gallery's specimen)
+            Area::Chrome => "Chrome",     // text: sample (the gallery's specimen)
+            Area::Settings => "Settings", // text: sample (the gallery's specimen)
+            Area::Ambient => "Ambient",   // text: sample (the gallery's specimen)
         }
     }
 
@@ -134,8 +134,8 @@ struct Specimen {
 
 const SPECIMENS: &[Specimen] = &[
     Specimen {
-        title: "Sidebar",
-        description: "bands, rows in every state, glyphs, status bar",
+        title: "Sidebar", // text: sample (the gallery's specimen)
+        description: "bands, rows in every state, glyphs, status bar", // text: sample (the gallery's specimen)
         area: Some(Area::Sidebar),
         column: Column::Left,
         part_gap: 16.0,
@@ -143,8 +143,8 @@ const SPECIMENS: &[Specimen] = &[
         render: sidebar::render,
     },
     Specimen {
-        title: "Tiles and tabs",
-        description: "status tiles, a card, the tab bars' tabs, chips, piles and segments",
+        title: "Tiles and tabs", // text: sample (the gallery's specimen)
+        description: "status tiles, a card, the tab bars' tabs, chips, piles and segments", // text: sample (the gallery's specimen)
         area: Some(Area::Sidebar),
         column: Column::Left,
         part_gap: 0.0,
@@ -152,8 +152,8 @@ const SPECIMENS: &[Specimen] = &[
         render: tiles::render,
     },
     Specimen {
-        title: "Right panel",
-        description: "section bands, items, files, commits, icon tabs",
+        title: "Right panel", // text: sample (the gallery's specimen)
+        description: "section bands, items, files, commits, icon tabs", // text: sample (the gallery's specimen)
         area: Some(Area::Panel),
         column: Column::Right,
         part_gap: 16.0,
@@ -161,8 +161,8 @@ const SPECIMENS: &[Specimen] = &[
         render: panel::render,
     },
     Specimen {
-        title: "Diff",
-        description: "header, hunk, context, removed, added, filler",
+        title: "Diff", // text: sample (the gallery's specimen)
+        description: "header, hunk, context, removed, added, filler", // text: sample (the gallery's specimen)
         area: Some(Area::Panel),
         column: Column::Right,
         part_gap: 0.0,
@@ -170,8 +170,8 @@ const SPECIMENS: &[Specimen] = &[
         render: diff::render,
     },
     Specimen {
-        title: "Chrome",
-        description: "icons, icon buttons, the × and hit areas",
+        title: "Chrome", // text: sample (the gallery's specimen)
+        description: "icons, icon buttons, the × and hit areas", // text: sample (the gallery's specimen)
         area: Some(Area::Chrome),
         column: Column::Left,
         part_gap: 0.0,
@@ -179,8 +179,8 @@ const SPECIMENS: &[Specimen] = &[
         render: chrome::render,
     },
     Specimen {
-        title: "Find",
-        description: "the find bar, matches and the current one",
+        title: "Find",                                            // text: sample (the gallery's specimen)
+        description: "the find bar, matches and the current one", // text: sample (the gallery's specimen)
         area: Some(Area::Chrome),
         column: Column::Both,
         part_gap: 0.0,
@@ -188,8 +188,8 @@ const SPECIMENS: &[Specimen] = &[
         render: find::render,
     },
     Specimen {
-        title: "Panes",
-        description: "pane headers, focused and not, and the dividers",
+        title: "Panes", // text: sample (the gallery's specimen)
+        description: "pane headers, focused and not, and the dividers", // text: sample (the gallery's specimen)
         area: Some(Area::Chrome),
         column: Column::Both,
         part_gap: 0.0,
@@ -197,8 +197,8 @@ const SPECIMENS: &[Specimen] = &[
         render: panes::render,
     },
     Specimen {
-        title: "Tabs and chips",
-        description: "tabs, chips, badges, rows, cards, tooltips",
+        title: "Tabs and chips", // text: sample (the gallery's specimen)
+        description: "tabs, chips, badges, rows, cards, tooltips", // text: sample (the gallery's specimen)
         area: Some(Area::Chrome),
         column: Column::Left,
         part_gap: 0.0,
@@ -206,8 +206,8 @@ const SPECIMENS: &[Specimen] = &[
         render: navigation::render,
     },
     Specimen {
-        title: "Labels",
-        description: "titles, section labels, empty notes, toolbars",
+        title: "Labels", // text: sample (the gallery's specimen)
+        description: "titles, section labels, empty notes, toolbars", // text: sample (the gallery's specimen)
         area: Some(Area::Chrome),
         column: Column::Left,
         part_gap: 0.0,
@@ -215,8 +215,8 @@ const SPECIMENS: &[Specimen] = &[
         render: labels::render,
     },
     Specimen {
-        title: "Shape",
-        description: "radii, the focus ring, everything chip-shaped",
+        title: "Shape", // text: sample (the gallery's specimen)
+        description: "radii, the focus ring, everything chip-shaped", // text: sample (the gallery's specimen)
         area: Some(Area::Chrome),
         column: Column::Left,
         part_gap: 0.0,
@@ -224,8 +224,8 @@ const SPECIMENS: &[Specimen] = &[
         render: shape::render,
     },
     Specimen {
-        title: "Settings",
-        description: "rows, nav, controls, banners",
+        title: "Settings",                           // text: sample (the gallery's specimen)
+        description: "rows, nav, controls, banners", // text: sample (the gallery's specimen)
         area: Some(Area::Settings),
         column: Column::Both,
         part_gap: 24.0,
@@ -233,8 +233,8 @@ const SPECIMENS: &[Specimen] = &[
         render: settings::render,
     },
     Specimen {
-        title: "Buttons",
-        description: "variants and sizes",
+        title: "Buttons",                  // text: sample (the gallery's specimen)
+        description: "variants and sizes", // text: sample (the gallery's specimen)
         area: Some(Area::Settings),
         column: Column::Right,
         part_gap: 0.0,
@@ -242,8 +242,8 @@ const SPECIMENS: &[Specimen] = &[
         render: buttons::render,
     },
     Specimen {
-        title: "Inputs",
-        description: "fields, checkboxes and switches",
+        title: "Inputs",                                // text: sample (the gallery's specimen)
+        description: "fields, checkboxes and switches", // text: sample (the gallery's specimen)
         area: Some(Area::Settings),
         column: Column::Right,
         part_gap: 0.0,
@@ -251,8 +251,8 @@ const SPECIMENS: &[Specimen] = &[
         render: inputs::render,
     },
     Specimen {
-        title: "Menus",
-        description: "the select and the menu it opens",
+        title: "Menus",                                  // text: sample (the gallery's specimen)
+        description: "the select and the menu it opens", // text: sample (the gallery's specimen)
         area: Some(Area::Settings),
         column: Column::Right,
         part_gap: 0.0,
@@ -260,8 +260,8 @@ const SPECIMENS: &[Specimen] = &[
         render: selects::render,
     },
     Specimen {
-        title: "Window sketch",
-        description: "the window drawn small, as the first run's questions offer it",
+        title: "Window sketch", // text: sample (the gallery's specimen)
+        description: "the window drawn small, as the first run's questions offer it", // text: sample (the gallery's specimen)
         area: Some(Area::Settings),
         column: Column::Right,
         part_gap: 0.0,
@@ -269,8 +269,8 @@ const SPECIMENS: &[Specimen] = &[
         render: sketch::render,
     },
     Specimen {
-        title: "Windows",
-        description: "dialog, first-run sheet, About, Licenses",
+        title: "Windows", // text: sample (the gallery's specimen)
+        description: "dialog, first-run sheet, About, Licenses", // text: sample (the gallery's specimen)
         area: Some(Area::Settings),
         column: Column::Right,
         part_gap: 0.0,
@@ -278,8 +278,8 @@ const SPECIMENS: &[Specimen] = &[
         render: windows::render,
     },
     Specimen {
-        title: "Notifications",
-        description: "quick panel and palette rows, readout",
+        title: "Notifications", // text: sample (the gallery's specimen)
+        description: "quick panel and palette rows, readout", // text: sample (the gallery's specimen)
         area: Some(Area::Ambient),
         column: Column::Both,
         part_gap: 0.0,
@@ -287,8 +287,8 @@ const SPECIMENS: &[Specimen] = &[
         render: ambient::render,
     },
     Specimen {
-        title: "Terminal",
-        description: "16 ANSI, text, selection, cursor",
+        title: "Terminal",                               // text: sample (the gallery's specimen)
+        description: "16 ANSI, text, selection, cursor", // text: sample (the gallery's specimen)
         area: None,
         column: Column::Left,
         part_gap: 0.0,
@@ -296,8 +296,8 @@ const SPECIMENS: &[Specimen] = &[
         render: terminal::render,
     },
     Specimen {
-        title: "Code",
-        description: "highlighting from the syntax tokens",
+        title: "Code",                                      // text: sample (the gallery's specimen)
+        description: "highlighting from the syntax tokens", // text: sample (the gallery's specimen)
         area: None,
         column: Column::Left,
         part_gap: 0.0,
@@ -305,8 +305,8 @@ const SPECIMENS: &[Specimen] = &[
         render: syntax::render,
     },
     Specimen {
-        title: "Type",
-        description: "the text roles and colors",
+        title: "Type",                            // text: sample (the gallery's specimen)
+        description: "the text roles and colors", // text: sample (the gallery's specimen)
         area: None,
         column: Column::Right,
         part_gap: 0.0,
@@ -314,8 +314,8 @@ const SPECIMENS: &[Specimen] = &[
         render: typography::render,
     },
     Specimen {
-        title: "Sizes and motion",
-        description: "every size, limit, duration and easing",
+        title: "Sizes and motion", // text: sample (the gallery's specimen)
+        description: "every size, limit, duration and easing", // text: sample (the gallery's specimen)
         area: None,
         column: Column::Right,
         part_gap: 24.0,

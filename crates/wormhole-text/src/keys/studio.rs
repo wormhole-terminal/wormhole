@@ -170,6 +170,52 @@ pub const STUDIO_EXPORT_JSON: Key = Key::new(1308);
 pub const STUDIO_COPY_JSON: Key = Key::new(1309);
 /// "Use in this project…"
 pub const STUDIO_USE_IN_PROJECT: Key = Key::new(1310);
+/// "Pick a token in the list, or click a color in the gallery, to edit it here."
+pub const STUDIO_PICK_A_TOKEN: Key = Key::new(1315);
+/// "last good value"
+pub const STUDIO_TAG_LAST_GOOD: Key = Key::new(1317);
+/// "Value"
+pub const STUDIO_SECTION_VALUE: Key = Key::new(1318);
+/// "sRGB · opaque"
+pub const STUDIO_SRGB_OPAQUE: Key = Key::new(1319);
+/// "A number of pixels. No color picker for metrics."
+pub const STUDIO_METRIC_HELP_WIDTH: Key = Key::new(1322);
+/// "A number of pixels; a radius above half the height is fully round. No color picker for metrics."
+pub const STUDIO_METRIC_HELP_RADIUS: Key = Key::new(1323);
+/// "This theme sets it, so the rule isn't used; Reset goes back to the rule."
+pub const STUDIO_RULE_SET_HERE: Key = Key::new(1327);
+/// "A fixed value. Typing a value overrides it; Reset goes back to the rule."
+pub const STUDIO_RULE_FIXED: Key = Key::new(1328);
+/// "Rule"
+pub const STUDIO_SECTION_RULE: Key = Key::new(1331);
+/// "Used by"
+pub const STUDIO_SECTION_USED_BY: Key = Key::new(1332);
+/// "No component draws with it directly; what follows it does."
+pub const STUDIO_USED_BY_NONE: Key = Key::new(1333);
+/// "Outlined in the gallery while selected."
+pub const STUDIO_USED_BY_OUTLINED: Key = Key::new(1334);
+/// "The terminal's background"
+pub const STUDIO_DESCRIBE_BACKGROUND: Key = Key::new(1337);
+/// "The terminal's text"
+pub const STUDIO_DESCRIBE_FOREGROUND: Key = Key::new(1338);
+/// "The terminal's cursor"
+pub const STUDIO_DESCRIBE_CURSOR: Key = Key::new(1339);
+/// "Selected text in the terminal"
+pub const STUDIO_DESCRIBE_SELECTION: Key = Key::new(1340);
+/// "Did you mean"
+pub const STUDIO_DID_YOU_MEAN: Key = Key::new(1342);
+/// "Forms"
+pub const STUDIO_FORMS: Key = Key::new(1343);
+/// "#hex or expression, e.g. primary / 15%"
+pub const STUDIO_EXPRESSION_PLACEHOLDER: Key = Key::new(1344);
+/// "Show"
+pub const STUDIO_CONTRAST_SHOW: Key = Key::new(1348);
+/// "Contrast on this fill"
+pub const STUDIO_CONTRAST_ON_FILL: Key = Key::new(1351);
+/// "Contrast"
+pub const STUDIO_CONTRAST: Key = Key::new(1352);
+/// "Theme"
+pub const STUDIO_DEFAULT_NAME: Key = Key::new(1357);
 
 /// ```text
 /// Change “{ $token }”
@@ -502,4 +548,150 @@ pub fn studio_title_own(appearance: &str) -> String {
 /// ```
 pub fn studio_date(day: &str, month: i64, year: &str) -> String {
     crate::active::message(1314, &[("day", Arg::Str(day)), ("month", Arg::Int(month)), ("year", Arg::Str(year))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] { $description }. 1 token follows it.
+///    *[other] { $description }. { $count } tokens follow it.
+/// }
+/// ```
+pub fn studio_followers(count: i64, description: &str) -> String {
+    crate::active::message(1316, &[("count", Arg::Int(count)), ("description", Arg::Str(description))])
+}
+
+/// ```text
+/// sRGB · { $percent }% alpha
+/// ```
+pub fn studio_srgb_alpha(percent: &str) -> String {
+    crate::active::message(1320, &[("percent", Arg::Str(percent))])
+}
+
+/// ```text
+/// Follow { $source } ({ $value } px)
+/// ```
+pub fn studio_metric_follow(source: &str, value: &str) -> String {
+    crate::active::message(1321, &[("source", Arg::Str(source)), ("value", Arg::Str(value))])
+}
+
+/// ```text
+/// { $value } px
+/// ```
+pub fn studio_metric_px(value: &str) -> String {
+    crate::active::message(1324, &[("value", Arg::Str(value))])
+}
+
+/// ```text
+/// Preview at { $value }
+/// ```
+pub fn studio_metric_preview(value: &str) -> String {
+    crate::active::message(1325, &[("value", Arg::Str(value))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] 1 use
+///    *[other] { $count } uses
+/// }
+/// ```
+pub fn studio_metric_uses(count: i64) -> String {
+    crate::active::message(1326, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// Follows { $names }. Typing a value overrides it; Reset goes back to the rule.
+/// ```
+pub fn studio_rule_follows(names: &str) -> String {
+    crate::active::message(1329, &[("names", Arg::Str(names))])
+}
+
+/// ```text
+/// From the palette of { $theme }. Typing a value overrides it.
+/// ```
+pub fn studio_rule_palette(theme: &str) -> String {
+    crate::active::message(1330, &[("theme", Arg::Str(theme))])
+}
+
+/// ```text
+/// Terminal palette color { $slot }
+/// ```
+pub fn studio_describe_ansi(slot: &str) -> String {
+    crate::active::message(1335, &[("slot", Arg::Str(slot))])
+}
+
+/// ```text
+/// Code highlighting: { $key }
+/// ```
+pub fn studio_describe_syntax(key: &str) -> String {
+    crate::active::message(1336, &[("key", Arg::Str(key))])
+}
+
+/// ```text
+/// { $rest } and { $last }
+/// ```
+pub fn studio_and_list(rest: &str, last: &str) -> String {
+    crate::active::message(1341, &[("rest", Arg::Str(rest)), ("last", Arg::Str(last))])
+}
+
+/// ```text
+/// { $name } isn’t used in { $area }.
+/// ```
+pub fn studio_not_in_area(name: &str, area: &str) -> String {
+    crate::active::message(1345, &[("name", Arg::Str(name)), ("area", Arg::Str(area))])
+}
+
+/// ```text
+/// { $name }: “{ $value }” is not a number of pixels
+/// ```
+pub fn studio_not_pixels(name: &str, value: &str) -> String {
+    crate::active::message(1346, &[("name", Arg::Str(name)), ("value", Arg::Str(value))])
+}
+
+/// ```text
+/// Low contrast · { $count }
+/// ```
+pub fn studio_low_contrast_count(count: &str) -> String {
+    crate::active::message(1347, &[("count", Arg::Str(count))])
+}
+
+/// ```text
+/// Follows { $token }: its fix clears this too.
+/// ```
+pub fn studio_contrast_follows(token: &str) -> String {
+    crate::active::message(1349, &[("token", Arg::Str(token))])
+}
+
+/// ```text
+/// on { $background }
+/// ```
+pub fn studio_contrast_on(background: &str) -> String {
+    crate::active::message(1350, &[("background", Arg::Str(background))])
+}
+
+/// ```text
+/// min { $ratio }
+/// ```
+pub fn studio_contrast_min(ratio: &str) -> String {
+    crate::active::message(1353, &[("ratio", Arg::Str(ratio))])
+}
+
+/// ```text
+/// { $base } Custom
+/// ```
+pub fn studio_custom_name(base: &str) -> String {
+    crate::active::message(1354, &[("base", Arg::Str(base))])
+}
+
+/// ```text
+/// { $name } copy
+/// ```
+pub fn studio_copy_name(name: &str) -> String {
+    crate::active::message(1355, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// { $name } copy { $n }
+/// ```
+pub fn studio_copy_name_n(name: &str, n: &str) -> String {
+    crate::active::message(1356, &[("name", Arg::Str(name)), ("n", Arg::Str(n))])
 }

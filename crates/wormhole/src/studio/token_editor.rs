@@ -22,7 +22,15 @@ use super::{Edit, StudioWindow, tokens_of, ui};
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::hsla;
-use wormhole_text::keys::{STUDIO_RESET, STUDIO_RESET_BASE};
+use wormhole_text::keys::{
+    STUDIO_DESCRIBE_BACKGROUND, STUDIO_DESCRIBE_CURSOR, STUDIO_DESCRIBE_FOREGROUND,
+    STUDIO_DESCRIBE_SELECTION, STUDIO_METRIC_HELP_RADIUS, STUDIO_METRIC_HELP_WIDTH, STUDIO_PICK_A_TOKEN,
+    STUDIO_RESET, STUDIO_RESET_BASE, STUDIO_RULE_FIXED, STUDIO_RULE_SET_HERE, STUDIO_SECTION_RULE,
+    STUDIO_SECTION_USED_BY, STUDIO_SECTION_VALUE, STUDIO_SRGB_OPAQUE, STUDIO_TAG_LAST_GOOD,
+    STUDIO_USED_BY_NONE, STUDIO_USED_BY_OUTLINED, studio_and_list, studio_describe_ansi,
+    studio_describe_syntax, studio_followers, studio_metric_follow, studio_metric_preview, studio_metric_px,
+    studio_metric_uses, studio_rule_follows, studio_rule_palette, studio_srgb_alpha,
+};
 use wormhole_text::text;
 
 /// The editor's width.
@@ -95,7 +103,7 @@ impl StudioWindow {
                     .py_4()
                     .text_body()
                     .text_color(ui.muted)
-                    .child("Pick a token in the list, or click a color in the gallery, to edit it here.")
+                    .child(text(STUDIO_PICK_A_TOKEN))
                     .into_any_element(),
             ],
         };
@@ -126,8 +134,7 @@ impl StudioWindow {
         let follow_count = followers(name, tokens.appearance).len();
         let mut description = info.map(|t| t.description.to_string()).unwrap_or_else(|| describe(name));
         if follow_count > 0 {
-            let s = if follow_count == 1 { "" } else { "s" };
-            description = format!("{description}. {follow_count} token{s} follow it.");
+            description = studio_followers(i64::try_from(follow_count).unwrap_or(i64::MAX), &description);
         }
         let header = section(ui)
             .gap_1()
@@ -181,7 +188,7 @@ impl StudioWindow {
         let overridden = self.doc.own(name).is_some();
         let rule = default_rule(name, tokens.appearance);
         let (tag, tag_color) = if self.field_error.is_some() {
-            ("last good value", ui.warning_text)
+            (text(STUDIO_TAG_LAST_GOOD), ui.warning_text)
         } else if overridden {
             ("override", ui.primary)
         } else if rule.is_some() {
@@ -203,7 +210,7 @@ impl StudioWindow {
         let head = div()
             .flex()
             .items_center()
-            .child(div().flex_1().child(style::section_label(ui, "Value")))
+            .child(div().flex_1().child(style::section_label(ui, text(STUDIO_SECTION_VALUE))))
             .when(overridden, |d| d.child(reset));
 
         let mut body = section(ui).gap_2().child(head);
@@ -212,9 +219,9 @@ impl StudioWindow {
         } else {
             let color = tokens.get(name).unwrap_or(crate::theme_bridge::MISSING_TOKEN);
             let alpha = if color.a >= 1.0 {
-                "sRGB · opaque".to_string()
+                text(STUDIO_SRGB_OPAQUE).to_string()
             } else {
-                format!("sRGB · {:.0}% alpha", color.a * 100.0)
+                studio_srgb_alpha(&format!("{:.0}", color.a * 100.0))
             };
             let palette: Vec<Hsla> = tokens.terminal.ansi.iter().map(|c| hsla(*c)).collect();
             body = body
@@ -303,12 +310,12 @@ impl StudioWindow {
                     })
                     .ok();
                 }))
-                .child(format!("Follow {source} ({} px)", number(source_value)))
+                .child(studio_metric_follow(&source.to_string(), &number(source_value)))
         });
         let help = if name.ends_with("width") {
-            "A number of pixels. No color picker for metrics."
+            text(STUDIO_METRIC_HELP_WIDTH)
         } else {
-            "A number of pixels; a radius above half the height is fully round. No color picker for metrics."
+            text(STUDIO_METRIC_HELP_RADIUS)
         };
         let uses = uses_of(name).len();
         div()
@@ -323,7 +330,7 @@ impl StudioWindow {
                     .child(style::stepper(
                         ui,
                         "studio-metric",
-                        format!("{} px", number(value)),
+                        studio_metric_px(&number(value)),
                         step(-1.0),
                         step(1.0),
                     ))
@@ -338,9 +345,14 @@ impl StudioWindow {
                     .child(
                         div()
                             .flex_1()
-                            .child(style::section_label(ui, &format!("Preview at {}", number(value)))),
+                            .child(style::section_label(ui, &studio_metric_preview(&number(value)))),
                     )
-                    .child(div().text_caption().text_color(ui.faint).child(format!("{uses} uses"))),
+                    .child(
+                        div()
+                            .text_caption()
+                            .text_color(ui.faint)
+                            .child(studio_metric_uses(i64::try_from(uses).unwrap_or(i64::MAX))),
+                    ),
             )
             .child(
                 div()
@@ -368,21 +380,16 @@ impl StudioWindow {
         let rule = default_rule(name, tokens.appearance);
         let overridden = self.doc.own(name).is_some();
         let explanation = match (&rule, overridden) {
-            (Some(_), true) => {
-                "This theme sets it, so the rule isn't used; Reset goes back to the rule.".to_string()
-            }
+            (Some(_), true) => text(STUDIO_RULE_SET_HERE).to_string(),
             (Some(rule), false) => match refers_to(rule).as_slice() {
-                [] => "A fixed value. Typing a value overrides it; Reset goes back to the rule.".to_string(),
-                names => format!(
-                    "Follows {}. Typing a value overrides it; Reset goes back to the rule.",
-                    and_list(names)
-                ),
+                [] => text(STUDIO_RULE_FIXED).to_string(),
+                names => studio_rule_follows(&and_list(names)),
             },
-            (None, _) => format!("From the palette of {}. Typing a value overrides it.", tokens.name),
+            (None, _) => studio_rule_palette(&tokens.name),
         };
         section(ui)
             .gap_1()
-            .child(style::section_label(ui, "Rule"))
+            .child(style::section_label(ui, text(STUDIO_SECTION_RULE)))
             .children(
                 rule.map(|rule| div().text_caption().font_family(code_font).text_color(ui.text).child(rule)),
             )
@@ -398,7 +405,7 @@ impl StudioWindow {
                 div()
                     .flex()
                     .items_center()
-                    .child(div().flex_1().child(style::section_label(ui, "Used by")))
+                    .child(div().flex_1().child(style::section_label(ui, text(STUDIO_SECTION_USED_BY))))
                     .child(div().text_caption().text_color(ui.faint).child(uses.len().to_string())),
             )
             .child(
@@ -410,9 +417,9 @@ impl StudioWindow {
                     .children(uses.iter().map(|u| style::neutral_chip(ui, u.label))),
             )
             .child(div().text_caption().text_color(ui.faint).child(if uses.is_empty() {
-                "No component draws with it directly; what follows it does."
+                text(STUDIO_USED_BY_NONE)
             } else {
-                "Outlined in the gallery while selected."
+                text(STUDIO_USED_BY_OUTLINED)
             }))
             .into_any_element()
     }
@@ -427,16 +434,16 @@ pub(super) fn section(ui: UiColors) -> Div {
 /// What a token without a catalogue entry is: a terminal color, a palette slot, a syntax color.
 fn describe(name: &str) -> String {
     if let Some(slot) = name.strip_prefix("terminal.ansi.") {
-        return format!("Terminal palette color {slot}");
+        return studio_describe_ansi(slot);
     }
     if let Some(key) = name.strip_prefix("syntax.") {
-        return format!("Code highlighting: {key}");
+        return studio_describe_syntax(key);
     }
     match name {
-        "terminal.background" => "The terminal's background".into(),
-        "terminal.foreground" => "The terminal's text".into(),
-        "terminal.cursor" => "The terminal's cursor".into(),
-        "terminal.selection_background" => "Selected text in the terminal".into(),
+        "terminal.background" => text(STUDIO_DESCRIBE_BACKGROUND).into(),
+        "terminal.foreground" => text(STUDIO_DESCRIBE_FOREGROUND).into(),
+        "terminal.cursor" => text(STUDIO_DESCRIBE_CURSOR).into(),
+        "terminal.selection_background" => text(STUDIO_DESCRIBE_SELECTION).into(),
         _ => String::new(),
     }
 }
@@ -446,7 +453,7 @@ fn and_list(names: &[String]) -> String {
     match names {
         [] => String::new(),
         [one] => one.clone(),
-        [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
+        [rest @ .., last] => studio_and_list(&rest.join(", "), last),
     }
 }
 

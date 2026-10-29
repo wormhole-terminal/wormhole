@@ -45,13 +45,13 @@ pub(super) fn render(
                 div()
                     .text_body()
                     .font_weight(FontWeight::SEMIBOLD)
-                    .child("Save \u{201c}Dusk\u{201d} before closing?"),
+                    .child("Save \u{201c}Dusk\u{201d} before closing?"), // text: sample (the gallery's specimen)
             )
             .child(
                 div()
                     .text_caption()
                     .text_color(ui.muted)
-                    .child("2 changes. If you don\u{2019}t save, the app goes back to Tokyo Night."),
+                    .child("2 changes. If you don\u{2019}t save, the app goes back to Tokyo Night."), // text: sample (the gallery's specimen)
             )
             .child(
                 div()
@@ -59,9 +59,9 @@ pub(super) fn render(
                     .flex()
                     .justify_end()
                     .gap_2()
-                    .child(Button::new("g-dialog-discard").ghost().small().label("Don\u{2019}t save"))
-                    .child(Button::new("g-dialog-cancel").small().label("Cancel"))
-                    .child(Button::new("g-dialog-save").primary().small().label("Save")),
+                    .child(Button::new("g-dialog-discard").ghost().small().label("Don\u{2019}t save")) // text: sample (the gallery's specimen)
+                    .child(Button::new("g-dialog-cancel").small().label("Cancel")) // text: sample (the gallery's specimen)
+                    .child(Button::new("g-dialog-save").primary().small().label("Save")), // text: sample (the gallery's specimen)
             ),
     );
 
@@ -91,17 +91,17 @@ pub(super) fn render(
                         .justify_between()
                         .text_caption()
                         .text_color(ui.muted)
-                        .child("Step 1 of 3")
+                        .child("Step 1 of 3") // text: sample (the gallery's specimen)
                         .child(
-                            style::link_button("g-sheet-skip", ui, "Skip setup", false).text_color(ui.muted),
+                            style::link_button("g-sheet-skip", ui, "Skip setup", false).text_color(ui.muted), // text: sample (the gallery's specimen)
                         ),
                 )
-                .child(div().text_title().font_weight(FontWeight::BOLD).child("Where do you work?"))
+                .child(div().text_title().font_weight(FontWeight::BOLD).child("Where do you work?")) // text: sample (the gallery's specimen)
                 .child(
                     div()
                         .text_body()
                         .text_color(ui.muted)
-                        .child("Pick a folder to start in; every terminal remembers its own."),
+                        .child("Pick a folder to start in; every terminal remembers its own."), // text: sample (the gallery's specimen)
                 ),
         )
         .child(
@@ -112,7 +112,7 @@ pub(super) fn render(
                 .px_4()
                 .rule_top(ui)
                 .child(div().flex_1().child(
-                    Button::new("g-sheet-back").ghost().small().icon(IconName::ChevronLeft).label("Back"),
+                    Button::new("g-sheet-back").ghost().small().icon(IconName::ChevronLeft).label("Back"), // text: sample (the gallery's specimen)
                 ))
                 .child(dots)
                 .child(
@@ -120,7 +120,7 @@ pub(super) fn render(
                         .flex_1()
                         .flex()
                         .justify_end()
-                        .child(Button::new("g-sheet-next").primary().small().label("Continue")),
+                        .child(Button::new("g-sheet-next").primary().small().label("Continue")), // text: sample (the gallery's specimen)
                 ),
         );
 
@@ -135,7 +135,7 @@ pub(super) fn render(
         .px_4()
         .py_4()
         .child(img(crate::icons::app_icon_for(env.tokens.appearance)).size(px(about::ICON)).flex_none())
-        .child(div().mt_2().text_heading().font_weight(FontWeight::BOLD).child("Wormhole"))
+        .child(div().mt_2().text_heading().font_weight(FontWeight::BOLD).child("Wormhole")) // text: sample (the gallery's specimen)
         .child(div().mt_1().text_caption().text_color(ui.muted).child(about::version_line()))
         .child(div().mt_1().text_caption().text_color(ui.muted).text_center().child(about::copyright()));
 
@@ -151,39 +151,38 @@ pub(super) fn render(
         .h(px(THUMB_H))
         .rounded_full()
         .bg(env.tk("scrollbar.thumb"));
-    let licenses =
-        surface(div())
-            .flex()
-            .overflow_hidden()
-            .h(px(4.0 * style::ROW_H))
-            .child(
-                div()
-                    .relative()
-                    .w(px(LICENSE_LIST_W))
-                    .flex_none()
-                    .flex()
-                    .flex_col()
-                    .rule_right(ui)
-                    .child(package("g-lic-a", "ahash", false))
-                    .child(package("g-lic-b", "anyhow", true))
-                    .child(package("g-lic-c", "gpui-kit", false))
-                    .child(package("g-lic-d", "rusqlite", false))
-                    .child(env.mark("scrollbar", thumb)),
-            )
-            .child(
-                div()
-                    .flex_1()
-                    .min_w_0()
-                    .p_2()
-                    .flex()
-                    .flex_col()
-                    .gap_1()
-                    .text_caption()
-                    .child(div().font_weight(FontWeight::SEMIBOLD).child("anyhow 1.0 · MIT OR Apache-2.0"))
-                    .child(div().text_color(ui.muted).child(
-                        "Permission is hereby granted, free of charge, to any person obtaining a copy…",
-                    )),
-            );
+    let licenses = surface(div())
+        .flex()
+        .overflow_hidden()
+        .h(px(4.0 * style::ROW_H))
+        .child(
+            div()
+                .relative()
+                .w(px(LICENSE_LIST_W))
+                .flex_none()
+                .flex()
+                .flex_col()
+                .rule_right(ui)
+                .child(package("g-lic-a", "ahash", false))
+                .child(package("g-lic-b", "anyhow", true))
+                .child(package("g-lic-c", "gpui-kit", false))
+                .child(package("g-lic-d", "rusqlite", false))
+                .child(env.mark("scrollbar", thumb)),
+        )
+        .child(
+            div()
+                .flex_1()
+                .min_w_0()
+                .p_2()
+                .flex()
+                .flex_col()
+                .gap_1()
+                .text_caption()
+                .child(div().font_weight(FontWeight::SEMIBOLD).child("anyhow 1.0 · MIT OR Apache-2.0")) // text: sample (the gallery's specimen)
+                .child(div().text_color(ui.muted).child(
+                    "Permission is hereby granted, free of charge, to any person obtaining a copy…", // text: sample (the gallery's specimen)
+                )),
+        );
 
     div()
         .flex()

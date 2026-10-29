@@ -42,7 +42,7 @@ pub(super) fn render(
                 tone,
                 selected,
                 hint: hint.map(|h| SharedString::from(h.to_string())),
-                ..SessionRow::new(g, if tone == RowTone::Attention { "diff perf" } else { "sidebar polish" })
+                ..SessionRow::new(g, if tone == RowTone::Attention { "diff perf" } else { "sidebar polish" }) // text: sample (the gallery's specimen)
             },
         )
         .into_any_element()
@@ -88,7 +88,7 @@ pub(super) fn render(
                 alert,
                 empty: empty.then(|| {
                     let add: style::ClickHandler = Box::new(|_, _, _| {});
-                    ("New terminal in group".into(), add)
+                    ("New terminal in group".into(), add) // text: sample (the gallery's specimen)
                 }),
                 add: None,
                 on_toggle: Box::new(|_, _, _| {}),
@@ -125,7 +125,7 @@ pub(super) fn render(
         column(ui)
             .child(caption(
                 ui,
-                "A group's card · folded · pinned and empty · with a folder · a terminal in no group",
+                "A group's card · folded · pinned and empty · with a folder · a terminal in no group", // text: sample (the gallery's specimen)
             ))
             .child(
                 env.mark(
@@ -138,7 +138,7 @@ pub(super) fn render(
                             "sidebar.band",
                             head(
                                 "g-head-open",
-                                "Release 1.2",
+                                "Release 1.2", // text: sample (the gallery's specimen)
                                 Some(blue),
                                 false,
                                 false,
@@ -158,7 +158,7 @@ pub(super) fn render(
                 wash(GroupColor::Blue),
                 env.mark(
                     "sidebar.row",
-                    tile_row("g-row-anatomy-1", "Sidebar cards", StatusGlyph::Working, "Working · 4m", true),
+                    tile_row("g-row-anatomy-1", "Sidebar cards", StatusGlyph::Working, "Working · 4m", true), // text: sample (the gallery's specimen)
                 )
                 .into_any_element(),
             ))
@@ -168,9 +168,9 @@ pub(super) fn render(
                 wash(GroupColor::Blue),
                 tile_row(
                     "g-row-anatomy-2",
-                    "Fix pile fan-out",
+                    "Fix pile fan-out", // text: sample (the gallery's specimen)
                     StatusGlyph::NeedsYou,
-                    "Needs input · 2m",
+                    "Needs input · 2m", // text: sample (the gallery's specimen)
                     false,
                 )
                 .into_any_element(),
@@ -181,7 +181,7 @@ pub(super) fn render(
                 wash(GroupColor::Pink),
                 head(
                     "g-head-folded",
-                    "Review",
+                    "Review", // text: sample (the gallery's specimen)
                     Some(theme_bridge::hsla(GroupColor::Pink.color(env.tokens))),
                     true,
                     true,
@@ -202,7 +202,7 @@ pub(super) fn render(
                 wash(GroupColor::Orange),
                 head(
                     "g-head-empty",
-                    "Docs",
+                    "Docs", // text: sample (the gallery's specimen)
                     Some(theme_bridge::hsla(GroupColor::Orange.color(env.tokens))),
                     false,
                     true,
@@ -220,14 +220,14 @@ pub(super) fn render(
                 wash(GroupColor::Blue),
                 head(
                     "g-head-folder",
-                    "Release 1.2",
+                    "Release 1.2", // text: sample (the gallery's specimen)
                     Some(blue),
                     false,
                     false,
                     vec![],
                     None,
                     false,
-                    Some("~/Projects/wormhole"),
+                    Some("~/Projects/wormhole"), // text: sample (the gallery's specimen)
                 )
                 .into_any_element(),
             ))
@@ -245,11 +245,11 @@ pub(super) fn render(
         let line = |text: &'static str| two_lines.then_some(text);
         let id = |a: &'static str, b: &'static str| if two_lines { a } else { b };
         column(ui)
-            .child(caption(ui, if two_lines { "Two lines" } else { "One line" }))
+            .child(caption(ui, if two_lines { "Two lines" } else { "One line" })) // text: sample (the gallery's specimen)
             .child(row(
                 id("g-r2-normal", "g-r1-normal"),
                 glyph(id("g-g2-normal", "g-g1-normal"), StatusGlyph::Working),
-                line("Editing sidebar.rs…"),
+                line("Editing sidebar.rs…"), // text: sample (the gallery's specimen)
                 RowTone::Plain,
                 false,
                 None,
@@ -257,7 +257,7 @@ pub(super) fn render(
             .child(div().bg(ui.hover).child(row(
                 id("g-r2-hover", "g-r1-hover"),
                 glyph(id("g-g2-hover", "g-g1-hover"), StatusGlyph::Working),
-                line("Editing sidebar.rs…"),
+                line("Editing sidebar.rs…"), // text: sample (the gallery's specimen)
                 RowTone::Plain,
                 false,
                 None,
@@ -265,7 +265,7 @@ pub(super) fn render(
             .child(row(
                 id("g-r2-selected", "g-r1-selected"),
                 glyph(id("g-g2-selected", "g-g1-selected"), StatusGlyph::Working),
-                line("Editing sidebar.rs…"),
+                line("Editing sidebar.rs…"), // text: sample (the gallery's specimen)
                 RowTone::Plain,
                 true,
                 None,
@@ -273,7 +273,7 @@ pub(super) fn render(
             .child(row(
                 id("g-r2-needs", "g-r1-needs"),
                 glyph(id("g-g2-needs", "g-g1-needs"), StatusGlyph::NeedsYou),
-                line("Needs input · Approve cargo test?"),
+                line("Needs input · Approve cargo test?"), // text: sample (the gallery's specimen)
                 RowTone::Attention,
                 false,
                 None,
@@ -281,7 +281,7 @@ pub(super) fn render(
             .child(row(
                 id("g-r2-done", "g-r1-done"),
                 glyph(id("g-g2-done", "g-g1-done"), StatusGlyph::Done),
-                line("Finished · 12m ago"),
+                line("Finished · 12m ago"), // text: sample (the gallery's specimen)
                 RowTone::Done,
                 false,
                 None,
@@ -289,7 +289,7 @@ pub(super) fn render(
             .child(row(
                 id("g-r2-failed", "g-r1-failed"),
                 glyph(id("g-g2-failed", "g-g1-failed"), StatusGlyph::Failed),
-                line("Failed · rsync failed"),
+                line("Failed · rsync failed"), // text: sample (the gallery's specimen)
                 RowTone::Failed,
                 false,
                 None,
@@ -297,7 +297,7 @@ pub(super) fn render(
             .child(row(
                 id("g-r2-hint", "g-r1-hint"),
                 glyph(id("g-g2-hint", "g-g1-hint"), StatusGlyph::Working),
-                line("Editing sidebar.rs…"),
+                line("Editing sidebar.rs…"), // text: sample (the gallery's specimen)
                 RowTone::Plain,
                 true,
                 Some("⌘1"),
@@ -310,7 +310,7 @@ pub(super) fn render(
         GroupColor::ALL.iter().map(|&color| (color, theme_bridge::hsla(color.color(env.tokens)))).collect();
     let washed = || {
         column(ui)
-            .child(caption(ui, "Grey · Blue · Red · Yellow · Green · Pink · Purple · Cyan · Orange"))
+            .child(caption(ui, "Grey · Blue · Red · Yellow · Green · Pink · Purple · Cyan · Orange")) // text: sample (the gallery's specimen)
             .children(group_colors.iter().enumerate().map(|(ix, &(color, hsla))| {
                 let id = Box::leak(format!("g-head-{}", color.key()).into_boxed_str());
                 card(
@@ -327,7 +327,7 @@ pub(super) fn render(
         .flex()
         .flex_wrap()
         .items_center()
-        .child(style::color_choice("g-color-none", ui, "None", None, false, true))
+        .child(style::color_choice("g-color-none", ui, "None", None, false, true)) // text: sample (the gallery's specimen)
         .children(colors.iter().enumerate().map(|(ix, (color, hsla))| {
             style::color_choice(("g-color", ix), ui, color.label(), Some(*hsla), ix == 4, true)
         }));
@@ -337,7 +337,7 @@ pub(super) fn render(
         .flex()
         .flex_wrap()
         .items_center()
-        .child(style::color_choice("g-locked-none", ui, "None", None, false, false))
+        .child(style::color_choice("g-locked-none", ui, "None", None, false, false)) // text: sample (the gallery's specimen)
         .children(colors.iter().enumerate().map(|(ix, (color, hsla))| {
             style::color_choice(("g-locked", ix), ui, color.label(), Some(*hsla), ix == 4, false)
         }));
@@ -350,14 +350,14 @@ pub(super) fn render(
         column(ui)
             .child(caption(
                 ui,
-                "A folder's colour (the Project tab): the choices · the choices a project sets · dots",
+                "A folder's colour (the Project tab): the choices · the choices a project sets · dots", // text: sample (the gallery's specimen)
             ))
             .child(div().px_4().py_2().child(env.mark("folder.color", choices)))
             .child(div().px_4().pb_2().child(locked_choices))
             .child(div().px_4().pb_2().child(menu_dots))
             .child(caption(
                 ui,
-                "A branch chip: the git branch and its changes, where the sidebar's rows show one",
+                "A branch chip: the git branch and its changes, where the sidebar's rows show one", // text: sample (the gallery's specimen)
             ))
             .child(
                 div()
@@ -378,7 +378,7 @@ pub(super) fn render(
     let codex = agents::agent(AgentId::Codex);
     let plain_rows = || {
         column(ui)
-            .child(caption(ui, "Plain terminals · a pin · an idle agent's logo"))
+            .child(caption(ui, "Plain terminals · a pin · an idle agent's logo")) // text: sample (the gallery's specimen)
             .child(style::session_row(
                 "g-plain-tests",
                 ui,
@@ -388,7 +388,7 @@ pub(super) fn render(
                         "g-plain-g1",
                         "tests",
                         StatusGlyph::Terminal { unread: false },
-                        Some("cargo test -p wormhole-core"),
+                        Some("cargo test -p wormhole-core"), // text: sample (the gallery's specimen)
                     )
                 },
             ))
@@ -401,7 +401,7 @@ pub(super) fn render(
                         "g-plain-g2",
                         "prod",
                         StatusGlyph::Terminal { unread: false },
-                        Some("ssh deploy@prod-1"),
+                        Some("ssh deploy@prod-1"), // text: sample (the gallery's specimen)
                     )
                 },
             ))
@@ -410,12 +410,12 @@ pub(super) fn render(
                 ui,
                 SessionRow {
                     emphasis: true,
-                    detail_trail: Some("new output".into()),
+                    detail_trail: Some("new output".into()), // text: sample (the gallery's specimen)
                     ..plain(
                         "g-plain-g3",
-                        "dev server",
+                        "dev server", // text: sample (the gallery's specimen)
                         StatusGlyph::Terminal { unread: true },
-                        Some("npm run dev"),
+                        Some("npm run dev"), // text: sample (the gallery's specimen)
                     )
                 },
             ))
@@ -432,7 +432,7 @@ pub(super) fn render(
                 ui,
                 SessionRow::new(
                     style::agent_logo(codex.icon(), codex.monogram, style::ITEM_LEAD_W, ui.muted),
-                    "rate limits",
+                    "rate limits", // text: sample (the gallery's specimen)
                 ),
             ))
     };
@@ -449,7 +449,7 @@ pub(super) fn render(
             id,
             ui,
             SessionRow {
-                detail: Some("Idle".into()),
+                detail: Some("Idle".into()), // text: sample (the gallery's specimen)
                 selected,
                 trail,
                 // These rows lead with a glyph, 16 in (`px_4`), not a tile: the line runs through it.
@@ -463,7 +463,7 @@ pub(super) fn render(
     };
     let split_rows = || {
         column(ui)
-            .child(caption(ui, "A split: its rows in one card, a line along them · the chain mark"))
+            .child(caption(ui, "A split: its rows in one card, a line along them · the chain mark")) // text: sample (the gallery's specimen)
             .child(split_row("g-split-a", StatusGlyph::Working, "claude", true, None, Some(Bracket::Start)))
             .child(split_row("g-split-b", StatusGlyph::Idle, "api-server", false, None, Some(Bracket::Mid)))
             .child(split_row("g-split-c", StatusGlyph::Idle, "zsh", false, None, Some(Bracket::End)))
@@ -485,7 +485,7 @@ pub(super) fn render(
             .child(row(
                 id,
                 glyph(Box::leak(format!("{id}-glyph").into_boxed_str()), StatusGlyph::Idle),
-                Some("Idle"),
+                Some("Idle"), // text: sample (the gallery's specimen)
                 RowTone::Plain,
                 false,
                 None,
@@ -494,7 +494,7 @@ pub(super) fn render(
     };
     let drops = || {
         column(ui)
-            .child(caption(ui, "A terminal dragged over: a row · between rows · inside a bracket"))
+            .child(caption(ui, "A terminal dragged over: a row · between rows · inside a bracket")) // text: sample (the gallery's specimen)
             .child(drop_row("g-drop-row", vec![style::row_drop_target(ui).into_any_element()]))
             .child(drop_row("g-drop-line", vec![style::drop_line(ui, false, true).into_any_element()]))
             .child(drop_row("g-drop-inset", vec![style::drop_line(ui, true, true).into_any_element()]))
@@ -504,16 +504,16 @@ pub(super) fn render(
     let glyphs = || {
         div().flex().flex_wrap().gap_4().p_2().children(
             [
-                ("g-glyph-working", StatusGlyph::Working, "Working"),
-                ("g-glyph-running", StatusGlyph::Running, "Running"),
-                ("g-glyph-needs", StatusGlyph::NeedsYou, "Needs input"),
-                ("g-glyph-done", StatusGlyph::Done, "Done"),
-                ("g-glyph-idle", StatusGlyph::Idle, "Idle"),
-                ("g-glyph-bell", StatusGlyph::Bell, "Bell"),
-                ("g-glyph-failed", StatusGlyph::Failed, "Failed"),
-                ("g-glyph-terminal", StatusGlyph::Terminal { unread: false }, "Terminal"),
-                ("g-glyph-unread", StatusGlyph::Terminal { unread: true }, "Unread"),
-                ("g-glyph-shell", StatusGlyph::Shell, "Shell"),
+                ("g-glyph-working", StatusGlyph::Working, "Working"), // text: sample (the gallery's specimen)
+                ("g-glyph-running", StatusGlyph::Running, "Running"), // text: sample (the gallery's specimen)
+                ("g-glyph-needs", StatusGlyph::NeedsYou, "Needs input"), // text: sample (the gallery's specimen)
+                ("g-glyph-done", StatusGlyph::Done, "Done"), // text: sample (the gallery's specimen)
+                ("g-glyph-idle", StatusGlyph::Idle, "Idle"), // text: sample (the gallery's specimen)
+                ("g-glyph-bell", StatusGlyph::Bell, "Bell"), // text: sample (the gallery's specimen)
+                ("g-glyph-failed", StatusGlyph::Failed, "Failed"), // text: sample (the gallery's specimen)
+                ("g-glyph-terminal", StatusGlyph::Terminal { unread: false }, "Terminal"), // text: sample (the gallery's specimen)
+                ("g-glyph-unread", StatusGlyph::Terminal { unread: true }, "Unread"), // text: sample (the gallery's specimen)
+                ("g-glyph-shell", StatusGlyph::Shell, "Shell"), // text: sample (the gallery's specimen)
             ]
             .map(|(id, g, label)| {
                 div()
@@ -543,22 +543,22 @@ pub(super) fn render(
                         },
                         cx,
                     ))
-                    .child("Fix pile fan-out")
-                    .child(div().text_color(ui.attention_text).child("needs input · 2m")),
+                    .child("Fix pile fan-out") // text: sample (the gallery's specimen)
+                    .child(div().text_color(ui.attention_text).child("needs input · 2m")), // text: sample (the gallery's specimen)
             )
             .child(
                 style::status_item("g-status-working", ui, false, true)
                     .child(glyph("g-status-spin", StatusGlyph::Working))
-                    .child("2 working"),
+                    .child("2 working"), // text: sample (the gallery's specimen)
             )
             .child(
                 style::status_item("g-status-done", ui, false, false)
                     .child(div().text_color(ui.agent_done).child(style::icon(IconName::CircleCheck)))
-                    .child("1 done"),
+                    .child("1 done"), // text: sample (the gallery's specimen)
             )
             .child(div().flex_1())
             .child(style::status_separator(ui))
-            .child(style::status_text(ui).child("claude · 90×40"))
+            .child(style::status_text(ui).child("claude · 90×40")) // text: sample (the gallery's specimen)
     };
 
     // The page builds one piece at a time (a piece is a list item), each as wide as the sidebar.

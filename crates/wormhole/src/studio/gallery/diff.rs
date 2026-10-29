@@ -38,7 +38,7 @@ pub(super) fn render(
                 .text_caption()
                 .child(div().min_w_0().truncate().text_color(ui.muted).child("src/api/"))
                 .child(div().flex_none().text_color(ui.text).child("orders.rs"))
-                .child(style::status_badge(ui, ui.primary, "Renamed")),
+                .child(style::status_badge(ui, ui.primary, "Renamed")), // text: sample (the gallery's specimen)
         )
         .child(
             div()
@@ -50,11 +50,11 @@ pub(super) fn render(
                 .child(div().text_color(colors.added).child("+3"))
                 .child(div().text_color(colors.removed).child("−1")),
         )
-        .child(style::icon_button("g-diff-wrap", ui, IconName::TextWrap, "Wrap long lines").selected(true))
+        .child(style::icon_button("g-diff-wrap", ui, IconName::TextWrap, "Wrap long lines").selected(true)) // text: sample (the gallery's specimen)
         .child(
             style::segmented(ui)
-                .child(style::segment("g-diff-split", ui, "Split", true))
-                .child(style::segment("g-diff-unified", ui, "Unified", false)),
+                .child(style::segment("g-diff-split", ui, "Split", true)) // text: sample (the gallery's specimen)
+                .child(style::segment("g-diff-unified", ui, "Unified", false)), // text: sample (the gallery's specimen)
         );
     let rows = crate::features::git::diff_render::sample(ui, colors, code_family, code_size.into());
     env.mark(

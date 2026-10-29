@@ -33,7 +33,7 @@ pub(super) fn render(
                 .child(style::icon(IconName::Folder))
                 .child(style::icon(IconName::GitCompare))
                 .child(style::icon(IconName::Terminal))
-                .child(div().text_caption().child("← icons, 14 pt")),
+                .child(div().text_caption().child("← icons, 14 pt")), // text: sample (the gallery's specimen)
         )
         .child(
             // Icon buttons, 28 square: hover one for `band.hover` and its tooltip.
@@ -43,20 +43,20 @@ pub(super) fn render(
                 .gap_1()
                 .child(env.mark(
                     "icon.button",
-                    style::icon_button("g-ibtn-refresh", ui, IconName::RefreshCw, "Refresh"),
+                    style::icon_button("g-ibtn-refresh", ui, IconName::RefreshCw, "Refresh"), // text: sample (the gallery's specimen)
                 ))
-                .child(style::icon_button("g-ibtn-plus", ui, IconName::Plus, "Add"))
+                .child(style::icon_button("g-ibtn-plus", ui, IconName::Plus, "Add")) // text: sample (the gallery's specimen)
                 .child(
-                    style::icon_button("g-ibtn-collapse", ui, IconName::PanelLeft, "Hide sidebar")
+                    style::icon_button("g-ibtn-collapse", ui, IconName::PanelLeft, "Hide sidebar") // text: sample (the gallery's specimen)
                         .in_title_row()
                         .strip(style::StripFill::new(style::StripSide::Left, true)),
                 )
                 .child(
-                    style::icon_button("g-ibtn-settings", ui, IconName::Settings, "Settings (⌘,)")
+                    style::icon_button("g-ibtn-settings", ui, IconName::Settings, "Settings (⌘,)") // text: sample (the gallery's specimen)
                         .in_title_row(),
                 )
-                .child(style::icon_button("g-ibtn-band", ui, IconName::Plus, "New terminal here").in_band())
-                .child(note("← 14 pt, 16 pt in a title row, a band's + (hover for the fill)")),
+                .child(style::icon_button("g-ibtn-band", ui, IconName::Plus, "New terminal here").in_band()) // text: sample (the gallery's specimen)
+                .child(note("← 14 pt, 16 pt in a title row, a band's + (hover for the fill)")), // text: sample (the gallery's specimen)
         )
         .child(
             // Pressed toggles and an active filter take the primary's tint.
@@ -65,16 +65,16 @@ pub(super) fn render(
                 .items_center()
                 .gap_1()
                 .child(
-                    style::icon_button("g-ibtn-wrap", ui, IconName::TextWrap, "Wrap long lines")
+                    style::icon_button("g-ibtn-wrap", ui, IconName::TextWrap, "Wrap long lines") // text: sample (the gallery's specimen)
                         .selected(true),
                 )
                 .child(
-                    style::icon_button("g-ibtn-filter", ui, IconName::Funnel, "Group and filter terminals")
+                    style::icon_button("g-ibtn-filter", ui, IconName::Funnel, "Group and filter terminals") // text: sample (the gallery's specimen)
                         .in_title_row()
                         .selected(true)
                         .marked(true),
                 )
-                .child(note("← pressed, and an active filter with its dot")),
+                .child(note("← pressed, and an active filter with its dot")), // text: sample (the gallery's specimen)
         )
         .child(
             // The title row's Open in… group: an app's own icon in the button's face (here a
@@ -84,30 +84,30 @@ pub(super) fn render(
                 .flex()
                 .items_center()
                 .child(
-                    style::icon_button("g-ibtn-open-in", ui, IconName::ExternalLink, "Open folder in Zed")
+                    style::icon_button("g-ibtn-open-in", ui, IconName::ExternalLink, "Open folder in Zed") // text: sample (the gallery's specimen)
                         .with_drawing(style::agent_logo(None, "Z", style::TITLE_GLYPH, ui.text))
                         .in_title_row(),
                 )
                 .child(
-                    style::icon_button("g-ibtn-open-menu", ui, IconName::ChevronDown, "Open in another app")
+                    style::icon_button("g-ibtn-open-menu", ui, IconName::ChevronDown, "Open in another app") // text: sample (the gallery's specimen)
                         .narrow(16.0)
                         // Points up while its menu is open.
                         .menu_chevron(|mark, window, cx| {
-                            let menu = mark.track(Menu::new().item(Item::new("Zed")), cx);
+                            let menu = mark.track(Menu::new().item(Item::new("Zed")), cx); // text: sample (the gallery's specimen)
                             platform::show_menu(menu, window.mouse_position(), window, cx);
                         }),
                 )
                 .child(
-                    style::icon_button("g-ibtn-split-right", ui, IconName::Columns2, "Split right")
+                    style::icon_button("g-ibtn-split-right", ui, IconName::Columns2, "Split right") // text: sample (the gallery's specimen)
                         .in_title_row()
                         .motion(style::IconMotion::NewPane(style::Half::Right)),
                 )
                 .child(
-                    style::icon_button("g-ibtn-split-down", ui, IconName::Rows2, "Split down")
+                    style::icon_button("g-ibtn-split-down", ui, IconName::Rows2, "Split down") // text: sample (the gallery's specimen)
                         .in_title_row()
                         .motion(style::IconMotion::NewPane(style::Half::Below)),
                 )
-                .child(note("← an app's icon, its chevron and the splits, flush")),
+                .child(note("← an app's icon, its chevron and the splits, flush")), // text: sample (the gallery's specimen)
         )
         .child(
             // The title row's extras: the branch's status (a dot while the tree has
@@ -121,7 +121,7 @@ pub(super) fn render(
                 .child(env.mark("title.extras", style::branch_status(ui, true, 2, 1)))
                 .child(style::agent_gauge(
                     ui,
-                    Some("Opus 4.5".into()),
+                    Some("Opus 4.5".into()), // text: sample (the gallery's specimen)
                     Some(style::ContextUse { share: 0.41, warn: false, percent: "41%".into() }),
                 ))
                 .child(style::agent_gauge(
@@ -141,7 +141,7 @@ pub(super) fn render(
                     },
                 ))
                 .child(style::extra_chip(ui, false, None, "+1"))
-                .child(note("← the title row's extras: branch status, context, a port, a pull request")),
+                .child(note("← the title row's extras: branch status, context, a port, a pull request")), // text: sample (the gallery's specimen)
         )
         .child(
             // The × that removes or closes what it sits on; shown here without the hover reveal.
@@ -170,7 +170,7 @@ pub(super) fn render(
                         .text_color(ui.on_selected)
                         .child(style::close_x("g-close-solid", ui, style::SelectedFill::Solid)),
                 )
-                .child(note("← × on a row, on a selected tint, and on the active tab")),
+                .child(note("← × on a row, on a selected tint, and on the active tab")), // text: sample (the gallery's specimen)
         )
         .child(
             // A small drawing keeps its size; the outline shows the target round it.
@@ -184,7 +184,7 @@ pub(super) fn render(
                     style::close_x("g-hit-x", ui, style::SelectedFill::Plain),
                     |hit| hit.outlined(ui, ui.border),
                 ))
-                .child(note("← a 22 pt × in its 28 pt hit area")),
+                .child(note("← a 22 pt × in its 28 pt hit area")), // text: sample (the gallery's specimen)
         )
         .child(
             // Buttons at a row's ends pull out by the room round their glyph, so the glyphs line
@@ -203,13 +203,13 @@ pub(super) fn render(
                         .px_4()
                         .h(px(style::TITLE_ROW_H))
                         .child(
-                            style::icon_button("g-flush-left", ui, IconName::PanelLeft, "Hide sidebar")
+                            style::icon_button("g-flush-left", ui, IconName::PanelLeft, "Hide sidebar") // text: sample (the gallery's specimen)
                                 .in_title_row()
                                 .flush_left(),
                         )
                         .child(div().flex_1())
                         .child(
-                            style::icon_button("g-flush-right", ui, IconName::Settings, "Settings (⌘,)")
+                            style::icon_button("g-flush-right", ui, IconName::Settings, "Settings (⌘,)") // text: sample (the gallery's specimen)
                                 .in_title_row()
                                 .flush_right(),
                         ),
@@ -223,7 +223,7 @@ pub(super) fn render(
                         .text_caption()
                         .text_color(ui.muted)
                         .child("x 16")
-                        .child("width − 16"),
+                        .child("width − 16"), // text: sample (the gallery's specimen)
                 ),
         )
         .into_any_element()

@@ -2,6 +2,10 @@
 //! and the draft's pairs that fall short, each with a fix written as an expression and Show.
 
 use std::collections::BTreeSet;
+use wormhole_text::keys::{
+    STUDIO_CONTRAST, STUDIO_CONTRAST_ON_FILL, STUDIO_CONTRAST_SHOW, studio_contrast_follows,
+    studio_contrast_min, studio_contrast_on, studio_low_contrast_count,
+};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
@@ -38,7 +42,7 @@ impl StudioWindow {
                 .text_label()
                 .text_color(ui.warning_text)
                 .child(style::icon(IconName::TriangleAlert).text_color(ui.warning))
-                .child(format!("Low contrast · {}", issues.len())),
+                .child(studio_low_contrast_count(&issues.len().to_string())),
         );
         for (ix, issue) in issues.iter().enumerate() {
             let check = &issue.check;
@@ -67,9 +71,17 @@ impl StudioWindow {
                                         )
                                     })),
                             )
-                            .child(style::link_button(("studio-show", ix), ui, "Show", false).on_click(
-                                cx.listener(move |this, _, window, cx| this.select_token(fg, window, cx)),
-                            ))
+                            .child(
+                                style::link_button(
+                                    ("studio-show", ix),
+                                    ui,
+                                    wormhole_text::text(STUDIO_CONTRAST_SHOW),
+                                    false,
+                                )
+                                .on_click(
+                                    cx.listener(move |this, _, window, cx| this.select_token(fg, window, cx)),
+                                ),
+                            )
                             .into_any_element(),
                     )
                 }
@@ -77,7 +89,7 @@ impl StudioWindow {
                     div()
                         .text_caption()
                         .text_color(ui.muted)
-                        .child(format!("Follows {follows}: its fix clears this too."))
+                        .child(studio_contrast_follows(follows))
                         .into_any_element(),
                 ),
                 (None, None) => None,
@@ -89,7 +101,7 @@ impl StudioWindow {
                     .gap_1()
                     .when(ix > 0, |d| d.pt_3().rule_top(ui))
                     .child(ratio_line(check, code_font.clone(), ui))
-                    .child(div().text_caption().text_color(ui.faint).child(format!("on {}", check.bg)))
+                    .child(div().text_caption().text_color(ui.faint).child(studio_contrast_on(check.bg)))
                     .children(actions),
             );
         }
@@ -106,7 +118,7 @@ pub(super) fn contrast_section(
     ui: UiColors,
 ) -> AnyElement {
     let fill = checks.iter().any(|c| c.bg == name);
-    let title = if fill { "Contrast on this fill" } else { "Contrast" };
+    let title = wormhole_text::text(if fill { STUDIO_CONTRAST_ON_FILL } else { STUDIO_CONTRAST });
     section(ui)
         .gap_2()
         .child(style::section_label(ui, title))
@@ -130,7 +142,11 @@ pub(super) fn contrast_section(
                         .flex_col()
                         .child(div().truncate().text_caption().font_family(code_font.clone()).child(other))
                         .child(
-                            div().truncate().text_caption().text_color(ui.faint).child(format!("on {on}")),
+                            div()
+                                .truncate()
+                                .text_caption()
+                                .text_color(ui.faint)
+                                .child(studio_contrast_on(on)),
                         ),
                 )
                 .child(ratio(check, ui))
@@ -161,5 +177,5 @@ fn ratio(check: &ContrastCheck, ui: UiColors) -> Div {
         .child(
             div().font_weight(FontWeight::SEMIBOLD).text_color(color).child(format!("{:.1}:1", check.ratio)),
         )
-        .child(div().text_color(ui.faint).child(format!("min {}", check.min)))
+        .child(div().text_color(ui.faint).child(studio_contrast_min(&check.min.to_string())))
 }

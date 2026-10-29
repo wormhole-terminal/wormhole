@@ -26,27 +26,7 @@ mod support;
 use support::{Literal, is_test_file, non_test_part, sources, src, string_literals};
 
 /// Folders and files under `src/` whose words are all in the catalogs.
-const MIGRATED: &[&str] = &[
-    "settings_window",
-    "notice",
-    "folder_picker",
-    "picker",
-    // The Theme Studio, file by file: the rest (the token editor, contrast, the gallery's specimens)
-    // joins when it is done.
-    "studio/save.rs",
-    "studio/switch.rs",
-    "studio/title.rs",
-    "studio/title_chips.rs",
-    "studio/names.rs",
-    "studio/theme_menu.rs",
-    "studio/theme_list.rs",
-    "studio/update_from.rs",
-    "studio/versions.rs",
-    "studio/modal.rs",
-    "studio/origin_tag.rs",
-    "studio/use_theme.rs",
-    "studio/commit.rs",
-];
+const MIGRATED: &[&str] = &["settings_window", "notice", "folder_picker", "picker", "studio"];
 
 /// A marker that says a literal on its line is not interface text.
 const MARKER: &str = "// text:";

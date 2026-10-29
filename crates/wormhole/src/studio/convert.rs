@@ -23,7 +23,7 @@ pub(super) fn converted_safely(themes: &Themes, file: &ThemeFile, id: &str) -> R
     let before = (themes.resolve)(file)?;
     let after = (themes.resolve)(&converted)?;
     if before != after {
-        return Err("the converted theme does not look the same".to_string());
+        return Err("the converted theme does not look the same".to_string()); // text: error (logged, not shown)
     }
     Ok(converted)
 }

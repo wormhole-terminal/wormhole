@@ -135,7 +135,8 @@ fn editable_in_place(file: &ThemeFile) -> bool {
 /// A theme without a name of its own is called what its file is called.
 fn named(mut file: ThemeFile, stem: Option<String>) -> ThemeFile {
     if file.name.as_deref().is_none_or(|n| n.trim().is_empty()) {
-        file.name = stem.or_else(|| Some("Theme".to_string()));
+        file.name =
+            stem.or_else(|| Some(wormhole_text::text(wormhole_text::keys::STUDIO_DEFAULT_NAME).to_string()));
     }
     file
 }

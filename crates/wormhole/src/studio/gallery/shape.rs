@@ -20,8 +20,8 @@ pub(super) fn render(
         .flex()
         .items_center()
         .gap_2()
-        .child(style::pill("g-shape-tab", ui, true, true).child("Tab"))
-        .child(style::pill("g-shape-chip", ui, true, false).child("Chip"))
+        .child(style::pill("g-shape-tab", ui, true, true).child("Tab")) // text: sample (the gallery's specimen)
+        .child(style::pill("g-shape-chip", ui, true, false).child("Chip")) // text: sample (the gallery's specimen)
         .child(style::count_badge(ui, "3"))
         .child(style::status_badge(ui, ui.success_text, "badge"))
         .child(style::keycap(ui, "⌘K"))
@@ -29,8 +29,8 @@ pub(super) fn render(
             env.mark(
                 "segmented",
                 style::segmented(ui)
-                    .child(style::segment("g-shape-seg-a", ui, "Split", true))
-                    .child(style::segment("g-shape-seg-b", ui, "Unified", false)),
+                    .child(style::segment("g-shape-seg-a", ui, "Split", true)) // text: sample (the gallery's specimen)
+                    .child(style::segment("g-shape-seg-b", ui, "Unified", false)), // text: sample (the gallery's specimen)
             ),
         );
     // The keyboard focus ring round a control, and inside a row (both drawn here always).
@@ -49,7 +49,7 @@ pub(super) fn render(
                 .rounded(ui.radius)
                 .outlined(ui, ui.border_strong)
                 .text_body()
-                .child("A control")
+                .child("A control") // text: sample (the gallery's specimen)
                 .child(style::focus_ring(ui, style::RingPlacement::Outside, ui.radius)),
         )
         .child(
@@ -57,7 +57,7 @@ pub(super) fn render(
                 .relative()
                 .w_full()
                 .max_w(px(240.0))
-                .child(style::flush_row("g-ring-row", ui, false).child("A row in a list"))
+                .child(style::flush_row("g-ring-row", ui, false).child("A row in a list")) // text: sample (the gallery's specimen)
                 .child(style::focus_ring(ui, style::RingPlacement::Inside, px(0.0))),
         );
     let shape = div()

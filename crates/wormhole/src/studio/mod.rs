@@ -215,7 +215,7 @@ pub(crate) fn open_studio(cx: &mut App) {
         return;
     }
     let options = aux_window::window_options(
-        "Theme Studio",
+        wormhole_text::text(wormhole_text::keys::STUDIO_TITLE),
         size(px(WINDOW_SIZE.0), px(WINDOW_SIZE.1)),
         size(px(WINDOW_MIN.0), px(WINDOW_MIN.1)),
         cx,
@@ -262,8 +262,10 @@ impl StudioWindow {
     /// A window on `doc`, the theme that was in use when it was asked for.
     fn with_themes(themes: Themes, doc: Document, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let picker = cx.new(|cx| ColorPickerState::new(window, cx));
-        let expression =
-            cx.new(|cx| InputState::new(window, cx).placeholder("#hex or expression, e.g. primary / 15%"));
+        let expression = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder(wormhole_text::text(wormhole_text::keys::STUDIO_EXPRESSION_PLACEHOLDER))
+        });
         let name = cx.new(|cx| InputState::new(window, cx).default_value(doc.name().to_string()));
         let slider = cx.new(|_| SliderState::new().min(0.0).max(token_editor::METRIC_MAX).step(1.0));
         let this = cx.entity();
@@ -598,4 +600,4 @@ fn tests_support_dump(t: &ThemeTokens) -> String {
     out
 }
 #[cfg(all(test, feature = "devctl"))]
-mod window_tests_v1;
+mod v1_tests;

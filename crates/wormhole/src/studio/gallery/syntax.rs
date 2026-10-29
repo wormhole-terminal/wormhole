@@ -13,7 +13,7 @@ use crate::settings::SettingsStore;
 use crate::style::TextRole;
 use crate::theme_bridge::hsla;
 
-const CODE_SAMPLE: &str = "/// Count words, ignoring case.\nfn count(text: &str) -> usize {\n    let words = text.split_whitespace();\n    words.map(str::to_lowercase).count() // 42\n}";
+const CODE_SAMPLE: &str = "/// Count words, ignoring case.\nfn count(text: &str) -> usize {\n    let words = text.split_whitespace();\n    words.map(str::to_lowercase).count() // 42\n}"; // text: sample (the gallery's specimen)
 
 /// A line of the sample and the styles its syntax theme gives it.
 type Line = (&'static str, Vec<(Range<usize>, HighlightStyle)>);
