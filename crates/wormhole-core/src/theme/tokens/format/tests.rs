@@ -230,6 +230,18 @@ fn a_newer_file_loads_what_it_knows_and_counts_the_rest() {
 }
 
 #[test]
+fn a_newer_file_drops_an_expression_that_names_a_color_this_version_lacks() {
+    let text = v1_text(r##""ui": {"primary": "#ff8800", "border": "mix(primary, glow.edge, 30%)"}"##)
+        .replace("\"version\": 1", "\"version\": 5");
+    let f = read(&text);
+    assert_eq!(f.read.skipped, 1);
+    assert_eq!(f.ui.len(), 1);
+    assert!(resolve_str(&text).is_ok(), "the rest of the theme still resolves");
+    let strict = text.replace("\"version\": 5", "\"version\": 1");
+    assert!(resolve_str(&strict).is_err(), "version 1 stays strict");
+}
+
+#[test]
 fn a_newer_file_keeps_the_caps() {
     let big = format!(r#"{{"version": 9, "name": "{}"}}"#, "x".repeat(MAX_THEME_BYTES));
     assert!(read_theme_file(&big).unwrap_err().contains("larger than"));
