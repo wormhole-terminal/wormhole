@@ -449,6 +449,26 @@ fn converting_a_user_theme_that_extends_another_user_theme() {
 }
 
 #[test]
+fn converting_a_theme_that_extends_the_built_in_it_is_called() {
+    let mine = read(r##"{"name": "Nord", "extends": "Nord", "ui": {"primary": "#ff0000"}}"##);
+    let lookup = |n: &str| n.eq_ignore_ascii_case("Nord").then(|| mine.clone());
+    let slug_of = |n: &str| slug::builtin_slug(n).unwrap_or("x").to_string();
+    let v1 = convert_to_v1(&mine, &lookup, &slug_of, "nord_2", "d").unwrap();
+    let base = v1.base.as_ref().unwrap();
+    assert_eq!(base.from, "nord");
+    assert_ne!(base.file.ui.get("primary").map(String::as_str), Some("#ff0000"), "the base is the built-in's");
+    assert_eq!(snapshot(&resolve(&mine, &lookup).unwrap()), snapshot(&resolve(&v1, &no_lookup).unwrap()));
+    // The same for a version that reaches outside the file.
+    let family = read(
+        r##"{"name": "Nord", "variants": [{"name": "Dim", "extends": "Nord", "ui": {"border": "#00ff00"}}]}"##,
+    );
+    let lookup = |n: &str| n.eq_ignore_ascii_case("Nord").then(|| family.clone());
+    let v1 = convert_to_v1(&family, &lookup, &slug_of, "nord_2", "d").unwrap();
+    let dim = v1.variants[0].base.as_ref().expect("a base of its own");
+    assert_ne!(dim.file.ui.get("border").map(String::as_str), Some("#00ff00"));
+}
+
+#[test]
 fn converting_a_family_keeps_every_version() {
     let family = read(
         r##"{"name": "Duo", "extends": "Nord", "ui": {"primary": "#c08a1e"}, "syntax": {"keyword": {"italic": true}},
