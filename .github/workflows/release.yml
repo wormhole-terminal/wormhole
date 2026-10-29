@@ -51,7 +51,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: ${{ github.event_name == 'workflow_run' && 0 || 1 }} # dev_version counts commits
+          # Strings: a bare 0 is false in an expression, so `&& 0 || 1` always gave 1, and the gate saw
+          # no tags. The whole history brings the tags along, which the check below reads.
+          fetch-depth: ${{ github.event_name == 'workflow_run' && '0' || '1' }}
       - id: check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -68,9 +70,15 @@ jobs:
             if [ "$CI_CONCLUSION" != success ] || [ "$CI_EVENT" != push ] || [ "$CI_REPO" != "$GITHUB_REPOSITORY" ]; then
               skip=true
               echo "::notice::CI ended '$CI_CONCLUSION' for a $CI_EVENT from $CI_REPO: no unstable build"
-            elif [ -z "$(dev_version)" ]; then
+            elif ! git tag --list 'v*' | grep -q .; then
+              # Without the tags every commit would look unreleased: stop rather than guess.
+              echo "::error::no release tags in the checkout"
+              exit 1
+            elif released="$(git tag --list 'v*' --contains HEAD --sort=v:refname | head -n 1)" && [ -n "$released" ]; then
+              # The release's own commit, or one before it whose CI finished after the tag: an
+              # unstable build of it would be numbered below the release that already has it.
               skip=true
-              echo "::notice::This is the commit of v$APP_VERSION: the release covers it"
+              echo "::notice::$released already contains this commit: no unstable build"
             fi
           elif [ "$GITHUB_EVENT_NAME" = push ] && gh release view "v$APP_VERSION" >/dev/null 2>&1; then
             skip=true

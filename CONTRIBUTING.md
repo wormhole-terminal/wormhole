@@ -206,7 +206,10 @@ is there.
 
 Every push to `main` that passes CI is built the same way for the Unstable channel (Settings → Updates →
 Channel): numbered `X.Y.(Z+1)-dev.N` (`dev_version` in `scripts/lib.sh`), signed, notarized and put on
-the rolling prerelease `unstable`, which holds only the newest build and the one before. Its notes are
+the rolling prerelease `unstable`, which holds only the newest build and the one before. A commit a
+release tag already contains is skipped: the release's own, or one whose CI finished after the tag.
+Because the `unstable` tag moves with every build, a plain `git fetch --tags` refuses it ("would clobber
+existing tag"); use `git fetch --tags --force`. An unstable build's notes are
 CHANGELOG.md's `[Unreleased]`. The app on Unstable reads `unstable/latest.json` and `stable/latest.json`
 and takes the newer, and it shows Settings → Feature flags, which a release otherwise hides.
 
