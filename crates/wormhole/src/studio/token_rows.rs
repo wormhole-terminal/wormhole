@@ -6,7 +6,8 @@ use std::collections::BTreeSet;
 
 use wormhole_core::theme::tokens::{self, Color, ThemeFile, ThemeTokens};
 
-use super::draft::{Show, group_size, in_area, is_metric, number, override_of, visible};
+use super::document::{is_metric, number, override_of};
+use super::draft::{Show, group_size, in_area, visible};
 use crate::theme_bridge::MISSING_TOKEN;
 
 /// What a token row's swatch draws.
@@ -146,7 +147,8 @@ mod tests {
 
     use wormhole_core::theme::tokens::{Area, ThemeFile, ThemeTokens, builtin_tokens, resolve};
 
-    use super::super::draft::{Show, draft_for, groups, set_override};
+    use super::super::document::set_override;
+    use super::super::draft::{Show, draft_for, groups};
     use super::{Built, Inputs, ListRow, build};
 
     fn base() -> ThemeTokens {

@@ -12,7 +12,8 @@ use gpui_kit::*;
 use wormhole_core::theme::tokens::{Completion, completions};
 
 use super::StudioWindow;
-use super::draft::{group_of, is_metric};
+use super::document::is_metric;
+use super::draft::group_of;
 use crate::settings::UiColors;
 use crate::style::{self, Edges, TextRole};
 
