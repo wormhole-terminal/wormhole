@@ -52,7 +52,13 @@ pub(super) fn open_target(target: &Target, inputs: &Inputs, themes: &Themes) -> 
         Target::Own(path) => {
             let Loaded { file, stamp } = (themes.read)(path).ok()?;
             let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned());
-            Some(Document::new(named(file, stem), Subject::Own { path: path.clone() }, stamp))
+            let file = named(file, stem);
+            if !editable_in_place(&file) {
+                // A hand-written file of several versions is never written by the Studio: a copy.
+                let name = file.name.clone().unwrap_or_default();
+                return Some(untitled(&name, &(themes.resolve)(&file).ok()?, themes));
+            }
+            Some(Document::new(file, Subject::Own { path: path.clone() }, stamp))
         }
         Target::Builtin(name) => {
             let tokens = builtin_tokens().into_iter().find(|t| &t.name == name)?;
@@ -87,10 +93,13 @@ pub(super) fn open_document(inputs: &Inputs, themes: &Themes) -> Document {
         &inputs.in_use.name,
     );
     let opened = match &subject {
-        Subject::Own { path } => (themes.read)(path).ok().map(|Loaded { file, stamp }| {
-            let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned());
-            (named(file, stem), stamp)
-        }),
+        Subject::Own { path } => (themes.read)(path)
+            .ok()
+            .map(|Loaded { file, stamp }| {
+                let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned());
+                (named(file, stem), stamp)
+            })
+            .filter(|(file, _)| editable_in_place(file)),
         Subject::Project { .. } => {
             project.and_then(|p| read_theme_file(&p.text).ok()).map(|file| (named(file, None), None))
         }
@@ -115,6 +124,12 @@ pub(super) fn open_document(inputs: &Inputs, themes: &Themes) -> Document {
             untitled(&from, &inputs.in_use, themes)
         }
     }
+}
+
+/// A file that ships several versions is edited in place only once the Studio itself wrote it (the
+/// new format, whose pair it keeps whole); a hand-written one is only ever copied.
+fn editable_in_place(file: &ThemeFile) -> bool {
+    file.variants.is_empty() || file.version.is_some()
 }
 
 /// A theme without a name of its own is called what its file is called.

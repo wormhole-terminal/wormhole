@@ -63,7 +63,7 @@ impl StudioWindow {
         if self.dirty() {
             // A copy of a theme is called by the theme it is made from: that is what was chosen.
             let called = match &doc.subject {
-                Subject::Untitled { from } => from.clone(),
+                Subject::Untitled { from } if !from.is_empty() => from.clone(),
                 _ => doc.name().to_string(),
             };
             self.ask_unsaved(Then::Switch(target.clone(), called), window, cx);

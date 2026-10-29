@@ -116,62 +116,60 @@ pub const STUDIO_VERSIONS_FIRST: Key = Key::new(1262);
 pub const STUDIO_UNDO_RESTORE: Key = Key::new(1265);
 /// "Made with a newer Wormhole"
 pub const STUDIO_NEWER_CHIP: Key = Key::new(1266);
-/// "This theme was made with a newer Wormhole; saving would drop what this version doesn’t know. Duplicate it to keep your edits."
-pub const STUDIO_NEWER_SAVE_BLOCKED: Key = Key::new(1268);
 /// "Duplicate"
-pub const STUDIO_NEWER_DUPLICATE: Key = Key::new(1269);
+pub const STUDIO_NEWER_DUPLICATE: Key = Key::new(1268);
 /// "Previewing, not in use"
-pub const STUDIO_PREVIEW_CHIP: Key = Key::new(1270);
+pub const STUDIO_PREVIEW_CHIP: Key = Key::new(1269);
 /// "Use"
-pub const STUDIO_PREVIEW_USE: Key = Key::new(1271);
+pub const STUDIO_PREVIEW_USE: Key = Key::new(1270);
 /// "Every window shows this theme while Theme Studio is open. Closing Theme Studio puts your theme back."
-pub const STUDIO_PREVIEW_TOOLTIP: Key = Key::new(1272);
+pub const STUDIO_PREVIEW_TOOLTIP: Key = Key::new(1271);
 /// "just now"
-pub const STUDIO_VERSIONS_JUST_NOW: Key = Key::new(1273);
+pub const STUDIO_VERSIONS_JUST_NOW: Key = Key::new(1272);
 /// "New Theme From"
-pub const STUDIO_MENU_NEW_FROM: Key = Key::new(1276);
+pub const STUDIO_MENU_NEW_FROM: Key = Key::new(1275);
 /// "Untitled"
-pub const STUDIO_UNTITLED: Key = Key::new(1277);
+pub const STUDIO_UNTITLED: Key = Key::new(1276);
 /// "Give the theme a name first."
-pub const STUDIO_NAME_FIRST: Key = Key::new(1278);
+pub const STUDIO_NAME_FIRST: Key = Key::new(1277);
 /// "Copied the theme's JSON."
-pub const STUDIO_COPIED_JSON: Key = Key::new(1286);
+pub const STUDIO_COPIED_JSON: Key = Key::new(1285);
 /// "The terminal in front is in another project."
-pub const STUDIO_OTHER_PROJECT: Key = Key::new(1288);
+pub const STUDIO_OTHER_PROJECT: Key = Key::new(1287);
 /// "Open a terminal in a project first."
-pub const STUDIO_NO_TERMINAL: Key = Key::new(1291);
+pub const STUDIO_NO_TERMINAL: Key = Key::new(1290);
 /// "The terminal in front isn't in a project with a .wormhole folder."
-pub const STUDIO_NO_PROJECT_FOLDER: Key = Key::new(1292);
+pub const STUDIO_NO_PROJECT_FOLDER: Key = Key::new(1291);
 /// "Reveal in Finder"
-pub const STUDIO_REVEAL: Key = Key::new(1293);
+pub const STUDIO_REVEAL: Key = Key::new(1292);
 /// "Saving replaces those changes. The file as it is now is kept in the theme’s saved versions."
-pub const STUDIO_CHANGED_DETAIL: Key = Key::new(1295);
+pub const STUDIO_CHANGED_DETAIL: Key = Key::new(1294);
 /// "Overwrite"
-pub const STUDIO_OVERWRITE: Key = Key::new(1296);
+pub const STUDIO_OVERWRITE: Key = Key::new(1295);
 /// "A theme with the same name is in your themes folder. Replacing it overwrites that theme with this draft."
-pub const STUDIO_EXISTS_DETAIL: Key = Key::new(1298);
+pub const STUDIO_EXISTS_DETAIL: Key = Key::new(1297);
 /// "Replace"
-pub const STUDIO_REPLACE: Key = Key::new(1299);
+pub const STUDIO_REPLACE: Key = Key::new(1298);
 /// "Cancel"
-pub const STUDIO_CANCEL: Key = Key::new(1300);
+pub const STUDIO_CANCEL: Key = Key::new(1299);
 /// "Save"
-pub const STUDIO_SAVE: Key = Key::new(1301);
+pub const STUDIO_SAVE: Key = Key::new(1300);
 /// "Don’t Save"
-pub const STUDIO_DONT_SAVE: Key = Key::new(1302);
+pub const STUDIO_DONT_SAVE: Key = Key::new(1301);
 /// "Theme Studio"
-pub const STUDIO_TITLE: Key = Key::new(1305);
+pub const STUDIO_TITLE: Key = Key::new(1304);
 /// "Unsaved"
-pub const STUDIO_UNSAVED: Key = Key::new(1306);
+pub const STUDIO_UNSAVED: Key = Key::new(1305);
 /// "Export…"
-pub const STUDIO_EXPORT: Key = Key::new(1307);
+pub const STUDIO_EXPORT: Key = Key::new(1306);
 /// "Save theme"
-pub const STUDIO_SAVE_THEME: Key = Key::new(1308);
+pub const STUDIO_SAVE_THEME: Key = Key::new(1307);
 /// "Export JSON…"
-pub const STUDIO_EXPORT_JSON: Key = Key::new(1309);
+pub const STUDIO_EXPORT_JSON: Key = Key::new(1308);
 /// "Copy JSON"
-pub const STUDIO_COPY_JSON: Key = Key::new(1310);
+pub const STUDIO_COPY_JSON: Key = Key::new(1309);
 /// "Use in this project…"
-pub const STUDIO_USE_IN_PROJECT: Key = Key::new(1311);
+pub const STUDIO_USE_IN_PROJECT: Key = Key::new(1310);
 
 /// ```text
 /// Change “{ $token }”
@@ -350,7 +348,7 @@ pub fn studio_newer_explain(count: i64) -> String {
 /// }
 /// ```
 pub fn studio_versions_minutes_ago(count: i64) -> String {
-    crate::active::message(1274, &[("count", Arg::Int(count))])
+    crate::active::message(1273, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -360,98 +358,98 @@ pub fn studio_versions_minutes_ago(count: i64) -> String {
 /// }
 /// ```
 pub fn studio_versions_hours_ago(count: i64) -> String {
-    crate::active::message(1275, &[("count", Arg::Int(count))])
+    crate::active::message(1274, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Could not save: { $error }
 /// ```
 pub fn studio_save_failed(error: &str) -> String {
-    crate::active::message(1279, &[("error", Arg::Str(error))])
+    crate::active::message(1278, &[("error", Arg::Str(error))])
 }
 
 /// ```text
 /// Saved to { $path } and set as your theme.
 /// ```
 pub fn studio_saved_set(path: &str) -> String {
-    crate::active::message(1280, &[("path", Arg::Str(path))])
+    crate::active::message(1279, &[("path", Arg::Str(path))])
 }
 
 /// ```text
 /// Saved to { $path }.
 /// ```
 pub fn studio_saved(path: &str) -> String {
-    crate::active::message(1281, &[("path", Arg::Str(path))])
+    crate::active::message(1280, &[("path", Arg::Str(path))])
 }
 
 /// ```text
 /// Saved a copy as “{ $name }” to { $path }.
 /// ```
 pub fn studio_copy_saved(name: &str, path: &str) -> String {
-    crate::active::message(1282, &[("name", Arg::Str(name)), ("path", Arg::Str(path))])
+    crate::active::message(1281, &[("name", Arg::Str(name)), ("path", Arg::Str(path))])
 }
 
 /// ```text
 /// Could not save a copy: { $error }
 /// ```
 pub fn studio_copy_failed(error: &str) -> String {
-    crate::active::message(1283, &[("error", Arg::Str(error))])
+    crate::active::message(1282, &[("error", Arg::Str(error))])
 }
 
 /// ```text
 /// Could not export: { $error }
 /// ```
 pub fn studio_export_failed(error: &str) -> String {
-    crate::active::message(1284, &[("error", Arg::Str(error))])
+    crate::active::message(1283, &[("error", Arg::Str(error))])
 }
 
 /// ```text
 /// Exported to { $path }.
 /// ```
 pub fn studio_exported(path: &str) -> String {
-    crate::active::message(1285, &[("path", Arg::Str(path))])
+    crate::active::message(1284, &[("path", Arg::Str(path))])
 }
 
 /// ```text
 /// Could not copy: { $error }
 /// ```
 pub fn studio_copy_json_failed(error: &str) -> String {
-    crate::active::message(1287, &[("error", Arg::Str(error))])
+    crate::active::message(1286, &[("error", Arg::Str(error))])
 }
 
 /// ```text
 /// Saved to { $path }: terminals in this project use it.
 /// ```
 pub fn studio_project_saved(path: &str) -> String {
-    crate::active::message(1289, &[("path", Arg::Str(path))])
+    crate::active::message(1288, &[("path", Arg::Str(path))])
 }
 
 /// ```text
 /// Could not save to the project: { $error }
 /// ```
 pub fn studio_project_failed(error: &str) -> String {
-    crate::active::message(1290, &[("error", Arg::Str(error))])
+    crate::active::message(1289, &[("error", Arg::Str(error))])
 }
 
 /// ```text
 /// “{ $name }” was changed by another application.
 /// ```
 pub fn studio_changed_message(name: &str) -> String {
-    crate::active::message(1294, &[("name", Arg::Str(name))])
+    crate::active::message(1293, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// “{ $name }” already exists. Do you want to replace it?
 /// ```
 pub fn studio_exists_message(name: &str) -> String {
-    crate::active::message(1297, &[("name", Arg::Str(name))])
+    crate::active::message(1296, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Do you want to save the changes to “{ $name }”?
 /// ```
 pub fn studio_close_message(name: &str) -> String {
-    crate::active::message(1303, &[("name", Arg::Str(name))])
+    crate::active::message(1302, &[("name", Arg::Str(name))])
 }
 
 /// ```text
@@ -461,28 +459,28 @@ pub fn studio_close_message(name: &str) -> String {
 /// }
 /// ```
 pub fn studio_unsaved_detail(count: i64) -> String {
-    crate::active::message(1304, &[("count", Arg::Int(count))])
+    crate::active::message(1303, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// based on { $from } · copied { $day } · { $appearance }
 /// ```
 pub fn studio_title_based_on(from: &str, day: &str, appearance: &str) -> String {
-    crate::active::message(1312, &[("from", Arg::Str(from)), ("day", Arg::Str(day)), ("appearance", Arg::Str(appearance))])
+    crate::active::message(1311, &[("from", Arg::Str(from)), ("day", Arg::Str(day)), ("appearance", Arg::Str(appearance))])
 }
 
 /// ```text
 /// extends { $base } · { $appearance }
 /// ```
 pub fn studio_title_extends(base: &str, appearance: &str) -> String {
-    crate::active::message(1313, &[("base", Arg::Str(base)), ("appearance", Arg::Str(appearance))])
+    crate::active::message(1312, &[("base", Arg::Str(base)), ("appearance", Arg::Str(appearance))])
 }
 
 /// ```text
 /// its own palette · { $appearance }
 /// ```
 pub fn studio_title_own(appearance: &str) -> String {
-    crate::active::message(1314, &[("appearance", Arg::Str(appearance))])
+    crate::active::message(1313, &[("appearance", Arg::Str(appearance))])
 }
 
 /// ```text
@@ -503,5 +501,5 @@ pub fn studio_title_own(appearance: &str) -> String {
 /// } { $year }
 /// ```
 pub fn studio_date(day: &str, month: i64, year: &str) -> String {
-    crate::active::message(1315, &[("day", Arg::Str(day)), ("month", Arg::Int(month)), ("year", Arg::Str(year))])
+    crate::active::message(1314, &[("day", Arg::Str(day)), ("month", Arg::Int(month)), ("year", Arg::Str(year))])
 }
