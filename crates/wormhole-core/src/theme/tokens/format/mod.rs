@@ -17,10 +17,11 @@
 //! has a `base` (and so no `extends` and no implicit Tokyo Night under it) is the only
 //! difference the resolver sees.
 //!
-//! - [`slug`]: theme names for settings and `base.from`; [`keys`]: the key table;
+//! - [`appearance`]: light and dark in one file; [`slug`]: theme names for settings and `base.from`; [`keys`]: the key table;
 //!   [`copy`]: building a `base`, converting a version 0 theme, diffing a base against its
 //!   source; [`export`]: writing a file older releases read; [`migrate`]: the steps.
 
+pub mod appearance;
 pub mod copy;
 pub mod export;
 mod keys;
