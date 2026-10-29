@@ -137,7 +137,11 @@ impl Reader {
             match key.as_str() {
                 "from" => from = self.string(v, &at)?,
                 "copied" => {
-                    base.copied = self.string(v, &at)?.filter(|c| c.len() <= MAX_TEXT);
+                    base.copied = self.string(v, &at)?;
+                    if base.copied.as_ref().is_some_and(|c| c.len() > MAX_TEXT) {
+                        base.copied = None;
+                        self.reject::<()>(|| format!("{at}: longer than {MAX_TEXT} characters"))?;
+                    }
                 }
                 other => {
                     if !self.layer(other, v, &mut base.file, &at)? {
