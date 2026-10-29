@@ -559,7 +559,19 @@ fn t(tokens: &ThemeTokens, name: &str) -> Hsla {
 mod draw_tests;
 #[cfg(all(test, feature = "devctl"))]
 mod guard_tests;
+#[cfg(all(test, feature = "devctl"))]
+mod proof_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(all(test, feature = "devctl"))]
 mod window_tests;
+
+/// Canonical text of every colour of a theme, for tests that compare two resolutions.
+#[cfg(all(test, feature = "devctl"))]
+fn tests_support_dump(t: &ThemeTokens) -> String {
+    let mut out = format!("{:?}|{:?}|{:?}|{:?}|", t.appearance, t.terminal, t.syntax, t.metrics);
+    for (k, v) in t.ui_tokens() {
+        out.push_str(&format!("{k}={};", v.to_hex()));
+    }
+    out
+}
