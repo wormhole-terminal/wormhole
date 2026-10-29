@@ -8,6 +8,7 @@ use gpui_kit::TestAppContext;
 use wormhole_core::theme::saved_versions::SavedVersion;
 use wormhole_core::theme::tokens::{ThemeFile, copy, read_theme_file};
 
+use super::Edit;
 use super::document::Subject;
 use super::document::places::{Origin, Reach, origin, reach};
 use super::modal::Modal;
@@ -92,8 +93,6 @@ fn a_value_edited_in_one_appearance_leaves_the_other_alone(cx: &mut TestAppConte
         studio.set_selected_value(None, Edit::Field, window, cx);
     });
 }
-
-use super::Edit;
 
 #[gpui_kit::test]
 fn update_from_applies_as_one_undo_step_and_up_to_date_is_off(cx: &mut TestAppContext) {
@@ -229,4 +228,57 @@ fn previewing_a_theme_not_in_use_shows_the_chip_until_it_is_used(cx: &mut TestAp
 fn a_loaded_file_flags_what_it_skipped() {
     let file: ThemeFile = read_theme_file(DUSK).expect("reads");
     assert!(!file.read.newer);
+}
+
+#[gpui_kit::test]
+fn new_theme_is_blank_and_new_theme_from_copies_into_the_base(cx: &mut TestAppContext) {
+    let themes = Themes {
+        catalog: || wormhole_core::theme::catalog::catalog_in(std::path::Path::new("/no/such/themes/folder")),
+        ..builtin_themes()
+    };
+    let (handle, studio) = open_with(cx, themes);
+    with(cx, handle, &studio, |studio, window, cx| studio.open_theme_menu(window, cx));
+    let outline = crate::platform::record::open().expect("the menu opened").outline();
+    assert!(outline.contains(&"> New Theme From".to_string()), "{outline:?}");
+
+    super::window_tests::pick_from_menu(cx, handle, "New Theme\u{2026}");
+    with(cx, handle, &studio, |studio, _, _| {
+        assert_eq!(studio.doc.name(), "Untitled");
+        assert!(studio.doc.file.base.is_none() && studio.doc.file.extends.is_none());
+        assert!(!studio.dirty());
+        assert_eq!(studio.update_check.state, super::update_from::State::NoBase);
+    });
+
+    with(cx, handle, &studio, |studio, window, cx| studio.open_theme_menu(window, cx));
+    super::window_tests::pick_from_menu(cx, handle, "Nord");
+    with(cx, handle, &studio, |studio, _, _| {
+        assert_eq!(studio.doc.name(), "Untitled (from Nord)");
+        assert_eq!(studio.doc.file.base.as_ref().map(|b| b.from.as_str()), Some("nord"));
+    });
+}
+
+#[gpui_kit::test]
+fn use_with_match_system_sets_both_picks(cx: &mut TestAppContext) {
+    use wormhole_core::config::ThemeMode;
+    let pair_themes = Themes {
+        read: |_| {
+            let file = read_theme_file(
+                r##"{"version": 1, "id": "mine", "name": "Mine", "base": {"from": "nord"}, "variants": [{"name": "light"}, {"name": "dark"}]}"##,
+            )?;
+            Ok(Loaded { file, stamp: None })
+        },
+        ..own_dusk()
+    };
+    let (handle, studio) = open_with(cx, pair_themes);
+    with(cx, handle, &studio, |studio, _, cx| {
+        assert!(studio.doc.is_pair());
+        assert!(studio.can_follow_system(cx));
+        studio.follow_system(cx);
+        let s = &cx.global::<SettingsStore>().settings;
+        assert_eq!(
+            (s.theme_mode, s.theme_light.as_str(), s.theme.as_str()),
+            (ThemeMode::System, "mine.light", "mine.dark")
+        );
+        assert!(!studio.can_follow_system(cx), "both are picks now");
+    });
 }

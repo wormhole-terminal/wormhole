@@ -89,11 +89,11 @@ impl StudioWindow {
         self.completion = None;
         self.field_error = None;
         self.notice = None;
-        self.touched();
         let name = doc.name().to_string();
         self.name.update(cx, |input, cx| input.set_value(name, window, cx));
         let resolved = (self.themes.resolve)(&doc.folded()).ok();
         self.doc = doc;
+        self.touched();
         SettingsStore::preview_tokens(cx, resolved);
         cx.refresh_windows();
         self.publish_edit_titles(cx);

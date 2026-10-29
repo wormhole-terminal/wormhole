@@ -512,7 +512,7 @@ pub(super) fn own_themes() -> Themes {
 }
 
 /// Choose a theme of the open theme menu, as a click on it would.
-fn pick_from_menu(cx: &mut TestAppContext, handle: AnyWindowHandle, title: &str) {
+pub(super) fn pick_from_menu(cx: &mut TestAppContext, handle: AnyWindowHandle, title: &str) {
     let (_, callbacks) = crate::platform::record::pick(title).expect("the item is there");
     cx.update(|cx| {
         handle

@@ -264,6 +264,16 @@ mod tests {
     }
 
     #[test]
+    fn the_yours_and_base_filters_list_what_the_theme_sets_and_what_it_still_has_as_copied() {
+        let yours = rows(Show::Yours, None, "", &[], None);
+        let listed = names(&yours);
+        assert!(listed.contains(&"primary"), "{listed:?}");
+        assert!(listed.iter().all(|n| matches!(*n, "Primary" | "primary")), "{listed:?}");
+        // A built-in's draft sets its whole palette itself; with no base, nothing is "base".
+        assert!(rows(Show::Base, None, "", &[], None).rows.is_empty());
+    }
+
+    #[test]
     fn a_line_is_the_same_line_when_only_its_contents_change() {
         let a = rows(Show::All, None, "", &["Primary"], None);
         let b = rows(Show::All, None, "", &["Primary"], Some("primary"));
