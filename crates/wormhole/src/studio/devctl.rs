@@ -236,12 +236,18 @@ impl StudioWindow {
             _ if arg == "project" => Target::Project,
             _ => Target::New,
         };
-        self.open_target(&target, window, cx);
+        let _ = window;
+        cx.defer(move |cx| {
+            let _ = with_studio(cx, |studio, window, cx| studio.open_target(&target, window, cx));
+        });
     }
 
     #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_theme_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.open_theme_menu(window, cx);
+    pub(crate) fn devctl_theme_menu(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        // The menu looks at the front window's project, which devctl's own update has locked.
+        cx.defer(|cx| {
+            let _ = with_studio(cx, |studio, window, cx| studio.open_theme_menu(window, cx));
+        });
     }
 
     #[cfg(feature = "devctl")]
