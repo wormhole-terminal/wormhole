@@ -183,3 +183,28 @@ fn the_whole_page_builds_piece_by_piece(cx: &mut TestAppContext) {
     let built = seen(cx, &studio).pieces;
     assert!(built >= gallery::piece_count(), "only {built} pieces were built");
 }
+
+/// Switching Light | Dark makes the list's rows once, however often it is drawn after.
+#[gpui_kit::test]
+fn the_light_dark_switch_makes_the_rows_once(cx: &mut TestAppContext) {
+    use wormhole_core::theme::tokens::Appearance;
+    let (handle, studio) = open(cx);
+    cx.update(|cx| {
+        handle
+            .update(cx, |_, window, cx| {
+                studio.update(cx, |s, cx| s.add_appearance(Appearance::Light, window, cx))
+            })
+            .expect("the window is open")
+    });
+    settle(cx, handle);
+    let before = seen(cx, &studio);
+    cx.update(|cx| {
+        handle
+            .update(cx, |_, window, cx| studio.update(cx, |s, cx| s.set_shown("dark", window, cx)))
+            .expect("the window is open")
+    });
+    settle(cx, handle);
+    draw(cx, handle);
+    let after = seen(cx, &studio);
+    assert_eq!(after.list.syncs - before.list.syncs, 1, "the rows were made once for the switch");
+}
