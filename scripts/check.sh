@@ -6,6 +6,7 @@
 #   scripts/check.sh --base HEAD      # only what isn't committed yet
 #   scripts/check.sh --all            # the whole gate, whatever changed (after a rebase; when unsure)
 #   scripts/check.sh --plan           # print what would run and why, run nothing
+#   scripts/check.sh --scope          # print only `scope=<name>` and `deps=<0|1>` (CI reads these), run nothing
 #
 # Scopes, widest first; the widest one any changed file needs wins:
 #   all   crates/wormhole-core/** and crates/wormhole-term/**, Cargo.toml/Cargo.lock, toolchain, lint and build config, a script
@@ -32,12 +33,13 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 . scripts/lib.sh
 
-base="" plan=0 force_all=0
+base="" plan=0 force_all=0 scope_only=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --base) base="${2:?--base needs a revision}"; shift ;;
     --all) force_all=1 ;;
     --plan) plan=1 ;;
+    --scope) scope_only=1 ;;
     -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
     *) die "unknown argument: $1 (see --help)" ;;
   esac
@@ -87,6 +89,12 @@ while IFS= read -r path; do
   if [ "$(rank "$s")" -gt "$(rank "$scope")" ]; then scope=$s why=$path; fi
 done <<<"$changed"
 [ "$force_all" = 1 ] && { scope=all; why="--all"; }
+
+if [ "$scope_only" = 1 ]; then
+  echo "scope=$scope"
+  echo "deps=$deps"
+  exit 0
+fi
 
 rust_changed=0
 grep -q '\.rs$' <<<"$changed" && rust_changed=1

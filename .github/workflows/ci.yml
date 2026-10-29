@@ -45,6 +45,61 @@ env:
 # The Rust version, its components and profile are rust-toolchain.toml's: `rustup toolchain install`
 # reads it, as cargo does locally, so a Rust bump is that one file.
 jobs:
+  # What the change reaches, from the same table the local gate uses (scripts/check.sh --scope): the
+  # macOS jobs build only as much as that, because their time is the build (about 8 of 11 minutes in the
+  # tests job), not the tests. Seconds, on Ubuntu. Anything unknown, a manual run and a push whose
+  # previous commit is unknown get the whole workspace, as check.sh does; so does a scope this job does
+  # not know, so a broken lookup runs too much, never too little. The structure check runs here for every
+  # change: it reads the sources as text, in a second, and a change to its own rules or allowlist is a
+  # `text` change that builds nothing.
+  scope:
+    name: Scope
+    if: ${{ !inputs.build_only && (github.event_name == 'workflow_dispatch' || !github.event.repository.private) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      clippy: ${{ steps.scope.outputs.clippy }}
+      test: ${{ steps.scope.outputs.test }}
+      full: ${{ steps.scope.outputs.full }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Structure (module rules, OS edge, file sizes)
+        run: |
+          python3 scripts/structure.py selftest
+          python3 scripts/structure.py check
+      - id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          base=""
+          case "$EVENT" in
+            pull_request) base="$(git merge-base "$PR_BASE" HEAD)" ;;
+            push) git cat-file -e "$BEFORE^{commit}" 2>/dev/null && base="$BEFORE" ;;
+          esac
+          scope=all
+          if [ -n "$base" ]; then
+            scope="$(scripts/check.sh --scope --base "$base" | sed -n 's/^scope=//p')"
+          fi
+          echo "scope: $scope (base: ${base:-none})"
+          case "$scope" in
+            all)  clippy="--workspace --all-targets --features devctl"; test="--workspace --features devctl" ;;
+            app)  clippy="-p wormhole --all-targets --features devctl";  test="-p wormhole --features devctl" ;;
+            wire) clippy="-p wormhole-wire --all-targets";               test="-p wormhole-wire" ;;
+            text) clippy="";                                             test="-p wormhole --features devctl --test design_rules" ;;
+            none) clippy="";                                             test="" ;;
+            *)    echo "::warning::unknown scope '$scope': checking everything"; scope=all
+                  clippy="--workspace --all-targets --features devctl"; test="--workspace --features devctl" ;;
+          esac
+          # Only a whole-workspace build may save the cache on main: a partial one saved under the key
+          # (after the old entry was evicted) would leave every later run to build the rest from scratch.
+          [ "$scope" = all ] && echo "full=true" >> "$GITHUB_OUTPUT"
+          echo "clippy=$clippy" >> "$GITHUB_OUTPUT"
+          echo "test=$test" >> "$GITHUB_OUTPUT"
+
   fmt:
     name: Format
     if: github.event_name != 'push' && !inputs.build_only && (github.event_name == 'workflow_dispatch' || !github.event.repository.private)
@@ -61,29 +116,24 @@ jobs:
   # stops before code generation), and each keeps a cache of its own.
   clippy:
     name: macOS (clippy)
-    if: ${{ !inputs.build_only && (github.event_name == 'workflow_dispatch' || !github.event.repository.private) }}
+    needs: scope
+    if: ${{ needs.scope.outputs.clippy != '' }}
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # Reads the sources as text, in a second, before anything builds: the counts the restructuring
-      # brings to zero may not grow, and the allowlist may only shrink (scripts/structure.py). Here and
-      # not in the history job, because this job also runs on a push to main.
-      - name: Structure (module rules, OS edge, file sizes)
-        run: |
-          python3 scripts/structure.py selftest
-          python3 scripts/structure.py check
       - name: Rust (the version in rust-toolchain.toml)
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: clippy
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-      - run: cargo clippy --workspace --all-targets --features devctl --locked -- -D warnings
+          save-if: ${{ github.ref == 'refs/heads/main' && needs.scope.outputs.full == 'true' }}
+      - run: cargo clippy ${{ needs.scope.outputs.clippy }} --locked -- -D warnings
 
   test:
     name: macOS (tests)
-    if: ${{ !inputs.build_only && (github.event_name == 'workflow_dispatch' || !github.event.repository.private) }}
+    needs: scope
+    if: ${{ needs.scope.outputs.test != '' }}
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
@@ -93,14 +143,14 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: test
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref == 'refs/heads/main' && needs.scope.outputs.full == 'true' }}
       - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: nextest
       # devctl turns on GPUI's test support: the settings and view tests only compile with it.
       # nextest runs every test in its own process and bounds the slow ones (.config/nextest.toml);
       # it runs no doctests, and the workspace has none (the one fenced block is `text`).
-      - run: cargo nextest run --workspace --features devctl --locked --profile ci
+      - run: cargo nextest run ${{ needs.scope.outputs.test }} --locked --profile ci
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
