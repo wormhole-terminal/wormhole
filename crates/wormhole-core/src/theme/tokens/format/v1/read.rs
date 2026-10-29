@@ -195,7 +195,10 @@ impl Reader {
                     }
                 }
             }
+            // Not `set_layers`: that would replace the base read above.
+            let base = variant.base.take();
             variant.set_layers(&layers);
+            variant.base = base;
             if !named {
                 self.reject::<()>(|| format!("{ctx}: a version needs a `name`"))?;
                 continue;
