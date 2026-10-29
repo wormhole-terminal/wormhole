@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-29
+
 ### Added
 
 - Theme Studio edits your own theme: it opens on the theme you use, and Save writes over that theme's file
@@ -861,7 +863,8 @@ agents.
     the background and verified with a minisign signature and Apple's
     code signature.
 
-[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/wormhole-terminal/wormhole/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/wormhole-terminal/wormhole/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/wormhole-terminal/wormhole/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/wormhole-terminal/wormhole/compare/v1.1.0...v1.2.0
