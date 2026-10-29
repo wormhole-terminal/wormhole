@@ -88,11 +88,8 @@ pub fn convert_to_v1(
         let name = extends.unwrap_or("Tokyo Night");
         // Carrying the theme's own name makes a theme that extends the one it is called (a
         // user "Nord" over the built-in) reach the built-in, not its own file.
-        let by_name = ThemeFile {
-            extends: Some(name.to_string()),
-            name: file.name.clone(),
-            ..ThemeFile::default()
-        };
+        let by_name =
+            ThemeFile { extends: Some(name.to_string()), name: file.name.clone(), ..ThemeFile::default() };
         copy_base(&slug_of(name), &by_name, lookup, copied)
     };
     let mut out = ThemeFile {

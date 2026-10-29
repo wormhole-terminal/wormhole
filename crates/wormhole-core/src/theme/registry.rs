@@ -202,6 +202,28 @@ impl UserThemes {
         self.named(name).map(UserTheme::id).or_else(|| builtin_named(name).map(|t| ThemeId::Builtin(&t.name)))
     }
 
+    /// [`select`](Self::select), then a path: a value (`~` expanded) that names a file of this
+    /// folder is that theme, as `settings.theme` resolves one. The Settings picker and the Studio's
+    /// save store a single-file theme this way.
+    pub fn select_or_path(&self, value: &str) -> Option<ThemeId> {
+        self.select(value).or_else(|| self.by_path(value).map(UserTheme::id))
+    }
+
+    /// The first theme of the file `value` (a path, `~` allowed) names, if it is one of these.
+    pub fn by_path(&self, value: &str) -> Option<&UserTheme> {
+        let expanded = match (value.strip_prefix("~/"), crate::platform::paths::home()) {
+            (Some(rest), Some(home)) => home.join(rest),
+            _ => PathBuf::from(value),
+        };
+        if !expanded.is_absolute() {
+            return None;
+        }
+        let wanted = std::fs::canonicalize(&expanded).ok()?;
+        self.themes
+            .iter()
+            .find(|t| t.path == wanted || std::fs::canonicalize(&t.path).is_ok_and(|p| p == wanted))
+    }
+
     /// Resolve a theme file with these themes available to `extends`.
     pub fn resolve_file(&self, file: &ThemeFile) -> Result<ThemeTokens, String> {
         tokens::resolve(file, &|name| self.theme_file(name))
@@ -417,6 +439,28 @@ mod tests {
         write(only.path(), "a.json", r#"{ "name": "Foo Bar" }"#);
         let user = UserThemes::read(only.path());
         assert_eq!(user.select("foo_bar"), Some(ThemeId::File(only.path().join("a.json"))));
+    }
+
+    #[test]
+    fn a_path_to_a_file_of_the_folder_selects_its_theme() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        write(dir.path(), "one.json", r#"{ "name": "First" }"#);
+        write(
+            dir.path(),
+            "pair.json",
+            r#"{ "name": "Pair", "variants": [{"name": "Light"}, {"name": "Dark"}] }"#,
+        );
+        let user = UserThemes::read(dir.path());
+        let one = dir.path().join("one.json");
+        assert_eq!(user.select(&one.to_string_lossy()), None);
+        assert_eq!(user.select_or_path(&one.to_string_lossy()), Some(ThemeId::File(one)));
+        // A file that ships versions: the first one, as the path resolves.
+        let pair = dir.path().join("pair.json");
+        assert!(
+            matches!(user.select_or_path(&pair.to_string_lossy()), Some(ThemeId::Variant(p, _)) if p == pair)
+        );
+        assert_eq!(user.select_or_path("/nowhere/x.json"), None);
+        assert_eq!(user.select_or_path("one.json"), None, "only an absolute path or ~/");
     }
 
     #[test]
