@@ -93,4 +93,25 @@ mod tests {
         let again = crate::theme::tokens::read_theme_file(&file.to_json_pretty()).expect("reads");
         assert_eq!(resolve(&again, &|_| None), resolve(&file, &|_| None));
     }
+
+    /// A palette a new theme starts from reads on its own background: the text 7:1, every colour
+    /// of the palette but the first 3:1, and the interface's text colours meet their minimums.
+    #[test]
+    fn a_starter_is_readable() {
+        use crate::theme::tokens::Color;
+        for appearance in [Appearance::Light, Appearance::Dark] {
+            let tokens = resolve(&starter(appearance), &|_| None).expect("resolves");
+            let bg = tokens.terminal.background;
+            let ratio = |c: Color| Color::contrast_ratio(c, bg);
+            assert!(ratio(tokens.terminal.foreground) >= 7.0, "{appearance:?} text");
+            assert!(ratio(tokens.terminal.cursor) >= 3.0, "{appearance:?} cursor");
+            for (i, c) in tokens.terminal.ansi.iter().enumerate().skip(1) {
+                assert!(ratio(*c) >= 3.0, "{appearance:?} ansi.{i} {}: {}", c.to_hex(), ratio(*c));
+            }
+            assert!(ratio(tokens.terminal.selection_background) >= 1.1, "{appearance:?} selection");
+            let low: Vec<_> =
+                tokens.contrast_warnings().into_iter().filter(|(fg, _, _)| fg.starts_with("text.")).collect();
+            assert!(low.is_empty(), "{appearance:?}: {low:?}");
+        }
+    }
 }
