@@ -60,3 +60,27 @@ pub(super) fn chain_len(
     memo.insert(name.to_string(), n);
     n
 }
+
+/// A version 1 theme's text with the full Tokyo Night terminal palette as its own block, and
+/// `rest` (members such as `"ui": {...}`) after it.
+pub(super) fn v1_text(rest: &str) -> String {
+    let palette = crate::theme::tokens::test_support::tokyo_palette_block();
+    format!("{{\"version\": 1, \"name\": \"T\", \"terminal\": {palette}, {rest}}}")
+}
+
+/// `{ "background": ..., "ansi.0": ... }` for Tokyo Night, in version 1 keys.
+pub(super) fn tokyo_palette_block() -> String {
+    let t = builtin("Tokyo Night");
+    let mut parts: Vec<String> = t
+        .terminal
+        .named()
+        .into_iter()
+        .map(|(n, c)| {
+            let key = &n["terminal.".len()..];
+            let key = super::format::new_key("terminal", key).unwrap_or(key);
+            format!("\"{key}\": \"{}\"", c.to_hex())
+        })
+        .collect();
+    parts.sort();
+    format!("{{{}}}", parts.join(", "))
+}

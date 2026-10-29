@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 use super::catalog::UI_TOKENS;
 use super::expr::{Expr, parse_expr};
 use super::file::{MetricsFile, SyntaxOverride, ThemeFile};
+use super::format::{CURRENT_VERSION, effective, missing_terminal};
 use super::model::{Metrics, TerminalColors, auto_appearance};
 use super::own::{own, own_named};
 use super::resolve::{FlagOverrides, NO_RULES, Resolver, build};
@@ -28,19 +29,19 @@ fn builtin_named(name: &str) -> Option<&'static theme::Theme> {
     all.iter().find(|t| t.name == name).or_else(|| all.iter().find(|t| t.name.eq_ignore_ascii_case(name)))
 }
 
-/// Resolve a theme file into tokens.
-///
-/// `extends` names are looked up with `lookup` first (user themes), then among
-/// the built-ins. A name already seen in the chain skips `lookup`, so a user
-/// theme called "Nord" can extend the built-in "Nord"; if no built-in matches
-/// either, that is reported as a cycle. Overrides are merged from the root
-/// ancestor down, then terminal colors are resolved, then every UI/syntax
-/// token is derived from the final palette with the merged overrides.
-pub fn resolve(file: &ThemeFile, lookup: &dyn Fn(&str) -> Option<ThemeFile>) -> Result<ThemeTokens, String> {
-    // A file that ships several versions is shown as its first.
-    if let Some(first) = variants(file, file.name.as_deref().unwrap_or("Theme"))?.into_iter().next() {
-        return resolve(&first.file, lookup);
-    }
+/// The files a theme is made of, the theme itself first, and the palette at the bottom of
+/// them.
+pub(super) struct Chain {
+    pub files: Vec<ThemeFile>,
+    pub root: &'static theme::Theme,
+}
+
+/// Walk `file`'s `extends` chain: user themes (`lookup`) first, then Wormhole's own, then the
+/// palettes; see [`resolve`] for the rules.
+pub(super) fn walk_chain(
+    file: &ThemeFile,
+    lookup: &dyn Fn(&str) -> Option<ThemeFile>,
+) -> Result<Chain, String> {
     let mut chain = vec![file.clone()];
     let mut seen: Vec<String> = file.name.iter().cloned().collect();
     let mut parent = file.extends.clone();
@@ -57,6 +58,8 @@ pub fn resolve(file: &ThemeFile, lookup: &dyn Fn(&str) -> Option<ThemeFile>) -> 
         match if shadowed { None } else { lookup(&name) }.or_else(own_file) {
             Some(f) => {
                 seen.push(name);
+                // A version 1 theme stands on its own base; there is nothing to extend.
+                let f = effective(&f).into_owned();
                 parent = f.extends.clone();
                 chain.push(f);
             }
@@ -75,6 +78,29 @@ pub fn resolve(file: &ThemeFile, lookup: &dyn Fn(&str) -> Option<ThemeFile>) -> 
             },
         }
     };
+
+    Ok(Chain { files: chain, root: base })
+}
+
+/// Resolve a theme file into tokens.
+///
+/// `extends` names are looked up with `lookup` first (user themes), then among
+/// the built-ins. A name already seen in the chain skips `lookup`, so a user
+/// theme called "Nord" can extend the built-in "Nord"; if no built-in matches
+/// either, that is reported as a cycle. Overrides are merged from the root
+/// ancestor down, then terminal colors are resolved, then every UI/syntax
+/// token is derived from the final palette with the merged overrides.
+pub fn resolve(file: &ThemeFile, lookup: &dyn Fn(&str) -> Option<ThemeFile>) -> Result<ThemeTokens, String> {
+    // A file that ships several versions is shown as its first.
+    if let Some(first) = variants(file, file.name.as_deref().unwrap_or("Theme"))?.into_iter().next() {
+        return resolve(&first.file, lookup);
+    }
+    let flat = effective(file);
+    let file = flat.as_ref();
+    let Chain { files: chain, root: base } = walk_chain(file, lookup)?;
+    // A chain that ends in a version 1 file has no palette under it: Tokyo Night must not
+    // fill what the file leaves out, so what it leaves out is an error.
+    let rootless = chain.last().is_some_and(|f| f.version == Some(CURRENT_VERSION));
 
     // Merge from the root ancestor down; each entry remembers its file for
     // error messages.
@@ -127,7 +153,22 @@ pub fn resolve(file: &ThemeFile, lookup: &dyn Fn(&str) -> Option<ThemeFile>) -> 
         let e = parse_expr(src).map_err(|e| format!("{label}: {node}: {e}"))?;
         rules.insert(node.clone(), e);
     }
+    if rootless {
+        let missing = missing_terminal(&|key| terminal_over.contains_key(&format!("terminal.{key}")));
+        if !missing.is_empty() {
+            return Err(format!(
+                "{}: terminal colors not set: {}. A version 1 theme sets every terminal color, in its `base` or its own `terminal` block",
+                file.label(),
+                missing.join(", ")
+            ));
+        }
+    }
     let mut base_terminal = TerminalColors::from_theme(base);
+    if rootless {
+        // Left unset, these follow the background and the foreground, as for any theme.
+        base_terminal.cursor_text = None;
+        base_terminal.selection_foreground = None;
+    }
     let mut values = base_terminal.named();
     // Unset optional colors follow whatever they default to after overrides.
     if base_terminal.cursor_text.is_none() {
