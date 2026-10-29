@@ -372,6 +372,25 @@ fn a_theme_without_extends_is_copied_with_the_palette_it_resolves_to() {
 }
 
 #[test]
+fn a_copy_leaves_out_cursor_text_and_selection_foreground_the_source_does_not_set() {
+    let palette = tokyo_palette_block();
+    let only: String = palette
+        .trim_matches(|c| c == '{' || c == '}')
+        .split(", ")
+        .filter(|p| !p.contains("cursor.text") && !p.contains("selection.foreground"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let source = read(&format!(r##"{{"version": 1, "name": "S", "terminal": {{{only}}}}}"##));
+    let base = copy_base("s", &source, &no_lookup, "2026-10-29").unwrap();
+    let t = &base.file.terminal;
+    assert_eq!((&t.cursor_text, &t.selection_foreground), (&None, &None), "they keep following");
+    assert_eq!(t.ansi.len(), 16, "the rest of the palette is complete");
+    // Set by the source, they are copied.
+    let nord = copy_builtin_base("nord", &no_lookup, "d").unwrap();
+    assert!(nord.file.terminal.cursor_text.is_some() && nord.file.terminal.selection_foreground.is_some());
+}
+
+#[test]
 fn a_chain_is_copied_merged_with_the_nearest_on_top() {
     let parent = read(
         r##"{"name": "P", "extends": "Nord", "ui": {"primary": "#111111", "border": "#222222"}, "metrics": {"radius": 3}}"##,
