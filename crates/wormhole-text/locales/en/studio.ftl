@@ -133,11 +133,6 @@ studio-versions-note = Older saves thin out to one an hour, then one a day. The 
 studio-versions-empty = No earlier saves yet. Every save keeps the file it replaces.
 studio-versions-unreadable = Can’t be read
 studio-versions-first = first save
-# { $count } values differ from the save before it.
-studio-versions-changed = { $count ->
-    [one] 1 value changed
-   *[other] { $count } values changed
-}
 # { $when } is a date and time; { $what } says how it differs from the save before.
 studio-versions-label = Version from { $when }, { $what }
 studio-undo-restore = Restore Version
