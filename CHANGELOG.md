@@ -42,6 +42,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   left.
 - Clear Buffer (⌘K) leaves the terminal cleared: the lines above no longer come back when the shell redraws
   its screen, and in a terminal kept by the session helper they stay gone when you reopen the window.
+- Saving a theme in the Theme Studio sets the pick of the theme's own appearance (light or dark) instead of
+  always the dark one, and a theme that is a pick already changes no pick.
 - Open in Finder, from a terminal's title row, no longer launches a folder that is really a program
   (`name.app`, `.prefPane`, `.workflow`, `.pkg`): Finder now shows such a folder instead of opening it.
 - The diff shows characters you can't see as visible marks: control characters as their symbols, and

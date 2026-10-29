@@ -10,10 +10,9 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::config::{Settings, ThemeMode};
 use wormhole_core::theme::catalog::ThemeEntry;
 use wormhole_core::theme::registry::ThemeId;
-use wormhole_core::theme::tokens::{Appearance, ThemeTokens};
+use wormhole_core::theme::tokens::ThemeTokens;
 
 #[allow(
     clippy::wildcard_imports,
@@ -25,6 +24,7 @@ use wormhole_text::text;
 use super::card_height;
 use crate::platform::{self, menu::Item, menu::Menu};
 use crate::settings::UiColors;
+use crate::settings::picks::set_pick;
 use crate::settings::update_settings;
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::{hsla, token};
@@ -59,17 +59,6 @@ pub(crate) struct ThemeCard {
 #[cfg(test)]
 thread_local! {
     pub(super) static CARD_RENDERS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
-}
-
-/// Set `value`, a theme of the `appearance` kind, as the pick the mode says a card sets: under
-/// Match system, the pick of the theme's own kind.
-fn choose(s: &mut Settings, value: String, appearance: Appearance) {
-    let light = match s.theme_mode {
-        ThemeMode::Dark => false,
-        ThemeMode::Light => true,
-        ThemeMode::System => appearance == Appearance::Light,
-    };
-    if light { s.theme_light = value } else { s.theme = value }
 }
 
 /// Leave the theme `value` out of the picker.
@@ -137,7 +126,7 @@ impl Render for ThemeCard {
             .when(!picked, |d| d.hover(|d| d.border_color(ui.border_strong)))
             .on_click(cx.listener(move |_, _, _, cx| {
                 let value = value.clone();
-                update_settings(cx, |s| choose(s, value, appearance));
+                update_settings(cx, |s| set_pick(s, value, appearance));
             }))
             .on_mouse_down(
                 MouseButton::Right,
