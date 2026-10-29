@@ -10,6 +10,7 @@
 
 mod completion;
 mod contrast;
+mod convert;
 #[cfg(feature = "devctl")]
 pub(crate) mod devctl;
 mod document;
@@ -19,6 +20,9 @@ mod names;
 mod opening;
 mod save;
 mod shell;
+mod switch;
+mod theme_list;
+mod theme_menu;
 mod themes;
 mod title;
 mod token_editor;
@@ -26,6 +30,8 @@ mod token_list;
 mod token_rows;
 mod undo;
 
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
@@ -84,6 +90,8 @@ pub(crate) struct StudioWindow {
     /// The draft's name, edited in place in the title row.
     name: Entity<InputState>,
     renaming: bool,
+    /// Where the name in the title row was last laid out: the theme menu hangs from it.
+    name_bounds: Rc<Cell<Bounds<Pixels>>>,
     /// The name being asked for before a copy with no file yet is saved: whether the window closes
     /// once it is. Return gives the name and saves; Esc leaves the copy unsaved.
     naming: Option<bool>,
@@ -159,7 +167,7 @@ fn save_key(key: &KeySpec) -> Option<SaveAction> {
     use wormhole_core::keys::keymap::{ActionId, studio_action};
     match studio_action(key)? {
         ActionId::SaveTheme => Some(SaveAction::Save),
-        ActionId::SaveThemeCopy => Some(SaveAction::SaveCopy),
+        ActionId::DuplicateTheme => Some(SaveAction::Duplicate),
         _ => None,
     }
 }
@@ -220,12 +228,16 @@ fn opening_inputs(cx: &App) -> opening::Inputs {
     let store = cx.global::<SettingsStore>();
     let shown = settings(cx).shown_theme(store.system().appearance).to_string();
     // A project's theme is edited only while it is in effect and the project may be written to.
-    let project =
-        store.has_project_theme().then(|| save::project_for_theme(cx).ok()).flatten().and_then(|folder| {
-            let text = folder.theme_json().ok().flatten()?.to_string();
-            Some(opening::ProjectTheme { root: folder.root, text })
-        });
+    let project = store.has_project_theme().then(|| project_theme(cx)).flatten();
     opening::Inputs { shown, project, in_use: store.base_tokens().clone() }
+}
+
+/// The theme file of the project the front terminal is in, when the project is trusted, has its
+/// theme switched on and has one.
+fn project_theme(cx: &App) -> Option<opening::ProjectTheme> {
+    let folder = save::project_for_theme(cx).ok()?;
+    let text = folder.theme_json().ok().flatten()?.to_string();
+    Some(opening::ProjectTheme { root: folder.root, text })
 }
 
 impl StudioWindow {
@@ -329,6 +341,7 @@ impl StudioWindow {
             slider,
             name,
             renaming: false,
+            name_bounds: Rc::default(),
             naming: None,
             area: Area::All,
             list,

@@ -22,14 +22,14 @@ fn quitting_does_not_wait_for_an_answer() {
     assert_eq!(closing(true, true, true), Closing::Now);
 }
 
-/// ⌘S saves and ⇧⌘S saves a copy, as the key table's Theme Studio rows say.
+/// ⌘S saves and ⇧⌘S duplicates, as the key table's Theme Studio rows say.
 #[test]
 fn the_save_keys_are_the_tables() {
     let key = |cmd, shift, alt, k| KeySpec::new(KeyMods { cmd, shift, alt, ctrl: false }, k);
     assert_eq!(save_key(&key(true, false, false, "s")), Some(SaveAction::Save));
-    assert_eq!(save_key(&key(true, true, false, "s")), Some(SaveAction::SaveCopy));
+    assert_eq!(save_key(&key(true, true, false, "s")), Some(SaveAction::Duplicate));
     // A US keyboard reports ⇧⌘S as ⌘S with a capital.
-    assert_eq!(save_key(&key(true, true, false, "S")), Some(SaveAction::SaveCopy));
+    assert_eq!(save_key(&key(true, true, false, "S")), Some(SaveAction::Duplicate));
     // ⌥⌘S is Stash Prompt's, S alone is typing, and ⌘W is not a save.
     assert_eq!(save_key(&key(true, false, true, "s")), None);
     assert_eq!(save_key(&key(false, false, false, "s")), None);

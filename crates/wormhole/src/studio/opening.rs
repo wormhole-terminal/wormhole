@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use wormhole_core::theme::tokens::{ThemeFile, ThemeTokens, copy, read_theme_file, slug};
+use wormhole_core::theme::tokens::{ThemeFile, ThemeTokens, builtin_tokens, copy, read_theme_file, slug};
 
 use super::document::subject::subject_for;
 use super::document::{Document, Subject};
@@ -27,6 +27,40 @@ pub(super) struct Inputs {
     pub(super) project: Option<ProjectTheme>,
     /// The theme in use, for what cannot be edited as itself.
     pub(super) in_use: ThemeTokens,
+}
+
+/// What the theme menu opens.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) enum Target {
+    /// A theme file of the themes folder.
+    Own(PathBuf),
+    /// A built-in, by name, as a copy to name.
+    Builtin(String),
+    /// A new theme: a copy of the theme in use.
+    New,
+    /// The project's theme.
+    Project,
+}
+
+/// The document a menu choice opens; `None` when it can't be read.
+pub(super) fn open_target(target: &Target, inputs: &Inputs, themes: &Themes) -> Option<Document> {
+    match target {
+        Target::Own(path) => {
+            let Loaded { file, stamp } = (themes.read)(path).ok()?;
+            let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned());
+            Some(Document::new(named(file, stem), Subject::Own { path: path.clone() }, stamp))
+        }
+        Target::Builtin(name) => {
+            let tokens = builtin_tokens().into_iter().find(|t| &t.name == name)?;
+            Some(untitled(name, &tokens, themes))
+        }
+        Target::New => Some(untitled(&inputs.in_use.name, &inputs.in_use, themes)),
+        Target::Project => {
+            let project = inputs.project.as_ref()?;
+            let file = read_theme_file(&project.text).ok()?;
+            Some(Document::new(named(file, None), Subject::Project { root: project.root.clone() }, None))
+        }
+    }
 }
 
 pub(super) fn open_document(inputs: &Inputs, themes: &Themes) -> Document {
@@ -100,6 +134,7 @@ mod tests {
         Themes {
             resolve: |f| resolve(f, &|_| None),
             saved_path: |_| None,
+            catalog: Vec::new,
             locate: |setting| match setting {
                 "mine" => Found::File("/themes/mine.json".into()),
                 "Nord" => Found::Builtin("Nord".into()),
@@ -113,7 +148,10 @@ mod tests {
             },
             save_new: |_| Err("stub".into()),
             overwrite: |_, _, _| Err(crate::studio::themes::SaveError::Other("stub".into())),
-            new_id: |name| slug::derive_id(name),
+            new_id: |name, _| slug::derive_id(name),
+            convert: |file, id| {
+                copy::convert_to_v1(file, &|_| None, &|n| slug::derive_id(n), id, "2026-10-29")
+            },
             selects: |_, _| false,
         }
     }

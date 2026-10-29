@@ -178,11 +178,11 @@ fn print_and_export_keys_are_kept_for_terminal_app_meanings() {
 #[test]
 fn the_studio_keys_are_in_the_table() {
     assert_eq!(studio_action(&spec("⌘S")), Some(ActionId::SaveTheme));
-    assert_eq!(studio_action(&spec("⇧⌘S")), Some(ActionId::SaveThemeCopy));
+    assert_eq!(studio_action(&spec("⇧⌘S")), Some(ActionId::DuplicateTheme));
     assert_eq!(studio_action(&spec("⌥⌘S")), None, "the stash key is a terminal window's");
     assert_eq!(terminal_action(&spec("⌘S")), None, "the Studio's keys stay in the Studio");
     assert_eq!(list_action(&spec("⌘S")), None);
-    for id in [ActionId::SaveTheme, ActionId::SaveThemeCopy] {
+    for id in [ActionId::SaveTheme, ActionId::DuplicateTheme] {
         let entry = entry(id).expect("a row");
         assert!(entry.is_live() && !entry.palette, "{id:?}");
     }
@@ -671,7 +671,7 @@ fn the_sheet_lists_the_keys_from_the_table() {
     assert_eq!(row("Keyboard shortcuts (this sheet)"), "⌥⌘/");
     // The Studio's own keys.
     assert_eq!(row("Save theme (in the Studio)"), "⌘S");
-    assert_eq!(row("Save Copy (in the Studio)"), "⇧⌘S");
+    assert_eq!(row("Duplicate (in the Studio)"), "⇧⌘S");
 }
 
 /// An empty Open Recent or Project Actions says so in a greyed item, as Finder does.
