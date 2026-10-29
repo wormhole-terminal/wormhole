@@ -46,6 +46,7 @@ pub(super) fn themes() -> Themes {
         fresh_base: |_| None,
         versions: |_, _| Vec::new(),
         read_version: |_| Err("stub".into()),
+        trash: |_| Ok(()),
     }
 }
 

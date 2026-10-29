@@ -42,6 +42,7 @@ impl StudioWindow {
             dirty: self.dirty(),
             addable: self.missing_appearance().filter(|_| !self.doc.is_newer()),
             versions: matches!(self.doc.subject, Subject::Own { .. }),
+            trashable: self.can_trash(),
             update: places::base_under(&self.doc.file, self.doc.shown.as_deref())
                 .map(|base| (update_from::source_name(&base.from), self.update_check.state)),
         };

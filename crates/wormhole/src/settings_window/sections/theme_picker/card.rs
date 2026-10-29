@@ -3,7 +3,7 @@
 //! the pointer a card that isn't a pick offers to hide its theme, and its menu (a right click) does
 //! too, with Move to Trash for a theme the person imported.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use gpui_kit::assets::IconName;
@@ -26,7 +26,8 @@ use super::card_height;
 use crate::platform::{self, menu::Item, menu::Menu};
 use crate::settings::UiColors;
 use crate::settings::picks::set_pick;
-use crate::settings::update_settings;
+use crate::settings::theme_trash;
+use crate::settings::{settings, update_settings};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::{hsla, token};
 
@@ -78,7 +79,8 @@ fn file_of(entry: &ThemeEntry) -> Option<PathBuf> {
     }
 }
 
-/// The card's menu: hide the theme, and for one the person imported, move its file to the Trash.
+/// The card's menu: hide the theme, and for one the person imported, move its file to the Trash
+/// (after asking; a pick that names it falls back to the default of its appearance).
 fn card_menu(entry: &ThemeEntry, picked: bool) -> Menu {
     let value = entry.value.clone();
     let mut menu = Menu::new().item(
@@ -87,15 +89,37 @@ fn card_menu(entry: &ThemeEntry, picked: bool) -> Menu {
             .on_select(move |_, cx| hide(&value, cx)),
     );
     if let Some(path) = file_of(entry) {
-        menu = menu.separator().item(Item::new(text(SETTINGS_APPEARANCE_MOVE_TO_TRASH)).on_select(
-            move |_, _| {
-                if let Err(error) = platform::trash::move_to_trash(&path) {
-                    tracing::warn!("theme picker: moving {} to the Trash failed: {error:#}", path.display());
-                }
-            },
-        ));
+        let entry = entry.clone();
+        menu = menu.separator().item(
+            Item::new(text(SETTINGS_APPEARANCE_MOVE_TO_TRASH))
+                .on_select(move |window, cx| ask_trash(&entry, &path, window, cx)),
+        );
     }
     menu
+}
+
+fn ask_trash(entry: &ThemeEntry, path: &Path, window: &mut Window, cx: &mut App) {
+    let which = theme_trash::affected(settings(cx), &|v| entry.is_selected_by(v));
+    let answer = theme_trash::ask(&entry.label, which, false, window, cx);
+    let (entry, path) = (entry.clone(), path.to_path_buf());
+    window
+        .spawn(cx, async move |cx| {
+            if !answer.await {
+                return;
+            }
+            cx.update(|_, cx| {
+                let selects = |v: &str| entry.is_selected_by(v);
+                match theme_trash::trash(cx, &path, &selects, platform::trash::move_to_trash) {
+                    Ok(()) => cx.refresh_windows(),
+                    Err(error) => tracing::warn!(
+                        "theme picker: moving {} to the Trash failed: {error:#}",
+                        path.display()
+                    ),
+                }
+            })
+            .ok();
+        })
+        .detach();
 }
 
 impl Render for ThemeCard {

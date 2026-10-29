@@ -7,8 +7,9 @@ use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_text::keys::{
     STUDIO_MENU_ADD_DARK, STUDIO_MENU_ADD_LIGHT, STUDIO_MENU_NEW, STUDIO_MENU_NEW_FROM,
     STUDIO_MENU_PROJECT_THEME, STUDIO_MENU_RENAME, STUDIO_MENU_REVERT, STUDIO_MENU_REVERT_TO,
-    STUDIO_MENU_THIS_PROJECT, STUDIO_MENU_VERSIONS, STUDIO_MENU_WORMHOLE, STUDIO_MENU_YOUR_THEMES,
-    studio_menu_duplicate, studio_menu_update_current, studio_menu_update_missing, studio_update_from,
+    STUDIO_MENU_THIS_PROJECT, STUDIO_MENU_TRASH, STUDIO_MENU_VERSIONS, STUDIO_MENU_WORMHOLE,
+    STUDIO_MENU_YOUR_THEMES, studio_menu_duplicate, studio_menu_update_current, studio_menu_update_missing,
+    studio_update_from,
 };
 use wormhole_text::text;
 
@@ -30,6 +31,8 @@ pub(super) struct Facts<'a> {
     pub(super) addable: Option<Appearance>,
     /// The theme has earlier saves to browse (it is a file of its own).
     pub(super) versions: bool,
+    /// The theme is one of the person's own files, which Move to Trash may take.
+    pub(super) trashable: bool,
     /// The theme it was copied from (as people know it) and how the copy compares, when the
     /// shown appearance was copied from one.
     pub(super) update: Option<(String, State)>,
@@ -126,6 +129,12 @@ pub(super) fn build(list: &ThemeList, facts: &Facts<'_>, this: &WeakEntity<Studi
             Item::new(text(STUDIO_MENU_RENAME))
                 .on_select(run_on(this, |studio, window, cx| studio.start_rename(window, cx))),
         );
+    if facts.trashable {
+        menu = menu.item(
+            Item::new(text(STUDIO_MENU_TRASH))
+                .on_select(run_on(this, |studio, window, cx| studio.ask_trash(window, cx))),
+        );
+    }
     if let Some(add) = add {
         menu = menu.item(add);
     }
@@ -203,6 +212,7 @@ mod tests {
             dirty: true,
             addable: Some(Appearance::Light),
             versions: true,
+            trashable: true,
             update: None,
         };
         let menu = build(&list(), &facts, &WeakEntity::new_invalid());
@@ -230,6 +240,7 @@ mod tests {
                 "  - Nord",
                 "- Duplicate \u{201c}Mine\u{201d}",
                 "- Rename\u{2026}",
+                "- Move to Trash\u{2026}",
                 "- Add Light Appearance",
                 "---",
                 "- Revert to Saved",
@@ -248,6 +259,7 @@ mod tests {
             dirty: false,
             addable: None,
             versions: false,
+            trashable: false,
             update: None,
         };
         let menu = build(&ThemeList { project: false, ..list() }, &facts, &WeakEntity::new_invalid());
@@ -269,6 +281,7 @@ mod tests {
                 dirty: false,
                 addable: None,
                 versions: true,
+                trashable: true,
                 update: Some(("Nord".into(), state)),
             };
             build(&list(), &facts, &WeakEntity::new_invalid()).outline()

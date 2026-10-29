@@ -166,8 +166,12 @@ pub const SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER: Key = Key::new(410);
 pub const SETTINGS_APPEARANCE_HIDE_THEME: Key = Key::new(413);
 /// "Move to Trash"
 pub const SETTINGS_APPEARANCE_MOVE_TO_TRASH: Key = Key::new(414);
+/// "You can get it back from the Trash."
+pub const SETTINGS_APPEARANCE_TRASH_DETAIL: Key = Key::new(416);
+/// "Its unsaved changes are lost."
+pub const SETTINGS_APPEARANCE_TRASH_EDITS: Key = Key::new(420);
 /// "Show"
-pub const SETTINGS_APPEARANCE_SHOW_THEME: Key = Key::new(415);
+pub const SETTINGS_APPEARANCE_SHOW_THEME: Key = Key::new(422);
 
 /// ```text
 /// Yours · { $color }, in every theme
@@ -222,10 +226,45 @@ pub fn settings_appearance_show_all_themes(total: &str) -> String {
 }
 
 /// ```text
+/// Move “{ $name }” to the Trash?
+/// ```
+pub fn settings_appearance_trash_message(name: &str) -> String {
+    crate::active::message(415, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// Your dark theme changes to { $to }.
+/// ```
+pub fn settings_appearance_trash_dark(to: &str) -> String {
+    crate::active::message(417, &[("to", Arg::Str(to))])
+}
+
+/// ```text
+/// Your light theme changes to { $to }.
+/// ```
+pub fn settings_appearance_trash_light(to: &str) -> String {
+    crate::active::message(418, &[("to", Arg::Str(to))])
+}
+
+/// ```text
+/// Your dark theme changes to { $dark } and your light theme to { $light }.
+/// ```
+pub fn settings_appearance_trash_both(dark: &str, light: &str) -> String {
+    crate::active::message(419, &[("dark", Arg::Str(dark)), ("light", Arg::Str(light))])
+}
+
+/// ```text
+/// “{ $name }” could not be moved to the Trash.
+/// ```
+pub fn settings_appearance_trash_failed(name: &str) -> String {
+    crate::active::message(421, &[("name", Arg::Str(name))])
+}
+
+/// ```text
 /// Hidden themes ({ $count })
 /// ```
 pub fn settings_appearance_hidden_themes(count: &str) -> String {
-    crate::active::message(416, &[("count", Arg::Str(count))])
+    crate::active::message(423, &[("count", Arg::Str(count))])
 }
 
 /// ```text
@@ -235,5 +274,5 @@ pub fn settings_appearance_hidden_themes(count: &str) -> String {
 /// }
 /// ```
 pub fn settings_appearance_theme_newer(count: i64) -> String {
-    crate::active::message(417, &[("count", Arg::Int(count))])
+    crate::active::message(424, &[("count", Arg::Int(count))])
 }

@@ -25,6 +25,7 @@ pub(crate) mod import;
 mod overlay;
 pub(crate) mod picks;
 mod profile;
+pub(crate) mod theme_trash;
 mod ui_colors;
 mod zen;
 
