@@ -8,6 +8,16 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Theme Studio edits your own theme: it opens on the theme you use, and Save writes over that theme's file
+  instead of making a copy. The theme's name is a menu of your themes and the built-in ones (a built-in opens
+  as a new, unnamed theme), with New Theme…, Duplicate (⇧⌘S), Rename… and Revert to Saved; unsaved edits ask
+  before you switch. Undo and redo (⌘Z, ⇧⌘Z) go back through your edits, one step per change, also after a
+  save.
+- Theme files have a format number (`version`). Saving a theme in Theme Studio writes version 1: instead of
+  following the theme it `extends`, the file keeps a copy of that theme's values in `base`, so it no longer
+  changes when that theme changes (colours Wormhole works out by its rules still can). The file keeps its name
+  and the file it replaced is kept in `themes/.versions/`. Earlier releases can't open a version 1 file;
+  Export and Copy JSON still write the older format. Files you don't save in Theme Studio are not rewritten.
 - Drag a terminal's row out of the sidebar to tear it off: let go over the desktop and it opens in a window
   of its own, let go over another Wormhole window and it moves there, still running.
 - A right-click (or ⌃-click) on a terminal opens a menu with Copy, Paste, Select All, Find, Split Right,
