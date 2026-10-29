@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::BannerKind;
 use wormhole_core::platform::paths;
@@ -48,6 +49,11 @@ pub(super) enum Notice {
     },
     /// Done, with nothing to reveal (Copy JSON).
     Done(SharedString),
+    /// A value moved between both appearances and one and a clash was settled: says which value
+    /// stayed. Undo takes it back.
+    Moved(SharedString),
+    /// The theme was made with a newer Wormhole and is not written over; Duplicate keeps the edits.
+    Newer(SharedString),
     Failed(SharedString),
 }
 
@@ -75,6 +81,14 @@ impl StudioWindow {
     pub(super) fn save(&mut self, then_close: bool, window: &mut Window, cx: &mut Context<Self>) {
         // A sheet is up: it has to be answered first.
         if self.asking {
+            return;
+        }
+        // Writing it back would drop what this version does not know.
+        if self.doc.is_newer() && !matches!(self.doc.subject, Subject::Project { .. }) {
+            self.notice = Some(Notice::Newer(
+                wormhole_text::text(wormhole_text::keys::STUDIO_NEWER_SAVE_BLOCKED).into(),
+            ));
+            cx.notify();
             return;
         }
         if self.renaming {
@@ -218,8 +232,8 @@ impl StudioWindow {
     /// The theme saved at `path` becomes the pick of its own appearance unless it is a pick
     /// already; the preview ends (the theme itself shows now). Whether a pick was set.
     fn switched_to(&mut self, path: &Path, cx: &mut Context<Self>) -> bool {
-        self.revision += 1;
-        let appearance = (self.themes.resolve)(&self.doc.file).map_or(Appearance::Dark, |t| t.appearance);
+        self.touched();
+        let appearance = (self.themes.resolve)(&self.doc.folded()).map_or(Appearance::Dark, |t| t.appearance);
         let (value, selects) = (path.to_string_lossy().into_owned(), self.themes.selects);
         let path = path.to_path_buf();
         let mut set = false;
@@ -268,7 +282,7 @@ impl StudioWindow {
     /// Export JSON…: the draft as a theme file, where the person picks. The dialog asks every
     /// time and starts where the last export went, the home folder the first time.
     pub(super) fn export(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
-        let json = match export_json(&self.doc.file, self.themes.resolve) {
+        let json = match export_json(&self.doc.folded(), self.themes.resolve) {
             Ok(json) => json,
             Err(err) => {
                 self.notice = Some(Notice::Failed(format!("Could not export: {err}").into()));
@@ -308,7 +322,7 @@ impl StudioWindow {
 
     /// Copy JSON: the same file, on the clipboard.
     pub(super) fn copy_json(&mut self, cx: &mut Context<Self>) {
-        self.notice = Some(match export_json(&self.doc.file, self.themes.resolve) {
+        self.notice = Some(match export_json(&self.doc.folded(), self.themes.resolve) {
             Ok(json) => {
                 crate::platform::clipboard::write(json, cx);
                 Notice::Done("Copied the theme's JSON.".into())
@@ -336,7 +350,7 @@ impl StudioWindow {
             cx.notify();
             return;
         }
-        let written = export_json(&self.doc.file, self.themes.resolve)
+        let written = export_json(&self.doc.folded(), self.themes.resolve)
             .map_err(|err| err.to_string())
             .and_then(|json| folder.write_theme(&json).map_err(|err| err.to_string()));
         self.notice = Some(match written {
@@ -345,7 +359,7 @@ impl StudioWindow {
                 if project_subject {
                     self.doc.mark_saved();
                 }
-                self.revision += 1;
+                self.touched();
                 let text = format!("Saved to {}: terminals in this project use it.", display_path(&path));
                 Notice::Saved { path, text: text.into() }
             }
@@ -364,15 +378,39 @@ impl StudioWindow {
         let ui = ui(cx);
         let notice = self.notice.clone()?;
         let banner = match notice {
-            Notice::Saved { path, text } => style::banner(ui, BannerKind::Success, false, text).child(
-                Button::new("studio-reveal")
+            Notice::Saved { path, text } => style::banner(ui, BannerKind::Success, false, text)
+                .child(
+                    Button::new("studio-reveal")
+                        .ghost()
+                        .small()
+                        .label("Reveal in Finder")
+                        .on_click(move |_, _, cx| cx.reveal_path(&path)),
+                )
+                .when(self.can_follow_system(cx), |banner| {
+                    banner.child(
+                        Button::new("studio-use-with-match-system")
+                            .ghost()
+                            .small()
+                            .label(wormhole_text::text(wormhole_text::keys::STUDIO_USE_WITH_MATCH_SYSTEM))
+                            .on_click(cx.listener(|this, _, _, cx| this.follow_system(cx))),
+                    )
+                }),
+            Notice::Done(text) => style::banner(ui, BannerKind::Success, false, text),
+            Notice::Moved(text) => style::banner(ui, BannerKind::Info, false, text).child(
+                Button::new("studio-moved-undo")
                     .ghost()
                     .small()
-                    .label("Reveal in Finder")
-                    .on_click(move |_, _, cx| cx.reveal_path(&path)),
+                    .label(wormhole_text::text(wormhole_text::keys::STUDIO_MOVED_UNDO))
+                    .on_click(cx.listener(|this, _, window, cx| this.undo(window, cx))),
             ),
-            Notice::Done(text) => style::banner(ui, BannerKind::Success, false, text),
             Notice::Failed(text) => style::banner(ui, BannerKind::Danger, false, text),
+            Notice::Newer(text) => style::banner(ui, BannerKind::Warning, false, text).child(
+                Button::new("studio-newer-duplicate")
+                    .ghost()
+                    .small()
+                    .label(wormhole_text::text(wormhole_text::keys::STUDIO_NEWER_DUPLICATE))
+                    .on_click(cx.listener(|this, _, window, cx| this.duplicate(window, cx))),
+            ),
         };
         Some(div().flex_none().px_4().py_3().bg(background).rule_bottom(ui).child(banner).into_any_element())
     }

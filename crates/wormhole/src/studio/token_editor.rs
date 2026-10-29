@@ -17,12 +17,15 @@ use wormhole_core::theme::tokens::{
 };
 use wormhole_core::theme::tokens::{METRIC_TOKENS, ThemeFile, ThemeTokens, UI_TOKENS};
 
-use super::document::{is_metric, number, override_of, set_override};
+use super::document::{is_metric, number, set_override};
 use super::draft;
+use super::origin_tag::reach_chip;
 use super::{Edit, StudioWindow, tokens_of, ui};
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::hsla;
+use wormhole_text::keys::{STUDIO_RESET, STUDIO_RESET_BASE};
+use wormhole_text::text;
 
 /// The editor's width.
 pub(super) const EDITOR_W: f32 = 320.0;
@@ -222,7 +225,16 @@ impl StudioWindow {
                             .font_family(code_font.clone())
                             .child(SharedString::from(name.to_string())),
                     )
-                    .child(div().flex_none().text_caption().text_color(ui.faint).child(group)),
+                    .child(div().flex_none().text_caption().text_color(ui.faint).child(group))
+                    .children(self.doc.is_pair().then(|| {
+                        let this = cx.weak_entity();
+                        let shown = self.doc.shown.clone().unwrap_or_default();
+                        let reach =
+                            super::document::places::reach(&self.doc.file, self.doc.shown.as_deref(), name);
+                        reach_chip(name, reach, &shown, ui.faint, ui, move |token, window, cx| {
+                            this.update(cx, |studio, cx| studio.toggle_reach(&token, window, cx)).ok();
+                        })
+                    })),
             )
             .child(div().text_caption().text_color(ui.muted).child(description));
         let mut sections =
@@ -245,7 +257,7 @@ impl StudioWindow {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let metric = is_metric(name);
-        let overridden = override_of(&self.doc.file, name).is_some();
+        let overridden = self.doc.own(name).is_some();
         let rule = default_rule(name, tokens.appearance);
         let (tag, tag_color) = if self.field_error.is_some() {
             ("last good value", ui.warning_text)
@@ -256,8 +268,15 @@ impl StudioWindow {
         } else {
             ("theme", ui.muted)
         };
-        let reset =
-            Button::new("token-reset").ghost().xsmall().icon(IconName::RotateCcw).label("Reset").on_click(
+        // Reset drops the theme's own value: back to what it was copied as, else what is worked out.
+        let has_base =
+            super::document::places::base_value(&self.doc.file, self.doc.shown.as_deref(), name).is_some();
+        let reset = Button::new("token-reset")
+            .ghost()
+            .xsmall()
+            .icon(IconName::RotateCcw)
+            .label(text(if has_base { STUDIO_RESET_BASE } else { STUDIO_RESET }))
+            .on_click(
                 cx.listener(|this, _, window, cx| this.set_selected_value(None, Edit::Field, window, cx)),
             );
         let head = div()
@@ -292,7 +311,7 @@ impl StudioWindow {
                                 .flex_col()
                                 .child(div().truncate().text_body().font_family(code_font.clone()).child(
                                     value_line(
-                                        override_of(&self.doc.file, name),
+                                        self.doc.own(name),
                                         color.to_hex(),
                                         rule.as_deref(),
                                         self.field_error.is_some(),
@@ -408,7 +427,7 @@ impl StudioWindow {
                 .ok();
             }
         };
-        let following = override_of(&self.doc.file, name).is_none();
+        let following = self.doc.own(name).is_none();
         let follow = rule.map(|source| {
             let source_value = tokens.metrics.get(&format!("metrics.{source}")).unwrap_or_default();
             let this = cx.weak_entity();
@@ -488,7 +507,7 @@ impl StudioWindow {
         ui: UiColors,
     ) -> AnyElement {
         let rule = default_rule(name, tokens.appearance);
-        let overridden = override_of(&self.doc.file, name).is_some();
+        let overridden = self.doc.own(name).is_some();
         let explanation = match (&rule, overridden) {
             (Some(_), true) => {
                 "This theme sets it, so the rule isn't used; Reset goes back to the rule.".to_string()

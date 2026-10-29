@@ -17,6 +17,12 @@ pub(in crate::studio) enum StepLabel {
     Rename,
     /// Revert to Saved.
     Revert,
+    /// A value moved between both appearances and one.
+    Move(String),
+    AddAppearance,
+    UpdateFrom,
+    /// An earlier saved version loaded as edits.
+    Restore,
 }
 
 /// The file as it was before a change, and what was selected.

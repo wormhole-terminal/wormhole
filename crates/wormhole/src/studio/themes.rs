@@ -10,8 +10,10 @@ use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::catalog::{ThemeEntry, catalog_in};
 use wormhole_core::theme::registry::ThemeSource as _;
 use wormhole_core::theme::registry::{ThemeId, UserThemes};
-use wormhole_core::theme::saved_versions::keep_version_now;
-use wormhole_core::theme::tokens::{MAX_THEME_BYTES, ThemeFile, ThemeTokens, copy, read_theme_file, slug};
+use wormhole_core::theme::saved_versions::{SavedVersion, keep_version_now, list_versions, read_version};
+use wormhole_core::theme::tokens::{
+    BaseLayer, MAX_THEME_BYTES, ThemeFile, ThemeTokens, copy, read_theme_file, slug,
+};
 
 use super::names::today;
 
@@ -40,7 +42,7 @@ pub(in crate::studio) enum Found {
     /// A theme file of the themes folder.
     File(PathBuf),
     /// One version of a file that ships several (a light and a dark one).
-    Variant(PathBuf),
+    Variant(PathBuf, String),
     /// A built-in theme, by name.
     Builtin(String),
     /// Nothing: the app shows its default.
@@ -92,6 +94,11 @@ pub(in crate::studio) struct Themes {
     pub(in crate::studio) convert: fn(&ThemeFile, &str) -> Result<ThemeFile, String>,
     /// Whether a pick's value (a name, a path or a slug) names the theme saved at this path.
     pub(in crate::studio) selects: fn(&str, &Path) -> bool,
+    /// The base a theme copied from `slug` would have now (to compare with the one it has).
+    pub(in crate::studio) fresh_base: fn(&str) -> Option<BaseLayer>,
+    /// The earlier saves of the theme at this path, newest first.
+    pub(in crate::studio) versions: fn(&Path, &ThemeFile) -> Vec<SavedVersion>,
+    pub(in crate::studio) read_version: fn(&SavedVersion) -> Result<ThemeFile, String>,
 }
 
 impl Themes {
@@ -108,6 +115,9 @@ impl Themes {
         new_id: new_id_in_profile,
         convert: convert_in_profile,
         selects: selects_in_profile,
+        fresh_base: fresh_base_in_profile,
+        versions: versions_in_profile,
+        read_version: read_version_of,
     };
 }
 
@@ -145,7 +155,7 @@ fn locate_in_profile(setting: &str) -> Found {
 fn locate_in(dir: &Path, setting: &str) -> Found {
     match UserThemes::read(dir).select_or_path(setting) {
         Some(ThemeId::File(path)) => Found::File(path),
-        Some(ThemeId::Variant(path, _)) => Found::Variant(path),
+        Some(ThemeId::Variant(path, short)) => Found::Variant(path, short),
         Some(ThemeId::Builtin(name)) => Found::Builtin(name.to_string()),
         None => Found::Missing,
     }
@@ -217,17 +227,41 @@ fn keep_old(themes: &Path, path: &Path, file: &ThemeFile) -> bool {
     let Ok(old) = files::read_to_string_capped(path, MAX_THEME_BYTES as u64, LinkPolicy::Follow) else {
         return false;
     };
-    let id = UserThemes::read(themes)
+    let id = version_id(themes, path, file);
+    if let Err(err) = keep_version_now(themes, &id, &old) {
+        tracing::warn!("keeping the earlier {}: {err}", path.display());
+    }
+    has_comments(&old)
+}
+
+/// The id the earlier saves of the theme at `path` are kept under: its slug.
+fn version_id(themes: &Path, path: &Path, file: &ThemeFile) -> String {
+    UserThemes::read(themes)
         .themes
         .iter()
         .find(|t| t.path == path && t.family.is_none())
         .map(|t| t.slug.clone())
         .or_else(|| file.id.clone())
-        .unwrap_or_else(|| slug::derive_id(file.name.as_deref().unwrap_or("theme")));
-    if let Err(err) = keep_version_now(themes, &id, &old) {
-        tracing::warn!("keeping the earlier {}: {err}", path.display());
+        .unwrap_or_else(|| slug::derive_id(file.name.as_deref().unwrap_or("theme")))
+}
+
+fn versions_in_profile(path: &Path, file: &ThemeFile) -> Vec<SavedVersion> {
+    let dir = dir();
+    list_versions(&dir, &version_id(&dir, path, file))
+}
+
+fn read_version_of(version: &SavedVersion) -> Result<ThemeFile, String> {
+    read_theme_file(&read_version(version)?)
+}
+
+fn fresh_base_in_profile(from: &str) -> Option<BaseLayer> {
+    let themes = UserThemes::read(&dir());
+    let lookup = |name: &str| themes.theme_file(name);
+    if slug::builtin_name(from).is_some() {
+        return copy::copy_builtin_base(from, &lookup, &today()).ok();
     }
-    has_comments(&old)
+    let by_slug = ThemeFile { extends: Some(from.to_string()), ..ThemeFile::default() };
+    copy::copy_base(from, &by_slug, &lookup, &today()).ok()
 }
 
 fn save_new_in_profile(file: &ThemeFile) -> Result<Saved, String> {

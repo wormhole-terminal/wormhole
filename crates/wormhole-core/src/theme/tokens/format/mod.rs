@@ -28,6 +28,7 @@ mod keys;
 pub mod migrate;
 mod refs;
 pub mod slug;
+pub mod starter;
 #[cfg(test)]
 mod tests;
 mod unique;

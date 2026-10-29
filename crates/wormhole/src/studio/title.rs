@@ -121,6 +121,7 @@ impl StudioWindow {
                 )
             })
             .child(div().min_w_0().truncate().text_caption().text_color(ui.faint).child(extends))
+            .children(self.title_chips(ui, cx))
             .when(self.dirty(), |d| {
                 d.child(
                     div()

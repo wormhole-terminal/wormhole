@@ -6,10 +6,14 @@ use std::time::Duration;
 
 use gpui_kit::component::input;
 use gpui_kit::*;
-use wormhole_text::keys::{STUDIO_UNDO_RENAME, STUDIO_UNDO_REVERT, studio_undo_change, studio_undo_reset};
+use wormhole_text::keys::{
+    STUDIO_UNDO_ADD_APPEARANCE, STUDIO_UNDO_RENAME, STUDIO_UNDO_RESTORE, STUDIO_UNDO_REVERT,
+    STUDIO_UNDO_UPDATE_FROM, studio_undo_change, studio_undo_move, studio_undo_reset,
+};
 
 use super::StudioWindow;
 use super::document::history::{Step, StepLabel};
+use super::document::places;
 use crate::settings::SettingsStore;
 use crate::window::menu_state::{EditTitles, set_edit_titles};
 
@@ -31,6 +35,10 @@ fn words(label: &StepLabel) -> String {
         StepLabel::Reset(token) => studio_undo_reset(token),
         StepLabel::Rename => wormhole_text::text(STUDIO_UNDO_RENAME).to_string(),
         StepLabel::Revert => wormhole_text::text(STUDIO_UNDO_REVERT).to_string(),
+        StepLabel::Move(token) => studio_undo_move(token),
+        StepLabel::AddAppearance => wormhole_text::text(STUDIO_UNDO_ADD_APPEARANCE).to_string(),
+        StepLabel::UpdateFrom => wormhole_text::text(STUDIO_UNDO_UPDATE_FROM).to_string(),
+        StepLabel::Restore => wormhole_text::text(STUDIO_UNDO_RESTORE).to_string(),
     }
 }
 
@@ -68,9 +76,13 @@ impl StudioWindow {
     /// Put a step's file back: the preview, the name and the editor follow, and the editor jumps to
     /// the token that was selected when the change was made.
     fn restore(&mut self, step: Step, window: &mut Window, cx: &mut Context<Self>) {
-        let Ok(resolved) = (self.themes.resolve)(&step.file) else { return };
+        let Ok(resolved) = (self.themes.resolve)(&places::folded(&step.file, self.doc.shown.as_deref()))
+        else {
+            return;
+        };
         self.doc.file = step.file;
-        self.revision += 1;
+        self.doc.settle_shown();
+        self.touched();
         self.field_error = None;
         self.notice = None;
         self.gesture_timer = None;

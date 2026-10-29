@@ -7,83 +7,318 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Rename"
-pub const STUDIO_UNDO_RENAME: Key = Key::new(1192);
+pub const STUDIO_UNDO_RENAME: Key = Key::new(1193);
 /// "Revert to Saved"
-pub const STUDIO_UNDO_REVERT: Key = Key::new(1193);
+pub const STUDIO_UNDO_REVERT: Key = Key::new(1194);
 /// "Name your theme, then press Return."
-pub const STUDIO_NAME_PROMPT: Key = Key::new(1195);
+pub const STUDIO_NAME_PROMPT: Key = Key::new(1196);
 /// "Your Themes"
-pub const STUDIO_MENU_YOUR_THEMES: Key = Key::new(1196);
+pub const STUDIO_MENU_YOUR_THEMES: Key = Key::new(1197);
 /// "This Project"
-pub const STUDIO_MENU_THIS_PROJECT: Key = Key::new(1197);
+pub const STUDIO_MENU_THIS_PROJECT: Key = Key::new(1198);
 /// "The project’s theme"
-pub const STUDIO_MENU_PROJECT_THEME: Key = Key::new(1198);
+pub const STUDIO_MENU_PROJECT_THEME: Key = Key::new(1199);
 /// "Built-in"
-pub const STUDIO_MENU_BUILT_IN: Key = Key::new(1199);
+pub const STUDIO_MENU_BUILT_IN: Key = Key::new(1200);
 /// "New Theme…"
-pub const STUDIO_MENU_NEW: Key = Key::new(1200);
+pub const STUDIO_MENU_NEW: Key = Key::new(1201);
 /// "Rename…"
-pub const STUDIO_MENU_RENAME: Key = Key::new(1202);
+pub const STUDIO_MENU_RENAME: Key = Key::new(1203);
 /// "Revert to Saved"
-pub const STUDIO_MENU_REVERT: Key = Key::new(1203);
+pub const STUDIO_MENU_REVERT: Key = Key::new(1204);
 /// "Open a theme, or duplicate, rename and revert this one"
-pub const STUDIO_TOOLTIP_MENU: Key = Key::new(1204);
+pub const STUDIO_TOOLTIP_MENU: Key = Key::new(1205);
 /// "That theme could not be opened."
-pub const STUDIO_OPEN_FAILED: Key = Key::new(1206);
+pub const STUDIO_OPEN_FAILED: Key = Key::new(1207);
 /// "Saved in the new theme format: older releases of Wormhole can’t open this file. The previous file is kept in the theme’s saved versions."
-pub const STUDIO_SAVED_CONVERTED: Key = Key::new(1207);
+pub const STUDIO_SAVED_CONVERTED: Key = Key::new(1208);
 /// "Comments in the file were not kept."
-pub const STUDIO_SAVED_COMMENTS: Key = Key::new(1208);
+pub const STUDIO_SAVED_COMMENTS: Key = Key::new(1209);
 /// "Could not convert this theme safely, so it was not changed."
-pub const STUDIO_CONVERT_FAILED: Key = Key::new(1209);
+pub const STUDIO_CONVERT_FAILED: Key = Key::new(1210);
 /// "This theme was made by a newer Wormhole. Saving here would lose what this version doesn’t understand, so it was not changed. Duplicate keeps a copy."
-pub const STUDIO_NEWER_FILE: Key = Key::new(1212);
+pub const STUDIO_NEWER_FILE: Key = Key::new(1213);
+/// "Filter tokens"
+pub const STUDIO_FILTER_PLACEHOLDER: Key = Key::new(1214);
+/// "All"
+pub const STUDIO_SHOW_ALL: Key = Key::new(1215);
+/// "yours"
+pub const STUDIO_ORIGIN_YOURS: Key = Key::new(1219);
+/// "base"
+pub const STUDIO_ORIGIN_BASE: Key = Key::new(1220);
+/// "worked out"
+pub const STUDIO_ORIGIN_WORKED_OUT: Key = Key::new(1221);
+/// "This theme sets this value itself."
+pub const STUDIO_ORIGIN_TIP_YOURS: Key = Key::new(1222);
+/// "Wormhole works this out from other colours, so it follows your edits. Editing it makes it yours."
+pub const STUDIO_ORIGIN_TIP_WORKED_OUT: Key = Key::new(1224);
+/// "Reset"
+pub const STUDIO_RESET: Key = Key::new(1225);
+/// "Reset to base"
+pub const STUDIO_RESET_BASE: Key = Key::new(1226);
+/// "Light"
+pub const STUDIO_APPEARANCE_LIGHT: Key = Key::new(1227);
+/// "Dark"
+pub const STUDIO_APPEARANCE_DARK: Key = Key::new(1228);
+/// "Appearance"
+pub const STUDIO_APPEARANCE_LABEL: Key = Key::new(1229);
+/// "both"
+pub const STUDIO_REACH_BOTH: Key = Key::new(1230);
+/// "light"
+pub const STUDIO_REACH_LIGHT: Key = Key::new(1231);
+/// "dark"
+pub const STUDIO_REACH_DARK: Key = Key::new(1232);
+/// "Add Dark Appearance"
+pub const STUDIO_MENU_ADD_DARK: Key = Key::new(1235);
+/// "Add Light Appearance"
+pub const STUDIO_MENU_ADD_LIGHT: Key = Key::new(1236);
+/// "Could not add an appearance to this theme."
+pub const STUDIO_ADD_FAILED: Key = Key::new(1237);
+/// "Undo"
+pub const STUDIO_MOVED_UNDO: Key = Key::new(1239);
+/// "Add Appearance"
+pub const STUDIO_UNDO_ADD_APPEARANCE: Key = Key::new(1240);
+/// "Use with Match system"
+pub const STUDIO_USE_WITH_MATCH_SYSTEM: Key = Key::new(1242);
+/// "Up to date"
+pub const STUDIO_UPDATE_UP_TO_DATE: Key = Key::new(1245);
+/// "Source unavailable"
+pub const STUDIO_UPDATE_SOURCE_MISSING: Key = Key::new(1246);
+/// "yours · kept"
+pub const STUDIO_UPDATE_KEPT: Key = Key::new(1249);
+/// "Cancel"
+pub const STUDIO_UPDATE_CANCEL: Key = Key::new(1250);
+/// "Update"
+pub const STUDIO_UPDATE_APPLY: Key = Key::new(1251);
+/// "Update from Base"
+pub const STUDIO_UNDO_UPDATE_FROM: Key = Key::new(1252);
+/// "Revert To"
+pub const STUDIO_MENU_REVERT_TO: Key = Key::new(1253);
+/// "Browse All Versions…"
+pub const STUDIO_MENU_VERSIONS: Key = Key::new(1254);
+/// "current"
+pub const STUDIO_VERSIONS_CURRENT: Key = Key::new(1256);
+/// "original file"
+pub const STUDIO_VERSIONS_ORIGINAL: Key = Key::new(1257);
+/// "Restore"
+pub const STUDIO_VERSIONS_RESTORE: Key = Key::new(1258);
+/// "Done"
+pub const STUDIO_VERSIONS_DONE: Key = Key::new(1259);
+/// "Older saves thin out to one an hour, then one a day. The original file is always kept."
+pub const STUDIO_VERSIONS_NOTE: Key = Key::new(1260);
+/// "No earlier saves yet. Every save keeps the file it replaces."
+pub const STUDIO_VERSIONS_EMPTY: Key = Key::new(1261);
+/// "Can’t be read"
+pub const STUDIO_VERSIONS_UNREADABLE: Key = Key::new(1262);
+/// "first save"
+pub const STUDIO_VERSIONS_FIRST: Key = Key::new(1263);
+/// "Restore Version"
+pub const STUDIO_UNDO_RESTORE: Key = Key::new(1266);
+/// "Made with a newer Wormhole"
+pub const STUDIO_NEWER_CHIP: Key = Key::new(1267);
+/// "This theme was made with a newer Wormhole; saving would drop what this version doesn’t know. Duplicate it to keep your edits."
+pub const STUDIO_NEWER_SAVE_BLOCKED: Key = Key::new(1269);
+/// "Duplicate"
+pub const STUDIO_NEWER_DUPLICATE: Key = Key::new(1270);
+/// "Previewing, not in use"
+pub const STUDIO_PREVIEW_CHIP: Key = Key::new(1271);
+/// "Use"
+pub const STUDIO_PREVIEW_USE: Key = Key::new(1272);
+/// "Every window shows this theme while Theme Studio is open. Closing Theme Studio puts your theme back."
+pub const STUDIO_PREVIEW_TOOLTIP: Key = Key::new(1273);
+/// "just now"
+pub const STUDIO_VERSIONS_JUST_NOW: Key = Key::new(1274);
+/// "New Theme From"
+pub const STUDIO_MENU_NEW_FROM: Key = Key::new(1277);
+/// "Untitled"
+pub const STUDIO_UNTITLED: Key = Key::new(1278);
 
 /// ```text
 /// Change “{ $token }”
 /// ```
 pub fn studio_undo_change(token: &str) -> String {
-    crate::active::message(1190, &[("token", Arg::Str(token))])
+    crate::active::message(1191, &[("token", Arg::Str(token))])
 }
 
 /// ```text
 /// Reset “{ $token }”
 /// ```
 pub fn studio_undo_reset(token: &str) -> String {
-    crate::active::message(1191, &[("token", Arg::Str(token))])
+    crate::active::message(1192, &[("token", Arg::Str(token))])
 }
 
 /// ```text
 /// Untitled (from { $from })
 /// ```
 pub fn studio_untitled_from(from: &str) -> String {
-    crate::active::message(1194, &[("from", Arg::Str(from))])
+    crate::active::message(1195, &[("from", Arg::Str(from))])
 }
 
 /// ```text
 /// Duplicate “{ $name }”
 /// ```
 pub fn studio_menu_duplicate(name: &str) -> String {
-    crate::active::message(1201, &[("name", Arg::Str(name))])
+    crate::active::message(1202, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Do you want to save the changes to “{ $current }” before opening “{ $next }”?
 /// ```
 pub fn studio_switch_message(current: &str, next: &str) -> String {
-    crate::active::message(1205, &[("current", Arg::Str(current)), ("next", Arg::Str(next))])
+    crate::active::message(1206, &[("current", Arg::Str(current)), ("next", Arg::Str(next))])
 }
 
 /// ```text
 /// “{ $name }” is the name of one version of a theme that comes in several. Choose another name.
 /// ```
 pub fn studio_name_is_a_version(name: &str) -> String {
-    crate::active::message(1210, &[("name", Arg::Str(name))])
+    crate::active::message(1211, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Another theme is already called “{ $name }”. Choose another name.
 /// ```
 pub fn studio_name_taken(name: &str) -> String {
-    crate::active::message(1211, &[("name", Arg::Str(name))])
+    crate::active::message(1212, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// Yours · { $count }
+/// ```
+pub fn studio_show_yours(count: &str) -> String {
+    crate::active::message(1216, &[("count", Arg::Str(count))])
+}
+
+/// ```text
+/// Base · { $count }
+/// ```
+pub fn studio_show_base(count: &str) -> String {
+    crate::active::message(1217, &[("count", Arg::Str(count))])
+}
+
+/// ```text
+/// Low contrast · { $count }
+/// ```
+pub fn studio_show_low(count: &str) -> String {
+    crate::active::message(1218, &[("count", Arg::Str(count))])
+}
+
+/// ```text
+/// Copied from { $from } and not changed. Editing it makes it yours.
+/// ```
+pub fn studio_origin_tip_base(from: &str) -> String {
+    crate::active::message(1223, &[("from", Arg::Str(from))])
+}
+
+/// ```text
+/// Both appearances use this value. Click to set it for { $appearance } only.
+/// ```
+pub fn studio_reach_tip_both(appearance: &str) -> String {
+    crate::active::message(1233, &[("appearance", Arg::Str(appearance))])
+}
+
+/// ```text
+/// Only { $appearance } uses this value. Click to set it for both appearances.
+/// ```
+pub fn studio_reach_tip_this(appearance: &str) -> String {
+    crate::active::message(1234, &[("appearance", Arg::Str(appearance))])
+}
+
+/// ```text
+/// Now set for both: kept the { $kept } value of “{ $token }”. The { $removed } value ({ $value }) was removed.
+/// ```
+pub fn studio_moved_kept(kept: &str, token: &str, removed: &str, value: &str) -> String {
+    crate::active::message(1238, &[("kept", Arg::Str(kept)), ("token", Arg::Str(token)), ("removed", Arg::Str(removed)), ("value", Arg::Str(value))])
+}
+
+/// ```text
+/// Move “{ $token }”
+/// ```
+pub fn studio_undo_move(token: &str) -> String {
+    crate::active::message(1241, &[("token", Arg::Str(token))])
+}
+
+/// ```text
+/// “{ $name }” follows the system’s light and dark.
+/// ```
+pub fn studio_pair_used(name: &str) -> String {
+    crate::active::message(1243, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// Update from { $from }…
+/// ```
+pub fn studio_update_from(from: &str) -> String {
+    crate::active::message(1244, &[("from", Arg::Str(from))])
+}
+
+/// ```text
+/// Update from { $from }?
+/// ```
+pub fn studio_update_title(from: &str) -> String {
+    crate::active::message(1247, &[("from", Arg::Str(from))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] 1 value changed since you copied it on { $date }. Your own changes stay.
+///    *[other] { $count } values changed since you copied it on { $date }. Your own changes stay.
+/// }
+/// ```
+pub fn studio_update_count(count: i64, date: &str) -> String {
+    crate::active::message(1248, &[("count", Arg::Int(count)), ("date", Arg::Str(date))])
+}
+
+/// ```text
+/// Versions of “{ $name }”
+/// ```
+pub fn studio_versions_title(name: &str) -> String {
+    crate::active::message(1255, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] 1 value changed
+///    *[other] { $count } values changed
+/// }
+/// ```
+pub fn studio_versions_changed(count: i64) -> String {
+    crate::active::message(1264, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// Version from { $when }, { $what }
+/// ```
+pub fn studio_versions_label(when: &str, what: &str) -> String {
+    crate::active::message(1265, &[("when", Arg::Str(when)), ("what", Arg::Str(what))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] 1 value this version doesn’t know was skipped.
+///    *[other] { $count } values this version doesn’t know were skipped.
+/// } It shows what it can; the rest is worked out. Saving would drop them, so Theme Studio won’t save over it.
+/// ```
+pub fn studio_newer_explain(count: i64) -> String {
+    crate::active::message(1268, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] 1 minute ago
+///    *[other] { $count } minutes ago
+/// }
+/// ```
+pub fn studio_versions_minutes_ago(count: i64) -> String {
+    crate::active::message(1275, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] 1 hour ago
+///    *[other] { $count } hours ago
+/// }
+/// ```
+pub fn studio_versions_hours_ago(count: i64) -> String {
+    crate::active::message(1276, &[("count", Arg::Int(count))])
 }

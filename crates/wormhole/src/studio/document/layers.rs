@@ -165,10 +165,44 @@ fn own_values(file: &ThemeFile) -> BTreeMap<String, String> {
     values
 }
 
+/// The tokens `file` sets differently from `before` (added, changed or removed), in the shown
+/// appearances too; a bold or italic is named by its syntax token.
+pub(in crate::studio) fn changed_tokens(before: &ThemeFile, file: &ThemeFile) -> BTreeSet<String> {
+    let (before, after) = (all_values(before), all_values(file));
+    let names: BTreeSet<&String> = before.keys().chain(after.keys()).collect();
+    names
+        .into_iter()
+        .filter(|name| before.get(*name) != after.get(*name))
+        .map(|name| {
+            let token = name.rsplit_once('/').map_or(name.as_str(), |(_, t)| t);
+            token.split(':').next().unwrap_or(token).to_string()
+        })
+        .collect()
+}
+
+/// Every value of the top and of each appearance, the appearance's as `name/token`.
+fn all_values(file: &ThemeFile) -> BTreeMap<String, String> {
+    let mut values = own_values(file);
+    for variant in &file.variants {
+        let prefix = format!("{}/", variant.name);
+        values.extend(own_values(&variant.to_file()).into_iter().map(|(k, v)| (format!("{prefix}{k}"), v)));
+    }
+    values
+}
+
 /// How many values `file` sets differently from `saved` (added, changed or removed): what
 /// closing without saving would lose.
 pub(in crate::studio) fn changes(saved: &ThemeFile, file: &ThemeFile) -> usize {
-    let (before, after) = (own_values(saved), own_values(file));
+    let with_variants = |file: &ThemeFile| {
+        let mut values = own_values(file);
+        for variant in &file.variants {
+            let prefix = format!("{}/", variant.name);
+            values
+                .extend(own_values(&variant.to_file()).into_iter().map(|(k, v)| (format!("{prefix}{k}"), v)));
+        }
+        values
+    };
+    let (before, after) = (with_variants(saved), with_variants(file));
     let names: BTreeSet<&String> = before.keys().chain(after.keys()).collect();
     names.into_iter().filter(|name| before.get(*name) != after.get(*name)).count()
 }

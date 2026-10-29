@@ -12,6 +12,11 @@ pub(super) fn today() -> String {
     let secs = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0));
+    day_of(secs)
+}
+
+/// The day (UTC) of a time in seconds since 1970, as `2026-10-29`.
+pub(super) fn day_of(secs: i64) -> String {
     let (y, m, d) = civil(secs.div_euclid(86_400));
     format!("{y:04}-{m:02}-{d:02}")
 }

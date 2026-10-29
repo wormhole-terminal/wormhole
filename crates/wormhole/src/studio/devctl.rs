@@ -104,12 +104,18 @@ pub(crate) fn state(cx: &App) -> Option<String> {
     let (_, studio) = super::current_window(cx)?;
     let studio = studio.read(cx);
     Some(format!(
-        "studio dirty={} asking={} subject={} undo={} redo={}",
+        "studio dirty={} asking={} subject={} undo={} redo={} format={} shown={} update={} modal={} inuse={} {}",
         studio.dirty(),
         studio.asking,
         studio.doc.subject.word(),
         studio.history.undo_len(),
-        studio.history.redo_len()
+        studio.history.redo_len(),
+        studio.format_word(),
+        studio.doc.shown.as_deref().unwrap_or("-"),
+        studio.update_word(),
+        studio.modal_word(),
+        studio.in_use(cx),
+        studio.token_word(),
     ))
 }
 
@@ -189,7 +195,8 @@ impl StudioWindow {
     pub(crate) fn devctl_filter(&mut self, arg: &str, window: &mut Window, cx: &mut Context<Self>) {
         let (show, text) = arg.split_once(' ').unwrap_or((arg, ""));
         let show = match show {
-            "changed" => Show::Changed,
+            "yours" => Show::Yours,
+            "base" => Show::Base,
             "low" => Show::LowContrast,
             _ => Show::All,
         };
@@ -223,6 +230,9 @@ impl StudioWindow {
                 Target::Own(dir.join(format!("{stem}.json")))
             }
             Some(("builtin", name)) => Target::Builtin(name.to_string()),
+            Some(("from", stem)) => {
+                Target::CopyOf(crate::active_profile::paths().themes_dir().join(format!("{stem}.json")))
+            }
             _ if arg == "project" => Target::Project,
             _ => Target::New,
         };
@@ -272,5 +282,103 @@ impl StudioWindow {
                 None => studio.open_save_menu(cx),
             });
         });
+    }
+}
+
+#[cfg(feature = "devctl")]
+impl StudioWindow {
+    fn format_word(&self) -> String {
+        let f = &self.doc.file;
+        match (f.read.newer, f.version) {
+            (true, _) => format!("newer:{}", f.read.skipped),
+            (false, Some(_)) => "v1".into(),
+            (false, None) => "v0".into(),
+        }
+    }
+
+    fn update_word(&self) -> String {
+        use super::update_from::State;
+        match self.update_check.state {
+            State::NoBase => "none".into(),
+            State::SourceMissing => "missing".into(),
+            State::UpToDate => "current".into(),
+            State::Changed(n) => format!("changed:{n}"),
+        }
+    }
+
+    fn modal_word(&self) -> &'static str {
+        match self.modal {
+            None => "-",
+            Some(super::modal::Modal::Update(_)) => "update",
+            Some(super::modal::Modal::Versions(_)) => "versions",
+        }
+    }
+
+    /// The selected token, where its value comes from and which appearances it is for.
+    fn token_word(&self) -> String {
+        use super::document::places::{Origin, Reach, origin, reach};
+        let Some(token) = self.selected.as_deref() else { return "token=-".into() };
+        let shown = self.doc.shown.as_deref();
+        let origin = match origin(&self.doc.file, shown, token) {
+            Origin::Yours => "yours",
+            Origin::Base => "base",
+            Origin::WorkedOut => "worked_out",
+        };
+        let reach = match (self.doc.is_pair(), reach(&self.doc.file, shown, token)) {
+            (false, _) => "-",
+            (true, Reach::Both) => "both",
+            (true, Reach::ThisAppearance) => "this",
+        };
+        format!("token={token} origin={origin} reach={reach}")
+    }
+
+    /// `studio-appearance`, `studio-add-appearance`, `studio-chip`, `studio-update-from`,
+    /// `studio-versions` and `studio-use`.
+    pub(crate) fn devctl_appearances(
+        &mut self,
+        command: &str,
+        arg: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        use wormhole_core::theme::tokens::Appearance;
+        let mut words = arg.split_whitespace();
+        let (first, second) = (words.next().unwrap_or_default(), words.next());
+        match command {
+            "studio-appearance" => self.set_shown(first, window, cx),
+            "studio-add-appearance" => {
+                let to = match first {
+                    "light" => Some(Appearance::Light),
+                    "dark" => Some(Appearance::Dark),
+                    _ => self.missing_appearance(),
+                };
+                if let Some(to) = to {
+                    self.add_appearance(to, window, cx);
+                }
+            }
+            "studio-chip" => {
+                let token = if first.is_empty() { self.selected.clone() } else { Some(first.to_string()) };
+                if let Some(token) = token {
+                    self.toggle_reach(&token, window, cx);
+                }
+            }
+            "studio-update-from" => match first {
+                "apply" => self.apply_update(window, cx),
+                "cancel" => self.close_modal(cx),
+                _ => self.open_update_from(cx),
+            },
+            "studio-versions" => match (first, second.and_then(|n| n.parse::<usize>().ok())) {
+                ("select", Some(n)) => self.select_version(n, cx),
+                ("restore", n) => {
+                    if let Some(n) = n {
+                        self.select_version(n, cx);
+                    }
+                    self.restore_version(window, cx);
+                }
+                ("close", _) => self.close_modal(cx),
+                _ => self.open_versions(cx),
+            },
+            _ => self.use_theme(window, cx),
+        }
     }
 }

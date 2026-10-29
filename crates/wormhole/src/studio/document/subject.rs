@@ -45,10 +45,9 @@ pub(in crate::studio) fn subject_for(
         return Subject::Project { root };
     }
     match locate(shown) {
-        Found::File(path) => Subject::Own { path },
+        Found::File(path) | Found::Variant(path, _) => Subject::Own { path },
         Found::Builtin(name) => Subject::Untitled { from: name },
-        // A version of a file that ships several is edited as a copy until the appearances come.
-        Found::Variant(_) | Found::Missing => Subject::Untitled { from: fallback.to_string() },
+        Found::Missing => Subject::Untitled { from: fallback.to_string() },
     }
 }
 
@@ -60,7 +59,7 @@ mod tests {
         let locate = |setting: &str| match setting {
             "mine" => Found::File("/themes/mine.json".into()),
             "Nord" => Found::Builtin("Nord".into()),
-            "pair" => Found::Variant("/themes/pair.json".into()),
+            "pair" => Found::Variant("/themes/pair.json".into(), "dark".into()),
             _ => Found::Missing,
         };
         subject_for(project.map(PathBuf::from), shown, &locate, "Wormhole Dark")
@@ -70,7 +69,11 @@ mod tests {
     fn the_studio_opens_on_the_theme_in_use() {
         assert_eq!(open(None, "mine"), Subject::Own { path: "/themes/mine.json".into() });
         assert_eq!(open(None, "Nord"), Subject::Untitled { from: "Nord".into() });
-        assert_eq!(open(None, "pair"), Subject::Untitled { from: "Wormhole Dark".into() });
+        assert_eq!(
+            open(None, "pair"),
+            Subject::Own { path: "/themes/pair.json".into() },
+            "a pair is edited as one file"
+        );
         assert_eq!(open(None, "gone"), Subject::Untitled { from: "Wormhole Dark".into() });
     }
 

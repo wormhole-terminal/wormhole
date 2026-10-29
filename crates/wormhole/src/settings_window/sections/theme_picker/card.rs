@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use gpui_kit::assets::IconName;
+use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -182,6 +183,17 @@ impl Render for ThemeCard {
                             .text_color(name_color)
                             .child(self.label.clone()),
                     )
+                    // Made with a newer Wormhole: it loads what this version knows.
+                    .children(entry.newer.map(|skipped| {
+                        let count = i64::try_from(skipped).unwrap_or(i64::MAX);
+                        let said = settings_appearance_theme_newer(count);
+                        div()
+                            .id(("theme-newer", self.entry))
+                            .flex_none()
+                            .aria_label(said.clone())
+                            .tooltip(move |window, cx| Tooltip::new(said.clone()).build(window, cx))
+                            .child(Icon::new(IconName::TriangleAlert).xsmall().text_color(ui.warning))
+                    }))
                     .when(picked, |d| {
                         d.child(Icon::new(IconName::Check).xsmall().text_color(t("primary")).flex_none())
                     }),

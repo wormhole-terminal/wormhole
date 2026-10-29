@@ -8,7 +8,7 @@
 
 use super::BaseLayer;
 use super::copy::{Lookup, copy_builtin_base};
-use super::slug::{BUILTIN_SLUGS, builtin_name};
+use super::slug::BUILTIN_SLUGS;
 use crate::theme::tokens::catalog::UI_TOKENS;
 use crate::theme::tokens::file::{TerminalFile, ThemeFile, ThemeVariant};
 use crate::theme::tokens::{Appearance, Color, ThemeTokens};
@@ -164,6 +164,7 @@ pub fn add_appearance(
 
 #[cfg(test)]
 mod tests {
+    use super::super::slug::builtin_name;
     use super::*;
     use crate::theme::tokens::{copy, resolve, variants};
 

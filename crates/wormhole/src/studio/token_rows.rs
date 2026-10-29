@@ -6,6 +6,7 @@ use std::collections::BTreeSet;
 
 use wormhole_core::theme::tokens::{self, Color, ThemeFile, ThemeTokens};
 
+use super::document::places::{self, Origin, Reach};
 use super::document::{is_metric, number, override_of};
 use super::draft::{Show, group_size, in_area, visible};
 use crate::theme_bridge::MISSING_TOKEN;
@@ -41,7 +42,12 @@ pub(super) struct TokenRow {
     pub(super) value: String,
     pub(super) selected: bool,
     pub(super) low: bool,
+    /// Edited since the last save.
     pub(super) changed: bool,
+    /// Where the value comes from.
+    pub(super) origin: Origin,
+    /// For a pair of appearances: which of them the value is for.
+    pub(super) reach: Option<Reach>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -70,6 +76,8 @@ impl ListRow {
 pub(super) struct Inputs<'a> {
     pub(super) draft: &'a ThemeFile,
     pub(super) initial: &'a ThemeFile,
+    /// The appearance being edited, while the theme is a pair.
+    pub(super) shown: Option<&'a str>,
     pub(super) tokens: &'a ThemeTokens,
     /// The tokens whose text falls short somewhere.
     pub(super) low: &'a BTreeSet<String>,
@@ -85,19 +93,23 @@ pub(super) struct Inputs<'a> {
 
 pub(super) struct Built {
     pub(super) rows: Vec<ListRow>,
-    /// The counts the Changed and Low contrast segments carry, in the area.
-    pub(super) changed_count: usize,
+    /// The counts the Yours, Base and Low contrast segments carry, in the area.
+    pub(super) yours_count: usize,
+    pub(super) base_count: usize,
     pub(super) low_count: usize,
 }
 
 pub(super) fn build(inputs: &Inputs) -> Built {
     let Inputs { draft, initial, tokens, low, show, area, query, .. } = *inputs;
     let changed = |name: &str| override_of(draft, name) != override_of(initial, name);
-    let shown = visible(show, area, query, &changed, &|name| low.contains(name));
+    let pair = places::is_pair(draft);
+    let origin = |name: &str| places::origin(draft, inputs.shown, name);
+    let shown = visible(show, area, query, &origin, &|name| low.contains(name));
     // Filtering shows what it found: every group that has a hit, open.
     let filtering = show != Show::All || area.is_some() || !query.trim().is_empty();
-    let changed_count =
-        visible(Show::Changed, area, "", &changed, &|_| false).iter().map(|(_, t)| t.len()).sum::<usize>();
+    let count =
+        |show| visible(show, area, "", &origin, &|_| false).iter().map(|(_, t)| t.len()).sum::<usize>();
+    let (yours_count, base_count) = (count(Show::Yours), count(Show::Base));
     let low_count = low.iter().filter(|name| in_area(name, area)).count();
 
     let mut rows = Vec::new();
@@ -131,14 +143,18 @@ pub(super) fn build(inputs: &Inputs) -> Built {
             ListRow::Token(TokenRow {
                 name: name.to_string(),
                 chip,
-                value: override_of(draft, name).filter(|_| !is_metric(name)).unwrap_or(value),
+                value: places::own_value(draft, inputs.shown, name)
+                    .filter(|_| !is_metric(name))
+                    .unwrap_or(value),
                 selected: inputs.selected == Some(name),
                 low: low.contains(name),
                 changed: changed(name),
+                origin: origin(name),
+                reach: pair.then(|| places::reach(draft, inputs.shown, name)),
             })
         }));
     }
-    Built { rows, changed_count, low_count }
+    Built { rows, yours_count, base_count, low_count }
 }
 
 #[cfg(test)]
@@ -147,6 +163,7 @@ mod tests {
 
     use wormhole_core::theme::tokens::{Area, ThemeFile, ThemeTokens, builtin_tokens, resolve};
 
+    use super::super::document::places::Origin;
     use super::super::document::set_override;
     use super::super::draft::{Show, draft_for, groups};
     use super::{Built, Inputs, ListRow, build};
@@ -175,6 +192,7 @@ mod tests {
         build(&Inputs {
             draft: &draft,
             initial: &initial,
+            shown: None,
             tokens: &tokens,
             low: &low,
             show,
@@ -214,7 +232,8 @@ mod tests {
         assert_eq!(token.value, "#ff0000", "the draft's own value, as typed");
         let ListRow::Band(band) = &built.rows[at - 1] else { panic!("its band") };
         assert!(band.open && band.changed && band.low == 1);
-        assert_eq!((built.changed_count, built.low_count), (1, 1));
+        assert_eq!((built.yours_count, built.low_count), (1, 1));
+        assert_eq!(token.origin, Origin::Yours);
     }
 
     #[test]
