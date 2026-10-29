@@ -4,7 +4,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use wormhole_core::theme::tokens::{METRIC_TOKENS, SyntaxOverride, TerminalFile, ThemeFile};
+use wormhole_core::theme::tokens::{METRIC_TOKENS, SyntaxOverride, TerminalFile, ThemeFile, ansi_index};
 
 /// The terminal colours a file names by a plain key, with their slots: one list for reading,
 /// writing and listing them, so a colour added to the file's terminal block is added here once.
@@ -48,7 +48,9 @@ pub(in crate::studio) fn override_of(file: &ThemeFile, name: &str) -> Option<Str
     }
     if let Some(key) = name.strip_prefix("terminal.") {
         if let Some(index) = key.strip_prefix("ansi.") {
-            return file.terminal.ansi.get(index).cloned();
+            // A hand-written file may call the slot by name (`blue`, `bright_white`).
+            let slot = index.parse::<usize>().ok().filter(|i| *i < 16)?;
+            return file.terminal.ansi.iter().find(|(k, _)| ansi_index(k) == Some(slot)).map(|(_, v)| v.clone());
         }
         return terminal_get(&file.terminal, key).cloned().flatten();
     }
@@ -84,10 +86,14 @@ pub(in crate::studio) fn set_override(
     }
     if let Some(key) = name.strip_prefix("terminal.") {
         if let Some(index) = key.strip_prefix("ansi.") {
-            match value {
-                Some(v) => file.terminal.ansi.insert(index.to_string(), v),
-                None => file.terminal.ansi.remove(index),
+            let Some(slot) = index.parse::<usize>().ok().filter(|i| *i < 16) else {
+                return Err(format!("{name}: no such palette slot"));
             };
+            // Under whatever name the file gives it: two keys for one slot would fight.
+            file.terminal.ansi.retain(|k, _| ansi_index(k) != Some(slot));
+            if let Some(v) = value {
+                file.terminal.ansi.insert(slot.to_string(), v);
+            }
             return Ok(());
         }
         if let Some(slot) = terminal_slot(&mut file.terminal, key) {
@@ -128,7 +134,8 @@ fn own_values(file: &ThemeFile) -> BTreeMap<String, String> {
         }
     }
     for (key, value) in &file.terminal.ansi {
-        values.insert(format!("terminal.ansi.{key}"), value.clone());
+        let slot = ansi_index(key).map_or_else(|| key.clone(), |i| i.to_string());
+        values.insert(format!("terminal.ansi.{slot}"), value.clone());
     }
     for info in METRIC_TOKENS {
         if let Some(value) = file.metrics.get(info.name) {
@@ -200,6 +207,26 @@ mod tests {
         assert!(draft.ui.is_empty(), "terminal colors are not UI tokens");
         set_override(&mut draft, "terminal.ansi.5", None).expect("resets");
         assert_eq!(override_of(&draft, "terminal.ansi.5"), None);
+    }
+
+    #[test]
+    fn an_ansi_slot_named_by_color_is_read_and_replaced_not_duplicated() {
+        let mut draft =
+            parse_theme_file(r##"{"terminal": {"ansi": {"blue": "#0000aa", "bright_white": "#ffffff"}}}"##)
+                .expect("parses");
+        assert_eq!(override_of(&draft, "terminal.ansi.4").as_deref(), Some("#0000aa"));
+        assert_eq!(override_of(&draft, "terminal.ansi.15").as_deref(), Some("#ffffff"));
+        set_override(&mut draft, "terminal.ansi.4", Some("#1111ff".into())).expect("sets");
+        assert_eq!(draft.terminal.ansi.len(), 2, "one key for the slot: {:?}", draft.terminal.ansi);
+        assert_eq!(override_of(&draft, "terminal.ansi.4").as_deref(), Some("#1111ff"));
+        set_override(&mut draft, "terminal.ansi.15", None).expect("resets");
+        assert_eq!(override_of(&draft, "terminal.ansi.15"), None);
+        assert_eq!(draft.terminal.ansi.len(), 1);
+        // Counted under the slot, whatever the file calls it.
+        let saved = parse_theme_file(r##"{"terminal": {"ansi": {"blue": "#0000aa"}}}"##).expect("parses");
+        let mut now = saved.clone();
+        set_override(&mut now, "terminal.ansi.4", Some("#0000aa".into())).expect("sets");
+        assert_eq!(changes(&saved, &now), 0);
     }
 
     #[test]
