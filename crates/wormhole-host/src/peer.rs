@@ -7,6 +7,10 @@
 //! every peer that passed the uid check: an identifier proves nothing when anyone can pick it, so
 //! there is nothing to check there. No team id is compiled in, so forks and dev builds need no
 //! switch.
+//!
+//! A peer whose executable was replaced on disk while it runs (an app updated by Homebrew or a copy)
+//! cannot be found by the system any more; it is then held to the kernel's record of its signature,
+//! the app's identifier and this team, valid and not ad hoc (wormhole-term's `sys/macos/kernel_peer.rs`).
 
 use wormhole_term::sys::socket::Stream;
 
@@ -77,9 +81,9 @@ impl Policy {
     /// The requirement for `team`, when the host itself satisfies the Developer ID part of it
     /// (a host signed by some other means must not lock itself out of its own app).
     fn require_team(team: &str) -> Option<Self> {
-        let own = codesign::requirement(&developer_id_clauses(team)?)?;
+        let own = codesign::requirement(&developer_id_clauses(team)?, APP_IDENTIFIER, team)?;
         codesign::self_satisfies(&own).then_some(())?;
-        codesign::requirement(&peer_requirement(team)?).map(Self::Require)
+        codesign::requirement(&peer_requirement(team)?, APP_IDENTIFIER, team).map(Self::Require)
     }
 
     /// Whether to serve the peer at the other end of `socket`; says why not in the log.
@@ -149,7 +153,7 @@ mod tests {
     mod socket_peer {
         use wormhole_term::sys::socket::{Listener, Stream};
 
-        use super::super::{Policy, peer_requirement};
+        use super::super::{APP_IDENTIFIER, Policy, peer_requirement};
         use wormhole_term::sys::codesign::{self, Stage};
 
         /// A client connected to a listener in a temporary folder, and the server's side of it.
@@ -178,8 +182,12 @@ mod tests {
 
         #[test]
         fn an_ad_hoc_peer_is_refused_under_a_requirement_through_its_audit_token() {
-            let requirement = codesign::requirement(&peer_requirement("ABCDE12345").expect("a team id"))
-                .expect("the requirement compiles");
+            let requirement = codesign::requirement(
+                &peer_requirement("ABCDE12345").expect("a team id"),
+                APP_IDENTIFIER,
+                "ABCDE12345",
+            )
+            .expect("the requirement compiles");
             let (_dir, _client, server) = connected();
             let policy = Policy::Require(requirement);
             // The peer is this process: found by its audit token, and not of that team.

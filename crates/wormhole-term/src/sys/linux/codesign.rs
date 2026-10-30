@@ -7,7 +7,7 @@ use crate::sys::codesign::{Refusal, Signature, SignerKind};
 /// A requirement a peer's signature must satisfy; there are none to write here.
 pub struct Requirement(());
 
-pub(crate) fn requirement(_text: &str) -> Option<Requirement> {
+pub(crate) fn requirement(_text: &str, _identifier: &str, _team: &str) -> Option<Requirement> {
     None
 }
 

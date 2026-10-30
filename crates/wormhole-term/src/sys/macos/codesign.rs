@@ -15,6 +15,7 @@ use security_framework::os::macos::code_signing::{
 };
 use security_framework_sys::code_signing::{SecCSFlags, SecCodeRef, SecStaticCodeRef};
 
+use super::kernel_peer;
 use crate::sys::codesign::{Refusal, Stage};
 
 pub(crate) use super::signature::of_pid;
@@ -23,8 +24,12 @@ pub(crate) use super::signature::of_pid;
 const SIGNING_INFORMATION: SecCSFlags = 1 << 1;
 
 /// An `audit_token_t`: eight 32-bit values, the pid the sixth.
-const TOKEN_WORDS: usize = 8;
-const TOKEN_PID: usize = 5;
+pub(super) const TOKEN_WORDS: usize = 8;
+pub(super) const TOKEN_PID: usize = 5;
+
+/// `kPOSIXErrorBase + ENOENT`: the Security framework's answer when the process is there but its
+/// executable no longer is (the app was replaced on disk while it runs).
+const CODE_GONE: i32 = 100_000 + libc::ENOENT;
 
 // Not in `security-framework-sys`. The framework is linked already (by that crate).
 #[allow(non_upper_case_globals, unsafe_code)] // declarations only; each call has its SAFETY note.
@@ -40,13 +45,21 @@ unsafe extern "C" {
     ) -> i32;
 }
 
-/// A requirement a peer's signature must satisfy, compiled.
-pub struct Requirement(SecRequirement);
+/// A requirement a peer's signature must satisfy, compiled, with the identifier and team it names:
+/// the kernel's record of a peer whose executable is gone is compared with those two (`kernel_peer`).
+pub struct Requirement {
+    compiled: SecRequirement,
+    identifier: String,
+    team: String,
+}
 
-/// A requirement compiled once from its text; `None` (said in the log) when it does not parse.
-pub(crate) fn requirement(text: &str) -> Option<Requirement> {
+/// A requirement compiled once from its text, which names `identifier` and `team`; `None` (said in the
+/// log) when it does not parse.
+pub(crate) fn requirement(text: &str, identifier: &str, team: &str) -> Option<Requirement> {
     match SecRequirement::from_str(text) {
-        Ok(requirement) => Some(Requirement(requirement)),
+        Ok(compiled) => {
+            Some(Requirement { compiled, identifier: identifier.to_owned(), team: team.to_owned() })
+        }
         Err(err) => {
             tracing::warn!(status = err.code(), "peer check: the requirement does not compile");
             None
@@ -56,7 +69,9 @@ pub(crate) fn requirement(text: &str) -> Option<Requirement> {
 
 /// Whether this process satisfies `requirement`.
 pub(crate) fn self_satisfies(requirement: &Requirement) -> bool {
-    SecCode::for_self(Flags::NONE).and_then(|own| own.check_validity(Flags::NONE, &requirement.0)).is_ok()
+    SecCode::for_self(Flags::NONE)
+        .and_then(|own| own.check_validity(Flags::NONE, &requirement.compiled))
+        .is_ok()
 }
 
 /// The team id in this process's own signature, if it has one.
@@ -127,6 +142,10 @@ fn peer_pid(fd: RawFd) -> Option<u32> {
 }
 
 /// Find the peer's code from its audit token and check it against `requirement`.
+///
+/// When the system finds no code because the peer's executable is gone from disk (and only then: every
+/// other failure refuses), the kernel's record of the peer's signature is compared with the app's
+/// identifier and team instead, see `kernel_peer` for what that does and does not prove.
 pub(crate) fn check_peer(stream: &Stream, requirement: &Requirement) -> Result<(), Refusal> {
     let fd = stream.as_raw_fd();
     let token = audit_token(fd).map_err(|err| Refusal {
@@ -139,14 +158,32 @@ pub(crate) fn check_peer(stream: &Stream, requirement: &Requirement) -> Result<(
     let data = CFData::from_buffer(&bytes);
     let mut attributes = GuestAttributes::new();
     attributes.set_audit_token(data.as_concrete_TypeRef());
-    let code = SecCode::copy_guest_with_attribues(None, &attributes, Flags::NONE).map_err(|err| Refusal {
-        stage: Stage::Code,
-        pid,
-        status: err.code(),
-    })?;
-    code.check_validity(Flags::NONE, &requirement.0).map_err(|err| Refusal {
+    let code = match SecCode::copy_guest_with_attribues(None, &attributes, Flags::NONE) {
+        Ok(code) => code,
+        Err(err) if err.code() == CODE_GONE => return kernel_check(&token, requirement),
+        Err(err) => return Err(Refusal { stage: Stage::Code, pid, status: err.code() }),
+    };
+    code.check_validity(Flags::NONE, &requirement.compiled).map_err(|err| Refusal {
         stage: Stage::Requirement,
         pid,
         status: err.code(),
-    })
+    })?;
+    tracing::info!(peer_pid = token[TOKEN_PID], "peer check: admitted by its code signature");
+    Ok(())
+}
+
+/// The fallback for a peer whose executable is gone: the kernel's record against the app's identity.
+fn kernel_check(token: &[u32; TOKEN_WORDS], requirement: &Requirement) -> Result<(), Refusal> {
+    let pid = Some(token[TOKEN_PID]);
+    let admitted = kernel_peer::record(token)
+        .is_some_and(|record| kernel_peer::admits(&record, &requirement.identifier, &requirement.team));
+    if admitted {
+        tracing::info!(
+            peer_pid = token[TOKEN_PID],
+            "peer check: admitted by the kernel's record of its signature (its executable is gone from disk)"
+        );
+        Ok(())
+    } else {
+        Err(Refusal { stage: Stage::Kernel, pid, status: CODE_GONE })
+    }
 }

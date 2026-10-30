@@ -20,6 +20,9 @@ pub enum Stage {
     Code,
     /// The code does not satisfy the requirement.
     Requirement,
+    /// The peer's executable is gone from disk, and the kernel's record of its signature is not the
+    /// app's.
+    Kernel,
 }
 
 impl Stage {
@@ -28,6 +31,7 @@ impl Stage {
             Self::Token => "no audit token for the peer",
             Self::Code => "no code for the peer's audit token",
             Self::Requirement => "the peer's signature does not satisfy the requirement",
+            Self::Kernel => "the peer's executable is gone and the kernel's record of it is not the app's",
         }
     }
 }
@@ -42,9 +46,11 @@ pub struct Refusal {
     pub status: i32,
 }
 
-/// A requirement compiled once from its text; `None` (said in the log) when it does not parse.
-pub fn requirement(text: &str) -> Option<Requirement> {
-    os::requirement(text)
+/// A requirement compiled once from its text; `None` (said in the log) when it does not parse. The text
+/// names the signing `identifier` and the `team` too: a peer whose executable is gone from disk is held
+/// to those two alone (the system cannot read its certificate any more).
+pub fn requirement(text: &str, identifier: &str, team: &str) -> Option<Requirement> {
+    os::requirement(text, identifier, team)
 }
 
 /// Whether this process satisfies `requirement`.

@@ -2,6 +2,7 @@
 //! for code signatures.
 
 pub(super) mod codesign;
+mod kernel_peer;
 mod ports;
 mod procargs;
 pub(super) mod process;
