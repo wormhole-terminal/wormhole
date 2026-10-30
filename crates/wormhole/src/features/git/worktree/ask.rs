@@ -307,16 +307,26 @@ impl Worktrees {
         // The ports the other worktrees have, as they are now: the free block is found off the
         // UI thread (up to a few thousand binds), next to the git work.
         let others = app(cx).worktrees.clone();
+        let clone_build_folders = settings(cx).worktree_clone_build_folders;
         cx.spawn_in(window, async move |this, cx| {
             let made = plan.clone();
             let result = cx
                 .background_spawn(async move {
-                    worktree::add(&made).map(|()| others.free_ports(worktree::port_free))
+                    worktree::add(&made)?;
+                    // Failures are logged inside: the worktree exists and works without the clones.
+                    let cloned = if clone_build_folders {
+                        worktree::clone_build_folders(&made.repo, &made.folder)
+                    } else {
+                        Vec::new()
+                    };
+                    Ok::<_, anyhow::Error>((others.free_ports(worktree::port_free), cloned))
                 })
                 .await;
             this.update_in(cx, |_, window, cx| match result {
-                Ok(port) => {
+                Ok((port, cloned)) => {
                     let mut plan = plan;
+                    // Recorded with the worktree, so removing it deletes exactly these.
+                    plan.cloned = cloned;
                     // Its own ports, before its first terminal starts with them in its env; a
                     // worktree made meanwhile may have taken that block, and then this one asks
                     // again here.

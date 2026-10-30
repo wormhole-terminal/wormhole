@@ -7,83 +7,83 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Rename"
-pub const STUDIO_UNDO_RENAME: Key = Key::new(1196);
+pub const STUDIO_UNDO_RENAME: Key = Key::new(1199);
 /// "Revert to Saved"
-pub const STUDIO_UNDO_REVERT: Key = Key::new(1197);
+pub const STUDIO_UNDO_REVERT: Key = Key::new(1200);
 /// "Name your theme, then press Return."
-pub const STUDIO_NAME_PROMPT: Key = Key::new(1199);
+pub const STUDIO_NAME_PROMPT: Key = Key::new(1202);
 /// "Your Themes"
-pub const STUDIO_MENU_YOUR_THEMES: Key = Key::new(1200);
+pub const STUDIO_MENU_YOUR_THEMES: Key = Key::new(1203);
 /// "This Project"
-pub const STUDIO_MENU_THIS_PROJECT: Key = Key::new(1201);
+pub const STUDIO_MENU_THIS_PROJECT: Key = Key::new(1204);
 /// "The project’s theme"
-pub const STUDIO_MENU_PROJECT_THEME: Key = Key::new(1202);
+pub const STUDIO_MENU_PROJECT_THEME: Key = Key::new(1205);
 /// "Built-in"
-pub const STUDIO_MENU_BUILT_IN: Key = Key::new(1203);
+pub const STUDIO_MENU_BUILT_IN: Key = Key::new(1206);
 /// "New Theme…"
-pub const STUDIO_MENU_NEW: Key = Key::new(1204);
+pub const STUDIO_MENU_NEW: Key = Key::new(1207);
 /// "Rename…"
-pub const STUDIO_MENU_RENAME: Key = Key::new(1206);
+pub const STUDIO_MENU_RENAME: Key = Key::new(1209);
 /// "Revert to Saved"
-pub const STUDIO_MENU_REVERT: Key = Key::new(1207);
+pub const STUDIO_MENU_REVERT: Key = Key::new(1210);
 /// "Open a theme, or duplicate, rename and revert this one"
-pub const STUDIO_TOOLTIP_MENU: Key = Key::new(1208);
+pub const STUDIO_TOOLTIP_MENU: Key = Key::new(1211);
 /// "That theme could not be opened."
-pub const STUDIO_OPEN_FAILED: Key = Key::new(1210);
+pub const STUDIO_OPEN_FAILED: Key = Key::new(1213);
 /// "Saved in the new theme format: older releases of Wormhole can’t open this file. The previous file is kept in the theme’s saved versions."
-pub const STUDIO_SAVED_CONVERTED: Key = Key::new(1211);
+pub const STUDIO_SAVED_CONVERTED: Key = Key::new(1214);
 /// "Comments in the file were not kept."
-pub const STUDIO_SAVED_COMMENTS: Key = Key::new(1212);
+pub const STUDIO_SAVED_COMMENTS: Key = Key::new(1215);
 /// "Could not convert this theme safely, so it was not changed."
-pub const STUDIO_CONVERT_FAILED: Key = Key::new(1213);
+pub const STUDIO_CONVERT_FAILED: Key = Key::new(1216);
 /// "This theme was made by a newer Wormhole. Saving here would lose what this version doesn’t understand, so it was not changed. Duplicate keeps a copy."
-pub const STUDIO_NEWER_FILE: Key = Key::new(1216);
+pub const STUDIO_NEWER_FILE: Key = Key::new(1219);
 
 /// ```text
 /// Change “{ $token }”
 /// ```
 pub fn studio_undo_change(token: &str) -> String {
-    crate::active::message(1194, &[("token", Arg::Str(token))])
+    crate::active::message(1197, &[("token", Arg::Str(token))])
 }
 
 /// ```text
 /// Reset “{ $token }”
 /// ```
 pub fn studio_undo_reset(token: &str) -> String {
-    crate::active::message(1195, &[("token", Arg::Str(token))])
+    crate::active::message(1198, &[("token", Arg::Str(token))])
 }
 
 /// ```text
 /// Untitled (from { $from })
 /// ```
 pub fn studio_untitled_from(from: &str) -> String {
-    crate::active::message(1198, &[("from", Arg::Str(from))])
+    crate::active::message(1201, &[("from", Arg::Str(from))])
 }
 
 /// ```text
 /// Duplicate “{ $name }”
 /// ```
 pub fn studio_menu_duplicate(name: &str) -> String {
-    crate::active::message(1205, &[("name", Arg::Str(name))])
+    crate::active::message(1208, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Do you want to save the changes to “{ $current }” before opening “{ $next }”?
 /// ```
 pub fn studio_switch_message(current: &str, next: &str) -> String {
-    crate::active::message(1209, &[("current", Arg::Str(current)), ("next", Arg::Str(next))])
+    crate::active::message(1212, &[("current", Arg::Str(current)), ("next", Arg::Str(next))])
 }
 
 /// ```text
 /// “{ $name }” is the name of one version of a theme that comes in several. Choose another name.
 /// ```
 pub fn studio_name_is_a_version(name: &str) -> String {
-    crate::active::message(1214, &[("name", Arg::Str(name))])
+    crate::active::message(1217, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Another theme is already called “{ $name }”. Choose another name.
 /// ```
 pub fn studio_name_taken(name: &str) -> String {
-    crate::active::message(1215, &[("name", Arg::Str(name))])
+    crate::active::message(1218, &[("name", Arg::Str(name))])
 }

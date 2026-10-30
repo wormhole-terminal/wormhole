@@ -219,6 +219,15 @@ impl GitCmd {
         self
     }
 
+    /// Let this command take its paths as git's pathspec syntax (`GIT_LITERAL_PATHSPECS` off). Only for a
+    /// command that refuses literal pathspecs outright (`check-ignore`: "pathspec magic not supported").
+    /// A path that may start with `:` (a repository's file name) is then read as magic, so the caller
+    /// must start every path with `./`, which no magic can follow.
+    pub(crate) fn pathspecs_not_literal(&mut self) -> &mut Self {
+        self.command.env("GIT_LITERAL_PATHSPECS", "0");
+        self
+    }
+
     /// Paths, after `--` (which is added even when there are none: it also keeps a revision
     /// from being taken for a file of the same name). Call last.
     pub(crate) fn paths<I, S>(&mut self, paths: I) -> &mut Self

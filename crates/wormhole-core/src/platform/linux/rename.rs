@@ -29,4 +29,11 @@ impl Folder {
         }
         std::fs::rename(self.0.join(from), self.0.join(to))
     }
+
+    pub(crate) fn move_no_replace_into(&self, from: &OsStr, dest: &Self, to: &OsStr) -> io::Result<()> {
+        if dest.has(to)? {
+            return Err(io::ErrorKind::AlreadyExists.into());
+        }
+        std::fs::rename(self.0.join(from), dest.0.join(to))
+    }
 }

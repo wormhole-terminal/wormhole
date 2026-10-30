@@ -3,6 +3,7 @@
 //! out of backups, no macOS version.
 
 pub(super) mod backup;
+pub(super) mod clone;
 pub(super) mod keychain;
 pub(super) mod rename;
 pub(super) mod system;

@@ -22,6 +22,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Liquid Glass, as a beta: on macOS 26 and later, Settings → Appearance has a Liquid Glass switch, marked
   Beta, that puts glass under the sidebar's and the panel's cards. It is off until you turn it on, and stays
   painted while Reduce Transparency or Increase Contrast is on.
+- Settings → Terminal → Worktrees has a switch, off by default, that starts each new worktree with clones of
+  the main checkout's ignored `node_modules` and `target` folders, so installs and builds in it start warm.
+  It works when both are on the same APFS volume; the clones share disk space with the originals until a file
+  changes, and are left out of Time Machine.
 
 ### Fixed
 

@@ -77,7 +77,8 @@ const BUDGET: [(&str, u64); 17] = [
     ("Appearance", 17241),
     ("Fonts", 7560),
     ("Motion", 6441),
-    ("Terminal", 9872),
+    // With the Worktrees group's switch for cloning build folders (356).
+    ("Terminal", 10228),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
     ("Sessions", 15198),

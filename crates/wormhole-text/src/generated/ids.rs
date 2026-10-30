@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) static IDS: [&str; 1313] = [
+pub(crate) static IDS: [&str; 1316] = [
     "agent-sheet-title", "agent-sheet-title-scripts", "agent-sheet-wants-read",
     "agent-sheet-wants-type", "agent-sheet-wants-run", "agent-sheet-wants-open",
     "agent-sheet-wants-close", "agent-sheet-detail", "agent-sheet-detail-scripts",
@@ -351,7 +351,8 @@ pub(crate) static IDS: [&str; 1313] = [
     "settings-terminal-default-shell", "settings-terminal-default-shell.description", "settings-terminal-default-shell.keywords",
     "settings-terminal-shells", "settings-terminal-shells.description", "settings-terminal-shells.keywords",
     "settings-terminal-group-worktrees", "settings-terminal-worktree-base", "settings-terminal-worktree-base.description",
-    "settings-terminal-worktree-base.keywords", "settings-terminal-group-bell", "settings-terminal-bell-sound",
+    "settings-terminal-worktree-base.keywords", "settings-terminal-worktree-clone-build-folders", "settings-terminal-worktree-clone-build-folders.description",
+    "settings-terminal-worktree-clone-build-folders.keywords", "settings-terminal-group-bell", "settings-terminal-bell-sound",
     "settings-terminal-bell-sound.description", "settings-terminal-bell-sound.keywords", "settings-terminal-bell-visual",
     "settings-terminal-bell-visual.description", "settings-terminal-bell-visual.keywords", "settings-terminal-group-privacy",
     "settings-terminal-clipboard-read", "settings-terminal-clipboard-read.description", "settings-terminal-clipboard-read.keywords",
@@ -447,7 +448,7 @@ pub(crate) static IDS: [&str; 1313] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 1313] = [
+pub(crate) const TAKES_ARGS: [bool; 1316] = [
     true, false, false, false, false, false, false, false, false, true, false, false,
     false, false, false, false, false, false, false, false, false, true, true, false,
     false, false, false, false, true, true, true, true, true, true, true, true,
@@ -537,25 +538,25 @@ pub(crate) const TAKES_ARGS: [bool; 1313] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, false, false, false, false, true, true, true,
+    false, false, false, false, false, false, false, false, false, false, false, false,
+    true, true, true, true, true, true, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, true, false, false, false, false, false,
+    false, false, true, true, true, true, true, true, false, false, false, false,
     true, true, true, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, true, false, false, false, false, false, false, false, true,
-    true, true, true, true, true, false, false, false, false, true, true, true,
-    false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, true, true, true, true, true, true, true,
-    false, false, false, false, false, true, true, true, false, false, false, false,
-    false, false, false, false, false, false, true, true, false, false, true, false,
-    false, false, false, false, false, true, false, false, false, true, false, false,
-    false, false, true, true, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, true, true, true, true,
+    true, true, true, false, false, false, false, false, true, true, true, false,
+    false, false, false, false, false, false, false, false, false, true, true, false,
+    false, true, false, false, false, false, false, false, true, false, false, false,
+    true, false, false, false, false, true, true, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, true, false, false, false, false, false, false,
-    false, false, false, false, false, false, false, false, true, true, false, false,
+    false, false, false, false, false, false, false, false, true, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, true,
+    true, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, true, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false,
+    false, false, false, false, false, false, false, false,
 ];

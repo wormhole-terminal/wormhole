@@ -47,6 +47,13 @@ impl Folder {
         self.0.rename_no_replace(from, to)
     }
 
+    /// Like [`Self::rename_no_replace`], but `to` is a name in `dest`, another folder: how something made
+    /// elsewhere (on the same volume; otherwise the error is `EXDEV`) is put in place without ever
+    /// replacing what is there.
+    pub fn move_no_replace_into(&self, from: &OsStr, dest: &Folder, to: &OsStr) -> io::Result<()> {
+        self.0.move_no_replace_into(from, &dest.0, to)
+    }
+
     /// [`Self::rename_no_replace`] for names that differ only in case, which may be one entry on a volume that
     /// ignores case: `from` goes to a name nothing has, then to `to`, each step refusing to replace. If
     /// something else is called `to` (a volume that tells case apart) `from` is put back and the error is
@@ -142,5 +149,22 @@ mod tests {
         crate::platform::fs::symlink(dir.path(), &link).unwrap();
         assert!(Folder::open(&link).is_err());
         assert!(Folder::open(&dir.path().join("a")).is_err(), "a file is no folder");
+    }
+
+    #[test]
+    fn a_move_into_another_folder_refuses_a_target_and_replaces_nothing() {
+        let (one, two) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+        fs::create_dir(one.path().join("made")).unwrap();
+        fs::write(one.path().join("made/file"), "new").unwrap();
+        fs::create_dir(two.path().join("there")).unwrap();
+        fs::write(two.path().join("there/keep"), "mine").unwrap();
+        let (from, to) = (Folder::open(one.path()).unwrap(), Folder::open(two.path()).unwrap());
+        let err = from.move_no_replace_into(OsStr::new("made"), &to, OsStr::new("there")).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(fs::read_to_string(two.path().join("there/keep")).unwrap(), "mine");
+        assert!(!two.path().join("there/made").exists(), "not nested into the existing folder");
+        from.move_no_replace_into(OsStr::new("made"), &to, OsStr::new("here")).unwrap();
+        assert_eq!(fs::read_to_string(two.path().join("here/file")).unwrap(), "new");
+        assert!(!one.path().join("made").exists());
     }
 }

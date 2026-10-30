@@ -297,6 +297,9 @@ pub struct Settings {
     /// Where New Terminal in New Worktree puts a worktree: under this folder (in a folder named
     /// after the repository), or, empty, beside the repository in `<name>-worktrees`.
     pub worktree_base: String,
+    /// Whether a new worktree starts with copy-on-write clones of the main checkout's `node_modules`
+    /// and `target` folders (macOS, APFS), so installs and builds start warm.
+    pub worktree_clone_build_folders: bool,
 
     /// Features still behind a flag (see [`crate::config::features`]). The key is a [`FeatureFlag`]'s
     /// `key`, the value whether it is on. Only a development build, the Unstable channel or a Stable
@@ -407,6 +410,7 @@ impl Default for Settings {
             clipboard_read: ClipboardRead::default(),
             clipboard_write: ClipboardWrite::default(),
             worktree_base: String::new(),
+            worktree_clone_build_folders: false,
             feature_flags: BTreeMap::new(),
             features: BTreeMap::new(),
         }
