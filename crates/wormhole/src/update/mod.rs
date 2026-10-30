@@ -21,7 +21,7 @@ use std::time::{Duration, SystemTime};
 use gpui_kit::*;
 use wormhole_core::storage::store::Store;
 use wormhole_core::update::{
-    self, Checked, Count, DownloadedUpdate, Release, UpdateChannel, UpdateError, UpdateSchedule,
+    self, Checked, Count, DownloadedUpdate, Launched, Release, UpdateChannel, UpdateError, UpdateSchedule,
     UpdateStatus, UpdaterConfig,
 };
 
@@ -44,7 +44,8 @@ pub(crate) enum UpdatePhase {
     /// Newer version exists, but it needs a newer macOS.
     Unsupported(String),
     Downloading,
-    /// Installed over the running app; takes effect on restart.
+    /// Installed over the running app (by it, or by something else: see [`watch_bundle`]); takes
+    /// effect on restart. The version on disk, as far as it is known.
     Installed(String),
     Failed(String),
 }
@@ -66,6 +67,11 @@ pub(crate) struct Updates {
     /// automatic checks offer it with its Install button instead of downloading it again every six
     /// hours. Not saved: a new run tries once more.
     failed_install: Option<semver::Version>,
+    /// The executable this run started from, while it is in a bundle that updates itself (a release
+    /// build): what [`watch_bundle`] compares the one on disk with. `None` for a dev build.
+    launched: Option<Launched>,
+    /// A look at the bundle is under way on a background thread.
+    watching: bool,
 }
 
 impl Global for Updates {}
@@ -97,6 +103,8 @@ impl Updates {
             restart_when_idle: None,
             channel: UpdateChannel::Stable,
             failed_install: None,
+            launched: feed_config().and_then(|_| Launched::capture(env!("CARGO_PKG_VERSION"))),
+            watching: false,
         }
     }
 
@@ -185,6 +193,43 @@ pub(crate) fn schedule_check(ticks: u64, cx: &mut App) {
     if due {
         check_for_updates(false, cx);
     }
+}
+
+/// Called from the app tick: once a minute, whether the bundle this run started from was replaced on
+/// disk (an update made outside the app, say). Then the app is in the state an in-app install leaves
+/// it in, `Installed`, so Settings offers the restart that finishes it (and "Restart When Idle").
+/// Only another version counts (see `wormhole_core::update::replaced`): the same one copied again
+/// changes nothing the running app depends on.
+///
+/// Only release builds are watched (`Updates::launched`): a dev build is rebuilt under its own feet
+/// all day. The look is a few file system calls, which a slow volume could hang, so it is made off
+/// the UI thread.
+pub(crate) fn watch_bundle(ticks: u64, cx: &mut App) {
+    if !ticks.is_multiple_of(150) {
+        return;
+    }
+    let updates = cx.global_mut::<Updates>();
+    if updates.watching || matches!(updates.phase, UpdatePhase::Installed(_) | UpdatePhase::Downloading) {
+        return;
+    }
+    let Some(launched) = updates.launched.clone() else { return };
+    updates.watching = true;
+    let look = cx.background_executor().spawn(async move { launched.replaced() });
+    cx.spawn(async move |cx| {
+        let replaced = look.await;
+        cx.update(|cx| {
+            let updates = cx.global_mut::<Updates>();
+            updates.watching = false;
+            // An in-app install may have started meanwhile: it sets the phase itself.
+            let free = !matches!(updates.phase, UpdatePhase::Installed(_) | UpdatePhase::Downloading);
+            if let Some(replaced) = replaced.filter(|_| free) {
+                tracing::info!(version = %replaced.version, "the app bundle was replaced while running");
+                updates.phase = UpdatePhase::Installed(replaced.version);
+                notify_settings(cx);
+            }
+        });
+    })
+    .detach();
 }
 
 /// `manual`: the user asked, so show every result (even a skipped version).

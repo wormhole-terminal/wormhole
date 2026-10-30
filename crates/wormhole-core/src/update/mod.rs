@@ -10,6 +10,8 @@
 //! Because an attacker who controls the feed could pair an old (validly signed) archive with a new
 //! version number, [`install`] also checks the version inside the extracted bundle's Info.plist.
 //!
+//! [`Launched`] notices the other way an app gets out of date: its bundle replaced on disk while it runs.
+//!
 //! `licenses` is here too: what the shipped build is made of changes with each release. Tier 1:
 //! the domain uses only `storage`. Settings (the channel, when to check) come to it as values, so
 //! it never reads them.
@@ -21,6 +23,7 @@ mod download;
 mod feed;
 mod http;
 mod install;
+mod replaced;
 mod schedule;
 mod security;
 
@@ -39,6 +42,7 @@ pub use download::{DownloadedUpdate, download};
 pub use feed::{Asset, Checked, Release, UpdateStatus, check, check_counted};
 pub(crate) use install::bundle_from_exe;
 pub use install::{current_app_bundle, install, is_translocated, preflight, relaunch};
+pub use replaced::{Launched, Replaced};
 pub use schedule::UpdateSchedule;
 pub use security::{MAX_ADVISORIES, Security, Severity};
 
