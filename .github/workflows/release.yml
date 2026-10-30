@@ -1,17 +1,16 @@
-# Builds, signs, notarizes and publishes a Wormhole release as a GitHub Release.
-# Needs the Developer ID certificate, the notarization key and the updater key as secrets, and
-# PUBLIC_BASE_URL as a variable: the address the app checks for updates (<base>/stable/latest.json),
-# which redirects to the latest release's latest.json.
+# A stable release: build.yml builds, signs, notarizes and publishes it as a GitHub Release.
+# Needs the Developer ID certificate, the notarization key and the updater key as secrets of the
+# `release` environment, and PUBLIC_BASE_URL as a variable: the address the app checks for updates
+# (<base>/stable/latest.json), which redirects to the latest release's latest.json.
 #
 # - Push an annotated tag vX.Y.Z (must equal workspace.package.version; scripts/release.sh makes the
 #   commit and the tag) -> full release, unless that release already exists. The release notes are the
 #   version's section of CHANGELOG.md (scripts/changelog.py notes); a Security entry there makes the
-#   release a security update in latest.json (see RELEASE_SEVERITY in scripts/package.sh).
+#   release a security update in latest.json (see RELEASE_SEVERITY in scripts/package.sh). Then the
+#   website is told (its Releases workflow copies the notes and the version at once).
 # - Run manually (workflow_dispatch) -> build + package only; tick "publish" to also create the
 #   GitHub Release.
-# - CI passed for a push to main (workflow_run) -> a build for the Unstable update channel, numbered
-#   after the last release (X.Y.Z-dev.N, scripts/lib.sh dev_version) and published to the rolling
-#   prerelease `unstable`; <base>/unstable/latest.json redirects to its latest.json.
+# The builds of main are preview.yml's.
 name: Release
 
 on:
@@ -27,460 +26,71 @@ on:
         description: "Run the whole test suite on the runner first (off: the local gate already ran it)"
         type: boolean
         default: false
-  # workflow_run runs with this repository's secrets whatever started CI (zizmor: dangerous-triggers).
-  # The gate below builds only a push to main in this repository that passed CI, and checks out that
-  # commit of main, never a pull request's code.
-  workflow_run: # zizmor: ignore[dangerous-triggers]
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
 
-# Read-only for every job; the release job asks for what it writes (zizmor: excessive-permissions).
+# Read-only for every job; the build job asks for what it writes (zizmor: excessive-permissions).
 permissions:
   contents: read
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
-  # A cheap Linux job that decides whether the macOS one is needed at all, and for which channel.
+  # A cheap Linux job that decides whether the macOS one is needed at all.
   gate:
     name: Anything to build?
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       skip: ${{ steps.check.outputs.skip }}
-      channel: ${{ steps.check.outputs.channel }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          # Strings: a bare 0 is false in an expression, so `&& 0 || 1` always gave 1, and the gate saw
-          # no tags. The whole history brings the tags along, which the check below reads.
-          fetch-depth: ${{ github.event_name == 'workflow_run' && '0' || '1' }}
       - id: check
         env:
           GH_TOKEN: ${{ github.token }}
-          CI_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
-          CI_EVENT: ${{ github.event.workflow_run.event }}
-          CI_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
         run: |
           . scripts/lib.sh
-          skip=false channel=stable
-          if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then
-            channel=unstable
-            # Only a push to main in this repository that passed CI: never a pull request's run,
-            # whose code isn't main's, and never a commit that failed the tests.
-            if [ "$CI_CONCLUSION" != success ] || [ "$CI_EVENT" != push ] || [ "$CI_REPO" != "$GITHUB_REPOSITORY" ]; then
-              skip=true
-              echo "::notice::CI ended '$CI_CONCLUSION' for a $CI_EVENT from $CI_REPO: no unstable build"
-            elif ! git tag --list 'v*' | grep -q .; then
-              # Without the tags every commit would look unreleased: stop rather than guess.
-              echo "::error::no release tags in the checkout"
-              exit 1
-            elif released="$(git tag --list 'v*' --contains HEAD --sort=v:refname | head -n 1)" && [ -n "$released" ]; then
-              # The release's own commit, or one before it whose CI finished after the tag: an
-              # unstable build of it would be numbered below the release that already has it.
-              skip=true
-              echo "::notice::$released already contains this commit: no unstable build"
-            fi
-          elif [ "$GITHUB_EVENT_NAME" = push ] && gh release view "v$APP_VERSION" >/dev/null 2>&1; then
+          skip=false
+          if [ "$GITHUB_EVENT_NAME" = push ] && gh release view "v$APP_VERSION" >/dev/null 2>&1; then
             skip=true
             echo "::notice::The release v$APP_VERSION already exists: nothing to build"
           fi
-          { echo "skip=$skip"; echo "channel=$channel"; } >> "$GITHUB_OUTPUT"
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
 
-  release:
-    name: Release (Apple Silicon + Intel)
+  build:
     needs: gate
     if: needs.gate.outputs.skip != 'true'
-    # Releases queue one after another, and the two channels never wait for each other. A build of
-    # main runs to the end: cancelling it at minute ten threw the minutes away. Only one waits behind
-    # it, the newest; GitHub cancels a waiting one when a newer one arrives.
-    concurrency:
-      group: release-${{ needs.gate.outputs.channel }}
-      cancel-in-progress: false
-    # The signing secrets live in this environment, which only main and v* tags may use: a workflow
-    # changed on any other branch can't reach them.
-    environment: release
-    # A job's permissions replace the workflow's, so contents: write is repeated here.
     permissions:
-      contents: write # gh release create
-      id-token: write # the attestation's signing certificate, from GitHub's OIDC token
-      attestations: write # the attestation is stored with the repository
-    runs-on: macos-latest
-    timeout-minutes: 120
-    env:
-      CHANNEL: ${{ needs.gate.outputs.channel }}
-      # The commit being built: a workflow_run's own GITHUB_SHA is main's newest, maybe a later one.
-      BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-      PUBLISH: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' || inputs.publish == true }}
-      # Set repository variable ALLOW_UNSIGNED_RELEASE=true to publish ad-hoc signed,
-      # un-notarized builds (e.g. before the Developer ID certificate exists).
-      ALLOW_UNSIGNED: ${{ vars.ALLOW_UNSIGNED_RELEASE == 'true' }}
-      PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL || secrets.PUBLIC_BASE_URL }}
+      contents: write
+      id-token: write
+      attestations: write
+    # `./` and not GitHub's newer `$/` (zizmor: self-repository): actionlint doesn't know `$/` yet, and a
+    # reusable workflow named with `./` comes from the same commit as this one anyway.
+    uses: ./.github/workflows/build.yml # zizmor: ignore[self-repository]
+    with:
+      channel: stable
+      publish: ${{ github.event_name == 'push' || inputs.publish == true }}
+      run_tests: ${{ inputs.run_tests == true }}
+      build_sha: ${{ github.sha }}
+
+  # The website's Releases workflow (hyperficial/wormhole-website) copies the release notes and the
+  # version the feed names; it runs every two hours, and at once when started here. WEBSITE_DISPATCH_TOKEN
+  # is a fine-grained token for that repository only with Actions: write, a secret of the `release`
+  # environment: it can start the workflow but change no file there, unlike the Contents: write a
+  # repository_dispatch would need, which could push to the site.
+  website:
+    name: Tell the website
+    needs: build
+    if: needs.build.outputs.prerelease == 'false' && (github.event_name == 'push' || inputs.publish == true)
+    environment: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          ref: ${{ env.BUILD_SHA }}
-          fetch-depth: 0 # the annotated tag object must be fetchable; dev_version counts commits
-
-      - name: Check version
-        id: version
+      - env:
+          GH_TOKEN: ${{ secrets.WEBSITE_DISPATCH_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
-          if [ "$CHANNEL" = unstable ]; then
-            # Numbered after the last release; Cargo.toml gets it once Rust is installed (below).
-            version="$(. scripts/lib.sh && dev_version)"
-            [ -n "$version" ] || { echo "::error::no dev version at the release's own commit"; exit 1; }
-            echo "Unstable build: $version"
-            python3 scripts/changelog.py check || exit 1
-            { echo "version=$version"; echo "prerelease=true"; } >> "$GITHUB_OUTPUT"
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice::No WEBSITE_DISPATCH_TOKEN: the website shows $VERSION at its next scheduled sync (every two hours)"
             exit 0
           fi
-          version="$(. scripts/lib.sh && echo "$APP_VERSION")"
-          echo "Cargo version: $version"
-          if [ "$GITHUB_REF_TYPE" = tag ]; then
-            # actions/checkout fetches a tag's commit under the tag's name, which turns an annotated tag
-            # into a lightweight one, and its message into the commit's. Fetch the tag object itself, and
-            # stop here (before the build) when there is no annotated tag (scripts/release.sh makes one).
-            git fetch --force --tags origin
-            [ "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = tag ] \
-              || { echo "::error::$GITHUB_REF_NAME is not an annotated tag (git tag -a, or scripts/release.sh)"; exit 1; }
-          fi
-          if [ "$GITHUB_REF_TYPE" = tag ] && [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match workspace.package.version $version in Cargo.toml"
-            exit 1
-          fi
-          # The notes are CHANGELOG.md's section for this version: stop before the build when it is
-          # malformed or has none. A manual build that doesn't publish may do without.
-          python3 scripts/changelog.py check || exit 1
-          if ! python3 scripts/changelog.py notes "$version" >/dev/null 2>&1; then
-            if [ "$PUBLISH" = true ]; then
-              echo "::error::CHANGELOG.md has no section for $version (scripts/release.sh writes it from [Unreleased])"
-              exit 1
-            fi
-            echo "::warning::CHANGELOG.md has no section for $version: the build's notes will be just its name"
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          case "$version" in *-*) echo "prerelease=true" ;; *) echo "prerelease=false" ;; esac >> "$GITHUB_OUTPUT"
-
-      - name: Check release configuration
-        env:
-          HAS_CERT: ${{ secrets.APPLE_CERTIFICATE_P12 != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' }}
-          HAS_NOTARY: ${{ secrets.APPLE_API_KEY_ID != '' && secrets.APPLE_API_ISSUER != '' && secrets.APPLE_API_KEY_P8 != '' }}
-          HAS_MINISIGN: ${{ secrets.MINISIGN_SECRET_KEY != '' }}
-          HAS_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE != '' }}
-        run: |
-          # Optional, never blocks a release: only changes how "needs you" notifications are delivered.
-          [ "$HAS_PROFILE" = true ] || echo "::notice::APPLE_PROVISIONING_PROFILE secret missing: the app has no Time Sensitive entitlement, so 'needs you' notifications are delivered at Active"
-          problems=()
-          [ "$HAS_CERT" = true ] || problems+=("APPLE_CERTIFICATE_P12 / APPLE_CERTIFICATE_PASSWORD secrets missing: app will be ad-hoc signed")
-          [ "$HAS_NOTARY" = true ] || problems+=("APPLE_API_KEY_ID / APPLE_API_ISSUER / APPLE_API_KEY_P8 secrets missing: no notarization")
-          if [ "$PUBLISH" != true ]; then
-            for p in "${problems[@]+"${problems[@]}"}"; do echo "::warning::$p"; done
-            echo "Not publishing: build + package only."
-            exit 0
-          fi
-          fatal=()
-          if [ "$ALLOW_UNSIGNED" = true ]; then
-            for p in "${problems[@]+"${problems[@]}"}"; do echo "::warning::$p (allowed by ALLOW_UNSIGNED_RELEASE)"; done
-          else
-            fatal+=("${problems[@]+"${problems[@]}"}")
-          fi
-          [ "$HAS_MINISIGN" = true ] || fatal+=("MINISIGN_SECRET_KEY secret missing (and MINISIGN_PASSWORD): cannot sign the update")
-          [ -n "$PUBLIC_BASE_URL" ] || fatal+=("PUBLIC_BASE_URL variable missing")
-          if cmp -s packaging/updater.pub packaging/dev-updater.pub; then
-            fatal+=("packaging/updater.pub is still the DEV key: generate the real key and commit its .pub")
-          fi
-          if [ ${#fatal[@]} -gt 0 ]; then
-            for p in "${fatal[@]}"; do echo "::error::$p"; done
-            exit 1
-          fi
-
-      # Three apps from one build of both architectures: universal (the website's default download and
-      # Homebrew's), Apple silicon and Intel. The feed gives each Mac the archive of its own architecture,
-      # half the size of the universal one; a release without darwin-x86_64 would leave Intel Macs on the
-      # last one that had it. The runner is Apple Silicon, so only the Intel target needs adding.
-      - name: Rust (the version in rust-toolchain.toml) + the Intel target
-        run: |
-          rustup toolchain install
-          rustup target add x86_64-apple-darwin
-      # Only a build of main (Unstable) restores and saves the cache. A release builds from nothing: what it
-      # signs and publishes must not depend on what an earlier run left in the cache (zizmor:
-      # cache-poisoning). The cache is main's alone (save-if), so the risk left for Unstable is a
-      # compromised run on main, which could publish to Unstable directly anyway.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2 # zizmor: ignore[cache-poisoning]
-        if: env.CHANNEL == 'unstable'
-        with:
-          key: release
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      # The binary reads its version from Cargo.toml (CARGO_PKG_VERSION), so the build of main gets
-      # its own there; the change stays on the runner.
-      - name: Version of this build of main
-        if: env.CHANNEL == 'unstable'
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: . scripts/lib.sh && set_app_version "$VERSION"
-
-      - name: Install tools
-        run: |
-          brew install minisign
-          # GPUI compiles its Metal shaders at build time; newer Xcodes ship the
-          # Metal toolchain as a separate download.
-          xcrun -sdk macosx metal --version >/dev/null 2>&1 || xcodebuild -downloadComponent MetalToolchain
-
-      # Off unless asked for: it compiles the workspace in debug just for the tests, which the release
-      # build below reuses nothing of, and the local gate (the `verify` skill) has already run them.
-      - name: Test
-        if: ${{ inputs.run_tests == true }}
-        run: cargo test --workspace --locked
-
-      - name: Import Developer ID certificate
-        env:
-          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          IDENTITY_OVERRIDE: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-        # GITHUB_ENV gets values from this workflow's own secrets (the certificate's identity, the
-        # profile's path), nothing a pull request or a commit can set (zizmor: github-env).
-        run: | # zizmor: ignore[github-env]
-          if [ -z "$APPLE_CERTIFICATE_P12" ]; then
-            echo "::notice::No APPLE_CERTIFICATE_P12: bundle.sh will sign ad-hoc"
-            exit 0
-          fi
-          keychain="$RUNNER_TEMP/signing.keychain-db"
-          kc_pass="$(openssl rand -base64 24)"
-          security create-keychain -p "$kc_pass" "$keychain"
-          security set-keychain-settings -lut 21600 "$keychain"
-          security unlock-keychain -p "$kc_pass" "$keychain"
-          printf '%s' "$APPLE_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
-          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$APPLE_CERTIFICATE_PASSWORD" \
-            -T /usr/bin/codesign -T /usr/bin/security
-          rm -f "$RUNNER_TEMP/cert.p12"
-          # The .p12 usually holds only the leaf; add Apple's Developer ID intermediate.
-          curl -fsSL https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o "$RUNNER_TEMP/DeveloperIDG2CA.cer"
-          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$keychain" || true
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kc_pass" "$keychain" >/dev/null
-          # shellcheck disable=SC2046
-          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
-          identity="$IDENTITY_OVERRIDE"
-          if [ -z "$identity" ]; then
-            identity="$(security find-identity -v -p codesigning "$keychain" \
-              | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')"
-          fi
-          if [ -z "$identity" ]; then
-            # Count them instead of listing them: the list names the certificates' owners.
-            echo "$(security find-identity -v -p codesigning "$keychain" | grep -c '"') signing identities found"
-            echo "::error::No 'Developer ID Application' identity in APPLE_CERTIFICATE_P12 (exported the right certificate, with its private key?)"
-            exit 1
-          fi
-          # The logs are public: hide the identity and the name in it (the Team ID is a secret already).
-          echo "::add-mask::$identity"
-          name="${identity#*: }" && name="${name% (*}"
-          [ -z "$name" ] || echo "::add-mask::$name"
-          echo "Signing identity: found"
-          echo "APPLE_SIGNING_IDENTITY=$identity" >> "$GITHUB_ENV"
-          echo "SIGNING_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
-
-      - name: Install provisioning profile
-        env:
-          APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
-        run: | # zizmor: ignore[github-env] (see the certificate step)
-          if [ -z "$APPLE_PROVISIONING_PROFILE" ]; then
-            echo "::notice::No APPLE_PROVISIONING_PROFILE: no Time Sensitive entitlement, 'needs you' is delivered at Active"
-            exit 0
-          fi
-          if [ -z "${APPLE_SIGNING_IDENTITY:-}" ]; then
-            # A restricted entitlement without a Developer ID signature would stop the app from launching.
-            echo "::notice::Ad-hoc signed build: not embedding APPLE_PROVISIONING_PROFILE"
-            exit 0
-          fi
-          profile="$RUNNER_TEMP/wormhole.provisionprofile"
-          printf '%s' "$APPLE_PROVISIONING_PROFILE" | base64 --decode > "$profile"
-          # bundle.sh validates it (App ID, team, entitlement, expiry) and embeds it.
-          echo "APPLE_PROVISIONING_PROFILE_PATH=$profile" >> "$GITHUB_ENV"
-
-      - name: Bundle (universal, Apple silicon, Intel)
-        env:
-          # Compiled into the app: the updater's feed (PUBLIC_BASE_URL, set above) and the
-          # Apple team a downloaded update must be signed by.
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          scripts/bundle.sh --universal
-          # The same binaries again, one architecture each.
-          scripts/bundle.sh --no-build --arch aarch64 --out target/release/aarch64
-          scripts/bundle.sh --no-build --arch x86_64 --out target/release/x86_64
-
-      - name: Notarize app
-        env:
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
-          REQUIRE_NOTARIZATION: ${{ env.PUBLISH == 'true' && env.ALLOW_UNSIGNED != 'true' && '1' || '0' }}
-        run: |
-          for app in target/release/Wormhole.app target/release/aarch64/Wormhole.app target/release/x86_64/Wormhole.app; do
-            scripts/notarize.sh "$app"
-          done
-
-      # CHANGELOG.md is the one source of the notes: latest.json, the GitHub Release and the app's
-      # update window all show them. A Security entry also marks the update as a security update.
-      - name: Release notes
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          notes="$RUNNER_TEMP/notes.md"
-          body="$RUNNER_TEMP/release-body.md"
-          if [ "$CHANNEL" = unstable ]; then
-            # What main has gained since the release. No security flag: every build until the
-            # release would carry it, and it would stop "Skip this version" for all of them.
-            {
-              echo "An unstable build of [\`${BUILD_SHA::7}\`](https://github.com/$GITHUB_REPOSITORY/commit/$BUILD_SHA): changes since the last release, not yet released."
-              echo
-              scripts/changelog.py notes Unreleased 2>/dev/null || true
-            } > "$notes"
-            cp "$notes" "$body"
-            { echo "RELEASE_NOTES_FILE=$notes"; echo "RELEASE_BODY_FILE=$body"; } >> "$GITHUB_ENV"
-            exit 0
-          fi
-          if ! scripts/changelog.py notes "$VERSION" > "$notes"; then
-            [ "$PUBLISH" != true ] || { echo "::error::CHANGELOG.md has no section for $VERSION"; exit 1; }
-            echo "Wormhole $VERSION" > "$notes"
-          fi
-          RELEASE_SEVERITY="$(scripts/changelog.py severity "$VERSION" 2>/dev/null || true)"
-          RELEASE_ADVISORIES="$(scripts/changelog.py severity "$VERSION" --advisories 2>/dev/null || true)"
-          # The Release page opens with the warning; latest.json carries the severity separately.
-          : > "$body"
-          if [ -n "$RELEASE_SEVERITY" ]; then
-            echo "**Security update ($RELEASE_SEVERITY):** this version fixes a security problem; see Security below. Update as soon as you can." >> "$body"
-            echo >> "$body"
-          fi
-          cat "$notes" >> "$body"
-          cat "$body"
-          {
-            echo "RELEASE_NOTES_FILE=$notes"
-            echo "RELEASE_BODY_FILE=$body"
-            echo "RELEASE_SEVERITY=$RELEASE_SEVERITY"
-            echo "RELEASE_ADVISORIES<<EOF_ADVISORIES"
-            echo "$RELEASE_ADVISORIES"
-            echo "EOF_ADVISORIES"
-          } >> "$GITHUB_ENV"
-
-      - name: Package (tar.gz, dmg, minisign, latest.json)
-        env:
-          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
-          MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
-          REQUIRE_RELEASE_KEY: ${{ env.PUBLISH == 'true' && '1' || '0' }}
-          RELEASE_TAG: ${{ env.CHANNEL == 'unstable' && 'unstable' || '' }}
-          REQUIRE_NOTARIZATION: ${{ env.PUBLISH == 'true' && env.ALLOW_UNSIGNED != 'true' && '1' || '0' }}
-        run: |
-          if [ -z "$MINISIGN_SECRET_KEY" ] && [ "$REQUIRE_RELEASE_KEY" != 1 ]; then
-            # Not publishing and no real key: package.sh falls back to the (git-ignored)
-            # dev key, so create a throwaway one with the dev password to still exercise signing.
-            printf 'wormhole-dev\nwormhole-dev\n' \
-              | minisign -G -f -p packaging/dev-updater.pub -s packaging/dev-updater.key >/dev/null
-          fi
-          scripts/package.sh target/release/Wormhole.app target/release/aarch64/Wormhole.app target/release/x86_64/Wormhole.app
-
-      # Build provenance for what people download: `gh attestation verify <file> -R wormhole-terminal/wormhole`
-      # shows that this workflow built the file from this commit. The update archives also carry a
-      # minisign signature the app checks; the attestation is for anyone checking a download by hand.
-      - name: Attest build provenance
-        if: env.PUBLISH == 'true'
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-        with:
-          subject-path: |
-            target/release/dist/*.dmg
-            target/release/dist/*.tar.gz
-          # The storage record is for packages pushed to a registry; these go to a GitHub Release.
-          create-storage-record: false
-
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: wormhole-${{ steps.version.outputs.version }}-dist
-          path: target/release/dist/
-          if-no-files-found: error
-
-      # gh uploads the files to a draft and publishes it after the last one, so latest.json and the
-      # archive it names appear together; a prerelease never becomes "latest", so the update feed
-      # (releases/latest/download/latest.json) only ever offers stable versions.
-      - name: GitHub Release
-        if: env.PUBLISH == 'true' && env.CHANNEL != 'unstable'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
-          PRERELEASE: ${{ steps.version.outputs.prerelease }}
-        run: |
-          flags=(--title "Wormhole $VERSION" --notes-file "$RELEASE_BODY_FILE" --target "$GITHUB_SHA")
-          if [ "$PRERELEASE" = true ]; then flags+=(--prerelease --latest=false); else flags+=(--latest); fi
-          gh release create "v$VERSION" target/release/dist/* "${flags[@]}"
-
-      # The tap's cask (wormhole-terminal/homebrew-tap, Casks/wormhole-terminal.rb) follows each stable
-      # release. HOMEBREW_TAP_TOKEN is a fine-grained token with Contents: write on that repository only.
-      - name: Homebrew cask
-        if: env.PUBLISH == 'true' && env.CHANNEL != 'unstable' && steps.version.outputs.prerelease != 'true'
-        env:
-          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          if [ -z "$TAP_TOKEN" ]; then
-            echo "::notice::No HOMEBREW_TAP_TOKEN: update version and sha256 in the tap's Casks/wormhole-terminal.rb by hand"
-            exit 0
-          fi
-          sha="$(shasum -a 256 "target/release/dist/Wormhole-$VERSION-macos.dmg" | cut -d' ' -f1)"
-          tap="$RUNNER_TEMP/homebrew-tap"
-          git clone -q --depth 1 "https://x-access-token:$TAP_TOKEN@github.com/wormhole-terminal/homebrew-tap.git" "$tap"
-          cask="$tap/Casks/wormhole-terminal.rb"
-          sed -i '' -e "s/^  version \".*\"$/  version \"$VERSION\"/" -e "s/^  sha256 \".*\"$/  sha256 \"$sha\"/" "$cask"
-          if ! grep -q "version \"$VERSION\"" "$cask" || ! grep -q "sha256 \"$sha\"" "$cask"; then
-            echo "::error::could not set version and sha256 in Casks/wormhole-terminal.rb"
-            exit 1
-          fi
-          if git -C "$tap" diff --quiet; then echo "The cask is at $VERSION already"; exit 0; fi
-          git -C "$tap" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit -q -am "wormhole-terminal $VERSION"
-          git -C "$tap" push -q origin HEAD:main
-
-      # One rolling prerelease, `unstable`, holds the newest build of main, so the Releases page gets
-      # no entry per commit. The archive goes up before the latest.json that names it; the build
-      # before stays as well, for an app that read the old latest.json a moment ago, and older ones go.
-      - name: Unstable release
-        if: env.PUBLISH == 'true' && env.CHANNEL == 'unstable'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          tag=unstable dist=target/release/dist previous=""
-          title="Wormhole Unstable ($VERSION)"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            previous="$(gh release download "$tag" -p latest.json -O - 2>/dev/null | jq -r '.version // empty' || true)"
-            # CI on main finishes in order, but an older build must never replace a newer one.
-            if [ -n "$previous" ] && ! python3 -c 'import sys; sys.path.insert(0, "scripts"); import changelog as c; sys.exit(c.sem_key(sys.argv[1]) <= c.sem_key(sys.argv[2]))' "$VERSION" "$previous"; then
-              echo "::notice::unstable already has $previous, newer than $VERSION: not published"
-              exit 0
-            fi
-            gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" -f sha="$BUILD_SHA" -F force=true >/dev/null
-            gh release edit "$tag" --title "$title" --notes-file "$RELEASE_BODY_FILE" --prerelease --latest=false
-          else
-            gh release create "$tag" --target "$BUILD_SHA" --title "$title" --notes-file "$RELEASE_BODY_FILE" --prerelease --latest=false
-          fi
-          files=()
-          for f in "$dist"/*; do [ "${f##*/}" = latest.json ] || files+=("$f"); done
-          gh release upload "$tag" "${files[@]}" --clobber
-          gh release upload "$tag" "$dist/latest.json" --clobber
-          gh release view "$tag" --json assets -q '.assets[].name' | while read -r name; do
-            case "$name" in
-              latest.json | SHA256SUMS | Wormhole-macos.dmg | Wormhole-macos-*.dmg | *"-$VERSION-"*) continue ;;
-            esac
-            if [ -n "$previous" ] && [[ "$name" == *"-$previous-"* ]]; then continue; fi
-            gh release delete-asset "$tag" "$name" --yes
-          done
-
-      - name: Remove signing keychain
-        if: always()
-        run: |
-          if [ -n "${SIGNING_KEYCHAIN:-}" ]; then security delete-keychain "$SIGNING_KEYCHAIN" || true; fi
+          gh workflow run releases.yml -R hyperficial/wormhole-website --ref main
+          echo "The website syncs $VERSION now"

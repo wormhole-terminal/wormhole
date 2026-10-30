@@ -64,19 +64,20 @@ set_app_version() {
   (cd "$ROOT" && { cargo update --workspace --offline --quiet 2>/dev/null || cargo update --workspace --quiet; })
 }
 
-# The version of a build of main between releases (the Unstable channel): after X.Y.Z it is
-# X.Y.(Z+1)-dev.N, after a prerelease X.Y.Z-beta.1 it is X.Y.Z-beta.1.dev.N, N being the commits
-# since that release's tag. Both sort after the release and before the next one, so the updater
-# moves across them. Prints nothing at the release's own commit, which the release itself covers.
-dev_version() {
+# The version of a build of main between releases (the Preview builds; the app's Unstable channel
+# reads them): after X.Y.Z it is X.Y.(Z+1)-preview.N, after a prerelease X.Y.Z-beta.1 it is
+# X.Y.Z-beta.1.preview.N, N being the commits since that release's tag. Both sort after the release
+# and before the next one, so the updater moves across them; and `preview` sorts after the `dev` the
+# builds of main used up to 1.5, so an app on one of those updates to the next. Prints nothing at the release's own commit, which the release itself covers.
+preview_version() {
   local n major minor patch
   n="$(git -C "$ROOT" rev-list --count "v$APP_VERSION..HEAD")" || die "no tag v$APP_VERSION to count from"
   [ "$n" -gt 0 ] || return 0
   case "$APP_VERSION" in
-    *-*) echo "$APP_VERSION.dev.$n" ;;
+    *-*) echo "$APP_VERSION.preview.$n" ;;
     *)
       IFS=. read -r major minor patch <<<"$APP_VERSION"
-      echo "$major.$minor.$((patch + 1))-dev.$n"
+      echo "$major.$minor.$((patch + 1))-preview.$n"
       ;;
   esac
 }
