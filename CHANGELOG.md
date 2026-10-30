@@ -35,6 +35,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   Duplicate instead of saving over it. While Studio previews a theme that isn't the one in use, a chip says
   so, with Use to switch to it.
 
+- Theme Studio's theme menu has Move to Trash… for your own themes, and undo and redo have buttons in the
+  title row. Moving a theme to the Trash, there or from its card in Settings → Appearance, asks first, and a
+  theme you use is replaced by the default for its appearance instead of leaving nothing to show.
+
 ### Fixed
 
 - The folder's card in the title row has room around its contents, and a long path breaks only between
