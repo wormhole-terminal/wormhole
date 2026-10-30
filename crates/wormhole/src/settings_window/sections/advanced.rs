@@ -41,6 +41,14 @@ pub(super) const SETTINGS: &[Setting] = &[
     }),
     Setting::custom("reset-settings", draw_reset).below(|w, cx| w.render_reset_question(cx)),
     Setting::custom("reset-tips", draw_reset_tips),
+    Setting::custom("skip-scans", |_, _| {
+        open_button(
+            "skip-scans",
+            IconName::Settings,
+            text(SETTINGS_ADVANCED_OPEN_DEVELOPER_TOOLS),
+            crate::platform::dev_tools::open_settings,
+        )
+    }),
 ];
 
 /// Reset tips: the tips closed with "Don't show again" show again where they belong.

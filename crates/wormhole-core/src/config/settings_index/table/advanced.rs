@@ -32,4 +32,12 @@ pub(super) const ADVANCED: &[Group] = &[
             .with_description(SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION)
             .with_keywords(SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS)],
     ),
+    group(
+        SETTINGS_ADVANCED_GROUP_PROGRAMS,
+        &[entry("skip-scans", SETTINGS_ADVANCED_SKIP_SCANS, &[])
+            // Only where the system has a Developer Tools list.
+            .with_needs(|_| crate::platform::system::has_developer_tools_list())
+            .with_description(SETTINGS_ADVANCED_SKIP_SCANS_DESCRIPTION)
+            .with_keywords(SETTINGS_ADVANCED_SKIP_SCANS_KEYWORDS)],
+    ),
 ];

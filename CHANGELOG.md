@@ -21,6 +21,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   Homebrew or a copy from a disk image) and shows it in Settings → Updates as installed, with the same
   Restart and Restart When Idle choices as after an update made in the app. A copy of the same version
   does not count.
+- Settings → Advanced explains how to add Wormhole to macOS's Developer Tools list, so programs started in
+  Wormhole skip the malware scan macOS runs the first time each new program runs, with a button to that
+  settings page.
 - Liquid Glass, as a beta: on macOS 26 and later, Settings → Appearance has a Liquid Glass switch, marked
   Beta, that puts glass under the sidebar's and the panel's cards. It is off until you turn it on, and stays
   painted while Reduce Transparency or Increase Contrast is on.

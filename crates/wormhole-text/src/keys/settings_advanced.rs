@@ -44,26 +44,36 @@ pub const SETTINGS_ADVANCED_RESET_TIPS: Key = Key::new(198);
 pub const SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION: Key = Key::new(199);
 /// "hints tips reset show again dismissed"
 pub const SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS: Key = Key::new(200);
+/// "New programs"
+pub const SETTINGS_ADVANCED_GROUP_PROGRAMS: Key = Key::new(201);
+/// "Skip malware scans of new programs"
+pub const SETTINGS_ADVANCED_SKIP_SCANS: Key = Key::new(202);
+/// "macOS scans each new program for malware the first time it runs, which slows builds, tests and coding agents. Adding Wormhole to Developer Tools lets programs started in Wormhole skip that scan. Only do this if you trust what you run. Terminals opened after you restart Wormhole get it. If Developer Tools isn't listed, run spctl developer-mode enable-terminal in a terminal first."
+pub const SETTINGS_ADVANCED_SKIP_SCANS_DESCRIPTION: Key = Key::new(203);
+/// "developer tools xprotect gatekeeper malware scan speed slow first run build privacy security spctl"
+pub const SETTINGS_ADVANCED_SKIP_SCANS_KEYWORDS: Key = Key::new(204);
 /// "Open"
-pub const SETTINGS_ADVANCED_OPEN: Key = Key::new(201);
+pub const SETTINGS_ADVANCED_OPEN: Key = Key::new(205);
+/// "Open Developer Tools Settings"
+pub const SETTINGS_ADVANCED_OPEN_DEVELOPER_TOOLS: Key = Key::new(206);
 /// "Show in Finder"
-pub const SETTINGS_ADVANCED_SHOW_IN_FINDER: Key = Key::new(202);
+pub const SETTINGS_ADVANCED_SHOW_IN_FINDER: Key = Key::new(207);
 /// "Reset tips"
-pub const SETTINGS_ADVANCED_RESET_TIPS_BUTTON: Key = Key::new(203);
+pub const SETTINGS_ADVANCED_RESET_TIPS_BUTTON: Key = Key::new(208);
 /// "No tip was closed for good"
-pub const SETTINGS_ADVANCED_NO_TIP_WAS_CLOSED_FOR_GOOD: Key = Key::new(204);
+pub const SETTINGS_ADVANCED_NO_TIP_WAS_CLOSED_FOR_GOOD: Key = Key::new(209);
 /// "They show again where they belong"
-pub const SETTINGS_ADVANCED_THEY_SHOW_AGAIN_WHERE_THEY_BELONG: Key = Key::new(205);
+pub const SETTINGS_ADVANCED_THEY_SHOW_AGAIN_WHERE_THEY_BELONG: Key = Key::new(210);
 /// "Reset to defaults…"
-pub const SETTINGS_ADVANCED_RESET_TO_DEFAULTS: Key = Key::new(206);
+pub const SETTINGS_ADVANCED_RESET_TO_DEFAULTS: Key = Key::new(211);
 /// "Every setting is at its default"
-pub const SETTINGS_ADVANCED_EVERY_SETTING_IS_AT_ITS_DEFAULT: Key = Key::new(207);
+pub const SETTINGS_ADVANCED_EVERY_SETTING_IS_AT_ITS_DEFAULT: Key = Key::new(212);
 /// "Asks first"
-pub const SETTINGS_ADVANCED_ASKS_FIRST: Key = Key::new(208);
+pub const SETTINGS_ADVANCED_ASKS_FIRST: Key = Key::new(213);
 /// "Cancel"
-pub const SETTINGS_ADVANCED_CANCEL: Key = Key::new(209);
+pub const SETTINGS_ADVANCED_CANCEL: Key = Key::new(214);
 /// "Reset"
-pub const SETTINGS_ADVANCED_RESET: Key = Key::new(210);
+pub const SETTINGS_ADVANCED_RESET: Key = Key::new(215);
 
 /// ```text
 /// { $count ->
@@ -72,5 +82,5 @@ pub const SETTINGS_ADVANCED_RESET: Key = Key::new(210);
 /// }
 /// ```
 pub fn settings_advanced_reset_question(count: i64) -> String {
-    crate::active::message(211, &[("count", Arg::Int(count))])
+    crate::active::message(216, &[("count", Arg::Int(count))])
 }
