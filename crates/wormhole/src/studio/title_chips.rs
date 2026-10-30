@@ -1,5 +1,5 @@
-//! What the title row says besides the name: the Light | Dark control of a theme with both, a
-//! small button when the theme it was copied from has changed (the rest of Update from is in the
+//! What the title row says besides the name (the Light | Dark control of a theme with both is
+//! on its right): a small button when the theme it was copied from has changed (the rest of Update from is in the
 //! theme menu), that it was made with a newer Wormhole, and that what the app shows is a preview
 //! of a theme that is not in use.
 
@@ -26,9 +26,6 @@ impl StudioWindow {
     /// The extra marks of the title row, in order.
     pub(super) fn title_chips(&self, ui: UiColors, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let mut chips = Vec::new();
-        if self.doc.is_pair() {
-            chips.push(self.appearance_control(ui, cx));
-        }
         if let Some(button) = self.update_button(ui, cx) {
             chips.push(button);
         }
@@ -53,7 +50,7 @@ impl StudioWindow {
     }
 
     /// Light | Dark: which appearance is being edited. Tab reaches it and the arrows switch.
-    fn appearance_control(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn appearance_control(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
         let shown = self.doc.shown.as_deref();
         let segment = |name: &'static str| {
             let this = cx.weak_entity();

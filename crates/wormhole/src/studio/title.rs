@@ -180,6 +180,8 @@ impl StudioWindow {
                     .flex()
                     .items_center()
                     .gap_2()
+                    .when(self.doc.is_pair(), |d| d.child(self.appearance_control(ui, cx)))
+                    .children(self.history_buttons(ui, cx))
                     .child(
                         Button::new("studio-discard")
                             .ghost()
@@ -204,14 +206,17 @@ impl StudioWindow {
     /// Save theme, with the chevron that opens the other ways to save. The menu is anchored
     /// under the split and open while `save_menu` says so, so devctl can show it too.
     fn save_split(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+        // The main colour says there is something to save; with nothing to save the button is off and
+        // neutral, and the chevron's menu (copy, export, use in the project) stays usable.
+        let can_save = self.dirty();
         let split = ButtonGroup::new("studio-save-split")
-            .primary()
             .small()
-            .child(
-                Button::new("studio-save")
-                    .label(text(STUDIO_SAVE_THEME))
-                    .on_click(cx.listener(|this, _, window, cx| this.request_save(window, cx))),
-            )
+            .when(can_save, |g| g.primary())
+            .when(!can_save, |g| g.outline())
+            .children([Button::new("studio-save")
+                .label(text(STUDIO_SAVE_THEME))
+                .disabled(!can_save)
+                .on_click(cx.listener(|this, _, window, cx| this.request_save(window, cx)))])
             .child(
                 Button::new("studio-save-more")
                     .icon(IconName::ChevronDown)
@@ -284,6 +289,8 @@ impl StudioWindow {
     ) {
         self.save_menu = false;
         match action {
+            // ⌘S with nothing to save does nothing.
+            SaveAction::Save if !self.dirty() => {}
             SaveAction::Save => self.request_save(window, cx),
             SaveAction::Duplicate => self.duplicate(window, cx),
             SaveAction::Export => self.export(window, cx),
