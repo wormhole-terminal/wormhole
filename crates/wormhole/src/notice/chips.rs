@@ -27,6 +27,22 @@ use crate::platform::notice::{Chip, Click, Clicks, Content};
 use crate::platform::popover::Handle;
 use crate::settings::{settings_in, store_in};
 
+/// What a click on a notice that offers something does, in the window of the chip.
+pub(crate) type OnAct = Rc<dyn Fn(&mut Window, &mut App)>;
+
+/// A notice that offers something, with what the poster does about it. The chip keeps the one it was last
+/// given for the window, so that it can wait behind a warning (a warning is about something broken and is
+/// never covered by an offer) and come back when the warning goes.
+#[derive(Clone)]
+pub(crate) struct Offer {
+    pub(crate) notice: Notice,
+    pub(crate) words: String,
+    /// A click on the capsule.
+    pub(crate) act: OnAct,
+    /// The person closed it with the ×: the poster keeps that for every window.
+    pub(crate) closed: Rc<dyn Fn(&mut App)>,
+}
+
 /// How a terminal's bounds in its window are read again whenever the chip is placed: a chip about a
 /// terminal that moves (a split dragged, a window resized) follows it. It holds the terminal weakly: a
 /// closed terminal is [`Where::Gone`], and nothing here keeps it (or its shell) alive.
@@ -92,6 +108,11 @@ pub(super) struct Entry {
     pub(super) anchor: Option<Anchor>,
     /// What the sticky notice says, kept for when a copy's words give way to it.
     pub(super) sticky_words: Option<String>,
+    /// What a click on the sticky notice's capsule does, for one that offers something (`Notice::has_action`):
+    /// the poster's, so this module needs to know nothing of it.
+    pub(super) sticky_act: Option<OnAct>,
+    /// The offer this window has to make while it is open and not closed, shown when no warning is up.
+    pub(super) offer: Option<Offer>,
     /// What the sticky notice's explanation says went wrong, in the error's own words (core's `reason`).
     pub(super) sticky_detail: Option<String>,
     /// The explanation, while its popover is open: which opening it is, and how to close it from here.
@@ -177,7 +198,7 @@ pub(crate) fn post_to(
     anchor: Option<Anchor>,
     cx: &mut App,
 ) {
-    queue(window, notice.into(), None, anchor, None, cx);
+    queue(window, notice.into(), None, anchor, None, None, cx);
 }
 
 /// [`post_to`] for a notice whose sentence the poster made, because it holds something the notice does not
@@ -189,7 +210,28 @@ pub(crate) fn post_to_words(
     anchor: Option<Anchor>,
     cx: &mut App,
 ) {
-    queue(window, notice.into(), Some(words), anchor, None, cx);
+    queue(window, notice.into(), Some(words), anchor, None, None, cx);
+}
+
+/// Say a notice that offers something (`Notice::has_action`): a click on the chip runs the offer's `act`.
+/// Behind a warning that is up it waits, and comes when that goes.
+pub(crate) fn post_offer(window: AnyWindowHandle, offer: Offer, cx: &mut App) {
+    queue(window, offer.notice, Some(offer.words.clone()), None, None, Some(offer), cx);
+}
+
+/// Take the offers back from every window: the poster is about to make it elsewhere, or it is closed.
+pub(crate) fn withdraw_offers(cx: &mut App) {
+    let Some(chips) = cx.try_global::<Chips>() else { return };
+    let ids: Vec<WindowId> = chips.windows.keys().copied().collect();
+    for id in ids {
+        let up = cx.global_mut::<Chips>().windows.get_mut(&id).is_some_and(|entry| {
+            entry.offer = None;
+            entry.rules.held().is_some_and(Notice::has_action)
+        });
+        if up {
+            withdraw(id, cx);
+        }
+    }
 }
 
 /// [`post_to`] for a notice with an explanation (`Notice::has_info`), which says `detail` of what went
@@ -201,19 +243,19 @@ pub(crate) fn post_to_with(
     detail: String,
     cx: &mut App,
 ) {
-    queue(window, notice.into(), None, anchor, Some(detail), cx);
+    queue(window, notice.into(), None, anchor, Some(detail), None, cx);
 }
 
 /// Say `notice` with `words` of its own (devctl's).
 #[cfg(feature = "devctl")]
 pub(super) fn post_words(window: &Window, notice: Notice, words: String, cx: &mut App) {
-    queue(window.window_handle(), notice, Some(words), None, None, cx);
+    queue(window.window_handle(), notice, Some(words), None, None, None, cx);
 }
 
 /// Say a notice that has words in the catalog, with `detail` for its explanation (devctl's `notice sticky`).
 #[cfg(feature = "devctl")]
 pub(super) fn post_notice(window: &Window, notice: Notice, detail: Option<String>, cx: &mut App) {
-    queue(window.window_handle(), notice, None, None, detail, cx);
+    queue(window.window_handle(), notice, None, None, detail, None, cx);
 }
 
 /// Click the chip of `window` as the panel does: the click goes over the same channel. `false` when the
@@ -233,10 +275,11 @@ fn queue(
     words: Option<String>,
     anchor: Option<Anchor>,
     detail: Option<String>,
+    offer: Option<Offer>,
     cx: &mut App,
 ) {
     cx.defer(move |cx| {
-        window.update(cx, |_, window, cx| say(window, notice, words, anchor, detail, cx)).ok();
+        window.update(cx, |_, window, cx| say(window, notice, words, anchor, detail, offer, cx)).ok();
     });
 }
 
@@ -247,6 +290,7 @@ fn say(
     words: Option<String>,
     anchor: Option<Anchor>,
     detail: Option<String>,
+    offer: Option<Offer>,
     cx: &mut App,
 ) {
     let id = window.window_handle().window_id();
@@ -260,6 +304,17 @@ fn say(
         return;
     }
     let Some(words) = words.or_else(|| super::words::of(notice)) else { return };
+    if let Some(offer) = &offer {
+        // Kept either way: a warning up now hides it, and it is shown when the warning goes (`repost_offer`).
+        let entry = cx.update_global::<Chips, _>(|chips, _| {
+            let entry = chips.windows.entry(id).or_default();
+            entry.offer = Some(offer.clone());
+            entry.rules.held().is_some_and(|held| !held.has_action())
+        });
+        if entry {
+            return;
+        }
+    }
     let store = store_in(&facts.profile, cx);
     let (theme, opaque) = (store.tokens.appearance, store.system().opaque());
     let entrance = Entrance::of(cx.reduce_motion());
@@ -292,6 +347,7 @@ fn say(
         if notice.is_sticky() {
             entry.sticky_words = Some(words.clone());
             entry.sticky_anchor = anchor.clone();
+            entry.sticky_act = offer.as_ref().map(|offer| offer.act.clone());
             entry.sticky_detail = detail.map(|detail| wormhole_core::view::notice::reason(&detail));
         }
         entry.words = words;
@@ -406,12 +462,35 @@ pub(super) fn pressed(id: WindowId, Click { press, down }: Click, cx: &mut App) 
     let reaction = cx
         .try_global::<Chips>()
         .and_then(|chips| chips.windows.get(&id))
-        .map_or(Reaction::Nothing, |entry| entry.rules.buttons().react(press));
+        .map_or(Reaction::Nothing, |entry| entry.rules.react(press, down));
     match reaction {
-        Reaction::Dismiss => dismiss(id, cx),
+        Reaction::Dismiss => {
+            let closed_offer = cx
+                .try_global::<Chips>()
+                .and_then(|chips| chips.windows.get(&id))
+                .filter(|entry| entry.rules.held().is_some_and(Notice::has_action))
+                .and_then(|entry| entry.offer.clone())
+                .map(|offer| offer.closed);
+            dismiss(id, cx);
+            match closed_offer {
+                Some(closed) => closed(cx),
+                None => repost_offer(id, cx),
+            }
+        }
         Reaction::ShowInfo => {
             if let Some(window) = cx.windows().into_iter().find(|window| window.window_id() == id) {
                 window.update(cx, |_, window, cx| super::explain::toggle(window, down, cx)).ok();
+            }
+        }
+        Reaction::Act => {
+            let act = cx
+                .try_global::<Chips>()
+                .and_then(|chips| chips.windows.get(&id))
+                .and_then(|entry| entry.sticky_act.clone());
+            if let (Some(act), Some(window)) =
+                (act, cx.windows().into_iter().find(|window| window.window_id() == id))
+            {
+                window.update(cx, |_, window, cx| act(window, cx)).ok();
             }
         }
         Reaction::Nothing => {}
@@ -430,6 +509,18 @@ pub(super) fn withdraw(id: WindowId, cx: &mut App) {
     take_away(id, cx, |rules, leave| rules.withdraw(now, leave));
 }
 
+/// A warning went and the window has an offer waiting: say it now.
+pub(super) fn repost_offer(id: WindowId, cx: &mut App) {
+    let offer = cx
+        .try_global::<Chips>()
+        .and_then(|chips| chips.windows.get(&id))
+        .filter(|entry| entry.rules.held().is_none())
+        .and_then(|entry| entry.offer.clone());
+    if let (Some(offer), Some(window)) = (offer, cx.windows().into_iter().find(|w| w.window_id() == id)) {
+        post_offer(window, offer, cx);
+    }
+}
+
 /// Let the rules take the sticky notice away (`how`), and when they do, send the chip off and let go of
 /// everything it held about its terminal.
 fn take_away(id: WindowId, cx: &mut App, how: impl FnOnce(&mut ChipRules, Duration) -> Effect) {
@@ -443,6 +534,7 @@ fn take_away(id: WindowId, cx: &mut App, how: impl FnOnce(&mut ChipRules, Durati
             entry.sticky_words = None;
             entry.sticky_anchor = None;
             entry.sticky_detail = None;
+            entry.sticky_act = None;
             entry.anchor = None;
             entry.follow = None;
             close_info(entry, cx);

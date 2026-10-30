@@ -60,6 +60,7 @@ fn step(window: &mut Window, cx: &mut App) -> bool {
     if matches!(placed, Some(Where::Gone)) {
         // The terminal it was about is closed: nothing to warn about any more.
         withdraw(id, cx);
+        super::chips::repost_offer(id, cx);
         return false;
     }
     let bounds = match &placed {

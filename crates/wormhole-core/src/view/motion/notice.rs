@@ -27,6 +27,9 @@ pub const SWAP: Duration = Duration::from_millis(120);
 pub const LIFE: Duration = Duration::from_secs(2);
 /// The same message again within this long is not said twice.
 pub const DEDUPE: Duration = Duration::from_secs(2);
+/// How long after a chip that offers something appears a click on it is not taken for a choice: a click
+/// meant for what was under the chip, or one already on its way, must not restart the app.
+pub const ARM: Duration = Duration::from_millis(500);
 /// How the chip comes and goes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Entrance {

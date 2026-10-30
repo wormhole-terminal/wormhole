@@ -9,7 +9,11 @@
 //! URL and never check. Which feeds a check reads is the `update_channel` setting. The public key
 //! is `packaging/updater.pub`, the same file `scripts/package.sh` checks the signing key against.
 
+mod prompt;
 pub(crate) mod restart;
+#[cfg(test)]
+pub(crate) use prompt::announce as announce_installed;
+pub(crate) use prompt::keep_offered;
 #[cfg(test)]
 mod restart_tests;
 
@@ -72,6 +76,12 @@ pub(crate) struct Updates {
     launched: Option<Launched>,
     /// A look at the bundle is under way on a background thread.
     watching: bool,
+    /// The version the notice chip last told about and the number of that install (`prompt`).
+    told: Option<(String, u32)>,
+    /// The version whose offer the person closed: not offered again, in any window, until a newer one.
+    dismissed: Option<String>,
+    /// The window (`OpenWindow::id`) that has the offer now, so it moves when the front window changes.
+    offered_in: Option<i64>,
 }
 
 impl Global for Updates {}
@@ -105,6 +115,9 @@ impl Updates {
             failed_install: None,
             launched: feed_config().and_then(|_| Launched::capture(env!("CARGO_PKG_VERSION"))),
             watching: false,
+            told: None,
+            dismissed: None,
+            offered_in: None,
         }
     }
 
@@ -226,6 +239,7 @@ pub(crate) fn watch_bundle(ticks: u64, cx: &mut App) {
                 tracing::info!(version = %replaced.version, "the app bundle was replaced while running");
                 updates.phase = UpdatePhase::Installed(replaced.version);
                 notify_settings(cx);
+                prompt::announce(cx);
             }
         });
     })
@@ -365,6 +379,7 @@ pub(crate) fn install_update(release: Release, cx: &mut App) {
                 }
             };
             notify_settings(cx);
+            prompt::announce(cx);
         });
     });
     cx.global_mut::<Updates>().task = Some(task);
@@ -437,6 +452,7 @@ pub(crate) fn devctl_installed(version: &str, pending: bool, cx: &mut App) {
     updates.phase = UpdatePhase::Installed(version.to_string());
     updates.restart_when_idle = pending.then(IdleWatch::default);
     notify_settings(cx);
+    prompt::announce(cx);
 }
 
 fn save_update_schedule(cx: &App) {

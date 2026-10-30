@@ -12,6 +12,9 @@ pub struct Buttons {
     pub info: bool,
     /// ×: close it.
     pub close: bool,
+    /// The capsule itself is the button: a click on it does what the words offer ("Restart"). It draws
+    /// nothing of its own.
+    pub act: bool,
 }
 
 /// Where on the chip a click was.
@@ -30,21 +33,23 @@ pub enum Reaction {
     Dismiss,
     /// The explanation opens (or closes again).
     ShowInfo,
+    /// What the words offer happens (the app restarts into the update).
+    Act,
     /// Nothing.
     Nothing,
 }
 
 impl Buttons {
     /// No buttons: the chip ignores the mouse.
-    pub const NONE: Self = Self { info: false, close: false };
+    pub const NONE: Self = Self { info: false, close: false, act: false };
 
     /// The buttons of the chip that shows `notice`'s own words: only a notice that stays has any.
     #[must_use]
     pub fn of(notice: Notice) -> Self {
-        Self { info: notice.has_info(), close: notice.is_sticky() }
+        Self { info: notice.has_info(), close: notice.is_sticky(), act: notice.has_action() }
     }
 
-    /// How many there are.
+    /// How many there are (drawn ones: the capsule's own click takes no room).
     #[must_use]
     pub fn count(self) -> usize {
         usize::from(self.info) + usize::from(self.close)
@@ -57,6 +62,7 @@ impl Buttons {
         match press {
             Press::Close if self.close => Reaction::Dismiss,
             Press::Info if self.info => Reaction::ShowInfo,
+            Press::Body if self.act => Reaction::Act,
             Press::Body if self.info => Reaction::ShowInfo,
             Press::Body if self.close => Reaction::Dismiss,
             Press::Close | Press::Info | Press::Body => Reaction::Nothing,
@@ -75,14 +81,14 @@ mod tests {
 
     #[test]
     fn a_warning_that_has_more_to_say_gets_both_buttons() {
-        assert_eq!(Buttons::of(warned()), Buttons { info: true, close: true });
+        assert_eq!(Buttons::of(warned()), Buttons { info: true, close: true, act: false });
         assert_eq!(Buttons::of(warned()).count(), 2);
     }
 
     #[test]
     fn a_warning_with_nothing_more_to_say_gets_only_the_cross() {
         let plain = Notice::Warned(Warning::Test(1));
-        assert_eq!(Buttons::of(plain), Buttons { info: false, close: true });
+        assert_eq!(Buttons::of(plain), Buttons { info: false, close: true, act: false });
     }
 
     #[test]
@@ -113,6 +119,16 @@ mod tests {
         assert_eq!(cross.react(Press::Body), Reaction::Dismiss);
         assert_eq!(cross.react(Press::Close), Reaction::Dismiss);
         assert_eq!(cross.react(Press::Info), Reaction::Nothing, "there is no such button");
+    }
+
+    #[test]
+    fn a_notice_that_offers_something_acts_on_the_body_and_closes_on_the_cross() {
+        let offer = Buttons::of(Notice::Warned(Warning::UpdateReady(1)));
+        assert_eq!(offer, Buttons { info: false, close: true, act: true });
+        assert_eq!(offer.count(), 1, "the capsule is the button: only the cross is drawn");
+        assert_eq!(offer.react(Press::Body), Reaction::Act);
+        assert_eq!(offer.react(Press::Close), Reaction::Dismiss);
+        assert_eq!(offer.react(Press::Info), Reaction::Nothing);
     }
 
     #[test]

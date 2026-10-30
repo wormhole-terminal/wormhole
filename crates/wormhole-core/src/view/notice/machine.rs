@@ -7,9 +7,9 @@
 
 use std::time::{Duration, Instant};
 
-use super::buttons::Buttons;
+use super::buttons::{Buttons, Press, Reaction};
 use super::message::Notice;
-use crate::view::motion::notice::{DEDUPE, LIFE};
+use crate::view::motion::notice::{ARM, DEDUPE, LIFE};
 
 /// Where the chip is in its life.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -62,11 +62,13 @@ pub struct ChipRules {
     sticky: Option<Notice>,
     /// Sticky messages the person dismissed: said once, not again.
     dismissed: Vec<Notice>,
+    /// Before this a click on a chip that offers something does nothing (`ARM`).
+    armed_at: Option<Instant>,
 }
 
 impl Default for ChipRules {
     fn default() -> Self {
-        Self { state: State::Hidden, last: None, sticky: None, dismissed: Vec::new() }
+        Self { state: State::Hidden, last: None, sticky: None, dismissed: Vec::new(), armed_at: None }
     }
 }
 
@@ -74,7 +76,7 @@ impl ChipRules {
     /// A message arrives at `now`.
     pub fn post(&mut self, notice: Notice, now: Instant) -> Effect {
         if notice.is_sticky() {
-            return self.post_sticky(notice);
+            return self.post_sticky(notice, now);
         }
         if self.last.is_some_and(|(last, at)| last == notice && now.saturating_duration_since(at) < DEDUPE) {
             return Effect::Ignore;
@@ -86,11 +88,12 @@ impl ChipRules {
     /// A message that stays. It is not held against `last` (that is for copies said twice); it is said
     /// once while it is up, and not again once it was dismissed. A different sticky message replaces the
     /// one held: the chip says one warning at a time, the newest, and the replaced one is not remembered.
-    fn post_sticky(&mut self, notice: Notice) -> Effect {
+    fn post_sticky(&mut self, notice: Notice, now: Instant) -> Effect {
         if self.sticky == Some(notice) || self.dismissed.contains(&notice) {
             return Effect::Ignore;
         }
         self.sticky = Some(notice);
+        self.armed_at = notice.has_action().then_some(now + ARM);
         self.show(None)
     }
 
@@ -136,6 +139,17 @@ impl ChipRules {
         }
         self.state = State::Leaving { until: now + leave };
         Effect::Hide
+    }
+
+    /// What a click at `press` that went down at `down` comes to: what the buttons say, except that a
+    /// click on the capsule of a chip that offers something is ignored until [`ARM`] after the chip
+    /// appeared, so a click meant for what was under it, or one already on its way, chooses nothing.
+    #[must_use]
+    pub fn react(&self, press: Press, down: Instant) -> Reaction {
+        match self.buttons().react(press) {
+            Reaction::Act if self.armed_at.is_some_and(|armed| down < armed) => Reaction::Nothing,
+            reaction => reaction,
+        }
     }
 
     /// Forget which sticky messages were dismissed: devctl's way to see one again.
@@ -219,6 +233,20 @@ mod tests {
 
     fn warned() -> Notice {
         Notice::Warned(Warning::HostFallback)
+    }
+
+    #[test]
+    fn a_click_just_after_an_offer_appears_chooses_nothing() {
+        let (mut chip, t0) = (ChipRules::default(), Instant::now());
+        let offer = Notice::Warned(Warning::UpdateReady(1));
+        assert_eq!(chip.post(offer, t0), Effect::Show);
+        assert_eq!(chip.react(Press::Body, t0 + MS(499)), Reaction::Nothing, "too soon");
+        assert_eq!(chip.react(Press::Close, t0 + MS(10)), Reaction::Dismiss, "the cross is not held back");
+        assert_eq!(chip.react(Press::Body, t0 + MS(500)), Reaction::Act);
+        // A warning that offers nothing has no such delay.
+        let mut warned_chip = ChipRules::default();
+        warned_chip.post(warned(), t0);
+        assert_eq!(warned_chip.react(Press::Body, t0), Reaction::ShowInfo);
     }
 
     #[test]
@@ -320,7 +348,7 @@ mod tests {
         chip.post(path(), t0);
         assert_eq!(chip.buttons(), Buttons::NONE, "a copy has none");
         chip.post(warned(), t0 + MS(10));
-        assert_eq!(chip.buttons(), Buttons { info: true, close: true });
+        assert_eq!(chip.buttons(), Buttons { info: true, close: true, act: false });
         chip.post(lines(2), t0 + MS(20));
         assert_eq!(chip.buttons(), Buttons::NONE, "a copy's words over the warning have none");
         chip.advance(t0 + MS(20) + LIFE, LEAVE);

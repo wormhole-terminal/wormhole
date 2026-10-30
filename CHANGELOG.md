@@ -8,6 +8,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- When an update is installed (by the app, or put on disk from outside), a chip says "Wormhole 1.6.0 is
+  ready — Restart"; a click restarts into it (a click right after the chip appears is ignored). If a
+  restart would end something, the same question as in Settings → Updates names what. Closing the chip
+  keeps it quiet, in every window, until the next version. It waits behind a warning on the chip and
+  follows the window in front.
 - With persistent terminals on, the status bar says where the selected terminal runs: "Persistent" (in a
   session host of its own, so it keeps running when Wormhole quits or updates), "Connecting…", or "In app"
   in the warning colour (it ends when Wormhole quits or updates). A tooltip says it in a sentence. The

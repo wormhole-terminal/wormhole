@@ -12,7 +12,8 @@ pub(crate) fn of(notice: Notice) -> Option<String> {
         Notice::Warned(Warning::HostFallback) => {
             return Some(text(keys::NOTICE_WARNED_HOST_FALLBACK).to_string());
         }
-        Notice::Warned(Warning::Test(_)) | Notice::Test(_) => return None,
+        // The version is the poster's to say (`update::prompt`).
+        Notice::Warned(Warning::UpdateReady(_) | Warning::Test(_)) | Notice::Test(_) => return None,
     };
     Some(match copied {
         Copied::Lines(lines) => keys::notice_copied_lines(whole(lines)),

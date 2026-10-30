@@ -305,11 +305,15 @@ fn a_warning_has_a_cross_and_an_info_and_a_copy_has_neither(cx: &mut TestAppCont
     }
     with_chip(cx, |cx, window| {
         lost_host(cx, window);
-        assert_eq!(buttons(cx).0, Buttons { info: true, close: true });
+        assert_eq!(buttons(cx).0, Buttons { info: true, close: true, act: false });
         copy(cx, window, "twelve chars");
         assert_eq!(buttons(cx).0, Buttons::NONE, "a copy's words over the warning have none");
         wait(cx, LIFE + Duration::from_millis(10));
-        assert_eq!(buttons(cx).0, Buttons { info: true, close: true }, "and they come back with the warning");
+        assert_eq!(
+            buttons(cx).0,
+            Buttons { info: true, close: true, act: false },
+            "and they come back with the warning"
+        );
     });
 }
 
@@ -442,5 +446,114 @@ fn closing_the_window_closes_the_explanation(cx: &mut TestAppContext) {
         cx.run_until_parked();
         assert_eq!(explanation(), None);
         assert!(cx.update(|cx| crate::notice::notices(cx).is_empty()), "and the chip with it");
+    });
+}
+
+/// An update installs, as `update::install_update` finishes or `watch_bundle` finds it on disk.
+fn install(cx: &mut TestAppContext, version: &str) {
+    use crate::update::{UpdatePhase, Updates};
+    cx.update(|cx| {
+        cx.global_mut::<Updates>().phase = UpdatePhase::Installed(version.into());
+        crate::update::announce_installed(cx);
+    });
+    cx.run_until_parked();
+}
+
+#[gpui_kit::test]
+fn an_installed_update_is_offered_on_the_chip_and_a_click_restarts_asking_only_when_it_must(
+    cx: &mut TestAppContext,
+) {
+    if isolate("an_installed_update_is_offered_on_the_chip_and_a_click_restarts_asking_only_when_it_must") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        install(cx, "0.3.1");
+        assert_eq!(
+            chip(cx),
+            Some((Phase::Showing, "Wormhole 0.3.1 is ready \u{2014} Restart".to_string(), true, true))
+        );
+        let buttons = cx.update(|cx| crate::notice::notices(cx).remove(0).buttons);
+        assert!(buttons.act && buttons.close && !buttons.info);
+
+        // Something runs in the terminal: the click opens the question and does not restart.
+        assert!(press(cx, window, Press::Body));
+        super::test_harness::hook(cx, window, 1, "UserPromptSubmit", None);
+        assert!(!cx.has_pending_prompt(), "a click just after the chip appeared chooses nothing");
+        wait(cx, Duration::from_millis(600));
+        super::test_harness::hook(cx, window, 1, "UserPromptSubmit", None);
+        assert!(press(cx, window, Press::Body));
+        let (title, _) = cx.pending_prompt().expect("the sheet names what would end");
+        assert_eq!(title, "Restart to Update?");
+        cx.simulate_prompt_answer("Later");
+        cx.run_until_parked();
+        assert_eq!(chip(cx).map(|c| c.0), Some(Phase::Showing), "Later leaves the offer up");
+    });
+}
+
+#[gpui_kit::test]
+fn a_closed_offer_stays_quiet_until_the_next_version(cx: &mut TestAppContext) {
+    if isolate("a_closed_offer_stays_quiet_until_the_next_version") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        install(cx, "0.3.1");
+        assert!(click(cx, window));
+        wait(cx, UP + Duration::from_millis(10));
+        assert_eq!(chip(cx).map(|c| c.0), Some(Phase::Hidden));
+        // Found on disk again, or told twice: the same version is not said again.
+        install(cx, "0.3.1");
+        assert_eq!(chip(cx).map(|c| c.0), Some(Phase::Hidden));
+        // A newer one is.
+        install(cx, "0.3.2");
+        assert_eq!(chip(cx).map(|c| c.1), Some("Wormhole 0.3.2 is ready \u{2014} Restart".to_string()));
+        assert_eq!(chip(cx).map(|c| c.0), Some(Phase::Showing));
+    });
+}
+
+const OFFER: &str = "Wormhole 0.3.1 is ready \u{2014} Restart";
+
+#[gpui_kit::test]
+fn an_offer_never_covers_a_warning_and_comes_back_when_the_warning_goes(cx: &mut TestAppContext) {
+    if isolate("an_offer_never_covers_a_warning_and_comes_back_when_the_warning_goes") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        lost_host(cx, window);
+        install(cx, "0.3.1");
+        assert_eq!(chip(cx).map(|c| c.1), Some(SHORT.to_string()), "the warning stays on the chip");
+        assert!(click(cx, window));
+        wait(cx, UP + Duration::from_millis(10));
+        assert_eq!(chip(cx).map(|c| c.1), Some(OFFER.to_string()), "and the offer follows it");
+    });
+}
+
+#[gpui_kit::test]
+fn a_warning_after_the_offer_does_not_lose_it(cx: &mut TestAppContext) {
+    if isolate("a_warning_after_the_offer_does_not_lose_it") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        install(cx, "0.3.1");
+        lost_host(cx, window);
+        assert_eq!(chip(cx).map(|c| c.1), Some(SHORT.to_string()));
+        assert!(click(cx, window));
+        wait(cx, UP + Duration::from_millis(10));
+        assert_eq!(chip(cx).map(|c| c.1), Some(OFFER.to_string()));
+    });
+}
+
+#[gpui_kit::test]
+fn a_closed_offer_is_closed_for_the_version_even_when_it_installs_again(cx: &mut TestAppContext) {
+    if isolate("a_closed_offer_is_closed_for_the_version_even_when_it_installs_again") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        install(cx, "0.3.1");
+        assert!(click(cx, window));
+        wait(cx, UP + Duration::from_millis(10));
+        // The app's tick keeps the offer in the window in front: closed, it is not offered again.
+        cx.update(crate::update::keep_offered);
+        cx.run_until_parked();
+        assert_eq!(chip(cx).map(|c| c.0), Some(Phase::Hidden));
     });
 }

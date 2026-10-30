@@ -80,6 +80,10 @@ pub enum Refused {
 pub enum Warning {
     /// The helper that keeps terminals running couldn't start, so this terminal ends when Wormhole quits.
     HostFallback,
+    /// An update was installed and waits for a restart. The number tells one install from the next, so a
+    /// chip the person closed is not said again for the same version, but is for a newer one; the version
+    /// itself is words, which come with the post.
+    UpdateReady(u32),
     /// A sticky message devctl made up (`notice sticky <text>`); the number tells one from another and the
     /// words come with the post. Nothing but devctl makes one.
     Test(u64),
@@ -161,6 +165,14 @@ impl Notice {
     #[must_use]
     pub fn has_info(self) -> bool {
         matches!(self, Self::Warned(Warning::HostFallback))
+    }
+}
+
+impl Notice {
+    /// A click on the capsule does what the words offer ([`super::Reaction::Act`]).
+    #[must_use]
+    pub fn has_action(self) -> bool {
+        matches!(self, Self::Warned(Warning::UpdateReady(_)))
     }
 }
 

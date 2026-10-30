@@ -99,6 +99,7 @@ pub(super) fn tick(cx: &mut App) {
     menus::sync(cx);
     update::schedule_check(ticks, cx);
     update::watch_bundle(ticks, cx);
+    update::keep_offered(cx);
     restart::tick(cx);
     if ticks.is_multiple_of(5) {
         project::prune_projects(cx);

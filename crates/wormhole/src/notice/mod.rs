@@ -25,7 +25,10 @@ mod info;
 mod report;
 mod words;
 
-pub(crate) use chips::{Anchor, Facts, Where, enabled, post, post_to, post_to_with, post_to_words, register};
+pub(crate) use chips::{
+    Anchor, Facts, Offer, Where, enabled, post, post_offer, post_to, post_to_with, post_to_words, register,
+    withdraw_offers,
+};
 #[cfg(test)]
 pub(crate) use follow::EVERY as FOLLOW_EVERY;
 #[cfg(any(test, feature = "devctl"))]

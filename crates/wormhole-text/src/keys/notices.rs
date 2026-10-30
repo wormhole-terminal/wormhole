@@ -59,25 +59,25 @@ pub const NOTICE_WARNED_HOST_FALLBACK: Key = Key::new(169);
 /// "This terminal runs inside Wormhole and ends when it quits: the helper that keeps terminals running couldn't start."
 pub const NOTICE_WARNED_HOST_FALLBACK_DETAIL: Key = Key::new(170);
 /// "Close"
-pub const NOTICE_CLOSE: Key = Key::new(171);
+pub const NOTICE_CLOSE: Key = Key::new(172);
 /// "More about this warning"
-pub const NOTICE_INFO: Key = Key::new(172);
+pub const NOTICE_INFO: Key = Key::new(173);
 /// "This terminal can't outlive Wormhole"
-pub const NOTICE_INFO_HOST_HEADING: Key = Key::new(173);
+pub const NOTICE_INFO_HOST_HEADING: Key = Key::new(174);
 /// "Wormhole normally keeps each terminal running in a small helper, so your work carries on after you quit Wormhole and is waiting when you open it again. The helper for this terminal couldn't start, so the terminal runs inside Wormhole instead and closes when Wormhole quits."
-pub const NOTICE_INFO_HOST_WHAT: Key = Key::new(174);
+pub const NOTICE_INFO_HOST_WHAT: Key = Key::new(175);
 /// "Other terminals that already run in a helper are not affected."
-pub const NOTICE_INFO_HOST_OTHERS: Key = Key::new(175);
+pub const NOTICE_INFO_HOST_OTHERS: Key = Key::new(176);
 /// "Finish what is running here before you quit. Each new terminal tries to start its helper again, and Wormhole says this once each time it starts."
-pub const NOTICE_INFO_HOST_TRY: Key = Key::new(176);
+pub const NOTICE_INFO_HOST_TRY: Key = Key::new(177);
 /// "What went wrong, if you want to report it:"
-pub const NOTICE_INFO_HOST_REASON: Key = Key::new(177);
+pub const NOTICE_INFO_HOST_REASON: Key = Key::new(178);
 /// "Open Logs Folder"
-pub const NOTICE_INFO_LOGS: Key = Key::new(178);
+pub const NOTICE_INFO_LOGS: Key = Key::new(179);
 /// "Copy reason"
-pub const NOTICE_INFO_COPY: Key = Key::new(179);
+pub const NOTICE_INFO_COPY: Key = Key::new(180);
 /// "Copied"
-pub const NOTICE_INFO_COPIED: Key = Key::new(180);
+pub const NOTICE_INFO_COPIED: Key = Key::new(181);
 
 /// ```text
 /// { $count ->
@@ -161,4 +161,11 @@ pub fn notice_driven_typing(name: &str) -> String {
 /// ```
 pub fn notice_driven_reading(name: &str) -> String {
     crate::active::message(149, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// { -brand } { $version } is ready — Restart
+/// ```
+pub fn notice_warned_update_ready(version: &str) -> String {
+    crate::active::message(171, &[("version", Arg::Str(version))])
 }

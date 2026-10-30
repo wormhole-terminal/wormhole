@@ -85,8 +85,8 @@ mod tests {
     use super::*;
 
     const NONE: Buttons = Buttons::NONE;
-    const BOTH: Buttons = Buttons { info: true, close: true };
-    const CROSS: Buttons = Buttons { info: false, close: true };
+    const BOTH: Buttons = Buttons { info: true, close: true, act: false };
+    const CROSS: Buttons = Buttons { info: false, close: true, act: false };
 
     fn words(width: f64) -> NSSize {
         NSSize::new(width, 16.0)
