@@ -9,6 +9,7 @@ use gpui_kit::component::button::ButtonGroup;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::Input;
 use gpui_kit::component::popover::Popover;
+use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::theme::tokens;
@@ -97,23 +98,39 @@ impl StudioWindow {
                 .overflow_hidden()
                 .max_w(px(NAME_MAX_W))
                 .child(canvas(move |at, _, _| bounds.set(at), |_, _, _, _| {}).absolute().size_full())
-                .child(
-                    Button::new("studio-name")
-                        .ghost()
-                        .small()
+                // Not a gpui-kit Button, which never shrinks: the name gives way with an ellipsis and
+                // the chevron after it always shows.
+                .child({
+                    let tip: SharedString =
+                        wormhole_text::text(wormhole_text::keys::STUDIO_TOOLTIP_MENU).into();
+                    let this = cx.weak_entity();
+                    div()
+                        .id("studio-name")
+                        .role(Role::Button)
+                        .aria_label(name.clone())
+                        .focusable()
+                        .tab_stop(true)
                         .min_w_0()
-                        .child(
-                            div()
-                                .min_w_0()
-                                .flex()
-                                .items_center()
-                                .gap_1()
-                                .child(div().min_w_0().truncate().child(name))
-                                .child(style::icon(IconName::ChevronDown).flex_none()),
-                        )
-                        .tooltip(wormhole_text::text(wormhole_text::keys::STUDIO_TOOLTIP_MENU))
-                        .on_click(cx.listener(|this, _, window, cx| this.open_theme_menu(window, cx))),
-                )
+                        .flex()
+                        .items_center()
+                        .gap_1()
+                        .px_2()
+                        .h(px(style::CONTROL_H))
+                        .rounded(ui.radius)
+                        .cursor_pointer()
+                        .hover(move |d| d.bg(ui.hover))
+                        .focus_visible(move |d| d.bg(ui.hover))
+                        .child(div().min_w_0().truncate().child(name))
+                        .child(style::icon(IconName::ChevronDown).flex_none())
+                        .tooltip(move |window, cx| Tooltip::new(tip.clone()).build(window, cx))
+                        .on_click(cx.listener(|this, _, window, cx| this.open_theme_menu(window, cx)))
+                        .on_key_down(move |event, window, cx| {
+                            if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                                this.update(cx, |studio, cx| studio.open_theme_menu(window, cx)).ok();
+                                cx.stop_propagation();
+                            }
+                        })
+                })
                 .into_any_element()
         };
         div()
