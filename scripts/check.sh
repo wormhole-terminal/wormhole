@@ -70,6 +70,8 @@ scope_of() {
     .github/*|.claude/hooks/*|.claude/settings*.json|.claude/worktrees/*|.gitignore|LICENSE|packaging/*) echo none ;;
     # The settings of the script linter: scripts/lint-scripts.sh runs whenever it changes, nothing builds.
     .shellcheckrc) echo none ;;
+    # Commits for git blame to skip (the moves); nothing reads it but git.
+    .git-blame-ignore-revs) echo none ;;
     # Its own workspace, built and checked on its own (tools/bench/README.md).
     tools/bench/*) echo none ;;
     # The download server's counter, a Cloudflare Worker with its own tests (bun test there).
