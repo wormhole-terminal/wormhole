@@ -110,8 +110,9 @@ Since 1.0:
   for the next minor.
 - A prerelease (`1.5.0-beta.1`) is published as a GitHub prerelease and is never offered as an update
   on the Stable channel.
-- A build of `main` is numbered after the last release: `1.5.1-dev.12` after `1.5.0` (12 commits since
-  its tag). Only the Unstable channel gets it (see Releases), and the next release sorts above it.
+- A build of `main` is a preview build, numbered after the last release: `1.5.1-preview.12` after
+  `1.5.0` (12 commits since its tag; up to 1.5 they were `-dev.N`, which `preview` sorts above). Only
+  the Unstable channel gets it (see Releases), and the next release sorts above it.
 - `version` in `Cargo.toml` changes only in a release commit (`chore(release): 1.5.1`, made by
   `scripts/release.sh`). Between releases it is the last release's number.
 
@@ -216,16 +217,25 @@ workflow built it from the tagged commit. A version with a Security entry gets `
 `latest.json`; a version with a suffix (`0.4.0-beta.1`) is published as a prerelease and is never
 offered on the Stable channel. A stable release also sets `version` and `sha256` in the Homebrew cask
 (`wormhole-terminal/homebrew-tap`, `Casks/wormhole-terminal.rb`) when the `HOMEBREW_TAP_TOKEN` secret
-is there.
+is there. Then it starts the website's Releases workflow (`WEBSITE_DISPATCH_TOKEN`: a fine-grained
+token with Actions: write on that repository only), which copies the notes and the version at once
+instead of at its next two-hourly run.
 
-Every push to `main` that passes CI is built the same way for the Unstable channel (Settings → Updates →
-Channel): numbered `X.Y.(Z+1)-dev.N` (`dev_version` in `scripts/lib.sh`), signed, notarized and put on
-the rolling prerelease `unstable`, which holds only the newest build and the one before. A commit a
-release tag already contains is skipped: the release's own, or one whose CI finished after the tag.
-Because the `unstable` tag moves with every build, a plain `git fetch --tags` refuses it ("would clobber
-existing tag"); use `git fetch --tags --force`. An unstable build's notes are
-CHANGELOG.md's `[Unreleased]`. The app on Unstable reads `unstable/latest.json` and `stable/latest.json`
-and takes the newer, and it shows Settings → Feature flags, which a release otherwise hides.
+Release (`release.yml`) and Preview (`preview.yml`, below) both build through `build.yml`, the one
+workflow with the signing secrets (secrets of the `release` environment, which only `main` and `v*` tags
+may use).
+
+Every push to `main` that passes CI is built the same way as a preview build (`preview.yml`): numbered
+`X.Y.(Z+1)-preview.N` (`preview_version` in `scripts/lib.sh`), signed, notarized and put on the rolling
+prerelease `preview`, which holds only the newest build and the one before. A commit a release tag
+already contains is skipped: the release's own, or one whose CI finished after the tag. Because the
+`preview` tag moves with every build, a plain `git fetch --tags` refuses it ("would clobber existing
+tag"); use `git fetch --tags --force`. A preview build's notes are CHANGELOG.md's `[Unreleased]`.
+`https://downloads.getwormhole.app/preview/latest.json` redirects to its `latest.json`, and so does
+`unstable/latest.json`, which the app's Unstable channel (Settings → Updates → Channel) reads up to
+1.5; the rolling `unstable` release keeps the last `-dev` build, which those apps fall back to only when
+the download server doesn't answer. The app on Unstable reads its feed and `stable/latest.json` and takes
+the newer, and it shows Settings → Feature flags, which a release otherwise hides.
 
 ## License
 
