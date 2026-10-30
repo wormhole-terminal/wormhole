@@ -19,15 +19,6 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Liquid Glass, as a beta: on macOS 26 and later, Settings → Appearance has a Liquid Glass switch, marked
   Beta, that puts glass under the sidebar's and the panel's cards. It is off until you turn it on, and stays
   painted while Reduce Transparency or Increase Contrast is on.
-
-### Fixed
-
-- The folder's card in the title row has room around its contents, and a long path breaks only between
-  folders, never inside a name, with the folder's own name stressed.
-- Persistent terminals keep working after Wormhole was replaced on disk while it was running (an update made
-  outside the app, say): a new session host used to refuse the app because its executable was gone, and the
-  terminal ran inside the app instead. The host now falls back to the kernel's record of the app's
-  signature. This holds from this version on: the running app must already have the fix.
 - Theme Studio's New Theme starts from a clean slate: a plain light or dark palette, matching the appearance
   in use, that depends on no other theme. New Theme From ▸ starts from a theme you pick instead (yours or a
   built-in), with that theme's values copied in.
@@ -43,6 +34,15 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - A theme made by a newer Wormhole says so in Theme Studio and in Settings → Appearance; Studio offers
   Duplicate instead of saving over it. While Studio previews a theme that isn't the one in use, a chip says
   so, with Use to switch to it.
+
+### Fixed
+
+- The folder's card in the title row has room around its contents, and a long path breaks only between
+  folders, never inside a name, with the folder's own name stressed.
+- Persistent terminals keep working after Wormhole was replaced on disk while it was running (an update made
+  outside the app, say): a new session host used to refuse the app because its executable was gone, and the
+  terminal ran inside the app instead. The host now falls back to the kernel's record of the app's
+  signature. This holds from this version on: the running app must already have the fix.
 
 ## [1.5.0] - 2026-10-29
 
