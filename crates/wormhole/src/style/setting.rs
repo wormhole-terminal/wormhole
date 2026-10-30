@@ -5,6 +5,7 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::popover::Popover;
 use gpui_kit::component::switch::Switch;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -92,6 +93,8 @@ pub enum SettingState {
 pub struct SettingParts {
     pub label: SharedString,
     pub description: Option<SharedString>,
+    /// Keep a warning below the label. Other descriptions go in an info popover.
+    pub visible_hint: bool,
     /// A tag after the label, in the primary's tint ("Time Sensitive").
     pub chip: Option<SharedString>,
     /// The `config.json` key, shown under the pointer (empty: none).
@@ -127,6 +130,7 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
     let SettingParts {
         label,
         description,
+        visible_hint,
         chip,
         key,
         state,
@@ -155,15 +159,19 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
         _ => text.into_any_element(),
     };
     let (code_font, _) = crate::fonts::code_font(cx);
+    let info = description.clone().filter(|_| !visible_hint);
     div()
         .id(id.clone())
+        .role(Role::Group)
+        .aria_label(label.clone())
+        .when_some(description.clone(), |d, description| d.aria_description(description))
         .group(group.clone())
         .flex()
         .map(|d| if tall { d.items_start() } else { d.items_center() })
         .gap_4()
         .w_full()
         .min_h(px(SETTING_ROW_MIN_H))
-        .py_2()
+        .py_1()
         .rule_top(ui)
         .relative()
         // The hover fill reaches past the text on both sides, so the words don't touch its edges,
@@ -202,6 +210,14 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
                                 .text_color(label_color)
                                 .child(marked(label, found)),
                         )
+                        .when_some(info, |d, description| {
+                            d.child(setting_info(
+                                (id.clone(), "info"),
+                                ui,
+                                description,
+                                found_description.clone(),
+                            ))
+                        })
                         .when_some(
                             match &state {
                                 SettingState::Project(project) => Some(project.clone()),
@@ -222,7 +238,7 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
                             )
                         }),
                 )
-                .children(description.map(|text| {
+                .children(description.filter(|_| visible_hint).map(|text| {
                     div().text_caption().text_color(description_color).child(marked(text, found_description))
                 })),
         )
@@ -245,6 +261,53 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
                 .child(if elsewhere { out_of_reach((id, "control"), control) } else { control }),
         )
 }
+
+/// The full description remains available by pointer, keyboard and VoiceOver.
+#[track_caller]
+fn setting_info(
+    id: impl Into<ElementId>,
+    ui: UiColors,
+    description: SharedString,
+    found: Option<Range<usize>>,
+) -> Popover {
+    let id = id.into();
+    Popover::new((id.clone(), "popover"))
+        .anchor(Anchor::TopLeft)
+        .appearance(false)
+        .trigger(
+            Button::new(id)
+                .ghost()
+                .small()
+                .icon(IconName::Info)
+                .accessibility_label(description.clone())
+                .tooltip(description.clone()),
+        )
+        .content(move |_, _, _| {
+            let mark = HighlightStyle { background_color: Some(ui.highlight), ..Default::default() };
+            let words = match found.clone() {
+                Some(range)
+                    if range.end <= description.len()
+                        && description.is_char_boundary(range.start)
+                        && description.is_char_boundary(range.end) =>
+                {
+                    StyledText::new(description.clone()).with_highlights([(range, mark)]).into_any_element()
+                }
+                _ => description.clone().into_any_element(),
+            };
+            div()
+                .p_3()
+                .max_w(px(INFO_W))
+                .rounded(ui.radius_lg)
+                .outlined(ui, ui.border)
+                .bg(ui.elevated)
+                .text_body()
+                .text_color(ui.text)
+                .child(words)
+        })
+}
+
+/// A paragraph's readable width inside the row's information popover.
+const INFO_W: f32 = 360.0;
 
 /// A control shown but not to be used (its value is set elsewhere): faint, and a cover over
 /// it takes the clicks.

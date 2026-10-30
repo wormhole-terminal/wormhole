@@ -28,10 +28,26 @@ mod updates;
 /// A setting whose words are in the catalogs: `label` is the message and the quiet line under it and the
 /// search words are its attributes (`.with_description`, `.with_keywords`).
 const fn entry(id: &'static str, label: Key, keys: &'static [&'static str]) -> Entry {
-    Entry { id, label, description: None, keywords: None, keys, feature: None, flag: None, needs: None }
+    Entry {
+        id,
+        label,
+        description: None,
+        visible_hint: false,
+        keywords: None,
+        keys,
+        feature: None,
+        flag: None,
+        needs: None,
+    }
 }
 
 impl Entry {
+    /// A warning that must be visible without opening the row's information.
+    const fn with_visible_hint(mut self) -> Self {
+        self.visible_hint = true;
+        self
+    }
+
     /// About the feature `feature`.
     const fn of(mut self, feature: FeatureId) -> Self {
         self.feature = Some(feature);

@@ -181,6 +181,7 @@ impl SettingsWindow {
             SettingParts {
                 label: entry.label().into(),
                 description: Some(text(SETTINGS_WINDOW_PREVIEW_COLUMN_HINT).into()),
+                visible_hint: false,
                 chip: None,
                 key: "",
                 state: SettingState::Default,

@@ -369,6 +369,7 @@ impl SettingsWindow {
             SettingParts {
                 label: entry.label().into(),
                 description,
+                visible_hint: entry.visible_hint && project.is_none(),
                 chip,
                 key: keys.first().copied().unwrap_or(""),
                 state,

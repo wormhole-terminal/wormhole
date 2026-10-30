@@ -174,6 +174,7 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
         SettingParts {
             label: title.into(),
             description: (!hint.is_empty()).then(|| hint.into()),
+            visible_hint: true,
             chip: None,
             key: "",
             state: SettingState::Default,

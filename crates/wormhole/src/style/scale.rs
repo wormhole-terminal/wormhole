@@ -61,8 +61,8 @@ pub const BADGE_H: f32 = 16.0;
 /// A key cap: a caption line with room around it, at least this wide so ⌘1 and esc match.
 pub const KEYCAP_H: f32 = 20.0;
 pub const KEYCAP_MIN_W: f32 = 28.0;
-/// Below this a setting row grows no shorter: a label, its description and room.
-pub const SETTING_ROW_MIN_H: f32 = 48.0;
+/// A one-line setting row; visible warnings and multiline controls may grow taller.
+pub const SETTING_ROW_MIN_H: f32 = 40.0;
 /// An inline banner's least height: one line of text beside a small button.
 pub const BANNER_MIN_H: f32 = 40.0;
 

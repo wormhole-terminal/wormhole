@@ -53,6 +53,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
+- Settings rows are more compact. Explanations open from an info button, while warnings stay visible;
+  the full descriptions remain searchable and available to VoiceOver.
+
 - Restarting for an update starts the new Wormhole as soon as the old one has quit, instead of after a pause
   of about a second.
 

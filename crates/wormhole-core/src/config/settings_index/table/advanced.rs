@@ -23,6 +23,7 @@ pub(super) const ADVANCED: &[Group] = &[
                 .with_keywords(SETTINGS_ADVANCED_OPEN_LOGS_KEYWORDS),
             entry("reset-settings", SETTINGS_ADVANCED_RESET_SETTINGS, &[])
                 .with_description(SETTINGS_ADVANCED_RESET_SETTINGS_DESCRIPTION)
+                .with_visible_hint()
                 .with_keywords(SETTINGS_ADVANCED_RESET_SETTINGS_KEYWORDS),
         ],
     ),
