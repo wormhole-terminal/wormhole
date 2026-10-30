@@ -1,0 +1,72 @@
+# A preview build: every push to main that passes CI is built, signed and notarized like a release
+# (build.yml), numbered after the last release (X.Y.(Z+1)-preview.N, scripts/lib.sh preview_version)
+# and published to the rolling prerelease `preview`. <base>/preview/latest.json redirects to its
+# latest.json, and so does <base>/unstable/latest.json, which the app's Unstable channel reads up to 1.5.
+name: Preview
+
+on:
+  # workflow_run runs with this repository's secrets whatever started CI (zizmor: dangerous-triggers).
+  # The gate below builds only a push to main in this repository that passed CI, and checks out that
+  # commit of main, never a pull request's code.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+# Read-only for every job; the build job asks for what it writes (zizmor: excessive-permissions).
+permissions:
+  contents: read
+
+jobs:
+  # A cheap Linux job that decides whether the macOS one is needed at all.
+  gate:
+    name: Anything to build?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha }}
+          # The whole history brings the tags along, which the check below reads.
+          fetch-depth: 0
+      - id: check
+        env:
+          CI_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          CI_EVENT: ${{ github.event.workflow_run.event }}
+          CI_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+        run: |
+          skip=false
+          # Only a push to main in this repository that passed CI: never a pull request's run,
+          # whose code isn't main's, never a scheduled run, and never a commit that failed the tests.
+          if [ "$CI_CONCLUSION" != success ] || [ "$CI_EVENT" != push ] || [ "$CI_REPO" != "$GITHUB_REPOSITORY" ]; then
+            skip=true
+            echo "::notice::CI ended '$CI_CONCLUSION' for a $CI_EVENT from $CI_REPO: no preview build"
+          elif ! git tag --list 'v*' | grep -q .; then
+            # Without the tags every commit would look unreleased: stop rather than guess.
+            echo "::error::no release tags in the checkout"
+            exit 1
+          elif released="$(git tag --list 'v*' --contains HEAD --sort=v:refname | head -n 1)" && [ -n "$released" ]; then
+            # The release's own commit, or one before it whose CI finished after the tag: a preview
+            # build of it would be numbered below the release that already has it.
+            skip=true
+            echo "::notice::$released already contains this commit: no preview build"
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: gate
+    if: needs.gate.outputs.skip != 'true'
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    # `./` and not GitHub's newer `$/` (zizmor: self-repository): actionlint doesn't know `$/` yet, and a
+    # reusable workflow named with `./` comes from the same commit as this one anyway.
+    uses: ./.github/workflows/build.yml # zizmor: ignore[self-repository]
+    with:
+      channel: preview
+      publish: true
+      build_sha: ${{ github.event.workflow_run.head_sha }}

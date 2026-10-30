@@ -27,6 +27,15 @@ describe("update checks", () => {
     expect(p?.doubles).toEqual([1, 0, 0]);
   });
 
+  test("a preview build names its channel", () => {
+    const p = dataPoint(
+      "/preview/latest.json",
+      "GET",
+      headers({ "user-agent": "Wormhole-Updater/1.5.1-preview.6 (preview; aarch64; macOS 27)" }),
+    );
+    expect(p?.blobs.slice(2, 6)).toEqual(["1.5.1-preview.6", "preview", "aarch64", "27"]);
+  });
+
   test("an older app has its version only, and flags from it are not believed", () => {
     const p = dataPoint(
       "/stable/latest.json",
@@ -83,8 +92,12 @@ describe("the worker", () => {
     const env = { COUNTS: { writeDataPoint: () => {} } };
     const at = async (path: string) =>
       (await worker.fetch(new Request(`https://downloads.getwormhole.app${path}`), env)).headers.get("location");
+    expect(await at("/preview/latest.json")).toBe(
+      "https://github.com/wormhole-terminal/wormhole/releases/download/preview/latest.json",
+    );
+    // The Unstable channel up to 1.5 reads the same builds.
     expect(await at("/unstable/latest.json")).toBe(
-      "https://github.com/wormhole-terminal/wormhole/releases/download/unstable/latest.json",
+      "https://github.com/wormhole-terminal/wormhole/releases/download/preview/latest.json",
     );
     expect(await at("/stable/Wormhole-latest.dmg")).toBe(
       "https://github.com/wormhole-terminal/wormhole/releases/latest/download/Wormhole-macos.dmg",
