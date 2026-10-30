@@ -53,9 +53,6 @@ pub(super) const APPEARANCE: &[Group] = &[
             )
             .with_description(SETTINGS_APPEARANCE_TRANSLUCENT_DESCRIPTION)
             .with_keywords(SETTINGS_APPEARANCE_TRANSLUCENT_KEYWORDS),
-            entry("title-border", SETTINGS_APPEARANCE_TITLE_BORDER, &["title_border"])
-                .with_description(SETTINGS_APPEARANCE_TITLE_BORDER_DESCRIPTION)
-                .with_keywords(SETTINGS_APPEARANCE_TITLE_BORDER_KEYWORDS),
             entry("column-dividers", SETTINGS_APPEARANCE_COLUMN_DIVIDERS, &["column_dividers"])
                 .with_description(SETTINGS_APPEARANCE_COLUMN_DIVIDERS_DESCRIPTION)
                 .with_keywords(SETTINGS_APPEARANCE_COLUMN_DIVIDERS_KEYWORDS),

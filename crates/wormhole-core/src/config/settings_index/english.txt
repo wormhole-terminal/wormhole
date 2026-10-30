@@ -272,10 +272,6 @@ entry Appearance translucent
   label "Also translucent"
   description "Use the opacity and blur above for these windows too"
   keywords "settings theme studio window"
-entry Appearance title-border
-  label "Line under the title row"
-  description "Between the bar and the terminal: always, only when output is scrolled under the bar, or never"
-  keywords "border hairline rule separator title bar toolbar"
 entry Appearance column-dividers
   label "Column dividers"
   description "The lines between the sidebar, the terminal and the right panel. Off hides them in every theme; the edges still resize. Increase Contrast keeps them"

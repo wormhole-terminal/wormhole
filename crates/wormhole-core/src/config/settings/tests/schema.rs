@@ -2,8 +2,7 @@
 
 use super::super::{
     APP_SETTINGS, AgentAccess, ChangesScope, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound,
-    OptionAsMeta, PROJECT_SETTINGS, PlainChanges, Settings, SharedChanges, SizeUnits, ThemeMode, TitleBorder,
-    keys,
+    OptionAsMeta, PROJECT_SETTINGS, PlainChanges, Settings, SharedChanges, SizeUnits, ThemeMode, keys,
 };
 use crate::storage::jsonc;
 use crate::theme::fonts;
@@ -49,7 +48,6 @@ fn the_final_design_keys_have_their_defaults() {
     assert_eq!(unset.hotkey_action, HotkeyAction::QuickPanel);
     assert_eq!(unset.jump_waiting_key, "alt-cmd-j");
     assert_eq!(unset.size_units, SizeUnits::Decimal, "sizes read like Finder's unless asked");
-    assert_eq!(unset.title_border, TitleBorder::Scrolled, "the line shows once output is under the bar");
     assert!(unset.open_in.is_empty(), "Open in… picks an editor until one is chosen");
     assert_eq!(
         unset.agent_access,
@@ -104,25 +102,15 @@ fn column_dividers_are_shown_until_turned_off_and_the_persons_own() {
     assert!(APP_SETTINGS.contains(&"column_dividers") && !PROJECT_SETTINGS.contains(&"column_dividers"));
 }
 
+/// The window's chrome and the programs a person opens: not a repository's to set. A file that still
+/// has the removed `title_border` reads, and the key is not reported as a mistake.
 #[test]
-fn the_title_border_reads_by_name_and_shows_by_rule() {
+fn open_in_is_the_persons_own_and_a_removed_title_border_still_reads() {
     let settings: Settings =
         jsonc::parse(r#"{ "title_border": "never", "open_in": "dev.zed.Zed" }"#).expect("valid jsonc");
-    assert_eq!(settings.title_border, TitleBorder::Never);
     assert_eq!(settings.open_in, "dev.zed.Zed");
-    for (border, under, shown) in [
-        (TitleBorder::Always, false, true),
-        (TitleBorder::Always, true, true),
-        (TitleBorder::Scrolled, false, false),
-        (TitleBorder::Scrolled, true, true),
-        (TitleBorder::Never, true, false),
-    ] {
-        assert_eq!(border.shows(under), shown, "{border:?} with content under: {under}");
-    }
-    // The window's chrome and the programs a person opens: not a repository's to set.
-    for key in ["title_border", "open_in"] {
-        assert!(APP_SETTINGS.contains(&key) && !PROJECT_SETTINGS.contains(&key), "{key}");
-    }
+    assert!(APP_SETTINGS.contains(&"open_in") && !PROJECT_SETTINGS.contains(&"open_in"));
+    assert!(!keys().contains(&"title_border".to_string()), "it is not written any more");
 }
 
 /// The title row shows everything until the person arranges it, and it is never a repository's to

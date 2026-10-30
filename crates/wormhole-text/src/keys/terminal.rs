@@ -7,42 +7,42 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Copy"
-pub const TERMINAL_MENU_COPY: Key = Key::new(1265);
+pub const TERMINAL_MENU_COPY: Key = Key::new(1259);
 /// "Paste"
-pub const TERMINAL_MENU_PASTE: Key = Key::new(1266);
+pub const TERMINAL_MENU_PASTE: Key = Key::new(1260);
 /// "Select All"
-pub const TERMINAL_MENU_SELECT_ALL: Key = Key::new(1267);
+pub const TERMINAL_MENU_SELECT_ALL: Key = Key::new(1261);
 /// "Find…"
-pub const TERMINAL_MENU_FIND: Key = Key::new(1268);
+pub const TERMINAL_MENU_FIND: Key = Key::new(1262);
 /// "Open Link"
-pub const TERMINAL_MENU_OPEN_LINK: Key = Key::new(1269);
+pub const TERMINAL_MENU_OPEN_LINK: Key = Key::new(1263);
 /// "Copy Link"
-pub const TERMINAL_MENU_COPY_LINK: Key = Key::new(1270);
+pub const TERMINAL_MENU_COPY_LINK: Key = Key::new(1264);
 /// "Copy Command"
-pub const TERMINAL_MENU_COPY_COMMAND: Key = Key::new(1271);
+pub const TERMINAL_MENU_COPY_COMMAND: Key = Key::new(1265);
 /// "Copy Output"
-pub const TERMINAL_MENU_COPY_OUTPUT: Key = Key::new(1272);
+pub const TERMINAL_MENU_COPY_OUTPUT: Key = Key::new(1266);
 /// "Put Command at Prompt"
-pub const TERMINAL_MENU_PUT_COMMAND_AT_PROMPT: Key = Key::new(1273);
+pub const TERMINAL_MENU_PUT_COMMAND_AT_PROMPT: Key = Key::new(1267);
 /// "Split Right"
-pub const TERMINAL_MENU_SPLIT_RIGHT: Key = Key::new(1274);
+pub const TERMINAL_MENU_SPLIT_RIGHT: Key = Key::new(1268);
 /// "Split Down"
-pub const TERMINAL_MENU_SPLIT_DOWN: Key = Key::new(1275);
+pub const TERMINAL_MENU_SPLIT_DOWN: Key = Key::new(1269);
 /// "Clear Buffer"
-pub const TERMINAL_MENU_CLEAR: Key = Key::new(1276);
+pub const TERMINAL_MENU_CLEAR: Key = Key::new(1270);
 /// "A program"
-pub const TERMINAL_PROGRAM_UNNAMED: Key = Key::new(1277);
+pub const TERMINAL_PROGRAM_UNNAMED: Key = Key::new(1271);
 
 /// ```text
 /// { $columns } × { $rows }
 /// ```
 pub fn terminal_size_readout(columns: &str, rows: &str) -> String {
-    crate::active::message(1264, &[("columns", Arg::Str(columns)), ("rows", Arg::Str(rows))])
+    crate::active::message(1258, &[("columns", Arg::Str(columns)), ("rows", Arg::Str(rows))])
 }
 
 /// ```text
 /// { $program } wants to read the clipboard
 /// ```
 pub fn terminal_clipboard_ask(program: &str) -> String {
-    crate::active::message(1278, &[("program", Arg::Str(program))])
+    crate::active::message(1272, &[("program", Arg::Str(program))])
 }

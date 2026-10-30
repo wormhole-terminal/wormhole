@@ -35,9 +35,13 @@ use crate::platform::menu::Callback;
 use crate::platform::popover::{Behavior, Button, Colours, Done, Field, Glyph, Handle, Popover, Row};
 
 /// The popover's padding, the gap between its rows, the least width it has, and how wide the path
-/// wraps.
-const PAD: f64 = 12.0;
+/// wraps. The padding follows the glass card's large corners, so nothing sits tight in them.
+const PAD: f64 = 16.0;
 const GAP: f64 = 8.0;
+/// Under a heading or a path, which stand over what follows rather than being one of a list.
+const GAP_UNDER_TITLE: f64 = 12.0;
+/// Between the buttons of a row.
+const BUTTON_GAP: f64 = 8.0;
 const MIN_WIDTH: f64 = 276.0;
 const PATH_WIDTH: f64 = 392.0;
 /// A paragraph's width: a few short lines, not a wide card.
@@ -358,6 +362,7 @@ fn build(mtm: MainThreadMarker, popover: &Popover, target: &Target, tx: &Tx) -> 
                 label.setPreferredMaxLayoutWidth(TEXT_WIDTH);
                 label.setSelectable(true);
                 stack.addArrangedSubview(&label);
+                stack.setCustomSpacing_afterView(GAP_UNDER_TITLE, &label);
                 least = least.max(TEXT_WIDTH + 2.0 * PAD);
             }
             Row::Text(text) => {
@@ -386,6 +391,7 @@ fn build(mtm: MainThreadMarker, popover: &Popover, target: &Target, tx: &Tx) -> 
                 label.setLineBreakMode(NSLineBreakMode::ByCharWrapping);
                 label.setSelectable(true);
                 stack.addArrangedSubview(&label);
+                stack.setCustomSpacing_afterView(GAP_UNDER_TITLE, &label);
             }
             Row::Field(spec) => {
                 let input = NSTextField::textFieldWithString(&NSString::from_str(&spec.value), mtm);
@@ -403,7 +409,7 @@ fn build(mtm: MainThreadMarker, popover: &Popover, target: &Target, tx: &Tx) -> 
             Row::Buttons(buttons) => {
                 let line = NSStackView::new(mtm);
                 line.setOrientation(NSUserInterfaceLayoutOrientation::Horizontal);
-                line.setSpacing(6.0);
+                line.setSpacing(BUTTON_GAP);
                 for button in buttons {
                     let ns_button = button_for(mtm, button, target, actions.len());
                     actions.push(Action {

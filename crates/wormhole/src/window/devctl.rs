@@ -242,7 +242,7 @@ impl Workspace {
         format!(
             "title row: path={path} steps={steps} words={} chip={chip} folded={} name={:.0} tint={tint} indicator={:?}\n\
              open-in: {} missing={:?} found={}\n\
-             border={:?} card={}\n\
+             card={}\n\
              extras: {}\n\
              ends: {:?} | {:?}",
             plan.fit.words,
@@ -252,7 +252,6 @@ impl Workspace {
             plan.app.app.bundle,
             plan.app.missing,
             apps.join(","),
-            crate::settings::settings(cx).title_border,
             self.path_card.is_shown(),
             crate::window::title::chips::describe(&plan),
             plan.ends.0.parts,

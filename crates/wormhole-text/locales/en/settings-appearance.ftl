@@ -56,10 +56,6 @@ settings-appearance-translucent = Also translucent
     .description = Use the opacity and blur above for these windows too
     .keywords = settings theme studio window
 
-settings-appearance-title-border = Line under the title row
-    .description = Between the bar and the terminal: always, only when output is scrolled under the bar, or never
-    .keywords = border hairline rule separator title bar toolbar
-
 settings-appearance-column-dividers = Column dividers
     .description = The lines between the sidebar, the terminal and the right panel. Off hides them in every theme; the edges still resize. Increase Contrast keeps them
     .keywords = border hairline rule separator edge columns divider
@@ -114,9 +110,6 @@ settings-appearance-group-your-fonts = Your fonts
 settings-appearance-dark = Dark
 settings-appearance-light = Light
 settings-appearance-match-system = Match system
-settings-appearance-always = Always
-settings-appearance-when-scrolled = When scrolled
-settings-appearance-never = Never
 settings-appearance-open-folder = Open folder
 settings-appearance-opaque-reduce-transparency = Reduce Transparency is on in System Settings, so every window is opaque. Your opacity applies again when it's off.
 settings-appearance-opaque-increase-contrast = Increase Contrast is on in System Settings, so every window is opaque. Your opacity applies again when it's off.

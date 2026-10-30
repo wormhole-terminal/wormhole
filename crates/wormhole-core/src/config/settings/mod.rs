@@ -35,7 +35,7 @@ use self::folder_colors::folder_color_key;
 
 pub use self::choices::{
     AgentAccess, BranchColor, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta,
-    ShellProfile, SizeUnits, ThemeMode, TitleBorder,
+    ShellProfile, SizeUnits, ThemeMode,
 };
 pub use self::keys::{APP_SETTINGS, PROJECT_SETTINGS};
 pub(crate) use self::keys::{LEGACY_SETTINGS, keys};
@@ -203,8 +203,6 @@ pub struct Settings {
     /// Icon buttons show what a click did with their own drawing (the toggles' strip filling and
     /// draining). Off, they change at once; Reduce Motion turns them off too.
     pub icon_animations: bool,
-    /// The line under the terminal's title row: always, only while content is under the bar, never.
-    pub title_border: TitleBorder,
     /// The app the title row's Open in… button opens a terminal's folder in, by its bundle
     /// identifier (`dev.zed.Zed`); empty picks the first editor found on this Mac, else Finder.
     /// An app that isn't installed any more falls back the same way.
@@ -375,7 +373,6 @@ impl Default for Settings {
             split_gaps: true,
             column_dividers: true,
             icon_animations: true,
-            title_border: TitleBorder::default(),
             open_in: String::new(),
             title_row: Some(TitleRow::default()),
             title_branch_status: true,

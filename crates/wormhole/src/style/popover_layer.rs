@@ -159,7 +159,7 @@ impl Render for Layer {
             .occlude()
             .w(px(if wide { WIDTH_PATH } else { WIDTH }))
             .gap_3()
-            .p_3()
+            .p_4()
             .cursor(CursorStyle::Arrow)
             .on_hover(cx.listener(|layer, hovered: &bool, window, cx| {
                 let on_hover = layer.open.as_ref().and_then(|open| open.popover.on_hover.clone());

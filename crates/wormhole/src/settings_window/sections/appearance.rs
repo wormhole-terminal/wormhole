@@ -11,7 +11,7 @@ use gpui_kit::component::color_picker::{ColorPicker, ColorPickerState};
 use gpui_kit::component::slider::Slider;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, SectionId as Section};
-use wormhole_core::config::{BranchColor, ThemeMode, TitleBorder};
+use wormhole_core::config::{BranchColor, ThemeMode};
 use wormhole_core::theme::tokens::{BranchTint, Color, ThemeTokens, Translucency};
 #[allow(
     clippy::wildcard_imports,
@@ -75,16 +75,6 @@ pub(super) const SETTINGS: &[Setting] = &[
         .chip(|_, _| Some(text(SETTINGS_APPEARANCE_LIQUID_GLASS_BETA).into()))
         .below(glass_held_note),
     Setting::custom("translucent", draw_translucent),
-    Setting::segmented(
-        "title-border",
-        &[
-            Segment::text(SETTINGS_APPEARANCE_ALWAYS),
-            Segment::text(SETTINGS_APPEARANCE_WHEN_SCROLLED),
-            Segment::text(SETTINGS_APPEARANCE_NEVER),
-        ],
-        |s| TitleBorder::ALL.iter().position(|b| *b == s.title_border).unwrap_or(1),
-        |s, ix| s.title_border = TitleBorder::ALL.get(ix).copied().unwrap_or_default(),
-    ),
     toggle!("column-dividers", column_dividers),
     toggle!("status-bar", status_bar),
     toggle!("icon-animations", icon_animations),

@@ -138,31 +138,6 @@ impl<'de> Deserialize<'de> for OptionAsMeta {
     }
 }
 
-/// When the line under the terminal's title row is drawn: always, only while the terminal
-/// has output scrolled under the bar (the bar then blurs it, and the line says where the bar
-/// ends), or never.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TitleBorder {
-    Always,
-    #[default]
-    Scrolled,
-    Never,
-}
-
-impl TitleBorder {
-    pub const ALL: [TitleBorder; 3] = [TitleBorder::Always, TitleBorder::Scrolled, TitleBorder::Never];
-
-    /// Whether the line is drawn, given whether content is scrolled under the bar.
-    pub fn shows(self, content_under: bool) -> bool {
-        match self {
-            TitleBorder::Always => true,
-            TitleBorder::Scrolled => content_under,
-            TitleBorder::Never => false,
-        }
-    }
-}
-
 /// Where the git branch's color comes from: the theme's own `git.branch`, the primary color
 /// in effect, or `branch_color_custom`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

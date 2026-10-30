@@ -83,7 +83,6 @@ pub const APP_SETTINGS: &[&str] = &[
     // The window's chrome, one look for every window (where the terminals are listed too); and the
     // programs the person opens folders in.
     "terminals_in",
-    "title_border",
     "open_in",
     // The glass is a look of the whole window, and a repository must not switch it on.
     "liquid_glass",
@@ -157,6 +156,8 @@ pub(crate) const LEGACY_SETTINGS: &[&str] = &[
     "title_ports",
     "title_pull_request",
     "control_read",
+    // The line under the title row went with the blurred lines it marked the edge of.
+    "title_border",
 ];
 
 /// Every key a settings file can have, sorted.
