@@ -59,6 +59,15 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   Duplicate instead of saving over it. While Studio previews a theme that isn't the one in use, a chip says
   so, with Use to switch to it.
 
+### Fixed
+
+- The folder's card in the title row has room around its contents, and a long path breaks only between
+  folders, never inside a name, with the folder's own name stressed.
+- Persistent terminals keep working after Wormhole was replaced on disk while it was running (an update made
+  outside the app, say): a new session host used to refuse the app because its executable was gone, and the
+  terminal ran inside the app instead. The host now falls back to the kernel's record of the app's
+  signature. This holds from this version on: the running app must already have the fix.
+
 ## [1.5.0] - 2026-10-29
 
 ### Added
