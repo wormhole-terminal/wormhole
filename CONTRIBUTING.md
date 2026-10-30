@@ -88,19 +88,31 @@ real settings, repositories or agents. The commands are documented at the top of
 ## Versioning
 
 Versions are `MAJOR.MINOR.PATCH` as in [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Before 1.0:
+Wormhole is an app, so its public API is what people and their scripts rely on: their data, settings
+and `.wormhole/` folders, the `Wormhole` command line and its socket protocol, agent hooks, the
+`WORMHOLE_*` variables, the escape sequences it answers, and the Macs and macOS versions it runs on.
+Since 1.0:
 
-- A **minor** version (0.3.0 → 0.4.0) brings new features, and anything that changes what users
-  already have: their data, settings, permissions or identifiers. A database migration, a config key
-  that moves, a new permission the app asks for and a renamed folder or variable all make a minor.
-- A **patch** version (0.3.0 → 0.3.1) is fixes only.
+- A **major** version (1.4.0 → 2.0.0) breaks something people rely on, so they have to act: settings
+  or data that stop being read with no migration, an incompatible change to the command line, its
+  protocol or the hooks, a removed variable or sequence, dropping a macOS version or Intel Macs. If the
+  old way can keep working beside the new one, it does, and the change is a minor instead.
+- A **minor** version (1.4.0 → 1.5.0) adds without breaking: new features (flagged ones too), new
+  commands, options and sequences, a database migration or a moved config key the app carries over by
+  itself, a new permission the app asks for, a deprecation that still works, and larger speed or design
+  work that leaves workflows as they were.
+- A **patch** version (1.4.0 → 1.4.1) is fixes only: bugs, crashes, drawing and speed regressions. No
+  migration, no new setting and no new permission.
+- The question to ask: after updating, does someone have to change something (major), gain something
+  (minor), or just meet fewer bugs (patch)?
+- Before 1.0, a minor took both a major's and a minor's place.
 - A security fix always ships as a patch on the latest version as soon as it is ready; it doesn't wait
   for the next minor.
-- A prerelease (`0.4.0-beta.1`) is published as a GitHub prerelease and is never offered as an update
+- A prerelease (`1.5.0-beta.1`) is published as a GitHub prerelease and is never offered as an update
   on the Stable channel.
-- A build of `main` is numbered after the last release: `0.4.1-dev.12` after `0.4.0` (12 commits since
+- A build of `main` is numbered after the last release: `1.5.1-dev.12` after `1.5.0` (12 commits since
   its tag). Only the Unstable channel gets it (see Releases), and the next release sorts above it.
-- `version` in `Cargo.toml` changes only in a release commit (`chore(release): 0.3.1`, made by
+- `version` in `Cargo.toml` changes only in a release commit (`chore(release): 1.5.1`, made by
   `scripts/release.sh`). Between releases it is the last release's number.
 
 ## Commits
