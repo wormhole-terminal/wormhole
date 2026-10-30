@@ -1,4 +1,5 @@
 use super::*;
+use crate::storage::store::front_last;
 
 #[test]
 fn round_trips_windows_sessions_terminals_notes_and_tasks() {
@@ -239,4 +240,21 @@ fn each_window_keeps_its_own_groups_and_order() {
         .map(|w| serde_json::from_str(w.layout.as_deref().unwrap_or("{}")).expect("parses"))
         .collect();
     assert_eq!(restored, [first, second]);
+}
+
+#[test]
+fn the_front_window_is_remembered_and_opens_last() {
+    let dir = temp_dir("front-window");
+    let store = Store::open_at(&dir).expect("opens");
+    assert_eq!(store.front_window().expect("reads"), None);
+    store.save_front_window(2).expect("saves");
+    assert_eq!(store.front_window().expect("reads"), Some(2));
+
+    let mut windows = vec![window(1, vec![]), window(2, vec![]), window(3, vec![])];
+    front_last(&mut windows, Some(2));
+    assert_eq!(windows.iter().map(|w| w.id).collect::<Vec<_>>(), [1, 3, 2]);
+    // One that is gone, or none saved, leaves the order as it was.
+    front_last(&mut windows, Some(9));
+    front_last(&mut windows, None);
+    assert_eq!(windows.iter().map(|w| w.id).collect::<Vec<_>>(), [1, 3, 2]);
 }

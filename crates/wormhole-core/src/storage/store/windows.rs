@@ -9,6 +9,16 @@ use super::records::{NoteRecord, SessionRecord, SplitRecord, TaskRecord, WindowR
 use super::sessions::{delete_session_rows, write_session};
 use super::{Store, exec};
 
+const FRONT_WINDOW_KEY: &str = "front_window";
+
+/// Put the window `front` last: windows open in this order and each comes to the front as it opens,
+/// so the one that was in front before is in front again. Order is otherwise kept.
+pub fn front_last(windows: &mut [WindowRecord], front: Option<i64>) {
+    if let Some(at) = front.and_then(|id| windows.iter().position(|w| w.id == id)) {
+        windows[at..].rotate_left(1);
+    }
+}
+
 impl Store {
     /// Every saved window, in the order they were first opened.
     pub fn load(&self) -> Result<Vec<WindowRecord>> {
@@ -90,6 +100,17 @@ impl Store {
                 .collect::<rusqlite::Result<_>>()?;
         }
         Ok(windows)
+    }
+
+    /// Remember which window was in front, so the next launch brings the same one forward again.
+    /// Kept in `meta`, not a column of `windows`: it describes the app's run, not a window.
+    pub fn save_front_window(&self, id: i64) -> Result<()> {
+        self.set_meta(FRONT_WINDOW_KEY, &id.to_string())
+    }
+
+    /// The window that was in front when the app last saved, if it is still saved.
+    pub fn front_window(&self) -> Result<Option<i64>> {
+        Ok(self.meta(FRONT_WINDOW_KEY)?.and_then(|text| text.parse().ok()))
     }
 
     /// Replace one window's sessions and splits (and the window's own row); other windows'

@@ -17,6 +17,7 @@ use gpui_kit::*;
 use wormhole_core::config::profile::ProfileList;
 use wormhole_core::ipc;
 use wormhole_core::storage::paths::DataRoot;
+use wormhole_core::storage::store::front_last;
 
 use crate::app::menus;
 use crate::app::tick::{dispatch_hook, handle_menu_command, tick};
@@ -54,13 +55,16 @@ pub(crate) fn start(
     upgrade_legacy_hooks(cx);
     cx.background_spawn(async { crate::platform::default_app::upgrade_legacy_default() }).detach();
     let data = profiles::ProfileData::open(&paths);
-    let saved = data
+    let mut saved = data
         .store
         .as_ref()
         .and_then(|s| {
             s.load().inspect_err(|err| tracing::error!("loading saved sessions failed: {err:#}")).ok()
         })
         .unwrap_or_default();
+    // The window that was in front opens last, and so is in front again (each comes forward as it opens).
+    let front = data.store.as_ref().and_then(|s| s.front_window().ok().flatten());
+    front_last(&mut saved, front);
     let launch_hosts = crate::window::hosting::scan_at_launch(&root, &profiles, data.store.as_ref());
     let (menu, menu_commands) = status_item::MenuState::new();
     let (display_changed, display_options) = smol::channel::unbounded::<()>();
@@ -163,6 +167,12 @@ pub(crate) fn start(
     }
     for window in saved {
         open_workspace_window(Some(window), None, cx);
+    }
+    // A window restored full screen comes forward as it opens, a windowed one once its first frame is
+    // drawn (`window_open::reveal`, a task): so the one that was in front is brought forward by a task
+    // queued after those, and lands last whatever the order of the others was.
+    if let Some(front) = front {
+        crate::window::window_lifecycle::bring_forward_later(front, cx);
     }
     crate::window::hosting::adopt_orphans(cx);
     menus::sync(cx);

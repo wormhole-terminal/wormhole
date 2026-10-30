@@ -31,6 +31,7 @@ use rusqlite::{Connection, OptionalExtension};
 pub use agent_grants::{AgentGrantKey, AgentGrantRow};
 pub use claims::ClaimRecord;
 pub use records::{NoteRecord, SessionRecord, SplitRecord, TaskRecord, WindowRecord, is_blank};
+pub use windows::front_last;
 
 use crate::platform::paths;
 use crate::storage::paths::{data_dir, data_dir_name};

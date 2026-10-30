@@ -272,12 +272,32 @@ pub(crate) fn window_closed(cx: &mut App, id: WindowId) {
     }
 }
 
+/// Bring window `id` to the front once the tasks queued so far have run (the reveals of windows that
+/// opened with the system's animation). Not in background mode, which never takes the focus
+/// (`background::activate_window`).
+pub(crate) fn bring_forward_later(id: i64, cx: &mut App) {
+    cx.spawn(async move |cx| {
+        cx.update(|cx| {
+            let Some(window) = app(cx).windows.iter().find(|w| w.id == id).cloned() else { return };
+            app_mut(cx).front = id;
+            let _ = window.handle.update(cx, |_, window, cx| crate::background::activate_window(window, cx));
+        });
+    })
+    .detach();
+}
+
 /// Everything that is worth keeping, for every window (scrollback included).
 pub(crate) fn save_all(cx: &mut App) {
     app_mut(cx).quitting = true;
     let windows = app(cx).windows.clone();
     for window in &windows {
         AppState::with_workspace(window, cx, |ws, win, cx| ws.persist(win, cx));
+    }
+    // The window the person was in, for the next launch.
+    if let (Some(front), Some(store)) = (AppState::front_window(cx), app(cx).store.as_ref())
+        && let Err(err) = store.save_front_window(front.id)
+    {
+        tracing::warn!("saving which window was in front: {err:#}");
     }
     app(cx).checkpoint_stores();
 }
