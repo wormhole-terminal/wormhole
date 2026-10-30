@@ -15,6 +15,7 @@
 //! from metadata alone, whether a file may have changed since it was read, so pollers re-read only what
 //! changed.
 
+mod clone;
 mod folders;
 pub mod listing;
 mod prefix;
@@ -22,6 +23,7 @@ mod private;
 mod rename;
 mod viewing;
 
+pub use clone::clone_dir;
 pub use folders::{
     Cut, FOLDERS_CAP, Folders, SCAN_CAP, has_folder, hostile_char, list_folders, list_folders_where,
 };

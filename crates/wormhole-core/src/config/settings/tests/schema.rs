@@ -59,6 +59,7 @@ fn the_final_design_keys_have_their_defaults() {
     assert!(!unset.allow_window_ops, "programs can't move the window until asked");
     assert!(!unset.allow_title_report, "programs can't read the window title back until asked");
     assert!(unset.worktree_base.is_empty(), "worktrees go beside the repository until asked");
+    assert!(!unset.worktree_clone_build_folders, "worktrees start without cloned build folders until asked");
 }
 
 #[test]

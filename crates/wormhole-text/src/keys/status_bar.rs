@@ -6,14 +6,14 @@
 use crate::key::Key;
 
 /// "Persistent"
-pub const STATUS_BAR_HOSTING_PERSISTENT: Key = Key::new(1197);
+pub const STATUS_BAR_HOSTING_PERSISTENT: Key = Key::new(1200);
 /// "This terminal keeps running when Wormhole quits or updates."
-pub const STATUS_BAR_HOSTING_PERSISTENT_TOOLTIP: Key = Key::new(1198);
+pub const STATUS_BAR_HOSTING_PERSISTENT_TOOLTIP: Key = Key::new(1201);
 /// "Connecting…"
-pub const STATUS_BAR_HOSTING_CONNECTING: Key = Key::new(1199);
+pub const STATUS_BAR_HOSTING_CONNECTING: Key = Key::new(1202);
 /// "Wormhole is still connecting to this terminal's session host."
-pub const STATUS_BAR_HOSTING_CONNECTING_TOOLTIP: Key = Key::new(1200);
+pub const STATUS_BAR_HOSTING_CONNECTING_TOOLTIP: Key = Key::new(1203);
 /// "In app"
-pub const STATUS_BAR_HOSTING_IN_APP: Key = Key::new(1201);
+pub const STATUS_BAR_HOSTING_IN_APP: Key = Key::new(1204);
 /// "This terminal runs inside Wormhole and ends when Wormhole quits or updates."
-pub const STATUS_BAR_HOSTING_IN_APP_TOOLTIP: Key = Key::new(1202);
+pub const STATUS_BAR_HOSTING_IN_APP_TOOLTIP: Key = Key::new(1205);

@@ -67,4 +67,22 @@ impl Folder {
         let rc = unsafe { libc::renameatx_np(fd, from.as_ptr(), fd, to.as_ptr(), libc::RENAME_EXCL) };
         if rc == 0 { Ok(()) } else { Err(io::Error::last_os_error()) }
     }
+
+    /// `renameatx_np` with `RENAME_EXCL` from this folder's descriptor to `dest`'s.
+    pub(crate) fn move_no_replace_into(&self, from: &OsStr, dest: &Self, to: &OsStr) -> io::Result<()> {
+        let (from, to) = (c_name(from)?, c_name(to)?);
+        // SAFETY: both descriptors are open for as long as the folders, both names are NUL-terminated and
+        // outlive the call; the call only reads them.
+        #[allow(unsafe_code)]
+        let rc = unsafe {
+            libc::renameatx_np(
+                self.0.as_raw_fd(),
+                from.as_ptr(),
+                dest.0.as_raw_fd(),
+                to.as_ptr(),
+                libc::RENAME_EXCL,
+            )
+        };
+        if rc == 0 { Ok(()) } else { Err(io::Error::last_os_error()) }
+    }
 }

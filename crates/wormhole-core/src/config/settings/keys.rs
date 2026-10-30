@@ -134,6 +134,8 @@ pub const APP_SETTINGS: &[&str] = &[
     "clipboard_write",
     // Where worktrees go is the person's own folder layout; a repository must not pick it.
     "worktree_base",
+    // Cloning folders into a worktree is the person's choice: a repository must not turn it on.
+    "worktree_clone_build_folders",
     // Which colour each folder wears is the person's too: a repository can tint its own title row
     // (`project_color`), not recolour the folders in everyone's windows.
     "folder_colors",

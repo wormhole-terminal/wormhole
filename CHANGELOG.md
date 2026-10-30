@@ -46,6 +46,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Theme Studio's theme menu has Move to Trash… for your own themes, and undo and redo have buttons in the
   title row. Moving a theme to the Trash, there or from its card in Settings → Appearance, asks first, and a
   theme you use is replaced by the default for its appearance instead of leaving nothing to show.
+- Settings → Terminal → Worktrees has a switch, off by default, that starts each new worktree with clones of
+  the main checkout's ignored `node_modules` and `target` folders, so installs and builds in it start warm.
+  It works when both are on the same APFS volume; the clones share disk space with the originals until a file
+  changes, and are left out of Time Machine.
 
 ### Changed
 

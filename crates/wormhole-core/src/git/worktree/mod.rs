@@ -16,6 +16,10 @@
 //! to its terminals as `WORMHOLE_PORT` and `WORMHOLE_PORTS` ([`Worktree::env`]), so the dev servers
 //! of several worktrees of one repository don't fight over the same port.
 
+mod build_folders;
+
+pub use build_folders::clone_build_folders;
+
 use std::io::ErrorKind;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, TcpListener};
 use std::path::{Path, PathBuf};
@@ -52,6 +56,10 @@ pub struct Worktree {
     /// The first of its [`PORT_BLOCK`] ports; `None` for one made before worktrees had ports.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port: Option<u16>,
+    /// The build folders cloned into it when it was made ([`clone_build_folders`]), relative to
+    /// `folder`: [`remove`] deletes exactly these. Empty for one made without or before that.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cloned: Vec<PathBuf>,
 }
 
 impl Worktree {
@@ -131,7 +139,7 @@ pub fn plan(repo: &Path, branch: &str, base: Option<&Path>) -> Result<Worktree, 
     if folder.exists() {
         return Err(format!("{} already exists", folder.display()));
     }
-    Ok(Worktree { repo: repo.to_path_buf(), branch, folder, port: None })
+    Ok(Worktree { repo: repo.to_path_buf(), branch, folder, port: None, cloned: Vec::new() })
 }
 
 /// Whether `repo` has a local branch called `branch`.
@@ -162,7 +170,8 @@ pub fn is_dirty(folder: &Path) -> Result<bool> {
 
 /// Remove `worktree`'s folder from disk and from the repository, keeping its branch. Refused when
 /// the folder has changes, and when it isn't a worktree of that repository any more (something
-/// else is there now). A folder that is already gone leaves nothing to do.
+/// else is there now). The build folders cloned into it are deleted first (a failure there leaves the
+/// worktree in place). A folder that is already gone leaves nothing to do.
 pub fn remove(worktree: &Worktree) -> Result<()> {
     if !worktree.folder.exists() {
         return Ok(());
@@ -175,6 +184,7 @@ pub fn remove(worktree: &Worktree) -> Result<()> {
     if is_dirty(&worktree.folder)? {
         anyhow::bail!("{} has uncommitted changes", worktree.folder.display());
     }
+    build_folders::remove_clones(worktree)?;
     GitWrite::worktree_remove(&worktree.repo, &worktree.folder)
 }
 
@@ -308,6 +318,7 @@ mod tests {
             branch: format!("b{port}"),
             folder: PathBuf::from(format!("/w/{port}")),
             port: Some(port),
+            cloned: Vec::new(),
         };
         let mut set = Worktrees::default();
         assert_eq!(set.free_ports(|_| true), Some(PORTS_FROM));
@@ -438,13 +449,19 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let kept = dir.path().join("kept");
         std::fs::create_dir_all(&kept).expect("mkdir");
-        let one =
-            Worktree { repo: PathBuf::from("/r"), branch: "a".into(), folder: kept.clone(), port: None };
+        let one = Worktree {
+            repo: PathBuf::from("/r"),
+            branch: "a".into(),
+            folder: kept.clone(),
+            port: None,
+            cloned: Vec::new(),
+        };
         let gone = Worktree {
             repo: PathBuf::from("/r"),
             branch: "b".into(),
             folder: dir.path().join("gone"),
             port: None,
+            cloned: Vec::new(),
         };
         let mut set = Worktrees::default();
         set.record(one.clone());

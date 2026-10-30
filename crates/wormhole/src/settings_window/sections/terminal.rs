@@ -73,6 +73,7 @@ pub(super) const SETTINGS: &[Setting] = &[
             .into_any_element()
     })
     .describe(describe_worktree_base),
+    toggle!("worktree-clone-build-folders", worktree_clone_build_folders),
     toggle!("bell-sound", bell_sound),
     toggle!("bell-visual", bell_visual),
     Setting::segmented(

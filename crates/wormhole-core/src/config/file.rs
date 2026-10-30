@@ -170,7 +170,7 @@ mod tests {
         assert!(new.starts_with("\u{feff}{\n  \"$schema\": \"https://example.com/config.json\",\n  // My theme.\n  \"theme\": \"Dracula\", /* keep */\n  \"x-mine\": { \"a\": [1, 2] },\n  \"font_size\": 14,\n"), "{new}");
         assert!(
             new.ends_with(
-                "  \"worktree_base\": \"\",\n  \"feature_flags\": {},\n  \"features\": {}\n}\n// end\n"
+                "  \"worktree_base\": \"\",\n  \"worktree_clone_build_folders\": false,\n  \"feature_flags\": {},\n  \"features\": {}\n}\n// end\n"
             ),
             "{new}"
         );

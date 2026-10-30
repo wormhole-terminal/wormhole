@@ -28,6 +28,7 @@ mod diff;
 mod diff_text;
 pub mod discover;
 mod head;
+mod ignored;
 mod lfs;
 mod log;
 mod message;

@@ -55,9 +55,18 @@ pub(super) const TERMINAL: &[Group] = &[
     ),
     group(
         SETTINGS_TERMINAL_GROUP_WORKTREES,
-        &[entry("worktree-base", SETTINGS_TERMINAL_WORKTREE_BASE, &["worktree_base"])
-            .with_description(SETTINGS_TERMINAL_WORKTREE_BASE_DESCRIPTION)
-            .with_keywords(SETTINGS_TERMINAL_WORKTREE_BASE_KEYWORDS)],
+        &[
+            entry("worktree-base", SETTINGS_TERMINAL_WORKTREE_BASE, &["worktree_base"])
+                .with_description(SETTINGS_TERMINAL_WORKTREE_BASE_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_WORKTREE_BASE_KEYWORDS),
+            entry(
+                "worktree-clone-build-folders",
+                SETTINGS_TERMINAL_WORKTREE_CLONE_BUILD_FOLDERS,
+                &["worktree_clone_build_folders"],
+            )
+            .with_description(SETTINGS_TERMINAL_WORKTREE_CLONE_BUILD_FOLDERS_DESCRIPTION)
+            .with_keywords(SETTINGS_TERMINAL_WORKTREE_CLONE_BUILD_FOLDERS_KEYWORDS),
+        ],
     ),
     group(
         SETTINGS_TERMINAL_GROUP_BELL,

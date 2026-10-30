@@ -63,6 +63,10 @@ settings-terminal-worktree-base = Worktrees folder
     .description = Where Shell → New Terminal in New Worktree puts a worktree: beside the repository in <name>-worktrees, or under the folder worktree_base names in config.json
     .keywords = worktree worktrees git branch folder base parallel agents
 
+settings-terminal-worktree-clone-build-folders = Start new worktrees with build folders
+    .description = When Wormhole makes a worktree, it clones the main checkout's ignored node_modules and target folders into it, so installs and builds start warm. Clones share disk space with the originals until a file changes. Only when both are on the same APFS volume; the clones are left out of Time Machine.
+    .keywords = worktree worktrees clone copy node_modules target cargo pnpm npm build cache install apfs warm
+
 ## Bell
 
 settings-terminal-group-bell = Bell
