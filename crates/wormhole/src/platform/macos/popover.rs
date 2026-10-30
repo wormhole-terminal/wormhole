@@ -21,18 +21,22 @@ use objc2::{
 };
 use objc2_app_kit::{
     NSAccessibility as _, NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua,
-    NSAppearanceNameDarkAqua, NSBezelStyle, NSBox, NSBoxType, NSButton, NSCellImagePosition, NSControl,
-    NSControlSize, NSControlTextEditingDelegate, NSEvent, NSFont, NSLayoutAttribute, NSLineBreakMode,
-    NSPopover, NSPopoverBehavior, NSPopoverDelegate, NSStackView, NSTextField, NSTextFieldDelegate,
-    NSTextView, NSTrackingArea, NSTrackingAreaOptions, NSUserInterfaceLayoutOrientation, NSView,
-    NSViewController,
+    NSAppearanceNameDarkAqua, NSBezelStyle, NSBox, NSBoxType, NSButton, NSCellImagePosition, NSColor,
+    NSControl, NSControlSize, NSControlTextEditingDelegate, NSEvent, NSFont, NSFontAttributeName,
+    NSForegroundColorAttributeName, NSLayoutAttribute, NSLineBreakMode, NSPopover, NSPopoverBehavior,
+    NSPopoverDelegate, NSStackView, NSTextField, NSTextFieldDelegate, NSTextView, NSTrackingArea,
+    NSTrackingAreaOptions, NSUserInterfaceLayoutOrientation, NSView, NSViewController,
 };
-use objc2_foundation::{NSEdgeInsets, NSNotification, NSRect, NSRectEdge, NSSize, NSString};
+use objc2_foundation::{
+    NSEdgeInsets, NSMutableAttributedString, NSNotification, NSRange, NSRect, NSRectEdge, NSSize, NSString,
+};
 use wormhole_core::theme::tokens::Appearance;
 
 use super::{appkit, rows, swatches};
 use crate::platform::menu::Callback;
-use crate::platform::popover::{Behavior, Button, Colours, Done, Field, Glyph, Handle, Popover, Row};
+use crate::platform::popover::{
+    Behavior, Button, Colours, Done, Field, Glyph, Handle, Popover, Row, path_lines,
+};
 
 /// The popover's padding, the gap between its rows, the least width it has, and how wide the path
 /// wraps. The padding follows the glass card's large corners, so nothing sits tight in them.
@@ -49,6 +53,7 @@ const TEXT_WIDTH: f64 = 320.0;
 /// `NSFontWeightRegular` and `NSFontWeightSemibold`, which AppKit gives as numbers from -1 to 1.
 const REGULAR: f64 = 0.0;
 const SEMIBOLD: f64 = 0.3;
+const MEDIUM: f64 = 0.23;
 
 /// What a control did, as the app's task is told.
 enum Event {
@@ -386,10 +391,7 @@ fn build(mtm: MainThreadMarker, popover: &Popover, target: &Target, tx: &Tx) -> 
                 least = least.max(TEXT_WIDTH + 2.0 * PAD);
             }
             Row::Path(text) => {
-                let label = NSTextField::wrappingLabelWithString(&NSString::from_str(text), mtm);
-                label.setPreferredMaxLayoutWidth(PATH_WIDTH);
-                label.setLineBreakMode(NSLineBreakMode::ByCharWrapping);
-                label.setSelectable(true);
+                let label = path_label(mtm, text);
                 stack.addArrangedSubview(&label);
                 stack.setCustomSpacing_afterView(GAP_UNDER_TITLE, &label);
             }
@@ -500,6 +502,51 @@ fn build(mtm: MainThreadMarker, popover: &Popover, target: &Target, tx: &Tx) -> 
     stack.setFrameSize(size);
     stack.setAppearance(appearance(popover.appearance).as_deref());
     Built { view: Retained::into_super(stack), size, actions, field, colours }
+}
+
+/// The path as its card's title: broken only after a `/`, the folders it is in muted and its own
+/// name in the text colour, as the card drawn in GPUI shows it. Its lines are made here, so a
+/// selection would copy line breaks the path doesn't have: it isn't selectable (Copy path is beside
+/// it), and VoiceOver reads the path itself.
+fn path_label(mtm: MainThreadMarker, path: &str) -> Retained<NSTextField> {
+    let size = NSFont::systemFontSize();
+    let plain = NSFont::systemFontOfSize_weight(size, REGULAR);
+    let medium = NSFont::systemFontOfSize_weight(size, MEDIUM);
+    // Measured in the heavier weight throughout: a line is never wider than measured.
+    let measure = NSTextField::labelWithString(&NSString::new(), mtm);
+    measure.setFont(Some(&medium));
+    let lines = path_lines(path, PATH_WIDTH, |line| {
+        measure.setStringValue(&NSString::from_str(line));
+        measure.intrinsicContentSize().width
+    });
+    let shown = lines.join("\n");
+    let name_at = shown.rfind('/').map_or(0, |slash| slash + 1);
+    let utf16 = |s: &str| s.encode_utf16().count();
+    let text = NSMutableAttributedString::initWithString(
+        NSMutableAttributedString::alloc(),
+        &NSString::from_str(&shown),
+    );
+    let folders = NSRange::new(0, utf16(&shown[..name_at]));
+    let name = NSRange::new(folders.length, utf16(&shown[name_at..]));
+    let muted = NSColor::secondaryLabelColor();
+    let ink = NSColor::labelColor();
+    // SAFETY: the attribute names are AppKit's constants, the values the objects AppKit documents for
+    // them, and both ranges lie inside the string.
+    #[allow(unsafe_code)]
+    unsafe {
+        text.addAttribute_value_range(NSFontAttributeName, plain.as_ref(), folders);
+        text.addAttribute_value_range(NSForegroundColorAttributeName, muted.as_ref(), folders);
+        text.addAttribute_value_range(NSFontAttributeName, medium.as_ref(), name);
+        text.addAttribute_value_range(NSForegroundColorAttributeName, ink.as_ref(), name);
+    }
+    let label = NSTextField::wrappingLabelWithString(&NSString::new(), mtm);
+    label.setAttributedStringValue(&text);
+    label.setPreferredMaxLayoutWidth(PATH_WIDTH);
+    // Only a name wider than the card breaks inside: there is nowhere else.
+    label.setLineBreakMode(NSLineBreakMode::ByCharWrapping);
+    label.setSelectable(false);
+    label.setAccessibilityLabel(Some(&NSString::from_str(path)));
+    label
 }
 
 /// A bordered push button: the title, a small picture, the control size of a popover.

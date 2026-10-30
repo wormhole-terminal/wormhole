@@ -206,6 +206,24 @@ impl Handle {
     }
 }
 
+/// A path cut into lines no wider than `max` that break only after a `/`, so every folder's name
+/// stays whole; a name wider than `max` on its own gets a line of its own (the platform breaks it
+/// there). `width` measures a line as it is drawn.
+pub fn path_lines(path: &str, max: f64, width: impl Fn(&str) -> f64) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut line = String::new();
+    for segment in path.split_inclusive('/') {
+        if !line.is_empty() && width(&format!("{line}{segment}")) > max {
+            lines.push(std::mem::take(&mut line));
+        }
+        line.push_str(segment);
+    }
+    if !line.is_empty() || lines.is_empty() {
+        lines.push(line);
+    }
+    lines
+}
+
 // The text form is for devctl's `popover` and for tests.
 #[cfg(any(test, feature = "devctl"))]
 impl Popover {
@@ -288,7 +306,7 @@ mod tests {
     use gpui_kit::hsla;
     use wormhole_core::theme::tokens::Appearance;
 
-    use super::{Behavior, Button, Colours, Custom, Field, Glyph, Popover, Row, hex};
+    use super::{Behavior, Button, Colours, Custom, Field, Glyph, Popover, Row, hex, path_lines};
     use crate::platform::menu::{Item, Swatch, Swatches};
 
     fn swatches(selected: Option<usize>) -> Swatches {
@@ -354,5 +372,18 @@ mod tests {
     #[test]
     fn hex_is_the_srgb_bytes() {
         assert_eq!(hex(hsla(0.0, 1.0, 0.5, 1.0)), "#ff0000");
+    }
+
+    #[test]
+    fn a_path_breaks_only_after_a_slash() {
+        // One point a character.
+        let width = |line: &str| line.chars().count() as f64;
+        assert_eq!(path_lines("~/Projects/terminal", 40.0, width), ["~/Projects/terminal"]);
+        assert_eq!(
+            path_lines("/private/tmp/a-long-folder-name/repo", 16.0, width),
+            ["/private/tmp/", "a-long-folder-name/", "repo"]
+        );
+        assert_eq!(path_lines("/", 16.0, width), ["/"]);
+        assert_eq!(path_lines("", 16.0, width), [""]);
     }
 }
