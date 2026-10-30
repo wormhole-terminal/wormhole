@@ -141,6 +141,7 @@
 //!                   (`connecting`, `headless`, `detached`, `lost`), or `local`)
 //!   reattach        attach those terminals to their hosts again, as a launch does (on screen with a
 //!                   repaint, the rest headless); prints their ids
+//!   minimise        put this window in the Dock (`state` has a `window minimised` line while it is)
 //!   quit-keep       quit as ⌘Q does: every hosted terminal is let go of and goes on running for the
 //!                   next launch (`quit` is the same quit)
 //!   rename <n> <name>   name the n-th terminal as a project's layout would (as `state` numbers them)

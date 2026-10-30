@@ -9,6 +9,7 @@
 
 use gpui_kit::*;
 
+use crate::terminal_view::Status;
 use crate::window::Workspace;
 
 impl Workspace {
@@ -27,6 +28,10 @@ impl Workspace {
         }
         let fresh = terminal.summary();
         let moved = fresh.cwd != pane.summary.cwd;
+        // "Done, unseen" is part of the saved row (it survives a restart with the host).
+        if (fresh.status == Status::Done) != (pane.summary.status == Status::Done) {
+            self.dirty = true;
+        }
         let old = std::mem::replace(&mut self.sessions[ix].pane.summary, fresh);
         self.publish_summary_change(ix, &old, cx);
         if moved {

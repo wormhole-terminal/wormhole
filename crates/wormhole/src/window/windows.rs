@@ -288,7 +288,11 @@ impl Workspace {
     /// Save the window, its sessions and their scrollback (on the way out).
     pub(crate) fn persist(&mut self, window: &Window, cx: &mut Context<Self>) {
         let display = window.display(cx).map(|display| display.id());
-        self.bounds = window_bounds::encode(window.window_bounds(), display);
+        self.bounds = window_bounds::encode(
+            window.window_bounds(),
+            display,
+            crate::platform::window::is_minimised(window),
+        );
         self.save(cx);
         self.save_scrollback(cx);
         self.keep_changes_now(cx);
@@ -312,7 +316,8 @@ impl Workspace {
     pub(super) fn track_window(&mut self, window: &mut Window, cx: &App) {
         let bounds = window.window_bounds();
         let display = || window.display(cx).map(|display| display.id());
-        if let Some(moved) = self.bounds_watch.moved(bounds, display, self.bounds.as_deref()) {
+        let minimised = crate::platform::window::is_minimised(window);
+        if let Some(moved) = self.bounds_watch.moved(bounds, display, minimised, self.bounds.as_deref()) {
             self.bounds = Some(moved);
             self.dirty = true;
         }

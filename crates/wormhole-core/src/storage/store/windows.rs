@@ -39,7 +39,7 @@ impl Store {
 
         let mut sessions = conn.prepare_cached(
             "SELECT id, name, tasks_collapsed, notes_collapsed, pinned, split_id, forget_text,
-                    agent_hidden FROM sessions
+                    agent_hidden, done_unseen FROM sessions
              WHERE window_id = ? ORDER BY position",
         )?;
         let mut splits =
@@ -66,6 +66,7 @@ impl Store {
                         split_id: row.get(5)?,
                         forget_text: row.get(6)?,
                         agent_hidden: row.get(7)?,
+                        done_unseen: row.get(8)?,
                         ..Default::default()
                     })
                 })?

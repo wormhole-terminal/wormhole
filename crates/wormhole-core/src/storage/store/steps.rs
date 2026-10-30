@@ -211,3 +211,10 @@ pub(super) const V11_AGENT_ACCESS: &str = "
 pub(super) const V12_AGENT_HIDDEN: &str = "
     ALTER TABLE sessions ADD COLUMN agent_hidden INTEGER NOT NULL DEFAULT 0;
 ";
+
+/// Version 12 to 13: a terminal can have finished while nobody looked (`sessions.done_unseen`, the
+/// "Done" dot), which a restart now keeps for a terminal that reattaches to its session host. No
+/// existing terminal has it: whatever was unseen before the update is not known.
+pub(super) const V13_DONE_UNSEEN: &str = "
+    ALTER TABLE sessions ADD COLUMN done_unseen INTEGER NOT NULL DEFAULT 0;
+";

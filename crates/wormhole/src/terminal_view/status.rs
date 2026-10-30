@@ -269,6 +269,15 @@ impl TerminalView {
         }
     }
 
+    /// The terminal reattached to a session host whose program had finished while nobody looked: it
+    /// shows "Done" again until it is seen, as it did before the app restarted. Only for a terminal that
+    /// has not heard from its program yet (a fresh view).
+    pub(crate) fn restore_done_unseen(&mut self) {
+        if self.status == Status::Idle {
+            self.set_status(Status::Done);
+        }
+    }
+
     /// Whether the person hid this terminal from the programs that control Wormhole.
     pub fn agent_hidden(&self) -> bool {
         self.agent_hidden

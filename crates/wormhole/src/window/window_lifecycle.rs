@@ -158,15 +158,22 @@ fn open_with_entrance(
             None,
         ),
     };
+    // A window saved in the Dock comes back there: it opens behind and unfocused, out of sight (no
+    // animation, no flash on the screen), and is minimised once it exists. It never takes the focus or
+    // the front, which is what a window opened with the Dock's yellow light would not do either.
+    let minimised = record.bounds.as_deref().is_some_and(window_bounds::minimised)
+        && matches!(bounds, WindowBounds::Windowed(_));
+    let activation = if minimised { Activation::Behind } else { activation };
     // A terminal window opens and closes with the system's animation: out of sight until its first frame is
     // drawn (`window_open::reveal`), unless it grows from a torn-off terminal's chip, the intro brings it in,
     // or it comes back full screen or maximized, which the system's own transition handles.
     let animated = entrance == Entrance::System
+        && !minimised
         && activation == Activation::Front
         && matches!(bounds, WindowBounds::Windowed(_))
         && scaling::terminal_window_animates(profile, crate::window::grow::active(id, cx), cx);
     let options = WindowOptions {
-        show: !animated,
+        show: !(animated || minimised),
         window_bounds: Some(bounds),
         display_id: display.map(|display| display.id()),
         titlebar: Some(TitlebarOptions {
@@ -193,6 +200,9 @@ fn open_with_entrance(
             let _ = handle.update(cx, |_, window, _| {
                 window.observe_window_appearance(|_, cx| cx.defer(sync_system_look)).detach();
             });
+            if minimised {
+                let _ = handle.update(cx, |_, window, _| crate::platform::window::minimise(window));
+            }
             let state = app_mut(cx);
             state.windows.push(OpenWindow {
                 id,
@@ -270,6 +280,14 @@ pub(crate) fn window_closed(cx: &mut App, id: WindowId) {
     if state.windows.is_empty() && !state.quitting {
         cx.quit();
     }
+}
+
+/// The window to bring forward once `saved` (in the order they open) are open: the one that was in
+/// front, or when it was in the Dock the one before it; `None` when all of them are.
+pub(crate) fn front_to_restore(saved: &[WindowRecord]) -> Option<i64> {
+    let windows: Vec<(i64, bool)> =
+        saved.iter().map(|w| (w.id, w.bounds.as_deref().is_some_and(window_bounds::minimised))).collect();
+    window_bounds::front_after_restore(&windows)
 }
 
 /// Bring window `id` to the front once the tasks queued so far have run (the reveals of windows that

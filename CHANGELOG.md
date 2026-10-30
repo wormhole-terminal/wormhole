@@ -33,6 +33,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 ### Fixed
 
 - After a restart, the window that was in front is in front again, not the one opened or revealed last.
+- After a restart, a terminal that kept running in its session host and had finished while you were away
+  shows "Done" again until you look at it, instead of coming back idle.
+- After a restart, a window that was minimised comes back minimised, and the window that was in front
+  before it, not the minimised one, is brought forward.
 - The folder's card in the title row has room around its contents, and a long path breaks only between
   folders, never inside a name, with the folder's own name stressed.
 - Persistent terminals keep working after Wormhole was replaced on disk while it was running (an update made

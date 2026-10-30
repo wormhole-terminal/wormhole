@@ -84,14 +84,14 @@ pub(super) fn write_session(
     exec(
         conn,
         "INSERT INTO sessions (id, window_id, position, name, tasks_collapsed, notes_collapsed, pinned, split_id,
-                               forget_text, agent_hidden)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                               forget_text, agent_hidden, done_unseen)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
          ON CONFLICT(id) DO UPDATE SET window_id = ?2, position = ?3, name = ?4, tasks_collapsed = ?5,
                                        notes_collapsed = ?6, pinned = ?7, split_id = ?8, forget_text = ?9,
-                                       agent_hidden = ?10
+                                       agent_hidden = ?10, done_unseen = ?11
          WHERE window_id IS NOT ?2 OR position IS NOT ?3 OR name IS NOT ?4 OR tasks_collapsed IS NOT ?5
             OR notes_collapsed IS NOT ?6 OR pinned IS NOT ?7 OR split_id IS NOT ?8 OR forget_text IS NOT ?9
-            OR agent_hidden IS NOT ?10",
+            OR agent_hidden IS NOT ?10 OR done_unseen IS NOT ?11",
         params![
             session.id,
             window_id,
@@ -103,6 +103,7 @@ pub(super) fn write_session(
             session.split_id,
             session.forget_text,
             session.agent_hidden,
+            session.done_unseen,
         ],
     )?;
     if session.forget_text {

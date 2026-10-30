@@ -113,7 +113,7 @@ impl Workspace {
                 id: window_id,
                 active,
                 layout,
-                bounds: window_bounds::encode(WindowBounds::Windowed(bounds), Some(display)),
+                bounds: window_bounds::encode(WindowBounds::Windowed(bounds), Some(display), false),
                 sessions: records,
                 splits: Vec::new(),
             };

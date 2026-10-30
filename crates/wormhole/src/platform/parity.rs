@@ -109,6 +109,7 @@ pub(super) fn signatures_match() {
         window::number: fn(&Window) -> Option<i64>;
         window::is_minimised: fn(&Window) -> bool;
         window::allow_fullscreen: fn(&Window);
+        window::miniaturize: fn(&Window);
         window::deminiaturize: fn(&Window);
         window::hide: fn(&Window);
         window::show: fn(&Window);

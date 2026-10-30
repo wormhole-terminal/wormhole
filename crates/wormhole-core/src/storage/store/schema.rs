@@ -26,6 +26,7 @@ const MIGRATIONS: &[&str] = &[
     steps::V10_ROW_CLAIMS,
     steps::V11_AGENT_ACCESS,
     steps::V12_AGENT_HIDDEN,
+    steps::V13_DONE_UNSEEN,
 ];
 
 /// The schema version this build creates and reads.
@@ -70,7 +71,8 @@ pub(super) const SCHEMA: &str = "
         pinned INTEGER NOT NULL DEFAULT 0,
         split_id INTEGER,
         forget_text INTEGER NOT NULL DEFAULT 0,
-        agent_hidden INTEGER NOT NULL DEFAULT 0
+        agent_hidden INTEGER NOT NULL DEFAULT 0,
+        done_unseen INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS splits (
         id INTEGER PRIMARY KEY,

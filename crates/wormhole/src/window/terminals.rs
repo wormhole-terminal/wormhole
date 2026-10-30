@@ -210,13 +210,21 @@ impl Workspace {
             options.env.insert(wormhole_core::onboarding::welcome::TOKEN_VAR.to_string(), token);
         }
         let start = self.start_for(record, &options, cx);
+        // Its program is the one that finished: the dot comes back with it. (A terminal restored from its
+        // text runs a new shell, whose past is only text.)
+        let done_unseen = record.done_unseen && matches!(start, crate::terminal_view::Start::Attach { .. });
         let new_host = match &start {
             crate::terminal_view::Start::Host { id, .. } => Some(id.clone()),
             _ => None,
         };
         let terminal = cx.new(|cx| TerminalView::new(options, start, self.profile.clone(), window, cx));
         let zoom = self.font_zoom;
-        terminal.update(cx, |terminal, cx| terminal.adopt_font_zoom(zoom, cx));
+        terminal.update(cx, |terminal, cx| {
+            terminal.adopt_font_zoom(zoom, cx);
+            if done_unseen {
+                terminal.restore_done_unseen();
+            }
+        });
         (Pane::new(record.id, record.shell.clone(), terminal, window, cx), new_host)
     }
 

@@ -15,7 +15,7 @@ use wormhole_term::PtyEvents;
 use wormhole_term::{GridSize, Pty};
 
 use super::TerminalView;
-use super::status::TerminalEvent;
+use super::status::{Status, TerminalEvent};
 use crate::settings::store_in;
 use crate::style::{self, BannerKind};
 
@@ -204,6 +204,10 @@ impl TerminalView {
                     // Gone between the scan and the attach: the saved text comes back as it would
                     // have without a host.
                     tracing::warn!(id, "couldn't attach to a session host, restoring the text: {err:#}");
+                    // The program that finished is gone with its host: the new shell has nothing to show.
+                    if self.status == Status::Done {
+                        self.set_status(Status::Idle);
+                    }
                 } else {
                     tracing::warn!(
                         id,

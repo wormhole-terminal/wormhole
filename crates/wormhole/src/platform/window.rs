@@ -98,6 +98,12 @@ pub fn allow_fullscreen(window: &Window) {
     os::allow_fullscreen(window);
 }
 
+/// Put the window in the Dock, as its yellow light does. A window that was never on the screen
+/// (`show: false`) goes there without the genie: what a window restored minimised gets.
+pub fn minimise(window: &Window) {
+    os::miniaturize(window);
+}
+
 /// Bring a minimised window back.
 pub fn deminiaturize(window: &Window) {
     os::deminiaturize(window);

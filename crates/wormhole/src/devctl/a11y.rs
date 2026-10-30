@@ -70,6 +70,13 @@ pub(super) fn window_front(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `minimise`: put this window in the Dock, as its yellow light does (`state` says `window minimised`
+/// once AppKit has finished). What a check of the restart restoring a minimised window needs.
+pub(super) fn minimise(ctx: &mut Ctx, _: &str) -> Result<String> {
+    crate::platform::window::minimise(ctx.window);
+    Ok(String::new())
+}
+
 /// Draw until GPUI has built the tree (it builds it from the frame after it was woken), then
 /// print it. `refresh`: drop GPUI's caches before each frame; without it a frame replays what it can.
 async fn dump(_: WeakEntity<Workspace>, cx: &mut AsyncWindowContext, refresh: bool) -> String {

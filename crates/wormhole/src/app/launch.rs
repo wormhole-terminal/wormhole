@@ -165,6 +165,8 @@ pub(crate) fn start(
             None => crate::app::welcome::start_if_first_launch(cx),
         }
     }
+    // Decided before the windows are handed over: a window saved in the Dock is not brought forward.
+    let front = crate::window::window_lifecycle::front_to_restore(&saved);
     for window in saved {
         open_workspace_window(Some(window), None, cx);
     }

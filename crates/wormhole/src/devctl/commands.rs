@@ -214,6 +214,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "a11y" => a11y::a11y,
         "keyboard-navigation" => a11y::keyboard_navigation,
         "window-front" => a11y::window_front,
+        "minimise" => a11y::minimise,
         "front" => sessions::front,
         "close-answer" => sessions::close_answer,
         "reduce-motion" => settings::reduce_motion,

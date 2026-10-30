@@ -67,14 +67,14 @@ fn a_database_from_version_10_gains_the_table_and_keeps_its_terminals() {
         // Version 10 as it shipped: the same layout without the table, and without the column of version 12.
         store
             .conn
-            .execute_batch("DROP TABLE agent_grants; ALTER TABLE sessions DROP COLUMN agent_hidden;")
+            .execute_batch("DROP TABLE agent_grants; ALTER TABLE sessions DROP COLUMN agent_hidden; ALTER TABLE sessions DROP COLUMN done_unseen;")
             .expect("drops");
         store.conn.pragma_update(None, "user_version", 10).expect("version");
         assert_eq!(version(&store.conn), 10);
     }
     let mut store = Store::open_at(&dir).expect("upgrades");
     assert!(store.recovered_from().is_none());
-    assert_eq!(version(&store.conn), 12);
+    assert_eq!(version(&store.conn), 13);
     let windows = store.load().expect("loads");
     assert_eq!(windows[0].sessions[0].cwd.as_deref(), Some("/a"));
     assert!(store.agent_grants().expect("lists").is_empty());
@@ -103,13 +103,16 @@ fn a_database_from_version_11_gains_the_column_and_every_terminal_stays_visible(
         let mut store = Store::open_at(&dir).expect("opens");
         store.save_window(&window(1, vec![session(1, "/a"), session(2, "/b")])).expect("saves");
         // Version 11 as it shipped: the same layout without the column.
-        store.conn.execute_batch("ALTER TABLE sessions DROP COLUMN agent_hidden;").expect("drops");
+        store
+            .conn
+            .execute_batch("ALTER TABLE sessions DROP COLUMN agent_hidden; ALTER TABLE sessions DROP COLUMN done_unseen;")
+            .expect("drops");
         store.conn.pragma_update(None, "user_version", 11).expect("version");
         assert_eq!(version(&store.conn), 11);
     }
     let mut store = Store::open_at(&dir).expect("upgrades");
     assert!(store.recovered_from().is_none(), "upgraded, not moved aside");
-    assert_eq!(version(&store.conn), 12);
+    assert_eq!(version(&store.conn), 13);
     let windows = store.load().expect("loads");
     assert_eq!(windows[0].sessions.len(), 2);
     assert!(windows[0].sessions.iter().all(|s| !s.agent_hidden));
@@ -117,4 +120,41 @@ fn a_database_from_version_11_gains_the_column_and_every_terminal_stays_visible(
     record.sessions[0].agent_hidden = true;
     store.save_window(&record).expect("the column works");
     assert!(store.load().expect("loads")[0].sessions[0].agent_hidden);
+}
+
+#[test]
+fn a_terminals_unseen_done_is_saved_loaded_and_cleared() {
+    let mut store = Store::open_at(&temp_dir("done-unseen")).expect("opens");
+    let mut done = session(2, "/b");
+    done.done_unseen = true;
+    store.save_window(&window(1, vec![session(1, "/a"), done])).expect("saves");
+    let loaded = store.load().expect("loads");
+    assert_eq!(loaded[0].sessions.iter().map(|s| s.done_unseen).collect::<Vec<_>>(), [false, true]);
+    // Seen: the same record without it is a write like any other change.
+    let mut seen = loaded[0].clone();
+    seen.sessions[1].done_unseen = false;
+    store.save_window(&seen).expect("saves again");
+    assert!(!store.load().expect("loads")[0].sessions[1].done_unseen);
+}
+
+#[test]
+fn a_database_from_version_12_gains_the_column_and_no_terminal_is_unseen() {
+    let dir = temp_dir("done-unseen-v12");
+    {
+        let mut store = Store::open_at(&dir).expect("opens");
+        store.save_window(&window(1, vec![session(1, "/a"), session(2, "/b")])).expect("saves");
+        // Version 12 as it shipped: the same layout without the column.
+        store.conn.execute_batch("ALTER TABLE sessions DROP COLUMN done_unseen;").expect("drops");
+        store.conn.pragma_update(None, "user_version", 12).expect("version");
+    }
+    let mut store = Store::open_at(&dir).expect("upgrades");
+    assert!(store.recovered_from().is_none(), "upgraded, not moved aside");
+    assert_eq!(version(&store.conn), 13);
+    let windows = store.load().expect("loads");
+    assert_eq!(windows[0].sessions.len(), 2);
+    assert!(windows[0].sessions.iter().all(|s| !s.done_unseen));
+    let mut record = windows[0].clone();
+    record.sessions[0].done_unseen = true;
+    store.save_window(&record).expect("the column works");
+    assert!(store.load().expect("loads")[0].sessions[0].done_unseen);
 }

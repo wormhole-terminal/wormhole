@@ -106,6 +106,12 @@ pub fn allow_fullscreen(window: &Window) {
     }
 }
 
+pub fn miniaturize(window: &Window) {
+    if let Some(ns_window) = ns_window(window) {
+        ns_window.miniaturize(None);
+    }
+}
+
 pub fn deminiaturize(window: &Window) {
     if let Some(ns_window) = ns_window(window) {
         ns_window.deminiaturize(None);

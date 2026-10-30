@@ -46,6 +46,10 @@ pub struct SessionRecord {
     /// The person hid this terminal from the programs that control Wormhole ("Hide from Agents"): none
     /// can list, read or type into it.
     pub agent_hidden: bool,
+    /// The terminal finished something (a command, an agent's turn) that nobody has looked at yet, the
+    /// "Done" dot on its row. Only a terminal whose program is still the same after a restart
+    /// (reattached to its session host) brings it back; one restored from its saved text starts idle.
+    pub done_unseen: bool,
     /// The terminal's working folder.
     pub cwd: Option<String>,
     /// The shell profile it was opened with (`shells`' key), `None` for the default: a restart of
