@@ -11,6 +11,7 @@
   "preview_urls": false,
   "routes": [
     { "pattern": "downloads.getwormhole.app/stable/latest.json", "zone_name": "getwormhole.app" },
+    { "pattern": "downloads.getwormhole.app/preview/latest.json", "zone_name": "getwormhole.app" },
     { "pattern": "downloads.getwormhole.app/unstable/latest.json", "zone_name": "getwormhole.app" },
     { "pattern": "downloads.getwormhole.app/stable/Wormhole-latest.dmg", "zone_name": "getwormhole.app" },
     { "pattern": "downloads.getwormhole.app/stable/Wormhole-latest-aarch64.dmg", "zone_name": "getwormhole.app" },

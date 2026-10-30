@@ -6,7 +6,7 @@ adds one data point per request to Workers Analytics Engine (`src/index.ts` says
 
 | Address | What is counted |
 |---|---|
-| `downloads.getwormhole.app/stable/latest.json`, `/unstable/latest.json` | an update check: version, and from 1.4 channel, chip, macOS major version, and the daily and monthly flag |
+| `downloads.getwormhole.app/stable/latest.json`, `/preview/latest.json`, `/unstable/latest.json` (up to 1.5) | an update check: version, and from 1.4 channel, chip, macOS major version, and the daily and monthly flag |
 | `downloads.getwormhole.app/stable/Wormhole-latest.dmg`, `-aarch64.dmg`, `-x86_64.dmg` | the website's download links (universal, Apple silicon, Intel; the last two from 1.4): which one, and browser, bot, other or none, by user agent |
 
 From 1.4 the app sends `Wormhole-Count: day` on its first check of a UTC day and `month` on its
@@ -19,7 +19,7 @@ and Workers Logs are off.
 
 1. `bun install`, then `bunx wrangler login` (the Cloudflare account with getwormhole.app).
 2. Cloudflare dashboard → getwormhole.app → Rules → Redirect Rules: turn off "Update feed to
-   GitHub", "Latest DMG to GitHub" and the unstable feed's rule. Redirect rules run before Workers,
+   GitHub", "Latest DMG to GitHub" and the preview and unstable feeds' rules. Redirect rules run before Workers,
    so while they are on the Worker never sees a request.
 3. `bun run deploy`. The first deploy makes the `wormhole_counts` dataset.
 4. Check: `curl -sI https://downloads.getwormhole.app/stable/latest.json` is a 302 to GitHub, and the
