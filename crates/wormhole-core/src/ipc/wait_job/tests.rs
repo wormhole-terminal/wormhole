@@ -183,15 +183,18 @@ fn the_setting_going_off_ends_a_wait_on_text() {
 fn quiet_is_no_output_for_the_time_asked_and_printing_keeps_pushing_it_back() {
     let rig = start(WaitSpec { stable_ms: Some(300), ..spec() }, Grant::default(), TestTerm::new(30, 4, 10));
     let busy_until = Instant::now() + Duration::from_millis(600);
+    // Measured from the last print, not the loop's end: on a loaded runner the last sleep overruns by
+    // over 100 ms, and the quiet already started at that print.
+    let mut last_print = Instant::now();
     while Instant::now() < busy_until {
         rig.print(b".");
+        last_print = Instant::now();
         std::thread::sleep(Duration::from_millis(40));
     }
     assert!(!rig.finished(), "it printed every 40 ms: never quiet for 300");
-    let quiet_from = Instant::now();
     let found = waited(&rig.reply());
     assert_eq!(found.met, Met::Stable);
-    assert!(quiet_from.elapsed() >= Duration::from_millis(250), "{:?}", quiet_from.elapsed());
+    assert!(last_print.elapsed() >= Duration::from_millis(250), "{:?}", last_print.elapsed());
 }
 
 #[test]
