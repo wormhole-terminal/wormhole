@@ -34,3 +34,5 @@ e794710d7b0f893e09bab6d59613c734a379f9e7
 47f18d0229a89b6ac9a24455384d4d5c9fc6a3ee
 # refactor(syntax): the tree-sitter highlighting moves from the diff to syntax
 bef7e035969b3440e7ed568252d6e20265f44c19
+# refactor(git): move worktree into a folder module
+61bcf4da60e9c90e853f7bda172470f83d6f7a36
