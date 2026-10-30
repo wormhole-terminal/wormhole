@@ -2,7 +2,8 @@
  * The download server's addresses, counted on the way to GitHub. It answers each with the
  * same 302 the redirect rules gave, and adds one data point to Workers Analytics Engine:
  *
- * - an update check (`/stable/latest.json`, `/unstable/latest.json`): the app's version, and from
+ * - an update check (`/stable/latest.json`, `/preview/latest.json`, and `/unstable/latest.json`, which
+ *   the Unstable channel reads up to 1.5): the app's version, and from
  *   1.4 its channel, chip and macOS major version (its user agent), and whether it is the copy's
  *   first check of a UTC day or month (`Wormhole-Count: day, month`). The flags summed are the
  *   copies running that day or month, with no ID: nothing tells two checks of one Mac apart.
@@ -29,7 +30,9 @@ const RELEASES = "https://github.com/wormhole-terminal/wormhole/releases";
 /** Each address and where it goes, as the Cloudflare redirect rules sent them. */
 export const TARGETS: Record<string, { kind: "feed" | "dmg"; to: string }> = {
   "/stable/latest.json": { kind: "feed", to: `${RELEASES}/latest/download/latest.json` },
-  "/unstable/latest.json": { kind: "feed", to: `${RELEASES}/download/unstable/latest.json` },
+  "/preview/latest.json": { kind: "feed", to: `${RELEASES}/download/preview/latest.json` },
+  // The Unstable channel up to 1.5: the builds of main are Preview builds now, on the `preview` release.
+  "/unstable/latest.json": { kind: "feed", to: `${RELEASES}/download/preview/latest.json` },
   "/stable/Wormhole-latest.dmg": { kind: "dmg", to: `${RELEASES}/latest/download/Wormhole-macos.dmg` },
   // From 1.4 a release also has a DMG per architecture.
   "/stable/Wormhole-latest-aarch64.dmg": { kind: "dmg", to: `${RELEASES}/latest/download/Wormhole-macos-aarch64.dmg` },
@@ -37,7 +40,7 @@ export const TARGETS: Record<string, { kind: "feed" | "dmg"; to: string }> = {
 };
 
 /** `Wormhole-Updater/1.4.0 (stable; aarch64; macOS 26)`; before 1.4 the version alone. */
-const UPDATER = /^Wormhole-Updater\/([0-9A-Za-z.+-]{1,40})(?: \((stable|unstable); (aarch64|x86_64|unknown); macOS (\d{1,3}|unknown)\))?$/;
+const UPDATER = /^Wormhole-Updater\/([0-9A-Za-z.+-]{1,40})(?: \((stable|preview|unstable); (aarch64|x86_64|unknown); macOS (\d{1,3}|unknown)\))?$/;
 
 /** User agents that are not a person clicking a link. */
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|embed|scan|monitor|check|curl|wget|python|go-http|java\/|okhttp|libwww|httpclient|headless/i;
