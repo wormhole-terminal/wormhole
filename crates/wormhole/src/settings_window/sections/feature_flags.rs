@@ -54,16 +54,22 @@ impl SettingsWindow {
             let default = settings(cx).flag_mode().default_for(flag);
             let state =
                 if on == default { style::SettingState::Default } else { style::SettingState::Changed };
-            let control = style::toggle(key, on, move |on, _, cx| {
-                update_settings(cx, |s| {
-                    if on == default {
-                        s.feature_flags.remove(key);
-                    } else {
-                        s.feature_flags.insert(key.to_string(), on);
-                    }
-                });
-            })
-            .into_any_element();
+            let control = self.switch_control(
+                format!("feature-flag-{key}").into(),
+                flag.title(),
+                on,
+                true,
+                cx,
+                move |on, _, cx| {
+                    update_settings(cx, |s| {
+                        if on == default {
+                            s.feature_flags.remove(key);
+                        } else {
+                            s.feature_flags.insert(key.to_string(), on);
+                        }
+                    });
+                },
+            );
             rows = rows.child(style::setting(
                 SharedString::from(format!("feature-flag-{key}")),
                 ui,

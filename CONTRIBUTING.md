@@ -69,6 +69,16 @@ also run `scripts/perf.sh` (a release build timed against your machine's baselin
   `ProjectHub::enabled` (which includes the user's Touch ID approval).
 - Colors come from design tokens, never hard-coded. Spacing, type, corners and shared components
   come from `crates/wormhole/src/style/`; `tests/design_rules.rs` enforces the rules.
+- For a menu of actions or a short list of choices, build `platform::Menu` and open it with
+  `platform::show_menu`. macOS draws it as an AppKit menu and the platform provides the fallback,
+  records it for devctl, and takes the opening window's profile appearance. Use `Item::subtitle`
+  for explanatory text. For a small native form or actions with a text field, use
+  `platform::Popover`; for a search-driven picker, use the picker appropriate to its interaction.
+  Keep AppKit objects and event dispatch in `platform/macos/`, not in feature views.
+- Use the shared `style::toggle` for switches. It is currently a GPUI control; the shared entry
+  point keeps its appearance and behavior consistent and gives a future platform control one
+  place to replace it. Test the actual platform menu path with `menu` and `menu-native` in devctl;
+  a GPUI screenshot does not include an AppKit menu.
 - Words: what a person reads is a message in `crates/wormhole-text/locales/en/`, never a literal in the
   code (`TEXT_BLESS=1 cargo test -p wormhole-text --test generated` writes the typed keys from the
   catalogs). `tests/text_rules.rs` fails on a word written in Rust in the folders it lists (`MIGRATED`), and

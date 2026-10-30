@@ -209,7 +209,7 @@ impl ProjectSource {
     }
 
     /// Whether this project sets `entry` (its theme.json counts for the theme).
-    fn sets(&self, entry: &Entry) -> bool {
+    pub(super) fn sets(&self, entry: &Entry) -> bool {
         settings_index::set_by_project(entry, &self.keys) || (self.theme && entry.id == "theme")
     }
 }
@@ -356,7 +356,7 @@ impl SettingsWindow {
         });
         let keys = entry.keys;
         let chip = setting.chip.and_then(|chip| chip(self, cx));
-        let control = self.render_control(setting, current, ui, cx);
+        let control = self.render_control(entry, setting, current, ui, project.is_none(), cx);
         // The row the palette asked for (`reveal_row`): marked as a search hit on its whole
         // label, and anchored so the page can scroll to it.
         let revealed = self.revealed_row().filter(|(id, _)| *id == entry.id).map(|(_, anchor)| anchor);
@@ -389,19 +389,37 @@ impl SettingsWindow {
 
     fn render_control(
         &self,
+        entry: &'static Entry,
         setting: &'static Setting,
         current: Shown,
         ui: UiColors,
+        enabled: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let id = setting.id;
         match (&setting.control, current) {
             (Control::Toggle { set, .. }, Shown::Toggle(on)) => {
                 let set = *set;
-                style::toggle(id, on, move |on, _, cx| update_settings(cx, |s| set(s, on))).into_any_element()
+                self.switch_control(id.into(), entry.label(), on, enabled, cx, move |on, _, cx| {
+                    update_settings(cx, |s| set(s, on))
+                })
             }
             (Control::Segmented { options, set, .. }, Shown::Segmented(active)) => {
                 let set = *set;
+                if self.native_switch_allowed(id, cx) {
+                    if let Some(native) = &self.native_segments {
+                        return super::native_segments::control(
+                            self,
+                            native.clone(),
+                            id,
+                            options,
+                            active,
+                            enabled,
+                            cx,
+                            move |ix, _, cx| update_settings(cx, |s| set(s, ix)),
+                        );
+                    }
+                }
                 style::segmented_form(ui)
                     .children(options.iter().enumerate().map(|(ix, option)| {
                         style::form_segment((id, ix), ui, option.icon, text(option.label), ix == active)
@@ -411,20 +429,126 @@ impl SettingsWindow {
             }
             (Control::Stepper { nudge, .. }, Shown::Stepper(value)) => {
                 let nudge = *nudge;
-                style::stepper(
-                    ui,
-                    id,
-                    value,
-                    move |_, _, cx| update_settings(cx, |s| nudge(s, -1)),
-                    move |_, _, cx| update_settings(cx, |s| nudge(s, 1)),
-                )
-                .into_any_element()
+                self.stepper_control(ui, id, entry.label(), value, enabled, cx, move |delta, _, cx| {
+                    update_settings(cx, |s| nudge(s, delta))
+                })
             }
             (Control::Recorder(row), _) => self.render_recorder(id, *row, cx),
             (Control::Custom(draw) | Control::Block(draw), _) => draw(self, cx),
             // `shown` reads each control as its own kind.
             _ => div().into_any_element(),
         }
+    }
+
+    pub(super) fn native_switch_action(
+        &mut self,
+        event: crate::platform::controls::SwitchEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<super::native_switch::Change> {
+        if !self.native_switch_allowed(&event.id, cx)
+            || !self.native_switches.as_ref().is_some_and(|native| native.accepts(&event.id))
+        {
+            return None;
+        }
+        let setting_id = match event.id.as_str() {
+            "translucent-settings" | "translucent-studio" => "translucent",
+            id => id,
+        };
+        if let Some((_, _, entry)) = settings_index::entry(setting_id) {
+            if ProjectSource::current(&self.front, cx).is_some_and(|project| project.sets(entry)) {
+                return None;
+            }
+        }
+        let change = self.native_switch_handlers.borrow().get(&event.id).cloned();
+        if let Some(focus) = self.native_switch_focus.borrow().get(&event.id) {
+            crate::style::native_focus::pointer(window);
+            window.focus(focus, cx);
+        }
+        change
+    }
+
+    pub(super) fn native_switch_allowed(&self, id: &str, cx: &App) -> bool {
+        if self.new_profile.is_some()
+            || cx.has_active_drag()
+            || self.primary_picker.read(cx).is_open()
+            || self.branch_picker.read(cx).is_open()
+        {
+            return false;
+        }
+        super::native_switch::scope_allows(self.extensions.sheet.as_ref().map(|sheet| sheet.serial), id)
+    }
+
+    pub(super) fn native_segment_action(
+        &mut self,
+        id: String,
+        selected: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<super::native_segments::Change> {
+        if !self.native_switch_allowed(&id, cx)
+            || !self.native_segments.as_ref().is_some_and(|native| native.accepts(&id))
+        {
+            return None;
+        }
+        if let Some((_, _, entry)) = settings_index::entry(&id) {
+            if ProjectSource::current(&self.front, cx).is_some_and(|project| project.sets(entry)) {
+                return None;
+            }
+        }
+        let change = self.native_segment_handlers.borrow().get(&id).cloned();
+        if let Some(focus) = self.native_segment_focus.borrow().get(&(id, selected)) {
+            crate::style::native_focus::pointer(window);
+            window.focus(focus, cx);
+        }
+        change
+    }
+
+    pub(super) fn native_slider_action(
+        &mut self,
+        id: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<super::native_slider::Change> {
+        if !self.native_switch_allowed(&id, cx)
+            || !self.stepper_enabled(&id, cx)
+            || !self.native_sliders.as_ref().is_some_and(|native| native.accepts(&id))
+        {
+            return None;
+        }
+        let change = self.native_slider_handlers.borrow().get(&id).cloned();
+        if let Some(focus) = self.native_slider_focus.borrow().get(&id) {
+            crate::style::native_focus::pointer(window);
+            window.focus(focus, cx);
+        }
+        change
+    }
+
+    pub(super) fn stepper_enabled(&self, id: &str, cx: &App) -> bool {
+        let setting_id = if id == "notify-command-after" { "notify-command-done" } else { id };
+        settings_index::entry(setting_id).is_none_or(|(_, _, entry)| {
+            !ProjectSource::current(&self.front, cx).is_some_and(|project| project.sets(entry))
+        })
+    }
+
+    pub(super) fn native_stepper_action(
+        &mut self,
+        id: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<super::native_stepper::Change> {
+        if !self.native_switch_allowed(&id, cx)
+            || !self.stepper_enabled(&id, cx)
+            || !self.native_steppers.as_ref().is_some_and(|native| native.accepts(&id))
+        {
+            return None;
+        }
+        let change = self.native_stepper_handlers.borrow().get(&id).cloned();
+        if let Some(focus) = self.native_stepper_focus.borrow().get(&id) {
+            crate::style::native_focus::pointer(window);
+            window.focus(focus, cx);
+        }
+        change
     }
 
     /// Search results: the rows the query found, each a live row with its control,

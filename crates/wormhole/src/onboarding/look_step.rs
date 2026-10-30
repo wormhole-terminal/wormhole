@@ -77,6 +77,36 @@ impl FirstRun {
         let size = store.fonts.size(FontSlot::Terminal);
         let bundled =
             cx.try_global::<crate::fonts::LoadedFonts>().is_some_and(|l| l.bundled.contains(&family));
+        let size_control = if self.intro_entrance(cx).body >= 1.0 {
+            sheet.native_stepper.as_ref().map(|native| {
+                crate::style::native_stepper::NativeStepper {
+                    native: native.clone(),
+                    id: "onboarding-font-size".to_string(),
+                    label: "Terminal font size".into(), // text: onboarding font size
+                    value: format!("{size:.0}"),
+                    enabled: true,
+                    focus: sheet.stepper_focus.clone(),
+                    appearance: store.tokens.appearance,
+                    ui,
+                    change: std::rc::Rc::new(|delta, _, cx| {
+                        update_settings(cx, |s| s.step_slot_size(FontSlot::Terminal, delta as f32))
+                    }),
+                }
+                .into_any_element()
+            })
+        } else {
+            None
+        };
+        let size_control = size_control.unwrap_or_else(|| {
+            style::stepper(
+                ui,
+                "onboarding-font-size",
+                format!("{size:.0}"),
+                |_, _, cx| update_settings(cx, |s| s.step_slot_size(FontSlot::Terminal, -1.0)),
+                |_, _, cx| update_settings(cx, |s| s.step_slot_size(FontSlot::Terminal, 1.0)),
+            )
+            .into_any_element()
+        });
         let font = div()
             .flex()
             .items_center()
@@ -103,13 +133,7 @@ impl FirstRun {
                     )
                     .when(bundled, |d| d.child(style::tint_chip(ui, None, "Bundled"))),
             )
-            .child(style::stepper(
-                ui,
-                "onboarding-font-size",
-                format!("{size:.0}"),
-                |_, _, cx| update_settings(cx, |s| s.step_slot_size(FontSlot::Terminal, -1.0)),
-                |_, _, cx| update_settings(cx, |s| s.step_slot_size(FontSlot::Terminal, 1.0)),
-            ));
+            .child(size_control);
         let ligatures = s.font_ligatures;
         let term = &store.tokens.terminal;
         let fg = hsla(term.foreground);
@@ -163,9 +187,14 @@ impl FirstRun {
                             .font_features(crate::fonts::ligature_features(ligatures))
                             .child("=> != >="),
                     )
-                    .child(style::toggle("onboarding-ligatures", ligatures, |on, _, cx| {
-                        update_settings(cx, |s| s.font_ligatures = on)
-                    }))
+                    .child(self.switch_control(
+                        sheet,
+                        "onboarding-ligatures",
+                        "Ligatures",
+                        ligatures,
+                        cx,
+                        |on, _, cx| update_settings(cx, |s| s.font_ligatures = on),
+                    ))
                     .into_any_element(),
             ))
             .child(sample)

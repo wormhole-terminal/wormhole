@@ -96,12 +96,11 @@ impl Workspace {
         match part {
             // Everything `render_sidebar_header` reads that no view of its own announces: the row's
             // start follows the traffic lights, the chip is drawn from the app's profiles and from the
-            // list's menu state (heard by `watch_sidebar`), the window's own profile may differ from the
+            // window's own profile may differ from the
             // shown one (its colours and font), and the keys' ring is on one of its two buttons.
             Part::SidebarHeader => {
                 fact(&mut facts, "lights end", &crate::style::lights_end(window));
                 fact(&mut facts, "profile chip", &Self::profiles_for_chip(cx));
-                fact(&mut facts, "profile menu", &self.sidebar.read(cx).profile_page());
                 fact(&mut facts, "odd profile", &self.odd_profile(cx).map(|(profile, _)| profile));
                 fact(&mut facts, "button", &self.areas.title);
                 fact(&mut facts, "new terminal ring", &self.title_ring(TitleButton::NewTerminal, window, cx));

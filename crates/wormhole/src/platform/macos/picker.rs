@@ -3,7 +3,7 @@
 //! Reduce Transparency or Increase Contrast (`picker_backdrop`).
 //!
 //! Inside it, from the top: the breadcrumb (`picker_crumbs`), a real `NSSearchField` (so the system's own
-//! editing, input methods and look), the list (a few reusable row views, `picker_slot`, over a view that takes
+//! editing, input methods and look), an optional segmented filter, the list (a few reusable row views, `picker_slot`, over a view that takes
 //! the wheel) and a hint line. The ghost completion is a label laid over the field where the system says the
 //! text ends.
 //!
@@ -34,8 +34,8 @@ use objc2::sel;
 use objc2_app_kit::{
     NSAccessibility as _, NSAccessibilityListRole, NSAccessibilityPostNotification,
     NSAccessibilitySelectedChildrenChangedNotification, NSApplication, NSColor, NSFocusRingType, NSFont,
-    NSLineBreakMode, NSSearchField, NSTextField, NSTextInputClient as _, NSTextView, NSView, NSWindow,
-    NSWindowCollectionBehavior, NSWindowOrderingMode,
+    NSLineBreakMode, NSSearchField, NSSegmentedControl, NSTextField, NSTextInputClient as _, NSTextView,
+    NSView, NSWindow, NSWindowCollectionBehavior, NSWindowOrderingMode,
 };
 use objc2_foundation::{NSPoint, NSRange, NSRect, NSSize, NSString};
 use wormhole_core::view::panes::Rect;
@@ -48,7 +48,7 @@ use super::picker_crumbs::{self, HEIGHT as CRUMBS_H};
 use super::picker_slot::Slot;
 use super::picker_views::{PickerPanel, Target, WheelView};
 use crate::platform::background_mode;
-use crate::platform::picker::{Event, Events, Line, ROW, View};
+use crate::platform::picker::{Event, Events, Line, ROW, Segments, View};
 
 /// From the panel's top and sides to what is in it, and what each part is as tall as.
 const PAD: f64 = 8.0;
@@ -58,6 +58,8 @@ const HINT_H: f64 = 20.0;
 /// Between the parts: after the breadcrumb, after the field.
 const AFTER_CRUMBS: f64 = 2.0;
 const AFTER_FIELD: f64 = 6.0;
+const SEGMENTS_H: f64 = 24.0;
+const AFTER_SEGMENTS: f64 = 6.0;
 /// The list's inset from the panel's sides, so a row's selection doesn't touch the glass's edge.
 const LIST_SIDE: f64 = 6.0;
 
@@ -92,11 +94,13 @@ fn arrival(background: bool, app_active: bool) -> Arrival {
 struct Layout {
     crumbs: Option<NSRect>,
     field: NSRect,
+    segments: Option<NSRect>,
+    segment_status: Option<NSRect>,
     list: NSRect,
     hint: NSRect,
 }
 
-fn layout(size: NSSize, has_crumbs: bool, rows: usize) -> Layout {
+fn layout(size: NSSize, has_crumbs: bool, has_segments: bool, rows: usize) -> Layout {
     let inner = (size.width - 2.0 * SIDE).max(0.0);
     let from_top = |top: f64, height: f64| size.height - top - height;
     let mut top = PAD;
@@ -107,13 +111,25 @@ fn layout(size: NSSize, has_crumbs: bool, rows: usize) -> Layout {
     });
     let field = NSRect::new(NSPoint::new(SIDE, from_top(top, FIELD_H)), NSSize::new(inner, FIELD_H));
     top += FIELD_H + AFTER_FIELD;
+    let mut segment_status = None;
+    let segments = has_segments.then(|| {
+        let y = from_top(top, SEGMENTS_H);
+        let width = (inner * 0.55).max(0.0);
+        let at = NSRect::new(NSPoint::new(SIDE, y), NSSize::new(width, SEGMENTS_H));
+        segment_status = Some(NSRect::new(
+            NSPoint::new(SIDE + width + 8.0, y),
+            NSSize::new((inner - width - 8.0).max(0.0), SEGMENTS_H),
+        ));
+        top += SEGMENTS_H + AFTER_SEGMENTS;
+        at
+    });
     let height = rows as f64 * f64::from(ROW);
     let list = NSRect::new(
         NSPoint::new(LIST_SIDE, from_top(top, height)),
         NSSize::new((size.width - 2.0 * LIST_SIDE).max(0.0), height),
     );
     let hint = NSRect::new(NSPoint::new(SIDE + 4.0, PAD), NSSize::new((inner - 8.0).max(0.0), HINT_H));
-    Layout { crumbs, field, list, hint }
+    Layout { crumbs, field, segments, segment_status, list, hint }
 }
 
 /// One window's picker panel.
@@ -126,6 +142,8 @@ pub struct Panel {
     body: Retained<NSView>,
     crumbs: Retained<NSView>,
     field: Retained<NSSearchField>,
+    segments: Retained<NSSegmentedControl>,
+    segment_status: Retained<NSTextField>,
     ghost: Retained<NSTextField>,
     list: Retained<WheelView>,
     hint: Retained<NSTextField>,
@@ -148,6 +166,7 @@ pub struct Panel {
     rect: Rect,
     shown_rows: Vec<String>,
     shown_ghost: String,
+    shown_segments: Option<Segments>,
 }
 
 impl Panel {
@@ -199,6 +218,20 @@ impl Panel {
         }
         target.watch(&field);
 
+        let segments = NSSegmentedControl::initWithFrame(mtm.alloc(), NSRect::ZERO);
+        // SAFETY: the panel owns the target, and the selector has an AppKit action signature.
+        #[allow(unsafe_code)]
+        unsafe {
+            segments.setTarget(Some(&*target));
+            segments.setAction(Some(sel!(segmentChanged:)));
+        }
+        segments.setHidden(true);
+        let segment_status = NSTextField::labelWithString(&NSString::from_str(""), mtm);
+        segment_status.setFont(Some(&NSFont::systemFontOfSize(11.0)));
+        segment_status.setTextColor(Some(&NSColor::secondaryLabelColor()));
+        segment_status.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+        segment_status.setHidden(true);
+
         let ghost = NSTextField::labelWithString(&NSString::from_str(""), mtm);
         ghost.setFont(Some(&NSFont::systemFontOfSize(15.0)));
         ghost.setTextColor(Some(&NSColor::placeholderTextColor()));
@@ -220,6 +253,8 @@ impl Panel {
 
         body.addSubview(&crumbs);
         body.addSubview(&field);
+        body.addSubview(&segments);
+        body.addSubview(&segment_status);
         body.addSubview(&list);
         body.addSubview(&hint);
         // Over the field, last, so it is drawn after the field's own text.
@@ -234,6 +269,8 @@ impl Panel {
             body,
             crumbs,
             field,
+            segments,
+            segment_status,
             ghost,
             list,
             hint,
@@ -250,6 +287,7 @@ impl Panel {
             rect: Rect::new(0.0, 0.0, 0.0, 0.0),
             shown_rows: Vec::new(),
             shown_ghost: String::new(),
+            shown_segments: None,
         })
     }
 
@@ -274,7 +312,8 @@ impl Panel {
             self.theme = Some(view.appearance);
             appearance::set_on(&self.holder, view.appearance);
         }
-        self.place(rect, !view.crumbs.is_empty(), view.lines.len());
+        self.place(rect, !view.crumbs.is_empty(), view.segments.is_some(), view.lines.len());
+        self.set_segments(view);
         self.set_text(view);
         self.set_crumbs(view);
         self.set_rows(view);
@@ -303,12 +342,28 @@ impl Panel {
             parent_number: self.parent.windowNumber() as i64,
             ghost: self.shown_ghost.clone(),
             rows: self.shown_rows.clone(),
+            row_fonts: self.slots.iter().filter(|slot| !slot.view.isHidden()).map(Slot::font_name).collect(),
             crumbs: self.crumb_labels.clone(),
+            segments: (!self.segments.isHidden()).then(|| {
+                let labels = (0..self.segments.segmentCount())
+                    .map(|index| {
+                        self.segments
+                            .labelForSegment(index)
+                            .map(|label| label.to_string())
+                            .unwrap_or_default()
+                    })
+                    .collect();
+                (
+                    labels,
+                    self.segments.selectedSegment().max(0) as usize,
+                    self.segment_status.stringValue().to_string(),
+                )
+            }),
         })
     }
 
     /// The panel at `rect` (the window's space, from its top left) over the window, and the parts in it.
-    fn place(&mut self, rect: Rect, has_crumbs: bool, rows: usize) {
+    fn place(&mut self, rect: Rect, has_crumbs: bool, has_segments: bool, rows: usize) {
         self.rect = rect;
         let parent = self.parent.frame();
         let size = NSSize::new(f64::from(rect.w), f64::from(rect.h));
@@ -329,14 +384,50 @@ impl Panel {
             }
         }
         self.backdrop.view().setFrame(whole);
-        let parts = layout(size, has_crumbs, rows);
+        let parts = layout(size, has_crumbs, has_segments, rows);
         self.crumbs.setHidden(parts.crumbs.is_none());
         if let Some(at) = parts.crumbs {
             self.crumbs.setFrame(at);
         }
         self.field.setFrame(parts.field);
+        self.segments.setHidden(parts.segments.is_none());
+        if let Some(at) = parts.segments {
+            self.segments.setFrame(at);
+        }
+        self.segment_status.setHidden(parts.segment_status.is_none());
+        if let Some(at) = parts.segment_status {
+            self.segment_status.setFrame(at);
+        }
         self.list.setFrame(parts.list);
         self.hint.setFrame(parts.hint);
+    }
+
+    fn set_segments(&mut self, view: &View<'_>) {
+        if self.shown_segments.as_ref() == view.segments {
+            return;
+        }
+        let Some(segments) = view.segments else {
+            self.shown_segments = None;
+            return;
+        };
+        let old = self.shown_segments.as_ref();
+        let labels_changed = old.is_none_or(|old| old.labels != segments.labels);
+        if labels_changed {
+            self.segments.setSegmentCount(segments.labels.len() as isize);
+            for (index, label) in segments.labels.iter().enumerate() {
+                self.segments.setLabel_forSegment(&NSString::from_str(label), index as isize);
+            }
+        }
+        if labels_changed || old.is_none_or(|old| old.selected != segments.selected) {
+            self.segments.setSelectedSegment(segments.selected as isize);
+        }
+        if old.is_none_or(|old| old.label != segments.label) {
+            self.segments.setAccessibilityLabel(Some(&NSString::from_str(&segments.label)));
+        }
+        if old.is_none_or(|old| old.status != segments.status) {
+            self.segment_status.setStringValue(&NSString::from_str(&segments.status));
+        }
+        self.shown_segments = Some(segments.clone());
     }
 
     /// The field's text, when the picker (not the person) changed it.
@@ -504,28 +595,35 @@ mod tests {
     #[test]
     fn the_parts_stack_from_the_top_and_fill_the_cards_height() {
         for has_crumbs in [false, true] {
-            let rows = 5;
-            let c = card(has_crumbs);
-            let size = NSSize::new(f64::from(c.width), f64::from(c.height(rows)));
-            let l = layout(size, has_crumbs, rows);
-            // Nothing leaves the panel and nothing overlaps: field above list above hint.
-            assert!(l.field.origin.y >= l.list.origin.y + l.list.size.height);
-            assert!(l.list.origin.y >= l.hint.origin.y + l.hint.size.height);
-            assert_eq!(l.list.size.height, rows as f64 * f64::from(ROW));
-            assert_eq!(
-                l.field.origin.y + FIELD_H + if has_crumbs { CRUMBS_H + 2.0 } else { 0.0 } + PAD,
-                size.height
-            );
-            assert_eq!(l.crumbs.is_some(), has_crumbs);
+            for has_segments in [false, true] {
+                let rows = 5;
+                let c = card(has_crumbs, has_segments);
+                let size = NSSize::new(f64::from(c.width), f64::from(c.height(rows)));
+                let l = layout(size, has_crumbs, has_segments, rows);
+                // Nothing leaves the panel and nothing overlaps: field above list above hint.
+                assert!(l.field.origin.y >= l.list.origin.y + l.list.size.height);
+                assert!(l.list.origin.y >= l.hint.origin.y + l.hint.size.height);
+                assert_eq!(l.list.size.height, rows as f64 * f64::from(ROW));
+                if let Some(segments) = l.segments {
+                    assert!(l.field.origin.y >= segments.origin.y + segments.size.height);
+                    assert!(segments.origin.y >= l.list.origin.y + l.list.size.height);
+                }
+                assert_eq!(
+                    l.field.origin.y + FIELD_H + if has_crumbs { CRUMBS_H + 2.0 } else { 0.0 } + PAD,
+                    size.height
+                );
+                assert_eq!(l.crumbs.is_some(), has_crumbs);
+                assert_eq!(l.segments.is_some(), has_segments);
+            }
         }
     }
 
     #[test]
     fn the_card_is_as_tall_as_the_layout_needs() {
         // Six points between the list and the hint line: what the card's chrome adds to the hint's height.
-        let c = card(false);
+        let c = card(false, false);
         let size = NSSize::new(f64::from(c.width), f64::from(c.height(3)));
-        let l = layout(size, false, 3);
+        let l = layout(size, false, false, 3);
         assert_eq!(l.list.origin.y - (l.hint.origin.y + l.hint.size.height), 4.0);
     }
 

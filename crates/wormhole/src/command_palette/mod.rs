@@ -52,6 +52,9 @@ pub(crate) struct CommandPalette {
     card: Rc<Cell<Option<Bounds<Pixels>>>>,
     /// The palette was closed and its picture is fading: no key, no click is its own.
     leaving: bool,
+    native_scopes: Option<Rc<crate::platform::controls::Segments>>,
+    scope_focus: Vec<FocusHandle>,
+    _scope_events: Option<Task<()>>,
     /// The selected row, by what it is (rows come and go as the snapshot changes).
     selected: Option<Item>,
     _subscriptions: Vec<Subscription>,
@@ -68,6 +71,10 @@ impl OverlayContent for CommandPalette {
 
     fn leave(&mut self, cx: &mut Context<Self>) {
         self.leaving = true;
+        if let Some(host) = &self.native_scopes {
+            host.begin();
+            host.finish();
+        }
         cx.notify();
     }
 }
@@ -247,6 +254,32 @@ impl CommandPalette {
         cx: &mut Context<Self>,
     ) -> Self {
         let search = cx.new(|cx| InputState::new(window, cx).placeholder(Scope::All.placeholder()));
+        let scope_focus: Vec<_> = Scope::ROW.iter().map(|_| cx.focus_handle()).collect();
+        let (scope_events, scope_rx) = smol::channel::unbounded();
+        let native_scopes = crate::platform::controls::Segments::new(window, scope_events, cx).map(Rc::new);
+        let scope_events = native_scopes.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = scope_rx.recv().await {
+                    if this
+                        .update_in(cx, |this, window, cx| {
+                            if this.leaving
+                                || event.id != "palette-scopes"
+                                || !this.native_scopes.as_ref().is_some_and(|host| host.accepts(&event.id))
+                            {
+                                return;
+                            }
+                            if let Some(scope) = Scope::ROW.get(event.selected).copied() {
+                                this.set_scope(scope, window, cx);
+                                window.focus(&this.search.focus_handle(cx), cx);
+                            }
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            })
+        });
         window.focus(&search.focus_handle(cx), cx);
         let handle = window.window_handle().window_id();
         let palette = cx.weak_entity();
@@ -290,6 +323,9 @@ impl CommandPalette {
             list: ListState::new(0, ListAlignment::Top, px(LIST_OVERDRAW)),
             card: Rc::default(),
             leaving: false,
+            native_scopes,
+            scope_focus,
+            _scope_events: scope_events,
             selected: None,
             _subscriptions: subscriptions,
             _refresh: refresh,

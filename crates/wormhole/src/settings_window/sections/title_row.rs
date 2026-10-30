@@ -29,7 +29,7 @@ pub(super) fn draw_control(_: &SettingsWindow, _: &mut Context<SettingsWindow>) 
 }
 
 /// The parts, shown ones first in their order, then the hidden ones.
-pub(super) fn draw_parts(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
+pub(super) fn draw_parts(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     let ui = ui(cx);
     // The person's own arrangement, whatever Zen mode shows meanwhile.
     let own = crate::settings::settings_without_zen(cx);
@@ -48,11 +48,13 @@ pub(super) fn draw_parts(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
                 on_move: Rc::new(|from, to, _, cx| update_settings(cx, |s| s.move_title_part(from, to))),
                 dragged: Reorder::dragging(&list, ix, cx),
             };
-            part_row(ui, part, true, bar, Some(reorder)).into_any_element()
+            part_row(window, ui, part, true, bar, Some(reorder), cx).into_any_element()
         })
         .collect();
-    let hidden: Vec<AnyElement> =
-        row.hidden().map(|part| part_row(ui, part, false, bar, None).into_any_element()).collect();
+    let hidden: Vec<AnyElement> = row
+        .hidden()
+        .map(|part| part_row(window, ui, part, false, bar, None, cx).into_any_element())
+        .collect();
     Some(
         div()
             .flex()
@@ -70,13 +72,25 @@ pub(super) fn draw_parts(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
 /// One part: its icon and name, and its switch (the space has its rule instead, as it can't be
 /// hidden). The terminal's status says, while the status bar is on (`bar`), that the bar shows it
 /// instead.
-fn part_row(ui: UiColors, part: TitlePart, shown: bool, bar: bool, reorder: Option<Reorder>) -> Div {
+fn part_row(
+    window: &SettingsWindow,
+    ui: UiColors,
+    part: TitlePart,
+    shown: bool,
+    bar: bool,
+    reorder: Option<Reorder>,
+    cx: &mut Context<SettingsWindow>,
+) -> Div {
     let slot = TitlePart::ALL.iter().position(|p| *p == part).unwrap_or_default();
     let control = part.hideable().then(|| {
-        style::toggle(("title-part-switch", slot), shown, move |on, _, cx| {
-            update_settings(cx, |s| s.show_title_part(part, on))
-        })
-        .into_any_element()
+        window.switch_control(
+            format!("title-part-switch-{slot}").into(),
+            text(parts::label(part)),
+            shown,
+            true,
+            cx,
+            move |on, _, cx| update_settings(cx, |s| s.show_title_part(part, on)),
+        )
     });
     let note = match part {
         TitlePart::Space => Some(text(TITLE_ROW_PART_SPACE_DESCRIPTION).into()),

@@ -483,7 +483,15 @@ impl Changes {
                 .pt(px(CARD_INSET))
                 .px(px(CARD_INSET))
                 .pb(px(CARD_INSET))
+                .children(self.native_diff_segments.as_ref().map(|host| {
+                    let host = host.clone();
+                    canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+                }))
                 .child(card)
+                .children(self.native_diff_segments.as_ref().map(|host| {
+                    let host = host.clone();
+                    canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()
+                }))
                 .into_any_element(),
         )
     }

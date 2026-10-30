@@ -14,7 +14,9 @@
 //! keys over them), `note_ops` and `tasks` (what is done to them), `view` (the drawing), `api` (what the
 //! project folder's notes.md sync may do, its bridge).
 
+use std::cell::Cell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use gpui_kit::component::input::{InputState, TextareaState};
 use gpui_kit::*;
@@ -69,6 +71,9 @@ pub(crate) struct Notes {
     /// The panel's width as the feature last heard it, for the hint of a note made without a frame
     /// to ask (a terminal opened at launch).
     panel: f32,
+    native_checks: Option<Rc<crate::platform::controls::Switches>>,
+    checks_epoch: Cell<u64>,
+    _check_events: Option<Task<()>>,
 }
 
 impl EventEmitter<FeatureEvent> for Notes {}
@@ -128,12 +133,50 @@ impl NotesOf {
 }
 
 impl Notes {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let (events, rx) = smol::channel::unbounded();
+        let native_checks = crate::platform::controls::Switches::new(window, events, cx).map(Rc::new);
+        let check_events = native_checks.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = rx.recv().await {
+                    if this
+                        .update_in(cx, |this, _, cx| {
+                            if !this.native_checks.as_ref().is_some_and(|host| host.accepts(&event.id)) {
+                                return;
+                            }
+                            let prefix = format!("note-task-{}-", this.checks_epoch.get());
+                            let Some((session, ix)) =
+                                event.id.strip_prefix(&prefix).and_then(|rest| rest.split_once('-'))
+                            else {
+                                return;
+                            };
+                            let (Ok(session), Ok(ix)) = (session.parse::<i64>(), ix.parse::<usize>()) else {
+                                return;
+                            };
+                            if this
+                                .of
+                                .get(&session)
+                                .and_then(|of| of.tasks.items().get(ix))
+                                .is_some_and(|task| task.done != event.on)
+                            {
+                                this.toggle_task(session, ix, cx);
+                            }
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            })
+        });
         Self {
             of: HashMap::new(),
             focused: None,
             editing: None,
             panel: wormhole_core::view::layout::PANEL_MIN,
+            native_checks,
+            checks_epoch: Cell::new(0),
+            _check_events: check_events,
         }
     }
 
@@ -172,6 +215,7 @@ impl Notes {
     /// its editors. Nothing else is stored for it here.
     pub(crate) fn forget(&mut self, session: i64) {
         self.of.remove(&session);
+        self.invalidate_checks();
         if self.focused.is_some_and(|(id, _)| id == session) {
             self.focused = None;
         }
@@ -180,6 +224,7 @@ impl Notes {
     /// Another terminal was chosen: the focused note belonged to the one before.
     pub(crate) fn selected(&mut self) {
         self.focused = None;
+        self.invalidate_checks();
     }
 
     fn of_mut(&mut self, session: i64) -> Option<&mut NotesOf> {
@@ -188,8 +233,16 @@ impl Notes {
 
     /// Tells the window something to save changed.
     fn dirty(&self, cx: &mut Context<Self>) {
+        self.invalidate_checks();
         cx.emit(FeatureEvent::Dirty);
         cx.notify();
+    }
+
+    fn invalidate_checks(&self) {
+        self.checks_epoch.set(self.checks_epoch.get().wrapping_add(1));
+        if let Some(host) = &self.native_checks {
+            host.forget_prefix("note-task-");
+        }
     }
 }
 

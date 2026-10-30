@@ -4,7 +4,9 @@
 //! A test window has no native panel, so the keys, the text and the clicks the panel would report are fed to the
 //! picker directly (`Picker::feed`): the same events, the same rules, the same queries off the main thread.
 
+use std::cell::RefCell;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use gpui_kit::{Focusable as _, TestAppContext};
@@ -163,6 +165,111 @@ fn open_picker(cx: &mut TestAppContext, window: &OpenWindow) {
     press(cx, window, "cmd-j");
     draw(cx, window);
     settle(cx, window);
+}
+
+#[gpui_kit::test]
+fn highlighted_row_changes_are_reported_for_previews(cx: &mut TestAppContext) {
+    if isolate("highlighted_row_changes_are_reported_for_previews") {
+        return;
+    }
+    let tree = tree();
+    let window = open_in(cx, tree.path());
+    open_picker(cx, &window);
+    let seen = Rc::new(RefCell::new(Vec::new()));
+    let observations = seen.clone();
+    let segment_events = Rc::new(RefCell::new(Vec::new()));
+    let segments_seen = segment_events.clone();
+    let keep = cx.update(|cx| {
+        let host = window
+            .workspace
+            .read_with(cx, |ws, _| ws.overlay_of::<FolderPicker>())
+            .expect("window open")
+            .expect("picker open");
+        let picker = host.read(cx).picker.clone();
+        host.update(cx, |_, cx| {
+            cx.subscribe(&picker, move |_, _, event: &crate::picker::PickerEvent, _| {
+                if let crate::picker::PickerEvent::Highlight(key) = event {
+                    observations.borrow_mut().push(key.clone());
+                } else if let crate::picker::PickerEvent::Segment(index) = event {
+                    segments_seen.borrow_mut().push(*index);
+                }
+            })
+        })
+    });
+    key(cx, &window, Key::Down);
+    let picker = picker(cx, &window);
+    let selected = cx.update(|cx| picker.read(cx).model.selected_row().map(|row| row.key.clone()));
+    assert!(selected.is_some());
+    assert_eq!(seen.borrow().last(), Some(&selected));
+    cx.update(|cx| {
+        picker.update(cx, |picker, cx| {
+            picker.set_segments(
+                Some(crate::platform::picker::Segments {
+                    labels: vec!["Monospace".into(), "All".into()],
+                    selected: 0,
+                    label: "Font filter".into(),
+                    status: String::new(),
+                }),
+                cx,
+            );
+            picker.feed(Event::Segment(1), cx);
+            picker.feed(Event::Segment(5), cx);
+        })
+    });
+    cx.run_until_parked();
+    assert_eq!(*segment_events.borrow(), [1]);
+    drop(keep);
+}
+
+#[gpui_kit::test]
+fn initial_selection_follows_its_key_but_never_overrides_a_key_press(cx: &mut TestAppContext) {
+    if isolate("initial_selection_follows_its_key_but_never_overrides_a_key_press") {
+        return;
+    }
+    let tree = tree();
+    let window = open_in(cx, tree.path());
+    open_picker(cx, &window);
+    let picker = picker(cx, &window);
+    let keys = cx.update(|cx| {
+        picker
+            .read(cx)
+            .model
+            .items()
+            .iter()
+            .filter_map(|item| match item {
+                Item::Row(row) => Some(row.key.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+    });
+    assert!(keys.len() >= 3);
+    cx.update(|cx| picker.update(cx, |picker, cx| picker.prefer_initial(keys[2].clone(), cx)));
+    assert_eq!(
+        cx.update(|cx| picker.read(cx).model.selected_row().map(|row| row.key.clone())),
+        Some(keys[2].clone())
+    );
+    key(cx, &window, Key::Down);
+    assert_eq!(
+        cx.update(|cx| picker.read(cx).model.selected_row().map(|row| row.key.clone())),
+        Some(keys[0].clone())
+    );
+    // A missing initial row stays pending until the user acts; it must not jump later.
+    let late = tree.path().join("zz-late");
+    cx.update(|cx| {
+        picker.update(cx, |picker, cx| picker.prefer_initial(late.to_string_lossy().into_owned(), cx))
+    });
+    key(cx, &window, Key::Down);
+    assert_eq!(
+        cx.update(|cx| picker.read(cx).model.selected_row().map(|row| row.key.clone())),
+        Some(keys[1].clone())
+    );
+    std::fs::create_dir_all(&late).expect("late folder");
+    cx.update(|cx| picker.update(cx, |picker, cx| picker.refresh(cx)));
+    settle(cx, &window);
+    assert_eq!(
+        cx.update(|cx| picker.read(cx).model.selected_row().map(|row| row.key.clone())),
+        Some(keys[1].clone())
+    );
 }
 
 fn is_open(cx: &mut TestAppContext, window: &OpenWindow) -> bool {

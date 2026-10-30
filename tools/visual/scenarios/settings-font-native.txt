@@ -1,0 +1,27 @@
+# Exercise native font search, the filter, and selection in an isolated profile.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+settings-section fonts
+@batch
+font-picker terminal
+@batch
+@sleep 1500
+font-native state
+@batch
+font-native pick
+@batch
+font-picker terminal menlo
+@batch
+@sleep 1500
+font-native state
+@batch
+font-native all
+@batch
+@sleep 500
+font-native state
+@batch
+font-native pick
+@batch
+font-native state
+@batch

@@ -43,7 +43,7 @@ impl SettingsWindow {
         for (ix, proposed) in proposal.values.iter().enumerate() {
             let on = ticks.get(ix).copied().unwrap_or(false);
             let row = Row { source, ix, proposed, on, pair };
-            column = column.child(proposed_row(ui, &code_font, &row, cx));
+            column = column.child(proposed_row(self, ui, &code_font, &row, cx));
         }
         if !proposal.skipped.is_empty() {
             column = column
@@ -88,21 +88,42 @@ impl SettingsWindow {
                 .text_color(ui.success_text)
                 .child(settings_import_summary(whole(brought.brought), &brought.left.to_string()))
         });
-        div()
-            .flex()
-            .items_center()
-            .gap_3()
-            .pt_2()
-            .rule_top(ui)
-            .child(
+        let this = cx.weak_entity();
+        let apply = self
+            .native_button_with_style(
+                format!("import-apply-{}", source.key()),
+                text(SETTINGS_IMPORT_APPLY),
+                selected > 0,
+                true,
+                cx,
+                move |_, cx| {
+                    this.update(cx, |this, cx| {
+                        if this.import.open == Some(source)
+                            && this.import.ticked.get(&source).is_some_and(|ticks| ticks.iter().any(|on| *on))
+                        {
+                            this.apply_import(source, cx);
+                        }
+                    })
+                    .ok();
+                },
+            )
+            .unwrap_or_else(|| {
                 Button::new("import-apply")
                     .primary()
                     .small()
                     .icon(IconName::ArrowDownToLine)
                     .label(text(SETTINGS_IMPORT_APPLY))
                     .disabled(selected == 0)
-                    .on_click(cx.listener(move |this, _, _, cx| this.apply_import(source, cx))),
-            )
+                    .on_click(cx.listener(move |this, _, _, cx| this.apply_import(source, cx)))
+                    .into_any_element()
+            });
+        div()
+            .flex()
+            .items_center()
+            .gap_3()
+            .pt_2()
+            .rule_top(ui)
+            .child(apply)
             .child(
                 div()
                     .text_caption()
@@ -129,6 +150,7 @@ struct Row<'a> {
 /// One setting: its tick, name, what the other terminal says, and what Wormhole would set. A shell
 /// command is taller: the whole command, and that it runs in every new terminal.
 fn proposed_row(
+    window: &SettingsWindow,
     ui: UiColors,
     code_font: &SharedString,
     row: &Row<'_>,
@@ -136,19 +158,34 @@ fn proposed_row(
 ) -> AnyElement {
     let Row { source, ix, proposed, on, pair } = *row;
     let label = setting_label(proposed.setting, pair);
-    let tick = style::checkbox(("import-tick", ix), ui, on).spoken(label).on_change({
-        let this = cx.weak_entity();
-        move |on, _, cx| {
-            this.update(cx, |this, cx| {
-                if let Some(slot) = this.import.ticked.get_mut(&source).and_then(|ticks| ticks.get_mut(ix)) {
-                    *slot = on;
-                }
-                this.import.done = None;
-                cx.notify();
-            })
-            .ok();
-        }
-    });
+    let this = cx.weak_entity();
+    let change = move |on, _: &mut Window, cx: &mut App| {
+        this.update(cx, |this, cx| {
+            if let Some(slot) = this.import.ticked.get_mut(&source).and_then(|ticks| ticks.get_mut(ix)) {
+                *slot = on;
+            }
+            this.import.done = None;
+            cx.notify();
+        })
+        .ok();
+    };
+    let tick = if window.native_switches.is_some() {
+        window.checkbox_control(
+            SharedString::from(format!("import-tick-{source:?}-{:?}-{ix}", proposed.setting)),
+            label,
+            on,
+            true,
+            false,
+            cx,
+            change,
+        )
+    } else {
+        style::checkbox(("import-tick", ix), ui, on)
+            .spoken(label)
+            .tab_stop(true)
+            .on_change(change)
+            .into_any_element()
+    };
     let head = div()
         .flex()
         .items_center()

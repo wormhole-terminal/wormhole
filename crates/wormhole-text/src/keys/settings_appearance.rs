@@ -150,26 +150,28 @@ pub const SETTINGS_APPEARANCE_SETTINGS: Key = Key::new(388);
 pub const SETTINGS_APPEARANCE_THEME_STUDIO: Key = Key::new(389);
 /// "Project settings"
 pub const SETTINGS_APPEARANCE_PROJECT_SETTINGS: Key = Key::new(390);
+/// "Pick a colour"
+pub const SETTINGS_APPEARANCE_PICK_COLOUR: Key = Key::new(395);
 /// "Live preview: your windows over the desktop, with everything below applied as you change it (the blur behind a window isn't drawn here)"
-pub const SETTINGS_APPEARANCE_STAGE_CAPTION: Key = Key::new(396);
+pub const SETTINGS_APPEARANCE_STAGE_CAPTION: Key = Key::new(397);
 /// "Filter themes"
-pub const SETTINGS_APPEARANCE_FILTER_THEMES: Key = Key::new(397);
+pub const SETTINGS_APPEARANCE_FILTER_THEMES: Key = Key::new(398);
 /// "In Dark Mode"
-pub const SETTINGS_APPEARANCE_IN_DARK_MODE: Key = Key::new(398);
+pub const SETTINGS_APPEARANCE_IN_DARK_MODE: Key = Key::new(399);
 /// "In Light Mode"
-pub const SETTINGS_APPEARANCE_IN_LIGHT_MODE: Key = Key::new(399);
+pub const SETTINGS_APPEARANCE_IN_LIGHT_MODE: Key = Key::new(400);
 /// "Show fewer"
-pub const SETTINGS_APPEARANCE_SHOW_FEWER: Key = Key::new(400);
+pub const SETTINGS_APPEARANCE_SHOW_FEWER: Key = Key::new(401);
 /// "Import theme…"
-pub const SETTINGS_APPEARANCE_IMPORT_THEME: Key = Key::new(401);
+pub const SETTINGS_APPEARANCE_IMPORT_THEME: Key = Key::new(402);
 /// "No themes match the filter."
-pub const SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER: Key = Key::new(402);
+pub const SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER: Key = Key::new(403);
 /// "Hide theme"
-pub const SETTINGS_APPEARANCE_HIDE_THEME: Key = Key::new(405);
+pub const SETTINGS_APPEARANCE_HIDE_THEME: Key = Key::new(406);
 /// "Move to Trash"
-pub const SETTINGS_APPEARANCE_MOVE_TO_TRASH: Key = Key::new(406);
+pub const SETTINGS_APPEARANCE_MOVE_TO_TRASH: Key = Key::new(407);
 /// "Show"
-pub const SETTINGS_APPEARANCE_SHOW_THEME: Key = Key::new(407);
+pub const SETTINGS_APPEARANCE_SHOW_THEME: Key = Key::new(408);
 
 /// ```text
 /// Yours · { $color }, in every theme
@@ -203,7 +205,7 @@ pub fn settings_appearance_branch_pick(color: &str) -> String {
 /// This terminal shows { $project }'s theme. Your own is kept for everything else.
 /// ```
 pub fn settings_appearance_project_theme_note(project: &str) -> String {
-    crate::active::message(395, &[("project", Arg::Str(project))])
+    crate::active::message(396, &[("project", Arg::Str(project))])
 }
 
 /// ```text
@@ -213,19 +215,19 @@ pub fn settings_appearance_project_theme_note(project: &str) -> String {
 /// }
 /// ```
 pub fn settings_appearance_filter_themes_count(count: i64) -> String {
-    crate::active::message(403, &[("count", Arg::Int(count))])
+    crate::active::message(404, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Show all { $total }
 /// ```
 pub fn settings_appearance_show_all_themes(total: &str) -> String {
-    crate::active::message(404, &[("total", Arg::Str(total))])
+    crate::active::message(405, &[("total", Arg::Str(total))])
 }
 
 /// ```text
 /// Hidden themes ({ $count })
 /// ```
 pub fn settings_appearance_hidden_themes(count: &str) -> String {
-    crate::active::message(408, &[("count", Arg::Str(count))])
+    crate::active::message(409, &[("count", Arg::Str(count))])
 }

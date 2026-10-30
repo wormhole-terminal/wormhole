@@ -38,6 +38,12 @@ pub(in crate::studio) struct GalleryView {
     columns: Columns,
     measures: Rc<RefCell<Measures>>,
     scroll: ScrollHandle,
+    /// Native specimens share the same host as the real application controls.
+    native_controls: Option<Rc<crate::platform::controls::Switches>>,
+    _native_events: Option<Task<()>>,
+    native_area: Option<Rc<crate::platform::controls::Segments>>,
+    area_focus: Vec<FocusHandle>,
+    _area_events: Option<Task<()>>,
     /// The gallery's text field and the item editor's, shown by the specimens that have one.
     pub(super) sample_input: Entity<InputState>,
     pub(super) item_editor: Entity<InputState>,
@@ -67,6 +73,42 @@ impl GalleryView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        let (events, rx) = smol::channel::unbounded();
+        let native_controls = crate::platform::controls::Switches::new(window, events, cx).map(Rc::new);
+        let native_events = native_controls.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while rx.recv().await.is_ok() {
+                    if this.update_in(cx, |_, _, cx| cx.notify()).is_err() {
+                        break;
+                    }
+                }
+            })
+        });
+        let (area_events, area_rx) = smol::channel::unbounded();
+        let native_area = crate::platform::controls::Segments::new(window, area_events, cx).map(Rc::new);
+        let area_task = native_area.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = area_rx.recv().await {
+                    if this
+                        .update_in(cx, |gallery, window, cx| {
+                            if event.id != "studio-gallery-area"
+                                || !gallery.native_area.as_ref().is_some_and(|host| host.accepts(&event.id))
+                            {
+                                return;
+                            }
+                            if let Some(area) = Area::ALL.get(event.selected).copied() {
+                                window.focus(&gallery.area_focus[event.selected], cx);
+                                gallery.studio.update(cx, |studio, cx| studio.set_area(area, cx)).ok();
+                            }
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            })
+        });
+        let area_focus = Area::ALL.iter().map(|_| cx.focus_handle()).collect();
         Self {
             studio: studio.downgrade(),
             selected: None,
@@ -75,6 +117,11 @@ impl GalleryView {
             columns: Columns::default(),
             measures: Rc::default(),
             scroll: ScrollHandle::new(),
+            native_controls,
+            _native_events: native_events,
+            native_area,
+            area_focus,
+            _area_events: area_task,
             sample_input: cx.new(|cx| InputState::new(window, cx).placeholder("Search themes")),
             item_editor: cx.new(|cx| InputState::new(window, cx).default_value("Rename this task")),
             sample: RefCell::new(None),
@@ -88,6 +135,54 @@ impl GalleryView {
                 // A theme that is switched to, or previewed, changes every color on the page.
                 cx.observe_global::<SettingsStore>(|_, cx| cx.notify()),
             ],
+        }
+    }
+
+    pub(super) fn checkbox(&self, id: &str, label: &str, on: bool, env: &Env) -> AnyElement {
+        if let Some(native) = &self.native_controls {
+            crate::style::native_switch::NativeCheckbox {
+                native: native.clone(),
+                id: id.to_string(),
+                label: label.to_string().into(),
+                on,
+                enabled: true,
+                show_label: false,
+                focus: None,
+                change: Rc::new(|_, _, _| {}),
+                appearance: env.tokens.appearance,
+                ui: env.ui,
+            }
+            .into_any_element()
+        } else {
+            style::checkbox(SharedString::from(id.to_string()), env.ui, on)
+                .spoken(label.to_string())
+                .into_any_element()
+        }
+    }
+
+    pub(super) fn has_native_controls(&self) -> bool {
+        self.native_controls.is_some()
+    }
+
+    pub(super) fn switch(&self, id: &str, label: &str, on: bool, enabled: bool, env: &Env) -> AnyElement {
+        if let Some(native) = &self.native_controls {
+            crate::style::native_switch::NativeSwitch {
+                native: native.clone(),
+                id: id.to_string(),
+                label: label.to_string().into(),
+                on,
+                enabled,
+                focus: None,
+                appearance: env.tokens.appearance,
+                change: Rc::new(|_, _, _| {}),
+            }
+            .into_any_element()
+        } else {
+            use gpui_kit::component::Disableable as _;
+            style::toggle(SharedString::from(id.to_string()), on, |_, _, _| {})
+                .disabled(!enabled)
+                .accessibility_label(label.to_string())
+                .into_any_element()
         }
     }
 
@@ -150,22 +245,58 @@ impl GalleryView {
     }
 
     /// The filter, and how many things the selected token is drawn on.
-    fn header(&self, uses: &[&TokenUse], ui: UiColors) -> AnyElement {
-        let mut filter = style::segmented(ui);
-        for area in Area::ALL {
+    fn header(
+        &self,
+        uses: &[&TokenUse],
+        ui: UiColors,
+        appearance: wormhole_core::theme::tokens::Appearance,
+    ) -> AnyElement {
+        let filter = if let Some(native) = &self.native_area {
+            let options: Vec<_> = Area::ALL
+                .iter()
+                .map(|area| crate::platform::controls::SegmentOption {
+                    label: area.label().to_string(),
+                    symbol: None,
+                })
+                .collect();
+            let metrics = native.metrics(&options);
             let studio = self.studio.clone();
-            filter = filter.child(
-                style::segment(
-                    SharedString::from(format!("studio-area-{}", area.label())),
-                    ui,
-                    area.label(),
-                    self.area == area,
-                )
-                .on_click(move |_, _, cx| {
-                    studio.update(cx, |studio, cx| studio.set_area(area, cx)).ok();
+            crate::style::native_segments::NativeSegments {
+                native: native.clone(),
+                id: "studio-gallery-area".into(),
+                options,
+                accessibility_labels: None,
+                selected: Area::ALL.iter().position(|area| *area == self.area).unwrap_or_default(),
+                enabled: true,
+                hover: None,
+                focus: self.area_focus.clone(),
+                appearance,
+                metrics,
+                change: Rc::new(move |ix, _, cx| {
+                    if let Some(area) = Area::ALL.get(ix).copied() {
+                        studio.update(cx, |studio, cx| studio.set_area(area, cx)).ok();
+                    }
                 }),
-            );
-        }
+            }
+            .into_any_element()
+        } else {
+            let mut filter = style::segmented(ui);
+            for area in Area::ALL {
+                let studio = self.studio.clone();
+                filter = filter.child(
+                    style::segment(
+                        SharedString::from(format!("studio-area-{}", area.label())),
+                        ui,
+                        area.label(),
+                        self.area == area,
+                    )
+                    .on_click(move |_, _, cx| {
+                        studio.update(cx, |studio, cx| studio.set_area(area, cx)).ok();
+                    }),
+                );
+            }
+            filter.into_any_element()
+        };
         let count = self.selected.as_ref().map(|name| {
             let text = match uses.len() {
                 0 => format!("Nothing draws {name} directly"),
@@ -274,6 +405,14 @@ impl Render for GalleryView {
             .flex_col()
             .gap_4()
             .text_color(t(&tokens, "text.primary"))
+            .children(self.native_controls.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+            }))
+            .children(self.native_area.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+            }))
             .child(
                 canvas(
                     {
@@ -287,8 +426,16 @@ impl Render for GalleryView {
                 .left_0()
                 .size_full(),
             )
-            .child(self.header(&uses, ui))
+            .child(self.header(&uses, ui, tokens.appearance))
             .child(two_columns)
             .child(wide)
+            .children(self.native_controls.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()
+            }))
+            .children(self.native_area.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()
+            }))
     }
 }

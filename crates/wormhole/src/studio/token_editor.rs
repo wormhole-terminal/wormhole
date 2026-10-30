@@ -125,6 +125,52 @@ impl FieldError {
 }
 
 impl StudioWindow {
+    pub(super) fn set_metric_slider(&mut self, value: f64, window: &mut Window, cx: &mut Context<Self>) {
+        if value.is_finite() && self.selected.as_deref().is_some_and(is_metric) {
+            let value = (value as f32).round().clamp(0.0, METRIC_MAX);
+            self.set_selected_value(Some(number(value)), Edit::Field, window, cx);
+        }
+    }
+    pub(super) fn step_metric(&mut self, delta: i32, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(name) = self.selected.as_deref().filter(|name| is_metric(name)) else { return };
+        let value = tokens_of(cx).metrics.get(name).unwrap_or_default();
+        let next = (value + delta as f32).clamp(0.0, METRIC_MAX);
+        self.set_selected_value(Some(number(next)), Edit::Field, window, cx);
+    }
+    pub(super) fn set_metric_following(
+        &mut self,
+        following: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(name) = self.selected.as_deref().filter(|name| is_metric(name)) else { return };
+        let value = tokens_of(cx).metrics.get(name).unwrap_or_default();
+        self.set_selected_value((!following).then(|| number(value)), Edit::Field, window, cx);
+    }
+    pub(super) fn choose_colour(&self, name: &str, start: Hsla, window: &mut Window, cx: &mut Context<Self>) {
+        let this = cx.weak_entity();
+        let token = name.to_string();
+        let epoch = self.selection_epoch;
+        crate::platform::pick_colour_with_alpha(
+            start,
+            true,
+            std::rc::Rc::new(move |colour, window, cx| {
+                this.update(cx, |studio, cx| {
+                    if studio.selection_epoch == epoch && studio.selected.as_deref() == Some(token.as_str()) {
+                        studio.set_selected_value(
+                            Some(crate::theme_bridge::color(colour).to_hex()),
+                            Edit::Field,
+                            window,
+                            cx,
+                        );
+                    }
+                })
+                .ok();
+            }),
+            window,
+            cx,
+        );
+    }
     /// On every keystroke: say what is wrong with the value as it stands, without applying it.
     pub(super) fn check_field(&mut self, value: &str, cx: &mut Context<Self>) {
         let Some(name) = self.selected.clone() else { return };
@@ -183,8 +229,40 @@ impl StudioWindow {
             .flex_col()
             .rule_left(ui)
             .bg(panel)
+            .children(self.metric_switch.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+            }))
+            .children(self.metric_stepper.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+            }))
+            .children(self.metric_slider.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+            }))
+            .children(self.colour_button.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+            }))
             .children(sections)
             .when(!issues.is_empty(), |d| d.child(self.low_contrast_card(&issues, code_font, ui, cx)))
+            .children(self.metric_switch.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()
+            }))
+            .children(self.metric_stepper.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()
+            }))
+            .children(self.metric_slider.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()
+            }))
+            .children(self.colour_button.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()
+            }))
             .into_any_element()
     }
 
@@ -275,14 +353,42 @@ impl StudioWindow {
             } else {
                 format!("sRGB · {:.0}% alpha", color.a * 100.0)
             };
-            let palette: Vec<Hsla> = tokens.terminal.ansi.iter().map(|c| hsla(*c)).collect();
+            let picker = if let Some(native) = &self.colour_button {
+                let token = name.to_string();
+                let start = hsla(color);
+                let epoch = self.selection_epoch;
+                let this = cx.weak_entity();
+                crate::style::native_button::NativeButton {
+                    tooltip: None,
+                    destructive: false,
+                    native: native.clone(),
+                    id: format!("studio-colour-{epoch}"),
+                    label: "Colour…".into(),
+                    enabled: true,
+                    primary: false,
+                    focus: self.colour_button_focus.clone(),
+                    appearance: tokens.appearance,
+                    press: std::rc::Rc::new(move |window, cx| {
+                        this.update(cx, |studio, cx| {
+                            if studio.selection_epoch == epoch {
+                                studio.choose_colour(&token, start, window, cx);
+                            }
+                        })
+                        .ok();
+                    }),
+                }
+                .into_any_element()
+            } else {
+                let palette: Vec<Hsla> = tokens.terminal.ansi.iter().map(|c| hsla(*c)).collect();
+                ColorPicker::new(&self.picker).featured_colors(palette).into_any_element()
+            };
             body = body
                 .child(
                     div()
                         .flex()
                         .items_center()
                         .gap_3()
-                        .child(ColorPicker::new(&self.picker).featured_colors(palette))
+                        .child(picker)
                         .child(
                             div()
                                 .flex_1()
@@ -408,22 +514,96 @@ impl StudioWindow {
             }
         };
         let following = override_of(&self.draft, name).is_none();
+        let slider = if let Some(native) = &self.metric_slider {
+            let this = cx.weak_entity();
+            let epoch = self.selection_epoch;
+            crate::style::native_slider::NativeSlider {
+                native: native.clone(),
+                id: format!("studio-metric-slider-{epoch}"),
+                label: format!("{name} in pixels").into(),
+                value: value.clamp(0.0, METRIC_MAX) as f64,
+                min: 0.0,
+                max: METRIC_MAX as f64,
+                step: 1.0,
+                enabled: true,
+                focus: self.metric_slider_focus.clone(),
+                appearance: tokens.appearance,
+                change: std::rc::Rc::new(move |value, window, cx| {
+                    this.update(cx, |studio, cx| {
+                        if studio.selection_epoch == epoch {
+                            studio.set_metric_slider(value, window, cx);
+                        }
+                    })
+                    .ok();
+                }),
+            }
+            .into_any_element()
+        } else {
+            Slider::new(&self.slider).into_any_element()
+        };
+        let stepper = if let Some(native) = &self.metric_stepper {
+            let this = cx.weak_entity();
+            let epoch = self.selection_epoch;
+            crate::style::native_stepper::NativeStepper {
+                native: native.clone(),
+                id: format!("studio-metric-stepper-{epoch}"),
+                label: format!("{name} in pixels").into(),
+                value: format!("{} px", number(value)),
+                enabled: true,
+                focus: self.metric_stepper_focus.clone(),
+                appearance: tokens.appearance,
+                ui,
+                change: std::rc::Rc::new(move |delta, window, cx| {
+                    this.update(cx, |studio, cx| {
+                        if studio.selection_epoch == epoch {
+                            studio.step_metric(delta, window, cx);
+                        }
+                    })
+                    .ok();
+                }),
+            }
+            .into_any_element()
+        } else {
+            style::stepper(ui, "studio-metric", format!("{} px", number(value)), step(-1.0), step(1.0))
+                .into_any_element()
+        };
         let follow = rule.map(|source| {
             let source_value = tokens.metrics.get(&format!("metrics.{source}")).unwrap_or_default();
             let this = cx.weak_entity();
+            let epoch = self.selection_epoch;
+            let label = format!("Follow {source}");
+            let change = move |on, window: &mut Window, cx: &mut App| {
+                this.update(cx, |studio, cx| {
+                    if studio.selection_epoch == epoch {
+                        studio.set_metric_following(on, window, cx);
+                    }
+                })
+                .ok();
+            };
+            let control = if let Some(native) = &self.metric_switch {
+                crate::style::native_switch::NativeSwitch {
+                    native: native.clone(),
+                    id: format!("studio-follow-{epoch}"),
+                    label: label.clone().into(),
+                    on: following,
+                    enabled: true,
+                    focus: Some(self.metric_switch_focus.clone()),
+                    appearance: tokens.appearance,
+                    change: std::rc::Rc::new(change),
+                }
+                .into_any_element()
+            } else {
+                style::toggle("studio-follow", following, change)
+                    .accessibility_label(label)
+                    .into_any_element()
+            };
             div()
                 .flex()
                 .items_center()
                 .gap_2()
                 .text_caption()
                 .text_color(ui.muted)
-                .child(style::toggle("studio-follow", following, move |on, window, cx| {
-                    this.update(cx, |studio, cx| {
-                        let value = (!on).then(|| number(value));
-                        studio.set_selected_value(value, Edit::Field, window, cx);
-                    })
-                    .ok();
-                }))
+                .child(control)
                 .child(format!("Follow {source} ({} px)", number(source_value)))
         });
         let help = if name.ends_with("width") {
@@ -436,20 +616,7 @@ impl StudioWindow {
             .flex()
             .flex_col()
             .gap_3()
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap_3()
-                    .child(style::stepper(
-                        ui,
-                        "studio-metric",
-                        format!("{} px", number(value)),
-                        step(-1.0),
-                        step(1.0),
-                    ))
-                    .child(div().flex_1().child(Slider::new(&self.slider))),
-            )
+            .child(div().flex().items_center().gap_3().child(stepper).child(div().flex_1().child(slider)))
             .children(follow)
             .child(div().text_caption().text_color(ui.faint).child(help))
             .child(

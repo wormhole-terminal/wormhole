@@ -30,7 +30,7 @@ use wormhole_core::view::picker::{
     Placed, Provider, Snapshot, place,
 };
 
-use crate::platform::picker::{Event, Line, MAX_ROWS, Panel, View, card};
+use crate::platform::picker::{Event, Line, MAX_ROWS, Panel, Segments, View, card};
 use crate::settings::store_in;
 
 #[cfg(feature = "devctl")]
@@ -44,8 +44,16 @@ pub(crate) use devctl::summary;
 pub(crate) enum PickerEvent {
     /// A row was picked: this is what it hands over. The picker is done.
     Insert(String),
+    /// A row requested its secondary action; the key is checked against the current list.
+    Context(String),
     /// The person asked to forget the row with this key.
     Forget(String),
+    /// The highlighted row changed, or there is no longer a row to preview.
+    Highlight(Option<String>),
+    /// A provider's status text changed.
+    Status(Option<String>),
+    /// The panel's optional filter was changed.
+    Segment(usize),
     /// The picker is done without a pick: Esc, a click away.
     Close,
 }
@@ -86,6 +94,11 @@ pub(crate) struct Picker {
     placed: Option<Placed>,
     /// What the panel was last handed, so a push of the same is skipped.
     last: Option<(Snapshot, Rect)>,
+    highlighted: Option<String>,
+    /// A caller's initial selection, retained while its asynchronously loaded row is absent.
+    preferred: Option<String>,
+    status: Option<String>,
+    segments: Option<Segments>,
     /// The token of the queries asked for the text now, cancelled when the text moves on. Decorations have
     /// their own: a text that moved on makes a query worthless, not the badge of a folder.
     cancel: Cancel,
@@ -114,6 +127,14 @@ const PAUSE: Duration = Duration::from_millis(60);
 /// the picker does not pass it on.
 fn insertable(text: &str) -> bool {
     !text.chars().any(hostile_char)
+}
+
+/// A recycled native row may report a press after the answer has changed.
+fn context_key<'a>(items: &'a [Item], at: usize, key: &str) -> Option<&'a str> {
+    match items.get(at) {
+        Some(Item::Row(row)) if row.key == key && row.context_menu => Some(&row.key),
+        _ => None,
+    }
 }
 
 impl Picker {
@@ -155,6 +176,10 @@ impl Picker {
             shown: false,
             placed: None,
             last: None,
+            highlighted: None,
+            preferred: None,
+            status: None,
+            segments: None,
             cancel: Cancel::new(),
             decorate_cancel: Cancel::new(),
             out: 0,
@@ -182,6 +207,8 @@ impl Picker {
 
     /// What the person did in the panel (or what a test says they did).
     pub(crate) fn feed(&mut self, event: Event, cx: &mut Context<Self>) {
+        // Once the person interacts, their choice takes precedence over an initial selection.
+        self.preferred = None;
         let before = self.model.generation();
         let outcome = match event {
             Event::Typed(field, epoch) => {
@@ -190,7 +217,25 @@ impl Picker {
             }
             Event::Do(what) => self.model.perform(what),
             Event::Key(key, field) => self.model.key(key, &field),
+            #[cfg(any(test, feature = "devctl"))]
             Event::Row(at) => self.model.click(at),
+            Event::RowKey { at, key } => self.model.click_key(at, &key),
+            Event::ContextKey { at, key } => {
+                if let Some(key) = context_key(self.model.items(), at, &key) {
+                    cx.emit(PickerEvent::Context(key.to_owned()));
+                }
+                Outcome::Nothing
+            }
+            Event::Hover { at, key } => {
+                self.model.hover_item(at, &key);
+                Outcome::Nothing
+            }
+            Event::Segment(index) => {
+                if self.segments.as_ref().is_some_and(|segments| index < segments.labels.len()) {
+                    cx.emit(PickerEvent::Segment(index));
+                }
+                Outcome::Nothing
+            }
             Event::Crumb(at) => self.model.crumb(at),
             Event::Scroll(by) => {
                 self.model.scroll(by);
@@ -209,6 +254,9 @@ impl Picker {
     /// The text is `text`, put there by a script (devctl): the field in the panel shows it too.
     #[cfg(feature = "devctl")]
     pub(crate) fn set_text(&mut self, text: &str, cx: &mut Context<Self>) {
+        if self.model.text() != text {
+            self.preferred = None;
+        }
         let before = self.model.generation();
         self.model.replace_text(text);
         if self.model.generation() != before {
@@ -222,6 +270,23 @@ impl Picker {
         self.model.refresh();
         self.cancel.cancel();
         self.go(cx);
+    }
+
+    /// Select this row when it first appears, unless the person interacts first.
+    pub(crate) fn prefer_initial(&mut self, key: String, cx: &mut Context<Self>) {
+        self.preferred = Some(key);
+        self.go(cx);
+    }
+
+    /// Set the optional filter displayed by the platform panel.
+    pub(crate) fn set_segments(&mut self, segments: Option<Segments>, cx: &mut Context<Self>) {
+        let segments = segments
+            .filter(|segments| !segments.labels.is_empty() && segments.selected < segments.labels.len());
+        if self.segments != segments {
+            self.segments = segments;
+            self.last = None;
+            self.push(cx);
+        }
     }
 
     /// Take the panel down. From a task, not from here: see the panel's own words. Whatever is still being read
@@ -249,7 +314,28 @@ impl Picker {
     fn go(&mut self, cx: &mut Context<Self>) {
         self.query(cx);
         self.decorate(cx);
+        if let Some(key) = self.preferred.as_deref()
+            && let Some(index) =
+                self.model.items().iter().position(|item| matches!(item, Item::Row(row) if row.key == key))
+        {
+            self.model.select_item(index);
+            self.preferred = None;
+        }
         self.push(cx);
+        let highlighted = self.model.selected_row().map(|row| row.key.clone());
+        if highlighted != self.highlighted {
+            self.highlighted.clone_from(&highlighted);
+            cx.emit(PickerEvent::Highlight(highlighted));
+        }
+        let status = self.model.items().iter().find_map(|item| match item {
+            Item::Note(Note::Custom(text)) => Some(text.as_str()),
+            _ => None,
+        });
+        if status != self.status.as_deref() {
+            let status = status.map(str::to_owned);
+            self.status.clone_from(&status);
+            cx.emit(PickerEvent::Status(status));
+        }
         cx.notify();
     }
 
@@ -386,7 +472,12 @@ impl Picker {
     /// list is as tall as the pane has room for, which the model is told, so what is selected is always in view.
     fn push(&mut self, cx: &mut Context<Self>) {
         let (pane, cursor) = self.spot;
-        let placed = place(pane, cursor, card(self.model.has_crumbs()), self.model.lines().max(1));
+        let placed = place(
+            pane,
+            cursor,
+            card(self.model.has_crumbs(), self.segments.is_some()),
+            self.model.lines().max(1),
+        );
         self.model.set_window(placed.rows);
         self.placed = Some(placed);
         let Some(panel) = self.panel.as_mut() else { return };
@@ -417,6 +508,7 @@ impl Picker {
             .collect();
         let view = View {
             lines: &lines,
+            segments: self.segments.as_ref(),
             top: snapshot.top,
             selected: snapshot.selected,
             crumbs: &snapshot.crumbs,
@@ -458,7 +550,6 @@ impl Picker {
     }
 
     /// Whether the panel is still there to show things (it is not once the picker is closed).
-    #[cfg(test)]
     pub(crate) fn has_panel(&self) -> bool {
         self.panel.is_some()
     }
@@ -501,9 +592,21 @@ impl Drop for Picker {
 mod tests {
     use std::sync::Arc;
 
-    use wormhole_core::view::picker::{Cancel, Decoration, DecorationRequest, Decorator, Target};
+    use wormhole_core::view::picker::{Cancel, Decoration, DecorationRequest, Decorator, Item, Row, Target};
 
-    use super::{decorate, insertable};
+    use super::{context_key, decorate, insertable};
+
+    #[test]
+    fn context_actions_ignore_stale_rows_and_rows_without_a_menu() {
+        let mut enabled = Row::new("group-1", "A group");
+        enabled.context_menu = true;
+        let rows = vec![Item::Row(enabled), Item::Row(Row::new("terminal-1", "A terminal"))];
+        assert_eq!(context_key(&rows, 0, "group-1"), Some("group-1"));
+        assert_eq!(context_key(&rows, 0, "old-group"), None);
+        assert_eq!(context_key(&rows, 1, "group-1"), None);
+        assert_eq!(context_key(&rows, 1, "terminal-1"), None);
+        assert_eq!(context_key(&rows, 2, "group-1"), None);
+    }
 
     struct Only(&'static str, &'static [&'static str]);
 

@@ -69,7 +69,7 @@ pub(crate) fn summary(picker: &Picker) -> String {
     }
     match picker.panel_info() {
         Some(info) => out.push_str(&format!(
-            "native {} key {} visible {} window {} parent {} frame {:?}\nnative rows {:?}\nnative ghost {:?}\nnative crumbs {:?}\n",
+            "native {} key {} visible {} window {} parent {} frame {:?}\nnative rows {:?}\nnative row fonts {:?}\nnative ghost {:?}\nnative crumbs {:?}\nnative segments {:?}\n",
             info.material.name(),
             info.key,
             info.visible,
@@ -77,8 +77,10 @@ pub(crate) fn summary(picker: &Picker) -> String {
             info.parent_number,
             info.frame,
             info.rows,
+            info.row_fonts,
             info.ghost,
             info.crumbs,
+            info.segments,
         )),
         None => out.push_str("native panel none\n"),
     }

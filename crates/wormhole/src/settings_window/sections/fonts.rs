@@ -25,10 +25,32 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("font-terminal", |w, cx| w.font_control(FontSlot::Terminal, cx)),
     Setting::custom("line-height", |w, cx| {
         let ui = ui(cx);
-        let value = format!("{:.2}", settings(cx).line_height);
+        let height = settings(cx).line_height;
+        let value = format!("{height:.2}");
+        let native = super::super::native_slider::control(
+            w,
+            "line-height",
+            text(SETTINGS_FONTS_LINE_HEIGHT),
+            f64::from(height),
+            1.0,
+            2.0,
+            0.05,
+            w.stepper_enabled("line-height", cx),
+            cx,
+            |value, _, cx| {
+                let height = ((value * 20.0).round() / 20.0).clamp(1.0, 2.0) as f32;
+                if (settings(cx).line_height - height).abs() > f32::EPSILON {
+                    crate::settings::update_settings(cx, |s| s.line_height = height);
+                }
+            },
+        );
         style::slider_control(
             ui,
-            gpui_kit::component::slider::Slider::new(&w.line_height_slider),
+            native.unwrap_or_else(|| {
+                gpui_kit::component::slider::Slider::new(&w.line_height_slider)
+                    .accessibility_label(text(SETTINGS_FONTS_LINE_HEIGHT))
+                    .into_any_element()
+            }),
             value,
             &["1.0", "1.5", "2.0"],
             false,
@@ -38,10 +60,15 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("font-ligatures", font_ligatures),
     Setting::custom("font-code", |w, cx| w.font_control(FontSlot::Code, cx)),
     Setting::custom("font-interface", |w, cx| w.font_control(FontSlot::Interface, cx)),
-    Setting::custom("fonts-folder", |_, _| {
-        open_button("fonts-folder", IconName::ExternalLink, text(SETTINGS_FONTS_OPEN_FONTS_FOLDER), |cx| {
-            open_folder(&crate::active_profile::paths().fonts_dir(), cx)
-        })
+    Setting::custom("fonts-folder", |w, cx| {
+        open_button(
+            w,
+            cx,
+            "fonts-folder",
+            IconName::ExternalLink,
+            text(SETTINGS_FONTS_OPEN_FONTS_FOLDER),
+            |cx| open_folder(&crate::active_profile::paths().fonts_dir(), cx),
+        )
     }),
     Setting::custom("custom-fonts", |_, _| div().into_any_element()).describe(describe_custom),
 ];
@@ -87,14 +114,45 @@ pub(in crate::settings_window) fn draw_specimen(
     let ansi = |i: usize| theme_bridge::hsla(term.ansi[i]);
     let theme_name = store.tokens.name.clone();
     let features = crate::fonts::ligature_features(s.font_ligatures);
-    let tabs = style::segmented(ui).children(FontSlot::ALL.into_iter().rev().enumerate().map(|(ix, tab)| {
-        style::segment(("specimen-tab", ix), ui, tab.title(), tab == slot).on_click(cx.listener(
-            move |this, _, _, cx| {
-                this.specimen = tab;
-                cx.notify();
-            },
-        ))
-    }));
+    let tabs = |cx: &mut Context<SettingsWindow>| -> AnyElement {
+        if window.native_switch_allowed("specimen-tab", cx) {
+            if let Some(native) = &window.native_segments {
+                let slots: Vec<_> = FontSlot::ALL.into_iter().rev().collect();
+                let selected = slots.iter().position(|tab| *tab == slot).unwrap_or(0);
+                let options = slots
+                    .iter()
+                    .map(|tab| crate::platform::controls::SegmentOption {
+                        label: tab.title().to_owned(),
+                        symbol: None,
+                    })
+                    .collect();
+                let page = cx.weak_entity();
+                super::super::native_segments::control_options(
+                    window,
+                    native.clone(),
+                    "specimen-tab",
+                    options,
+                    selected,
+                    true,
+                    None,
+                    cx,
+                    move |index, _, cx| {
+                        if let Some(tab) = slots.get(index).copied() {
+                            page.update(cx, |this, cx| {
+                                this.specimen = tab;
+                                cx.notify();
+                            })
+                            .ok();
+                        }
+                    },
+                )
+            } else {
+                specimen_tabs_fallback(ui, slot, cx)
+            }
+        } else {
+            specimen_tabs_fallback(ui, slot, cx)
+        }
+    };
     let line = |parts: Vec<(Hsla, &'static str)>| {
         div().flex().flex_wrap().children(
             parts
@@ -148,6 +206,7 @@ pub(in crate::settings_window) fn draw_specimen(
             })
         })
         .child(settings_fonts_specimen_colours(&theme_name));
+    let tabs = tabs(cx);
     div()
         .flex()
         .flex_col()
@@ -181,5 +240,22 @@ pub(in crate::settings_window) fn draw_specimen(
                 .child(specimen)
                 .child(facts),
         )
+        .into_any_element()
+}
+
+fn specimen_tabs_fallback(
+    ui: crate::settings::UiColors,
+    slot: FontSlot,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
+    style::segmented(ui)
+        .children(FontSlot::ALL.into_iter().rev().enumerate().map(|(ix, tab)| {
+            style::segment(("specimen-tab", ix), ui, tab.title(), tab == slot).on_click(cx.listener(
+                move |this, _, _, cx| {
+                    this.specimen = tab;
+                    cx.notify();
+                },
+            ))
+        }))
         .into_any_element()
 }

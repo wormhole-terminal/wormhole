@@ -4,9 +4,13 @@
 //! Monospace | All for the terminal and code fonts; the font under the pointer shows in the
 //! page's specimen. Used for the terminal, interface and code fonts.
 
+mod native;
+
 use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
+use wormhole_core::view::panes::Rect;
+use wormhole_core::view::picker::{Context as PickerContext, Note};
 #[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
@@ -23,6 +27,7 @@ use wormhole_core::theme::fonts::{FontSlot, FontSource, SYSTEM_FONT, display_nam
 
 use super::{SettingsWindow, ui};
 use crate::fonts::{FontCatalog, LoadedFonts};
+use crate::picker::{Picker, PickerEvent, Sources, Words};
 use crate::select::{self, SelectTrigger};
 use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors, settings};
@@ -43,6 +48,24 @@ pub(super) struct FontPickerState {
     scroll: UniformListScrollHandle,
     /// The family under the pointer in the open menu, which the specimen shows.
     pub(super) hovered: Option<String>,
+    native: Option<NativeFontPicker>,
+    anchors: [crate::platform::Anchor; 3],
+}
+
+struct NativeFontPicker {
+    picker: Entity<Picker>,
+    source: Arc<native::Fonts>,
+    catalog: native::Catalog,
+    status: String,
+    _subscription: Subscription,
+}
+
+fn slot_index(slot: FontSlot) -> usize {
+    match slot {
+        FontSlot::Terminal => 0,
+        FontSlot::Interface => 1,
+        FontSlot::Code => 2,
+    }
 }
 
 impl FontPickerState {
@@ -53,6 +76,40 @@ impl FontPickerState {
             show_all: false,
             scroll: UniformListScrollHandle::new(),
             hovered: None,
+            native: None,
+            anchors: std::array::from_fn(|_| crate::platform::Anchor::default()),
+        }
+    }
+
+    /// Dismiss the picker and its transient specimen preview together.
+    pub(super) fn close(&mut self) -> bool {
+        let was_open = self.open.take().is_some();
+        self.native.take();
+        self.hovered = None;
+        was_open
+    }
+
+    #[cfg(feature = "devctl")]
+    pub(super) fn set_query(&mut self, query: String, window: &mut Window, cx: &mut App) {
+        if let Some(native) = &self.native {
+            native.picker.update(cx, |picker, cx| picker.set_text(&query, cx));
+            return;
+        }
+        self.search.update(cx, |input, cx| input.set_value(query, window, cx));
+    }
+
+    #[cfg(feature = "devctl")]
+    pub(super) fn devctl_state(&self, cx: &App) -> String {
+        self.native
+            .as_ref()
+            .map(|native| crate::picker::summary(native.picker.read(cx)))
+            .unwrap_or_else(|| format!("font fallback open {:?}\n", self.open)) // text: not shown (devctl output)
+    }
+
+    #[cfg(feature = "devctl")]
+    pub(super) fn devctl_event(&mut self, event: crate::platform::picker::Event, cx: &mut App) {
+        if let Some(native) = &self.native {
+            native.picker.update(cx, |picker, cx| picker.feed(event, cx));
         }
     }
 }
@@ -67,11 +124,202 @@ enum Entry {
 }
 
 impl SettingsWindow {
+    fn native_font_catalog(&self, slot: FontSlot, cx: &App) -> native::Catalog {
+        let catalog = cx.try_global::<FontCatalog>();
+        let loaded = cx.try_global::<LoadedFonts>();
+        native::Catalog {
+            slot,
+            installed: catalog.map(|catalog| catalog.names.clone()).unwrap_or_default(),
+            bundled: loaded.map(|loaded| loaded.bundled.clone()).unwrap_or_default(),
+            custom: loaded.map(LoadedFonts::custom_families).unwrap_or_default(),
+            monospace: catalog.and_then(|catalog| catalog.monospace.clone()),
+            symbolic: catalog.map(|catalog| catalog.symbolic.clone()).unwrap_or_default(),
+            all: self.font_picker.show_all,
+            selected: settings(cx).slot_family(slot).to_string(),
+            loading: text(SETTINGS_FONTS_LOADING_INSTALLED_FONTS).to_string(),
+            classifying: text(SETTINGS_FONTS_FINDING_MONOSPACE_FONTS).to_string(),
+            mono_tag: text(SETTINGS_FONTS_MONOSPACE).to_string(),
+        }
+    }
+
+    pub(super) fn refresh_native_fonts(&mut self, cx: &mut Context<Self>) {
+        let Some(slot) = self.font_picker.open else { return };
+        if self.font_picker.native.is_none() {
+            return;
+        }
+        let catalog = self.native_font_catalog(slot, cx);
+        let native = self.font_picker.native.as_mut().unwrap();
+        if native.catalog == catalog {
+            return;
+        }
+        native.catalog = catalog.clone();
+        native.source.replace(catalog);
+        let picker = native.picker.clone();
+        picker.update(cx, |picker, cx| picker.refresh(cx));
+    }
+
+    fn open_native_font_picker(
+        &mut self,
+        slot: FontSlot,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let catalog = self.native_font_catalog(slot, cx);
+        let source = Arc::new(native::Fonts::new(catalog.clone()));
+        let words = Words {
+            placeholder: text(SETTINGS_FONTS_SEARCH_FONTS).to_string(),
+            name: slot.title().to_string(),
+            hint: String::new(),
+            note: |note| match note {
+                Note::Custom(text) => text.clone(),
+                Note::Empty => text(SETTINGS_FONTS_NO_MATCHES).to_string(),
+                _ => String::new(),
+            },
+        };
+        let anchor = self.font_picker.anchors[slot_index(slot)].clone();
+        let place: crate::picker::Anchor = Rc::new(move |window, _| {
+            let size = window.viewport_size();
+            let bounds = anchor.bounds();
+            (
+                Rect::new(0.0, 0.0, f32::from(size.width), f32::from(size.height)),
+                Rect::new(
+                    f32::from(bounds.origin.x),
+                    f32::from(bounds.origin.y),
+                    f32::from(bounds.size.width),
+                    f32::from(bounds.size.height),
+                ),
+            )
+        });
+        let profile = crate::app_state::app(cx).active_profile().clone();
+        let picker = cx.new(|cx| {
+            Picker::new(
+                PickerContext::default(),
+                Sources { providers: vec![source.clone()], decorators: Vec::new() },
+                words,
+                profile,
+                place,
+                window,
+                cx,
+            )
+        });
+        if !picker.read(cx).has_panel() {
+            picker.update(cx, |picker, cx| picker.close(cx));
+            return false;
+        }
+        let preferred = if catalog.selected.trim().is_empty() && slot.inherit_label().is_some() {
+            "inherit".to_string()
+        } else {
+            native::family_key(&catalog.selected)
+        };
+        picker.update(cx, |picker, cx| picker.prefer_initial(preferred, cx));
+        if slot.prefers_monospace() {
+            picker.update(cx, |picker, cx| {
+                picker.set_segments(
+                    Some(crate::platform::picker::Segments {
+                        labels: vec![text(SETTINGS_FONTS_MONOSPACE).into(), text(SETTINGS_FONTS_ALL).into()],
+                        selected: 0,
+                        label: text(SETTINGS_FONTS_SEARCH_FONTS).into(),
+                        status: String::new(),
+                    }),
+                    cx,
+                )
+            });
+        }
+        let subscription =
+            cx.subscribe_in(&picker, window, move |this, picker, event: &PickerEvent, _, cx| match event {
+                PickerEvent::Highlight(key) => {
+                    this.font_picker.hovered =
+                        key.as_deref().and_then(native::decode_key).filter(|name| !name.is_empty());
+                    cx.notify();
+                }
+                PickerEvent::Insert(key) => {
+                    if let Some(family) = native::decode_key(key) {
+                        this.font_picker.close();
+                        update_settings(cx, |settings| settings.set_slot_family(slot, family));
+                        cx.notify();
+                    }
+                }
+                PickerEvent::Segment(index) if *index < 2 => {
+                    this.font_picker.show_all = *index == 1;
+                    let status = this
+                        .font_picker
+                        .native
+                        .as_ref()
+                        .map(|native| native.status.clone())
+                        .unwrap_or_default();
+                    picker.update(cx, |picker, cx| {
+                        picker.set_segments(
+                            Some(crate::platform::picker::Segments {
+                                labels: vec![
+                                    text(SETTINGS_FONTS_MONOSPACE).into(),
+                                    text(SETTINGS_FONTS_ALL).into(),
+                                ],
+                                selected: *index,
+                                label: text(SETTINGS_FONTS_SEARCH_FONTS).into(),
+                                status,
+                            }),
+                            cx,
+                        )
+                    });
+                    this.refresh_native_fonts(cx);
+                }
+                PickerEvent::Status(status) if slot.prefers_monospace() => {
+                    let status = status.clone().unwrap_or_default();
+                    if let Some(native) = this.font_picker.native.as_mut() {
+                        native.status = status.clone();
+                    }
+                    let selected = usize::from(this.font_picker.show_all);
+                    picker.update(cx, |picker, cx| {
+                        picker.set_segments(
+                            Some(crate::platform::picker::Segments {
+                                labels: vec![
+                                    text(SETTINGS_FONTS_MONOSPACE).into(),
+                                    text(SETTINGS_FONTS_ALL).into(),
+                                ],
+                                selected,
+                                label: text(SETTINGS_FONTS_SEARCH_FONTS).into(),
+                                status,
+                            }),
+                            cx,
+                        )
+                    });
+                }
+                PickerEvent::Close => {
+                    this.font_picker.close();
+                    cx.notify();
+                }
+                _ => {}
+            });
+        self.font_picker.native = Some(NativeFontPicker {
+            picker,
+            source,
+            catalog,
+            status: String::new(),
+            _subscription: subscription,
+        });
+        true
+    }
+    /// Return chooses the first selectable result, just like the other searchable pickers.
+    pub(super) fn pick_first_font(&mut self, cx: &mut Context<Self>) {
+        let Some(slot) = self.font_picker.open else { return };
+        let family = self.entries(slot, cx).into_iter().find_map(|entry| match entry {
+            Entry::Inherit(_) => Some(String::new()),
+            Entry::Family(name) => Some(name),
+            Entry::Group(_) => None,
+        });
+        if let Some(family) = family {
+            self.font_picker.close();
+            update_settings(cx, |settings| settings.set_slot_family(slot, family));
+            cx.notify();
+        }
+    }
+
     /// Expand `slot`'s picker (collapsing any other), or collapse it.
     pub(super) fn toggle_font_picker(&mut self, slot: FontSlot, window: &mut Window, cx: &mut Context<Self>) {
+        self.projects.close_picker(cx);
         let picker = &mut self.font_picker;
         if picker.open == Some(slot) {
-            picker.open = None;
+            picker.close();
         } else {
             FontCatalog::ensure_loaded(cx);
             picker.open = Some(slot);
@@ -80,6 +328,11 @@ impl SettingsWindow {
             // The specimen shows the font being picked.
             self.specimen = slot;
             picker.search.update(cx, |input, cx| input.set_value("", window, cx));
+            if self.open_native_font_picker(slot, window, cx) {
+                cx.notify();
+                return;
+            }
+            let picker = &mut self.font_picker;
             let focus = picker.search.read(cx).focus_handle(cx);
             window.focus(&focus, cx);
             if let Some(ix) = self.entries(slot, cx).iter().position(|e| self.is_selected(slot, e, cx)) {
@@ -173,41 +426,66 @@ impl SettingsWindow {
                 .when(bundled, |d| d.child(style::tint_chip(ui, None, text(SETTINGS_FONTS_BUNDLED)))),
         };
 
-        let this = cx.weak_entity();
-        let on_change = this.clone();
-        // Only the open picker needs its (searched) entries.
-        let menu = open.then(|| FontMenu::new(self, slot, this, cx));
-        let popover = Popover::new(SharedString::from(format!("font-popover-{key}")))
-            .anchor(Anchor::TopRight)
-            .offset(px(6.0))
-            .open(open)
-            // Typing goes straight into the search box when the menu opens.
-            .track_focus(&self.font_picker.search.read(cx).focus_handle(cx))
-            .on_open_change(move |want_open, window, cx| {
-                on_change
-                    .update(cx, |this, cx| {
-                        if (this.font_picker.open == Some(slot)) != *want_open {
-                            this.toggle_font_picker(slot, window, cx);
-                        }
-                    })
-                    .ok();
-            })
-            .trigger(
-                SelectTrigger::new(SharedString::from(format!("font-picker-{key}")), ui, face.w_full())
-                    .width(px(SELECT_W)),
-            );
-        let picker = select::menu_surface(popover, ui, px(MENU_W), select::menu_bg(ui, cx))
-            .content(move |_, _, _| div().children(menu.as_ref().map(|menu| menu.render(ui))));
-        let size_control = style::stepper(
+        let picker = if open && self.font_picker.native.is_none() {
+            let this = cx.weak_entity();
+            let on_change = this.clone();
+            // Only the open picker needs its (searched) entries.
+            let menu = open.then(|| FontMenu::new(self, slot, this, cx));
+            let popover = Popover::new(SharedString::from(format!("font-popover-{key}")))
+                .anchor(Anchor::TopRight)
+                .offset(px(6.0))
+                .open(open)
+                // Typing goes straight into the search box when the menu opens.
+                .track_focus(&self.font_picker.search.read(cx).focus_handle(cx))
+                .on_open_change(move |want_open, window, cx| {
+                    on_change
+                        .update(cx, |this, cx| {
+                            if (this.font_picker.open == Some(slot)) != *want_open {
+                                this.toggle_font_picker(slot, window, cx);
+                            }
+                        })
+                        .ok();
+                })
+                .trigger(
+                    SelectTrigger::new(SharedString::from(format!("font-picker-{key}")), ui, face.w_full())
+                        .width(px(SELECT_W)),
+                );
+            select::menu_surface(popover, ui, px(MENU_W), select::menu_bg(ui, cx))
+                .content(move |_, _, _| div().children(menu.as_ref().map(|menu| menu.render(ui))))
+                .into_any_element()
+        } else {
+            let anchor = self.font_picker.anchors[slot_index(slot)].clone();
+            let (trigger_id, face_id) = match slot {
+                FontSlot::Terminal => ("font-native-terminal", "font-native-face-terminal"),
+                FontSlot::Interface => ("font-native-interface", "font-native-face-interface"),
+                FontSlot::Code => ("font-native-code", "font-native-face-code"),
+            };
+            let trigger = gpui_kit::base::Button::new(trigger_id)
+                .accessibility_label(format!("{}: {}", slot.title(), family))
+                .on_click(cx.listener(move |this, _, window, cx| this.toggle_font_picker(slot, window, cx)))
+                .child(SelectTrigger::new(face_id, ui, face.w_full()).width(px(SELECT_W)));
+            div().relative().child(anchor.probe()).child(trigger).into_any_element()
+        };
+        let id = match slot {
+            FontSlot::Terminal => "font-terminal",
+            FontSlot::Interface => "font-interface",
+            FontSlot::Code => "font-code",
+        };
+        let label = format!(
+            "{}: {}",
+            slot.title(),
+            wormhole_core::config::settings_index::entry(id)
+                .map_or(slot.title(), |(_, _, entry)| entry.label())
+        );
+        let enabled = self.stepper_enabled(id, cx);
+        let size_control = self.stepper_control(
             ui,
-            match slot {
-                FontSlot::Terminal => "font-size-terminal",
-                FontSlot::Interface => "font-size-interface",
-                FontSlot::Code => "font-size-code",
-            },
+            id,
+            label,
             settings_fonts_size_points(&format!("{size:.0}")),
-            cx.listener(move |_, _, _, cx| update_settings(cx, |s| s.step_slot_size(slot, -1.0))),
-            cx.listener(move |_, _, _, cx| update_settings(cx, |s| s.step_slot_size(slot, 1.0))),
+            enabled,
+            cx,
+            move |delta, _, cx| update_settings(cx, |s| s.step_slot_size(slot, delta as f32)),
         );
         div().flex().items_center().gap_2().child(picker).child(size_control).into_any_element()
     }
@@ -390,7 +668,7 @@ fn entry_row(
         .on_click(move |_, _, cx| {
             let value = value.clone();
             page.update(cx, |this, cx| {
-                this.font_picker.open = None;
+                this.font_picker.close();
                 cx.notify();
             })
             .ok();

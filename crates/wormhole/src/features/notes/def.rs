@@ -45,6 +45,11 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         // The backstop for a new note that never got the focus it would be thrown away on losing.
         typed(entity).update(cx, |notes, cx| notes.prune_blank_notes(window, cx));
     }),
+    panel_visibility: Some(|entity, visible, cx| {
+        if let Some(host) = &typed(entity).read(cx).native_checks {
+            host.set_suspended(!visible);
+        }
+    }),
     state: Some(STATE),
     ..FeatureDef::NONE
 };
@@ -80,7 +85,7 @@ fn close_stake(entity: &AnyEntity, sessions: &[i64], cx: &App) -> Option<Stake> 
 
 const STATE: StateDef = StateDef {
     make: |window, cx| {
-        let entity = cx.new(|_| Notes::new());
+        let entity = cx.new(|cx| Notes::new(window, cx));
         Workspace::listen(&entity, window, cx)
     },
     selected: Some(|entity, _, cx| typed(entity).update(cx, |notes, _| notes.selected())),

@@ -1,0 +1,12 @@
+# The missing app has a native menu subtitle. `menu-native` also reports the theme appearance.
+@fixture repo-basic
+@theme Tokyo Night
+@config open_in="com.example.wormhole-test-not-installed"
+@size 1440 900
+settings-section terminal
+@batch
+settings-select open-in
+@batch
+menu
+menu-native
+@batch

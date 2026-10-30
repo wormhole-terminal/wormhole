@@ -306,6 +306,53 @@ impl SettingsWindow {
                 .cleanable(true)
                 .prefix(style::icon(IconName::Search).text_color(ui.muted)),
         );
+        let this = cx.weak_entity();
+        let import = self
+            .native_button("import-theme", text(SETTINGS_APPEARANCE_IMPORT_THEME), true, cx, move |_, cx| {
+                import_theme(this.clone(), cx);
+            })
+            .unwrap_or_else(|| {
+                Button::new("import-theme")
+                    .outline()
+                    .small()
+                    .icon(IconName::ArrowDown)
+                    .label(text(SETTINGS_APPEARANCE_IMPORT_THEME))
+                    .on_click(cx.listener(|_, _, _, cx| import_theme(cx.weak_entity(), cx)))
+                    .into_any_element()
+            });
+        let studio_button = self
+            .native_button("open-studio", text(SETTINGS_APPEARANCE_THEME_STUDIO), true, cx, |_, cx| {
+                studio::open_studio(cx);
+            })
+            .map(|button| {
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .child(button)
+                    .child(style::keycap(
+                        ui,
+                        wormhole_core::keys::keymap::glyphs(
+                            wormhole_core::keys::keymap::ActionId::ThemeStudio,
+                        ),
+                    ))
+                    .into_any_element()
+            })
+            .unwrap_or_else(|| {
+                Button::new("open-studio")
+                    .outline()
+                    .small()
+                    .icon(IconName::Palette)
+                    .label(text(SETTINGS_APPEARANCE_THEME_STUDIO))
+                    .child(style::keycap(
+                        ui,
+                        wormhole_core::keys::keymap::glyphs(
+                            wormhole_core::keys::keymap::ActionId::ThemeStudio,
+                        ),
+                    ))
+                    .on_click(cx.listener(|_, _, _, cx| studio::open_studio(cx)))
+                    .into_any_element()
+            });
         let footer = div()
             .flex()
             .items_center()
@@ -335,28 +382,8 @@ impl SettingsWindow {
                 )
             })
             .child(div().flex_1())
-            .child(
-                Button::new("import-theme")
-                    .outline()
-                    .small()
-                    .icon(IconName::ArrowDown)
-                    .label(text(SETTINGS_APPEARANCE_IMPORT_THEME))
-                    .on_click(cx.listener(|_, _, _, cx| import_theme(cx.weak_entity(), cx))),
-            )
-            .child(
-                Button::new("open-studio")
-                    .outline()
-                    .small()
-                    .icon(IconName::Palette)
-                    .label(text(SETTINGS_APPEARANCE_THEME_STUDIO))
-                    .child(style::keycap(
-                        ui,
-                        wormhole_core::keys::keymap::glyphs(
-                            wormhole_core::keys::keymap::ActionId::ThemeStudio,
-                        ),
-                    ))
-                    .on_click(cx.listener(|_, _, _, cx| studio::open_studio(cx))),
-            );
+            .child(import)
+            .child(studio_button);
 
         let hidden_list = (!hidden_themes.is_empty())
             .then(|| self.render_hidden_themes(&hidden_themes, &entries, &set, ui, cx));

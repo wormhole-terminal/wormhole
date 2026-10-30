@@ -3,7 +3,7 @@
 use gpui_kit::component::Sizable;
 use gpui_kit::component::input::Input;
 use gpui_kit::component::radio::Radio;
-use gpui_kit::component::switch::Switch;
+use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use super::Env;
@@ -37,17 +37,32 @@ pub(super) fn render(
                 .child(
                     env.mark(
                         "checkbox",
-                        // The app's own checkbox (`checkbox.border`), not the Kit's.
                         div()
                             .flex()
                             .gap_4()
-                            .child(style::checkbox("g-check-off", ui, false).in_form("Checkbox"))
-                            .child(style::checkbox("g-check-on", ui, true).in_form("Checked"))
                             .child(
-                                style::checkbox("g-check-ring", ui, false)
-                                    .in_form("Focused")
-                                    .focus_ring(true),
-                            ),
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_2()
+                                    .child(studio.checkbox("g-check-off", "Checkbox", false, env))
+                                    .child("Checkbox"),
+                            )
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_2()
+                                    .child(studio.checkbox("g-check-on", "Checked", true, env))
+                                    .child("Checked"),
+                            )
+                            .when(!studio.has_native_controls(), |row| {
+                                row.child(
+                                    style::checkbox("g-check-ring", ui, false)
+                                        .in_form("Focused")
+                                        .focus_ring(true),
+                                )
+                            }),
                     ),
                 )
                 .child(
@@ -56,12 +71,34 @@ pub(super) fn render(
                         div()
                             .flex()
                             .gap_4()
-                            .child(Switch::new("g-switch-off").label("Switch"))
-                            .child(Switch::new("g-switch-on").checked(true).label("On")),
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_2()
+                                    .child(studio.switch("g-switch-off", "Switch", false, true, env))
+                                    .child("Switch"),
+                            )
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_2()
+                                    .child(studio.switch("g-switch-on", "On", true, true, env))
+                                    .child("On"),
+                            ),
                     ),
                 )
                 .child(Radio::new("g-radio-off").label("Radio"))
                 .child(Radio::new("g-radio-on").checked(true).label("Selected")),
-        );
+        )
+        .when(studio.has_native_controls(), |inputs| {
+            inputs.child(
+                div()
+                    .text_caption()
+                    .text_color(ui.muted)
+                    .child("macOS controls use the system accent colour."),
+            )
+        });
     inputs.into_any_element()
 }

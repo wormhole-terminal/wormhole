@@ -1,0 +1,11 @@
+# The profile chip opens a native menu with colored avatars and submenus.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+profile-new Work
+@batch
+click 165 20
+@batch
+menu
+menu-native
+@batch

@@ -64,4 +64,27 @@ fn an_odd_window_reads_its_profiles_theme_and_fonts(cx: &mut TestAppContext) {
     cx.update(|cx| assert!(shown_terminal.read(cx).profile().is_default()));
     draw(cx, &odd);
     draw(cx, &shown);
+
+    // Menu appearance comes from the opening window's profile, not whichever
+    // profile supplied the application's most recently installed materials.
+    for (window, expected) in [
+        (&shown, wormhole_core::theme::tokens::Appearance::Dark),
+        (&odd, wormhole_core::theme::tokens::Appearance::Light),
+    ] {
+        cx.update(|cx| {
+            window
+                .handle
+                .update(cx, |_, window, cx| {
+                    crate::platform::show_menu(
+                        crate::platform::Menu::new().item(crate::platform::Item::new("Test")),
+                        gpui_kit::point(gpui_kit::px(0.0), gpui_kit::px(0.0)),
+                        window,
+                        cx,
+                    );
+                })
+                .expect("opens the window's menu");
+        });
+        assert_eq!(crate::platform::record::open().expect("menu recorded").appearance, Some(expected));
+        crate::platform::record::close();
+    }
 }

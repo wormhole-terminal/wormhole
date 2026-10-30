@@ -4,6 +4,7 @@
 use std::cell::{OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::sync::Arc;
 #[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
@@ -19,10 +20,13 @@ use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::project::Feature;
 use wormhole_core::project::{FeatureStanding, TrustStatus, trust_applies};
+use wormhole_core::view::panes::Rect;
+use wormhole_core::view::picker::{Context as PickerContext, Note};
 
 use super::reveal;
 use crate::features::project;
 use crate::features::project::LoadedProject;
+use crate::picker::{Picker, PickerEvent, Sources, Words};
 use crate::select;
 use crate::select::{Choice, SearchSelect, SelectTrigger};
 use crate::settings::UiColors;
@@ -40,6 +44,9 @@ pub(crate) struct ProjectPicker {
     known: Rc<Vec<PathBuf>>,
     open: bool,
     search: Entity<InputState>,
+    /// A native search panel, with the exact values its stable row IDs refer to.
+    native: Option<NativeProjectPicker>,
+    anchor: crate::platform::Anchor,
     /// The selected project's files as read for this page. Reading them (and the trust
     /// fingerprint) is file I/O, so it is kept between frames and read again about once a
     /// second, and right after a button changes something.
@@ -47,6 +54,13 @@ pub(crate) struct ProjectPicker {
     /// Whether the Mac can approve a project (asked once; asking creates a system
     /// authentication context).
     can_approve: OnceCell<bool>,
+}
+
+struct NativeProjectPicker {
+    picker: Entity<Picker>,
+    values: Vec<Option<PathBuf>>,
+    source: Arc<crate::select::native::Choices>,
+    _subscription: Subscription,
 }
 
 impl ProjectPicker {
@@ -69,6 +83,8 @@ impl ProjectPicker {
                 known,
                 open: false,
                 search,
+                native: None,
+                anchor: crate::platform::Anchor::default(),
                 info: RefCell::new(None),
                 can_approve: OnceCell::new(),
             },
@@ -86,9 +102,77 @@ impl ProjectPicker {
 
     /// devctl: open the menu, optionally with `query` typed into its search box.
     #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_open(&mut self, query: String, window: &mut Window, cx: &mut App) {
-        self.open = true;
-        self.search.update(cx, |search, cx| search.set_value(query, window, cx));
+    pub(crate) fn devctl_query(&mut self, query: String, window: &mut Window, cx: &mut App) {
+        if let Some(native) = &self.native {
+            native.picker.update(cx, |picker, cx| picker.set_text(&query, cx));
+        } else {
+            self.search.update(cx, |search, cx| search.set_value(query, window, cx));
+        }
+    }
+
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_state(&self, cx: &App) -> String {
+        let selected = self.selected.as_ref().map(|path| path.display().to_string()).unwrap_or_default();
+        let picker = self
+            .native
+            .as_ref()
+            .map(|native| crate::picker::summary(native.picker.read(cx)))
+            .unwrap_or_else(|| format!("native panel none; fallback open {}\n", self.open)); // text: not shown (devctl output)
+        format!("project selected {selected:?}\n{picker}") // text: not shown (devctl output)
+    }
+
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_pick(&mut self, cx: &mut App) {
+        if let Some(native) = &self.native {
+            native.picker.update(cx, |picker, cx| {
+                picker.feed(crate::platform::picker::Event::Do(wormhole_core::view::picker::Do::Pick), cx);
+            });
+        } else if self.open {
+            self.pick_first_match(cx);
+        }
+    }
+
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_hover(&mut self, row: usize, cx: &mut App) {
+        if let Some(native) = &self.native {
+            native.picker.update(cx, |picker, cx| {
+                let key = match picker.model.items().get(row) {
+                    Some(wormhole_core::view::picker::Item::Row(item)) => Some(item.key.clone()),
+                    _ => None,
+                };
+                if let Some(key) = key {
+                    picker.feed(crate::platform::picker::Event::Hover { at: row, key }, cx);
+                }
+            });
+        }
+    }
+
+    /// Exercise the shared native filter with the font picker's own labels.
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_segments(&mut self, cx: &mut App) {
+        if let Some(native) = &self.native {
+            native.picker.update(cx, |picker, cx| {
+                picker.set_segments(
+                    Some(crate::platform::picker::Segments {
+                        labels: vec![text(SETTINGS_FONTS_MONOSPACE).into(), text(SETTINGS_FONTS_ALL).into()],
+                        selected: 0,
+                        label: text(SETTINGS_FONTS_MONOSPACE).into(),
+                        status: text(SETTINGS_FONTS_FINDING_MONOSPACE_FONTS).into(),
+                    }),
+                    cx,
+                );
+            });
+        }
+    }
+
+    pub(in crate::settings_window) fn close_picker(&mut self, cx: &mut App) -> bool {
+        let fallback_was_open = std::mem::take(&mut self.open);
+        if let Some(native) = self.native.take() {
+            native.picker.update(cx, |picker, cx| picker.close(cx));
+            true
+        } else {
+            fallback_was_open
+        }
     }
 
     /// The project's files as last read, reading them if they are not (or are of another
@@ -110,9 +194,9 @@ impl ProjectPicker {
         self.info.take();
     }
 
-    /// The choice's value is the project root ("" = all projects).
-    fn pick(&mut self, value: &str) {
-        self.selected = Some(value).filter(|v| !v.is_empty()).map(PathBuf::from);
+    /// The choice's value is the exact project root, or all projects.
+    fn pick(&mut self, value: Option<PathBuf>) {
+        self.selected = value;
         self.open = false;
     }
 
@@ -120,7 +204,7 @@ impl ProjectPicker {
     fn pick_first_match(&mut self, cx: &App) {
         let query = self.search.read(cx).value().to_string();
         if let Some(first) = select::filter(&choices(&self.known), &query).into_iter().next() {
-            self.pick(&first.value);
+            self.pick(first.value);
         }
     }
 }
@@ -135,11 +219,11 @@ fn choice_label(root: &Path) -> SharedString {
     root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default().into()
 }
 
-fn choices(known: &[PathBuf]) -> Vec<Choice<String>> {
-    let mut items = vec![Choice::new(String::new(), all_projects())];
-    items.extend(known.iter().map(|root| {
-        Choice::new(root.to_string_lossy().into_owned(), choice_label(root)).detail(short_home(root))
-    }));
+fn choices(known: &[PathBuf]) -> Vec<Choice<Option<PathBuf>>> {
+    let mut items = vec![Choice::new(None, all_projects())];
+    items.extend(
+        known.iter().map(|root| Choice::new(Some(root.clone()), choice_label(root)).detail(short_home(root))),
+    );
     items
 }
 
@@ -153,49 +237,145 @@ fn short_home(path: &Path) -> String {
 }
 
 impl SettingsWindow {
+    /// Open a native search panel; a window without a native view keeps the GPUI fallback.
+    pub(in crate::settings_window) fn open_project_picker(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.projects.close_picker(cx) {
+            cx.notify();
+            return;
+        }
+        self.font_picker.close();
+        let choices = choices(&self.projects.known);
+        let current = match &self.projects.selected {
+            None => Some(0),
+            Some(path) => self.projects.known.iter().position(|known| known == path).map(|index| index + 1),
+        };
+        let values = std::iter::once(None).chain(self.projects.known.iter().cloned().map(Some)).collect();
+        let source = Arc::new(crate::select::native::Choices::new(&choices, current, "folder"));
+        let words = Words {
+            placeholder: text(SETTINGS_PROJECTS_SEARCH_PROJECTS).to_string(),
+            name: text(SETTINGS_PROJECTS_PROJECT).to_string(),
+            hint: String::new(),
+            note: |note| match note {
+                Note::Empty => text(SETTINGS_PROJECTS_NO_MATCHES).to_string(),
+                Note::Custom(text) => text.clone(),
+                _ => String::new(),
+            },
+        };
+        let profile = crate::app_state::app(cx).active_profile().clone();
+        let anchor = self.projects.anchor.clone();
+        let place: crate::picker::Anchor = Rc::new(move |window, _| {
+            let viewport = window.viewport_size();
+            let pane = Rect::new(0.0, 0.0, f32::from(viewport.width), f32::from(viewport.height));
+            let bounds = anchor.bounds();
+            let trigger = Rect::new(
+                f32::from(bounds.origin.x),
+                f32::from(bounds.origin.y),
+                f32::from(bounds.size.width),
+                f32::from(bounds.size.height),
+            );
+            (pane, trigger)
+        });
+        let picker = cx.new(|cx| {
+            Picker::new(
+                PickerContext::default(),
+                Sources { providers: vec![source.clone()], decorators: Vec::new() },
+                words,
+                profile,
+                place,
+                window,
+                cx,
+            )
+        });
+        if !picker.read(cx).has_panel() {
+            picker.update(cx, |picker, cx| picker.close(cx));
+            self.projects.open = true;
+            self.projects.search.update(cx, |search, cx| search.set_value("", window, cx));
+            cx.notify();
+            return;
+        }
+        if let Some(current) = current {
+            picker.update(cx, |picker, cx| picker.prefer_initial(current.to_string(), cx));
+        }
+        let subscription = cx.subscribe_in(&picker, window, |this, _, event: &PickerEvent, _, cx| {
+            let value = match event {
+                PickerEvent::Insert(index) => index
+                    .parse::<usize>()
+                    .ok()
+                    .and_then(|index| this.projects.native.as_ref()?.values.get(index).cloned())
+                    .filter(|value| value.as_ref().is_none_or(|path| this.projects.known.contains(path))),
+                PickerEvent::Close => None,
+                PickerEvent::Forget(_)
+                | PickerEvent::Context(_)
+                | PickerEvent::Highlight(_)
+                | PickerEvent::Segment(_)
+                | PickerEvent::Status(_) => return,
+            };
+            this.projects.close_picker(cx);
+            if let Some(value) = value {
+                this.projects.selected = value;
+            }
+            cx.notify();
+        });
+        self.projects.native =
+            Some(NativeProjectPicker { picker, values, source, _subscription: subscription });
+        cx.notify();
+    }
+
     /// The project select: "All projects" or one of the known folders, searchable.
     fn project_select(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
-        let value = self.projects.selected.as_ref().map(|p| p.to_string_lossy().into_owned());
-        let value = value.unwrap_or_default();
         // The trigger's own text; the options are only built while the menu is open.
         let label = match &self.projects.selected {
             Some(root) if self.projects.known.contains(root) => choice_label(root),
             _ => all_projects().into(),
         };
-        let known = self.projects.known.clone();
-        let this = cx.weak_entity();
-        let on_change = this.clone();
-        SearchSelect::new(
-            "project-select",
-            ui,
-            SelectTrigger::new("project-select-trigger", ui, label).width(px(360.0)),
-            &self.projects.search,
-            cx,
-        )
-        .options_with(move || choices(&known).into())
-        .current(value)
-        .open(self.projects.open)
-        .menu_width(px(360.0))
-        .on_open_change(move |want_open, window, cx| {
-            on_change
-                .update(cx, |this, cx| {
-                    this.projects.open = want_open;
-                    if want_open {
-                        this.projects.search.update(cx, |search, cx| search.set_value("", window, cx));
-                    }
+        // A window without a native panel keeps the searchable GPUI fallback.
+        if self.projects.open {
+            let value = self.projects.selected.clone();
+            let known = self.projects.known.clone();
+            let this = cx.weak_entity();
+            let on_change = this.clone();
+            return SearchSelect::new(
+                "project-select",
+                ui,
+                SelectTrigger::new("project-select-trigger", ui, label.clone()).width(px(360.0)),
+                &self.projects.search,
+                cx,
+            )
+            .options_with(move || choices(&known).into())
+            .current(value)
+            .open(self.projects.open)
+            .menu_width(px(360.0))
+            .on_open_change(move |want_open, window, cx| {
+                on_change
+                    .update(cx, |this, cx| {
+                        this.projects.open = want_open;
+                        if want_open {
+                            this.projects.search.update(cx, |search, cx| search.set_value("", window, cx));
+                        }
+                        cx.notify();
+                    })
+                    .ok();
+            })
+            .on_pick(move |value, _, cx| {
+                this.update(cx, |this, cx| {
+                    this.projects.pick(value.clone());
                     cx.notify();
                 })
                 .ok();
-        })
-        .on_pick(move |value, _, cx| {
-            this.update(cx, |this, cx| {
-                this.projects.pick(value);
-                cx.notify();
             })
-            .ok();
-        })
-        .into_popover()
-        .into_any_element()
+            .into_popover()
+            .into_any_element();
+        }
+        let anchor = self.projects.anchor.clone();
+        let chip = gpui_kit::base::Button::new("project-native-trigger")
+            .accessibility_label(format!("{}: {}", text(SETTINGS_PROJECTS_PROJECT), label))
+            .on_click(cx.listener(|this, _, window, cx| this.open_project_picker(window, cx)))
+            .child(SelectTrigger::new("project-native-face", ui, label).width(px(360.0)));
+        div().relative().child(anchor.probe()).child(chip).into_any_element()
     }
 
     /// Re-list the projects the picker offers, keeping the selection.
@@ -211,6 +391,28 @@ impl SettingsWindow {
         let known = project::known_projects(cx);
         if known != *self.projects.known {
             self.projects.known = Rc::new(known);
+            if let Some(native) = &mut self.projects.native {
+                let choices = choices(&self.projects.known);
+                let values = std::iter::once(None).chain(self.projects.known.iter().cloned().map(Some));
+                let ids: Vec<_> = values
+                    .map(|value| {
+                        if let Some(index) = native.values.iter().position(|old| old == &value) {
+                            index
+                        } else {
+                            native.values.push(value);
+                            native.values.len() - 1
+                        }
+                    })
+                    .collect();
+                let current = match &self.projects.selected {
+                    None => Some(0),
+                    Some(path) => {
+                        self.projects.known.iter().position(|known| known == path).map(|index| index + 1)
+                    }
+                };
+                native.source.replace(&choices, &ids, current, "folder");
+                native.picker.update(cx, |picker, cx| picker.refresh(cx));
+            }
         }
         // The files and the trust status can change under us (an approval finishing, an
         // edit in the folder).
@@ -220,6 +422,7 @@ impl SettingsWindow {
 
     fn draw_projects(&self, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
+        self.retain_project_feature_controls(cx);
         let all_projects = self.projects.selected.is_some().then(|| {
             style::link_button("all-projects", ui, text(SETTINGS_PROJECTS_ALL_PROJECTS), false)
                 .on_click(cx.listener(|this, _, _, cx| {
@@ -250,6 +453,22 @@ impl SettingsWindow {
         div().flex().flex_col().gap_6().child(picker).child(body).into_any_element()
     }
 
+    /// A project selection owns its native controls; discard the old ones when it changes.
+    fn retain_project_feature_controls(&self, cx: &App) {
+        let Some(native) = &self.native_segments else { return };
+        let keep = self
+            .projects
+            .selected
+            .as_ref()
+            .map(|root| project_feature_control_prefix(project::shown_profile(cx).as_str(), root));
+        let belongs = |id: &str| {
+            !id.starts_with("project-feature-") || keep.as_ref().is_some_and(|keep| id.starts_with(keep))
+        };
+        self.native_segment_handlers.borrow_mut().retain(|id, _| belongs(id));
+        self.native_segment_focus.borrow_mut().retain(|(id, _), _| belongs(id));
+        native.forget_prefix_except("project-feature-", keep.as_deref());
+    }
+
     fn render_project_defaults(&self, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
         let mut defaults = div()
@@ -262,9 +481,12 @@ impl SettingsWindow {
         for feature in Feature::ALL {
             let on = project::api::default_enabled(feature, cx);
             let profile = project::shown_profile(cx).clone();
-            let switch = style::toggle(
-                SharedString::from(format!("default-{}", feature.key())),
+            let switch = self.switch_control(
+                format!("default-{}-{}", profile.as_str(), feature.key()).into(),
+                feature.label(),
                 on,
+                true,
+                cx,
                 move |on, _, cx| project::set_feature_default(&profile, feature, on, cx),
             );
             let description = if feature.requires_trust() {
@@ -272,14 +494,8 @@ impl SettingsWindow {
             } else {
                 feature.description().to_string()
             };
-            defaults = defaults.child(feature_row(
-                ui,
-                feature,
-                description,
-                SettingState::Default,
-                switch.into_any_element(),
-                cx,
-            ));
+            defaults =
+                defaults.child(feature_row(ui, feature, description, SettingState::Default, switch, cx));
         }
         let defaults = defaults.rule_bottom(ui);
 
@@ -484,33 +700,68 @@ impl SettingsWindow {
                 (Some(true), text(SETTINGS_PROJECTS_ON)),
                 (Some(false), text(SETTINGS_PROJECTS_OFF)),
             ];
-            let control = style::segmented(ui)
-                .children(options.into_iter().enumerate().map(|(ix, (value, label))| {
-                    let root = root.to_path_buf();
-                    style::segment(
-                        SharedString::from(format!("feature-{key}-{ix}")),
-                        ui,
-                        label,
-                        current == value,
-                    )
-                    .on_click(cx.listener(move |_, _, _, cx| {
-                        let root = root.clone();
-                        project::set_feature_for(
-                            &project::shown_profile(cx).clone(),
-                            &root,
-                            feature,
-                            value,
-                            cx,
-                        )
-                    }))
-                }))
-                .into_any_element();
-            // Notes without a file are still for the person to switch on: that makes the file.
-            let state = if standing == FeatureStanding::Missing && feature != Feature::Notes {
-                SettingState::Disabled
+            let enabled = standing != FeatureStanding::Missing || feature == Feature::Notes;
+            let profile = project::shown_profile(cx).clone();
+            let id = project_feature_control_id(profile.as_str(), root, feature);
+            let native = self.native_switch_allowed(&id, cx).then(|| self.native_segments.clone()).flatten();
+            let control = if let Some(native) = native {
+                let selected = options.iter().position(|(value, _)| *value == current).unwrap_or(0);
+                let native_options = options
+                    .iter()
+                    .map(|(_, label)| crate::platform::controls::SegmentOption {
+                        label: (*label).to_owned(),
+                        symbol: None,
+                    })
+                    .collect();
+                let page = cx.weak_entity();
+                let root = root.to_path_buf();
+                super::super::native_segments::control_options(
+                    self,
+                    native,
+                    id,
+                    native_options,
+                    selected,
+                    enabled,
+                    None,
+                    cx,
+                    move |index, _, cx| {
+                        if project::shown_profile(cx) != &profile
+                            || page
+                                .upgrade()
+                                .is_none_or(|page| page.read(cx).projects.selected.as_ref() != Some(&root))
+                        {
+                            return;
+                        }
+                        if let Some((value, _)) = options.get(index) {
+                            project::set_feature_for(&profile, &root, feature, *value, cx);
+                        }
+                    },
+                )
             } else {
-                SettingState::Default
+                style::segmented(ui)
+                    .children(options.into_iter().enumerate().map(|(ix, (value, label))| {
+                        let root = root.to_path_buf();
+                        style::segment(
+                            SharedString::from(format!("feature-{key}-{ix}")),
+                            ui,
+                            label,
+                            current == value,
+                        )
+                        .on_click(cx.listener(move |_, _, _, cx| {
+                            let root = root.clone();
+                            project::set_feature_for(
+                                &project::shown_profile(cx).clone(),
+                                &root,
+                                feature,
+                                value,
+                                cx,
+                            )
+                        }))
+                    }))
+                    .into_any_element()
             };
+            // Notes without a file are still for the person to switch on: that makes the file.
+            let state = if !enabled { SettingState::Disabled } else { SettingState::Default };
             features = features.child(feature_row(ui, feature, description, state, control, cx));
         }
         let features = features.rule_bottom(ui);
@@ -566,6 +817,16 @@ impl SettingsWindow {
             .child(actions)
             .into_any_element()
     }
+}
+
+/// The event identity includes both owners, even when a queued action arrives after a selection
+/// change. Debug formatting of the path preserves non-Unicode paths without lossy conversion.
+fn project_feature_control_id(profile: &str, root: &Path, feature: Feature) -> String {
+    format!("{}{}", project_feature_control_prefix(profile, root), feature.key())
+}
+
+fn project_feature_control_prefix(profile: &str, root: &Path) -> String {
+    format!("project-feature-{profile}-{root:?}-")
 }
 
 /// What the Trust row says under the badge. Trusting applies more than commands: a `config.json`
@@ -641,6 +902,35 @@ fn feature_row(
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
+    #[test]
+    fn native_feature_events_are_scoped_to_profile_project_and_feature() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+        use std::path::PathBuf;
+        use wormhole_core::project::Feature;
+
+        let first = PathBuf::from(OsString::from_vec(b"/projects/demo-\xff".to_vec()));
+        let second = PathBuf::from(OsString::from_vec(b"/projects/demo-\xfe".to_vec()));
+        let id = super::project_feature_control_id("one", &first, Feature::Notes);
+        assert_ne!(id, super::project_feature_control_id("two", &first, Feature::Notes));
+        assert_ne!(id, super::project_feature_control_id("one", &second, Feature::Notes));
+        assert_ne!(id, super::project_feature_control_id("one", &first, Feature::Theme));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn project_choices_keep_non_unicode_paths() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::OsStringExt;
+        use std::path::PathBuf;
+
+        let path = PathBuf::from(OsString::from_vec(b"/projects/demo-\xff".to_vec()));
+        let choices = super::choices(std::slice::from_ref(&path));
+        let found = crate::select::filter(&choices, "demo");
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].value.as_ref(), Some(&path));
+    }
     use wormhole_core::project::{Feature, FeatureStanding, TrustStatus};
 
     use super::{feature_description, trust_detail};

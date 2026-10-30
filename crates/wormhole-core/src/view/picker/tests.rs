@@ -60,6 +60,28 @@ impl Decorator for Sweet {
 
 const FRUIT: &[&str] = &["apple", "banana", "plum", "pineapple"];
 
+#[test]
+fn font_preview_keeps_picker_rows_compatible_with_existing_providers() {
+    let row = Row::new("apple", "Apple");
+    let old = serde_json::to_value(&row).expect("row serializes");
+    assert!(old.get("font_family").is_none());
+    assert!(old.get("font_embedded").is_none());
+    assert!(old.get("context_menu").is_none());
+    assert!(old.get("icon_color").is_none());
+    assert!(old.get("indicators").is_none());
+    let restored: Row = serde_json::from_value(old).expect("an older row still reads");
+    assert_eq!(restored.font_family, None);
+    assert!(!restored.context_menu);
+    assert!(restored.indicators.is_empty());
+    let mut preview = row;
+    preview.font_family = Some("Menlo".into());
+    preview.context_menu = true;
+    let encoded = serde_json::to_value(&preview).expect("preview serializes");
+    assert_eq!(encoded.get("context_menu").and_then(|value| value.as_bool()), Some(true));
+    let restored: Row = serde_json::from_value(encoded).expect("preview reads");
+    assert_eq!(restored.font_family.as_deref(), Some("Menlo"));
+}
+
 /// What the driver does: ask, run the provider (here, at once) and hand the answer back.
 fn settle(model: &mut Model, provider: &dyn Provider) -> Option<Outcome> {
     let request = model.request()?;
@@ -116,6 +138,79 @@ fn return_hands_over_the_rows_insert_text_and_a_click_picks_that_row() {
     assert_eq!(model.key(Key::Enter, &Field::default()), Outcome::Insert("eat banana".into()));
     assert_eq!(model.click(0), Outcome::Insert("eat apple".into()));
     assert_eq!(model.click(99), Outcome::Nothing);
+}
+
+#[test]
+fn refreshing_a_list_keeps_the_selected_row_when_its_position_changes() {
+    let mut model = model();
+    settle(&mut model, &Fruit(&["apple", "banana", "plum"]));
+    model.key(Key::Down, &Field::default());
+    assert_eq!(model.selected_row().map(|row| row.key.as_str()), Some("banana"));
+    model.refresh();
+    settle(&mut model, &Fruit(&["apricot", "apple", "banana", "plum"]));
+    assert_eq!(model.selected_row().map(|row| row.key.as_str()), Some("banana"));
+    assert_eq!(model.key(Key::Enter, &Field::default()), Outcome::Insert("eat banana".into()));
+    model.typed("pl");
+    settle(&mut model, &Fruit(&["apricot", "apple", "banana", "plum"]));
+    assert_eq!(model.selected_row().map(|row| row.key.as_str()), Some("plum"));
+}
+
+#[test]
+fn a_later_provider_can_improve_the_default_selection() {
+    let mut model = Model::new(Context::default(), 9, 2);
+    let request = model.request().expect("query");
+    let mut lesser = Row::new("later", "Later");
+    lesser.score = 1;
+    let mut better = Row::new("better", "Better");
+    better.score = 10;
+    model.deliver(request.generation, 0, Answer { rows: vec![lesser], ..Answer::default() });
+    model.deliver(request.generation, 1, Answer { rows: vec![better], ..Answer::default() });
+    assert_eq!(model.selected_row().map(|row| row.key.as_str()), Some("better"));
+
+    let mut model = Model::new(Context::default(), 9, 2);
+    let request = model.request().expect("query");
+    model.deliver(
+        request.generation,
+        0,
+        Answer { rows: vec![Row::new("first", "First"), Row::new("chosen", "Chosen")], ..Answer::default() },
+    );
+    model.key(Key::Down, &Field::default());
+    let mut better = Row::new("better", "Better");
+    better.score = 10;
+    model.deliver(request.generation, 1, Answer { rows: vec![better], ..Answer::default() });
+    assert_eq!(model.selected_row().map(|row| row.key.as_str()), Some("chosen"));
+}
+
+#[test]
+fn hovering_selects_a_row_without_scrolling_or_picking_a_header() {
+    let mut model = Model::new(Context::default(), 2, 1);
+    let request = model.request().expect("query");
+    let rows = ["apple", "banana", "plum"]
+        .into_iter()
+        .map(|name| {
+            let mut row = Row::new(name, name);
+            row.insert = Some(name.into());
+            row
+        })
+        .collect();
+    model.deliver(
+        request.generation,
+        0,
+        Answer { sections: vec!["Fruit".into()], rows, ..Answer::default() },
+    );
+    assert!(!model.hover_item(0, "apple"), "the section heading cannot be selected");
+    model.scroll(2);
+    let top = model.snapshot().top;
+    assert_eq!(top, 2);
+    model.set_window(2);
+    assert_eq!(model.snapshot().top, top, "redrawing at the same size preserves scrolling");
+    assert!(!model.hover_item(2, "apple"), "an event for an old row cannot select its replacement");
+    assert_eq!(model.click_key(2, "apple"), Outcome::Nothing, "nor can a late click pick it");
+    assert!(model.hover_item(2, "banana"));
+    assert_eq!(model.snapshot().top, top, "hovering must not move the list");
+    assert_eq!(model.selected_row().map(|row| row.label.as_str()), Some("banana"));
+    assert_eq!(model.key(Key::Enter, &Field::default()), Outcome::Insert("banana".into()));
+    assert!(!model.hover_item(99, "banana"));
 }
 
 #[test]

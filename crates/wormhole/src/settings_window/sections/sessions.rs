@@ -85,9 +85,60 @@ pub(super) const SETTINGS: &[Setting] = &[
 ];
 
 /// Density: hovering an option shows the list in it beside the current one.
-fn draw_density(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_density(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let current = settings(cx).density;
+    if window.native_switch_allowed("density", cx) {
+        if let Some(native) = &window.native_segments {
+            let options = Density::ALL
+                .iter()
+                .map(|density| crate::platform::controls::SegmentOption {
+                    label: density.label().to_owned(),
+                    symbol: None,
+                })
+                .collect();
+            let enabled =
+                wormhole_core::config::settings_index::entry("density").is_none_or(|(_, _, entry)| {
+                    !super::super::registry::ProjectSource::current(&window.front, cx)
+                        .is_some_and(|project| project.sets(entry))
+                });
+            let selected = Density::ALL.iter().position(|density| *density == current).unwrap_or(0);
+            let page = cx.weak_entity();
+            let hover: super::super::native_segments::Hover = std::rc::Rc::new(move |index, over, _, cx| {
+                let Some(density) = Density::ALL.get(index).copied() else { return };
+                page.update(cx, |this, cx| {
+                    let look = Some(SidebarLook::Density(density));
+                    let next = if over {
+                        look
+                    } else if this.sidebar_preview == look {
+                        None
+                    } else {
+                        return;
+                    };
+                    if this.sidebar_preview != next {
+                        this.sidebar_preview = next;
+                        cx.notify();
+                    }
+                })
+                .ok();
+            });
+            return super::super::native_segments::control_options(
+                window,
+                native.clone(),
+                "density",
+                options,
+                selected,
+                enabled,
+                enabled.then_some(hover),
+                cx,
+                |index, _, cx| {
+                    if let Some(density) = Density::ALL.get(index).copied() {
+                        update_settings(cx, |s| s.density = density);
+                    }
+                },
+            );
+        }
+    }
     style::segmented_form(ui)
         .children(Density::ALL.map(|density| {
             style::form_segment(("density", density as usize), ui, None, density.label(), current == density)

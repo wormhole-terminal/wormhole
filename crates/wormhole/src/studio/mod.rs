@@ -21,6 +21,7 @@ mod token_editor;
 mod token_list;
 mod token_rows;
 
+use std::rc::Rc;
 use std::sync::Arc;
 
 use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
@@ -66,6 +67,20 @@ pub(crate) struct StudioWindow {
     /// The draft when the window opened or was last saved: what counts as a change.
     initial: ThemeFile,
     selected: Option<String>,
+    /// Invalidates a colour-panel session when the selected token changes.
+    selection_epoch: u64,
+    metric_switch: Option<Rc<crate::platform::controls::Switches>>,
+    metric_switch_focus: FocusHandle,
+    _metric_switch_events: Option<Task<()>>,
+    metric_stepper: Option<Rc<crate::platform::controls::Steppers>>,
+    metric_stepper_focus: FocusHandle,
+    _metric_stepper_events: Option<Task<()>>,
+    metric_slider: Option<Rc<crate::platform::controls::Sliders>>,
+    metric_slider_focus: FocusHandle,
+    _metric_slider_events: Option<Task<()>>,
+    colour_button: Option<Rc<crate::platform::controls::Buttons>>,
+    colour_button_focus: FocusHandle,
+    _colour_button_events: Option<Task<()>>,
     picker: Entity<ColorPickerState>,
     expression: Entity<InputState>,
     /// What is wrong with the value in the field, checked on every keystroke. While there is
@@ -90,10 +105,6 @@ pub(crate) struct StudioWindow {
     revision: u64,
     /// The Save theme menu (Save as a copy, Export, Copy JSON, Use in this project).
     save_menu: bool,
-    /// Whether Use in this project can write, as of when the menu opened. (Looked up then,
-    /// never while drawing: reading the main window's workspace during this window's draw
-    /// would bind it to this window.)
-    menu_project: bool,
     /// What the last save, export or copy did, under the title row.
     notice: Option<Notice>,
     /// The draft has edits that are not saved as a theme.
@@ -211,6 +222,108 @@ impl StudioWindow {
         let name =
             cx.new(|cx| InputState::new(window, cx).default_value(draft.name.clone().unwrap_or_default()));
         let slider = cx.new(|_| SliderState::new().min(0.0).max(token_editor::METRIC_MAX).step(1.0));
+        let (switch_events, switch_rx) = smol::channel::unbounded();
+        let metric_switch = crate::platform::controls::Switches::new(window, switch_events, cx).map(Rc::new);
+        let metric_switch_events = metric_switch.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = switch_rx.recv().await {
+                    if this
+                        .update_in(cx, |studio, window, cx| {
+                            let expected = format!("studio-follow-{}", studio.selection_epoch);
+                            if event.id == expected
+                                && studio.metric_switch.as_ref().is_some_and(|host| host.accepts(&event.id))
+                            {
+                                crate::style::native_focus::pointer(window);
+                                window.focus(&studio.metric_switch_focus, cx);
+                                studio.set_metric_following(event.on, window, cx);
+                            }
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            })
+        });
+        let metric_switch_focus = cx.focus_handle();
+        let (stepper_events, stepper_rx) = smol::channel::unbounded();
+        let metric_stepper =
+            crate::platform::controls::Steppers::new(window, stepper_events, cx).map(Rc::new);
+        let metric_stepper_events = metric_stepper.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = stepper_rx.recv().await {
+                    if this
+                        .update_in(cx, |studio, window, cx| {
+                            let expected = format!("studio-metric-stepper-{}", studio.selection_epoch);
+                            if event.id == expected
+                                && studio.metric_stepper.as_ref().is_some_and(|host| host.accepts(&event.id))
+                            {
+                                crate::style::native_focus::pointer(window);
+                                window.focus(&studio.metric_stepper_focus, cx);
+                                studio.step_metric(event.delta, window, cx);
+                            }
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            })
+        });
+        let metric_stepper_focus = cx.focus_handle();
+        let (slider_events, slider_rx) = smol::channel::unbounded();
+        let metric_slider = crate::platform::controls::Sliders::new(window, slider_events, cx).map(Rc::new);
+        let metric_slider_events = metric_slider.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = slider_rx.recv().await {
+                    if this
+                        .update_in(cx, |studio, window, cx| {
+                            let expected = format!("studio-metric-slider-{}", studio.selection_epoch);
+                            if event.id == expected
+                                && studio.metric_slider.as_ref().is_some_and(|host| host.accepts(&event.id))
+                            {
+                                crate::style::native_focus::pointer(window);
+                                window.focus(&studio.metric_slider_focus, cx);
+                                studio.set_metric_slider(event.value, window, cx);
+                            }
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            })
+        });
+        let metric_slider_focus = cx.focus_handle();
+        let (button_events, button_rx) = smol::channel::unbounded();
+        let colour_button = crate::platform::controls::Buttons::new(window, button_events, cx).map(Rc::new);
+        let colour_button_events = colour_button.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(id) = button_rx.recv().await {
+                    if this
+                        .update_in(cx, |studio, window, cx| {
+                            let expected = format!("studio-colour-{}", studio.selection_epoch);
+                            if id != expected
+                                || !studio.colour_button.as_ref().is_some_and(|host| host.accepts(&id))
+                            {
+                                return;
+                            }
+                            crate::style::native_focus::pointer(window);
+                            window.focus(&studio.colour_button_focus, cx);
+                            if let Some(name) = studio.selected.clone() {
+                                if let Some(color) = tokens_of(cx).get(&name) {
+                                    studio.choose_colour(&name, hsla(color), window, cx);
+                                }
+                            }
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            })
+        });
+        let colour_button_focus = cx.focus_handle();
         let this = cx.entity();
         let list = cx.new(|cx| TokenListView::new(&this, window, cx));
         let gallery = cx.new(|cx| GalleryView::new(&this, window, cx));
@@ -267,6 +380,19 @@ impl StudioWindow {
             initial: draft.clone(),
             draft,
             selected: None,
+            selection_epoch: 0,
+            metric_switch,
+            metric_switch_focus,
+            _metric_switch_events: metric_switch_events,
+            metric_stepper,
+            metric_stepper_focus,
+            _metric_stepper_events: metric_stepper_events,
+            metric_slider,
+            metric_slider_focus,
+            _metric_slider_events: metric_slider_events,
+            colour_button,
+            colour_button_focus,
+            _colour_button_events: colour_button_events,
             picker,
             expression,
             field_error: None,
@@ -280,7 +406,6 @@ impl StudioWindow {
             editor,
             revision: 0,
             save_menu: false,
-            menu_project: false,
             notice: None,
             dirty: false,
             asking: false,
@@ -300,6 +425,19 @@ impl StudioWindow {
     /// Select a token: the editor shows it, the list opens its band, the gallery outlines its
     /// uses.
     fn select_token(&mut self, name: &str, window: &mut Window, cx: &mut Context<Self>) {
+        self.selection_epoch = self.selection_epoch.wrapping_add(1);
+        if let Some(host) = &self.metric_switch {
+            host.forget_prefix("studio-follow-");
+        }
+        if let Some(host) = &self.metric_stepper {
+            host.forget_prefix("studio-metric-stepper-");
+        }
+        if let Some(host) = &self.metric_slider {
+            host.forget_prefix("studio-metric-slider-");
+        }
+        if let Some(host) = &self.colour_button {
+            host.forget_prefix("studio-colour-");
+        }
         self.selected = Some(name.to_string());
         self.field_error = None;
         if let Some(group) = group_of(name) {

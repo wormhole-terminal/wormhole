@@ -7,6 +7,7 @@
 //! made again only when something they are made from changes.
 
 use std::collections::BTreeSet;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use gpui_kit::assets::IconName;
@@ -72,6 +73,9 @@ pub(super) struct TokenListView {
     /// The filter text.
     pub(super) filter: Entity<InputState>,
     show: Show,
+    native_filter: Option<Rc<crate::platform::controls::Segments>>,
+    filter_focus: Vec<FocusHandle>,
+    _filter_events: Option<Task<()>>,
     /// The bands that are open.
     open_groups: BTreeSet<&'static str>,
     state: ListState,
@@ -90,6 +94,34 @@ pub(super) struct TokenListView {
 impl TokenListView {
     pub(super) fn new(studio: &Entity<StudioWindow>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let filter = cx.new(|cx| InputState::new(window, cx).placeholder("Filter tokens"));
+        let (events, rx) = smol::channel::unbounded();
+        let native_filter = crate::platform::controls::Segments::new(window, events, cx).map(Rc::new);
+        let filter_events = native_filter.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = rx.recv().await {
+                    if this
+                        .update_in(cx, |list, window, cx| {
+                            if event.id != "studio-token-filter"
+                                || !list.native_filter.as_ref().is_some_and(|host| host.accepts(&event.id))
+                            {
+                                return;
+                            }
+                            if let Some(show) =
+                                [Show::All, Show::Changed, Show::LowContrast].get(event.selected).copied()
+                            {
+                                crate::style::native_focus::pointer(window);
+                                window.focus(&list.filter_focus[event.selected], cx);
+                                list.set_show(show, cx);
+                            }
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            })
+        });
+        let filter_focus = (0..3).map(|_| cx.focus_handle()).collect();
         Self {
             studio: studio.downgrade(),
             _subscriptions: vec![
@@ -100,6 +132,9 @@ impl TokenListView {
             ],
             filter,
             show: Show::All,
+            native_filter,
+            filter_focus,
+            _filter_events: filter_events,
             open_groups: BTreeSet::new(),
             state: ListState::new(0, ListAlignment::Top, px(OVERDRAW)),
             rows: Vec::new(),
@@ -344,6 +379,47 @@ impl Render for TokenListView {
             style::segment(id, ui, label, self.show == value)
                 .on_click(cx.listener(move |this, _, _, cx| this.set_show(value, cx)))
         };
+        let show_filter = if let Some(native) = &self.native_filter {
+            let options: Vec<_> = [
+                "All".to_string(),
+                format!("Changed · {changed_count}"),
+                format!("Low contrast · {low_count}"),
+            ]
+            .into_iter()
+            .map(|label| crate::platform::controls::SegmentOption { label, symbol: None })
+            .collect();
+            let metrics = native.metrics(&options);
+            let selected = match self.show {
+                Show::All => 0,
+                Show::Changed => 1,
+                Show::LowContrast => 2,
+            };
+            let this = cx.weak_entity();
+            crate::style::native_segments::NativeSegments {
+                native: native.clone(),
+                id: "studio-token-filter".into(),
+                options,
+                accessibility_labels: None,
+                selected,
+                enabled: true,
+                hover: None,
+                focus: self.filter_focus.clone(),
+                appearance: cx.global::<SettingsStore>().tokens.appearance,
+                metrics,
+                change: Rc::new(move |ix, _, cx| {
+                    if let Some(show) = [Show::All, Show::Changed, Show::LowContrast].get(ix).copied() {
+                        this.update(cx, |list, cx| list.set_show(show, cx)).ok();
+                    }
+                }),
+            }
+            .into_any_element()
+        } else {
+            style::segmented(ui)
+                .child(show("studio-show-all", "All".into(), Show::All))
+                .child(show("studio-show-changed", format!("Changed · {changed_count}"), Show::Changed))
+                .child(show("studio-show-low", format!("Low contrast · {low_count}"), Show::LowContrast))
+                .into_any_element()
+        };
         let header = div()
             .flex_none()
             .flex()
@@ -357,12 +433,7 @@ impl Render for TokenListView {
                     .cleanable(true)
                     .prefix(style::icon(IconName::Search).text_color(ui.muted)),
             )
-            .child(
-                style::segmented(ui)
-                    .child(show("studio-show-all", "All".into(), Show::All))
-                    .child(show("studio-show-changed", format!("Changed · {changed_count}"), Show::Changed))
-                    .child(show("studio-show-low", format!("Low contrast · {low_count}"), Show::LowContrast)),
-            );
+            .child(show_filter);
         div()
             .id("studio-token-list")
             .size_full()
@@ -370,11 +441,19 @@ impl Render for TokenListView {
             .flex_col()
             .rule_right(ui)
             .bg(panel)
+            .children(self.native_filter.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+            }))
             .child(header)
             .child(
                 list(self.state.clone(), cx.processor(|this, ix, _window, cx| this.render_row(ix, cx)))
                     .flex_1()
                     .min_h_0(),
             )
+            .children(self.native_filter.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()
+            }))
     }
 }

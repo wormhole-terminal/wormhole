@@ -78,6 +78,14 @@ impl FirstRun {
                 .text_color(ui.text)
                 .occlude()
                 .track_focus(&intro.focus)
+                .children(intro.native_stepper.as_ref().map(|host| {
+                    let host = host.clone();
+                    canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+                }))
+                .children(intro.native_switches.as_ref().map(|host| {
+                    let host = host.clone();
+                    canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+                }))
                 // A click while the page is still coming in cuts the animation short.
                 .on_mouse_down(
                     MouseButton::Left,
@@ -123,6 +131,14 @@ impl FirstRun {
                 )
                 // Last in the tree, so ⇥ reaches the page's buttons first and this one after them.
                 .child(self.render_replay_button(ui, entrance, cx))
+                .children(intro.native_stepper.as_ref().map(|host| {
+                    let host = host.clone();
+                    canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()
+                }))
+                .children(intro.native_switches.as_ref().map(|host| {
+                    let host = host.clone();
+                    canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()
+                }))
                 .into_any_element(),
         )
     }

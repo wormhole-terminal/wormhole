@@ -18,6 +18,43 @@ fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
 }
 
+#[gpui_kit::test]
+fn overflow_ports_open_the_platform_menu_and_close_the_trigger(cx: &mut TestAppContext) {
+    if isolate("overflow_ports_open_the_platform_menu_and_close_the_trigger") {
+        return;
+    }
+    let window = start(cx, 1);
+    cx.simulate_window_resize(window.handle, size(px(1600.0), px(800.0)));
+    draw(cx, &window);
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].extras.found_ports(vec![3000, 5173, 8080, 9229]);
+        cx.notify();
+    });
+    draw(cx, &window);
+    record::close();
+    let mut pointer = VisualTestContext::from_window(window.handle, cx);
+    let at = pointer.debug_bounds("title-more-ports").expect("overflow chip is drawn").center();
+    pointer.simulate_mouse_move(at, None, Modifiers::none());
+    pointer.simulate_mouse_down(at, MouseButton::Left, Modifiers::none());
+    pointer.simulate_mouse_up(at, MouseButton::Left, Modifiers::none());
+    cx.run_until_parked();
+    let menu = record::open().expect("the overflow is a platform menu");
+    assert_eq!(menu.outline(), ["- localhost:8080", "- localhost:9229"]);
+    assert!(drive(cx, &window, |ws, _, _| ws.ports_menu));
+    let callbacks = record::close().expect("menu is open");
+    cx.update(|cx| {
+        window
+            .handle
+            .update(cx, |_, window, cx| {
+                for callback in callbacks {
+                    callback(window, cx);
+                }
+            })
+            .expect("runs the close callbacks");
+    });
+    assert!(!drive(cx, &window, |ws, _, _| ws.ports_menu));
+}
+
 /// A wide row shows the whole path, a narrower one drops parents out of its middle, and a narrow
 /// one folds Open in… and the splits into one menu before the name is cut.
 #[gpui_kit::test]

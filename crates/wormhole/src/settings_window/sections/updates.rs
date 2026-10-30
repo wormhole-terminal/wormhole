@@ -183,7 +183,7 @@ fn security_color(ui: UiColors, severity: Severity) -> Hsla {
 }
 
 /// Where an update stands, with the button for the next step and the release notes.
-fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_status(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let updates = cx.global::<Updates>();
     let (phase, busy, available, (done, total), last, restart_pending) = (
@@ -231,49 +231,106 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
             let (install, skip) = ((**release).clone(), (**release).clone());
             // A security update can't be skipped: checks would offer it again anyway.
             if !release.is_security_update() {
-                actions = actions.child(
+                let expected = skip.clone();
+                let skip_button = window.native_button(
+                    format!("update-skip-{}", release.version), text(SETTINGS_UPDATES_SKIP_THIS_VERSION), true, cx,
+                    move |_, cx| {
+                        if matches!(&cx.global::<Updates>().phase, UpdatePhase::Available(current) if **current == expected && !current.is_security_update()) {
+                            crate::update::skip_update(&expected, cx);
+                        }
+                    },
+                ).unwrap_or_else(|| {
                     Button::new("update-skip")
                         .ghost()
                         .small()
                         .label(text(SETTINGS_UPDATES_SKIP_THIS_VERSION))
-                        .on_click(cx.listener(move |_, _, _, cx| crate::update::skip_update(&skip, cx))),
-                );
+                        .on_click(cx.listener(move |_, _, _, cx| crate::update::skip_update(&skip, cx)))
+                        .into_any_element()
+                });
+                actions = actions.child(skip_button);
             }
-            actions = actions.child(
+            let expected = install.clone();
+            let install_button = window.native_button_with_style(
+                format!("update-install-{}", release.version), text(SETTINGS_UPDATES_INSTALL_UPDATE), true, true, cx,
+                move |_, cx| {
+                    if matches!(&cx.global::<Updates>().phase, UpdatePhase::Available(current) if **current == expected) {
+                        crate::update::install_update(expected.clone(), cx);
+                    }
+                },
+            ).unwrap_or_else(|| {
                 Button::new("update-install")
                     .primary()
                     .small()
                     .label(text(SETTINGS_UPDATES_INSTALL_UPDATE))
                     .on_click(
                         cx.listener(move |_, _, _, cx| crate::update::install_update(install.clone(), cx)),
-                    ),
-            );
+                    )
+                    .into_any_element()
+            });
+            actions = actions.child(install_button);
         }
-        UpdatePhase::Installed(_) => {
+        UpdatePhase::Installed(version) => {
             // Restarting asks first while something runs; waiting for the terminals to be idle
             // can be called off, or cut short by restarting now (no second question: it was asked).
             if restart_pending {
-                actions = actions.child(
+                let expected = version.clone();
+                let cancel = window.native_button(
+                    format!("update-restart-cancel-{version}"),
+                    text(SETTINGS_UPDATES_DONT_RESTART), true, cx,
+                    move |_, cx| {
+                        let updates = cx.global::<Updates>();
+                        if matches!(&updates.phase, UpdatePhase::Installed(current) if current == &expected)
+                            && updates.restart_pending()
+                        {
+                            crate::update::cancel_restart_when_idle(cx);
+                        }
+                    },
+                ).unwrap_or_else(|| {
                     Button::new("update-restart-cancel")
                         .ghost()
                         .small()
                         .label(text(SETTINGS_UPDATES_DONT_RESTART))
-                        .on_click(cx.listener(|_, _, _, cx| crate::update::cancel_restart_when_idle(cx))),
-                );
+                        .on_click(cx.listener(|_, _, _, cx| crate::update::cancel_restart_when_idle(cx)))
+                        .into_any_element()
+                });
+                actions = actions.child(cancel);
             }
-            actions = actions.child(
-                Button::new("update-restart")
-                    .primary()
-                    .small()
-                    .label(text(SETTINGS_UPDATES_RESTART_NOW))
-                    .on_click(cx.listener(move |_, _, window, cx| {
-                        if restart_pending {
+            let expected = version.clone();
+            let restart = window
+                .native_button_with_style(
+                    format!("update-restart-{version}"),
+                    text(SETTINGS_UPDATES_RESTART_NOW),
+                    true,
+                    true,
+                    cx,
+                    move |window, cx| {
+                        let updates = cx.global::<Updates>();
+                        if !matches!(&updates.phase, UpdatePhase::Installed(current) if current == &expected)
+                        {
+                            return;
+                        }
+                        if updates.restart_pending() {
                             crate::update::restart_to_update(cx);
                         } else {
                             crate::update::restart::request_restart(window, cx);
                         }
-                    })),
-            );
+                    },
+                )
+                .unwrap_or_else(|| {
+                    Button::new("update-restart")
+                        .primary()
+                        .small()
+                        .label(text(SETTINGS_UPDATES_RESTART_NOW))
+                        .on_click(cx.listener(move |_, _, window, cx| {
+                            if restart_pending {
+                                crate::update::restart_to_update(cx);
+                            } else {
+                                crate::update::restart::request_restart(window, cx);
+                            }
+                        }))
+                        .into_any_element()
+                });
+            actions = actions.child(restart);
         }
         UpdatePhase::Checking => {
             actions = actions.child(Button::new("update-checking").ghost().small().loading(true).label(""));
@@ -286,15 +343,24 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
         }
         UpdatePhase::Idle if !available => {}
         _ => {
-            actions = actions.child(
-                Button::new("update-check").small().label(text(SETTINGS_UPDATES_CHECK_NOW)).on_click(
-                    cx.listener(move |_, _, _, cx| {
-                        if !busy {
-                            crate::update::check_for_updates(true, cx);
-                        }
-                    }),
-                ),
-            );
+            let check = window
+                .native_button("update-check", text(SETTINGS_UPDATES_CHECK_NOW), !busy, cx, |_, cx| {
+                    if !cx.global::<Updates>().busy() {
+                        crate::update::check_for_updates(true, cx);
+                    }
+                })
+                .unwrap_or_else(|| {
+                    Button::new("update-check")
+                        .small()
+                        .label(text(SETTINGS_UPDATES_CHECK_NOW))
+                        .on_click(cx.listener(move |_, _, _, cx| {
+                            if !busy {
+                                crate::update::check_for_updates(true, cx);
+                            }
+                        }))
+                        .into_any_element()
+                });
+            actions = actions.child(check);
         }
     }
 

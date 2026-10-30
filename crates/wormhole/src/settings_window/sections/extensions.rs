@@ -8,7 +8,6 @@
 //! `probe::hidden::reveal` before it is drawn.
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
@@ -214,7 +213,7 @@ fn draw_probes(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
                 div()
                     .flex()
                     .flex_col()
-                    .children(entries.iter().map(|entry| probe_row(ui, entry, cx)))
+                    .children(entries.iter().map(|entry| probe_row(window, ui, entry, cx)))
                     .into_any_element()
             };
             let Some(problem) = key_problem else { return rows };
@@ -272,7 +271,12 @@ fn empty(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
 }
 
 /// One Probe: its mark, name and state, who and which version, what it says it is, and the switch.
-fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn probe_row(
+    window: &SettingsWindow,
+    ui: UiColors,
+    entry: &Entry,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
     let folder = entry.folder.clone();
     let id = SharedString::from(format!("probe-{folder}"));
     let (title, identity, description) = match &entry.probe {
@@ -290,15 +294,14 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
     let can_switch = state.can_approve() || state.is_on();
     let probe_id = entry.probe.as_ref().map_or_else(|| folder.clone(), |probe| probe.id.clone());
     let switch_name = title.clone();
-    let switch = style::toggle(SharedString::from(format!("{id}-switch")), state.is_on(), {
-        let this = cx.weak_entity();
-        move |on, _, cx| {
-            let (probe_id, name) = (probe_id.clone(), switch_name.clone());
-            this.update(cx, |this, cx| this.probe_switched(probe_id, name, on, cx)).ok();
-        }
-    })
-    .disabled(!can_switch)
-    .accessibility_label(title.clone());
+    let page = cx.weak_entity();
+    let switch =
+        window.switch_control(format!("{id}-switch").into(), title.clone(), state.is_on(), can_switch, cx, {
+            move |on, _, cx| {
+                let (probe_id, name) = (probe_id.clone(), switch_name.clone());
+                page.update(cx, |this, cx| this.probe_switched(probe_id, name, on, cx)).ok();
+            }
+        });
 
     let again = (*state == ProbeState::Changed).then(|| {
         let (probe_id, name) = (entry.folder.clone(), title.clone());

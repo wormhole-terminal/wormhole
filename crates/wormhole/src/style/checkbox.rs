@@ -35,7 +35,9 @@ pub struct Checkbox {
     id: ElementId,
     ui: UiColors,
     checked: bool,
+    disabled: bool,
     form: bool,
+    tab_stop: bool,
     label: Option<SharedString>,
     spoken: Option<SharedString>,
     on_change: Option<OnChange>,
@@ -48,7 +50,9 @@ pub fn checkbox(id: impl Into<ElementId>, ui: UiColors, checked: bool) -> Checkb
         id: id.into(),
         ui,
         checked,
+        disabled: false,
         form: false,
+        tab_stop: false,
         label: None,
         spoken: None,
         on_change: None,
@@ -57,9 +61,16 @@ pub fn checkbox(id: impl Into<ElementId>, ui: UiColors, checked: bool) -> Checkb
 }
 
 impl Checkbox {
+    /// Prevent interaction and expose the disabled state to accessibility.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
     /// A form's checkbox (16 pt) with its label after it, which VoiceOver reads too.
     pub fn in_form(mut self, label: impl Into<SharedString>) -> Self {
         self.form = true;
+        self.tab_stop = true;
         self.label = Some(label.into());
         self
     }
@@ -67,6 +78,12 @@ impl Checkbox {
     /// What VoiceOver calls a checkbox without a label of its own (a next step: its text).
     pub fn spoken(mut self, text: impl Into<SharedString>) -> Self {
         self.spoken = Some(text.into());
+        self
+    }
+
+    /// Let keyboard traversal reach an unlabeled checkbox in a form or table.
+    pub fn tab_stop(mut self, enabled: bool) -> Self {
+        self.tab_stop = enabled;
         self
     }
 
@@ -84,7 +101,7 @@ impl Checkbox {
 
 impl RenderOnce for Checkbox {
     fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
-        let Checkbox { id, ui, checked, form, label, spoken, on_change, ring } = self;
+        let Checkbox { id, ui, checked, disabled, form, tab_stop, label, spoken, on_change, ring } = self;
         let (side, mark) = if form { (BOX_FORM, MARK_FORM) } else { (BOX, MARK) };
         let indicator = CheckboxIndicator::new()
             .checked(checked)
@@ -107,9 +124,10 @@ impl RenderOnce for Checkbox {
         let spoken = label.clone().or(spoken);
         let base = BaseCheckbox::new(id)
             .checked(checked)
-            // The workspace moves the keyboard through its lists itself; a box of its own
-            // would be one more stop in every row.
-            .tab_stop(false)
+            .disabled(disabled)
+            // List rows own their keyboard navigation; forms need a stop for each checkbox.
+            .tab_stop(tab_stop)
+            .when(tab_stop, |base| base.focus_visible(|style| style.bg(ui.hover).rounded(ui.radius_chip)))
             .when_some(spoken, |d, text| d.accessibility_label(text))
             .when_some(on_change, |d, on_change| {
                 d.on_change(move |_, _, window, cx| {
@@ -120,7 +138,8 @@ impl RenderOnce for Checkbox {
             .flex()
             .flex_none()
             .items_center()
-            .cursor_pointer();
+            .when(!disabled, |base| base.cursor_pointer())
+            .when(disabled, |base| base.opacity(0.5));
         match label {
             // In a form the label takes the clicks too.
             Some(label) => base
@@ -146,8 +165,11 @@ impl RenderOnce for Checkbox {
 mod window_tests {
     use gpui_kit::prelude::*;
     use gpui_kit::{
-        Context, IntoElement, Render, TestAppContext, VisualTestContext, Window, WindowOptions, div, px,
+        Context, IntoElement, KeyDownEvent, KeyUpEvent, Keystroke, Render, TestAppContext, VisualTestContext,
+        Window, WindowOptions, div, px,
     };
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
     use super::checkbox;
     use crate::settings::{SettingsStore, ui};
@@ -196,5 +218,77 @@ mod window_tests {
         assert_eq!(next.origin.x, px(10.0 + super::BOX), "the box takes its own width, no more");
         let after_form = drawn.debug_bounds("after-form").expect("drawn");
         assert!(after_form.origin.x > px(super::BOX_FORM + 60.0), "the label has room: {after_form:?}");
+    }
+
+    #[gpui_kit::test]
+    fn form_checkboxes_are_keyboard_stops_but_list_checkboxes_are_not(cx: &mut TestAppContext) {
+        struct Form(Rc<RefCell<Vec<&'static str>>>);
+        impl Render for Form {
+            fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+                let ui = ui(cx);
+                let lead = self.0.clone();
+                let disabled = self.0.clone();
+                let form = self.0.clone();
+                let table = self.0.clone();
+                div()
+                    .tab_group()
+                    .child(
+                        checkbox("lead-key", ui, false)
+                            .spoken("List item")
+                            .on_change(move |_, _, _| lead.borrow_mut().push("lead")),
+                    )
+                    .child(
+                        checkbox("disabled-key", ui, false)
+                            .in_form("Disabled item")
+                            .disabled(true)
+                            .on_change(move |_, _, _| disabled.borrow_mut().push("disabled")),
+                    )
+                    .child(
+                        checkbox("form-key", ui, false)
+                            .in_form("Form item")
+                            .on_change(move |_, _, _| form.borrow_mut().push("form")),
+                    )
+                    .child(
+                        checkbox("table-key", ui, false)
+                            .spoken("Table item")
+                            .tab_stop(true)
+                            .on_change(move |_, _, _| table.borrow_mut().push("table")),
+                    )
+            }
+        }
+        let changes = Rc::new(RefCell::new(Vec::new()));
+        let handle = cx.update(|cx| {
+            gpui_kit::init(cx);
+            cx.set_global(SettingsStore::for_test());
+            gpui_kit::open_window(WindowOptions::default(), cx, |_, cx| cx.new(|_| Form(changes.clone())))
+                .expect("opens the window")
+                .0
+        });
+        let mut window = VisualTestContext::from_window(handle, cx);
+        window.update(|window, cx| {
+            window.draw(cx).clear(cx);
+            window.focus_next(cx);
+        });
+        window.update(|window, cx| {
+            assert!(window.focused(cx).is_some(), "the first form checkbox has focus");
+            window.draw(cx).clear(cx);
+        });
+        let press_space = |window: &mut VisualTestContext| {
+            let key = Keystroke::parse("space").expect("space");
+            window.simulate_event(KeyDownEvent {
+                keystroke: key.clone(),
+                is_held: false,
+                prefer_character_input: false,
+            });
+            window.simulate_event(KeyUpEvent { keystroke: key });
+        };
+        press_space(&mut window);
+        window.update(|window, cx| {
+            window.draw(cx).clear(cx);
+            window.focus_next(cx);
+        });
+        window.update(|window, cx| window.draw(cx).clear(cx));
+        press_space(&mut window);
+        assert_eq!(&*changes.borrow(), &["form", "table"]);
     }
 }

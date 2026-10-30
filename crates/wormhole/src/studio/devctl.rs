@@ -218,7 +218,7 @@ impl StudioWindow {
         cx.defer(move |cx| {
             let _ = with_studio(cx, |studio, window, cx| match action {
                 Some(action) => studio.run_save_action(action, window, cx),
-                None => studio.open_save_menu(cx),
+                None => studio.open_save_menu(point(px(0.0), px(0.0)), window, cx),
             });
         });
     }

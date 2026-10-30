@@ -10,7 +10,6 @@ use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::color_picker::ColorPicker;
-use gpui_kit::component::switch::Switch;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -51,9 +50,29 @@ pub(super) fn tab(
 ) -> AnyElement {
     let project =
         entity.clone().downcast::<Project>().expect("the project entity is made by this entry's `make`");
-    let Some(active) = facts.active() else { return div().into_any_element() };
+    let Some(active) = facts.active() else {
+        project.update(cx, |project, _| {
+            project.switch_scope(None);
+            if let Some(host) = &project.native_switches {
+                host.begin();
+                host.finish();
+            }
+        });
+        return div().into_any_element();
+    };
     let folder = active.band_folder();
-    project.update(cx, |project, cx| project.sync_picker(facts.profile, folder.as_deref(), window, cx));
+    let has_native = project.read(cx).native_switches.is_some();
+    let root = has_native
+        .then(|| {
+            project.read(cx).project(active.id, facts.profile, cx).map(|project| project.folder.root.clone())
+        })
+        .flatten();
+    project.update(cx, |project, cx| {
+        project.sync_picker(facts.profile, folder.as_deref(), window, cx);
+        if has_native {
+            project.switch_scope(root.map(|root| (facts.profile.clone(), root)));
+        }
+    });
     let ui = ui_in(facts.profile, cx);
     let tab = Tab {
         project: &project,
@@ -64,7 +83,23 @@ pub(super) fn tab(
         notes: NotesLink::of(facts),
     };
     let content = tab.content(cx);
-    panel_list::scroll_column("project-scroll", facts.panel_scroll, ui, content, cx)
+    let column = panel_list::scroll_column("project-scroll", facts.panel_scroll, ui, content, cx);
+    let host = project.read(cx).native_switches.clone();
+    if host.is_none() {
+        return column;
+    }
+    div()
+        .flex()
+        .flex_col()
+        .flex_1()
+        .min_h_0()
+        .children(host.as_ref().map(|host| {
+            let host = host.clone();
+            canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+        }))
+        .child(column)
+        .children(host.map(|host| canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()))
+        .into_any_element()
 }
 
 /// What the tab is drawn for.
@@ -146,14 +181,52 @@ impl Tab<'_> {
             }))
             // Any other colour: the picker, which shows the folder's own and saves a hex colour.
             .children(enabled.then(|| {
-                let featured = folder_color::choices(cx).into_iter().map(|(_, shown)| shown).collect();
-                div().flex().items_center().h(px(style::HIT_MIN)).pl_1().child(
+                let picker: AnyElement = if crate::platform::has_colour_panel() {
+                    let start = paint
+                        .shown(&store_in(self.profile, cx).tokens)
+                        .map(|color| theme_bridge::hsla(color.color()))
+                        .unwrap_or(ui.primary);
+                    let project = self.project.downgrade();
+                    let profile = self.profile.clone();
+                    let folder = folder.to_path_buf();
+                    style::icon_button("folder-color-custom-picker", ui, IconName::Plus, "Pick a colour")
+                        .on_click(move |_, window, cx| {
+                            let project = project.clone();
+                            let profile = profile.clone();
+                            let folder = folder.clone();
+                            crate::platform::pick_colour(
+                                start,
+                                std::rc::Rc::new(move |color, _, cx| {
+                                    let Some(project) = project.upgrade() else { return };
+                                    let paint = project.read(cx).folder_paint(&profile, &folder, cx);
+                                    let Ok(color) = wormhole_core::project::ProjectColor::parse(
+                                        &theme_bridge::color(color).with_alpha(1.0).to_hex(),
+                                    ) else {
+                                        return;
+                                    };
+                                    folder_color::set_folder_choice(
+                                        &paint,
+                                        &profile,
+                                        &folder,
+                                        Some(wormhole_core::project::ProjectColorChoice::Hex(color)),
+                                        cx,
+                                    );
+                                }),
+                                window,
+                                cx,
+                            );
+                        })
+                        .into_any_element()
+                } else {
+                    let featured = folder_color::choices(cx).into_iter().map(|(_, shown)| shown).collect();
                     ColorPicker::new(&self.project.read(cx).picker)
                         .icon(IconName::Plus)
                         .featured_colors(featured)
                         .anchor(Anchor::TopRight)
-                        .accessibility_label("Pick a colour"),
-                )
+                        .accessibility_label("Pick a colour")
+                        .into_any_element()
+                };
+                div().flex().items_center().h(px(style::HIT_MIN)).pl_1().child(picker)
             }));
         style::Cards::new(ui)
             .head(section_band("project-folder-color", "Folder colour", None, ui))
@@ -297,17 +370,44 @@ impl Tab<'_> {
                     title: feature.label().into(),
                     detail: Some(hint.into()),
                     detail_color: warns.then_some(ui.warning_text),
-                    trailing: Some(
-                        Switch::new(SharedString::from(format!("feature-{}", feature.key())))
-                            .checked(on)
-                            .on_click({
-                                let (root, profile) = (root.clone(), self.profile.clone());
-                                move |checked: &bool, _, cx| {
-                                    set_feature_for(&profile, &root, feature, Some(*checked), cx)
+                    trailing: Some({
+                        let (root, profile) = (root.clone(), self.profile.clone());
+                        let change = move |checked, _: &mut Window, cx: &mut App| {
+                            set_feature_for(&profile, &root, feature, Some(checked), cx)
+                        };
+                        let state = self.project.read(cx);
+                        if let Some(native) = &state.native_switches {
+                            let id = state.switch_id(feature);
+                            let event_id = id.clone();
+                            let host = native.clone();
+                            let owner = self.project.downgrade();
+                            let guarded_change = move |checked, window: &mut Window, cx: &mut App| {
+                                let Some(owner) = owner.upgrade() else { return };
+                                if host.accepts(&event_id) && owner.read(cx).switch_id(feature) == event_id {
+                                    change(checked, window, cx);
                                 }
-                            })
-                            .into_any_element(),
-                    ),
+                            };
+                            crate::style::native_switch::NativeSwitch {
+                                native: native.clone(),
+                                id,
+                                label: feature.label().into(),
+                                on,
+                                enabled: true,
+                                focus: Some(state.switch_focus[&feature].clone()),
+                                appearance: store_in(self.profile, cx).tokens.appearance,
+                                change: std::rc::Rc::new(guarded_change),
+                            }
+                            .into_any_element()
+                        } else {
+                            style::toggle(
+                                SharedString::from(format!("feature-{}", feature.key())),
+                                on,
+                                change,
+                            )
+                            .accessibility_label(feature.label())
+                            .into_any_element()
+                        }
+                    }),
                     actions: Vec::new(),
                 },
             ));

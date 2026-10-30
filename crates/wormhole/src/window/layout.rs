@@ -248,6 +248,23 @@ impl Render for Workspace {
             .key_context("Workspace");
         // While the intro window is open the window's actions wait: its keys go to it.
         let intro_open = self.first_run_open(cx);
+        let panel_controls_visible = notes_visible
+            && self.in_flow(Edge::Panel)
+            && !intro_open
+            && !self.overlay.is_shown()
+            && !cx.has_active_drag();
+        for (at, def) in self.features.iter().enumerate() {
+            if let (Some(visibility), Some(entity)) = (def.cover_visibility, self.feature_entity(at)) {
+                visibility(entity, !intro_open && !self.overlay.is_shown() && !cx.has_active_drag(), cx);
+            }
+            if let (Some(visibility), Some(entity)) = (def.panel_visibility, self.feature_entity(at)) {
+                let facts = self.facts(cx);
+                let visible = panel_controls_visible
+                    && facts.features.has(def.id)
+                    && def.tabs.iter().any(|tab| tab.id == self.right_tab && (tab.shown)(&facts, cx));
+                visibility(entity, visible, cx);
+            }
+        }
         let root = if intro_open { root } else { self.with_actions(root, cx) };
         // What the intro window needs of this one is told before it is drawn.
         self.push_first_run(cx);

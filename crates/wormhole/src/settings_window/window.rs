@@ -40,7 +40,6 @@ impl SettingsWindow {
         let current = settings(cx).clone();
         let search =
             cx.new(|cx| InputState::new(window, cx).placeholder(text(SETTINGS_WINDOW_SEARCH_SETTINGS)));
-        let menu_search = cx.new(|cx| InputState::new(window, cx).placeholder(text(SETTINGS_WINDOW_SEARCH)));
         let font_picker = FontPickerState::new(window, cx);
         let primary_picker = cx.new(|cx| ColorPickerState::new(window, cx));
         let branch_picker = cx.new(|cx| ColorPickerState::new(window, cx));
@@ -71,19 +70,16 @@ impl SettingsWindow {
                     // The search's marks take over from a revealed row's.
                     if this.show_results {
                         this.revealed = None;
+                        this.projects.close_picker(cx);
+                        this.font_picker.close();
                     }
                     cx.notify();
                 }
             }),
-            cx.subscribe_in(&menu_search, window, |_, _, event: &InputEvent, _, cx| {
-                if let InputEvent::Change = event {
-                    cx.notify();
-                }
-            }),
-            cx.subscribe_in(&font_picker.search, window, |_, _, event: &InputEvent, _, cx| {
-                if let InputEvent::Change = event {
-                    cx.notify();
-                }
+            cx.subscribe_in(&font_picker.search, window, |this, _, event: &InputEvent, _, cx| match event {
+                InputEvent::Change => cx.notify(),
+                InputEvent::PressEnter { .. } => this.pick_first_font(cx),
+                _ => {}
             }),
             cx.subscribe(&opacity_slider, |_, _, event: &SliderEvent, cx| {
                 let SliderEvent::Change(value) = event else { return };
@@ -103,6 +99,15 @@ impl SettingsWindow {
             }),
         ];
         subscriptions.extend(project_subscriptions);
+        // A GPUI popover must cover native subviews too; redraw the host whenever either
+        // color picker opens or closes so the native switches are hidden while it is up.
+        subscriptions.push(cx.observe(&primary_picker, |_, _, cx| cx.notify()));
+        subscriptions.push(cx.observe(&branch_picker, |_, _, cx| cx.notify()));
+        subscriptions
+            .push(cx.observe_global::<crate::fonts::FontCatalog>(|this, cx| this.refresh_native_fonts(cx)));
+        subscriptions
+            .push(cx.observe_global::<crate::fonts::LoadedFonts>(|this, cx| this.refresh_native_fonts(cx)));
+        subscriptions.push(cx.observe_global::<SettingsStore>(|this, cx| this.refresh_native_fonts(cx)));
         // Closed while its field records: the hotkey comes back with the window gone.
         subscriptions.push(cx.on_release(|_, cx| {
             crate::hotkey::pause(false, cx);
@@ -112,6 +117,112 @@ impl SettingsWindow {
         let blur = Blur::install(window, style::wants_blur(settings(cx), translucent));
         let focus_handle = cx.focus_handle();
         window.focus(&focus_handle, cx);
+        let (button_events, button_rx) = smol::channel::unbounded();
+        let native_buttons =
+            crate::platform::controls::Buttons::new(window, button_events, cx).map(std::rc::Rc::new);
+        let native_button_events = native_buttons.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(id) = button_rx.recv().await {
+                    let action = match this
+                        .update_in(cx, |this, window, cx| this.native_button_action(&id, window, cx))
+                    {
+                        Ok(action) => action,
+                        Err(_) => break,
+                    };
+                    if let Some(action) = action {
+                        if cx.update(|window, cx| action(window, cx)).is_err() {
+                            break;
+                        }
+                    }
+                }
+            })
+        });
+        let (switch_events, switch_rx) = smol::channel::unbounded();
+        let native_switches =
+            crate::platform::controls::Switches::new(window, switch_events, cx).map(std::rc::Rc::new);
+        let native_switch_events = native_switches.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = switch_rx.recv().await {
+                    let on = event.on;
+                    let action = match this
+                        .update_in(cx, |this, window, cx| this.native_switch_action(event, window, cx))
+                    {
+                        Ok(action) => action,
+                        Err(_) => break,
+                    };
+                    // A specialized handler may update this same entity. Invoke it only after
+                    // the lookup and focus update have released the SettingsWindow borrow.
+                    if let Some(action) = action {
+                        if cx.update(|window, cx| action(on, window, cx)).is_err() {
+                            break;
+                        }
+                    }
+                }
+            })
+        });
+        let (segment_events, segment_rx) = smol::channel::unbounded();
+        let native_segments =
+            crate::platform::controls::Segments::new(window, segment_events, cx).map(std::rc::Rc::new);
+        let native_segment_events = native_segments.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = segment_rx.recv().await {
+                    let selected = event.selected;
+                    let action = match this.update_in(cx, |this, window, cx| {
+                        this.native_segment_action(event.id, selected, window, cx)
+                    }) {
+                        Ok(action) => action,
+                        Err(_) => break,
+                    };
+                    if let Some(action) = action {
+                        if cx.update(|window, cx| action(selected, window, cx)).is_err() {
+                            break;
+                        }
+                    }
+                }
+            })
+        });
+        let (stepper_events, stepper_rx) = smol::channel::unbounded();
+        let native_steppers =
+            crate::platform::controls::Steppers::new(window, stepper_events, cx).map(std::rc::Rc::new);
+        let native_stepper_events = native_steppers.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = stepper_rx.recv().await {
+                    let delta = event.delta;
+                    let action = match this
+                        .update_in(cx, |this, window, cx| this.native_stepper_action(event.id, window, cx))
+                    {
+                        Ok(action) => action,
+                        Err(_) => break,
+                    };
+                    if let Some(action) = action {
+                        if cx.update(|window, cx| action(delta, window, cx)).is_err() {
+                            break;
+                        }
+                    }
+                }
+            })
+        });
+        let (slider_events, slider_rx) = smol::channel::unbounded();
+        let native_sliders =
+            crate::platform::controls::Sliders::new(window, slider_events, cx).map(std::rc::Rc::new);
+        let native_slider_events = native_sliders.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = slider_rx.recv().await {
+                    let value = event.value;
+                    let action = match this
+                        .update_in(cx, |this, window, cx| this.native_slider_action(event.id, window, cx))
+                    {
+                        Ok(action) => action,
+                        Err(_) => break,
+                    };
+                    if let Some(action) = action {
+                        if cx.update(|window, cx| action(value, window, cx)).is_err() {
+                            break;
+                        }
+                    }
+                }
+            })
+        });
         // Sessions move between folders and windows come to the front; keep the project list
         // and what the pages show of the front window current while the window is open.
         let refresh = cx.spawn_in(window, async move |this, cx| {
@@ -128,6 +239,26 @@ impl SettingsWindow {
             }
         });
         let mut this = Self {
+            native_buttons,
+            native_button_focus: Default::default(),
+            native_button_handlers: Default::default(),
+            _native_button_events: native_button_events,
+            native_switches,
+            native_switch_focus: Default::default(),
+            native_switch_handlers: Default::default(),
+            _native_switch_events: native_switch_events,
+            native_segments,
+            native_segment_focus: Default::default(),
+            native_segment_handlers: Default::default(),
+            _native_segment_events: native_segment_events,
+            native_steppers,
+            native_stepper_focus: Default::default(),
+            native_stepper_handlers: Default::default(),
+            _native_stepper_events: native_stepper_events,
+            native_sliders,
+            native_slider_focus: Default::default(),
+            native_slider_handlers: Default::default(),
+            _native_slider_events: native_slider_events,
             section: section.unwrap_or(Section::Appearance),
             front: FrontWindow::read(cx),
             search,
@@ -138,7 +269,6 @@ impl SettingsWindow {
             primary_picker,
             branch_picker,
             open_select: None,
-            menu_search,
             opacity_slider,
             line_height_slider,
             specimen: FontSlot::Terminal,
@@ -206,8 +336,11 @@ impl SettingsWindow {
     }
 
     pub(super) fn show_section(&mut self, section: Section, cx: &mut Context<Self>) {
+        self.projects.close_picker(cx);
+        self.font_picker.close();
         if self.section != section || self.show_results {
             self.notice = None;
+            self.sidebar_preview = None;
             self.content_scroll.set_offset(point(px(0.0), px(0.0)));
         }
         self.section = section;
@@ -270,7 +403,8 @@ impl SettingsWindow {
     pub(super) fn escape(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.new_profile.take().is_some()
             || self.close_probe_sheet(cx)
-            || self.font_picker.open.take().is_some()
+            || self.font_picker.close()
+            || self.projects.close_picker(cx)
             || self.open_select.take().is_some()
             || self.end_recording(cx)
             || std::mem::take(&mut self.confirm_reset)
@@ -414,6 +548,7 @@ impl Render for SettingsWindow {
             .track_focus(&self.focus_handle)
             .key_context("SettingsWindow") // text: not shown (a key context)
             .on_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
+                crate::style::native_focus::keyboard(window);
                 let keys = &event.keystroke;
                 if this.record_key(keys, cx) {
                     cx.stop_propagation();
@@ -433,6 +568,11 @@ impl Render for SettingsWindow {
             .relative()
             .flex()
             .text_color(ui.text)
+            .children(self.native_buttons.as_ref().map(super::native_button::begin))
+            .children(self.native_switches.as_ref().map(super::native_switch::begin))
+            .children(self.native_segments.as_ref().map(super::native_segments::begin))
+            .children(self.native_steppers.as_ref().map(super::native_stepper::begin))
+            .children(self.native_sliders.as_ref().map(super::native_slider::begin))
             // Drag the window by its top strip (the title bar is transparent); first, so it is
             // behind what is drawn over it (`style::TitleDrag`).
             .child(div().absolute().top_0().left_0().right_0().h(px(style::TITLE_ROW_H)).title_drag())
@@ -443,6 +583,11 @@ impl Render for SettingsWindow {
             )
             .children(self.render_new_profile(cx))
             .children(self.render_probe_sheet(window, cx))
+            .children(self.native_switches.as_ref().map(super::native_switch::finish))
+            .children(self.native_segments.as_ref().map(super::native_segments::finish))
+            .children(self.native_steppers.as_ref().map(super::native_stepper::finish))
+            .children(self.native_sliders.as_ref().map(super::native_slider::finish))
+            .children(self.native_buttons.as_ref().map(super::native_button::finish))
     }
 }
 

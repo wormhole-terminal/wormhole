@@ -11,10 +11,13 @@ use std::ops::Range;
 
 use objc2::rc::Retained;
 use objc2::runtime::{NSObjectProtocol, Sel};
-use objc2::{DefinedClass as _, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
+use objc2::{
+    AnyThread as _, DefinedClass as _, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel,
+};
 use objc2_app_kit::{
     NSAccessibility as _, NSBackingStoreType, NSButton, NSControl, NSControlTextEditingDelegate, NSEvent,
-    NSPanel, NSSearchField, NSTextFieldDelegate, NSTextView, NSView, NSWindowDelegate, NSWindowStyleMask,
+    NSPanel, NSSearchField, NSSegmentedControl, NSTextFieldDelegate, NSTextView, NSTrackingArea,
+    NSTrackingAreaOptions, NSView, NSWindowDelegate, NSWindowStyleMask,
 };
 use objc2_foundation::{NSNotification, NSObject, NSRange, NSRect};
 use wormhole_core::view::picker::{Do, Facts, Field, Key, decide};
@@ -103,6 +106,13 @@ define_class!(
         #[unsafe(method(searched:))]
         fn searched(&self, _sender: &NSSearchField) {
             self.typed();
+        }
+
+        #[unsafe(method(segmentChanged:))]
+        fn segment_changed(&self, sender: &NSSegmentedControl) {
+            if let Ok(index) = usize::try_from(sender.selectedSegment()) {
+                self.send(Event::Segment(index));
+            }
         }
     }
 
@@ -239,6 +249,8 @@ pub struct RowIvars {
     tx: Events,
     /// Which line of the list this view is showing.
     at: Cell<usize>,
+    key: RefCell<Option<String>>,
+    context_menu: Cell<bool>,
 }
 
 define_class!(
@@ -269,10 +281,31 @@ define_class!(
             self.press();
         }
 
+        #[unsafe(method(rightMouseDown:))]
+        fn right_mouse_down(&self, _event: &NSEvent) {
+            self.context();
+        }
+
+        #[unsafe(method(mouseEntered:))]
+        fn mouse_entered(&self, _event: &NSEvent) {
+            let ivars = self.ivars();
+            if let Some(key) = ivars.key.borrow().as_ref() {
+                ivars.tx.try_send(Event::Hover { at: ivars.at.get(), key: key.clone() }).ok();
+            }
+        }
+
+        #[unsafe(method(mouseExited:))]
+        fn mouse_exited(&self, _event: &NSEvent) {}
+
         #[unsafe(method(accessibilityPerformPress))]
         fn accessibility_perform_press(&self) -> bool {
             self.press();
             true
+        }
+
+        #[unsafe(method(accessibilityPerformShowMenu))]
+        fn accessibility_perform_show_menu(&self) -> bool {
+            self.context()
         }
     }
 
@@ -282,19 +315,52 @@ define_class!(
 impl RowView {
     #[allow(unsafe_code)]
     pub fn new(mtm: MainThreadMarker, tx: Events) -> Retained<Self> {
-        let this = Self::alloc(mtm).set_ivars(RowIvars { tx, at: Cell::new(0) });
+        let this = Self::alloc(mtm).set_ivars(RowIvars {
+            tx,
+            at: Cell::new(0),
+            key: RefCell::new(None),
+            context_menu: Cell::new(false),
+        });
         // SAFETY: `-[NSView initWithFrame:]` is the designated initializer of the superclass.
         let view: Retained<Self> = unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] };
         view.setAccessibilityElement(true);
+        // SAFETY: the row owns the tracking area and implements its mouse-entered callback.
+        let area = unsafe {
+            NSTrackingArea::initWithRect_options_owner_userInfo(
+                NSTrackingArea::alloc(),
+                NSRect::ZERO,
+                NSTrackingAreaOptions::MouseEnteredAndExited
+                    | NSTrackingAreaOptions::ActiveInKeyWindow
+                    | NSTrackingAreaOptions::InVisibleRect,
+                Some(&view),
+                None,
+            )
+        };
+        view.addTrackingArea(&area);
         view
     }
 
-    pub fn show(&self, at: usize) {
+    pub fn show(&self, at: usize, key: Option<&str>, context_menu: bool) {
         self.ivars().at.set(at);
+        self.ivars().key.replace(key.map(str::to_owned));
+        self.ivars().context_menu.set(context_menu);
     }
 
     fn press(&self) {
-        self.ivars().tx.try_send(Event::Row(self.ivars().at.get())).ok();
+        let ivars = self.ivars();
+        if let Some(key) = ivars.key.borrow().as_ref() {
+            ivars.tx.try_send(Event::RowKey { at: ivars.at.get(), key: key.clone() }).ok();
+        }
+    }
+
+    fn context(&self) -> bool {
+        let ivars = self.ivars();
+        if !ivars.context_menu.get() {
+            return false;
+        }
+        let key = ivars.key.borrow();
+        let Some(key) = key.as_ref() else { return false };
+        ivars.tx.try_send(Event::ContextKey { at: ivars.at.get(), key: key.clone() }).is_ok()
     }
 }
 

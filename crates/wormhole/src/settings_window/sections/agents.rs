@@ -225,7 +225,7 @@ fn draw_installed(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> 
     let ui = ui(cx);
     let Some(snapshot) = &window.agents else { return div().into_any_element() };
     let rows: Vec<AnyElement> =
-        snapshot.installed().map(|row| agent_row(ui, row, snapshot.home(), cx)).collect();
+        snapshot.installed().map(|row| agent_row(window, ui, row, snapshot.home(), cx)).collect();
     let none = rows.is_empty().then(|| {
         div()
             .py_3()
@@ -256,7 +256,13 @@ pub(super) fn mark(ui: UiColors, agent: &Agent) -> AnyElement {
 
 /// One installed agent: its mark and name with the hooks' badge, where the hooks are
 /// (Reveal), the one action that fits, and what needs doing under it.
-fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn agent_row(
+    window: &SettingsWindow,
+    ui: UiColors,
+    row: &AgentRow,
+    home: &Path,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
     let agent = row.agent;
     let (code_font, _) = crate::fonts::code_font(cx);
     let (badge, badge_color) = match (row.spec, row.hooks()) {
@@ -279,7 +285,33 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
                 State::Partial => text(SETTINGS_AGENTS_REPAIR_HOOKS),
                 State::NotInstalled => text(SETTINGS_AGENTS_INSTALL_HOOKS),
             };
-            Some(
+            let this = cx.weak_entity();
+            let native = window.native_button_with_style(
+                format!("agent-native-hooks-{:?}-{state:?}", agent.id),
+                label,
+                true,
+                !remove,
+                cx,
+                move |_, cx| {
+                    let home = integrations::home();
+                    if spec.state(&home).ok() != Some(state) {
+                        return;
+                    }
+                    this.update(cx, |this, cx| {
+                        let result = if remove { spec.uninstall(&home) } else { spec.install(&home) };
+                        if let Err(err) = &result {
+                            tracing::warn!("{} hooks: {err}", agent.name);
+                        }
+                        this.notice = result.err().map(|e| {
+                            (Section::Agents, settings_agents_hooks_failed(agent.name, &e.to_string()).into())
+                        });
+                        this.load_agents(cx);
+                        cx.notify();
+                    })
+                    .ok();
+                },
+            );
+            Some(native.unwrap_or_else(|| {
                 Button::new(SharedString::from(format!("agent-hooks-{:?}", agent.id)))
                     .small()
                     .when(remove, |b| b.outline())
@@ -298,8 +330,8 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
                         this.load_agents(cx);
                         cx.notify();
                     }))
-                    .into_any_element(),
-            )
+                    .into_any_element()
+            }))
         }
         _ => None,
     };
@@ -393,7 +425,10 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
         .children(problem.map(|banner| div().pl(px(style::CONTROL_H + 12.0)).child(banner)))
         .children(row.spec.map(|spec| {
             div().flex().flex_col().children(
-                row.logins.iter().enumerate().map(|(ix, login)| login_row(ui, agent, spec, ix, login, cx)),
+                row.logins
+                    .iter()
+                    .enumerate()
+                    .map(|(ix, login)| login_row(window, ui, agent, spec, ix, login, cx)),
             )
         }))
         .into_any_element()
@@ -402,6 +437,7 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
 /// A profile's login of an agent: its folder, the hooks' state there and the button for it, as the
 /// agent's own row has for the default location.
 fn login_row(
+    window: &SettingsWindow,
     ui: UiColors,
     agent: &'static Agent,
     spec: &'static Spec,
@@ -424,6 +460,54 @@ fn login_row(
         _ => text(SETTINGS_AGENTS_NO_HOOKS),
     };
     let id = format!("agent-login-{:?}-{ix}", agent.id);
+    let native_dir = dir.clone();
+    let expected = login.state.clone();
+    let this = cx.weak_entity();
+    let action = window
+        .native_button_with_style(
+            format!("agent-native-login-{:?}-{}-{state:?}", agent.id, dir.display()),
+            label,
+            true,
+            !remove,
+            cx,
+            move |_, cx| {
+                if spec.state_in(&native_dir) != expected {
+                    return;
+                }
+                this.update(cx, |this, cx| {
+                    let result =
+                        if remove { spec.uninstall_in(&native_dir) } else { spec.install_in(&native_dir) };
+                    if let Err(err) = &result {
+                        tracing::warn!("{} hooks in {}: {err}", agent.name, native_dir.display());
+                    }
+                    this.notice = result.err().map(|e| {
+                        (Section::Agents, settings_agents_hooks_failed(agent.name, &e.to_string()).into())
+                    });
+                    this.load_agents(cx);
+                    cx.notify();
+                })
+                .ok();
+            },
+        )
+        .unwrap_or_else(|| {
+            Button::new(SharedString::from(id))
+                .small()
+                .when(remove, |b| b.outline())
+                .when(!remove, |b| b.primary())
+                .label(label)
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    let result = if remove { spec.uninstall_in(&dir) } else { spec.install_in(&dir) };
+                    if let Err(err) = &result {
+                        tracing::warn!("{} hooks in {}: {err}", agent.name, dir.display());
+                    }
+                    this.notice = result.err().map(|e| {
+                        (Section::Agents, settings_agents_hooks_failed(agent.name, &e.to_string()).into())
+                    });
+                    this.load_agents(cx);
+                    cx.notify();
+                }))
+                .into_any_element()
+        });
     div()
         .flex()
         .items_center()
@@ -450,24 +534,7 @@ fn login_row(
                         .child(shown),
                 ),
         )
-        .child(
-            Button::new(SharedString::from(id))
-                .small()
-                .when(remove, |b| b.outline())
-                .when(!remove, |b| b.primary())
-                .label(label)
-                .on_click(cx.listener(move |this, _, _, cx| {
-                    let result = if remove { spec.uninstall_in(&dir) } else { spec.install_in(&dir) };
-                    if let Err(err) = &result {
-                        tracing::warn!("{} hooks in {}: {err}", agent.name, dir.display());
-                    }
-                    this.notice = result.err().map(|e| {
-                        (Section::Agents, settings_agents_hooks_failed(agent.name, &e.to_string()).into())
-                    });
-                    this.load_agents(cx);
-                    cx.notify();
-                })),
-        )
+        .child(action)
         .into_any_element()
 }
 

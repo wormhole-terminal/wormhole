@@ -10,6 +10,7 @@
 //! the status bar show it too, and this feature is lent it through the facts.
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use gpui_kit::*;
 use wormhole_core::git::review::Review;
@@ -49,6 +50,10 @@ pub(crate) struct Changes {
     /// that rebuilds the diff, a diff that lands).
     pub(super) profile: ProfileId,
     pub(super) terminal_width: f32,
+    pub(super) native_diff_segments: Option<Rc<crate::platform::controls::Segments>>,
+    pub(super) diff_segment_focus: Vec<FocusHandle>,
+    pub(super) diff_epoch: u64,
+    _diff_segment_events: Option<Task<()>>,
 }
 
 impl EventEmitter<FeatureEvent> for Changes {}
@@ -86,6 +91,35 @@ pub(super) struct ChangesOf {
 
 impl Changes {
     pub(crate) fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let diff_segment_focus = (0..2).map(|_| cx.focus_handle()).collect();
+        let (events, rx) = smol::channel::unbounded();
+        let native_diff_segments = crate::platform::controls::Segments::new(window, events, cx).map(Rc::new);
+        let diff_segment_events = native_diff_segments.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = rx.recv().await {
+                    if this
+                        .update_in(cx, |this, window, cx| {
+                            if this.diff.is_none()
+                                || this.commenting.is_some()
+                                || event.id != this.diff_segment_id()
+                                || !this
+                                    .native_diff_segments
+                                    .as_ref()
+                                    .is_some_and(|host| host.accepts(&event.id))
+                                || event.selected >= 2
+                            {
+                                return;
+                            }
+                            window.focus(&this.diff_segment_focus[event.selected], cx);
+                            this.set_diff_split(event.selected == 0, cx);
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            })
+        });
         Self {
             of: HashMap::new(),
             diff: None,
@@ -93,7 +127,15 @@ impl Changes {
             picker: BranchPicker::new(Picker::Compare, window, cx),
             profile: ProfileId::default_profile(),
             terminal_width: wormhole_core::view::layout::PANEL_MIN,
+            native_diff_segments,
+            diff_segment_focus,
+            diff_epoch: 0,
+            _diff_segment_events: diff_segment_events,
         }
+    }
+
+    pub(super) fn diff_segment_id(&self) -> String {
+        format!("diff-layout-{}", self.diff_epoch)
     }
 
     /// Takes in what the window says of itself: whose settings it draws with and how much room the

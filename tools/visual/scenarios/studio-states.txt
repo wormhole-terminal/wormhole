@@ -29,7 +29,10 @@ studio-save
 @shot name-taken studio
 studio-menu
 @batch
-@shot save-menu studio
+menu
+menu-native
+menu-close
+@batch
 # The toggle closes the Studio, which asks first: the draft has a change since it was saved.
 studio
 @batch

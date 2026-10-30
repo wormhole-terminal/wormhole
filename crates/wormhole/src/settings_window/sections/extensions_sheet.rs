@@ -6,6 +6,7 @@
 //!
 //! Cancel, a cancelled or failed Touch ID, and a write that fails change nothing.
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gpui_kit::component::Disableable as _;
@@ -35,6 +36,7 @@ const SHEET_MAX_H: f32 = 0.72;
 
 /// An open approval sheet.
 pub(in crate::settings_window) struct Sheet {
+    pub(in crate::settings_window) serial: u64,
     request: Request,
     grants: Grants,
     /// What Approve was pressed with: the grants as they were then, and what the yes will be. The
@@ -51,6 +53,10 @@ pub(in crate::settings_window) struct Sheet {
 }
 
 impl Sheet {
+    fn next_serial() -> u64 {
+        static NEXT: AtomicU64 = AtomicU64::new(1);
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    }
     /// Nothing on the sheet may change while the system asks or the approval is written.
     fn busy(&self) -> bool {
         self.waiting || self.saving
@@ -114,9 +120,13 @@ impl SettingsWindow {
                 this.extensions.work = None;
                 match read {
                     Ok(request) => {
+                        if let Some(previous) = this.extensions.sheet.as_ref() {
+                            this.forget_approval_switches(previous.serial);
+                        }
                         let name = reveal(&request.folder().manifest.probe.name).into_owned();
                         let grants = request.initial_grants();
                         this.extensions.sheet = Some(Sheet {
+                            serial: Sheet::next_serial(),
                             request,
                             grants,
                             pending: None,
@@ -153,7 +163,9 @@ impl SettingsWindow {
             Some(sheet) if sheet.busy() => return true,
             Some(_) => {}
         }
-        self.extensions.sheet = None;
+        if let Some(sheet) = self.extensions.sheet.take() {
+            self.forget_approval_switches(sheet.serial);
+        }
         cx.notify();
         true
     }
@@ -229,7 +241,11 @@ impl SettingsWindow {
             this.update(cx, |this, cx| {
                 this.extensions.work = None;
                 match result {
-                    Ok(()) => this.extensions.sheet = None,
+                    Ok(()) => {
+                        if let Some(sheet) = this.extensions.sheet.take() {
+                            this.forget_approval_switches(sheet.serial);
+                        }
+                    }
                     Err(err) => {
                         if let Some(sheet) = this.extensions.sheet.as_mut() {
                             sheet.saving = false;
@@ -292,7 +308,7 @@ impl SettingsWindow {
         ));
         let mut list = div().flex().flex_col();
         for (ix, permission) in summary.permissions.iter().enumerate() {
-            list = list.child(permission_row(ui, &code_font, sheet, ix, permission, cx));
+            list = list.child(permission_row(self, ui, &code_font, sheet, ix, permission, cx));
         }
         body = body.child(list);
         if !summary.combinations.is_empty() {
@@ -456,6 +472,7 @@ fn describe(permission: &DeclaredPermission) -> String {
 /// One permission: its switch, the sentence, the Touch ID tag, and for a program the command lines
 /// that run it and what kind of program it is.
 fn permission_row(
+    window: &SettingsWindow,
     ui: crate::settings::UiColors,
     code_font: &SharedString,
     sheet: &Sheet,
@@ -466,18 +483,26 @@ fn permission_row(
     let granted = sheet.grants.is_granted(permission);
     let toggled = permission.clone();
     let page = cx.weak_entity();
-    let switch = style::toggle(("probe-grant", ix), granted, move |_, _, cx| {
-        let permission = toggled.clone();
-        page.update(cx, |page, cx| {
-            if let Some(sheet) = page.extensions.sheet.as_mut().filter(|sheet| !sheet.busy()) {
-                sheet.grants.toggle(&permission);
-            }
-            cx.notify();
-        })
-        .ok();
-    })
-    .disabled(sheet.busy())
-    .accessibility_label(describe(permission));
+    let serial = sheet.serial;
+    let switch = window.switch_control(
+        format!("probe-grant-{serial}-{ix}").into(),
+        describe(permission),
+        granted,
+        !sheet.busy(),
+        cx,
+        move |on, _, cx| {
+            let permission = toggled.clone();
+            page.update(cx, |page, cx| {
+                if let Some(sheet) =
+                    page.extensions.sheet.as_mut().filter(|sheet| sheet.serial == serial && !sheet.busy())
+                {
+                    sheet.grants.set(&permission, on);
+                }
+                cx.notify();
+            })
+            .ok();
+        },
+    );
     let program = (permission.key == "process").then(|| program_lines(ui, code_font, sheet, permission));
     div()
         .flex()

@@ -1,4 +1,4 @@
-# Settings → Terminal: scrollback select (open too), Option as Meta per side, the font pointer and the Bell group.
+# Settings → Terminal: scrollback, Option as Meta per side, the font pointer and the Bell group.
 @fixture repo-basic
 @theme Tokyo Night
 @size 1440 900
@@ -9,4 +9,6 @@ settings-resize 1024 900
 @shot terminal settings
 settings-select scrollback
 @batch
-@shot scrollback-select settings
+menu
+menu-native
+@batch

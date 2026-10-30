@@ -31,10 +31,22 @@ pub struct Row {
     /// selection kept across answers go by it, and two rows with one key are one row.
     pub key: String,
     pub label: String,
+    /// An optional font family for previewing this row's label.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_family: Option<String>,
+    /// Use the app's embedded face for this family rather than a system-installed copy.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub font_embedded: bool,
     /// Where the typed text matched in `label`, as byte ranges, to highlight.
     pub marks: Vec<Range<usize>>,
     /// An SF Symbol's name, which the platform draws as it can (a system without it draws no icon).
     pub icon: String,
+    /// Optional sRGB tint for the leading symbol.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_color: Option<[u8; 3]>,
+    /// Compact status symbols displayed alongside this row.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub indicators: Vec<Indicator>,
     /// A small tag after the label.
     pub badge: Option<String>,
     /// Grey words after the label.
@@ -50,10 +62,35 @@ pub struct Row {
     pub section: usize,
     /// The person can ask to forget this row (⌘⌫).
     pub forgettable: bool,
+    /// A secondary action is available for this row, such as its context menu.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub context_menu: bool,
     /// What kind of thing the row is (`folder`): a decorator is asked only about the kinds it names.
     pub kind: String,
     /// How well it fits the text; higher first. Rows of one section are ordered by it, stably.
     pub score: i32,
+}
+
+/// A status symbol and its spoken meaning.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Indicator {
+    pub symbol: String,
+    pub label: String,
+    pub tone: IndicatorTone,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum IndicatorTone {
+    Neutral,
+    Attention,
+    Error,
+    Active,
+    Success,
+}
+
+fn is_false(value: &bool) -> bool {
+    !value
 }
 
 impl Row {

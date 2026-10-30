@@ -20,7 +20,6 @@ use wormhole_core::view::sidebar::wording;
 
 use super::agents::mark;
 use crate::agent_access::{self, Approved, How, Which};
-use crate::settings::UiColors;
 use crate::settings_window::registry::{Segment, Setting};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
@@ -43,7 +42,7 @@ pub(super) const MODE: Setting = Setting::segmented(
 pub(super) const PROGRAMS: Setting = Setting::block("agent-access-programs", draw_programs);
 
 /// The approved programs, or a line saying that nothing has asked.
-fn draw_programs(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_programs(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let rows = agent_access::approved(cx);
     if rows.is_empty() {
@@ -59,7 +58,7 @@ fn draw_programs(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEle
     div()
         .flex()
         .flex_col()
-        .children(rows.into_iter().enumerate().map(|(ix, row)| program_row(ix, row, now, cx)))
+        .children(rows.into_iter().enumerate().map(|(ix, row)| program_row(window, ix, row, now, cx)))
         .child(
             div()
                 .py_2()
@@ -85,12 +84,12 @@ fn capability_label(capability: Capability) -> &'static str {
 
 /// The ticks of one approved program: what it may do, changed at once and kept with the approval.
 fn switches(
-    ix: usize,
+    window: &SettingsWindow,
     which: Which,
     row: &Approved,
-    ui: UiColors,
     cx: &mut Context<SettingsWindow>,
 ) -> AnyElement {
+    let profile = crate::app_state::app(cx).active_profile().clone();
     div()
         .flex()
         .flex_wrap()
@@ -98,16 +97,22 @@ fn switches(
         .pt_1()
         .children(SWITCHES.into_iter().map(|capability| {
             let this = cx.weak_entity();
-            style::checkbox(
-                SharedString::from(format!("agent-access-{ix}-{capability:?}")),
-                ui,
+            let profile = profile.clone();
+            window.checkbox_control(
+                SharedString::from(format!("agent-access-{profile:?}-{which:?}-{capability:?}")),
+                capability_label(capability),
                 row.caps.contains(capability),
+                true,
+                true,
+                cx,
+                move |on, _, cx| {
+                    if crate::app_state::app(cx).active_profile() != &profile {
+                        return;
+                    }
+                    agent_access::set_capability(which, capability, on, cx);
+                    this.update(cx, |_, cx| cx.notify()).ok();
+                },
             )
-            .in_form(capability_label(capability))
-            .on_change(move |on, _, cx| {
-                agent_access::set_capability(which, capability, on, cx);
-                this.update(cx, |_, cx| cx.notify()).ok();
-            })
         }))
         .into_any_element()
 }
@@ -142,7 +147,13 @@ fn detail(row: &Approved, now: i64) -> String {
     parts.join(" · ")
 }
 
-fn program_row(ix: usize, row: Approved, now: i64, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn program_row(
+    window: &SettingsWindow,
+    ix: usize,
+    row: Approved,
+    now: i64,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
     let ui = ui(cx);
     let (code_font, _) = crate::fonts::code_font(cx);
     let which = row.which;
@@ -175,7 +186,7 @@ fn program_row(ix: usize, row: Approved, now: i64, cx: &mut Context<SettingsWind
                             .child(row.location.clone()),
                     )
                 })
-                .child(switches(ix, which, &row, ui, cx)),
+                .child(switches(window, which, &row, cx)),
         )
         .child(
             Button::new(SharedString::from(format!("agent-access-revoke-{ix}")))

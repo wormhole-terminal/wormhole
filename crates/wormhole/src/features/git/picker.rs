@@ -5,6 +5,8 @@
 //! so neither needs the other to exist.
 
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
+use std::sync::{Arc, RwLock};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::input::{InputEvent, InputState};
@@ -12,11 +14,77 @@ use gpui_kit::component::{Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::git;
+use wormhole_core::view::panes::Rect;
+use wormhole_core::view::picker::{Answer, Cancel, Context as PickerContext, Note, Provider, Query, Row};
 
 use crate::select::{self, Choice, SearchSelect, SelectTrigger};
 use crate::settings::UiColors;
 use crate::terminal_view::TerminalView;
 use crate::window::repo::job::{Job, Ticket};
+
+struct BranchSource {
+    head: String,
+    branches: RwLock<Vec<String>>,
+    current: Option<String>,
+}
+
+impl Provider for BranchSource {
+    fn query(&self, query: &Query, cancel: &Cancel) -> Answer {
+        let needle = select::Needle::new(&query.text);
+        let branches = self.branches.read().unwrap_or_else(|error| error.into_inner());
+        let mut answer = Answer::default();
+        for (key, label) in std::iter::once(("head".to_string(), self.head.as_str()))
+            .chain(branches.iter().map(|branch| (branch_key(branch), branch.as_str())))
+        {
+            if cancel.is_cancelled() {
+                return Answer::default();
+            }
+            if needle.is_empty() || needle.found_in(label) {
+                let mut row = Row::new(&key, label);
+                row.icon = "arrow.triangle.branch".into();
+                let selected =
+                    self.current.as_ref().map_or(key == "head", |branch| branch_key(branch) == key);
+                row.badge = selected.then(|| "✓".into());
+                row.insert = Some(key);
+                answer.rows.push(row);
+            }
+        }
+        answer
+    }
+}
+
+fn branch_key(branch: &str) -> String {
+    use std::fmt::Write;
+    let mut key = String::from("b");
+    for byte in branch.as_bytes() {
+        let _ = write!(key, "{byte:02x}");
+    }
+    key
+}
+
+fn branch_from_key(key: &str) -> Option<Option<String>> {
+    if key == "head" {
+        return Some(None);
+    }
+    let hex = key.strip_prefix('b')?.as_bytes();
+    if hex.is_empty() || hex.len() % 2 != 0 {
+        return None;
+    }
+    let bytes = hex
+        .chunks_exact(2)
+        .map(|pair| {
+            let digit = |byte: u8| (byte as char).to_digit(16).map(|n| n as u8);
+            Some((digit(pair[0])? << 4) | digit(pair[1])?)
+        })
+        .collect::<Option<Vec<_>>>()?;
+    String::from_utf8(bytes).ok().map(Some)
+}
+
+struct NativeBranchPicker {
+    picker: Entity<crate::picker::Picker>,
+    source: Arc<BranchSource>,
+    _subscription: Subscription,
+}
 
 /// Which tab a picker is for: its wording and its ids.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -46,6 +114,8 @@ pub(crate) struct BranchPicker {
     _subscription: Subscription,
     /// The branch list the open picker waits for.
     job: Job<(i64, PathBuf)>,
+    anchor: crate::platform::Anchor,
+    native: Option<NativeBranchPicker>,
 }
 
 impl BranchPicker {
@@ -66,6 +136,8 @@ impl BranchPicker {
             search,
             _subscription: subscription,
             job: Job::default(),
+            anchor: crate::platform::Anchor::default(),
+            native: None,
         }
     }
 
@@ -77,6 +149,7 @@ impl BranchPicker {
     pub(crate) fn close(&mut self) {
         self.open = None;
         self.branches.clear();
+        self.native.take();
     }
 
     /// The branches listed (empty until the list is in).
@@ -95,6 +168,17 @@ impl BranchPicker {
         window: &mut Window,
         cx: &mut Context<H>,
     ) {
+        self.toggle_current(session, terminal, None, window, cx);
+    }
+
+    fn toggle_current<H: PickerHost>(
+        &mut self,
+        session: i64,
+        terminal: &Entity<TerminalView>,
+        current: Option<String>,
+        window: &mut Window,
+        cx: &mut Context<H>,
+    ) {
         if self.open.is_some() {
             self.close();
             cx.notify();
@@ -103,6 +187,7 @@ impl BranchPicker {
         self.open = Some(session);
         self.branches.clear();
         self.search.update(cx, |search, cx| search.set_value("", window, cx));
+        self.open_native::<H>(session, terminal, current, window, cx);
         cx.notify();
         let Some(cwd) = terminal.read(cx).cwd.clone() else { return };
         // The same list already being fetched (closed and reopened quickly) is waited for.
@@ -120,11 +205,105 @@ impl BranchPicker {
             let _ = this.update(cx, |this: &mut H, cx| {
                 let cwd_now = terminal.read_with(cx, |terminal, _| terminal.cwd.clone()).ok().flatten();
                 if this.picker_mut().loaded(ticket, branches, cwd_now.as_deref()) {
+                    this.picker_mut().refresh_native(cx);
                     cx.notify();
                 }
             });
         })
         .detach();
+    }
+
+    fn refresh_native(&mut self, cx: &mut App) {
+        if let Some(native) = self.native.as_ref() {
+            *native.source.branches.write().unwrap_or_else(|error| error.into_inner()) =
+                self.branches.clone();
+            native.picker.update(cx, |picker, cx| picker.refresh(cx));
+        }
+    }
+
+    fn open_native<H: PickerHost>(
+        &mut self,
+        session: i64,
+        terminal: &Entity<TerminalView>,
+        current: Option<String>,
+        window: &mut Window,
+        cx: &mut Context<H>,
+    ) {
+        use crate::picker::{Picker as NativePicker, PickerEvent, Sources, Words};
+        let head = match self.kind {
+            Picker::Compare => "HEAD (uncommitted changes)",
+            Picker::History => "HEAD (current branch)",
+        };
+        let source = Arc::new(BranchSource {
+            head: head.into(),
+            branches: RwLock::new(Vec::new()),
+            current: current.clone(),
+        });
+        let anchor = self.anchor.clone();
+        let place: crate::picker::Anchor = Rc::new(move |window, _| {
+            let viewport = window.viewport_size();
+            let bounds = anchor.bounds();
+            (
+                Rect::new(0.0, 0.0, f32::from(viewport.width), f32::from(viewport.height)),
+                Rect::new(
+                    f32::from(bounds.origin.x),
+                    f32::from(bounds.origin.y),
+                    f32::from(bounds.size.width),
+                    f32::from(bounds.size.height),
+                ),
+            )
+        });
+        let words = Words {
+            placeholder: "Search branches".into(),
+            name: "Branches".into(),
+            hint: if self.kind == Picker::Compare {
+                "Changes since this branch split off from it".into()
+            } else {
+                String::new()
+            },
+            note: |note| if matches!(note, Note::Empty) { "No matches".into() } else { String::new() },
+        };
+        let profile = terminal.read(cx).profile().clone();
+        let picker = cx.new(|cx| {
+            NativePicker::new(
+                PickerContext::default(),
+                Sources { providers: vec![source.clone()], decorators: vec![] },
+                words,
+                profile,
+                place,
+                window,
+                cx,
+            )
+        });
+        if !picker.read(cx).has_panel() {
+            picker.update(cx, |picker, cx| picker.close(cx));
+            return;
+        }
+        let preferred = current.as_deref().map_or_else(|| "head".to_string(), branch_key);
+        picker.update(cx, |picker, cx| picker.prefer_initial(preferred, cx));
+        let subscription = cx.subscribe_in(
+            &picker,
+            window,
+            move |this: &mut H, _, event: &PickerEvent, _, cx| match event {
+                PickerEvent::Insert(key) => {
+                    let Some(value) = branch_from_key(key) else { return };
+                    if this.picker().open != Some(session)
+                        || value.as_ref().is_some_and(|branch| !this.picker().branches.contains(branch))
+                    {
+                        return;
+                    }
+                    this.picker_mut().close();
+                    this.pick(session, value, cx);
+                    cx.notify();
+                }
+                PickerEvent::Close => {
+                    this.picker_mut().close();
+                    cx.notify();
+                }
+                _ => {}
+            },
+        );
+        self.native = Some(NativeBranchPicker { picker, source, _subscription: subscription });
     }
 
     /// The branch list arrived. It is shown only if that same picker is still open for the terminal
@@ -154,10 +333,14 @@ impl BranchPicker {
             .collect()
     }
 
-    /// The search box, to type into (devctl).
+    /// Type into whichever search field is showing (devctl).
     #[cfg(feature = "devctl")]
-    pub(crate) fn search(&self) -> &Entity<InputState> {
-        &self.search
+    pub(crate) fn set_query(&self, query: &str, window: &mut Window, cx: &mut App) {
+        if let Some(native) = self.native.as_ref() {
+            native.picker.update(cx, |picker, cx| picker.set_text(query, cx));
+        } else {
+            self.search.update(cx, |search, cx| search.set_value(query.to_string(), window, cx));
+        }
     }
 
     /// The picker in a panel card's head, as the data its chip draws from: the rows of a list are
@@ -184,6 +367,8 @@ impl BranchPicker {
             session,
             terminal: terminal.clone(),
             this: host,
+            anchor: self.anchor.clone(),
+            native: self.native.is_some(),
         }
     }
 }
@@ -226,6 +411,8 @@ pub(crate) struct PickerChip<H: PickerHost> {
     session: i64,
     terminal: Entity<TerminalView>,
     this: WeakEntity<H>,
+    anchor: crate::platform::Anchor,
+    native: bool,
 }
 
 impl<H: PickerHost> PickerChip<H> {
@@ -252,16 +439,19 @@ impl<H: PickerHost> PickerChip<H> {
         };
         let (this, on_change) = (self.this.clone(), self.this.clone());
         let terminal = self.terminal.clone();
+        let current = self.current.clone();
         let select = SearchSelect::new(
             id,
             ui,
-            SelectTrigger::new(SharedString::from(format!("{id}-trigger")), ui, label).compact(),
+            SelectTrigger::new(SharedString::from(format!("{id}-trigger")), ui, label)
+                .compact()
+                .native_anchor(self.anchor.clone()),
             &self.search,
             cx,
         )
         .options(self.options.clone())
         .current(self.current.clone())
-        .open(self.open)
+        .open(self.open && !self.native)
         .anchor(Anchor::TopRight)
         .menu_width(px(320.0))
         .compact()
@@ -269,7 +459,7 @@ impl<H: PickerHost> PickerChip<H> {
             on_change
                 .update(cx, |this, cx| {
                     if this.picker().is_open() != want_open {
-                        this.picker_mut().toggle(session, &terminal, window, cx);
+                        this.picker_mut().toggle_current(session, &terminal, current.clone(), window, cx);
                     }
                 })
                 .ok();
@@ -302,10 +492,38 @@ fn branches_wanted(asked: &(i64, PathBuf), open: Option<i64>, cwd_now: Option<&P
 #[cfg(test)]
 mod tests {
     use std::path::{Path, PathBuf};
+    use std::sync::RwLock;
 
-    use super::branches_wanted;
+    use super::{BranchSource, branch_from_key, branch_key, branches_wanted};
     use crate::window::repo::job::Job;
     use crate::window::repo::job::testing::ManualExecutor;
+    use wormhole_core::view::picker::{Cancel, Provider, Query};
+
+    #[test]
+    fn native_branch_keys_and_results_preserve_identity_and_current_branch() {
+        for branch in ["main", "feature/é", "a b", "HEAD"] {
+            assert_eq!(branch_from_key(&branch_key(branch)), Some(Some(branch.to_string())));
+        }
+        assert_eq!(branch_from_key("head"), Some(None));
+        assert_eq!(branch_from_key("b0"), None);
+        assert_eq!(branch_from_key("bzz"), None);
+        let source = BranchSource {
+            head: "HEAD (current branch)".into(),
+            branches: RwLock::new(vec!["main".into(), "feature/é".into()]),
+            current: Some("main".into()),
+        };
+        let query =
+            |text: &str| source.query(&Query { text: text.into(), ..Default::default() }, &Cancel::new());
+        let all = query("");
+        assert_eq!(all.rows.len(), 3);
+        assert_eq!(all.rows[1].badge.as_deref(), Some("✓"));
+        assert_eq!(query("É").rows[0].insert.as_deref(), Some(branch_key("feature/é").as_str()));
+        *source.branches.write().unwrap() = vec!["feature/é".into()];
+        assert_eq!(query("main").rows.len(), 0);
+        let cancelled = Cancel::new();
+        cancelled.cancel();
+        assert!(source.query(&Query::default(), &cancelled).rows.is_empty());
+    }
 
     const CWD: &str = "/work/repo";
 

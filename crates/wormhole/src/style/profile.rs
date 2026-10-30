@@ -7,7 +7,6 @@ use gpui_kit::component::{Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::groups::PopoverTrigger;
 use super::scale::{CONTROL_H, Edges, TextRole};
 use crate::settings::UiColors;
 
@@ -16,13 +15,7 @@ use crate::settings::UiColors;
 /// window's white on a light theme's yellow or green).
 #[track_caller]
 pub fn profile_avatar(ui: UiColors, color: Hsla, letter: char, size: f32) -> Div {
-    let fill = crate::theme_bridge::color(color);
-    let ink = crate::theme_bridge::color(ui.background);
-    let ink = if wormhole_core::theme::tokens::Color::contrast_ratio(ink, fill) >= LETTER_CONTRAST {
-        ui.background
-    } else {
-        crate::theme_bridge::hsla(fill.text_on())
-    };
+    let ink = profile_avatar_ink(ui, color);
     let avatar = div()
         .flex_none()
         .size(px(size))
@@ -37,10 +30,21 @@ pub fn profile_avatar(ui: UiColors, color: Hsla, letter: char, size: f32) -> Div
     if size >= AVATAR_BODY_FROM { avatar.text_body() } else { avatar.text_caption() }
 }
 
+/// The same contrasting letter in GPUI and native menu avatars.
+pub(crate) fn profile_avatar_ink(ui: UiColors, color: Hsla) -> Hsla {
+    let fill = crate::theme_bridge::color(color);
+    let ink = crate::theme_bridge::color(ui.background);
+    if wormhole_core::theme::tokens::Color::contrast_ratio(ink, fill) >= LETTER_CONTRAST {
+        ui.background
+    } else {
+        crate::theme_bridge::hsla(fill.text_on())
+    }
+}
+
 /// The chip in the top row of the sidebar and of the tab bar (RF-21): a borderless pop-up that names
 /// the profile Wormhole is in. 24 tall, a 16 pt avatar, the name in 13, up-down chevrons, and a
 /// fill only under the pointer. It is only drawn while there are two or more profiles. As a
-/// `Popover`'s trigger it opens the profile menu.
+/// A caller puts it inside its menu trigger.
 #[track_caller]
 pub fn profile_chip(
     id: impl Into<ElementId>,
@@ -49,11 +53,8 @@ pub fn profile_chip(
     letter: char,
     name: impl Into<SharedString>,
     spoken: impl Into<SharedString>,
-) -> PopoverTrigger {
+) -> gpui_kit::base::Button {
     let chip = div()
-        .id(id)
-        .role(Role::Button)
-        .aria_label(spoken)
         .flex_none()
         .flex()
         .items_center()
@@ -75,7 +76,7 @@ pub fn profile_chip(
                 .child(name.into()),
         )
         .child(Icon::new(IconName::ChevronsUpDown).xsmall().text_color(ui.muted));
-    PopoverTrigger::new(chip)
+    gpui_kit::base::Button::new(id).accessibility_label(spoken).child(chip)
 }
 
 /// The chip's height, its avatar, and the longest name it shows whole.

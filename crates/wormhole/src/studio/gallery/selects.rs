@@ -1,6 +1,7 @@
 //! The select: a trigger with chevrons, and the menu it opens (a search row over roomy
 //! options on a lifted surface).
 
+use gpui_kit::component::button::Button;
 use gpui_kit::*;
 
 use super::Env;
@@ -15,6 +16,25 @@ pub(super) fn render(
     cx: &mut Context<GalleryView>,
 ) -> AnyElement {
     let ui = env.ui;
+    if cfg!(target_os = "macos") && !crate::platform::background_mode::on() {
+        return div()
+            .flex()
+            .flex_col()
+            .items_start()
+            .gap_2()
+            .child(Button::new("studio-native-menu-example").label("Show menu…").on_click(
+                |event: &ClickEvent, window, cx| {
+                    use crate::platform::menu::{Item, Menu};
+                    let menu = Menu::new()
+                        .item(Item::new("Tokyo Night").checked(true).on_select(|_, _| {}))
+                        .item(Item::new("Nord").on_select(|_, _| {}))
+                        .item(Item::new("Dracula").on_select(|_, _| {}));
+                    crate::platform::show_menu(menu, event.position(), window, cx);
+                },
+            ))
+            .child(div().text_caption().text_color(ui.muted).child("Menus use the macOS appearance."))
+            .into_any_element();
+    }
     let surface = select::menu_bg(ui, cx);
     let menu = div()
         .w(px(260.0))

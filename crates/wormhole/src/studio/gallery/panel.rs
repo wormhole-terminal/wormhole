@@ -8,7 +8,6 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::Input;
-use gpui_kit::component::switch::Switch;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::{BandKind, BandParts, FileLines, FileRow, ItemParts, Section};
@@ -70,14 +69,13 @@ pub(super) fn render(
             style::item_action((id, 1usize), ui, IconName::X, "Delete", |_, _, _| {}),
         ]
     };
-    let check = |id: &'static str, done: bool| style::checkbox(id, ui, done).into_any_element();
     let task = |id: &'static str, label: &'static str, done: bool, reorder: Option<usize>| {
         let main = style::item_label(ui, label, done).when(done, |d| d.line_through());
         style::item_row(
             id,
             ui,
             ItemParts {
-                lead: check(id, done),
+                lead: studio.checkbox(id, label, done, env),
                 main: main.into_any_element(),
                 actions: actions(id),
                 body: None,
@@ -140,7 +138,7 @@ pub(super) fn render(
                     "g-flush-editing",
                     ui,
                     ItemParts {
-                        lead: check("g-flush-editing-check", false),
+                        lead: studio.checkbox("g-flush-editing-check", "Rename this task", false, env),
                         main: style::item_editor(Input::new(&studio.item_editor).appearance(false).small())
                             .into_any_element(),
                         actions: actions("g-flush-editing"),
@@ -347,7 +345,7 @@ pub(super) fn render(
                 title: title.into(),
                 detail: Some(detail),
                 detail_color: warn.then_some(ui.warning_text),
-                trailing: Some(Switch::new(id).checked(true).into_any_element()),
+                trailing: Some(studio.switch(id, title, true, true, env)),
                 actions: Vec::new(),
             },
         )

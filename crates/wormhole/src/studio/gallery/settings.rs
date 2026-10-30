@@ -2,7 +2,6 @@
 //! nav items, and the controls that are ours.
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
@@ -20,7 +19,7 @@ const COLUMN_W: f32 = 560.0;
 const NAV_W: f32 = 220.0;
 
 pub(super) fn render(
-    _studio: &GalleryView,
+    studio: &GalleryView,
     env: &Env,
     part: usize,
     cx: &mut Context<GalleryView>,
@@ -32,10 +31,10 @@ pub(super) fn render(
             .flex()
             .flex_wrap()
             .gap_6()
-            .child(env.mark("setting.row", setting_rows(ui, cx)))
+            .child(env.mark("setting.row", setting_rows(studio, env, cx)))
             .child(env.mark("settings.nav", nav(ui)))
             .into_any_element(),
-        1 => controls(env).into_any_element(),
+        1 => controls(studio, env).into_any_element(),
         _ => div()
             .flex()
             .flex_col()
@@ -86,43 +85,34 @@ fn profile_marks(env: &Env) -> Div {
         )))
         .child(
             div()
-                .w(px(PROFILE_MENU_W))
+                .w(px(POPOVER_SAMPLE_W))
                 .p_1()
                 .rounded(ui.radius_lg)
                 .bg(ui.elevated)
                 .outlined(ui, ui.border_strong)
-                .child(style::popover_heading(ui, "Switch Wormhole to"))
+                .child(style::popover_heading(ui, "Groups"))
                 .child(style::popover_row(
-                    "g-menu-default",
+                    "g-menu-project",
                     ui,
                     style::PopoverRow {
                         lead: Some(
-                            style::profile_avatar(ui, colors[0].1, 'D', style::TITLE_GLYPH)
-                                .into_any_element(),
+                            style::color_dot(ui, colors[0].1, style::COLOR_DOT_MENU).into_any_element(),
                         ),
-                        note: Some("every window switches".into()),
-                        ..style::PopoverRow::new("Default")
+                        note: Some("3 terminals".into()),
+                        ..style::PopoverRow::new("Project")
                     },
                 ))
                 .child(style::popover_row(
-                    "g-menu-work",
+                    "g-menu-ungrouped",
                     ui,
                     style::PopoverRow {
-                        lead: Some(
-                            style::profile_avatar(ui, colors[1].1, 'W', style::TITLE_GLYPH)
-                                .into_any_element(),
-                        ),
-                        note: Some("current".into()),
+                        note: Some("2 terminals".into()),
                         current: true,
-                        ..style::PopoverRow::new("Work")
+                        ..style::PopoverRow::new("Ungrouped")
                     },
                 ))
                 .child(style::popover_rule(ui))
-                .child(style::popover_row(
-                    "g-menu-settings",
-                    ui,
-                    style::PopoverRow { key: Some("⌘,".into()), ..style::PopoverRow::new("Settings…") },
-                )),
+                .child(style::popover_row("g-menu-new-group", ui, style::PopoverRow::new("New group"))),
         )
         .child(
             div()
@@ -137,12 +127,13 @@ fn profile_marks(env: &Env) -> Div {
 
 /// The larger avatar (the settings window's top) and the height of the window sample under the edge.
 const PROFILE_AVATAR_LARGE: f32 = 24.0;
-/// The profile chip's menu sample.
-const PROFILE_MENU_W: f32 = 280.0;
+/// A sample of the app's rich popover rows.
+const POPOVER_SAMPLE_W: f32 = 280.0;
 const PROFILE_EDGE_SAMPLE_H: f32 = 24.0;
 
 /// The setting row in each of its states.
-fn setting_rows(ui: UiColors, cx: &App) -> Div {
+fn setting_rows(studio: &GalleryView, env: &Env, cx: &App) -> Div {
+    let ui = env.ui;
     let row = |id: &'static str,
                label: &'static str,
                description: &'static str,
@@ -182,7 +173,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             "blur",
             SettingState::Default,
             None,
-            style::toggle("g-setting-blur", true, |_, _, _| {}).into_any_element(),
+            studio.switch("g-setting-blur", "Blur what's behind the window", true, true, env),
         ))
         .child(row(
             "g-setting-changed",
@@ -229,7 +220,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             "diff_wrap",
             SettingState::Default,
             Some(10..14),
-            style::toggle("g-setting-wrap", false, |_, _, _| {}).into_any_element(),
+            studio.switch("g-setting-wrap", "Wrap long lines", false, true, env),
         ))
         .child(row(
             "g-setting-disabled",
@@ -238,7 +229,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             "layout",
             SettingState::Disabled,
             None,
-            style::toggle("g-setting-layout", false, |_, _, _| {}).disabled(true).into_any_element(),
+            studio.switch("g-setting-layout", "Terminal layout", false, false, env),
         ))
 }
 
@@ -301,7 +292,7 @@ fn nav(ui: UiColors) -> Div {
 }
 
 /// The settings controls that are ours rather than GPUI Kit's.
-fn controls(env: &Env) -> Div {
+fn controls(studio: &GalleryView, env: &Env) -> Div {
     let ui = env.ui;
     let mode = |id: &'static str, icon, label: &'static str, active| {
         style::form_segment(id, ui, Some(icon), label, active)
@@ -410,12 +401,13 @@ fn controls(env: &Env) -> Div {
                         ),
                 ),
         )
-        .child(arranged(ui))
+        .child(arranged(studio, env))
 }
 
 /// A list the person arranges (the title row's parts): a row that moves, the fixed space with its
 /// note, and a hidden one, faint and still.
-fn arranged(ui: UiColors) -> Div {
+fn arranged(studio: &GalleryView, env: &Env) -> Div {
+    let ui = env.ui;
     let reorder = |ix: usize, label: &'static str| style::Reorder {
         list: "g-arrange".into(),
         ix,
@@ -423,10 +415,10 @@ fn arranged(ui: UiColors) -> Div {
         on_move: std::rc::Rc::new(|_, _, _, _| {}),
         dragged: false,
     };
-    let switch = |id: &'static str, on: bool| style::toggle(id, on, |_, _, _| {}).into_any_element();
+    let switch = |id: &'static str, label: &'static str, on: bool| studio.switch(id, label, on, true, env);
     let row =
         |id: &'static str, icon, label: &'static str, note: Option<&'static str>, quiet: bool, on: bool| {
-            let control = note.is_none().then(|| switch(id, on));
+            let control = note.is_none().then(|| switch(id, label, on));
             let reorder = (!quiet).then(|| reorder(if note.is_some() { 1 } else { 0 }, label));
             style::arrange_row(
                 id,

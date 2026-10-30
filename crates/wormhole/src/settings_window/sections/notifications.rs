@@ -7,6 +7,7 @@
 
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
 use wormhole_core::config::{DockBadge, InFront, NotifySound};
 #[allow(
@@ -134,38 +135,53 @@ fn permission_text(permission: Permission) -> (&'static str, &'static str) {
 }
 
 /// The permission's row: what macOS allows, in the row's own words, and what to do about it.
-fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_permission(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let permission = notifications::permission(cx);
     let (title, hint) = permission_text(permission);
-    let send_test = || {
-        Button::new("notify-send-test")
-            .small()
-            .outline()
-            .label(text(SETTINGS_NOTIFICATIONS_SEND_TEST))
-            .on_click(|_, _, cx| notifications::send_test(cx))
-    };
-    let system_settings = || {
-        Button::new("notify-open-settings")
-            .small()
-            .outline()
-            .label(text(SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS))
-            .on_click(|_, _, cx| notifications::open_system_settings(cx))
-    };
     let buttons: Vec<AnyElement> = match permission {
-        Permission::Allowed { .. } => {
-            vec![send_test().into_any_element(), system_settings().into_any_element()]
-        }
-        Permission::NotAsked => vec![
-            Button::new("notify-allow")
-                .small()
-                .primary()
-                .label(text(SETTINGS_NOTIFICATIONS_ALLOW_NOTIFICATIONS))
-                .on_click(|_, _, cx| notifications::ask_permission(cx))
-                .into_any_element(),
+        Permission::Allowed { .. } => vec![
+            permission_button(
+                window,
+                "notify-send-test",
+                text(SETTINGS_NOTIFICATIONS_SEND_TEST),
+                false,
+                cx,
+                notifications::send_test,
+            ),
+            permission_button(
+                window,
+                "notify-open-settings",
+                text(SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS),
+                false,
+                cx,
+                |cx| notifications::open_system_settings(cx),
+            ),
         ],
-        Permission::Denied => vec![system_settings().into_any_element()],
-        Permission::OutsideBundle => vec![send_test().into_any_element()],
+        Permission::NotAsked => vec![permission_button(
+            window,
+            "notify-allow",
+            text(SETTINGS_NOTIFICATIONS_ALLOW_NOTIFICATIONS),
+            true,
+            cx,
+            notifications::ask_permission,
+        )],
+        Permission::Denied => vec![permission_button(
+            window,
+            "notify-open-settings",
+            text(SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS),
+            false,
+            cx,
+            |cx| notifications::open_system_settings(cx),
+        )],
+        Permission::OutsideBundle => vec![permission_button(
+            window,
+            "notify-send-test",
+            text(SETTINGS_NOTIFICATIONS_SEND_TEST),
+            false,
+            cx,
+            notifications::send_test,
+        )],
         Permission::Checking => Vec::new(),
     };
     style::setting(
@@ -187,6 +203,42 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
         cx,
     )
     .into_any_element()
+}
+
+fn permission_button(
+    window: &SettingsWindow,
+    id: &'static str,
+    label: &'static str,
+    primary: bool,
+    cx: &mut Context<SettingsWindow>,
+    action: fn(&mut App),
+) -> AnyElement {
+    window
+        .native_button_with_style(id, label, true, primary, cx, move |_, cx| {
+            let permission = notifications::permission(cx);
+            let still_available = match id {
+                "notify-send-test" => {
+                    matches!(permission, Permission::Allowed { .. } | Permission::OutsideBundle)
+                }
+                "notify-open-settings" => {
+                    matches!(permission, Permission::Allowed { .. } | Permission::Denied)
+                }
+                "notify-allow" => matches!(permission, Permission::NotAsked),
+                _ => false,
+            };
+            if still_available {
+                action(cx);
+            }
+        })
+        .unwrap_or_else(|| {
+            Button::new(id)
+                .small()
+                .when(primary, |button| button.primary())
+                .when(!primary, |button| button.outline())
+                .label(label)
+                .on_click(move |_, _, cx| action(cx))
+                .into_any_element()
+        })
 }
 
 /// "A terminal needs input", and when this build can't deliver it as Time Sensitive, says so
@@ -214,26 +266,38 @@ fn after_label(secs: u32) -> String {
 }
 
 /// "A command finishes": the threshold (5 s … 5 min) beside the switch.
-fn draw_command_done(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_command_done(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let s = settings(cx);
     let on = kind_on(s, s.notify_command_done);
     let after = s.notify_command_after;
-    let nudge = |delta: isize| {
-        move |_: &ClickEvent, _: &mut Window, cx: &mut App| {
-            let step = after_step(settings(cx).notify_command_after).saturating_add_signed(delta);
-            let secs = AFTER[step.min(AFTER.len() - 1)];
-            update_settings(cx, |s| s.notify_command_after = secs);
-        }
-    };
+    let enabled = window.stepper_enabled("notify-command-after", cx);
     div()
         .flex()
         .items_center()
         .gap_3()
-        .child(style::stepper(ui, "notify-command-after", after_label(after), nudge(-1), nudge(1)))
-        .child(style::toggle("notify-command-done", on, |on, _, cx| {
-            update_settings(cx, |s| set_kind(s, |s| s.notify_command_done = on))
-        }))
+        .child(window.stepper_control(
+            ui,
+            "notify-command-after",
+            text(SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE),
+            after_label(after),
+            enabled,
+            cx,
+            |delta, _, cx| {
+                let step =
+                    after_step(settings(cx).notify_command_after).saturating_add_signed(delta as isize);
+                let secs = AFTER[step.min(AFTER.len() - 1)];
+                update_settings(cx, |s| s.notify_command_after = secs);
+            },
+        ))
+        .child(window.switch_control(
+            "notify-command-done".into(),
+            text(SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE),
+            on,
+            true,
+            cx,
+            |on, _, cx| update_settings(cx, |s| set_kind(s, |s| s.notify_command_done = on)),
+        ))
         .into_any_element()
 }
 

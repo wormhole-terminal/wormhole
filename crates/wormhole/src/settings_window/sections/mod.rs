@@ -15,7 +15,7 @@ use gpui_kit::component::button::Button;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 
-use crate::select::{Choice, SearchSelect, SelectTrigger};
+use crate::select::{Choice, SelectTrigger};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore};
 use crate::settings_window::registry::Setting;
@@ -125,39 +125,79 @@ impl SettingsWindow {
     /// What sits at the right of a page's title (Coding agents: Rescan PATH).
     pub(super) fn header_action(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         match self.section {
-            Section::Agents => Some(
-                Button::new("agents-rescan")
-                    .outline()
-                    .small()
-                    .icon(IconName::RefreshCw)
-                    .label(text(SETTINGS_WINDOW_RESCAN_PATH))
-                    .loading(self.agents_task.is_some())
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.load_agents(cx);
-                        cx.notify();
-                    }))
-                    .into_any_element(),
-            ),
-            Section::Import => Some(
-                Button::new("import-rescan")
-                    .outline()
-                    .small()
-                    .icon(IconName::RefreshCw)
-                    .label(text(SETTINGS_IMPORT_SCAN_AGAIN))
-                    .loading(self.import.scanning())
-                    .on_click(cx.listener(|this, _, _, cx| this.scan_import(cx)))
-                    .into_any_element(),
-            ),
+            Section::Agents => {
+                let this = cx.weak_entity();
+                let native = self.native_button(
+                    "agents-rescan",
+                    text(SETTINGS_WINDOW_RESCAN_PATH),
+                    self.agents_task.is_none(),
+                    cx,
+                    move |_, cx| {
+                        this.update(cx, |this, cx| {
+                            this.load_agents(cx);
+                            cx.notify();
+                        })
+                        .ok();
+                    },
+                );
+                Some(native.unwrap_or_else(|| {
+                    Button::new("agents-rescan")
+                        .outline()
+                        .small()
+                        .icon(IconName::RefreshCw)
+                        .label(text(SETTINGS_WINDOW_RESCAN_PATH))
+                        .loading(self.agents_task.is_some())
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.load_agents(cx);
+                            cx.notify();
+                        }))
+                        .into_any_element()
+                }))
+            }
+            Section::Import => {
+                let this = cx.weak_entity();
+                let native = self.native_button(
+                    "import-rescan",
+                    text(SETTINGS_IMPORT_SCAN_AGAIN),
+                    !self.import.scanning(),
+                    cx,
+                    move |_, cx| {
+                        this.update(cx, |this, cx| this.scan_import(cx)).ok();
+                    },
+                );
+                Some(native.unwrap_or_else(|| {
+                    Button::new("import-rescan")
+                        .outline()
+                        .small()
+                        .icon(IconName::RefreshCw)
+                        .label(text(SETTINGS_IMPORT_SCAN_AGAIN))
+                        .loading(self.import.scanning())
+                        .on_click(cx.listener(|this, _, _, cx| this.scan_import(cx)))
+                        .into_any_element()
+                }))
+            }
             Section::Extensions => Some(extensions::header_action(cx)),
-            Section::Profile => Some(
-                Button::new("profile-new")
-                    .outline()
-                    .small()
-                    .icon(IconName::Plus)
-                    .label(text(SETTINGS_WINDOW_NEW_PROFILE))
-                    .on_click(cx.listener(|this, _, window, cx| this.open_new_profile(window, cx)))
-                    .into_any_element(),
-            ),
+            Section::Profile => {
+                let this = cx.weak_entity();
+                let native = self.native_button(
+                    "profile-new",
+                    text(SETTINGS_WINDOW_NEW_PROFILE),
+                    true,
+                    cx,
+                    move |window, cx| {
+                        this.update(cx, |this, cx| this.open_new_profile(window, cx)).ok();
+                    },
+                );
+                Some(native.unwrap_or_else(|| {
+                    Button::new("profile-new")
+                        .outline()
+                        .small()
+                        .icon(IconName::Plus)
+                        .label(text(SETTINGS_WINDOW_NEW_PROFILE))
+                        .on_click(cx.listener(|this, _, window, cx| this.open_new_profile(window, cx)))
+                        .into_any_element()
+                }))
+            }
             _ => None,
         }
     }
@@ -176,52 +216,133 @@ impl SettingsWindow {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let ui = ui(cx);
-        let this = cx.weak_entity();
-        let on_open = this.clone();
-        SearchSelect::new(
-            SharedString::from(format!("select-{id}")),
-            ui,
-            SelectTrigger::new(SharedString::from(format!("select-{id}-trigger")), ui, face).width(px(width)),
-            &self.menu_search,
-            cx,
-        )
-        .options(choices)
-        .current(current)
-        .open(self.open_select == Some(id))
-        .without_search()
-        .anchor(Anchor::TopRight)
-        .menu_width(px(width))
-        .on_open_change(move |open, _, cx| {
-            on_open
-                .update(cx, |this, cx| {
-                    this.open_select = open.then_some(id);
-                    cx.notify();
-                })
-                .ok();
-        })
-        .on_pick(move |value, _, cx| {
-            let value = value.clone();
-            this.update(cx, |this, cx| {
-                this.open_select = None;
-                cx.notify();
+        use crate::platform;
+        use gpui_kit::base::Button as BaseButton;
+
+        let anchor = platform::Anchor::default();
+        let menu_anchor = anchor.clone();
+        let label = choices
+            .iter()
+            .find(|choice| choice.value == current)
+            .map(|choice| choice.label.clone())
+            .unwrap_or_default();
+        let menu = settings_choice_menu(choices, &current, pick);
+
+        // devctl asks to open this same menu by row id. The platform records it in
+        // background mode, just as it does menus opened by a real click.
+        #[cfg(feature = "devctl")]
+        if self.open_select == Some(id) {
+            if let Some((handle, _)) = super::current_window(cx) {
+                let this = cx.weak_entity();
+                let menu = menu.clone();
+                let anchor = anchor.clone();
+                cx.defer(move |cx| {
+                    let _ = handle.update(cx, |_, window, cx| {
+                        let should_open = this
+                            .update(cx, |page, _| {
+                                if page.open_select == Some(id) {
+                                    page.open_select = None;
+                                    true
+                                } else {
+                                    false
+                                }
+                            })
+                            .unwrap_or(false);
+                        if should_open {
+                            platform::show_menu(menu, anchor.below(), window, cx);
+                        }
+                    });
+                });
+            }
+        }
+
+        div()
+            .relative()
+            .debug_selector(move || format!("select-{id}-trigger"))
+            .child(anchor.probe())
+            .child(
+                BaseButton::new(SharedString::from(format!("select-{id}-trigger")))
+                    .accessibility_label(label)
+                    .on_click(move |_, window, cx| {
+                        platform::show_menu(menu.clone(), menu_anchor.below(), window, cx);
+                    })
+                    .child(
+                        SelectTrigger::new(SharedString::from(format!("select-{id}-face")), ui, face)
+                            .width(px(width)),
+                    ),
+            )
+            .into_any_element()
+    }
+}
+
+/// Build the same menu model for AppKit and the platform's drawn fallback.
+fn settings_choice_menu(
+    choices: Vec<Choice<String>>,
+    current: &str,
+    pick: fn(&mut Settings, &str),
+) -> crate::platform::Menu {
+    use crate::platform::{Item, Menu};
+    choices.into_iter().fold(Menu::new(), |menu, choice| {
+        let selected = choice.value == current;
+        let value = choice.value;
+        menu.item(Item::new(choice.label).subtitle(choice.detail).checked(selected).on_select(
+            move |_, cx| {
+                update_settings(cx, |settings| pick(settings, &value));
+            },
+        ))
+    })
+}
+
+#[cfg(test)]
+mod choice_menu_tests {
+    use super::settings_choice_menu;
+    use crate::platform::menu::{Check, Entry};
+    use crate::select::Choice;
+
+    #[test]
+    fn menu_preserves_choices_details_and_selection() {
+        let choices = vec![
+            Choice::new("a".to_string(), "First"),
+            Choice::new("b".to_string(), "Second").detail("Unavailable"),
+        ];
+        let menu = settings_choice_menu(choices, "b", |_, _| {});
+        let items: Vec<_> = menu
+            .entries
+            .iter()
+            .filter_map(|entry| match entry {
+                Entry::Item(item) => Some(item),
+                _ => None,
             })
-            .ok();
-            update_settings(cx, |s| pick(s, &value));
-        })
-        .into_popover()
-        .into_any_element()
+            .collect();
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].title.as_ref(), "First");
+        assert_eq!(items[0].check, Check::Off);
+        assert_eq!(items[1].title.as_ref(), "Second");
+        assert_eq!(items[1].subtitle.as_deref(), Some("Unavailable"));
+        assert_eq!(items[1].check, Check::On);
+        assert!(items.iter().all(|item| item.on_select.is_some()));
+        assert_eq!(menu.outline(), ["- First", "- Second — Unavailable [x]"]);
     }
 }
 
 /// A row's button that opens something (a folder, a file).
-fn open_button(id: &'static str, icon: IconName, label: &'static str, open: fn(&App)) -> AnyElement {
-    Button::new(id)
-        .outline()
-        .small()
-        .icon(icon)
-        .label(label)
-        .on_click(move |_, _, cx| open(cx))
-        .into_any_element()
+fn open_button(
+    window: &SettingsWindow,
+    cx: &mut Context<SettingsWindow>,
+    id: &'static str,
+    icon: IconName,
+    label: &'static str,
+    open: fn(&App),
+) -> AnyElement {
+    window.native_button(id, label, true, cx, move |_, cx| open(cx)).unwrap_or_else(|| {
+        Button::new(id)
+            .outline()
+            .small()
+            .icon(icon)
+            .label(label)
+            .on_click(move |_, _, cx| open(cx))
+            .into_any_element()
+    })
 }
 
 /// Open a file in the text editor (config.json).

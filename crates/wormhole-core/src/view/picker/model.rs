@@ -101,6 +101,8 @@ pub struct Model {
     slow: bool,
     shown: Shown,
     selected: usize,
+    /// Whether a person or the caller chose this row, rather than it being the default first row.
+    selected_explicitly: bool,
     top: usize,
     window: usize,
     pending: Option<Do>,
@@ -126,6 +128,7 @@ impl Model {
             slow: false,
             shown: Shown::default(),
             selected: 0,
+            selected_explicitly: false,
             top: 0,
             window: window.max(1),
             pending: None,
@@ -196,6 +199,7 @@ impl Model {
         self.parts.iter_mut().for_each(|part| *part = None);
         self.slow = false;
         self.selected = 0;
+        self.selected_explicitly = false;
         self.top = 0;
     }
 
@@ -209,8 +213,11 @@ impl Model {
 
     /// How many lines the list shows: fewer in a small pane.
     pub fn set_window(&mut self, window: usize) {
-        self.window = window.max(1);
-        self.reveal();
+        let window = window.max(1);
+        if self.window != window {
+            self.window = window;
+            self.reveal();
+        }
     }
 
     /// The query to run now, once for each text.
@@ -255,6 +262,11 @@ impl Model {
 
     /// The list, made of the answers that are in.
     fn show(&mut self) {
+        // A refresh or a late provider can insert rows before the selection. Keep the same
+        // item in that case; a different query starts with its first result as before.
+        let selected_key = (self.selected_explicitly && self.answered == self.text)
+            .then(|| self.shown.row(self.selected).map(|row| row.key.clone()))
+            .flatten();
         let merged = merge(self.parts.iter().flatten().cloned().collect());
         self.answered = self.text.clone();
         self.shown = Shown::of(
@@ -274,7 +286,11 @@ impl Model {
                 apply(row, &found);
             }
         }
-        self.selected = self.selected.min(self.shown.rows().saturating_sub(1));
+        self.selected = selected_key
+            .and_then(|key| {
+                (0..self.shown.rows()).find(|&index| self.shown.row(index).is_some_and(|row| row.key == key))
+            })
+            .unwrap_or_else(|| self.selected.min(self.shown.rows().saturating_sub(1)));
         self.asked_for_answer = 0;
         self.reveal();
     }
@@ -387,6 +403,7 @@ impl Model {
         if n == 0 {
             return;
         }
+        self.selected_explicitly = true;
         let page = by.abs() >= PAGE;
         let next = self.selected as isize + by;
         // A page key stops at the ends; the arrows wrap.
@@ -399,7 +416,23 @@ impl Model {
         match self.shown.row_items.iter().position(|&at| at == item) {
             Some(row) => {
                 self.selected = row;
+                self.selected_explicitly = true;
                 self.reveal();
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Follow the pointer without scrolling. Ignore headers and events for a row that has changed.
+    pub fn hover_item(&mut self, item: usize, key: &str) -> bool {
+        if !matches!(self.shown.items.get(item), Some(Item::Row(row)) if row.key == key) {
+            return false;
+        }
+        match self.shown.row_items.iter().position(|&at| at == item) {
+            Some(row) => {
+                self.selected = row;
+                self.selected_explicitly = true;
                 true
             }
             None => false,
@@ -476,6 +509,15 @@ impl Model {
     /// A click on the row at `item`: it is picked.
     pub fn click(&mut self, item: usize) -> Outcome {
         if self.select_item(item) { self.act(Do::Pick) } else { Outcome::Nothing }
+    }
+
+    /// A click from a platform view, ignored if that view has since been reused for another row.
+    pub fn click_key(&mut self, item: usize, key: &str) -> Outcome {
+        if matches!(self.shown.items.get(item), Some(Item::Row(row)) if row.key == key) {
+            self.click(item)
+        } else {
+            Outcome::Nothing
+        }
     }
 
     /// A click on a step of the breadcrumb.

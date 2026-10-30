@@ -144,11 +144,16 @@ impl FirstRun {
                  they change. Skip any agent: Settings › Coding agents adds or removes hooks later.",
             ))
             .child(switch_row(
-                "onboarding-notifications",
                 ui,
                 "Notify me when a background terminal needs me or finishes",
-                notifications,
-                |on, _, cx| update_settings(cx, |s| s.notifications = on),
+                self.switch_control(
+                    sheet,
+                    "onboarding-notifications",
+                    "Notify me when a background terminal needs me or finishes",
+                    notifications,
+                    cx,
+                    |on, _, cx| update_settings(cx, |s| s.notifications = on),
+                ),
             ))
             .children(self.render_sheet_trust(sheet, ui, cx))
             .into_any_element()
@@ -235,7 +240,12 @@ impl FirstRun {
 
     /// The primer: Wormhole as a terminal, the keys worth knowing, and what changes once an
     /// agent is installed.
-    pub(super) fn render_primer_step(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn render_primer_step(
+        &self,
+        sheet: &Intro,
+        ui: UiColors,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         // The list; the keys come from the key table, so they stay what the menus say (the
         // sheet's is ⌥⌘/ since ⌘/ became the status bar's).
         const KEYS: [(&str, &[ActionId]); 5] = [
@@ -306,24 +316,23 @@ impl FirstRun {
                     ))),
             )
             .child(switch_row(
-                "onboarding-command-done",
                 ui,
                 "Notify me when a long command in a background terminal finishes",
-                command_done,
-                |on, _, cx| update_settings(cx, |s| s.notify_command_done = on),
+                self.switch_control(
+                    sheet,
+                    "onboarding-command-done",
+                    "Notify me when a long command in a background terminal finishes",
+                    command_done,
+                    cx,
+                    |on, _, cx| update_settings(cx, |s| s.notify_command_done = on),
+                ),
             ))
             .into_any_element()
     }
 }
 
 /// A row with a bell, a line of text and a switch (the notifications on the last step).
-fn switch_row(
-    id: &'static str,
-    ui: UiColors,
-    label: &'static str,
-    on: bool,
-    set: impl Fn(bool, &mut Window, &mut App) + 'static,
-) -> AnyElement {
+fn switch_row(ui: UiColors, label: &'static str, control: AnyElement) -> AnyElement {
     div()
         .flex()
         .items_center()
@@ -333,7 +342,7 @@ fn switch_row(
         .rule_top(ui)
         .child(style::icon(IconName::Bell).text_color(ui.muted))
         .child(div().flex_1().min_w_0().text_body().child(label))
-        .child(style::toggle(id, on, set))
+        .child(control)
         .into_any_element()
 }
 

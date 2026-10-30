@@ -18,7 +18,7 @@ use super::appkit;
 use crate::platform::popover::ColourChange;
 
 /// The sRGB colour the panel shows now, each channel 0–1.
-type Rgb = [f64; 3];
+type Colour = [f64; 4];
 
 thread_local! {
     /// The target the panel is wired to: replaced by the next session, which ends the last one's
@@ -27,7 +27,7 @@ thread_local! {
 }
 
 pub struct Ivars {
-    tx: smol::channel::Sender<Rgb>,
+    tx: smol::channel::Sender<Colour>,
 }
 
 define_class!(
@@ -44,7 +44,7 @@ define_class!(
             let srgb = sender.color().colorUsingColorSpace(&NSColorSpace::sRGBColorSpace());
             if let Some(color) = srgb {
                 // Unbounded: never full, never waits. A closed receiver means the session is over.
-                self.ivars().tx.try_send([color.redComponent(), color.greenComponent(), color.blueComponent()]).ok();
+                self.ivars().tx.try_send([color.redComponent(), color.greenComponent(), color.blueComponent(), color.alphaComponent()]).ok();
             }
         }
     }
@@ -54,7 +54,7 @@ define_class!(
 
 impl Target {
     #[allow(unsafe_code)]
-    fn new(mtm: MainThreadMarker, tx: smol::channel::Sender<Rgb>) -> Retained<Self> {
+    fn new(mtm: MainThreadMarker, tx: smol::channel::Sender<Colour>) -> Retained<Self> {
         let this = Self::alloc(mtm).set_ivars(Ivars { tx });
         // SAFETY: `-[NSObject init]` is the designated initializer of the superclass.
         unsafe { msg_send![super(this), init] }
@@ -62,17 +62,17 @@ impl Target {
 }
 
 /// Open the Colours window showing `start`; every colour chosen in it reaches `on_change`.
-pub fn pick(start: Hsla, on_change: ColourChange, window: &mut Window, cx: &mut App) {
+pub fn pick(start: Hsla, alpha: bool, on_change: ColourChange, window: &mut Window, cx: &mut App) {
     let handle = window.window_handle();
-    let (tx, rx) = smol::channel::unbounded::<Rgb>();
+    let (tx, rx) = smol::channel::unbounded::<Colour>();
     cx.spawn(async move |cx| {
         let Some(mtm) = MainThreadMarker::new() else { return };
         let target = Target::new(mtm, tx);
         let rgba = Rgba::from(start);
         let panel = NSColorPanel::sharedColorPanel(mtm);
-        panel.setShowsAlpha(false);
+        panel.setShowsAlpha(alpha);
         panel.setContinuous(true);
-        panel.setColor(&appkit::ns_color([rgba.r, rgba.g, rgba.b, 1.0]));
+        panel.setColor(&appkit::ns_color([rgba.r, rgba.g, rgba.b, if alpha { rgba.a } else { 1.0 }]));
         // The target is wired after the colour is set: setting it is not a choice.
         #[allow(unsafe_code)]
         // SAFETY: `changeColor:` is defined on `Target` with the `(id)sender` signature AppKit uses
@@ -87,8 +87,9 @@ pub fn pick(start: Hsla, on_change: ColourChange, window: &mut Window, cx: &mut 
             while let Ok(next) = rx.try_recv() {
                 latest = next;
             }
-            let [r, g, b] = latest;
-            let colour: Hsla = Rgba { r: r as f32, g: g as f32, b: b as f32, a: 1.0 }.into();
+            let [r, g, b, a] = latest;
+            let colour: Hsla =
+                Rgba { r: r as f32, g: g as f32, b: b as f32, a: if alpha { a as f32 } else { 1.0 } }.into();
             let on_change = on_change.clone();
             cx.update(|cx| {
                 handle.update(cx, move |_, window, cx| on_change(colour, window, cx)).ok();

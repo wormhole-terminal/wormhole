@@ -1,0 +1,37 @@
+# Search for and select a project using the native picker.
+@fixture repo-panel
+@theme Tokyo Night
+@size 1440 900
+settings-section projects
+@batch
+settings-project-menu
+@batch
+@sleep 500
+settings-project-picker segments
+@batch
+settings-project-picker state
+@batch
+settings-project-picker hover 1
+@batch
+settings-project-picker state
+@batch
+settings-project-picker pick
+@batch
+settings-project-picker state
+@batch
+settings-project-menu
+@batch
+@sleep 500
+settings-project-picker state
+@batch
+settings-project-picker pick
+@batch
+settings-project-menu repo-panel
+@batch
+@sleep 500
+settings-project-picker state
+@batch
+settings-project-picker pick
+@batch
+settings-project-picker state
+@batch

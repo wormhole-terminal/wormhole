@@ -33,6 +33,7 @@ pub(crate) mod welcome;
 mod welcome_page;
 
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::time::Duration;
 
 use gpui_kit::assets::IconName;
@@ -117,6 +118,14 @@ pub(crate) struct Intro {
     pub(crate) first_run: bool,
     /// The look step's offer to bring another terminal's settings over.
     pub(crate) import: look_step::LookImport,
+    native_stepper: Option<Rc<crate::platform::controls::Steppers>>,
+    stepper_focus: FocusHandle,
+    _stepper_events: Option<Task<()>>,
+    native_switches: Option<Rc<crate::platform::controls::Switches>>,
+    ligatures_focus: FocusHandle,
+    notifications_focus: FocusHandle,
+    command_done_focus: FocusHandle,
+    _switch_events: Option<Task<()>>,
 }
 
 /// The sidebar's "No coding agents yet" note after a primer, as the window keeps it.
@@ -210,6 +219,40 @@ pub(crate) enum FirstRunEvent {
 impl EventEmitter<FirstRunEvent> for FirstRun {}
 
 impl FirstRun {
+    fn switch_control(
+        &self,
+        sheet: &Intro,
+        id: &'static str,
+        label: &'static str,
+        on: bool,
+        cx: &App,
+        change: impl Fn(bool, &mut Window, &mut App) + 'static,
+    ) -> AnyElement {
+        if self.intro_entrance(cx).body >= 1.0 {
+            if let Some(native) = &sheet.native_switches {
+                let focus = if id == "onboarding-ligatures" {
+                    sheet.ligatures_focus.clone()
+                } else if id == "onboarding-notifications" {
+                    sheet.notifications_focus.clone()
+                } else {
+                    sheet.command_done_focus.clone()
+                };
+                return crate::style::native_switch::NativeSwitch {
+                    native: native.clone(),
+                    id: id.to_owned(),
+                    label: label.into(),
+                    on,
+                    enabled: true,
+                    focus: Some(focus),
+                    appearance: cx.global::<crate::settings::SettingsStore>().tokens.appearance,
+                    change: Rc::new(change),
+                }
+                .into_any_element();
+            }
+        }
+        style::toggle(id, on, change).accessibility_label(label).into_any_element()
+    }
+
     /// The project whose trust card the agents step shows: the folder picked in the first step, else the
     /// project of the terminal in front (`active_root`). `None` when the step shows no card (another
     /// step, or "Later" was pressed). The window builds the card from it ([`Facts::trust`]).
@@ -262,7 +305,7 @@ impl FirstRun {
     /// only a replay; `first` is the window's terminal that is there now.
     pub(crate) fn open_intro(&mut self, opening: Opening, window: &mut Window, cx: &mut Context<Self>) {
         let Opening { model, first_run, first, play, recent } = opening;
-        let intro = self.new_intro(model, first_run, first, &recent, cx);
+        let intro = self.new_intro(model, first_run, first, &recent, window, cx);
         // Test instances stay behind other windows, and their screenshots don't need a show.
         let start = play.filter(|_| !crate::background::on());
         let Some(start) = start else {
@@ -336,9 +379,90 @@ impl FirstRun {
         first_run: bool,
         first: Option<i64>,
         recent: &[PathBuf],
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Intro {
         let focus = cx.focus_handle();
+        let stepper_focus = cx.focus_handle();
+        let ligatures_focus = cx.focus_handle();
+        let notifications_focus = cx.focus_handle();
+        let command_done_focus = cx.focus_handle();
+        let (switch_events, switch_rx) = smol::channel::unbounded();
+        let native_switches =
+            crate::platform::controls::Switches::new(window, switch_events, cx).map(Rc::new);
+        let switch_events = native_switches.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = switch_rx.recv().await {
+                    let allowed = match this.update_in(cx, |this, window, cx| {
+                        let Some(intro) = &this.intro else { return false };
+                        if !intro.native_switches.as_ref().is_some_and(|host| host.accepts(&event.id)) {
+                            return false;
+                        }
+                        let focus = match (event.id.as_str(), intro.model.step()) {
+                            ("onboarding-ligatures", Step::Look) => &intro.ligatures_focus,
+                            ("onboarding-notifications", Step::Agents) => &intro.notifications_focus,
+                            ("onboarding-command-done", Step::Primer) => &intro.command_done_focus,
+                            _ => return false,
+                        };
+                        window.focus(focus, cx);
+                        true
+                    }) {
+                        Ok(allowed) => allowed,
+                        Err(_) => break,
+                    };
+                    if allowed
+                        && cx
+                            .update(|_, cx| {
+                                crate::settings::update_settings(cx, |s| match event.id.as_str() {
+                                    "onboarding-ligatures" => s.font_ligatures = event.on,
+                                    "onboarding-notifications" => s.notifications = event.on,
+                                    "onboarding-command-done" => s.notify_command_done = event.on,
+                                    _ => {}
+                                });
+                            })
+                            .is_err()
+                    {
+                        break;
+                    }
+                }
+            })
+        });
+        let (events, rx) = smol::channel::unbounded();
+        let native_stepper = crate::platform::controls::Steppers::new(window, events, cx).map(Rc::new);
+        let stepper_events = native_stepper.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = rx.recv().await {
+                    let allowed = match this.update_in(cx, |this, window, cx| {
+                        let Some(intro) = &this.intro else { return false };
+                        if event.id != "onboarding-font-size"
+                            || intro.model.step() != Step::Look
+                            || !intro.native_stepper.as_ref().is_some_and(|host| host.accepts(&event.id))
+                        {
+                            return false;
+                        }
+                        window.focus(&intro.stepper_focus, cx);
+                        true
+                    }) {
+                        Ok(allowed) => allowed,
+                        Err(_) => break,
+                    };
+                    if allowed
+                        && cx
+                            .update(|_, cx| {
+                                crate::settings::update_settings(cx, |s| {
+                                    s.step_slot_size(
+                                        wormhole_core::theme::fonts::FontSlot::Terminal,
+                                        event.delta as f32,
+                                    )
+                                });
+                            })
+                            .is_err()
+                    {
+                        break;
+                    }
+                }
+            })
+        });
         // A handful of `stat`s, once: the places don't change while the intro is up.
         let home = paths::home().unwrap_or_default();
         let places = onboarding::places(&home, recent, |path| path.is_dir());
@@ -369,6 +493,14 @@ impl FirstRun {
             tailor: None,
             first_run,
             import: look_step::LookImport::default(),
+            native_stepper,
+            stepper_focus,
+            _stepper_events: stepper_events,
+            native_switches,
+            ligatures_focus,
+            notifications_focus,
+            command_done_focus,
+            _switch_events: switch_events,
         }
     }
 

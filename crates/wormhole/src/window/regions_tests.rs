@@ -111,16 +111,13 @@ fn with_the_accessibility_tree_built_the_chrome_is_replayed_and_stays_in_the_tre
     assert_eq!(builds(cx, &window), before, "five frames of output left the chrome as it was");
 }
 
-/// A popover opens its content through `deferred`, which GPUI prepaints after the cached view that holds the
-/// popover: the content stays in the tree, and answers, on the frames that replay the view. The profile
-/// chip's menu is one (two profiles make the chip).
+/// A cached profile chip keeps its accessibility action and can still open the platform menu.
 #[gpui_kit::test]
-fn an_open_menu_stays_in_the_tree_on_frames_that_replay_the_chrome(cx: &mut TestAppContext) {
+fn profile_menu_opens_from_the_cached_accessibility_tree(cx: &mut TestAppContext) {
     use wormhole_core::config::profile::{NewProfile, StartFrom};
 
     use crate::app_state::AppState;
-    use crate::sidebar::profile_chip::ProfilePage;
-    if isolate("an_open_menu_stays_in_the_tree_on_frames_that_replay_the_chrome") {
+    if isolate("profile_menu_opens_from_the_cached_accessibility_tree") {
         return;
     }
     let window = settled_window(cx);
@@ -132,17 +129,10 @@ fn an_open_menu_stays_in_the_tree_on_frames_that_replay_the_chrome(cx: &mut Test
     for _ in 0..3 {
         draw(cx, &window);
     }
-    let sidebar = read_cx(cx, &window, |ws, _| ws.sidebar.clone());
-    cx.update(|cx| sidebar.update(cx, |sidebar, cx| sidebar.open_profile_menu_for_test(cx)));
-    // The popover shows its content from the frame after it has seen where its trigger is.
-    for _ in 0..3 {
-        draw(cx, &window);
-    }
     rebuild(cx, &window);
     let reference = tree(cx, &window);
     assert!(reference.whole(), "{:?}", reference.problems);
-    let open_in = reference.one(Role::Button, "Open a window in");
-    assert!(!reference.labelled(Role::Button, "Settings").is_empty(), "the menu's last row is in the tree");
+    let chip = reference.one(Role::Button, "Profile Default, switch profile");
 
     // Frames only the terminal asked for replay the sidebar's region, and the menu with it.
     let shown = terminal(cx, &window, 0);
@@ -154,22 +144,111 @@ fn an_open_menu_stays_in_the_tree_on_frames_that_replay_the_chrome(cx: &mut Test
     }
     assert_eq!(builds(cx, &window), before, "the chrome was replayed");
 
-    // And a row answers on such a frame: it opens the menu's second page.
-    activate(cx, &window, open_in);
-    assert_eq!(sidebar_page(cx, &sidebar), Some(ProfilePage::OpenIn));
-    draw(cx, &window);
-    draw(cx, &window);
-    let second = tree(cx, &window);
-    assert!(second.whole(), "{:?}", second.problems);
-    assert!(!second.labelled(Role::Button, "Back").is_empty(), "its back row is there");
-    assert!(second.labelled(Role::Button, "Settings").is_empty(), "and the first page's rows are gone");
+    activate(cx, &window, chip);
+    let menu = crate::platform::record::open().expect("the chip opened a platform menu");
+    assert!(menu.outline().iter().any(|line| line == "> Open a window in"));
+    assert!(menu.outline().iter().any(|line| line == "- Settings…"));
 }
 
-fn sidebar_page(
-    cx: &mut TestAppContext,
-    sidebar: &Entity<crate::sidebar::Sidebar>,
-) -> Option<crate::sidebar::profile_chip::ProfilePage> {
-    cx.update(|cx| sidebar.read(cx).profile_page())
+/// Rich GPUI popovers remain in the accessibility tree when their cached host is replayed.
+#[gpui_kit::test]
+fn group_switcher_popover_survives_cached_frames(cx: &mut TestAppContext) {
+    use wormhole_core::view::sidebar::TerminalsIn;
+    if isolate("group_switcher_popover_survives_cached_frames") {
+        return;
+    }
+    let window = settled_window(cx);
+    drive(cx, &window, |ws, _, cx| {
+        ws.group_terminals(&[1], cx);
+    });
+    cx.update(|cx| SettingsStore::update(cx, |settings| settings.terminals_in = TerminalsIn::Tabs));
+    simulate_tree(cx, &window, true);
+    for _ in 0..3 {
+        draw(cx, &window);
+    }
+    let trigger = tree(cx, &window).one(Role::Button, "Group ");
+    activate(cx, &window, trigger);
+    for _ in 0..3 {
+        draw(cx, &window);
+    }
+    rebuild(cx, &window);
+    let reference = tree(cx, &window);
+    assert!(reference.whole(), "{:?}", reference.problems);
+    assert!(!reference.labelled(Role::Button, "New group").is_empty());
+    let terminal = terminal(cx, &window, 0);
+    for round in 0..4 {
+        output(cx, &terminal);
+        draw(cx, &window);
+        assert_eq!(tree(cx, &window), reference, "cached frame {round}");
+    }
+    let show_all = reference.one(Role::Button, "Show all groups in the sidebar");
+    activate(cx, &window, show_all);
+    assert_eq!(cx.update(|cx| crate::settings::settings(cx).terminals_in), TerminalsIn::Sidebar);
+}
+
+#[gpui_kit::test]
+fn switcher_targets_still_open_the_same_items_after_reordering(cx: &mut TestAppContext) {
+    use crate::sidebar::SwitchTarget;
+    if isolate("switcher_targets_still_open_the_same_items_after_reordering") {
+        return;
+    }
+    let window = start(cx, 3);
+    let first = drive(cx, &window, |ws, _, cx| ws.group_terminals(&[1], cx));
+    let second = drive(cx, &window, |ws, _, cx| ws.group_terminals(&[2], cx));
+    let target = SwitchTarget::Group(Some(second));
+    // Removing the earlier group changes the second group's position.
+    drive(cx, &window, |ws, _, cx| ws.with_sidebar(cx, |sidebar, cx| sidebar.ungroup(first, cx)));
+    drive(cx, &window, |ws, _, cx| ws.with_sidebar(cx, |sidebar, cx| sidebar.open_switch_target(target, cx)));
+    assert_eq!(read(cx, &window, |ws| ws.active_session().id), 2);
+    // A captured terminal target is an ID, not its old position in the rows.
+    drive(cx, &window, |ws, window, cx| {
+        let index = ws.sessions.iter().position(|session| session.id == 3).expect("terminal 3");
+        ws.activate(index, window, cx);
+    });
+    assert_eq!(read(cx, &window, |ws| ws.active_session().id), 3);
+    drive(cx, &window, |ws, window, cx| {
+        let index = ws.sessions.iter().position(|session| session.id == 1).expect("terminal 1");
+        ws.close_session(index, window, cx);
+    });
+    assert_eq!(read(cx, &window, |ws| ws.active_session().id), 3);
+    drive(cx, &window, |ws, _, cx| {
+        ws.with_sidebar(cx, |sidebar, cx| {
+            sidebar.open_switch_target(SwitchTarget::Terminal(2), cx);
+        })
+    });
+    assert_eq!(read(cx, &window, |ws| ws.active_session().id), 2);
+}
+
+#[gpui_kit::test]
+fn switcher_search_opens_the_result_selected_with_the_keyboard(cx: &mut TestAppContext) {
+    use crate::window::test_harness::press;
+    use wormhole_core::view::sidebar::TerminalsIn;
+    if isolate("switcher_search_opens_the_result_selected_with_the_keyboard") {
+        return;
+    }
+    let window = start(cx, 2);
+    drive(cx, &window, |ws, _, cx| {
+        ws.devctl_rename(0, "Pick first", cx);
+        ws.devctl_rename(1, "Pick second", cx);
+        ws.group_terminals(&[1], cx);
+    });
+    cx.update(|cx| SettingsStore::update(cx, |settings| settings.terminals_in = TerminalsIn::Tabs));
+    simulate_tree(cx, &window, true);
+    for _ in 0..3 {
+        draw(cx, &window);
+    }
+    let trigger = tree(cx, &window).one(Role::Button, "Group ");
+    activate(cx, &window, trigger);
+    drive(cx, &window, |ws, window, cx| {
+        ws.with_sidebar(cx, |sidebar, cx| sidebar.set_switcher_query("Pick", window, cx));
+    });
+    for _ in 0..3 {
+        draw(cx, &window);
+    }
+    press(cx, &window, "down");
+    draw(cx, &window);
+    press(cx, &window, "enter");
+    assert_eq!(read(cx, &window, |ws| ws.active_session().id), 2);
 }
 
 #[gpui_kit::test]

@@ -46,6 +46,7 @@ mod row;
 mod row_menu;
 pub(crate) mod shells;
 mod switcher;
+mod switcher_native;
 mod tab_bar;
 pub(crate) mod tear_off;
 pub(crate) mod terminal_drag;
@@ -56,6 +57,8 @@ pub(crate) use input::{NewTerminal, SidebarEvent, SidebarInput};
 pub(crate) use keys::SidebarStop;
 use motion::{ItemKey, ListMotion, slot_id};
 pub(crate) use row_menu::reveal_in_finder;
+#[cfg(test)]
+pub(crate) use switcher::SwitchTarget;
 pub(crate) use tab_bar::TAB_ROW_H;
 
 /// The terminal list: what is saved with the window (the groups, their order, which are folded) and what
@@ -110,8 +113,6 @@ pub(crate) struct Sidebar {
     tabs: tab_bar::TabBarState,
     /// What it remembers of its groups' places.
     memory: group_fence::Memory,
-    /// The profile chip's menu being open, and the list it shows.
-    profile_menu: Option<profile_chip::ProfilePage>,
     /// Where the chip reads the app's profiles from.
     profiles: profile_chip::ProfilesFn,
     /// How many times the list was built, for the tests that check a notification drew it (and
@@ -158,7 +159,6 @@ impl Sidebar {
             demo: None,
             tabs: tab_bar::TabBarState::default(),
             memory: group_fence::Memory::default(),
-            profile_menu: None,
             profiles,
             #[cfg(any(test, feature = "devctl"))]
             built: 0,
@@ -180,6 +180,7 @@ impl Sidebar {
             self.memory.forget_folders();
         }
         self.input = Rc::new(input);
+        self.refresh_native_switcher(cx);
         // Only as a drag begins: when it ends nothing is asked, and this is called as a frame is drawn.
         if drag_changed && self.dragging() {
             self.warm_drag();
@@ -352,25 +353,6 @@ impl Sidebar {
         self.built
     }
 
-    /// The profile chip's menu is open.
-    #[cfg(test)]
-    pub(crate) fn profile_menu_open(&self) -> bool {
-        self.profile_menu.is_some()
-    }
-
-    /// Open the profile chip's menu, as a click on the chip does.
-    #[cfg(test)]
-    pub(crate) fn open_profile_menu_for_test(&mut self, cx: &mut Context<Self>) {
-        self.profile_menu = Some(profile_chip::ProfilePage::Main);
-        cx.notify();
-    }
-
-    /// The page of the profile chip's menu that is open. The chip is drawn by the window's header, a view
-    /// of its own, so the window watches this to draw the header again (`Regions::watch_sidebar`).
-    pub(crate) fn profile_page(&self) -> Option<profile_chip::ProfilePage> {
-        self.profile_menu
-    }
-
     /// The terminal being renamed, and its name field.
     #[cfg(test)]
     pub(crate) fn terminal_renaming(&self) -> Option<Entity<gpui_kit::component::input::InputState>> {
@@ -438,6 +420,7 @@ impl Sidebar {
     fn changed(&mut self, cx: &mut Context<Self>) {
         // The selected terminal may be in another group now.
         self.note_selected();
+        self.refresh_native_switcher(cx);
         cx.emit(SidebarEvent::Changed);
         cx.notify();
     }

@@ -253,6 +253,7 @@
 //!   font-picker <interface|code|terminal> [query]   expand a font picker (open settings first)
 //!   picker <compare|history> [query]   open the branch select in the Changes / History tab
 //!   settings-project-menu [query]   open the project select in Settings → Project folders
+//!   settings-project-picker [state|pick]   inspect the native project picker, or pick its selected row
 //!   settings-search [text]   type into the settings search (empty clears it; open settings first)
 //!   settings-record <id> [keys]   start a shortcut field (hotkey) recording, and press keys into it
 //!   settings-reveal <id>   open the settings window at that row, scrolled to it and marked (what

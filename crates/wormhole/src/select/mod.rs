@@ -15,6 +15,8 @@ use gpui_kit::*;
 use crate::settings::UiColors;
 use crate::style::{CONTROL_H, Edges, ROW_H, TextRole};
 
+pub(crate) mod native;
+
 /// The panel picker's trigger: 24 high, between the 22 of a chip and a control's 28.
 const PICKER_H: f32 = 24.0;
 /// The widest a panel picker grows before its branch name truncates.
@@ -30,11 +32,20 @@ pub struct SelectTrigger {
     open: bool,
     compact: bool,
     width: Option<Pixels>,
+    anchor: Option<crate::platform::Anchor>,
 }
 
 impl SelectTrigger {
     pub fn new(id: impl Into<ElementId>, ui: UiColors, label: impl IntoElement) -> Self {
-        Self { id: id.into(), ui, label: label.into_any_element(), open: false, compact: false, width: None }
+        Self {
+            id: id.into(),
+            ui,
+            label: label.into_any_element(),
+            open: false,
+            compact: false,
+            width: None,
+            anchor: None,
+        }
     }
 
     /// The panel headers' variant (the branch picker): 24 high, caption text in 500, a
@@ -46,6 +57,12 @@ impl SelectTrigger {
 
     pub fn width(mut self, width: Pixels) -> Self {
         self.width = Some(width);
+        self
+    }
+
+    /// Measure this trigger for a native picker without adding another layout wrapper.
+    pub fn native_anchor(mut self, anchor: crate::platform::Anchor) -> Self {
+        self.anchor = Some(anchor);
         self
     }
 }
@@ -105,6 +122,7 @@ impl RenderOnce for SelectTrigger {
             })
             .child(div().min_w_0().truncate().child(self.label))
             .child(chevrons(ui))
+            .when_some(self.anchor, |d, anchor| d.relative().child(anchor.probe()))
     }
 }
 
@@ -212,8 +230,8 @@ pub fn search_row(ui: UiColors, compact: bool, content: impl IntoElement) -> Div
 #[derive(Clone)]
 pub struct Choice<V> {
     pub value: V,
-    label: SharedString,
-    detail: Option<SharedString>,
+    pub(crate) label: SharedString,
+    pub(crate) detail: Option<SharedString>,
     /// A glyph before the label in its own color: the branch mark in the branch picker.
     mark: Option<(IconName, Hsla)>,
 }
@@ -325,8 +343,6 @@ pub struct SearchSelect<V> {
     menu_width: Pixels,
     bg: Hsla,
     compact: bool,
-    /// Whether the menu has its search box (a list of a few options doesn't need one).
-    searchable: bool,
     on_open_change: Option<OpenChange>,
     on_pick: Option<Pick<V>>,
 }
@@ -354,16 +370,9 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
             menu_width: px(280.0),
             bg: menu_bg(ui, cx),
             compact: false,
-            searchable: true,
             on_open_change: None,
             on_pick: None,
         }
-    }
-
-    /// The menu without its search box: a handful of options (scrollback sizes, icon themes).
-    pub fn without_search(mut self) -> Self {
-        self.searchable = false;
-        self
     }
 
     pub fn options(mut self, options: Vec<Choice<V>>) -> Self {
@@ -439,7 +448,6 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
             menu_width,
             bg,
             compact,
-            searchable,
             on_open_change,
             on_pick,
         } = self;
@@ -511,12 +519,10 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
             div()
                 .flex()
                 .flex_col()
-                .when(searchable, |d| {
-                    d.child(search_row(ui, compact, {
-                        let input = Input::new(&search).appearance(false);
-                        if compact { input.xsmall() } else { input.small() }
-                    }))
-                })
+                .child(search_row(ui, compact, {
+                    let input = Input::new(&search).appearance(false);
+                    if compact { input.xsmall() } else { input.small() }
+                }))
                 .child(list)
                 .children(footer)
         })

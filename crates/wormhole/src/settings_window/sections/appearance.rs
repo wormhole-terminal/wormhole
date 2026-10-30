@@ -87,8 +87,10 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("icon-animations", icon_animations),
     Setting::custom("title-row", title_row::draw_control).below(title_row::draw_parts),
     Setting::custom("icon-theme", draw_icon_select),
-    Setting::custom("icon-themes-folder", |_, _| {
+    Setting::custom("icon-themes-folder", |w, cx| {
         open_button(
+            w,
+            cx,
             "icon-themes-folder",
             IconName::ExternalLink,
             text(SETTINGS_APPEARANCE_OPEN_FOLDER),
@@ -183,6 +185,28 @@ fn swatch_row(
     cx: &App,
 ) -> AnyElement {
     let ui = ui(cx);
+    let custom: AnyElement = if crate::platform::has_colour_panel() {
+        let start = chosen.map(theme_bridge::hsla).or_else(|| picker.read(cx).value()).unwrap_or(ui.primary);
+        style::icon_button((id, usize::MAX), ui, IconName::Plus, text(SETTINGS_APPEARANCE_PICK_COLOUR))
+            .on_click(move |_, window, cx| {
+                let profile = crate::app_state::app(cx).active_profile().clone();
+                crate::platform::pick_colour(
+                    start,
+                    std::rc::Rc::new(move |color, _, cx| {
+                        if crate::app_state::app(cx).active_profile() != &profile {
+                            return;
+                        }
+                        let hex = theme_bridge::color(color).with_alpha(1.0).to_hex();
+                        update_settings(cx, |settings| choose(settings, hex));
+                    }),
+                    window,
+                    cx,
+                );
+            })
+            .into_any_element()
+    } else {
+        ColorPicker::new(picker).icon(IconName::Plus).anchor(Anchor::TopRight).into_any_element()
+    };
     div()
         .flex()
         .items_center()
@@ -193,7 +217,7 @@ fn swatch_row(
             style::swatch((id, ix), ui, theme_bridge::hsla(color), picked)
                 .on_click(move |_, _, cx| update_settings(cx, |s| choose(s, hex.clone())))
         }))
-        .child(ColorPicker::new(picker).icon(IconName::Plus).anchor(Anchor::TopRight))
+        .child(custom)
         .into_any_element()
 }
 
@@ -202,11 +226,34 @@ fn swatch_row(
 fn draw_opacity(w: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let store = cx.global::<SettingsStore>();
     let reduced = store.system().opaque();
-    let value = format!("{:.0} %", store.asked_opacity() * 100.0);
+    let opacity = store.asked_opacity() * 100.0;
+    let value = format!("{opacity:.0} %");
     let ui = ui(cx);
     // The value goes quiet with the slider.
     let shown = if reduced { UiColors { text: ui.faint, ..ui } } else { ui };
-    let slider = Slider::new(&w.opacity_slider).disabled(reduced);
+    let slider = super::super::native_slider::control(
+        w,
+        "opacity",
+        text(SETTINGS_APPEARANCE_OPACITY),
+        f64::from(opacity),
+        30.0,
+        100.0,
+        1.0,
+        !reduced && w.stepper_enabled("opacity", cx),
+        cx,
+        |value, _, cx| {
+            let opacity = (value.round() as f32 / 100.0).clamp(0.3, 1.0);
+            if (cx.global::<SettingsStore>().asked_opacity() - opacity).abs() > f32::EPSILON {
+                update_settings(cx, |s| s.opacity = opacity);
+            }
+        },
+    )
+    .unwrap_or_else(|| {
+        Slider::new(&w.opacity_slider)
+            .disabled(reduced)
+            .accessibility_label(text(SETTINGS_APPEARANCE_OPACITY))
+            .into_any_element()
+    });
     style::slider_control(shown, slider, value, &["30", "65", "100"], false).into_any_element()
 }
 
@@ -241,23 +288,27 @@ fn blur_off_warning(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
 }
 
 /// The settings and Studio windows in one row of checkboxes.
-fn draw_translucent(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let (ui, s) = (ui(cx), settings(cx));
-    div()
-        .flex()
-        .items_center()
-        .gap_4()
-        .child(
-            style::checkbox("translucent-settings", ui, s.settings_translucent)
-                .in_form(text(SETTINGS_APPEARANCE_SETTINGS))
-                .on_change(|checked, _, cx| update_settings(cx, |s| s.settings_translucent = checked)),
-        )
-        .child(
-            style::checkbox("translucent-studio", ui, s.studio_translucent)
-                .in_form(text(SETTINGS_APPEARANCE_THEME_STUDIO))
-                .on_change(|checked, _, cx| update_settings(cx, |s| s.studio_translucent = checked)),
-        )
-        .into_any_element()
+fn draw_translucent(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let (settings_on, studio_on) = (settings(cx).settings_translucent, settings(cx).studio_translucent);
+    let settings_box = window.checkbox_control(
+        "translucent-settings".into(),
+        text(SETTINGS_APPEARANCE_SETTINGS),
+        settings_on,
+        window.stepper_enabled("translucent", cx),
+        true,
+        cx,
+        |checked, _, cx| update_settings(cx, |s| s.settings_translucent = checked),
+    );
+    let studio_box = window.checkbox_control(
+        "translucent-studio".into(),
+        text(SETTINGS_APPEARANCE_THEME_STUDIO),
+        studio_on,
+        window.stepper_enabled("translucent", cx),
+        true,
+        cx,
+        |checked, _, cx| update_settings(cx, |s| s.studio_translucent = checked),
+    );
+    div().flex().items_center().gap_4().child(settings_box).child(studio_box).into_any_element()
 }
 
 fn draw_icon_select(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {

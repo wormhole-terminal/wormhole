@@ -57,6 +57,13 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
             changes.sync_diff(cx);
         });
     }),
+    cover_visibility: Some(|entity, visible, cx| {
+        let changes = typed(entity);
+        let changes = changes.read(cx);
+        if let Some(host) = &changes.native_diff_segments {
+            host.set_suspended(!visible || changes.diff.is_none() || changes.commenting.is_some());
+        }
+    }),
     cover: Some(CoverDef {
         open: |entity, cx| typed(entity).read(cx).diff.is_some(),
         view: |entity, facts, window, cx| {

@@ -358,7 +358,7 @@ pub(super) fn profile_new(ctx: &mut Ctx, arg: &str) -> Result<String> {
             .and_then(|()| state.profiles.save(&root))
             .map_err(|err| anyhow!("{err}"))?;
     }
-    Ok(id.to_string())
+    Ok(format!("{id}\n"))
 }
 
 /// `profiles`: one a line, `*` on the shown one.

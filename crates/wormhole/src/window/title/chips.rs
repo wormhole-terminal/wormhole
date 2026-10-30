@@ -8,8 +8,6 @@
 //! VoiceOver.
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Selectable;
-use gpui_kit::component::popover::Popover;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -18,7 +16,7 @@ use wormhole_core::git::pr::{Checks, PrState, PullRequest};
 use wormhole_core::view::layout::title_row::{Extra, Extras};
 use wormhole_core::view::title_extras::{more_ports_words, port_label, port_url, port_words, ports_shown};
 
-use crate::select;
+use crate::platform::{self, Item, Menu};
 use crate::settings::{UiColors, ui_in};
 use crate::style;
 use crate::window::Workspace;
@@ -28,8 +26,6 @@ use crate::window::title::extras::ExtraFacts;
 
 /// The gap in front of each chip (the row's, and the ports' `ml_2` between theirs).
 const CHIP_GAP: f32 = 8.0;
-/// The menu under "+n", wide enough for `localhost:65535`.
-const MORE_PORTS_W: f32 = 168.0;
 
 impl Workspace {
     /// How wide each extra is with the gap in front of it (what `fit_row` weighs), and how wide
@@ -182,45 +178,39 @@ impl Workspace {
 
     /// The ports without a chip, in a menu under "+n": each opens in the browser.
     fn more_ports_chip(&self, rest: &[u16], ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+        let anchor = platform::Anchor::default();
+        let menu_anchor = anchor.clone();
         let this = cx.weak_entity();
-        let on_open = this.clone();
-        let ports = rest.to_vec();
-        let trigger = MoreTrigger {
-            ui,
-            text: format!("+{}", rest.len()).into(),
-            words: more_ports_words(rest).into(),
-            open: false,
-        };
-        let popover = Popover::new("title-more-ports-menu")
-            .anchor(Anchor::TopRight)
-            .offset(px(4.0))
-            .open(self.ports_menu)
-            .on_open_change(move |open, _, cx| {
-                on_open
-                    .update(cx, |this, cx| {
-                        this.ports_menu = *open;
+        let menu = rest
+            .iter()
+            .fold(Menu::new(), |menu, &port| {
+                menu.item(Item::new(port_label(port)).on_select(move |_, cx| cx.open_url(&port_url(port))))
+            })
+            .on_close(move |_, cx| {
+                this.update(cx, |this, cx| {
+                    this.ports_menu = false;
+                    cx.notify();
+                })
+                .ok();
+            });
+        let words: SharedString = more_ports_words(rest).into();
+        let tip = words.clone();
+        div()
+            .relative()
+            .ml_2()
+            .debug_selector(|| "title-more-ports".into())
+            .child(anchor.probe())
+            .child(
+                gpui_kit::base::Button::new("title-more-ports")
+                    .accessibility_label(words)
+                    .tooltip(move |window, cx| Tooltip::new(tip.clone()).build(window, cx))
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        this.ports_menu = true;
                         cx.notify();
-                    })
-                    .ok();
-            })
-            .trigger(trigger);
-        select::menu_surface(popover, ui, px(MORE_PORTS_W), select::menu_bg(ui, cx))
-            .p_1()
-            .content(move |_, _, _| {
-                div().flex().flex_col().children(ports.iter().map(|&port| {
-                    let this = this.clone();
-                    style::row(("title-more-port", u64::from(port)), ui, false)
-                        .child(div().flex_1().child(port_label(port)))
-                        .on_click(move |_, _, cx| {
-                            cx.open_url(&port_url(port));
-                            this.update(cx, |this, cx| {
-                                this.ports_menu = false;
-                                cx.notify();
-                            })
-                            .ok();
-                        })
-                }))
-            })
+                        platform::show_menu(menu.clone(), menu_anchor.below(), window, cx);
+                    }))
+                    .child(style::extra_chip(ui, self.ports_menu, None, format!("+{}", rest.len()))),
+            )
             .into_any_element()
     }
 }
@@ -275,41 +265,6 @@ fn pull_request_chip(pr: &PullRequest, ui: UiColors) -> AnyElement {
         .tooltip(move |window, cx| Tooltip::new(tip.clone()).build(window, cx))
         .on_click(move |_, _, cx| cx.open_url(&url))
         .into_any_element()
-}
-
-/// "+2": the chip the ports without one of their own are behind. `Popover` marks it open while its
-/// menu shows, and it takes the neutral fill then.
-#[derive(IntoElement)]
-struct MoreTrigger {
-    ui: UiColors,
-    text: SharedString,
-    words: SharedString,
-    open: bool,
-}
-
-impl Selectable for MoreTrigger {
-    fn selected(mut self, selected: bool) -> Self {
-        self.open = selected;
-        self
-    }
-
-    fn is_selected(&self) -> bool {
-        self.open
-    }
-}
-
-impl RenderOnce for MoreTrigger {
-    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
-        let tip = self.words.clone();
-        div()
-            .id("title-more-ports")
-            .ml_2()
-            .role(Role::Button)
-            .aria_label(self.words)
-            .cursor_pointer()
-            .child(style::extra_chip(self.ui, self.open, None, self.text))
-            .tooltip(move |window, cx| Tooltip::new(tip.clone()).build(window, cx))
-    }
 }
 
 /// What a plan's extras are, for devctl's `title`: what is drawn and what the row gave up.

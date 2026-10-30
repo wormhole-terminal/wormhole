@@ -36,8 +36,17 @@ pub enum Event {
     /// A key with the field as it was, for a caller that has no panel to have decided (a test, devctl): the
     /// picker decides.
     Key(Key, Field),
-    /// A click on the line at this place in the list.
+    /// A scripted click on a line of the list.
+    #[cfg(any(test, feature = "devctl"))]
     Row(usize),
+    /// A click on a row as it appeared when pressed.
+    RowKey { at: usize, key: String },
+    /// A secondary click on a row that offers a context menu.
+    ContextKey { at: usize, key: String },
+    /// The pointer entered a row; its key rejects events from a recycled or changed row.
+    Hover { at: usize, key: String },
+    /// A choice in the panel's optional segmented control.
+    Segment(usize),
     /// A click on a step of the breadcrumb.
     Crumb(usize),
     /// The wheel or the trackpad: this many lines.
@@ -54,11 +63,22 @@ pub enum Line<'a> {
     Note(&'a str),
 }
 
+/// The optional filter above the list, owned by the picker rather than AppKit.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Segments {
+    pub labels: Vec<String>,
+    pub selected: usize,
+    pub label: String,
+    /// A short status next to the control, such as the number of results.
+    pub status: String,
+}
+
 /// Everything the panel shows.
 #[derive(Clone, Copy, Debug)]
 pub struct View<'a> {
     /// The lines in view, and nothing else: a list of hundreds costs the panel its few lines.
     pub lines: &'a [Line<'a>],
+    pub segments: Option<&'a Segments>,
     /// Where `lines` start in the whole list: what a click on one reports (`Event::Row`).
     pub top: usize,
     /// The selected row's place in the whole list.
@@ -82,15 +102,19 @@ pub struct View<'a> {
 pub const WIDTH: f32 = 480.0;
 pub const ROW: f32 = 28.0;
 pub const MAX_ROWS: usize = 9;
+/// Number of compact status indicators visible beside a row.
+pub const MAX_INDICATORS: usize = 4;
 /// What the panel has besides rows: its padding, the field, the hint line below the list, and the breadcrumb.
 const CHROME: f32 = 76.0;
 const CRUMBS: f32 = 26.0;
+/// Space below the search field for an optional native segmented control.
+const SEGMENTS: f32 = 30.0;
 
 /// The panel as the placement rules (`view::picker::place`) need it.
-pub fn card(has_crumbs: bool) -> Card {
+pub fn card(has_crumbs: bool, has_segments: bool) -> Card {
     Card {
         width: WIDTH,
-        chrome: CHROME + if has_crumbs { CRUMBS } else { 0.0 },
+        chrome: CHROME + if has_crumbs { CRUMBS } else { 0.0 } + if has_segments { SEGMENTS } else { 0.0 },
         row: ROW,
         max_rows: MAX_ROWS,
     }
@@ -115,5 +139,9 @@ pub struct Info {
     /// What the ghost label says, and the rows' labels in view, as the panel shows them.
     pub ghost: String,
     pub rows: Vec<String>,
+    /// The AppKit font names applied to the visible row labels.
+    pub row_fonts: Vec<Option<String>>,
     pub crumbs: Vec<String>,
+    /// Labels, selected index and status shown by the optional native filter.
+    pub segments: Option<(Vec<String>, usize, String)>,
 }

@@ -100,6 +100,8 @@ fn fill(mut popup: PopupMenu, menu: &Menu, window: &mut Window, cx: &mut Context
             Entry::Separator => popup.separator(),
             Entry::Header(title) => popup.label(title.clone()),
             Entry::Item(item) => {
+                let title: SharedString =
+                    crate::platform::menu::display_title(&item.title, item.subtitle.as_deref(), false).into();
                 let run = item.on_select.clone();
                 let click = move |_: &ClickEvent, window: &mut Window, cx: &mut App| {
                     if let Some(run) = &run {
@@ -107,9 +109,9 @@ fn fill(mut popup: PopupMenu, menu: &Menu, window: &mut Window, cx: &mut Context
                     }
                 };
                 let shown = match &item.icon {
-                    None => PopupMenuItem::new(item.title.clone()),
+                    None => PopupMenuItem::new(title.clone()),
                     Some(icon) => {
-                        let (title, icon) = (item.title.clone(), icon.clone());
+                        let icon = icon.clone();
                         PopupMenuItem::element(move |_, cx| with_icon(&icon, title.clone(), cx))
                     }
                 };
@@ -150,6 +152,19 @@ fn with_icon(icon: &Icon, title: SharedString, cx: &App) -> AnyElement {
             .bg(crate::settings::ui(cx).hover)
             .text_caption()
             .child(letters.clone())
+            .into_any_element(),
+        Icon::Avatar { letter, background, foreground } => div()
+            .flex_none()
+            .size_4()
+            .flex()
+            .items_center()
+            .justify_center()
+            .rounded_full()
+            .bg(*background)
+            .text_color(*foreground)
+            .text_caption()
+            .font_weight(FontWeight::BOLD)
+            .child(letter.clone())
             .into_any_element(),
         // SF Symbols are Apple's: this menu has no picture for one, only the title.
         Icon::Symbol(_) => return title.into_any_element(),

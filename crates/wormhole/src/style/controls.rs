@@ -267,6 +267,69 @@ pub fn segmented_form(ui: UiColors) -> Div {
         .bg(ui.hover)
 }
 
+#[cfg(all(test, feature = "devctl"))]
+mod segment_tests {
+    use super::{form_segment, segmented_form};
+    use crate::settings::{SettingsStore, ui};
+    use gpui_kit::prelude::*;
+    use gpui_kit::{
+        Context, IntoElement, KeyDownEvent, KeyUpEvent, Keystroke, Render, TestAppContext, VisualTestContext,
+        Window, WindowOptions, div,
+    };
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    #[gpui_kit::test]
+    fn form_segments_are_keyboard_focusable_and_activatable(cx: &mut TestAppContext) {
+        struct Form(Rc<RefCell<Vec<usize>>>);
+        impl Render for Form {
+            fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+                let colors = ui(cx);
+                let first = self.0.clone();
+                let second = self.0.clone();
+                div().tab_group().child(
+                    segmented_form(colors)
+                        .child(
+                            form_segment("first", colors, None, "First", true)
+                                .on_click(move |_, _, _| first.borrow_mut().push(0)),
+                        )
+                        .child(
+                            form_segment("second", colors, None, "Second", false)
+                                .on_click(move |_, _, _| second.borrow_mut().push(1)),
+                        ),
+                )
+            }
+        }
+        let changes = Rc::new(RefCell::new(Vec::new()));
+        let handle = cx.update(|cx| {
+            gpui_kit::init(cx);
+            cx.set_global(SettingsStore::for_test());
+            gpui_kit::open_window(WindowOptions::default(), cx, |_, cx| cx.new(|_| Form(changes.clone())))
+                .expect("opens the window")
+                .0
+        });
+        let mut window = VisualTestContext::from_window(handle, cx);
+        window.run_until_parked();
+        window.update(|window, cx| {
+            window.draw(cx).clear(cx);
+            window.focus_next(cx);
+        });
+        window.update(|window, cx| {
+            window.draw(cx).clear(cx);
+            window.focus_next(cx);
+        });
+        window.update(|window, cx| window.draw(cx).clear(cx));
+        let key = Keystroke::parse("space").expect("space");
+        window.simulate_event(KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        window.simulate_event(KeyUpEvent { keystroke: key });
+        assert_eq!(&*changes.borrow(), &[1]);
+    }
+}
+
 /// One option of a [`segmented_form`], with an optional icon before its label ("Dark",
 /// "Light", "Match system"); add `.on_click(…)`.
 #[track_caller]
@@ -276,9 +339,12 @@ pub fn form_segment(
     icon: Option<IconName>,
     label: impl Into<SharedString>,
     active: bool,
-) -> Stateful<Div> {
-    div()
-        .id(id)
+) -> gpui_kit::base::Button {
+    let label = label.into();
+    gpui_kit::base::Button::new(id)
+        .role(Role::RadioButton)
+        .aria_selected(active)
+        .accessibility_label(label.clone())
         .flex()
         .items_center()
         .gap(px(SEGMENT_ICON_GAP))
@@ -290,9 +356,10 @@ pub fn form_segment(
         .cursor_pointer()
         .text_color(if active { ui.on_selected } else { ui.muted })
         .when(active, |d| d.bg(ui.selected_chip))
+        .focus_visible(move |style| style.bg(ui.active))
         .hover(move |d| if active { d } else { d.text_color(ui.text) })
         .children(icon.map(|icon| Icon::new(icon).with_size(px(super::scale::GLYPH))))
-        .child(label.into())
+        .child(label)
 }
 
 /// A color to pick (the primary in Settings → Appearance): a [`SWATCH`] square in the

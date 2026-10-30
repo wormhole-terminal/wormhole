@@ -97,7 +97,7 @@ pub(super) const SETTINGS: &[Setting] = &[
 ];
 
 /// Default terminal: makes Wormhole the app that runs opened scripts, or says that it is.
-fn draw_default_terminal(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_default_terminal(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let state = default_app::is_default();
     let (icon, label, tooltip) = match state {
         Some(true) => (
@@ -116,6 +116,31 @@ fn draw_default_terminal(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
             text(SETTINGS_TERMINAL_DEFAULT_ONLY_APP),
         ),
     };
+    let this = cx.weak_entity();
+    if let Some(button) = window.native_button_with_tooltip(
+        "default-terminal",
+        label,
+        state == Some(false),
+        false,
+        Some(tooltip.into()),
+        cx,
+        move |_, cx| {
+            if default_app::is_default() != Some(false) {
+                return;
+            }
+            this.update(cx, |this, cx| {
+                if let Err(err) = default_app::make_default() {
+                    tracing::warn!("making Wormhole the default terminal: {err:#}");
+                    this.notice =
+                        Some((Section::Terminal, settings_terminal_default_failed(&err.to_string()).into()));
+                }
+                cx.notify();
+            })
+            .ok();
+        },
+    ) {
+        return button;
+    }
     Button::new("default-terminal")
         .outline()
         .small()

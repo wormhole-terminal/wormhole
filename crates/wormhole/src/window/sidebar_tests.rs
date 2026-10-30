@@ -355,8 +355,36 @@ fn the_profile_chip_is_drawn_only_while_there_are_two_profiles(cx: &mut TestAppC
         cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.profile_chip_shown(cx))).expect("open")
     );
     draw(cx, &window);
-    // Its menu opens and closes with the chip.
-    assert!(sidebar_of(cx, &window, |sidebar| !sidebar.profile_menu_open()));
+    crate::platform::record::close();
+    let at = pointer(cx, &window).debug_bounds("profile-chip").expect("profile chip").center();
+    click(cx, &window, at);
+    let menu = crate::platform::record::open().expect("the profile menu opened");
+    let outline = menu.outline();
+    assert!(outline.contains(&"- Default — current [x]".to_string()), "{outline:?}");
+    assert!(outline.contains(&"- Work — every window switches".to_string()), "{outline:?}");
+    assert!(outline.contains(&"  - Default — this window".to_string()), "{outline:?}");
+    assert!(outline.contains(&"> Open a window in".to_string()), "{outline:?}");
+    assert!(outline.contains(&"> Move this window to".to_string()), "{outline:?}");
+    assert!(
+        menu.leaves()
+            .iter()
+            .filter(|leaf| leaf.item.title == "Work")
+            .all(|leaf| matches!(&leaf.item.icon, Some(crate::platform::Icon::Avatar { .. })))
+    );
+    let (_, callbacks) = crate::platform::record::pick("Open a window in > Work").expect("Work can open");
+    cx.update(|cx| {
+        window
+            .handle
+            .update(cx, |_, window, cx| {
+                for callback in callbacks {
+                    callback(window, cx);
+                }
+            })
+            .expect("runs the selected action")
+    });
+    cx.run_until_parked();
+    assert!(crate::platform::record::open().is_none());
+    assert!(cx.update(|cx| crate::app_state::app(cx).windows.iter().any(|w| w.profile.as_str() == "work")));
 }
 
 // ---------------------------------------------------------------- scrolling

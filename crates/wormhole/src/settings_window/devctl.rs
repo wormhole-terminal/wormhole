@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{Query, SectionId as Section};
 use wormhole_core::import::{self, Env, Source};
+#[cfg(feature = "devctl")]
 use wormhole_core::theme::fonts::FontSlot;
 use wormhole_core::view::sidebar::Density;
 
@@ -139,16 +140,43 @@ pub(crate) fn project(root: &str, cx: &mut App) {
     let root = PathBuf::from(root);
     with_page(cx, move |page, _, cx| {
         page.show_section(Section::Projects, cx);
+        page.projects.close_picker(cx);
         page.projects.select(root);
     });
 }
 
+/// Inspect or pick from the project selector, including its native panel.
+#[cfg(feature = "devctl")]
+pub(crate) fn project_picker(arg: &str, cx: &mut App) -> String {
+    if arg.trim() == "segments" {
+        with_page(cx, |page, _, cx| page.projects.devctl_segments(cx));
+        return String::new();
+    }
+    if let Some(row) = arg.trim().strip_prefix("hover ").and_then(|at| at.parse::<usize>().ok()) {
+        with_page(cx, move |page, _, cx| page.projects.devctl_hover(row, cx));
+        return String::new();
+    }
+    if arg.trim() == "pick" {
+        with_page(cx, |page, _, cx| {
+            page.projects.devctl_pick(cx);
+        });
+        return String::new();
+    }
+    current_window(cx)
+        .map(|(_, page)| page.read(cx).projects.devctl_state(cx))
+        .unwrap_or_else(|| "settings window closed\n".into())
+}
+
 /// devctl: open the project select's menu in Settings → Project folders.
+#[cfg(feature = "devctl")]
 pub(crate) fn project_menu(query: &str, cx: &mut App) {
     let query = query.to_string();
     with_page(cx, move |page, window, cx| {
         page.show_section(Section::Projects, cx);
-        page.projects.devctl_open(query, window, cx);
+        cx.on_next_frame(window, move |page, window, cx| {
+            page.open_project_picker(window, cx);
+            page.projects.devctl_query(query, window, cx);
+        });
     });
 }
 
@@ -221,6 +249,7 @@ pub(crate) fn shot(path: PathBuf, out: PathBuf, cx: &mut App) {
 
 /// devctl: expand a font picker in the settings window, optionally searching
 /// (the window opens deferred, so the first call on a closed window only opens it).
+#[cfg(feature = "devctl")]
 pub(crate) fn font_picker(arg: &str, cx: &mut App) {
     let (slot, query) = arg.trim().split_once(' ').unwrap_or((arg.trim(), ""));
     let Some(slot) = FontSlot::from_key(slot) else { return };
@@ -232,9 +261,28 @@ pub(crate) fn font_picker(arg: &str, cx: &mut App) {
             if page.font_picker.open != Some(slot) {
                 page.toggle_font_picker(slot, window, cx);
             }
-            page.font_picker.search.update(cx, |input, cx| input.set_value(query, window, cx));
+            page.font_picker.set_query(query, window, cx);
         })
     });
+}
+
+#[cfg(feature = "devctl")]
+pub(crate) fn font_native(arg: &str, cx: &mut App) -> String {
+    let event = match arg.trim() {
+        "all" => Some(crate::platform::picker::Event::Segment(1)),
+        "mono" => Some(crate::platform::picker::Event::Segment(0)),
+        "pick" => Some(crate::platform::picker::Event::Do(wormhole_core::view::picker::Do::Pick)),
+        _ => None,
+    };
+    if let Some(event) = event {
+        with_page(cx, move |page, _, cx| page.font_picker.devctl_event(event, cx));
+        return String::new();
+    }
+    let active = crate::platform::dock::app_is_active(cx);
+    let state = current_window(cx)
+        .map(|(_, page)| page.read(cx).font_picker.devctl_state(cx))
+        .unwrap_or_else(|| "settings window closed\n".into());
+    format!("app active {active}\n{state}")
 }
 
 /// Run `f` on the settings window's page after this update (devctl runs inside a workspace's).

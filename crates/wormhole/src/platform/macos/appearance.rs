@@ -29,7 +29,7 @@ thread_local! {
 
 /// AppKit's appearance for `appearance`.
 #[allow(unsafe_code)]
-fn ns_appearance(appearance: Appearance) -> Option<Retained<NSAppearance>> {
+pub(super) fn ns_appearance(appearance: Appearance) -> Option<Retained<NSAppearance>> {
     // SAFETY: AppKit's appearance names are immutable statics, set before main runs.
     let name = unsafe {
         match appearance {
@@ -38,6 +38,11 @@ fn ns_appearance(appearance: Appearance) -> Option<Retained<NSAppearance>> {
         }
     };
     NSAppearance::appearanceNamed(name)
+}
+
+/// The appearance currently applied to the app's native window materials.
+pub(super) fn current() -> Option<Retained<NSAppearance>> {
+    CURRENT.get().and_then(ns_appearance)
 }
 
 /// The theme's appearance is now `appearance`: every view that follows it is drawn that way. Does

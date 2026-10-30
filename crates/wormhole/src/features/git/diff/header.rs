@@ -231,7 +231,46 @@ impl Changes {
             })
             .map(|d| {
                 if controls.switch {
-                    d.child(
+                    let layout = if let Some(native) = &self.native_diff_segments {
+                        let options = ["Split", "Unified"]
+                            .into_iter()
+                            .map(|label| crate::platform::controls::SegmentOption {
+                                label: label.to_string(),
+                                symbol: None,
+                            })
+                            .collect::<Vec<_>>();
+                        let id = self.diff_segment_id();
+                        let owner = cx.weak_entity();
+                        let host = native.clone();
+                        let event_id = id.clone();
+                        let change = std::rc::Rc::new(move |index: usize, _: &mut Window, cx: &mut App| {
+                            if index >= 2 || !host.accepts(&event_id) {
+                                return;
+                            }
+                            let _ = owner.update(cx, |this, cx| {
+                                if this.diff.is_some()
+                                    && this.commenting.is_none()
+                                    && this.diff_segment_id() == event_id
+                                {
+                                    this.set_diff_split(index == 0, cx);
+                                }
+                            });
+                        });
+                        crate::style::native_segments::NativeSegments {
+                            native: native.clone(),
+                            id: id.into(),
+                            metrics: native.metrics(&options),
+                            options,
+                            accessibility_labels: None,
+                            selected: if split { 0 } else { 1 },
+                            enabled: true,
+                            hover: None,
+                            focus: self.diff_segment_focus.clone(),
+                            appearance: crate::settings::store_in(&self.profile, cx).tokens.appearance,
+                            change,
+                        }
+                        .into_any_element()
+                    } else {
                         style::segmented(ui)
                             .child(
                                 style::segment("diff-split", ui, "Split", split)
@@ -240,9 +279,10 @@ impl Changes {
                             .child(
                                 style::segment("diff-unified", ui, "Unified", !split)
                                     .on_click(cx.listener(|this, _, _, cx| this.set_diff_split(false, cx))),
-                            ),
-                    )
-                    .child(
+                            )
+                            .into_any_element()
+                    };
+                    d.child(layout).child(
                         div()
                             .id("diff-close")
                             .flex()

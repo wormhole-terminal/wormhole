@@ -123,6 +123,7 @@ fn let_programs_print(cx: &TestAppContext) {
 /// table, all of which `app::launch` sets. A test that opens a window sets them here, so none can lack
 /// one and a test window has the features the app's has ([`start_with_table`] swaps the table).
 pub(crate) fn set_shared_state(cx: &mut App) {
+    cx.set_global(crate::platform::MenuAppearance(crate::app_state::look::menu_appearance));
     cx.set_global(AppState::for_test(100));
     cx.set_global(crate::update::Updates::new(None, None));
     crate::features::install(cx);

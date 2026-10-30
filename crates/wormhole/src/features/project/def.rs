@@ -59,6 +59,13 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         rehomed: Some(look),
     }),
     refresh: Some(look),
+    panel_visibility: Some(|entity, visible, cx| {
+        let project = typed(entity);
+        let project = project.read(cx);
+        if let Some(host) = &project.native_switches {
+            host.set_suspended(!visible || project.picker.read(cx).is_open());
+        }
+    }),
     approves_programs: Some(approves_programs),
     spawn: Some(detect::spawn_options),
     trust: Some(TrustHooks {

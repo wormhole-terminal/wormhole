@@ -41,10 +41,11 @@ mod trust_window;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
 use gpui_kit::*;
-use wormhole_core::project::NotesDoc;
+use wormhole_core::project::{Feature, NotesDoc};
 use wormhole_core::storage::paths::ProfileId;
 
 use crate::window::feature::FeatureEvent;
@@ -82,9 +83,15 @@ pub(crate) struct Project {
     /// The Project tab's colour picker for the active terminal's folder.
     picker: Entity<ColorPickerState>,
     _picker_subscription: Subscription,
+    _picker_observation: Subscription,
     /// The profile and folder the tab was last drawn for: what a colour picked in the picker is for. The
     /// picker's event comes with neither, and the window isn't asked (a feature never reaches it).
     drawn_for: Option<(ProfileId, PathBuf)>,
+    native_switches: Option<Rc<crate::platform::controls::Switches>>,
+    switch_focus: HashMap<Feature, FocusHandle>,
+    switch_scope: Option<(ProfileId, PathBuf)>,
+    switch_epoch: u64,
+    _switch_events: Option<Task<()>>,
 }
 
 impl EventEmitter<FeatureEvent> for Project {}
@@ -106,12 +113,60 @@ impl Project {
             let ColorPickerEvent::Change(Some(color)) = event else { return };
             this.pick_color(*color, cx);
         });
+        let picker_observation = cx.observe(&picker, |_, _, cx| cx.notify());
+        let switch_focus = Feature::ALL.into_iter().map(|feature| (feature, cx.focus_handle())).collect();
+        let (events, rx) = smol::channel::unbounded();
+        let native_switches = crate::platform::controls::Switches::new(window, events, cx).map(Rc::new);
+        let switch_events = native_switches.as_ref().map(|_| {
+            cx.spawn_in(window, async move |this, cx| {
+                while let Ok(event) = rx.recv().await {
+                    if this
+                        .update_in(cx, |this, window, cx| {
+                            if !this.native_switches.as_ref().is_some_and(|host| host.accepts(&event.id)) {
+                                return;
+                            }
+                            let Some((profile, root)) = this.switch_scope.clone() else { return };
+                            let Some(feature) =
+                                Feature::ALL.into_iter().find(|feature| event.id == this.switch_id(*feature))
+                            else {
+                                return;
+                            };
+                            window.focus(&this.switch_focus[&feature], cx);
+                            set_feature_for(&profile, &root, feature, Some(event.on), cx);
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            })
+        });
         Self {
             of: HashMap::new(),
             folder_projects: HashMap::new(),
             picker,
             _picker_subscription: subscription,
+            _picker_observation: picker_observation,
             drawn_for: None,
+            native_switches,
+            switch_focus,
+            switch_scope: None,
+            switch_epoch: 0,
+            _switch_events: switch_events,
+        }
+    }
+
+    fn switch_id(&self, feature: Feature) -> String {
+        format!("project-switch-{}-{}", self.switch_epoch, feature.key())
+    }
+
+    fn switch_scope(&mut self, scope: Option<(ProfileId, PathBuf)>) {
+        if self.switch_scope != scope {
+            self.switch_epoch = self.switch_epoch.wrapping_add(1);
+            self.switch_scope = scope;
+            if let Some(host) = &self.native_switches {
+                host.forget_prefix("project-switch-");
+            }
         }
     }
 

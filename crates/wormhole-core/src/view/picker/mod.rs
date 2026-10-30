@@ -56,4 +56,4 @@ pub use model::{DecorationRequest, Model, Outcome, Request, Snapshot, Target};
 pub use place::{Card, GAP, MARGIN, Placed, place};
 pub use provider::{Cancel, Decorator, Provider};
 pub use shown::{Item, Reading, Shown};
-pub use types::{Answer, Context, Crumb, Decoration, Note, Query, Row};
+pub use types::{Answer, Context, Crumb, Decoration, Indicator, IndicatorTone, Note, Query, Row};

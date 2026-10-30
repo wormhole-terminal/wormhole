@@ -206,6 +206,10 @@ impl FolderPicker {
                 self.pick(path, window, cx);
             }
             PickerEvent::Forget(key) => self.forget(key, cx),
+            PickerEvent::Context(_)
+            | PickerEvent::Highlight(_)
+            | PickerEvent::Segment(_)
+            | PickerEvent::Status(_) => {}
             PickerEvent::Close => self.close(window, cx),
         }
     }

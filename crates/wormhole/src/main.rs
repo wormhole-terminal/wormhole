@@ -116,6 +116,7 @@ fn main() {
         // Before any window: the words it draws are in this language from the first frame.
         app::language::init();
         style::menu_layer::install(cx);
+        cx.set_global(platform::MenuAppearance(app_state::look::menu_appearance));
         fonts::init(cx);
         // The profile Wormhole was left in: its files are the ones read from here on. With only
         // Default (no `profiles.json`) these are the data folder's own, where they have always been.

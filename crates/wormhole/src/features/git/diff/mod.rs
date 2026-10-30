@@ -232,6 +232,10 @@ impl Changes {
         let store = store_in(&self.profile, cx);
         let build = BuildKey::of(&store.settings, split_fits, view.syntax(store.revision, &store.tokens));
         let started = view.begin_load(build);
+        self.diff_epoch = self.diff_epoch.wrapping_add(1);
+        if let Some(host) = &self.native_diff_segments {
+            host.forget_prefix_except("diff-layout-", None);
+        }
         self.diff = Some(view);
         // The window shows one cover at a time: a file's viewer that was up comes down.
         cx.emit(FeatureEvent::CoverOpened(FeatureId::Changes));

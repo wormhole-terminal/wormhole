@@ -11,6 +11,7 @@ settings-projects-projects = Project folders
 ## settings_window/sections/projects.rs (labels, hints and notes drawn by this page's code)
 
 settings-projects-search-projects = Search projects
+settings-projects-no-matches = No matching projects
 settings-projects-all-projects-defaults = All projects (defaults)
 settings-projects-all-projects = All projects
 settings-projects-project = Project

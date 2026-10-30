@@ -9,7 +9,7 @@ use std::cell::{Cell, RefCell};
 use std::time::Instant;
 
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, ProtocolObject};
+use objc2::runtime::{AnyObject, NSObjectProtocol as _, ProtocolObject};
 use objc2::{AnyThread, MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
     NSCellImagePosition, NSColor, NSFont, NSImage, NSImageSymbolConfiguration, NSImageSymbolScale, NSMenu,
@@ -277,13 +277,20 @@ fn set_action(item: &NSMenuItem, target: &MenuTarget) {
 
 /// Where a menu's right-aligned times go: past its longest title (an estimate from the menu
 /// font's average width, which is all a tab stop needs).
-fn tab_stop(entries: &[Entry]) -> f64 {
+fn tab_stop(entries: &[Entry], supports_subtitle: bool) -> f64 {
     const CHAR_W: f64 = 7.5;
     const GAP: f64 = 48.0;
     let longest = entries
         .iter()
         .filter_map(|entry| match entry {
-            Entry::Item(item) if item.trailing.is_some() => Some(item.title.chars().count()),
+            Entry::Item(item) if item.trailing.is_some() => Some(
+                item.title.chars().count()
+                    + if supports_subtitle {
+                        0
+                    } else {
+                        item.subtitle.as_ref().map_or(0, |s| 3 + s.chars().count())
+                    },
+            ),
             Entry::Submenu { title, trailing: Some(_), .. } => Some(title.chars().count()),
             _ => None,
         })
@@ -345,13 +352,18 @@ fn menu_item(
     stop: f64,
 ) -> Retained<NSMenuItem> {
     let item = NSMenuItem::new(mtm);
-    item.setTitle(&NSString::from_str(&model.title));
+    let supports_subtitle = item.respondsToSelector(sel!(setSubtitle:));
+    let title =
+        crate::platform::menu::display_title(&model.title, model.subtitle.as_deref(), supports_subtitle);
+    item.setTitle(&NSString::from_str(&title));
     if let Some(trailing) = &model.trailing {
-        item.setAttributedTitle(Some(&title_with_trailing(&model.title, trailing, stop)));
+        item.setAttributedTitle(Some(&title_with_trailing(&title, trailing, stop)));
     }
     if let Some(subtitle) = &model.subtitle {
         let subtitle = NSString::from_str(subtitle);
-        item.setSubtitle(Some(&subtitle));
+        if supports_subtitle {
+            item.setSubtitle(Some(&subtitle));
+        }
         item.setToolTip(Some(&subtitle));
     }
     if let Some(glyph) = model.glyph {
@@ -372,6 +384,29 @@ fn menu_item(
     item
 }
 
+#[cfg(test)]
+mod subtitle_tests {
+    use super::tab_stop;
+    use crate::menubar::model::{Entry, ItemModel};
+    use crate::platform::menu::display_title;
+
+    #[test]
+    fn older_macos_keeps_details_and_room_for_trailing_text() {
+        assert_eq!(display_title("Task", Some("Waiting for input"), false), "Task — Waiting for input");
+        assert_eq!(display_title("Task", Some("Waiting for input"), true), "Task");
+        let entries = [Entry::Item(ItemModel {
+            title: "Task".into(),
+            trailing: Some("2m".into()),
+            subtitle: Some("Waiting for input".into()),
+            glyph: None,
+            key: None,
+            indent: 0,
+            command: None,
+        })];
+        assert!(tab_stop(&entries, false) > tab_stop(&entries, true));
+    }
+}
+
 fn fill(
     mtm: MainThreadMarker,
     menu: &NSMenu,
@@ -380,7 +415,8 @@ fn fill(
     entries: &[Entry],
     colors: StatusColors,
 ) {
-    let stop = tab_stop(entries);
+    let supports_subtitle = NSMenuItem::new(mtm).respondsToSelector(sel!(setSubtitle:));
+    let stop = tab_stop(entries, supports_subtitle);
     for entry in entries {
         let item = match entry {
             // macOS 14 is the minimum: native section headers, no fallback.

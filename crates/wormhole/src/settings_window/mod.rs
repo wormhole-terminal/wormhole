@@ -19,12 +19,19 @@ mod font_picker;
 mod frame_tests;
 #[cfg(test)]
 mod motion_tests;
+mod native_button;
+mod native_segments;
+mod native_slider;
+mod native_stepper;
+mod native_switch;
 mod nav;
 mod open;
 mod preview_column;
 mod recorder;
 mod registry;
 mod sections;
+#[cfg(all(test, feature = "devctl"))]
+mod select_tests;
 #[cfg(test)]
 mod unlock_tests;
 mod window;
@@ -32,7 +39,10 @@ mod window;
 mod words_tests;
 mod zen_note;
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::color_picker::ColorPickerState;
@@ -108,6 +118,26 @@ impl FrontWindow {
 }
 
 pub(crate) struct SettingsWindow {
+    native_buttons: Option<Rc<crate::platform::controls::Buttons>>,
+    native_button_focus: RefCell<HashMap<String, FocusHandle>>,
+    native_button_handlers: RefCell<HashMap<String, native_button::Press>>,
+    _native_button_events: Option<Task<()>>,
+    native_switches: Option<Rc<crate::platform::controls::Switches>>,
+    native_switch_focus: RefCell<HashMap<String, FocusHandle>>,
+    native_switch_handlers: RefCell<HashMap<String, native_switch::Change>>,
+    _native_switch_events: Option<Task<()>>,
+    native_segments: Option<Rc<crate::platform::controls::Segments>>,
+    native_segment_focus: RefCell<HashMap<(String, usize), FocusHandle>>,
+    native_segment_handlers: RefCell<HashMap<String, native_segments::Change>>,
+    _native_segment_events: Option<Task<()>>,
+    native_steppers: Option<Rc<crate::platform::controls::Steppers>>,
+    native_stepper_focus: RefCell<HashMap<String, FocusHandle>>,
+    native_stepper_handlers: RefCell<HashMap<String, native_stepper::Change>>,
+    _native_stepper_events: Option<Task<()>>,
+    native_sliders: Option<Rc<crate::platform::controls::Sliders>>,
+    native_slider_focus: RefCell<HashMap<String, FocusHandle>>,
+    native_slider_handlers: RefCell<HashMap<String, native_slider::Change>>,
+    _native_slider_events: Option<Task<()>>,
     section: Section,
     /// The window in front, as the last refresh read it.
     front: FrontWindow,
@@ -124,9 +154,8 @@ pub(crate) struct SettingsWindow {
     primary_picker: Entity<ColorPickerState>,
     /// Appearance → the "+" after the branch color's swatches: any color.
     branch_picker: Entity<ColorPickerState>,
-    /// The select whose menu is open (by its row id), and the search box the select menus share.
+    /// A devctl request to open a select by row id on its next draw.
     open_select: Option<&'static str>,
-    menu_search: Entity<InputState>,
     opacity_slider: Entity<SliderState>,
     line_height_slider: Entity<SliderState>,
     /// Fonts → which font the specimen shows.

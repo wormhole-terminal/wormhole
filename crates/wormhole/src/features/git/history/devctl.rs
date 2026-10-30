@@ -68,7 +68,7 @@ pub(crate) fn picker(ws: &mut Workspace, query: &str, window: &mut Window, cx: &
         if !history.picker().is_open() {
             history.picker_mut().toggle(session, terminal, window, cx);
         }
-        history.picker().search().update(cx, |search, cx| search.set_value(query, window, cx));
+        history.picker().set_query(&query, window, cx);
     });
 }
 

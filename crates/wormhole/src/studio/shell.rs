@@ -30,7 +30,10 @@ impl Render for StudioWindow {
             .id("studio-window")
             .track_focus(&self.focus_handle)
             .key_context("StudioWindow")
-            .on_key_down(cx.listener(Self::on_key))
+            .on_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
+                crate::style::native_focus::keyboard(window);
+                this.on_key(event, window, cx);
+            }))
             .size_full()
             .flex()
             .flex_col()

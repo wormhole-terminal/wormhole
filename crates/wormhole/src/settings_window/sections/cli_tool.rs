@@ -158,6 +158,28 @@ fn describe(window: &SettingsWindow, _: &mut Context<SettingsWindow>) -> Option<
 
 /// Install, Update and Uninstall.
 fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let native_action = |id: &'static str,
+                         label: &'static str,
+                         enabled: bool,
+                         primary: bool,
+                         tooltip: Option<SharedString>,
+                         cx: &mut Context<SettingsWindow>| {
+        let expected = window.cli_tool.status.clone();
+        let this = cx.weak_entity();
+        window.native_button_with_tooltip(id, label, enabled, primary, tooltip, cx, move |_, cx| {
+            if current_status() != expected {
+                return;
+            }
+            this.update(cx, |this, cx| {
+                if id == "cli-native-uninstall" {
+                    this.uninstall_cli_tool(cx);
+                } else {
+                    this.install_cli_tool(cx);
+                }
+            })
+            .ok();
+        })
+    };
     let install = |label: &'static str, cx: &mut Context<SettingsWindow>| {
         Button::new("cli-tool-install")
             .small()
@@ -174,15 +196,60 @@ fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement
     };
     let row = div().flex().items_center().gap_2();
     match &window.cli_tool.status {
+        Status::NotInstalled if window.native_buttons.is_some() => row
+            .child(
+                native_action(
+                    "cli-native-install",
+                    text(SETTINGS_AGENTS_INSTALL),
+                    true,
+                    true,
+                    Some(settings_agents_cli_install_tooltip(COMMAND_NAME).into()),
+                    cx,
+                )
+                .unwrap_or_else(|| {
+                    install(text(SETTINGS_AGENTS_INSTALL), cx)
+                        .tooltip(settings_agents_cli_install_tooltip(COMMAND_NAME))
+                        .into_any_element()
+                }),
+            )
+            .into_any_element(),
         Status::NotInstalled => row
             .child(
                 install(text(SETTINGS_AGENTS_INSTALL), cx)
                     .tooltip(settings_agents_cli_install_tooltip(COMMAND_NAME)),
             )
             .into_any_element(),
+        Status::Installed { current, .. } if window.native_buttons.is_some() => {
+            let update = (!current).then(|| {
+                native_action("cli-native-update", text(SETTINGS_AGENTS_UPDATE), true, true, None, cx)
+                    .unwrap_or_else(|| install(text(SETTINGS_AGENTS_UPDATE), cx).into_any_element())
+            });
+            let remove =
+                native_action("cli-native-uninstall", text(SETTINGS_AGENTS_UNINSTALL), true, false, None, cx)
+                    .unwrap_or_else(|| uninstall(cx).into_any_element());
+            row.children(update).child(remove).into_any_element()
+        }
         Status::Installed { current, .. } => row
             .when(!current, |row| row.child(install(text(SETTINGS_AGENTS_UPDATE), cx)))
             .child(uninstall(cx))
+            .into_any_element(),
+        Status::Foreign { .. } if window.native_buttons.is_some() => row
+            .child(
+                native_action(
+                    "cli-native-foreign",
+                    text(SETTINGS_AGENTS_INSTALL),
+                    false,
+                    true,
+                    Some(settings_agents_cli_foreign_tooltip(COMMAND_NAME).into()),
+                    cx,
+                )
+                .unwrap_or_else(|| {
+                    install(text(SETTINGS_AGENTS_INSTALL), cx)
+                        .disabled(true)
+                        .tooltip(settings_agents_cli_foreign_tooltip(COMMAND_NAME))
+                        .into_any_element()
+                }),
+            )
             .into_any_element(),
         Status::Foreign { .. } => row
             .child(

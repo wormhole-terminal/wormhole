@@ -286,6 +286,10 @@ pub(crate) struct FeatureDef {
     /// The panel's tab was shown (any tab, also the one already on show): a feature drops what only
     /// belongs to its own tab being on show (a branch picker that is open).
     pub tab_changed: Option<TabChangedFn>,
+    /// Cover or reveal native views owned by a cached panel surface.
+    pub panel_visibility: Option<fn(&AnyEntity, bool, &mut App)>,
+    /// Cover or reveal native views owned by a feature's terminal cover.
+    pub cover_visibility: Option<fn(&AnyEntity, bool, &mut App)>,
     /// The title row's branch chip: what a click on it opens (Changes' "compare with").
     pub branch_chip: Option<BranchChip>,
     /// What the first run asks of the folder's project: which one the terminal in front is in, the trust
@@ -318,6 +322,8 @@ impl FeatureDef {
         spawn: None,
         cover: None,
         tab_changed: None,
+        panel_visibility: None,
+        cover_visibility: None,
         branch_chip: None,
         trust: None,
         worktree: None,

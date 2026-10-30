@@ -138,6 +138,9 @@ settings-appearance-primary-theme = The theme's · { $color }. { $description }
 # theme's own branch colour, as a hex code.
 settings-appearance-branch-pick = Pick a colour below · the theme's is { $color }
 
+# Opens the system colour picker for a custom accent or branch colour.
+settings-appearance-pick-colour = Pick a colour
+
 # Over the theme picker in a project's terminal. { $project } is the project's name.
 settings-appearance-project-theme-note = This terminal shows { $project }'s theme. Your own is kept for everything else.
 

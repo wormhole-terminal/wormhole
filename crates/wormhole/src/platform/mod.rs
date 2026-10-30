@@ -33,6 +33,7 @@ pub mod apps;
 pub mod auth;
 pub mod background_mode;
 pub mod clipboard;
+pub mod controls;
 pub mod default_app;
 pub mod dock;
 // Built on macOS too, though only used elsewhere, so it can't drift from `macos/` (`parity`).
@@ -99,9 +100,12 @@ pub fn boot_volume_name() -> String {
 /// Returns at once: the menu opens, and its item runs, a moment later, outside the borrow of the
 /// app that the caller (a mouse handler, an update) is in. See `macos::menu` for why that matters.
 /// Call it from anywhere with a `Window` and an `App`, once per menu; an empty menu opens nothing.
-pub fn show_menu(menu: Menu, at: Point<Pixels>, window: &mut Window, cx: &mut App) {
+pub fn show_menu(mut menu: Menu, at: Point<Pixels>, window: &mut Window, cx: &mut App) {
     if menu.is_empty() {
         return;
+    }
+    if menu.appearance.is_none() {
+        menu.appearance = cx.try_global::<MenuAppearance>().and_then(|look| (look.0)(window, cx));
     }
     #[cfg(any(test, feature = "devctl"))]
     if record::keep(&menu, window) {
@@ -121,6 +125,12 @@ pub fn show_menu(menu: Menu, at: Point<Pixels>, window: &mut Window, cx: &mut Ap
         }
     }
 }
+
+/// The application supplies the opening window's theme without the platform
+/// depending on profiles, settings, or window ownership.
+pub struct MenuAppearance(pub fn(&Window, &App) -> Option<wormhole_core::theme::tokens::Appearance>);
+
+impl Global for MenuAppearance {}
 
 /// Open `popover` under `anchor` (the element's bounds in the window) as the platform's own, and
 /// run what is done in it, a moment later and outside every borrow of the app (see `popover`).
@@ -159,13 +169,28 @@ impl Global for Drawn {}
 
 /// Open the system's Colours window showing `start`; each colour chosen in it reaches `on_change`,
 /// the latest per tick, outside every borrow of the app. Nowhere to open it, nothing happens.
+pub fn has_colour_panel() -> bool {
+    cfg!(target_os = "macos") && !background_mode::on()
+}
+
 pub fn pick_colour(start: Hsla, on_change: ColourChange, window: &mut Window, cx: &mut App) {
+    pick_colour_with_alpha(start, false, on_change, window, cx);
+}
+
+/// Open the system colour panel, optionally allowing transparency to be edited.
+pub fn pick_colour_with_alpha(
+    start: Hsla,
+    alpha: bool,
+    on_change: ColourChange,
+    window: &mut Window,
+    cx: &mut App,
+) {
     #[cfg(any(test, feature = "devctl"))]
     if record::keep_colour(&on_change) {
         return;
     }
     #[cfg(target_os = "macos")]
-    macos::colour::pick(start, on_change, window, cx);
+    macos::colour::pick(start, alpha, on_change, window, cx);
     #[cfg(not(target_os = "macos"))]
-    let _ = (start, on_change, window, cx);
+    let _ = (start, alpha, on_change, window, cx);
 }

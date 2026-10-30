@@ -43,7 +43,6 @@ use gpui_kit::*;
 use wormhole_core::view::layout::status_bar::STATUS_BAR_H;
 
 use crate::sidebar::Sidebar;
-use crate::sidebar::profile_chip::ProfilePage;
 use crate::window::Workspace;
 use crate::window::panel_switch::PanelSwitch;
 use crate::window::status_bar::StatusBar;
@@ -120,8 +119,6 @@ pub(super) struct Regions {
     app_seen: Option<AppFacts>,
     /// What the selected terminal's group was last painted with, as the list's notifications saw it.
     paint_seen: Option<GroupPaint>,
-    /// Which page of the profile chip's menu was open, as the list's notifications saw it.
-    menu_seen: Option<ProfilePage>,
     /// What each was built from, checked at the end of every frame.
     #[cfg(any(test, debug_assertions))]
     oracle: oracle::Oracle,
@@ -163,7 +160,6 @@ impl Regions {
             drawn: Drawn::default(),
             app_seen: None,
             paint_seen: None,
-            menu_seen: None,
             #[cfg(any(test, debug_assertions))]
             oracle: Default::default(),
         }
@@ -203,11 +199,6 @@ impl Regions {
     #[cfg(test)]
     pub(super) fn notify_status_bar(&self, cx: &mut App) {
         self.status_bar.update(cx, |_, cx| cx.notify());
-    }
-
-    /// Draw the sidebar's header again on the next frame (outside a draw).
-    fn notify_header(&self, cx: &mut App) {
-        self.sidebar_header.update(cx, |_, cx| cx.notify());
     }
 
     /// The sidebar's header, across the top of its column.
@@ -263,25 +254,19 @@ impl Regions {
     /// hover, a rename being typed, a turn of an agent's spinner, 30 times a second). GPUI marks a
     /// notified view and its ancestors dirty, so the list is a sibling of the cached header in the column
     /// and not a child of it: those notifications draw the list and leave every region as it was. The
-    /// regions read two facts of the list's, which are heard here: the saved view's tint of the selected
-    /// terminal's group (the title row) and the profile chip's menu being open (the header, which draws
-    /// the chip). The tab bar, which the root draws from the list's state when the terminals are in tabs, is
+    /// regions read the saved view's tint of the selected terminal's group (the title row). The tab bar,
+    /// which the root draws from the list's state when the terminals are in tabs, is
     /// the one other reader. It is not a region: the root reads the list while it builds the bar, so GPUI
     /// draws the root again for every notification of the list then, and the bar with it, without a word
     /// from here.
     pub(super) fn watch_sidebar(workspace: &mut Workspace, cx: &mut Context<Workspace>) {
         workspace.regions.paint_seen = workspace.group_paint(cx);
         let sidebar = workspace.sidebar.clone();
-        workspace.regions.menu_seen = sidebar.read(cx).profile_page();
-        cx.observe(&sidebar, |workspace, sidebar, cx| {
+        cx.observe(&sidebar, |workspace, _, cx| {
             let paint = workspace.group_paint(cx);
             let moved = std::mem::replace(&mut workspace.regions.paint_seen, paint) != paint;
             if moved {
                 cx.notify();
-            }
-            let menu = sidebar.read(cx).profile_page();
-            if std::mem::replace(&mut workspace.regions.menu_seen, menu) != menu {
-                workspace.regions.notify_header(cx);
             }
         })
         .detach();

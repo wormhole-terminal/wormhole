@@ -68,6 +68,122 @@ fn edit(studio: &mut StudioWindow, window: &mut Window, cx: &mut Context<StudioW
 }
 
 #[gpui_kit::test]
+fn system_colour_panel_keeps_alpha_and_ignores_a_stale_selection(cx: &mut TestAppContext) {
+    let (handle, studio) = open(cx);
+    with(cx, handle, &studio, |studio, window, cx| {
+        studio.choose_colour("primary", hsla(0., 0., 0., 1.), window, cx);
+    });
+    let callbacks = crate::platform::record::popover_colour("#33669980").unwrap();
+    cx.update(|cx| {
+        handle
+            .update(cx, |_, window, cx| {
+                for callback in callbacks {
+                    callback(window, cx);
+                }
+            })
+            .unwrap();
+    });
+    with(cx, handle, &studio, |studio, window, cx| {
+        assert_eq!(super::draft::override_of(&studio.draft, "primary").as_deref(), Some("#33669980"));
+        studio.select_token("secondary", window, cx);
+        studio.select_token("primary", window, cx);
+    });
+    let callbacks = crate::platform::record::popover_colour("#ff0000").unwrap();
+    cx.update(|cx| {
+        handle
+            .update(cx, |_, window, cx| {
+                for callback in callbacks {
+                    callback(window, cx);
+                }
+            })
+            .unwrap();
+    });
+    with(cx, handle, &studio, |studio, _, _| {
+        assert_eq!(super::draft::override_of(&studio.draft, "primary").as_deref(), Some("#33669980"));
+    });
+}
+
+#[gpui_kit::test]
+fn metric_follow_switch_freezes_the_resolved_value_and_restores_the_rule(cx: &mut TestAppContext) {
+    let (handle, studio) = open(cx);
+    with(cx, handle, &studio, |studio, window, cx| {
+        studio.select_token("metrics.radius_chip", window, cx);
+        let original = super::tokens_of(cx).metrics.get("metrics.radius_chip").unwrap();
+        studio.set_metric_following(false, window, cx);
+        assert_eq!(
+            super::draft::override_of(&studio.draft, "metrics.radius_chip"),
+            Some(super::draft::number(original))
+        );
+        studio.set_metric_following(true, window, cx);
+        assert_eq!(super::draft::override_of(&studio.draft, "metrics.radius_chip"), None);
+    });
+}
+
+#[gpui_kit::test]
+fn metric_stepper_uses_current_value_and_clamps(cx: &mut TestAppContext) {
+    let (handle, studio) = open(cx);
+    with(cx, handle, &studio, |studio, window, cx| {
+        studio.select_token("metrics.radius_chip", window, cx);
+        studio.set_selected_value(Some("4".into()), Edit::Field, window, cx);
+        studio.step_metric(1, window, cx);
+        studio.step_metric(1, window, cx);
+        assert_eq!(super::draft::override_of(&studio.draft, "metrics.radius_chip").as_deref(), Some("6"));
+        studio.step_metric(100, window, cx);
+        assert_eq!(super::draft::override_of(&studio.draft, "metrics.radius_chip").as_deref(), Some("24"));
+    });
+}
+
+#[gpui_kit::test]
+fn metric_slider_rounds_clamps_and_rejects_nonfinite_values(cx: &mut TestAppContext) {
+    let (handle, studio) = open(cx);
+    with(cx, handle, &studio, |studio, window, cx| {
+        studio.select_token("metrics.radius_chip", window, cx);
+        studio.set_metric_slider(5.6, window, cx);
+        assert_eq!(super::draft::override_of(&studio.draft, "metrics.radius_chip").as_deref(), Some("6"));
+        studio.set_metric_slider(f64::NAN, window, cx);
+        assert_eq!(super::draft::override_of(&studio.draft, "metrics.radius_chip").as_deref(), Some("6"));
+        studio.set_metric_slider(100.0, window, cx);
+        assert_eq!(super::draft::override_of(&studio.draft, "metrics.radius_chip").as_deref(), Some("24"));
+    });
+}
+
+#[gpui_kit::test]
+fn save_actions_use_the_platform_menu(cx: &mut TestAppContext) {
+    let (handle, studio) = open(cx);
+    with(cx, handle, &studio, |studio, window, cx| {
+        studio.open_save_menu(gpui_kit::point(gpui_kit::px(0.0), gpui_kit::px(0.0)), window, cx);
+        assert!(studio.save_menu);
+    });
+    let menu = crate::platform::record::open().expect("the save menu was opened");
+    let leaves = menu.leaves();
+    assert_eq!(
+        leaves.iter().map(|leaf| leaf.item.title.as_ref()).collect::<Vec<&str>>(),
+        [
+            "Save theme",
+            "Save Copy",
+            "Save Copy and Switch",
+            "Export JSON…",
+            "Copy JSON",
+            "Use in this project…"
+        ]
+    );
+    assert!(leaves[0].item.key.as_ref().is_some_and(|key| key.command && !key.shift && key.key == "s"));
+    assert!(leaves[1].item.key.as_ref().is_some_and(|key| key.command && key.shift && key.key == "s"));
+    assert!(!leaves[5].item.enabled, "no project is open");
+    let callbacks = crate::platform::record::close().expect("menu is open");
+    cx.update(|cx| {
+        handle
+            .update(cx, |_, window, cx| {
+                for callback in callbacks {
+                    callback(window, cx);
+                }
+            })
+            .expect("closes the menu");
+    });
+    assert!(!cx.update(|cx| studio.read(cx).save_menu));
+}
+
+#[gpui_kit::test]
 fn closing_a_dirty_studio_asks_first(cx: &mut TestAppContext) {
     let (handle, studio) = open(cx);
     with(cx, handle, &studio, |studio, window, cx| {

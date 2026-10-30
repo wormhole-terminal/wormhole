@@ -41,6 +41,14 @@ pub(super) fn project_menu(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+pub(super) fn project_picker(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    Ok(crate::settings_window::devctl::project_picker(arg, ctx.cx))
+}
+
+pub(super) fn font_native(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    Ok(crate::settings_window::devctl::font_native(arg, ctx.cx))
+}
+
 pub(super) fn search(ctx: &mut Ctx, arg: &str) -> Result<String> {
     crate::settings_window::devctl::search(arg.trim(), ctx.cx);
     Ok(String::new())

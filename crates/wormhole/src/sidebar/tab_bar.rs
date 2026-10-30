@@ -46,6 +46,8 @@ const CLOSE_RIGHT: f32 = 8.0 - (style::CONTROL_H_SM - style::GLYPH) / 2.0;
 pub(super) struct TabBarState {
     /// The group switcher being open: its search field.
     pub(super) switcher: Option<super::switcher::Switcher>,
+    pub(super) native_switcher: Option<super::switcher::NativeSwitcher>,
+    pub(super) switcher_anchor: crate::platform::Anchor,
     /// The row of tabs, which scrolls sideways once they are at their narrowest, and the terminal it
     /// last brought into view.
     scroll: ScrollHandle,
@@ -214,14 +216,6 @@ impl Sidebar {
             (None, Some(group)) => cx.emit(SidebarEvent::NewTerminal(NewTerminal::InGroup(group))),
             (None, None) => {}
         }
-    }
-
-    /// Open the set at `at` of the list as it is now.
-    pub(super) fn open_set_at(&mut self, at: usize, cx: &mut Context<Self>) {
-        let listing = self.listing(cx);
-        let view = self.set_view(&listing, cx);
-        let (Some(set), Some(look)) = (view.sets.get(at), view.looks.get(at)) else { return };
-        self.open_set(set, look.group, cx);
     }
 
     /// ⌃⌥] and ⌃⌥[: the next or previous group, in the switcher's order with the terminals in no

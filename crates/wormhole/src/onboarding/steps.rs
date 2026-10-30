@@ -80,7 +80,7 @@ impl FirstRun {
             Step::Folder => self.render_folder_step(sheet, ui, cx),
             Step::Look => self.render_look_step(sheet, ui, cx),
             Step::Agents => self.render_agents_step(sheet, ui, cx),
-            Step::Primer => self.render_primer_step(ui, cx),
+            Step::Primer => self.render_primer_step(sheet, ui, cx),
             Step::Welcome => div().into_any_element(),
         };
         let max_h = window.viewport_size().height - px(2.0 * SHEET_MARGIN);

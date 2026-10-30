@@ -90,6 +90,20 @@ fn radii_come_from_the_theme() {
     assert!(found.is_empty(), "fixed radius, use ui.radius*:\n{}", found.join("\n"));
 }
 
+/// Switches go through a shared control boundary; the native settings bridge also owns the
+/// GPUI focus and accessibility proxy for its AppKit switches.
+#[test]
+fn switches_use_the_shared_control() {
+    let found: Vec<_> = offenders(&["Switch::new("])
+        .into_iter()
+        .filter(|line| {
+            let line = line.replace('\\', "/");
+            !line.contains("/style/") && !line.contains("/settings_window/native_switch.rs:")
+        })
+        .collect();
+    assert!(found.is_empty(), "use style::toggle:\n{}", found.join("\n"));
+}
+
 /// A top-level function of the design language: its name, whether the line above it
 /// carries `#[track_caller]`, and its body with string literals blanked out.
 struct Builder {

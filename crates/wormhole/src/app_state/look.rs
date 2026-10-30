@@ -13,6 +13,19 @@ use crate::app_state::{app, app_mut};
 use crate::platform::vibrancy;
 use crate::settings::{SettingsStore, SystemLook};
 
+/// The theme of the window that opened a menu. Auxiliary windows use the
+/// shown profile; a workspace can belong to a different, parked profile.
+pub(crate) fn menu_appearance(window: &Window, cx: &App) -> Option<Appearance> {
+    let settings = cx.try_global::<SettingsStore>()?;
+    let profile = cx
+        .try_global::<crate::app_state::AppState>()
+        .and_then(|state| {
+            state.windows.iter().find(|open| open.handle.window_id() == window.window_handle().window_id())
+        })
+        .map(|open| &open.profile);
+    Some(profile.map(|profile| crate::settings::store_in(profile, cx)).unwrap_or(settings).tokens.appearance)
+}
+
 /// Stand-ins for what the system says about how windows look; `None` follows the system.
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct LookOverride {

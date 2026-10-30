@@ -11,6 +11,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use gpui_kit::*;
+use wormhole_core::theme::tokens::Appearance;
 
 use crate::menubar::model::KeyEquivalent;
 
@@ -20,6 +21,14 @@ pub type Callback = Rc<dyn Fn(&mut Window, &mut App)>;
 
 /// What choosing a swatch does, given its place in the row. Runs like a [`Callback`].
 pub type Pick = Rc<dyn Fn(usize, &mut Window, &mut App)>;
+
+/// Keep a subtitle visible on platforms that cannot draw a second line.
+pub(crate) fn display_title(title: &str, subtitle: Option<&str>, supports_subtitle: bool) -> String {
+    match (subtitle, supports_subtitle) {
+        (Some(subtitle), false) => format!("{title} — {subtitle}"),
+        _ => title.to_string(),
+    }
+}
 
 /// A small picture in front of an item's title.
 #[derive(Clone)]
@@ -35,6 +44,8 @@ pub enum Icon {
     /// Two letters in a small rounded square, for an app whose icon can't be had (where there is
     /// no icon service to ask, the fallback menu draws it; the native one has the icon).
     Monogram(SharedString),
+    /// A profile's colored circular avatar and its contrasting letter.
+    Avatar { letter: SharedString, background: Hsla, foreground: Hsla },
     /// An SF Symbol by name, as Apple's own menus carry (`doc.on.doc` beside Copy). A template
     /// image, so the menu tints it; where there are no symbols, no picture is drawn.
     Symbol(&'static str),
@@ -55,6 +66,8 @@ pub enum Check {
 #[derive(Clone)]
 pub struct Item {
     pub title: SharedString,
+    /// A short explanation beneath the title, where the platform supports it.
+    pub subtitle: Option<SharedString>,
     pub enabled: bool,
     pub check: Check,
     /// The key shown beside the title (the action's own key; the menu doesn't bind it).
@@ -65,7 +78,20 @@ pub struct Item {
 
 impl Item {
     pub fn new(title: impl Into<SharedString>) -> Self {
-        Self { title: title.into(), enabled: true, check: Check::Off, key: None, icon: None, on_select: None }
+        Self {
+            title: title.into(),
+            subtitle: None,
+            enabled: true,
+            check: Check::Off,
+            key: None,
+            icon: None,
+            on_select: None,
+        }
+    }
+
+    pub fn subtitle(mut self, subtitle: Option<SharedString>) -> Self {
+        self.subtitle = subtitle;
+        self
     }
 
     pub fn checked(mut self, checked: bool) -> Self {
@@ -144,6 +170,8 @@ pub struct Swatches {
 #[derive(Clone, Default)]
 pub struct Menu {
     pub entries: Vec<Entry>,
+    /// The opening window's theme, independent of the system's appearance.
+    pub appearance: Option<Appearance>,
     /// Runs once the menu has closed, whether an item was chosen or not, and before the chosen
     /// item's own callback: for state that shows the menu is open (a row's focus ring).
     pub on_close: Option<Callback>,
@@ -300,7 +328,7 @@ impl Leaf<'_> {
 
 #[cfg(any(test, feature = "devctl"))]
 fn describe(item: &Item) -> String {
-    let mut text = item.title.to_string();
+    let mut text = display_title(&item.title, item.subtitle.as_deref(), false);
     match item.check {
         Check::Off => {}
         Check::On => text.push_str(" [x]"),

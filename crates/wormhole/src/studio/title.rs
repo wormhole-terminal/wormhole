@@ -8,21 +8,20 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::ButtonGroup;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::Input;
-use gpui_kit::component::popover::Popover;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::theme::tokens;
 
 use super::{StudioWindow, ui};
-use crate::settings::{SettingsStore, UiColors};
+use crate::menubar::model::KeyEquivalent;
+use crate::platform::{self, Item, Menu};
+use crate::settings::SettingsStore;
 use crate::style::TitleDrag as _;
 use crate::style::{self, Edges, TextRole};
 
 /// The name field while renaming.
 const NAME_FIELD_W: f32 = 200.0;
-/// The Save theme menu.
-const MENU_W: f32 = 240.0;
 
 /// One entry of the Save theme menu.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -39,9 +38,9 @@ pub(super) enum SaveAction {
 impl SaveAction {
     /// The menu, with Save as a copy as two entries: what to show, its
     /// key, and the separator before it.
-    const MENU: [(SaveAction, &'static str, Option<&'static str>, bool); 6] = [
-        (SaveAction::Save, "Save theme", Some("⌘S"), false),
-        (SaveAction::SaveCopy, "Save Copy", Some("⇧⌘S"), false),
+    const MENU: [(SaveAction, &'static str, Option<bool>, bool); 6] = [
+        (SaveAction::Save, "Save theme", Some(false), false),
+        (SaveAction::SaveCopy, "Save Copy", Some(true), false),
         (SaveAction::SaveCopyAndSwitch, "Save Copy and Switch", None, false),
         (SaveAction::Export, "Export JSON…", None, true),
         (SaveAction::CopyJson, "Copy JSON", None, false),
@@ -138,13 +137,14 @@ impl StudioWindow {
                     .label("Export…")
                     .on_click(cx.listener(|this, _, window, cx| this.export(window, cx))),
             )
-            .child(self.save_split(ui, cx))
+            .child(self.save_split(cx))
             .into_any_element()
     }
 
-    /// Save theme, with the chevron that opens the other ways to save. The menu is anchored
-    /// under the split and open while `save_menu` says so, so devctl can show it too.
-    fn save_split(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+    /// Save theme, with the system menu of the other ways to save.
+    fn save_split(&self, cx: &mut Context<Self>) -> AnyElement {
+        let anchor = platform::Anchor::default();
+        let menu_anchor = anchor.clone();
         let split = ButtonGroup::new("studio-save-split")
             .primary()
             .small()
@@ -153,68 +153,49 @@ impl StudioWindow {
                     .label("Save theme")
                     .on_click(cx.listener(|this, _, window, cx| this.request_save(window, cx))),
             )
-            .child(
-                Button::new("studio-save-more")
-                    .icon(IconName::ChevronDown)
-                    .on_click(cx.listener(|this, _, _, cx| this.open_save_menu(cx))),
-            );
-        let this = cx.weak_entity();
-        let on_open = this.clone();
-        let project = self.menu_project;
-        let menu = Popover::new("studio-save-menu")
-            .anchor(Anchor::TopRight)
-            .offset(px(4.0))
-            .open(self.save_menu)
-            .on_open_change(move |open, _, cx| {
-                on_open
-                    .update(cx, |studio, cx| {
-                        studio.save_menu = *open;
-                        cx.notify();
-                    })
-                    .ok();
-            })
-            // The menu hangs from the split's corner: an empty anchor stands in for it.
-            .trigger(Button::new("studio-save-anchor").ghost().w(px(0.0)).h(px(0.0)));
-        let menu =
-            crate::select::menu_surface(menu, ui, px(MENU_W), ui.elevated).p_1().content(move |_, _, _| {
-                let mut list = div().flex().flex_col();
-                for (action, label, keys, separated) in SaveAction::MENU {
-                    if separated {
-                        list = list.child(div().my_1().h(ui.border_width).bg(ui.border));
-                    }
-                    let enabled = action != SaveAction::UseInProject || project;
-                    let this = this.clone();
-                    list = list.child(
-                        style::row(SharedString::from(format!("studio-menu-{action:?}")), ui, false)
-                            .when(!enabled, |d| d.text_color(ui.faint).cursor_default())
-                            .child(div().flex_1().child(label))
-                            .children(
-                                keys.map(|k| {
-                                    div().text_caption().tabular_nums().text_color(ui.faint).child(k)
-                                }),
-                            )
-                            .when(enabled, |d| {
-                                d.on_click(move |_, window, cx| {
-                                    this.update(cx, |studio, cx| studio.run_save_action(action, window, cx))
-                                        .ok();
-                                })
-                            }),
-                    );
-                }
-                list
-            });
-        div()
-            .relative()
-            .flex_none()
-            .child(split)
-            .child(div().absolute().right_0().bottom_0().child(menu))
-            .into_any_element()
+            .child(Button::new("studio-save-more").icon(IconName::ChevronDown).on_click(cx.listener(
+                move |this, _, window, cx| {
+                    this.open_save_menu(menu_anchor.below(), window, cx);
+                },
+            )));
+        div().relative().flex_none().child(anchor.probe()).child(split).into_any_element()
     }
 
-    pub(super) fn open_save_menu(&mut self, cx: &mut Context<Self>) {
-        self.menu_project = self.project_for_theme(cx).is_ok();
+    pub(super) fn open_save_menu(&mut self, at: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        let project = self.project_for_theme(cx).is_ok();
+        let this = cx.weak_entity();
+        let close = this.clone();
+        let mut menu = Menu::new();
+        for (action, label, keys, separated) in SaveAction::MENU {
+            if separated {
+                menu = menu.separator();
+            }
+            let this = this.clone();
+            let key = keys.map(|shift| KeyEquivalent {
+                key: "s".into(),
+                command: true,
+                shift,
+                ..Default::default()
+            });
+            menu = menu.item(
+                Item::new(label).key(key).enabled(action != SaveAction::UseInProject || project).on_select(
+                    move |window, cx| {
+                        this.update(cx, |studio, cx| studio.run_save_action(action, window, cx)).ok();
+                    },
+                ),
+            );
+        }
+        let menu = menu.on_close(move |_, cx| {
+            close
+                .update(cx, |studio, cx| {
+                    studio.save_menu = false;
+                    cx.notify();
+                })
+                .ok();
+        });
         self.save_menu = true;
         cx.notify();
+        platform::show_menu(menu, at, window, cx);
     }
 
     pub(super) fn run_save_action(

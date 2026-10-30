@@ -53,6 +53,9 @@ pub(super) struct NotesView {
     /// The panel's width, which an open note's text wraps in.
     pub(super) width: f32,
     pub(super) this: WeakEntity<Notes>,
+    pub(super) native_checks: Option<Rc<crate::platform::controls::Switches>>,
+    pub(super) checks_epoch: u64,
+    pub(super) appearance: wormhole_core::theme::tokens::Appearance,
 }
 
 impl NotesView {
@@ -379,6 +382,9 @@ pub(super) fn tab(entity: &AnyEntity, facts: &WindowFacts<'_>, _: &mut Window, c
         note_list: format!("notes-{}", notes.entity_id()).into(),
         width,
         this: notes.downgrade(),
+        native_checks: this.native_checks.clone(),
+        checks_epoch: this.checks_epoch.get(),
+        appearance: crate::settings::store_in(facts.profile, cx).tokens.appearance,
     });
     let rows = &of.list.rows;
     let ring = facts.panel_cursor.map(|(row, shown)| (row, shown.then_some(ui)));
@@ -389,6 +395,10 @@ pub(super) fn tab(entity: &AnyEntity, facts: &WindowFacts<'_>, _: &mut Window, c
         .flex_col()
         .flex_1()
         .min_h_0()
+        .children(this.native_checks.as_ref().map(|host| {
+            let host = host.clone();
+            canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+        }))
         .child(rows.with_edges(
             rows.element_carded(ring, ui, part, move |row, window, cx| {
                 view.render_row(row, ui_in(&profile, cx), window, cx)
@@ -397,6 +407,10 @@ pub(super) fn tab(entity: &AnyEntity, facts: &WindowFacts<'_>, _: &mut Window, c
             "notes-scrollbar",
             cx,
         ))
+        .children(this.native_checks.as_ref().map(|host| {
+            let host = host.clone();
+            canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()
+        }))
         .into_any_element()
 }
 

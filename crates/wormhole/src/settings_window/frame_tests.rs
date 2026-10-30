@@ -72,14 +72,16 @@ const SLACK: u64 = 20;
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 17] = [
     ("Profile", 6862),
-    ("Appearance", 16810),
-    ("Fonts", 7560),
+    // Named switches and focusable segmented choices add per-control state to these pages.
+    ("Appearance", 16998),
+    // Native font triggers keep anchors and accessible labels.
+    ("Fonts", 7590),
     ("Motion", 6441),
-    ("Terminal", 9872),
+    ("Terminal", 10075),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 15198),
-    ("Git", 4668),
+    ("Sessions", 15424),
+    ("Git", 4764),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
@@ -87,23 +89,25 @@ const BUDGET: [(&str, u64); 17] = [
     // page measured 9,501: under this, which stays.
     ("Agents", 9679),
     ("Import", 53166),
-    ("Notifications", 7983),
-    ("MenuBar", 6296),
-    ("Updates", 5750),
+    ("Notifications", 8134),
+    ("MenuBar", 6374),
+    ("Updates", 5785),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     ("Advanced", 4270),
-    ("Projects", 9138),
+    // Project-default switch identities include the profile to reject stale actions after a switch.
+    ("Projects", 9163),
     // Measured with the nav's Motion and Import rows, which came after the page.
     ("Extensions", 2686),
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost
-    // about 380); the Folder picker flag one more again (about 385).
-    ("FeatureFlags", 7260),
+    // about 380); the Folder picker flag one more again (about 385). The shared native-switch
+    // boundary gives each flag a distinct stable id, adding 24 allocations to this page.
+    ("FeatureFlags", 7323),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
-    ("search", 12250),
+    ("search", 12303),
 ];
 
 /// What a scan finds in the visual checks' fixture home (Ghostty, iTerm2 and Alacritty settings), with the

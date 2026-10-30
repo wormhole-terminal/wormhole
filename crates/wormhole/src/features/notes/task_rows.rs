@@ -92,7 +92,7 @@ impl NotesView {
 
         // The 14 pt box, clickable across the lead column and beyond (28 pt).
         let (toggle, session) = (self.this.clone(), self.session);
-        let lead =
+        let fallback = || {
             style::checkbox(SharedString::from(format!("{key}-check")), ui, done)
                 .spoken(task.map_or_else(
                     || SharedString::from("New next step"),
@@ -102,7 +102,56 @@ impl NotesView {
                     check.on_change(move |_, _, cx| {
                         toggle.update(cx, |this, cx| this.toggle_task(session, ix, cx)).ok();
                     })
-                });
+                })
+                .into_any_element()
+        };
+        let lead = if let (Some(native), Some(ix), Some(task)) = (&self.native_checks, ix, task) {
+            let id = format!("note-task-{}-{}-{ix}", self.checks_epoch, session);
+            let event_id = id.clone();
+            let host = native.clone();
+            let owner = self.this.clone();
+            let epoch = self.checks_epoch;
+            crate::style::native_switch::NativeCheckbox {
+                native: native.clone(),
+                id,
+                label: task.text.clone().into(),
+                on: done,
+                enabled: true,
+                show_label: false,
+                focus: None,
+                appearance: self.appearance,
+                ui,
+                change: Rc::new(move |_, _, cx| {
+                    if !host.accepts(&event_id) {
+                        return;
+                    }
+                    owner
+                        .update(cx, |notes, cx| {
+                            if notes.checks_epoch.get() == epoch {
+                                notes.toggle_task(session, ix, cx);
+                            }
+                        })
+                        .ok();
+                }),
+            }
+            .into_any_element()
+        } else if let Some(native) = &self.native_checks {
+            crate::style::native_switch::NativeCheckbox {
+                native: native.clone(),
+                id: format!("note-task-draft-{}-{session}", self.checks_epoch),
+                label: "New next step".into(),
+                on: false,
+                enabled: false,
+                show_label: false,
+                focus: None,
+                appearance: self.appearance,
+                ui,
+                change: Rc::new(|_, _, _| {}),
+            }
+            .into_any_element()
+        } else {
+            fallback()
+        };
         let edit = self.this.clone();
         let main = match (&editor, task) {
             (Some(input), _) => {
@@ -175,14 +224,7 @@ impl NotesView {
         style::item_row(
             key,
             ui,
-            style::ItemParts {
-                lead: lead.into_any_element(),
-                main,
-                actions,
-                body: None,
-                active: editor.is_some(),
-                reorder,
-            },
+            style::ItemParts { lead, main, actions, body: None, active: editor.is_some(), reorder },
         )
         .into_any_element()
     }

@@ -267,7 +267,73 @@ fn render_row(ix: usize, row: &Row, env: &RowEnv, cx: &mut App) -> AnyElement {
 impl CommandPalette {
     /// The scope row: All and the kinds, each with its prefix, in the app's one segmented
     /// control (as Settings and the filter popover have it); the chosen one is solid.
-    fn render_scopes(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+    fn render_scopes(&self, ui: UiColors, width: f32, cx: &mut Context<Self>) -> AnyElement {
+        if !self.leaving {
+            if let Some(native) = &self.native_scopes {
+                let mut options: Vec<_> = Scope::ROW
+                    .iter()
+                    .map(|scope| {
+                        let label = match scope.prefix() {
+                            Some(prefix) => format!("{prefix} {}", scope.title()),
+                            None => scope.title().to_string(),
+                        };
+                        crate::platform::controls::SegmentOption { label, symbol: None }
+                    })
+                    .collect();
+                let full_labels = options.iter().map(|option| option.label.clone()).collect();
+                let mut metrics = native.metrics(&options);
+                if f32::from(metrics.width) > width - 24.0 {
+                    let labels = ["All", "Tabs", "Folders", "Commits", "Settings", "Actions"];
+                    for (option, label) in options.iter_mut().zip(labels) {
+                        option.label = label.to_owned();
+                    }
+                    metrics = native.metrics(&options);
+                    if f32::from(metrics.width) > width - 24.0 {
+                        let labels = ["All", "Tabs", "Dirs", "Commits", "Prefs", "Actions"];
+                        for (option, label) in options.iter_mut().zip(labels) {
+                            option.label = label.to_owned();
+                        }
+                        metrics = native.metrics(&options);
+                    }
+                }
+                let selected = Scope::ROW.iter().position(|scope| *scope == self.scope).unwrap_or(0);
+                let palette = cx.weak_entity();
+                let change = Rc::new(move |index, window: &mut Window, cx: &mut App| {
+                    if let Some(scope) = Scope::ROW.get(index).copied() {
+                        palette
+                            .update(cx, |this, cx| {
+                                if !this.leaving {
+                                    this.set_scope(scope, window, cx);
+                                }
+                            })
+                            .ok();
+                    }
+                });
+                return div()
+                    .flex()
+                    .flex_none()
+                    .items_center()
+                    .h(px(style::QP_ROW_H))
+                    .px_3()
+                    .rule_bottom(ui)
+                    .child(div().id("palette-scopes-scroll").min_w_0().flex_1().overflow_x_scroll().child(
+                        crate::style::native_segments::NativeSegments {
+                            native: native.clone(),
+                            id: "palette-scopes".into(),
+                            options,
+                            accessibility_labels: Some(full_labels),
+                            selected,
+                            enabled: true,
+                            hover: None,
+                            focus: self.scope_focus.clone(),
+                            appearance: cx.global::<crate::settings::SettingsStore>().tokens.appearance,
+                            metrics,
+                            change,
+                        },
+                    ))
+                    .into_any_element();
+            }
+        }
         div()
             .flex()
             .flex_none()
@@ -377,13 +443,22 @@ impl Render for CommandPalette {
                     )
                     .child(style::keycap(ui, "esc")),
             )
-            .child(self.render_scopes(ui, cx))
+            .child(self.render_scopes(ui, width, cx))
             .child(div().flex().flex_col().h(px(list_h)).pb(px(LIST_BOTTOM)).child(list))
             .child(self.render_footer(ui, code_font, cx));
         // A palette on its way out is a picture: its scrim keeps nothing from what is under it.
         let scrim =
             if self.leaving { scrim_surface("palette-scrim", cx) } else { scrim("palette-scrim", cx) };
-        scrim.child(div().absolute().top(px(TOP)).left_0().right_0().flex().justify_center().child(card))
+        scrim
+            .children(self.native_scopes.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.begin(), |_, _, _, _| {}).absolute().size_0()
+            }))
+            .child(div().absolute().top(px(TOP)).left_0().right_0().flex().justify_center().child(card))
+            .children(self.native_scopes.as_ref().map(|host| {
+                let host = host.clone();
+                canvas(move |_, _, _| host.finish(), |_, _, _, _| {}).absolute().size_0()
+            }))
     }
 }
 

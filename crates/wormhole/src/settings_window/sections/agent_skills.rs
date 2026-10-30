@@ -85,7 +85,7 @@ fn draw_skills(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
         .skills
         .iter()
         .filter(|row| row.found || !matches!(row.state, Ok(State::NotInstalled)))
-        .map(|row| skill_row(row, cx))
+        .map(|row| skill_row(window, row, cx))
         .collect();
     let none = rows.is_empty().then(|| {
         div().py_3().rule_top(ui).text_body().text_color(ui.muted).child(text(SETTINGS_AGENTS_SKILL_NONE))
@@ -93,7 +93,7 @@ fn draw_skills(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
     div().flex().flex_col().children(rows).children(none).into_any_element()
 }
 
-fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn skill_row(window: &SettingsWindow, row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let (code_font, _) = crate::fonts::code_font(cx);
     let target = row.target;
@@ -115,12 +115,54 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
             .label(label)
     };
     let install = |cx: &mut Context<SettingsWindow>, label, primary| {
-        button("install", label, primary)
-            .on_click(cx.listener(move |this, _, _, cx| this.change_skill(target, false, cx)))
+        let expected = row.state.clone();
+        let covered = row.covered.clone();
+        let this = cx.weak_entity();
+        window
+            .native_button_with_style(
+                format!("agent-native-skill-{word}-install-{state:?}"),
+                label,
+                true,
+                primary,
+                cx,
+                move |_, cx| {
+                    let home = integrations::home();
+                    if skill::state(target, &home) != expected
+                        || (expected == Ok(State::NotInstalled)
+                            && skill::covered_by(target, &home) != covered)
+                    {
+                        return;
+                    }
+                    this.update(cx, |this, cx| this.change_skill(target, false, cx)).ok();
+                },
+            )
+            .unwrap_or_else(|| {
+                button("install", label, primary)
+                    .on_click(cx.listener(move |this, _, _, cx| this.change_skill(target, false, cx)))
+                    .into_any_element()
+            })
     };
     let remove = |cx: &mut Context<SettingsWindow>| {
-        button("remove", text(SETTINGS_AGENTS_UNINSTALL), false)
-            .on_click(cx.listener(move |this, _, _, cx| this.change_skill(target, true, cx)))
+        let expected = row.state.clone();
+        let this = cx.weak_entity();
+        window
+            .native_button(
+                format!("agent-native-skill-{word}-remove-{state:?}"),
+                text(SETTINGS_AGENTS_UNINSTALL),
+                true,
+                cx,
+                move |_, cx| {
+                    if skill::state(target, &integrations::home()) != expected {
+                        return;
+                    }
+                    this.update(cx, |this, cx| this.change_skill(target, true, cx)).ok();
+                },
+            )
+            .unwrap_or_else(|| {
+                button("remove", text(SETTINGS_AGENTS_UNINSTALL), false)
+                    .on_click(cx.listener(move |this, _, _, cx| this.change_skill(target, true, cx)))
+                    .into_any_element()
+            })
     };
     let actions = div().flex_none().flex().items_center().gap_2();
     let actions = match state {
@@ -129,9 +171,22 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
             actions.child(install(cx, text(SETTINGS_AGENTS_UPDATE), true)).child(remove(cx))
         }
         Some(State::Foreign) => actions.child(
-            button("install", text(SETTINGS_AGENTS_INSTALL), true)
-                .disabled(true)
-                .tooltip(text(SETTINGS_AGENTS_SKILL_FOREIGN_TOOLTIP)),
+            window
+                .native_button_with_tooltip(
+                    format!("agent-native-skill-{word}-foreign"),
+                    text(SETTINGS_AGENTS_INSTALL),
+                    false,
+                    true,
+                    Some(text(SETTINGS_AGENTS_SKILL_FOREIGN_TOOLTIP).into()),
+                    cx,
+                    |_, _| {},
+                )
+                .unwrap_or_else(|| {
+                    button("install", text(SETTINGS_AGENTS_INSTALL), true)
+                        .disabled(true)
+                        .tooltip(text(SETTINGS_AGENTS_SKILL_FOREIGN_TOOLTIP))
+                        .into_any_element()
+                }),
         ),
         // Covered: the agent reads a folder that has the skill; nothing to press.
         Some(State::NotInstalled) if row.covered.is_some() => actions,

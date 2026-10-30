@@ -13,11 +13,17 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
+use block2::RcBlock;
 use gpui_kit::*;
 use objc2::rc::Retained;
+use objc2::runtime::{AnyObject, Bool, NSObjectProtocol as _};
 use objc2::{AnyThread, DefinedClass as _, MainThreadMarker, sel};
-use objc2_app_kit::{NSControlStateValueMixed, NSControlStateValueOn, NSImage, NSMenu, NSMenuItem, NSView};
-use objc2_foundation::{NSData, NSSize, NSString};
+use objc2_app_kit::{
+    NSAppearanceCustomization as _, NSAttributedStringNSStringDrawing as _, NSBezierPath, NSColor,
+    NSControlStateValueMixed, NSControlStateValueOn, NSFont, NSFontAttributeName,
+    NSForegroundColorAttributeName, NSImage, NSMenu, NSMenuItem, NSView,
+};
+use objc2_foundation::{NSData, NSMutableAttributedString, NSPoint, NSRange, NSRect, NSSize, NSString};
 
 use super::appkit;
 use super::swatches::{self, Chosen};
@@ -91,6 +97,14 @@ use target::Target;
 pub fn show(menu: Menu, at: Point<Pixels>, window: &mut Window, cx: &mut App) -> Result<(), Menu> {
     let Some(view) = appkit::ns_view(window) else { return Err(menu) };
     if OPEN.with(Cell::get) {
+        // The caller may already have marked its trigger open. A dropped menu must
+        // still close that state, outside the update that attempted to show it.
+        if let Some(on_close) = menu.on_close {
+            let handle = window.window_handle();
+            cx.defer(move |cx| {
+                let _ = handle.update(cx, |_, window, cx| on_close(window, cx));
+            });
+        }
         return Ok(());
     }
     OPEN.with(|open| open.set(true));
@@ -129,8 +143,10 @@ pub fn inspect(menu: &Menu, press: Option<usize>) -> Option<String> {
     let mtm = MainThreadMarker::new()?;
     let target = Target::new(mtm);
     let mut parts = Parts { callbacks: Vec::new(), picks: Vec::new(), chosen: Rc::default() };
-    let ns_menu = build(mtm, menu, &target, &mut parts);
+    let ns_menu = build(mtm, menu, &target, &mut parts, menu.appearance);
     let mut out = String::new();
+    let appearance = ns_menu.appearance().map(|appearance| appearance.name().to_string());
+    out.push_str(&format!("appearance: {}\n", appearance.as_deref().unwrap_or("system")));
     for item in ns_menu.itemArray() {
         if item.isSeparatorItem() {
             out.push_str("---\n");
@@ -147,9 +163,35 @@ pub fn inspect(menu: &Menu, press: Option<usize>) -> Option<String> {
             }
         } else {
             let icon = item.image().map(|image| {
-                format!(" [icon {}x{} ink {}%]", image.size().width, image.size().height, ink(&image))
+                let (ink, colors) = image_ink(&image);
+                format!(
+                    " [icon {}x{} ink {}% colors {}]",
+                    image.size().width,
+                    image.size().height,
+                    ink,
+                    colors
+                )
             });
-            out.push_str(&format!("{}{}\n", item.title(), icon.unwrap_or_default()));
+            let check = if item.state() == NSControlStateValueOn {
+                " [x]"
+            } else if item.state() == NSControlStateValueMixed {
+                " [-]"
+            } else {
+                ""
+            };
+            let enabled = if item.isEnabled() { "" } else { " [off]" };
+            let subtitle = if item.respondsToSelector(sel!(subtitle)) {
+                item.subtitle().map(|text| format!(" — {text}")).unwrap_or_default()
+            } else {
+                String::new()
+            };
+            out.push_str(&format!(
+                "{}{subtitle}{}{}{}\n",
+                item.title(),
+                check,
+                enabled,
+                icon.unwrap_or_default()
+            ));
         }
     }
     out.push_str(&format!("chosen dot: {:?}\n", parts.chosen.get()));
@@ -159,24 +201,44 @@ pub fn inspect(menu: &Menu, press: Option<usize>) -> Option<String> {
 /// How much of a picture is drawn rather than transparent, in percent of a grid of its pixels: an
 /// icon that is there but blank is the thing a size alone doesn't show.
 #[cfg(any(test, feature = "devctl"))]
-fn ink(image: &NSImage) -> usize {
-    use objc2_app_kit::NSBitmapImageRep;
+fn image_ink(image: &NSImage) -> (usize, usize) {
+    use objc2_app_kit::{NSBitmapImageRep, NSColorSpace};
+    use std::collections::HashSet;
 
     let Some(rep) = image.TIFFRepresentation().and_then(|tiff| NSBitmapImageRep::imageRepWithData(&tiff))
     else {
-        return 0;
+        return (0, 0);
     };
     let (w, h) = (rep.pixelsWide().max(1), rep.pixelsHigh().max(1));
     let (mut drawn, mut seen) = (0, 0);
+    let mut colors = HashSet::new();
+    let srgb = NSColorSpace::sRGBColorSpace();
     for y in (0..h).step_by((h / 16).max(1) as usize) {
         for x in (0..w).step_by((w / 16).max(1) as usize) {
             seen += 1;
-            if rep.colorAtX_y(x, y).is_some_and(|color| color.alphaComponent() > 0.1) {
-                drawn += 1;
+            if let Some(color) = rep.colorAtX_y(x, y) {
+                if color.alphaComponent() > 0.1 {
+                    drawn += 1;
+                }
+                // Count opaque interior colors: a flat colored disk without its
+                // contrasting letter has one, regardless of edge antialiasing.
+                if x >= w / 4
+                    && x < 3 * w / 4
+                    && y >= h / 4
+                    && y < 3 * h / 4
+                    && color.alphaComponent() > 0.99
+                    && let Some(color) = color.colorUsingColorSpace(&srgb)
+                {
+                    colors.insert((
+                        (color.redComponent() * 255.0).round() as u8,
+                        (color.greenComponent() * 255.0).round() as u8,
+                        (color.blueComponent() * 255.0).round() as u8,
+                    ));
+                }
             }
         }
     }
-    drawn * 100 / seen.max(1)
+    (drawn * 100 / seen.max(1), colors.len())
 }
 
 /// Build `menu`, run AppKit's loop until it closes, and return the callback of the item chosen.
@@ -184,7 +246,7 @@ fn pop_up(view: &NSView, at: Point<Pixels>, menu: &Menu) -> Option<Callback> {
     let mtm = MainThreadMarker::new()?;
     let target = Target::new(mtm);
     let mut parts = Parts { callbacks: Vec::new(), picks: Vec::new(), chosen: Rc::default() };
-    let ns_menu = build(mtm, menu, &target, &mut parts);
+    let ns_menu = build(mtm, menu, &target, &mut parts, menu.appearance);
     ns_menu.popUpMenuPositioningItem_atLocation_inView(None, appkit::location(view, at), Some(view));
     // A dot of a row of colours: its `on_pick` with its place, run later like any item's callback.
     if let Some((row, index)) = parts.chosen.get() {
@@ -196,8 +258,20 @@ fn pop_up(view: &NSView, at: Point<Pixels>, menu: &Menu) -> Option<Callback> {
 }
 
 /// `menu` as an `NSMenu`. An item's tag is the place of its callback in `parts.callbacks`.
-fn build(mtm: MainThreadMarker, menu: &Menu, target: &Target, parts: &mut Parts) -> Retained<NSMenu> {
+fn build(
+    mtm: MainThreadMarker,
+    menu: &Menu,
+    target: &Target,
+    parts: &mut Parts,
+    appearance: Option<wormhole_core::theme::tokens::Appearance>,
+) -> Retained<NSMenu> {
     let ns_menu = NSMenu::new(mtm);
+    // GPUI keeps the window's system appearance to observe system changes. A menu
+    // follows the opening window's theme, including in a parked profile. If no
+    // window look was supplied, use the app's current native-material appearance.
+    let ns_appearance =
+        appearance.and_then(super::appearance::ns_appearance).or_else(super::appearance::current);
+    ns_menu.setAppearance(ns_appearance.as_deref());
     // Every item says whether it is enabled; AppKit isn't to guess from the responder chain.
     ns_menu.setAutoenablesItems(false);
     for entry in &menu.entries {
@@ -223,7 +297,7 @@ fn build(mtm: MainThreadMarker, menu: &Menu, target: &Target, parts: &mut Parts)
                 ns_item.setTitle(&NSString::from_str(title));
                 ns_item.setEnabled(*enabled);
                 if *enabled {
-                    ns_item.setSubmenu(Some(&build(mtm, menu, target, parts)));
+                    ns_item.setSubmenu(Some(&build(mtm, menu, target, parts, appearance)));
                 }
                 ns_item
             }
@@ -242,6 +316,20 @@ fn item_for(
 ) -> Retained<NSMenuItem> {
     let ns_item = NSMenuItem::new(mtm);
     ns_item.setTitle(&NSString::from_str(&item.title));
+    if let Some(subtitle) = &item.subtitle {
+        let subtitle = NSString::from_str(subtitle);
+        ns_item.setToolTip(Some(&subtitle));
+        if ns_item.respondsToSelector(sel!(setSubtitle:)) {
+            ns_item.setSubtitle(Some(&subtitle));
+        } else {
+            // macOS 14.0–14.3 has no subtitle; keep the detail visible.
+            ns_item.setTitle(&NSString::from_str(&crate::platform::menu::display_title(
+                &item.title,
+                item.subtitle.as_deref(),
+                false,
+            )));
+        }
+    }
     ns_item.setEnabled(item.enabled);
     ns_item.setState(match item.check {
         Check::Off => 0,
@@ -273,6 +361,9 @@ fn image(icon: &Icon) -> Option<Retained<NSImage>> {
         Icon::Folder => appkit::folder_icon(IMAGE_SIDE),
         // Only where there is no icon service; the app has a file icon here.
         Icon::Monogram(_) => None,
+        Icon::Avatar { letter, background, foreground } => {
+            Some(avatar_image(letter, *background, *foreground))
+        }
         // A name the system doesn't know gives `None`: the row simply has no picture. Symbols are
         // template images already, which is what makes the menu tint them like its text.
         Icon::Symbol(name) => {
@@ -288,4 +379,46 @@ fn image(icon: &Icon) -> Option<Retained<NSImage>> {
             Some(image)
         }
     }
+}
+
+/// A profile mark keeps its color in an AppKit menu; it is not a template icon.
+#[allow(unsafe_code)] // AppKit text attributes have the documented font and color value types.
+fn avatar_image(letter: &str, background: Hsla, foreground: Hsla) -> Retained<NSImage> {
+    let text = letter.to_owned();
+    let bg = Rgba::from(background);
+    let fg = Rgba::from(foreground);
+    let handler = RcBlock::new(move |rect: NSRect| -> Bool {
+        let colour = |c: Rgba| {
+            NSColor::colorWithSRGBRed_green_blue_alpha(
+                f64::from(c.r),
+                f64::from(c.g),
+                f64::from(c.b),
+                f64::from(c.a),
+            )
+        };
+        colour(bg).setFill();
+        NSBezierPath::bezierPathWithOvalInRect(rect).fill();
+        let label = NSMutableAttributedString::initWithString(
+            NSMutableAttributedString::alloc(),
+            &NSString::from_str(&text),
+        );
+        let range = NSRange::new(0, text.encode_utf16().count());
+        let font = NSFont::boldSystemFontOfSize(10.0);
+        let ink = colour(fg);
+        // SAFETY: these attribute keys take NSFont and NSColor; the range covers the string.
+        unsafe {
+            label.addAttribute_value_range(NSFontAttributeName, font.as_ref() as &AnyObject, range);
+            label.addAttribute_value_range(NSForegroundColorAttributeName, ink.as_ref() as &AnyObject, range);
+        }
+        let size = label.size();
+        label.drawAtPoint(NSPoint::new(
+            (rect.size.width - size.width) / 2.0,
+            (rect.size.height - size.height) / 2.0,
+        ));
+        Bool::YES
+    });
+    let image =
+        NSImage::imageWithSize_flipped_drawingHandler(NSSize::new(IMAGE_SIDE, IMAGE_SIDE), false, &handler);
+    image.setTemplate(false);
+    image
 }

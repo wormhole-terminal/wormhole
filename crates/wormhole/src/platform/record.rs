@@ -55,7 +55,13 @@ pub fn pick(selector: &str) -> Result<(String, Vec<Callback>), String> {
     let selector = selector.trim();
     let found = match selector.parse::<usize>() {
         Ok(n) => leaves.get(n),
-        Err(_) => leaves.iter().find(|leaf| leaf.full_title() == selector || leaf.item.title == selector),
+        Err(_) => leaves.iter().find(|leaf| {
+            let shown = super::menu::display_title(&leaf.item.title, leaf.item.subtitle.as_deref(), false);
+            leaf.full_title() == selector
+                || leaf.item.title == selector
+                || shown == selector
+                || (!leaf.path.is_empty() && format!("{} > {shown}", leaf.path) == selector)
+        }),
     }
     .ok_or_else(|| format!("no item {selector:?}"))?;
     if !found.item.enabled {
@@ -66,6 +72,24 @@ pub fn pick(selector: &str) -> Result<(String, Vec<Callback>), String> {
     let mut callbacks = close().unwrap_or_default();
     callbacks.extend(run);
     Ok((title, callbacks))
+}
+
+#[cfg(test)]
+mod menu_tests {
+    use super::{LAST, pick};
+    use crate::platform::{Item, Menu};
+
+    #[test]
+    fn a_choice_with_detail_can_be_picked_by_its_title_or_displayed_text() {
+        let menu = Menu::new()
+            .submenu("Apps", Menu::new().item(Item::new("Editor").subtitle(Some("Not installed".into()))));
+        for selector in ["Editor", "Apps > Editor", "Editor — Not installed", "Apps > Editor — Not installed"]
+        {
+            LAST.with(|last| *last.borrow_mut() = Some(menu.clone()));
+            let (title, _) = pick(selector).expect("selects the item");
+            assert_eq!(title, "Apps > Editor");
+        }
+    }
 }
 
 /// `colour <n|name>`: a dot of the menu's row of swatches, by its place (from 0) or its name, as a
@@ -272,7 +296,7 @@ pub fn popover_colour(which: &str) -> Result<Vec<Callback>, String> {
     let which = which.trim();
     let hex = which.starts_with('#').then(|| wormhole_core::theme::tokens::Color::from_hex(which));
     let colour = |color: wormhole_core::theme::tokens::Color| -> Hsla {
-        gpui_kit::Rgba { r: color.r, g: color.g, b: color.b, a: 1.0 }.into()
+        gpui_kit::Rgba { r: color.r, g: color.g, b: color.b, a: color.a }.into()
     };
     if let Some(popover) = open_popover() {
         for row in &popover.rows {
