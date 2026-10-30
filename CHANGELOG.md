@@ -20,6 +20,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   Beta, that puts glass under the sidebar's and the panel's cards. It is off until you turn it on, and stays
   painted while Reduce Transparency or Increase Contrast is on.
 
+### Changed
+
+- Restarting for an update starts the new Wormhole as soon as the old one has quit, instead of after a pause
+  of about a second.
+
 ### Fixed
 
 - After a restart, the window that was in front is in front again, not the one opened or revealed last.

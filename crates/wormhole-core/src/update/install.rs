@@ -88,17 +88,18 @@ pub fn is_translocated(app_bundle: &Path) -> bool {
     app_bundle.components().any(|c| c.as_os_str() == "AppTranslocation")
 }
 
-/// How long the relaunch helper waits for this process to exit before giving up: 150 polls of 0.2 s.
-const RELAUNCH_WAIT_POLLS: u32 = 150;
+/// How long the relaunch helper waits for this process to exit before giving up: 600 polls of 50 ms.
+/// A short poll is what makes a restart quick: the new app starts within 50 ms of the old one's exit.
+const RELAUNCH_WAIT_POLLS: u32 = 600;
 /// The seconds between two of those polls (a `sleep` argument).
-const RELAUNCH_POLL_SECS: &str = "0.2";
+const RELAUNCH_POLL_SECS: &str = "0.05";
 
 /// Starts `app_bundle` again once this process has exited, then returns immediately; the caller
 /// should quit right after. The helper is double-forked (`( … ) &`) so it's reparented to launchd
 /// and survives our exit, and waits for our pid so `open -n` doesn't race the old instance.
 ///
 /// If this process is still there after [`RELAUNCH_WAIT_POLLS`] (hung while quitting), the
-/// helper gives up and launches nothing: a second instance next to a half-dead first one would
+/// helper writes a line to the system log (`logger`), gives up and launches nothing: a second instance next to a half-dead first one would
 /// fight it over the hook socket and the database, and the user can open the app themselves.
 pub fn relaunch(app_bundle: &Path) -> io::Result<()> {
     spawn_relaunch_helper(
@@ -107,11 +108,12 @@ pub fn relaunch(app_bundle: &Path) -> io::Result<()> {
         Path::new("/usr/bin/open"),
         RELAUNCH_WAIT_POLLS,
         RELAUNCH_POLL_SECS,
-        "1",
     )
 }
 
-/// `opener -n app_bundle` once `pid` is gone; `polls`, `poll_secs` and `settle_secs` are parameters
+/// `opener -n app_bundle` once `pid` is gone, with no pause after it: `kill -0` fails only once the process
+/// is gone for good, so its single-instance lock and sockets are released, and `-n` starts a new instance
+/// whatever LaunchServices still thinks of the old one. `polls` and `poll_secs` are parameters
 /// so tests can use a fake opener and not wait for real.
 fn spawn_relaunch_helper(
     app_bundle: &Path,
@@ -119,17 +121,20 @@ fn spawn_relaunch_helper(
     opener: &Path,
     polls: u32,
     poll_secs: &str,
-    settle_secs: &str,
 ) -> io::Result<()> {
-    // Everything goes in as positional args ($0..$5), never interpolated, so no quoting issues.
+    // Everything goes in as positional args ($0..$4), never interpolated, so no quoting issues.
     const SCRIPT: &str = r#"(
         i=0
         while kill -0 "$1" 2>/dev/null; do
-            [ "$i" -ge "$3" ] && exit 0
+            if [ "$i" -ge "$3" ]; then
+                # Nobody sees this process: leave a line in the system log (`log show --predicate
+                # 'senderImagePath ENDSWITH "logger"'`, or Console) saying why no new app came up.
+                logger -t Wormhole-relaunch "the old Wormhole (pid $1) did not exit in time: not starting a new one" 2>/dev/null
+                exit 0
+            fi
             sleep "$4"
             i=$((i+1))
         done
-        sleep "$5"
         exec "$2" -n "$0"
     ) </dev/null >/dev/null 2>&1 &"#;
     let mut command = shell::script(SCRIPT);
@@ -139,7 +144,6 @@ fn spawn_relaunch_helper(
         .arg(opener)
         .arg(polls.to_string())
         .arg(poll_secs)
-        .arg(settle_secs)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
@@ -327,7 +331,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let (opener, marker) = fake_opener(dir.path());
         let mut old = Command::new("sleep").arg("30").spawn().unwrap();
-        spawn_relaunch_helper(Path::new("/Applications/Wormhole.app"), old.id(), &opener, 100, "0.02", "0")
+        spawn_relaunch_helper(Path::new("/Applications/Wormhole.app"), old.id(), &opener, 100, "0.02")
             .unwrap();
         std::thread::sleep(std::time::Duration::from_millis(250));
         assert!(!marker.exists(), "it must wait for the old instance");
@@ -343,7 +347,7 @@ mod tests {
         let (opener, marker) = fake_opener(dir.path());
         let mut stuck = Command::new("sleep").arg("30").spawn().unwrap();
         // Three polls (60 ms) stand in for the 30 s; the old process never exits.
-        spawn_relaunch_helper(Path::new("/Applications/Wormhole.app"), stuck.id(), &opener, 3, "0.02", "0")
+        spawn_relaunch_helper(Path::new("/Applications/Wormhole.app"), stuck.id(), &opener, 3, "0.02")
             .unwrap();
         std::thread::sleep(std::time::Duration::from_millis(500));
         assert!(!marker.exists(), "it opened a second instance next to a running one");
