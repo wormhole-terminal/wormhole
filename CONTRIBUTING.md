@@ -217,9 +217,8 @@ workflow built it from the tagged commit. A version with a Security entry gets `
 `latest.json`; a version with a suffix (`0.4.0-beta.1`) is published as a prerelease and is never
 offered on the Stable channel. A stable release also sets `version` and `sha256` in the Homebrew cask
 (`wormhole-terminal/homebrew-tap`, `Casks/wormhole-terminal.rb`) when the `HOMEBREW_TAP_TOKEN` secret
-is there. Then it starts the website's Releases workflow (`WEBSITE_DISPATCH_TOKEN`: a fine-grained
-token with Actions: write on that repository only), which copies the notes and the version at once
-instead of at its next two-hourly run.
+is there. Then it calls the website's deploy hook (`WEBSITE_DEPLOY_HOOK`, Cloudflare Workers Builds), and the
+site rebuilds with the new notes and version at once instead of after its next two-hourly sync.
 
 Release (`release.yml`) and Preview (`preview.yml`, below) both build through `build.yml`, the one
 workflow with the signing secrets (secrets of the `release` environment, which only `main` and `v*` tags

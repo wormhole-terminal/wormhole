@@ -7,7 +7,7 @@
 #   commit and the tag) -> full release, unless that release already exists. The release notes are the
 #   version's section of CHANGELOG.md (scripts/changelog.py notes); a Security entry there makes the
 #   release a security update in latest.json (see RELEASE_SEVERITY in scripts/package.sh). Then the
-#   website is told (its Releases workflow copies the notes and the version at once).
+#   website rebuilds through its deploy hook and shows the release at once.
 # - Run manually (workflow_dispatch) -> build + package only; tick "publish" to also create the
 #   GitHub Release.
 # The builds of main are preview.yml's.
@@ -71,11 +71,11 @@ jobs:
       run_tests: ${{ inputs.run_tests == true }}
       build_sha: ${{ github.sha }}
 
-  # The website's Releases workflow (hyperficial/wormhole-website) copies the release notes and the
-  # version the feed names; it runs every two hours, and at once when started here. WEBSITE_DISPATCH_TOKEN
-  # is a fine-grained token for that repository only with Actions: write, a secret of the `release`
-  # environment: it can start the workflow but change no file there, unlike the Contents: write a
-  # repository_dispatch would need, which could push to the site.
+  # The website (hyperficial/wormhole-website, built by Cloudflare Workers Builds) reads the version from
+  # the update feed and copies the notes from CHANGELOG.md while it builds (its scripts/sync-at-build.ts);
+  # it rebuilds on its own every two hours, and at once through its deploy hook. WEBSITE_DEPLOY_HOOK is that
+  # hook's URL, a secret of the `release` environment: whoever has it can start a build of the site and
+  # nothing else.
   website:
     name: Tell the website
     needs: build
@@ -85,12 +85,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - env:
-          GH_TOKEN: ${{ secrets.WEBSITE_DISPATCH_TOKEN }}
+          HOOK: ${{ secrets.WEBSITE_DEPLOY_HOOK }}
           VERSION: ${{ needs.build.outputs.version }}
         run: |
-          if [ -z "$GH_TOKEN" ]; then
-            echo "::notice::No WEBSITE_DISPATCH_TOKEN: the website shows $VERSION at its next scheduled sync (every two hours)"
+          if [ -z "$HOOK" ]; then
+            echo "::notice::No WEBSITE_DEPLOY_HOOK: the website shows $VERSION after its next scheduled sync (every two hours)"
             exit 0
           fi
-          gh workflow run releases.yml -R hyperficial/wormhole-website --ref main
-          echo "The website syncs $VERSION now"
+          # The URL stays in the environment: curl names no URL in an error, and GitHub masks secrets anyway.
+          curl -fsS -o /dev/null -X POST --max-time 30 "$HOOK"
+          echo "The website rebuilds with $VERSION now"
