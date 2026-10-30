@@ -7,7 +7,7 @@ name: CI
 # `gh workflow run CI`) always goes. Run `scripts/check.sh` before pushing all the same.
 #
 # A push that only changes the root's Markdown or GitHub's templates and README images starts nothing,
-# not even an unstable build (Release follows CI); scripts/check.sh already ran design_rules, the one
+# not even a preview build (Preview follows CI); scripts/check.sh already ran design_rules, the one
 # test that reads them. Markdown under crates/ and .claude/ is compiled in or tested, so it still runs;
 # pull requests always run.
 on:

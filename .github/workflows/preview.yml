@@ -1,0 +1,78 @@
+# A preview build: every push to main that passes CI is built, signed and notarized like a release
+# (build.yml), numbered after the last release (X.Y.(Z+1)-preview.N, scripts/lib.sh preview_version)
+# and published to the rolling prerelease `preview`. <base>/preview/latest.json redirects to its
+# latest.json, and so does <base>/unstable/latest.json, which the app's Unstable channel reads up to 1.5.
+name: Preview
+
+on:
+  # workflow_run runs with this repository's secrets whatever started CI (zizmor: dangerous-triggers),
+  # and on main's ref, so the `release` environment's branch limit doesn't stop it: the gate is the guard
+  # here. `branches` only compares a name: a fork's pull request from its own main passes it. The gate's
+  # `if` below lets through only a push to main in this repository that passed CI, before anything is
+  # checked out, so a pull request's code is never fetched, let alone run.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+# Read-only for every job; the build job asks for what it writes (zizmor: excessive-permissions).
+permissions:
+  contents: read
+
+jobs:
+  # A cheap Linux job that decides whether the macOS one is needed at all.
+  gate:
+    name: Anything to build?
+    # On the job, not in a step: a step's check runs after the checkout, on a runner that already has
+    # the commit, and whatever that commit runs can write this job's outputs, which open the build job.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha }}
+          # The whole history brings the tags along, which the check below reads.
+          fetch-depth: 0
+      # This job's outputs decide whether the signing job runs, so it runs nothing from the checkout: the
+      # checkout is only data here, for git to read.
+      - id: check
+        run: |
+          skip=false
+          if ! git tag --list 'v*' | grep -q .; then
+            # Without the tags every commit would look unreleased: stop rather than guess.
+            echo "::error::no release tags in the checkout"
+            exit 1
+          elif released="$(git tag --list 'v*' --contains HEAD --sort=v:refname | head -n 1)" && [ -n "$released" ]; then
+            # The release's own commit, or one before it whose CI finished after the tag: a preview
+            # build of it would be numbered below the release that already has it.
+            skip=true
+            echo "::notice::$released already contains this commit: no preview build"
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: gate
+    # The result as well: a gate that was skipped has no `skip` output, which isn't 'true' either.
+    if: needs.gate.result == 'success' && needs.gate.outputs.skip != 'true'
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    # `./` and not GitHub's newer `$/` (zizmor: self-repository): actionlint doesn't know `$/` yet, and a
+    # reusable workflow named with `./` comes from the same commit as this one anyway.
+    uses: ./.github/workflows/build.yml # zizmor: ignore[self-repository]
+    with:
+      channel: preview
+      publish: true
+      build_sha: ${{ github.event.workflow_run.head_sha }}
+    # Environment secrets are reported empty in a called workflow without this (actions/runner#4453). The
+    # repository has no repository or organization secrets, so it passes nothing; build.yml's come from
+    # its environment.
+    secrets: inherit # zizmor: ignore[secrets-inherit]

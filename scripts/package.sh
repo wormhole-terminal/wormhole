@@ -18,7 +18,7 @@
 # The feed gives each Mac the archive of its own architecture: a thin app where there is one, else the
 # universal one; so with all three the universal app has a DMG and no archive.
 #
-# All of them go onto the GitHub Release vX.Y.Z (a build of main: the rolling release `unstable`). The
+# All of them go onto the GitHub Release vX.Y.Z (a build of main: the rolling release `preview`). The
 # app reads <PUBLIC_BASE_URL>/<channel>/latest.json, which redirects to that release's latest.json,
 # and that names the archives on its release.
 #
@@ -27,7 +27,7 @@
 # Env:
 #   GITHUB_REPOSITORY    owner/name whose Releases host the files (set in Actions; default
 #                        wormhole-terminal/wormhole)
-#   RELEASE_TAG          the release the files go onto (default v<version>; `unstable` for main builds)
+#   RELEASE_TAG          the release the files go onto (default v<version>; `preview` for main builds)
 #   RELEASE_NOTES        Markdown notes for latest.json, or RELEASE_NOTES_FILE=path
 #   RELEASE_SEVERITY     critical|high|medium|low: this version is a security update, so latest.json gets
 #                        "security": {"severity": "<level>", "advisories": ["GHSA-…"]}. Without it
