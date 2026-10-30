@@ -14,6 +14,7 @@ use wormhole_core::view::sidebar::{RowState, names};
 use wormhole_term::{Mark, Notification, PtyEvent, WindowOp};
 
 use super::find_bar::FindBar;
+use super::hosted::Hosting;
 use super::{Failure, TerminalView};
 use crate::settings::settings_in;
 
@@ -58,6 +59,8 @@ pub struct TerminalSummary {
     pub notice: Option<ProgramNotice>,
     /// Hidden from the programs that control Wormhole ("Hide from Agents").
     pub agent_hidden: bool,
+    /// Where the program runs: in the app, or in a session host that outlives it.
+    pub hosting: Hosting,
     /// The find bar, while it is open (the window draws it).
     pub find_bar: Option<Entity<FindBar>>,
 }
@@ -83,6 +86,7 @@ impl TerminalSummary {
             bell_rang: false,
             notice: None,
             agent_hidden: false,
+            hosting: Hosting::InApp,
             find_bar: None,
         }
     }
@@ -124,6 +128,7 @@ impl TerminalSummary {
             && self.bell_rang == terminal.bell_rang()
             && self.notice.as_ref() == terminal.notice()
             && self.agent_hidden == terminal.agent_hidden
+            && self.hosting == terminal.hosting()
             && self.find_bar == terminal.find_bar()
     }
 }
@@ -213,6 +218,7 @@ impl TerminalView {
             bell_rang: self.bell_rang,
             notice: self.notice.clone(),
             agent_hidden: self.agent_hidden,
+            hosting: self.hosting(),
             find_bar: self.find_bar(),
         }
     }

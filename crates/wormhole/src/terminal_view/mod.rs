@@ -42,7 +42,7 @@ pub use control_input::MouseSent;
 pub use failed::Failure;
 pub use grid_layout::GridProbe;
 use grid_layout::Layout;
-pub use hosted::{Start, note_app_quitting};
+pub use hosted::{Hosting, Start, note_app_quitting};
 pub use input::{TerminalKeys, keystroke_spec};
 #[cfg(feature = "devctl")]
 pub(crate) use render::PAINTS;
@@ -274,7 +274,7 @@ impl TerminalView {
             }
             None => (None, None),
         };
-        let host = hosted::HostState::of(&start);
+        let host = hosted::HostState::of(&start, options.welcome);
 
         input::TerminalKeys::register(cx.entity().downgrade(), cx);
 

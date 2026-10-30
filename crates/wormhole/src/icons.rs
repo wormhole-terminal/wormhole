@@ -38,6 +38,8 @@ gpui_kit::assets::icon_assets!(
         GripVertical,
         FilePlus,
         Pin,
+        // The status bar's mark for a terminal in a session host of its own, which outlives the app.
+        HardDrive,
         GitFork,
         // A split's members that aren't together in the list.
         Link2,

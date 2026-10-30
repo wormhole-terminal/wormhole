@@ -17,7 +17,7 @@
 //! `window_lifecycle`, `hosting` for the persistent terminals), what it answers from outside
 //! (`control`, `restart_facts`, `ambient`, `menu_state`, and `devctl` in a devctl build), its
 //! actions and keys (`window_actions`, `shortcuts`), its look (`layout`, `chrome`, `resize`, `slide`,
-//! `glass`, `status_bar`; `regions`: the chrome GPUI keeps between frames) and what opens over it
+//! `glass`, `status_bar` and its `status_hosting` item; `regions`: the chrome GPUI keeps between frames) and what opens over it
 //! (`overlay`).
 //!
 //! The window sits between the modules it hosts and the ones that use it. Below it, and used by it:
@@ -163,6 +163,7 @@ mod split_opening_tests;
 #[cfg(test)]
 mod stable_list_tests;
 mod status_bar;
+mod status_hosting;
 #[cfg(test)]
 mod status_motion_tests;
 mod status_rolls;

@@ -4,7 +4,8 @@
 //! Shown, it has the terminal of any window that has waited longest for you as a button (its
 //! tile, its name, how long: one click goes there), the other agents by what they do as numbers
 //! ("2 working · 1 done"; each opens the first such terminal), how the terminal on screen is doing
-//! ("working · 4m", which the title row leaves to the bar then) and its size. The branch,
+//! ("working · 4m", which the title row leaves to the bar then), where it runs (`status_hosting`) and
+//! its size. The branch,
 //! its changes and the agent's context are the title row's, so the bar doesn't repeat them. What it
 //! says, which terminal is
 //! the longest waiting and how much fits the window's width, is core's
@@ -23,8 +24,9 @@ use crate::app_state::app;
 use crate::settings::{settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::style::{StatusGlyph, StatusTile, TileFace};
-use crate::terminal_view::Status;
+use crate::terminal_view::{Hosting, Status};
 use crate::window::Workspace;
+use crate::window::status_hosting;
 use crate::window::window_lifecycle::open_tab;
 
 /// One terminal (a sidebar row) as the bar counts it.
@@ -55,6 +57,9 @@ pub(super) struct StatusBar {
     state: Option<String>,
     /// The terminal's shell and grid, while the window is wide enough.
     size: Option<String>,
+    /// Where the selected terminal runs, while persistent terminals are on, and whether the window is
+    /// wide enough for the word beside its icon.
+    hosting: Option<(Hosting, bool)>,
     /// What VoiceOver says for each item, whole whatever the width.
     spoken: Spoken,
     /// The profile of a window that is not in the profile Wormhole is in, while the window is
@@ -213,6 +218,7 @@ impl Workspace {
             self.status_counted(cx),
             Detail::at(self.window_width),
             crate::window::title::breadcrumb::crumb_source(&self.active_session().pane.summary),
+            self.hosting_shown(cx).then(|| self.active_session().pane.summary.hosting),
         )
     }
 
@@ -260,6 +266,10 @@ impl Workspace {
                 spoken: spoken::status_counted(&c),
             })
             .collect();
+        let hosting = self
+            .hosting_shown(cx)
+            .then(|| (session.pane.summary.hosting, detail.hosting_word()))
+            .filter(|(hosting, _)| status_hosting::shown(*hosting));
         let spoken = Spoken { size: size.as_ref().map(|_| spoken::status_size(&program, cols, rows)) };
         let profile = self.odd_profile(cx).filter(|_| detail.profile()).map(|(profile, color)| ProfileTag {
             spoken: spoken::status_profile(&profile.name),
@@ -267,7 +277,12 @@ impl Workspace {
             name: profile.name.clone().into(),
             color,
         });
-        Some(StatusBar { spoken, attention, rest, words: detail.words(), state, size, profile })
+        Some(StatusBar { spoken, attention, rest, words: detail.words(), state, size, hosting, profile })
+    }
+
+    /// Whether the bar says where the terminal runs: only while persistent terminals are on.
+    fn hosting_shown(&self, cx: &App) -> bool {
+        crate::window::windows::persistent_terminals_on(cx)
     }
 
     /// On the tick: read the other windows, and redraw when what the bar would show has changed
@@ -500,6 +515,11 @@ impl Workspace {
             .children(attention)
             .child(div().flex().items_center().children(rest))
             .child(div().flex_1())
+            .children(
+                bar.hosting
+                    .and_then(|(hosting, word)| status_hosting::item(ui, hosting, word))
+                    .map(|item| div().flex().items_center().child(item)),
+            )
             .children(bar.state.clone().map(|state| {
                 div()
                     .flex()

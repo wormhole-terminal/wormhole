@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- With persistent terminals on, the status bar says where the selected terminal runs: "Persistent" (in a
+  session host of its own, so it keeps running when Wormhole quits or updates), "Connecting…", or "In app"
+  in the warning colour (it ends when Wormhole quits or updates). A tooltip says it in a sentence. The
+  Welcome terminal, which never runs in a session host, shows nothing.
 - Wormhole notices when it was updated on disk while it runs (an update made outside the app, such as
   Homebrew or a copy from a disk image) and shows it in Settings → Updates as installed, with the same
   Restart and Restart When Idle choices as after an update made in the app. A copy of the same version

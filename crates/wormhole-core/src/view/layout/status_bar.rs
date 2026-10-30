@@ -42,6 +42,12 @@ impl Detail {
         self >= Detail::Numbers
     }
 
+    /// Whether the word beside the hosting item's icon ("Persistent") is shown; below that the icon
+    /// stays and its tooltip says the rest. Like the size, it goes only in the narrowest window.
+    pub fn hosting_word(self) -> bool {
+        self >= Detail::Numbers
+    }
+
     /// Whether the profile's name is shown (a window in another profile than the shown one). It is
     /// the bar's lowest-priority item: it goes first, with the words, when the window narrows.
     pub fn profile(self) -> bool {
@@ -222,6 +228,13 @@ mod tests {
     use super::{
         Activity, Counted, Detail, Entry, STATUS_BAR_H, Summary, elapsed, pane_height, rest_line, size,
     };
+
+    #[test]
+    fn the_hosting_item_keeps_its_icon_when_the_window_is_narrowest() {
+        assert!(Detail::at(900.0).hosting_word());
+        assert!(!Detail::at(500.0).hosting_word());
+        assert!(Detail::at(500.0) < Detail::Numbers, "the same line as the size's");
+    }
 
     #[test]
     fn the_bar_sheds_detail_as_the_window_narrows() {

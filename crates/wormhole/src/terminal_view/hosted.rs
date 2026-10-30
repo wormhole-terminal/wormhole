@@ -31,6 +31,22 @@ pub enum Start {
     Attach { socket: PathBuf, id: String, visible: bool },
 }
 
+/// Where a terminal's program runs, as the status bar says it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Hosting {
+    /// In the app's own process: it ends when the app quits.
+    InApp,
+    /// In the app's own process by design (the Welcome terminal never gets a session host): there is
+    /// nothing to warn about, so the bar says nothing.
+    AppOnly,
+    /// In a session host that is being started or attached to.
+    Connecting,
+    /// In a session host, which outlives the app.
+    Persistent,
+    /// Its session host went away and took the program with it: the terminal has ended.
+    Lost,
+}
+
 /// What a terminal knows about its session host.
 #[derive(Default)]
 pub(super) struct HostState {
@@ -42,6 +58,8 @@ pub(super) struct HostState {
     detached: bool,
     /// The host is being started or attached to (the pane is blank meanwhile).
     connecting: bool,
+    /// Runs in the app by design (the Welcome terminal), so being in the app is not a fallback.
+    app_only: bool,
     /// On screen (fed a repaint, then the stream) or headless, as the workspace last said.
     on_screen: bool,
     /// The options it was started with, for attaching again (`reattach`): the replica must have
@@ -76,9 +94,19 @@ fn kept_past_quit(ready: anyhow::Result<(Pty, PtyEvents)>) -> anyhow::Result<(Pt
 }
 
 impl HostState {
-    pub(super) fn of(start: &Start) -> Self {
+    fn hosting(&self) -> Hosting {
+        match self {
+            Self { id: None, app_only: true, .. } => Hosting::AppOnly,
+            Self { id: None, .. } => Hosting::InApp,
+            Self { lost: true, .. } => Hosting::Lost,
+            Self { connecting: true, .. } => Hosting::Connecting,
+            Self { .. } => Hosting::Persistent,
+        }
+    }
+
+    pub(super) fn of(start: &Start, app_only: bool) -> Self {
         match start {
-            Start::Local => Self::default(),
+            Start::Local => Self { app_only, ..Self::default() },
             Start::Host { id, .. } => {
                 Self { id: Some(id.clone()), connecting: true, on_screen: true, ..Self::default() }
             }
@@ -192,6 +220,8 @@ impl TerminalView {
                 cx.emit(TerminalEvent::HostChanged);
             }
         }
+        // Connected, or fallen back to the app: the status bar says which.
+        self.announce_summary(cx);
         cx.notify();
     }
 
@@ -253,6 +283,11 @@ impl TerminalView {
         self.host.lost
     }
 
+    /// Where the program runs now.
+    pub fn hosting(&self) -> Hosting {
+        self.host.hosting()
+    }
+
     /// Its program runs in a session host that is still there: quitting leaves it running.
     pub fn is_hosted(&self) -> bool {
         self.host.id.is_some() && !self.host.lost
@@ -264,6 +299,7 @@ impl TerminalView {
             tracing::warn!(id = self.host.id.as_deref(), "a terminal's session host went away");
             self.host.lost = true;
             cx.emit(TerminalEvent::HostChanged);
+            self.announce_summary(cx);
         }
     }
 
@@ -313,6 +349,7 @@ impl TerminalView {
         };
         self.host.detached = false;
         self.host.connecting = true;
+        self.announce_summary(cx);
         let size = self.painted_size().unwrap_or(GridSize {
             cols: 100,
             rows: 30,
@@ -378,5 +415,25 @@ impl TerminalView {
                 .child(banner)
                 .into_any_element(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{HostState, Hosting, Start};
+
+    #[test]
+    fn where_a_program_runs_follows_its_host() {
+        assert_eq!(HostState::of(&Start::Local, false).hosting(), Hosting::InApp);
+        assert_eq!(HostState::of(&Start::Local, true).hosting(), Hosting::AppOnly);
+        let new =
+            HostState::of(&Start::Host { binary: "h".into(), data_dir: "d".into(), id: "x".into() }, false);
+        assert_eq!(new.hosting(), Hosting::Connecting);
+        let ready = HostState { connecting: false, ..new };
+        assert_eq!(ready.hosting(), Hosting::Persistent);
+        let lost = HostState { lost: true, ..ready };
+        assert_eq!(lost.hosting(), Hosting::Lost);
+        // Fallen back to the app: the id is given up.
+        assert_eq!(HostState { id: None, ..lost }.hosting(), Hosting::InApp);
     }
 }
