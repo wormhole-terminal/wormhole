@@ -10,6 +10,15 @@ studio-undo-reset = Reset “{ $token }”
 studio-undo-rename = Rename
 studio-undo-revert = Revert to Saved
 
+## The title row's Undo and Redo buttons: tooltips and what VoiceOver says
+
+# { $step } is what the step did, e.g. Change “primary”.
+studio-undo-button = Undo { $step }
+# { $step } is what the step did, e.g. Change “primary”.
+studio-redo-button = Redo { $step }
+studio-undo-nothing = Undo
+studio-redo-nothing = Redo
+
 ## Opening on a built-in theme
 
 # { $from } is the name of the theme it starts from, e.g. Nord.

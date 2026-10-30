@@ -4,17 +4,20 @@
 
 use std::time::Duration;
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::input;
 use gpui_kit::*;
 use wormhole_text::keys::{
-    STUDIO_UNDO_ADD_APPEARANCE, STUDIO_UNDO_RENAME, STUDIO_UNDO_RESTORE, STUDIO_UNDO_REVERT,
-    STUDIO_UNDO_UPDATE_FROM, studio_undo_change, studio_undo_move, studio_undo_reset,
+    STUDIO_REDO_NOTHING, STUDIO_UNDO_ADD_APPEARANCE, STUDIO_UNDO_NOTHING, STUDIO_UNDO_RENAME,
+    STUDIO_UNDO_RESTORE, STUDIO_UNDO_REVERT, STUDIO_UNDO_UPDATE_FROM, studio_redo_button, studio_undo_button,
+    studio_undo_change, studio_undo_move, studio_undo_reset,
 };
 
 use super::StudioWindow;
 use super::document::history::{Step, StepLabel};
 use super::document::{places, settled_shown};
-use crate::settings::SettingsStore;
+use crate::settings::{SettingsStore, UiColors};
+use crate::style;
 use crate::window::menu_state::{EditTitles, set_edit_titles};
 
 /// How long a drag of a colour, or a run of key presses on a slider, may pause and still be one step.
@@ -61,6 +64,37 @@ impl StudioWindow {
         self.history.end_gesture();
         self.gesture_timer = None;
         self.publish_edit_titles(cx);
+    }
+
+    /// The Undo and Redo buttons of the title row: the tooltip (and what VoiceOver says) names the
+    /// step as the Edit menu does; with no step to take, the button is off.
+    pub(super) fn history_buttons(&self, ui: UiColors, cx: &mut Context<Self>) -> [AnyElement; 2] {
+        let undo = self.history.undo_label().map(words);
+        let redo = self.history.redo_label().map(words);
+        let tip = |step: &Option<String>, with: fn(&str) -> String, bare| match step {
+            Some(step) => with(step),
+            None => wormhole_text::text(bare).to_string(),
+        };
+        [
+            style::icon_button(
+                "studio-undo",
+                ui,
+                IconName::Undo2,
+                tip(&undo, studio_undo_button, STUDIO_UNDO_NOTHING),
+            )
+            .disabled(undo.is_none())
+            .on_click(cx.listener(|this, _, window, cx| this.undo(window, cx)))
+            .into_any_element(),
+            style::icon_button(
+                "studio-redo",
+                ui,
+                IconName::Redo2,
+                tip(&redo, studio_redo_button, STUDIO_REDO_NOTHING),
+            )
+            .disabled(redo.is_none())
+            .on_click(cx.listener(|this, _, window, cx| this.redo(window, cx)))
+            .into_any_element(),
+        ]
     }
 
     pub(super) fn undo(&mut self, window: &mut Window, cx: &mut Context<Self>) {

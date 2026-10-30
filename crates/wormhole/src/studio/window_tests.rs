@@ -732,6 +732,43 @@ fn undo_and_redo_walk_the_edits_and_clear_unsaved(cx: &mut TestAppContext) {
     });
 }
 
+/// Save theme (the button and ⌘S) does nothing while there is nothing to save, and starts the save
+/// once there are edits.
+#[gpui_kit::test]
+fn save_is_off_until_there_are_edits(cx: &mut TestAppContext) {
+    use super::title::SaveAction;
+    let (handle, studio) = open(cx);
+    with(cx, handle, &studio, |studio, window, cx| {
+        assert!(!studio.dirty());
+        studio.run_save_action(SaveAction::Save, window, cx);
+        assert!(studio.naming.is_none() && !studio.renaming, "nothing to save: nothing asked");
+        edit(studio, window, cx);
+        assert!(studio.dirty());
+        studio.run_save_action(SaveAction::Save, window, cx);
+        assert!(studio.naming.is_some(), "an untitled theme with edits asks for its name");
+    });
+}
+
+/// The title row's Undo and Redo buttons are on exactly while there is a step to take, name it as
+/// the Edit menu does, and draw without trouble in each state.
+#[gpui_kit::test]
+fn the_undo_and_redo_buttons_follow_the_history(cx: &mut TestAppContext) {
+    let (handle, studio) = open(cx);
+    let state = |cx: &mut TestAppContext| {
+        studio.read_with(cx, |s, _| (s.history.undo_label().is_some(), s.history.redo_label().is_some()))
+    };
+    assert_eq!(state(cx), (false, false));
+    cx.update(|cx| cx.refresh_windows());
+    with(cx, handle, &studio, edit);
+    assert_eq!(state(cx), (true, false));
+    cx.update(|cx| cx.refresh_windows());
+    with(cx, handle, &studio, |studio, window, cx| studio.undo(window, cx));
+    assert_eq!(state(cx), (false, true));
+    cx.update(|cx| cx.refresh_windows());
+    with(cx, handle, &studio, |studio, window, cx| studio.redo(window, cx));
+    assert_eq!(state(cx), (true, false));
+}
+
 /// The picker and the slider report every value on the way; a drag is one step.
 #[gpui_kit::test]
 fn a_picker_drag_is_one_undo_step(cx: &mut TestAppContext) {

@@ -4,7 +4,7 @@
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::button::{Button, ButtonCustomVariant, ButtonVariants};
-use gpui_kit::component::{Icon, Selectable, Sizable};
+use gpui_kit::component::{Disableable as _, Icon, Selectable, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use std::rc::Rc;
@@ -111,6 +111,7 @@ pub struct IconButton {
     /// The button's own click handler, which the button runs after starting its motion.
     on_click: Option<ClickHandler>,
     menu: Option<OpenMenu>,
+    disabled: bool,
 }
 
 /// An [`IconButton`] with a 14 pt glyph. Add `.on_click(…)` or a menu.
@@ -142,6 +143,7 @@ pub fn icon_button(
         motion: IconMotion::of(icon),
         on_click: None,
         menu: None,
+        disabled: false,
     }
 }
 
@@ -237,6 +239,12 @@ impl IconButton {
         self
     }
 
+    /// Nothing to do now (an Undo with no step): drawn in the faint colour, no hover, no click.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
     /// Pulls the button out by the room around its glyph, so the glyph (not the
     /// invisible box) lines up with the text and icons of the rows above and below.
     pub fn flush_right(self) -> Self {
@@ -299,6 +307,7 @@ impl RenderOnce for IconButton {
             motion,
             on_click,
             menu,
+            disabled,
         } = self;
         let clear = transparent_black();
         // An app's own icon, drawn in its place, has no motion of the glyph's.
@@ -309,7 +318,7 @@ impl RenderOnce for IconButton {
         let on_click = {
             let started = armed.as_ref().and_then(|armed| armed.clicks());
             let menu = menu.zip(menu_mark);
-            let wanted = started.is_some() || on_click.is_some() || menu.is_some();
+            let wanted = !disabled && (started.is_some() || on_click.is_some() || menu.is_some());
             wanted.then_some(move |event: &ClickEvent, window: &mut Window, cx: &mut App| {
                 if let Some(started) = &started {
                     started.start(cx);
@@ -349,6 +358,7 @@ impl RenderOnce for IconButton {
             .when_some(on_click, |b, run| b.on_click(run))
             // Only a pressed one is a toggle to VoiceOver; the rest are plain buttons.
             .when(selected, |b| b.toggled(true))
+            .when(disabled, |b| b.disabled(true))
             .group(group.clone())
             .w(px(face_w))
             .h(px(HIT_MIN))
@@ -364,9 +374,15 @@ impl RenderOnce for IconButton {
                     .items_center()
                     .justify_center()
                     .rounded(ui.radius)
-                    .text_color(if selected { ui.selected_text } else { ui.muted })
+                    .text_color(if disabled {
+                        ui.faint
+                    } else if selected {
+                        ui.selected_text
+                    } else {
+                        ui.muted
+                    })
                     .when(selected, |d| d.bg(ui.selected))
-                    .when(!selected, |d| {
+                    .when(!selected && !disabled, |d| {
                         d.group_hover(group, move |s| s.bg(ui.band_hover).text_color(ui.text))
                     })
                     .child(shown)
