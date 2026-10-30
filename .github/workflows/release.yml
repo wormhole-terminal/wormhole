@@ -27,9 +27,10 @@ on:
         description: "Run the whole test suite on the runner first (off: the local gate already ran it)"
         type: boolean
         default: false
-  # workflow_run runs with this repository's secrets whatever started CI (zizmor: dangerous-triggers).
-  # The gate below builds only a push to main in this repository that passed CI, and checks out that
-  # commit of main, never a pull request's code.
+  # workflow_run runs with this repository's secrets whatever started CI (zizmor: dangerous-triggers),
+  # and `branches` only compares a name: a fork's pull request from its own main passes it. The gate's
+  # `if` below lets through only a push to main in this repository that passed CI, before anything is
+  # checked out, so a pull request's code is never fetched, let alone run.
   workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows: [CI]
     types: [completed]
@@ -46,6 +47,13 @@ jobs:
   # A cheap Linux job that decides whether the macOS one is needed at all, and for which channel.
   gate:
     name: Anything to build?
+    # On the job, not in a step: a step's check runs after the checkout, on a runner that already has
+    # the commit, and whatever that commit runs can write this job's outputs, which open the release job.
+    if: >-
+      github.event_name != 'workflow_run' || (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -59,23 +67,16 @@ jobs:
           # Strings: a bare 0 is false in an expression, so `&& 0 || 1` always gave 1, and the gate saw
           # no tags. The whole history brings the tags along, which the check below reads.
           fetch-depth: ${{ github.event_name == 'workflow_run' && '0' || '1' }}
+      # This job's outputs decide whether the signing job runs, so it runs nothing from the checkout: the
+      # checkout is only data here, for git to read.
       - id: check
         env:
           GH_TOKEN: ${{ github.token }}
-          CI_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
-          CI_EVENT: ${{ github.event.workflow_run.event }}
-          CI_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
         run: |
-          . scripts/lib.sh
           skip=false channel=stable
           if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then
             channel=unstable
-            # Only a push to main in this repository that passed CI: never a pull request's run,
-            # whose code isn't main's, and never a commit that failed the tests.
-            if [ "$CI_CONCLUSION" != success ] || [ "$CI_EVENT" != push ] || [ "$CI_REPO" != "$GITHUB_REPOSITORY" ]; then
-              skip=true
-              echo "::notice::CI ended '$CI_CONCLUSION' for a $CI_EVENT from $CI_REPO: no unstable build"
-            elif ! git tag --list 'v*' | grep -q .; then
+            if ! git tag --list 'v*' | grep -q .; then
               # Without the tags every commit would look unreleased: stop rather than guess.
               echo "::error::no release tags in the checkout"
               exit 1
@@ -85,16 +86,18 @@ jobs:
               skip=true
               echo "::notice::$released already contains this commit: no unstable build"
             fi
-          elif [ "$GITHUB_EVENT_NAME" = push ] && gh release view "v$APP_VERSION" >/dev/null 2>&1; then
+          elif [ "$GITHUB_EVENT_NAME" = push ] && gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            # The tag's own name: the release job stops a tag that differs from Cargo.toml's version.
             skip=true
-            echo "::notice::The release v$APP_VERSION already exists: nothing to build"
+            echo "::notice::The release $GITHUB_REF_NAME already exists: nothing to build"
           fi
           { echo "skip=$skip"; echo "channel=$channel"; } >> "$GITHUB_OUTPUT"
 
   release:
     name: Release (Apple Silicon + Intel)
     needs: gate
-    if: needs.gate.outputs.skip != 'true'
+    # The result as well: a gate that was skipped has no `skip` output, which isn't 'true' either.
+    if: needs.gate.result == 'success' && needs.gate.outputs.skip != 'true'
     # Releases queue one after another, and the two channels never wait for each other. A build of
     # main runs to the end: cancelling it at minute ten threw the minutes away. Only one waits behind
     # it, the newest; GitHub cancels a waiting one when a newer one arrives.
