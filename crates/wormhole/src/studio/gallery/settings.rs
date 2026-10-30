@@ -157,6 +157,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             SettingParts {
                 label: label.into(),
                 description: Some(description.into()),
+                visible_hint: id == "g-setting-disabled",
                 chip: None,
                 key,
                 state,

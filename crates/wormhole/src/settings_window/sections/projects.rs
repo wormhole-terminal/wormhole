@@ -624,6 +624,7 @@ fn feature_row(
         SettingParts {
             label: feature.label().into(),
             description: Some(description.into()),
+            visible_hint: state == SettingState::Disabled,
             chip: None,
             key: "",
             state,

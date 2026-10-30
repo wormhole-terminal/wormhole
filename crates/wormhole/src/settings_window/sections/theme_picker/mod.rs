@@ -428,6 +428,7 @@ impl SettingsWindow {
                     style::SettingParts {
                         label: name,
                         description: kind,
+                        visible_hint: false,
                         chip: None,
                         key: "",
                         state: style::SettingState::Default,

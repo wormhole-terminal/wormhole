@@ -70,6 +70,7 @@ impl SettingsWindow {
                 SettingParts {
                     label: flag.title().into(),
                     description: Some(flag.description().into()),
+                    visible_hint: false,
                     chip: None,
                     key: "",
                     state,

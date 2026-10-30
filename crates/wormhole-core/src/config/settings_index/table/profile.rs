@@ -26,6 +26,7 @@ pub(super) const PROFILE: &[Group] = &[
         SETTINGS_PROFILE_GROUP_DANGER_ZONE,
         &[entry("profile-delete", SETTINGS_PROFILE_DELETE, &[])
             .with_description(SETTINGS_PROFILE_DELETE_DESCRIPTION)
+            .with_visible_hint()
             .with_keywords(SETTINGS_PROFILE_DELETE_KEYWORDS)],
     ),
 ];

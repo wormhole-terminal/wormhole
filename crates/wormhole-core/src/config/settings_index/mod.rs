@@ -128,6 +128,8 @@ pub struct Entry {
     /// The quiet line under the label. A page may say something more current in its place (the font
     /// in use, how many custom fonts were found).
     description: Option<Key>,
+    /// A warning that stays on the page; other descriptions are shown by the info button.
+    pub visible_hint: bool,
     /// Words that find it besides its label and description.
     keywords: Option<Key>,
     /// The `config.json` keys it writes: what "changed", the reset arrow and "set by a project"
@@ -428,6 +430,16 @@ mod tests {
     }
 
     #[test]
+    fn warnings_stay_visible_and_other_descriptions_remain_searchable() {
+        let warnings: Vec<_> = entries().filter(|(_, _, e)| e.visible_hint).map(|(_, _, e)| e.id).collect();
+        assert_eq!(warnings, ["profile-delete", "scrollback", "restore-text", "meta", "reset-settings"]);
+        let (_, _, minimap) = entry("minimap").expect("minimap row");
+        assert!(!minimap.visible_hint);
+        let hits = super::search(&super::Query::new("drawn small"));
+        assert!(hits.iter().any(|hit| hit.entry.id == "minimap"));
+    }
+
+    #[test]
     fn ids_are_unique_and_rows_are_named() {
         let mut seen = HashSet::new();
         for (section, group, entry) in entries() {
@@ -551,6 +563,7 @@ mod tests {
             id: "nested",
             label: wormhole_text::keys::SETTINGS_MOTION_INSERT,
             description: None,
+            visible_hint: false,
             keywords: None,
             keys: &["density.nested"],
             feature: None,

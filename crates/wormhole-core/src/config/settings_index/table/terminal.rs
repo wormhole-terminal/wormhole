@@ -14,9 +14,11 @@ pub(super) const TERMINAL: &[Group] = &[
         &[
             entry("scrollback", SETTINGS_TERMINAL_SCROLLBACK, &["scrollback_lines"])
                 .with_description(SETTINGS_TERMINAL_SCROLLBACK_DESCRIPTION)
+                .with_visible_hint()
                 .with_keywords(SETTINGS_TERMINAL_SCROLLBACK_KEYWORDS),
             entry("restore-text", SETTINGS_TERMINAL_RESTORE_TEXT, &["restore_terminal_text"])
                 .with_description(SETTINGS_TERMINAL_RESTORE_TEXT_DESCRIPTION)
+                .with_visible_hint()
                 .with_keywords(SETTINGS_TERMINAL_RESTORE_TEXT_KEYWORDS),
             entry("minimap", SETTINGS_TERMINAL_MINIMAP, &["minimap"])
                 .with_description(SETTINGS_TERMINAL_MINIMAP_DESCRIPTION)
@@ -26,6 +28,7 @@ pub(super) const TERMINAL: &[Group] = &[
                 .with_keywords(SETTINGS_TERMINAL_SPLIT_GAPS_KEYWORDS),
             entry("meta", SETTINGS_TERMINAL_META, &["option_as_meta"])
                 .with_description(SETTINGS_TERMINAL_META_DESCRIPTION)
+                .with_visible_hint()
                 .with_keywords(SETTINGS_TERMINAL_META_KEYWORDS),
             entry("terminal-font", SETTINGS_TERMINAL_FONT, &[])
                 .with_keywords(SETTINGS_TERMINAL_FONT_KEYWORDS),
