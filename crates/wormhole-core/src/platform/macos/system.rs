@@ -11,6 +11,11 @@ pub(crate) fn version_text() -> Option<String> {
         .or_else(version_from_sw_vers)
 }
 
+/// System Settings → Privacy & Security → Developer Tools.
+pub(crate) fn has_developer_tools_list() -> bool {
+    true
+}
+
 /// `ProductVersion` in a `SystemVersion.plist`.
 fn version_in(path: &Path) -> Option<String> {
     let value = plist::Value::from_file(path).ok()?;

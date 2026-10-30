@@ -22,6 +22,12 @@ pub fn has_liquid_glass() -> bool {
     *HAS.get_or_init(|| macos_version_text().as_deref().is_some_and(major_has_liquid_glass))
 }
 
+/// Whether the system has a Developer Tools list, where an app is added so the programs it starts skip
+/// the first-run malware scan (macOS). Nothing else has one, so what is about it shows nowhere else.
+pub fn has_developer_tools_list() -> bool {
+    os::has_developer_tools_list()
+}
+
 fn major_has_liquid_glass(version: &str) -> bool {
     version.split('.').next().and_then(|major| major.parse::<u64>().ok()).is_some_and(|major| major >= 26)
 }

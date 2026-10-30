@@ -191,6 +191,9 @@ group "Files"
 group "Tips"
   blurb ""
   aside ""
+group "New programs"
+  blurb ""
+  aside ""
 section Projects
   title "Project folders"
   intro "Change the defaults for every project, or pick one to set it up just for you."
@@ -668,6 +671,10 @@ entry Advanced reset-tips
   label "Closed tips"
   description "Bring back the tips closed with “Don't show again”, such as the sidebar's coding agents note"
   keywords "hints tips reset show again dismissed"
+entry Advanced skip-scans
+  label "Skip malware scans of new programs"
+  description "macOS scans each new program for malware the first time it runs, which slows builds, tests and coding agents. Adding Wormhole to Developer Tools lets programs started in Wormhole skip that scan. Only do this if you trust what you run. Terminals opened after you restart Wormhole get it. If Developer Tools isn't listed, run spctl developer-mode enable-terminal in a terminal first."
+  keywords "developer tools xprotect gatekeeper malware scan speed slow first run build privacy security spctl"
 entry Projects projects
   label "Project folders"
   description "The .wormhole folder of a project: trust, and which of its files you use"

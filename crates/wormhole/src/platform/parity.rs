@@ -68,6 +68,7 @@ pub(super) fn signatures_match() {
         apps::icon_png: fn(&str, usize) -> Option<Vec<u8>>;
         apps::command: fn(&str, wormhole_core::platform::open_file::Launch) -> Option<std::process::Command>;
         apps::text_editor_command: fn(&Path) -> Option<std::process::Command>;
+        dev_tools::open_settings: fn(&App);
         dock::set_badge: fn(Option<&str>);
         dock::bounce: fn(&mut App);
         dock::is_active: fn() -> bool;

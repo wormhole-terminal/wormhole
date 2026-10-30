@@ -7,99 +7,99 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Updates"
-pub const SETTINGS_SECTION_UPDATES: Key = Key::new(1078);
+pub const SETTINGS_SECTION_UPDATES: Key = Key::new(1083);
 /// "Signed releases, checked in the background."
-pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(1079);
+pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(1084);
 /// "Updates"
-pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(1080);
+pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(1085);
 /// "Version"
-pub const SETTINGS_UPDATES_VERSION: Key = Key::new(1081);
+pub const SETTINGS_UPDATES_VERSION: Key = Key::new(1086);
 /// "release build"
-pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(1082);
+pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(1087);
 /// "Update automatically"
-pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(1083);
+pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(1088);
 /// "Checks in the background and installs on the next restart"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(1084);
+pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(1089);
 /// "download auto"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(1085);
+pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(1090);
 /// "Channel"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(1086);
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(1091);
 /// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(1087);
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(1092);
 /// "beta nightly unstable stable prerelease dev builds main feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(1088);
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(1093);
 /// "Check for updates"
-pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(1089);
+pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(1094);
 /// "install restart release notes check skip"
-pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(1090);
+pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(1095);
 /// "Privacy"
-pub const SETTINGS_UPDATES_GROUP_PRIVACY: Key = Key::new(1091);
+pub const SETTINGS_UPDATES_GROUP_PRIVACY: Key = Key::new(1096);
 /// "Wormhole has no analytics, telemetry or crash reports. Update checks are counted, so we know how many people use Wormhole and which Macs and macOS versions to keep supporting, with nothing that tells one Mac from another."
-pub const SETTINGS_UPDATES_GROUP_PRIVACY_BLURB: Key = Key::new(1092);
+pub const SETTINGS_UPDATES_GROUP_PRIVACY_BLURB: Key = Key::new(1097);
 /// "Count this Mac anonymously"
-pub const SETTINGS_UPDATES_ANONYMOUS_COUNT: Key = Key::new(1093);
+pub const SETTINGS_UPDATES_ANONYMOUS_COUNT: Key = Key::new(1098);
 /// "The first update check of a day and of a month says so. Off, a check sends the version alone"
-pub const SETTINGS_UPDATES_ANONYMOUS_COUNT_DESCRIPTION: Key = Key::new(1094);
+pub const SETTINGS_UPDATES_ANONYMOUS_COUNT_DESCRIPTION: Key = Key::new(1099);
 /// "analytics telemetry privacy usage statistics count tracking"
-pub const SETTINGS_UPDATES_ANONYMOUS_COUNT_KEYWORDS: Key = Key::new(1095);
+pub const SETTINGS_UPDATES_ANONYMOUS_COUNT_KEYWORDS: Key = Key::new(1100);
 /// "What an update check sends"
-pub const SETTINGS_UPDATES_COUNT_DETAILS: Key = Key::new(1096);
+pub const SETTINGS_UPDATES_COUNT_DETAILS: Key = Key::new(1101);
 /// "privacy data sent user agent ip address"
-pub const SETTINGS_UPDATES_COUNT_DETAILS_KEYWORDS: Key = Key::new(1097);
+pub const SETTINGS_UPDATES_COUNT_DETAILS_KEYWORDS: Key = Key::new(1102);
 /// "Stable"
-pub const SETTINGS_UPDATES_STABLE: Key = Key::new(1098);
+pub const SETTINGS_UPDATES_STABLE: Key = Key::new(1103);
 /// "Unstable"
-pub const SETTINGS_UPDATES_UNSTABLE: Key = Key::new(1099);
+pub const SETTINGS_UPDATES_UNSTABLE: Key = Key::new(1104);
 /// "Checked just now."
-pub const SETTINGS_UPDATES_CHECKED_JUST_NOW: Key = Key::new(1100);
+pub const SETTINGS_UPDATES_CHECKED_JUST_NOW: Key = Key::new(1105);
 /// "Checked a minute ago."
-pub const SETTINGS_UPDATES_CHECKED_A_MINUTE_AGO: Key = Key::new(1101);
+pub const SETTINGS_UPDATES_CHECKED_A_MINUTE_AGO: Key = Key::new(1106);
 /// "Checked an hour ago."
-pub const SETTINGS_UPDATES_CHECKED_AN_HOUR_AGO: Key = Key::new(1102);
+pub const SETTINGS_UPDATES_CHECKED_AN_HOUR_AGO: Key = Key::new(1107);
 /// "Fixes a security issue."
-pub const SETTINGS_UPDATES_FIXES_A_SECURITY_ISSUE: Key = Key::new(1103);
+pub const SETTINGS_UPDATES_FIXES_A_SECURITY_ISSUE: Key = Key::new(1108);
 /// "Development build: updates only work in released builds."
-pub const SETTINGS_UPDATES_DEVELOPMENT_BUILD: Key = Key::new(1104);
+pub const SETTINGS_UPDATES_DEVELOPMENT_BUILD: Key = Key::new(1109);
 /// "Not checked yet."
-pub const SETTINGS_UPDATES_NOT_CHECKED_YET: Key = Key::new(1105);
+pub const SETTINGS_UPDATES_NOT_CHECKED_YET: Key = Key::new(1110);
 /// "Checking…"
-pub const SETTINGS_UPDATES_CHECKING: Key = Key::new(1106);
+pub const SETTINGS_UPDATES_CHECKING: Key = Key::new(1111);
 /// "Wormhole is up to date."
-pub const SETTINGS_UPDATES_WORMHOLE_IS_UP_TO_DATE: Key = Key::new(1107);
+pub const SETTINGS_UPDATES_WORMHOLE_IS_UP_TO_DATE: Key = Key::new(1112);
 /// "Downloading…"
-pub const SETTINGS_UPDATES_DOWNLOADING: Key = Key::new(1108);
+pub const SETTINGS_UPDATES_DOWNLOADING: Key = Key::new(1113);
 /// "Skip this version"
-pub const SETTINGS_UPDATES_SKIP_THIS_VERSION: Key = Key::new(1109);
+pub const SETTINGS_UPDATES_SKIP_THIS_VERSION: Key = Key::new(1114);
 /// "Install update"
-pub const SETTINGS_UPDATES_INSTALL_UPDATE: Key = Key::new(1110);
+pub const SETTINGS_UPDATES_INSTALL_UPDATE: Key = Key::new(1115);
 /// "Don't restart"
-pub const SETTINGS_UPDATES_DONT_RESTART: Key = Key::new(1111);
+pub const SETTINGS_UPDATES_DONT_RESTART: Key = Key::new(1116);
 /// "Restart now"
-pub const SETTINGS_UPDATES_RESTART_NOW: Key = Key::new(1112);
+pub const SETTINGS_UPDATES_RESTART_NOW: Key = Key::new(1117);
 /// "Check now"
-pub const SETTINGS_UPDATES_CHECK_NOW: Key = Key::new(1113);
+pub const SETTINGS_UPDATES_CHECK_NOW: Key = Key::new(1118);
 /// "Every check"
-pub const SETTINGS_UPDATES_COUNT_EVERY_CHECK: Key = Key::new(1115);
+pub const SETTINGS_UPDATES_COUNT_EVERY_CHECK: Key = Key::new(1120);
 /// "The version, the update channel, Apple silicon or Intel, and the macOS version: the same on thousands of Macs."
-pub const SETTINGS_UPDATES_COUNT_EVERY_CHECK_COUNTED: Key = Key::new(1116);
+pub const SETTINGS_UPDATES_COUNT_EVERY_CHECK_COUNTED: Key = Key::new(1121);
 /// "The version alone."
-pub const SETTINGS_UPDATES_COUNT_EVERY_CHECK_PLAIN: Key = Key::new(1117);
+pub const SETTINGS_UPDATES_COUNT_EVERY_CHECK_PLAIN: Key = Key::new(1122);
 /// "First check of a day or month"
-pub const SETTINGS_UPDATES_COUNT_FIRST_CHECK: Key = Key::new(1118);
+pub const SETTINGS_UPDATES_COUNT_FIRST_CHECK: Key = Key::new(1123);
 /// "Adding these up gives how many copies of Wormhole run each day and each month."
-pub const SETTINGS_UPDATES_COUNT_FIRST_CHECK_WHY: Key = Key::new(1119);
+pub const SETTINGS_UPDATES_COUNT_FIRST_CHECK_WHY: Key = Key::new(1124);
 /// "Never"
-pub const SETTINGS_UPDATES_COUNT_NEVER: Key = Key::new(1120);
+pub const SETTINGS_UPDATES_COUNT_NEVER: Key = Key::new(1125);
 /// "An ID, your name or account, your files or what your terminals show. The server sees your IP address, as with any request, and doesn't keep it."
-pub const SETTINGS_UPDATES_COUNT_NEVER_WHAT: Key = Key::new(1121);
+pub const SETTINGS_UPDATES_COUNT_NEVER_WHAT: Key = Key::new(1126);
 /// "Fixes a critical-severity security issue."
-pub const SETTINGS_UPDATES_FIXES_CRITICAL: Key = Key::new(1128);
+pub const SETTINGS_UPDATES_FIXES_CRITICAL: Key = Key::new(1133);
 /// "Fixes a high-severity security issue."
-pub const SETTINGS_UPDATES_FIXES_HIGH: Key = Key::new(1129);
+pub const SETTINGS_UPDATES_FIXES_HIGH: Key = Key::new(1134);
 /// "Fixes a medium-severity security issue."
-pub const SETTINGS_UPDATES_FIXES_MEDIUM: Key = Key::new(1130);
+pub const SETTINGS_UPDATES_FIXES_MEDIUM: Key = Key::new(1135);
 /// "Fixes a low-severity security issue."
-pub const SETTINGS_UPDATES_FIXES_LOW: Key = Key::new(1131);
+pub const SETTINGS_UPDATES_FIXES_LOW: Key = Key::new(1136);
 
 /// ```text
 /// { $count ->
@@ -108,7 +108,7 @@ pub const SETTINGS_UPDATES_FIXES_LOW: Key = Key::new(1131);
 /// }
 /// ```
 pub fn settings_updates_count_starts_in(count: i64) -> String {
-    crate::active::message(1114, &[("count", Arg::Int(count))])
+    crate::active::message(1119, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -118,7 +118,7 @@ pub fn settings_updates_count_starts_in(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_updates_checked_minutes_ago(count: i64) -> String {
-    crate::active::message(1122, &[("count", Arg::Int(count))])
+    crate::active::message(1127, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -128,7 +128,7 @@ pub fn settings_updates_checked_minutes_ago(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_updates_checked_hours_ago(count: i64) -> String {
-    crate::active::message(1123, &[("count", Arg::Int(count))])
+    crate::active::message(1128, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -138,47 +138,47 @@ pub fn settings_updates_checked_hours_ago(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_updates_checked_days_ago(count: i64) -> String {
-    crate::active::message(1124, &[("count", Arg::Int(count))])
+    crate::active::message(1129, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { -brand } is up to date. { $checked }
 /// ```
 pub fn settings_updates_up_to_date_checked(checked: &str) -> String {
-    crate::active::message(1125, &[("checked", Arg::Str(checked))])
+    crate::active::message(1130, &[("checked", Arg::Str(checked))])
 }
 
 /// ```text
 /// Security update available: { -brand } { $version }.
 /// ```
 pub fn settings_updates_security_available(version: &str) -> String {
-    crate::active::message(1126, &[("version", Arg::Str(version))])
+    crate::active::message(1131, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// Version { $version } is available.
 /// ```
 pub fn settings_updates_version_available(version: &str) -> String {
-    crate::active::message(1127, &[("version", Arg::Str(version))])
+    crate::active::message(1132, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// Version { $version } is installed. Restarts when your terminals are idle.
 /// ```
 pub fn settings_updates_installed_waits(version: &str) -> String {
-    crate::active::message(1132, &[("version", Arg::Str(version))])
+    crate::active::message(1137, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// Version { $version } is installed. Restart to use it.
 /// ```
 pub fn settings_updates_installed_restart(version: &str) -> String {
-    crate::active::message(1133, &[("version", Arg::Str(version))])
+    crate::active::message(1138, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// What's new in { $version }
 /// ```
 pub fn settings_updates_whats_new(version: &str) -> String {
-    crate::active::message(1134, &[("version", Arg::Str(version))])
+    crate::active::message(1139, &[("version", Arg::Str(version))])
 }

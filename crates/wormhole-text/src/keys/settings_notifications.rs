@@ -7,148 +7,148 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Notifications"
-pub const SETTINGS_SECTION_NOTIFICATIONS: Key = Key::new(772);
+pub const SETTINGS_SECTION_NOTIFICATIONS: Key = Key::new(777);
 /// "What Wormhole tells you about terminals you aren't looking at."
-pub const SETTINGS_SECTION_NOTIFICATIONS_INTRO: Key = Key::new(773);
+pub const SETTINGS_SECTION_NOTIFICATIONS_INTRO: Key = Key::new(778);
 /// "macOS"
-pub const SETTINGS_NOTIFICATIONS_GROUP_MACOS: Key = Key::new(774);
+pub const SETTINGS_NOTIFICATIONS_GROUP_MACOS: Key = Key::new(779);
 /// "Notifications in System Settings"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION: Key = Key::new(775);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION: Key = Key::new(780);
 /// "permission allow system settings send test banner"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION_KEYWORDS: Key = Key::new(776);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION_KEYWORDS: Key = Key::new(781);
 /// "Notify me when"
-pub const SETTINGS_NOTIFICATIONS_GROUP_NOTIFY_ME_WHEN: Key = Key::new(777);
+pub const SETTINGS_NOTIFICATIONS_GROUP_NOTIFY_ME_WHEN: Key = Key::new(782);
 /// "A terminal needs input"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU: Key = Key::new(778);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU: Key = Key::new(783);
 /// "An agent asks a question or for permission"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU_DESCRIPTION: Key = Key::new(779);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU_DESCRIPTION: Key = Key::new(784);
 /// "time sensitive focus question permission notifications"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU_KEYWORDS: Key = Key::new(780);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU_KEYWORDS: Key = Key::new(785);
 /// "An agent finishes"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE: Key = Key::new(781);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE: Key = Key::new(786);
 /// "Its Stop hook, or its output settles. A program that reports it is done or failed counts too"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE_DESCRIPTION: Key = Key::new(782);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE_DESCRIPTION: Key = Key::new(787);
 /// "notifications done program report failed error"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE_KEYWORDS: Key = Key::new(783);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE_KEYWORDS: Key = Key::new(788);
 /// "A command finishes"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE: Key = Key::new(784);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE: Key = Key::new(789);
 /// "Any foreground command, agent or not, that ran longer than"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE_DESCRIPTION: Key = Key::new(785);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE_DESCRIPTION: Key = Key::new(790);
 /// "long build threshold seconds notifications"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE_KEYWORDS: Key = Key::new(786);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE_KEYWORDS: Key = Key::new(791);
 /// "A command fails"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED: Key = Key::new(787);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED: Key = Key::new(792);
 /// "Non-zero exit code. Needs shell integration (on for zsh, bash and fish)"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED_DESCRIPTION: Key = Key::new(788);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED_DESCRIPTION: Key = Key::new(793);
 /// "failed failure error exit code build notifications"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED_KEYWORDS: Key = Key::new(789);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED_KEYWORDS: Key = Key::new(794);
 /// "The terminal rings the bell"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_BELL: Key = Key::new(790);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_BELL: Key = Key::new(795);
 /// "Terminals without an agent; at most once a minute each"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_BELL_DESCRIPTION: Key = Key::new(791);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_BELL_DESCRIPTION: Key = Key::new(796);
 /// "bell notifications"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_BELL_KEYWORDS: Key = Key::new(792);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_BELL_KEYWORDS: Key = Key::new(797);
 /// "Delivery"
-pub const SETTINGS_NOTIFICATIONS_GROUP_DELIVERY: Key = Key::new(793);
+pub const SETTINGS_NOTIFICATIONS_GROUP_DELIVERY: Key = Key::new(798);
 /// "Only for terminals I’m not looking at"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN: Key = Key::new(794);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN: Key = Key::new(799);
 /// "Off: the terminal in front notifies too"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN_DESCRIPTION: Key = Key::new(795);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN_DESCRIPTION: Key = Key::new(800);
 /// "unseen front"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN_KEYWORDS: Key = Key::new(796);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN_KEYWORDS: Key = Key::new(801);
 /// "While Wormhole is in front"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT: Key = Key::new(797);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT: Key = Key::new(802);
 /// "A system banner, or nothing"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT_DESCRIPTION: Key = Key::new(798);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT_DESCRIPTION: Key = Key::new(803);
 /// "banner nothing front"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT_KEYWORDS: Key = Key::new(799);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT_KEYWORDS: Key = Key::new(804);
 /// "Sound"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_SOUND: Key = Key::new(800);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_SOUND: Key = Key::new(805);
 /// "sound alert"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_SOUND_KEYWORDS: Key = Key::new(801);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_SOUND_KEYWORDS: Key = Key::new(806);
 /// "Group bursts"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS: Key = Key::new(802);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS: Key = Key::new(807);
 /// "Three or more within 10 s become one summary"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS_DESCRIPTION: Key = Key::new(803);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS_DESCRIPTION: Key = Key::new(808);
 /// "summary bursts"
-pub const SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS_KEYWORDS: Key = Key::new(804);
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS_KEYWORDS: Key = Key::new(809);
 /// "Dock"
-pub const SETTINGS_NOTIFICATIONS_GROUP_DOCK: Key = Key::new(805);
+pub const SETTINGS_NOTIFICATIONS_GROUP_DOCK: Key = Key::new(810);
 /// "Badge"
-pub const SETTINGS_NOTIFICATIONS_DOCK_BADGE: Key = Key::new(806);
+pub const SETTINGS_NOTIFICATIONS_DOCK_BADGE: Key = Key::new(811);
 /// "The count on the Dock icon"
-pub const SETTINGS_NOTIFICATIONS_DOCK_BADGE_DESCRIPTION: Key = Key::new(807);
+pub const SETTINGS_NOTIFICATIONS_DOCK_BADGE_DESCRIPTION: Key = Key::new(812);
 /// "dock badge count"
-pub const SETTINGS_NOTIFICATIONS_DOCK_BADGE_KEYWORDS: Key = Key::new(808);
+pub const SETTINGS_NOTIFICATIONS_DOCK_BADGE_KEYWORDS: Key = Key::new(813);
 /// "Bounce once when a terminal needs input"
-pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE: Key = Key::new(809);
+pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE: Key = Key::new(814);
 /// "Only while Wormhole isn’t the active app; never for a bell"
-pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_DESCRIPTION: Key = Key::new(810);
+pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_DESCRIPTION: Key = Key::new(815);
 /// "dock bounce"
-pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_KEYWORDS: Key = Key::new(811);
+pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_KEYWORDS: Key = Key::new(816);
 /// "Time Sensitive"
-pub const SETTINGS_NOTIFICATIONS_TIME_SENSITIVE: Key = Key::new(812);
+pub const SETTINGS_NOTIFICATIONS_TIME_SENSITIVE: Key = Key::new(817);
 /// "Banner"
-pub const SETTINGS_NOTIFICATIONS_BANNER: Key = Key::new(813);
+pub const SETTINGS_NOTIFICATIONS_BANNER: Key = Key::new(818);
 /// "Nothing"
-pub const SETTINGS_NOTIFICATIONS_NOTHING: Key = Key::new(814);
+pub const SETTINGS_NOTIFICATIONS_NOTHING: Key = Key::new(819);
 /// "Needs input only"
-pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_ONLY: Key = Key::new(815);
+pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_ONLY: Key = Key::new(820);
 /// "All"
-pub const SETTINGS_NOTIFICATIONS_ALL: Key = Key::new(816);
+pub const SETTINGS_NOTIFICATIONS_ALL: Key = Key::new(821);
 /// "None"
-pub const SETTINGS_NOTIFICATIONS_NONE: Key = Key::new(817);
+pub const SETTINGS_NOTIFICATIONS_NONE: Key = Key::new(822);
 /// "Off"
-pub const SETTINGS_NOTIFICATIONS_OFF: Key = Key::new(818);
+pub const SETTINGS_NOTIFICATIONS_OFF: Key = Key::new(823);
 /// "Needs input"
-pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU: Key = Key::new(819);
+pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU: Key = Key::new(824);
 /// "Needs input + finished"
-pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_FINISHED: Key = Key::new(820);
+pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_FINISHED: Key = Key::new(825);
 /// "Asking macOS…"
-pub const SETTINGS_NOTIFICATIONS_ASKING_MACOS: Key = Key::new(821);
+pub const SETTINGS_NOTIFICATIONS_ASKING_MACOS: Key = Key::new(826);
 /// "Not asked yet"
-pub const SETTINGS_NOTIFICATIONS_NOT_ASKED_YET: Key = Key::new(822);
+pub const SETTINGS_NOTIFICATIONS_NOT_ASKED_YET: Key = Key::new(827);
 /// "macOS asks once; nothing is sent before"
-pub const SETTINGS_NOTIFICATIONS_MACOS_ASKS_ONCE_NOTHING_IS_SENT: Key = Key::new(823);
+pub const SETTINGS_NOTIFICATIONS_MACOS_ASKS_ONCE_NOTHING_IS_SENT: Key = Key::new(828);
 /// "Allowed in System Settings"
-pub const SETTINGS_NOTIFICATIONS_ALLOWED_IN_SYSTEM_SETTINGS: Key = Key::new(824);
+pub const SETTINGS_NOTIFICATIONS_ALLOWED_IN_SYSTEM_SETTINGS: Key = Key::new(829);
 /// "Banners, sounds and Time Sensitive"
-pub const SETTINGS_NOTIFICATIONS_BANNERS_SOUNDS_AND_TIME_SENSITIVE: Key = Key::new(825);
+pub const SETTINGS_NOTIFICATIONS_BANNERS_SOUNDS_AND_TIME_SENSITIVE: Key = Key::new(830);
 /// "Banners and sounds"
-pub const SETTINGS_NOTIFICATIONS_BANNERS_AND_SOUNDS: Key = Key::new(826);
+pub const SETTINGS_NOTIFICATIONS_BANNERS_AND_SOUNDS: Key = Key::new(831);
 /// "Off in System Settings"
-pub const SETTINGS_NOTIFICATIONS_OFF_IN_SYSTEM_SETTINGS: Key = Key::new(827);
+pub const SETTINGS_NOTIFICATIONS_OFF_IN_SYSTEM_SETTINGS: Key = Key::new(832);
 /// "Nothing is delivered until turned on there"
-pub const SETTINGS_NOTIFICATIONS_OFF_HINT: Key = Key::new(828);
+pub const SETTINGS_NOTIFICATIONS_OFF_HINT: Key = Key::new(833);
 /// "Outside the app bundle"
-pub const SETTINGS_NOTIFICATIONS_OUTSIDE_THE_APP_BUNDLE: Key = Key::new(829);
+pub const SETTINGS_NOTIFICATIONS_OUTSIDE_THE_APP_BUNDLE: Key = Key::new(834);
 /// "cargo run: osascript, no actions or grouping"
-pub const SETTINGS_NOTIFICATIONS_OUTSIDE_BUNDLE_HINT: Key = Key::new(830);
+pub const SETTINGS_NOTIFICATIONS_OUTSIDE_BUNDLE_HINT: Key = Key::new(835);
 /// "Send test"
-pub const SETTINGS_NOTIFICATIONS_SEND_TEST: Key = Key::new(831);
+pub const SETTINGS_NOTIFICATIONS_SEND_TEST: Key = Key::new(836);
 /// "Open System Settings"
-pub const SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS: Key = Key::new(832);
+pub const SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS: Key = Key::new(837);
 /// "Allow notifications"
-pub const SETTINGS_NOTIFICATIONS_ALLOW_NOTIFICATIONS: Key = Key::new(833);
+pub const SETTINGS_NOTIFICATIONS_ALLOW_NOTIFICATIONS: Key = Key::new(838);
 /// "An agent asks a question or for permission"
-pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_HINT: Key = Key::new(834);
+pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_HINT: Key = Key::new(839);
 /// "An agent asks a question or for permission. Delivered as a normal notification in this build"
-pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_HINT_PLAIN: Key = Key::new(835);
+pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_HINT_PLAIN: Key = Key::new(840);
 /// "now"
-pub const SETTINGS_NOTIFICATIONS_PREVIEW_NOW: Key = Key::new(838);
+pub const SETTINGS_NOTIFICATIONS_PREVIEW_NOW: Key = Key::new(843);
 /// "How a notification looks. macOS decides where it shows and for how long (System Settings → Notifications → Wormhole)."
-pub const SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION: Key = Key::new(839);
+pub const SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION: Key = Key::new(844);
 
 /// ```text
 /// { $count } min
 /// ```
 pub fn settings_notifications_after_minutes(count: &str) -> String {
-    crate::active::message(836, &[("count", Arg::Str(count))])
+    crate::active::message(841, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// { $count } s
 /// ```
 pub fn settings_notifications_after_seconds(count: &str) -> String {
-    crate::active::message(837, &[("count", Arg::Str(count))])
+    crate::active::message(842, &[("count", Arg::Str(count))])
 }
