@@ -53,6 +53,12 @@
 //! page cost what that Mac had installed. Pi's row and the logos of Codex, Amp, goose and Kiro came at
 //! the same time and cost nothing measurable (8,662 before them, 8,649 after, measured before the
 //! command line's row: a logo is cheaper than the two letters it replaces).
+//! Rows lost their line of description for an (i) after the label, a tab stop with its card built only
+//! while it is open (`style::info`). That costs a row its element, its focus, its click and its ring
+//! (measured on Terminal with the (i)s left out and in: 9,895 and 10,333), so Fonts rose from 7,560 to
+//! 7,634, Terminal from 10,228 to 10,333, Sessions from 15,198 to 15,454, Notifications from 7,983 to
+//! 8,007 and MenuBar from 6,296 to 6,344 (the other pages stayed under theirs). With the Kit's popover and
+//! tooltip on every row the same pages made 8,263, 11,773, 16,714, 8,907 and 6,884.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -75,13 +81,13 @@ const BUDGET: [(&str, u64); 17] = [
     ("Profile", 6862),
     // With the Liquid Glass row (16,810 before it came back).
     ("Appearance", 17241),
-    ("Fonts", 7560),
+    ("Fonts", 7634),
     ("Motion", 6441),
     // With the Worktrees group's switch for cloning build folders (356).
-    ("Terminal", 10228),
+    ("Terminal", 10333),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 15198),
+    ("Sessions", 15454),
     ("Git", 4668),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
@@ -90,8 +96,8 @@ const BUDGET: [(&str, u64); 17] = [
     // page measured 9,501: under this, which stays.
     ("Agents", 9679),
     ("Import", 53166),
-    ("Notifications", 7983),
-    ("MenuBar", 6296),
+    ("Notifications", 8007),
+    ("MenuBar", 6344),
     ("Updates", 5750),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).

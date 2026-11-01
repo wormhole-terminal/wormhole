@@ -18,6 +18,8 @@ mod font_picker;
 #[cfg(test)]
 mod frame_tests;
 #[cfg(test)]
+mod info_tests;
+#[cfg(test)]
 mod motion_tests;
 mod nav;
 mod open;

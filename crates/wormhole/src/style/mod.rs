@@ -67,6 +67,7 @@ mod folder_colors;
 mod groups;
 mod home;
 mod icon_motion;
+mod info;
 mod labels;
 mod lights;
 pub(crate) mod menu_layer;
@@ -112,6 +113,8 @@ pub use folder_colors::*;
 pub use groups::*;
 pub(crate) use home::home_dir;
 pub use icon_motion::{Half, IconMotion, MenuMark, StripFill, StripSide};
+#[cfg(test)]
+pub(crate) use info::is_open_in;
 pub use labels::*;
 pub(crate) use lights::{
     ASSUMED_LIGHTS_SPAN, LIGHTS_X, lights_end, shown_lights_end, traffic_light_position,

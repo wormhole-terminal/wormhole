@@ -15,3 +15,5 @@ pub const SETTINGS_NAV_AGENTS: Key = Key::new(1314);
 pub const SETTINGS_NAV_APP: Key = Key::new(1315);
 /// "Preview"
 pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1316);
+/// "More information"
+pub const SETTINGS_MORE_INFORMATION: Key = Key::new(1317);

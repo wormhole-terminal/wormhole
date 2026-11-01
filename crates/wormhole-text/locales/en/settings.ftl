@@ -7,3 +7,6 @@ settings-nav-work = Work
 settings-nav-agents = Agents
 settings-nav-app = App
 settings-nav-preview = Preview
+
+# The name VoiceOver reads for the (i) after a setting. What it opens, the description, is the row's own.
+settings-more-information = More information
