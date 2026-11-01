@@ -20,6 +20,9 @@ pub use wormhole_core::view::limits::{
 pub const CONTROL_H: f32 = 28.0;
 /// Height of a control inside a panel (tab, chip, compact select).
 pub const CONTROL_H_SM: f32 = 22.0;
+/// The height of what stands in a title row beside the icon buttons' 24 pt faces (a segmented
+/// control, a key cap), so the row's shapes are one height.
+pub const TITLE_CONTROL_H: f32 = 24.0;
 /// A one-line list row: a task, a note, a file, a nav item, a compact terminal.
 pub const ROW_H: f32 = 28.0;
 /// A two-line row: a terminal with a second line, a commit, a project action. Four

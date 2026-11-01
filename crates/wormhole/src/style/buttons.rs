@@ -11,12 +11,14 @@ use std::rc::Rc;
 
 use super::icon_motion::{IconMotion, MenuMark, StripFill};
 use super::motion::TOOLTIP_DELAY;
-use super::scale::{CONTROL_H_SM, GLYPH, HIT_MIN, ICON_SIZE, MARK_DOT, TITLE_GLYPH, TextRole};
+use super::scale::{
+    CONTROL_H_SM, GLYPH, HIT_MIN, ICON_SIZE, MARK_DOT, TITLE_CONTROL_H, TITLE_GLYPH, TextRole,
+};
 use crate::settings::UiColors;
 
 /// The face of a band's +: smaller than a button's, so it sits inside the band's 32 pt
 /// height with room above and below.
-const BAND_BUTTON: f32 = 24.0;
+const BAND_BUTTON: f32 = TITLE_CONTROL_H;
 /// The chevron of a menu beside a button.
 const NARROW_GLYPH: f32 = 12.0;
 /// The face of a row's hover action (send, delete): it fits a 28 pt row with 3 to spare.

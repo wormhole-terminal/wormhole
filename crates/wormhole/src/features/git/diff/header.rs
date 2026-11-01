@@ -23,6 +23,8 @@ use wormhole_core::view::limits::count_grouped;
 
 /// "esc close": a target this tall around its key cap.
 const CLOSE_H: f32 = style::HIT_MIN;
+/// The segmented control's segments inside its 24 pt track.
+const SEGMENT_H: f32 = style::TITLE_CONTROL_H - 4.0;
 /// With the title row's own 4 pt, this puts the first chevron's glyph on the card's 16 pt
 /// inset below it.
 const TITLE_LEAD: f32 = 6.0;
@@ -186,13 +188,17 @@ impl Changes {
             .map(|d| {
                 if controls.switch {
                     d.child(
+                        // As tall as the icon buttons' faces beside it, and the key cap after it.
                         style::segmented(ui)
+                            .h(px(style::TITLE_CONTROL_H))
                             .child(
                                 style::segment("diff-split", ui, "Split", split)
+                                    .h(px(SEGMENT_H))
                                     .on_click(cx.listener(|this, _, _, cx| this.set_diff_split(true, cx))),
                             )
                             .child(
                                 style::segment("diff-unified", ui, "Unified", !split)
+                                    .h(px(SEGMENT_H))
                                     .on_click(cx.listener(|this, _, _, cx| this.set_diff_split(false, cx))),
                             ),
                     )
@@ -214,7 +220,7 @@ impl Changes {
                                 let terminal = terminal.clone();
                                 cx.listener(move |this, _, window, cx| this.close_diff(&terminal, window, cx))
                             })
-                            .child(style::keycap(ui, "esc"))
+                            .child(style::keycap(ui, "esc").h(px(style::TITLE_CONTROL_H)))
                             .child("close"),
                     )
                 } else {

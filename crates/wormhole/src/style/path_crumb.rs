@@ -10,8 +10,8 @@ use super::scale::TextRole;
 use crate::settings::UiColors;
 
 /// The crumb of a path. `text` is the parents with their slashes and the last part (`None`: the row has
-/// room for the icon alone). `shrinks`: the text gives way to what is beside the crumb, the folders
-/// before the name, instead of keeping its width (a row that cut the path itself keeps it). `soft` colours
+/// room for the icon alone). `shrinks`: the crumb is as wide as its text and gives way to what is beside
+/// it, the folders before the name, instead of keeping its width (a row that cut the path itself keeps it). `soft` colours
 /// the icon and the parents; the name is the text colour. Add `.on_click(…)` and the rest.
 #[track_caller]
 pub fn path_crumb(
@@ -28,7 +28,7 @@ pub fn path_crumb(
             // give, then it is cut too.
             div()
                 .flex()
-                .flex_1()
+                .flex_shrink(1.0)
                 .min_w_0()
                 .overflow_hidden()
                 .child(
@@ -67,7 +67,7 @@ pub fn path_crumb(
         .text_color(soft)
         .cursor_pointer()
         .hover(|d| d.text_color(ui.text))
-        .map(|d| if shrinks { d.flex_1().min_w_0() } else { d.flex_none() })
+        .map(|d| if shrinks { d.flex_shrink(1.0).min_w_0() } else { d.flex_none() })
         .child(div().flex_none().child(icon))
         .children(text)
 }

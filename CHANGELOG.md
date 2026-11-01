@@ -72,6 +72,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- The path's hover card no longer runs its last button to its edge when the path is long, and opens under
+  the file's name in a diff.
 - After a restart, the window that was in front is in front again, not the one opened or revealed last.
 - After a restart, a terminal that kept running in its session host and had finished while you were away
   shows "Done" again until you look at it, instead of coming back idle.

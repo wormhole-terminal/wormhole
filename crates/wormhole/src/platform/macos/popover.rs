@@ -424,6 +424,9 @@ fn build(mtm: MainThreadMarker, popover: &Popover, target: &Target, tx: &Tx) -> 
                     line.addArrangedSubview(&ns_button);
                 }
                 stack.addArrangedSubview(&line);
+                // The card is at least as wide as its buttons: with a long path (wider than them) or a
+                // short one, the stack's own fit left the last button on the card's edge.
+                least = least.max(line.fittingSize().width + 2.0 * PAD);
             }
             Row::Colours(spec) => {
                 let tx = tx.clone();

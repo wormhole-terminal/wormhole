@@ -200,8 +200,10 @@ impl Workspace {
                 .items_center()
                 .gap_3()
                 .child(lead)
-                // The crumb takes what the cover's parts leave; without a file the space is just space.
-                .child(crumb.unwrap_or_else(|| div().flex_1().min_w_0().into_any_element()))
+                // The crumb is as wide as its text (the card opens under the name); the space after it is
+                // the title bar's, and pushes the cover's right end to the edge.
+                .children(crumb)
+                .child(div().flex_1().min_w_0())
                 .child(trail)
                 .into_any_element(),
         )
