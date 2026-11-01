@@ -12,10 +12,15 @@
 //! click that follows is to be swallowed, so a dismissal left over by a press elsewhere, or by a press
 //! that never became a click, matches nothing later.
 //!
+//! Whoever opens a popup may leave a closing hook ([`OpenOne::on_close`]): it runs on every way the popup
+//! ends (Esc, a choice, a press outside, Tab away, another popup of the kind opening), so what the popup
+//! showed while open (a preview of the option under the pointer) never outlives it.
+//!
 //! Tabbing away from the trigger closes its popup too (it would otherwise stay open with no key to
 //! close it): [`OpenOne::toggle`] watches the focus the press or key gave the trigger.
 
 use std::marker::PhantomData;
+use std::rc::Rc;
 
 use gpui_kit::*;
 
@@ -27,16 +32,28 @@ pub(crate) struct OpenOne<K: 'static> {
     swallow: bool,
     /// Closes the popup when the trigger it hangs from loses the keyboard; dropped with the popup.
     focus_out: Option<Subscription>,
+    /// What to do as the popup closes, left by whoever opened it.
+    on_close: Option<Hook>,
     kind: PhantomData<fn() -> K>,
 }
 
 impl<K: 'static> Default for OpenOne<K> {
     fn default() -> Self {
-        Self { shown: None, dismissed: None, swallow: false, focus_out: None, kind: PhantomData }
+        Self {
+            shown: None,
+            dismissed: None,
+            swallow: false,
+            focus_out: None,
+            on_close: None,
+            kind: PhantomData,
+        }
     }
 }
 
 impl<K: 'static> Global for OpenOne<K> {}
+
+/// What runs as a popup closes.
+pub(crate) type Hook = Rc<dyn Fn(&mut Window, &mut App)>;
 
 /// The press a popup closed on, and whose popup it was.
 #[derive(Clone, PartialEq)]
@@ -99,18 +116,36 @@ impl<K: 'static> OpenOne<K> {
             })
         });
         let open = cx.default_global::<Self>();
+        // Another popup of the kind is replaced without having been closed: it still ends.
+        let replaced = open.on_close.take();
         open.shown = Some((this_window, row.clone()));
         open.focus_out = focus_out;
         window.refresh();
+        if let Some(hook) = replaced {
+            hook(window, cx);
+        }
     }
 
-    /// Close the open popup, if it is in `window`'s kind of global at all.
+    /// Leave `hook` to run when the open popup of `row` closes, however it does. Said again on every
+    /// frame the popup is drawn, so it always holds what the popup was last built with.
+    pub(crate) fn on_close(window: WindowId, row: &ElementId, hook: Hook, cx: &mut App) {
+        if Self::is_open(window, row, cx) {
+            cx.default_global::<Self>().on_close = Some(hook);
+        }
+    }
+
+    /// Close the open popup and run its closing hook.
     pub(crate) fn close(window: &mut Window, cx: &mut App) {
         let open = cx.default_global::<Self>();
         open.shown = None;
-        // Dropped after the borrow, not inside it: it may be the very listener that is running.
+        // Dropped and run after the borrow, not inside it: the focus listener may be the very one that is
+        // running, and the hook may update anything.
         let focus_out = open.focus_out.take();
+        let hook = open.on_close.take();
         window.refresh();
         drop(focus_out);
+        if let Some(hook) = hook {
+            hook(window, cx);
+        }
     }
 }

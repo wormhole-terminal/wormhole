@@ -14,11 +14,10 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use super::MotionScene;
-use crate::select::Choice;
-use crate::settings::{Settings, settings};
-use crate::settings_window::registry::Setting;
+use crate::select::{MenuOptions, menu_select};
+use crate::settings::{Settings, settings, update_settings};
+use crate::settings_window::registry::{Setting, row_label};
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style;
 
 /// What the options of a choice are called, in the order the menu lists them.
 type Labels<T> = &'static [(T, Key)];
@@ -61,27 +60,26 @@ macro_rules! pick {
 }
 
 pub(super) const SETTINGS: &[Setting] = &[
-    Setting::custom("motion-insert", |w, cx| {
-        select(w, "motion-insert", INSERT, settings(cx).motion.insert, pick!(insert), cx)
+    Setting::custom("motion-insert", |_, cx| {
+        select("motion-insert", INSERT, settings(cx).motion.insert, pick!(insert), cx)
     })
     .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Insert, ui(cx)))),
-    Setting::custom("motion-fold", |w, cx| {
-        select(w, "motion-fold", FOLD, settings(cx).motion.fold, pick!(fold), cx)
+    Setting::custom("motion-fold", |_, cx| {
+        select("motion-fold", FOLD, settings(cx).motion.fold, pick!(fold), cx)
     })
     .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Fold, ui(cx)))),
-    Setting::custom("motion-status", |w, cx| {
-        select(w, "motion-status", STATUS, settings(cx).motion.status, pick!(status), cx)
+    Setting::custom("motion-status", |_, cx| {
+        select("motion-status", STATUS, settings(cx).motion.status, pick!(status), cx)
     })
     .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Status, ui(cx)))),
-    Setting::custom("motion-column", |w, cx| {
-        select(w, "motion-column", COLUMN, settings(cx).motion.column, pick!(column), cx)
+    Setting::custom("motion-column", |_, cx| {
+        select("motion-column", COLUMN, settings(cx).motion.column, pick!(column), cx)
     })
     .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Column, ui(cx)))),
 ];
 
-/// The select of one choice: the option in use in its face, every option in its menu.
+/// The menu of one choice: the option in use in its face, every option in its menu.
 fn select<T: MotionChoice>(
-    window: &SettingsWindow,
     id: &'static str,
     labels: Labels<T>,
     current: T,
@@ -89,17 +87,16 @@ fn select<T: MotionChoice>(
     cx: &mut Context<SettingsWindow>,
 ) -> AnyElement {
     let name_of = |choice: T| labels.iter().find(|(c, _)| *c == choice).map_or("", |(_, key)| text(*key));
-    let choices =
-        labels.iter().map(|(choice, key)| Choice::new(choice.name().to_string(), text(*key))).collect();
-    window.select(
-        id,
-        div().child(name_of(current)).into_any_element(),
-        style::SELECT_W,
-        choices,
-        current.name().to_string(),
-        pick,
-        cx,
-    )
+    menu_select(id, ui(cx), row_label(id), name_of(current), move |_| {
+        let words = labels.iter().map(|(_, key)| text(*key).into());
+        let at = labels.iter().position(|(choice, _)| *choice == current);
+        MenuOptions::words(words, at, move |ix, _, cx| {
+            if let Some((choice, _)) = labels.get(ix) {
+                update_settings(cx, |s| pick(s, choice.name()));
+            }
+        })
+    })
+    .into_any_element()
 }
 
 #[cfg(test)]

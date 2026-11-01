@@ -89,6 +89,14 @@
 //! Terminal fell from 11,437 to 11,421, Appearance from 18,014 to 17,988, Agents from 10,466 to 10,460
 //! and the search from 12,274 to 12,250.
 //!
+//! The menu controls then took the width of their value instead of a fixed one, which makes GPUI measure
+//! the text of every closed menu (about 35 allocations each, measured as Git's three: 5,127 to 5,231), and
+//! the four selects that were a `SearchSelect` (Scrollback, Open folders in, Default shell, Icon theme, and
+//! Motion's four) became menu controls too, which build nothing until open. Sessions rose from 16,284 to
+//! 16,440, Git to 5,231, Notifications from 8,645 to 8,749, MenuBar from 6,852 to 6,904, Updates from 6,160
+//! to 6,186, Agents from 10,460 to 10,486 and Appearance from 17,988 to 18,033 (a menu more: Icon theme,
+//! less its popover and trigger); Terminal fell from 11,421 to 11,340, Motion from 6,816 to 6,787.
+//!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
 use gpui_kit::test::TestWindowExt as _;
@@ -109,29 +117,29 @@ const SLACK: u64 = 20;
 const BUDGET: [(&str, u64); 17] = [
     ("Profile", 7051),
     // With the Worktrees group's switch for cloning build folders (356).
-    ("Terminal", 11421),
+    ("Terminal", 11340),
     // With the Liquid Glass row (16,810 before it came back).
-    ("Appearance", 17988),
+    ("Appearance", 18033),
     ("Fonts", 8292),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 16284),
-    ("Git", 5127),
-    ("Notifications", 8645),
+    ("Sessions", 16440),
+    ("Git", 5231),
+    ("Notifications", 8749),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
     // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
     // page measured 9,501: under this, which stays.
-    ("Agents", 10460),
-    ("MenuBar", 6852),
+    ("Agents", 10486),
+    ("MenuBar", 6904),
     ("Import", 53549),
-    ("Updates", 6160),
+    ("Updates", 6186),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     // With the New programs group: the Developer Tools row, its description and its button (417).
     ("Advanced", 5136),
-    ("Motion", 6816),
+    ("Motion", 6787),
     ("Projects", 9283),
     // Measured with the nav's Motion and Import rows, which came after the page.
     ("Extensions", 2845),
@@ -144,7 +152,7 @@ const BUDGET: [(&str, u64); 17] = [
     ("FeatureFlags", 7290),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
-    ("search", 12250),
+    ("search", 12263),
 ];
 
 /// What Appearance's Liquid Glass row adds, a switch with its line and Beta chip: it is on the page on

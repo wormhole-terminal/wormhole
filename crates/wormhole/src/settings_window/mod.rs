@@ -132,9 +132,6 @@ pub(crate) struct SettingsWindow {
     primary_picker: Entity<ColorPickerState>,
     /// Appearance → the "+" after the branch color's swatches: any color.
     branch_picker: Entity<ColorPickerState>,
-    /// The select whose menu is open (by its row id), and the search box the select menus share.
-    open_select: Option<&'static str>,
-    menu_search: Entity<InputState>,
     opacity_slider: Entity<SliderState>,
     line_height_slider: Entity<SliderState>,
     /// Fonts → which font the specimen shows.

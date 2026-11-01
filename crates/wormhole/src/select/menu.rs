@@ -5,6 +5,10 @@
 //! one read of a global; the options, their closures and the card exist only for the open one, which a
 //! window shows one at a time ([`OpenOne`]).
 //!
+//! The control is as wide as its value and sits at the right edge of its row; the card hangs from the
+//! same edge and is as wide as its longest option (never narrower than the control: the value is one of
+//! the options, and the card's check column is wider than the control's chevrons).
+//!
 //! The keyboard path is the one of the (i): ⇥ reaches the control, ↩ and Space open it, ↑ ↓ Home and End
 //! move through the options, ↩ and Space choose, Esc closes and leaves the keyboard on the control. For
 //! VoiceOver the control is a pop-up button with its current value, and the options are a list of which
@@ -19,7 +23,7 @@ use gpui_kit::*;
 
 use super::{SelectTrigger, menu_bg, menu_shadow, option};
 use crate::settings::UiColors;
-use crate::style::{Edges as _, OpenOne};
+use crate::style::{Edges as _, OpenOne, TextRole as _};
 
 /// Marks the menu controls' [`OpenOne`].
 struct Menu;
@@ -38,55 +42,125 @@ impl Global for Highlight {}
 const GAP: f32 = 4.0;
 /// How near the menu may come to the window's edge.
 const EDGE: f32 = 8.0;
+/// The widest a control grows before its value truncates.
+const FACE_MAX_W: f32 = 280.0;
+/// The widest a menu grows before its words truncate, and how tall before it scrolls.
+const CARD_MAX_W: f32 = 360.0;
+const CARD_MAX_H: f32 = 280.0;
 
-/// Which pick of the options a keyboard or pointer chose.
+/// Which option a keyboard or pointer chose.
 type Pick = Rc<dyn Fn(usize, &mut Window, &mut App)>;
 /// The option the pointer or the keyboard is on now (`None`: none).
 type Hover = Rc<dyn Fn(Option<usize>, &mut Window, &mut App)>;
 
+/// One line of the open menu.
+pub struct MenuLine {
+    label: SharedString,
+    detail: Option<SharedString>,
+    icon: Option<AnyElement>,
+    action: bool,
+}
+
+impl MenuLine {
+    pub fn new(label: impl Into<SharedString>) -> Self {
+        Self { label: label.into(), detail: None, icon: None, action: false }
+    }
+
+    /// A second line under the label, in the muted colour.
+    pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
+        self.detail = Some(detail.into());
+        self
+    }
+
+    /// A picture before the label (an app's icon).
+    pub fn icon(mut self, icon: impl IntoElement) -> Self {
+        self.icon = Some(icon.into_any_element());
+        self
+    }
+
+    /// An item that does something rather than choosing a value ("Choose app…"): listed after a rule,
+    /// never checked.
+    pub fn action(mut self) -> Self {
+        self.action = true;
+        self
+    }
+}
+
 /// What the open menu offers. Built by the caller only when the menu opens.
 pub struct MenuOptions {
-    /// The options' words, in order.
-    pub labels: Vec<SharedString>,
-    /// The option that is the current value, checked; `None` when the value is none of them.
+    pub items: Vec<MenuLine>,
+    /// The item that is the current value, checked; `None` when the value is none of them.
     pub current: Option<usize>,
     pub on_pick: Pick,
-    /// Told which option is under the pointer or the keyboard, and `None` as it leaves or the menu closes
-    /// (a page that previews each option).
+    /// Told which item is under the pointer or the keyboard, and `None` as it leaves and as the menu
+    /// closes however it does (a page that previews each option).
     pub on_hover: Option<Hover>,
+}
+
+impl MenuOptions {
+    /// Plain words, one per item.
+    pub fn words(
+        words: impl IntoIterator<Item = SharedString>,
+        current: Option<usize>,
+        on_pick: impl Fn(usize, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        Self {
+            items: words.into_iter().map(MenuLine::new).collect(),
+            current,
+            on_pick: Rc::new(on_pick),
+            on_hover: None,
+        }
+    }
 }
 
 /// The control of the row `row`: `value` in the select's face, a menu of what `options` builds under it.
 #[derive(IntoElement)]
-pub struct MenuSelect<B: FnOnce() -> MenuOptions + 'static> {
+pub struct MenuSelect<B: FnOnce(&mut App) -> MenuOptions + 'static> {
     row: ElementId,
     ui: UiColors,
     /// The row's name, what VoiceOver calls the control.
     label: SharedString,
     value: SharedString,
-    width: Pixels,
+    leading: Option<AnyElement>,
     options: B,
 }
 
 #[track_caller]
-pub fn menu_select<B: FnOnce() -> MenuOptions + 'static>(
+pub fn menu_select<B: FnOnce(&mut App) -> MenuOptions + 'static>(
     row: impl Into<ElementId>,
     ui: UiColors,
     label: impl Into<SharedString>,
     value: impl Into<SharedString>,
-    width: f32,
     options: B,
 ) -> MenuSelect<B> {
-    MenuSelect { row: row.into(), ui, label: label.into(), value: value.into(), width: px(width), options }
+    MenuSelect { row: row.into(), ui, label: label.into(), value: value.into(), leading: None, options }
 }
 
-impl<B: FnOnce() -> MenuOptions + 'static> RenderOnce for MenuSelect<B> {
+impl<B: FnOnce(&mut App) -> MenuOptions + 'static> MenuSelect<B> {
+    /// A picture before the value in the face.
+    pub fn leading(mut self, icon: impl IntoElement) -> Self {
+        self.leading = Some(icon.into_any_element());
+        self
+    }
+}
+
+impl<B: FnOnce(&mut App) -> MenuOptions + 'static> RenderOnce for MenuSelect<B> {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let Self { row, ui, label, value, width, options } = self;
+        let Self { row, ui, label, value, leading, options } = self;
         let this_window = window.window_handle().window_id();
         let open = Open::is_open(this_window, &row, cx);
         let (on_press, on_down) = (row.clone(), row.clone());
-        let face = SelectTrigger::new("face", ui, value.clone()).width(width).selected(open);
+        let face = match leading {
+            Some(icon) => div()
+                .flex()
+                .items_center()
+                .gap_2()
+                .child(icon)
+                .child(div().min_w_0().truncate().child(value.clone()))
+                .into_any_element(),
+            None => value.clone().into_any_element(),
+        };
+        let face = SelectTrigger::new("face", ui, face).selected(open);
         div()
             // Scoped by its row's id, so one name does for all.
             .id("menu-select")
@@ -98,7 +172,9 @@ impl<B: FnOnce() -> MenuOptions + 'static> RenderOnce for MenuSelect<B> {
             .tab_stop(true)
             .focus_visible(move |d| d.ringed(ui, ui.focus, ui.focus_ring_width))
             .relative()
+            .flex()
             .flex_none()
+            .max_w(px(FACE_MAX_W))
             .rounded(ui.radius)
             .child(face)
             .on_mouse_down(MouseButton::Left, move |event, _, cx| Open::pressed(&on_down, event.position, cx))
@@ -109,25 +185,28 @@ impl<B: FnOnce() -> MenuOptions + 'static> RenderOnce for MenuSelect<B> {
                 Open::clicked(&on_press, event, window, cx);
             })
             .when(open, |d| {
-                let menu = options();
-                let current = menu.current;
-                let at = highlighted(this_window, &row, current, menu.labels.len(), cx);
+                let menu = options(cx);
+                let count = menu.items.len();
+                let at = highlighted(this_window, &row, menu.current, count, cx);
+                if let Some(hover) = menu.on_hover.clone() {
+                    // However the menu closes, what it previewed goes with it.
+                    Open::on_close(this_window, &row, Rc::new(move |window, cx| hover(None, window, cx)), cx);
+                }
                 let keys = Keys {
                     row: row.clone(),
-                    current,
+                    current: menu.current,
                     pick: menu.on_pick.clone(),
                     hover: menu.on_hover.clone(),
                 };
-                let count = menu.labels.len();
                 d.capture_key_down(move |event, window, cx| {
                     keys.handle(&event.keystroke.key, count, window, cx)
                 })
-                .child(card(ui, row, width, menu, at, cx))
+                .child(card(ui, row, menu, at, cx))
             })
     }
 }
 
-/// The highlighted option of the open menu of `row`: where the keyboard moved it, else the current value.
+/// The highlighted item of the open menu of `row`: where the keyboard moved it, else the current value.
 fn highlighted(window: WindowId, row: &ElementId, current: Option<usize>, count: usize, cx: &App) -> usize {
     let kept = cx
         .try_global::<Highlight>()
@@ -172,48 +251,32 @@ impl Keys {
             "enter" | "space" => {
                 cx.stop_propagation();
                 (self.pick)(at, window, cx);
-                self.finish(window, cx);
+                Open::close(window, cx);
             }
             "escape" => {
                 cx.stop_propagation();
-                self.finish(window, cx);
+                Open::close(window, cx);
             }
             _ => {}
         }
-    }
-
-    fn finish(&self, window: &mut Window, cx: &mut App) {
-        if let Some(hover) = &self.hover {
-            hover(None, window, cx);
-        }
-        Open::close(window, cx);
     }
 }
 
 /// The menu, under the control's right edge and kept inside the window.
 #[track_caller]
-fn card(ui: UiColors, row: ElementId, width: Pixels, menu: MenuOptions, at: usize, cx: &App) -> Div {
-    let MenuOptions { labels, current, on_pick, on_hover } = menu;
-    let dismissed = row;
-    let list = div()
-        .id("menu-select-card")
-        .role(Role::ListBox)
-        // Over the page: it takes the pointer, the clicks and the wheel from it.
-        .occlude()
-        .flex()
-        .flex_col()
-        .p_1()
-        .min_w(width)
-        .rounded(ui.radius_lg)
-        .bg(menu_bg(ui, cx))
-        .shadow(menu_shadow(ui))
-        .cursor(CursorStyle::Arrow)
-        .on_mouse_down_out(move |event, window, cx| {
-            Open::dismissed_outside(&dismissed, event.position, window, cx);
-        })
-        .children(labels.into_iter().enumerate().map(|(ix, label)| {
-            let (pick, hover) = (on_pick.clone(), on_hover.clone());
-            let chosen = current == Some(ix);
+fn card(ui: UiColors, row: ElementId, menu: MenuOptions, at: usize, cx: &App) -> Div {
+    let MenuOptions { items, current, on_pick, on_hover } = menu;
+    let mut was_action = false;
+    let mut rows = Vec::with_capacity(items.len() + 1);
+    for (ix, item) in items.into_iter().enumerate() {
+        let MenuLine { label, detail, icon, action } = item;
+        if action && !was_action {
+            rows.push(crate::style::popover_rule(ui).into_any_element());
+        }
+        was_action = action;
+        let (pick, hover) = (on_pick.clone(), on_hover.clone());
+        let chosen = current == Some(ix) && !action;
+        rows.push(
             option(("option", ix), ui, chosen, false)
                 .role(Role::ListBoxOption)
                 .aria_label(label.clone())
@@ -222,7 +285,12 @@ fn card(ui: UiColors, row: ElementId, width: Pixels, menu: MenuOptions, at: usiz
                     // The option the keyboard is on is the one the control's focus describes.
                     d.bg(ui.hover).aria_active_descendant()
                 })
-                .child(div().flex_1().min_w_0().truncate().child(label))
+                .children(icon)
+                .child(
+                    div().flex_1().min_w_0().flex().flex_col().child(div().truncate().child(label)).children(
+                        detail.map(|d| div().truncate().text_caption().text_color(ui.muted).child(d)),
+                    ),
+                )
                 .on_hover(move |hovered, window, cx| {
                     if let Some(hover) = &hover {
                         hover((*hovered).then_some(ix), window, cx);
@@ -232,7 +300,29 @@ fn card(ui: UiColors, row: ElementId, width: Pixels, menu: MenuOptions, at: usiz
                     pick(ix, window, cx);
                     Open::close(window, cx);
                 })
-        }));
+                .into_any_element(),
+        );
+    }
+    let dismissed = row;
+    let list = div()
+        .id("menu-select-card")
+        .role(Role::ListBox)
+        // Over the page: it takes the pointer, the clicks and the wheel from it.
+        .occlude()
+        .flex()
+        .flex_col()
+        .p_1()
+        .max_w(px(CARD_MAX_W))
+        .max_h(px(CARD_MAX_H))
+        .overflow_y_scroll()
+        .rounded(ui.radius_lg)
+        .bg(menu_bg(ui, cx))
+        .shadow(menu_shadow(ui))
+        .cursor(CursorStyle::Arrow)
+        .on_mouse_down_out(move |event, window, cx| {
+            Open::dismissed_outside(&dismissed, event.position, window, cx);
+        })
+        .children(rows);
     // The holder gives the anchor a corner to hang from: below the control, at its right edge.
     div().absolute().top(px(crate::style::CONTROL_H + GAP)).right_0().child(
         deferred(anchored().anchor(Anchor::TopRight).snap_to_window_with_margin(px(EDGE)).child(list))

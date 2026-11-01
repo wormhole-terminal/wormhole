@@ -48,10 +48,7 @@ pub(super) fn render(
 fn sample_menu_select(ui: crate::settings::UiColors) -> impl IntoElement {
     const NAME: &str = "Mode"; // text: sample (the gallery's specimen)
     const OPTIONS: [&str; 3] = ["Match system", "Dark", "Light"]; // text: sample (the gallery's specimen)
-    select::menu_select("g-menu-select", ui, NAME, OPTIONS[0], 224.0, || select::MenuOptions {
-        labels: OPTIONS.map(Into::into).to_vec(),
-        current: Some(0),
-        on_pick: std::rc::Rc::new(|_, _, _| {}),
-        on_hover: None,
+    select::menu_select("g-menu-select", ui, NAME, OPTIONS[0], |_| {
+        select::MenuOptions::words(OPTIONS.map(Into::into), Some(0), |_, _, _| {})
     })
 }

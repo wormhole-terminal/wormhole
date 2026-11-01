@@ -223,14 +223,26 @@ fn control(id: &str) -> Option<&'static Setting> {
     controls().get(id).map(|(_, setting)| *setting)
 }
 
-/// The ids of the rows drawn as menu controls (the density's is a custom one, named here too), for devctl,
-/// which opens them by name.
+/// The ids of the rows drawn as menu controls, for devctl, which opens them by name: the registry's menus
+/// and the custom rows that draw one themselves.
 #[cfg(feature = "devctl")]
 pub(super) fn menu_ids() -> impl Iterator<Item = &'static str> {
+    const CUSTOM: [&str; 9] = [
+        "density",
+        "scrollback",
+        "open-in",
+        "default-shell",
+        "icon-theme",
+        "motion-insert",
+        "motion-fold",
+        "motion-status",
+        "motion-column",
+    ];
     controls()
         .values()
-        .filter(|(_, setting)| matches!(setting.control, Control::Menu(_)) || setting.id == "density")
+        .filter(|(_, setting)| matches!(setting.control, Control::Menu(_)))
         .map(|(_, setting)| setting.id)
+        .chain(CUSTOM)
 }
 
 /// What the recorder of row `id` records into and checks.
@@ -546,8 +558,10 @@ impl SettingsWindow {
     }
 }
 
-/// The width of a menu control: the longest option ("Needs input and finished") with its chevrons.
-pub(super) const MENU_W: f32 = 224.0;
+/// The name of the row `id` in the table, for a menu control's VoiceOver label.
+pub(super) fn row_label(id: &str) -> &'static str {
+    settings_index::entry(id).map_or("", |(_, _, entry)| entry.label())
+}
 
 /// A row's menu: the current value in its face. A value no option names (set by hand in
 /// `config.json`) is shown as it is and listed last, checked, so it stays until another is chosen.
@@ -567,15 +581,13 @@ fn menu_control(
             (words.clone(), Some(words), options.len())
         }
     };
-    select::menu_select(id, ui, label, value, MENU_W, move || MenuOptions {
-        labels: options.iter().map(|option| option.label.words()).chain(other).collect(),
-        current: Some(at),
-        on_pick: Rc::new(move |ix, _, cx| {
+    select::menu_select(id, ui, label, value, move |_| {
+        let words = options.iter().map(|option| option.label.words()).chain(other);
+        MenuOptions::words(words, Some(at), move |ix, _, cx| {
             if ix < options.len() {
                 update_settings(cx, |s| set(s, ix));
             }
-        }),
-        on_hover: None,
+        })
     })
     .into_any_element()
 }

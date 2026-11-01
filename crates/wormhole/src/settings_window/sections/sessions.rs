@@ -12,10 +12,10 @@ use wormhole_core::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 use wormhole_text::keys::*;
 
 use super::preview;
-use crate::select::{self, MenuOptions};
+use crate::select::{self, MenuLine, MenuOptions};
 use crate::settings::settings;
 use crate::settings::update_settings;
-use crate::settings_window::registry::MENU_W;
+use crate::settings_window::registry::row_label;
 use crate::settings_window::registry::{MenuOption, Setting, toggle};
 use crate::settings_window::{SettingsWindow, SidebarLook, ui};
 
@@ -92,8 +92,8 @@ fn draw_density(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElem
     let ui = ui(cx);
     let current = settings(cx).density;
     let window = cx.weak_entity();
-    select::menu_select("density", ui, entry_label("density"), current.label(), MENU_W, move || MenuOptions {
-        labels: Density::ALL.map(|density| density.label().into()).to_vec(),
+    select::menu_select("density", ui, row_label("density"), current.label(), move |_| MenuOptions {
+        items: Density::ALL.into_iter().map(|density| MenuLine::new(density.label())).collect(),
         current: Density::ALL.iter().position(|density| *density == current),
         on_pick: Rc::new(|ix, _, cx| {
             if let Some(density) = Density::ALL.get(ix) {
@@ -113,9 +113,4 @@ fn draw_density(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElem
         })),
     })
     .into_any_element()
-}
-
-/// The name of the row `id`, for the control's VoiceOver label.
-fn entry_label(id: &str) -> &'static str {
-    wormhole_core::config::settings_index::entry(id).map_or("", |(_, _, entry)| entry.label())
 }

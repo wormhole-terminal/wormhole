@@ -21,10 +21,10 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use super::{open_button, stage, title_row};
-use crate::select::Choice;
+use crate::select::{self, MenuOptions};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
-use crate::settings_window::registry::{MenuOption, ProjectSource, Setting, toggle};
+use crate::settings_window::registry::{MenuOption, ProjectSource, Setting, row_label, toggle};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
 use crate::style::{self, Edges};
 use crate::theme_bridge;
@@ -266,18 +266,23 @@ fn draw_translucent(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
         .into_any_element()
 }
 
-fn draw_icon_select(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_icon_select(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let current = settings(cx).icon_theme.clone();
-    let choices = crate::icons::available().into_iter().map(|name| Choice::new(name.clone(), name)).collect();
-    window.select(
-        "icon-theme",
-        div().child(current.clone()).into_any_element(),
-        style::SELECT_W,
-        choices,
-        current,
-        |s, name| s.icon_theme = name.to_string(),
-        cx,
-    )
+    select::menu_select("icon-theme", ui(cx), row_label("icon-theme"), current.clone(), move |_| {
+        let mut names = crate::icons::available();
+        // A theme that is not installed any more is shown as written, and listed, until another is chosen.
+        let at = names.iter().position(|name| *name == current).unwrap_or_else(|| {
+            names.push(current.clone());
+            names.len() - 1
+        });
+        let picked = names.clone();
+        MenuOptions::words(names.into_iter().map(Into::into), Some(at), move |ix, _, cx| {
+            if let Some(name) = picked.get(ix) {
+                update_settings(cx, |s| s.icon_theme = name.clone());
+            }
+        })
+    })
+    .into_any_element()
 }
 
 /// The project's theme notice, the filter and the cards, and the ways to more themes.

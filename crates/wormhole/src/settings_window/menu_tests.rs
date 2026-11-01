@@ -6,6 +6,7 @@
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
 use gpui_kit::accesskit::{Action, ActionRequest, NodeId, Role, TreeId};
+use gpui_kit::test::TestWindowExt as _;
 use gpui_kit::{AnyWindowHandle, KeyUpEvent, Keystroke, Modifiers, TestAppContext, VisualTestContext};
 
 use super::info_tests::{centre, draw};
@@ -16,7 +17,11 @@ use crate::window::test_harness::{isolate_in, start};
 const LABEL: &str = "Tab width";
 
 fn open(cx: &mut TestAppContext) -> AnyWindowHandle {
-    cx.update(|cx| open_settings(Some(Section::Git), cx));
+    open_at(cx, Section::Git)
+}
+
+fn open_at(cx: &mut TestAppContext, section: Section) -> AnyWindowHandle {
+    cx.update(|cx| open_settings(Some(section), cx));
     cx.run_until_parked();
     let handle = cx.update(|cx| current_window(cx)).expect("the settings window opened").0;
     cx.update(|cx| handle.update(cx, |_, window, _| window.simulate_a11y_active(true))).expect("open");
@@ -26,6 +31,14 @@ fn open(cx: &mut TestAppContext) -> AnyWindowHandle {
 
 /// What the last frame's tree holds of the menu control: its node, its value, whether it has focus.
 fn control(cx: &mut TestAppContext, handle: AnyWindowHandle) -> (NodeId, String, bool, Option<bool>) {
+    named(cx, handle, LABEL)
+}
+
+fn named(
+    cx: &mut TestAppContext,
+    handle: AnyWindowHandle,
+    label: &str,
+) -> (NodeId, String, bool, Option<bool>) {
     let update = cx
         .update(|cx| handle.update(cx, |_, window, _| window.last_a11y_tree_update()))
         .expect("open")
@@ -33,8 +46,8 @@ fn control(cx: &mut TestAppContext, handle: AnyWindowHandle) -> (NodeId, String,
     let (id, node) = update
         .nodes
         .iter()
-        .find(|(_, node)| node.role() == Role::ComboBox && node.label() == Some(LABEL))
-        .expect("the Tab width menu is on the page");
+        .find(|(_, node)| node.role() == Role::ComboBox && node.label() == Some(label))
+        .unwrap_or_else(|| panic!("the {label} menu is on the page"));
     (*id, node.value().unwrap_or_default().to_string(), update.focus == *id, node.is_expanded())
 }
 
@@ -204,4 +217,102 @@ fn voiceover_can_press_the_menu(cx: &mut TestAppContext) {
     cx.run_until_parked();
     draw(cx, handle);
     assert_eq!(control(cx, handle).3, Some(true), "pressing the control opens its menu");
+}
+
+// A menu that previews its option under the pointer or the keyboard (Density's sidebar) must show nothing
+// of it once it is closed, however it was closed.
+
+const DENSITY: &str = "Density";
+
+fn preview(cx: &mut TestAppContext) -> Option<super::SidebarLook> {
+    let page = cx.update(|cx| current_window(cx)).expect("the window").1;
+    cx.update(|cx| page.read(cx).sidebar_preview)
+}
+
+/// Opens Density by keyboard and arrows to the second option, which previews it.
+fn preview_the_second_density(cx: &mut TestAppContext) -> (AnyWindowHandle, VisualTestContext) {
+    let handle = open_at(cx, Section::Sessions);
+    // GPUI tells a window's focus listeners about a move only while the window is the active one.
+    cx.update(|cx| handle.update(cx, |_, window, _| window.activate_window())).expect("open");
+    draw(cx, handle);
+    let mut keys = VisualTestContext::from_window(handle, cx);
+    for _ in 0..80 {
+        keys.simulate_keystrokes("tab");
+        if named(&mut keys, handle, DENSITY).2 {
+            break;
+        }
+    }
+    assert!(named(&mut keys, handle, DENSITY).2, "Tab reaches Density");
+    activate(&mut keys, "enter");
+    assert_eq!(named(&mut keys, handle, DENSITY).3, Some(true));
+    assert!(preview(&mut keys).is_none());
+    keys.simulate_keystrokes("down");
+    assert!(preview(&mut keys).is_some(), "the option under the keyboard is previewed");
+    (handle, keys)
+}
+
+#[gpui_kit::test]
+fn a_press_outside_the_open_menu_takes_its_preview_away(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "a_press_outside_the_open_menu_takes_its_preview_away") {
+        return;
+    }
+    start(cx, 1);
+    let (handle, mut keys) = preview_the_second_density(cx);
+    keys.simulate_click(gpui_kit::point(gpui_kit::px(2.0), gpui_kit::px(400.0)), Modifiers::none());
+    assert_eq!(named(&mut keys, handle, DENSITY).3, Some(false), "the press closed the menu");
+    assert!(preview(&mut keys).is_none(), "and the look that was not chosen goes with it");
+}
+
+#[gpui_kit::test]
+fn tabbing_away_from_the_open_menu_takes_its_preview_away(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "tabbing_away_from_the_open_menu_takes_its_preview_away") {
+        return;
+    }
+    start(cx, 1);
+    let (handle, mut keys) = preview_the_second_density(cx);
+    keys.simulate_keystrokes("tab");
+    // Focus listeners run as the frame that follows the move is drawn.
+    draw(&mut keys, handle);
+    assert_eq!(named(&mut keys, handle, DENSITY).3, Some(false), "Tab away closed the menu");
+    assert!(preview(&mut keys).is_none(), "and the look that was not chosen goes with it");
+}
+
+#[gpui_kit::test]
+fn choosing_clears_the_preview_and_keeps_the_choice(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "choosing_clears_the_preview_and_keeps_the_choice") {
+        return;
+    }
+    start(cx, 1);
+    let (handle, mut keys) = preview_the_second_density(cx);
+    activate(&mut keys, "enter");
+    assert_eq!(named(&mut keys, handle, DENSITY).3, Some(false));
+    assert!(preview(&mut keys).is_none());
+    assert_eq!(named(&mut keys, handle, DENSITY).1, "Compact", "the choice is the current value");
+}
+
+#[gpui_kit::test]
+fn the_former_searchable_selects_are_menus_with_their_actions_unchecked(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "the_former_searchable_selects_are_menus_with_their_actions_unchecked") {
+        return;
+    }
+    start(cx, 1);
+    let handle = open_at(cx, Section::Terminal);
+    cx.update(|cx| update_settings(cx, |s| s.scrollback_lines = 7_777));
+    draw(cx, handle);
+    let (id, value, ..) = named(cx, handle, "Scrollback");
+    assert_eq!(value, "7,777 lines", "a size written by hand shows as it is");
+    let mut keys = VisualTestContext::from_window(handle, cx);
+    click(&mut keys, handle, id);
+    let listed = options(&mut keys, handle);
+    let checked: Vec<_> =
+        listed.iter().filter(|(_, _, selected)| *selected).map(|(_, n, _)| n.as_str()).collect();
+    assert_eq!(checked, ["7,777 lines"]);
+    keys.simulate_keystrokes("escape");
+
+    let (id, ..) = named(&mut keys, handle, "Open folders in");
+    click(&mut keys, handle, id);
+    let listed = options(&mut keys, handle);
+    let (_, name, selected) = listed.last().expect("the menu has items");
+    assert_eq!((name.as_str(), *selected), ("Choose app…", false), "the action is last and never checked");
+    assert!(listed.iter().filter(|(_, _, selected)| *selected).count() <= 1);
 }

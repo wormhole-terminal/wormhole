@@ -40,7 +40,6 @@ impl SettingsWindow {
         let current = settings(cx).clone();
         let search =
             cx.new(|cx| InputState::new(window, cx).placeholder(text(SETTINGS_WINDOW_SEARCH_SETTINGS)));
-        let menu_search = cx.new(|cx| InputState::new(window, cx).placeholder(text(SETTINGS_WINDOW_SEARCH)));
         let font_picker = FontPickerState::new(window, cx);
         let primary_picker = cx.new(|cx| ColorPickerState::new(window, cx));
         let branch_picker = cx.new(|cx| ColorPickerState::new(window, cx));
@@ -72,11 +71,6 @@ impl SettingsWindow {
                     if this.show_results {
                         this.revealed = None;
                     }
-                    cx.notify();
-                }
-            }),
-            cx.subscribe_in(&menu_search, window, |_, _, event: &InputEvent, _, cx| {
-                if let InputEvent::Change = event {
                     cx.notify();
                 }
             }),
@@ -137,8 +131,6 @@ impl SettingsWindow {
             recording: None,
             primary_picker,
             branch_picker,
-            open_select: None,
-            menu_search,
             opacity_slider,
             line_height_slider,
             specimen: FontSlot::Terminal,
@@ -228,7 +220,6 @@ impl SettingsWindow {
             self.scan_probes(cx);
         }
         self.show_results = false;
-        self.open_select = None;
         self.confirm_reset = false;
         self.confirm_delete_profile = false;
         self.revealed = None;
@@ -267,13 +258,12 @@ impl SettingsWindow {
         cx.notify();
     }
 
-    /// Esc: whatever is open first (a menu, the reset question), then the search, then the
+    /// Esc: whatever is open first (a sheet, the reset question), then the search, then the
     /// window.
     pub(super) fn escape(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.new_profile.take().is_some()
             || self.close_probe_sheet(cx)
             || self.font_picker.open.take().is_some()
-            || self.open_select.take().is_some()
             || self.end_recording(cx)
             || std::mem::take(&mut self.confirm_reset)
             || std::mem::take(&mut self.confirm_delete_profile)

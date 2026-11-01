@@ -94,8 +94,10 @@ impl RenderOnce for SelectTrigger {
             .hover(|d| d.bg(ui.hover))
             // A soft ring around the open select, like a focused input (the panel's picker
             // marks itself with the outline alone).
+            // The ring is a shadow under the select; with nothing painted in the select it would show through
+            // and tint the inside, so an open select is filled with the page's own colour.
             .when(self.open && !self.compact, |d| {
-                d.shadow(vec![BoxShadow {
+                d.bg(ui.background).shadow(vec![BoxShadow {
                     color: Hsla { a: 0.3, ..ui.primary },
                     offset: point(px(0.0), px(0.0)),
                     blur_radius: px(0.0),
@@ -325,8 +327,6 @@ pub struct SearchSelect<V> {
     menu_width: Pixels,
     bg: Hsla,
     compact: bool,
-    /// Whether the menu has its search box (a list of a few options doesn't need one).
-    searchable: bool,
     on_open_change: Option<OpenChange>,
     on_pick: Option<Pick<V>>,
 }
@@ -354,16 +354,9 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
             menu_width: px(280.0),
             bg: menu_bg(ui, cx),
             compact: false,
-            searchable: true,
             on_open_change: None,
             on_pick: None,
         }
-    }
-
-    /// The menu without its search box: a handful of options (scrollback sizes, icon themes).
-    pub fn without_search(mut self) -> Self {
-        self.searchable = false;
-        self
     }
 
     pub fn options(mut self, options: Vec<Choice<V>>) -> Self {
@@ -439,7 +432,6 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
             menu_width,
             bg,
             compact,
-            searchable,
             on_open_change,
             on_pick,
         } = self;
@@ -511,12 +503,10 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
             div()
                 .flex()
                 .flex_col()
-                .when(searchable, |d| {
-                    d.child(search_row(ui, compact, {
-                        let input = Input::new(&search).appearance(false);
-                        if compact { input.xsmall() } else { input.small() }
-                    }))
-                })
+                .child(search_row(ui, compact, {
+                    let input = Input::new(&search).appearance(false);
+                    if compact { input.xsmall() } else { input.small() }
+                }))
                 .child(list)
                 .children(footer)
         })
@@ -578,7 +568,7 @@ fn option_row<V: Clone + PartialEq + 'static>(
 mod menu;
 #[cfg(feature = "devctl")]
 pub use menu::devctl_open;
-pub use menu::{MenuOptions, menu_select};
+pub use menu::{MenuLine, MenuOptions, menu_select};
 
 #[cfg(test)]
 mod tests;

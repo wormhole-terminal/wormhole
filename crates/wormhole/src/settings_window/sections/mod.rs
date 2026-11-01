@@ -15,11 +15,9 @@ use gpui_kit::component::button::Button;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 
-use crate::select::{Choice, SearchSelect, SelectTrigger};
-use crate::settings::update_settings;
-use crate::settings::{Settings, SettingsStore};
+use crate::settings::SettingsStore;
+use crate::settings_window::SettingsWindow;
 use crate::settings_window::registry::Setting;
-use crate::settings_window::{SettingsWindow, ui};
 
 mod advanced;
 mod agent_access;
@@ -100,23 +98,6 @@ pub(super) fn recorder_id(id: &str) -> Option<&'static str> {
     ["hotkey", "jump-waiting-key"].into_iter().find(|known| *known == id)
 }
 
-/// The selects of the pages, by their row's id (devctl opens them by name).
-#[cfg(feature = "devctl")]
-pub(super) fn select_id(id: &str) -> Option<&'static str> {
-    [
-        "scrollback",
-        "icon-theme",
-        "default-shell",
-        "open-in",
-        "motion-insert",
-        "motion-fold",
-        "motion-status",
-        "motion-column",
-    ]
-    .into_iter()
-    .find(|known| *known == id)
-}
-
 impl SettingsWindow {
     pub(super) fn render_section(&self, section: Section, cx: &mut Context<Self>) -> AnyElement {
         self.render_page(section, cx)
@@ -160,56 +141,6 @@ impl SettingsWindow {
             ),
             _ => None,
         }
-    }
-
-    /// A select in a row: its value in the face, a menu of `choices` under it.
-    /// `id` names the row; only one select is open at a time.
-    #[allow(clippy::too_many_arguments)]
-    pub(super) fn select(
-        &self,
-        id: &'static str,
-        face: AnyElement,
-        width: f32,
-        choices: Vec<Choice<String>>,
-        current: String,
-        pick: fn(&mut Settings, &str),
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let ui = ui(cx);
-        let this = cx.weak_entity();
-        let on_open = this.clone();
-        SearchSelect::new(
-            SharedString::from(format!("select-{id}")),
-            ui,
-            SelectTrigger::new(SharedString::from(format!("select-{id}-trigger")), ui, face).width(px(width)),
-            &self.menu_search,
-            cx,
-        )
-        .options(choices)
-        .current(current)
-        .open(self.open_select == Some(id))
-        .without_search()
-        .anchor(Anchor::TopRight)
-        .menu_width(px(width))
-        .on_open_change(move |open, _, cx| {
-            on_open
-                .update(cx, |this, cx| {
-                    this.open_select = open.then_some(id);
-                    cx.notify();
-                })
-                .ok();
-        })
-        .on_pick(move |value, _, cx| {
-            let value = value.clone();
-            this.update(cx, |this, cx| {
-                this.open_select = None;
-                cx.notify();
-            })
-            .ok();
-            update_settings(cx, |s| pick(s, &value));
-        })
-        .into_popover()
-        .into_any_element()
     }
 }
 

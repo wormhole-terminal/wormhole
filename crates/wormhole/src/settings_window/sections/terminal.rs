@@ -3,6 +3,7 @@
 //! whether programs may read the screen back, read or set the clipboard and control the window.
 
 use std::path::Path;
+use std::rc::Rc;
 #[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
@@ -25,10 +26,10 @@ use super::open_in_editor;
 use crate::open_in::OpenIn;
 use crate::platform::apps;
 use crate::platform::default_app;
-use crate::select::Choice;
+use crate::select::{MenuLine, MenuOptions, menu_select};
 use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors, settings};
-use crate::settings_window::registry::{MenuOption, Setting, toggle};
+use crate::settings_window::registry::{MenuOption, Setting, row_label, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
 
@@ -173,74 +174,62 @@ fn lines(n: usize) -> String {
     settings_terminal_scrollback_lines(&grouped)
 }
 
-fn draw_scrollback(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_scrollback(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let current = settings(cx).scrollback_lines;
     let mut sizes = SCROLLBACK.to_vec();
     if !sizes.contains(&current) {
         sizes.push(current);
         sizes.sort_unstable();
     }
-    let choices = sizes.into_iter().map(|n| Choice::new(n.to_string(), lines(n))).collect();
-    window.select(
-        "scrollback",
-        div().child(lines(current)).into_any_element(),
-        SCROLLBACK_W,
-        choices,
-        current.to_string(),
-        |s, value| {
-            if let Ok(n) = value.parse() {
-                s.scrollback_lines = n;
+    menu_select("scrollback", ui(cx), row_label("scrollback"), lines(current), move |_| {
+        let at = sizes.iter().position(|n| *n == current);
+        let words: Vec<_> = sizes.iter().map(|n| lines(*n).into()).collect();
+        MenuOptions::words(words, at, move |ix, _, cx| {
+            if let Some(n) = sizes.get(ix) {
+                update_settings(cx, |s| s.scrollback_lines = *n);
             }
-        },
-        cx,
-    )
+        })
+    })
+    .into_any_element()
 }
-
-/// The scrollback select: wide enough for "200,000 lines".
-const SCROLLBACK_W: f32 = 160.0;
 
 /// Open folders in: the apps on this Mac that can open a folder, found when Settings opens or the page is
 /// shown (`OpenIn::refresh`), the one the title row's button opens checked; an app that isn't in the list can
-/// be picked with Choose app…. An app that is gone is shown as written, with what opens instead.
-fn draw_open_in(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+/// be picked with Choose app…, the last item of the menu. An app that is gone is shown as written, with what
+/// opens instead.
+fn draw_open_in(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
-    let apps = OpenIn::apps(cx);
     let resolved = OpenIn::resolved(cx);
+    let missing = resolved.missing.clone();
     let current = resolved.app.bundle.clone();
-    let mut options: Vec<Choice<String>> =
-        apps.iter().map(|app| Choice::new(app.bundle.clone(), app.name.clone())).collect();
-    if let Some(missing) = &resolved.missing {
-        let chosen = settings(cx).open_in.trim().to_string();
-        options.push(
-            Choice::new(chosen, missing.clone())
-                .detail(text(SETTINGS_TERMINAL_NOT_INSTALLED_THE_TITLE_ROW_OPENS)),
-        );
-    }
-    let face = div()
-        .flex()
-        .items_center()
-        .gap_2()
-        .child(open_in_icon(ui, cx, &resolved.app))
-        .child(resolved.app.name.clone());
-    let select = window.select(
-        "open-in",
-        face.into_any_element(),
-        SHELL_W,
-        options,
-        current,
-        |s, bundle| s.open_in = bundle.to_string(),
-        cx,
-    );
-    div()
-        .flex()
-        .items_center()
-        .gap_2()
-        .child(select)
-        .child(
-            style::link_button("open-in-choose", ui, text(SETTINGS_TERMINAL_CHOOSE_APP), false)
-                .on_click(cx.listener(|_, _, _, cx| choose_app(cx))),
-        )
-        .into_any_element()
+    menu_select("open-in", ui, row_label("open-in"), resolved.app.name.clone(), move |cx| {
+        let apps = OpenIn::apps(cx);
+        let mut lines: Vec<MenuLine> =
+            apps.iter().map(|app| MenuLine::new(app.name.clone()).icon(open_in_icon(ui, cx, app))).collect();
+        let mut bundles: Vec<String> = apps.iter().map(|app| app.bundle.clone()).collect();
+        if let Some(missing) = missing {
+            let chosen = settings(cx).open_in.trim().to_string();
+            lines.push(
+                MenuLine::new(missing).detail(text(SETTINGS_TERMINAL_NOT_INSTALLED_THE_TITLE_ROW_OPENS)),
+            );
+            bundles.push(chosen);
+        }
+        let at = bundles.iter().position(|bundle| *bundle == current);
+        let choose = lines.len();
+        lines.push(MenuLine::new(text(SETTINGS_TERMINAL_CHOOSE_APP)).action());
+        MenuOptions {
+            items: lines,
+            current: at,
+            on_pick: Rc::new(move |ix, _, cx| match bundles.get(ix) {
+                Some(bundle) => update_settings(cx, |s| s.open_in = bundle.clone()),
+                None if ix == choose => choose_app(cx),
+                None => {}
+            }),
+            on_hover: None,
+        }
+    })
+    .leading(open_in_icon(ui, cx, &resolved.app))
+    .into_any_element()
 }
 
 /// An app's icon in the select, `style::GLYPH` square: its own, or its monogram.
@@ -273,40 +262,43 @@ fn choose_app(cx: &mut App) {
 /// The Default shell select: the login shell, the profiles and the shells on this Mac by name,
 /// what each runs under it. A default that names nothing any more (a profile taken out of
 /// config.json) is shown as written, with what happens instead.
-fn draw_default_shell(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_default_shell(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let settings = settings(cx);
-    let current = wormhole_core::terminal::shells::default_key(settings).to_string();
+    let current = shells::default_key(settings).to_string();
     let choices = shells::choices(settings);
     let face = choices.iter().find(|c| c.key == current).map_or(current.clone(), |c| c.name.clone());
-    let mut options: Vec<Choice<String>> = choices.iter().map(shell_choice).collect();
-    if !choices.iter().any(|c| c.key == current) {
-        options.push(
-            Choice::new(current.clone(), current.clone())
-                .detail(text(SETTINGS_TERMINAL_NOT_FOUND_THE_LOGIN_SHELL_RUNS)),
-        );
-    }
-    window.select(
-        "default-shell",
-        div().child(face).into_any_element(),
-        SHELL_W,
-        options,
-        current,
-        |s, key| s.default_shell = key.to_string(),
-        cx,
-    )
+    menu_select("default-shell", ui(cx), row_label("default-shell"), face, move |_| {
+        let mut lines: Vec<MenuLine> = choices.iter().map(shell_line).collect();
+        let mut keys: Vec<String> = choices.iter().map(|c| c.key.clone()).collect();
+        if !keys.contains(&current) {
+            lines.push(
+                MenuLine::new(current.clone()).detail(text(SETTINGS_TERMINAL_NOT_FOUND_THE_LOGIN_SHELL_RUNS)),
+            );
+            keys.push(current.clone());
+        }
+        let at = keys.iter().position(|key| *key == current);
+        MenuOptions {
+            items: lines,
+            current: at,
+            on_pick: Rc::new(move |ix, _, cx| {
+                if let Some(key) = keys.get(ix) {
+                    update_settings(cx, |s| s.default_shell = key.clone());
+                }
+            }),
+            on_hover: None,
+        }
+    })
+    .into_any_element()
 }
 
-/// A shell in the Default shell select: its name, and what it runs under it.
-fn shell_choice(choice: &ShellChoice) -> Choice<String> {
+/// A shell in the Default shell menu: its name, and what it runs under it.
+fn shell_line(choice: &ShellChoice) -> MenuLine {
     let detail = match choice.kind {
         ShellKind::Login => settings_terminal_login_shell(&choice.command_line),
         ShellKind::Profile | ShellKind::System => choice.command_line.clone(),
     };
-    Choice::new(choice.key.clone(), choice.name.clone()).detail(detail)
+    MenuLine::new(choice.name.clone()).detail(detail)
 }
-
-/// The Default shell select: wide enough for a profile's name and, in the menu, what it runs.
-const SHELL_W: f32 = 240.0;
 
 /// The profiles under the Shells row, each with what it runs (as the menus run it: a bare name
 /// through the login shell); nothing while config.json lists none.
