@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-11-01
+
 ### Fixed
 
 - A folder that is a repository of its own (git lists it as one entry) showed in Changes as an empty
@@ -952,7 +954,8 @@ agents.
     the background and verified with a minisign signature and Apple's
     code signature.
 
-[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/wormhole-terminal/wormhole/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/wormhole-terminal/wormhole/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/wormhole-terminal/wormhole/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/wormhole-terminal/wormhole/compare/v1.3.0...v1.4.0
