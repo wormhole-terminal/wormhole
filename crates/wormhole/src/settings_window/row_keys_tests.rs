@@ -297,3 +297,28 @@ fn voiceover_can_press_the_key_while_it_is_hidden(cx: &mut TestAppContext) {
     cx.run_until_parked();
     assert_eq!(clipboard(cx).as_deref(), Some(KEY), "pressing the key copies it without the pointer");
 }
+
+#[gpui_kit::test]
+fn a_copied_left_over_from_a_closed_window_is_not_shown_in_the_next_one(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "a_copied_left_over_from_a_closed_window_is_not_shown_in_the_next_one") {
+        return;
+    }
+    start(cx, 1);
+    let handle = open(cx);
+    let button = key_button(cx, handle);
+    let at = centre(cx, handle, button);
+    {
+        let mut keys = VisualTestContext::from_window(handle, cx);
+        keys.simulate_mouse_move(at, None, Modifiers::none());
+        draw(&mut keys, handle);
+        keys.simulate_click(at, Modifiers::none());
+        assert_eq!(shown_keys(&mut keys, handle), [KEY], "the row says Copied");
+    }
+    // The window goes before the timer that would clear it, so that timer finds nothing to update.
+    cx.update(|cx| handle.update(cx, |_, window, _| window.remove_window())).expect("open");
+    cx.run_until_parked();
+    cx.executor().advance_clock(Duration::from_secs(2));
+    cx.run_until_parked();
+    let reopened = open(cx);
+    assert!(shown_keys(cx, reopened).is_empty(), "a new window does not inherit the old Copied");
+}

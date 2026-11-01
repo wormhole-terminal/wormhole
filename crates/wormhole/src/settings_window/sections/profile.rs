@@ -46,7 +46,7 @@ const AGENT_LABEL_W: f32 = 48.0;
 
 /// A text field of `width`.
 fn field(input: &Entity<InputState>, width: f32) -> Div {
-    div().flex_none().w(px(width)).child(Input::new(input).small())
+    style::own_menu(div().flex_none().w(px(width)).child(Input::new(input).small()))
 }
 
 /// The profile Wormhole is in, copied out so no borrow of the app is held while a row is built.

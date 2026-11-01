@@ -55,9 +55,10 @@ impl RowKeys {
 #[derive(Default)]
 struct Shown {
     option: bool,
-    /// The row that copied last, and which copy it was, so an older copy's timer leaves a newer
-    /// one's Copied alone.
-    copied: Option<(ElementId, u64)>,
+    /// The window and row that copied last, and which copy it was, so an older copy's timer leaves a
+    /// newer one's Copied alone. The window is named because the timer cannot clear this once its
+    /// window is gone; the entry then matches no window that is open and is never drawn again.
+    copied: Option<(WindowId, ElementId, u64)>,
     copies: u64,
 }
 
@@ -90,8 +91,10 @@ impl KeyView {
             option: shown.is_some_and(|shown| shown.option),
             copied: shown
                 .and_then(|shown| shown.copied.as_ref())
-                .filter(|(copied, _)| copied == row)
-                .map(|(_, copy)| *copy),
+                .filter(|(window, copied, _)| {
+                    copied == row && cx.windows().iter().any(|w| w.window_id() == *window)
+                })
+                .map(|(_, _, copy)| *copy),
         }
     }
 }
@@ -151,14 +154,14 @@ fn copy(row: &ElementId, words: String, window: &mut Window, cx: &mut App) {
     let shown = cx.default_global::<Shown>();
     shown.copies += 1;
     let copy = shown.copies;
-    shown.copied = Some((row.clone(), copy));
+    shown.copied = Some((window.window_handle().window_id(), row.clone(), copy));
     window.refresh();
     window
         .spawn(cx, async move |cx| {
             cx.background_executor().timer(COPIED_FOR).await;
             cx.update(|window, cx| {
                 let shown = cx.default_global::<Shown>();
-                if shown.copied.as_ref().is_some_and(|(_, latest)| *latest == copy) {
+                if shown.copied.as_ref().is_some_and(|(_, _, latest)| *latest == copy) {
                     shown.copied = None;
                     window.refresh();
                 }
@@ -210,6 +213,15 @@ pub(super) fn with_menu(
     })
 }
 
+/// A control with a context menu of its own (a text field's cut, copy and paste): a right press on it
+/// goes no further up, so the row's menu does not open beside it, and the row's menu stays everywhere
+/// else on the row. `Input` handles that press on its way up and leaves it to go on, and shows its menu
+/// on the release, which this does not stop. Wrap every text field that sits in a row with keys.
+#[track_caller]
+pub fn own_menu<E: InteractiveElement>(control: E) -> E {
+    control.on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
+}
+
 fn open(menu: &RowMenu, at: Point<Pixels>, window: &mut Window, cx: &mut App) {
     let (for_key, for_json, for_reset) = (menu.clone(), menu.clone(), menu.reset.clone());
     let reset = text(keys::SETTINGS_ROW_RESET_MENU);
@@ -228,4 +240,84 @@ fn open(menu: &RowMenu, at: Point<Pixels>, window: &mut Window, cx: &mut App) {
             }
         }));
     platform::show_menu(menu, at, window, cx);
+}
+
+#[cfg(all(test, feature = "devctl"))]
+mod window_tests {
+    use gpui_kit::component::input::{Input, InputState};
+    use gpui_kit::prelude::*;
+    use gpui_kit::{
+        Context, Entity, IntoElement, Modifiers, MouseButton, MouseDownEvent, MouseUpEvent, Pixels, Point,
+        Render, TestAppContext, VisualTestContext, Window, WindowOptions, div, point, px,
+    };
+
+    use super::{RowKeys, own_menu, with_menu};
+    use crate::settings::SettingsStore;
+
+    const ROW_W: f32 = 400.0;
+    const FIELD_X: f32 = 200.0;
+
+    /// A row with a key and a text field at its right, the field wrapped in [`own_menu`] or not.
+    struct Row {
+        input: Entity<InputState>,
+        own: bool,
+    }
+
+    impl Render for Row {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            let field = div().w(px(ROW_W - FIELD_X)).child(Input::new(&self.input));
+            let field = if self.own { own_menu(field).into_any_element() } else { field.into_any_element() };
+            let row =
+                div().id("row").flex().w(px(ROW_W)).h(px(40.0)).child(div().w(px(FIELD_X))).child(field);
+            with_menu(row, "row".into(), RowKeys { keys: &["a.b"], json: |_, _| String::new() }, None)
+        }
+    }
+
+    fn right_click(cx: &mut VisualTestContext, at: Point<Pixels>) {
+        let (button, modifiers) = (MouseButton::Right, Modifiers::none());
+        cx.simulate_event(MouseDownEvent {
+            button,
+            position: at,
+            modifiers,
+            click_count: 1,
+            first_mouse: false,
+        });
+        cx.simulate_event(MouseUpEvent { button, position: at, modifiers, click_count: 1 });
+    }
+
+    /// Whether the row's menu opened for a right click at `x` on the row, with the field wrapped or not.
+    fn row_menu_opens(cx: &mut TestAppContext, own: bool, x: f32) -> bool {
+        let window = cx.update(|cx| {
+            gpui_kit::init(cx);
+            cx.set_global(SettingsStore::for_test());
+            gpui_kit::open_window(WindowOptions::default(), cx, |window, cx| {
+                let input = cx.new(|cx| InputState::new(window, cx));
+                cx.new(|_| Row { input, own })
+            })
+            .expect("opens the window")
+        });
+        let mut cx = VisualTestContext::from_window(window.0, cx);
+        cx.run_until_parked();
+        crate::platform::record::close();
+        right_click(&mut cx, point(px(x), px(20.0)));
+        let opened = crate::platform::record::open().is_some();
+        crate::platform::record::close();
+        opened
+    }
+
+    #[gpui_kit::test]
+    fn the_rows_menu_opens_on_the_row_beside_a_text_field(cx: &mut TestAppContext) {
+        assert!(row_menu_opens(cx, true, 20.0));
+    }
+
+    #[gpui_kit::test]
+    fn a_text_field_keeps_its_own_menu_and_the_row_opens_none_beside_it(cx: &mut TestAppContext) {
+        assert!(!row_menu_opens(cx, true, FIELD_X + 40.0), "the field's own menu wins inside the field");
+    }
+
+    #[gpui_kit::test]
+    fn without_own_menu_a_text_field_would_open_both(cx: &mut TestAppContext) {
+        // Why `own_menu` exists: `Input` lets the press go on up to the row.
+        assert!(row_menu_opens(cx, false, FIELD_X + 40.0));
+    }
 }

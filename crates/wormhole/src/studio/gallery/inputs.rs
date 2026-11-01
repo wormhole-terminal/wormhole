@@ -25,7 +25,10 @@ pub(super) fn render(
             div()
                 .flex()
                 .gap_2()
-                .child(env.mark("input", div().w(px(220.0)).child(Input::new(&studio.sample_input).small())))
+                .child(env.mark(
+                    "input",
+                    style::own_menu(div().w(px(220.0)).child(Input::new(&studio.sample_input).small())),
+                ))
                 .child(div().text_caption().text_color(ui.muted).child("← a real input")), // text: sample (the gallery's specimen)
         )
         .child(
