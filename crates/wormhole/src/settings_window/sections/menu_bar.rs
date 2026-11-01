@@ -13,16 +13,16 @@ use wormhole_text::keys::*;
 
 use crate::settings::Settings;
 use crate::settings_window::recorder::RecorderRow;
-use crate::settings_window::registry::{Segment, Setting, toggle};
+use crate::settings_window::registry::{MenuOption, Setting, toggle};
 
 pub(super) const SETTINGS: &[Setting] = &[
     toggle!("menu-bar", menu_bar),
-    Setting::segmented(
+    Setting::menu(
         "menu-bar-icon",
         &[
-            Segment::text(SETTINGS_MENU_BAR_STATUS_AND_COUNT),
-            Segment::text(SETTINGS_MENU_BAR_STATUS),
-            Segment::text(SETTINGS_MENU_BAR_ICON_ONLY),
+            MenuOption::text(SETTINGS_MENU_BAR_STATUS_AND_COUNT),
+            MenuOption::text(SETTINGS_MENU_BAR_STATUS),
+            MenuOption::text(SETTINGS_MENU_BAR_ICON_ONLY),
         ],
         |s| match s.menu_bar_icon {
             MenuBarIcon::StatusCount => 0,
@@ -44,11 +44,11 @@ pub(super) const SETTINGS: &[Setting] = &[
             own: None,
         },
     ),
-    Setting::segmented(
+    Setting::menu(
         "hotkey-action",
         &[
-            Segment::text(SETTINGS_MENU_BAR_QUICK_PANEL),
-            Segment::text(SETTINGS_MENU_BAR_SHOW_OR_HIDE_WORMHOLE),
+            MenuOption::text(SETTINGS_MENU_BAR_QUICK_PANEL),
+            MenuOption::text(SETTINGS_MENU_BAR_SHOW_OR_HIDE_WORMHOLE),
         ],
         |s| usize::from(s.hotkey_action == HotkeyAction::ToggleApp),
         |s, ix| s.hotkey_action = if ix == 1 { HotkeyAction::ToggleApp } else { HotkeyAction::QuickPanel },

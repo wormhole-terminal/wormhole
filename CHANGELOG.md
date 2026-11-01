@@ -23,6 +23,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   for a moment. Holding ⌥ shows every key on the page. A right click on a row (or ⌃↩ on one of its
   controls, or VoiceOver's Show menu) offers Copy Key, Copy as JSON (the key with its current value, ready
   for `config.json`) and Reset to Default.
+- Every Settings choice that was a row of buttons is a menu showing the current value, opened with a click,
+  ↩ or Space and chosen with ↑ ↓ and ↩, and VoiceOver reads it as a pop-up button with its value. Tab width
+  is a menu of 4, 2 and 8 in place of the minus and plus, and "A command finishes" is one menu (After 10 s,
+  30 s, 1 min or Off) in place of a threshold beside its switch. A value written in `config.json` that a menu
+  does not list (a tab width of 3, a threshold of 45 s) is shown as it is and kept until you choose another.
+  Theme mode lists Match system first, and the density menu still previews each option in the sidebar.
 
 ### Changed
 

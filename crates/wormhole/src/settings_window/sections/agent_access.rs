@@ -21,16 +21,16 @@ use wormhole_core::view::sidebar::wording;
 use super::agents::mark;
 use crate::agent_access::{self, Approved, How, Which};
 use crate::settings::UiColors;
-use crate::settings_window::registry::{Segment, Setting};
+use crate::settings_window::registry::{MenuOption, Setting};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
 
-pub(super) const MODE: Setting = Setting::segmented(
+pub(super) const MODE: Setting = Setting::menu(
     "agent-access",
     &[
-        Segment::text(SETTINGS_AGENTS_ACCESS_OFF),
-        Segment::text(SETTINGS_AGENTS_ACCESS_ASK),
-        Segment::text(SETTINGS_AGENTS_ACCESS_OPEN),
+        MenuOption::text(SETTINGS_AGENTS_ACCESS_OFF),
+        MenuOption::text(SETTINGS_AGENTS_ACCESS_ASK),
+        MenuOption::text(SETTINGS_AGENTS_ACCESS_OPEN),
     ],
     |s| match s.agent_access {
         AgentAccess::Off => 0,

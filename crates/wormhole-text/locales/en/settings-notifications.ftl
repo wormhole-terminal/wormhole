@@ -95,13 +95,12 @@ settings-notifications-allow-notifications = Allow notifications
 settings-notifications-needs-you-hint = An agent asks a question or for permission
 settings-notifications-needs-you-hint-plain = An agent asks a question or for permission. Delivered as a normal notification in this build
 
-## The command threshold beside its switch
+## The command threshold in "A command finishes"
 
-# The "after" step of "A command finishes": { $count } is a whole number of minutes or seconds, with its
-# unit abbreviated.
-settings-notifications-after-minutes = { $count } min
+# An option of "A command finishes": { $count } is a whole number of minutes, with its unit abbreviated.
+settings-notifications-after-minutes = After { $count } min
 # The same with seconds. { $count } is a whole number.
-settings-notifications-after-seconds = { $count } s
+settings-notifications-after-seconds = After { $count } s
 
 ## settings_window/sections/notifications_preview.rs
 

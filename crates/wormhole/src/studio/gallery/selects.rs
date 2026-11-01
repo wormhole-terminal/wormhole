@@ -38,6 +38,20 @@ pub(super) fn render(
         .items_start()
         .child(select::SelectTrigger::new("g-select", ui, "Tokyo Night").width(px(220.0))) // text: sample (the gallery's specimen)
         .child(select::SelectTrigger::new("g-select-compact", ui, "main").compact())
+        // The settings rows' control: the same face, its menu built only while open (click it to see it).
+        .child(sample_menu_select(ui))
         .child(env.mark("menu", menu))
         .into_any_element()
+}
+
+/// A settings row's menu control with sample words.
+fn sample_menu_select(ui: crate::settings::UiColors) -> impl IntoElement {
+    const NAME: &str = "Mode"; // text: sample (the gallery's specimen)
+    const OPTIONS: [&str; 3] = ["Match system", "Dark", "Light"]; // text: sample (the gallery's specimen)
+    select::menu_select("g-menu-select", ui, NAME, OPTIONS[0], 224.0, || select::MenuOptions {
+        labels: OPTIONS.map(Into::into).to_vec(),
+        current: Some(0),
+        on_pick: std::rc::Rc::new(|_, _, _| {}),
+        on_hover: None,
+    })
 }

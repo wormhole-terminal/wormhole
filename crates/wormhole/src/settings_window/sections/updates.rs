@@ -22,7 +22,7 @@ use wormhole_core::update::{
 };
 
 use crate::settings::{UiColors, settings};
-use crate::settings_window::registry::{Segment, Setting, toggle};
+use crate::settings_window::registry::{MenuOption, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::update::{UpdatePhase, Updates};
@@ -38,9 +38,9 @@ pub(super) const SETTINGS: &[Setting] = &[
             .into_any_element()
     }),
     toggle!("auto-update", auto_update),
-    Setting::segmented(
+    Setting::menu(
         "update-channel",
-        &[Segment::text(SETTINGS_UPDATES_STABLE), Segment::text(SETTINGS_UPDATES_UNSTABLE)],
+        &[MenuOption::text(SETTINGS_UPDATES_STABLE), MenuOption::text(SETTINGS_UPDATES_UNSTABLE)],
         |s| usize::from(s.update_channel == UpdateChannel::Unstable),
         |s, ix| s.update_channel = if ix == 1 { UpdateChannel::Unstable } else { UpdateChannel::Stable },
     ),

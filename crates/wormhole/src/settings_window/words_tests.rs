@@ -94,8 +94,8 @@ fn sentences() -> Vec<(String, &'static str)> {
         (settings_git_tab_width_value(1), "1 space"),
         (settings_git_tab_width_value(4), "4 spaces"),
         (settings_menu_bar_key_conflict("⌘Space is Spotlight's"), "⌘Space is Spotlight's. Press other keys."),
-        (settings_notifications_after_minutes("5"), "5 min"),
-        (settings_notifications_after_seconds("30"), "30 s"),
+        (settings_notifications_after_minutes("5"), "After 5 min"),
+        (settings_notifications_after_seconds("30"), "After 30 s"),
         (
             settings_profile_start_caption_none("Work"),
             "Where a new terminal starts. A folder you add below opens in Work too.",

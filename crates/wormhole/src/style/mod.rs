@@ -74,6 +74,7 @@ pub(crate) mod menu_layer;
 mod messages;
 mod metrics;
 pub mod motion;
+mod open_one;
 mod palette;
 mod panel;
 pub(crate) mod panel_list;
@@ -122,6 +123,7 @@ pub(crate) use lights::{
 };
 pub use messages::*;
 pub use metrics::Metrics;
+pub(crate) use open_one::OpenOne;
 pub use palette::*;
 pub use panel::*;
 pub use panes::*;

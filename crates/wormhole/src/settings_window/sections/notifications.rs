@@ -18,14 +18,13 @@ use wormhole_text::text;
 
 use crate::notifications;
 use crate::platform::notifications::Permission;
-use crate::settings::update_settings;
-use crate::settings::{Settings, settings};
-use crate::settings_window::registry::{Segment, Setting, toggle};
+use crate::settings::Settings;
+use crate::settings_window::registry::{Current, MenuOption, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, RowKeys, SettingParts, SettingState};
 
-/// The command-finished threshold's steps, in seconds.
-const AFTER: [u32; 5] = [5, 10, 30, 60, 300];
+/// What "A command finishes" offers besides Off: how long a command runs before it counts, in seconds.
+const AFTER: [u32; 3] = [10, 30, 60];
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("notify-permission", draw_permission),
@@ -43,7 +42,31 @@ pub(super) const SETTINGS: &[Setting] = &[
         |s| kind_on(s, s.notify_agent_done),
         |s, on| set_kind(s, |s| s.notify_agent_done = on),
     ),
-    Setting::custom("notify-command-done", draw_command_done),
+    // One menu for the switch and its threshold: Off turns the kind off and leaves the threshold where it
+    // was, After turns it on with that threshold. A threshold written in config.json that the menu
+    // doesn't list shows as it is and stays until another is chosen.
+    Setting::menu_of_values(
+        "notify-command-done",
+        &[
+            MenuOption::counted(after_label, AFTER[0]),
+            MenuOption::counted(after_label, AFTER[1]),
+            MenuOption::counted(after_label, AFTER[2]),
+            MenuOption::text(SETTINGS_NOTIFICATIONS_OFF),
+        ],
+        |s| match (kind_on(s, s.notify_command_done), AFTER.iter().position(|&n| n == s.notify_command_after))
+        {
+            (false, _) => Current::At(AFTER.len()),
+            (true, Some(at)) => Current::At(at),
+            (true, None) => Current::Other(after_label(s.notify_command_after)),
+        },
+        |s, ix| match AFTER.get(ix) {
+            Some(&secs) => {
+                s.notify_command_after = secs;
+                set_kind(s, |s| s.notify_command_done = true);
+            }
+            None => set_kind(s, |s| s.notify_command_done = false),
+        },
+    ),
     Setting::toggle(
         "notify-command-failed",
         |s| kind_on(s, s.notify_command_failed),
@@ -55,21 +78,21 @@ pub(super) const SETTINGS: &[Setting] = &[
         |s, on| set_kind(s, |s| s.notify_bell = on),
     ),
     toggle!("notify-only-unseen", notify_only_unseen),
-    Setting::segmented(
+    Setting::menu(
         "notify-in-front",
-        &[Segment::text(SETTINGS_NOTIFICATIONS_BANNER), Segment::text(SETTINGS_NOTIFICATIONS_NOTHING)],
+        &[MenuOption::text(SETTINGS_NOTIFICATIONS_BANNER), MenuOption::text(SETTINGS_NOTIFICATIONS_NOTHING)],
         |s| match s.notify_in_front {
             InFront::Banner => 0,
             InFront::None => 1,
         },
         |s, ix| s.notify_in_front = [InFront::Banner, InFront::None][ix.min(1)],
     ),
-    Setting::segmented(
+    Setting::menu(
         "notify-sound",
         &[
-            Segment::text(SETTINGS_NOTIFICATIONS_NEEDS_YOU_ONLY),
-            Segment::text(SETTINGS_NOTIFICATIONS_ALL),
-            Segment::text(SETTINGS_NOTIFICATIONS_NONE),
+            MenuOption::text(SETTINGS_NOTIFICATIONS_NEEDS_YOU_ONLY),
+            MenuOption::text(SETTINGS_NOTIFICATIONS_ALL),
+            MenuOption::text(SETTINGS_NOTIFICATIONS_NONE),
         ],
         |s| match s.notify_sound {
             NotifySound::NeedsYou => 0,
@@ -79,12 +102,12 @@ pub(super) const SETTINGS: &[Setting] = &[
         |s, ix| s.notify_sound = [NotifySound::NeedsYou, NotifySound::All, NotifySound::None][ix.min(2)],
     ),
     toggle!("notify-group-bursts", notify_group_bursts),
-    Setting::segmented(
+    Setting::menu(
         "dock-badge",
         &[
-            Segment::text(SETTINGS_NOTIFICATIONS_OFF),
-            Segment::text(SETTINGS_NOTIFICATIONS_NEEDS_YOU),
-            Segment::text(SETTINGS_NOTIFICATIONS_NEEDS_YOU_FINISHED),
+            MenuOption::text(SETTINGS_NOTIFICATIONS_OFF),
+            MenuOption::text(SETTINGS_NOTIFICATIONS_NEEDS_YOU),
+            MenuOption::text(SETTINGS_NOTIFICATIONS_NEEDS_YOU_FINISHED),
         ],
         |s| match s.dock_badge {
             DockBadge::Off => 0,
@@ -201,11 +224,7 @@ fn describe_needs_you(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> O
     })
 }
 
-/// The threshold's step: `AFTER` nearest the setting.
-fn after_step(secs: u32) -> usize {
-    AFTER.iter().position(|&step| step >= secs).unwrap_or(AFTER.len() - 1)
-}
-
+/// "After 10 s", "After 1 min".
 fn after_label(secs: u32) -> String {
     if secs >= 60 {
         settings_notifications_after_minutes(&(secs / 60).to_string())
@@ -214,42 +233,54 @@ fn after_label(secs: u32) -> String {
     }
 }
 
-/// "A command finishes": the threshold (5 s … 5 min) beside the switch.
-fn draw_command_done(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let ui = ui(cx);
-    let s = settings(cx);
-    let on = kind_on(s, s.notify_command_done);
-    let after = s.notify_command_after;
-    let nudge = |delta: isize| {
-        move |_: &ClickEvent, _: &mut Window, cx: &mut App| {
-            let step = after_step(settings(cx).notify_command_after).saturating_add_signed(delta);
-            let secs = AFTER[step.min(AFTER.len() - 1)];
-            update_settings(cx, |s| s.notify_command_after = secs);
-        }
-    };
-    div()
-        .flex()
-        .items_center()
-        .gap_3()
-        .child(style::stepper(ui, "notify-command-after", after_label(after), nudge(-1), nudge(1)))
-        .child(style::toggle("notify-command-done", on, |on, _, cx| {
-            update_settings(cx, |s| set_kind(s, |s| s.notify_command_done = on))
-        }))
-        .into_any_element()
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{AFTER, after_label, after_step};
+    use wormhole_core::config::Settings;
+
+    use super::{AFTER, SETTINGS, set_kind};
+    use crate::settings_window::registry::{Control, Current, Menu};
+
+    fn menu() -> &'static Menu {
+        SETTINGS
+            .iter()
+            .find_map(|s| match &s.control {
+                Control::Menu(menu) if s.id == "notify-command-done" => Some(menu),
+                _ => None,
+            })
+            .expect("the command-finished menu")
+    }
+
+    fn shown(s: &Settings) -> String {
+        match menu().current(s) {
+            Current::At(at) => format!("option {at}"),
+            Current::Other(words) => words,
+        }
+    }
 
     #[test]
-    fn the_threshold_steps_through_its_list() {
-        assert_eq!(after_step(10), 1);
-        assert_eq!(after_step(12), 2, "a hand-written value rounds up to the next step");
-        assert_eq!(after_step(999), AFTER.len() - 1);
-        assert_eq!(
-            (after_label(10), after_label(60), after_label(300)),
-            ("10 s".into(), "1 min".into(), "5 min".into())
-        );
+    fn the_menu_is_off_or_after_a_threshold_and_keeps_the_other_half() {
+        let mut s = Settings::default();
+        set_kind(&mut s, |s| s.notify_command_done = true);
+        s.notify_command_after = 30;
+        assert_eq!(shown(&s), "option 1");
+        (menu().set)(&mut s, AFTER.len());
+        assert!(!s.notify_command_done, "Off turns the kind off");
+        assert_eq!(s.notify_command_after, 30, "and leaves the threshold where it was");
+        assert_eq!(shown(&s), format!("option {}", AFTER.len()));
+        (menu().set)(&mut s, 2);
+        assert!(s.notify_command_done && s.notify_command_after == 60, "After turns it on at that time");
+    }
+
+    #[test]
+    fn a_threshold_written_by_hand_shows_as_it_is_and_stays_until_another_is_chosen() {
+        let mut s = Settings::default();
+        set_kind(&mut s, |s| s.notify_command_done = true);
+        s.notify_command_after = 45;
+        assert_eq!(shown(&s), "After 45 s");
+        s.notify_command_after = 300;
+        assert_eq!(shown(&s), "After 5 min", "a step the menu no longer lists");
+        assert_eq!(s.notify_command_after, 300, "reading never writes");
+        (menu().set)(&mut s, 0);
+        assert_eq!(s.notify_command_after, AFTER[0]);
     }
 }

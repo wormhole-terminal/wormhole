@@ -140,14 +140,14 @@ pub const SETTINGS_NOTIFICATIONS_PREVIEW_NOW: Key = Key::new(976);
 pub const SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION: Key = Key::new(977);
 
 /// ```text
-/// { $count } min
+/// After { $count } min
 /// ```
 pub fn settings_notifications_after_minutes(count: &str) -> String {
     crate::active::message(974, &[("count", Arg::Str(count))])
 }
 
 /// ```text
-/// { $count } s
+/// After { $count } s
 /// ```
 pub fn settings_notifications_after_seconds(count: &str) -> String {
     crate::active::message(975, &[("count", Arg::Str(count))])

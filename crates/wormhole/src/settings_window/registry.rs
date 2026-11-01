@@ -5,7 +5,7 @@
 //! page from the two: one renderer for every row (`style::setting`), with its changed, project
 //! and search states.
 //!
-//! A row that is more than a switch, a segmented control or a stepper (a font select, the
+//! A row that is more than a switch, a menu or a recorder (a font select, the
 //! theme cards) is a [`Control::Custom`] or [`Control::Block`]: a function of the window.
 //! A new setting is a row in the core table plus a [`Setting`] in its section's list here;
 //! a test fails while one has no other.
@@ -15,7 +15,6 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::OnceLock;
 
-use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
@@ -28,11 +27,12 @@ use wormhole_text::keys::*;
 use wormhole_text::{Key, text};
 
 use super::{FrontWindow, SettingsWindow, section_icon, sections, ui};
+use crate::select::{self, MenuOptions};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, RowKeys, SettingParts, SettingState, TextRole};
 
-/// Draws part of a page that is more than a switch, a segmented control or a stepper.
+/// Draws part of a page that is more than a switch, a menu or a recorder.
 pub(super) type Draw = fn(&SettingsWindow, &mut Context<SettingsWindow>) -> AnyElement;
 /// Says something more current than the table's description (the font in use).
 pub(super) type Describe = fn(&SettingsWindow, &mut Context<SettingsWindow>) -> Option<SharedString>;
@@ -42,32 +42,78 @@ pub(super) type Chip = fn(&SettingsWindow, &mut Context<SettingsWindow>) -> Opti
 /// question).
 pub(super) type Below = fn(&SettingsWindow, &mut Context<SettingsWindow>) -> Option<AnyElement>;
 
-/// One option of a [`Control::Segmented`].
-pub(super) struct Segment {
-    /// The option's name, a message of the catalogs: a table of options is a `const`, which cannot
-    /// read the language in use, so it is looked up as the control is drawn.
-    pub label: Key,
-    pub icon: Option<IconName>,
+/// The words of one option of a [`Control::Menu`].
+pub(super) enum Label {
+    /// A message of the catalogs: a table of options is a `const`, which cannot read the language in
+    /// use, so it is looked up as the control is drawn.
+    Message(Key),
+    /// A message with a whole number in it ("4 spaces"): how to say the number, and the number.
+    Counted(fn(u32) -> String, u32),
 }
 
-impl Segment {
+impl Label {
+    fn words(&self) -> SharedString {
+        match self {
+            Self::Message(key) => text(*key).into(),
+            Self::Counted(say, n) => say(*n).into(),
+        }
+    }
+}
+
+/// One option of a [`Control::Menu`].
+pub(super) struct MenuOption {
+    pub label: Label,
+}
+
+impl MenuOption {
     pub(super) const fn text(label: Key) -> Self {
-        Self { label, icon: None }
+        Self { label: Label::Message(label) }
     }
 
-    pub(super) const fn icon(icon: IconName, label: Key) -> Self {
-        Self { label, icon: Some(icon) }
+    pub(super) const fn counted(say: fn(u32) -> String, n: u32) -> Self {
+        Self { label: Label::Counted(say, n) }
+    }
+}
+
+/// What a menu's setting is now, read from the settings.
+pub(super) enum Current {
+    /// The option at this place.
+    At(usize),
+    /// None of the options: a value written in `config.json` by hand. Shown as it is, and kept until
+    /// another option is chosen.
+    Other(String),
+}
+
+/// How a menu reads its setting.
+#[derive(Clone, Copy)]
+pub(super) enum Read {
+    /// Every value of the setting is an option.
+    Index(fn(&Settings) -> usize),
+    /// The setting is a number or a mix of keys, so a value may be none of the options.
+    Value(fn(&Settings) -> Current),
+}
+
+pub(super) struct Menu {
+    pub options: &'static [MenuOption],
+    pub read: Read,
+    /// Chooses the option at a place; never called with a place past the options.
+    pub set: fn(&mut Settings, usize),
+}
+
+impl Menu {
+    pub(super) fn current(&self, settings: &Settings) -> Current {
+        match self.read {
+            Read::Index(get) => Current::At(get(settings).min(self.options.len().saturating_sub(1))),
+            Read::Value(get) => get(settings),
+        }
     }
 }
 
 pub(super) enum Control {
     /// A switch.
     Toggle { get: fn(&Settings) -> bool, set: fn(&mut Settings, bool) },
-    /// A few options in one segmented control, one of them current.
-    Segmented { options: &'static [Segment], get: fn(&Settings) -> usize, set: fn(&mut Settings, usize) },
-    /// A small number with a minus and a plus: `show` reads it as text, `nudge` moves it one
-    /// step (`-1` or `1`; the settings are clamped when they are saved).
-    Stepper { show: fn(&Settings) -> String, nudge: fn(&mut Settings, i32) },
+    /// A few options in a menu that shows the current one.
+    Menu(Menu),
     /// A shortcut, recorded by pressing it (empty is none).
     Recorder(super::recorder::RecorderRow),
     /// The control of a row, drawn by the page.
@@ -100,21 +146,24 @@ impl Setting {
         Self::new(id, Control::Toggle { get, set })
     }
 
-    pub(super) const fn segmented(
+    /// A menu over a setting of which every value is one of the options.
+    pub(super) const fn menu(
         id: &'static str,
-        options: &'static [Segment],
+        options: &'static [MenuOption],
         get: fn(&Settings) -> usize,
         set: fn(&mut Settings, usize),
     ) -> Self {
-        Self::new(id, Control::Segmented { options, get, set })
+        Self::new(id, Control::Menu(Menu { options, read: Read::Index(get), set }))
     }
 
-    pub(super) const fn stepper(
+    /// A menu over a setting that may hold a value none of the options is.
+    pub(super) const fn menu_of_values(
         id: &'static str,
-        show: fn(&Settings) -> String,
-        nudge: fn(&mut Settings, i32),
+        options: &'static [MenuOption],
+        get: fn(&Settings) -> Current,
+        set: fn(&mut Settings, usize),
     ) -> Self {
-        Self::new(id, Control::Stepper { show, nudge })
+        Self::new(id, Control::Menu(Menu { options, read: Read::Value(get), set }))
     }
 
     pub(super) const fn recorder(id: &'static str, row: super::recorder::RecorderRow) -> Self {
@@ -244,16 +293,14 @@ fn current_json(cx: &App, keys: &[&str]) -> String {
 /// is held while the row borrows the window.
 enum Shown {
     Toggle(bool),
-    Segmented(usize),
-    Stepper(String),
+    Menu(Current),
     Drawn,
 }
 
 fn shown(control: &Control, settings: &Settings) -> Shown {
     match control {
         Control::Toggle { get, .. } => Shown::Toggle(get(settings)),
-        Control::Segmented { get, .. } => Shown::Segmented(get(settings)),
-        Control::Stepper { show, .. } => Shown::Stepper(show(settings)),
+        Control::Menu(menu) => Shown::Menu(menu.current(settings)),
         Control::Recorder(_) | Control::Custom(_) | Control::Block(_) => Shown::Drawn,
     }
 }
@@ -386,7 +433,7 @@ impl SettingsWindow {
         });
         let keys = entry.keys;
         let chip = setting.chip.and_then(|chip| chip(self, cx));
-        let control = self.render_control(setting, current, ui, cx);
+        let control = self.render_control(setting, entry.label(), current, ui, cx);
         // The row the palette asked for (`reveal_row`): marked as a search hit on its whole
         // label, and anchored so the page can scroll to it.
         let revealed = self.revealed_row().filter(|(id, _)| *id == entry.id).map(|(_, anchor)| anchor);
@@ -422,6 +469,7 @@ impl SettingsWindow {
     fn render_control(
         &self,
         setting: &'static Setting,
+        label: &'static str,
         current: Shown,
         ui: UiColors,
         cx: &mut Context<Self>,
@@ -432,26 +480,7 @@ impl SettingsWindow {
                 let set = *set;
                 style::toggle(id, on, move |on, _, cx| update_settings(cx, |s| set(s, on))).into_any_element()
             }
-            (Control::Segmented { options, set, .. }, Shown::Segmented(active)) => {
-                let set = *set;
-                style::segmented_form(ui)
-                    .children(options.iter().enumerate().map(|(ix, option)| {
-                        style::form_segment((id, ix), ui, option.icon, text(option.label), ix == active)
-                            .on_click(move |_, _, cx| update_settings(cx, |s| set(s, ix)))
-                    }))
-                    .into_any_element()
-            }
-            (Control::Stepper { nudge, .. }, Shown::Stepper(value)) => {
-                let nudge = *nudge;
-                style::stepper(
-                    ui,
-                    id,
-                    value,
-                    move |_, _, cx| update_settings(cx, |s| nudge(s, -1)),
-                    move |_, _, cx| update_settings(cx, |s| nudge(s, 1)),
-                )
-                .into_any_element()
-            }
+            (Control::Menu(menu), Shown::Menu(current)) => menu_control(id, label, menu, current, ui),
             (Control::Recorder(row), _) => self.render_recorder(id, *row, cx),
             (Control::Custom(draw) | Control::Block(draw), _) => draw(self, cx),
             // `shown` reads each control as its own kind.
@@ -507,6 +536,40 @@ impl SettingsWindow {
     }
 }
 
+/// The width of a menu control: the longest option ("Needs input and finished") with its chevrons.
+pub(super) const MENU_W: f32 = 224.0;
+
+/// A row's menu: the current value in its face. A value no option names (set by hand in
+/// `config.json`) is shown as it is and listed last, checked, so it stays until another is chosen.
+fn menu_control(
+    id: &'static str,
+    label: &'static str,
+    menu: &'static Menu,
+    current: Current,
+    ui: UiColors,
+) -> AnyElement {
+    let options = menu.options;
+    let set = menu.set;
+    let (value, other, at) = match current {
+        Current::At(at) => (options[at].label.words(), None, at),
+        Current::Other(words) => {
+            let words = SharedString::from(words);
+            (words.clone(), Some(words), options.len())
+        }
+    };
+    select::menu_select(id, ui, label, value, MENU_W, move || MenuOptions {
+        labels: options.iter().map(|option| option.label.words()).chain(other).collect(),
+        current: Some(at),
+        on_pick: Rc::new(move |ix, _, cx| {
+            if ix < options.len() {
+                update_settings(cx, |s| set(s, ix));
+            }
+        }),
+        on_hover: None,
+    })
+    .into_any_element()
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -514,7 +577,7 @@ mod tests {
     use wormhole_core::config::Settings;
     use wormhole_core::config::settings_index::{self, SectionId};
 
-    use super::{Control, controls, sections};
+    use super::{Control, Menu, Read, controls, sections};
     use crate::settings_window::Section;
 
     fn every_setting() -> impl Iterator<Item = &'static super::Setting> {
@@ -551,30 +614,15 @@ mod tests {
     }
 
     #[test]
-    fn a_segmented_control_reads_back_every_option() {
+    fn a_menu_reads_back_every_option() {
         for setting in every_setting() {
-            if let Control::Segmented { options, get, set } = &setting.control {
+            if let Control::Menu(Menu { options, read: Read::Index(get), set }) = &setting.control {
                 assert!(options.len() > 1, "{} has nothing to choose", setting.id);
                 for ix in 0..options.len() {
                     let mut s = Settings::default();
                     set(&mut s, ix);
                     assert_eq!(get(&s), ix, "{} option {ix}", setting.id);
                 }
-            }
-        }
-    }
-
-    #[test]
-    fn a_stepper_moves_its_value_both_ways() {
-        for setting in every_setting() {
-            if let Control::Stepper { show, nudge } = &setting.control {
-                let start = Settings::default();
-                let mut up = start.clone();
-                nudge(&mut up, 1);
-                let mut down = start.clone();
-                nudge(&mut down, -1);
-                assert_ne!(show(&up), show(&start), "{} does not go up", setting.id);
-                assert_ne!(show(&down), show(&start), "{} does not go down", setting.id);
             }
         }
     }

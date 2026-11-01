@@ -24,32 +24,32 @@ use super::{open_button, stage, title_row};
 use crate::select::Choice;
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
-use crate::settings_window::registry::{ProjectSource, Segment, Setting, toggle};
+use crate::settings_window::registry::{MenuOption, ProjectSource, Setting, toggle};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
 use crate::style::{self, Edges};
 use crate::theme_bridge;
 
-const MODES: &[Segment] = &[
-    Segment::icon(IconName::Moon, SETTINGS_APPEARANCE_DARK),
-    Segment::icon(IconName::Sun, SETTINGS_APPEARANCE_LIGHT),
-    Segment::icon(IconName::Monitor, SETTINGS_APPEARANCE_MATCH_SYSTEM),
+const MODES: &[MenuOption] = &[
+    MenuOption::text(SETTINGS_APPEARANCE_MATCH_SYSTEM),
+    MenuOption::text(SETTINGS_APPEARANCE_DARK),
+    MenuOption::text(SETTINGS_APPEARANCE_LIGHT),
 ];
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("appearance-preview", stage::draw_stage),
-    Setting::segmented(
+    Setting::menu(
         "theme-mode",
         MODES,
         |s| match s.theme_mode {
-            ThemeMode::Dark => 0,
-            ThemeMode::Light => 1,
-            ThemeMode::System => 2,
+            ThemeMode::System => 0,
+            ThemeMode::Dark => 1,
+            ThemeMode::Light => 2,
         },
         |s, ix| {
             s.theme_mode = match ix {
-                0 => ThemeMode::Dark,
-                1 => ThemeMode::Light,
-                _ => ThemeMode::System,
+                0 => ThemeMode::System,
+                1 => ThemeMode::Dark,
+                _ => ThemeMode::Light,
             }
         },
     ),
@@ -57,12 +57,12 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::toggle("primary-color", |s| s.uses_theme_primary(), |s, on| s.theme_primary = Some(on))
         .describe(describe_primary)
         .below(draw_swatches),
-    Setting::segmented(
+    Setting::menu(
         "branch-color",
         &[
-            Segment::text(SETTINGS_APPEARANCE_BRANCH_THEME),
-            Segment::text(SETTINGS_APPEARANCE_BRANCH_PRIMARY),
-            Segment::text(SETTINGS_APPEARANCE_BRANCH_CUSTOM),
+            MenuOption::text(SETTINGS_APPEARANCE_BRANCH_THEME),
+            MenuOption::text(SETTINGS_APPEARANCE_BRANCH_PRIMARY),
+            MenuOption::text(SETTINGS_APPEARANCE_BRANCH_CUSTOM),
         ],
         |s| BranchColor::ALL.iter().position(|c| *c == s.branch_color).unwrap_or(0),
         |s, ix| s.branch_color = BranchColor::ALL.get(ix).copied().unwrap_or_default(),

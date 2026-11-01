@@ -28,7 +28,7 @@ use crate::platform::default_app;
 use crate::select::Choice;
 use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors, settings};
-use crate::settings_window::registry::{Segment, Setting, toggle};
+use crate::settings_window::registry::{MenuOption, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
 
@@ -40,13 +40,13 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("restore-text", restore_terminal_text),
     toggle!("minimap", minimap),
     toggle!("split-gaps", split_gaps),
-    Setting::segmented(
+    Setting::menu(
         "meta",
         &[
-            Segment::text(SETTINGS_TERMINAL_OFF),
-            Segment::text(SETTINGS_TERMINAL_LEFT),
-            Segment::text(SETTINGS_TERMINAL_RIGHT),
-            Segment::text(SETTINGS_TERMINAL_BOTH),
+            MenuOption::text(SETTINGS_TERMINAL_OFF),
+            MenuOption::text(SETTINGS_TERMINAL_LEFT),
+            MenuOption::text(SETTINGS_TERMINAL_RIGHT),
+            MenuOption::text(SETTINGS_TERMINAL_BOTH),
         ],
         |s| OptionAsMeta::ALL.iter().position(|o| *o == s.option_as_meta).unwrap_or(0),
         |s, ix| s.option_as_meta = OptionAsMeta::ALL.get(ix).copied().unwrap_or_default(),
@@ -76,19 +76,19 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("worktree-clone-build-folders", worktree_clone_build_folders),
     toggle!("bell-sound", bell_sound),
     toggle!("bell-visual", bell_visual),
-    Setting::segmented(
+    Setting::menu(
         "clipboard-read",
         &[
-            Segment::text(SETTINGS_TERMINAL_ASK),
-            Segment::text(SETTINGS_TERMINAL_ALLOW),
-            Segment::text(SETTINGS_TERMINAL_DENY),
+            MenuOption::text(SETTINGS_TERMINAL_ASK),
+            MenuOption::text(SETTINGS_TERMINAL_ALLOW),
+            MenuOption::text(SETTINGS_TERMINAL_DENY),
         ],
         |s| ClipboardRead::ALL.iter().position(|o| *o == s.clipboard_read).unwrap_or(0),
         |s, ix| s.clipboard_read = ClipboardRead::ALL.get(ix).copied().unwrap_or_default(),
     ),
-    Setting::segmented(
+    Setting::menu(
         "clipboard-write",
-        &[Segment::text(SETTINGS_TERMINAL_ALLOW), Segment::text(SETTINGS_TERMINAL_DENY)],
+        &[MenuOption::text(SETTINGS_TERMINAL_ALLOW), MenuOption::text(SETTINGS_TERMINAL_DENY)],
         |s| ClipboardWrite::ALL.iter().position(|o| *o == s.clipboard_write).unwrap_or(0),
         |s, ix| s.clipboard_write = ClipboardWrite::ALL.get(ix).copied().unwrap_or_default(),
     ),

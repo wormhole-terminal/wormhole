@@ -373,36 +373,15 @@ fn nav(env: &Env) -> Div {
 /// The settings controls that are ours rather than GPUI Kit's.
 fn controls(env: &Env) -> Div {
     let ui = env.ui;
-    let mode = |id: &'static str, icon, label: &'static str, active| {
-        style::form_segment(id, ui, Some(icon), label, active)
-    };
     let palette = [ui.primary, ui.success, ui.branch, ui.warning];
     div()
         .flex()
         .flex_col()
         .gap_3()
-        .child(
-            div()
-                .flex()
-                .flex_wrap()
-                .items_center()
-                .gap_4()
-                .child(
-                    style::segmented_form(ui)
-                        .child(style::form_segment("g-form-split", ui, None, "Split", true)) // text: sample (the gallery's specimen)
-                        .child(style::form_segment("g-form-unified", ui, None, "Unified", false)), // text: sample (the gallery's specimen)
-                )
-                .child(
-                    style::segmented_form(ui)
-                        .child(mode("g-form-dark", IconName::Moon, "Dark", false)) // text: sample (the gallery's specimen)
-                        .child(mode("g-form-light", IconName::Sun, "Light", false)) // text: sample (the gallery's specimen)
-                        .child(mode("g-form-system", IconName::Monitor, "Match system", true)), // text: sample (the gallery's specimen)
-                )
-                .child(env.mark(
-                    "stepper",
-                    style::stepper(ui, "g-form-size", "14 pt".into(), |_, _, _| {}, |_, _, _| {}), // text: sample (the gallery's specimen)
-                )),
-        )
+        .child(div().flex().flex_wrap().items_center().gap_4().child(env.mark(
+            "stepper",
+            style::stepper(ui, "g-form-size", "14 pt".into(), |_, _, _| {}, |_, _, _| {}), // text: sample (the gallery's specimen)
+        )))
         .child(
             div()
                 .flex()

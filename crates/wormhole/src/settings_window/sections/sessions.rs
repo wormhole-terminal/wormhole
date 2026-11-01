@@ -1,5 +1,7 @@
 //! Terminals & sidebar: the live preview, the density, the ⌘ hints, and what each row shows.
 
+use std::rc::Rc;
+
 use gpui_kit::*;
 use wormhole_core::config::{ChangesScope, PlainChanges, SharedChanges};
 use wormhole_core::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
@@ -10,17 +12,18 @@ use wormhole_core::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 use wormhole_text::keys::*;
 
 use super::preview;
+use crate::select::{self, MenuOptions};
 use crate::settings::settings;
 use crate::settings::update_settings;
-use crate::settings_window::registry::{Segment, Setting, toggle};
+use crate::settings_window::registry::MENU_W;
+use crate::settings_window::registry::{MenuOption, Setting, toggle};
 use crate::settings_window::{SettingsWindow, SidebarLook, ui};
-use crate::style;
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("sidebar-preview", preview::draw_sidebar_preview),
-    Setting::segmented(
+    Setting::menu(
         "terminals-in",
-        &[Segment::text(SETTINGS_SESSIONS_SIDEBAR), Segment::text(SETTINGS_SESSIONS_TABS)],
+        &[MenuOption::text(SETTINGS_SESSIONS_SIDEBAR), MenuOption::text(SETTINGS_SESSIONS_TABS)],
         |s| usize::from(s.terminals_in == TerminalsIn::Tabs),
         |s, ix| s.terminals_in = if ix == 0 { TerminalsIn::Sidebar } else { TerminalsIn::Tabs },
     ),
@@ -28,34 +31,34 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("cards", show_groups_as_cards),
     toggle!("fade-group-colors", fade_group_colors),
     toggle!("show-group-folders", show_group_folders),
-    Setting::segmented(
+    Setting::menu(
         "sidebar-numbers",
         &[
-            Segment::text(SETTINGS_SESSIONS_STAY_WITH_THE_TERMINAL),
-            Segment::text(SETTINGS_SESSIONS_FOLLOW_THE_LIST),
+            MenuOption::text(SETTINGS_SESSIONS_STAY_WITH_THE_TERMINAL),
+            MenuOption::text(SETTINGS_SESSIONS_FOLLOW_THE_LIST),
         ],
         |s| usize::from(s.sidebar_numbers == SidebarNumbers::List),
         |s, ix| s.sidebar_numbers = if ix == 0 { SidebarNumbers::Terminal } else { SidebarNumbers::List },
     ),
     toggle!("cmd-hints", sidebar_cmd_hints),
     toggle!("sidebar-changes", sidebar_changes),
-    Setting::segmented(
+    Setting::menu(
         "sidebar-changes-scope",
         &[
-            Segment::text(SETTINGS_SESSIONS_CHANGES_THIS_TERMINAL),
-            Segment::text(SETTINGS_SESSIONS_CHANGES_REPOSITORY),
+            MenuOption::text(SETTINGS_SESSIONS_CHANGES_THIS_TERMINAL),
+            MenuOption::text(SETTINGS_SESSIONS_CHANGES_REPOSITORY),
         ],
         |s| usize::from(s.sidebar_changes_scope == ChangesScope::Repository),
         |s, ix| {
             s.sidebar_changes_scope = if ix == 0 { ChangesScope::Terminal } else { ChangesScope::Repository }
         },
     ),
-    Setting::segmented(
+    Setting::menu(
         "sidebar-changes-plain",
         &[
-            Segment::text(SETTINGS_SESSIONS_CHANGES_PLAIN_FINISHING),
-            Segment::text(SETTINGS_SESSIONS_CHANGES_PLAIN_ANY),
-            Segment::text(SETTINGS_SESSIONS_CHANGES_PLAIN_NONE),
+            MenuOption::text(SETTINGS_SESSIONS_CHANGES_PLAIN_FINISHING),
+            MenuOption::text(SETTINGS_SESSIONS_CHANGES_PLAIN_ANY),
+            MenuOption::text(SETTINGS_SESSIONS_CHANGES_PLAIN_NONE),
         ],
         |s| match s.sidebar_changes_plain {
             PlainChanges::Finishing => 0,
@@ -70,11 +73,11 @@ pub(super) const SETTINGS: &[Setting] = &[
             }
         },
     ),
-    Setting::segmented(
+    Setting::menu(
         "sidebar-changes-shared",
         &[
-            Segment::text(SETTINGS_SESSIONS_CHANGES_SHARED_EACH),
-            Segment::text(SETTINGS_SESSIONS_CHANGES_SHARED_NONE),
+            MenuOption::text(SETTINGS_SESSIONS_CHANGES_SHARED_EACH),
+            MenuOption::text(SETTINGS_SESSIONS_CHANGES_SHARED_NONE),
         ],
         |s| usize::from(s.sidebar_changes_shared == SharedChanges::None),
         |s, ix| s.sidebar_changes_shared = if ix == 0 { SharedChanges::Each } else { SharedChanges::None },
@@ -84,23 +87,35 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("sidebar-notes", sidebar_notes),
 ];
 
-/// Density: hovering an option shows the list in it beside the current one.
+/// Density: the option the pointer or the keyboard is on shows the list in it beside the current one.
 fn draw_density(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let current = settings(cx).density;
-    style::segmented_form(ui)
-        .children(Density::ALL.map(|density| {
-            style::form_segment(("density", density as usize), ui, None, density.label(), current == density)
-                .on_hover(cx.listener(move |this, hovered: &bool, _, cx| {
-                    let look = hovered.then_some(SidebarLook::Density(density));
-                    if this.sidebar_preview != look
-                        && (*hovered || this.sidebar_preview == Some(SidebarLook::Density(density)))
-                    {
+    let window = cx.weak_entity();
+    select::menu_select("density", ui, entry_label("density"), current.label(), MENU_W, move || MenuOptions {
+        labels: Density::ALL.map(|density| density.label().into()).to_vec(),
+        current: Density::ALL.iter().position(|density| *density == current),
+        on_pick: Rc::new(|ix, _, cx| {
+            if let Some(density) = Density::ALL.get(ix) {
+                update_settings(cx, |s| s.density = *density);
+            }
+        }),
+        on_hover: Some(Rc::new(move |at, _, cx| {
+            let look = at.and_then(|ix| Density::ALL.get(ix)).map(|density| SidebarLook::Density(*density));
+            window
+                .update(cx, |this, cx| {
+                    if this.sidebar_preview != look {
                         this.sidebar_preview = look;
                         cx.notify();
                     }
-                }))
-                .on_click(move |_, _, cx| update_settings(cx, |s| s.density = density))
-        }))
-        .into_any_element()
+                })
+                .ok();
+        })),
+    })
+    .into_any_element()
+}
+
+/// The name of the row `id`, for the control's VoiceOver label.
+fn entry_label(id: &str) -> &'static str {
+    wormhole_core::config::settings_index::entry(id).map_or("", |(_, _, entry)| entry.label())
 }
