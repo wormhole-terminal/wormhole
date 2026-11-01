@@ -358,6 +358,7 @@ impl Render for SettingsWindow {
         self.sync_sliders(window, cx);
         self.sync_profile_form(window, cx);
         self.rem = window.rem_size();
+        style::sync_option(window.modifiers().alt, cx);
         let ui = ui(cx);
         // A preview section can disappear under the person (its flag was switched off in another
         // window): fall back to the first always-on section rather than draw an empty page.
@@ -427,7 +428,11 @@ impl Render for SettingsWindow {
                 }
             }))
             .on_modifiers_changed(cx.listener(|this, event: &ModifiersChangedEvent, _, cx| {
-                this.record_modifiers(&event.modifiers, cx)
+                this.record_modifiers(&event.modifiers, cx);
+                // ⌥ shows every row's key: the page is drawn again when it goes down or up, not for ⇧ or ⌘.
+                if style::option_held(cx) != event.modifiers.alt {
+                    cx.notify();
+                }
             }))
             .size_full()
             .relative()

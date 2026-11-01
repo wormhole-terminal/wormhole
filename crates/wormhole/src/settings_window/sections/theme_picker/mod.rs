@@ -430,7 +430,7 @@ impl SettingsWindow {
                         description: kind,
                         visible_hint: false,
                         chip: None,
-                        key: "",
+                        keys: style::RowKeys::NONE,
                         state: style::SettingState::Default,
                         found: None,
                         found_description: None,

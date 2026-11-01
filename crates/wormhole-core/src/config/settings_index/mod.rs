@@ -8,6 +8,7 @@
 //! A new setting is a row here plus its control in the app's `settings_window/registry.rs`; a
 //! test fails while a `config.json` key has neither a row nor a place in [`UNLISTED`].
 
+mod copy;
 #[cfg(test)]
 mod english;
 mod key_path;

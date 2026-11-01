@@ -1,13 +1,15 @@
 //! The settings window's parts: the rows in their states under a group's head, the
 //! nav items, and the controls that are ours.
 
+use std::rc::Rc;
+
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use style::{BannerKind, NavMark, RecorderState, SettingParts, SettingState};
+use style::{BannerKind, NavMark, RecorderState, RowKeys, SettingParts, SettingState};
 
 use super::Env;
 use super::view::GalleryView;
@@ -147,7 +149,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
     let row = |id: &'static str,
                label: &'static str,
                description: &'static str,
-               key: &'static str,
+               keys: &'static [&'static str],
                state: SettingState,
                found: Option<std::ops::Range<usize>>,
                control: AnyElement| {
@@ -159,14 +161,15 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
                 description: Some(description.into()),
                 visible_hint: id == "g-setting-disabled",
                 chip: None,
-                key,
+                // The gallery's rows copy nothing real: their menu's JSON is empty.
+                keys: RowKeys { keys, json: |_, _| String::new() },
                 state,
                 found,
                 found_description: None,
                 control,
                 tall: false,
                 extra: None,
-                on_reset: Some(Box::new(|_, _, _| {})),
+                on_reset: Some(Rc::new(|_, _| {})),
             },
             cx,
         )
@@ -181,7 +184,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             "g-setting-default",
             "Blur what's behind the window", // text: sample (the gallery's specimen)
             "Only visible below 100 % opacity", // text: sample (the gallery's specimen)
-            "blur",
+            &["blur"],
             SettingState::Default,
             None,
             style::toggle("g-setting-blur", true, |_, _, _| {}).into_any_element(),
@@ -190,7 +193,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             "g-setting-changed",
             "Line height", // text: sample (the gallery's specimen)
             "Terminal rows, as a multiple of the font size", // text: sample (the gallery's specimen)
-            "line_height",
+            &["line_height"],
             SettingState::Changed,
             None,
             style::stepper(ui, "g-setting-line", "1.45".into(), |_, _, _| {}, |_, _, _| {})
@@ -200,7 +203,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             "g-setting-project",
             "Theme", // text: sample (the gallery's specimen)
             "Set by api-server/.wormhole/theme.json while this terminal is active", // text: sample (the gallery's specimen)
-            "theme",
+            &["theme"],
             SettingState::Project("api-server".into()),
             None,
             style::link_button("g-setting-edit", ui, "Edit in project", false).into_any_element(), // text: sample (the gallery's specimen)
@@ -209,7 +212,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             "g-setting-slider",
             "Background opacity", // text: sample (the gallery's specimen)
             "30–100 %. Below 100 % the desktop shows through", // text: sample (the gallery's specimen)
-            "opacity",
+            &["opacity"],
             SettingState::Default,
             None,
             style::slider_control(ui, slider_track(ui), "80 %", &["30", "65", "100"], false)
@@ -219,7 +222,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             "g-setting-link",
             "Font",                                    // text: sample (the gallery's specimen)
             "JetBrains Mono 14 pt · line height 1.30", // text: sample (the gallery's specimen)
-            "",
+            &[],
             SettingState::Default,
             None,
             style::link_button("g-setting-fonts", ui, "Edit in Fonts", true).into_any_element(), // text: sample (the gallery's specimen)
@@ -228,7 +231,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             "g-setting-found",
             "Wrap long lines",                     // text: sample (the gallery's specimen)
             "Otherwise the diff scrolls sideways", // text: sample (the gallery's specimen)
-            "diff_wrap",
+            &["diff_wrap"],
             SettingState::Default,
             Some(10..14),
             style::toggle("g-setting-wrap", false, |_, _, _| {}).into_any_element(),
@@ -237,7 +240,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             "g-setting-disabled",
             "Terminal layout",                // text: sample (the gallery's specimen)
             "No layout.json in this project", // text: sample (the gallery's specimen)
-            "layout",
+            &["layout"],
             SettingState::Disabled,
             None,
             style::toggle("g-setting-layout", false, |_, _, _| {}).disabled(true).into_any_element(),

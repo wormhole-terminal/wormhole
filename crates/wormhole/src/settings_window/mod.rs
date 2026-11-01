@@ -26,6 +26,8 @@ mod open;
 mod preview_column;
 mod recorder;
 mod registry;
+#[cfg(test)]
+mod row_keys_tests;
 mod sections;
 #[cfg(test)]
 mod unlock_tests;

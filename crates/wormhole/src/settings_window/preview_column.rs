@@ -26,7 +26,7 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use super::{PAGE_TOP, SettingsWindow, nav, sections, ui};
-use crate::style::{self, Edges, SettingParts, SettingState, TextRole};
+use crate::style::{self, Edges, RowKeys, SettingParts, SettingState, TextRole};
 
 /// The column's width, border to border: a 16 pt inset round the miniature window.
 pub(super) const PREVIEW_W: f32 = 448.0 + 2.0 * 16.0;
@@ -183,7 +183,7 @@ impl SettingsWindow {
                 description: Some(text(SETTINGS_WINDOW_PREVIEW_COLUMN_HINT).into()),
                 visible_hint: false,
                 chip: None,
-                key: "",
+                keys: RowKeys::NONE,
                 state: SettingState::Default,
                 found: hit.and_then(|hit| hit.label_range.clone()),
                 found_description: None,

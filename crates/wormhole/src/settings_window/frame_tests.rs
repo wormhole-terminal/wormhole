@@ -63,6 +63,14 @@
 //! press, whether the click after it is the (i)'s own (a dismissal left over by an earlier press then
 //! matches nothing). That is about 3 allocations per (i): Fonts rose from 7,634 to 7,655, Terminal from
 //! 10,333 to 10,381, Sessions from 15,454 to 15,496 and Notifications from 8,007 to 8,037 (measured).
+//! A row with a config key then took its menu (a right click, ⌃↩ and VoiceOver's Show menu: three listeners
+//! on the row, each a closure and a registration GPUI makes as the frame paints) and a click on its key
+//! (an element with an id of its own, so its state and click too): 19 allocations per such row (measured on
+//! Terminal's 17 such rows: 10,381 to 10,705). The
+//! menu, its items and the JSON are built only once it is open, and the key's words are not copied.
+//! Appearance rose from 17,241 to 17,367, Fonts from 7,655 to 7,750, Motion from 6,441 to 6,462, Terminal
+//! from 10,381 to 10,705, Sessions from 15,496 to 15,764, Git from 4,668 to 4,746, Notifications from
+//! 8,037 to 8,246, MenuBar from 6,344 to 6,476 and Updates from 5,750 to 5,786.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -84,15 +92,15 @@ const SLACK: u64 = 20;
 const BUDGET: [(&str, u64); 17] = [
     ("Profile", 6862),
     // With the Liquid Glass row (16,810 before it came back).
-    ("Appearance", 17241),
-    ("Fonts", 7655),
-    ("Motion", 6441),
+    ("Appearance", 17367),
+    ("Fonts", 7750),
+    ("Motion", 6462),
     // With the Worktrees group's switch for cloning build folders (356).
-    ("Terminal", 10381),
+    ("Terminal", 10705),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 15496),
-    ("Git", 4668),
+    ("Sessions", 15764),
+    ("Git", 4746),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
@@ -100,9 +108,9 @@ const BUDGET: [(&str, u64); 17] = [
     // page measured 9,501: under this, which stays.
     ("Agents", 9679),
     ("Import", 53166),
-    ("Notifications", 8037),
-    ("MenuBar", 6344),
-    ("Updates", 5750),
+    ("Notifications", 8246),
+    ("MenuBar", 6476),
+    ("Updates", 5786),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     // With the New programs group: the Developer Tools row, its description and its button (417).

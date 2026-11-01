@@ -22,7 +22,7 @@ use crate::settings::update_settings;
 use crate::settings::{Settings, settings};
 use crate::settings_window::registry::{Segment, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, SettingParts, SettingState};
+use crate::style::{self, RowKeys, SettingParts, SettingState};
 
 /// The command-finished threshold's steps, in seconds.
 const AFTER: [u32; 5] = [5, 10, 30, 60, 300];
@@ -176,7 +176,7 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
             description: (!hint.is_empty()).then(|| hint.into()),
             visible_hint: true,
             chip: None,
-            key: "",
+            keys: RowKeys::NONE,
             state: SettingState::Default,
             found: None,
             found_description: None,

@@ -5,6 +5,8 @@
 //! flag on makes its feature's own section appear (Project folders) and the feature work in every
 //! window at once.
 
+use std::rc::Rc;
+
 use gpui_kit::*;
 use wormhole_core::config::features::{self, FeatureFlag};
 
@@ -12,7 +14,7 @@ use crate::settings::settings;
 use crate::settings::update_settings;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{Section, SettingsWindow, ui};
-use crate::style::{self, Edges, SettingParts};
+use crate::style::{self, Edges, RowKeys, SettingParts};
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("feature-flags", |w, cx| w.draw_feature_flags(cx))];
 
@@ -72,14 +74,14 @@ impl SettingsWindow {
                     description: Some(flag.description().into()),
                     visible_hint: false,
                     chip: None,
-                    key: "",
+                    keys: RowKeys::NONE,
                     state,
                     found: None,
                     found_description: None,
                     control,
                     tall: false,
                     extra: None,
-                    on_reset: Some(Box::new(move |_, _, cx| {
+                    on_reset: Some(Rc::new(move |_, cx| {
                         update_settings(cx, |s| {
                             s.feature_flags.remove(key);
                         });

@@ -1,0 +1,231 @@
+//! A setting row's config keys: shown under the pointer, copied by a click on them, and offered by the
+//! row's menu (Copy Key, Copy as JSON, Reset to Default).
+//!
+//! Hover shows a key and a pointer can click it, but neither reaches a keyboard or VoiceOver, so the
+//! menu is also opened by ⌃↩ on any control of the row and by VoiceOver's "Show menu" action
+//! (`Action::ShowContextMenu`), and the key is a labelled button of its own.
+//!
+//! The row hands over data, not behaviour: its keys, a function that reads their current values as
+//! JSON (the app's own settings, which this layer does not know) and, while changed, a way to put them
+//! back. That is all, so a row of another source (a Probe's, later) is drawn the same. What a row
+//! costs a frame is three listeners on the row and one on the key (`frame_tests` says how much); the
+//! menu and the JSON exist only once the menu is open.
+//!
+//! Two small facts live in one global, read once per row: whether ⌥ is held (every key of the page is
+//! shown) and which row has just copied (it says Copied for a moment).
+
+use std::rc::Rc;
+use std::time::Duration;
+
+use gpui_kit::accesskit::Action;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_text::{keys, text};
+
+use super::scale::TextRole as _;
+use crate::platform::{self, Item, Menu};
+use crate::settings::UiColors;
+
+/// What a row's reset does, from a click on the arrow or the menu.
+pub type Reset = Rc<dyn Fn(&mut Window, &mut App)>;
+
+/// How long a copied key says Copied.
+const COPIED_FOR: Duration = Duration::from_millis(1200);
+
+/// The config keys a row writes, and how to read them as JSON. `Copy`, and built from statics, so a
+/// row makes none of it afresh each frame.
+#[derive(Clone, Copy)]
+pub struct RowKeys {
+    pub keys: &'static [&'static str],
+    /// The current values of the given keys as one line of JSON (`{"key": value}`).
+    pub json: fn(&App, &[&str]) -> String,
+}
+
+impl RowKeys {
+    /// A row with no config key (a summary, a button): no key, no menu.
+    pub const NONE: Self = Self { keys: &[], json: |_, _| String::new() };
+
+    /// What a click on the key and Copy Key put on the clipboard: the keys, a line each.
+    fn text(&self) -> String {
+        self.keys.join("\n")
+    }
+}
+
+/// ⌥ and the last copy, for every row of the window. One small value in one global.
+#[derive(Default)]
+struct Shown {
+    option: bool,
+    /// The row that copied last, and which copy it was, so an older copy's timer leaves a newer
+    /// one's Copied alone.
+    copied: Option<(ElementId, u64)>,
+    copies: u64,
+}
+
+impl Global for Shown {}
+
+/// Tell the rows whether ⌥ is held. The window says so from its own frame, from the modifiers it holds,
+/// so a key let go while the window was in the background cannot leave the keys shown.
+pub(crate) fn sync_option(held: bool, cx: &mut App) {
+    if cx.try_global::<Shown>().is_none_or(|shown| shown.option != held) {
+        cx.default_global::<Shown>().option = held;
+    }
+}
+
+/// Whether the rows show their keys because ⌥ is held.
+pub(crate) fn option_held(cx: &App) -> bool {
+    cx.try_global::<Shown>().is_some_and(|shown| shown.option)
+}
+
+/// What every row of a frame needs of [`Shown`], read once.
+#[derive(Clone, Copy)]
+pub(super) struct KeyView {
+    option: bool,
+    copied: Option<u64>,
+}
+
+impl KeyView {
+    pub(super) fn read(row: &ElementId, cx: &App) -> Self {
+        let shown = cx.try_global::<Shown>();
+        Self {
+            option: shown.is_some_and(|shown| shown.option),
+            copied: shown
+                .and_then(|shown| shown.copied.as_ref())
+                .filter(|(copied, _)| copied == row)
+                .map(|(_, copy)| *copy),
+        }
+    }
+}
+
+// What the last frame drew of the keys, for the tests: the keys shown without the pointer.
+#[cfg(test)]
+thread_local! {
+    pub(crate) static SHOWN_KEYS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// The row's key, after its label: faint, and shown under the pointer (`group`), while ⌥ is held or while
+/// it says Copied. A click copies the keys. `None` for a row without a key.
+#[track_caller]
+pub(super) fn key_label(
+    row: &ElementId,
+    ui: UiColors,
+    view: KeyView,
+    keys: RowKeys,
+    group: &SharedString,
+    code_font: SharedString,
+) -> Option<Stateful<Div>> {
+    let key = *keys.keys.first()?;
+    let always = view.option || view.copied.is_some();
+    #[cfg(test)]
+    if always {
+        SHOWN_KEYS.with(|shown| shown.borrow_mut().push(key.to_string()));
+    }
+    let copied = view.copied.is_some();
+    let on_copy = row.clone();
+    Some(
+        div()
+            // Scoped by its row's id, so one name does for all (and none is made per row).
+            .id("key")
+            .role(Role::Button)
+            .aria_label(text(keys::SETTINGS_ROW_COPY_KEY))
+            .aria_description(key)
+            .text_caption()
+            .font_family(code_font)
+            .text_color(if copied { ui.success_text } else { ui.faint })
+            // Clear text, not `invisible` or no opacity: an element that is not painted has no hit box,
+            // and VoiceOver's press, which GPUI answers with a click at the node's middle, must reach
+            // the key while it is hidden.
+            .when(!always, |d| {
+                d.text_color(transparent_black()).group_hover(group.clone(), move |s| s.text_color(ui.faint))
+            })
+            .cursor_pointer()
+            .on_click(move |_, window, cx| copy(&on_copy, keys.text(), window, cx))
+            .child(SharedString::from(if copied { text(keys::SETTINGS_ROW_COPIED) } else { key })),
+    )
+}
+
+/// Put `words` on the clipboard and have `row` say so: for a moment in its key's place, and to VoiceOver.
+fn copy(row: &ElementId, words: String, window: &mut Window, cx: &mut App) {
+    platform::clipboard::write(words, cx);
+    let said = text(keys::SETTINGS_ROW_COPIED);
+    platform::a11y::announce(said, false);
+    let shown = cx.default_global::<Shown>();
+    shown.copies += 1;
+    let copy = shown.copies;
+    shown.copied = Some((row.clone(), copy));
+    window.refresh();
+    window
+        .spawn(cx, async move |cx| {
+            cx.background_executor().timer(COPIED_FOR).await;
+            cx.update(|window, cx| {
+                let shown = cx.default_global::<Shown>();
+                if shown.copied.as_ref().is_some_and(|(_, latest)| *latest == copy) {
+                    shown.copied = None;
+                    window.refresh();
+                }
+            })
+            .ok();
+        })
+        .detach();
+}
+
+/// What the row's menu is made from. Cloned into each listener: cheaper than a shared pointer made
+/// per row, as a clone copies a few words.
+#[derive(Clone)]
+struct RowMenu {
+    row: ElementId,
+    keys: RowKeys,
+    /// Present while the value is changed.
+    reset: Option<Reset>,
+}
+
+/// `row` with its context menu: a right click, ⌃↩ on a control inside it, VoiceOver's "Show menu".
+/// Nothing is built until it opens.
+#[track_caller]
+pub(super) fn with_menu(
+    row: Stateful<Div>,
+    id: ElementId,
+    keys: RowKeys,
+    reset: Option<Reset>,
+) -> Stateful<Div> {
+    if keys.keys.is_empty() {
+        return row;
+    }
+    let menu = RowMenu { row: id, keys, reset };
+    let (on_click, on_key, on_a11y) = (menu.clone(), menu.clone(), menu);
+    row.on_mouse_down(MouseButton::Right, move |event, window, cx| {
+        // Not the page's, nor a control's own menu.
+        cx.stop_propagation();
+        open(&on_click, event.position, window, cx);
+    })
+    .on_key_down(move |event, window, cx| {
+        let keystroke = &event.keystroke;
+        let held = keystroke.modifiers;
+        if keystroke.key == "enter" && held.control && !held.alt && !held.platform && !held.shift {
+            cx.stop_propagation();
+            open(&on_key, window.mouse_position(), window, cx);
+        }
+    })
+    .on_a11y_action(Action::ShowContextMenu, move |_, window, cx| {
+        open(&on_a11y, window.mouse_position(), window, cx)
+    })
+}
+
+fn open(menu: &RowMenu, at: Point<Pixels>, window: &mut Window, cx: &mut App) {
+    let (for_key, for_json, for_reset) = (menu.clone(), menu.clone(), menu.reset.clone());
+    let reset = text(keys::SETTINGS_ROW_RESET_MENU);
+    let menu = Menu::new()
+        .item(Item::new(text(keys::SETTINGS_ROW_COPY_KEY)).on_select(move |window, cx| {
+            copy(&for_key.row, for_key.keys.text(), window, cx);
+        }))
+        .item(Item::new(text(keys::SETTINGS_ROW_COPY_JSON)).on_select(move |window, cx| {
+            let json = (for_json.keys.json)(cx, for_json.keys.keys);
+            copy(&for_json.row, json, window, cx);
+        }))
+        .separator()
+        .item(Item::new(reset).enabled(for_reset.is_some()).on_select(move |window, cx| {
+            if let Some(reset) = &for_reset {
+                reset(window, cx);
+            }
+        }));
+    platform::show_menu(menu, at, window, cx);
+}

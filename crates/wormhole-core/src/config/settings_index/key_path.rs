@@ -30,6 +30,22 @@ pub(super) fn set(map: &mut Map<String, Value>, key: &str, value: Value) {
     }
 }
 
+/// Put `value` at `key`, making the objects the path goes through where they are not yet: a copy of
+/// what a row holds, not the settings (which [`set`] changes in place and never grows).
+pub(super) fn insert(map: &mut Map<String, Value>, key: &str, value: Value) {
+    match key.split_once('.') {
+        None => {
+            map.insert(key.to_string(), value);
+        }
+        Some((object, rest)) => {
+            let inner = map.entry(object.to_string()).or_insert_with(|| Value::Object(Map::new()));
+            if let Value::Object(inner) = inner {
+                insert(inner, rest, value);
+            }
+        }
+    }
+}
+
 /// Take the value at `key` out of the map, in the object it names: a setting that is stored only
 /// while it differs from its default is put back to its default by removing it.
 pub(super) fn remove(map: &mut Map<String, Value>, key: &str) {

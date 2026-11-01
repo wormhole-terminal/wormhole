@@ -12,6 +12,7 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::OnceLock;
 
 use gpui_kit::assets::IconName;
@@ -29,7 +30,7 @@ use wormhole_text::{Key, text};
 use super::{FrontWindow, SettingsWindow, section_icon, sections, ui};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
-use crate::style::{self, Edges, SettingParts, SettingState, TextRole};
+use crate::style::{self, Edges, RowKeys, SettingParts, SettingState, TextRole};
 
 /// Draws part of a page that is more than a switch, a segmented control or a stepper.
 pub(super) type Draw = fn(&SettingsWindow, &mut Context<SettingsWindow>) -> AnyElement;
@@ -233,6 +234,12 @@ impl PageState {
     }
 }
 
+/// The person's current values of `keys` as JSON, for a row's Copy as JSON. Their own, not what Zen mode or
+/// a project overlays: the file is what is copied.
+fn current_json(cx: &App, keys: &[&str]) -> String {
+    Values::of(cx.global::<SettingsStore>().user_settings()).json(keys)
+}
+
 /// What a setting shows right now, read before the row is built so no copy of the settings
 /// is held while the row borrows the window.
 enum Shown {
@@ -320,9 +327,10 @@ impl SettingsWindow {
         // The person's own values: Zen mode draws the window with less, and says so at the top of the page.
         let current = shown(&setting.control, crate::settings::settings_without_zen(cx));
         let project = page.project.as_ref().filter(|project| project.sets(entry));
+        let changed = page.values.entry_changed(entry);
         let state = match project {
             Some(project) => SettingState::Project(project.name.clone()),
-            None if page.values.entry_changed(entry) => SettingState::Changed,
+            None if changed => SettingState::Changed,
             None => SettingState::Default,
         };
         let description = match project {
@@ -371,15 +379,16 @@ impl SettingsWindow {
                 description,
                 visible_hint: entry.visible_hint && project.is_none(),
                 chip,
-                key: keys.first().copied().unwrap_or(""),
+                keys: RowKeys { keys, json: current_json },
                 state,
                 found,
                 found_description,
                 control,
                 tall: setting.tall,
                 extra,
-                on_reset: (!keys.is_empty()).then(|| -> style::ClickHandler {
-                    Box::new(move |_, _, cx| update_settings(cx, |s| *s = settings_index::reset(s, keys)))
+                // Only a changed row can reset, so only it makes the closure.
+                on_reset: (!keys.is_empty() && changed).then(|| -> style::Reset {
+                    Rc::new(move |_, cx| update_settings(cx, |s| *s = settings_index::reset(s, keys)))
                 }),
             },
             cx,

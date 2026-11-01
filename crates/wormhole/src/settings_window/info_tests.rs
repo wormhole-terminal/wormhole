@@ -18,7 +18,7 @@ use crate::window::test_harness::{isolate_in, start};
 
 const NAME: &str = "More information";
 
-fn open(cx: &mut TestAppContext) -> AnyWindowHandle {
+pub(super) fn open(cx: &mut TestAppContext) -> AnyWindowHandle {
     cx.update(|cx| open_settings(Some(Section::Terminal), cx));
     cx.run_until_parked();
     let handle = cx.update(|cx| current_window(cx)).expect("the settings window opened").0;
@@ -27,7 +27,7 @@ fn open(cx: &mut TestAppContext) -> AnyWindowHandle {
     handle
 }
 
-fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {
+pub(super) fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {
     cx.update(|cx| handle.update(cx, |_, window, cx| window.render_frame(cx))).expect("open");
 }
 
@@ -70,7 +70,11 @@ fn infos(cx: &mut TestAppContext, handle: AnyWindowHandle) -> (Vec<NodeId>, Node
 }
 
 /// Where the (i) `id` is drawn.
-fn centre(cx: &mut TestAppContext, handle: AnyWindowHandle, id: NodeId) -> gpui_kit::Point<gpui_kit::Pixels> {
+pub(super) fn centre(
+    cx: &mut TestAppContext,
+    handle: AnyWindowHandle,
+    id: NodeId,
+) -> gpui_kit::Point<gpui_kit::Pixels> {
     let update = cx
         .update(|cx| handle.update(cx, |_, window, _| window.last_a11y_tree_update()))
         .expect("open")

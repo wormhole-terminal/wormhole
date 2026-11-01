@@ -11,6 +11,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Help → Session Hosts (while Persistent terminals is on) opens a window that shows every session host:
   its processes, version and protocol against the app's, whether it answers, which terminal holds it
   and how that connection is doing, with End, Forget and a copy of the details for a bug report.
+- Settings rows show their config key under the pointer, and a click on it copies it and says "Copied"
+  for a moment. Holding ⌥ shows every key on the page. A right click on a row (or ⌃↩ on one of its
+  controls, or VoiceOver's Show menu) offers Copy Key, Copy as JSON (the key with its current value, ready
+  for `config.json`) and Reset to Default.
 
 ### Changed
 

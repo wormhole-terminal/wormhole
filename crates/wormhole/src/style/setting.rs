@@ -8,6 +8,7 @@ use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::switch::Switch;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_text::{keys, text};
 
 use std::ops::Range;
 
@@ -15,6 +16,7 @@ use super::buttons::icon_button;
 use super::controls::keycap;
 use super::info::{marked, setting_info};
 use super::labels::{changed_dot, tint_chip};
+use super::row_keys::{KeyView, Reset, RowKeys, key_label, with_menu};
 use super::scale::{
     CONTROL_H, Edges, MARK_DOT, NAME_LINE, RECORDER_W, SETTING_ROW_MIN_H, SLIDER_W, TextRole,
 };
@@ -100,8 +102,9 @@ pub struct SettingParts {
     pub visible_hint: bool,
     /// A tag after the label, in the primary's tint ("Time Sensitive").
     pub chip: Option<SharedString>,
-    /// The `config.json` key, shown under the pointer (empty: none).
-    pub key: &'static str,
+    /// The `config.json` keys the row writes: the first is shown under the pointer, all are in its menu
+    /// ([`RowKeys::NONE`]: none, and no menu).
+    pub keys: RowKeys,
     pub state: SettingState,
     /// What a search found in the label, marked with `state.highlight`.
     pub found: Option<Range<usize>>,
@@ -113,8 +116,9 @@ pub struct SettingParts {
     pub tall: bool,
     /// Before the control: a link such as "Edit in project".
     pub extra: Option<AnyElement>,
-    /// Puts the default back; the reset arrow shows while the value is changed.
-    pub on_reset: Option<ClickHandler>,
+    /// Puts the default back; the reset arrow shows, and the row's menu offers it, while the value is
+    /// changed.
+    pub on_reset: Option<Reset>,
 }
 
 /// How far a [`setting`] row's hover fill reaches past its text on each side.
@@ -137,7 +141,7 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
         description,
         visible_hint,
         chip,
-        key,
+        keys,
         state,
         found,
         found_description,
@@ -154,7 +158,11 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
     let (label_color, description_color) = if disabled { (ui.faint, ui.faint) } else { (ui.text, ui.muted) };
     let (code_font, _) = crate::fonts::code_font(cx);
     let info = description.clone().filter(|_| !visible_hint);
-    div()
+    let view = KeyView::read(&id, cx);
+    let reset = on_reset.filter(|_| changed);
+    let menu_reset = reset.clone();
+    let menu_id = id.clone();
+    let row = div()
         .id(id.clone())
         .role(Role::Group)
         .aria_label(label.clone())
@@ -215,17 +223,7 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
                             |d, project| d.child(tint_chip(ui, Some(IconName::Folder), project)),
                         )
                         .children(chip.map(|chip| tint_chip(ui, None, chip)))
-                        .when(!key.is_empty() && !elsewhere, |d| {
-                            d.child(
-                                div()
-                                    .text_caption()
-                                    .font_family(code_font)
-                                    .text_color(ui.faint)
-                                    .invisible()
-                                    .group_hover(group.clone(), |s| s.visible())
-                                    .child(key),
-                            )
-                        }),
+                        .children(key_label(&id, ui, view, keys, &group, code_font).filter(|_| !elsewhere)),
                 )
                 .children(description.filter(|_| visible_hint).map(|text| {
                     div().text_caption().text_color(description_color).child(marked(
@@ -241,18 +239,25 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
                 .flex_none()
                 .items_center()
                 .gap_2()
-                .when_some(on_reset.filter(|_| changed), |d, on_reset| {
+                .when_some(reset, |d, reset| {
                     d.child(
                         div().invisible().group_hover(group.clone(), |s| s.visible()).child(
-                            icon_button((id.clone(), "reset"), ui, IconName::RotateCcw, "Reset to default")
-                                .still()
-                                .on_click(on_reset),
+                            icon_button(
+                                (id.clone(), "reset"),
+                                ui,
+                                IconName::RotateCcw,
+                                text(keys::SETTINGS_ROW_RESET),
+                            )
+                            .still()
+                            .on_click(move |_, window, cx| reset(window, cx)),
                         ),
                     )
                 })
                 .children(extra)
                 .child(if elsewhere { out_of_reach((id, "control"), control) } else { control }),
-        )
+        );
+    // What a project sets or a layout lacks keeps its row as it was: no key, no menu.
+    if elsewhere { row } else { with_menu(row, menu_id, keys, menu_reset) }
 }
 
 /// A control shown but not to be used (its value is set elsewhere): faint, and a cover over

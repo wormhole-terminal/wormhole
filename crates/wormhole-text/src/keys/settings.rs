@@ -17,3 +17,13 @@ pub const SETTINGS_NAV_APP: Key = Key::new(1315);
 pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1316);
 /// "More information"
 pub const SETTINGS_MORE_INFORMATION: Key = Key::new(1317);
+/// "Copied"
+pub const SETTINGS_ROW_COPIED: Key = Key::new(1318);
+/// "Copy Key"
+pub const SETTINGS_ROW_COPY_KEY: Key = Key::new(1319);
+/// "Copy as JSON"
+pub const SETTINGS_ROW_COPY_JSON: Key = Key::new(1320);
+/// "Reset to Default"
+pub const SETTINGS_ROW_RESET_MENU: Key = Key::new(1321);
+/// "Reset to default"
+pub const SETTINGS_ROW_RESET: Key = Key::new(1322);

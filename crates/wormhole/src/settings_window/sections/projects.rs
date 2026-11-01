@@ -28,7 +28,7 @@ use crate::select::{Choice, SearchSelect, SelectTrigger};
 use crate::settings::UiColors;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, SettingParts, SettingState, TextRole};
+use crate::style::{self, Edges, RowKeys, SettingParts, SettingState, TextRole};
 use crate::window::window_lifecycle::with_front_workspace;
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("projects", |w, cx| w.draw_projects(cx))];
@@ -626,7 +626,7 @@ fn feature_row(
             description: Some(description.into()),
             visible_hint: state == SettingState::Disabled,
             chip: None,
-            key: "",
+            keys: RowKeys::NONE,
             state,
             found: None,
             found_description: None,
