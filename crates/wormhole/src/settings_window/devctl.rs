@@ -259,9 +259,10 @@ fn with_page(
     });
 }
 
-/// devctl `settings-pointer <move|click|right-click> <x> <y>` and `settings-pointer alt-on|alt-off`:
-/// the pointer, or ⌥ held, in the settings window, which has no command file of its own. Positions are
-/// in the window's logical pixels, as in `settings-shot`.
+/// devctl `settings-pointer <move|click|right-click> <x> <y>`, `settings-pointer wheel <x> <y> <dy>` and
+/// `settings-pointer alt-on|alt-off`: the pointer, the wheel over a point (a negative `dy` scrolls
+/// down, as a trackpad), or ⌥ held, in the settings window, which has no command file of its own.
+/// Positions are in the window's logical pixels, as in `settings-shot`.
 pub(crate) fn pointer(arg: &str, cx: &mut App) -> Result<(), String> {
     let mut words = arg.split_whitespace();
     let what = words.next().unwrap_or("").to_string();
@@ -269,12 +270,19 @@ pub(crate) fn pointer(arg: &str, cx: &mut App) -> Result<(), String> {
         .next()
         .zip(words.next())
         .and_then(|(x, y)| Some(point(px(x.parse().ok()?), px(y.parse().ok()?))));
+    let dy: Option<f32> = words.next().and_then(|dy| dy.parse().ok());
     let Some((handle, _)) = current_window(cx) else { return Err("settings window not open".into()) };
     let (held, none) = (Modifiers { alt: true, ..Modifiers::none() }, Modifiers::none());
     let events: Vec<PlatformInput> = match (what.as_str(), at) {
         ("alt-on" | "alt-off", _) => vec![PlatformInput::ModifiersChanged(ModifiersChangedEvent {
             modifiers: if what == "alt-on" { held } else { none },
             capslock: Capslock::default(),
+        })],
+        ("wheel", Some(position)) => vec![PlatformInput::ScrollWheel(ScrollWheelEvent {
+            position,
+            delta: ScrollDelta::Pixels(point(px(0.0), px(dy.ok_or("wheel needs <x> <y> <dy>")?))),
+            modifiers: none,
+            touch_phase: TouchPhase::Moved,
         })],
         ("move", Some(position)) => {
             vec![PlatformInput::MouseMove(MouseMoveEvent { position, pressed_button: None, modifiers: none })]
@@ -293,7 +301,11 @@ pub(crate) fn pointer(arg: &str, cx: &mut App) -> Result<(), String> {
                 PlatformInput::MouseUp(MouseUpEvent { button, position, modifiers: none, click_count: 1 }),
             ]
         }
-        _ => return Err("expected move|click|right-click <x> <y> or alt-on|alt-off".into()),
+        _ => {
+            return Err(
+                "expected move|click|right-click <x> <y>, wheel <x> <y> <dy> or alt-on|alt-off".into()
+            );
+        }
     };
     cx.defer(move |cx| {
         let _ = handle.update(cx, |_, window, cx| {

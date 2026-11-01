@@ -271,8 +271,9 @@
 //!                   `set feature_flags {"probes": true}`); `state` lists each Probe as `probe <folder> <state>`
 //!   probe-off <id>  turn that Probe off, with no question: its approval and its copy go
 //!   settings-scroll <px>   scroll the settings page (negative = up)
-//!   settings-pointer <move|click|right-click|alt-on|alt-off> [x y]   the pointer, or ⌥ held, in the
-//!                   settings window (logical pixels as in settings-shot); hover shows a row's key and (i)
+//!   settings-pointer <move|click|right-click|wheel|alt-on|alt-off> [x y [dy]]   the pointer, the wheel
+//!                   or ⌥ held, in the settings window (logical pixels as in settings-shot); hover shows a
+//!                   row's key and (i); `wheel x y -80` scrolls down 80 under that point
 //!   settings-resize <w> <h>   the settings window's size (a tall one shows a whole page in one shot)
 //!   settings-select <scrollback|icon-theme>   open that row's select in the settings window
 //!   settings-reset-confirm   press Advanced → Reset to defaults… (shows its question, resets nothing)
