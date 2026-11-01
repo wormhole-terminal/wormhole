@@ -258,3 +258,49 @@ fn with_page(
         }
     });
 }
+
+/// devctl `settings-pointer <move|click|right-click> <x> <y>` and `settings-pointer alt-on|alt-off`:
+/// the pointer, or ⌥ held, in the settings window, which has no command file of its own. Positions are
+/// in the window's logical pixels, as in `settings-shot`.
+pub(crate) fn pointer(arg: &str, cx: &mut App) -> Result<(), String> {
+    let mut words = arg.split_whitespace();
+    let what = words.next().unwrap_or("").to_string();
+    let at = words
+        .next()
+        .zip(words.next())
+        .and_then(|(x, y)| Some(point(px(x.parse().ok()?), px(y.parse().ok()?))));
+    let Some((handle, _)) = current_window(cx) else { return Err("settings window not open".into()) };
+    let (held, none) = (Modifiers { alt: true, ..Modifiers::none() }, Modifiers::none());
+    let events: Vec<PlatformInput> = match (what.as_str(), at) {
+        ("alt-on" | "alt-off", _) => vec![PlatformInput::ModifiersChanged(ModifiersChangedEvent {
+            modifiers: if what == "alt-on" { held } else { none },
+            capslock: Capslock::default(),
+        })],
+        ("move", Some(position)) => {
+            vec![PlatformInput::MouseMove(MouseMoveEvent { position, pressed_button: None, modifiers: none })]
+        }
+        ("click" | "right-click", Some(position)) => {
+            let button = if what == "click" { MouseButton::Left } else { MouseButton::Right };
+            vec![
+                PlatformInput::MouseMove(MouseMoveEvent { position, pressed_button: None, modifiers: none }),
+                PlatformInput::MouseDown(MouseDownEvent {
+                    button,
+                    position,
+                    modifiers: none,
+                    click_count: 1,
+                    first_mouse: false,
+                }),
+                PlatformInput::MouseUp(MouseUpEvent { button, position, modifiers: none, click_count: 1 }),
+            ]
+        }
+        _ => return Err("expected move|click|right-click <x> <y> or alt-on|alt-off".into()),
+    };
+    cx.defer(move |cx| {
+        let _ = handle.update(cx, |_, window, cx| {
+            for event in events {
+                window.dispatch_event(event, cx);
+            }
+        });
+    });
+    Ok(())
+}

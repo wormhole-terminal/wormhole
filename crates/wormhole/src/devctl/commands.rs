@@ -204,6 +204,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "settings-search" => settings::search,
         "settings-resize" => settings::resize,
         "settings-scroll" => settings::scroll,
+        "settings-pointer" => settings::pointer,
         "profile-sheet" => settings::profile_sheet,
         "probe-approve" => probes::approve,
         "probe-off" => probes::off,
