@@ -22,6 +22,8 @@ pub enum FileLines {
     Binary,
     /// Stored with Git LFS, whose counts would be the pointer's: "LFS".
     Lfs,
+    /// A nested repository: git lists it as one folder and has no lines to count.
+    Folder,
 }
 
 /// One changed file in the Changes panel or under a commit: its icon in the lead
@@ -97,6 +99,7 @@ pub fn file_row(id: impl Into<ElementId>, ui: UiColors, row: FileRow) -> Statefu
             }
             FileLines::Binary => line_word(muted, "bin"),
             FileLines::Lfs => line_word(muted, "LFS"),
+            FileLines::Folder => div().into_any_element(),
         })
         .child(
             div()

@@ -34,11 +34,15 @@ pub(super) fn change_row(
     cx: &App,
 ) -> Stateful<Div> {
     let Placement { in_tree, depth, selected, width } = place;
-    let (folder, name) = match file.path.rsplit_once('/') {
+    // A nested repository comes from git as "dir/": a folder, named without its slash.
+    let is_dir = file.path.ends_with('/');
+    let (folder, name) = match file.path.trim_end_matches('/').rsplit_once('/') {
         Some((folder, name)) => (if in_tree { "" } else { folder }, name),
-        None => ("", file.path.as_str()),
+        None => ("", file.path.trim_end_matches('/')),
     };
-    let lines = if file.lfs {
+    let lines = if is_dir {
+        FileLines::Folder
+    } else if file.lfs {
         FileLines::Lfs
     } else {
         match (file.added, file.removed) {
@@ -50,8 +54,14 @@ pub(super) fn change_row(
     let fitted = fit(name, folder, lines, renamed_from, moved, selected, width, depth, window, cx);
     let shortened = fitted.name != name || fitted.folder != folder;
     let icon_color = if selected { ui.selected_muted } else { ui.muted };
-    let icon = crate::icons::file(cx.global::<SettingsStore>().icons.as_deref(), name, icon_color)
-        .unwrap_or_else(|| style::icon(IconName::File).text_color(icon_color).into_any_element());
+    let icons = cx.global::<SettingsStore>().icons.as_deref();
+    let icon = if is_dir {
+        crate::icons::folder(icons, name, false, icon_color)
+            .unwrap_or_else(|| style::icon(IconName::Folder).text_color(icon_color).into_any_element())
+    } else {
+        crate::icons::file(icons, name, icon_color)
+            .unwrap_or_else(|| style::icon(IconName::File).text_color(icon_color).into_any_element())
+    };
     let row = style::file_row(
         SharedString::from(format!("change-{depth}-{}", file.path)),
         ui,
@@ -180,6 +190,7 @@ fn fit(
         FileLines::Counts(added, _) => caption(&format!("+{added}")),
         FileLines::Binary => caption("bin"),
         FileLines::Lfs => caption("LFS"),
+        FileLines::Folder => 0.0,
     };
     let renamed = renamed_from.map_or(0.0, |old| caption(old) + 4.0 + RENAME_ARROW + GAP);
     let mark = if moved { style::MOVED_MARK + GAP } else { 0.0 };

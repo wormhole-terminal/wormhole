@@ -48,6 +48,16 @@ fn tree_groups_by_folder() {
     assert_eq!(src.dirs["ui"].files, [1]);
 }
 #[test]
+fn a_nested_repository_is_one_entry_in_its_parent_folder() {
+    // Git lists a folder that is a repository of its own as "dir/", with no files under it.
+    let files = modified(&["gpui-pre-patched/", "src/a.rs"]);
+    let ids: Vec<usize> = (0..files.len()).collect();
+    let tree = build_tree(&files, &ids);
+    assert_eq!(tree.files, [0]);
+    assert!(!tree.dirs.contains_key("gpui-pre-patched"));
+}
+
+#[test]
 fn folders_fold_per_session_and_per_block() {
     // `src` holds a tracked and an untracked file, so it is listed in both blocks.
     let files = vec![change("src/a.rs", ChangeKind::Modified), change("src/b.rs", ChangeKind::Untracked)];

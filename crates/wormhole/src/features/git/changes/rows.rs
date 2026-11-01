@@ -205,7 +205,7 @@ pub(super) fn build_tree(files: &[FileChange], ids: &[usize]) -> DirNode {
     let mut root = DirNode::default();
     for &ix in ids {
         let mut node = &mut root;
-        let mut parts: Vec<&str> = files[ix].path.split('/').collect();
+        let mut parts: Vec<&str> = files[ix].path.trim_end_matches('/').split('/').collect();
         parts.pop();
         for part in parts {
             node = node.dirs.entry(part.to_string()).or_default();

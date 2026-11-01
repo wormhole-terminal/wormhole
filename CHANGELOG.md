@@ -6,6 +6,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Fixed
+
+- A folder that is a repository of its own (git lists it as one entry) showed in Changes as an empty
+  row marked "bin"; it now shows as a folder with its name.
+
 ## [1.6.0] - 2026-11-01
 
 ### Added
