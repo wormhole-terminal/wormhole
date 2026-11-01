@@ -54,6 +54,28 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         "band" => "text.primary / 5%",
         "band.hover" => "text.primary / 8%",
         "band.solid" => "over(band, sidebar.background)",
+        // The primary itself, never a tint of it: the settings nav's current page, with `text.on_primary`
+        // on it. Its own token, so the main sidebar's selected row stays as it is.
+        "settings.nav.selected" => "primary",
+        // The nav's tiles, one colour per page under a white icon (`tile.mark.brand`), as macOS System
+        // Settings draws its sidebar. They are the design's own colours, like the agents' brands, so a
+        // theme's palette doesn't move them; a light window takes darker ones, each 3:1 or better against
+        // the white icon.
+        "settings.nav.tile.terminal" => p("#2c2c2e", "#3a3a3c"),
+        "settings.nav.tile.appearance" => p("#0a84ff", "#0a6fd6"),
+        "settings.nav.tile.fonts" => p("#636366", "#636366"),
+        "settings.nav.tile.sidebar" => p("#5e5ce6", "#5e5ce6"),
+        "settings.nav.tile.git" => p("#ff9f0a", "#b86500"),
+        "settings.nav.tile.notifications" => p("#ff453a", "#e0352b"),
+        "settings.nav.tile.agents" => p("#bf5af2", "#a63fd9"),
+        "settings.nav.tile.menubar" => p("#64748b", "#64748b"),
+        "settings.nav.tile.import" => p("#30b0c7", "#10829a"),
+        "settings.nav.tile.updates" => p("#30d158", "#1f8a3b"),
+        "settings.nav.tile.advanced" => p("#8e8e93", "#7a7a80"),
+        "settings.nav.tile.motion" => p("#ff375f", "#e0264d"),
+        "settings.nav.tile.projects" => p("#32ade6", "#1a78b0"),
+        "settings.nav.tile.extensions" => p("#a2845e", "#8f7048"),
+        "settings.nav.tile.flags" => p("#ff6b35", "#d9501a"),
         // UI text gets 7:1 (AAA) even when the terminal foreground is softer:
         // UI labels are smaller and thinner than terminal text.
         "text.primary" => {

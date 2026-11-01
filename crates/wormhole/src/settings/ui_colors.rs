@@ -56,6 +56,8 @@ pub struct UiColors {
     /// The current session's row in the sidebar, and the settings nav's current page
     /// (`sidebar.row.selected`, the same tint, opaque, in a translucent window too).
     pub selected_row: Hsla,
+    /// The settings nav's current page: the primary itself (`settings.nav.selected`), with `on_primary` on it.
+    pub nav_selected: Hsla,
     /// Names and icons on a selected tint (`sidebar.row.selected.text`).
     pub selected_text: Hsla,
     /// Second lines and metadata on a selected tint (`sidebar.row.selected.muted`).
@@ -206,6 +208,7 @@ const COLORS: &[Field] = fields! {
     highlight = "state.highlight";
     selected = "state.selected";
     selected_row = "sidebar.row.selected";
+    nav_selected = "settings.nav.selected";
     selected_text = "sidebar.row.selected.text";
     selected_muted = "sidebar.row.selected.muted";
     selected_inset = "state.selected.inset";

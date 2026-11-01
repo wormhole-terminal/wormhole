@@ -17,6 +17,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   on one scrolls the page there; the list scrolls when they run long. Rows are 28 high with room between
   them, the profile is a card above the list, and every row can be reached with ⇥ and ↑ ↓ and is read out
   by VoiceOver. While you search, the sidebar shows how many settings each page holds instead of its groups.
+  Each row has a coloured tile with its icon, in a shade of its own for Light and Dark, and the open page's
+  row is marked in the theme's primary colour.
 - Settings rows show their config key under the pointer, and a click on it copies it and says "Copied"
   for a moment. Holding ⌥ shows every key on the page. A right click on a row (or ⌃↩ on one of its
   controls, or VoiceOver's Show menu) offers Copy Key, Copy as JSON (the key with its current value, ready

@@ -386,8 +386,24 @@ pub const TOKEN_USES: &[TokenUse] = &[
         Settings,
         &[
             "sidebar.background",
-            "sidebar.row.selected",
-            "sidebar.row.selected.text",
+            "settings.nav.selected",
+            "text.on_primary",
+            "tile.mark.brand",
+            "settings.nav.tile.terminal",
+            "settings.nav.tile.appearance",
+            "settings.nav.tile.fonts",
+            "settings.nav.tile.sidebar",
+            "settings.nav.tile.git",
+            "settings.nav.tile.notifications",
+            "settings.nav.tile.agents",
+            "settings.nav.tile.menubar",
+            "settings.nav.tile.import",
+            "settings.nav.tile.updates",
+            "settings.nav.tile.advanced",
+            "settings.nav.tile.motion",
+            "settings.nav.tile.projects",
+            "settings.nav.tile.extensions",
+            "settings.nav.tile.flags",
             "state.hover",
             "text.primary",
             "text.muted",
@@ -693,9 +709,11 @@ mod tests {
     }
 
     #[test]
-    fn the_selected_row_tint_is_used_by_the_sidebar_and_the_settings_nav() {
+    fn the_selected_row_tint_is_the_sidebars_and_the_settings_nav_has_its_own_selection() {
         let ids: Vec<&str> = uses_of("sidebar.row.selected").iter().map(|u| u.id).collect();
-        assert!(ids.contains(&"sidebar.row") && ids.contains(&"settings.nav"), "{ids:?}");
+        assert!(ids.contains(&"sidebar.row") && !ids.contains(&"settings.nav"), "{ids:?}");
+        let nav: Vec<&str> = uses_of("settings.nav.selected").iter().map(|u| u.id).collect();
+        assert_eq!(nav, ["settings.nav"]);
         let chip: Vec<&str> = uses_of("metrics.radius_chip").iter().map(|u| u.id).collect();
         assert!(chip.contains(&"keycap") && chip.contains(&"badge"), "{chip:?}");
     }
@@ -714,7 +732,9 @@ mod tests {
     #[test]
     fn a_token_is_in_the_areas_whose_components_draw_with_it() {
         assert!(used_in("sidebar.row.selected", Area::Sidebar));
-        assert!(used_in("sidebar.row.selected", Area::Settings), "the settings nav");
+        assert!(!used_in("sidebar.row.selected", Area::Settings), "the settings nav has its own");
+        assert!(used_in("settings.nav.selected", Area::Settings), "the settings nav");
+        assert!(!used_in("settings.nav.selected", Area::Sidebar));
         assert!(!used_in("sidebar.row.selected", Area::Ambient));
         assert!(used_in("metrics.radius_chip", Area::Sidebar), "the branch chip");
         assert!(!used_in("primary", Area::Ambient));

@@ -38,7 +38,7 @@ pub(super) fn render(
             .flex_wrap()
             .gap_6()
             .child(env.mark("setting.row", setting_rows(ui, cx)))
-            .child(env.mark("settings.nav", nav(ui)))
+            .child(env.mark("settings.nav", nav(env)))
             .into_any_element(),
         1 => controls(env).into_any_element(),
         _ => div()
@@ -267,9 +267,12 @@ const SLIDER_KNOB: f32 = 16.0;
 
 /// The settings nav: the profile card, rows (current, needs attention, search hits, none, preview) and
 /// the sub-rows of the open page, in runs set apart by a clear step.
-fn nav(ui: UiColors) -> Div {
-    let item = |icon, label: &'static str, selected, mark, opened| style::NavItem {
+fn nav(env: &Env) -> Div {
+    let ui = env.ui;
+    // Each page's tile is the theme's, as the window draws it.
+    let item = |icon, tile: &str, label: &'static str, selected, mark, opened| style::NavItem {
         icon,
+        tile: env.tk(tile),
         label: label.into(),
         spoken: label.into(),
         selected,
@@ -281,17 +284,20 @@ fn nav(ui: UiColors) -> Div {
             .child(style::nav_profile_row(
                 "g-nav-profile",
                 ui,
-                style::profile_avatar(ui, ui.primary, 'D', style::SWATCH),
-                "Default", // text: sample (the gallery's specimen)
-                "Profile", // text: sample (the gallery's specimen)
-                false,
-                None,
+                style::NavProfile {
+                    color: ui.primary,
+                    letter: 'D',
+                    name: "Default".into(),    // text: sample (the gallery's specimen)
+                    caption: "Profile".into(), // text: sample (the gallery's specimen)
+                    selected: false,
+                    hits: None,
+                },
             ))
             .child(style::nav_group_gap())
             .child(style::nav_row(
                 "g-nav-fonts",
                 ui,
-                item(IconName::ALargeSmall, "Fonts", true, NavMark::None, true), // text: sample (the gallery's specimen)
+                item(IconName::ALargeSmall, "settings.nav.tile.fonts", "Fonts", true, NavMark::None, true), // text: sample (the gallery's specimen)
             ))
             .child(
                 style::nav_sub_list()
@@ -301,30 +307,65 @@ fn nav(ui: UiColors) -> Div {
             .child(style::nav_row(
                 "g-nav-look",
                 ui,
-                item(IconName::Palette, "Appearance", false, NavMark::None, false), // text: sample (the gallery's specimen)
+                item(
+                    IconName::Palette,
+                    "settings.nav.tile.appearance",
+                    "Appearance", // text: sample (the gallery's specimen)
+                    false,
+                    NavMark::None,
+                    false,
+                ), // text: sample (the gallery's specimen)
             ))
             .child(style::nav_group_gap())
             .child(style::nav_row(
                 "g-nav-agents",
                 ui,
-                item(IconName::Sparkles, "Coding agents", false, NavMark::Attention, false), // text: sample (the gallery's specimen)
+                item(
+                    IconName::Sparkles,
+                    "settings.nav.tile.agents",
+                    "Coding agents", // text: sample (the gallery's specimen)
+                    false,
+                    NavMark::Attention,
+                    false,
+                ), // text: sample (the gallery's specimen)
             ))
             .child(style::nav_row(
                 "g-nav-hits",
                 ui,
-                item(IconName::SquareTerminal, "Terminal", false, NavMark::Hits(1), false), // text: sample (the gallery's specimen)
+                item(
+                    IconName::SquareTerminal,
+                    "settings.nav.tile.terminal",
+                    "Terminal", // text: sample (the gallery's specimen)
+                    false,
+                    NavMark::Hits(1),
+                    false,
+                ), // text: sample (the gallery's specimen)
             ))
             .child(style::nav_row(
                 "g-nav-none",
                 ui,
-                item(IconName::ArrowDown, "Updates", false, NavMark::NoHits, false), // text: sample (the gallery's specimen)
+                item(
+                    IconName::Download,
+                    "settings.nav.tile.updates",
+                    "Updates", // text: sample (the gallery's specimen)
+                    false,
+                    NavMark::NoHits,
+                    false,
+                ), // text: sample (the gallery's specimen)
             ))
             .child(style::nav_group_gap())
             .child(style::nav_group_label(ui, "Preview")) // text: sample (the gallery's specimen)
             .child(style::nav_row(
                 "g-nav-preview",
                 ui,
-                item(IconName::FlaskConical, "Project folders", false, NavMark::Preview, false), // text: sample (the gallery's specimen)
+                item(
+                    IconName::Folder,
+                    "settings.nav.tile.projects",
+                    "Project folders", // text: sample (the gallery's specimen)
+                    false,
+                    NavMark::Preview,
+                    false,
+                ), // text: sample (the gallery's specimen)
             )),
     )
 }

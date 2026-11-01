@@ -42,8 +42,12 @@ pub const NAV_ROW_GAP: f32 = 2.0;
 pub const NAV_GROUP_GAP: f32 = 20.0;
 /// The nav's inset from its edges, a row's padding and the gap after its lead: `_2`, named where a sum needs it.
 pub const NAV_STEP: f32 = 8.0;
-/// The nav row's lead (its icon) and the gap after it: a sub-row's text starts under the row's name.
-pub const NAV_LEAD_W: f32 = TITLE_GLYPH;
+/// A nav row's coloured tile, which is its lead column.
+pub const NAV_TILE: f32 = 20.0;
+/// The line icon inside the tile.
+pub const NAV_TILE_ICON: f32 = 12.0;
+/// The nav row's lead and the gap after it: a sub-row's text starts under the row's name.
+pub const NAV_LEAD_W: f32 = NAV_TILE;
 /// A folder band in the sidebar, a section band in the right panel.
 pub const BAND_H: f32 = 32.0;
 /// A folder band with its second line (the folder's path, ±N and branch): the height of a

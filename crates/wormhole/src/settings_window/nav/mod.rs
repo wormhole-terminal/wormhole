@@ -33,6 +33,7 @@ use super::{SettingsWindow, ui};
 use crate::app_state::app;
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
+use crate::theme_bridge::token;
 
 /// The nav's width.
 pub(super) const NAV_W: f32 = 220.0;
@@ -77,7 +78,10 @@ impl SettingsWindow {
         let mut run = None;
         // Only the sections shown for this build: the Preview group (feature flags, and a feature's
         // own section while its flag is on) is there only in a dev build, so a release never lists it.
-        for section in Section::visible(settings(cx)).filter(|section| *section != Section::Profile) {
+        let tokens = &cx.global::<SettingsStore>().tokens;
+        for section in Section::visible(settings(cx)) {
+            // The profile is the card above, with an avatar of its own.
+            let Some(tile) = tile_token(section) else { continue };
             let nav_group = section.info().nav;
             if run != Some(nav_group) {
                 run = Some(nav_group);
@@ -103,6 +107,7 @@ impl SettingsWindow {
                     ui,
                     NavItem {
                         icon: section_icon(section),
+                        tile: token(tokens, tile),
                         label: section.title().into(),
                         spoken: spoken(section.title(), mark),
                         selected,
@@ -205,18 +210,42 @@ impl SettingsWindow {
         let state = app(cx);
         let profile = state.profiles.active();
         let color = crate::theme_bridge::hsla(profile.color.color(&cx.global::<SettingsStore>().tokens));
-        let selected = self.section == Section::Profile && !self.show_results;
         style::nav_profile_row(
             "settings-nav-profile",
             ui,
-            style::profile_avatar(ui, color, profile.avatar, style::SWATCH),
-            profile.name.clone(),
-            Section::Profile.title(),
-            selected,
-            hits.copied().filter(|_| searching),
+            style::NavProfile {
+                color,
+                letter: profile.avatar,
+                name: profile.name.clone().into(),
+                caption: Section::Profile.title().into(),
+                selected: self.section == Section::Profile && !self.show_results,
+                hits: hits.copied().filter(|_| searching),
+            },
         )
         .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::Profile, cx)))
     }
+}
+
+/// The token of a section's tile, which the theme sets: a colour of its own for each page of the list.
+fn tile_token(section: Section) -> Option<&'static str> {
+    Some(match section {
+        Section::Profile => return None,
+        Section::Terminal => "settings.nav.tile.terminal",
+        Section::Appearance => "settings.nav.tile.appearance",
+        Section::Fonts => "settings.nav.tile.fonts",
+        Section::Sessions => "settings.nav.tile.sidebar",
+        Section::Git => "settings.nav.tile.git",
+        Section::Notifications => "settings.nav.tile.notifications",
+        Section::Agents => "settings.nav.tile.agents",
+        Section::MenuBar => "settings.nav.tile.menubar",
+        Section::Import => "settings.nav.tile.import",
+        Section::Updates => "settings.nav.tile.updates",
+        Section::Advanced => "settings.nav.tile.advanced",
+        Section::Motion => "settings.nav.tile.motion",
+        Section::Projects => "settings.nav.tile.projects",
+        Section::Extensions => "settings.nav.tile.extensions",
+        Section::FeatureFlags => "settings.nav.tile.flags",
+    })
 }
 
 /// What VoiceOver reads for a row: its name, and what the row marks. A name with no mark is the

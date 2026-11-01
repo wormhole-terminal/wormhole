@@ -71,7 +71,7 @@ pub fn status_badge(ui: UiColors, color: Hsla, text: impl Into<SharedString>) ->
 /// The box both badges share: caption text centered in [`BADGE_H`] by at least
 /// [`BADGE_H`], with the chip corners.
 #[track_caller]
-fn badge(ui: UiColors) -> Div {
+pub(in crate::style) fn badge(ui: UiColors) -> Div {
     div()
         .flex_none()
         .flex()
