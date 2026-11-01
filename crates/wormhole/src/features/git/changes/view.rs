@@ -189,6 +189,19 @@ impl ChangesView {
                     label.clone(),
                     *collapsed,
                 )
+                .on_mouse_down(MouseButton::Right, {
+                    let (open, history, path) = (self.open.clone(), self.history.clone(), path.clone());
+                    move |event, window, cx| {
+                        cx.stop_propagation();
+                        let on_disk =
+                            wormhole_core::storage::files::resolve_within(open.root(), &path).is_ok();
+                        let history = history.clone().map(|history| (history, session));
+                        let menu =
+                            PathMenu { open: &open, paths: std::slice::from_ref(&path), on_disk, history }
+                                .menu();
+                        platform::show_menu(menu, event.position, window, cx);
+                    }
+                })
                 .on_click(move |_, _, cx| {
                     this.update(cx, |this, cx| this.toggle_dir(session, group, key.clone(), cx)).ok();
                 })

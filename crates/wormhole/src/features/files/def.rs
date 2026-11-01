@@ -55,6 +55,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
                 .unwrap_or_else(|| div().into_any_element())
         },
         title: |_, _, _| None,
+        file: None,
         close: |entity, facts, window, cx| {
             if let Some(active) = facts.active() {
                 typed(entity).update(cx, |files, cx| files.close_viewer(active.terminal, window, cx));

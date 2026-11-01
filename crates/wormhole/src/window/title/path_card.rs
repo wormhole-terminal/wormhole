@@ -7,7 +7,7 @@
 //! left both, and closes on Esc. A click on the path itself opens the folder in Finder, and a
 //! right-click its Finder-style path menu (`path_menu`).
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use gpui_kit::*;
 use wormhole_core::platform::shell;
@@ -103,6 +103,15 @@ impl Workspace {
         }));
     }
 
+    /// What the crumb in the title row stands for: the file a cover shows (a diff's), else the terminal's
+    /// folder. The card, the menu and what they type into the terminal are about this path.
+    pub(in crate::window) fn crumb_path(&self, cx: &App) -> Option<PathBuf> {
+        match self.cover_file(cx) {
+            Some(file) => Some(file.absolute()),
+            None => self.active_terminal().read(cx).cwd.clone(),
+        }
+    }
+
     /// Esc: close the card if it is open. Whether there was one.
     pub(in crate::window) fn close_path_card(&mut self, cx: &mut Context<Self>) -> bool {
         if !self.path_card.shown {
@@ -115,9 +124,8 @@ impl Workspace {
 
     /// Open the card under the folder (the timer's, devctl's).
     pub(in crate::window) fn open_path_card(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let terminal = self.active_terminal().read(cx);
-        let Some(folder) = terminal.cwd.clone() else { return };
-        let exited = terminal.status() == Status::Exited;
+        let Some(folder) = self.crumb_path(cx) else { return };
+        let exited = self.active_terminal().read(cx).status() == Status::Exited;
         let shown = wormhole_core::view::sidebar::display_path(&folder, crate::style::home_dir());
         let appearance = store_in(&self.profile, cx).tokens.appearance;
         self.path_card.opened += 1;
@@ -181,7 +189,7 @@ fn path_popover(
         .row(Row::Path(shown.to_string().into()))
         .row(Row::Buttons(vec![
             Button::new(text(keys::TITLE_ROW_PATH_OPEN_IN_FINDER), Some(Glyph::Folder), move |_, cx| {
-                cx.open_with_system(&open_of)
+                show_in_finder(&open_of, cx)
             }),
             Button::new(text(keys::TITLE_ROW_PATH_COPY), Some(Glyph::Copy), move |_, cx| {
                 Workspace::copy_path_from_card(&copy_of, cx)
@@ -213,6 +221,15 @@ fn path_popover(
                 })
                 .ok();
         })
+}
+
+/// A folder opened in Finder, a file shown in its folder with it selected.
+pub(in crate::window) fn show_in_finder(path: &Path, cx: &App) {
+    if path.is_dir() {
+        cx.open_with_system(path);
+    } else {
+        cx.reveal_path(path);
+    }
 }
 
 /// What Insert into terminal types: the path in single quotes, so spaces and `$` survive.

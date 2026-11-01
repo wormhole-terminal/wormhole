@@ -225,7 +225,8 @@ pub(crate) type FoldFn = fn(&AnyEntity, &WindowFacts<'_>, session: i64, row: usi
 pub(crate) type CopyFn =
     fn(&AnyEntity, &WindowFacts<'_>, session: i64, row: usize, &Window, &mut App) -> bool;
 pub(crate) type CoverCloseFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
-pub(crate) type CoverTitleFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App) -> Option<AnyElement>;
+pub(crate) type CoverTitleFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App) -> Option<CoverTitle>;
+pub(crate) type CoverFileFn = fn(&AnyEntity, &App) -> Option<CoverFile>;
 pub(crate) type TabChangedFn = fn(&AnyEntity, TabId, &mut App);
 pub(crate) type PickBranchFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
 pub(crate) type WatchFn = fn(&AnyEntity, &App) -> Option<PathBuf>;
@@ -335,8 +336,11 @@ pub(crate) struct CoverDef {
     pub open: fn(&AnyEntity, &App) -> bool,
     /// The card, built inline from `Workspace::render`.
     pub view: fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App) -> AnyElement,
-    /// The title row's entry while it is up (where the file sits among its siblings).
+    /// The title row's entry while it is up: what stands before the file's path and what after.
     pub title: CoverTitleFn,
+    /// The file it shows, if it shows one: the title row names it with the same path crumb as the
+    /// terminal's folder (its hover card, its menu), between the two parts of `title`.
+    pub file: Option<CoverFileFn>,
     /// Esc, and the feature's own close buttons: takes it down and gives the keyboard to the terminal.
     pub close: CoverCloseFn,
     /// Takes it down without touching the keyboard: another feature laid its cover over the terminal (the
@@ -345,6 +349,27 @@ pub(crate) struct CoverDef {
     pub dismiss: fn(&AnyEntity, &mut App),
     /// Its part in the window's reading of the repository, for a cover that is a file of it (a diff).
     pub repo: Option<CoverRepo>,
+}
+
+/// What a cover puts in the title row: its own parts, with the crumb of its file between them.
+pub(crate) struct CoverTitle {
+    /// Before the path (the arrows through the files).
+    pub lead: AnyElement,
+    /// After it (what happened to the file, the counts, the controls).
+    pub trail: AnyElement,
+}
+
+/// A file of a repository that a cover shows: `path` is relative to `root`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct CoverFile {
+    pub root: PathBuf,
+    pub path: String,
+}
+
+impl CoverFile {
+    pub(crate) fn absolute(&self) -> PathBuf {
+        self.root.join(&self.path)
+    }
 }
 
 /// What a cover that shows a file of the terminal's repository asks of the window's reading of it.

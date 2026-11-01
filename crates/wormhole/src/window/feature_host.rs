@@ -18,8 +18,8 @@ use crate::sidebar::{RowExtras, RowInfo};
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
 use crate::window::feature::{
-    CloseAlso, CloseExtra, CloseOf, CoverDef, FeatureDef, FeatureEvent, RepoRequest, Root, SpawnAdd, Stake,
-    TabDef,
+    CloseAlso, CloseExtra, CloseOf, CoverDef, CoverFile, CoverTitle, FeatureDef, FeatureEvent, RepoRequest,
+    Root, SpawnAdd, Stake, TabDef,
 };
 
 /// Every window looks again at what its features show of the world outside the app, for a change that
@@ -171,11 +171,10 @@ impl Workspace {
         self.open_cover(cx).is_some()
     }
 
-    /// The file the cover shows (a diff's), where it has one: what the title row's entry for it names.
-    #[cfg(any(test, debug_assertions))]
-    pub(in crate::window) fn cover_file(&self, cx: &App) -> Option<std::path::PathBuf> {
+    /// The file the cover shows (a diff's), where it has one: what the title row's crumb names.
+    pub(in crate::window) fn cover_file(&self, cx: &App) -> Option<CoverFile> {
         let (cover, entity) = self.open_cover(cx)?;
-        (cover.repo.as_ref()?.watch)(entity, cx)
+        (cover.file?)(entity, cx)
     }
 
     /// What is laid over the terminal, built for this frame.
@@ -186,7 +185,7 @@ impl Workspace {
     }
 
     /// The title row's entry while something is laid over the terminal.
-    pub(in crate::window) fn render_cover_title(&self, cx: &mut App) -> Option<AnyElement> {
+    pub(in crate::window) fn render_cover_title(&self, cx: &mut App) -> Option<CoverTitle> {
         let (cover, entity) = self.open_cover(cx)?;
         let entity = entity.clone();
         (cover.title)(&entity, &self.facts(cx), cx)

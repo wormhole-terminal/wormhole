@@ -28,7 +28,7 @@ use gpui_kit::*;
 use crate::features::git::changes::Changes;
 use crate::features::git::open_file::{OpenFile, OpenTarget};
 use crate::settings::SettingsStore;
-use crate::settings::{settings_in, store_in, ui_in};
+use crate::settings::{settings_in, store_in};
 use crate::terminal_view::TerminalView;
 use crate::window::feature::FeatureEvent;
 use crate::window::repo::Stamp;
@@ -153,6 +153,11 @@ impl DiffView {
         self.session
     }
 
+    /// The repository the file is in.
+    pub(crate) fn root(&self) -> &std::path::Path {
+        &self.request.root
+    }
+
     /// The file shown, as the last status described it.
     pub(super) fn file(&self) -> &FileChange {
         &self.request.file
@@ -228,7 +233,7 @@ impl Changes {
     ) {
         let request = Request { root, file, spec, limits: DiffLimits::default() };
         let mut view = DiffView::new(session, request, siblings, context);
-        let split_fits = self.diff_split_fits(cx);
+        let split_fits = self.diff_split_fits();
         let store = store_in(&self.profile, cx);
         let build = BuildKey::of(&store.settings, split_fits, view.syntax(store.revision, &store.tokens));
         let started = view.begin_load(build);
@@ -252,10 +257,9 @@ impl Changes {
     }
 
     /// Whether the diff has room for old and new side by side: its body is the terminal's
-    /// column less the card's inset and border, and needs two columns of 280.
-    pub(super) fn diff_split_fits(&self, cx: &App) -> bool {
-        let border = f32::from(ui_in(&self.profile, cx).border_width);
-        limits::diff_split_fits(self.terminal_width - 2.0 * (render::CARD_INSET + border))
+    /// column less the surface's inset, and needs two columns of 280.
+    pub(super) fn diff_split_fits(&self) -> bool {
+        limits::diff_split_fits(self.terminal_width - 2.0 * crate::style::SURFACE_INSET)
     }
 
     /// Show the open diff's file in the Finder (the card of a diff too large to load).

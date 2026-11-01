@@ -16,14 +16,14 @@ use wormhole_text::{keys, text};
 use crate::platform::{self, Icon, Item, Menu};
 use crate::terminal_view::Status;
 use crate::window::Workspace;
+use crate::window::title::path_card::show_in_finder;
 
 impl Workspace {
     /// Open the menu of the active terminal's folder under the folder in the title row (a right-click
     /// on it, or ⌃↩ with the keys on the strip). Nothing for a terminal whose folder isn't known.
     pub(in crate::window) fn open_path_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let terminal = self.active_terminal().read(cx);
-        let Some(folder) = terminal.cwd.clone() else { return };
-        let exited = terminal.status() == Status::Exited;
+        let Some(folder) = self.crumb_path(cx) else { return };
+        let exited = self.active_terminal().read(cx).status() == Status::Exited;
         let shown = wormhole_core::view::sidebar::display_path(&folder, crate::style::home_dir());
         let menu = path_menu(&folder, &shown, &platform::boot_volume_name(), exited, &cx.weak_entity());
         platform::show_menu(menu, self.path_anchor.below(), window, cx);
@@ -39,7 +39,7 @@ fn path_menu(folder: &Path, shown: &str, volume: &str, exited: bool, this: &Weak
         .separator()
         .item(
             Item::new(text(keys::TITLE_ROW_PATH_OPEN_IN_FINDER))
-                .on_select(move |_, cx| cx.open_with_system(&open_of)),
+                .on_select(move |_, cx| show_in_finder(&open_of, cx)),
         )
         .item(
             Item::new(text(keys::TITLE_ROW_PATH_COPY))

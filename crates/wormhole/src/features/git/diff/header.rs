@@ -4,8 +4,8 @@
 //! 40 pt row, the switch hidden and a × to close.
 
 use gpui_kit::assets::IconName;
+use gpui_kit::component::Selectable;
 use gpui_kit::component::tooltip::Tooltip;
-use gpui_kit::component::{Selectable, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
@@ -13,15 +13,14 @@ use super::DiffView;
 use super::render::DiffColors;
 use crate::features::git::changes::Changes;
 use crate::settings::{SettingsStore, UiColors};
-use crate::settings::{settings_in, ui_in};
-use crate::style::{self, Edges, TextRole};
+use crate::settings::{settings_in, store_in, ui_in};
+use crate::style::{self, TextRole};
 use crate::terminal_view::TerminalView;
 use crate::window::facts::WindowFacts;
+use crate::window::feature::CoverTitle;
 use wormhole_core::git::{ChangeKind, Side};
 use wormhole_core::view::limits::count_grouped;
 
-/// The card's header beside a split view; a narrow one is a title row tall.
-const HEADER_H: f32 = 44.0;
 /// "esc close": a target this tall around its key cap.
 const CLOSE_H: f32 = 24.0;
 /// With the title row's own 4 pt, this puts the first chevron's glyph on the card's 16 pt
@@ -29,21 +28,27 @@ const CLOSE_H: f32 = 24.0;
 const TITLE_LEAD: f32 = 6.0;
 
 impl Changes {
-    /// Title bar while a diff is open: where the file sits among its siblings.
+    /// The title row while a diff is open: the arrows and where the file sits among its siblings come
+    /// first, then the window draws the file's path crumb, then what happened to the file, its counts
+    /// and the controls.
     pub(crate) fn render_diff_title(
         &mut self,
         facts: &WindowFacts<'_>,
         cx: &mut Context<Self>,
-    ) -> Option<AnyElement> {
+    ) -> Option<CoverTitle> {
         self.follow(facts);
         let view = self.diff.as_ref()?;
         let ui = ui_in(&self.profile, cx);
+        let terminal = facts.active()?.terminal.clone();
+        let colors = DiffColors::new(&store_in(&self.profile, cx).tokens);
+        let split_fits = self.diff_split_fits();
         let position = view.siblings.iter().position(|f| f.path == view.file().path);
         let count = view.siblings.len();
-        Some(
+        let trail = self.render_diff_trail(view, ui, colors, split_fits, &terminal, cx).into_any_element();
+        let lead = {
             div()
                 .flex()
-                .min_w_0()
+                .flex_none()
                 .items_center()
                 .gap_1()
                 .ml(px(TITLE_LEAD))
@@ -68,14 +73,14 @@ impl Changes {
                         .children(position.map(|ix| format!("File {} of {count}", ix + 1)))
                         .children(view.context.clone().map(|c| div().text_color(ui.primary).child(c))),
                 )
-                .into_any_element(),
-        )
+                .into_any_element()
+        };
+        Some(CoverTitle { lead, trail })
     }
 
-    /// The card's top row: the path, what happened to the file, +/− counts, the
-    /// layout switch and close. `split_fits`: there is room for a split view, and
-    /// with it for the full row.
-    pub(super) fn render_diff_header(
+    /// What happened to the file, the +/− counts, the layout switch and close: the title row's right
+    /// end. `split_fits`: there is room for a split view, and with it for every control.
+    fn render_diff_trail(
         &self,
         view: &DiffView,
         ui: UiColors,
@@ -84,13 +89,9 @@ impl Changes {
         terminal: &Entity<TerminalView>,
         cx: &mut Context<Self>,
     ) -> Div {
-        let (font_family, font_size) = crate::fonts::code_font_in(&self.profile, cx);
+        let (font_family, _) = crate::fonts::code_font_in(&self.profile, cx);
         let wrap = settings_in(&self.profile, cx).diff_wrap;
         let split = view.split(&self.profile, split_fits, cx);
-        let (dir, name) = match view.file().path.rsplit_once('/') {
-            Some((dir, name)) => (format!("{dir}/"), name.to_string()),
-            None => (String::new(), view.file().path.clone()),
-        };
         let diff = view.diff.as_deref();
         let renamed_from = diff.and_then(|d| d.renamed_from.clone()).or(view.file().original_path.clone());
         let mut badges: Vec<(Hsla, SharedString)> = Vec::new();
@@ -100,7 +101,11 @@ impl Changes {
             _ => {}
         }
         if renamed_from.is_some() || view.file().kind == ChangeKind::Renamed {
-            badges.push((ui.primary, "Renamed".into()));
+            let from = renamed_from.as_deref().map(|from| from.rsplit('/').next().unwrap_or(from));
+            badges.push((
+                ui.primary,
+                from.map_or_else(|| "Renamed".into(), |from| format!("Renamed from {from}").into()),
+            ));
         }
         if let Some(sub) = &view.file().submodule {
             // What changed, in the row's words, where a file has "New file" or "Renamed".
@@ -144,68 +149,9 @@ impl Changes {
             .flex()
             .flex_none()
             .items_center()
-            .map(|d| {
-                if split_fits {
-                    d.h(px(HEADER_H)).gap_3().pl_4().pr_3()
-                } else {
-                    d.h(px(style::TITLE_ROW_H)).gap_2().pl_3().pr_1()
-                }
-            })
-            .rule_bottom(ui)
-            .child(
-                div()
-                    .flex()
-                    .flex_1()
-                    .min_w_0()
-                    .items_center()
-                    .gap_2()
-                    .child(
-                        div()
-                            .flex()
-                            .min_w_0()
-                            // Nothing of the path is drawn over the badges and counts after it
-                            // (at 320: the name used to run on under them).
-                            .overflow_hidden()
-                            .items_center()
-                            .gap_1()
-                            .font_family(font_family.clone())
-                            // Narrow, the path is the code's size, so more of it fits.
-                            .map(|d| if split_fits { d.text_body() } else { d.text_size(font_size) })
-                            .children(renamed_from.map(|from| {
-                                div()
-                                    .flex()
-                                    .min_w_0()
-                                    .items_center()
-                                    .gap_1()
-                                    .text_color(ui.muted)
-                                    .child(
-                                        div().min_w_0().text_ellipsis_start().overflow_hidden().child(from),
-                                    )
-                                    .child(style::icon(IconName::ArrowRight).xsmall())
-                            }))
-                            // The folder gives way first; the file name stays whole as long as
-                            // the folder has anything left to give, then it is cut too.
-                            .child(
-                                div()
-                                    .min_w_0()
-                                    .overflow_hidden()
-                                    .whitespace_nowrap()
-                                    .text_ellipsis_start()
-                                    .text_color(ui.muted)
-                                    .child(dir),
-                            )
-                            .child(
-                                div()
-                                    .min_w_0()
-                                    .flex_shrink(NAME_SHRINK)
-                                    .truncate()
-                                    .text_color(ui.text)
-                                    .child(name),
-                            ),
-                    )
-                    .children(badges.into_iter().map(|(color, text)| style::status_badge(ui, color, text)))
-                    .children(refresh_error),
-            )
+            .map(|d| if split_fits { d.gap_3().pr_2() } else { d.gap_2().pr_1() })
+            .children(badges.into_iter().map(|(color, text)| style::status_badge(ui, color, text)))
+            .children(refresh_error)
             .children(counts.map(|(added, removed)| {
                 div()
                     .flex()
@@ -217,18 +163,25 @@ impl Changes {
                     .child(div().text_color(colors.added).child(added))
                     .child(div().text_color(colors.removed).child(removed))
             }))
-            .children(view.open_file(cx).map(|file| file.header_button(ui)))
-            .when(controls.wrap, |d| {
-                d.child(
-                    style::icon_button("diff-wrap", ui, IconName::TextWrap, "Wrap long lines")
-                        .in_title_row()
-                        .selected(wrap)
-                        .on_click(cx.listener(|_, _, _, cx| {
-                            SettingsStore::update(cx, |s| s.diff_wrap = !s.diff_wrap);
-                            cx.notify();
-                        })),
-                )
-            })
+            // The two icon buttons side by side: they read as one group between the counts and the switch.
+            .child(
+                div()
+                    .flex()
+                    .flex_none()
+                    .items_center()
+                    .children(view.open_file(cx).map(|file| file.header_button(ui)))
+                    .when(controls.wrap, |d| {
+                        d.child(
+                            style::icon_button("diff-wrap", ui, IconName::TextWrap, "Wrap long lines")
+                                .in_title_row()
+                                .selected(wrap)
+                                .on_click(cx.listener(|_, _, _, cx| {
+                                    SettingsStore::update(cx, |s| s.diff_wrap = !s.diff_wrap);
+                                    cx.notify();
+                                })),
+                        )
+                    }),
+            )
             .map(|d| {
                 if controls.switch {
                     d.child(
@@ -277,11 +230,6 @@ impl Changes {
             })
     }
 }
-
-/// How much of the overflow the file name takes while its folder can still give way: next to
-/// nothing, so the folder is gone before the name loses a letter, and the name is cut (at its
-/// end) only once the folder is.
-const NAME_SHRINK: f32 = 0.01;
 
 /// Which controls the header shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

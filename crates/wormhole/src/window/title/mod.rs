@@ -180,11 +180,11 @@ impl Workspace {
                         .flex()
                         .items_center()
                         .title_drag()
-                        .children(self.render_cover_title(cx))
+                        .children(self.render_cover_crumbs(cx))
                         // The left end gives way before the right one: the name in it is cut.
                         .children(left.map(|left| div().flex().min_w_0().flex_shrink(1.0).child(left)))
-                        // The flexible space: the window's title bar.
-                        .child(div().flex_1().min_w_0())
+                        // The flexible space: the window's title bar. A diff's title fills the row itself.
+                        .when(!in_diff, |d| d.child(div().flex_1().min_w_0()))
                         // The right end keeps its width, unless the name is there to give way.
                         .children(right.map(|right| {
                             div()

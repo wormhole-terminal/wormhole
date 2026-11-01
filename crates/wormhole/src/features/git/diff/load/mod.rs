@@ -287,7 +287,7 @@ impl DiffView {
 impl Changes {
     /// The key rows would be built with now. `None` without a diff on view.
     pub(super) fn build_key(&mut self, cx: &App) -> Option<BuildKey> {
-        let split_fits = self.diff_split_fits(cx);
+        let split_fits = self.diff_split_fits();
         let store = store_in(&self.profile, cx);
         let view = self.diff.as_mut()?;
         Some(BuildKey::of(&store.settings, split_fits, view.syntax(store.revision, &store.tokens)))

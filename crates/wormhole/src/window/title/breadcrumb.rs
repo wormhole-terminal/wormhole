@@ -16,13 +16,28 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::view::layout::title_parts::TitlePart;
 use wormhole_core::view::layout::title_row::{Chip, Face, PathShown, RowWants, fit_row, path_steps};
 
-use crate::settings::{UiColors, settings_in, ui_in};
+use crate::settings::{SettingsStore, UiColors, settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::terminal_view::{Status, TerminalSummary};
 use crate::window::Workspace;
-use crate::window::title::path_card::Over;
+use crate::window::feature::CoverTitle;
+use crate::window::title::path_card::{Over, show_in_finder};
 use crate::window::title::row::{self, has};
 use crate::window::title::{Facts, MORE_W, OPEN_IN_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
+
+/// What a path crumb draws and does.
+struct PathCrumb {
+    id: &'static str,
+    icon: AnyElement,
+    /// The parents with their slashes, and the last part; none while the row has room for the icon alone.
+    text: Option<(String, String)>,
+    /// What a click shows in Finder, and the card and the menu are about.
+    target: std::path::PathBuf,
+    label: String,
+    /// The text gives way to what is beside the crumb (a file in a cover's title) instead of keeping its width.
+    shrinks: bool,
+    soft: Hsla,
+}
 
 impl Workspace {
     /// What the title row says about the active terminal, as of now.
@@ -130,64 +145,143 @@ impl Workspace {
     ) -> Option<AnyElement> {
         let ui = ui_in(&self.profile, cx);
         let folder = plan.facts.folder.clone()?;
-        // Under a tint the folder's icon and its parents step up to the main text color, so they
-        // keep their contrast on it.
-        let soft = if plan.tint.is_some() { ui.text } else { ui.muted };
         let text = match plan.fit.path {
             PathShown::Step(ix) => Some(&plan.steps[ix].text),
             PathShown::Icon | PathShown::None => None,
         };
+        let crumb = PathCrumb {
+            id: "crumb-folder",
+            icon: style::icon(IconName::Folder).into_any_element(),
+            text: text.map(|text| (text.parents.clone(), text.last.clone())),
+            target: folder,
+            label: format!("Open folder {} in Finder", plan.facts.shown.as_deref().unwrap_or_default()),
+            shrinks: false,
+            // Under a tint the folder's icon and its parents step up to the main text color, so they
+            // keep their contrast on it.
+            soft: if plan.tint.is_some() { ui.text } else { ui.muted },
+        };
+        Some(self.render_path_crumb(crumb, ui, cx))
+    }
+
+    /// The title row while something covers the terminal: the cover's own parts around the crumb of
+    /// the file it shows, which is the folder's crumb (its card, its menu) with the file's icon.
+    pub(in crate::window) fn render_cover_crumbs(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let CoverTitle { lead, trail } = self.render_cover_title(cx)?;
+        let ui = ui_in(&self.profile, cx);
+        let file = self.cover_file(cx);
+        let crumb = file.map(|file| {
+            let (parents, last) = match file.path.rsplit_once('/') {
+                Some((dir, name)) => (format!("{dir}/"), name.to_string()),
+                None => (String::new(), file.path.clone()),
+            };
+            let icon_color = ui.muted;
+            let icon = crate::icons::file(cx.global::<SettingsStore>().icons.as_deref(), &last, icon_color)
+                .unwrap_or_else(|| style::icon(IconName::File).text_color(icon_color).into_any_element());
+            let label = format!("Reveal {} in Finder", file.path);
+            self.render_path_crumb(
+                PathCrumb {
+                    id: "crumb-file",
+                    icon,
+                    text: Some((parents, last)),
+                    target: file.absolute(),
+                    label,
+                    shrinks: true,
+                    soft: ui.muted,
+                },
+                ui,
+                cx,
+            )
+        });
         Some(
             div()
-                .id("crumb-folder")
-                .debug_selector(|| "crumb-folder".to_string())
-                // Cut in the middle, the folder is still read whole.
-                .role(Role::Button)
-                .aria_label(format!(
-                    "Open folder {} in Finder",
-                    plan.facts.shown.as_deref().unwrap_or_default()
-                ))
-                // The card and the menu open under the folder, which the probe measures.
-                .relative()
                 .flex()
-                .flex_none()
+                .flex_1()
+                .min_w_0()
                 .items_center()
-                .gap_2()
-                .text_label()
-                .font_weight(FontWeight::NORMAL)
-                .text_color(soft)
-                .cursor_pointer()
-                .hover(|d| d.text_color(ui.text))
-                .child(self.path_anchor.probe())
-                .child(div().flex_none().child(style::icon(IconName::Folder)))
-                .children(text.map(|text| {
-                    div().flex().flex_none().child(div().flex_none().child(text.parents.clone())).child(
-                        div()
-                            .flex_none()
-                            .font_weight(FontWeight::MEDIUM)
-                            .text_color(ui.text)
-                            .child(text.last.clone()),
-                    )
-                }))
-                // The folder itself in Finder, not its parent with it selected.
-                .on_click(cx.listener(move |this, _, _, cx| {
-                    this.path_card.reset(cx);
-                    cx.open_with_system(&folder);
-                }))
-                .on_hover(cx.listener(|this, hovered: &bool, window, cx| {
-                    this.hover_path(Over::Path, *hovered, window, cx)
-                }))
-                // The Finder-style path menu.
-                .on_mouse_down(
-                    MouseButton::Right,
-                    cx.listener(|this, _, window, cx| {
-                        cx.stop_propagation();
-                        this.path_card.reset(cx);
-                        this.open_path_menu(window, cx);
-                    }),
-                )
+                .gap_3()
+                .child(lead)
+                // The crumb takes what the cover's parts leave; without a file the space is just space.
+                .child(crumb.unwrap_or_else(|| div().flex_1().min_w_0().into_any_element()))
+                .child(trail)
                 .into_any_element(),
         )
+    }
+
+    /// A path in the title row: an icon, the parents in regular weight and the last part in medium. A
+    /// click shows `target` in Finder, resting on it opens the card and a right-click the path menu.
+    fn render_path_crumb(&self, crumb: PathCrumb, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+        let PathCrumb { id, icon, text, target, label, shrinks, soft } = crumb;
+        let text =
+            text.map(|(parents, last)| {
+                if shrinks {
+                    // The folders give way first; the name stays whole as long as the folders have anything
+                    // left to give, then it is cut too.
+                    div()
+                        .flex()
+                        .flex_1()
+                        .min_w_0()
+                        .overflow_hidden()
+                        .child(
+                            div()
+                                .min_w_0()
+                                .overflow_hidden()
+                                .whitespace_nowrap()
+                                .text_ellipsis_start()
+                                .child(parents),
+                        )
+                        .child(
+                            div()
+                                .min_w_0()
+                                .flex_shrink(0.01)
+                                .truncate()
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(ui.text)
+                                .child(last),
+                        )
+                } else {
+                    // Cut in the middle by the row's fit, the path is still read whole.
+                    div().flex().flex_none().child(div().flex_none().child(parents)).child(
+                        div().flex_none().font_weight(FontWeight::MEDIUM).text_color(ui.text).child(last),
+                    )
+                }
+            });
+        div()
+            .id(id)
+            .debug_selector(|| id.to_string())
+            .role(Role::Button)
+            .aria_label(label)
+            // The card and the menu open under the path, which the probe measures.
+            .relative()
+            .flex()
+            .items_center()
+            .gap_2()
+            .text_label()
+            .font_weight(FontWeight::NORMAL)
+            .text_color(soft)
+            .cursor_pointer()
+            .hover(|d| d.text_color(ui.text))
+            .map(|d| if shrinks { d.flex_1().min_w_0() } else { d.flex_none() })
+            .child(self.path_anchor.probe())
+            .child(div().flex_none().child(icon))
+            .children(text)
+            // The path itself in Finder, not its parent with it selected: a folder is opened, a file shown.
+            .on_click(cx.listener(move |this, _, _, cx| {
+                this.path_card.reset(cx);
+                show_in_finder(&target, cx);
+            }))
+            .on_hover(cx.listener(|this, hovered: &bool, window, cx| {
+                this.hover_path(Over::Path, *hovered, window, cx)
+            }))
+            // The Finder-style path menu.
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(|this, _, window, cx| {
+                    cx.stop_propagation();
+                    this.path_card.reset(cx);
+                    this.open_path_menu(window, cx);
+                }),
+            )
+            .into_any_element()
     }
 
     /// The branch chip, which opens the compare picker, and in a submodule whose it is ("in

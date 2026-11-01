@@ -14,7 +14,8 @@ use crate::features::git::diff::DiffView;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
 use crate::window::feature::{
-    BranchChip, CoverDef, CoverRepo, FeatureDef, FeatureEvent, RepoRequest, StateDef, TabDef, show_tab,
+    BranchChip, CoverDef, CoverFile, CoverRepo, FeatureDef, FeatureEvent, RepoRequest, StateDef, TabDef,
+    show_tab,
 };
 
 /// The window's `Changes`, from the handle the window keeps. The entry makes it, so it is one.
@@ -64,6 +65,10 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
                 .update(cx, |changes, cx| changes.render_diff(facts, window, cx))
                 .unwrap_or_else(|| div().into_any_element())
         },
+        file: Some(|entity, cx| {
+            let view = typed(entity).read(cx).diff.as_ref()?;
+            Some(CoverFile { root: view.root().to_path_buf(), path: view.file().path.clone() })
+        }),
         title: |entity, facts, cx| {
             typed(entity).update(cx, |changes, cx| changes.render_diff_title(facts, cx))
         },

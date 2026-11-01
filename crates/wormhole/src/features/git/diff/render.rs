@@ -28,8 +28,6 @@ use wormhole_core::git::review::LineSide;
 use wormhole_core::git::{LineKind, Side};
 use wormhole_core::theme::tokens::ThemeTokens;
 
-/// How far the card sits in from the terminal's column, left, right and below.
-pub(super) const CARD_INSET: f32 = 16.0;
 /// The +/− column between the line numbers and the code.
 const MARKER_WIDTH: f32 = 16.0;
 /// Roughly the advance of a monospace glyph, in ems.
@@ -438,7 +436,7 @@ pub(crate) fn sample(ui: UiColors, colors: DiffColors, font_family: SharedString
 }
 
 impl Changes {
-    /// The diff view, its card inset in the column the terminal is in (`None`: no diff is open).
+    /// The diff view, filling the surface the terminal is in (`None`: no diff is open).
     pub(crate) fn render_diff(
         &mut self,
         facts: &WindowFacts<'_>,
@@ -450,7 +448,7 @@ impl Changes {
         let view = self.diff.as_ref()?;
         let ui = ui_in(&self.profile, cx);
         let colors = DiffColors::new(&store_in(&self.profile, cx).tokens);
-        let split_fits = self.diff_split_fits(cx);
+        let split_fits = self.diff_split_fits();
         // The room for a split view changed (the window or a panel was resized): build the rows
         // for it now rather than at the next tick.
         let want_split = split_fits && settings_in(&self.profile, cx).diff_split;
@@ -460,32 +458,18 @@ impl Changes {
                 let _ = this.update(cx, |this, cx| this.sync_diff(cx));
             });
         }
-        let header = self.render_diff_header(view, ui, colors, split_fits, &terminal, cx);
         let body = self.render_diff_body(view, ui, colors, split_fits, &terminal, cx);
+        // The terminal's own rounded surface is the frame: the diff fills it, with no card inside a card.
         let card = div()
             .flex()
             .flex_col()
             .flex_1()
             .min_h_0()
             .overflow_hidden()
-            .rounded(ui.radius_lg)
-            .outlined(ui, ui.border)
             .bg(colors.surface)
-            .child(header)
             .child(body)
             .children(self.render_review_bar(ui, &terminal, cx));
-        Some(
-            div()
-                .id("diff-view")
-                .size_full()
-                .flex()
-                .flex_col()
-                .pt(px(CARD_INSET))
-                .px(px(CARD_INSET))
-                .pb(px(CARD_INSET))
-                .child(card)
-                .into_any_element(),
-        )
+        Some(div().id("diff-view").size_full().flex().flex_col().child(card).into_any_element())
     }
 
     fn render_diff_body(
