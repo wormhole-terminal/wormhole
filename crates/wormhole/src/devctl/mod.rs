@@ -275,7 +275,7 @@
 //!                   or ⌥ held, in the settings window (logical pixels as in settings-shot); hover shows a
 //!                   row's key and (i); `wheel x y -80` scrolls down 80 under that point
 //!   settings-resize <w> <h>   the settings window's size (a tall one shows a whole page in one shot)
-//!   settings-select <scrollback|icon-theme>   open that row's select in the settings window
+//!   settings-select <row id>   open that row's select or menu in the settings window (scrollback, tab-width, theme-mode…)
 //!   settings-reset-confirm   press Advanced → Reset to defaults… (shows its question, resets nothing)
 //!   settings-cli-tool [install|uninstall]   Coding agents → Command line tool: show it, or press its
 //!                   Install / Uninstall (into the instance's own cli-bin folder, `WORMHOLE_CLI_DIR`)

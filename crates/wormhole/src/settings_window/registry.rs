@@ -223,6 +223,16 @@ fn control(id: &str) -> Option<&'static Setting> {
     controls().get(id).map(|(_, setting)| *setting)
 }
 
+/// The ids of the rows drawn as menu controls (the density's is a custom one, named here too), for devctl,
+/// which opens them by name.
+#[cfg(feature = "devctl")]
+pub(super) fn menu_ids() -> impl Iterator<Item = &'static str> {
+    controls()
+        .values()
+        .filter(|(_, setting)| matches!(setting.control, Control::Menu(_)) || setting.id == "density")
+        .map(|(_, setting)| setting.id)
+}
+
 /// What the recorder of row `id` records into and checks.
 pub(super) fn recorder_row(id: &str) -> Option<super::recorder::RecorderRow> {
     match control(id)?.control {

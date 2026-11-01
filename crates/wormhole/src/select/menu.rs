@@ -239,3 +239,10 @@ fn card(ui: UiColors, row: ElementId, width: Pixels, menu: MenuOptions, at: usiz
             .with_priority(gpui_kit::base::POPUP_PRIORITY),
     )
 }
+
+/// devctl `settings-select`: open the menu of the row `row`, as a click on it does.
+#[cfg(feature = "devctl")]
+pub fn devctl_open(row: &'static str, window: &mut Window, cx: &mut App) {
+    cx.default_global::<Highlight>().row = None;
+    Open::toggle(&ElementId::from(row), window, cx);
+}

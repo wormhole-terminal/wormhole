@@ -576,6 +576,8 @@ fn option_row<V: Clone + PartialEq + 'static>(
 }
 
 mod menu;
+#[cfg(feature = "devctl")]
+pub use menu::devctl_open;
 pub use menu::{MenuOptions, menu_select};
 
 #[cfg(test)]

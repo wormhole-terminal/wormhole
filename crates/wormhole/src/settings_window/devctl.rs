@@ -128,8 +128,13 @@ pub(crate) fn cli_tool(action: &str, cx: &mut App) {
     });
 }
 
-/// devctl `settings-select <id>`: open the select of the row `id` (scrollback, icon-theme).
+/// devctl `settings-select <id>`: open the select of the row `id` (scrollback, icon-theme), or the menu of a
+/// row drawn as a menu control (tab-width, theme-mode, density), as a click on it does.
 pub(crate) fn select(id: &str, cx: &mut App) {
+    if let Some(row) = super::registry::menu_ids().find(|known| *known == id) {
+        with_page(cx, move |_, window, cx| crate::select::devctl_open(row, window, cx));
+        return;
+    }
     let id = super::sections::select_id(id);
     with_page(cx, move |page, _, _| page.open_select = id);
 }
