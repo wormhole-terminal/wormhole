@@ -1,14 +1,17 @@
 //! The (i) after a setting's label: it is a tab stop that ↩ opens and Esc closes, a press outside its
-//! card or on itself closes it, one is open at a time, and VoiceOver can press it. Its cost is held by
-//! `frame_tests`.
+//! card or on itself closes it, so does Tab away from it, one is open at a time (the second press opens
+//! the second, not only closes the first), a search's mark is in the card, and VoiceOver can press it.
+//! Its cost is held by `frame_tests`.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
 use gpui_kit::accesskit::{Action, ActionRequest, NodeId, Role, TreeId};
 use gpui_kit::test::TestWindowExt as _;
 use gpui_kit::{
-    AnyWindowHandle, KeyUpEvent, Keystroke, Modifiers, TestAppContext, VisualTestContext, point, px,
+    AnyWindowHandle, ElementId, KeyUpEvent, Keystroke, Modifiers, TestAppContext, VisualTestContext, point,
+    px,
 };
+use wormhole_core::config::settings_index::Query;
 
 use super::{Section, current_window, open_settings};
 use crate::window::test_harness::{isolate_in, start};
@@ -31,6 +34,14 @@ fn draw(cx: &mut TestAppContext, handle: AnyWindowHandle) {
 fn shown(cx: &mut TestAppContext, handle: AnyWindowHandle) -> bool {
     cx.update(|cx| {
         handle.update(cx, |_, window, cx| crate::style::is_open_in(window.window_handle().window_id(), cx))
+    })
+    .expect("open")
+}
+
+/// The row whose card is open.
+fn open_row(cx: &mut TestAppContext, handle: AnyWindowHandle) -> Option<ElementId> {
+    cx.update(|cx| {
+        handle.update(cx, |_, window, cx| crate::style::open_row_in(window.window_handle().window_id(), cx))
     })
     .expect("open")
 }
@@ -114,14 +125,94 @@ fn the_info_opens_by_keyboard_and_pointer_and_closes_again(cx: &mut TestAppConte
     keys.simulate_click(at, Modifiers::none());
     assert!(shown(&mut keys, handle), "a click on a closed one opens it");
 
-    // Another (i) takes over, and a press outside closes.
+    // Another (i) takes over, and a press outside closes. An open card hangs under its (i) and covers
+    // what lies below it, so the card is opened on the lower of two (i)s and the press is on the upper,
+    // which it does not cover: that press must open the upper one's card, not only close the lower's.
+    keys.simulate_click(at, Modifiers::none());
+    assert!(!shown(&mut keys, handle), "closed again");
     let (ids, _) = infos(&mut keys, handle);
-    let other = *ids.iter().find(|id| **id != focus).expect("another (i)");
-    let there = centre(&mut keys, handle, other);
-    keys.simulate_click(there, Modifiers::none());
-    assert!(shown(&mut keys, handle), "a second (i) opens");
+    let mut by_height: Vec<_> = ids.iter().map(|id| (centre(&mut keys, handle, *id).y, *id)).collect();
+    by_height.sort_by(|a, b| a.0.partial_cmp(&b.0).expect("heights compare"));
+    let (upper, lower) = (by_height[0].1, by_height[1].1);
+    let down = centre(&mut keys, handle, lower);
+    keys.simulate_click(down, Modifiers::none());
+    let first = open_row(&mut keys, handle).expect("the lower (i)'s card is open");
+    let up = centre(&mut keys, handle, upper);
+    keys.simulate_click(up, Modifiers::none());
+    let second = open_row(&mut keys, handle).expect("a card is open after the press on the upper (i)");
+    assert_ne!(second, first, "a press on another (i) opens that one's card");
     keys.simulate_click(point(px(2.0), px(400.0)), Modifiers::none());
     assert!(!shown(&mut keys, handle), "a press outside closes it");
+}
+
+#[gpui_kit::test]
+fn tabbing_away_from_the_info_closes_its_card(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "tabbing_away_from_the_info_closes_its_card") {
+        return;
+    }
+    start(cx, 1);
+    let handle = open(cx);
+    // GPUI tells a window's focus listeners about a move only while the window is the active one.
+    cx.update(|cx| handle.update(cx, |_, window, _| window.activate_window())).expect("open");
+    draw(cx, handle);
+    let mut keys = VisualTestContext::from_window(handle, cx);
+    let mut reached = false;
+    for _ in 0..80 {
+        keys.simulate_keystrokes("tab");
+        let (ids, focus) = infos(&mut keys, handle);
+        if ids.contains(&focus) {
+            reached = true;
+            break;
+        }
+    }
+    assert!(reached, "Tab reaches an (i)");
+    activate(&mut keys, "enter");
+    assert!(shown(&mut keys, handle), "↩ opens it");
+    keys.simulate_keystrokes("tab");
+    // Focus listeners run as the frame that follows the move is drawn.
+    draw(&mut keys, handle);
+    assert!(!shown(&mut keys, handle), "Tab away closes its card, which Esc could no longer reach");
+}
+
+#[gpui_kit::test]
+fn a_card_opened_from_a_search_marks_what_was_found_in_it(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "a_card_opened_from_a_search_marks_what_was_found_in_it") {
+        return;
+    }
+    start(cx, 1);
+    let handle = open(cx);
+    // A word of the descriptions that no label has, so the (i)s of the results hold the found part.
+    let word = "scrollback";
+    let page = cx.update(|cx| current_window(cx)).expect("the window").1;
+    cx.update(|cx| {
+        handle
+            .update(cx, |_, window, cx| {
+                page.update(cx, |page, cx| {
+                    page.search.update(cx, |search, cx| search.set_value(word.to_string(), window, cx));
+                    page.show_results = !Query::new(word).is_empty();
+                    cx.notify();
+                })
+            })
+            .expect("open")
+    });
+    cx.run_until_parked();
+    draw(cx, handle);
+    let (ids, _) = infos(cx, handle);
+    // The results are live rows; press each (i) until a card holds the found word.
+    let mut marked = None;
+    for id in ids {
+        let at = centre(cx, handle, id);
+        let mut keys = VisualTestContext::from_window(handle, cx);
+        keys.simulate_click(at, Modifiers::none());
+        if shown(&mut keys, handle)
+            && let Some((words, Some(found))) = crate::style::LAST_CARD.with(|c| c.borrow().clone())
+        {
+            marked = Some(words[found].to_lowercase());
+            break;
+        }
+        keys.simulate_click(point(px(2.0), px(400.0)), Modifiers::none());
+    }
+    assert_eq!(marked.as_deref(), Some(word), "the card marks the part of its words the search found");
 }
 
 #[gpui_kit::test]

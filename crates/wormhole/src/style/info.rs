@@ -8,8 +8,9 @@
 //! either knowing of the other.
 //!
 //! ↩ and Space open it, as they click any focused element; Esc closes it and the keyboard stays on
-//! the (i). A press outside the card closes it, and the press that lands on the (i) itself only
-//! closes (see [`Dismissed`]).
+//! the (i), and so does moving the keyboard away from it (Tab), which would otherwise leave the card
+//! open with no key to close it. A press outside the card closes it, and the press that lands on the
+//! (i) itself only closes (see [`Dismissed`]).
 
 use std::ops::Range;
 
@@ -35,17 +36,26 @@ const EDGE: f32 = 8.0;
 #[derive(Default)]
 struct Open {
     shown: Option<(WindowId, ElementId)>,
-    dismissed: Dismissed,
+    dismissed: Option<Dismissed>,
+    /// Whether the click that comes of the press now going on is the one that closed the card.
+    swallow: bool,
+    /// Closes the card when the (i) it hangs from loses the keyboard; dropped with the card.
+    focus_out: Option<Subscription>,
 }
 
 impl Global for Open {}
 
-/// Where the press was that a card closed on. A card closes on the capture phase of any press
-/// outside it, before the (i) under the pointer sees that press; without this the (i) would open
-/// the card again at once, and could never be used to close it. The position is the press's own, so
-/// it matches that press and no later one.
-#[derive(Default)]
-struct Dismissed(Option<Point<Pixels>>);
+/// The press a card closed on, and whose card it was. A card closes on the capture phase of any
+/// press outside it, before the (i) under the pointer sees that press; without this the (i) would
+/// open the card again at once, and could never be used to close it. The row says which card, so a
+/// press on another (i) still opens that one. Every (i) reads this at its own press and settles
+/// whether the click that follows is to be swallowed (`Open::swallow`), so a dismissal left over by a
+/// press elsewhere, or by a press that never became a click, matches nothing later.
+#[derive(Clone, PartialEq)]
+struct Dismissed {
+    row: ElementId,
+    at: Point<Pixels>,
+}
 
 impl Open {
     fn is(&self, window: WindowId, id: &ElementId) -> bool {
@@ -56,7 +66,21 @@ impl Open {
 /// Whether a card is open in `window`, for the tests of the pages that show (i)s.
 #[cfg(test)]
 pub(crate) fn is_open_in(window: WindowId, cx: &App) -> bool {
-    cx.try_global::<Open>().and_then(|open| open.shown.as_ref()).is_some_and(|(open, _)| *open == window)
+    open_row_in(window, cx).is_some()
+}
+
+/// The row whose card is open in `window`, for the same tests.
+#[cfg(test)]
+pub(crate) fn open_row_in(window: WindowId, cx: &App) -> Option<ElementId> {
+    let open = cx.try_global::<Open>()?;
+    open.shown.as_ref().filter(|(open, _)| *open == window).map(|(_, row)| row.clone())
+}
+
+// What the last card was built with: its words and the part a search marked.
+#[cfg(test)]
+thread_local! {
+    pub(crate) static LAST_CARD: std::cell::RefCell<Option<(SharedString, Option<Range<usize>>)>> =
+        const { std::cell::RefCell::new(None) };
 }
 
 /// `text` with `found` marked, when it lies on character boundaries of it.
@@ -100,6 +124,7 @@ impl RenderOnce for SettingInfo {
         let this_window = window.window_handle().window_id();
         let open = cx.try_global::<Open>().is_some_and(|open| open.is(this_window, &row));
         let on_press = row.clone();
+        let on_down = row.clone();
         div()
             // Scoped by its row's id, so one name does for all.
             .id("info")
@@ -120,11 +145,17 @@ impl RenderOnce for SettingInfo {
             .cursor_pointer()
             .hover(move |d| d.bg(ui.hover).text_color(ui.text))
             .child(icon(IconName::Info))
+            .on_mouse_down(MouseButton::Left, move |event, _, cx| {
+                // Settled at every press, so the answer is never an older press's.
+                let open = cx.default_global::<Open>();
+                let dismissed = open.dismissed.take();
+                open.swallow = dismissed.is_some_and(|d| d.row == on_down && d.at == event.position);
+            })
             .on_click(move |event, window, cx| {
                 // A pointer's click is told apart from the press that closed the card (see
                 // [`Dismissed`]); ↩ and Space reach here as a keyboard click.
-                if let ClickEvent::Mouse(click) = event
-                    && cx.default_global::<Open>().dismissed.0.take() == Some(click.down.position)
+                if matches!(event, ClickEvent::Mouse(_))
+                    && std::mem::take(&mut cx.default_global::<Open>().swallow)
                 {
                     return;
                 }
@@ -138,7 +169,7 @@ impl RenderOnce for SettingInfo {
                         close(window, cx);
                     }
                 })
-                .child(card(ui, description, found))
+                .child(card(ui, row, description, found))
             })
     }
 }
@@ -146,19 +177,41 @@ impl RenderOnce for SettingInfo {
 /// Open the card of `row`, or close it when it is the open one.
 fn toggle(row: &ElementId, window: &mut Window, cx: &mut App) {
     let this_window = window.window_handle().window_id();
+    if cx.default_global::<Open>().is(this_window, row) {
+        close(window, cx);
+        return;
+    }
+    // Whatever has the keyboard now is the (i): a press focuses it, as ↩ and Space need it to. When
+    // it loses the keyboard its card closes; the check on the row keeps a card that has since moved
+    // to another (i) open.
+    let focus_out = window.focused(cx).map(|handle| {
+        let row = row.clone();
+        window.on_focus_out(&handle, cx, move |_, window, cx| {
+            if cx.default_global::<Open>().is(window.window_handle().window_id(), &row) {
+                close(window, cx);
+            }
+        })
+    });
     let open = cx.default_global::<Open>();
-    open.shown = if open.is(this_window, row) { None } else { Some((this_window, row.clone())) };
+    open.shown = Some((this_window, row.clone()));
+    open.focus_out = focus_out;
     window.refresh();
 }
 
 fn close(window: &mut Window, cx: &mut App) {
-    cx.default_global::<Open>().shown = None;
+    let open = cx.default_global::<Open>();
+    open.shown = None;
+    // Dropped after the borrow, not inside it: it may be the very listener that is running.
+    let focus_out = open.focus_out.take();
     window.refresh();
+    drop(focus_out);
 }
 
 /// The card, under the (i) and kept inside the window.
 #[track_caller]
-fn card(ui: UiColors, description: SharedString, found: Option<Range<usize>>) -> Div {
+fn card(ui: UiColors, row: ElementId, description: SharedString, found: Option<Range<usize>>) -> Div {
+    #[cfg(test)]
+    LAST_CARD.with(|last| *last.borrow_mut() = Some((description.clone(), found.clone())));
     let words = div()
         .id("info-card")
         // Over the page: it takes the pointer, the clicks and the wheel from it.
@@ -171,11 +224,9 @@ fn card(ui: UiColors, description: SharedString, found: Option<Range<usize>>) ->
         .text_body()
         .text_color(ui.text)
         .cursor(CursorStyle::Arrow)
-        .on_mouse_down_out(|event, window, cx| {
-            let open = cx.default_global::<Open>();
-            open.shown = None;
-            open.dismissed.0 = Some(event.position);
-            window.refresh();
+        .on_mouse_down_out(move |event, window, cx| {
+            cx.default_global::<Open>().dismissed = Some(Dismissed { row: row.clone(), at: event.position });
+            close(window, cx);
         })
         .child(marked(ui, description, found));
     // The holder gives the anchor a corner to hang from: below the face, at its left.

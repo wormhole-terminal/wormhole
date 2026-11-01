@@ -114,7 +114,7 @@ pub use groups::*;
 pub(crate) use home::home_dir;
 pub use icon_motion::{Half, IconMotion, MenuMark, StripFill, StripSide};
 #[cfg(test)]
-pub(crate) use info::is_open_in;
+pub(crate) use info::{LAST_CARD, is_open_in, open_row_in};
 pub use labels::*;
 pub(crate) use lights::{
     ASSUMED_LIGHTS_SPAN, LIGHTS_X, lights_end, shown_lights_end, traffic_light_position,
