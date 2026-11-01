@@ -20,7 +20,7 @@ use crate::open_in::OpenIn;
 use crate::settings::UiColors;
 use crate::style::{self, IconButton};
 use wormhole_core::platform::open_file;
-use wormhole_core::platform::open_in::Installed;
+use wormhole_core::platform::open_in::{self, Installed};
 use wormhole_core::storage::files;
 use wormhole_core::view::spoken;
 
@@ -39,6 +39,21 @@ impl OpenTarget {
         Self(Rc::new(Target { root: root.to_path_buf(), app: OpenIn::resolved(cx).app }))
     }
 
+    /// For a test, which has no settings to ask which app is chosen.
+    #[cfg(test)]
+    pub(crate) fn with_app(root: &Path, app: Installed) -> Self {
+        Self(Rc::new(Target { root: root.to_path_buf(), app }))
+    }
+
+    /// Whether the chosen app is Finder, whose "open" is a reveal.
+    pub(crate) fn opens_in_finder(&self) -> bool {
+        self.0.app.bundle == open_in::FINDER.bundle
+    }
+
+    pub(crate) fn root(&self) -> &Path {
+        &self.0.root
+    }
+
     /// One file of the repository, by its path relative to the root.
     pub(crate) fn file(&self, path: &str) -> OpenFile {
         OpenFile { target: self.clone(), path: path.to_string().into() }
@@ -52,12 +67,12 @@ pub(crate) struct OpenFile {
 }
 
 impl OpenFile {
-    fn tooltip(&self, line: Option<u32>) -> String {
+    pub(crate) fn tooltip(&self, line: Option<u32>) -> String {
         let app = &self.target.0.app;
         open_file::tooltip(&app.bundle, &app.name, line)
     }
 
-    fn open(&self, line: Option<u32>) {
+    pub(crate) fn open(&self, line: Option<u32>) {
         let Target { root, app } = &*self.target.0;
         open(&app.bundle, root, &self.path, line);
     }

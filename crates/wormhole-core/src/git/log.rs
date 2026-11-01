@@ -53,6 +53,17 @@ pub const LOG_LIMIT: usize = 300;
 
 /// Recent commits reachable from `rev`, at most `limit` of them.
 pub fn log(root: &Path, rev: &str, limit: usize) -> Result<Vec<Commit>> {
+    log_paths::<&str>(root, rev, limit, [])
+}
+
+/// [`log`] limited to the commits that touched `paths` (files or folders, relative to the root,
+/// taken literally). Renames are not followed: `--follow` takes one file and no folder.
+pub fn log_paths<P: AsRef<std::ffi::OsStr>>(
+    root: &Path,
+    rev: &str,
+    limit: usize,
+    paths: impl IntoIterator<Item = P>,
+) -> Result<Vec<Commit>> {
     if !has_head(root) {
         return Ok(Vec::new());
     }
@@ -64,7 +75,7 @@ pub fn log(root: &Path, rev: &str, limit: usize) -> Result<Vec<Commit>> {
         .arg("--decorate=full")
         .arg("--format=%H%x1f%h%x1f%P%x1f%an%x1f%at%x1f%s%x1f%D%x1e")
         .revs([rev])
-        .paths::<_, &str>([])
+        .paths(paths)
         .run()?;
     Ok(parse_log(&String::from_utf8_lossy(&raw)))
 }
@@ -165,6 +176,22 @@ mod tests {
             branch_gone("fatal: bad revision 'x'\n"),
             "fatal: bad revision 'x': the branch was deleted."
         );
+    }
+
+    #[test]
+    fn a_path_limits_the_log_to_the_commits_that_touched_it() {
+        use crate::git::testing::{git, repo_with, write};
+        let repo = repo_with(&[("a[1].txt", "a"), ("dir/b.txt", "b")]);
+        let root = repo.path();
+        write(root, "dir/b.txt", "b2");
+        git(root, &["commit", "-q", "-am", "touch b"]);
+        assert_eq!(log(root, "HEAD", 10).expect("log").len(), 2);
+        let b = log_paths(root, "HEAD", 10, ["dir/b.txt"]).expect("log");
+        assert_eq!(b.iter().map(|c| c.subject.as_str()).collect::<Vec<_>>(), ["touch b", "initial"]);
+        assert_eq!(log_paths(root, "HEAD", 10, ["dir"]).expect("a folder").len(), 2);
+        // Literal: the brackets name that file, not a glob over `a1.txt`.
+        assert_eq!(log_paths(root, "HEAD", 10, ["a[1].txt"]).expect("log").len(), 1);
+        assert!(log_paths(root, "HEAD", 10, ["nothing.txt"]).expect("log").is_empty());
     }
 
     /// A tag or a branch that moves makes the log differ, though no commit did: that is how the open

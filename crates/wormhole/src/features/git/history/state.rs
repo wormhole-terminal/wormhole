@@ -15,7 +15,7 @@ use crate::style::panel_list::{CardPart, Rows};
 use crate::window::repo::job::{Job, Ticket, Wanted};
 
 /// What a history refresh is for: the folder, and the branch whose log is shown.
-pub(super) type HistoryKey = (PathBuf, Option<String>);
+pub(super) type HistoryKey = (PathBuf, Option<String>, Vec<String>);
 
 /// What a refresh found: the repository root, and its log (or why git could not
 /// list it); `Ok(None)` when the folder is not in a repository, `Err` when git
@@ -64,6 +64,8 @@ pub(super) const DETAILS_KEPT: usize = 64;
 pub(super) struct HistoryState {
     /// Branch whose log is shown; `None` = HEAD.
     pub(super) rev: Option<String>,
+    /// The log is limited to the commits that touched these paths (relative to the root); empty: all.
+    pub(super) paths: Vec<String>,
     pub(super) commits: Rc<Vec<Commit>>,
     /// The refresh in flight.
     pub(super) job: Job<HistoryKey>,
@@ -147,7 +149,9 @@ impl HistoryState {
 
     /// Whether git has answered for `cwd` and the branch shown (whatever it said).
     pub(super) fn answered_for(&self, cwd: &std::path::Path) -> bool {
-        self.answered.as_ref().is_some_and(|(dir, rev)| dir == cwd && *rev == self.rev)
+        self.answered
+            .as_ref()
+            .is_some_and(|(dir, rev, paths)| dir == cwd && *rev == self.rev && *paths == self.paths)
     }
 
     /// git is missing: like the Changes tab, nothing polls it until Retry.
@@ -245,6 +249,8 @@ impl HistoryState {
         if !on_branch {
             self.rev = None;
         }
+        // A commit the palette found is shown even if it touched none of the paths.
+        self.paths.clear();
         self.expanded = Some(commit.sha.clone());
         self.details_shown = self.details_shown.wrapping_add(1);
         self.body_expanded = false;

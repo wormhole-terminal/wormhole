@@ -5,12 +5,14 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::git::{Commit, FileChange};
 use wormhole_core::view::limits::count_grouped;
 use wormhole_core::view::panel::age;
+use wormhole_text::{keys, text};
 
 use super::def::typed;
 use super::measure;
@@ -111,6 +113,7 @@ impl History {
                 .map(|d| d.as_secs() as i64)
                 .unwrap_or(0),
             width: f32::from(facts.panel_width),
+            filter: history.paths.clone(),
             picker: self.picker.chip(
                 cx.weak_entity(),
                 ChipOf {
@@ -173,6 +176,8 @@ pub(super) struct HistoryView {
     /// The panel's width, which file names are fitted to.
     pub(super) width: f32,
     picker: PickerChip<History>,
+    /// The paths the log is limited to, as the chip says them.
+    filter: Vec<String>,
     /// Changes, which a commit's file opens its diff in.
     changes: Option<Entity<Changes>>,
     pub(super) session: i64,
@@ -193,6 +198,27 @@ impl HistoryView {
             return true;
         }
         measure::text_width(subject, measure::BODY_REMS, FontWeight::NORMAL, window, cx) > room
+    }
+
+    /// "foo.rs ×" while the log is limited to some paths: a click shows every commit again.
+    fn filter_chip(&self, ui: UiColors) -> Option<AnyElement> {
+        let first = self.filter.first()?;
+        let name = first.trim_end_matches('/').rsplit('/').next().unwrap_or(first);
+        let label = keys::history_filter(self.filter.len() as i64, name);
+        let (this, session) = (self.this.clone(), self.session);
+        let clear = SharedString::from(text(keys::HISTORY_FILTER_CLEAR).to_string());
+        let tip = clear.clone();
+        Some(
+            style::pill("history-filter", ui, true, true)
+                .child(div().min_w_0().truncate().child(SharedString::from(label)))
+                .child(style::icon(IconName::X))
+                .tooltip(move |window, cx| Tooltip::new(tip.clone()).build(window, cx))
+                .aria_label(clear)
+                .on_click(move |_, _, cx| {
+                    this.update(cx, |this, cx| this.show_paths(session, Vec::new(), cx)).ok();
+                })
+                .into_any_element(),
+        )
     }
 
     fn render_row(&self, row: &HistoryRow, ui: UiColors, window: &mut Window, cx: &App) -> AnyElement {
@@ -216,7 +242,7 @@ impl HistoryView {
                     sticky: false,
                     joined: false,
                 },
-                vec![self.picker.render(ui, cx)],
+                self.filter_chip(ui).into_iter().chain([self.picker.render(ui, cx)]).collect(),
             )
             .into_any_element(),
             // The branch is gone (or git can't read its log): git's words where the list would be.

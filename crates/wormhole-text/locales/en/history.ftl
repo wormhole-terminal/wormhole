@@ -69,6 +69,21 @@ history-menu-copy-message = Copy Message
 history-menu-copy-subject = Copy Subject
 history-menu-copy-author = Copy Author
 
+## A file's menu in Changes: its copies, and its log in History
+
+history-menu-reveal = Reveal in Finder
+history-menu-copy-path = Copy Path
+history-menu-copy-relative-path = Copy Relative Path
+history-menu-file-history = File History
+
+# The chip that limits the log to the commits that touched some paths. { $count } is how many; { $name }
+# is the one file or folder when it is one.
+history-filter = { $count ->
+    [one] { $name }
+   *[other] { $count } paths
+}
+history-filter-clear = Show all commits
+
 # In a commit's menu: open the commit it follows. { $short } is its short hash.
 history-menu-open-parent = Open Parent { $short }
 

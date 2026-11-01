@@ -16,10 +16,13 @@ use super::list::DiffTarget;
 use super::rows::{ChangeRow, Group, file_name};
 use super::{Changes, def::typed};
 use crate::features::git::file_line::{Placement, change_row};
+use crate::features::git::history::History;
 use crate::features::git::open_file::OpenTarget;
+use crate::features::git::path_menu::PathMenu;
 use crate::features::git::picker::{ChipOf, PickerChip};
 use crate::features::git::problem::{self, GitTab};
 use crate::features::git::submodule_row::{open_terminal_by_event, submodule_row};
+use crate::platform;
 use crate::settings::{SettingsStore, UiColors, ui as ui_main, ui_in};
 use crate::style::{self, TextRole};
 use crate::window::facts::WindowFacts;
@@ -94,6 +97,7 @@ impl Changes {
                 },
                 ui.branch,
             ),
+            history: facts.feature::<History>().map(|history| history.downgrade()),
             this: cx.weak_entity(),
         });
 
@@ -147,6 +151,8 @@ struct ChangesView {
     /// The panel's width, which file names are fitted to.
     width: f32,
     compare: PickerChip<Changes>,
+    /// Where a file's menu shows its log; none while History is off.
+    history: Option<WeakEntity<History>>,
     this: WeakEntity<Changes>,
 }
 
@@ -213,7 +219,17 @@ impl ChangesView {
                         }
                     }
                 };
-                row.on_click(move |_, _, cx| {
+                let menu = (file.submodule.is_none())
+                    .then(|| (self.open.clone(), file.path.clone(), file.kind != git::ChangeKind::Deleted));
+                let history = self.history.clone();
+                row.on_mouse_down(MouseButton::Right, move |event, window, cx| {
+                    let Some((open, path, on_disk)) = &menu else { return };
+                    cx.stop_propagation();
+                    let history = history.clone().map(|history| (history, session));
+                    let menu = PathMenu { open, path, on_disk: *on_disk, history }.menu();
+                    platform::show_menu(menu, event.position, window, cx);
+                })
+                .on_click(move |_, _, cx| {
                     this.update(cx, |this, cx| this.open_change(session, clicked.clone(), &target, cx)).ok();
                 })
                 .into_any_element()

@@ -33,7 +33,7 @@ fn file(path: &str) -> FileChange {
 }
 
 fn key(rev: Option<&str>) -> HistoryKey {
-    (PathBuf::from("/repo"), rev.map(String::from))
+    (PathBuf::from("/repo"), rev.map(String::from), Vec::new())
 }
 
 fn log_of(shas: &[&str]) -> Fetched {
@@ -144,6 +144,21 @@ fn git_that_cannot_read_the_folder_is_a_problem_not_an_empty_repository() {
 }
 
 #[test]
+fn limiting_the_log_to_paths_is_a_new_question() {
+    let mut history = HistoryState::default();
+    let repo = PathBuf::from("/repo");
+    let k = key(None);
+    let t = history.begin_refresh(k.clone()).expect("started").ticket();
+    history.finish_refresh(t, Some(&k), log_of(&["a"]));
+    assert!(history.answered_for(&repo));
+    history.paths = vec!["src/a.rs".into()];
+    assert!(!history.answered_for(&repo), "the log for the file is still to be read");
+    // A commit the palette found is shown whatever the paths were.
+    history.open(repo.clone(), commit("a"), true);
+    assert!(history.paths.is_empty());
+}
+
+#[test]
 fn a_folder_git_has_not_answered_for_is_not_called_no_repository() {
     // A terminal opened (or switched to) while the History tab shows: nothing has been asked yet,
     // so there is no repository to show, but that is not git saying "not a repository".
@@ -167,7 +182,7 @@ fn a_folder_git_has_not_answered_for_is_not_called_no_repository() {
     // An answer for a folder that is no longer on screen answers nothing.
     let mut history = HistoryState::default();
     let t = history.begin_refresh(k.clone()).expect("started").ticket();
-    history.finish_refresh(t, Some(&(PathBuf::from("/elsewhere"), None)), Ok(None));
+    history.finish_refresh(t, Some(&(PathBuf::from("/elsewhere"), None, Vec::new())), Ok(None));
     assert!(!history.answered_for(&repo));
     assert!(!history.answered_for(&PathBuf::from("/elsewhere")));
 }

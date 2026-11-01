@@ -7,19 +7,19 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Use Folder"
-pub const SIDEBAR_FOLDER_ASK_USE: Key = Key::new(1196);
+pub const SIDEBAR_FOLDER_ASK_USE: Key = Key::new(1202);
 /// "Not Now"
-pub const SIDEBAR_FOLDER_ASK_DECLINE: Key = Key::new(1197);
+pub const SIDEBAR_FOLDER_ASK_DECLINE: Key = Key::new(1203);
 /// "Only keep terminals in this folder"
-pub const SIDEBAR_FOLDER_ASK_ONLY: Key = Key::new(1198);
+pub const SIDEBAR_FOLDER_ASK_ONLY: Key = Key::new(1204);
 /// "Only terminals in this folder"
-pub const SIDEBAR_GROUP_ONLY_IN_FOLDER: Key = Key::new(1199);
+pub const SIDEBAR_GROUP_ONLY_IN_FOLDER: Key = Key::new(1205);
 
 /// ```text
 /// Use “{ $folder }” for “{ $group }”?
 /// ```
 pub fn sidebar_folder_ask_title(folder: &str, group: &str) -> String {
-    crate::active::message(1193, &[("folder", Arg::Str(folder)), ("group", Arg::Str(group))])
+    crate::active::message(1199, &[("folder", Arg::Str(folder)), ("group", Arg::Str(group))])
 }
 
 /// ```text
@@ -27,7 +27,7 @@ pub fn sidebar_folder_ask_title(folder: &str, group: &str) -> String {
 /// New terminals in the group open there.
 /// ```
 pub fn sidebar_folder_ask_detail(path: &str) -> String {
-    crate::active::message(1194, &[("path", Arg::Str(path))])
+    crate::active::message(1200, &[("path", Arg::Str(path))])
 }
 
 /// ```text
@@ -41,5 +41,5 @@ pub fn sidebar_folder_ask_detail(path: &str) -> String {
 /// }
 /// ```
 pub fn sidebar_folder_ask_detail_leaving(count: i64, path: &str) -> String {
-    crate::active::message(1195, &[("count", Arg::Int(count)), ("path", Arg::Str(path))])
+    crate::active::message(1201, &[("count", Arg::Int(count)), ("path", Arg::Str(path))])
 }

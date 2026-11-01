@@ -32,8 +32,8 @@ impl History {
         let Some(terminal) = self.terminals.get(&session).cloned() else { return };
         let Some(cwd) = terminal.read(cx).cwd.clone() else { return };
         let Some(state) = self.of.get_mut(&session) else { return };
-        let rev = state.rev.clone();
-        let Some(wanted) = state.begin_refresh((cwd.clone(), rev.clone())) else { return };
+        let (rev, paths) = (state.rev.clone(), state.paths.clone());
+        let Some(wanted) = state.begin_refresh((cwd.clone(), rev.clone(), paths.clone())) else { return };
         let ticket = wanted.ticket();
         let task = cx.background_executor().spawn(async move {
             let root = match git::repo_root(&cwd) {
@@ -46,7 +46,8 @@ impl History {
             };
             // A branch that was deleted since it was picked gets its own words.
             let rev = rev.as_deref().unwrap_or("HEAD");
-            let commits = git::log(&root, rev, LOG_LIMIT).map_err(|err| git::log_failure(&root, rev, &err));
+            let commits = git::log_paths(&root, rev, LOG_LIMIT, &paths)
+                .map_err(|err| git::log_failure(&root, rev, &err));
             Ok(Some((root, commits)))
         });
         cx.spawn(async move |this, cx| {
@@ -54,7 +55,7 @@ impl History {
             let _ = this.update(cx, |this, cx| {
                 let now = terminal.read(cx).cwd.clone();
                 let Some(state) = this.of.get_mut(&session) else { return };
-                let now = now.map(|cwd| (cwd, state.rev.clone()));
+                let now = now.map(|cwd| (cwd, state.rev.clone(), state.paths.clone()));
                 if state.finish_refresh(ticket, now.as_ref(), result) {
                     // What points at the open commit may have moved with the log.
                     let stale = state.details_stale();
@@ -69,6 +70,16 @@ impl History {
             });
         })
         .detach();
+    }
+
+    /// Limit the log to the commits that touched `paths` (none: all of them) and show the tab.
+    pub(crate) fn show_paths(&mut self, session: i64, paths: Vec<String>, cx: &mut Context<Self>) {
+        let Some(state) = self.of.get_mut(&session) else { return };
+        state.paths = paths;
+        state.expanded = None;
+        cx.emit(FeatureEvent::ShowTab(TabId::History));
+        cx.notify();
+        self.refresh(session, cx);
     }
 
     /// A click, or → ←, on a commit: show or fold its files.

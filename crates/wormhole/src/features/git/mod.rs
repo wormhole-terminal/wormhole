@@ -6,6 +6,7 @@ pub mod diff;
 mod file_line;
 pub mod history;
 pub(crate) mod open_file;
+mod path_menu;
 pub mod picker;
 mod problem;
 mod submodule_row;

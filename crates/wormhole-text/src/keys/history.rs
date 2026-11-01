@@ -50,6 +50,16 @@ pub const HISTORY_MENU_COPY_MESSAGE: Key = Key::new(128);
 pub const HISTORY_MENU_COPY_SUBJECT: Key = Key::new(129);
 /// "Copy Author"
 pub const HISTORY_MENU_COPY_AUTHOR: Key = Key::new(130);
+/// "Reveal in Finder"
+pub const HISTORY_MENU_REVEAL: Key = Key::new(131);
+/// "Copy Path"
+pub const HISTORY_MENU_COPY_PATH: Key = Key::new(132);
+/// "Copy Relative Path"
+pub const HISTORY_MENU_COPY_RELATIVE_PATH: Key = Key::new(133);
+/// "File History"
+pub const HISTORY_MENU_FILE_HISTORY: Key = Key::new(134);
+/// "Show all commits"
+pub const HISTORY_FILTER_CLEAR: Key = Key::new(136);
 
 /// ```text
 /// { $count ->
@@ -111,36 +121,46 @@ pub fn history_date_ago(date: &str, ago: &str) -> String {
 }
 
 /// ```text
+/// { $count ->
+///     [one] { $name }
+///    *[other] { $count } paths
+/// }
+/// ```
+pub fn history_filter(count: i64, name: &str) -> String {
+    crate::active::message(135, &[("count", Arg::Int(count)), ("name", Arg::Str(name))])
+}
+
+/// ```text
 /// Open Parent { $short }
 /// ```
 pub fn history_menu_open_parent(short: &str) -> String {
-    crate::active::message(131, &[("short", Arg::Str(short))])
+    crate::active::message(137, &[("short", Arg::Str(short))])
 }
 
 /// ```text
 /// Details of { $short }
 /// ```
 pub fn history_spoken_details(short: &str) -> String {
-    crate::active::message(132, &[("short", Arg::Str(short))])
+    crate::active::message(138, &[("short", Arg::Str(short))])
 }
 
 /// ```text
 /// by { $author }
 /// ```
 pub fn history_spoken_by(author: &str) -> String {
-    crate::active::message(133, &[("author", Arg::Str(author))])
+    crate::active::message(139, &[("author", Arg::Str(author))])
 }
 
 /// ```text
 /// { $count } parents
 /// ```
 pub fn history_spoken_parents(count: &str) -> String {
-    crate::active::message(134, &[("count", Arg::Str(count))])
+    crate::active::message(140, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// Open parent { $short }
 /// ```
 pub fn history_open_parent(short: &str) -> String {
-    crate::active::message(135, &[("short", Arg::Str(short))])
+    crate::active::message(141, &[("short", Arg::Str(short))])
 }
