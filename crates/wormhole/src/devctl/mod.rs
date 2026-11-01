@@ -271,7 +271,7 @@
 //!                   `set feature_flags {"probes": true}`); `state` lists each Probe as `probe <folder> <state>`
 //!   probe-off <id>  turn that Probe off, with no question: its approval and its copy go
 //!   settings-scroll <px>   scroll the settings page (negative = up)
-//!   settings-pointer <move|click|right-click> <x> <y> | alt-on | alt-off   the pointer, or ⌥ held, in the
+//!   settings-pointer <move|click|right-click|alt-on|alt-off> [x y]   the pointer, or ⌥ held, in the
 //!                   settings window (logical pixels as in settings-shot); hover shows a row's key and (i)
 //!   settings-resize <w> <h>   the settings window's size (a tall one shows a whole page in one shot)
 //!   settings-select <scrollback|icon-theme>   open that row's select in the settings window
