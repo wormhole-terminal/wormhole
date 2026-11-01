@@ -15,9 +15,7 @@ mod key_path;
 mod search;
 mod table;
 
-use wormhole_text::keys::{
-    SETTINGS_NAV_AGENTS, SETTINGS_NAV_APP, SETTINGS_NAV_LOOK, SETTINGS_NAV_PREVIEW, SETTINGS_NAV_WORK,
-};
+use wormhole_text::keys::SETTINGS_NAV_PREVIEW;
 use wormhole_text::{Key, Language, text, text_in};
 
 use serde_json::{Map, Value};
@@ -25,53 +23,54 @@ use serde_json::{Map, Value};
 use crate::config::{PROJECT_SETTINGS, Settings};
 pub use search::{Hit, Query, search, search_visible};
 
-/// A page of the settings window, in nav order.
+/// A page of the settings window, in nav order. The order is the nav's: the discriminant is the
+/// section's place in [`SectionId::ALL`], which the search index relies on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SectionId {
     /// The profile Wormhole is in: its name, folders, environment, git identity and agent logins.
+    /// The nav shows it as the card above its list, not as a row of it.
     Profile,
+    Terminal,
     Appearance,
     Fonts,
-    /// How the app moves, one choice and live preview each. Behind [`crate::config::features::FeatureFlag::Motion`].
-    Motion,
-    Terminal,
     Sessions,
     Git,
+    Notifications,
     Agents,
+    MenuBar,
     /// Other terminals' settings, brought over, and how they compare.
     Import,
-    Notifications,
-    MenuBar,
     Updates,
     Advanced,
     // Preview (dev builds only): sections behind a feature flag, listed last.
+    /// How the app moves, one choice and live preview each. Behind [`crate::config::features::FeatureFlag::Motion`].
+    Motion,
     Projects,
     Extensions,
     FeatureFlags,
 }
 
-/// The headings the nav groups its sections under.
+/// The runs of sections the nav sets apart by a clear step. Only the Preview run has a heading.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NavGroup {
-    /// The profile page, first and without a heading of its own.
+    /// The profile page: the card above the list, in no run of it.
     Profile,
-    Look,
+    /// The terminal and how it looks.
+    Terminal,
+    /// What the window shows: terminals, changes, notifications and the agents.
     Work,
-    Agents,
+    /// The app itself.
     App,
     /// In-progress, feature-flagged sections, shown only in a development build.
     Preview,
 }
 
 impl NavGroup {
+    /// The heading over the run; empty for the runs that have none.
     pub fn title(self) -> &'static str {
         match self {
-            NavGroup::Profile => "",
-            NavGroup::Look => text(SETTINGS_NAV_LOOK),
-            NavGroup::Work => text(SETTINGS_NAV_WORK),
-            NavGroup::Agents => text(SETTINGS_NAV_AGENTS),
-            NavGroup::App => text(SETTINGS_NAV_APP),
             NavGroup::Preview => text(SETTINGS_NAV_PREVIEW),
+            NavGroup::Profile | NavGroup::Terminal | NavGroup::Work | NavGroup::App => "",
         }
     }
 }
@@ -188,19 +187,19 @@ impl Entry {
 impl SectionId {
     pub const ALL: [SectionId; 16] = [
         SectionId::Profile,
+        SectionId::Terminal,
         SectionId::Appearance,
         SectionId::Fonts,
-        SectionId::Motion,
-        SectionId::Terminal,
         SectionId::Sessions,
         SectionId::Git,
-        SectionId::Agents,
-        SectionId::Import,
         SectionId::Notifications,
+        SectionId::Agents,
         SectionId::MenuBar,
+        SectionId::Import,
         SectionId::Updates,
         SectionId::Advanced,
         // Preview, last: behind a feature flag and shown only in a dev build.
+        SectionId::Motion,
         SectionId::Projects,
         SectionId::Extensions,
         SectionId::FeatureFlags,
@@ -495,6 +494,50 @@ mod tests {
         assert!(SectionId::Projects.is_visible_in(&asked_on, UNSTABLE));
         assert!(!SectionId::Motion.is_visible_in(&defaults, UNSTABLE));
         assert!(SectionId::Motion.is_visible_in(&asked_on, UNSTABLE));
+    }
+
+    #[test]
+    fn the_nav_lists_the_sections_in_the_designed_order_in_runs() {
+        use super::NavGroup;
+        let dev = Settings::default();
+        let names: Vec<(NavGroup, SectionId)> =
+            SectionId::visible(&dev).map(|section| (section.info().nav, section)).collect();
+        assert_eq!(
+            names.iter().map(|(_, section)| *section).collect::<Vec<_>>(),
+            [
+                SectionId::Profile,
+                SectionId::Terminal,
+                SectionId::Appearance,
+                SectionId::Fonts,
+                SectionId::Sessions,
+                SectionId::Git,
+                SectionId::Notifications,
+                SectionId::Agents,
+                SectionId::MenuBar,
+                SectionId::Import,
+                SectionId::Updates,
+                SectionId::Advanced,
+                SectionId::Motion,
+                SectionId::Projects,
+                SectionId::Extensions,
+                SectionId::FeatureFlags,
+            ]
+        );
+        // Each run of the nav is one stretch of the order, and only the last has a heading.
+        let mut runs: Vec<NavGroup> = Vec::new();
+        for (group, _) in &names {
+            if runs.last() != Some(group) {
+                assert!(!runs.contains(group), "{group:?} is split in two");
+                runs.push(*group);
+            }
+        }
+        assert_eq!(
+            runs,
+            [NavGroup::Profile, NavGroup::Terminal, NavGroup::Work, NavGroup::App, NavGroup::Preview]
+        );
+        for run in runs {
+            assert_eq!(!run.title().is_empty(), run == NavGroup::Preview, "{run:?}");
+        }
     }
 
     #[test]

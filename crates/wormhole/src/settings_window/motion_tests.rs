@@ -1,4 +1,4 @@
-//! Settings → Motion is behind a feature flag: it is in the nav, after Fonts, and its choices are
+//! Settings → Motion is behind a feature flag: it is in the nav, first of the Preview run, and its choices are
 //! found by the search only while the flag is on. The flag is a switch of the person's own
 //! `feature_flags`, so it is turned off in the file's way: with an entry.
 //!
@@ -35,8 +35,8 @@ fn the_motion_page_and_its_choices_show_only_while_its_flag_is_on(cx: &mut TestA
 
     // A development build has every flag on until it is switched off.
     let on = listed(cx);
-    let fonts = on.iter().position(|s| *s == Section::Fonts).expect("Fonts is listed");
-    assert_eq!(on.get(fonts + 1), Some(&Section::Motion), "Motion follows Fonts in the Look group");
+    let advanced = on.iter().position(|s| *s == Section::Advanced).expect("Advanced is listed");
+    assert_eq!(on.get(advanced + 1), Some(&Section::Motion), "Motion opens the Preview run, after Advanced");
     assert!(found(cx, "tuck").contains(&"motion-fold"), "the search finds a choice by its option's name");
 
     cx.update(|cx| {

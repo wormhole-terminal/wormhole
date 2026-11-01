@@ -4,17 +4,10 @@
 //! The messages of `locales/en/settings.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
-/// "Look"
-pub const SETTINGS_NAV_LOOK: Key = Key::new(1312);
-/// "Work"
-pub const SETTINGS_NAV_WORK: Key = Key::new(1313);
-/// "Agents"
-pub const SETTINGS_NAV_AGENTS: Key = Key::new(1314);
-/// "App"
-pub const SETTINGS_NAV_APP: Key = Key::new(1315);
 /// "Preview"
-pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1316);
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1312);
 /// "More information"
 pub const SETTINGS_MORE_INFORMATION: Key = Key::new(1317);
 /// "Copied"
@@ -27,3 +20,34 @@ pub const SETTINGS_ROW_COPY_JSON: Key = Key::new(1320);
 pub const SETTINGS_ROW_RESET_MENU: Key = Key::new(1321);
 /// "Reset to default"
 pub const SETTINGS_ROW_RESET: Key = Key::new(1322);
+
+/// ```text
+/// { $name }, needs attention
+/// ```
+pub fn settings_nav_spoken_attention(name: &str) -> String {
+    crate::active::message(1313, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// { $name }, preview
+/// ```
+pub fn settings_nav_spoken_preview(name: &str) -> String {
+    crate::active::message(1314, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// { $name }, no matches
+/// ```
+pub fn settings_nav_spoken_no_matches(name: &str) -> String {
+    crate::active::message(1315, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// { $name }, { $count ->
+///     [one] 1 match
+///    *[other] { $count } matches
+/// }
+/// ```
+pub fn settings_nav_spoken_matches(name: &str, count: i64) -> String {
+    crate::active::message(1316, &[("name", Arg::Str(name)), ("count", Arg::Int(count))])
+}

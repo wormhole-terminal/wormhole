@@ -22,6 +22,8 @@ mod info_tests;
 #[cfg(test)]
 mod motion_tests;
 mod nav;
+#[cfg(test)]
+mod nav_tests;
 mod open;
 mod preview_column;
 mod recorder;
@@ -157,6 +159,8 @@ pub(crate) struct SettingsWindow {
     notice: Option<(Section, SharedString)>,
     /// The page's scroll position: a page opens at its top.
     content_scroll: ScrollHandle,
+    /// The group picked in the nav under the open page, and the scroll to it.
+    group: nav::GroupPick,
     /// The row the palette asked for (`reveal_row`): marked, and its anchor in the page, until
     /// another section or a search takes over.
     revealed: Option<(&'static str, ScrollAnchor)>,

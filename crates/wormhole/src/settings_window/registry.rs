@@ -269,8 +269,10 @@ impl SettingsWindow {
             .map(|hit| (hit.entry.id, hit))
             .collect();
         let mut column = div().flex().flex_col().gap_6().children(super::zen_note::draw(section, cx));
-        for group in section.groups() {
-            let mut rows = div().flex().flex_col();
+        for (at, group) in section.groups().iter().enumerate() {
+            // Each group is where its sub-row in the nav scrolls to: only the picked one carries the anchor.
+            let mut rows =
+                div().id(("settings-group", at)).flex().flex_col().anchor_scroll(self.group.anchor_of(at));
             if !group.title().is_empty() {
                 rows = rows.child(style::setting_group_head(
                     page.ui,
@@ -283,15 +285,8 @@ impl SettingsWindow {
             }
             let mut any_row = false;
             let mut shown = 0;
-            for entry in group.entries.iter().filter(|entry| !self.in_column(entry.id)) {
-                // A row behind a feature flag that is off is not on the page at all.
-                if !entry.is_shown(settings(cx)) {
-                    continue;
-                }
-                let Some(setting) = control(entry.id) else {
-                    tracing::warn!("settings: no control for {}", entry.id);
-                    continue;
-                };
+            for entry in group.entries {
+                let Some(setting) = self.drawn(entry, settings(cx)) else { continue };
                 shown += 1;
                 any_row |= !matches!(setting.control, Control::Block(_));
                 rows = rows.child(self.render_entry(entry, setting, &page, hits.get(entry.id), cx));
@@ -303,9 +298,36 @@ impl SettingsWindow {
             if shown == 0 {
                 continue;
             }
-            column = column.child(if any_row { rows.rule_bottom(page.ui) } else { rows });
+            let rows = if any_row { rows.rule_bottom(page.ui) } else { rows };
+            // The group its sub-row in the nav picked is where the page scrolls to; it alone has an anchor
+            // (and so an id), which costs the others nothing.
+            column = column.child(match self.group.anchor_of(at) {
+                Some(anchor) => {
+                    rows.id(("settings-group", at)).anchor_scroll(Some(anchor)).into_any_element()
+                }
+                None => rows.into_any_element(),
+            });
         }
         column.into_any_element()
+    }
+
+    /// The control of `entry` if the page draws its row: shown for these settings (not behind a feature
+    /// flag that is off) and not held by the preview column.
+    fn drawn(&self, entry: &'static Entry, settings: &Settings) -> Option<&'static Setting> {
+        if self.in_column(entry.id) || !entry.is_shown(settings) {
+            return None;
+        }
+        let setting = control(entry.id);
+        if setting.is_none() {
+            tracing::warn!("settings: no control for {}", entry.id);
+        }
+        setting
+    }
+
+    /// Whether the page draws a row of `group`. The nav lists a group under its page only if so, so a
+    /// sub-row never leads to nothing.
+    pub(super) fn group_drawn(&self, group: &'static settings_index::Group, settings: &Settings) -> bool {
+        group.entries.iter().any(|entry| self.drawn(entry, settings).is_some())
     }
 
     /// One setting: a block as it draws itself, anything else in a `style::setting` row.

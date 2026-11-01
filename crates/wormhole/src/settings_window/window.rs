@@ -152,6 +152,7 @@ impl SettingsWindow {
             new_profile: None,
             notice: None,
             content_scroll: ScrollHandle::new(),
+            group: super::nav::GroupPick::default(),
             revealed: None,
             reveal_pending: false,
             projects,
@@ -208,6 +209,7 @@ impl SettingsWindow {
     pub(super) fn show_section(&mut self, section: Section, cx: &mut Context<Self>) {
         if self.section != section || self.show_results {
             self.notice = None;
+            self.group = super::nav::GroupPick::default();
             self.content_scroll.set_offset(point(px(0.0), px(0.0)));
         }
         self.section = section;
@@ -381,6 +383,7 @@ impl Render for SettingsWindow {
             self.render_section(self.section, cx)
         };
         self.scroll_to_revealed(window, cx);
+        self.scroll_to_group(window, cx);
         let content = div()
             .id("settings-content")
             // Each region paints its own surface: stacked translucent layers

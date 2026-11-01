@@ -1,12 +1,22 @@
 # The Settings window: what its pages share. Each page's own words are in settings-<page>.ftl.
 
-## The headings the nav lists its pages under
+## The nav's heading over the pages still being built
 
-settings-nav-look = Look
-settings-nav-work = Work
-settings-nav-agents = Agents
-settings-nav-app = App
 settings-nav-preview = Preview
+
+## What VoiceOver reads for a row of the nav: the page's name, then what the row marks
+
+# { $name } is the page's name.
+settings-nav-spoken-attention = { $name }, needs attention
+# { $name } is the page's name.
+settings-nav-spoken-preview = { $name }, preview
+# { $name } is the page's name; a search found nothing on it.
+settings-nav-spoken-no-matches = { $name }, no matches
+# { $name } is the page's name and { $count } how many settings a search found on it.
+settings-nav-spoken-matches = { $name }, { $count ->
+    [one] 1 match
+   *[other] { $count } matches
+}
 
 # The name VoiceOver reads for the (i) after a setting. What it opens, the description, is the row's own.
 settings-more-information = More information

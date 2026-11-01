@@ -32,8 +32,18 @@ pub const ROW_TWO_LINE_H: f32 = 44.0;
 pub const NAME_LINE: f32 = 1.25;
 /// The second line of a two-line row, in rems (16).
 pub const META_LINE: f32 = 1.0;
-/// The settings nav's group label with the step above it: 12 of space, a caption line, 4 below.
-pub const NAV_GROUP_H: f32 = 32.0;
+/// The settings nav's group label: a caption line and 4 below. The step above it is the group gap.
+pub const NAV_GROUP_H: f32 = 20.0;
+/// Between two rows of the settings nav, sub-rows too: the one step of the nav off the 4 pt grid, so two
+/// hover or selection fills never touch. (The grid is for padding and gaps of components: a layout
+/// constant named here is how a scale permits an exception, as `ROW_H` does for heights.)
+pub const NAV_ROW_GAP: f32 = 2.0;
+/// Between two groups of the settings nav, measured from one row's bottom to the next's top.
+pub const NAV_GROUP_GAP: f32 = 20.0;
+/// The nav's inset from its edges, a row's padding and the gap after its lead: `_2`, named where a sum needs it.
+pub const NAV_STEP: f32 = 8.0;
+/// The nav row's lead (its icon) and the gap after it: a sub-row's text starts under the row's name.
+pub const NAV_LEAD_W: f32 = TITLE_GLYPH;
 /// A folder band in the sidebar, a section band in the right panel.
 pub const BAND_H: f32 = 32.0;
 /// A folder band with its second line (the folder's path, ±N and branch): the height of a

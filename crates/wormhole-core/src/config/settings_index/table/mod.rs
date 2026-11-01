@@ -114,22 +114,22 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
         SectionId::Appearance => &SectionInfo {
             title: SETTINGS_SECTION_APPEARANCE,
             intro: SETTINGS_SECTION_APPEARANCE_INTRO,
-            nav: NavGroup::Look,
+            nav: NavGroup::Terminal,
         },
         SectionId::Fonts => &SectionInfo {
             title: SETTINGS_SECTION_FONTS,
             intro: SETTINGS_SECTION_FONTS_INTRO,
-            nav: NavGroup::Look,
+            nav: NavGroup::Terminal,
         },
         SectionId::Motion => &SectionInfo {
             title: SETTINGS_SECTION_MOTION,
             intro: SETTINGS_SECTION_MOTION_INTRO,
-            nav: NavGroup::Look,
+            nav: NavGroup::Preview,
         },
         SectionId::Terminal => &SectionInfo {
             title: SETTINGS_SECTION_TERMINAL,
             intro: SETTINGS_SECTION_TERMINAL_INTRO,
-            nav: NavGroup::Work,
+            nav: NavGroup::Terminal,
         },
         SectionId::Sessions => &SectionInfo {
             title: SETTINGS_SECTION_SESSIONS,
@@ -144,7 +144,7 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
         SectionId::Agents => &SectionInfo {
             title: SETTINGS_SECTION_AGENTS,
             intro: SETTINGS_SECTION_AGENTS_INTRO,
-            nav: NavGroup::Agents,
+            nav: NavGroup::Work,
         },
         SectionId::Projects => &SectionInfo {
             title: SETTINGS_SECTION_PROJECTS,
@@ -169,7 +169,7 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
         SectionId::Notifications => &SectionInfo {
             title: SETTINGS_SECTION_NOTIFICATIONS,
             intro: SETTINGS_SECTION_NOTIFICATIONS_INTRO,
-            nav: NavGroup::App,
+            nav: NavGroup::Work,
         },
         SectionId::MenuBar => &SectionInfo {
             title: SETTINGS_SECTION_MENU_BAR,

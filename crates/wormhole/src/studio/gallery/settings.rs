@@ -265,44 +265,68 @@ fn slider_track(ui: UiColors) -> AnyElement {
 const SLIDER_TRACK: f32 = 4.0;
 const SLIDER_KNOB: f32 = 16.0;
 
-/// The settings nav's group labels and items: normal, current, needs attention, search hits, none.
+/// The settings nav: the profile card, rows (current, needs attention, search hits, none, preview) and
+/// the sub-rows of the open page, in runs set apart by a clear step.
 fn nav(ui: UiColors) -> Div {
-    div()
-        .flex()
-        .flex_col()
-        .w(px(NAV_W))
-        .bg(ui.panel)
-        .outlined(ui, ui.border)
-        .p_2()
-        .child(style::nav_group_label(ui, "Look")) // text: sample (the gallery's specimen)
-        .child(style::nav_row("g-nav-look", ui, IconName::Palette, "Appearance", false, NavMark::None)) // text: sample (the gallery's specimen)
-        .child(style::nav_row("g-nav-fonts", ui, IconName::ALargeSmall, "Fonts", true, NavMark::None)) // text: sample (the gallery's specimen)
-        .child(style::nav_group_label(ui, "Agents")) // text: sample (the gallery's specimen)
-        .child(style::nav_row(
-            "g-nav-agents",
-            ui,
-            IconName::Sparkles,
-            "Coding agents", // text: sample (the gallery's specimen)
-            false,
-            NavMark::Attention,
-        ))
-        .child(style::nav_row(
-            "g-nav-hits",
-            ui,
-            IconName::SquareTerminal,
-            "Terminal", // text: sample (the gallery's specimen)
-            false,
-            NavMark::Hits(1),
-        ))
-        .child(style::nav_row("g-nav-none", ui, IconName::ArrowDown, "Updates", false, NavMark::NoHits)) // text: sample (the gallery's specimen)
-        .child(style::nav_row(
-            "g-nav-preview",
-            ui,
-            IconName::FlaskConical,
-            "Project folders", // text: sample (the gallery's specimen)
-            false,
-            NavMark::Preview,
-        ))
+    let item = |icon, label: &'static str, selected, mark, opened| style::NavItem {
+        icon,
+        label: label.into(),
+        spoken: label.into(),
+        selected,
+        mark,
+        opened,
+    };
+    div().flex().flex_col().w(px(NAV_W)).bg(ui.panel).outlined(ui, ui.border).py_2().child(
+        style::nav_list()
+            .child(style::nav_profile_row(
+                "g-nav-profile",
+                ui,
+                style::profile_avatar(ui, ui.primary, 'D', style::SWATCH),
+                "Default", // text: sample (the gallery's specimen)
+                "Profile", // text: sample (the gallery's specimen)
+                false,
+                None,
+            ))
+            .child(style::nav_group_gap())
+            .child(style::nav_row(
+                "g-nav-fonts",
+                ui,
+                item(IconName::ALargeSmall, "Fonts", true, NavMark::None, true), // text: sample (the gallery's specimen)
+            ))
+            .child(
+                style::nav_sub_list()
+                    .child(style::nav_sub_row("g-nav-sub-terminal", ui, "Terminal", true)) // text: sample (the gallery's specimen)
+                    .child(style::nav_sub_row("g-nav-sub-code", ui, "Code", false)), // text: sample (the gallery's specimen)
+            )
+            .child(style::nav_row(
+                "g-nav-look",
+                ui,
+                item(IconName::Palette, "Appearance", false, NavMark::None, false), // text: sample (the gallery's specimen)
+            ))
+            .child(style::nav_group_gap())
+            .child(style::nav_row(
+                "g-nav-agents",
+                ui,
+                item(IconName::Sparkles, "Coding agents", false, NavMark::Attention, false), // text: sample (the gallery's specimen)
+            ))
+            .child(style::nav_row(
+                "g-nav-hits",
+                ui,
+                item(IconName::SquareTerminal, "Terminal", false, NavMark::Hits(1), false), // text: sample (the gallery's specimen)
+            ))
+            .child(style::nav_row(
+                "g-nav-none",
+                ui,
+                item(IconName::ArrowDown, "Updates", false, NavMark::NoHits, false), // text: sample (the gallery's specimen)
+            ))
+            .child(style::nav_group_gap())
+            .child(style::nav_group_label(ui, "Preview")) // text: sample (the gallery's specimen)
+            .child(style::nav_row(
+                "g-nav-preview",
+                ui,
+                item(IconName::FlaskConical, "Project folders", false, NavMark::Preview, false), // text: sample (the gallery's specimen)
+            )),
+    )
 }
 
 /// The settings controls that are ours rather than GPUI Kit's.

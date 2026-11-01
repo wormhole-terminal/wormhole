@@ -1,17 +1,12 @@
-//! The sidebar's cards: a stretch of a card, and the navigation row of Settings.
+//! The sidebar's cards: a stretch of a card.
 
-use gpui_kit::assets::IconName;
-use gpui_kit::component::{Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::settings::UiColors;
-use crate::style::labels::count_badge;
 use crate::style::metrics::Metrics;
-use crate::style::scale::{Edges, MARK_DOT, ROW_H, TITLE_GLYPH, TextRole};
+use crate::style::scale::Edges;
 use wormhole_core::view::sidebar::{WASH_FAR, WASH_PEAK, WASH_SPAN};
-
-use super::lead;
 
 /// One stretch of a card in the sidebar: a group's head and its terminals, or a terminal's own, are
 /// drawn as one rounded card (`metrics.card_margin` in from the sidebar's sides, `card_radius` round,
@@ -138,72 +133,4 @@ pub fn card_lifted(
         .bg(fill)
         .child(content);
     crate::style::drag_lift(card, ui, 1.0)
-}
-
-/// What a [`nav_row`] says beside its name.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NavMark {
-    None,
-    /// Something on the page wants attention (an agent's hooks are incomplete): an amber dot.
-    Attention,
-    /// A search found this many settings on the page.
-    Hits(usize),
-    /// A search found nothing on the page: the row dims.
-    NoHits,
-    /// A feature-flagged section still being built: an outlined "Preview" tag, so it's obvious
-    /// the section isn't a shipped one.
-    Preview,
-}
-
-/// An item of the settings nav, like a row of System Settings' sidebar: [`ROW_H`] tall, its
-/// 16 pt icon in the lead column and its name (13) a gap after it. The row sits in a container
-/// inset by `_2` (`nav_inset`), so its rounded hover and selection float in from the nav's edges
-/// while the icon still starts at x 16. The current page is the opaque tint of the sidebar's
-/// selected row, its icon and name (600) in the tint's text color.
-#[track_caller]
-pub fn nav_row(
-    id: impl Into<ElementId>,
-    ui: UiColors,
-    icon: IconName,
-    label: impl Into<SharedString>,
-    selected: bool,
-    mark: NavMark,
-) -> Stateful<Div> {
-    let dim = mark == NavMark::NoHits;
-    let (icon_color, text_color) = match (selected, dim) {
-        (true, _) => (ui.selected_text, ui.selected_text),
-        (false, true) => (ui.faint, ui.faint),
-        (false, false) => (ui.muted, ui.text),
-    };
-    div()
-        .id(id)
-        .flex()
-        .items_center()
-        .gap_2()
-        .w_full()
-        .h(px(ROW_H))
-        .px_2()
-        .rounded(ui.radius_sm)
-        .text_label()
-        .cursor_pointer()
-        .when(selected, |d| d.bg(ui.selected_row))
-        .hover(move |d| if selected { d } else { d.bg(ui.hover) })
-        .child(lead(Icon::new(icon).with_size(px(TITLE_GLYPH)).text_color(icon_color)))
-        .child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .truncate()
-                .font_weight(if selected { FontWeight::SEMIBOLD } else { FontWeight::NORMAL })
-                .text_color(text_color)
-                .child(label.into()),
-        )
-        .map(|d| match mark {
-            NavMark::Attention => {
-                d.child(div().flex_none().size(px(MARK_DOT)).rounded_full().bg(ui.agent_attention))
-            }
-            NavMark::Hits(n) => d.child(count_badge(ui, crate::style::scale::count_label(n))),
-            NavMark::Preview => d.child(crate::style::status_badge(ui, ui.info, "Preview")),
-            NavMark::None | NavMark::NoHits => d,
-        })
 }

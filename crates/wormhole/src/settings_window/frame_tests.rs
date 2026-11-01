@@ -71,6 +71,15 @@
 //! Appearance rose from 17,241 to 17,367, Fonts from 7,655 to 7,750, Motion from 6,441 to 6,462, Terminal
 //! from 10,381 to 10,705, Sessions from 15,496 to 15,764, Git from 4,668 to 4,746, Notifications from
 //! 8,037 to 8,246, MenuBar from 6,344 to 6,476 and Updates from 5,750 to 5,786.
+//! The nav's order changed (the budgets are listed in it) and its rows became keyboard stops: each row is a
+//! button with a name, a tab stop and a focus ring, about 13 allocations, so every page rose by 189 (Profile,
+//! which lists no sub-rows, measured 6,862 before and 7,051 after) and by about 136 for each sub-row under the
+//! open page, which is one more line of text to shape plus that (Terminal's four: 10,894 to 11,437, measured
+//! with the sub-rows left out and in). Terminal 10,705 to 11,437, Appearance 17,367 to 18,014, Fonts 7,750 to
+//! 8,292, Sessions 15,764 to 16,229, Git 4,746 to 5,113, Notifications 8,246 to 8,795, Agents 9,679 to 10,466,
+//! MenuBar 6,476 to 6,839, Updates 5,786 to 6,140, Advanced 4,687 to 5,136, Motion 6,462 to 6,816, Projects
+//! 9,138 to 9,283, Extensions 2,686 to 2,845, Feature flags 6,912 to 7,074 and the search 12,250 to 12,274
+//! (no sub-rows while searching). Import rose from 53,166 to 53,549.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -90,34 +99,34 @@ const SLACK: u64 = 20;
 /// keeps), and of the results page of a search for a word found in several pages; a frame may make
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 17] = [
-    ("Profile", 6862),
-    // With the Liquid Glass row (16,810 before it came back).
-    ("Appearance", 17367),
-    ("Fonts", 7750),
-    ("Motion", 6462),
+    ("Profile", 7051),
     // With the Worktrees group's switch for cloning build folders (356).
-    ("Terminal", 10705),
+    ("Terminal", 11437),
+    // With the Liquid Glass row (16,810 before it came back).
+    ("Appearance", 18014),
+    ("Fonts", 8292),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 15764),
-    ("Git", 4746),
+    ("Sessions", 16229),
+    ("Git", 5113),
+    ("Notifications", 8795),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
     // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
     // page measured 9,501: under this, which stays.
-    ("Agents", 9679),
-    ("Import", 53166),
-    ("Notifications", 8246),
-    ("MenuBar", 6476),
-    ("Updates", 5786),
+    ("Agents", 10466),
+    ("MenuBar", 6839),
+    ("Import", 53549),
+    ("Updates", 6140),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     // With the New programs group: the Developer Tools row, its description and its button (417).
-    ("Advanced", 4687),
-    ("Projects", 9138),
+    ("Advanced", 5136),
+    ("Motion", 6816),
+    ("Projects", 9283),
     // Measured with the nav's Motion and Import rows, which came after the page.
-    ("Extensions", 2686),
+    ("Extensions", 2845),
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost
@@ -127,7 +136,7 @@ const BUDGET: [(&str, u64); 17] = [
     ("FeatureFlags", 7290),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
-    ("search", 12250),
+    ("search", 12274),
 ];
 
 /// What Appearance's Liquid Glass row adds, a switch with its line and Beta chip: it is on the page on

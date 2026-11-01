@@ -11,6 +11,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Help → Session Hosts (while Persistent terminals is on) opens a window that shows every session host:
   its processes, version and protocol against the app's, whether it answers, which terminal holds it
   and how that connection is doing, with End, Forget and a copy of the details for a bug report.
+- The Settings sidebar lists Terminal first, then Appearance and Fonts, then Terminals & sidebar, Changes &
+  diffs, Notifications and Coding agents, then Menu bar & hotkey, Import, Updates and Advanced, with the
+  pages still being built under a Preview heading. The open page shows its groups under it, and a click
+  on one scrolls the page there; the list scrolls when they run long. Rows are 28 high with room between
+  them, the profile is a card above the list, and every row can be reached with ⇥ and ↑ ↓ and is read out
+  by VoiceOver. While you search, the sidebar shows how many settings each page holds instead of its groups.
 - Settings rows show their config key under the pointer, and a click on it copies it and says "Copied"
   for a moment. Holding ⌥ shows every key on the page. A right click on a row (or ⌃↩ on one of its
   controls, or VoiceOver's Show menu) offers Copy Key, Copy as JSON (the key with its current value, ready
