@@ -128,6 +128,10 @@ impl History {
         let Some(rev) = self.of.get(&session).and_then(|state| state.rev.clone()) else {
             return self.open_commit(session, root, commit, true, cx);
         };
+        // The stashes are a list of their own: the commit is on none of it, so the log goes back to HEAD.
+        if rev == git::STASH_REV {
+            return self.open_commit(session, root, commit, false, cx);
+        }
         let asked = cx.background_executor().spawn({
             let (root, sha) = (root.clone(), commit.sha.clone());
             async move { git::is_ancestor(&root, &sha, &rev).unwrap_or(false) }

@@ -59,7 +59,10 @@ pub use diff::{
 pub use diff_text::{byte_size, lfs_side, lfs_summary, sizes_label, too_large_detail, too_large_title};
 pub use head::{HeadCommit, head_commit, worktree_of};
 pub use lfs::{LfsChange, LfsPointer, parse_pointer};
-pub use log::{LOG_LIMIT, branches, commit_files, commit_spec, is_ancestor, log, log_failure, log_paths};
+pub use log::{
+    LOG_LIMIT, STASH_REV, branches, commit_files, commit_spec, history_revs, is_ancestor, log, log_failure,
+    log_paths,
+};
 pub use message::{Block, Body, COMPACT_LINES, Contact, DISPLAY_CAP, DISPLAY_LINES, MESSAGE_CAP};
 pub use split::{Cell, Side, SplitRow, sides, split_rows};
 pub use status::{changed_files, status, status_summary};

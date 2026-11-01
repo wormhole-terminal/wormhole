@@ -50,6 +50,15 @@ pub(super) fn wording(tab: GitTab, error: &GitError) -> Option<Wording> {
         }),
         failed => {
             let message = failed.to_string();
+            if let Some(path) = dubious_path(&message) {
+                // The command is shown, never run: marking a folder safe is the person's decision.
+                return Some(Wording {
+                    headline: "git doesn't trust who owns this folder.",
+                    hint: Some("If you trust it, run this once, then retry."),
+                    detail: format!("git config --global --add safe.directory '{path}'"),
+                    copy: Some(message),
+                });
+            }
             Some(Wording {
                 headline: "Couldn't read this repository.",
                 hint: None,
@@ -58,6 +67,15 @@ pub(super) fn wording(tab: GitTab, error: &GitError) -> Option<Wording> {
             })
         }
     }
+}
+
+/// The folder git refuses for its owner's sake ("detected dubious ownership in repository at '<path>'"),
+/// when it can be put in a shell command as it stands: a quote or a control character in it, from a
+/// folder name someone else chose, leaves the generic wording.
+fn dubious_path(message: &str) -> Option<&str> {
+    let rest = message.lines().next()?.split_once("dubious ownership in repository at '")?.1;
+    let path = rest.strip_suffix('\'')?;
+    (!path.is_empty() && !path.contains('\'') && !path.chars().any(char::is_control)).then_some(path)
 }
 
 /// In place of a git tab's list when git could not read the folder at all. `retry` asks git again.
@@ -165,20 +183,33 @@ mod tests {
 
     #[test]
     fn a_failure_shows_gits_first_line_and_copies_all_of_it() {
-        let message = "fatal: detected dubious ownership in repository at '/Volumes/work/app'\n\
-                       To add an exception for this directory, call:";
+        let message = "fatal: bad object HEAD\nerror: could not read the index";
         let failed = wording(GitTab::Changes, &GitError::Failed(message.into()));
         assert_eq!(
             failed,
             Some(Wording {
                 headline: "Couldn't read this repository.",
                 hint: None,
-                detail: "fatal: detected dubious ownership in repository at '/Volumes/work/app'".into(),
+                detail: "fatal: bad object HEAD".into(),
                 copy: Some(message.into()),
             })
         );
         let timed_out = wording(GitTab::History, &GitError::TimedOut(std::time::Duration::from_secs(30)));
         assert_eq!(timed_out.map(|w| w.detail), Some("git did not finish within 30s".into()));
+    }
+
+    #[test]
+    fn a_folder_git_does_not_trust_gets_the_command_that_trusts_it() {
+        let message = "fatal: detected dubious ownership in repository at '/Volumes/work/app'\n\
+                       To add an exception for this directory, call:";
+        let shown = wording(GitTab::Changes, &GitError::Failed(message.into())).expect("a problem");
+        assert_eq!(shown.headline, "git doesn't trust who owns this folder.");
+        assert_eq!(shown.detail, "git config --global --add safe.directory '/Volumes/work/app'");
+        assert_eq!(shown.copy.as_deref(), Some(message));
+        // A name that would break out of the quotes is not put in a command.
+        let hostile = "fatal: detected dubious ownership in repository at '/x'; touch y; echo ''";
+        let shown = wording(GitTab::Changes, &GitError::Failed(hostile.into())).expect("a problem");
+        assert_eq!(shown.headline, "Couldn't read this repository.");
     }
 
     #[test]

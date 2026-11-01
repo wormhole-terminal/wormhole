@@ -27,6 +27,7 @@ use crate::settings::{SettingsStore, UiColors, ui as ui_main, ui_in};
 use crate::style::{self, TextRole};
 use crate::window::facts::WindowFacts;
 use crate::window::feature::{FeatureEvent, RepoRequest};
+use wormhole_text::{keys, text};
 
 /// The tab's content, built inline from `Workspace::render` on the feature's entity.
 pub(super) fn tab(
@@ -223,12 +224,12 @@ impl ChangesView {
                         }
                     }
                 };
-                let menu = (file.submodule.is_none()).then(|| self.file_menu(file));
+                let menu = (file.submodule.is_none()).then(|| self.file_menu(*ix));
                 let marking = file.submodule.is_none();
                 row.on_mouse_down(MouseButton::Right, move |event, window, cx| {
-                    let Some(menu) = &menu else { return };
+                    let Some(menu) = menu.as_ref().and_then(|menu| menu()) else { return };
                     cx.stop_propagation();
-                    platform::show_menu(menu(), event.position, window, cx);
+                    platform::show_menu(menu, event.position, window, cx);
                 })
                 .on_click(move |event, _, cx| {
                     // ⌘-click marks the file for the menu; a plain click opens its diff and drops the marks.
@@ -247,18 +248,20 @@ impl ChangesView {
 
     /// What a right-click on `file` builds: the menu of every marked file when it is one of them, else
     /// of the file alone. Built when the click happens, so a frame builds no menus.
-    fn file_menu(&self, file: &git::FileChange) -> impl Fn() -> Menu + use<> {
+    fn file_menu(&self, ix: usize) -> impl Fn() -> Option<Menu> + use<> {
         let (open, history, session) = (self.open.clone(), self.history.clone(), self.session);
         let (files, marked) = (self.files.clone(), self.marked.clone());
-        let (path, on_disk) = (file.path.clone(), file.kind != git::ChangeKind::Deleted);
+        // The file is found again by its index when the click happens: no path is copied per row per frame.
         move || {
-            let paths: Vec<String> = if marked.contains(&path) {
+            let file = files.get(ix)?;
+            let paths: Vec<String> = if marked.contains(&file.path) {
                 files.iter().filter(|f| marked.contains(&f.path)).map(|f| f.path.clone()).collect()
             } else {
-                vec![path.clone()]
+                vec![file.path.clone()]
             };
+            let on_disk = file.kind != git::ChangeKind::Deleted;
             let history = history.clone().map(|history| (history, session));
-            PathMenu { open: &open, paths: &paths, on_disk, history }.menu()
+            Some(PathMenu { open: &open, paths: &paths, on_disk, history }.menu())
         }
     }
 
@@ -279,6 +282,20 @@ impl ChangesView {
         let trailing = if controls {
             vec![
                 self.compare.render(ui, cx),
+                style::icon_button(
+                    "git-view-options",
+                    ui,
+                    IconName::SlidersHorizontal,
+                    text(keys::CHANGES_VIEW_OPTIONS),
+                )
+                .in_band()
+                .on_click({
+                    let this = self.this.clone();
+                    move |_, window, cx| {
+                        this.update(cx, |this, cx| this.show_view_menu(window, cx)).ok();
+                    }
+                })
+                .into_any_element(),
                 style::icon_button("git-refresh", ui, IconName::RefreshCw, "Refresh")
                     .in_band()
                     .on_click(move |_, _, cx| {

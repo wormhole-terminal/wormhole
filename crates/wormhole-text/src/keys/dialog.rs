@@ -6,4 +6,4 @@
 use crate::key::Key;
 
 /// "Cancel"
-pub const DIALOG_CANCEL: Key = Key::new(52);
+pub const DIALOG_CANCEL: Key = Key::new(53);

@@ -13,6 +13,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   A chip in History's head names the file; clicking it shows every commit again.
   ⌘-click marks several files; the menu of a marked file then copies all their paths or shows their
   shared history.
+- Changes has a view button in its head: List or Tree, and whether untracked files are grouped, the same
+  settings as Settings → Git.
+- History's branch picker lists Stashes when the repository has some: each stash is a row that opens to its
+  files and their diffs, like a commit.
+- When git refuses a folder because of its owner ("dubious ownership"), Changes and History say so and show
+  the one command that trusts it, to run yourself, instead of git's bare first line.
 - When an update is installed (by the app, or put on disk from outside), a chip says "Wormhole 1.6.0 is
   ready — Restart"; a click restarts into it (a click right after the chip appears is ignored). If a
   restart would end something, the same question as in Settings → Updates names what. Closing the chip

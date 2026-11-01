@@ -221,6 +221,46 @@ fn a_file_limits_the_log_to_the_commits_that_touched_it_until_the_chip_is_cleare
     assert!(with_state(cx, &window, |state, _| state.paths.is_empty()));
 }
 
+#[gpui_kit::test]
+fn the_stashes_are_a_list_the_picker_offers_only_when_there_are_some(cx: &mut TestAppContext) {
+    if isolate("the_stashes_are_a_list_the_picker_offers_only_when_there_are_some") {
+        return;
+    }
+    let window = start(cx, 1);
+    let root = make_two_commits("stashes");
+    drive(cx, &window, |ws, window, cx| {
+        go(ws, &root, cx);
+        ws.show_tab(TabId::History, cx);
+        open_picker(ws, window, cx);
+    });
+    cx.run_until_parked();
+    let first = first_commit(cx, &window);
+    let offered = |cx: &mut TestAppContext| {
+        read_cx(cx, &window, |ws, cx| history(ws).read(cx).picker().branches().to_vec())
+    };
+    assert!(!offered(cx).contains(&"refs/stash".to_string()), "nothing stashed");
+
+    write(&root, &[("a.txt", "changed\n")]);
+    git(&root, &["stash", "push", "-q", "-m", "half done"]);
+    drive(cx, &window, |ws, window, cx| {
+        open_picker(ws, window, cx);
+        open_picker(ws, window, cx);
+    });
+    cx.run_until_parked();
+    assert_eq!(offered(cx).last().map(String::as_str), Some("refs/stash"));
+
+    drive(cx, &window, |ws, _, cx| pick(ws, Some("refs/stash".into()), cx));
+    cx.run_until_parked();
+    let shown = subjects(cx, &window);
+    assert_eq!(shown.len(), 1, "{shown:?}");
+    assert!(shown[0].ends_with("half done"), "{shown:?}");
+    draw(cx, &window);
+
+    // A commit the palette finds is on no stash list: the log goes back to HEAD.
+    reveal(cx, &window, &root, &first);
+    assert_eq!(history_branch(cx, &window), None, "HEAD");
+}
+
 // ---------------------------------------------------------------- the branch picker
 
 #[gpui_kit::test]

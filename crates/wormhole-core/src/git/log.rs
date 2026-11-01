@@ -10,6 +10,19 @@ use super::status::{changed_files, resolves};
 use super::submodule::annotate_files;
 use super::{Commit, DiffSpec, EMPTY_TREE, FileChange, GitCmd, GitError, has_head};
 
+/// What the History tab names to show the stashes: [`log`] reads them as a list of commits, a stash
+/// being one (its first parent is HEAD when it was made, so its files and diff are a commit's).
+pub const STASH_REV: &str = "refs/stash";
+
+/// [`branches`], and [`STASH_REV`] after them when there is a stash to show.
+pub fn history_revs(root: &Path) -> Result<Vec<String>> {
+    let mut revs = branches(root)?;
+    if resolves(root, STASH_REV) {
+        revs.push(STASH_REV.to_string());
+    }
+    Ok(revs)
+}
+
 /// Local branches (current first), then remote-tracking branches.
 pub fn branches(root: &Path) -> Result<Vec<String>> {
     let raw = GitCmd::new(root)
@@ -67,9 +80,19 @@ pub fn log_paths<P: AsRef<std::ffi::OsStr>>(
     if !has_head(root) {
         return Ok(Vec::new());
     }
+    // The stashes are the reflog of `refs/stash`, each entry a commit: read with `-g`. With none (the
+    // last was popped while the tab showed them) the list is empty, not "the branch was deleted".
+    let stashes = rev == STASH_REV;
+    if stashes && !resolves(root, rev) {
+        return Ok(Vec::new());
+    }
     // A branch may be called `--output=<file>`: the rev is never an option.
-    let raw = GitCmd::new(root)
-        .arg("log")
+    let mut cmd = GitCmd::new(root);
+    cmd.arg("log");
+    if stashes {
+        cmd.arg("-g");
+    }
+    let raw = cmd
         .arg(format!("-n{limit}"))
         // `%D` with the full names, as the details read them: no process of its own, the refs are read once.
         .arg("--decorate=full")
@@ -176,6 +199,28 @@ mod tests {
             branch_gone("fatal: bad revision 'x'\n"),
             "fatal: bad revision 'x': the branch was deleted."
         );
+    }
+
+    #[test]
+    fn the_stashes_are_listed_as_commits_and_none_is_an_empty_list() {
+        use crate::git::testing::{git, repo_with, write};
+        let repo = repo_with(&[("a.txt", "a\n")]);
+        let root = repo.path();
+        assert!(log(root, STASH_REV, 10).expect("none").is_empty(), "no stash, no error");
+        assert!(!history_revs(root).expect("revs").contains(&STASH_REV.to_string()));
+        write(root, "a.txt", "changed\n");
+        git(root, &["stash", "push", "-q", "-m", "wip"]);
+        write(root, "a.txt", "again\n");
+        git(root, &["stash", "push", "-q", "-m", "second"]);
+        let stashes = log(root, STASH_REV, 10).expect("stashes");
+        assert_eq!(stashes.len(), 2, "each entry of the stash list, newest first");
+        assert!(stashes[0].subject.ends_with("second"), "{}", stashes[0].subject);
+        // A stash is read as a commit: what it changed against the commit it was made on.
+        let files = commit_files(root, &stashes[0]).expect("files");
+        assert_eq!(files.iter().map(|f| f.path.as_str()).collect::<Vec<_>>(), ["a.txt"]);
+        assert_eq!(history_revs(root).expect("revs").last().map(String::as_str), Some(STASH_REV));
+        // The branch's own log is not the stashes'.
+        assert_eq!(log(root, "HEAD", 10).expect("log").len(), 1);
     }
 
     #[test]

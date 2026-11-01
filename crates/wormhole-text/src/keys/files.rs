@@ -7,140 +7,140 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Reading…"
-pub const FILES_READING: Key = Key::new(53);
+pub const FILES_READING: Key = Key::new(54);
 /// "Empty folder"
-pub const FILES_EMPTY: Key = Key::new(54);
+pub const FILES_EMPTY: Key = Key::new(55);
 /// "This terminal hasn't said which folder it is in yet."
-pub const FILES_NO_FOLDER: Key = Key::new(55);
+pub const FILES_NO_FOLDER: Key = Key::new(56);
 /// "This folder is gone."
-pub const FILES_FOLDER_GONE: Key = Key::new(56);
+pub const FILES_FOLDER_GONE: Key = Key::new(57);
 /// "Wormhole isn't allowed to read this folder."
-pub const FILES_FOLDER_DENIED: Key = Key::new(57);
+pub const FILES_FOLDER_DENIED: Key = Key::new(58);
 /// "This folder can't be read."
-pub const FILES_FOLDER_UNREADABLE: Key = Key::new(58);
+pub const FILES_FOLDER_UNREADABLE: Key = Key::new(59);
 /// "Choose Folder…"
-pub const FILES_MENU_CHOOSE_FOLDER: Key = Key::new(63);
+pub const FILES_MENU_CHOOSE_FOLDER: Key = Key::new(64);
 /// "Follow Terminal"
-pub const FILES_MENU_FOLLOW_TERMINAL: Key = Key::new(64);
+pub const FILES_MENU_FOLLOW_TERMINAL: Key = Key::new(65);
 /// "Choose"
-pub const FILES_CHOOSE_PROMPT: Key = Key::new(65);
+pub const FILES_CHOOSE_PROMPT: Key = Key::new(66);
 /// "Open in"
-pub const FILES_ROW_OPEN_IN: Key = Key::new(66);
+pub const FILES_ROW_OPEN_IN: Key = Key::new(67);
 /// "Reveal in Finder"
-pub const FILES_ROW_REVEAL: Key = Key::new(67);
+pub const FILES_ROW_REVEAL: Key = Key::new(68);
 /// "Copy Path"
-pub const FILES_ROW_COPY_PATH: Key = Key::new(68);
+pub const FILES_ROW_COPY_PATH: Key = Key::new(69);
 /// "Pin Folder"
-pub const FILES_ROW_PIN_FOLDER: Key = Key::new(69);
+pub const FILES_ROW_PIN_FOLDER: Key = Key::new(70);
 /// "Unpin Folder"
-pub const FILES_ROW_UNPIN_FOLDER: Key = Key::new(70);
+pub const FILES_ROW_UNPIN_FOLDER: Key = Key::new(71);
 /// "Rename…"
-pub const FILES_ROW_RENAME: Key = Key::new(71);
+pub const FILES_ROW_RENAME: Key = Key::new(72);
 /// "Path copied"
-pub const FILES_SPOKEN_PATH_COPIED: Key = Key::new(76);
+pub const FILES_SPOKEN_PATH_COPIED: Key = Key::new(77);
 /// "New name, text field"
-pub const FILES_SPOKEN_RENAME_FIELD: Key = Key::new(77);
+pub const FILES_SPOKEN_RENAME_FIELD: Key = Key::new(78);
 /// "Close file (esc)"
-pub const FILES_VIEWER_CLOSE: Key = Key::new(79);
+pub const FILES_VIEWER_CLOSE: Key = Key::new(80);
 /// "This file is empty."
-pub const FILES_VIEWER_EMPTY: Key = Key::new(82);
+pub const FILES_VIEWER_EMPTY: Key = Key::new(83);
 /// "Open in…"
-pub const FILES_VIEWER_OPEN_IN: Key = Key::new(84);
+pub const FILES_VIEWER_OPEN_IN: Key = Key::new(85);
 /// "This picture can't be shown."
-pub const FILES_VIEWER_IMAGE_FAILED: Key = Key::new(85);
+pub const FILES_VIEWER_IMAGE_FAILED: Key = Key::new(86);
 /// "This picture is too large to show."
-pub const FILES_VIEWER_IMAGE_TOO_LARGE: Key = Key::new(86);
+pub const FILES_VIEWER_IMAGE_TOO_LARGE: Key = Key::new(87);
 /// "This file was deleted."
-pub const FILES_VIEWER_GONE: Key = Key::new(87);
+pub const FILES_VIEWER_GONE: Key = Key::new(88);
 /// "This is a link that leads out of the folder, so it isn't shown."
-pub const FILES_VIEWER_OUTSIDE: Key = Key::new(88);
+pub const FILES_VIEWER_OUTSIDE: Key = Key::new(89);
 /// "This isn't a regular file."
-pub const FILES_VIEWER_NOT_FILE: Key = Key::new(89);
+pub const FILES_VIEWER_NOT_FILE: Key = Key::new(90);
 /// "Wormhole isn't allowed to read this file."
-pub const FILES_VIEWER_DENIED: Key = Key::new(90);
+pub const FILES_VIEWER_DENIED: Key = Key::new(91);
 /// "This file can't be read."
-pub const FILES_VIEWER_UNREADABLE: Key = Key::new(91);
+pub const FILES_VIEWER_UNREADABLE: Key = Key::new(92);
 
 /// ```text
 /// { $count } more
 /// ```
 pub fn files_more(count: &str) -> String {
-    crate::active::message(59, &[("count", Arg::Str(count))])
+    crate::active::message(60, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// { $count }+ more
 /// ```
 pub fn files_more_at_least(count: &str) -> String {
-    crate::active::message(60, &[("count", Arg::Str(count))])
+    crate::active::message(61, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// Pin “{ $name }”
 /// ```
 pub fn files_menu_pin(name: &str) -> String {
-    crate::active::message(61, &[("name", Arg::Str(name))])
+    crate::active::message(62, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Unpin “{ $name }”
 /// ```
 pub fn files_menu_unpin(name: &str) -> String {
-    crate::active::message(62, &[("name", Arg::Str(name))])
+    crate::active::message(63, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, folder, opens the path menu
 /// ```
 pub fn files_spoken_path_button(name: &str) -> String {
-    crate::active::message(72, &[("name", Arg::Str(name))])
+    crate::active::message(73, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, folder, expanded
 /// ```
 pub fn files_spoken_folder_open(name: &str) -> String {
-    crate::active::message(73, &[("name", Arg::Str(name))])
+    crate::active::message(74, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, folder, collapsed
 /// ```
 pub fn files_spoken_folder_closed(name: &str) -> String {
-    crate::active::message(74, &[("name", Arg::Str(name))])
+    crate::active::message(75, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, link
 /// ```
 pub fn files_spoken_link(name: &str) -> String {
-    crate::active::message(75, &[("name", Arg::Str(name))])
+    crate::active::message(76, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Renamed to { $name }
 /// ```
 pub fn files_spoken_renamed(name: &str) -> String {
-    crate::active::message(78, &[("name", Arg::Str(name))])
+    crate::active::message(79, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, file viewer
 /// ```
 pub fn files_spoken_viewer(name: &str) -> String {
-    crate::active::message(80, &[("name", Arg::Str(name))])
+    crate::active::message(81, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Showing the first { $shown } of { $size }
 /// ```
 pub fn files_viewer_truncated(shown: &str, size: &str) -> String {
-    crate::active::message(81, &[("shown", Arg::Str(shown)), ("size", Arg::Str(size))])
+    crate::active::message(82, &[("shown", Arg::Str(shown)), ("size", Arg::Str(size))])
 }
 
 /// ```text
 /// Binary file, { $size }
 /// ```
 pub fn files_viewer_binary(size: &str) -> String {
-    crate::active::message(83, &[("size", Arg::Str(size))])
+    crate::active::message(84, &[("size", Arg::Str(size))])
 }

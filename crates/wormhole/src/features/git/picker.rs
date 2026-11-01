@@ -13,6 +13,8 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::git;
 
+use wormhole_text::{keys, text};
+
 use crate::select::{self, Choice, SearchSelect, SelectTrigger};
 use crate::settings::UiColors;
 use crate::terminal_view::TerminalView;
@@ -108,8 +110,11 @@ impl BranchPicker {
         // The same list already being fetched (closed and reopened quickly) is waited for.
         let Some(wanted) = self.job.begin((session, cwd.clone())) else { return };
         let ticket = wanted.ticket();
+        let kind = self.kind;
         let task = cx.background_executor().spawn(async move {
             match git::repo_root(&cwd) {
+                // Only History can show the stashes: they are not something to compare with.
+                Ok(Some(root)) if kind == Picker::History => git::history_revs(&root).unwrap_or_default(),
                 Ok(Some(root)) => git::branches(&root).unwrap_or_default(),
                 _ => Vec::new(),
             }
@@ -147,9 +152,9 @@ impl BranchPicker {
         };
         std::iter::once(Choice::new(None, head))
             .chain(
-                self.branches
-                    .iter()
-                    .map(|b| Choice::new(Some(b.clone()), b.clone()).mark(IconName::GitBranch, branch_color)),
+                self.branches.iter().map(|b| {
+                    Choice::new(Some(b.clone()), rev_label(b)).mark(IconName::GitBranch, branch_color)
+                }),
             )
             .collect()
     }
@@ -198,6 +203,11 @@ pub(crate) struct ChipOf<'a> {
     pub current: Option<String>,
 }
 
+/// What a branch or the stashes are called in the picker and its chip.
+fn rev_label(rev: &str) -> String {
+    if rev == git::STASH_REV { text(keys::HISTORY_STASHES).to_string() } else { rev.to_string() }
+}
+
 /// Enter in the search box: take the first branch that matches.
 fn pick_first_match<H: PickerHost>(this: &mut H, cx: &mut Context<H>) {
     let picker = this.picker();
@@ -240,12 +250,9 @@ impl<H: PickerHost> PickerChip<H> {
             .when(self.branch.is_some(), |d| {
                 d.child(Icon::new(IconName::GitBranch).xsmall().text_color(ui.branch).flex_none())
             })
-            .child(
-                div()
-                    .min_w_0()
-                    .truncate()
-                    .child(SharedString::from(self.branch.clone().unwrap_or_else(|| "HEAD".to_string()))),
-            );
+            .child(div().min_w_0().truncate().child(SharedString::from(
+                self.branch.as_deref().map_or_else(|| "HEAD".to_string(), rev_label),
+            )));
         let id = match kind {
             Picker::Compare => "compare-chip",
             Picker::History => "history-chip",

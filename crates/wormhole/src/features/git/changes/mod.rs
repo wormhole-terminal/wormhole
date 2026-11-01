@@ -30,6 +30,7 @@ mod rows;
 #[cfg(test)]
 mod tests;
 mod view;
+mod view_menu;
 
 pub(crate) use def::DEF;
 use list::ChangesList;

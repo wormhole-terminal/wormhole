@@ -96,6 +96,9 @@ history-filter = { $count ->
 }
 history-filter-clear = Show all commits
 
+# What the branch picker calls the list of stashes (git stash), beside the branches.
+history-stashes = Stashes
+
 # In a commit's menu: open the commit it follows. { $short } is its short hash.
 history-menu-open-parent = Open Parent { $short }
 
