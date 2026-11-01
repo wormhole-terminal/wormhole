@@ -98,14 +98,22 @@ impl ChangesList {
     }
 }
 
+/// A file that left the list (committed, reverted) is no longer marked.
+pub(super) fn prune_marks(marked: &mut HashSet<String>, files: Option<&[FileChange]>) {
+    if !marked.is_empty() {
+        marked.retain(|path| files.is_some_and(|files| files.iter().any(|file| file.path == *path)));
+    }
+}
+
 impl Changes {
     /// Refresh `session`'s rows from its git status and the settings. Cheap when nothing changed, so it
     /// runs on every frame (including every scroll tick).
     pub(super) fn sync_list(&mut self, session: i64, status: Option<&RepoStatus>, cx: &App) {
         let s = settings_in(&self.profile, cx);
         let (tree, group_untracked) = (s.changes_tree, s.group_untracked);
-        let ChangesOf { list, collapsed, folds, .. } = self.of_mut(session);
+        let ChangesOf { list, collapsed, folds, marked, .. } = self.of_mut(session);
         list.sync(status, tree, group_untracked, Folded { set: collapsed, session }, folds);
+        prune_marks(marked, list.built.as_ref().map(|built| &built.files[..]));
     }
 
     /// A click on a section's band: fold it, or unfold it (one folded for its size too).
@@ -131,6 +139,15 @@ impl Changes {
         cx.notify();
     }
 
+    /// ⌘-click: mark `path`, or unmark it.
+    pub(super) fn toggle_mark(&mut self, session: i64, path: String, cx: &mut Context<Self>) {
+        let marked = &mut self.of_mut(session).marked;
+        if !marked.remove(&path) {
+            marked.insert(path);
+        }
+        cx.notify();
+    }
+
     /// Opens the diff of working-tree change `file` of `session`.
     pub(in crate::features::git) fn open_change(
         &mut self,
@@ -139,6 +156,7 @@ impl Changes {
         target: &DiffTarget,
         cx: &mut Context<Self>,
     ) {
+        self.of_mut(session).marked.clear();
         let spec = DiffSpec { old: target.base_rev.clone(), new: None };
         let siblings = Rc::new(target.siblings.clone());
         self.open_diff(session, target.root.clone(), file, spec, siblings, None, cx);

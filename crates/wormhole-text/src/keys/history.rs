@@ -52,12 +52,6 @@ pub const HISTORY_MENU_COPY_SUBJECT: Key = Key::new(129);
 pub const HISTORY_MENU_COPY_AUTHOR: Key = Key::new(130);
 /// "Reveal in Finder"
 pub const HISTORY_MENU_REVEAL: Key = Key::new(131);
-/// "Copy Path"
-pub const HISTORY_MENU_COPY_PATH: Key = Key::new(132);
-/// "Copy Relative Path"
-pub const HISTORY_MENU_COPY_RELATIVE_PATH: Key = Key::new(133);
-/// "File History"
-pub const HISTORY_MENU_FILE_HISTORY: Key = Key::new(134);
 /// "Show all commits"
 pub const HISTORY_FILTER_CLEAR: Key = Key::new(136);
 
@@ -118,6 +112,36 @@ pub fn history_ago(age: &str) -> String {
 /// ```
 pub fn history_date_ago(date: &str, ago: &str) -> String {
     crate::active::message(120, &[("date", Arg::Str(date)), ("ago", Arg::Str(ago))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] Copy Path
+///    *[other] Copy Paths
+/// }
+/// ```
+pub fn history_menu_copy_path(count: i64) -> String {
+    crate::active::message(132, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] Copy Relative Path
+///    *[other] Copy Relative Paths
+/// }
+/// ```
+pub fn history_menu_copy_relative_path(count: i64) -> String {
+    crate::active::message(133, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] File History
+///    *[other] History of These Files
+/// }
+/// ```
+pub fn history_menu_file_history(count: i64) -> String {
+    crate::active::message(134, &[("count", Arg::Int(count))])
 }
 
 /// ```text

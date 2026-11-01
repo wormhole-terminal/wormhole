@@ -13,8 +13,9 @@ use crate::platform::{self, Item, Menu};
 
 pub(crate) struct PathMenu<'a> {
     pub open: &'a OpenTarget,
-    /// Relative to the repository's root.
-    pub path: &'a str,
+    /// Relative to the repository's root. Several: one menu for all, where opening and revealing
+    /// (one window each) are left out.
+    pub paths: &'a [String],
     /// A deleted file has nothing to open or reveal.
     pub on_disk: bool,
     /// Where "File History" shows the log, and for which terminal; `None` while History is off.
@@ -23,39 +24,49 @@ pub(crate) struct PathMenu<'a> {
 
 impl PathMenu<'_> {
     pub(crate) fn menu(self) -> Menu {
-        let Self { open, path, on_disk, history } = self;
-        let file = open.file(path);
-        let (root, relative) = (open.root().to_path_buf(), path.to_string());
-        let reveal = {
-            let (root, relative) = (root.clone(), relative.clone());
-            move |_: &mut Window, cx: &mut App| match files::resolve_within(&root, &relative) {
-                Ok(full) => cx.reveal_path(&full),
-                Err(err) => tracing::warn!("not revealing {relative}: {err}"),
-            }
-        };
+        let Self { open, paths, on_disk, history } = self;
+        let count = paths.len() as i64;
+        let root = open.root().to_path_buf();
         let copy = |what: String| {
             move |window: &mut Window, cx: &mut App| {
                 platform::clipboard::write(what.clone(), cx);
                 crate::notice::post(window, Copied::Path, None, cx);
             }
         };
-        let absolute = root.join(path).to_string_lossy().into_owned();
+        let absolute = paths.iter().map(|path| root.join(path).to_string_lossy().into_owned());
+        let single = match paths {
+            [path] => Some(path.to_string()),
+            _ => None,
+        };
         Menu::new()
-            // With Finder as the app, opening is revealing: one item, not two.
-            .when(!open.opens_in_finder(), |menu| {
-                menu.item(
-                    Item::new(file.tooltip(None)).enabled(on_disk).on_select(move |_, _| file.open(None)),
-                )
+            .when_some(single, |menu, path| {
+                let file = open.file(&path);
+                let reveal = {
+                    let root = root.clone();
+                    move |_: &mut Window, cx: &mut App| match files::resolve_within(&root, &path) {
+                        Ok(full) => cx.reveal_path(&full),
+                        Err(err) => tracing::warn!("not revealing {path}: {err}"),
+                    }
+                };
+                // With Finder as the app, opening is revealing: one item, not two.
+                menu.when(!open.opens_in_finder(), |menu| {
+                    menu.item(
+                        Item::new(file.tooltip(None)).enabled(on_disk).on_select(move |_, _| file.open(None)),
+                    )
+                })
+                .item(Item::new(text(keys::HISTORY_MENU_REVEAL)).enabled(on_disk).on_select(reveal))
+                .separator()
             })
-            .item(Item::new(text(keys::HISTORY_MENU_REVEAL)).enabled(on_disk).on_select(reveal))
-            .separator()
-            .item(Item::new(text(keys::HISTORY_MENU_COPY_PATH)).on_select(copy(absolute)))
-            .item(Item::new(text(keys::HISTORY_MENU_COPY_RELATIVE_PATH)).on_select(copy(relative.clone())))
-            .when(history.is_some(), |menu| {
-                let Some((this, session)) = history else { return menu };
-                menu.separator().item(Item::new(text(keys::HISTORY_MENU_FILE_HISTORY)).on_select(
+            .item(
+                Item::new(keys::history_menu_copy_path(count))
+                    .on_select(copy(absolute.collect::<Vec<_>>().join("\n"))),
+            )
+            .item(Item::new(keys::history_menu_copy_relative_path(count)).on_select(copy(paths.join("\n"))))
+            .when_some(history, |menu, (this, session)| {
+                let paths = paths.to_vec();
+                menu.separator().item(Item::new(keys::history_menu_file_history(count)).on_select(
                     platform::run_on(&this, move |history, _, cx| {
-                        history.show_paths(session, vec![relative.clone()], cx)
+                        history.show_paths(session, paths.clone(), cx)
                     }),
                 ))
             })
@@ -80,7 +91,7 @@ mod tests {
     ) -> Vec<String> {
         let open = OpenTarget::with_app(Path::new("/repo"), app.into());
         let history = history.then(|| (WeakEntity::new_invalid(), 1));
-        PathMenu { open: &open, path: "src/a.rs", on_disk, history }.menu().outline()
+        PathMenu { open: &open, paths: &["src/a.rs".to_string()], on_disk, history }.menu().outline()
     }
 
     #[test]
@@ -97,6 +108,20 @@ mod tests {
             let gone = outline(editor, false, false);
             assert!(gone[0].ends_with("[off]") && gone[1].ends_with("[off]"), "{gone:?}");
             assert_eq!(gone.len(), 5);
+        });
+    }
+
+    #[test]
+    fn several_files_share_one_menu_without_opening_each() {
+        with_language(Language::ENGLISH, || {
+            let open = OpenTarget::with_app(Path::new("/repo"), EDITORS[0].into());
+            let paths = ["a.rs".to_string(), "b.rs".to_string()];
+            let history = Some((WeakEntity::new_invalid(), 1));
+            let menu = PathMenu { open: &open, paths: &paths, on_disk: true, history }.menu();
+            assert_eq!(
+                menu.outline(),
+                ["- Copy Paths", "- Copy Relative Paths", "---", "- History of These Files"]
+            );
         });
     }
 

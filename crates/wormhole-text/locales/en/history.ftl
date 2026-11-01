@@ -72,9 +72,21 @@ history-menu-copy-author = Copy Author
 ## A file's menu in Changes: its copies, and its log in History
 
 history-menu-reveal = Reveal in Finder
-history-menu-copy-path = Copy Path
-history-menu-copy-relative-path = Copy Relative Path
-history-menu-file-history = File History
+# In the menu of one file or of several marked ones. { $count } is how many files.
+history-menu-copy-path = { $count ->
+    [one] Copy Path
+   *[other] Copy Paths
+}
+# { $count } is how many files.
+history-menu-copy-relative-path = { $count ->
+    [one] Copy Relative Path
+   *[other] Copy Relative Paths
+}
+# { $count } is how many files.
+history-menu-file-history = { $count ->
+    [one] File History
+   *[other] History of These Files
+}
 
 # The chip that limits the log to the commits that touched some paths. { $count } is how many; { $name }
 # is the one file or folder when it is one.

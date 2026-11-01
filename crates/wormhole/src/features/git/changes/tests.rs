@@ -175,3 +175,15 @@ fn a_submodule_is_a_row_like_any_file_and_the_diff_steps_through_it() {
     assert_eq!(order.last().and_then(|f| f.submodule.as_ref()), lib.submodule.as_ref());
     assert_eq!(order.last().map(|f| f.path.as_str()), Some("vendor/lib"));
 }
+
+#[test]
+fn a_mark_goes_with_the_file_that_left_the_list() {
+    let files = modified(&["a.rs", "b.rs"]);
+    let mut marked: HashSet<String> = ["a.rs", "b.rs", "gone.rs"].map(String::from).into();
+    super::list::prune_marks(&mut marked, Some(&files));
+    let mut left: Vec<_> = marked.iter().cloned().collect();
+    left.sort();
+    assert_eq!(left, ["a.rs", "b.rs"]);
+    super::list::prune_marks(&mut marked, None);
+    assert!(marked.is_empty(), "no status, no marks");
+}

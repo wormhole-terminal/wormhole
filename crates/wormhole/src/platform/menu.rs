@@ -199,6 +199,13 @@ impl Menu {
         if condition { build(self) } else { self }
     }
 
+    pub fn when_some<T>(self, value: Option<T>, build: impl FnOnce(Self, T) -> Self) -> Self {
+        match value {
+            Some(value) => build(self, value),
+            None => self,
+        }
+    }
+
     pub fn on_close(mut self, run: impl Fn(&mut Window, &mut App) + 'static) -> Self {
         self.on_close = Some(Rc::new(run));
         self

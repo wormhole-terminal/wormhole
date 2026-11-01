@@ -11,6 +11,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - A right-click on a file in Changes opens a menu: open it in your editor, reveal it in Finder, copy its
   path (full or relative) and File History, which limits the History tab to the commits that touched it.
   A chip in History's head names the file; clicking it shows every commit again.
+  ⌘-click marks several files; the menu of a marked file then copies all their paths or shows their
+  shared history.
 - When an update is installed (by the app, or put on disk from outside), a chip says "Wormhole 1.6.0 is
   ready — Restart"; a click restarts into it (a click right after the chip appears is ignored). If a
   restart would end something, the same question as in Settings → Updates names what. Closing the chip

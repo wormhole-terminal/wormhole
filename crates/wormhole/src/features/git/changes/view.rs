@@ -22,7 +22,7 @@ use crate::features::git::path_menu::PathMenu;
 use crate::features::git::picker::{ChipOf, PickerChip};
 use crate::features::git::problem::{self, GitTab};
 use crate::features::git::submodule_row::{open_terminal_by_event, submodule_row};
-use crate::platform;
+use crate::platform::{self, Menu};
 use crate::settings::{SettingsStore, UiColors, ui as ui_main, ui_in};
 use crate::style::{self, TextRole};
 use crate::window::facts::WindowFacts;
@@ -97,6 +97,7 @@ impl Changes {
                 },
                 ui.branch,
             ),
+            marked: Rc::new(of.marked.clone()),
             history: facts.feature::<History>().map(|history| history.downgrade()),
             this: cx.weak_entity(),
         });
@@ -151,6 +152,8 @@ struct ChangesView {
     /// The panel's width, which file names are fitted to.
     width: f32,
     compare: PickerChip<Changes>,
+    /// The files marked, which a right-click on one of them acts on together.
+    marked: Rc<std::collections::HashSet<String>>,
     /// Where a file's menu shows its log; none while History is off.
     history: Option<WeakEntity<History>>,
     this: WeakEntity<Changes>,
@@ -197,7 +200,8 @@ impl ChangesView {
                 let place = Placement {
                     in_tree: *in_tree,
                     depth: *depth,
-                    selected: self.open_path.as_deref() == Some(file.path.as_str()),
+                    selected: self.open_path.as_deref() == Some(file.path.as_str())
+                        || self.marked.contains(&file.path),
                     width: self.width,
                 };
                 let row = match file.submodule {
@@ -219,22 +223,42 @@ impl ChangesView {
                         }
                     }
                 };
-                let menu = (file.submodule.is_none())
-                    .then(|| (self.open.clone(), file.path.clone(), file.kind != git::ChangeKind::Deleted));
-                let history = self.history.clone();
+                let menu = (file.submodule.is_none()).then(|| self.file_menu(file));
+                let marking = file.submodule.is_none();
                 row.on_mouse_down(MouseButton::Right, move |event, window, cx| {
-                    let Some((open, path, on_disk)) = &menu else { return };
+                    let Some(menu) = &menu else { return };
                     cx.stop_propagation();
-                    let history = history.clone().map(|history| (history, session));
-                    let menu = PathMenu { open, path, on_disk: *on_disk, history }.menu();
-                    platform::show_menu(menu, event.position, window, cx);
+                    platform::show_menu(menu(), event.position, window, cx);
                 })
-                .on_click(move |_, _, cx| {
+                .on_click(move |event, _, cx| {
+                    // ⌘-click marks the file for the menu; a plain click opens its diff and drops the marks.
+                    if marking && event.modifiers().platform {
+                        let path = clicked.path.clone();
+                        this.update(cx, |this, cx| this.toggle_mark(session, path, cx)).ok();
+                        return;
+                    }
                     this.update(cx, |this, cx| this.open_change(session, clicked.clone(), &target, cx)).ok();
                 })
                 .into_any_element()
             }
             ChangeRow::Spacer => div().h(px(16.0)).into_any_element(),
+        }
+    }
+
+    /// What a right-click on `file` builds: the menu of every marked file when it is one of them, else
+    /// of the file alone. Built when the click happens, so a frame builds no menus.
+    fn file_menu(&self, file: &git::FileChange) -> impl Fn() -> Menu + use<> {
+        let (open, history, session) = (self.open.clone(), self.history.clone(), self.session);
+        let (files, marked) = (self.files.clone(), self.marked.clone());
+        let (path, on_disk) = (file.path.clone(), file.kind != git::ChangeKind::Deleted);
+        move || {
+            let paths: Vec<String> = if marked.contains(&path) {
+                files.iter().filter(|f| marked.contains(&f.path)).map(|f| f.path.clone()).collect()
+            } else {
+                vec![path.clone()]
+            };
+            let history = history.clone().map(|history| (history, session));
+            PathMenu { open: &open, paths: &paths, on_disk, history }.menu()
         }
     }
 

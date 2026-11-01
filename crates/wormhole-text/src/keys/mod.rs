@@ -106,7 +106,7 @@ pub use zen::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 1230] = [
+pub const ALL: [Key; 1227] = [
     AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_READ, AGENT_SHEET_WANTS_TYPE,
     AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_CLOSE,
     AGENT_SHEET_DETAIL, AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_WARNING_UNSIGNED,
@@ -138,8 +138,7 @@ pub const ALL: [Key; 1230] = [
     HISTORY_SHOW_LESS, HISTORY_COPY_MESSAGE, HISTORY_COPY_HASH,
     HISTORY_MORE_COPY, HISTORY_MENU_COPY_HASH, HISTORY_MENU_COPY_SHORT_HASH,
     HISTORY_MENU_COPY_MESSAGE, HISTORY_MENU_COPY_SUBJECT, HISTORY_MENU_COPY_AUTHOR,
-    HISTORY_MENU_REVEAL, HISTORY_MENU_COPY_PATH, HISTORY_MENU_COPY_RELATIVE_PATH,
-    HISTORY_MENU_FILE_HISTORY, HISTORY_FILTER_CLEAR, NOTICE_COPIED_COMMAND,
+    HISTORY_MENU_REVEAL, HISTORY_FILTER_CLEAR, NOTICE_COPIED_COMMAND,
     NOTICE_COPIED_PATH, NOTICE_COPIED_SETTING_KEY, NOTICE_COPIED_ERROR,
     NOTICE_COPIED_OBJECT_ID, NOTICE_DRIVEN_SCRIPTS_TYPING, NOTICE_DRIVEN_SCRIPTS_READING,
     NOTICE_COPIED_COMMIT_HASH, NOTICE_COPIED_COMMIT_SHORT_HASH, NOTICE_COPIED_COMMIT_MESSAGE,
@@ -563,6 +562,12 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("history-changes-line", history_changes_line("Sample", "Sample", "Sample")),
         ("history-ago", history_ago("Sample")),
         ("history-date-ago", history_date_ago("Sample", "Sample")),
+        ("history-menu-copy-path", history_menu_copy_path(1)),
+        ("history-menu-copy-path", history_menu_copy_path(5)),
+        ("history-menu-copy-relative-path", history_menu_copy_relative_path(1)),
+        ("history-menu-copy-relative-path", history_menu_copy_relative_path(5)),
+        ("history-menu-file-history", history_menu_file_history(1)),
+        ("history-menu-file-history", history_menu_file_history(5)),
         ("history-filter", history_filter(1, "Sample")),
         ("history-filter", history_filter(5, "Sample")),
         ("history-menu-open-parent", history_menu_open_parent("Sample")),

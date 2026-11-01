@@ -78,6 +78,8 @@ pub(super) struct ChangesOf {
     /// (`wormhole_core::view::panel::section_folded`).
     folds: HashMap<Group, bool>,
     list: ChangesList,
+    /// Files marked with ⌘-click, by path: a right-click on one of them acts on all.
+    marked: std::collections::HashSet<String>,
     /// Folders folded in the tree, by [`rows::collapse_key`].
     collapsed: std::collections::HashSet<String>,
     /// The comments written on its diffs and not pasted into its terminal yet.
