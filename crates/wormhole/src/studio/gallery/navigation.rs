@@ -164,7 +164,16 @@ pub(super) fn render(
                 .pt_2()
                 .child(div().text_caption().text_color(ui.muted).child("Close the diff")) // text: sample (the gallery's specimen)
                 .child(env.mark("keycap", style::keycap(ui, "esc"))),
-        );
+        )
+        // A path as the title row writes it: the terminal's folder and the file a diff covers it with.
+        .child(div().flex().items_center().px_2().pt_2().w_full().child(style::path_crumb(
+            "g-path-crumb",
+            ui,
+            style::icon(IconName::File).text_color(ui.muted).into_any_element(),
+            Some(("docs/hub/".into(), "status.md".into())), // text: sample (the gallery's specimen)
+            true,
+            ui.muted,
+        )));
     let badges = div()
         .flex()
         .items_center()

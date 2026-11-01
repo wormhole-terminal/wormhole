@@ -207,63 +207,17 @@ impl Workspace {
         )
     }
 
-    /// A path in the title row: an icon, the parents in regular weight and the last part in medium. A
-    /// click shows `target` in Finder, resting on it opens the card and a right-click the path menu.
+    /// A path in the title row (`style::path_crumb`) with what the window does for it: a click shows
+    /// `target` in Finder, resting on it opens the card and a right-click the path menu.
     fn render_path_crumb(&self, crumb: PathCrumb, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
         let PathCrumb { id, icon, text, target, label, shrinks, soft } = crumb;
-        let text =
-            text.map(|(parents, last)| {
-                if shrinks {
-                    // The folders give way first; the name stays whole as long as the folders have anything
-                    // left to give, then it is cut too.
-                    div()
-                        .flex()
-                        .flex_1()
-                        .min_w_0()
-                        .overflow_hidden()
-                        .child(
-                            div()
-                                .min_w_0()
-                                .overflow_hidden()
-                                .whitespace_nowrap()
-                                .text_ellipsis_start()
-                                .child(parents),
-                        )
-                        .child(
-                            div()
-                                .min_w_0()
-                                .flex_shrink(0.01)
-                                .truncate()
-                                .font_weight(FontWeight::MEDIUM)
-                                .text_color(ui.text)
-                                .child(last),
-                        )
-                } else {
-                    // Cut in the middle by the row's fit, the path is still read whole.
-                    div().flex().flex_none().child(div().flex_none().child(parents)).child(
-                        div().flex_none().font_weight(FontWeight::MEDIUM).text_color(ui.text).child(last),
-                    )
-                }
-            });
-        div()
-            .id(id)
+        let text = text.map(|(parents, last)| (SharedString::from(parents), SharedString::from(last)));
+        style::path_crumb(id, ui, icon, text, shrinks, soft)
             .debug_selector(|| id.to_string())
             .role(Role::Button)
             .aria_label(label)
             // The card and the menu open under the path, which the probe measures.
-            .relative()
-            .flex()
-            .items_center()
-            .gap_2()
-            .text_label()
-            .font_weight(FontWeight::NORMAL)
-            .text_color(soft)
-            .cursor_pointer()
-            .hover(|d| d.text_color(ui.text))
-            .map(|d| if shrinks { d.flex_1().min_w_0() } else { d.flex_none() })
             .child(self.path_anchor.probe())
-            .child(div().flex_none().child(icon))
-            .children(text)
             // The path itself in Finder, not its parent with it selected: a folder is opened, a file shown.
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.path_card.reset(cx);

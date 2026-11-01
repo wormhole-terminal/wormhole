@@ -64,9 +64,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
-- A diff fills the terminal's surface, without a card and padding inside it. Its title row holds the arrows,
-  the file's path (drawn like the terminal's folder, with the same hover card and right-click menu), the
-  counts and the controls.
+- A diff and the Files viewer fill the terminal's surface, without a card and padding inside it. Their
+  title row holds the file's path (drawn like the terminal's folder, with the same hover card and
+  right-click menu) and the controls: for a diff the arrows, the counts, wrap and the layout switch.
 - Restarting for an update starts the new Wormhole as soon as the old one has quit, instead of after a pause
   of about a second.
 

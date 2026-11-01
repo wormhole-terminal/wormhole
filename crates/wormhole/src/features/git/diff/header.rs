@@ -22,7 +22,7 @@ use wormhole_core::git::{ChangeKind, Side};
 use wormhole_core::view::limits::count_grouped;
 
 /// "esc close": a target this tall around its key cap.
-const CLOSE_H: f32 = 24.0;
+const CLOSE_H: f32 = style::HIT_MIN;
 /// With the title row's own 4 pt, this puts the first chevron's glyph on the card's 16 pt
 /// inset below it.
 const TITLE_LEAD: f32 = 6.0;
@@ -149,7 +149,8 @@ impl Changes {
             .flex()
             .flex_none()
             .items_center()
-            .map(|d| if split_fits { d.gap_3().pr_2() } else { d.gap_2().pr_1() })
+            .gap_2()
+            .pr_2()
             .children(badges.into_iter().map(|(color, text)| style::status_badge(ui, color, text)))
             .children(refresh_error)
             .children(counts.map(|(added, removed)| {
@@ -157,9 +158,9 @@ impl Changes {
                     .flex()
                     .flex_none()
                     .items_center()
-                    .gap_2()
+                    .gap_1()
                     .font_family(font_family)
-                    .map(|d| if split_fits { d.text_body() } else { d.text_caption() })
+                    .text_caption()
                     .child(div().text_color(colors.added).child(added))
                     .child(div().text_color(colors.removed).child(removed))
             }))
@@ -203,7 +204,7 @@ impl Changes {
                             .items_center()
                             .gap_1()
                             .h(px(CLOSE_H))
-                            .px_1()
+                            .px_2()
                             .rounded(ui.radius)
                             .cursor_pointer()
                             .text_caption()

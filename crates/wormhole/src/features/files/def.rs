@@ -10,7 +10,7 @@ use wormhole_core::view::spoken::{self, PanelTab};
 use super::{Files, keys, view};
 use crate::actions::ShowFiles;
 use crate::window::Workspace;
-use crate::window::feature::{CoverDef, FeatureDef, StateDef, TabDef, show_tab};
+use crate::window::feature::{CoverDef, CoverFile, FeatureDef, StateDef, TabDef, show_tab};
 
 /// The window's `Files`, from the handle the window keeps. The entry makes it, so it is one.
 pub(super) fn typed(entity: &AnyEntity) -> Entity<Files> {
@@ -54,8 +54,12 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
                 .update(cx, |files, cx| files.render_viewer(facts, window, cx))
                 .unwrap_or_else(|| div().into_any_element())
         },
-        title: |_, _, _| None,
-        file: None,
+        title: |entity, facts, cx| typed(entity).update(cx, |files, cx| files.render_viewer_title(facts, cx)),
+        file: Some(|entity, cx| {
+            let viewer = typed(entity).read(cx).viewer.as_ref()?;
+            let path = viewer.path.strip_prefix(&viewer.root).unwrap_or(&viewer.path);
+            Some(CoverFile { root: viewer.root.clone(), path: path.to_string_lossy().into_owned() })
+        }),
         close: |entity, facts, window, cx| {
             if let Some(active) = facts.active() {
                 typed(entity).update(cx, |files, cx| files.close_viewer(active.terminal, window, cx));

@@ -26,6 +26,7 @@ use crate::settings::{UiColors, settings_in, store_in, ui_in};
 use crate::style::{self, Edges as _, TextRole as _, panel_list};
 use crate::theme_bridge::token;
 use crate::window::facts::WindowFacts;
+use crate::window::feature::CoverTitle;
 
 /// The card's header is a title row tall; the buttons are the small ones of the diff's narrow header.
 const BUTTON_H: f32 = 24.0;
@@ -57,11 +58,9 @@ impl Files {
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
         self.follow(facts);
-        let terminal = facts.active()?.terminal.clone();
         let viewer = self.viewer.as_ref()?;
         let ui = ui_in(&self.profile, cx);
         let surface = token(&store_in(&self.profile, cx).tokens, "surface.window");
-        let header = self.render_viewer_header(viewer, ui, &terminal, cx);
         let body = self.render_viewer_body(viewer, ui, cx);
         let card = div()
             .id("file-viewer")
@@ -71,31 +70,24 @@ impl Files {
             .flex_1()
             .min_h_0()
             .overflow_hidden()
-            .rounded(ui.radius_lg)
-            .outlined(ui, ui.border)
             .bg(surface)
             .aria_label(SharedString::from(keys::files_spoken_viewer(&clean(&viewer.name()))))
-            .child(header)
             .child(body);
-        Some(
-            div().id("file-viewer-column").size_full().flex().flex_col().p_4().child(card).into_any_element(),
-        )
+        // The terminal's own rounded surface is the frame: the viewer fills it, as a diff does.
+        Some(div().id("file-viewer-column").size_full().flex().flex_col().child(card).into_any_element())
     }
 
-    fn render_viewer_header(
-        &self,
-        viewer: &Viewer,
-        ui: UiColors,
-        terminal: &Entity<crate::terminal_view::TerminalView>,
+    /// The viewer's part of the title row: the file's size and its buttons, at the right end. The window
+    /// draws the path crumb before them (the card of the path has Reveal and Copy path).
+    pub(in crate::features::files) fn render_viewer_title(
+        &mut self,
+        facts: &WindowFacts<'_>,
         cx: &mut Context<Self>,
-    ) -> Div {
-        let (family, _) = font_in(&self.profile, FontSlot::Terminal, cx);
-        let name = viewer.name();
-        let dir = match viewer.path.parent() {
-            // A folder's name is whatever its maker chose: cleaned like the name after it.
-            Some(dir) if !dir.as_os_str().is_empty() => clean(&format!("{}/", dir.display())),
-            _ => String::new(),
-        };
+    ) -> Option<CoverTitle> {
+        self.follow(facts);
+        let terminal = facts.active()?.terminal.clone();
+        let viewer = self.viewer.as_ref()?;
+        let ui = ui_in(&self.profile, cx);
         let units = settings_in(&self.profile, cx).size_units;
         let size = match &viewer.content {
             Content::Text(shown) => Some(shown.size),
@@ -106,80 +98,39 @@ impl Files {
         let bundle = open::default_bundle(&resolved).to_string();
         let app = open_in::known(&bundle).map_or("", |editor| editor.name);
         let tooltip = open_file::tooltip(&bundle, app, None);
-        let terminal = terminal.clone();
-        div()
+        let trail = div()
             .flex()
             .flex_none()
             .items_center()
-            .h(px(style::TITLE_ROW_H))
             .gap_2()
-            .pl_4()
-            .pr_1()
-            .rule_bottom(ui)
+            .pr_2()
+            .children(size.map(|size| {
+                div()
+                    .flex_none()
+                    .text_caption()
+                    .text_color(ui.muted)
+                    .child(wormhole_core::git::byte_size(size, units))
+            }))
             .child(
                 div()
                     .flex()
-                    .flex_1()
-                    .min_w_0()
+                    .flex_none()
                     .items_center()
-                    .gap_2()
                     .child(
-                        div()
-                            .flex()
-                            .min_w_0()
-                            .overflow_hidden()
-                            .items_center()
-                            .font_family(family)
-                            .text_body()
-                            // The folder gives way first; the file's name stays whole as long as it can.
-                            .child(
-                                div()
-                                    .min_w_0()
-                                    .overflow_hidden()
-                                    .whitespace_nowrap()
-                                    .text_ellipsis_start()
-                                    .text_color(ui.muted)
-                                    .child(dir),
-                            )
-                            .child(
-                                div()
-                                    .min_w_0()
-                                    .flex_shrink(0.01)
-                                    .truncate()
-                                    .text_color(ui.text)
-                                    .child(clean(&name)),
-                            ),
+                        style::icon_button("file-open-in", ui, IconName::ExternalLink, tooltip)
+                            .in_title_row()
+                            .on_click(cx.listener(|this, _, _, cx| this.viewer_open(cx))),
                     )
-                    .children(size.map(|size| {
-                        div()
-                            .flex_none()
-                            .text_caption()
-                            .text_color(ui.muted)
-                            .child(wormhole_core::git::byte_size(size, units))
-                    })),
+                    .child(
+                        style::icon_button("file-close", ui, IconName::X, text(keys::FILES_VIEWER_CLOSE))
+                            .in_title_row()
+                            .on_click(cx.listener(move |this, _, window, cx| {
+                                this.close_viewer(&terminal, window, cx);
+                            })),
+                    ),
             )
-            .child(
-                style::icon_button("file-open-in", ui, IconName::ExternalLink, tooltip)
-                    .in_title_row()
-                    .on_click(cx.listener(|this, _, _, cx| this.viewer_open(cx))),
-            )
-            .child(
-                style::icon_button("file-reveal", ui, IconName::FolderOpen, text(keys::FILES_ROW_REVEAL))
-                    .in_title_row()
-                    .on_click(cx.listener(|this, _, _, cx| this.viewer_reveal(cx))),
-            )
-            .child(
-                style::icon_button("file-copy-path", ui, IconName::Copy, text(keys::FILES_ROW_COPY_PATH))
-                    .in_title_row()
-                    .on_click(cx.listener(|this, _, window, cx| this.viewer_copy_path(window, cx))),
-            )
-            .child(
-                style::icon_button("file-close", ui, IconName::X, text(keys::FILES_VIEWER_CLOSE))
-                    .in_title_row()
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        this.close_viewer(&terminal, window, cx);
-                    })),
-            )
+            .into_any_element();
+        Some(CoverTitle { lead: div().into_any_element(), trail })
     }
 
     fn render_viewer_body(&self, viewer: &Viewer, ui: UiColors, cx: &mut Context<Self>) -> Div {
@@ -362,12 +313,6 @@ impl Files {
     pub(super) fn viewer_reveal(&mut self, _: &mut Context<Self>) {
         if let Some(viewer) = &self.viewer {
             open::reveal(&viewer.root, &viewer.as_row());
-        }
-    }
-
-    pub(super) fn viewer_copy_path(&mut self, window: &Window, cx: &mut Context<Self>) {
-        if let Some(viewer) = &self.viewer {
-            open::copy_path(&viewer.root, &viewer.as_row(), window, cx);
         }
     }
 }
