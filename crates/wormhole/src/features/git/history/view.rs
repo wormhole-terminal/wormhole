@@ -23,6 +23,7 @@ use super::{CommitFiles, History, HistoryRow};
 use crate::features::git::changes::Changes;
 use crate::features::git::file_line::{Placement, change_row};
 use crate::features::git::open_file::OpenTarget;
+use crate::features::git::path_menu::PathMenu;
 use crate::features::git::picker::{ChipOf, PickerChip};
 use crate::features::git::problem::{self, GitTab};
 use crate::features::git::submodule_row::{open_terminal_by_event, submodule_row};
@@ -336,7 +337,27 @@ impl HistoryView {
                         }
                     }
                 };
-                row.on_click(move |_, _, cx| {
+                let menu = match (&self.open, file.submodule.is_none()) {
+                    (Some(open), true) => {
+                        let on_disk =
+                            self.present.as_ref().is_some_and(|present| present.contains(&file.path));
+                        Some((open.clone(), file.path.clone(), on_disk, self.this.clone()))
+                    }
+                    _ => None,
+                };
+                row.on_mouse_down(MouseButton::Right, move |event, window, cx| {
+                    let Some((open, path, on_disk, history)) = &menu else { return };
+                    cx.stop_propagation();
+                    let menu = PathMenu {
+                        open,
+                        paths: std::slice::from_ref(path),
+                        on_disk: *on_disk,
+                        history: Some((history.clone(), session)),
+                    }
+                    .menu();
+                    platform::show_menu(menu, event.position, window, cx);
+                })
+                .on_click(move |_, _, cx| {
                     let Some(changes) = this.clone() else { return };
                     history
                         .update(cx, |history, cx| {

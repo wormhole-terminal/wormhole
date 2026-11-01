@@ -8,7 +8,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
-- A right-click on a file in Changes opens a menu: open it in your editor, reveal it in Finder, copy its
+- A right-click on a file in Changes, or on a file of an opened commit in History, opens a menu: open it in your editor, reveal it in Finder, copy its
   path (full or relative) and File History, which limits the History tab to the commits that touched it.
   A chip in History's head names the file; clicking it shows every commit again.
   ⌘-click marks several files; the menu of a marked file then copies all their paths or shows their

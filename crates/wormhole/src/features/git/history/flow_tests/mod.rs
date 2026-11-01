@@ -192,6 +192,35 @@ fn a_commit_opens_to_its_files_and_a_file_opens_its_diff(cx: &mut TestAppContext
     assert_eq!(expanded(cx, &window), None);
 }
 
+/// "File History": the log limited to `paths` (none: every commit again).
+fn show_paths(cx: &mut TestAppContext, window: &OpenWindow, paths: &[&str]) {
+    drive(cx, window, |ws, _, cx| {
+        let session = ws.active_session().id;
+        let paths = paths.iter().map(|path| path.to_string()).collect();
+        history(ws).update(cx, |history, cx| history.show_paths(session, paths, cx));
+    });
+    cx.run_until_parked();
+}
+
+#[gpui_kit::test]
+fn a_file_limits_the_log_to_the_commits_that_touched_it_until_the_chip_is_cleared(cx: &mut TestAppContext) {
+    if isolate("a_file_limits_the_log_to_the_commits_that_touched_it_until_the_chip_is_cleared") {
+        return;
+    }
+    let window = start(cx, 1);
+    two_commits(cx, &window, "file-history");
+    assert_eq!(subjects(cx, &window), ["second", "first"]);
+    show_paths(cx, &window, &["src/b.txt"]);
+    assert_eq!(subjects(cx, &window), ["second"], "only the commit that added it");
+    // The chip is drawn with the limited log, and the tab is the one on view.
+    draw(cx, &window);
+    show_paths(cx, &window, &["a.txt", "src/b.txt"]);
+    assert_eq!(subjects(cx, &window), ["second", "first"], "either file counts");
+    show_paths(cx, &window, &[]);
+    assert_eq!(subjects(cx, &window), ["second", "first"]);
+    assert!(with_state(cx, &window, |state, _| state.paths.is_empty()));
+}
+
 // ---------------------------------------------------------------- the branch picker
 
 #[gpui_kit::test]
