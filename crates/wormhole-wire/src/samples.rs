@@ -3,7 +3,9 @@
 //! (`examples/seeds.rs`). Fixtures, not API: a value here changes only together with a vector.
 
 use crate::boot::{Hello, Incompatible, Welcome};
-use crate::control::{Attach, ClipboardReply, Colors, ErrorMsg, Hook, Limits, Options, Resize, Spawn};
+use crate::control::{
+    Attach, CheckpointKey, ClipboardReply, Colors, ErrorMsg, Hook, Limits, Options, Resize, Spawn,
+};
 use crate::event::{Event, EventKind, Mark, MarkKind, ProgressState};
 use crate::history::{FindDirection, FindMatch, FindResults, FindStart, Page, PageGet, find_flags};
 use crate::message::Message;
@@ -208,6 +210,10 @@ pub fn all() -> Vec<(&'static str, Message<'static>)> {
         ("set_options", Message::SetOptions(Options { scrollback_lines: 2_000, flags: 1 })),
         ("set_color_scheme", Message::SetColorScheme(ColorScheme::Light)),
         ("clear_history", Message::ClearHistory),
+        ("set_checkpoint_key", Message::SetCheckpointKey(CheckpointKey { key: &[0x42; 32], shell: "login" })),
+        ("set_checkpoint_key_none", Message::SetCheckpointKey(CheckpointKey { key: &[], shell: "fish" })),
+        ("checkpoint", Message::Checkpoint { flush: false }),
+        ("checkpoint_flush", Message::Checkpoint { flush: true }),
         ("close", Message::Close { grace_ms: 3000 }),
         ("clipboard_reply", Message::ClipboardReply(ClipboardReply { ticket: 17, data: b"hello" })),
         ("hook", Message::Hook(Hook { name: "needs_you", payload: br#"{"a":1}"# })),

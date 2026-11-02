@@ -31,7 +31,15 @@ use wormhole_wire::*;
 
 /// The protocol minor that introduced each sample message. Everything not listed here came with
 /// minor 1, the first release.
-const LEDGER: &[(&str, u16)] = &[("clear_history", 2), ("error_peer_refused", 3), ("spawn_seeded", 4)];
+const LEDGER: &[(&str, u16)] = &[
+    ("clear_history", 2),
+    ("error_peer_refused", 3),
+    ("spawn_seeded", 4),
+    ("set_checkpoint_key", 4),
+    ("set_checkpoint_key_none", 4),
+    ("checkpoint", 4),
+    ("checkpoint_flush", 4),
+];
 
 /// The released tags kept here, and the protocol minor each spoke.
 const RELEASES: &[(&str, u16)] = &[("v1.2.0", 1), ("v1.5.0", 2)];

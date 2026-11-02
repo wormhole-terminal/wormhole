@@ -94,6 +94,8 @@ pub mod ty {
     pub const HOOK: u8 = 0x18;
     pub const SET_COLOR_SCHEME: u8 = 0x19;
     pub const CLEAR_HISTORY: u8 = 0x1A;
+    pub const SET_CHECKPOINT_KEY: u8 = 0x1B;
+    pub const CHECKPOINT: u8 = 0x1C;
 
     pub const INPUT: u8 = 0x20;
     pub const INPUT_ACK: u8 = 0x21;
@@ -134,6 +136,8 @@ pub fn max_payload(t: u8) -> Option<usize> {
         | ty::SET_OPTIONS
         | ty::SET_COLOR_SCHEME
         | ty::CLEAR_HISTORY
+        | ty::SET_CHECKPOINT_KEY
+        | ty::CHECKPOINT
         | ty::CLOSE
         | ty::INPUT_ACK
         | ty::RESIZE_APPLIED

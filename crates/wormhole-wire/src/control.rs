@@ -290,6 +290,46 @@ impl Limits {
     }
 }
 
+/// The key a host seals its checkpoint with, and what the manifest says of the terminal that the host cannot
+/// know: sent by the app right after the spawn or the attach when "restore after restart" is on (added in
+/// minor 4). A host that has never been sent one writes no checkpoint at all.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct CheckpointKey<'a> {
+    /// The 32-byte key, or empty: the app has none (the Keychain is unavailable), and the host then writes
+    /// the folder and the shell but never a screen.
+    pub key: &'a [u8],
+    /// The key of the shell the terminal runs (`login`, or a shell profile's key), for the manifest.
+    pub shell: &'a str,
+}
+
+/// The key must not show in a log line or a test failure.
+impl std::fmt::Debug for CheckpointKey<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CheckpointKey")
+            .field("key", &if self.key.is_empty() { "none" } else { "<hidden>" })
+            .field("shell", &self.shell)
+            .finish()
+    }
+}
+
+/// The longest key sent: a longer one is a different thing, refused.
+pub const CHECKPOINT_KEY_LEN: usize = 32;
+
+impl<'a> CheckpointKey<'a> {
+    pub(crate) fn encode(&self, w: &mut Writer<'_>) -> Result<(), EncodeError> {
+        w.bytes32("SetCheckpointKey", self.key)?;
+        w.str16("SetCheckpointKey", self.shell)
+    }
+
+    pub(crate) fn decode(r: &mut Reader<'a>) -> Result<Self, WireError> {
+        let key = r.bytes32()?;
+        if !key.is_empty() && key.len() != CHECKPOINT_KEY_LEN {
+            return Err(WireError::BadValue("SetCheckpointKey"));
+        }
+        Ok(Self { key, shell: r.str16()? })
+    }
+}
+
 /// The answer to `ClipboardLoad{ticket}`; an empty `data` is "nothing to give".
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ClipboardReply<'a> {

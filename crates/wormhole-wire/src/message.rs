@@ -11,7 +11,9 @@
 //! middle.
 
 use crate::boot::{Hello, Incompatible, Welcome};
-use crate::control::{Attach, ClipboardReply, Colors, ErrorMsg, Hook, Limits, Options, Resize, Spawn};
+use crate::control::{
+    Attach, CheckpointKey, ClipboardReply, Colors, ErrorMsg, Hook, Limits, Options, Resize, Spawn,
+};
 use crate::cursor::{Reader, Writer};
 use crate::error::{EncodeError, WireError};
 use crate::event::{Event, decode_backlog, encode_backlog};
@@ -51,6 +53,14 @@ pub enum Message<'a> {
     /// Empty the host engine's history (the app's "clear buffer"), added in minor 2. It counts as
     /// `ED 3` for the `ED 2` that follows, so a ^L sent right after leaves nothing in it.
     ClearHistory,
+    /// The key and the shell for the checkpoint the host keeps for a restart of the Mac (minor 4). The host
+    /// keeps the key in memory only.
+    SetCheckpointKey(CheckpointKey<'a>),
+    /// Write a checkpoint now (minor 4); `flush` asks for it even if nothing changed since the last one and
+    /// whatever the write budget says, as a quit does.
+    Checkpoint {
+        flush: bool,
+    },
     /// End the session: hang up the shell, wait `grace_ms` before killing it.
     Close {
         grace_ms: u32,
@@ -113,6 +123,8 @@ impl Message<'_> {
             Self::SetOptions(_) => ty::SET_OPTIONS,
             Self::SetColorScheme(_) => ty::SET_COLOR_SCHEME,
             Self::ClearHistory => ty::CLEAR_HISTORY,
+            Self::SetCheckpointKey(_) => ty::SET_CHECKPOINT_KEY,
+            Self::Checkpoint { .. } => ty::CHECKPOINT,
             Self::Close { .. } => ty::CLOSE,
             Self::ClipboardReply(_) => ty::CLIPBOARD_REPLY,
             Self::Hook(_) => ty::HOOK,
@@ -153,6 +165,8 @@ impl Message<'_> {
             Self::SetLimits(m) => m.encode(w),
             Self::SetOptions(m) => m.write(w),
             Self::SetColorScheme(s) => w.u8(s.to_wire()),
+            Self::SetCheckpointKey(m) => m.encode(w)?,
+            Self::Checkpoint { flush } => w.bool(*flush),
             Self::Close { grace_ms } => w.u32(*grace_ms),
             Self::ClipboardReply(m) => m.encode(w)?,
             Self::Hook(m) => m.encode(w)?,
@@ -203,6 +217,8 @@ impl<'a> Message<'a> {
             ty::SET_OPTIONS => Self::SetOptions(Options::read(r)?),
             ty::SET_COLOR_SCHEME => Self::SetColorScheme(ColorScheme::from_wire(r.u8()?)),
             ty::CLEAR_HISTORY => Self::ClearHistory,
+            ty::SET_CHECKPOINT_KEY => Self::SetCheckpointKey(CheckpointKey::decode(r)?),
+            ty::CHECKPOINT => Self::Checkpoint { flush: r.bool()? },
             ty::CLOSE => Self::Close { grace_ms: r.u32()? },
             ty::CLIPBOARD_REPLY => Self::ClipboardReply(ClipboardReply::decode(r)?),
             ty::HOOK => Self::Hook(Hook::decode(r)?),
@@ -252,6 +268,8 @@ fn type_name(t: u8) -> &'static str {
         ty::SET_OPTIONS => "SetOptions",
         ty::SET_COLOR_SCHEME => "SetColorScheme",
         ty::CLEAR_HISTORY => "ClearHistory",
+        ty::SET_CHECKPOINT_KEY => "SetCheckpointKey",
+        ty::CHECKPOINT => "Checkpoint",
         ty::CLOSE => "Close",
         ty::CLIPBOARD_REPLY => "ClipboardReply",
         ty::HOOK => "Hook",

@@ -32,8 +32,8 @@ pub mod version;
 
 pub use boot::{BOOT_FIXED, Hello, Incompatible, MAGIC, MAX_TICKET, Welcome};
 pub use control::{
-    Attach, ClipboardReply, Colors, ErrorMsg, Hook, Limits, MAX_PALETTE, MAX_SPAWN_ITEMS, Options, Resize,
-    SEED_CHUNK, SEED_MAX, Spawn, error_code, option_flags, seed_chunks,
+    Attach, CHECKPOINT_KEY_LEN, CheckpointKey, ClipboardReply, Colors, ErrorMsg, Hook, Limits, MAX_PALETTE,
+    MAX_SPAWN_ITEMS, Options, Resize, SEED_CHUNK, SEED_MAX, Spawn, error_code, option_flags, seed_chunks,
 };
 pub use decoder::Decoder;
 pub use error::{EncodeError, WireError};
