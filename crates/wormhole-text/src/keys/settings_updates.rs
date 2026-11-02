@@ -182,3 +182,17 @@ pub fn settings_updates_installed_restart(version: &str) -> String {
 pub fn settings_updates_whats_new(version: &str) -> String {
     crate::active::message(1318, &[("version", Arg::Str(version))])
 }
+
+/// ```text
+/// The Unstable build { $version } was removed before it replaced anything. Stable offers its own releases.
+/// ```
+pub fn settings_updates_unstable_removed(version: &str) -> String {
+    crate::active::message(1319, &[("version", Arg::Str(version))])
+}
+
+/// ```text
+/// This Mac has the Unstable build { $version } installed. Stable takes over with the first Stable release newer than it.
+/// ```
+pub fn settings_updates_unstable_stays(version: &str) -> String {
+    crate::active::message(1320, &[("version", Arg::Str(version))])
+}

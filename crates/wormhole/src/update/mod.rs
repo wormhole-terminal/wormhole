@@ -19,14 +19,14 @@ mod restart_tests;
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, SystemTime};
 
 use gpui_kit::*;
 use wormhole_core::storage::store::Store;
 use wormhole_core::update::{
-    self, Checked, Count, DownloadedUpdate, Launched, Release, UpdateChannel, UpdateError, UpdateSchedule,
-    UpdateStatus, UpdaterConfig,
+    self, Checked, Count, DownloadedUpdate, Held, Launched, OnSwitch, Release, UpdateChannel, UpdateError,
+    UpdateSchedule, UpdateStatus, UpdaterConfig,
 };
 
 use crate::app_state::app;
@@ -52,6 +52,22 @@ pub(crate) enum UpdatePhase {
     /// effect on restart. The version on disk, as far as it is known.
     Installed(String),
     Failed(String),
+}
+
+/// What a change of channel did to the build it found, for Settings to say (`channel_note`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum ChannelNote {
+    /// An Unstable build was on its way; Stable called it off before it replaced anything.
+    Removed(String),
+    /// An Unstable build is already installed; Stable takes over at the next release newer than it.
+    Stays(String),
+}
+
+/// The download-and-install in flight, so a change of channel can call it off.
+struct Installing {
+    version: semver::Version,
+    /// Read by the install right before it swaps the bundle (`update::install_unless`).
+    called_off: Arc<AtomicBool>,
 }
 
 pub(crate) struct Updates {
@@ -82,6 +98,9 @@ pub(crate) struct Updates {
     dismissed: Option<String>,
     /// The window (`OpenWindow::id`) that has the offer now, so it moves when the front window changes.
     offered_in: Option<i64>,
+    installing: Option<Installing>,
+    /// What the last change of channel did to a build of the channel left, until the next change.
+    pub channel_note: Option<ChannelNote>,
 }
 
 impl Global for Updates {}
@@ -118,6 +137,8 @@ impl Updates {
             told: None,
             dismissed: None,
             offered_in: None,
+            installing: None,
+            channel_note: None,
         }
     }
 
@@ -132,6 +153,37 @@ impl Updates {
 
     pub fn progress(&self) -> (u64, u64) {
         (self.progress.0.load(Ordering::Relaxed), self.progress.1.load(Ordering::Relaxed))
+    }
+
+    /// The update the app holds, and what the new `channel` makes of it.
+    fn on_switch(&self, channel: UpdateChannel) -> (OnSwitch, Option<semver::Version>) {
+        let installed = match &self.phase {
+            UpdatePhase::Installed(version) => semver::Version::parse(version).ok(),
+            _ => None,
+        };
+        let on_its_way = self.installing.as_ref().filter(|_| self.phase_is_downloading());
+        let held = match (&installed, on_its_way) {
+            (Some(version), _) => Held::Installed(version),
+            (None, Some(installing)) => Held::OnItsWay(&installing.version),
+            (None, None) => Held::Nothing,
+        };
+        let version = installed.clone().or_else(|| on_its_way.map(|i| i.version.clone()));
+        (update::on_channel_switch(held, channel), version)
+    }
+
+    fn phase_is_downloading(&self) -> bool {
+        matches!(self.phase, UpdatePhase::Downloading)
+    }
+
+    /// Calls the download-and-install off. Its thread keeps running until it next looks at the flag
+    /// (a download is a blocking read), but it cannot get past the swap, and its result is not heard.
+    fn call_off_install(&mut self, version: semver::Version) {
+        if let Some(installing) = self.installing.take() {
+            installing.called_off.store(true, Ordering::Release);
+        }
+        self.task = None;
+        self.phase = UpdatePhase::Idle;
+        self.channel_note = Some(ChannelNote::Removed(version.to_string()));
     }
 
     /// Whether the app is waiting for its terminals to be idle to restart.
@@ -175,6 +227,9 @@ pub(crate) fn init(cx: &mut App) {
 
 /// What the old channel offered (or that it had nothing) no longer holds, so the new one is asked
 /// at once, as if the person had pressed Check: they just made a choice about updates.
+///
+/// A build the new channel would not have offered is dealt with first (`wormhole_core::update::held`):
+/// one still on its way is called off, one already installed stays and is said so.
 fn channel_changed(cx: &mut App) {
     let channel = settings(cx).update_channel;
     let updates = cx.global_mut::<Updates>();
@@ -182,7 +237,20 @@ fn channel_changed(cx: &mut App) {
         return;
     }
     updates.channel = channel;
+    updates.channel_note = None;
+    match updates.on_switch(channel) {
+        (OnSwitch::Keep, _) => {}
+        (OnSwitch::CallOff, Some(version)) => updates.call_off_install(version),
+        (OnSwitch::StaysInstalled, Some(version)) => {
+            updates.channel_note = Some(ChannelNote::Stays(version.to_string()));
+            notify_settings(cx);
+            return;
+        }
+        (_, None) => {}
+    }
+    let updates = cx.global_mut::<Updates>();
     if !updates.available() || updates.busy() || matches!(updates.phase, UpdatePhase::Installed(_)) {
+        notify_settings(cx);
         return;
     }
     check_for_updates(true, cx);
@@ -351,23 +419,32 @@ pub(crate) fn install_update(release: Release, cx: &mut App) {
         return;
     }
     updates.phase = UpdatePhase::Downloading;
+    let called_off = Arc::new(AtomicBool::new(false));
     let progress = updates.progress.clone();
     progress.0.store(0, Ordering::Relaxed);
     progress.1.store(release.asset.size, Ordering::Relaxed);
+    updates.installing =
+        Some(Installing { version: release.version.clone(), called_off: called_off.clone() });
     notify_settings(cx);
 
     let version = release.version.to_string();
     let semver = release.version.clone();
+    let flag = called_off.clone();
     let work = cx.background_executor().spawn(async move {
         let downloaded: DownloadedUpdate = update::download(&config, &release, |done, _| {
             progress.0.store(done, Ordering::Relaxed);
         })?;
-        update::install(&config, &downloaded, &bundle)
+        update::install_unless(&config, &downloaded, &bundle, &flag)
     });
     let task = cx.spawn(async move |cx| {
         let result = work.await;
         cx.update(|cx| {
             let updates = cx.global_mut::<Updates>();
+            // Called off by a change of channel: the person has moved on, so the result is not theirs.
+            if called_off.load(Ordering::Acquire) {
+                return;
+            }
+            updates.installing = None;
             updates.phase = match result {
                 Ok(()) => UpdatePhase::Installed(version),
                 Err(err) => {
@@ -465,9 +542,68 @@ fn save_update_schedule(cx: &App) {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::update::{UpdateError, UpdateStatus};
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
-    use super::should_record;
+    use wormhole_core::update::{OnSwitch, UpdateChannel, UpdateError, UpdateStatus};
+
+    use super::{ChannelNote, Installing, UpdatePhase, Updates, should_record};
+
+    fn updates(phase: UpdatePhase) -> Updates {
+        let mut updates = Updates::new(None, None);
+        updates.phase = phase;
+        updates
+    }
+
+    fn on_its_way(version: &str) -> (Updates, Arc<AtomicBool>) {
+        let mut updates = updates(UpdatePhase::Downloading);
+        let called_off = Arc::new(AtomicBool::new(false));
+        updates.installing = Some(Installing {
+            version: semver::Version::parse(version).expect("a version"),
+            called_off: called_off.clone(),
+        });
+        (updates, called_off)
+    }
+
+    #[test]
+    fn stable_calls_off_an_unstable_download_and_says_so() {
+        let (mut updates, called_off) = on_its_way("1.7.0-dev.3");
+        let (switch, version) = updates.on_switch(UpdateChannel::Stable);
+        assert_eq!(switch, OnSwitch::CallOff);
+        updates.call_off_install(version.expect("the version"));
+        assert!(called_off.load(Ordering::Acquire), "the install is told before it swaps");
+        assert!(matches!(updates.phase, UpdatePhase::Idle), "no Restart, no progress");
+        assert_eq!(updates.channel_note, Some(ChannelNote::Removed("1.7.0-dev.3".into())));
+        assert!(updates.installing.is_none());
+    }
+
+    #[test]
+    fn a_download_the_new_channel_also_offers_goes_on() {
+        let (updates, called_off) = on_its_way("1.7.0");
+        assert_eq!(updates.on_switch(UpdateChannel::Stable).0, OnSwitch::Keep);
+        let (updates, _) = on_its_way("1.7.0-dev.3");
+        assert_eq!(updates.on_switch(UpdateChannel::Unstable).0, OnSwitch::Keep);
+        assert!(!called_off.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn an_unstable_build_already_installed_stays_and_is_not_rolled_back() {
+        let held = updates(UpdatePhase::Installed("1.7.0-dev.3".into()));
+        let (switch, version) = held.on_switch(UpdateChannel::Stable);
+        assert_eq!(switch, OnSwitch::StaysInstalled);
+        assert_eq!(version.map(|v| v.to_string()).as_deref(), Some("1.7.0-dev.3"));
+        // A stable one, or one found on disk with only a plain version, is nothing to say.
+        assert_eq!(
+            updates(UpdatePhase::Installed("1.7.0".into())).on_switch(UpdateChannel::Stable).0,
+            OnSwitch::Keep
+        );
+    }
+
+    #[test]
+    fn nothing_held_changes_nothing() {
+        assert_eq!(updates(UpdatePhase::UpToDate).on_switch(UpdateChannel::Stable).0, OnSwitch::Keep);
+        assert_eq!(updates(UpdatePhase::Idle).on_switch(UpdateChannel::Unstable).0, OnSwitch::Keep);
+    }
 
     #[test]
     fn an_offline_check_is_not_recorded_so_it_is_retried() {

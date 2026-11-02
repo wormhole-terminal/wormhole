@@ -8,6 +8,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use tempfile::TempDir;
 
@@ -28,6 +29,21 @@ pub fn install(
     update: &DownloadedUpdate,
     app_bundle: &Path,
 ) -> Result<(), UpdateError> {
+    install_unless(config, update, app_bundle, &AtomicBool::new(false))
+}
+
+/// [`install`] that gives up with [`UpdateError::Cancelled`] if `cancelled` is set before the swap.
+///
+/// The swap is the point of no return: from the first rename on, the new bundle is what is on disk
+/// (the running app keeps going from memory, and the next launch is the new one), and nothing here
+/// keeps the previous bundle. So the flag is read once more right before it, after the extraction and
+/// every check, which is the last moment an update can still be called off with nothing changed.
+pub fn install_unless(
+    config: &UpdaterConfig,
+    update: &DownloadedUpdate,
+    app_bundle: &Path,
+    cancelled: &AtomicBool,
+) -> Result<(), UpdateError> {
     let app_bundle = check_bundle_path(app_bundle)?;
     let staging = create_staging(&app_bundle)?;
     check_bundle_removable(&app_bundle, &staging)?;
@@ -42,6 +58,11 @@ pub fn install(
         tracing::warn!("skipping codesign verification (disabled in config)");
     }
 
+    if cancelled.load(Ordering::Acquire) {
+        // Dropping `staging` removes the extracted copy; the bundle was never touched.
+        tracing::info!(%version, "update called off before it replaced the app");
+        return Err(UpdateError::Cancelled);
+    }
     let backup = staging.path().join("previous.app");
     if let Err(e) = swap_into_place(&app_bundle, &new_app, &backup) {
         if backup.exists() {

@@ -824,6 +824,8 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("settings-updates-installed-waits", settings_updates_installed_waits("Sample")),
         ("settings-updates-installed-restart", settings_updates_installed_restart("Sample")),
         ("settings-updates-whats-new", settings_updates_whats_new("Sample")),
+        ("settings-updates-unstable-removed", settings_updates_unstable_removed("Sample")),
+        ("settings-updates-unstable-stays", settings_updates_unstable_stays("Sample")),
         ("settings-window-open-section", settings_window_open_section("Sample")),
         ("settings-window-import-failed", settings_window_import_failed("Sample")),
         ("settings-window-results-summary", settings_window_results_summary(1, 1, "Sample")),

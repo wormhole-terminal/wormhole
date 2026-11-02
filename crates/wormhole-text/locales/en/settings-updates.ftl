@@ -110,3 +110,10 @@ settings-updates-installed-restart = Version { $version } is installed. Restart 
 
 # The heading over a release's notes. { $version } is its number.
 settings-updates-whats-new = What's new in { $version }
+
+## After the channel changed with a build of the old one in hand
+
+# Going back to Stable while an Unstable build was downloading or being installed. { $version } is its number.
+settings-updates-unstable-removed = The Unstable build { $version } was removed before it replaced anything. Stable offers its own releases.
+# Going back to Stable after an Unstable build was installed; it cannot be taken off again. { $version } is its number.
+settings-updates-unstable-stays = This Mac has the Unstable build { $version } installed. Stable takes over with the first Stable release newer than it.

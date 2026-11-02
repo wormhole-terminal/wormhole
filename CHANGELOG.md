@@ -132,6 +132,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - A session host started from a preview build (such as 1.6.3-preview.2) said its version was 1.6.0.
 - A session host's log no longer gets three lines for every look at it from the command line or the Session
   Hosts window; those short connections are logged at the debug level.
+- Going back from Unstable to Stable no longer keeps an Unstable build and offers to restart into it. A build
+  still downloading is called off before it replaces anything, and Settings → Updates says it was removed.
+  A build that is already installed stays (nothing keeps the version before it), and the page says so and that
+  Stable takes over with the first Stable release newer than it.
 
 ## [1.6.3] - 2026-11-02
 

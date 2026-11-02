@@ -21,6 +21,7 @@ mod channel;
 mod count;
 mod download;
 mod feed;
+mod held;
 mod http;
 mod install;
 mod replaced;
@@ -40,8 +41,9 @@ pub use channel::UpdateChannel;
 pub use count::{Count, counted_user_agent, plain_user_agent};
 pub use download::{DownloadedUpdate, download};
 pub use feed::{Asset, Checked, Release, UpdateStatus, check, check_counted};
+pub use held::{Held, OnSwitch, on_channel_switch};
 pub(crate) use install::bundle_from_exe;
-pub use install::{current_app_bundle, install, is_translocated, preflight, relaunch};
+pub use install::{current_app_bundle, install, install_unless, is_translocated, preflight, relaunch};
 pub use replaced::{Launched, Replaced};
 pub use schedule::UpdateSchedule;
 pub use security::{MAX_ADVISORIES, Security, Severity};
@@ -172,6 +174,8 @@ pub enum UpdateError {
     /// was opened straight from Downloads/a DMG. Updating it would be lost on the next launch.
     Translocated(PathBuf),
     Install(String),
+    /// Called off (the channel changed) before the new bundle replaced the app; nothing was changed.
+    Cancelled,
     Io(std::io::Error),
 }
 
@@ -200,6 +204,7 @@ impl fmt::Display for UpdateError {
                  Wormhole.app to your Applications folder, open it from there, and try again"
             ),
             Self::Install(e) => write!(f, "installing the update failed: {e}"),
+            Self::Cancelled => write!(f, "the update was called off before it replaced the app"),
             Self::Io(e) => write!(f, "I/O error during update: {e}"),
         }
     }

@@ -26,7 +26,7 @@ use crate::settings_window::nav::page_tile;
 use crate::settings_window::registry::{MenuOption, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
-use crate::update::{UpdatePhase, Updates};
+use crate::update::{ChannelNote, UpdatePhase, Updates};
 use wormhole_core::config::settings_index::SectionId as Section;
 
 pub(super) const SETTINGS: &[Setting] = &[
@@ -188,6 +188,10 @@ fn security_color(ui: UiColors, severity: Severity) -> Hsla {
 fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let updates = cx.global::<Updates>();
+    let channel_note = updates.channel_note.clone().map(|note| match note {
+        ChannelNote::Removed(version) => settings_updates_unstable_removed(&version),
+        ChannelNote::Stays(version) => settings_updates_unstable_stays(&version),
+    });
     let (phase, busy, available, (done, total), last, restart_pending) = (
         updates.phase.clone(),
         updates.busy(),
@@ -328,6 +332,11 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
         .flex()
         .flex_col()
         .child(style::tile_row("update-status-row", ui, parts))
+        .children(
+            channel_note.map(|note| {
+                div().py_3().rule_top(ui).child(style::notice(ui, style::NoticeKind::Info, note))
+            }),
+        )
         .children(security.map(|security| {
             div()
                 .flex()

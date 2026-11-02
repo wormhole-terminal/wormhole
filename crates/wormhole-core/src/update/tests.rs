@@ -16,7 +16,7 @@ use super::test_support::{
 };
 use super::{
     Checked, Count, UpdateChannel, UpdateError, UpdateStatus, UpdaterConfig, check, check_counted, download,
-    install, preflight,
+    install, install_unless, preflight,
 };
 
 const ARCHIVE_PATH: &str = "/releases/0.2.0/Wormhole-0.2.0-macos.app.tar.gz";
@@ -464,4 +464,26 @@ fn setuid_bits_and_special_files_do_not_survive_extraction() {
 fn apple_style_versions_parse_and_words_do_not() {
     assert_eq!(super::parse_lenient_version("14.5"), Some(semver::Version::new(14, 5, 0)));
     assert_eq!(super::parse_lenient_version("soon"), None);
+}
+
+/// The two states a switch back to Stable can meet, in the real install: called off before the swap
+/// (nothing on disk changes, nothing is left behind), and too late (the build is in place).
+#[test]
+fn an_install_called_off_before_the_swap_changes_nothing_and_after_it_is_in_place() {
+    let key = TestKey::generate();
+    let archive = fake_app_archive(BUNDLE_ID, "0.2.0");
+    let p = publish(&key, &archive, archive.clone(), None);
+    let update = download(&p.config, &available(&p.config), |_, _| {}).unwrap();
+
+    let (dir, app) = temp_apps_dir();
+    let called_off = std::sync::atomic::AtomicBool::new(true);
+    let err = install_unless(&p.config, &update, &app, &called_off).unwrap_err();
+    assert!(matches!(err, UpdateError::Cancelled), "{err}");
+    assert!(marker_of(&app).contains("old"), "the bundle is as it was");
+    assert!(leftovers(dir.path()).is_empty(), "left behind: {:?}", leftovers(dir.path()));
+
+    called_off.store(false, std::sync::atomic::Ordering::Release);
+    install_unless(&p.config, &update, &app, &called_off).unwrap();
+    assert!(marker_of(&app).contains("new"), "not called off: in place");
+    assert!(leftovers(dir.path()).is_empty());
 }
