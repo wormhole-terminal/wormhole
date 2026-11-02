@@ -55,6 +55,8 @@ pub(in crate::settings_window) fn draw_split_preview(
         minimap,
         split: !gaps,
         bg,
+        // The panes' faint ring when there are gaps: the foreground at 8 % over the pane.
+        ring_fill: if gaps { bg.blend(faded(fg, 0.08)) } else { bg },
         sep: faded(fg, 0.16),
         rule: faded(fg, 0.16),
         bar: faded(fg, 0.28),

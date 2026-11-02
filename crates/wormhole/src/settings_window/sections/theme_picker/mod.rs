@@ -25,8 +25,6 @@ use wormhole_core::theme::tokens::Appearance;
 
 mod card;
 
-#[cfg(test)]
-use self::card::CARD_RENDERS;
 use self::card::ThemeCard;
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
