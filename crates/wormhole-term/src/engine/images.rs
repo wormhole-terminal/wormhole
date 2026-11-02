@@ -34,18 +34,25 @@ pub(super) struct Uploads {
 
 impl Uploads {
     pub(super) fn new(proxy: EventProxy, screen: Arc<FairLock<Screen>>) -> Self {
-        let frames = FrameWorker::new(proxy.clone(), screen.clone(), true);
+        let frames = FrameWorker::new(proxy.clone(), screen.clone(), true, true);
+        Self { proxy, screen, replies: true, frames }
+    }
+
+    /// For a session host: it answers the program but draws nothing, so frames are only decoded.
+    pub(super) fn headless(proxy: EventProxy, screen: Arc<FairLock<Screen>>) -> Self {
+        let frames = FrameWorker::new(proxy.clone(), screen.clone(), true, false);
         Self { proxy, screen, replies: true, frames }
     }
 
     pub(super) fn replica(proxy: EventProxy, screen: Arc<FairLock<Screen>>) -> Self {
-        let frames = FrameWorker::new(proxy.clone(), screen.clone(), false);
+        let frames = FrameWorker::new(proxy.clone(), screen.clone(), false, true);
         Self { proxy, screen, replies: false, frames }
     }
 
-    /// Data for a frame of an animated picture arrived.
-    pub(super) fn frame(&self, screen: &mut Screen, upload: FrameUpload) {
-        self.frames.frame(screen, upload);
+    /// Data for a frame of an animated picture arrived (the screen is locked, being read): it is
+    /// built in turn once [`flush_frames`](Self::flush_frames) hands it over.
+    pub(super) fn frame(&self, upload: FrameUpload) {
+        self.frames.frame(upload);
     }
 
     /// The program composed one frame onto another.
@@ -53,9 +60,14 @@ impl Uploads {
         self.frames.compose(job);
     }
 
-    /// The program deleted a picture's frames.
-    pub(super) fn clear_frames(&self, image: ImageHandle) {
-        self.frames.clear(image);
+    /// The program deleted a frame of a picture.
+    pub(super) fn delete_frame(&self, image: ImageHandle, frame: u32) {
+        self.frames.delete(image, frame);
+    }
+
+    /// The screen's lock is released: hand over the frames' jobs collected under it.
+    pub(super) fn flush_frames(&self) {
+        self.frames.flush();
     }
 
     /// A picture arrived (the screen is locked, being read). Answer the engine now or when the

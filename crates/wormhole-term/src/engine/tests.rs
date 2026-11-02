@@ -153,15 +153,35 @@ fn the_frames_of_an_animated_picture_are_built_in_order_and_the_plan_is_the_engi
 }
 
 #[test]
-fn a_frame_that_cannot_be_decoded_is_refused_and_taken_away_again() {
+fn a_frame_that_cannot_be_decoded_is_refused_and_is_still_a_frame_built_from_its_base() {
     // A PNG whose header is right (the engine reads the size from it) and whose body is not: only
-    // the host's decoder finds out.
+    // the host's decoder finds out. The engine decided the frame's number when the command came, so
+    // the frame stays, as the base canvas alone, and the program is told.
     let script = "printf '\\033_Ga=t,f=32,s=2,v=1,i=7,q=2;/wAA//8AAP8=\\033\\\\'; \
                   printf '\\033_Ga=f,f=100,i=7;iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAAAAAA\\033\\\\'; sleep 5";
     let (pty, _events) = spawn(script);
     wait_until("the error reply", || pty.screen_text().contains("^[_Gi=7;ENODATA"));
-    assert!(pty.animation(1).is_none(), "the frame that failed is gone again: one frame is no animation");
-    assert_eq!(pty.images().frame_count(1), 1);
+    assert_eq!(pty.animation(1).map(|plan| plan.frame_count()), Some(2));
+    wait_until("the base canvas", || pty.images().frame_count(1) == 2);
+    let base = pty.images().frame(1, 1).expect("a canvas for the frame");
+    assert_eq!((base.width, base.height, base.rgba.iter().all(|&byte| byte == 0)), (2, 1, true));
+}
+
+#[test]
+fn a_frame_delete_waits_behind_the_frames_before_it() {
+    // The delete of the first frame comes after the frame it must find: if it ran early, the
+    // picture would still be the red one.
+    let script = "printf '\\033_Ga=t,f=32,s=2,v=1,i=7,q=2;/wAA//8AAP8=\\033\\\\'; \
+                  printf '\\033_Ga=f,f=32,s=1,v=1,x=1,c=1,i=7,q=2;AP8A/w==\\033\\\\'; \
+                  printf '\\033_Ga=d,d=f,i=7,q=2\\033\\\\'; printf 'done'; sleep 5";
+    let (pty, _events) = spawn(script);
+    wait_until("the output", || pty.screen_text().contains("done"));
+    let green_second = [255, 0, 0, 255, 0, 255, 0, 255];
+    wait_until("the delete", || {
+        pty.images().frame_count(1) == 1
+            && pty.images().frame(1, 0).is_some_and(|image| image.rgba == green_second)
+    });
+    assert!(pty.animation(1).is_none(), "one frame is no animation");
 }
 
 #[test]

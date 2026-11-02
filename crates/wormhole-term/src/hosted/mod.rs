@@ -118,7 +118,7 @@ impl HostedTerminal {
             screen.set_default_colors(&palette);
         }
         let screen = Arc::new(FairLock::new(screen));
-        let feed = HostedFeed::new(OwnFeed::new(proxy.clone(), screen.clone()), core.clone());
+        let feed = HostedFeed::new(OwnFeed::headless(proxy.clone(), screen.clone()), core.clone());
         // Before the program's first byte, so the spawning client misses none.
         let cursor = core.stream.register(true, Duration::ZERO, wake);
         let counted = core.clone();

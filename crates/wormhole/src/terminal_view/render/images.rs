@@ -157,7 +157,9 @@ fn run_paint(
 /// is what the engine says about the virtual placements the runs' cells name (asked for
 /// beforehand, `Pty::virtual_placement`): the cells carry the program's ids, and the store holds
 /// the pixels under the engine's handles. `shown` is the frame of an animated picture to draw, by
-/// the store's key (the first frame when the picture is not in it).
+/// the store's key (the first frame when the picture is not in it); a frame that has no pixels (never
+/// built, or refused for room) is drawn as the newest one before it that has, so a picture never
+/// vanishes in the middle of its animation.
 pub(super) fn image_paints<'a>(
     runs: impl Iterator<Item = (usize, &'a ImageRun)>,
     tiles: &HashMap<(u32, u32), Tiles>,
@@ -170,7 +172,8 @@ pub(super) fn image_paints<'a>(
     for (row, run) in runs {
         // No virtual placement for the cell: nothing says how big its picture is.
         let Some(tiles) = tiles.get(&(run.image, run.placement)) else { continue };
-        let Some(image) = store.frame(tiles.key, shown.get(&tiles.key).copied().unwrap_or(0)) else {
+        let Some(image) = store.frame_or_earlier(tiles.key, shown.get(&tiles.key).copied().unwrap_or(0))
+        else {
             continue;
         };
         let render_image = cache.render_image(tiles.key, &image);
@@ -200,7 +203,7 @@ pub(super) fn placement_paints(
     let (mut under, mut over) = (Vec::new(), Vec::new());
     for placement in placements {
         let id = placement_key(placement);
-        let Some(image) = store.frame(id, shown.get(&id).copied().unwrap_or(0)) else { continue };
+        let Some(image) = store.frame_or_earlier(id, shown.get(&id).copied().unwrap_or(0)) else { continue };
         let render_image = cache.render_image(id, &image);
         let Some(paint) = placement_paint(placement, offset, &image, render_image, clip, geometry) else {
             continue;
@@ -414,7 +417,7 @@ mod tests {
     }
 
     #[test]
-    fn the_frame_on_show_is_the_one_drawn_and_a_frame_without_pixels_draws_nothing() {
+    fn the_frame_on_show_is_the_one_drawn_and_a_frame_without_pixels_shows_the_one_before_it() {
         let mut store = ImageStore::default();
         store.insert(1, image(8, 16));
         let second = image(8, 16);
@@ -433,8 +436,16 @@ mod tests {
         assert_eq!(cache.take_retired().len(), 1, "and the first leaves the atlas");
         let (_, again) = place(1, &mut cache, &mut store);
         assert!(Arc::ptr_eq(&next[0].image, &again[0].image), "the same frame converts once");
-        assert!(place(2, &mut cache, &mut store).1.is_empty(), "frame 3 was never given pixels");
-        assert!(place(9, &mut cache, &mut store).1.is_empty(), "no such frame");
+        let (_, held) = place(2, &mut cache, &mut store);
+        assert!(
+            Arc::ptr_eq(&held[0].image, &next[0].image),
+            "frame 3 was never built: frame 2 stays on show"
+        );
+        let (_, beyond) = place(9, &mut cache, &mut store);
+        assert_eq!(beyond.len(), 1, "no such frame: the newest there is");
+        let mut decoding = ImageStore::default();
+        decoding.reserve(1, 8, 16);
+        assert!(place(0, &mut cache, &mut decoding).1.is_empty(), "nothing at all to draw while it decodes");
     }
 
     #[test]

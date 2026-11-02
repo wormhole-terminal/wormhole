@@ -9544,7 +9544,7 @@ dependencies = [
 [[package]]
 name = "wormhole-vt"
 version = "0.1.0"
-source = "git+https://github.com/wormhole-terminal/wormhole-vt?rev=e1cf56e6becb611b49839bb5a607124b3234e75b#e1cf56e6becb611b49839bb5a607124b3234e75b"
+source = "git+https://github.com/wormhole-terminal/wormhole-vt?rev=fe99a78a1d26e638a9f830aa10fa43a9f7453527#fe99a78a1d26e638a9f830aa10fa43a9f7453527"
 dependencies = [
  "bitflags 2.13.2",
  "memchr",

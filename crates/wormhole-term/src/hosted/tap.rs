@@ -326,6 +326,10 @@ impl Feed<Screen> for HostedFeed {
         self.core.stream.append(bytes);
     }
 
+    fn after_slice(&mut self) {
+        self.inner.after_slice();
+    }
+
     fn deadline(&self) -> Option<Instant> {
         self.inner.deadline()
     }

@@ -64,9 +64,16 @@ impl Clocks {
         if playing.generation != plan.generation() {
             *playing = Playing::start(plan, now);
         }
+        // Whole passes that went by while nobody looked (a hidden window) are skipped at once; the
+        // frames of the last one are stepped through, each step a constant-time `tick`.
+        let lag = now.saturating_duration_since(playing.since);
+        if lag >= plan.pass_duration() {
+            let skipped = plan.skip_passes(playing.position, lag);
+            playing.position = skipped.position;
+            playing.since = if skipped.finished { now } else { now - skipped.lag };
+        }
         let mut due = None;
-        // Catch up with the time that passed (the frames that went by since the last look), but
-        // not for ever: a pane that was hidden for an hour starts again from here.
+        // At most the frames of a pass and the ones that follow without a gap.
         for _ in 0..plan.frame_count() * 2 + 2 {
             match plan.tick(playing.position) {
                 Tick::Hold => break,
@@ -82,7 +89,7 @@ impl Clocks {
             }
         }
         if due.is_none() && !matches!(plan.tick(playing.position), Tick::Hold) {
-            // Still behind after all that: the frame on show starts now.
+            // Still behind (a plan that changed under us): the frame on show starts now.
             playing.since = now;
             due = Some(now);
         }

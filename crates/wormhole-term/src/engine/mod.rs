@@ -47,6 +47,14 @@ impl OwnFeed {
         Self { host: Host::new(proxy, uploads), deadline: None }
     }
 
+    /// The feed of a session host's terminal (`hosted`): the program is answered from here, but
+    /// nothing is drawn, so the frames of animated pictures are decoded to find out whether they
+    /// can be (the program's reply depends on it) and not kept.
+    pub(crate) fn headless(proxy: EventProxy, screen: Arc<FairLock<Screen>>) -> Self {
+        let uploads = Uploads::headless(proxy.clone(), screen);
+        Self { host: Host::new(proxy, uploads), deadline: None }
+    }
+
     /// The feed of a hosted terminal's replica (`client`): the host answers the program and
     /// reports what it did, so the replica's replies and events are dropped, all but its pictures,
     /// which the UI draws from its own decode.
@@ -79,6 +87,10 @@ impl Feed<Screen> for OwnFeed {
             Hold::Since(began) => Some(began + SYNC_TIMEOUT),
             Hold::Off | Hold::GaveUp => None,
         };
+    }
+
+    fn after_slice(&mut self) {
+        self.host.after_slice();
     }
 
     fn deadline(&self) -> Option<Instant> {

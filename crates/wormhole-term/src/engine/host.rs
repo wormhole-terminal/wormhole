@@ -84,15 +84,21 @@ impl Host {
             match event {
                 Event::ImageData(upload) => self.uploads.begin(screen, upload),
                 Event::ImageFree(image) => self.uploads.free(image),
-                Event::ImageFrame(upload) => self.uploads.frame(screen, upload),
+                Event::ImageFrame(upload) => self.uploads.frame(upload),
                 Event::ImageCompose(job) => self.uploads.compose(job),
-                Event::ImageFramesCleared(image) => self.uploads.clear_frames(image),
+                Event::ImageFrameDeleted { image, frame } => self.uploads.delete_frame(image, frame),
                 _ => {}
             }
         }
         self.events = events;
         screen.term.clear_cwd_reports();
         screen.term.clear_replies();
+    }
+
+    /// The screen's lock is released: hand the frames' jobs collected under it to the worker (this
+    /// may wait for the worker to catch up, which holds the PTY back instead of losing frames).
+    pub(super) fn after_slice(&mut self) {
+        self.uploads.flush_frames();
     }
 
     /// Send the engine's replies up to byte `until` that have not gone out yet.
@@ -166,9 +172,9 @@ impl Host {
             Event::WindowOp(op) => proxy.send(PtyEvent::WindowOp(op)),
             Event::ImageData(upload) => self.uploads.begin(screen, upload),
             Event::ImageFree(image) => self.uploads.free(image),
-            Event::ImageFrame(upload) => self.uploads.frame(screen, upload),
+            Event::ImageFrame(upload) => self.uploads.frame(upload),
             Event::ImageCompose(job) => self.uploads.compose(job),
-            Event::ImageFramesCleared(image) => self.uploads.clear_frames(image),
+            Event::ImageFrameDeleted { image, frame } => self.uploads.delete_frame(image, frame),
             // The plan is read from the engine when a frame is drawn (`Pty::animation`); the read
             // that brought this event wakes the view.
             Event::ImageAnimation(_) => {}

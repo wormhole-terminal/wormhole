@@ -24,6 +24,11 @@ pub(crate) trait Feed<S>: Send + 'static {
     /// Parse `bytes` of the program's output into `screen`. A sequence may end in the next call.
     fn feed(&mut self, screen: &mut S, bytes: &[u8]);
 
+    /// Called after a slice was parsed and the screen's lock is **released**: work the feed
+    /// collected under the lock that may take a while or wait (handing frames to a worker whose
+    /// queue is full), which must not hold the lock the worker needs to answer.
+    fn after_slice(&mut self) {}
+
     /// When a synchronized update (mode 2026) that was begun and not ended must be given up on:
     /// the reader wakes then and calls [`expire`](Self::expire). `None` when there is none.
     fn deadline(&self) -> Option<Instant> {
@@ -77,6 +82,7 @@ impl<S, F: Feed<S>> Sink<S, F> {
                 perf::parsed(slice.len(), parsing);
                 was_held && self.feed.held_back(&screen)
             };
+            self.feed.after_slice();
             // A slice inside a held update changes nothing the UI shows: it draws the frame from
             // before the update until the update ends (the slice that ends it wakes, as does the
             // timeout, see `expire_sync`). The slice that began the hold may carry output from
@@ -134,6 +140,7 @@ impl<S, F: Feed<S>> Sink<S, F> {
             let mut screen = self.screen.lock_as(Side::Reader);
             change(&mut screen, &mut self.feed);
         }
+        self.feed.after_slice();
         self.proxy.wakeup();
     }
 }

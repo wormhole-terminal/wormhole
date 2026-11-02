@@ -14,8 +14,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::MAX_IMAGES;
 
-/// Most one terminal's images may take, decoded.
-pub const STORE_BUDGET: usize = 128 * 1024 * 1024;
+/// Most one terminal's images may take, decoded: what the engine allows each of its two screens
+/// (`IMAGE_BUDGET_BYTES`, frames of animations counted), twice, so that what the engine keeps the
+/// store can hold. The engine evicts by its own count, and the frames it accepted must find room
+/// here without this evicting anything to make it.
+pub const STORE_BUDGET: usize = 2 * (wormhole_vt::image::IMAGE_BUDGET_BYTES as usize);
 /// Most all terminals' images may take together.
 pub const GLOBAL_BUDGET: usize = 512 * 1024 * 1024;
 
@@ -44,9 +47,13 @@ struct Slot {
     /// `None` while the image is being decoded.
     image: Option<Arc<Image>>,
     /// The canvases of an animation's frames after the first (frame 2 is `frames[0]`). `None`:
-    /// a frame the engine counts that has no pixels here, because its data could not be decoded
-    /// or was dropped under load; it shows nothing.
+    /// a frame the engine counts that has no canvas here (it did not fit, or was dropped under
+    /// load): the one before it shows in its place ([`ImageStore::frame_or_earlier`]).
     frames: Vec<Option<Arc<Image>>>,
+    /// The picture is reserved and its own decode has not finished: its pixels are on the way.
+    /// (Not "has no pixels": a picture whose first frame was deleted may have none and is not
+    /// waiting for any.)
+    pending: bool,
     width: u32,
     height: u32,
     /// The tick it was last drawn or stored at (the eviction order).
@@ -60,14 +67,26 @@ impl Slot {
     }
 }
 
-#[derive(Default)]
 pub struct ImageStore {
     images: HashMap<u32, Slot>,
     bytes: usize,
     tick: u64,
+    /// What this store may hold: [`STORE_BUDGET`] (smaller in tests).
+    budget: usize,
+}
+
+impl Default for ImageStore {
+    fn default() -> Self {
+        Self::with_budget(STORE_BUDGET)
+    }
 }
 
 impl ImageStore {
+    /// A store that holds at most `budget` bytes.
+    pub fn with_budget(budget: usize) -> Self {
+        Self { images: HashMap::new(), bytes: 0, tick: 0, budget }
+    }
+
     /// How much this terminal's images take.
     pub fn bytes(&self) -> usize {
         self.bytes
@@ -89,10 +108,10 @@ impl ImageStore {
     /// Make room for `bytes` more by evicting the least recently drawn images of this terminal.
     /// `false` when there is no room even then.
     fn make_room(&mut self, bytes: usize) -> bool {
-        if bytes > STORE_BUDGET {
+        if bytes > self.budget {
             return false;
         }
-        while self.bytes + bytes > STORE_BUDGET
+        while self.bytes + bytes > self.budget
             || global_bytes() + bytes > GLOBAL_BUDGET
             || self.images.len() >= MAX_IMAGES
         {
@@ -100,7 +119,7 @@ impl ImageStore {
                 break;
             }
         }
-        self.bytes + bytes <= STORE_BUDGET && global_bytes() + bytes <= GLOBAL_BUDGET
+        self.bytes + bytes <= self.budget && global_bytes() + bytes <= GLOBAL_BUDGET
     }
 
     /// An image of this size is on its way (being decoded): its id is taken and placements may
@@ -111,7 +130,7 @@ impl ImageStore {
             return false;
         }
         let used = self.touch();
-        self.images.insert(id, Slot { image: None, frames: Vec::new(), width, height, used });
+        self.images.insert(id, Slot { image: None, frames: Vec::new(), pending: true, width, height, used });
         true
     }
 
@@ -128,7 +147,8 @@ impl ImageStore {
         GLOBAL_BYTES.fetch_add(bytes, Ordering::Relaxed);
         self.bytes += bytes;
         let used = self.touch();
-        self.images.insert(id, Slot { image: Some(image), frames: Vec::new(), width, height, used });
+        self.images
+            .insert(id, Slot { image: Some(image), frames: Vec::new(), pending: false, width, height, used });
         true
     }
 
@@ -185,7 +205,7 @@ impl ImageStore {
 
     /// Whether the image is reserved and still being decoded.
     pub fn is_pending(&self, id: u32) -> bool {
-        self.images.get(&id).is_some_and(|slot| slot.image.is_none())
+        self.images.get(&id).is_some_and(|slot| slot.pending)
     }
 
     /// Frame `frame` of the image (counted from 0, the picture itself), counted as drawn now.
@@ -200,36 +220,41 @@ impl ImageStore {
         }
     }
 
+    /// Frame `frame` of the image, or the newest frame before it that has pixels: what to draw
+    /// while a frame has none (counted as drawn now). `None` when none of them does.
+    pub fn frame_or_earlier(&mut self, id: u32, frame: usize) -> Option<Arc<Image>> {
+        let tick = self.touch();
+        let slot = self.images.get_mut(&id)?;
+        slot.used = tick;
+        let last = slot.frames.len().min(frame);
+        (1..=last).rev().find_map(|n| slot.frames[n - 1].clone()).or_else(|| slot.image.clone())
+    }
+
     /// Keep `image` as frame `frame` (counted from 0, the picture itself) of the image, replacing
-    /// what was there and making room as `insert` does. Frames before it that were never given
-    /// pixels stay empty. `false` when there is no such image or the frame doesn't fit even then.
+    /// what was there. Frames before it that were never given pixels stay empty. **No room is made
+    /// by evicting**: the engine counts the same canvases against a budget of its own and has made
+    /// room by it, and a frame is never paid for with another picture, nor with its own. `false`,
+    /// and nothing changed (the old canvas stays), when there is no such image or it does not fit.
     pub fn set_frame(&mut self, id: u32, frame: usize, image: Arc<Image>) -> bool {
-        if !self.images.contains_key(&id) {
-            return false;
+        let Some(slot) = self.images.get(&id) else { return false };
+        let old = match frame {
+            0 => slot.image.as_ref(),
+            n => slot.frames.get(n - 1).and_then(Option::as_ref),
         }
+        .map_or(0, |old| old.bytes());
         let bytes = image.bytes();
-        // The old canvas goes first, so replacing a frame does not need room for both.
-        if let Some(slot) = self.images.get_mut(&id) {
-            let old = match frame {
-                0 => slot.image.take(),
-                n => slot.frames.get_mut(n - 1).and_then(Option::take),
-            };
-            if let Some(old) = old {
-                self.bytes -= old.bytes();
-                GLOBAL_BYTES.fetch_sub(old.bytes(), Ordering::Relaxed);
-            }
-        }
-        // Newest, so that making room takes other images first.
-        let used = self.touch();
-        if let Some(slot) = self.images.get_mut(&id) {
-            slot.used = used;
-        }
-        if !self.make_room(bytes) {
+        let grow = bytes.saturating_sub(old);
+        if self.bytes + grow > self.budget || global_bytes() + grow > GLOBAL_BUDGET {
             return false;
         }
+        let used = self.touch();
         let Some(slot) = self.images.get_mut(&id) else { return false };
+        slot.used = used;
         match frame {
-            0 => slot.image = Some(image),
+            0 => {
+                slot.image = Some(image);
+                slot.pending = false;
+            }
             n => {
                 if slot.frames.len() < n {
                     slot.frames.resize(n, None);
@@ -237,15 +262,28 @@ impl ImageStore {
                 slot.frames[n - 1] = Some(image);
             }
         }
+        self.bytes = self.bytes - old + bytes;
         GLOBAL_BYTES.fetch_add(bytes, Ordering::Relaxed);
-        self.bytes += bytes;
+        GLOBAL_BYTES.fetch_sub(old, Ordering::Relaxed);
         true
     }
 
-    /// Drop all the frames after the first.
-    pub fn clear_frames(&mut self, id: u32) {
+    /// Delete frame `frame` (counted from 0) as the engine does: the later frames move up one, and
+    /// when it is the first the next one becomes the picture. The only frame stays.
+    pub fn remove_frame(&mut self, id: u32, frame: usize) {
         let Some(slot) = self.images.get_mut(&id) else { return };
-        let freed: usize = slot.frames.drain(..).flatten().map(|frame| frame.bytes()).sum();
+        let removed = if frame == 0 {
+            if slot.frames.is_empty() {
+                return;
+            }
+            let next = slot.frames.remove(0);
+            std::mem::replace(&mut slot.image, next)
+        } else if frame <= slot.frames.len() {
+            slot.frames.remove(frame - 1)
+        } else {
+            return;
+        };
+        let freed = removed.map_or(0, |image| image.bytes());
         self.bytes -= freed;
         GLOBAL_BYTES.fetch_sub(freed, Ordering::Relaxed);
     }
@@ -276,7 +314,7 @@ impl Drop for ImageStore {
 mod tests {
     use std::sync::Arc;
 
-    use super::{Image, ImageStore, STORE_BUDGET};
+    use super::{Image, ImageStore};
 
     fn image(bytes: usize) -> Arc<Image> {
         Arc::new(Image { width: (bytes / 4) as u32, height: 1, rgba: vec![0; bytes] })
@@ -284,8 +322,8 @@ mod tests {
 
     #[test]
     fn the_least_recently_drawn_image_goes_first_when_the_budget_is_full() {
-        let mut store = ImageStore::default();
-        let third = STORE_BUDGET / 3;
+        let mut store = ImageStore::with_budget(3_000);
+        let third = 1_000;
         assert!(store.insert(1, image(third)));
         assert!(store.insert(2, image(third)));
         assert!(store.insert(3, image(third)));
@@ -296,7 +334,7 @@ mod tests {
         assert!(!store.contains(2) && store.contains(1) && store.contains(3));
         assert_eq!(store.bytes(), 3 * third);
         // Too big for the budget at all.
-        assert!(!store.insert(5, image(STORE_BUDGET + 1)));
+        assert!(!store.insert(5, image(3_001)));
         assert_eq!(store.len(), 3);
         // Replacing an image frees the old one.
         assert!(store.insert(4, image(8)));
@@ -317,28 +355,68 @@ mod tests {
         assert_eq!(store.bytes(), 32);
         assert!(store.set_frame(1, 2, image(24)), "replacing a frame frees the old canvas");
         assert_eq!(store.bytes(), 40);
-        store.clear_frames(1);
-        assert_eq!((store.frame_count(1), store.bytes()), (1, 16));
         assert!(store.set_frame(1, 0, image(8)), "frame 0 is the picture itself");
-        assert_eq!(store.bytes(), 8);
+        assert_eq!(store.bytes(), 32);
         assert!(!store.set_frame(5, 1, image(8)), "no such image");
-        // Removing the image takes its frames' bytes along.
-        assert!(store.set_frame(1, 1, image(8)));
-        assert_eq!(store.bytes(), 16);
         store.remove(1);
         assert_eq!(store.bytes(), 0);
     }
 
     #[test]
-    fn a_frame_makes_room_by_evicting_other_images_and_never_its_own() {
+    fn the_frame_to_draw_is_the_newest_with_pixels_at_or_before_the_one_asked_for() {
         let mut store = ImageStore::default();
-        let half = STORE_BUDGET / 2;
-        assert!(store.insert(1, image(half)));
-        assert!(store.insert(2, image(half)));
-        assert!(store.set_frame(2, 1, image(half)), "image 1, the older, makes room");
-        assert!(!store.contains(1) && store.contains(2));
-        assert!(!store.set_frame(2, 2, image(half + 1)), "more than the budget has");
-        assert!(store.contains(2) || store.is_empty());
+        let (root, second) = (image(8), image(16));
+        assert!(store.insert(1, root.clone()));
+        assert!(store.set_frame(1, 1, second.clone()));
+        assert!(store.set_frame(1, 4, image(24)));
+        let at = |store: &mut ImageStore, n| store.frame_or_earlier(1, n).map(|i| i.bytes());
+        assert_eq!([at(&mut store, 0), at(&mut store, 1)], [Some(8), Some(16)]);
+        assert_eq!([at(&mut store, 2), at(&mut store, 3)], [Some(16), Some(16)], "frames 3 and 4 have none");
+        assert_eq!([at(&mut store, 4), at(&mut store, 9)], [Some(24), Some(24)]);
+        assert_eq!(store.frame_or_earlier(7, 0), None);
+        store.reserve(2, 1, 1);
+        assert_eq!(store.frame_or_earlier(2, 3), None, "a picture still being decoded has nothing to draw");
+    }
+
+    #[test]
+    fn a_frame_never_evicts_and_one_that_does_not_fit_leaves_the_old_canvas() {
+        let mut store = ImageStore::with_budget(100);
+        assert!(store.insert(1, image(36)));
+        assert!(store.insert(2, image(16)));
+        assert!(store.set_frame(2, 1, image(32)), "36 + 16 + 32 fits");
+        assert!(
+            !store.set_frame(2, 2, image(32)),
+            "it does not, and the older picture 1 is not evicted for it"
+        );
+        assert!(store.contains(1) && store.contains(2));
+        assert_eq!((store.frame_count(2), store.bytes()), (2, 84));
+        assert!(!store.set_frame(2, 1, image(100)), "a bigger canvas for a frame does not fit either");
+        assert_eq!(store.frame(2, 1).map(|i| i.bytes()), Some(32), "the old canvas is still there");
+        assert_eq!(store.bytes(), 84);
+        assert!(!store.set_frame(2, 0, image(200)));
+        assert_eq!(store.frame(2, 0).map(|i| i.bytes()), Some(16));
+    }
+
+    #[test]
+    fn deleting_a_frame_moves_the_later_ones_up_and_the_next_becomes_the_picture() {
+        let mut store = ImageStore::default();
+        assert!(store.insert(1, image(8)));
+        assert!(store.set_frame(1, 1, image(16)));
+        assert!(store.set_frame(1, 2, image(24)));
+        store.remove_frame(1, 1);
+        assert_eq!(
+            (store.frame_count(1), store.frame(1, 1).map(|i| i.bytes()), store.bytes()),
+            (2, Some(24), 32)
+        );
+        store.remove_frame(1, 0);
+        assert_eq!(
+            (store.frame_count(1), store.frame(1, 0).map(|i| i.bytes()), store.bytes()),
+            (1, Some(24), 24)
+        );
+        store.remove_frame(1, 0);
+        store.remove_frame(1, 5);
+        store.remove_frame(9, 0);
+        assert_eq!(store.bytes(), 24, "the only frame stays");
     }
 
     #[test]
@@ -355,5 +433,10 @@ mod tests {
         store.remove(8);
         assert!(!store.insert_decoded(8, image(16)));
         assert!(!store.contains(8));
+        // Pending is a state of its own, not "has no pixels yet".
+        store.reserve(9, 1, 1);
+        assert!(store.is_pending(9));
+        assert!(store.insert_decoded(9, image(4)));
+        assert!(!store.is_pending(9) && !store.is_pending(77));
     }
 }
