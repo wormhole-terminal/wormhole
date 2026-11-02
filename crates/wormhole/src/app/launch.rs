@@ -140,6 +140,7 @@ pub(crate) fn start(
         }
     })
     .detach();
+    crate::app::sigterm::quit_on_sigterm(cx);
     cx.spawn(async move |cx| {
         loop {
             cx.background_executor().timer(TICK).await;

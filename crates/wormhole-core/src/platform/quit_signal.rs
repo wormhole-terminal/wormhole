@@ -1,6 +1,7 @@
 //! A polite `kill`: SIGTERM asks the app to quit as ⌘Q does (every window saved, session hosts
 //! left running) instead of ending it on the spot, which lost the terminals' text since the last
-//! minute's save. The handler only sets a flag; the app's tick reads it with [`take`].
+//! minute's save. The handler only writes to a pipe (all a handler may do); a thread of the app waits on
+//! it with [`wait`], so the quit starts at once instead of at the next tick.
 
 use std::io;
 
@@ -12,9 +13,10 @@ pub fn catch_sigterm() -> io::Result<()> {
     os::catch_sigterm()
 }
 
-/// Whether SIGTERM arrived since the last call.
-pub fn take() -> bool {
-    os::take()
+/// Block until SIGTERM arrives (or already has), for a thread of its own. Errors if
+/// [`catch_sigterm`] was not called, or the pipe broke.
+pub fn wait() -> io::Result<()> {
+    os::wait()
 }
 
 /// End the process at once, with exit code 0, when ctrl-c (SIGINT) arrives: for a command line that

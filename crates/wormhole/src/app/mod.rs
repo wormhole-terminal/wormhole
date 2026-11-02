@@ -16,6 +16,7 @@ pub(crate) mod menus;
 mod saved_text;
 #[cfg(test)]
 mod saved_text_tests;
+mod sigterm;
 mod tick;
 #[cfg(test)]
 mod tick_tests;

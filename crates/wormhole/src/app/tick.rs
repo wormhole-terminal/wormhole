@@ -67,12 +67,6 @@ pub(super) fn handle_menu_command(command: MenuCommand, cx: &mut App) {
 
 /// Once per tick, whatever the number of windows.
 pub(super) fn tick(cx: &mut App) {
-    // `kill` (SIGTERM): quit as ⌘Q does, without its question, so nothing unsaved is lost.
-    if wormhole_core::platform::quit_signal::take() {
-        tracing::info!("asked to quit (SIGTERM)");
-        cx.quit();
-        return;
-    }
     let ticks = app(cx).advance_tick();
     let mut moved = SettingsStore::poll(cx);
     if cx.try_global::<ParkedSettings>().is_some_and(|parked| !parked.is_empty()) {
