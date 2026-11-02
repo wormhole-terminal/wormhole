@@ -16,15 +16,15 @@
 
 use std::collections::VecDeque;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::time::Instant;
 
 use super::blocks::CommandLog;
 use super::images::{DECODES_MAX, ImageStore};
-use super::osc::{Mark, Notification, Osc, Progress, ProgressState, PromptKind};
+use super::osc::{Mark, Notification, Osc, PromptKind};
 use super::procinfo;
-use super::program_status::{self, ProgramStatus};
+use super::program_status::{self, ProgramStatus, Progress};
 use wormhole_vt::window::WindowOp;
 
 /// Turns clipboard text into the escape sequence a program expects.
@@ -216,8 +216,6 @@ pub(super) struct Shared {
     exit_code: AtomicU64,
     /// OSC 133: when each command started and how it ended, by prompt (the blocks' states).
     commands: Mutex<CommandLog>,
-    /// OSC 9;4: the progress, as `(state + 1) << 8 | percent`; 0 when there is none.
-    progress: AtomicU32,
     /// OSC 7501: what programs report, applied here on the PTY thread in the order the bytes came
     /// (so a prompt after a report drops it, and the UI never holds a queue of them).
     program_status: Mutex<ProgramStatus>,
@@ -317,29 +315,8 @@ impl Shared {
         (packed != 0).then_some(packed as u32 as i32)
     }
 
-    fn set_progress(&self, progress: Option<Progress>) {
-        let packed = progress.map_or(0, |p| {
-            let state = match p.state {
-                ProgressState::Normal => 1,
-                ProgressState::Error => 2,
-                ProgressState::Indeterminate => 3,
-                ProgressState::Paused => 4,
-            };
-            state << 8 | u32::from(p.percent)
-        });
-        self.progress.store(packed, Ordering::Release);
-    }
-
     pub(super) fn progress(&self) -> Option<Progress> {
-        let packed = self.progress.load(Ordering::Acquire);
-        let state = match packed >> 8 {
-            0 => return None,
-            1 => ProgressState::Normal,
-            2 => ProgressState::Error,
-            3 => ProgressState::Indeterminate,
-            _ => ProgressState::Paused,
-        };
-        Some(Progress { state, percent: (packed & 0xff) as u8 })
+        self.program_status().progress()
     }
 
     pub(super) fn set_writer(&self, writer: Writer) {
@@ -526,12 +503,13 @@ impl EventProxy {
                 self.heard(Heard::Notify(&notification));
                 self.send(PtyEvent::Notify(notification));
             }
-            // Nothing shows this yet. Once something does, it must stop mapping it to a status
-            // after the first OSC 7501 report, until the next full reset: a mapped 9;4 would
-            // replace a real report's kind and msg.
+            // Kept beside OSC 7501's records and shown through the same summary when it has no
+            // record of its own (`program_status::progress` says which of the two wins).
             Osc::Progress(progress) => {
                 self.heard(Heard::Progress(progress));
-                self.shared.set_progress(progress);
+                if self.shared.program_status().set_progress(progress) {
+                    self.program_status_changed();
+                }
             }
             // Answered here, on the PTY thread while the read's events are acted on, so the reply
             // goes out ahead of the engine's own replies from the same read: the reply to the

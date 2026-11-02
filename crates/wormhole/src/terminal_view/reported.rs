@@ -170,6 +170,11 @@ pub(super) fn status_of(summary: &Reported) -> (Status, Option<String>) {
         State::Done => (Status::Done, message),
         // Without words of its own, only the percentage is worth saying: the row's "Working · 3m"
         // can't carry it.
+        // A program that holds its progress (OSC 9;4 state 4) says so, since it isn't moving.
+        State::Working if summary.paused => {
+            let words = wormhole_text::text(wormhole_text::keys::TERMINAL_PROGRESS_PAUSED).to_string();
+            (Status::Busy, Some(with_progress(words, summary.progress)))
+        }
         State::Working => match (message, summary.progress) {
             (None, Some(_)) => (Status::Busy, Some(with_progress("Working".to_string(), summary.progress))),
             (message, progress) => (Status::Busy, message.map(|words| with_progress(words, progress))),
@@ -204,7 +209,15 @@ mod tests {
     use super::{status_of, waiting_for};
 
     fn summary(state: State, kind: Option<Kind>, msg: Option<&str>) -> Summary {
-        Summary { state, kind, progress: None, app: None, title: None, msg: msg.map(str::to_string) }
+        Summary {
+            state,
+            kind,
+            progress: None,
+            app: None,
+            title: None,
+            msg: msg.map(str::to_string),
+            paused: false,
+        }
     }
 
     fn with_progress(state: State, progress: u8, msg: Option<&str>) -> Summary {
@@ -277,6 +290,12 @@ mod tests {
             of(with_progress(State::Working, 0, Some("Starting"))).1.as_deref(),
             Some("Starting · 0%")
         );
+    }
+
+    #[test]
+    fn progress_a_program_holds_says_paused_and_keeps_its_percentage() {
+        let paused = Summary { paused: true, ..with_progress(State::Working, 40, None) };
+        assert_eq!(status_of(&paused), (Status::Busy, Some("Paused · 40%".into())));
     }
 
     #[test]

@@ -6,6 +6,13 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Added
+
+- Progress a program reports with OSC 9;4 (the sequence ConEmu, Windows Terminal and Ghostty show) now
+  appears in the terminal's row like OSC 7501's: a percentage, "Paused" while it is held, and a
+  failure for the error state. A program that reports through OSC 7501 keeps priority; the progress
+  clears at the next prompt or when the program exits.
+
 ## [1.6.2] - 2026-11-02
 
 ### Fixed

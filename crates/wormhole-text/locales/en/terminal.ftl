@@ -51,3 +51,7 @@ terminal-program-unnamed = A program
 # The bar over a terminal when a program asks to read the clipboard, and what VoiceOver says for it. { $program }
 # is the program's name as the sidebar shows it, e.g. ssh, or the message above.
 terminal-clipboard-ask = { $program } wants to read the clipboard
+
+# The sidebar row's words for a terminal whose program holds its progress (OSC 9;4 state 4); the
+# percentage follows it ("Paused · 40%").
+terminal-progress-paused = Paused
