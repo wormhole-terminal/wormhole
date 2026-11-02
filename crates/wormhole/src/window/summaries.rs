@@ -49,6 +49,9 @@ impl Workspace {
                 crate::app_state::recent_folders::visited(cx, &self.profile, &folder);
             }
         }
+        if ix == self.active {
+            self.sync_title_soon(cx);
+        }
         cx.notify();
         // A status that starts or ends a counted time starts or ends the timer's reason.
         if timed {

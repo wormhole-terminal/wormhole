@@ -133,6 +133,7 @@ impl Workspace {
     pub(crate) fn set_custom_name(&mut self, ix: usize, name: Option<String>, cx: &mut Context<Self>) {
         let Some(session) = self.sessions.get_mut(ix) else { return };
         session.custom_name = name;
+        self.sync_title_soon(cx);
         self.mark_dirty(cx);
         let session = &self.sessions[ix];
         self.publish_renamed(session.id, session.custom_name.as_deref(), cx);
@@ -252,6 +253,7 @@ impl Workspace {
             self.dirty = true;
         }
         self.active = ix;
+        self.sync_title_soon(cx);
         let id = self.sessions[ix].id;
         if let Some(split) = self.active_split_mut()
             && split.layout.focused() != id

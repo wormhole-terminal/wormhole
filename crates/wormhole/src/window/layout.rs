@@ -182,7 +182,6 @@ impl Render for Workspace {
         self.regions.note_tree(window, self.window_id);
         // The workspace's own column: the window less what lies beside it (`column_probe`).
         self.window_width = f32::from(window.viewport_size().width) - self.beside;
-        self.sync_window_title(window);
         self.sync_tab_layout(window, cx);
         // A drag that ended anywhere (a drop on a row clears the window's own drag first, so it is not the
         // window's drag that says so) has no chip to follow it.

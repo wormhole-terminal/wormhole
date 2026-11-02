@@ -330,8 +330,26 @@ impl Workspace {
         }
     }
 
-    /// Name the window after the selected session. Run by each frame: whatever changes the name (a
-    /// program's title, the folder, a rename, another selection) notifies the workspace, which draws.
+    /// Name the window after the selected session, now that the name may have changed (a program's
+    /// title, the folder, a rename, another selection). Not left to a frame: a window that is minimised
+    /// or hidden draws none, and its title is what the Window menu, ⌘` and Mission Control list. The
+    /// window is reached from a deferred call, since this runs inside updates that don't have it.
+    pub(super) fn sync_title_soon(&mut self, cx: &mut Context<Self>) {
+        let title = self.active_session().name();
+        if title == self.title {
+            return;
+        }
+        let Some(handle) = app(cx).windows.iter().find(|w| w.id == self.window_id).map(|w| w.handle) else {
+            return;
+        };
+        self.title = title.clone();
+        cx.defer(move |cx| {
+            handle.update(cx, |_, window, _| window.set_window_title(&title)).ok();
+        });
+    }
+
+    /// The tick's backstop for [`sync_title_soon`](Self::sync_title_soon): a name changed by a path that
+    /// doesn't call it (a session closed under the selection).
     pub(super) fn sync_window_title(&mut self, window: &mut Window) {
         let title = self.active_session().name();
         if title != self.title {
