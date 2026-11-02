@@ -145,6 +145,9 @@ pub(crate) mod repo;
 mod reported_tests;
 mod resize;
 pub(crate) mod restart_facts;
+pub(crate) mod restart_restore;
+#[cfg(test)]
+mod restart_restore_tests;
 mod save;
 mod saved_layout;
 pub(crate) mod scaling;

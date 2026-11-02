@@ -74,6 +74,31 @@ pub fn read(sessions_dir: &Path, host_id: &str, key: Option<&[u8; 32]>) -> Resul
     Ok(Seed { text, time: read.manifest.time, ended: read.manifest.ended })
 }
 
+/// Make `options` restore the screen of the checkpoint of host `host_id` (the host the terminal ran in before
+/// the restart) in place of its saved text: the text becomes the styled screen with its divider. Whether it did;
+/// on any failure the options are as they were, and the terminal is restored from its text as before. Nothing
+/// but the screen is taken: the folder, the shell and the environment stay what the terminal's record and its
+/// project say.
+pub fn seed_options(
+    sessions_dir: &Path,
+    host_id: &str,
+    key: Option<&[u8; 32]>,
+    options: &mut super::SpawnOptions,
+) -> bool {
+    match read(sessions_dir, host_id, key) {
+        Ok(seed) => {
+            tracing::info!(host_id, ended = ?seed.ended, "restoring a terminal from its checkpoint");
+            options.restore = Some(seed.text);
+            options.restore_styled = true;
+            true
+        }
+        Err(why) => {
+            tracing::debug!(host_id, ?why, "no checkpoint to restore from, the saved text is used");
+            false
+        }
+    }
+}
+
 /// Make the folder the checkpoints live in: `0700`, and out of backups (`exclude`, which the caller gives:
 /// the saved text's platform does the same for its file). A failure to exclude is only worth a warning; one to
 /// make the folder is the error.

@@ -60,6 +60,11 @@ impl LaunchHosts {
         }
     }
 
+    /// The ids of the live hosts found at launch, before any terminal takes one: their checkpoints are in use.
+    pub fn live_ids(&self) -> HashSet<String> {
+        self.live.keys().cloned().collect()
+    }
+
     /// The orphans, once: the window that adopts them attaches to each through [`Self::restore`].
     pub fn take_orphans(&mut self) -> Vec<HostMeta> {
         std::mem::take(&mut self.orphans)

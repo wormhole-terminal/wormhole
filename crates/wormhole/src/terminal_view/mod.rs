@@ -20,6 +20,7 @@ use wormhole_term::program_status::Summary as Reported;
 use wormhole_term::{GridSize, Pty, WindowGeometry};
 
 mod blocks;
+mod checkpoint_plan;
 mod clear;
 pub(crate) mod context_menu;
 mod control_input;
@@ -41,6 +42,7 @@ mod settle;
 mod status;
 mod window_geometry;
 
+pub(crate) use checkpoint_plan::{CheckpointPlan, forget_checkpoint_of};
 pub use control_input::MouseSent;
 pub use failed::Failure;
 pub use grid_layout::GridProbe;

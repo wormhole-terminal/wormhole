@@ -57,7 +57,7 @@ pub enum Hosting {
 #[derive(Default)]
 pub(super) struct HostState {
     /// The host it runs in, or is starting in or attaching to; `None` in the app's own process.
-    id: Option<String>,
+    pub(super) id: Option<String>,
     /// The host went away (crashed, killed) and took the program with it.
     lost: bool,
     /// Let go of (`detach_host`): the program runs on in the host, the view keeps its last screen.
@@ -84,6 +84,8 @@ pub(super) struct HostState {
     pub(super) end_failed: Option<String>,
     /// The attach was tried once more already after a failure that may pass.
     pub(super) auto_retried: bool,
+    /// What the host is to be asked for the restart of the Mac (`checkpoint_plan`), once connected.
+    pub(super) checkpoint: Option<super::checkpoint_plan::CheckpointPlan>,
 }
 
 /// The warning that a host could not start is shown once per run: when one fails, the next would
@@ -158,7 +160,8 @@ impl TerminalView {
     ) {
         if !matches!(start, Start::Local) {
             // What a reattach needs; the saved text only matters to the fallback below.
-            self.host.options = Some(SpawnOptions { restore: None, ..options.clone() });
+            self.host.options =
+                Some(SpawnOptions { restore: None, restore_styled: false, ..options.clone() });
         }
         match start {
             Start::Local => {}
@@ -231,6 +234,7 @@ impl TerminalView {
                 }
                 self.host.auto_retried = false;
                 self.install(pty, events, cx);
+                self.send_checkpoint_plan();
             }
             // The host runs and cannot be shown: the terminal keeps its id and says why. No shell
             // replaces it (the program is in the host), and the next launch finds this same row.

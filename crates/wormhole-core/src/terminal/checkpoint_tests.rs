@@ -109,7 +109,7 @@ fn the_folder_is_private_and_kept_out_of_backups() {
         Ok(())
     })
     .unwrap();
-    assert_eq!(excluded, [dir.clone()]);
+    assert_eq!(excluded, std::slice::from_ref(&dir));
     assert_eq!(wormhole_term::sys::fs::mode(&fs::metadata(&dir).unwrap()) & 0o777, 0o700);
     // A folder that cannot be excluded still opens: that is a warning.
     let again = parent.path().join("again");
@@ -169,4 +169,27 @@ fn over_the_budget_the_oldest_go_first() {
     assert!(sessions.path().join(B).is_dir() && sessions.path().join(C).is_dir());
     // Nothing else to take once it fits.
     assert!(sweep_with(sessions.path(), &HashSet::new(), now, MAX_AGE, 25_000).is_empty());
+}
+
+#[test]
+fn a_terminal_is_restored_from_its_checkpoint_or_from_its_text_as_before() {
+    let sessions = tempfile::tempdir().unwrap();
+    write(sessions.path(), A, Some(key(1)), b"\x1b[1mfrom the checkpoint\x1b[0m\r\n", None, 1_793_023_327);
+    let text_only =
+        || super::super::SpawnOptions { restore: Some("saved text".into()), ..Default::default() };
+    let mut options = text_only();
+    assert!(seed_options(sessions.path(), A, Some(&key(1)), &mut options));
+    assert!(options.restore_styled);
+    let drawn = options.restore.as_deref().unwrap();
+    assert!(
+        drawn.contains("from the checkpoint")
+            && drawn.contains("restored 20")
+            && !drawn.contains("saved text")
+    );
+    // Another key, none, no checkpoint: the text stays, unstyled.
+    for (id, key_given) in [(A, Some(key(2))), (A, None), (B, Some(key(1)))] {
+        let mut options = text_only();
+        assert!(!seed_options(sessions.path(), id, key_given.as_ref(), &mut options));
+        assert_eq!((options.restore.as_deref(), options.restore_styled), (Some("saved text"), false));
+    }
 }

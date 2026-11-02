@@ -211,6 +211,14 @@ impl Workspace {
             options.env.insert(wormhole_core::onboarding::welcome::TOKEN_VAR.to_string(), token);
         }
         let start = self.start_for(record, &options, cx);
+        // A terminal whose host is gone (the Mac restarted) comes back from its host's checkpoint when it kept one.
+        self.restore_from_checkpoint(record, &start, &mut options, cx);
+        let plan = match &start {
+            crate::terminal_view::Start::Host { id, .. } | crate::terminal_view::Start::Attach { id, .. } => {
+                self.checkpoint_plan(record, id, cx)
+            }
+            _ => None,
+        };
         // Its program is the one that finished: the dot comes back with it. (A terminal restored from its
         // text runs a new shell, whose past is only text.)
         let done_unseen = record.done_unseen && matches!(start, crate::terminal_view::Start::Attach { .. });
@@ -222,6 +230,9 @@ impl Workspace {
         let zoom = self.font_zoom;
         terminal.update(cx, |terminal, cx| {
             terminal.adopt_font_zoom(zoom, cx);
+            if let Some(plan) = plan {
+                terminal.set_checkpoint_plan(plan);
+            }
             if done_unseen {
                 terminal.restore_done_unseen();
             }
@@ -288,6 +299,7 @@ impl Workspace {
         self.leave_layout(ix, cx);
         let after = crate::window::session::session_after_close(self.active, ix, len);
         let closed = self.sessions.remove(ix);
+        self.forget_checkpoint_of(&closed, cx);
         self.edit_sidebar_view(cx, |view| view.groups.leave(closed.id));
         self.features_closed(closed.id, cx);
         self.forget_changes(closed.id, cx);

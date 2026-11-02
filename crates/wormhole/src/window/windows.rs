@@ -287,6 +287,7 @@ impl Workspace {
         self.discarded = true;
         for session in &self.sessions {
             attention::tell(Attention::Seen(session.id), cx);
+            self.forget_checkpoint_of(session, cx);
         }
         app_mut(cx).forget_window(&self.profile, self.window_id);
     }

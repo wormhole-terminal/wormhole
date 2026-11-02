@@ -66,6 +66,8 @@ pub(crate) fn start(
     let front = data.store.as_ref().and_then(|s| s.front_window().ok().flatten());
     front_last(&mut saved, front);
     let launch_hosts = crate::window::hosting::scan_at_launch(&root, &profiles, data.store.as_ref());
+    // Their checkpoints are in use; the sweep after the windows open leaves them alone.
+    let running_hosts = launch_hosts.live_ids();
     let (menu, menu_commands) = status_item::MenuState::new();
     let (display_changed, display_options) = smol::channel::unbounded::<()>();
     let display_observer = crate::platform::look::observe_display_options(move || {
@@ -179,6 +181,7 @@ pub(crate) fn start(
     }
     tell_data_folder(cx);
     crate::window::hosting::adopt_orphans(cx);
+    crate::window::restart_restore::launch(running_hosts, cx);
     menus::sync(cx);
 }
 
