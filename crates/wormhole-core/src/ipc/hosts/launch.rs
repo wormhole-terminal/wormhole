@@ -27,17 +27,8 @@ pub struct LaunchHosts {
 /// protocol does not fit) is left alone, listed in the Session Hosts window, and not adopted over
 /// and over as a new terminal that cannot attach. Order is kept.
 pub fn adoptable(orphans: Vec<HostMeta>, accepts: impl Fn(&HostMeta) -> bool + Sync) -> Vec<HostMeta> {
-    /// Hosts asked at once.
-    const AT_ONCE: usize = 16;
-    let mut keep = Vec::with_capacity(orphans.len());
-    for chunk in orphans.chunks(AT_ONCE) {
-        let answers: Vec<bool> = std::thread::scope(|scope| {
-            let handles: Vec<_> = chunk.iter().map(|meta| scope.spawn(|| accepts(meta))).collect();
-            handles.into_iter().map(|h| h.join().unwrap_or(false)).collect()
-        });
-        keep.extend(chunk.iter().zip(answers).filter(|(_, ok)| *ok).map(|(meta, _)| meta.clone()));
-    }
-    keep
+    let accepted = super::chunked::map_chunked(&orphans, || false, |meta| accepts(meta));
+    orphans.into_iter().zip(accepted).filter(|(_, ok)| *ok).map(|(meta, _)| meta).collect()
 }
 
 /// How a saved terminal comes back.

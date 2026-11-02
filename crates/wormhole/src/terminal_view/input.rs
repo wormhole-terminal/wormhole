@@ -201,7 +201,7 @@ impl TerminalView {
                 let mut kept_by_host = false;
                 if let Some(pty) = &self.pty {
                     pty.clear_history();
-                    kept_by_host = history_kept_by_host(pty.host_forgets_history());
+                    kept_by_host = super::clear::history_kept_by_host(pty.host_forgets_history());
                 }
                 if kept_by_host {
                     // The cleared history is back at the next attach: say so, and that ending the host
@@ -650,25 +650,5 @@ mod tests {
         };
         assert!(yields("f6") && yields("shift-f6"));
         assert!(!yields("f5") && !yields("cmd-c") && !yields("tab") && !yields("escape"));
-    }
-}
-
-/// Whether Clear Buffer leaves the history in its host: only a hosted terminal whose host is too old to
-/// forget it (`Some(false)`).
-fn history_kept_by_host(host_forgets: Option<bool>) -> bool {
-    host_forgets == Some(false)
-}
-
-#[cfg(test)]
-mod clear_tests {
-    use super::history_kept_by_host;
-
-    #[test]
-    fn clear_buffer_on_a_minor_1_host_says_so() {
-        // A host of minor 1 skips ClearHistory: the history would come back, so the person is told.
-        assert!(history_kept_by_host(Some(false)));
-        // A current host forgets it, and a terminal in the app has nothing in a host: nothing to say.
-        assert!(!history_kept_by_host(Some(true)));
-        assert!(!history_kept_by_host(None));
     }
 }

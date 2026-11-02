@@ -91,22 +91,9 @@ fn signal_for(identity: Identity, looks_like_host: bool, wanted: EndSignal) -> O
 /// End every host in `hosts` at once (a few at a time; each has `wait`). The answers come back in
 /// the order of `hosts`.
 pub fn end_all(hosts: &[HostMeta], wait: Duration) -> Vec<(String, Result<EndHow, String>)> {
-    /// Hosts are asked this many at a time: threads, not an async runtime, and a user has few.
-    const AT_ONCE: usize = 16;
-    let mut out = Vec::with_capacity(hosts.len());
-    for chunk in hosts.chunks(AT_ONCE) {
-        std::thread::scope(|scope| {
-            let running: Vec<_> = chunk
-                .iter()
-                .map(|meta| (meta.id.clone(), scope.spawn(move || end_host(meta, wait))))
-                .collect();
-            for (id, handle) in running {
-                let result = handle.join().unwrap_or_else(|_| Err("the worker stopped".into()));
-                out.push((id, result));
-            }
-        });
-    }
-    out
+    let results =
+        super::chunked::map_chunked(hosts, || Err("the worker stopped".into()), |meta| end_host(meta, wait));
+    hosts.iter().map(|meta| meta.id.clone()).zip(results).collect()
 }
 
 /// End every live host in `hosts_dir`, as Quit and End All Terminals and `sessions end --all` do.

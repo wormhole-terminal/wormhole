@@ -59,10 +59,10 @@ pub const PING_IDLE: Duration = Duration::from_secs(2);
 pub const START_TIMEOUT: Duration = Duration::from_secs(5);
 pub const READY_TIMEOUT: Duration = Duration::from_secs(2);
 
-/// The protocol minor that introduced `ClearHistory`. A host of an older minor skips the message, and
-/// every message added from minor 3 on is gated by what a host announced in `Features` instead of by
-/// its minor alone (a minor only says "this much exists"; a feature bit says "this host does it"), so
-/// the client asks only for what the host said it has.
+/// The protocol minor that introduced `ClearHistory`. A host of an older minor skips the message. A new
+/// *message* from here on is gated by what the host announced in `Features` (a feature bit says "this host
+/// does it"; a minor only says how much exists), so the client asks only for what the host has. An error
+/// *code* an old client reads as an unknown refusal (such as `PEER_REFUSED`, minor 3) needs no gate.
 pub const CLEAR_HISTORY_MINOR: u16 = 2;
 
 /// The socket of the host with `id` in `hosts_dir`, as its meta file says (the host decides where

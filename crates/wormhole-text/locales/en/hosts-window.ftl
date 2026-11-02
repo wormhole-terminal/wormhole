@@ -142,7 +142,7 @@ hosts-failure-not-ours = The socket belongs to another user
 hosts-failure-other-host = The socket belongs to another host
 hosts-failure-hung-up = The host hung up
 hosts-failure-unexpected = The host answered something unexpected
-hosts-failure-timed-out = No answer in time
+hosts-failure-timed-out = Timed out
 # { $why } is the system's reason for the failure.
 hosts-failure-io = Talking to it failed: { $why }
 
@@ -151,7 +151,7 @@ hosts-failure-io = Talking to it failed: { $why }
 hosts-unavailable-refused = Session host unavailable: it does not accept this app
 hosts-unavailable-too-old = Session host unavailable: it is too old for this app
 hosts-unavailable-too-new = Session host unavailable: it needs a newer Wormhole
-hosts-unavailable-busy = Session host unavailable: it is busy with another connection
+hosts-unavailable-busy = Session host unavailable: it has all the connections it allows
 hosts-unavailable-timed-out = Session host unavailable: it did not answer
 hosts-unavailable-unreachable = Session host unavailable: nothing answers on its socket
 hosts-unavailable-failed = Session host unavailable: the connection failed
@@ -185,3 +185,9 @@ hosts-end-failed = Couldn’t end the session host: { $why }
 hosts-close-detail = Its session host is still running, but this app can’t show it. Ending the host ends the program in it; leaving it running keeps it in the Session Hosts window.
 hosts-close-end = End the Host
 hosts-close-leave = Leave It Running
+
+# In the Session Hosts window, for a terminal that is not on screen (its host is not pinged, so only the
+# time since anything came is known): the name of that fact.
+hosts-field-quiet = Quiet for
+# How long it has been quiet; { $quiet } is like 1 min 5 s.
+hosts-quiet-for = { $quiet }

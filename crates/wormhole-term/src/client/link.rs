@@ -3,7 +3,7 @@
 //! for; whoever sends wakes the thread only when the queue was empty, as the PTY's inbox does.
 
 use std::borrow::Cow;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU16, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
@@ -212,17 +212,13 @@ pub(crate) struct Hosted {
     /// [`detach`](Self::detach) was called: dropping the terminal leaves the host running.
     detached: AtomicBool,
     /// The protocol minor the host said in its `Welcome`: what it understands beyond the first minor.
-    minor: AtomicU16,
+    minor: u16,
 }
 
 impl Hosted {
-    pub(crate) fn new(link: Arc<Link>, id: String) -> Self {
-        Self {
-            link,
-            id,
-            detached: AtomicBool::new(false),
-            minor: AtomicU16::new(wormhole_wire::version::PROTO_MINOR),
-        }
+    /// `minor` is the protocol minor the host said in its `Welcome`.
+    pub(crate) fn new(link: Arc<Link>, id: String, minor: u16) -> Self {
+        Self { link, id, detached: AtomicBool::new(false), minor }
     }
 
     pub(crate) fn input(&self, bytes: Cow<'static, [u8]>) {
@@ -260,11 +256,7 @@ impl Hosted {
 
     /// The host's protocol minor, as its `Welcome` said it.
     pub(crate) fn minor(&self) -> u16 {
-        self.minor.load(Ordering::Relaxed)
-    }
-
-    pub(crate) fn set_minor(&self, minor: u16) {
-        self.minor.store(minor, Ordering::Relaxed);
+        self.minor
     }
 
     pub(crate) fn is_detached(&self) -> bool {

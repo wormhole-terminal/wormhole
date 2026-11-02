@@ -62,8 +62,15 @@ impl Pty {
                     "hosted terminal started"
                 );
                 let replica_size = GridSize { cols: info.size.cols, rows: info.size.rows, ..size };
-                hosted(joined, host.id, size, replica_size, options, StreamMode::Raw, info.pid)
-                    .inspect(|(pty, _)| pty.set_host_minor(info.proto_minor))
+                hosted(
+                    joined,
+                    host.id,
+                    size,
+                    replica_size,
+                    options,
+                    StreamMode::Raw,
+                    HostFacts { pid: info.pid, minor: info.proto_minor },
+                )
             }
             Err(err) => {
                 // A host that came up without its program would wait for a `Spawn` until it gives
@@ -97,9 +104,16 @@ impl Pty {
         let size = grid_of(welcome.size);
         let first = if visible { StreamMode::Sync } else { StreamMode::None };
         tracing::info!(id, pid = welcome.pid, visible, "attaching to a hosted terminal");
-        hosted(Joined { stream, dec }, id, size, size, options, first, welcome.pid)
-            .inspect(|(pty, _)| pty.set_host_minor(welcome.proto_minor))
-            .map_err(|e| AttachError::Failed(format!("{e:#}")))
+        hosted(
+            Joined { stream, dec },
+            id,
+            size,
+            size,
+            options,
+            first,
+            HostFacts { pid: welcome.pid, minor: welcome.proto_minor },
+        )
+        .map_err(|e| AttachError::Failed(format!("{e:#}")))
     }
 
     /// Whether this terminal's program runs in a session host.
@@ -129,12 +143,6 @@ impl Pty {
         match &self.io {
             Backend::Hosted(host) => Some(host.minor()),
             Backend::Local(_) => None,
-        }
-    }
-
-    pub(super) fn set_host_minor(&self, minor: u16) {
-        if let Backend::Hosted(host) = &self.io {
-            host.set_minor(minor);
         }
     }
 
@@ -271,6 +279,15 @@ fn environment(launch: &Launch) -> Vec<(String, String)> {
     env.into_iter().filter(|(k, v)| fits(k) && fits(v) && !k.is_empty()).collect()
 }
 
+/// What the host's `Welcome` said that the terminal keeps.
+#[derive(Clone, Copy)]
+pub(crate) struct HostFacts {
+    /// The pid of the terminal's program.
+    pub pid: u32,
+    /// The protocol minor the host speaks.
+    pub minor: u16,
+}
+
 /// The `Pty` around a connection whose handshake is done, and its thread. `size` is the app's;
 /// `replica` the size the host has (the replica's until the host says otherwise).
 pub(crate) fn hosted(
@@ -280,8 +297,9 @@ pub(crate) fn hosted(
     replica: GridSize,
     options: &StartOptions,
     first: StreamMode,
-    pid: u32,
+    host: HostFacts,
 ) -> anyhow::Result<(Pty, PtyEvents)> {
+    let HostFacts { pid, minor } = host;
     let (proxy, events) = EventProxy::new();
     let shared = proxy.shared().clone();
     let replica_options = ReplicaOptions::of(options);
@@ -308,7 +326,7 @@ pub(crate) fn hosted(
     let pty = Pty {
         term: screen,
         shared,
-        io: Backend::Hosted(Hosted::new(link, id.to_owned())),
+        io: Backend::Hosted(Hosted::new(link, id.to_owned(), minor)),
         size,
         pid,
         hangup_grace: pty::HANGUP_GRACE,

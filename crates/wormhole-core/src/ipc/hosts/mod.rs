@@ -8,6 +8,7 @@
 
 mod admin;
 mod attach;
+mod chunked;
 mod gone;
 mod identity;
 mod launch;

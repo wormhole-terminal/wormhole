@@ -2,11 +2,12 @@
 
 use gpui_kit::*;
 use wormhole_core::ipc::hosts::report::{Answer, HostRow, Report, Standing};
+use wormhole_term::client::LinkMode;
 use wormhole_text::keys::{
     HOSTS_ACTION_COPIED, HOSTS_ACTION_COPY, HOSTS_ACTION_END, HOSTS_ACTION_FORGET, HOSTS_FIELD_ANSWER,
     HOSTS_FIELD_FOLDER, HOSTS_FIELD_HEARD, HOSTS_FIELD_HOST_PID, HOSTS_FIELD_LINK, HOSTS_FIELD_MEMORY,
-    HOSTS_FIELD_META, HOSTS_FIELD_PROGRAM, HOSTS_FIELD_PROTOCOL, HOSTS_FIELD_SHELL_PID, HOSTS_FIELD_SOCKET,
-    HOSTS_FIELD_STARTED, HOSTS_FIELD_VERSION, HOSTS_UNKNOWN, hosts_version_differs,
+    HOSTS_FIELD_META, HOSTS_FIELD_PROGRAM, HOSTS_FIELD_PROTOCOL, HOSTS_FIELD_QUIET, HOSTS_FIELD_SHELL_PID,
+    HOSTS_FIELD_SOCKET, HOSTS_FIELD_STARTED, HOSTS_FIELD_VERSION, HOSTS_UNKNOWN, hosts_version_differs,
 };
 use wormhole_text::text;
 
@@ -94,7 +95,12 @@ impl HostsWindow {
             ));
         }
         if let Some(link) = row.link.filter(|l| !l.detached && !l.ended) {
-            facts.push(fact(ui, text(HOSTS_FIELD_HEARD), words::ago_text(link.quiet_for), ui.text, false));
+            // A link on screen is pinged, so the last answer is news; one that is not only knows how long it has been quiet.
+            facts.push(if link.mode == LinkMode::Headless {
+                fact(ui, text(HOSTS_FIELD_QUIET), words::quiet_text(link.quiet_for), ui.text, false)
+            } else {
+                fact(ui, text(HOSTS_FIELD_HEARD), words::ago_text(link.quiet_for), ui.text, false)
+            });
         }
         facts.push(fact(ui, text(HOSTS_FIELD_FOLDER), path(&row.cwd), ui.text, true));
         facts.push(fact(ui, text(HOSTS_FIELD_SOCKET), path(&row.socket), ui.muted, true));

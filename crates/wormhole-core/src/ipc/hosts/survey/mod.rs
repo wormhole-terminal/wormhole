@@ -32,25 +32,10 @@ pub fn survey(hosts_dir: &Path, wait: Duration) -> io::Result<Survey> {
     let live = scan.live.iter().map(|meta| (meta, true));
     let stale = scan.stale.iter().filter_map(|s| s.meta.as_ref()).map(|meta| (meta, false));
     let hosts: Vec<_> = live.chain(stale).collect();
-    // A few at a time: each is a thread that may wait for a stuck host, and a person can have many.
-    for chunk in hosts.chunks(AT_ONCE) {
-        std::thread::scope(|scope| {
-            let running: Vec<_> = chunk
-                .iter()
-                .map(|&(meta, ask)| (meta.id.clone(), scope.spawn(move || look(meta, ask, wait))))
-                .collect();
-            for (id, handle) in running {
-                if let Some(seen) = handle.join().unwrap_or_default() {
-                    observed.insert(id, seen);
-                }
-            }
-        });
-    }
+    let seen = super::chunked::map_chunked(&hosts, || None, |&(meta, ask)| look(meta, ask, wait));
+    observed.extend(hosts.iter().zip(seen).filter_map(|(&(meta, _), seen)| Some((meta.id.clone(), seen?))));
     Ok(Survey { scan, observed })
 }
-
-/// Hosts looked at at once.
-const AT_ONCE: usize = 16;
 
 /// What is known of one host's process, and its answer when `ask`ed. Only a process that is the
 /// host (its name, its user and its start fit the meta) is read: a pid that something else has

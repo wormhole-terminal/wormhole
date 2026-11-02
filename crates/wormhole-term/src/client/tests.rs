@@ -11,7 +11,7 @@ use wormhole_wire::io::{FrameReader, FrameWriter, RecvError};
 use wormhole_wire::{self as wire, CHANNEL_LOCAL, Decoder, DetachReason, EventKind, Message, StreamMode};
 
 use super::events::exit_of;
-use super::open::hosted;
+use super::open::{HostFacts, hosted};
 use super::socket::Joined;
 use super::{ACK_EVERY, INPUT_WINDOW};
 use crate::osc::{Mark, PromptKind};
@@ -103,11 +103,24 @@ fn wire_size(cols: u16, rows: u16) -> wire::Size {
 /// A hosted `Pty` on one end of a socket pair and the scripted host on the other; its first
 /// `Attach` asks for `first`.
 fn connected(first: StreamMode) -> (Pty, PtyEvents, Script) {
+    connected_to_minor(first, wire::version::PROTO_MINOR)
+}
+
+/// [`connected`] to a host whose `Welcome` said protocol minor `minor`.
+fn connected_to_minor(first: StreamMode, minor: u16) -> (Pty, PtyEvents, Script) {
     let (ours, theirs) = Stream::pair().expect("a socket pair");
     let joined = Joined { stream: ours, dec: Decoder::new() };
     let options = StartOptions { scrollback_lines: 1000, ..StartOptions::default() };
-    let (pty, events) =
-        hosted(joined, "abcdef123456", GRID, GRID, &options, first, std::process::id()).expect("a client");
+    let (pty, events) = hosted(
+        joined,
+        "abcdef123456",
+        GRID,
+        GRID,
+        &options,
+        first,
+        HostFacts { pid: std::process::id(), minor },
+    )
+    .expect("a client");
     let write = theirs.try_clone().expect("a second handle");
     let mut script = Script { reader: FrameReader::new(theirs), writer: FrameWriter::new(write) };
     assert_eq!(script.expect("the attach", |g| matches!(g, Got::Attach(_))), Got::Attach(first));
@@ -480,9 +493,9 @@ fn a_host_that_never_answers_a_ping_is_not_responding_until_it_speaks() {
 fn a_minor_1_host_is_known_not_to_forget_history() {
     let (pty, _events, _script) = connected(StreamMode::Sync);
     assert_eq!(pty.host_forgets_history(), Some(true), "a host of this build's minor does");
-    pty.set_host_minor(1);
-    assert_eq!(pty.host_minor(), Some(1));
-    assert_eq!(pty.host_forgets_history(), Some(false));
+    let (old, _events, _script) = connected_to_minor(StreamMode::Sync, 1);
+    assert_eq!(old.host_minor(), Some(1));
+    assert_eq!(old.host_forgets_history(), Some(false));
 }
 
 /// What `hello` makes of each thing a host can answer a `Hello` with (or not answer).

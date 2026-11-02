@@ -112,6 +112,9 @@ pub(crate) struct State {
     live: Liveness,
     /// What was last published, to wake the app only when it changes.
     responsiveness: Responsiveness,
+    /// The last read emptied the socket (it hit `WouldBlock`). A read that stopped early (to write, or after
+    /// a turn's worth) leaves frames unread, and silence cannot be told from them.
+    drained: bool,
     cmds: Vec<Cmd>,
 }
 
@@ -155,6 +158,7 @@ impl State {
             ping: 1,
             live: Liveness::new(Instant::now()),
             responsiveness: Responsiveness::Responsive,
+            drained: true,
             cmds: Vec::new(),
         };
         state.attach(first);
@@ -454,7 +458,8 @@ impl State {
     /// Tell the `Pty` how the host stands, and wake the app when that changed (the terminal says
     /// "not responding" or stops saying it).
     fn publish_liveness(&mut self, now: Instant) {
-        let state = self.live.state(now);
+        // Unread frames may hold the answer: not responding only after a read that drained the socket.
+        let state = if self.drained { self.live.state(now) } else { Responsiveness::Responsive };
         let changed = matches!(state, Responsiveness::Responsive)
             != matches!(self.responsiveness, Responsiveness::Responsive);
         self.responsiveness = state;
@@ -563,6 +568,7 @@ impl Client {
             self.state.ack();
             // Input waiting goes out between batches, and acks within a flood.
             if self.state.link.has_messages() || read >= READ_TURN {
+                self.state.drained = false;
                 return None;
             }
             match self.dec.fill(&mut &self.stream) {
@@ -571,7 +577,10 @@ impl Client {
                     read += n;
                     self.state.link.count_read(n);
                 }
-                Err(err) if err.kind() == io::ErrorKind::WouldBlock => return None,
+                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
+                    self.state.drained = true;
+                    return None;
+                }
                 Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
                 Err(err) => {
                     tracing::info!("reading from the session host failed: {err}");

@@ -118,7 +118,7 @@ pub const HOSTS_FAILURE_OTHER_HOST: Key = Key::new(223);
 pub const HOSTS_FAILURE_HUNG_UP: Key = Key::new(224);
 /// "The host answered something unexpected"
 pub const HOSTS_FAILURE_UNEXPECTED: Key = Key::new(225);
-/// "No answer in time"
+/// "Timed out"
 pub const HOSTS_FAILURE_TIMED_OUT: Key = Key::new(226);
 /// "Session host unavailable: it does not accept this app"
 pub const HOSTS_UNAVAILABLE_REFUSED: Key = Key::new(228);
@@ -126,7 +126,7 @@ pub const HOSTS_UNAVAILABLE_REFUSED: Key = Key::new(228);
 pub const HOSTS_UNAVAILABLE_TOO_OLD: Key = Key::new(229);
 /// "Session host unavailable: it needs a newer Wormhole"
 pub const HOSTS_UNAVAILABLE_TOO_NEW: Key = Key::new(230);
-/// "Session host unavailable: it is busy with another connection"
+/// "Session host unavailable: it has all the connections it allows"
 pub const HOSTS_UNAVAILABLE_BUSY: Key = Key::new(231);
 /// "Session host unavailable: it did not answer"
 pub const HOSTS_UNAVAILABLE_TIMED_OUT: Key = Key::new(232);
@@ -154,6 +154,8 @@ pub const HOSTS_CLOSE_DETAIL: Key = Key::new(245);
 pub const HOSTS_CLOSE_END: Key = Key::new(246);
 /// "Leave It Running"
 pub const HOSTS_CLOSE_LEAVE: Key = Key::new(247);
+/// "Quiet for"
+pub const HOSTS_FIELD_QUIET: Key = Key::new(248);
 
 /// ```text
 /// Wormhole { $version }, protocol { $protocol }
@@ -363,4 +365,11 @@ pub fn hosts_link_not_responding(quiet: &str) -> String {
 /// ```
 pub fn hosts_end_failed(why: &str) -> String {
     crate::active::message(244, &[("why", Arg::Str(why))])
+}
+
+/// ```text
+/// { $quiet }
+/// ```
+pub fn hosts_quiet_for(quiet: &str) -> String {
+    crate::active::message(249, &[("quiet", Arg::Str(quiet))])
 }

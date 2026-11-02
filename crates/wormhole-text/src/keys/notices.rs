@@ -7,79 +7,79 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Copied command"
-pub const NOTICE_COPIED_COMMAND: Key = Key::new(255);
+pub const NOTICE_COPIED_COMMAND: Key = Key::new(257);
 /// "Copied path"
-pub const NOTICE_COPIED_PATH: Key = Key::new(256);
+pub const NOTICE_COPIED_PATH: Key = Key::new(258);
 /// "Copied setting key"
-pub const NOTICE_COPIED_SETTING_KEY: Key = Key::new(257);
+pub const NOTICE_COPIED_SETTING_KEY: Key = Key::new(259);
 /// "Copied error"
-pub const NOTICE_COPIED_ERROR: Key = Key::new(258);
+pub const NOTICE_COPIED_ERROR: Key = Key::new(260);
 /// "Copied object id"
-pub const NOTICE_COPIED_OBJECT_ID: Key = Key::new(259);
+pub const NOTICE_COPIED_OBJECT_ID: Key = Key::new(261);
 /// "A script is typing"
-pub const NOTICE_DRIVEN_SCRIPTS_TYPING: Key = Key::new(262);
+pub const NOTICE_DRIVEN_SCRIPTS_TYPING: Key = Key::new(264);
 /// "A script is reading"
-pub const NOTICE_DRIVEN_SCRIPTS_READING: Key = Key::new(263);
+pub const NOTICE_DRIVEN_SCRIPTS_READING: Key = Key::new(265);
 /// "Copied commit hash"
-pub const NOTICE_COPIED_COMMIT_HASH: Key = Key::new(264);
+pub const NOTICE_COPIED_COMMIT_HASH: Key = Key::new(266);
 /// "Copied short hash"
-pub const NOTICE_COPIED_COMMIT_SHORT_HASH: Key = Key::new(265);
+pub const NOTICE_COPIED_COMMIT_SHORT_HASH: Key = Key::new(267);
 /// "Copied commit message"
-pub const NOTICE_COPIED_COMMIT_MESSAGE: Key = Key::new(266);
+pub const NOTICE_COPIED_COMMIT_MESSAGE: Key = Key::new(268);
 /// "Copied the start of the message, which is cut"
-pub const NOTICE_COPIED_COMMIT_MESSAGE_CUT: Key = Key::new(267);
+pub const NOTICE_COPIED_COMMIT_MESSAGE_CUT: Key = Key::new(269);
 /// "Copied subject"
-pub const NOTICE_COPIED_COMMIT_SUBJECT: Key = Key::new(268);
+pub const NOTICE_COPIED_COMMIT_SUBJECT: Key = Key::new(270);
 /// "Copied author"
-pub const NOTICE_COPIED_COMMIT_AUTHOR: Key = Key::new(269);
+pub const NOTICE_COPIED_COMMIT_AUTHOR: Key = Key::new(271);
 /// "Couldn't copy: git could not read the commit"
-pub const NOTICE_FAILED_COPY_COMMIT: Key = Key::new(270);
+pub const NOTICE_FAILED_COPY_COMMIT: Key = Key::new(272);
 /// "Not copied: the path has characters that would act when pasted"
-pub const NOTICE_FAILED_COPY_PATH: Key = Key::new(271);
+pub const NOTICE_FAILED_COPY_PATH: Key = Key::new(273);
 /// "Not renamed: that isn't a usable name"
-pub const NOTICE_FAILED_RENAME_NAME: Key = Key::new(272);
+pub const NOTICE_FAILED_RENAME_NAME: Key = Key::new(274);
 /// "Not renamed: something with that name exists already"
-pub const NOTICE_FAILED_RENAME_EXISTS: Key = Key::new(273);
+pub const NOTICE_FAILED_RENAME_EXISTS: Key = Key::new(275);
 /// "Not renamed: Wormhole isn't allowed to change it"
-pub const NOTICE_FAILED_RENAME_DENIED: Key = Key::new(274);
+pub const NOTICE_FAILED_RENAME_DENIED: Key = Key::new(276);
 /// "Not renamed: it isn't there any more"
-pub const NOTICE_FAILED_RENAME_GONE: Key = Key::new(275);
+pub const NOTICE_FAILED_RENAME_GONE: Key = Key::new(277);
 /// "Couldn't rename it"
-pub const NOTICE_FAILED_RENAME_FAILED: Key = Key::new(276);
+pub const NOTICE_FAILED_RENAME_FAILED: Key = Key::new(278);
 /// "Cleared here only: this session host is too old to forget it"
-pub const NOTICE_FAILED_HISTORY_KEPT_BY_HOST: Key = Key::new(277);
+pub const NOTICE_FAILED_HISTORY_KEPT_BY_HOST: Key = Key::new(279);
 /// "Not put at the prompt: part of it is concealed"
-pub const NOTICE_FAILED_PUT_CONCEALED: Key = Key::new(278);
+pub const NOTICE_FAILED_PUT_CONCEALED: Key = Key::new(280);
 /// "Not put at the prompt: part of it is in its background's color"
-pub const NOTICE_FAILED_PUT_SAME_COLOR: Key = Key::new(279);
+pub const NOTICE_FAILED_PUT_SAME_COLOR: Key = Key::new(281);
 /// "Not put at the prompt: it has characters you can't see"
-pub const NOTICE_FAILED_PUT_INVISIBLE: Key = Key::new(280);
+pub const NOTICE_FAILED_PUT_INVISIBLE: Key = Key::new(282);
 /// "Not put at the prompt: each line would run in this shell"
-pub const NOTICE_FAILED_PUT_LINES: Key = Key::new(281);
+pub const NOTICE_FAILED_PUT_LINES: Key = Key::new(283);
 /// "This terminal ends when Wormhole quits"
-pub const NOTICE_WARNED_HOST_FALLBACK: Key = Key::new(282);
+pub const NOTICE_WARNED_HOST_FALLBACK: Key = Key::new(284);
 /// "This terminal runs inside Wormhole and ends when it quits: the helper that keeps terminals running couldn't start."
-pub const NOTICE_WARNED_HOST_FALLBACK_DETAIL: Key = Key::new(283);
+pub const NOTICE_WARNED_HOST_FALLBACK_DETAIL: Key = Key::new(285);
 /// "Close"
-pub const NOTICE_CLOSE: Key = Key::new(285);
+pub const NOTICE_CLOSE: Key = Key::new(287);
 /// "More about this warning"
-pub const NOTICE_INFO: Key = Key::new(286);
+pub const NOTICE_INFO: Key = Key::new(288);
 /// "This terminal can't outlive Wormhole"
-pub const NOTICE_INFO_HOST_HEADING: Key = Key::new(287);
+pub const NOTICE_INFO_HOST_HEADING: Key = Key::new(289);
 /// "Wormhole normally keeps each terminal running in a small helper, so your work carries on after you quit Wormhole and is waiting when you open it again. The helper for this terminal couldn't start, so the terminal runs inside Wormhole instead and closes when Wormhole quits."
-pub const NOTICE_INFO_HOST_WHAT: Key = Key::new(288);
+pub const NOTICE_INFO_HOST_WHAT: Key = Key::new(290);
 /// "Other terminals that already run in a helper are not affected."
-pub const NOTICE_INFO_HOST_OTHERS: Key = Key::new(289);
+pub const NOTICE_INFO_HOST_OTHERS: Key = Key::new(291);
 /// "Finish what is running here before you quit. Each new terminal tries to start its helper again, and Wormhole says this once each time it starts."
-pub const NOTICE_INFO_HOST_TRY: Key = Key::new(290);
+pub const NOTICE_INFO_HOST_TRY: Key = Key::new(292);
 /// "What went wrong, if you want to report it:"
-pub const NOTICE_INFO_HOST_REASON: Key = Key::new(291);
+pub const NOTICE_INFO_HOST_REASON: Key = Key::new(293);
 /// "Open Logs Folder"
-pub const NOTICE_INFO_LOGS: Key = Key::new(292);
+pub const NOTICE_INFO_LOGS: Key = Key::new(294);
 /// "Copy reason"
-pub const NOTICE_INFO_COPY: Key = Key::new(293);
+pub const NOTICE_INFO_COPY: Key = Key::new(295);
 /// "Copied"
-pub const NOTICE_INFO_COPIED: Key = Key::new(294);
+pub const NOTICE_INFO_COPIED: Key = Key::new(296);
 
 /// ```text
 /// { $count ->
@@ -88,7 +88,7 @@ pub const NOTICE_INFO_COPIED: Key = Key::new(294);
 /// }
 /// ```
 pub fn notice_copied_lines(count: i64) -> String {
-    crate::active::message(248, &[("count", Arg::Int(count))])
+    crate::active::message(250, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -98,7 +98,7 @@ pub fn notice_copied_lines(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_characters(count: i64) -> String {
-    crate::active::message(249, &[("count", Arg::Int(count))])
+    crate::active::message(251, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -108,7 +108,7 @@ pub fn notice_copied_characters(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_output(count: i64) -> String {
-    crate::active::message(250, &[("count", Arg::Int(count))])
+    crate::active::message(252, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -118,7 +118,7 @@ pub fn notice_copied_output(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_program_lines(count: i64) -> String {
-    crate::active::message(251, &[("count", Arg::Int(count))])
+    crate::active::message(253, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -128,7 +128,7 @@ pub fn notice_copied_program_lines(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_program_characters(count: i64) -> String {
-    crate::active::message(252, &[("count", Arg::Int(count))])
+    crate::active::message(254, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -138,7 +138,7 @@ pub fn notice_copied_program_characters(count: i64) -> String {
 /// }
 /// ```
 pub fn notice_copied_named_lines(count: i64, program: &str) -> String {
-    crate::active::message(253, &[("count", Arg::Int(count)), ("program", Arg::Str(program))])
+    crate::active::message(255, &[("count", Arg::Int(count)), ("program", Arg::Str(program))])
 }
 
 /// ```text
@@ -148,26 +148,26 @@ pub fn notice_copied_named_lines(count: i64, program: &str) -> String {
 /// }
 /// ```
 pub fn notice_copied_named_characters(count: i64, program: &str) -> String {
-    crate::active::message(254, &[("count", Arg::Int(count)), ("program", Arg::Str(program))])
+    crate::active::message(256, &[("count", Arg::Int(count)), ("program", Arg::Str(program))])
 }
 
 /// ```text
 /// { $name } is typing
 /// ```
 pub fn notice_driven_typing(name: &str) -> String {
-    crate::active::message(260, &[("name", Arg::Str(name))])
+    crate::active::message(262, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name } is reading
 /// ```
 pub fn notice_driven_reading(name: &str) -> String {
-    crate::active::message(261, &[("name", Arg::Str(name))])
+    crate::active::message(263, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { -brand } { $version } is ready — Restart
 /// ```
 pub fn notice_warned_update_ready(version: &str) -> String {
-    crate::active::message(284, &[("version", Arg::Str(version))])
+    crate::active::message(286, &[("version", Arg::Str(version))])
 }

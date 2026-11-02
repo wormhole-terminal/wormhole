@@ -15,8 +15,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 ### Fixed
 
 - Clear Buffer in a terminal whose session host comes from Wormhole 1.4 or older cleared the history only in the
-  window, and the host gave it back at the next attach. The terminal now says that the host is too old to
-  forget it, and that ending the host is how to be rid of it.
+  window, and the host gave it back at the next attach. The terminal now says it cleared it only there,
+  because the host is too old to forget it.
 - A session host that stopped answering (a stopped or stuck process) looked like a quiet terminal. After five
   seconds without an answer to a ping the terminal says "Session host not responding" and offers to wait or to
   end the host, killed outright when it does not take the request; the Session Hosts window shows when it
@@ -25,7 +25,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   that does not fit, a busy or slow host) was treated as if the host were gone: it lost its place and the
   next launch added one more terminal for it, again and again. It now keeps its place, says why it cannot
   show the host, and offers to end the host or open a new terminal there; only a host that is really gone
-  is let go of. Hosts that do not take the app are no longer added as new terminals.
+  is let go of. Hosts that do not take the app are no longer added as new terminals; they stay listed in the
+  Session Hosts window.
 - A terminal that pasted or copied more than 64 KiB through the clipboard (an OSC 52 reply), or started with an
   environment that large, lost its session host: after the handshake the host kept the handshake's
   smaller frame limit and dropped the connection.
