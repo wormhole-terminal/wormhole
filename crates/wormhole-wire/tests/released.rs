@@ -9,6 +9,15 @@
 //! longer exists, and when one is newer than [`PROTO_MINOR`] (the minor must be bumped with the
 //! message). A release file holds exactly the samples of its minor and before.
 //!
+//! Extending an existing message (a new tag, a new field) changes no old sample: add a **new sample
+//! name** for the extended form (`spawn_with_x`, ledgered with the new minor) and keep the old one,
+//! which is what the old release wrote and must still decode. Changing an old sample's bytes fails
+//! `golden.rs` and the frozen files, which is the point.
+//!
+//! Every protocol minor up to [`PROTO_MINOR`] must have a frozen release file, or be listed in
+//! [`UNRELEASED_MINORS`] while its first release is still to come (the list is emptied by adding
+//! that release's file).
+//!
 //! To add a release: copy its `golden.txt` here as `release-<tag>.txt` with the frozen header, and
 //! add the tag and the protocol minor it spoke to [`RELEASES`].
 
@@ -26,6 +35,10 @@ const LEDGER: &[(&str, u16)] = &[("clear_history", 2)];
 
 /// The released tags kept here, and the protocol minor each spoke.
 const RELEASES: &[(&str, u16)] = &[("v1.2.0", 1), ("v1.5.0", 2)];
+
+/// Minors this build speaks that no release has shipped yet (so there is nothing to freeze).
+/// Remove a minor from here when its release file is added to [`RELEASES`].
+const UNRELEASED_MINORS: &[u16] = &[];
 
 fn introduced(name: &str) -> u16 {
     LEDGER.iter().find(|(n, _)| *n == name).map_or(1, |(_, minor)| *minor)
@@ -99,5 +112,22 @@ fn a_release_file_holds_exactly_the_samples_of_its_minor_and_before() {
             .collect();
         want.sort();
         assert_eq!(have, want, "{tag} (protocol 1.{minor})");
+    }
+}
+
+#[test]
+fn every_minor_has_a_frozen_release_or_is_listed_as_unreleased() {
+    for minor in 1..=PROTO_MINOR {
+        let frozen = RELEASES.iter().any(|(_, m)| *m == minor);
+        let unreleased = UNRELEASED_MINORS.contains(&minor);
+        assert!(
+            frozen != unreleased,
+            "protocol minor {minor}: {}",
+            if frozen {
+                "frozen, so it is not unreleased"
+            } else {
+                "no release file; freeze its release or list it as unreleased"
+            }
+        );
     }
 }
