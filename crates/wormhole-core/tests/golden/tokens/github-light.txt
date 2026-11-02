@@ -77,6 +77,7 @@ settings.nav.selected #0969da
 settings.nav.tile.advanced #7a7a80
 settings.nav.tile.agents #a63fd9
 settings.nav.tile.appearance #0a6fd6
+settings.nav.tile.changed #4a5266
 settings.nav.tile.extensions #8f7048
 settings.nav.tile.flags #d9501a
 settings.nav.tile.fonts #636366

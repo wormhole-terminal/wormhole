@@ -497,7 +497,7 @@ impl Cards<'_> {
                 name_color: self.t("text.primary"),
                 tile_fill: self.t("settings.nav.tile.agents"),
                 brand: None,
-                icon: Some(IconName::Sparkles),
+                icon: Some(IconName::Sparkles.into()),
                 info: None,
                 chip: chip.map(Into::into),
                 good: false,
@@ -694,7 +694,7 @@ impl Cards<'_> {
                 is_item: true,
                 name: name.into(),
                 spoken: name.into(),
-                icon: Some(IconName::Sparkles),
+                icon: Some(IconName::Sparkles.into()),
                 tile: self.t(tile),
                 selected,
                 ..NavEntry::default()
@@ -703,7 +703,7 @@ impl Cards<'_> {
         };
         let mut rows = div().flex().flex_col().gap(px(2.0));
         for (entry, force) in [
-            item(0, "Changed", "settings.nav.tile.advanced", Force::None, false),
+            item(0, "Changed", "settings.nav.tile.changed", Force::None, false),
             item(1, "Changes & diffs", "settings.nav.tile.git", Force::None, false),
             item(2, "Notifications (hover)", "settings.nav.tile.notifications", Force::Hover, false),
             item(3, "Coding agents", "settings.nav.tile.agents", Force::None, true),

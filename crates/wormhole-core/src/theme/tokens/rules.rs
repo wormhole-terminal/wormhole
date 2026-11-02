@@ -67,6 +67,7 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         // Settings draws its sidebar. They are the design's own colours, like the agents' brands, so a
         // theme's palette doesn't move them; a light window takes darker ones, each 3:1 or better against
         // the white icon.
+        "settings.nav.tile.changed" => p("#3b4252", "#4a5266"),
         "settings.nav.tile.terminal" => p("#2c2c2e", "#3a3a3c"),
         "settings.nav.tile.appearance" => p("#0a84ff", "#0a6fd6"),
         "settings.nav.tile.fonts" => p("#636366", "#636366"),

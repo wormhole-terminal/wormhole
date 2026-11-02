@@ -391,6 +391,7 @@ pub const TOKEN_USES: &[TokenUse] = &[
             "settings.nav.selected",
             "text.on_primary",
             "tile.mark.brand",
+            "settings.nav.tile.changed",
             "settings.nav.tile.terminal",
             "settings.nav.tile.appearance",
             "settings.nav.tile.fonts",

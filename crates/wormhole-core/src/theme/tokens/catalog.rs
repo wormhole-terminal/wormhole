@@ -50,6 +50,7 @@ pub const UI_TOKENS: &[TokenInfo] = &[
         "Chrome",
         "The current page's row in the settings nav: the primary itself, with `text.on_primary` on it",
     ),
+    t("settings.nav.tile.changed", "Chrome", "The settings nav's tile for Changed, under its white icon"),
     t("settings.nav.tile.terminal", "Chrome", "The settings nav's tile for Terminal, under its white icon"),
     t(
         "settings.nav.tile.appearance",
