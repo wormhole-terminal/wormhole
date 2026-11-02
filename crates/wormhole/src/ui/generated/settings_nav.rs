@@ -1,12 +1,11 @@
 //! `SettingsNav`, generated from the design's markup. Do not edit it by hand: it is rewritten whenever the design changes.
 
-use gpui_kit::assets::IconName;
 use gpui_kit::component::{Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look, Force};
+use crate::ui::{Handler, Look, DesignIcon, Force};
 
 /// One item of `rows`.
 #[derive(Default)]
@@ -19,7 +18,7 @@ pub struct NavEntry {
     pub is_sub: bool,
     pub name: SharedString,
     pub spoken: SharedString,
-    pub icon: Option<IconName>,
+    pub icon: Option<DesignIcon>,
     pub tile: Hsla,
     pub selected: bool,
     pub dim: bool,

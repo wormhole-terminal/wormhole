@@ -16,6 +16,7 @@ use super::view::GalleryView;
 use crate::settings::UiColors;
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge;
+use crate::ui::design;
 use crate::ui::{Look, NavEntry, SettingsNavProps};
 
 /// The letters of the sample row's tiles.
@@ -341,35 +342,35 @@ fn nav(env: &Env) -> Div {
         NavEntry {
             selected: true,
             opened: true,
-            ..page(0, IconName::ALargeSmall, "settings.nav.tile.fonts", "Fonts") // text: sample (the gallery's specimen)
+            ..page(0, design::FONTS, "settings.nav.tile.fonts", "Fonts") // text: sample (the gallery's specimen)
         },
         group(0, "Terminal", true), // text: sample (the gallery's specimen)
         group(1, "Code", false),    // text: sample (the gallery's specimen)
         NavEntry { is_sub_end: true, ..NavEntry::default() },
         NavEntry {
-            ..page(1, IconName::Palette, "settings.nav.tile.appearance", "Appearance") // text: sample (the gallery's specimen)
+            ..page(1, design::APPEARANCE, "settings.nav.tile.appearance", "Appearance") // text: sample (the gallery's specimen)
         },
         NavEntry { is_gap: true, ..NavEntry::default() },
         NavEntry {
             has_dot: true,
-            ..page(2, IconName::Sparkles, "settings.nav.tile.agents", "Coding agents") // text: sample (the gallery's specimen)
+            ..page(2, design::AGENTS, "settings.nav.tile.agents", "Coding agents") // text: sample (the gallery's specimen)
         },
         NavEntry {
             follows: true,
             count: Some("1".into()), // text: sample (the gallery's specimen)
-            ..page(3, IconName::SquareTerminal, "settings.nav.tile.terminal", "Terminal") // text: sample (the gallery's specimen)
+            ..page(3, design::TERMINAL, "settings.nav.tile.terminal", "Terminal") // text: sample (the gallery's specimen)
         },
         NavEntry {
             follows: true,
             dim: true,
-            ..page(4, IconName::Download, "settings.nav.tile.updates", "Updates") // text: sample (the gallery's specimen)
+            ..page(4, design::UPDATES, "settings.nav.tile.updates", "Updates") // text: sample (the gallery's specimen)
         },
         NavEntry { is_gap: true, ..NavEntry::default() },
         NavEntry { is_label: true, name: "Preview".into(), ..NavEntry::default() }, // text: sample (the gallery's specimen)
         NavEntry {
             has_dot: true,
             preview: true,
-            ..page(5, IconName::Folder, "settings.nav.tile.projects", "Project folders") // text: sample (the gallery's specimen)
+            ..page(5, design::PROJECTS, "settings.nav.tile.projects", "Project folders") // text: sample (the gallery's specimen)
         },
     ];
     let profile = style::nav_profile_row(

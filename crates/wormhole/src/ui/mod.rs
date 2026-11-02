@@ -11,6 +11,7 @@
 #[rustfmt::skip]
 #[allow(clippy::all, reason = "generated code")]
 mod generated;
+mod drawn;
 mod rule;
 
 use std::rc::Rc;
@@ -20,6 +21,7 @@ use wormhole_core::theme::tokens::ThemeTokens;
 
 use crate::settings::SettingsStore;
 
+pub(crate) use drawn::{DesignIcon, bytes as drawn_icon, design};
 pub(crate) use generated::banner_mock::{Banner, BannerMockProps};
 pub(crate) use generated::checkbox_control::CheckboxControlProps;
 pub(crate) use generated::diff_mock::{Cell, DiffLine, DiffMockProps, File};

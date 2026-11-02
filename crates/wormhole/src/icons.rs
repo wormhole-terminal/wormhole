@@ -185,6 +185,9 @@ impl AssetSource for Assets {
         if let Some((_, bytes)) = GLYPHS.iter().chain(&PARTS).find(|(glyph, _)| *glyph == path) {
             return Ok(Some(Cow::Borrowed(bytes)));
         }
+        if let Some(bytes) = crate::ui::drawn_icon(path) {
+            return Ok(Some(Cow::Borrowed(bytes)));
+        }
         if let Some(bytes) = PanelIcons.load(path)? {
             return Ok(Some(bytes));
         }

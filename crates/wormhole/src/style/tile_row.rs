@@ -141,7 +141,7 @@ pub fn tile_row(id: impl Into<ElementId>, ui: UiColors, parts: TileRowParts, cx:
         name_color: name_color.unwrap_or(ui.text),
         tile_fill,
         brand,
-        icon,
+        icon: icon.map(Into::into),
         info: more.map(|more| setting_info(id, ui, more, Vec::new()).into_any_element()),
         chip: chip.map(|(_, text)| text),
         good: kind == Some(ChipKind::Good),

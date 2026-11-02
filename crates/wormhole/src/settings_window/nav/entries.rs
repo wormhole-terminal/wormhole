@@ -19,7 +19,7 @@ use wormhole_core::config::settings_index::NavGroup;
 use wormhole_core::config::settings_index::SectionId as Section;
 
 use super::super::SettingsWindow;
-use super::{section_icon, tile_token};
+use super::{tile_icon, tile_token};
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style;
 use crate::theme_bridge::token;
@@ -117,7 +117,7 @@ impl SettingsWindow {
                 is_item: true,
                 name: section.title().into(),
                 spoken: spoken(section.title(), mark),
-                icon: Some(section_icon(section)),
+                icon: Some(tile_icon(section)),
                 tile: style::nav_tile_fill(ui, token(tiles, tile), selected),
                 selected,
                 dim: mark == NavMark::NoHits,

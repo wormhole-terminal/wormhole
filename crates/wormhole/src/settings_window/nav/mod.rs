@@ -15,8 +15,8 @@ pub(super) use groups::GroupPick;
 use std::collections::HashMap;
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Sizable;
 use gpui_kit::component::input::Input;
+use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::Query;
@@ -25,8 +25,9 @@ use wormhole_core::config::settings_index::{self, SectionId as Section};
 use super::{SettingsWindow, ui};
 use crate::app_state::app;
 use crate::settings::{SettingsStore, settings};
-use crate::style::{self, Edges, TextRole};
+use crate::style::{Edges, TextRole};
 use crate::theme_bridge::token;
+use crate::ui::{DesignIcon, design};
 use std::rc::Rc;
 
 use crate::ui::{Look, SettingsNavProps, SidebarProfileProps};
@@ -60,6 +61,29 @@ pub(super) fn section_icon(section: Section) -> IconName {
         Section::MenuBar => IconName::Command,
         Section::Updates => IconName::Download,
         Section::Advanced => IconName::SlidersHorizontal,
+    }
+}
+
+/// The icon of a section's tile in the nav: the design's own drawing (the profile has an avatar, not a tile).
+pub(super) fn tile_icon(section: Section) -> DesignIcon {
+    match section {
+        Section::Profile => IconName::CircleUser.into(),
+        Section::Changed => design::CHANGED,
+        Section::Appearance => design::APPEARANCE,
+        Section::Fonts => design::FONTS,
+        Section::Motion => design::MOTION,
+        Section::Terminal => design::TERMINAL,
+        Section::Sessions => design::SESSIONS,
+        Section::Git => design::GIT,
+        Section::Agents => design::AGENTS,
+        Section::Import => design::IMPORT,
+        Section::Projects => design::PROJECTS,
+        Section::Extensions => design::EXTENSIONS,
+        Section::FeatureFlags => design::FLAGS,
+        Section::Notifications => design::NOTIFICATIONS,
+        Section::MenuBar => design::MENUBAR,
+        Section::Updates => design::UPDATES,
+        Section::Advanced => design::ADVANCED,
     }
 }
 
@@ -115,7 +139,19 @@ impl SettingsWindow {
                                 .small()
                                 .appearance(false)
                                 .cleanable(true)
-                                .prefix(style::icon(IconName::Search).text_color(ui.muted))
+                                // The design's field: 13 point text, the search drawing at 13 in a 20 point
+                                // box and 10 points before the text.
+                                .text_size(rems(13.0 / 16.0))
+                                .gap(px(10.0))
+                                .prefix(
+                                    div()
+                                        .flex()
+                                        .items_center()
+                                        .justify_center()
+                                        .size(px(20.0))
+                                        .text_color(ui.muted)
+                                        .child(Icon::new(design::SEARCH).with_size(px(13.0))),
+                                )
                                 .when(searching, |input| {
                                     input.suffix(
                                         div()
@@ -187,8 +223,7 @@ impl SettingsWindow {
 fn tile_token(section: Section) -> Option<&'static str> {
     Some(match section {
         Section::Profile => return None,
-        // A neutral grey, the Advanced page's: the page is about all the others at once.
-        Section::Changed => "settings.nav.tile.advanced",
+        Section::Changed => "settings.nav.tile.changed",
         Section::Terminal => "settings.nav.tile.terminal",
         Section::Appearance => "settings.nav.tile.appearance",
         Section::Fonts => "settings.nav.tile.fonts",

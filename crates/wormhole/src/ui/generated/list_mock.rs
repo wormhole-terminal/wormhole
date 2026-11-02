@@ -6,7 +6,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Look, Rule, Sides};
+use crate::ui::{Look, DesignIcon, Rule, Sides};
 
 /// One item of `rows`.
 #[derive(Default)]
@@ -18,7 +18,7 @@ pub struct Row {
     pub compact: bool,
     pub dense: bool,
     pub tile: Hsla,
-    pub icon: Option<IconName>,
+    pub icon: Option<DesignIcon>,
     pub dot: bool,
     pub dot_color: Hsla,
     pub status_color: Hsla,

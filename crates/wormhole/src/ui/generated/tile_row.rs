@@ -1,12 +1,11 @@
 //! `TileRow`, generated from the design's markup. Do not edit it by hand: it is rewritten whenever the design changes.
 
-use gpui_kit::assets::IconName;
 use gpui_kit::component::{Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Look, Rule, Sides};
+use crate::ui::{Look, DesignIcon, Rule, Sides};
 
 /// What `TileRow` is drawn from.
 pub struct TileRowProps {
@@ -16,7 +15,7 @@ pub struct TileRowProps {
     pub name_color: Hsla,
     pub tile_fill: Hsla,
     pub brand: Option<AnyElement>,
-    pub icon: Option<IconName>,
+    pub icon: Option<DesignIcon>,
     pub info: Option<AnyElement>,
     pub chip: Option<SharedString>,
     pub good: bool,

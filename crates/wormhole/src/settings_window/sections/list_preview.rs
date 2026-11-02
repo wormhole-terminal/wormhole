@@ -209,7 +209,14 @@ fn props(
                 compact,
                 dense,
                 tile: tile_fill(sample.agent, tokens),
-                icon: Some(if sample.agent.is_some() { IconName::Sparkles } else { IconName::Terminal }),
+                icon: Some(
+                    IconName::from(if sample.agent.is_some() {
+                        IconName::Sparkles
+                    } else {
+                        IconName::Terminal
+                    })
+                    .into(),
+                ),
                 dot: options.dot && sample.tone != Tone::Idle,
                 dot_color: tone_color(sample.tone),
                 status_color: if selected { on_primary } else { tone_color(sample.tone) },
