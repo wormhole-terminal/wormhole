@@ -86,8 +86,7 @@ fn sentences() -> Vec<(String, &'static str)> {
         (settings_fonts_specimen_size("JetBrains Mono", "14"), "JetBrains Mono 14 pt"),
         (settings_fonts_specimen_line_height("1.30"), "line height 1.30"),
         (settings_fonts_specimen_colours("Soltari"), "Soltari colours"),
-        (settings_git_tab_width_value(1), "1 space"),
-        (settings_git_tab_width_value(4), "4 spaces"),
+        (settings_git_tab_width_value("4"), "4"),
         (settings_menu_bar_key_conflict("⌘Space is Spotlight's"), "⌘Space is Spotlight's. Press other keys."),
         (settings_notifications_after_minutes("5"), "After 5 min"),
         (settings_notifications_after_seconds("30"), "After 30 s"),
@@ -127,14 +126,6 @@ fn sentences() -> Vec<(String, &'static str)> {
         (settings_sessions_preview_now("Regular"), "Now · Regular"),
         (settings_sessions_preview_hovering("Compact"), "Previewed while hovering Compact"),
         (settings_terminal_default_failed("denied"), "Couldn't make Wormhole the default: denied"),
-        (
-            settings_terminal_font_summary_ligatures_on("JetBrains Mono", "14", "1.30"),
-            "JetBrains Mono 14 pt · line height 1.30 · ligatures on",
-        ),
-        (
-            settings_terminal_font_summary_ligatures_off("JetBrains Mono", "14", "1.30"),
-            "JetBrains Mono 14 pt · line height 1.30 · ligatures off",
-        ),
         (
             settings_terminal_worktree_base_under("~/worktrees"),
             "Under ~/worktrees, in a folder named after the repository (worktree_base in config.json)",

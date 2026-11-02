@@ -24,7 +24,7 @@ pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
         return style::empty_note(ui, text(SETTINGS_IMPORT_SCANNING)).into_any_element();
     };
     if all.is_empty() {
-        return none_found(ui).into_any_element();
+        return none_found(ui, cx).into_any_element();
     }
     div()
         .flex()
@@ -34,7 +34,7 @@ pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
 }
 
 /// Nothing to bring over: what was looked for, so the page doesn't read as broken.
-fn none_found(ui: crate::settings::UiColors) -> Div {
+fn none_found(ui: crate::settings::UiColors, cx: &App) -> Stateful<Div> {
     style::empty_list(
         ui,
         style::EmptyList {
@@ -43,6 +43,7 @@ fn none_found(ui: crate::settings::UiColors) -> Div {
             hint: text(SETTINGS_IMPORT_NONE_DETAIL).into(),
             actions: Vec::new(),
         },
+        cx,
     )
 }
 
@@ -56,7 +57,6 @@ fn card(window: &SettingsWindow, found: &Found, ix: usize, cx: &mut Context<Sett
     let name = terminal_name(source);
     let path = found.files.first().map(|path| visible(&with_tilde(path)).to_string());
     let button = style::form_button(("import-card", ix))
-        .outline()
         .label(text(SETTINGS_IMPORT_REVIEW))
         .selected(open)
         .on_click(cx.listener(move |this, _, _, cx| {
@@ -64,25 +64,15 @@ fn card(window: &SettingsWindow, found: &Found, ix: usize, cx: &mut Context<Sett
             cx.notify();
         }))
         .into_any_element();
-    let row = style::setting(
-        SharedString::from(format!("import-row-{}", source.key())),
-        ui,
-        style::SettingParts {
-            label: name.into(),
-            description: path.map(Into::into),
-            visible_hint: true,
-            chip: Some(settings_import_count(whole(found.proposal.values.len())).into()),
-            keys: style::RowKeys::NONE,
-            state: style::SettingState::Default,
-            found: Vec::new(),
-            found_description: Vec::new(),
-            control: button,
-            tall: false,
-            extra: None,
-            on_reset: None,
-        },
-        cx,
-    );
+    let fill =
+        crate::settings_window::nav::page_tile(wormhole_core::config::settings_index::SectionId::Import, cx);
+    let mut parts =
+        style::TileRowParts::new(style::RowTile::Icon { fill, icon: IconName::ArrowDownToLine }, name);
+    parts.hint = path.map(Into::into);
+    parts.chip =
+        Some((style::ChipKind::Quiet, settings_import_count(whole(found.proposal.values.len())).into()));
+    parts.controls = vec![button];
+    let row = style::tile_row(SharedString::from(format!("import-row-{}", source.key())), ui, parts, cx);
     let mut column = div().flex().flex_col().child(row);
     if open {
         column = column.child(

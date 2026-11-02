@@ -31,14 +31,10 @@ settings-fonts-font-interface = Font
 
 settings-fonts-folder = Fonts folder
     .description = JetBrains Mono comes with { -brand }. To use other fonts without installing them, put .ttf, .otf or .ttc files (or folders of them) here: they're listed under Custom within seconds
-    .keywords = custom bundled ttf otf ttc folder
-
-settings-fonts-custom-fonts = Custom fonts
-    .keywords = custom families
+    .keywords = custom bundled ttf otf ttc folder families
 
 ## settings_window/sections/fonts.rs (labels, hints and notes drawn by this page's code)
 
-settings-fonts-open-fonts-folder = Open fonts folder
 settings-fonts-none-yet = None yet: the fonts folder is empty.
 settings-fonts-ligatures-on = ligatures on
 settings-fonts-ligatures-off = ligatures off

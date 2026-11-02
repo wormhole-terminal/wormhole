@@ -51,14 +51,13 @@ impl SettingsWindow {
         let trusted = project.status == TrustStatus::Trusted;
         let trust_root = root.to_path_buf();
         let trust_button = if trusted {
-            style::form_button("project-revoke")
-                .outline()
-                .label(text(SETTINGS_PROJECTS_REVOKE_TRUST))
-                .on_click(cx.listener(move |this, _, _, cx| {
+            style::form_button("project-revoke").label(text(SETTINGS_PROJECTS_REVOKE_TRUST)).on_click(
+                cx.listener(move |this, _, _, cx| {
                     let root = trust_root.clone();
                     project::revoke_project(&project::shown_profile(cx).clone(), &root, cx);
                     this.projects.forget_info();
-                }))
+                }),
+            )
         } else {
             style::form_button("project-trust")
                 .primary()
@@ -156,7 +155,6 @@ impl SettingsWindow {
             )
             .child(
                 style::form_button("project-reveal")
-                    .ghost()
                     .label(settings_projects_show_in_finder(&project.folder.dir_name()))
                     .on_click(move |_, _, cx| reveal(&reveal_root, cx)),
             );

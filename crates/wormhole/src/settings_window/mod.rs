@@ -51,7 +51,6 @@ use std::path::{Path, PathBuf};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::input::InputState;
-use gpui_kit::component::slider::{SliderState, SliderValue};
 use gpui_kit::*;
 use wormhole_core::platform::paths;
 use wormhole_core::theme::fonts::FontSlot;
@@ -140,8 +139,6 @@ pub(crate) struct SettingsWindow {
     primary_pick: Entity<ColorPickState>,
     /// Appearance → the branch colour's.
     branch_pick: Entity<ColorPickState>,
-    opacity_slider: Entity<SliderState>,
-    line_height_slider: Entity<SliderState>,
     /// Fonts → which font the specimen shows.
     specimen: FontSlot,
     /// Appearance → every theme, not just the first rows.
@@ -154,6 +151,8 @@ pub(crate) struct SettingsWindow {
     others_open: bool,
     /// Coding agents → "How status works" is open under the last line.
     status_open: bool,
+    /// Updates → Privacy: what an update check sends is shown under its row.
+    updates_details_open: bool,
     /// Terminal → the Shells and Worktrees folder rows are open.
     terminal_rows: sections::TerminalRows,
     /// Profile → the Environment, Git identity and Agent logins rows are open.
@@ -215,18 +214,6 @@ fn with_tilde(dir: &Path) -> String {
 /// The icon the settings nav gives a section (the palette's settings show it too).
 pub(crate) fn section_icon(section: Section) -> IconName {
     nav::section_icon(section)
-}
-
-/// A slider over `range` in `step`s, starting at `value`.
-fn slider(min: f32, max: f32, step: f32, value: f32, cx: &mut App) -> Entity<SliderState> {
-    cx.new(|_| SliderState::new().min(min).max(max).step(step).default_value(value))
-}
-
-fn slider_value(value: &SliderValue) -> f32 {
-    match value {
-        SliderValue::Single(value) => *value,
-        SliderValue::Range(_, end) => *end,
-    }
 }
 
 /// Show one of our folders in the Finder (the icon themes, the fonts),

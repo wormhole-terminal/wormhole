@@ -86,7 +86,6 @@ impl SettingsWindow {
             parts.hint = Some(text(SETTINGS_CHANGED_SUMMARY_DETAIL).into());
             parts.controls = vec![
                 style::form_button("changed-copy")
-                    .outline()
                     .label(if self.changed_copied {
                         text(SETTINGS_CHANGED_COPIED)
                     } else {
@@ -95,8 +94,6 @@ impl SettingsWindow {
                     .on_click(cx.listener(|this, _, _, cx| this.copy_changed(cx)))
                     .into_any_element(),
                 style::form_button("changed-reset-all")
-                    .danger()
-                    .outline()
                     .label(text(SETTINGS_CHANGED_RESET_ALL))
                     .on_click(cx.listener(|this, _, window, cx| this.ask_reset_changed(window, cx)))
                     .into_any_element(),

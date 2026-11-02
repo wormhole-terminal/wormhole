@@ -63,7 +63,7 @@ impl SettingsWindow {
         let list: Vec<PathBuf> = project::api::trusted_roots(cx);
         let mut rows = Vec::new();
         if list.is_empty() {
-            trusted = trusted.child(style::empty_list(
+            trusted = trusted.child(style::empty_card(
                 ui,
                 style::EmptyList {
                     icon: IconName::Folder,
@@ -71,6 +71,7 @@ impl SettingsWindow {
                     hint: text(SETTINGS_PROJECTS_NONE_HINT).into(),
                     actions: Vec::new(),
                 },
+                cx,
             ));
         }
         for (ix, root) in list.into_iter().enumerate() {
@@ -82,7 +83,6 @@ impl SettingsWindow {
             parts.hint = Some(short_home(&root).into());
             parts.controls = vec![
                 style::form_button(("trusted-open", ix))
-                    .ghost()
                     .label(text(SETTINGS_PROJECTS_SETTINGS))
                     .on_click(cx.listener(move |this, _, _, cx| {
                         this.projects.select(open.clone());
@@ -90,7 +90,6 @@ impl SettingsWindow {
                     }))
                     .into_any_element(),
                 style::form_button(("revoke", ix))
-                    .ghost()
                     .label(text(SETTINGS_PROJECTS_REVOKE))
                     .on_click(cx.listener(move |this, _, _, cx| {
                         let root = revoke.clone();

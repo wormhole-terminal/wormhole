@@ -236,30 +236,22 @@ fn draw_probes(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
 /// Where Probes live and how to make one.
 fn empty(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let folder = DataRoot::current().probes_dir();
-    let shown = crate::settings_window::with_tilde(&folder);
     let to_open = folder.clone();
     let command = format!("{COMMAND_NAME} probe new"); // text: a command line, not interface text
-    style::empty_list(
+    style::empty_card(
         ui,
         style::EmptyList {
             icon: IconName::Puzzle,
             title: text(SETTINGS_EXTENSIONS_NONE_TITLE).into(),
-            hint: format!(
-                "{} {}",
-                settings_extensions_none_where(&shown),
-                settings_extensions_none_new(&command)
-            )
-            .into(),
+            hint: settings_extensions_none_new(&command).into(),
             actions: vec![
                 style::form_button("probes-show-folder")
-                    .outline()
                     .label(text(SETTINGS_EXTENSIONS_SHOW_FOLDER))
                     .on_click(
                         cx.listener(move |_, _, _, cx| crate::settings_window::open_folder(&to_open, cx)),
                     )
                     .into_any_element(),
                 style::form_button("probes-refresh")
-                    .outline()
                     .label(text(SETTINGS_EXTENSIONS_SCAN_AGAIN))
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.scan_probes(cx);
@@ -268,6 +260,7 @@ fn empty(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
                     .into_any_element(),
             ],
         },
+        cx,
     )
     .into_any_element()
 }
@@ -306,7 +299,6 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
     let again = (*state == ProbeState::Changed).then(|| {
         let (probe_id, name) = (entry.folder.clone(), title.clone());
         style::form_button(SharedString::from(format!("{id}-again")))
-            .outline()
             .label(text(SETTINGS_EXTENSIONS_APPROVE_AGAIN))
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.probe_switched(probe_id.clone(), name.clone(), true, cx)
@@ -315,7 +307,6 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
     let forget = entry.can_forget().then(|| {
         let (probe_id, name) = (entry.folder.clone(), title.clone());
         style::form_button(SharedString::from(format!("{id}-forget")))
-            .ghost()
             .label(text(SETTINGS_EXTENSIONS_FORGET))
             .on_click(
                 cx.listener(move |this, _, _, cx| this.turn_probe_off(probe_id.clone(), name.clone(), cx)),

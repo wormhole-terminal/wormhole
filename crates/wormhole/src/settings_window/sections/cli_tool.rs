@@ -164,7 +164,6 @@ fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement
     };
     let uninstall = |cx: &mut Context<SettingsWindow>| {
         style::form_button("cli-tool-uninstall")
-            .outline()
             .label(text(SETTINGS_AGENTS_UNINSTALL))
             .on_click(cx.listener(|this, _, _, cx| this.uninstall_cli_tool(cx)))
     };

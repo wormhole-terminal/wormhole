@@ -158,7 +158,6 @@ fn program_row(ix: usize, row: Approved, now: i64, cx: &mut Context<SettingsWind
     parts.hint = Some(hint.into());
     parts.controls.push(
         style::form_button(SharedString::from(format!("agent-access-revoke-{ix}")))
-            .outline()
             .label(text(SETTINGS_AGENTS_ACCESS_REVOKE))
             .on_click(cx.listener(move |_, _, _, cx| {
                 agent_access::revoke(which, cx);

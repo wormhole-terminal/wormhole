@@ -55,6 +55,7 @@ pub(super) fn row(
             control,
             tall: false,
             extra: None,
+            under: None,
             on_reset: None,
         },
         cx,

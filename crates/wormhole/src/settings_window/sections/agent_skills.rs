@@ -93,6 +93,7 @@ fn draw_skills(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
                 hint: text(SETTINGS_AGENTS_SKILL_NONE).into(),
                 actions: Vec::new(),
             },
+            cx,
         )
     });
     div().flex().flex_col().children(rows).children(none).into_any_element()
@@ -133,7 +134,6 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let button = |id: &str, label: &'static str, primary: bool| {
         style::form_button(SharedString::from(format!("agent-skill-{word}-{id}")))
             .when(primary, |b| b.primary())
-            .when(!primary, |b| b.outline())
             .label(label)
     };
     let install = |cx: &mut Context<SettingsWindow>, label, primary| {
@@ -191,7 +191,6 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
 fn draw_mcp(_: &SettingsWindow, _: &mut Context<SettingsWindow>) -> AnyElement {
     let copy = mcp_add_command();
     style::form_button("agent-mcp-copy")
-        .outline()
         .label(text(SETTINGS_AGENTS_COPY_COMMAND))
         .on_click(move |_, _, cx| crate::platform::clipboard::write(copy.clone(), cx))
         .into_any_element()

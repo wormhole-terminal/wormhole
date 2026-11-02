@@ -121,14 +121,7 @@ pub(super) const FONTS: &[Group] = &[
             .with_description(SETTINGS_FONTS_FONT_INTERFACE_DESCRIPTION)
             .with_keywords(SETTINGS_FONTS_FONT_INTERFACE_KEYWORDS)],
     ),
-    group(
-        SETTINGS_APPEARANCE_GROUP_YOUR_FONTS,
-        &[
-            entry("fonts-folder", SETTINGS_FONTS_FOLDER, &[])
-                .with_description(SETTINGS_FONTS_FOLDER_DESCRIPTION)
-                .with_keywords(SETTINGS_FONTS_FOLDER_KEYWORDS),
-            entry("custom-fonts", SETTINGS_FONTS_CUSTOM_FONTS, &[])
-                .with_keywords(SETTINGS_FONTS_CUSTOM_FONTS_KEYWORDS),
-        ],
-    ),
+    untitled(&[entry("fonts-folder", SETTINGS_FONTS_FOLDER, &[])
+        .with_description(SETTINGS_FONTS_FOLDER_DESCRIPTION)
+        .with_keywords(SETTINGS_FONTS_FOLDER_KEYWORDS)]),
 ];

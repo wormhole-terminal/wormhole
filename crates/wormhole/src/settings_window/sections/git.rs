@@ -7,16 +7,15 @@ use wormhole_core::config::SizeUnits;
     reason = "the keys are generated, one constant per message: naming each would list them twice"
 )]
 use wormhole_text::keys::*;
-use wormhole_text::whole;
 
 use crate::settings_window::registry::{Current, MenuOption, Setting, toggle};
 
 /// The tab widths the menu offers, the usual one first.
 const TAB_WIDTHS: [u32; 3] = [4, 2, 8];
 
-/// "4 spaces".
+/// "4".
 fn spaces(width: u32) -> String {
-    settings_git_tab_width_value(whole(width))
+    settings_git_tab_width_value(&width.to_string())
 }
 
 pub(super) const SETTINGS: &[Setting] = &[
@@ -45,7 +44,7 @@ pub(super) const SETTINGS: &[Setting] = &[
         // A width written in config.json that the menu doesn't list shows as it is.
         |s| match TAB_WIDTHS.iter().position(|&width| width as usize == s.tab_width) {
             Some(at) => Current::At(at),
-            None => Current::Other(settings_git_tab_width_value(whole(s.tab_width))),
+            None => Current::Other(settings_git_tab_width_value(&s.tab_width.to_string())),
         },
         |s, ix| s.tab_width = TAB_WIDTHS[ix.min(TAB_WIDTHS.len() - 1)] as usize,
     ),

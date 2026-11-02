@@ -148,6 +148,8 @@ pub(super) struct Setting {
     pub control: Control,
     pub describe: Option<Describe>,
     pub below: Option<Below>,
+    /// Drawn inside the row, under its label and hint (the colour swatches, a row of checkboxes).
+    pub under: Option<Below>,
     pub chip: Option<Chip>,
     /// The control runs over more than one line (see `SettingParts::tall`).
     pub tall: bool,
@@ -158,7 +160,16 @@ pub(super) struct Setting {
 
 impl Setting {
     pub(super) const fn new(id: &'static str, control: Control) -> Self {
-        Self { id, control, describe: None, below: None, chip: None, tall: false, default_words: None }
+        Self {
+            id,
+            control,
+            describe: None,
+            below: None,
+            under: None,
+            chip: None,
+            tall: false,
+            default_words: None,
+        }
     }
 
     pub(super) const fn toggle(
@@ -216,6 +227,10 @@ impl Setting {
     }
 
     /// Something under the row, across the column, while there is something to say.
+    pub(super) const fn under(self, under: Below) -> Self {
+        Self { under: Some(under), ..self }
+    }
+
     pub(super) const fn below(self, below: Below) -> Self {
         Self { below: Some(below), ..self }
     }
@@ -545,6 +560,7 @@ impl SettingsWindow {
             None if revealed.is_some() => std::iter::once(0..entry.label().len()).collect(),
             None => Vec::new(),
         };
+        let under = setting.under.and_then(|under| under(self, cx));
         style::setting(
             SharedString::from(format!("setting-{}", entry.id)),
             ui,
@@ -558,7 +574,8 @@ impl SettingsWindow {
                 found,
                 found_description,
                 control,
-                tall: setting.tall,
+                tall: setting.tall || under.is_some(),
+                under,
                 extra,
                 // Only a changed row can reset, so only it makes the closure.
                 on_reset: (!keys.is_empty() && changed).then(|| -> style::Reset {

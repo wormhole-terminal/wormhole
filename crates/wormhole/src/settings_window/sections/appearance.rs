@@ -4,7 +4,6 @@
 //! Transparency the opacity slider is off and says why; with the blur off below 95 % the
 //! blur's row warns.
 
-use gpui_kit::component::slider::Slider;
 use gpui_kit::*;
 use wormhole_core::config::ThemeMode;
 use wormhole_core::config::settings_index::{self, SectionId as Section};
@@ -16,11 +15,11 @@ use wormhole_core::theme::tokens::Translucency;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use super::{color_rows, open_button, stage, title_row};
+use super::{color_rows, stage, title_row};
 use crate::select::{self, MenuOptions};
 use crate::settings::update_settings;
-use crate::settings::{Settings, SettingsStore, UiColors, settings};
-use crate::settings_window::registry::{MenuOption, ProjectSource, Setting, row_label, toggle};
+use crate::settings::{Settings, SettingsStore, settings};
+use crate::settings_window::registry::{Current, MenuOption, ProjectSource, Setting, row_label, toggle};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
 use crate::style::{self, Edges};
 
@@ -53,14 +52,33 @@ pub(super) const SETTINGS: &[Setting] = &[
         .describe(describe_primary)
         .default_words(color_rows::theme_words),
     Setting::custom("branch-color", color_rows::draw_branch).default_words(color_rows::theme_words),
-    Setting::custom("opacity", draw_opacity)
-        .below(reduced_transparency_note)
-        .default_words(|| format!("{:.0} %", Settings::default().opacity * 100.0).into()),
+    Setting::menu_of_values(
+        "opacity",
+        &[
+            MenuOption::counted(percent, OPACITIES[0]),
+            MenuOption::counted(percent, OPACITIES[1]),
+            MenuOption::counted(percent, OPACITIES[2]),
+            MenuOption::counted(percent, OPACITIES[3]),
+            MenuOption::counted(percent, OPACITIES[4]),
+        ],
+        // An opacity written in config.json (or left by the slider this menu replaced) that the menu does not
+        // list shows as it is, checked.
+        |s| match OPACITIES.iter().position(|&p| (s.opacity * 100.0).round() as u32 == p) {
+            Some(at) => Current::At(at),
+            None => Current::Other(percent((s.opacity * 100.0).round() as u32)),
+        },
+        |s, ix| s.opacity = OPACITIES[ix.min(OPACITIES.len() - 1)] as f32 / 100.0,
+    )
+    .below(reduced_transparency_note)
+    .default_words(|| format!("{:.0} %", Settings::default().opacity * 100.0).into()),
     toggle!("blur", blur).below(blur_off_warning),
     toggle!("liquid-glass", liquid_glass)
         .chip(|_, _| Some(text(SETTINGS_APPEARANCE_LIQUID_GLASS_BETA).into()))
         .below(glass_held_note),
-    Setting::custom("translucent", draw_translucent).default_words(default_translucent),
+    // The checkboxes sit under the label, as the design has them; the row itself has no control.
+    Setting::custom("translucent", |_, _| div().into_any_element())
+        .under(draw_translucent)
+        .default_words(default_translucent),
     toggle!("borders", borders),
     toggle!("column-dividers", column_dividers),
     toggle!("status-bar", status_bar),
@@ -69,10 +87,16 @@ pub(super) const SETTINGS: &[Setting] = &[
         .below(title_row::draw_parts)
         .default_words(title_row::default_parts),
     Setting::custom("icon-theme", draw_icon_select),
-    Setting::custom("icon-themes-folder", |_, _| {
-        open_button("icon-themes-folder", text(SETTINGS_APPEARANCE_OPEN_FOLDER), |cx| {
-            open_folder(&crate::icons::user_dir(), cx)
-        })
+    Setting::block("icon-themes-folder", |_, _| {
+        div()
+            .pt_3()
+            .child(
+                style::footer(text(SETTINGS_APPEARANCE_ICON_THEMES_FOOTER))
+                    .link(text(SETTINGS_ADVANCED_SHOW_IN_FINDER), |_, _, cx| {
+                        open_folder(&crate::icons::user_dir(), cx)
+                    }),
+            )
+            .into_any_element()
     }),
 ];
 
@@ -98,21 +122,15 @@ fn describe_primary(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
     })
 }
 
-/// The opacity slider at what the settings ask for, switched off while Reduce Transparency or
-/// Increase Contrast makes every window opaque whatever it says.
-fn draw_opacity(w: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let store = cx.global::<SettingsStore>();
-    let reduced = store.system().opaque();
-    let value = format!("{:.0} %", store.asked_opacity() * 100.0);
-    let ui = ui(cx);
-    // The value goes quiet with the slider.
-    let shown = if reduced { UiColors { text: ui.faint, ..ui } } else { ui };
-    let slider = Slider::new(&w.opacity_slider).disabled(reduced);
-    style::slider_control(shown, slider, value, &["30", "65", "100"], false).into_any_element()
+/// The opacities the menu lists, in per cent.
+const OPACITIES: [u32; 5] = [100, 95, 90, 80, 70];
+
+/// "80 %".
+fn percent(n: u32) -> String {
+    format!("{n} %")
 }
 
-/// Why the opacity slider is off: the system's Reduce Transparency or Increase
-/// Contrast.
+/// Why the opacity is not in force: the system's Reduce Transparency or Increase Contrast.
 fn reduced_transparency_note(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     let system = cx.global::<SettingsStore>().system();
     let note = match (system.reduce_transparency, system.increase_contrast) {
@@ -148,23 +166,26 @@ fn glass_held_note(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opti
 }
 
 /// The settings and Studio windows in one row of checkboxes.
-fn draw_translucent(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_translucent(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     let (ui, s) = (ui(cx), settings(cx));
-    div()
-        .flex()
-        .items_center()
-        .gap_4()
-        .child(
-            style::checkbox("translucent-settings", ui, s.settings_translucent)
-                .in_form(text(SETTINGS_APPEARANCE_SETTINGS))
-                .on_change(|checked, _, cx| update_settings(cx, |s| s.settings_translucent = checked)),
-        )
-        .child(
-            style::checkbox("translucent-studio", ui, s.studio_translucent)
-                .in_form(text(SETTINGS_APPEARANCE_THEME_STUDIO))
-                .on_change(|checked, _, cx| update_settings(cx, |s| s.studio_translucent = checked)),
-        )
-        .into_any_element()
+    Some(
+        div()
+            .flex()
+            .mt(px(6.0))
+            .items_center()
+            .gap_4()
+            .child(
+                style::checkbox("translucent-settings", ui, s.settings_translucent)
+                    .in_form(text(SETTINGS_APPEARANCE_SETTINGS))
+                    .on_change(|checked, _, cx| update_settings(cx, |s| s.settings_translucent = checked)),
+            )
+            .child(
+                style::checkbox("translucent-studio", ui, s.studio_translucent)
+                    .in_form(text(SETTINGS_APPEARANCE_THEME_STUDIO))
+                    .on_change(|checked, _, cx| update_settings(cx, |s| s.studio_translucent = checked)),
+            )
+            .into_any_element(),
+    )
 }
 
 fn draw_icon_select(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {

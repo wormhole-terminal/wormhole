@@ -118,7 +118,7 @@ pub use controls::*;
 pub use extras::*;
 pub use find_bar::*;
 pub use folder_colors::*;
-pub use footer::footer;
+pub use footer::{Footer, footer};
 pub use form_button::form_button;
 pub use group_card::*;
 pub use groups::*;

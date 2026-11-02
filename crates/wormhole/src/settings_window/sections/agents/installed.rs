@@ -45,6 +45,7 @@ pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
                 hint: text(SETTINGS_AGENTS_NO_CODING_AGENT_ON_THIS_MACS).into(),
                 actions: Vec::new(),
             },
+            cx,
         )
     });
     div().flex().flex_col().children(rows).children(none).into_any_element()
@@ -286,13 +287,11 @@ fn login_row(
                 ),
         )
         .child(
-            style::form_button(SharedString::from(id))
-                .when(remove, |b| b.outline())
-                .when(!remove, |b| b.primary())
-                .label(label)
-                .on_click(cx.listener(move |this, _, _, cx| {
+            style::form_button(SharedString::from(id)).when(!remove, |b| b.primary()).label(label).on_click(
+                cx.listener(move |this, _, _, cx| {
                     this.change_hooks(agent, spec, Some(&dir), remove, cx);
-                })),
+                }),
+            ),
         )
         .into_any_element()
 }

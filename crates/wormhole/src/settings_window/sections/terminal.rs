@@ -190,7 +190,6 @@ fn draw_default_terminal(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
         None => (text(SETTINGS_TERMINAL_MAKE_DEFAULT), text(SETTINGS_TERMINAL_DEFAULT_ONLY_APP)),
     };
     style::form_button("default-terminal")
-        .outline()
         .label(label)
         .disabled(state != Some(false))
         .tooltip(tooltip)
@@ -210,12 +209,8 @@ fn describe_font(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option
     let store = cx.global::<SettingsStore>();
     let s = &store.settings;
     let family = wormhole_core::theme::fonts::display_name(store.fonts.family(FontSlot::Terminal));
-    let (size, line_height) = (format!("{:.0}", s.font_size), format!("{:.2}", s.line_height));
-    let summary = if s.font_ligatures {
-        settings_terminal_font_summary_ligatures_on(family, &size, &line_height)
-    } else {
-        settings_terminal_font_summary_ligatures_off(family, &size, &line_height)
-    };
+    let size = settings_fonts_size_points(&format!("{:.0}", s.font_size));
+    let summary = format!("{family}, {size}");
     Some(summary.into())
 }
 

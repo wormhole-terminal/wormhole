@@ -27,6 +27,7 @@ pub struct SettingsRowProps {
     pub dormant: bool,
     pub copied: bool,
     pub hint: Option<SharedString>,
+    pub under: Option<AnyElement>,
     pub on_reset: Option<Handler>,
     pub reset_label: SharedString,
     pub extra: Option<AnyElement>,
@@ -46,7 +47,7 @@ impl SettingsRowProps {
         let t_text_on_primary = token(look.tokens, "text.on_primary");
         let t_text_primary = token(look.tokens, "text.primary");
         let borders = look.borders;
-        let Self { id, name, description, label, tall, disabled, changed, project, chip, info, key_text, key_name, copy_label, on_copy, dormant, copied, hint, on_reset, reset_label, extra, control } = self;
+        let Self { id, name, description, label, tall, disabled, changed, project, chip, info, key_text, key_name, copy_label, on_copy, dormant, copied, hint, under, on_reset, reset_label, extra, control } = self;
 
         div()
             .id(id)
@@ -192,6 +193,10 @@ impl SettingsRowProps {
                             .text_color(t_text_muted)
                             .when(disabled, |this| this.text_color(t_text_faint))
                             .child(hint.clone()))
+                })
+                .when_some(under, |this, under| {
+                    this
+                        .child(under)
                 }))
             .child(div()
                 .relative()

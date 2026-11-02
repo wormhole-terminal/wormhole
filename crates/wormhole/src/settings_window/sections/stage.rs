@@ -1,5 +1,5 @@
-//! Appearance's live preview: a window over a wallpaper at its real size, cut off where the column
-//! ends. It is built from the parts the window itself draws: the sidebar's Terminals list (the same
+//! Appearance's live preview: a window on the preview card's panel, drawn as the app draws it
+//! and as wide as the card. It is built from the parts the window itself draws: the sidebar's Terminals list (the same
 //! list as Terminals & sidebar's preview, `preview::list`), the title row's crumbs and branch chip,
 //! the status bar's items, and a terminal in the terminal's own font, size and colours. A change to
 //! any of those parts shows here by itself; only the arrangement is this file's.
@@ -29,19 +29,16 @@ use crate::style::{self, Edges, StatusGlyph, StatusTile, TextRole, TileFace};
 use crate::theme_bridge::hsla;
 
 /// The wallpaper's height, and how far in from its top left corner the window sits.
-const STAGE_H: f32 = 400.0;
-const WINDOW_INSET: f32 = 24.0;
-/// The window: as wide as the app opens one, so the column shows its left part.
-const WINDOW_W: f32 = 1100.0;
+const STAGE_H: f32 = 360.0;
+const WINDOW_INSET: f32 = 12.0;
+/// The window: as wide as the card, less the room round it.
+const WINDOW_W: f32 = 510.0;
 /// The traffic lights as macOS draws them (`style::LIGHTS_X`, `style::ASSUMED_LIGHTS_SPAN`).
 const LIGHT: f32 = 12.0;
 const LIGHT_GAP: f32 = 8.0;
 /// The terminal's inset: 16 at the sides, 12 at the top (Aligned A-01).
 const TERM_INSET_X: f32 = 16.0;
 const TERM_INSET_Y: f32 = 12.0;
-/// The wallpaper's two washes, from the theme's own colours.
-const WASH_ALPHA: f32 = 0.55;
-const WASH_ANGLE: f32 = 135.0;
 
 /// Appearance → the window over the desktop: theme, primary, opacity, fonts, density and the status
 /// bar as they are now.
@@ -52,18 +49,9 @@ pub(in crate::settings_window) fn draw_stage(
     // The main window's colours, whatever this window's look.
     let ui = crate::settings::ui(cx);
     let store = cx.global::<SettingsStore>();
-    let base = hsla(store.tokens.terminal.background.with_alpha(1.0));
     let status_bar = store.settings_without_zen().status_bar;
     let surfaces = style::window_surfaces(cx, true);
     let look = Look::of(settings(cx));
-    // The theme's own branch magenta, not the one in effect: a branch color picked below recolors
-    // the chips, never the desktop behind the window.
-    let magenta = store.base_tokens().get("git.branch").map(hsla).unwrap_or(ui.branch);
-    let wallpaper = linear_gradient(
-        WASH_ANGLE,
-        linear_color_stop(Hsla { a: WASH_ALPHA, ..magenta }, 0.0),
-        linear_color_stop(Hsla { a: WASH_ALPHA, ..ui.info }, 1.0),
-    );
     let lights = div()
         .flex_none()
         .flex()
@@ -100,14 +88,7 @@ pub(in crate::settings_window) fn draw_stage(
         .child(div().flex_1().min_h_0().flex().child(sidebar).child(content))
         .when(status_bar, |d| d.child(status(ui, cx)));
     // Edge to edge: the window it shows fills the frame.
-    let frame = style::preview_frame(ui)
-        .p_0()
-        .relative()
-        .h(px(STAGE_H))
-        .w_full()
-        .bg(base)
-        .child(div().absolute().size_full().bg(wallpaper))
-        .child(window);
+    let frame = style::preview_frame(ui).p_0().relative().h(px(STAGE_H)).w_full().child(window);
     card(
         ui,
         Words {

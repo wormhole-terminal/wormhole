@@ -12,10 +12,9 @@ use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
 use super::card::{Words, card};
-use super::open_button;
 use crate::fonts::LoadedFonts;
-use crate::settings::{Settings, SettingsStore, settings};
-use crate::settings_window::registry::{Setting, toggle};
+use crate::settings::{Settings, SettingsStore};
+use crate::settings_window::registry::{Current, MenuOption, Setting, toggle};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge;
@@ -24,31 +23,37 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("font-specimen", draw_specimen),
     Setting::custom("font-terminal", |w, cx| w.font_control(FontSlot::Terminal, cx))
         .default_words(|| font_words(FontSlot::Terminal)),
-    Setting::custom("line-height", |w, cx| {
-        let ui = ui(cx);
-        let value = format!("{:.2}", settings(cx).line_height);
-        style::slider_control(
-            ui,
-            gpui_kit::component::slider::Slider::new(&w.line_height_slider),
-            value,
-            &["1.0", "1.5", "2.0"],
-            false,
-        )
-        .into_any_element()
-    })
+    Setting::menu_of_values(
+        "line-height",
+        &[
+            MenuOption::counted(ratio, LINE_HEIGHTS[0]),
+            MenuOption::counted(ratio, LINE_HEIGHTS[1]),
+            MenuOption::counted(ratio, LINE_HEIGHTS[2]),
+            MenuOption::counted(ratio, LINE_HEIGHTS[3]),
+        ],
+        // A line height written in config.json (or left by the slider this menu replaced) shows as it is.
+        |s| match LINE_HEIGHTS.iter().position(|&h| (s.line_height * 100.0).round() as u32 == h) {
+            Some(at) => Current::At(at),
+            None => Current::Other(ratio((s.line_height * 100.0).round() as u32)),
+        },
+        |s, ix| s.line_height = LINE_HEIGHTS[ix.min(LINE_HEIGHTS.len() - 1)] as f32 / 100.0,
+    )
     .default_words(|| format!("{:.2}", Settings::default().line_height).into()),
     toggle!("font-ligatures", font_ligatures),
     Setting::custom("font-code", |w, cx| w.font_control(FontSlot::Code, cx))
         .default_words(|| font_words(FontSlot::Code)),
     Setting::custom("font-interface", |w, cx| w.font_control(FontSlot::Interface, cx))
         .default_words(|| font_words(FontSlot::Interface)),
-    Setting::custom("fonts-folder", |_, _| {
-        open_button("fonts-folder", text(SETTINGS_FONTS_OPEN_FONTS_FOLDER), |cx| {
-            open_folder(&crate::active_profile::paths().fonts_dir(), cx)
-        })
-    }),
-    Setting::custom("custom-fonts", |_, _| div().into_any_element()).describe(describe_custom),
+    Setting::block("fonts-folder", draw_footer),
 ];
+
+/// The line heights the menu lists, in hundredths.
+const LINE_HEIGHTS: [u32; 4] = [120, 130, 140, 150];
+
+/// "1.30", from hundredths.
+fn ratio(hundredths: u32) -> String {
+    format!("{:.2}", hundredths as f32 / 100.0)
+}
 
 /// A font row's default as its control shows it: the family (or what an empty one follows) and the size.
 fn font_words(slot: FontSlot) -> SharedString {
@@ -62,13 +67,20 @@ fn font_words(slot: FontSlot) -> SharedString {
     format!("{face}, {size}").into()
 }
 
-/// "2 families found: Berkeley Mono, Monaspace Neon".
-fn describe_custom(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<SharedString> {
+/// The page's last line: what custom fonts there are ("None yet: the fonts folder is empty."), and the way to the
+/// folder.
+fn draw_footer(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let families = cx.try_global::<LoadedFonts>().map(LoadedFonts::custom_families).unwrap_or_default();
-    Some(match families.len() {
+    let caption: SharedString = match families.len() {
         0 => text(SETTINGS_FONTS_NONE_YET).into(),
         n => settings_fonts_families_found(whole(n), &families.join(", ")).into(),
-    })
+    };
+    div()
+        .pt_3()
+        .child(style::footer(caption).link(text(SETTINGS_ADVANCED_SHOW_IN_FINDER), |_, _, cx| {
+            open_folder(&crate::active_profile::paths().fonts_dir(), cx)
+        }))
+        .into_any_element()
 }
 
 /// The specimen's text: a prompt, a result, code with the pairs ligatures join, and the

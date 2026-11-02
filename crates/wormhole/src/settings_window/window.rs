@@ -10,7 +10,6 @@ use wormhole_text::{text, whole};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::input::{InputEvent, InputState};
-use gpui_kit::component::slider::SliderEvent;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, Query};
@@ -20,29 +19,22 @@ use super::font_picker::FontPickerState;
 use crate::app_state::app;
 use crate::platform::vibrancy::Blur;
 use crate::select::ColorPickState;
-use crate::settings::{SettingsStore, update_settings};
+use crate::settings::SettingsStore;
 use crate::settings::{UiColors, settings};
 use crate::style::TitleDrag as _;
 use crate::style::{self, TextRole};
 use crate::ui::{Look, PageTitleProps};
 
 use super::open::REVEAL_INSET;
-use super::{
-    COLUMN_W, FrontWindow, INTRO_W, NO_RESULTS_W, PAGE_TOP, Section, SettingsWindow, sections, slider,
-    slider_value, ui,
-};
+use super::{COLUMN_W, FrontWindow, INTRO_W, NO_RESULTS_W, PAGE_TOP, Section, SettingsWindow, sections, ui};
 
 impl SettingsWindow {
     pub(super) fn new(section: Option<Section>, window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let current = settings(cx).clone();
         let search =
             cx.new(|cx| InputState::new(window, cx).placeholder(text(SETTINGS_WINDOW_SEARCH_SETTINGS)));
         let font_picker = FontPickerState::new(window, cx);
         let primary_pick = cx.new(|cx| ColorPickState::new(window, cx));
         let branch_pick = cx.new(|cx| ColorPickState::new(window, cx));
-        let asked_opacity = cx.global::<SettingsStore>().asked_opacity();
-        let opacity_slider = slider(30.0, 100.0, 1.0, (asked_opacity * 100.0).round(), cx);
-        let line_height_slider = slider(1.0, 2.0, 0.05, current.line_height, cx);
         let (projects, project_subscriptions) = sections::ProjectPicker::new(window, cx);
         let mut subscriptions = vec![
             cx.subscribe_in(&search, window, |this, input, event: &InputEvent, _, cx| {
@@ -58,22 +50,6 @@ impl SettingsWindow {
             cx.subscribe_in(&font_picker.search, window, |_, _, event: &InputEvent, _, cx| {
                 if let InputEvent::Change = event {
                     cx.notify();
-                }
-            }),
-            cx.subscribe(&opacity_slider, |_, _, event: &SliderEvent, cx| {
-                let SliderEvent::Change(value) = event else { return };
-                let opacity = (slider_value(value) / 100.0).clamp(0.3, 1.0);
-                // Against the opacity asked for: Reduce Transparency's 100 % is not a setting.
-                if (cx.global::<SettingsStore>().asked_opacity() - opacity).abs() > f32::EPSILON {
-                    update_settings(cx, |s| s.opacity = opacity);
-                }
-            }),
-            cx.subscribe(&line_height_slider, |_, _, event: &SliderEvent, cx| {
-                let SliderEvent::Change(value) = event else { return };
-                // Steps of 0.05, without the float noise the slider adds.
-                let line_height = (slider_value(value) * 20.0).round() / 20.0;
-                if (settings(cx).line_height - line_height).abs() > f32::EPSILON {
-                    update_settings(cx, |s| s.line_height = line_height);
                 }
             }),
         ];
@@ -112,14 +88,13 @@ impl SettingsWindow {
             recording: None,
             primary_pick,
             branch_pick,
-            opacity_slider,
-            line_height_slider,
             specimen: FontSlot::Terminal,
             themes_all: false,
             sidebar_preview: None,
             changed_copied: false,
             others_open: false,
             status_open: false,
+            updates_details_open: false,
             terminal_rows: Default::default(),
             profile_rows: Default::default(),
             profile_form: None,
@@ -258,18 +233,6 @@ impl SettingsWindow {
         }
     }
 
-    /// Keep the sliders where the settings are (a change in config.json, a reset arrow),
-    /// unless one is being dragged to that value right now.
-    pub(super) fn sync_sliders(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let store = cx.global::<SettingsStore>();
-        let (opacity, line_height) = ((store.asked_opacity() * 100.0).round(), store.settings.line_height);
-        for (slider, value) in [(&self.opacity_slider, opacity), (&self.line_height_slider, line_height)] {
-            if (slider_value(&slider.read(cx).value()) - value).abs() > 0.001 {
-                slider.update(cx, |slider, cx| slider.set_value(value, window, cx));
-            }
-        }
-    }
-
     /// Point the colour controls' editors at the colours in force (the primary's, the branch's), unless a
     /// change of their own put them there.
     pub(super) fn sync_color_picks(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -343,7 +306,6 @@ impl SettingsWindow {
 impl Render for SettingsWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.sync_color_picks(window, cx);
-        self.sync_sliders(window, cx);
         self.sync_profile_form(window, cx);
         self.rem = window.rem_size();
         style::sync_option(window.modifiers().alt, cx);
@@ -539,13 +501,11 @@ impl SettingsWindow {
                     .pt_1()
                     .child(
                         style::form_button("no-results-config")
-                            .outline()
                             .label(text(SETTINGS_WINDOW_OPEN_CONFIG_JSON))
                             .on_click(|_, _, _| sections::open_in_editor(&SettingsStore::config_path())),
                     )
                     .child(
                         style::form_button("no-results-clear")
-                            .ghost()
                             .label(text(SETTINGS_WINDOW_CLEAR_SEARCH))
                             .on_click(cx.listener(|this, _, window, cx| this.clear_search(window, cx))),
                     ),

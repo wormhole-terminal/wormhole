@@ -88,6 +88,8 @@ settings-appearance-icon-theme = Icon theme
     .description = Zed icon themes work too
     .keywords = icon theme
 
+settings-appearance-icon-themes-footer = Add an icon theme by putting it in the icon themes folder.
+
 settings-appearance-icon-themes-folder = Icon themes folder
     .description = Put a Zed icon theme folder here; it's listed above within seconds
     .keywords = zed folder
@@ -107,19 +109,17 @@ settings-appearance-group-interface = Interface
 
 ## Your fonts
 
-settings-appearance-group-your-fonts = Your fonts
 
 ## settings_window/sections/appearance.rs (labels, hints and notes drawn by this page's code)
 
 settings-appearance-dark = Dark
 settings-appearance-light = Light
 settings-appearance-match-system = Match system
-settings-appearance-open-folder = Open folder
 settings-appearance-opaque-reduce-transparency = Reduce Transparency is on in System Settings, so every window is opaque. Your opacity applies again when it's off.
 settings-appearance-opaque-increase-contrast = Increase Contrast is on in System Settings, so every window is opaque. Your opacity applies again when it's off.
 settings-appearance-blur-off-warning = Without blur the desktop shows sharp behind the text: below 95 % opacity it may not read.
 settings-appearance-turn-on-blur = Turn on blur
-settings-appearance-liquid-glass-beta = Beta
+settings-appearance-liquid-glass-beta = Preview
 settings-appearance-glass-held-by-accessibility = Reduce Transparency or Increase Contrast is on in System Settings, so every surface stays painted. The glass returns when it's off.
 settings-appearance-settings = Settings
 settings-appearance-theme-studio = Theme Studio
@@ -148,7 +148,7 @@ settings-appearance-filter-themes = Filter themes
 settings-appearance-in-dark-mode = In Dark Mode
 settings-appearance-in-light-mode = In Light Mode
 settings-appearance-show-fewer = Show fewer
-settings-appearance-import-theme = Import theme…
+settings-appearance-import-theme = Import Theme…
 settings-appearance-no-themes-match-the-filter = No themes match the filter.
 
 ## Sentences with a hole in them

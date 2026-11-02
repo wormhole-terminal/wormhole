@@ -49,7 +49,6 @@ pub(super) const SETTINGS: &[Setting] = &[
 fn draw_reset_tips(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let none = app(cx).tips.is_empty();
     style::form_button("reset-tips")
-        .outline()
         .label(text(SETTINGS_ADVANCED_RESET_TIPS_BUTTON))
         .disabled(none)
         .tooltip(if none {
@@ -69,7 +68,6 @@ fn draw_reset(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElemen
     let changed = changed_keys(cx);
     style::form_button("reset-settings")
         .danger()
-        .outline()
         .label(text(SETTINGS_ADVANCED_RESET_TO_DEFAULTS))
         .disabled(changed == 0)
         .tooltip(if changed == 0 {

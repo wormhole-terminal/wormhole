@@ -19,7 +19,7 @@ use crate::platform::notifications::Permission;
 use crate::settings::Settings;
 use crate::settings_window::registry::{Current, MenuOption, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, RowKeys, SettingParts, SettingState};
+use crate::style;
 
 /// What "A command finishes" offers besides Off: how long a command runs before it counts, in seconds.
 const AFTER: [u32; 3] = [10, 30, 60];
@@ -155,64 +155,39 @@ fn permission_text(permission: Permission) -> (&'static str, &'static str) {
     }
 }
 
-/// The buttons for what macOS allows: ask, send a test, or open System Settings.
-fn permission_buttons(permission: Permission) -> Vec<AnyElement> {
-    let send_test = || {
-        style::form_button("notify-send-test")
-            .outline()
-            .label(text(SETTINGS_NOTIFICATIONS_SEND_TEST))
-            .on_click(|_, _, cx| notifications::send_test(cx))
-            .into_any_element()
-    };
-    let system_settings = || {
-        style::form_button("notify-open-settings")
-            .outline()
-            .label(text(SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS))
-            .on_click(|_, _, cx| notifications::open_system_settings(cx))
-            .into_any_element()
-    };
+/// The links for what macOS allows: ask, send a test, or open System Settings.
+fn permission_links(permission: Permission, mut line: style::Footer) -> style::Footer {
+    let send_test = SETTINGS_NOTIFICATIONS_SEND_TEST;
+    let system_settings = SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS;
     match permission {
-        Permission::Allowed { .. } => vec![send_test(), system_settings()],
-        Permission::NotAsked => vec![
-            style::form_button("notify-allow")
-                .primary()
-                .label(text(SETTINGS_NOTIFICATIONS_ALLOW_NOTIFICATIONS))
-                .on_click(|_, _, cx| notifications::ask_permission(cx))
-                .into_any_element(),
-        ],
-        Permission::Denied => vec![system_settings()],
-        Permission::OutsideBundle => vec![send_test()],
-        Permission::Checking => Vec::new(),
+        Permission::Allowed { .. } => {
+            line = line
+                .link(text(send_test), |_, _, cx| notifications::send_test(cx))
+                .link(text(system_settings), |_, _, cx| notifications::open_system_settings(cx));
+        }
+        Permission::NotAsked => {
+            line = line.link(text(SETTINGS_NOTIFICATIONS_ALLOW_NOTIFICATIONS), |_, _, cx| {
+                notifications::ask_permission(cx)
+            });
+        }
+        Permission::Denied => {
+            line = line.link(text(system_settings), |_, _, cx| notifications::open_system_settings(cx));
+        }
+        Permission::OutsideBundle => {
+            line = line.link(text(send_test), |_, _, cx| notifications::send_test(cx));
+        }
+        Permission::Checking => {}
     }
+    line
 }
 
 /// The footer of the page: what macOS decides, where the state of the permission stays in view, and the
 /// way to test it.
 fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let ui = ui(cx);
     let permission = notifications::permission(cx);
     let (title, hint) = permission_text(permission);
     let state = if hint.is_empty() { title.to_string() } else { settings_notifications_state(title, hint) };
-    style::setting(
-        "setting-notify-permission",
-        ui,
-        SettingParts {
-            label: text(SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION).into(),
-            description: Some(state.into()),
-            visible_hint: true,
-            chip: None,
-            keys: RowKeys::NONE,
-            state: SettingState::Default,
-            found: Vec::new(),
-            found_description: Vec::new(),
-            control: div().flex().gap_2().children(permission_buttons(permission)).into_any_element(),
-            tall: false,
-            extra: None,
-            on_reset: None,
-        },
-        cx,
-    )
-    .into_any_element()
+    div().pt_3().child(permission_links(permission, style::footer(state))).into_any_element()
 }
 
 /// The notice above the page while macOS has not said yes: off (a warning, with the way to turn it

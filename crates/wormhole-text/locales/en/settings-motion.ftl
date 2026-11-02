@@ -52,5 +52,9 @@ settings-motion-insert-preview-label = Preview of a terminal opening and closing
 settings-motion-fold-preview-label = Preview of a group folding and opening
 settings-motion-status-preview-label = Preview of a terminal's status changing
 settings-motion-column-preview-label = Preview of the sidebar hiding and showing
+settings-motion-preview = Live preview
+    .keywords = preview loop animation motion
+
+settings-motion-preview-label = Preview of how the terminals list moves
 settings-motion-preview-caption = Loops while you look. Under Reduce Motion it holds still.
 settings-motion-column-terminal = Terminal

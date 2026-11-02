@@ -53,13 +53,13 @@ pub const SETTINGS_ADVANCED_OPEN: Key = Key::new(337);
 pub const SETTINGS_ADVANCED_OPEN_DEVELOPER_TOOLS: Key = Key::new(338);
 /// "Show in Finder"
 pub const SETTINGS_ADVANCED_SHOW_IN_FINDER: Key = Key::new(339);
-/// "Reset tips"
+/// "Show Again"
 pub const SETTINGS_ADVANCED_RESET_TIPS_BUTTON: Key = Key::new(340);
 /// "No tip was closed for good"
 pub const SETTINGS_ADVANCED_NO_TIP_WAS_CLOSED_FOR_GOOD: Key = Key::new(341);
 /// "They show again where they belong"
 pub const SETTINGS_ADVANCED_THEY_SHOW_AGAIN_WHERE_THEY_BELONG: Key = Key::new(342);
-/// "Reset to defaults…"
+/// "Reset…"
 pub const SETTINGS_ADVANCED_RESET_TO_DEFAULTS: Key = Key::new(343);
 /// "Every setting is at its default"
 pub const SETTINGS_ADVANCED_EVERY_SETTING_IS_AT_ITS_DEFAULT: Key = Key::new(344);

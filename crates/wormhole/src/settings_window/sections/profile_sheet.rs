@@ -137,7 +137,6 @@ impl SettingsWindow {
                     .gap_2()
                     .child(
                         style::form_button("new-profile-cancel")
-                            .outline()
                             .label(text(SETTINGS_PROFILE_CANCEL))
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.new_profile = None;

@@ -312,7 +312,6 @@ fn delete_caption(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> 
 fn draw_delete(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let is_default = app(cx).active_profile().is_default();
     style::form_button("profile-delete")
-        .outline()
         .label(text(SETTINGS_PROFILE_DELETE_PROFILE))
         .disabled(is_default || window.confirm_delete_profile)
         .on_click(cx.listener(|this, _, _, cx| {

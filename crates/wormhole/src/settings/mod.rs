@@ -430,7 +430,8 @@ impl SettingsStore {
     }
 
     /// The opacity the settings ask for, which Reduce Transparency and Increase Contrast overrule
-    /// while one is on: what the opacity slider shows.
+    /// while one is on.
+    #[cfg(test)]
     pub fn asked_opacity(&self) -> f32 {
         self.asked_opacity
     }

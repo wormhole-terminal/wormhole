@@ -7,13 +7,11 @@
 //! of what it says, and grows by that line; anything longer goes under the row as a notice.
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::{Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 
 use super::info::setting_info;
-use super::scale::TextRole;
 use super::tile::{TileFace, brand_tile};
 use crate::settings::UiColors;
 use crate::ui::{Look, SolidChipProps, TileRowProps};
@@ -164,28 +162,26 @@ pub struct EmptyList {
     pub title: SharedString,
     /// What to do about it, in a line or two.
     pub hint: SharedString,
-    /// Buttons under the words, centred.
+    /// Buttons at the row's end.
     pub actions: Vec<AnyElement>,
 }
 
 /// A list with nothing in it, said once: no agents on this Mac, no Probes, no projects, no terminals to
-/// import from. A card with an icon, a title, what to do and the buttons that do it, so the page doesn't
-/// read as broken.
+/// import from. It is a tile row like the ones the list would have, in a card of its own, so the page
+/// doesn't read as broken.
 #[track_caller]
-pub fn empty_list(ui: UiColors, parts: EmptyList) -> Div {
+pub fn empty_list(ui: UiColors, parts: EmptyList, cx: &App) -> Stateful<Div> {
     let EmptyList { icon, title, hint, actions } = parts;
-    let actions = (!actions.is_empty())
-        .then(|| div().flex().flex_wrap().justify_center().gap_2().pt_2().children(actions));
-    super::card(ui, ui.border)
-        .flex()
-        .flex_col()
-        .items_center()
-        .gap_1()
-        .px_6()
-        .py_4()
-        .text_center()
-        .child(Icon::new(icon).with_size(px(super::scale::EMPTY_GLYPH)).text_color(ui.muted))
-        .child(div().text_body().font_weight(FontWeight::SEMIBOLD).text_color(ui.text).child(title))
-        .child(div().text_caption().text_color(ui.muted).child(hint))
-        .children(actions)
+    let fill =
+        crate::theme_bridge::token(&cx.global::<crate::settings::SettingsStore>().tokens, "tile.background");
+    let mut row = TileRowParts::new(RowTile::Icon { fill, icon }, title);
+    row.note = Some((ui.muted, hint));
+    row.controls = actions;
+    tile_row("empty-list", ui, row, cx)
+}
+
+/// An [`empty_list`] in a card of its own, for a page that is not drawing its rows in one.
+#[track_caller]
+pub fn empty_card(ui: UiColors, parts: EmptyList, cx: &App) -> super::GroupCard {
+    super::group_card(ui, [empty_list(ui, parts, cx).into_any_element()])
 }

@@ -53,10 +53,7 @@ settings-git-mib = MiB
 ## Sentences with a hole in them
 
 # The tab width stepper's value. { $count } is a whole number of spaces.
-settings-git-tab-width-value = { $count ->
-    [one] { $count } space
-   *[other] { $count } spaces
-}
+settings-git-tab-width-value = { $count }
 
 ## settings_window/sections/diff_preview.rs (the words of the sample Changes panel)
 

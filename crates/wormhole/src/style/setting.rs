@@ -154,6 +154,8 @@ pub struct SettingParts {
     pub tall: bool,
     /// Before the control: a link such as "Edit in project".
     pub extra: Option<AnyElement>,
+    /// Inside the row under the label and hint.
+    pub under: Option<AnyElement>,
     /// Puts the default back; the reset arrow shows, and the row's menu offers it, while the value is
     /// changed.
     pub on_reset: Option<Reset>,
@@ -196,6 +198,7 @@ pub fn setting_in(
         control,
         tall,
         extra,
+        under,
         on_reset,
     } = parts;
     let id = id.into();
@@ -231,6 +234,7 @@ pub fn setting_in(
         dormant: key.as_ref().is_none_or(|key| key.dormant),
         copied: key.as_ref().is_some_and(|key| key.copied),
         hint: description.filter(|_| visible_hint),
+        under,
         on_reset: reset.map(|reset| -> Handler { Rc::new(move |_, window, cx| reset(window, cx)) }),
         reset_label: text(keys::SETTINGS_ROW_RESET).into(),
         extra,

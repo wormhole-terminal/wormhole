@@ -54,16 +54,6 @@ impl FormButton {
         self
     }
 
-    /// The normal style, which is the default; kept so a call site can say it.
-    pub fn outline(self) -> Self {
-        self
-    }
-
-    /// The design has three styles and no quiet one: a former ghost button is a normal one.
-    pub fn ghost(self) -> Self {
-        self
-    }
-
     /// A spinner is not part of the design: the button is off and shows its words, if any.
     pub fn loading(mut self, loading: bool) -> Self {
         self.disabled |= loading;

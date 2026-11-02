@@ -24,7 +24,6 @@ pub(super) fn tile_rows(ui: UiColors, cx: &App) -> Div {
             .iter()
             .map(|label| {
                 style::form_button(SharedString::from(format!("{id}-{label}")))
-                    .outline()
                     .label(*label)
                     .into_any_element()
             })
@@ -106,15 +105,16 @@ pub(super) fn tile_rows(ui: UiColors, cx: &App) -> Div {
                     cx,
                 )), // text: sample (the gallery's specimen)
         )
-        .child(style::empty_list(
+        .child(style::empty_card(
             ui,
             style::EmptyList {
                 icon: IconName::Puzzle,
                 title: "No Probes yet".into(), // text: sample (the gallery's specimen)
                 hint: "Make one with wh probe new, or copy a folder in.".into(), // text: sample (the gallery's specimen)
                 actions: vec![
-                    style::form_button("g-empty-show").outline().label("Show in Finder").into_any_element(), // text: sample (the gallery's specimen)
+                    style::form_button("g-empty-show").label("Show in Finder").into_any_element(), // text: sample (the gallery's specimen)
                 ],
             },
+            cx,
         ))
 }

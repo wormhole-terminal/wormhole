@@ -109,6 +109,13 @@ pub(super) fn recorder_id(id: &str) -> Option<&'static str> {
 pub(super) fn page_notice(section: Section, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     match section {
         Section::Notifications => notifications::notice(cx),
+        Section::Updates => updates::dev_notice(cx),
+        // The page says in one line what the design's notice says: the flags are for features that are
+        // not finished.
+        Section::FeatureFlags => Some(
+            style::notice(crate::settings::ui(cx), style::NoticeKind::Info, section.info().intro())
+                .into_any_element(),
+        ),
         _ => None,
     }
 }
@@ -146,7 +153,7 @@ impl SettingsWindow {
 
 /// A row's button that opens something (a folder, a file).
 fn open_button(id: &'static str, label: &'static str, open: fn(&App)) -> AnyElement {
-    style::form_button(id).outline().label(label).on_click(move |_, _, cx| open(cx)).into_any_element()
+    style::form_button(id).label(label).on_click(move |_, _, cx| open(cx)).into_any_element()
 }
 
 /// Open a file in the text editor (config.json).

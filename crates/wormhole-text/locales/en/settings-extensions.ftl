@@ -26,9 +26,6 @@ settings-extensions-looking = Looking for Probes…
 
 settings-extensions-none-title = No Probes yet
 
-# { $folder } is the Probes folder, shown with ~ for the home folder.
-settings-extensions-none-where = Probes live in { $folder }, one folder each with a probe.toml in it.
-
 # { $command } is the command line, as the terminal types it: "Wormhole probe new".
 settings-extensions-none-new = Make one with { $command }, or copy a folder in. It stays off until you approve it here.
 

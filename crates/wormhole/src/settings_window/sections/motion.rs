@@ -13,11 +13,15 @@ use wormhole_text::Key;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use super::MotionScene;
+use super::card::{Words, card};
 use crate::select::{MenuOptions, menu_select};
 use crate::settings::{Settings, settings, update_settings};
 use crate::settings_window::registry::{Setting, row_label};
 use crate::settings_window::{SettingsWindow, ui};
+use crate::style;
 
 /// What the options of a choice are called, in the order the menu lists them.
 type Labels<T> = &'static [(T, Key)];
@@ -67,27 +71,45 @@ fn default_name<T: MotionChoice>(labels: Labels<T>, default: T) -> SharedString 
         .map_or_else(SharedString::default, |(_, key)| text(*key).into())
 }
 
+/// The scene the page's one preview shows: the one whose choice was changed last (Insert to begin with).
+static SHOWN: AtomicUsize = AtomicUsize::new(0);
+
+/// The page's preview card: one loop, for the thing whose option was picked last.
+fn draw_preview(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let ui = ui(cx);
+    let scene = [MotionScene::Insert, MotionScene::Fold, MotionScene::Status, MotionScene::Column]
+        [SHOWN.load(Ordering::Relaxed).min(3)];
+    let Some(previews) = window.motion_previews.as_ref() else { return div().into_any_element() };
+    card(
+        ui,
+        Words {
+            id: "motion-preview-card",
+            what: SETTINGS_SECTION_MOTION,
+            spoken: SETTINGS_MOTION_PREVIEW_LABEL,
+            caption: SETTINGS_MOTION_PREVIEW_CAPTION,
+        },
+        style::preview_frame(ui).child(previews.of(scene)),
+    )
+}
+
 pub(super) const SETTINGS: &[Setting] = &[
+    Setting::block("motion-preview", draw_preview),
     Setting::custom("motion-insert", |_, cx| {
         select("motion-insert", INSERT, settings(cx).motion.insert, pick!(insert), cx)
     })
-    .default_words(|| default_name(INSERT, Settings::default().motion.insert))
-    .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Insert, ui(cx)))),
+    .default_words(|| default_name(INSERT, Settings::default().motion.insert)),
     Setting::custom("motion-fold", |_, cx| {
         select("motion-fold", FOLD, settings(cx).motion.fold, pick!(fold), cx)
     })
-    .default_words(|| default_name(FOLD, Settings::default().motion.fold))
-    .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Fold, ui(cx)))),
+    .default_words(|| default_name(FOLD, Settings::default().motion.fold)),
     Setting::custom("motion-status", |_, cx| {
         select("motion-status", STATUS, settings(cx).motion.status, pick!(status), cx)
     })
-    .default_words(|| default_name(STATUS, Settings::default().motion.status))
-    .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Status, ui(cx)))),
+    .default_words(|| default_name(STATUS, Settings::default().motion.status)),
     Setting::custom("motion-column", |_, cx| {
         select("motion-column", COLUMN, settings(cx).motion.column, pick!(column), cx)
     })
-    .default_words(|| default_name(COLUMN, Settings::default().motion.column))
-    .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Column, ui(cx)))),
+    .default_words(|| default_name(COLUMN, Settings::default().motion.column)),
 ];
 
 /// The menu of one choice: the option in use in its face, every option in its menu.
@@ -104,6 +126,11 @@ fn select<T: MotionChoice>(
         let at = labels.iter().position(|(choice, _)| *choice == current);
         MenuOptions::words(words, at, move |ix, _, cx| {
             if let Some((choice, _)) = labels.get(ix) {
+                let scene = ["motion-insert", "motion-fold", "motion-status", "motion-column"]
+                    .iter()
+                    .position(|known| *known == id)
+                    .unwrap_or(0);
+                SHOWN.store(scene, Ordering::Relaxed);
                 update_settings(cx, |s| pick(s, choice.name()));
             }
         })

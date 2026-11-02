@@ -336,13 +336,11 @@ impl SettingsWindow {
             .child(div().flex_1())
             .child(
                 style::form_button("import-theme")
-                    .outline()
                     .label(text(SETTINGS_APPEARANCE_IMPORT_THEME))
                     .on_click(cx.listener(|_, _, _, cx| import_theme(cx.weak_entity(), cx))),
             )
             .child(
                 style::form_button("open-studio")
-                    .outline()
                     .label(text(SETTINGS_APPEARANCE_THEME_STUDIO))
                     .on_click(cx.listener(|_, _, _, cx| studio::open_studio(cx))),
             );
@@ -426,6 +424,7 @@ impl SettingsWindow {
                         control: show,
                         tall: false,
                         extra: None,
+                        under: None,
                         on_reset: None,
                     },
                     cx,

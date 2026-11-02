@@ -121,7 +121,7 @@ settings-terminal-allow = Allow
 settings-terminal-deny = Deny
 settings-terminal-wormhole-is-the-default = { -brand } is the default
 settings-terminal-to-change-it-pick-another-app = To change it, pick another app for a .command file in Finder's Get Info
-settings-terminal-make-default = Make default
+settings-terminal-make-default = Make Default
 settings-terminal-instead-of-terminal = Instead of Terminal
 settings-terminal-default-only-app = Only { -brand }.app can be the default terminal
 settings-terminal-not-installed-the-title-row-opens = Not installed: the title row opens it in another app
@@ -134,13 +134,6 @@ settings-terminal-not-found-the-login-shell-runs = Not found: the login shell ru
 # Under the Terminal page's switch when making the app the default terminal failed. { $error } is the
 # system's reason, in English.
 settings-terminal-default-failed = Couldn't make { -brand } the default: { $error }
-
-# The Font row's value on the Terminal page. { $family } is the font's name, { $size } its size in points and
-# { $line_height } the line height as a multiple, both already formatted as numbers. The two messages
-# are the same sentence with ligatures on and off.
-settings-terminal-font-summary-ligatures-on = { $family } { $size } pt · line height { $line_height } · ligatures on
-# The same sentence with ligatures off.
-settings-terminal-font-summary-ligatures-off = { $family } { $size } pt · line height { $line_height } · ligatures off
 
 # The Worktrees folder row's quiet line once a folder is set. { $folder } is that folder, as the
 # terminal title row would show it.

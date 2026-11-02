@@ -374,7 +374,6 @@ impl SettingsWindow {
                     .gap_2()
                     .child(
                         style::form_button("probe-cancel")
-                            .outline()
                             .label(text(SETTINGS_EXTENSIONS_CANCEL))
                             .disabled(busy)
                             .on_click(cx.listener(|this, _, _, cx| {

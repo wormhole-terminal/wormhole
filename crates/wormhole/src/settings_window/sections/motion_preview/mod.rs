@@ -29,8 +29,7 @@ use wormhole_core::view::motion::MotionChoice;
 use wormhole_core::view::sidebar::Density;
 use wormhole_text::keys::{
     SETTINGS_MOTION_COLUMN_PREVIEW_LABEL, SETTINGS_MOTION_FOLD_PREVIEW_LABEL,
-    SETTINGS_MOTION_INSERT_PREVIEW_LABEL, SETTINGS_MOTION_PREVIEW_CAPTION,
-    SETTINGS_MOTION_STATUS_PREVIEW_LABEL,
+    SETTINGS_MOTION_INSERT_PREVIEW_LABEL, SETTINGS_MOTION_STATUS_PREVIEW_LABEL,
 };
 use wormhole_text::text;
 
@@ -38,7 +37,7 @@ use super::samples::{CARGO_TEST, FIX_PILE, SCRATCH, SIDEBAR_CARDS, Sample};
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::settings_window::ui;
 use crate::style::motion::ANIMATION_FPS;
-use crate::style::{self, Metrics, TextRole, TileFace};
+use crate::style::{self, Metrics, TileFace};
 
 /// The widest a preview grows: the sidebar's rows read best at about the width the sidebar has.
 const STAGE_MAX_W: f32 = 480.0;
@@ -157,23 +156,15 @@ impl MotionPreviews {
         }
     }
 
-    /// The preview of `scene`, to put under its row.
-    pub(in crate::settings_window) fn of(&self, scene: Scene, ui: UiColors) -> AnyElement {
+    /// The preview of `scene`: its looping stage.
+    pub(in crate::settings_window) fn of(&self, scene: Scene) -> AnyElement {
         let view = match scene {
             Scene::Insert => &self.insert,
             Scene::Fold => &self.fold,
             Scene::Status => &self.status,
             Scene::Column => &self.column,
         };
-        div()
-            .w_full()
-            .max_w(px(STAGE_MAX_W))
-            .flex()
-            .flex_col()
-            .gap_2()
-            .child(view.clone())
-            .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_MOTION_PREVIEW_CAPTION)))
-            .into_any_element()
+        div().w_full().max_w(px(STAGE_MAX_W)).child(view.clone()).into_any_element()
     }
 }
 

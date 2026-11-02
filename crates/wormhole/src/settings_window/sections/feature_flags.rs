@@ -102,6 +102,7 @@ impl SettingsWindow {
                     control,
                     tall: false,
                     extra: None,
+                    under: None,
                     on_reset: Some(Rc::new(move |_, cx| {
                         update_settings(cx, |s| {
                             s.feature_flags.remove(key);

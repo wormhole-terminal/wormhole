@@ -22,7 +22,7 @@ use wormhole_core::update::{
 
 use crate::settings::{UiColors, settings};
 use crate::settings_window::nav::page_tile;
-use crate::settings_window::registry::{MenuOption, Setting, toggle};
+use crate::settings_window::registry::{MenuOption, Setting, row_label, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::update::{ChannelNote, UpdatePhase, Updates};
@@ -47,12 +47,24 @@ pub(super) const SETTINGS: &[Setting] = &[
     ),
     Setting::rows("update-status", draw_status),
     toggle!("anonymous-count", anonymous_count),
-    Setting::block("count-details", draw_count_details),
+    Setting::rows("count-details", draw_count_details),
 ];
 
 /// Privacy → what an update check sends: this Mac's own user agent word for word, the daily and
 /// monthly flag, what is never sent, and in the first day how long until the first count.
-fn draw_count_details(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_count_details(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let open = window.updates_details_open;
+    let head = style::more_row("count-details", ui(cx), row_label("count-details"), None, open, cx).on_click(
+        cx.listener(|this, _, _, cx| {
+            this.updates_details_open = !this.updates_details_open;
+            cx.notify();
+        }),
+    );
+    div().flex().flex_col().child(head).children(open.then(|| count_details(cx))).into_any_element()
+}
+
+/// The table under the row.
+fn count_details(cx: &mut Context<SettingsWindow>) -> AnyElement {
     // The version and the Mac don't change while the app runs; the system's version is read once.
     static MAC: OnceLock<Option<(semver::Version, String, Option<semver::Version>)>> = OnceLock::new();
     let mac = MAC.get_or_init(|| {
@@ -232,12 +244,8 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
     };
 
     if matches!(phase, UpdatePhase::Idle) && !available {
-        // No feed in this build: nothing to check, so only the reason.
+        // No feed in this build: nothing to check; the reason is the page's notice at the top.
         return div()
-            .flex()
-            .flex_col()
-            .gap_2()
-            .child(style::notice(ui, style::NoticeKind::Info, text(SETTINGS_UPDATES_DEVELOPMENT_BUILD)))
             .children(channel_note.map(|note| style::notice(ui, style::NoticeKind::Info, note)))
             .into_any_element();
     }
@@ -250,7 +258,6 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
             if !release.is_security_update() {
                 actions = actions.child(
                     style::form_button("update-skip")
-                        .ghost()
                         .label(text(SETTINGS_UPDATES_SKIP_THIS_VERSION))
                         .on_click(cx.listener(move |_, _, _, cx| crate::update::skip_update(&skip, cx))),
                 );
@@ -270,7 +277,6 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
             if restart_pending {
                 actions = actions.child(
                     style::form_button("update-restart-cancel")
-                        .ghost()
                         .label(text(SETTINGS_UPDATES_DONT_RESTART))
                         .on_click(cx.listener(|_, _, _, cx| crate::update::cancel_restart_when_idle(cx))),
                 );
@@ -289,7 +295,7 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
             );
         }
         UpdatePhase::Checking => {
-            actions = actions.child(style::form_button("update-checking").ghost().loading(true).label(""));
+            actions = actions.child(style::form_button("update-checking").loading(true).label(""));
         }
         UpdatePhase::Downloading => {
             let percent = (done * 100).checked_div(total).unwrap_or(0);
@@ -419,6 +425,15 @@ fn draw_notes(ui: UiColors, version: &str, notes: &str) -> Div {
                 .gap_1()
                 .children(read_notes(notes).into_iter().map(line)),
         )
+}
+
+/// The notice at the top of the page while this build has no update feed: nothing to check, so only the reason.
+pub(super) fn dev_notice(cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
+    let updates = cx.global::<Updates>();
+    (matches!(updates.phase, UpdatePhase::Idle) && !updates.available()).then(|| {
+        style::notice(ui(cx), style::NoticeKind::Info, text(SETTINGS_UPDATES_DEVELOPMENT_BUILD))
+            .into_any_element()
+    })
 }
 
 #[cfg(test)]
