@@ -46,8 +46,7 @@ pub(crate) fn spawn_fake_host(dir: &std::path::Path) -> FakeHost {
     let binary = dir.join(HOST_BINARY_NAME);
     std::fs::copy("/bin/sleep", &binary).expect("copies sleep");
     // macOS kills a copy of a system binary at once (its signature names the old place): sign it again.
-    #[cfg(target_os = "macos")]
-    {
+    if std::path::Path::new("/usr/bin/codesign").exists() {
         let signed = std::process::Command::new("/usr/bin/codesign")
             .args(["-s", "-", "-f"])
             .arg(&binary)
@@ -125,7 +124,6 @@ mod tests {
 
     /// An update deletes the bundle a host runs from; the process lives on, with no path to its
     /// executable, and must still be known as the host (so `sessions end` can signal it).
-    #[cfg(target_os = "macos")]
     #[test]
     fn a_host_whose_binary_was_deleted_is_still_known() {
         let dir = tempfile::tempdir().expect("temp");

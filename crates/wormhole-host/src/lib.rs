@@ -77,23 +77,6 @@ fn parse_version(text: &str) -> AppVersion {
     }
 }
 
-#[cfg(test)]
-mod version_tests {
-    use super::parse_version;
-
-    #[test]
-    fn host_version_parses_a_prerelease() {
-        let v = parse_version("1.6.3-preview.2");
-        assert_eq!((v.major, v.minor, v.patch), (1, 6, 3));
-        let v = parse_version("1.6.3");
-        assert_eq!((v.major, v.minor, v.patch), (1, 6, 3));
-        let v = parse_version("2.0.0-rc.1+build5");
-        assert_eq!((v.major, v.minor, v.patch), (2, 0, 0));
-        let v = parse_version("garbage");
-        assert_eq!((v.major, v.minor, v.patch), (0, 0, 0));
-    }
-}
-
 /// The whole program: `main` is this.
 pub fn main(argv: impl IntoIterator<Item = OsString>) -> ExitCode {
     let args = match args::parse(argv.into_iter().skip(1)) {
@@ -195,4 +178,21 @@ fn serve_files(
     // The program's thread finishes its hangup before the host exits (`Session` waited for it).
     drop(session);
     Ok(())
+}
+
+#[cfg(test)]
+mod version_tests {
+    use super::parse_version;
+
+    #[test]
+    fn host_version_parses_a_prerelease() {
+        let v = parse_version("1.6.3-preview.2");
+        assert_eq!((v.major, v.minor, v.patch), (1, 6, 3));
+        let v = parse_version("1.6.3");
+        assert_eq!((v.major, v.minor, v.patch), (1, 6, 3));
+        let v = parse_version("2.0.0-rc.1+build5");
+        assert_eq!((v.major, v.minor, v.patch), (2, 0, 0));
+        let v = parse_version("garbage");
+        assert_eq!((v.major, v.minor, v.patch), (0, 0, 0));
+    }
 }

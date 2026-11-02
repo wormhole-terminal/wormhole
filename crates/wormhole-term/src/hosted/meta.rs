@@ -162,7 +162,7 @@ impl Meta {
         }
         // A newer format is read with the keys this build knows, as long as it says it can be: only
         // `min_reader` above this build's level (or a format that does not say) refuses it.
-        let format = format.ok_or(MetaError::Missing("format"))?;
+        format.ok_or(MetaError::Missing("format"))?;
         if let Some(needed) = min_reader.filter(|&needed| needed > READER) {
             return Err(MetaError::NewerFormat(needed));
         }

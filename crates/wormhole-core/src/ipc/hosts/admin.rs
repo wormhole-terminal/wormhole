@@ -335,7 +335,6 @@ mod tests {
 
     /// An update deleted the bundle a host runs from; with no socket to ask, SIGTERM must still
     /// reach it because it is known by its name and start, not by a path that is empty now.
-    #[cfg(target_os = "macos")]
     #[test]
     fn a_host_whose_binary_was_deleted_is_ended_by_signal() {
         let dir = short_dir();
