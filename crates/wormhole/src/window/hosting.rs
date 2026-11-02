@@ -89,8 +89,10 @@ pub(crate) fn adopt_orphans(cx: &mut App) {
 /// A host that refuses the app (another signature), speaks another protocol, or does not answer
 /// is not adopted: a new row for it could only fail to attach, and the next launch would adopt it
 /// again. It stays where it is, listed by the Session Hosts window. And a host some terminal of any
-/// window already names is never given a second row.
-pub(crate) fn adopt_orphans_with(cx: &mut App, accepts: impl Fn(&HostMeta) -> bool + Sync) {
+/// window already names is never given a second row. Asking the hosts takes up to half a second each
+/// (a stuck one), so it is done off the UI thread; the orphans were taken from the launch plan first, so
+/// nothing is adopted twice.
+pub(crate) fn adopt_orphans_with(cx: &mut App, accepts: impl Fn(&HostMeta) -> bool + Send + Sync + 'static) {
     let orphans = app_mut(cx).launch_hosts.take_orphans();
     if orphans.is_empty() {
         return;
@@ -101,13 +103,21 @@ pub(crate) fn adopt_orphans_with(cx: &mut App, accepts: impl Fn(&HostMeta) -> bo
             named.extend(workspace.read(cx).host_attachments(cx).into_iter().map(|a| a.host_id));
         }
     }
-    let unnamed = orphans.into_iter().filter(|meta| !named.contains(&meta.id)).collect();
-    let orphans = hosts::adoptable(unnamed, accepts);
-    if orphans.is_empty() {
+    let unnamed: Vec<HostMeta> = orphans.into_iter().filter(|meta| !named.contains(&meta.id)).collect();
+    if unnamed.is_empty() {
         return;
     }
-    let Some(front) = AppState::front_window(cx) else { return };
-    AppState::with_workspace(&front, cx, |ws, window, cx| ws.adopt_orphans(orphans, window, cx));
+    cx.spawn(async move |cx| {
+        let adopted = cx.background_executor().spawn(async move { hosts::adoptable(unnamed, accepts) }).await;
+        if adopted.is_empty() {
+            return;
+        }
+        cx.update(|cx| {
+            let Some(front) = AppState::front_window(cx) else { return };
+            AppState::with_workspace(&front, cx, |ws, window, cx| ws.adopt_orphans(adopted, window, cx));
+        });
+    })
+    .detach();
 }
 
 /// Whether the host takes this app: its protocol fits and it answers an admin `Hello` (a host that
