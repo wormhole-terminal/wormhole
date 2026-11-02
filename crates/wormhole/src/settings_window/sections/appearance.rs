@@ -50,8 +50,10 @@ pub(super) const SETTINGS: &[Setting] = &[
         },
     ),
     Setting::block("theme", draw_theme),
-    Setting::custom("primary-color", color_rows::draw_primary).describe(describe_primary),
-    Setting::custom("branch-color", color_rows::draw_branch),
+    Setting::custom("primary-color", color_rows::draw_primary)
+        .describe(describe_primary)
+        .default_words(color_rows::theme_words),
+    Setting::custom("branch-color", color_rows::draw_branch).default_words(color_rows::theme_words),
     Setting::custom("opacity", draw_opacity).below(reduced_transparency_note),
     toggle!("blur", blur).below(blur_off_warning),
     toggle!("liquid-glass", liquid_glass)

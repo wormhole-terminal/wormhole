@@ -142,3 +142,8 @@ pub(super) fn draw_branch(window: &SettingsWindow, cx: &mut Context<SettingsWind
     select::color_select("branch-color", ui, row_label("branch-color"), &window.branch_pick, choice)
         .into_any_element()
 }
+
+/// What both colours are by default, for the Changed page.
+pub(super) fn theme_words() -> SharedString {
+    text(COLOR_PICK_THEME).into()
+}

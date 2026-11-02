@@ -180,6 +180,9 @@ fn default_note(row: &ChangedRow, setting: &Setting, values: &Values) -> SharedS
 /// else in plain words from the defaults of its keys.
 fn default_words(row: &ChangedRow, setting: &Setting, values: &Values) -> String {
     let defaults = Settings::default();
+    if let Some(words) = setting.default_words {
+        return words().to_string();
+    }
     match &setting.control {
         Control::Menu(menu) => match menu.current(&defaults) {
             Current::At(at) => menu.options[at].label.words().to_string(),

@@ -134,11 +134,14 @@ pub(super) struct Setting {
     pub chip: Option<Chip>,
     /// The control runs over more than one line (see `SettingParts::tall`).
     pub tall: bool,
+    /// What the setting is by default, in the control's own words, where the defaults of its keys don't say
+    /// it (the colours: "Theme's colour", not "On"). The Changed page shows it.
+    pub default_words: Option<fn() -> SharedString>,
 }
 
 impl Setting {
     pub(super) const fn new(id: &'static str, control: Control) -> Self {
-        Self { id, control, describe: None, below: None, chip: None, tall: false }
+        Self { id, control, describe: None, below: None, chip: None, tall: false, default_words: None }
     }
 
     pub(super) const fn toggle(
@@ -194,6 +197,11 @@ impl Setting {
     /// Something under the row, across the column, while there is something to say.
     pub(super) const fn below(self, below: Below) -> Self {
         Self { below: Some(below), ..self }
+    }
+
+    /// The default, in words, for the Changed page.
+    pub(super) const fn default_words(self, words: fn() -> SharedString) -> Self {
+        Self { default_words: Some(words), ..self }
     }
 
     /// A control of more than one line: the label sits beside its first line.
