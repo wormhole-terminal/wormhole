@@ -6,7 +6,6 @@
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
 use gpui_kit::accesskit::{Action, ActionRequest, NodeId, Role, TreeId};
-use gpui_kit::test::TestWindowExt as _;
 use gpui_kit::{AnyWindowHandle, KeyUpEvent, Keystroke, Modifiers, TestAppContext, VisualTestContext};
 
 use super::info_tests::{centre, draw};

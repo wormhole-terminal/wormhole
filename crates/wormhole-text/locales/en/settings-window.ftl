@@ -9,7 +9,6 @@ settings-window-import-theme = Import theme
 ## settings_window/window.rs (labels, hints and notes drawn by this page's code)
 
 settings-window-search-settings = Search settings
-settings-window-search = Search
 settings-window-no-results = No setting has these words in its name, description or config key.
 settings-window-results = Results
 settings-window-clears-the-search-then-closes = clears the search, then closes
