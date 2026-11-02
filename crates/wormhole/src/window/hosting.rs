@@ -29,7 +29,10 @@ pub(crate) fn host_binary() -> Option<&'static PathBuf> {
 /// The hosts this data folder has at launch, matched against what every profile's database names:
 /// one scan, before any window opens. `live` is the shown profile's open database.
 pub(crate) fn scan_at_launch(root: &DataRoot, profiles: &ProfileList, live: Option<&Store>) -> LaunchHosts {
-    let found = match hosts::scan(&hosts::hosts_dir(&wormhole_core::storage::paths::data_dir())) {
+    let hosts_dir = hosts::hosts_dir(&wormhole_core::storage::paths::data_dir());
+    // First: the files of hosts that are certainly gone (a crash, a reboot) would be listed for ever.
+    hosts::forget_gone_hosts(&hosts_dir);
+    let found = match hosts::scan(&hosts_dir) {
         Ok(scan) => scan.live,
         Err(err) => {
             tracing::warn!("couldn't look for running session hosts: {err}");

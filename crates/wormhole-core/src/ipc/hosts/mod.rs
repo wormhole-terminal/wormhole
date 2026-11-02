@@ -7,6 +7,7 @@
 //! deletes a file: [`scan`] reports what is stale and the caller decides.
 
 mod admin;
+mod gone;
 mod identity;
 mod launch;
 mod probe;
@@ -23,6 +24,7 @@ use crate::platform::fs::{mode, private_dir, set_mode};
 use crate::platform::user::UserId;
 
 pub use admin::{EndHow, ForgetError, ForgetOutcome, end_all, end_all_live, end_host, find, forget};
+pub use gone::forget_gone_hosts;
 #[cfg(test)]
 pub(crate) use identity::{FakeHost, spawn_fake_host};
 pub use identity::{START_SLACK_SECS, is_host_process, looks_like_host_process};
