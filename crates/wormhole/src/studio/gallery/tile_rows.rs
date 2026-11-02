@@ -68,6 +68,12 @@ pub(super) fn tile_rows(ui: UiColors) -> Div {
                 )),
         )
         .child(
+            div().flex().gap_2().children(
+                [AgentId::Claude, AgentId::Codex, AgentId::Gemini]
+                    .map(|agent| style::brand_tile(ui, style::TileFace::Agent(agent), style::ROW_TILE)),
+            ),
+        )
+        .child(
             div().flex().flex_wrap().gap_2().children(
                 [
                     (ChipKind::Good, "Trusted"),            // text: sample (the gallery's specimen)

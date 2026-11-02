@@ -144,6 +144,7 @@ pub fn brand_tile(ui: UiColors, face: TileFace, size: f32) -> AnyElement {
 }
 
 /// The rounded square a tile is: its paint, the face on it, the sheen across its top and the edge.
+#[track_caller]
 fn face_box(ui: UiColors, face: TileFace, size: f32) -> Div {
     let corner = size * SQUIRCLE;
     let (paint, mark_color, face) = resolve(ui, face);
