@@ -1,10 +1,9 @@
 //! Components compiled from the design's markup.
 //!
-//! Each `ui/*.dc.html` file at the crate's root is a component written once, in the subset of HTML and CSS
-//! that `wormhole-markup` knows: the design canvas renders it, and the compiler turns the same file into
-//! the GPUI code in `generated/` (committed; a test of that crate fails when it is stale). So a window drawn
-//! from a component matches its design from one source, and what the code adds is behaviour: the props a
-//! component is built from carry its text, its state and its handlers; its controls arrive as slots.
+//! Each component is written once as markup in the design's own tooling, which turns it into the GPUI code
+//! in `generated/` (committed, and never edited by hand). So a window drawn from a component matches its
+//! design from one source, and what the code adds is behaviour: the props a component is built from carry
+//! its text, its state and its handlers; its controls arrive as slots.
 //!
 //! This module only gathers the generated components and the types they share. It uses the theme tokens
 //! and the code font and nothing of `style`, which draws with it.

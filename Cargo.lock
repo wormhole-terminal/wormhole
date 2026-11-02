@@ -9490,15 +9490,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "wormhole-design-export"
-version = "1.5.0"
-dependencies = [
- "serde_json",
- "wormhole-core",
- "wormhole-markup",
-]
-
-[[package]]
 name = "wormhole-host"
 version = "1.6.3"
 dependencies = [
@@ -9510,14 +9501,6 @@ dependencies = [
  "wormhole-term",
  "wormhole-vt",
  "wormhole-wire",
-]
-
-[[package]]
-name = "wormhole-markup"
-version = "1.5.0"
-dependencies = [
- "serde_json",
- "wormhole-core",
 ]
 
 [[package]]
