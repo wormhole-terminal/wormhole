@@ -339,7 +339,7 @@ impl SettingsStore {
     /// until the tick caught up.
     fn publish(changed: Changed, cx: &mut App) {
         // Borders (a setting) reaches the Kit's outlines too; `apply_shared` is free when nothing differs.
-        if changed.theme || changed.fonts || changed.settings {
+        if changed.theme || changed.fonts || (changed.settings && theme_bridge::has_applied(cx)) {
             let store = cx.global::<SettingsStore>();
             let (tokens, fonts, highlight) =
                 (store.tokens.clone(), store.fonts.clone(), store.highlight.clone());

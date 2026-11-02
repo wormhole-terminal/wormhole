@@ -137,7 +137,8 @@ const BUDGET: [(&str, u64); 18] = [
     // With the Liquid Glass row (16,810 before it came back).
     // The preview moved from the right-hand column into a card at the top of the page: 18,117 measured, 84
     // more (the card's own label, group and caption; the window it draws is the same).
-    ("Appearance", 18189),
+    // With the Borders switch (a row, its (i) and its key line): 18,615 measured, 426 more.
+    ("Appearance", 18615),
     // The specimen is a card on the page now, not in the column: 8,266 measured, 26 fewer.
     ("Fonts", 8260),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
@@ -190,7 +191,8 @@ const BUDGET: [(&str, u64); 18] = [
     // every page reads as JSON each frame, are about 14 more.
     // The results no longer show the window's miniature beside them (it was in the column, whatever was
     // found): 8,042 measured, 4,221 fewer.
-    ("search", 8036),
+    // The search finds the Borders row too, as one more result: 8,456 measured, 420 more.
+    ("search", 8456),
 ];
 
 /// What Appearance's Liquid Glass row adds, a switch with its line and Beta chip: it is on the page on

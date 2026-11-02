@@ -177,6 +177,11 @@ struct Applied {
 
 impl Global for Applied {}
 
+/// Whether the Kit has been given a theme yet (a settings change before that has nothing to update).
+pub(crate) fn has_applied(cx: &App) -> bool {
+    cx.has_global::<Applied>()
+}
+
 fn is_applied(
     tokens: &ThemeTokens,
     shared: Option<&Arc<ThemeTokens>>,
