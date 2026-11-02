@@ -116,6 +116,48 @@ const GLYPHS: [(&str, &[u8]); 6] = [
     (glyph::TERMINAL, include_bytes!("../assets/glyphs/terminal.svg")),
 ];
 
+/// The line icons the design draws on its own 16-point grid (the settings sidebar's tiles and its search
+/// field), strokes 1.6 wide; the colour is the text's. `ui::DesignIcon` names them for the compiled components.
+pub mod design {
+    pub const CHANGED: &str = "wormhole/glyphs/design/changed.svg";
+    pub const TERMINAL: &str = "wormhole/glyphs/design/terminal.svg";
+    pub const APPEARANCE: &str = "wormhole/glyphs/design/appearance.svg";
+    pub const FONTS: &str = "wormhole/glyphs/design/fonts.svg";
+    pub const SESSIONS: &str = "wormhole/glyphs/design/sessions.svg";
+    pub const GIT: &str = "wormhole/glyphs/design/git.svg";
+    pub const NOTIFICATIONS: &str = "wormhole/glyphs/design/notifications.svg";
+    pub const AGENTS: &str = "wormhole/glyphs/design/agents.svg";
+    pub const MENUBAR: &str = "wormhole/glyphs/design/menubar.svg";
+    pub const IMPORT: &str = "wormhole/glyphs/design/import.svg";
+    pub const UPDATES: &str = "wormhole/glyphs/design/updates.svg";
+    pub const ADVANCED: &str = "wormhole/glyphs/design/advanced.svg";
+    pub const MOTION: &str = "wormhole/glyphs/design/motion.svg";
+    pub const PROJECTS: &str = "wormhole/glyphs/design/projects.svg";
+    pub const EXTENSIONS: &str = "wormhole/glyphs/design/extensions.svg";
+    pub const FLAGS: &str = "wormhole/glyphs/design/flags.svg";
+    pub const SEARCH: &str = "wormhole/glyphs/design/search.svg";
+}
+
+const DESIGN: [(&str, &[u8]); 17] = [
+    (design::CHANGED, include_bytes!("../assets/glyphs/design/changed.svg")),
+    (design::TERMINAL, include_bytes!("../assets/glyphs/design/terminal.svg")),
+    (design::APPEARANCE, include_bytes!("../assets/glyphs/design/appearance.svg")),
+    (design::FONTS, include_bytes!("../assets/glyphs/design/fonts.svg")),
+    (design::SESSIONS, include_bytes!("../assets/glyphs/design/sessions.svg")),
+    (design::GIT, include_bytes!("../assets/glyphs/design/git.svg")),
+    (design::NOTIFICATIONS, include_bytes!("../assets/glyphs/design/notifications.svg")),
+    (design::AGENTS, include_bytes!("../assets/glyphs/design/agents.svg")),
+    (design::MENUBAR, include_bytes!("../assets/glyphs/design/menubar.svg")),
+    (design::IMPORT, include_bytes!("../assets/glyphs/design/import.svg")),
+    (design::UPDATES, include_bytes!("../assets/glyphs/design/updates.svg")),
+    (design::ADVANCED, include_bytes!("../assets/glyphs/design/advanced.svg")),
+    (design::MOTION, include_bytes!("../assets/glyphs/design/motion.svg")),
+    (design::PROJECTS, include_bytes!("../assets/glyphs/design/projects.svg")),
+    (design::EXTENSIONS, include_bytes!("../assets/glyphs/design/extensions.svg")),
+    (design::FLAGS, include_bytes!("../assets/glyphs/design/flags.svg")),
+    (design::SEARCH, include_bytes!("../assets/glyphs/design/search.svg")),
+];
+
 /// Pieces of Lucide icons (ISC, the exact path data), each drawn on the icon's own 24-unit grid so
 /// that a piece lies over the icon where it belongs: the part of an icon that moves, fills or
 /// draws itself on its own (`style::icon_motion`).
@@ -185,7 +227,7 @@ impl AssetSource for Assets {
         if let Some((_, bytes)) = GLYPHS.iter().chain(&PARTS).find(|(glyph, _)| *glyph == path) {
             return Ok(Some(Cow::Borrowed(bytes)));
         }
-        if let Some(bytes) = crate::ui::drawn_icon(path) {
+        if let Some((_, bytes)) = DESIGN.iter().find(|(icon, _)| *icon == path) {
             return Ok(Some(Cow::Borrowed(bytes)));
         }
         if let Some(bytes) = PanelIcons.load(path)? {
@@ -201,6 +243,7 @@ impl AssetSource for Assets {
             GLYPHS
                 .iter()
                 .chain(&PARTS)
+                .chain(&DESIGN)
                 .filter(|(glyph, _)| glyph.starts_with(path))
                 .map(|(glyph, _)| (*glyph).into()),
         );
