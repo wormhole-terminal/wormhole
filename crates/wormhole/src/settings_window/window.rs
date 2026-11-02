@@ -12,6 +12,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::component::slider::SliderEvent;
+use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, Query};
 use wormhole_core::theme::fonts::FontSlot;
@@ -310,6 +311,7 @@ impl SettingsWindow {
         } else {
             self.header_action(cx)
         };
+        let badge = (!self.show_results && self.section.is_preview()).then(|| self.preview_badge(ui, cx));
         div()
             .flex()
             .flex_col()
@@ -321,7 +323,20 @@ impl SettingsWindow {
                     .justify_between()
                     .gap_4()
                     .h(px(style::TITLE_ROW_H))
-                    .child(div().text_title().font_weight(FontWeight::BOLD).child(title))
+                    .child(match badge {
+                        // A page that isn't finished says so beside its title; every other page's title is
+                        // as it was, with no row around it.
+                        Some(badge) => div()
+                            .flex()
+                            .items_center()
+                            .gap_3()
+                            .child(div().text_title().font_weight(FontWeight::BOLD).child(title))
+                            .child(badge)
+                            .into_any_element(),
+                        None => {
+                            div().text_title().font_weight(FontWeight::BOLD).child(title).into_any_element()
+                        }
+                    })
                     .children(action),
             )
             .child(div().max_w(px(INTRO_W)).text_body().text_color(ui.muted).child(intro))
@@ -423,6 +438,23 @@ impl Render for SettingsWindow {
 }
 
 impl SettingsWindow {
+    /// "Preview" beside the title of a page that isn't finished. Its tooltip says why, and on a page tied
+    /// to a flag it is the way to the flags, which a release build doesn't show.
+    fn preview_badge(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+        let badge = style::solid_chip(ui, style::ChipKind::Info, text(SETTINGS_NAV_PREVIEW));
+        let Some(flag) = self.section.feature_flag() else { return badge.into_any_element() };
+        let note = SharedString::from(settings_window_preview_feature_note(flag.key()));
+        badge
+            .id("preview-open-flags")
+            .role(gpui_kit::accesskit::Role::Button)
+            .aria_label(note.clone())
+            .aria_description(text(SETTINGS_WINDOW_FEATURE_FLAGS))
+            .cursor_pointer()
+            .tooltip(move |window, cx| Tooltip::new(note.clone()).build(window, cx))
+            .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::FeatureFlags, cx)))
+            .into_any_element()
+    }
+
     /// Problems, at the top of the page they concern: what is wrong in config.json on
     /// Advanced (elsewhere only that changes aren't saved meanwhile), and the page's own.
     pub(super) fn render_problems(&self, ui: UiColors, cx: &mut Context<Self>) -> Vec<AnyElement> {
@@ -430,21 +462,6 @@ impl SettingsWindow {
         let mut problems = Vec::new();
         if self.show_results {
             return problems;
-        }
-        // A preview section tied to a flag says so at the top, with a way to the flags. Only a dev
-        // build, Unstable or unlocked flags ever show such a section, so the way is always there.
-        if let Some(flag) = self.section.feature_flag() {
-            problems.push(
-                style::notice(ui, style::NoticeKind::Info, settings_window_preview_feature_note(flag.key()))
-                    .child(
-                        style::notice_button("preview-open-flags", ui, style::NoticeKind::Info, cx)
-                            .label(text(SETTINGS_WINDOW_FEATURE_FLAGS))
-                            .on_click(
-                                cx.listener(|this, _, _, cx| this.show_section(Section::FeatureFlags, cx)),
-                            ),
-                    )
-                    .into_any_element(),
-            );
         }
         match store.error.clone() {
             Some(error) if self.section == Section::Advanced => problems.push(

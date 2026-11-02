@@ -1,9 +1,10 @@
 //! The tile row: one row for a thing in a Settings list (a coding agent, a Probe, a project, an update)
 //! and the empty state for a list with nothing in it.
 //!
-//! Every tile row is [`TILE_ROW_H`] tall, whatever it holds: a tile, a name with an optional solid
-//! chip, one line of hint, and controls that end on the column's edge. What a row has more to say
-//! goes under it as a notice, never inside it, so the rows of a list line up.
+//! Every tile row is at least [`TILE_ROW_H`] tall: a tile, a name with an optional solid chip, one line
+//! of hint, and controls that end on the column's edge. A row that has a sentence to say about its state
+//! (a Probe that changed, a folder that can't be read) carries it as a note under the hint, in the colour
+//! of what it says, and grows by that line; anything longer goes under the row as a notice.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{Icon, Sizable as _};
@@ -46,6 +47,8 @@ pub enum ChipKind {
     Danger,
     /// A plain state: Off, Not trusted, Needs code.
     Quiet,
+    /// A label rather than a state: Preview, on the fill of an info notice.
+    Info,
 }
 
 impl ChipKind {
@@ -55,6 +58,7 @@ impl ChipKind {
             Self::Warn => ui.chip_warn,
             Self::Danger => ui.chip_danger,
             Self::Quiet => ui.chip_quiet,
+            Self::Info => ui.notice_info,
         }
     }
 }
@@ -87,6 +91,8 @@ pub struct TileRowParts {
     pub chip: Option<(ChipKind, SharedString)>,
     /// One line under the name, muted, cut at the controls.
     pub hint: Option<SharedString>,
+    /// One sentence about the row's state under the hint, in the colour of what it says (the row grows by it).
+    pub note: Option<(Hsla, SharedString)>,
     /// What a person may read about the row that is not worth a line: behind an (i) after the name.
     pub more: Option<SharedString>,
     /// The controls, which end on the row's right edge.
@@ -101,6 +107,7 @@ impl TileRowParts {
             name_color: None,
             chip: None,
             hint: None,
+            note: None,
             more: None,
             controls: Vec::new(),
         }
@@ -112,12 +119,27 @@ impl TileRowParts {
 /// description; the controls are tab stops of their own.
 #[track_caller]
 pub fn tile_row(id: impl Into<ElementId>, ui: UiColors, parts: TileRowParts) -> Stateful<Div> {
-    let TileRowParts { tile, name, name_color, chip, hint, more, controls } = parts;
+    let TileRowParts { tile, name, name_color, chip, hint, note, more, controls } = parts;
     let id = id.into();
-    let spoken = match (&chip, &hint) {
-        (Some((_, chip)), Some(hint)) => Some(SharedString::from(format!("{chip}. {hint}"))),
-        (Some((_, only)), None) | (None, Some(only)) => Some(only.clone()),
-        (None, None) => None,
+    let grows = note.is_some();
+    // One line per fact, read after the name; a row with one fact says it as it is, with no copy.
+    let spoken = {
+        let mut said =
+            [chip.as_ref().map(|(_, chip)| chip), hint.as_ref(), note.as_ref().map(|(_, note)| note)]
+                .into_iter()
+                .flatten();
+        match (said.next(), said.next()) {
+            (None, _) => None,
+            (Some(only), None) => Some(only.clone()),
+            (Some(first), Some(second)) => {
+                let mut all = format!("{first}. {second}");
+                for more in said {
+                    all.push_str(". ");
+                    all.push_str(more);
+                }
+                Some(SharedString::from(all))
+            }
+        }
     };
     let face = match tile {
         RowTile::Agent(agent) => brand_tile(ui, TileFace::Agent(agent), ROW_TILE),
@@ -141,7 +163,9 @@ pub fn tile_row(id: impl Into<ElementId>, ui: UiColors, parts: TileRowParts) -> 
         .items_center()
         .gap_3()
         .w_full()
-        .h(px(TILE_ROW_H))
+        // A fixed height costs the frame nothing to work out; only a row with a note has to measure.
+        .when(grows, |row| row.min_h(px(TILE_ROW_H)))
+        .when(!grows, |row| row.h(px(TILE_ROW_H)))
         .py_2()
         .rule_top(ui)
         // Decoration: the name says what the tile would.
@@ -174,6 +198,9 @@ pub fn tile_row(id: impl Into<ElementId>, ui: UiColors, parts: TileRowParts) -> 
                     hint.map(|hint| {
                         div().min_w_0().truncate().text_caption().text_color(ui.muted).child(hint)
                     }),
+                )
+                .children(
+                    note.map(|(color, note)| div().min_w_0().text_caption().text_color(color).child(note)),
                 ),
         )
         .child(div().flex_none().flex().items_center().gap_2().children(controls))

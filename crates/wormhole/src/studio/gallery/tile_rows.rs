@@ -80,6 +80,7 @@ pub(super) fn tile_rows(ui: UiColors) -> Div {
                     (ChipKind::Warn, "Needs repair"),       // text: sample (the gallery's specimen)
                     (ChipKind::Danger, "Can’t be enabled"), // text: sample (the gallery's specimen)
                     (ChipKind::Quiet, "Not trusted"),       // text: sample (the gallery's specimen)
+                    (ChipKind::Info, "Preview"),            // text: sample (the gallery's specimen)
                 ]
                 .map(|(kind, word)| style::solid_chip(ui, kind, word)),
             ),
