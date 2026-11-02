@@ -47,22 +47,83 @@ pub(super) fn open(size: WindowSize) -> io::Result<Pair> {
 /// How many times [`open_pair_again`] tries.
 const OPEN_TRIES: usize = 6;
 
-/// [`open_pair`], again a moment later when the system says no. The lock above makes one process open one at a
-/// time, but the kernel's naming of new devices is shared by all processes, and many hosts starting at the same
-/// moment (a relaunch attaching or restoring a window of terminals) can make it fail once with `ENXIO` or a
-/// neighbour's error; a second try a few milliseconds on finds the device.
+/// Whether `err` is the one failure a later try cures: `ENXIO`, which `openpty` reports when the kernel's naming
+/// of a new device races another process's. macOS has been seen to give it negated (`errno` literally `-6`, shown
+/// as "Unknown error: -6"), so both are taken. Running out of descriptors (`EMFILE`, `ENFILE`) or of
+/// pseudo-terminals does not pass in a few milliseconds and is reported at once.
+fn is_device_race(err: &io::Error) -> bool {
+    err.raw_os_error().is_some_and(|code| code == libc::ENXIO || code == -libc::ENXIO)
+}
+
+/// [`open_pair`], again a moment later when the kernel's device naming raced another process. The lock above makes
+/// one process open one at a time, but the naming is shared by all processes, and many hosts starting at the same
+/// moment (a relaunch attaching or restoring a window of terminals) can make it fail once; a second try a few
+/// milliseconds on finds the device. Any other failure, and the last of these, is logged with what the system
+/// can say about the cause.
 fn open_pair_again(size: libc::winsize) -> io::Result<(OwnedFd, OwnedFd)> {
-    retrying(
+    let result = retrying(
         OPEN_TRIES,
+        is_device_race,
         |tried| std::thread::sleep(std::time::Duration::from_millis(5 * tried as u64)),
         || open_pair(size),
+    );
+    if let Err(err) = &result {
+        tracing::error!(
+            raw_os_error = ?err.raw_os_error(),
+            open_ptys = open_pty_count(),
+            ptmx_max = ptmx_max(),
+            "openpty failed: {err}"
+        );
+    }
+    result
+}
+
+/// How many pseudo-terminal slaves exist now (`/dev/ttys###`), for the log of a failure.
+fn open_pty_count() -> Option<usize> {
+    let entries = std::fs::read_dir("/dev").ok()?;
+    Some(
+        entries
+            .flatten()
+            .filter(|e| {
+                e.file_name()
+                    .to_str()
+                    .and_then(|n| n.strip_prefix("ttys"))
+                    .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+            })
+            .count(),
     )
 }
 
-/// Run `attempt` up to `tries` times; after a failure that is not the last, `pause(n)` for the nth time. The
-/// last failure is the error.
+/// The system's limit on pseudo-terminals (`kern.tty.ptmx_max` on macOS), for the log of a failure.
+#[allow(unsafe_code)] // libc FFI: sysctlbyname reads one integer into a local.
+fn ptmx_max() -> Option<i32> {
+    #[cfg(target_os = "macos")]
+    {
+        let mut value: libc::c_int = 0;
+        let mut len = std::mem::size_of::<libc::c_int>();
+        // SAFETY: the name is a NUL-terminated literal, `value` and `len` are valid locals of the size given.
+        let rc = unsafe {
+            libc::sysctlbyname(
+                c"kern.tty.ptmx_max".as_ptr(),
+                (&raw mut value).cast(),
+                &mut len,
+                std::ptr::null_mut(),
+                0,
+            )
+        };
+        (rc == 0).then_some(value)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        None
+    }
+}
+
+/// Run `attempt` up to `tries` times; after a failure `retry` accepts that is not the last, `pause(n)` for the nth
+/// time. The first other failure, or the last, is the error.
 fn retrying<T>(
     tries: usize,
+    retry: impl Fn(&io::Error) -> bool,
     mut pause: impl FnMut(usize),
     mut attempt: impl FnMut() -> io::Result<T>,
 ) -> io::Result<T> {
@@ -70,7 +131,7 @@ fn retrying<T>(
     loop {
         match attempt() {
             Ok(done) => return Ok(done),
-            Err(err) if tried + 1 < tries => {
+            Err(err) if tried + 1 < tries && retry(&err) => {
                 tried += 1;
                 tracing::warn!("opening a pseudo-terminal failed ({err}); trying again ({tried})");
                 pause(tried);
@@ -135,30 +196,58 @@ fn add_flag(fd: RawFd, flag: Flag) -> io::Result<()> {
 mod retry_tests {
     use super::*;
 
-    /// The system says no once in a while when many terminals open at once; a later try finds the device.
+    /// The kernel's device naming races now and then when many terminals open at once; a later try finds the
+    /// device. Only that failure is tried again.
     #[test]
-    fn a_failure_is_tried_again_and_a_lasting_one_is_the_error() {
-        let mut calls = 0;
-        let mut pauses = Vec::new();
-        let got = retrying(
-            OPEN_TRIES,
-            |n| pauses.push(n),
-            || {
-                calls += 1;
-                if calls < 3 { Err(io::Error::from_raw_os_error(6)) } else { Ok(calls) }
-            },
-        );
-        assert_eq!((got.unwrap(), pauses.as_slice()), (3, [1, 2].as_slice()));
+    fn a_device_race_is_tried_again_and_nothing_else_is() {
+        for code in [libc::ENXIO, -libc::ENXIO] {
+            let mut calls = 0;
+            let mut pauses = Vec::new();
+            let got = retrying(
+                OPEN_TRIES,
+                is_device_race,
+                |n| pauses.push(n),
+                || {
+                    calls += 1;
+                    if calls < 3 { Err(io::Error::from_raw_os_error(code)) } else { Ok(calls) }
+                },
+            );
+            assert_eq!((got.unwrap(), pauses.as_slice()), (3, [1, 2].as_slice()), "errno {code}");
+        }
+        // A lasting race is the error after the last try.
         let mut calls = 0;
         let err = retrying::<()>(
             OPEN_TRIES,
+            is_device_race,
             |_| {},
             || {
                 calls += 1;
-                Err(io::Error::from_raw_os_error(6))
+                Err(io::Error::from_raw_os_error(libc::ENXIO))
             },
         );
-        assert_eq!((calls, err.unwrap_err().raw_os_error()), (OPEN_TRIES, Some(6)));
+        assert_eq!((calls, err.unwrap_err().raw_os_error()), (OPEN_TRIES, Some(libc::ENXIO)));
+        // Out of descriptors or terminals does not pass: one try.
+        for code in [libc::EMFILE, libc::ENFILE, libc::EACCES] {
+            let mut calls = 0;
+            let err = retrying::<()>(
+                OPEN_TRIES,
+                is_device_race,
+                |_| {},
+                || {
+                    calls += 1;
+                    Err(io::Error::from_raw_os_error(code))
+                },
+            );
+            assert_eq!((calls, err.unwrap_err().raw_os_error()), (1, Some(code)));
+        }
+    }
+
+    #[test]
+    fn what_the_log_of_a_failure_says_can_be_asked() {
+        assert!(open_pty_count().is_some());
+        if cfg!(target_os = "macos") {
+            assert!(ptmx_max().is_some_and(|max| max > 0));
+        }
     }
 
     #[test]
