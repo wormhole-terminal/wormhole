@@ -65,8 +65,10 @@ pub(crate) use wormhole_core::config::settings_index::SectionId as Section;
 /// Where a page's title row starts: under the traffic lights, which the nav runs beneath like
 /// System Settings.
 const PAGE_TOP: f32 = style::TITLE_ROW_H;
-/// The content column: the widest a page grows.
-const COLUMN_W: f32 = 760.0;
+/// The content column: the widest a page grows, with or without a preview, so a row's name and its
+/// control stay close enough to read as one line in a wide window. The column is centred in the room
+/// left over.
+const COLUMN_W: f32 = 680.0;
 /// A page's intro line wraps at a readable length, not across the whole column.
 const INTRO_W: f32 = 560.0;
 /// The card that says nothing matched.

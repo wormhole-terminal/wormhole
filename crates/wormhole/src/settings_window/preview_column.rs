@@ -106,11 +106,6 @@ impl SettingsWindow {
         }
     }
 
-    /// Whether the column is drawn: the window is wide enough and the page has a preview.
-    pub(super) fn column_shown(&self) -> bool {
-        self.preview_column && self.preview_kind().is_some()
-    }
-
     /// Whether the column shows the preview row `id` (so the page leaves it out).
     pub(super) fn in_column(&self, id: &str) -> bool {
         self.preview_column && IN_COLUMN.contains(&id)

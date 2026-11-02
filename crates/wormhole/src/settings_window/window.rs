@@ -389,12 +389,9 @@ impl Render for SettingsWindow {
             .pt(px(PAGE_TOP))
             .child(
                 div()
-                    // A page without a preview takes the column's width too.
-                    .max_w(px(if self.preview_column && !self.column_shown() {
-                        COLUMN_W + super::preview_column::PREVIEW_W
-                    } else {
-                        COLUMN_W
-                    }))
+                    .w_full()
+                    .max_w(px(COLUMN_W))
+                    .mx_auto()
                     .flex()
                     .flex_col()
                     .gap_6()
