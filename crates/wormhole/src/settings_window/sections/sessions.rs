@@ -102,14 +102,19 @@ fn draw_density(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElem
         }),
         on_hover: Some(Rc::new(move |at, _, cx| {
             let look = at.and_then(|ix| Density::ALL.get(ix)).map(|density| SidebarLook::Density(*density));
-            window
-                .update(cx, |this, cx| {
-                    if this.sidebar_preview != look {
-                        this.sidebar_preview = look;
-                        cx.notify();
-                    }
-                })
-                .ok();
+            // Deferred: a menu can close from inside an update of this window (its closing hook runs
+            // wherever the close happens), and updating it again there would panic.
+            let window = window.clone();
+            cx.defer(move |cx| {
+                window
+                    .update(cx, |this, cx| {
+                        if this.sidebar_preview != look {
+                            this.sidebar_preview = look;
+                            cx.notify();
+                        }
+                    })
+                    .ok();
+            });
         })),
     })
     .into_any_element()
