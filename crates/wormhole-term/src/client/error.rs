@@ -15,10 +15,12 @@ pub enum AttachError {
     /// Nothing accepted the connection (no socket, a refused connection): the host may be gone, or
     /// only its socket. Whoever can look at its process decides.
     Unreachable(String),
-    /// The host is there and will not serve this app: it said so (`PEER_REFUSED`), closed the
-    /// connection without a word (a host older than protocol 1.3 does), or the socket is another
-    /// user's. The program runs on in the host.
-    Refused(String),
+    /// The host will not serve this app. `said`: it (or this app's own check of the peer) said so, so the
+    /// host is certainly there (`PEER_REFUSED`, or a socket that is another user's); not `said`: it took
+    /// the connection and closed it without a word, which a host older than protocol 1.3 does for a
+    /// refusal and any host does as it exits, so only the process can tell a refusal from a host that
+    /// is gone.
+    Refused { said: bool, why: String },
     /// The host speaks no protocol major this build does.
     Incompatible { host_min: u16, host_max: u16, host_version: String, ours: Range },
     /// The host has all the connections it allows.
@@ -34,7 +36,7 @@ impl AttachError {
     pub(crate) fn from_connect(err: &io::Error) -> Self {
         match err.kind() {
             io::ErrorKind::NotFound | io::ErrorKind::ConnectionRefused => Self::Unreachable(err.to_string()),
-            io::ErrorKind::PermissionDenied => Self::Refused(err.to_string()),
+            io::ErrorKind::PermissionDenied => Self::Refused { said: true, why: err.to_string() },
             io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock => Self::TimedOut,
             _ => Self::Failed(err.to_string()),
         }
@@ -45,7 +47,7 @@ impl AttachError {
         match err.kind() {
             io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock => Self::TimedOut,
             io::ErrorKind::UnexpectedEof | io::ErrorKind::BrokenPipe | io::ErrorKind::ConnectionReset => {
-                Self::Refused("the session host closed the connection".into())
+                Self::Refused { said: false, why: "the session host closed the connection".into() }
             }
             _ => Self::Failed(err.to_string()),
         }
@@ -55,7 +57,7 @@ impl AttachError {
     pub(crate) fn from_error_code(code: u16, text: &str) -> Self {
         match code {
             error_code::BUSY => Self::Busy,
-            error_code::PEER_REFUSED => Self::Refused(text.to_owned()),
+            error_code::PEER_REFUSED => Self::Refused { said: true, why: text.to_owned() },
             _ => Self::Failed(text.to_owned()),
         }
     }
@@ -78,7 +80,7 @@ impl std::fmt::Display for AttachError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Unreachable(why) => write!(f, "could not reach the session host: {why}"),
-            Self::Refused(why) => write!(f, "the session host will not serve this app: {why}"),
+            Self::Refused { why, .. } => write!(f, "the session host will not serve this app: {why}"),
             Self::Incompatible { host_min, host_max, host_version, ours } => write!(
                 f,
                 "the session host speaks protocol {host_min}..{host_max} (version {host_version}), this app {}..{}",
@@ -102,7 +104,7 @@ mod tests {
         let kind = |k: io::ErrorKind| AttachError::from_connect(&io::Error::new(k, "x"));
         assert!(matches!(kind(io::ErrorKind::NotFound), AttachError::Unreachable(_)));
         assert!(matches!(kind(io::ErrorKind::ConnectionRefused), AttachError::Unreachable(_)));
-        assert!(matches!(kind(io::ErrorKind::PermissionDenied), AttachError::Refused(_)));
+        assert!(matches!(kind(io::ErrorKind::PermissionDenied), AttachError::Refused { said: true, .. }));
         assert_eq!(kind(io::ErrorKind::TimedOut), AttachError::TimedOut);
         assert!(matches!(kind(io::ErrorKind::Other), AttachError::Failed(_)));
     }
@@ -110,8 +112,9 @@ mod tests {
     #[test]
     fn a_host_that_took_the_connection_and_closed_it_is_there_and_refusing() {
         let talk = |k: io::ErrorKind| AttachError::from_talking(&io::Error::new(k, "x"));
-        assert!(matches!(talk(io::ErrorKind::UnexpectedEof), AttachError::Refused(_)));
-        assert!(matches!(talk(io::ErrorKind::ConnectionReset), AttachError::Refused(_)));
+        // Without a word: refusal or exit, which only the process can tell apart.
+        assert!(matches!(talk(io::ErrorKind::UnexpectedEof), AttachError::Refused { said: false, .. }));
+        assert!(matches!(talk(io::ErrorKind::ConnectionReset), AttachError::Refused { said: false, .. }));
         assert_eq!(talk(io::ErrorKind::TimedOut), AttachError::TimedOut);
     }
 
@@ -120,7 +123,7 @@ mod tests {
         assert_eq!(AttachError::from_error_code(error_code::BUSY, "full"), AttachError::Busy);
         assert_eq!(
             AttachError::from_error_code(error_code::PEER_REFUSED, "no"),
-            AttachError::Refused("no".into())
+            AttachError::Refused { said: true, why: "no".into() }
         );
         assert!(matches!(AttachError::from_error_code(error_code::INVALID, "bad"), AttachError::Failed(_)));
     }

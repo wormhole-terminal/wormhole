@@ -119,7 +119,9 @@ fn recv<T>(
         if left.is_zero() {
             return Err(io::Error::new(io::ErrorKind::TimedOut, "the session host did not answer"));
         }
-        stream.set_read_timeout(Some(left))?;
+        // Not an error when it fails: macOS refuses it on a socket the host already closed, and what the
+        // host sent before closing (an `Error{PEER_REFUSED}`) is still there to read.
+        let _ = stream.set_read_timeout(Some(left));
         match dec.fill(&mut &*stream) {
             Ok(0) => {
                 return Err(io::Error::new(

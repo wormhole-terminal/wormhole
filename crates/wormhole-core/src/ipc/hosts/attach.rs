@@ -55,7 +55,10 @@ pub fn classify(error: &AttachError, identity: Identity) -> AttachFailure {
     let kind = match error {
         AttachError::Unreachable(_) if identity == Identity::No => return AttachFailure::Gone,
         AttachError::Unreachable(_) => UnavailableKind::Unreachable,
-        AttachError::Refused(_) => UnavailableKind::Refused,
+        // It took the connection and closed it without a word: a refusal, or a host that was exiting.
+        // Only the process can say which, as for a connection that found nothing.
+        AttachError::Refused { said: false, .. } if identity == Identity::No => return AttachFailure::Gone,
+        AttachError::Refused { .. } => UnavailableKind::Refused,
         AttachError::Incompatible { host_max, ours, .. } if *host_max < ours.min => UnavailableKind::TooOld,
         AttachError::Incompatible { .. } => UnavailableKind::TooNew,
         AttachError::Busy => UnavailableKind::Busy,
@@ -114,11 +117,23 @@ mod tests {
         assert_eq!(kind_of(unreachable(), Identity::Unknown), Some(UnavailableKind::Unreachable));
     }
 
+    /// A close with no word is a refusal only while the process is the host; with no such process it is a
+    /// host that exited, and a refusal that was *said* never is.
+    #[test]
+    fn a_close_with_no_word_is_told_apart_by_the_process_but_a_said_refusal_is_not() {
+        let silent = || AttachError::Refused { said: false, why: "closed".into() };
+        assert_eq!(classify(&silent(), Identity::No), AttachFailure::Gone);
+        assert_eq!(kind_of(silent(), Identity::Yes), Some(UnavailableKind::Refused));
+        assert_eq!(kind_of(silent(), Identity::Unknown), Some(UnavailableKind::Refused));
+        let said = AttachError::Refused { said: true, why: "no".into() };
+        assert_eq!(kind_of(said, Identity::No), Some(UnavailableKind::Refused));
+    }
+
     #[test]
     fn every_other_failure_keeps_the_host_whatever_the_process_says() {
         let ours = Range::current();
         let cases = [
-            (AttachError::Refused("no".into()), UnavailableKind::Refused),
+            (AttachError::Refused { said: true, why: "no".into() }, UnavailableKind::Refused),
             (AttachError::Busy, UnavailableKind::Busy),
             (AttachError::TimedOut, UnavailableKind::TimedOut),
             (AttachError::Failed("x".into()), UnavailableKind::Failed),

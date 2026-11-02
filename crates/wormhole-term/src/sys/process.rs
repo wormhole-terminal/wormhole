@@ -150,7 +150,11 @@ mod tests {
     #[test]
     fn pids_0_and_1_are_never_signalled() {
         for pid in [0, 1, u32::MAX] {
-            assert_eq!(terminate(pid).expect_err("refused").kind(), io::ErrorKind::InvalidInput, "{pid}");
+            assert_eq!(
+                signal(pid, EndSignal::Terminate).expect_err("refused").kind(),
+                io::ErrorKind::InvalidInput,
+                "{pid}"
+            );
         }
     }
 
@@ -188,7 +192,7 @@ mod tests {
         let mut child = Command::new("/bin/sleep").arg("30").spawn().expect("spawns");
         let path = executable(child.id()).expect("an executable");
         assert_eq!(path.file_name().and_then(|n| n.to_str()), Some("sleep"));
-        terminate(child.id()).expect("signalled");
+        signal(child.id(), EndSignal::Terminate).expect("signalled");
         let status = child.wait().expect("ends");
         assert!(!status.success());
         assert!(executable(u32::MAX).is_none());

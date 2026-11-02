@@ -530,14 +530,14 @@ mod handshake {
         let result = hello_against(|s| {
             let _ = (&mut &*s).write_all(&error(wire::error_code::PEER_REFUSED));
         });
-        assert_eq!(result.unwrap_err(), AttachError::Refused("because".into()));
+        assert_eq!(result.unwrap_err(), AttachError::Refused { said: true, why: "because".into() });
     }
 
     #[test]
     fn a_host_older_than_protocol_1_3_closes_without_a_word_and_is_refused_too() {
         // It took the connection and hung up: it is there, which is not "gone".
         let result = hello_against(|_| {});
-        assert!(matches!(result, Err(AttachError::Refused(_))), "{result:?}");
+        assert!(matches!(result, Err(AttachError::Refused { said: false, .. })), "{result:?}");
     }
 
     #[test]
