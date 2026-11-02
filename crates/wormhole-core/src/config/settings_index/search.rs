@@ -42,10 +42,10 @@ pub struct Hit {
     pub entry: &'static Entry,
     /// Higher is a better match.
     pub score: u32,
-    /// Where the first word that is in the label sits in it (bytes), to mark.
-    pub label_range: Option<Range<usize>>,
+    /// Where each word that is in the label sits in it (bytes), to mark: in order, none overlapping.
+    pub label_ranges: Vec<Range<usize>>,
     /// The same in the description, when the label has none of the words.
-    pub description_range: Option<Range<usize>>,
+    pub description_ranges: Vec<Range<usize>>,
     /// A config key a word was found in.
     pub key: Option<&'static str>,
 }
@@ -166,6 +166,20 @@ fn range_in(original: &str, lower: &str, at: usize, len: usize) -> Option<Range<
         .then(|| at..at + len)
 }
 
+/// The ranges in order, with those that touch or overlap made one, so each word of the query is marked
+/// once however the words lie.
+fn merged(mut ranges: Vec<Range<usize>>) -> Vec<Range<usize>> {
+    ranges.sort_by_key(|range| range.start);
+    let mut out: Vec<Range<usize>> = Vec::with_capacity(ranges.len());
+    for range in ranges {
+        match out.last_mut() {
+            Some(last) if range.start <= last.end => last.end = last.end.max(range.end),
+            _ => out.push(range),
+        }
+    }
+    out
+}
+
 fn score(
     query: &Query,
     section: SectionId,
@@ -175,15 +189,20 @@ fn score(
     section_title: &str,
 ) -> Option<Hit> {
     let Row { label, description, keywords, group_title, english } = row;
-    let mut hit =
-        Hit { section, group, entry, score: 0, label_range: None, description_range: None, key: None };
+    let mut hit = Hit {
+        section,
+        group,
+        entry,
+        score: 0,
+        label_ranges: Vec::new(),
+        description_ranges: Vec::new(),
+        key: None,
+    };
     for word in &query.words {
         let mut best = 0;
         if let Some((at, starts)) = find(label, word) {
             best = best.max(if starts { LABEL_WORD_START } else { LABEL_INSIDE });
-            if hit.label_range.is_none() {
-                hit.label_range = range_in(entry.label(), label, at, word.len());
-            }
+            hit.label_ranges.extend(range_in(entry.label(), label, at, word.len()));
         }
         if let Some(key) = entry.keys.iter().find(|key| key.contains(word.as_str())) {
             best = best.max(KEY);
@@ -193,9 +212,7 @@ fn score(
         // not find "readline".
         if let Some((at, true)) = find(description, word) {
             best = best.max(DESCRIPTION_WORD_START);
-            if hit.description_range.is_none() {
-                hit.description_range = range_in(entry.description(), description, at, word.len());
-            }
+            hit.description_ranges.extend(range_in(entry.description(), description, at, word.len()));
         }
         if let Some((_, true)) = find(keywords, word) {
             best = best.max(KEYWORDS);
@@ -219,8 +236,11 @@ fn score(
         hit.score += LABEL_PREFIX_BONUS;
     }
     // One place to mark: the label when it has a word, else the description.
-    if hit.label_range.is_some() {
-        hit.description_range = None;
+    if hit.label_ranges.is_empty() {
+        hit.description_ranges = merged(hit.description_ranges);
+    } else {
+        hit.description_ranges.clear();
+        hit.label_ranges = merged(hit.label_ranges);
     }
     Some(hit)
 }
@@ -285,21 +305,32 @@ mod tests {
     fn the_match_is_marked_where_it_was_found() {
         let hits = search(&Query::new("wrap"));
         let wrap = hits.iter().find(|h| h.entry.id == "diff-wrap").expect("found");
-        assert_eq!(wrap.label_range, Some(0..4), "\"Wrap long lines\"");
-        assert_eq!(wrap.description_range, None, "one mark per row");
+        assert_eq!(wrap.label_ranges, [0..4], "\"Wrap long lines\"");
+        assert!(wrap.description_ranges.is_empty(), "one place to mark per row");
 
         let hits = search(&Query::new("kept"));
         let scrollback = hits.iter().find(|h| h.entry.id == "scrollback").expect("found");
-        assert_eq!(scrollback.label_range, None);
-        let range = scrollback.description_range.clone().expect("in the description");
+        assert!(scrollback.label_ranges.is_empty());
+        let range = scrollback.description_ranges.first().cloned().expect("in the description");
         assert_eq!(&scrollback.entry.description()[range], "kept");
 
         // Inside a word of the label too ("lines" in "Wrap long lines").
         let hits = search(&Query::new("ines"));
         let wrap = hits.iter().find(|h| h.entry.id == "diff-wrap").expect("found");
-        assert_eq!(wrap.label_range.clone().map(|r| &wrap.entry.label()[r]), Some("ines"));
+        assert_eq!(wrap.label_ranges.first().map(|r| &wrap.entry.label()[r.clone()]), Some("ines"));
         // But not inside a word of the description: "readline" is not a line.
         assert!(!ids("line").contains(&"meta"));
+    }
+
+    #[test]
+    fn every_word_found_in_the_label_is_marked() {
+        let hits = search(&Query::new("tab width"));
+        let tab = hits.iter().find(|h| h.entry.id == "tab-width").expect("found");
+        assert_eq!(tab.label_ranges, [0..3, 4..9], "\"Tab width\"");
+        // Words that touch are one mark.
+        let hits = search(&Query::new("tab wid"));
+        let tab = hits.iter().find(|h| h.entry.id == "tab-width").expect("found");
+        assert_eq!(tab.label_ranges, [0..3, 4..7]);
     }
 
     #[test]

@@ -41,6 +41,11 @@ pub const UI_TOKENS: &[TokenInfo] = &[
         "A group of rows in Settings: the card they sit in, one step off the page (overlay)",
     ),
     t(
+        "settings.search_mark",
+        "Chrome",
+        "The words a Settings search found, marked in a row's label or description (overlay)",
+    ),
+    t(
         "settings.nav.selected",
         "Chrome",
         "The current page's row in the settings nav: the primary itself, with `text.on_primary` on it",

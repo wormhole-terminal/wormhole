@@ -12,7 +12,7 @@ use wormhole_core::config::features::{self, FeatureFlag};
 
 use crate::settings::settings;
 use crate::settings::update_settings;
-use crate::settings_window::registry::Setting;
+use crate::settings_window::registry::{Setting, current_json};
 use crate::settings_window::{Section, SettingsWindow, ui};
 use crate::style::{self, RowKeys, SettingParts};
 
@@ -23,6 +23,27 @@ pub(super) const SETTINGS: &[Setting] = &[Setting::rows("feature-flags", |w, cx|
 pub(in crate::settings_window) fn is_unlock_key(keys: &Keystroke) -> bool {
     let m = &keys.modifiers;
     m.control && m.alt && m.platform && !m.shift && keys.key == "f"
+}
+
+/// The `config.json` entry of each flag, in [`FeatureFlag::ALL`]'s order: what its row's menu copies.
+const FLAG_KEYS: [&str; 12] = [
+    "feature_flags.project_folders",
+    "feature_flags.terminal_welcome",
+    "feature_flags.notes_and_tasks",
+    "feature_flags.persistent_terminals",
+    "feature_flags.automation",
+    "feature_flags.motion",
+    "feature_flags.tear_off",
+    "feature_flags.live_resize",
+    "feature_flags.notices",
+    "feature_flags.probes",
+    "feature_flags.files",
+    "feature_flags.folder_picker",
+];
+
+fn keys_of(flag: FeatureFlag) -> &'static [&'static str] {
+    let at = FeatureFlag::ALL.iter().position(|f| *f == flag).unwrap_or(0);
+    std::slice::from_ref(&FLAG_KEYS[at])
 }
 
 impl SettingsWindow {
@@ -74,10 +95,10 @@ impl SettingsWindow {
                     description: Some(flag.description().into()),
                     visible_hint: false,
                     chip: None,
-                    keys: RowKeys::NONE,
+                    keys: RowKeys { keys: keys_of(flag), json: current_json },
                     state,
-                    found: None,
-                    found_description: None,
+                    found: Vec::new(),
+                    found_description: Vec::new(),
                     control,
                     tall: false,
                     extra: None,
@@ -91,5 +112,20 @@ impl SettingsWindow {
             ));
         }
         rows.into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use wormhole_core::config::features::FeatureFlag;
+
+    use super::{FLAG_KEYS, keys_of};
+
+    #[test]
+    fn each_flag_row_names_its_own_entry_of_config_json() {
+        assert_eq!(FLAG_KEYS.len(), FeatureFlag::ALL.len());
+        for flag in FeatureFlag::ALL {
+            assert_eq!(keys_of(flag), [format!("feature_flags.{}", flag.key())]);
+        }
     }
 }

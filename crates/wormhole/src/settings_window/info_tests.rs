@@ -209,7 +209,8 @@ fn a_card_opened_from_a_search_marks_what_was_found_in_it(cx: &mut TestAppContex
         let mut keys = VisualTestContext::from_window(handle, cx);
         keys.simulate_click(at, Modifiers::none());
         if shown(&mut keys, handle)
-            && let Some((words, Some(found))) = crate::style::LAST_CARD.with(|c| c.borrow().clone())
+            && let Some((words, found)) = crate::style::LAST_CARD.with(|c| c.borrow().clone())
+            && let Some(found) = found.first().cloned()
         {
             marked = Some(words[found].to_lowercase());
             break;

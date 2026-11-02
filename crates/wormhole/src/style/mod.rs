@@ -140,7 +140,7 @@ pub use preview::*;
 pub use profile::*;
 pub use reorder::*;
 pub use rolling_number::*;
-pub use row_keys::{Reset, RowKeys, own_menu};
+pub use row_keys::{Reset, RowKeys, keyed_block, own_menu};
 pub(crate) use row_keys::{option_held, sync_option};
 pub use rows::*;
 pub use scale::*;

@@ -37,8 +37,8 @@ pub enum NavMark {
     Changed(usize),
     /// A search found nothing on the page: the row dims.
     NoHits,
-    /// A feature-flagged section still being built: an outlined "Preview" tag, so it's obvious
-    /// the section isn't a shipped one.
+    /// A feature-flagged section still being built: a dot in the info colour, since the nav's Preview
+    /// heading says what it is.
     Preview,
 }
 
@@ -167,11 +167,15 @@ pub fn nav_row(id: impl Into<ElementId>, ui: UiColors, item: NavItem) -> Statefu
             NavMark::Hits(n) | NavMark::Changed(n) => {
                 d.child(count_badge(ui, crate::style::scale::count_label(n)))
             }
-            NavMark::Preview => d.child(crate::style::status_badge(
-                ui,
-                if selected { ui.on_primary } else { ui.info },
-                "Preview",
-            )),
+            // A dot, not the word: the word took the room the page's own name needs ("Project fold…"), and
+            // the nav's Preview heading and the page's badge already say it. VoiceOver still hears it.
+            NavMark::Preview => {
+                d.child(div().flex_none().size(px(MARK_DOT)).rounded_full().bg(if selected {
+                    ui.on_primary
+                } else {
+                    ui.info
+                }))
+            }
             NavMark::None | NavMark::NoHits => d,
         });
     focus_ring(row, ui, selected)

@@ -89,6 +89,7 @@ settings.nav.tile.projects #32ade6
 settings.nav.tile.sidebar #5e5ce6
 settings.nav.tile.terminal #2c2c2e
 settings.nav.tile.updates #30d158
+settings.search_mark #ff3b3059
 shadow #00000080
 sidebar.background #120a09
 sidebar.row.hover #ede4e30d

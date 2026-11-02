@@ -14,6 +14,7 @@
 //! Two small facts live in one global, read once per row: whether ⌥ is held (every key of the page is
 //! shown) and which row has just copied (it says Copied for a moment).
 
+use std::cell::Cell;
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -195,6 +196,10 @@ pub(super) fn with_menu(
     }
     let menu = RowMenu { row: id, keys, reset };
     let (on_click, on_key, on_a11y) = (menu.clone(), menu.clone(), menu);
+    // Where the row is, noted as it is laid out: a key or VoiceOver opens the menu at the row, not at a
+    // pointer that may be anywhere.
+    let place = Rc::new(Cell::new(None));
+    let (for_key, for_a11y, noted) = (place.clone(), place.clone(), place.clone());
     row.on_mouse_down(MouseButton::Right, move |event, window, cx| {
         // Not the page's, nor a control's own menu.
         cx.stop_propagation();
@@ -205,13 +210,46 @@ pub(super) fn with_menu(
         let held = keystroke.modifiers;
         if keystroke.key == "enter" && held.control && !held.alt && !held.platform && !held.shift {
             cx.stop_propagation();
-            open(&on_key, window.mouse_position(), window, cx);
+            open(&on_key, menu_at(&for_key, window), window, cx);
         }
     })
     .on_a11y_action(Action::ShowContextMenu, move |_, window, cx| {
-        open(&on_a11y, window.mouse_position(), window, cx)
+        open(&on_a11y, menu_at(&for_a11y, window), window, cx)
     })
+    .child(
+        canvas(move |bounds, _, _| noted.set(Some(bounds)), |_, (), _, _| {})
+            .absolute()
+            .top_0()
+            .left_0()
+            .size_full(),
+    )
 }
+
+/// Content that stands on its own (the theme cards) with a row's menu: right-click, ⌃↩ and VoiceOver's
+/// "Show menu" give Copy Key, Copy as JSON and Reset to Default for `keys`, as on a row. It has no label to
+/// show a key beside, so the menu is the way to them.
+#[track_caller]
+pub fn keyed_block(
+    id: impl Into<ElementId>,
+    keys: RowKeys,
+    reset: Option<Reset>,
+    content: AnyElement,
+) -> Stateful<Div> {
+    let id = id.into();
+    with_menu(div().id(id.clone()).w_full().child(content), id, keys, reset)
+}
+
+/// Where a menu from the keyboard or VoiceOver opens: under the row's text, at its bottom edge. The
+/// pointer's place only when the row has not been laid out yet.
+fn menu_at(place: &Cell<Option<Bounds<Pixels>>>, window: &Window) -> Point<Pixels> {
+    match place.get() {
+        Some(row) => point(row.left() + px(MENU_INSET), row.bottom()),
+        None => window.mouse_position(),
+    }
+}
+
+/// How far in from the row's left edge a menu from the keyboard opens.
+const MENU_INSET: f32 = 16.0;
 
 /// A control with a context menu of its own (a text field's cut, copy and paste): a right press on it
 /// goes no further up, so the row's menu does not open beside it, and the row's menu stays everywhere

@@ -191,7 +191,7 @@ pub fn tile_row(id: impl Into<ElementId>, ui: UiColors, parts: TileRowParts) -> 
                                 .text_color(name_color.unwrap_or(ui.text))
                                 .child(name),
                         )
-                        .children(more.map(|more| setting_info(id.clone(), ui, more, None)))
+                        .children(more.map(|more| setting_info(id.clone(), ui, more, Vec::new())))
                         .children(chip.map(|(kind, text)| solid_chip(ui, kind, text))),
                 )
                 .children(

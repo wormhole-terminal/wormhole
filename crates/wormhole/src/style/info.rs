@@ -53,24 +53,26 @@ pub(crate) fn open_row_in(window: WindowId, cx: &App) -> Option<ElementId> {
 // What the last card was built with: its words and the part a search marked.
 #[cfg(test)]
 thread_local! {
-    pub(crate) static LAST_CARD: std::cell::RefCell<Option<(SharedString, Option<Range<usize>>)>> =
+    pub(crate) static LAST_CARD: std::cell::RefCell<Option<(SharedString, Vec<Range<usize>>)>> =
         const { std::cell::RefCell::new(None) };
 }
 
 /// `text` with `found` marked, when it lies on character boundaries of it.
 #[track_caller]
-pub(super) fn marked(ui: UiColors, text: SharedString, found: Option<Range<usize>>) -> AnyElement {
-    match found {
-        Some(found)
-            if found.end <= text.len()
-                && text.is_char_boundary(found.start)
-                && text.is_char_boundary(found.end) =>
-        {
-            let mark = HighlightStyle { background_color: Some(ui.highlight), ..Default::default() };
-            StyledText::new(text).with_highlights([(found, mark)]).into_any_element()
-        }
-        _ => text.into_any_element(),
+pub(super) fn marked(ui: UiColors, text: SharedString, found: Vec<Range<usize>>) -> AnyElement {
+    // Only ranges that lie on character boundaries of it; the rest of the text is left plain.
+    let mark = HighlightStyle { background_color: Some(ui.search_mark), ..Default::default() };
+    let marks: Vec<_> = found
+        .into_iter()
+        .filter(|found| {
+            found.end <= text.len() && text.is_char_boundary(found.start) && text.is_char_boundary(found.end)
+        })
+        .map(|found| (found, mark))
+        .collect();
+    if marks.is_empty() {
+        return text.into_any_element();
     }
+    StyledText::new(text).with_highlights(marks).into_any_element()
 }
 
 /// The (i) of the row `row`, whose `description` it opens, with `found` marked in it.
@@ -79,7 +81,7 @@ pub(super) struct SettingInfo {
     row: ElementId,
     ui: UiColors,
     description: SharedString,
-    found: Option<Range<usize>>,
+    found: Vec<Range<usize>>,
 }
 
 #[track_caller]
@@ -87,7 +89,7 @@ pub(super) fn setting_info(
     row: ElementId,
     ui: UiColors,
     description: SharedString,
-    found: Option<Range<usize>>,
+    found: Vec<Range<usize>>,
 ) -> SettingInfo {
     SettingInfo { row, ui, description, found }
 }
@@ -136,7 +138,7 @@ impl RenderOnce for SettingInfo {
 
 /// The card, under the (i) and kept inside the window.
 #[track_caller]
-fn card(ui: UiColors, row: ElementId, description: SharedString, found: Option<Range<usize>>) -> Div {
+fn card(ui: UiColors, row: ElementId, description: SharedString, found: Vec<Range<usize>>) -> Div {
     #[cfg(test)]
     LAST_CARD.with(|last| *last.borrow_mut() = Some((description.clone(), found.clone())));
     let words = div()

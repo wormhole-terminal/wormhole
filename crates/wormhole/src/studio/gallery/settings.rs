@@ -154,7 +154,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                description: &'static str,
                keys: &'static [&'static str],
                state: SettingState,
-               found: Option<std::ops::Range<usize>>,
+               found: Vec<std::ops::Range<usize>>,
                control: AnyElement| {
         style::setting(
             id,
@@ -168,7 +168,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                 keys: RowKeys { keys, json: |_, _| String::new() },
                 state,
                 found,
-                found_description: None,
+                found_description: Vec::new(),
                 control,
                 tall: false,
                 extra: None,
@@ -195,7 +195,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                             "Only visible below 100 % opacity", // text: sample (the gallery's specimen)
                             &["blur"],
                             SettingState::Default,
-                            None,
+                            Vec::new(),
                             style::toggle("g-setting-blur", true, |_, _, _| {}).into_any_element(),
                         )
                         .into_any_element(),
@@ -205,7 +205,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                             "Terminal rows, as a multiple of the font size", // text: sample (the gallery's specimen)
                             &["line_height"],
                             SettingState::Changed,
-                            None,
+                            Vec::new(),
                             style::stepper(ui, "g-setting-line", "1.45".into(), |_, _, _| {}, |_, _, _| {})
                                 .into_any_element(),
                         )
@@ -216,7 +216,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                             "Set by api-server/.wormhole/theme.json while this terminal is active", // text: sample (the gallery's specimen)
                             &["theme"],
                             SettingState::Project("api-server".into()),
-                            None,
+                            Vec::new(),
                             style::link_button("g-setting-edit", ui, "Edit in project", false) // text: sample (the gallery's specimen)
                                 .into_any_element(), // text: sample (the gallery's specimen)
                         )
@@ -227,7 +227,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                             "30–100 %. Below 100 % the desktop shows through", // text: sample (the gallery's specimen)
                             &["opacity"],
                             SettingState::Default,
-                            None,
+                            Vec::new(),
                             style::slider_control(ui, slider_track(ui), "80 %", &["30", "65", "100"], false)
                                 .into_any_element(),
                         )
@@ -238,19 +238,23 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                             "JetBrains Mono 14 pt · line height 1.30", // text: sample (the gallery's specimen)
                             &[],
                             SettingState::Default,
-                            None,
+                            Vec::new(),
                             style::link_button("g-setting-fonts", ui, "Edit in Fonts", true) // text: sample (the gallery's specimen)
                                 .into_any_element(), // text: sample (the gallery's specimen)
                         )
                         .into_any_element(),
-                        row(
-                            "g-setting-found",
-                            "Wrap long lines", // text: sample (the gallery's specimen)
-                            "Otherwise the diff scrolls sideways", // text: sample (the gallery's specimen)
-                            &["diff_wrap"],
-                            SettingState::Default,
-                            Some(10..14),
-                            style::toggle("g-setting-wrap", false, |_, _, _| {}).into_any_element(),
+                        env.mark(
+                            "settings.search_mark",
+                            row(
+                                "g-setting-found",
+                                "Wrap long lines", // text: sample (the gallery's specimen)
+                                "Otherwise the diff scrolls sideways", // text: sample (the gallery's specimen)
+                                &["diff_wrap"],
+                                SettingState::Default,
+                                vec![10..14],
+                                style::toggle("g-setting-wrap", false, |_, _, _| {}).into_any_element(),
+                            )
+                            .into_any_element(),
                         )
                         .into_any_element(),
                         row(
@@ -259,7 +263,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                             "No layout.json in this project", // text: sample (the gallery's specimen)
                             &["layout"],
                             SettingState::Disabled,
-                            None,
+                            Vec::new(),
                             style::toggle("g-setting-layout", false, |_, _, _| {})
                                 .disabled(true)
                                 .into_any_element(),

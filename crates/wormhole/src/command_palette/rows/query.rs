@@ -42,10 +42,7 @@ pub(super) fn found(snapshot: &Snapshot, scope: Scope, query: &str) -> Vec<Row> 
             .enumerate()
             .map(|(index, hit)| Ranked {
                 index,
-                found: search::Match {
-                    score: hit.score as i32,
-                    ranges: hit.label_range.iter().cloned().collect(),
-                },
+                found: search::Match { score: hit.score as i32, ranges: hit.label_ranges.clone() },
             })
             .collect();
         if scope == Scope::All {

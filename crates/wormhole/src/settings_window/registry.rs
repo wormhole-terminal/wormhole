@@ -260,12 +260,11 @@ pub(super) fn control(id: &str) -> Option<&'static Setting> {
 #[cfg(feature = "devctl")]
 pub(super) fn menu_ids() -> impl Iterator<Item = &'static str> {
     // The agents' "Hooks on" menus, named as `agents/installed.rs` names them.
-    const CUSTOM: [&str; 12] = [
+    const CUSTOM: [&str; 11] = [
         "agent-hooks-Claude",
         "agent-hooks-Codex",
         "agent-hooks-Gemini",
         "density",
-        "scrollback",
         "open-in",
         "default-shell",
         "icon-theme",
@@ -465,7 +464,22 @@ impl SettingsWindow {
             let (Control::Block(draw) | Control::Rows(draw)) = &setting.control else {
                 return div().into_any_element();
             };
-            return draw(self, cx);
+            let content = draw(self, cx);
+            // A standing block (the theme cards) has no row to carry its keys, so it carries the menu.
+            if matches!(setting.control, Control::Block(_)) && !entry.keys.is_empty() {
+                let keys = entry.keys;
+                let on_reset = page.values.entry_changed(entry).then(|| -> style::Reset {
+                    Rc::new(move |_, cx| update_settings(cx, |s| *s = settings_index::reset(s, keys)))
+                });
+                return style::keyed_block(
+                    SharedString::from(format!("setting-{}", entry.id)),
+                    RowKeys { keys, json: current_json },
+                    on_reset,
+                    content,
+                )
+                .into_any_element();
+            }
+            return content;
         }
         // The person's own values: Zen mode draws the window with less, and says so at the top of the page.
         let current = shown(&setting.control, crate::settings::settings_without_zen(cx));
@@ -490,8 +504,9 @@ impl SettingsWindow {
         };
         // A description of the moment is not the table's: its search marks don't fit it.
         let found_description = hit
-            .and_then(|hit| hit.description_range.clone())
-            .filter(|_| setting.describe.is_none() && project.is_none() && default.is_none());
+            .map(|hit| hit.description_ranges.clone())
+            .filter(|_| setting.describe.is_none() && project.is_none() && default.is_none())
+            .unwrap_or_default();
         let extra = project.map(|project| {
             let root = project.root.clone();
             style::link_button(
@@ -523,9 +538,11 @@ impl SettingsWindow {
         // The row the palette asked for (`reveal_row`): marked as a search hit on its whole
         // label, and anchored so the page can scroll to it.
         let revealed = self.revealed_row().filter(|(id, _)| *id == entry.id).map(|(_, anchor)| anchor);
-        let found = hit
-            .and_then(|hit| hit.label_range.clone())
-            .or_else(|| revealed.as_ref().map(|_| 0..entry.label().len()));
+        let found = match hit.map(|hit| hit.label_ranges.clone()).filter(|ranges| !ranges.is_empty()) {
+            Some(ranges) => ranges,
+            None if revealed.is_some() => vec![0..entry.label().len()],
+            None => Vec::new(),
+        };
         style::setting(
             SharedString::from(format!("setting-{}", entry.id)),
             ui,

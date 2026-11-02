@@ -155,7 +155,9 @@ const BUDGET: [(&str, u64); 18] = [
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
     // The list preview is a card at the top of the page, with the column's second window gone: 13,612
     // measured, 2,828 fewer than the page and the column made together.
-    ("Sessions", 13732),
+    // Step 8e: the rows regrouped into Layout, Groups, Shortcuts and Row details: two cards more (about 100
+    // each): 13,929 measured, 197 more.
+    ("Sessions", 13929),
     // The preview card of the Changes panel and a diff: the panel's own file rows (four, with the folder
     // rows of the tree and the untracked head) and the diff view's own rows (a hunk head and six lines, each
     // a row with two gutters, a marker and its code): 8,367 measured, 3,136 more, about 340 for each of the
@@ -201,6 +203,9 @@ const BUDGET: [(&str, u64); 18] = [
     // 6,912 measured, a row fewer.
     // The Restore after restart flag is one switch row more again: 7,271 measured (about 340 a row).
     // Step 8c: the Preview badge beside the title (a tile chip, 37 allocations: 7,106 measured).
+    // Step 8e: each flag's row has its config key, so a right-click, ⌃↩ and VoiceOver give Copy Key, Copy as
+    // JSON and Reset (the row's menu listeners, its key line and the canvas that notes where the row is):
+    // 7,961 measured, 786 more for twelve rows, about 65 a row, which is what every row with keys costs.
     ("FeatureFlags", 7290),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
@@ -208,7 +213,9 @@ const BUDGET: [(&str, u64); 18] = [
     // found): 8,042 measured, 4,221 fewer.
     // The search finds the Borders row too, as one more result: 8,456 measured, 420 more.
     // Step 8d: each group of results is a card too: 9,073 measured, 617 more.
-    ("search", 9073),
+    // Step 8e: a row's menu opens at the row (a canvas noting where it is), and a search marks every word of
+    // the query: 9,165 measured, 92 more.
+    ("search", 9165),
 ];
 
 /// What Appearance's Liquid Glass row adds, a switch with its line and Beta chip: it is on the page on

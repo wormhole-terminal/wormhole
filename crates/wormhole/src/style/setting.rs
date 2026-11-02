@@ -106,10 +106,10 @@ pub struct SettingParts {
     /// ([`RowKeys::NONE`]: none, and no menu).
     pub keys: RowKeys,
     pub state: SettingState,
-    /// What a search found in the label, marked with `state.highlight`.
-    pub found: Option<Range<usize>>,
+    /// What a search found in the label (each word of the query), marked with `settings.search_mark`.
+    pub found: Vec<Range<usize>>,
     /// The same in the description.
-    pub found_description: Option<Range<usize>>,
+    pub found_description: Vec<Range<usize>>,
     pub control: AnyElement,
     /// The control runs over more than one line (a few fields, a text box): the label sits
     /// beside its first line rather than in the middle of the row, and the description under it.
@@ -120,6 +120,9 @@ pub struct SettingParts {
     /// changed.
     pub on_reset: Option<Reset>,
 }
+
+/// The space between a changed row's dot and its label.
+const CHANGED_DOT_GAP: f32 = 4.0;
 
 /// How far a [`setting`] row's hover fill reaches past its text on each side.
 const ROW_FILL_PAD: f32 = 8.0;
@@ -202,10 +205,24 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
                         .flex()
                         .items_center()
                         .gap_2()
+                        .relative()
                         .min_h(rems(NAME_LINE))
                         // As tall as the control's first line, so the two share a middle.
                         .when(tall, |d| d.min_h(px(CONTROL_H)))
-                        .when(changed, |d| d.child(changed_dot(ui)))
+                        // In the margin left of the label, out of the layout: the label starts where it
+                        // does whether or not the row is changed, and the card's inset leaves the dot room.
+                        .when(changed, |d| {
+                            d.child(
+                                div()
+                                    .absolute()
+                                    .top_0()
+                                    .bottom_0()
+                                    .left(px(-(MARK_DOT + CHANGED_DOT_GAP)))
+                                    .flex()
+                                    .items_center()
+                                    .child(changed_dot(ui)),
+                            )
+                        })
                         .child(
                             div()
                                 .text_body()

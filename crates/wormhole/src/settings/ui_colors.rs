@@ -99,6 +99,8 @@ pub struct UiColors {
     pub focus: Hsla,
     /// The card a Settings group of rows sits in (`settings.group`).
     pub group: Hsla,
+    /// The words a Settings search found, marked (`settings.search_mark`).
+    pub search_mark: Hsla,
     /// A secondary button's fill and its fill under the pointer (`button.background`, `button.hover`):
     /// also what an outlined control is filled with while Borders is off, so it still reads as one.
     pub button: Hsla,
@@ -235,6 +237,7 @@ const COLORS: &[Field] = fields! {
     selected_row = "sidebar.row.selected";
     nav_selected = "settings.nav.selected";
     group = "settings.group";
+    search_mark = "settings.search_mark";
     button = "button.background";
     button_hover = "button.hover";
     selected_text = "sidebar.row.selected.text";
