@@ -10,8 +10,6 @@
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::Button;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::AgentAccess;
@@ -178,8 +176,7 @@ fn program_row(ix: usize, row: Approved, now: i64, cx: &mut Context<SettingsWind
                 .child(switches(ix, which, &row, ui, cx)),
         )
         .child(
-            Button::new(SharedString::from(format!("agent-access-revoke-{ix}")))
-                .small()
+            style::form_button(SharedString::from(format!("agent-access-revoke-{ix}")))
                 .outline()
                 .label(text(SETTINGS_AGENTS_ACCESS_REVOKE))
                 .on_click(cx.listener(move |_, _, _, cx| {

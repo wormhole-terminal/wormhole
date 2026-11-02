@@ -92,7 +92,7 @@ fn files_read(ui: crate::settings::UiColors, found: &Found, cx: &App) -> Div {
         .flex()
         .flex_col()
         .gap_1()
-        .child(style::section_label(ui, text(SETTINGS_IMPORT_FILES_READ)))
+        .child(style::setting_group_head(ui, text(SETTINGS_IMPORT_FILES_READ), None))
         .children(found.files.iter().map(|path| {
             div()
                 .min_w_0()

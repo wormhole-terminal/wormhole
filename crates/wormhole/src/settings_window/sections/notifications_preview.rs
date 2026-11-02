@@ -13,7 +13,7 @@ use wormhole_text::text;
 use crate::icons::app_icon_for;
 use crate::settings::{SettingsStore, UiColors};
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{Edges, TextRole};
+use crate::style::{self, Edges, TextRole};
 
 /// A banner's width: as wide as macOS draws them.
 const BANNER_W: f32 = 344.0;
@@ -29,15 +29,11 @@ pub(in crate::settings_window) fn draw_notifications_preview(cx: &mut Context<Se
         .flex_col()
         .gap_2()
         .child(
-            div()
+            style::preview_frame(ui)
                 .flex()
                 .flex_col()
                 .items_center()
                 .gap_3()
-                .p_4()
-                .rounded(ui.radius_lg)
-                .outlined(ui, ui.border)
-                .bg(ui.background)
                 .child(banner(
                     ui,
                     icon,

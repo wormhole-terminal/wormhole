@@ -153,12 +153,11 @@ pub(in crate::settings_window) fn draw_specimen(
         .flex_col()
         .gap_2()
         .child(
-            div()
+            // Edge to edge: the tab strip's rule runs the frame's width.
+            style::preview_frame(ui)
+                .p_0()
                 .flex()
                 .flex_col()
-                .rounded(ui.radius_lg)
-                .overflow_hidden()
-                .outlined(ui, ui.border)
                 .bg(ui.elevated)
                 .child(
                     div()

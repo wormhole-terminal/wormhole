@@ -16,8 +16,7 @@ use wormhole_text::text;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::skill::{self, State, Target};
@@ -108,8 +107,7 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
         _ => (text(SETTINGS_AGENTS_SKILL_NOT_INSTALLED), ui.muted),
     };
     let button = |id: &str, label: &'static str, primary: bool| {
-        Button::new(SharedString::from(format!("agent-skill-{word}-{id}")))
-            .small()
+        style::form_button(SharedString::from(format!("agent-skill-{word}-{id}")))
             .when(primary, |b| b.primary())
             .when(!primary, |b| b.outline())
             .label(label)
@@ -138,12 +136,7 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
         _ => actions.child(install(cx, text(SETTINGS_AGENTS_INSTALL), true)),
     };
     let problem = row.state.as_ref().err().map(|err| {
-        div().pl(px(style::CONTROL_H + 12.0)).child(style::banner(
-            ui,
-            style::BannerKind::Danger,
-            false,
-            err.clone(),
-        ))
+        div().pl(px(style::CONTROL_H + 12.0)).child(style::notice(ui, style::NoticeKind::Danger, err.clone()))
     });
     div()
         .flex()
@@ -214,9 +207,8 @@ fn draw_mcp(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement 
                 .child(command),
         )
         .child(
-            Button::new("agent-mcp-copy")
+            style::form_button("agent-mcp-copy")
                 .ghost()
-                .small()
                 .icon(IconName::Copy)
                 .label(text(SETTINGS_AGENTS_COPY_COMMAND))
                 .on_click(move |_, _, cx| crate::platform::clipboard::write(copy.clone(), cx)),

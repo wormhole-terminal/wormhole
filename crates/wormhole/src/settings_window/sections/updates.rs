@@ -11,8 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::progress::Progress;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -118,7 +117,7 @@ fn draw_count_details(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> A
         .flex_col()
         .pt_2()
         .when_some(starts, |d, starts| {
-            d.child(div().pb_2().child(style::banner(ui, style::BannerKind::Info, false, starts)))
+            d.child(div().pb_2().child(style::notice(ui, style::NoticeKind::Info, starts)))
         })
         .child(every)
         .children(first)
@@ -232,17 +231,15 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
             // A security update can't be skipped: checks would offer it again anyway.
             if !release.is_security_update() {
                 actions = actions.child(
-                    Button::new("update-skip")
+                    style::form_button("update-skip")
                         .ghost()
-                        .small()
                         .label(text(SETTINGS_UPDATES_SKIP_THIS_VERSION))
                         .on_click(cx.listener(move |_, _, _, cx| crate::update::skip_update(&skip, cx))),
                 );
             }
             actions = actions.child(
-                Button::new("update-install")
+                style::form_button("update-install")
                     .primary()
-                    .small()
                     .label(text(SETTINGS_UPDATES_INSTALL_UPDATE))
                     .on_click(
                         cx.listener(move |_, _, _, cx| crate::update::install_update(install.clone(), cx)),
@@ -254,17 +251,15 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
             // can be called off, or cut short by restarting now (no second question: it was asked).
             if restart_pending {
                 actions = actions.child(
-                    Button::new("update-restart-cancel")
+                    style::form_button("update-restart-cancel")
                         .ghost()
-                        .small()
                         .label(text(SETTINGS_UPDATES_DONT_RESTART))
                         .on_click(cx.listener(|_, _, _, cx| crate::update::cancel_restart_when_idle(cx))),
                 );
             }
             actions = actions.child(
-                Button::new("update-restart")
+                style::form_button("update-restart")
                     .primary()
-                    .small()
                     .label(text(SETTINGS_UPDATES_RESTART_NOW))
                     .on_click(cx.listener(move |_, _, window, cx| {
                         if restart_pending {
@@ -276,7 +271,7 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
             );
         }
         UpdatePhase::Checking => {
-            actions = actions.child(Button::new("update-checking").ghost().small().loading(true).label(""));
+            actions = actions.child(style::form_button("update-checking").ghost().loading(true).label(""));
         }
         UpdatePhase::Downloading => {
             let percent = (done * 100).checked_div(total).unwrap_or(0);
@@ -287,7 +282,7 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
         UpdatePhase::Idle if !available => {}
         _ => {
             actions = actions.child(
-                Button::new("update-check").small().label(text(SETTINGS_UPDATES_CHECK_NOW)).on_click(
+                style::form_button("update-check").label(text(SETTINGS_UPDATES_CHECK_NOW)).on_click(
                     cx.listener(move |_, _, _, cx| {
                         if !busy {
                             crate::update::check_for_updates(true, cx);

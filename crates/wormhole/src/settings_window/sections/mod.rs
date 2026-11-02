@@ -10,14 +10,13 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::Button;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 
 use crate::settings::SettingsStore;
 use crate::settings_window::SettingsWindow;
 use crate::settings_window::registry::Setting;
+use crate::style;
 
 mod advanced;
 mod agent_access;
@@ -107,9 +106,8 @@ impl SettingsWindow {
     pub(super) fn header_action(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         match self.section {
             Section::Agents => Some(
-                Button::new("agents-rescan")
+                style::form_button("agents-rescan")
                     .outline()
-                    .small()
                     .icon(IconName::RefreshCw)
                     .label(text(SETTINGS_WINDOW_RESCAN_PATH))
                     .loading(self.agents_task.is_some())
@@ -120,9 +118,8 @@ impl SettingsWindow {
                     .into_any_element(),
             ),
             Section::Import => Some(
-                Button::new("import-rescan")
+                style::form_button("import-rescan")
                     .outline()
-                    .small()
                     .icon(IconName::RefreshCw)
                     .label(text(SETTINGS_IMPORT_SCAN_AGAIN))
                     .loading(self.import.scanning())
@@ -131,9 +128,8 @@ impl SettingsWindow {
             ),
             Section::Extensions => Some(extensions::header_action(cx)),
             Section::Profile => Some(
-                Button::new("profile-new")
+                style::form_button("profile-new")
                     .outline()
-                    .small()
                     .icon(IconName::Plus)
                     .label(text(SETTINGS_WINDOW_NEW_PROFILE))
                     .on_click(cx.listener(|this, _, window, cx| this.open_new_profile(window, cx)))
@@ -146,9 +142,8 @@ impl SettingsWindow {
 
 /// A row's button that opens something (a folder, a file).
 fn open_button(id: &'static str, icon: IconName, label: &'static str, open: fn(&App)) -> AnyElement {
-    Button::new(id)
+    style::form_button(id)
         .outline()
-        .small()
         .icon(icon)
         .label(label)
         .on_click(move |_, _, cx| open(cx))

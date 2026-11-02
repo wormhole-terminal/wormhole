@@ -90,7 +90,7 @@ fn part(
             strength_text(subject, comparison)
                 .map(|strength| div().text_body().text_color(ui.muted).child(strength)),
         )
-        .child(style::section_label(ui, &label))
+        .child(style::setting_group_head(ui, &label, None))
         .child(div().flex().flex_col().children(rows))
 }
 

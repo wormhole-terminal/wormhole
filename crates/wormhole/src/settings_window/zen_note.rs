@@ -5,8 +5,6 @@
 //! Only the pages with a row Zen mode overrides carry it: the title row, the status bar, the minimap
 //! and the lines between the columns.
 
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_text::keys::{ZEN_SETTINGS_LEAVE, ZEN_SETTINGS_NOTE};
@@ -30,12 +28,10 @@ pub(super) fn draw(section: Section, cx: &mut Context<SettingsWindow>) -> Option
         return None;
     }
     Some(
-        style::banner(ui(cx), style::BannerKind::Info, false, text(ZEN_SETTINGS_NOTE))
+        style::notice(ui(cx), style::NoticeKind::Info, text(ZEN_SETTINGS_NOTE))
             .debug_selector(|| "zen-note".into())
             .child(
-                Button::new("leave-zen")
-                    .ghost()
-                    .small()
+                style::notice_button("leave-zen", ui(cx), style::NoticeKind::Info, cx)
                     .label(text(ZEN_SETTINGS_LEAVE))
                     .on_click(|_, _, cx| set_zen_mode(cx, false)),
             )

@@ -5,8 +5,7 @@
 //! `notifications` stays the master switch: it is on while any kind is on, so turning every kind
 //! off turns it off.
 
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::*;
 use wormhole_core::config::{DockBadge, InFront, NotifySound};
 #[allow(
@@ -162,15 +161,13 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
     let permission = notifications::permission(cx);
     let (title, hint) = permission_text(permission);
     let send_test = || {
-        Button::new("notify-send-test")
-            .small()
+        style::form_button("notify-send-test")
             .outline()
             .label(text(SETTINGS_NOTIFICATIONS_SEND_TEST))
             .on_click(|_, _, cx| notifications::send_test(cx))
     };
     let system_settings = || {
-        Button::new("notify-open-settings")
-            .small()
+        style::form_button("notify-open-settings")
             .outline()
             .label(text(SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS))
             .on_click(|_, _, cx| notifications::open_system_settings(cx))
@@ -180,8 +177,7 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
             vec![send_test().into_any_element(), system_settings().into_any_element()]
         }
         Permission::NotAsked => vec![
-            Button::new("notify-allow")
-                .small()
+            style::form_button("notify-allow")
                 .primary()
                 .label(text(SETTINGS_NOTIFICATIONS_ALLOW_NOTIFICATIONS))
                 .on_click(|_, _, cx| notifications::ask_permission(cx))

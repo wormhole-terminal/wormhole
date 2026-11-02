@@ -9,8 +9,7 @@
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::ipc::control::COMMAND_NAME;
@@ -200,10 +199,9 @@ fn draw_probes(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
             .text_color(ui.muted)
             .child(text(SETTINGS_EXTENSIONS_LOOKING))
             .into_any_element(),
-        Some(Listing::TooMany) => style::banner(
+        Some(Listing::TooMany) => style::notice(
             ui,
-            style::BannerKind::Warning,
-            false,
+            style::NoticeKind::Warning,
             settings_extensions_too_many(&MAX_ENTRIES.to_string()),
         )
         .into_any_element(),
@@ -227,7 +225,7 @@ fn draw_probes(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
                 .flex()
                 .flex_col()
                 .gap_2()
-                .child(style::banner(ui, style::BannerKind::Warning, false, notice.to_string()))
+                .child(style::notice(ui, style::NoticeKind::Warning, notice.to_string()))
                 .child(rows)
                 .into_any_element()
         }
@@ -258,9 +256,8 @@ fn empty(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
         )
         .child(
             div().flex().pt_1().child(
-                Button::new("probes-show-folder")
+                style::form_button("probes-show-folder")
                     .outline()
-                    .small()
                     .icon(IconName::FolderOpen)
                     .label(text(SETTINGS_EXTENSIONS_SHOW_FOLDER))
                     .on_click(
@@ -302,9 +299,8 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
 
     let again = (*state == ProbeState::Changed).then(|| {
         let (probe_id, name) = (entry.folder.clone(), title.clone());
-        Button::new(SharedString::from(format!("{id}-again")))
+        style::form_button(SharedString::from(format!("{id}-again")))
             .outline()
-            .small()
             .label(text(SETTINGS_EXTENSIONS_APPROVE_AGAIN))
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.probe_switched(probe_id.clone(), name.clone(), true, cx)
@@ -312,9 +308,8 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
     });
     let forget = entry.can_forget().then(|| {
         let (probe_id, name) = (entry.folder.clone(), title.clone());
-        Button::new(SharedString::from(format!("{id}-forget")))
+        style::form_button(SharedString::from(format!("{id}-forget")))
             .ghost()
-            .small()
             .label(text(SETTINGS_EXTENSIONS_FORGET))
             .on_click(
                 cx.listener(move |this, _, _, cx| this.turn_probe_off(probe_id.clone(), name.clone(), cx)),
@@ -338,10 +333,9 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
         _ => None,
     };
     let invalid = match state {
-        ProbeState::Invalid(reason) => Some(style::banner(
+        ProbeState::Invalid(reason) => Some(style::notice(
             ui,
-            style::BannerKind::Danger,
-            false,
+            style::NoticeKind::Danger,
             settings_extensions_invalid_reason(&reveal(reason)),
         )),
         _ => None,

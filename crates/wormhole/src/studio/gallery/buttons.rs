@@ -6,6 +6,7 @@ use gpui_kit::*;
 
 use super::Env;
 use super::view::GalleryView;
+use crate::style;
 
 pub(super) fn render(
     _studio: &GalleryView,
@@ -48,7 +49,9 @@ pub(super) fn render(
                 .child(Button::new("g-xs").primary().xsmall().label("xsmall"))
                 .child(Button::new("g-sm").primary().small().label("small"))
                 .child(Button::new("g-md").primary().label("medium"))
-                .child(Button::new("g-lg").primary().large().label("large")),
+                .child(Button::new("g-lg").primary().large().label("large"))
+                // The size of a button in a Settings row: as tall as its menus and fields.
+                .child(style::form_button("g-form").primary().label("form")), // text: sample (the gallery's specimen)
         );
     buttons.into_any_element()
 }

@@ -31,7 +31,6 @@ use self::card::CARD_RENDERS;
 use self::card::ThemeCard;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::Button;
 use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -336,17 +335,15 @@ impl SettingsWindow {
             })
             .child(div().flex_1())
             .child(
-                Button::new("import-theme")
+                style::form_button("import-theme")
                     .outline()
-                    .small()
                     .icon(IconName::ArrowDown)
                     .label(text(SETTINGS_APPEARANCE_IMPORT_THEME))
                     .on_click(cx.listener(|_, _, _, cx| import_theme(cx.weak_entity(), cx))),
             )
             .child(
-                Button::new("open-studio")
+                style::form_button("open-studio")
                     .outline()
-                    .small()
                     .icon(IconName::Palette)
                     .label(text(SETTINGS_APPEARANCE_THEME_STUDIO))
                     .child(style::keycap(

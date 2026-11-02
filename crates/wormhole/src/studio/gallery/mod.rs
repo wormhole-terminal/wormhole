@@ -14,6 +14,7 @@ mod labels;
 mod layout;
 mod metrics;
 mod navigation;
+mod notices;
 mod panel;
 mod panes;
 mod selects;

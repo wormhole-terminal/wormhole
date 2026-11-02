@@ -12,8 +12,7 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
@@ -315,9 +314,8 @@ impl SettingsWindow {
                             .flex()
                             .gap_1()
                             .child(
-                                Button::new(("trusted-open", ix))
+                                style::form_button(("trusted-open", ix))
                                     .ghost()
-                                    .small()
                                     .label(text(SETTINGS_PROJECTS_SETTINGS))
                                     .on_click(cx.listener(move |this, _, _, cx| {
                                         this.projects.select(open.clone());
@@ -325,9 +323,8 @@ impl SettingsWindow {
                                     })),
                             )
                             .child(
-                                Button::new(("revoke", ix))
+                                style::form_button(("revoke", ix))
                                     .ghost()
-                                    .small()
                                     .label(text(SETTINGS_PROJECTS_REVOKE))
                                     .on_click(cx.listener(move |this, _, _, cx| {
                                         let root = revoke.clone();
@@ -343,10 +340,9 @@ impl SettingsWindow {
             );
         }
         if !*self.projects.can_approve.get_or_init(crate::platform::auth::available) {
-            trusted = trusted.child(div().pb_2().child(style::banner(
+            trusted = trusted.child(div().pb_2().child(style::notice(
                 ui,
-                style::BannerKind::Warning,
-                false,
+                style::NoticeKind::Warning,
                 text(SETTINGS_PROJECTS_APPROVAL_ISNT_AVAILABLE_ON_THIS_MAC),
             )));
         }
@@ -356,10 +352,9 @@ impl SettingsWindow {
     fn render_project(&self, root: &Path, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
         let Some(project) = self.projects.info(root, cx) else {
-            return style::banner(
+            return style::notice(
                 ui,
-                style::BannerKind::Warning,
-                false,
+                style::NoticeKind::Warning,
                 settings_projects_missing_folder(&root.display().to_string()),
             )
             .into_any_element();
@@ -380,9 +375,8 @@ impl SettingsWindow {
         let trusted = project.status == TrustStatus::Trusted;
         let trust_root = root.to_path_buf();
         let trust_button = if trusted {
-            Button::new("project-revoke")
+            style::form_button("project-revoke")
                 .outline()
-                .small()
                 .label(text(SETTINGS_PROJECTS_REVOKE_TRUST))
                 .on_click(cx.listener(move |this, _, _, cx| {
                     let root = trust_root.clone();
@@ -390,9 +384,8 @@ impl SettingsWindow {
                     this.projects.forget_info();
                 }))
         } else {
-            Button::new("project-trust")
+            style::form_button("project-trust")
                 .primary()
-                .small()
                 .icon(IconName::FingerprintPattern)
                 .label(if approving {
                     text(SETTINGS_PROJECTS_WAITING_FOR_APPROVAL)
@@ -453,8 +446,7 @@ impl SettingsWindow {
             );
         }
         if let Some(error) = hub_error {
-            trust =
-                trust.child(div().pb_2().child(style::banner(ui, style::BannerKind::Danger, false, error)));
+            trust = trust.child(div().pb_2().child(style::notice(ui, style::NoticeKind::Danger, error)));
         }
 
         // Features: default / on / off per project, as the panel's small segmented control.
@@ -522,10 +514,7 @@ impl SettingsWindow {
                 .gap_2()
                 .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_PROBLEMS), None))
                 .children(
-                    project
-                        .errors
-                        .iter()
-                        .map(|e| style::banner(ui, style::BannerKind::Warning, false, e.clone())),
+                    project.errors.iter().map(|e| style::notice(ui, style::NoticeKind::Warning, e.clone())),
                 )
         });
 
@@ -535,8 +524,7 @@ impl SettingsWindow {
             .flex()
             .gap_2()
             .child(
-                Button::new("project-open-session")
-                    .small()
+                style::form_button("project-open-session")
                     .icon(IconName::SquareTerminal)
                     .label(text(SETTINGS_PROJECTS_OPEN_IN_A_NEW_TERMINAL))
                     .on_click(cx.listener(move |_, _, _, cx| {
@@ -548,9 +536,8 @@ impl SettingsWindow {
                     })),
             )
             .child(
-                Button::new("project-reveal")
+                style::form_button("project-reveal")
                     .ghost()
-                    .small()
                     .icon(IconName::ExternalLink)
                     .label(settings_projects_show_in_finder(&project.folder.dir_name()))
                     .on_click(move |_, _, cx| reveal(&reveal_root, cx)),

@@ -123,9 +123,8 @@ fn draw_start(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
 
 /// The button that picks a folder for a field.
 fn choose(id: impl Into<ElementId>, pick: Pick, cx: &mut Context<SettingsWindow>) -> Button {
-    Button::new(id)
+    style::form_button(id)
         .outline()
-        .small()
         .icon(IconName::Folder)
         .tooltip(text(SETTINGS_PROFILE_CHOOSE_A_FOLDER))
         .on_click(cx.listener(move |this, _, window, cx| this.pick_profile_folder(pick, window, cx)))
@@ -159,9 +158,8 @@ fn folder_list(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
             .child(style::icon(IconName::Folder).text_color(ui.muted))
             .child(div().flex_1().min_w_0().truncate().text_body().child(folder.clone()))
             .child(
-                Button::new(("profile-folder-remove", ix))
+                style::form_button(("profile-folder-remove", ix))
                     .ghost()
-                    .small()
                     .icon(IconName::X)
                     .tooltip(text(SETTINGS_PROFILE_STOP_OPENING_FOLDER))
                     .on_click(cx.listener(move |this, _, _, cx| {
@@ -231,9 +229,8 @@ fn delete_caption(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> 
 
 fn draw_delete(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let is_default = app(cx).active_profile().is_default();
-    Button::new("profile-delete")
+    style::form_button("profile-delete")
         .outline()
-        .small()
         .icon(IconName::Trash)
         .label(text(SETTINGS_PROFILE_DELETE_PROFILE))
         .disabled(is_default || window.confirm_delete_profile)
@@ -253,11 +250,9 @@ fn delete_question(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
     let (profile, _) = shown(window, cx)?;
     let id = profile.id.clone();
     Some(
-        style::banner(ui, style::BannerKind::Danger, false, settings_profile_delete_question(&profile.name))
+        style::notice(ui, style::NoticeKind::Danger, settings_profile_delete_question(&profile.name))
             .child(
-                Button::new("profile-delete-cancel")
-                    .ghost()
-                    .small()
+                style::notice_button_quiet("profile-delete-cancel", ui, style::NoticeKind::Danger, cx)
                     .label(text(SETTINGS_PROFILE_CANCEL))
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.confirm_delete_profile = false;
@@ -265,9 +260,7 @@ fn delete_question(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
                     })),
             )
             .child(
-                Button::new("profile-delete-confirm")
-                    .danger()
-                    .small()
+                style::notice_button("profile-delete-confirm", ui, style::NoticeKind::Danger, cx)
                     .label(text(SETTINGS_PROFILE_DELETE_BUTTON))
                     .on_click(cx.listener(move |this, _, _, cx| {
                         this.confirm_delete_profile = false;

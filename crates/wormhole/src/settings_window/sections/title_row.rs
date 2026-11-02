@@ -60,8 +60,7 @@ pub(super) fn draw_parts(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
             .pb_2()
             .children(shown)
             .when(!hidden.is_empty(), |d| {
-                d.child(div().pt_3().pb_1().pl_2().child(style::section_label(ui, text(TITLE_ROW_HIDDEN))))
-                    .children(hidden)
+                d.child(style::setting_group_head(ui, text(TITLE_ROW_HIDDEN), None)).children(hidden)
             })
             .into_any_element(),
     )

@@ -15,8 +15,7 @@ use wormhole_text::text;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::ipc::control::COMMAND_NAME;
@@ -159,15 +158,13 @@ fn describe(window: &SettingsWindow, _: &mut Context<SettingsWindow>) -> Option<
 /// Install, Update and Uninstall.
 fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let install = |label: &'static str, cx: &mut Context<SettingsWindow>| {
-        Button::new("cli-tool-install")
-            .small()
+        style::form_button("cli-tool-install")
             .primary()
             .label(label)
             .on_click(cx.listener(|this, _, _, cx| this.install_cli_tool(cx)))
     };
     let uninstall = |cx: &mut Context<SettingsWindow>| {
-        Button::new("cli-tool-uninstall")
-            .small()
+        style::form_button("cli-tool-uninstall")
             .outline()
             .label(text(SETTINGS_AGENTS_UNINSTALL))
             .on_click(cx.listener(|this, _, _, cx| this.uninstall_cli_tool(cx)))
@@ -206,24 +203,14 @@ fn below(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<An
     match &panel.status {
         Status::NotInstalled => {}
         Status::Foreign { .. } => lines.push(
-            style::banner(
-                ui,
-                style::BannerKind::Warning,
-                false,
-                settings_agents_cli_foreign_note(COMMAND_NAME),
-            )
-            .into_any_element(),
+            style::notice(ui, style::NoticeKind::Warning, settings_agents_cli_foreign_note(COMMAND_NAME))
+                .into_any_element(),
         ),
         Status::Installed { current, .. } => {
             if !current {
                 lines.push(
-                    style::banner(
-                        ui,
-                        style::BannerKind::Info,
-                        false,
-                        settings_agents_cli_stale_note(COMMAND_NAME),
-                    )
-                    .into_any_element(),
+                    style::notice(ui, style::NoticeKind::Info, settings_agents_cli_stale_note(COMMAND_NAME))
+                        .into_any_element(),
                 );
             }
             match &panel.path {
@@ -238,16 +225,13 @@ fn below(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<An
                     let line = advice.line.clone();
                     let (code_font, _) = crate::fonts::code_font(cx);
                     lines.push(
-                        style::banner(
+                        style::notice(
                             ui,
-                            style::BannerKind::Warning,
-                            false,
+                            style::NoticeKind::Warning,
                             settings_agents_cli_path_off(dir, COMMAND_NAME, &advice.file),
                         )
                         .child(
-                            Button::new("cli-tool-copy-line")
-                                .ghost()
-                                .small()
+                            style::notice_button("cli-tool-copy-line", ui, style::NoticeKind::Warning, cx)
                                 .icon(IconName::Copy)
                                 .label(text(SETTINGS_AGENTS_COPY_LINE))
                                 .on_click(move |_, _, cx| {
@@ -276,7 +260,7 @@ fn below(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<An
         }
     }
     if let Some(problem) = &panel.problem {
-        lines.push(style::banner(ui, style::BannerKind::Danger, false, problem.clone()).into_any_element());
+        lines.push(style::notice(ui, style::NoticeKind::Danger, problem.clone()).into_any_element());
     }
     (!lines.is_empty()).then(|| div().flex().flex_col().gap_2().children(lines).into_any_element())
 }

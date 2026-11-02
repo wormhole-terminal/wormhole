@@ -3,8 +3,7 @@
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::Values;
 use wormhole_core::storage::paths::data_dir;
@@ -54,9 +53,8 @@ pub(super) const SETTINGS: &[Setting] = &[
 /// Reset tips: the tips closed with "Don't show again" show again where they belong.
 fn draw_reset_tips(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let none = app(cx).tips.is_empty();
-    Button::new("reset-tips")
+    style::form_button("reset-tips")
         .outline()
-        .small()
         .icon(IconName::RotateCcw)
         .label(text(SETTINGS_ADVANCED_RESET_TIPS_BUTTON))
         .disabled(none)
@@ -75,10 +73,9 @@ fn draw_reset_tips(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
 /// The outlined danger button; pressed, the question in place under the row.
 fn draw_reset(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let changed = Values::of(cx.global::<SettingsStore>().user_settings()).changed_keys().len();
-    Button::new("reset-settings")
+    style::form_button("reset-settings")
         .danger()
         .outline()
-        .small()
         .label(text(SETTINGS_ADVANCED_RESET_TO_DEFAULTS))
         .disabled(changed == 0 || window.confirm_reset)
         .tooltip(if changed == 0 {
@@ -102,29 +99,24 @@ impl SettingsWindow {
         let ui = ui(cx);
         let changed = Values::of(cx.global::<SettingsStore>().user_settings()).changed_keys().len();
         Some(
-            style::banner(
-                ui,
-                style::BannerKind::Danger,
-                false,
-                settings_advanced_reset_question(whole(changed)),
-            )
-            .child(
-                Button::new("reset-cancel").ghost().small().label(text(SETTINGS_ADVANCED_CANCEL)).on_click(
-                    cx.listener(|this, _, _, cx| {
-                        this.confirm_reset = false;
-                        cx.notify();
-                    }),
-                ),
-            )
-            .child(
-                Button::new("reset-confirm").danger().small().label(text(SETTINGS_ADVANCED_RESET)).on_click(
-                    cx.listener(|this, _, _, cx| {
-                        this.confirm_reset = false;
-                        update_settings(cx, |s| *s = Settings::default());
-                    }),
-                ),
-            )
-            .into_any_element(),
+            style::notice(ui, style::NoticeKind::Danger, settings_advanced_reset_question(whole(changed)))
+                .child(
+                    style::notice_button_quiet("reset-cancel", ui, style::NoticeKind::Danger, cx)
+                        .label(text(SETTINGS_ADVANCED_CANCEL))
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.confirm_reset = false;
+                            cx.notify();
+                        })),
+                )
+                .child(
+                    style::notice_button("reset-confirm", ui, style::NoticeKind::Danger, cx)
+                        .label(text(SETTINGS_ADVANCED_RESET))
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.confirm_reset = false;
+                            update_settings(cx, |s| *s = Settings::default());
+                        })),
+                )
+                .into_any_element(),
         )
     }
 }

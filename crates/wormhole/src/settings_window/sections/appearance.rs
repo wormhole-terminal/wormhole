@@ -5,8 +5,6 @@
 //! blur's row warns.
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::color_picker::{ColorPicker, ColorPickerState};
 use gpui_kit::component::slider::Slider;
 use gpui_kit::*;
@@ -212,7 +210,7 @@ fn reduced_transparency_note(_: &SettingsWindow, cx: &mut Context<SettingsWindow
         (false, true) => text(SETTINGS_APPEARANCE_OPAQUE_INCREASE_CONTRAST),
         (false, false) => return None,
     };
-    Some(style::banner(ui(cx), style::BannerKind::Info, false, note).into_any_element())
+    Some(style::notice(ui(cx), style::NoticeKind::Info, note).into_any_element())
 }
 
 /// Below 95 % without the blur the desktop shows sharp behind the text, and no text colour
@@ -221,11 +219,9 @@ fn blur_off_warning(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
     let s = settings(cx);
     let look = Translucency { opacity: s.opacity, blur: s.blur };
     look.unsafe_without_blur().then(|| {
-        style::banner(ui(cx), style::BannerKind::Warning, false, text(SETTINGS_APPEARANCE_BLUR_OFF_WARNING))
+        style::notice(ui(cx), style::NoticeKind::Warning, text(SETTINGS_APPEARANCE_BLUR_OFF_WARNING))
             .child(
-                Button::new("blur-on")
-                    .ghost()
-                    .small()
+                style::notice_button("blur-on", ui(cx), style::NoticeKind::Warning, cx)
                     .label(text(SETTINGS_APPEARANCE_TURN_ON_BLUR))
                     .on_click(|_, _, cx| update_settings(cx, |s| s.blur = true)),
             )
@@ -236,13 +232,8 @@ fn blur_off_warning(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
 /// Under Reduce Transparency or Increase Contrast the switch can be on and still show no glass: say why.
 fn glass_held_note(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     (settings(cx).liquid_glass && cx.global::<SettingsStore>().system().opaque()).then(|| {
-        style::banner(
-            ui(cx),
-            style::BannerKind::Info,
-            false,
-            text(SETTINGS_APPEARANCE_GLASS_HELD_BY_ACCESSIBILITY),
-        )
-        .into_any_element()
+        style::notice(ui(cx), style::NoticeKind::Info, text(SETTINGS_APPEARANCE_GLASS_HELD_BY_ACCESSIBILITY))
+            .into_any_element()
     })
 }
 
@@ -298,22 +289,15 @@ fn draw_theme(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
         .rule_top(ui)
         .children(project.map(|project| {
             let root = project.root.clone();
-            style::banner(
-                ui,
-                style::BannerKind::Info,
-                false,
-                settings_appearance_project_theme_note(&project.name),
-            )
-            .child(
-                Button::new("project-theme-settings")
-                    .ghost()
-                    .small()
-                    .label(text(SETTINGS_APPEARANCE_PROJECT_SETTINGS))
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        this.projects.select(root.clone());
-                        this.show_section(Section::Projects, cx);
-                    })),
-            )
+            style::notice(ui, style::NoticeKind::Info, settings_appearance_project_theme_note(&project.name))
+                .child(
+                    style::notice_button("project-theme-settings", ui, style::NoticeKind::Info, cx)
+                        .label(text(SETTINGS_APPEARANCE_PROJECT_SETTINGS))
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            this.projects.select(root.clone());
+                            this.show_section(Section::Projects, cx);
+                        })),
+                )
         }))
         .child(window.render_theme_picker(cx))
         .into_any_element()

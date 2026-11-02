@@ -13,8 +13,7 @@ use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::integrations::{self, Spec, State};
@@ -280,8 +279,7 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
                 State::NotInstalled => text(SETTINGS_AGENTS_INSTALL_HOOKS),
             };
             Some(
-                Button::new(SharedString::from(format!("agent-hooks-{:?}", agent.id)))
-                    .small()
+                style::form_button(SharedString::from(format!("agent-hooks-{:?}", agent.id)))
                     .when(remove, |b| b.outline())
                     .when(!remove, |b| b.primary())
                     .label(label)
@@ -304,13 +302,10 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
         _ => None,
     };
     let problem = match &row.state {
-        Some(Err(err)) => Some(style::banner(ui, style::BannerKind::Danger, false, err.clone())),
-        Some(Ok(State::Partial)) => Some(style::banner(
-            ui,
-            style::BannerKind::Warning,
-            false,
-            settings_agents_hooks_partial(agent.name),
-        )),
+        Some(Err(err)) => Some(style::notice(ui, style::NoticeKind::Danger, err.clone())),
+        Some(Ok(State::Partial)) => {
+            Some(style::notice(ui, style::NoticeKind::Warning, settings_agents_hooks_partial(agent.name)))
+        }
         _ => None,
     };
     let note = row.spec.and_then(|spec| spec.note).filter(|_| row.hooks() != Some(State::NotInstalled));
@@ -451,8 +446,7 @@ fn login_row(
                 ),
         )
         .child(
-            Button::new(SharedString::from(id))
-                .small()
+            style::form_button(SharedString::from(id))
                 .when(remove, |b| b.outline())
                 .when(!remove, |b| b.primary())
                 .label(label)

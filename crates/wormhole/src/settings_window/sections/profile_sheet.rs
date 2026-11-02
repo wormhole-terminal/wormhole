@@ -2,8 +2,7 @@
 //! settings window, opened from the Profile page, the File menu and the command palette. Create
 //! makes the profile and switches Wormhole to it.
 
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::*;
 use wormhole_core::config::profile::{NewProfile, StartFrom, first_letter};
@@ -114,7 +113,7 @@ impl SettingsWindow {
                     .child(style::profile_avatar(ui, color, letter, PREVIEW_AVATAR))
                     .child(div().flex_1().child(Input::new(&sheet.name))),
             )
-            .child(style::section_label(ui, text(SETTINGS_PROFILE_START_FROM)))
+            .child(style::setting_group_head(ui, text(SETTINGS_PROFILE_START_FROM), None))
             .child(div().flex().flex_col().children(sheet.options.iter().enumerate().map(
                 |(ix, (label, _))| {
                     style::choice_row(("new-profile-from", ix), ui, label.clone(), ix == sheet.chosen)
@@ -138,9 +137,8 @@ impl SettingsWindow {
                     .justify_end()
                     .gap_2()
                     .child(
-                        Button::new("new-profile-cancel")
+                        style::form_button("new-profile-cancel")
                             .outline()
-                            .small()
                             .label(text(SETTINGS_PROFILE_CANCEL))
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.new_profile = None;
@@ -148,9 +146,8 @@ impl SettingsWindow {
                             })),
                     )
                     .child(
-                        Button::new("new-profile-create")
+                        style::form_button("new-profile-create")
                             .primary()
-                            .small()
                             .label(text(SETTINGS_PROFILE_CREATE))
                             .on_click(cx.listener(|this, _, window, cx| this.create_profile(window, cx))),
                     ),

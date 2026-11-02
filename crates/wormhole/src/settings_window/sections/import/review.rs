@@ -3,8 +3,7 @@
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::import::{Found, Proposed, Setting, SettingValue, Source, command_line, visible};
@@ -35,7 +34,7 @@ impl SettingsWindow {
         let (code_font, _) = crate::fonts::code_font(cx);
 
         let mut column = div().flex().flex_col().gap_2();
-        column = column.child(style::section_label(ui, text(SETTINGS_IMPORT_TAKE)));
+        column = column.child(style::setting_group_head(ui, text(SETTINGS_IMPORT_TAKE), None));
         if proposal.values.is_empty() {
             column = column
                 .child(div().text_body().text_color(ui.muted).child(text(SETTINGS_IMPORT_NOTHING_TO_TAKE)));
@@ -46,9 +45,8 @@ impl SettingsWindow {
             column = column.child(proposed_row(ui, &code_font, &row, cx));
         }
         if !proposal.skipped.is_empty() {
-            column = column
-                .child(div().pt_2().child(style::section_label(ui, text(SETTINGS_IMPORT_LEAVE))))
-                .children(proposal.skipped.iter().map(|skipped| {
+            column = column.child(style::setting_group_head(ui, text(SETTINGS_IMPORT_LEAVE), None)).children(
+                proposal.skipped.iter().map(|skipped| {
                     // The key above its reason, so a long one (`keybind = super+d=new_split:right`)
                     // has the whole row's width before it is cut.
                     div()
@@ -66,7 +64,8 @@ impl SettingsWindow {
                                 .child(visible(&skipped.key)),
                         )
                         .child(div().min_w_0().text_body().child(reason_text(&skipped.reason)))
-                }));
+                }),
+            );
         }
         column
             .child(self.render_import_footer(found, selected, proposal.values.len(), ui, cx))
@@ -95,9 +94,8 @@ impl SettingsWindow {
             .pt_2()
             .rule_top(ui)
             .child(
-                Button::new("import-apply")
+                style::form_button("import-apply")
                     .primary()
-                    .small()
                     .icon(IconName::ArrowDownToLine)
                     .label(text(SETTINGS_IMPORT_APPLY))
                     .disabled(selected == 0)

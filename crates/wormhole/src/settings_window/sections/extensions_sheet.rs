@@ -9,8 +9,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::probe::approval::{self, Changes, Grants, Proof, Request};
@@ -282,13 +281,14 @@ impl SettingsWindow {
         if let Some(changes) = &changes {
             body = body.child(changes_block(ui, changes));
         }
-        body = body.child(style::section_label(
+        body = body.child(style::setting_group_head(
             ui,
             if summary.permissions.is_empty() {
                 text(SETTINGS_EXTENSIONS_ASKS_FOR_NOTHING)
             } else {
                 text(SETTINGS_EXTENSIONS_ASKS_FOR)
             },
+            None,
         ));
         let mut list = div().flex().flex_col();
         for (ix, permission) in summary.permissions.iter().enumerate() {
@@ -296,16 +296,15 @@ impl SettingsWindow {
         }
         body = body.child(list);
         if !summary.combinations.is_empty() {
-            body = body.child(style::section_label(ui, text(SETTINGS_EXTENSIONS_COMBINATIONS))).children(
-                summary.combinations.iter().map(|combination| {
-                    style::banner(
+            body = body
+                .child(style::setting_group_head(ui, text(SETTINGS_EXTENSIONS_COMBINATIONS), None))
+                .children(summary.combinations.iter().map(|combination| {
+                    style::notice(
                         ui,
-                        style::BannerKind::Danger,
-                        false,
+                        style::NoticeKind::Danger,
                         settings_extensions_combination(&reveal(&combination.description)),
                     )
-                }),
-            );
+                }));
         }
         // Outside the scrolling part: what was fingerprinted stays in view next to the buttons.
         let fingerprint =
@@ -350,9 +349,8 @@ impl SettingsWindow {
                     .justify_end()
                     .gap_2()
                     .child(
-                        Button::new("probe-cancel")
+                        style::form_button("probe-cancel")
                             .outline()
-                            .small()
                             .label(text(SETTINGS_EXTENSIONS_CANCEL))
                             .disabled(busy)
                             .on_click(cx.listener(|this, _, _, cx| {
@@ -360,9 +358,8 @@ impl SettingsWindow {
                             })),
                     )
                     .child(
-                        Button::new("probe-approve")
+                        style::form_button("probe-approve")
                             .primary()
-                            .small()
                             .label(approve_label)
                             .loading(busy)
                             .disabled(busy)
@@ -420,8 +417,11 @@ const FADE_H: f32 = 32.0;
 
 /// What differs from the approval the Probe is `Changed` against.
 fn changes_block(ui: crate::settings::UiColors, changes: &Changes) -> Div {
-    let mut block =
-        div().flex().flex_col().gap_1().child(style::section_label(ui, text(SETTINGS_EXTENSIONS_SINCE)));
+    let mut block = div().flex().flex_col().gap_1().child(style::setting_group_head(
+        ui,
+        text(SETTINGS_EXTENSIONS_SINCE),
+        None,
+    ));
     if changes.files_only() {
         block = block.child(div().text_body().child(text(SETTINGS_EXTENSIONS_FILES_CHANGED)));
     }

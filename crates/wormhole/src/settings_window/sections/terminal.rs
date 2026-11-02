@@ -13,8 +13,6 @@ use wormhole_text::text;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::Button;
 use gpui_kit::*;
 use wormhole_core::config::OptionAsMeta;
 use wormhole_core::config::clipboard::{ClipboardRead, ClipboardWrite};
@@ -118,9 +116,8 @@ fn draw_default_terminal(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
             text(SETTINGS_TERMINAL_DEFAULT_ONLY_APP),
         ),
     };
-    Button::new("default-terminal")
+    style::form_button("default-terminal")
         .outline()
-        .small()
         .icon(icon)
         .label(label)
         .disabled(state != Some(false))

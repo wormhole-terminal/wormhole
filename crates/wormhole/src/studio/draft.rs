@@ -371,7 +371,7 @@ mod tests {
         assert!(shown.iter().any(|(g, _)| g.name == "Chrome"));
         let shown = visible(Show::All, None, "banners", &worked, &nothing);
         assert_eq!(shown.len(), 1);
-        assert_eq!(shown[0].1.len(), 8);
+        assert_eq!(shown[0].1.len(), 14);
         assert!(visible(Show::Yours, None, "border", &changed, &nothing).is_empty());
     }
 

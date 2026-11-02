@@ -48,6 +48,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Settings rows are more compact. Explanations open from an info button, while warnings stay visible;
   the full descriptions remain searchable and available to VoiceOver.
 
+- Settings shows one notice for information, warnings and errors, drawn on a solid blue, amber or red with
+  its button on the same colour; every group inside a page has the same heading; every preview sits in the
+  same frame; and every button in a row is as tall as the menus beside it.
+
 ### Fixed
 
 - Starting many terminals at the same moment (a relaunch attaching a window full of them, or a script opening

@@ -42,8 +42,8 @@
 //! [`icon_button`] is [`HIT_MIN`] square with a 14 pt glyph, 16 in a title row.
 //!
 //! **Controls** come in two heights, [`CONTROL_H`] and the compact
-//! [`CONTROL_H_SM`] used inside panels. Buttons are GPUI Kit's `Button`: `small`
-//! in forms, `xsmall` in panels, `primary` for the one main action; a glyph-only
+//! [`CONTROL_H_SM`] used inside panels. Buttons are GPUI Kit's `Button`: [`form_button`]
+//! (a `small` one as tall as [`CONTROL_H`]) in forms and Settings, `xsmall` in panels, `primary` for the one main action; a glyph-only
 //! button is an [`icon_button`], never a text character. Anything smaller than
 //! [`HIT_MIN`] that you click gets a [`hit_area`].
 //!
@@ -74,6 +74,7 @@ pub(crate) mod menu_layer;
 mod messages;
 mod metrics;
 pub mod motion;
+mod notice;
 mod open_one;
 mod palette;
 mod panel;
@@ -123,6 +124,7 @@ pub(crate) use lights::{
 };
 pub use messages::*;
 pub use metrics::Metrics;
+pub use notice::*;
 pub(crate) use open_one::OpenOne;
 pub use palette::*;
 pub use panel::*;

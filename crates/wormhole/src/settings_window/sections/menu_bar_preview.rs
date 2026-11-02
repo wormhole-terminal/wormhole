@@ -12,7 +12,7 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, StatusGlyph, TextRole};
+use crate::style::{self, StatusGlyph, TextRole};
 
 /// The menu bar's height.
 const MENU_BAR_H: f32 = 24.0;
@@ -44,16 +44,13 @@ pub(in crate::settings_window) fn draw_menu_bar_preview(cx: &mut Context<Setting
     working.trailing.push(time("4m")); // text: sample (a made-up time of the preview)
 
     // The menu bar: the clock's side, the item with its dot and count.
-    let bar = div()
+    let bar = style::preview_surface(ui)
         .flex()
         .items_center()
         .justify_end()
         .gap_4()
         .h(px(MENU_BAR_H))
         .px_3()
-        .rounded(ui.radius)
-        .bg(ui.panel)
-        .outlined(ui, ui.border)
         .text_caption()
         .child(
             div()

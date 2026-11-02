@@ -104,13 +104,12 @@ pub(in crate::settings_window) fn draw_stage(
         .flex_col()
         .gap_2()
         .child(
-            div()
+            // Edge to edge: the window it shows fills the frame.
+            style::preview_frame(ui)
+                .p_0()
                 .relative()
                 .h(px(STAGE_H))
                 .w_full()
-                .rounded(ui.radius_lg)
-                .overflow_hidden()
-                .outlined(ui, ui.border)
                 .bg(base)
                 .child(div().absolute().size_full().bg(wallpaper))
                 .child(window),

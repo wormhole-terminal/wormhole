@@ -117,7 +117,7 @@ const SLACK: u64 = 20;
 const BUDGET: [(&str, u64); 17] = [
     ("Profile", 7051),
     // With the Worktrees group's switch for cloning build folders (356).
-    ("Terminal", 11340),
+    ("Terminal", 11291),
     // With the Liquid Glass row (16,810 before it came back).
     ("Appearance", 18033),
     ("Fonts", 8292),
@@ -133,16 +133,18 @@ const BUDGET: [(&str, u64); 17] = [
     // page measured 9,501: under this, which stays.
     ("Agents", 10486),
     ("MenuBar", 6904),
-    ("Import", 53549),
-    ("Updates", 6186),
+    // Fell from 53,549 to 50,188 (measured) when the group labels, notices and buttons became one
+    // component each; Terminal, Updates, Motion, Projects and Extensions fell by 3 to 589 with them.
+    ("Import", 50188),
+    ("Updates", 5597),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     // With the New programs group: the Developer Tools row, its description and its button (417).
     ("Advanced", 5136),
-    ("Motion", 6787),
-    ("Projects", 9283),
+    ("Motion", 6784),
+    ("Projects", 9281),
     // Measured with the nav's Motion and Import rows, which came after the page.
-    ("Extensions", 2845),
+    ("Extensions", 2842),
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost

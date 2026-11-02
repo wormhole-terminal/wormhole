@@ -558,6 +558,20 @@ pub const TOKEN_USES: &[TokenUse] = &[
         ],
     ),
     u(
+        "notice",
+        "notice",
+        Settings,
+        &[
+            "banner.info.solid",
+            "banner.info.solid.text",
+            "banner.warning.solid",
+            "banner.warning.solid.text",
+            "banner.danger.solid",
+            "banner.danger.solid.text",
+            "metrics.radius",
+        ],
+    ),
+    u(
         "palette.row",
         "palette result",
         Ambient,

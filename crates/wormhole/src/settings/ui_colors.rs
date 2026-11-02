@@ -118,6 +118,14 @@ pub struct UiColors {
     pub banner_danger_border: Hsla,
     pub banner_success: Hsla,
     pub banner_success_border: Hsla,
+    /// Settings' notices (`style::notice`): each kind's solid fill and the words on it
+    /// (`banner.<kind>.solid` and `.solid.text`).
+    pub notice_info: Hsla,
+    pub notice_info_text: Hsla,
+    pub notice_warning: Hsla,
+    pub notice_warning_text: Hsla,
+    pub notice_danger: Hsla,
+    pub notice_danger_text: Hsla,
     /// A file's added and removed line counts (`diff.added` / `diff.removed`).
     pub added: Hsla,
     pub removed: Hsla,
@@ -247,6 +255,12 @@ const COLORS: &[Field] = fields! {
     banner_danger_border = "banner.danger.border";
     banner_success = "banner.success.background";
     banner_success_border = "banner.success.border";
+    notice_info = "banner.info.solid";
+    notice_info_text = "banner.info.solid.text";
+    notice_warning = "banner.warning.solid";
+    notice_warning_text = "banner.warning.solid.text";
+    notice_danger = "banner.danger.solid";
+    notice_danger_text = "banner.danger.solid.text";
     added = "diff.added";
     removed = "diff.removed";
     branch = "git.branch";

@@ -9,8 +9,7 @@ use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::component::slider::SliderEvent;
@@ -454,39 +453,31 @@ impl SettingsWindow {
         // build, Unstable or unlocked flags ever show such a section, so the way is always there.
         if let Some(flag) = self.section.feature_flag() {
             problems.push(
-                style::banner(
-                    ui,
-                    style::BannerKind::Info,
-                    false,
-                    settings_window_preview_feature_note(flag.key()),
-                )
-                .child(
-                    Button::new("preview-open-flags")
-                        .outline()
-                        .small()
-                        .label(text(SETTINGS_WINDOW_FEATURE_FLAGS))
-                        .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::FeatureFlags, cx))),
-                )
-                .into_any_element(),
+                style::notice(ui, style::NoticeKind::Info, settings_window_preview_feature_note(flag.key()))
+                    .child(
+                        style::notice_button("preview-open-flags", ui, style::NoticeKind::Info, cx)
+                            .label(text(SETTINGS_WINDOW_FEATURE_FLAGS))
+                            .on_click(
+                                cx.listener(|this, _, _, cx| this.show_section(Section::FeatureFlags, cx)),
+                            ),
+                    )
+                    .into_any_element(),
             );
         }
         match store.error.clone() {
             Some(error) if self.section == Section::Advanced => problems.push(
-                style::banner(ui, style::BannerKind::Warning, false, error)
+                style::notice(ui, style::NoticeKind::Warning, error)
                     .child(
-                        Button::new("config-error-open")
-                            .outline()
-                            .small()
+                        style::notice_button("config-error-open", ui, style::NoticeKind::Warning, cx)
                             .label(text(SETTINGS_WINDOW_OPEN))
                             .on_click(|_, _, _| sections::open_in_editor(&SettingsStore::config_path())),
                     )
                     .into_any_element(),
             ),
             _ if store.config_unreadable() => problems.push(
-                style::banner(
+                style::notice(
                     ui,
-                    style::BannerKind::Warning,
-                    false,
+                    style::NoticeKind::Warning,
                     text(SETTINGS_WINDOW_CONFIG_JSON_CANT_BE_READ_SO),
                 )
                 .into_any_element(),
@@ -496,25 +487,22 @@ impl SettingsWindow {
         if self.section == Section::Profile {
             if let Some(message) = app(cx).profiles_error.clone() {
                 problems.push(
-                    style::banner(
+                    style::notice(
                         ui,
-                        style::BannerKind::Warning,
-                        false,
+                        style::NoticeKind::Warning,
                         settings_window_profiles_unreadable(&message),
                     )
                     .into_any_element(),
                 );
             }
             if let Some(message) = self.profile_form.as_ref().and_then(|form| form.problem()) {
-                problems
-                    .push(style::banner(ui, style::BannerKind::Danger, false, message).into_any_element());
+                problems.push(style::notice(ui, style::NoticeKind::Danger, message).into_any_element());
             }
         }
         if let Some((section, notice)) = &self.notice
             && *section == self.section
         {
-            problems
-                .push(style::banner(ui, style::BannerKind::Danger, false, notice.clone()).into_any_element());
+            problems.push(style::notice(ui, style::NoticeKind::Danger, notice.clone()).into_any_element());
         }
         problems
     }
@@ -553,17 +541,15 @@ impl SettingsWindow {
                     .gap_2()
                     .pt_1()
                     .child(
-                        Button::new("no-results-config")
+                        style::form_button("no-results-config")
                             .outline()
-                            .small()
                             .icon(IconName::CodeXml)
                             .label(text(SETTINGS_WINDOW_OPEN_CONFIG_JSON))
                             .on_click(|_, _, _| sections::open_in_editor(&SettingsStore::config_path())),
                     )
                     .child(
-                        Button::new("no-results-clear")
+                        style::form_button("no-results-clear")
                             .ghost()
-                            .small()
                             .label(text(SETTINGS_WINDOW_CLEAR_SEARCH))
                             .on_click(cx.listener(|this, _, window, cx| this.clear_search(window, cx))),
                     ),
