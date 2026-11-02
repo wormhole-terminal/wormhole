@@ -17,6 +17,8 @@ mod changed_tests;
 mod close_tests;
 #[cfg(test)]
 mod color_tests;
+#[cfg(test)]
+mod default_words_tests;
 pub(crate) mod devctl;
 #[cfg(test)]
 mod extensions_tests;

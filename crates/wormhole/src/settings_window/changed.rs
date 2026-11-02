@@ -178,12 +178,15 @@ fn default_note(row: &ChangedRow, setting: &Setting, values: &Values) -> SharedS
 
 /// The default of a row, in its control's own words where it has them (a menu's option, a switch's On),
 /// else in plain words from the defaults of its keys.
-fn default_words(row: &ChangedRow, setting: &Setting, values: &Values) -> String {
+pub(super) fn default_words(row: &ChangedRow, setting: &Setting, values: &Values) -> String {
     let defaults = Settings::default();
     if let Some(words) = setting.default_words {
         return words().to_string();
     }
     match &setting.control {
+        Control::Recorder(recorder) => {
+            super::recorder::default_keys(recorder).unwrap_or_else(|| values.default_words(row.entry.keys))
+        }
         Control::Menu(menu) => match menu.current(&defaults) {
             Current::At(at) => menu.options[at].label.words().to_string(),
             Current::Other(words) => words,

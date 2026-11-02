@@ -59,22 +59,34 @@ macro_rules! pick {
     };
 }
 
+/// The name of the default option of a choice, as its menu lists it.
+fn default_name<T: MotionChoice>(labels: Labels<T>, default: T) -> SharedString {
+    labels
+        .iter()
+        .find(|(choice, _)| *choice == default)
+        .map_or_else(SharedString::default, |(_, key)| text(*key).into())
+}
+
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("motion-insert", |_, cx| {
         select("motion-insert", INSERT, settings(cx).motion.insert, pick!(insert), cx)
     })
+    .default_words(|| default_name(INSERT, Settings::default().motion.insert))
     .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Insert, ui(cx)))),
     Setting::custom("motion-fold", |_, cx| {
         select("motion-fold", FOLD, settings(cx).motion.fold, pick!(fold), cx)
     })
+    .default_words(|| default_name(FOLD, Settings::default().motion.fold))
     .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Fold, ui(cx)))),
     Setting::custom("motion-status", |_, cx| {
         select("motion-status", STATUS, settings(cx).motion.status, pick!(status), cx)
     })
+    .default_words(|| default_name(STATUS, Settings::default().motion.status))
     .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Status, ui(cx)))),
     Setting::custom("motion-column", |_, cx| {
         select("motion-column", COLUMN, settings(cx).motion.column, pick!(column), cx)
     })
+    .default_words(|| default_name(COLUMN, Settings::default().motion.column))
     .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Column, ui(cx)))),
 ];
 

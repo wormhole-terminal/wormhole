@@ -28,6 +28,13 @@ pub(super) fn draw_control(_: &SettingsWindow, _: &mut Context<SettingsWindow>) 
     div().into_any_element()
 }
 
+/// The parts shown by default, named as the list names them.
+pub(super) fn default_parts() -> SharedString {
+    let defaults = crate::settings::Settings::default();
+    let names: Vec<_> = defaults.title_row().parts().iter().map(|part| text(parts::label(*part))).collect();
+    names.join(", ").into()
+}
+
 /// The parts, shown ones first in their order, then the hidden ones.
 pub(super) fn draw_parts(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     let ui = ui(cx);

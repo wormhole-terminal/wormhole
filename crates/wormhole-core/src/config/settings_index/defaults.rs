@@ -32,6 +32,7 @@ fn plain(value: &Value) -> String {
         Value::Array(items) => {
             items.iter().map(plain).filter(|item| !item.is_empty()).collect::<Vec<_>>().join(", ")
         }
+        Value::Object(map) if map.is_empty() => String::new(),
         Value::Object(_) => value.to_string(),
         Value::Null => String::new(),
     }

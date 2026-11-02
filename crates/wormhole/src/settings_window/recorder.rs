@@ -46,6 +46,12 @@ fn caps(mods: KeyMods, key: Option<&str>) -> Vec<SharedString> {
     caps
 }
 
+/// The keys a recorder row has by default, as its key caps read ("⌥⌘J"); `None` where it has none.
+pub(super) fn default_keys(row: &RecorderRow) -> Option<String> {
+    let spec = (row.get)(&Settings::default()).trim().parse::<KeySpec>().ok()?;
+    Some(caps(spec.mods, Some(&spec.key)).iter().map(|cap| cap.to_string()).collect())
+}
+
 fn mods_of(modifiers: &Modifiers) -> KeyMods {
     KeyMods { cmd: modifiers.platform, ctrl: modifiers.control, alt: modifiers.alt, shift: modifiers.shift }
 }

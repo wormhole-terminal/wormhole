@@ -13,8 +13,8 @@ use wormhole_text::keys::*;
 
 use super::preview;
 use crate::select::{self, MenuLine, MenuOptions};
-use crate::settings::settings;
 use crate::settings::update_settings;
+use crate::settings::{Settings, settings};
 use crate::settings_window::registry::row_label;
 use crate::settings_window::registry::{MenuOption, Setting, toggle};
 use crate::settings_window::{SettingsWindow, SidebarLook, ui};
@@ -27,7 +27,7 @@ pub(super) const SETTINGS: &[Setting] = &[
         |s| usize::from(s.terminals_in == TerminalsIn::Tabs),
         |s, ix| s.terminals_in = if ix == 0 { TerminalsIn::Sidebar } else { TerminalsIn::Tabs },
     ),
-    Setting::custom("density", draw_density),
+    Setting::custom("density", draw_density).default_words(|| Settings::default().density.label().into()),
     toggle!("cards", show_groups_as_cards),
     toggle!("fade-group-colors", fade_group_colors),
     toggle!("show-group-folders", show_group_folders),

@@ -26,7 +26,7 @@ use crate::platform::apps;
 use crate::platform::default_app;
 use crate::select::{MenuLine, MenuOptions, menu_select};
 use crate::settings::update_settings;
-use crate::settings::{SettingsStore, UiColors, settings};
+use crate::settings::{Settings, SettingsStore, UiColors, settings};
 use crate::settings_window::registry::{MenuOption, Setting, row_label, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
@@ -36,7 +36,8 @@ const SCROLLBACK: [usize; 6] = [1_000, 5_000, 10_000, 50_000, 100_000, 200_000];
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("terminal-preview", super::draw_split_preview),
-    Setting::custom("scrollback", draw_scrollback),
+    Setting::custom("scrollback", draw_scrollback)
+        .default_words(|| lines(Settings::default().scrollback_lines).into()),
     toggle!("restore-text", restore_terminal_text),
     toggle!("minimap", minimap),
     toggle!("split-gaps", split_gaps),
@@ -58,9 +59,9 @@ pub(super) const SETTINGS: &[Setting] = &[
             .into_any_element()
     })
     .describe(describe_font),
-    Setting::custom("open-in", draw_open_in),
+    Setting::custom("open-in", draw_open_in).default_words(|| text(SETTINGS_TERMINAL_OPEN_IN_DEFAULT).into()),
     Setting::custom("default-terminal", draw_default_terminal),
-    Setting::custom("default-shell", draw_default_shell),
+    Setting::custom("default-shell", draw_default_shell).default_words(default_shell_name),
     Setting::custom("shells", |_, cx| {
         style::link_button("edit-shells", ui(cx), text(SETTINGS_TERMINAL_EDIT_IN_CONFIG_JSON), false)
             .on_click(|_, _, _| open_in_editor(&SettingsStore::config_path()))
@@ -157,6 +158,16 @@ fn describe_worktree_base(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) 
     let home = crate::settings_window::home();
     let shown = wormhole_core::view::sidebar::display_path(Path::new(&base), home.as_deref());
     Some(settings_terminal_worktree_base_under(&shown).into())
+}
+
+/// The shell a new terminal runs by default, as the Default shell menu names it.
+fn default_shell_name() -> SharedString {
+    let defaults = Settings::default();
+    let key = shells::default_key(&defaults);
+    shells::choices(&defaults)
+        .into_iter()
+        .find(|choice| choice.key == key)
+        .map_or_else(|| SharedString::from(key.to_string()), |choice| choice.name.into())
 }
 
 /// "10,000 lines".

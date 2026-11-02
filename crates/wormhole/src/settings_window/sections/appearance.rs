@@ -20,7 +20,7 @@ use wormhole_text::text;
 use super::{color_rows, open_button, stage, title_row};
 use crate::select::{self, MenuOptions};
 use crate::settings::update_settings;
-use crate::settings::{SettingsStore, UiColors, settings};
+use crate::settings::{Settings, SettingsStore, UiColors, settings};
 use crate::settings_window::registry::{MenuOption, ProjectSource, Setting, row_label, toggle};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
 use crate::style::{self, Edges};
@@ -54,16 +54,20 @@ pub(super) const SETTINGS: &[Setting] = &[
         .describe(describe_primary)
         .default_words(color_rows::theme_words),
     Setting::custom("branch-color", color_rows::draw_branch).default_words(color_rows::theme_words),
-    Setting::custom("opacity", draw_opacity).below(reduced_transparency_note),
+    Setting::custom("opacity", draw_opacity)
+        .below(reduced_transparency_note)
+        .default_words(|| format!("{:.0} %", Settings::default().opacity * 100.0).into()),
     toggle!("blur", blur).below(blur_off_warning),
     toggle!("liquid-glass", liquid_glass)
         .chip(|_, _| Some(text(SETTINGS_APPEARANCE_LIQUID_GLASS_BETA).into()))
         .below(glass_held_note),
-    Setting::custom("translucent", draw_translucent),
+    Setting::custom("translucent", draw_translucent).default_words(default_translucent),
     toggle!("column-dividers", column_dividers),
     toggle!("status-bar", status_bar),
     toggle!("icon-animations", icon_animations),
-    Setting::custom("title-row", title_row::draw_control).below(title_row::draw_parts),
+    Setting::custom("title-row", title_row::draw_control)
+        .below(title_row::draw_parts)
+        .default_words(title_row::default_parts),
     Setting::custom("icon-theme", draw_icon_select),
     Setting::custom("icon-themes-folder", |_, _| {
         open_button(
@@ -74,6 +78,17 @@ pub(super) const SETTINGS: &[Setting] = &[
         )
     }),
 ];
+
+/// The two windows the opacity and blur may reach, by default: neither, as the checkboxes show.
+fn default_translucent() -> SharedString {
+    let defaults = Settings::default();
+    text(if defaults.settings_translucent || defaults.studio_translucent {
+        SETTINGS_CHANGED_ON
+    } else {
+        SETTINGS_CHANGED_OFF
+    })
+    .into()
+}
 
 /// "The theme's · #7aa2f7. Off: …": the primary in use, the theme's or the one chosen.
 fn describe_primary(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<SharedString> {

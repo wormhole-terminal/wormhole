@@ -44,6 +44,9 @@ settings-terminal-open-in = Open folders in
     .description = The Open in… button in a terminal's title row opens its folder here; its menu lists the others
     .keywords = editor ide zed code vscode cursor sublime xcode jetbrains phpstorm finder app
 
+# What Open folders in is by default, on the Changed page: the app is found on each Mac.
+settings-terminal-open-in-default = The first editor found, else Finder
+
 settings-terminal-default-terminal = Default terminal
     .description = Double-clicked .command files and programs run in a new { -brand } terminal instead of Terminal
     .keywords = default terminal app command script executable finder open with launch services

@@ -15,7 +15,7 @@ use wormhole_text::{text, whole};
 use super::card::{Words, card};
 use super::open_button;
 use crate::fonts::LoadedFonts;
-use crate::settings::{SettingsStore, settings};
+use crate::settings::{Settings, SettingsStore, settings};
 use crate::settings_window::registry::{Setting, toggle};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
 use crate::style::{self, Edges, TextRole};
@@ -23,7 +23,8 @@ use crate::theme_bridge;
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("font-specimen", draw_specimen),
-    Setting::custom("font-terminal", |w, cx| w.font_control(FontSlot::Terminal, cx)),
+    Setting::custom("font-terminal", |w, cx| w.font_control(FontSlot::Terminal, cx))
+        .default_words(|| font_words(FontSlot::Terminal)),
     Setting::custom("line-height", |w, cx| {
         let ui = ui(cx);
         let value = format!("{:.2}", settings(cx).line_height);
@@ -35,10 +36,13 @@ pub(super) const SETTINGS: &[Setting] = &[
             false,
         )
         .into_any_element()
-    }),
+    })
+    .default_words(|| format!("{:.2}", Settings::default().line_height).into()),
     toggle!("font-ligatures", font_ligatures),
-    Setting::custom("font-code", |w, cx| w.font_control(FontSlot::Code, cx)),
-    Setting::custom("font-interface", |w, cx| w.font_control(FontSlot::Interface, cx)),
+    Setting::custom("font-code", |w, cx| w.font_control(FontSlot::Code, cx))
+        .default_words(|| font_words(FontSlot::Code)),
+    Setting::custom("font-interface", |w, cx| w.font_control(FontSlot::Interface, cx))
+        .default_words(|| font_words(FontSlot::Interface)),
     Setting::custom("fonts-folder", |_, _| {
         open_button("fonts-folder", IconName::ExternalLink, text(SETTINGS_FONTS_OPEN_FONTS_FOLDER), |cx| {
             open_folder(&crate::active_profile::paths().fonts_dir(), cx)
@@ -46,6 +50,18 @@ pub(super) const SETTINGS: &[Setting] = &[
     }),
     Setting::custom("custom-fonts", |_, _| div().into_any_element()).describe(describe_custom),
 ];
+
+/// A font row's default as its control shows it: the family (or what an empty one follows) and the size.
+fn font_words(slot: FontSlot) -> SharedString {
+    let defaults = Settings::default();
+    let family = defaults.slot_family(slot).trim();
+    let face = match slot.inherit_label().filter(|_| family.is_empty()) {
+        Some(label) => label,
+        None => display_name(family),
+    };
+    let size = settings_fonts_size_points(&format!("{:.0}", defaults.slot_size(slot)));
+    format!("{face}, {size}").into()
+}
 
 /// "2 families found: Berkeley Mono, Monaspace Neon".
 fn describe_custom(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<SharedString> {
