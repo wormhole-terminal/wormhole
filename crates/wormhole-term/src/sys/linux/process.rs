@@ -21,6 +21,11 @@ pub(crate) fn parent(_pid: u32) -> Option<u32> {
     None
 }
 
+/// [`start_time`] for a process of another user: `/proc` shows the same to everyone.
+pub(crate) fn start_time_any_user(pid: u32) -> Option<SystemTime> {
+    start_time(pid)
+}
+
 /// When the process started: its start in clock ticks after boot (`/proc/<pid>/stat`, field 22)
 /// from the boot time (`btime` in `/proc/stat`).
 pub(crate) fn start_time(pid: u32) -> Option<SystemTime> {

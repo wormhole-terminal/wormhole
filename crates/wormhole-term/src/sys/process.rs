@@ -102,6 +102,12 @@ pub fn start_time(pid: u32) -> Option<SystemTime> {
     os::start_time(pid)
 }
 
+/// [`start_time`] for a process of another user as well: for showing when a program started, never for
+/// deciding who a process is.
+pub fn start_time_any_user(pid: u32) -> Option<SystemTime> {
+    os::start_time_any_user(pid)
+}
+
 /// The device of the process's controlling terminal.
 pub fn tty(pid: u32) -> Option<u32> {
     os::tty(pid)

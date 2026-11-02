@@ -108,6 +108,35 @@ pub(crate) fn start_time(pid: u32) -> Option<SystemTime> {
     SystemTime::UNIX_EPOCH.checked_add(since)
 }
 
+/// [`start_time`] for a process of another user too (a setuid-root program such as `top`), which
+/// `proc_pidinfo` refuses and the kernel's process table still answers. Kept apart: who a peer is and
+/// whether it is the same process (`start_time`) is decided only from what the system shows of one's own.
+pub(crate) fn start_time_any_user(pid: u32) -> Option<SystemTime> {
+    let since = kernel_start_time(pid)?;
+    SystemTime::UNIX_EPOCH.checked_add(since)
+}
+
+/// When a process started since the epoch, from the kernel's process table (`kinfo_proc`), which any user may
+/// read for any process. Its first field is a `timeval` (seconds as `i64`, then microseconds as `i32`): the
+/// layout is the system's ABI, and the buffer is far larger than the struct, so only that prefix is read.
+#[allow(unsafe_code)] // sysctl FFI; the buffer is sized and the kernel is told its size.
+fn kernel_start_time(pid: u32) -> Option<Duration> {
+    let mut mib = [libc::CTL_KERN, libc::KERN_PROC, libc::KERN_PROC_PID, i32::try_from(pid).ok()?];
+    let mut buf = [0u8; 2048];
+    let mut size: libc::size_t = buf.len();
+    // SAFETY: `buf` is `size` bytes and `size` tells the kernel so.
+    let ok = unsafe {
+        libc::sysctl(mib.as_mut_ptr(), 4, buf.as_mut_ptr().cast(), &mut size, std::ptr::null_mut(), 0)
+    };
+    if ok != 0 || size < 16 {
+        return None;
+    }
+    let secs = i64::from_ne_bytes(buf[..8].try_into().ok()?);
+    let micros = i32::from_ne_bytes(buf[8..12].try_into().ok()?);
+    // A process that is gone answers with an empty (zeroed) record at times.
+    (secs > 0).then(|| Duration::from_secs(secs as u64) + Duration::from_micros(micros.max(0) as u64))
+}
+
 /// The controlling terminal's device.
 pub(crate) fn tty(pid: u32) -> Option<u32> {
     bsd_info(pid).map(|info| info.e_tdev).filter(|&dev| dev != 0 && dev != u32::MAX)

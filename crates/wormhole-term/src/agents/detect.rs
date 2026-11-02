@@ -51,8 +51,26 @@ pub struct Foreground {
 /// leader, which is what the shell started), or `None` while the shell is at its prompt.
 pub fn foreground_command(shell_pid: u32) -> Option<Foreground> {
     let pgid = process::foreground_group(shell_pid).filter(|&pgid| pgid != shell_pid)?;
-    let (exe, argv) = process::command_line(pgid)?;
-    Some(Foreground { command: command_label(&exe, &argv), started: process::start_time(pgid)? })
+    Some(Foreground { command: command_of(pgid)?, started: process::start_time_any_user(pgid)? })
+}
+
+/// The command a process group's leader runs, as a row spells it. The system will not show the arguments of
+/// a program that is setuid root (macOS `top`, `ping`, `sudo`) to the user it runs for, but it still gives
+/// its path, and so its name: a row says "top" then, not the shell's own name as if nothing ran.
+fn command_of(pid: u32) -> Option<String> {
+    match process::command_line(pid) {
+        Some((exe, argv)) => Some(command_label(&exe, &argv)),
+        None => {
+            let path = process::executable(pid)?;
+            // Only a program that runs as another user hides its arguments; for any other, an unreadable
+            // line is an exec in flight or an exit, and naming the executable then would flicker.
+            let set_id = std::fs::metadata(&path).is_ok_and(|meta| crate::sys::fs::mode(&meta) & 0o6000 != 0);
+            if !set_id {
+                return None;
+            }
+            path.file_name().map(|name| name.to_string_lossy().into_owned()).filter(|name| !name.is_empty())
+        }
+    }
 }
 
 /// Programs that run a script named by their first argument: the script is the command.
@@ -105,6 +123,35 @@ pub(crate) fn shell_holds_terminal(shell_pid: u32) -> Option<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A program whose arguments the system keeps from the user (setuid root, like macOS `top`) is still
+    /// named, so the row shows it and not the shell.
+    #[test]
+    fn a_setuid_program_is_named_though_its_arguments_are_hidden() {
+        let top = std::path::Path::new("/usr/bin/top");
+        if !top.exists() {
+            return;
+        }
+        let mut child = std::process::Command::new(top)
+            .args(["-l", "0", "-s", "5"])
+            .stdout(std::process::Stdio::null())
+            .spawn()
+            .expect("spawns top");
+        let mut named = None;
+        // Not yet exec'd right after spawn.
+        for _ in 0..100 {
+            named = command_of(child.id()).filter(|name| name.starts_with("top"));
+            if named.is_some() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        let started = process::start_time_any_user(child.id());
+        let _ = child.kill();
+        let _ = child.wait();
+        assert!(named.is_some(), "top is named");
+        assert!(started.is_some_and(|t| t.elapsed().is_ok_and(|age| age.as_secs() < 60)), "and has a start");
+    }
 
     /// A real process that calls itself like an agent: `sleep` started
     /// through a symlink named `gemini` (argv[0] is the link). A copied

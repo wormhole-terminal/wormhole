@@ -30,6 +30,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- A terminal running `top` (or another program that is setuid root, like `ping` and `sudo`) was named after the
+  shell in the sidebar, and not counted as running a command, because macOS hides such a program's arguments
+  and start time from the user. The row now names the program and knows when it started.
 - The question before quitting said that what runs in your terminals keeps going even when some of them run
   inside Wormhole and end. It now counts them ("2 terminals keep running; 1 terminal ends because it runs
   inside Wormhole"). The questions before quitting or closing also said "An agent is still working" for any
