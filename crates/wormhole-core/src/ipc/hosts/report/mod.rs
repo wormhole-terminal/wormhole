@@ -20,10 +20,13 @@ pub use wormhole_wire::version::HostFit;
 use wormhole_wire::version::Range;
 use wormhole_wire::{AppVersion, HostState};
 
-use super::probe::Probed;
+use super::probe::{ProbeFailure, Probed};
 use super::{HostMeta, Scan, StaleReason, meta_path};
 
-pub use plain::{bytes_words, duration_words, range_words, stale_word, time_words};
+pub use plain::{
+    Elapsed, SizeUnit, bytes_words, duration_words, elapsed, range_words, size, stale_word, time_words,
+    utc_parts,
+};
 
 /// What this build is, for the header and for judging each host against it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -108,8 +111,8 @@ pub enum Answer {
     Yes(HostInfo),
     /// It answered that it speaks no protocol this build does.
     Incompatible,
-    /// It did not answer; the text says why.
-    No(String),
+    /// It did not answer.
+    No(ProbeFailure),
 }
 
 /// A host's own account of itself (`Info`).
@@ -246,6 +249,19 @@ impl Report {
             }
         }
         counts
+    }
+
+    /// Whether `other` shows the same: every fact equal, the clock and an uptime that reads the same
+    /// aside (it counts up by itself, and only a change in what is shown is worth a redraw).
+    pub fn same_as(&self, other: &Self) -> bool {
+        let shown = |r: &HostRow| HostRow { uptime_secs: None, ..r.clone() };
+        let uptime = |r: &HostRow| r.uptime_secs.map(plain::duration_words);
+        self.app == other.app
+            && self.hosts_dir == other.hosts_dir
+            && self.flag_on == other.flag_on
+            && self.host_binary == other.host_binary
+            && self.rows.len() == other.rows.len()
+            && self.rows.iter().zip(&other.rows).all(|(a, b)| shown(a) == shown(b) && uptime(a) == uptime(b))
     }
 
     pub fn row(&self, id: &str) -> Option<&HostRow> {

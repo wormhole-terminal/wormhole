@@ -110,6 +110,16 @@ pub const HOSTS_ACTION_COPIED: Key = Key::new(208);
 pub const HOSTS_END_DETAIL: Key = Key::new(211);
 /// "End Host"
 pub const HOSTS_END_CONFIRM: Key = Key::new(212);
+/// "The socket belongs to another user"
+pub const HOSTS_FAILURE_NOT_OURS: Key = Key::new(222);
+/// "The socket belongs to another host"
+pub const HOSTS_FAILURE_OTHER_HOST: Key = Key::new(223);
+/// "The host hung up"
+pub const HOSTS_FAILURE_HUNG_UP: Key = Key::new(224);
+/// "The host answered something unexpected"
+pub const HOSTS_FAILURE_UNEXPECTED: Key = Key::new(225);
+/// "No answer in time"
+pub const HOSTS_FAILURE_TIMED_OUT: Key = Key::new(226);
 
 /// ```text
 /// Wormhole { $version }, protocol { $protocol }
@@ -228,4 +238,74 @@ pub fn hosts_end_title(id: &str) -> String {
 /// ```
 pub fn hosts_end_detail_attached(title: &str) -> String {
     crate::active::message(210, &[("title", Arg::Str(title))])
+}
+
+/// ```text
+/// { $number } B
+/// ```
+pub fn hosts_size_bytes(number: &str) -> String {
+    crate::active::message(213, &[("number", Arg::Str(number))])
+}
+
+/// ```text
+/// { $number } KiB
+/// ```
+pub fn hosts_size_kib(number: &str) -> String {
+    crate::active::message(214, &[("number", Arg::Str(number))])
+}
+
+/// ```text
+/// { $number } MiB
+/// ```
+pub fn hosts_size_mib(number: &str) -> String {
+    crate::active::message(215, &[("number", Arg::Str(number))])
+}
+
+/// ```text
+/// { $s } s
+/// ```
+pub fn hosts_duration_seconds(s: &str) -> String {
+    crate::active::message(216, &[("s", Arg::Str(s))])
+}
+
+/// ```text
+/// { $m } min { $s } s
+/// ```
+pub fn hosts_duration_minutes(m: &str, s: &str) -> String {
+    crate::active::message(217, &[("m", Arg::Str(m)), ("s", Arg::Str(s))])
+}
+
+/// ```text
+/// { $h } h { $m } min
+/// ```
+pub fn hosts_duration_hours(h: &str, m: &str) -> String {
+    crate::active::message(218, &[("h", Arg::Str(h)), ("m", Arg::Str(m))])
+}
+
+/// ```text
+/// { $d } d { $h } h
+/// ```
+pub fn hosts_duration_days(d: &str, h: &str) -> String {
+    crate::active::message(219, &[("d", Arg::Str(d)), ("h", Arg::Str(h))])
+}
+
+/// ```text
+/// { $date } { $time } UTC
+/// ```
+pub fn hosts_time_utc(date: &str, time: &str) -> String {
+    crate::active::message(220, &[("date", Arg::Str(date)), ("time", Arg::Str(time))])
+}
+
+/// ```text
+/// Can’t connect: { $why }
+/// ```
+pub fn hosts_failure_connect(why: &str) -> String {
+    crate::active::message(221, &[("why", Arg::Str(why))])
+}
+
+/// ```text
+/// Talking to it failed: { $why }
+/// ```
+pub fn hosts_failure_io(why: &str) -> String {
+    crate::active::message(227, &[("why", Arg::Str(why))])
 }

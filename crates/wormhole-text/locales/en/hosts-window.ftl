@@ -89,7 +89,7 @@ hosts-answer-not-asked = Not asked
 hosts-answer-running = Yes, program running, { $cols }×{ $rows }, { $lines } lines of history
 hosts-answer-exited = Yes, but its program has ended
 hosts-answer-incompatible = Yes, but it speaks no protocol this app does
-# { $why } is the reason, e.g. connecting: Connection refused.
+# { $why } is the reason, in one of the hosts-failure messages.
 hosts-answer-none = No answer: { $why }
 
 # This app's connection to an attached host: the stream asked for, then what went over it.
@@ -116,3 +116,32 @@ hosts-end-title = End session host { $id }?
 hosts-end-detail-attached = The program in the terminal “{ $title }” gets a hangup and the terminal ends.
 hosts-end-detail = The program in it gets a hangup and ends.
 hosts-end-confirm = End Host
+
+# A size of memory or traffic; { $number } is a number such as 300 or 40.5.
+hosts-size-bytes = { $number } B
+# A size in kibibytes; { $number } is a whole number.
+hosts-size-kib = { $number } KiB
+# A size in mebibytes; { $number } has one decimal, e.g. 40.5.
+hosts-size-mib = { $number } MiB
+
+# How long ago, under a minute: { $s } seconds.
+hosts-duration-seconds = { $s } s
+# How long ago, under an hour: { $m } minutes and { $s } seconds.
+hosts-duration-minutes = { $m } min { $s } s
+# How long ago, under a day: { $h } hours and { $m } minutes.
+hosts-duration-hours = { $h } h { $m } min
+# How long ago, a day or more: { $d } days and { $h } hours.
+hosts-duration-days = { $d } d { $h } h
+
+# A moment in universal time; { $date } is like 2026-10-30 and { $time } like 14:03:07.
+hosts-time-utc = { $date } { $time } UTC
+
+# Why a host did not answer. { $why } is the system's reason, e.g. Connection refused.
+hosts-failure-connect = Can’t connect: { $why }
+hosts-failure-not-ours = The socket belongs to another user
+hosts-failure-other-host = The socket belongs to another host
+hosts-failure-hung-up = The host hung up
+hosts-failure-unexpected = The host answered something unexpected
+hosts-failure-timed-out = No answer in time
+# { $why } is the system's reason for the failure.
+hosts-failure-io = Talking to it failed: { $why }

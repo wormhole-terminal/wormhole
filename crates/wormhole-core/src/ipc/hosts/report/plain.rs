@@ -157,32 +157,77 @@ pub fn range_words(min: u16, max: u16) -> String {
     if min == max { min.to_string() } else { format!("{min} to {max}") }
 }
 
-/// `3d 4h`, `5h 12m`, `7m 30s`, `12s`: the two largest units.
-pub fn duration_words(secs: u64) -> String {
+/// A length of time as the two units a person reads: `12s`, `7m 30s`, `5h 12m`, `3d 4h`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Elapsed {
+    Seconds(u64),
+    MinutesSeconds(u64, u64),
+    HoursMinutes(u64, u64),
+    DaysHours(u64, u64),
+}
+
+/// `secs` split into [`Elapsed`]'s two largest units.
+pub fn elapsed(secs: u64) -> Elapsed {
     let (d, h, m, s) = (secs / 86_400, secs % 86_400 / 3600, secs % 3600 / 60, secs % 60);
     match (d, h, m) {
-        (0, 0, 0) => format!("{s}s"),
-        (0, 0, _) => format!("{m}m {s}s"),
-        (0, _, _) => format!("{h}h {m}m"),
-        _ => format!("{d}d {h}h"),
+        (0, 0, 0) => Elapsed::Seconds(s),
+        (0, 0, _) => Elapsed::MinutesSeconds(m, s),
+        (0, _, _) => Elapsed::HoursMinutes(h, m),
+        _ => Elapsed::DaysHours(d, h),
     }
 }
 
-/// `38.2 MB`: binary megabytes with one digit, below that kilobytes, below that bytes.
-pub fn bytes_words(bytes: u64) -> String {
-    if bytes >= 1024 * 1024 {
-        format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
-    } else if bytes >= 1024 {
-        format!("{} KB", bytes / 1024)
+/// [`elapsed`] in English: `3d 4h`, `5h 12m`, `7m 30s`, `12s`.
+pub fn duration_words(secs: u64) -> String {
+    match elapsed(secs) {
+        Elapsed::Seconds(s) => format!("{s}s"),
+        Elapsed::MinutesSeconds(m, s) => format!("{m}m {s}s"),
+        Elapsed::HoursMinutes(h, m) => format!("{h}h {m}m"),
+        Elapsed::DaysHours(d, h) => format!("{d}d {h}h"),
+    }
+}
+
+/// The unit of a size from [`size`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SizeUnit {
+    Bytes,
+    Kib,
+    Mib,
+}
+
+/// `bytes` as a number and a binary unit: whole bytes below 1 KiB, whole KiB below 1 MiB, then MiB
+/// with one digit (`40.5`).
+pub fn size(bytes: u64) -> (SizeUnit, String) {
+    const KIB: u64 = 1024;
+    const MIB: u64 = KIB * KIB;
+    if bytes >= MIB {
+        (SizeUnit::Mib, format!("{:.1}", bytes as f64 / MIB as f64))
+    } else if bytes >= KIB {
+        (SizeUnit::Kib, (bytes / KIB).to_string())
     } else {
-        format!("{bytes} B")
+        (SizeUnit::Bytes, bytes.to_string())
     }
 }
 
-/// `2026-10-30 14:03:07 UTC` for Unix seconds.
+/// [`size`] in English: `512 B`, `300 KiB`, `40.5 MiB`.
+pub fn bytes_words(bytes: u64) -> String {
+    let (unit, number) = size(bytes);
+    let unit = match unit {
+        SizeUnit::Bytes => "B",
+        SizeUnit::Kib => "KiB",
+        SizeUnit::Mib => "MiB",
+    };
+    format!("{number} {unit}")
+}
+
+/// A moment in UTC as a date (`2026-10-30`) and a time (`14:03:07`), for Unix seconds; `None` for
+/// one no calendar has.
+pub fn utc_parts(secs: u64) -> Option<(String, String)> {
+    let moment = i64::try_from(secs).ok().and_then(|s| chrono::DateTime::from_timestamp(s, 0))?;
+    Some((moment.format("%Y-%m-%d").to_string(), moment.format("%H:%M:%S").to_string()))
+}
+
+/// [`utc_parts`] in English: `2026-10-30 14:03:07 UTC`.
 pub fn time_words(secs: u64) -> String {
-    i64::try_from(secs)
-        .ok()
-        .and_then(|s| chrono::DateTime::from_timestamp(s, 0))
-        .map_or_else(|| secs.to_string(), |t| t.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+    utc_parts(secs).map_or_else(|| secs.to_string(), |(date, time)| format!("{date} {time} UTC"))
 }

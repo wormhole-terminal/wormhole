@@ -1,7 +1,7 @@
 //! One host as a card: a badge for how it stands, its id, the buttons, and the facts in two columns.
 
 use gpui_kit::*;
-use wormhole_core::ipc::hosts::report::{Answer, HostRow, Report, Standing, bytes_words};
+use wormhole_core::ipc::hosts::report::{Answer, HostRow, Report, Standing};
 use wormhole_text::keys::{
     HOSTS_ACTION_COPIED, HOSTS_ACTION_COPY, HOSTS_ACTION_END, HOSTS_ACTION_FORGET, HOSTS_FIELD_ANSWER,
     HOSTS_FIELD_FOLDER, HOSTS_FIELD_HOST_PID, HOSTS_FIELD_LINK, HOSTS_FIELD_MEMORY, HOSTS_FIELD_META,
@@ -57,7 +57,13 @@ impl HostsWindow {
             fact(ui, text(HOSTS_FIELD_HOST_PID), number(row.host_pid), ui.text, false),
             fact(ui, text(HOSTS_FIELD_SHELL_PID), number(row.shell_pid), ui.text, false),
             fact(ui, text(HOSTS_FIELD_PROGRAM), row.program.clone().unwrap_or_else(unknown), ui.text, false),
-            fact(ui, text(HOSTS_FIELD_MEMORY), row.rss.map_or_else(unknown, bytes_words), ui.text, false),
+            fact(
+                ui,
+                text(HOSTS_FIELD_MEMORY),
+                row.rss.map_or_else(unknown, words::size_text),
+                ui.text,
+                false,
+            ),
             fact(ui, text(HOSTS_FIELD_VERSION), version, if mismatch { warn } else { ui.text }, false),
             fact(
                 ui,

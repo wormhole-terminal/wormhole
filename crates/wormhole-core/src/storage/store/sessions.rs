@@ -41,6 +41,32 @@ impl Store {
         self.save_session(window_id, &record)
     }
 
+    /// The host ids the terminals of a profile's database name, read without touching it: the file
+    /// is opened read-only (never created, moved aside, upgraded or backed up), so a look from a
+    /// window that only wants to know which hosts are taken cannot change what the profile will do
+    /// at its next launch. A database that is missing, locked, from another schema or unreadable
+    /// names none.
+    pub fn host_ids_read_only(paths: &crate::storage::paths::ProfilePaths) -> Vec<String> {
+        use rusqlite::OpenFlags;
+        let file = paths.dir().join(super::DB_FILE);
+        if !file.is_file() {
+            return Vec::new();
+        }
+        let read = || -> rusqlite::Result<Vec<String>> {
+            let conn = Connection::open_with_flags(
+                &file,
+                OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+            )?;
+            conn.busy_timeout(std::time::Duration::from_millis(200))?;
+            let mut stmt = conn.prepare("SELECT host_id FROM tabs WHERE host_id IS NOT NULL")?;
+            stmt.query_map([], |row| row.get(0))?.collect()
+        };
+        read().unwrap_or_else(|err| {
+            tracing::debug!("couldn't read the host ids of {}: {err}", file.display());
+            Vec::new()
+        })
+    }
+
     /// Every terminal that names a session host: `(session id, host id)`, for matching the hosts
     /// found on disk against the rows (a live host nobody names is an orphan).
     pub fn host_ids(&self) -> Result<Vec<(i64, String)>> {

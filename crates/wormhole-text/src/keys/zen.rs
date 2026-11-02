@@ -6,12 +6,12 @@
 use crate::key::Key;
 
 /// "Zen mode on"
-pub const ZEN_ON: Key = Key::new(1548);
+pub const ZEN_ON: Key = Key::new(1563);
 /// "Zen mode off"
-pub const ZEN_OFF: Key = Key::new(1549);
+pub const ZEN_OFF: Key = Key::new(1564);
 /// "Zen mode is on, so the window shows less than these settings say. They keep your own values and apply again when you leave it."
-pub const ZEN_SETTINGS_NOTE: Key = Key::new(1550);
+pub const ZEN_SETTINGS_NOTE: Key = Key::new(1565);
 /// "Leave Zen mode"
-pub const ZEN_SETTINGS_LEAVE: Key = Key::new(1551);
+pub const ZEN_SETTINGS_LEAVE: Key = Key::new(1566);
 /// "Zen mode hides the right panel · Click to leave Zen mode"
-pub const ZEN_PANEL_HIDDEN: Key = Key::new(1552);
+pub const ZEN_PANEL_HIDDEN: Key = Key::new(1567);

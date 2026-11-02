@@ -33,7 +33,7 @@ impl HostsWindow {
         } else {
             text(HOSTS_ACTION_COPY_ALL)
         };
-        let count = |label: &'static str, n: usize| {
+        let tally = |label: &'static str, n: usize| {
             div()
                 .flex()
                 .items_center()
@@ -98,10 +98,10 @@ impl HostsWindow {
                 div()
                     .flex()
                     .gap_4()
-                    .child(count(text(HOSTS_COUNT_ATTACHED), counts.attached))
-                    .child(count(text(HOSTS_COUNT_DETACHED), counts.detached))
-                    .child(count(text(HOSTS_COUNT_ORPHAN), counts.orphan))
-                    .child(count(text(HOSTS_COUNT_STALE), counts.stale)),
+                    .child(tally(text(HOSTS_COUNT_ATTACHED), counts.attached))
+                    .child(tally(text(HOSTS_COUNT_DETACHED), counts.detached))
+                    .child(tally(text(HOSTS_COUNT_ORPHAN), counts.orphan))
+                    .child(tally(text(HOSTS_COUNT_STALE), counts.stale)),
             )
             .children(
                 (!report.flag_on)

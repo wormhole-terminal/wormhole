@@ -38,7 +38,7 @@ pub enum Identity {
 
 /// What the system says of one process, read once.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Reading {
+pub(crate) struct Reading {
     pub exists: bool,
     pub name: Option<String>,
     /// Runs as this user: `None` when it cannot be read.
@@ -48,7 +48,7 @@ pub struct Reading {
 
 impl Reading {
     /// Read process `pid`.
-    pub fn of(pid: u32) -> Self {
+    pub(crate) fn of(pid: u32) -> Self {
         Self {
             exists: process::exists(pid),
             name: process::command_name(pid),
@@ -72,7 +72,7 @@ pub fn looks_like_host_process(pid: u32) -> bool {
 }
 
 /// [`identify`] over what was read, so the rules are tested without processes.
-pub fn classify(reading: &Reading, started_at: u64, proc_start: Option<(u64, u32)>) -> Identity {
+pub(crate) fn classify(reading: &Reading, started_at: u64, proc_start: Option<(u64, u32)>) -> Identity {
     if !reading.exists {
         return Identity::No;
     }

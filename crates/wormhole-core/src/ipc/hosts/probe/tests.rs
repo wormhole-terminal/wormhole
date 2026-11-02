@@ -98,7 +98,7 @@ fn a_socket_that_names_another_host_is_not_believed() {
     let sock = dir.path().join("bbbbbbbbbbbb.sock");
     let server = serve(Listener::bind(&sock).expect("binds"), "zzzzzzzzzzzz", false);
     let probed = probe(&meta("bbbbbbbbbbbb", &sock), Duration::from_secs(5));
-    assert!(matches!(&probed, Probed::Failed(why) if why.contains("another host")), "{probed:?}");
+    assert_eq!(probed, Probed::Failed(ProbeFailure::OtherHost));
     let _ = server.join();
 }
 

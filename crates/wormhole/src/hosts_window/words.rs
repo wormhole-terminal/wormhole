@@ -2,19 +2,24 @@
 //! core's and stays English.
 
 use gpui_kit::Hsla;
+use wormhole_core::ipc::hosts::ProbeFailure;
 use wormhole_core::ipc::hosts::StaleReason;
 use wormhole_core::ipc::hosts::report::{
-    Answer, HostFit, HostRow, Standing, bytes_words, duration_words, time_words,
+    Answer, Elapsed, HostFit, HostRow, SizeUnit, Standing, elapsed, size, utc_parts,
 };
 use wormhole_term::client::{LinkMode, LinkStats};
 use wormhole_text::keys::{
-    HOSTS_ANSWER_EXITED, HOSTS_ANSWER_INCOMPATIBLE, HOSTS_ANSWER_NOT_ASKED, HOSTS_LINK_DETACHED,
-    HOSTS_LINK_HEADLESS, HOSTS_LINK_LOST, HOSTS_LINK_NONE, HOSTS_LINK_RAW, HOSTS_LINK_SYNC,
-    HOSTS_STALE_NO_META, HOSTS_STALE_PID_GONE, HOSTS_STALE_SOCKET_MISSING, HOSTS_STALE_UNREADABLE,
-    HOSTS_STANDING_ATTACHED, HOSTS_STANDING_DETACHED, HOSTS_STANDING_DETACHED_NOTE, HOSTS_STANDING_ORPHAN,
-    HOSTS_STANDING_ORPHAN_NOTE, HOSTS_STANDING_STALE, hosts_answer_none, hosts_answer_running,
-    hosts_fit_compatible, hosts_fit_too_new, hosts_fit_too_old, hosts_link_traffic, hosts_protocol_minor,
-    hosts_range_not_running, hosts_range_one, hosts_range_span, hosts_standing_attached_to, hosts_started,
+    HOSTS_ANSWER_EXITED, HOSTS_ANSWER_INCOMPATIBLE, HOSTS_ANSWER_NOT_ASKED, HOSTS_FAILURE_HUNG_UP,
+    HOSTS_FAILURE_NOT_OURS, HOSTS_FAILURE_OTHER_HOST, HOSTS_FAILURE_TIMED_OUT, HOSTS_FAILURE_UNEXPECTED,
+    HOSTS_LINK_DETACHED, HOSTS_LINK_HEADLESS, HOSTS_LINK_LOST, HOSTS_LINK_NONE, HOSTS_LINK_RAW,
+    HOSTS_LINK_SYNC, HOSTS_STALE_NO_META, HOSTS_STALE_PID_GONE, HOSTS_STALE_SOCKET_MISSING,
+    HOSTS_STALE_UNREADABLE, HOSTS_STANDING_ATTACHED, HOSTS_STANDING_DETACHED, HOSTS_STANDING_DETACHED_NOTE,
+    HOSTS_STANDING_ORPHAN, HOSTS_STANDING_ORPHAN_NOTE, HOSTS_STANDING_STALE, hosts_answer_none,
+    hosts_answer_running, hosts_duration_days, hosts_duration_hours, hosts_duration_minutes,
+    hosts_duration_seconds, hosts_failure_connect, hosts_failure_io, hosts_fit_compatible, hosts_fit_too_new,
+    hosts_fit_too_old, hosts_link_traffic, hosts_protocol_minor, hosts_range_not_running, hosts_range_one,
+    hosts_range_span, hosts_size_bytes, hosts_size_kib, hosts_size_mib, hosts_standing_attached_to,
+    hosts_started, hosts_time_utc,
 };
 use wormhole_text::text;
 
@@ -52,11 +57,49 @@ pub(super) fn standing_note(standing: &Standing) -> String {
 }
 
 pub(super) fn started(row: &HostRow) -> Option<String> {
-    let when = time_words(row.started_at?);
+    let when = time(row.started_at?);
     Some(match row.uptime_secs {
-        Some(up) => hosts_started(&when, &duration_words(up)),
+        Some(up) => hosts_started(&when, &elapsed_text(up)),
         None => when,
     })
+}
+
+/// A moment in universal time.
+fn time(secs: u64) -> String {
+    utc_parts(secs).map_or_else(|| secs.to_string(), |(date, time)| hosts_time_utc(&date, &time))
+}
+
+/// How long, in the two largest units.
+fn elapsed_text(secs: u64) -> String {
+    match elapsed(secs) {
+        Elapsed::Seconds(s) => hosts_duration_seconds(&s.to_string()),
+        Elapsed::MinutesSeconds(m, s) => hosts_duration_minutes(&m.to_string(), &s.to_string()),
+        Elapsed::HoursMinutes(h, m) => hosts_duration_hours(&h.to_string(), &m.to_string()),
+        Elapsed::DaysHours(d, h) => hosts_duration_days(&d.to_string(), &h.to_string()),
+    }
+}
+
+/// A size of memory or traffic.
+pub(super) fn size_text(bytes: u64) -> String {
+    let (unit, number) = size(bytes);
+    match unit {
+        SizeUnit::Bytes => hosts_size_bytes(&number),
+        SizeUnit::Kib => hosts_size_kib(&number),
+        SizeUnit::Mib => hosts_size_mib(&number),
+    }
+}
+
+/// Why a host did not answer.
+fn failure(why: &ProbeFailure) -> String {
+    match why {
+        ProbeFailure::Connect(why) => hosts_failure_connect(why),
+        ProbeFailure::NotOurs => text(HOSTS_FAILURE_NOT_OURS).to_string(),
+        ProbeFailure::OtherHost => text(HOSTS_FAILURE_OTHER_HOST).to_string(),
+        ProbeFailure::HungUp => text(HOSTS_FAILURE_HUNG_UP).to_string(),
+        ProbeFailure::Unexpected => text(HOSTS_FAILURE_UNEXPECTED).to_string(),
+        ProbeFailure::TimedOut => text(HOSTS_FAILURE_TIMED_OUT).to_string(),
+        ProbeFailure::Io(why) => hosts_failure_io(why),
+    }
 }
 
 /// A host's majors in words: "1", or "1 to 2".
@@ -108,7 +151,7 @@ pub(super) fn answer(answer: &Answer) -> String {
             &info.history_lines.to_string(),
         ),
         Answer::Incompatible => text(HOSTS_ANSWER_INCOMPATIBLE).to_string(),
-        Answer::No(why) => hosts_answer_none(why),
+        Answer::No(why) => hosts_answer_none(&failure(why)),
     }
 }
 
@@ -127,8 +170,8 @@ pub(super) fn link(link: Option<&LinkStats>) -> String {
     };
     hosts_link_traffic(
         mode,
-        &bytes_words(l.bytes_in),
-        &bytes_words(l.bytes_out),
+        &size_text(l.bytes_in),
+        &size_text(l.bytes_out),
         &l.frames_in.to_string(),
         &l.frames_out.to_string(),
     )

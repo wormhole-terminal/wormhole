@@ -5,7 +5,7 @@ use wormhole_term::client::{LinkMode, LinkStats};
 use wormhole_wire::version::HostFit;
 
 use super::*;
-use crate::ipc::hosts::{StaleHost, StaleReason};
+use crate::ipc::hosts::{ProbeFailure, StaleHost, StaleReason};
 
 const NOW: u64 = 1_000_000;
 
@@ -187,7 +187,10 @@ fn what_a_host_says_to_get_info_becomes_its_answer() {
     );
     i.observed.insert(
         "bbbbbbbbbbbb".into(),
-        Observed { probed: Some(Probed::Failed("connecting: refused".into())), ..Default::default() },
+        Observed {
+            probed: Some(Probed::Failed(ProbeFailure::Connect("refused".into()))),
+            ..Default::default()
+        },
     );
     let report = Report::build(i);
     let Answer::Yes(host) = &report.rows[0].answer else { panic!("answered: {:?}", report.rows[0].answer) };
@@ -197,7 +200,7 @@ fn what_a_host_says_to_get_info_becomes_its_answer() {
     assert_eq!(report.rows[0].rss, Some(40 << 20));
     assert!(!report.rows[0].needs_attention(&report.app));
     // A live host that does not answer is worth a look; a stale one would not be asked at all.
-    assert_eq!(report.rows[1].answer, Answer::No("connecting: refused".into()));
+    assert_eq!(report.rows[1].answer, Answer::No(ProbeFailure::Connect("refused".into())));
     assert!(report.rows[1].needs_attention(&report.app));
 }
 
@@ -235,8 +238,8 @@ fn words_for_durations_sizes_and_times() {
     assert_eq!(duration_words(3700), "1h 1m");
     assert_eq!(duration_words(90_000), "1d 1h");
     assert_eq!(bytes_words(512), "512 B");
-    assert_eq!(bytes_words(300 * 1024), "300 KB");
-    assert_eq!(bytes_words(40 * 1024 * 1024 + 512 * 1024), "40.5 MB");
+    assert_eq!(bytes_words(300 * 1024), "300 KiB");
+    assert_eq!(bytes_words(40 * 1024 * 1024 + 512 * 1024), "40.5 MiB");
     assert_eq!(time_words(0), "1970-01-01 00:00:00 UTC");
 }
 
@@ -305,4 +308,26 @@ fn a_stale_looking_host_with_a_live_link_cannot_be_forgotten() {
     i.attachments =
         vec![Attachment { host_id: "aaaaaaaaaaaa".into(), window: 1, title: "t".into(), link: Some(lost) }];
     assert!(Report::build(i).rows[0].can_forget(), "a lost link is the host gone");
+}
+
+#[test]
+fn a_report_that_only_ticked_shows_the_same() {
+    let scan = || Scan { live: vec![meta("aaaaaaaaaaaa", NOW - 100, "1.6.2", (1, 1))], stale: Vec::new() };
+    let first = Report::build(inputs(scan()));
+    let mut later = inputs(scan());
+    later.now = NOW + 5; // 105 s: "1m 45s", not "1m 40s"
+    assert!(!first.same_as(&Report::build(later)), "the uptime reads differently");
+    // A clock tick that rounds to the same words (days show hours only).
+    let old = || Scan { live: vec![meta("aaaaaaaaaaaa", 1, "1.6.2", (1, 1))], stale: Vec::new() };
+    let mut a = inputs(old());
+    a.now = 1 + 3 * 86_400 + 100;
+    let mut b = inputs(old());
+    b.now = 1 + 3 * 86_400 + 200;
+    assert!(Report::build(a).same_as(&Report::build(b)));
+    // A fact that changed shows.
+    let mut other = inputs(old());
+    other.flag_on = false;
+    let mut same = inputs(old());
+    same.flag_on = true;
+    assert!(!Report::build(other).same_as(&Report::build(same)));
 }

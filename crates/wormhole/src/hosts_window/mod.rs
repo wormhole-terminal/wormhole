@@ -12,7 +12,6 @@ mod gather;
 mod header;
 mod words;
 
-use std::collections::HashSet;
 use std::time::Duration;
 
 use gpui_kit::component::Sizable as _;
@@ -26,7 +25,6 @@ use wormhole_text::keys::{
 };
 use wormhole_text::text;
 
-use crate::app_state::app;
 use crate::aux_window;
 use crate::dialog::{self, CloseQuestion};
 use crate::style;
@@ -59,8 +57,6 @@ enum Copied {
 
 pub(crate) struct HostsWindow {
     report: Option<Report>,
-    /// The host ids the other profiles' databases name, read when the window opened.
-    elsewhere: HashSet<String>,
     scroll: ScrollHandle,
     focus_handle: FocusHandle,
     copied: Option<Copied>,
@@ -105,16 +101,10 @@ fn open_handle(cx: &App) -> Option<AnyWindowHandle> {
 
 impl HostsWindow {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let state = app(cx);
-        let elsewhere: HashSet<String> =
-            crate::window::hosting::named_in_other_profiles(&state.root, &state.profiles)
-                .into_iter()
-                .collect();
         let focus_handle = cx.focus_handle();
         window.focus(&focus_handle, cx);
         let mut this = Self {
             report: None,
-            elsewhere,
             scroll: ScrollHandle::new(),
             focus_handle,
             copied: None,
@@ -130,13 +120,16 @@ impl HostsWindow {
     fn start(&mut self, cx: &mut Context<Self>) {
         self._refresh = Some(cx.spawn(async move |this, cx| {
             loop {
-                let Ok(gather) = this.update(cx, |this, cx| Gather::collect(&this.elsewhere, cx)) else {
+                let Ok(gather) = this.update(cx, |_, cx| Gather::collect(cx)) else {
                     return;
                 };
                 let report = cx.background_executor().spawn(async move { gather.run() }).await;
                 let shown = this.update(cx, |this, cx| {
-                    this.report = Some(report);
-                    cx.notify();
+                    // Draw again only when something shows differently.
+                    if !this.report.as_ref().is_some_and(|shown| shown.same_as(&report)) {
+                        this.report = Some(report);
+                        cx.notify();
+                    }
                 });
                 if shown.is_err() {
                     return;
@@ -252,7 +245,7 @@ impl Render for HostsWindow {
         div()
             .id("hosts-window")
             .track_focus(&self.focus_handle)
-            .key_context("HostsWindow")
+            .key_context("HostsWindow") // text: a key context
             .on_key_down(cx.listener(|_, event: &KeyDownEvent, window, _| {
                 aux_window::close_on_esc_or_cmd_w(event, window);
             }))

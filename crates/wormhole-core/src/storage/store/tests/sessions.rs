@@ -209,6 +209,7 @@ fn restoring_with_live_and_missing_hosts_attaches_replays_and_finds_orphans() {
         proc_start: None,
     };
     let dir = temp_dir("mixed-hosts");
+    // (Read-only look, below, after the rows are saved.)
     let mut store = Store::open_at(&dir).expect("opens");
     let mut live = session(1, "/a");
     live.host_id = Some("aaaaaaaaaaaa".into());
@@ -236,4 +237,30 @@ fn restoring_with_live_and_missing_hosts_attaches_replays_and_finds_orphans() {
     );
     let orphans: Vec<String> = hosts.take_orphans().into_iter().map(|m| m.id).collect();
     assert_eq!(orphans, ["oooooooooooo"]);
+}
+
+/// The Session Hosts window asks which hosts the rows name without opening the database the way
+/// the app does: nothing is created, copied or upgraded by looking.
+#[test]
+fn host_ids_are_read_without_opening_the_database_for_writing() {
+    use crate::storage::paths::{DataRoot, ProfileId};
+    let dir = temp_dir("host-ids-read-only");
+    let paths = DataRoot::new(&dir).profile(&ProfileId::default_profile());
+    assert!(Store::host_ids_read_only(&paths).is_empty(), "no database: none, and none is made");
+    assert!(!dir.join("wormhole.db").exists());
+    let mut store = Store::open_at(&dir).expect("opens");
+    let mut one = session(1, "/a");
+    one.host_id = Some("aaaaaaaaaaaa".into());
+    store.save_window(&window(1, vec![one, session(2, "/b")])).expect("saves");
+    let mut names = Store::host_ids_read_only(&paths);
+    names.sort();
+    assert_eq!(names, ["aaaaaaaaaaaa"]);
+    let files = |d: &std::path::Path| {
+        let mut v: Vec<_> = std::fs::read_dir(d).expect("lists").map(|e| e.expect("e").file_name()).collect();
+        v.sort();
+        v
+    };
+    let before = files(&dir);
+    Store::host_ids_read_only(&paths);
+    assert_eq!(files(&dir), before, "a look leaves no copy or file behind");
 }

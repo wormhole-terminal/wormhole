@@ -29,7 +29,7 @@ pub use gone::forget_gone_hosts;
 pub(crate) use identity::{FakeHost, spawn_fake_host};
 pub use identity::{Identity, START_SLACK_SECS, identify, looks_like_host_process};
 pub use launch::{LaunchHosts, Restore, persisted_host, shown_at_launch};
-pub use probe::{Probed, probe};
+pub use probe::{ProbeFailure, Probed, probe};
 pub use scan::{HostMeta, Scan, StaleHost, StaleReason, read_meta, scan, scan_with};
 pub use survey::{Survey, survey};
 /// Where a host listens and where its meta file is: one rule for the host, the app and this crate
