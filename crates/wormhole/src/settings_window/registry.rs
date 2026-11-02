@@ -372,7 +372,11 @@ impl SettingsWindow {
             .into_iter()
             .map(|hit| (hit.entry.id, hit))
             .collect();
-        let mut column = div().flex().flex_col().gap_6().children(super::zen_note::draw(section, cx))
+        let mut column = div()
+            .flex()
+            .flex_col()
+            .gap_6()
+            .children(super::zen_note::draw(section, cx))
             .children(super::sections::page_notice(section, cx));
         for (at, group) in section.groups().iter().enumerate() {
             // Each group is where its sub-row in the nav scrolls to: only the picked one carries the anchor.
