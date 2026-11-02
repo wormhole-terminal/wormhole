@@ -88,6 +88,7 @@
           "fonts",
           "syntax"
         ],
+        "ui",
         "style",
         "notice",
         "picker",

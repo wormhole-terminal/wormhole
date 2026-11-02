@@ -47,6 +47,7 @@ mod style;
 mod syntax;
 mod terminal_view;
 mod theme_bridge;
+mod ui;
 mod update;
 mod window;
 mod window_open;
