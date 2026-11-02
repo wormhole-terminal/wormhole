@@ -147,8 +147,12 @@ fn sentences() -> Vec<(String, &'static str)> {
         (settings_updates_checked_hours_ago(5), "Checked 5 hours ago."),
         (settings_updates_checked_days_ago(3), "Checked 3 days ago."),
         (
-            settings_updates_up_to_date_checked("Checked just now."),
-            "Wormhole is up to date. Checked just now.",
+            settings_updates_unstable_removed("1.7.0-dev.3"),
+            "The Unstable build 1.7.0-dev.3 was removed before it replaced anything. Stable offers its own releases.",
+        ),
+        (
+            settings_updates_unstable_stays("1.7.0-dev.3"),
+            "This Mac has the Unstable build 1.7.0-dev.3 installed. Stable takes over with the first Stable release newer than it.",
         ),
         (settings_updates_security_available("0.3.1"), "Security update available: Wormhole 0.3.1."),
         (settings_updates_version_available("0.3.1"), "Version 0.3.1 is available."),
