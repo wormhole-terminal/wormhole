@@ -172,22 +172,27 @@ impl Workspace {
             self.sessions
                 .iter()
                 .filter(|session| works(&session.pane.summary))
-                .filter_map(|session| match session.git.place(session.pane.summary.cwd.as_deref()) {
-                    Place::In(root) => Some(root.to_path_buf()),
-                    Place::Unknown | Place::Outside => None,
+                .filter_map(|session| {
+                    // The terminal's folder, as the loop below and the reads use it.
+                    let cwd = session.terminal().read(cx).cwd.clone();
+                    match session.git.place(cwd.as_deref()) {
+                        Place::In(root) => Some(root.to_path_buf()),
+                        Place::Unknown | Place::Outside => None,
+                    }
                 })
                 .collect()
         };
-        // The repositories the terminals are in, for the watches: a root nobody is in any more is let go.
+        // The repositories the terminals are in, for the watches. By the last one git named, not by where
+        // the terminal is asked about now: a `cd` must not let go of a repository and start it again.
         let mut roots: Vec<PathBuf> = Vec::new();
         for session in &self.sessions {
-            if let Place::In(root) = session.git.place(session.pane.summary.cwd.as_deref())
+            if let Some(root) = session.git.root()
                 && !roots.iter().any(|known| known == root)
             {
                 roots.push(root.to_path_buf());
             }
         }
-        RepoWatches::claim(&cx.weak_entity(), &roots, cx);
+        RepoWatches::claim(&roots, cx);
         for ix in 0..self.sessions.len() {
             if self.sessions[ix].git.waits_for_retry() {
                 continue;

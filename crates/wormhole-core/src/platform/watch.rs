@@ -9,7 +9,8 @@
 //!
 //! An event source can fail: the system says so when it drops events ([`Batch::rescan`]: read
 //! everything again), and a network volume or a FUSE mount sends none at all, which a watch cannot
-//! tell from a quiet folder. Whoever depends on a watch keeps a slow poll as the fallback. Off macOS
+//! tell from a quiet folder, so [`watch`] refuses those roots. Whoever depends on a watch keeps a slow
+//! poll as the fallback. Off macOS
 //! there is no watcher: [`watch`] fails with `Unsupported` and the caller keeps polling.
 
 use std::io;
@@ -39,14 +40,9 @@ pub struct Watch {
 
 /// Follow `roots` (folders, each with everything below it, at file level) and call `on_batch` for
 /// every event. Fails when a root cannot be watched (it is not there, or the system refuses), and with
-/// `Unsupported` where there is no watcher.
+/// `Unsupported` where there is no watcher or the root is on a network volume (which sends no events).
 pub fn watch(roots: &[&Path], on_batch: impl FnMut(Batch) + Send + 'static) -> io::Result<Watch> {
     let mut on_batch = on_batch;
     let relay = Box::new(move |paths, rescan| on_batch(Batch { paths, rescan }));
     Ok(Watch { _os: os::watch(roots, relay)? })
-}
-
-/// Whether this system has a watcher at all.
-pub fn supported() -> bool {
-    cfg!(target_os = "macos")
 }

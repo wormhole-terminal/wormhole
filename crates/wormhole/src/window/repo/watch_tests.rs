@@ -10,7 +10,7 @@ use std::time::Duration;
 
 use gpui_kit::TestAppContext;
 
-use super::watches::RepoWatches;
+use super::watches::{GRACE, RepoWatches};
 use crate::app_state::OpenWindow;
 use crate::window::test_harness::{drive, isolate_in, read, start};
 
@@ -108,5 +108,8 @@ fn a_write_in_a_followed_repository_is_read_without_a_tick(cx: &mut TestAppConte
         ws.sessions[0].git = Default::default();
         ws.poll_repos(true, true, cx);
     });
+    assert!(cx.update(|cx| RepoWatches::live(&root, cx)), "kept for a few seconds, in case it comes back");
+    std::thread::sleep(GRACE + Duration::from_millis(100));
+    drive(cx, &window, |ws, _, cx| ws.poll_repos(true, true, cx));
     assert!(!cx.update(|cx| RepoWatches::live(&root, cx)), "dropped with the last terminal in it");
 }

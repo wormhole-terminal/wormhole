@@ -160,6 +160,13 @@ impl GitState {
         self.root.as_deref().map_or(Place::Outside, Place::In)
     }
 
+    /// The repository git last named for this terminal, kept while a new folder is being asked about
+    /// (unlike [`place`](Self::place), which is unknown then). What the watches are claimed by, so a `cd`
+    /// does not let go of a repository and start it again.
+    pub(crate) fn root(&self) -> Option<&Path> {
+        self.root.as_deref()
+    }
+
     /// Why the last refresh failed, if it did.
     pub(crate) fn error(&self) -> Option<&GitError> {
         self.error.as_ref()

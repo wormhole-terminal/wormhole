@@ -3,6 +3,9 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
+use std::ffi::CString;
+use std::os::unix::ffi::OsStrExt as _;
+
 use notify::{Config, Event, EventHandler, RecommendedWatcher, RecursiveMode, Watcher as _};
 
 /// What the neutral file hands to the OS: called with the changed paths and whether events were lost.
@@ -37,11 +40,39 @@ impl EventHandler for Relay {
 }
 
 pub(crate) fn watch(roots: &[&Path], on_batch: Handler) -> io::Result<Watcher> {
-    let mut watcher = RecommendedWatcher::new(Relay(on_batch), Config::default()).map_err(into_io)?;
+    // A network or FUSE volume sends no events, which a watch cannot tell from a quiet folder: refuse
+    // it, so the caller keeps its fast polling instead of trusting a silence.
     for root in roots {
-        watcher.watch(root, RecursiveMode::Recursive).map_err(into_io)?;
+        if !on_local_volume(root)? {
+            return Err(io::Error::new(io::ErrorKind::Unsupported, "not on a local volume"));
+        }
     }
+    let mut watcher = RecommendedWatcher::new(Relay(on_batch), Config::default()).map_err(into_io)?;
+    // All roots in one commit: each `watch` call of its own would restart the stream.
+    let mut paths = watcher.paths_mut();
+    for root in roots {
+        paths.add(root, RecursiveMode::Recursive).map_err(into_io)?;
+    }
+    paths.commit().map_err(into_io)?;
     Ok(Watcher { _stream: watcher })
+}
+
+/// Whether `path` is on a volume of this machine (`MNT_LOCAL`), as opposed to SMB, NFS, AFP or a
+/// FUSE mount.
+fn on_local_volume(path: &Path) -> io::Result<bool> {
+    let c = CString::new(path.as_os_str().as_bytes())
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "a NUL in the path"))?;
+    let mut stat = std::mem::MaybeUninit::<libc::statfs>::uninit();
+    // SAFETY: `c` is NUL-terminated and outlives the call, and `stat` is the size statfs writes.
+    #[allow(unsafe_code)]
+    let rc = unsafe { libc::statfs(c.as_ptr(), stat.as_mut_ptr()) };
+    if rc != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    // SAFETY: statfs returned 0, so it filled the whole struct.
+    #[allow(unsafe_code)]
+    let stat = unsafe { stat.assume_init() };
+    Ok(stat.f_flags & libc::MNT_LOCAL as u32 != 0)
 }
 
 fn into_io(err: notify::Error) -> io::Error {
