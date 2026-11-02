@@ -43,6 +43,7 @@ fn meta(id: &str, socket: &std::path::Path) -> HostMeta {
         proto_max: 1,
         socket: socket.to_path_buf(),
         data_dir: PathBuf::from("/d"),
+        proc_start: None,
     }
 }
 

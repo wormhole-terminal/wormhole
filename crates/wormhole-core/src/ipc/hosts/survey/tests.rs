@@ -23,7 +23,10 @@ fn a_running_host_that_stays_silent_is_live_unanswering_and_read_from_the_system
     assert_eq!(survey.scan.live.len(), 1);
     let seen = &survey.observed["aaaaaaaaaaaa"];
     assert!(matches!(seen.probed, Some(Probed::Failed(_))), "{:?}", seen.probed);
-    assert!(seen.rss.is_some_and(|bytes| bytes > 0), "this process has resident memory");
+    // Memory is read on macOS only for now.
+    if cfg!(target_os = "macos") {
+        assert!(seen.rss.is_some_and(|bytes| bytes > 0), "the process has resident memory");
+    }
 }
 
 #[test]
@@ -31,4 +34,24 @@ fn a_folder_without_hosts_surveys_to_nothing() {
     let dir = tempfile::tempdir().expect("temp");
     let survey = survey(dir.path(), Duration::from_millis(50)).expect("surveys");
     assert!(survey.scan.live.is_empty() && survey.observed.is_empty());
+}
+
+/// A pid some other program has now is not looked at: nothing of it shows as the host's.
+#[test]
+fn a_process_that_is_not_the_host_is_not_read() {
+    let dir = tempfile::Builder::new().prefix("hs").tempdir_in("/tmp").expect("temp");
+    let socket = dir.path().join("bbbbbbbbbbbb.sock");
+    let _listener = Listener::bind(&socket).expect("binds");
+    // This test program: it runs, but it is not named like a host.
+    let text = format!(
+        "format=1\nid=bbbbbbbbbbbb\npid={}\nchild_pid={}\nstarted_at=1\nhost_version=1.0.0\nproto_min=1\n\
+         proto_max=1\nsocket={}\ndata_dir=/d\n",
+        std::process::id(),
+        std::process::id(),
+        socket.display()
+    );
+    std::fs::write(dir.path().join("bbbbbbbbbbbb.meta"), text).expect("meta");
+    let survey = survey(dir.path(), Duration::from_millis(200)).expect("surveys");
+    assert!(survey.scan.live.is_empty());
+    assert!(survey.observed.is_empty(), "{:?}", survey.observed);
 }

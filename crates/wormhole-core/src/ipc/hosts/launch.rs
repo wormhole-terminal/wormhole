@@ -101,6 +101,7 @@ mod tests {
             proto_max: 1,
             socket: PathBuf::from(format!("/h/{id}.sock")),
             data_dir: PathBuf::from("/d"),
+            proc_start: None,
         }
     }
 

@@ -206,6 +206,7 @@ fn restoring_with_live_and_missing_hosts_attaches_replays_and_finds_orphans() {
         proto_max: 1,
         socket: std::path::PathBuf::from(format!("/h/{id}.sock")),
         data_dir: std::path::PathBuf::from("/d"),
+        proc_start: None,
     };
     let dir = temp_dir("mixed-hosts");
     let mut store = Store::open_at(&dir).expect("opens");

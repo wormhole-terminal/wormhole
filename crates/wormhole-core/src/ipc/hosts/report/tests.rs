@@ -24,6 +24,7 @@ fn meta(id: &str, started_at: u64, version: &str, proto: (u16, u16)) -> HostMeta
         proto_max: proto.1,
         socket: PathBuf::from(format!("/h/{id}.sock")),
         data_dir: PathBuf::from("/d"),
+        proc_start: None,
     }
 }
 
@@ -269,4 +270,39 @@ fn the_copied_text_has_the_header_and_a_block_a_host() {
     ] {
         assert!(text.contains(want), "missing {want:?} in:\n{text}");
     }
+}
+
+/// A file that looks stale but whose host this app is connected to is not offered for forgetting.
+#[test]
+fn a_stale_looking_host_with_a_live_link_cannot_be_forgotten() {
+    let scan = Scan {
+        live: Vec::new(),
+        stale: vec![StaleHost {
+            id: "aaaaaaaaaaaa".into(),
+            reason: StaleReason::PidGone,
+            meta: Some(meta("aaaaaaaaaaaa", 5, "1.6.2", (1, 1))),
+        }],
+    };
+    let mut i = inputs(scan);
+    i.attachments = vec![Attachment {
+        host_id: "aaaaaaaaaaaa".into(),
+        window: 1,
+        title: "t".into(),
+        link: Some(link(false)),
+    }];
+    assert!(!Report::build(i).rows[0].can_forget(), "the link is up");
+    let scan = Scan {
+        live: Vec::new(),
+        stale: vec![StaleHost {
+            id: "aaaaaaaaaaaa".into(),
+            reason: StaleReason::PidGone,
+            meta: Some(meta("aaaaaaaaaaaa", 5, "1.6.2", (1, 1))),
+        }],
+    };
+    let mut i = inputs(scan);
+    let mut lost = link(false);
+    lost.lost = true;
+    i.attachments =
+        vec![Attachment { host_id: "aaaaaaaaaaaa".into(), window: 1, title: "t".into(), link: Some(lost) }];
+    assert!(Report::build(i).rows[0].can_forget(), "a lost link is the host gone");
 }

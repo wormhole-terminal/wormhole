@@ -66,6 +66,12 @@ mod tests {
         drop(Listener::bind(&reused_sock).expect("binds"));
         let reused_meta = meta("rrrrrrrrrrrr", std::process::id(), 1, &reused_sock);
         std::fs::write(d.join("rrrrrrrrrrrr.meta"), reused_meta).expect("meta");
+        // Slow: a live host whose process began long before it wrote its meta.
+        let slow = crate::ipc::hosts::spawn_fake_host(d);
+        let slow_sock = d.join("ssssssssssss.sock");
+        let _slow_listener = Listener::bind(&slow_sock).expect("binds");
+        let slow_meta = meta("ssssssssssss", slow.pid(), slow.started_at + 30, &slow_sock);
+        std::fs::write(d.join("ssssssssssss.meta"), slow_meta).expect("meta");
         // Odd: a meta that does not read stays for a person to look at.
         std::fs::write(d.join("uuuuuuuuuuuu.meta"), "garbage").expect("write");
 
@@ -75,7 +81,13 @@ mod tests {
         for name in ["gggggggggggg.meta", "gggggggggggg.sock", "rrrrrrrrrrrr.meta", "rrrrrrrrrrrr.sock"] {
             assert!(!d.join(name).exists(), "{name} is removed");
         }
-        for name in ["llllllllllll.meta", "llllllllllll.sock", "uuuuuuuuuuuu.meta"] {
+        for name in [
+            "llllllllllll.meta",
+            "llllllllllll.sock",
+            "ssssssssssss.meta",
+            "ssssssssssss.sock",
+            "uuuuuuuuuuuu.meta",
+        ] {
             assert!(d.join(name).exists(), "{name} stays");
         }
     }

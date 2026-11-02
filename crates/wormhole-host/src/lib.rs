@@ -111,6 +111,15 @@ pub fn main(argv: impl IntoIterator<Item = OsString>) -> ExitCode {
     }
 }
 
+/// When the system says this process started: what a reader compares to tell it from another
+/// process that has its pid later.
+fn own_start() -> Option<(u64, u32)> {
+    let since = wormhole_term::sys::process::start_time(std::process::id())?
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?;
+    Some((since.as_secs(), since.subsec_micros()))
+}
+
 fn run(args: &args::Args, socket: &std::path::Path, ready: &mut ReadyPipe) -> anyhow::Result<()> {
     use anyhow::Context as _;
     let started = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
@@ -136,6 +145,7 @@ fn run(args: &args::Args, socket: &std::path::Path, ready: &mut ReadyPipe) -> an
             proto_max: range.max,
             socket: socket.to_owned(),
             data_dir: args.data_dir(),
+            proc_start: own_start(),
         },
     };
     let result = serve_files(args, &mut listener, ready, &mut files, started.as_millis() as u64);

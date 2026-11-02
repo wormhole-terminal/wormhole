@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 use wormhole_wire::io::{FrameReader, FrameWriter};
 use wormhole_wire::{AppVersion, CHANNEL_LOCAL, Features, Hello, Message, Role, version};
 
-use super::identity::is_host_process;
+use super::identity::{Identity, identify, looks_like_host_process};
 use super::scan::{StaleReason, scan};
 use super::{HostMeta, meta_path, read_meta};
 use crate::platform::fs::is_socket;
@@ -50,7 +50,14 @@ pub fn end_host(meta: &HostMeta, wait: Duration) -> Result<EndHow, String> {
     let asked = ask_kill(meta, wait);
     let Err(why) = asked else { return Ok(EndHow::Asked) };
     tracing::info!(id = %meta.id, %why, "the host did not take Kill, signalling it");
-    if !is_host_process(meta.pid, meta.started_at) {
+    // Unknown (the start cannot be compared) is signalled only when it looks like a host: named so,
+    // and ours.
+    let ours = match identify(meta) {
+        Identity::Yes => true,
+        Identity::Unknown => looks_like_host_process(meta.pid),
+        Identity::No => false,
+    };
+    if !ours {
         return Err(format!("{why}; pid {} is not a wormhole-host, so it was left alone", meta.pid));
     }
     process::terminate(meta.pid).map_err(|err| format!("{why}; SIGTERM to {}: {err}", meta.pid))?;
@@ -205,17 +212,23 @@ pub fn forget(hosts_dir: &Path, id: &str) -> Result<ForgetOutcome, ForgetError> 
         return Err(ForgetError::Unknown);
     };
     let home_socket = hosts_dir.join(format!("{id}.sock"));
-    // Where the host may be listening: next to its meta, or where the socket rule puts it when the
-    // hosts folder's path is too long (a folder others can write to). Either answering means a host.
-    let candidates = [home_socket.clone(), super::socket_path(hosts_dir, id)];
+    // Where the host may be listening: next to its meta, where the socket rule puts it when the
+    // hosts folder's path is too long (a folder others can write to), and where the meta says.
+    let mut candidates = vec![home_socket, super::socket_path(hosts_dir, id)];
+    if let Some(meta) = &stale.meta {
+        candidates.push(meta.socket.clone());
+    }
+    candidates.dedup();
+    // Whatever made it look stale, a socket that answers is a host that runs: files are removed
+    // only when nothing does. (The meta is hostile input: only a socket named like a host's is
+    // connected to.)
+    if candidates.iter().any(|socket| named_like_host_socket(socket, id) && answers(socket)) {
+        return Err(ForgetError::Live(format!("session {id} still answers on its socket")));
+    }
     match (&stale.reason, &stale.meta) {
         // The process runs, only its socket is missing (it binds it again within the hour).
         (StaleReason::SocketMissing, Some(meta)) => {
             return Err(ForgetError::Live(format!("session {id} runs on as pid {}", meta.pid)));
-        }
-        // Nothing says it is dead, and something may still answer.
-        (StaleReason::Unreadable(_) | StaleReason::NoMeta, _) if candidates.iter().any(|s| answers(s)) => {
-            return Err(ForgetError::Live(format!("session {id} still answers on its socket")));
         }
         // A meta that does not read may still name a pid, and that pid may still be the host.
         (StaleReason::Unreadable(_), _)
@@ -224,13 +237,17 @@ pub fn forget(hosts_dir: &Path, id: &str) -> Result<ForgetOutcome, ForgetError> 
         {
             return Err(ForgetError::Live(format!("session {id} has a process that looks like its host")));
         }
+        // A meta that reads but cannot be told from a host (the start is not comparable) is not gone.
+        (StaleReason::PidGone, Some(meta)) if identify(meta) == Identity::Unknown => {
+            return Err(ForgetError::Live(format!(
+                "session {id}: its process {} may still be the host",
+                meta.pid
+            )));
+        }
         _ => {}
     }
     let mut targets = vec![meta_path(hosts_dir, id)];
     targets.extend(candidates);
-    if let Some(meta) = &stale.meta {
-        targets.push(meta.socket.clone());
-    }
     let mut removed = Vec::new();
     for path in targets {
         if !removable(&path, id) {
@@ -254,9 +271,14 @@ fn removable(path: &Path, id: &str) -> bool {
     if name == format!("{id}.meta") {
         return true;
     }
-    let socket_name = name == format!("{id}.sock")
-        || name.strip_prefix("wormhole-host-").is_some_and(|rest| rest.ends_with(&format!("-{id}.sock")));
-    socket_name && is_socket(&meta.file_type())
+    named_like_host_socket(path, id) && is_socket(&meta.file_type())
+}
+
+/// Whether `path` is named the way host `id`'s socket is (`<id>.sock`, or the long-path fallback).
+fn named_like_host_socket(path: &Path, id: &str) -> bool {
+    let Some(name) = path.file_name().and_then(|n| n.to_str()) else { return false };
+    name == format!("{id}.sock")
+        || name.strip_prefix("wormhole-host-").is_some_and(|rest| rest.ends_with(&format!("-{id}.sock")))
 }
 
 /// The `pid=` a meta file says, if it says one, from a file too damaged to parse.
@@ -270,9 +292,15 @@ fn lenient_pid(path: &Path) -> Option<u32> {
     text.lines().find_map(|line| line.strip_prefix("pid=")?.trim().parse().ok())
 }
 
-/// Whether something accepts connections on `path`.
+/// Whether something accepts connections on `path`. A connect that does not finish in a moment
+/// (a full backlog, a stuck host) counts as an answer: not knowing is a reason to keep the files.
 fn answers(path: &Path) -> bool {
-    Stream::connect(path).is_ok()
+    let (tx, rx) = std::sync::mpsc::channel();
+    let path = path.to_path_buf();
+    std::thread::spawn(move || {
+        let _ = tx.send(Stream::connect(&path).is_ok());
+    });
+    rx.recv_timeout(Duration::from_millis(500)).unwrap_or(true)
 }
 
 /// The meta file of host `id` in `hosts_dir`, checked.
@@ -339,17 +367,32 @@ mod tests {
     fn a_host_whose_binary_was_deleted_is_ended_by_signal() {
         let dir = short_dir();
         let d = dir.path();
-        let host = super::super::identity::spawn_fake_host(d);
+        let mut host = super::super::identity::spawn_fake_host(d);
         std::fs::remove_file(d.join("wormhole-host")).expect("deletes the binary");
         let mut meta = meta_for("ffffffffffff", &d.join("nothing.sock"));
         meta.pid = host.pid();
         meta.started_at = host.started_at;
         let how = end_host(&meta, Duration::from_millis(300)).expect("ends");
         assert_eq!(how, EndHow::Signalled);
-        let deadline = Instant::now() + Duration::from_secs(5);
-        while process::exists(host.pid()) && Instant::now() < deadline {
-            std::thread::sleep(Duration::from_millis(20));
-        }
+        assert!(host.exits_within(Duration::from_secs(5)), "the signal ended the process");
+    }
+
+    /// A meta that cannot be compared (no `started_at`) is signalled only because the process
+    /// looks like a host (named so, and ours); one that does not is left alone.
+    #[test]
+    fn an_unknown_start_is_signalled_only_when_the_process_looks_like_a_host() {
+        let dir = short_dir();
+        let d = dir.path();
+        let mut host = super::super::identity::spawn_fake_host(d);
+        let mut meta = meta_for("iiiiiiiiiiii", &d.join("nothing.sock"));
+        meta.pid = host.pid();
+        meta.started_at = 0;
+        assert_eq!(end_host(&meta, Duration::from_millis(300)), Ok(EndHow::Signalled));
+        assert!(host.exits_within(Duration::from_secs(5)));
+        let mut other = meta_for("jjjjjjjjjjjj", &d.join("nothing.sock"));
+        other.pid = std::process::id();
+        other.started_at = 0;
+        assert!(end_host(&other, Duration::from_millis(300)).is_err(), "a test program is not a host");
     }
 
     #[test]
@@ -401,6 +444,48 @@ mod tests {
         write_meta_started(d, "bbbbbbbbbbbb", host.pid(), host.started_at, &sock);
         assert!(matches!(forget(d, "bbbbbbbbbbbb"), Err(ForgetError::Live(_))));
         assert!(sock.exists() && d.join("bbbbbbbbbbbb.meta").exists());
+    }
+
+    /// Whatever made a host look gone, a socket that answers is a host that runs.
+    #[test]
+    fn a_live_socket_blocks_forget_even_when_the_pid_looks_gone() {
+        let dir = short_dir();
+        let d = dir.path();
+        let sock = d.join("kkkkkkkkkkkk.sock");
+        let _listener = Listener::bind(&sock).expect("binds");
+        // The pid is a process that exited: by every file the host is gone, but its socket answers.
+        write_meta(d, "kkkkkkkkkkkk", dead_pid(), &sock);
+        assert!(matches!(forget(d, "kkkkkkkkkkkk"), Err(ForgetError::Live(_))));
+        assert!(sock.exists() && d.join("kkkkkkkkkkkk.meta").exists());
+    }
+
+    /// A reused pid (the process started after the host did) with nothing answering is gone.
+    #[test]
+    fn a_reused_pid_with_no_answering_socket_is_forgotten() {
+        let dir = short_dir();
+        let d = dir.path();
+        let sock = d.join("llllllllllll.sock");
+        drop(Listener::bind(&sock).expect("binds"));
+        // This test program runs, and started well after a host that started at second 1.
+        write_meta(d, "llllllllllll", std::process::id(), &sock);
+        let outcome = forget_once_closed(d, "llllllllllll").expect("forgets");
+        assert_eq!(outcome.removed.len(), 2, "{outcome:?}");
+    }
+
+    /// A meta without `started_at` cannot be compared: its process is not taken for gone.
+    #[test]
+    fn a_meta_without_a_start_is_not_gone() {
+        let dir = short_dir();
+        let d = dir.path();
+        let host = super::super::identity::spawn_fake_host(d);
+        let text = format!(
+            "format=1\nid=mmmmmmmmmmmm\npid={}\nhost_version=1.0.0\nproto_min=1\nproto_max=1\nsocket={}\ndata_dir=/d\n",
+            host.pid(),
+            d.join("mmmmmmmmmmmm.sock").display()
+        );
+        std::fs::write(d.join("mmmmmmmmmmmm.meta"), text).expect("meta");
+        assert!(matches!(forget(d, "mmmmmmmmmmmm"), Err(ForgetError::Live(_))));
+        assert!(d.join("mmmmmmmmmmmm.meta").exists());
     }
 
     #[test]
@@ -543,6 +628,7 @@ mod tests {
             proto_max: 1,
             socket: socket.to_path_buf(),
             data_dir: PathBuf::from("/d"),
+            proc_start: None,
         }
     }
 

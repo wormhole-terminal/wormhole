@@ -14,7 +14,7 @@ use wormhole_term::hosted::meta::Meta;
 use crate::platform::fs;
 use crate::storage::files::{self, LinkPolicy};
 
-use super::identity::is_host_process;
+use super::identity::{Identity, identify};
 use super::is_valid_host_id;
 
 /// A meta file is a dozen short lines; anything bigger is not one.
@@ -89,7 +89,8 @@ pub struct Scan {
 
 /// Look in `hosts_dir`. A folder that is not there is an empty scan.
 pub fn scan(hosts_dir: &Path) -> io::Result<Scan> {
-    scan_with(hosts_dir, |meta| is_host_process(meta.pid, meta.started_at))
+    // Only a definite "no" is gone: a process that cannot be told from the host is not.
+    scan_with(hosts_dir, |meta| identify(meta) != Identity::No)
 }
 
 /// [`scan`] with the check for a running pid as an argument, for the tests.

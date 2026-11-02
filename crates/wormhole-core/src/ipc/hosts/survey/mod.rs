@@ -10,6 +10,7 @@ use std::io;
 use std::path::Path;
 use std::time::Duration;
 
+use super::identity::{Identity, identify};
 use super::probe::probe;
 use super::report::Observed;
 use super::{HostMeta, Scan, scan};
@@ -28,28 +29,46 @@ pub struct Survey {
 pub fn survey(hosts_dir: &Path, wait: Duration) -> io::Result<Survey> {
     let scan = scan(hosts_dir)?;
     let mut observed = HashMap::new();
-    std::thread::scope(|scope| {
-        let live = scan.live.iter().map(|meta| (meta, true));
-        let stale = scan.stale.iter().filter_map(|s| s.meta.as_ref()).map(|meta| (meta, false));
-        let running: Vec<_> = live
-            .chain(stale)
-            .filter(|(meta, _)| process::exists(meta.pid))
-            .map(|(meta, ask)| (meta.id.clone(), scope.spawn(move || look(meta, ask, wait))))
-            .collect();
-        for (id, handle) in running {
-            observed.insert(id, handle.join().unwrap_or_default());
-        }
-    });
+    let live = scan.live.iter().map(|meta| (meta, true));
+    let stale = scan.stale.iter().filter_map(|s| s.meta.as_ref()).map(|meta| (meta, false));
+    let hosts: Vec<_> = live.chain(stale).collect();
+    // A few at a time: each is a thread that may wait for a stuck host, and a person can have many.
+    for chunk in hosts.chunks(AT_ONCE) {
+        std::thread::scope(|scope| {
+            let running: Vec<_> = chunk
+                .iter()
+                .map(|&(meta, ask)| (meta.id.clone(), scope.spawn(move || look(meta, ask, wait))))
+                .collect();
+            for (id, handle) in running {
+                if let Some(seen) = handle.join().unwrap_or_default() {
+                    observed.insert(id, seen);
+                }
+            }
+        });
+    }
     Ok(Survey { scan, observed })
 }
 
-/// What is known of one host's process, and its answer when `ask`ed.
-fn look(meta: &HostMeta, ask: bool, wait: Duration) -> Observed {
+/// Hosts looked at at once.
+const AT_ONCE: usize = 16;
+
+/// What is known of one host's process, and its answer when `ask`ed. Only a process that is the
+/// host (its name, its user and its start fit the meta) is read: a pid that something else has
+/// now must not put that program's folder or memory in front of a person as the host's.
+fn look(meta: &HostMeta, ask: bool, wait: Duration) -> Option<Observed> {
+    if identify(meta) != Identity::Yes {
+        return None;
+    }
     let (program, cwd) = match meta.child_pid {
         Some(shell) => (foreground_program(shell), process::cwd(shell)),
         None => (None, None),
     };
-    Observed { probed: ask.then(|| probe(meta, wait)), rss: process::resident_bytes(meta.pid), program, cwd }
+    Some(Observed {
+        probed: ask.then(|| probe(meta, wait)),
+        rss: process::resident_bytes(meta.pid),
+        program,
+        cwd,
+    })
 }
 
 /// The name of the program that owns the terminal of `shell` right now (the shell itself when

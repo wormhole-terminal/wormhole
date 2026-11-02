@@ -29,6 +29,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Left-over files of session hosts that are gone (after a crash or a restart) are removed when Wormhole
   starts instead of piling up.
 - A session host started from a preview build (such as 1.6.3-preview.2) said its version was 1.6.0.
+- A session host that started slowly (after an update, while macOS checked the new program) was taken for gone
+  when Wormhole started, and its files removed, losing its terminal. A host is now only taken for gone when
+  something definite says so, and files are never removed while anything still answers on its socket.
 - A session host's log no longer gets three lines for every look at it from the command line or the Session
   Hosts window; those short connections are logged at the debug level.
 

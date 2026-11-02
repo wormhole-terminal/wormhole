@@ -27,7 +27,7 @@ pub use admin::{EndHow, ForgetError, ForgetOutcome, end_all, end_all_live, end_h
 pub use gone::forget_gone_hosts;
 #[cfg(test)]
 pub(crate) use identity::{FakeHost, spawn_fake_host};
-pub use identity::{START_SLACK_SECS, is_host_process, looks_like_host_process};
+pub use identity::{Identity, START_SLACK_SECS, identify, looks_like_host_process};
 pub use launch::{LaunchHosts, Restore, persisted_host, shown_at_launch};
 pub use probe::{Probed, probe};
 pub use scan::{HostMeta, Scan, StaleHost, StaleReason, read_meta, scan, scan_with};

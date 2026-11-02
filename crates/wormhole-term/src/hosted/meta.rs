@@ -18,8 +18,9 @@ pub const FORMAT: u32 = 1;
 /// format that only adds keys keeps it, and so stays readable by this build; one that changes what
 /// a known key means raises it, and a reader below it refuses the file rather than guess.
 pub const MIN_READER: u32 = 1;
-/// The reader level of this build: files that ask for more are refused (a host that new is not
-/// shown as stale, it is told apart as one this build cannot read).
+/// The reader level of this build: a file that asks for more is refused, so its host reads as
+/// unreadable, which is stale: end and forget still look at its socket and process before they
+/// act, and never take it for gone on the strength of the file alone.
 pub const READER: u32 = 1;
 /// The most a meta file may hold when read (they are a few hundred bytes).
 pub const READ_MAX: u64 = 16 * 1024;
@@ -46,6 +47,11 @@ pub struct Meta {
     pub socket: PathBuf,
     /// The app's data directory the host belongs to (absolute).
     pub data_dir: PathBuf,
+    /// When the system says this process started, as `(seconds, microseconds)` after the Unix
+    /// epoch: the host reads it from the system itself, so a reader can tell the process from
+    /// another that reused its pid by comparing it with what the system says now. `None` in the
+    /// meta of a host that predates it.
+    pub proc_start: Option<(u64, u32)>,
 }
 
 /// Why a meta file could not be used.
@@ -99,6 +105,13 @@ pub fn remove(dir: &Path, id: &str) {
     Meta::remove(dir, id);
 }
 
+/// `<seconds>.<microseconds>`; a value that does not read is the same as no value (the key is
+/// additive, so a reader that cannot use it falls back to the start time it always had).
+fn parse_proc_start(value: &str) -> Option<(u64, u32)> {
+    let (secs, micros) = value.split_once('.')?;
+    Some((secs.parse().ok()?, micros.parse().ok().filter(|m| *m < 1_000_000)?))
+}
+
 impl Meta {
     /// The file's text. Fails when a value would break the line format.
     pub fn render(&self) -> io::Result<String> {
@@ -123,6 +136,9 @@ impl Meta {
         let _ = writeln!(text, "proto_max={}", self.proto_max);
         let _ = writeln!(text, "socket={socket}");
         let _ = writeln!(text, "data_dir={data_dir}");
+        if let Some((secs, micros)) = self.proc_start {
+            let _ = writeln!(text, "proc_start={secs}.{micros:06}");
+        }
         let _ = writeln!(text, "min_reader={MIN_READER}");
         Ok(text)
     }
@@ -130,7 +146,7 @@ impl Meta {
     /// Read a meta file's text. Unknown keys are skipped; a repeated key takes its last value.
     pub fn parse(text: &str) -> Result<Self, MetaError> {
         let (mut format, mut id, mut pid, mut child_pid, mut started_at) = (None, None, None, None, None);
-        let mut min_reader = None;
+        let (mut min_reader, mut proc_start) = (None, None);
         let (mut version, mut proto_min, mut proto_max, mut socket, mut data_dir) =
             (None, None, None, None, None);
         for line in text.lines() {
@@ -140,6 +156,7 @@ impl Meta {
                 "min_reader" => {
                     min_reader = Some(value.parse::<u32>().map_err(|_| MetaError::Malformed("min_reader"))?);
                 }
+                "proc_start" => proc_start = parse_proc_start(value),
                 "id" => id = Some(value.to_owned()),
                 "pid" => pid = Some(value.parse::<u32>().map_err(|_| MetaError::Malformed("pid"))?),
                 "child_pid" => {
@@ -180,6 +197,7 @@ impl Meta {
             proto_max: proto_max.unwrap_or(1),
             socket: socket.ok_or(MetaError::Missing("socket"))?,
             data_dir: data_dir.unwrap_or_default(),
+            proc_start,
         })
     }
 
@@ -234,6 +252,7 @@ mod tests {
             proto_max: 1,
             socket: "/Users/me/Library/Application Support/Wormhole/hosts/abcdefghij12.sock".into(),
             data_dir: "/Users/me/Library/Application Support/Wormhole".into(),
+            proc_start: Some((1_760_000_000, 123_456)),
         }
     }
 

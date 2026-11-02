@@ -52,9 +52,9 @@ pub fn command_name(pid: u32) -> Option<String> {
     os::command_name(pid)
 }
 
-/// Whether the process runs as the user this one acts as. `false` when that cannot be read.
-pub fn runs_as_current_user(pid: u32) -> bool {
-    os::owner(pid).is_some_and(|uid| uid == super::unix::user::effective_uid())
+/// Whether the process runs as the user this one acts as; `None` when that cannot be read.
+pub fn runs_as_current_user(pid: u32) -> Option<bool> {
+    os::owner(pid).map(|uid| uid == super::unix::user::effective_uid())
 }
 
 /// The memory a process has resident, in bytes.

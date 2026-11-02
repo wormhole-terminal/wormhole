@@ -177,8 +177,10 @@ impl HostRow {
         self.standing.is_live()
     }
 
+    /// May the files be forgotten: the host is not running, and this app holds no connection to it
+    /// (one still up says it is there, whatever the files look like).
     pub fn can_forget(&self) -> bool {
-        !self.standing.is_live()
+        !self.standing.is_live() && !self.link.is_some_and(|l| !l.lost && !l.ended && !l.detached)
     }
 }
 
