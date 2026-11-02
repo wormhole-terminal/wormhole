@@ -23,6 +23,15 @@ pub(crate) enum Cmd {
     /// The theme is light or dark, for the host's answers and its reports of a change.
     ColorScheme(ColorScheme),
     ClearHistory,
+    /// Start the host's checkpoints with this key (none: the folder and the shell only) and shell key.
+    CheckpointKey {
+        key: Option<[u8; crate::checkpoint::seal::KEY_LEN]>,
+        shell: String,
+    },
+    /// Write a checkpoint now.
+    Checkpoint {
+        flush: bool,
+    },
     /// The answer to the host's `ClipboardLoad{ticket}`.
     Clipboard {
         ticket: u32,
@@ -213,12 +222,27 @@ pub(crate) struct Hosted {
     detached: AtomicBool,
     /// The protocol minor the host said in its `Welcome`: what it understands beyond the first minor.
     minor: u16,
+    /// The features the host announced in its `Welcome`: the messages it understands from minor 4 on.
+    features: wormhole_wire::Features,
 }
 
 impl Hosted {
     /// `minor` is the protocol minor the host said in its `Welcome`.
-    pub(crate) fn new(link: Arc<Link>, id: String, minor: u16) -> Self {
-        Self { link, id, detached: AtomicBool::new(false), minor }
+    pub(crate) fn new(link: Arc<Link>, id: String, minor: u16, features: wormhole_wire::Features) -> Self {
+        Self { link, id, detached: AtomicBool::new(false), minor, features }
+    }
+
+    /// Whether the host keeps checkpoints when asked.
+    pub(crate) fn can_checkpoint(&self) -> bool {
+        self.features.contains(wormhole_wire::Features::CHECKPOINT)
+    }
+
+    pub(crate) fn checkpoint_key(&self, key: Option<&crate::checkpoint::Key>, shell: &str) {
+        self.link.send(Cmd::CheckpointKey { key: key.map(|k| *k.as_bytes()), shell: shell.to_owned() });
+    }
+
+    pub(crate) fn checkpoint(&self, flush: bool) {
+        self.link.send(Cmd::Checkpoint { flush });
     }
 
     pub(crate) fn input(&self, bytes: Cow<'static, [u8]>) {

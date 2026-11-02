@@ -77,6 +77,41 @@ pub struct Repainted {
     pub history_lines: usize,
 }
 
+/// What the checkpoint thread reads of a hosted terminal: a handle that keeps the screen and the host's
+/// memory of the title and the folder alive for as long as it is held, whatever happens to the terminal.
+#[derive(Clone)]
+pub struct Reader {
+    screen: Arc<FairLock<Screen>>,
+    core: Arc<Core>,
+    pid: u32,
+}
+
+impl Reader {
+    /// The terminal's program.
+    pub fn pid(&self) -> u32 {
+        self.pid
+    }
+
+    /// Run `read` on the screen under its lock, which is held as long as `read` runs: for a thread of its
+    /// own, never the PTY's.
+    pub(crate) fn with_screen<R>(&self, read: impl FnOnce(&Screen) -> R) -> R {
+        read(&self.screen.lock())
+    }
+
+    /// The title a program set and the folder the shell reported (OSC 7), as the host remembers them.
+    pub fn title_and_folder(&self) -> (Option<String>, Option<String>) {
+        let (mut title, mut folder) = (None, None);
+        for event in self.core.remembered() {
+            match event {
+                HostEvent::Title(t) => title = Some(t),
+                HostEvent::Cwd(c) => folder = Some(c),
+                _ => {}
+            }
+        }
+        (title, folder)
+    }
+}
+
 /// The program a host runs and the screen it draws.
 pub struct HostedTerminal {
     screen: Arc<FairLock<Screen>>,
@@ -227,10 +262,10 @@ impl HostedTerminal {
         self.core.stream.register(bytes, gap, wake)
     }
 
-    /// Run `read` on the screen under its lock: for the checkpoint, which is a layer above this one. Holds the
-    /// lock as long as `read` runs, so it is for a thread of its own and never the PTY's.
-    pub(crate) fn with_screen<R>(&self, read: impl FnOnce(&crate::screen::Screen) -> R) -> R {
-        read(&self.screen.lock())
+    /// A handle on what a checkpoint reads of this terminal, which another thread can hold: the screen, the
+    /// title and the folder. See [`Reader`].
+    pub fn reader(&self) -> Reader {
+        Reader { screen: self.screen.clone(), core: self.core.clone(), pid: self.pid }
     }
 
     /// Append to `out` the repaint that brings a fresh replica of [`Repainted::size`] to the screen

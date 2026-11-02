@@ -130,6 +130,8 @@ impl Features {
     pub const RESUME_RING: Self = Self(1 << 3);
     /// `Sync` streams (host-synthesized repaints under flow control).
     pub const SYNC: Self = Self(1 << 4);
+    /// `SetCheckpointKey` / `Checkpoint`: the host keeps a checkpoint of its terminal for a restart of the Mac.
+    pub const CHECKPOINT: Self = Self(1 << 5);
 
     pub const NONE: Self = Self(0);
 

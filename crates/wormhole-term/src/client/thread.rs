@@ -221,6 +221,13 @@ impl State {
                     }
                 }
                 Cmd::ClearHistory => self.queue(&Message::ClearHistory),
+                Cmd::CheckpointKey { key, shell } => {
+                    self.queue(&Message::SetCheckpointKey(wire::CheckpointKey {
+                        key: key.as_ref().map_or(&[], |k| k.as_slice()),
+                        shell: &shell,
+                    }))
+                }
+                Cmd::Checkpoint { flush } => self.queue(&Message::Checkpoint { flush }),
                 Cmd::Clipboard { ticket, data } => {
                     self.queue(&Message::ClipboardReply(wire::ClipboardReply { ticket, data: &data }))
                 }

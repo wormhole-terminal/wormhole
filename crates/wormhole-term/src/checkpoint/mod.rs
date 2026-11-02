@@ -18,6 +18,7 @@
 //! modes, and anything while no key is held. The folder and the shell are *not trusted* when read: the app
 //! checks them against the project's trust (`ProjectHub::enabled`) at restore.
 
+pub mod capture;
 pub mod manifest;
 pub mod seal;
 pub mod store;
@@ -25,10 +26,11 @@ pub mod vt;
 
 use std::path::{Path, PathBuf};
 
+pub use capture::{Capture, capture};
 pub use manifest::{Manifest, ManifestError, ScreenFile};
 pub use seal::{Key, KeyId};
 pub use store::{Issue, KEEP, ReadError, Restored, Snapshot, Store, Written, forget, read_latest};
-pub use vt::{Limits, host_screen, safe_replay};
+pub use vt::{Limits, safe_replay};
 
 /// The file layout this build writes.
 pub const FORMAT: u32 = 1;

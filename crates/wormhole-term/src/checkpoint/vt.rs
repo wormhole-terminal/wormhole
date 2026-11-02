@@ -211,12 +211,6 @@ pub(crate) fn primary_screen(screen: &Screen, limits: Limits) -> Option<Vec<u8>>
     Some(out)
 }
 
-/// The primary screen of a hosted terminal as a checkpoint keeps it: see [`primary_screen`]. Holds the screen's
-/// lock while it reads the rows, so it is for the checkpoint's own thread and never the PTY's.
-pub fn host_screen(host: &crate::hosted::HostedTerminal, limits: Limits) -> Option<Vec<u8>> {
-    host.with_screen(|screen| primary_screen(screen, limits))
-}
-
 /// The longest SGR sequence let through.
 const SGR_MAX: usize = 64;
 

@@ -36,6 +36,8 @@ pub struct Snapshot<'a> {
     pub cwd: Option<&'a str>,
     pub shell: Option<&'a str>,
     pub title: Option<&'a str>,
+    /// How the program ended, once it has.
+    pub ended: Option<&'a str>,
     /// The primary screen as VT bytes (`vt::primary_screen`); sealed when written, and not written at all
     /// when there is no key.
     pub screen: Option<&'a [u8]>,
@@ -153,6 +155,7 @@ impl Store {
             cwd: snapshot.cwd.map(str::to_owned),
             shell: snapshot.shell.map(str::to_owned),
             title: snapshot.title.map(str::to_owned),
+            ended: snapshot.ended.map(str::to_owned),
             screen,
         };
         let text = manifest.render();

@@ -22,6 +22,7 @@ fn snapshot<'a>(screen: Option<&'a [u8]>, title: &'a str) -> Snapshot<'a> {
         cwd: Some("/Users/me/src"),
         shell: Some("login"),
         title: Some(title),
+        ended: None,
         screen,
     }
 }

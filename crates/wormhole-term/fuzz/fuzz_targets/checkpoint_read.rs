@@ -22,7 +22,7 @@ fuzz_target!(|data: &[u8]| {
     let root = tempfile::tempdir().expect("a temp dir");
     let key = Key::new([7; 32]);
     let mut store = Store::open(root.path(), ID).expect("a store");
-    let snapshot = Snapshot { time: 1, cols: 80, rows: 24, cwd: None, shell: None, title: None, screen: Some(b"real") };
+    let snapshot = Snapshot { time: 1, cols: 80, rows: 24, cwd: None, shell: None, title: None, ended: None, screen: Some(b"real") };
     store.write(Some(&key), &snapshot).expect("a write");
     std::fs::write(store.dir().join("g000000000001.manifest"), manifest).expect("a manifest");
     std::fs::write(store.dir().join("g000000000001.screen"), screen).expect("a screen");

@@ -52,6 +52,10 @@ pub struct Manifest {
     /// The key of the shell the terminal ran (`ShellChoice::key`, or `login`).
     pub shell: Option<String>,
     pub title: Option<String>,
+    /// How the program ended (`exit:<status>`, `signal:<number>`), once it has: the last generation a host
+    /// writes. A restore draws the screen with its divider and starts a shell, and does not pretend the
+    /// program is still there.
+    pub ended: Option<String>,
     pub screen: Option<ScreenFile>,
 }
 
@@ -138,7 +142,9 @@ impl Manifest {
         let _ = writeln!(text, "time={}", self.time);
         let _ = writeln!(text, "cols={}", self.cols);
         let _ = writeln!(text, "rows={}", self.rows);
-        for (key, value) in [("cwd", &self.cwd), ("shell", &self.shell), ("title", &self.title)] {
+        for (key, value) in
+            [("cwd", &self.cwd), ("shell", &self.shell), ("title", &self.title), ("ended", &self.ended)]
+        {
             if let Some(value) = value {
                 let _ = writeln!(text, "{key}={}", escape(capped(value)));
             }
@@ -176,6 +182,7 @@ impl Manifest {
                 "cwd" => manifest.cwd = Some(unescape(value).ok_or(ManifestError::Malformed("cwd"))?),
                 "shell" => manifest.shell = Some(unescape(value).ok_or(ManifestError::Malformed("shell"))?),
                 "title" => manifest.title = Some(unescape(value).ok_or(ManifestError::Malformed("title"))?),
+                "ended" => manifest.ended = Some(unescape(value).ok_or(ManifestError::Malformed("ended"))?),
                 "key_id" => key_id = Some(KeyId::parse(value).ok_or(ManifestError::Malformed("key_id"))?),
                 "screen_len" => {
                     screen_len =
@@ -216,6 +223,7 @@ mod tests {
             cwd: Some("/Users/me/src/project".into()),
             shell: Some("login".into()),
             title: Some("cargo test".into()),
+            ended: None,
             screen: Some(ScreenFile {
                 key_id: KeyId([0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]),
                 len: 1234,
@@ -275,6 +283,16 @@ mod tests {
         let read = Manifest::parse(&manifest.render()).expect("reads");
         let title = read.title.expect("a title");
         assert!(title.len() <= VALUE_MAX && title.chars().all(|c| c == 'é'));
+    }
+
+    #[test]
+    fn a_terminal_whose_program_ended_says_how() {
+        let manifest = Manifest { ended: Some("exit:0".into()), ..sample() };
+        let text = manifest.render();
+        assert!(text.contains("\nended=exit:0\n"), "{text:?}");
+        assert_eq!(Manifest::parse(&text).expect("reads").ended.as_deref(), Some("exit:0"));
+        // The format-1 bytes are unchanged for a terminal that runs on.
+        assert!(!sample().render().contains("ended"));
     }
 
     #[test]

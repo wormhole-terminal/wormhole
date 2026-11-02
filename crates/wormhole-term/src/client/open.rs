@@ -75,6 +75,7 @@ impl Pty {
                     HostFacts {
                         pid: info.pid,
                         minor: info.proto_minor,
+                        features: info.features,
                         replay: seed_drawn_by(options.restore, info.proto_minor),
                     },
                 )
@@ -119,7 +120,12 @@ impl Pty {
             options,
             first,
             // An attach never replays saved text: the host's screen is what it shows, and its repaint has it.
-            HostFacts { pid: welcome.pid, minor: welcome.proto_minor, replay: None },
+            HostFacts {
+                pid: welcome.pid,
+                minor: welcome.proto_minor,
+                features: welcome.features,
+                replay: None,
+            },
         )
         .map_err(|e| AttachError::Failed(format!("{e:#}")))
     }
@@ -151,6 +157,32 @@ impl Pty {
         match &self.io {
             Backend::Hosted(host) => Some(host.minor()),
             Backend::Local(_) => None,
+        }
+    }
+
+    /// Ask a hosted terminal's host to keep a checkpoint of the terminal for a restart of the Mac: sealed with
+    /// `key` (none: the folder and the shell only, never a screen), `shell` being the key of the shell it
+    /// runs. `false` when the terminal is not hosted or its host is too old to do it; the host writes nothing
+    /// until it is asked.
+    pub fn start_checkpoints(&self, key: Option<&crate::checkpoint::Key>, shell: &str) -> bool {
+        match &self.io {
+            Backend::Hosted(host) if host.can_checkpoint() => {
+                host.checkpoint_key(key, shell);
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Ask the host to write a checkpoint now (`flush`: even if nothing changed and whatever the write budget
+    /// says). `false` as for [`start_checkpoints`](Self::start_checkpoints).
+    pub fn checkpoint_now(&self, flush: bool) -> bool {
+        match &self.io {
+            Backend::Hosted(host) if host.can_checkpoint() => {
+                host.checkpoint(flush);
+                true
+            }
+            _ => false,
         }
     }
 
@@ -305,6 +337,8 @@ pub(crate) struct HostFacts<'a> {
     pub pid: u32,
     /// The protocol minor the host speaks.
     pub minor: u16,
+    /// What the host announced it does beyond the first minor.
+    pub features: wire::Features,
     /// The saved text a host that was just started drew before the program's first byte, which the
     /// replica draws too: `None` for an attach (the host has its screen already) and for a host that
     /// skipped the seed.
@@ -322,7 +356,7 @@ pub(crate) fn hosted(
     first: StreamMode,
     host: HostFacts<'_>,
 ) -> anyhow::Result<(Pty, PtyEvents)> {
-    let HostFacts { pid, minor, replay } = host;
+    let HostFacts { pid, minor, features, replay } = host;
     let (proxy, events) = EventProxy::new();
     let shared = proxy.shared().clone();
     let replica_options = ReplicaOptions::of(options);
@@ -354,7 +388,7 @@ pub(crate) fn hosted(
     let pty = Pty {
         term: screen,
         shared,
-        io: Backend::Hosted(Hosted::new(link, id.to_owned(), minor)),
+        io: Backend::Hosted(Hosted::new(link, id.to_owned(), minor, features)),
         size,
         pid,
         hangup_grace: pty::HANGUP_GRACE,
