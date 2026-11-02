@@ -121,15 +121,7 @@ fn payload_errors_are_typed_and_leave_the_stream_in_step() {
         (raw_frame(ty::REPAINT, 0, 1, &[0; 15]), WireError::Truncated("Repaint")),
         // A middle part with no bytes at all is nothing a sender produces.
         (raw_frame(ty::REPAINT, 0, 1, &[0; 16]), WireError::BadValue("Repaint")),
-        // A bool that is neither 0 nor 1.
-        (
-            raw_frame(ty::COUNTERS, 0, 1, &{
-                let mut p = vec![0; 27];
-                p[18] = 2;
-                p
-            }),
-            WireError::BadValue("Counters"),
-        ),
+        // (A bool that is neither 0 nor 1 is true, not an error: see `bool_fields_accept_any_nonzero`.)
         (raw_frame(ty::FIND_START, 0, 1, &[0; 5]), WireError::Truncated("FindStart")),
     ];
     for (frame, want) in bad {

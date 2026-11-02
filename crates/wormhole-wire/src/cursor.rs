@@ -51,11 +51,9 @@ impl<'a> Reader<'a> {
         Ok(i32::from_le_bytes(self.array()?))
     }
     pub(crate) fn bool(&mut self) -> Result<bool, WireError> {
-        match self.u8()? {
-            0 => Ok(false),
-            1 => Ok(true),
-            _ => Err(WireError::BadValue(self.what)),
-        }
+        // Any byte but 0 is true: a later minor may widen a flag into a small number, and a reader
+        // that took only 0 and 1 would drop the whole frame for it. Writers still send 0 or 1.
+        Ok(self.u8()? != 0)
     }
     pub(crate) fn fixed<const N: usize>(&mut self) -> Result<[u8; N], WireError> {
         self.array()
@@ -204,5 +202,22 @@ impl<'v> Writer<'v> {
         let start = self.tlv_begin(tag);
         self.raw(value);
         self.tlv_end(start, field)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bool_fields_accept_any_nonzero() {
+        for (byte, want) in [(0u8, false), (1, true), (2, true), (0x80, true), (255, true)] {
+            let bytes = [byte];
+            let mut r = Reader::new(&bytes, "test");
+            assert_eq!(r.bool().expect("decodes"), want, "{byte}");
+        }
+        let mut out = Vec::new();
+        Writer::new(&mut out).bool(true);
+        assert_eq!(out, [1], "encoding stays 0 or 1");
     }
 }
