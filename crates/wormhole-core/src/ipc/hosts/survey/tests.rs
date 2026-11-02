@@ -23,8 +23,8 @@ fn a_running_host_that_stays_silent_is_live_unanswering_and_read_from_the_system
     assert_eq!(survey.scan.live.len(), 1);
     let seen = &survey.observed["aaaaaaaaaaaa"];
     assert!(matches!(seen.probed, Some(Probed::Failed(_))), "{:?}", seen.probed);
-    // Memory is read on macOS only for now.
-    if cfg!(target_os = "macos") {
+    // Memory is read where the system can say it (macOS for now).
+    if crate::platform::process::resident_bytes(std::process::id()).is_some() {
         assert!(seen.rss.is_some_and(|bytes| bytes > 0), "the process has resident memory");
     }
 }
