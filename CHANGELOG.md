@@ -33,9 +33,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   and how that connection is doing, with End, Forget and a copy of the details for a bug report. It follows
   the theme and, like the main window, is translucent (Settings → Appearance → Also translucent).
 - Progress a program reports with OSC 9;4 (the sequence ConEmu, Windows Terminal and Ghostty show) now
-  appears in the terminal's row like OSC 7501's: a percentage, "Paused" while it is held, and a
-  failure for the error state. A program that reports through OSC 7501 keeps priority; the progress
-  clears at the next prompt or when the program exits.
+  appears in the terminal's row like OSC 7501's: a percentage, "Paused" while it is held, and "Error"
+  for the error state, which is not a failure to be announced. Whichever of 7501 and 9;4 needs you more
+  is shown. The progress ends at the next prompt, when the program exits or after 15 seconds without
+  a report, and survives the app relaunching while persistent terminals keep running.
 
 ### Changed
 

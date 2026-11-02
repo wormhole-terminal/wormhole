@@ -60,3 +60,8 @@ terminal-restored-at = restored { $year }-{ $month }-{ $day } { $hour }:{ $minut
 # The sidebar row's words for a terminal whose program holds its progress (OSC 9;4 state 4); the
 # percentage follows it ("Paused · 40%").
 terminal-progress-paused = Paused
+
+# The sidebar row's words for a terminal whose program shows its progress bar in the error state
+# (OSC 9;4 state 2), which is a state it still holds, not a failure; the percentage follows it
+# when the program gave one ("Error · 50%").
+terminal-progress-error = Error

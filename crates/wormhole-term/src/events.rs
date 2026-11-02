@@ -515,11 +515,11 @@ impl EventProxy {
                 self.heard(Heard::Notify(&notification));
                 self.send(PtyEvent::Notify(notification));
             }
-            // Kept beside OSC 7501's records and shown through the same summary when it has no
-            // record of its own (`program_status::progress` says which of the two wins).
+            // Kept beside OSC 7501's records and shown through the same summary
+            // (`program_status::progress` says which of the two wins).
             Osc::Progress(progress) => {
                 self.heard(Heard::Progress(progress));
-                if self.shared.program_status().set_progress(progress) {
+                if self.shared.program_status().set_progress(progress, Instant::now()) {
                     self.program_status_changed();
                 }
             }

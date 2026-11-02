@@ -6,8 +6,8 @@
 //! - `parse` is the grammar and its limits: one OSC body in, a [`Report`] (or the feature-detection
 //!   query) out, or nothing when the spec says to discard it. Everything is checked before the
 //!   store is touched, so a discarded report changes nothing.
-//! - `progress` is OSC 9;4 (ConEmu's progress) as a fallback summary beside the records, and which
-//!   of the two wins.
+//! - `progress` is OSC 9;4 (ConEmu's progress) as one more candidate for the summary beside the
+//!   records, which of the two wins, and when it goes stale.
 //! - `store` is [`ProgramStatus`]: the records by id, how they are replaced, cleared, evicted and
 //!   dropped when a prompt or the program's exit says they are over, and the [`Summary`] the UI
 //!   shows of them.
@@ -24,7 +24,7 @@ mod store;
 mod tests;
 
 pub use parse::{Parsed, SEQUENCE_MAX, parse};
-pub use progress::{Progress, ProgressState};
+pub use progress::{PROGRESS_TIMEOUT, Progress, ProgressState};
 pub use store::{ProgramStatus, RECORDS_MAX, Summary};
 
 use crate::agents::{AGENTS, AgentId};

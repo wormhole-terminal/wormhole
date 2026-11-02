@@ -11,10 +11,13 @@
 
 #[cfg(test)]
 use gpui_kit::*;
+use std::time::Instant;
 use wormhole_term::program_status::Summary as Reported;
+
+use wormhole_term::ProgressState;
 use wormhole_term::program_status::{Kind, State};
 #[cfg(test)]
-use wormhole_term::{Mark, PtyEvent};
+use wormhole_term::{Mark, Progress, PtyEvent};
 
 use super::TerminalView;
 use super::status::Status;
@@ -51,9 +54,14 @@ impl TerminalView {
     fn apply_reported(&mut self, summary: Option<Reported>, by_report: bool) -> bool {
         let before = (self.status, self.agent_message.clone(), self.agent);
         let derived = summary.as_ref().map(|summary| (status_of(summary), summary.agent()));
+        // A progress bar (OSC 9;4) says how far along work is, not what the agent in front is
+        // doing: a hook's word on it (a question waiting, say) is not taken over by a later bar.
+        let bar_under_hooks =
+            self.hook_driven && summary.as_ref().is_some_and(|summary| summary.bar.is_some());
         self.program = summary;
         if self.status != Status::Exited {
             match derived {
+                Some(_) if bar_under_hooks => {}
                 Some(((status, message), agent)) => {
                     self.program_driven |= by_report;
                     if self.program_driven {
@@ -78,6 +86,18 @@ impl TerminalView {
             }
         }
         (self.status, &self.agent_message, self.agent) != (before.0, &before.1, before.2)
+    }
+
+    /// Drop the OSC 9;4 progress its program has not renewed for `wormhole_term::program_status::PROGRESS_TIMEOUT` by `now` (the
+    /// store has no clock; the window's tick brings one). Returns whether it did, which the tick
+    /// passes on so the chrome is told outside a draw.
+    pub(super) fn expire_progress_at(&mut self, now: Instant) -> bool {
+        let Some(pty) = &self.pty else { return false };
+        if !pty.program_status().expire_progress(now) {
+            return false;
+        }
+        self.sync_reported(false);
+        true
     }
 
     /// The program that was in front has left the terminal (the process exit of the protocol):
@@ -115,6 +135,26 @@ impl TerminalView {
         }
         self.handle_event(PtyEvent::ProgramStatus, cx);
         self.after_events(cx);
+    }
+
+    /// Feed one OSC 9;4 report to the terminal's records at `now` as the PTY thread would, and
+    /// handle the event that tells the UI (none when it changed nothing shown).
+    pub(crate) fn progress_for_test(
+        &mut self,
+        progress: Option<Progress>,
+        now: Instant,
+        cx: &mut Context<Self>,
+    ) {
+        let changed = self.pty.as_ref().is_some_and(|pty| pty.program_status().set_progress(progress, now));
+        if changed {
+            self.handle_event(PtyEvent::ProgramStatus, cx);
+            self.after_events(cx);
+        }
+    }
+
+    /// The window's tick at `now`, as far as the OSC 9;4 timeout goes.
+    pub(crate) fn expire_progress_for_test(&mut self, now: Instant) -> bool {
+        self.expire_progress_at(now)
     }
 
     /// A shell prompt began (OSC 133 `A`): the PTY thread drops what only the running program could
@@ -158,7 +198,8 @@ impl TerminalView {
 /// The status and the words a program's record amounts to. A blocked program needs input, with its
 /// own words or a short default for what it waits for; working is busy, done is done, and an error
 /// is failed, with what went wrong as its words. How far along a working or blocked program says it
-/// is follows its words ("Installing · 40%"); a result has no progress to show.
+/// is follows its words ("Installing · 40%"); a result has no progress to show. An OSC 9;4 bar is
+/// work whatever its state: paused and error say so in their words and are never a result.
 pub(super) fn status_of(summary: &Reported) -> (Status, Option<String>) {
     let message = summary.message();
     match summary.state {
@@ -166,12 +207,18 @@ pub(super) fn status_of(summary: &Reported) -> (Status, Option<String>) {
             let words = message.unwrap_or_else(|| waiting_for(summary.kind).to_string());
             (Status::Attention, Some(with_progress(words, summary.progress)))
         }
+        // A bar in its error state (OSC 9;4 state 2) is a state the program still holds, not an
+        // outcome: busy, never failed, so nothing is announced and nothing waits to be looked at.
+        State::Error if summary.bar.is_some() => {
+            let words = wormhole_text::text(wormhole_text::keys::TERMINAL_PROGRESS_ERROR).to_string();
+            (Status::Busy, Some(with_progress(words, summary.progress)))
+        }
         State::Error => (Status::Failed, message),
         State::Done => (Status::Done, message),
         // Without words of its own, only the percentage is worth saying: the row's "Working · 3m"
         // can't carry it.
         // A program that holds its progress (OSC 9;4 state 4) says so, since it isn't moving.
-        State::Working if summary.paused => {
+        State::Working if summary.bar == Some(ProgressState::Paused) => {
             let words = wormhole_text::text(wormhole_text::keys::TERMINAL_PROGRESS_PAUSED).to_string();
             (Status::Busy, Some(with_progress(words, summary.progress)))
         }
@@ -203,6 +250,7 @@ fn waiting_for(kind: Option<Kind>) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    use wormhole_term::ProgressState;
     use wormhole_term::program_status::{Kind, State, Summary};
 
     use super::super::Status;
@@ -216,7 +264,7 @@ mod tests {
             app: None,
             title: None,
             msg: msg.map(str::to_string),
-            paused: false,
+            bar: None,
         }
     }
 
@@ -294,8 +342,18 @@ mod tests {
 
     #[test]
     fn progress_a_program_holds_says_paused_and_keeps_its_percentage() {
-        let paused = Summary { paused: true, ..with_progress(State::Working, 40, None) };
+        let paused = Summary { bar: Some(ProgressState::Paused), ..with_progress(State::Working, 40, None) };
         assert_eq!(status_of(&paused), (Status::Busy, Some("Paused · 40%".into())));
+    }
+
+    #[test]
+    fn a_bar_in_error_is_busy_with_its_percentage_never_failed() {
+        let bar = Summary { bar: Some(ProgressState::Error), ..summary(State::Error, None, None) };
+        assert_eq!(status_of(&bar), (Status::Busy, Some("Error".into())));
+        let with_percent = Summary { progress: Some(50), ..bar };
+        assert_eq!(status_of(&with_percent), (Status::Busy, Some("Error · 50%".into())));
+        // A 7501 error is an outcome and stays one.
+        assert_eq!(status_of(&summary(State::Error, None, Some("x"))).0, Status::Failed);
     }
 
     #[test]

@@ -47,7 +47,11 @@ pub const SEQUENCES: &[Sequence] = &[
         sequence: "OSC 9;4",
         name: "Progress",
         source: "ConEmu, Windows Terminal",
-        does: "Kept per terminal, not shown yet.",
+        does: "Shown in the terminal's row like OSC 7501's `progress`: a percentage (state 4 \
+               says Paused), plain work for state 3 and Error for state 2, a state the \
+               program holds and not a failure; 0 removes it. Whichever of the two needs you \
+               more is shown, OSC 7501 on a tie. It ends at the next prompt, when the program \
+               exits, or after 15 seconds without a report.",
     },
     Sequence {
         sequence: "OSC 9;9",
