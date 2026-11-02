@@ -326,6 +326,8 @@ jobs:
           REQUIRE_RELEASE_KEY: ${{ env.PUBLISH == 'true' && '1' || '0' }}
           RELEASE_TAG: ${{ env.CHANNEL == 'preview' && 'preview' || '' }}
           REQUIRE_NOTARIZATION: ${{ env.PUBLISH == 'true' && env.ALLOW_UNSIGNED != 'true' && '1' || '0' }}
+          # dmgbuild's venv stays out of target/, which rust-cache cleans and saves (scripts/make-dmg.sh).
+          DMG_VENV: ${{ runner.temp }}/dmg-venv
         run: |
           if [ -z "$MINISIGN_SECRET_KEY" ] && [ "$REQUIRE_RELEASE_KEY" != 1 ]; then
             # Not publishing and no real key: package.sh falls back to the (git-ignored)

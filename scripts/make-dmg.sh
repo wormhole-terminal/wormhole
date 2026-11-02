@@ -12,6 +12,8 @@
 # Env:
 #   REQUIRE_DMG_LAYOUT=1  fail when neither works (default: warn and ship a plain image)
 #   DMG_LAYOUT=skip       do not try; a plain image
+#   DMG_VENV=<dir>        where dmgbuild is installed (default target/dmg-venv). CI puts it outside target/,
+#                         whose cache cleanup otherwise walks pip's own `target` folders and logs ENOENT errors.
 #
 # The background is packaging/dmg/background.png + background@2x.png (packaging/dmg/make-background.swift draws
 # them); the window and the icon positions are in packaging/dmg/settings.py and below, where its arrow expects them.
@@ -50,7 +52,7 @@ plain() { # the app and the Applications shortcut, nothing else
 }
 
 with_dmgbuild() {
-  local venv="$TARGET_DIR/dmg-venv"
+  local venv="${DMG_VENV:-$TARGET_DIR/dmg-venv}"
   if [ ! -x "$venv/bin/dmgbuild" ]; then
     need python3
     log "installing dmgbuild into $venv"
