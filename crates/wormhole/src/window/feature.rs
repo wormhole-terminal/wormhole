@@ -414,6 +414,10 @@ pub(crate) struct BranchChip {
     pub pick: PickBranchFn,
 }
 
+/// How long until a word on a tab reads differently, given the feature's entity and the selected
+/// terminal's id (`TabDef::time_words`).
+pub(crate) type TimeWordsFn = fn(&AnyEntity, i64, &App) -> Option<Duration>;
+
 /// A panel tab of a feature.
 pub(crate) struct TabDef {
     pub id: TabId,
@@ -451,7 +455,7 @@ pub(crate) struct TabDef {
     /// word on it reads differently, `None` while none moves. The window redraws then, while the tab is
     /// on show (`window/clock.rs`).
     /// It is given the feature's entity and the selected terminal's id.
-    pub time_words: Option<fn(&AnyEntity, i64, &App) -> Option<Duration>>,
+    pub time_words: Option<TimeWordsFn>,
     /// The tab is offered only while something holds (Usage: an agent is on screen). The window
     /// remembers the tab it came from when this one is opened, and goes back there when it is gone.
     pub returns_to_previous: bool,
