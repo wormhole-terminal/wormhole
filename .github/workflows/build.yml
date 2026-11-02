@@ -160,7 +160,7 @@ jobs:
       # signs and publishes must not depend on what an earlier run left in the cache (zizmor:
       # cache-poisoning). The cache is main's alone (save-if), so the risk left for Preview is a
       # compromised run on main, which could publish to Preview directly anyway.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2 # zizmor: ignore[cache-poisoning]
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.2 # zizmor: ignore[cache-poisoning]
         if: env.CHANNEL == 'preview'
         with:
           key: release
