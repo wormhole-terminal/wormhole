@@ -532,6 +532,55 @@ pub(crate) fn devctl_installed(version: &str, pending: bool, cx: &mut App) {
     prompt::announce(cx);
 }
 
+/// devctl `update-state <state>`: Settings → Updates as it is in one state, from fixtures, without a
+/// feed, a download or an install (a dev build has none). The names are in `devctl/mod.rs`.
+#[cfg(feature = "devctl")]
+pub(crate) fn devctl_state(state: &str, cx: &mut App) -> Result<(), String> {
+    use wormhole_core::update::Asset;
+    let release = |version: &str| {
+        Release {
+        version: semver::Version::parse(version).expect("a fixture version"),
+        notes: "## Added\n\n- Settings shows each page's **live preview** as a card.\n- A `config.json` key for \
+                [borders](https://example.invalid/borders).\n\n## Fixed\n\n- After a restart, the window that was in \
+                front is in front again.\n- Going back to Stable no longer keeps an Unstable build.\n\nThanks for \
+                the reports."
+            .into(),
+        pub_date: None,
+        minimum_system_version: None,
+        asset: Asset { url: String::new(), sha256: String::new(), signature: String::new(), size: 100 },
+        security: None,
+    }
+    };
+    let updates = cx.global_mut::<Updates>();
+    updates.channel_note = None;
+    updates.installing = None;
+    updates.restart_when_idle = None;
+    updates.phase = match state {
+        "idle" => UpdatePhase::Idle,
+        "checking" => UpdatePhase::Checking,
+        "up-to-date" => UpdatePhase::UpToDate,
+        "available" => UpdatePhase::Available(Box::new(release("1.7.0"))),
+        "downloading" => {
+            updates.progress.0.store(40, Ordering::Relaxed);
+            updates.progress.1.store(100, Ordering::Relaxed);
+            UpdatePhase::Downloading
+        }
+        "installed" => UpdatePhase::Installed("1.7.0".into()),
+        "failed" => UpdatePhase::Failed("network error: the server did not answer".into()),
+        "removed" => {
+            updates.channel_note = Some(ChannelNote::Removed("1.7.0-dev.12".into()));
+            UpdatePhase::Idle
+        }
+        "stays" => {
+            updates.channel_note = Some(ChannelNote::Stays("1.7.0-dev.12".into()));
+            UpdatePhase::Installed("1.7.0-dev.12".into())
+        }
+        other => return Err(format!("unknown update state {other:?}")),
+    };
+    notify_settings(cx);
+    Ok(())
+}
+
 fn save_update_schedule(cx: &App) {
     let updates = cx.global::<Updates>();
     let Some(file) = &updates.schedule_file else { return };

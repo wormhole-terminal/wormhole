@@ -31,6 +31,12 @@ pub(super) fn update_installed(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `update-state <state>`: Settings → Updates in one state, from fixtures (see `update::devctl_state`).
+pub(super) fn update_state(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    crate::update::devctl_state(arg.trim(), ctx.cx).map_err(|e| anyhow!(e))?;
+    Ok(String::new())
+}
+
 pub(super) fn project(ctx: &mut Ctx, arg: &str) -> Result<String> {
     crate::settings_window::devctl::project(arg.trim(), ctx.cx);
     Ok(String::new())

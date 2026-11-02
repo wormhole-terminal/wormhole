@@ -199,6 +199,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "import-open" => settings::import_open,
         "import-apply" => settings::import_apply,
         "update-installed" => settings::update_installed,
+        "update-state" => settings::update_state,
         "settings-project" => settings::project,
         "settings-project-menu" => settings::project_menu,
         "settings-search" => settings::search,

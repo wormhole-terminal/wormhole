@@ -256,6 +256,9 @@
 //!                   as theme files in the instance's data dir)
 //!   update-installed <version> [pending]   Settings → Updates as after an install: Restart, or with
 //!                   `pending` the line "Restarts when your terminals are idle."
+//!   update-state <idle|checking|up-to-date|available|downloading|installed|failed|removed|stays>
+//!                   Settings → Updates in that state from fixtures, nothing downloaded or installed
+//!                   (`removed`, `stays`: the notes after going back to Stable)
 //!   font-picker <interface|code|terminal> [query]   expand a font picker (open settings first)
 //!   picker <compare|history> [query]   open the branch select in the Changes / History tab
 //!   settings-project-menu [query]   open the project select in Settings → Project folders
