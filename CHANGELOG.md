@@ -12,6 +12,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   its processes, version and protocol against the app's, whether it answers, which terminal holds it
   and how that connection is doing, with End, Forget and a copy of the details for a bug report.
 
+### Fixed
+
+- A terminal that pasted or copied more than 64 KiB through the clipboard (an OSC 52 reply), or started with an
+  environment that large, lost its session host: after the handshake the host kept the handshake's
+  smaller frame limit and dropped the connection.
+
 ## [1.6.3] - 2026-11-02
 
 ### Fixed

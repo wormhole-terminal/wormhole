@@ -123,6 +123,18 @@ impl Conn {
         }
     }
 
+    /// Put the decoder back after a frame was handled with it taken out (`handle_frames` leaves a
+    /// placeholder in its place meanwhile, so a limit `Hello` set on the placeholder would be lost):
+    /// the payload limit follows the connection's phase, the handshake's before `Hello`, the full
+    /// one after it.
+    pub(super) fn restore_decoder(&mut self, mut dec: Decoder) {
+        match self.phase {
+            Phase::Hello { .. } => dec.limit_to_handshake(),
+            Phase::Ready { .. } => dec.set_max_payload(wormhole_wire::MAX_PAYLOAD),
+        }
+        self.dec = dec;
+    }
+
     pub(super) fn role(&self) -> Option<Role> {
         match self.phase {
             Phase::Ready { role } => Some(role),

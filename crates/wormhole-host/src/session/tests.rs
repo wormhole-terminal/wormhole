@@ -764,3 +764,24 @@ fn an_event_for_a_newer_host_is_answered_not_fatal() {
     assert_eq!(rig.recv(id), [Got::Error(ty::EVENT, error_code::BAD_STATE)]);
     assert!(!rig.session.should_close(id));
 }
+
+/// `Hello` lifts the handshake's payload limit; it must still be lifted once the frame that
+/// carried it has been handled (the decoder is out of the connection while a frame is handled).
+#[test]
+fn a_frame_larger_than_64_kib_is_accepted_after_hello_and_fatal_before() {
+    let big = vec![b'x'; 100 * 1024];
+    // Before Hello: fatal.
+    let mut rig = Rig::new();
+    let id = rig.connect();
+    rig.send(id, &Message::ClipboardReply(wire::ClipboardReply { ticket: 1, data: &big }));
+    let at = rig.session.index(id).expect("still listed until the driver closes it");
+    assert!(rig.session.conns[at].dead, "a frame past the handshake limit before Hello ends the connection");
+    // After Hello: taken, and the connection stays up.
+    let mut rig = Rig::new();
+    let id = rig.spawned();
+    rig.attach(id, StreamMode::Raw, 0);
+    rig.send(id, &Message::ClipboardReply(wire::ClipboardReply { ticket: 7, data: &big }));
+    let at = rig.session.index(id).expect("listed");
+    assert!(!rig.session.conns[at].dead, "a large ClipboardReply is not a protocol error after Hello");
+    assert_eq!(rig.state.borrow().clipboard, [(7, big)]);
+}

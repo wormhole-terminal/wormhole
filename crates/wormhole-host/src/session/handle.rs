@@ -43,7 +43,7 @@ impl<S: Spawner> Session<S> {
                 }
             };
             if let Some(at) = self.index(id) {
-                self.conns[at].dec = dec;
+                self.conns[at].restore_decoder(dec);
             }
             if done {
                 return;
