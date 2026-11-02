@@ -179,7 +179,9 @@ const BUDGET: [(&str, u64); 18] = [
     // 10,264 measured, 983 more than the one line it was.
     ("Projects", 10259),
     // Measured with the nav's Motion and Import rows, which came after the page.
-    ("Extensions", 2832),
+    // Step 8c: the Probes' rows, with a note under the hint in place of a notice, and the footer in place
+    // of the Refresh button; the page measures an empty list in the tests: 2,758, 74 fewer.
+    ("Extensions", 2758),
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost

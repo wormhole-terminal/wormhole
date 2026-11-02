@@ -136,7 +136,6 @@ impl SettingsWindow {
                     .on_click(cx.listener(|this, _, _, cx| this.scan_import(cx)))
                     .into_any_element(),
             ),
-            Section::Extensions => Some(extensions::header_action(cx)),
             Section::Profile => Some(
                 style::form_button("profile-new")
                     .outline()

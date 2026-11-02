@@ -8,8 +8,9 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use gpui_kit::component::Disableable as _;
+use gpui_kit::assets::IconName;
 use gpui_kit::component::button::ButtonVariants;
+use gpui_kit::component::{Disableable as _, Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::probe::approval::{self, Changes, Grants, Proof, Request};
@@ -29,6 +30,9 @@ use crate::settings_window::{Section, SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
 
 const SHEET_W: f32 = 520.0;
+/// The Probe's tile in the sheet's head, and the line icon on it.
+const SHEET_TILE: f32 = 40.0;
+const SHEET_TILE_ICON: f32 = 20.0;
 /// How much of the window's height the sheet's scrolling part may take; the buttons stay below it.
 const SHEET_MAX_H: f32 = 0.72;
 
@@ -271,12 +275,34 @@ impl SettingsWindow {
             .flex()
             .flex_col()
             .gap_3()
-            .child(style::panel_title(ui, title))
-            .child(div().text_caption().text_color(ui.muted).child(settings_extensions_identity(
-                &reveal(&probe.id),
-                &reveal(&probe.version),
-                &reveal(&probe.author),
-            )))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_3()
+                    .child(
+                        div()
+                            .flex_none()
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .size(px(SHEET_TILE))
+                            .rounded(ui.radius)
+                            .bg(crate::settings_window::nav::page_tile(Section::Extensions, cx))
+                            .child(
+                                Icon::new(IconName::Puzzle)
+                                    .with_size(px(SHEET_TILE_ICON))
+                                    .text_color(ui.tile_mark_brand),
+                            ),
+                    )
+                    .child(div().flex().flex_col().min_w_0().child(style::panel_title(ui, title)).child(
+                        div().text_caption().text_color(ui.muted).child(settings_extensions_identity(
+                            &reveal(&probe.id),
+                            &reveal(&probe.version),
+                            &reveal(&probe.author),
+                        )),
+                    )),
+            )
             .child(div().text_body().child(reveal(&probe.description).into_owned()));
         if let Some(changes) = &changes {
             body = body.child(changes_block(ui, changes));
@@ -415,28 +441,20 @@ fn scrolling_body(ui: crate::settings::UiColors, sheet: &Sheet, body: Div, max_h
 /// How tall the fade over the sheet body's bottom edge is.
 const FADE_H: f32 = 32.0;
 
-/// What differs from the approval the Probe is `Changed` against.
+/// What differs from the approval the Probe is `Changed` against, in an amber notice under its own heading.
 fn changes_block(ui: crate::settings::UiColors, changes: &Changes) -> Div {
-    let mut block = div().flex().flex_col().gap_1().child(style::setting_group_head(
-        ui,
-        text(SETTINGS_EXTENSIONS_SINCE),
-        None,
-    ));
+    let mut lines = Vec::new();
     if changes.files_only() {
-        block = block.child(div().text_body().child(text(SETTINGS_EXTENSIONS_FILES_CHANGED)));
+        lines.push(text(SETTINGS_EXTENSIONS_FILES_CHANGED).to_string());
     }
-    for added in &changes.added {
-        block = block.child(
-            div()
-                .text_body()
-                .text_color(ui.warning_text)
-                .child(settings_extensions_now_asks(&reveal(&describe(added)))),
-        );
-    }
-    for gone in &changes.removed {
-        block = block.child(div().text_body().child(settings_extensions_no_longer_asks(&reveal(gone))));
-    }
-    block
+    lines.extend(changes.added.iter().map(|added| settings_extensions_now_asks(&reveal(&describe(added)))));
+    lines.extend(changes.removed.iter().map(|gone| settings_extensions_no_longer_asks(&reveal(gone))));
+    div()
+        .flex()
+        .flex_col()
+        .gap_1()
+        .child(style::setting_group_head(ui, text(SETTINGS_EXTENSIONS_SINCE), None))
+        .child(style::notice(ui, style::NoticeKind::Warning, lines.join("\n")))
 }
 
 /// A permission as a sentence, for the places that list it without a switch.
@@ -450,6 +468,19 @@ fn describe(permission: &DeclaredPermission) -> String {
         "agents" => settings_extensions_perm_agents(detail.strip_prefix("install-hooks:").unwrap_or(&detail)),
         "main" => text(SETTINGS_EXTENSIONS_PERM_CODE).to_string(),
         key => settings_extensions_perm_other(key, &detail),
+    }
+}
+
+/// The size of the line icon before a permission.
+const PERMISSION_ICON: f32 = 14.0;
+
+/// The icon that stands for what a permission lets a Probe do.
+fn permission_icon(key: &str) -> IconName {
+    match key {
+        "process" => IconName::SquareTerminal,
+        "notify" => IconName::Bell,
+        "open" => IconName::Link2,
+        _ => IconName::Puzzle,
     }
 }
 
@@ -490,6 +521,12 @@ fn permission_row(
                 .flex()
                 .items_center()
                 .gap_2()
+                .child(
+                    Icon::new(permission_icon(permission.key))
+                        .with_size(px(PERMISSION_ICON))
+                        .text_color(ui.muted)
+                        .flex_none(),
+                )
                 .child(div().flex_1().min_w_0().text_body().child(describe(permission)))
                 .when(permission.confirmation == Confirmation::TouchId, |d| {
                     d.child(style::status_badge(ui, ui.muted, text(SETTINGS_EXTENSIONS_TOUCH_ID)))

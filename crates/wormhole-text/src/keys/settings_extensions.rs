@@ -18,275 +18,281 @@ pub const SETTINGS_EXTENSIONS_PROBES_DESCRIPTION: Key = Key::new(584);
 pub const SETTINGS_EXTENSIONS_PROBES_KEYWORDS: Key = Key::new(585);
 /// "Scan the Probes folder again"
 pub const SETTINGS_EXTENSIONS_REFRESH: Key = Key::new(586);
+/// "Probes live in the Probes folder, one folder each with a probe.toml."
+pub const SETTINGS_EXTENSIONS_FOOTER: Key = Key::new(587);
+/// "Scan Again"
+pub const SETTINGS_EXTENSIONS_SCAN_AGAIN: Key = Key::new(588);
+/// "A folder in the Probes folder"
+pub const SETTINGS_EXTENSIONS_FOLDER_HINT: Key = Key::new(589);
 /// "Looking for Probes…"
-pub const SETTINGS_EXTENSIONS_LOOKING: Key = Key::new(587);
+pub const SETTINGS_EXTENSIONS_LOOKING: Key = Key::new(590);
 /// "No Probes yet"
-pub const SETTINGS_EXTENSIONS_NONE_TITLE: Key = Key::new(588);
+pub const SETTINGS_EXTENSIONS_NONE_TITLE: Key = Key::new(591);
 /// "Show in Finder"
-pub const SETTINGS_EXTENSIONS_SHOW_FOLDER: Key = Key::new(591);
+pub const SETTINGS_EXTENSIONS_SHOW_FOLDER: Key = Key::new(594);
 /// "Off"
-pub const SETTINGS_EXTENSIONS_STATE_OFF: Key = Key::new(594);
+pub const SETTINGS_EXTENSIONS_STATE_OFF: Key = Key::new(597);
 /// "On"
-pub const SETTINGS_EXTENSIONS_STATE_ON: Key = Key::new(595);
+pub const SETTINGS_EXTENSIONS_STATE_ON: Key = Key::new(598);
 /// "Changed"
-pub const SETTINGS_EXTENSIONS_STATE_CHANGED: Key = Key::new(596);
+pub const SETTINGS_EXTENSIONS_STATE_CHANGED: Key = Key::new(599);
 /// "Can't be enabled"
-pub const SETTINGS_EXTENSIONS_STATE_INVALID: Key = Key::new(597);
+pub const SETTINGS_EXTENSIONS_STATE_INVALID: Key = Key::new(600);
 /// "Needs code"
-pub const SETTINGS_EXTENSIONS_STATE_UNSUPPORTED: Key = Key::new(598);
+pub const SETTINGS_EXTENSIONS_STATE_UNSUPPORTED: Key = Key::new(601);
 /// "Not approved by this Wormhole"
-pub const SETTINGS_EXTENSIONS_STATE_UNSEALED: Key = Key::new(599);
+pub const SETTINGS_EXTENSIONS_STATE_UNSEALED: Key = Key::new(602);
 /// "Its files changed since you approved it, so it is off until you approve it again."
-pub const SETTINGS_EXTENSIONS_CHANGED_NOTE: Key = Key::new(600);
+pub const SETTINGS_EXTENSIONS_CHANGED_NOTE: Key = Key::new(603);
 /// "An approval is stored for it that this Wormhole did not make, or that was changed afterwards, so it is off. Approve it again, or forget the approval."
-pub const SETTINGS_EXTENSIONS_UNSEALED_NOTE: Key = Key::new(601);
+pub const SETTINGS_EXTENSIONS_UNSEALED_NOTE: Key = Key::new(604);
 /// "Wormhole couldn't read its key from the Keychain, so extensions stay off. Unlock the Keychain or allow access when it asks, then scan again."
-pub const SETTINGS_EXTENSIONS_KEY_UNAVAILABLE: Key = Key::new(602);
+pub const SETTINGS_EXTENSIONS_KEY_UNAVAILABLE: Key = Key::new(605);
 /// "A development build keeps no extension approvals in the real data folder, so extensions stay off. Start it with WORMHOLE_DATA_DIR set to a scratch folder."
-pub const SETTINGS_EXTENSIONS_DEV_DATA_FOLDER: Key = Key::new(603);
+pub const SETTINGS_EXTENSIONS_DEV_DATA_FOLDER: Key = Key::new(606);
 /// "It runs code, which this version of Wormhole does not support yet."
-pub const SETTINGS_EXTENSIONS_UNSUPPORTED_NOTE: Key = Key::new(604);
+pub const SETTINGS_EXTENSIONS_UNSUPPORTED_NOTE: Key = Key::new(607);
 /// "Approve again…"
-pub const SETTINGS_EXTENSIONS_APPROVE_AGAIN: Key = Key::new(606);
+pub const SETTINGS_EXTENSIONS_APPROVE_AGAIN: Key = Key::new(609);
 /// "It asks for"
-pub const SETTINGS_EXTENSIONS_ASKS_FOR: Key = Key::new(612);
+pub const SETTINGS_EXTENSIONS_ASKS_FOR: Key = Key::new(615);
 /// "It asks for no permissions. It can only add what its files describe."
-pub const SETTINGS_EXTENSIONS_ASKS_FOR_NOTHING: Key = Key::new(613);
+pub const SETTINGS_EXTENSIONS_ASKS_FOR_NOTHING: Key = Key::new(616);
 /// "Show notifications"
-pub const SETTINGS_EXTENSIONS_PERM_NOTIFY: Key = Key::new(617);
+pub const SETTINGS_EXTENSIONS_PERM_NOTIFY: Key = Key::new(620);
 /// "Run code inside Wormhole"
-pub const SETTINGS_EXTENSIONS_PERM_CODE: Key = Key::new(619);
+pub const SETTINGS_EXTENSIONS_PERM_CODE: Key = Key::new(622);
 /// "Touch ID"
-pub const SETTINGS_EXTENSIONS_TOUCH_ID: Key = Key::new(621);
+pub const SETTINGS_EXTENSIONS_TOUCH_ID: Key = Key::new(624);
 /// "Read-only git, run by Wormhole itself."
-pub const SETTINGS_EXTENSIONS_READ_ONLY_GIT: Key = Key::new(624);
+pub const SETTINGS_EXTENSIONS_READ_ONLY_GIT: Key = Key::new(627);
 /// "A script from its own folder, exactly as approved."
-pub const SETTINGS_EXTENSIONS_OWN_SCRIPT: Key = Key::new(625);
+pub const SETTINGS_EXTENSIONS_OWN_SCRIPT: Key = Key::new(628);
 /// "Dangerous together"
-pub const SETTINGS_EXTENSIONS_COMBINATIONS: Key = Key::new(626);
+pub const SETTINGS_EXTENSIONS_COMBINATIONS: Key = Key::new(629);
 /// "Since you approved it"
-pub const SETTINGS_EXTENSIONS_SINCE: Key = Key::new(628);
+pub const SETTINGS_EXTENSIONS_SINCE: Key = Key::new(631);
 /// "Its files changed."
-pub const SETTINGS_EXTENSIONS_FILES_CHANGED: Key = Key::new(629);
+pub const SETTINGS_EXTENSIONS_FILES_CHANGED: Key = Key::new(632);
 /// "Approving needs Touch ID, or your password."
-pub const SETTINGS_EXTENSIONS_CONFIRM_TOUCH_ID: Key = Key::new(633);
+pub const SETTINGS_EXTENSIONS_CONFIRM_TOUCH_ID: Key = Key::new(636);
 /// "Approving needs only a click."
-pub const SETTINGS_EXTENSIONS_CONFIRM_CLICK: Key = Key::new(634);
+pub const SETTINGS_EXTENSIONS_CONFIRM_CLICK: Key = Key::new(637);
 /// "Cancel"
-pub const SETTINGS_EXTENSIONS_CANCEL: Key = Key::new(635);
+pub const SETTINGS_EXTENSIONS_CANCEL: Key = Key::new(638);
 /// "Approve"
-pub const SETTINGS_EXTENSIONS_APPROVE: Key = Key::new(636);
+pub const SETTINGS_EXTENSIONS_APPROVE: Key = Key::new(639);
 /// "Approve with Touch ID…"
-pub const SETTINGS_EXTENSIONS_APPROVE_TOUCH_ID: Key = Key::new(637);
+pub const SETTINGS_EXTENSIONS_APPROVE_TOUCH_ID: Key = Key::new(640);
 /// "Waiting for approval…"
-pub const SETTINGS_EXTENSIONS_WAITING: Key = Key::new(638);
+pub const SETTINGS_EXTENSIONS_WAITING: Key = Key::new(641);
 /// "The folder's name is not a Probe id."
-pub const SETTINGS_EXTENSIONS_ERR_BAD_NAME: Key = Key::new(640);
+pub const SETTINGS_EXTENSIONS_ERR_BAD_NAME: Key = Key::new(643);
 /// "A Probe is a folder of its own here, not a link."
-pub const SETTINGS_EXTENSIONS_ERR_LINK: Key = Key::new(641);
+pub const SETTINGS_EXTENSIONS_ERR_LINK: Key = Key::new(644);
 /// "It runs code, which this version of Wormhole does not support yet."
-pub const SETTINGS_EXTENSIONS_ERR_NEEDS_CODE: Key = Key::new(644);
+pub const SETTINGS_EXTENSIONS_ERR_NEEDS_CODE: Key = Key::new(647);
 /// "The yes was for another version of it. Open the sheet again."
-pub const SETTINGS_EXTENSIONS_ERR_UNCONFIRMED: Key = Key::new(648);
+pub const SETTINGS_EXTENSIONS_ERR_UNCONFIRMED: Key = Key::new(651);
 /// "Its approved copy is missing, so it is off until you approve it again."
-pub const SETTINGS_EXTENSIONS_COPY_MISSING: Key = Key::new(649);
+pub const SETTINGS_EXTENSIONS_COPY_MISSING: Key = Key::new(652);
 /// "Its approved copy is not what you approved, so it is off until you approve it again."
-pub const SETTINGS_EXTENSIONS_COPY_DIFFERS: Key = Key::new(651);
+pub const SETTINGS_EXTENSIONS_COPY_DIFFERS: Key = Key::new(654);
 /// "Forget approval"
-pub const SETTINGS_EXTENSIONS_FORGET: Key = Key::new(652);
+pub const SETTINGS_EXTENSIONS_FORGET: Key = Key::new(655);
 
 /// ```text
 /// Probes live in { $folder }, one folder each with a probe.toml in it.
 /// ```
 pub fn settings_extensions_none_where(folder: &str) -> String {
-    crate::active::message(589, &[("folder", Arg::Str(folder))])
+    crate::active::message(592, &[("folder", Arg::Str(folder))])
 }
 
 /// ```text
 /// Make one with { $command }, or copy a folder in. It stays off until you approve it here.
 /// ```
 pub fn settings_extensions_none_new(command: &str) -> String {
-    crate::active::message(590, &[("command", Arg::Str(command))])
+    crate::active::message(593, &[("command", Arg::Str(command))])
 }
 
 /// ```text
 /// The Probes folder has more than { $count } entries, so none are listed. Move the ones you don't use out of it.
 /// ```
 pub fn settings_extensions_too_many(count: &str) -> String {
-    crate::active::message(592, &[("count", Arg::Str(count))])
+    crate::active::message(595, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// { $id } · version { $version } · by { $author }
 /// ```
 pub fn settings_extensions_identity(id: &str, version: &str, author: &str) -> String {
-    crate::active::message(593, &[("id", Arg::Str(id)), ("version", Arg::Str(version)), ("author", Arg::Str(author))])
+    crate::active::message(596, &[("id", Arg::Str(id)), ("version", Arg::Str(version)), ("author", Arg::Str(author))])
 }
 
 /// ```text
 /// { $reason }
 /// ```
 pub fn settings_extensions_invalid_reason(reason: &str) -> String {
-    crate::active::message(605, &[("reason", Arg::Str(reason))])
+    crate::active::message(608, &[("reason", Arg::Str(reason))])
 }
 
 /// ```text
 /// { $name } was not turned on: { $reason }
 /// ```
 pub fn settings_extensions_not_approved(name: &str, reason: &str) -> String {
-    crate::active::message(607, &[("name", Arg::Str(name)), ("reason", Arg::Str(reason))])
+    crate::active::message(610, &[("name", Arg::Str(name)), ("reason", Arg::Str(reason))])
 }
 
 /// ```text
 /// { $name } could not be turned off: { $reason }
 /// ```
 pub fn settings_extensions_not_turned_off(name: &str, reason: &str) -> String {
-    crate::active::message(608, &[("name", Arg::Str(name)), ("reason", Arg::Str(reason))])
+    crate::active::message(611, &[("name", Arg::Str(name)), ("reason", Arg::Str(reason))])
 }
 
 /// ```text
 /// { $name } cannot be turned on: { $reason }
 /// ```
 pub fn settings_extensions_cannot_approve(name: &str, reason: &str) -> String {
-    crate::active::message(609, &[("name", Arg::Str(name)), ("reason", Arg::Str(reason))])
+    crate::active::message(612, &[("name", Arg::Str(name)), ("reason", Arg::Str(reason))])
 }
 
 /// ```text
 /// Turn on { $name }
 /// ```
 pub fn settings_extensions_sheet_title(name: &str) -> String {
-    crate::active::message(610, &[("name", Arg::Str(name))])
+    crate::active::message(613, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Approve { $name } again
 /// ```
 pub fn settings_extensions_sheet_title_again(name: &str) -> String {
-    crate::active::message(611, &[("name", Arg::Str(name))])
+    crate::active::message(614, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Run { $program }
 /// ```
 pub fn settings_extensions_perm_process(program: &str) -> String {
-    crate::active::message(614, &[("program", Arg::Str(program))])
+    crate::active::message(617, &[("program", Arg::Str(program))])
 }
 
 /// ```text
 /// Hand the secret { $name } to the programs it runs
 /// ```
 pub fn settings_extensions_perm_env(name: &str) -> String {
-    crate::active::message(615, &[("name", Arg::Str(name))])
+    crate::active::message(618, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Open links on { $host }
 /// ```
 pub fn settings_extensions_perm_open(host: &str) -> String {
-    crate::active::message(616, &[("host", Arg::Str(host))])
+    crate::active::message(619, &[("host", Arg::Str(host))])
 }
 
 /// ```text
 /// Write the hook entries of its agent { $agent }
 /// ```
 pub fn settings_extensions_perm_agents(agent: &str) -> String {
-    crate::active::message(618, &[("agent", Arg::Str(agent))])
+    crate::active::message(621, &[("agent", Arg::Str(agent))])
 }
 
 /// ```text
 /// { $key }: { $detail }
 /// ```
 pub fn settings_extensions_perm_other(key: &str, detail: &str) -> String {
-    crate::active::message(620, &[("key", Arg::Str(key)), ("detail", Arg::Str(detail))])
+    crate::active::message(623, &[("key", Arg::Str(key)), ("detail", Arg::Str(detail))])
 }
 
 /// ```text
 /// { $program } can run anything it is given.
 /// ```
 pub fn settings_extensions_runs_anything(program: &str) -> String {
-    crate::active::message(622, &[("program", Arg::Str(program))])
+    crate::active::message(625, &[("program", Arg::Str(program))])
 }
 
 /// ```text
 /// { $program } runs code that the folder it starts in brings.
 /// ```
 pub fn settings_extensions_runs_folder_code(program: &str) -> String {
-    crate::active::message(623, &[("program", Arg::Str(program))])
+    crate::active::message(626, &[("program", Arg::Str(program))])
 }
 
 /// ```text
 /// It { $what }.
 /// ```
 pub fn settings_extensions_combination(what: &str) -> String {
-    crate::active::message(627, &[("what", Arg::Str(what))])
+    crate::active::message(630, &[("what", Arg::Str(what))])
 }
 
 /// ```text
 /// Now also asks for: { $what }
 /// ```
 pub fn settings_extensions_now_asks(what: &str) -> String {
-    crate::active::message(630, &[("what", Arg::Str(what))])
+    crate::active::message(633, &[("what", Arg::Str(what))])
 }
 
 /// ```text
 /// No longer asks for: { $what }
 /// ```
 pub fn settings_extensions_no_longer_asks(what: &str) -> String {
-    crate::active::message(631, &[("what", Arg::Str(what))])
+    crate::active::message(634, &[("what", Arg::Str(what))])
 }
 
 /// ```text
 /// files: { $count }, fingerprint { $fingerprint }…
 /// ```
 pub fn settings_extensions_files_fingerprint(count: &str, fingerprint: &str) -> String {
-    crate::active::message(632, &[("count", Arg::Str(count)), ("fingerprint", Arg::Str(fingerprint))])
+    crate::active::message(635, &[("count", Arg::Str(count)), ("fingerprint", Arg::Str(fingerprint))])
 }
 
 /// ```text
 /// turn on the Probe “{ $name }” and let it do what it asks
 /// ```
 pub fn settings_extensions_auth_reason(name: &str) -> String {
-    crate::active::message(639, &[("name", Arg::Str(name))])
+    crate::active::message(642, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Its probe.toml says its id is { $id }, not the folder's name.
 /// ```
 pub fn settings_extensions_err_id_mismatch(id: &str) -> String {
-    crate::active::message(642, &[("id", Arg::Str(id))])
+    crate::active::message(645, &[("id", Arg::Str(id))])
 }
 
 /// ```text
 /// { $reason }
 /// ```
 pub fn settings_extensions_err_read(reason: &str) -> String {
-    crate::active::message(643, &[("reason", Arg::Str(reason))])
+    crate::active::message(646, &[("reason", Arg::Str(reason))])
 }
 
 /// ```text
 /// Its files could not be copied for it to run from: { $reason }
 /// ```
 pub fn settings_extensions_err_copy(reason: &str) -> String {
-    crate::active::message(645, &[("reason", Arg::Str(reason))])
+    crate::active::message(648, &[("reason", Arg::Str(reason))])
 }
 
 /// ```text
 /// The approval could not be saved: { $reason }
 /// ```
 pub fn settings_extensions_err_store(reason: &str) -> String {
-    crate::active::message(646, &[("reason", Arg::Str(reason))])
+    crate::active::message(649, &[("reason", Arg::Str(reason))])
 }
 
 /// ```text
 /// The key the approval is sealed with could not be made in the Keychain: { $reason }
 /// ```
 pub fn settings_extensions_err_key(reason: &str) -> String {
-    crate::active::message(647, &[("reason", Arg::Str(reason))])
+    crate::active::message(650, &[("reason", Arg::Str(reason))])
 }
 
 /// ```text
 /// Its approved copy cannot be read ({ $why }), so it is off until you approve it again.
 /// ```
 pub fn settings_extensions_copy_unreadable(why: &str) -> String {
-    crate::active::message(650, &[("why", Arg::Str(why))])
+    crate::active::message(653, &[("why", Arg::Str(why))])
 }

@@ -11,8 +11,16 @@ settings-extensions-probes = Probes
 
 ## The page (settings_window/sections/extensions.rs)
 
-# The tooltip of the button that looks for Probes again.
+# What VoiceOver says for the footer's Scan Again.
 settings-extensions-refresh = Scan the Probes folder again
+
+# The line under the list of Probes, before its two buttons.
+settings-extensions-footer = Probes live in the Probes folder, one folder each with a probe.toml.
+
+settings-extensions-scan-again = Scan Again
+
+# The line of a folder that holds no readable Probe, where a Probe's own name and version would be.
+settings-extensions-folder-hint = A folder in the Probes folder
 
 settings-extensions-looking = Looking for Probes…
 

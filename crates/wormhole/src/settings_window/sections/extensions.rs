@@ -3,7 +3,7 @@
 //! needs no question. "On" is a stored approval that later steps read: nothing here runs a Probe.
 //!
 //! The folder is read on the background executor when the page opens, when the window comes forward
-//! while the page is showing and from the Refresh button, never on a timer and never in a frame.
+//! while the page is showing and from Scan Again, never on a timer and never in a frame.
 //! A Probe's words are written by whoever made the folder, so every one is passed through
 //! `probe::hidden::reveal` before it is drawn.
 
@@ -29,7 +29,7 @@ use super::extensions_text::verify_text;
 use crate::settings::UiColors;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{Section, SettingsWindow, ui};
-use crate::style::{self, TextRole};
+use crate::style::{self, Edges as _, TextRole};
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("probes", draw_probes)];
 
@@ -213,6 +213,7 @@ fn draw_probes(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
                     .flex()
                     .flex_col()
                     .children(entries.iter().map(|entry| probe_row(ui, entry, cx)))
+                    .child(footer(ui, cx))
                     .into_any_element()
             };
             let Some(problem) = key_problem else { return rows };
@@ -258,6 +259,15 @@ fn empty(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
                         cx.listener(move |_, _, _, cx| crate::settings_window::open_folder(&to_open, cx)),
                     )
                     .into_any_element(),
+                style::form_button("probes-refresh")
+                    .outline()
+                    .icon(IconName::RefreshCw)
+                    .label(text(SETTINGS_EXTENSIONS_SCAN_AGAIN))
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.scan_probes(cx);
+                        cx.notify();
+                    }))
+                    .into_any_element(),
             ],
         },
     )
@@ -274,7 +284,9 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
             settings_extensions_identity(&reveal(&probe.id), &reveal(&probe.version), &reveal(&probe.author)),
             reveal(&probe.description).into_owned(),
         ),
-        None => (reveal(&folder).into_owned(), String::new(), String::new()),
+        None => {
+            (reveal(&folder).into_owned(), text(SETTINGS_EXTENSIONS_FOLDER_HINT).to_string(), String::new())
+        }
     };
     let state = &entry.state;
     // An unsealed approval is a stored one that reads as none: off, but worth a warning's colour.
@@ -311,29 +323,22 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
                 cx.listener(move |this, _, _, cx| this.turn_probe_off(probe_id.clone(), name.clone(), cx)),
             )
     });
+    // What is wrong or waiting, in the colour of what it is: the row says it, the (i) has the rest.
     let note = match state {
-        ProbeState::Changed => Some(
-            div()
-                .child(match &entry.copy_problem {
-                    Some(problem) => verify_text(problem),
-                    None => text(SETTINGS_EXTENSIONS_CHANGED_NOTE).to_string(),
-                })
-                .into_any_element(),
-        ),
-        ProbeState::Unsupported => {
-            Some(div().child(text(SETTINGS_EXTENSIONS_UNSUPPORTED_NOTE)).into_any_element())
-        }
-        ProbeState::Off if entry.unsealed => {
-            Some(div().child(text(SETTINGS_EXTENSIONS_UNSEALED_NOTE)).into_any_element())
-        }
-        _ => None,
-    };
-    let invalid = match state {
-        ProbeState::Invalid(reason) => Some(style::notice(
-            ui,
-            style::NoticeKind::Danger,
-            settings_extensions_invalid_reason(&reveal(reason)),
+        ProbeState::Changed => Some((
+            ui.warning_text,
+            match &entry.copy_problem {
+                Some(problem) => verify_text(problem),
+                None => text(SETTINGS_EXTENSIONS_CHANGED_NOTE).to_string(),
+            },
         )),
+        ProbeState::Unsupported => Some((ui.muted, text(SETTINGS_EXTENSIONS_UNSUPPORTED_NOTE).to_string())),
+        ProbeState::Off if entry.unsealed => {
+            Some((ui.warning_text, text(SETTINGS_EXTENSIONS_UNSEALED_NOTE).to_string()))
+        }
+        ProbeState::Invalid(reason) => {
+            Some((ui.danger_text, settings_extensions_invalid_reason(&reveal(reason))))
+        }
         _ => None,
     };
     let mut parts = style::TileRowParts::new(
@@ -345,30 +350,39 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
     );
     parts.chip = Some((chip_kind, word.into()));
     parts.hint = Some(identity).filter(|identity| !identity.is_empty()).map(Into::into);
+    parts.note = note.map(|(color, note)| (color, note.into()));
     parts.more = Some(description).filter(|description| !description.is_empty()).map(Into::into);
-    parts.controls = [forget.map(|b| b.into_any_element()), again.map(|b| b.into_any_element())]
+    // A changed Probe is turned on again by "Approve again…", which is what its switch would do.
+    let switch = (*state != ProbeState::Changed).then(|| switch.into_any_element());
+    parts.controls = [forget.map(|b| b.into_any_element()), again.map(|b| b.into_any_element()), switch]
         .into_iter()
         .flatten()
-        .chain([switch.into_any_element()])
         .collect();
-    div()
-        .flex()
-        .flex_col()
-        .child(style::tile_row(id, ui, parts))
-        .children(note.map(|note| {
-            div().pb_2().pl(px(style::ROW_TILE + 12.0)).text_caption().text_color(ui.muted).child(note)
-        }))
-        .children(invalid.map(|banner| div().pb_2().pl(px(style::ROW_TILE + 12.0)).child(banner)))
-        .into_any_element()
+    style::tile_row(id, ui, parts).into_any_element()
 }
 
-/// The Refresh button, at the right of the page's title.
-pub(in crate::settings_window) fn header_action(cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let ui = ui(cx);
-    style::icon_button("probes-refresh", ui, IconName::RefreshCw, text(SETTINGS_EXTENSIONS_REFRESH))
-        .on_click(cx.listener(|this, _, _, cx| {
-            this.scan_probes(cx);
-            cx.notify();
-        }))
+/// The line under the list: where Probes live, and the two things to do about the folder.
+fn footer(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let folder = DataRoot::current().probes_dir();
+    div()
+        .flex()
+        .flex_wrap()
+        .items_center()
+        .gap_x_4()
+        .rule_top(ui)
+        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_EXTENSIONS_FOOTER)))
+        .child(
+            style::link_button("probes-show-folder", ui, text(SETTINGS_EXTENSIONS_SHOW_FOLDER), false)
+                .on_click(cx.listener(move |_, _, _, cx| crate::settings_window::open_folder(&folder, cx))),
+        )
+        .child(
+            style::link_button("probes-refresh", ui, text(SETTINGS_EXTENSIONS_SCAN_AGAIN), false)
+                .role(gpui_kit::accesskit::Role::Button)
+                .aria_label(text(SETTINGS_EXTENSIONS_REFRESH))
+                .on_click(cx.listener(|this, _, _, cx| {
+                    this.scan_probes(cx);
+                    cx.notify();
+                })),
+        )
         .into_any_element()
 }
