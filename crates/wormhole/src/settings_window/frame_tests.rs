@@ -131,20 +131,25 @@ const BUDGET: [(&str, u64); 17] = [
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
     // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
     // page measured 9,501: under this, which stays.
-    ("Agents", 10486),
+    // The line that no agent was found became the empty list (a card with a title, the sentence and an
+    // icon): 11,013 measured, 527 more, all of it the second text block's shaping and the card.
+    ("Agents", 11013),
     ("MenuBar", 6904),
     // Fell from 53,549 to 50,188 (measured) when the group labels, notices and buttons became one
     // component each; Terminal, Updates, Motion, Projects and Extensions fell by 3 to 589 with them.
     ("Import", 50188),
-    ("Updates", 5597),
+    // Fell by 37 when the status became a tile row.
+    ("Updates", 5560),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     // With the New programs group: the Developer Tools row, its description and its button (417).
     ("Advanced", 5136),
     ("Motion", 6784),
-    ("Projects", 9281),
+    // The Trusted projects list, empty in the tests, says so in the empty list (title, hint, card):
+    // 10,264 measured, 983 more than the one line it was.
+    ("Projects", 10264),
     // Measured with the nav's Motion and Import rows, which came after the page.
-    ("Extensions", 2842),
+    ("Extensions", 2837),
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost

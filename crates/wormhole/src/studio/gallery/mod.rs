@@ -24,6 +24,7 @@ mod sidebar;
 mod sketch;
 mod syntax;
 mod terminal;
+mod tile_rows;
 mod tiles;
 mod typography;
 mod view;

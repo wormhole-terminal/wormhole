@@ -24,10 +24,9 @@ use wormhole_core::agents::{self, integrations};
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::ipc::control::doctor::mcp_add_command;
 
-use super::agents::mark;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, TextRole};
 
 pub(super) const SKILLS: Setting = Setting::block("agent-skills", draw_skills);
 pub(super) const MCP: Setting = Setting::custom("agent-mcp", draw_mcp);
@@ -87,24 +86,40 @@ fn draw_skills(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
         .map(|row| skill_row(row, cx))
         .collect();
     let none = rows.is_empty().then(|| {
-        div().py_3().rule_top(ui).text_body().text_color(ui.muted).child(text(SETTINGS_AGENTS_SKILL_NONE))
+        style::empty_list(
+            ui,
+            style::EmptyList {
+                icon: IconName::SquareTerminal,
+                title: text(SETTINGS_AGENTS_NONE_TITLE).into(),
+                hint: text(SETTINGS_AGENTS_SKILL_NONE).into(),
+                actions: Vec::new(),
+            },
+        )
     });
     div().flex().flex_col().children(rows).children(none).into_any_element()
 }
 
 fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
-    let (code_font, _) = crate::fonts::code_font(cx);
     let target = row.target;
     let agent = agents::agent(target.agent);
     let word = target.word();
     let state = row.state.as_ref().ok().copied();
-    let (detail, color) = match state {
-        Some(State::NotInstalled) if row.covered.is_some() => (text(SETTINGS_AGENTS_SKILL_COVERED), ui.muted),
-        Some(State::Current) => (text(SETTINGS_AGENTS_SKILL_CURRENT), ui.success_text),
-        Some(State::Outdated) => (text(SETTINGS_AGENTS_SKILL_OUTDATED), ui.warning_text),
-        Some(State::Foreign) => (text(SETTINGS_AGENTS_SKILL_FOREIGN), ui.warning_text),
-        _ => (text(SETTINGS_AGENTS_SKILL_NOT_INSTALLED), ui.muted),
+    let (detail, chip) = match state {
+        Some(State::NotInstalled) if row.covered.is_some() => (text(SETTINGS_AGENTS_SKILL_COVERED), None),
+        Some(State::Current) => (
+            text(SETTINGS_AGENTS_SKILL_CURRENT),
+            Some((style::ChipKind::Good, text(SETTINGS_AGENTS_SKILL_CHIP_CURRENT))),
+        ),
+        Some(State::Outdated) => (
+            text(SETTINGS_AGENTS_SKILL_OUTDATED),
+            Some((style::ChipKind::Warn, text(SETTINGS_AGENTS_SKILL_CHIP_OUTDATED))),
+        ),
+        Some(State::Foreign) => (
+            text(SETTINGS_AGENTS_SKILL_FOREIGN),
+            Some((style::ChipKind::Warn, text(SETTINGS_AGENTS_SKILL_CHIP_FOREIGN))),
+        ),
+        _ => (text(SETTINGS_AGENTS_SKILL_NOT_INSTALLED), None),
     };
     let button = |id: &str, label: &'static str, primary: bool| {
         style::form_button(SharedString::from(format!("agent-skill-{word}-{id}")))
@@ -115,71 +130,41 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let install = |cx: &mut Context<SettingsWindow>, label, primary| {
         button("install", label, primary)
             .on_click(cx.listener(move |this, _, _, cx| this.change_skill(target, false, cx)))
+            .into_any_element()
     };
     let remove = |cx: &mut Context<SettingsWindow>| {
         button("remove", text(SETTINGS_AGENTS_UNINSTALL), false)
             .on_click(cx.listener(move |this, _, _, cx| this.change_skill(target, true, cx)))
+            .into_any_element()
     };
-    let actions = div().flex_none().flex().items_center().gap_2();
-    let actions = match state {
-        Some(State::Current) => actions.child(remove(cx)),
-        Some(State::Outdated) => {
-            actions.child(install(cx, text(SETTINGS_AGENTS_UPDATE), true)).child(remove(cx))
-        }
-        Some(State::Foreign) => actions.child(
+    let controls = match state {
+        Some(State::Current) => vec![remove(cx)],
+        Some(State::Outdated) => vec![install(cx, text(SETTINGS_AGENTS_UPDATE), true), remove(cx)],
+        Some(State::Foreign) => vec![
             button("install", text(SETTINGS_AGENTS_INSTALL), true)
                 .disabled(true)
-                .tooltip(text(SETTINGS_AGENTS_SKILL_FOREIGN_TOOLTIP)),
-        ),
+                .tooltip(text(SETTINGS_AGENTS_SKILL_FOREIGN_TOOLTIP))
+                .into_any_element(),
+        ],
         // Covered: the agent reads a folder that has the skill; nothing to press.
-        Some(State::NotInstalled) if row.covered.is_some() => actions,
-        _ => actions.child(install(cx, text(SETTINGS_AGENTS_INSTALL), true)),
+        Some(State::NotInstalled) if row.covered.is_some() => Vec::new(),
+        _ => vec![install(cx, text(SETTINGS_AGENTS_INSTALL), true)],
     };
     let problem = row.state.as_ref().err().map(|err| {
-        div().pl(px(style::CONTROL_H + 12.0)).child(style::notice(ui, style::NoticeKind::Danger, err.clone()))
+        div().pb_2().pl(px(style::ROW_TILE + 12.0)).child(style::notice(
+            ui,
+            style::NoticeKind::Danger,
+            err.clone(),
+        ))
     });
+    let mut parts = style::TileRowParts::new(style::RowTile::Agent(target.agent), agent.name);
+    parts.chip = chip.map(|(kind, word)| (kind, word.into()));
+    parts.hint = Some(format!("{detail} {}", row.covered.as_deref().unwrap_or(&row.shown)).into());
+    parts.controls = controls;
     div()
         .flex()
         .flex_col()
-        .gap_2()
-        .py_2()
-        .rule_top(ui)
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap_3()
-                .child(mark(ui, agent))
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w_0()
-                        .flex()
-                        .flex_col()
-                        .child(div().text_body().font_weight(FontWeight::MEDIUM).child(agent.name))
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_1()
-                                .min_w_0()
-                                .text_caption()
-                                .text_color(color)
-                                .child(detail)
-                                .child(
-                                    div()
-                                        .px_1()
-                                        .rounded(ui.radius_chip)
-                                        .bg(ui.hover)
-                                        .text_color(ui.muted)
-                                        .font_family(code_font)
-                                        .truncate()
-                                        .child(row.covered.clone().unwrap_or_else(|| row.shown.clone())),
-                                ),
-                        ),
-                )
-                .child(actions),
-        )
+        .child(style::tile_row(SharedString::from(format!("agent-skill-{word}")), ui, parts))
         .children(problem)
         .into_any_element()
 }

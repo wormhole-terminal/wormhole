@@ -35,13 +35,15 @@ pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
 
 /// Nothing to bring over: what was looked for, so the page doesn't read as broken.
 fn none_found(ui: crate::settings::UiColors) -> Div {
-    style::card(ui, ui.border)
-        .flex()
-        .flex_col()
-        .gap_2()
-        .child(style::icon(IconName::Search).text_color(ui.muted))
-        .child(div().text_body().font_weight(FontWeight::SEMIBOLD).child(text(SETTINGS_IMPORT_NONE)))
-        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_IMPORT_NONE_DETAIL)))
+    style::empty_list(
+        ui,
+        style::EmptyList {
+            icon: IconName::Search,
+            title: text(SETTINGS_IMPORT_NONE).into(),
+            hint: text(SETTINGS_IMPORT_NONE_DETAIL).into(),
+            actions: Vec::new(),
+        },
+    )
 }
 
 fn card(window: &SettingsWindow, found: &Found, ix: usize, cx: &mut Context<SettingsWindow>) -> AnyElement {

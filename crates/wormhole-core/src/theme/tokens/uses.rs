@@ -572,6 +572,20 @@ pub const TOKEN_USES: &[TokenUse] = &[
         ],
     ),
     u(
+        "tile.row",
+        "tile row",
+        Settings,
+        &[
+            "chip.good.fill",
+            "chip.warn.fill",
+            "chip.danger.fill",
+            "chip.quiet.fill",
+            "chip.solid.text",
+            "tile.mark.brand",
+            "metrics.radius_chip",
+        ],
+    ),
+    u(
         "palette.row",
         "palette result",
         Ambient,

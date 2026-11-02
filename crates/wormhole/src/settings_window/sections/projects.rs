@@ -25,6 +25,7 @@ use crate::features::project::LoadedProject;
 use crate::select;
 use crate::select::{Choice, SearchSelect, SelectTrigger};
 use crate::settings::UiColors;
+use crate::settings_window::nav::page_tile;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, RowKeys, SettingParts, SettingState, TextRole};
@@ -289,55 +290,43 @@ impl SettingsWindow {
         ));
         let list: Vec<PathBuf> = project::api::trusted_roots(cx);
         if list.is_empty() {
-            trusted = trusted.child(
-                div()
-                    .py_3()
-                    .rule_top(ui)
-                    .text_body()
-                    .text_color(ui.faint)
-                    .child(text(SETTINGS_PROJECTS_NONE_YET)),
-            );
+            trusted = trusted.child(style::empty_list(
+                ui,
+                style::EmptyList {
+                    icon: IconName::Folder,
+                    title: text(SETTINGS_PROJECTS_NONE_YET).into(),
+                    hint: text(SETTINGS_PROJECTS_NONE_HINT).into(),
+                    actions: Vec::new(),
+                },
+            ));
         }
         for (ix, root) in list.into_iter().enumerate() {
+            let tile =
+                style::RowTile::Icon { fill: page_tile(Section::Projects, cx), icon: IconName::Folder };
             let (open, revoke) = (root.clone(), root.clone());
-            trusted = trusted.child(
-                div()
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap_2()
-                    .min_h(px(style::ROW_H + 8.0))
-                    .rule_top(ui)
-                    .child(div().text_body().truncate().child(short_home(&root)))
-                    .child(
-                        div()
-                            .flex()
-                            .gap_1()
-                            .child(
-                                style::form_button(("trusted-open", ix))
-                                    .ghost()
-                                    .label(text(SETTINGS_PROJECTS_SETTINGS))
-                                    .on_click(cx.listener(move |this, _, _, cx| {
-                                        this.projects.select(open.clone());
-                                        cx.notify();
-                                    })),
-                            )
-                            .child(
-                                style::form_button(("revoke", ix))
-                                    .ghost()
-                                    .label(text(SETTINGS_PROJECTS_REVOKE))
-                                    .on_click(cx.listener(move |this, _, _, cx| {
-                                        let root = revoke.clone();
-                                        project::revoke_project(
-                                            &project::shown_profile(cx).clone(),
-                                            &root,
-                                            cx,
-                                        );
-                                        this.projects.forget_info();
-                                    })),
-                            ),
-                    ),
-            );
+            let mut parts = style::TileRowParts::new(tile, choice_label(&root));
+            parts.chip = Some((style::ChipKind::Good, text(SETTINGS_PROJECTS_TRUSTED).into()));
+            parts.hint = Some(short_home(&root).into());
+            parts.controls = vec![
+                style::form_button(("trusted-open", ix))
+                    .ghost()
+                    .label(text(SETTINGS_PROJECTS_SETTINGS))
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.projects.select(open.clone());
+                        cx.notify();
+                    }))
+                    .into_any_element(),
+                style::form_button(("revoke", ix))
+                    .ghost()
+                    .label(text(SETTINGS_PROJECTS_REVOKE))
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        let root = revoke.clone();
+                        project::revoke_project(&project::shown_profile(cx).clone(), &root, cx);
+                        this.projects.forget_info();
+                    }))
+                    .into_any_element(),
+            ];
+            trusted = trusted.child(style::tile_row(("trusted-project", ix), ui, parts));
         }
         if !*self.projects.can_approve.get_or_init(crate::platform::auth::available) {
             trusted = trusted.child(div().pb_2().child(style::notice(

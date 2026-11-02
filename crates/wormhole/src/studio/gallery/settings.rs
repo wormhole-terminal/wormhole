@@ -47,6 +47,7 @@ pub(super) fn render(
             .gap_6()
             .child(env.mark("banner", banners(ui)))
             .child(env.mark("notice", super::notices::notices(ui, cx)))
+            .child(env.mark("tile.row", super::tile_rows::tile_rows(ui)))
             .child(profile_marks(env))
             .into_any_element(),
     }

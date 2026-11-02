@@ -226,42 +226,32 @@ fn draw_installed(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> 
     let rows: Vec<AnyElement> =
         snapshot.installed().map(|row| agent_row(ui, row, snapshot.home(), cx)).collect();
     let none = rows.is_empty().then(|| {
-        div()
-            .py_3()
-            .rule_top(ui)
-            .text_body()
-            .text_color(ui.muted)
-            .child(text(SETTINGS_AGENTS_NO_CODING_AGENT_ON_THIS_MACS))
+        style::empty_list(
+            ui,
+            style::EmptyList {
+                icon: IconName::SquareTerminal,
+                title: text(SETTINGS_AGENTS_NONE_TITLE).into(),
+                hint: text(SETTINGS_AGENTS_NO_CODING_AGENT_ON_THIS_MACS).into(),
+                actions: Vec::new(),
+            },
+        )
     });
     div().flex().flex_col().children(rows).children(none).into_any_element()
 }
 
-/// An agent's logo in a square, or its monogram (CX, AI…) for an agent without a bundled logo.
+/// An agent's logo on its own tile (`agents::Agent::tile`), or its monogram for an agent without a bundled logo.
 pub(super) fn mark(ui: UiColors, agent: &Agent) -> AnyElement {
-    let tile = div()
-        .flex_none()
-        .flex()
-        .items_center()
-        .justify_center()
-        .size(px(style::CONTROL_H))
-        .rounded(ui.radius)
-        .bg(ui.hover);
-    match agent.icon() {
-        Some(logo) => tile.child(style::agent_logo(Some(logo), agent.monogram, style::GLYPH, ui.text)),
-        None => tile.text_caption().font_weight(FontWeight::BOLD).text_color(ui.text).child(agent.monogram),
-    }
-    .into_any_element()
+    style::brand_tile(ui, style::TileFace::Agent(agent.id), style::ROW_TILE)
 }
 
-/// One installed agent: its mark and name with the hooks' badge, where the hooks are
-/// (Reveal), the one action that fits, and what needs doing under it.
+/// One installed agent as a tile row: its name with the hooks' chip, where the hooks are (and Reveal), the one
+/// action that fits; and under it what needs doing, and each profile's login.
 fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let agent = row.agent;
-    let (code_font, _) = crate::fonts::code_font(cx);
-    let (badge, badge_color) = match (row.spec, row.hooks()) {
-        (Some(_), Some(State::Installed)) => (text(SETTINGS_AGENTS_STATUS_HOOKS_ON), ui.success_text),
-        (Some(_), Some(State::Partial)) => (text(SETTINGS_AGENTS_HOOKS_INCOMPLETE), ui.warning_text),
-        _ => (text(SETTINGS_AGENTS_READING_OUTPUT), ui.muted),
+    let (chip_kind, chip) = match (row.spec, row.hooks()) {
+        (Some(_), Some(State::Installed)) => (style::ChipKind::Good, text(SETTINGS_AGENTS_STATUS_HOOKS_ON)),
+        (Some(_), Some(State::Partial)) => (style::ChipKind::Warn, text(SETTINGS_AGENTS_HOOKS_INCOMPLETE)),
+        _ => (style::ChipKind::Quiet, text(SETTINGS_AGENTS_READING_OUTPUT)),
     };
     let path = row.spec.map(|spec| (spec.display_path(home), spec.path(home)));
     let detail = match row.hooks() {
@@ -270,37 +260,54 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
         Some(State::NotInstalled) => text(SETTINGS_AGENTS_INSTALLED_STATUS_FROM_OUTPUT_HOOKS_GO),
         None => text(SETTINGS_AGENTS_INSTALLED_STATUS_FROM_OUTPUT_NO_HOOK),
     };
-    let action = match (row.spec, row.hooks()) {
-        (Some(spec), Some(state)) => {
-            let remove = state == State::Installed;
-            let label = match state {
-                State::Installed => text(SETTINGS_AGENTS_REMOVE_HOOKS),
-                State::Partial => text(SETTINGS_AGENTS_REPAIR_HOOKS),
-                State::NotInstalled => text(SETTINGS_AGENTS_INSTALL_HOOKS),
-            };
-            Some(
-                style::form_button(SharedString::from(format!("agent-hooks-{:?}", agent.id)))
-                    .when(remove, |b| b.outline())
-                    .when(!remove, |b| b.primary())
-                    .label(label)
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        let home = integrations::home();
-                        let result = if remove { spec.uninstall(&home) } else { spec.install(&home) };
-                        if let Err(err) = &result {
-                            tracing::warn!("{} hooks: {err}", agent.name);
-                        }
-                        this.notice = result.err().map(|e| {
-                            (Section::Agents, settings_agents_hooks_failed(agent.name, &e.to_string()).into())
-                        });
-                        // The files changed: read them again.
-                        this.load_agents(cx);
-                        cx.notify();
-                    }))
-                    .into_any_element(),
-            )
-        }
-        _ => None,
+    let hint = match &path {
+        Some((shown, _)) => format!("{detail} {shown}"),
+        None => detail.to_string(),
     };
+    let mut parts = style::TileRowParts::new(style::RowTile::Agent(agent.id), agent.name);
+    parts.chip = Some((chip_kind, chip.into()));
+    parts.hint = Some(hint.into());
+    if let Some((_, full)) = path {
+        parts.controls.push(
+            style::icon_button(
+                SharedString::from(format!("agent-reveal-{:?}", agent.id)),
+                ui,
+                IconName::ExternalLink,
+                text(SETTINGS_AGENTS_REVEAL_IN_FINDER),
+            )
+            .in_row()
+            .on_click(move |_, _, cx| reveal_file(&full, cx))
+            .into_any_element(),
+        );
+    }
+    if let (Some(spec), Some(state)) = (row.spec, row.hooks()) {
+        let remove = state == State::Installed;
+        let label = match state {
+            State::Installed => text(SETTINGS_AGENTS_REMOVE_HOOKS),
+            State::Partial => text(SETTINGS_AGENTS_REPAIR_HOOKS),
+            State::NotInstalled => text(SETTINGS_AGENTS_INSTALL_HOOKS),
+        };
+        parts.controls.push(
+            style::form_button(SharedString::from(format!("agent-hooks-{:?}", agent.id)))
+                .when(remove, |b| b.outline())
+                .when(!remove, |b| b.primary())
+                .label(label)
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    let home = integrations::home();
+                    let result = if remove { spec.uninstall(&home) } else { spec.install(&home) };
+                    if let Err(err) = &result {
+                        tracing::warn!("{} hooks: {err}", agent.name);
+                    }
+                    this.notice = result.err().map(|e| {
+                        (Section::Agents, settings_agents_hooks_failed(agent.name, &e.to_string()).into())
+                    });
+                    // The files changed: read them again.
+                    this.load_agents(cx);
+                    cx.notify();
+                }))
+                .into_any_element(),
+        );
+    }
     let problem = match &row.state {
         Some(Err(err)) => Some(style::notice(ui, style::NoticeKind::Danger, err.clone())),
         Some(Ok(State::Partial)) => {
@@ -312,80 +319,20 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
     div()
         .flex()
         .flex_col()
-        .gap_2()
-        .py_2()
-        .rule_top(ui)
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap_3()
-                .child(mark(ui, agent))
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w_0()
-                        .flex()
-                        .flex_col()
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_2()
-                                .child(div().text_body().font_weight(FontWeight::MEDIUM).child(agent.name))
-                                .child(style::status_badge(ui, badge_color, badge)),
-                        )
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_1()
-                                .min_w_0()
-                                .text_caption()
-                                .text_color(ui.muted)
-                                .child(detail)
-                                .children(path.map(|(shown, full)| {
-                                    div()
-                                        .flex()
-                                        .items_center()
-                                        .gap_1()
-                                        .min_w_0()
-                                        .child(
-                                            div()
-                                                .px_1()
-                                                .rounded(ui.radius_chip)
-                                                .bg(ui.hover)
-                                                .font_family(code_font.clone())
-                                                .truncate()
-                                                .child(shown),
-                                        )
-                                        .child(
-                                            style::icon_button(
-                                                SharedString::from(format!("agent-reveal-{:?}", agent.id)),
-                                                ui,
-                                                IconName::ExternalLink,
-                                                text(SETTINGS_AGENTS_REVEAL_IN_FINDER),
-                                            )
-                                            .in_row()
-                                            .on_click(move |_, _, cx| reveal_file(&full, cx)),
-                                        )
-                                })),
-                        ),
-                )
-                .children(action),
-        )
+        .child(style::tile_row(SharedString::from(format!("agent-{:?}", agent.id)), ui, parts))
         .children(note.map(|note| {
             div()
                 .flex()
                 .items_center()
                 .gap_2()
-                .pl(px(style::CONTROL_H + 12.0))
+                .pb_2()
+                .pl(px(style::ROW_TILE + 12.0))
                 .text_caption()
                 .text_color(ui.muted)
                 .child(style::icon(IconName::Info))
                 .child(note)
         }))
-        .children(problem.map(|banner| div().pl(px(style::CONTROL_H + 12.0)).child(banner)))
+        .children(problem.map(|banner| div().pb_2().pl(px(style::ROW_TILE + 12.0)).child(banner)))
         .children(row.spec.map(|spec| {
             div().flex().flex_col().children(
                 row.logins.iter().enumerate().map(|(ix, login)| login_row(ui, agent, spec, ix, login, cx)),
@@ -423,7 +370,7 @@ fn login_row(
         .flex()
         .items_center()
         .gap_2()
-        .pl(px(style::CONTROL_H + 12.0))
+        .pl(px(style::ROW_TILE + 12.0))
         .py_1()
         .child(
             div()

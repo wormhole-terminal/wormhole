@@ -126,6 +126,12 @@ pub struct UiColors {
     pub notice_warning_text: Hsla,
     pub notice_danger: Hsla,
     pub notice_danger_text: Hsla,
+    /// The solid chips of a Settings list (`style::tile_row`): a fill for each kind, one ink.
+    pub chip_good: Hsla,
+    pub chip_warn: Hsla,
+    pub chip_danger: Hsla,
+    pub chip_quiet: Hsla,
+    pub chip_text: Hsla,
     /// A file's added and removed line counts (`diff.added` / `diff.removed`).
     pub added: Hsla,
     pub removed: Hsla,
@@ -261,6 +267,11 @@ const COLORS: &[Field] = fields! {
     notice_warning_text = "banner.warning.solid.text";
     notice_danger = "banner.danger.solid";
     notice_danger_text = "banner.danger.solid.text";
+    chip_good = "chip.good.fill";
+    chip_warn = "chip.warn.fill";
+    chip_danger = "chip.danger.fill";
+    chip_quiet = "chip.quiet.fill";
+    chip_text = "chip.solid.text";
     added = "diff.added";
     removed = "diff.removed";
     branch = "git.branch";

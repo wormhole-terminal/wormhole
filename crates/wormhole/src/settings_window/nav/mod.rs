@@ -248,6 +248,13 @@ fn tile_token(section: Section) -> Option<&'static str> {
     })
 }
 
+/// The colour of a page's tile in the nav, which a list on another page may borrow for its own tiles (the
+/// Probes under Extensions wear Extensions' colour).
+pub(super) fn page_tile(section: Section, cx: &App) -> Hsla {
+    let tokens = &cx.global::<SettingsStore>().tokens;
+    tile_token(section).map_or_else(|| token(tokens, "tile.background"), |name| token(tokens, name))
+}
+
 /// What VoiceOver reads for a row: its name, and what the row marks. A name with no mark is the
 /// catalog's own text, which costs no allocation.
 fn spoken(name: &'static str, mark: NavMark) -> SharedString {

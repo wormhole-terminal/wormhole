@@ -11,6 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::progress::Progress;
 use gpui_kit::prelude::*;
@@ -21,10 +22,12 @@ use wormhole_core::update::{
 };
 
 use crate::settings::{UiColors, settings};
+use crate::settings_window::nav::page_tile;
 use crate::settings_window::registry::{MenuOption, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::update::{UpdatePhase, Updates};
+use wormhole_core::config::settings_index::SectionId as Section;
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("version", |_, cx| {
@@ -304,21 +307,27 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
         _ => None,
     };
 
+    // The tile says the state at a glance: the page's own colour at rest, the primary while something is
+    // on offer or on its way, amber when it failed.
+    let (tile_fill, tile_icon) = match &phase {
+        UpdatePhase::Failed(_) | UpdatePhase::Unsupported(_) => (ui.warning_text, IconName::TriangleAlert),
+        UpdatePhase::Available(_) => (ui.primary, IconName::ArrowDown),
+        UpdatePhase::Downloading => (ui.primary, IconName::Download),
+        UpdatePhase::Checking => (page_tile(Section::Updates, cx), IconName::RefreshCw),
+        UpdatePhase::Installed(_) | UpdatePhase::UpToDate => {
+            (page_tile(Section::Updates, cx), IconName::Check)
+        }
+        UpdatePhase::Idle => (page_tile(Section::Updates, cx), IconName::Info),
+    };
+    let mut parts =
+        style::TileRowParts::new(style::RowTile::Icon { fill: tile_fill, icon: tile_icon }, status);
+    parts.name_color = Some(status_color);
+    parts.controls = vec![actions.into_any_element()];
+
     div()
         .flex()
         .flex_col()
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .gap_4()
-                .min_h(px(style::SETTING_ROW_MIN_H))
-                .py_2()
-                .rule_top(ui)
-                .child(div().text_body().text_color(status_color).child(status))
-                .child(actions),
-        )
+        .child(style::tile_row("update-status-row", ui, parts))
         .children(security.map(|security| {
             div()
                 .flex()

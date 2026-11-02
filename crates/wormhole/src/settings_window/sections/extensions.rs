@@ -29,7 +29,7 @@ use super::extensions_text::verify_text;
 use crate::settings::UiColors;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{Section, SettingsWindow, ui};
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, TextRole};
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("probes", draw_probes)];
 
@@ -170,12 +170,12 @@ impl SettingsWindow {
     }
 }
 
-fn state_color(ui: UiColors, state: &ProbeState) -> Hsla {
+fn state_chip(state: &ProbeState) -> style::ChipKind {
     match state {
-        ProbeState::On => ui.success_text,
-        ProbeState::Changed => ui.warning_text,
-        ProbeState::Invalid(_) => ui.danger_text,
-        ProbeState::Off | ProbeState::Unsupported => ui.muted,
+        ProbeState::On => style::ChipKind::Good,
+        ProbeState::Changed => style::ChipKind::Warn,
+        ProbeState::Invalid(_) => style::ChipKind::Danger,
+        ProbeState::Off | ProbeState::Unsupported => style::ChipKind::Quiet,
     }
 }
 
@@ -238,34 +238,30 @@ fn empty(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let shown = crate::settings_window::with_tilde(&folder);
     let to_open = folder.clone();
     let command = format!("{COMMAND_NAME} probe new"); // text: a command line, not interface text
-    style::card(ui, ui.border)
-        .flex()
-        .flex_col()
-        .gap_2()
-        .p_4()
-        .child(style::icon(IconName::Puzzle).text_color(ui.muted))
-        .child(
-            div().text_body().font_weight(FontWeight::SEMIBOLD).child(text(SETTINGS_EXTENSIONS_NONE_TITLE)),
-        )
-        .child(
-            div()
-                .text_caption()
-                .text_color(ui.muted)
-                .child(settings_extensions_none_where(&shown))
-                .child(settings_extensions_none_new(&command)),
-        )
-        .child(
-            div().flex().pt_1().child(
+    style::empty_list(
+        ui,
+        style::EmptyList {
+            icon: IconName::Puzzle,
+            title: text(SETTINGS_EXTENSIONS_NONE_TITLE).into(),
+            hint: format!(
+                "{} {}",
+                settings_extensions_none_where(&shown),
+                settings_extensions_none_new(&command)
+            )
+            .into(),
+            actions: vec![
                 style::form_button("probes-show-folder")
                     .outline()
                     .icon(IconName::FolderOpen)
                     .label(text(SETTINGS_EXTENSIONS_SHOW_FOLDER))
                     .on_click(
                         cx.listener(move |_, _, _, cx| crate::settings_window::open_folder(&to_open, cx)),
-                    ),
-            ),
-        )
-        .into_any_element()
+                    )
+                    .into_any_element(),
+            ],
+        },
+    )
+    .into_any_element()
 }
 
 /// One Probe: its mark, name and state, who and which version, what it says it is, and the switch.
@@ -282,7 +278,7 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
     };
     let state = &entry.state;
     // An unsealed approval is a stored one that reads as none: off, but worth a warning's colour.
-    let color = if entry.unsealed { ui.warning_text } else { state_color(ui, state) };
+    let chip_kind = if entry.unsealed { style::ChipKind::Warn } else { state_chip(state) };
     let word = if entry.unsealed { text(SETTINGS_EXTENSIONS_STATE_UNSEALED) } else { state_word(state) };
     let can_switch = state.can_approve() || state.is_on();
     let probe_id = entry.probe.as_ref().map_or_else(|| folder.clone(), |probe| probe.id.clone());
@@ -340,60 +336,29 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
         )),
         _ => None,
     };
+    let mut parts = style::TileRowParts::new(
+        style::RowTile::Icon {
+            fill: crate::settings_window::nav::page_tile(Section::Extensions, cx),
+            icon: IconName::Puzzle,
+        },
+        title,
+    );
+    parts.chip = Some((chip_kind, word.into()));
+    parts.hint = Some(identity).filter(|identity| !identity.is_empty()).map(Into::into);
+    parts.more = Some(description).filter(|description| !description.is_empty()).map(Into::into);
+    parts.controls = [forget.map(|b| b.into_any_element()), again.map(|b| b.into_any_element())]
+        .into_iter()
+        .flatten()
+        .chain([switch.into_any_element()])
+        .collect();
     div()
-        .id(id)
         .flex()
         .flex_col()
-        .gap_2()
-        .py_2()
-        .rule_top(ui)
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap_3()
-                .child(
-                    div()
-                        .flex_none()
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .size(px(style::CONTROL_H))
-                        .rounded(ui.radius)
-                        .bg(ui.hover)
-                        .child(style::icon(IconName::Puzzle).text_color(ui.text)),
-                )
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w_0()
-                        .flex()
-                        .flex_col()
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_2()
-                                .child(
-                                    div().text_body().font_weight(FontWeight::MEDIUM).truncate().child(title),
-                                )
-                                .child(style::status_badge(ui, color, word)),
-                        )
-                        .when(!identity.is_empty(), |d| {
-                            d.child(div().text_caption().text_color(ui.muted).truncate().child(identity))
-                        })
-                        .when(!description.is_empty(), |d| {
-                            d.child(div().text_caption().text_color(ui.muted).child(description))
-                        }),
-                )
-                .children(forget)
-                .children(again)
-                .child(switch),
-        )
+        .child(style::tile_row(id, ui, parts))
         .children(note.map(|note| {
-            div().pl(px(style::CONTROL_H + 12.0)).text_caption().text_color(ui.muted).child(note)
+            div().pb_2().pl(px(style::ROW_TILE + 12.0)).text_caption().text_color(ui.muted).child(note)
         }))
-        .children(invalid.map(|banner| div().pl(px(style::CONTROL_H + 12.0)).child(banner)))
+        .children(invalid.map(|banner| div().pb_2().pl(px(style::ROW_TILE + 12.0)).child(banner)))
         .into_any_element()
 }
 

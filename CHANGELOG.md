@@ -19,6 +19,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   by VoiceOver. While you search, the sidebar shows how many settings each page holds instead of its groups.
   Each row has a coloured tile with its icon, in a shade of its own for Light and Dark, and the open page's
   row is marked in the theme's primary colour.
+- Coding agents, Probes, trusted projects, approved programs and the update status in Settings are one kind of
+  row: a tile (an agent on its own colour, a Probe or project with its icon), the name with a solid chip for
+  its state, one line under it, and the buttons on the right edge, every row the same height. A list with
+  nothing in it (no coding agent found, no Probes, no trusted projects, no terminals to import from) says so
+  in a card that says what to do.
 - Settings rows show their config key under the pointer, and a click on it copies it and says "Copied"
   for a moment. Holding ⌥ shows every key on the page. A right click on a row (or ⌃↩ on one of its
   controls, or VoiceOver's Show menu) offers Copy Key, Copy as JSON (the key with its current value, ready

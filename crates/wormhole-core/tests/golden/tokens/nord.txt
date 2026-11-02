@@ -37,8 +37,13 @@ checkbox.background #242932
 checkbox.border #7b818c
 checkbox.checked #81a1c1
 chip.border #d8dee93d
+chip.danger.fill #c42b20
+chip.good.fill #1f7a35
+chip.quiet.fill #545b68
 chip.selected #81a1c1
+chip.solid.text #ffffff
 chip.tint #81a1c129
+chip.warn.fill #a35200
 diff.added #a3be8c
 diff.added.background #3e474b
 diff.filler #d8dee91f

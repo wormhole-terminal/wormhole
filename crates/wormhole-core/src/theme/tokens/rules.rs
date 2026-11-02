@@ -155,6 +155,13 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         "banner.warning.solid.text" => "readable(#1f1400, banner.warning.solid, 4.5)",
         "banner.danger.solid" => p("#d9342b", "#cf2f26"),
         "banner.danger.solid.text" => "readable(#fff, banner.danger.solid, 4.5)",
+        // The chips of a Settings list (`style::tile_row`) are solid, in the design's own colours like the
+        // notices, so a theme's palette doesn't move them. White words on each reach 4.5:1.
+        "chip.good.fill" => "#1f7a35",
+        "chip.warn.fill" => "#a35200",
+        "chip.danger.fill" => "#c42b20",
+        "chip.quiet.fill" => "#545b68",
+        "chip.solid.text" => "#ffffff",
         // The commands a project wants to run, told apart from what runs them: the
         // info color read as text, on the warning callout's tint and in the opaque window.
         "trust.command" => {

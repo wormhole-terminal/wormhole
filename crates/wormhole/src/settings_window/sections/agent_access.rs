@@ -13,10 +13,10 @@ use wormhole_text::text;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::AgentAccess;
+use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::ipc::access::{Capability, Kind};
 use wormhole_core::view::sidebar::wording;
 
-use super::agents::mark;
 use crate::agent_access::{self, Approved, How, Which};
 use crate::settings::UiColors;
 use crate::settings_window::registry::{MenuOption, Setting};
@@ -142,47 +142,34 @@ fn detail(row: &Approved, now: i64) -> String {
 
 fn program_row(ix: usize, row: Approved, now: i64, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
-    let (code_font, _) = crate::fonts::code_font(cx);
     let which = row.which;
     let tile = match row.agent {
-        Some(id) => mark(ui, wormhole_core::agents::agent(id)),
-        None => style::icon(gpui_kit::assets::IconName::Terminal).text_color(ui.muted).into_any_element(),
+        Some(id) => style::RowTile::Agent(id),
+        None => style::RowTile::Icon {
+            fill: crate::settings_window::nav::page_tile(Section::Terminal, cx),
+            icon: gpui_kit::assets::IconName::Terminal,
+        },
     };
+    let hint = match row.location.is_empty() {
+        true => detail(&row, now),
+        false => format!("{} · {}", detail(&row, now), row.location),
+    };
+    let mut parts = style::TileRowParts::new(tile, row.label.clone());
+    parts.hint = Some(hint.into());
+    parts.controls.push(
+        style::form_button(SharedString::from(format!("agent-access-revoke-{ix}")))
+            .outline()
+            .label(text(SETTINGS_AGENTS_ACCESS_REVOKE))
+            .on_click(cx.listener(move |_, _, _, cx| {
+                agent_access::revoke(which, cx);
+                cx.notify();
+            }))
+            .into_any_element(),
+    );
     div()
         .flex()
-        .items_center()
-        .gap_3()
-        .py_2()
-        .rule_top(ui)
-        .child(tile)
-        .child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .flex()
-                .flex_col()
-                .child(div().text_body().font_weight(FontWeight::MEDIUM).truncate().child(row.label.clone()))
-                .child(div().text_caption().text_color(ui.muted).truncate().child(detail(&row, now)))
-                .when(!row.location.is_empty(), |column| {
-                    column.child(
-                        div()
-                            .text_caption()
-                            .text_color(ui.muted)
-                            .font_family(code_font)
-                            .truncate()
-                            .child(row.location.clone()),
-                    )
-                })
-                .child(switches(ix, which, &row, ui, cx)),
-        )
-        .child(
-            style::form_button(SharedString::from(format!("agent-access-revoke-{ix}")))
-                .outline()
-                .label(text(SETTINGS_AGENTS_ACCESS_REVOKE))
-                .on_click(cx.listener(move |_, _, _, cx| {
-                    agent_access::revoke(which, cx);
-                    cx.notify();
-                })),
-        )
+        .flex_col()
+        .child(style::tile_row(SharedString::from(format!("agent-access-{ix}")), ui, parts))
+        .child(div().pb_2().pl(px(style::ROW_TILE + 12.0)).child(switches(ix, which, &row, ui, cx)))
         .into_any_element()
 }
