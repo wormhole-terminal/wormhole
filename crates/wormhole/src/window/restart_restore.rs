@@ -14,6 +14,7 @@
 
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use gpui_kit::*;
@@ -26,7 +27,7 @@ use wormhole_term::checkpoint::Key;
 
 use crate::app_state::app;
 use crate::settings::settings_in;
-use crate::terminal_view::{CheckpointPlan, Start, forget_checkpoint_of};
+use crate::terminal_view::{CheckpointPlan, PendingRestore, Start, pending_restores};
 use crate::window::Workspace;
 use crate::window::session::Session;
 
@@ -47,6 +48,8 @@ pub(crate) fn sessions_dir() -> PathBuf {
 /// At launch: make the folder (`0700`, out of backups) and take what is old or too much, off the main thread.
 /// Nothing when no profile has the feature on, so a Mac that never used it gets no folder.
 pub(crate) fn launch(running: HashSet<String>, cx: &mut App) {
+    // The hosts that run, and those whose checkpoint a restore under way still needs.
+    let running = protected(running, pending_restores());
     let any_on = app(cx).profiles.profiles().iter().any(|p| on(&p.id, cx));
     if !any_on {
         return;
@@ -65,28 +68,31 @@ pub(crate) fn launch(running: HashSet<String>, cx: &mut App) {
     .detach();
 }
 
+/// What the sweep must not take: the hosts that run, and the checkpoints terminals were restored from whose new
+/// hosts have not yet written their own.
+pub(crate) fn protected(running: HashSet<String>, pending: HashSet<String>) -> HashSet<String> {
+    running.into_iter().chain(pending).collect()
+}
+
 impl Workspace {
     /// The terminal of `record` is to start in a new host because the one it ran in is gone: if it kept a
-    /// checkpoint, make `options` restore its screen in place of the saved text. The checkpoint is removed once it
-    /// is in memory: the new host writes its own, and a crash before it has is a terminal restored from its saved
-    /// text, as without the feature.
+    /// checkpoint, make `options` restore its screen in place of the saved text, and say which checkpoint that
+    /// was. It is **not** removed here: the new host writes its own only after it has its key and a quiet moment,
+    /// and a crash or another restart before that must still find this one. It goes when the new host's first
+    /// checkpoint has landed (`TerminalView::send_checkpoint_plan`), and the launch sweep spares it until then.
     pub(super) fn restore_from_checkpoint(
         &self,
         record: &SessionRecord,
         start: &Start,
         options: &mut SpawnOptions,
         cx: &App,
-    ) -> bool {
-        let (Start::Host { .. }, Some(old)) = (start, record.host_id.as_deref()) else { return false };
+    ) -> Option<Arc<PendingRestore>> {
+        let (Start::Host { .. }, Some(old)) = (start, record.host_id.as_deref()) else { return None };
         if record.forget_text || !on(&self.profile, cx) {
-            return false;
+            return None;
         }
         let key = app(cx).store_of(&self.profile).and_then(|store| store.checkpoint_key(old));
-        let restored = core::seed_options(&sessions_dir(), old, key.as_ref(), options);
-        if restored {
-            forget_checkpoint_of(old);
-        }
-        restored
+        core::seed_options(&sessions_dir(), old, key.as_ref(), options).then(|| PendingRestore::new(old))
     }
 
     /// What the host of the terminal of `record` is to be asked: to keep checkpoints, with the key for `host_id`
@@ -104,7 +110,11 @@ impl Workspace {
             .then(|| app(cx).store_of(&self.profile).and_then(|store| store.checkpoint_key(host_id)))
             .flatten()
             .map(Key::new);
-        Some(CheckpointPlan { key, shell: record.shell.clone().unwrap_or_else(|| "login".into()) })
+        Some(CheckpointPlan {
+            key,
+            shell: record.shell.clone().unwrap_or_else(|| "login".into()),
+            replaces: None,
+        })
     }
 
     /// A terminal is closed for good: the checkpoint its host kept goes with it (whether or not the feature is on

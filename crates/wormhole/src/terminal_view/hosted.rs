@@ -234,7 +234,7 @@ impl TerminalView {
                 }
                 self.host.auto_retried = false;
                 self.install(pty, events, cx);
-                self.send_checkpoint_plan();
+                self.send_checkpoint_plan(cx);
             }
             // The host runs and cannot be shown: the terminal keeps its id and says why. No shell
             // replaces it (the program is in the host), and the next launch finds this same row.

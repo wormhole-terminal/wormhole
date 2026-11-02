@@ -42,7 +42,7 @@ mod settle;
 mod status;
 mod window_geometry;
 
-pub(crate) use checkpoint_plan::{CheckpointPlan, forget_checkpoint_of};
+pub(crate) use checkpoint_plan::{CheckpointPlan, PendingRestore, pending_restores};
 pub use control_input::MouseSent;
 pub use failed::Failure;
 pub use grid_layout::GridProbe;

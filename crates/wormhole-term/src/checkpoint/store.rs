@@ -300,6 +300,13 @@ pub fn read_latest(dir: &Path, id: &str, key: Option<&Key>) -> Result<Restored, 
     best.ok_or(ReadError::Unusable)
 }
 
+/// Whether the checkpoint in `dir` has a generation that reads as it should: its manifest reads and, when a key
+/// is given, its screen opens with it. For the app to know a host's first write has landed.
+pub fn is_readable(dir: &Path, id: &str, key: Option<&Key>) -> bool {
+    read_latest(dir, id, key)
+        .is_ok_and(|read| read.issue.is_none() && (key.is_none() || read.screen.is_some()))
+}
+
 /// Remove a terminal's checkpoint: its files, then its directory. For a terminal that is closed, cleared or
 /// forgotten; never for one that is only restored (the checkpoint stays until the new host has its own).
 pub fn forget(dir: &Path) {

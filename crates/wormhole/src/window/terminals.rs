@@ -212,10 +212,11 @@ impl Workspace {
         }
         let start = self.start_for(record, &options, cx);
         // A terminal whose host is gone (the Mac restarted) comes back from its host's checkpoint when it kept one.
-        self.restore_from_checkpoint(record, &start, &mut options, cx);
+        let replaces = self.restore_from_checkpoint(record, &start, &mut options, cx);
         let plan = match &start {
             crate::terminal_view::Start::Host { id, .. } | crate::terminal_view::Start::Attach { id, .. } => {
                 self.checkpoint_plan(record, id, cx)
+                    .map(|plan| crate::terminal_view::CheckpointPlan { replaces, ..plan })
             }
             _ => None,
         };
@@ -231,7 +232,7 @@ impl Workspace {
         terminal.update(cx, |terminal, cx| {
             terminal.adopt_font_zoom(zoom, cx);
             if let Some(plan) = plan {
-                terminal.set_checkpoint_plan(plan);
+                terminal.set_checkpoint_plan(plan, cx);
             }
             if done_unseen {
                 terminal.restore_done_unseen();

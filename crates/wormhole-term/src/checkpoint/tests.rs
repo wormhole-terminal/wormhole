@@ -258,6 +258,24 @@ fn a_directory_removed_under_a_running_store_comes_back_with_the_next_write() {
 }
 
 #[test]
+fn a_checkpoint_is_readable_once_a_generation_with_its_screen_is_there() {
+    let root = sessions();
+    let a = key(1);
+    let dir = root.path().join(ID);
+    assert!(!store::is_readable(&dir, ID, Some(&a)), "nothing yet");
+    let mut store = Store::open(root.path(), ID).unwrap();
+    assert!(!store::is_readable(&dir, ID, Some(&a)), "a directory is not a checkpoint");
+    store.write(Some(&a), &snapshot(Some(b"one"), "t")).unwrap();
+    assert!(store::is_readable(&dir, ID, Some(&a)));
+    assert!(!store::is_readable(&dir, ID, Some(&key(2))), "not with another key");
+    // Written without a key: the folder and the shell, which is what was asked for.
+    let other = "zzzzzzzzzzzz";
+    Store::open(root.path(), other).unwrap().write(None, &snapshot(None, "t")).unwrap();
+    assert!(store::is_readable(&root.path().join(other), other, None));
+    assert!(!store::is_readable(&root.path().join(other), other, Some(&a)), "no screen to open");
+}
+
+#[test]
 fn only_a_host_id_names_a_directory() {
     let root = sessions();
     for bad in ["", "short", "../etc/passwd1", "ABCDEFGHIJ12", "abcdefghij1/"] {

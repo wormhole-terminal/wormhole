@@ -78,7 +78,7 @@ fn restore(
     window: &OpenWindow,
     record: &SessionRecord,
     start: &Start,
-) -> (bool, SpawnOptions) {
+) -> (Option<std::sync::Arc<crate::terminal_view::PendingRestore>>, SpawnOptions) {
     let mut options = SpawnOptions { restore: record.scrollback.clone(), ..Default::default() };
     let done = cx.update(|cx| {
         window
@@ -99,15 +99,20 @@ fn a_terminal_whose_host_is_gone_comes_back_from_its_checkpoint(cx: &mut TestApp
     let key = key_for(cx, &window, OLD);
     write_checkpoint(OLD, key, b"\x1b[1mbuilt it\x1b[0m\r\n$ cargo test\r\n");
     let (done, options) = restore(cx, &window, &record(OLD), &host_start());
-    assert!(done);
+    assert!(done.is_some());
     assert!(options.restore_styled);
     let drawn = options.restore.as_deref().unwrap();
     assert!(drawn.contains("built it") && drawn.contains("restored 20"), "{drawn:?}");
     assert!(!drawn.contains("the saved text"), "the screen replaces the text");
-    assert!(!sessions_dir().join(OLD).exists(), "the new host keeps its own: the old one is spent");
-    // Asked again, there is nothing, and the text stays.
-    let (done, options) = restore(cx, &window, &record(OLD), &host_start());
-    assert!(!done && !options.restore_styled && options.restore.as_deref() == Some("the saved text"));
+    // Not removed: the new host has not written its own yet, and a crash or another restart now must still find it.
+    assert!(sessions_dir().join(OLD).is_dir(), "the old checkpoint stays until the new host's has landed");
+    assert!(crate::terminal_view::pending_restores().contains(OLD), "and the sweep is told to spare it");
+    // It can be restored from again (the app crashed before the new host wrote).
+    let (again, _) = restore(cx, &window, &record(OLD), &host_start());
+    assert!(again.is_some());
+    // Once nothing waits on it any more, the sweep may have it.
+    drop((done, again));
+    assert!(!crate::terminal_view::pending_restores().contains(OLD));
 }
 
 #[gpui_kit::test]
@@ -125,19 +130,19 @@ fn it_is_for_a_terminal_that_starts_a_new_host_and_wanted_its_text_kept_and_only
     write_checkpoint(OLD, key, b"screen\r\n");
     // Attached to a live host, or in the app: no new shell to draw it above.
     let attach = Start::Attach { socket: "/s".into(), id: OLD.into(), visible: true };
-    assert!(!restore(cx, &window, &record(OLD), &attach).0);
-    assert!(!restore(cx, &window, &record(OLD), &Start::Local).0);
+    assert!(restore(cx, &window, &record(OLD), &attach).0.is_none());
+    assert!(restore(cx, &window, &record(OLD), &Start::Local).0.is_none());
     // A terminal whose text the person asked not to keep.
     let mut forgotten = record(OLD);
     forgotten.forget_text = true;
-    assert!(!restore(cx, &window, &forgotten, &host_start()).0);
+    assert!(restore(cx, &window, &forgotten, &host_start()).0.is_none());
     // A row that never ran in a host.
     let mut fresh = record(OLD);
     fresh.host_id = None;
-    assert!(!restore(cx, &window, &fresh, &host_start()).0);
+    assert!(restore(cx, &window, &fresh, &host_start()).0.is_none());
     // The feature off.
     set_flags(cx, false);
-    assert!(!restore(cx, &window, &record(OLD), &host_start()).0);
+    assert!(restore(cx, &window, &record(OLD), &host_start()).0.is_none());
     assert!(sessions_dir().join(OLD).is_dir(), "none of that touched the checkpoint");
 }
 
@@ -204,5 +209,41 @@ fn clearing_the_buffer_removes_the_checkpoint_that_holds_it(cx: &mut TestAppCont
         let terminal = ws.sessions[0].terminal().clone();
         terminal.update(cx, |t, cx| t.clear_buffer_for_test(cx));
     });
+    assert!(!sessions_dir().join(OLD).exists());
+}
+
+/// What the launch sweep must spare: running hosts, and the checkpoints terminals are being restored from.
+#[test]
+fn the_sweep_spares_running_hosts_and_pending_restores() {
+    let running: std::collections::HashSet<String> = [OLD.to_owned()].into();
+    let pending: std::collections::HashSet<String> = [OTHER.to_owned()].into();
+    let spared = super::restart_restore::protected(running, pending);
+    assert!(spared.contains(OLD) && spared.contains(OTHER) && spared.len() == 2);
+}
+
+/// Closing a terminal that was restored but whose new host had not written yet takes the old checkpoint too: no
+/// one is going to restore from it.
+#[gpui_kit::test]
+fn closing_a_restored_terminal_before_its_new_host_wrote_removes_the_old_checkpoint_as_well(
+    cx: &mut TestAppContext,
+) {
+    if isolate("closing_a_restored_terminal_before_its_new_host_wrote_removes_the_old_checkpoint_as_well") {
+        return;
+    }
+    let window = start_with_store(cx, 2);
+    set_flags(cx, true);
+    let key = key_for(cx, &window, OLD);
+    write_checkpoint(OLD, key, b"old\r\n");
+    let (pending, _) = restore(cx, &window, &record(OLD), &host_start());
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[1].terminal().update(cx, |t, cx| {
+            t.set_host_id_for_test(OTHER);
+            t.set_checkpoint_plan(
+                crate::terminal_view::CheckpointPlan { key: None, shell: "login".into(), replaces: pending },
+                cx,
+            );
+        });
+    });
+    drive(cx, &window, |ws, window, cx| ws.close_session(1, window, cx));
     assert!(!sessions_dir().join(OLD).exists());
 }

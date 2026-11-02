@@ -99,6 +99,19 @@ pub fn seed_options(
     }
 }
 
+/// A terminal was restored from the checkpoint of host `old` and now runs in host `new`, which was asked to write
+/// its own (with `key`). If that has landed (`new`'s newest generation reads), `old`'s is spent and removed:
+/// true. Until then both stay, so that another restart or a crash restores from `old` again.
+pub fn forget_when_confirmed(sessions_dir: &Path, old: &str, new: &str, key: Option<&[u8; 32]>) -> bool {
+    let key = key.map(|k| Key::new(*k));
+    let confirmed =
+        checkpoint::store::is_readable(&checkpoint::store::dir_in(sessions_dir, new), new, key.as_ref());
+    if confirmed {
+        forget(sessions_dir, old);
+    }
+    confirmed
+}
+
 /// Make the folder the checkpoints live in: `0700`, and out of backups (`exclude`, which the caller gives:
 /// the saved text's platform does the same for its file). A failure to exclude is only worth a warning; one to
 /// make the folder is the error.

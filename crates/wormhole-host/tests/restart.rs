@@ -288,3 +288,46 @@ fn the_hosts_files_are_gone_after_a_restart_and_the_checkpoints_are_not() {
         assert!(checkpoint::store::dir_in(&sessions_dir_of_hosts(&hosts_dir), id).is_dir());
     }
 }
+
+/// The new host of a restored terminal is killed before it has written anything: the old checkpoint is still
+/// there (nothing removes it until the new host's has landed), and the next launch restores from it again.
+#[test]
+fn a_restore_followed_at_once_by_the_new_hosts_death_restores_again_from_the_old_checkpoint() {
+    let (_data, hosts_dir, terminals) = old_life(1);
+    let before = looks(&terminals[0].pty, 4);
+    let ids = restart(&hosts_dir, terminals);
+    let first = relaunch(&hosts_dir, &ids[0], &key()).expect("restored");
+    // The app has sent no key yet and the host no quiet second: nothing of its own on disk. It dies.
+    let new_dir = checkpoint::store::dir_in(&sessions_dir_of_hosts(&hosts_dir), &first.id);
+    assert!(!new_dir.exists(), "the new host has written nothing");
+    let pid = {
+        let path = wormhole_term::hosted::paths::meta_path(&hosts_dir, &first.id);
+        wormhole_term::hosted::meta::read(&path).unwrap().pid
+    };
+    assert!(signal(pid, libc::SIGKILL));
+    wait_gone(pid);
+    drop(first);
+    let old_dir = checkpoint::store::dir_in(&sessions_dir_of_hosts(&hosts_dir), &ids[0]);
+    assert!(old_dir.is_dir(), "the old checkpoint is still where it was");
+    let second = relaunch(&hosts_dir, &ids[0], &key()).expect("restored again");
+    assert_same_screen(&before, &second);
+}
+
+/// The other way: asked to flush, the new host's own checkpoint lands, and then (and only then) the old one is
+/// spent. This is what the app waits for.
+#[test]
+fn a_restored_terminals_new_host_writes_its_own_checkpoint_when_asked_to_flush() {
+    let (_data, hosts_dir, terminals) = old_life(1);
+    let ids = restart(&hosts_dir, terminals);
+    let new = relaunch(&hosts_dir, &ids[0], &key()).expect("restored");
+    let new_dir = checkpoint::store::dir_in(&sessions_dir_of_hosts(&hosts_dir), &new.id);
+    assert!(!checkpoint::store::is_readable(&new_dir, &new.id, Some(&key())));
+    assert!(new.pty.start_checkpoints(Some(&key()), "login"));
+    assert!(new.pty.checkpoint_now(true));
+    wait_for("the new host's own checkpoint", || {
+        checkpoint::store::is_readable(&new_dir, &new.id, Some(&key()))
+    });
+    let read = read_latest(&new_dir, &new.id, Some(&key())).unwrap();
+    let screen = String::from_utf8_lossy(read.screen.as_deref().unwrap()).into_owned();
+    assert!(screen.contains("red bold"), "the restored screen is in it: {screen:?}");
+}

@@ -193,3 +193,27 @@ fn a_terminal_is_restored_from_its_checkpoint_or_from_its_text_as_before() {
         assert_eq!((options.restore.as_deref(), options.restore_styled), (Some("saved text"), false));
     }
 }
+
+/// The old host's checkpoint is spent only once the new host has written its own: until then another restart
+/// or a crash must still find it.
+#[test]
+fn the_old_checkpoint_stays_until_the_new_hosts_has_landed() {
+    let sessions = tempfile::tempdir().unwrap();
+    write(sessions.path(), A, Some(key(1)), b"the old screen\r\n", None, 1);
+    assert!(!forget_when_confirmed(sessions.path(), A, B, Some(&key(2))), "the new host wrote nothing yet");
+    assert!(sessions.path().join(A).is_dir());
+    fs::create_dir(sessions.path().join(B)).unwrap();
+    assert!(
+        !forget_when_confirmed(sessions.path(), A, B, Some(&key(2))),
+        "an empty directory is not a write"
+    );
+    assert!(sessions.path().join(A).is_dir());
+    write(sessions.path(), B, Some(key(2)), b"the new screen\r\n", None, 2);
+    assert!(
+        !forget_when_confirmed(sessions.path(), A, B, Some(&key(3))),
+        "a write that does not open with the key is not one"
+    );
+    assert!(sessions.path().join(A).is_dir());
+    assert!(forget_when_confirmed(sessions.path(), A, B, Some(&key(2))));
+    assert!(!sessions.path().join(A).exists() && sessions.path().join(B).is_dir());
+}
