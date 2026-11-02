@@ -8,6 +8,9 @@
 #   version's section of CHANGELOG.md (scripts/changelog.py notes); a Security entry there makes the
 #   release a security update in latest.json (see RELEASE_SEVERITY in scripts/package.sh). Then the
 #   website rebuilds through its deploy hook and shows the release at once.
+#   Before anything is signed or published, a minor or major release (vX.Y.0), and a patch release whose
+#   diff since the previous release touches what talks to a session host, drive the hosts of the last two
+#   releases with this build's client (scripts/previous-hosts.sh); a failure stops the release.
 # - Run manually (workflow_dispatch) -> build + package only; tick "publish" to also create the
 #   GitHub Release.
 # The builds of main are preview.yml's.
@@ -54,10 +57,85 @@ jobs:
           fi
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
 
-  build:
+  # Whether the session hosts of the last two stable releases must be driven by this build's client before
+  # anything is published (scripts/previous-hosts.sh): always for a minor or major release (vX.Y.0), for a
+  # patch release only when the code that talks to a host changed since the previous release. Like the gate,
+  # its output decides whether a job with secrets runs, so it runs nothing from the commit it checks out:
+  # git reads the tags and the list of changed files as data, and that is all.
+  hosts_plan:
+    name: Do earlier session hosts need checking?
     needs: gate
-    # The result as well: a gate that was skipped has no `skip` output, which isn't 'true' either.
     if: needs.gate.result == 'success' && needs.gate.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      run: ${{ steps.plan.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          fetch-depth: 0 # every tag, and the history between two of them
+      - id: plan
+        env:
+          PUBLISH_BY_HAND: ${{ inputs.publish == true }}
+        run: |
+          run=true
+          if [ "$GITHUB_EVENT_NAME" != push ]; then
+            # A manual run publishes only when asked to; a build that does not publish has nothing to hold back.
+            run="$PUBLISH_BY_HAND"
+            echo "Manual run: the check runs when it publishes ($run)"
+          elif [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.([0-9]+)$ ]] && [ "${BASH_REMATCH[1]}" != 0 ]; then
+            # A patch release: the newest plain release tag before this one is what it is compared with.
+            previous="$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V \
+              | awk -v current="$GITHUB_REF_NAME" '$0 == current { print last; exit } { last = $0 }')"
+            if [ -z "$previous" ]; then
+              echo "No earlier release tag to compare with: the check runs"
+            elif git diff --name-only "$previous" "$GITHUB_SHA" \
+              | grep -E '^(crates/wormhole-wire/|crates/wormhole-host/|crates/wormhole-term/src/client/|crates/wormhole-term/src/hosted/)'; then
+              echo "The code that talks to a host changed since $previous (files above): the check runs"
+            else
+              run=false
+              echo "Nothing that talks to a host changed since $previous: no check"
+            fi
+          else
+            echo "A minor or major release (or a version with a suffix): the check runs"
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+  # The hosts of the last two stable releases, started and driven by this build's client. A host outlives the
+  # app, so after an update today's app talks to what an earlier release started. It runs the commit's own
+  # script and tests, so it holds nothing but a read-only token (`gh release download`, `gh attestation
+  # verify`); the release's secrets belong to `build`, which waits for this job.
+  previous_hosts:
+    name: Earlier session hosts still work
+    needs: hosts_plan
+    if: needs.hosts_plan.result == 'success' && needs.hosts_plan.outputs.run == 'true'
+    permissions:
+      contents: read
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - name: Rust (the version in rust-toolchain.toml)
+        run: rustup toolchain install
+      - name: Drive the last two releases' hosts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/previous-hosts.sh
+
+  build:
+    needs: [gate, hosts_plan, previous_hosts]
+    # The results as well: a skipped job has no outputs, which is not 'true' either. The check passed, or it
+    # was not wanted (the plan ran and said no); a plan that failed or a check that failed publishes nothing.
+    if: >-
+      needs.gate.result == 'success' && needs.gate.outputs.skip != 'true'
+      && needs.hosts_plan.result == 'success'
+      && (needs.previous_hosts.result == 'success'
+      || (needs.previous_hosts.result == 'skipped' && needs.hosts_plan.outputs.run != 'true'))
     permissions:
       contents: write
       id-token: write
