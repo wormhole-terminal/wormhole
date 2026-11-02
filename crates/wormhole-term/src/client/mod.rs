@@ -29,6 +29,7 @@ mod error;
 mod events;
 mod launch;
 mod link;
+mod liveness;
 mod open;
 mod replica;
 mod socket;
@@ -42,6 +43,7 @@ use std::time::Duration;
 pub use error::AttachError;
 pub(crate) use link::Hosted;
 pub use link::{LinkMode, LinkStats};
+pub use liveness::{PATIENCE, Responsiveness};
 pub use open::HostCommand;
 
 /// The byte window a client gives the host: stream bytes past the last `Ack` it may send.
@@ -50,11 +52,18 @@ pub const WINDOW: u32 = 1024 * 1024;
 pub const ACK_EVERY: u64 = 64 * 1024;
 /// The most input bytes sent and not yet acknowledged by the host's `InputAck`.
 pub const INPUT_WINDOW: u64 = 256 * 1024;
-/// A connection with nothing received for this long is asked whether the host is there.
+/// A connection with nothing received for this long is asked whether the host is there; a ping
+/// unanswered for [`PATIENCE`] marks the host not responding.
 pub const PING_IDLE: Duration = Duration::from_secs(2);
 /// How long a new host has to listen, and then to say whether its program runs.
 pub const START_TIMEOUT: Duration = Duration::from_secs(5);
 pub const READY_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// The protocol minor that introduced `ClearHistory`. A host of an older minor skips the message, and
+/// every message added from minor 3 on is gated by what a host announced in `Features` instead of by
+/// its minor alone (a minor only says "this much exists"; a feature bit says "this host does it"), so
+/// the client asks only for what the host said it has.
+pub const CLEAR_HISTORY_MINOR: u16 = 2;
 
 /// The socket of the host with `id` in `hosts_dir`, as its meta file says (the host decides where
 /// it listens; nobody else applies the rule).

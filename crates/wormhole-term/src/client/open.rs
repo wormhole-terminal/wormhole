@@ -63,6 +63,7 @@ impl Pty {
                 );
                 let replica_size = GridSize { cols: info.size.cols, rows: info.size.rows, ..size };
                 hosted(joined, host.id, size, replica_size, options, StreamMode::Raw, info.pid)
+                    .inspect(|(pty, _)| pty.set_host_minor(info.proto_minor))
             }
             Err(err) => {
                 // A host that came up without its program would wait for a `Spawn` until it gives
@@ -97,6 +98,7 @@ impl Pty {
         let first = if visible { StreamMode::Sync } else { StreamMode::None };
         tracing::info!(id, pid = welcome.pid, visible, "attaching to a hosted terminal");
         hosted(Joined { stream, dec }, id, size, size, options, first, welcome.pid)
+            .inspect(|(pty, _)| pty.set_host_minor(welcome.proto_minor))
             .map_err(|e| AttachError::Failed(format!("{e:#}")))
     }
 
@@ -119,6 +121,28 @@ impl Pty {
             Backend::Hosted(host) => Some(host.stats()),
             Backend::Local(_) => None,
         }
+    }
+
+    /// The protocol minor the host said it speaks, for a hosted terminal: what it understands of
+    /// the messages added after the first minor.
+    pub fn host_minor(&self) -> Option<u16> {
+        match &self.io {
+            Backend::Hosted(host) => Some(host.minor()),
+            Backend::Local(_) => None,
+        }
+    }
+
+    pub(super) fn set_host_minor(&self, minor: u16) {
+        if let Backend::Hosted(host) = &self.io {
+            host.set_minor(minor);
+        }
+    }
+
+    /// Whether the host forgets history when told to (`ClearHistory`, protocol minor 2): `Some(false)`
+    /// for an older host, which ignores the message, so the history it keeps comes back at the
+    /// next attach. `None` for a terminal that is not hosted.
+    pub fn host_forgets_history(&self) -> Option<bool> {
+        self.host_minor().map(|minor| minor >= super::CLEAR_HISTORY_MINOR)
     }
 
     /// Let go of the session host and leave the program running in it, for the next

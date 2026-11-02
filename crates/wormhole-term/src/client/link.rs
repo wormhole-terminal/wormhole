@@ -3,7 +3,7 @@
 //! for; whoever sends wakes the thread only when the queue was empty, as the PTY's inbox does.
 
 use std::borrow::Cow;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU16, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
@@ -82,6 +82,11 @@ pub struct LinkStats {
     pub lost: bool,
     /// The connection's thread is over.
     pub ended: bool,
+    /// How long ago anything last came from the host.
+    pub quiet_for: Duration,
+    /// How long a ping has gone unanswered, once it has for [`PATIENCE`](super::PATIENCE): the host
+    /// is not responding (a stopped or stuck process keeps its socket and says nothing).
+    pub not_responding_for: Option<Duration>,
 }
 
 /// The counters behind [`LinkStats`].
@@ -92,11 +97,17 @@ struct Traffic {
     frames_in: AtomicU64,
     frames_out: AtomicU64,
     mode: AtomicU8,
+    /// Milliseconds after `Link::epoch` of the last frame from the host.
+    heard_ms: AtomicU64,
+    /// Milliseconds a ping has been unanswered past its patience, plus one; 0 when responsive.
+    not_responding_ms: AtomicU64,
 }
 
 /// The queue into the thread, and what the thread says back.
 pub(crate) struct Link {
     traffic: Traffic,
+    /// What `Traffic::heard_ms` counts from.
+    epoch: std::time::Instant,
     queue: Mutex<Vec<Cmd>>,
     /// The queue is not empty; checked without its lock.
     waiting: AtomicBool,
@@ -111,6 +122,7 @@ impl Link {
     pub(crate) fn new(poller: Arc<Poller>) -> Self {
         Self {
             traffic: Traffic::default(),
+            epoch: std::time::Instant::now(),
             queue: Mutex::new(Vec::new()),
             waiting: AtomicBool::new(false),
             poller,
@@ -151,6 +163,17 @@ impl Link {
         self.traffic.frames_out.fetch_add(1, Ordering::Relaxed);
     }
 
+    /// What the thread knows of the host's liveness, for [`LinkStats`].
+    pub(crate) fn set_liveness(&self, heard: std::time::Instant, state: super::Responsiveness) {
+        let ms = |d: Duration| u64::try_from(d.as_millis()).unwrap_or(u64::MAX);
+        self.traffic.heard_ms.store(ms(heard.saturating_duration_since(self.epoch)), Ordering::Relaxed);
+        let stuck = match state {
+            super::Responsiveness::Responsive => 0,
+            super::Responsiveness::NotResponding(for_) => ms(for_).saturating_add(1),
+        };
+        self.traffic.not_responding_ms.store(stuck, Ordering::Relaxed);
+    }
+
     pub(crate) fn set_mode(&self, mode: LinkMode) {
         self.traffic.mode.store(mode.to_bits(), Ordering::Relaxed);
     }
@@ -188,11 +211,18 @@ pub(crate) struct Hosted {
     pub(crate) id: String,
     /// [`detach`](Self::detach) was called: dropping the terminal leaves the host running.
     detached: AtomicBool,
+    /// The protocol minor the host said in its `Welcome`: what it understands beyond the first minor.
+    minor: AtomicU16,
 }
 
 impl Hosted {
     pub(crate) fn new(link: Arc<Link>, id: String) -> Self {
-        Self { link, id, detached: AtomicBool::new(false) }
+        Self {
+            link,
+            id,
+            detached: AtomicBool::new(false),
+            minor: AtomicU16::new(wormhole_wire::version::PROTO_MINOR),
+        }
     }
 
     pub(crate) fn input(&self, bytes: Cow<'static, [u8]>) {
@@ -228,6 +258,15 @@ impl Hosted {
         }
     }
 
+    /// The host's protocol minor, as its `Welcome` said it.
+    pub(crate) fn minor(&self) -> u16 {
+        self.minor.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn set_minor(&self, minor: u16) {
+        self.minor.store(minor, Ordering::Relaxed);
+    }
+
     pub(crate) fn is_detached(&self) -> bool {
         self.detached.load(Ordering::Acquire)
     }
@@ -244,6 +283,12 @@ impl Hosted {
             detached: self.is_detached(),
             lost: self.link.lost(),
             ended: self.link.ended.load(Ordering::Acquire),
+            quiet_for: (self.link.epoch + Duration::from_millis(traffic.heard_ms.load(Ordering::Relaxed)))
+                .elapsed(),
+            not_responding_for: match traffic.not_responding_ms.load(Ordering::Relaxed) {
+                0 => None,
+                ms => Some(Duration::from_millis(ms - 1)),
+            },
         }
     }
 

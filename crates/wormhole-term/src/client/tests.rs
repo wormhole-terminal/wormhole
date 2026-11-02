@@ -456,6 +456,35 @@ fn readiness_lines_parse() {
     assert!(matches!(parse_line("garbage"), Ready::Err(_)));
 }
 
+/// A host that takes a connection and never answers its pings is called not responding after the
+/// patience, and an answer (anything it says) clears it. Real time: the thread's own clock.
+#[test]
+fn a_host_that_never_answers_a_ping_is_not_responding_until_it_speaks() {
+    let (pty, _events, mut script) = connected(StreamMode::Sync);
+    assert_eq!(pty.link_stats().expect("hosted").not_responding_for, None);
+    // It reads its pings and says nothing.
+    let until = Instant::now() + Duration::from_secs(15);
+    while pty.link_stats().and_then(|l| l.not_responding_for).is_none() {
+        assert!(Instant::now() < until, "the host was never called not responding");
+        let _ = script.read(Duration::from_millis(100));
+    }
+    // Any frame from it, a Pong or not, says it is there.
+    script.send(&Message::Pong { n: 1, pty_progress: 0 });
+    wait_for("the host to be responsive again", || {
+        pty.link_stats().is_some_and(|l| l.not_responding_for.is_none())
+    });
+}
+
+/// A host that said protocol minor 1 in its `Welcome` skips `ClearHistory`, and the terminal knows.
+#[test]
+fn a_minor_1_host_is_known_not_to_forget_history() {
+    let (pty, _events, _script) = connected(StreamMode::Sync);
+    assert_eq!(pty.host_forgets_history(), Some(true), "a host of this build's minor does");
+    pty.set_host_minor(1);
+    assert_eq!(pty.host_minor(), Some(1));
+    assert_eq!(pty.host_forgets_history(), Some(false));
+}
+
 /// What `hello` makes of each thing a host can answer a `Hello` with (or not answer).
 mod handshake {
     use std::io::Write as _;

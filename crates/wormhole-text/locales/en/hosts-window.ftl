@@ -159,3 +159,16 @@ hosts-unavailable-failed = Session host unavailable: the connection failed
 # The buttons on that message: end the host and its program, or leave it and start a new shell in this place.
 hosts-unavailable-end = End host
 hosts-unavailable-new = Open a new terminal here
+
+# A terminal whose session host stopped answering (stopped or stuck), over the terminal. Wait leaves it be; End
+# ends the host and the program in it.
+hosts-not-responding = Session host not responding
+hosts-not-responding-wait = Wait
+hosts-not-responding-end = End host
+
+# In the Session Hosts window: how long ago anything came from the host, and how long it has not answered.
+hosts-field-heard = Last heard
+# { $ago } is how long ago, e.g. 12 s.
+hosts-heard-ago = { $ago } ago
+# { $quiet } is how long it has been silent, e.g. 1 min 5 s.
+hosts-link-not-responding = Not responding: silent for { $quiet }

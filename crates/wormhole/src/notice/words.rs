@@ -70,6 +70,7 @@ fn failed_key(failed: Failed) -> wormhole_text::Key {
         Failed::RenameDenied => keys::NOTICE_FAILED_RENAME_DENIED,
         Failed::RenameGone => keys::NOTICE_FAILED_RENAME_GONE,
         Failed::RenameFailed => keys::NOTICE_FAILED_RENAME_FAILED,
+        Failed::HistoryKeptByHost => keys::NOTICE_FAILED_HISTORY_KEPT_BY_HOST,
         Failed::PutAtPrompt(Refused::Concealed) => keys::NOTICE_FAILED_PUT_CONCEALED,
         Failed::PutAtPrompt(Refused::SameColor) => keys::NOTICE_FAILED_PUT_SAME_COLOR,
         Failed::PutAtPrompt(Refused::Invisible) => keys::NOTICE_FAILED_PUT_INVISIBLE,

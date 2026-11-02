@@ -4,8 +4,8 @@ use gpui_kit::*;
 use wormhole_core::ipc::hosts::report::{Answer, HostRow, Report, Standing};
 use wormhole_text::keys::{
     HOSTS_ACTION_COPIED, HOSTS_ACTION_COPY, HOSTS_ACTION_END, HOSTS_ACTION_FORGET, HOSTS_FIELD_ANSWER,
-    HOSTS_FIELD_FOLDER, HOSTS_FIELD_HOST_PID, HOSTS_FIELD_LINK, HOSTS_FIELD_MEMORY, HOSTS_FIELD_META,
-    HOSTS_FIELD_PROGRAM, HOSTS_FIELD_PROTOCOL, HOSTS_FIELD_SHELL_PID, HOSTS_FIELD_SOCKET,
+    HOSTS_FIELD_FOLDER, HOSTS_FIELD_HEARD, HOSTS_FIELD_HOST_PID, HOSTS_FIELD_LINK, HOSTS_FIELD_MEMORY,
+    HOSTS_FIELD_META, HOSTS_FIELD_PROGRAM, HOSTS_FIELD_PROTOCOL, HOSTS_FIELD_SHELL_PID, HOSTS_FIELD_SOCKET,
     HOSTS_FIELD_STARTED, HOSTS_FIELD_VERSION, HOSTS_UNKNOWN, hosts_version_differs,
 };
 use wormhole_text::text;
@@ -51,7 +51,7 @@ impl HostsWindow {
             (Some(v), false) => v.clone(),
             (None, _) => unknown(),
         };
-        let bad_link = row.link.is_some_and(|l| l.lost);
+        let bad_link = row.link.is_some_and(|l| l.lost || l.not_responding_for.is_some());
         let bad_answer = row.standing.is_live() && matches!(row.answer, Answer::No(_) | Answer::Incompatible);
         let warn = ui.warning_text;
         let mut facts = vec![
@@ -92,6 +92,9 @@ impl HostsWindow {
                 if bad_link || row.unavailable.is_some() { ui.danger_text } else { ui.text },
                 true,
             ));
+        }
+        if let Some(link) = row.link.filter(|l| !l.detached && !l.ended) {
+            facts.push(fact(ui, text(HOSTS_FIELD_HEARD), words::ago_text(link.quiet_for), ui.text, false));
         }
         facts.push(fact(ui, text(HOSTS_FIELD_FOLDER), path(&row.cwd), ui.text, true));
         facts.push(fact(ui, text(HOSTS_FIELD_SOCKET), path(&row.socket), ui.muted, true));

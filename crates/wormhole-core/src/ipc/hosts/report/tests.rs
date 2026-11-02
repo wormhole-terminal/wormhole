@@ -38,6 +38,8 @@ fn link(detached: bool) -> LinkStats {
         detached,
         lost: false,
         ended: false,
+        quiet_for: std::time::Duration::from_millis(40),
+        not_responding_for: None,
     }
 }
 
@@ -204,6 +206,24 @@ fn what_a_host_says_to_get_info_becomes_its_answer() {
     // A live host that does not answer is worth a look; a stale one would not be asked at all.
     assert_eq!(report.rows[1].answer, Answer::No(ProbeFailure::Connect("refused".into())));
     assert!(report.rows[1].needs_attention(&report.app));
+}
+
+#[test]
+fn a_host_that_does_not_answer_needs_attention_and_the_text_says_so() {
+    let scan = Scan { live: vec![meta("aaaaaaaaaaaa", 1, "1.6.2", (1, 1))], stale: Vec::new() };
+    let mut i = inputs(scan);
+    let mut stuck = link(false);
+    stuck.not_responding_for = Some(std::time::Duration::from_secs(12));
+    i.attachments = vec![Attachment {
+        host_id: "aaaaaaaaaaaa".into(),
+        unavailable: None,
+        window: 1,
+        title: "t".into(),
+        link: Some(stuck),
+    }];
+    let report = Report::build(i);
+    assert!(report.rows[0].needs_attention(&report.app));
+    assert!(report.to_text().contains("not responding for 12s"), "{}", report.to_text());
 }
 
 #[test]

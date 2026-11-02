@@ -34,6 +34,7 @@ use wormhole_wire::{
 
 use super::events::{self, Heard};
 use super::link::{Cmd, Link, LinkMode};
+use super::liveness::{Liveness, Responsiveness};
 use super::replica::{ReplicaOptions, grid_of, wire_colors, wire_scheme, wire_size};
 use super::{ACK_EVERY, INPUT_WINDOW, PING_IDLE, WINDOW};
 use crate::GridSize;
@@ -107,6 +108,10 @@ pub(crate) struct State {
     /// When something last came (or a ping went), and the next ping's number.
     active: Instant,
     ping: u64,
+    /// Whether the host answers (see `liveness`).
+    live: Liveness,
+    /// What was last published, to wake the app only when it changes.
+    responsiveness: Responsiveness,
     cmds: Vec<Cmd>,
 }
 
@@ -148,6 +153,8 @@ impl State {
             taken_over: false,
             active: Instant::now(),
             ping: 1,
+            live: Liveness::new(Instant::now()),
+            responsiveness: Responsiveness::Responsive,
             cmds: Vec::new(),
         };
         state.attach(first);
@@ -429,7 +436,7 @@ impl State {
     /// When the loop must wake at the latest.
     fn deadline(&self) -> Option<Instant> {
         let ping = self.pings().then_some(self.active + PING_IDLE);
-        [ping, self.replica.deadline(), self.closing].into_iter().flatten().min()
+        [ping, self.live.deadline(), self.replica.deadline(), self.closing].into_iter().flatten().min()
     }
 
     fn tick(&mut self, now: Instant) {
@@ -438,7 +445,22 @@ impl State {
             let n = self.ping;
             self.ping += 1;
             self.active = now;
+            self.live.ping_sent(now);
             self.queue(&Message::Ping(n));
+        }
+        self.publish_liveness(now);
+    }
+
+    /// Tell the `Pty` how the host stands, and wake the app when that changed (the terminal says
+    /// "not responding" or stops saying it).
+    fn publish_liveness(&mut self, now: Instant) {
+        let state = self.live.state(now);
+        let changed = matches!(state, Responsiveness::Responsive)
+            != matches!(self.responsiveness, Responsiveness::Responsive);
+        self.responsiveness = state;
+        self.link.set_liveness(self.live.last_heard(), state);
+        if changed {
+            self.proxy.host_responsiveness_changed();
         }
     }
 }
@@ -522,7 +544,10 @@ impl Client {
             loop {
                 match self.dec.next_frame() {
                     Ok(Some(frame)) => {
-                        self.state.active = Instant::now();
+                        let now = Instant::now();
+                        self.state.active = now;
+                        self.state.live.heard(now);
+                        self.state.publish_liveness(now);
                         self.state.link.count_frame_in();
                         self.state.handle(frame.message);
                     }

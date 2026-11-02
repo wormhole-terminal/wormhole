@@ -55,6 +55,9 @@ pub enum PtyEvent {
     /// Read it with `Pty::program_status`. Like `Output`, one is in flight at a time, so a
     /// program reporting as fast as it can writes costs the UI one look per turn.
     ProgramStatus,
+    /// The session host stopped answering, or answered again (`Pty::link_stats`): nothing the program did, so
+    /// it is not output; the terminal redraws what it says of its host.
+    HostResponsiveness,
     /// A program asked the window to do something and `allow_window_ops` is on: move, resize,
     /// minimise, raise, full screen (XTWINOPS), or switch to 80 or 132 columns (DECCOLM). The
     /// sizes in cells have taken effect in the engine already; the UI makes the window match and
@@ -77,6 +80,7 @@ impl std::fmt::Debug for PtyEvent {
             PtyEvent::Mark(mark, prompt) => write!(f, "Mark({mark:?}, {prompt})"),
             PtyEvent::Notify(notification) => write!(f, "Notify({notification:?})"),
             PtyEvent::ProgramStatus => f.write_str("ProgramStatus"),
+            PtyEvent::HostResponsiveness => f.write_str("HostResponsiveness"),
             PtyEvent::WindowOp(op) => write!(f, "WindowOp({op:?})"),
             PtyEvent::Exited(code) => write!(f, "Exited({code:?})"),
         }
@@ -490,6 +494,11 @@ impl EventProxy {
             self.shared.program_status().on_process_exit();
             self.send(PtyEvent::Exited(code));
         }
+    }
+
+    /// The host's responsiveness changed (see `client::liveness`).
+    pub(crate) fn host_responsiveness_changed(&self) {
+        self.send(PtyEvent::HostResponsiveness);
     }
 
     /// What programs report changed: one event until the UI has looked.

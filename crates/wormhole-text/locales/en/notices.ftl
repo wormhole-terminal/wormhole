@@ -109,6 +109,10 @@ notice-failed-rename-gone = Not renamed: it isn't there any more
 
 notice-failed-rename-failed = Couldn't rename it
 
+# Clear Buffer in a terminal whose session host is from an older Wormhole and cannot forget its history: it is
+# cleared in this window only, and comes back when Wormhole attaches again. A short line: the chip cuts a long one.
+notice-failed-history-kept-by-host = Cleared here only: this session host is too old to forget it
+
 # A finished command that Put at Prompt refused to type, because of what it would do there. The four that
 # follow say why, each after the same start; they are short, as the chip cuts a long line.
 notice-failed-put-concealed = Not put at the prompt: part of it is concealed

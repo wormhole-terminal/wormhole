@@ -56,6 +56,9 @@ pub enum Failed {
     RenameGone,
     /// Any other failure of a rename.
     RenameFailed,
+    /// Clear Buffer in a terminal whose session host is too old to forget its history: cleared here, and
+    /// the host keeps it (it comes back at the next attach); ending the host is how to be rid of it.
+    HistoryKeptByHost,
     /// A finished command that was not put back at the prompt, because of what its text might do there.
     /// Not a copy, and it does not stay: it says what happened and goes.
     PutAtPrompt(Refused),

@@ -642,6 +642,10 @@ impl TerminalView {
             PtyEvent::ProgramStatus => {
                 self.sync_reported(true);
             }
+            PtyEvent::HostResponsiveness => {
+                self.host_answers_again();
+                cx.notify();
+            }
             PtyEvent::Bell => {
                 let since = self.bell_counted.map(|at| at.elapsed());
                 let bell = on_bell(self.status, self.reported(), self.agent.is_some(), since);

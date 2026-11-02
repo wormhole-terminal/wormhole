@@ -74,6 +74,9 @@ pub(super) struct HostState {
     /// protocol, is busy...): the terminal keeps the host's id and says why, so the next launch finds
     /// the same row and the host is not adopted again as a stranger.
     pub(super) unavailable: Option<Unavailable>,
+    /// "Wait" was pressed on the bar for a host that does not answer: it stays away until the host answers
+    /// again.
+    pub(super) waiting: bool,
 }
 
 /// The warning that a host could not start is shown once per run: when one fails, the next would

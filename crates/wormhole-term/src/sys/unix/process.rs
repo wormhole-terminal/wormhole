@@ -13,6 +13,19 @@ pub(crate) fn exists(pid: u32) -> bool {
     result == 0 || io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
 }
 
+/// End the process at once (`SIGKILL`), for a host that no longer answers (stopped, or stuck). Refuses
+/// pid 0 and 1, as [`terminate`] does.
+#[allow(unsafe_code)] // libc FFI; plain integers.
+pub(crate) fn kill(pid: u32) -> io::Result<()> {
+    let pid = i32::try_from(pid).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "pid"))?;
+    if pid <= 1 {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "not a host's pid"));
+    }
+    // SAFETY: kill with a positive pid signals that one process; the pid was checked above.
+    let result = unsafe { libc::kill(pid, libc::SIGKILL) };
+    if result == 0 { Ok(()) } else { Err(io::Error::last_os_error()) }
+}
+
 /// Ask the process to end (`SIGTERM`). Refuses pid 0 and 1, which would signal a process group or init.
 #[allow(unsafe_code)] // libc FFI; plain integers.
 pub(crate) fn terminate(pid: u32) -> io::Result<()> {

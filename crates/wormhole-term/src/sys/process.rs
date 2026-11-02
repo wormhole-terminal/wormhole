@@ -36,6 +36,11 @@ pub fn terminate(pid: u32) -> io::Result<()> {
     unix::terminate(pid)
 }
 
+/// End a process at once. Refuses pids 0 and 1.
+pub fn kill(pid: u32) -> io::Result<()> {
+    unix::kill(pid)
+}
+
 /// The path of a process's executable.
 pub fn executable(pid: u32) -> Option<PathBuf> {
     os::executable(pid)

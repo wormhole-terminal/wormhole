@@ -47,6 +47,24 @@ impl EndHow {
 /// End the host `meta` describes: ask it over its socket, and signal its process when that does
 /// not work. Waits at most `wait` for the host to answer and hang up.
 pub fn end_host(meta: &HostMeta, wait: Duration) -> Result<EndHow, String> {
+    end_with(meta, wait, Signal::Terminate)
+}
+
+/// [`end_host`] for a host that does not answer: when `Kill` over its socket gets no answer the process
+/// is killed outright (`SIGKILL`, which a stopped or stuck process cannot ignore), again only when it
+/// is checked to be the host.
+pub fn end_unresponsive_host(meta: &HostMeta, wait: Duration) -> Result<EndHow, String> {
+    end_with(meta, wait, Signal::Kill)
+}
+
+/// How hard to signal a host that did not take `Kill`.
+#[derive(Clone, Copy)]
+enum Signal {
+    Terminate,
+    Kill,
+}
+
+fn end_with(meta: &HostMeta, wait: Duration, signal: Signal) -> Result<EndHow, String> {
     let asked = ask_kill(meta, wait);
     let Err(why) = asked else { return Ok(EndHow::Asked) };
     tracing::info!(id = %meta.id, %why, "the host did not take Kill, signalling it");
@@ -60,7 +78,11 @@ pub fn end_host(meta: &HostMeta, wait: Duration) -> Result<EndHow, String> {
     if !ours {
         return Err(format!("{why}; pid {} is not a wormhole-host, so it was left alone", meta.pid));
     }
-    process::terminate(meta.pid).map_err(|err| format!("{why}; SIGTERM to {}: {err}", meta.pid))?;
+    let (sent, name) = match signal {
+        Signal::Terminate => (process::terminate(meta.pid), "SIGTERM"),
+        Signal::Kill => (process::kill(meta.pid), "SIGKILL"),
+    };
+    sent.map_err(|err| format!("{why}; {name} to {}: {err}", meta.pid))?;
     Ok(EndHow::Signalled)
 }
 
@@ -393,6 +415,25 @@ mod tests {
         other.pid = std::process::id();
         other.started_at = 0;
         assert!(end_host(&other, Duration::from_millis(300)).is_err(), "a test program is not a host");
+    }
+
+    /// A host that is stopped keeps its socket and answers nothing, and ignores SIGTERM until it
+    /// runs again; the hard end gets rid of it, checked to be the host first.
+    #[test]
+    fn a_stopped_host_is_ended_with_sigkill() {
+        let dir = short_dir();
+        let d = dir.path();
+        let mut host = super::super::identity::spawn_fake_host(d);
+        let stopped = std::process::Command::new("kill").args(["-STOP", &host.pid().to_string()]).status();
+        assert!(stopped.expect("kill runs").success());
+        let mut meta = meta_for("hhhhhhhhhhhh", &d.join("nothing.sock"));
+        meta.pid = host.pid();
+        meta.started_at = host.started_at;
+        assert_eq!(end_unresponsive_host(&meta, Duration::from_millis(300)), Ok(EndHow::Signalled));
+        assert!(host.exits_within(Duration::from_secs(5)), "SIGKILL ends a stopped process");
+        // And a process that only has the pid is still left alone.
+        meta.pid = std::process::id();
+        assert!(end_unresponsive_host(&meta, Duration::from_millis(300)).is_err());
     }
 
     #[test]

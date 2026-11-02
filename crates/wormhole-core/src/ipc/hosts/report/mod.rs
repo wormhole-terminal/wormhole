@@ -176,7 +176,7 @@ impl HostRow {
         self.version_differs(app)
             || self.fit_problem()
             || (self.standing.is_live() && matches!(self.answer, Answer::No(_) | Answer::Incompatible))
-            || self.link.is_some_and(|l| l.lost)
+            || self.link.is_some_and(|l| l.lost || l.not_responding_for.is_some())
             || self.unavailable.is_some()
             || matches!(&self.answer, Answer::Yes(info) if info.exited)
     }

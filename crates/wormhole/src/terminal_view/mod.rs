@@ -27,6 +27,7 @@ mod find;
 mod find_bar;
 mod first_command;
 mod grid_layout;
+mod host_responding;
 mod host_unavailable;
 mod hosted;
 mod input;

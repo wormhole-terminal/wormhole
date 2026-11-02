@@ -93,6 +93,12 @@ impl HostRow {
                     flag(l.detached, "detached"),
                     flag(l.lost, "lost"),
                     flag(l.ended, "ended"),
+                ) + &format!(
+                    ", last heard {} ago{}",
+                    duration_words(l.quiet_for.as_secs()),
+                    l.not_responding_for
+                        .map(|d| format!(", not responding for {}", duration_words(d.as_secs())))
+                        .unwrap_or_default()
                 ),
             );
         }

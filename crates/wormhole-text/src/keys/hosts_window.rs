@@ -138,6 +138,14 @@ pub const HOSTS_UNAVAILABLE_FAILED: Key = Key::new(234);
 pub const HOSTS_UNAVAILABLE_END: Key = Key::new(235);
 /// "Open a new terminal here"
 pub const HOSTS_UNAVAILABLE_NEW: Key = Key::new(236);
+/// "Session host not responding"
+pub const HOSTS_NOT_RESPONDING: Key = Key::new(237);
+/// "Wait"
+pub const HOSTS_NOT_RESPONDING_WAIT: Key = Key::new(238);
+/// "End host"
+pub const HOSTS_NOT_RESPONDING_END: Key = Key::new(239);
+/// "Last heard"
+pub const HOSTS_FIELD_HEARD: Key = Key::new(240);
 
 /// ```text
 /// Wormhole { $version }, protocol { $protocol }
@@ -326,4 +334,18 @@ pub fn hosts_failure_connect(why: &str) -> String {
 /// ```
 pub fn hosts_failure_io(why: &str) -> String {
     crate::active::message(227, &[("why", Arg::Str(why))])
+}
+
+/// ```text
+/// { $ago } ago
+/// ```
+pub fn hosts_heard_ago(ago: &str) -> String {
+    crate::active::message(241, &[("ago", Arg::Str(ago))])
+}
+
+/// ```text
+/// Not responding: silent for { $quiet }
+/// ```
+pub fn hosts_link_not_responding(quiet: &str) -> String {
+    crate::active::message(242, &[("quiet", Arg::Str(quiet))])
 }

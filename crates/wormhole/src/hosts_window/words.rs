@@ -17,9 +17,9 @@ use wormhole_text::keys::{
     HOSTS_STANDING_ORPHAN, HOSTS_STANDING_ORPHAN_NOTE, HOSTS_STANDING_STALE, hosts_answer_none,
     hosts_answer_running, hosts_duration_days, hosts_duration_hours, hosts_duration_minutes,
     hosts_duration_seconds, hosts_failure_connect, hosts_failure_io, hosts_fit_compatible, hosts_fit_too_new,
-    hosts_fit_too_old, hosts_link_traffic, hosts_protocol_minor, hosts_range_not_running, hosts_range_one,
-    hosts_range_span, hosts_size_bytes, hosts_size_kib, hosts_size_mib, hosts_standing_attached_to,
-    hosts_started, hosts_time_utc,
+    hosts_fit_too_old, hosts_heard_ago, hosts_link_not_responding, hosts_link_traffic, hosts_protocol_minor,
+    hosts_range_not_running, hosts_range_one, hosts_range_span, hosts_size_bytes, hosts_size_kib,
+    hosts_size_mib, hosts_standing_attached_to, hosts_started, hosts_time_utc,
 };
 use wormhole_text::text;
 
@@ -155,8 +155,16 @@ pub(super) fn answer(answer: &Answer) -> String {
     }
 }
 
+/// How long ago, from a duration.
+pub(super) fn ago_text(since: std::time::Duration) -> String {
+    hosts_heard_ago(&elapsed_text(since.as_secs()))
+}
+
 pub(super) fn link(link: Option<&LinkStats>) -> String {
     let Some(l) = link else { return text(HOSTS_LINK_NONE).to_string() };
+    if let Some(silent) = l.not_responding_for {
+        return hosts_link_not_responding(&elapsed_text(silent.as_secs()));
+    }
     if l.lost {
         return text(HOSTS_LINK_LOST).to_string();
     }

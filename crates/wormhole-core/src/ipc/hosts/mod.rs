@@ -24,7 +24,9 @@ use ring::rand::{SecureRandom as _, SystemRandom};
 use crate::platform::fs::{mode, private_dir, set_mode};
 use crate::platform::user::UserId;
 
-pub use admin::{EndHow, ForgetError, ForgetOutcome, end_all, end_all_live, end_host, find, forget};
+pub use admin::{
+    EndHow, ForgetError, ForgetOutcome, end_all, end_all_live, end_host, end_unresponsive_host, find, forget,
+};
 pub use attach::{AttachFailure, Unavailable, UnavailableKind, classify, failure_of, unfit};
 pub use gone::forget_gone_hosts;
 #[cfg(test)]
