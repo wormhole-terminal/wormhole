@@ -362,8 +362,16 @@ fn clearing_the_buffer_leaves_no_generation_from_before_it() {
         assert!(Instant::now() < until, "a generation from before the clear is still there");
         std::thread::sleep(Duration::from_millis(10));
     }
-    let files = std::fs::read_dir(place.checkpoint_dir()).unwrap().count();
-    assert_eq!(files, 2, "one generation: its manifest and its screen");
+    // A write may be between its screen and its manifest for a moment; it settles on one generation.
+    let until = Instant::now() + PATIENCE;
+    loop {
+        let files = std::fs::read_dir(place.checkpoint_dir()).unwrap().count();
+        if files == 2 {
+            break;
+        }
+        assert!(Instant::now() < until, "{files} files: one generation is its manifest and its screen");
+        std::thread::sleep(Duration::from_millis(10));
+    }
 }
 
 /// `Checkpoint{flush: true}` is answered with `CheckpointWritten` once the generation is on disk, and a plain
