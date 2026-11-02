@@ -380,6 +380,7 @@ pub const TOKEN_USES: &[TokenUse] = &[
     ),
     u("tooltip", "tooltip", Chrome, &["tooltip.background", "tooltip.text", "shadow", "metrics.radius"]),
     u("focus.ring", "focus ring", Chrome, &["border.focus", "metrics.focus_ring_width"]),
+    u("settings.group", "settings group", Settings, &["settings.group", "state.hover", "metrics.radius_lg"]),
     u(
         "settings.nav",
         "settings nav",

@@ -38,7 +38,7 @@ pub(super) const MODE: Setting = Setting::menu(
     |s, ix| s.agent_access = [AgentAccess::Off, AgentAccess::Ask, AgentAccess::Open][ix.min(2)],
 );
 
-pub(super) const PROGRAMS: Setting = Setting::block("agent-access-programs", draw_programs);
+pub(super) const PROGRAMS: Setting = Setting::rows("agent-access-programs", draw_programs);
 
 /// The approved programs, or a line saying that nothing has asked.
 fn draw_programs(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {

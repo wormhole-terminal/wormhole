@@ -60,6 +60,8 @@ pub fn pill(id: impl Into<ElementId>, ui: UiColors, active: bool, compact: bool)
         .when(!compact, |d| d.text_body())
         .text_color(if active { ui.on_selected } else { ui.muted })
         .when(!compact, |d| d.outlined(ui, if active { ui.selected_chip } else { ui.border }))
+        // An outlined chip that is not chosen keeps its shape without the outline: the button's fill.
+        .when(!compact && !active && !ui.borders, |d| d.bg(ui.button))
         .when(active, |d| d.bg(ui.selected_chip))
         // Hovering the active one keeps its fill rather than trading it for the lighter hover.
         .hover(move |d| if active { d } else { d.bg(ui.hover).text_color(ui.text) })

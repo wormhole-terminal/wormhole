@@ -30,7 +30,7 @@ use super::{FrontWindow, SettingsWindow, section_icon, sections, ui};
 use crate::select::{self, MenuOptions};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
-use crate::style::{self, Edges, RowKeys, SettingParts, SettingState, TextRole};
+use crate::style::{self, RowKeys, SettingParts, SettingState, TextRole};
 
 /// The widest the summary of a block's value grows on the Changed page before it is cut.
 const SUMMARY_MAX_W: f32 = 240.0;
@@ -121,8 +121,25 @@ pub(super) enum Control {
     Recorder(super::recorder::RecorderRow),
     /// The control of a row, drawn by the page.
     Custom(Draw),
-    /// Content that stands on its own, with no row around it (the theme cards, a preview).
+    /// Content that stands on its own, with no row around it and outside the group's card (the theme
+    /// cards, a preview, a notice).
     Block(Draw),
+    /// Rows the page draws itself (a list of agents, of Probes): they sit in the group's card as any
+    /// row does, and the Changed page and the search show them as one line, as a [`Control::Block`].
+    Rows(Draw),
+}
+
+impl Control {
+    /// Drawn by the page as a whole rather than as a label with a control: the Changed page and the
+    /// search have no room for it, so they say what it is set to.
+    fn draws_itself(&self) -> bool {
+        matches!(self, Self::Block(_) | Self::Rows(_))
+    }
+
+    /// Whether it sits in its group's card: every row does, a standing block does not.
+    fn in_card(&self) -> bool {
+        !matches!(self, Self::Block(_))
+    }
 }
 
 pub(super) struct Setting {
@@ -182,6 +199,10 @@ impl Setting {
 
     pub(super) const fn block(id: &'static str, draw: Draw) -> Self {
         Self::new(id, Control::Block(draw))
+    }
+
+    pub(super) const fn rows(id: &'static str, draw: Draw) -> Self {
+        Self::new(id, Control::Rows(draw))
     }
 
     /// A description that says what is in use now, instead of the table's.
@@ -338,7 +359,7 @@ fn shown(control: &Control, settings: &Settings) -> Shown {
     match control {
         Control::Toggle { get, .. } => Shown::Toggle(get(settings)),
         Control::Menu(menu) => Shown::Menu(menu.current(settings)),
-        Control::Recorder(_) | Control::Custom(_) | Control::Block(_) => Shown::Drawn,
+        Control::Recorder(_) | Control::Custom(_) | Control::Block(_) | Control::Rows(_) => Shown::Drawn,
     }
 }
 
@@ -367,22 +388,33 @@ impl SettingsWindow {
             if !group.blurb().is_empty() {
                 rows = rows.child(div().pb_2().text_body().text_color(page.ui.muted).child(group.blurb()));
             }
-            let mut any_row = false;
+            // The rows of a group share one card; a block that stands on its own (a preview, a notice) is
+            // drawn as it is and closes the card, so the rows after it start another.
+            let mut card: Vec<AnyElement> = Vec::new();
             let mut shown = 0;
             for entry in group.entries {
                 let Some(setting) = self.drawn(entry, settings(cx)) else { continue };
                 shown += 1;
-                any_row |= !matches!(setting.control, Control::Block(_));
-                rows = rows.child(self.render_entry(entry, setting, &page, hits.get(entry.id), None, cx));
+                let element = self.render_entry(entry, setting, &page, hits.get(entry.id), None, cx);
+                if !setting.control.in_card() {
+                    if !card.is_empty() {
+                        rows = rows.child(style::group_card(page.ui, std::mem::take(&mut card)));
+                    }
+                    rows = rows.child(element);
+                    continue;
+                }
+                card.push(element);
                 if let Some(below) = setting.below.and_then(|below| below(self, cx)) {
-                    rows = rows.child(div().pb_2().child(below));
+                    card.push(div().pb_2().child(below).into_any_element());
                 }
             }
             // A group none of whose rows this build draws (a flag is off) has nothing to show.
             if shown == 0 {
                 continue;
             }
-            let rows = if any_row { rows.rule_bottom(page.ui) } else { rows };
+            if !card.is_empty() {
+                rows = rows.child(style::group_card(page.ui, card));
+            }
             // The group its sub-row in the nav picked is where the page scrolls to; it alone has an anchor
             // (and so an id), which costs the others nothing.
             column = column.child(match self.group.anchor_of(at) {
@@ -428,9 +460,11 @@ impl SettingsWindow {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let ui = page.ui;
-        let block = matches!(setting.control, Control::Block(_));
+        let block = setting.control.draws_itself();
         if block && default.is_none() {
-            let Control::Block(draw) = &setting.control else { return div().into_any_element() };
+            let (Control::Block(draw) | Control::Rows(draw)) = &setting.control else {
+                return div().into_any_element();
+            };
             return draw(self, cx);
         }
         // The person's own values: Zen mode draws the window with less, and says so at the top of the page.
@@ -534,7 +568,7 @@ impl SettingsWindow {
             }
             (Control::Menu(menu), Shown::Menu(current)) => menu_control(id, label, menu, current, ui),
             (Control::Recorder(row), _) => self.render_recorder(id, *row, cx),
-            (Control::Custom(draw) | Control::Block(draw), _) => draw(self, cx),
+            (Control::Custom(draw) | Control::Block(draw) | Control::Rows(draw), _) => draw(self, cx),
             // `shown` reads each control as its own kind.
             _ => div().into_any_element(),
         }
@@ -575,13 +609,13 @@ impl SettingsWindow {
                     )
                     .on_click(cx.listener(move |this, _, _, cx| this.show_section(section, cx))),
                 );
-            let mut rows = div().flex().flex_col().child(head);
+            let mut rows = Vec::new();
             for hit in &hits[start..end] {
                 if let Some(setting) = control(hit.entry.id) {
-                    rows = rows.child(self.render_entry(hit.entry, setting, &page, Some(hit), None, cx));
+                    rows.push(self.render_entry(hit.entry, setting, &page, Some(hit), None, cx));
                 }
             }
-            column = column.child(rows.rule_bottom(ui));
+            column = column.child(div().flex().flex_col().child(head).child(style::group_card(ui, rows)));
             start = end;
         }
         column.into_any_element()

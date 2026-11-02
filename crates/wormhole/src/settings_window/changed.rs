@@ -27,7 +27,7 @@ use super::registry::{Control, Current, PageState, Setting, control};
 use crate::dialog::{self, DestructiveQuestion};
 use crate::platform::clipboard;
 use crate::settings::{Settings, SettingsStore, UiColors, settings, update_settings};
-use crate::style::{self, Edges as _, RowTile, TileRowParts};
+use crate::style::{self, RowTile, TileRowParts};
 
 /// How long Copy as JSON says Copied.
 const COPIED_FOR: Duration = Duration::from_millis(1500);
@@ -50,7 +50,7 @@ impl SettingsWindow {
             let section = rows[start].section;
             let end =
                 rows[start..].iter().position(|row| row.section != section).map_or(rows.len(), |n| start + n);
-            let mut list = div().flex().flex_col();
+            let mut list = Vec::new();
             for row in &rows[start..end] {
                 let Some(setting) =
                     control(row.entry.id).filter(|_| self.drawn(row.entry, settings(cx)).is_some())
@@ -58,9 +58,9 @@ impl SettingsWindow {
                     continue;
                 };
                 let note = default_note(row, setting, &page.values);
-                list = list.child(self.render_entry(row.entry, setting, &page, None, Some(note), cx));
+                list.push(self.render_entry(row.entry, setting, &page, None, Some(note), cx));
                 if let Some(below) = setting.below.and_then(|below| below(self, cx)) {
-                    list = list.child(div().pb_2().child(below));
+                    list.push(div().pb_2().child(below).into_any_element());
                 }
             }
             column = column.child(
@@ -68,7 +68,7 @@ impl SettingsWindow {
                     .flex()
                     .flex_col()
                     .child(style::setting_group_head(ui, section.title(), None))
-                    .child(list.rule_bottom(ui)),
+                    .child(style::group_card(ui, list)),
             );
             start = end;
         }
@@ -105,7 +105,8 @@ impl SettingsWindow {
             ];
             parts
         };
-        style::tile_row("changed-summary", ui, parts).rule_bottom(ui).into_any_element()
+        style::group_card(ui, [style::tile_row("changed-summary", ui, parts).into_any_element()])
+            .into_any_element()
     }
 
     /// Copy what differs, as the snippet a person pastes into `config.json`, and say so for a moment.

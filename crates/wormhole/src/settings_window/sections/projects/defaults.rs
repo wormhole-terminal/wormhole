@@ -25,11 +25,7 @@ impl SettingsWindow {
     /// The defaults every project starts from, one switch per feature, under the "For" row.
     pub(super) fn defaults_group(&self, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
-        let mut defaults = div()
-            .flex()
-            .flex_col()
-            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_PROJECTS), None))
-            .child(self.for_row(ui, cx));
+        let mut rows = vec![self.for_row(ui, cx)];
         for feature in Feature::ALL {
             let on = project::api::default_enabled(feature, cx);
             let profile = project::shown_profile(cx).clone();
@@ -43,7 +39,7 @@ impl SettingsWindow {
             } else {
                 feature.description().to_string()
             };
-            defaults = defaults.child(feature_row(
+            rows.push(feature_row(
                 ui,
                 feature,
                 description,
@@ -52,18 +48,25 @@ impl SettingsWindow {
                 cx,
             ));
         }
-        defaults.into_any_element()
+        div()
+            .flex()
+            .flex_col()
+            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_PROJECTS), None))
+            .child(style::group_card(ui, rows))
+            .into_any_element()
     }
 
     /// The trusted projects, a tile row each, with the ways into a project's page and out of its trust.
     pub(super) fn trusted_group(&self, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
-        let mut trusted = div().flex().flex_col().child(style::setting_group_head(
+        let head = style::setting_group_head(
             ui,
             text(SETTINGS_PROJECTS_TRUSTED_PROJECTS),
             Some(text(SETTINGS_PROJECTS_PROJECTS_ALLOWED_TO_RUN_COMMANDS)),
-        ));
+        );
+        let mut trusted = div().flex().flex_col().child(head);
         let list: Vec<PathBuf> = project::api::trusted_roots(cx);
+        let mut rows = Vec::new();
         if list.is_empty() {
             trusted = trusted.child(style::empty_list(
                 ui,
@@ -101,7 +104,10 @@ impl SettingsWindow {
                     }))
                     .into_any_element(),
             ];
-            trusted = trusted.child(style::tile_row(("trusted-project", ix), ui, parts));
+            rows.push(style::tile_row(("trusted-project", ix), ui, parts).into_any_element());
+        }
+        if !rows.is_empty() {
+            trusted = trusted.child(style::group_card(ui, rows));
         }
         if !*self.projects.can_approve.get_or_init(crate::platform::auth::available) {
             trusted = trusted.child(div().pb_2().child(style::notice(

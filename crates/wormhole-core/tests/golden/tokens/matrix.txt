@@ -72,6 +72,7 @@ resize.handle.active #00ff41
 resize.handle.hover #00ff4180
 scrollbar.thumb #4dff7c40
 selection.ui #00ff414d
+settings.group #4dff7c14
 settings.nav.selected #00ff41
 settings.nav.tile.advanced #8e8e93
 settings.nav.tile.agents #bf5af2

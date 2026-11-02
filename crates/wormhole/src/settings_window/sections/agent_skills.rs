@@ -28,7 +28,7 @@ use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
 
-pub(super) const SKILLS: Setting = Setting::block("agent-skills", draw_skills);
+pub(super) const SKILLS: Setting = Setting::rows("agent-skills", draw_skills);
 pub(super) const MCP: Setting = Setting::custom("agent-mcp", draw_mcp).below(mcp_command);
 
 /// One agent's skill as the files have it, read with the rest of the page (`AgentsSnapshot::load`).

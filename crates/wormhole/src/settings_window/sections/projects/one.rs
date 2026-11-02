@@ -88,8 +88,10 @@ impl SettingsWindow {
             .flex()
             .flex_col()
             .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_PROJECTS), None))
-            .child(self.for_row(ui, cx))
-            .child(style::tile_row("project-trust-row", ui, parts));
+            .child(style::group_card(
+                ui,
+                [self.for_row(ui, cx), style::tile_row("project-trust-row", ui, parts).into_any_element()],
+            ));
         if let Some(request) = project.request.as_ref().filter(|r| !trusted && !r.commands.is_empty()) {
             group = group.child(
                 div().pb_2().child(
@@ -108,6 +110,7 @@ impl SettingsWindow {
         }
 
         // Each feature: the project's own choice, Default, On or Off.
+        let mut features = Vec::new();
         for (feature, standing, current, default) in prefs {
             let description = feature_description(feature, standing);
             let control = feature_menu(ui, feature, root, current, default);
@@ -117,7 +120,10 @@ impl SettingsWindow {
             } else {
                 SettingState::Default
             };
-            group = group.child(feature_row(ui, feature, description, state, control, cx));
+            features.push(feature_row(ui, feature, description, state, control, cx));
+        }
+        if !features.is_empty() {
+            group = group.child(div().pt_2().child(style::group_card(ui, features)));
         }
 
         let errors = (!project.errors.is_empty()).then(|| {

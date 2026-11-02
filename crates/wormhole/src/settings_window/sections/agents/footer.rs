@@ -14,7 +14,7 @@ use wormhole_core::config::settings_index::SectionId as Section;
 
 use super::how;
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, TextRole};
 
 pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
@@ -24,7 +24,7 @@ pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
         .flex_wrap()
         .items_center()
         .gap_x_4()
-        .rule_top(ui)
+        .pt_3()
         .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_AGENTS_FOOTER_LINE)))
         .child(
             style::link_button("open-notifications", ui, text(SETTINGS_AGENTS_OPEN_NOTIFICATIONS), true)

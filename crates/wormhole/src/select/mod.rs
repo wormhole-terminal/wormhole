@@ -96,7 +96,9 @@ impl RenderOnce for SelectTrigger {
             .when_some(self.width, |d, width| d.w(width))
             .rounded(ui.radius)
             .cursor_pointer()
-            .hover(|d| d.bg(ui.hover))
+            // With Borders off the outline that gave the select its shape is gone: the button's fill does.
+            .when(!ui.borders, |d| d.bg(ui.button))
+            .hover(move |d| d.bg(if ui.borders { ui.hover } else { ui.button_hover }))
             // A soft ring around the open select, like a focused input (the panel's picker
             // marks itself with the outline alone).
             // The ring is a shadow under the select; with nothing painted in the select it would show through

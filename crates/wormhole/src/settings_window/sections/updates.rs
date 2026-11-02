@@ -46,7 +46,7 @@ pub(super) const SETTINGS: &[Setting] = &[
         |s| usize::from(s.update_channel == UpdateChannel::Unstable),
         |s, ix| s.update_channel = if ix == 1 { UpdateChannel::Unstable } else { UpdateChannel::Stable },
     ),
-    Setting::block("update-status", draw_status),
+    Setting::rows("update-status", draw_status),
     toggle!("anonymous-count", anonymous_count),
     Setting::block("count-details", draw_count_details),
 ];

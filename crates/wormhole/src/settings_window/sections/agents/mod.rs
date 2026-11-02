@@ -20,8 +20,8 @@ pub(crate) use snapshot::AgentsSnapshot;
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("agents-preview", |_, cx| super::draw_agents_preview(cx)),
-    Setting::block("agents-installed", installed::draw),
-    Setting::block("agents-other", others::draw),
+    Setting::rows("agents-installed", installed::draw),
+    Setting::rows("agents-other", others::draw),
     cli_tool::SETTING,
     // Shown while the Automation flag is off (the index row says so); with it on, Agent access decides.
     toggle!("control-write", control_write),

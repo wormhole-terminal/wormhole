@@ -29,7 +29,7 @@ use super::extensions_text::verify_text;
 use crate::settings::UiColors;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{Section, SettingsWindow, ui};
-use crate::style::{self, Edges as _, TextRole};
+use crate::style::{self, TextRole};
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("probes", draw_probes)];
 
@@ -209,10 +209,11 @@ fn draw_probes(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
             let rows = if entries.is_empty() {
                 empty(ui, cx)
             } else {
+                let rows = entries.iter().map(|entry| probe_row(ui, entry, cx)).collect::<Vec<_>>();
                 div()
                     .flex()
                     .flex_col()
-                    .children(entries.iter().map(|entry| probe_row(ui, entry, cx)))
+                    .child(style::group_card(ui, rows))
                     .child(footer(ui, cx))
                     .into_any_element()
             };
@@ -369,7 +370,7 @@ fn footer(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
         .flex_wrap()
         .items_center()
         .gap_x_4()
-        .rule_top(ui)
+        .pt_3()
         .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_EXTENSIONS_FOOTER)))
         .child(
             style::link_button("probes-show-folder", ui, text(SETTINGS_EXTENSIONS_SHOW_FOLDER), false)

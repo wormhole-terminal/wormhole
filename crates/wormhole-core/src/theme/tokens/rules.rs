@@ -54,6 +54,9 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         "band" => "text.primary / 5%",
         "band.hover" => "text.primary / 8%",
         "band.solid" => "over(band, sidebar.background)",
+        // A Settings group's card: the band's step above a hovered row (5%), so a row under the pointer
+        // still shows on it. The board's `band-hover` fill, in Dark and Light alike.
+        "settings.group" => "text.primary / 8%",
         // The primary itself, never a tint of it: the settings nav's current page, with `text.on_primary`
         // on it. Its own token, so the main sidebar's selected row stays as it is.
         "settings.nav.selected" => "primary",

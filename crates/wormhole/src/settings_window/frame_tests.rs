@@ -107,6 +107,14 @@
 //! settings more often); Profile rose by 65, the one page the new read costs more
 //! than the cache gives back. The Changed page, 5,541 over three changed settings, is new.
 //!
+//! Step 8d: every group of rows sits in a `style::group_card` (two layers, a list of its rows, a fill, corners
+//! and an inset), about 100 allocations a card and none a row. The Changed page and the nav stay as they
+//! were, Agents (8,842, under its budget) and Projects (7,804) fell with other work and keep their budgets.
+//! Measured per page, third draw: Profile 7,256, Terminal 12,843, Appearance 18,940, Fonts 8,536, Sessions
+//! 13,732, Git 8,485, Notifications 8,980, MenuBar 7,096, Updates 5,672, Advanced 5,175, Motion 6,857,
+//! FeatureFlags 7,175, search 9,073; Changed 5,462, Agents 8,842, Import 48,699, Projects 7,804, Extensions
+//! 2,758. The budgets below are those.
+//!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
 use gpui_kit::test::TestWindowExt as _;
@@ -126,34 +134,36 @@ const SLACK: u64 = 20;
 /// keeps), and of the results page of a search for a word found in several pages; a frame may make
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 18] = [
-    ("Profile", 7116),
+    // Step 8d, the group cards: one more card for each group of rows, about 100 allocations a card
+    // (two layers, the rows' list and its fill, radius and inset), not a cost per row.
+    ("Profile", 7256),
     // The Changed page is measured with three settings changed (Tab width, Wrap long lines, Blur), each in the
     // row of its own page with its default under its name: 5,541.
     ("Changed", 5541),
     // With the Worktrees group's switch for cloning build folders (356). Then the preview card of two split
     // terminals (its label, two panes with their headers, five runs of text each and a minimap's bars):
     // 12,441 measured, 1,150 more.
-    ("Terminal", 12435),
+    ("Terminal", 12843),
     // With the Liquid Glass row (16,810 before it came back).
     // The preview moved from the right-hand column into a card at the top of the page: 18,117 measured, 84
     // more (the card's own label, group and caption; the window it draws is the same).
     // With the Borders switch (a row, its (i) and its key line): 18,615 measured, 426 more.
-    ("Appearance", 18615),
+    ("Appearance", 18940),
     // The specimen is a card on the page now, not in the column: 8,266 measured, 26 fewer.
-    ("Fonts", 8260),
+    ("Fonts", 8536),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
     // The list preview is a card at the top of the page, with the column's second window gone: 13,612
     // measured, 2,828 fewer than the page and the column made together.
-    ("Sessions", 13523),
+    ("Sessions", 13732),
     // The preview card of the Changes panel and a diff: the panel's own file rows (four, with the folder
     // rows of the tree and the untracked head) and the diff view's own rows (a hunk head and six lines, each
     // a row with two gutters, a marker and its code): 8,367 measured, 3,136 more, about 340 for each of the
     // nine rows.
-    ("Git", 8361),
+    ("Git", 8485),
     // The banners are a card on the page: 8,793 measured, 44 more than in the column (the card's label,
     // group and caption).
-    ("Notifications", 8787),
+    ("Notifications", 8980),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
@@ -164,17 +174,17 @@ const BUDGET: [(&str, u64); 18] = [
     // The agents list is a card on the page: 11,076 measured, 63 more than in the column.
     ("Agents", 11070),
     // The menu bar and the quick panel are a card on the page: 6,962 measured, 58 more than in the column.
-    ("MenuBar", 6956),
+    ("MenuBar", 7096),
     // Fell from 53,549 to 50,188 (measured) when the group labels, notices and buttons became one
     // component each; Terminal, Updates, Motion, Projects and Extensions fell by 3 to 589 with them.
     ("Import", 48697),
     // Fell by 37 when the status became a tile row.
-    ("Updates", 5552),
+    ("Updates", 5672),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     // With the New programs group: the Developer Tools row, its description and its button (417).
-    ("Advanced", 4979),
-    ("Motion", 6779),
+    ("Advanced", 5175),
+    ("Motion", 6857),
     // The Trusted projects list, empty in the tests, says so in the empty list (title, hint, card):
     // 10,264 measured, 983 more than the one line it was.
     // Step 8c: the project's own switches are menus (built only while open) and the page's rows are
@@ -197,7 +207,8 @@ const BUDGET: [(&str, u64); 18] = [
     // The results no longer show the window's miniature beside them (it was in the column, whatever was
     // found): 8,042 measured, 4,221 fewer.
     // The search finds the Borders row too, as one more result: 8,456 measured, 420 more.
-    ("search", 8456),
+    // Step 8d: each group of results is a card too: 9,073 measured, 617 more.
+    ("search", 9073),
 ];
 
 /// What Appearance's Liquid Glass row adds, a switch with its line and Beta chip: it is on the page on

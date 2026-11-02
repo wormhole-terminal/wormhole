@@ -131,7 +131,8 @@ const SET_ELSEWHERE_OPACITY: f32 = 0.55;
 /// opens the description in a card (VoiceOver reads the description from the row), or, for a
 /// warning that must not be missed ([`SettingParts::visible_hint`]), the description under the label
 /// (12, muted); the control at the right edge of the column, a hairline above and at least
-/// [`SETTING_ROW_MIN_H`] tall, no card. Hovering fills it with `state.hover`, [`ROW_FILL_PAD`]
+/// [`SETTING_ROW_MIN_H`] tall; it stands in a [`group_card`](super::group_card), which keeps the first
+/// hairline from showing. Hovering fills it with `state.hover`, [`ROW_FILL_PAD`]
 /// past its text on each side. See [`SettingState`] for what a changed, project-set or disabled
 /// value adds.
 #[track_caller]
@@ -274,7 +275,7 @@ fn out_of_reach(id: impl Into<ElementId>, control: AnyElement) -> AnyElement {
 
 /// The head of a group of [`setting`] rows: the group's name as a heading (16 / 600) with a
 /// step of space above it, and a quiet note at the right ("Same values as the funnel"). The
-/// rows follow with their hairlines; end the group with `rule_bottom`.
+/// rows follow in a [`group_card`](super::group_card).
 #[track_caller]
 pub fn setting_group_head(ui: UiColors, title: &str, aside: Option<&str>) -> Div {
     div()

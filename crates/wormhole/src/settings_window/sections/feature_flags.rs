@@ -14,9 +14,9 @@ use crate::settings::settings;
 use crate::settings::update_settings;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{Section, SettingsWindow, ui};
-use crate::style::{self, Edges, RowKeys, SettingParts};
+use crate::style::{self, RowKeys, SettingParts};
 
-pub(super) const SETTINGS: &[Setting] = &[Setting::block("feature-flags", |w, cx| w.draw_feature_flags(cx))];
+pub(super) const SETTINGS: &[Setting] = &[Setting::rows("feature-flags", |w, cx| w.draw_feature_flags(cx))];
 
 /// The unlisted key that unlocks the flags in a Stable release, and locks them again: ⌃⌥⌘F. It is in
 /// no menu, keymap or shortcut sheet on purpose; the flags are for testers who were told about it.
@@ -46,7 +46,7 @@ impl SettingsWindow {
 
     fn draw_feature_flags(&self, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
-        let mut rows = div().flex().flex_col().rule_bottom(ui);
+        let mut rows = div().flex().flex_col();
         for flag in FeatureFlag::ALL {
             let on = settings(cx).feature_enabled(flag);
             let key = flag.key();

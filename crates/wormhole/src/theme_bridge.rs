@@ -246,10 +246,13 @@ fn apply_now(
                 hsla(MISSING_TOKEN)
             });
         }
-        // The Kit draws its buttons' and fields' outlines in `input`; with Borders off they have none.
-        // Its `border` stays: it is what the Kit's separators and tooltips use, which Borders leaves.
+        // The Kit draws its buttons' and fields' outlines in `input`, and fills an outlined button or a
+        // field from it too (Dark: this colour mostly transparent; Light: the page's own). With Borders
+        // off the outline must go but the shape must stay, so `input` becomes the button's fill: the
+        // outline is then the fill's own colour and the Dark fill is a button-coloured one. Its `border`
+        // stays: it is what the Kit's separators and tooltips use, which Borders leaves.
         if !borders {
-            theme.colors.input = transparent_black();
+            theme.colors.input = token(tokens, "button.background");
         }
         theme.radius = px(tokens.metrics.radius);
         theme.radius_lg = px(tokens.metrics.radius_lg);

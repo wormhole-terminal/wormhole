@@ -36,6 +36,11 @@ pub const UI_TOKENS: &[TokenInfo] = &[
     t("band.hover", "Chrome", "A band under the pointer; also the hover of an icon button (overlay)"),
     t("band.solid", "Chrome", "A band over the sidebar, opaque: the fill of a band that sticks to the top"),
     t(
+        "settings.group",
+        "Chrome",
+        "A group of rows in Settings: the card they sit in, one step off the page (overlay)",
+    ),
+    t(
         "settings.nav.selected",
         "Chrome",
         "The current page's row in the settings nav: the primary itself, with `text.on_primary` on it",
