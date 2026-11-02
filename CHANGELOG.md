@@ -19,6 +19,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   and every 10 seconds in a window nobody can see (minimised, hidden, covered or on another Space; was 2 or 8),
   unless something in the repository is working. A terminal that comes into view or into focus is read at once.
   In a large repository each read takes most of a second of git's time.
+- A terminal's repository is read when something in it changes (the system's file events), not on a timer: a
+  saved file, a stage or a commit shows in the Changes tab within about 200 milliseconds, and an idle
+  repository costs no git runs. The timer stays as a backstop every 30 seconds, and as before where file events
+  are not available (a network volume). Build output in ignored folders no longer causes reads.
 - Drawing the title row no longer asks the system where the apps in Open in… are on every frame.
 
 ### Fixed

@@ -46,6 +46,10 @@ pub(crate) struct GitState {
     owed: bool,
 }
 
+/// Ticks (0.4 s) between reads of a repository that is followed through its files: 30 s. A missed event
+/// (a volume that sends none, a dropped batch that went unflagged) shows within this.
+pub(crate) const WATCHED_READ: u64 = 75;
+
 /// How a terminal is seen, which sets how often its repository is read.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) enum Sight {
@@ -83,14 +87,23 @@ pub(crate) enum GitPoll {
 
 impl GitState {
     /// What to do on tick number `tick` (already offset by the session's place, so sessions
-    /// don't all poll on the same tick) for a terminal in `cwd`, seen as `sight`. A folder git has
+    /// don't all poll on the same tick) for a terminal in `cwd`, seen as `sight`, whose repository is
+    /// followed through its files (`watched`). A folder git has
     /// not answered for is asked at once, and so is a repository whose terminal is owed a refresh
     /// (see [`note_sight`](Self::note_sight)). A repository is polled every 3rd tick (1.2 s) in front,
-    /// every 20th (8 s) behind, every 25th (10 s) unseen. A folder in no repository is not polled at
+    /// every 20th (8 s) behind, every 25th (10 s) unseen. A watched repository is read every 75th (30 s) in any sight, as the
+    /// backstop for events that never came ([`WATCHED_READ`]; [`watch_hit`](Self::watch_hit) is how the
+    /// events arrive). A folder in no repository is not polled at
     /// all: it is looked at for a `.git` every tick in front (0.4 s), every 5th behind, every 25th
     /// unseen. Only one read runs at a time (`begin_refresh`), so a slow repository is read back to
     /// back at most, never piled up.
-    pub(crate) fn poll(&self, cwd: Option<&std::path::Path>, tick: u64, sight: Sight) -> GitPoll {
+    pub(crate) fn poll(
+        &self,
+        cwd: Option<&std::path::Path>,
+        tick: u64,
+        sight: Sight,
+        watched: bool,
+    ) -> GitPoll {
         if self.cwd.as_deref() != cwd {
             return GitPoll::Refresh;
         }
@@ -100,6 +113,8 @@ impl GitState {
             Sight::Behind => (5, 20),
             Sight::Unseen => (25, 25),
         };
+        // Looking for a `.git` is not what a watch replaces: it only follows a repository that exists.
+        let read = if watched { WATCHED_READ } else { read };
         let due = |every: u64| tick.is_multiple_of(every);
         if cwd.is_some_and(|cwd| self.is_absent_for(cwd)) {
             return if due(look) { GitPoll::Probe } else { GitPoll::Idle };
@@ -115,6 +130,19 @@ impl GitState {
         if std::mem::replace(&mut self.sight, sight) != sight {
             self.owed = true;
         }
+    }
+
+    /// Something in the terminal's repository changed (a watch said so). Owes a read at once unless the
+    /// terminal is unseen: nobody sees what git would say, and coming into sight owes a read anyway
+    /// ([`note_sight`](Self::note_sight)), while a read of a repository somebody works in is not
+    /// unseen (`poll_repos` counts it as behind, for the attribution's pictures). True when the read
+    /// is wanted now.
+    pub(crate) fn watch_hit(&mut self) -> bool {
+        if self.sight == Sight::Unseen {
+            return false;
+        }
+        self.owed = true;
+        true
     }
 
     #[cfg(any(test, feature = "devctl"))]

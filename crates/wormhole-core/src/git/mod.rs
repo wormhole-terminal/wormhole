@@ -12,6 +12,9 @@
 //! app, never forced. Nothing else writes. (`pr` is not git at all: it asks the GitHub CLI for a
 //! branch's pull request, read-only, for a trusted project, with a scrubbed environment.)
 //!
+//! `watch` says which file events matter to `status` and when to read after them; it is how the app
+//! learns that a repository changed without asking on a timer.
+//!
 //! `attribution` says which terminal changed which file, from snapshots of the status and when each
 //! terminal was working: it reads git's answers and `stat`s the files, and asks git nothing itself.
 //!
@@ -40,6 +43,7 @@ mod status_parse;
 mod submodule;
 #[cfg(test)]
 pub(crate) mod testing;
+pub mod watch;
 pub mod worktree;
 mod write;
 

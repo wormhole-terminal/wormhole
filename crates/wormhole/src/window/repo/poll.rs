@@ -11,6 +11,7 @@ use wormhole_core::git::{self, RepoStatus};
 use wormhole_core::view::sidebar::RowState;
 
 use super::state::{GitPoll, Refreshed, Sight};
+use super::watches::RepoWatches;
 use crate::terminal_view::TerminalSummary;
 use crate::window::Workspace;
 use crate::window::repo::Observed;
@@ -141,6 +142,21 @@ impl Workspace {
         }
     }
 
+    /// Something changed in the repository at `root` (its watch said so, after the debounce): read it for
+    /// every terminal in it that is not unseen, without waiting for the tick.
+    pub(crate) fn repo_changed(&mut self, root: &std::path::Path, cx: &mut Context<Self>) {
+        for ix in 0..self.sessions.len() {
+            let cwd = self.sessions[ix].terminal().read(cx).cwd.clone();
+            let git = &mut self.sessions[ix].git;
+            if git.waits_for_retry() || git.place(cwd.as_deref()) != Place::In(root) {
+                continue;
+            }
+            if git.watch_hit() {
+                self.refresh_git(ix, cx);
+            }
+        }
+    }
+
     /// What the tick does about each terminal's repository: ask git, look for a `.git`, or nothing.
     /// A terminal whose git is missing waits for a Retry. `seen` is whether any of the window can be
     /// seen, `active` whether it is the window in front.
@@ -162,6 +178,16 @@ impl Workspace {
                 })
                 .collect()
         };
+        // The repositories the terminals are in, for the watches: a root nobody is in any more is let go.
+        let mut roots: Vec<PathBuf> = Vec::new();
+        for session in &self.sessions {
+            if let Place::In(root) = session.git.place(session.pane.summary.cwd.as_deref())
+                && !roots.iter().any(|known| known == root)
+            {
+                roots.push(root.to_path_buf());
+            }
+        }
+        RepoWatches::claim(&cx.weak_entity(), &roots, cx);
         for ix in 0..self.sessions.len() {
             if self.sessions[ix].git.waits_for_retry() {
                 continue;
@@ -177,7 +203,8 @@ impl Workspace {
                 }
             };
             git.note_sight(sight);
-            match git.poll(cwd.as_deref(), self.ticks + ix as u64, sight) {
+            let watched = matches!(git.place(cwd.as_deref()), Place::In(root) if RepoWatches::live(root, cx));
+            match git.poll(cwd.as_deref(), self.ticks + ix as u64, sight, watched) {
                 GitPoll::Refresh => self.refresh_git(ix, cx),
                 GitPoll::Probe => self.probe_repo(ix, cx),
                 GitPoll::Idle => {}

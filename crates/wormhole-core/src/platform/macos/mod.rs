@@ -5,3 +5,4 @@ pub(super) mod clone;
 pub(super) mod keychain;
 pub(super) mod rename;
 pub(super) mod system;
+pub(super) mod watch;

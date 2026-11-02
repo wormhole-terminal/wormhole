@@ -297,20 +297,21 @@ fn the_tick_never_asks_git_about_a_folder_it_knows_is_no_repository() {
     use super::state::{GitPoll, Sight};
     let plain = std::path::Path::new("/plain");
     // Nothing known yet: ask at once, whatever the tick.
-    assert_eq!(GitState::default().poll(Some(plain), 3, Sight::Front), GitPoll::Refresh);
+    assert_eq!(GitState::default().poll(Some(plain), 3, Sight::Front, false), GitPoll::Refresh);
     let (git, _) = absent_git(Ok(None));
-    let polls: Vec<GitPoll> = (0..40).map(|tick| git.poll(Some(plain), tick, Sight::Front)).collect();
+    let polls: Vec<GitPoll> = (0..40).map(|tick| git.poll(Some(plain), tick, Sight::Front, false)).collect();
     assert!(polls.iter().all(|p| *p == GitPoll::Probe), "looked at every tick in front");
-    let behind = (0..40).filter(|tick| git.poll(Some(plain), *tick, Sight::Behind) == GitPoll::Probe).count();
+    let behind =
+        (0..40).filter(|tick| git.poll(Some(plain), *tick, Sight::Behind, false) == GitPoll::Probe).count();
     assert_eq!(behind, 8);
     for tick in 0..40 {
         assert_ne!(
-            git.poll(Some(plain), tick, if tick % 2 == 0 { Sight::Front } else { Sight::Behind }),
+            git.poll(Some(plain), tick, if tick % 2 == 0 { Sight::Front } else { Sight::Behind }, false),
             GitPoll::Refresh
         );
     }
     // Another folder is asked about at once.
-    assert_eq!(git.poll(Some(std::path::Path::new("/other")), 1, Sight::Behind), GitPoll::Refresh);
+    assert_eq!(git.poll(Some(std::path::Path::new("/other")), 1, Sight::Behind, false), GitPoll::Refresh);
     // A repository is read every 1.2 s in front, 8 s behind, 10 s unseen.
     let mut repo = GitState::default();
     let k = key("/repo", None);
@@ -318,10 +319,11 @@ fn the_tick_never_asks_git_about_a_folder_it_knows_is_no_repository() {
     repo.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
     let repo_dir = std::path::Path::new("/repo");
     let refreshed =
-        |sight| (0..40).filter(|t| repo.poll(Some(repo_dir), *t, sight) == GitPoll::Refresh).count();
+        |sight| (0..40).filter(|t| repo.poll(Some(repo_dir), *t, sight, false) == GitPoll::Refresh).count();
     assert_eq!((refreshed(Sight::Front), refreshed(Sight::Behind), refreshed(Sight::Unseen)), (14, 2, 2));
     // Unseen, a folder in no repository is looked at every 10 s.
-    let unseen = (0..40).filter(|tick| git.poll(Some(plain), *tick, Sight::Unseen) == GitPoll::Probe).count();
+    let unseen =
+        (0..40).filter(|tick| git.poll(Some(plain), *tick, Sight::Unseen, false) == GitPoll::Probe).count();
     assert_eq!(unseen, 2);
 }
 
@@ -334,25 +336,76 @@ fn a_terminal_seen_another_way_is_read_once_at_once() {
     repo.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
     let dir = std::path::Path::new("/repo");
     // A tick that is not due in front.
-    assert_eq!(repo.poll(Some(dir), 1, Sight::Front), GitPoll::Idle);
+    assert_eq!(repo.poll(Some(dir), 1, Sight::Front, false), GitPoll::Idle);
     // Going out of sight: one more picture, for whoever just stopped working.
     repo.note_sight(Sight::Unseen);
-    assert_eq!(repo.poll(Some(dir), 1, Sight::Unseen), GitPoll::Refresh);
+    assert_eq!(repo.poll(Some(dir), 1, Sight::Unseen, false), GitPoll::Refresh);
     // Owed until a read starts; one already out for the same key doesn't count.
     let t = repo.begin_refresh(k.clone()).expect("started").ticket();
-    assert_eq!(repo.poll(Some(dir), 2, Sight::Unseen), GitPoll::Idle);
+    assert_eq!(repo.poll(Some(dir), 2, Sight::Unseen, false), GitPoll::Idle);
     repo.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
     let unseen =
-        (0..40).filter(|tick| repo.poll(Some(dir), *tick, Sight::Unseen) == GitPoll::Refresh).count();
+        (0..40).filter(|tick| repo.poll(Some(dir), *tick, Sight::Unseen, false) == GitPoll::Refresh).count();
     assert_eq!(unseen, 2, "every 10 s while unseen");
     // Seen again: read at once, not at the next period.
     repo.note_sight(Sight::Behind);
-    assert_eq!(repo.poll(Some(dir), 3, Sight::Behind), GitPoll::Refresh);
+    assert_eq!(repo.poll(Some(dir), 3, Sight::Behind, false), GitPoll::Refresh);
     assert!(repo.begin_refresh(k.clone()).is_some());
-    assert_eq!(repo.poll(Some(dir), 3, Sight::Behind), GitPoll::Idle);
+    assert_eq!(repo.poll(Some(dir), 3, Sight::Behind, false), GitPoll::Idle);
     // The same sight again owes nothing.
     repo.note_sight(Sight::Behind);
-    assert_eq!(repo.poll(Some(dir), 3, Sight::Behind), GitPoll::Idle);
+    assert_eq!(repo.poll(Some(dir), 3, Sight::Behind, false), GitPoll::Idle);
+}
+
+#[test]
+fn a_watched_repository_is_read_every_30_s_in_any_sight() {
+    use super::state::{GitPoll, Sight};
+    let mut repo = GitState::default();
+    let k = key("/repo", None);
+    let t = repo.begin_refresh(k.clone()).expect("started").ticket();
+    repo.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
+    let dir = std::path::Path::new("/repo");
+    for sight in [Sight::Front, Sight::Behind, Sight::Unseen] {
+        // A change of sight owes one read; take it so only the period is counted.
+        repo.note_sight(sight);
+        let t = repo.begin_refresh(k.clone()).expect("started").ticket();
+        repo.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
+        let reads =
+            (1..=150).filter(|tick| repo.poll(Some(dir), *tick, sight, true) == GitPoll::Refresh).count();
+        assert_eq!(reads, 2, "{sight:?}: every 75th tick (30 s), not the 1.2 s of an unwatched one");
+    }
+    // The folder itself is still asked about when it changes.
+    assert_eq!(repo.poll(Some(std::path::Path::new("/other")), 1, Sight::Front, true), GitPoll::Refresh);
+}
+
+#[test]
+fn a_watch_hit_owes_a_read_unless_the_terminal_is_unseen() {
+    use super::state::{GitPoll, Sight};
+    let dir = std::path::Path::new("/repo");
+    let k = key("/repo", None);
+    let mut repo = GitState::default();
+    let t = repo.begin_refresh(k.clone()).expect("started").ticket();
+    repo.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
+    // On a tick that is not due, a hit makes the read due.
+    repo.note_sight(Sight::Front);
+    assert_eq!(repo.poll(Some(dir), 1, Sight::Front, true), GitPoll::Idle);
+    assert!(repo.watch_hit());
+    assert_eq!(repo.poll(Some(dir), 1, Sight::Front, true), GitPoll::Refresh);
+    // A read that starts takes it; a hit during the read stays owed for the next one.
+    let t = repo.begin_refresh(k.clone()).expect("started").ticket();
+    assert_eq!(repo.poll(Some(dir), 1, Sight::Front, true), GitPoll::Idle);
+    assert!(repo.watch_hit());
+    assert!(repo.begin_refresh(k.clone()).is_none(), "the same read is already out");
+    repo.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
+    assert_eq!(repo.poll(Some(dir), 1, Sight::Front, true), GitPoll::Refresh);
+    // Nobody sees an unseen terminal's repository: no read now, and one when it is seen again.
+    repo.begin_refresh(k.clone());
+    let mut hidden = GitState::default();
+    let t = hidden.begin_refresh(k.clone()).expect("started").ticket();
+    hidden.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
+    hidden.note_sight(Sight::Unseen);
+    hidden.begin_refresh(k.clone());
+    assert!(!hidden.watch_hit());
 }
 
 #[test]

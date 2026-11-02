@@ -59,6 +59,9 @@ ureq = { version = "3.4", default-features = false, features = ["rustls-no-provi
 # The saved text's key in the login Keychain (already in the tree through rustls' platform verifier).
 security-framework = "3"
 core-foundation = "0.10"
+# Folder watching through FSEvents (`platform::watch`). The version GPUI's component library already
+# links, so no crate is added to the tree; only its FSEvents backend is asked for.
+notify = { version = "8.2", default-features = false, features = ["macos_fsevent"] }
 
 [features]
 # The saved terminal text's key in a file beside it instead of the Keychain, as debug builds do:

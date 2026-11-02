@@ -5,7 +5,7 @@
 //! `user` (the terminal layer's `sys`, shared with the session host and re-exported with what only core
 //! adds), `tty` (the first-run welcome's terminal), `quit_signal`, `keychain`, `backup` (Time Machine), `clone` (copy-on-write folder copies), `clock` (the time of day in the system's zone),
 //! `system` (the macOS version), `rename` (a rename that never overwrites), `open_in` and `open_file` (editors and apps a file can be opened in, and
-//! at a line). The code that talks to the system is in `unix/` (POSIX, real on macOS and Linux), `macos/`
+//! at a line), `watch` (a folder followed through the system's file events). The code that talks to the system is in `unix/` (POSIX, real on macOS and Linux), `macos/`
 //! (the Keychain, extended attributes, the version file) and `linux/` (stand-ins for what macOS has and
 //! Linux not yet; nothing builds it, macOS being the only target). The app's own edge is its `platform`
 //! module.
@@ -35,3 +35,4 @@ pub mod tty;
 #[cfg(unix)]
 mod unix;
 pub mod user;
+pub mod watch;

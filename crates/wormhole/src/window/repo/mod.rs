@@ -9,6 +9,9 @@
 //! `attribution` is what the sidebar rows count instead of the repository's files: the ones the
 //! terminal itself changed.
 //!
+//! `watches` follows the repositories' files, so a read comes when something changed and the tick's
+//! period is only the backstop.
+//!
 //! What a read can also report is what it saw of one file ([`Observed`]): taken in the same
 //! background hop as the status, so a feature that watches a file (an open diff) does not stat it on
 //! the UI thread.
@@ -22,6 +25,9 @@ mod remembered;
 mod state;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod watch_tests;
+mod watches;
 
 pub(crate) use attribution::changes_of;
 pub(crate) use state::GitState;

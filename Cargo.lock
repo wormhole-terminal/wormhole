@@ -9462,6 +9462,7 @@ dependencies = [
  "libc",
  "minisign",
  "minisign-verify",
+ "notify",
  "plist",
  "regex",
  "regex-syntax",

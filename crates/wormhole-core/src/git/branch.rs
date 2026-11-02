@@ -54,7 +54,7 @@ pub fn is_repository_top(dir: &Path) -> bool {
     std::fs::symlink_metadata(dir.join(".git")).is_ok_and(|m| m.is_dir() || m.is_file())
 }
 
-fn git_dir_of(dir: &Path) -> Option<PathBuf> {
+pub(super) fn git_dir_of(dir: &Path) -> Option<PathBuf> {
     let dot_git = dir.join(".git");
     let meta = std::fs::symlink_metadata(&dot_git).ok()?;
     if meta.is_dir() {
