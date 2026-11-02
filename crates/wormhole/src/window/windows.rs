@@ -317,7 +317,9 @@ impl Workspace {
         }
     }
 
-    /// Per tick: remember where the window is, and name it after the session.
+    /// Remember where the window is. Told by GPUI's bounds observer (a move, a resize) and its
+    /// visibility observer (a minimise hides the window), both set up in `new`; the tick calls it too as
+    /// the backstop for what no observer reports: a display change that leaves the bounds as they were.
     pub(super) fn track_window(&mut self, window: &mut Window, cx: &App) {
         let bounds = window.window_bounds();
         let display = || window.display(cx).map(|display| display.id());
@@ -326,6 +328,11 @@ impl Workspace {
             self.bounds = Some(moved);
             self.dirty = true;
         }
+    }
+
+    /// Name the window after the selected session. Run by each frame: whatever changes the name (a
+    /// program's title, the folder, a rename, another selection) notifies the workspace, which draws.
+    pub(super) fn sync_window_title(&mut self, window: &mut Window) {
         let title = self.active_session().name();
         if title != self.title {
             window.set_window_title(&title);

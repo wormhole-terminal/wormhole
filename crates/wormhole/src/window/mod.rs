@@ -346,6 +346,8 @@ impl Workspace {
                 }
             }
         });
+        cx.observe_window_bounds(window, |this, window, cx| this.track_window(window, cx)).detach();
+        cx.observe_window_visibility(window, |this, _, window, cx| this.track_window(window, cx)).detach();
         cx.observe_window_activation(window, |this, window, cx| {
             // Rows draw no clocks for a window nobody looks at, and do again once it is in front.
             this.sync_clock(window.is_window_active(), cx);
