@@ -2,12 +2,14 @@
 //! processes that keep terminals running behind the app are doing, so a person can see whether
 //! things are right. Every host in the hosts folder is a card: its ids and processes, its version
 //! and protocol against this app's, whether it answers, and for an attached one the connection's
-//! counters. The data is core's `ipc::hosts::report` (collected off the main thread about once a
-//! second while the window is open); this module only draws it and carries out End, Forget and Copy.
+//! counters. The data is core's `ipc::hosts::report` (collected off the main thread when the hosts folder
+//! changes, and on a slow look while the window is open: `follow`); this module only draws it and carries
+//! out End, Forget and Copy.
 
 mod card;
 #[cfg(feature = "devctl")]
 mod devctl;
+mod follow;
 mod gather;
 mod header;
 mod words;
@@ -35,8 +37,13 @@ pub(crate) use devctl::command as devctl_command;
 
 const SIZE: (f32, f32) = (940.0, 720.0);
 const MIN_SIZE: (f32, f32) = (640.0, 420.0);
-/// How often the window looks again while it is open.
-const REFRESH: Duration = Duration::from_secs(1);
+/// How often the window looks again while it is open and the hosts folder is followed. The folder's events
+/// say when a host comes, goes or rewrites its meta; nothing says when a host stops answering, how much memory
+/// it holds or what its connection to this app has counted, so those are asked on this slow look.
+const SLOW_LOOK: Duration = Duration::from_secs(3);
+/// The look where the folder cannot be followed (no watcher here, a network volume, or the folder not made
+/// yet): the old pace, since the timer is all there is.
+const FALLBACK_LOOK: Duration = Duration::from_secs(1);
 /// How long a copy button says "Copied".
 const COPIED_FOR: Duration = Duration::from_millis(1500);
 /// How long End waits for the host to take the hangup.
@@ -115,10 +122,13 @@ impl HostsWindow {
         this
     }
 
-    /// (Re)start the loop that looks about once a second: the app's part on the main thread, the
-    /// files and sockets off it.
+    /// (Re)start the loop that looks when the hosts folder changes and on a slow timer: the app's part on the
+    /// main thread, the files and sockets off it. It ends with the window (the task and the watch it holds
+    /// are dropped).
     fn start(&mut self, cx: &mut Context<Self>) {
+        let dir = hosts::hosts_dir(&wormhole_core::storage::paths::data_dir());
         self._refresh = Some(cx.spawn(async move |this, cx| {
+            let followed = cx.background_executor().spawn(async move { follow::follow(&dir) }).await.ok();
             loop {
                 let Ok(gather) = this.update(cx, |_, cx| Gather::collect(cx)) else {
                     return;
@@ -134,7 +144,21 @@ impl HostsWindow {
                 if shown.is_err() {
                     return;
                 }
-                cx.background_executor().timer(REFRESH).await;
+                let look = if followed.is_some() { SLOW_LOOK } else { FALLBACK_LOOK };
+                let timer = cx.background_executor().timer(look);
+                match &followed {
+                    Some(followed) => {
+                        let event = async {
+                            if followed.woken.recv().await.is_ok() {
+                                // The writer finishes; and what came meanwhile is this one look's.
+                                cx.background_executor().timer(follow::SETTLE).await;
+                                while followed.woken.try_recv().is_ok() {}
+                            }
+                        };
+                        smol::future::or(event, timer).await;
+                    }
+                    None => timer.await,
+                }
             }
         }));
     }
