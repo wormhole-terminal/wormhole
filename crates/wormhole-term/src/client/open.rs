@@ -9,6 +9,7 @@ use anyhow::Context as _;
 use polling::Poller;
 use wormhole_wire::{self as wire, StreamMode};
 
+use super::error::AttachError;
 use super::launch::{self, Ready};
 use super::link::{Hosted, Link};
 use super::replica::{ReplicaOptions, grid_of, wire_colors, wire_size};
@@ -84,16 +85,19 @@ impl Pty {
         id: &str,
         options: &StartOptions,
         visible: bool,
-    ) -> anyhow::Result<(Self, PtyEvents)> {
-        anyhow::ensure!(meta::valid_id(id), "not a session host id: {id:?}");
-        let stream = socket::connect(socket).context("could not reach the session host")?;
+    ) -> Result<(Self, PtyEvents), AttachError> {
+        if !meta::valid_id(id) {
+            return Err(AttachError::Failed(format!("not a session host id: {id:?}")));
+        }
+        let stream = socket::connect(socket).map_err(|e| AttachError::from_connect(&e))?;
         let mut dec = wire::Decoder::new();
         let until = Instant::now() + READY_TIMEOUT;
-        let welcome = socket::hello(&stream, &mut dec, id, until).context("the session host's handshake")?;
+        let welcome = socket::hello(&stream, &mut dec, id, until)?;
         let size = grid_of(welcome.size);
         let first = if visible { StreamMode::Sync } else { StreamMode::None };
         tracing::info!(id, pid = welcome.pid, visible, "attaching to a hosted terminal");
         hosted(Joined { stream, dec }, id, size, size, options, first, welcome.pid)
+            .map_err(|e| AttachError::Failed(format!("{e:#}")))
     }
 
     /// Whether this terminal's program runs in a session host.

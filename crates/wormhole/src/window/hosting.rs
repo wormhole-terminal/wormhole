@@ -3,6 +3,7 @@
 //! at launch (attached to, or adopted into a Recovered group), which are fed while on screen, and
 //! letting go of every host as the app quits, so their programs go on running.
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
@@ -77,14 +78,43 @@ pub(crate) fn named_in_other_profiles(root: &DataRoot, profiles: &ProfileList) -
 }
 
 /// After the windows opened at launch: the live hosts no terminal named come into the front window's
-/// Recovered group, attached headless. Never ended: what runs in them is the person's.
+/// Recovered group, attached headless. Never ended: what runs in them is the person's. Only hosts
+/// that accept this app are taken (see [`adopt_orphans_with`]).
 pub(crate) fn adopt_orphans(cx: &mut App) {
+    adopt_orphans_with(cx, accepts_the_app);
+}
+
+/// [`adopt_orphans`] with the question "does this host take the app?" as an argument.
+///
+/// A host that refuses the app (another signature), speaks another protocol, or does not answer
+/// is not adopted: a new row for it could only fail to attach, and the next launch would adopt it
+/// again. It stays where it is, listed by the Session Hosts window. And a host some terminal of any
+/// window already names is never given a second row.
+pub(crate) fn adopt_orphans_with(cx: &mut App, accepts: impl Fn(&HostMeta) -> bool + Sync) {
     let orphans = app_mut(cx).launch_hosts.take_orphans();
+    if orphans.is_empty() {
+        return;
+    }
+    let mut named: HashSet<String> = HashSet::new();
+    for window in &app(cx).windows {
+        if let Some(workspace) = window.workspace.upgrade() {
+            named.extend(workspace.read(cx).host_attachments(cx).into_iter().map(|a| a.host_id));
+        }
+    }
+    let unnamed = orphans.into_iter().filter(|meta| !named.contains(&meta.id)).collect();
+    let orphans = hosts::adoptable(unnamed, accepts);
     if orphans.is_empty() {
         return;
     }
     let Some(front) = AppState::front_window(cx) else { return };
     AppState::with_workspace(&front, cx, |ws, window, cx| ws.adopt_orphans(orphans, window, cx));
+}
+
+/// Whether the host takes this app: its protocol fits and it answers an admin `Hello` (a host that
+/// refuses the app's signature refuses every role).
+fn accepts_the_app(meta: &HostMeta) -> bool {
+    hosts::unfit(meta.proto_min, meta.proto_max).is_none()
+        && matches!(hosts::probe(meta, std::time::Duration::from_millis(500)), hosts::Probed::Answered(_))
 }
 
 /// As the app quits, before anything drops a terminal (GPUI drops the windows, and with them every
@@ -205,6 +235,7 @@ impl Workspace {
                     window: self.window_id,
                     title: session.name().to_string(),
                     link: terminal.host_link(),
+                    unavailable: terminal.host_unavailable().cloned(),
                 })
             })
             .collect()

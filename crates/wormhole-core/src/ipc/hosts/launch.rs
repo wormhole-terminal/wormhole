@@ -22,6 +22,24 @@ pub struct LaunchHosts {
     orphans: Vec<HostMeta>,
 }
 
+/// Of the live hosts nobody names, those this app can take over: the ones that accept it (`accepts`,
+/// asked at most a few at a time). A host that refuses the app (its signature is another's, its
+/// protocol does not fit) is left alone, listed in the Session Hosts window, and not adopted over
+/// and over as a new terminal that cannot attach. Order is kept.
+pub fn adoptable(orphans: Vec<HostMeta>, accepts: impl Fn(&HostMeta) -> bool + Sync) -> Vec<HostMeta> {
+    /// Hosts asked at once.
+    const AT_ONCE: usize = 16;
+    let mut keep = Vec::with_capacity(orphans.len());
+    for chunk in orphans.chunks(AT_ONCE) {
+        let answers: Vec<bool> = std::thread::scope(|scope| {
+            let handles: Vec<_> = chunk.iter().map(|meta| scope.spawn(|| accepts(meta))).collect();
+            handles.into_iter().map(|h| h.join().unwrap_or(false)).collect()
+        });
+        keep.extend(chunk.iter().zip(answers).filter(|(_, ok)| *ok).map(|(meta, _)| meta.clone()));
+    }
+    keep
+}
+
 /// How a saved terminal comes back.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Restore {
@@ -87,8 +105,16 @@ pub fn persisted_host(host: Option<&str>, lost: bool, ending: bool) -> Option<St
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use super::{LaunchHosts, Restore, persisted_host, shown_at_launch};
+    use super::{LaunchHosts, Restore, adoptable, persisted_host, shown_at_launch};
     use crate::ipc::hosts::HostMeta;
+
+    #[test]
+    fn only_orphans_that_accept_the_app_are_adopted_and_their_order_is_kept() {
+        let orphans = vec![meta("aaaaaaaaaaaa", 1), meta("bbbbbbbbbbbb", 2), meta("cccccccccccc", 3)];
+        let adopted = adoptable(orphans, |m| m.id != "bbbbbbbbbbbb");
+        let ids: Vec<&str> = adopted.iter().map(|m| m.id.as_str()).collect();
+        assert_eq!(ids, ["aaaaaaaaaaaa", "cccccccccccc"]);
+    }
 
     fn meta(id: &str, started_at: u64) -> HostMeta {
         HostMeta {

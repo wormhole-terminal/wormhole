@@ -41,14 +41,24 @@ pub fn spawn_hosted(
 
 /// Attach to the running session host `id` listening at `socket`, with the engine options the
 /// terminal was started with (`options`, as [`spawn_hosted`] had them), fed a repaint at once when
-/// `visible` and headless otherwise. Blocks for the handshake: never on the UI thread.
+/// `visible` and headless otherwise. Blocks for the handshake: never on the UI thread. A failure
+/// says whether the host is gone or only cannot be shown (`ipc::hosts::attach`).
 pub fn attach_hosted(
     socket: &std::path::Path,
     id: &str,
     options: &SpawnOptions,
     visible: bool,
-) -> anyhow::Result<(Pty, PtyEvents)> {
+) -> Result<(Pty, PtyEvents), crate::ipc::hosts::AttachFailure> {
+    use crate::ipc::hosts::{self, AttachFailure};
+    let hosts_dir = hosts::hosts_dir(&crate::storage::paths::data_dir());
+    // A host whose meta says it speaks no protocol this app does is not tried.
+    if let Ok(meta) = hosts::find(&hosts_dir, id)
+        && let Some(unavailable) = hosts::unfit(meta.proto_min, meta.proto_max)
+    {
+        return Err(AttachFailure::Unavailable(unavailable));
+    }
     Pty::attach_hosted(socket, id, &options.start_options(), visible)
+        .map_err(|error| hosts::failure_of(&hosts_dir, id, &error))
 }
 
 /// [`spawn`] with an explicit program instead of the user's shell.

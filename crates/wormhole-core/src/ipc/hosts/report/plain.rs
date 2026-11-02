@@ -76,6 +76,9 @@ impl HostRow {
         line("meta", self.meta_path.display().to_string());
         line("answers", answer_word(&self.answer));
         line("memory", self.rss.map_or_else(unknown, bytes_words));
+        if let Some(u) = &self.unavailable {
+            line("terminal", format!("cannot show it: {}", u.detail));
+        }
         if let Some(l) = &self.link {
             let flag = |on: bool, word: &str| if on { format!(", {word}") } else { String::new() };
             line(

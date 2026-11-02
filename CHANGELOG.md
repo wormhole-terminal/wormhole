@@ -14,6 +14,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- A terminal whose session host was running but would not take the app (another code signature, a protocol
+  that does not fit, a busy or slow host) was treated as if the host were gone: it lost its place and the
+  next launch added one more terminal for it, again and again. It now keeps its place, says why it cannot
+  show the host, and offers to end the host or open a new terminal there; only a host that is really gone
+  is let go of. Hosts that do not take the app are no longer added as new terminals.
 - A terminal that pasted or copied more than 64 KiB through the clipboard (an OSC 52 reply), or started with an
   environment that large, lost its session host: after the handshake the host kept the handshake's
   smaller frame limit and dropped the connection.

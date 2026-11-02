@@ -30,7 +30,7 @@ fn words(hosting: Hosting) -> Option<(&'static str, &'static str)> {
         Hosting::InApp => {
             Some((text(keys::STATUS_BAR_HOSTING_IN_APP), text(keys::STATUS_BAR_HOSTING_IN_APP_TOOLTIP)))
         }
-        Hosting::Lost | Hosting::AppOnly => None,
+        Hosting::Lost | Hosting::AppOnly | Hosting::Unavailable => None,
     }
 }
 
@@ -46,7 +46,9 @@ pub(super) fn item(ui: UiColors, hosting: Hosting, word: bool) -> Option<Statefu
     let (icon, color) = match hosting {
         Hosting::Persistent => (IconName::HardDrive, ui.muted),
         Hosting::Connecting => (IconName::RefreshCw, ui.muted),
-        Hosting::InApp | Hosting::Lost | Hosting::AppOnly => (IconName::TriangleAlert, ui.warning_text),
+        Hosting::InApp | Hosting::Lost | Hosting::AppOnly | Hosting::Unavailable => {
+            (IconName::TriangleAlert, ui.warning_text)
+        }
     };
     Some(
         style::status_text(ui)

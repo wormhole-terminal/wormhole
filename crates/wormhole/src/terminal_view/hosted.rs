@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use gpui_kit::component::Sizable as _;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
+use wormhole_core::ipc::hosts::{AttachFailure, Unavailable};
 use wormhole_core::terminal::SpawnOptions;
 use wormhole_core::view::notice::{Notice, Warning};
 use wormhole_term::PtyEvents;
@@ -45,6 +46,8 @@ pub enum Hosting {
     Persistent,
     /// Its session host went away and took the program with it: the terminal has ended.
     Lost,
+    /// Its session host runs, and this app could not attach to it.
+    Unavailable,
 }
 
 /// What a terminal knows about its session host.
@@ -67,6 +70,10 @@ pub(super) struct HostState {
     options: Option<SpawnOptions>,
     /// The banner that the host could not start, while it shows: only where the notice chip is off.
     notice: Option<SharedString>,
+    /// The host runs but this terminal could not attach to it (it refused the app, speaks another
+    /// protocol, is busy...): the terminal keeps the host's id and says why, so the next launch finds
+    /// the same row and the host is not adopted again as a stranger.
+    pub(super) unavailable: Option<Unavailable>,
 }
 
 /// The warning that a host could not start is shown once per run: when one fails, the next would
@@ -83,8 +90,16 @@ pub fn note_app_quitting() {
     APP_QUITTING.store(true, Ordering::Release);
 }
 
+/// Why a terminal's host did not come up.
+pub(super) enum HostFailure {
+    /// An attach failed: the host is gone, or only cannot be shown.
+    Attach(AttachFailure),
+    /// A new host could not start.
+    Start(anyhow::Error),
+}
+
 /// `ready`, let go of when the app quit while it was being made (see [`APP_QUITTING`]).
-fn kept_past_quit(ready: anyhow::Result<(Pty, PtyEvents)>) -> anyhow::Result<(Pty, PtyEvents)> {
+fn kept_past_quit<E>(ready: Result<(Pty, PtyEvents), E>) -> Result<(Pty, PtyEvents), E> {
     if APP_QUITTING.load(Ordering::Acquire)
         && let Ok((pty, _)) = &ready
     {
@@ -99,6 +114,7 @@ impl HostState {
             Self { id: None, app_only: true, .. } => Hosting::AppOnly,
             Self { id: None, .. } => Hosting::InApp,
             Self { lost: true, .. } => Hosting::Lost,
+            Self { unavailable: Some(_), .. } => Hosting::Unavailable,
             Self { connecting: true, .. } => Hosting::Connecting,
             Self { .. } => Hosting::Persistent,
         }
@@ -137,13 +153,15 @@ impl TerminalView {
                 let task = cx.background_spawn({
                     let options = options.clone();
                     async move {
-                        let hosts_dir = wormhole_core::ipc::hosts::ensure_hosts_dir(&data_dir)?;
+                        let hosts_dir = wormhole_core::ipc::hosts::ensure_hosts_dir(&data_dir)
+                            .map_err(|e| HostFailure::Start(e.into()))?;
                         let host = wormhole_term::client::HostCommand {
                             binary: &binary,
                             hosts_dir: &hosts_dir,
                             id: &id,
                         };
                         kept_past_quit(wormhole_core::terminal::spawn_hosted(&host, size, &options))
+                            .map_err(HostFailure::Start)
                     }
                 });
                 self.await_host(task, options, size, false, cx);
@@ -155,6 +173,7 @@ impl TerminalView {
                         kept_past_quit(wormhole_core::terminal::attach_hosted(
                             &socket, &id, &options, visible,
                         ))
+                        .map_err(HostFailure::Attach)
                     }
                 });
                 self.await_host(task, options, size, true, cx);
@@ -166,7 +185,7 @@ impl TerminalView {
     /// fails (`attaching`: the host had gone, which is today's restore with the saved text).
     fn await_host(
         &mut self,
-        task: Task<anyhow::Result<(Pty, PtyEvents)>>,
+        task: Task<Result<(Pty, PtyEvents), HostFailure>>,
         options: SpawnOptions,
         size: GridSize,
         attaching: bool,
@@ -182,7 +201,7 @@ impl TerminalView {
 
     fn host_ready(
         &mut self,
-        ready: anyhow::Result<(Pty, PtyEvents)>,
+        ready: Result<(Pty, PtyEvents), HostFailure>,
         options: &SpawnOptions,
         size: GridSize,
         attaching: bool,
@@ -198,7 +217,23 @@ impl TerminalView {
                 }
                 self.install(pty, events, cx);
             }
-            Err(err) => {
+            // The host runs and cannot be shown: the terminal keeps its id and says why. No shell
+            // replaces it (the program is in the host), and the next launch finds this same row.
+            Err(HostFailure::Attach(AttachFailure::Unavailable(unavailable))) => {
+                tracing::warn!(
+                    id = self.host.id.as_deref(),
+                    kind = ?unavailable.kind,
+                    "a session host runs and cannot be attached to: {}",
+                    unavailable.detail
+                );
+                self.host.unavailable = Some(unavailable);
+                cx.emit(TerminalEvent::HostChanged);
+            }
+            Err(failure) => {
+                let err = match failure {
+                    HostFailure::Start(err) => err,
+                    HostFailure::Attach(_) => anyhow::anyhow!("the host is gone"),
+                };
                 let id = self.host.id.take().unwrap_or_default();
                 if attaching {
                     // Gone between the scan and the attach: the saved text comes back as it would
@@ -238,6 +273,39 @@ impl TerminalView {
         } else {
             self.host.notice = Some(crate::notice::host_fallback_detail().into());
         }
+    }
+
+    /// This terminal's attach to host `id` ended as `failure` says, as `host_ready` hears it.
+    #[cfg(test)]
+    pub(crate) fn attach_failed_for_test(
+        &mut self,
+        id: &str,
+        failure: AttachFailure,
+        cx: &mut Context<Self>,
+    ) {
+        self.host.id = Some(id.to_string());
+        self.host.connecting = true;
+        self.pty = None;
+        let options = self.host.options.clone().unwrap_or_default();
+        self.host_ready(
+            Err(HostFailure::Attach(failure)),
+            &options,
+            GridSize { cols: 100, rows: 30, cell_width: 8.0, cell_height: 18.0 },
+            true,
+            cx,
+        );
+    }
+
+    /// Where the terminal's program runs, for tests.
+    #[cfg(test)]
+    pub(crate) fn hosting_for_test(&self) -> Hosting {
+        self.host.hosting()
+    }
+
+    /// Whether it has a terminal of its own (a `Pty`), for tests.
+    #[cfg(test)]
+    pub(crate) fn has_pty_for_test(&self) -> bool {
+        self.pty.is_some()
     }
 
     /// Its host could not start: tell it as `host_ready` does, once per run.

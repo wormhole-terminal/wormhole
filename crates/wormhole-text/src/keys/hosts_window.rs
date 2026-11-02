@@ -120,6 +120,24 @@ pub const HOSTS_FAILURE_HUNG_UP: Key = Key::new(224);
 pub const HOSTS_FAILURE_UNEXPECTED: Key = Key::new(225);
 /// "No answer in time"
 pub const HOSTS_FAILURE_TIMED_OUT: Key = Key::new(226);
+/// "Session host unavailable: it does not accept this app"
+pub const HOSTS_UNAVAILABLE_REFUSED: Key = Key::new(228);
+/// "Session host unavailable: it is too old for this app"
+pub const HOSTS_UNAVAILABLE_TOO_OLD: Key = Key::new(229);
+/// "Session host unavailable: it needs a newer Wormhole"
+pub const HOSTS_UNAVAILABLE_TOO_NEW: Key = Key::new(230);
+/// "Session host unavailable: it is busy with another connection"
+pub const HOSTS_UNAVAILABLE_BUSY: Key = Key::new(231);
+/// "Session host unavailable: it did not answer"
+pub const HOSTS_UNAVAILABLE_TIMED_OUT: Key = Key::new(232);
+/// "Session host unavailable: nothing answers on its socket"
+pub const HOSTS_UNAVAILABLE_UNREACHABLE: Key = Key::new(233);
+/// "Session host unavailable: the connection failed"
+pub const HOSTS_UNAVAILABLE_FAILED: Key = Key::new(234);
+/// "End host"
+pub const HOSTS_UNAVAILABLE_END: Key = Key::new(235);
+/// "Open a new terminal here"
+pub const HOSTS_UNAVAILABLE_NEW: Key = Key::new(236);
 
 /// ```text
 /// Wormhole { $version }, protocol { $protocol }

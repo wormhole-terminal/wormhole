@@ -25,6 +25,7 @@
 //! The constructors block (the host's start, the handshake: at most a few seconds); call them off
 //! the UI thread. After that nothing a `Pty` method does waits on the socket.
 
+mod error;
 mod events;
 mod launch;
 mod link;
@@ -38,6 +39,7 @@ mod thread;
 use std::path::Path;
 use std::time::Duration;
 
+pub use error::AttachError;
 pub(crate) use link::Hosted;
 pub use link::{LinkMode, LinkStats};
 pub use open::HostCommand;

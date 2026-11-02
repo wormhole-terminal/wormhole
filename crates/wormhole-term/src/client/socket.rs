@@ -7,10 +7,9 @@ use std::io::{self, Write as _};
 use std::path::Path;
 use std::time::Instant;
 
-use wormhole_wire::{
-    self as wire, AppVersion, CHANNEL_LOCAL, Decoder, Features, Message, Role, error_code, version,
-};
+use wormhole_wire::{self as wire, AppVersion, CHANNEL_LOCAL, Decoder, Features, Message, Role, version};
 
+use super::error::AttachError;
 use crate::sys::socket::{Stream, peer_user};
 use crate::sys::user::UserId;
 
@@ -32,13 +31,13 @@ pub(super) fn connect(socket: &Path) -> io::Result<Stream> {
     Ok(stream)
 }
 
-/// Say `Hello` as the controller; the host's `Welcome`, which must be for `id`.
+/// Say `Hello` as the controller; the host's `Welcome`, which must be for `id`, or why not.
 pub(super) fn hello(
     stream: &Stream,
     dec: &mut Decoder,
     id: &str,
     until: Instant,
-) -> io::Result<wire::Welcome> {
+) -> Result<wire::Welcome, AttachError> {
     let range = version::Range::current();
     send(
         stream,
@@ -56,27 +55,19 @@ pub(super) fn hello(
             client_name: "Wormhole",
             ticket: None,
         }),
-    )?;
-    let welcome = recv(stream, dec, until, |msg| match msg {
-        Message::Welcome(welcome) => Some(Ok(*welcome)),
-        Message::Incompatible(i) => Some(Err(io::Error::other(format!(
-            "the session host speaks protocol {}..{} (version {}.{}.{}), this app {}..{}",
-            i.host_min,
-            i.host_max,
-            i.host_version.major,
-            i.host_version.minor,
-            i.host_version.patch,
-            range.min,
-            range.max
-        )))),
-        Message::Error(e) if e.code == error_code::BUSY => {
-            Some(Err(io::Error::new(io::ErrorKind::ResourceBusy, e.text.to_owned())))
-        }
-        Message::Error(e) => Some(Err(io::Error::other(e.text.to_owned()))),
+    )
+    .map_err(|e| AttachError::from_talking(&e))?;
+    let answer = recv(stream, dec, until, |msg| match msg {
+        Message::Welcome(welcome) => Some(Ok(Ok(*welcome))),
+        Message::Incompatible(i) => Some(Ok(Err(AttachError::from_incompatible(i, range)))),
+        Message::Error(e) => Some(Ok(Err(AttachError::from_error_code(e.code, e.text)))),
         _ => None,
-    })?;
+    })
+    .map_err(|e| AttachError::from_talking(&e))?;
+    let welcome = answer?;
     if welcome.session_id != *id.as_bytes() {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "the session host is another terminal's"));
+        // The socket now belongs to another host: the one this was is not there.
+        return Err(AttachError::Unreachable("the session host is another terminal's".into()));
     }
     Ok(welcome)
 }

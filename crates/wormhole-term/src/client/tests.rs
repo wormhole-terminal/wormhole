@@ -455,3 +455,115 @@ fn readiness_lines_parse() {
     );
     assert!(matches!(parse_line("garbage"), Ready::Err(_)));
 }
+
+/// What `hello` makes of each thing a host can answer a `Hello` with (or not answer).
+mod handshake {
+    use std::io::Write as _;
+
+    use super::*;
+    use crate::client::AttachError;
+    use crate::client::socket::hello;
+
+    /// Run `hello` against a host that does `answer` with its end of the pair, then hangs up.
+    fn hello_against(answer: impl FnOnce(&Stream) + Send + 'static) -> Result<wire::Welcome, AttachError> {
+        let (ours, theirs) = Stream::pair().expect("a socket pair");
+        let host = std::thread::spawn(move || {
+            // Read the Hello first, as a host does.
+            let mut dec = Decoder::new();
+            let mut buf = [0u8; 512];
+            while dec.next_frame().map(|f| f.is_none()).unwrap_or(true) {
+                let n = std::io::Read::read(&mut &theirs, &mut buf).unwrap_or(0);
+                if n == 0 {
+                    return;
+                }
+                dec.push(&buf[..n]);
+            }
+            answer(&theirs);
+        });
+        let mut dec = Decoder::new();
+        let result = hello(&ours, &mut dec, "abcdefghij12", Instant::now() + PATIENCE);
+        host.join().expect("the host thread");
+        result
+    }
+
+    fn frame(msg: &Message<'_>) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        wire::encode(&mut bytes, CHANNEL_LOCAL, 0, msg).expect("encodes");
+        bytes
+    }
+
+    fn error(code: u16) -> Vec<u8> {
+        frame(&Message::Error(wire::ErrorMsg { ref_type: 0, code, text: "because" }))
+    }
+
+    #[test]
+    fn a_host_that_refuses_the_peer_says_so_and_is_refused() {
+        let result = hello_against(|s| {
+            let _ = (&mut &*s).write_all(&error(wire::error_code::PEER_REFUSED));
+        });
+        assert_eq!(result.unwrap_err(), AttachError::Refused("because".into()));
+    }
+
+    #[test]
+    fn a_host_older_than_protocol_1_3_closes_without_a_word_and_is_refused_too() {
+        // It took the connection and hung up: it is there, which is not "gone".
+        let result = hello_against(|_| {});
+        assert!(matches!(result, Err(AttachError::Refused(_))), "{result:?}");
+    }
+
+    #[test]
+    fn a_busy_host_is_busy() {
+        let result = hello_against(|s| {
+            let _ = (&mut &*s).write_all(&error(wire::error_code::BUSY));
+        });
+        assert_eq!(result.unwrap_err(), AttachError::Busy);
+    }
+
+    #[test]
+    fn a_host_of_another_protocol_is_incompatible() {
+        let result = hello_against(|s| {
+            let inc = wire::Incompatible {
+                host_min: 7,
+                host_max: 8,
+                host_version: wire::AppVersion { major: 9, minor: 0, patch: 1 },
+            };
+            let _ = (&mut &*s).write_all(&frame(&Message::Incompatible(inc)));
+        });
+        let Err(AttachError::Incompatible { host_min, host_max, host_version, .. }) = result else {
+            panic!("incompatible: {result:?}")
+        };
+        assert_eq!((host_min, host_max, host_version.as_str()), (7, 8, "9.0.1"));
+    }
+
+    #[test]
+    fn a_socket_that_is_another_hosts_is_not_this_host() {
+        let result = hello_against(|s| {
+            let mut id = [0u8; 12];
+            id.copy_from_slice(b"zzzzzzzzzzzz");
+            let welcome = wire::Welcome {
+                proto: 1,
+                proto_minor: 3,
+                state: wire::HostState::Running,
+                host_version: wire::AppVersion::default(),
+                pid: 1,
+                session_id: id,
+                features: wire::Features::NONE,
+                started_at_ms: 0,
+                first_block_id: 0,
+                size: wire::Size { cols: 80, rows: 24, cell_w: 8, cell_h: 16 },
+                counters: wire::Counters {
+                    epoch: 0,
+                    history_lines: 0,
+                    trimmed_total: 0,
+                    screen_rows: 24,
+                    alt_screen: false,
+                    revision: 0,
+                },
+                exit: None,
+                token: None,
+            };
+            let _ = (&mut &*s).write_all(&frame(&Message::Welcome(welcome)));
+        });
+        assert!(matches!(result, Err(AttachError::Unreachable(_))), "{result:?}");
+    }
+}

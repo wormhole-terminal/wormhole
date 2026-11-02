@@ -145,3 +145,17 @@ hosts-failure-unexpected = The host answered something unexpected
 hosts-failure-timed-out = No answer in time
 # { $why } is the system's reason for the failure.
 hosts-failure-io = Talking to it failed: { $why }
+
+# Why a terminal cannot show its session host: the program runs on in the host. Over the terminal, and in the
+# Session Hosts window.
+hosts-unavailable-refused = Session host unavailable: it does not accept this app
+hosts-unavailable-too-old = Session host unavailable: it is too old for this app
+hosts-unavailable-too-new = Session host unavailable: it needs a newer Wormhole
+hosts-unavailable-busy = Session host unavailable: it is busy with another connection
+hosts-unavailable-timed-out = Session host unavailable: it did not answer
+hosts-unavailable-unreachable = Session host unavailable: nothing answers on its socket
+hosts-unavailable-failed = Session host unavailable: the connection failed
+
+# The buttons on that message: end the host and its program, or leave it and start a new shell in this place.
+hosts-unavailable-end = End host
+hosts-unavailable-new = Open a new terminal here

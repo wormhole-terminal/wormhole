@@ -14,10 +14,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use polling::{AsRawSource, Event, Events, PollMode, Poller};
-use wormhole_wire as wire;
 use wormhole_term::hosted::meta::{self, Meta};
 use wormhole_term::sys::socket::{Stream, peer_user};
 use wormhole_term::sys::user::UserId;
+use wormhole_wire as wire;
 
 use crate::listen::{Listener, TOUCH_EVERY};
 use crate::peer::Policy;

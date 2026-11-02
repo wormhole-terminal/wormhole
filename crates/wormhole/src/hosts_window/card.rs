@@ -13,6 +13,7 @@ use wormhole_text::text;
 use super::{Copied, HostsWindow, words};
 use crate::settings::UiColors;
 use crate::style::{self, TextRole};
+use crate::terminal_view::unavailable_text;
 
 /// How wide a fact's name is: wide enough for the longest ("Shell process").
 const LABEL_W: f32 = 104.0;
@@ -85,8 +86,10 @@ impl HostsWindow {
             facts.push(fact(
                 ui,
                 text(HOSTS_FIELD_LINK),
-                words::link(row.link.as_ref()),
-                if bad_link { ui.danger_text } else { ui.text },
+                row.unavailable
+                    .as_ref()
+                    .map_or_else(|| words::link(row.link.as_ref()), |u| unavailable_text(u.kind).to_string()),
+                if bad_link || row.unavailable.is_some() { ui.danger_text } else { ui.text },
                 true,
             ));
         }

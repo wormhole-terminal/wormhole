@@ -70,6 +70,7 @@ fn a_held_host_is_attached_a_named_one_detached_and_a_nameless_one_an_orphan() {
     i.attachments = vec![
         Attachment {
             host_id: "aaaaaaaaaaaa".into(),
+            unavailable: None,
             window: 2,
             title: "build".into(),
             link: Some(link(false)),
@@ -77,6 +78,7 @@ fn a_held_host_is_attached_a_named_one_detached_and_a_nameless_one_an_orphan() {
         // The app let go of this one (devctl `detach`, or the window closing).
         Attachment {
             host_id: "bbbbbbbbbbbb".into(),
+            unavailable: None,
             window: 2,
             title: "logs".into(),
             link: Some(link(true)),
@@ -210,8 +212,13 @@ fn a_lost_link_needs_attention() {
     let mut i = inputs(scan);
     let mut lost = link(false);
     lost.lost = true;
-    i.attachments =
-        vec![Attachment { host_id: "aaaaaaaaaaaa".into(), window: 1, title: "t".into(), link: Some(lost) }];
+    i.attachments = vec![Attachment {
+        host_id: "aaaaaaaaaaaa".into(),
+        unavailable: None,
+        window: 1,
+        title: "t".into(),
+        link: Some(lost),
+    }];
     let report = Report::build(i);
     assert!(report.rows[0].needs_attention(&report.app));
 }
@@ -252,6 +259,7 @@ fn the_copied_text_has_the_header_and_a_block_a_host() {
     let mut i = inputs(scan);
     i.attachments = vec![Attachment {
         host_id: "aaaaaaaaaaaa".into(),
+        unavailable: None,
         window: 1,
         title: "server".into(),
         link: Some(link(false)),
@@ -289,6 +297,7 @@ fn a_stale_looking_host_with_a_live_link_cannot_be_forgotten() {
     let mut i = inputs(scan);
     i.attachments = vec![Attachment {
         host_id: "aaaaaaaaaaaa".into(),
+        unavailable: None,
         window: 1,
         title: "t".into(),
         link: Some(link(false)),
@@ -305,8 +314,13 @@ fn a_stale_looking_host_with_a_live_link_cannot_be_forgotten() {
     let mut i = inputs(scan);
     let mut lost = link(false);
     lost.lost = true;
-    i.attachments =
-        vec![Attachment { host_id: "aaaaaaaaaaaa".into(), window: 1, title: "t".into(), link: Some(lost) }];
+    i.attachments = vec![Attachment {
+        host_id: "aaaaaaaaaaaa".into(),
+        unavailable: None,
+        window: 1,
+        title: "t".into(),
+        link: Some(lost),
+    }];
     assert!(Report::build(i).rows[0].can_forget(), "a lost link is the host gone");
 }
 

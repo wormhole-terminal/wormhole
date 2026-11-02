@@ -20,6 +20,7 @@ pub use wormhole_wire::version::HostFit;
 use wormhole_wire::version::Range;
 use wormhole_wire::{AppVersion, HostState};
 
+use super::attach::Unavailable;
 use super::probe::{ProbeFailure, Probed};
 use super::{HostMeta, Scan, StaleReason, meta_path};
 
@@ -56,6 +57,8 @@ pub struct Attachment {
     pub title: String,
     /// `None` for a terminal whose connection is not up yet.
     pub link: Option<LinkStats>,
+    /// Why the terminal cannot show the host, when it could not attach to one that runs.
+    pub unavailable: Option<Unavailable>,
 }
 
 /// What looking at one host found besides its files. All of it is optional: a pid may be gone,
@@ -152,6 +155,8 @@ pub struct HostRow {
     pub answer: Answer,
     pub rss: Option<u64>,
     pub link: Option<LinkStats>,
+    /// Why this app's terminal cannot show the host (it refused the app, speaks another protocol...).
+    pub unavailable: Option<Unavailable>,
 }
 
 impl HostRow {
@@ -172,6 +177,7 @@ impl HostRow {
             || self.fit_problem()
             || (self.standing.is_live() && matches!(self.answer, Answer::No(_) | Answer::Incompatible))
             || self.link.is_some_and(|l| l.lost)
+            || self.unavailable.is_some()
             || matches!(&self.answer, Answer::Yes(info) if info.exited)
     }
 
@@ -224,7 +230,9 @@ impl Report {
             let seen = observed.get(&meta.id).unwrap_or(&none);
             let hold = held.get(meta.id.as_str()).copied();
             let standing = live_standing(&meta.id, hold, &named);
-            rows.push(row_of(meta, standing, seen, hold.and_then(|a| a.link), &hosts_dir, now));
+            let mut row = row_of(meta, standing, seen, hold.and_then(|a| a.link), &hosts_dir, now);
+            row.unavailable = hold.and_then(|a| a.unavailable.clone());
+            rows.push(row);
         }
         for stale in &scan.stale {
             let seen = observed.get(&stale.id).unwrap_or(&none);
@@ -289,6 +297,7 @@ impl HostRow {
             answer: Answer::NotAsked,
             rss: None,
             link,
+            unavailable: None,
         }
     }
 }
@@ -348,6 +357,7 @@ fn row_of(
         answer,
         rss: seen.rss,
         link,
+        unavailable: None,
     }
 }
 
