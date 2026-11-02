@@ -202,18 +202,29 @@ pub fn forget(hosts_dir: &Path, id: &str) -> Result<ForgetOutcome, ForgetError> 
         return Err(ForgetError::Unknown);
     };
     let home_socket = hosts_dir.join(format!("{id}.sock"));
+    // Where the host may be listening: next to its meta, or where the socket rule puts it when the
+    // hosts folder's path is too long (a folder others can write to). Either answering means a host.
+    let candidates = [home_socket.clone(), super::socket_path(hosts_dir, id)];
     match (&stale.reason, &stale.meta) {
         // The process runs, only its socket is missing (it binds it again within the hour).
         (StaleReason::SocketMissing, Some(meta)) => {
             return Err(ForgetError::Live(format!("session {id} runs on as pid {}", meta.pid)));
         }
         // Nothing says it is dead, and something may still answer.
-        (StaleReason::Unreadable(_) | StaleReason::NoMeta, _) if answers(&home_socket) => {
+        (StaleReason::Unreadable(_) | StaleReason::NoMeta, _) if candidates.iter().any(|s| answers(s)) => {
             return Err(ForgetError::Live(format!("session {id} still answers on its socket")));
+        }
+        // A meta that does not read may still name a pid, and that pid may still be the host.
+        (StaleReason::Unreadable(_), _)
+            if lenient_pid(&meta_path(hosts_dir, id))
+                .is_some_and(super::identity::looks_like_host_process) =>
+        {
+            return Err(ForgetError::Live(format!("session {id} has a process that looks like its host")));
         }
         _ => {}
     }
-    let mut targets = vec![meta_path(hosts_dir, id), home_socket];
+    let mut targets = vec![meta_path(hosts_dir, id)];
+    targets.extend(candidates);
     if let Some(meta) = &stale.meta {
         targets.push(meta.socket.clone());
     }
@@ -243,6 +254,17 @@ fn removable(path: &Path, id: &str) -> bool {
     let socket_name = name == format!("{id}.sock")
         || name.strip_prefix("wormhole-host-").is_some_and(|rest| rest.ends_with(&format!("-{id}.sock")));
     socket_name && is_socket(&meta.file_type())
+}
+
+/// The `pid=` a meta file says, if it says one, from a file too damaged to parse.
+fn lenient_pid(path: &Path) -> Option<u32> {
+    let text = crate::storage::files::read_to_string_capped(
+        path,
+        wormhole_term::hosted::meta::READ_MAX,
+        crate::storage::files::LinkPolicy::Within(path.parent()?),
+    )
+    .ok()?;
+    text.lines().find_map(|line| line.strip_prefix("pid=")?.trim().parse().ok())
 }
 
 /// Whether something accepts connections on `path`.
@@ -335,6 +357,20 @@ mod tests {
         meta.pid = std::process::id();
         let err = end_host(&meta, Duration::from_millis(300)).expect_err("refused");
         assert!(err.contains("not a wormhole-host"), "{err}");
+    }
+
+    #[test]
+    fn a_meta_that_does_not_read_but_names_a_running_host_is_kept() {
+        let dir = short_dir();
+        let d = dir.path();
+        let host = super::super::identity::spawn_fake_host(d);
+        std::fs::write(d.join("hhhhhhhhhhhh.meta"), format!("format=1\npid={}\nnothing else\n", host.pid()))
+            .expect("write");
+        assert!(matches!(forget(d, "hhhhhhhhhhhh"), Err(ForgetError::Live(_))));
+        assert!(d.join("hhhhhhhhhhhh.meta").exists());
+        drop(host);
+        // The process is gone: the damaged file can go.
+        assert!(forget(d, "hhhhhhhhhhhh").is_ok());
     }
 
     #[test]

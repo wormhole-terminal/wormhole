@@ -14,6 +14,13 @@ use crate::sys::fs::private_file;
 
 /// The file format this build writes and reads.
 pub const FORMAT: u32 = 1;
+/// The lowest reader level that understands what this build writes (`min_reader=`). A later
+/// format that only adds keys keeps it, and so stays readable by this build; one that changes what
+/// a known key means raises it, and a reader below it refuses the file rather than guess.
+pub const MIN_READER: u32 = 1;
+/// The reader level of this build: files that ask for more are refused (a host that new is not
+/// shown as stale, it is told apart as one this build cannot read).
+pub const READER: u32 = 1;
 /// The most a meta file may hold when read (they are a few hundred bytes).
 pub const READ_MAX: u64 = 16 * 1024;
 
@@ -49,7 +56,7 @@ pub enum MetaError {
     Malformed(&'static str),
     /// A key every reader needs is missing.
     Missing(&'static str),
-    /// Written by a build that knows a newer format.
+    /// Written by a build that asks readers to be at least this level (`min_reader`).
     NewerFormat(u32),
 }
 
@@ -59,7 +66,7 @@ impl std::fmt::Display for MetaError {
             Self::Io(e) => e.fmt(f),
             Self::Malformed(key) => write!(f, "meta: bad value for {key}"),
             Self::Missing(key) => write!(f, "meta: {key} is missing"),
-            Self::NewerFormat(n) => write!(f, "meta: format {n} is newer than this build reads"),
+            Self::NewerFormat(n) => write!(f, "meta: needs a reader of level {n}, this build is {READER}"),
         }
     }
 }
@@ -116,18 +123,23 @@ impl Meta {
         let _ = writeln!(text, "proto_max={}", self.proto_max);
         let _ = writeln!(text, "socket={socket}");
         let _ = writeln!(text, "data_dir={data_dir}");
+        let _ = writeln!(text, "min_reader={MIN_READER}");
         Ok(text)
     }
 
     /// Read a meta file's text. Unknown keys are skipped; a repeated key takes its last value.
     pub fn parse(text: &str) -> Result<Self, MetaError> {
         let (mut format, mut id, mut pid, mut child_pid, mut started_at) = (None, None, None, None, None);
+        let mut min_reader = None;
         let (mut version, mut proto_min, mut proto_max, mut socket, mut data_dir) =
             (None, None, None, None, None);
         for line in text.lines() {
             let Some((key, value)) = line.split_once('=') else { continue };
             match key {
                 "format" => format = Some(value.parse::<u32>().map_err(|_| MetaError::Malformed("format"))?),
+                "min_reader" => {
+                    min_reader = Some(value.parse::<u32>().map_err(|_| MetaError::Malformed("min_reader"))?);
+                }
                 "id" => id = Some(value.to_owned()),
                 "pid" => pid = Some(value.parse::<u32>().map_err(|_| MetaError::Malformed("pid"))?),
                 "child_pid" => {
@@ -148,9 +160,11 @@ impl Meta {
                 _ => {}
             }
         }
+        // A newer format is read with the keys this build knows, as long as it says it can be: only
+        // `min_reader` above this build's level (or a format that does not say) refuses it.
         let format = format.ok_or(MetaError::Missing("format"))?;
-        if format > FORMAT {
-            return Err(MetaError::NewerFormat(format));
+        if let Some(needed) = min_reader.filter(|&needed| needed > READER) {
+            return Err(MetaError::NewerFormat(needed));
         }
         let id = id.ok_or(MetaError::Missing("id"))?;
         if !valid_id(&id) {
@@ -236,8 +250,12 @@ mod tests {
         let mut text = sample().render().expect("renders");
         text.push_str("future_key=whatever\nnot a pair\n");
         assert_eq!(Meta::parse(&text).expect("parses"), sample());
+        // A later format that only adds keys is read as far as this build knows it...
         let newer = text.replace("format=1", "format=2");
-        assert!(matches!(Meta::parse(&newer), Err(MetaError::NewerFormat(2))));
+        assert_eq!(Meta::parse(&newer).expect("a newer format parses"), sample());
+        // ...unless it asks for a newer reader.
+        let demanding = newer.replace("min_reader=1", "min_reader=2");
+        assert!(matches!(Meta::parse(&demanding), Err(MetaError::NewerFormat(2))));
         let no_pid: String =
             text.lines().filter(|l| !l.starts_with("pid=")).map(|l| format!("{l}\n")).collect();
         assert!(matches!(Meta::parse(&no_pid), Err(MetaError::Missing("pid"))));

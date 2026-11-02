@@ -21,6 +21,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   running after an update replaced the app it came from; it was left alone because its program file was gone.
 - A session host whose process number was taken by another program after a restart is no longer listed as
   running.
+- A session host that a newer version of Wormhole started was shown as left over and could not be ended from
+  an older one; its meta file is now read for what the older version knows, unless it says it needs a newer
+  reader.
+- Forgetting a left-over session no longer removes the files of one that is still running when its meta file
+  is damaged: its socket is looked for in both places, and its process number is checked.
 - A session host's log no longer gets three lines for every look at it from the command line or the Session
   Hosts window; those short connections are logged at the debug level.
 

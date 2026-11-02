@@ -25,6 +25,13 @@ pub fn is_host_process(pid: u32, started_at: u64) -> bool {
     )
 }
 
+/// Whether `pid` is named like a host and runs as this user, whatever its start: for a meta file
+/// too damaged to say when its host started, where "might it be alive" is the question and a
+/// process that looks like a host is reason enough to say yes.
+pub fn looks_like_host_process(pid: u32) -> bool {
+    process::command_name(pid).as_deref() == Some(HOST_BINARY_NAME) && process::runs_as_current_user(pid)
+}
+
 /// [`is_host_process`] over what was read, so the rule is tested without processes.
 fn matches(name: Option<&str>, ours: bool, start: Option<SystemTime>, started_at: u64) -> bool {
     let Some(start) = start.and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok()) else {

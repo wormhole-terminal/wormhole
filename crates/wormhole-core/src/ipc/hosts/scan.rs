@@ -194,7 +194,7 @@ mod tests {
         let dir = tempfile::tempdir().expect("temp");
         let good = meta_text("abcdefghij12", 77, Path::new("/s/x.sock"), 5);
         let cases = [
-            ("format=2", good.replace("format=1", "format=2")),
+            ("a reader level above this build", good.replace("format=1", "format=2\nmin_reader=2")),
             ("other id", good.replace("id=abcdefghij12", "id=zzzzzzzzzzzz")),
             ("no pid", good.replace("pid=77\n", "")),
             ("pid 0", good.replace("pid=77", "pid=0")),
