@@ -13,7 +13,8 @@ use super::memory::Memory;
 use super::stream::{Stream, Wake};
 use crate::engine::OwnFeed;
 use crate::events::{Heard, Reply, Tap, TextFormatter};
-use crate::osc::{Mark, ProgressState, PromptKind};
+use crate::osc::{Mark, PromptKind};
+use crate::program_status::ProgressState;
 use crate::pty::Feed;
 use crate::screen::Screen;
 

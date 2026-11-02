@@ -1,7 +1,7 @@
 //! What the terminal holds of what programs report: a set of records, one per id, and the one
 //! thing the UI shows of them.
 
-use super::{Kind, Record, Report, State, agent_for_app};
+use super::{Kind, Progress, Record, Report, State, agent_for_app};
 use crate::agents::AgentId;
 use crate::clean;
 
@@ -17,6 +17,8 @@ const DISPLAY_MAX_CHARS: usize = 200;
 #[derive(Debug, Default)]
 pub struct ProgramStatus {
     records: Vec<Stored>,
+    /// OSC 9;4, which is not a record: see `progress`.
+    pub(super) progress: Option<Progress>,
 }
 
 #[derive(Debug)]
@@ -76,7 +78,8 @@ impl ProgramStatus {
     /// take its absence for the program still reporting. Done and error stay for the user to
     /// look at. Returns whether anything was dropped.
     pub fn on_prompt(&mut self) -> bool {
-        self.keep(|state| state.outlives_program())
+        let records = self.keep(|state| state.outlives_program());
+        self.drop_running_progress() | records
     }
 
     /// The process attached to the terminal exited: the same as a new prompt.
@@ -88,12 +91,13 @@ impl ProgramStatus {
     /// (The spec leaves it to the terminal to decide when to stop showing them.) What is still
     /// going on stays. Returns whether anything was dropped.
     pub fn acknowledge(&mut self) -> bool {
-        self.keep(|state| !state.outlives_program())
+        let records = self.keep(|state| !state.outlives_program());
+        self.drop_failed_progress() | records
     }
 
     /// A full reset (RIS) removes every record; a soft reset (DECSTR) is not heard of here.
     pub fn reset(&mut self) -> bool {
-        self.clear(None)
+        self.clear(None) | self.set_progress(None)
     }
 
     fn keep(&mut self, mut keep: impl FnMut(State) -> bool) -> bool {
@@ -133,16 +137,11 @@ impl ProgramStatus {
     /// busy, nor a result behind one at rest. `None` when there are no records.
     pub fn summary(&self) -> Option<Summary> {
         // `max_by_key` keeps the last of equals, and the records are oldest first.
-        let top = self.records.iter().max_by_key(|stored| stored.record.state.priority())?;
-        let record = &top.record;
-        Some(Summary {
-            state: record.state,
-            kind: record.kind,
-            progress: record.progress,
-            app: self.app_of(top).map(str::to_string),
-            title: record.title.clone(),
-            msg: record.msg.clone(),
-        })
+        let Some(top) = self.records.iter().max_by_key(|stored| stored.record.state.priority()) else {
+            // OSC 7501 speaks first; OSC 9;4 fills in when it has nothing (see `progress`).
+            return self.progress_summary();
+        };
+        Some(Summary { app: self.app_of(top).map(str::to_string), ..Summary::of(top.record.clone()) })
     }
 }
 
@@ -157,9 +156,24 @@ pub struct Summary {
     /// As reported: validated, not cleaned for display.
     pub title: Option<String>,
     pub msg: Option<String>,
+    /// Working, with the progress held (OSC 9;4 state 4): only the fallback from 9;4 sets it.
+    pub paused: bool,
 }
 
 impl Summary {
+    /// The summary of a record, without its `app` (that comes from the ancestors).
+    pub(super) fn of(record: Record) -> Self {
+        Summary {
+            state: record.state,
+            kind: record.kind,
+            progress: record.progress,
+            app: None,
+            title: record.title,
+            msg: record.msg,
+            paused: false,
+        }
+    }
+
     /// The message as the UI may show it outside the terminal grid: one line, without control
     /// characters or the invisible and direction-changing ones that could disguise what it says,
     /// cut to a length a row shows. `None` when nothing is left.
@@ -236,7 +250,15 @@ mod tests {
         // A key the new report left out is gone: kind, progress, app, title and msg.
         assert_eq!(
             summary,
-            Summary { state: State::Working, kind: None, progress: None, app: None, title: None, msg: None }
+            Summary {
+                state: State::Working,
+                kind: None,
+                progress: None,
+                app: None,
+                title: None,
+                msg: None,
+                paused: false
+            }
         );
     }
 
@@ -433,6 +455,7 @@ mod tests {
             app: None,
             title: None,
             msg: Some(msg.into()),
+            paused: false,
         };
         // Direction overrides and invisible formatting go (they could disguise what it says),
         // runs of spaces fold, and a long line is cut.
@@ -460,6 +483,7 @@ mod tests {
                 app: Some(app.into()),
                 title: None,
                 msg: None,
+                paused: false,
             }
             .agent()
         };
@@ -475,7 +499,15 @@ mod tests {
         assert_eq!(agent("brew"), None);
         let bare = Summary {
             app: None,
-            ..Summary { state: State::Idle, kind: None, progress: None, app: None, title: None, msg: None }
+            ..Summary {
+                state: State::Idle,
+                kind: None,
+                progress: None,
+                app: None,
+                title: None,
+                msg: None,
+                paused: false,
+            }
         };
         assert_eq!(bare.agent(), None);
     }

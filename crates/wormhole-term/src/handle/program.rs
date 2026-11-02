@@ -40,7 +40,8 @@ impl Pty {
         self.shared.last_exit_code()
     }
 
-    /// The progress a program reports (OSC 9;4), until it removes it.
+    /// The progress a program reports (OSC 9;4), until it removes it or its prompt returns (a failure
+    /// waits for the user to look).
     pub fn progress(&self) -> Option<Progress> {
         self.shared.progress()
     }

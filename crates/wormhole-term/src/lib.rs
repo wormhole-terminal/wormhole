@@ -112,11 +112,9 @@ pub use events::{PtyEvent, PtyEvents, Reply, TextFormatter};
 pub use links::{Link, Openable};
 pub use marks::Direction;
 pub use osc::percent_decode;
-pub use osc::{
-    BODY_MAX_CHARS, Mark, Notification, Progress, ProgressState, PromptKind, TITLE_MAX_CHARS, clean,
-    is_invisible,
-};
+pub use osc::{BODY_MAX_CHARS, Mark, Notification, PromptKind, TITLE_MAX_CHARS, clean, is_invisible};
 pub use ports::listening_ports;
+pub use program_status::{Progress, ProgressState};
 use pty::FairLock;
 pub use pty::{Launch, Shell};
 pub use row_mark::{Part, RowMark};
