@@ -16,6 +16,7 @@ use crate::settings::settings;
 use crate::terminal_view::Status;
 use crate::window::feature::{CloseAlso, CloseOf};
 use crate::window::feature_host::extras_to_ask;
+use crate::window::quit_question;
 use crate::window::session::{self, Session};
 use crate::window::window_lifecycle::open_workspace_window_in;
 use crate::window::{Layout, Workspace, window_bounds};
@@ -475,7 +476,7 @@ fn quit_asking(cx: &mut App, end_hosts: bool) {
         }
     }
     let front = AppState::front_window(cx);
-    let ask = session::quit_ask(end_hosts, hosted_running, local_running, any_hosted);
+    let ask = quit_question::quit_ask(end_hosts, hosted_running, local_running, any_hosted);
     let (Some(front), Some(ask)) = (front, ask) else {
         finish_quit(cx, end_hosts);
         return;
@@ -483,27 +484,27 @@ fn quit_asking(cx: &mut App, end_hosts: bool) {
     let confirm = if end_hosts { "Quit and End All" } else { "Quit" };
     let title = if end_hosts { "Quit and End All Terminals?" } else { "Quit Wormhole?" };
     let detail = match ask {
-        session::QuitAsk::Plain => session::quit_detail(&running, &programs, &elsewhere),
-        session::QuitAsk::KeepBox { .. } => {
-            session::quit_detail_keeping(&running, &programs, &elsewhere, hosted_running, local_running)
+        quit_question::QuitAsk::Plain => quit_question::quit_detail(&running, &programs, &elsewhere),
+        quit_question::QuitAsk::KeepBox { .. } => {
+            quit_question::quit_detail_keeping(&running, &programs, &elsewhere, hosted_running, local_running)
         }
     };
     let question = dialog::CloseQuestion { title: title.into(), detail: detail.into(), confirm };
     let asked = AppState::with_workspace(&front, cx, |_, window, cx| {
         let on_dismiss = |cx: &mut App| app_mut(cx).quit_prompt = None;
         match ask {
-            session::QuitAsk::Plain => dialog::ask_before_closing(
+            quit_question::QuitAsk::Plain => dialog::ask_before_closing(
                 window,
                 cx,
                 question,
                 move |_, cx| finish_quit(cx, end_hosts),
                 on_dismiss,
             ),
-            session::QuitAsk::KeepBox { .. } => dialog::ask_keeping_terminals(
+            quit_question::QuitAsk::KeepBox { .. } => dialog::ask_keeping_terminals(
                 window,
                 cx,
                 question,
-                move |keep_running, _, cx| finish_quit(cx, session::quit_ends_hosts(keep_running)),
+                move |keep_running, _, cx| finish_quit(cx, quit_question::quit_ends_hosts(keep_running)),
                 on_dismiss,
             ),
         }

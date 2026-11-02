@@ -6,74 +6,74 @@
 use crate::key::Key;
 
 /// "Motion"
-pub const SETTINGS_SECTION_MOTION: Key = Key::new(870);
+pub const SETTINGS_SECTION_MOTION: Key = Key::new(874);
 /// "How things move. Pick one for each, and watch it loop in the preview under it."
-pub const SETTINGS_SECTION_MOTION_INTRO: Key = Key::new(871);
+pub const SETTINGS_SECTION_MOTION_INTRO: Key = Key::new(875);
 /// "Terminals list"
-pub const SETTINGS_MOTION_GROUP_TERMINALS: Key = Key::new(872);
+pub const SETTINGS_MOTION_GROUP_TERMINALS: Key = Key::new(876);
 /// "A terminal opens or closes"
-pub const SETTINGS_MOTION_INSERT: Key = Key::new(873);
+pub const SETTINGS_MOTION_INSERT: Key = Key::new(877);
 /// "How its row comes into the list and leaves it"
-pub const SETTINGS_MOTION_INSERT_DESCRIPTION: Key = Key::new(874);
+pub const SETTINGS_MOTION_INSERT_DESCRIPTION: Key = Key::new(878);
 /// "animation animate new row appear disappear add remove list insert spring slide fade"
-pub const SETTINGS_MOTION_INSERT_KEYWORDS: Key = Key::new(875);
+pub const SETTINGS_MOTION_INSERT_KEYWORDS: Key = Key::new(879);
 /// "A group folds"
-pub const SETTINGS_MOTION_FOLD: Key = Key::new(876);
+pub const SETTINGS_MOTION_FOLD: Key = Key::new(880);
 /// "How a group's rows go away when you fold it, and come back when you open it"
-pub const SETTINGS_MOTION_FOLD_DESCRIPTION: Key = Key::new(877);
+pub const SETTINGS_MOTION_FOLD_DESCRIPTION: Key = Key::new(881);
 /// "animation animate collapse expand band group fold drawer tuck"
-pub const SETTINGS_MOTION_FOLD_KEYWORDS: Key = Key::new(878);
+pub const SETTINGS_MOTION_FOLD_KEYWORDS: Key = Key::new(882);
 /// "A status changes"
-pub const SETTINGS_MOTION_STATUS: Key = Key::new(879);
+pub const SETTINGS_MOTION_STATUS: Key = Key::new(883);
 /// "What a terminal's tile does when its agent starts working, needs you or finishes"
-pub const SETTINGS_MOTION_STATUS_DESCRIPTION: Key = Key::new(880);
+pub const SETTINGS_MOTION_STATUS_DESCRIPTION: Key = Key::new(884);
 /// "animation animate tile badge agent working needs input done failed crossfade wash flare nudge roll"
-pub const SETTINGS_MOTION_STATUS_KEYWORDS: Key = Key::new(881);
+pub const SETTINGS_MOTION_STATUS_KEYWORDS: Key = Key::new(885);
 /// "Window"
-pub const SETTINGS_MOTION_GROUP_WINDOW: Key = Key::new(882);
+pub const SETTINGS_MOTION_GROUP_WINDOW: Key = Key::new(886);
 /// "The sidebar and panel hide or show"
-pub const SETTINGS_MOTION_COLUMN: Key = Key::new(883);
+pub const SETTINGS_MOTION_COLUMN: Key = Key::new(887);
 /// "How a column slides in and out"
-pub const SETTINGS_MOTION_COLUMN_DESCRIPTION: Key = Key::new(884);
+pub const SETTINGS_MOTION_COLUMN_DESCRIPTION: Key = Key::new(888);
 /// "animation animate sidebar panel column slide spring hide show collapse"
-pub const SETTINGS_MOTION_COLUMN_KEYWORDS: Key = Key::new(885);
+pub const SETTINGS_MOTION_COLUMN_KEYWORDS: Key = Key::new(889);
 /// "Classic"
-pub const SETTINGS_MOTION_CLASSIC: Key = Key::new(886);
+pub const SETTINGS_MOTION_CLASSIC: Key = Key::new(890);
 /// "Reveal"
-pub const SETTINGS_MOTION_INSERT_REVEAL: Key = Key::new(887);
+pub const SETTINGS_MOTION_INSERT_REVEAL: Key = Key::new(891);
 /// "From the side"
-pub const SETTINGS_MOTION_INSERT_FROM_SIDE: Key = Key::new(888);
+pub const SETTINGS_MOTION_INSERT_FROM_SIDE: Key = Key::new(892);
 /// "Soft spring"
-pub const SETTINGS_MOTION_INSERT_SOFT_SPRING: Key = Key::new(889);
+pub const SETTINGS_MOTION_INSERT_SOFT_SPRING: Key = Key::new(893);
 /// "Drawer"
-pub const SETTINGS_MOTION_FOLD_DRAWER: Key = Key::new(890);
+pub const SETTINGS_MOTION_FOLD_DRAWER: Key = Key::new(894);
 /// "Rows tuck in"
-pub const SETTINGS_MOTION_FOLD_TUCK: Key = Key::new(891);
+pub const SETTINGS_MOTION_FOLD_TUCK: Key = Key::new(895);
 /// "Crossfade"
-pub const SETTINGS_MOTION_STATUS_CROSSFADE: Key = Key::new(892);
+pub const SETTINGS_MOTION_STATUS_CROSSFADE: Key = Key::new(896);
 /// "Badge pops"
-pub const SETTINGS_MOTION_STATUS_BADGE_POP: Key = Key::new(893);
+pub const SETTINGS_MOTION_STATUS_BADGE_POP: Key = Key::new(897);
 /// "Card wash"
-pub const SETTINGS_MOTION_STATUS_WASH: Key = Key::new(894);
+pub const SETTINGS_MOTION_STATUS_WASH: Key = Key::new(898);
 /// "Amber flare"
-pub const SETTINGS_MOTION_STATUS_FLARE: Key = Key::new(895);
+pub const SETTINGS_MOTION_STATUS_FLARE: Key = Key::new(899);
 /// "Nudge"
-pub const SETTINGS_MOTION_STATUS_NUDGE: Key = Key::new(896);
+pub const SETTINGS_MOTION_STATUS_NUDGE: Key = Key::new(900);
 /// "Line rolls"
-pub const SETTINGS_MOTION_STATUS_LINE_ROLL: Key = Key::new(897);
+pub const SETTINGS_MOTION_STATUS_LINE_ROLL: Key = Key::new(901);
 /// "Soft spring"
-pub const SETTINGS_MOTION_COLUMN_SOFT_SPRING: Key = Key::new(898);
+pub const SETTINGS_MOTION_COLUMN_SOFT_SPRING: Key = Key::new(902);
 /// "Content after"
-pub const SETTINGS_MOTION_COLUMN_CONTENT_AFTER: Key = Key::new(899);
+pub const SETTINGS_MOTION_COLUMN_CONTENT_AFTER: Key = Key::new(903);
 /// "Preview of a terminal opening and closing in the list"
-pub const SETTINGS_MOTION_INSERT_PREVIEW_LABEL: Key = Key::new(900);
+pub const SETTINGS_MOTION_INSERT_PREVIEW_LABEL: Key = Key::new(904);
 /// "Preview of a group folding and opening"
-pub const SETTINGS_MOTION_FOLD_PREVIEW_LABEL: Key = Key::new(901);
+pub const SETTINGS_MOTION_FOLD_PREVIEW_LABEL: Key = Key::new(905);
 /// "Preview of a terminal's status changing"
-pub const SETTINGS_MOTION_STATUS_PREVIEW_LABEL: Key = Key::new(902);
+pub const SETTINGS_MOTION_STATUS_PREVIEW_LABEL: Key = Key::new(906);
 /// "Preview of the sidebar hiding and showing"
-pub const SETTINGS_MOTION_COLUMN_PREVIEW_LABEL: Key = Key::new(903);
+pub const SETTINGS_MOTION_COLUMN_PREVIEW_LABEL: Key = Key::new(907);
 /// "Loops while you look. Under Reduce Motion it holds still."
-pub const SETTINGS_MOTION_PREVIEW_CAPTION: Key = Key::new(904);
+pub const SETTINGS_MOTION_PREVIEW_CAPTION: Key = Key::new(908);
 /// "Terminal"
-pub const SETTINGS_MOTION_COLUMN_TERMINAL: Key = Key::new(905);
+pub const SETTINGS_MOTION_COLUMN_TERMINAL: Key = Key::new(909);

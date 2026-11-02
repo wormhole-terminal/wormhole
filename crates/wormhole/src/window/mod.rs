@@ -134,6 +134,7 @@ mod plays_motion;
 #[cfg(test)]
 mod profile_look_tests;
 mod published;
+mod quit_question;
 #[cfg(test)]
 mod read_tests;
 mod regions;

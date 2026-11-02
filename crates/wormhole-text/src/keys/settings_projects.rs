@@ -7,122 +7,122 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Project folders"
-pub const SETTINGS_SECTION_PROJECTS: Key = Key::new(1017);
+pub const SETTINGS_SECTION_PROJECTS: Key = Key::new(1021);
 /// "Change the defaults for every project, or pick one to set it up just for you."
-pub const SETTINGS_SECTION_PROJECTS_INTRO: Key = Key::new(1018);
+pub const SETTINGS_SECTION_PROJECTS_INTRO: Key = Key::new(1022);
 /// "Project folders"
-pub const SETTINGS_PROJECTS_PROJECTS: Key = Key::new(1019);
+pub const SETTINGS_PROJECTS_PROJECTS: Key = Key::new(1023);
 /// "The .wormhole folder of a project: trust, and which of its files you use"
-pub const SETTINGS_PROJECTS_PROJECTS_DESCRIPTION: Key = Key::new(1020);
+pub const SETTINGS_PROJECTS_PROJECTS_DESCRIPTION: Key = Key::new(1024);
 /// ".wormhole project folder trust touch id actions prompts layout notes theme settings"
-pub const SETTINGS_PROJECTS_PROJECTS_KEYWORDS: Key = Key::new(1021);
+pub const SETTINGS_PROJECTS_PROJECTS_KEYWORDS: Key = Key::new(1025);
 /// "Search projects"
-pub const SETTINGS_PROJECTS_SEARCH_PROJECTS: Key = Key::new(1022);
+pub const SETTINGS_PROJECTS_SEARCH_PROJECTS: Key = Key::new(1026);
 /// "All projects (defaults)"
-pub const SETTINGS_PROJECTS_ALL_PROJECTS_DEFAULTS: Key = Key::new(1023);
+pub const SETTINGS_PROJECTS_ALL_PROJECTS_DEFAULTS: Key = Key::new(1027);
 /// "All projects"
-pub const SETTINGS_PROJECTS_ALL_PROJECTS: Key = Key::new(1024);
+pub const SETTINGS_PROJECTS_ALL_PROJECTS: Key = Key::new(1028);
 /// "Project"
-pub const SETTINGS_PROJECTS_PROJECT: Key = Key::new(1025);
+pub const SETTINGS_PROJECTS_PROJECT: Key = Key::new(1029);
 /// "Use from projects by default"
-pub const SETTINGS_PROJECTS_USE_FROM_PROJECTS_BY_DEFAULT: Key = Key::new(1026);
+pub const SETTINGS_PROJECTS_USE_FROM_PROJECTS_BY_DEFAULT: Key = Key::new(1030);
 /// "A project can still turn a feature on or off just for you: pick it above."
-pub const SETTINGS_PROJECTS_DEFAULTS_NOTE: Key = Key::new(1027);
+pub const SETTINGS_PROJECTS_DEFAULTS_NOTE: Key = Key::new(1031);
 /// "Trusted projects"
-pub const SETTINGS_PROJECTS_TRUSTED_PROJECTS: Key = Key::new(1028);
+pub const SETTINGS_PROJECTS_TRUSTED_PROJECTS: Key = Key::new(1032);
 /// "Projects allowed to run commands"
-pub const SETTINGS_PROJECTS_PROJECTS_ALLOWED_TO_RUN_COMMANDS: Key = Key::new(1029);
+pub const SETTINGS_PROJECTS_PROJECTS_ALLOWED_TO_RUN_COMMANDS: Key = Key::new(1033);
 /// "None yet."
-pub const SETTINGS_PROJECTS_NONE_YET: Key = Key::new(1030);
+pub const SETTINGS_PROJECTS_NONE_YET: Key = Key::new(1034);
 /// "Settings"
-pub const SETTINGS_PROJECTS_SETTINGS: Key = Key::new(1031);
+pub const SETTINGS_PROJECTS_SETTINGS: Key = Key::new(1035);
 /// "Revoke"
-pub const SETTINGS_PROJECTS_REVOKE: Key = Key::new(1032);
+pub const SETTINGS_PROJECTS_REVOKE: Key = Key::new(1036);
 /// "Approval isn't available on this Mac (no Touch ID or login password), so projects can't be trusted."
-pub const SETTINGS_PROJECTS_APPROVAL_ISNT_AVAILABLE_ON_THIS_MAC: Key = Key::new(1033);
+pub const SETTINGS_PROJECTS_APPROVAL_ISNT_AVAILABLE_ON_THIS_MAC: Key = Key::new(1037);
 /// "Trusted"
-pub const SETTINGS_PROJECTS_TRUSTED: Key = Key::new(1034);
+pub const SETTINGS_PROJECTS_TRUSTED: Key = Key::new(1038);
 /// "Changed since you trusted it"
-pub const SETTINGS_PROJECTS_CHANGED_SINCE_YOU_TRUSTED_IT: Key = Key::new(1035);
+pub const SETTINGS_PROJECTS_CHANGED_SINCE_YOU_TRUSTED_IT: Key = Key::new(1039);
 /// "Not trusted"
-pub const SETTINGS_PROJECTS_NOT_TRUSTED: Key = Key::new(1036);
+pub const SETTINGS_PROJECTS_NOT_TRUSTED: Key = Key::new(1040);
 /// "Revoke trust"
-pub const SETTINGS_PROJECTS_REVOKE_TRUST: Key = Key::new(1037);
+pub const SETTINGS_PROJECTS_REVOKE_TRUST: Key = Key::new(1041);
 /// "Waiting for approval…"
-pub const SETTINGS_PROJECTS_WAITING_FOR_APPROVAL: Key = Key::new(1038);
+pub const SETTINGS_PROJECTS_WAITING_FOR_APPROVAL: Key = Key::new(1042);
 /// "Trust with Touch ID…"
-pub const SETTINGS_PROJECTS_TRUST_WITH_TOUCH_ID: Key = Key::new(1039);
+pub const SETTINGS_PROJECTS_TRUST_WITH_TOUCH_ID: Key = Key::new(1043);
 /// "Trust"
-pub const SETTINGS_PROJECTS_TRUST: Key = Key::new(1040);
+pub const SETTINGS_PROJECTS_TRUST: Key = Key::new(1044);
 /// "This project"
-pub const SETTINGS_PROJECTS_THIS_PROJECT: Key = Key::new(1041);
+pub const SETTINGS_PROJECTS_THIS_PROJECT: Key = Key::new(1045);
 /// "Use from this project"
-pub const SETTINGS_PROJECTS_USE_FROM_THIS_PROJECT: Key = Key::new(1042);
+pub const SETTINGS_PROJECTS_USE_FROM_THIS_PROJECT: Key = Key::new(1046);
 /// "Only for you: nothing is written into the project folder."
-pub const SETTINGS_PROJECTS_ONLY_FOR_YOU_NOTHING_IS_WRITTEN: Key = Key::new(1043);
+pub const SETTINGS_PROJECTS_ONLY_FOR_YOU_NOTHING_IS_WRITTEN: Key = Key::new(1047);
 /// "Default (on)"
-pub const SETTINGS_PROJECTS_DEFAULT_ON: Key = Key::new(1044);
+pub const SETTINGS_PROJECTS_DEFAULT_ON: Key = Key::new(1048);
 /// "Default (off)"
-pub const SETTINGS_PROJECTS_DEFAULT_OFF: Key = Key::new(1045);
+pub const SETTINGS_PROJECTS_DEFAULT_OFF: Key = Key::new(1049);
 /// "On"
-pub const SETTINGS_PROJECTS_ON: Key = Key::new(1046);
+pub const SETTINGS_PROJECTS_ON: Key = Key::new(1050);
 /// "Off"
-pub const SETTINGS_PROJECTS_OFF: Key = Key::new(1047);
+pub const SETTINGS_PROJECTS_OFF: Key = Key::new(1051);
 /// "Problems"
-pub const SETTINGS_PROJECTS_PROBLEMS: Key = Key::new(1048);
+pub const SETTINGS_PROJECTS_PROBLEMS: Key = Key::new(1052);
 /// "Open in a new terminal"
-pub const SETTINGS_PROJECTS_OPEN_IN_A_NEW_TERMINAL: Key = Key::new(1049);
+pub const SETTINGS_PROJECTS_OPEN_IN_A_NEW_TERMINAL: Key = Key::new(1053);
 /// "Actions, the terminal layout and env/shell may run."
-pub const SETTINGS_PROJECTS_ACTIONS_THE_TERMINAL_LAYOUT_AND_ENV: Key = Key::new(1050);
+pub const SETTINGS_PROJECTS_ACTIONS_THE_TERMINAL_LAYOUT_AND_ENV: Key = Key::new(1054);
 /// "Nothing in it needs trust."
-pub const SETTINGS_PROJECTS_NOTHING_IN_IT_NEEDS_TRUST: Key = Key::new(1051);
+pub const SETTINGS_PROJECTS_NOTHING_IN_IT_NEEDS_TRUST: Key = Key::new(1055);
 /// "Review the commands below and trust it again."
-pub const SETTINGS_PROJECTS_REVIEW_THE_COMMANDS_BELOW_AND_TRUST: Key = Key::new(1052);
+pub const SETTINGS_PROJECTS_REVIEW_THE_COMMANDS_BELOW_AND_TRUST: Key = Key::new(1056);
 /// "Nothing in it needs trust now."
-pub const SETTINGS_PROJECTS_NOTHING_IN_IT_NEEDS_TRUST_NOW: Key = Key::new(1053);
+pub const SETTINGS_PROJECTS_NOTHING_IN_IT_NEEDS_TRUST_NOW: Key = Key::new(1057);
 /// "Nothing in it can run commands until you trust it."
-pub const SETTINGS_PROJECTS_NOTHING_IN_IT_CAN_RUN_COMMANDS: Key = Key::new(1054);
+pub const SETTINGS_PROJECTS_NOTHING_IN_IT_CAN_RUN_COMMANDS: Key = Key::new(1058);
 /// "No notes.md yet. On creates it and syncs this project's terminals' notes"
-pub const SETTINGS_PROJECTS_NO_NOTES_MD_YET_ON_CREATES: Key = Key::new(1055);
+pub const SETTINGS_PROJECTS_NO_NOTES_MD_YET_ON_CREATES: Key = Key::new(1059);
 
 /// ```text
 /// { $folder } has no .wormhole folder anymore.
 /// ```
 pub fn settings_projects_missing_folder(folder: &str) -> String {
-    crate::active::message(1056, &[("folder", Arg::Str(folder))])
+    crate::active::message(1060, &[("folder", Arg::Str(folder))])
 }
 
 /// ```text
 /// Show { $folder } in Finder
 /// ```
 pub fn settings_projects_show_in_finder(folder: &str) -> String {
-    crate::active::message(1057, &[("folder", Arg::Str(folder))])
+    crate::active::message(1061, &[("folder", Arg::Str(folder))])
 }
 
 /// ```text
 /// Applies { $applies }.
 /// ```
 pub fn settings_projects_trust_applies(applies: &str) -> String {
-    crate::active::message(1058, &[("applies", Arg::Str(applies))])
+    crate::active::message(1062, &[("applies", Arg::Str(applies))])
 }
 
 /// ```text
 /// Trust it again to apply { $applies }.
 /// ```
 pub fn settings_projects_trust_again(applies: &str) -> String {
-    crate::active::message(1059, &[("applies", Arg::Str(applies))])
+    crate::active::message(1063, &[("applies", Arg::Str(applies))])
 }
 
 /// ```text
 /// Trusting it applies { $applies }.
 /// ```
 pub fn settings_projects_trust_would_apply(applies: &str) -> String {
-    crate::active::message(1060, &[("applies", Arg::Str(applies))])
+    crate::active::message(1064, &[("applies", Arg::Str(applies))])
 }
 
 /// ```text
 /// { $description }. Only after you trust the project
 /// ```
 pub fn settings_projects_feature_needs_trust(description: &str) -> String {
-    crate::active::message(1061, &[("description", Arg::Str(description))])
+    crate::active::message(1065, &[("description", Arg::Str(description))])
 }

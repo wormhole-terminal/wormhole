@@ -4,6 +4,34 @@
 //! The messages of `locales/en/dialog.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Cancel"
 pub const DIALOG_CANCEL: Key = Key::new(53);
+/// "Your terminals come back next time, but what runs in them ends."
+pub const DIALOG_QUIT_ENDS: Key = Key::new(54);
+/// "Your terminals come back next time and what runs in them keeps going. Untick the box to end them."
+pub const DIALOG_QUIT_KEEPS_ALL: Key = Key::new(55);
+
+/// ```text
+/// Your terminals come back next time. { $kept ->
+///     [one] 1 terminal keeps
+///    *[other] { $kept } terminals keep
+/// } running; { $ended ->
+///     [one] 1 terminal ends because it runs
+///    *[other] { $ended } terminals end because they run
+/// } inside { -brand }. Untick the box to end the others too.
+/// ```
+pub fn dialog_quit_keeps_some(kept: i64, ended: i64) -> String {
+    crate::active::message(56, &[("kept", Arg::Int(kept)), ("ended", Arg::Int(ended))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] 1 terminal in { $profile } is running an agent or a command.
+///    *[other] { $count } terminals in { $profile } are running an agent or a command.
+/// }
+/// ```
+pub fn dialog_quit_other_profile(count: i64, profile: &str) -> String {
+    crate::active::message(57, &[("count", Arg::Int(count)), ("profile", Arg::Str(profile))])
+}
