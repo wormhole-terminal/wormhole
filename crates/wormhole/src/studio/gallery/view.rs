@@ -239,7 +239,12 @@ impl Render for GalleryView {
         let ui = ui(cx);
         let tokens = tokens_of(cx);
         let uses = self.selected.as_deref().map(uses_of).unwrap_or_default();
-        let env = Env { ui, tokens: &tokens, uses: uses.iter().map(|u| u.id).collect() };
+        let env = Env {
+            ui,
+            tokens: &tokens,
+            code_font: crate::fonts::code_font(cx).0,
+            uses: uses.iter().map(|u| u.id).collect(),
+        };
 
         // The viewport and a stretch of overdraw on either side, in points down the page; the
         // pieces that meet it are built.

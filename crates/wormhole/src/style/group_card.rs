@@ -8,7 +8,7 @@ use crate::settings::UiColors;
 
 /// How far a card's rows are inset from its edges. The hover fill of a row reaches 8 pt past its
 /// text, so the card's inset leaves it room to stay inside.
-const CARD_PAD_X: f32 = 16.0;
+pub(super) const CARD_PAD_X: f32 = 16.0;
 
 /// `rows` in one card: `settings.group` as its fill, `radius_lg` corners, a [`CARD_PAD_X`] inset at the
 /// sides and none above or below, so a row's hover fill meets the card's own corners.

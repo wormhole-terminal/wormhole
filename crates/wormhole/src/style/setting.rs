@@ -11,17 +11,16 @@ use gpui_kit::*;
 use wormhole_text::{keys, text};
 
 use std::ops::Range;
+use std::rc::Rc;
 
-use super::buttons::icon_button;
 use super::controls::keycap;
+use super::group_card::CARD_PAD_X;
 use super::info::{marked, setting_info};
-use super::labels::{changed_dot, tint_chip};
-use super::row_keys::{KeyView, Reset, RowKeys, key_label, with_menu};
-use super::scale::{
-    CONTROL_H, Edges, MARK_DOT, NAME_LINE, RECORDER_W, SETTING_ROW_MIN_H, SLIDER_W, TextRole,
-};
+use super::row_keys::{KeyView, Reset, RowKeys, key_face, with_menu};
+use super::scale::{CONTROL_H, Edges, MARK_DOT, RECORDER_W, SLIDER_W, TextRole};
 use super::section::ClickHandler;
 use crate::settings::UiColors;
+use crate::ui::{Handler, Look, SettingsRowProps};
 
 /// A small whole number with a minus and a plus: one outlined control as tall as a
 /// select, the value between hairlines in the middle. Add nothing: `minus` and `plus` are
@@ -121,25 +120,31 @@ pub struct SettingParts {
     pub on_reset: Option<Reset>,
 }
 
-/// The space between a changed row's dot and its label.
-const CHANGED_DOT_GAP: f32 = 4.0;
-
-/// How far a [`setting`] row's hover fill reaches past its text on each side.
-const ROW_FILL_PAD: f32 = 8.0;
-
 /// How faint a control is while a project sets its value.
 const SET_ELSEWHERE_OPACITY: f32 = 0.55;
 
-/// One setting in the settings window: the label (14 / 500) at the left with, after it, an (i) that
-/// opens the description in a card (VoiceOver reads the description from the row), or, for a
-/// warning that must not be missed ([`SettingParts::visible_hint`]), the description under the label
-/// (12, muted); the control at the right edge of the column, a hairline above and at least
-/// [`SETTING_ROW_MIN_H`] tall; it stands in a [`group_card`](super::group_card), which keeps the first
-/// hairline from showing. Hovering fills it with `state.hover`, [`ROW_FILL_PAD`]
-/// past its text on each side. See [`SettingState`] for what a changed, project-set or disabled
-/// value adds.
+/// One setting in the settings window: drawn by the `SettingsRow` component (`ui/settings_row.dc.html`,
+/// which is also the design), with this function giving it the row's words, state and behaviour: the
+/// label (marked where a search found it) with, after it, an (i) that opens the description in a card
+/// (VoiceOver reads the description from the row), or, for a warning that must not be missed
+/// ([`SettingParts::visible_hint`]), the description under the label; the control at the right edge. It
+/// stands in a [`group_card`](super::group_card), which keeps the first hairline from showing. See
+/// [`SettingState`] for what a changed, project-set or disabled value adds.
 #[track_caller]
 pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: &App) -> Stateful<Div> {
+    setting_in(id, ui, parts, &Look::of(cx), cx)
+}
+
+/// [`setting`] in the colours of `look` rather than the app's theme: the Theme Studio's gallery draws the
+/// theme being edited.
+#[track_caller]
+pub fn setting_in(
+    id: impl Into<ElementId>,
+    ui: UiColors,
+    parts: SettingParts,
+    look: &Look,
+    cx: &App,
+) -> Stateful<Div> {
     let SettingParts {
         label,
         description,
@@ -155,125 +160,48 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
         on_reset,
     } = parts;
     let id = id.into();
-    let group = SharedString::from(format!("setting-{id}"));
     let disabled = state == SettingState::Disabled;
     let changed = state == SettingState::Changed;
     let elsewhere = matches!(state, SettingState::Project(_)) || disabled;
-    let (label_color, description_color) = if disabled { (ui.faint, ui.faint) } else { (ui.text, ui.muted) };
-    let (code_font, _) = crate::fonts::code_font(cx);
     let info = description.clone().filter(|_| !visible_hint);
-    let view = KeyView::read(&id, cx);
+    let key = key_face(&id, KeyView::read(&id, cx), keys).filter(|_| !elsewhere);
     let reset = on_reset.filter(|_| changed);
     let menu_reset = reset.clone();
     let menu_id = id.clone();
-    let row = div()
-        .id(id.clone())
-        .role(Role::Group)
-        .aria_label(label.clone())
-        .when_some(description.clone(), |d, description| d.aria_description(description))
-        .group(group.clone())
-        .flex()
-        .map(|d| if tall { d.items_start() } else { d.items_center() })
-        .gap_4()
-        .w_full()
-        .min_h(px(SETTING_ROW_MIN_H))
-        .py_1()
-        .rule_top(ui)
-        .relative()
-        // The hover fill reaches past the text on both sides, so the words don't touch its edges,
-        // while the text keeps the column of the group heads. Out of the layout, as a layer.
-        .when(!disabled, |d| {
-            d.child(
-                div()
-                    .absolute()
-                    .top_0()
-                    .bottom_0()
-                    .left(px(-ROW_FILL_PAD))
-                    .right(px(-ROW_FILL_PAD))
-                    .rounded(ui.radius)
-                    .group_hover(group.clone(), move |d| d.bg(ui.hover)),
-            )
-        })
-        .child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .flex()
-                .flex_col()
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap_2()
-                        .relative()
-                        .min_h(rems(NAME_LINE))
-                        // As tall as the control's first line, so the two share a middle.
-                        .when(tall, |d| d.min_h(px(CONTROL_H)))
-                        // In the margin left of the label, out of the layout: the label starts where it
-                        // does whether or not the row is changed, and the card's inset leaves the dot room.
-                        .when(changed, |d| {
-                            d.child(
-                                div()
-                                    .absolute()
-                                    .top_0()
-                                    .bottom_0()
-                                    .left(px(-(MARK_DOT + CHANGED_DOT_GAP)))
-                                    .flex()
-                                    .items_center()
-                                    .child(changed_dot(ui)),
-                            )
-                        })
-                        .child(
-                            div()
-                                .text_body()
-                                .font_weight(FontWeight::MEDIUM)
-                                .text_color(label_color)
-                                .child(marked(ui, label, found)),
-                        )
-                        .when_some(info, |d, description| {
-                            d.child(setting_info(id.clone(), ui, description, found_description.clone()))
-                        })
-                        .when_some(
-                            match &state {
-                                SettingState::Project(project) => Some(project.clone()),
-                                _ => None,
-                            },
-                            |d, project| d.child(tint_chip(ui, Some(IconName::Folder), project)),
-                        )
-                        .children(chip.map(|chip| tint_chip(ui, None, chip)))
-                        .children(key_label(&id, ui, view, keys, &group, code_font).filter(|_| !elsewhere)),
-                )
-                .children(description.filter(|_| visible_hint).map(|text| {
-                    div().text_caption().text_color(description_color).child(marked(
-                        ui,
-                        text,
-                        found_description,
-                    ))
-                })),
-        )
-        .child(
-            div()
-                .flex()
-                .flex_none()
-                .items_center()
-                .gap_2()
-                .when_some(reset, |d, reset| {
-                    d.child(
-                        div().invisible().group_hover(group.clone(), |s| s.visible()).child(
-                            icon_button(
-                                (id.clone(), "reset"),
-                                ui,
-                                IconName::RotateCcw,
-                                text(keys::SETTINGS_ROW_RESET),
-                            )
-                            .still()
-                            .on_click(move |_, window, cx| reset(window, cx)),
-                        ),
-                    )
-                })
-                .children(extra)
-                .child(if elsewhere { out_of_reach((id, "control"), control) } else { control }),
-        );
+    let project = match &state {
+        SettingState::Project(project) => Some(project.clone()),
+        _ => None,
+    };
+    let row = SettingsRowProps {
+        id: id.clone(),
+        name: label.clone(),
+        description: description.clone(),
+        label: marked(ui, label, found),
+        tall,
+        disabled,
+        changed,
+        project,
+        chip,
+        info: info.map(|description| {
+            setting_info(id.clone(), ui, description, found_description.clone()).into_any_element()
+        }),
+        key_text: key.as_ref().map(|key| key.shown.clone()),
+        key_name: SharedString::from(key.as_ref().map_or("", |key| key.key)),
+        copy_label: text(keys::SETTINGS_ROW_COPY_KEY).into(),
+        on_copy: key.as_ref().map(|key| key.copy.clone()),
+        dormant: key.as_ref().is_none_or(|key| key.dormant),
+        copied: key.as_ref().is_some_and(|key| key.copied),
+        hint: description.filter(|_| visible_hint),
+        on_reset: reset.map(|reset| -> Handler { Rc::new(move |_, window, cx| reset(window, cx)) }),
+        reset_label: text(keys::SETTINGS_ROW_RESET).into(),
+        extra,
+        control: if elsewhere { out_of_reach((id, "control"), control) } else { control },
+    }
+    .render(look)
+    // The design's row spans its card: the card's inset is the row's own padding (14), not added to it.
+    .mx(px(-CARD_PAD_X))
+    // The hairline between the rows of a card: out of the layout, so the row is the design's height.
+    .child(div().absolute().top_0().left_0().right_0().h(ui.border_width).bg(ui.line(ui.border)));
     // What a project sets or a layout lacks keeps its row as it was: no key, no menu.
     if elsewhere { row } else { with_menu(row, menu_id, keys, menu_reset) }
 }

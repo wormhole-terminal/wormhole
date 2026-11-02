@@ -11,6 +11,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Help → Session Hosts (while Persistent terminals is on) opens a window that shows every session host:
   its processes, version and protocol against the app's, whether it answers, which terminal holds it
   and how that connection is doing, with End, Forget and a copy of the details for a bug report.
+- The Settings sidebar and rows are drawn from the design's own markup, so their sizes match it: a 240 wide
+  sidebar with 24 high sub-rows, rows 40 high with a 13 px label, the changed dot before the label, and the
+  config key, reset arrow and (i) at the design's sizes.
 - Settings pages use the designed words and groups: Terminal's Shells and Worktrees folder are rows that open more
   (with no footer line about config.json), Appearance has a Details group, Terminals & sidebar is grouped as
   Layout, Groups, Shortcuts and Row details, and warnings stay under their rows while other hints sit behind the (i).

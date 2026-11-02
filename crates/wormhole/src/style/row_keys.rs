@@ -23,9 +23,8 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_text::{keys, text};
 
-use super::scale::TextRole as _;
 use crate::platform::{self, Item, Menu};
-use crate::settings::UiColors;
+use crate::ui::Handler;
 
 /// What a row's reset does, from a click on the arrow or the menu.
 pub type Reset = Rc<dyn Fn(&mut Window, &mut App)>;
@@ -106,17 +105,21 @@ thread_local! {
     pub(crate) static SHOWN_KEYS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
 }
 
-/// The row's key, after its label: faint, and shown under the pointer (`group`), while ⌥ is held or while
-/// it says Copied. A click copies the keys. `None` for a row without a key.
-#[track_caller]
-pub(super) fn key_label(
-    row: &ElementId,
-    ui: UiColors,
-    view: KeyView,
-    keys: RowKeys,
-    group: &SharedString,
-    code_font: SharedString,
-) -> Option<Stateful<Div>> {
+/// What a row's key shows, for the row to draw: the key is faint and shown under the pointer, while ⌥ is
+/// held and while it says Copied; a click copies the keys.
+pub(super) struct KeyFace {
+    /// The key, or Copied for a moment after a copy.
+    pub shown: SharedString,
+    /// The key itself, which VoiceOver reads as the button's description.
+    pub key: &'static str,
+    pub copied: bool,
+    /// Hidden until the pointer is over the row.
+    pub dormant: bool,
+    pub copy: Handler,
+}
+
+/// The key of a row, `None` for a row without one.
+pub(super) fn key_face(row: &ElementId, view: KeyView, keys: RowKeys) -> Option<KeyFace> {
     let key = *keys.keys.first()?;
     let always = view.option || view.copied.is_some();
     #[cfg(test)]
@@ -125,26 +128,13 @@ pub(super) fn key_label(
     }
     let copied = view.copied.is_some();
     let on_copy = row.clone();
-    Some(
-        div()
-            // Scoped by its row's id, so one name does for all (and none is made per row).
-            .id("key")
-            .role(Role::Button)
-            .aria_label(text(keys::SETTINGS_ROW_COPY_KEY))
-            .aria_description(key)
-            .text_caption()
-            .font_family(code_font)
-            .text_color(if copied { ui.success_text } else { ui.faint })
-            // Clear text, not `invisible` or no opacity: an element that is not painted has no hit box,
-            // and VoiceOver's press, which GPUI answers with a click at the node's middle, must reach
-            // the key while it is hidden.
-            .when(!always, |d| {
-                d.text_color(transparent_black()).group_hover(group.clone(), move |s| s.text_color(ui.faint))
-            })
-            .cursor_pointer()
-            .on_click(move |_, window, cx| copy(&on_copy, keys.text(), window, cx))
-            .child(SharedString::from(if copied { text(keys::SETTINGS_ROW_COPIED) } else { key })),
-    )
+    Some(KeyFace {
+        shown: SharedString::from(if copied { text(keys::SETTINGS_ROW_COPIED) } else { key }),
+        key,
+        copied,
+        dormant: !always,
+        copy: Rc::new(move |_, window, cx| copy(&on_copy, keys.text(), window, cx)),
+    })
 }
 
 /// Put `words` on the clipboard and have `row` say so: for a moment in its key's place, and to VoiceOver.

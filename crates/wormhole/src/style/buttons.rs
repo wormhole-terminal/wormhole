@@ -182,13 +182,6 @@ impl IconButton {
         self
     }
 
-    /// No motion, where its icon would have one: a button the click takes away, which would never
-    /// be seen moving (a setting's Reset, gone once the value is back to its default).
-    pub fn still(mut self) -> Self {
-        self.motion = None;
-        self
-    }
-
     /// A menu's chevron: a click runs `open`, which opens the menu and passes it through the
     /// mark's [`MenuMark::track`]; the chevron points up until the menu closes.
     pub fn menu_chevron(mut self, open: impl Fn(&MenuMark, &mut Window, &mut App) + 'static) -> Self {

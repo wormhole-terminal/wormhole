@@ -32,7 +32,7 @@
 //! | `radius_sm` | tiny elements | [`close_x`], color swatches |
 //! | `radius` | controls | buttons, [`icon_button`], [`icon_tab`], inputs, selects, banners, inset [`row`]s |
 //! | `radius_lg` | cards and floating surfaces | [`card`], menus, popovers, theme cards |
-//! | none | lists | [`flush_row`], [`session_row`], [`nav_row`], [`band`], flush banners |
+//! | none | lists | [`flush_row`], [`session_row`], [`band`], flush banners |
 //! | full | dots | agent status dots |
 //!
 //! `radius_chip` follows `radius_sm` unless the theme sets it. A new chip-like

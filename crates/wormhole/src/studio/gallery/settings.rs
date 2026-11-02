@@ -9,13 +9,14 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use style::{BannerKind, NavMark, RecorderState, RowKeys, SettingParts, SettingState};
+use style::{BannerKind, RecorderState, RowKeys, SettingParts, SettingState};
 
 use super::Env;
 use super::view::GalleryView;
 use crate::settings::UiColors;
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge;
+use crate::ui::{Look, NavEntry, SettingsNavProps};
 
 /// The letters of the sample row's tiles.
 const LETTERS: &str = "DWPCSRABX"; // text: sample (the gallery's specimen)
@@ -156,7 +157,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                state: SettingState,
                found: Vec<std::ops::Range<usize>>,
                control: AnyElement| {
-        style::setting(
+        style::setting_in(
             id,
             ui,
             SettingParts {
@@ -174,6 +175,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                 extra: None,
                 on_reset: Some(Rc::new(|_, _| {})),
             },
+            &Look { tokens: env.tokens, code_font: env.code_font.clone() },
             cx,
         )
     };
@@ -305,108 +307,88 @@ const SLIDER_TRACK: f32 = 4.0;
 const SLIDER_KNOB: f32 = 16.0;
 
 /// The settings nav: the profile card, rows (current, needs attention, search hits, none, preview) and
-/// the sub-rows of the open page, in runs set apart by a clear step.
+/// the sub-rows of the open page, in runs set apart by a clear step. The rows are the `SettingsNav`
+/// component, as the window draws them.
 fn nav(env: &Env) -> Div {
     let ui = env.ui;
     // Each page's tile is the theme's, as the window draws it.
-    let item = |icon, tile: &str, label: &'static str, selected, mark, opened| style::NavItem {
-        icon,
-        tile: env.tk(tile),
-        label: label.into(),
+    let page = |key: usize, icon, tile: &str, label: &'static str| NavEntry {
+        key,
+        is_item: true,
+        name: label.into(),
         spoken: label.into(),
-        selected,
-        mark,
-        opened,
+        icon: Some(icon),
+        tile: env.tk(tile),
+        ..NavEntry::default()
     };
-    div().flex().flex_col().w(px(NAV_W)).bg(ui.panel).outlined(ui, ui.border).py_2().child(
-        style::nav_list()
-            .child(style::nav_profile_row(
-                "g-nav-profile",
-                ui,
-                style::NavProfile {
-                    color: ui.primary,
-                    letter: 'D',
-                    name: "Default".into(),    // text: sample (the gallery's specimen)
-                    caption: "Profile".into(), // text: sample (the gallery's specimen)
-                    selected: false,
-                    hits: None,
-                },
-            ))
-            .child(style::nav_group_gap())
-            .child(style::nav_row(
-                "g-nav-fonts",
-                ui,
-                item(IconName::ALargeSmall, "settings.nav.tile.fonts", "Fonts", true, NavMark::None, true), // text: sample (the gallery's specimen)
-            ))
-            .child(
-                style::nav_sub_list()
-                    .child(style::nav_sub_row("g-nav-sub-terminal", ui, "Terminal", true)) // text: sample (the gallery's specimen)
-                    .child(style::nav_sub_row("g-nav-sub-code", ui, "Code", false)), // text: sample (the gallery's specimen)
-            )
-            .child(style::nav_row(
-                "g-nav-look",
-                ui,
-                item(
-                    IconName::Palette,
-                    "settings.nav.tile.appearance",
-                    "Appearance", // text: sample (the gallery's specimen)
-                    false,
-                    NavMark::None,
-                    false,
-                ), // text: sample (the gallery's specimen)
-            ))
-            .child(style::nav_group_gap())
-            .child(style::nav_row(
-                "g-nav-agents",
-                ui,
-                item(
-                    IconName::Sparkles,
-                    "settings.nav.tile.agents",
-                    "Coding agents", // text: sample (the gallery's specimen)
-                    false,
-                    NavMark::Attention,
-                    false,
-                ), // text: sample (the gallery's specimen)
-            ))
-            .child(style::nav_row(
-                "g-nav-hits",
-                ui,
-                item(
-                    IconName::SquareTerminal,
-                    "settings.nav.tile.terminal",
-                    "Terminal", // text: sample (the gallery's specimen)
-                    false,
-                    NavMark::Hits(1),
-                    false,
-                ), // text: sample (the gallery's specimen)
-            ))
-            .child(style::nav_row(
-                "g-nav-none",
-                ui,
-                item(
-                    IconName::Download,
-                    "settings.nav.tile.updates",
-                    "Updates", // text: sample (the gallery's specimen)
-                    false,
-                    NavMark::NoHits,
-                    false,
-                ), // text: sample (the gallery's specimen)
-            ))
-            .child(style::nav_group_gap())
-            .child(style::nav_group_label(ui, "Preview")) // text: sample (the gallery's specimen)
-            .child(style::nav_row(
-                "g-nav-preview",
-                ui,
-                item(
-                    IconName::Folder,
-                    "settings.nav.tile.projects",
-                    "Project folders", // text: sample (the gallery's specimen)
-                    false,
-                    NavMark::Preview,
-                    false,
-                ), // text: sample (the gallery's specimen)
-            )),
-    )
+    let group = |key: usize, label: &'static str, current: bool| NavEntry {
+        key,
+        is_sub: true,
+        name: label.into(),
+        spoken: label.into(),
+        current,
+        first: key == 0,
+        follows: key > 0,
+        ..NavEntry::default()
+    };
+    let rows = vec![
+        NavEntry {
+            selected: true,
+            opened: true,
+            ..page(0, IconName::ALargeSmall, "settings.nav.tile.fonts", "Fonts") // text: sample (the gallery's specimen)
+        },
+        group(0, "Terminal", true), // text: sample (the gallery's specimen)
+        group(1, "Code", false),    // text: sample (the gallery's specimen)
+        NavEntry { is_sub_end: true, ..NavEntry::default() },
+        NavEntry {
+            ..page(1, IconName::Palette, "settings.nav.tile.appearance", "Appearance") // text: sample (the gallery's specimen)
+        },
+        NavEntry { is_gap: true, ..NavEntry::default() },
+        NavEntry {
+            has_dot: true,
+            ..page(2, IconName::Sparkles, "settings.nav.tile.agents", "Coding agents") // text: sample (the gallery's specimen)
+        },
+        NavEntry {
+            follows: true,
+            count: Some("1".into()), // text: sample (the gallery's specimen)
+            ..page(3, IconName::SquareTerminal, "settings.nav.tile.terminal", "Terminal") // text: sample (the gallery's specimen)
+        },
+        NavEntry {
+            follows: true,
+            dim: true,
+            ..page(4, IconName::Download, "settings.nav.tile.updates", "Updates") // text: sample (the gallery's specimen)
+        },
+        NavEntry { is_gap: true, ..NavEntry::default() },
+        NavEntry { is_label: true, name: "Preview".into(), ..NavEntry::default() }, // text: sample (the gallery's specimen)
+        NavEntry {
+            has_dot: true,
+            preview: true,
+            ..page(5, IconName::Folder, "settings.nav.tile.projects", "Project folders") // text: sample (the gallery's specimen)
+        },
+    ];
+    let profile = style::nav_profile_row(
+        "g-nav-profile",
+        ui,
+        style::NavProfile {
+            color: ui.primary,
+            letter: 'D',
+            name: "Default".into(),    // text: sample (the gallery's specimen)
+            caption: "Profile".into(), // text: sample (the gallery's specimen)
+            selected: false,
+            hits: None,
+        },
+    );
+    div()
+        .flex()
+        .flex_col()
+        .w(px(NAV_W))
+        .bg(ui.panel)
+        .outlined(ui, ui.border)
+        .py_2()
+        .child(div().px_3().pb_4().child(profile))
+        .child(
+            SettingsNavProps { rows }.render(&Look { tokens: env.tokens, code_font: env.code_font.clone() }),
+        )
 }
 
 /// The settings controls that are ours rather than GPUI Kit's.

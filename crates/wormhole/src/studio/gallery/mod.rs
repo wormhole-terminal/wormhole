@@ -46,6 +46,8 @@ pub(super) use view::GalleryView;
 struct Env<'a> {
     ui: UiColors,
     tokens: &'a ThemeTokens,
+    /// The code font, for the components drawn in the draft theme.
+    code_font: SharedString,
     /// The ids (core `TOKEN_USES`) of what the selected token is drawn on.
     uses: Vec<&'static str>,
 }
