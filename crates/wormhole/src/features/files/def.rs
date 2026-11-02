@@ -37,7 +37,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         walk: Some(keys::WALK),
         actions: None,
         // Not the window's redraw every so often: the entity redraws it when a read finds a change.
-        refresh_ticks: None,
+        time_words: None,
         returns_to_previous: false,
     }],
     tick: Some(|entity, facts, _, cx| {

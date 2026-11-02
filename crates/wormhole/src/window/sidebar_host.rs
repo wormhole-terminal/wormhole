@@ -442,26 +442,34 @@ impl Workspace {
 
     // ---------------------------------------------------------------- the tick
 
-    /// The sidebar's part of the window's 400 ms tick: what moves on its own (a row's times), and
-    /// which repository a worktree belongs to, read from disk now and then.
-    pub(super) fn sidebar_tick(&mut self, window_active: bool, cx: &mut Context<Self>) {
+    /// The sidebar's part of the window's 400 ms tick: which repository a worktree belongs to, read
+    /// from disk now and then, and the backstop for a fact no notification said. (The rows' times are
+    /// the window clock's, `window/clock.rs`.)
+    pub(super) fn sidebar_tick(&mut self, cx: &mut Context<Self>) {
         if self.ticks % 5 == 1 {
             self.sidebar_feed.worktrees.borrow_mut().clear();
         }
-        // The backstop for a fact no notification said: told only if it differs.
+        // Told only if it differs.
         self.sync_sidebar(cx);
-        // Only what is on screen: the times on the rows (the tab bar draws them too).
-        let shown = self.panes.sidebar_open || self.sidebar_feed.tabs_on;
-        // The times on the rows ("Working · 3m", a command's clock) move on their own; the sidebar
-        // draws again when one would read differently, but not for a window nobody is looking at.
-        if window_active && shown {
-            let now = row_times(&self.row_infos(cx), &self.profile, cx);
-            self.sidebar.update(cx, |sidebar, cx| {
-                if sidebar.times_changed(now) {
-                    cx.notify();
-                }
-            });
+    }
+
+    /// Whether the rows' times are on screen (the tab bar draws them too).
+    pub(super) fn sidebar_times_shown(&self) -> bool {
+        self.panes.sidebar_open || self.sidebar_feed.tabs_on
+    }
+
+    /// The times on the rows ("Working · 3m", a command's clock) move on their own: the sidebar draws
+    /// again when one reads differently than when it was drawn.
+    pub(super) fn sidebar_times(&mut self, cx: &mut Context<Self>) {
+        if !self.sidebar_times_shown() {
+            return;
         }
+        let now = row_times(&self.row_infos(cx), &self.profile, cx);
+        self.sidebar.update(cx, |sidebar, cx| {
+            if sidebar.times_changed(now) {
+                cx.notify();
+            }
+        });
     }
 
     // ---------------------------------------------------------------- what the list asks

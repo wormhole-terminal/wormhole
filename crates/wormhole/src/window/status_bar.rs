@@ -42,6 +42,18 @@ pub(super) struct Counted {
     face: TileFace,
 }
 
+impl Counted {
+    /// Whether the terminal counts for nothing the bar times.
+    pub(super) fn is_quiet(&self) -> bool {
+        self.activity == Activity::Quiet
+    }
+
+    /// Since when it has been in its status.
+    pub(super) fn since(&self) -> Instant {
+        self.since
+    }
+}
+
 /// What the bar shows, worked out once per frame and compared on the tick, so a change in
 /// another window (or a minute more of waiting) redraws this one.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -192,7 +204,7 @@ impl Workspace {
     }
 
     /// Every window's terminals, in window order: this one's now, the others' as the tick last read them.
-    fn status_counted(&self, cx: &App) -> Vec<Counted> {
+    pub(super) fn status_counted(&self, cx: &App) -> Vec<Counted> {
         let mut counted = Vec::new();
         let mut seen_self = false;
         for window in app(cx).windows.iter().filter(|w| !w.hidden) {
@@ -286,13 +298,19 @@ impl Workspace {
     }
 
     /// On the tick: read the other windows, and redraw when what the bar would show has changed
-    /// since it was drawn (a terminal in another window, or the working time).
+    /// since it was drawn. This part stays on the tick because nothing tells this window what another
+    /// window's terminals do; the working time that moves on its own is the clock's.
     pub(super) fn refresh_status_bar(&mut self, cx: &mut Context<Self>) {
         if settings_in(&self.profile, cx).status_bar {
             self.read_other_windows(cx);
         } else {
             self.status_others.clear();
         }
+        self.redraw_status_bar_if_stale(cx);
+    }
+
+    /// Redraw when what the bar would show differs from what it drew.
+    pub(super) fn redraw_status_bar_if_stale(&mut self, cx: &mut Context<Self>) {
         if self.status_bar(cx) != self.regions.drawn.status_bar {
             cx.notify();
         }

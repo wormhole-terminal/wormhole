@@ -72,8 +72,7 @@ impl Workspace {
         // What the window shows of each terminal, taken again where the terminal didn't say so itself
         // (this tick changed some above): then it is drawn.
         self.sync_summaries(cx);
-        // A tab whose words change with time (Usage's "resets 34m") is redrawn on its own period.
-        if changed || self.tab_refresh_due() {
+        if changed {
             cx.notify();
         }
         self.sync_close_dot(window, cx);
@@ -92,8 +91,8 @@ impl Workspace {
         self.tick_features(window, cx);
         self.tick_extras(cx);
         self.refresh_status_bar(cx);
-        self.crumb_tick(cx);
-        self.sidebar_tick(window_active, cx);
+        self.sidebar_tick(cx);
+        self.sync_clock(window_active, cx);
         if self.dirty && !self.discarded {
             self.save(cx);
         }

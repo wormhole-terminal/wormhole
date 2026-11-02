@@ -69,12 +69,12 @@ fn output_that_changes_no_fact_does_not_wake_the_window_and_a_change_does_at_onc
     assert_ne!(state(cx), busy, "and its row says so");
 }
 
-/// The times on the rows move on by themselves: the tick draws the sidebar when one would read
+/// The times on the rows move on by themselves: the window's clock draws the sidebar when one would read
 /// differently, and draws nothing while none does. (The window around it is not drawn for that, nor for a
 /// hover or a rename in the list: only for a change of what it reads of the list, `regions_tests`.)
 #[gpui_kit::test]
-fn a_time_that_reads_differently_draws_the_sidebar_on_the_tick(cx: &mut TestAppContext) {
-    if isolate_in(module_path!(), "a_time_that_reads_differently_draws_the_sidebar_on_the_tick") {
+fn a_time_that_reads_differently_draws_the_sidebar_when_the_clock_says_so(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "a_time_that_reads_differently_draws_the_sidebar_when_the_clock_says_so") {
         return;
     }
     let window = start(cx, 2);
@@ -106,14 +106,17 @@ fn a_time_that_reads_differently_draws_the_sidebar_on_the_tick(cx: &mut TestAppC
         });
     };
     assert_eq!(times(cx), None, "not yet a minute");
+    // The tick plans the clock's timer for the moment the minute is reached.
+    tick(cx);
     let (wakes, sidebar_wakes) = count_wakes(cx, &window);
     tick(cx);
     assert_eq!((wakes.get(), sidebar_wakes.get()), (0, 0), "a tick with nothing new tells nobody");
 
     std::thread::sleep(Duration::from_millis(150));
     assert_eq!(times(cx), Some("1m".to_string()), "a minute now");
-    tick(cx);
-    assert!(sidebar_wakes.get() >= 1, "the sidebar is told the time reads differently");
+    cx.executor().advance_clock(Duration::from_millis(200));
+    cx.run_until_parked();
+    assert!(sidebar_wakes.get() >= 1, "the sidebar is told the time reads differently, by the timer");
     draw(cx, &window);
     let after = sidebar_wakes.get();
     tick(cx);

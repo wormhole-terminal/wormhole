@@ -120,7 +120,7 @@ static STAND_IN: &[FeatureDef] = &[
                 marker(entity).update(cx, |marker, _| marker.count += 10);
                 on.then(|| gpui_kit::div().into_any_element())
             }),
-            refresh_ticks: None,
+            time_words: None,
             returns_to_previous: false,
         }],
         bind: Some(|_, _, root, _| root),
@@ -753,7 +753,7 @@ macro_rules! crowd_member {
                 },
                 walk: None,
                 actions: None,
-                refresh_ticks: None,
+                time_words: None,
                 returns_to_previous: false,
             }],
             bind: Some(|_, _, root, _| root),

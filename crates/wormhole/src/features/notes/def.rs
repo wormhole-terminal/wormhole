@@ -35,7 +35,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         view: view::tab,
         walk: Some(list::WALK),
         actions: Some(view::stash_button),
-        refresh_ticks: None,
+        time_words: None,
         returns_to_previous: false,
     }],
     bind: Some(bind),

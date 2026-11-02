@@ -44,7 +44,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         view: panel::tab,
         walk: None,
         actions: None,
-        refresh_ticks: None,
+        time_words: None,
         returns_to_previous: false,
     }],
     bind: Some(bind),

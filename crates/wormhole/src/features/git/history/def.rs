@@ -18,10 +18,6 @@ pub(super) fn typed(entity: &AnyEntity) -> Entity<History> {
     entity.clone().downcast::<History>().expect("the history entity is made by this entry's `make`")
 }
 
-/// The commits' ages ("2h ago") are read from the clock when the tab draws and nothing else redraws it:
-/// the tab redraws this often while it shows, in ticks of the window (400 ms each).
-const AGE_TICKS: u64 = 25;
-
 /// The History entry: the tab, its panel and keys, the log's polling and the terminals' state.
 pub(crate) const DEF: FeatureDef = FeatureDef {
     id: FeatureId::History,
@@ -40,7 +36,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         view: view::tab,
         walk: Some(keys::WALK),
         actions: None,
-        refresh_ticks: Some(AGE_TICKS),
+        time_words: Some(|_| Some(crate::window::clock::until_next_wall_minute())),
         returns_to_previous: false,
     }],
     // The log is read again while the tab shows.

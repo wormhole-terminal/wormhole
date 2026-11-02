@@ -75,6 +75,7 @@ mod failed_tests;
 pub(crate) mod feature;
 mod feature_host;
 pub(crate) use self::feature_host::{redraw_windows_of, refresh_all_features};
+pub(crate) mod clock;
 #[cfg(all(test, feature = "devctl"))]
 mod devctl_tests;
 mod feature_terminals;
@@ -346,6 +347,8 @@ impl Workspace {
             }
         });
         cx.observe_window_activation(window, |this, window, cx| {
+            // Rows draw no clocks for a window nobody looks at, and do again once it is in front.
+            this.sync_clock(window.is_window_active(), cx);
             if window.is_window_active() {
                 this.became_front(cx);
                 // macOS isn't relied on to say when Reduce Motion changes.

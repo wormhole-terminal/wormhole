@@ -15,6 +15,7 @@ use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::view::layout::title_parts::TitlePart;
 use wormhole_core::view::layout::title_row::{Chip, Face, PathShown, RowWants, fit_row, path_steps};
+use wormhole_core::view::sidebar::wording::until_next;
 
 use crate::settings::{SettingsStore, UiColors, settings_in, ui_in};
 use crate::style::{self, TextRole};
@@ -371,7 +372,7 @@ impl Workspace {
 
     /// Whether the row says how the terminal is doing: it shows the part, and the status bar, which
     /// has the state at its end, isn't shown (the row doesn't repeat it).
-    fn crumb_words_shown(&self, cx: &App) -> bool {
+    pub(in crate::window) fn crumb_words_shown(&self, cx: &App) -> bool {
         let settings = settings_in(&self.profile, cx);
         !settings.status_bar && settings.title_shows(TitlePart::TerminalStatus)
     }
@@ -432,7 +433,7 @@ impl<'a> Measure<'a> {
 }
 
 impl Workspace {
-    /// On the tick: the breadcrumb's "working · 4m" moves on by itself once a minute, with nothing
+    /// On the clock: the breadcrumb's "working · 4m" moves on by itself once a minute, with nothing
     /// else to redraw the window (an agent thinking quietly); redraw when it would read
     /// differently.
     pub(in crate::window) fn crumb_tick(&mut self, cx: &mut Context<Self>) {
@@ -469,6 +470,16 @@ pub(in crate::window) fn crumb_words(summary: &TerminalSummary) -> Option<String
         Status::Exited => Some("exited".to_string()),
         Status::Idle => None,
     }
+}
+
+/// How long until [`crumb_words`] reads differently: the next whole minute of the status it counts.
+pub(in crate::window) fn crumb_next_change(summary: &TerminalSummary) -> Option<std::time::Duration> {
+    let counts = match summary.status {
+        Status::Busy | Status::Done => true,
+        Status::Failed => summary.failure.is_none(),
+        Status::Attention | Status::Exited | Status::Idle => false,
+    };
+    counts.then(|| until_next(summary.status_since.elapsed(), std::time::Duration::from_secs(60)))
 }
 
 /// What [`crumb_words`] is made of: the status, since when, and a failure's exit code. The words move with

@@ -33,6 +33,12 @@ impl Workspace {
             self.dirty = true;
         }
         let old = std::mem::replace(&mut self.sessions[ix].pane.summary, fresh);
+        let timed = (old.status, old.status_since, old.failure.is_some())
+            != (
+                self.sessions[ix].pane.summary.status,
+                self.sessions[ix].pane.summary.status_since,
+                self.sessions[ix].pane.summary.failure.is_some(),
+            );
         self.publish_summary_change(ix, &old, cx);
         if moved {
             // A group that keeps only its folder's terminals lets this one go if it left the folder.
@@ -44,6 +50,10 @@ impl Workspace {
             }
         }
         cx.notify();
+        // A status that starts or ends a counted time starts or ends the timer's reason.
+        if timed {
+            self.replan_clock(cx);
+        }
         true
     }
 

@@ -140,6 +140,8 @@ pub(super) struct Drawn {
     pub(super) panel_switch: PanelSwitch,
     /// Where the panel's tabs were laid out, which its selection's shape is painted from.
     pub(super) panel_slots: crate::style::TabSlots,
+    /// The timer that redraws the above when a word reads differently (`window/clock.rs`).
+    pub(super) clock: crate::window::clock::Clock,
 }
 
 impl Regions {

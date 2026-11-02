@@ -113,7 +113,10 @@ fn a_hidden_sidebar_never_redraws_the_window_for_its_times(cx: &mut TestAppConte
         cx.observe(&workspace, move |_, _| redraws.set(redraws.get() + 1))
     });
     for _ in 0..3 {
-        drive(cx, &window, |ws, _, cx| ws.sidebar_tick(true, cx));
+        drive(cx, &window, |ws, _, cx| {
+            ws.sidebar_tick(cx);
+            ws.sidebar_times(cx)
+        });
     }
     assert_eq!(redraws.get(), 0, "nothing on screen shows those times");
 }

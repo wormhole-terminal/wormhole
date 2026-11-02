@@ -159,6 +159,12 @@ impl RowInfo {
     }
 }
 
+/// How long until any row's times read differently (see [`row_times`]), `None` if none moves.
+pub(crate) fn next_row_change(infos: &[RowInfo], profile: &ProfileId, cx: &App) -> Option<Duration> {
+    let compact = !settings_in(profile, cx).density.two_lines();
+    infos.iter().filter_map(|info| row::next_time_change(info, compact)).min()
+}
+
 /// What each row's times read now (compact rows, without a second line, show none).
 pub(crate) fn row_times(infos: &[RowInfo], profile: &ProfileId, cx: &App) -> Vec<Option<String>> {
     let compact = !settings_in(profile, cx).density.two_lines();

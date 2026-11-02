@@ -50,8 +50,8 @@ mod tab_bar;
 pub(crate) mod tear_off;
 pub(crate) mod terminal_drag;
 
-pub(crate) use facts::row_times;
 pub(crate) use facts::{RowExtra, RowExtras, RowFailure, RowInfo};
+pub(crate) use facts::{next_row_change, row_times};
 pub(crate) use input::{NewTerminal, SidebarEvent, SidebarInput};
 pub(crate) use keys::SidebarStop;
 use motion::{ItemKey, ListMotion, slot_id};

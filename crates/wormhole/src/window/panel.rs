@@ -87,13 +87,14 @@ impl Workspace {
         self.right_tab = tab;
     }
 
-    /// Whether the tab on show wants the window redrawn on this tick (its words change with time).
-    pub(in crate::window) fn tab_refresh_due(&self) -> bool {
-        self.notes_visible()
-            && self
-                .tab_entry(self.right_tab)
-                .and_then(|(_, entry)| entry.refresh_ticks)
-                .is_some_and(|every| self.ticks.is_multiple_of(every))
+    /// How long until a word on the tab on show reads differently (its words change with time and no
+    /// event), if it has such words and is shown.
+    pub(crate) fn tab_next_word_change(&self, cx: &App) -> Option<std::time::Duration> {
+        if !self.notes_visible() {
+            return None;
+        }
+        let (_, entry) = self.tab_entry(self.right_tab)?;
+        entry.time_words?(cx)
     }
 
     /// The title row's branch chip was clicked: the feature that contributes it shows its tab and opens

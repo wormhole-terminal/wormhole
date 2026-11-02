@@ -22,6 +22,7 @@
 #![cfg_attr(not(test), expect(dead_code, reason = "the contract is built before every feature uses it"))]
 
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::*;
@@ -446,9 +447,10 @@ pub(crate) struct TabDef {
     pub walk: Option<WalkFns>,
     /// Buttons beside the tabs while it is on show (Notes' stash).
     pub actions: Option<TabActionsFn>,
-    /// Redraw the window every this many ticks (400 ms each) while the tab is on show, for a tab whose
-    /// words change with time and no event (Usage's "resets 34m").
-    pub refresh_ticks: Option<u64>,
+    /// For a tab whose words change with time and no event (Usage's "resets 34m"): how long until a
+    /// word on it reads differently, `None` while none moves. The window redraws then, while the tab is
+    /// on show (`window/clock.rs`).
+    pub time_words: Option<fn(&App) -> Option<Duration>>,
     /// The tab is offered only while something holds (Usage: an agent is on screen). The window
     /// remembers the tab it came from when this one is opened, and goes back there when it is gone.
     pub returns_to_previous: bool,

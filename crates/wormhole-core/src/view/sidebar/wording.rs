@@ -54,6 +54,12 @@ pub fn ago(elapsed: Duration) -> String {
     took(elapsed).map_or_else(|| "just now".to_string(), |took| format!("{took} ago"))
 }
 
+/// How long until `elapsed` next crosses a whole `unit` (a minute, a second): when a word made of whole
+/// units of it ("3m", "0:05") next reads differently.
+pub fn until_next(elapsed: Duration, unit: Duration) -> Duration {
+    unit - Duration::from_nanos((elapsed.as_nanos() % unit.as_nanos()) as u64)
+}
+
 /// A running command's time on the clock: "0:05", "1:12", "1:02:03".
 pub fn clock(elapsed: Duration) -> String {
     let secs = elapsed.as_secs();

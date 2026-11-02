@@ -118,48 +118,34 @@ fn the_latest_report_of_an_agent_wins_and_is_remembered(cx: &mut TestAppContext)
     assert_eq!(remembered(cx), kept, "kept across restarts");
 }
 
+/// The Usage tab's "resets 34m" and "Updated 2m ago" are read from the clock when it draws: the window
+/// plans a redraw for the moment one reads differently while the tab shows, and for no other tab.
 #[gpui_kit::test]
-fn the_tab_redraws_on_the_tick_only_while_it_shows(cx: &mut TestAppContext) {
-    if isolate("the_tab_redraws_on_the_tick_only_while_it_shows") {
+fn the_window_plans_a_redraw_for_the_moment_a_word_on_the_tab_changes(cx: &mut TestAppContext) {
+    if isolate("the_window_plans_a_redraw_for_the_moment_a_word_on_the_tab_changes") {
         return;
     }
     let window = on_usage(cx);
-    let redraws = Rc::new(Cell::new(0u32));
-    let counted = redraws.clone();
-    cx.update(|cx| {
-        let workspace = window.workspace.upgrade().expect("the window is open");
-        cx.observe(&workspace, move |_, _| counted.set(counted.get() + 1)).detach();
-    });
-    // The redraws of the window's tick number `at`. What else a tick notifies for is the same whatever
-    // the tab, so a difference between the tabs is the Usage tab's own.
-    let tick_at = |cx: &mut TestAppContext, tab: TabId, at: u64| {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| since.as_secs() as i64);
+    report(cx, claude(25.0, now));
+    let planned = |cx: &mut TestAppContext, tab: TabId| {
         drive(cx, &window, |ws, _, cx| {
-            // The tick looks for the agent in the terminal's process tree, where `cat` runs and none
-            // does, so it is told again before each.
             ws.sessions()[0].terminal().update(cx, |t, cx| {
                 t.agent = Some(AgentId::Claude);
                 cx.notify();
             });
             ws.sync_summaries(cx);
             ws.show_tab(tab, cx);
-        });
-        redraws.set(0);
-        drive(cx, &window, |ws, window, cx| {
-            ws.set_ticks(at - 1);
-            ws.tick(window, cx);
-        });
-        redraws.get()
+            ws.tab_next_word_change(cx)
+        })
     };
-    let period = 25;
-    let ticks = |cx: &mut TestAppContext, tab| {
-        [tick_at(cx, tab, period), tick_at(cx, tab, period + 1), tick_at(cx, tab, 2 * period)]
-    };
-    let on = ticks(cx, TabId::Usage);
-    assert!(on[0] > 0 && on[2] > 0, "every {period} ticks while it shows");
-
-    let off = ticks(cx, TabId::Changes);
-    assert!(on[1] == off[1], "between those ticks, the same as another tab");
-    assert!(on[0] > off[0] && on[2] > off[2], "another tab: the tick leaves the window alone");
+    let wait = planned(cx, TabId::Usage).expect("the tab has words that move");
+    // The report is fresh and its window resets far ahead: the next change is the countdown's minute
+    // or the report's age, within a minute.
+    assert!(wait <= std::time::Duration::from_secs(60), "{wait:?}");
+    assert_eq!(planned(cx, TabId::Changes), None, "another tab has none");
 }
 
 #[gpui_kit::test]

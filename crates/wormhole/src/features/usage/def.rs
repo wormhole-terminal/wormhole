@@ -2,8 +2,11 @@
 //! on screen, redrawn every so often while it shows, and its key and menu line hidden when it is not
 //! offered. The entity is the app's reports (`state`); it holds no per-terminal state, so the
 //! terminal hooks of its `StateDef` have nothing to do.
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
 use gpui_kit::InteractiveElement as _;
 use gpui_kit::assets::IconName;
+use wormhole_core::agents::usage;
 use wormhole_core::config::{FeatureId, TabId};
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::view::spoken::{self, PanelTab};
@@ -14,9 +17,11 @@ use crate::actions::ShowUsage;
 use crate::window::Workspace;
 use crate::window::feature::{FeatureDef, ProfileHooks, StateDef, TabDef, show_tab};
 
-/// "resets 34m" and "Updated 2m ago" move on: the tab redraws this often while it shows, in ticks of
-/// the window (400 ms each).
-const REDRAW_TICKS: u64 = 25;
+/// "resets 34m" and "Updated 2m ago" move on: the window redraws the tab at the moment one reads
+/// differently while it shows (`wormhole_core::agents::usage::next_change`).
+fn now_since_epoch() -> Duration {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default()
+}
 
 pub(crate) const DEF: FeatureDef = FeatureDef {
     id: FeatureId::Usage,
@@ -34,7 +39,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         view: view::tab,
         walk: None,
         actions: None,
-        refresh_ticks: Some(REDRAW_TICKS),
+        time_words: Some(|cx| usage::next_change(state::reports(cx), now_since_epoch())),
         returns_to_previous: true,
     }],
     // The key is the window's (it binds each offered tab's action); its menu line goes with the tab.

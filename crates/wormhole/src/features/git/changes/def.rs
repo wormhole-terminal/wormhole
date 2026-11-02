@@ -49,7 +49,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         view: view::tab,
         walk: Some(list::WALK),
         actions: None,
-        refresh_ticks: None,
+        time_words: None,
         returns_to_previous: false,
     }],
     tick: Some(|entity, facts, _, cx| {

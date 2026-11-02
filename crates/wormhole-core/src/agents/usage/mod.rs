@@ -279,6 +279,35 @@ pub fn updated(updated: i64, now: i64) -> String {
     }
 }
 
+/// How long until a word the reports show reads differently, from `now` (since the Unix epoch): the
+/// "resets 34m" of each limit and the "Updated 3m ago" of each report. `None` when none moves (no
+/// reports, or every limit has reset and says "Awaiting update"). Words under a minute count seconds;
+/// above, whole minutes, so this is the next second or the next minute boundary of each.
+pub fn next_change(reports: &[Usage], now: std::time::Duration) -> Option<std::time::Duration> {
+    use std::time::Duration;
+    let whole = now.as_secs() as i64;
+    // What is left of the current second: the words are made from whole seconds.
+    let rest = Duration::from_secs(1) - Duration::from_nanos(u64::from(now.subsec_nanos()));
+    let mut soonest: Option<Duration> = None;
+    let mut soon = |secs: i64| {
+        let wait = Duration::from_secs(secs.max(0) as u64) + rest;
+        soonest = Some(soonest.map_or(wait, |s| s.min(wait)));
+    };
+    for report in reports {
+        // "Updated just now" turns to "Updated 1m ago" at a minute, then at each.
+        let age = (whole - report.updated).max(0);
+        soon(59 - age % 60);
+        for limit in report.plan_limits() {
+            let Some(left) = limit.resets_at.map(|reset| reset - whole).filter(|left| *left > 0) else {
+                continue;
+            };
+            // Counting down: seconds in the last minute, else the next whole minute lost.
+            soon(if left < 60 { 0 } else { left % 60 });
+        }
+    }
+    soonest
+}
+
 /// The store's key for the reports, kept so the tab isn't empty after a restart.
 pub const STORE_KEY: &str = "usage";
 
@@ -295,7 +324,10 @@ pub fn from_json(json: &str) -> Vec<Usage> {
 mod tests {
     use serde_json::json;
 
-    use super::{AgentId, Gauge, Level, Limit, Usage, Window, duration, from_json, record, to_json, updated};
+    use super::{
+        AgentId, Gauge, Level, Limit, Usage, Window, duration, from_json, next_change, record, to_json,
+        updated,
+    };
 
     const NOW: i64 = 1_800_000_000;
 
@@ -307,6 +339,25 @@ mod tests {
                 "seven_day": { "used_percentage": 0, "resets_at": NOW + 6 * 86_400 + 100 }
             }
         })
+    }
+
+    #[test]
+    fn the_next_change_is_the_next_second_or_minute_a_word_reads_differently() {
+        use std::time::Duration;
+        let mut usage = Usage::from_claude_status(&status(), NOW).expect("limits");
+        usage.updated = NOW - 20;
+        let at = |secs: i64, millis: u64| Duration::from_secs(secs as u64) + Duration::from_millis(millis);
+        let all = [usage];
+        // 34m left, reported 20 s ago: the countdown reads 33m in 1 s; the report's age, in 40 s.
+        assert_eq!(next_change(&all, at(NOW, 0)), Some(Duration::from_secs(1)));
+        assert_eq!(next_change(&all, at(NOW, 250)), Some(Duration::from_millis(750)));
+        // 34m 20 s left: the minutes change once 21 whole seconds have passed.
+        let early = at(NOW - 20, 0);
+        let mut one = all[0].clone();
+        one.updated = NOW - 20;
+        one.seven_day = None;
+        assert_eq!(next_change(&[one], early), Some(Duration::from_secs(21)));
+        assert_eq!(next_change(&[], at(NOW, 0)), None);
     }
 
     #[test]

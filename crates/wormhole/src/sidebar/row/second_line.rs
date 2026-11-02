@@ -3,9 +3,11 @@
 
 use super::Frame;
 use crate::style::home_dir;
+use std::time::Duration;
 use wormhole_core::view::sidebar::RowState;
 use wormhole_core::view::sidebar::wording::place_detail;
-use wormhole_core::view::sidebar::wording::{agent_detail, ago, clock, took};
+
+use wormhole_core::view::sidebar::wording::{agent_detail, ago, clock, took, until_next};
 
 use super::super::facts::RowInfo;
 use crate::style::RowTone;
@@ -83,6 +85,26 @@ pub(in crate::sidebar) fn time_text(info: &RowInfo, compact: bool) -> Option<Str
         (true, RowState::Working) if info.message.is_none() => took(info.since()),
         (true, RowState::Finished | RowState::Failed) if info.message.is_none() => Some(ago(info.since())),
         (false, _) => info.running().map(clock).or_else(|| info.failure.as_ref().map(|f| ago(f.since()))),
+        _ => None,
+    }
+}
+
+/// How long until [`time_text`]'s words read differently: the next minute of the status or failure
+/// they count, or the next second of a command's clock. Mirrors `time_text`'s cases, and answers also
+/// for the first minute, when the words are not there yet.
+pub(in crate::sidebar) fn next_time_change(info: &RowInfo, compact: bool) -> Option<Duration> {
+    if compact {
+        return None;
+    }
+    let minute = Duration::from_secs(60);
+    match (info.told(), info.state) {
+        (true, RowState::Working | RowState::Finished | RowState::Failed) if info.message.is_none() => {
+            Some(until_next(info.since(), minute))
+        }
+        (false, _) => match info.running() {
+            Some(running) => Some(until_next(running, Duration::from_secs(1))),
+            None => info.failure.as_ref().map(|f| until_next(f.since(), minute)),
+        },
         _ => None,
     }
 }
