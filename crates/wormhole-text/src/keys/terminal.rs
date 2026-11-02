@@ -32,6 +32,8 @@ pub const TERMINAL_MENU_SPLIT_DOWN: Key = Key::new(1550);
 pub const TERMINAL_MENU_CLEAR: Key = Key::new(1551);
 /// "A program"
 pub const TERMINAL_PROGRAM_UNNAMED: Key = Key::new(1552);
+/// "Paused"
+pub const TERMINAL_PROGRESS_PAUSED: Key = Key::new(1555);
 
 /// ```text
 /// { $columns } × { $rows }

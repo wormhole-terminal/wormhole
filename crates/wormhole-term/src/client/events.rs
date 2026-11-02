@@ -12,8 +12,9 @@ use wormhole_wire::{self as wire, EventKind, MarkKind};
 use super::link::{Cmd, Link};
 use crate::events::{EventProxy, PtyEvent, Reply, TextFormatter};
 use crate::hosted::window_op_from_wire;
-use crate::osc::{Mark, Notification, Osc, Progress, ProgressState, PromptKind};
+use crate::osc::{Mark, Notification, Osc, PromptKind};
 use crate::program_status::{self, Parsed};
+use crate::program_status::{Progress, ProgressState};
 
 /// What an event was, for the connection's thread.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

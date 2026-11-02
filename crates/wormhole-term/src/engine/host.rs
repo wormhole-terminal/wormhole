@@ -16,8 +16,9 @@ use wormhole_vt::window::{Extent, WindowOp};
 
 use super::images::Uploads;
 use crate::events::{EventProxy, PtyEvent, TextFormatter};
-use crate::osc::{KittyChunks, Mark, Osc, Progress, ProgressState, PromptKind, cwd, notification};
+use crate::osc::{KittyChunks, Mark, Osc, PromptKind, cwd, notification};
 use crate::program_status::{self, Parsed};
+use crate::program_status::{Progress, ProgressState};
 use crate::screen::Screen;
 
 /// The host side of the engine's events on the PTY thread: the proxy they go to, the count of

@@ -56,3 +56,7 @@ terminal-clipboard-ask = { $program } wants to read the clipboard
 # says when the text was kept, or, for saved text, when it was drawn back. The parts are numbers, in the system's
 # time zone. A language writes them in its own order and with its own separators (German: { $day }.{ $month }.{ $year }).
 terminal-restored-at = restored { $year }-{ $month }-{ $day } { $hour }:{ $minute }
+
+# The sidebar row's words for a terminal whose program holds its progress (OSC 9;4 state 4); the
+# percentage follows it ("Paused · 40%").
+terminal-progress-paused = Paused

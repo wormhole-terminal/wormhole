@@ -12,7 +12,7 @@ use std::path::PathBuf;
 
 use base64::Engine;
 
-use crate::program_status;
+use crate::program_status::{self, Progress};
 
 /// One sequence the terminal acts on.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -70,22 +70,6 @@ pub struct Notification {
     /// Empty when the program gave only a body (OSC 9).
     pub title: String,
     pub body: String,
-}
-
-/// A program's progress (OSC 9;4, ConEmu / Windows Terminal / Ghostty).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Progress {
-    pub state: ProgressState,
-    /// 0–100; 0 when the state has no percentage (indeterminate).
-    pub percent: u8,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ProgressState {
-    Normal,
-    Error,
-    Indeterminate,
-    Paused,
 }
 
 /// Most a notification's title and body may be, in characters (a banner shows about that much).
