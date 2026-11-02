@@ -109,6 +109,14 @@ impl Pty {
         }
     }
 
+    /// The connection's counters and state, for a hosted terminal (the Session Hosts window).
+    pub fn link_stats(&self) -> Option<super::LinkStats> {
+        match &self.io {
+            Backend::Hosted(host) => Some(host.stats()),
+            Backend::Local(_) => None,
+        }
+    }
+
     /// Let go of the session host and leave the program running in it, for the next
     /// [`attach_hosted`](Self::attach_hosted) (the app does this for every hosted terminal when it
     /// quits). Dropping the terminal afterwards does not end it. Whether there was a host to let go

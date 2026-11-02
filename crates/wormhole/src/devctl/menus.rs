@@ -18,6 +18,12 @@ pub(super) fn about(ctx: &mut Ctx, cmd: &str, arg: &str) -> Result<String> {
     Ok(crate::about::devctl_command(cmd, arg, ctx.dir, ctx.cx)?.unwrap_or_default())
 }
 
+/// `hosts-window`, `hosts-shot [name]`, `hosts-text`: the Session Hosts window.
+pub(super) fn hosts_window(ctx: &mut Ctx, cmd: &str, arg: &str) -> Result<String> {
+    let arg = if cmd == "hosts-shot" { super::file_name(arg, "")? } else { arg };
+    Ok(crate::hosts_window::devctl_command(cmd, arg, ctx.dir, ctx.cx)?.unwrap_or_default())
+}
+
 /// `action <name>`: dispatch a registered action by name (`workspace::ToggleSidebar`) through this
 /// window, as a click on its menu item does.
 pub(super) fn action(ctx: &mut Ctx, arg: &str) -> Result<String> {

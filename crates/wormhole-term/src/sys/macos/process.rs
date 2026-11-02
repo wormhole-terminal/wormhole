@@ -55,6 +55,25 @@ fn bsd_info(pid: u32) -> Option<libc::proc_bsdinfo> {
     (written == size).then_some(info)
 }
 
+/// The bytes of memory the process has resident (`pti_resident_size`).
+#[allow(unsafe_code)] // libproc FFI; the buffer size is checked.
+pub(crate) fn resident_bytes(pid: u32) -> Option<u64> {
+    // SAFETY: `proc_taskinfo` is plain old data; all-zero is a valid value.
+    let mut info: libc::proc_taskinfo = unsafe { std::mem::zeroed() };
+    let size = size_of::<libc::proc_taskinfo>() as i32;
+    // SAFETY: `info` is a correctly sized, writable buffer for this flavor.
+    let written = unsafe {
+        libc::proc_pidinfo(
+            pid as i32,
+            libc::PROC_PIDTASKINFO,
+            0,
+            (&mut info as *mut libc::proc_taskinfo).cast(),
+            size,
+        )
+    };
+    (written == size).then_some(info.pti_resident_size)
+}
+
 /// The process group that owns the terminal of the process `shell_pid` right now.
 pub(crate) fn foreground_group(shell_pid: u32) -> Option<u32> {
     bsd_info(shell_pid).map(|info| info.e_tpgid).filter(|&pgid| pgid > 0)

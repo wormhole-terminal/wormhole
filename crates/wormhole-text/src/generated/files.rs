@@ -21,6 +21,7 @@ pub(crate) const LOCALES: [Locale; 1] = [
             ("files.ftl", include_str!("../../locales/en/files.ftl")),
             ("folder-picker.ftl", include_str!("../../locales/en/folder-picker.ftl")),
             ("history.ftl", include_str!("../../locales/en/history.ftl")),
+            ("hosts-window.ftl", include_str!("../../locales/en/hosts-window.ftl")),
             ("notices.ftl", include_str!("../../locales/en/notices.ftl")),
             ("settings-advanced.ftl", include_str!("../../locales/en/settings-advanced.ftl")),
             ("settings-agents.ftl", include_str!("../../locales/en/settings-agents.ftl")),

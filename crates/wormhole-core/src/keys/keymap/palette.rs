@@ -111,8 +111,8 @@ pub fn section(id: ActionId) -> Section {
         | FullScreen | KeyboardShortcuts | Minimize | Zoom | BringAllToFront | LayoutColumns | LayoutRows
         | LayoutGrid | LayoutSingle => Section::View,
         About | CheckForUpdates | Settings | ThemeStudio | NewProfile | ManageProfiles | Hide
-        | HideOthers | ShowAll | Quit | QuitAndEndAll | ShowLogs | Licenses | Inspector | Help
-        | CommandPalette | ShowIntro | PlayIntroEmerge | PlayIntroVortex | PlayIntroCollapse
+        | HideOthers | ShowAll | Quit | QuitAndEndAll | ShowLogs | SessionHosts | Licenses | Inspector
+        | Help | CommandPalette | ShowIntro | PlayIntroEmerge | PlayIntroVortex | PlayIntroCollapse
         | PlayIntroFtl | PlayIntroAurora | PlayIntroTentacles | PlayIntroVoyage | PlayWelcomeCursor
         | PlayWelcomePortal | PlayWelcomeLogo => Section::App,
         _ => Section::Terminal,

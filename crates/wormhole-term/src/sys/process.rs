@@ -46,6 +46,11 @@ pub fn cwd(pid: u32) -> Option<PathBuf> {
     os::cwd(pid)
 }
 
+/// The memory a process has resident, in bytes.
+pub fn resident_bytes(pid: u32) -> Option<u64> {
+    os::resident_bytes(pid)
+}
+
 /// The process group that owns the terminal of the process `shell_pid` right now.
 pub fn foreground_group(shell_pid: u32) -> Option<u32> {
     os::foreground_group(shell_pid)

@@ -33,7 +33,7 @@ use wormhole_wire::{
 };
 
 use super::events::{self, Heard};
-use super::link::{Cmd, Link};
+use super::link::{Cmd, Link, LinkMode};
 use super::replica::{ReplicaOptions, grid_of, wire_colors, wire_scheme, wire_size};
 use super::{ACK_EVERY, INPUT_WINDOW, PING_IDLE, WINDOW};
 use crate::GridSize;
@@ -155,14 +155,22 @@ impl State {
     }
 
     fn queue(&mut self, msg: &Message<'_>) {
-        if let Err(err) = wire::encode(&mut self.out, CHANNEL_LOCAL, 0, msg) {
-            tracing::warn!(ty = msg.ty(), "a frame for the session host could not be encoded: {err}");
+        match wire::encode(&mut self.out, CHANNEL_LOCAL, 0, msg) {
+            Ok(_) => self.link.count_frame_out(),
+            Err(err) => {
+                tracing::warn!(ty = msg.ty(), "a frame for the session host could not be encoded: {err}")
+            }
         }
     }
 
     /// Start a new stream of `mode`.
     fn attach(&mut self, mode: StreamMode) {
         self.mode = mode;
+        self.link.set_mode(match mode {
+            StreamMode::Raw => LinkMode::Raw,
+            StreamMode::Sync => LinkMode::Sync,
+            _ => LinkMode::Headless,
+        });
         self.order = StreamOrder::new();
         self.in_repaint = false;
         self.awaiting = (mode == StreamMode::Sync).then(Awaiting::default);
@@ -515,6 +523,7 @@ impl Client {
                 match self.dec.next_frame() {
                     Ok(Some(frame)) => {
                         self.state.active = Instant::now();
+                        self.state.link.count_frame_in();
                         self.state.handle(frame.message);
                     }
                     Ok(None) => break,
@@ -533,7 +542,10 @@ impl Client {
             }
             match self.dec.fill(&mut &self.stream) {
                 Ok(0) => return Some(End::Eof),
-                Ok(n) => read += n,
+                Ok(n) => {
+                    read += n;
+                    self.state.link.count_read(n);
+                }
                 Err(err) if err.kind() == io::ErrorKind::WouldBlock => return None,
                 Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
                 Err(err) => {
@@ -557,7 +569,10 @@ impl Client {
                     self.broken = true;
                     break;
                 }
-                Ok(n) => state.written += n,
+                Ok(n) => {
+                    state.written += n;
+                    state.link.count_written(n);
+                }
                 Err(err) if err.kind() == io::ErrorKind::WouldBlock => break,
                 Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
                 Err(err) => {

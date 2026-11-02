@@ -3,7 +3,7 @@
 //! for; whoever sends wakes the thread only when the queue was empty, as the PTY's inbox does.
 
 use std::borrow::Cow;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
@@ -36,8 +36,67 @@ pub(crate) enum Cmd {
     Close(Duration),
 }
 
+/// What the stream is asked for, as the connection's thread last attached (`Attach.stream`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LinkMode {
+    /// Events and counters only: the terminal is not on screen.
+    Headless,
+    /// The program's bytes as they come (the connection that started the host).
+    Raw,
+    /// Host-synthesized repaints, then the stream: on screen.
+    Sync,
+}
+
+impl LinkMode {
+    fn to_bits(self) -> u8 {
+        match self {
+            Self::Headless => 0,
+            Self::Raw => 1,
+            Self::Sync => 2,
+        }
+    }
+
+    fn from_bits(bits: u8) -> Self {
+        match bits {
+            1 => Self::Raw,
+            2 => Self::Sync,
+            _ => Self::Headless,
+        }
+    }
+}
+
+/// How the connection to a host stands, for the Session Hosts window: a copy of counters the
+/// thread keeps (relaxed atomics, one add per read or write, so counting costs nothing visible).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LinkStats {
+    pub mode: LinkMode,
+    /// Bytes read from, and written to, the socket since it connected.
+    pub bytes_in: u64,
+    pub bytes_out: u64,
+    /// Frames decoded from the host, and frames queued for it.
+    pub frames_in: u64,
+    pub frames_out: u64,
+    /// The app let go of the host (it keeps running).
+    pub detached: bool,
+    /// The connection ended without the program's exit: the host is gone.
+    pub lost: bool,
+    /// The connection's thread is over.
+    pub ended: bool,
+}
+
+/// The counters behind [`LinkStats`].
+#[derive(Default)]
+struct Traffic {
+    bytes_in: AtomicU64,
+    bytes_out: AtomicU64,
+    frames_in: AtomicU64,
+    frames_out: AtomicU64,
+    mode: AtomicU8,
+}
+
 /// The queue into the thread, and what the thread says back.
 pub(crate) struct Link {
+    traffic: Traffic,
     queue: Mutex<Vec<Cmd>>,
     /// The queue is not empty; checked without its lock.
     waiting: AtomicBool,
@@ -51,6 +110,7 @@ pub(crate) struct Link {
 impl Link {
     pub(crate) fn new(poller: Arc<Poller>) -> Self {
         Self {
+            traffic: Traffic::default(),
             queue: Mutex::new(Vec::new()),
             waiting: AtomicBool::new(false),
             poller,
@@ -73,6 +133,26 @@ impl Link {
             // Fails only when the poller is gone, and then so is the thread.
             let _ = self.poller.notify();
         }
+    }
+
+    pub(crate) fn count_read(&self, bytes: usize) {
+        self.traffic.bytes_in.fetch_add(bytes as u64, Ordering::Relaxed);
+    }
+
+    pub(crate) fn count_written(&self, bytes: usize) {
+        self.traffic.bytes_out.fetch_add(bytes as u64, Ordering::Relaxed);
+    }
+
+    pub(crate) fn count_frame_in(&self) {
+        self.traffic.frames_in.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub(crate) fn count_frame_out(&self) {
+        self.traffic.frames_out.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub(crate) fn set_mode(&self, mode: LinkMode) {
+        self.traffic.mode.store(mode.to_bits(), Ordering::Relaxed);
     }
 
     pub(crate) fn has_messages(&self) -> bool {
@@ -150,6 +230,21 @@ impl Hosted {
 
     pub(crate) fn is_detached(&self) -> bool {
         self.detached.load(Ordering::Acquire)
+    }
+
+    /// The connection's counters and state, now.
+    pub(crate) fn stats(&self) -> LinkStats {
+        let traffic = &self.link.traffic;
+        LinkStats {
+            mode: LinkMode::from_bits(traffic.mode.load(Ordering::Relaxed)),
+            bytes_in: traffic.bytes_in.load(Ordering::Relaxed),
+            bytes_out: traffic.bytes_out.load(Ordering::Relaxed),
+            frames_in: traffic.frames_in.load(Ordering::Relaxed),
+            frames_out: traffic.frames_out.load(Ordering::Relaxed),
+            detached: self.is_detached(),
+            lost: self.link.lost(),
+            ended: self.link.ended.load(Ordering::Acquire),
+        }
     }
 
     /// End the terminal, unless it was detached.

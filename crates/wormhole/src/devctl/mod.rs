@@ -102,6 +102,10 @@
 //!                   window, as a click on its menu item does
 //!   available <name>   whether the focused element's path handles that action (app-wide handlers
 //!                   like Hide's don't count here, though the menu counts them)
+//!   hosts-window | hosts-shot [name] | hosts-text   the Session Hosts window (Help → Session Hosts, while
+//!                   persistent terminals are on): open it, save a picture of it (it looks again once a
+//!                   second: send the shot in a later batch), print what its Copy all button copies
+//!   hosts-scroll <px>   scroll the Session Hosts window's list down by that much
 //!   about | licenses | about-shot [name] | licenses-shot [name]   the About and Licenses windows
 //!   intro [style]   play the intro around this window: emerge, vortex, collapse, ftl, aurora, tentacles,
 //!                   voyage or glow (as asked, whatever Reduce Motion says)

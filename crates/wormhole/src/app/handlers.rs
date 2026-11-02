@@ -21,7 +21,7 @@ use crate::actions::{
     InsertFolderPath, Licenses, ManageProfiles, Minimize, MoveWindowToProfile, NewProfile, NewWindow,
     OpenFolder, OpenRecent, OpenSettings, OpenSettingsAt, OpenWindowInProfile, PlayIntroAurora,
     PlayIntroCollapse, PlayIntroEmerge, PlayIntroFtl, PlayIntroTentacles, PlayIntroVortex, PlayIntroVoyage,
-    PlayWelcomeCursor, PlayWelcomeLogo, PlayWelcomePortal, RevealSetting, ShowAll, ShowIntro,
+    PlayWelcomeCursor, PlayWelcomeLogo, PlayWelcomePortal, RevealSetting, SessionHosts, ShowAll, ShowIntro,
     ShowKeyboardShortcuts, ShowLogs, SwitchProfile, ToggleCommandPalette, ToggleFullScreen, ToggleMinimap,
     ToggleStatusBar, ToggleTerminalTabs, ToggleThemeStudio, ToggleZenMode, Zoom,
 };
@@ -98,6 +98,7 @@ pub(crate) fn init(cx: &mut App) {
     });
     cx.on_action(|_: &About, cx| cx.defer(about::open_about));
     cx.on_action(|_: &Licenses, cx| cx.defer(about::open_licenses));
+    cx.on_action(|_: &SessionHosts, cx| cx.defer(crate::hosts_window::open));
     cx.on_action(|_: &OpenSettings, cx| cx.defer(|cx| settings_window::open_settings(None, cx)));
     cx.on_action(|open: &OpenSettingsAt, cx| {
         let section = open.0;

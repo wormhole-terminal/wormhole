@@ -160,6 +160,9 @@ pub enum ActionId {
     /// Quit, and end every terminal the session hosts keep running (only with persistent terminals on).
     QuitAndEndAll,
     ShowLogs,
+    /// The Session Hosts window (Help → Session Hosts): what the persistent terminals' hosts are doing
+    /// (only with persistent terminals on).
+    SessionHosts,
     /// The third-party licences (Help → Licenses).
     Licenses,
     /// The intro window again (Help → Welcome to Wormhole): its welcome page, with the animation.

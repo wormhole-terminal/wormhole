@@ -6,50 +6,50 @@
 use crate::key::Key;
 
 /// "Folder"
-pub const TITLE_ROW_PART_FOLDER: Key = Key::new(1455);
+pub const TITLE_ROW_PART_FOLDER: Key = Key::new(1520);
 /// "Branch"
-pub const TITLE_ROW_PART_BRANCH: Key = Key::new(1456);
+pub const TITLE_ROW_PART_BRANCH: Key = Key::new(1521);
 /// "Branch status"
-pub const TITLE_ROW_PART_BRANCH_STATUS: Key = Key::new(1457);
+pub const TITLE_ROW_PART_BRANCH_STATUS: Key = Key::new(1522);
 /// "Terminal name"
-pub const TITLE_ROW_PART_TERMINAL: Key = Key::new(1458);
+pub const TITLE_ROW_PART_TERMINAL: Key = Key::new(1523);
 /// "Terminal status"
-pub const TITLE_ROW_PART_TERMINAL_STATUS: Key = Key::new(1459);
+pub const TITLE_ROW_PART_TERMINAL_STATUS: Key = Key::new(1524);
 /// "Flexible space"
-pub const TITLE_ROW_PART_SPACE: Key = Key::new(1460);
+pub const TITLE_ROW_PART_SPACE: Key = Key::new(1525);
 /// "Parts above it sit at the left, parts below it at the right"
-pub const TITLE_ROW_PART_SPACE_DESCRIPTION: Key = Key::new(1461);
+pub const TITLE_ROW_PART_SPACE_DESCRIPTION: Key = Key::new(1526);
 /// "Agent model and context"
-pub const TITLE_ROW_PART_AGENT_GAUGE: Key = Key::new(1462);
+pub const TITLE_ROW_PART_AGENT_GAUGE: Key = Key::new(1527);
 /// "Open ports"
-pub const TITLE_ROW_PART_PORTS: Key = Key::new(1463);
+pub const TITLE_ROW_PART_PORTS: Key = Key::new(1528);
 /// "Pull request"
-pub const TITLE_ROW_PART_PULL_REQUEST: Key = Key::new(1464);
+pub const TITLE_ROW_PART_PULL_REQUEST: Key = Key::new(1529);
 /// "Open in…"
-pub const TITLE_ROW_PART_OPEN_IN: Key = Key::new(1465);
+pub const TITLE_ROW_PART_OPEN_IN: Key = Key::new(1530);
 /// "Split buttons"
-pub const TITLE_ROW_PART_SPLITS: Key = Key::new(1466);
+pub const TITLE_ROW_PART_SPLITS: Key = Key::new(1531);
 /// "Show in title row"
-pub const TITLE_ROW_MENU_HEADER: Key = Key::new(1467);
+pub const TITLE_ROW_MENU_HEADER: Key = Key::new(1532);
 /// "Reset title row"
-pub const TITLE_ROW_MENU_RESET: Key = Key::new(1468);
+pub const TITLE_ROW_MENU_RESET: Key = Key::new(1533);
 /// "Customize title row…"
-pub const TITLE_ROW_MENU_CUSTOMIZE: Key = Key::new(1469);
+pub const TITLE_ROW_MENU_CUSTOMIZE: Key = Key::new(1534);
 /// "Open in, split"
-pub const TITLE_ROW_MORE_OPEN_IN_SPLIT: Key = Key::new(1470);
+pub const TITLE_ROW_MORE_OPEN_IN_SPLIT: Key = Key::new(1535);
 /// "Open in"
-pub const TITLE_ROW_MORE_OPEN_IN: Key = Key::new(1471);
+pub const TITLE_ROW_MORE_OPEN_IN: Key = Key::new(1536);
 /// "Split"
-pub const TITLE_ROW_MORE_SPLIT: Key = Key::new(1472);
+pub const TITLE_ROW_MORE_SPLIT: Key = Key::new(1537);
 /// "Hidden"
-pub const TITLE_ROW_HIDDEN: Key = Key::new(1473);
+pub const TITLE_ROW_HIDDEN: Key = Key::new(1538);
 /// "The status bar shows it while it's on"
-pub const TITLE_ROW_STATUS_IN_BAR: Key = Key::new(1474);
+pub const TITLE_ROW_STATUS_IN_BAR: Key = Key::new(1539);
 /// "Open in Finder"
-pub const TITLE_ROW_PATH_OPEN_IN_FINDER: Key = Key::new(1475);
+pub const TITLE_ROW_PATH_OPEN_IN_FINDER: Key = Key::new(1540);
 /// "Copy path"
-pub const TITLE_ROW_PATH_COPY: Key = Key::new(1476);
+pub const TITLE_ROW_PATH_COPY: Key = Key::new(1541);
 /// "Copied"
-pub const TITLE_ROW_PATH_COPIED: Key = Key::new(1477);
+pub const TITLE_ROW_PATH_COPIED: Key = Key::new(1542);
 /// "Path copied"
-pub const TITLE_ROW_PATH_SPOKEN_COPIED: Key = Key::new(1478);
+pub const TITLE_ROW_PATH_SPOKEN_COPIED: Key = Key::new(1543);

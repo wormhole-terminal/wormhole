@@ -21,6 +21,7 @@ mod features;
 mod focus_keys;
 mod folder_picker;
 mod fonts;
+mod hosts_window;
 mod hotkey;
 mod icons;
 #[cfg(any(feature = "inspector", debug_assertions))]

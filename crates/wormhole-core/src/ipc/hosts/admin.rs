@@ -101,17 +101,7 @@ fn ask_kill(meta: &HostMeta, wait: Duration) -> Result<(), String> {
         return Err("the socket's owner is not this user".into());
     }
     let mut writer = FrameWriter::new(&stream);
-    let hello = Hello {
-        proto_min: 1,
-        proto_max: version::PROTO_MAJOR,
-        proto_minor: version::PROTO_MINOR,
-        role: Role::Admin,
-        force: false,
-        features: Features::NONE,
-        client_version: app_version(),
-        client_name: "wormhole sessions",
-        ticket: None,
-    };
+    let hello = admin_hello();
     writer.send(CHANNEL_LOCAL, 0, &Message::Hello(hello)).map_err(|e| format!("hello: {e}"))?;
     let mut reader = FrameReader::new(&stream);
     match reader.read_frame().map_err(|e| format!("welcome: {e}"))? {
@@ -141,7 +131,24 @@ fn ask_kill(meta: &HostMeta, wait: Duration) -> Result<(), String> {
     }
 }
 
-fn app_version() -> AppVersion {
+/// The `Hello` of a short-lived admin connection (`GetInfo` and `Kill` only): every major, so any
+/// host version answers it.
+pub(super) fn admin_hello() -> Hello<'static> {
+    Hello {
+        proto_min: 1,
+        proto_max: version::PROTO_MAJOR,
+        proto_minor: version::PROTO_MINOR,
+        role: Role::Admin,
+        force: false,
+        features: Features::NONE,
+        client_version: app_version(),
+        client_name: "wormhole sessions",
+        ticket: None,
+    }
+}
+
+/// This build's version as the wire carries it.
+pub(super) fn app_version() -> AppVersion {
     let mut parts = env!("CARGO_PKG_VERSION").split('.').map(|p| p.parse::<u16>().unwrap_or(0));
     AppVersion {
         major: parts.next().unwrap_or(0),

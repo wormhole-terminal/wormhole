@@ -1,0 +1,288 @@
+//! The Session Hosts window (Help → Session Hosts, while persistent terminals are on): what the
+//! processes that keep terminals running behind the app are doing, so a person can see whether
+//! things are right. Every host in the hosts folder is a card: its ids and processes, its version
+//! and protocol against this app's, whether it answers, and for an attached one the connection's
+//! counters. The data is core's `ipc::hosts::report` (collected off the main thread about once a
+//! second while the window is open); this module only draws it and carries out End, Forget and Copy.
+
+mod card;
+#[cfg(feature = "devctl")]
+mod devctl;
+mod gather;
+mod header;
+mod words;
+
+use std::collections::HashSet;
+use std::time::Duration;
+
+use gpui_kit::component::Sizable as _;
+use gpui_kit::component::button::Button;
+use gpui_kit::*;
+use wormhole_core::ipc::hosts::report::Report;
+use wormhole_core::ipc::hosts::{self, EndHow};
+use wormhole_text::keys::{
+    HOSTS_END_CONFIRM, HOSTS_END_DETAIL, HOSTS_LOADING, HOSTS_WINDOW_TITLE, hosts_empty,
+    hosts_end_detail_attached, hosts_end_title,
+};
+use wormhole_text::text;
+
+use crate::app_state::app;
+use crate::aux_window;
+use crate::dialog::{self, CloseQuestion};
+use crate::style;
+use gather::Gather;
+
+#[cfg(feature = "devctl")]
+pub(crate) use devctl::command as devctl_command;
+
+const SIZE: (f32, f32) = (940.0, 720.0);
+const MIN_SIZE: (f32, f32) = (640.0, 420.0);
+/// How often the window looks again while it is open.
+const REFRESH: Duration = Duration::from_secs(1);
+/// How long a copy button says "Copied".
+const COPIED_FOR: Duration = Duration::from_millis(1500);
+/// How long End waits for the host to take the hangup.
+const END_WAIT: Duration = Duration::from_secs(5);
+
+/// The window while open, so a second command brings it forward instead of opening another.
+#[derive(Default)]
+struct OpenWindow(crate::app_state::Slot);
+
+impl Global for OpenWindow {}
+
+/// What was last copied, for the button to say so.
+#[derive(Clone, PartialEq, Eq)]
+enum Copied {
+    All,
+    Host(String),
+}
+
+pub(crate) struct HostsWindow {
+    report: Option<Report>,
+    /// The host ids the other profiles' databases name, read when the window opened.
+    elsewhere: HashSet<String>,
+    scroll: ScrollHandle,
+    focus_handle: FocusHandle,
+    copied: Option<Copied>,
+    _refresh: Option<Task<()>>,
+    _copied_reset: Option<Task<()>>,
+}
+
+/// Open the window, or bring it to the front.
+pub(crate) fn open(cx: &mut App) {
+    if let Some((handle, _)) = cx.try_global::<OpenWindow>().and_then(|open| open.0.clone())
+        && handle.update(cx, |_, window, cx| crate::background::activate_window(window, cx)).is_ok()
+    {
+        return;
+    }
+    let options = aux_window::window_options(
+        text(HOSTS_WINDOW_TITLE),
+        size(px(SIZE.0), px(SIZE.1)),
+        size(px(MIN_SIZE.0), px(MIN_SIZE.1)),
+        cx,
+    );
+    // Deferred: the new window renders right away, and this may run inside another window's update.
+    cx.defer(move |cx| {
+        match crate::window_open::open(options, cx, |window, cx| cx.new(|cx| HostsWindow::new(window, cx))) {
+            Ok((handle, view)) => cx.set_global(OpenWindow(Some((handle, view.downgrade().into())))),
+            Err(err) => tracing::error!("opening the Session Hosts window failed: {err:#}"),
+        }
+    });
+}
+
+/// The window's view while it is open (devctl).
+#[cfg(feature = "devctl")]
+fn open_view(cx: &App) -> Option<Entity<HostsWindow>> {
+    let (_, view) = cx.try_global::<OpenWindow>()?.0.clone()?;
+    view.upgrade()?.downcast::<HostsWindow>().ok()
+}
+
+/// The window's handle while it is open (devctl).
+#[cfg(feature = "devctl")]
+fn open_handle(cx: &App) -> Option<AnyWindowHandle> {
+    cx.try_global::<OpenWindow>().and_then(|open| open.0.clone()).map(|(handle, _)| handle)
+}
+
+impl HostsWindow {
+    fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let state = app(cx);
+        let elsewhere: HashSet<String> =
+            crate::window::hosting::named_in_other_profiles(&state.root, &state.profiles)
+                .into_iter()
+                .collect();
+        let focus_handle = cx.focus_handle();
+        window.focus(&focus_handle, cx);
+        let mut this = Self {
+            report: None,
+            elsewhere,
+            scroll: ScrollHandle::new(),
+            focus_handle,
+            copied: None,
+            _refresh: None,
+            _copied_reset: None,
+        };
+        this.start(cx);
+        this
+    }
+
+    /// (Re)start the loop that looks about once a second: the app's part on the main thread, the
+    /// files and sockets off it.
+    fn start(&mut self, cx: &mut Context<Self>) {
+        self._refresh = Some(cx.spawn(async move |this, cx| {
+            loop {
+                let Ok(gather) = this.update(cx, |this, cx| Gather::collect(&this.elsewhere, cx)) else {
+                    return;
+                };
+                let report = cx.background_executor().spawn(async move { gather.run() }).await;
+                let shown = this.update(cx, |this, cx| {
+                    this.report = Some(report);
+                    cx.notify();
+                });
+                if shown.is_err() {
+                    return;
+                }
+                cx.background_executor().timer(REFRESH).await;
+            }
+        }));
+    }
+
+    fn copy(&mut self, what: Copied, cx: &mut Context<Self>) {
+        let Some(report) = &self.report else { return };
+        let text = match &what {
+            Copied::All => report.to_text(),
+            Copied::Host(id) => match report.row(id) {
+                Some(row) => row.to_text(&report.app),
+                None => return,
+            },
+        };
+        crate::platform::clipboard::write(text, cx);
+        self.copied = Some(what);
+        self._copied_reset = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(COPIED_FOR).await;
+            this.update(cx, |this, cx| {
+                this.copied = None;
+                cx.notify();
+            })
+            .ok();
+        }));
+        cx.notify();
+    }
+
+    /// Ask before ending a host: its program gets a hangup, and an attached terminal ends with it.
+    fn ask_to_end(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(row) = self.report.as_ref().and_then(|r| r.row(id)) else { return };
+        let detail = match &row.standing {
+            hosts::report::Standing::Attached { title, .. } => hosts_end_detail_attached(title),
+            _ => text(HOSTS_END_DETAIL).to_string(),
+        };
+        let question = CloseQuestion {
+            title: hosts_end_title(id).into(),
+            detail: detail.into(),
+            confirm: text(HOSTS_END_CONFIRM),
+        };
+        let (this, id) = (cx.weak_entity(), id.to_string());
+        dialog::ask_before_closing(
+            window,
+            cx,
+            question,
+            move |_, cx| {
+                this.update(cx, |this, cx| this.end(id, cx)).ok();
+            },
+            |_| {},
+        );
+    }
+
+    fn end(&mut self, id: String, cx: &mut Context<Self>) {
+        let dir = hosts::hosts_dir(&wormhole_core::storage::paths::data_dir());
+        cx.spawn(async move |this, cx| {
+            let done = cx
+                .background_executor()
+                .spawn(async move {
+                    let meta = hosts::find(&dir, &id)?;
+                    hosts::end_host(&meta, END_WAIT).map(|how: EndHow| (id, how))
+                })
+                .await;
+            match done {
+                Ok((id, how)) => tracing::info!(id, how = how.word(), "ended a session host from its window"),
+                Err(why) => tracing::warn!("ending a session host from its window failed: {why}"),
+            }
+            this.update(cx, |this, cx| this.start(cx)).ok();
+        })
+        .detach();
+    }
+
+    fn forget(&mut self, id: String, cx: &mut Context<Self>) {
+        let dir = hosts::hosts_dir(&wormhole_core::storage::paths::data_dir());
+        cx.spawn(async move |this, cx| {
+            let done = cx.background_executor().spawn(async move { hosts::forget(&dir, &id) }).await;
+            if let Err(err) = done {
+                tracing::warn!("forgetting a session host from its window failed: {err}");
+            }
+            this.update(cx, |this, cx| this.start(cx)).ok();
+        })
+        .detach();
+    }
+
+    /// A small outlined button.
+    fn button(id: impl Into<ElementId>, label: &'static str) -> Button {
+        Button::new(id).outline().small().label(label)
+    }
+}
+
+impl Render for HostsWindow {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let ui = crate::settings::window_ui(cx, false);
+        let surfaces = style::window_surfaces(cx, false);
+        let body: AnyElement = match &self.report {
+            None => style::empty_note(ui, text(HOSTS_LOADING)).into_any_element(),
+            Some(report) if report.rows.is_empty() => {
+                style::empty_note(ui, hosts_empty(&report.hosts_dir.display().to_string())).into_any_element()
+            }
+            Some(report) => {
+                let cards: Vec<AnyElement> = report
+                    .rows
+                    .iter()
+                    .enumerate()
+                    .map(|(ix, row)| self.card(ix, row, report, ui, cx))
+                    .collect();
+                div().flex().flex_col().gap_3().children(cards).into_any_element()
+            }
+        };
+        let header = self.report.as_ref().map(|report| self.header(report, ui, cx));
+        div()
+            .id("hosts-window")
+            .track_focus(&self.focus_handle)
+            .key_context("HostsWindow")
+            .on_key_down(cx.listener(|_, event: &KeyDownEvent, window, _| {
+                aux_window::close_on_esc_or_cmd_w(event, window);
+            }))
+            .size_full()
+            .relative()
+            .flex()
+            .flex_col()
+            .pt(px(style::TITLE_ROW_H))
+            .bg(surfaces.background)
+            .text_color(ui.text)
+            .child(style::drag_strip())
+            .children(header)
+            .child(
+                div()
+                    .id("hosts-scroll")
+                    .flex_1()
+                    .min_h_0()
+                    .overflow_y_scroll()
+                    .track_scroll(&self.scroll)
+                    .px_4()
+                    .pb_4()
+                    .child(body),
+            )
+    }
+}
+
+/// Used by the devctl build to read the window typed.
+#[cfg(feature = "devctl")]
+impl HostsWindow {
+    fn report(&self) -> Option<&Report> {
+        self.report.as_ref()
+    }
+}

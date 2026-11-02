@@ -8,6 +8,7 @@ use std::sync::OnceLock;
 
 use gpui_kit::*;
 use wormhole_core::config::profile::ProfileList;
+use wormhole_core::ipc::hosts::report::Attachment;
 use wormhole_core::ipc::hosts::{self, HostMeta, LaunchHosts, Restore};
 use wormhole_core::storage::paths::DataRoot;
 use wormhole_core::storage::store::SessionRecord;
@@ -20,7 +21,7 @@ use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
 
 /// The host executable, looked for once: it sits beside the app's, which doesn't move while it runs.
-fn host_binary() -> Option<&'static PathBuf> {
+pub(crate) fn host_binary() -> Option<&'static PathBuf> {
     static BINARY: OnceLock<Option<PathBuf>> = OnceLock::new();
     BINARY.get_or_init(wormhole_core::ipc::host_binary::host_binary).as_ref()
 }
@@ -38,27 +39,38 @@ pub(crate) fn scan_at_launch(root: &DataRoot, profiles: &ProfileList, live: Opti
     if found.is_empty() {
         return LaunchHosts::default();
     }
-    let mut named: Vec<String> = Vec::new();
-    let mut add = |store: &Store| match store.host_ids() {
-        Ok(ids) => named.extend(ids.into_iter().map(|(_, id)| id)),
-        Err(err) => tracing::warn!("reading which hosts the terminals run in: {err:#}"),
-    };
-    if let Some(store) = live {
-        add(store);
+    let mut named = named_in_store(live);
+    named.extend(named_in_other_profiles(root, profiles));
+    tracing::info!(live = found.len(), named = named.len(), "session hosts at launch");
+    LaunchHosts::plan(named.iter().map(String::as_str), found)
+}
+
+/// The host ids the rows of `store` (the shown profile's open database) name.
+pub(crate) fn named_in_store(store: Option<&Store>) -> Vec<String> {
+    let Some(store) = store else { return Vec::new() };
+    match store.host_ids() {
+        Ok(ids) => ids.into_iter().map(|(_, id)| id).collect(),
+        Err(err) => {
+            tracing::warn!("reading which hosts the terminals run in: {err:#}");
+            Vec::new()
+        }
     }
-    // A host another profile's terminal runs in is that profile's, not an orphan: its database is
-    // opened for the ids only, as `first_free_ids` does.
+}
+
+/// The host ids the other profiles' databases name. A host another profile's terminal runs in is
+/// that profile's, not an orphan: each database is opened for the ids only.
+pub(crate) fn named_in_other_profiles(root: &DataRoot, profiles: &ProfileList) -> Vec<String> {
+    let mut named = Vec::new();
     for profile in profiles.profiles().iter().filter(|p| &p.id != profiles.active_id()) {
         let paths = root.profile(&profile.id);
         if Store::exists_for(&paths) {
             match Store::open_for(&paths) {
-                Ok(store) => add(&store),
+                Ok(store) => named.extend(named_in_store(Some(&store))),
                 Err(err) => tracing::warn!("reading the hosts of profile {}: {err:#}", profile.id),
             }
         }
     }
-    tracing::info!(live = found.len(), named = named.len(), "session hosts at launch");
-    LaunchHosts::plan(named.iter().map(String::as_str), found)
+    named
 }
 
 /// After the windows opened at launch: the live hosts no terminal named come into the front window's
@@ -177,6 +189,22 @@ impl Workspace {
         self.edit_sidebar_view(cx, |view| view.groups.recover(&ids));
         self.dirty = true;
         cx.notify();
+    }
+
+    /// The terminals of this window that run in a session host, for the Session Hosts window.
+    pub(crate) fn host_attachments(&self, cx: &App) -> Vec<Attachment> {
+        self.sessions
+            .iter()
+            .filter_map(|session| {
+                let terminal = session.terminal().read(cx);
+                Some(Attachment {
+                    host_id: terminal.host_id()?.to_string(),
+                    window: self.window_id,
+                    title: session.name().to_string(),
+                    link: terminal.host_link(),
+                })
+            })
+            .collect()
     }
 
     /// devctl `detach`: let go of every hosted terminal of this window, leaving the views. How many.

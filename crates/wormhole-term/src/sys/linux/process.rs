@@ -48,3 +48,7 @@ pub(crate) fn children(_pid: u32) -> Vec<u32> {
 pub(crate) fn listening_tcp_ports(_pid: u32, _limit: usize) -> Vec<u16> {
     Vec::new()
 }
+
+pub(crate) fn resident_bytes(_pid: u32) -> Option<u64> {
+    None
+}

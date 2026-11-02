@@ -283,6 +283,12 @@ impl TerminalView {
         self.host.id.as_deref()
     }
 
+    /// The connection to the host in counters, for the Session Hosts window. `None` before the
+    /// terminal is connected, and for a terminal that runs in the app.
+    pub fn host_link(&self) -> Option<wormhole_term::client::LinkStats> {
+        self.pty.as_ref().and_then(Pty::link_stats)
+    }
+
     pub fn host_lost(&self) -> bool {
         self.host.lost
     }

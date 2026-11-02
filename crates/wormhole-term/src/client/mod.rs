@@ -39,6 +39,7 @@ use std::path::Path;
 use std::time::Duration;
 
 pub(crate) use link::Hosted;
+pub use link::{LinkMode, LinkStats};
 pub use open::HostCommand;
 
 /// The byte window a client gives the host: stream bytes past the last `Ack` it may send.

@@ -251,6 +251,7 @@ pub(super) fn entries() -> Vec<Entry> {
         // No key: ending every terminal is not something to hit by accident.
         row(QuitAndEndAll, "Quit and End All Terminals", &[]).persistent_only(),
         row(ShowLogs, "Show Logs in Finder", &[]),
+        row(SessionHosts, "Session Hosts", &[]).persistent_only(),
         row(Licenses, "Licenses", &[]),
         row(ShowIntro, "Welcome to Wormhole", &[]),
         // While three intro styles are on trial: a key each, to compare them quickly.

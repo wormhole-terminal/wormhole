@@ -6,6 +6,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Added
+
+- Help → Session Hosts (while Persistent terminals is on) opens a window that shows every session host:
+  its processes, version and protocol against the app's, whether it answers, which terminal holds it
+  and how that connection is doing, with End, Forget and a copy of the details for a bug report.
+
 ## [1.6.3] - 2026-11-02
 
 ### Fixed
