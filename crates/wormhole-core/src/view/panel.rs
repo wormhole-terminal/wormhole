@@ -132,10 +132,12 @@ pub fn next_age_change(
         .into_iter()
         .map(|time| {
             let age = (now_secs - time).max(0);
-            let unit = match age {
-                ..3600 => 60,
-                ..86_400 => 3600,
-                _ => 86_400,
+            let unit = if age < 3600 {
+                60
+            } else if age < 86_400 {
+                3600
+            } else {
+                86_400
             };
             Duration::from_secs((unit - 1 - age % unit) as u64) + rest
         })
