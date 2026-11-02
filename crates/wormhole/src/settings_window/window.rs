@@ -346,7 +346,7 @@ impl Render for SettingsWindow {
         let surfaces = style::window_surfaces(cx, translucent);
         let query = Query::new(&self.search.read(cx).value());
         let hits = settings_index::search_visible(&query, settings(cx)).len();
-        let changed = super::changed::count(cx);
+        let changed = super::changed::differing(cx);
 
         let body = if self.show_results && hits == 0 {
             self.render_no_results(&query, ui, cx)

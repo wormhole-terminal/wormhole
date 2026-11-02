@@ -33,7 +33,7 @@ use crate::style::{self, Edges as _, RowTile, TileRowParts};
 const COPIED_FOR: Duration = Duration::from_millis(1500);
 
 /// How many settings differ, for the nav's badge: the rows the page would list.
-pub(super) fn count(cx: &App) -> usize {
+pub(super) fn differing(cx: &App) -> usize {
     let store = cx.global::<SettingsStore>();
     Values::of(store.user_settings()).changed_rows(&store.settings).len()
 }
@@ -129,7 +129,7 @@ impl SettingsWindow {
 
     /// Reset All…: ask, then put every listed setting back.
     fn ask_reset_changed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let count = count(cx);
+        let count = differing(cx);
         if count == 0 {
             return;
         }
