@@ -227,6 +227,12 @@ impl HostedTerminal {
         self.core.stream.register(bytes, gap, wake)
     }
 
+    /// Run `read` on the screen under its lock: for the checkpoint, which is a layer above this one. Holds the
+    /// lock as long as `read` runs, so it is for a thread of its own and never the PTY's.
+    pub(crate) fn with_screen<R>(&self, read: impl FnOnce(&crate::screen::Screen) -> R) -> R {
+        read(&self.screen.lock())
+    }
+
     /// Append to `out` the repaint that brings a fresh replica of [`Repainted::size`] to the screen
     /// as it is now, with at most `max_history` lines of history (and never more than
     /// [`ATTACH_HISTORY_LINES`]), and a cursor that reads the bytes from that point on. `Err` while

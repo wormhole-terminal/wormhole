@@ -32,6 +32,8 @@
 //! - `handle`: the methods of [`Pty`], one file for each concern; `options`: the sizes and settings a
 //!   terminal starts with;
 //! - `restore`: replaying a previous session's text;
+//! - `checkpoint`: what a host keeps on disk of a terminal for a restart of the Mac: a manifest and a sealed
+//!   screen, written in generations, read newest first;
 //! - `snapshot`: what the UI draws, copied under a short lock;
 //! - `minimap`: the history drawn small, and where a click on it scrolls to;
 //! - `scrollbar`: the scrollbar's thumb, what clicks and drags on it do, and when it shows and fades;
@@ -53,6 +55,7 @@
 pub mod agents;
 mod blocks;
 mod capture;
+pub mod checkpoint;
 pub mod client;
 mod command_to_prompt;
 mod contents;

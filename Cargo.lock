@@ -9521,6 +9521,7 @@ dependencies = [
  "libc",
  "polling",
  "regex",
+ "ring",
  "security-framework",
  "security-framework-sys",
  "serde",
@@ -9528,6 +9529,7 @@ dependencies = [
  "tracing",
  "wormhole-vt",
  "wormhole-wire",
+ "zeroize",
 ]
 
 [[package]]

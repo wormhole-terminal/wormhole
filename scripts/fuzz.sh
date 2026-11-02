@@ -17,11 +17,16 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 . scripts/lib.sh
 
-TARGETS=(wire_frame wire_message)
-# Every target is the wire protocol's; the helpers keep the crate a parameter all the same.
-crate_of() { echo wormhole-wire; }
+TARGETS=(wire_frame wire_message checkpoint_read)
+# The wire protocol's targets, and the checkpoint reader's (wormhole-term).
+crate_of() { case "$1" in checkpoint_read) echo wormhole-term ;; *) echo wormhole-wire ;; esac; }
 # Bound the work an input may cause: a hang or a huge allocation is a finding. A frame is up to 64 KiB.
-libfuzzer_args() { echo "-max_len=70000 -timeout=10 -rss_limit_mb=2048 -dict=$ROOT/crates/wormhole-wire/fuzz/wire.dict"; }
+libfuzzer_args() {
+  case "$1" in
+    checkpoint_read) echo "-max_len=70000 -timeout=10 -rss_limit_mb=2048" ;;
+    *) echo "-max_len=70000 -timeout=10 -rss_limit_mb=2048 -dict=$ROOT/crates/wormhole-wire/fuzz/wire.dict" ;;
+  esac
+}
 # Nightly builds with sanitizers get their own target dir, so they never invalidate the normal one.
 BASE_TARGET="${CARGO_TARGET_DIR:-$ROOT/target}"
 export CARGO_TARGET_DIR="$BASE_TARGET/fuzz-nightly"
@@ -33,6 +38,8 @@ cmd="${1:-}"; [ $# -gt 0 ] && shift
 case "$cmd" in
   seeds)
     CARGO_TARGET_DIR="$BASE_TARGET" cargo run -q -p wormhole-wire --example seeds -- "$ROOT/crates/wormhole-wire/fuzz/corpus"
+    # The checkpoint reader starts from an empty corpus.
+    mkdir -p "$ROOT/crates/wormhole-term/fuzz/corpus/checkpoint_read"
     ;;
   list) printf '%s\n' "${TARGETS[@]}" ;;
   run)
