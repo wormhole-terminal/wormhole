@@ -5,8 +5,11 @@
 
 use std::time::{Duration, Instant};
 
-use wormhole_term::hosted::{Cursor, HostEvent, HostedTerminal, NotReady, Repainted, Wake};
+use wormhole_term::checkpoint::{Capture, Limits};
+use wormhole_term::hosted::{Cursor, HostEvent, HostedTerminal, NotReady, Reader, Repainted, Wake};
 use wormhole_wire as wire;
+
+use crate::checkpoint::Source;
 
 /// A running (or ended) terminal, as the session drives it.
 pub trait Program {
@@ -39,6 +42,16 @@ pub trait Program {
     /// Answer the clipboard reads that are out of time; when the next one is.
     fn clipboard_expire(&self, now: Instant) -> Option<Instant>;
     fn first_block_id(&self) -> u64;
+    /// What the program has printed so far, in bytes: it changes when there is output, which is what the
+    /// checkpoint schedule watches. A scripted program may say nothing.
+    fn output_total(&self) -> u64 {
+        0
+    }
+    /// What a checkpoint reads of this terminal, for the checkpoint thread; `None` for a program that has
+    /// no screen to keep.
+    fn checkpoint_source(&self) -> Option<Box<dyn Source>> {
+        None
+    }
 }
 
 /// Starts the program a `Spawn` asks for.
@@ -128,5 +141,23 @@ impl Program for HostedTerminal {
     }
     fn first_block_id(&self) -> u64 {
         HostedTerminal::first_block_id(self)
+    }
+    fn output_total(&self) -> u64 {
+        HostedTerminal::counters(self).revision
+    }
+    fn checkpoint_source(&self) -> Option<Box<dyn Source>> {
+        Some(Box::new(PtySource { reader: self.reader(), limits: Limits::default() }))
+    }
+}
+
+/// A hosted terminal as a checkpoint reads it.
+struct PtySource {
+    reader: Reader,
+    limits: Limits,
+}
+
+impl Source for PtySource {
+    fn capture(&self) -> Capture {
+        wormhole_term::checkpoint::capture(&self.reader, self.limits)
     }
 }

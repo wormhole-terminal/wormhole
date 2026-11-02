@@ -9,6 +9,8 @@
 //!
 //! - `session`: everything the host decides, as a state machine without I/O or a clock of its
 //!   own (tested in its own tests with a scripted terminal and a virtual clock);
+//! - `checkpoint`: what the host keeps on disk of its terminal for a restart of the Mac, written by a thread
+//!   of its own once the app has sent a key;
 //! - `program`: the seam between the session and the terminal (`wormhole_term::hosted`);
 //! - `serve`: the socket, the connections and the clock around the session;
 //! - `listen`: the socket file and its directory; `sys`: start-up hygiene, signals, the peer's
@@ -30,6 +32,7 @@
 #![cfg_attr(test, allow(clippy::disallowed_methods, reason = "tests build their own files and processes"))]
 
 pub mod args;
+pub mod checkpoint;
 mod listen;
 pub mod log;
 mod peer;
@@ -190,7 +193,11 @@ fn serve_files(
     let config = Config::new(args.id.clone(), host_version(), started_ms);
     let spawner = PtySpawner { on_reader_start: sys::process::set_user_interactive };
     let mut session = Session::new(config, spawner, wake, Instant::now());
-    serve::serve(&mut session, listener, &wakes, ready, files, &peers)?;
+    let mut checkpoints = checkpoint::Checkpointer::new(
+        wormhole_term::checkpoint::sessions_dir_of_hosts(&args.dir),
+        args.id.clone(),
+    );
+    serve::serve(&mut session, listener, &wakes, ready, files, &peers, &mut checkpoints)?;
     if !ready.is_spent() {
         ready.say("err the host ended before a program was started");
     }

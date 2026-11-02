@@ -75,6 +75,8 @@ impl<S: Spawner> Session<S> {
                 | Message::SetColors(_)
                 | Message::SetColorScheme(_)
                 | Message::ClearHistory
+                | Message::SetCheckpointKey(_)
+                | Message::Checkpoint { .. }
                 | Message::SetOptions(_)
                 | Message::Close { .. }
                 | Message::ClipboardReply(_)
@@ -90,6 +92,8 @@ impl<S: Spawner> Session<S> {
                 | Message::SetColors(_)
                 | Message::SetColorScheme(_)
                 | Message::ClearHistory
+                | Message::SetCheckpointKey(_)
+                | Message::Checkpoint { .. }
                 | Message::SetOptions(_)
                 | Message::ClipboardReply(_)
         );
@@ -160,6 +164,10 @@ impl<S: Spawner> Session<S> {
                     program.clear_history();
                 }
             }
+            Message::SetCheckpointKey(k) => {
+                self.notices.push(Notice::SetCheckpoint { key: k.key.to_vec(), shell: k.shell.to_owned() });
+            }
+            Message::Checkpoint { .. } => self.notices.push(Notice::CheckpointNow),
             Message::SetOptions(options) => {
                 if let Some(program) = &mut self.program {
                     program.set_options(&options);

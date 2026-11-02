@@ -14,14 +14,16 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use polling::{AsRawSource, Event, Events, PollMode, Poller};
+use wormhole_term::checkpoint::Key;
 use wormhole_term::hosted::meta::{self, Meta};
 use wormhole_term::sys::socket::{Stream, peer_user};
 use wormhole_term::sys::user::UserId;
 use wormhole_wire as wire;
 
+use crate::checkpoint::{Checkpointer, FLUSH_WITHIN};
 use crate::listen::{Listener, TOUCH_EVERY};
 use crate::peer::Policy;
-use crate::program::Spawner;
+use crate::program::{Program as _, Spawner};
 use crate::session::{ConnId, Notice, Session};
 use crate::sys::ready::ReadyPipe;
 
@@ -72,6 +74,7 @@ pub(crate) fn serve<S: Spawner>(
     ready: &mut ReadyPipe,
     files: &mut Files<'_>,
     peers: &Policy,
+    checkpoints: &mut Checkpointer,
 ) -> io::Result<()> {
     let poller = wakes.poller.clone();
     watch(&poller, &listener.listener, LISTENER, false)?;
@@ -83,12 +86,17 @@ pub(crate) fn serve<S: Spawner>(
         wakes.pending.store(false, Ordering::Release);
         let now = Instant::now();
         if wakes.terminate.swap(false, Ordering::AcqRel) {
+            // Before the shell is hung up: what a restart finds is the screen as the person left it. The
+            // checkpoint is kept (the host never deletes one); the wait is bounded, as the kill is near.
+            let flushed = checkpoints.flush(FLUSH_WITHIN);
+            tracing::info!(?flushed, "checkpoint before ending");
             session.terminate(now);
         }
         let pump = session.pump(now);
         for notice in session.take_notices() {
-            on_notice(notice, ready, files);
+            on_notice(notice, ready, files, session, checkpoints, now);
         }
+        let checkpoint_next = checkpoints.pump(session.program().map_or(0, |p| p.output_total()), now);
         let wrote_all = write_all(session, &mut conns, &poller);
         if session.is_done() {
             flush_at_end(session, &mut conns);
@@ -99,6 +107,9 @@ pub(crate) fn serve<S: Spawner>(
             return Ok(());
         }
         let mut deadline = pump.next.map_or(touch_at, |next| next.min(touch_at));
+        if let Some(due) = checkpoint_next {
+            deadline = deadline.min(due);
+        }
         if pump.busy && wrote_all {
             deadline = now;
         }
@@ -141,8 +152,27 @@ pub(crate) fn serve<S: Spawner>(
     }
 }
 
-fn on_notice(notice: Notice, ready: &mut ReadyPipe, files: &mut Files<'_>) {
+fn on_notice<S: Spawner>(
+    notice: Notice,
+    ready: &mut ReadyPipe,
+    files: &mut Files<'_>,
+    session: &Session<S>,
+    checkpoints: &mut Checkpointer,
+    now: Instant,
+) {
     match notice {
+        Notice::SetCheckpoint { key, shell } => {
+            let source = session.program().and_then(|program| program.checkpoint_source());
+            if let Some(source) = source {
+                // Empty: the app has no key, and the checkpoint is the folder and the shell only.
+                checkpoints.configure(source, Key::from_slice(&key), shell, now);
+            }
+        }
+        Notice::CheckpointNow => checkpoints.request(),
+        Notice::Exited(info) => {
+            let ended = checkpoints.ended(&info, FLUSH_WITHIN);
+            tracing::info!(?ended, "the program's last checkpoint");
+        }
         Notice::Spawned { pid } => {
             files.meta.child_pid = Some(pid);
             if let Err(err) = meta::write(files.hosts_dir, &files.meta) {

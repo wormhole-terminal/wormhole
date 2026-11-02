@@ -88,6 +88,12 @@ pub enum Notice {
     Spawned { pid: u32 },
     /// It could not be started, or nobody asked in time: say `err <text>`; the host ends.
     SpawnFailed(String),
+    /// The controller sent `SetCheckpointKey`: start keeping a checkpoint (`key` empty: without a screen).
+    SetCheckpoint { key: Vec<u8>, shell: String },
+    /// The controller sent `Checkpoint`: write one now.
+    CheckpointNow,
+    /// The program ended, once: the checkpoint's last generation says how.
+    Exited(wire::ExitInfo),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -277,6 +283,9 @@ impl<S: Spawner> Session<S> {
                 if exited && self.exited_at.is_none() {
                     tracing::info!("the program exited; keeping its screen");
                     self.exited_at = Some(now);
+                    if let Some(info) = self.program.as_ref().and_then(|p| p.exit()) {
+                        self.notices.push(Notice::Exited(info));
+                    }
                 }
                 if let Some(at) = self.exited_at {
                     let ttl = at + self.config.ttl_after_exit;
@@ -360,7 +369,7 @@ impl<S: Spawner> Session<S> {
             host_version: self.config.host_version,
             pid: program.map_or(0, |p| p.pid()),
             session_id,
-            features: Features::NONE,
+            features: Features::CHECKPOINT,
             started_at_ms: self.config.started_at_ms,
             first_block_id: program.map_or(0, |p| p.first_block_id()),
             size: program.map_or(wire::Size { cols: 0, rows: 0, cell_w: 0, cell_h: 0 }, |p| p.size()),

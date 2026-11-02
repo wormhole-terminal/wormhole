@@ -786,3 +786,41 @@ fn a_frame_larger_than_64_kib_is_accepted_after_hello_and_fatal_before() {
     assert!(!rig.session.conns[at].dead, "a large ClipboardReply is not a protocol error after Hello");
     assert_eq!(rig.state.borrow().clipboard, [(7, big)]);
 }
+
+#[test]
+fn the_controller_starts_checkpoints_and_asks_for_one_and_others_may_not() {
+    let mut rig = Rig::new();
+    let controller = rig.spawned();
+    rig.session.take_notices();
+    rig.send(controller, &Message::SetCheckpointKey(wire::CheckpointKey { key: &[7; 32], shell: "login" }));
+    rig.send(controller, &Message::Checkpoint { flush: true });
+    assert_eq!(
+        rig.session.take_notices(),
+        [Notice::SetCheckpoint { key: vec![7; 32], shell: "login".into() }, Notice::CheckpointNow]
+    );
+    // No key at all is a message too: the folder and the shell only.
+    rig.send(controller, &Message::SetCheckpointKey(wire::CheckpointKey { key: &[], shell: "fish" }));
+    assert_eq!(rig.session.take_notices(), [Notice::SetCheckpoint { key: vec![], shell: "fish".into() }]);
+    let observer = rig.connect();
+    rig.hello(observer, Role::Observer, false);
+    rig.send(observer, &Message::Checkpoint { flush: false });
+    assert_eq!(rig.recv(observer), [Got::Error(ty::CHECKPOINT, error_code::NOT_CONTROLLER)]);
+    rig.send(observer, &Message::SetCheckpointKey(wire::CheckpointKey { key: &[], shell: "x" }));
+    assert_eq!(rig.recv(observer), [Got::Error(ty::SET_CHECKPOINT_KEY, error_code::NOT_CONTROLLER)]);
+    assert!(rig.session.take_notices().is_empty());
+}
+
+#[test]
+fn the_host_says_it_keeps_checkpoints_and_the_programs_end_is_noticed_once() {
+    let mut rig = Rig::new();
+    let id = rig.connect();
+    let got = rig.hello(id, Role::Controller, false);
+    assert!(matches!(got.as_slice(), [Got::Welcome(w)] if w.features.contains(wire::Features::CHECKPOINT)));
+    rig.spawn_program(id, "/bin/cat");
+    rig.session.take_notices();
+    let exit = wire::ExitInfo { code: 3, signal: 0, at_ms: 1 };
+    rig.state.borrow_mut().exit = Some(exit);
+    rig.session.pump(rig.now);
+    rig.session.pump(rig.now);
+    assert_eq!(rig.session.take_notices(), [Notice::Exited(exit)], "once");
+}
