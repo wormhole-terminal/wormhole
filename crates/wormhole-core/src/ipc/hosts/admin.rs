@@ -19,6 +19,7 @@ use std::time::{Duration, Instant};
 use wormhole_wire::io::{FrameReader, FrameWriter};
 use wormhole_wire::{AppVersion, CHANNEL_LOCAL, Features, Hello, Message, Role, version};
 
+use super::identity::is_host_process;
 use super::scan::{StaleReason, scan};
 use super::{HostMeta, meta_path, read_meta};
 use crate::platform::fs::is_socket;
@@ -49,7 +50,7 @@ pub fn end_host(meta: &HostMeta, wait: Duration) -> Result<EndHow, String> {
     let asked = ask_kill(meta, wait);
     let Err(why) = asked else { return Ok(EndHow::Asked) };
     tracing::info!(id = %meta.id, %why, "the host did not take Kill, signalling it");
-    if !is_host_process(meta.pid) {
+    if !is_host_process(meta.pid, meta.started_at) {
         return Err(format!("{why}; pid {} is not a wormhole-host, so it was left alone", meta.pid));
     }
     process::terminate(meta.pid).map_err(|err| format!("{why}; SIGTERM to {}: {err}", meta.pid))?;
@@ -155,15 +156,6 @@ pub(super) fn app_version() -> AppVersion {
         minor: parts.next().unwrap_or(0),
         patch: parts.next().unwrap_or(0),
     }
-}
-
-/// Whether process `pid` runs the `wormhole-host` executable. Only its name is checked: a pid in a
-/// file proves nothing, and a signal must not go to whatever reused the number. (To *talk* to a
-/// host the meta and `Welcome` identify it; this guards the signal fallback.)
-pub fn is_host_process(pid: u32) -> bool {
-    process::executable(pid)
-        .and_then(|path| path.file_name().map(|n| n == crate::ipc::host_binary::HOST_BINARY_NAME))
-        == Some(true)
 }
 
 /// What `forget` removed.
@@ -275,8 +267,12 @@ mod tests {
     use crate::platform::socket::Listener;
 
     fn write_meta(dir: &Path, id: &str, pid: u32, socket: &Path) {
+        write_meta_started(dir, id, pid, 1, socket);
+    }
+
+    fn write_meta_started(dir: &Path, id: &str, pid: u32, started_at: u64, socket: &Path) {
         let text = format!(
-            "format=1\nid={id}\npid={pid}\nstarted_at=1\nhost_version=0.3.0\nproto_min=1\nproto_max=1\n\
+            "format=1\nid={id}\npid={pid}\nstarted_at={started_at}\nhost_version=0.3.0\nproto_min=1\nproto_max=1\n\
              socket={}\ndata_dir=/d\n",
             socket.display()
         );
@@ -312,12 +308,33 @@ mod tests {
         pid
     }
 
+    /// An update deleted the bundle a host runs from; with no socket to ask, SIGTERM must still
+    /// reach it because it is known by its name and start, not by a path that is empty now.
+    #[cfg(target_os = "macos")]
     #[test]
-    fn this_process_is_not_a_host_and_a_gone_one_is_not_either() {
-        assert!(!is_host_process(std::process::id()), "the test binary is not wormhole-host");
-        assert!(!is_host_process(dead_pid()));
-        assert!(!is_host_process(0));
-        assert!(!is_host_process(u32::MAX));
+    fn a_host_whose_binary_was_deleted_is_ended_by_signal() {
+        let dir = short_dir();
+        let d = dir.path();
+        let host = super::super::identity::spawn_fake_host(d);
+        std::fs::remove_file(d.join("wormhole-host")).expect("deletes the binary");
+        let mut meta = meta_for("ffffffffffff", &d.join("nothing.sock"));
+        meta.pid = host.pid();
+        meta.started_at = host.started_at;
+        let how = end_host(&meta, Duration::from_millis(300)).expect("ends");
+        assert_eq!(how, EndHow::Signalled);
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while process::exists(host.pid()) && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    #[test]
+    fn a_process_that_only_has_the_pid_is_left_alone() {
+        let dir = short_dir();
+        let mut meta = meta_for("gggggggggggg", &dir.path().join("nothing.sock"));
+        meta.pid = std::process::id();
+        let err = end_host(&meta, Duration::from_millis(300)).expect_err("refused");
+        assert!(err.contains("not a wormhole-host"), "{err}");
     }
 
     #[test]
@@ -341,8 +358,9 @@ mod tests {
         let d = dir.path();
         let sock = d.join("bbbbbbbbbbbb.sock");
         let _listener = Listener::bind(&sock).expect("binds");
-        // This test process stands in for the host: its pid runs.
-        write_meta(d, "bbbbbbbbbbbb", std::process::id(), &sock);
+        // A process named like a host, started when the meta says, stands in for it.
+        let host = super::super::identity::spawn_fake_host(d);
+        write_meta_started(d, "bbbbbbbbbbbb", host.pid(), host.started_at, &sock);
         assert!(matches!(forget(d, "bbbbbbbbbbbb"), Err(ForgetError::Live(_))));
         assert!(sock.exists() && d.join("bbbbbbbbbbbb.meta").exists());
     }
@@ -351,7 +369,8 @@ mod tests {
     fn a_host_whose_socket_is_missing_but_whose_pid_runs_is_kept() {
         let dir = short_dir();
         let d = dir.path();
-        write_meta(d, "cccccccccccc", std::process::id(), &d.join("cccccccccccc.sock"));
+        let host = super::super::identity::spawn_fake_host(d);
+        write_meta_started(d, "cccccccccccc", host.pid(), host.started_at, &d.join("cccccccccccc.sock"));
         assert!(matches!(forget(d, "cccccccccccc"), Err(ForgetError::Live(_))));
         assert!(d.join("cccccccccccc.meta").exists());
     }

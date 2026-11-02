@@ -46,6 +46,17 @@ pub fn cwd(pid: u32) -> Option<PathBuf> {
     os::cwd(pid)
 }
 
+/// The name the system keeps for a process, as it was started: unlike its executable's path it
+/// survives the file being replaced or deleted.
+pub fn command_name(pid: u32) -> Option<String> {
+    os::command_name(pid)
+}
+
+/// Whether the process runs as the user this one acts as. `false` when that cannot be read.
+pub fn runs_as_current_user(pid: u32) -> bool {
+    os::owner(pid).is_some_and(|uid| uid == super::unix::user::effective_uid())
+}
+
 /// The memory a process has resident, in bytes.
 pub fn resident_bytes(pid: u32) -> Option<u64> {
     os::resident_bytes(pid)

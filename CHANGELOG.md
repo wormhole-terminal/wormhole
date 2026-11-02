@@ -17,6 +17,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - A terminal that pasted or copied more than 64 KiB through the clipboard (an OSC 52 reply), or started with an
   environment that large, lost its session host: after the handshake the host kept the handshake's
   smaller frame limit and dropped the connection.
+- Ending session hosts (Quit and End All Terminals, `Wormhole sessions end`) now reaches a host that kept
+  running after an update replaced the app it came from; it was left alone because its program file was gone.
+- A session host whose process number was taken by another program after a restart is no longer listed as
+  running.
 - A session host's log no longer gets three lines for every look at it from the command line or the Session
   Hosts window; those short connections are logged at the debug level.
 

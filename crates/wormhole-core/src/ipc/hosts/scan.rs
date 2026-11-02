@@ -1,7 +1,8 @@
 //! Which session hosts are alive, from the files they leave in `<data dir>/hosts/`.
 //!
-//! A host is live when its meta file reads, its pid runs and its socket exists. A pid alone proves
-//! nothing (pids are reused) and neither does a file, so a caller that is about to talk to a host
+//! A host is live when its meta file reads, its pid is the host the meta describes (`identity`: its
+//! name, its user and its start time, not just a pid that runs) and its socket exists. A pid alone
+//! proves nothing (pids are reused) and neither does a file, so a caller that is about to talk to a host
 //! still checks it is the right one with the protocol's `Welcome`; this only narrows the list and
 //! tells the stale files apart. Nothing here deletes anything.
 
@@ -10,9 +11,10 @@ use std::path::Path;
 
 use wormhole_term::hosted::meta::Meta;
 
-use crate::platform::{fs, process};
+use crate::platform::fs;
 use crate::storage::files::{self, LinkPolicy};
 
+use super::identity::is_host_process;
 use super::is_valid_host_id;
 
 /// A meta file is a dozen short lines; anything bigger is not one.
@@ -87,11 +89,11 @@ pub struct Scan {
 
 /// Look in `hosts_dir`. A folder that is not there is an empty scan.
 pub fn scan(hosts_dir: &Path) -> io::Result<Scan> {
-    scan_with(hosts_dir, process::exists)
+    scan_with(hosts_dir, |meta| is_host_process(meta.pid, meta.started_at))
 }
 
 /// [`scan`] with the check for a running pid as an argument, for the tests.
-pub fn scan_with(hosts_dir: &Path, pid_runs: impl Fn(u32) -> bool) -> io::Result<Scan> {
+pub fn scan_with(hosts_dir: &Path, is_running: impl Fn(&HostMeta) -> bool) -> io::Result<Scan> {
     let entries = match std::fs::read_dir(hosts_dir) {
         Ok(entries) => entries,
         Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(Scan::default()),
@@ -118,7 +120,7 @@ pub fn scan_with(hosts_dir: &Path, pid_runs: impl Fn(u32) -> bool) -> io::Result
                 reason: StaleReason::Unreadable(err.to_string()),
                 meta: None,
             }),
-            Ok(meta) if !pid_runs(meta.pid) => {
+            Ok(meta) if !is_running(&meta) => {
                 scan.stale.push(StaleHost { id: id.clone(), reason: StaleReason::PidGone, meta: Some(meta) })
             }
             Ok(meta) if !is_socket(&meta.socket) => scan.stale.push(StaleHost {
@@ -149,6 +151,7 @@ fn is_socket(path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::platform::process;
     use crate::platform::socket::Listener;
 
     fn meta_text(id: &str, pid: u32, socket: &Path, started_at: u64) -> String {
@@ -167,8 +170,8 @@ mod tests {
         listening.then(|| Listener::bind(&socket).expect("binds"))
     }
 
-    fn runs(pids: &'static [u32]) -> impl Fn(u32) -> bool {
-        move |pid| pids.contains(&pid)
+    fn runs(pids: &'static [u32]) -> impl Fn(&HostMeta) -> bool {
+        move |meta| pids.contains(&meta.pid)
     }
 
     #[test]
@@ -271,6 +274,30 @@ mod tests {
         for name in ["cccccccccccc.meta", "cccccccccccc.sock", "eeeeeeeeeeee.meta", "ffffffffffff.sock"] {
             assert!(d.join(name).exists(), "{name}");
         }
+    }
+
+    /// After a reboot a host's pid may belong to anything; the meta says a host, the process is
+    /// not one (here: this test, which runs, but is neither named like a host nor started when the
+    /// meta says), so the host is not live.
+    #[test]
+    fn a_reused_pid_is_not_a_live_host() {
+        let dir = tempfile::Builder::new().prefix("hs").tempdir_in("/tmp").expect("temp");
+        let d = dir.path();
+        let _listener = host(d, "aaaaaaaaaaaa", std::process::id(), 1000, true);
+        let scan = scan(d).expect("scans");
+        assert!(scan.live.is_empty(), "{:?}", scan.live);
+        assert_eq!(scan.stale[0].reason, StaleReason::PidGone);
+    }
+
+    #[test]
+    fn a_running_host_is_live_by_name_and_start_even_when_its_binary_is_gone() {
+        let dir = tempfile::Builder::new().prefix("hs").tempdir_in("/tmp").expect("temp");
+        let d = dir.path();
+        let fake = super::super::identity::spawn_fake_host(d);
+        let _listener = host(d, "bbbbbbbbbbbb", fake.pid(), fake.started_at, true);
+        std::fs::remove_file(d.join("wormhole-host")).expect("deletes the binary");
+        let scan = scan(d).expect("scans");
+        assert_eq!(scan.live.len(), 1, "{:?}", scan.stale);
     }
 
     #[test]

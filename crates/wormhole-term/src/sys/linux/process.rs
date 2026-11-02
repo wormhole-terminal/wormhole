@@ -49,6 +49,14 @@ pub(crate) fn listening_tcp_ports(_pid: u32, _limit: usize) -> Vec<u16> {
     Vec::new()
 }
 
+pub(crate) fn command_name(pid: u32) -> Option<String> {
+    std::fs::read_to_string(format!("/proc/{pid}/comm")).ok().map(|name| name.trim_end().to_string())
+}
+
+pub(crate) fn owner(_pid: u32) -> Option<u32> {
+    None
+}
+
 pub(crate) fn resident_bytes(_pid: u32) -> Option<u64> {
     None
 }

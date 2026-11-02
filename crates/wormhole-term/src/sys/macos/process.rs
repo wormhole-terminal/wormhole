@@ -74,6 +74,24 @@ pub(crate) fn resident_bytes(pid: u32) -> Option<u64> {
     (written == size).then_some(info.pti_resident_size)
 }
 
+/// The name the kernel keeps for the process (`pbi_name`, else `pbi_comm`): what it was started as,
+/// still there after the file it runs from was replaced or deleted (an update does that to a host
+/// that outlives the app).
+pub(crate) fn command_name(pid: u32) -> Option<String> {
+    let info = bsd_info(pid)?;
+    let text = |raw: &[libc::c_char]| {
+        let bytes: Vec<u8> = raw.iter().take_while(|&&c| c != 0).map(|&c| c as u8).collect();
+        String::from_utf8_lossy(&bytes).into_owned()
+    };
+    let name = text(&info.pbi_name);
+    Some(if name.is_empty() { text(&info.pbi_comm) } else { name })
+}
+
+/// The effective user id the process runs as.
+pub(crate) fn owner(pid: u32) -> Option<u32> {
+    bsd_info(pid).map(|info| info.pbi_uid)
+}
+
 /// The process group that owns the terminal of the process `shell_pid` right now.
 pub(crate) fn foreground_group(shell_pid: u32) -> Option<u32> {
     bsd_info(shell_pid).map(|info| info.e_tpgid).filter(|&pgid| pgid > 0)

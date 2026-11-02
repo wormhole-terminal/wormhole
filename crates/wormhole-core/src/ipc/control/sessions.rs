@@ -340,6 +340,7 @@ fn offline_in(action: &super::Action, json: bool, hosts_dir: &Path) -> Option<St
 mod tests {
     use super::*;
     use crate::ipc::control::Action;
+    use crate::ipc::hosts::{FakeHost, spawn_fake_host};
     use crate::platform::socket::Listener;
 
     fn words(list: &[&str]) -> Vec<String> {
@@ -404,23 +405,25 @@ mod tests {
     }
 
     /// A live host (this process's pid, a bound socket) and a stale one (its pid is gone).
-    fn two_hosts(dir: &Path) -> Listener {
-        let socket = write_meta(dir, "aaaaaaaaaaaa", std::process::id(), 1_760_000_000);
+    fn two_hosts(dir: &Path) -> (Listener, FakeHost) {
+        let host = spawn_fake_host(dir);
+        let socket = write_meta(dir, "aaaaaaaaaaaa", host.pid(), host.started_at);
         let listener = Listener::bind(&socket).expect("binds");
         write_meta(dir, "bbbbbbbbbbbb", dead_pid(), 1_700_000_000);
-        listener
+        (listener, host)
     }
 
     #[test]
     fn list_shows_live_hosts_first_then_the_stale_with_their_reason() {
         let dir = short_dir();
-        let _live = two_hosts(dir.path());
+        let (_live, host) = two_hosts(dir.path());
+        let started = host.started_at;
         let (code, out, err) = execute(&Command::List { json: false }, dir.path(), END_WAIT);
         assert_eq!((code, err.as_str()), (0, ""));
         let lines: Vec<&str> = out.lines().collect();
         assert_eq!(lines.len(), 3, "{out}");
         assert!(lines[0].starts_with("ID") && lines[0].ends_with("STATE"));
-        assert!(lines[1].starts_with("aaaaaaaaaaaa") && lines[1].contains("2025-10-09 08:53:20Z"), "{out}");
+        assert!(lines[1].starts_with("aaaaaaaaaaaa") && lines[1].contains(&utc(started)), "{out}");
         assert!(lines[1].contains("4242") && lines[1].contains("0.3.0") && lines[1].ends_with("live"));
         assert!(lines[2].starts_with("bbbbbbbbbbbb") && lines[2].ends_with("stale (process gone)"), "{out}");
     }
