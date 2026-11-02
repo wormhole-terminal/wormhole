@@ -278,6 +278,21 @@ fn with_page(
     });
 }
 
+/// devctl `settings-key <keystroke>`: a key pressed in the settings window (`escape`, `ctrl-enter`, …;
+/// `key` goes to the main window). Sent through the window, deferred, so it never runs inside an update
+/// of the page: a handler that updates the page would find it already borrowed.
+pub(crate) fn key(arg: &str, cx: &mut App) -> Result<(), String> {
+    let keystroke = Keystroke::parse(arg.trim()).map_err(|err| err.to_string())?;
+    let Some((handle, _)) = current_window(cx) else { return Err("settings window not open".into()) };
+    cx.defer(move |cx| {
+        let _ = handle.update(cx, |_, window, cx| {
+            let event = KeyDownEvent { keystroke, is_held: false, prefer_character_input: false };
+            window.dispatch_event(PlatformInput::KeyDown(event), cx);
+        });
+    });
+    Ok(())
+}
+
 /// devctl `settings-pointer <move|click|right-click> <x> <y>`, `settings-pointer wheel <x> <y> <dy>` and
 /// `settings-pointer alt-on|alt-off`: the pointer, the wheel over a point (a negative `dy` scrolls
 /// down, as a trackpad), or ⌥ held, in the settings window, which has no command file of its own.

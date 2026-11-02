@@ -134,6 +134,11 @@ pub(super) fn pointer(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+pub(super) fn key(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    crate::settings_window::devctl::key(arg, ctx.cx).map_err(|err| anyhow!(err))?;
+    Ok(String::new())
+}
+
 pub(super) fn resize(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let mut dims = arg.split_whitespace().filter_map(|n| n.parse::<f32>().ok());
     let (Some(w), Some(h)) = (dims.next(), dims.next()) else {
