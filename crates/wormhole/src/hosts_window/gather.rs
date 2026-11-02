@@ -4,17 +4,17 @@
 //! read in the background: the databases are opened read-only, so a look never creates, upgrades
 //! or backs up anything.
 
-use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use gpui_kit::App;
+use wormhole_core::ipc::host_binary::HostProgram;
 use wormhole_core::ipc::hosts::report::{AppFacts, Attachment, Inputs, Report};
 use wormhole_core::ipc::hosts::{self, Survey};
 use wormhole_core::storage::paths::ProfilePaths;
 use wormhole_core::storage::store::Store;
 
 use crate::app_state::app;
-use crate::window::hosting::host_binary;
+use crate::window::hosting::host_program;
 use crate::window::windows::persistent_terminals_on;
 
 /// How long one host gets to answer `GetInfo`: a host that is there answers in a millisecond, so a
@@ -24,7 +24,7 @@ const ANSWER_WITHIN: Duration = Duration::from_millis(400);
 /// The app's side of one refresh.
 pub(super) struct Gather {
     flag_on: bool,
-    host_binary: Option<PathBuf>,
+    host_program: HostProgram,
     attachments: Vec<Attachment>,
     /// Every profile's files, whose databases name the hosts their terminals run in.
     profiles: Vec<ProfilePaths>,
@@ -44,7 +44,7 @@ impl Gather {
             state.profiles.profiles().iter().map(|profile| state.root.profile(&profile.id)).collect();
         Self {
             flag_on: persistent_terminals_on(cx),
-            host_binary: host_binary().cloned(),
+            host_program: host_program().clone(),
             attachments,
             profiles,
         }
@@ -64,7 +64,7 @@ impl Gather {
             app: AppFacts::this_build(),
             hosts_dir,
             flag_on: self.flag_on,
-            host_binary: self.host_binary,
+            host_program: self.host_program,
             scan: survey.scan,
             observed: survey.observed,
             attachments: self.attachments,

@@ -2,12 +2,13 @@
 //! and how many hosts stand each way.
 
 use gpui_kit::*;
+use wormhole_core::ipc::host_binary::HostProgram;
 use wormhole_core::ipc::hosts::report::Report;
 use wormhole_text::keys::{
     HOSTS_ACTION_COPIED, HOSTS_ACTION_COPY_ALL, HOSTS_COUNT_ATTACHED, HOSTS_COUNT_DETACHED,
-    HOSTS_COUNT_ORPHAN, HOSTS_COUNT_STALE, HOSTS_HEADER_BINARY, HOSTS_HEADER_BINARY_MISSING,
-    HOSTS_HEADER_FLAG, HOSTS_HEADER_FLAG_OFF, HOSTS_HEADER_FLAG_ON, HOSTS_HEADER_FOLDER, HOSTS_OFF_NOTE,
-    HOSTS_WINDOW_TITLE, hosts_header_app,
+    HOSTS_COUNT_ORPHAN, HOSTS_COUNT_STALE, HOSTS_HEADER_BINARY, HOSTS_HEADER_BINARY_DISPOSABLE,
+    HOSTS_HEADER_BINARY_MISSING, HOSTS_HEADER_FLAG, HOSTS_HEADER_FLAG_OFF, HOSTS_HEADER_FLAG_ON,
+    HOSTS_HEADER_FOLDER, HOSTS_OFF_NOTE, HOSTS_WINDOW_TITLE, hosts_header_app,
 };
 use wormhole_text::text;
 
@@ -24,9 +25,12 @@ impl HostsWindow {
         } else {
             style::status_badge(ui, ui.warning_text, text(HOSTS_HEADER_FLAG_OFF))
         };
-        let (binary, binary_color) = match &report.host_binary {
-            Some(path) => (words::path_keeping(path, 40), ui.text),
-            None => (text(HOSTS_HEADER_BINARY_MISSING).to_string(), ui.warning_text),
+        let (binary, binary_color) = match &report.host_program {
+            HostProgram::Found(path) => (words::path_keeping(path, 40), ui.text),
+            HostProgram::DisposableCopy => {
+                (text(HOSTS_HEADER_BINARY_DISPOSABLE).to_string(), ui.warning_text)
+            }
+            HostProgram::Missing => (text(HOSTS_HEADER_BINARY_MISSING).to_string(), ui.warning_text),
         };
         let copy_all = if self.copied == Some(Copied::All) {
             text(HOSTS_ACTION_COPIED)

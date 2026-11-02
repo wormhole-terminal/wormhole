@@ -134,6 +134,13 @@ notice-warned-host-fallback = This terminal ends when { -brand } quits
 # switched off.
 notice-warned-host-fallback-detail = This terminal runs inside { -brand } and ends when it quits: the helper that keeps terminals running couldn't start.
 
+# The chip when Wormhole runs from a disk image or a temporary copy, where the helper that keeps terminals
+# running must not start. One line.
+notice-warned-move-to-applications = Move { -brand } to Applications to keep terminals running when it quits
+
+# The same, in full: what VoiceOver says, and the banner of a window whose chip is switched off.
+notice-warned-move-to-applications-detail = { -brand } is running from a disk image or a temporary copy, so its terminals end when it quits. Move it to Applications, then open it from there.
+
 # The chip when an update is installed and waits for a restart; a click on it restarts. { $version } is the
 # new version's number, e.g. 1.6.0.
 notice-warned-update-ready = { -brand } { $version } is ready — Restart

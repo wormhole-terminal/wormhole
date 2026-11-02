@@ -7,7 +7,7 @@ use std::fmt::Write as _;
 use wormhole_term::client::LinkMode;
 use wormhole_wire::version::HostFit;
 
-use super::{Answer, AppFacts, HostRow, Report, Standing};
+use super::{Answer, AppFacts, HostProgram, HostRow, Report, Standing};
 use crate::ipc::hosts::StaleReason;
 
 impl Report {
@@ -22,7 +22,13 @@ impl Report {
         );
         let _ = writeln!(out, "hosts folder: {}", self.hosts_dir.display());
         let _ = writeln!(out, "persistent terminals: {}", if self.flag_on { "on" } else { "off" });
-        let binary = self.host_binary.as_deref().map_or("not found".to_string(), |p| p.display().to_string());
+        let binary = match &self.host_program {
+            HostProgram::Found(path) => path.display().to_string(),
+            HostProgram::DisposableCopy => {
+                "none: the app runs from a disk image or a temporary copy".to_string()
+            }
+            HostProgram::Missing => "not found".to_string(),
+        };
         let _ = writeln!(out, "host binary: {binary}");
         let _ = writeln!(
             out,

@@ -12,6 +12,9 @@ pub(crate) fn of(notice: Notice) -> Option<String> {
         Notice::Warned(Warning::HostFallback) => {
             return Some(text(keys::NOTICE_WARNED_HOST_FALLBACK).to_string());
         }
+        Notice::Warned(Warning::MoveToApplications) => {
+            return Some(text(keys::NOTICE_WARNED_MOVE_TO_APPLICATIONS).to_string());
+        }
         // The version is the poster's to say (`update::prompt`).
         Notice::Warned(Warning::UpdateReady(_) | Warning::Test(_)) | Notice::Test(_) => return None,
     };
@@ -50,8 +53,14 @@ pub(crate) fn program_copy(program: &str, copied: Copied) -> Option<String> {
 pub(super) fn spoken(notice: Notice) -> Option<String> {
     match notice {
         Notice::Warned(Warning::HostFallback) => Some(host_fallback_detail()),
+        Notice::Warned(Warning::MoveToApplications) => Some(move_to_applications_detail()),
         _ => None,
     }
+}
+
+/// Why terminals end when Wormhole quits while it runs from a disk image, in full.
+pub(crate) fn move_to_applications_detail() -> String {
+    text(keys::NOTICE_WARNED_MOVE_TO_APPLICATIONS_DETAIL).to_string()
 }
 
 /// Why the terminal ends when Wormhole quits, in full: spoken, and written in the banner a window without
@@ -180,6 +189,20 @@ mod tests {
             assert_eq!(said(Refused::Invisible), "Not put at the prompt: it has characters you can't see");
             assert_eq!(said(Refused::Lines), "Not put at the prompt: each line would run in this shell");
             assert_eq!(spoken(Notice::Failed(Failed::PutAtPrompt(Refused::Lines))), None, "the chip's words");
+        });
+    }
+
+    /// Running from a disk image or a temporary copy is told to the person as one line that says what to do.
+    #[test]
+    fn a_disk_image_run_says_to_move_wormhole_to_applications() {
+        with_language(Language::ENGLISH, || {
+            let warned = Notice::Warned(Warning::MoveToApplications);
+            assert_eq!(
+                of(warned).unwrap_or_default(),
+                "Move Wormhole to Applications to keep terminals running when it quits"
+            );
+            let long = spoken(warned).unwrap_or_default();
+            assert!(long.contains("disk image or a temporary copy"), "{long}");
         });
     }
 

@@ -30,6 +30,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- Wormhole run from a disk image or a temporary copy started its terminals inside the app without a word, so
+  they ended when it quit. With Persistent terminals on it now says so once ("Move Wormhole to Applications to
+  keep terminals running when it quits"), and the Session Hosts window says why it has no host program.
 - A terminal brought back from its saved text after its session host was gone (a restart, or a host that
   ended) ran inside Wormhole, so the next update or quit ended it. With Persistent terminals on it now starts
   a new session host, which shows the saved text first, with the "restored" line, and keeps running when

@@ -4,11 +4,11 @@
 //! letting go of every host as the app quits, so their programs go on running.
 
 use std::collections::HashSet;
-use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use gpui_kit::*;
 use wormhole_core::config::profile::ProfileList;
+use wormhole_core::ipc::host_binary::HostProgram;
 use wormhole_core::ipc::hosts::report::Attachment;
 use wormhole_core::ipc::hosts::{self, HostMeta, LaunchHosts, Restore};
 use wormhole_core::storage::paths::DataRoot;
@@ -21,10 +21,11 @@ use crate::terminal_view::Start;
 use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
 
-/// The host executable, looked for once: it sits beside the app's, which doesn't move while it runs.
-pub(crate) fn host_binary() -> Option<&'static PathBuf> {
-    static BINARY: OnceLock<Option<PathBuf>> = OnceLock::new();
-    BINARY.get_or_init(wormhole_core::ipc::host_binary::host_binary).as_ref()
+/// The host program, or why there is none, looked for once: it sits beside the app's, which doesn't
+/// move while it runs.
+pub(crate) fn host_program() -> &'static HostProgram {
+    static PROGRAM: OnceLock<HostProgram> = OnceLock::new();
+    PROGRAM.get_or_init(wormhole_core::ipc::host_binary::host_program)
 }
 
 /// The hosts this data folder has at launch, matched against what every profile's database names:
@@ -160,8 +161,8 @@ impl Workspace {
         options: &SpawnOptions,
         cx: &mut App,
     ) -> Start {
-        let (may_host, binary) = (self.may_host(options, cx), host_binary().cloned());
-        self.start_with(record, options, may_host, binary, cx)
+        let (may_host, program) = (self.may_host(options, cx), host_program().clone());
+        self.start_with(record, may_host, program, cx)
     }
 
     /// [`start_for`](Self::start_for) with the two facts it reads from the machine given: whether a host
@@ -169,9 +170,8 @@ impl Workspace {
     pub(super) fn start_with(
         &mut self,
         record: &SessionRecord,
-        options: &SpawnOptions,
         may_host: bool,
-        binary: Option<PathBuf>,
+        program: HostProgram,
         cx: &mut App,
     ) -> Start {
         if let Some(id) = record.host_id.as_deref()
@@ -185,7 +185,12 @@ impl Workspace {
         if !may_host {
             return Start::Local;
         }
-        let Some(binary) = binary else { return Start::Local };
+        let binary = match program {
+            HostProgram::Found(binary) => binary,
+            // Hosting is on and wanted, and the app runs from a copy that is about to go: say so, once.
+            HostProgram::DisposableCopy => return Start::LocalNeedsApplications,
+            HostProgram::Missing => return Start::Local,
+        };
         match hosts::new_host_id() {
             Ok(id) => Start::Host { binary, data_dir: wormhole_core::storage::paths::data_dir(), id },
             Err(err) => {

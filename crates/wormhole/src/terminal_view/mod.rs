@@ -271,7 +271,8 @@ impl TerminalView {
         options.color_scheme = Some(palette.color_scheme());
         let cwd = options.cwd.clone();
         let restored = options.restore.clone().unwrap_or_default();
-        let local = matches!(start, Start::Local).then(|| wormhole_core::terminal::spawn(initial, &options));
+        let local = matches!(start, Start::Local | Start::LocalNeedsApplications)
+            .then(|| wormhole_core::terminal::spawn(initial, &options));
         let (pty, events) = match local {
             Some(Ok((pty, events))) => (Some(pty), Some(events)),
             Some(Err(err)) => {

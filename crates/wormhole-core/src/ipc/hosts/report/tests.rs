@@ -48,7 +48,7 @@ fn inputs(scan: Scan) -> Inputs {
         app: app(),
         hosts_dir: PathBuf::from("/h"),
         flag_on: true,
-        host_binary: Some(PathBuf::from("/Apps/wormhole-host")),
+        host_program: HostProgram::Found(PathBuf::from("/Apps/wormhole-host")),
         scan,
         observed: HashMap::new(),
         attachments: Vec::new(),
@@ -268,6 +268,20 @@ fn words_for_durations_sizes_and_times() {
     assert_eq!(bytes_words(300 * 1024), "300 KiB");
     assert_eq!(bytes_words(40 * 1024 * 1024 + 512 * 1024), "40.5 MiB");
     assert_eq!(time_words(0), "1970-01-01 00:00:00 UTC");
+}
+
+#[test]
+fn the_header_says_why_there_is_no_host_program() {
+    let text = |program| {
+        let mut i = inputs(Scan::default());
+        i.host_program = program;
+        Report::build(i).to_text()
+    };
+    assert!(
+        text(HostProgram::DisposableCopy)
+            .contains("host binary: none: the app runs from a disk image or a temporary copy")
+    );
+    assert!(text(HostProgram::Missing).contains("host binary: not found"));
 }
 
 #[test]

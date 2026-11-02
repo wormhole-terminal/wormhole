@@ -25,6 +25,9 @@ use crate::style::{self, BannerKind};
 pub enum Start {
     /// In the app's own process, as without hosts.
     Local,
+    /// In the app's own process because the app runs from a disk image or a temporary copy, where a session host
+    /// must not start: like `Local`, and the person is told to move Wormhole to Applications (once per run).
+    LocalNeedsApplications,
     /// In a new session host: `binary`, with its files in `<data_dir>/hosts` under the id `id`.
     Host { binary: PathBuf, data_dir: PathBuf, id: String },
     /// Attach to the running host `id` at `socket` (a terminal saved with it, or an orphan), fed a
@@ -87,6 +90,9 @@ pub(super) struct HostState {
 /// for the same reason, and every new terminal would say it again.
 static FALLBACK_TOLD: AtomicBool = AtomicBool::new(false);
 
+/// The same for "move Wormhole to Applications": once per run, however many terminals start.
+static MOVE_TOLD: AtomicBool = AtomicBool::new(false);
+
 /// The app is quitting and has let go of its hosts (`window::hosting::detach_all`). A start or
 /// attach still under way then finishes on its background thread with no view to take it, and its
 /// `Pty` would be dropped there, which closes the host: it lets go of the host instead.
@@ -129,7 +135,7 @@ impl HostState {
 
     pub(super) fn of(start: &Start, app_only: bool) -> Self {
         match start {
-            Start::Local => Self { app_only, ..Self::default() },
+            Start::Local | Start::LocalNeedsApplications => Self { app_only, ..Self::default() },
             Start::Host { id, .. } => {
                 Self { id: Some(id.clone()), connecting: true, on_screen: true, ..Self::default() }
             }
@@ -156,6 +162,7 @@ impl TerminalView {
         }
         match start {
             Start::Local => {}
+            Start::LocalNeedsApplications => self.tell_move_to_applications(cx),
             Start::Host { binary, data_dir, id } => {
                 let task = cx.background_spawn({
                     let options = options.clone();
@@ -264,6 +271,23 @@ impl TerminalView {
         // Connected, or fallen back to the app: the status bar says which.
         self.announce_summary(cx);
         cx.notify();
+    }
+
+    /// Say that terminals end when the app quits because it runs from a disk image or a temporary copy: once
+    /// per run, on the chip, or as the banner where the chip is off.
+    fn tell_move_to_applications(&mut self, cx: &mut Context<Self>) {
+        if MOVE_TOLD.swap(true, Ordering::Relaxed) {
+            return;
+        }
+        if crate::notice::enabled(&self.profile, cx) {
+            self.say_with(
+                Notice::Warned(Warning::MoveToApplications),
+                crate::notice::move_to_applications_detail(),
+                cx,
+            );
+        } else {
+            self.host.notice = Some(crate::notice::move_to_applications_detail().into());
+        }
     }
 
     /// Say that this terminal ends when the app quits, because its host couldn't start: on the notice chip,

@@ -18,29 +18,57 @@ pub const HOST_BINARY_NAME: &str = "wormhole-host";
 /// every terminal.
 pub const HOST_BIN_VAR: &str = "WORMHOLE_HOST_BIN";
 
+/// Where the session host program is, or why there is none.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HostProgram {
+    /// The executable to start.
+    Found(PathBuf),
+    /// The app runs from a copy that is about to go away (Gatekeeper's translocated copy, or a mounted disk
+    /// image): a host started from it would outlive the copy and keep the image from being ejected.
+    DisposableCopy,
+    /// None beside the app (a build without it), or an override that is not an executable.
+    Missing,
+}
+
 /// The host executable this app should start, or `None` for in-process terminals: there is none beside
 /// the app, or the app runs where hosts must not start (see [`runs_from_a_disposable_copy`]).
 pub fn host_binary() -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
+    match host_program() {
+        HostProgram::Found(path) => Some(path),
+        HostProgram::DisposableCopy | HostProgram::Missing => None,
+    }
+}
+
+/// [`host_binary`] with the reason there is none.
+pub fn host_program() -> HostProgram {
+    let Some(exe) = std::env::current_exe().ok() else { return HostProgram::Missing };
     let over = cfg!(debug_assertions).then(|| std::env::var_os(HOST_BIN_VAR)).flatten();
-    host_binary_for(&exe, over.as_deref())
+    locate(&exe, over.as_deref())
 }
 
 /// [`host_binary`] for a given app executable and override, so the rules can be tested.
+#[cfg(test)]
 fn host_binary_for(exe: &Path, over: Option<&OsStr>) -> Option<PathBuf> {
+    match locate(exe, over) {
+        HostProgram::Found(path) => Some(path),
+        HostProgram::DisposableCopy | HostProgram::Missing => None,
+    }
+}
+
+fn locate(exe: &Path, over: Option<&OsStr>) -> HostProgram {
     if let Some(over) = over.filter(|p| !p.is_empty()) {
         let path = PathBuf::from(OsString::from(over));
         if is_executable_file(&path) {
-            return Some(path);
+            return HostProgram::Found(path);
         }
         tracing::warn!(path = %path.display(), "{HOST_BIN_VAR} is not an executable file; no session host");
-        return None;
+        return HostProgram::Missing;
     }
     if runs_from_a_disposable_copy(exe) {
-        return None;
+        return HostProgram::DisposableCopy;
     }
-    let path = exe.parent()?.join(HOST_BINARY_NAME);
-    is_executable_file(&path).then_some(path)
+    let Some(path) = exe.parent().map(|dir| dir.join(HOST_BINARY_NAME)) else { return HostProgram::Missing };
+    if is_executable_file(&path) { HostProgram::Found(path) } else { HostProgram::Missing }
 }
 
 /// A host outlives the app and keeps its executable open, so it must not start from a copy that macOS
@@ -64,7 +92,7 @@ mod tests {
     use std::fs;
     use std::path::Path;
 
-    use super::{HOST_BINARY_NAME, host_binary_for, runs_from_a_disposable_copy};
+    use super::{HOST_BINARY_NAME, HostProgram, host_binary_for, locate, runs_from_a_disposable_copy};
     use crate::platform::fs::permissions;
 
     fn touch(path: &Path, mode: u32) {
@@ -128,5 +156,19 @@ mod tests {
         assert_eq!(host_binary_for(&exe, Some(OsStr::new("/nonexistent/host"))), None);
         // Empty means unset.
         assert_eq!(host_binary_for(&exe, Some(OsStr::new(""))), Some(beside));
+    }
+
+    /// Not finding a host is not one thing: a copy that is about to go away is told apart, so the app can
+    /// say to move itself to Applications instead of saying nothing.
+    #[test]
+    fn a_disposable_copy_is_told_apart_from_a_missing_host() {
+        let exe = Path::new("/Volumes/Wormhole/Wormhole.app/Contents/MacOS/Wormhole");
+        assert_eq!(locate(exe, None), HostProgram::DisposableCopy);
+        let translocated =
+            Path::new("/private/var/folders/x/AppTranslocation/ABC/d/Wormhole.app/Contents/MacOS/Wormhole");
+        assert_eq!(locate(translocated, None), HostProgram::DisposableCopy);
+        // An ordinary place with no host beside it: missing, not disposable.
+        let dir = tempfile::tempdir().expect("temp");
+        assert_eq!(locate(&dir.path().join("Wormhole"), None), HostProgram::Missing);
     }
 }

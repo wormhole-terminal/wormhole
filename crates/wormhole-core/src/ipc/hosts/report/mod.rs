@@ -23,6 +23,7 @@ use wormhole_wire::{AppVersion, HostState};
 use super::attach::Unavailable;
 use super::probe::{ProbeFailure, Probed};
 use super::{HostMeta, Scan, StaleReason, meta_path};
+use crate::ipc::host_binary::HostProgram;
 
 pub use plain::{
     Elapsed, SizeUnit, bytes_words, duration_words, elapsed, range_words, size, stale_word, time_words,
@@ -80,7 +81,8 @@ pub struct Inputs {
     pub hosts_dir: PathBuf,
     /// Whether `FeatureFlag::PersistentTerminals` is on.
     pub flag_on: bool,
-    pub host_binary: Option<PathBuf>,
+    /// The host program found, or why none is.
+    pub host_program: HostProgram,
     pub scan: Scan,
     pub observed: HashMap<String, Observed>,
     pub attachments: Vec<Attachment>,
@@ -214,7 +216,8 @@ pub struct Report {
     pub app: AppFacts,
     pub hosts_dir: PathBuf,
     pub flag_on: bool,
-    pub host_binary: Option<PathBuf>,
+    /// The host program found, or why none is.
+    pub host_program: HostProgram,
     pub now: u64,
     /// Live hosts first (oldest first), then the stale ones by id.
     pub rows: Vec<HostRow>,
@@ -222,7 +225,8 @@ pub struct Report {
 
 impl Report {
     pub fn build(inputs: Inputs) -> Self {
-        let Inputs { app, hosts_dir, flag_on, host_binary, scan, observed, attachments, named, now } = inputs;
+        let Inputs { app, hosts_dir, flag_on, host_program, scan, observed, attachments, named, now } =
+            inputs;
         let held: HashMap<&str, &Attachment> = attachments.iter().map(|a| (a.host_id.as_str(), a)).collect();
         let none = Observed::default();
         let mut rows = Vec::with_capacity(scan.live.len() + scan.stale.len());
@@ -243,7 +247,7 @@ impl Report {
                 None => HostRow::bare(&stale.id, standing, &hosts_dir, link),
             });
         }
-        Self { app, hosts_dir, flag_on, host_binary, now, rows }
+        Self { app, hosts_dir, flag_on, host_program, now, rows }
     }
 
     pub fn counts(&self) -> Counts {
@@ -267,7 +271,7 @@ impl Report {
         self.app == other.app
             && self.hosts_dir == other.hosts_dir
             && self.flag_on == other.flag_on
-            && self.host_binary == other.host_binary
+            && self.host_program == other.host_program
             && self.rows.len() == other.rows.len()
             && self.rows.iter().zip(&other.rows).all(|(a, b)| shown(a) == shown(b) && uptime(a) == uptime(b))
     }

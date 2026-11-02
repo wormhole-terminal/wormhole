@@ -186,7 +186,6 @@ fn a_failure_that_may_pass_is_tried_again_once_before_the_bar(cx: &mut TestAppCo
 #[gpui_kit::test]
 fn a_terminal_restored_after_its_host_is_gone_runs_in_a_new_host(cx: &mut TestAppContext) {
     use wormhole_core::storage::store::SessionRecord;
-    use wormhole_core::terminal::SpawnOptions;
 
     use crate::terminal_view::Start;
     if isolate("a_terminal_restored_after_its_host_is_gone_runs_in_a_new_host") {
@@ -197,21 +196,27 @@ fn a_terminal_restored_after_its_host_is_gone_runs_in_a_new_host(cx: &mut TestAp
     record.scrollback = Some("what the shell printed last time\n".into());
     // Its row names a host that is not there any more: no attach, but a new host with the text.
     record.host_id = Some("aaaaaaaaaaaa".into());
-    let options = SpawnOptions { restore: record.scrollback.clone(), ..SpawnOptions::default() };
-    let plan = |cx: &mut TestAppContext, may_host: bool, binary: Option<&str>| {
-        let (record, options) = (record.clone(), options.clone());
-        let binary = binary.map(std::path::PathBuf::from);
+    use wormhole_core::ipc::host_binary::HostProgram;
+    let plan = |cx: &mut TestAppContext, may_host: bool, program: HostProgram| {
+        let record = record.clone();
         cx.update(|cx| {
             window
                 .workspace
-                .update(cx, |ws, cx| ws.start_with(&record, &options, may_host, binary, cx))
+                .update(cx, |ws, cx| ws.start_with(&record, may_host, program, cx))
                 .expect("window")
         })
     };
     assert!(
-        matches!(plan(cx, true, Some("/the/host")), Start::Host { .. }),
+        matches!(plan(cx, true, HostProgram::Found("/the/host".into())), Start::Host { .. }),
         "a new host, with the text as its seed"
     );
-    assert!(matches!(plan(cx, false, Some("/the/host")), Start::Local), "not allowed to host: in the app");
-    assert!(matches!(plan(cx, true, None), Start::Local), "no host program: in the app");
+    assert!(
+        matches!(plan(cx, false, HostProgram::Found("/the/host".into())), Start::Local),
+        "not allowed to host: in the app"
+    );
+    assert!(matches!(plan(cx, true, HostProgram::Missing), Start::Local), "no host program: in the app");
+    assert!(
+        matches!(plan(cx, true, HostProgram::DisposableCopy), Start::LocalNeedsApplications),
+        "a disk image or temporary copy: in the app, and the person is told why"
+    );
 }

@@ -13,6 +13,7 @@ hosts-header-flag-on = On
 hosts-header-flag-off = Off
 hosts-header-binary = Host program
 hosts-header-binary-missing = Not found beside the app
+hosts-header-binary-disposable = None: the app runs from a disk image or a temporary copy
 
 # The counts under the header.
 hosts-count-attached = Attached
