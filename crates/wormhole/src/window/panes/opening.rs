@@ -208,7 +208,7 @@ impl Workspace {
             .absolute()
             .w(px(new_pane.w - gap_x))
             .h(px(new_pane.h - gap_y))
-            .when(!gaps, |d| d.rule_left(ui))
+            .when(!gaps, |d| d.rule_left_always(ui))
             .debug_selector(|| "split-opening-new".into())
             .child(pane)
             .with_animation(

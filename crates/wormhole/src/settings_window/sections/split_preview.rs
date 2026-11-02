@@ -130,7 +130,7 @@ fn pane(
         .flex_col()
         .bg(hsla(colors.background))
         .when(gaps, |d| d.rounded(ui.radius_lg).overflow_hidden())
-        .when(!gaps && ix > 0, |d| d.rule_left(ui))
+        .when(!gaps && ix > 0, |d| d.rule_left_always(ui))
         .child(header)
         .child(div().flex().flex_1().min_h_0().child(text).when(minimap, |d| d.child(minimap_of(ui, lines))))
         .when(gaps, |d| d.child(style::pane_outline(ui, focused)))

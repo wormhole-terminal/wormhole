@@ -287,10 +287,18 @@ fn flipping_the_look_gives_what_a_fresh_derivation_does() {
         assert_eq!(*fresh.tokens, *store.tokens, "after {what}");
         assert_eq!(fresh.ui, store.ui, "after {what}");
         let look = Translucency { opacity: store.settings.opacity, blur: store.settings.blur };
-        assert_eq!(UiColors::new(&fresh.tokens, look), store.ui, "after {what}");
+        assert_eq!(
+            UiColors::new(&fresh.tokens, look).with_borders(store.ui.borders),
+            store.ui,
+            "after {what}"
+        );
         // An opaque window's colours follow the same flips.
         assert_eq!(fresh.ui_for(false), store.ui_for(false), "after {what}");
-        assert_eq!(UiColors::new(&fresh.tokens, OPAQUE_LOOK), store.ui_for(false), "after {what}");
+        assert_eq!(
+            UiColors::new(&fresh.tokens, OPAQUE_LOOK).with_borders(store.ui.borders),
+            store.ui_for(false),
+            "after {what}"
+        );
     }
 }
 
@@ -390,4 +398,21 @@ fn a_config_problem_is_shown_and_cleared() {
     store.config.error = None;
     store.derive();
     assert_eq!(store.error, None);
+}
+
+/// Borders off (the default) draws no decorative line in any window, on draws them, and Increase Contrast
+/// keeps them whatever the setting says.
+#[test]
+fn borders_are_off_by_default_and_increase_contrast_keeps_them() {
+    let mut store = store();
+    assert!(!store.ui.borders && !store.ui_for(false).borders, "off by default, in every window");
+    assert_eq!(store.ui.line(store.ui.border), gpui_kit::Hsla::transparent_black());
+    update(&mut store, |s| s.borders = true);
+    assert!(store.ui.borders && store.ui_for(false).borders);
+    assert_eq!(store.ui.line(store.ui.border), store.ui.border);
+    update(&mut store, |s| s.borders = false);
+    system(&mut store, SystemLook { increase_contrast: true, ..LIGHT });
+    assert!(store.ui.borders && store.ui_for(false).borders, "Increase Contrast keeps the lines");
+    system(&mut store, SystemLook::default());
+    assert!(!store.ui.borders, "and gives them up when it goes off");
 }

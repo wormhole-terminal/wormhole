@@ -145,7 +145,7 @@ pub fn title_tab(id: impl Into<ElementId>, ui: UiColors, active: bool, needs_you
         .text_color(if active { ui.text } else { ui.muted })
         .cursor_pointer()
         .when(active, |d| d.bg(ui.tab_active))
-        .when(!active && needs_you, |d| d.bg(ui.attention_tint).outlined(ui, ui.attention_ring))
+        .when(!active && needs_you, |d| d.bg(ui.attention_tint).outlined_always(ui, ui.attention_ring))
         .hover(move |d| if quiet { d.bg(ui.hover).text_color(ui.text) } else { d })
 }
 
@@ -264,8 +264,9 @@ pub fn swatch(id: impl Into<ElementId>, ui: UiColors, color: Hsla, chosen: bool)
         .size(px(SWATCH + 2.0 * (SWATCH_RING + SWATCH_GAP)))
         .rounded(ui.radius_sm + px(SWATCH_RING + SWATCH_GAP))
         .cursor_pointer()
-        .when(chosen, |d| d.outlined(ring, ui.text))
-        .child(div().size(px(SWATCH)).rounded(ui.radius_sm).bg(color).outlined(ui, ui.border))
+        .when(chosen, |d| d.outlined_always(ring, ui.text))
+        // A colour sample keeps its edge whatever Borders says: a pale colour on a pale surface has none else.
+        .child(div().size(px(SWATCH)).rounded(ui.radius_sm).bg(color).outlined_always(ui, ui.border))
 }
 
 /// The ring round a chosen [`swatch`] and the gap inside it.
@@ -299,7 +300,7 @@ pub fn focus_ring(ui: UiColors, placement: RingPlacement, radius: Pixels) -> Div
         .right(-out)
         .bottom(-out)
         .rounded(radius + out)
-        .outlined(ring, ui.focus)
+        .outlined_always(ring, ui.focus)
 }
 
 /// How far a [`uses_outline`] stands off what it marks, and its line: GPUI draws a dash twice
@@ -321,6 +322,6 @@ pub fn uses_outline(ui: UiColors, radius: Pixels) -> Div {
         .right(-out)
         .bottom(-out)
         .rounded(radius + out)
-        .outlined(line, ui.primary)
+        .outlined_always(line, ui.primary)
         .border_dashed()
 }

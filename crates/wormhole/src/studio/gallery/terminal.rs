@@ -76,7 +76,7 @@ impl GalleryView {
                 if selected {
                     d.ringed(ui, ui.primary, ui.border_width * 2.0)
                 } else {
-                    d.outlined(ui, ui.border)
+                    d.outlined_always(ui, ui.border)
                 }
             })
             .bg(hsla(color))

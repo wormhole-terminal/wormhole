@@ -172,6 +172,7 @@ const KIT_COLORS: &[Mapping] = mapping! {
 struct Applied {
     tokens: Arc<ThemeTokens>,
     fonts: ResolvedFonts,
+    borders: bool,
 }
 
 impl Global for Applied {}
@@ -180,10 +181,12 @@ fn is_applied(
     tokens: &ThemeTokens,
     shared: Option<&Arc<ThemeTokens>>,
     fonts: &ResolvedFonts,
+    borders: bool,
     cx: &App,
 ) -> bool {
     cx.try_global::<Applied>().is_some_and(|applied| {
         applied.fonts == *fonts
+            && applied.borders == borders
             && (shared.is_some_and(|t| Arc::ptr_eq(t, &applied.tokens)) || *applied.tokens == *tokens)
     })
 }
@@ -191,11 +194,11 @@ fn is_applied(
 /// Apply `tokens` and the resolved fonts to GPUI Kit's global theme, unless it already
 /// has them. The settings store does this itself whenever the theme or the fonts change
 /// ([`apply_shared`]); this is for a caller that holds the values separately.
-pub fn apply(tokens: &ThemeTokens, fonts: &ResolvedFonts, cx: &mut App) {
-    if is_applied(tokens, None, fonts, cx) {
+pub fn apply(tokens: &ThemeTokens, fonts: &ResolvedFonts, borders: bool, cx: &mut App) {
+    if is_applied(tokens, None, fonts, borders, cx) {
         return;
     }
-    apply_now(&Arc::new(tokens.clone()), fonts, &highlight_for(tokens), cx);
+    apply_now(&Arc::new(tokens.clone()), fonts, &highlight_for(tokens), borders, cx);
 }
 
 /// Apply a theme and fonts whose syntax theme is already built (the settings store's, which
@@ -205,18 +208,20 @@ pub(crate) fn apply_shared(
     tokens: &Arc<ThemeTokens>,
     fonts: &ResolvedFonts,
     highlight: &Arc<HighlightTheme>,
+    borders: bool,
     cx: &mut App,
 ) {
-    if is_applied(tokens, Some(tokens), fonts, cx) {
+    if is_applied(tokens, Some(tokens), fonts, borders, cx) {
         return;
     }
-    apply_now(tokens, fonts, highlight, cx);
+    apply_now(tokens, fonts, highlight, borders, cx);
 }
 
 fn apply_now(
     tokens: &Arc<ThemeTokens>,
     fonts: &ResolvedFonts,
     highlight: &Arc<HighlightTheme>,
+    borders: bool,
     cx: &mut App,
 ) {
     let mode = match tokens.appearance {
@@ -236,6 +241,11 @@ fn apply_now(
                 hsla(MISSING_TOKEN)
             });
         }
+        // The Kit draws its buttons' and fields' outlines in `input`; with Borders off they have none.
+        // Its `border` stays: it is what the Kit's separators and tooltips use, which Borders leaves.
+        if !borders {
+            theme.colors.input = transparent_black();
+        }
         theme.radius = px(tokens.metrics.radius);
         theme.radius_lg = px(tokens.metrics.radius_lg);
         // GPUI Kit sizes text and spacing in rems of `font_size` (16 px by
@@ -247,7 +257,7 @@ fn apply_now(
         theme.mono_font_size = px(fonts.code_size);
         theme.highlight_theme = highlight.clone();
     });
-    cx.set_global(Applied { tokens: tokens.clone(), fonts: fonts.clone() });
+    cx.set_global(Applied { tokens: tokens.clone(), fonts: fonts.clone(), borders });
 }
 
 /// The syntax theme for `tokens`: [`highlight_theme`], or GPUI Kit's own for the
@@ -341,10 +351,10 @@ mod kit_tests {
             let config = Config::placeholder();
             let (tokens, fonts) =
                 (config.tokens.clone(), config.settings.resolved_fonts(&config.tokens.metrics));
-            apply(&tokens, &fonts, cx);
+            apply(&tokens, &fonts, true, cx);
             // Make a change a repeat would undo, to see whether it is redone.
             KitTheme::global_mut(cx).colors.primary = gpui_kit::red();
-            apply(&tokens, &fonts, cx);
+            apply(&tokens, &fonts, true, cx);
             assert_eq!(KitTheme::global(cx).colors.primary, gpui_kit::red());
         });
     }

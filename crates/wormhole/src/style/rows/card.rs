@@ -64,7 +64,7 @@ fn card_segment_in(
     segment = segment.bg(if selected { ui.selected_row } else { ui.card }).border_color(if selected {
         ui.selected_row
     } else {
-        ui.card_edge
+        ui.line(ui.card_edge)
     });
     if solo == Some(false) {
         segment = segment.hover(move |d| d.bg(ui.hover));

@@ -72,18 +72,25 @@ pub(super) fn translucency(settings: &Settings) -> Translucency {
     Translucency { opacity: settings.opacity, blur: settings.blur }
 }
 
-/// The main window's colours: the tokens at the window's look, and no line between the columns
+/// The main window's colours: the tokens at the window's look, the lines the Borders setting asks for, and no line between the columns
 /// when the person turned Column dividers off. Increase Contrast keeps the lines, as the
 /// window's columns would otherwise be told apart by a tint alone.
 pub(super) fn main_ui(tokens: &ThemeTokens, settings: &Settings, increase_contrast: bool) -> UiColors {
     let ui = UiColors::new(tokens, translucency(settings));
     let ui = if settings.column_dividers || increase_contrast { ui } else { ui.without_dividers() };
-    with_icon_motion(ui, settings)
+    with_icon_motion(ui, settings).with_borders(lines(settings, increase_contrast))
 }
 
 /// The other windows' colours (Settings, the Studio, About): the tokens as they are.
-pub(super) fn opaque_ui(tokens: &ThemeTokens, settings: &Settings) -> UiColors {
+pub(super) fn opaque_ui(tokens: &ThemeTokens, settings: &Settings, increase_contrast: bool) -> UiColors {
     with_icon_motion(UiColors::new(tokens, OPAQUE_LOOK), settings)
+        .with_borders(lines(settings, increase_contrast))
+}
+
+/// Whether the windows draw their lines: the Borders setting, and always under Increase Contrast, where
+/// surfaces told apart by a shade alone would not be told apart enough.
+fn lines(settings: &Settings, increase_contrast: bool) -> bool {
+    settings.borders || increase_contrast
 }
 
 /// Every window's icons hold still when the person turned Animate icons off.

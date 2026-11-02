@@ -120,7 +120,7 @@ impl GalleryView {
             .gap_1()
             .cursor_pointer()
             .on_click(cx.listener(move |this, _, window, cx| this.select_token(&name, window, cx)))
-            .child(div().size(px(56.0)).rounded(radius).outlined(outline, color).bg(ui.hover))
+            .child(div().size(px(56.0)).rounded(radius).outlined_always(outline, color).bg(ui.hover))
             .child(div().text_caption().text_color(if selected { ui.text } else { ui.muted }).child(key))
     }
 }

@@ -563,20 +563,20 @@ impl StudioWindow {
 }
 
 fn color_chip(ui: UiColors, color: Color) -> Div {
-    div().size(px(14.0)).flex_none().rounded(ui.radius_sm).outlined(ui, ui.border).bg(hsla(color))
+    div().size(px(14.0)).flex_none().rounded(ui.radius_sm).outlined_always(ui, ui.border).bg(hsla(color))
 }
 
-/// A metric's swatch: a box with that corner radius, or that outline (a focus ring in
+/// A metric's swatch (a sample of the metric, so it keeps its line whatever Borders says): a box with that corner radius, or that outline (a focus ring in
 /// the focus color).
 fn metric_chip(ui: UiColors, name: &str, value: f32) -> Div {
     let chip = div().size(px(14.0)).flex_none().bg(ui.hover);
     let line = UiColors { border_width: px(value), ..ui };
     if name.ends_with("border_width") || name.ends_with("divider_width") {
-        chip.rounded(ui.radius_sm).outlined(line, ui.muted)
+        chip.rounded(ui.radius_sm).outlined_always(line, ui.muted)
     } else if name.ends_with("focus_ring_width") {
-        chip.rounded(ui.radius_sm).outlined(line, ui.focus)
+        chip.rounded(ui.radius_sm).outlined_always(line, ui.focus)
     } else {
-        chip.rounded(px(value)).outlined(ui, ui.muted)
+        chip.rounded(px(value)).outlined_always(ui, ui.muted)
     }
 }
 

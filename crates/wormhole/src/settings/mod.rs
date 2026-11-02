@@ -203,7 +203,7 @@ impl SettingsStore {
             icons: crate::icons::resolve(&icon_key.0, icon_key.1),
             ui: main_ui(&tokens, &settings, false),
             features: FeatureMask::resolve(&settings),
-            ui_opaque: opaque_ui(&tokens, &settings),
+            ui_opaque: opaque_ui(&tokens, &settings, false),
             error: config.error.clone().map(Into::into),
             palette,
             highlight,
@@ -260,6 +260,7 @@ impl SettingsStore {
         let look_changed = settings.as_ref().is_some_and(|s| {
             translucency(s) != translucency(&self.settings)
                 || s.column_dividers != self.settings.column_dividers
+                || s.borders != self.settings.borders
                 || s.icon_animations != self.settings.icon_animations
         });
         if let Some(settings) = settings {
@@ -298,7 +299,7 @@ impl SettingsStore {
         }
         if theme_changed || look_changed {
             self.ui = main_ui(&self.tokens, &self.settings, self.system.increase_contrast);
-            self.ui_opaque = opaque_ui(&self.tokens, &self.settings);
+            self.ui_opaque = opaque_ui(&self.tokens, &self.settings, self.system.increase_contrast);
         }
 
         let fonts = self.settings.resolved_fonts(&self.tokens.metrics);
@@ -337,11 +338,12 @@ impl SettingsStore {
     /// read the store directly, so the Kit's controls would otherwise show the old colors
     /// until the tick caught up.
     fn publish(changed: Changed, cx: &mut App) {
-        if changed.theme || changed.fonts {
+        // Borders (a setting) reaches the Kit's outlines too; `apply_shared` is free when nothing differs.
+        if changed.theme || changed.fonts || changed.settings {
             let store = cx.global::<SettingsStore>();
             let (tokens, fonts, highlight) =
                 (store.tokens.clone(), store.fonts.clone(), store.highlight.clone());
-            theme_bridge::apply_shared(&tokens, &fonts, &highlight, cx);
+            theme_bridge::apply_shared(&tokens, &fonts, &highlight, store.ui.borders, cx);
         }
     }
 

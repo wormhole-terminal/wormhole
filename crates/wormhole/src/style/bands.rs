@@ -131,8 +131,8 @@ fn band_with(
     let inset = if card { CARD_INSET } else { SIDEBAR_INSET };
     let (fill, hairline) = match (drop_target, sticky) {
         (true, _) => (ui.highlight, ui.primary),
-        (false, true) => (ui.band_solid, ui.border),
-        (false, false) => (ui.band, ui.border),
+        (false, true) => (ui.band_solid, ui.line(ui.border)),
+        (false, false) => (ui.band, ui.line(ui.border)),
     };
     // In a card, the colour is a pill under the name rather than a tint across the band.
     let pill = look.tint.filter(|_| card);

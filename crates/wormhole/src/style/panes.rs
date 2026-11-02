@@ -84,7 +84,7 @@ pub fn pane_outline(ui: UiColors, focused: bool) -> Div {
         .right_0()
         .bottom_0()
         .rounded(ui.radius_lg)
-        .outlined(ui, if focused { ui.faint } else { ui.border })
+        .map(|d| if focused { d.outlined_always(ui, ui.faint) } else { d.outlined(ui, ui.border) })
 }
 
 /// The divider between two panes: a [`RESIZE_HANDLE_W`] handle straddling their shared edge (it
@@ -163,7 +163,7 @@ pub fn pane_drop_zone(ui: UiColors, look: ZoneLook, zone: Zone) -> Div {
                 Zone::Top => IconName::ChevronUp,
                 Zone::Bottom => IconName::ChevronDown,
             };
-            area.outlined(ui, ui.border_strong)
+            area.outlined_always(ui, ui.border_strong)
                 .border_dashed()
                 .bg(ui.hover)
                 .text_color(ui.muted)

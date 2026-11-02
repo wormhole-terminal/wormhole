@@ -71,6 +71,7 @@ pub const APP_SETTINGS: &[&str] = &[
     "minimap",
     "split_gaps",
     "column_dividers",
+    "borders",
     "icon_animations",
     // The person's own habit: what ⌘1–9 reach, whatever project is in front.
     "sidebar_numbers",

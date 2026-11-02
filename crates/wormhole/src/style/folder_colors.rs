@@ -15,7 +15,7 @@ use crate::settings::UiColors;
 /// [`COLOR_DOT_MENU`], in a [`color_choice`] [`COLOR_DOT`].
 #[track_caller]
 pub fn color_dot(ui: UiColors, color: Hsla, size: f32) -> Div {
-    div().flex_none().size(px(size)).rounded(ui.radius_sm).bg(color).outlined(ui, ui.border)
+    div().flex_none().size(px(size)).rounded(ui.radius_sm).bg(color).outlined_always(ui, ui.border)
 }
 
 /// One choice in a row of folder colours: a [`HIT_MIN`] square holding the colour's [`color_dot`],
@@ -45,7 +45,7 @@ pub fn color_choice(
             .items_center()
             .justify_center()
             .rounded(ui.radius_sm)
-            .outlined(ui, ui.border_strong)
+            .outlined_always(ui, ui.border_strong)
             .text_color(ui.muted)
             .child(Icon::new(IconName::Ban).xsmall()),
     };
@@ -69,7 +69,7 @@ pub fn color_choice(
                 .justify_center()
                 .size(px(inner))
                 .rounded(ui.radius_sm + px(RING + RING_GAP))
-                .when(chosen, |d| d.outlined(ring, ui.text))
+                .when(chosen, |d| d.outlined_always(ring, ui.text))
                 .child(dot),
         )
 }

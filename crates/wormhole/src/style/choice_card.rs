@@ -28,5 +28,5 @@ pub fn choice_card(id: impl Into<ElementId>, ui: UiColors, chosen: bool) -> Stat
         // The ring is a shadow drawn behind the card: without a fill of its own the card fills with it.
         .bg(ui.elevated)
         .map(|d| if chosen { d.ringed(ui, ui.primary, px(RING)) } else { d.outlined(ui, ui.border) })
-        .when(!chosen, |d| d.hover(|d| d.border_color(ui.border_strong)))
+        .when(!chosen, |d| d.hover(|d| d.border_color(ui.line(ui.border_strong))))
 }

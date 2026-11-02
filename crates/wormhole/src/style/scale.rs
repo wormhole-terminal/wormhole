@@ -227,10 +227,21 @@ pub trait TextRole: Styled + Sized {
 
 impl<T: Styled> TextRole for T {}
 
-/// Borders that follow the theme's `border_width` instead of a fixed pixel.
+/// Lines that follow the theme's `border_width` instead of a fixed pixel, and the Borders setting.
+///
+/// `outlined` and the `rule_*` edges are the decorative lines: with Borders off (`UiColors::borders`)
+/// they keep their width, so nothing moves when the setting changes, and draw in a transparent
+/// colour. What must stay visible says so by name: `outlined_always` (a selection or focus ring, a
+/// checkbox, a colour sample) and `ringed`. Nothing else asks the setting.
 pub trait Edges: Styled + Sized {
-    /// A border on every side.
-    fn outlined(mut self, ui: UiColors, color: Hsla) -> Self {
+    /// A decorative line on every side.
+    fn outlined(self, ui: UiColors, color: Hsla) -> Self {
+        self.outlined_always(ui, ui.line(color))
+    }
+
+    /// A line on every side that Borders does not take away: a ring that shows what is selected or
+    /// focused, the outline that keeps an unticked checkbox or a colour sample visible.
+    fn outlined_always(mut self, ui: UiColors, color: Hsla) -> Self {
         let w = ui.border_width.into();
         let b = &mut self.style().border_widths;
         (b.top, b.right, b.bottom, b.left) = (Some(w), Some(w), Some(w), Some(w));
@@ -239,10 +250,10 @@ pub trait Edges: Styled + Sized {
 
     /// A ring of `width` in `color`: the border every side takes the color, and a shadow without
     /// blur draws the rest just outside the edge. Choosing or focusing an element this way never
-    /// moves what is in it, as a thicker border would.
+    /// moves what is in it, as a thicker border would. A ring stays whatever Borders says.
     fn ringed(self, ui: UiColors, color: Hsla, width: Pixels) -> Self {
         let rest = (width - ui.border_width).max(px(0.0));
-        self.outlined(ui, color).shadow(vec![BoxShadow {
+        self.outlined_always(ui, color).shadow(vec![BoxShadow {
             color,
             offset: point(px(0.0), px(0.0)),
             blur_radius: px(0.0),
@@ -253,16 +264,17 @@ pub trait Edges: Styled + Sized {
 
     fn rule_top(mut self, ui: UiColors) -> Self {
         self.style().border_widths.top = Some(ui.border_width.into());
-        self.border_color(ui.border)
+        self.border_color(ui.line(ui.border))
     }
 
     fn rule_bottom(mut self, ui: UiColors) -> Self {
         self.style().border_widths.bottom = Some(ui.border_width.into());
-        self.border_color(ui.border)
+        self.border_color(ui.line(ui.border))
     }
 
     /// A line along the bottom `lines` border widths thick in `color`: a project's colour under
-    /// the title row, where it stands in for a tint that Increase Contrast takes away.
+    /// the title row, where it stands in for a tint that Increase Contrast takes away. It is the
+    /// project's colour, not a border, so Borders does not take it away.
     fn rule_bottom_in(mut self, ui: UiColors, color: Hsla, lines: f32) -> Self {
         self.style().border_widths.bottom = Some((ui.border_width * lines).into());
         self.border_color(color)
@@ -270,12 +282,19 @@ pub trait Edges: Styled + Sized {
 
     fn rule_left(mut self, ui: UiColors) -> Self {
         self.style().border_widths.left = Some(ui.border_width.into());
+        self.border_color(ui.line(ui.border))
+    }
+
+    /// The hairline that joins two split panes (`split_gaps` off): it has a setting of its own, so
+    /// Borders does not take it away.
+    fn rule_left_always(mut self, ui: UiColors) -> Self {
+        self.style().border_widths.left = Some(ui.border_width.into());
         self.border_color(ui.border)
     }
 
     fn rule_right(mut self, ui: UiColors) -> Self {
         self.style().border_widths.right = Some(ui.border_width.into());
-        self.border_color(ui.border)
+        self.border_color(ui.line(ui.border))
     }
 }
 

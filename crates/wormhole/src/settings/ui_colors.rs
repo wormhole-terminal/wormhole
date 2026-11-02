@@ -20,6 +20,11 @@ pub struct UiColors {
     /// Cards, menus and other floating surfaces.
     pub radius_lg: Pixels,
     pub border_width: Pixels,
+    /// Whether decorative lines are drawn: the Borders setting, which Increase Contrast overrides.
+    /// Off, `line` hands back a transparent colour, so every line helper in `style` (`outlined`,
+    /// `rule_*`) keeps its space and draws nothing, and a surface is told apart by its shade alone.
+    /// Rings, separators and anything with a setting of its own do not ask (`outlined_always`).
+    pub borders: bool,
     /// The line between the window's columns (`metrics.divider_width`), 0 for none; the main
     /// window's also follows the Column dividers setting (`without_dividers`).
     pub divider_width: Pixels,
@@ -301,6 +306,17 @@ const COLORS: &[Field] = fields! {
 };
 
 impl UiColors {
+    /// `color` for a decorative line: itself while Borders is on, transparent while it is off.
+    #[must_use]
+    pub fn line(&self, color: Hsla) -> Hsla {
+        if self.borders { color } else { Hsla::transparent_black() }
+    }
+
+    /// These colors with the Borders setting applied (`borders` is whether lines are drawn).
+    pub(crate) fn with_borders(self, borders: bool) -> Self {
+        Self { borders, ..self }
+    }
+
     /// These colors with no line between the columns: the Column dividers setting, off.
     pub(crate) fn without_dividers(self) -> Self {
         Self { divider_width: px(0.0), ..self }

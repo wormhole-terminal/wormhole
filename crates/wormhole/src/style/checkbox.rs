@@ -96,7 +96,7 @@ impl RenderOnce for Checkbox {
             .size(px(side))
             .rounded(ui.radius_chip)
             .bg(ui.checkbox_bg)
-            .outlined(ui, ui.checkbox_border)
+            .outlined_always(ui, ui.checkbox_border)
             .styles(|styles| {
                 styles.checked(|style| style.bg(ui.checkbox_checked).border_color(ui.checkbox_checked))
             })

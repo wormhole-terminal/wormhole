@@ -69,6 +69,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   its button on the same colour; every group inside a page has the same heading; every preview sits in the
   same frame; and every button in a row is as tall as the menus beside it.
 
+- The lines around cards, columns, the sidebar and panels, between settings rows, and around buttons, menus and
+  fields are off by default: surfaces are told apart by their shade. After updating, Wormhole looks flatter.
+  Settings → Appearance → Details → Borders (`borders` in `config.json`) brings the lines back; Increase Contrast
+  keeps them. Selection and focus rings, menu separators, the checkbox's outline, Column dividers and the
+  split terminals' hairline are not affected.
+
 - Settings → Advanced → Reset to defaults… asks with the system's alert instead of a strip under the button:
   Reset is red and Cancel is the default.
 

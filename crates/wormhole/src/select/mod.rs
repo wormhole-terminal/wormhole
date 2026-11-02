@@ -80,13 +80,18 @@ impl RenderOnce for SelectTrigger {
                     .font_weight(FontWeight::MEDIUM)
                     .max_w(px(PICKER_MAX_W))
                     .flex_none()
-                    .outlined(ui, if self.open { ui.primary } else { ui.border_strong })
+                    .map(|d| {
+                        if self.open {
+                            d.outlined_always(ui, ui.primary)
+                        } else {
+                            d.outlined(ui, ui.border_strong)
+                        }
+                    })
             })
             .when(!self.compact, |d| {
-                d.h(px(CONTROL_H))
-                    .px_2()
-                    .text_body()
-                    .outlined(ui, if self.open { ui.primary } else { ui.border })
+                d.h(px(CONTROL_H)).px_2().text_body().map(|d| {
+                    if self.open { d.outlined_always(ui, ui.primary) } else { d.outlined(ui, ui.border) }
+                })
             })
             .when_some(self.width, |d, width| d.w(width))
             .rounded(ui.radius)

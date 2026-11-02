@@ -148,7 +148,7 @@ impl Render for ThemeCard {
             .map(
                 |d| if picked { d.ringed(ui, ui.primary, px(RING_WIDTH)) } else { d.outlined(ui, ui.border) },
             )
-            .when(!picked, |d| d.hover(|d| d.border_color(ui.border_strong)))
+            .when(!picked, |d| d.hover(|d| d.border_color(ui.line(ui.border_strong))))
             .on_click(cx.listener(move |_, _, _, cx| {
                 let value = value.clone();
                 update_settings(cx, |s| set_pick(s, value, appearance));
@@ -160,7 +160,7 @@ impl Render for ThemeCard {
                     platform::show_menu(menu, event.position, window, cx);
                 }),
             )
-            .child(preview(tokens))
+            .child(preview(tokens, ui))
             // The theme in use can't be hidden: its card keeps its place while it is a pick.
             .when(!picked, |d| {
                 d.child(
@@ -236,7 +236,7 @@ fn solid(tokens: &ThemeTokens, name: &str) -> Hsla {
 
 /// A miniature of the app in `tokens`: the sidebar with three rows, the first one selected, and
 /// the terminal with lines in the theme's colors.
-fn preview(tokens: &ThemeTokens) -> AnyElement {
+fn preview(tokens: &ThemeTokens, ui: UiColors) -> AnyElement {
     let t = |name: &str| token(tokens, name);
     let ansi = |i: usize| hsla(tokens.terminal.ansi[i]);
     let bar =
@@ -251,7 +251,7 @@ fn preview(tokens: &ThemeTokens) -> AnyElement {
         .p(px(PREVIEW_PAD))
         .bg(solid(tokens, "sidebar.background"))
         .border_r(px(PREVIEW_RULE))
-        .border_color(t("border"))
+        .border_color(ui.line(t("border")))
         .child(div().h(px(PREVIEW_BAR_H * 2.0)).w(relative(0.9)).rounded_full().bg(t("sidebar.row.selected")))
         .child(bar(t("text.muted"), 0.6))
         .child(bar(t("text.muted"), 0.75));

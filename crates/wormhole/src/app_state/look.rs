@@ -30,8 +30,8 @@ pub(crate) fn apply_theme(cx: &mut App) {
     if app(cx).applied_theme == Some(revision) {
         return;
     }
-    let (tokens, fonts) = (store.tokens.clone(), store.fonts.clone());
-    crate::theme_bridge::apply(&tokens, &fonts, cx);
+    let (tokens, fonts, borders) = (store.tokens.clone(), store.fonts.clone(), store.ui.borders);
+    crate::theme_bridge::apply(&tokens, &fonts, borders, cx);
     vibrancy::set_material_appearance(tokens.appearance);
     app_mut(cx).applied_theme = Some(revision);
     cx.refresh_windows();

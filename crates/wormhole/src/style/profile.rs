@@ -115,7 +115,9 @@ pub fn choice_row(
         .items_center()
         .justify_center()
         .rounded_full()
-        .outlined(ui, if chosen { ui.primary } else { ui.border_strong })
+        // An unchosen mark keeps its outline whatever Borders says, as the checkbox does: without it the
+        // choice would not be there to pick.
+        .outlined_always(ui, if chosen { ui.primary } else { ui.border_strong })
         .when(chosen, |d| d.child(div().size(px(CHOICE_DOT)).rounded_full().bg(ui.primary)));
     div()
         .id(id)

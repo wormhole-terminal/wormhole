@@ -453,7 +453,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Sidebar>, cx: &mut App) ->
                 .right_0()
                 .bottom_0()
                 .rounded(px(metrics.card_radius))
-                .outlined(ui, ui.primary.opacity(RING))
+                .outlined_always(ui, ui.primary.opacity(RING))
         });
         content = content.child(div().relative().children(Some(segment)).children(ring));
     }

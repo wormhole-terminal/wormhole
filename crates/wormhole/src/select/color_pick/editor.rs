@@ -183,7 +183,7 @@ fn area(
                 .mt(px(-AREA_THUMB / 2.0))
                 .size(px(AREA_THUMB))
                 .rounded_full()
-                .outlined(thumb_ring, model(Color::WHITE))
+                .outlined_always(thumb_ring, model(Color::WHITE))
                 .shadow(vec![ring_shadow()]),
         )
         .on_prepaint(move |bounds, _, _| place.set(bounds))

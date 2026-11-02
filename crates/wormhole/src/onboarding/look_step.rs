@@ -346,7 +346,7 @@ fn theme_card(ix: usize, tokens: &ThemeTokens, current: bool, ui: UiColors) -> S
                         .p(px(PREVIEW_PAD))
                         .bg(solid("sidebar.background"))
                         .border_r(px(PREVIEW_RULE))
-                        .border_color(t("border"))
+                        .border_color(ui.line(t("border")))
                         .child(bar(t("text.muted"), 0.8))
                         .child(bar(t("text.muted"), 0.6)),
                 )

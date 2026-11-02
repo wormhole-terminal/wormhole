@@ -39,7 +39,7 @@ pub fn banner(ui: UiColors, kind: BannerKind, flush: bool, text: impl Into<Share
     };
     let frame = div().flex().items_center().gap_3().min_h(px(BANNER_MIN_H)).py(px(BANNER_PAD_Y)).bg(fill);
     let frame = if flush {
-        frame.w_full().px_4().rule_top(ui).rule_bottom(ui).border_color(border)
+        frame.w_full().px_4().rule_top(ui).rule_bottom(ui).border_color(ui.line(border))
     } else {
         frame.pl_3().pr_2().rounded(ui.radius).outlined(ui, border)
     };
@@ -89,7 +89,7 @@ pub fn callout(
         .bg(fill)
         .rule_top(ui)
         .rule_bottom(ui)
-        .border_color(border)
+        .border_color(ui.line(border))
         .child(
             div()
                 .flex()

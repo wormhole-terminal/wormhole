@@ -143,7 +143,7 @@ impl ColorChoice {
 fn dot(ui: UiColors, color: Option<Hsla>, size: f32) -> Div {
     match color {
         Some(color) => style::color_dot(ui, color, size),
-        None => div().flex_none().size(px(size)).rounded(ui.radius_sm).outlined(ui, ui.border_strong),
+        None => div().flex_none().size(px(size)).rounded(ui.radius_sm).outlined_always(ui, ui.border_strong),
     }
 }
 

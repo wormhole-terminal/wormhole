@@ -54,6 +54,10 @@ settings-appearance-translucent = Also translucent
     .description = Use the opacity and blur above for these windows too
     .keywords = settings theme studio window
 
+settings-appearance-borders = Borders
+    .description = Lines around cards, columns and the sidebar. Off: surfaces are told apart by their shade alone
+    .keywords = lines outline outlines border hairline rule ring frame cards rows controls menus
+
 settings-appearance-column-dividers = Column dividers
     .description = The lines between the sidebar, the terminal and the right panel. Off hides them in every theme; the edges still resize. Increase Contrast keeps them
     .keywords = border hairline rule separator edge columns divider

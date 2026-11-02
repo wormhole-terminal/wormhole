@@ -255,7 +255,7 @@ pub fn arrange_row(id: impl Into<ElementId>, ui: UiColors, parts: ArrangeParts) 
 /// the drop tint with a primary outline all round. Lay it over the row.
 #[track_caller]
 pub fn row_drop_target(ui: UiColors) -> Div {
-    div().absolute().top_0().left_0().size_full().bg(ui.highlight).outlined(ui, ui.primary)
+    div().absolute().top_0().left_0().size_full().bg(ui.highlight).outlined_always(ui, ui.primary)
 }
 
 /// How far a [`drop_line`] that stays inside a split's bracket starts from the row's left edge: at

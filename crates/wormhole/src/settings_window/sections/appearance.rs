@@ -62,6 +62,7 @@ pub(super) const SETTINGS: &[Setting] = &[
         .chip(|_, _| Some(text(SETTINGS_APPEARANCE_LIQUID_GLASS_BETA).into()))
         .below(glass_held_note),
     Setting::custom("translucent", draw_translucent).default_words(default_translucent),
+    toggle!("borders", borders),
     toggle!("column-dividers", column_dividers),
     toggle!("status-bar", status_bar),
     toggle!("icon-animations", icon_animations),
