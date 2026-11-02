@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-11-02
+
 ### Fixed
 
 - The × and ⓘ in a notice chip sat a point off the centre of the circle that lights up under the pointer.
@@ -958,7 +960,8 @@ agents.
     the background and verified with a minisign signature and Apple's
     code signature.
 
-[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v1.6.1...HEAD
+[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v1.6.2...HEAD
+[1.6.2]: https://github.com/wormhole-terminal/wormhole/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/wormhole-terminal/wormhole/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/wormhole-terminal/wormhole/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/wormhole-terminal/wormhole/compare/v1.4.0...v1.5.0
