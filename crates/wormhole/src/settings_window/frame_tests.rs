@@ -105,7 +105,8 @@ const BUDGET: [(&str, u64); 17] = [
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost
     // about 380); the Folder picker flag one more again (about 385). Liquid Glass went back to Appearance:
     // 6,912 measured, a row fewer.
-    ("FeatureFlags", 6912),
+    // The Restore after restart flag is one switch row more again: 7,271 measured (about 340 a row).
+    ("FeatureFlags", 7290),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     ("search", 12250),

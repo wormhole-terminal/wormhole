@@ -36,6 +36,11 @@ pub enum FeatureFlag {
     /// quitting, crashing or updating Wormhole detaches from them and the next launch attaches
     /// again to the same screen and the same running programs (`repo-docs/docs/session-host.md`).
     PersistentTerminals,
+    /// Terminals that come back after the Mac restarts: each session host keeps a checkpoint of its terminal
+    /// (the folder, the shell and the primary screen, sealed with a key from the Keychain) on disk, and the
+    /// next launch starts a fresh shell in that folder with the saved screen above it. Needs Persistent
+    /// terminals (`repo-docs/docs/session-host.md` section 8).
+    RestoreAfterRestart,
     /// Driving Wormhole from scripts and coding agents beyond `list`, `status`, `notify`, `send-text`
     /// and `new-terminal`: `wh events` and, as the phases land, reading terminals, keys and mouse,
     /// windows and splits, waiting and running, and `wh mcp` (`repo-docs/docs/automation.md`). Off,
@@ -74,11 +79,12 @@ pub enum FeatureFlag {
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 12] = [
+    pub const ALL: [FeatureFlag; 13] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
         Self::PersistentTerminals,
+        Self::RestoreAfterRestart,
         Self::Automation,
         Self::Motion,
         Self::TearOff,
@@ -96,6 +102,7 @@ impl FeatureFlag {
             Self::TerminalWelcome => "terminal_welcome",
             Self::NotesAndTasks => "notes_and_tasks",
             Self::PersistentTerminals => "persistent_terminals",
+            Self::RestoreAfterRestart => "restore_after_restart",
             Self::Automation => "automation",
             Self::Motion => "motion",
             Self::TearOff => "tear_off",
@@ -118,6 +125,7 @@ impl FeatureFlag {
             Self::TerminalWelcome => "Terminal welcome",
             Self::NotesAndTasks => "Notes and tasks",
             Self::PersistentTerminals => "Persistent terminals",
+            Self::RestoreAfterRestart => "Restore after restart",
             Self::Automation => "Automation",
             Self::Motion => "Motion",
             Self::TearOff => "Tear off a terminal",
@@ -147,6 +155,10 @@ impl FeatureFlag {
             Self::PersistentTerminals => {
                 "Terminals keep running when Wormhole quits or updates, and the next launch picks them \
                  up again with their screen and programs."
+            }
+            Self::RestoreAfterRestart => {
+                "After the Mac restarts, terminals come back in their folder with their screen above a \
+                 fresh shell, from a checkpoint the helpers keep on disk, sealed with a key in the Keychain."
             }
             Self::Automation => {
                 "The command line and coding agents watch and drive Wormhole: wh events, and later \
@@ -195,6 +207,8 @@ impl FeatureFlag {
             Self::NotesAndTasks => false,
             // Off until the host has been through its phases and the user has approved it.
             Self::PersistentTerminals => false,
+            // New: off until a restart of the Mac has been tried with it and the user has approved it.
+            Self::RestoreAfterRestart => false,
             // Until its last phase has landed and the user has approved it.
             Self::Automation => false,
             // Unfinished: only the page and its previews exist, the animations are still to come.
