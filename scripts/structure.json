@@ -211,7 +211,10 @@
         "declaration",
         "cascade",
         "component",
-        "emit"
+        [
+          "emit",
+          "html"
+        ]
       ]
     },
     "module_depth": {
