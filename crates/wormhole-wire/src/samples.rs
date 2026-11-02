@@ -150,7 +150,6 @@ pub fn all() -> Vec<(&'static str, Message<'static>)> {
                     palette: List::Borrowed(&[[0, 0, 0], [0xcd, 0, 0]]),
                 }),
                 seed: List::Borrowed(&[]),
-                seed_styled: false,
             }),
         ),
         (
@@ -164,24 +163,6 @@ pub fn all() -> Vec<(&'static str, Message<'static>)> {
                 env: List::Borrowed(&[("TERM", "xterm-256color")]),
                 colors: None,
                 seed: List::Borrowed(&["$ make\r\nok\r\n", "$ \u{e9}t\u{e9}\r\n"]),
-                seed_styled: false,
-            }),
-        ),
-        (
-            "spawn_seeded_styled",
-            Message::Spawn(Spawn {
-                size: SIZE,
-                options: Options { scrollback_lines: 1000, flags: 0 },
-                program: "/bin/zsh",
-                cwd: "/Users/me",
-                args: List::Borrowed(&[]),
-                env: List::Borrowed(&[("TERM", "xterm-256color")]),
-                colors: None,
-                seed: List::Borrowed(&[
-                    "\x1b[1mmake\x1b[0m\r\n",
-                    "\x1b[2m\u{2500}\u{2500} restored \u{2500}\u{2500}\x1b[0m\r\n",
-                ]),
-                seed_styled: true,
             }),
         ),
         (
@@ -195,7 +176,6 @@ pub fn all() -> Vec<(&'static str, Message<'static>)> {
                 env: List::Borrowed(&[]),
                 colors: None,
                 seed: List::Borrowed(&[]),
-                seed_styled: false,
             }),
         ),
         (
@@ -230,8 +210,9 @@ pub fn all() -> Vec<(&'static str, Message<'static>)> {
         ("set_options", Message::SetOptions(Options { scrollback_lines: 2_000, flags: 1 })),
         ("set_color_scheme", Message::SetColorScheme(ColorScheme::Light)),
         ("clear_history", Message::ClearHistory),
-        ("set_checkpoint_key", Message::SetCheckpointKey(CheckpointKey { key: &[0x42; 32], shell: "login" })),
-        ("set_checkpoint_key_none", Message::SetCheckpointKey(CheckpointKey { key: &[], shell: "fish" })),
+        ("set_checkpoint_key", Message::SetCheckpointKey(CheckpointKey { key: &[0x42; 32] })),
+        ("set_checkpoint_key_stop", Message::SetCheckpointKey(CheckpointKey { key: &[] })),
+        ("checkpoint_written", Message::CheckpointWritten { generation: 7 }),
         ("checkpoint", Message::Checkpoint { flush: false }),
         ("checkpoint_flush", Message::Checkpoint { flush: true }),
         ("close", Message::Close { grace_ms: 3000 }),

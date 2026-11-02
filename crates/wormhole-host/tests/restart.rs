@@ -119,7 +119,7 @@ fn old_life(count: usize) -> (tempfile::TempDir, PathBuf, Vec<Terminal>) {
         )
         .expect("a hosted terminal");
         wait_text(&pty, "wide: 日本語");
-        assert!(pty.start_checkpoints(Some(&key()), "login"));
+        assert!(pty.start_checkpoints(&key()));
         // Each terminal ends up with its own last line, so a restore that mixed them up is seen.
         let _ = n;
         assert!(pty.checkpoint_now(true));
@@ -170,9 +170,9 @@ fn relaunch(hosts_dir: &Path, old: &str, key: &Key) -> Result<Terminal, ReadErro
     let read = read_latest(&dir, old, Some(key))?;
     let screen = read.screen.expect("a checkpoint with a screen");
     let mut seed = String::from_utf8_lossy(&safe_replay(&screen)).into_owned();
-    seed.push_str(&format!("\x1b[2m{}\x1b[0m\r\n", divider("2026-11-02 14:03")));
+    seed.push_str(&divider("restored 2026-11-02 14:03"));
     let id = new_id();
-    let options = StartOptions { restore: Some(&seed), restore_styled: true, ..options() };
+    let options = StartOptions { restore: Some(&seed), ..options() };
     let (pty, events) = Pty::start_hosted(&command(hosts_dir, &id), GRID, &options, launch("/bin/cat", &[]))
         .expect("a new host");
     wait_text(&pty, "restored 2026-11-02 14:03");
@@ -322,7 +322,7 @@ fn a_restored_terminals_new_host_writes_its_own_checkpoint_when_asked_to_flush()
     let new = relaunch(&hosts_dir, &ids[0], &key()).expect("restored");
     let new_dir = checkpoint::store::dir_in(&sessions_dir_of_hosts(&hosts_dir), &new.id);
     assert!(!checkpoint::store::is_readable(&new_dir, &new.id, Some(&key())));
-    assert!(new.pty.start_checkpoints(Some(&key()), "login"));
+    assert!(new.pty.start_checkpoints(&key()));
     assert!(new.pty.checkpoint_now(true));
     wait_for("the new host's own checkpoint", || {
         checkpoint::store::is_readable(&new_dir, &new.id, Some(&key()))
@@ -330,4 +330,61 @@ fn a_restored_terminals_new_host_writes_its_own_checkpoint_when_asked_to_flush()
     let read = read_latest(&new_dir, &new.id, Some(&key())).unwrap();
     let screen = String::from_utf8_lossy(read.screen.as_deref().unwrap()).into_owned();
     assert!(screen.contains("red bold"), "the restored screen is in it: {screen:?}");
+}
+
+/// Thirty hosts get SIGTERM in the same instant (the Mac is shutting down) with output no checkpoint holds yet:
+/// every one writes it within the host's second, and the whole lot is gone well inside the seconds a shutdown gives.
+/// The time is printed (`--nocapture`) for the record.
+#[test]
+fn thirty_hosts_flush_their_last_output_when_all_are_signalled_at_once() {
+    const HOSTS: usize = 30;
+    let data = tempfile::tempdir().expect("a data folder");
+    let hosts_dir = data.path().join("hosts");
+    let mut terminals = Vec::new();
+    for n in 0..HOSTS {
+        let id = new_id();
+        let (pty, events) =
+            Pty::start_hosted(&command(&hosts_dir, &id), GRID, &options(), launch("/bin/cat", &[]))
+                .expect("a hosted terminal");
+        assert!(pty.start_checkpoints(&key()));
+        pty.write(format!("early {n}\r").into_bytes());
+        wait_text(&pty, &format!("early {n}"));
+        terminals.push(Terminal { id, pty, _events: events });
+    }
+    // Output the schedule has not written yet: only the flush at SIGTERM can keep it.
+    for (n, t) in terminals.iter().enumerate() {
+        t.pty.write(format!("last words {n}\r").into_bytes());
+    }
+    for (n, t) in terminals.iter().enumerate() {
+        wait_text(&t.pty, &format!("last words {n}"));
+    }
+    let pids: Vec<u32> = terminals
+        .iter()
+        .map(|t| {
+            wormhole_term::hosted::meta::read(&wormhole_term::hosted::paths::meta_path(&hosts_dir, &t.id))
+                .expect("the meta file")
+                .pid
+        })
+        .collect();
+    let ids: Vec<String> = terminals.iter().map(|t| t.id.clone()).collect();
+    for t in &terminals {
+        assert!(t.pty.detach());
+    }
+    drop(terminals);
+    let started = std::time::Instant::now();
+    for pid in &pids {
+        assert!(signal(*pid, libc::SIGTERM));
+    }
+    for pid in pids {
+        wait_gone(pid);
+    }
+    let took = started.elapsed();
+    eprintln!("{HOSTS} hosts: SIGTERM to the last one gone in {took:?}");
+    assert!(took < std::time::Duration::from_secs(3), "{took:?}");
+    for (n, id) in ids.iter().enumerate() {
+        let dir = checkpoint::store::dir_in(&sessions_dir_of_hosts(&hosts_dir), id);
+        let read = read_latest(&dir, id, Some(&key())).expect("a checkpoint");
+        let screen = String::from_utf8_lossy(read.screen.as_deref().expect("a screen")).into_owned();
+        assert!(screen.contains(&format!("last words {n}")), "host {n} kept its last output: {screen:?}");
+    }
 }

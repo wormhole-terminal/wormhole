@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) static IDS: [&str; 1600] = [
+pub(crate) static IDS: [&str; 1601] = [
     "agent-sheet-title", "agent-sheet-title-scripts", "agent-sheet-wants-read",
     "agent-sheet-wants-type", "agent-sheet-wants-run", "agent-sheet-wants-open",
     "agent-sheet-wants-close", "agent-sheet-detail", "agent-sheet-detail-scripts",
@@ -529,21 +529,21 @@ pub(crate) static IDS: [&str; 1600] = [
     "terminal-menu-find", "terminal-menu-open-link", "terminal-menu-copy-link",
     "terminal-menu-copy-command", "terminal-menu-copy-output", "terminal-menu-put-command-at-prompt",
     "terminal-menu-split-right", "terminal-menu-split-down", "terminal-menu-clear",
-    "terminal-program-unnamed", "terminal-clipboard-ask", "title-row-part-folder",
-    "title-row-part-branch", "title-row-part-branch-status", "title-row-part-terminal",
-    "title-row-part-terminal-status", "title-row-part-space", "title-row-part-space.description",
-    "title-row-part-agent-gauge", "title-row-part-ports", "title-row-part-pull-request",
-    "title-row-part-open-in", "title-row-part-splits", "title-row-menu-header",
-    "title-row-menu-reset", "title-row-menu-customize", "title-row-more-open-in-split",
-    "title-row-more-open-in", "title-row-more-split", "title-row-hidden",
-    "title-row-status-in-bar", "title-row-path-open-in-finder", "title-row-path-copy",
-    "title-row-path-copied", "title-row-path-spoken-copied", "zen-on",
-    "zen-off", "zen-settings-note", "zen-settings-leave",
-    "zen-panel-hidden",
+    "terminal-program-unnamed", "terminal-clipboard-ask", "terminal-restored-at",
+    "title-row-part-folder", "title-row-part-branch", "title-row-part-branch-status",
+    "title-row-part-terminal", "title-row-part-terminal-status", "title-row-part-space",
+    "title-row-part-space.description", "title-row-part-agent-gauge", "title-row-part-ports",
+    "title-row-part-pull-request", "title-row-part-open-in", "title-row-part-splits",
+    "title-row-menu-header", "title-row-menu-reset", "title-row-menu-customize",
+    "title-row-more-open-in-split", "title-row-more-open-in", "title-row-more-split",
+    "title-row-hidden", "title-row-status-in-bar", "title-row-path-open-in-finder",
+    "title-row-path-copy", "title-row-path-copied", "title-row-path-spoken-copied",
+    "zen-on", "zen-off", "zen-settings-note",
+    "zen-settings-leave", "zen-panel-hidden",
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 1600] = [
+pub(crate) const TAKES_ARGS: [bool; 1601] = [
     true, false, false, false, false, false, false, false, false, true, false, false,
     false, false, false, false, false, false, false, false, false, true, true, false,
     false, false, false, false, true, true, true, true, true, true, true, true,
@@ -674,8 +674,8 @@ pub(crate) const TAKES_ARGS: [bool; 1600] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, true, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, true, true, false, false, false,
-    false, false, false, false, false, false, false, false, false, false, true, false,
+    false, false, false, false, false, false, false, false, false, false, true, true,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false,
+    false, false, false, false, false,
 ];

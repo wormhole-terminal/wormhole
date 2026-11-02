@@ -14,7 +14,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use polling::{AsRawSource, Event, Events, PollMode, Poller};
-use wormhole_term::checkpoint::Key;
 use wormhole_term::hosted::meta::{self, Meta};
 use wormhole_term::sys::socket::{Stream, peer_user};
 use wormhole_term::sys::user::UserId;
@@ -96,7 +95,11 @@ pub(crate) fn serve<S: Spawner>(
         for notice in session.take_notices() {
             on_notice(notice, ready, files, session, checkpoints, now);
         }
-        let checkpoint_next = checkpoints.pump(session.program().map_or(0, |p| p.output_total()), now);
+        let (checkpoint_next, written) =
+            checkpoints.pump(session.program().map_or(0, |p| p.output_total()), now);
+        for generation in written {
+            session.checkpoint_written(generation);
+        }
         let wrote_all = write_all(session, &mut conns, &poller);
         if session.is_done() {
             flush_at_end(session, &mut conns);
@@ -161,18 +164,16 @@ fn on_notice<S: Spawner>(
     now: Instant,
 ) {
     match notice {
-        Notice::SetCheckpoint { key, shell } => {
-            let source = session.program().and_then(|program| program.checkpoint_source());
-            if let Some(source) = source {
-                // Empty: the app has no key, and the checkpoint is the folder and the shell only.
-                checkpoints.configure(source, Key::from_slice(&key), shell, now);
+        Notice::SetCheckpoint { key } => {
+            if let Some(source) = session.program().and_then(|program| program.checkpoint_source()) {
+                checkpoints.configure(source, key, now);
             }
         }
-        Notice::CheckpointNow => checkpoints.request(),
-        Notice::Exited(info) => {
-            let ended = checkpoints.ended(&info, FLUSH_WITHIN);
-            tracing::info!(?ended, "the program's last checkpoint");
-        }
+        Notice::CheckpointNow { flush } => checkpoints.request(flush),
+        Notice::HistoryCleared => checkpoints.cleared(),
+        // Before the hangup's exit is noticed: that exit leaves nothing.
+        Notice::Closing => checkpoints.close(),
+        Notice::Exited(info) => checkpoints.ended(&info),
         Notice::Spawned { pid } => {
             files.meta.child_pid = Some(pid);
             if let Err(err) = meta::write(files.hosts_dir, &files.meta) {

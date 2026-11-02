@@ -17,7 +17,7 @@
 
 use wormhole_vt::{Cell, Color, Flags, Line, Modes, NamedColor, RowExtras};
 
-use crate::restore::is_marker;
+use super::replay::is_divider_line;
 use crate::screen::Screen;
 
 /// How much of a terminal a checkpoint keeps.
@@ -25,15 +25,34 @@ use crate::screen::Screen;
 pub struct Limits {
     /// The most lines, counted from the bottom of the screen.
     pub max_lines: usize,
-    /// The most bytes of VT; the oldest lines go first.
+    /// The most bytes of VT; the oldest lines go first, whole (a cut is always at a line start, so no escape
+    /// sequence is ever split).
     pub max_bytes: usize,
 }
 
 impl Default for Limits {
     fn default() -> Self {
-        Self { max_lines: 5_000, max_bytes: 4 * 1024 * 1024 }
+        // What a new host can be seeded with: the checkpoint is drawn through a `Spawn`.
+        Self { max_lines: 5_000, max_bytes: wormhole_wire::SEED_MAX }
     }
 }
+
+/// How the screen is reached: under its lock, for as long as the closure runs. The checkpoint thread reads the
+/// screen in slices of [`SLICE_ROWS`] rows, one look each, so the PTY thread that parses under the same lock is
+/// never kept waiting for more than a slice.
+pub(crate) trait ScreenAccess {
+    fn with<R>(&self, read: impl FnOnce(&Screen) -> R) -> R;
+}
+
+/// A screen that is not shared: its own access.
+impl ScreenAccess for Screen {
+    fn with<R>(&self, read: impl FnOnce(&Screen) -> R) -> R {
+        read(self)
+    }
+}
+
+/// Rows copied out in one look at the screen.
+pub(crate) const SLICE_ROWS: usize = 256;
 
 /// The attributes a cell can carry that a replay sets: SGR's.
 const ATTRIBUTES: Flags = Flags::BOLD
@@ -119,47 +138,92 @@ fn glyph(cell: &Cell) -> char {
     if cell.c.is_control() || cell.c == crate::images::PLACEHOLDER { ' ' } else { cell.c }
 }
 
-/// The primary screen of `screen` as VT bytes, newest [`Limits::max_lines`] lines and at most
-/// [`Limits::max_bytes`]; `None` while the alternate screen shows (a full-screen program: the engine keeps the
-/// real screen out of reach, so the checkpoint before it is the one to keep), and `None` for a screen that is
-/// blank. The caller holds the screen's lock for as long as this takes.
-pub(crate) fn primary_screen(screen: &Screen, limits: Limits) -> Option<Vec<u8>> {
-    if screen.mode().contains(Modes::ALT_SCREEN) {
+/// One row copied out of the grid: its cells and the zero-width characters some of them carry.
+struct RowCopy {
+    cells: Vec<Cell>,
+    marks: Vec<(usize, Vec<char>)>,
+}
+
+/// The primary screen as VT bytes, newest [`Limits::max_lines`] lines and at most [`Limits::max_bytes`]; `None`
+/// while the alternate screen shows (a full-screen program: the engine keeps the real screen out of reach, so
+/// the checkpoint before it is the one to keep), and `None` for a screen that is blank.
+///
+/// The screen is looked at in slices ([`SLICE_ROWS`] rows a look) and encoded outside the lock. A program that
+/// prints while it is read may scroll the grid between two looks; the rows are then followed by how far the
+/// history grew, and if the history is full and drops lines a row can be missed or repeated: the next checkpoint
+/// (a quiet moment later) is whole.
+pub(crate) fn primary_screen<A: ScreenAccess>(access: &A, limits: Limits) -> Option<Vec<u8>> {
+    let (alt, top, bottom, history) = access.with(|s| {
+        (s.mode().contains(Modes::ALT_SCREEN), s.topmost_line().0, s.bottommost_line().0, s.history_size())
+    });
+    if alt {
         return None;
     }
-    let top = screen.topmost_line().0;
-    let bottom = screen.bottommost_line().0;
     let start = (bottom - limits.max_lines.min(i32::MAX as usize) as i32 + 1).max(top);
+    let mut rows: Vec<RowCopy> = Vec::with_capacity((bottom - start + 1).max(0) as usize);
+    let mut at = start;
+    while at <= bottom {
+        let end = (at + SLICE_ROWS as i32 - 1).min(bottom);
+        access.with(|s| {
+            // Lines that scrolled into the history since the first look moved up by as much.
+            let shift = s.history_size() as i32 - history as i32;
+            let (mut cells, mut extras) = (Vec::new(), RowExtras::default());
+            for line in at..=end {
+                let line = line - shift;
+                if line < s.topmost_line().0 || line > s.bottommost_line().0 {
+                    rows.push(RowCopy { cells: Vec::new(), marks: Vec::new() });
+                    continue;
+                }
+                s.copy_row(Line(line), &mut cells, Some(&mut extras));
+                let marks = (0..cells.len())
+                    .filter_map(|col| {
+                        let marks = extras.zerowidth(col);
+                        (!marks.is_empty()).then(|| (col, marks.to_vec()))
+                    })
+                    .collect();
+                rows.push(RowCopy { cells: std::mem::take(&mut cells), marks });
+            }
+        });
+        at = end + 1;
+    }
+    encode(&rows, limits)
+}
 
+/// VT for the copied rows (see the module).
+fn encode(rows: &[RowCopy], limits: Limits) -> Option<Vec<u8>> {
     let mut lines: Vec<Vec<u8>> = Vec::new();
     let mut line = Vec::new();
     let mut plain = String::new();
     // Where `line` ends after its last cell that shows something: what comes after is blanks to trim.
     let mut shown = 0usize;
     let mut pen = Pen::DEFAULT;
-    let (mut cells, mut extras) = (Vec::new(), RowExtras::default());
-    let mut finish = |line: &mut Vec<u8>, plain: &mut String, shown: &mut usize, pen: &mut Pen| {
-        line.truncate(*shown);
-        // Restore markers do not pile up across restarts.
-        if !is_marker(plain) {
-            let mut done = std::mem::take(line);
-            done.extend_from_slice(b"\x1b[0m\r\n");
-            lines.push(done);
-        } else {
-            line.clear();
-        }
-        plain.clear();
-        *shown = 0;
-        *pen = Pen::DEFAULT;
-    };
-    for row in start..=bottom {
-        screen.copy_row(Line(row), &mut cells, Some(&mut extras));
-        for (col, cell) in cells.iter().enumerate() {
+    // Whether every character of the line is dim and italic, which is how a restore's divider is drawn.
+    let mut divider_look = true;
+    let mut finish =
+        |line: &mut Vec<u8>, plain: &mut String, shown: &mut usize, pen: &mut Pen, look: &mut bool| {
+            line.truncate(*shown);
+            // Dividers of earlier restores do not pile up across restarts.
+            if !is_divider_line(plain, *look) {
+                let mut done = std::mem::take(line);
+                done.extend_from_slice(b"\x1b[0m\r\n");
+                lines.push(done);
+            } else {
+                line.clear();
+            }
+            plain.clear();
+            *shown = 0;
+            *pen = Pen::DEFAULT;
+            *look = true;
+        };
+    for row in rows {
+        for (col, cell) in row.cells.iter().enumerate() {
             if cell.flags.intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER) {
                 continue;
             }
+            let marks: &[char] =
+                row.marks.iter().find(|(c, _)| *c == col).map_or(&[], |(_, marks)| marks.as_slice());
             let this = Pen::of(cell);
-            let blank = glyph(cell) == ' ' && extras.zerowidth(col).is_empty();
+            let blank = glyph(cell) == ' ' && marks.is_empty();
             if this != pen {
                 if this.is_default() {
                     line.extend_from_slice(b"\x1b[0m");
@@ -172,23 +236,26 @@ pub(crate) fn primary_screen(screen: &Screen, limits: Limits) -> Option<Vec<u8>>
             let mut buf = [0u8; 4];
             line.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
             plain.push(c);
-            for &mark in extras.zerowidth(col) {
+            for &mark in marks {
                 let safe = if mark.is_control() { ' ' } else { mark };
                 line.extend_from_slice(safe.encode_utf8(&mut buf).as_bytes());
                 plain.push(safe);
+            }
+            if !blank {
+                divider_look &= cell.flags.contains(Flags::DIM | Flags::ITALIC);
             }
             // A blank in the default look shows nothing; anything else does (a background, an underline).
             if !(blank && this.is_default()) {
                 shown = line.len();
             }
         }
-        let wrapped = cells.last().is_some_and(|last| last.flags.contains(Flags::WRAPLINE));
+        let wrapped = row.cells.last().is_some_and(|last| last.flags.contains(Flags::WRAPLINE));
         if !wrapped {
-            finish(&mut line, &mut plain, &mut shown, &mut pen);
+            finish(&mut line, &mut plain, &mut shown, &mut pen, &mut divider_look);
         }
     }
     if !line.is_empty() {
-        finish(&mut line, &mut plain, &mut shown, &mut pen);
+        finish(&mut line, &mut plain, &mut shown, &mut pen, &mut divider_look);
     }
     // The blank rows under the last line of output are not history.
     while lines.last().is_some_and(|l| l.as_slice() == b"\x1b[0m\r\n") {
@@ -197,7 +264,8 @@ pub(crate) fn primary_screen(screen: &Screen, limits: Limits) -> Option<Vec<u8>>
     if lines.is_empty() {
         return None;
     }
-    // The oldest lines go first when the bytes are over the limit.
+    // The oldest lines go first when the bytes are over the limit; lines go whole, so the cut is at a line start
+    // and no escape sequence is split (every line starts from the default look).
     let mut total: usize = lines.iter().map(Vec::len).sum();
     let mut skip = 0;
     while total > limits.max_bytes && skip + 1 < lines.len() {
@@ -209,12 +277,6 @@ pub(crate) fn primary_screen(screen: &Screen, limits: Limits) -> Option<Vec<u8>>
         out.extend_from_slice(line);
     }
     Some(out)
-}
-
-/// The divider of a restore at `when` ("2026-11-02 14:03"), the line a checkpoint's styled seed ends with.
-pub fn divider(when: &str) -> String {
-    let when: String = when.chars().filter(|c| !c.is_control()).take(40).collect();
-    format!("──── restored {when} ────")
 }
 
 /// The longest SGR sequence let through.
@@ -329,12 +391,76 @@ mod tests {
     }
 
     #[test]
-    fn a_restored_marker_does_not_pile_up() {
-        let t = text(
-            &vt_of(format!("old\r\n{}\r\nnew\r\n", crate::restore::RESTORED_MARKER).as_bytes()).unwrap(),
+    fn a_restored_divider_does_not_pile_up_whatever_its_words() {
+        for words in ["restored 2026-11-02 14:03", "wiederhergestellt 02.11.2026 14:03"] {
+            let divider = super::super::replay::divider(words);
+            let t = text(&vt_of(format!("old\r\n{divider}new\r\n").as_bytes()).unwrap());
+            assert!(!t.contains("────") && !t.contains(words), "{t:?}");
+            assert!(t.contains("old") && t.contains("new"));
+        }
+        // A rule someone drew themselves is theirs: it is not dim and italic, so it stays.
+        let t = text(&vt_of(b"a\r\n\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80 mine \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\r\n").unwrap());
+        assert!(t.contains("mine"), "{t:?}");
+    }
+
+    /// The screen is read in slices, each under one look at the lock, and the lock is never held for the whole
+    /// of a long history: the PTY thread that parses under it waits for a slice at the most.
+    #[test]
+    fn a_long_history_is_read_in_slices_and_no_look_is_long() {
+        use std::cell::RefCell;
+        use std::time::{Duration, Instant};
+
+        struct Timed<'a> {
+            screen: &'a Screen,
+            holds: RefCell<Vec<Duration>>,
+        }
+        impl ScreenAccess for Timed<'_> {
+            fn with<R>(&self, read: impl FnOnce(&Screen) -> R) -> R {
+                let started = Instant::now();
+                let out = read(self.screen);
+                self.holds.borrow_mut().push(started.elapsed());
+                out
+            }
+        }
+        let mut term = TestTerm::new(80, 24, 6_000);
+        for i in 0..5_000 {
+            term.feed(
+                format!("\x1b[3{}mline {i} of the long history with some text on it\x1b[0m\r\n", i % 8)
+                    .as_bytes(),
+            );
+        }
+        let timed = Timed { screen: term.screen(), holds: RefCell::new(Vec::new()) };
+        let vt =
+            primary_screen(&timed, Limits { max_lines: 5_000, max_bytes: usize::MAX }).expect("a screen");
+        let holds = timed.holds.borrow();
+        assert!(holds.len() >= 5_000 / SLICE_ROWS, "{} looks", holds.len());
+        let longest = holds.iter().max().copied().unwrap();
+        assert!(longest < Duration::from_millis(25), "one look held the lock for {longest:?}");
+        let t = text(&vt);
+        assert!(
+            t.contains("line 4999 ") && t.contains("line 0 ") || t.contains("line 4999 "),
+            "the newest line is in it"
         );
-        assert!(!t.contains("restored"), "{t:?}");
-        assert!(t.contains("old") && t.contains("new"));
+        // The same bytes as reading the screen in one look.
+        assert_eq!(
+            Some(vt),
+            primary_screen(term.screen(), Limits { max_lines: 5_000, max_bytes: usize::MAX })
+        );
+    }
+
+    /// The oldest lines go whole when the bytes are over the limit: the cut is at a line start, so no escape
+    /// sequence is ever split, and what is left passes the replay filter unchanged.
+    #[test]
+    fn the_byte_cap_cuts_at_a_line_start_and_never_inside_an_escape() {
+        let mut term = TestTerm::new(40, 10, 1_000);
+        for i in 0..400 {
+            term.feed(format!("\x1b[1;3{}mline {i:03}\x1b[0m\r\n", i % 8).as_bytes());
+        }
+        let vt = primary_screen(term.screen(), Limits { max_lines: 1_000, max_bytes: 700 }).unwrap();
+        assert!(vt.len() <= 700 + 64, "{}", vt.len());
+        let t = text(&vt);
+        assert!(t.starts_with("\x1b[0;1;3") && t.contains("line 399"), "{:?}", &t[..40.min(t.len())]);
+        assert_eq!(safe_replay(&vt), vt, "no sequence was cut");
     }
 
     #[test]

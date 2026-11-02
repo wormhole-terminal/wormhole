@@ -48,6 +48,11 @@ impl Schedule {
         }
     }
 
+    /// Whether something was printed since the last checkpoint was asked for.
+    pub fn is_dirty(&self) -> bool {
+        self.dirty_since.is_some()
+    }
+
     /// Something to write though nothing was printed: the first checkpoint, for the folder and the shell.
     pub fn force(&mut self, now: Instant) {
         self.dirty_since.get_or_insert(now);

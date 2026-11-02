@@ -3,7 +3,7 @@
 
 use wormhole_vt::{Cell, Flags, Line, Modes, RowExtras};
 
-use super::restore::is_marker;
+use super::checkpoint::is_divider_line;
 use super::screen::Screen;
 
 /// One grid line as text, trailing blanks trimmed. `cells` is scratch for the copy.
@@ -44,13 +44,16 @@ pub(super) fn scrollback_text(screen: &Screen, max_lines: usize) -> Option<Strin
     let start = (bottom - max_lines as i32 + 1).max(top);
     let mut lines: Vec<String> = Vec::new();
     let mut current = String::new();
-    let mut finish = |current: &mut String| {
+    // Whether every character of the line so far was drawn dim and italic: how a restore's divider looks.
+    let mut dim_italic = true;
+    let mut finish = |current: &mut String, dim_italic: &mut bool| {
         let line = current.trim_end();
-        // Don't let restore markers pile up across restarts.
-        if !is_marker(line) {
+        // Don't let restore dividers pile up across restarts.
+        if !is_divider_line(line, *dim_italic) {
             lines.push(line.to_string());
         }
         current.clear();
+        *dim_italic = true;
     };
     let (mut cells, mut extras) = (Vec::new(), RowExtras::default());
     for line in start..=bottom {
@@ -67,14 +70,17 @@ pub(super) fn scrollback_text(screen: &Screen, max_lines: usize) -> Option<Strin
             }
             current.push(cell.c);
             current.extend(extras.zerowidth(col));
+            if cell.c != ' ' {
+                dim_italic &= cell.flags.contains(Flags::DIM | Flags::ITALIC);
+            }
         }
         let wrapped = cells.last().is_some_and(|last| last.flags.contains(Flags::WRAPLINE));
         if !wrapped {
-            finish(&mut current);
+            finish(&mut current, &mut dim_italic);
         }
     }
     if !current.is_empty() {
-        finish(&mut current);
+        finish(&mut current, &mut dim_italic);
     }
     while lines.last().is_some_and(|l| l.is_empty()) {
         lines.pop();
@@ -157,7 +163,8 @@ mod tests {
         for i in 0..8 {
             bytes.extend_from_slice(format!("line {i}\r\n").as_bytes());
         }
-        bytes.extend_from_slice("──── restored ────\r\nafter\r\n\r\n".as_bytes());
+        bytes.extend_from_slice(crate::checkpoint::divider("restored").as_bytes());
+        bytes.extend_from_slice(b"after\r\n\r\n");
         let term = term(20, 4, &bytes);
         assert_eq!(
             scrollback_text(term.screen(), 1000).as_deref(),

@@ -77,7 +77,6 @@ impl Pty {
                         minor: info.proto_minor,
                         features: info.features,
                         replay: seed_drawn_by(options.restore, info.proto_minor),
-                        replay_styled: options.restore_styled,
                     },
                 )
             }
@@ -126,7 +125,6 @@ impl Pty {
                 minor: welcome.proto_minor,
                 features: welcome.features,
                 replay: None,
-                replay_styled: false,
             },
         )
         .map_err(|e| AttachError::Failed(format!("{e:#}")))
@@ -162,22 +160,35 @@ impl Pty {
         }
     }
 
-    /// Ask a hosted terminal's host to keep a checkpoint of the terminal for a restart of the Mac: sealed with
-    /// `key` (none: the folder and the shell only, never a screen), `shell` being the key of the shell it
-    /// runs. `false` when the terminal is not hosted or its host is too old to do it; the host writes nothing
+    /// Ask a hosted terminal's host to keep a checkpoint of the terminal for a restart of the Mac, sealed with
+    /// `key`. `false` when the terminal is not hosted or its host is too old to do it; the host writes nothing
     /// until it is asked.
-    pub fn start_checkpoints(&self, key: Option<&crate::checkpoint::Key>, shell: &str) -> bool {
+    pub fn start_checkpoints(&self, key: &crate::checkpoint::Key) -> bool {
         match &self.io {
             Backend::Hosted(host) if host.can_checkpoint() => {
-                host.checkpoint_key(key, shell);
+                host.checkpoint_key(Some(key));
                 true
             }
             _ => false,
         }
     }
 
-    /// Ask the host to write a checkpoint now (`flush`: even if nothing changed and whatever the write budget
-    /// says). `false` as for [`start_checkpoints`](Self::start_checkpoints).
+    /// Tell the host to stop keeping checkpoints (the feature was turned off): it writes nothing more. `false` as
+    /// for [`start_checkpoints`](Self::start_checkpoints).
+    pub fn stop_checkpoints(&self) -> bool {
+        match &self.io {
+            Backend::Hosted(host) if host.can_checkpoint() => {
+                host.checkpoint_key(None);
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Ask the host to write a checkpoint now. With `flush` the host says when it is on disk
+    /// ([`PtyEvent::CheckpointWritten`](crate::PtyEvent::CheckpointWritten)), whatever the write budget and the
+    /// quiet rule say; without it, only when something was printed since the last. `false` as for
+    /// [`start_checkpoints`](Self::start_checkpoints).
     pub fn checkpoint_now(&self, flush: bool) -> bool {
         match &self.io {
             Backend::Hosted(host) if host.can_checkpoint() => {
@@ -265,7 +276,6 @@ fn spawn_in(
         env: wire::List::Borrowed(&pairs),
         colors,
         seed: wire::List::Borrowed(&seed),
-        seed_styled: options.restore_styled,
     };
     let until = Instant::now() + READY_TIMEOUT;
     let info = match socket::spawn(&stream, &mut dec, &spawn, until)? {
@@ -346,8 +356,6 @@ pub(crate) struct HostFacts<'a> {
     /// replica draws too: `None` for an attach (the host has its screen already) and for a host that
     /// skipped the seed.
     pub replay: Option<&'a str>,
-    /// `replay` is a checkpoint's styled VT (see `StartOptions::restore_styled`).
-    pub replay_styled: bool,
 }
 
 /// The `Pty` around a connection whose handshake is done, and its thread. `size` is the app's;
@@ -361,7 +369,7 @@ pub(crate) fn hosted(
     first: StreamMode,
     host: HostFacts<'_>,
 ) -> anyhow::Result<(Pty, PtyEvents)> {
-    let HostFacts { pid, minor, features, replay, replay_styled } = host;
+    let HostFacts { pid, minor, features, replay } = host;
     let (proxy, events) = EventProxy::new();
     let shared = proxy.shared().clone();
     let replica_options = ReplicaOptions::of(options);
@@ -369,12 +377,7 @@ pub(crate) fn hosted(
     // What the host draws before the program's first byte (see `start_hosted`): the same here, so the
     // stream's bytes land under it as they do there.
     if let Some(text) = replay {
-        let text = wire::seed_chunks(text).concat();
-        if replay_styled {
-            crate::checkpoint::replay::replay_styled(&mut screen, &text);
-        } else {
-            crate::restore::replay(&mut screen, &text);
-        }
+        crate::checkpoint::replay::replay_seed(&mut screen, &wire::seed_chunks(text).concat());
     }
     if let Some(colors) = options.colors {
         screen.set_default_colors(colors);

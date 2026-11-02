@@ -193,7 +193,6 @@ fn lists_are_bounded_on_both_sides() {
             env: Vec::new().into(),
             colors: None,
             seed: Vec::new().into(),
-            seed_styled: false,
         })
     };
     assert!(matches!(encode(&mut Vec::new(), 1, 0, &spawn(too_many)), Err(EncodeError::TooMany(_))));

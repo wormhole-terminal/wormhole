@@ -25,11 +25,21 @@ pub fn local_time_of_day(unix_ms: u64) -> Option<TimeOfDay> {
     Some(TimeOfDay { hour, minute, second, millis: (unix_ms % 1000) as u16 })
 }
 
-/// `2026-11-02 14:03`: the date and the time of day, in the system's time zone, at `unix_seconds`; `None` when
-/// the system can't say.
-pub fn local_date_time(unix_seconds: u64) -> Option<String> {
+/// A date and a time of day, in the system's time zone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DateTime {
+    pub year: i32,
+    pub month: u8,
+    pub day: u8,
+    pub hour: u8,
+    pub minute: u8,
+}
+
+/// The date and the time of day, in the system's time zone, at `unix_seconds`; `None` when the system can't say.
+/// The parts, not a text: how a date is written is the interface language's (`terminal-restored-at`).
+pub fn local_date_time(unix_seconds: u64) -> Option<DateTime> {
     let (year, month, day, hour, minute) = os::local_ymd_hm(unix_seconds)?;
-    Some(format!("{year:04}-{month:02}-{day:02} {hour:02}:{minute:02}"))
+    Some(DateTime { year, month, day, hour, minute })
 }
 
 #[cfg(test)]
@@ -39,10 +49,10 @@ mod tests {
     #[test]
     fn the_date_and_time_read_as_a_stamp() {
         // 2026-10-26 14:02:07 UTC: a day within a day of that date wherever the zone is.
-        let stamp = local_date_time(1_793_023_327).expect("the system knows its zone");
-        assert_eq!(stamp.len(), 16, "{stamp}");
-        assert!(["2026-10-25", "2026-10-26", "2026-10-27"].iter().any(|d| stamp.starts_with(d)), "{stamp}");
-        assert_eq!(&stamp[10..11], " ");
+        let at = local_date_time(1_793_023_327).expect("the system knows its zone");
+        assert_eq!((at.year, at.month), (2026, 10));
+        assert!((25..=27).contains(&at.day), "{at:?}");
+        assert!(at.hour < 24 && at.minute < 60, "{at:?}");
     }
 
     #[test]

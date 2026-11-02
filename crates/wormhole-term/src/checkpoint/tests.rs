@@ -14,17 +14,8 @@ fn key(byte: u8) -> Key {
     Key::new([byte; KEY_LEN])
 }
 
-fn snapshot<'a>(screen: Option<&'a [u8]>, title: &'a str) -> Snapshot<'a> {
-    Snapshot {
-        time: 1_760_000_000,
-        cols: 80,
-        rows: 24,
-        cwd: Some("/Users/me/src"),
-        shell: Some("login"),
-        title: Some(title),
-        ended: None,
-        screen,
-    }
+fn snapshot(screen: &[u8]) -> Snapshot<'_> {
+    Snapshot { time: 1_760_000_000, ended: None, screen }
 }
 
 fn names(dir: &Path) -> Vec<String> {
@@ -43,20 +34,19 @@ fn a_checkpoint_comes_back_with_its_manifest_and_screen() {
     let root = sessions();
     let mut store = Store::open(root.path(), ID).unwrap();
     let a = key(1);
-    let written = store.write(Some(&a), &snapshot(Some(b"\x1b[1mhello\x1b[0m\r\n"), "t")).unwrap();
-    assert_eq!((written.generation, written.screen), (1, true));
+    let written = store.write(&a, &snapshot(b"\x1b[1mhello\x1b[0m\r\n")).unwrap();
+    assert_eq!(written.generation, 1);
     let read = read_latest(store.dir(), ID, Some(&a)).unwrap();
-    assert_eq!(read.manifest.cwd.as_deref(), Some("/Users/me/src"));
-    assert_eq!((read.manifest.cols, read.manifest.rows, read.manifest.generation), (80, 24, 1));
+    assert_eq!((read.manifest.generation, read.manifest.time), (1, 1_760_000_000));
     assert_eq!(read.screen.as_deref().map(Vec::as_slice), Some(&b"\x1b[1mhello\x1b[0m\r\n"[..]));
     assert_eq!(read.issue, None);
 }
 
 #[test]
-fn the_directory_is_private_and_the_screen_is_not_in_it_in_the_clear() {
+fn the_directory_is_private_and_nothing_in_it_is_readable_text() {
     let root = sessions();
     let mut store = Store::open(root.path(), ID).unwrap();
-    store.write(Some(&key(1)), &snapshot(Some(b"password hunter2\r\n"), "t")).unwrap();
+    store.write(&key(1), &snapshot(b"password hunter2\r\n")).unwrap();
     let dir = store.dir().to_path_buf();
     assert_eq!(crate::sys::fs::mode(&fs::metadata(&dir).unwrap()) & 0o777, 0o700);
     for name in names(&dir) {
@@ -64,25 +54,11 @@ fn the_directory_is_private_and_the_screen_is_not_in_it_in_the_clear() {
         assert_eq!(crate::sys::fs::mode(&fs::metadata(&path).unwrap()) & 0o777, 0o600, "{name}");
         assert!(!fs::read(&path).unwrap().windows(7).any(|w| w == b"hunter2"), "{name} holds the text");
     }
-}
-
-#[test]
-fn without_a_key_only_the_manifest_is_written_and_never_a_screen() {
-    let root = sessions();
-    let mut store = Store::open(root.path(), ID).unwrap();
-    let written = store.write(None, &snapshot(Some(b"secret screen"), "t")).unwrap();
-    assert!(!written.screen);
-    assert_eq!(names(store.dir()), ["g000000000001.manifest"]);
-    for name in names(store.dir()) {
-        assert!(!fs::read(store.dir().join(name)).unwrap().windows(6).any(|w| w == b"secret"));
+    // The plaintext manifest says nothing of what the person did.
+    let manifest = fs::read_to_string(dir.join("g000000000001.manifest")).unwrap();
+    for word in ["cwd", "title", "shell", "cols", "rows"] {
+        assert!(!manifest.contains(word), "{word} in {manifest:?}");
     }
-    let read = read_latest(store.dir(), ID, None).unwrap();
-    assert!(read.screen.is_none() && read.issue.is_none());
-    assert_eq!(
-        read.manifest.cwd.as_deref(),
-        Some("/Users/me/src"),
-        "the folder and the shell are still there"
-    );
 }
 
 #[test]
@@ -91,7 +67,7 @@ fn the_newest_two_generations_are_kept() {
     let mut store = Store::open(root.path(), ID).unwrap();
     let a = key(1);
     for i in 0..5 {
-        store.write(Some(&a), &snapshot(Some(format!("screen {i}").as_bytes()), "t")).unwrap();
+        store.write(&a, &snapshot(format!("screen {i}").as_bytes())).unwrap();
     }
     assert_eq!(KEEP, 2);
     assert_eq!(
@@ -102,13 +78,29 @@ fn the_newest_two_generations_are_kept() {
     assert_eq!(read.screen.as_deref().map(Vec::as_slice), Some(&b"screen 4"[..]));
 }
 
+/// After Clear Buffer no generation from before it may be left: not for a restart, not for a copy of the folder.
+#[test]
+fn writing_the_only_one_drops_every_generation_before_it() {
+    let root = sessions();
+    let mut store = Store::open(root.path(), ID).unwrap();
+    let a = key(1);
+    for i in 0..3 {
+        store.write(&a, &snapshot(format!("before {i}").as_bytes())).unwrap();
+    }
+    store.write_only(&a, &snapshot(b"after the clear")).unwrap();
+    assert_eq!(names(store.dir()), ["g000000000004.manifest", "g000000000004.screen"]);
+    for name in names(store.dir()) {
+        assert!(!fs::read(store.dir().join(name)).unwrap().windows(6).any(|w| w == b"before"));
+    }
+}
+
 #[test]
 fn a_new_store_goes_on_from_the_generation_it_finds() {
     let root = sessions();
     let a = key(1);
-    Store::open(root.path(), ID).unwrap().write(Some(&a), &snapshot(Some(b"one"), "t")).unwrap();
+    Store::open(root.path(), ID).unwrap().write(&a, &snapshot(b"one")).unwrap();
     let mut again = Store::open(root.path(), ID).unwrap();
-    assert_eq!(again.write(Some(&a), &snapshot(Some(b"two"), "t")).unwrap().generation, 2);
+    assert_eq!(again.write(&a, &snapshot(b"two")).unwrap().generation, 2);
 }
 
 #[test]
@@ -116,18 +108,17 @@ fn a_write_killed_between_its_steps_leaves_the_last_generation_whole() {
     let root = sessions();
     let mut store = Store::open(root.path(), ID).unwrap();
     let a = key(1);
-    store.write(Some(&a), &snapshot(Some(b"good"), "t")).unwrap();
+    store.write(&a, &snapshot(b"good")).unwrap();
     let dir = store.dir().to_path_buf();
     // Killed after the screen was renamed in and before the manifest: a screen with no manifest.
     fs::write(dir.join("g000000000002.screen"), b"half a generation").unwrap();
     // Killed while writing a temporary file.
-    fs::write(dir.join(".g000000000002.manifest.99999.tmp"), b"cut").unwrap();
+    fs::write(dir.join(".g000000000002.manifest.99999.0.tmp"), b"cut").unwrap();
     let read = read_latest(&dir, ID, Some(&a)).unwrap();
     assert_eq!(read.screen.as_deref().map(Vec::as_slice), Some(&b"good"[..]), "the whole generation wins");
     // The next write cleans both up and does not reuse the dead generation's number.
     let mut next = Store::open(root.path(), ID).unwrap();
-    let written = next.write(Some(&a), &snapshot(Some(b"later"), "t")).unwrap();
-    assert_eq!(written.generation, 3);
+    assert_eq!(next.write(&a, &snapshot(b"later")).unwrap().generation, 3);
     assert!(
         !names(&dir).iter().any(|n| n.ends_with(".tmp") || n == "g000000000002.screen"),
         "{:?}",
@@ -135,13 +126,39 @@ fn a_write_killed_between_its_steps_leaves_the_last_generation_whole() {
     );
 }
 
+/// A directory the app removed (the terminal was closed) is not made again by a host that is still ending: its
+/// last writes fail, and nothing of the terminal comes back.
+#[test]
+fn a_directory_removed_under_a_store_is_not_made_again() {
+    let root = sessions();
+    let mut store = Store::open(root.path(), ID).unwrap();
+    let a = key(1);
+    store.write(&a, &snapshot(b"one")).unwrap();
+    forget(store.dir());
+    assert!(store.write(&a, &snapshot(b"two")).is_err());
+    assert!(store.write_only(&a, &snapshot(b"three")).is_err());
+    assert!(!store.dir().exists());
+}
+
+/// Each write has temporary names of its own: two in a row in one process never meet in one file.
+#[test]
+fn writes_in_a_row_do_not_share_temporary_files() {
+    let root = sessions();
+    let mut store = Store::open(root.path(), ID).unwrap();
+    let a = key(1);
+    for _ in 0..20 {
+        store.write(&a, &snapshot(b"x")).unwrap();
+    }
+    assert!(!names(store.dir()).iter().any(|n| n.ends_with(".tmp")));
+}
+
 #[test]
 fn a_damaged_newest_generation_gives_way_to_the_one_before() {
     let root = sessions();
     let mut store = Store::open(root.path(), ID).unwrap();
     let a = key(1);
-    store.write(Some(&a), &snapshot(Some(b"older"), "t")).unwrap();
-    store.write(Some(&a), &snapshot(Some(b"newer"), "t")).unwrap();
+    store.write(&a, &snapshot(b"older")).unwrap();
+    store.write(&a, &snapshot(b"newer")).unwrap();
     let dir = store.dir().to_path_buf();
     for damage in ["flip", "cut", "gone"] {
         let path = dir.join("g000000000002.screen");
@@ -168,8 +185,8 @@ fn a_damaged_manifest_is_skipped_too() {
     let root = sessions();
     let mut store = Store::open(root.path(), ID).unwrap();
     let a = key(1);
-    store.write(Some(&a), &snapshot(Some(b"older"), "t")).unwrap();
-    store.write(Some(&a), &snapshot(Some(b"newer"), "t")).unwrap();
+    store.write(&a, &snapshot(b"older")).unwrap();
+    store.write(&a, &snapshot(b"newer")).unwrap();
     fs::write(store.dir().join("g000000000002.manifest"), b"\xff\xfe not a manifest").unwrap();
     assert_eq!(read_latest(store.dir(), ID, Some(&a)).unwrap().manifest.generation, 1);
 }
@@ -178,22 +195,21 @@ fn a_damaged_manifest_is_skipped_too() {
 fn another_key_gives_the_manifest_and_says_why_there_is_no_screen() {
     let root = sessions();
     let mut store = Store::open(root.path(), ID).unwrap();
-    store.write(Some(&key(1)), &snapshot(Some(b"sealed"), "t")).unwrap();
+    store.write(&key(1), &snapshot(b"sealed")).unwrap();
     let wrong = read_latest(store.dir(), ID, Some(&key(2))).unwrap();
     assert!(wrong.screen.is_none());
     assert_eq!(wrong.issue, Some(Issue::WrongKey));
-    assert_eq!(wrong.manifest.cwd.as_deref(), Some("/Users/me/src"));
     let none = read_latest(store.dir(), ID, None).unwrap();
     assert_eq!(none.issue, Some(Issue::NoKey));
 }
 
 #[test]
-fn a_screen_sealed_for_another_terminal_or_generation_does_not_open_by_being_renamed() {
+fn a_screen_sealed_for_another_generation_does_not_open_by_being_renamed() {
     let root = sessions();
     let mut store = Store::open(root.path(), ID).unwrap();
     let a = key(1);
-    store.write(Some(&a), &snapshot(Some(b"one"), "t")).unwrap();
-    store.write(Some(&a), &snapshot(Some(b"two"), "t")).unwrap();
+    store.write(&a, &snapshot(b"one")).unwrap();
+    store.write(&a, &snapshot(b"two")).unwrap();
     let dir = store.dir().to_path_buf();
     // Generation 1's screen put where generation 2's is.
     fs::copy(dir.join("g000000000001.screen"), dir.join("g000000000002.screen")).unwrap();
@@ -211,7 +227,7 @@ fn a_newer_format_is_left_alone_and_a_missing_directory_is_missing() {
     let root = sessions();
     let mut store = Store::open(root.path(), ID).unwrap();
     let a = key(1);
-    store.write(Some(&a), &snapshot(Some(b"one"), "t")).unwrap();
+    store.write(&a, &snapshot(b"one")).unwrap();
     let path = store.dir().join("g000000000001.manifest");
     let text = fs::read_to_string(&path).unwrap().replace("min_reader=1", "min_reader=9");
     fs::write(&path, text).unwrap();
@@ -235,26 +251,11 @@ fn nothing_readable_is_unusable() {
 fn forgetting_removes_the_files_and_the_directory() {
     let root = sessions();
     let mut store = Store::open(root.path(), ID).unwrap();
-    store.write(Some(&key(1)), &snapshot(Some(b"x"), "t")).unwrap();
+    store.write(&key(1), &snapshot(b"x")).unwrap();
     let dir = store.dir().to_path_buf();
     forget(&dir);
     assert!(!dir.exists());
     forget(&dir); // already gone: fine
-}
-
-#[test]
-fn a_directory_removed_under_a_running_store_comes_back_with_the_next_write() {
-    let root = sessions();
-    let mut store = Store::open(root.path(), ID).unwrap();
-    let a = key(1);
-    store.write(Some(&a), &snapshot(Some(b"one"), "t")).unwrap();
-    forget(store.dir());
-    assert!(!store.dir().exists());
-    let written = store.write(Some(&a), &snapshot(Some(b"two"), "t")).unwrap();
-    assert_eq!(written.generation, 2);
-    let read = read_latest(store.dir(), ID, Some(&a)).unwrap();
-    assert_eq!(read.screen.as_deref().map(Vec::as_slice), Some(&b"two"[..]));
-    assert_eq!(crate::sys::fs::mode(&fs::metadata(store.dir()).unwrap()) & 0o777, 0o700);
 }
 
 #[test]
@@ -265,14 +266,9 @@ fn a_checkpoint_is_readable_once_a_generation_with_its_screen_is_there() {
     assert!(!store::is_readable(&dir, ID, Some(&a)), "nothing yet");
     let mut store = Store::open(root.path(), ID).unwrap();
     assert!(!store::is_readable(&dir, ID, Some(&a)), "a directory is not a checkpoint");
-    store.write(Some(&a), &snapshot(Some(b"one"), "t")).unwrap();
+    store.write(&a, &snapshot(b"one")).unwrap();
     assert!(store::is_readable(&dir, ID, Some(&a)));
     assert!(!store::is_readable(&dir, ID, Some(&key(2))), "not with another key");
-    // Written without a key: the folder and the shell, which is what was asked for.
-    let other = "zzzzzzzzzzzz";
-    Store::open(root.path(), other).unwrap().write(None, &snapshot(None, "t")).unwrap();
-    assert!(store::is_readable(&root.path().join(other), other, None));
-    assert!(!store::is_readable(&root.path().join(other), other, Some(&a)), "no screen to open");
 }
 
 #[test]
@@ -297,6 +293,19 @@ fn the_sealed_screen_of_format_1_is_these_bytes() {
     assert_eq!(&**opened, b"\x1b[1mhello\x1b[0m\r\n");
 }
 
+/// A screen over the cap is not read, whatever its manifest says.
+#[test]
+fn a_screen_file_over_the_cap_is_damaged_not_read() {
+    let root = sessions();
+    let mut store = Store::open(root.path(), ID).unwrap();
+    let a = key(1);
+    store.write(&a, &snapshot(b"fine")).unwrap();
+    let big = vec![7u8; store::SCREEN_MAX as usize + 1];
+    fs::write(store.dir().join("g000000000001.screen"), big).unwrap();
+    let read = read_latest(store.dir(), ID, Some(&a)).unwrap();
+    assert_eq!((read.screen.is_none(), read.issue), (true, Some(Issue::Damaged)));
+}
+
 /// Whatever is on disk, reading never panics, and never returns a screen it did not open. A small
 /// deterministic stand-in for the fuzz target (`crates/wormhole-term/fuzz`).
 #[test]
@@ -311,7 +320,7 @@ fn hostile_files_never_panic_the_reader() {
         seed
     };
     let mut store = Store::open(root.path(), ID).unwrap();
-    store.write(Some(&a), &snapshot(Some(b"real"), "t")).unwrap();
+    store.write(&a, &snapshot(b"real")).unwrap();
     let good_manifest = fs::read(store.dir().join("g000000000001.manifest")).unwrap();
     let good_screen = fs::read(store.dir().join("g000000000001.screen")).unwrap();
     for round in 0..300 {

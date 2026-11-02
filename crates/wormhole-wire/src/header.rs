@@ -106,6 +106,7 @@ pub mod ty {
     pub const COUNTERS: u8 = 0x26;
     pub const EVENT: u8 = 0x27;
     pub const BACKLOG: u8 = 0x28;
+    pub const CHECKPOINT_WRITTEN: u8 = 0x29;
 
     pub const PAGE_GET: u8 = 0x30;
     pub const PAGE: u8 = 0x31;
@@ -138,6 +139,7 @@ pub fn max_payload(t: u8) -> Option<usize> {
         | ty::CLEAR_HISTORY
         | ty::SET_CHECKPOINT_KEY
         | ty::CHECKPOINT
+        | ty::CHECKPOINT_WRITTEN
         | ty::CLOSE
         | ty::INPUT_ACK
         | ty::RESIZE_APPLIED

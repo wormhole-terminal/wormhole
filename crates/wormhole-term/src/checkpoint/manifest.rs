@@ -1,24 +1,23 @@
-//! A checkpoint's manifest: what a restore needs to know before it opens the sealed screen, and what is
-//! useful without it (the folder and the shell). UTF-8 text, one `key=value` per line, unknown keys
-//! ignored by readers, `0600`; the same conventions as a host's meta file (`hosted::meta`).
+//! A checkpoint's manifest: what a restore needs to know before it opens the sealed screen. UTF-8 text, one
+//! `key=value` per line, unknown keys ignored by readers, `0600`; the same conventions as a host's meta file
+//! (`hosted::meta`).
 //!
 //! ```text
 //! wormhole-checkpoint=1
 //! min_reader=1
 //! generation=7
 //! time=1760000000
-//! cols=80
-//! rows=24
-//! cwd=/Users/me/src/project
-//! shell=login
-//! title=cargo test
 //! key_id=0123456789abcdef
 //! screen_len=1234
+//! ended=exit:0
 //! ```
 //!
-//! `cwd`, `shell` and `title` are escaped so a value is always one line (`\\`, `\n`, `\r` and other control
-//! characters as `\xNN`). `key_id` and `screen_len` are there only when a sealed screen file goes with the
-//! manifest. Nothing of the program's environment is stored, ever: a restore derives its own.
+//! **Nothing here says what the person did.** The manifest is plain text on a disk that backups and other users'
+//! tools may read, so it holds no folder, no title (shells put whole command lines there) and no shell: a
+//! restore takes none of them from here (the folder and the shell come from the terminal's saved record, through
+//! the same path as any new terminal), and anything a later format needs of that kind goes into the sealed
+//! screen. Only the fact that a checkpoint exists, when it was made, which key sealed it and how long the sealed
+//! file is are readable without the key. `ended` appears only in the last generation of a program that ended.
 
 use std::fmt::Write as _;
 
@@ -27,10 +26,10 @@ use super::{FORMAT, READER};
 
 /// The most a manifest may hold when read.
 pub const READ_MAX: u64 = 16 * 1024;
-/// The longest a value (folder, shell, title) is kept.
-pub const VALUE_MAX: usize = 4096;
+/// The longest `ended` value kept.
+const VALUE_MAX: usize = 64;
 
-/// A sealed screen file the manifest vouches for.
+/// The sealed screen file the manifest vouches for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ScreenFile {
     /// The key that sealed it.
@@ -39,24 +38,17 @@ pub struct ScreenFile {
     pub len: u64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Manifest {
     /// Counts up for each checkpoint of a terminal; the newest readable one is restored.
     pub generation: u64,
     /// Unix seconds.
     pub time: u64,
-    pub cols: u16,
-    pub rows: u16,
-    /// The folder the shell was in (not trusted at restore: see `restore`).
-    pub cwd: Option<String>,
-    /// The key of the shell the terminal ran (`ShellChoice::key`, or `login`).
-    pub shell: Option<String>,
-    pub title: Option<String>,
     /// How the program ended (`exit:<status>`, `signal:<number>`), once it has: the last generation a host
     /// writes. A restore draws the screen with its divider and starts a shell, and does not pretend the
     /// program is still there.
     pub ended: Option<String>,
-    pub screen: Option<ScreenFile>,
+    pub screen: ScreenFile,
 }
 
 /// Why a manifest did not read.
@@ -84,10 +76,13 @@ impl std::fmt::Display for ManifestError {
 
 impl std::error::Error for ManifestError {}
 
-/// `value` on one line.
-fn escape(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
+/// `value` on one line, cut to [`VALUE_MAX`] bytes at a character, with control characters as `\xNN`.
+fn one_line(value: &str) -> String {
+    let mut out = String::with_capacity(value.len().min(VALUE_MAX));
     for c in value.chars() {
+        if out.len() + 4 > VALUE_MAX {
+            break;
+        }
         match c {
             '\\' => out.push_str("\\\\"),
             c if c.is_ascii_control() => {
@@ -99,7 +94,7 @@ fn escape(value: &str) -> String {
     out
 }
 
-/// What [`escape`] wrote; `None` for an escape it did not write.
+/// What [`one_line`] wrote; `None` for an escape it did not write.
 fn unescape(value: &str) -> Option<String> {
     let mut out = String::with_capacity(value.len());
     let mut chars = value.chars();
@@ -120,18 +115,6 @@ fn unescape(value: &str) -> Option<String> {
     Some(out)
 }
 
-/// A value cut to [`VALUE_MAX`] bytes at a character boundary.
-fn capped(value: &str) -> &str {
-    if value.len() <= VALUE_MAX {
-        return value;
-    }
-    let mut end = VALUE_MAX;
-    while !value.is_char_boundary(end) {
-        end -= 1;
-    }
-    &value[..end]
-}
-
 impl Manifest {
     /// The file's text.
     pub fn render(&self) -> String {
@@ -140,28 +123,18 @@ impl Manifest {
         let _ = writeln!(text, "min_reader={}", super::MIN_READER);
         let _ = writeln!(text, "generation={}", self.generation);
         let _ = writeln!(text, "time={}", self.time);
-        let _ = writeln!(text, "cols={}", self.cols);
-        let _ = writeln!(text, "rows={}", self.rows);
-        for (key, value) in
-            [("cwd", &self.cwd), ("shell", &self.shell), ("title", &self.title), ("ended", &self.ended)]
-        {
-            if let Some(value) = value {
-                let _ = writeln!(text, "{key}={}", escape(capped(value)));
-            }
-        }
-        if let Some(screen) = &self.screen {
-            let _ = writeln!(text, "key_id={}", screen.key_id);
-            let _ = writeln!(text, "screen_len={}", screen.len);
+        let _ = writeln!(text, "key_id={}", self.screen.key_id);
+        let _ = writeln!(text, "screen_len={}", self.screen.len);
+        if let Some(ended) = &self.ended {
+            let _ = writeln!(text, "ended={}", one_line(ended));
         }
         text
     }
 
     /// Read a manifest's text. Unknown keys are skipped; a repeated key takes its last value.
     pub fn parse(text: &str) -> Result<Self, ManifestError> {
-        let mut manifest = Self::default();
-        let (mut format, mut min_reader) = (None, None);
-        let (mut generation, mut time, mut cols, mut rows) = (None, None, None, None);
-        let (mut key_id, mut screen_len) = (None, None);
+        let (mut format, mut min_reader, mut generation, mut time) = (None, None, None, None);
+        let (mut key_id, mut screen_len, mut ended) = (None, None, None);
         for line in text.lines() {
             let Some((key, value)) = line.split_once('=') else { continue };
             match key {
@@ -177,17 +150,12 @@ impl Manifest {
                         Some(value.parse::<u64>().map_err(|_| ManifestError::Malformed("generation"))?);
                 }
                 "time" => time = Some(value.parse::<u64>().map_err(|_| ManifestError::Malformed("time"))?),
-                "cols" => cols = Some(value.parse::<u16>().map_err(|_| ManifestError::Malformed("cols"))?),
-                "rows" => rows = Some(value.parse::<u16>().map_err(|_| ManifestError::Malformed("rows"))?),
-                "cwd" => manifest.cwd = Some(unescape(value).ok_or(ManifestError::Malformed("cwd"))?),
-                "shell" => manifest.shell = Some(unescape(value).ok_or(ManifestError::Malformed("shell"))?),
-                "title" => manifest.title = Some(unescape(value).ok_or(ManifestError::Malformed("title"))?),
-                "ended" => manifest.ended = Some(unescape(value).ok_or(ManifestError::Malformed("ended"))?),
                 "key_id" => key_id = Some(KeyId::parse(value).ok_or(ManifestError::Malformed("key_id"))?),
                 "screen_len" => {
                     screen_len =
                         Some(value.parse::<u64>().map_err(|_| ManifestError::Malformed("screen_len"))?);
                 }
+                "ended" => ended = Some(unescape(value).ok_or(ManifestError::Malformed("ended"))?),
                 _ => {}
             }
         }
@@ -197,16 +165,15 @@ impl Manifest {
         if let Some(needed) = min_reader.filter(|&needed| needed > READER) {
             return Err(ManifestError::NewerFormat(needed));
         }
-        manifest.generation = generation.ok_or(ManifestError::Missing("generation"))?;
-        manifest.time = time.unwrap_or(0);
-        manifest.cols = cols.ok_or(ManifestError::Missing("cols"))?;
-        manifest.rows = rows.ok_or(ManifestError::Missing("rows"))?;
-        manifest.screen = match (key_id, screen_len) {
-            (Some(key_id), Some(len)) => Some(ScreenFile { key_id, len }),
-            (None, None) => None,
-            _ => return Err(ManifestError::Malformed("screen_len")),
-        };
-        Ok(manifest)
+        Ok(Self {
+            generation: generation.ok_or(ManifestError::Missing("generation"))?,
+            time: time.unwrap_or(0),
+            ended,
+            screen: ScreenFile {
+                key_id: key_id.ok_or(ManifestError::Missing("key_id"))?,
+                len: screen_len.ok_or(ManifestError::Missing("screen_len"))?,
+            },
+        })
     }
 }
 
@@ -218,16 +185,8 @@ mod tests {
         Manifest {
             generation: 7,
             time: 1_760_000_000,
-            cols: 80,
-            rows: 24,
-            cwd: Some("/Users/me/src/project".into()),
-            shell: Some("login".into()),
-            title: Some("cargo test".into()),
             ended: None,
-            screen: Some(ScreenFile {
-                key_id: KeyId([0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]),
-                len: 1234,
-            }),
+            screen: ScreenFile { key_id: KeyId([0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]), len: 1234 },
         }
     }
 
@@ -240,19 +199,40 @@ mod tests {
         assert_eq!(Manifest::parse(GOLDEN).expect("reads"), sample());
     }
 
+    /// The plaintext says nothing of what the person did: no folder, no title, no shell, not even a size.
     #[test]
-    fn values_with_control_characters_stay_on_their_line() {
-        let manifest = Manifest { title: Some("a\nb\r\\c\u{1b}[31m".into()), ..sample() };
+    fn the_manifest_names_only_the_checkpoint_itself() {
+        let text = Manifest { ended: Some("exit:0".into()), ..sample() }.render();
+        let keys: Vec<&str> = text.lines().filter_map(|l| l.split_once('=')).map(|(k, _)| k).collect();
+        assert_eq!(
+            keys,
+            ["wormhole-checkpoint", "min_reader", "generation", "time", "key_id", "screen_len", "ended"]
+        );
+    }
+
+    #[test]
+    fn a_terminal_whose_program_ended_says_how() {
+        let manifest = Manifest { ended: Some("exit:0".into()), ..sample() };
         let text = manifest.render();
-        assert_eq!(text.lines().count(), 11, "one line each: {text:?}");
-        assert_eq!(Manifest::parse(&text).expect("reads").title, manifest.title);
+        assert!(text.ends_with("\nended=exit:0\n"), "{text:?}");
+        assert_eq!(Manifest::parse(&text).expect("reads").ended.as_deref(), Some("exit:0"));
+        assert!(!sample().render().contains("ended"));
+    }
+
+    #[test]
+    fn a_value_stays_on_its_line_and_short() {
+        let manifest =
+            Manifest { ended: Some(format!("a\nb\r\\c\u{1b}[31m{}", "x".repeat(500))), ..sample() };
+        let text = manifest.render();
+        assert_eq!(text.lines().count(), 7, "one line each: {text:?}");
+        let ended = Manifest::parse(&text).expect("reads").ended.unwrap();
+        assert!(ended.starts_with("a\nb\r\\c\u{1b}[31m") && ended.len() <= VALUE_MAX);
     }
 
     #[test]
     fn unknown_keys_are_skipped_and_the_last_value_wins() {
-        let text = format!("{GOLDEN}future=whatever\ncols=100\n");
-        let manifest = Manifest::parse(&text).expect("reads");
-        assert_eq!((manifest.cols, manifest.rows), (100, 24));
+        let text = format!("{GOLDEN}future=whatever\ntime=5\n");
+        assert_eq!(Manifest::parse(&text).expect("reads").time, 5);
     }
 
     #[test]
@@ -265,40 +245,11 @@ mod tests {
 
     #[test]
     fn what_a_reader_needs_must_be_there() {
-        for gone in ["wormhole-checkpoint", "generation", "cols", "rows"] {
+        for gone in ["wormhole-checkpoint", "generation", "key_id", "screen_len"] {
             let text: String =
                 GOLDEN.lines().filter(|l| !l.starts_with(gone)).map(|l| format!("{l}\n")).collect();
             assert!(matches!(Manifest::parse(&text), Err(ManifestError::Missing(_))), "{gone}");
         }
-        // A key id without a length (or the reverse) is a damaged manifest.
-        let text: String =
-            GOLDEN.lines().filter(|l| !l.starts_with("screen_len")).map(|l| format!("{l}\n")).collect();
-        assert!(matches!(Manifest::parse(&text), Err(ManifestError::Malformed(_))));
         assert!(Manifest::parse("generation=x\n").is_err());
-    }
-
-    #[test]
-    fn a_value_is_capped_at_a_character_boundary() {
-        let manifest = Manifest { title: Some("é".repeat(VALUE_MAX)), ..sample() };
-        let read = Manifest::parse(&manifest.render()).expect("reads");
-        let title = read.title.expect("a title");
-        assert!(title.len() <= VALUE_MAX && title.chars().all(|c| c == 'é'));
-    }
-
-    #[test]
-    fn a_terminal_whose_program_ended_says_how() {
-        let manifest = Manifest { ended: Some("exit:0".into()), ..sample() };
-        let text = manifest.render();
-        assert!(text.contains("\nended=exit:0\n"), "{text:?}");
-        assert_eq!(Manifest::parse(&text).expect("reads").ended.as_deref(), Some("exit:0"));
-        // The format-1 bytes are unchanged for a terminal that runs on.
-        assert!(!sample().render().contains("ended"));
-    }
-
-    #[test]
-    fn a_manifest_without_a_screen_has_neither_key_nor_length() {
-        let text = Manifest { screen: None, ..sample() }.render();
-        assert!(!text.contains("key_id") && !text.contains("screen_len"));
-        assert_eq!(Manifest::parse(&text).expect("reads").screen, None);
     }
 }

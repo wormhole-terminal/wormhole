@@ -61,6 +61,12 @@ pub enum Message<'a> {
     Checkpoint {
         flush: bool,
     },
+    /// Host to app (minor 4): a checkpoint's generation is on disk. Said after an explicit `Checkpoint{flush:
+    /// true}` has been written, so the app knows its terminal's own checkpoint exists before it removes the one
+    /// the terminal was restored from.
+    CheckpointWritten {
+        generation: u64,
+    },
     /// End the session: hang up the shell, wait `grace_ms` before killing it.
     Close {
         grace_ms: u32,
@@ -125,6 +131,7 @@ impl Message<'_> {
             Self::ClearHistory => ty::CLEAR_HISTORY,
             Self::SetCheckpointKey(_) => ty::SET_CHECKPOINT_KEY,
             Self::Checkpoint { .. } => ty::CHECKPOINT,
+            Self::CheckpointWritten { .. } => ty::CHECKPOINT_WRITTEN,
             Self::Close { .. } => ty::CLOSE,
             Self::ClipboardReply(_) => ty::CLIPBOARD_REPLY,
             Self::Hook(_) => ty::HOOK,
@@ -167,6 +174,7 @@ impl Message<'_> {
             Self::SetColorScheme(s) => w.u8(s.to_wire()),
             Self::SetCheckpointKey(m) => m.encode(w)?,
             Self::Checkpoint { flush } => w.bool(*flush),
+            Self::CheckpointWritten { generation } => w.u64(*generation),
             Self::Close { grace_ms } => w.u32(*grace_ms),
             Self::ClipboardReply(m) => m.encode(w)?,
             Self::Hook(m) => m.encode(w)?,
@@ -219,6 +227,7 @@ impl<'a> Message<'a> {
             ty::CLEAR_HISTORY => Self::ClearHistory,
             ty::SET_CHECKPOINT_KEY => Self::SetCheckpointKey(CheckpointKey::decode(r)?),
             ty::CHECKPOINT => Self::Checkpoint { flush: r.bool()? },
+            ty::CHECKPOINT_WRITTEN => Self::CheckpointWritten { generation: r.u64()? },
             ty::CLOSE => Self::Close { grace_ms: r.u32()? },
             ty::CLIPBOARD_REPLY => Self::ClipboardReply(ClipboardReply::decode(r)?),
             ty::HOOK => Self::Hook(Hook::decode(r)?),
@@ -270,6 +279,7 @@ fn type_name(t: u8) -> &'static str {
         ty::CLEAR_HISTORY => "ClearHistory",
         ty::SET_CHECKPOINT_KEY => "SetCheckpointKey",
         ty::CHECKPOINT => "Checkpoint",
+        ty::CHECKPOINT_WRITTEN => "CheckpointWritten",
         ty::CLOSE => "Close",
         ty::CLIPBOARD_REPLY => "ClipboardReply",
         ty::HOOK => "Hook",

@@ -193,9 +193,11 @@ fn serve_files(
     let config = Config::new(args.id.clone(), host_version(), started_ms);
     let spawner = PtySpawner { on_reader_start: sys::process::set_user_interactive };
     let mut session = Session::new(config, spawner, wake, Instant::now());
+    let wake_checkpoints = wakes.clone();
     let mut checkpoints = checkpoint::Checkpointer::new(
         wormhole_term::checkpoint::sessions_dir_of_hosts(&args.dir),
         args.id.clone(),
+        Arc::new(move || wake_checkpoints.wake()),
     );
     serve::serve(&mut session, listener, &wakes, ready, files, &peers, &mut checkpoints)?;
     if !ready.is_spent() {

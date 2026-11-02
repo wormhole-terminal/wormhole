@@ -6,6 +6,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use wormhole_term::checkpoint::Key;
 use wormhole_term::hosted::{Cursor, Gaps, HostEvent, NotReady, Repainted, ResizeMark, Stream, Wake};
 use wormhole_wire::{
     self as wire, AppVersion, Attach, CHANNEL_LOCAL, Decoder, DetachReason, EventKind, Features, HostState,
@@ -262,7 +263,6 @@ impl Rig {
             env: wire::List::Owned(vec![("TERM", "xterm-256color")]),
             colors: None,
             seed: wire::List::Owned(vec![]),
-            seed_styled: false,
         };
         self.send(id, &Message::Spawn(spawn));
         self.recv(id)
@@ -793,22 +793,67 @@ fn the_controller_starts_checkpoints_and_asks_for_one_and_others_may_not() {
     let mut rig = Rig::new();
     let controller = rig.spawned();
     rig.session.take_notices();
-    rig.send(controller, &Message::SetCheckpointKey(wire::CheckpointKey { key: &[7; 32], shell: "login" }));
+    rig.send(controller, &Message::SetCheckpointKey(wire::CheckpointKey { key: &[7; 32] }));
     rig.send(controller, &Message::Checkpoint { flush: true });
+    rig.send(controller, &Message::Checkpoint { flush: false });
     assert_eq!(
         rig.session.take_notices(),
-        [Notice::SetCheckpoint { key: vec![7; 32], shell: "login".into() }, Notice::CheckpointNow]
+        [
+            Notice::SetCheckpoint { key: Some(Key::new([7; 32])) },
+            Notice::CheckpointNow { flush: true },
+            Notice::CheckpointNow { flush: false }
+        ]
     );
-    // No key at all is a message too: the folder and the shell only.
-    rig.send(controller, &Message::SetCheckpointKey(wire::CheckpointKey { key: &[], shell: "fish" }));
-    assert_eq!(rig.session.take_notices(), [Notice::SetCheckpoint { key: vec![], shell: "fish".into() }]);
+    // An empty key is a stop.
+    rig.send(controller, &Message::SetCheckpointKey(wire::CheckpointKey { key: &[] }));
+    assert_eq!(rig.session.take_notices(), [Notice::SetCheckpoint { key: None }]);
     let observer = rig.connect();
     rig.hello(observer, Role::Observer, false);
     rig.send(observer, &Message::Checkpoint { flush: false });
     assert_eq!(rig.recv(observer), [Got::Error(ty::CHECKPOINT, error_code::NOT_CONTROLLER)]);
-    rig.send(observer, &Message::SetCheckpointKey(wire::CheckpointKey { key: &[], shell: "x" }));
+    rig.send(observer, &Message::SetCheckpointKey(wire::CheckpointKey { key: &[] }));
     assert_eq!(rig.recv(observer), [Got::Error(ty::SET_CHECKPOINT_KEY, error_code::NOT_CONTROLLER)]);
     assert!(rig.session.take_notices().is_empty());
+}
+
+/// Closing on purpose (the controller's Close, an admin's Kill) says so before the hangup; a signal does not (a
+/// restart's end is the one that keeps a checkpoint), and clearing the buffer says so.
+#[test]
+fn a_close_says_closing_a_signal_does_not_and_a_clear_is_told() {
+    let mut rig = Rig::new();
+    let controller = rig.spawned();
+    rig.session.take_notices();
+    rig.send(controller, &Message::ClearHistory);
+    assert_eq!(rig.session.take_notices(), [Notice::HistoryCleared]);
+    rig.send(controller, &Message::Close { grace_ms: 500 });
+    assert_eq!(rig.session.take_notices(), [Notice::Closing]);
+
+    let mut rig = Rig::new();
+    let _ = rig.spawned();
+    rig.session.take_notices();
+    rig.session.terminate(rig.now);
+    assert!(rig.session.take_notices().is_empty(), "a signal is a restart, not a close");
+
+    let mut rig = Rig::new();
+    let _ = rig.spawned();
+    rig.session.take_notices();
+    let admin = rig.connect();
+    rig.hello(admin, Role::Admin, false);
+    rig.send(admin, &Message::Kill);
+    assert_eq!(rig.session.take_notices(), [Notice::Closing]);
+}
+
+/// The host tells the controller, and only it, that a checkpoint generation is on disk.
+#[test]
+fn the_controller_is_told_when_a_checkpoint_is_on_disk() {
+    let mut rig = Rig::new();
+    let controller = rig.spawned();
+    rig.recv(controller);
+    let observer = rig.connect();
+    rig.hello(observer, Role::Observer, false);
+    rig.session.checkpoint_written(7);
+    assert_eq!(rig.recv(controller), [Got::Other(ty::CHECKPOINT_WRITTEN)]);
+    assert!(rig.recv(observer).is_empty());
 }
 
 #[test]

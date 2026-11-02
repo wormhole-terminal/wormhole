@@ -49,7 +49,7 @@ use crate::{GridSize, Launch, Shell};
 
 pub use self::tap::{CLIPBOARD_TIMEOUT, now_ms};
 mod capture;
-pub use capture::{Capture, capture};
+pub use capture::capture;
 pub use event::{HostEvent, window_op_from_wire, window_op_to_wire};
 pub use stream::{Cursor, FORWARD_CAP, Next, ResizeMark, Stream, Wake};
 pub use wormhole_vt::repaint::{Gaps, NotReady};
@@ -79,38 +79,17 @@ pub struct Repainted {
     pub history_lines: usize,
 }
 
-/// What the checkpoint thread reads of a hosted terminal: a handle that keeps the screen and the host's
-/// memory of the title and the folder alive for as long as it is held, whatever happens to the terminal.
+/// What the checkpoint thread reads of a hosted terminal: a handle that keeps the screen alive for as long as it
+/// is held, whatever happens to the terminal.
 #[derive(Clone)]
 pub struct Reader {
     screen: Arc<FairLock<Screen>>,
-    core: Arc<Core>,
-    pid: u32,
 }
 
-impl Reader {
-    /// The terminal's program.
-    pub fn pid(&self) -> u32 {
-        self.pid
-    }
-
-    /// Run `read` on the screen under its lock, which is held as long as `read` runs: for a thread of its
-    /// own, never the PTY's.
-    pub(crate) fn with_screen<R>(&self, read: impl FnOnce(&Screen) -> R) -> R {
+/// The checkpoint reads the screen through the handle, one slice at a time.
+impl crate::checkpoint::vt::ScreenAccess for Reader {
+    fn with<R>(&self, read: impl FnOnce(&Screen) -> R) -> R {
         read(&self.screen.lock())
-    }
-
-    /// The title a program set and the folder the shell reported (OSC 7), as the host remembers them.
-    pub fn title_and_folder(&self) -> (Option<String>, Option<String>) {
-        let (mut title, mut folder) = (None, None);
-        for event in self.core.remembered() {
-            match event {
-                HostEvent::Title(t) => title = Some(t),
-                HostEvent::Cwd(c) => folder = Some(c),
-                _ => {}
-            }
-        }
-        (title, folder)
     }
 }
 
@@ -156,12 +135,7 @@ impl HostedTerminal {
         }
         // The previous session's text, dimmed, then the marker, before the program's first byte.
         if !spawn.seed.is_empty() {
-            let seed = spawn.seed.concat();
-            if spawn.seed_styled {
-                crate::checkpoint::replay::replay_styled(&mut screen, &seed);
-            } else {
-                crate::restore::replay(&mut screen, &seed);
-            }
+            crate::checkpoint::replay::replay_seed(&mut screen, &spawn.seed.concat());
         }
         let screen = Arc::new(FairLock::new(screen));
         let feed = HostedFeed::new(OwnFeed::new(proxy.clone(), screen.clone()), core.clone());
@@ -272,7 +246,7 @@ impl HostedTerminal {
     /// A handle on what a checkpoint reads of this terminal, which another thread can hold: the screen, the
     /// title and the folder. See [`Reader`].
     pub fn reader(&self) -> Reader {
-        Reader { screen: self.screen.clone(), core: self.core.clone(), pid: self.pid }
+        Reader { screen: self.screen.clone() }
     }
 
     /// Append to `out` the repaint that brings a fresh replica of [`Repainted::size`] to the screen
@@ -492,7 +466,6 @@ mod tests {
             env: wire::List::Owned(vec![("TERM", "xterm-256color")]),
             colors: None,
             seed: wire::List::Owned(vec![]),
-            seed_styled: false,
         };
         let launch = launch_of(&spawn);
         assert_eq!(launch.shell, Shell::new("/bin/sh".into(), vec!["-c".into(), "true".into()]));

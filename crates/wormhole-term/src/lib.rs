@@ -31,7 +31,6 @@
 //!   keeps a [`Pty`]'s screen a replica of the host's;
 //! - `handle`: the methods of [`Pty`], one file for each concern; `options`: the sizes and settings a
 //!   terminal starts with;
-//! - `restore`: replaying a previous session's text;
 //! - `checkpoint`: what a host keeps on disk of a terminal for a restart of the Mac: a manifest and a sealed
 //!   screen, written in generations, read newest first;
 //! - `snapshot`: what the UI draws, copied under a short lock;
@@ -78,7 +77,6 @@ mod ports;
 mod procinfo;
 pub mod program_status;
 mod pty;
-mod restore;
 mod row_mark;
 mod screen;
 pub mod scrollbar;

@@ -90,20 +90,16 @@ pub struct Spawn<'a> {
     pub args: List<'a, &'a str>,
     pub env: List<'a, (&'a str, &'a str)>,
     pub colors: Option<Colors<'a>>,
-    /// Text a previous session of this terminal left (minor 4), which the host draws dimmed before the
-    /// program's first byte, with the "restored" marker, as a terminal restarted in the app does. In
+    /// What a previous session of this terminal left (minor 4): VT with colors and attributes (SGR) that ends
+    /// with its own divider, made by the app, which the host draws before the program's first byte. Only text,
+    /// line ends and SGR are obeyed. In
     /// chunks of at most [`SEED_CHUNK`] bytes (a TLV's length is 16 bits), each valid UTF-8 on its own
     /// (see [`seed_chunks`]); an older host skips the tag and starts with a blank screen.
     pub seed: List<'a, &'a str>,
-    /// The seed is VT with colors and attributes (SGR) and carries its own "restored" divider, as a
-    /// checkpoint's screen is (minor 4): the host draws it as it is, filtered to text and SGR, and does not dim
-    /// it or add a divider. A host that skips the tag (older) draws the seed as text.
-    pub seed_styled: bool,
 }
 
 const S_COLORS: u8 = 1;
 const S_SEED: u8 = 2;
-const S_SEED_STYLED: u8 = 3;
 
 /// The most bytes of one seed chunk: a TLV's length is 16 bits.
 pub const SEED_CHUNK: usize = 60_000;
@@ -166,9 +162,6 @@ impl<'a> Spawn<'a> {
         for chunk in self.seed.iter() {
             w.tlv_raw(S_SEED, "Spawn.seed", chunk.as_bytes())?;
         }
-        if self.seed_styled {
-            w.tlv_raw(S_SEED_STYLED, "Spawn.seed_styled", &[1])?;
-        }
         Ok(())
     }
 
@@ -195,7 +188,7 @@ impl<'a> Spawn<'a> {
         for _ in 0..n {
             env.push((r.str16()?, r.str16()?));
         }
-        let (mut colors, mut seen, mut seed, mut seed_styled) = (None, Seen::default(), Vec::new(), false);
+        let (mut colors, mut seen, mut seed) = (None, Seen::default(), Vec::new());
         for tlv in r.tlvs() {
             let (tag, value) = tlv?;
             if tag == S_COLORS {
@@ -204,8 +197,6 @@ impl<'a> Spawn<'a> {
             } else if tag == S_SEED {
                 // Chunks of one text: as many as the frame holds.
                 seed.push(std::str::from_utf8(value).map_err(|_| WireError::BadUtf8(WHAT))?);
-            } else if tag == S_SEED_STYLED {
-                seed_styled = value == [1];
             }
         }
         Ok(Self {
@@ -217,7 +208,6 @@ impl<'a> Spawn<'a> {
             env: List::Owned(env),
             colors,
             seed: List::Owned(seed),
-            seed_styled,
         })
     }
 }
@@ -301,35 +291,31 @@ impl Limits {
     }
 }
 
-/// The key a host seals its checkpoint with, and what the manifest says of the terminal that the host cannot
-/// know: sent by the app right after the spawn or the attach when "restore after restart" is on (added in
-/// minor 4). A host that has never been sent one writes no checkpoint at all.
+/// The key a host seals its checkpoint with: sent by the app right after the spawn or the attach when "restore
+/// after restart" is on for the terminal (added in minor 4). A host that has never been sent one writes no
+/// checkpoint at all, and **an empty key stops it**: the feature was turned off, and the host writes nothing more.
+/// Nothing but the key goes: the checkpoint's plaintext holds no folder, title or shell.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct CheckpointKey<'a> {
-    /// The 32-byte key, or empty: the app has none (the Keychain is unavailable), and the host then writes
-    /// the folder and the shell but never a screen.
+    /// The 32-byte key, or empty to stop.
     pub key: &'a [u8],
-    /// The key of the shell the terminal runs (`login`, or a shell profile's key), for the manifest.
-    pub shell: &'a str,
 }
 
 /// The key must not show in a log line or a test failure.
 impl std::fmt::Debug for CheckpointKey<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CheckpointKey")
-            .field("key", &if self.key.is_empty() { "none" } else { "<hidden>" })
-            .field("shell", &self.shell)
+            .field("key", &if self.key.is_empty() { "stop" } else { "<hidden>" })
             .finish()
     }
 }
 
-/// The longest key sent: a longer one is a different thing, refused.
+/// The length of a checkpoint key: a different length is refused.
 pub const CHECKPOINT_KEY_LEN: usize = 32;
 
 impl<'a> CheckpointKey<'a> {
     pub(crate) fn encode(&self, w: &mut Writer<'_>) -> Result<(), EncodeError> {
-        w.bytes32("SetCheckpointKey", self.key)?;
-        w.str16("SetCheckpointKey", self.shell)
+        w.bytes32("SetCheckpointKey", self.key)
     }
 
     pub(crate) fn decode(r: &mut Reader<'a>) -> Result<Self, WireError> {
@@ -337,7 +323,7 @@ impl<'a> CheckpointKey<'a> {
         if !key.is_empty() && key.len() != CHECKPOINT_KEY_LEN {
             return Err(WireError::BadValue("SetCheckpointKey"));
         }
-        Ok(Self { key, shell: r.str16()? })
+        Ok(Self { key })
     }
 }
 

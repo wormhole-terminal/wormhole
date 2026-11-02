@@ -289,13 +289,13 @@ fn a_checkpoint_key_is_the_texts_key_made_one_per_host() {
     let dir = tempfile::tempdir().expect("temp dir");
     let store = Store::open_in(dir.path(), FakePlatform::with_key(1)).expect("opens");
     let a = store.checkpoint_key("aaaaaaaaaaaa").expect("a key");
-    assert_eq!(store.checkpoint_key("aaaaaaaaaaaa"), Some(a), "the same host, the same key");
-    assert_ne!(store.checkpoint_key("bbbbbbbbbbbb"), Some(a), "another host");
-    assert_ne!(a, [1u8; 32], "not the text's key");
+    assert_eq!(store.checkpoint_key("aaaaaaaaaaaa").as_ref(), Some(&a), "the same host, the same key");
+    assert_ne!(store.checkpoint_key("bbbbbbbbbbbb").as_ref(), Some(&a), "another host");
+    assert_ne!(*a.as_bytes(), [1u8; 32], "not the text's key");
     drop(store);
     let other_dir = tempfile::tempdir().expect("temp dir");
     let other = Store::open_in(other_dir.path(), FakePlatform::with_key(2)).expect("opens");
-    assert_ne!(other.checkpoint_key("aaaaaaaaaaaa"), Some(a), "another text key");
+    assert_ne!(other.checkpoint_key("aaaaaaaaaaaa").as_ref(), Some(&a), "another text key");
     let third_dir = tempfile::tempdir().expect("temp dir");
     let none = Store::open_in(third_dir.path(), FakePlatform::without_key()).expect("opens");
     assert_eq!(none.checkpoint_key("aaaaaaaaaaaa"), None, "no key, no checkpoint key");

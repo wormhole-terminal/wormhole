@@ -25,7 +25,7 @@ use anyhow::Context as _;
 use super::events::{EventProxy, Shared};
 use super::pty::{self, FairLock, Feed};
 use super::screen::{Hold, SYNC_TIMEOUT, Screen};
-use super::{GridSize, StartOptions, restore};
+use super::{GridSize, StartOptions};
 use host::Host;
 #[cfg(any(test, feature = "test-support"))]
 pub(super) use host::drain_marks;
@@ -125,13 +125,9 @@ pub(super) fn spawn(
         // The program has asked for nothing yet: there is no reply to send.
         let _ = screen.set_color_scheme(scheme);
     }
-    // Replay the previous session's text (dimmed) before the shell starts.
-    if let Some(text) = options.restore {
-        if options.restore_styled {
-            crate::checkpoint::replay::replay_styled(&mut screen, text);
-        } else {
-            restore::replay(&mut screen, text);
-        }
+    // Draw the previous session's seed (its text, or its checkpoint's screen) before the shell starts.
+    if let Some(seed) = options.restore {
+        crate::checkpoint::replay::replay_seed(&mut screen, seed);
     }
     let screen = Arc::new(FairLock::new(screen));
     let feed = OwnFeed::new(proxy.clone(), screen.clone());

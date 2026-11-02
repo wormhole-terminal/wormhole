@@ -4,43 +4,42 @@
 //! `<dir>/g<generation>.screen` is written first (a temporary file in the directory, then renamed), the
 //! manifest `<dir>/g<generation>.manifest` last: a manifest is the commit of its generation, and a screen
 //! without one is a write that never finished and is cleaned up. The newest [`KEEP`] generations are kept.
-//! The directory is `0700` and the files `0600`.
+//! The directory is `0700` and the files `0600`. Each file is `fsync`ed before it is renamed and the directory
+//! after, so a commit that was acknowledged is on disk.
+//!
+//! The store makes its directory once, when it is opened, and **never makes it again**: a writer whose directory
+//! was removed (the app closed the terminal) fails instead of bringing the checkpoint back.
 //!
 //! The reader takes the newest generation whose manifest reads and whose screen opens. A generation that
 //! needs a newer reader stops it (`Newer`): the app falls back to its text and the directory stays for the
 //! newer build. A generation that is damaged or sealed with another key is skipped for an older one; when
-//! none has a screen that opens, the newest manifest is still returned with the reason, because the folder
-//! and the shell are worth restoring without it.
+//! none has a screen that opens, the newest manifest is still returned with the reason.
 
 use std::fs::{self, DirBuilder, OpenOptions};
 use std::io::{self, Read as _, Write as _};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use zeroize::Zeroizing;
 
 use super::manifest::{Manifest, ManifestError, READ_MAX, ScreenFile};
 use super::seal::{self, Binding, Key, OpenError};
 use crate::host_id::valid as valid_id;
-use crate::sys::fs::{private_dir, private_file};
+use crate::sys::fs::{fsync, fsync_dir, private_dir, private_file};
 
 /// How many generations are kept: the newest, and the one before it for when the newest is damaged.
 pub const KEEP: usize = 2;
-/// The most a sealed screen file may hold when read.
-pub const SCREEN_MAX: u64 = 96 * 1024 * 1024;
+/// The most a sealed screen file may hold when read: a screen is at most [`wormhole_wire::SEED_MAX`] bytes
+/// (what a new host can be seeded with), and the seal adds a few dozen.
+pub const SCREEN_MAX: u64 = 1024 * 1024;
 
 /// What a checkpoint writes about a terminal at one moment.
 pub struct Snapshot<'a> {
     pub time: u64,
-    pub cols: u16,
-    pub rows: u16,
-    pub cwd: Option<&'a str>,
-    pub shell: Option<&'a str>,
-    pub title: Option<&'a str>,
     /// How the program ended, once it has.
     pub ended: Option<&'a str>,
-    /// The primary screen as VT bytes (`vt::primary_screen`); sealed when written, and not written at all
-    /// when there is no key.
-    pub screen: Option<&'a [u8]>,
+    /// The primary screen as VT bytes (`vt::primary_screen`); sealed when written.
+    pub screen: &'a [u8],
 }
 
 /// What one write put on disk.
@@ -49,8 +48,6 @@ pub struct Written {
     pub generation: u64,
     /// The bytes written, for the host's budget.
     pub bytes: u64,
-    /// Whether a sealed screen went with the manifest.
-    pub screen: bool,
 }
 
 /// `<sessions dir>/<id>`: where a terminal's checkpoint is.
@@ -94,13 +91,16 @@ fn survey(dir: &Path) -> io::Result<(Vec<u64>, Vec<u64>)> {
     Ok((manifests, orphans))
 }
 
-/// A `0600` file written whole under a temporary name in its directory and renamed over its name.
+/// Makes each temporary name its own: two writes of one name in a process (a worker that was told to write
+/// twice quickly) never share a file.
+static TEMP: AtomicU64 = AtomicU64::new(0);
+
+/// A `0600` file written whole under a temporary name in its directory, synced, and renamed over its name.
 fn write_atomic(dir: &Path, name: &str, bytes: &[u8]) -> io::Result<()> {
-    let temp = dir.join(format!(".{name}.{}.tmp", std::process::id()));
-    // A leftover of a crashed write by a process with this pid is replaced.
-    let _ = fs::remove_file(&temp);
+    let temp =
+        dir.join(format!(".{name}.{}.{}.tmp", std::process::id(), TEMP.fetch_add(1, Ordering::Relaxed)));
     let mut file = private_file(OpenOptions::new().write(true).create_new(true)).open(&temp)?;
-    let written = file.write_all(bytes).and_then(|()| file.sync_all());
+    let written = file.write_all(bytes).and_then(|()| fsync(&file));
     drop(file);
     let renamed = written.and_then(|()| fs::rename(&temp, dir.join(name)));
     if renamed.is_err() {
@@ -134,61 +134,59 @@ impl Store {
         &self.dir
     }
 
-    /// Write `snapshot` as the next generation and drop the generations past [`KEEP`]. With no `key` only the
-    /// manifest is written: the folder and the shell, never a screen, and never an unsealed one.
-    pub fn write(&mut self, key: Option<&Key>, snapshot: &Snapshot<'_>) -> io::Result<Written> {
-        // The app removes a checkpoint when the buffer is cleared, under a host that goes on writing: the
-        // directory comes back with the next generation, and its numbers go on.
-        if !self.dir.is_dir() {
-            let mut builder = DirBuilder::new();
-            private_dir(builder.recursive(true)).create(&self.dir)?;
-        }
+    /// Write `snapshot`, sealed with `key`, as the next generation and drop the generations past [`KEEP`]. Fails
+    /// when the directory is gone (see the module).
+    pub fn write(&mut self, key: &Key, snapshot: &Snapshot<'_>) -> io::Result<Written> {
+        let written = self.commit(key, snapshot)?;
+        self.prune(KEEP);
+        Ok(written)
+    }
+
+    /// [`write`](Self::write), then drop **every** earlier generation: after Clear Buffer, no generation from
+    /// before it may survive.
+    pub fn write_only(&mut self, key: &Key, snapshot: &Snapshot<'_>) -> io::Result<Written> {
+        let written = self.commit(key, snapshot)?;
+        self.prune(1);
+        Ok(written)
+    }
+
+    fn commit(&mut self, key: &Key, snapshot: &Snapshot<'_>) -> io::Result<Written> {
         let generation = self.next;
-        let mut bytes = 0u64;
-        let mut screen = None;
-        if let (Some(key), Some(vt)) = (key, snapshot.screen) {
-            let binding = Binding { id: &self.id, generation, key_id: key.id() };
-            let sealed = seal::seal(key, &binding, vt)?;
-            write_atomic(&self.dir, &screen_name(generation), &sealed)?;
-            bytes += sealed.len() as u64;
-            screen = Some(ScreenFile { key_id: key.id(), len: sealed.len() as u64 });
-        }
+        let binding = Binding { id: &self.id, generation, key_id: key.id() };
+        let sealed = seal::seal(key, &binding, snapshot.screen)?;
+        write_atomic(&self.dir, &screen_name(generation), &sealed)?;
         let manifest = Manifest {
             generation,
             time: snapshot.time,
-            cols: snapshot.cols,
-            rows: snapshot.rows,
-            cwd: snapshot.cwd.map(str::to_owned),
-            shell: snapshot.shell.map(str::to_owned),
-            title: snapshot.title.map(str::to_owned),
             ended: snapshot.ended.map(str::to_owned),
-            screen,
+            screen: ScreenFile { key_id: key.id(), len: sealed.len() as u64 },
         };
         let text = manifest.render();
         write_atomic(&self.dir, &manifest_name(generation), text.as_bytes())?;
-        bytes += text.len() as u64;
+        // The renames are on disk before the write is said to have happened.
+        fsync_dir(&self.dir)?;
         self.next = generation + 1;
-        self.prune();
-        Ok(Written { generation, bytes, screen: screen.is_some() })
+        Ok(Written { generation, bytes: sealed.len() as u64 + text.len() as u64 })
     }
 
-    /// Remove the generations past [`KEEP`], screens whose manifest never came, and temporary files. Best
-    /// effort: what cannot be removed is tried again at the next write.
-    fn prune(&self) {
+    /// Keep the newest `keep` generations; remove the rest, screens whose manifest never came, and
+    /// temporary files of other writers. Best effort: what cannot be removed is tried again at the next write.
+    fn prune(&self, keep: usize) {
         let Ok((manifests, orphans)) = survey(&self.dir) else { return };
-        let old = manifests.iter().skip(KEEP).copied();
+        let old = manifests.iter().skip(keep).copied();
         let stray = orphans.into_iter().filter(|g| *g < self.next - 1);
-        for generation in old.clone().chain(stray.clone()) {
+        for generation in old.clone().chain(stray) {
             let _ = fs::remove_file(self.dir.join(screen_name(generation)));
         }
         for generation in old {
             let _ = fs::remove_file(self.dir.join(manifest_name(generation)));
         }
         if let Ok(entries) = fs::read_dir(&self.dir) {
+            let mine = format!(".{}.", std::process::id());
             for entry in entries.flatten() {
                 let name = entry.file_name();
                 let leftover = name.to_str().is_some_and(|n| n.starts_with('.') && n.ends_with(".tmp"));
-                if leftover && !name.to_string_lossy().contains(&format!(".{}.", std::process::id())) {
+                if leftover && !name.to_string_lossy().contains(&mine) {
                     let _ = fs::remove_file(entry.path());
                 }
             }
@@ -208,13 +206,23 @@ pub enum Issue {
 }
 
 /// A checkpoint as read.
-#[derive(Debug)]
 pub struct Restored {
     pub manifest: Manifest,
     /// The screen's VT bytes, when the generation had one and it opened.
     pub screen: Option<Zeroizing<Vec<u8>>>,
     /// Why there is no screen though a checkpoint was written with one.
     pub issue: Option<Issue>,
+}
+
+/// What a checkpoint was read from, without a byte of the screen.
+impl std::fmt::Debug for Restored {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Restored")
+            .field("manifest", &self.manifest)
+            .field("screen", &self.screen.as_ref().map(|s| format!("{} bytes", s.len())))
+            .field("issue", &self.issue)
+            .finish()
+    }
 }
 
 /// Why nothing was read.
@@ -244,7 +252,8 @@ fn open_screen(
     manifest: &Manifest,
     key: Option<&Key>,
 ) -> Result<Zeroizing<Vec<u8>>, Issue> {
-    let (Some(file), Some(key)) = (&manifest.screen, key) else { return Err(Issue::NoKey) };
+    let Some(key) = key else { return Err(Issue::NoKey) };
+    let file = &manifest.screen;
     if file.key_id != key.id() {
         return Err(Issue::WrongKey);
     }
@@ -283,11 +292,6 @@ pub fn read_latest(dir: &Path, id: &str, key: Option<&Key>) -> Result<Restored, 
         if manifest.generation != generation {
             continue; // a manifest copied under another name
         }
-        if manifest.screen.is_none() {
-            // Written without a key (or with nothing to say of the screen): the folder and the shell.
-            let restored = Restored { manifest, screen: None, issue: None };
-            return Ok(best.unwrap_or(restored));
-        }
         match open_screen(dir, id, &manifest, key) {
             Ok(screen) => return Ok(Restored { manifest, screen: Some(screen), issue: None }),
             Err(issue) => {
@@ -300,11 +304,10 @@ pub fn read_latest(dir: &Path, id: &str, key: Option<&Key>) -> Result<Restored, 
     best.ok_or(ReadError::Unusable)
 }
 
-/// Whether the checkpoint in `dir` has a generation that reads as it should: its manifest reads and, when a key
-/// is given, its screen opens with it. For the app to know a host's first write has landed.
+/// Whether the checkpoint in `dir` has a generation that reads as it should: its manifest reads and its screen
+/// opens with `key`. For the app to know a host's first write has landed.
 pub fn is_readable(dir: &Path, id: &str, key: Option<&Key>) -> bool {
-    read_latest(dir, id, key)
-        .is_ok_and(|read| read.issue.is_none() && (key.is_none() || read.screen.is_some()))
+    read_latest(dir, id, key).is_ok_and(|read| read.issue.is_none() && read.screen.is_some())
 }
 
 /// Remove a terminal's checkpoint: its files, then its directory. For a terminal that is closed, cleared or

@@ -54,6 +54,15 @@ impl Key {
     }
 }
 
+/// Equal keys are the same bytes, compared without stopping at the first difference.
+impl PartialEq for Key {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.iter().zip(other.0.iter()).fold(0u8, |diff, (a, b)| diff | (a ^ b)) == 0
+    }
+}
+
+impl Eq for Key {}
+
 impl std::fmt::Debug for Key {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Key({})", self.id())

@@ -179,7 +179,7 @@ fn welcome(rng: &mut Rng) -> Welcome {
 
 /// A random message of any kind, with every field random, borrowing from `p`.
 pub(crate) fn message<'a>(rng: &mut Rng, p: &'a Pool) -> Message<'a> {
-    match rng.below(38) {
+    match rng.below(39) {
         0 => {
             let min = 1 + rng.u16() % 100;
             Message::Hello(Hello {
@@ -223,7 +223,6 @@ pub(crate) fn message<'a>(rng: &mut Rng, p: &'a Pool) -> Message<'a> {
                 env: List::Owned(env),
                 colors: rng.bool().then(|| colors(rng)),
                 seed: List::Owned((0..rng.usize(3)).map(|_| p.string(rng)).collect()),
-                seed_styled: rng.bool(),
             })
         }
         12 => Message::Attach(Attach {
@@ -304,9 +303,10 @@ pub(crate) fn message<'a>(rng: &mut Rng, p: &'a Pool) -> Message<'a> {
         34 => Message::ClearHistory,
         35 => {
             let key: &[u8] = if rng.bool() { &[0x5a; 32] } else { &[] };
-            Message::SetCheckpointKey(CheckpointKey { key, shell: p.string(rng) })
+            Message::SetCheckpointKey(CheckpointKey { key })
         }
         36 => Message::Checkpoint { flush: rng.bool() },
+        37 => Message::CheckpointWritten { generation: rng.next() },
         _ => Message::FindCancel { id: rng.u32() },
     }
 }

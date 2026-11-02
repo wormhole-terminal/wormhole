@@ -108,7 +108,11 @@ fn a_hosted_terminal_echoes_what_is_typed() {
 #[test]
 fn a_terminal_restored_from_text_runs_in_a_new_host_that_seeds_the_screen() {
     let place = Place::new();
-    let options = StartOptions { restore: Some("old line one\nold line two\n"), ..options() };
+    let seed = wormhole_term::checkpoint::text_seed(
+        "old line one\nold line two\n",
+        &wormhole_term::checkpoint::divider("restored"),
+    );
+    let options = StartOptions { restore: Some(&seed), ..options() };
     let (pty, _events) = Pty::start_hosted(&place.command(), GRID, &options, launch("/bin/cat", &[]))
         .expect("a hosted terminal");
     assert!(pty.is_hosted(), "it runs in a host, not in the app");
@@ -134,10 +138,10 @@ fn a_terminal_restored_from_text_runs_in_a_new_host_that_seeds_the_screen() {
 fn a_styled_seed_is_drawn_by_the_new_host_with_its_own_divider() {
     let place = Place::new();
     let vt = format!(
-        "\x1b[1;31mred line\x1b[0m\r\nplain line\r\n\x1b[2m{}\x1b[0m\r\n",
-        wormhole_term::checkpoint::divider("2026-11-02 14:03")
+        "\x1b[1;31mred line\x1b[0m\r\nplain line\r\n{}",
+        wormhole_term::checkpoint::divider("restored 2026-11-02 14:03")
     );
-    let options = StartOptions { restore: Some(&vt), restore_styled: true, ..options() };
+    let options = StartOptions { restore: Some(&vt), ..options() };
     let (pty, _events) =
         Pty::start_hosted(&place.command(), GRID, &options, launch("/bin/cat", &[])).unwrap();
     wait_text(&pty, "restored 2026-11-02 14:03");
@@ -265,7 +269,7 @@ fn a_host_that_was_not_asked_keeps_no_checkpoint() {
 fn a_checkpoint_survives_sigterm_with_the_screen_the_person_left() {
     let place = Place::new();
     let (pty, _events) = start(&place, "/bin/cat", &[]);
-    assert!(pty.start_checkpoints(Some(&checkpoint_key()), "login"));
+    assert!(pty.start_checkpoints(&checkpoint_key()));
     pty.write(b"before the restart\r".as_slice());
     wait_text(&pty, "before the restart");
     let host = place.host_pid();
@@ -279,12 +283,107 @@ fn a_checkpoint_survives_sigterm_with_the_screen_the_person_left() {
     let read = place.wait_checkpoint("last words");
     let text = String::from_utf8_lossy(read.screen.as_deref().unwrap()).into_owned();
     assert!(text.contains("before the restart"), "{text:?}");
-    assert_eq!(read.manifest.shell.as_deref(), Some("login"));
-    assert!(read.manifest.cwd.is_some(), "the folder the shell is in");
     assert!(started.elapsed() < Duration::from_secs(3), "the flush and the hangup fit before the kill");
     assert!(place.checkpoint_dir().is_dir(), "the host leaves the checkpoint alone");
     assert!(!socket.exists(), "and removes its socket as always");
     drop(pty);
+}
+
+/// Closing a terminal (the app forgets its checkpoint and drops the terminal) leaves no directory behind: the host
+/// drops its checkpointer before the hangup, so the exit that follows writes nothing, and the store does not
+/// make a directory again.
+#[test]
+fn a_closed_terminal_leaves_no_checkpoint_behind() {
+    let place = Place::new();
+    let (pty, _events) = start(&place, "/bin/cat", &[]);
+    assert!(pty.start_checkpoints(&checkpoint_key()));
+    pty.write(b"closing now\r".as_slice());
+    wait_text(&pty, "closing now");
+    assert!(pty.checkpoint_now(true));
+    place.wait_checkpoint("closing now");
+    let host = place.host_pid();
+    // What the app does when a row is closed: forget the checkpoint, then let the terminal go.
+    checkpoint::forget(&place.checkpoint_dir());
+    drop(pty);
+    wait_gone(host);
+    std::thread::sleep(Duration::from_millis(300));
+    assert!(!place.checkpoint_dir().exists(), "nothing came back");
+}
+
+/// Told to stop (the feature went off), the host writes nothing more, even when asked.
+#[test]
+fn a_host_told_to_stop_writes_nothing_more() {
+    let place = Place::new();
+    let (pty, _events) = start(&place, "/bin/cat", &[]);
+    assert!(pty.start_checkpoints(&checkpoint_key()));
+    pty.write(b"before the stop\r".as_slice());
+    wait_text(&pty, "before the stop");
+    assert!(pty.checkpoint_now(true));
+    place.wait_checkpoint("before the stop");
+    assert!(pty.stop_checkpoints());
+    pty.write(b"after the stop\r".as_slice());
+    wait_text(&pty, "after the stop");
+    assert!(pty.checkpoint_now(true));
+    let host = place.host_pid();
+    assert!(signal(host, libc::SIGTERM));
+    wait_gone(host);
+    let read = checkpoint::read_latest(&place.checkpoint_dir(), &place.id, Some(&checkpoint_key())).unwrap();
+    let screen = String::from_utf8_lossy(read.screen.as_deref().unwrap()).into_owned();
+    assert!(screen.contains("before the stop") && !screen.contains("after the stop"), "{screen:?}");
+}
+
+/// Clear Buffer: the host writes a fresh generation and no generation from before the clear survives.
+#[test]
+fn clearing_the_buffer_leaves_no_generation_from_before_it() {
+    let place = Place::new();
+    let (pty, _events) = start(&place, "/bin/cat", &[]);
+    assert!(pty.start_checkpoints(&checkpoint_key()));
+    pty.write(b"secret before the clear\r".as_slice());
+    wait_text(&pty, "secret before the clear");
+    assert!(pty.checkpoint_now(true));
+    place.wait_checkpoint("secret before the clear");
+    assert!(pty.checkpoint_now(true));
+    pty.clear_history();
+    let until = Instant::now() + PATIENCE;
+    loop {
+        let any_secret = std::fs::read_dir(place.checkpoint_dir()).map_or(true, |d| {
+            d.flatten().any(|e| {
+                let name = e.file_name().to_string_lossy().into_owned();
+                name.ends_with(".manifest") && {
+                    let generation = name.trim_start_matches('g').trim_end_matches(".manifest").to_owned();
+                    checkpoint::read_latest(&place.checkpoint_dir(), &place.id, Some(&checkpoint_key()))
+                        .map_or(true, |r| format!("{:012}", r.manifest.generation) != generation)
+                }
+            })
+        });
+        if !any_secret {
+            break;
+        }
+        assert!(Instant::now() < until, "a generation from before the clear is still there");
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    let files = std::fs::read_dir(place.checkpoint_dir()).unwrap().count();
+    assert_eq!(files, 2, "one generation: its manifest and its screen");
+}
+
+/// `Checkpoint{flush: true}` is answered with `CheckpointWritten` once the generation is on disk, and a plain
+/// request is not answered.
+#[test]
+fn a_flush_request_is_acknowledged_when_the_generation_is_on_disk() {
+    let place = Place::new();
+    let (pty, events) = start(&place, "/bin/cat", &[]);
+    assert!(pty.start_checkpoints(&checkpoint_key()));
+    pty.write(b"acknowledge me\r".as_slice());
+    wait_text(&pty, "acknowledge me");
+    assert!(pty.checkpoint_now(true));
+    let got = next_event(&events, "the acknowledgement", |e| matches!(e, PtyEvent::CheckpointWritten(_)));
+    let PtyEvent::CheckpointWritten(generation) = got else { unreachable!() };
+    let read = checkpoint::read_latest(&place.checkpoint_dir(), &place.id, Some(&checkpoint_key())).unwrap();
+    assert!(read.manifest.generation >= generation, "it was on disk when it was said");
+    // A plain request with nothing printed since is neither written nor answered.
+    assert!(pty.checkpoint_now(false));
+    std::thread::sleep(Duration::from_millis(300));
+    assert!(events.try_recv().into_iter().all(|e| !matches!(e, PtyEvent::CheckpointWritten(_))));
 }
 
 /// A program that exits leaves a checkpoint that says how, and the host does not delete it; closing the terminal
@@ -293,7 +392,7 @@ fn a_checkpoint_survives_sigterm_with_the_screen_the_person_left() {
 fn a_program_that_exits_leaves_its_checkpoint_and_closing_does_not_remove_it() {
     let place = Place::new();
     let (pty, events) = start(&place, "/bin/sh", &["-c", "read x; echo goodbye; exit 3"]);
-    assert!(pty.start_checkpoints(Some(&checkpoint_key()), "login"));
+    assert!(pty.start_checkpoints(&checkpoint_key()));
     pty.write(b"\r".as_slice());
     next_event(&events, "exit", |e| matches!(e, PtyEvent::Exited(_)));
     let read = place.wait_checkpoint("goodbye");

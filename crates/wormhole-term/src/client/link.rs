@@ -23,10 +23,9 @@ pub(crate) enum Cmd {
     /// The theme is light or dark, for the host's answers and its reports of a change.
     ColorScheme(ColorScheme),
     ClearHistory,
-    /// Start the host's checkpoints with this key (none: the folder and the shell only) and shell key.
+    /// Start the host's checkpoints with this key, or (none) stop them.
     CheckpointKey {
-        key: Option<[u8; crate::checkpoint::seal::KEY_LEN]>,
-        shell: String,
+        key: Option<crate::checkpoint::Key>,
     },
     /// Write a checkpoint now.
     Checkpoint {
@@ -237,8 +236,8 @@ impl Hosted {
         self.features.contains(wormhole_wire::Features::CHECKPOINT)
     }
 
-    pub(crate) fn checkpoint_key(&self, key: Option<&crate::checkpoint::Key>, shell: &str) {
-        self.link.send(Cmd::CheckpointKey { key: key.map(|k| *k.as_bytes()), shell: shell.to_owned() });
+    pub(crate) fn checkpoint_key(&self, key: Option<&crate::checkpoint::Key>) {
+        self.link.send(Cmd::CheckpointKey { key: key.cloned() });
     }
 
     pub(crate) fn checkpoint(&self, flush: bool) {

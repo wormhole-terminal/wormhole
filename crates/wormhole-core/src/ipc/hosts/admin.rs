@@ -612,17 +612,8 @@ mod tests {
         let sessions = wormhole_term::checkpoint::sessions_dir_of_hosts(&hosts);
         let make = |id: &str| {
             let mut store = wormhole_term::checkpoint::Store::open(&sessions, id).expect("a store");
-            let snapshot = wormhole_term::checkpoint::Snapshot {
-                time: 1,
-                cols: 80,
-                rows: 24,
-                cwd: None,
-                shell: None,
-                title: None,
-                ended: None,
-                screen: None,
-            };
-            store.write(None, &snapshot).expect("written");
+            let snapshot = wormhole_term::checkpoint::Snapshot { time: 1, ended: None, screen: b"x\r\n" };
+            store.write(&wormhole_term::checkpoint::Key::new([1; 32]), &snapshot).expect("written");
         };
         // A stale host with its checkpoint.
         make("iiiiiiiiiiii");

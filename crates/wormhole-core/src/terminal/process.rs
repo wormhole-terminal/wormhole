@@ -16,10 +16,9 @@ pub struct SpawnOptions {
     pub cwd: Option<PathBuf>,
     /// The tab this shell belongs to, as `WORMHOLE_TAB_ID`: what its agent hooks report.
     pub tab_id: String,
-    /// Previous session text, replayed dimmed before the shell starts.
+    /// What to draw before the shell starts: the previous session as VT with its own divider (see
+    /// `wormhole_term::StartOptions::restore`).
     pub restore: Option<String>,
-    /// `restore` is a checkpoint's screen (VT with colors and its own divider), not plain text.
-    pub restore_styled: bool,
     pub scrollback_lines: usize,
     /// Answer DECRQCRA, a program's request for the checksum of a rectangle of the screen
     /// (`allow_screen_checksum`); the engine ignores it otherwise.

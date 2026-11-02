@@ -46,3 +46,10 @@ pub fn terminal_size_readout(columns: &str, rows: &str) -> String {
 pub fn terminal_clipboard_ask(program: &str) -> String {
     crate::active::message(1570, &[("program", Arg::Str(program))])
 }
+
+/// ```text
+/// restored { $year }-{ $month }-{ $day } { $hour }:{ $minute }
+/// ```
+pub fn terminal_restored_at(year: &str, month: &str, day: &str, hour: &str, minute: &str) -> String {
+    crate::active::message(1571, &[("year", Arg::Str(year)), ("month", Arg::Str(month)), ("day", Arg::Str(day)), ("hour", Arg::Str(hour)), ("minute", Arg::Str(minute))])
+}

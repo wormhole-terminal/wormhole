@@ -16,8 +16,6 @@ use std::time::{Duration, SystemTime};
 
 use wormhole_term::checkpoint::{self, Issue, Key, ReadError, divider, safe_replay};
 
-use crate::platform::clock::local_date_time;
-
 /// A checkpoint older than this goes at launch: what it holds is a week stale.
 pub const MAX_AGE: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 /// All checkpoints together may take this much; past it the oldest go first.
@@ -29,7 +27,7 @@ pub fn sessions_dir(data_dir: &Path) -> PathBuf {
 }
 
 /// A checkpoint ready to draw above a new shell.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct Seed {
     /// The screen as styled VT, ending with the divider that says when it was kept.
     pub text: String,
@@ -37,6 +35,17 @@ pub struct Seed {
     pub time: u64,
     /// How the program ended, if it did (the last generation a host writes).
     pub ended: Option<String>,
+}
+
+/// What a seed is, without a character of the screen.
+impl std::fmt::Debug for Seed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Seed")
+            .field("text", &format_args!("{} bytes", self.text.len()))
+            .field("time", &self.time)
+            .field("ended", &self.ended)
+            .finish()
+    }
 }
 
 /// Why a terminal is restored from its text instead.
@@ -48,48 +57,51 @@ pub enum Skipped {
     Newer,
     /// Nothing in it reads.
     Unusable,
-    /// It has no screen that opens: no key was given to the host, or ours is another, or the file is damaged.
+    /// It has no screen that opens: ours is not the key that sealed it, or the file is damaged.
     NoScreen(Option<Issue>),
 }
 
-/// The screen of the checkpoint of host `host_id` in `sessions_dir`, opened with `key` and drawn with a divider
-/// at the time it was written.
-pub fn read(sessions_dir: &Path, host_id: &str, key: Option<&[u8; 32]>) -> Result<Seed, Skipped> {
-    let key = key.map(|k| Key::new(*k));
-    let read =
-        checkpoint::read_latest(&checkpoint::store::dir_in(sessions_dir, host_id), host_id, key.as_ref())
-            .map_err(|e| match e {
-                ReadError::Missing => Skipped::Missing,
-                ReadError::Newer(_) => Skipped::Newer,
-                ReadError::Unusable => Skipped::Unusable,
-            })?;
+/// The screen of the checkpoint of host `host_id` in `sessions_dir`, opened with `key` and ending with a divider
+/// that says (`words`, given the time it was written, in the person's language) when it was kept. Reads, opens and
+/// filters the file: for a thread that is not the UI's.
+pub fn read(
+    sessions_dir: &Path,
+    host_id: &str,
+    key: Option<&Key>,
+    words: &dyn Fn(u64) -> String,
+) -> Result<Seed, Skipped> {
+    let read = checkpoint::read_latest(&checkpoint::store::dir_in(sessions_dir, host_id), host_id, key)
+        .map_err(|e| match e {
+            ReadError::Missing => Skipped::Missing,
+            ReadError::Newer(_) => Skipped::Newer,
+            ReadError::Unusable => Skipped::Unusable,
+        })?;
     let Some(screen) = read.screen else { return Err(Skipped::NoScreen(read.issue)) };
     // Whatever the file holds, only text and SGR get in; a restored terminal obeys nothing of its history.
     let mut text = String::from_utf8_lossy(&safe_replay(&screen)).into_owned();
     if !text.ends_with('\n') {
         text.push_str("\r\n");
     }
-    let when = local_date_time(read.manifest.time).unwrap_or_default();
-    text.push_str(&format!("\x1b[2m{}\x1b[0m\r\n", divider(&when)));
+    text.push_str(&divider(&words(read.manifest.time)));
     Ok(Seed { text, time: read.manifest.time, ended: read.manifest.ended })
 }
 
 /// Make `options` restore the screen of the checkpoint of host `host_id` (the host the terminal ran in before
-/// the restart) in place of its saved text: the text becomes the styled screen with its divider. Whether it did;
-/// on any failure the options are as they were, and the terminal is restored from its text as before. Nothing
-/// but the screen is taken: the folder, the shell and the environment stay what the terminal's record and its
-/// project say.
+/// the restart) in place of its saved text. Whether it did; on any failure the options are as they were, and the
+/// terminal is restored from its text as before. Nothing but the screen is taken: the folder, the shell and the
+/// environment stay what the terminal's record and its project say. Does file I/O and decryption: not for the
+/// UI's thread.
 pub fn seed_options(
     sessions_dir: &Path,
     host_id: &str,
-    key: Option<&[u8; 32]>,
+    key: Option<&Key>,
     options: &mut super::SpawnOptions,
+    words: &dyn Fn(u64) -> String,
 ) -> bool {
-    match read(sessions_dir, host_id, key) {
+    match read(sessions_dir, host_id, key, words) {
         Ok(seed) => {
             tracing::info!(host_id, ended = ?seed.ended, "restoring a terminal from its checkpoint");
             options.restore = Some(seed.text);
-            options.restore_styled = true;
             true
         }
         Err(why) => {
@@ -102,10 +114,9 @@ pub fn seed_options(
 /// A terminal was restored from the checkpoint of host `old` and now runs in host `new`, which was asked to write
 /// its own (with `key`). If that has landed (`new`'s newest generation reads), `old`'s is spent and removed:
 /// true. Until then both stay, so that another restart or a crash restores from `old` again.
-pub fn forget_when_confirmed(sessions_dir: &Path, old: &str, new: &str, key: Option<&[u8; 32]>) -> bool {
-    let key = key.map(|k| Key::new(*k));
+pub fn forget_when_confirmed(sessions_dir: &Path, old: &str, new: &str, key: &Key) -> bool {
     let confirmed =
-        checkpoint::store::is_readable(&checkpoint::store::dir_in(sessions_dir, new), new, key.as_ref());
+        checkpoint::store::is_readable(&checkpoint::store::dir_in(sessions_dir, new), new, Some(key));
     if confirmed {
         forget(sessions_dir, old);
     }
@@ -157,6 +168,19 @@ fn survey(sessions_dir: &Path) -> Vec<Found> {
         found.push(Found { id, modified, bytes });
     }
     found
+}
+
+/// Remove every checkpoint but those of `running` hosts: the feature is off everywhere, and what it left is not
+/// wanted. The ids removed.
+pub fn remove_unused(sessions_dir: &Path, running: &HashSet<String>) -> Vec<String> {
+    let mut removed = Vec::new();
+    for found in survey(sessions_dir) {
+        if !running.contains(&found.id) {
+            forget(sessions_dir, &found.id);
+            removed.push(found.id);
+        }
+    }
+    removed
 }
 
 /// Remove the checkpoints older than [`MAX_AGE`], then the oldest while all together take more than

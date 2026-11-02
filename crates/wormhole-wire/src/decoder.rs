@@ -115,6 +115,13 @@ impl Decoder {
         self.fatal.is_some()
     }
 
+    /// Overwrite the bytes of frames already handed out with zeros: after a frame that carried a secret (a key)
+    /// was handled, so it does not sit in memory until the buffer happens to be reused. Best effort for a crate
+    /// with no `unsafe`: the buffer is live afterwards, so the writes are not dead stores the compiler may drop.
+    pub fn wipe_consumed(&mut self) {
+        self.buf[..self.head].fill(0);
+    }
+
     /// Make room for at least `want` more bytes after `tail`.
     fn make_room(&mut self, want: usize) {
         if self.head == self.tail {
@@ -268,5 +275,26 @@ impl Decoder {
             // Unreachable for a type `admit`ted as known; skipping beats panicking.
             None => Ok(None),
         }
+    }
+}
+
+#[cfg(test)]
+mod wipe_tests {
+    use super::*;
+    use crate::{CheckpointKey, Message};
+
+    /// A frame that carried a key leaves nothing of it in the read buffer once it is wiped.
+    #[test]
+    fn a_wiped_decoder_keeps_no_key_bytes() {
+        let key = [0x42u8; 32];
+        let mut bytes = Vec::new();
+        crate::encode(&mut bytes, 0, 0, &Message::SetCheckpointKey(CheckpointKey { key: &key }))
+            .expect("encodes");
+        let mut dec = Decoder::new();
+        dec.push(&bytes);
+        assert!(dec.next_frame().expect("decodes").is_some());
+        assert!(dec.buf.windows(32).any(|w| w == key), "it was there");
+        dec.wipe_consumed();
+        assert!(!dec.buf.windows(32).any(|w| w == key), "and is gone");
     }
 }

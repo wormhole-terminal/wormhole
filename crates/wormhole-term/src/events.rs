@@ -65,6 +65,8 @@ pub enum PtyEvent {
     WindowOp(WindowOp),
     /// The shell exited (sent once), with its exit code when the system reported one.
     Exited(Option<i32>),
+    /// The session host wrote a checkpoint generation to disk, because it was asked to flush (`Pty::checkpoint_now`).
+    CheckpointWritten(u64),
 }
 
 impl std::fmt::Debug for PtyEvent {
@@ -83,6 +85,7 @@ impl std::fmt::Debug for PtyEvent {
             PtyEvent::HostResponsiveness => f.write_str("HostResponsiveness"),
             PtyEvent::WindowOp(op) => write!(f, "WindowOp({op:?})"),
             PtyEvent::Exited(code) => write!(f, "Exited({code:?})"),
+            PtyEvent::CheckpointWritten(generation) => write!(f, "CheckpointWritten({generation})"),
         }
     }
 }

@@ -81,6 +81,8 @@ pub(crate) struct State {
     /// Frames to write, and how much of them is written.
     out: Vec<u8>,
     written: usize,
+    /// A key is among the frames to write: the buffer is wiped, not just emptied, once they are written.
+    secret_queued: bool,
     /// The stream asked for, and what the app wants (on screen or not).
     mode: StreamMode,
     visible: bool,
@@ -134,6 +136,7 @@ impl State {
             replica,
             options,
             out: Vec::new(),
+            secret_queued: false,
             written: 0,
             mode: StreamMode::None,
             visible: first != StreamMode::None,
@@ -221,11 +224,10 @@ impl State {
                     }
                 }
                 Cmd::ClearHistory => self.queue(&Message::ClearHistory),
-                Cmd::CheckpointKey { key, shell } => {
-                    self.queue(&Message::SetCheckpointKey(wire::CheckpointKey {
-                        key: key.as_ref().map_or(&[], |k| k.as_slice()),
-                        shell: &shell,
-                    }))
+                Cmd::CheckpointKey { key } => {
+                    self.secret_queued = key.is_some();
+                    let bytes: &[u8] = key.as_ref().map_or(&[], |k| k.as_bytes().as_slice());
+                    self.queue(&Message::SetCheckpointKey(wire::CheckpointKey { key: bytes }));
                 }
                 Cmd::Checkpoint { flush } => self.queue(&Message::Checkpoint { flush }),
                 Cmd::Clipboard { ticket, data } => {
@@ -307,6 +309,9 @@ impl State {
                 self.in_flight = self.in_flight.saturating_sub(grew);
             }
             Message::Detached(reason) => self.detached(reason),
+            Message::CheckpointWritten { generation } => {
+                self.proxy.send(crate::PtyEvent::CheckpointWritten(generation));
+            }
             Message::Error(err) => {
                 tracing::info!(ref_type = err.ref_type, code = err.code, "the session host refused a request")
             }
@@ -624,6 +629,9 @@ impl Client {
             }
         }
         if self.broken || state.written >= state.out.len() {
+            if std::mem::take(&mut state.secret_queued) {
+                zeroize::Zeroize::zeroize(&mut state.out);
+            }
             state.out.clear();
             state.written = 0;
         }

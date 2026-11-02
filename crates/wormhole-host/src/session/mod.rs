@@ -20,6 +20,7 @@ mod tests;
 
 use std::time::{Duration, Instant};
 
+use wormhole_term::checkpoint::Key;
 use wormhole_term::hosted::{Cursor, Wake};
 use wormhole_wire::{self as wire, AppVersion, DetachReason, Features, HostState, Message, Role};
 
@@ -88,10 +89,15 @@ pub enum Notice {
     Spawned { pid: u32 },
     /// It could not be started, or nobody asked in time: say `err <text>`; the host ends.
     SpawnFailed(String),
-    /// The controller sent `SetCheckpointKey`: start keeping a checkpoint (`key` empty: without a screen).
-    SetCheckpoint { key: Vec<u8>, shell: String },
-    /// The controller sent `Checkpoint`: write one now.
-    CheckpointNow,
+    /// The controller sent `SetCheckpointKey`: start keeping a checkpoint with this key, or (none) stop.
+    SetCheckpoint { key: Option<Key> },
+    /// The controller sent `Checkpoint`: write one now (`flush`: and say when it is on disk).
+    CheckpointNow { flush: bool },
+    /// The controller cleared the buffer: write a fresh generation and drop the ones before.
+    HistoryCleared,
+    /// The terminal is being closed on purpose (the controller's `Close`, an admin's `Kill`): the program is
+    /// hung up next, and what it does then is not worth a checkpoint.
+    Closing,
     /// The program ended, once: the checkpoint's last generation says how.
     Exited(wire::ExitInfo),
 }
@@ -225,6 +231,13 @@ impl<S: Spawner> Session<S> {
     pub fn terminate(&mut self, now: Instant) {
         tracing::info!("asked to end by a signal");
         self.end(self.config.terminate_grace, now);
+    }
+
+    /// Tell the controller that checkpoint `generation` is on disk (it asked with `Checkpoint{flush: true}`).
+    pub fn checkpoint_written(&mut self, generation: u64) {
+        if let Some(at) = self.controller.and_then(|id| self.index(id)) {
+            self.conns[at].send(&Message::CheckpointWritten { generation });
+        }
     }
 
     /// The host is over: the driver flushes, removes its files and exits.

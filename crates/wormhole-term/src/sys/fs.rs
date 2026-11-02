@@ -37,6 +37,16 @@ pub fn private_file(options: &mut OpenOptions) -> &mut OpenOptions {
     os::private_file(options)
 }
 
+/// Hand the data of `file` to the drive (`fsync(2)`, not the full flush `File::sync_all` does on macOS).
+pub fn fsync(file: &std::fs::File) -> io::Result<()> {
+    os::fsync(file)
+}
+
+/// [`fsync`] of the folder at `dir`: a rename into it is on disk once this returns.
+pub fn fsync_dir(dir: &Path) -> io::Result<()> {
+    os::fsync(&std::fs::File::open(dir)?)
+}
+
 /// Make `link` a symbolic link to `target`.
 pub fn symlink(target: impl AsRef<Path>, link: impl AsRef<Path>) -> io::Result<()> {
     os::symlink(target.as_ref(), link.as_ref())

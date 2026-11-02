@@ -37,11 +37,9 @@ pub(crate) struct WindowSize {
 /// byte. Where the program comes from, and its folder and environment, are the [`Launch`].
 #[derive(Clone, Copy, Debug, Default)]
 pub struct StartOptions<'a> {
-    /// Previous session text, replayed dimmed before the shell starts.
+    /// What to draw before the shell starts: VT with colors and attributes that ends with its own divider
+    /// (`checkpoint::text_seed` for saved text, a checkpoint's screen otherwise). Drawn filtered to text and SGR.
     pub restore: Option<&'a str>,
-    /// `restore` is VT with colors and attributes and its own "restored" divider (a checkpoint's screen),
-    /// not plain text: it is drawn filtered to text and SGR, undimmed, and no divider is added.
-    pub restore_styled: bool,
     pub scrollback_lines: usize,
     /// Answer DECRQCRA, a program's request for the checksum of a rectangle of the screen
     /// (`allow_screen_checksum`); the engine ignores it otherwise.

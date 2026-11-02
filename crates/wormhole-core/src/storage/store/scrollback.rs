@@ -90,7 +90,7 @@ impl Store {
 
     /// The key the session host of terminal `host_id` seals its checkpoint with; see
     /// [`wormhole_term::checkpoint`]. `None` when the profile has no saved-text key (no Keychain).
-    pub fn checkpoint_key(&self, host_id: &str) -> Option<[u8; 32]> {
+    pub fn checkpoint_key(&self, host_id: &str) -> Option<wormhole_term::checkpoint::Key> {
         self.saved.checkpoint_key(host_id)
     }
 

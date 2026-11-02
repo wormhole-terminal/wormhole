@@ -32,3 +32,13 @@ pub(crate) fn private_file(options: &mut OpenOptions) -> &mut OpenOptions {
 pub(crate) fn symlink(target: &Path, link: &Path) -> io::Result<()> {
     std::os::unix::fs::symlink(target, link)
 }
+
+/// A plain `fsync(2)` of `file`: the data is handed to the drive, which is enough for a file that is written
+/// whole and renamed over its name. (Rust's `File::sync_all` is `F_FULLFSYNC` on macOS, which also flushes the
+/// drive's own cache and takes far longer; a checkpoint written at a restart has about a second.)
+#[allow(unsafe_code)] // libc FFI: one call on a descriptor the borrow keeps open.
+pub(crate) fn fsync(file: &std::fs::File) -> io::Result<()> {
+    use std::os::fd::AsRawFd as _;
+    // SAFETY: fsync takes the descriptor of an open file and nothing else.
+    if unsafe { libc::fsync(file.as_raw_fd()) } < 0 { Err(io::Error::last_os_error()) } else { Ok(()) }
+}

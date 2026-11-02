@@ -885,5 +885,6 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("tailor-announce", tailor_announce("Sample", "Sample", "Sample")),
         ("terminal-size-readout", terminal_size_readout("Sample", "Sample")),
         ("terminal-clipboard-ask", terminal_clipboard_ask("Sample")),
+        ("terminal-restored-at", terminal_restored_at("Sample", "Sample", "Sample", "Sample", "Sample")),
     ]
 }

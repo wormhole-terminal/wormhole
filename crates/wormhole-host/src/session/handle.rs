@@ -13,6 +13,8 @@ use wormhole_wire::{
     version::Range,
 };
 
+use wormhole_term::checkpoint::Key;
+
 use super::conn::{Attachment, Phase, Waiting};
 use super::{ConnId, Life, Notice, Session};
 use crate::program::{Program, Spawner};
@@ -30,7 +32,12 @@ impl<S: Spawner> Session<S> {
             let mut dec = std::mem::take(&mut self.conns[at].dec);
             let done = match dec.next_frame() {
                 Ok(Some(frame)) => {
+                    let secret = matches!(frame.message, Message::SetCheckpointKey(_));
                     self.handle(id, frame, now);
+                    if secret {
+                        // The key now lives in the checkpointer; the copy in the read buffer goes.
+                        dec.wipe_consumed();
+                    }
                     false
                 }
                 Ok(None) => true,
@@ -110,10 +117,12 @@ impl<S: Spawner> Session<S> {
                 tracing::info!(conn = id.0, "asked to kill");
                 // The grace a closed terminal gets: `sessions end` and Quit and End All Terminals
                 // must not be harsher than quitting was before hosts. Force quit is SIGKILL by pid.
+                self.notices.push(Notice::Closing);
                 self.end(self.config.terminate_grace, now);
             }
             Message::Close { grace_ms } => {
                 tracing::info!(conn = id.0, grace_ms, "asked to close");
+                self.notices.push(Notice::Closing);
                 self.end(Duration::from_millis(u64::from(grace_ms)), now);
             }
             Message::Ping(n) => {
@@ -162,12 +171,13 @@ impl<S: Spawner> Session<S> {
             Message::ClearHistory => {
                 if let Some(program) = &mut self.program {
                     program.clear_history();
+                    self.notices.push(Notice::HistoryCleared);
                 }
             }
             Message::SetCheckpointKey(k) => {
-                self.notices.push(Notice::SetCheckpoint { key: k.key.to_vec(), shell: k.shell.to_owned() });
+                self.notices.push(Notice::SetCheckpoint { key: Key::from_slice(k.key) });
             }
-            Message::Checkpoint { .. } => self.notices.push(Notice::CheckpointNow),
+            Message::Checkpoint { flush } => self.notices.push(Notice::CheckpointNow { flush }),
             Message::SetOptions(options) => {
                 if let Some(program) = &mut self.program {
                     program.set_options(&options);

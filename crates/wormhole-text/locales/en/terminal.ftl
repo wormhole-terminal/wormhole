@@ -51,3 +51,8 @@ terminal-program-unnamed = A program
 # The bar over a terminal when a program asks to read the clipboard, and what VoiceOver says for it. { $program }
 # is the program's name as the sidebar shows it, e.g. ssh, or the message above.
 terminal-clipboard-ask = { $program } wants to read the clipboard
+
+# The line under the text a restored terminal shows above its new prompt (between two rules, dim and italic):
+# says when the text was kept, or, for saved text, when it was drawn back. The parts are numbers, in the system's
+# time zone. A language writes them in its own order and with its own separators (German: { $day }.{ $month }.{ $year }).
+terminal-restored-at = restored { $year }-{ $month }-{ $day } { $hour }:{ $minute }
