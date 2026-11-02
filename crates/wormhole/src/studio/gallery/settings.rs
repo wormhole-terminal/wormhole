@@ -273,6 +273,17 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                 ),
             ),
         )
+        // A block that stands on its own, with a row's menu (right-click, ⌃↩): the theme cards.
+        .child(style::keyed_block(
+            "g-keyed-block",
+            RowKeys { keys: &["theme"], json: |_, _| String::new() },
+            None,
+            div()
+                .text_caption()
+                .text_color(ui.muted)
+                .child("A block with a row's menu: right-click it") // text: sample (the gallery's specimen)
+                .into_any_element(),
+        ))
 }
 
 /// A slider's track and knob as drawn (the real one is GPUI Kit's, and needs a state).
