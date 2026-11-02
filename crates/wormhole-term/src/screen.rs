@@ -103,6 +103,19 @@ impl Screen {
         Self { term, hold: Hold::Off, epoch: EPOCHS.fetch_add(1, Ordering::Relaxed), orphans: Vec::new() }
     }
 
+    /// Forget what the engine queued for the program and for the app (replies, events, reports of the
+    /// folder, the title, the clipboard): what replaying saved text left, which nobody asked for.
+    pub(crate) fn discard_output(&mut self) {
+        self.term.clear_replies();
+        self.term.events().for_each(drop);
+    }
+
+    /// The replies the engine has queued for the program, for the tests.
+    #[cfg(test)]
+    pub(crate) fn queued_replies(&self) -> Vec<u8> {
+        self.term.replies().to_vec()
+    }
+
     /// The events the engine queued, for a test terminal, which has no host to hear them.
     #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn drain_events(&mut self) -> Vec<wormhole_vt::event::Event> {
