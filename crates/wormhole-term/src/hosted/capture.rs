@@ -1,8 +1,9 @@
 //! What a checkpoint takes of a running hosted terminal, in one go: the screen as VT bytes, the size, the
 //! folder and the title.
 
-use super::vt::{Limits, primary_screen};
-use crate::hosted::Reader;
+use super::Reader;
+use crate::checkpoint::Limits;
+use crate::checkpoint::vt::primary_screen;
 
 /// A terminal as a checkpoint sees it at one moment.
 #[derive(Debug, Default, PartialEq, Eq)]

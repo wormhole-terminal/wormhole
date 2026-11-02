@@ -27,7 +27,7 @@ pub const READ_MAX: u64 = 16 * 1024;
 
 /// Whether `id` is a host id: 12 characters from `[a-z0-9]`.
 pub fn valid_id(id: &str) -> bool {
-    id.len() == 12 && id.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
+    crate::host_id::valid(id)
 }
 
 /// What a host says about itself.

@@ -141,7 +141,7 @@ pub(crate) fn primary_screen(screen: &Screen, limits: Limits) -> Option<Vec<u8>>
     let mut finish = |line: &mut Vec<u8>, plain: &mut String, shown: &mut usize, pen: &mut Pen| {
         line.truncate(*shown);
         // Restore markers do not pile up across restarts.
-        if !is_marker(&plain) {
+        if !is_marker(plain) {
             let mut done = std::mem::take(line);
             done.extend_from_slice(b"\x1b[0m\r\n");
             lines.push(done);
@@ -209,6 +209,12 @@ pub(crate) fn primary_screen(screen: &Screen, limits: Limits) -> Option<Vec<u8>>
         out.extend_from_slice(line);
     }
     Some(out)
+}
+
+/// The divider of a restore at `when` ("2026-11-02 14:03"), the line a checkpoint's styled seed ends with.
+pub fn divider(when: &str) -> String {
+    let when: String = when.chars().filter(|c| !c.is_control()).take(40).collect();
+    format!("──── restored {when} ────")
 }
 
 /// The longest SGR sequence let through.

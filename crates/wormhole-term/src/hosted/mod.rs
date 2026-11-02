@@ -48,6 +48,8 @@ use crate::screen::Screen;
 use crate::{GridSize, Launch, Shell};
 
 pub use self::tap::{CLIPBOARD_TIMEOUT, now_ms};
+mod capture;
+pub use capture::{Capture, capture};
 pub use event::{HostEvent, window_op_from_wire, window_op_to_wire};
 pub use stream::{Cursor, FORWARD_CAP, Next, ResizeMark, Stream, Wake};
 pub use wormhole_vt::repaint::{Gaps, NotReady};
@@ -156,7 +158,7 @@ impl HostedTerminal {
         if !spawn.seed.is_empty() {
             let seed = spawn.seed.concat();
             if spawn.seed_styled {
-                crate::restore::replay_styled(&mut screen, &seed);
+                crate::checkpoint::replay::replay_styled(&mut screen, &seed);
             } else {
                 crate::restore::replay(&mut screen, &seed);
             }

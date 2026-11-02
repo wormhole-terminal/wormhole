@@ -6,7 +6,8 @@ use std::io;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use wormhole_term::checkpoint::{Capture, Key, Snapshot, Written, read_latest};
+use wormhole_term::checkpoint::{Key, Snapshot, Written, read_latest};
+use wormhole_term::hosted::Capture;
 
 use super::worker::THREAD_NAME;
 use super::*;

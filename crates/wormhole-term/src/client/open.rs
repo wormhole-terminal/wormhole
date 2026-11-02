@@ -371,7 +371,7 @@ pub(crate) fn hosted(
     if let Some(text) = replay {
         let text = wire::seed_chunks(text).concat();
         if replay_styled {
-            crate::restore::replay_styled(&mut screen, &text);
+            crate::checkpoint::replay::replay_styled(&mut screen, &text);
         } else {
             crate::restore::replay(&mut screen, &text);
         }

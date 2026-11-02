@@ -20,7 +20,7 @@ use zeroize::Zeroizing;
 
 use super::manifest::{Manifest, ManifestError, READ_MAX, ScreenFile};
 use super::seal::{self, Binding, Key, OpenError};
-use crate::hosted::meta::valid_id;
+use crate::host_id::valid as valid_id;
 use crate::sys::fs::{private_dir, private_file};
 
 /// How many generations are kept: the newest, and the one before it for when the newest is damaged.

@@ -64,6 +64,7 @@ mod events;
 pub mod find;
 pub mod glyphs;
 mod handle;
+mod host_id;
 pub mod hosted;
 pub mod images;
 pub mod input;

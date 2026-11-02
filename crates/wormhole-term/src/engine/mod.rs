@@ -128,7 +128,7 @@ pub(super) fn spawn(
     // Replay the previous session's text (dimmed) before the shell starts.
     if let Some(text) = options.restore {
         if options.restore_styled {
-            restore::replay_styled(&mut screen, text);
+            crate::checkpoint::replay::replay_styled(&mut screen, text);
         } else {
             restore::replay(&mut screen, text);
         }

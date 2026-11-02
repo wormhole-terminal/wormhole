@@ -8,7 +8,8 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use wormhole_term::checkpoint::{Capture, Key, Snapshot, Store, Written};
+use wormhole_term::checkpoint::{Key, Snapshot, Store, Written};
+use wormhole_term::hosted::Capture;
 
 /// The name of the thread, which the tests look for to see where the work happened.
 pub const THREAD_NAME: &str = "wormhole-checkpoint";

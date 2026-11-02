@@ -5,8 +5,8 @@
 
 use std::time::{Duration, Instant};
 
-use wormhole_term::checkpoint::{Capture, Limits};
-use wormhole_term::hosted::{Cursor, HostEvent, HostedTerminal, NotReady, Reader, Repainted, Wake};
+use wormhole_term::checkpoint::Limits;
+use wormhole_term::hosted::{Capture, Cursor, HostEvent, HostedTerminal, NotReady, Reader, Repainted, Wake};
 use wormhole_wire as wire;
 
 use crate::checkpoint::Source;
@@ -158,6 +158,6 @@ struct PtySource {
 
 impl Source for PtySource {
     fn capture(&self) -> Capture {
-        wormhole_term::checkpoint::capture(&self.reader, self.limits)
+        wormhole_term::hosted::capture(&self.reader, self.limits)
     }
 }
