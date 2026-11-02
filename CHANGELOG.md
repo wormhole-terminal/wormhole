@@ -14,10 +14,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
-- A window nobody can see (minimised, hidden, covered or on another Space) no longer asks git about its
-  terminals' repositories every few seconds: only while something in a repository is working, and once more
-  as soon as it can be seen. A window that isn't in front reads them every 8 seconds instead of every 2. In a
-  large repository each read took most of a second of git's time.
+- Git is asked about a terminal's repository by how the terminal is seen: every 1.2 seconds on screen in the
+  window in front (was 2), every 8 seconds in a window that isn't in front (was 2 for the terminal on screen),
+  and every 10 seconds in a window nobody can see (minimised, hidden, covered or on another Space; was 2 or 8),
+  unless something in the repository is working. A terminal that comes into view or into focus is read at once.
+  In a large repository each read takes most of a second of git's time.
 - Drawing the title row no longer asks the system where the apps in Open in… are on every frame.
 
 ### Fixed

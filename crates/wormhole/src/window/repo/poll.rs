@@ -145,10 +145,10 @@ impl Workspace {
     /// A terminal whose git is missing waits for a Retry. `seen` is whether any of the window can be
     /// seen, `active` whether it is the window in front.
     ///
-    /// A window nobody can see reads only the repositories something works in: their pictures say who
-    /// changed what (`git::attribution`), which is not known afterwards. Git's answers for the others
-    /// change nothing anyone sees until the window is seen again, when each is read at once. In a large
-    /// repository one read is most of a second of git's time, so this is what an unseen window idles at.
+    /// A window nobody can see reads the repositories something works in as a window behind does: their
+    /// pictures say who changed what (`git::attribution`), which is not known afterwards. Git's answers
+    /// for the others change nothing anyone sees, so they are read only every 10 s, and at once when the
+    /// window is seen again. In a large repository one read is most of a second of git's time.
     pub(crate) fn poll_repos(&mut self, seen: bool, active: bool, cx: &mut Context<Self>) {
         let working: Vec<PathBuf> = if seen {
             Vec::new()

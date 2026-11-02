@@ -56,7 +56,7 @@ pub(crate) enum Sight {
     Behind,
     /// Its window cannot be seen (minimised, hidden, covered, on another Space) and nothing in its
     /// repository is working: what git would say changes nothing anyone sees, and edits made while
-    /// nobody works are nobody's, so no picture is needed until it is seen again.
+    /// nobody works are nobody's, so it is read only now and then, and at once when seen again.
     Unseen,
 }
 
@@ -85,20 +85,22 @@ impl GitState {
     /// What to do on tick number `tick` (already offset by the session's place, so sessions
     /// don't all poll on the same tick) for a terminal in `cwd`, seen as `sight`. A folder git has
     /// not answered for is asked at once, and so is a repository whose terminal is owed a refresh
-    /// (see [`note_sight`](Self::note_sight)). A repository is polled every 5th tick (2 s) in front,
-    /// every 20th (8 s) behind, never unseen. A folder in no repository is not polled at all: it is
-    /// looked at for a `.git` every tick in front (0.4 s), every 5th behind, never unseen.
+    /// (see [`note_sight`](Self::note_sight)). A repository is polled every 3rd tick (1.2 s) in front,
+    /// every 20th (8 s) behind, every 25th (10 s) unseen. A folder in no repository is not polled at
+    /// all: it is looked at for a `.git` every tick in front (0.4 s), every 5th behind, every 25th
+    /// unseen. Only one read runs at a time (`begin_refresh`), so a slow repository is read back to
+    /// back at most, never piled up.
     pub(crate) fn poll(&self, cwd: Option<&std::path::Path>, tick: u64, sight: Sight) -> GitPoll {
         if self.cwd.as_deref() != cwd {
             return GitPoll::Refresh;
         }
-        // In ticks: (a look for a `.git`, a read of the repository); `None` for never.
+        // In ticks: (a look for a `.git`, a read of the repository).
         let (look, read) = match sight {
-            Sight::Front => (Some(1), Some(5)),
-            Sight::Behind => (Some(5), Some(20)),
-            Sight::Unseen => (None, None),
+            Sight::Front => (1, 3),
+            Sight::Behind => (5, 20),
+            Sight::Unseen => (25, 25),
         };
-        let due = |every: Option<u64>| every.is_some_and(|every| tick.is_multiple_of(every));
+        let due = |every: u64| tick.is_multiple_of(every);
         if cwd.is_some_and(|cwd| self.is_absent_for(cwd)) {
             return if due(look) { GitPoll::Probe } else { GitPoll::Idle };
         }

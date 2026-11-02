@@ -311,7 +311,7 @@ fn the_tick_never_asks_git_about_a_folder_it_knows_is_no_repository() {
     }
     // Another folder is asked about at once.
     assert_eq!(git.poll(Some(std::path::Path::new("/other")), 1, Sight::Behind), GitPoll::Refresh);
-    // A repository keeps its 2 s / 8 s polls.
+    // A repository is read every 1.2 s in front, 8 s behind, 10 s unseen.
     let mut repo = GitState::default();
     let k = key("/repo", None);
     let t = repo.begin_refresh(k.clone()).expect("started").ticket();
@@ -319,9 +319,10 @@ fn the_tick_never_asks_git_about_a_folder_it_knows_is_no_repository() {
     let repo_dir = std::path::Path::new("/repo");
     let refreshed =
         |sight| (0..40).filter(|t| repo.poll(Some(repo_dir), *t, sight) == GitPoll::Refresh).count();
-    assert_eq!((refreshed(Sight::Front), refreshed(Sight::Behind), refreshed(Sight::Unseen)), (8, 2, 0));
-    // Unseen, a folder in no repository is not looked at either.
-    assert!((0..40).all(|tick| git.poll(Some(plain), tick, Sight::Unseen) == GitPoll::Idle));
+    assert_eq!((refreshed(Sight::Front), refreshed(Sight::Behind), refreshed(Sight::Unseen)), (14, 2, 2));
+    // Unseen, a folder in no repository is looked at every 10 s.
+    let unseen = (0..40).filter(|tick| git.poll(Some(plain), *tick, Sight::Unseen) == GitPoll::Probe).count();
+    assert_eq!(unseen, 2);
 }
 
 #[test]
@@ -341,10 +342,9 @@ fn a_terminal_seen_another_way_is_read_once_at_once() {
     let t = repo.begin_refresh(k.clone()).expect("started").ticket();
     assert_eq!(repo.poll(Some(dir), 2, Sight::Unseen), GitPoll::Idle);
     repo.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
-    assert!(
-        (0..40).all(|tick| repo.poll(Some(dir), tick, Sight::Unseen) == GitPoll::Idle),
-        "nothing while unseen"
-    );
+    let unseen =
+        (0..40).filter(|tick| repo.poll(Some(dir), *tick, Sight::Unseen) == GitPoll::Refresh).count();
+    assert_eq!(unseen, 2, "every 10 s while unseen");
     // Seen again: read at once, not at the next period.
     repo.note_sight(Sight::Behind);
     assert_eq!(repo.poll(Some(dir), 3, Sight::Behind), GitPoll::Refresh);
