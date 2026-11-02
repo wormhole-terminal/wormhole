@@ -15,6 +15,7 @@
         "src/sys/"
       ],
       "wormhole-text": [],
+      "wormhole-markup": [],
       "wormhole-wire": []
     },
     "os_edge_sanctioned": {
@@ -191,6 +192,25 @@
         "catalog",
         "active",
         "keys"
+      ],
+      "wormhole-markup": [
+        [
+          "dom",
+          "error",
+          "names",
+          "tokens"
+        ],
+        [
+          "css",
+          "parse",
+          "props",
+          "template",
+          "value"
+        ],
+        "declaration",
+        "cascade",
+        "component",
+        "emit"
       ]
     },
     "module_depth": {

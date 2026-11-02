@@ -9504,6 +9504,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "wormhole-markup"
+version = "1.5.0"
+dependencies = [
+ "serde_json",
+ "wormhole-core",
+]
+
+[[package]]
 name = "wormhole-rules"
 version = "1.6.3"
 

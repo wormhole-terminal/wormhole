@@ -55,7 +55,7 @@ scope_of() {
   case "$1" in
     Cargo.toml|Cargo.lock|deny.toml|crates/*/Cargo.toml) echo "all deps" ;;
     rust-toolchain*|rustfmt.toml|clippy.toml|.cargo/*|.config/nextest.toml) echo all ;;
-    crates/wormhole-core/*|crates/wormhole-term/*|crates/wormhole-host/*|crates/wormhole-wire/*|crates/wormhole-text/*) echo all ;;
+    crates/wormhole-core/*|crates/wormhole-term/*|crates/wormhole-host/*|crates/wormhole-wire/*|crates/wormhole-text/*|crates/wormhole-markup/*) echo all ;;
     # include_str!'d by core's updater tests; lib.sh also runs in the app's isolated_instance test.
     # packaging/icon: core's intro tests include the iconset script and the chevron.
     scripts/lib.sh|scripts/package.sh|packaging/icon/*) echo all ;;
