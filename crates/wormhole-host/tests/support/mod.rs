@@ -474,6 +474,7 @@ impl Client {
             args: wire::List::Borrowed(args),
             env: wire::List::Borrowed(&env),
             colors: None,
+            seed: wire::List::Borrowed(&[]),
         }));
         match self.until("the spawn's answer", |g| matches!(g, Got::Info(_) | Got::Error(..))) {
             Got::Info(info) => info.pid,

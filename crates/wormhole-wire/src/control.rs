@@ -90,9 +90,47 @@ pub struct Spawn<'a> {
     pub args: List<'a, &'a str>,
     pub env: List<'a, (&'a str, &'a str)>,
     pub colors: Option<Colors<'a>>,
+    /// Text a previous session of this terminal left (minor 4), which the host draws dimmed before the
+    /// program's first byte, with the "restored" marker, as a terminal restarted in the app does. In
+    /// chunks of at most [`SEED_CHUNK`] bytes (a TLV's length is 16 bits), each valid UTF-8 on its own
+    /// (see [`seed_chunks`]); an older host skips the tag and starts with a blank screen.
+    pub seed: List<'a, &'a str>,
 }
 
 const S_COLORS: u8 = 1;
+const S_SEED: u8 = 2;
+
+/// The most bytes of one seed chunk: a TLV's length is 16 bits.
+pub const SEED_CHUNK: usize = 60_000;
+/// The most seed text a `Spawn` carries (the end of the text is kept): well inside a frame.
+pub const SEED_MAX: usize = 512 * 1024;
+
+/// `text` as seed chunks: its last [`SEED_MAX`] bytes (cut at a character, and at a line when one is near),
+/// in pieces of at most [`SEED_CHUNK`] bytes that each end on a character.
+pub fn seed_chunks(text: &str) -> Vec<&str> {
+    let mut text = text;
+    if text.len() > SEED_MAX {
+        let mut start = text.len() - SEED_MAX;
+        while !text.is_char_boundary(start) {
+            start += 1;
+        }
+        // The next line start, when there is one close: the first line is not left cut in half.
+        if let Some(newline) = text[start..].find('\n').filter(|n| *n < 4096) {
+            start += newline + 1;
+        }
+        text = &text[start..];
+    }
+    let mut chunks = Vec::new();
+    while !text.is_empty() {
+        let mut end = text.len().min(SEED_CHUNK);
+        while !text.is_char_boundary(end) {
+            end -= 1;
+        }
+        chunks.push(&text[..end]);
+        text = &text[end..];
+    }
+    chunks
+}
 
 impl<'a> Spawn<'a> {
     pub(crate) fn encode(&self, w: &mut Writer<'_>) -> Result<(), EncodeError> {
@@ -120,6 +158,9 @@ impl<'a> Spawn<'a> {
             colors.write(w)?;
             w.tlv_end(at, "Spawn.colors")?;
         }
+        for chunk in self.seed.iter() {
+            w.tlv_raw(S_SEED, "Spawn.seed", chunk.as_bytes())?;
+        }
         Ok(())
     }
 
@@ -146,15 +187,27 @@ impl<'a> Spawn<'a> {
         for _ in 0..n {
             env.push((r.str16()?, r.str16()?));
         }
-        let (mut colors, mut seen) = (None, Seen::default());
+        let (mut colors, mut seen, mut seed) = (None, Seen::default(), Vec::new());
         for tlv in r.tlvs() {
             let (tag, value) = tlv?;
             if tag == S_COLORS {
                 seen.once(tag, WHAT)?;
                 colors = Some(Colors::read(&mut Reader::new(value, WHAT))?);
+            } else if tag == S_SEED {
+                // Chunks of one text: as many as the frame holds.
+                seed.push(std::str::from_utf8(value).map_err(|_| WireError::BadUtf8(WHAT))?);
             }
         }
-        Ok(Self { size, options, program, cwd, args: List::Owned(args), env: List::Owned(env), colors })
+        Ok(Self {
+            size,
+            options,
+            program,
+            cwd,
+            args: List::Owned(args),
+            env: List::Owned(env),
+            colors,
+            seed: List::Owned(seed),
+        })
     }
 }
 
@@ -310,5 +363,40 @@ impl<'a> ErrorMsg<'a> {
 
     pub(crate) fn decode(r: &mut Reader<'a>) -> Result<Self, WireError> {
         Ok(Self { ref_type: r.u8()?, code: r.u16()?, text: r.str16()? })
+    }
+}
+
+#[cfg(test)]
+mod seed_tests {
+    use super::*;
+
+    #[test]
+    fn short_text_is_one_chunk_and_nothing_is_empty() {
+        assert_eq!(seed_chunks("abc"), ["abc"]);
+        assert!(seed_chunks("").is_empty());
+    }
+
+    #[test]
+    fn long_text_is_cut_into_chunks_that_hold_whole_characters_and_join_back() {
+        // Two-byte characters across the chunk size.
+        let text: String = std::iter::repeat_n('\u{e9}', SEED_CHUNK).collect();
+        let chunks = seed_chunks(&text);
+        assert!(chunks.len() >= 2);
+        assert!(chunks.iter().all(|c| c.len() <= SEED_CHUNK));
+        assert_eq!(chunks.concat(), text);
+    }
+
+    #[test]
+    fn text_past_the_cap_keeps_its_end_and_starts_on_a_line() {
+        let mut text = String::new();
+        let mut i = 0;
+        while text.len() < SEED_MAX + 10_000 {
+            text.push_str(&format!("line {i}\n"));
+            i += 1;
+        }
+        let kept = seed_chunks(&text).concat();
+        assert!(kept.len() <= SEED_MAX);
+        assert!(text.ends_with(&kept));
+        assert!(kept.starts_with("line "), "starts on a line: {:?}", &kept[..20]);
     }
 }

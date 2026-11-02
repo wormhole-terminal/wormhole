@@ -3,10 +3,10 @@
 use super::screen::Screen;
 
 /// The marker `replay` draws under replayed text, which `contents` leaves out of what it saves.
-pub(super) const RESTORED_MARKER: &str = "──── restored ────";
+pub(crate) const RESTORED_MARKER: &str = "──── restored ────";
 
 /// Draw `text` dimmed, followed by a marker line, before the shell starts.
-pub(super) fn replay(screen: &mut Screen, text: &str) {
+pub(crate) fn replay(screen: &mut Screen, text: &str) {
     if text.trim().is_empty() {
         return;
     }

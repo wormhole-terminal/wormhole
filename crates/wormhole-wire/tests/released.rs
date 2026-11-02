@@ -31,14 +31,14 @@ use wormhole_wire::*;
 
 /// The protocol minor that introduced each sample message. Everything not listed here came with
 /// minor 1, the first release.
-const LEDGER: &[(&str, u16)] = &[("clear_history", 2), ("error_peer_refused", 3)];
+const LEDGER: &[(&str, u16)] = &[("clear_history", 2), ("error_peer_refused", 3), ("spawn_seeded", 4)];
 
 /// The released tags kept here, and the protocol minor each spoke.
 const RELEASES: &[(&str, u16)] = &[("v1.2.0", 1), ("v1.5.0", 2)];
 
 /// Minors this build speaks that no release has shipped yet (so there is nothing to freeze).
 /// Remove a minor from here when its release file is added to [`RELEASES`].
-const UNRELEASED_MINORS: &[u16] = &[3];
+const UNRELEASED_MINORS: &[u16] = &[3, 4];
 
 fn introduced(name: &str) -> u16 {
     LEDGER.iter().find(|(n, _)| *n == name).map_or(1, |(_, minor)| *minor)

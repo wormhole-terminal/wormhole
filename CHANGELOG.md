@@ -30,6 +30,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- A terminal brought back from its saved text after its session host was gone (a restart, or a host that
+  ended) ran inside Wormhole, so the next update or quit ended it. With Persistent terminals on it now starts
+  a new session host, which shows the saved text first, with the "restored" line, and keeps running when
+  Wormhole quits.
 - Clear Buffer in a terminal whose session host comes from Wormhole 1.4 or older cleared the history only in the
   window, and the host gave it back at the next attach. The terminal now says it cleared it only there,
   because the host is too old to forget it.

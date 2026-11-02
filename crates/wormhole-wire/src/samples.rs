@@ -147,6 +147,20 @@ pub fn all() -> Vec<(&'static str, Message<'static>)> {
                     cursor: Some([0xff, 0x80, 0]),
                     palette: List::Borrowed(&[[0, 0, 0], [0xcd, 0, 0]]),
                 }),
+                seed: List::Borrowed(&[]),
+            }),
+        ),
+        (
+            "spawn_seeded",
+            Message::Spawn(Spawn {
+                size: SIZE,
+                options: Options { scrollback_lines: 1000, flags: 0 },
+                program: "/bin/zsh",
+                cwd: "/Users/me",
+                args: List::Borrowed(&[]),
+                env: List::Borrowed(&[("TERM", "xterm-256color")]),
+                colors: None,
+                seed: List::Borrowed(&["$ make\r\nok\r\n", "$ \u{e9}t\u{e9}\r\n"]),
             }),
         ),
         (
@@ -159,6 +173,7 @@ pub fn all() -> Vec<(&'static str, Message<'static>)> {
                 args: List::Borrowed(&[]),
                 env: List::Borrowed(&[]),
                 colors: None,
+                seed: List::Borrowed(&[]),
             }),
         ),
         (

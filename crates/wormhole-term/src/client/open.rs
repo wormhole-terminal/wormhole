@@ -38,8 +38,10 @@ impl Pty {
     /// program in it with `options` and `size`, then the stream from the program's first byte.
     ///
     /// The program's environment is the app's with `launch.env` over it, as a local terminal's
-    /// is, all of it sent to the host (which adds nothing). `options.restore` is not replayed: a
-    /// hosted terminal's history is the host's. Blocks until the program runs or could not be
+    /// is, all of it sent to the host (which adds nothing). `options.restore`, the text of a
+    /// previous session whose host is gone, is the host's seed: it draws it dimmed with the "restored"
+    /// marker before the program's first byte (the replica draws the same, so the first stream byte lands
+    /// under it); a host older than protocol 1.4 skips it. Blocks until the program runs or could not be
     /// started (a few seconds at most); the error then says why, in the words the "could not
     /// start" view shows.
     pub fn start_hosted(
@@ -210,6 +212,7 @@ fn spawn_in(
     let flag = |on: bool, bit: u32| if on { bit } else { 0 };
     let flags = flag(options.allow_window_ops, wire::option_flags::WINDOW_OPS)
         | flag(options.allow_screen_checksum, wire::option_flags::CHECKSUM);
+    let seed = options.restore.map(wire::seed_chunks).unwrap_or_default();
     let spawn = wire::Spawn {
         size: wire_size(size),
         options: wire::Options {
@@ -221,6 +224,7 @@ fn spawn_in(
         args: wire::List::Borrowed(&args),
         env: wire::List::Borrowed(&pairs),
         colors,
+        seed: wire::List::Borrowed(&seed),
     };
     let until = Instant::now() + READY_TIMEOUT;
     let info = match socket::spawn(&stream, &mut dec, &spawn, until)? {
@@ -304,6 +308,11 @@ pub(crate) fn hosted(
     let shared = proxy.shared().clone();
     let replica_options = ReplicaOptions::of(options);
     let mut screen = replica_options.screen(replica);
+    // What the host draws before the program's first byte (see `start_hosted`): the same here, so the
+    // stream's bytes land under it as they do there.
+    if let Some(text) = options.restore {
+        crate::restore::replay(&mut screen, &wire::seed_chunks(text).concat());
+    }
     if let Some(colors) = options.colors {
         screen.set_default_colors(colors);
     }

@@ -153,12 +153,25 @@ pub(crate) fn detach_all(cx: &mut App) {
 impl Workspace {
     /// How the terminal of `record` starts: attached to the host its row names when that runs, in
     /// a new host when persistent terminals are on and one can start, else in the app's process.
-    /// Restored text (`record.scrollback`) is replayed only in the app's process, so a terminal
-    /// restored without a live host stays there, as it would without hosts.
+    /// Restored text (`record.scrollback`) goes to the new host as its seed.
     pub(super) fn start_for(
         &mut self,
         record: &SessionRecord,
         options: &SpawnOptions,
+        cx: &mut App,
+    ) -> Start {
+        let (may_host, binary) = (self.may_host(options, cx), host_binary().cloned());
+        self.start_with(record, options, may_host, binary, cx)
+    }
+
+    /// [`start_for`](Self::start_for) with the two facts it reads from the machine given: whether a host
+    /// may start, and the host program found.
+    pub(super) fn start_with(
+        &mut self,
+        record: &SessionRecord,
+        options: &SpawnOptions,
+        may_host: bool,
+        binary: Option<PathBuf>,
         cx: &mut App,
     ) -> Start {
         if let Some(id) = record.host_id.as_deref()
@@ -167,16 +180,14 @@ impl Workspace {
             let visible = self.shown_at_launch.contains(&record.id);
             return Start::Attach { socket, id: id.to_string(), visible };
         }
-        if record.scrollback.is_some() || !self.may_host(options, cx) {
+        // A terminal restored from text (its host is gone) starts a new host too, which draws the text first
+        // (`Spawn.seed`): in the app's process it would end with the next quit or update.
+        if !may_host {
             return Start::Local;
         }
-        let Some(binary) = host_binary() else { return Start::Local };
+        let Some(binary) = binary else { return Start::Local };
         match hosts::new_host_id() {
-            Ok(id) => Start::Host {
-                binary: binary.clone(),
-                data_dir: wormhole_core::storage::paths::data_dir(),
-                id,
-            },
+            Ok(id) => Start::Host { binary, data_dir: wormhole_core::storage::paths::data_dir(), id },
             Err(err) => {
                 tracing::warn!("no id for a session host, the terminal runs in the app: {err}");
                 Start::Local

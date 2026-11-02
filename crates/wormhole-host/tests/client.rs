@@ -106,6 +106,29 @@ fn a_hosted_terminal_echoes_what_is_typed() {
     wait_text(&pty, "hello hosted");
 }
 
+/// A terminal restored from text after its host is gone runs in a new host that draws the text first: the
+/// spawning client sees it, and so does a client that attaches later (the host's own screen has it).
+#[test]
+fn a_terminal_restored_from_text_runs_in_a_new_host_that_seeds_the_screen() {
+    let place = Place::new();
+    let options = StartOptions { restore: Some("old line one\nold line two\n"), ..options() };
+    let (pty, _events) = Pty::start_hosted(&place.command(), GRID, &options, launch("/bin/cat", &[]))
+        .expect("a hosted terminal");
+    assert!(pty.is_hosted(), "it runs in a host, not in the app");
+    wait_text(&pty, "old line two");
+    wait_text(&pty, "restored");
+    pty.write(b"typed now\r".as_slice());
+    wait_text(&pty, "typed now");
+    let seen = pty.screen_text();
+    assert!(seen.find("old line one") < seen.find("typed now"), "the old text is above: {seen}");
+    // A later attach gets the same from the host itself.
+    assert!(pty.detach());
+    drop(pty);
+    let (again, _events) = place.attach(true);
+    wait_text(&again, "old line one");
+    wait_text(&again, "typed now");
+}
+
 #[test]
 fn a_terminal_attached_again_after_detach_shows_the_screen_it_had() {
     let place = Place::new();
