@@ -217,7 +217,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                             &["theme"],
                             SettingState::Project("api-server".into()),
                             None,
-                            style::link_button("g-setting-edit", ui, "Edit in project", false)
+                            style::link_button("g-setting-edit", ui, "Edit in project", false) // text: sample (the gallery's specimen)
                                 .into_any_element(), // text: sample (the gallery's specimen)
                         )
                         .into_any_element(),
@@ -239,7 +239,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                             &[],
                             SettingState::Default,
                             None,
-                            style::link_button("g-setting-fonts", ui, "Edit in Fonts", true)
+                            style::link_button("g-setting-fonts", ui, "Edit in Fonts", true) // text: sample (the gallery's specimen)
                                 .into_any_element(), // text: sample (the gallery's specimen)
                         )
                         .into_any_element(),
