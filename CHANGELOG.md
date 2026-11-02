@@ -37,6 +37,15 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   30 s, 1 min or Off) in place of a threshold beside its switch. A value written in `config.json` that a menu
   does not list (a tab width of 3, a threshold of 45 s) is shown as it is and kept until you choose another.
   Theme mode lists Match system first, and the density menu still previews each option in the sidebar.
+- The primary colour and the branch colour in Settings are one colour control: a swatch with the colour's name
+  (or its code), opening the theme's own colour, the eight folder colours as the theme draws them, and
+  Custom…, with an area for saturation and brightness, a hue bar and a field for a hex code (↩ applies it, and
+  what isn't a colour is refused and says so). The branch can also follow the primary. Every colour can be
+  chosen, black and white too; a colour written in `config.json` shows as it is, and ⇥, ↩, the arrows and Esc
+  work it by keyboard.
+- Settings has a Changed page, first in the sidebar while any setting differs from its default, with how many
+  do. It lists them by page, each in its own control with its default beside it and a reset arrow, with Copy as
+  JSON (the changed values, ready for `config.json`) and Reset All…, which asks first.
 
 ### Changed
 
@@ -59,6 +68,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Settings shows one notice for information, warnings and errors, drawn on a solid blue, amber or red with
   its button on the same colour; every group inside a page has the same heading; every preview sits in the
   same frame; and every button in a row is as tall as the menus beside it.
+
+- Settings → Advanced → Reset to defaults… asks with the system's alert instead of a strip under the button:
+  Reset is red and Cancel is the default.
 
 ### Fixed
 

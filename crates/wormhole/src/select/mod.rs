@@ -565,7 +565,11 @@ fn option_row<V: Clone + PartialEq + 'static>(
         })
 }
 
+mod color_pick;
 mod menu;
+#[cfg(feature = "devctl")]
+pub use color_pick::devctl_open as devctl_open_color;
+pub use color_pick::{ColorChoice, ColorPickState, Picked, Swatch, Value, color_select};
 #[cfg(feature = "devctl")]
 pub use menu::devctl_open;
 pub use menu::{MenuLine, MenuOptions, menu_select};

@@ -97,6 +97,16 @@
 //! to 6,186, Agents from 10,460 to 10,486 and Appearance from 17,988 to 18,033 (a menu more: Icon theme,
 //! less its popover and trigger); Terminal fell from 11,421 to 11,340, Motion from 6,816 to 6,787.
 //!
+//!
+//! Step 7a of the Settings redesign: the primary and branch colours are one colour control each (a swatch and
+//! a name, its card built only while open) in place of a switch with a row of swatches under it and a menu with
+//! another: Appearance rose from 18,117 to 18,189. The nav counts the settings that differ for the Changed
+//! page's badge (one more read of the settings as JSON a frame, about 340), which paid for itself: the
+//! defaults they are compared with are made once now and not by every read (about 270 each), so the
+//! other pages stand within 10 of their old budgets, Sessions 89, Advanced 157 and Import 1,491 under (they read the
+//! settings more often); Profile rose by 65, the one page the new read costs more
+//! than the cache gives back. The Changed page, 5,541 over three changed settings, is new.
+//!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
 use gpui_kit::test::TestWindowExt as _;
@@ -106,6 +116,7 @@ use wormhole_core::config::settings_index::Query;
 use super::sections::{MotionPreview, MotionScene as Scene};
 use super::{Section, current_window, open_settings};
 use crate::perf::allocations::thread_counts;
+use crate::settings::update_settings;
 use crate::window::test_harness::{isolate_in, start};
 
 /// Allocations a frame may make over what the pages made when this budget was set.
@@ -114,31 +125,34 @@ const SLACK: u64 = 20;
 /// Allocations a third draw of each page made when the budget was set (the first two build what a window
 /// keeps), and of the results page of a search for a word found in several pages; a frame may make
 /// [`SLACK`] more.
-const BUDGET: [(&str, u64); 17] = [
-    ("Profile", 7051),
+const BUDGET: [(&str, u64); 18] = [
+    ("Profile", 7116),
+    // The Changed page is measured with three settings changed (Tab width, Wrap long lines, Blur), each in the
+    // row of its own page with its default under its name: 5,541.
+    ("Changed", 5541),
     // With the Worktrees group's switch for cloning build folders (356). Then the preview card of two split
     // terminals (its label, two panes with their headers, five runs of text each and a minimap's bars):
     // 12,441 measured, 1,150 more.
-    ("Terminal", 12441),
+    ("Terminal", 12435),
     // With the Liquid Glass row (16,810 before it came back).
     // The preview moved from the right-hand column into a card at the top of the page: 18,117 measured, 84
     // more (the card's own label, group and caption; the window it draws is the same).
-    ("Appearance", 18117),
+    ("Appearance", 18189),
     // The specimen is a card on the page now, not in the column: 8,266 measured, 26 fewer.
-    ("Fonts", 8266),
+    ("Fonts", 8260),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
     // The list preview is a card at the top of the page, with the column's second window gone: 13,612
     // measured, 2,828 fewer than the page and the column made together.
-    ("Sessions", 13612),
+    ("Sessions", 13523),
     // The preview card of the Changes panel and a diff: the panel's own file rows (four, with the folder
     // rows of the tree and the untracked head) and the diff view's own rows (a hunk head and six lines, each
     // a row with two gutters, a marker and its code): 8,367 measured, 3,136 more, about 340 for each of the
     // nine rows.
-    ("Git", 8367),
+    ("Git", 8361),
     // The banners are a card on the page: 8,793 measured, 44 more than in the column (the card's label,
     // group and caption).
-    ("Notifications", 8793),
+    ("Notifications", 8787),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
@@ -147,24 +161,24 @@ const BUDGET: [(&str, u64); 17] = [
     // The line that no agent was found became the empty list (a card with a title, the sentence and an
     // icon): 11,013 measured, 527 more, all of it the second text block's shaping and the card.
     // The agents list is a card on the page: 11,076 measured, 63 more than in the column.
-    ("Agents", 11076),
+    ("Agents", 11070),
     // The menu bar and the quick panel are a card on the page: 6,962 measured, 58 more than in the column.
-    ("MenuBar", 6962),
+    ("MenuBar", 6956),
     // Fell from 53,549 to 50,188 (measured) when the group labels, notices and buttons became one
     // component each; Terminal, Updates, Motion, Projects and Extensions fell by 3 to 589 with them.
-    ("Import", 50188),
+    ("Import", 48697),
     // Fell by 37 when the status became a tile row.
-    ("Updates", 5560),
+    ("Updates", 5552),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     // With the New programs group: the Developer Tools row, its description and its button (417).
-    ("Advanced", 5136),
-    ("Motion", 6784),
+    ("Advanced", 4979),
+    ("Motion", 6779),
     // The Trusted projects list, empty in the tests, says so in the empty list (title, hint, card):
     // 10,264 measured, 983 more than the one line it was.
-    ("Projects", 10264),
+    ("Projects", 10259),
     // Measured with the nav's Motion and Import rows, which came after the page.
-    ("Extensions", 2837),
+    ("Extensions", 2832),
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost
@@ -176,7 +190,7 @@ const BUDGET: [(&str, u64); 17] = [
     // every page reads as JSON each frame, are about 14 more.
     // The results no longer show the window's miniature beside them (it was in the column, whatever was
     // found): 8,042 measured, 4,221 fewer.
-    ("search", 8042),
+    ("search", 8036),
 ];
 
 /// What Appearance's Liquid Glass row adds, a switch with its line and Beta chip: it is on the page on
@@ -220,6 +234,17 @@ fn a_settings_frame_stays_within_its_allocation_budget(cx: &mut TestAppContext) 
     let mut measured = Vec::new();
     for section in Section::ALL {
         cx.update(|cx| page.update(cx, |page, cx| page.show_section(section, cx)));
+        // The Changed page is measured with three settings changed (and the nav listing it): over the
+        // defaults it is one line.
+        if section == Section::Changed {
+            cx.update(|cx| {
+                update_settings(cx, |s| {
+                    s.tab_width = 8;
+                    s.diff_wrap = true;
+                    s.blur = !crate::settings::Settings::default().blur;
+                })
+            });
+        }
         cx.run_until_parked();
         if section == Section::Import {
             // The page's own scan has run over the scratch home and found nothing; measure the page
@@ -233,6 +258,9 @@ fn a_settings_frame_stays_within_its_allocation_budget(cx: &mut TestAppContext) 
         let before = thread_counts();
         draw(cx, handle);
         measured.push((format!("{section:?}"), thread_counts().since(before)));
+        if section == Section::Changed {
+            cx.update(|cx| update_settings(cx, |s| *s = crate::settings::Settings::default()));
+        }
     }
     // A search: the results of a word found in several pages, over the pages' rows.
     cx.update(|cx| {

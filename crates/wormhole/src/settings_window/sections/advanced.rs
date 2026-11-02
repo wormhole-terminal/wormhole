@@ -12,14 +12,14 @@ use wormhole_core::storage::paths::data_dir;
     reason = "the keys are generated, one constant per message: naming each would list them twice"
 )]
 use wormhole_text::keys::*;
-use wormhole_text::{text, whole};
+use wormhole_text::text;
 
 use super::{open_button, open_in_editor, reveal};
 use crate::app_state::{app, app_mut};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore};
+use crate::settings_window::SettingsWindow;
 use crate::settings_window::registry::Setting;
-use crate::settings_window::{SettingsWindow, ui};
 use crate::style;
 
 pub(super) const SETTINGS: &[Setting] = &[
@@ -38,7 +38,7 @@ pub(super) const SETTINGS: &[Setting] = &[
             reveal(&data_dir().join("logs"), cx)
         })
     }),
-    Setting::custom("reset-settings", draw_reset).below(|w, cx| w.render_reset_question(cx)),
+    Setting::custom("reset-settings", draw_reset),
     Setting::custom("reset-tips", draw_reset_tips),
     Setting::custom("skip-scans", |_, _| {
         open_button(
@@ -70,53 +70,38 @@ fn draw_reset_tips(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
         .into_any_element()
 }
 
-/// The outlined danger button; pressed, the question in place under the row.
-fn draw_reset(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let changed = Values::of(cx.global::<SettingsStore>().user_settings()).changed_keys().len();
+/// The outlined danger button; pressed, the system's alert asks (`changed::ask_reset`).
+fn draw_reset(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let changed = changed_keys(cx);
     style::form_button("reset-settings")
         .danger()
         .outline()
         .label(text(SETTINGS_ADVANCED_RESET_TO_DEFAULTS))
-        .disabled(changed == 0 || window.confirm_reset)
+        .disabled(changed == 0)
         .tooltip(if changed == 0 {
             text(SETTINGS_ADVANCED_EVERY_SETTING_IS_AT_ITS_DEFAULT)
         } else {
             text(SETTINGS_ADVANCED_ASKS_FIRST)
         })
-        .on_click(cx.listener(|this, _, _, cx| {
-            this.confirm_reset = true;
-            cx.notify();
-        }))
+        .on_click(cx.listener(|this, _, window, cx| this.ask_reset_all(window, cx)))
         .into_any_element()
 }
 
+/// How many settings differ from their defaults, counted as `config.json` has them (an object of choices is
+/// one), which is what "Reset to defaults" puts back.
+fn changed_keys(cx: &App) -> usize {
+    Values::of(cx.global::<SettingsStore>().user_settings()).changed_keys().len()
+}
+
 impl SettingsWindow {
-    /// The reset's question, in place under its row once "Reset to defaults…" was pressed.
-    fn render_reset_question(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
-        if !self.confirm_reset {
-            return None;
+    /// Ask before every setting goes back to its default, then reset them (the terminals, notes and themes
+    /// are not settings and stay).
+    pub(in crate::settings_window) fn ask_reset_all(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let count = changed_keys(cx);
+        if count > 0 {
+            crate::settings_window::changed::ask_reset(window, cx, count, |cx| {
+                update_settings(cx, |s| *s = Settings::default());
+            });
         }
-        let ui = ui(cx);
-        let changed = Values::of(cx.global::<SettingsStore>().user_settings()).changed_keys().len();
-        Some(
-            style::notice(ui, style::NoticeKind::Danger, settings_advanced_reset_question(whole(changed)))
-                .child(
-                    style::notice_button_quiet("reset-cancel", ui, style::NoticeKind::Danger, cx)
-                        .label(text(SETTINGS_ADVANCED_CANCEL))
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.confirm_reset = false;
-                            cx.notify();
-                        })),
-                )
-                .child(
-                    style::notice_button("reset-confirm", ui, style::NoticeKind::Danger, cx)
-                        .label(text(SETTINGS_ADVANCED_RESET))
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.confirm_reset = false;
-                            update_settings(cx, |s| *s = Settings::default());
-                        })),
-                )
-                .into_any_element(),
-        )
     }
 }

@@ -32,6 +32,9 @@ use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, RowKeys, SettingParts, SettingState, TextRole};
 
+/// The widest the summary of a block's value grows on the Changed page before it is cut.
+const SUMMARY_MAX_W: f32 = 240.0;
+
 /// Draws part of a page that is more than a switch, a menu or a recorder.
 pub(super) type Draw = fn(&SettingsWindow, &mut Context<SettingsWindow>) -> AnyElement;
 /// Says something more current than the table's description (the font in use).
@@ -52,7 +55,7 @@ pub(super) enum Label {
 }
 
 impl Label {
-    fn words(&self) -> SharedString {
+    pub(super) fn words(&self) -> SharedString {
         match self {
             Self::Message(key) => text(*key).into(),
             Self::Counted(say, n) => say(*n).into(),
@@ -219,7 +222,7 @@ fn controls() -> &'static HashMap<&'static str, (Section, &'static Setting)> {
 }
 
 /// The control of the row `id`.
-fn control(id: &str) -> Option<&'static Setting> {
+pub(super) fn control(id: &str) -> Option<&'static Setting> {
     controls().get(id).map(|(_, setting)| *setting)
 }
 
@@ -287,15 +290,15 @@ impl ProjectSource {
 }
 
 /// What every row of a page needs to know, read once per draw.
-struct PageState {
-    ui: UiColors,
+pub(super) struct PageState {
+    pub(super) ui: UiColors,
     /// The user's own settings against the defaults.
-    values: Values,
+    pub(super) values: Values,
     project: Option<ProjectSource>,
 }
 
 impl PageState {
-    fn new(front: &FrontWindow, cx: &App) -> Self {
+    pub(super) fn new(front: &FrontWindow, cx: &App) -> Self {
         let store = cx.global::<SettingsStore>();
         Self {
             ui: ui(cx),
@@ -307,7 +310,7 @@ impl PageState {
 
 /// The person's current values of `keys` as JSON, for a row's Copy as JSON. Their own, not what Zen mode or
 /// a project overlays: the file is what is copied.
-fn current_json(cx: &App, keys: &[&str]) -> String {
+pub(super) fn current_json(cx: &App, keys: &[&str]) -> String {
     Values::of(cx.global::<SettingsStore>().user_settings()).json(keys)
 }
 
@@ -358,7 +361,7 @@ impl SettingsWindow {
                 let Some(setting) = self.drawn(entry, settings(cx)) else { continue };
                 shown += 1;
                 any_row |= !matches!(setting.control, Control::Block(_));
-                rows = rows.child(self.render_entry(entry, setting, &page, hits.get(entry.id), cx));
+                rows = rows.child(self.render_entry(entry, setting, &page, hits.get(entry.id), None, cx));
                 if let Some(below) = setting.below.and_then(|below| below(self, cx)) {
                     rows = rows.child(div().pb_2().child(below));
                 }
@@ -382,7 +385,7 @@ impl SettingsWindow {
 
     /// The control of `entry` if the page draws its row: shown for these settings (not behind a feature
     /// flag that is off).
-    fn drawn(&self, entry: &'static Entry, settings: &Settings) -> Option<&'static Setting> {
+    pub(super) fn drawn(&self, entry: &'static Entry, settings: &Settings) -> Option<&'static Setting> {
         if !entry.is_shown(settings) {
             return None;
         }
@@ -399,17 +402,23 @@ impl SettingsWindow {
         group.entries.iter().any(|entry| self.drawn(entry, settings).is_some())
     }
 
-    /// One setting: a block as it draws itself, anything else in a `style::setting` row.
-    fn render_entry(
+    /// One setting: a block as it draws itself, anything else in a `style::setting` row. `default` is the
+    /// Changed page's: the line under the label that says what the setting is by default (it takes the
+    /// description's place, which the setting's own page keeps), and a block, which draws a whole page's
+    /// worth, is a row there that says what it is set to.
+    pub(super) fn render_entry(
         &self,
         entry: &'static Entry,
         setting: &'static Setting,
         page: &PageState,
         hit: Option<&Hit>,
+        default: Option<SharedString>,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let ui = page.ui;
-        if let Control::Block(draw) = &setting.control {
+        let block = matches!(setting.control, Control::Block(_));
+        if block && default.is_none() {
+            let Control::Block(draw) = &setting.control else { return div().into_any_element() };
             return draw(self, cx);
         }
         // The person's own values: Zen mode draws the window with less, and says so at the top of the page.
@@ -427,6 +436,7 @@ impl SettingsWindow {
                 &project.dir,
                 if entry.id == "theme" { "theme.json" } else { "config.json" },
             ))),
+            None if default.is_some() => default.clone(),
             None => setting
                 .describe
                 .and_then(|describe| describe(self, cx))
@@ -435,7 +445,7 @@ impl SettingsWindow {
         // A description of the moment is not the table's: its search marks don't fit it.
         let found_description = hit
             .and_then(|hit| hit.description_range.clone())
-            .filter(|_| setting.describe.is_none() && project.is_none());
+            .filter(|_| setting.describe.is_none() && project.is_none() && default.is_none());
         let extra = project.map(|project| {
             let root = project.root.clone();
             style::link_button(
@@ -452,7 +462,18 @@ impl SettingsWindow {
         });
         let keys = entry.keys;
         let chip = setting.chip.and_then(|chip| chip(self, cx));
-        let control = self.render_control(setting, entry.label(), current, ui, cx);
+        let control = if block {
+            // Only the Changed page gets here with a block: what it is set to, in one muted line.
+            div()
+                .max_w(px(SUMMARY_MAX_W))
+                .truncate()
+                .text_caption()
+                .text_color(ui.muted)
+                .child(current_json(cx, entry.keys))
+                .into_any_element()
+        } else {
+            self.render_control(setting, entry.label(), current, ui, cx)
+        };
         // The row the palette asked for (`reveal_row`): marked as a search hit on its whole
         // label, and anchored so the page can scroll to it.
         let revealed = self.revealed_row().filter(|(id, _)| *id == entry.id).map(|(_, anchor)| anchor);
@@ -465,7 +486,7 @@ impl SettingsWindow {
             SettingParts {
                 label: entry.label().into(),
                 description,
-                visible_hint: entry.visible_hint && project.is_none(),
+                visible_hint: (entry.visible_hint || default.is_some()) && project.is_none(),
                 chip,
                 keys: RowKeys { keys, json: current_json },
                 state,
@@ -545,7 +566,7 @@ impl SettingsWindow {
             let mut rows = div().flex().flex_col().child(head);
             for hit in &hits[start..end] {
                 if let Some(setting) = control(hit.entry.id) {
-                    rows = rows.child(self.render_entry(hit.entry, setting, &page, Some(hit), cx));
+                    rows = rows.child(self.render_entry(hit.entry, setting, &page, Some(hit), None, cx));
                 }
             }
             column = column.child(rows.rule_bottom(ui));

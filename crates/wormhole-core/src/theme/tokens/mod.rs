@@ -64,6 +64,7 @@ mod file;
 mod fixes;
 mod format;
 mod high_contrast;
+mod hsv;
 mod model;
 mod own;
 mod resolve;
@@ -97,6 +98,7 @@ pub use self::format::{
     migrate, new_key, old_key, read_theme_file, slug, starter, write_v1,
 };
 pub use self::high_contrast::HIGH_CONTRAST_RING;
+pub use self::hsv::Hsv;
 use self::model::auto_appearance;
 pub use self::model::{Appearance, Metrics, SyntaxStyle, TerminalColors};
 use self::resolve::build;

@@ -9,6 +9,7 @@
 //! test fails while a `config.json` key has neither a row nor a place in [`UNLISTED`].
 
 mod copy;
+mod defaults;
 #[cfg(test)]
 mod english;
 mod key_path;
@@ -17,6 +18,8 @@ mod table;
 
 use wormhole_text::keys::SETTINGS_NAV_PREVIEW;
 use wormhole_text::{Key, Language, text, text_in};
+
+use std::sync::LazyLock;
 
 use serde_json::{Map, Value};
 
@@ -30,6 +33,10 @@ pub enum SectionId {
     /// The profile Wormhole is in: its name, folders, environment, git identity and agent logins.
     /// The nav shows it as the card above its list, not as a row of it.
     Profile,
+    /// Every setting that differs from its default, in its own control, each reset by itself or all at
+    /// once. It holds no settings of its own (no group), and the nav lists it only while something differs
+    /// (`Values::changed_entries` is what it shows).
+    Changed,
     Terminal,
     Appearance,
     Fonts,
@@ -55,6 +62,8 @@ pub enum SectionId {
 pub enum NavGroup {
     /// The profile page: the card above the list, in no run of it.
     Profile,
+    /// The Changed page, a run of its own between the profile card and the first section.
+    Changed,
     /// The terminal and how it looks.
     Terminal,
     /// What the window shows: terminals, changes, notifications and the agents.
@@ -70,7 +79,7 @@ impl NavGroup {
     pub fn title(self) -> &'static str {
         match self {
             NavGroup::Preview => text(SETTINGS_NAV_PREVIEW),
-            NavGroup::Profile | NavGroup::Terminal | NavGroup::Work | NavGroup::App => "",
+            NavGroup::Profile | NavGroup::Changed | NavGroup::Terminal | NavGroup::Work | NavGroup::App => "",
         }
     }
 }
@@ -185,8 +194,9 @@ impl Entry {
 }
 
 impl SectionId {
-    pub const ALL: [SectionId; 16] = [
+    pub const ALL: [SectionId; 17] = [
         SectionId::Profile,
+        SectionId::Changed,
         SectionId::Terminal,
         SectionId::Appearance,
         SectionId::Fonts,
@@ -288,6 +298,13 @@ pub fn entry(id: &str) -> Option<(SectionId, &'static Group, &'static Entry)> {
 /// Settings has a page of them.
 pub const UNLISTED: &[&str] = &["notifications", "folder_colors", "files_pinned", "features"];
 
+/// The defaults as values, made once: they never change, and every frame of the settings window reads them
+/// beside the current ones.
+fn default_map() -> &'static Map<String, Value> {
+    static DEFAULTS: LazyLock<Map<String, Value>> = LazyLock::new(|| as_map(&Settings::default()));
+    &DEFAULTS
+}
+
 fn as_map(settings: &Settings) -> Map<String, Value> {
     match serde_json::to_value(settings) {
         Ok(Value::Object(map)) => map,
@@ -298,22 +315,36 @@ fn as_map(settings: &Settings) -> Map<String, Value> {
 /// The settings as values to compare, and the defaults beside them.
 pub struct Values {
     current: Map<String, Value>,
-    defaults: Map<String, Value>,
+    defaults: &'static Map<String, Value>,
 }
 
 impl Values {
     pub fn of(settings: &Settings) -> Self {
-        Self { current: as_map(settings), defaults: as_map(&Settings::default()) }
+        Self { current: as_map(settings), defaults: default_map() }
     }
 
     /// Whether `key` is set to something other than its default.
     pub fn changed(&self, key: &str) -> bool {
-        key_path::get(&self.current, key) != key_path::get(&self.defaults, key)
+        key_path::get(&self.current, key) != key_path::get(self.defaults, key)
     }
 
     /// Whether any key of `entry` differs from its default.
     pub fn entry_changed(&self, entry: &Entry) -> bool {
         entry.keys.iter().any(|key| self.changed(key))
+    }
+
+    /// Every row that differs from its default and that `settings` shows, in the order of the pages: what
+    /// the Changed page lists. A row of a page that is hidden (a flag is off) or that sits behind a
+    /// switch that is off is left out with its page, as the pages leave it out.
+    pub fn changed_rows(&self, settings: &Settings) -> Vec<ChangedRow> {
+        SectionId::ALL
+            .into_iter()
+            .filter(|section| section.is_visible(settings))
+            .flat_map(|section| {
+                section.entries().map(move |(group, entry)| ChangedRow { section, group, entry })
+            })
+            .filter(|row| self.entry_changed(row.entry) && row.entry.is_shown(settings))
+            .collect()
     }
 
     /// Every key that differs from its default, sorted: what "Reset all settings" puts back.
@@ -325,12 +356,34 @@ impl Values {
     }
 }
 
+/// One row of the Changed page: a setting that differs from its default and where it lives.
+#[derive(Clone, Copy)]
+pub struct ChangedRow {
+    pub section: SectionId,
+    pub group: &'static Group,
+    pub entry: &'static Entry,
+}
+
+impl Values {
+    /// The keys of `rows` that differ from their default, each once, in the rows' order: what the Changed
+    /// page copies and what its Reset All puts back.
+    pub fn changed_keys_of<'a>(&self, rows: impl IntoIterator<Item = &'a ChangedRow>) -> Vec<&'static str> {
+        let mut keys: Vec<&'static str> = Vec::new();
+        for key in rows.into_iter().flat_map(|row| row.entry.keys.iter().copied()) {
+            if self.changed(key) && !keys.contains(&key) {
+                keys.push(key);
+            }
+        }
+        keys
+    }
+}
+
 /// `settings` with `keys` back at their defaults (the reset arrow of a row).
 pub fn reset(settings: &Settings, keys: &[&str]) -> Settings {
     let mut map = as_map(settings);
-    let defaults = as_map(&Settings::default());
+    let defaults = default_map();
     for key in keys {
-        match key_path::get(&defaults, key) {
+        match key_path::get(defaults, key) {
             Some(value) => key_path::set(&mut map, key, value.clone()),
             // Stored only while it differs (the motion choices): its default is that it isn't there.
             None => key_path::remove(&mut map, key),
@@ -506,6 +559,7 @@ mod tests {
             names.iter().map(|(_, section)| *section).collect::<Vec<_>>(),
             [
                 SectionId::Profile,
+                SectionId::Changed,
                 SectionId::Terminal,
                 SectionId::Appearance,
                 SectionId::Fonts,
@@ -533,7 +587,14 @@ mod tests {
         }
         assert_eq!(
             runs,
-            [NavGroup::Profile, NavGroup::Terminal, NavGroup::Work, NavGroup::App, NavGroup::Preview]
+            [
+                NavGroup::Profile,
+                NavGroup::Changed,
+                NavGroup::Terminal,
+                NavGroup::Work,
+                NavGroup::App,
+                NavGroup::Preview
+            ]
         );
         for run in runs {
             assert_eq!(!run.title().is_empty(), run == NavGroup::Preview, "{run:?}");
@@ -544,7 +605,8 @@ mod tests {
     fn every_section_has_a_page() {
         for section in SectionId::ALL {
             assert!(!section.title().is_empty());
-            assert!(!section.groups().is_empty(), "{section:?} has nothing to show");
+            // The Changed page shows the other pages' rows, not rows of its own.
+            assert_eq!(section.groups().is_empty(), section == SectionId::Changed, "{section:?}");
         }
     }
 
@@ -562,6 +624,37 @@ mod tests {
         assert_eq!(back.tab_width, Settings::default().tab_width);
         assert!(back.diff_wrap, "the other changes stay");
         assert!(Values::of(&Settings::default()).changed_keys().is_empty());
+    }
+
+    #[test]
+    fn the_changed_rows_are_the_shown_rows_that_differ_in_the_order_of_the_pages() {
+        let none = Values::of(&Settings::default());
+        assert!(none.changed_rows(&Settings::default()).is_empty());
+
+        let settings = Settings {
+            diff_wrap: true,
+            tab_width: 8,
+            blur: !Settings::default().blur,
+            ..Settings::default()
+        };
+        let values = Values::of(&settings);
+        let rows = values.changed_rows(&settings);
+        let ids: Vec<&str> = rows.iter().map(|row| row.entry.id).collect();
+        assert_eq!(ids.len(), 3, "{ids:?}");
+        for id in ["diff-wrap", "tab-width", "blur"] {
+            assert!(ids.contains(&id), "{id} in {ids:?}");
+        }
+        let places: Vec<usize> = rows
+            .iter()
+            .map(|row| SectionId::ALL.iter().position(|s| *s == row.section).expect("a section"))
+            .collect();
+        assert!(places.windows(2).all(|pair| pair[0] <= pair[1]), "in the order of the pages: {places:?}");
+        assert!(rows.iter().all(|row| row.section != SectionId::Changed));
+
+        // Only what differs is copied and put back, each key once.
+        assert_eq!(values.changed_keys_of(&rows).len(), 3);
+        let json = values.json(&values.changed_keys_of(&rows));
+        assert!(json.contains("\"tab_width\": 8") && json.contains("\"diff_wrap\": true"), "{json}");
     }
 
     #[test]

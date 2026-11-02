@@ -10,22 +10,20 @@ use wormhole_text::{text, whole};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::button::ButtonVariants;
-use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::component::slider::SliderEvent;
 use gpui_kit::*;
-use wormhole_core::config::BranchColor;
 use wormhole_core::config::settings_index::{self, Query};
 use wormhole_core::theme::fonts::FontSlot;
 
 use super::font_picker::FontPickerState;
 use crate::app_state::app;
 use crate::platform::vibrancy::Blur;
+use crate::select::ColorPickState;
 use crate::settings::{SettingsStore, update_settings};
 use crate::settings::{UiColors, settings};
 use crate::style::TitleDrag as _;
 use crate::style::{self, TextRole};
-use crate::theme_bridge;
 
 use super::open::REVEAL_INSET;
 use super::{
@@ -39,29 +37,13 @@ impl SettingsWindow {
         let search =
             cx.new(|cx| InputState::new(window, cx).placeholder(text(SETTINGS_WINDOW_SEARCH_SETTINGS)));
         let font_picker = FontPickerState::new(window, cx);
-        let primary_picker = cx.new(|cx| ColorPickerState::new(window, cx));
-        let branch_picker = cx.new(|cx| ColorPickerState::new(window, cx));
+        let primary_pick = cx.new(|cx| ColorPickState::new(window, cx));
+        let branch_pick = cx.new(|cx| ColorPickState::new(window, cx));
         let asked_opacity = cx.global::<SettingsStore>().asked_opacity();
         let opacity_slider = slider(30.0, 100.0, 1.0, (asked_opacity * 100.0).round(), cx);
         let line_height_slider = slider(1.0, 2.0, 0.05, current.line_height, cx);
         let (projects, project_subscriptions) = sections::ProjectPicker::new(window, cx);
         let mut subscriptions = vec![
-            cx.subscribe_in(&primary_picker, window, |_, _, event: &ColorPickerEvent, _, cx| {
-                let ColorPickerEvent::Change(Some(color)) = event else { return };
-                let hex = theme_bridge::color(*color).with_alpha(1.0).to_hex();
-                // Dragging a slider fires for shades that round to the same hex.
-                if settings(cx).primary_color != hex {
-                    update_settings(cx, |s| s.choose_primary(hex));
-                }
-            }),
-            cx.subscribe_in(&branch_picker, window, |_, _, event: &ColorPickerEvent, _, cx| {
-                let ColorPickerEvent::Change(Some(color)) = event else { return };
-                let hex = theme_bridge::color(*color).with_alpha(1.0).to_hex();
-                let s = settings(cx);
-                if s.branch_color != BranchColor::Custom || s.branch_color_custom != hex {
-                    update_settings(cx, |s| s.choose_branch_color(hex));
-                }
-            }),
             cx.subscribe_in(&search, window, |this, input, event: &InputEvent, _, cx| {
                 if let InputEvent::Change = event {
                     this.show_results = !Query::new(&input.read(cx).value()).is_empty();
@@ -127,14 +109,14 @@ impl SettingsWindow {
             font_picker,
             motion_previews: None,
             recording: None,
-            primary_picker,
-            branch_picker,
+            primary_pick,
+            branch_pick,
             opacity_slider,
             line_height_slider,
             specimen: FontSlot::Terminal,
             themes_all: false,
             sidebar_preview: None,
-            confirm_reset: false,
+            changed_copied: false,
             others_open: false,
             profile_form: None,
             confirm_delete_profile: false,
@@ -217,7 +199,6 @@ impl SettingsWindow {
             self.scan_probes(cx);
         }
         self.show_results = false;
-        self.confirm_reset = false;
         self.confirm_delete_profile = false;
         self.revealed = None;
         cx.notify();
@@ -262,7 +243,6 @@ impl SettingsWindow {
             || self.close_probe_sheet(cx)
             || self.font_picker.open.take().is_some()
             || self.end_recording(cx)
-            || std::mem::take(&mut self.confirm_reset)
             || std::mem::take(&mut self.confirm_delete_profile)
         {
             cx.notify();
@@ -285,11 +265,18 @@ impl SettingsWindow {
         }
     }
 
-    /// Point the color pickers at the colors in effect (the primary, the branch's; the theme's
-    /// own while none is chosen), unless they already show them.
-    pub(super) fn sync_color_pickers(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        sync_picker(&self.primary_picker, "primary", window, cx);
-        sync_picker(&self.branch_picker, "git.branch", window, cx);
+    /// Point the colour controls' editors at the colours in force (the primary's, the branch's), unless a
+    /// change of their own put them there.
+    pub(super) fn sync_color_picks(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let (primary, branch) = sections::colors_in_force(cx.global::<SettingsStore>());
+        self.primary_pick.update(cx, |pick, cx| pick.follow(primary, window, cx));
+        self.branch_pick.update(cx, |pick, cx| pick.follow(branch, window, cx));
+    }
+
+    /// Whether the primary's field says that what was typed is not a colour.
+    #[cfg(test)]
+    pub(super) fn primary_pick_says_bad(&self, cx: &App) -> bool {
+        self.primary_pick.read(cx).says_bad()
     }
 
     /// The page's title row and the line under it; in a search, the results' count instead.
@@ -343,7 +330,7 @@ impl SettingsWindow {
 
 impl Render for SettingsWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        self.sync_color_pickers(window, cx);
+        self.sync_color_picks(window, cx);
         self.sync_sliders(window, cx);
         self.sync_profile_form(window, cx);
         self.rem = window.rem_size();
@@ -359,6 +346,7 @@ impl Render for SettingsWindow {
         let surfaces = style::window_surfaces(cx, translucent);
         let query = Query::new(&self.search.read(cx).value());
         let hits = settings_index::search_visible(&query, settings(cx)).len();
+        let changed = super::changed::count(cx);
 
         let body = if self.show_results && hits == 0 {
             self.render_no_results(&query, ui, cx)
@@ -426,7 +414,7 @@ impl Render for SettingsWindow {
             // Drag the window by its top strip (the title bar is transparent); first, so it is
             // behind what is drawn over it (`style::TitleDrag`).
             .child(div().absolute().top_0().left_0().right_0().h(px(style::TITLE_ROW_H)).title_drag())
-            .child(self.render_nav(&query, surfaces.panel, cx))
+            .child(self.render_nav(&query, changed, surfaces.panel, cx))
             .child(content)
             .children(self.render_new_profile(cx))
             .children(self.render_probe_sheet(window, cx))
@@ -548,16 +536,5 @@ impl SettingsWindow {
                     ),
             )
             .into_any_element()
-    }
-}
-
-/// Point `picker` at `token`'s color in effect, unless it already shows it. Compared as the hex
-/// code's bytes so a slider drag in progress, whose color rounds to the setting just saved, is not
-/// rewritten under the user's hand (and a frame builds no strings to tell).
-fn sync_picker(picker: &Entity<ColorPickerState>, token: &str, window: &mut Window, cx: &mut App) {
-    let Some(color) = cx.global::<SettingsStore>().tokens.get(token) else { return };
-    let shown = picker.read(cx).value().map(|c| theme_bridge::color(c).to_bytes());
-    if shown != Some(color.to_bytes()) {
-        picker.update(cx, |picker, cx| picker.set_value(theme_bridge::hsla(color), window, cx));
     }
 }

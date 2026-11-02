@@ -7,371 +7,371 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Session Hosts"
-pub const HOSTS_WINDOW_TITLE: Key = Key::new(148);
+pub const HOSTS_WINDOW_TITLE: Key = Key::new(158);
 /// "Hosts folder"
-pub const HOSTS_HEADER_FOLDER: Key = Key::new(150);
+pub const HOSTS_HEADER_FOLDER: Key = Key::new(160);
 /// "Persistent terminals"
-pub const HOSTS_HEADER_FLAG: Key = Key::new(151);
+pub const HOSTS_HEADER_FLAG: Key = Key::new(161);
 /// "On"
-pub const HOSTS_HEADER_FLAG_ON: Key = Key::new(152);
+pub const HOSTS_HEADER_FLAG_ON: Key = Key::new(162);
 /// "Off"
-pub const HOSTS_HEADER_FLAG_OFF: Key = Key::new(153);
+pub const HOSTS_HEADER_FLAG_OFF: Key = Key::new(163);
 /// "Host program"
-pub const HOSTS_HEADER_BINARY: Key = Key::new(154);
+pub const HOSTS_HEADER_BINARY: Key = Key::new(164);
 /// "Not found beside the app"
-pub const HOSTS_HEADER_BINARY_MISSING: Key = Key::new(155);
+pub const HOSTS_HEADER_BINARY_MISSING: Key = Key::new(165);
 /// "None: the app runs from a disk image or a temporary copy"
-pub const HOSTS_HEADER_BINARY_DISPOSABLE: Key = Key::new(156);
+pub const HOSTS_HEADER_BINARY_DISPOSABLE: Key = Key::new(166);
 /// "Attached"
-pub const HOSTS_COUNT_ATTACHED: Key = Key::new(157);
+pub const HOSTS_COUNT_ATTACHED: Key = Key::new(167);
 /// "Detached"
-pub const HOSTS_COUNT_DETACHED: Key = Key::new(158);
+pub const HOSTS_COUNT_DETACHED: Key = Key::new(168);
 /// "Orphans"
-pub const HOSTS_COUNT_ORPHAN: Key = Key::new(159);
+pub const HOSTS_COUNT_ORPHAN: Key = Key::new(169);
 /// "Stale"
-pub const HOSTS_COUNT_STALE: Key = Key::new(160);
+pub const HOSTS_COUNT_STALE: Key = Key::new(170);
 /// "Looking for session hosts…"
-pub const HOSTS_LOADING: Key = Key::new(162);
+pub const HOSTS_LOADING: Key = Key::new(172);
 /// "Persistent terminals are off, so new terminals start inside the app. Hosts left over from earlier are listed below."
-pub const HOSTS_OFF_NOTE: Key = Key::new(163);
+pub const HOSTS_OFF_NOTE: Key = Key::new(173);
 /// "Attached"
-pub const HOSTS_STANDING_ATTACHED: Key = Key::new(164);
+pub const HOSTS_STANDING_ATTACHED: Key = Key::new(174);
 /// "Detached"
-pub const HOSTS_STANDING_DETACHED: Key = Key::new(165);
+pub const HOSTS_STANDING_DETACHED: Key = Key::new(175);
 /// "Orphan"
-pub const HOSTS_STANDING_ORPHAN: Key = Key::new(166);
+pub const HOSTS_STANDING_ORPHAN: Key = Key::new(176);
 /// "Stale"
-pub const HOSTS_STANDING_STALE: Key = Key::new(167);
+pub const HOSTS_STANDING_STALE: Key = Key::new(177);
 /// "Running, no terminal of this app holds it"
-pub const HOSTS_STANDING_DETACHED_NOTE: Key = Key::new(169);
+pub const HOSTS_STANDING_DETACHED_NOTE: Key = Key::new(179);
 /// "Running, and no saved terminal names it"
-pub const HOSTS_STANDING_ORPHAN_NOTE: Key = Key::new(170);
+pub const HOSTS_STANDING_ORPHAN_NOTE: Key = Key::new(180);
 /// "The meta file can’t be read"
-pub const HOSTS_STALE_UNREADABLE: Key = Key::new(171);
+pub const HOSTS_STALE_UNREADABLE: Key = Key::new(181);
 /// "Its process is gone"
-pub const HOSTS_STALE_PID_GONE: Key = Key::new(172);
+pub const HOSTS_STALE_PID_GONE: Key = Key::new(182);
 /// "No socket where the meta file says"
-pub const HOSTS_STALE_SOCKET_MISSING: Key = Key::new(173);
+pub const HOSTS_STALE_SOCKET_MISSING: Key = Key::new(183);
 /// "A socket with no meta file"
-pub const HOSTS_STALE_NO_META: Key = Key::new(174);
+pub const HOSTS_STALE_NO_META: Key = Key::new(184);
 /// "Host process"
-pub const HOSTS_FIELD_HOST_PID: Key = Key::new(175);
+pub const HOSTS_FIELD_HOST_PID: Key = Key::new(185);
 /// "Shell process"
-pub const HOSTS_FIELD_SHELL_PID: Key = Key::new(176);
+pub const HOSTS_FIELD_SHELL_PID: Key = Key::new(186);
 /// "Running now"
-pub const HOSTS_FIELD_PROGRAM: Key = Key::new(177);
+pub const HOSTS_FIELD_PROGRAM: Key = Key::new(187);
 /// "Folder"
-pub const HOSTS_FIELD_FOLDER: Key = Key::new(178);
+pub const HOSTS_FIELD_FOLDER: Key = Key::new(188);
 /// "Started"
-pub const HOSTS_FIELD_STARTED: Key = Key::new(179);
+pub const HOSTS_FIELD_STARTED: Key = Key::new(189);
 /// "Host version"
-pub const HOSTS_FIELD_VERSION: Key = Key::new(180);
+pub const HOSTS_FIELD_VERSION: Key = Key::new(190);
 /// "Protocol"
-pub const HOSTS_FIELD_PROTOCOL: Key = Key::new(181);
+pub const HOSTS_FIELD_PROTOCOL: Key = Key::new(191);
 /// "Answers"
-pub const HOSTS_FIELD_ANSWER: Key = Key::new(182);
+pub const HOSTS_FIELD_ANSWER: Key = Key::new(192);
 /// "Memory"
-pub const HOSTS_FIELD_MEMORY: Key = Key::new(183);
+pub const HOSTS_FIELD_MEMORY: Key = Key::new(193);
 /// "Connection"
-pub const HOSTS_FIELD_LINK: Key = Key::new(184);
+pub const HOSTS_FIELD_LINK: Key = Key::new(194);
 /// "Socket"
-pub const HOSTS_FIELD_SOCKET: Key = Key::new(185);
+pub const HOSTS_FIELD_SOCKET: Key = Key::new(195);
 /// "Meta file"
-pub const HOSTS_FIELD_META: Key = Key::new(186);
+pub const HOSTS_FIELD_META: Key = Key::new(196);
 /// "Unknown"
-pub const HOSTS_UNKNOWN: Key = Key::new(187);
+pub const HOSTS_UNKNOWN: Key = Key::new(197);
 /// "Not asked"
-pub const HOSTS_ANSWER_NOT_ASKED: Key = Key::new(197);
+pub const HOSTS_ANSWER_NOT_ASKED: Key = Key::new(207);
 /// "Yes, but its program has ended"
-pub const HOSTS_ANSWER_EXITED: Key = Key::new(199);
+pub const HOSTS_ANSWER_EXITED: Key = Key::new(209);
 /// "Yes, but it speaks no protocol this app does"
-pub const HOSTS_ANSWER_INCOMPATIBLE: Key = Key::new(200);
+pub const HOSTS_ANSWER_INCOMPATIBLE: Key = Key::new(210);
 /// "Repaint, then stream"
-pub const HOSTS_LINK_SYNC: Key = Key::new(202);
+pub const HOSTS_LINK_SYNC: Key = Key::new(212);
 /// "Raw stream"
-pub const HOSTS_LINK_RAW: Key = Key::new(203);
+pub const HOSTS_LINK_RAW: Key = Key::new(213);
 /// "Headless (not on screen)"
-pub const HOSTS_LINK_HEADLESS: Key = Key::new(204);
+pub const HOSTS_LINK_HEADLESS: Key = Key::new(214);
 /// "Connection lost"
-pub const HOSTS_LINK_LOST: Key = Key::new(206);
+pub const HOSTS_LINK_LOST: Key = Key::new(216);
 /// "Detached; the host keeps running"
-pub const HOSTS_LINK_DETACHED: Key = Key::new(207);
+pub const HOSTS_LINK_DETACHED: Key = Key::new(217);
 /// "Connecting…"
-pub const HOSTS_LINK_NONE: Key = Key::new(208);
+pub const HOSTS_LINK_NONE: Key = Key::new(218);
 /// "End"
-pub const HOSTS_ACTION_END: Key = Key::new(209);
+pub const HOSTS_ACTION_END: Key = Key::new(219);
 /// "Forget"
-pub const HOSTS_ACTION_FORGET: Key = Key::new(210);
+pub const HOSTS_ACTION_FORGET: Key = Key::new(220);
 /// "Copy details"
-pub const HOSTS_ACTION_COPY: Key = Key::new(211);
+pub const HOSTS_ACTION_COPY: Key = Key::new(221);
 /// "Copy all"
-pub const HOSTS_ACTION_COPY_ALL: Key = Key::new(212);
+pub const HOSTS_ACTION_COPY_ALL: Key = Key::new(222);
 /// "Copied"
-pub const HOSTS_ACTION_COPIED: Key = Key::new(213);
+pub const HOSTS_ACTION_COPIED: Key = Key::new(223);
 /// "The program in it gets a hangup and ends."
-pub const HOSTS_END_DETAIL: Key = Key::new(216);
+pub const HOSTS_END_DETAIL: Key = Key::new(226);
 /// "End Host"
-pub const HOSTS_END_CONFIRM: Key = Key::new(217);
+pub const HOSTS_END_CONFIRM: Key = Key::new(227);
 /// "The socket belongs to another user"
-pub const HOSTS_FAILURE_NOT_OURS: Key = Key::new(227);
+pub const HOSTS_FAILURE_NOT_OURS: Key = Key::new(237);
 /// "The socket belongs to another host"
-pub const HOSTS_FAILURE_OTHER_HOST: Key = Key::new(228);
+pub const HOSTS_FAILURE_OTHER_HOST: Key = Key::new(238);
 /// "The host hung up"
-pub const HOSTS_FAILURE_HUNG_UP: Key = Key::new(229);
+pub const HOSTS_FAILURE_HUNG_UP: Key = Key::new(239);
 /// "The host answered something unexpected"
-pub const HOSTS_FAILURE_UNEXPECTED: Key = Key::new(230);
+pub const HOSTS_FAILURE_UNEXPECTED: Key = Key::new(240);
 /// "Timed out"
-pub const HOSTS_FAILURE_TIMED_OUT: Key = Key::new(231);
+pub const HOSTS_FAILURE_TIMED_OUT: Key = Key::new(241);
 /// "Session host unavailable: it does not accept this app"
-pub const HOSTS_UNAVAILABLE_REFUSED: Key = Key::new(233);
+pub const HOSTS_UNAVAILABLE_REFUSED: Key = Key::new(243);
 /// "Session host unavailable: it is too old for this app"
-pub const HOSTS_UNAVAILABLE_TOO_OLD: Key = Key::new(234);
+pub const HOSTS_UNAVAILABLE_TOO_OLD: Key = Key::new(244);
 /// "Session host unavailable: it needs a newer Wormhole"
-pub const HOSTS_UNAVAILABLE_TOO_NEW: Key = Key::new(235);
+pub const HOSTS_UNAVAILABLE_TOO_NEW: Key = Key::new(245);
 /// "Session host unavailable: it has all the connections it allows"
-pub const HOSTS_UNAVAILABLE_BUSY: Key = Key::new(236);
+pub const HOSTS_UNAVAILABLE_BUSY: Key = Key::new(246);
 /// "Session host unavailable: it did not answer"
-pub const HOSTS_UNAVAILABLE_TIMED_OUT: Key = Key::new(237);
+pub const HOSTS_UNAVAILABLE_TIMED_OUT: Key = Key::new(247);
 /// "Session host unavailable: nothing answers on its socket"
-pub const HOSTS_UNAVAILABLE_UNREACHABLE: Key = Key::new(238);
+pub const HOSTS_UNAVAILABLE_UNREACHABLE: Key = Key::new(248);
 /// "Session host unavailable: the connection failed"
-pub const HOSTS_UNAVAILABLE_FAILED: Key = Key::new(239);
+pub const HOSTS_UNAVAILABLE_FAILED: Key = Key::new(249);
 /// "End host"
-pub const HOSTS_UNAVAILABLE_END: Key = Key::new(240);
+pub const HOSTS_UNAVAILABLE_END: Key = Key::new(250);
 /// "Open a new terminal here"
-pub const HOSTS_UNAVAILABLE_NEW: Key = Key::new(241);
+pub const HOSTS_UNAVAILABLE_NEW: Key = Key::new(251);
 /// "Session host not responding"
-pub const HOSTS_NOT_RESPONDING: Key = Key::new(242);
+pub const HOSTS_NOT_RESPONDING: Key = Key::new(252);
 /// "Wait"
-pub const HOSTS_NOT_RESPONDING_WAIT: Key = Key::new(243);
+pub const HOSTS_NOT_RESPONDING_WAIT: Key = Key::new(253);
 /// "End host"
-pub const HOSTS_NOT_RESPONDING_END: Key = Key::new(244);
+pub const HOSTS_NOT_RESPONDING_END: Key = Key::new(254);
 /// "Last heard"
-pub const HOSTS_FIELD_HEARD: Key = Key::new(245);
+pub const HOSTS_FIELD_HEARD: Key = Key::new(255);
 /// "Try again"
-pub const HOSTS_UNAVAILABLE_RETRY: Key = Key::new(248);
+pub const HOSTS_UNAVAILABLE_RETRY: Key = Key::new(258);
 /// "Its session host is still running, but this app can’t show it. Ending the host ends the program in it; leaving it running keeps it in the Session Hosts window."
-pub const HOSTS_CLOSE_DETAIL: Key = Key::new(250);
+pub const HOSTS_CLOSE_DETAIL: Key = Key::new(260);
 /// "End the Host"
-pub const HOSTS_CLOSE_END: Key = Key::new(251);
+pub const HOSTS_CLOSE_END: Key = Key::new(261);
 /// "Leave It Running"
-pub const HOSTS_CLOSE_LEAVE: Key = Key::new(252);
+pub const HOSTS_CLOSE_LEAVE: Key = Key::new(262);
 /// "Quiet for"
-pub const HOSTS_FIELD_QUIET: Key = Key::new(253);
+pub const HOSTS_FIELD_QUIET: Key = Key::new(263);
 
 /// ```text
 /// Wormhole { $version }, protocol { $protocol }
 /// ```
 pub fn hosts_header_app(version: &str, protocol: &str) -> String {
-    crate::active::message(149, &[("version", Arg::Str(version)), ("protocol", Arg::Str(protocol))])
+    crate::active::message(159, &[("version", Arg::Str(version)), ("protocol", Arg::Str(protocol))])
 }
 
 /// ```text
 /// No session hosts in { $folder }.
 /// ```
 pub fn hosts_empty(folder: &str) -> String {
-    crate::active::message(161, &[("folder", Arg::Str(folder))])
+    crate::active::message(171, &[("folder", Arg::Str(folder))])
 }
 
 /// ```text
 /// Window { $window }, “{ $title }”
 /// ```
 pub fn hosts_standing_attached_to(window: &str, title: &str) -> String {
-    crate::active::message(168, &[("window", Arg::Str(window)), ("title", Arg::Str(title))])
+    crate::active::message(178, &[("window", Arg::Str(window)), ("title", Arg::Str(title))])
 }
 
 /// ```text
 /// { $when } (up { $uptime })
 /// ```
 pub fn hosts_started(when: &str, uptime: &str) -> String {
-    crate::active::message(188, &[("when", Arg::Str(when)), ("uptime", Arg::Str(uptime))])
+    crate::active::message(198, &[("when", Arg::Str(when)), ("uptime", Arg::Str(uptime))])
 }
 
 /// ```text
 /// This app is { $version }
 /// ```
 pub fn hosts_version_differs(version: &str) -> String {
-    crate::active::message(189, &[("version", Arg::Str(version))])
+    crate::active::message(199, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// { $major } (minor { $minor })
 /// ```
 pub fn hosts_protocol_minor(major: &str, minor: &str) -> String {
-    crate::active::message(190, &[("major", Arg::Str(major)), ("minor", Arg::Str(minor))])
+    crate::active::message(200, &[("major", Arg::Str(major)), ("minor", Arg::Str(minor))])
 }
 
 /// ```text
 /// { $major }
 /// ```
 pub fn hosts_range_one(major: &str) -> String {
-    crate::active::message(191, &[("major", Arg::Str(major))])
+    crate::active::message(201, &[("major", Arg::Str(major))])
 }
 
 /// ```text
 /// { $min } to { $max }
 /// ```
 pub fn hosts_range_span(min: &str, max: &str) -> String {
-    crate::active::message(192, &[("min", Arg::Str(min)), ("max", Arg::Str(max))])
+    crate::active::message(202, &[("min", Arg::Str(min)), ("max", Arg::Str(max))])
 }
 
 /// ```text
 /// { $range }, not running
 /// ```
 pub fn hosts_range_not_running(range: &str) -> String {
-    crate::active::message(193, &[("range", Arg::Str(range))])
+    crate::active::message(203, &[("range", Arg::Str(range))])
 }
 
 /// ```text
 /// { $range }, compatible
 /// ```
 pub fn hosts_fit_compatible(range: &str) -> String {
-    crate::active::message(194, &[("range", Arg::Str(range))])
+    crate::active::message(204, &[("range", Arg::Str(range))])
 }
 
 /// ```text
 /// { $range }, too old for this app
 /// ```
 pub fn hosts_fit_too_old(range: &str) -> String {
-    crate::active::message(195, &[("range", Arg::Str(range))])
+    crate::active::message(205, &[("range", Arg::Str(range))])
 }
 
 /// ```text
 /// { $range }, too new for this app
 /// ```
 pub fn hosts_fit_too_new(range: &str) -> String {
-    crate::active::message(196, &[("range", Arg::Str(range))])
+    crate::active::message(206, &[("range", Arg::Str(range))])
 }
 
 /// ```text
 /// Yes, program running, { $cols }×{ $rows }, { $lines } lines of history
 /// ```
 pub fn hosts_answer_running(cols: &str, rows: &str, lines: &str) -> String {
-    crate::active::message(198, &[("cols", Arg::Str(cols)), ("rows", Arg::Str(rows)), ("lines", Arg::Str(lines))])
+    crate::active::message(208, &[("cols", Arg::Str(cols)), ("rows", Arg::Str(rows)), ("lines", Arg::Str(lines))])
 }
 
 /// ```text
 /// No answer: { $why }
 /// ```
 pub fn hosts_answer_none(why: &str) -> String {
-    crate::active::message(201, &[("why", Arg::Str(why))])
+    crate::active::message(211, &[("why", Arg::Str(why))])
 }
 
 /// ```text
 /// { $mode }; { $received } in, { $sent } out; { $frames_in } frames in, { $frames_out } out
 /// ```
 pub fn hosts_link_traffic(mode: &str, received: &str, sent: &str, frames_in: &str, frames_out: &str) -> String {
-    crate::active::message(205, &[("mode", Arg::Str(mode)), ("received", Arg::Str(received)), ("sent", Arg::Str(sent)), ("frames_in", Arg::Str(frames_in)), ("frames_out", Arg::Str(frames_out))])
+    crate::active::message(215, &[("mode", Arg::Str(mode)), ("received", Arg::Str(received)), ("sent", Arg::Str(sent)), ("frames_in", Arg::Str(frames_in)), ("frames_out", Arg::Str(frames_out))])
 }
 
 /// ```text
 /// End session host { $id }?
 /// ```
 pub fn hosts_end_title(id: &str) -> String {
-    crate::active::message(214, &[("id", Arg::Str(id))])
+    crate::active::message(224, &[("id", Arg::Str(id))])
 }
 
 /// ```text
 /// The program in the terminal “{ $title }” gets a hangup and the terminal ends.
 /// ```
 pub fn hosts_end_detail_attached(title: &str) -> String {
-    crate::active::message(215, &[("title", Arg::Str(title))])
+    crate::active::message(225, &[("title", Arg::Str(title))])
 }
 
 /// ```text
 /// { $number } B
 /// ```
 pub fn hosts_size_bytes(number: &str) -> String {
-    crate::active::message(218, &[("number", Arg::Str(number))])
+    crate::active::message(228, &[("number", Arg::Str(number))])
 }
 
 /// ```text
 /// { $number } KiB
 /// ```
 pub fn hosts_size_kib(number: &str) -> String {
-    crate::active::message(219, &[("number", Arg::Str(number))])
+    crate::active::message(229, &[("number", Arg::Str(number))])
 }
 
 /// ```text
 /// { $number } MiB
 /// ```
 pub fn hosts_size_mib(number: &str) -> String {
-    crate::active::message(220, &[("number", Arg::Str(number))])
+    crate::active::message(230, &[("number", Arg::Str(number))])
 }
 
 /// ```text
 /// { $s } s
 /// ```
 pub fn hosts_duration_seconds(s: &str) -> String {
-    crate::active::message(221, &[("s", Arg::Str(s))])
+    crate::active::message(231, &[("s", Arg::Str(s))])
 }
 
 /// ```text
 /// { $m } min { $s } s
 /// ```
 pub fn hosts_duration_minutes(m: &str, s: &str) -> String {
-    crate::active::message(222, &[("m", Arg::Str(m)), ("s", Arg::Str(s))])
+    crate::active::message(232, &[("m", Arg::Str(m)), ("s", Arg::Str(s))])
 }
 
 /// ```text
 /// { $h } h { $m } min
 /// ```
 pub fn hosts_duration_hours(h: &str, m: &str) -> String {
-    crate::active::message(223, &[("h", Arg::Str(h)), ("m", Arg::Str(m))])
+    crate::active::message(233, &[("h", Arg::Str(h)), ("m", Arg::Str(m))])
 }
 
 /// ```text
 /// { $d } d { $h } h
 /// ```
 pub fn hosts_duration_days(d: &str, h: &str) -> String {
-    crate::active::message(224, &[("d", Arg::Str(d)), ("h", Arg::Str(h))])
+    crate::active::message(234, &[("d", Arg::Str(d)), ("h", Arg::Str(h))])
 }
 
 /// ```text
 /// { $date } { $time } UTC
 /// ```
 pub fn hosts_time_utc(date: &str, time: &str) -> String {
-    crate::active::message(225, &[("date", Arg::Str(date)), ("time", Arg::Str(time))])
+    crate::active::message(235, &[("date", Arg::Str(date)), ("time", Arg::Str(time))])
 }
 
 /// ```text
 /// Can’t connect: { $why }
 /// ```
 pub fn hosts_failure_connect(why: &str) -> String {
-    crate::active::message(226, &[("why", Arg::Str(why))])
+    crate::active::message(236, &[("why", Arg::Str(why))])
 }
 
 /// ```text
 /// Talking to it failed: { $why }
 /// ```
 pub fn hosts_failure_io(why: &str) -> String {
-    crate::active::message(232, &[("why", Arg::Str(why))])
+    crate::active::message(242, &[("why", Arg::Str(why))])
 }
 
 /// ```text
 /// { $ago } ago
 /// ```
 pub fn hosts_heard_ago(ago: &str) -> String {
-    crate::active::message(246, &[("ago", Arg::Str(ago))])
+    crate::active::message(256, &[("ago", Arg::Str(ago))])
 }
 
 /// ```text
 /// Not responding: silent for { $quiet }
 /// ```
 pub fn hosts_link_not_responding(quiet: &str) -> String {
-    crate::active::message(247, &[("quiet", Arg::Str(quiet))])
+    crate::active::message(257, &[("quiet", Arg::Str(quiet))])
 }
 
 /// ```text
 /// Couldn’t end the session host: { $why }
 /// ```
 pub fn hosts_end_failed(why: &str) -> String {
-    crate::active::message(249, &[("why", Arg::Str(why))])
+    crate::active::message(259, &[("why", Arg::Str(why))])
 }
 
 /// ```text
 /// { $quiet }
 /// ```
 pub fn hosts_quiet_for(quiet: &str) -> String {
-    crate::active::message(254, &[("quiet", Arg::Str(quiet))])
+    crate::active::message(264, &[("quiet", Arg::Str(quiet))])
 }

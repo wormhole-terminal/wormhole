@@ -12,7 +12,7 @@ use objc2_foundation::NSString;
 use smol::channel::Receiver;
 
 use super::appkit::ns_window;
-use crate::platform::sheet::{Choice, Question, Style};
+use crate::platform::sheet::{Choice, Destructive, Question, Style};
 
 /// `NSAlertFirstButtonReturn`: buttons answer 1000 + their place in the order they were added.
 const FIRST_BUTTON: isize = 1000;
@@ -57,8 +57,38 @@ pub fn ask_with_checkbox(window: &Window, question: &Question) -> Option<Receive
         };
     });
     #[cfg(feature = "devctl")]
-    up::begin(&alert);
+    up::begin(&alert, false);
     // AppKit copies the block and keeps the alert until the sheet is answered.
+    alert.beginSheetModalForWindow_completionHandler(&ns_window, Some(&done));
+    Some(rx)
+}
+
+pub fn confirm_destructive(window: &Window, question: &Destructive) -> Option<Receiver<bool>> {
+    let mtm = MainThreadMarker::new()?;
+    let ns_window = ns_window(window)?;
+    let alert = NSAlert::new(mtm);
+    alert.setAlertStyle(NSAlertStyle::Warning);
+    alert.setMessageText(&NSString::from_str(question.title));
+    alert.setInformativeText(&NSString::from_str(question.detail));
+    // Cancel first: the first button is the one Return presses, and the one that backs out. The destructive
+    // button after it is drawn red by AppKit.
+    alert.addButtonWithTitle(&NSString::from_str(question.cancel));
+    alert.addButtonWithTitle(&NSString::from_str(question.confirm)).setHasDestructiveAction(true);
+
+    let (tx, rx) = smol::channel::bounded(1);
+    #[cfg(feature = "devctl")]
+    let sheet = alert.clone();
+    let done = RcBlock::new(move |response: NSModalResponse| {
+        #[cfg(feature = "devctl")]
+        up::end(&sheet);
+        match response {
+            FIRST_BUTTON => tx.try_send(false).ok(),
+            SECOND_BUTTON => tx.try_send(true).ok(),
+            _ => None,
+        };
+    });
+    #[cfg(feature = "devctl")]
+    up::begin(&alert, true);
     alert.beginSheetModalForWindow_completionHandler(&ns_window, Some(&done));
     Some(rx)
 }
@@ -71,14 +101,15 @@ pub fn answer(window: &Window, button: isize, tick: Option<bool>) -> bool {
     let Some(sheet) = ns_window.attachedSheet() else { return false };
     // An alert answers 1000 + its button's place; GPUI's own prompt answers with the place itself.
     let code = match up::alert_of(&sheet) {
-        Some(alert) => {
+        Some((alert, cancel_first)) => {
             if let Some(tick) = tick
                 && let Some(checkbox) = alert.suppressionButton()
             {
                 checkbox.setState(if tick { NSControlStateValueOn } else { NSControlStateValueOff });
             }
             // The alert has the closing button and the one that backs out; anything but the first is the latter.
-            FIRST_BUTTON + isize::from(button != 0)
+            // A question about something destructive has Cancel first, and its closing button second.
+            FIRST_BUTTON + isize::from((button != 0) != cancel_first)
         }
         None => button,
     };
@@ -138,19 +169,20 @@ mod up {
     use objc2_app_kit::{NSAlert, NSWindow};
 
     thread_local! {
-        static UP: RefCell<Vec<Retained<NSAlert>>> = const { RefCell::new(Vec::new()) };
+        /// Each alert, and whether its Cancel is the first button (a question before something destructive).
+        static UP: RefCell<Vec<(Retained<NSAlert>, bool)>> = const { RefCell::new(Vec::new()) };
     }
 
-    pub(super) fn begin(alert: &Retained<NSAlert>) {
-        UP.with(|up| up.borrow_mut().push(alert.clone()));
+    pub(super) fn begin(alert: &Retained<NSAlert>, cancel_first: bool) {
+        UP.with(|up| up.borrow_mut().push((alert.clone(), cancel_first)));
     }
 
     pub(super) fn end(alert: &Retained<NSAlert>) {
-        UP.with(|up| up.borrow_mut().retain(|other| !std::ptr::eq(&**other, &**alert)));
+        UP.with(|up| up.borrow_mut().retain(|(other, _)| !std::ptr::eq(&**other, &**alert)));
     }
 
     /// The alert shown in `sheet`.
-    pub(super) fn alert_of(sheet: &NSWindow) -> Option<Retained<NSAlert>> {
-        UP.with(|up| up.borrow().iter().find(|alert| std::ptr::eq(&*alert.window(), sheet)).cloned())
+    pub(super) fn alert_of(sheet: &NSWindow) -> Option<(Retained<NSAlert>, bool)> {
+        UP.with(|up| up.borrow().iter().find(|(alert, _)| std::ptr::eq(&*alert.window(), sheet)).cloned())
     }
 }

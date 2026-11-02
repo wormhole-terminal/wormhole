@@ -31,6 +31,14 @@ impl Settings {
         }
     }
 
+    /// Use the theme's own primary and forget the colour chosen: what the colour picker's "Theme's colour"
+    /// does, so the setting is back at its default (unlike [`Self::choose_primary`] with nothing, which
+    /// keeps the colour for a switch).
+    pub fn use_theme_primary(&mut self) {
+        self.theme_primary = Some(true);
+        self.primary_color.clear();
+    }
+
     /// A problem with `primary_color` to show the user, while it is in use.
     pub(in crate::config) fn primary_error(&self) -> Option<String> {
         let value = self.primary_color.trim();

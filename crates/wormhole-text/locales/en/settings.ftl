@@ -17,6 +17,11 @@ settings-nav-spoken-matches = { $name }, { $count ->
     [one] 1 match
    *[other] { $count } matches
 }
+# { $name } is the page's name and { $count } how many settings differ from their defaults.
+settings-nav-spoken-changed = { $name }, { $count ->
+    [one] 1 setting changed
+   *[other] { $count } settings changed
+}
 
 # The name VoiceOver reads for the (i) after a setting. What it opens, the description, is the row's own.
 settings-more-information = More information

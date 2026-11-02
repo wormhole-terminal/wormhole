@@ -8,6 +8,10 @@ group ""
 group "Danger zone"
   blurb ""
   aside ""
+section Changed
+  title "Changed"
+  intro "Every setting that differs from its default, with its default beside it. Reset them one by one, or all at once."
+  nav ""
 section Terminal
   title "Terminal"
   intro "How the terminal behaves. Its font is in Fonts."
@@ -347,8 +351,8 @@ entry Appearance theme
   description ""
   keywords "colour color scheme palette dark light studio import ghostty iterm2 alacritty"
 entry Appearance primary-color
-  label "Use the theme's primary colour"
-  description "Off: a colour of your choice for buttons, focus rings, selection and links, in every theme"
+  label "Primary colour"
+  description "Buttons, focus rings, selection and links, in every theme"
   keywords "accent highlight color colour swatch custom own"
 entry Appearance branch-color
   label "Branch colour"

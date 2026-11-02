@@ -14,14 +14,12 @@ use wormhole_text::{Language, with_language};
 /// Every typed message of the window with sample arguments, and what its Rust `format!` said.
 fn sentences() -> Vec<(String, &'static str)> {
     vec![
-        (
-            settings_advanced_reset_question(1),
-            "Reset 1 changed setting to its default? Your terminals, notes and themes are kept.",
-        ),
-        (
-            settings_advanced_reset_question(3),
-            "Reset 3 changed settings to their default? Your terminals, notes and themes are kept.",
-        ),
+        (settings_changed_question(1), "Reset 1 setting to its default?"),
+        (settings_changed_question(3), "Reset 3 settings to their defaults?"),
+        (settings_changed_summary(1), "1 setting changed"),
+        (settings_changed_summary(5), "5 settings changed"),
+        (settings_changed_default("Off"), "Default: Off"),
+        (settings_changed_default_in_group("Behaviour", "10000"), "Behaviour · Default: 10000"),
         (settings_agents_hooks_failed("Claude Code", "denied"), "Claude Code hooks: denied"),
         (
             settings_agents_hooks_partial("Codex"),
@@ -67,7 +65,6 @@ fn sentences() -> Vec<(String, &'static str)> {
             "Couldn't read your shell's PATH. If wh isn't found, add ~/.local/bin to it.",
         ),
         (settings_appearance_primary_yours("#7aa2f7"), "Yours · #7aa2f7, in every theme"),
-        (settings_appearance_primary_pick("#7aa2f7"), "Pick a colour below · the theme's is #7aa2f7"),
         (
             settings_appearance_primary_theme("#7aa2f7", "Off: a colour of your own"),
             "The theme's · #7aa2f7. Off: a colour of your own",

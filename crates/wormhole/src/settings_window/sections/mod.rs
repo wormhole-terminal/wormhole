@@ -25,6 +25,7 @@ mod agents;
 mod appearance;
 mod card;
 mod cli_tool;
+mod color_rows;
 mod diff_preview;
 mod extensions;
 mod extensions_sheet;
@@ -55,6 +56,7 @@ mod updates;
 
 pub(super) use agents::AgentsSnapshot;
 pub(super) use cli_tool::CliToolPanel;
+pub(super) use color_rows::in_force as colors_in_force;
 pub(super) use diff_preview::draw_diff_preview;
 pub(super) use extensions::Extensions;
 pub(super) use feature_flags::is_unlock_key;
@@ -76,6 +78,8 @@ pub(super) use theme_picker::ThemePicker;
 pub(super) fn controls(section: Section) -> &'static [Setting] {
     match section {
         Section::Profile => profile::SETTINGS,
+        // Other pages' rows, drawn by the page itself (`changed`).
+        Section::Changed => &[],
         Section::Appearance => appearance::SETTINGS,
         Section::Fonts => fonts::SETTINGS,
         Section::Motion => motion::SETTINGS,
@@ -102,6 +106,9 @@ pub(super) fn recorder_id(id: &str) -> Option<&'static str> {
 
 impl SettingsWindow {
     pub(super) fn render_section(&self, section: Section, cx: &mut Context<Self>) -> AnyElement {
+        if section == Section::Changed {
+            return self.render_changed(cx);
+        }
         self.render_page(section, cx)
     }
 

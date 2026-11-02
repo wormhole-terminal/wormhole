@@ -106,11 +106,12 @@ pub(crate) fn resize(w: f32, h: f32, cx: &mut App) {
     with_page(cx, move |_, window, _| window.resize(size(px(w), px(h))));
 }
 
-/// devctl `settings-reset-confirm`: press Advanced → "Reset to defaults…" (asks, resets nothing).
+/// devctl `settings-reset-confirm`: press Advanced → "Reset to defaults…" (the system's alert asks; answer
+/// it with `sheet-answer`, and nothing is reset until the red button is).
 pub(crate) fn reset_confirm(cx: &mut App) {
-    with_page(cx, |page, _, cx| {
+    with_page(cx, |page, window, cx| {
         page.show_section(Section::Advanced, cx);
-        page.confirm_reset = true;
+        page.ask_reset_all(window, cx);
     });
 }
 
@@ -131,6 +132,14 @@ pub(crate) fn cli_tool(action: &str, cx: &mut App) {
 /// devctl `settings-select <id>`: open the menu of the row `id` (tab-width, theme-mode, scrollback,
 /// density…), as a click on it does.
 pub(crate) fn select(id: &str, cx: &mut App) {
+    // The colour controls are menus of their own kind, with state in the window.
+    if let Some(row) = ["primary-color", "branch-color"].into_iter().find(|known| *known == id) {
+        with_page(cx, move |page, window, cx| {
+            let state = if row == "primary-color" { &page.primary_pick } else { &page.branch_pick };
+            crate::select::devctl_open_color(row, state, window, cx);
+        });
+        return;
+    }
     let Some(row) = super::registry::menu_ids().find(|known| *known == id) else { return };
     with_page(cx, move |_, window, cx| crate::select::devctl_open(row, window, cx));
 }

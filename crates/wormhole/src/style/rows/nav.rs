@@ -33,6 +33,8 @@ pub enum NavMark {
     Attention,
     /// A search found this many settings on the page.
     Hits(usize),
+    /// This many settings differ from their defaults: the Changed page's count.
+    Changed(usize),
     /// A search found nothing on the page: the row dims.
     NoHits,
     /// A feature-flagged section still being built: an outlined "Preview" tag, so it's obvious
@@ -159,8 +161,12 @@ pub fn nav_row(id: impl Into<ElementId>, ui: UiColors, item: NavItem) -> Statefu
                     ui.agent_attention
                 }))
             }
-            NavMark::Hits(n) if selected => d.child(selected_count(ui, crate::style::scale::count_label(n))),
-            NavMark::Hits(n) => d.child(count_badge(ui, crate::style::scale::count_label(n))),
+            NavMark::Hits(n) | NavMark::Changed(n) if selected => {
+                d.child(selected_count(ui, crate::style::scale::count_label(n)))
+            }
+            NavMark::Hits(n) | NavMark::Changed(n) => {
+                d.child(count_badge(ui, crate::style::scale::count_label(n)))
+            }
             NavMark::Preview => d.child(crate::style::status_badge(
                 ui,
                 if selected { ui.on_primary } else { ui.info },

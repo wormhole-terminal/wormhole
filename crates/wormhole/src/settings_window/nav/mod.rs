@@ -42,6 +42,7 @@ pub(super) const NAV_W: f32 = 220.0;
 pub(super) fn section_icon(section: Section) -> IconName {
     match section {
         Section::Profile => IconName::CircleUser,
+        Section::Changed => IconName::RotateCcw,
         Section::Appearance => IconName::Palette,
         Section::Fonts => IconName::ALargeSmall,
         Section::Motion => IconName::Play,
@@ -61,7 +62,15 @@ pub(super) fn section_icon(section: Section) -> IconName {
 }
 
 impl SettingsWindow {
-    pub(super) fn render_nav(&self, query: &Query, fill: Hsla, cx: &mut Context<Self>) -> AnyElement {
+    /// `changed` is how many settings differ from their defaults: the Changed page's badge, and whether the
+    /// page is listed at all (it is while one does, and while it is the page that is open).
+    pub(super) fn render_nav(
+        &self,
+        query: &Query,
+        changed: usize,
+        fill: Hsla,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let ui = ui(cx);
         let mut hits: HashMap<Section, usize> = HashMap::new();
         for hit in settings_index::search_visible(query, settings(cx)) {
@@ -71,8 +80,6 @@ impl SettingsWindow {
         let total: usize = hits.values().sum();
         let attention = self.agents.as_ref().is_some_and(|agents| agents.needs_repair() > 0);
 
-        // The Changed page (a later step of the redesign) is a run of its own between the profile card and
-        // the first section, shown only while something differs: it joins the list here, ahead of the loop.
         let mut list =
             style::nav_list().child(self.render_profile_card(ui, searching, hits.get(&Section::Profile), cx));
         let mut run = None;
@@ -82,6 +89,11 @@ impl SettingsWindow {
         for section in Section::visible(settings(cx)) {
             // The profile is the card above, with an avatar of its own.
             let Some(tile) = tile_token(section) else { continue };
+            // The Changed page is a run of its own after the profile card, listed only while something differs
+            // (and kept while it is open, so the page that says "every setting is at its default" has its row).
+            if section == Section::Changed && changed == 0 && self.section != Section::Changed {
+                continue;
+            }
             let nav_group = section.info().nav;
             if run != Some(nav_group) {
                 run = Some(nav_group);
@@ -91,6 +103,7 @@ impl SettingsWindow {
                 }
             }
             let mark = match hits.get(&section) {
+                _ if !searching && section == Section::Changed => NavMark::Changed(changed),
                 _ if !searching && section == Section::Agents && attention => NavMark::Attention,
                 // A preview section wears its tag when not searching; search marks override it.
                 _ if !searching && section.is_preview() => NavMark::Preview,
@@ -230,6 +243,8 @@ impl SettingsWindow {
 fn tile_token(section: Section) -> Option<&'static str> {
     Some(match section {
         Section::Profile => return None,
+        // A neutral grey, the Advanced page's: the page is about all the others at once.
+        Section::Changed => "settings.nav.tile.advanced",
         Section::Terminal => "settings.nav.tile.terminal",
         Section::Appearance => "settings.nav.tile.appearance",
         Section::Fonts => "settings.nav.tile.fonts",
@@ -264,5 +279,6 @@ fn spoken(name: &'static str, mark: NavMark) -> SharedString {
         NavMark::Preview => settings_nav_spoken_preview(name).into(),
         NavMark::NoHits => settings_nav_spoken_no_matches(name).into(),
         NavMark::Hits(n) => settings_nav_spoken_matches(name, whole(n)).into(),
+        NavMark::Changed(n) => settings_nav_spoken_changed(name, whole(n)).into(),
     }
 }

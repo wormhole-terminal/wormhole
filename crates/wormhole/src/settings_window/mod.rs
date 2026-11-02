@@ -10,8 +10,13 @@
 //! Above the window and the shared state: it may use them; the app root, the palette and the status
 //! item use it. The shared state keeps its page untyped.
 
+mod changed;
+#[cfg(test)]
+mod changed_tests;
 #[cfg(test)]
 mod close_tests;
+#[cfg(test)]
+mod color_tests;
 pub(crate) mod devctl;
 #[cfg(test)]
 mod extensions_tests;
@@ -43,7 +48,6 @@ mod zen_note;
 use std::path::{Path, PathBuf};
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::color_picker::ColorPickerState;
 use gpui_kit::component::input::InputState;
 use gpui_kit::component::slider::{SliderState, SliderValue};
 use gpui_kit::*;
@@ -53,6 +57,7 @@ use wormhole_core::view::sidebar::Density;
 
 use crate::app_state::AppState;
 use crate::platform::vibrancy::Blur;
+use crate::select::ColorPickState;
 use crate::settings::{UiColors, settings};
 use crate::style::{self};
 use font_picker::FontPickerState;
@@ -129,10 +134,10 @@ pub(crate) struct SettingsWindow {
     motion_previews: Option<sections::MotionPreviews>,
     /// A shortcut field waiting for keys, or showing keys it refused.
     recording: Option<recorder::Recording>,
-    /// Appearance → the "+" after the primary swatches: any color.
-    primary_picker: Entity<ColorPickerState>,
-    /// Appearance → the "+" after the branch color's swatches: any color.
-    branch_picker: Entity<ColorPickerState>,
+    /// Appearance → the primary's colour control: its editor, its field and where the keyboard is.
+    primary_pick: Entity<ColorPickState>,
+    /// Appearance → the branch colour's.
+    branch_pick: Entity<ColorPickState>,
     opacity_slider: Entity<SliderState>,
     line_height_slider: Entity<SliderState>,
     /// Fonts → which font the specimen shows.
@@ -141,8 +146,8 @@ pub(crate) struct SettingsWindow {
     themes_all: bool,
     /// Terminals & sidebar → the option under the pointer, previewed beside the current look.
     sidebar_preview: Option<SidebarLook>,
-    /// Advanced → "Reset to defaults…" was pressed: the row asks before it resets.
-    confirm_reset: bool,
+    /// Changed → Copy as JSON has just copied: it says Copied for a moment.
+    changed_copied: bool,
     /// Coding agents → the agents that aren't on PATH are listed.
     others_open: bool,
     /// Profile → the fields of the profile Wormhole is in (made again when it changes).

@@ -51,14 +51,3 @@ settings-advanced-they-show-again-where-they-belong = They show again where they
 settings-advanced-reset-to-defaults = Reset to defaults…
 settings-advanced-every-setting-is-at-its-default = Every setting is at its default
 settings-advanced-asks-first = Asks first
-settings-advanced-cancel = Cancel
-settings-advanced-reset = Reset
-
-## The reset question
-
-# The question over the Reset button. { $count } is how many settings differ from their defaults (at least
-# one: the button is off otherwise).
-settings-advanced-reset-question = { $count ->
-    [one] Reset { $count } changed setting to its default? Your terminals, notes and themes are kept.
-   *[other] Reset { $count } changed settings to their default? Your terminals, notes and themes are kept.
-}

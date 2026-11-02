@@ -15,6 +15,7 @@ pub(crate) const LOCALES: [Locale; 1] = [
         files: &[
             ("agent-sheet.ftl", include_str!("../../locales/en/agent-sheet.ftl")),
             ("changes.ftl", include_str!("../../locales/en/changes.ftl")),
+            ("color-pick.ftl", include_str!("../../locales/en/color-pick.ftl")),
             ("common.ftl", include_str!("../../locales/en/common.ftl")),
             ("control.ftl", include_str!("../../locales/en/control.ftl")),
             ("dialog.ftl", include_str!("../../locales/en/dialog.ftl")),
@@ -26,6 +27,7 @@ pub(crate) const LOCALES: [Locale; 1] = [
             ("settings-advanced.ftl", include_str!("../../locales/en/settings-advanced.ftl")),
             ("settings-agents.ftl", include_str!("../../locales/en/settings-agents.ftl")),
             ("settings-appearance.ftl", include_str!("../../locales/en/settings-appearance.ftl")),
+            ("settings-changed.ftl", include_str!("../../locales/en/settings-changed.ftl")),
             ("settings-extensions.ftl", include_str!("../../locales/en/settings-extensions.ftl")),
             ("settings-feature-flags.ftl", include_str!("../../locales/en/settings-feature-flags.ftl")),
             ("settings-fonts.ftl", include_str!("../../locales/en/settings-fonts.ftl")),

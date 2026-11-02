@@ -21,7 +21,7 @@ fn open(cx: &mut TestAppContext) -> AnyWindowHandle {
     open_at(cx, Section::Git)
 }
 
-fn open_at(cx: &mut TestAppContext, section: Section) -> AnyWindowHandle {
+pub(super) fn open_at(cx: &mut TestAppContext, section: Section) -> AnyWindowHandle {
     cx.update(|cx| open_settings(Some(section), cx));
     cx.run_until_parked();
     let handle = cx.update(|cx| current_window(cx)).expect("the settings window opened").0;
@@ -38,7 +38,7 @@ fn control(cx: &mut TestAppContext, handle: AnyWindowHandle) -> (NodeId, String,
     named(cx, handle, LABEL)
 }
 
-fn named(
+pub(super) fn named(
     cx: &mut TestAppContext,
     handle: AnyWindowHandle,
     label: &str,
@@ -56,7 +56,7 @@ fn named(
 }
 
 /// The options of the open menu as VoiceOver has them: node, name, whether it is the selected one.
-fn options(cx: &mut TestAppContext, handle: AnyWindowHandle) -> Vec<(NodeId, String, bool)> {
+pub(super) fn options(cx: &mut TestAppContext, handle: AnyWindowHandle) -> Vec<(NodeId, String, bool)> {
     let update = cx
         .update(|cx| handle.update(cx, |_, window, _| window.last_a11y_tree_update()))
         .expect("open")
@@ -72,7 +72,7 @@ fn options(cx: &mut TestAppContext, handle: AnyWindowHandle) -> Vec<(NodeId, Str
 }
 
 /// A click in the middle of the node.
-fn click(keys: &mut VisualTestContext, handle: AnyWindowHandle, node: NodeId) {
+pub(super) fn click(keys: &mut VisualTestContext, handle: AnyWindowHandle, node: NodeId) {
     let at = centre(keys, handle, node);
     keys.simulate_click(at, Modifiers::none());
 }
@@ -82,7 +82,7 @@ fn tab_width(cx: &mut TestAppContext) -> usize {
 }
 
 /// ↩ or Space as the keyboard sends it: GPUI clicks a focused element when the key comes back up.
-fn activate(keys: &mut VisualTestContext, key: &str) {
+pub(super) fn activate(keys: &mut VisualTestContext, key: &str) {
     keys.simulate_keystrokes(key);
     keys.simulate_event(KeyUpEvent { keystroke: Keystroke::parse(key).expect("a key") });
 }
