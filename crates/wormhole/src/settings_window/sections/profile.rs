@@ -238,7 +238,10 @@ fn form_row(
 fn draw_env(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let Some(form) = window.profile_form.as_ref() else { return div().into_any_element() };
     let lines = form.env.read(cx).value().lines().filter(|line| !line.trim().is_empty()).count();
-    let value = (lines > 0).then(|| wormhole_text::whole(lines).to_string().into());
+    let value = Some(match lines {
+        0 => SharedString::from(text(SETTINGS_PROFILE_VALUE_NONE)),
+        n => wormhole_text::whole(n).to_string().into(),
+    });
     let fields = div().flex_none().w(px(ENV_W)).child(Textarea::new(&form.env).small()).into_any_element();
     form_row(
         "profile-env",
@@ -254,7 +257,11 @@ fn draw_env(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEle
 fn draw_git(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let Some(form) = window.profile_form.as_ref() else { return div().into_any_element() };
     let name = form.git_name.read(cx).value();
-    let value = (!name.is_empty()).then(|| SharedString::from(name.to_string()));
+    let value = Some(if name.is_empty() {
+        SharedString::from(text(SETTINGS_PROFILE_VALUE_GITCONFIG))
+    } else {
+        SharedString::from(name.to_string())
+    });
     let fields = div()
         .flex()
         .items_center()
@@ -277,7 +284,10 @@ fn draw_logins(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
     let ui = ui(cx);
     let Some(form) = window.profile_form.as_ref() else { return div().into_any_element() };
     let set = form.logins.iter().filter(|input| !input.read(cx).value().is_empty()).count();
-    let value = (set > 0).then(|| wormhole_text::whole(set).to_string().into());
+    let value = Some(match set {
+        0 => SharedString::from(text(SETTINGS_PROFILE_VALUE_SHARED)),
+        n => wormhole_text::whole(n).to_string().into(),
+    });
     let fields = div()
         .flex()
         .flex_col()

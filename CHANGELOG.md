@@ -18,7 +18,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   stays as an extra checked item), "Also translucent" sits under its label, Motion has one preview card on top,
   Updates shows its development-build notice at the top and what an update check sends behind a row, the fonts
   and icon themes folders are a line under their groups, an empty list is a row like the others, and Import's
-  terminals are tile rows. The page's sentence under its title, the "Settings" title
+  terminals are tile rows. Profile's Environment, Git identity and Agent logins rows say what is in them (None, From ~/.gitconfig, Shared). The page's sentence under its title, the "Settings" title
   over the sidebar and the Preview dots are gone, and Rescan PATH, Scan again and New profile sit on their page's
   last line.
 - The Settings sidebar and rows are drawn from the design's own markup, so their sizes match it: a 240 wide

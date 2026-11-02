@@ -4,6 +4,12 @@
 settings-section-profile = Profile
     .intro = Every page here is this profile's. A new profile starts as a copy of one you have, without its terminals or agent logins.
 
+# What a closed row that opens more says when nothing is set in it (Environment), when git is read from the
+# machine's own file (Git identity), and when every agent keeps the one login it has (Agent logins).
+settings-profile-value-none = None
+settings-profile-value-gitconfig = From ~/.gitconfig
+settings-profile-value-shared = Shared
+
 settings-profile-name = Name
     .keywords = profile rename avatar letter swatch colour color edge
 
