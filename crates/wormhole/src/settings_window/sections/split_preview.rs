@@ -37,21 +37,19 @@ const GREEN: usize = 2;
 const YELLOW: usize = 3;
 const BLUE: usize = 4;
 
-// text: sample (the preview's made-up terminals, below)
 const TEST_PANE: [&[Run]; 5] = [
-    &[("api ", BLUE), ("$ ", MUTED), ("cargo test", FG)],
-    &[("running 412 tests", FG)],
-    &[("limits::burst ... ", FG), ("ok", GREEN)],
-    &[("limits::refill ... ", FG), ("ok", GREEN)],
-    &[("test result: ", FG), ("ok", GREEN)],
+    &[("api ", BLUE), ("$ ", MUTED), ("cargo test", FG)], // text: sample (the preview's made-up terminals)
+    &[("running 412 tests", FG)],                         // text: sample (the preview's made-up terminals)
+    &[("limits::burst ... ", FG), ("ok", GREEN)],         // text: sample (the preview's made-up terminals)
+    &[("limits::refill ... ", FG), ("ok", GREEN)],        // text: sample (the preview's made-up terminals)
+    &[("test result: ", FG), ("ok", GREEN)],              // text: sample (the preview's made-up terminals)
 ];
-// text: sample (the preview's made-up terminals, below)
 const LOG_PANE: [&[Run]; 5] = [
-    &[("api ", BLUE), ("$ ", MUTED), ("git log --oneline", FG)],
-    &[("a41f2c9 ", YELLOW), ("limits: refill", FG)],
-    &[("9e03b11 ", YELLOW), ("limits: burst", FG)],
-    &[("77d0a2e ", YELLOW), ("api: routes", FG)],
-    &[("api ", BLUE), ("$ ", MUTED)],
+    &[("api ", BLUE), ("$ ", MUTED), ("git log --oneline", FG)], // text: sample (the preview's made-up terminals)
+    &[("a41f2c9 ", YELLOW), ("limits: refill", FG)], // text: sample (the preview's made-up terminals)
+    &[("9e03b11 ", YELLOW), ("limits: burst", FG)],  // text: sample (the preview's made-up terminals)
+    &[("77d0a2e ", YELLOW), ("api: routes", FG)],    // text: sample (the preview's made-up terminals)
+    &[("api ", BLUE), ("$ ", MUTED)],                // text: sample (the preview's made-up terminals)
 ];
 
 /// Terminal → two split terminals under the page's options.
