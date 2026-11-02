@@ -6,6 +6,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Fixed
+
+- The × and ⓘ in a notice chip sat a point off the centre of the circle that lights up under the pointer.
+
 ## [1.6.1] - 2026-11-01
 
 ### Fixed

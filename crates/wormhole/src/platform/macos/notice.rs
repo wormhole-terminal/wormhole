@@ -28,7 +28,7 @@ use objc2_app_kit::{
     NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView, NSWindow, NSWindowCollectionBehavior,
     NSWindowOrderingMode, NSWindowStyleMask,
 };
-use objc2_foundation::{NSEdgeInsets, NSPoint, NSRect, NSSize, NSString};
+use objc2_foundation::{NSCopying as _, NSEdgeInsets, NSPoint, NSRect, NSSize, NSString};
 use objc2_quartz_core::{CALayer, CAMediaTiming as _, CATransition, kCATransitionFade};
 use wormhole_core::view::motion::notice::{Entrance, FADE_EASE, FADE_IN, FADE_OUT, SWAP, UP, UP_EASE};
 use wormhole_core::view::notice::{Buttons, Glyph, Placed, Press, Spot, place};
@@ -173,6 +173,15 @@ fn symbol_name(glyph: Glyph) -> &'static str {
         Glyph::Keyboard => "keyboard",
         Glyph::Warning => "exclamationmark.triangle",
     }
+}
+
+/// A button's picture, drawn from its whole image: a symbol's alignment rect is cut to where its baseline
+/// would sit, which put the × a point left of and below the circle that lights up behind it.
+fn button_symbol(name: &str, description: &str) -> Option<Retained<NSImage>> {
+    // A copy, because the system hands out one shared image per symbol.
+    let image: Retained<NSImage> = symbol(name, description)?.copy();
+    image.setAlignmentRect(NSRect::new(NSPoint::ZERO, image.size()));
+    Some(image)
 }
 
 /// One window's chip.
@@ -474,8 +483,8 @@ impl Chip {
         self.text.setStringValue(&NSString::from_str(text));
         self.icon.setImage(symbol(symbol_name(glyph), text).as_deref());
         self.buttons = buttons;
-        self.info_icon.setImage(symbol("info.circle", info_label).as_deref());
-        self.close_icon.setImage(symbol("xmark", close_label).as_deref());
+        self.info_icon.setImage(button_symbol("info.circle", info_label).as_deref());
+        self.close_icon.setImage(button_symbol("xmark", close_label).as_deref());
         self.info_icon.setHidden(!buttons.info);
         self.close_icon.setHidden(!buttons.close);
         self.presses.label(text, info_label, close_label);
