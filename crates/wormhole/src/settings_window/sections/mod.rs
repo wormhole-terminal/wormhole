@@ -72,6 +72,7 @@ pub(super) use profile_sheet::NewProfileSheet;
 pub(crate) use profile_sheet::open_new_profile_sheet;
 pub(super) use projects::ProjectPicker;
 pub(super) use split_preview::draw_split_preview;
+pub(super) use terminal::TerminalRows;
 pub(super) use theme_picker::ThemePicker;
 
 /// The controls of a section's rows (their names and words are in core's settings index).

@@ -487,7 +487,24 @@ mod tests {
         let warnings: Vec<_> = entries().filter(|(_, _, e)| e.visible_hint).map(|(_, _, e)| e.id).collect();
         assert_eq!(
             warnings,
-            ["profile-delete", "scrollback", "restore-text", "meta", "auto-update", "reset-settings"]
+            [
+                "profile-delete",
+                "scrollback",
+                "restore-text",
+                "meta",
+                "blur",
+                "icon-theme",
+                "font-ligatures",
+                "font-code",
+                "font-interface",
+                "notify-command-failed",
+                "notify-group-bursts",
+                "hotkey",
+                "jump-waiting-key",
+                "auto-update",
+                "open-config",
+                "reset-settings"
+            ]
         );
         let (_, _, minimap) = entry("minimap").expect("minimap row");
         assert!(!minimap.visible_hint);

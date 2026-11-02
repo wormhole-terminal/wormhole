@@ -18,15 +18,15 @@ settings-fonts-line-height = Line height
     .keywords = spacing leading
 
 settings-fonts-font-ligatures = Ligatures
-    .description = Join sequences like => and != into one glyph
+    .description = Shows => and != as one glyph
     .keywords = ligature
 
 settings-fonts-font-code = Font
-    .description = Diffs, commit hashes, file lists, Theme Studio
+    .description = Diffs, file lists, Theme Studio
     .keywords = code font typeface size monospace diff
 
 settings-fonts-font-interface = Font
-    .description = Sidebar, panels, settings and controls. The size scales the whole interface
+    .description = Its size scales the interface
     .keywords = interface font typeface size system ui
 
 settings-fonts-folder = Fonts folder

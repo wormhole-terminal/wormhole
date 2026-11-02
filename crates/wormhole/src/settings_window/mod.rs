@@ -154,6 +154,8 @@ pub(crate) struct SettingsWindow {
     others_open: bool,
     /// Coding agents → "How status works" is open under the last line.
     status_open: bool,
+    /// Terminal → the Shells and Worktrees folder rows are open.
+    terminal_rows: sections::TerminalRows,
     /// Profile → the fields of the profile Wormhole is in (made again when it changes).
     profile_form: Option<sections::ProfileForm>,
     /// Profile → "Delete profile…" was pressed: the row asks before it deletes.

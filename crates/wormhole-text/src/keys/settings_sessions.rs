@@ -7,30 +7,32 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Terminals & sidebar"
-pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(1104);
+pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(1103);
 /// "The Terminals list on the left: how it's grouped and what each row shows."
-pub const SETTINGS_SECTION_SESSIONS_INTRO: Key = Key::new(1105);
+pub const SETTINGS_SECTION_SESSIONS_INTRO: Key = Key::new(1104);
 /// "Live preview"
-pub const SETTINGS_SESSIONS_SIDEBAR_PREVIEW: Key = Key::new(1106);
+pub const SETTINGS_SESSIONS_SIDEBAR_PREVIEW: Key = Key::new(1105);
 /// "preview sidebar"
-pub const SETTINGS_SESSIONS_SIDEBAR_PREVIEW_KEYWORDS: Key = Key::new(1107);
-/// "Terminals in"
-pub const SETTINGS_SESSIONS_GROUP_TERMINALS_IN: Key = Key::new(1108);
+pub const SETTINGS_SESSIONS_SIDEBAR_PREVIEW_KEYWORDS: Key = Key::new(1106);
+/// "Layout"
+pub const SETTINGS_SESSIONS_GROUP_LAYOUT: Key = Key::new(1107);
 /// "Show terminals in"
-pub const SETTINGS_SESSIONS_TERMINALS_IN: Key = Key::new(1109);
+pub const SETTINGS_SESSIONS_TERMINALS_IN: Key = Key::new(1108);
 /// "Sidebar: the list on the left; Tabs: a tab bar instead, with the groups as sets of tabs"
-pub const SETTINGS_SESSIONS_TERMINALS_IN_DESCRIPTION: Key = Key::new(1110);
+pub const SETTINGS_SESSIONS_TERMINALS_IN_DESCRIPTION: Key = Key::new(1109);
 /// "tabs tab bar sidebar list layout"
-pub const SETTINGS_SESSIONS_TERMINALS_IN_KEYWORDS: Key = Key::new(1111);
-/// "Terminals list"
-pub const SETTINGS_SESSIONS_GROUP_TERMINALS_LIST: Key = Key::new(1112);
+pub const SETTINGS_SESSIONS_TERMINALS_IN_KEYWORDS: Key = Key::new(1110);
+/// "Groups"
+pub const SETTINGS_SESSIONS_GROUP_GROUPS: Key = Key::new(1111);
+/// "Shortcuts"
+pub const SETTINGS_SESSIONS_GROUP_SHORTCUTS: Key = Key::new(1112);
 /// "Density"
 pub const SETTINGS_SESSIONS_DENSITY: Key = Key::new(1113);
 /// "How much room each terminal takes, in the sidebar and the tab bar: Regular rows are 48 pt with a second line, Compact 32, Dense 26"
 pub const SETTINGS_SESSIONS_DENSITY_DESCRIPTION: Key = Key::new(1114);
 /// "density compact dense regular comfortable rows size"
 pub const SETTINGS_SESSIONS_DENSITY_KEYWORDS: Key = Key::new(1115);
-/// "Show groups as cards"
+/// "Groups as cards"
 pub const SETTINGS_SESSIONS_CARDS: Key = Key::new(1116);
 /// "Off: groups are a head and their rows, with no card around them"
 pub const SETTINGS_SESSIONS_CARDS_DESCRIPTION: Key = Key::new(1117);
@@ -54,7 +56,7 @@ pub const SETTINGS_SESSIONS_SIDEBAR_NUMBERS: Key = Key::new(1125);
 pub const SETTINGS_SESSIONS_SIDEBAR_NUMBERS_DESCRIPTION: Key = Key::new(1126);
 /// "command shortcuts numbers stay follow list stable classic"
 pub const SETTINGS_SESSIONS_SIDEBAR_NUMBERS_KEYWORDS: Key = Key::new(1127);
-/// "Show ⌘1–⌘9 while ⌘ is held"
+/// "Show numbers while ⌘ is held"
 pub const SETTINGS_SESSIONS_CMD_HINTS: Key = Key::new(1128);
 /// "Keycaps on the first nine terminals after 250 ms; the shortcuts work either way"
 pub const SETTINGS_SESSIONS_CMD_HINTS_DESCRIPTION: Key = Key::new(1129);
@@ -74,7 +76,7 @@ pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_SCOPE: Key = Key::new(1135);
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_SCOPE_DESCRIPTION: Key = Key::new(1136);
 /// "git changes count repository terminal own"
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_SCOPE_KEYWORDS: Key = Key::new(1137);
-/// "Plain terminals"
+/// "Plain terminals count"
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_PLAIN: Key = Key::new(1138);
 /// "Which programs make a terminal without an agent count the files changed while they run. Commands that finish: a build, a test run, a formatter. Any program: an editor or a dev server too, which then take edits made outside the app"
 pub const SETTINGS_SESSIONS_SIDEBAR_CHANGES_PLAIN_DESCRIPTION: Key = Key::new(1139);

@@ -120,6 +120,7 @@ impl SettingsWindow {
             changed_copied: false,
             others_open: false,
             status_open: false,
+            terminal_rows: Default::default(),
             profile_form: None,
             confirm_delete_profile: false,
             new_profile: None,

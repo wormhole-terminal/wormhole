@@ -308,11 +308,11 @@ mod tests {
         assert_eq!(wrap.label_ranges, [0..4], "\"Wrap long lines\"");
         assert!(wrap.description_ranges.is_empty(), "one place to mark per row");
 
-        let hits = search(&Query::new("kept"));
+        let hits = search(&Query::new("applies"));
         let scrollback = hits.iter().find(|h| h.entry.id == "scrollback").expect("found");
         assert!(scrollback.label_ranges.is_empty());
         let range = scrollback.description_ranges.first().cloned().expect("in the description");
-        assert_eq!(&scrollback.entry.description()[range], "kept");
+        assert_eq!(&scrollback.entry.description()[range], "Applies");
 
         // Inside a word of the label too ("lines" in "Wrap long lines").
         let hits = search(&Query::new("ines"));

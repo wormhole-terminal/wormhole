@@ -9,7 +9,7 @@ settings-sessions-sidebar-preview = Live preview
 
 ## Terminals in
 
-settings-sessions-group-terminals-in = Terminals in
+settings-sessions-group-layout = Layout
 
 settings-sessions-terminals-in = Show terminals in
     .description = Sidebar: the list on the left; Tabs: a tab bar instead, with the groups as sets of tabs
@@ -17,13 +17,15 @@ settings-sessions-terminals-in = Show terminals in
 
 ## Terminals list
 
-settings-sessions-group-terminals-list = Terminals list
+settings-sessions-group-groups = Groups
+
+settings-sessions-group-shortcuts = Shortcuts
 
 settings-sessions-density = Density
     .description = How much room each terminal takes, in the sidebar and the tab bar: Regular rows are 48 pt with a second line, Compact 32, Dense 26
     .keywords = density compact dense regular comfortable rows size
 
-settings-sessions-cards = Show groups as cards
+settings-sessions-cards = Groups as cards
     .description = Off: groups are a head and their rows, with no card around them
     .keywords = cards groups card background border
 
@@ -39,7 +41,7 @@ settings-sessions-sidebar-numbers = ⌘1–⌘9 numbers
     .description = Stay with the terminal: dealt down the list, then kept (a new terminal gets the next one); Follow the list: the first nine rows you can see
     .keywords = command shortcuts numbers stay follow list stable classic
 
-settings-sessions-cmd-hints = Show ⌘1–⌘9 while ⌘ is held
+settings-sessions-cmd-hints = Show numbers while ⌘ is held
     .description = Keycaps on the first nine terminals after 250 ms; the shortcuts work either way
     .keywords = command keycaps shortcuts numbers hints
 
@@ -55,7 +57,7 @@ settings-sessions-sidebar-changes-scope = Count
     .description = The files this terminal changed, or everything changed in its repository, shown once, on the topmost row of that repository
     .keywords = git changes count repository terminal own
 
-settings-sessions-sidebar-changes-plain = Plain terminals
+settings-sessions-sidebar-changes-plain = Plain terminals count
     .description = Which programs make a terminal without an agent count the files changed while they run. Commands that finish: a build, a test run, a formatter. Any program: an editor or a dev server too, which then take edits made outside the app
     .keywords = shell command editor dev server vim ssh
 

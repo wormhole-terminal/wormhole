@@ -30,12 +30,14 @@ pub(super) const MENU_BAR: &[Group] = &[
         &[
             entry("hotkey", SETTINGS_MENU_BAR_HOTKEY, &["hotkey"])
                 .with_description(SETTINGS_MENU_BAR_HOTKEY_DESCRIPTION)
+                .with_visible_hint()
                 .with_keywords(SETTINGS_MENU_BAR_HOTKEY_KEYWORDS),
             entry("hotkey-action", SETTINGS_MENU_BAR_HOTKEY_ACTION, &["hotkey_action"])
                 .with_description(SETTINGS_MENU_BAR_HOTKEY_ACTION_DESCRIPTION)
                 .with_keywords(SETTINGS_MENU_BAR_HOTKEY_ACTION_KEYWORDS),
             entry("jump-waiting-key", SETTINGS_MENU_BAR_JUMP_WAITING_KEY, &["jump_waiting_key"])
                 .with_description(SETTINGS_MENU_BAR_JUMP_WAITING_KEY_DESCRIPTION)
+                .with_visible_hint()
                 .with_keywords(SETTINGS_MENU_BAR_JUMP_WAITING_KEY_KEYWORDS),
         ],
     ),

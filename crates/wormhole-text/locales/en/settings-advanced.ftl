@@ -26,15 +26,11 @@ settings-advanced-reset-settings = Reset all settings
 
 ## Tips
 
-settings-advanced-group-tips = Tips
-
 settings-advanced-reset-tips = Closed tips
     .description = Bring back the tips closed with “Don't show again”, such as the sidebar's coding agents note
     .keywords = hints tips reset show again dismissed
 
 ## Programs
-
-settings-advanced-group-programs = New programs
 
 settings-advanced-skip-scans = Skip malware scans of new programs
     .description = macOS scans each new program for malware the first time it runs, which slows builds, tests and coding agents. Adding Wormhole to Developer Tools lets programs started in Wormhole skip that scan. Only do this if you trust what you run. Terminals opened after you restart Wormhole get it. If Developer Tools isn't listed, run spctl developer-mode enable-terminal in a terminal first.

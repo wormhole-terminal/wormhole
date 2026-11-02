@@ -13,17 +13,19 @@ pub(super) const SESSIONS: &[Group] = &[
     untitled(&[entry("sidebar-preview", SETTINGS_SESSIONS_SIDEBAR_PREVIEW, &[])
         .with_keywords(SETTINGS_SESSIONS_SIDEBAR_PREVIEW_KEYWORDS)]),
     group(
-        SETTINGS_SESSIONS_GROUP_TERMINALS_IN,
-        &[entry("terminals-in", SETTINGS_SESSIONS_TERMINALS_IN, &["terminals_in"])
-            .with_description(SETTINGS_SESSIONS_TERMINALS_IN_DESCRIPTION)
-            .with_keywords(SETTINGS_SESSIONS_TERMINALS_IN_KEYWORDS)],
-    ),
-    group(
-        SETTINGS_SESSIONS_GROUP_TERMINALS_LIST,
+        SETTINGS_SESSIONS_GROUP_LAYOUT,
         &[
+            entry("terminals-in", SETTINGS_SESSIONS_TERMINALS_IN, &["terminals_in"])
+                .with_description(SETTINGS_SESSIONS_TERMINALS_IN_DESCRIPTION)
+                .with_keywords(SETTINGS_SESSIONS_TERMINALS_IN_KEYWORDS),
             entry("density", SETTINGS_SESSIONS_DENSITY, &["density"])
                 .with_description(SETTINGS_SESSIONS_DENSITY_DESCRIPTION)
                 .with_keywords(SETTINGS_SESSIONS_DENSITY_KEYWORDS),
+        ],
+    ),
+    group(
+        SETTINGS_SESSIONS_GROUP_GROUPS,
+        &[
             entry("cards", SETTINGS_SESSIONS_CARDS, &["show_groups_as_cards"])
                 .with_description(SETTINGS_SESSIONS_CARDS_DESCRIPTION)
                 .with_keywords(SETTINGS_SESSIONS_CARDS_KEYWORDS),
@@ -33,6 +35,11 @@ pub(super) const SESSIONS: &[Group] = &[
             entry("show-group-folders", SETTINGS_SESSIONS_SHOW_GROUP_FOLDERS, &["show_group_folders"])
                 .with_description(SETTINGS_SESSIONS_SHOW_GROUP_FOLDERS_DESCRIPTION)
                 .with_keywords(SETTINGS_SESSIONS_SHOW_GROUP_FOLDERS_KEYWORDS),
+        ],
+    ),
+    group(
+        SETTINGS_SESSIONS_GROUP_SHORTCUTS,
+        &[
             entry("sidebar-numbers", SETTINGS_SESSIONS_SIDEBAR_NUMBERS, &["sidebar_numbers"])
                 .with_description(SETTINGS_SESSIONS_SIDEBAR_NUMBERS_DESCRIPTION)
                 .with_keywords(SETTINGS_SESSIONS_SIDEBAR_NUMBERS_KEYWORDS),

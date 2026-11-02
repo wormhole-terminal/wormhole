@@ -14,14 +14,14 @@ settings-terminal-preview = Live preview
 settings-terminal-group-behaviour = Behaviour
 
 settings-terminal-scrollback = Scrollback
-    .description = Lines kept per terminal (applies to new terminals)
+    .description = Applies to new terminals
     .keywords = history buffer lines
 
-settings-terminal-restore-text = Restore terminal text after restart
-    .description = Encrypted and kept only on this Mac. Off erases what's saved
+settings-terminal-restore-text = Restore text after restart
+    .description = Encrypted, on this Mac only. Off erases what's saved
     .keywords = scrollback history saved restore privacy secrets encrypted keychain
 
-settings-terminal-minimap = Show minimap
+settings-terminal-minimap = Minimap
     .description = The scrollback drawn small along the terminal's right edge. Click or drag it to scroll
     .keywords = overview scrollbar map outline
 
@@ -29,9 +29,9 @@ settings-terminal-split-gaps = Gaps between split terminals
     .description = Each terminal of a split is its own rounded surface, a small gap apart. Off joins them with a hairline
     .keywords = panes divider spacing rounded margin
 
-settings-terminal-meta = Use Option as Meta
-    .description = For emacs and readline shortcuts. A side set to Meta can't type @ { "{" } [ on some keyboard layouts
-    .keywords = alt option escape keyboard left right
+settings-terminal-meta = Option key as Meta
+    .description = A side set to Meta can't type @ { "{" } [ on some layouts
+    .keywords = alt option escape keyboard left right emacs readline
 
 settings-terminal-font = Font
     .keywords = typeface size line height
@@ -53,9 +53,7 @@ settings-terminal-default-terminal = Default terminal
 
 ## Shell
 
-settings-terminal-group-shell = Shell
-
-settings-terminal-default-shell = Default shell
+settings-terminal-default-shell = Shell
     .description = What a new terminal runs: your login shell, a shell on this Mac, or a profile below. Right-click a + for the others
     .keywords = shell zsh bash fish nu nushell login program default
 
@@ -65,13 +63,11 @@ settings-terminal-shells = Shells
 
 ## Worktrees
 
-settings-terminal-group-worktrees = Worktrees
-
 settings-terminal-worktree-base = Worktrees folder
     .description = Where Shell → New Terminal in New Worktree puts a worktree: beside the repository in <name>-worktrees, or under the folder worktree_base names in config.json
     .keywords = worktree worktrees git branch folder base parallel agents
 
-settings-terminal-worktree-clone-build-folders = Start new worktrees with build folders
+settings-terminal-worktree-clone-build-folders = Copy build folders into new worktrees
     .description = When Wormhole makes a worktree, it clones the main checkout's ignored node_modules and target folders into it, so installs and builds start warm. Clones share disk space with the originals until a file changes. Only when both are on the same APFS volume; the clones are left out of Time Machine.
     .keywords = worktree worktrees clone copy node_modules target cargo pnpm npm build cache install apfs warm
 
@@ -79,11 +75,11 @@ settings-terminal-worktree-clone-build-folders = Start new worktrees with build 
 
 settings-terminal-group-bell = Bell
 
-settings-terminal-bell-sound = Play a sound
+settings-terminal-bell-sound = Sound
     .description = The system beep when a program in a terminal rings the bell
     .keywords = bell beep audible alert
 
-settings-terminal-bell-visual = Flash the window edge
+settings-terminal-bell-visual = Flash the terminal edge
     .description = A short glow along the terminal's edge when it rings the bell
     .keywords = bell visual flash glow
 
@@ -99,15 +95,15 @@ settings-terminal-clipboard-write = Programs setting the clipboard
     .description = Lets a program put text on the clipboard (OSC 52), which replaces what you copied. The terminal says when one does
     .keywords = osc 52 clipboard write copy set security ssh notice
 
-settings-terminal-screen-checksum = Let programs read the screen back
+settings-terminal-screen-checksum = Screen read-back
     .description = Answers a program's request for the checksum of part of the screen (DECRQCRA), which also lets a program, over ssh too, read the screen cell by cell. Applies to new terminals
     .keywords = decrqcra checksum screen read capture esctest security ssh
 
-settings-terminal-window-ops = Let programs control the window
+settings-terminal-window-ops = Window control
     .description = Lets a program move, resize, minimise, raise or full-screen the window (xterm's window operations). Applies to new terminals
     .keywords = xtwinops window operations resize move iconify fullscreen maximize security ssh
 
-settings-terminal-title-report = Let programs read the window title back
+settings-terminal-title-report = Title read-back
     .description = Answers a program's request for the window title and icon name (XTWINOPS 20 and 21). A title is text a program chose, and the answer is typed into the shell, so over ssh this lets a program type a command line. Applies to new terminals
     .keywords = xtwinops title icon name report read back window security ssh esctest
 
@@ -117,8 +113,9 @@ settings-terminal-off = Off
 settings-terminal-left = Left
 settings-terminal-right = Right
 settings-terminal-both = Both
-settings-terminal-edit-in-fonts = Edit in Fonts
 settings-terminal-edit-in-config-json = Edit in config.json
+# What the Worktrees folder row says while no folder is set.
+settings-terminal-worktrees-beside = Beside the repository
 settings-terminal-ask = Ask
 settings-terminal-allow = Allow
 settings-terminal-deny = Deny
@@ -138,7 +135,7 @@ settings-terminal-not-found-the-login-shell-runs = Not found: the login shell ru
 # system's reason, in English.
 settings-terminal-default-failed = Couldn't make { -brand } the default: { $error }
 
-# The Font row's quiet line in Fonts. { $family } is the font's name, { $size } its size in points and
+# The Font row's value on the Terminal page. { $family } is the font's name, { $size } its size in points and
 # { $line_height } the line height as a multiple, both already formatted as numbers. The two messages
 # are the same sentence with ligatures on and off.
 settings-terminal-font-summary-ligatures-on = { $family } { $size } pt · line height { $line_height } · ligatures on

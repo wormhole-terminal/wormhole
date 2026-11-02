@@ -11,7 +11,7 @@ settings-menu-bar-preview = Live preview
 
 settings-menu-bar-group-menu-bar = Menu bar
 
-settings-menu-bar-menu-bar = Show { -brand } in the menu bar
+settings-menu-bar-menu-bar = Show in the menu bar
     .description = Terminals by status and quick actions
     .keywords = status bar tray item menubar
 
@@ -19,7 +19,7 @@ settings-menu-bar-icon = Icon shows
     .description = The dot and count on the status item
     .keywords = status item icon count
 
-settings-menu-bar-animate = Animate menu bar icon while working
+settings-menu-bar-animate = Animate while working
     .description = The prompt in the icon types itself out while something runs. Off: a still, filled icon
     .keywords = animation
 
@@ -28,15 +28,15 @@ settings-menu-bar-animate = Animate menu bar icon while working
 settings-menu-bar-group-global-hotkey = Global hotkey
 
 settings-menu-bar-hotkey = Shortcut
-    .description = Works from any app. Click, then press the keys
+    .description = Works from any app
     .keywords = global shortcut quake record hotkey
 
-settings-menu-bar-hotkey-action = Hotkey opens
+settings-menu-bar-hotkey-action = Opens
     .description = Pressing it again with the panel open shows { -brand }
     .keywords = quick panel toggle
 
-settings-menu-bar-jump-waiting-key = Jump to next waiting terminal
-    .description = Inside { -brand }, in any window
+settings-menu-bar-jump-waiting-key = Next waiting terminal
+    .description = Inside { -brand }
     .keywords = needs input needs you waiting shortcut
 
 ## settings_window/sections/menu_bar.rs (labels, hints and notes drawn by this page's code)

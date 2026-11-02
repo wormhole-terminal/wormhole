@@ -37,12 +37,14 @@ settings-appearance-branch-primary = Primary
 
 settings-appearance-group-window = Window
 
-settings-appearance-opacity = Background opacity
+settings-appearance-group-details = Details
+
+settings-appearance-opacity = Opacity
     .description = 30–100 %. Below 100 % the desktop shows through
     .keywords = transparency translucent see through
 
-settings-appearance-blur = Blur what's behind the window
-    .description = Only visible below 100 % opacity
+settings-appearance-blur = Blur behind the window
+    .description = Below 100 % opacity
     .keywords = vibrancy frosted
 
 settings-appearance-liquid-glass = Liquid Glass
@@ -62,7 +64,7 @@ settings-appearance-column-dividers = Column dividers
     .description = The lines between the sidebar, the terminal and the right panel. Off hides them in every theme; the edges still resize. Increase Contrast keeps them
     .keywords = border hairline rule separator edge columns divider
 
-settings-appearance-status-bar = Show status bar
+settings-appearance-status-bar = Status bar
     .description = Branch, agents and terminal size along the bottom of every window
     .keywords = bottom bar footer
 
@@ -82,8 +84,8 @@ settings-appearance-title-row = Parts and order
 
 settings-appearance-group-file-icons = File icons
 
-settings-appearance-icon-theme = File icons
-    .description = In the Changes and History panels. Zed icon themes work too
+settings-appearance-icon-theme = Icon theme
+    .description = Zed icon themes work too
     .keywords = icon theme
 
 settings-appearance-icon-themes-folder = Icon themes folder

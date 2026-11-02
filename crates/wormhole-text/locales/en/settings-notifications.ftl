@@ -26,15 +26,15 @@ settings-notifications-notify-agent-done = An agent finishes
     .description = Its Stop hook, or its output settles. A program that reports it is done or failed counts too
     .keywords = notifications done program report failed error
 
-settings-notifications-notify-command-done = A command finishes
+settings-notifications-notify-command-done = A long command finishes
     .description = Any foreground command, agent or not, that ran longer than
     .keywords = long build threshold seconds notifications
 
 settings-notifications-notify-command-failed = A command fails
-    .description = Non-zero exit code. Needs shell integration (on for zsh, bash and fish)
+    .description = zsh, bash and fish
     .keywords = failed failure error exit code build notifications
 
-settings-notifications-notify-bell = The terminal rings the bell
+settings-notifications-notify-bell = The bell rings
     .description = Terminals without an agent; at most once a minute each
     .keywords = bell notifications
 
@@ -56,7 +56,7 @@ settings-notifications-notify-sound = Sound
 ## Group bursts
 
 settings-notifications-notify-group-bursts = Group bursts
-    .description = Three or more within 10 s become one summary
+    .description = Three or more in 10 s become one
     .keywords = summary bursts
 
 ## Dock
@@ -67,7 +67,7 @@ settings-notifications-dock-badge = Badge
     .description = The count on the Dock icon
     .keywords = dock badge count
 
-settings-notifications-dock-bounce = Bounce once when a terminal needs input
+settings-notifications-dock-bounce = Bounce when a terminal needs input
     .description = Only while { -brand } isn’t the active app; never for a bell
     .keywords = dock bounce
 

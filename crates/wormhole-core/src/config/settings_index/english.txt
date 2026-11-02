@@ -25,12 +25,6 @@ group "Behaviour"
 group "Opening"
   blurb ""
   aside ""
-group "Shell"
-  blurb ""
-  aside ""
-group "Worktrees"
-  blurb ""
-  aside ""
 group "Bell"
   blurb ""
   aside ""
@@ -51,6 +45,9 @@ group "Accent"
   blurb ""
   aside ""
 group "Window"
+  blurb ""
+  aside ""
+group "Details"
   blurb ""
   aside ""
 group "Title row"
@@ -85,10 +82,13 @@ section Sessions
 group ""
   blurb ""
   aside ""
-group "Terminals in"
+group "Layout"
   blurb ""
   aside ""
-group "Terminals list"
+group "Groups"
+  blurb ""
+  aside ""
+group "Shortcuts"
   blurb ""
   aside ""
 group "Row details"
@@ -168,7 +168,7 @@ section Import
 group "Found on this Mac"
   blurb ""
   aside ""
-group "Compared with Wormhole"
+group ""
   blurb ""
   aside ""
 section Updates
@@ -191,10 +191,10 @@ section Advanced
 group "Files"
   blurb ""
   aside ""
-group "Tips"
+group ""
   blurb ""
   aside ""
-group "New programs"
+group ""
   blurb ""
   aside ""
 section Motion
@@ -223,7 +223,7 @@ group ""
   aside ""
 section FeatureFlags
   title "Feature flags"
-  intro "Features still being built. They show here in a development build and on the Unstable update channel; otherwise a release has them off until they're finished."
+  intro "Switches for features that aren’t finished. Only development builds show this page; a release uses each feature’s default."
   nav "Preview"
 group ""
   blurb ""
@@ -258,14 +258,14 @@ entry Terminal terminal-preview
   keywords "preview split terminals gaps minimap scrollbar"
 entry Terminal scrollback
   label "Scrollback"
-  description "Lines kept per terminal (applies to new terminals)"
+  description "Applies to new terminals"
   keywords "history buffer lines"
 entry Terminal restore-text
-  label "Restore terminal text after restart"
-  description "Encrypted and kept only on this Mac. Off erases what's saved"
+  label "Restore text after restart"
+  description "Encrypted, on this Mac only. Off erases what's saved"
   keywords "scrollback history saved restore privacy secrets encrypted keychain"
 entry Terminal minimap
-  label "Show minimap"
+  label "Minimap"
   description "The scrollback drawn small along the terminal's right edge. Click or drag it to scroll"
   keywords "overview scrollbar map outline"
 entry Terminal split-gaps
@@ -273,9 +273,9 @@ entry Terminal split-gaps
   description "Each terminal of a split is its own rounded surface, a small gap apart. Off joins them with a hairline"
   keywords "panes divider spacing rounded margin"
 entry Terminal meta
-  label "Use Option as Meta"
-  description "For emacs and readline shortcuts. A side set to Meta can't type @ { [ on some keyboard layouts"
-  keywords "alt option escape keyboard left right"
+  label "Option key as Meta"
+  description "A side set to Meta can't type @ { [ on some layouts"
+  keywords "alt option escape keyboard left right emacs readline"
 entry Terminal terminal-font
   label "Font"
   description ""
@@ -289,7 +289,7 @@ entry Terminal default-terminal
   description "Double-clicked .command files and programs run in a new Wormhole terminal instead of Terminal"
   keywords "default terminal app command script executable finder open with launch services"
 entry Terminal default-shell
-  label "Default shell"
+  label "Shell"
   description "What a new terminal runs: your login shell, a shell on this Mac, or a profile below. Right-click a + for the others"
   keywords "shell zsh bash fish nu nushell login program default"
 entry Terminal shells
@@ -301,15 +301,15 @@ entry Terminal worktree-base
   description "Where Shell → New Terminal in New Worktree puts a worktree: beside the repository in <name>-worktrees, or under the folder worktree_base names in config.json"
   keywords "worktree worktrees git branch folder base parallel agents"
 entry Terminal worktree-clone-build-folders
-  label "Start new worktrees with build folders"
+  label "Copy build folders into new worktrees"
   description "When Wormhole makes a worktree, it clones the main checkout's ignored node_modules and target folders into it, so installs and builds start warm. Clones share disk space with the originals until a file changes. Only when both are on the same APFS volume; the clones are left out of Time Machine."
   keywords "worktree worktrees clone copy node_modules target cargo pnpm npm build cache install apfs warm"
 entry Terminal bell-sound
-  label "Play a sound"
+  label "Sound"
   description "The system beep when a program in a terminal rings the bell"
   keywords "bell beep audible alert"
 entry Terminal bell-visual
-  label "Flash the window edge"
+  label "Flash the terminal edge"
   description "A short glow along the terminal's edge when it rings the bell"
   keywords "bell visual flash glow"
 entry Terminal clipboard-read
@@ -321,15 +321,15 @@ entry Terminal clipboard-write
   description "Lets a program put text on the clipboard (OSC 52), which replaces what you copied. The terminal says when one does"
   keywords "osc 52 clipboard write copy set security ssh notice"
 entry Terminal screen-checksum
-  label "Let programs read the screen back"
+  label "Screen read-back"
   description "Answers a program's request for the checksum of part of the screen (DECRQCRA), which also lets a program, over ssh too, read the screen cell by cell. Applies to new terminals"
   keywords "decrqcra checksum screen read capture esctest security ssh"
 entry Terminal window-ops
-  label "Let programs control the window"
+  label "Window control"
   description "Lets a program move, resize, minimise, raise or full-screen the window (xterm's window operations). Applies to new terminals"
   keywords "xtwinops window operations resize move iconify fullscreen maximize security ssh"
 entry Terminal title-report
-  label "Let programs read the window title back"
+  label "Title read-back"
   description "Answers a program's request for the window title and icon name (XTWINOPS 20 and 21). A title is text a program chose, and the answer is typed into the shell, so over ssh this lets a program type a command line. Applies to new terminals"
   keywords "xtwinops title icon name report read back window security ssh esctest"
 entry Appearance appearance-preview
@@ -353,12 +353,12 @@ entry Appearance branch-color
   description "The git branch on folders, in the title row and in the status bar. Any colour is kept readable"
   keywords "git branch chip accent color colour magenta purple primary swatch custom own"
 entry Appearance opacity
-  label "Background opacity"
+  label "Opacity"
   description "30–100 %. Below 100 % the desktop shows through"
   keywords "transparency translucent see through"
 entry Appearance blur
-  label "Blur what's behind the window"
-  description "Only visible below 100 % opacity"
+  label "Blur behind the window"
+  description "Below 100 % opacity"
   keywords "vibrancy frosted"
 entry Appearance liquid-glass
   label "Liquid Glass"
@@ -377,7 +377,7 @@ entry Appearance column-dividers
   description "The lines between the sidebar, the terminal and the right panel. Off hides them in every theme; the edges still resize. Increase Contrast keeps them"
   keywords "border hairline rule separator edge columns divider"
 entry Appearance status-bar
-  label "Show status bar"
+  label "Status bar"
   description "Branch, agents and terminal size along the bottom of every window"
   keywords "bottom bar footer"
 entry Appearance icon-animations
@@ -389,8 +389,8 @@ entry Appearance title-row
   description "What the title row shows, and where. Drag a part to move it: the ones above the flexible space sit at the row's left, the others at its right. Right-click the title row to show or hide them there. The pull request is asked of the GitHub CLI (gh), only in a trusted project; hidden, it isn't asked for, and the folder's band in the sidebar has no mark for it either"
   keywords "toolbar customize arrange order reorder rearrange move hide show folder path branch git dirty uncommitted ahead behind status working claude model context window ports localhost server pull request pr github gh checks open in editor split buttons"
 entry Appearance icon-theme
-  label "File icons"
-  description "In the Changes and History panels. Zed icon themes work too"
+  label "Icon theme"
+  description "Zed icon themes work too"
   keywords "icon theme"
 entry Appearance icon-themes-folder
   label "Icon themes folder"
@@ -410,15 +410,15 @@ entry Fonts line-height
   keywords "spacing leading"
 entry Fonts font-ligatures
   label "Ligatures"
-  description "Join sequences like => and != into one glyph"
+  description "Shows => and != as one glyph"
   keywords "ligature"
 entry Fonts font-code
   label "Font"
-  description "Diffs, commit hashes, file lists, Theme Studio"
+  description "Diffs, file lists, Theme Studio"
   keywords "code font typeface size monospace diff"
 entry Fonts font-interface
   label "Font"
-  description "Sidebar, panels, settings and controls. The size scales the whole interface"
+  description "Its size scales the interface"
   keywords "interface font typeface size system ui"
 entry Fonts fonts-folder
   label "Fonts folder"
@@ -441,7 +441,7 @@ entry Sessions density
   description "How much room each terminal takes, in the sidebar and the tab bar: Regular rows are 48 pt with a second line, Compact 32, Dense 26"
   keywords "density compact dense regular comfortable rows size"
 entry Sessions cards
-  label "Show groups as cards"
+  label "Groups as cards"
   description "Off: groups are a head and their rows, with no card around them"
   keywords "cards groups card background border"
 entry Sessions fade-group-colors
@@ -457,7 +457,7 @@ entry Sessions sidebar-numbers
   description "Stay with the terminal: dealt down the list, then kept (a new terminal gets the next one); Follow the list: the first nine rows you can see"
   keywords "command shortcuts numbers stay follow list stable classic"
 entry Sessions cmd-hints
-  label "Show ⌘1–⌘9 while ⌘ is held"
+  label "Show numbers while ⌘ is held"
   description "Keycaps on the first nine terminals after 250 ms; the shortcuts work either way"
   keywords "command keycaps shortcuts numbers hints"
 entry Sessions sidebar-changes
@@ -469,7 +469,7 @@ entry Sessions sidebar-changes-scope
   description "The files this terminal changed, or everything changed in its repository, shown once, on the topmost row of that repository"
   keywords "git changes count repository terminal own"
 entry Sessions sidebar-changes-plain
-  label "Plain terminals"
+  label "Plain terminals count"
   description "Which programs make a terminal without an agent count the files changed while they run. Commands that finish: a build, a test run, a formatter. Any program: an editor or a dev server too, which then take edits made outside the app"
   keywords "shell command editor dev server vim ssh"
 entry Sessions sidebar-changes-shared
@@ -497,11 +497,11 @@ entry Git changes-view
   description "A flat list, or folders as a tree"
   keywords "folders files list tree"
 entry Git group-untracked
-  label "Group untracked files separately"
+  label "Untracked files separately"
   description "New files get their own section under the changes"
   keywords "untracked new files"
 entry Git diff-layout
-  label "Default layout"
+  label "Layout"
   description "Split keeps old and new side by side, even for a new or deleted file. The diff's own toolbar switches one diff"
   keywords "split unified side by side"
 entry Git diff-wrap
@@ -533,15 +533,15 @@ entry Notifications notify-agent-done
   description "Its Stop hook, or its output settles. A program that reports it is done or failed counts too"
   keywords "notifications done program report failed error"
 entry Notifications notify-command-done
-  label "A command finishes"
+  label "A long command finishes"
   description "Any foreground command, agent or not, that ran longer than"
   keywords "long build threshold seconds notifications"
 entry Notifications notify-command-failed
   label "A command fails"
-  description "Non-zero exit code. Needs shell integration (on for zsh, bash and fish)"
+  description "zsh, bash and fish"
   keywords "failed failure error exit code build notifications"
 entry Notifications notify-bell
-  label "The terminal rings the bell"
+  label "The bell rings"
   description "Terminals without an agent; at most once a minute each"
   keywords "bell notifications"
 entry Notifications notify-only-unseen
@@ -558,14 +558,14 @@ entry Notifications notify-sound
   keywords "sound alert"
 entry Notifications notify-group-bursts
   label "Group bursts"
-  description "Three or more within 10 s become one summary"
+  description "Three or more in 10 s become one"
   keywords "summary bursts"
 entry Notifications dock-badge
   label "Badge"
   description "The count on the Dock icon"
   keywords "dock badge count"
 entry Notifications dock-bounce
-  label "Bounce once when a terminal needs input"
+  label "Bounce when a terminal needs input"
   description "Only while Wormhole isn’t the active app; never for a bell"
   keywords "dock bounce"
 entry Agents agents-preview
@@ -613,7 +613,7 @@ entry MenuBar menu-bar-preview
   description ""
   keywords "preview menu bar item quick panel"
 entry MenuBar menu-bar
-  label "Show Wormhole in the menu bar"
+  label "Show in the menu bar"
   description "Terminals by status and quick actions"
   keywords "status bar tray item menubar"
 entry MenuBar menu-bar-icon
@@ -621,27 +621,27 @@ entry MenuBar menu-bar-icon
   description "The dot and count on the status item"
   keywords "status item icon count"
 entry MenuBar menu-bar-animate
-  label "Animate menu bar icon while working"
+  label "Animate while working"
   description "The prompt in the icon types itself out while something runs. Off: a still, filled icon"
   keywords "animation"
 entry MenuBar hotkey
   label "Shortcut"
-  description "Works from any app. Click, then press the keys"
+  description "Works from any app"
   keywords "global shortcut quake record hotkey"
 entry MenuBar hotkey-action
-  label "Hotkey opens"
+  label "Opens"
   description "Pressing it again with the panel open shows Wormhole"
   keywords "quick panel toggle"
 entry MenuBar jump-waiting-key
-  label "Jump to next waiting terminal"
-  description "Inside Wormhole, in any window"
+  label "Next waiting terminal"
+  description "Inside Wormhole"
   keywords "needs input needs you waiting shortcut"
 entry Import import-found
   label "Terminals found"
   description ""
   keywords "import migrate switch move settings config configuration ghostty iterm iterm2 terminal.app alacritty kitty wezterm warp zed vscode vs code font theme colours colors shell"
 entry Import import-compare
-  label "How they compare"
+  label "Compare with Wormhole"
   description ""
   keywords "drawbacks limits strengths differences versus comparison alternatives"
 entry Updates update-status
@@ -680,10 +680,6 @@ entry Advanced open-logs
   label "Logs"
   description "Set WORMHOLE_LOG=debug for more detail"
   keywords "debug log"
-entry Advanced reset-settings
-  label "Reset all settings"
-  description "Your terminals, notes and themes are kept"
-  keywords "defaults reset restore"
 entry Advanced reset-tips
   label "Closed tips"
   description "Bring back the tips closed with “Don't show again”, such as the sidebar's coding agents note"
@@ -692,6 +688,10 @@ entry Advanced skip-scans
   label "Skip malware scans of new programs"
   description "macOS scans each new program for malware the first time it runs, which slows builds, tests and coding agents. Adding Wormhole to Developer Tools lets programs started in Wormhole skip that scan. Only do this if you trust what you run. Terminals opened after you restart Wormhole get it. If Developer Tools isn't listed, run spctl developer-mode enable-terminal in a terminal first."
   keywords "developer tools xprotect gatekeeper malware scan speed slow first run build privacy security spctl"
+entry Advanced reset-settings
+  label "Reset all settings"
+  description "Your terminals, notes and themes are kept"
+  keywords "defaults reset restore"
 entry Motion motion-insert
   label "A terminal opens or closes"
   description "How its row comes into the list and leaves it"

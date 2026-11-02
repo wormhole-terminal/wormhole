@@ -17,7 +17,7 @@ settings-git-changes-view = File view
     .description = A flat list, or folders as a tree
     .keywords = folders files list tree
 
-settings-git-group-untracked = Group untracked files separately
+settings-git-group-untracked = Untracked files separately
     .description = New files get their own section under the changes
     .keywords = untracked new files
 
@@ -25,7 +25,7 @@ settings-git-group-untracked = Group untracked files separately
 
 settings-git-group-diff-view = Diff view
 
-settings-git-diff-layout = Default layout
+settings-git-diff-layout = Layout
     .description = Split keeps old and new side by side, even for a new or deleted file. The diff's own toolbar switches one diff
     .keywords = split unified side by side
 

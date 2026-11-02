@@ -38,6 +38,7 @@ pub(super) const NOTIFICATIONS: &[Group] = &[
                 &["notify_command_failed"],
             )
             .with_description(SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED_DESCRIPTION)
+            .with_visible_hint()
             .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED_KEYWORDS),
             entry("notify-bell", SETTINGS_NOTIFICATIONS_NOTIFY_BELL, &["notify_bell"])
                 .with_description(SETTINGS_NOTIFICATIONS_NOTIFY_BELL_DESCRIPTION)
@@ -61,6 +62,7 @@ pub(super) const NOTIFICATIONS: &[Group] = &[
                 &["notify_group_bursts"],
             )
             .with_description(SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS_DESCRIPTION)
+            .with_visible_hint()
             .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS_KEYWORDS),
         ],
     ),

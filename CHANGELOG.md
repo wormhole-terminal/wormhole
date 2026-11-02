@@ -11,6 +11,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Help → Session Hosts (while Persistent terminals is on) opens a window that shows every session host:
   its processes, version and protocol against the app's, whether it answers, which terminal holds it
   and how that connection is doing, with End, Forget and a copy of the details for a bug report.
+- Settings pages use the designed words and groups: Terminal's Shells and Worktrees folder are rows that open more
+  (with no footer line about config.json), Appearance has a Details group, Terminals & sidebar is grouped as
+  Layout, Groups, Shortcuts and Row details, and warnings stay under their rows while other hints sit behind the (i).
 - Settings → Import lists each terminal found as a row with the file it was read from and an Import… button, and
   "Compare with Wormhole" opens how they compare in a sheet.
 - Every group of rows in Settings sits in one rounded card under its heading, with a line between the rows only while

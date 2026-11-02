@@ -45,22 +45,12 @@ pub(super) const TERMINAL: &[Group] = &[
             entry("default-terminal", SETTINGS_TERMINAL_DEFAULT_TERMINAL, &[])
                 .with_description(SETTINGS_TERMINAL_DEFAULT_TERMINAL_DESCRIPTION)
                 .with_keywords(SETTINGS_TERMINAL_DEFAULT_TERMINAL_KEYWORDS),
-        ],
-    ),
-    group(
-        SETTINGS_TERMINAL_GROUP_SHELL,
-        &[
             entry("default-shell", SETTINGS_TERMINAL_DEFAULT_SHELL, &["default_shell"])
                 .with_description(SETTINGS_TERMINAL_DEFAULT_SHELL_DESCRIPTION)
                 .with_keywords(SETTINGS_TERMINAL_DEFAULT_SHELL_KEYWORDS),
             entry("shells", SETTINGS_TERMINAL_SHELLS, &["shells"])
                 .with_description(SETTINGS_TERMINAL_SHELLS_DESCRIPTION)
                 .with_keywords(SETTINGS_TERMINAL_SHELLS_KEYWORDS),
-        ],
-    ),
-    group(
-        SETTINGS_TERMINAL_GROUP_WORKTREES,
-        &[
             entry("worktree-base", SETTINGS_TERMINAL_WORKTREE_BASE, &["worktree_base"])
                 .with_description(SETTINGS_TERMINAL_WORKTREE_BASE_DESCRIPTION)
                 .with_keywords(SETTINGS_TERMINAL_WORKTREE_BASE_KEYWORDS),

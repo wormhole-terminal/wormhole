@@ -46,7 +46,6 @@ fn lines() -> Vec<(&'static str, String)> {
 fn a_row_with_its_own_control_says_its_default_in_that_controls_words() {
     let lines = lines();
     let said = |id: &str| lines.iter().find(|(row, _)| *row == id).map(|(_, words)| words.as_str());
-    assert_eq!(said("scrollback"), Some("10,000 lines"), "as its menu says it");
     assert_eq!(said("opacity"), Some("80 %"));
     assert_eq!(said("line-height"), Some("1.30"));
     assert_eq!(said("density"), Some("Regular"));

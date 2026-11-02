@@ -16,7 +16,7 @@ use gpui_kit::component::Disableable as _;
 use gpui_kit::*;
 use wormhole_core::config::OptionAsMeta;
 use wormhole_core::config::clipboard::{ClipboardRead, ClipboardWrite};
-use wormhole_core::config::settings_index::SectionId as Section;
+use wormhole_core::config::settings_index::{self, SectionId as Section};
 use wormhole_core::terminal::shells::{self, ShellChoice, ShellKind};
 use wormhole_core::theme::fonts::FontSlot;
 
@@ -27,7 +27,7 @@ use crate::platform::default_app;
 use crate::select::{MenuLine, MenuOptions, menu_select};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
-use crate::settings_window::registry::{MenuOption, Setting, row_label, toggle};
+use crate::settings_window::registry::{Current, MenuOption, Setting, row_label, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
 
@@ -36,8 +36,22 @@ const SCROLLBACK: [usize; 6] = [1_000, 5_000, 10_000, 50_000, 100_000, 200_000];
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("terminal-preview", super::draw_split_preview),
-    Setting::custom("scrollback", draw_scrollback)
-        .default_words(|| lines(Settings::default().scrollback_lines).into()),
+    Setting::menu_of_values(
+        "scrollback",
+        &[
+            MenuOption::counted(scrollback_lines, 1_000),
+            MenuOption::counted(scrollback_lines, 5_000),
+            MenuOption::counted(scrollback_lines, 10_000),
+            MenuOption::counted(scrollback_lines, 50_000),
+            MenuOption::counted(scrollback_lines, 100_000),
+            MenuOption::counted(scrollback_lines, 200_000),
+        ],
+        |s| match SCROLLBACK.iter().position(|n| *n == s.scrollback_lines) {
+            Some(at) => Current::At(at),
+            None => Current::Other(lines(s.scrollback_lines)),
+        },
+        |s, ix| s.scrollback_lines = SCROLLBACK.get(ix).copied().unwrap_or(s.scrollback_lines),
+    ),
     toggle!("restore-text", restore_terminal_text),
     toggle!("minimap", minimap),
     toggle!("split-gaps", split_gaps),
@@ -52,28 +66,12 @@ pub(super) const SETTINGS: &[Setting] = &[
         |s| OptionAsMeta::ALL.iter().position(|o| *o == s.option_as_meta).unwrap_or(0),
         |s, ix| s.option_as_meta = OptionAsMeta::ALL.get(ix).copied().unwrap_or_default(),
     ),
-    Setting::custom("terminal-font", |_, cx| {
-        let ui = ui(cx);
-        style::link_button("edit-in-fonts", ui, text(SETTINGS_TERMINAL_EDIT_IN_FONTS), true)
-            .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::Fonts, cx)))
-            .into_any_element()
-    })
-    .describe(describe_font),
+    Setting::rows("terminal-font", draw_font),
     Setting::custom("open-in", draw_open_in).default_words(|| text(SETTINGS_TERMINAL_OPEN_IN_DEFAULT).into()),
     Setting::custom("default-terminal", draw_default_terminal),
     Setting::custom("default-shell", draw_default_shell).default_words(default_shell_name),
-    Setting::custom("shells", |_, cx| {
-        style::link_button("edit-shells", ui(cx), text(SETTINGS_TERMINAL_EDIT_IN_CONFIG_JSON), false)
-            .on_click(|_, _, _| open_in_editor(&SettingsStore::config_path()))
-            .into_any_element()
-    })
-    .below(list_shells),
-    Setting::custom("worktree-base", |_, cx| {
-        style::link_button("edit-worktree-base", ui(cx), text(SETTINGS_TERMINAL_EDIT_IN_CONFIG_JSON), false)
-            .on_click(|_, _, _| open_in_editor(&SettingsStore::config_path()))
-            .into_any_element()
-    })
-    .describe(describe_worktree_base),
+    Setting::rows("shells", draw_shells),
+    Setting::rows("worktree-base", draw_worktree_base),
     toggle!("worktree-clone-build-folders", worktree_clone_build_folders),
     toggle!("bell-sound", bell_sound),
     toggle!("bell-visual", bell_visual),
@@ -97,6 +95,88 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("window-ops", allow_window_ops),
     toggle!("title-report", allow_title_report),
 ];
+
+/// Which of the Terminal page's rows that open more are open.
+#[derive(Default)]
+pub(crate) struct TerminalRows {
+    shells: bool,
+    worktrees: bool,
+}
+
+/// Font: a row to the Fonts page, with the font in use, its size, line height and ligatures as its value.
+fn draw_font(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let summary = describe_font(window, cx);
+    style::more_row("terminal-font", ui(cx), row_label("terminal-font"), summary, false)
+        .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::Fonts, cx)))
+        .into_any_element()
+}
+
+/// Shells: closed it counts the profiles `config.json` lists; open, each with what it runs, and the way to
+/// the file that holds them.
+fn draw_shells(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let ui = ui(cx);
+    let open = window.terminal_rows.shells;
+    let count = shells::choices(settings(cx)).iter().filter(|c| c.kind == ShellKind::Profile).count();
+    let head = style::more_row(
+        "terminal-shells",
+        ui,
+        row_label("shells"),
+        Some(wormhole_text::whole(count).to_string().into()),
+        open,
+    )
+    .on_click(cx.listener(|this, _, _, cx| {
+        this.terminal_rows.shells = !this.terminal_rows.shells;
+        cx.notify();
+    }));
+    opened(head, open.then(|| (list_shells(window, cx), "edit-shells")), ui, cx)
+}
+
+/// Worktrees folder: closed it says where worktrees go; open, what that means, and the way to the file that
+/// sets it.
+fn draw_worktree_base(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let ui = ui(cx);
+    let open = window.terminal_rows.worktrees;
+    let base = settings(cx).worktree_base.trim().to_string();
+    let value = if base.is_empty() {
+        SharedString::from(text(SETTINGS_TERMINAL_WORKTREES_BESIDE))
+    } else {
+        let home = crate::settings_window::home();
+        wormhole_core::view::sidebar::display_path(Path::new(&base), home.as_deref()).into()
+    };
+    let head = style::more_row("terminal-worktrees", ui, row_label("worktree-base"), Some(value), open)
+        .on_click(cx.listener(|this, _, _, cx| {
+            this.terminal_rows.worktrees = !this.terminal_rows.worktrees;
+            cx.notify();
+        }));
+    let note = describe_worktree_base(window, cx).unwrap_or_else(|| {
+        settings_index::entry("worktree-base").map_or("", |(_, _, entry)| entry.description()).into()
+    });
+    let body = div().text_caption().text_color(ui.muted).child(note).into_any_element();
+    opened(head, open.then(|| (Some(body), "edit-worktree-base")), ui, cx)
+}
+
+/// A row that opens more with what it opens under it, and the link that edits `config.json` after it.
+fn opened(
+    head: Stateful<Div>,
+    open: Option<(Option<AnyElement>, &'static str)>,
+    ui: UiColors,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
+    let _ = cx;
+    div()
+        .flex()
+        .flex_col()
+        .child(head)
+        .children(open.map(|(body, edit)| {
+            div().flex().flex_col().gap_2().pb_2().children(body).child(
+                div().flex().justify_end().child(
+                    style::link_button(edit, ui, text(SETTINGS_TERMINAL_EDIT_IN_CONFIG_JSON), false)
+                        .on_click(|_, _, _| open_in_editor(&SettingsStore::config_path())),
+                ),
+            )
+        }))
+        .into_any_element()
+}
 
 /// Default terminal: makes Wormhole the app that runs opened scripts, or says that it is.
 fn draw_default_terminal(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
@@ -170,6 +250,11 @@ fn default_shell_name() -> SharedString {
         .map_or_else(|| SharedString::from(key.to_string()), |choice| choice.name.into())
 }
 
+/// "10,000 lines" for a menu option.
+fn scrollback_lines(n: u32) -> String {
+    lines(n as usize)
+}
+
 /// "10,000 lines".
 fn lines(n: usize) -> String {
     let digits = n.to_string();
@@ -181,25 +266,6 @@ fn lines(n: usize) -> String {
         grouped.push(c);
     }
     settings_terminal_scrollback_lines(&grouped)
-}
-
-fn draw_scrollback(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let current = settings(cx).scrollback_lines;
-    let mut sizes = SCROLLBACK.to_vec();
-    if !sizes.contains(&current) {
-        sizes.push(current);
-        sizes.sort_unstable();
-    }
-    menu_select("scrollback", ui(cx), row_label("scrollback"), lines(current), move |_| {
-        let at = sizes.iter().position(|n| *n == current);
-        let words: Vec<_> = sizes.iter().map(|n| lines(*n).into()).collect();
-        MenuOptions::words(words, at, move |ix, _, cx| {
-            if let Some(n) = sizes.get(ix) {
-                update_settings(cx, |s| s.scrollback_lines = *n);
-            }
-        })
-    })
-    .into_any_element()
 }
 
 /// Open folders in: the apps on this Mac that can open a folder, found when Settings opens or the page is
