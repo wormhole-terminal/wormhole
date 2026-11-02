@@ -17,7 +17,7 @@ impl Report {
         let mut out = String::new();
         let _ = writeln!(
             out,
-            "Wormhole {} (protocol {}.{})",
+            "Wormhole {} (protocol {} (minor {}))",
             self.app.version, self.app.proto_major, self.app.proto_minor
         );
         let _ = writeln!(out, "hosts folder: {}", self.hosts_dir.display());
@@ -67,7 +67,8 @@ impl HostRow {
         line(
             "protocol",
             match (self.proto, self.fit) {
-                (Some((min, max)), Some(fit)) => format!("{min}..={max}, {}", fit_word(fit)),
+                (Some((min, max)), Some(fit)) => format!("{}, {}", range_words(min, max), fit_word(fit)),
+                (Some((min, max)), None) => format!("{}, not running", range_words(min, max)),
                 _ => unknown(),
             },
         );
@@ -149,6 +150,11 @@ fn fit_word(fit: HostFit) -> String {
         HostFit::TooOld => "too old for this app".to_string(),
         HostFit::TooNew => "too new for this app".to_string(),
     }
+}
+
+/// A host's range of protocol majors in words: `1`, or `1 to 2`.
+pub fn range_words(min: u16, max: u16) -> String {
+    if min == max { min.to_string() } else { format!("{min} to {max}") }
 }
 
 /// `3d 4h`, `5h 12m`, `7m 30s`, `12s`: the two largest units.

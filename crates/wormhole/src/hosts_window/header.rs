@@ -11,7 +11,7 @@ use wormhole_text::keys::{
 };
 use wormhole_text::text;
 
-use super::{Copied, HostsWindow};
+use super::{Copied, HostsWindow, words};
 use crate::settings::UiColors;
 use crate::style::{self, TextRole};
 
@@ -25,7 +25,7 @@ impl HostsWindow {
             style::status_badge(ui, ui.warning_text, text(HOSTS_HEADER_FLAG_OFF))
         };
         let (binary, binary_color) = match &report.host_binary {
-            Some(path) => (path.display().to_string(), ui.text),
+            Some(path) => (words::path(path), ui.text),
             None => (text(HOSTS_HEADER_BINARY_MISSING).to_string(), ui.warning_text),
         };
         let copy_all = if self.copied == Some(Copied::All) {
@@ -66,7 +66,7 @@ impl HostsWindow {
                     .text_label()
                     .child(hosts_header_app(
                         &app.version,
-                        &format!("{}.{}", app.proto_major, app.proto_minor),
+                        &words::app_protocol(app.proto_major, app.proto_minor),
                     ))
                     .child(
                         div()
@@ -92,7 +92,7 @@ impl HostsWindow {
                     .gap_2()
                     .text_label()
                     .child(div().flex_none().text_color(ui.muted).child(text(HOSTS_HEADER_FOLDER)))
-                    .child(div().min_w_0().truncate().child(report.hosts_dir.display().to_string())),
+                    .child(div().min_w_0().truncate().child(words::path(&report.hosts_dir))),
             )
             .child(
                 div()

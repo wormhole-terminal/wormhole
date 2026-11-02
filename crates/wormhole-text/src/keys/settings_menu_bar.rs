@@ -7,71 +7,71 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Menu bar & hotkey"
-pub const SETTINGS_SECTION_MENU_BAR: Key = Key::new(791);
+pub const SETTINGS_SECTION_MENU_BAR: Key = Key::new(795);
 /// "Wormhole in the macOS menu bar, and a shortcut that works from any app."
-pub const SETTINGS_SECTION_MENU_BAR_INTRO: Key = Key::new(792);
+pub const SETTINGS_SECTION_MENU_BAR_INTRO: Key = Key::new(796);
 /// "Menu bar"
-pub const SETTINGS_MENU_BAR_GROUP_MENU_BAR: Key = Key::new(793);
+pub const SETTINGS_MENU_BAR_GROUP_MENU_BAR: Key = Key::new(797);
 /// "Show Wormhole in the menu bar"
-pub const SETTINGS_MENU_BAR_MENU_BAR: Key = Key::new(794);
+pub const SETTINGS_MENU_BAR_MENU_BAR: Key = Key::new(798);
 /// "Terminals by status and quick actions"
-pub const SETTINGS_MENU_BAR_MENU_BAR_DESCRIPTION: Key = Key::new(795);
+pub const SETTINGS_MENU_BAR_MENU_BAR_DESCRIPTION: Key = Key::new(799);
 /// "status bar tray item menubar"
-pub const SETTINGS_MENU_BAR_MENU_BAR_KEYWORDS: Key = Key::new(796);
+pub const SETTINGS_MENU_BAR_MENU_BAR_KEYWORDS: Key = Key::new(800);
 /// "Icon shows"
-pub const SETTINGS_MENU_BAR_ICON: Key = Key::new(797);
+pub const SETTINGS_MENU_BAR_ICON: Key = Key::new(801);
 /// "The dot and count on the status item"
-pub const SETTINGS_MENU_BAR_ICON_DESCRIPTION: Key = Key::new(798);
+pub const SETTINGS_MENU_BAR_ICON_DESCRIPTION: Key = Key::new(802);
 /// "status item icon count"
-pub const SETTINGS_MENU_BAR_ICON_KEYWORDS: Key = Key::new(799);
+pub const SETTINGS_MENU_BAR_ICON_KEYWORDS: Key = Key::new(803);
 /// "Animate menu bar icon while working"
-pub const SETTINGS_MENU_BAR_ANIMATE: Key = Key::new(800);
+pub const SETTINGS_MENU_BAR_ANIMATE: Key = Key::new(804);
 /// "The prompt in the icon types itself out while something runs. Off: a still, filled icon"
-pub const SETTINGS_MENU_BAR_ANIMATE_DESCRIPTION: Key = Key::new(801);
+pub const SETTINGS_MENU_BAR_ANIMATE_DESCRIPTION: Key = Key::new(805);
 /// "animation"
-pub const SETTINGS_MENU_BAR_ANIMATE_KEYWORDS: Key = Key::new(802);
+pub const SETTINGS_MENU_BAR_ANIMATE_KEYWORDS: Key = Key::new(806);
 /// "Global hotkey"
-pub const SETTINGS_MENU_BAR_GROUP_GLOBAL_HOTKEY: Key = Key::new(803);
+pub const SETTINGS_MENU_BAR_GROUP_GLOBAL_HOTKEY: Key = Key::new(807);
 /// "Shortcut"
-pub const SETTINGS_MENU_BAR_HOTKEY: Key = Key::new(804);
+pub const SETTINGS_MENU_BAR_HOTKEY: Key = Key::new(808);
 /// "Works from any app. Click, then press the keys"
-pub const SETTINGS_MENU_BAR_HOTKEY_DESCRIPTION: Key = Key::new(805);
+pub const SETTINGS_MENU_BAR_HOTKEY_DESCRIPTION: Key = Key::new(809);
 /// "global shortcut quake record hotkey"
-pub const SETTINGS_MENU_BAR_HOTKEY_KEYWORDS: Key = Key::new(806);
+pub const SETTINGS_MENU_BAR_HOTKEY_KEYWORDS: Key = Key::new(810);
 /// "Hotkey opens"
-pub const SETTINGS_MENU_BAR_HOTKEY_ACTION: Key = Key::new(807);
+pub const SETTINGS_MENU_BAR_HOTKEY_ACTION: Key = Key::new(811);
 /// "Pressing it again with the panel open shows Wormhole"
-pub const SETTINGS_MENU_BAR_HOTKEY_ACTION_DESCRIPTION: Key = Key::new(808);
+pub const SETTINGS_MENU_BAR_HOTKEY_ACTION_DESCRIPTION: Key = Key::new(812);
 /// "quick panel toggle"
-pub const SETTINGS_MENU_BAR_HOTKEY_ACTION_KEYWORDS: Key = Key::new(809);
+pub const SETTINGS_MENU_BAR_HOTKEY_ACTION_KEYWORDS: Key = Key::new(813);
 /// "Jump to next waiting terminal"
-pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY: Key = Key::new(810);
+pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY: Key = Key::new(814);
 /// "Inside Wormhole, in any window"
-pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_DESCRIPTION: Key = Key::new(811);
+pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_DESCRIPTION: Key = Key::new(815);
 /// "needs input needs you waiting shortcut"
-pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_KEYWORDS: Key = Key::new(812);
+pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_KEYWORDS: Key = Key::new(816);
 /// "Status and count"
-pub const SETTINGS_MENU_BAR_STATUS_AND_COUNT: Key = Key::new(813);
+pub const SETTINGS_MENU_BAR_STATUS_AND_COUNT: Key = Key::new(817);
 /// "Status"
-pub const SETTINGS_MENU_BAR_STATUS: Key = Key::new(814);
+pub const SETTINGS_MENU_BAR_STATUS: Key = Key::new(818);
 /// "Icon only"
-pub const SETTINGS_MENU_BAR_ICON_ONLY: Key = Key::new(815);
+pub const SETTINGS_MENU_BAR_ICON_ONLY: Key = Key::new(819);
 /// "Quick panel"
-pub const SETTINGS_MENU_BAR_QUICK_PANEL: Key = Key::new(816);
+pub const SETTINGS_MENU_BAR_QUICK_PANEL: Key = Key::new(820);
 /// "Show or hide Wormhole"
-pub const SETTINGS_MENU_BAR_SHOW_OR_HIDE_WORMHOLE: Key = Key::new(817);
+pub const SETTINGS_MENU_BAR_SHOW_OR_HIDE_WORMHOLE: Key = Key::new(821);
 /// "Search terminals and actions"
-pub const SETTINGS_MENU_BAR_PREVIEW_SEARCH: Key = Key::new(819);
+pub const SETTINGS_MENU_BAR_PREVIEW_SEARCH: Key = Key::new(823);
 /// "Needs input"
-pub const SETTINGS_MENU_BAR_PREVIEW_NEEDS_INPUT: Key = Key::new(820);
+pub const SETTINGS_MENU_BAR_PREVIEW_NEEDS_INPUT: Key = Key::new(824);
 /// "Working"
-pub const SETTINGS_MENU_BAR_PREVIEW_WORKING: Key = Key::new(821);
+pub const SETTINGS_MENU_BAR_PREVIEW_WORKING: Key = Key::new(825);
 /// "The menu bar item, with a dot and a count while a terminal needs input, and the quick panel it and the hotkey open."
-pub const SETTINGS_MENU_BAR_PREVIEW_CAPTION: Key = Key::new(822);
+pub const SETTINGS_MENU_BAR_PREVIEW_CAPTION: Key = Key::new(826);
 
 /// ```text
 /// { $conflict }. Press other keys.
 /// ```
 pub fn settings_menu_bar_key_conflict(conflict: &str) -> String {
-    crate::active::message(818, &[("conflict", Arg::Str(conflict))])
+    crate::active::message(822, &[("conflict", Arg::Str(conflict))])
 }

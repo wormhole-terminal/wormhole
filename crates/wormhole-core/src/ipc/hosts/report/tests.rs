@@ -254,7 +254,7 @@ fn the_copied_text_has_the_header_and_a_block_a_host() {
     }];
     let text = Report::build(i).to_text();
     for want in [
-        "Wormhole 1.6.2 (protocol 1.2)",
+        "Wormhole 1.6.2 (protocol 1 (minor 2))",
         "hosts folder: /h",
         "persistent terminals: on",
         "host binary: /Apps/wormhole-host",
@@ -262,7 +262,7 @@ fn the_copied_text_has_the_header_and_a_block_a_host() {
         "[aaaaaaaaaaaa]",
         "state: attached (window 1, \"server\")",
         "host version: 1.5.0 (this app is 1.6.2)",
-        "protocol: 1..=1, compatible (major 1)",
+        "protocol: 1, compatible (major 1)",
         "link: sync, 10 B in / 5 B out, 3 frames in / 2 out",
         "[bbbbbbbbbbbb]",
         "state: stale (its process is gone)",

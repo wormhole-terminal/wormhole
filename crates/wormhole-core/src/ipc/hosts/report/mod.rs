@@ -23,7 +23,7 @@ use wormhole_wire::{AppVersion, HostState};
 use super::probe::Probed;
 use super::{HostMeta, Scan, StaleReason, meta_path};
 
-pub use plain::{bytes_words, duration_words, stale_word, time_words};
+pub use plain::{bytes_words, duration_words, range_words, stale_word, time_words};
 
 /// What this build is, for the header and for judging each host against it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -142,6 +142,7 @@ pub struct HostRow {
     /// As the meta file says.
     pub host_version: Option<String>,
     pub proto: Option<(u16, u16)>,
+    /// `None` for a host that is not running.
     pub fit: Option<HostFit>,
     pub socket: Option<PathBuf>,
     pub meta_path: PathBuf,
@@ -322,7 +323,8 @@ fn row_of(
         uptime_secs: live.then(|| now.saturating_sub(meta.started_at)),
         host_version: Some(meta.host_version.clone()),
         proto: Some((meta.proto_min, meta.proto_max)),
-        fit: Some(Range::current().fit(Range::new(meta.proto_min, meta.proto_max))),
+        // A host that is not running fits nothing: it cannot be attached to.
+        fit: live.then(|| Range::current().fit(Range::new(meta.proto_min, meta.proto_max))),
         socket: Some(meta.socket.clone()),
         meta_path: meta_path(hosts_dir, &meta.id),
         answer,

@@ -5,7 +5,7 @@
 hosts-window-title = Session Hosts
 
 # The header strip: this app, the folder the hosts live in, the feature's switch, the host program found.
-# { $version } is the app's version, e.g. 1.6.2, and { $protocol } its protocol, e.g. 1.2.
+# { $version } is the app's version, e.g. 1.6.2, and { $protocol } its protocol, e.g. 1 (minor 2).
 hosts-header-app = Wormhole { $version }, protocol { $protocol }
 hosts-header-folder = Hosts folder
 hosts-header-flag = Persistent terminals
@@ -64,11 +64,23 @@ hosts-started = { $when } (up { $uptime })
 # The host runs another version than this app. { $version } is the app's.
 hosts-version-differs = This app is { $version }
 
-# How this app's protocol fits the host's. { $range } is the host's range of majors, like 1..=1.
+# A protocol version: { $major } is the major, the one that must match, { $minor } the minor within it.
+hosts-protocol-minor = { $major } (minor { $minor })
+
+# The one major a host speaks: { $major }.
+hosts-range-one = { $major }
+
+# The majors a host speaks, from { $min } to { $max }.
+hosts-range-span = { $min } to { $max }
+
+# A host that is not running has no protocol to fit; { $range } is the majors its meta file says.
+hosts-range-not-running = { $range }, not running
+
+# How this app's protocol fits the host's. { $range } is the host's majors, like 1 or 1 to 2.
 hosts-fit-compatible = { $range }, compatible
-# { $range } is the host's range of majors, like 1..=1.
+# { $range } is the host's majors, like 1 or 1 to 2.
 hosts-fit-too-old = { $range }, too old for this app
-# { $range } is the host's range of majors, like 1..=1.
+# { $range } is the host's majors, like 1 or 1 to 2.
 hosts-fit-too-new = { $range }, too new for this app
 
 # What the host said when asked over its socket.
@@ -88,7 +100,7 @@ hosts-link-headless = Headless (not on screen)
 # { $mode } is one of the three lines above; { $frames_in } and { $frames_out } count frames.
 hosts-link-traffic = { $mode }; { $received } in, { $sent } out; { $frames_in } frames in, { $frames_out } out
 hosts-link-lost = Connection lost
-hosts-link-detached = Let go of; the host keeps running
+hosts-link-detached = Detached; the host keeps running
 hosts-link-none = Connecting…
 
 # The buttons on a card and in the header.

@@ -80,7 +80,9 @@ enum Reply {
 
 /// The next message, within `wait`.
 fn next(reader: &mut FrameReader<&Stream>, stream: &Stream, wait: Duration) -> Result<Reply, String> {
-    stream.set_read_timeout(Some(wait)).map_err(|e| e.to_string())?;
+    // Not an error when it fails: macOS refuses it on a socket the host already closed, and what
+    // the host sent before closing is still there to read.
+    let _ = stream.set_read_timeout(Some(wait));
     match reader.read_frame() {
         Ok(Some(frame)) => Ok(match frame.message {
             Message::Welcome(w) => Reply::Welcome(w),

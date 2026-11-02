@@ -43,8 +43,7 @@ impl HostsWindow {
         let attention = row.needs_attention(app);
         let unknown = || text(HOSTS_UNKNOWN).to_string();
         let number = |n: Option<u32>| n.map_or_else(unknown, |n| n.to_string());
-        let path =
-            |p: &Option<std::path::PathBuf>| p.as_ref().map_or_else(unknown, |p| p.display().to_string());
+        let path = |p: &Option<std::path::PathBuf>| p.as_ref().map_or_else(unknown, |p| words::path(p));
         let mismatch = row.version_differs(app);
         let version = match (&row.host_version, mismatch) {
             (Some(v), true) => format!("{v} ({})", hosts_version_differs(&app.version)),
@@ -87,7 +86,7 @@ impl HostsWindow {
         }
         facts.push(fact(ui, text(HOSTS_FIELD_FOLDER), path(&row.cwd), ui.text, true));
         facts.push(fact(ui, text(HOSTS_FIELD_SOCKET), path(&row.socket), ui.muted, true));
-        facts.push(fact(ui, text(HOSTS_FIELD_META), row.meta_path.display().to_string(), ui.muted, true));
+        facts.push(fact(ui, text(HOSTS_FIELD_META), words::path(&row.meta_path), ui.muted, true));
 
         let id = row.id.clone();
         let copy_label = if self.copied == Some(Copied::Host(id.clone())) {

@@ -13,8 +13,8 @@ use wormhole_text::keys::{
     HOSTS_STALE_NO_META, HOSTS_STALE_PID_GONE, HOSTS_STALE_SOCKET_MISSING, HOSTS_STALE_UNREADABLE,
     HOSTS_STANDING_ATTACHED, HOSTS_STANDING_DETACHED, HOSTS_STANDING_DETACHED_NOTE, HOSTS_STANDING_ORPHAN,
     HOSTS_STANDING_ORPHAN_NOTE, HOSTS_STANDING_STALE, hosts_answer_none, hosts_answer_running,
-    hosts_fit_compatible, hosts_fit_too_new, hosts_fit_too_old, hosts_link_traffic,
-    hosts_standing_attached_to, hosts_started,
+    hosts_fit_compatible, hosts_fit_too_new, hosts_fit_too_old, hosts_link_traffic, hosts_protocol_minor,
+    hosts_range_not_running, hosts_range_one, hosts_range_span, hosts_standing_attached_to, hosts_started,
 };
 use wormhole_text::text;
 
@@ -59,15 +59,39 @@ pub(super) fn started(row: &HostRow) -> Option<String> {
     })
 }
 
+/// A host's majors in words: "1", or "1 to 2".
+fn range(min: u16, max: u16) -> String {
+    if min == max {
+        hosts_range_one(&min.to_string())
+    } else {
+        hosts_range_span(&min.to_string(), &max.to_string())
+    }
+}
+
+/// This build's protocol, "1 (minor 2)".
+pub(super) fn app_protocol(major: u16, minor: u16) -> String {
+    hosts_protocol_minor(&major.to_string(), &minor.to_string())
+}
+
+/// The host's majors and how they fit this app's; a host that is not running only has its majors.
 pub(super) fn protocol(row: &HostRow) -> Option<String> {
     let (min, max) = row.proto?;
-    let range = format!("{min}..={max}");
-    Some(match row.fit? {
-        HostFit::Compatible(_) => hosts_fit_compatible(&range),
-        HostFit::TooOld => hosts_fit_too_old(&range),
-        HostFit::TooNew => hosts_fit_too_new(&range),
+    let range = range(min, max);
+    Some(match row.fit {
+        Some(HostFit::Compatible(_)) => hosts_fit_compatible(&range),
+        Some(HostFit::TooOld) => hosts_fit_too_old(&range),
+        Some(HostFit::TooNew) => hosts_fit_too_new(&range),
+        None => hosts_range_not_running(&range),
     })
 }
+
+/// A path for a line: the end of it when it is long, since that is what tells paths apart.
+pub(super) fn path(path: &std::path::Path) -> String {
+    wormhole_core::view::elide::front(&path.display().to_string(), PATH_KEEP).into_owned()
+}
+
+/// How many characters of a path a line shows.
+const PATH_KEEP: usize = 72;
 
 pub(super) fn answer(answer: &Answer) -> String {
     match answer {
