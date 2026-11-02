@@ -87,7 +87,10 @@ pub mod testing;
 
 /// The value types the screen is drawn and driven with: cells, colors, positions, modes.
 pub mod types {
-    pub use wormhole_vt::image::{Extent, ImageHandle, ImagePlacement, PLACEHOLDER, SourceRect};
+    pub use wormhole_vt::image::{
+        Animation, AnimationState, Extent, Gap, ImageHandle, ImagePlacement, Loops, PLACEHOLDER, Position,
+        SourceRect, Tick,
+    };
     pub use wormhole_vt::input::{MouseEncoding, MouseTracking};
     pub use wormhole_vt::{
         COLOR_COUNT, Cell, CellExtra, Color, ColorScheme, Colors, Column, CursorShape, Flags, Hyperlink,

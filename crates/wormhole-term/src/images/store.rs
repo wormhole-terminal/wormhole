@@ -27,7 +27,7 @@ pub fn global_bytes() -> usize {
 }
 
 /// A decoded image: straight (not premultiplied) RGBA, row-major.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Image {
     pub width: u32,
     pub height: u32,
@@ -43,6 +43,10 @@ impl Image {
 struct Slot {
     /// `None` while the image is being decoded.
     image: Option<Arc<Image>>,
+    /// The canvases of an animation's frames after the first (frame 2 is `frames[0]`). `None`:
+    /// a frame the engine counts that has no pixels here, because its data could not be decoded
+    /// or was dropped under load; it shows nothing.
+    frames: Vec<Option<Arc<Image>>>,
     width: u32,
     height: u32,
     /// The tick it was last drawn or stored at (the eviction order).
@@ -52,6 +56,7 @@ struct Slot {
 impl Slot {
     fn bytes(&self) -> usize {
         self.image.as_ref().map_or(0, |image| image.bytes())
+            + self.frames.iter().flatten().map(|frame| frame.bytes()).sum::<usize>()
     }
 }
 
@@ -106,7 +111,7 @@ impl ImageStore {
             return false;
         }
         let used = self.touch();
-        self.images.insert(id, Slot { image: None, width, height, used });
+        self.images.insert(id, Slot { image: None, frames: Vec::new(), width, height, used });
         true
     }
 
@@ -123,7 +128,7 @@ impl ImageStore {
         GLOBAL_BYTES.fetch_add(bytes, Ordering::Relaxed);
         self.bytes += bytes;
         let used = self.touch();
-        self.images.insert(id, Slot { image: Some(image), width, height, used });
+        self.images.insert(id, Slot { image: Some(image), frames: Vec::new(), width, height, used });
         true
     }
 
@@ -144,6 +149,7 @@ impl ImageStore {
         if let Some(slot) = self.images.get_mut(&id) {
             let bytes = slot.bytes();
             slot.image = None;
+            slot.frames.clear();
             self.bytes -= bytes;
             GLOBAL_BYTES.fetch_sub(bytes, Ordering::Relaxed);
         }
@@ -164,6 +170,84 @@ impl ImageStore {
         let slot = self.images.get_mut(&id)?;
         slot.used = tick;
         slot.image.clone()
+    }
+
+    /// Whether any image has animation frames: a frame that draws only still pictures skips
+    /// everything about animation.
+    pub fn any_animated(&self) -> bool {
+        self.images.values().any(|slot| !slot.frames.is_empty())
+    }
+
+    /// How many frames the image has here, the first included; 0 when there is no such image.
+    pub fn frame_count(&self, id: u32) -> usize {
+        self.images.get(&id).map_or(0, |slot| 1 + slot.frames.len())
+    }
+
+    /// Whether the image is reserved and still being decoded.
+    pub fn is_pending(&self, id: u32) -> bool {
+        self.images.get(&id).is_some_and(|slot| slot.image.is_none())
+    }
+
+    /// Frame `frame` of the image (counted from 0, the picture itself), counted as drawn now.
+    /// `None` while the picture is being decoded, and for a frame without pixels.
+    pub fn frame(&mut self, id: u32, frame: usize) -> Option<Arc<Image>> {
+        let tick = self.touch();
+        let slot = self.images.get_mut(&id)?;
+        slot.used = tick;
+        match frame {
+            0 => slot.image.clone(),
+            n => slot.frames.get(n - 1)?.clone(),
+        }
+    }
+
+    /// Keep `image` as frame `frame` (counted from 0, the picture itself) of the image, replacing
+    /// what was there and making room as `insert` does. Frames before it that were never given
+    /// pixels stay empty. `false` when there is no such image or the frame doesn't fit even then.
+    pub fn set_frame(&mut self, id: u32, frame: usize, image: Arc<Image>) -> bool {
+        if !self.images.contains_key(&id) {
+            return false;
+        }
+        let bytes = image.bytes();
+        // The old canvas goes first, so replacing a frame does not need room for both.
+        if let Some(slot) = self.images.get_mut(&id) {
+            let old = match frame {
+                0 => slot.image.take(),
+                n => slot.frames.get_mut(n - 1).and_then(Option::take),
+            };
+            if let Some(old) = old {
+                self.bytes -= old.bytes();
+                GLOBAL_BYTES.fetch_sub(old.bytes(), Ordering::Relaxed);
+            }
+        }
+        // Newest, so that making room takes other images first.
+        let used = self.touch();
+        if let Some(slot) = self.images.get_mut(&id) {
+            slot.used = used;
+        }
+        if !self.make_room(bytes) {
+            return false;
+        }
+        let Some(slot) = self.images.get_mut(&id) else { return false };
+        match frame {
+            0 => slot.image = Some(image),
+            n => {
+                if slot.frames.len() < n {
+                    slot.frames.resize(n, None);
+                }
+                slot.frames[n - 1] = Some(image);
+            }
+        }
+        GLOBAL_BYTES.fetch_add(bytes, Ordering::Relaxed);
+        self.bytes += bytes;
+        true
+    }
+
+    /// Drop all the frames after the first.
+    pub fn clear_frames(&mut self, id: u32) {
+        let Some(slot) = self.images.get_mut(&id) else { return };
+        let freed: usize = slot.frames.drain(..).flatten().map(|frame| frame.bytes()).sum();
+        self.bytes -= freed;
+        GLOBAL_BYTES.fetch_sub(freed, Ordering::Relaxed);
     }
 
     /// Whether the id is taken (an image, decoded or on its way).
@@ -217,6 +301,44 @@ mod tests {
         // Replacing an image frees the old one.
         assert!(store.insert(4, image(8)));
         assert_eq!(store.bytes(), 2 * third + 8);
+    }
+
+    #[test]
+    fn frames_are_kept_with_the_image_and_count_in_the_budget() {
+        let mut store = ImageStore::default();
+        assert!(store.insert(1, image(16)));
+        assert_eq!((store.frame_count(1), store.frame_count(9)), (1, 0));
+        assert!(!store.any_animated());
+        assert!(store.set_frame(1, 2, image(16)), "a frame may skip ahead; the one before stays empty");
+        assert_eq!(store.frame_count(1), 3);
+        assert!(store.any_animated());
+        assert!(store.frame(1, 1).is_none() && store.frame(1, 2).is_some() && store.frame(1, 0).is_some());
+        assert!(store.frame(1, 9).is_none());
+        assert_eq!(store.bytes(), 32);
+        assert!(store.set_frame(1, 2, image(24)), "replacing a frame frees the old canvas");
+        assert_eq!(store.bytes(), 40);
+        store.clear_frames(1);
+        assert_eq!((store.frame_count(1), store.bytes()), (1, 16));
+        assert!(store.set_frame(1, 0, image(8)), "frame 0 is the picture itself");
+        assert_eq!(store.bytes(), 8);
+        assert!(!store.set_frame(5, 1, image(8)), "no such image");
+        // Removing the image takes its frames' bytes along.
+        assert!(store.set_frame(1, 1, image(8)));
+        assert_eq!(store.bytes(), 16);
+        store.remove(1);
+        assert_eq!(store.bytes(), 0);
+    }
+
+    #[test]
+    fn a_frame_makes_room_by_evicting_other_images_and_never_its_own() {
+        let mut store = ImageStore::default();
+        let half = STORE_BUDGET / 2;
+        assert!(store.insert(1, image(half)));
+        assert!(store.insert(2, image(half)));
+        assert!(store.set_frame(2, 1, image(half)), "image 1, the older, makes room");
+        assert!(!store.contains(1) && store.contains(2));
+        assert!(!store.set_frame(2, 2, image(half + 1)), "more than the budget has");
+        assert!(store.contains(2) || store.is_empty());
     }
 
     #[test]

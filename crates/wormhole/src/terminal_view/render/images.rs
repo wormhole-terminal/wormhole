@@ -24,33 +24,54 @@ pub(super) struct ImagePaint {
 }
 
 struct Cached {
-    /// The store's pixels this was made from (a re-sent image with the same id is another `Arc`).
-    source: *const Image,
+    /// The store's pixels this was made from (a re-sent image with the same id is another `Arc`,
+    /// and so is each frame of an animation). Held, not just pointed at: while it is here its
+    /// address can't be given to other pixels, which would look like the same ones.
+    source: Arc<Image>,
     image: Arc<RenderImage>,
 }
 
-/// GPUI's frames for the store's images, converted once each.
+/// GPUI's frames for the store's images, converted once each: of an animation the frame on show.
 #[derive(Default)]
 pub(super) struct ImageCache {
     frames: HashMap<u32, Cached>,
+    /// Conversions that were replaced or whose image is gone, still in GPUI's atlas until the
+    /// window is told (`take_retired`).
+    retired: Vec<Arc<RenderImage>>,
 }
 
 impl ImageCache {
     fn render_image(&mut self, id: u32, image: &Arc<Image>) -> Arc<RenderImage> {
-        let source = Arc::as_ptr(image);
         if let Some(cached) = self.frames.get(&id)
-            && std::ptr::eq(cached.source, source)
+            && Arc::ptr_eq(&cached.source, image)
         {
             return cached.image.clone();
         }
         let converted = Arc::new(to_render_image(image));
-        self.frames.insert(id, Cached { source, image: converted.clone() });
+        let cached = Cached { source: image.clone(), image: converted.clone() };
+        if let Some(old) = self.frames.insert(id, cached) {
+            self.retired.push(old.image);
+        }
         converted
     }
 
     /// Drop what the store no longer has.
     fn retain(&mut self, store: &ImageStore) {
-        self.frames.retain(|id, _| store.contains(*id));
+        let retired = &mut self.retired;
+        self.frames.retain(|id, cached| {
+            let keep = store.contains(*id);
+            if !keep {
+                retired.push(cached.image.clone());
+            }
+            keep
+        });
+    }
+
+    /// The conversions to take out of GPUI's atlas: it keeps the tile of every image it drew until
+    /// told, so a frame that is no longer shown must be let go of, or an animation would fill video
+    /// memory with every frame it ever showed.
+    pub(super) fn take_retired(&mut self) -> Vec<Arc<RenderImage>> {
+        std::mem::take(&mut self.retired)
     }
 }
 
@@ -135,19 +156,23 @@ fn run_paint(
 /// The paints for every image run in view (`runs`: viewport row, run), from the store. `tiles`
 /// is what the engine says about the virtual placements the runs' cells name (asked for
 /// beforehand, `Pty::virtual_placement`): the cells carry the program's ids, and the store holds
-/// the pixels under the engine's handles.
+/// the pixels under the engine's handles. `shown` is the frame of an animated picture to draw, by
+/// the store's key (the first frame when the picture is not in it).
 pub(super) fn image_paints<'a>(
     runs: impl Iterator<Item = (usize, &'a ImageRun)>,
     tiles: &HashMap<(u32, u32), Tiles>,
     store: &mut ImageStore,
     cache: &mut ImageCache,
+    shown: &HashMap<u32, usize>,
     geometry: Geometry,
 ) -> Vec<ImagePaint> {
     let mut paints = Vec::new();
     for (row, run) in runs {
         // No virtual placement for the cell: nothing says how big its picture is.
         let Some(tiles) = tiles.get(&(run.image, run.placement)) else { continue };
-        let Some(image) = store.get(tiles.key) else { continue };
+        let Some(image) = store.frame(tiles.key, shown.get(&tiles.key).copied().unwrap_or(0)) else {
+            continue;
+        };
         let render_image = cache.render_image(tiles.key, &image);
         let paint = run_paint(row, run, &image, tiles, render_image, geometry);
         if paint.bounds.size.width > Pixels::ZERO && paint.bounds.size.height > Pixels::ZERO {
@@ -168,13 +193,14 @@ pub(super) fn placement_paints(
     offset: usize,
     store: &mut ImageStore,
     cache: &mut ImageCache,
+    shown: &HashMap<u32, usize>,
     clip: Bounds<Pixels>,
     geometry: Geometry,
 ) -> (Vec<ImagePaint>, Vec<ImagePaint>) {
     let (mut under, mut over) = (Vec::new(), Vec::new());
     for placement in placements {
         let id = placement_key(placement);
-        let Some(image) = store.get(id) else { continue };
+        let Some(image) = store.frame(id, shown.get(&id).copied().unwrap_or(0)) else { continue };
         let render_image = cache.render_image(id, &image);
         let Some(paint) = placement_paint(placement, offset, &image, render_image, clip, geometry) else {
             continue;
@@ -186,7 +212,7 @@ pub(super) fn placement_paints(
 }
 
 /// The store's key of a placement's picture (its handle).
-fn placement_key(placement: &ImagePlacement) -> u32 {
+pub(super) fn placement_key(placement: &ImagePlacement) -> u32 {
     wormhole_term::images::key_of(placement.image)
 }
 
@@ -247,7 +273,7 @@ mod tests {
 
     use super::super::frame::Geometry;
     use super::super::rows::ImageRun;
-    use super::{ImageCache, fitted_rect, image_paints, placement_paint};
+    use super::{ImageCache, fitted_rect, image_paints, placement_paint, placement_paints};
 
     const GEOMETRY: Geometry = Geometry {
         origin: gpui_kit::Point { x: px(10.0), y: px(40.0) },
@@ -284,34 +310,64 @@ mod tests {
         let tiles = HashMap::from([((5, 0), Tiles { key: 9, cols: 2, rows: 2 })]);
         // The second row of the placement at viewport row 3, columns 4 and 5.
         let run = ImageRun { col: 4, cells: 2, image: 5, placement: 0, tile_row: 1, tile_col: 0 };
-        let paints = image_paints([(3usize, &run)].into_iter(), &tiles, &mut store, &mut cache, GEOMETRY);
+        let paints = image_paints(
+            [(3usize, &run)].into_iter(),
+            &tiles,
+            &mut store,
+            &mut cache,
+            &HashMap::new(),
+            GEOMETRY,
+        );
         assert_eq!(paints.len(), 1);
         assert_eq!(rect(&paints[0].bounds), (42.0, 88.0, 16.0, 16.0), "the run's cells");
         assert_eq!(rect(&paints[0].image_bounds), (42.0, 72.0, 16.0, 32.0), "the picture a row higher");
         // The second tile of a one-row placement: the picture a cell to the left.
         let tiles = HashMap::from([((5, 0), Tiles { key: 9, cols: 2, rows: 1 })]);
         let run = ImageRun { col: 0, cells: 1, image: 5, placement: 0, tile_row: 0, tile_col: 1 };
-        let paints = image_paints([(0usize, &run)].into_iter(), &tiles, &mut store, &mut cache, GEOMETRY);
+        let paints = image_paints(
+            [(0usize, &run)].into_iter(),
+            &tiles,
+            &mut store,
+            &mut cache,
+            &HashMap::new(),
+            GEOMETRY,
+        );
         assert_eq!(rect(&paints[0].bounds), (10.0, 40.0, 8.0, 16.0), "the second tile's cell");
         assert_eq!(rect(&paints[0].image_bounds), (2.0, 40.0, 16.0, 16.0), "the picture, a cell to the left");
         // A cell the engine knows no placement for draws nothing, whatever the store has under 5.
         store.insert(5, image(8, 8));
         let none = HashMap::new();
         assert!(
-            image_paints([(0usize, &run)].into_iter(), &none, &mut store, &mut cache, GEOMETRY).is_empty()
+            image_paints(
+                [(0usize, &run)].into_iter(),
+                &none,
+                &mut store,
+                &mut cache,
+                &HashMap::new(),
+                GEOMETRY
+            )
+            .is_empty()
         );
         // Still decoding: nothing to paint; the cache follows the store.
         store.reserve(6, 8, 8);
         let decoding = HashMap::from([((6, 0), Tiles { key: 6, cols: 1, rows: 1 })]);
         let waiting = ImageRun { col: 0, cells: 1, image: 6, placement: 0, tile_row: 0, tile_col: 0 };
         assert!(
-            image_paints([(0usize, &waiting)].into_iter(), &decoding, &mut store, &mut cache, GEOMETRY)
-                .is_empty()
+            image_paints(
+                [(0usize, &waiting)].into_iter(),
+                &decoding,
+                &mut store,
+                &mut cache,
+                &HashMap::new(),
+                GEOMETRY
+            )
+            .is_empty()
         );
         assert_eq!(cache.frames.len(), 1);
         store.remove(9);
-        image_paints(std::iter::empty(), &tiles, &mut store, &mut cache, GEOMETRY);
+        image_paints(std::iter::empty(), &tiles, &mut store, &mut cache, &HashMap::new(), GEOMETRY);
         assert!(cache.frames.is_empty());
+        assert_eq!(cache.take_retired().len(), 1, "an image the store forgot leaves the atlas too");
     }
 
     fn placed(line: i32, column: usize, extent: Extent) -> ImagePlacement {
@@ -358,13 +414,41 @@ mod tests {
     }
 
     #[test]
+    fn the_frame_on_show_is_the_one_drawn_and_a_frame_without_pixels_draws_nothing() {
+        let mut store = ImageStore::default();
+        store.insert(1, image(8, 16));
+        let second = image(8, 16);
+        store.set_frame(1, 1, second.clone());
+        store.set_frame(1, 3, image(8, 16));
+        let mut cache = ImageCache::default();
+        let place = |frame: usize, cache: &mut ImageCache, store: &mut ImageStore| {
+            let shown = HashMap::from([(1u32, frame)]);
+            let clip = Bounds::new(point(px(0.0), px(0.0)), size(px(400.0), px(400.0)));
+            placement_paints(&[placed(0, 0, Extent::Fill)], 0, store, cache, &shown, clip, GEOMETRY)
+        };
+        let (_, first) = place(0, &mut cache, &mut store);
+        assert_eq!(first.len(), 1);
+        let (_, next) = place(1, &mut cache, &mut store);
+        assert!(!Arc::ptr_eq(&first[0].image, &next[0].image), "another frame, another conversion");
+        assert_eq!(cache.take_retired().len(), 1, "and the first leaves the atlas");
+        let (_, again) = place(1, &mut cache, &mut store);
+        assert!(Arc::ptr_eq(&next[0].image, &again[0].image), "the same frame converts once");
+        assert!(place(2, &mut cache, &mut store).1.is_empty(), "frame 3 was never given pixels");
+        assert!(place(9, &mut cache, &mut store).1.is_empty(), "no such frame");
+    }
+
+    #[test]
     fn the_same_pixels_convert_once_and_new_pixels_again() {
         let mut cache = ImageCache::default();
         let a = image(2, 2);
         let first = cache.render_image(1, &a);
         assert!(Arc::ptr_eq(&first, &cache.render_image(1, &a)));
+        assert!(cache.take_retired().is_empty());
         let b = image(2, 2);
         assert!(!Arc::ptr_eq(&first, &cache.render_image(1, &b)), "re-sent: a new frame");
+        let retired = cache.take_retired();
+        assert!(retired.len() == 1 && Arc::ptr_eq(&retired[0], &first), "the old one leaves the atlas");
+        assert!(cache.take_retired().is_empty());
         assert_eq!(first.size(0), size(gpui_kit::DevicePixels(2), gpui_kit::DevicePixels(2)));
     }
 }

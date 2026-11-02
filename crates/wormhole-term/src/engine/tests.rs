@@ -126,6 +126,45 @@ fn a_kitty_picture_is_decoded_kept_placed_and_freed() {
 }
 
 #[test]
+fn the_frames_of_an_animated_picture_are_built_in_order_and_the_plan_is_the_engines() {
+    // A 2×1 picture of two red pixels; frame 2 is a copy of frame 1 with its second pixel green
+    // (a base frame, a rectangle); a composition then puts frame 1's first pixel back over frame
+    // 2's second, and the animation is started. Each step reads the one before.
+    let script = "printf '\\033_Ga=t,f=32,s=2,v=1,i=7,q=2;/wAA//8AAP8=\\033\\\\'; \
+                  printf '\\033_Ga=f,f=32,s=1,v=1,x=1,c=1,i=7,z=50,q=2;AP8A/w==\\033\\\\'; \
+                  printf '\\033_Ga=c,i=7,r=1,c=2,w=1,h=1,x=1,C=1,q=2\\033\\\\'; \
+                  printf '\\033_Ga=a,i=7,s=3,v=2,q=2\\033\\\\'; printf 'done'; sleep 5";
+    let (pty, _events) = spawn(script);
+    wait_until("the output", || pty.screen_text().contains("done"));
+    let red = [255, 0, 0, 255];
+    wait_until("both frames", || pty.images().frame_count(1) == 2 && pty.images().frame(1, 1).is_some());
+    // The composition ran after the frame was built: the green pixel is red again.
+    wait_until("the composition", || {
+        pty.images().frame(1, 1).is_some_and(|frame| frame.rgba == [red, red].concat())
+    });
+    let plan = pty.animation(1).expect("an animated picture");
+    assert_eq!((plan.frame_count(), plan.gap(1)), (2, Some(wormhole_vt::image::Gap::Millis(50))));
+    assert_eq!(plan.state(), wormhole_vt::image::AnimationState::Running);
+    assert_eq!(plan.loops(), wormhole_vt::image::Loops::Passes(1));
+    assert!(pty.animation(99).is_none());
+    // The viewer reports the frame it moved to; the engine remembers it.
+    pty.set_animation_frame(1, 1);
+    assert_eq!(pty.animation(1).map(|plan| plan.current()), Some(1));
+}
+
+#[test]
+fn a_frame_that_cannot_be_decoded_is_refused_and_taken_away_again() {
+    // A PNG whose header is right (the engine reads the size from it) and whose body is not: only
+    // the host's decoder finds out.
+    let script = "printf '\\033_Ga=t,f=32,s=2,v=1,i=7,q=2;/wAA//8AAP8=\\033\\\\'; \
+                  printf '\\033_Ga=f,f=100,i=7;iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAAAAAA\\033\\\\'; sleep 5";
+    let (pty, _events) = spawn(script);
+    wait_until("the error reply", || pty.screen_text().contains("^[_Gi=7;ENODATA"));
+    assert!(pty.animation(1).is_none(), "the frame that failed is gone again: one frame is no animation");
+    assert_eq!(pty.images().frame_count(1), 1);
+}
+
+#[test]
 fn raw_pixels_and_sixel_are_kept_without_a_decoder_and_a_bad_picture_is_refused() {
     // A 2×1 RGB picture, a Sixel, and a PNG that is not one (the program asked for the answer).
     let script = "printf '\\033_Ga=T,f=24,s=2,v=1,i=7,q=2;AAAAAAAA\\033\\\\'; printf '\\033Pq#1;2;100;0;0~\\033\\\\'; \

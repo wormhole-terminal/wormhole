@@ -128,4 +128,27 @@ impl Pty {
             rows: placement.rows,
         })
     }
+
+    /// The animation plan of a picture, when it has more than one frame (kitty's `a=f`): the
+    /// frames' gaps, the state, the loops and the current frame. The screen's lock is taken for a
+    /// copy. A still picture, and one the engine let go of, give `None`.
+    pub fn animation(&self, key: u32) -> Option<wormhole_vt::image::Animation> {
+        let plan = self
+            .term
+            .lock()
+            .term
+            .animation(wormhole_vt::image::ImageHandle::from_raw(u64::from(key)))?
+            .clone();
+        (plan.frame_count() > 1).then_some(plan)
+    }
+
+    /// The viewer moved a picture's animation on to frame `frame` (counted from 0), so that a
+    /// program that stops the animation leaves it where it was seen. The engine remembers it and
+    /// tells nobody.
+    pub fn set_animation_frame(&self, key: u32, frame: usize) {
+        self.term
+            .lock()
+            .term
+            .set_animation_current(wormhole_vt::image::ImageHandle::from_raw(u64::from(key)), frame);
+    }
 }

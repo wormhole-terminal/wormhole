@@ -84,6 +84,9 @@ impl Host {
             match event {
                 Event::ImageData(upload) => self.uploads.begin(screen, upload),
                 Event::ImageFree(image) => self.uploads.free(image),
+                Event::ImageFrame(upload) => self.uploads.frame(screen, upload),
+                Event::ImageCompose(job) => self.uploads.compose(job),
+                Event::ImageFramesCleared(image) => self.uploads.clear_frames(image),
                 _ => {}
             }
         }
@@ -163,6 +166,12 @@ impl Host {
             Event::WindowOp(op) => proxy.send(PtyEvent::WindowOp(op)),
             Event::ImageData(upload) => self.uploads.begin(screen, upload),
             Event::ImageFree(image) => self.uploads.free(image),
+            Event::ImageFrame(upload) => self.uploads.frame(screen, upload),
+            Event::ImageCompose(job) => self.uploads.compose(job),
+            Event::ImageFramesCleared(image) => self.uploads.clear_frames(image),
+            // The plan is read from the engine when a frame is drawn (`Pty::animation`); the read
+            // that brought this event wakes the view.
+            Event::ImageAnimation(_) => {}
             // The engine keeps the icon name to itself, and iTerm2's other keys (marks, the
             // current directory) are nothing Wormhole acts on today.
             Event::IconName(_) | Event::Iterm(_) => {}

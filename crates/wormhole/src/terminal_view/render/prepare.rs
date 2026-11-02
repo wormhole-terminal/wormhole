@@ -15,7 +15,7 @@ use super::cursor::{CursorPaint, cursor_frame};
 use super::frame::Geometry;
 use super::rows::Style;
 use super::shaping::{ShapeKey, colors_key, shape_word, text_run};
-use super::{RenderState, blink, images, words};
+use super::{RenderState, animation, blink, images, words};
 use crate::palette::Palette;
 use crate::perf::{self, Count, Part};
 use crate::terminal_view::{Layout, PADDING_X, PADDING_Y, TerminalView};
@@ -136,7 +136,7 @@ impl Prepare {
             },
         );
         let mut state = self.state.borrow_mut();
-        let RenderState { frame: cache, images: image_cache, words, outlines, .. } = &mut *state;
+        let RenderState { frame: cache, images: image_cache, clocks, words, outlines, .. } = &mut *state;
         let mut found = Vec::new();
         let mut ticks = Vec::new();
         let palette = &self.palette;
@@ -215,33 +215,56 @@ impl Prepare {
             (baseline, (line.ascent * 0.5 + baseline) * 0.5)
         };
         // The pictures: under the placeholder cells and placed in the grid. The terminal's
-        // lock for what the engine knows of the placeholders, then the store's for the
-        // pixels; never both at once.
+        // lock for what the engine knows of the placeholders and of the animations, then the
+        // store's for the pixels; never both at once.
         let images_span = perf::span();
-        let (images, overlay) = self.entity.read(cx).pty.as_ref().map_or_else(Default::default, |pty| {
-            let mut tiles: HashMap<(u32, u32), Tiles> = HashMap::new();
-            for (_, run) in cache.image_runs() {
-                let pair = (run.image, run.placement);
-                if let Entry::Vacant(slot) = tiles.entry(pair)
-                    && let Some(found) = pty.virtual_placement(pair.0, pair.1)
-                {
-                    slot.insert(found);
+        let (now, motion) = (std::time::Instant::now(), !self.reduce_motion);
+        let (images, overlay, next_frame) =
+            self.entity.read(cx).pty.as_ref().map_or_else(Default::default, |pty| {
+                let mut tiles: HashMap<(u32, u32), Tiles> = HashMap::new();
+                for (_, run) in cache.image_runs() {
+                    let pair = (run.image, run.placement);
+                    if let Entry::Vacant(slot) = tiles.entry(pair)
+                        && let Some(found) = pty.virtual_placement(pair.0, pair.1)
+                    {
+                        slot.insert(found);
+                    }
                 }
-            }
-            let store = &mut pty.images();
-            let mut paints = images::image_paints(cache.image_runs(), &tiles, store, image_cache, geometry);
-            let snapshot = &cache.snapshot;
-            let (under, over) = images::placement_paints(
-                snapshot.placements(),
-                snapshot.display_offset,
-                store,
-                image_cache,
-                bounds,
-                geometry,
-            );
-            paints.extend(under);
-            (paints, over)
-        });
+                let snapshot = &cache.snapshot;
+                // The pictures this frame draws, to find out which frame of an animated one.
+                let keys = cache
+                    .image_runs()
+                    .filter_map(|(_, run)| tiles.get(&(run.image, run.placement)).map(|found| found.key))
+                    .chain(snapshot.placements().iter().map(images::placement_key));
+                let animated = pty.images().any_animated();
+                let frames = animation::choose(keys, animated, pty, clocks, now, motion);
+                let store = &mut pty.images();
+                let mut paints = images::image_paints(
+                    cache.image_runs(),
+                    &tiles,
+                    store,
+                    image_cache,
+                    &frames.shown,
+                    geometry,
+                );
+                let (under, over) = images::placement_paints(
+                    snapshot.placements(),
+                    snapshot.display_offset,
+                    store,
+                    image_cache,
+                    &frames.shown,
+                    bounds,
+                    geometry,
+                );
+                paints.extend(under);
+                (paints, over, frames.due)
+            });
+        // Frames that are no longer shown leave GPUI's atlas, and the next change is waited for.
+        for retired in image_cache.take_retired() {
+            window.drop_image(retired).ok();
+        }
+        let active = window.is_window_active();
+        self.entity.update(cx, |this, cx| this.image_animation_due(next_frame, active, cx));
         images_span.end(Part::Images);
         Some(Frame {
             geometry,

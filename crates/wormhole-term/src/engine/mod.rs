@@ -6,12 +6,14 @@
 //!   synchronized update's deadline), and [`spawn`];
 //! - `host`: the engine's events as `PtyEvent`s, the shell marks as the command log, replies
 //!   written back to the PTY in order;
-//! - `images`: decoding the pictures the engine sends and keeping their pixels.
+//! - `images`: decoding the pictures the engine sends and keeping their pixels;
+//! - `frames`: the same for the frames of animated pictures, built in the order they come.
 //!
 //! The screen itself, [`Screen`], is `terminal::screen`. The engine reads every sequence itself
 //! (the shell-integration and notification OSCs, pictures, `clear` erasing the history), so the
 //! PTY's bytes go from the master to the parser as they are.
 
+mod frames;
 mod host;
 mod images;
 #[cfg(test)]
