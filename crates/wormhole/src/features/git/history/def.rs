@@ -36,7 +36,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         view: view::tab,
         walk: Some(keys::WALK),
         actions: None,
-        time_words: Some(|_| Some(crate::window::clock::until_next_wall_minute())),
+        time_words: Some(|_| Some(wormhole_core::view::sidebar::wording::until_next_wall_minute())),
         returns_to_previous: false,
     }],
     // The log is read again while the tab shows.

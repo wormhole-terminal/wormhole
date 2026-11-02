@@ -8,7 +8,7 @@
 //! Only the redrawing is the timer's; reading the other windows' terminals stays on the tick
 //! (`refresh_status_bar`), since nothing tells this window what another one's terminals do.
 
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use gpui_kit::*;
 
@@ -28,12 +28,6 @@ pub(in crate::window) struct Clock {
     armed: Option<(Instant, Task<()>)>,
     /// Whether the window is the one in front, as last told: a window nobody looks at draws no clocks.
     window_active: bool,
-}
-
-/// How long until the wall clock's next minute starts, for words that have no start of their own.
-pub(crate) fn until_next_wall_minute() -> Duration {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
-    until_next(now, Duration::from_secs(60))
 }
 
 impl Workspace {
@@ -109,18 +103,5 @@ impl Workspace {
     pub(super) fn replan_clock(&mut self, cx: &mut Context<Self>) {
         let window_active = self.regions.drawn.clock.window_active;
         self.sync_clock(window_active, cx);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::time::Duration;
-
-    use super::until_next_wall_minute;
-
-    #[test]
-    fn the_wall_minute_ends_within_a_minute() {
-        let wait = until_next_wall_minute();
-        assert!(wait > Duration::ZERO && wait <= Duration::from_secs(60));
     }
 }

@@ -60,6 +60,12 @@ pub fn until_next(elapsed: Duration, unit: Duration) -> Duration {
     unit - Duration::from_nanos((elapsed.as_nanos() % unit.as_nanos()) as u64)
 }
 
+/// How long until the wall clock's next minute starts, for words that have no start of their own.
+pub fn until_next_wall_minute() -> Duration {
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
+    until_next(now, Duration::from_secs(60))
+}
+
 /// A running command's time on the clock: "0:05", "1:12", "1:02:03".
 pub fn clock(elapsed: Duration) -> String {
     let secs = elapsed.as_secs();
@@ -104,10 +110,23 @@ pub fn display_path(path: &Path, home: Option<&Path>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{agent_detail, ago, clock, display_path, path_tail, place_detail, took};
+    use super::{
+        agent_detail, ago, clock, display_path, path_tail, place_detail, took, until_next,
+        until_next_wall_minute,
+    };
     use crate::view::sidebar::RowState;
     use std::path::Path;
     use std::time::Duration;
+
+    #[test]
+    fn the_next_change_is_the_rest_of_the_unit() {
+        let minute = Duration::from_secs(60);
+        assert_eq!(until_next(Duration::ZERO, minute), minute);
+        assert_eq!(until_next(Duration::from_secs(45), minute), Duration::from_secs(15));
+        assert_eq!(until_next(Duration::from_secs(60), minute), minute);
+        let wait = until_next_wall_minute();
+        assert!(wait > Duration::ZERO && wait <= minute);
+    }
 
     const fn mins(n: u64) -> Duration {
         Duration::from_secs(n * 60)
