@@ -73,12 +73,12 @@ fn plain(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(ch) = rest.chars().next() {
-        if ch == '[' {
-            if let Some((label, after)) = link(rest) {
-                out.push_str(&plain(label));
-                rest = after;
-                continue;
-            }
+        if ch == '['
+            && let Some((label, after)) = link(rest)
+        {
+            out.push_str(&plain(label));
+            rest = after;
+            continue;
         }
         if matches!(ch, '*' | '`') || (ch == '_' && emphasis_underscore(&out, rest)) {
             rest = &rest[ch.len_utf8()..];
