@@ -30,6 +30,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- Starting many terminals at the same moment (a relaunch attaching a window full of them, or a script opening
+  several) now and then failed for one of them with "Unknown error: -6": the system sometimes refuses a new
+  pseudo-terminal while others are being made. Wormhole now asks again a few milliseconds later.
 - A terminal running `top` (or another program that is setuid root, like `ping` and `sudo`) was named after the
   shell in the sidebar, and not counted as running a command, because macOS hides such a program's arguments
   and start time from the user. The row now names the program and knows when it started.

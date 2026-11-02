@@ -36,12 +36,48 @@ pub(super) fn open(size: WindowSize) -> io::Result<Pair> {
     // spawn in parallel). One at a time; an open takes microseconds in here.
     static OPENING: Mutex<()> = Mutex::new(());
     let _one_at_a_time = OPENING.lock().unwrap_or_else(PoisonError::into_inner);
-    let (master, slave) = open_pair(winsize(size))?;
+    let (master, slave) = open_pair_again(winsize(size))?;
     add_flag(master.as_raw_fd(), Flag::CloseOnExec)?;
     add_flag(slave.as_raw_fd(), Flag::CloseOnExec)?;
     add_flag(master.as_raw_fd(), Flag::NonBlocking)?;
     discipline::apply(&slave)?;
     Ok(Pair { master: File::from(master), slave })
+}
+
+/// How many times [`open_pair_again`] tries.
+const OPEN_TRIES: usize = 6;
+
+/// [`open_pair`], again a moment later when the system says no. The lock above makes one process open one at a
+/// time, but the kernel's naming of new devices is shared by all processes, and many hosts starting at the same
+/// moment (a relaunch attaching or restoring a window of terminals) can make it fail once with `ENXIO` or a
+/// neighbour's error; a second try a few milliseconds on finds the device.
+fn open_pair_again(size: libc::winsize) -> io::Result<(OwnedFd, OwnedFd)> {
+    retrying(
+        OPEN_TRIES,
+        |tried| std::thread::sleep(std::time::Duration::from_millis(5 * tried as u64)),
+        || open_pair(size),
+    )
+}
+
+/// Run `attempt` up to `tries` times; after a failure that is not the last, `pause(n)` for the nth time. The
+/// last failure is the error.
+fn retrying<T>(
+    tries: usize,
+    mut pause: impl FnMut(usize),
+    mut attempt: impl FnMut() -> io::Result<T>,
+) -> io::Result<T> {
+    let mut tried = 0;
+    loop {
+        match attempt() {
+            Ok(done) => return Ok(done),
+            Err(err) if tried + 1 < tries => {
+                tried += 1;
+                tracing::warn!("opening a pseudo-terminal failed ({err}); trying again ({tried})");
+                pause(tried);
+            }
+            Err(err) => return Err(err),
+        }
+    }
 }
 
 /// The kernel's window size for `size`: cells and pixels (`TIOCSWINSZ`; programs read the pixels
@@ -93,4 +129,48 @@ fn add_flag(fd: RawFd, flag: Flag) -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod retry_tests {
+    use super::*;
+
+    /// The system says no once in a while when many terminals open at once; a later try finds the device.
+    #[test]
+    fn a_failure_is_tried_again_and_a_lasting_one_is_the_error() {
+        let mut calls = 0;
+        let mut pauses = Vec::new();
+        let got = retrying(
+            OPEN_TRIES,
+            |n| pauses.push(n),
+            || {
+                calls += 1;
+                if calls < 3 { Err(io::Error::from_raw_os_error(6)) } else { Ok(calls) }
+            },
+        );
+        assert_eq!((got.unwrap(), pauses.as_slice()), (3, [1, 2].as_slice()));
+        let mut calls = 0;
+        let err = retrying::<()>(
+            OPEN_TRIES,
+            |_| {},
+            || {
+                calls += 1;
+                Err(io::Error::from_raw_os_error(6))
+            },
+        );
+        assert_eq!((calls, err.unwrap_err().raw_os_error()), (OPEN_TRIES, Some(6)));
+    }
+
+    #[test]
+    fn a_pty_opens_when_the_system_is_asked() {
+        assert!(
+            open_pair_again(winsize(WindowSize {
+                num_lines: 24,
+                num_cols: 80,
+                cell_width: 8,
+                cell_height: 16
+            }))
+            .is_ok()
+        );
+    }
 }
