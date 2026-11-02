@@ -6,7 +6,6 @@
 use gpui_kit::TestAppContext;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::storage::store::SessionRecord;
-use wormhole_core::terminal::SpawnOptions;
 use wormhole_term::checkpoint::{Key, Snapshot, Store};
 
 use super::restart_restore::sessions_dir;
@@ -40,26 +39,16 @@ fn set_flags(cx: &mut TestAppContext, restore: bool) {
 }
 
 /// The key the app derives for `host`, from the instance's own store.
-fn key_for(cx: &mut TestAppContext, window: &OpenWindow, host: &str) -> [u8; 32] {
+fn key_for(cx: &mut TestAppContext, window: &OpenWindow, host: &str) -> Key {
     let profile = drive(cx, window, |ws, _, _| ws.profile().clone());
     cx.update(|cx| app(cx).store_of(&profile).and_then(|s| s.checkpoint_key(host)))
         .expect("the store has a key")
 }
 
 /// A checkpoint of `host` as its host wrote it.
-fn write_checkpoint(host: &str, key: [u8; 32], screen: &[u8]) {
+fn write_checkpoint(host: &str, key: &Key, screen: &[u8]) {
     let mut store = Store::open(&sessions_dir(), host).expect("a store");
-    let snapshot = Snapshot {
-        time: 1_793_023_327,
-        cols: 80,
-        rows: 24,
-        cwd: Some("/tmp"),
-        shell: Some("login"),
-        title: None,
-        ended: None,
-        screen: Some(screen),
-    };
-    store.write(Some(&Key::new(key)), &snapshot).expect("written");
+    store.write(key, &Snapshot { time: 1_793_023_327, ended: None, screen }).expect("written");
 }
 
 fn record(host: &str) -> SessionRecord {
@@ -70,7 +59,12 @@ fn record(host: &str) -> SessionRecord {
 }
 
 fn host_start() -> Start {
-    Start::Host { binary: "/the/host".into(), data_dir: "/data".into(), id: "cccccccccccc".into() }
+    Start::Host {
+        binary: "/the/host".into(),
+        data_dir: "/data".into(),
+        id: "cccccccccccc".into(),
+        restore: None,
+    }
 }
 
 fn restore(
@@ -78,15 +72,15 @@ fn restore(
     window: &OpenWindow,
     record: &SessionRecord,
     start: &Start,
-) -> (Option<std::sync::Arc<crate::terminal_view::PendingRestore>>, SpawnOptions) {
-    let mut options = SpawnOptions { restore: record.scrollback.clone(), ..Default::default() };
+) -> (Option<std::sync::Arc<crate::terminal_view::PendingRestore>>, Start) {
+    let mut start = start.clone();
     let done = cx.update(|cx| {
         window
             .workspace
-            .read_with(cx, |ws, cx| ws.restore_from_checkpoint(record, start, &mut options, cx))
+            .read_with(cx, |ws, cx| ws.restore_from_checkpoint(record, &mut start, cx))
             .expect("window")
     });
-    (done, options)
+    (done, start)
 }
 
 #[gpui_kit::test]
@@ -97,12 +91,26 @@ fn a_terminal_whose_host_is_gone_comes_back_from_its_checkpoint(cx: &mut TestApp
     let window = start_with_store(cx, 1);
     set_flags(cx, true);
     let key = key_for(cx, &window, OLD);
-    write_checkpoint(OLD, key, b"\x1b[1mbuilt it\x1b[0m\r\n$ cargo test\r\n");
-    let (done, options) = restore(cx, &window, &record(OLD), &host_start());
+    write_checkpoint(OLD, &key, b"\x1b[1mbuilt it\x1b[0m\r\n$ cargo test\r\n");
+    let (done, start) = restore(cx, &window, &record(OLD), &host_start());
     assert!(done.is_some());
-    assert!(options.restore_styled);
+    // What the host starts with is read in the background from the checkpoint, with the key named here.
+    let Start::Host { restore: Some(from), .. } = start else { panic!("a host start that restores") };
+    assert_eq!(from.old, OLD);
+    let mut options = wormhole_core::terminal::SpawnOptions {
+        restore: Some("the saved text".into()),
+        ..Default::default()
+    };
+    let words = |t: u64| format!("restored at {t}");
+    assert!(wormhole_core::terminal::checkpoint::seed_options(
+        &sessions_dir(),
+        OLD,
+        Some(&from.key),
+        &mut options,
+        &words
+    ));
     let drawn = options.restore.as_deref().unwrap();
-    assert!(drawn.contains("built it") && drawn.contains("restored 20"), "{drawn:?}");
+    assert!(drawn.contains("built it") && drawn.contains("restored at 1793023327"), "{drawn:?}");
     assert!(!drawn.contains("the saved text"), "the screen replaces the text");
     // Not removed: the new host has not written its own yet, and a crash or another restart now must still find it.
     assert!(sessions_dir().join(OLD).is_dir(), "the old checkpoint stays until the new host's has landed");
@@ -127,7 +135,7 @@ fn it_is_for_a_terminal_that_starts_a_new_host_and_wanted_its_text_kept_and_only
     let window = start_with_store(cx, 1);
     set_flags(cx, true);
     let key = key_for(cx, &window, OLD);
-    write_checkpoint(OLD, key, b"screen\r\n");
+    write_checkpoint(OLD, &key, b"screen\r\n");
     // Attached to a live host, or in the app: no new shell to draw it above.
     let attach = Start::Attach { socket: "/s".into(), id: OLD.into(), visible: true };
     assert!(restore(cx, &window, &record(OLD), &attach).0.is_none());
@@ -161,15 +169,14 @@ fn what_the_host_is_asked_for_follows_the_feature_the_text_setting_and_the_termi
     assert!(plan(cx, &record(OLD)).is_none(), "off: the host is asked for nothing and writes nothing");
     set_flags(cx, true);
     let keyed = plan(cx, &record(OLD)).expect("asked");
-    assert_eq!(keyed.shell, "login");
-    assert_eq!(keyed.key.as_ref().map(|k| *k.as_bytes()), Some(key_for(cx, &window, OTHER)));
-    let mut shell = record(OLD);
-    shell.shell = Some("fish".into());
-    assert_eq!(plan(cx, &shell).unwrap().shell, "fish");
+    assert_eq!(keyed.key.as_bytes(), key_for(cx, &window, OTHER).as_bytes());
+    // The terminal's text is not to be kept: no key, no plan, and the host writes nothing.
     let mut forgotten = record(OLD);
     forgotten.forget_text = true;
-    let plan_forgotten = plan(cx, &forgotten).expect("asked");
-    assert!(plan_forgotten.key.is_none(), "no screen for a terminal whose text is not kept");
+    assert!(plan(cx, &forgotten).is_none(), "no screen for a terminal whose text is not kept");
+    // A profile that does not keep text after a restart.
+    cx.update(|cx| update_settings(cx, |s| s.restore_terminal_text = false));
+    assert!(plan(cx, &record(OLD)).is_none());
 }
 
 #[gpui_kit::test]
@@ -180,8 +187,8 @@ fn closing_a_row_removes_its_hosts_checkpoint_and_no_other(cx: &mut TestAppConte
     let window = start_with_store(cx, 2);
     set_flags(cx, true);
     let key = key_for(cx, &window, OLD);
-    write_checkpoint(OLD, key, b"closed\r\n");
-    write_checkpoint(OTHER, key, b"kept\r\n");
+    write_checkpoint(OLD, &key, b"closed\r\n");
+    write_checkpoint(OTHER, &key, b"kept\r\n");
     drive(cx, &window, |ws, _, cx| {
         ws.sessions[1].terminal().update(cx, |t, _| t.set_host_id_for_test(OLD));
         ws.sessions[0].terminal().update(cx, |t, _| t.set_host_id_for_test(OTHER));
@@ -189,27 +196,6 @@ fn closing_a_row_removes_its_hosts_checkpoint_and_no_other(cx: &mut TestAppConte
     drive(cx, &window, |ws, window, cx| ws.close_session(1, window, cx));
     assert!(!sessions_dir().join(OLD).exists(), "the closed terminal's checkpoint is gone");
     assert!(sessions_dir().join(OTHER).is_dir(), "the other's is not");
-}
-
-/// Clear Buffer forgets what a checkpoint holds of the buffer: it is gone before the host writes the next, so a
-/// restart cannot bring back what the person cleared.
-#[gpui_kit::test]
-fn clearing_the_buffer_removes_the_checkpoint_that_holds_it(cx: &mut TestAppContext) {
-    if isolate("clearing_the_buffer_removes_the_checkpoint_that_holds_it") {
-        return;
-    }
-    let window = start_with_store(cx, 1);
-    set_flags(cx, true);
-    let key = key_for(cx, &window, OLD);
-    write_checkpoint(OLD, key, b"secret scrollback\r\n");
-    drive(cx, &window, |ws, _, cx| {
-        ws.sessions[0].terminal().update(cx, |t, _| t.set_host_id_for_test(OLD));
-    });
-    drive(cx, &window, |ws, _, cx| {
-        let terminal = ws.sessions[0].terminal().clone();
-        terminal.update(cx, |t, cx| t.clear_buffer_for_test(cx));
-    });
-    assert!(!sessions_dir().join(OLD).exists());
 }
 
 /// What the launch sweep must spare: running hosts, and the checkpoints terminals are being restored from.
@@ -233,17 +219,85 @@ fn closing_a_restored_terminal_before_its_new_host_wrote_removes_the_old_checkpo
     let window = start_with_store(cx, 2);
     set_flags(cx, true);
     let key = key_for(cx, &window, OLD);
-    write_checkpoint(OLD, key, b"old\r\n");
+    write_checkpoint(OLD, &key, b"old\r\n");
     let (pending, _) = restore(cx, &window, &record(OLD), &host_start());
     drive(cx, &window, |ws, _, cx| {
         ws.sessions[1].terminal().update(cx, |t, cx| {
             t.set_host_id_for_test(OTHER);
             t.set_checkpoint_plan(
-                crate::terminal_view::CheckpointPlan { key: None, shell: "login".into(), replaces: pending },
+                crate::terminal_view::CheckpointPlan { key: Key::new([3; 32]), replaces: pending },
                 cx,
             );
         });
     });
     drive(cx, &window, |ws, window, cx| ws.close_session(1, window, cx));
     assert!(!sessions_dir().join(OLD).exists());
+}
+
+/// Turning the setting off tells every terminal's host to stop and removes what they wrote.
+#[gpui_kit::test]
+fn turning_the_setting_off_stops_the_hosts_and_removes_their_checkpoints(cx: &mut TestAppContext) {
+    if isolate("turning_the_setting_off_stops_the_hosts_and_removes_their_checkpoints") {
+        return;
+    }
+    let window = start_with_store(cx, 1);
+    set_flags(cx, true);
+    let key = key_for(cx, &window, OLD);
+    write_checkpoint(OLD, &key, b"x\r\n");
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].terminal().update(cx, |t, _| t.set_host_id_for_test(OLD));
+    });
+    set_flags(cx, false);
+    drive(cx, &window, |ws, _, cx| {
+        assert!(!ws.sessions[0].terminal().read(cx).has_checkpoint_plan_for_test(), "no plan any more");
+    });
+    assert!(!sessions_dir().join(OLD).exists());
+}
+
+/// The new host says its first checkpoint is on disk: the app reads it back once and then, and only then, removes
+/// the old host's. With no word from the host the old one stays.
+#[gpui_kit::test]
+fn the_old_checkpoint_goes_when_the_new_host_says_its_own_is_written_and_not_before(cx: &mut TestAppContext) {
+    if isolate("the_old_checkpoint_goes_when_the_new_host_says_its_own_is_written_and_not_before") {
+        return;
+    }
+    let window = start_with_store(cx, 1);
+    set_flags(cx, true);
+    let old_key = key_for(cx, &window, OLD);
+    let new_key = key_for(cx, &window, OTHER);
+    write_checkpoint(OLD, &old_key, b"old\r\n");
+    let (pending, _) = restore(cx, &window, &record(OLD), &host_start());
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].terminal().update(cx, |t, cx| {
+            t.set_host_id_for_test(OTHER);
+            t.set_checkpoint_plan(
+                crate::terminal_view::CheckpointPlan { key: new_key.clone(), replaces: pending },
+                cx,
+            );
+        });
+    });
+    cx.run_until_parked();
+    assert!(sessions_dir().join(OLD).is_dir(), "no word from the host: the old one stays");
+    // The word comes, but the new host's files do not read (it wrote nothing): the old one still stays.
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].terminal().update(cx, |t, cx| t.checkpoint_written_for_test(1, cx));
+    });
+    cx.run_until_parked();
+    assert!(sessions_dir().join(OLD).is_dir(), "the new checkpoint is not there to read");
+    // Now it is, and the word comes again (a fresh plan: the first was spent).
+    write_checkpoint(OTHER, &new_key, b"new\r\n");
+    let (pending, _) = restore(cx, &window, &record(OLD), &host_start());
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].terminal().update(cx, |t, cx| {
+            t.set_checkpoint_plan(
+                crate::terminal_view::CheckpointPlan { key: new_key.clone(), replaces: pending },
+                cx,
+            );
+            t.checkpoint_written_for_test(2, cx);
+        });
+    });
+    cx.run_until_parked();
+    assert!(!sessions_dir().join(OLD).exists(), "read back once, then the old one went");
+    assert!(sessions_dir().join(OTHER).is_dir());
+    assert!(!crate::terminal_view::pending_restores().contains(OLD));
 }

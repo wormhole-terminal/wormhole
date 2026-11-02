@@ -477,7 +477,15 @@ impl Workspace {
             this.sync_sidebar_soon(cx);
         })
         .detach();
-        cx.observe_global::<crate::settings::SettingsStore>(|this, cx| this.sync_sidebar_soon(cx)).detach();
+        cx.observe_global::<crate::settings::SettingsStore>(|this, cx| {
+            this.sync_sidebar_soon(cx);
+            // The setting went off (the flag, hosts, or the text setting): the hosts stop writing and what they
+            // wrote goes.
+            if !restart_restore::on(&this.profile, cx) {
+                this.stop_checkpoints(cx);
+            }
+        })
+        .detach();
         // A terminal's file count moves in any window.
         this.watch_changes(cx);
         self::regions::Regions::watch_globals(&mut this, cx);

@@ -643,6 +643,7 @@ impl TerminalView {
             PtyEvent::ClipboardLoad(format, reply) => self.clipboard_load(format, reply, cx),
             // The workspace owns the window.
             PtyEvent::WindowOp(op) => cx.emit(TerminalEvent::WindowOp(op)),
+            PtyEvent::CheckpointWritten(generation) => self.checkpoint_written(generation, cx),
             // The screen stays: the last output (often why it exited) can still
             // be read, selected and saved.
             PtyEvent::Exited(code) => {

@@ -4,6 +4,7 @@
 //! go of the host when the app quits, so the program goes on running.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use gpui_kit::component::Sizable as _;
@@ -29,7 +30,13 @@ pub enum Start {
     /// must not start: like `Local`, and the person is told to move Wormhole to Applications (once per run).
     LocalNeedsApplications,
     /// In a new session host: `binary`, with its files in `<data_dir>/hosts` under the id `id`.
-    Host { binary: PathBuf, data_dir: PathBuf, id: String },
+    /// `restore`: the checkpoint to draw above the new shell, read in the background before the host starts.
+    Host {
+        binary: PathBuf,
+        data_dir: PathBuf,
+        id: String,
+        restore: Option<super::checkpoint_plan::RestoreFrom>,
+    },
     /// Attach to the running host `id` at `socket` (a terminal saved with it, or an orphan), fed a
     /// repaint at once when `visible`, headless otherwise.
     Attach { socket: PathBuf, id: String, visible: bool },
@@ -86,6 +93,8 @@ pub(super) struct HostState {
     pub(super) auto_retried: bool,
     /// What the host is to be asked for the restart of the Mac (`checkpoint_plan`), once connected.
     pub(super) checkpoint: Option<super::checkpoint_plan::CheckpointPlan>,
+    /// Set by the background start when it read the checkpoint it was to restore from.
+    pub(super) seeded: Option<Arc<AtomicBool>>,
 }
 
 /// The warning that a host could not start is shown once per run: when one fails, the next would
@@ -160,16 +169,31 @@ impl TerminalView {
     ) {
         if !matches!(start, Start::Local) {
             // What a reattach needs; the saved text only matters to the fallback below.
-            self.host.options =
-                Some(SpawnOptions { restore: None, restore_styled: false, ..options.clone() });
+            self.host.options = Some(SpawnOptions { restore: None, ..options.clone() });
         }
         match start {
             Start::Local => {}
             Start::LocalNeedsApplications => self.tell_move_to_applications(cx),
-            Start::Host { binary, data_dir, id } => {
+            Start::Host { binary, data_dir, id, restore } => {
+                // Whether the checkpoint was read: if not, the saved text is drawn and nothing waits to replace
+                // an old checkpoint (`host_ready`).
+                let seeded = restore.as_ref().map(|_| Arc::new(AtomicBool::new(false)));
+                self.host.seeded = seeded.clone();
                 let task = cx.background_spawn({
-                    let options = options.clone();
+                    let mut options = options.clone();
                     async move {
+                        // Reading, opening and filtering a checkpoint is file I/O and decryption.
+                        if let (Some(from), Some(seeded)) = (restore, seeded) {
+                            let dir = wormhole_core::terminal::checkpoint::sessions_dir(&data_dir);
+                            let drawn = wormhole_core::terminal::checkpoint::seed_options(
+                                &dir,
+                                &from.old,
+                                Some(&from.key),
+                                &mut options,
+                                &super::restored::restored_words,
+                            );
+                            seeded.store(drawn, Ordering::Release);
+                        }
                         let hosts_dir = wormhole_core::ipc::hosts::ensure_hosts_dir(&data_dir)
                             .map_err(|e| HostFailure::Start(e.into()))?;
                         let host = wormhole_term::client::HostCommand {
@@ -225,6 +249,14 @@ impl TerminalView {
         cx: &mut Context<Self>,
     ) {
         self.host.connecting = false;
+        // The checkpoint a restore was to read did not: no new checkpoint will replace it, and it stays as it was
+        // (a newer Wormhole's, or one that does not open, is not ours to remove).
+        if let Some(seeded) = self.host.seeded.take()
+            && !seeded.load(Ordering::Acquire)
+            && let Some(plan) = self.host.checkpoint.as_mut()
+        {
+            plan.replaces = None;
+        }
         match ready {
             Ok((pty, events)) => {
                 // Attached headless while the workspace has put it on screen since (or the other
@@ -544,8 +576,10 @@ mod tests {
     fn where_a_program_runs_follows_its_host() {
         assert_eq!(HostState::of(&Start::Local, false).hosting(), Hosting::InApp);
         assert_eq!(HostState::of(&Start::Local, true).hosting(), Hosting::AppOnly);
-        let new =
-            HostState::of(&Start::Host { binary: "h".into(), data_dir: "d".into(), id: "x".into() }, false);
+        let new = HostState::of(
+            &Start::Host { binary: "h".into(), data_dir: "d".into(), id: "x".into(), restore: None },
+            false,
+        );
         assert_eq!(new.hosting(), Hosting::Connecting);
         let ready = HostState { connecting: false, ..new };
         assert_eq!(ready.hosting(), Hosting::Persistent);

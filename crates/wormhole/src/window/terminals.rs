@@ -210,9 +210,9 @@ impl Workspace {
             options.welcome = !cfg!(test);
             options.env.insert(wormhole_core::onboarding::welcome::TOKEN_VAR.to_string(), token);
         }
-        let start = self.start_for(record, &options, cx);
+        let mut start = self.start_for(record, &options, cx);
         // A terminal whose host is gone (the Mac restarted) comes back from its host's checkpoint when it kept one.
-        let replaces = self.restore_from_checkpoint(record, &start, &mut options, cx);
+        let replaces = self.restore_from_checkpoint(record, &mut start, cx);
         let plan = match &start {
             crate::terminal_view::Start::Host { id, .. } | crate::terminal_view::Start::Attach { id, .. } => {
                 self.checkpoint_plan(record, id, cx)
@@ -433,7 +433,6 @@ fn spawn_options(
         cwd,
         tab_id: tab_id.to_string(),
         restore,
-        restore_styled: false,
         scrollback_lines: 0,
         allow_screen_checksum: false,
         allow_window_ops: false,

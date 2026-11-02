@@ -2,7 +2,7 @@
 //! key the app derived for this terminal. The window decides (it knows the terminal's record and the profile's
 //! settings) and hands over a [`CheckpointPlan`]; the terminal sends it as soon as it is connected to its host,
 //! whether the host was just started or attached to. A terminal without a plan asks for nothing, and its host
-//! writes nothing.
+//! writes nothing: no key, no checkpoint.
 
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex, PoisonError};
@@ -43,20 +43,30 @@ pub(crate) fn pending_restores() -> HashSet<String> {
     PENDING.lock().unwrap_or_else(PoisonError::into_inner).iter().cloned().collect()
 }
 
-/// How long the app waits for a new host's first checkpoint to land, in steps that double: the host writes at
-/// once on a flush, and the disk is quick, so the first looks find it; a host that never does leaves the old
-/// checkpoint where it is. (The host sends no word when it has written, so the app looks at the files.)
-const CONFIRM_STEPS: [u64; 8] = [50, 100, 200, 400, 800, 1_600, 3_200, 6_400];
+/// How long the app waits for the new host to say its first checkpoint is on disk. A host that never does leaves
+/// the old checkpoint where it is (the retention sweep takes it in time): the one timeout there is, not a poll.
+const CONFIRM_WITHIN: Duration = Duration::from_secs(10);
 
-/// The key the host seals with (none: the app has none, or the person does not want the terminal's text kept,
-/// and then the host keeps the folder and the shell only) and the key of the shell the terminal runs.
+/// The key the host seals with. A terminal whose text is not to be kept, or a profile without a key, has no plan.
 #[derive(Clone)]
 pub(crate) struct CheckpointPlan {
-    pub key: Option<Key>,
-    pub shell: String,
-    /// The terminal was restored from this host's checkpoint: the new host is asked to write its own at once, and
-    /// the old one is removed when that has landed.
+    pub key: Key,
+    /// The terminal was restored from this host's checkpoint: the new host is asked to write its own at once and to
+    /// say when it has; the old one is removed after that, once the new one has been read back.
     pub replaces: Option<Arc<PendingRestore>>,
+}
+
+/// What a terminal restored from a checkpoint reads it with, in the background.
+#[derive(Clone)]
+pub(crate) struct RestoreFrom {
+    pub old: String,
+    pub key: Key,
+}
+
+impl std::fmt::Debug for RestoreFrom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RestoreFrom").field("old", &self.old).finish_non_exhaustive()
+    }
 }
 
 /// Remove the checkpoint of host `host_id` from the data folder.
@@ -76,62 +86,72 @@ impl TerminalView {
     /// Send the plan to the host, if there is a plan and a connection to a host that can keep checkpoints.
     pub(super) fn send_checkpoint_plan(&mut self, cx: &mut Context<Self>) {
         let (Some(plan), Some(pty)) = (&self.host.checkpoint, &self.pty) else { return };
-        if !pty.start_checkpoints(plan.key.as_ref(), &plan.shell) {
+        if !pty.start_checkpoints(&plan.key) {
             return;
         }
-        tracing::debug!(keyed = plan.key.is_some(), "asked the host to keep checkpoints");
-        // A restored terminal: its new host writes its first checkpoint now, not after three quiet seconds,
-        // and the old checkpoint goes when that is on disk (and not before: a crash or another restart in
-        // between must still find the old one).
-        if let (Some(replaces), Some(new)) = (plan.replaces.clone(), self.host.id.clone()) {
+        tracing::debug!("asked the host to keep checkpoints");
+        // A restored terminal: its new host writes its first checkpoint now, not after three quiet seconds, and
+        // says when it is on disk (`checkpoint_written`). The old checkpoint goes after that and not before: a
+        // crash or another restart in between must still find the old one.
+        if plan.replaces.is_some() {
             pty.checkpoint_now(true);
-            let key = plan.key.clone();
-            self.confirm_restore(replaces, new, key, cx);
+            self.await_confirmation(cx);
         }
     }
 
-    /// Wait for host `new` to have written its first checkpoint, then remove the one `replaces` names.
-    fn confirm_restore(
-        &mut self,
-        replaces: Arc<PendingRestore>,
-        new: String,
-        key: Option<Key>,
-        cx: &mut Context<Self>,
-    ) {
-        use wormhole_core::terminal::checkpoint as core;
-        self._tasks.push(cx.spawn(async move |_this, cx| {
-            let bg = cx.background_executor().clone();
-            for step in CONFIRM_STEPS {
-                bg.timer(Duration::from_millis(step)).await;
-                let (old, new, key) =
-                    (replaces.old.clone(), new.clone(), key.as_ref().map(|k| *k.as_bytes()));
-                let landed = bg
-                    .spawn(async move {
-                        let dir = core::sessions_dir(&wormhole_core::storage::paths::data_dir());
-                        core::forget_when_confirmed(&dir, &old, &new, key.as_ref())
-                    })
-                    .await;
-                if landed {
-                    return;
+    /// Give the new host [`CONFIRM_WITHIN`] to say its checkpoint is written; after that the old one stays.
+    fn await_confirmation(&mut self, cx: &mut Context<Self>) {
+        self._tasks.push(cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(CONFIRM_WITHIN).await;
+            let _ = this.update(cx, |this, _| {
+                if let Some(plan) = this.host.checkpoint.as_mut()
+                    && let Some(replaces) = plan.replaces.take()
+                {
+                    tracing::warn!(
+                        old = replaces.old,
+                        "the new host said nothing of its first checkpoint; the old one stays"
+                    );
                 }
-            }
-            tracing::warn!(
-                old = replaces.old,
-                "the new host's first checkpoint did not land; the old one stays"
-            );
+            });
         }));
     }
 
-    /// Ask the host for a checkpoint now (after Clear Buffer, whose result should not be the old screen).
-    pub(super) fn checkpoint_now(&self) {
-        if self.host.checkpoint.is_some()
-            && let Some(pty) = &self.pty
-        {
-            pty.checkpoint_now(false);
-        }
+    /// The host says generation `generation` of its checkpoint is on disk (it was asked to flush). If this
+    /// terminal was restored from an older host's checkpoint, read the new one back once; if it opens, the old
+    /// one is spent.
+    pub(super) fn checkpoint_written(&mut self, generation: u64, cx: &mut Context<Self>) {
+        let (Some(plan), Some(new)) = (self.host.checkpoint.as_mut(), self.host.id.clone()) else { return };
+        let Some(replaces) = plan.replaces.take() else { return };
+        let key = plan.key.clone();
+        tracing::debug!(generation, "the host's first checkpoint is on disk");
+        self._tasks.push(cx.background_spawn(async move {
+            use wormhole_core::terminal::checkpoint as core;
+            let dir = core::sessions_dir(&wormhole_core::storage::paths::data_dir());
+            if !core::forget_when_confirmed(&dir, &replaces.old, &new, &key) {
+                tracing::warn!(
+                    old = replaces.old,
+                    "the new host's checkpoint does not read; the old one stays"
+                );
+            }
+            // (`replaces` drops here: the sweep may have what is left.)
+        }));
     }
 
-    /// Remove the checkpoint of this terminal's host, if it runs in one: its buffer was cleared, or it is closed.
+    /// Stop the host's checkpoints and remove what it wrote: the setting went off.
+    pub(crate) fn stop_checkpoints(&mut self) {
+        if self.host.checkpoint.is_none() {
+            return;
+        }
+        self.host.checkpoint = None;
+        if let Some(pty) = &self.pty {
+            pty.stop_checkpoints();
+        }
+        self.forget_checkpoint();
+    }
+
+    /// Remove the checkpoint of this terminal's host, if it runs in one: it is closed (or the setting went off).
+    /// The host drops its own writer first when told to close, so nothing writes it again; the app looks once more
+    /// when the host is gone, as a backstop (`forget_checkpoint_later`).
     pub(crate) fn forget_checkpoint(&self) {
         if let Some(id) = self.host.id.as_deref() {
             forget_checkpoint_of(id);
@@ -142,15 +162,26 @@ impl TerminalView {
         }
     }
 
-    /// Clear Buffer, as the key and the menu do.
-    #[cfg(test)]
-    pub(crate) fn clear_buffer_for_test(&mut self, cx: &mut gpui_kit::Context<Self>) {
-        self.run_command(super::input::TerminalCommand::Clear, cx);
+    /// The host ids whose checkpoints [`forget_checkpoint`](Self::forget_checkpoint) removes.
+    pub(crate) fn checkpoint_hosts(&self) -> Vec<String> {
+        let own = self.host.id.clone();
+        let old = self.host.checkpoint.as_ref().and_then(|p| p.replaces.as_ref()).map(|r| r.old.clone());
+        own.into_iter().chain(old).collect()
     }
 
     #[cfg(test)]
     pub(crate) fn set_host_id_for_test(&mut self, id: &str) {
         self.host.id = Some(id.to_owned());
-        self.host.checkpoint = Some(CheckpointPlan { key: None, shell: "login".into(), replaces: None });
+        self.host.checkpoint = Some(CheckpointPlan { key: Key::new([9; 32]), replaces: None });
+    }
+
+    #[cfg(test)]
+    pub(crate) fn checkpoint_written_for_test(&mut self, generation: u64, cx: &mut Context<Self>) {
+        self.checkpoint_written(generation, cx);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn has_checkpoint_plan_for_test(&self) -> bool {
+        self.host.checkpoint.is_some()
     }
 }

@@ -192,7 +192,9 @@ impl Workspace {
             HostProgram::Missing => return Start::Local,
         };
         match hosts::new_host_id() {
-            Ok(id) => Start::Host { binary, data_dir: wormhole_core::storage::paths::data_dir(), id },
+            Ok(id) => {
+                Start::Host { binary, data_dir: wormhole_core::storage::paths::data_dir(), id, restore: None }
+            }
             Err(err) => {
                 tracing::warn!("no id for a session host, the terminal runs in the app: {err}");
                 Start::Local

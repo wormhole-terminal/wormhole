@@ -203,9 +203,8 @@ impl TerminalView {
                     pty.clear_history();
                     kept_by_host = super::clear::history_kept_by_host(pty.host_forgets_history());
                 }
-                // A checkpoint the host kept holds the history that was just cleared: gone, and a new one at once.
-                self.forget_checkpoint();
-                self.checkpoint_now();
+                // (A host that keeps checkpoints hears the clear itself: it writes a fresh generation and
+                // removes every earlier one.)
                 if kept_by_host {
                     // The cleared history is back at the next attach: say so, and that ending the host
                     // is how to be rid of it.

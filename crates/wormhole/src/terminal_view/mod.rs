@@ -37,12 +37,13 @@ mod links;
 mod pane_bar;
 mod render;
 mod reported;
+mod restored;
 mod scaling;
 mod settle;
 mod status;
 mod window_geometry;
 
-pub(crate) use checkpoint_plan::{CheckpointPlan, PendingRestore, pending_restores};
+pub(crate) use checkpoint_plan::{CheckpointPlan, PendingRestore, RestoreFrom, pending_restores};
 pub use control_input::MouseSent;
 pub use failed::Failure;
 pub use grid_layout::GridProbe;
@@ -273,6 +274,13 @@ impl TerminalView {
         options.color_scheme = Some(palette.color_scheme());
         let cwd = options.cwd.clone();
         let restored = options.restore.clone().unwrap_or_default();
+        // The saved text is the seed a new shell starts above: dim, with the divider that says when.
+        options.restore = options.restore.take().map(|text| {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |since| since.as_secs());
+            restored::seed_from_text(&text, now)
+        });
         let local = matches!(start, Start::Local | Start::LocalNeedsApplications)
             .then(|| wormhole_core::terminal::spawn(initial, &options));
         let (pty, events) = match local {
