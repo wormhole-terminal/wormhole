@@ -91,15 +91,15 @@ pub(super) fn tile_rows(ui: UiColors) -> Div {
                 .child(style::more_row(
                     "g-more-closed",
                     ui,
-                    "Other agents Wormhole recognises",
-                    Some("17".into()),
+                    "Other agents Wormhole recognises", // text: sample (the gallery's specimen)
+                    Some("17".into()),                  // text: sample (the gallery's specimen)
                     false,
                 )) // text: sample (the gallery's specimen)
                 .child(style::more_row(
                     "g-more-open",
                     ui,
-                    "Other agents Wormhole recognises",
-                    Some("17".into()),
+                    "Other agents Wormhole recognises", // text: sample (the gallery's specimen)
+                    Some("17".into()),                  // text: sample (the gallery's specimen)
                     true,
                 )), // text: sample (the gallery's specimen)
         )
