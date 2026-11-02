@@ -62,6 +62,10 @@ pub(super) enum Bar<'a> {
     Ask(&'a str),
     /// What the chip would have said, where it is off.
     Notice(BannerKind, &'a str),
+    /// The session host runs and this app cannot show it: why, and what went wrong ending it, if that failed.
+    HostUnavailable(wormhole_core::ipc::hosts::UnavailableKind, Option<&'a str>),
+    /// The session host does not answer; what went wrong ending it, if that failed.
+    HostNotResponding(Option<&'a str>),
 }
 
 impl TerminalView {
@@ -171,13 +175,19 @@ impl TerminalView {
         reply.send(format(&text).into_bytes());
     }
 
-    /// What the bar over the pane says now: a question first, else the last notice.
+    /// What the bar over the pane says now: a question first,
+    /// Then a problem with the session host, then the last notice: one bar at a time.
     pub(super) fn pane_bar(&self) -> Option<Bar<'_>> {
-        match (&self.bar.ask, &self.bar.note) {
-            (Some(ask), _) => Some(Bar::Ask(&ask.program)),
-            (None, Some(note)) => Some(Bar::Notice(note.kind, &note.text)),
-            (None, None) => None,
+        if let Some(ask) = &self.bar.ask {
+            return Some(Bar::Ask(&ask.program));
         }
+        if let Some(unavailable) = self.host_unavailable() {
+            return Some(Bar::HostUnavailable(unavailable.kind, self.host_end_failure()));
+        }
+        if self.shows_not_responding() {
+            return Some(Bar::HostNotResponding(self.host_end_failure()));
+        }
+        self.bar.note.as_ref().map(|note| Bar::Notice(note.kind, &note.text))
     }
 
     /// The program in front as the sidebar names it, cleaned and cut; `None` when there is none.
@@ -264,6 +274,8 @@ impl TerminalView {
         match self.pane_bar() {
             Some(Bar::Ask(program)) => format!("ask: {}", ask_words(program)),
             Some(Bar::Notice(_, text)) => format!("notice: {text}"),
+            Some(Bar::HostUnavailable(kind, _)) => format!("host unavailable: {kind:?}"),
+            Some(Bar::HostNotResponding(_)) => "host not responding".to_string(),
             None => "none".to_string(),
         }
     }

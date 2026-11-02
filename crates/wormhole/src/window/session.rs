@@ -143,6 +143,7 @@ impl Session {
     /// a command running. Notes and tasks alone never ask; they are the user's to keep or not.
     pub(crate) fn needs_close_confirmation(&self, cx: &App) -> bool {
         close_needs_confirmation(self.status(cx), self.command_running(cx))
+            || self.terminal().read(cx).host_unavailable().is_some()
     }
 
     /// The window's part of the saved record; the features add theirs (`Workspace::session_record`).

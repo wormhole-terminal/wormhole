@@ -150,6 +150,9 @@ pub enum TerminalEvent {
     Restart,
     /// The exited shell's bar asks to close the tab.
     Close,
+    /// The session host this terminal could not show was ended (from its bar or from the question before
+    /// closing): the terminal has nothing left to show, and goes, shown or not.
+    HostEnded,
     /// The find bar opened or closed (the workspace draws it).
     FindChanged,
     /// A program asked the window to move, resize, minimise or the like (`allow_window_ops`).

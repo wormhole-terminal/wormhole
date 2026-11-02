@@ -292,8 +292,6 @@ impl Render for TerminalView {
             .when(exited, |this| this.child(self.render_exited(cx)))
             .children(self.render_pane_bar(exited, cx))
             .children(self.render_host_notice(cx))
-            .children(self.render_host_unavailable(cx))
-            .children(self.render_host_not_responding(cx))
     }
 }
 

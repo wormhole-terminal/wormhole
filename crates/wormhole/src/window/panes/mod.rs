@@ -115,6 +115,7 @@ impl Workspace {
             TerminalEvent::Printed => self.publish_printed(ix, cx),
             TerminalEvent::Activate => self.focus_pane(id, window, cx),
             // The bar is only on screen in the shown terminals.
+            TerminalEvent::HostEnded => self.close_session(ix, window, cx),
             TerminalEvent::Close => {
                 if self.on_screen(ix) {
                     self.request_close_session(ix, window, cx);

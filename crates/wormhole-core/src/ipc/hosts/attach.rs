@@ -49,6 +49,14 @@ pub enum UnavailableKind {
     Failed,
 }
 
+impl UnavailableKind {
+    /// A failure that may pass by itself (a busy or slow host, a socket not bound just now), so the attach is
+    /// worth trying again; a refusal or a protocol that does not fit will not change by waiting.
+    pub fn is_transient(self) -> bool {
+        matches!(self, Self::Busy | Self::TimedOut | Self::Unreachable | Self::Failed)
+    }
+}
+
 /// Decide what `error` means, given what the system says of the host's process (`identity`).
 pub fn classify(error: &AttachError, identity: Identity) -> AttachFailure {
     let detail = error.to_string();
@@ -150,6 +158,17 @@ mod tests {
             for identity in [Identity::Yes, Identity::No, Identity::Unknown] {
                 assert_eq!(kind_of(error.clone(), identity), Some(want), "{error:?} / {identity:?}");
             }
+        }
+    }
+
+    #[test]
+    fn only_failures_that_may_pass_are_worth_trying_again() {
+        use UnavailableKind::*;
+        for kind in [Busy, TimedOut, Unreachable, Failed] {
+            assert!(kind.is_transient(), "{kind:?}");
+        }
+        for kind in [Refused, TooOld, TooNew] {
+            assert!(!kind.is_transient(), "{kind:?}");
         }
     }
 

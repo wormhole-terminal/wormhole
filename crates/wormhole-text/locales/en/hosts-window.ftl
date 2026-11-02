@@ -172,3 +172,16 @@ hosts-field-heard = Last heard
 hosts-heard-ago = { $ago } ago
 # { $quiet } is how long it has been silent, e.g. 1 min 5 s.
 hosts-link-not-responding = Not responding: silent for { $quiet }
+
+# On the bar for a host this app cannot show: try the attach again. First, so a momentary failure does not
+# steer anyone to ending the host.
+hosts-unavailable-retry = Try again
+
+# When ending the session host from that bar failed; { $why } is the reason. The terminal stays.
+hosts-end-failed = Couldn’t end the session host: { $why }
+
+# The question before closing a terminal whose session host runs but cannot be shown. The title is the
+# terminal's own close title; the buttons end the host with it, or close the terminal and leave the host.
+hosts-close-detail = Its session host is still running, but this app can’t show it. Ending the host ends the program in it; leaving it running keeps it in the Session Hosts window.
+hosts-close-end = End the Host
+hosts-close-leave = Leave It Running

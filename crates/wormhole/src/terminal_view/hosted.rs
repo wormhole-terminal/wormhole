@@ -60,14 +60,14 @@ pub(super) struct HostState {
     /// Let go of (`detach_host`): the program runs on in the host, the view keeps its last screen.
     detached: bool,
     /// The host is being started or attached to (the pane is blank meanwhile).
-    connecting: bool,
+    pub(super) connecting: bool,
     /// Runs in the app by design (the Welcome terminal), so being in the app is not a fallback.
     app_only: bool,
     /// On screen (fed a repaint, then the stream) or headless, as the workspace last said.
-    on_screen: bool,
+    pub(super) on_screen: bool,
     /// The options it was started with, for attaching again (`reattach`): the replica must have
     /// the same history and window rules as the host.
-    options: Option<SpawnOptions>,
+    pub(super) options: Option<SpawnOptions>,
     /// The banner that the host could not start, while it shows: only where the notice chip is off.
     notice: Option<SharedString>,
     /// The host runs but this terminal could not attach to it (it refused the app, speaks another
@@ -77,6 +77,10 @@ pub(super) struct HostState {
     /// "Wait" was pressed on the bar for a host that does not answer: it stays away until the host answers
     /// again.
     pub(super) waiting: bool,
+    /// Why ending the host from its terminal failed, for the bar.
+    pub(super) end_failed: Option<String>,
+    /// The attach was tried once more already after a failure that may pass.
+    pub(super) auto_retried: bool,
 }
 
 /// The warning that a host could not start is shown once per run: when one fails, the next would
@@ -186,7 +190,7 @@ impl TerminalView {
 
     /// Take the terminal `task` makes when it is ready, or start one in the app's process when it
     /// fails (`attaching`: the host had gone, which is today's restore with the saved text).
-    fn await_host(
+    pub(super) fn await_host(
         &mut self,
         task: Task<Result<(Pty, PtyEvents), HostFailure>>,
         options: SpawnOptions,
@@ -218,19 +222,14 @@ impl TerminalView {
                 if attaching {
                     pty.set_visible(self.host.on_screen);
                 }
+                self.host.auto_retried = false;
                 self.install(pty, events, cx);
             }
             // The host runs and cannot be shown: the terminal keeps its id and says why. No shell
             // replaces it (the program is in the host), and the next launch finds this same row.
             Err(HostFailure::Attach(AttachFailure::Unavailable(unavailable))) => {
-                tracing::warn!(
-                    id = self.host.id.as_deref(),
-                    kind = ?unavailable.kind,
-                    "a session host runs and cannot be attached to: {}",
-                    unavailable.detail
-                );
-                self.host.unavailable = Some(unavailable);
-                cx.emit(TerminalEvent::HostChanged);
+                // (Connecting again, or the bar: see `host_problem`.)
+                let _ = self.host_unavailable_now(unavailable, cx);
             }
             Err(failure) => {
                 let err = match failure {
@@ -339,7 +338,7 @@ impl TerminalView {
     }
 
     /// The grid's size as the last frame laid it out, if one did.
-    fn painted_size(&self) -> Option<GridSize> {
+    pub(super) fn painted_size(&self) -> Option<GridSize> {
         let layout = self.layout.get();
         (layout.cols > 0 && layout.rows > 0).then(|| GridSize {
             cols: layout.cols as u16,

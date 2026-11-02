@@ -27,8 +27,7 @@ mod find;
 mod find_bar;
 mod first_command;
 mod grid_layout;
-mod host_responding;
-mod host_unavailable;
+mod host_problem;
 mod hosted;
 mod input;
 mod line_size;
@@ -44,7 +43,7 @@ pub use control_input::MouseSent;
 pub use failed::Failure;
 pub use grid_layout::GridProbe;
 use grid_layout::Layout;
-pub use host_unavailable::unavailable_text;
+pub use host_problem::unavailable_text;
 pub use hosted::{Hosting, Start, note_app_quitting};
 pub use input::{TerminalKeys, keystroke_spec};
 #[cfg(feature = "devctl")]

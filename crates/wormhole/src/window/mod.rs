@@ -89,6 +89,7 @@ mod group_ops;
 #[cfg(test)]
 mod group_tests;
 pub(crate) mod grow;
+mod host_close;
 #[cfg(test)]
 mod host_unavailable_tests;
 pub(crate) mod hosting;

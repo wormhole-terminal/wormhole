@@ -194,6 +194,11 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        // A host that runs and cannot be shown: closing would drop its id and leave the program running
+        // unseen, so the question is asked whatever the origin.
+        if self.host_cannot_be_shown(ix, cx) {
+            return self.ask_close_unavailable(ix, window, cx);
+        }
         let Some(session) = self.sessions.get(ix) else { return };
         // A feature may have more to ask (a terminal in a worktree Wormhole made asks whether the worktree
         // goes with it), which makes the window ask even when nothing is running.

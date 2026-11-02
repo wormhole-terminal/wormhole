@@ -146,6 +146,14 @@ pub const HOSTS_NOT_RESPONDING_WAIT: Key = Key::new(238);
 pub const HOSTS_NOT_RESPONDING_END: Key = Key::new(239);
 /// "Last heard"
 pub const HOSTS_FIELD_HEARD: Key = Key::new(240);
+/// "Try again"
+pub const HOSTS_UNAVAILABLE_RETRY: Key = Key::new(243);
+/// "Its session host is still running, but this app can’t show it. Ending the host ends the program in it; leaving it running keeps it in the Session Hosts window."
+pub const HOSTS_CLOSE_DETAIL: Key = Key::new(245);
+/// "End the Host"
+pub const HOSTS_CLOSE_END: Key = Key::new(246);
+/// "Leave It Running"
+pub const HOSTS_CLOSE_LEAVE: Key = Key::new(247);
 
 /// ```text
 /// Wormhole { $version }, protocol { $protocol }
@@ -348,4 +356,11 @@ pub fn hosts_heard_ago(ago: &str) -> String {
 /// ```
 pub fn hosts_link_not_responding(quiet: &str) -> String {
     crate::active::message(242, &[("quiet", Arg::Str(quiet))])
+}
+
+/// ```text
+/// Couldn’t end the session host: { $why }
+/// ```
+pub fn hosts_end_failed(why: &str) -> String {
+    crate::active::message(244, &[("why", Arg::Str(why))])
 }
