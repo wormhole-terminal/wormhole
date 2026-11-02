@@ -8,7 +8,7 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use gpui_kit::*;
@@ -26,6 +26,10 @@ pub(crate) struct OpenIn {
     found: Vec<String>,
     /// The icons, by bundle identifier: drawn once, `None` for an app whose icon can't be read.
     icons: RefCell<HashMap<String, Option<Arc<Image>>>>,
+    /// Where each app is, by bundle identifier, as LaunchServices said (`None`: not installed). The
+    /// title row builds its menu with every frame it draws, so this is asked once, and again only by
+    /// [`refresh`](Self::refresh).
+    places: RefCell<HashMap<String, Option<PathBuf>>>,
 }
 
 impl Global for OpenIn {}
@@ -38,7 +42,7 @@ impl OpenIn {
     /// Look for the apps and keep the result as a global.
     pub(crate) fn install(cx: &mut App) {
         let found = installed();
-        cx.set_global(Self { found, icons: RefCell::new(HashMap::new()) });
+        cx.set_global(Self { found, icons: RefCell::default(), places: RefCell::default() });
     }
 
     /// Look again (an app was installed or removed since): the icons already drawn are kept. The
@@ -47,12 +51,13 @@ impl OpenIn {
     pub(crate) fn refresh(cx: &mut App) {
         let found = installed();
         match cx.try_global::<Self>() {
-            Some(this) if this.found == found => {}
+            // An app moved or reinstalled keeps its identifier: its place is asked again either way.
+            Some(this) if this.found == found => this.places.borrow_mut().clear(),
             Some(this) => {
                 let icons = this.icons.take();
-                cx.set_global(Self { found, icons: RefCell::new(icons) });
+                cx.set_global(Self { found, icons: RefCell::new(icons), places: RefCell::default() });
             }
-            None => cx.set_global(Self { found, icons: RefCell::new(HashMap::new()) }),
+            None => cx.set_global(Self { found, icons: RefCell::default(), places: RefCell::default() }),
         }
     }
 
@@ -62,8 +67,9 @@ impl OpenIn {
         let found = cx.try_global::<Self>().map(|this| this.found.clone()).unwrap_or_default();
         let chosen = settings(cx).open_in.trim().to_string();
         let stranger = (!chosen.is_empty() && open_in::known(&chosen).is_none())
-            .then(|| apps::name_of(&chosen))
+            .then(|| Self::place(cx, &chosen))
             .flatten()
+            .and_then(|path| apps::name_at(&path))
             .map(|name| Installed { monogram: open_in::monogram(&name), bundle: chosen, name });
         open_in::listing(&found, stranger)
     }
@@ -78,7 +84,7 @@ impl OpenIn {
     /// can be read; else none.
     pub(crate) fn menu_icon(cx: &App, app: &Installed) -> Option<crate::platform::Icon> {
         use crate::platform::Icon;
-        match apps::app_path(&app.bundle) {
+        match Self::place(cx, &app.bundle) {
             Some(path) => Some(Icon::File(path)),
             None => Some(match Self::icon(cx, &app.bundle) {
                 Some(image) => Icon::Image(image),
@@ -86,6 +92,17 @@ impl OpenIn {
                 None => Icon::Monogram(app.monogram.clone().into()),
             }),
         }
+    }
+
+    /// Where the app with this bundle identifier is, asked of LaunchServices once (see `places`).
+    fn place(cx: &App, bundle: &str) -> Option<PathBuf> {
+        let Some(this) = cx.try_global::<Self>() else { return apps::app_path(bundle) };
+        if let Some(place) = this.places.borrow().get(bundle) {
+            return place.clone();
+        }
+        let place = apps::app_path(bundle);
+        this.places.borrow_mut().insert(bundle.to_string(), place.clone());
+        place
     }
 
     /// The app's own icon, drawn at [`ICON_PX`]; `None` when it can't be read (the button shows

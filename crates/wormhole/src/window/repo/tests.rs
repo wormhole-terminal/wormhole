@@ -294,20 +294,23 @@ fn looking_for_a_git_dir_replaces_polling_git_for_an_absent_repository() {
 
 #[test]
 fn the_tick_never_asks_git_about_a_folder_it_knows_is_no_repository() {
-    use super::state::GitPoll;
+    use super::state::{GitPoll, Sight};
     let plain = std::path::Path::new("/plain");
     // Nothing known yet: ask at once, whatever the tick.
-    assert_eq!(GitState::default().poll(Some(plain), 3, true), GitPoll::Refresh);
+    assert_eq!(GitState::default().poll(Some(plain), 3, Sight::Front), GitPoll::Refresh);
     let (git, _) = absent_git(Ok(None));
-    let polls: Vec<GitPoll> = (0..40).map(|tick| git.poll(Some(plain), tick, true)).collect();
+    let polls: Vec<GitPoll> = (0..40).map(|tick| git.poll(Some(plain), tick, Sight::Front)).collect();
     assert!(polls.iter().all(|p| *p == GitPoll::Probe), "looked at every tick in front");
-    let behind = (0..40).filter(|tick| git.poll(Some(plain), *tick, false) == GitPoll::Probe).count();
+    let behind = (0..40).filter(|tick| git.poll(Some(plain), *tick, Sight::Behind) == GitPoll::Probe).count();
     assert_eq!(behind, 8);
     for tick in 0..40 {
-        assert_ne!(git.poll(Some(plain), tick, tick % 2 == 0), GitPoll::Refresh);
+        assert_ne!(
+            git.poll(Some(plain), tick, if tick % 2 == 0 { Sight::Front } else { Sight::Behind }),
+            GitPoll::Refresh
+        );
     }
     // Another folder is asked about at once.
-    assert_eq!(git.poll(Some(std::path::Path::new("/other")), 1, false), GitPoll::Refresh);
+    assert_eq!(git.poll(Some(std::path::Path::new("/other")), 1, Sight::Behind), GitPoll::Refresh);
     // A repository keeps its 2 s / 8 s polls.
     let mut repo = GitState::default();
     let k = key("/repo", None);
@@ -315,8 +318,41 @@ fn the_tick_never_asks_git_about_a_folder_it_knows_is_no_repository() {
     repo.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
     let repo_dir = std::path::Path::new("/repo");
     let refreshed =
-        |front| (0..40).filter(|t| repo.poll(Some(repo_dir), *t, front) == GitPoll::Refresh).count();
-    assert_eq!((refreshed(true), refreshed(false)), (8, 2));
+        |sight| (0..40).filter(|t| repo.poll(Some(repo_dir), *t, sight) == GitPoll::Refresh).count();
+    assert_eq!((refreshed(Sight::Front), refreshed(Sight::Behind), refreshed(Sight::Unseen)), (8, 2, 0));
+    // Unseen, a folder in no repository is not looked at either.
+    assert!((0..40).all(|tick| git.poll(Some(plain), tick, Sight::Unseen) == GitPoll::Idle));
+}
+
+#[test]
+fn a_terminal_seen_another_way_is_read_once_at_once() {
+    use super::state::{GitPoll, Sight};
+    let mut repo = GitState::default();
+    let k = key("/repo", None);
+    let t = repo.begin_refresh(k.clone()).expect("started").ticket();
+    repo.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
+    let dir = std::path::Path::new("/repo");
+    // A tick that is not due in front.
+    assert_eq!(repo.poll(Some(dir), 1, Sight::Front), GitPoll::Idle);
+    // Going out of sight: one more picture, for whoever just stopped working.
+    repo.note_sight(Sight::Unseen);
+    assert_eq!(repo.poll(Some(dir), 1, Sight::Unseen), GitPoll::Refresh);
+    // Owed until a read starts; one already out for the same key doesn't count.
+    let t = repo.begin_refresh(k.clone()).expect("started").ticket();
+    assert_eq!(repo.poll(Some(dir), 2, Sight::Unseen), GitPoll::Idle);
+    repo.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
+    assert!(
+        (0..40).all(|tick| repo.poll(Some(dir), tick, Sight::Unseen) == GitPoll::Idle),
+        "nothing while unseen"
+    );
+    // Seen again: read at once, not at the next period.
+    repo.note_sight(Sight::Behind);
+    assert_eq!(repo.poll(Some(dir), 3, Sight::Behind), GitPoll::Refresh);
+    assert!(repo.begin_refresh(k.clone()).is_some());
+    assert_eq!(repo.poll(Some(dir), 3, Sight::Behind), GitPoll::Idle);
+    // The same sight again owes nothing.
+    repo.note_sight(Sight::Behind);
+    assert_eq!(repo.poll(Some(dir), 3, Sight::Behind), GitPoll::Idle);
 }
 
 #[test]

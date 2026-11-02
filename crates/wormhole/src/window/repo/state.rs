@@ -39,6 +39,25 @@ pub(crate) struct GitState {
     /// The branch the status is read against (`None`: HEAD): the Changes tab's "compare with". The
     /// status is a different list for each, so it is part of what is asked.
     pub compare: Option<String>,
+    /// How the terminal was seen on the last tick ([`note_sight`](Self::note_sight)).
+    sight: Sight,
+    /// A refresh is owed as soon as one can start: the terminal was seen another way since the last
+    /// one. Cleared when a refresh starts.
+    owed: bool,
+}
+
+/// How a terminal is seen, which sets how often its repository is read.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) enum Sight {
+    /// On screen in the window in front: what the person looks at.
+    #[default]
+    Front,
+    /// Seen, but not looked at closely: behind another terminal, or in a window that is not in front.
+    Behind,
+    /// Its window cannot be seen (minimised, hidden, covered, on another Space) and nothing in its
+    /// repository is working: what git would say changes nothing anyone sees, and edits made while
+    /// nobody works are nobody's, so no picture is needed until it is seen again.
+    Unseen,
 }
 
 /// What became of a refresh's answer.
@@ -64,18 +83,36 @@ pub(crate) enum GitPoll {
 
 impl GitState {
     /// What to do on tick number `tick` (already offset by the session's place, so sessions
-    /// don't all poll on the same tick) for a terminal in `cwd`. A folder git has not answered
-    /// for is asked at once. A repository is polled every 5th tick (2 s) when in front, every
-    /// 20th (8 s) behind. A folder in no repository is not polled at all: it is looked at for a
-    /// `.git` every tick in front (0.4 s), every 5th behind.
-    pub(crate) fn poll(&self, cwd: Option<&std::path::Path>, tick: u64, in_front: bool) -> GitPoll {
+    /// don't all poll on the same tick) for a terminal in `cwd`, seen as `sight`. A folder git has
+    /// not answered for is asked at once, and so is a repository whose terminal is owed a refresh
+    /// (see [`note_sight`](Self::note_sight)). A repository is polled every 5th tick (2 s) in front,
+    /// every 20th (8 s) behind, never unseen. A folder in no repository is not polled at all: it is
+    /// looked at for a `.git` every tick in front (0.4 s), every 5th behind, never unseen.
+    pub(crate) fn poll(&self, cwd: Option<&std::path::Path>, tick: u64, sight: Sight) -> GitPoll {
         if self.cwd.as_deref() != cwd {
             return GitPoll::Refresh;
         }
+        // In ticks: (a look for a `.git`, a read of the repository); `None` for never.
+        let (look, read) = match sight {
+            Sight::Front => (Some(1), Some(5)),
+            Sight::Behind => (Some(5), Some(20)),
+            Sight::Unseen => (None, None),
+        };
+        let due = |every: Option<u64>| every.is_some_and(|every| tick.is_multiple_of(every));
         if cwd.is_some_and(|cwd| self.is_absent_for(cwd)) {
-            return if in_front || tick.is_multiple_of(5) { GitPoll::Probe } else { GitPoll::Idle };
+            return if due(look) { GitPoll::Probe } else { GitPoll::Idle };
         }
-        if tick.is_multiple_of(if in_front { 5 } else { 20 }) { GitPoll::Refresh } else { GitPoll::Idle }
+        if self.owed || due(read) { GitPoll::Refresh } else { GitPoll::Idle }
+    }
+
+    /// Before [`poll`](Self::poll) on each tick: how the terminal is seen now. A change owes one
+    /// refresh, taken at once: coming into sight, what changed meanwhile shows without waiting
+    /// for the period; going out of sight, the repository is pictured once more, so edits made by
+    /// whoever just stopped working are not merged with the next worker's (`git::attribution`).
+    pub(crate) fn note_sight(&mut self, sight: Sight) {
+        if std::mem::replace(&mut self.sight, sight) != sight {
+            self.owed = true;
+        }
     }
 
     #[cfg(any(test, feature = "devctl"))]
@@ -137,7 +174,9 @@ impl GitState {
     /// running; a different one (another branch compared, another folder)
     /// supersedes it, and the older answer is dropped when it lands.
     pub(crate) fn begin_refresh(&mut self, key: StatusKey) -> Option<Wanted> {
-        self.job.begin(key)
+        let wanted = self.job.begin(key)?;
+        self.owed = false;
+        Some(wanted)
     }
 
     /// Take a refresh's answer. `now` is what the session shows at this moment.

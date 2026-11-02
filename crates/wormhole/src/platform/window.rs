@@ -92,6 +92,18 @@ pub fn is_minimised(window: &Window) -> bool {
     os::is_minimised(window)
 }
 
+/// Whether any part of the window can be seen: false while it is minimised, hidden with its app,
+/// on another Space or covered by other windows (AppKit's occlusion state). Work that only
+/// refreshes what the window shows can wait while it is false. A test instance in background mode
+/// is kept behind the person's windows on purpose and counts as seen unless it is minimised, so its
+/// checks see what the app does in front.
+pub fn is_visible(window: &Window) -> bool {
+    if super::background_mode::on() {
+        return !os::is_minimised(window);
+    }
+    os::is_visible(window)
+}
+
 /// Let the window enter full screen: GPUI's windows don't say they may, and a program can ask
 /// for it (XTWINOPS 10).
 pub fn allow_fullscreen(window: &Window) {

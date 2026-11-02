@@ -35,6 +35,10 @@ pub fn is_minimised(_: &Window) -> bool {
     false
 }
 
+pub fn is_visible(_: &Window) -> bool {
+    true
+}
+
 pub fn allow_fullscreen(_: &Window) {}
 
 pub fn miniaturize(_: &Window) {}

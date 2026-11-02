@@ -109,6 +109,7 @@ pub(super) fn signatures_match() {
         pointer::window_number_at: fn((f32, f32)) -> Option<i64>;
         window::number: fn(&Window) -> Option<i64>;
         window::is_minimised: fn(&Window) -> bool;
+        window::is_visible: fn(&Window) -> bool;
         window::allow_fullscreen: fn(&Window);
         window::miniaturize: fn(&Window);
         window::deminiaturize: fn(&Window);

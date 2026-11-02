@@ -9,8 +9,8 @@ use objc2::rc::Retained;
 use objc2_app_kit::{
     NSNormalWindowLevel, NSView, NSWindow, NSWindowAnimationBehavior, NSWindowButton,
     NSWindowCollectionBehavior, NSWindowDidEnterFullScreenNotification,
-    NSWindowDidExitFullScreenNotification, NSWindowStyleMask, NSWindowWillEnterFullScreenNotification,
-    NSWindowWillExitFullScreenNotification,
+    NSWindowDidExitFullScreenNotification, NSWindowOcclusionState, NSWindowStyleMask,
+    NSWindowWillEnterFullScreenNotification, NSWindowWillExitFullScreenNotification,
 };
 use objc2_foundation::{NSNotification, NSNotificationCenter, NSOperationQueue, NSPoint};
 use wormhole_core::view::motion::live_resize::{Dragged, settled_frame, tiled};
@@ -96,6 +96,11 @@ pub fn set_shadow(window: &Window, shadow: bool) {
 
 pub fn is_minimised(window: &Window) -> bool {
     ns_window(window).is_some_and(|w| w.isMiniaturized())
+}
+
+/// A window AppKit can't hand over is taken as seen: the safe side for work that waits for it.
+pub fn is_visible(window: &Window) -> bool {
+    ns_window(window).is_none_or(|w| w.occlusionState().contains(NSWindowOcclusionState::Visible))
 }
 
 pub fn allow_fullscreen(window: &Window) {

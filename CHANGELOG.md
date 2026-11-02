@@ -12,6 +12,14 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   its processes, version and protocol against the app's, whether it answers, which terminal holds it
   and how that connection is doing, with End, Forget and a copy of the details for a bug report.
 
+### Changed
+
+- A window nobody can see (minimised, hidden, covered or on another Space) no longer asks git about its
+  terminals' repositories every few seconds: only while something in a repository is working, and once more
+  as soon as it can be seen. A window that isn't in front reads them every 8 seconds instead of every 2. In a
+  large repository each read took most of a second of git's time.
+- Drawing the title row no longer asks the system where the apps in Open in… are on every frame.
+
 ### Fixed
 
 - Clear Buffer in a terminal whose session host comes from Wormhole 1.4 or older cleared the history only in the

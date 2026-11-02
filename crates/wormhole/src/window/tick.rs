@@ -79,7 +79,7 @@ impl Workspace {
         self.leave_missing_tab(cx);
         self.track_changes(cx);
         self.keep_changes(cx);
-        self.poll_repos(cx);
+        self.poll_repos(crate::platform::window::is_visible(window), window_active, cx);
         if self.ticks % 5 == 1 {
             // A `git init` in the folder a session is already in changes its root without a `cd`.
             for session in &self.sessions {

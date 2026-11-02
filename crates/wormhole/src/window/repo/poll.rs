@@ -5,11 +5,13 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use gpui_kit::*;
-use wormhole_core::git::attribution::Snapshot;
+use wormhole_core::git::attribution::{Place, Snapshot};
 use wormhole_core::git::discover::{self, Sighting};
 use wormhole_core::git::{self, RepoStatus};
+use wormhole_core::view::sidebar::RowState;
 
-use super::state::{GitPoll, Refreshed};
+use super::state::{GitPoll, Refreshed, Sight};
+use crate::terminal_view::TerminalSummary;
 use crate::window::Workspace;
 use crate::window::repo::Observed;
 use crate::window::repo::job::Ticket;
@@ -140,18 +142,57 @@ impl Workspace {
     }
 
     /// What the tick does about each terminal's repository: ask git, look for a `.git`, or nothing.
-    /// A terminal whose git is missing waits for a Retry.
-    pub(crate) fn poll_repos(&mut self, cx: &mut Context<Self>) {
+    /// A terminal whose git is missing waits for a Retry. `seen` is whether any of the window can be
+    /// seen, `active` whether it is the window in front.
+    ///
+    /// A window nobody can see reads only the repositories something works in: their pictures say who
+    /// changed what (`git::attribution`), which is not known afterwards. Git's answers for the others
+    /// change nothing anyone sees until the window is seen again, when each is read at once. In a large
+    /// repository one read is most of a second of git's time, so this is what an unseen window idles at.
+    pub(crate) fn poll_repos(&mut self, seen: bool, active: bool, cx: &mut Context<Self>) {
+        let working: Vec<PathBuf> = if seen {
+            Vec::new()
+        } else {
+            self.sessions
+                .iter()
+                .filter(|session| works(&session.pane.summary))
+                .filter_map(|session| match session.git.place(session.pane.summary.cwd.as_deref()) {
+                    Place::In(root) => Some(root.to_path_buf()),
+                    Place::Unknown | Place::Outside => None,
+                })
+                .collect()
+        };
         for ix in 0..self.sessions.len() {
             if self.sessions[ix].git.waits_for_retry() {
                 continue;
             }
             let cwd = self.sessions[ix].terminal().read(cx).cwd.clone();
-            match self.sessions[ix].git.poll(cwd.as_deref(), self.ticks + ix as u64, ix == self.active) {
+            let git = &mut self.sessions[ix].git;
+            let sight = if seen {
+                if active && ix == self.active { Sight::Front } else { Sight::Behind }
+            } else {
+                match git.place(cwd.as_deref()) {
+                    Place::In(root) if working.iter().any(|busy| busy == root) => Sight::Behind,
+                    _ => Sight::Unseen,
+                }
+            };
+            git.note_sight(sight);
+            match git.poll(cwd.as_deref(), self.ticks + ix as u64, sight) {
                 GitPoll::Refresh => self.refresh_git(ix, cx),
                 GitPoll::Probe => self.probe_repo(ix, cx),
                 GitPoll::Idle => {}
             }
         }
+    }
+}
+
+/// Whether a terminal may be changing files, for the polling of an unseen window: one that tells its
+/// status while it says it works, a plain one while any program holds it. Generous on purpose (the
+/// attribution's own rule depends on a setting): a wrong yes costs a read, a wrong no a misattribution.
+fn works(summary: &TerminalSummary) -> bool {
+    if summary.source.told() {
+        summary.row_state() == RowState::Working
+    } else {
+        summary.program_in_foreground
     }
 }

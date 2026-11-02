@@ -18,9 +18,8 @@ pub fn app_path(bundle: &str) -> Option<PathBuf> {
     os::app_path(bundle)
 }
 
-/// The app's name as Finder shows it: its folder's name without `.app`.
-pub fn name_of(bundle: &str) -> Option<String> {
-    let path = app_path(bundle)?;
+/// The name of the app at `path` (from [`app_path`]) as Finder shows it: its folder's name without `.app`.
+pub fn name_at(path: &Path) -> Option<String> {
     Some(path.file_stem()?.to_string_lossy().into_owned())
 }
 
