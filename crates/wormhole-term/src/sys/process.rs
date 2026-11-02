@@ -30,15 +30,12 @@ pub fn exists(pid: u32) -> bool {
     unix::exists(pid)
 }
 
-/// Ask a process to end. Refuses pids 0 and 1, which would reach a process group or init: a pid read
-/// from a file is never trusted that far.
-pub fn terminate(pid: u32) -> io::Result<()> {
-    unix::terminate(pid)
-}
+pub use super::unix::process::EndSignal;
 
-/// End a process at once. Refuses pids 0 and 1.
-pub fn kill(pid: u32) -> io::Result<()> {
-    unix::kill(pid)
+/// End a process, gently or at once. Refuses pids 0 and 1, which would reach a process group or init: a pid
+/// read from a file is never trusted that far.
+pub fn signal(pid: u32, how: EndSignal) -> io::Result<()> {
+    unix::signal(pid, how)
 }
 
 /// The path of a process's executable.

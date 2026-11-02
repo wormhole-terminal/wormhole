@@ -23,7 +23,7 @@ use super::identity::{Identity, identify, looks_like_host_process};
 use super::scan::{StaleReason, scan};
 use super::{HostMeta, meta_path, read_meta};
 use crate::platform::fs::is_socket;
-use crate::platform::process;
+use crate::platform::process::{self, EndSignal};
 use crate::platform::socket::{Stream, peer_is_same_user};
 
 /// How an ended host was reached.
@@ -47,43 +47,45 @@ impl EndHow {
 /// End the host `meta` describes: ask it over its socket, and signal its process when that does
 /// not work. Waits at most `wait` for the host to answer and hang up.
 pub fn end_host(meta: &HostMeta, wait: Duration) -> Result<EndHow, String> {
-    end_with(meta, wait, Signal::Terminate)
+    end_with(meta, wait, EndSignal::Terminate)
 }
 
 /// [`end_host`] for a host that does not answer: when `Kill` over its socket gets no answer the process
-/// is killed outright (`SIGKILL`, which a stopped or stuck process cannot ignore), again only when it
-/// is checked to be the host.
+/// is killed outright (`SIGKILL`, which a stopped or stuck process cannot ignore), but only when the
+/// system confirms it is the host ([`Identity::Yes`]). A process that only looks like one (the start
+/// could not be compared) may be another terminal's healthy host under a reused pid, so it gets the
+/// gentler `SIGTERM`.
 pub fn end_unresponsive_host(meta: &HostMeta, wait: Duration) -> Result<EndHow, String> {
-    end_with(meta, wait, Signal::Kill)
+    end_with(meta, wait, EndSignal::Kill)
 }
 
-/// How hard to signal a host that did not take `Kill`.
-#[derive(Clone, Copy)]
-enum Signal {
-    Terminate,
-    Kill,
-}
-
-fn end_with(meta: &HostMeta, wait: Duration, signal: Signal) -> Result<EndHow, String> {
+/// End the host over its socket, else signal its process with `wanted`, or a gentler one when the
+/// process is not certainly the host.
+fn end_with(meta: &HostMeta, wait: Duration, wanted: EndSignal) -> Result<EndHow, String> {
     let asked = ask_kill(meta, wait);
     let Err(why) = asked else { return Ok(EndHow::Asked) };
     tracing::info!(id = %meta.id, %why, "the host did not take Kill, signalling it");
-    // Unknown (the start cannot be compared) is signalled only when it looks like a host: named so,
-    // and ours.
-    let ours = match identify(meta) {
-        Identity::Yes => true,
-        Identity::Unknown => looks_like_host_process(meta.pid),
-        Identity::No => false,
-    };
-    if !ours {
+    let identity = identify(meta);
+    let looks_like = identity == Identity::Unknown && looks_like_host_process(meta.pid);
+    let Some(how) = signal_for(identity, looks_like, wanted) else {
         return Err(format!("{why}; pid {} is not a wormhole-host, so it was left alone", meta.pid));
-    }
-    let (sent, name) = match signal {
-        Signal::Terminate => (process::terminate(meta.pid), "SIGTERM"),
-        Signal::Kill => (process::kill(meta.pid), "SIGKILL"),
     };
+    let sent = process::signal(meta.pid, how);
+    let name = if how == EndSignal::Kill { "SIGKILL" } else { "SIGTERM" };
     sent.map_err(|err| format!("{why}; {name} to {}: {err}", meta.pid))?;
     Ok(EndHow::Signalled)
+}
+
+/// Which signal a process may get: the one asked for when it is certainly the host; only `SIGTERM` when its
+/// start could not be compared and it merely looks like one (named so, and ours): it may be another
+/// terminal's healthy host under a reused pid, and nothing is killed outright on a guess; none when it is
+/// not the host.
+fn signal_for(identity: Identity, looks_like_host: bool, wanted: EndSignal) -> Option<EndSignal> {
+    match identity {
+        Identity::Yes => Some(wanted),
+        Identity::Unknown if looks_like_host => Some(EndSignal::Terminate),
+        Identity::Unknown | Identity::No => None,
+    }
 }
 
 /// End every host in `hosts` at once (a few at a time; each has `wait`). The answers come back in
@@ -434,6 +436,22 @@ mod tests {
         // And a process that only has the pid is still left alone.
         meta.pid = std::process::id();
         assert!(end_unresponsive_host(&meta, Duration::from_millis(300)).is_err());
+    }
+
+    /// Nothing is killed outright on a guess: a process whose start cannot be compared and that only looks
+    /// like a host (it may be another terminal's healthy host under a reused pid) gets SIGTERM at most.
+    #[test]
+    fn only_a_certain_host_is_killed_outright() {
+        use EndSignal::{Kill, Terminate};
+        // Certainly the host: what was asked for.
+        assert_eq!(signal_for(Identity::Yes, true, Kill), Some(Kill));
+        assert_eq!(signal_for(Identity::Yes, true, Terminate), Some(Terminate));
+        // Cannot be compared: SIGTERM when it looks like a host, even if SIGKILL was asked for; else nothing.
+        assert_eq!(signal_for(Identity::Unknown, true, Kill), Some(Terminate));
+        assert_eq!(signal_for(Identity::Unknown, false, Kill), None);
+        // Not the host: nothing.
+        assert_eq!(signal_for(Identity::No, true, Kill), None);
+        assert_eq!(signal_for(Identity::No, false, Terminate), None);
     }
 
     #[test]
