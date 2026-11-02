@@ -225,7 +225,13 @@ impl<S: Spawner> Session<S> {
         let conn = &mut self.conns[at];
         conn.phase = Phase::Ready { role: hello.role };
         conn.dec.set_max_payload(wire::MAX_PAYLOAD);
-        tracing::info!(conn = id.0, role = hello.role.to_wire(), proto, "hello");
+        // An admin connection is a short look (`sessions list`, the Session Hosts window asks every
+        // second): not worth a line in the log at its usual level.
+        if hello.role == Role::Admin {
+            tracing::debug!(conn = id.0, proto, "hello (admin)");
+        } else {
+            tracing::info!(conn = id.0, role = hello.role.to_wire(), proto, "hello");
+        }
         let welcome = self.welcome(proto);
         self.conns[at].send(&Message::Welcome(welcome));
     }

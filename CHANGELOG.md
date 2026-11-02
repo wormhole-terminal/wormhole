@@ -17,6 +17,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - A terminal that pasted or copied more than 64 KiB through the clipboard (an OSC 52 reply), or started with an
   environment that large, lost its session host: after the handshake the host kept the handshake's
   smaller frame limit and dropped the connection.
+- A session host's log no longer gets three lines for every look at it from the command line or the Session
+  Hosts window; those short connections are logged at the debug level.
 
 ## [1.6.3] - 2026-11-02
 

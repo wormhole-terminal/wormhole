@@ -21,7 +21,7 @@ mod tests;
 use std::time::{Duration, Instant};
 
 use wormhole_term::hosted::{Cursor, Wake};
-use wormhole_wire::{self as wire, AppVersion, DetachReason, Features, HostState, Message};
+use wormhole_wire::{self as wire, AppVersion, DetachReason, Features, HostState, Message, Role};
 
 use conn::Conn;
 pub use conn::ConnId;
@@ -160,7 +160,7 @@ impl<S: Spawner> Session<S> {
         let id = ConnId(self.next_id);
         self.next_id += 1;
         self.conns.push(Conn::new(id, now + self.config.hello_timeout));
-        tracing::info!(conn = id.0, open = self.conns.len(), "connection accepted");
+        tracing::debug!(conn = id.0, open = self.conns.len(), "connection accepted");
         Ok(id)
     }
 
@@ -182,7 +182,12 @@ impl<S: Spawner> Session<S> {
                 program.set_controller(false);
             }
         }
-        tracing::info!(conn = id.0, open = self.conns.len(), unwritten = conn.pending(), "connection closed");
+        let open = self.conns.len();
+        if conn.role() == Some(Role::Admin) {
+            tracing::debug!(conn = id.0, open, "connection closed (admin)");
+        } else {
+            tracing::info!(conn = id.0, open, unwritten = conn.pending(), "connection closed");
+        }
     }
 
     /// What is queued for connection `id`.
