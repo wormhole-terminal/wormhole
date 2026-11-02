@@ -16,6 +16,7 @@ pub(crate) mod settings_nav;
 pub(crate) mod settings_row;
 pub(crate) mod sidebar_profile;
 pub(crate) mod solid_chip;
+pub(crate) mod split_mock;
 pub(crate) mod switch_control;
 pub(crate) mod theme_card;
 pub(crate) mod theme_set;

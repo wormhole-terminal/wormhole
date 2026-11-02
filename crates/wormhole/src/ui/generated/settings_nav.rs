@@ -232,7 +232,6 @@ impl SettingsNavProps {
                             .text_left()
                             .cursor_pointer()
                             .when(row_first, |this| this.mt(px(4.0)))
-                            .when(row_follows, |this| this.mt(px(2.0)))
                             .when(row_current, |this| {
                                 this
                                     .text_color(t_text_primary)

@@ -85,7 +85,6 @@ impl SettingsWindow {
         let list = div()
             .flex_none()
             .px(px(LIST_INSET))
-            .pb(px(PROFILE_GAP))
             .child(profile)
             .child(div().h(px(PROFILE_GAP)))
             .into_any_element();
@@ -96,24 +95,37 @@ impl SettingsWindow {
             .w(px(NAV_W))
             .flex_none()
             .h_full()
-            .pt(px(style::TITLE_ROW_H))
+            // The design's nav: 44 down, under the traffic lights.
+            .pt(px(44.0))
             .bg(fill)
             .rule_right(ui)
             .child(
-                div().flex_none().px_4().pt_2().pb_2().child(
-                    Input::new(&self.search)
-                        .small()
-                        .cleanable(true)
-                        .prefix(style::icon(IconName::Search).text_color(ui.muted))
-                        .when(searching, |input| {
-                            input.suffix(
-                                div()
-                                    .text_caption()
-                                    .tabular_nums()
-                                    .text_color(ui.muted)
-                                    .child(total.to_string()),
-                            )
-                        }),
+                // The design's field: 28 high, the input's own shade, a ring only with Borders on.
+                div().flex_none().px(px(LIST_INSET)).pb(px(PROFILE_GAP)).child(
+                    div()
+                        .h(px(28.0))
+                        .flex()
+                        .items_center()
+                        .px(px(8.0))
+                        .rounded(px(7.0))
+                        .bg(ui.input)
+                        .outlined(ui, ui.border)
+                        .child(
+                            Input::new(&self.search)
+                                .small()
+                                .appearance(false)
+                                .cleanable(true)
+                                .prefix(style::icon(IconName::Search).text_color(ui.muted))
+                                .when(searching, |input| {
+                                    input.suffix(
+                                        div()
+                                            .text_caption()
+                                            .tabular_nums()
+                                            .text_color(ui.muted)
+                                            .child(total.to_string()),
+                                    )
+                                }),
+                        ),
                 ),
             )
             // The list scrolls under the search when the open page's sub-rows run long.

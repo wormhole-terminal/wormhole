@@ -26,7 +26,7 @@ use crate::style::{self, TextRole};
 use crate::ui::{Look, PageTitleProps};
 
 use super::open::REVEAL_INSET;
-use super::{COLUMN_W, FrontWindow, INTRO_W, NO_RESULTS_W, PAGE_TOP, Section, SettingsWindow, sections, ui};
+use super::{COLUMN_W, FrontWindow, INTRO_W, NO_RESULTS_W, PAGE_GAP, PAGE_TITLE_H, PAGE_TOP, Section, SettingsWindow, sections, ui};
 
 impl SettingsWindow {
     pub(super) fn new(section: Option<Section>, window: &mut Window, cx: &mut Context<Self>) -> Self {
@@ -287,7 +287,7 @@ impl SettingsWindow {
                     .items_center()
                     .justify_between()
                     .gap_4()
-                    .h(px(style::TITLE_ROW_H))
+                    .h(px(PAGE_TITLE_H))
                     .child(
                         div()
                             .flex()
@@ -351,7 +351,7 @@ impl Render for SettingsWindow {
                     .mx_auto()
                     .flex()
                     .flex_col()
-                    .gap_6()
+                    .gap(px(PAGE_GAP))
                     .child(self.render_header(&query, hits, ui, cx))
                     .children(self.render_problems(ui, cx))
                     .child(body),
