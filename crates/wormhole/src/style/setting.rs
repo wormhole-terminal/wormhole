@@ -219,7 +219,7 @@ pub fn setting_in(
         project,
         chip,
         info: info.map(|description| {
-            setting_info(id.clone(), ui, description, found_description.clone()).into_any_element()
+            setting_info(id.clone(), ui, description, found_description.clone()).dormant().into_any_element()
         }),
         key_text: key.as_ref().map(|key| key.shown.clone()),
         key_name: SharedString::from(key.as_ref().map_or("", |key| key.key)),

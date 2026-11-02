@@ -82,6 +82,9 @@ pub(crate) struct SettingInfo {
     ui: UiColors,
     description: SharedString,
     found: Vec<Range<usize>>,
+    /// Shown only while its row is under the pointer or it has the keyboard, like the row's key and reset
+    /// arrow: the design's rows show one line and the (i) when they are reached.
+    dormant: bool,
 }
 
 #[track_caller]
@@ -91,12 +94,19 @@ pub(crate) fn setting_info(
     description: SharedString,
     found: Vec<Range<usize>>,
 ) -> SettingInfo {
-    SettingInfo { row, ui, description, found }
+    SettingInfo { row, ui, description, found, dormant: false }
+}
+
+impl SettingInfo {
+    /// Hidden until the row it belongs to (`settings-row-sr`) is hovered or the (i) is focused.
+    pub(crate) fn dormant(self) -> Self {
+        Self { dormant: true, ..self }
+    }
 }
 
 impl RenderOnce for SettingInfo {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let Self { row, ui, description, found } = self;
+        let Self { row, ui, description, found, dormant } = self;
         let this_window = window.window_handle().window_id();
         let open = Open::is_open(this_window, &row, cx);
         let on_press = row.clone();
@@ -109,7 +119,7 @@ impl RenderOnce for SettingInfo {
             .aria_expanded(open)
             .focusable()
             .tab_stop(true)
-            .focus_visible(move |d| d.ringed(ui, ui.focus, ui.focus_ring_width))
+            .focus_visible(move |d| d.ringed(ui, ui.focus, ui.focus_ring_width).text_color(ui.faint))
             .relative()
             .flex_none()
             .flex()
@@ -117,8 +127,17 @@ impl RenderOnce for SettingInfo {
             .justify_center()
             .size(px(FACE))
             .rounded(ui.radius_chip)
-            .text_color(if open { ui.text } else { ui.faint })
+            .text_color(if open {
+                ui.text
+            } else if dormant {
+                gpui_kit::transparent_black()
+            } else {
+                ui.faint
+            })
             .cursor_pointer()
+            .when(dormant && !open, |d| {
+                d.group_hover("settings-row-sr", move |style| style.text_color(ui.faint))
+            })
             .hover(move |d| d.bg(ui.hover).text_color(ui.text))
             .child(icon(IconName::Info))
             .on_mouse_down(MouseButton::Left, move |event, _, cx| Open::pressed(&on_down, event.position, cx))
