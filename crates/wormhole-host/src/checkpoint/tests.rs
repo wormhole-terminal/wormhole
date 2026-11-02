@@ -327,7 +327,7 @@ fn clearing_the_buffer_writes_a_new_generation_and_drops_the_old_ones() {
     *screen.lock().unwrap() = Some(b"fresh".to_vec());
     cp.cleared();
     let dir = sessions.path().join(ID);
-    wait_for("the cleared generation alone", || std::fs::read_dir(&dir).map_or(false, |d| d.count() == 2));
+    wait_for("the cleared generation alone", || std::fs::read_dir(&dir).is_ok_and(|d| d.count() == 2));
     let read = read_latest(&dir, ID, Some(&key())).unwrap();
     assert_eq!(read.screen.as_deref().map(Vec::as_slice), Some(&b"fresh"[..]));
     for entry in std::fs::read_dir(&dir).unwrap().flatten() {
