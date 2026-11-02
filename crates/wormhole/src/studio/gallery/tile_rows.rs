@@ -1,7 +1,6 @@
 //! The Settings window's tile row in each of its states, the solid chips, and the empty list.
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 
