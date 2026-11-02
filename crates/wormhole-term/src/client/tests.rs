@@ -210,6 +210,28 @@ fn what_the_host_replays_after_a_repaint_reaches_the_app_as_live_events_do() {
 }
 
 #[test]
+fn a_progress_the_host_replays_after_the_records_stands_in_the_replica_like_a_live_one() {
+    let (pty, events, mut script) = connected(StreamMode::Sync);
+    let (bytes, seeds) = repaint_of(40, 10, b"restored");
+    send_repaint(&mut script, 100, wire_size(40, 10), &bytes, seeds);
+    // The order `Memory::events` sends them in: the records, then the progress.
+    script.event(100, EventKind::ProgramStatus("state=done"));
+    script.event(100, EventKind::Progress { state: wire::ProgressState::Paused, percent: 40 });
+    wait_for("the progress", || pty.progress().is_some());
+    assert_eq!(
+        pty.progress(),
+        Some(crate::program_status::Progress {
+            state: crate::program_status::ProgressState::Paused,
+            percent: 40
+        })
+    );
+    next_event(&events, "status", |e| matches!(e, PtyEvent::ProgramStatus));
+    // Removed as a live removal is.
+    script.event(100, EventKind::Progress { state: wire::ProgressState::Remove, percent: 0 });
+    wait_for("the removal", || pty.progress().is_none());
+}
+
+#[test]
 fn too_slow_attaches_again_and_the_repaint_replaces_the_screen() {
     let (pty, _events, mut script) = connected(StreamMode::Raw);
     script.send(&Message::Out(wire::Out { offset: 0, bytes: b"old text\r\n" }));

@@ -129,6 +129,8 @@ mod panes;
 mod plays_motion;
 #[cfg(test)]
 mod profile_look_tests;
+#[cfg(test)]
+mod progress_tests;
 mod published;
 #[cfg(test)]
 mod read_tests;

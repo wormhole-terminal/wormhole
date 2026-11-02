@@ -345,6 +345,42 @@ fn notifications_and_progress_are_reported() {
     assert_eq!(pty.screen_text().trim_end(), "sent", "none of it shows on the screen");
 }
 
+/// Count the `ProgramStatus` events that arrive until at least `at_least` have, and a moment more.
+fn program_status_events(events: &super::PtyEvents, at_least: usize) -> usize {
+    let mut seen = 0;
+    let count = |seen: &mut usize| {
+        *seen += drain(events).iter().filter(|e| matches!(e, PtyEvent::ProgramStatus)).count();
+    };
+    wait_until("a program status event", || {
+        count(&mut seen);
+        seen >= at_least
+    });
+    // Anything the same change sent twice would be here by now.
+    std::thread::sleep(Duration::from_millis(100));
+    count(&mut seen);
+    seen
+}
+
+#[test]
+fn a_progress_report_raises_one_program_status_event_per_change() {
+    // `read` holds the script until the test has looked at each step, as the UI does between turns.
+    let script = "printf '\\033]9;4;1;10\\a'; printf 'one'; read x; \
+                  printf '\\033]9;4;1;10\\a\\033]9;4;1;20\\a'; printf 'two'; read x; \
+                  printf '\\033]9;4;0\\a'; printf 'three'; sleep 5";
+    let (pty, events) = spawn("/bin/sh", &["-c", script]);
+    wait_until("the first report", || pty.screen_text().contains("one"));
+    assert_eq!(program_status_events(&events, 1), 1);
+    assert_eq!(pty.progress(), Some(Progress { state: ProgressState::Normal, percent: 10 }));
+    pty.write(b"\n".to_vec());
+    wait_until("the second", || pty.screen_text().contains("two"));
+    assert_eq!(program_status_events(&events, 1), 1, "a repeat is no change; the new percentage is one");
+    assert_eq!(pty.progress(), Some(Progress { state: ProgressState::Normal, percent: 20 }));
+    pty.write(b"\n".to_vec());
+    wait_until("the removal", || pty.screen_text().contains("three"));
+    assert_eq!(program_status_events(&events, 1), 1);
+    assert_eq!(pty.progress(), None);
+}
+
 /// How many bytes the reply to `OSC 7501 ; ?` and the primary device attributes make, and the
 /// attributes as the test prints them (ESC as `E`): what the engine can do (sixel, selective
 /// erase, color, the clipboard).

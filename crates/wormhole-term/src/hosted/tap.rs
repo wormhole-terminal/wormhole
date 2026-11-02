@@ -14,7 +14,6 @@ use super::stream::{Stream, Wake};
 use crate::engine::OwnFeed;
 use crate::events::{Heard, Reply, Tap, TextFormatter};
 use crate::osc::{Mark, PromptKind};
-use crate::program_status::ProgressState;
 use crate::pty::Feed;
 use crate::screen::Screen;
 
@@ -265,18 +264,10 @@ impl Tap for Core {
                 title: notification.title.clone(),
                 body: notification.body.clone(),
             },
-            Heard::Progress(progress) => match progress {
-                None => HostEvent::Progress { state: wire::ProgressState::Remove, percent: 0 },
-                Some(p) => HostEvent::Progress {
-                    state: match p.state {
-                        ProgressState::Normal => wire::ProgressState::Set,
-                        ProgressState::Error => wire::ProgressState::Error,
-                        ProgressState::Indeterminate => wire::ProgressState::Indeterminate,
-                        ProgressState::Paused => wire::ProgressState::Paused,
-                    },
-                    percent: p.percent,
-                },
-            },
+            Heard::Progress(progress) => {
+                self.memory().set_progress(progress, Instant::now());
+                HostEvent::progress(progress)
+            }
             Heard::ProgramStatus(body) => match std::str::from_utf8(body) {
                 Ok(body) => {
                     self.memory().report(body);

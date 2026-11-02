@@ -1,5 +1,6 @@
 //! What the host remembers of its program for a client that attaches later: the title, the
-//! folder the shell reported and the OSC 7501 reports that still stand.
+//! folder the shell reported, the OSC 7501 reports that still stand and the OSC 9;4 progress that
+//! does.
 //!
 //! A local terminal's UI hears each of these once, as it happens, and keeps them. A client that
 //! attaches to a host that already ran for a while (the app relaunched) was not there, and the
@@ -10,10 +11,13 @@
 //! The status is not one body: `Shared`'s store holds a record per id, so the memory keeps the
 //! body of each record that stands, oldest first, and ends them as the store does (a clear, a
 //! full reset, a new prompt, the program's exit). Replayed in order, the bodies leave a client's
-//! store as the host's would be.
+//! store as the host's would be. The progress is one event, kept with the time it was heard so that
+//! a bar its program stopped updating (see [`PROGRESS_TIMEOUT`]) is not brought back by an attach.
 
 use super::event::HostEvent;
-use crate::program_status::{self, Parsed, RECORDS_MAX, Report, State};
+use std::time::Instant;
+
+use crate::program_status::{self, PROGRESS_TIMEOUT, Parsed, Progress, RECORDS_MAX, Report, State};
 
 /// One OSC 7501 record that stands: where it goes, how long it lasts, and the body that made it.
 struct Standing {
@@ -27,6 +31,8 @@ pub(super) struct Memory {
     title: Option<String>,
     cwd: Option<String>,
     status: Vec<Standing>,
+    /// OSC 9;4, and when it was last heard.
+    progress: Option<(Progress, Instant)>,
 }
 
 impl Memory {
@@ -65,9 +71,16 @@ impl Memory {
         }
     }
 
-    /// A new prompt, or the program's exit: only what outlives the program stands.
+    /// A program's OSC 9;4 report at `now`; `None` removes it.
+    pub(super) fn set_progress(&mut self, progress: Option<Progress>, now: Instant) {
+        self.progress = progress.map(|progress| (progress, now));
+    }
+
+    /// A new prompt, or the program's exit: only what outlives the program stands (a progress
+    /// bar never does).
     pub(super) fn program_over(&mut self) {
         self.status.retain(|s| s.state.outlives_program());
+        self.progress = None;
     }
 
     /// RIS: the title and every record are gone (the folder is not: a reset does not move the
@@ -75,14 +88,23 @@ impl Memory {
     pub(super) fn full_reset(&mut self) {
         self.title = None;
         self.status.clear();
+        self.progress = None;
     }
 
     /// The events that bring a client to this state, in the order to deliver them.
     pub(super) fn events(&self) -> Vec<HostEvent> {
+        self.events_at(Instant::now())
+    }
+
+    fn events_at(&self, now: Instant) -> Vec<HostEvent> {
         let title = self.title.iter().map(|t| HostEvent::Title(t.clone()));
         let cwd = self.cwd.iter().map(|p| HostEvent::Cwd(p.clone()));
         let status = self.status.iter().map(|s| HostEvent::ProgramStatus(s.body.clone()));
-        title.chain(cwd).chain(status).collect()
+        let progress = self
+            .progress
+            .filter(|(_, at)| now.saturating_duration_since(*at) < PROGRESS_TIMEOUT)
+            .map(|(progress, _)| HostEvent::progress(Some(progress)));
+        title.chain(cwd).chain(status).chain(progress).collect()
     }
 }
 
@@ -93,7 +115,11 @@ fn within(id: &str, ancestor: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use super::*;
+    use crate::program_status::ProgressState;
+    use wormhole_wire as wire;
 
     fn bodies(memory: &Memory) -> Vec<String> {
         memory
@@ -161,6 +187,50 @@ mod tests {
         memory.report("state=done");
         memory.full_reset();
         assert_eq!(memory.events(), vec![HostEvent::Cwd("/tmp".into())]);
+    }
+
+    fn bar(state: ProgressState, percent: u8) -> Option<Progress> {
+        Some(Progress { state, percent })
+    }
+
+    #[test]
+    fn the_progress_is_replayed_after_the_records_and_follows_the_program() {
+        let now = Instant::now();
+        let mut memory = Memory::default();
+        memory.set_progress(bar(ProgressState::Paused, 40), now);
+        memory.report("state=done");
+        assert_eq!(
+            memory.events_at(now),
+            vec![
+                HostEvent::ProgramStatus("state=done".into()),
+                HostEvent::Progress { state: wire::ProgressState::Paused, percent: 40 }
+            ]
+        );
+        memory.set_progress(bar(ProgressState::Normal, 41), now);
+        assert_eq!(
+            memory.events_at(now).last(),
+            Some(&HostEvent::Progress { state: wire::ProgressState::Set, percent: 41 })
+        );
+        memory.set_progress(None, now);
+        assert_eq!(memory.events_at(now).len(), 1, "removed");
+        // A prompt or the exit ends it, a reset too; a 7501 clear does not touch it.
+        memory.set_progress(bar(ProgressState::Error, 0), now);
+        memory.report("state=clear");
+        assert_eq!(memory.events_at(now).len(), 1);
+        memory.program_over();
+        assert!(memory.events_at(now).is_empty());
+        memory.set_progress(bar(ProgressState::Indeterminate, 0), now);
+        memory.full_reset();
+        assert!(memory.events_at(now).is_empty());
+    }
+
+    #[test]
+    fn a_bar_nobody_updates_is_not_brought_back() {
+        let heard = Instant::now();
+        let mut memory = Memory::default();
+        memory.set_progress(bar(ProgressState::Normal, 9), heard);
+        assert_eq!(memory.events_at(heard + PROGRESS_TIMEOUT - Duration::from_millis(1)).len(), 1);
+        assert!(memory.events_at(heard + PROGRESS_TIMEOUT).is_empty());
     }
 
     #[test]

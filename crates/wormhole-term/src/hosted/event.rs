@@ -1,6 +1,7 @@
 //! The events a hosted terminal's host tells its clients, owned (the wire's `Event` borrows), and the
 //! mapping of window operations to and from the wire's three numbers.
 
+use crate::program_status::{Progress, ProgressState};
 use wormhole_vt::window::{Extent, Fullscreen, Maximize, WindowOp};
 use wormhole_wire as wire;
 
@@ -50,6 +51,22 @@ pub enum HostEvent {
 }
 
 impl HostEvent {
+    /// A program's OSC 9;4 progress as the wire says it; `None` is its removal.
+    pub fn progress(progress: Option<Progress>) -> Self {
+        match progress {
+            None => Self::Progress { state: wire::ProgressState::Remove, percent: 0 },
+            Some(p) => Self::Progress {
+                state: match p.state {
+                    ProgressState::Normal => wire::ProgressState::Set,
+                    ProgressState::Error => wire::ProgressState::Error,
+                    ProgressState::Indeterminate => wire::ProgressState::Indeterminate,
+                    ProgressState::Paused => wire::ProgressState::Paused,
+                },
+                percent: p.percent,
+            },
+        }
+    }
+
     /// The wire event for this one at stream `offset`.
     pub fn to_wire(&self, offset: u64) -> wire::Event<'_> {
         use wire::EventKind as K;

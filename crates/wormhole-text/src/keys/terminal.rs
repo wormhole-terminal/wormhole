@@ -34,6 +34,8 @@ pub const TERMINAL_MENU_CLEAR: Key = Key::new(1452);
 pub const TERMINAL_PROGRAM_UNNAMED: Key = Key::new(1453);
 /// "Paused"
 pub const TERMINAL_PROGRESS_PAUSED: Key = Key::new(1455);
+/// "Error"
+pub const TERMINAL_PROGRESS_ERROR: Key = Key::new(1456);
 
 /// ```text
 /// { $columns } × { $rows }
