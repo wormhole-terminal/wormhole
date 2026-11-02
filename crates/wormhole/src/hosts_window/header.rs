@@ -25,7 +25,7 @@ impl HostsWindow {
             style::status_badge(ui, ui.warning_text, text(HOSTS_HEADER_FLAG_OFF))
         };
         let (binary, binary_color) = match &report.host_binary {
-            Some(path) => (words::path(path), ui.text),
+            Some(path) => (words::path_keeping(path, 40), ui.text),
             None => (text(HOSTS_HEADER_BINARY_MISSING).to_string(), ui.warning_text),
         };
         let copy_all = if self.copied == Some(Copied::All) {

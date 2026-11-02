@@ -87,7 +87,12 @@ pub(super) fn protocol(row: &HostRow) -> Option<String> {
 
 /// A path for a line: the end of it when it is long, since that is what tells paths apart.
 pub(super) fn path(path: &std::path::Path) -> String {
-    wormhole_core::view::elide::front(&path.display().to_string(), PATH_KEEP).into_owned()
+    path_keeping(path, PATH_KEEP)
+}
+
+/// [`path`] in at most `keep` characters, for a line that shares its row with others.
+pub(super) fn path_keeping(path: &std::path::Path, keep: usize) -> String {
+    wormhole_core::view::elide::front(&path.display().to_string(), keep).into_owned()
 }
 
 /// How many characters of a path a line shows.
