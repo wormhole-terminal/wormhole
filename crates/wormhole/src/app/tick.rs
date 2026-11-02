@@ -9,6 +9,7 @@ use gpui_kit::*;
 use wormhole_core::ipc;
 
 use crate::agent_access;
+use crate::app::own_files::{OwnFiles, SLOW_POLL};
 use crate::app::{control, menus};
 use crate::app_state::look::apply_theme;
 use crate::app_state::{AppState, app};
@@ -68,7 +69,11 @@ pub(super) fn handle_menu_command(command: MenuCommand, cx: &mut App) {
 /// Once per tick, whatever the number of windows.
 pub(super) fn tick(cx: &mut App) {
     let ticks = app(cx).advance_tick();
-    let mut moved = SettingsStore::poll(cx);
+    // The files are followed through events (`own_files`); the poll that stays is the backstop for
+    // when the watch is not running and for what no event names.
+    OwnFiles::follow(cx);
+    let slow = ticks.is_multiple_of(SLOW_POLL) || !OwnFiles::live(cx);
+    let mut moved = slow && SettingsStore::poll(cx);
     if cx.try_global::<ParkedSettings>().is_some_and(|parked| !parked.is_empty()) {
         let (system, zen) = {
             let shown = cx.global::<SettingsStore>();
@@ -97,8 +102,16 @@ pub(super) fn tick(cx: &mut App) {
     restart::tick(cx);
     if ticks.is_multiple_of(5) {
         project::prune_projects(cx);
-        if crate::fonts::poll_custom(cx) {
-            cx.refresh_windows();
-        }
     }
+    if slow && ticks.is_multiple_of(5) && crate::fonts::poll_custom(cx) {
+        cx.refresh_windows();
+    }
+}
+
+/// `config.json` or a theme file changed on disk: read it back and show it now, as the tick does.
+pub(super) fn reload_settings(cx: &mut App) {
+    if SettingsStore::poll(cx) {
+        cx.refresh_windows();
+    }
+    apply_theme(cx);
 }

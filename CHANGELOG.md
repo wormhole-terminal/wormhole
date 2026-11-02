@@ -14,6 +14,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
+- A change to `config.json`, a theme file or the custom fonts folder applies at once (within a tenth of a
+  second) instead of at the next check, up to 0.4 seconds later; the check that remains runs every 10 seconds,
+  for a folder the system cannot watch.
 - Git is asked about a terminal's repository by how the terminal is seen: every 1.2 seconds on screen in the
   window in front (was 2), every 8 seconds in a window that isn't in front (was 2 for the terminal on screen),
   and every 10 seconds in a window nobody can see (minimised, hidden, covered or on another Space; was 2 or 8),
