@@ -182,6 +182,15 @@ pub(crate) fn import_scan(home: Option<PathBuf>, cx: &mut App) {
     with_page(cx, move |page, _, cx| page.set_import(found, cx));
 }
 
+/// devctl `agents-open`: Coding agents' list of other agents and "How status works", open or shut.
+pub(crate) fn agents_open(others: bool, status: bool, cx: &mut App) {
+    with_page(cx, move |page, _, cx| {
+        page.others_open = others;
+        page.status_open = status;
+        cx.notify();
+    });
+}
+
 /// devctl `import-open <source key>`: open that terminal's card on the Import page.
 pub(crate) fn import_open(source: Source, cx: &mut App) {
     with_page(cx, move |page, _, cx| page.import_open(source, cx));

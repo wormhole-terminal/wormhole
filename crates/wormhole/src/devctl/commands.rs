@@ -198,6 +198,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "import-scan" => settings::import_scan,
         "import-open" => settings::import_open,
         "import-apply" => settings::import_apply,
+        "agents-open" => settings::agents_open,
         "update-installed" => settings::update_installed,
         "update-state" => settings::update_state,
         "settings-project" => settings::project,

@@ -250,6 +250,7 @@
 //!   import-scan [<fixture home>]   Settings → Import over a folder standing in for the home (`~/…` is the
 //!                   instance's; `tools/visual/fixtures/import/`; never the real one), shown and open; without a folder the page scans the
 //!                   instance's own home. Shot it with settings-shot in a later batch
+//!   agents-open <others|status|->   Coding agents: open the other agents list or How status works (`-`: shut both)
 //!   import-open <ghostty|iterm2|…>   open that terminal's card on the Import page
 //!   import-apply <ghostty|iterm2|terminal-app|alacritty|kitty|wezterm|warp|zed|vscode>   press "Import
 //!                   selected" on that terminal's card, rows ticked as shown (settings change, colours are saved

@@ -238,7 +238,11 @@ pub(super) fn control(id: &str) -> Option<&'static Setting> {
 /// and the custom rows that draw one themselves.
 #[cfg(feature = "devctl")]
 pub(super) fn menu_ids() -> impl Iterator<Item = &'static str> {
-    const CUSTOM: [&str; 9] = [
+    // The agents' "Hooks on" menus, named as `agents/installed.rs` names them.
+    const CUSTOM: [&str; 12] = [
+        "agent-hooks-Claude",
+        "agent-hooks-Codex",
+        "agent-hooks-Gemini",
         "density",
         "scrollback",
         "open-in",

@@ -96,6 +96,19 @@ pub(super) fn import_open(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `agents-open others|status|-`: open Coding agents' "Other agents Wormhole recognises" list or "How
+/// status works" (`-`: close both), to see them.
+pub(super) fn agents_open(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let (others, status) = match arg.trim() {
+        "others" => (true, false),
+        "status" => (false, true),
+        "-" => (false, false),
+        other => return Err(anyhow!("agents-open others|status|-, not {other:?}")),
+    };
+    crate::settings_window::devctl::agents_open(others, status, ctx.cx);
+    Ok(String::new())
+}
+
 /// `import-apply <source>`: press "Import selected" for that terminal (`ghostty`, `iterm2`, …).
 pub(super) fn import_apply(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let source = wormhole_core::import::Source::from_key(arg.trim())
