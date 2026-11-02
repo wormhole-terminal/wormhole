@@ -3,7 +3,7 @@
 
 use wormhole_vt::{Cell, Flags, Line, Modes, RowExtras};
 
-use super::restore::RESTORED_MARKER;
+use super::restore::is_marker;
 use super::screen::Screen;
 
 /// One grid line as text, trailing blanks trimmed. `cells` is scratch for the copy.
@@ -47,7 +47,7 @@ pub(super) fn scrollback_text(screen: &Screen, max_lines: usize) -> Option<Strin
     let mut finish = |current: &mut String| {
         let line = current.trim_end();
         // Don't let restore markers pile up across restarts.
-        if line != RESTORED_MARKER {
+        if !is_marker(line) {
             lines.push(line.to_string());
         }
         current.clear();

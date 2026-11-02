@@ -118,7 +118,13 @@ fn connected_to_minor(first: StreamMode, minor: u16) -> (Pty, PtyEvents, Script)
         GRID,
         &options,
         first,
-        HostFacts { pid: std::process::id(), minor, features: wire::Features::NONE, replay: None },
+        HostFacts {
+            pid: std::process::id(),
+            minor,
+            features: wire::Features::NONE,
+            replay: None,
+            replay_styled: false,
+        },
     )
     .expect("a client");
     let write = theirs.try_clone().expect("a second handle");

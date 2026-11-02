@@ -223,6 +223,7 @@ pub(crate) fn message<'a>(rng: &mut Rng, p: &'a Pool) -> Message<'a> {
                 env: List::Owned(env),
                 colors: rng.bool().then(|| colors(rng)),
                 seed: List::Owned((0..rng.usize(3)).map(|_| p.string(rng)).collect()),
+                seed_styled: rng.bool(),
             })
         }
         12 => Message::Attach(Attach {

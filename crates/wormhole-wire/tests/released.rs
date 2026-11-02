@@ -35,6 +35,7 @@ const LEDGER: &[(&str, u16)] = &[
     ("clear_history", 2),
     ("error_peer_refused", 3),
     ("spawn_seeded", 4),
+    ("spawn_seeded_styled", 4),
     ("set_checkpoint_key", 4),
     ("set_checkpoint_key_none", 4),
     ("checkpoint", 4),

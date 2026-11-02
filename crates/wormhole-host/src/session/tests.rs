@@ -262,6 +262,7 @@ impl Rig {
             env: wire::List::Owned(vec![("TERM", "xterm-256color")]),
             colors: None,
             seed: wire::List::Owned(vec![]),
+            seed_styled: false,
         };
         self.send(id, &Message::Spawn(spawn));
         self.recv(id)

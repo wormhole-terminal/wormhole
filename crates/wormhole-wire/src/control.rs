@@ -95,10 +95,15 @@ pub struct Spawn<'a> {
     /// chunks of at most [`SEED_CHUNK`] bytes (a TLV's length is 16 bits), each valid UTF-8 on its own
     /// (see [`seed_chunks`]); an older host skips the tag and starts with a blank screen.
     pub seed: List<'a, &'a str>,
+    /// The seed is VT with colors and attributes (SGR) and carries its own "restored" divider, as a
+    /// checkpoint's screen is (minor 4): the host draws it as it is, filtered to text and SGR, and does not dim
+    /// it or add a divider. A host that skips the tag (older) draws the seed as text.
+    pub seed_styled: bool,
 }
 
 const S_COLORS: u8 = 1;
 const S_SEED: u8 = 2;
+const S_SEED_STYLED: u8 = 3;
 
 /// The most bytes of one seed chunk: a TLV's length is 16 bits.
 pub const SEED_CHUNK: usize = 60_000;
@@ -161,6 +166,9 @@ impl<'a> Spawn<'a> {
         for chunk in self.seed.iter() {
             w.tlv_raw(S_SEED, "Spawn.seed", chunk.as_bytes())?;
         }
+        if self.seed_styled {
+            w.tlv_raw(S_SEED_STYLED, "Spawn.seed_styled", &[1])?;
+        }
         Ok(())
     }
 
@@ -187,7 +195,7 @@ impl<'a> Spawn<'a> {
         for _ in 0..n {
             env.push((r.str16()?, r.str16()?));
         }
-        let (mut colors, mut seen, mut seed) = (None, Seen::default(), Vec::new());
+        let (mut colors, mut seen, mut seed, mut seed_styled) = (None, Seen::default(), Vec::new(), false);
         for tlv in r.tlvs() {
             let (tag, value) = tlv?;
             if tag == S_COLORS {
@@ -196,6 +204,8 @@ impl<'a> Spawn<'a> {
             } else if tag == S_SEED {
                 // Chunks of one text: as many as the frame holds.
                 seed.push(std::str::from_utf8(value).map_err(|_| WireError::BadUtf8(WHAT))?);
+            } else if tag == S_SEED_STYLED {
+                seed_styled = value == [1];
             }
         }
         Ok(Self {
@@ -207,6 +217,7 @@ impl<'a> Spawn<'a> {
             env: List::Owned(env),
             colors,
             seed: List::Owned(seed),
+            seed_styled,
         })
     }
 }

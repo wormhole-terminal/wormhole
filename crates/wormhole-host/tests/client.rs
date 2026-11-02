@@ -128,6 +128,31 @@ fn a_terminal_restored_from_text_runs_in_a_new_host_that_seeds_the_screen() {
     wait_text(&again, "typed now");
 }
 
+/// A checkpoint's screen is a styled seed: the host draws it as it is with the divider the seed ends with, adds
+/// no divider of its own, and a client that attaches later gets the same from the host.
+#[test]
+fn a_styled_seed_is_drawn_by_the_new_host_with_its_own_divider() {
+    let place = Place::new();
+    let vt = format!(
+        "\x1b[1;31mred line\x1b[0m\r\nplain line\r\n\x1b[2m{}\x1b[0m\r\n",
+        wormhole_term::checkpoint::divider("2026-11-02 14:03")
+    );
+    let options = StartOptions { restore: Some(&vt), restore_styled: true, ..options() };
+    let (pty, _events) =
+        Pty::start_hosted(&place.command(), GRID, &options, launch("/bin/cat", &[])).unwrap();
+    wait_text(&pty, "restored 2026-11-02 14:03");
+    pty.write(b"typed\r".as_slice());
+    wait_text(&pty, "typed");
+    let seen = pty.screen_text();
+    assert_eq!(seen.matches("restored").count(), 1, "one divider, the seed's: {seen}");
+    assert!(seen.find("red line") < seen.find("plain line") && seen.find("plain line") < seen.find("typed"));
+    assert!(pty.detach());
+    drop(pty);
+    let (again, _events) = place.attach(true);
+    wait_text(&again, "restored 2026-11-02 14:03");
+    wait_text(&again, "red line");
+}
+
 /// An attach shows the host's screen and never draws saved text of its own: the host's repaint has what it
 /// has, so a replica that added the saved text would differ from it (a headless attach would keep it until
 /// shown).

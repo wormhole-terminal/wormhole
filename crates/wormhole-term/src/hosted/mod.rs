@@ -154,7 +154,12 @@ impl HostedTerminal {
         }
         // The previous session's text, dimmed, then the marker, before the program's first byte.
         if !spawn.seed.is_empty() {
-            crate::restore::replay(&mut screen, &spawn.seed.concat());
+            let seed = spawn.seed.concat();
+            if spawn.seed_styled {
+                crate::restore::replay_styled(&mut screen, &seed);
+            } else {
+                crate::restore::replay(&mut screen, &seed);
+            }
         }
         let screen = Arc::new(FairLock::new(screen));
         let feed = HostedFeed::new(OwnFeed::new(proxy.clone(), screen.clone()), core.clone());
@@ -485,6 +490,7 @@ mod tests {
             env: wire::List::Owned(vec![("TERM", "xterm-256color")]),
             colors: None,
             seed: wire::List::Owned(vec![]),
+            seed_styled: false,
         };
         let launch = launch_of(&spawn);
         assert_eq!(launch.shell, Shell::new("/bin/sh".into(), vec!["-c".into(), "true".into()]));

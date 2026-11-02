@@ -17,7 +17,7 @@
 
 use wormhole_vt::{Cell, Color, Flags, Line, Modes, NamedColor, RowExtras};
 
-use crate::restore::RESTORED_MARKER;
+use crate::restore::is_marker;
 use crate::screen::Screen;
 
 /// How much of a terminal a checkpoint keeps.
@@ -141,7 +141,7 @@ pub(crate) fn primary_screen(screen: &Screen, limits: Limits) -> Option<Vec<u8>>
     let mut finish = |line: &mut Vec<u8>, plain: &mut String, shown: &mut usize, pen: &mut Pen| {
         line.truncate(*shown);
         // Restore markers do not pile up across restarts.
-        if plain.trim_end() != RESTORED_MARKER {
+        if !is_marker(&plain) {
             let mut done = std::mem::take(line);
             done.extend_from_slice(b"\x1b[0m\r\n");
             lines.push(done);
@@ -324,7 +324,9 @@ mod tests {
 
     #[test]
     fn a_restored_marker_does_not_pile_up() {
-        let t = text(&vt_of(format!("old\r\n{RESTORED_MARKER}\r\nnew\r\n").as_bytes()).unwrap());
+        let t = text(
+            &vt_of(format!("old\r\n{}\r\nnew\r\n", crate::restore::RESTORED_MARKER).as_bytes()).unwrap(),
+        );
         assert!(!t.contains("restored"), "{t:?}");
         assert!(t.contains("old") && t.contains("new"));
     }

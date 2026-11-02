@@ -77,6 +77,7 @@ impl Pty {
                         minor: info.proto_minor,
                         features: info.features,
                         replay: seed_drawn_by(options.restore, info.proto_minor),
+                        replay_styled: options.restore_styled,
                     },
                 )
             }
@@ -125,6 +126,7 @@ impl Pty {
                 minor: welcome.proto_minor,
                 features: welcome.features,
                 replay: None,
+                replay_styled: false,
             },
         )
         .map_err(|e| AttachError::Failed(format!("{e:#}")))
@@ -263,6 +265,7 @@ fn spawn_in(
         env: wire::List::Borrowed(&pairs),
         colors,
         seed: wire::List::Borrowed(&seed),
+        seed_styled: options.restore_styled,
     };
     let until = Instant::now() + READY_TIMEOUT;
     let info = match socket::spawn(&stream, &mut dec, &spawn, until)? {
@@ -343,6 +346,8 @@ pub(crate) struct HostFacts<'a> {
     /// replica draws too: `None` for an attach (the host has its screen already) and for a host that
     /// skipped the seed.
     pub replay: Option<&'a str>,
+    /// `replay` is a checkpoint's styled VT (see `StartOptions::restore_styled`).
+    pub replay_styled: bool,
 }
 
 /// The `Pty` around a connection whose handshake is done, and its thread. `size` is the app's;
@@ -356,7 +361,7 @@ pub(crate) fn hosted(
     first: StreamMode,
     host: HostFacts<'_>,
 ) -> anyhow::Result<(Pty, PtyEvents)> {
-    let HostFacts { pid, minor, features, replay } = host;
+    let HostFacts { pid, minor, features, replay, replay_styled } = host;
     let (proxy, events) = EventProxy::new();
     let shared = proxy.shared().clone();
     let replica_options = ReplicaOptions::of(options);
@@ -364,7 +369,12 @@ pub(crate) fn hosted(
     // What the host draws before the program's first byte (see `start_hosted`): the same here, so the
     // stream's bytes land under it as they do there.
     if let Some(text) = replay {
-        crate::restore::replay(&mut screen, &wire::seed_chunks(text).concat());
+        let text = wire::seed_chunks(text).concat();
+        if replay_styled {
+            crate::restore::replay_styled(&mut screen, &text);
+        } else {
+            crate::restore::replay(&mut screen, &text);
+        }
     }
     if let Some(colors) = options.colors {
         screen.set_default_colors(colors);

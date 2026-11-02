@@ -39,6 +39,9 @@ pub(crate) struct WindowSize {
 pub struct StartOptions<'a> {
     /// Previous session text, replayed dimmed before the shell starts.
     pub restore: Option<&'a str>,
+    /// `restore` is VT with colors and attributes and its own "restored" divider (a checkpoint's screen),
+    /// not plain text: it is drawn filtered to text and SGR, undimmed, and no divider is added.
+    pub restore_styled: bool,
     pub scrollback_lines: usize,
     /// Answer DECRQCRA, a program's request for the checksum of a rectangle of the screen
     /// (`allow_screen_checksum`); the engine ignores it otherwise.

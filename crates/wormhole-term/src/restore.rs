@@ -5,6 +5,19 @@ use super::screen::Screen;
 /// The marker `replay` draws under replayed text, which `contents` leaves out of what it saves.
 pub(crate) const RESTORED_MARKER: &str = "──── restored ────";
 
+/// Whether `line` is a "restored" divider, with a time or without: the screen's text and a checkpoint leave
+/// them out, so they do not pile up across restarts.
+pub(crate) fn is_marker(line: &str) -> bool {
+    let line = line.trim();
+    line == RESTORED_MARKER || (line.starts_with("──── restored ") && line.ends_with(" ────"))
+}
+
+/// The divider of a restore at `when` ("2026-11-02 14:03"), the line a checkpoint's styled seed ends with.
+pub fn divider(when: &str) -> String {
+    let when: String = when.chars().filter(|c| !c.is_control()).take(40).collect();
+    format!("──── restored {when} ────")
+}
+
 /// What a saved line may hold: text, and tabs. Saved text came from a screen, and a file the person can edit
 /// (or a repository's hostile one) may hold anything: an escape sequence in it would be run as if a program
 /// had printed it, to answer a query into the PTY, set the title or write the clipboard.
@@ -27,6 +40,17 @@ pub(crate) fn replay(screen: &mut Screen, text: &str) {
     bytes.extend_from_slice(format!("\x1b[2m{}\x1b[0m\r\n", RESTORED_MARKER).as_bytes());
     screen.feed(&bytes);
     // Defence in depth: whatever got through, no reply is written to the PTY and no event is heard.
+    screen.discard_output();
+}
+
+/// Draw a checkpoint's screen before the shell starts: VT with colors and attributes that ends with its own
+/// divider. Only text, line ends and SGR get in (`checkpoint::safe_replay`), and what the engine queued is
+/// dropped after, as for [`replay`].
+pub(crate) fn replay_styled(screen: &mut Screen, vt: &str) {
+    if vt.trim().is_empty() {
+        return;
+    }
+    screen.feed(&crate::checkpoint::safe_replay(vt.as_bytes()));
     screen.discard_output();
 }
 
@@ -65,6 +89,31 @@ mod tests {
         screen.discard_output();
         assert!(screen.queued_replies().is_empty());
         assert!(screen.drain_events().is_empty());
+    }
+
+    #[test]
+    fn a_styled_seed_keeps_its_colors_and_acts_on_nothing() {
+        let mut screen = screen();
+        replay_styled(
+            &mut screen,
+            "\x1b[1;31mred\x1b[0m\r\n\x1b[6n\x1b]52;c;?\x07\x1b]0;t\x07\x1b[?1000hend\r\n",
+        );
+        assert!(screen.queued_replies().is_empty() && screen.drain_events().is_empty());
+        let drawn = super::super::contents::screen_text(&screen);
+        assert!(drawn.contains("red") && drawn.contains("end"), "{drawn}");
+        let mut cells = Vec::new();
+        screen.copy_row(wormhole_vt::Line(0), &mut cells, None);
+        assert!(cells[0].flags.contains(wormhole_vt::Flags::BOLD), "the colors and attributes are drawn");
+        assert!(!screen.mode().contains(wormhole_vt::Modes::MOUSE_CLICK), "no mode was set");
+    }
+
+    #[test]
+    fn dividers_with_and_without_a_time_are_markers() {
+        assert!(is_marker(RESTORED_MARKER));
+        assert!(is_marker(&divider("2026-11-02 14:03")));
+        assert!(!is_marker("restored"));
+        assert!(!is_marker("──── restored"));
+        assert_eq!(divider("a\nb"), "──── restored ab ────");
     }
 
     #[test]

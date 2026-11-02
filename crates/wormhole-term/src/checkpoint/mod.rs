@@ -26,6 +26,7 @@ pub mod vt;
 
 use std::path::{Path, PathBuf};
 
+pub use crate::restore::divider;
 pub use capture::{Capture, capture};
 pub use manifest::{Manifest, ManifestError, ScreenFile};
 pub use seal::{Key, KeyId};
