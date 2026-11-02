@@ -117,4 +117,8 @@ settings-notifications-after-seconds = After { $count } s
 
 # When the banner in the preview arrived.
 settings-notifications-preview-now = now
-settings-notifications-preview-caption = How a notification looks. macOS decides where it shows and for how long (System Settings → Notifications → Wormhole).
+# The banners the preview shows when no notification is turned on.
+settings-notifications-preview-empty = Nothing turned on: no banners.
+# One banner standing for several, when they are grouped. { $count } is a whole number.
+settings-notifications-preview-grouped = { $count } terminals need you
+settings-notifications-preview-caption = The banners you would get. macOS decides where they show and for how long (System Settings › Notifications › Wormhole).

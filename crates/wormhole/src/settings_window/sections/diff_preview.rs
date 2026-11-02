@@ -1,11 +1,9 @@
-//! Changes & diffs' preview: the Changes panel and a diff beside it, drawn with the panel's own file
-//! rows and the diff view's own rows (`features::git::diff::sample`), under the options of the page:
-//! list or tree, untracked files apart or not, split or unified, wrapped or cut, the tab's width.
+//! Changes & diffs' preview: the Changes panel and a diff beside it, compiled from the design's `DiffMock`
+//! (`ui/generated/diff_mock.rs`) and filled from the page's options: list or tree, untracked files apart or
+//! not, split or unified, wrapped or cut, the tab's width. The miniature's rows are the design's; this
+//! file only chooses the made-up files and the diff's lines.
 
-use gpui_kit::assets::IconName;
-use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::git::ChangeKind;
 #[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
@@ -14,30 +12,34 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use super::card::{Words, card};
-use crate::features::git::diff::sample::{self, Look};
-use crate::features::git::diff_render::DiffColors;
-use crate::settings::{SettingsStore, UiColors, settings};
+use crate::settings::{SettingsStore, settings};
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, FileLines, FileRow, TextRole};
+use crate::theme_bridge::token;
+use crate::ui::{Cell, DiffLine, DiffMockProps, File, Look};
 
-/// The file list's width: the panel's, as the right column keeps it.
-const LIST_W: f32 = 200.0;
+/// How a file of the panel stands against the repository.
+#[derive(Clone, Copy)]
+enum Mark {
+    Modified,
+    Added,
+    Untracked,
+}
 
-/// One file of the sample panel.
-struct File {
+/// A file of the sample panel: its folder (empty at the top), its name and its mark.
+struct Sample {
     folder: &'static str,
     name: &'static str,
-    kind: ChangeKind,
-    lines: FileLines,
+    mark: Mark,
 }
 
 // text: sample (made-up files of the preview)
-const FILES: [File; 4] = [
-    File { folder: "src", name: "limits.rs", kind: ChangeKind::Modified, lines: FileLines::Counts(2, 1) },
-    File { folder: "src", name: "lib.rs", kind: ChangeKind::Modified, lines: FileLines::Counts(3, 1) },
-    File { folder: "tests", name: "limits.rs", kind: ChangeKind::Added, lines: FileLines::Counts(30, 0) },
-    File { folder: "", name: "notes.txt", kind: ChangeKind::Untracked, lines: FileLines::Counts(5, 0) },
+const TRACKED: [Sample; 3] = [
+    Sample { folder: "src", name: "limits.rs", mark: Mark::Modified },
+    Sample { folder: "src", name: "lib.rs", mark: Mark::Modified },
+    Sample { folder: "tests", name: "limits.rs", mark: Mark::Added },
 ];
+// text: sample (a made-up file of the preview)
+const UNTRACKED: Sample = Sample { folder: "", name: "notes.txt", mark: Mark::Untracked };
 
 /// Changes & diffs → the panel and a diff as the options make them.
 pub(in crate::settings_window) fn draw_diff_preview(
@@ -46,33 +48,99 @@ pub(in crate::settings_window) fn draw_diff_preview(
 ) -> AnyElement {
     let ui = ui(cx);
     let s = settings(cx).clone();
-    let store = cx.global::<SettingsStore>();
-    let colors = DiffColors::new(&store.tokens);
-    let (family, size) = crate::fonts::code_font(cx);
-    let look = Look { split: s.diff_split, wrap: s.diff_wrap, tab_width: s.tab_width };
-    let list = changes_panel(ui, s.changes_tree, s.group_untracked);
-    let diff = div()
-        .flex_1()
-        .min_w_0()
-        .flex()
-        .flex_col()
-        .bg(colors.surface)
-        .child(
-            div()
-                .flex_none()
-                .flex()
-                .items_center()
-                .h(px(style::ROW_H))
-                .px_3()
-                .rule_bottom(ui)
-                .font_family(family.clone())
-                .text_caption()
-                .text_color(ui.muted)
-                .child("src/limits.rs"), // text: sample (a made-up file of the preview)
-        )
-        .child(sample::preview_rows(ui, colors, look, family, f32::from(size)));
-    // Edge to edge: the panel's and the diff's own surfaces fill the frame.
-    let frame = style::preview_frame(ui).p_0().flex().child(list).child(diff);
+    let tokens = &cx.global::<SettingsStore>().tokens;
+    let (warning, added, muted) =
+        (token(tokens, "status.warning.text"), token(tokens, "agent.done"), token(tokens, "text.muted"));
+    let tree = s.changes_tree;
+    let badge = |mark: Mark| match mark {
+        Mark::Modified => ("M", warning),
+        Mark::Added => ("A", added),
+        Mark::Untracked => ("U", muted),
+    };
+    let file = |sample: &Sample, deep: bool| {
+        let (badge, color) = badge(sample.mark);
+        File {
+            name: if tree || sample.folder.is_empty() {
+                sample.name.into()
+            } else {
+                format!("{}/{}", sample.folder, sample.name).into()
+            },
+            badge: badge.into(),
+            badge_color: color,
+            deep,
+            dir: false,
+        }
+    };
+    let dir = |name: &str| File { name: name.to_owned().into(), dir: true, ..File::default() };
+    let mut files = Vec::new();
+    let mut folder = "";
+    for sample in &TRACKED {
+        if tree && sample.folder != folder {
+            folder = sample.folder;
+            files.push(dir(&format!("{folder}/")));
+        }
+        files.push(file(sample, tree));
+    }
+    if s.group_untracked {
+        files.push(dir(text(SETTINGS_GIT_PREVIEW_UNTRACKED)));
+    }
+    files.push(file(&UNTRACKED, tree && s.group_untracked));
+
+    let indent = " ".repeat(s.tab_width);
+    // text: sample (the lines of a made-up diff)
+    let long = format!("{indent}let budget = self.refill(now).min(self.capacity * BURST_FACTOR);");
+    let (wrap, split) = (s.diff_wrap, s.diff_split);
+    let cell = |text: String, left: bool, kind: &str| Cell {
+        text: text.into(),
+        wrap,
+        left,
+        del: kind == "del",
+        add: kind == "add",
+        none: kind == "none",
+    };
+    let cells = if split {
+        // text: sample (the lines of a made-up diff)
+        [
+            ("fn take(&mut self) {".to_owned(), "fn take(&mut self) {".to_owned(), "", ""),
+            (format!("{indent}let budget = self.tokens;"), long.clone(), "del", "add"),
+            (format!("{indent}if budget == 0 {{"), format!("{indent}if budget == 0 {{"), "", ""),
+            (String::new(), format!("{indent}{indent}self.stats.denied += 1;"), "none", "add"),
+        ]
+        .into_iter()
+        .flat_map(|(l, r, lk, rk)| [cell(l, true, lk), cell(r, false, rk)])
+        .collect()
+    } else {
+        Vec::new()
+    };
+    let line = |text: String, kind: &str| DiffLine {
+        text: text.into(),
+        wrap,
+        del: kind == "del",
+        add: kind == "add",
+    };
+    let lines = if split {
+        Vec::new()
+    } else {
+        // text: sample (the lines of a made-up diff)
+        vec![
+            line(" fn take(&mut self) {".to_owned(), ""),
+            line(format!("-{indent}let budget = self.tokens;"), "del"),
+            line(format!("+{long}"), "add"),
+            line(format!(" {indent}if budget == 0 {{"), ""),
+            line(format!("+{indent}{indent}self.stats.denied += 1;"), "add"),
+        ]
+    };
+    let mock = DiffMockProps {
+        id: "diff-mock".into(),
+        spoken: text(SETTINGS_WINDOW_PREVIEW_DIFF_LABEL).into(),
+        heading: format!("{} · {}", text(SETTINGS_GIT_PREVIEW_CHANGES), TRACKED.len() + 1).into(),
+        path: "src/limits.rs".into(), // text: sample (a made-up file of the preview)
+        split,
+        unified: !split,
+        files,
+        cells,
+        lines,
+    };
     card(
         ui,
         Words {
@@ -81,89 +149,6 @@ pub(in crate::settings_window) fn draw_diff_preview(
             spoken: SETTINGS_WINDOW_PREVIEW_DIFF_LABEL,
             caption: SETTINGS_GIT_PREVIEW_CAPTION,
         },
-        frame,
+        div().child(mock.render(&Look::of(cx))).overflow_hidden(),
     )
-}
-
-/// The Changes panel: the files as a list or a tree, the untracked one under a head of its own or among
-/// the others.
-fn changes_panel(ui: UiColors, tree: bool, untracked_apart: bool) -> Div {
-    let (apart, among): (Vec<_>, Vec<_>) =
-        FILES.iter().partition(|file| untracked_apart && file.kind == ChangeKind::Untracked);
-    let mut panel = div()
-        .flex_none()
-        .w(px(LIST_W))
-        .flex()
-        .flex_col()
-        .gap_1()
-        .pb_2()
-        .bg(ui.panel)
-        .rule_right(ui)
-        .child(head(ui, text(SETTINGS_GIT_PREVIEW_CHANGES), among.len()));
-    panel = panel.children(files(ui, &among, tree, true));
-    if !apart.is_empty() {
-        panel = panel
-            .child(head(ui, text(SETTINGS_GIT_PREVIEW_UNTRACKED), apart.len()))
-            .children(files(ui, &apart, tree, false));
-    }
-    panel
-}
-
-/// A block's head: its name and how many files it holds.
-fn head(ui: UiColors, title: &str, count: usize) -> Div {
-    div()
-        .flex_none()
-        .flex()
-        .items_center()
-        .gap_2()
-        .h(px(style::ROW_H))
-        .px_3()
-        .text_caption()
-        .font_weight(FontWeight::MEDIUM)
-        .text_color(ui.muted)
-        .child(title.to_owned())
-        .child(style::count_badge(ui, count.to_string()))
-}
-
-/// `files` as rows: flat, each with its folder beside it, or under a row for each folder. The first
-/// block's first file is the one open in the diff.
-fn files(ui: UiColors, files: &[&File], tree: bool, first_block: bool) -> Vec<AnyElement> {
-    let id_base = if first_block { 0 } else { 100 };
-    let mut rows = Vec::new();
-    let mut folder = "";
-    for (ix, file) in files.iter().enumerate() {
-        if tree && file.folder != folder && !file.folder.is_empty() {
-            folder = file.folder;
-            rows.push(
-                style::folder_row(
-                    ("diff-preview-folder", id_base + ix),
-                    ui,
-                    0,
-                    style::icon(IconName::Folder).into_any_element(),
-                    folder,
-                    false,
-                )
-                .into_any_element(),
-            );
-        }
-        rows.push(
-            style::file_row(
-                ("diff-preview-file", id_base + ix),
-                ui,
-                FileRow {
-                    icon: style::icon(IconName::File).into_any_element(),
-                    name: file.name.into(),
-                    folder: if tree { "".into() } else { file.folder.into() },
-                    renamed_from: None,
-                    moved: false,
-                    kind: file.kind,
-                    lines: file.lines,
-                    depth: usize::from(tree && !file.folder.is_empty()),
-                    selected: first_block && ix == 0,
-                },
-            )
-            .into_any_element(),
-        );
-    }
-    rows
 }

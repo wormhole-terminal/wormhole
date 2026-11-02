@@ -1,47 +1,62 @@
-//! Notifications' preview: two banners as macOS shows them, one for a terminal that needs input and
-//! one for an agent that finished, drawn in the theme's colours over the window's own surface.
+//! Notifications' preview: the banners that are turned on, as macOS draws them at the top right, compiled
+//! from the design's `BannerMock` (`ui/generated/banner_mock.rs`). Which banners show follows the page's
+//! switches; with three or more and "Group bursts" on they become one.
 
-use gpui_kit::prelude::*;
 use gpui_kit::*;
 #[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
 )]
 use wormhole_text::keys::*;
-use wormhole_text::text;
+use wormhole_text::{text, whole};
 
 use super::card::{Words, card};
-use crate::icons::app_icon_for;
-use crate::settings::{SettingsStore, UiColors};
+use crate::settings::settings;
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, TextRole};
+use crate::ui::{Banner, BannerMockProps, Look};
 
-/// A banner's width: as wide as macOS draws them.
-const BANNER_W: f32 = 344.0;
-/// The app's icon in a banner.
-const BANNER_ICON: f32 = 32.0;
+/// The most banners the picture holds.
+const BANNERS: usize = 2;
 
-/// The banners, and what they show under them.
+/// The banners the settings would show, as (title, body).
+fn banners(cx: &App) -> Vec<(String, String)> {
+    let s = settings(cx);
+    // text: sample (made-up notifications of the preview)
+    let kinds = [
+        (s.notify_kind_on(s.notify_needs_you), "api needs input", "Allow edit of src/limits.rs?"),
+        (s.notify_kind_on(s.notify_agent_done), "Release notes finished", "Claude Code · 12m"),
+        (s.notify_kind_on(s.notify_command_done), "cargo build finished", "2m 14s · ~/Projects/api"),
+        (s.notify_kind_on(s.notify_command_failed), "cargo test failed", "Exit code 101 · ~/Projects/api"),
+        (s.notify_kind_on(s.notify_bell), "scratch rang the bell", "At most once a minute per terminal"),
+    ];
+    let mut on: Vec<(String, String)> = kinds
+        .into_iter()
+        .filter(|(on, ..)| *on)
+        .map(|(_, title, body)| (title.to_owned(), body.to_owned()))
+        .collect();
+    if s.notify_group_bursts && on.len() >= 3 {
+        let titles = on.iter().map(|(title, _)| title.as_str()).collect::<Vec<_>>().join(" · ");
+        on = vec![(settings_notifications_preview_grouped(&whole(on.len()).to_string()), titles)];
+    }
+    on.truncate(BANNERS);
+    on
+}
+
+/// The banners.
 pub(in crate::settings_window) fn draw_notifications_preview(cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
-    let icon = app_icon_for(cx.global::<SettingsStore>().tokens.appearance);
-    let frame = style::preview_frame(ui)
-        .flex()
-        .flex_col()
-        .items_center()
-        .gap_3()
-        .child(banner(
-            ui,
-            icon,
-            "api needs input", // text: sample (a made-up notification of the preview)
-            "Allow edit of src/limits.rs?", // text: sample (a made-up notification of the preview)
-        ))
-        .child(banner(
-            ui,
-            icon,
-            "Release notes finished", // text: sample (a made-up notification of the preview)
-            "Claude Code · 12m",      // text: sample (a made-up notification of the preview)
-        ));
+    let banners = banners(cx);
+    let mock = BannerMockProps {
+        id: "banner-mock".into(),
+        spoken: text(SETTINGS_WINDOW_PREVIEW_NOTIFICATIONS_LABEL).into(),
+        when: text(SETTINGS_NOTIFICATIONS_PREVIEW_NOW).into(),
+        none: banners.is_empty(),
+        empty: text(SETTINGS_NOTIFICATIONS_PREVIEW_EMPTY).into(),
+        banners: banners
+            .into_iter()
+            .map(|(title, body)| Banner { title: title.into(), body: body.into() })
+            .collect(),
+    };
     card(
         ui,
         Words {
@@ -50,52 +65,6 @@ pub(in crate::settings_window) fn draw_notifications_preview(cx: &mut Context<Se
             spoken: SETTINGS_WINDOW_PREVIEW_NOTIFICATIONS_LABEL,
             caption: SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION,
         },
-        frame,
+        div().child(mock.render(&Look::of(cx))).overflow_hidden(),
     )
-}
-
-/// One banner: the app's icon, the title over the body, and when it came.
-fn banner(ui: UiColors, icon: &'static str, title: &'static str, body: &'static str) -> Div {
-    div()
-        .w_full()
-        .max_w(px(BANNER_W))
-        .flex()
-        .items_center()
-        .gap_3()
-        .p_3()
-        .rounded(ui.radius_lg)
-        .outlined(ui, ui.border)
-        .bg(ui.panel)
-        .shadow(crate::select::menu_shadow(ui))
-        .child(img(icon).size(px(BANNER_ICON)).flex_none())
-        .child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .flex()
-                .flex_col()
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap_2()
-                        .child(
-                            div()
-                                .flex_1()
-                                .min_w_0()
-                                .truncate()
-                                .text_body()
-                                .font_weight(FontWeight::SEMIBOLD)
-                                .child(title),
-                        )
-                        .child(
-                            div()
-                                .flex_none()
-                                .text_caption()
-                                .text_color(ui.faint)
-                                .child(text(SETTINGS_NOTIFICATIONS_PREVIEW_NOW)),
-                        ),
-                )
-                .child(div().truncate().text_body().text_color(ui.muted).child(body)),
-        )
 }

@@ -91,15 +91,6 @@ settings-sessions-changes-plain-none = None
 settings-sessions-changes-shared-each = Each counts it
 settings-sessions-changes-shared-none = Nobody counts it
 
-## settings_window/sections/preview.rs (labels, hints and notes drawn by this page's code)
+## settings_window/sections/list_preview.rs (what the page's preview card says)
 
-settings-sessions-preview-caption-side-by-side = Live preview of the Terminals list. Hovering a density previews it next to the current one
-settings-sessions-terminals = Terminals
-
-## Sentences with a hole in them
-
-# Over the live preview: the Terminals list as it is now. { $density } is the density's name.
-settings-sessions-preview-now = Now · { $density }
-
-# Over the live preview: the list as the density under the pointer would draw it.
-settings-sessions-preview-hovering = Previewed while hovering { $density }
+settings-sessions-preview-caption = How the list draws a group and its terminals at this density, with the row details you keep.

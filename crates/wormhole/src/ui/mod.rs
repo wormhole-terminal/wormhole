@@ -20,11 +20,15 @@ use wormhole_core::theme::tokens::ThemeTokens;
 
 use crate::settings::SettingsStore;
 
+pub(crate) use generated::banner_mock::{Banner, BannerMockProps};
 pub(crate) use generated::checkbox_control::CheckboxControlProps;
+pub(crate) use generated::diff_mock::{Cell, DiffLine, DiffMockProps, File};
 pub(crate) use generated::footer_line::{FooterLineProps, FooterLink};
 pub(crate) use generated::form_button::FormButtonProps;
 pub(crate) use generated::group_card::GroupCardProps;
 pub(crate) use generated::group_head::GroupHeadProps;
+pub(crate) use generated::list_mock::{ListMockProps, PaneLine, Row};
+pub(crate) use generated::menu_bar_mock::{MenuBarMockProps, MenuItem as MenuBarItem};
 pub(crate) use generated::menu_face::MenuFaceProps;
 pub(crate) use generated::menu_item::MenuItemProps;
 pub(crate) use generated::menu_panel::MenuPanelProps;
@@ -36,6 +40,7 @@ pub(crate) use generated::settings_nav::{NavEntry, SettingsNavProps};
 pub(crate) use generated::settings_row::SettingsRowProps;
 pub(crate) use generated::sidebar_profile::SidebarProfileProps;
 pub(crate) use generated::solid_chip::SolidChipProps;
+pub(crate) use generated::specimen_mock::{Fact, SpecimenMockProps, Tab};
 pub(crate) use generated::split_mock::{LeftLine, RightLine, SplitMockProps};
 pub(crate) use generated::stepper::StepperProps;
 pub(crate) use generated::switch_control::SwitchControlProps;

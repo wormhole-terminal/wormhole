@@ -1,6 +1,8 @@
 //! Fonts: one specimen for the three fonts, then the terminal font with its line height
 //! and ligatures, the code and interface fonts, and the user's own fonts.
 
+use std::rc::Rc;
+
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::theme::fonts::{FontSlot, display_name};
@@ -16,8 +18,9 @@ use crate::fonts::LoadedFonts;
 use crate::settings::{Settings, SettingsStore};
 use crate::settings_window::registry::{Current, MenuOption, Setting, toggle};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
-use crate::style::{self, Edges, TextRole};
+use crate::style;
 use crate::theme_bridge;
+use crate::ui::{Fact, Look, SpecimenMockProps, Tab};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("font-specimen", draw_specimen),
@@ -115,14 +118,26 @@ pub(in crate::settings_window) fn draw_specimen(
     let ansi = |i: usize| theme_bridge::hsla(term.ansi[i]);
     let theme_name = store.tokens.name.clone();
     let features = crate::fonts::ligature_features(s.font_ligatures);
-    let tabs = style::segmented(ui).children(FontSlot::ALL.into_iter().rev().enumerate().map(|(ix, tab)| {
-        style::segment(("specimen-tab", ix), ui, tab.title(), tab == slot).on_click(cx.listener(
-            move |this, _, _, cx| {
-                this.specimen = tab;
-                cx.notify();
-            },
-        ))
-    }));
+    let window = cx.weak_entity();
+    let tabs = FontSlot::ALL
+        .into_iter()
+        .rev()
+        .map(|tab| {
+            let window = window.clone();
+            Tab {
+                name: tab.title().into(),
+                selected: tab == slot,
+                pick: Some(Rc::new(move |_, _, cx| {
+                    window
+                        .update(cx, |this, cx| {
+                            this.specimen = tab;
+                            cx.notify();
+                        })
+                        .ok();
+                })),
+            }
+        })
+        .collect();
     let line = |parts: Vec<(Hsla, &'static str)>| {
         div().flex().flex_wrap().children(
             parts
@@ -155,53 +170,34 @@ pub(in crate::settings_window) fn draw_specimen(
             (fg, "(&self) -> Result<Tokens> { a != b && c >= d }"), // text: sample (the specimen's terminal text)
         ]))
         .child(line(vec![(ui.muted, SPECIMEN[3])]));
-    let facts = div()
-        .flex()
-        .flex_wrap()
-        .gap_x_4()
-        .px_4()
-        .py_2()
-        .rule_top(ui)
-        .text_caption()
-        .text_color(ui.muted)
-        .child(settings_fonts_specimen_size(display_name(&family), &format!("{size:.0}")))
-        .when(slot == FontSlot::Terminal, |d| {
-            d.child(settings_fonts_specimen_line_height(&format!("{:.2}", s.line_height)))
-        })
-        .when(slot != FontSlot::Interface, |d| {
-            d.child(if s.font_ligatures {
-                text(SETTINGS_FONTS_LIGATURES_ON)
-            } else {
-                text(SETTINGS_FONTS_LIGATURES_OFF)
-            })
-        })
-        .child(settings_fonts_specimen_colours(&theme_name));
-    // Edge to edge: the tab strip's rule runs the frame's width.
-    let frame = style::preview_frame(ui)
-        .p_0()
-        .flex()
-        .flex_col()
-        .bg(ui.elevated)
-        .child(
-            div().flex().items_center().justify_between().px_2().py_2().rule_bottom(ui).child(tabs).child(
-                div()
-                    .min_w_0()
-                    .truncate()
-                    .text_caption()
-                    .text_color(ui.faint)
-                    .child(text(SETTINGS_FONTS_HOVER_A_FONT_IN_A_LIST)),
-            ),
-        )
-        .child(specimen)
-        .child(facts);
+    let mut facts = vec![settings_fonts_specimen_size(display_name(&family), &format!("{size:.0}"))];
+    if slot == FontSlot::Terminal {
+        facts.push(settings_fonts_specimen_line_height(&format!("{:.2}", s.line_height)));
+    }
+    if slot != FontSlot::Interface {
+        facts.push(
+            text(if s.font_ligatures { SETTINGS_FONTS_LIGATURES_ON } else { SETTINGS_FONTS_LIGATURES_OFF })
+                .to_owned(),
+        );
+    }
+    facts.push(settings_fonts_specimen_colours(&theme_name));
+    let mock = SpecimenMockProps {
+        id: "font-specimen-mock".into(),
+        spoken: text(SETTINGS_WINDOW_PREVIEW_FONTS_LABEL).into(),
+        tabs_label: text(SETTINGS_FONTS_SPECIMEN_TABS).into(),
+        hint: text(SETTINGS_FONTS_HOVER_A_FONT_IN_A_LIST).into(),
+        sample: specimen.into_any_element(),
+        tabs,
+        facts: facts.into_iter().map(|text| Fact { text: text.into() }).collect(),
+    };
     card(
         ui,
         Words {
             id: "font-specimen-card",
-            what: SETTINGS_WINDOW_FONTS,
+            what: SETTINGS_WINDOW_TERMINAL_FONT,
             spoken: SETTINGS_WINDOW_PREVIEW_FONTS_LABEL,
             caption: SETTINGS_FONTS_SPECIMEN_CAPTION,
         },
-        frame,
+        div().child(mock.render(&Look::of(cx))).overflow_hidden(),
     )
 }

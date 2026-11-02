@@ -31,6 +31,7 @@ settings-window-edit-in-project = Edit in project
 
 settings-window-window = Window
 settings-window-fonts = Fonts
+settings-window-terminal-font = Terminal font
 settings-window-terminals-list = Terminals list
 settings-window-notifications = Notifications
 settings-window-menu-bar = Menu bar

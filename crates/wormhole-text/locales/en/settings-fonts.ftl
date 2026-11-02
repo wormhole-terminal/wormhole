@@ -4,7 +4,9 @@
 settings-section-fonts = Fonts
     .intro = Terminal first: it's what you read most. Code follows it and Interface uses the system font until you pick one.
 
-settings-fonts-specimen-caption = Your fonts at their size and line height. In a font menu, the font under the pointer shows here.
+settings-fonts-specimen-caption = The terminal font at its size and line height. In a font menu, the font under the pointer shows here.
+# VoiceOver's name for the specimen's three tabs: which font it shows.
+settings-fonts-specimen-tabs = Which font
 
 settings-fonts-font-specimen = Specimen
     .keywords = preview sample

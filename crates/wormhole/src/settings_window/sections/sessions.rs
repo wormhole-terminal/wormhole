@@ -11,7 +11,6 @@ use wormhole_core::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 )]
 use wormhole_text::keys::*;
 
-use super::preview;
 use crate::select::{self, MenuLine, MenuOptions};
 use crate::settings::update_settings;
 use crate::settings::{Settings, settings};
@@ -20,7 +19,7 @@ use crate::settings_window::registry::{MenuOption, Setting, toggle};
 use crate::settings_window::{SettingsWindow, SidebarLook, ui};
 
 pub(super) const SETTINGS: &[Setting] = &[
-    Setting::block("sidebar-preview", preview::draw_sidebar_preview),
+    Setting::block("sidebar-preview", super::draw_sidebar_preview),
     Setting::menu(
         "terminals-in",
         &[MenuOption::text(SETTINGS_SESSIONS_SIDEBAR), MenuOption::text(SETTINGS_SESSIONS_TABS)],

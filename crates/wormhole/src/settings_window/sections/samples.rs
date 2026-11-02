@@ -28,14 +28,6 @@ pub(super) struct Sample {
     pub(super) agent: Option<AgentId>,
 }
 
-/// A card of a sample list: a group's head and its rows, or a terminal in no group.
-pub(super) struct Card {
-    pub(super) group: Option<&'static str>,
-    /// The group's folder, as its head shows it.
-    pub(super) folder: Option<&'static str>,
-    pub(super) rows: &'static [Sample],
-}
-
 pub(super) const SCRATCH: Sample = Sample {
     name: "scratch", // text: sample (a made-up terminal of the preview)
     glyph: StatusGlyph::Idle,
@@ -72,15 +64,6 @@ pub(super) const CARGO_TEST: Sample = Sample {
     notes: 0,
     agent: None,
 };
-const ZSH: Sample = Sample {
-    name: "zsh",
-    glyph: StatusGlyph::Idle,
-    detail: "~/Projects/terminal/wormhole", // text: sample (a made-up folder of the preview)
-    tone: RowTone::Plain,
-    selected: false,
-    notes: 0,
-    agent: None,
-};
 pub(super) const RATE_LIMITS: Sample = Sample {
     name: "Rate limits", // text: sample (a made-up terminal of the preview)
     glyph: StatusGlyph::Working,
@@ -108,24 +91,6 @@ pub(super) const RELEASE_NOTES: Sample = Sample {
     notes: 0,
     agent: Some(AgentId::OpenCode),
 };
-
-/// The Terminals list of Terminals & sidebar and of Appearance's window.
-pub(super) const SAMPLES: &[Card] = &[
-    Card { group: None, folder: None, rows: &[SCRATCH] },
-    Card {
-        group: Some("Release 1.2"),          // text: sample (a made-up group of the preview)
-        folder: Some("~/Projects/wormhole"), // text: sample (a made-up folder of the preview)
-        rows: &[SIDEBAR_CARDS, FIX_PILE, CARGO_TEST],
-    },
-    Card { group: None, folder: None, rows: &[ZSH] },
-];
-
-/// The list of Coding agents: a group with an agent working, one asking and one finished.
-pub(super) const AGENT_SAMPLES: &[Card] = &[Card {
-    group: Some("api"),             // text: sample (a made-up project of the preview)
-    folder: Some("~/Projects/api"), // text: sample (a made-up folder of the preview)
-    rows: &[RATE_LIMITS, FLAKY_LOGIN, RELEASE_NOTES],
-}];
 
 impl Sample {
     /// The sidebar's own row for it, with its status tile: `plain` is the face of a terminal without an

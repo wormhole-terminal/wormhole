@@ -1,9 +1,9 @@
-//! Menu bar & hotkey's preview: a stretch of the menu bar with Wormhole's item, a dot and the count
-//! of terminals that need input, and under it the quick panel the item and the hotkey open.
+//! Menu bar & hotkey's preview: a stretch of the menu bar with Wormhole's extra (the dot and the count
+//! while a terminal needs input) and the menu it opens, compiled from the design's `MenuBarMock`
+//! (`ui/generated/menu_bar_mock.rs`). This file fills it from the page's switch and icon choice.
 
-use gpui_kit::assets::IconName;
-use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_core::config::MenuBarIcon;
 #[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
@@ -12,77 +12,39 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use super::card::{Words, card};
+use crate::settings::{SettingsStore, settings};
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, StatusGlyph, TextRole};
+use crate::theme_bridge::token;
+use crate::ui::{Look, MenuBarItem, MenuBarMockProps};
 
-/// The menu bar's height.
-const MENU_BAR_H: f32 = 24.0;
-/// The item's dot.
-const ITEM_DOT: f32 = 8.0;
-
-/// The menu bar, its item and the quick panel.
+/// The menu bar, the extra and its menu.
 pub(in crate::settings_window) fn draw_menu_bar_preview(cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
-    let app: &App = cx;
-    let glyph = |id: &'static str, glyph: StatusGlyph| style::status_glyph(id, ui, glyph, app);
-    let time = |text: &'static str| {
-        div().text_caption().tabular_nums().text_color(ui.faint).child(text).into_any_element()
+    let s = settings(cx);
+    let (shown, icon) = (s.menu_bar, s.menu_bar_icon);
+    let tokens = &cx.global::<SettingsStore>().tokens;
+    let (on_primary, muted) = (token(tokens, "text.on_primary"), token(tokens, "text.muted"));
+    // text: sample (the made-up terminals and clock of the preview)
+    let items = [("Flaky login test", "⌘1", true), ("Rate limits", "⌘2", false)]
+        .into_iter()
+        .map(|(name, key, selected)| MenuBarItem {
+            name: name.into(),
+            key: key.into(),
+            key_color: if selected { on_primary } else { muted },
+            selected,
+        })
+        .collect();
+    let mock = MenuBarMockProps {
+        id: "menu-bar-mock".into(),
+        spoken: text(SETTINGS_WINDOW_PREVIEW_MENU_BAR_LABEL).into(),
+        shown,
+        dot: icon != MenuBarIcon::Plain,
+        count: icon == MenuBarIcon::StatusCount,
+        count_text: "2".into(),    // text: sample (a made-up count)
+        clock: "Thu 09:41".into(), // text: sample (a made-up clock)
+        header: text(SETTINGS_MENU_BAR_PREVIEW_WAITING).into(),
+        items,
     };
-    let mut needs = style::PaletteResult::new(
-        glyph("menu-preview-needs", StatusGlyph::NeedsYou),
-        "api", // text: sample (a made-up terminal of the preview)
-    );
-    needs.strong = true;
-    needs.detail = Some("Allow edit?".into()); // text: sample (a made-up terminal of the preview)
-    needs.detail_color = Some(ui.attention_text);
-    needs.trailing.push(time("2m")); // text: sample (a made-up time of the preview)
-    let mut working = style::PaletteResult::new(
-        glyph("menu-preview-working", StatusGlyph::Working),
-        "Rate limits", // text: sample (a made-up terminal of the preview)
-    );
-    working.strong = true;
-    working.detail = Some("Working".into()); // text: sample (a made-up terminal of the preview)
-    working.trailing.push(time("4m")); // text: sample (a made-up time of the preview)
-
-    // The menu bar: the clock's side, the item with its dot and count.
-    let bar = style::preview_surface(ui)
-        .flex()
-        .items_center()
-        .justify_end()
-        .gap_4()
-        .h(px(MENU_BAR_H))
-        .px_3()
-        .text_caption()
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap_1()
-                .px_1()
-                .rounded(ui.radius_sm)
-                .bg(ui.hover)
-                .child(div().size(px(ITEM_DOT)).rounded_full().bg(ui.agent_attention))
-                .child(div().font_weight(FontWeight::SEMIBOLD).text_color(ui.text).child("1")), // text: sample (a made-up count)
-        )
-        .child(style::icon(IconName::Search).text_color(ui.muted))
-        .child(div().text_color(ui.text).child("Sun 18:42")); // text: sample (a made-up clock of the preview)
-    let panel = style::palette_surface(ui, true)
-        .w_full()
-        .max_w(px(style::QUICK_PANEL_W))
-        .child(
-            style::palette_search(ui)
-                .child(div().flex_1().text_color(ui.faint).child(text(SETTINGS_MENU_BAR_PREVIEW_SEARCH))),
-        )
-        .child(style::palette_label(ui, text(SETTINGS_MENU_BAR_PREVIEW_NEEDS_INPUT), Some(1)))
-        .child(style::palette_result("menu-preview-needs-row", ui, true, needs))
-        .child(style::palette_label(ui, text(SETTINGS_MENU_BAR_PREVIEW_WORKING), None))
-        .child(style::palette_result("menu-preview-working-row", ui, false, working));
-    let frame = style::preview_frame(ui)
-        .flex()
-        .flex_col()
-        .gap_3()
-        .child(bar)
-        .child(div().flex().justify_end().child(panel));
     card(
         ui,
         Words {
@@ -91,6 +53,6 @@ pub(in crate::settings_window) fn draw_menu_bar_preview(cx: &mut Context<Setting
             spoken: SETTINGS_WINDOW_PREVIEW_MENU_BAR_LABEL,
             caption: SETTINGS_MENU_BAR_PREVIEW_CAPTION,
         },
-        frame,
+        div().child(mock.render(&Look::of(cx))).overflow_hidden(),
     )
 }
