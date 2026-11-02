@@ -37,7 +37,11 @@ pub(crate) use generated::settings_row::SettingsRowProps;
 pub(crate) use generated::sidebar_profile::SidebarProfileProps;
 pub(crate) use generated::solid_chip::SolidChipProps;
 pub(crate) use generated::switch_control::SwitchControlProps;
+pub(crate) use generated::theme_card::{Half, ThemeCardProps};
+pub(crate) use generated::theme_set::ThemeSetProps;
+pub(crate) use generated::themes_block::ThemesBlockProps;
 pub(crate) use generated::tile_row::TileRowProps;
+pub(crate) use generated::window_mock::{Bar, Line, Part, RightPart, WindowMockProps};
 pub(crate) use rule::{Rule, Sides};
 
 /// A click handler in a component's props. A `Rc` because a component's element tree is built again

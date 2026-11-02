@@ -58,7 +58,7 @@ impl SettingsWindow {
         subscriptions.push(cx.on_release(|_, cx| {
             crate::hotkey::pause(false, cx);
         }));
-        let theme_picker = sections::ThemePicker::new(window, cx);
+        let theme_picker = sections::ThemePicker::default();
         let translucent = settings(cx).settings_translucent;
         let blur = Blur::install(window, style::wants_blur(settings(cx), translucent));
         let focus_handle = cx.focus_handle();
@@ -71,7 +71,6 @@ impl SettingsWindow {
                 let alive = this.update_in(cx, |this, window, cx| {
                     this.read_front(cx);
                     this.refresh_known_projects(window, cx);
-                    this.theme_picker.sync_placeholder(window, cx);
                 });
                 if alive.is_err() {
                     break;
@@ -90,6 +89,7 @@ impl SettingsWindow {
             branch_pick,
             specimen: FontSlot::Terminal,
             themes_all: false,
+            themes_separate: None,
             sidebar_preview: None,
             changed_copied: false,
             others_open: false,

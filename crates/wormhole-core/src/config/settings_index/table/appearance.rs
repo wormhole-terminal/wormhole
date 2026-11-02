@@ -17,6 +17,8 @@ pub(super) const APPEARANCE: &[Group] = &[
             entry("theme-mode", SETTINGS_APPEARANCE_THEME_MODE, &["theme_mode"])
                 .with_description(SETTINGS_APPEARANCE_THEME_MODE_DESCRIPTION)
                 .with_keywords(SETTINGS_APPEARANCE_THEME_MODE_KEYWORDS),
+            entry("theme-pairing", SETTINGS_APPEARANCE_THEME_PAIRING, &[])
+                .with_keywords(SETTINGS_APPEARANCE_THEME_PAIRING_KEYWORDS),
             entry("theme", SETTINGS_APPEARANCE_THEME, &["theme", "theme_light", "hidden_themes"])
                 .with_keywords(SETTINGS_APPEARANCE_THEME_KEYWORDS),
         ],

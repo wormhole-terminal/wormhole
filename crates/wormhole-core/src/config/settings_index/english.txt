@@ -340,6 +340,10 @@ entry Appearance theme-mode
   label "Mode"
   description "Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode"
   keywords "dark light system appearance match night day"
+entry Appearance theme-pairing
+  label "Choose"
+  description ""
+  keywords "pair one theme both dark light separately"
 entry Appearance theme
   label "Theme"
   description ""

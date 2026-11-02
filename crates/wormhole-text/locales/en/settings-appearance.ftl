@@ -11,6 +11,13 @@ settings-appearance-preview = Live preview
 
 settings-appearance-group-theme = Theme
 
+settings-appearance-theme-pairing = Choose
+    .keywords = pair one theme both dark light separately
+
+# The two ways to choose themes: a dark and light pair on one card, or a card for each.
+settings-appearance-pairing-both = One theme for both
+settings-appearance-pairing-separate = Dark and light separately
+
 settings-appearance-theme-mode = Mode
     .description = Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode
     .keywords = dark light system appearance match night day
@@ -139,7 +146,7 @@ settings-appearance-project-theme-note = This terminal shows { $project }'s them
 
 ## settings_window/sections/stage.rs (labels, hints and notes drawn by this page's code)
 
-settings-appearance-stage-caption = Live preview: your windows over the desktop, with everything below applied as you change it (the blur behind a window isn't drawn here)
+settings-appearance-stage-caption = Your theme, opacity, blur, glass, dividers, status bar and title row, as one window draws them.
 
 ## settings_window/sections/theme_picker/mod.rs (labels, hints and notes drawn by this page's code)
 

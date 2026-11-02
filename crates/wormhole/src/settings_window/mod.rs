@@ -143,6 +143,9 @@ pub(crate) struct SettingsWindow {
     specimen: FontSlot,
     /// Appearance → every theme, not just the first rows.
     themes_all: bool,
+    /// Appearance → Choose: a card per kind of theme (Some(true)), or pairs (Some(false)); until chosen it
+    /// follows whether the two picks are halves of one pair.
+    themes_separate: Option<bool>,
     /// Terminals & sidebar → the option under the pointer, previewed beside the current look.
     sidebar_preview: Option<SidebarLook>,
     /// Changed → Copy as JSON has just copied: it says Copied for a moment.

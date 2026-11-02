@@ -21,7 +21,7 @@ use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, settings};
 use crate::settings_window::registry::{Current, MenuOption, ProjectSource, Setting, row_label, toggle};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
-use crate::style::{self, Edges};
+use crate::style;
 
 const MODES: &[MenuOption] = &[
     MenuOption::text(SETTINGS_APPEARANCE_MATCH_SYSTEM),
@@ -47,6 +47,7 @@ pub(super) const SETTINGS: &[Setting] = &[
             }
         },
     ),
+    Setting::custom("theme-pairing", draw_pairing),
     Setting::block("theme", draw_theme),
     Setting::custom("primary-color", color_rows::draw_primary)
         .describe(describe_primary)
@@ -207,6 +208,21 @@ fn draw_icon_select(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
     .into_any_element()
 }
 
+/// Choose: one theme for both Dark Mode and Light Mode (a pair), or a theme for each.
+fn draw_pairing(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let separate = window.themes_separate(cx);
+    let words: [SharedString; 2] =
+        [text(SETTINGS_APPEARANCE_PAIRING_BOTH).into(), text(SETTINGS_APPEARANCE_PAIRING_SEPARATE).into()];
+    let current = words[usize::from(separate)].clone();
+    let window = cx.weak_entity();
+    select::menu_select("theme-pairing", ui(cx), row_label("theme-pairing"), current, move |_| {
+        MenuOptions::words(words, Some(usize::from(separate)), move |ix, _, cx| {
+            window.update(cx, |this, cx| this.choose_pairing(ix == 1, cx)).ok();
+        })
+    })
+    .into_any_element()
+}
+
 /// The project's theme notice, the filter and the cards, and the ways to more themes.
 fn draw_theme(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
@@ -214,10 +230,6 @@ fn draw_theme(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
     div()
         .flex()
         .flex_col()
-        .gap_3()
-        .pt_3()
-        .pb_3()
-        .rule_top(ui)
         .children(project.map(|project| {
             let root = project.root.clone();
             style::notice(ui, style::NoticeKind::Info, settings_appearance_project_theme_note(&project.name))
