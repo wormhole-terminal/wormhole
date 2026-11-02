@@ -12,6 +12,7 @@ mod notes;
 pub(crate) mod render;
 mod review;
 mod rows;
+pub(crate) mod sample;
 mod submodule;
 
 #[cfg(test)]

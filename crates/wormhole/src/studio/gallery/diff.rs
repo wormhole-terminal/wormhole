@@ -56,7 +56,7 @@ pub(super) fn render(
                 .child(style::segment("g-diff-split", ui, "Split", true)) // text: sample (the gallery's specimen)
                 .child(style::segment("g-diff-unified", ui, "Unified", false)), // text: sample (the gallery's specimen)
         );
-    let rows = crate::features::git::diff_render::sample(ui, colors, code_family, code_size.into());
+    let rows = crate::features::git::diff::sample::sample(ui, colors, code_family, code_size.into());
     env.mark(
         "diff",
         div()
