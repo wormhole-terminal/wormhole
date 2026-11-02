@@ -169,7 +169,7 @@ fn program_row(ix: usize, row: Approved, now: i64, cx: &mut Context<SettingsWind
     div()
         .flex()
         .flex_col()
-        .child(style::tile_row(SharedString::from(format!("agent-access-{ix}")), ui, parts))
+        .child(style::tile_row(SharedString::from(format!("agent-access-{ix}")), ui, parts, cx))
         .child(div().pb_2().pl(px(style::ROW_TILE + 12.0)).child(switches(ix, which, &row, ui, cx)))
         .into_any_element()
 }

@@ -9,7 +9,6 @@ use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::component::slider::SliderEvent;
 use gpui_kit::component::tooltip::Tooltip;
@@ -25,6 +24,7 @@ use crate::settings::{SettingsStore, update_settings};
 use crate::settings::{UiColors, settings};
 use crate::style::TitleDrag as _;
 use crate::style::{self, TextRole};
+use crate::ui::{Look, PageTitleProps};
 
 use super::open::REVEAL_INSET;
 use super::{
@@ -292,7 +292,13 @@ impl SettingsWindow {
         ui: UiColors,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let (title, intro): (SharedString, SharedString) = if self.show_results {
+        let title: SharedString = if self.show_results {
+            text(SETTINGS_WINDOW_RESULTS).into()
+        } else {
+            self.section.title().into()
+        };
+        // The design has no sentence under a title; in a search the count says what was found.
+        let found = self.show_results.then(|| {
             let sections = settings_index::search_visible(query, settings(cx))
                 .iter()
                 .map(|hit| hit.section)
@@ -302,18 +308,11 @@ impl SettingsWindow {
                 0 => text(SETTINGS_WINDOW_NO_RESULTS).to_string(),
                 _ => settings_window_results_summary(whole(hits), whole(sections), &query.text()),
             };
-            (text(SETTINGS_WINDOW_RESULTS).into(), intro.into())
-        } else {
-            (self.section.title().into(), self.section.info().intro().into())
-        };
-        let action = if self.show_results {
-            Some(
-                style::key_hint(ui, "esc", text(SETTINGS_WINDOW_CLEARS_THE_SEARCH_THEN_CLOSES))
-                    .into_any_element(),
-            )
-        } else {
-            self.header_action(cx)
-        };
+            div().max_w(px(INTRO_W)).text_body().text_color(ui.muted).child(SharedString::from(intro))
+        });
+        let action = self.show_results.then(|| {
+            style::key_hint(ui, "esc", text(SETTINGS_WINDOW_CLEARS_THE_SEARCH_THEN_CLOSES)).into_any_element()
+        });
         let badge = (!self.show_results && self.section.is_preview()).then(|| self.preview_badge(ui, cx));
         div()
             .flex()
@@ -326,23 +325,17 @@ impl SettingsWindow {
                     .justify_between()
                     .gap_4()
                     .h(px(style::TITLE_ROW_H))
-                    .child(match badge {
-                        // A page that isn't finished says so beside its title; every other page's title is
-                        // as it was, with no row around it.
-                        Some(badge) => div()
+                    .child(
+                        div()
                             .flex()
                             .items_center()
-                            .gap_3()
-                            .child(div().text_title().font_weight(FontWeight::BOLD).child(title))
-                            .child(badge)
-                            .into_any_element(),
-                        None => {
-                            div().text_title().font_weight(FontWeight::BOLD).child(title).into_any_element()
-                        }
-                    })
+                            .gap(px(10.0))
+                            .child(PageTitleProps { title, badge: None }.render(&Look::of(cx)))
+                            .children(badge),
+                    )
                     .children(action),
             )
-            .child(div().max_w(px(INTRO_W)).text_body().text_color(ui.muted).child(intro))
+            .children(found)
             .into_any_element()
     }
 }
@@ -448,7 +441,8 @@ impl SettingsWindow {
         let badge = style::solid_chip(ui, style::ChipKind::Info, text(SETTINGS_NAV_PREVIEW));
         let Some(flag) = self.section.feature_flag() else { return badge.into_any_element() };
         let note = SharedString::from(settings_window_preview_feature_note(flag.key()));
-        badge
+        div()
+            .child(badge)
             .id("preview-open-flags")
             .role(gpui_kit::accesskit::Role::Button)
             .aria_label(note.clone())
@@ -546,7 +540,6 @@ impl SettingsWindow {
                     .child(
                         style::form_button("no-results-config")
                             .outline()
-                            .icon(IconName::CodeXml)
                             .label(text(SETTINGS_WINDOW_OPEN_CONFIG_JSON))
                             .on_click(|_, _, _| sections::open_in_editor(&SettingsStore::config_path())),
                     )

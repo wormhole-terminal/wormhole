@@ -12,7 +12,6 @@ use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::progress::Progress;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -343,7 +342,7 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
     div()
         .flex()
         .flex_col()
-        .child(style::tile_row("update-status-row", ui, parts))
+        .child(style::tile_row("update-status-row", ui, parts, cx))
         .children(
             channel_note.map(|note| {
                 div().py_3().rule_top(ui).child(style::notice(ui, style::NoticeKind::Info, note))

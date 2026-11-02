@@ -15,7 +15,6 @@ use wormhole_text::text;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::ipc::control::COMMAND_NAME;

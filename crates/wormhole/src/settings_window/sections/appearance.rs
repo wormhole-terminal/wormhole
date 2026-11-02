@@ -4,7 +4,6 @@
 //! Transparency the opacity slider is off and says why; with the blur off below 95 % the
 //! blur's row warns.
 
-use gpui_kit::assets::IconName;
 use gpui_kit::component::slider::Slider;
 use gpui_kit::*;
 use wormhole_core::config::ThemeMode;
@@ -71,12 +70,9 @@ pub(super) const SETTINGS: &[Setting] = &[
         .default_words(title_row::default_parts),
     Setting::custom("icon-theme", draw_icon_select),
     Setting::custom("icon-themes-folder", |_, _| {
-        open_button(
-            "icon-themes-folder",
-            IconName::ExternalLink,
-            text(SETTINGS_APPEARANCE_OPEN_FOLDER),
-            |cx| open_folder(&crate::icons::user_dir(), cx),
-        )
+        open_button("icon-themes-folder", text(SETTINGS_APPEARANCE_OPEN_FOLDER), |cx| {
+            open_folder(&crate::icons::user_dir(), cx)
+        })
     }),
 ];
 

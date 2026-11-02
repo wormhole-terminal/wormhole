@@ -13,31 +13,22 @@ use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 
 use super::how;
-use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, TextRole};
+use crate::settings_window::SettingsWindow;
+use crate::style;
 
 pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let ui = ui(cx);
     let open = window.status_open;
-    let line = div()
-        .flex()
-        .flex_wrap()
-        .items_center()
-        .gap_x_4()
-        .pt_3()
-        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_AGENTS_FOOTER_LINE)))
-        .child(
-            style::link_button("open-notifications", ui, text(SETTINGS_AGENTS_OPEN_NOTIFICATIONS), true)
-                .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::Notifications, cx))),
+    let line = style::footer(text(SETTINGS_AGENTS_FOOTER_LINE))
+        .link(
+            text(SETTINGS_AGENTS_OPEN_NOTIFICATIONS),
+            cx.listener(|this, _, _, cx| this.show_section(Section::Notifications, cx)),
         )
-        .child(
-            style::link_button("how-status-works", ui, text(SETTINGS_AGENTS_HOW_STATUS_WORKS), false)
-                .role(gpui_kit::accesskit::Role::Button)
-                .aria_expanded(open)
-                .on_click(cx.listener(|this, _, _, cx| {
-                    this.status_open = !this.status_open;
-                    cx.notify();
-                })),
+        .link(
+            text(SETTINGS_AGENTS_HOW_STATUS_WORKS),
+            cx.listener(|this, _, _, cx| {
+                this.status_open = !this.status_open;
+                cx.notify();
+            }),
         );
-    div().flex().flex_col().child(line).children(open.then(|| how::draw(cx))).into_any_element()
+    div().flex().flex_col().pt_3().child(line).children(open.then(|| how::draw(cx))).into_any_element()
 }

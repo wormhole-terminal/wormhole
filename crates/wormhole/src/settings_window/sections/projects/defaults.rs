@@ -3,7 +3,6 @@
 use std::path::PathBuf;
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::project::Feature;
@@ -51,7 +50,7 @@ impl SettingsWindow {
         div()
             .flex()
             .flex_col()
-            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_PROJECTS), None))
+            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_PROJECTS)))
             .child(style::group_card(ui, rows))
             .into_any_element()
     }
@@ -59,11 +58,7 @@ impl SettingsWindow {
     /// The trusted projects, a tile row each, with the ways into a project's page and out of its trust.
     pub(super) fn trusted_group(&self, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
-        let head = style::setting_group_head(
-            ui,
-            text(SETTINGS_PROJECTS_TRUSTED_PROJECTS),
-            Some(text(SETTINGS_PROJECTS_PROJECTS_ALLOWED_TO_RUN_COMMANDS)),
-        );
+        let head = style::setting_group_head(ui, text(SETTINGS_PROJECTS_TRUSTED_PROJECTS));
         let mut trusted = div().flex().flex_col().child(head);
         let list: Vec<PathBuf> = project::api::trusted_roots(cx);
         let mut rows = Vec::new();
@@ -104,7 +99,7 @@ impl SettingsWindow {
                     }))
                     .into_any_element(),
             ];
-            rows.push(style::tile_row(("trusted-project", ix), ui, parts).into_any_element());
+            rows.push(style::tile_row(("trusted-project", ix), ui, parts, cx).into_any_element());
         }
         if !rows.is_empty() {
             trusted = trusted.child(style::group_card(ui, rows));

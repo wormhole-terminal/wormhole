@@ -15,6 +15,7 @@ use gpui_kit::*;
 use super::controls::{RingPlacement, focus_ring};
 use super::scale::{Edges, HIT_MIN, TextRole};
 use crate::settings::UiColors;
+use crate::ui::CheckboxControlProps;
 
 /// The box in a panel's lead column and in a form.
 const BOX: f32 = 14.0;
@@ -83,8 +84,11 @@ impl Checkbox {
 }
 
 impl RenderOnce for Checkbox {
-    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let Checkbox { id, ui, checked, form, label, spoken, on_change, ring } = self;
+        if form && !ring {
+            return form_checkbox(id, ui, checked, label, spoken, on_change, cx);
+        }
         let (side, mark) = if form { (BOX_FORM, MARK_FORM) } else { (BOX, MARK) };
         let indicator = CheckboxIndicator::new()
             .checked(checked)
@@ -140,6 +144,44 @@ impl RenderOnce for Checkbox {
             }
         }
     }
+}
+
+/// A form's checkbox with its label: the `CheckboxControl` component (16 pt, the outline kept whatever Borders
+/// says) and the label, which takes the clicks too.
+fn form_checkbox(
+    id: ElementId,
+    ui: UiColors,
+    checked: bool,
+    label: Option<SharedString>,
+    spoken: Option<SharedString>,
+    on_change: Option<OnChange>,
+    cx: &App,
+) -> AnyElement {
+    let flip: Option<crate::ui::Handler> = on_change.map(|on_change| -> crate::ui::Handler {
+        Rc::new(move |_, window, cx| {
+            cx.stop_propagation();
+            on_change(!checked, window, cx);
+        })
+    });
+    let said = label.clone().or(spoken).unwrap_or_default();
+    let boxed = CheckboxControlProps { id, label: said, on: checked, on_click: flip.clone() }
+        .render(&crate::ui::Look::of(cx));
+    div()
+        .flex()
+        .flex_none()
+        .items_center()
+        .gap_2()
+        .child(boxed)
+        .children(label.map(|label| {
+            div()
+                .id("checkbox-label")
+                .text_body()
+                .text_color(ui.text)
+                .cursor_pointer()
+                .child(label)
+                .when_some(flip, |d, flip| d.on_click(move |event, window, cx| flip(event, window, cx)))
+        }))
+        .into_any_element()
 }
 
 #[cfg(all(test, feature = "devctl"))]

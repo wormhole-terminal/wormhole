@@ -12,7 +12,7 @@ pub const SETTINGS_WINDOW_RESCAN_PATH: Key = Key::new(1316);
 pub const SETTINGS_WINDOW_NEW_PROFILE: Key = Key::new(1317);
 /// "Import theme"
 pub const SETTINGS_WINDOW_IMPORT_THEME: Key = Key::new(1318);
-/// "Search settings"
+/// "Search"
 pub const SETTINGS_WINDOW_SEARCH_SETTINGS: Key = Key::new(1319);
 /// "No setting has these words in its name, description or config key."
 pub const SETTINGS_WINDOW_NO_RESULTS: Key = Key::new(1320);

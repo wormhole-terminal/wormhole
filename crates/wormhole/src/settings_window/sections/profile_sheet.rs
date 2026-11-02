@@ -2,7 +2,6 @@
 //! settings window, opened from the Profile page, the File menu and the command palette. Create
 //! makes the profile and switches Wormhole to it.
 
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::*;
 use wormhole_core::config::profile::{NewProfile, StartFrom, first_letter};
@@ -113,7 +112,7 @@ impl SettingsWindow {
                     .child(style::profile_avatar(ui, color, letter, PREVIEW_AVATAR))
                     .child(div().flex_1().child(Input::new(&sheet.name))),
             )
-            .child(style::setting_group_head(ui, text(SETTINGS_PROFILE_START_FROM), None))
+            .child(style::setting_group_head(ui, text(SETTINGS_PROFILE_START_FROM)))
             .child(div().flex().flex_col().children(sheet.options.iter().enumerate().map(
                 |(ix, (label, _))| {
                     style::choice_row(("new-profile-from", ix), ui, label.clone(), ix == sheet.chosen)

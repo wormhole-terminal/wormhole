@@ -10,7 +10,6 @@
 use std::time::Duration;
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::button::ButtonVariants as _;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, ChangedRow, SectionId as Section, Values};
@@ -67,7 +66,7 @@ impl SettingsWindow {
                 div()
                     .flex()
                     .flex_col()
-                    .child(style::setting_group_head(ui, section.title(), None))
+                    .child(style::setting_group_head(ui, section.title()))
                     .child(style::group_card(ui, list)),
             );
             start = end;
@@ -88,7 +87,6 @@ impl SettingsWindow {
             parts.controls = vec![
                 style::form_button("changed-copy")
                     .outline()
-                    .icon(IconName::Copy)
                     .label(if self.changed_copied {
                         text(SETTINGS_CHANGED_COPIED)
                     } else {
@@ -105,7 +103,7 @@ impl SettingsWindow {
             ];
             parts
         };
-        style::group_card(ui, [style::tile_row("changed-summary", ui, parts).into_any_element()])
+        style::group_card(ui, [style::tile_row("changed-summary", ui, parts, cx).into_any_element()])
             .into_any_element()
     }
 

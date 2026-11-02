@@ -40,7 +40,6 @@ pub(super) const APPEARANCE: &[Group] = &[
                 .with_keywords(SETTINGS_APPEARANCE_OPACITY_KEYWORDS),
             entry("blur", SETTINGS_APPEARANCE_BLUR, &["blur"])
                 .with_description(SETTINGS_APPEARANCE_BLUR_DESCRIPTION)
-                .with_visible_hint()
                 .with_keywords(SETTINGS_APPEARANCE_BLUR_KEYWORDS),
             // Before macOS 26 there is no glass to turn on, so the row isn't there.
             entry("liquid-glass", SETTINGS_APPEARANCE_LIQUID_GLASS, &["liquid_glass"])
@@ -84,7 +83,6 @@ pub(super) const APPEARANCE: &[Group] = &[
         &[
             entry("icon-theme", SETTINGS_APPEARANCE_ICON_THEME, &["icon_theme"])
                 .with_description(SETTINGS_APPEARANCE_ICON_THEME_DESCRIPTION)
-                .with_visible_hint()
                 .with_keywords(SETTINGS_APPEARANCE_ICON_THEME_KEYWORDS),
             entry("icon-themes-folder", SETTINGS_APPEARANCE_ICON_THEMES_FOLDER, &[])
                 .with_description(SETTINGS_APPEARANCE_ICON_THEMES_FOLDER_DESCRIPTION)
@@ -107,7 +105,6 @@ pub(super) const FONTS: &[Group] = &[
                 .with_keywords(SETTINGS_FONTS_LINE_HEIGHT_KEYWORDS),
             entry("font-ligatures", SETTINGS_FONTS_FONT_LIGATURES, &["font_ligatures"])
                 .with_description(SETTINGS_FONTS_FONT_LIGATURES_DESCRIPTION)
-                .with_visible_hint()
                 .with_keywords(SETTINGS_FONTS_FONT_LIGATURES_KEYWORDS),
         ],
     ),
@@ -115,7 +112,6 @@ pub(super) const FONTS: &[Group] = &[
         SETTINGS_APPEARANCE_GROUP_CODE,
         &[entry("font-code", SETTINGS_FONTS_FONT_CODE, &["code_font_family", "code_font_size"])
             .with_description(SETTINGS_FONTS_FONT_CODE_DESCRIPTION)
-            .with_visible_hint()
             .with_keywords(SETTINGS_FONTS_FONT_CODE_KEYWORDS)],
     )
     .with_aside(SETTINGS_APPEARANCE_GROUP_CODE_ASIDE),
@@ -123,7 +119,6 @@ pub(super) const FONTS: &[Group] = &[
         SETTINGS_APPEARANCE_GROUP_INTERFACE,
         &[entry("font-interface", SETTINGS_FONTS_FONT_INTERFACE, &["ui_font_family", "ui_font_size"])
             .with_description(SETTINGS_FONTS_FONT_INTERFACE_DESCRIPTION)
-            .with_visible_hint()
             .with_keywords(SETTINGS_FONTS_FONT_INTERFACE_KEYWORDS)],
     ),
     group(

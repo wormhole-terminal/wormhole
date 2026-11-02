@@ -7,7 +7,6 @@
 //! black and the hues round the wheel), not the theme's: they say what each place would pick.
 
 use gpui_kit::accesskit::Role;
-use gpui_kit::component::button::ButtonVariants as _;
 use gpui_kit::component::input::Input;
 use gpui_kit::component::{ElementExt as _, Sizable as _};
 use gpui_kit::prelude::*;

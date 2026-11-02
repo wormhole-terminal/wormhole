@@ -17,13 +17,12 @@
 use std::rc::Rc;
 
 use gpui_kit::accesskit::Role;
-use gpui_kit::component::Selectable as _;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::{SelectTrigger, menu_bg, menu_shadow, option};
 use crate::settings::UiColors;
-use crate::style::{Edges as _, OpenOne, TextRole as _};
+use crate::style::{Edges as _, OpenOne};
+use crate::ui::{Handler, Look, MenuFaceProps, MenuItemProps, MenuPanelProps};
 
 /// Marks the menu controls' [`OpenOne`].
 struct Menu;
@@ -151,17 +150,8 @@ impl<B: FnOnce(&mut App) -> MenuOptions + 'static> RenderOnce for MenuSelect<B> 
         let this_window = window.window_handle().window_id();
         let open = Open::is_open(this_window, &row, cx);
         let (on_press, on_down) = (row.clone(), row.clone());
-        let face = match leading {
-            Some(icon) => div()
-                .flex()
-                .items_center()
-                .gap_2()
-                .child(icon)
-                .child(div().min_w_0().truncate().child(value.clone()))
-                .into_any_element(),
-            None => value.clone().into_any_element(),
-        };
-        let face = SelectTrigger::new("face", ui, face).selected(open);
+        let face = MenuFaceProps { value: value.clone(), lead: leading, open, disabled: false }
+            .render(&Look::of(cx));
         div()
             // Scoped by its row's id, so one name does for all.
             .id("menu-select")
@@ -263,9 +253,11 @@ impl Keys {
     }
 }
 
-/// The menu, under the control's right edge and kept inside the window.
+/// The menu, under the control's right edge and kept inside the window: the `MenuPanel` component with a
+/// `MenuItem` for each option, and the pointer's and keyboard's behaviour added to them.
 #[track_caller]
 fn card(ui: UiColors, row: ElementId, menu: MenuOptions, at: usize, cx: &App) -> Div {
+    let look = Look::of(cx);
     let MenuOptions { items, current, on_pick, on_hover } = menu;
     let mut was_action = false;
     let mut rows = Vec::with_capacity(items.len() + 1);
@@ -277,53 +269,49 @@ fn card(ui: UiColors, row: ElementId, menu: MenuOptions, at: usize, cx: &App) ->
         was_action = action;
         let (pick, hover) = (on_pick.clone(), on_hover.clone());
         let chosen = current == Some(ix) && !action;
+        let click: Handler = Rc::new(move |_, window, cx| {
+            pick(ix, window, cx);
+            Open::close(window, cx);
+        });
         rows.push(
-            option(("option", ix), ui, chosen, false)
-                .role(Role::ListBoxOption)
-                .aria_label(label.clone())
-                .aria_selected(chosen)
-                .when(ix == at, |d| {
-                    // The option the keyboard is on is the one the control's focus describes.
-                    d.bg(ui.hover).aria_active_descendant()
-                })
-                .children(icon)
-                .child(
-                    div().flex_1().min_w_0().flex().flex_col().child(div().truncate().child(label)).children(
-                        detail.map(|d| div().truncate().text_caption().text_color(ui.muted).child(d)),
-                    ),
-                )
-                .on_hover(move |hovered, window, cx| {
-                    if let Some(hover) = &hover {
-                        hover((*hovered).then_some(ix), window, cx);
-                    }
-                })
-                .on_click(move |_, window, cx| {
-                    pick(ix, window, cx);
-                    Open::close(window, cx);
-                })
-                .into_any_element(),
+            MenuItemProps {
+                id: ElementId::from(("option", ix)),
+                name: label,
+                hint: detail,
+                lead: icon,
+                chosen,
+                active: ix == at,
+                muted: action,
+                destructive: false,
+                on_click: Some(click),
+            }
+            .render(&look)
+            // The option the keyboard is on is the one the control's focus describes.
+            .when(ix == at, |d| d.aria_active_descendant())
+            .on_hover(move |hovered, window, cx| {
+                if let Some(hover) = &hover {
+                    hover((*hovered).then_some(ix), window, cx);
+                }
+            })
+            .into_any_element(),
         );
     }
     let dismissed = row;
-    let list = div()
-        .id("menu-select-card")
-        .role(Role::ListBox)
-        // Over the page: it takes the pointer, the clicks and the wheel from it.
-        .occlude()
-        .flex()
-        .flex_col()
-        .p_1()
-        .max_w(px(CARD_MAX_W))
-        .max_h(px(CARD_MAX_H))
-        .overflow_y_scroll()
-        .rounded(ui.radius_lg)
-        .bg(menu_bg(ui, cx))
-        .shadow(menu_shadow(ui))
-        .cursor(CursorStyle::Arrow)
-        .on_mouse_down_out(move |event, window, cx| {
-            Open::dismissed_outside(&dismissed, event.position, window, cx);
-        })
-        .children(rows);
+    let list = MenuPanelProps {
+        id: ElementId::from("menu-select-card"),
+        label: SharedString::default(),
+        rows: div().flex().flex_col().children(rows).into_any_element(),
+    }
+    .render(&look)
+    // Over the page: it takes the pointer, the clicks and the wheel from it.
+    .occlude()
+    .max_w(px(CARD_MAX_W))
+    .max_h(px(CARD_MAX_H))
+    .overflow_y_scroll()
+    .cursor(CursorStyle::Arrow)
+    .on_mouse_down_out(move |event, window, cx| {
+        Open::dismissed_outside(&dismissed, event.position, window, cx);
+    });
     // The holder gives the anchor a corner to hang from: below the control, at its right edge.
     div().absolute().top(px(crate::style::CONTROL_H + GAP)).right_0().child(
         deferred(anchored().anchor(Anchor::TopRight).snap_to_window_with_margin(px(EDGE)).child(list))

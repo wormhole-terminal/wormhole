@@ -5,7 +5,8 @@
 use gpui_kit::*;
 
 use crate::settings::UiColors;
-use crate::style::{self, Edges, TextRole};
+use crate::style::Edges;
+use crate::ui::{Look, PreviewFrameProps};
 
 /// What a preview card says around its picture, all of it words from the catalogs.
 #[derive(Clone, Copy)]
@@ -23,36 +24,48 @@ pub struct PreviewCard<'a> {
 }
 
 /// A page's preview as a card: the label and what is previewed above `frame` (a [`preview_frame`] holding
-/// the miniature), the caption under it. One group for VoiceOver, named by `spoken`; the picture
-/// holds nothing to operate, so the card takes no focus of its own.
-#[track_caller]
-pub fn preview_card(ui: UiColors, card: PreviewCard<'_>, frame: Div) -> Stateful<Div> {
-    div()
-        .id(card.id)
-        .role(Role::Group)
-        .aria_label(SharedString::from(card.spoken.to_owned()))
-        .w_full()
-        .flex()
-        .flex_col()
-        .gap_2()
-        .child(
-            div()
-                .flex_none()
-                .flex()
-                .items_center()
-                .h(px(style::CONTROL_H))
-                .child(style::section_label(ui, card.label))
-                .child(div().ml_2().text_caption().text_color(ui.faint).child(format!("· {}", card.what))),
-        )
-        .child(frame)
-        .child(div().text_caption().text_color(ui.muted).child(SharedString::from(card.caption.to_owned())))
+/// the miniature), the caption under it. Drawn by the `PreviewFrame` component. One group for
+/// VoiceOver, named by `spoken`; the picture holds nothing to operate, so the card takes no focus.
+#[derive(IntoElement)]
+pub struct PreviewCardView {
+    id: &'static str,
+    label: SharedString,
+    what: SharedString,
+    spoken: SharedString,
+    caption: SharedString,
+    frame: AnyElement,
 }
 
-/// The box a preview stands in: on the window's background, with the room round it a card has.
-/// Clips what moves inside it, so a row sliding past the edge is cut there.
+pub fn preview_card(_: UiColors, card: PreviewCard<'_>, frame: Div) -> PreviewCardView {
+    PreviewCardView {
+        id: card.id,
+        label: card.label.to_uppercase().into(),
+        what: card.what.to_owned().into(),
+        spoken: card.spoken.to_owned().into(),
+        caption: card.caption.to_owned().into(),
+        frame: frame.into_any_element(),
+    }
+}
+
+impl RenderOnce for PreviewCardView {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        PreviewFrameProps {
+            id: ElementId::from(self.id),
+            spoken: self.spoken,
+            label: self.label,
+            what: self.what,
+            caption: self.caption,
+            picture: self.frame,
+        }
+        .render(&Look::of(cx))
+    }
+}
+
+/// The picture area of a preview card: the panel's shade comes from the card, so this holds the
+/// miniature with the room round it the pictures have, and clips what moves inside it.
 #[track_caller]
-pub fn preview_frame(ui: UiColors) -> Div {
-    div().p_4().rounded(ui.radius_lg).outlined(ui, ui.border).bg(ui.background).overflow_hidden()
+pub fn preview_frame(_: UiColors) -> Div {
+    div().p(px(12.0)).overflow_hidden()
 }
 
 /// The sidebar's panel as a preview draws it on its own: the surface a list stands on, with the corner

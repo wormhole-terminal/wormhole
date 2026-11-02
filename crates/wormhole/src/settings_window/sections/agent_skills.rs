@@ -16,7 +16,6 @@ use wormhole_text::text;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::skill::{self, State, Target};
@@ -182,7 +181,7 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     div()
         .flex()
         .flex_col()
-        .child(style::tile_row(SharedString::from(format!("agent-skill-{word}")), ui, parts))
+        .child(style::tile_row(SharedString::from(format!("agent-skill-{word}")), ui, parts, cx))
         .children(problem)
         .into_any_element()
 }
@@ -193,7 +192,6 @@ fn draw_mcp(_: &SettingsWindow, _: &mut Context<SettingsWindow>) -> AnyElement {
     let copy = mcp_add_command();
     style::form_button("agent-mcp-copy")
         .outline()
-        .icon(IconName::Copy)
         .label(text(SETTINGS_AGENTS_COPY_COMMAND))
         .on_click(move |_, _, cx| crate::platform::clipboard::write(copy.clone(), cx))
         .into_any_element()

@@ -9,7 +9,6 @@
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::ipc::control::COMMAND_NAME;
@@ -214,7 +213,7 @@ fn draw_probes(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
                     .flex()
                     .flex_col()
                     .child(style::group_card(ui, rows))
-                    .child(footer(ui, cx))
+                    .child(footer(cx))
                     .into_any_element()
             };
             let Some(problem) = key_problem else { return rows };
@@ -254,7 +253,6 @@ fn empty(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
             actions: vec![
                 style::form_button("probes-show-folder")
                     .outline()
-                    .icon(IconName::FolderOpen)
                     .label(text(SETTINGS_EXTENSIONS_SHOW_FOLDER))
                     .on_click(
                         cx.listener(move |_, _, _, cx| crate::settings_window::open_folder(&to_open, cx)),
@@ -262,7 +260,6 @@ fn empty(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
                     .into_any_element(),
                 style::form_button("probes-refresh")
                     .outline()
-                    .icon(IconName::RefreshCw)
                     .label(text(SETTINGS_EXTENSIONS_SCAN_AGAIN))
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.scan_probes(cx);
@@ -359,31 +356,27 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
         .into_iter()
         .flatten()
         .collect();
-    style::tile_row(id, ui, parts).into_any_element()
+    style::tile_row(id, ui, parts, cx).into_any_element()
 }
 
 /// The line under the list: where Probes live, and the two things to do about the folder.
-fn footer(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
+fn footer(cx: &mut Context<SettingsWindow>) -> AnyElement {
     let folder = DataRoot::current().probes_dir();
     div()
-        .flex()
-        .flex_wrap()
-        .items_center()
-        .gap_x_4()
         .pt_3()
-        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_EXTENSIONS_FOOTER)))
         .child(
-            style::link_button("probes-show-folder", ui, text(SETTINGS_EXTENSIONS_SHOW_FOLDER), false)
-                .on_click(cx.listener(move |_, _, _, cx| crate::settings_window::open_folder(&folder, cx))),
-        )
-        .child(
-            style::link_button("probes-refresh", ui, text(SETTINGS_EXTENSIONS_SCAN_AGAIN), false)
-                .role(gpui_kit::accesskit::Role::Button)
-                .aria_label(text(SETTINGS_EXTENSIONS_REFRESH))
-                .on_click(cx.listener(|this, _, _, cx| {
-                    this.scan_probes(cx);
-                    cx.notify();
-                })),
+            style::footer(text(SETTINGS_EXTENSIONS_FOOTER))
+                .link(
+                    text(SETTINGS_EXTENSIONS_SHOW_FOLDER),
+                    cx.listener(move |_, _, _, cx| crate::settings_window::open_folder(&folder, cx)),
+                )
+                .link(
+                    text(SETTINGS_EXTENSIONS_SCAN_AGAIN),
+                    cx.listener(|this, _, _, cx| {
+                        this.scan_probes(cx);
+                        cx.notify();
+                    }),
+                ),
         )
         .into_any_element()
 }

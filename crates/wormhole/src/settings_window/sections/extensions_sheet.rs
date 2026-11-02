@@ -9,7 +9,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::{Disableable as _, Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -314,7 +313,6 @@ impl SettingsWindow {
             } else {
                 text(SETTINGS_EXTENSIONS_ASKS_FOR)
             },
-            None,
         ));
         let mut list = div().flex().flex_col();
         for (ix, permission) in summary.permissions.iter().enumerate() {
@@ -323,7 +321,7 @@ impl SettingsWindow {
         body = body.child(list);
         if !summary.combinations.is_empty() {
             body = body
-                .child(style::setting_group_head(ui, text(SETTINGS_EXTENSIONS_COMBINATIONS), None))
+                .child(style::setting_group_head(ui, text(SETTINGS_EXTENSIONS_COMBINATIONS)))
                 .children(summary.combinations.iter().map(|combination| {
                     style::notice(
                         ui,
@@ -453,7 +451,7 @@ fn changes_block(ui: crate::settings::UiColors, changes: &Changes) -> Div {
         .flex()
         .flex_col()
         .gap_1()
-        .child(style::setting_group_head(ui, text(SETTINGS_EXTENSIONS_SINCE), None))
+        .child(style::setting_group_head(ui, text(SETTINGS_EXTENSIONS_SINCE)))
         .child(style::notice(ui, style::NoticeKind::Warning, lines.join("\n")))
 }
 

@@ -16,11 +16,10 @@ use super::scale::{
 };
 use crate::settings::UiColors;
 
-/// A text button in a form or a Settings row: GPUI Kit's small button made [`CONTROL_H`] tall, so it
-/// stands level with the menus and fields beside it. Pick its kind as usual (`.primary()`,
-/// `.outline()`, `.ghost()`, `.danger()`) and add the label and `.on_click(…)`.
+/// An icon-only button in a Settings row (a folder chooser, a remove ×): GPUI Kit's small button made
+/// [`CONTROL_H`] tall. A button with words is a [`super::form_button`].
 #[track_caller]
-pub fn form_button(id: impl Into<ElementId>) -> Button {
+pub fn form_icon_button(id: impl Into<ElementId>) -> Button {
     Button::new(id).small().h(px(CONTROL_H))
 }
 

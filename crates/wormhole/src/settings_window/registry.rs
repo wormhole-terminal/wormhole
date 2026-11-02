@@ -380,17 +380,14 @@ impl SettingsWindow {
             .children(super::sections::page_notice(section, cx));
         for (at, group) in section.groups().iter().enumerate() {
             // Each group is where its sub-row in the nav scrolls to: only the picked one carries the anchor.
-            let mut rows =
-                div().id(("settings-group", at)).flex().flex_col().anchor_scroll(self.group.anchor_of(at));
+            let mut rows = div()
+                .id(("settings-group", at))
+                .flex()
+                .flex_col()
+                .gap_2()
+                .anchor_scroll(self.group.anchor_of(at));
             if !group.title().is_empty() {
-                rows = rows.child(style::setting_group_head(
-                    page.ui,
-                    group.title(),
-                    (!group.aside().is_empty()).then_some(group.aside()),
-                ));
-            }
-            if !group.blurb().is_empty() {
-                rows = rows.child(div().pb_2().text_body().text_color(page.ui.muted).child(group.blurb()));
+                rows = rows.child(style::setting_group_head(page.ui, group.title()));
             }
             // The rows of a group share one card; a block that stands on its own (a preview, a notice) is
             // drawn as it is and closes the card, so the rows after it start another.
@@ -428,7 +425,7 @@ impl SettingsWindow {
                 None => rows.into_any_element(),
             });
         }
-        column.into_any_element()
+        column.children(self.page_footer(cx)).into_any_element()
     }
 
     /// The control of `entry` if the page draws its row: shown for these settings (not behind a feature

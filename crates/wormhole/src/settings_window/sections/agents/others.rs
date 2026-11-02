@@ -29,6 +29,7 @@ pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
         text(SETTINGS_AGENTS_OTHER),
         Some(whole(others.len()).to_string().into()),
         open,
+        cx,
     )
     .on_click(cx.listener(|this, _, _, cx| {
         this.others_open = !this.others_open;
@@ -39,13 +40,15 @@ pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
         .flex_col()
         .child(head)
         .children(
-            open.then(|| div().flex().flex_col().children(others.into_iter().map(|row| other_row(ui, row)))),
+            open.then(|| {
+                div().flex().flex_col().children(others.into_iter().map(|row| other_row(ui, row, cx)))
+            }),
         )
         .into_any_element()
 }
 
 /// One agent that isn't on PATH: its name, and that it isn't, with what its status would come from.
-fn other_row(ui: crate::settings::UiColors, row: &AgentRow) -> AnyElement {
+fn other_row(ui: crate::settings::UiColors, row: &AgentRow, cx: &App) -> AnyElement {
     let status = text(if row.spec.is_some() {
         SETTINGS_AGENTS_STATUS_HOOKS_AVAILABLE
     } else {
@@ -53,6 +56,6 @@ fn other_row(ui: crate::settings::UiColors, row: &AgentRow) -> AnyElement {
     });
     let mut parts = style::TileRowParts::new(style::RowTile::Agent(row.agent.id), row.agent.name);
     parts.hint = Some(format!("{} · {status}", text(SETTINGS_AGENTS_NOT_ON_PATH)).into());
-    style::tile_row(SharedString::from(format!("agent-other-{:?}", row.agent.id)), ui, parts)
+    style::tile_row(SharedString::from(format!("agent-other-{:?}", row.agent.id)), ui, parts, cx)
         .into_any_element()
 }

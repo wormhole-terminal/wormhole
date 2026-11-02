@@ -11,6 +11,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Help → Session Hosts (while Persistent terminals is on) opens a window that shows every session host:
   its processes, version and protocol against the app's, whether it answers, which terminal holds it
   and how that connection is doing, with End, Forget and a copy of the details for a bug report.
+- Settings buttons, switches, chips, notices, menus, group headings, tile rows, rows that open more, the preview
+  card and the footer lines are drawn from the design's markup: three button styles (normal, primary, destructive)
+  with no icons, a 34 by 20 switch, an open menu with 24 point rows filled with the primary, a profile row with
+  up-down chevrons, and the Preview badge in the primary. The page's sentence under its title, the "Settings" title
+  over the sidebar and the Preview dots are gone, and Rescan PATH, Scan again and New profile sit on their page's
+  last line.
 - The Settings sidebar and rows are drawn from the design's own markup, so their sizes match it: a 240 wide
   sidebar with 24 high sub-rows, rows 40 high with a 13 px label, the changed dot before the label, and the
   config key, reset arrow and (i) at the design's sizes.

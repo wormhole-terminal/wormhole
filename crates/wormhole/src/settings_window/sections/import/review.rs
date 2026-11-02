@@ -3,7 +3,6 @@
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::import::{Found, Proposed, Setting, SettingValue, Source, command_line, visible};
@@ -34,7 +33,7 @@ impl SettingsWindow {
         let (code_font, _) = crate::fonts::code_font(cx);
 
         let mut column = div().flex().flex_col().gap_2();
-        column = column.child(style::setting_group_head(ui, text(SETTINGS_IMPORT_TAKE), None));
+        column = column.child(style::setting_group_head(ui, text(SETTINGS_IMPORT_TAKE)));
         if proposal.values.is_empty() {
             column = column
                 .child(div().text_body().text_color(ui.muted).child(text(SETTINGS_IMPORT_NOTHING_TO_TAKE)));
@@ -45,7 +44,7 @@ impl SettingsWindow {
             column = column.child(proposed_row(ui, &code_font, &row, cx));
         }
         if !proposal.skipped.is_empty() {
-            column = column.child(style::setting_group_head(ui, text(SETTINGS_IMPORT_LEAVE), None)).children(
+            column = column.child(style::setting_group_head(ui, text(SETTINGS_IMPORT_LEAVE))).children(
                 proposal.skipped.iter().map(|skipped| {
                     // The key above its reason, so a long one (`keybind = super+d=new_split:right`)
                     // has the whole row's width before it is cut.
@@ -96,7 +95,6 @@ impl SettingsWindow {
             .child(
                 style::form_button("import-apply")
                     .primary()
-                    .icon(IconName::ArrowDownToLine)
                     .label(text(SETTINGS_IMPORT_APPLY))
                     .disabled(selected == 0)
                     .on_click(cx.listener(move |this, _, _, cx| this.apply_import(source, cx))),

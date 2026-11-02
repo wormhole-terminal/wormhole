@@ -127,7 +127,7 @@ impl SettingsWindow {
                     NavMark::Hits(n) | NavMark::Changed(n) => Some(style::count_label(n).into()),
                     _ => None,
                 },
-                has_dot: matches!(mark, NavMark::Attention | NavMark::Preview),
+                has_dot: matches!(mark, NavMark::Attention),
                 preview: mark == NavMark::Preview,
                 pick: Some(pick),
                 ..NavEntry::default()
@@ -168,7 +168,7 @@ impl SettingsWindow {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{NavMark, spoken};
 
     #[test]
     fn a_name_with_no_mark_is_read_as_the_catalog_has_it() {

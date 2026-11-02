@@ -4,7 +4,6 @@
 //! the card"); the content is core's `import::compare`, the sentences the catalog's.
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::import::{CHECKED, Comparison, Drawback, WORMHOLE, comparison};
@@ -35,6 +34,7 @@ pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
         text(SETTINGS_IMPORT_COMPARE),
         count.map(|n| whole(n).to_string().into()),
         window.import.comparing,
+        cx,
     )
     .on_click(cx.listener(|this, _, _, cx| {
         this.import.comparing = true;
@@ -176,7 +176,7 @@ fn part(
             strength_text(subject, comparison)
                 .map(|strength| div().text_body().text_color(ui.muted).child(strength)),
         )
-        .child(style::setting_group_head(ui, &label, None))
+        .child(style::setting_group_head(ui, &label))
         .child(div().flex().flex_col().children(rows))
 }
 

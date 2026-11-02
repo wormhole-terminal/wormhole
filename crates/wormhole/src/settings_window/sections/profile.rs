@@ -132,7 +132,7 @@ fn draw_start(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
 
 /// The button that picks a folder for a field.
 fn choose(id: impl Into<ElementId>, pick: Pick, cx: &mut Context<SettingsWindow>) -> Button {
-    style::form_button(id)
+    style::form_icon_button(id)
         .outline()
         .icon(IconName::Folder)
         .tooltip(text(SETTINGS_PROFILE_CHOOSE_A_FOLDER))
@@ -167,7 +167,7 @@ fn folder_list(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
             .child(style::icon(IconName::Folder).text_color(ui.muted))
             .child(div().flex_1().min_w_0().truncate().text_body().child(folder.clone()))
             .child(
-                style::form_button(("profile-folder-remove", ix))
+                style::form_icon_button(("profile-folder-remove", ix))
                     .ghost()
                     .icon(IconName::X)
                     .tooltip(text(SETTINGS_PROFILE_STOP_OPENING_FOLDER))
@@ -208,7 +208,7 @@ fn form_row(
 ) -> AnyElement {
     let ui = ui(cx);
     let (_, _, info) = settings_index::entry(entry).expect("a profile row of the table");
-    let head = style::more_row(id, ui, row_label(entry), value, open).on_click(cx.listener(
+    let head = style::more_row(id, ui, row_label(entry), value, open, cx).on_click(cx.listener(
         move |this, _, _, cx| {
             toggle(&mut this.profile_rows);
             cx.notify();
@@ -313,7 +313,6 @@ fn draw_delete(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
     let is_default = app(cx).active_profile().is_default();
     style::form_button("profile-delete")
         .outline()
-        .icon(IconName::Trash)
         .label(text(SETTINGS_PROFILE_DELETE_PROFILE))
         .disabled(is_default || window.confirm_delete_profile)
         .on_click(cx.listener(|this, _, _, cx| {

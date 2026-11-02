@@ -2,14 +2,15 @@
 //! color with the words on it, an icon, and room at the right for a button that sits on the
 //! same fill.
 
-use gpui_kit::assets::IconName;
 use gpui_kit::component::button::{Button, ButtonCustomVariant, ButtonVariants};
-use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::scale::{BANNER_MIN_H, CONTROL_H, TITLE_GLYPH, TextRole};
+use gpui_kit::component::Sizable;
+
+use super::scale::CONTROL_H;
 use crate::settings::UiColors;
+use crate::ui::{Look, NoticeBarProps};
 
 /// What a [`notice`] says, which picks its fill and icon.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -31,39 +32,49 @@ impl NoticeKind {
             Self::Danger => (ui.notice_danger, ui.notice_danger_text),
         }
     }
+}
 
-    fn icon(self) -> IconName {
-        match self {
-            Self::Info => IconName::Info,
-            Self::Warning | Self::Danger => IconName::TriangleAlert,
-        }
+/// An inline message next to what it is about: the kind's icon and one or two lines of text on the kind's
+/// solid fill, drawn by the `NoticeBar` component. Add a [`notice_button`] with `.child(…)`; it sits at
+/// the right.
+#[derive(IntoElement)]
+pub struct Notice {
+    kind: NoticeKind,
+    text: SharedString,
+    actions: Vec<AnyElement>,
+}
+
+pub fn notice(_: UiColors, kind: NoticeKind, text: impl Into<SharedString>) -> Notice {
+    Notice { kind, text: text.into(), actions: Vec::new() }
+}
+
+impl ParentElement for Notice {
+    fn extend(&mut self, elements: impl IntoIterator<Item = AnyElement>) {
+        self.actions.extend(elements);
     }
 }
 
-/// An inline message next to what it is about: the kind's icon and one or two lines of
-/// text on the kind's solid fill. Add a [`notice_button`] with `.child(…)`; it sits at the
-/// right.
-#[track_caller]
-pub fn notice(ui: UiColors, kind: NoticeKind, text: impl Into<SharedString>) -> Div {
-    let (fill, ink) = kind.colors(ui);
-    div()
-        .flex()
-        .items_center()
-        .gap_3()
-        .min_h(px(BANNER_MIN_H))
-        .py(px(NOTICE_PAD_Y))
-        .pl_3()
-        .pr_2()
-        .rounded(ui.radius)
-        .bg(fill)
-        .text_color(ink)
-        .child(Icon::new(kind.icon()).with_size(px(TITLE_GLYPH)).flex_none())
-        .child(div().flex_1().min_w_0().text_label().font_weight(FontWeight::NORMAL).child(text.into()))
+impl RenderOnce for Notice {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let Self { kind, text, actions } = self;
+        NoticeBarProps {
+            id: ElementId::from(("notice", {
+                use std::hash::{Hash as _, Hasher as _};
+                let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                text.hash(&mut hasher);
+                hasher.finish() as usize
+            })),
+            text,
+            warning: kind == NoticeKind::Warning,
+            danger: kind == NoticeKind::Danger,
+            alerting: kind != NoticeKind::Info,
+            informing: kind == NoticeKind::Info,
+            actions: (!actions.is_empty())
+                .then(|| div().flex().items_center().gap_2().children(actions).into_any_element()),
+        }
+        .render(&Look::of(cx))
+    }
 }
-
-/// A notice's padding above and below its text: a one-line notice is [`BANNER_MIN_H`], with a
-/// [`CONTROL_H`] button centered in it.
-const NOTICE_PAD_Y: f32 = 6.0;
 
 /// A button on a notice's fill, for the action the notice asks for: the words' color as its
 /// fill and the notice's fill as its text, a [`CONTROL_H`] tall button like every other in

@@ -9,7 +9,9 @@
 //! and the code font and nothing of `style`, which draws with it.
 
 #[rustfmt::skip]
+#[allow(clippy::all, reason = "generated code")]
 mod generated;
+mod rule;
 
 use std::rc::Rc;
 
@@ -18,8 +20,25 @@ use wormhole_core::theme::tokens::ThemeTokens;
 
 use crate::settings::SettingsStore;
 
+pub(crate) use generated::checkbox_control::CheckboxControlProps;
+pub(crate) use generated::footer_line::{FooterLineProps, FooterLink};
+pub(crate) use generated::form_button::FormButtonProps;
+pub(crate) use generated::group_card::GroupCardProps;
+pub(crate) use generated::group_head::GroupHeadProps;
+pub(crate) use generated::menu_face::MenuFaceProps;
+pub(crate) use generated::menu_item::MenuItemProps;
+pub(crate) use generated::menu_panel::MenuPanelProps;
+pub(crate) use generated::more_row::MoreRowProps;
+pub(crate) use generated::notice_bar::NoticeBarProps;
+pub(crate) use generated::page_title::PageTitleProps;
+pub(crate) use generated::preview_frame::PreviewFrameProps;
 pub(crate) use generated::settings_nav::{NavEntry, SettingsNavProps};
 pub(crate) use generated::settings_row::SettingsRowProps;
+pub(crate) use generated::sidebar_profile::SidebarProfileProps;
+pub(crate) use generated::solid_chip::SolidChipProps;
+pub(crate) use generated::switch_control::SwitchControlProps;
+pub(crate) use generated::tile_row::TileRowProps;
+pub(crate) use rule::{Rule, Sides};
 
 /// A click handler in a component's props. A `Rc` because a component's element tree is built again
 /// every frame and each element that clicks takes its own copy.
@@ -29,6 +48,8 @@ pub(crate) type Handler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
 pub(crate) struct Look<'a> {
     pub tokens: &'a ThemeTokens,
     pub code_font: SharedString,
+    /// The Borders setting (Increase Contrast turns it on): see `rule`.
+    pub borders: bool,
 }
 
 impl<'a> Look<'a> {
@@ -39,6 +60,6 @@ impl<'a> Look<'a> {
 
     /// Another theme's colours (the Theme Studio's draft) in the app's code font.
     pub(crate) fn with_tokens(tokens: &'a ThemeTokens, cx: &App) -> Self {
-        Self { tokens, code_font: crate::fonts::code_font(cx).0 }
+        Self { tokens, code_font: crate::fonts::code_font(cx).0, borders: crate::settings::ui(cx).borders }
     }
 }

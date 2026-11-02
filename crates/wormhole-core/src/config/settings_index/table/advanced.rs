@@ -14,7 +14,6 @@ pub(super) const ADVANCED: &[Group] = &[
         &[
             entry("open-config", SETTINGS_ADVANCED_OPEN_CONFIG, &[])
                 .with_description(SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION)
-                .with_visible_hint()
                 .with_keywords(SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS),
             entry("open-data", SETTINGS_ADVANCED_OPEN_DATA, &[])
                 .with_description(SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION)

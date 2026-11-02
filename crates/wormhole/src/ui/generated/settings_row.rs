@@ -6,7 +6,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look};
+use crate::ui::{Handler, Look, Rule, Sides};
 
 /// What `SettingsRow` is drawn from.
 pub struct SettingsRowProps {
@@ -36,6 +36,7 @@ pub struct SettingsRowProps {
 impl SettingsRowProps {
     /// The element tree, in the colours and the code font of `look`.
     pub fn render(self, look: &Look) -> Stateful<Div> {
+        let t_border = token(look.tokens, "border");
         let t_border_focus = token(look.tokens, "border.focus");
         let t_button_background = token(look.tokens, "button.background");
         let t_primary = token(look.tokens, "primary");
@@ -44,6 +45,7 @@ impl SettingsRowProps {
         let t_text_muted = token(look.tokens, "text.muted");
         let t_text_on_primary = token(look.tokens, "text.on_primary");
         let t_text_primary = token(look.tokens, "text.primary");
+        let borders = look.borders;
         let Self { id, name, description, label, tall, disabled, changed, project, chip, info, key_text, key_name, copy_label, on_copy, dormant, copied, hint, on_reset, reset_label, extra, control } = self;
 
         div()
@@ -58,6 +60,7 @@ impl SettingsRowProps {
             .gap(px(12.0))
             .min_h(px(40.0))
             .py(px(8.0)).px(px(14.0))
+            .rule(borders, Sides::TOP, 1.0, t_border, false)
             .rounded(px(10.0))
             .text_color(t_text_primary)
             .text_size(rems(0.8125))

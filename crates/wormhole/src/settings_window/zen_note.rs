@@ -28,12 +28,14 @@ pub(super) fn draw(section: Section, cx: &mut Context<SettingsWindow>) -> Option
         return None;
     }
     Some(
-        style::notice(ui(cx), style::NoticeKind::Info, text(ZEN_SETTINGS_NOTE))
+        div()
             .debug_selector(|| "zen-note".into())
             .child(
-                style::notice_button("leave-zen", ui(cx), style::NoticeKind::Info, cx)
-                    .label(text(ZEN_SETTINGS_LEAVE))
-                    .on_click(|_, _, cx| set_zen_mode(cx, false)),
+                style::notice(ui(cx), style::NoticeKind::Info, text(ZEN_SETTINGS_NOTE)).child(
+                    style::notice_button("leave-zen", ui(cx), style::NoticeKind::Info, cx)
+                        .label(text(ZEN_SETTINGS_LEAVE))
+                        .on_click(|_, _, cx| set_zen_mode(cx, false)),
+                ),
             )
             .into_any_element(),
     )

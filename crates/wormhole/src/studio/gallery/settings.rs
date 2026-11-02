@@ -48,7 +48,7 @@ pub(super) fn render(
             .gap_6()
             .child(env.mark("banner", banners(ui)))
             .child(env.mark("notice", super::notices::notices(ui, cx)))
-            .child(env.mark("tile.row", super::tile_rows::tile_rows(ui)))
+            .child(env.mark("tile.row", super::tile_rows::tile_rows(ui, cx)))
             .child(profile_marks(env))
             .into_any_element(),
     }
@@ -175,7 +175,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                 extra: None,
                 on_reset: Some(Rc::new(|_, _| {})),
             },
-            &Look { tokens: env.tokens, code_font: env.code_font.clone() },
+            &Look { tokens: env.tokens, code_font: env.code_font.clone(), borders: env.ui.borders },
             cx,
         )
     };
@@ -184,7 +184,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
         .flex_col()
         .w_full()
         .max_w(px(COLUMN_W))
-        .child(style::setting_group_head(ui, "Window", Some("A note at the right of the head"))) // text: sample (the gallery's specimen)
+        .child(style::setting_group_head(ui, "Window")) // text: sample (the gallery's specimen)
         .child(
             env.mark(
                 "settings.group",
@@ -386,9 +386,11 @@ fn nav(env: &Env) -> Div {
         .outlined(ui, ui.border)
         .py_2()
         .child(div().px_3().pb_4().child(profile))
-        .child(
-            SettingsNavProps { rows }.render(&Look { tokens: env.tokens, code_font: env.code_font.clone() }),
-        )
+        .child(SettingsNavProps { rows }.render(&Look {
+            tokens: env.tokens,
+            code_font: env.code_font.clone(),
+            borders: env.ui.borders,
+        }))
 }
 
 /// The settings controls that are ours rather than GPUI Kit's.

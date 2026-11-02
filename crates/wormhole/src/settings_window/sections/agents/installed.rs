@@ -9,7 +9,6 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::Agent;
@@ -118,7 +117,7 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
     div()
         .flex()
         .flex_col()
-        .child(style::tile_row(SharedString::from(format!("agent-{:?}", agent.id)), ui, parts))
+        .child(style::tile_row(SharedString::from(format!("agent-{:?}", agent.id)), ui, parts, cx))
         .children(note.map(|note| {
             div()
                 .flex()

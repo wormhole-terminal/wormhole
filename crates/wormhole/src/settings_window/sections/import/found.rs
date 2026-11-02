@@ -57,7 +57,6 @@ fn card(window: &SettingsWindow, found: &Found, ix: usize, cx: &mut Context<Sett
     let path = found.files.first().map(|path| visible(&with_tilde(path)).to_string());
     let button = style::form_button(("import-card", ix))
         .outline()
-        .icon(IconName::ArrowDownToLine)
         .label(text(SETTINGS_IMPORT_REVIEW))
         .selected(open)
         .on_click(cx.listener(move |this, _, _, cx| {
@@ -106,7 +105,7 @@ fn files_read(ui: crate::settings::UiColors, found: &Found, cx: &App) -> Div {
         .flex()
         .flex_col()
         .gap_1()
-        .child(style::setting_group_head(ui, text(SETTINGS_IMPORT_FILES_READ), None))
+        .child(style::setting_group_head(ui, text(SETTINGS_IMPORT_FILES_READ)))
         .children(found.files.iter().map(|path| {
             div()
                 .min_w_0()

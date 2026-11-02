@@ -3,7 +3,6 @@
 use std::path::Path;
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::project::{Feature, FeatureStanding, TrustStatus, trust_applies};
@@ -63,7 +62,6 @@ impl SettingsWindow {
         } else {
             style::form_button("project-trust")
                 .primary()
-                .icon(IconName::FingerprintPattern)
                 .label(if approving {
                     text(SETTINGS_PROJECTS_WAITING_FOR_APPROVAL)
                 } else {
@@ -87,10 +85,13 @@ impl SettingsWindow {
         let mut group = div()
             .flex()
             .flex_col()
-            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_PROJECTS), None))
+            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_PROJECTS)))
             .child(style::group_card(
                 ui,
-                [self.for_row(ui, cx), style::tile_row("project-trust-row", ui, parts).into_any_element()],
+                [
+                    self.for_row(ui, cx),
+                    style::tile_row("project-trust-row", ui, parts, cx).into_any_element(),
+                ],
             ));
         if let Some(request) = project.request.as_ref().filter(|r| !trusted && !r.commands.is_empty()) {
             group = group.child(
@@ -131,7 +132,7 @@ impl SettingsWindow {
                 .flex()
                 .flex_col()
                 .gap_2()
-                .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_PROBLEMS), None))
+                .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_PROBLEMS)))
                 .children(
                     project.errors.iter().map(|e| style::notice(ui, style::NoticeKind::Warning, e.clone())),
                 )
@@ -144,7 +145,6 @@ impl SettingsWindow {
             .gap_2()
             .child(
                 style::form_button("project-open-session")
-                    .icon(IconName::SquareTerminal)
                     .label(text(SETTINGS_PROJECTS_OPEN_IN_A_NEW_TERMINAL))
                     .on_click(cx.listener(move |_, _, _, cx| {
                         let root = open_root.clone();
@@ -157,7 +157,6 @@ impl SettingsWindow {
             .child(
                 style::form_button("project-reveal")
                     .ghost()
-                    .icon(IconName::ExternalLink)
                     .label(settings_projects_show_in_finder(&project.folder.dir_name()))
                     .on_click(move |_, _, cx| reveal(&reveal_root, cx)),
             );

@@ -9,7 +9,6 @@ use std::path::Path;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use gpui_kit::assets::IconName;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 
@@ -122,51 +121,32 @@ impl SettingsWindow {
         self.render_page(section, cx)
     }
 
-    /// What sits at the right of a page's title (Coding agents: Rescan PATH).
-    pub(super) fn header_action(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
-        match self.section {
-            Section::Agents => Some(
-                style::form_button("agents-rescan")
-                    .outline()
-                    .icon(IconName::RefreshCw)
-                    .label(text(SETTINGS_WINDOW_RESCAN_PATH))
-                    .loading(self.agents_task.is_some())
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.load_agents(cx);
-                        cx.notify();
-                    }))
-                    .into_any_element(),
+    /// What the design keeps off a page's title row and puts in its last line: rescanning the PATH
+    /// (Coding agents), scanning for terminals again (Import) and a new profile (Profile).
+    pub(super) fn page_footer(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let line = match self.section {
+            Section::Agents if self.agents_task.is_none() => style::footer("").link(
+                text(SETTINGS_WINDOW_RESCAN_PATH),
+                cx.listener(|this, _, _, cx| {
+                    this.load_agents(cx);
+                    cx.notify();
+                }),
             ),
-            Section::Import => Some(
-                style::form_button("import-rescan")
-                    .outline()
-                    .icon(IconName::RefreshCw)
-                    .label(text(SETTINGS_IMPORT_SCAN_AGAIN))
-                    .loading(self.import.scanning())
-                    .on_click(cx.listener(|this, _, _, cx| this.scan_import(cx)))
-                    .into_any_element(),
+            Section::Import if !self.import.scanning() => style::footer("")
+                .link(text(SETTINGS_IMPORT_SCAN_AGAIN), cx.listener(|this, _, _, cx| this.scan_import(cx))),
+            Section::Profile => style::footer("").link(
+                text(SETTINGS_WINDOW_NEW_PROFILE),
+                cx.listener(|this, _, window, cx| this.open_new_profile(window, cx)),
             ),
-            Section::Profile => Some(
-                style::form_button("profile-new")
-                    .outline()
-                    .icon(IconName::Plus)
-                    .label(text(SETTINGS_WINDOW_NEW_PROFILE))
-                    .on_click(cx.listener(|this, _, window, cx| this.open_new_profile(window, cx)))
-                    .into_any_element(),
-            ),
-            _ => None,
-        }
+            _ => return None,
+        };
+        Some(div().child(line).into_any_element())
     }
 }
 
 /// A row's button that opens something (a folder, a file).
-fn open_button(id: &'static str, icon: IconName, label: &'static str, open: fn(&App)) -> AnyElement {
-    style::form_button(id)
-        .outline()
-        .icon(icon)
-        .label(label)
-        .on_click(move |_, _, cx| open(cx))
-        .into_any_element()
+fn open_button(id: &'static str, label: &'static str, open: fn(&App)) -> AnyElement {
+    style::form_button(id).outline().label(label).on_click(move |_, _, cx| open(cx)).into_any_element()
 }
 
 /// Open a file in the text editor (config.json).

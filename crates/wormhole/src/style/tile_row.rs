@@ -1,7 +1,7 @@
 //! The tile row: one row for a thing in a Settings list (a coding agent, a Probe, a project, an update)
 //! and the empty state for a list with nothing in it.
 //!
-//! Every tile row is at least [`TILE_ROW_H`] tall: a tile, a name with an optional solid chip, one line
+//! Every tile row is at least 56 tall: a tile, a name with an optional solid chip, one line
 //! of hint, and controls that end on the column's edge. A row that has a sentence to say about its state
 //! (a Probe that changed, a folder that can't be read) carries it as a note under the hint, in the colour
 //! of what it says, and grows by that line; anything longer goes under the row as a notice.
@@ -13,18 +13,13 @@ use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 
 use super::info::setting_info;
-use super::scale::{Edges, TextRole};
+use super::scale::TextRole;
 use super::tile::{TileFace, brand_tile};
 use crate::settings::UiColors;
+use crate::ui::{Look, SolidChipProps, TileRowProps};
 
-/// A tile row's height: the same for every row of every list.
-pub const TILE_ROW_H: f32 = 56.0;
 /// The tile's side.
 pub const ROW_TILE: f32 = 28.0;
-/// The line icon on a tile.
-const ROW_TILE_ICON: f32 = 14.0;
-/// A chip's height, and the room it keeps between the name and itself.
-const CHIP_ROW_H: f32 = 20.0;
 
 /// What a tile row's tile shows.
 #[derive(Clone, Copy)]
@@ -51,34 +46,28 @@ pub enum ChipKind {
     Info,
 }
 
-impl ChipKind {
-    fn fill(self, ui: UiColors) -> Hsla {
-        match self {
-            Self::Good => ui.chip_good,
-            Self::Warn => ui.chip_warn,
-            Self::Danger => ui.chip_danger,
-            Self::Quiet => ui.chip_quiet,
-            Self::Info => ui.notice_info,
-        }
-    }
+/// A short state word on a solid fill in the kind's colour, white on it: the chip of a [`tile_row`].
+/// Drawn by the `SolidChip` component.
+#[derive(IntoElement)]
+pub struct SolidChip {
+    kind: ChipKind,
+    text: SharedString,
 }
 
-/// A short state word on a solid fill in the kind's colour, white on it: the chip of a [`tile_row`].
-#[track_caller]
-pub fn solid_chip(ui: UiColors, kind: ChipKind, text: impl Into<SharedString>) -> Div {
-    div()
-        .flex_none()
-        .flex()
-        .items_center()
-        .h(px(CHIP_ROW_H))
-        .px_2()
-        .rounded(ui.radius_chip)
-        .bg(kind.fill(ui))
-        .text_color(ui.chip_text)
-        .text_caption()
-        .font_weight(FontWeight::SEMIBOLD)
-        .whitespace_nowrap()
-        .child(text.into())
+pub fn solid_chip(_: UiColors, kind: ChipKind, text: impl Into<SharedString>) -> SolidChip {
+    SolidChip { kind, text: text.into() }
+}
+
+impl RenderOnce for SolidChip {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let (good, warn, danger, primary) = (
+            self.kind == ChipKind::Good,
+            self.kind == ChipKind::Warn,
+            self.kind == ChipKind::Danger,
+            self.kind == ChipKind::Info,
+        );
+        SolidChipProps { text: self.text, good, warn, danger, primary }.render(&Look::of(cx))
+    }
 }
 
 /// The parts of a [`tile_row`].
@@ -114,14 +103,13 @@ impl TileRowParts {
     }
 }
 
-/// One tile row: the tile, the name and chip over the hint, and the controls, [`TILE_ROW_H`] tall with a
-/// hairline above like a setting's row. VoiceOver reads the name, then the chip and the hint as its
-/// description; the controls are tab stops of their own.
+/// One tile row: the tile, the name and chip over the hint, and the controls, drawn by the `TileRow`
+/// component. VoiceOver reads the name, then the chip and the hint as its description; the controls are tab
+/// stops of their own.
 #[track_caller]
-pub fn tile_row(id: impl Into<ElementId>, ui: UiColors, parts: TileRowParts) -> Stateful<Div> {
+pub fn tile_row(id: impl Into<ElementId>, ui: UiColors, parts: TileRowParts, cx: &App) -> Stateful<Div> {
     let TileRowParts { tile, name, name_color, chip, hint, note, more, controls } = parts;
     let id = id.into();
-    let grows = note.is_some();
     // One line per fact, read after the name; a row with one fact says it as it is, with no copy.
     let spoken = {
         let mut said =
@@ -141,69 +129,33 @@ pub fn tile_row(id: impl Into<ElementId>, ui: UiColors, parts: TileRowParts) -> 
             }
         }
     };
-    let face = match tile {
-        RowTile::Agent(agent) => brand_tile(ui, TileFace::Agent(agent), ROW_TILE),
-        RowTile::Icon { fill, icon } => div()
-            .flex_none()
-            .flex()
-            .items_center()
-            .justify_center()
-            .size(px(ROW_TILE))
-            .rounded(ui.radius)
-            .bg(fill)
-            .child(Icon::new(icon).with_size(px(ROW_TILE_ICON)).text_color(ui.tile_mark_brand))
-            .into_any_element(),
+    let (tile_fill, brand, icon) = match tile {
+        RowTile::Agent(agent) => {
+            (transparent_black(), Some(brand_tile(ui, TileFace::Agent(agent), ROW_TILE)), None)
+        }
+        RowTile::Icon { fill, icon } => (fill, None, Some(icon)),
     };
-    div()
-        .id(id.clone())
-        .role(Role::Group)
-        .aria_label(name.clone())
-        .when_some(spoken, |d, spoken| d.aria_description(spoken))
-        .flex()
-        .items_center()
-        .gap_3()
-        .w_full()
-        // A fixed height costs the frame nothing to work out; only a row with a note has to measure.
-        .when(grows, |row| row.min_h(px(TILE_ROW_H)))
-        .when(!grows, |row| row.h(px(TILE_ROW_H)))
-        .py_2()
-        .rule_top(ui)
-        // Decoration: the name says what the tile would.
-        .child(face)
-        .child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .flex()
-                .flex_col()
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap_2()
-                        .min_w_0()
-                        .child(
-                            div()
-                                .min_w_0()
-                                .truncate()
-                                .text_body()
-                                .font_weight(FontWeight::MEDIUM)
-                                .text_color(name_color.unwrap_or(ui.text))
-                                .child(name),
-                        )
-                        .children(more.map(|more| setting_info(id.clone(), ui, more, Vec::new())))
-                        .children(chip.map(|(kind, text)| solid_chip(ui, kind, text))),
-                )
-                .children(
-                    hint.map(|hint| {
-                        div().min_w_0().truncate().text_caption().text_color(ui.muted).child(hint)
-                    }),
-                )
-                .children(
-                    note.map(|(color, note)| div().min_w_0().text_caption().text_color(color).child(note)),
-                ),
-        )
-        .child(div().flex_none().flex().items_center().gap_2().children(controls))
+    let kind = chip.as_ref().map(|(kind, _)| *kind);
+    TileRowProps {
+        id: id.clone(),
+        name,
+        spoken,
+        name_color: name_color.unwrap_or(ui.text),
+        tile_fill,
+        brand,
+        icon,
+        info: more.map(|more| setting_info(id, ui, more, Vec::new()).into_any_element()),
+        chip: chip.map(|(_, text)| text),
+        good: kind == Some(ChipKind::Good),
+        warn: kind == Some(ChipKind::Warn),
+        danger: kind == Some(ChipKind::Danger),
+        primary: kind == Some(ChipKind::Info),
+        hint,
+        note: note.as_ref().map(|(_, note)| note.clone()),
+        note_color: note.map_or(ui.muted, |(color, _)| color),
+        controls: div().flex().items_center().gap_2().children(controls).into_any_element(),
+    }
+    .render(&Look::of(cx))
 }
 
 /// The parts of an [`empty_list`].

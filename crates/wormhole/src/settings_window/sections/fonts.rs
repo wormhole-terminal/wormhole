@@ -1,7 +1,6 @@
 //! Fonts: one specimen for the three fonts, then the terminal font with its line height
 //! and ligatures, the code and interface fonts, and the user's own fonts.
 
-use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::theme::fonts::{FontSlot, display_name};
@@ -44,7 +43,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("font-interface", |w, cx| w.font_control(FontSlot::Interface, cx))
         .default_words(|| font_words(FontSlot::Interface)),
     Setting::custom("fonts-folder", |_, _| {
-        open_button("fonts-folder", IconName::ExternalLink, text(SETTINGS_FONTS_OPEN_FONTS_FOLDER), |cx| {
+        open_button("fonts-folder", text(SETTINGS_FONTS_OPEN_FONTS_FOLDER), |cx| {
             open_folder(&crate::active_profile::paths().fonts_dir(), cx)
         })
     }),

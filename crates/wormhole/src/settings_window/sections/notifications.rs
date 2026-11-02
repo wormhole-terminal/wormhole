@@ -5,7 +5,6 @@
 //! `notifications` stays the master switch: it is on while any kind is on, so turning every kind
 //! off turns it off.
 
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::*;
 use wormhole_core::config::{DockBadge, InFront, NotifySound};
 #[allow(

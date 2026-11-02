@@ -5,7 +5,6 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
-use gpui_kit::component::switch::Switch;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_text::{keys, text};
@@ -14,13 +13,12 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use super::controls::keycap;
-use super::group_card::CARD_PAD_X;
 use super::info::{marked, setting_info};
 use super::row_keys::{KeyView, Reset, RowKeys, key_face, with_menu};
 use super::scale::{CONTROL_H, Edges, MARK_DOT, RECORDER_W, SLIDER_W, TextRole};
 use super::section::ClickHandler;
 use crate::settings::UiColors;
-use crate::ui::{Handler, Look, SettingsRowProps};
+use crate::ui::{Handler, Look, SettingsRowProps, SwitchControlProps};
 
 /// A small whole number with a minus and a plus: one outlined control as tall as a
 /// select, the value between hairlines in the middle. Add nothing: `minus` and `plus` are
@@ -64,15 +62,56 @@ pub fn stepper(
 /// move the buttons.
 const STEPPER_VALUE_W: f32 = 72.0;
 
-/// A switch. `on_change` gets the new state.
+/// What a switch does with the state it is flipped to.
+type OnToggle = Rc<dyn Fn(bool, &mut Window, &mut App)>;
+
+/// A switch. `on_change` gets the new state. Drawn by the `SwitchControl` component (the design's 34 by 20
+/// switch); a click flips it, and so do Space and Return, since GPUI sends a focused element those as clicks.
+#[derive(IntoElement)]
+pub struct Toggle {
+    id: ElementId,
+    checked: bool,
+    on_change: OnToggle,
+    label: Option<SharedString>,
+    disabled: bool,
+}
+
 pub fn toggle(
     id: impl Into<ElementId>,
     checked: bool,
     on_change: impl Fn(bool, &mut Window, &mut App) + 'static,
-) -> Switch {
-    Switch::new(id)
-        .checked(checked)
-        .on_click(move |checked: &bool, window, cx| on_change(*checked, window, cx))
+) -> Toggle {
+    Toggle { id: id.into(), checked, on_change: Rc::new(on_change), label: None, disabled: false }
+}
+
+impl Toggle {
+    /// What VoiceOver calls the switch when its row does not name it.
+    pub fn accessibility_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+}
+
+impl gpui_kit::component::Disableable for Toggle {
+    fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+}
+
+impl RenderOnce for Toggle {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let Self { id, checked, on_change, label, disabled } = self;
+        let click: Handler = Rc::new(move |_, window, cx| on_change(!checked, window, cx));
+        SwitchControlProps {
+            id,
+            label: label.unwrap_or_default(),
+            on: checked,
+            disabled,
+            on_click: (!disabled).then_some(click),
+        }
+        .render(&Look::of(cx))
+    }
 }
 
 /// What a [`setting`] row says about its value.
@@ -197,11 +236,7 @@ pub fn setting_in(
         extra,
         control: if elsewhere { out_of_reach((id, "control"), control) } else { control },
     }
-    .render(look)
-    // The design's row spans its card: the card's inset is the row's own padding (14), not added to it.
-    .mx(px(-CARD_PAD_X))
-    // The hairline between the rows of a card: out of the layout, so the row is the design's height.
-    .child(div().absolute().top_0().left_0().right_0().h(ui.border_width).bg(ui.line(ui.border)));
+    .render(look);
     // What a project sets or a layout lacks keeps its row as it was: no key, no menu.
     if elsewhere { row } else { with_menu(row, menu_id, keys, menu_reset) }
 }
@@ -217,34 +252,6 @@ fn out_of_reach(id: impl Into<ElementId>, control: AnyElement) -> AnyElement {
         .child(div().id(id).absolute().top_0().left_0().size_full().occlude())
         .into_any_element()
 }
-
-/// The head of a group of [`setting`] rows: the group's name as a heading (16 / 600) with a
-/// step of space above it, and a quiet note at the right ("Same values as the funnel"). The
-/// rows follow in a [`group_card`](super::group_card).
-#[track_caller]
-pub fn setting_group_head(ui: UiColors, title: &str, aside: Option<&str>) -> Div {
-    div()
-        .flex()
-        .items_end()
-        .justify_between()
-        .gap_4()
-        .h(px(GROUP_HEAD_H))
-        .pb_2()
-        .child(
-            div()
-                .text_heading()
-                .font_weight(FontWeight::SEMIBOLD)
-                .text_color(ui.text)
-                .child(title.to_string()),
-        )
-        .children(aside.map(|aside| {
-            div().min_w_0().truncate().text_caption().text_color(ui.faint).child(aside.to_string())
-        }))
-}
-
-/// A group head's height: its name sits at the bottom, a clear step below the group above and a
-/// small one above the first row's hairline.
-const GROUP_HEAD_H: f32 = 40.0;
 
 /// A text button in the link color ("Edit in Fonts", "Open Notifications"), with an arrow
 /// after it when it takes you to another page. Its text lines up with the edge it is placed

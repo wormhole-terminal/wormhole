@@ -12,13 +12,6 @@ mod groups;
 
 pub(super) use groups::GroupPick;
 
-#[allow(
-    clippy::wildcard_imports,
-    reason = "the keys are generated, one constant per message: naming each would list them twice"
-)]
-use wormhole_text::keys::*;
-use wormhole_text::text;
-
 use std::collections::HashMap;
 
 use gpui_kit::assets::IconName;
@@ -31,10 +24,12 @@ use wormhole_core::config::settings_index::{self, SectionId as Section};
 
 use super::{SettingsWindow, ui};
 use crate::app_state::app;
-use crate::settings::{SettingsStore, UiColors, settings};
+use crate::settings::{SettingsStore, settings};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::token;
-use crate::ui::{Look, SettingsNavProps};
+use std::rc::Rc;
+
+use crate::ui::{Look, SettingsNavProps, SidebarProfileProps};
 
 /// The nav's width.
 pub(super) const NAV_W: f32 = 240.0;
@@ -86,7 +81,7 @@ impl SettingsWindow {
         let searching = !query.is_empty();
         let total: usize = hits.values().sum();
         let rows = self.nav_entries(ui, &hits, searching, changed, cx);
-        let profile = self.render_profile_card(ui, searching, hits.get(&Section::Profile), cx);
+        let profile = self.render_profile_card(searching, hits.get(&Section::Profile), cx);
         let list = div()
             .flex_none()
             .px(px(LIST_INSET))
@@ -104,15 +99,6 @@ impl SettingsWindow {
             .pt(px(style::TITLE_ROW_H))
             .bg(fill)
             .rule_right(ui)
-            .child(
-                div()
-                    .flex_none()
-                    .flex()
-                    .items_center()
-                    .h(px(style::TITLE_ROW_H))
-                    .px_4()
-                    .child(style::panel_title(ui, text(SETTINGS_WINDOW_SETTINGS))),
-            )
             .child(
                 div().flex_none().px_4().pt_2().pb_2().child(
                     Input::new(&self.search)
@@ -162,27 +148,26 @@ impl SettingsWindow {
     /// Whose settings these are, and the way to their page: the avatar and name of the profile Wormhole is in.
     fn render_profile_card(
         &self,
-        ui: UiColors,
         searching: bool,
         hits: Option<&usize>,
         cx: &Context<Self>,
     ) -> impl IntoElement {
         let state = app(cx);
         let profile = state.profiles.active();
-        let color = crate::theme_bridge::hsla(profile.color.color(&cx.global::<SettingsStore>().tokens));
-        style::nav_profile_row(
-            "settings-nav-profile",
-            ui,
-            style::NavProfile {
-                color,
-                letter: profile.avatar,
-                name: profile.name.clone().into(),
-                caption: Section::Profile.title().into(),
-                selected: self.section == Section::Profile && !self.show_results,
-                hits: hits.copied().filter(|_| searching),
-            },
-        )
-        .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::Profile, cx)))
+        let selected = self.section == Section::Profile && !self.show_results;
+        let caption: SharedString = Section::Profile.title().into();
+        let name: SharedString = profile.name.clone().into();
+        SidebarProfileProps {
+            id: "settings-nav-profile".into(),
+            label: format!("{caption}: {name}").into(),
+            letter: profile.avatar.to_uppercase().to_string().into(),
+            name,
+            caption,
+            selected,
+            hits: hits.copied().filter(|_| searching).map(|n| crate::style::count_label(n).into()),
+            on_click: Some(Rc::new(cx.listener(|this, _, _, cx| this.show_section(Section::Profile, cx)))),
+        }
+        .render(&Look::of(cx))
     }
 }
 

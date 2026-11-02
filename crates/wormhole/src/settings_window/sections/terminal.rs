@@ -11,7 +11,6 @@ use std::rc::Rc;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
 use gpui_kit::*;
 use wormhole_core::config::OptionAsMeta;
@@ -106,7 +105,7 @@ pub(crate) struct TerminalRows {
 /// Font: a row to the Fonts page, with the font in use, its size, line height and ligatures as its value.
 fn draw_font(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let summary = describe_font(window, cx);
-    style::more_row("terminal-font", ui(cx), row_label("terminal-font"), summary, false)
+    style::more_row("terminal-font", ui(cx), row_label("terminal-font"), summary, false, cx)
         .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::Fonts, cx)))
         .into_any_element()
 }
@@ -123,6 +122,7 @@ fn draw_shells(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
         row_label("shells"),
         Some(wormhole_text::whole(count).to_string().into()),
         open,
+        cx,
     )
     .on_click(cx.listener(|this, _, _, cx| {
         this.terminal_rows.shells = !this.terminal_rows.shells;
@@ -143,7 +143,7 @@ fn draw_worktree_base(window: &SettingsWindow, cx: &mut Context<SettingsWindow>)
         let home = crate::settings_window::home();
         wormhole_core::view::sidebar::display_path(Path::new(&base), home.as_deref()).into()
     };
-    let head = style::more_row("terminal-worktrees", ui, row_label("worktree-base"), Some(value), open)
+    let head = style::more_row("terminal-worktrees", ui, row_label("worktree-base"), Some(value), open, cx)
         .on_click(cx.listener(|this, _, _, cx| {
             this.terminal_rows.worktrees = !this.terminal_rows.worktrees;
             cx.notify();
@@ -181,26 +181,16 @@ fn opened(
 /// Default terminal: makes Wormhole the app that runs opened scripts, or says that it is.
 fn draw_default_terminal(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let state = default_app::is_default();
-    let (icon, label, tooltip) = match state {
+    let (label, tooltip) = match state {
         Some(true) => (
-            IconName::Check,
             text(SETTINGS_TERMINAL_WORMHOLE_IS_THE_DEFAULT),
             text(SETTINGS_TERMINAL_TO_CHANGE_IT_PICK_ANOTHER_APP),
         ),
-        Some(false) => (
-            IconName::SquareTerminal,
-            text(SETTINGS_TERMINAL_MAKE_DEFAULT),
-            text(SETTINGS_TERMINAL_INSTEAD_OF_TERMINAL),
-        ),
-        None => (
-            IconName::SquareTerminal,
-            text(SETTINGS_TERMINAL_MAKE_DEFAULT),
-            text(SETTINGS_TERMINAL_DEFAULT_ONLY_APP),
-        ),
+        Some(false) => (text(SETTINGS_TERMINAL_MAKE_DEFAULT), text(SETTINGS_TERMINAL_INSTEAD_OF_TERMINAL)),
+        None => (text(SETTINGS_TERMINAL_MAKE_DEFAULT), text(SETTINGS_TERMINAL_DEFAULT_ONLY_APP)),
     };
     style::form_button("default-terminal")
         .outline()
-        .icon(icon)
         .label(label)
         .disabled(state != Some(false))
         .tooltip(tooltip)

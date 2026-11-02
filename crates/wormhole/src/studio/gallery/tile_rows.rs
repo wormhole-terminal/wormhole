@@ -10,7 +10,7 @@ use crate::style::{self, ChipKind, RowTile};
 /// As wide as the Settings content column.
 const COLUMN_W: f32 = 560.0;
 
-pub(super) fn tile_rows(ui: UiColors) -> Div {
+pub(super) fn tile_rows(ui: UiColors, cx: &App) -> Div {
     let row = |id: &'static str,
                tile: RowTile,
                name: &'static str,
@@ -29,7 +29,7 @@ pub(super) fn tile_rows(ui: UiColors) -> Div {
                     .into_any_element()
             })
             .collect();
-        style::tile_row(id, ui, parts)
+        style::tile_row(id, ui, parts, cx)
     };
     let folder = RowTile::Icon { fill: ui.primary, icon: IconName::Folder };
     div()
@@ -95,6 +95,7 @@ pub(super) fn tile_rows(ui: UiColors) -> Div {
                     "Other agents Wormhole recognises", // text: sample (the gallery's specimen)
                     Some("17".into()),                  // text: sample (the gallery's specimen)
                     false,
+                    cx,
                 )) // text: sample (the gallery's specimen)
                 .child(style::more_row(
                     "g-more-open",
@@ -102,6 +103,7 @@ pub(super) fn tile_rows(ui: UiColors) -> Div {
                     "Other agents Wormhole recognises", // text: sample (the gallery's specimen)
                     Some("17".into()),                  // text: sample (the gallery's specimen)
                     true,
+                    cx,
                 )), // text: sample (the gallery's specimen)
         )
         .child(style::empty_list(

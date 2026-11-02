@@ -1,9 +1,7 @@
 //! Advanced: what is wrong in config.json, the files and folders, and a way back to the
 //! defaults that asks first.
 
-use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::Values;
 use wormhole_core::storage::paths::data_dir;
@@ -24,17 +22,15 @@ use crate::style;
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("open-config", |_, _| {
-        open_button("open-config", IconName::CodeXml, text(SETTINGS_ADVANCED_OPEN), |_| {
+        open_button("open-config", text(SETTINGS_ADVANCED_OPEN), |_| {
             open_in_editor(&SettingsStore::config_path())
         })
     }),
     Setting::custom("open-data", |_, _| {
-        open_button("open-data", IconName::FolderOpen, text(SETTINGS_ADVANCED_SHOW_IN_FINDER), |cx| {
-            reveal(&data_dir(), cx)
-        })
+        open_button("open-data", text(SETTINGS_ADVANCED_SHOW_IN_FINDER), |cx| reveal(&data_dir(), cx))
     }),
     Setting::custom("open-logs", |_, _| {
-        open_button("open-logs", IconName::FolderOpen, text(SETTINGS_ADVANCED_SHOW_IN_FINDER), |cx| {
+        open_button("open-logs", text(SETTINGS_ADVANCED_SHOW_IN_FINDER), |cx| {
             reveal(&data_dir().join("logs"), cx)
         })
     }),
@@ -43,7 +39,6 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("skip-scans", |_, _| {
         open_button(
             "skip-scans",
-            IconName::Settings,
             text(SETTINGS_ADVANCED_OPEN_DEVELOPER_TOOLS),
             crate::platform::dev_tools::open_settings,
         )
@@ -55,7 +50,6 @@ fn draw_reset_tips(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
     let none = app(cx).tips.is_empty();
     style::form_button("reset-tips")
         .outline()
-        .icon(IconName::RotateCcw)
         .label(text(SETTINGS_ADVANCED_RESET_TIPS_BUTTON))
         .disabled(none)
         .tooltip(if none {

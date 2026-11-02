@@ -337,21 +337,13 @@ impl SettingsWindow {
             .child(
                 style::form_button("import-theme")
                     .outline()
-                    .icon(IconName::ArrowDown)
                     .label(text(SETTINGS_APPEARANCE_IMPORT_THEME))
                     .on_click(cx.listener(|_, _, _, cx| import_theme(cx.weak_entity(), cx))),
             )
             .child(
                 style::form_button("open-studio")
                     .outline()
-                    .icon(IconName::Palette)
                     .label(text(SETTINGS_APPEARANCE_THEME_STUDIO))
-                    .child(style::keycap(
-                        ui,
-                        wormhole_core::keys::keymap::glyphs(
-                            wormhole_core::keys::keymap::ActionId::ThemeStudio,
-                        ),
-                    ))
                     .on_click(cx.listener(|_, _, _, cx| studio::open_studio(cx))),
             );
 
