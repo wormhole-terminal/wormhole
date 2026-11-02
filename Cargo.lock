@@ -9420,7 +9420,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "wormhole"
-version = "1.6.2"
+version = "1.6.3"
 dependencies = [
  "anyhow",
  "block2 0.6.2",
@@ -9453,7 +9453,7 @@ dependencies = [
 
 [[package]]
 name = "wormhole-core"
-version = "1.6.2"
+version = "1.6.3"
 dependencies = [
  "anyhow",
  "chrono",
@@ -9490,7 +9490,7 @@ dependencies = [
 
 [[package]]
 name = "wormhole-host"
-version = "1.6.2"
+version = "1.6.3"
 dependencies = [
  "anyhow",
  "libc",
@@ -9504,11 +9504,11 @@ dependencies = [
 
 [[package]]
 name = "wormhole-rules"
-version = "1.6.2"
+version = "1.6.3"
 
 [[package]]
 name = "wormhole-term"
-version = "1.6.2"
+version = "1.6.3"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -9531,7 +9531,7 @@ dependencies = [
 
 [[package]]
 name = "wormhole-text"
-version = "1.6.2"
+version = "1.6.3"
 dependencies = [
  "fluent-bundle",
  "fluent-langneg",
@@ -9552,7 +9552,7 @@ dependencies = [
 
 [[package]]
 name = "wormhole-wire"
-version = "1.6.2"
+version = "1.6.3"
 dependencies = [
  "libc",
 ]
