@@ -152,6 +152,8 @@ pub(crate) struct SettingsWindow {
     changed_copied: bool,
     /// Coding agents → the agents that aren't on PATH are listed.
     others_open: bool,
+    /// Coding agents → "How status works" is open under the last line.
+    status_open: bool,
     /// Profile → the fields of the profile Wormhole is in (made again when it changes).
     profile_form: Option<sections::ProfileForm>,
     /// Profile → "Delete profile…" was pressed: the row asks before it deletes.

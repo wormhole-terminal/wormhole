@@ -78,7 +78,8 @@ impl MenuLine {
         self
     }
 
-    /// An item that does something rather than choosing a value ("Choose app…"): listed after a rule,
+    /// An item that does something rather than choosing a value ("Choose app…"): listed after a rule (none when
+    /// it is the first),
     /// never checked.
     pub fn action(mut self) -> Self {
         self.action = true;
@@ -270,7 +271,7 @@ fn card(ui: UiColors, row: ElementId, menu: MenuOptions, at: usize, cx: &App) ->
     let mut rows = Vec::with_capacity(items.len() + 1);
     for (ix, item) in items.into_iter().enumerate() {
         let MenuLine { label, detail, icon, action } = item;
-        if action && !was_action {
+        if action && !was_action && !rows.is_empty() {
             rows.push(crate::style::popover_rule(ui).into_any_element());
         }
         was_action = action;

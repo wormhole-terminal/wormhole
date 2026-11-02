@@ -7,39 +7,16 @@ settings-section-agents = Coding agents
 settings-agents-preview = Live preview
     .keywords = preview terminals list working asking finished status
 
-settings-agents-summary = Agents found
-    .keywords = installed hooks repair path summary
+## Agents on this Mac
 
-## Notifications
-
-settings-agents-group-notifications = Notifications
-
-settings-agents-notifications = Notify me when an agent needs input or finishes
-    .description = These, and notifications about long commands and the bell, have their own section
-    .keywords = notifications alerts banner
-
-## Installed
-
-settings-agents-group-installed = Installed
+settings-agents-group-installed = Agents on this Mac
 
 settings-agents-installed = Installed agents
     .keywords = claude code codex gemini copilot cursor opencode aider amp goose qwen pi fm foundation models hooks status install remove repair
 
-## Other agents
-
-settings-agents-group-other-agents = Other agents
-
-settings-agents-other = Other agents
+settings-agents-other = Other agents Wormhole recognises
     .description = Agents { -brand } recognises that aren't on this Mac's PATH
     .keywords = not installed path
-
-## How status works
-
-settings-agents-group-how-status-works = How status works
-
-settings-agents-how = How status works
-    .description = With status hooks the agent tells { -brand } the moment it starts working, waits for you or finishes; without them the status is read from the terminal output
-    .keywords = hooks output heuristic backup
 
 ## Command line
 
@@ -50,7 +27,7 @@ settings-agents-cli-tool = Command line tool
     .description = The { -brand } command in any terminal
     .keywords = wh wht cli command install uninstall path shell alias symlink bin usr local terminal
 
-settings-agents-control-write = Let the command line type and open terminals
+settings-agents-control-write = Let it type and open terminals
     .description = send-text types into a terminal and new-terminal opens one, as a paste; never into the terminal that asks, nor one waiting for your answer
     .keywords = cli command line control api socket send-text new-terminal scripts agents automation remote type
 
@@ -59,7 +36,7 @@ settings-agents-control-write = Let the command line type and open terminals
 settings-agents-group-access = Agent access
     .blurb = Programs that drive { -brand } through its command line, MCP or socket: which ones are let in, and what they were allowed. { -brand } controls what goes through { -brand }. It can't stop a program from using your files directly.
 
-settings-agents-access = External agents and scripts
+settings-agents-access = Scripts and agents
     .description = Off lets nothing in beyond listing terminals and their status. Ask shows a question the first time a program wants more. Allowed while open lets every program in without asking while { -brand } runs
     .keywords = agent access permissions approve allow deny ask off open scripts mcp command line automation security trust
 
@@ -91,9 +68,9 @@ settings-agents-access-caps-note = Closing a terminal always asks. A program use
 settings-agents-access-not-signed = not signed
 settings-agents-access-ad-hoc = ad hoc signature
 
-## Wormhole skill
+## Skill and MCP
 
-settings-agents-group-skill = Wormhole skill
+settings-agents-group-skill = Skill and MCP
     .blurb = A skill teaches a coding agent to drive { -brand } through the command line: run tests in a split, wait for a dev server, read a screen. Nothing is installed until you press Install.
 
 settings-agents-skills = Skill for coding agents
@@ -106,11 +83,16 @@ settings-agents-skill-mcp = Add { -brand } to an agent over MCP
 
 ## settings_window/sections/agent_skills.rs (rows and notes drawn by that page's code)
 
+# The quiet line under an agent in Skill and MCP; where the skill is, is behind the (i).
+settings-agents-skill-hint-current = Skill installed
+settings-agents-skill-hint-outdated = Skill out of date
+settings-agents-skill-hint-foreign = Another skill is in the way
+settings-agents-skill-hint-none = No skill
+
 settings-agents-skill-none = No coding agent that loads skills was found on this Mac's PATH.
 settings-agents-skill-not-installed = No skill installed in
 settings-agents-skill-current = Skill installed in
 settings-agents-skill-outdated = Skill out of date in
-settings-agents-skill-chip-current = Installed
 settings-agents-skill-chip-outdated = Out of date
 settings-agents-skill-chip-foreign = In the way
 settings-agents-skill-covered = Skill covered by
@@ -122,26 +104,37 @@ settings-agents-copy-command = Copy command
 # { $error } the reason, in English.
 settings-agents-skill-failed = { $agent } skill: { $error }
 
-## settings_window/sections/agents.rs (labels, hints and notes drawn by this page's code)
+## The page's last line, with the buttons after it. Its words in search: where status comes from, and what has its own page
 
+settings-agents-footer = Notifications and how status works
+    .description = These, and notifications about long commands and the bell, have their own section. With status hooks the agent tells { -brand } the moment it starts working, waits for you or finishes; without them the status is read from the terminal output
+    .keywords = notifications alerts banner hooks output heuristic backup status
+
+## settings_window/sections/agents (labels, hints and notes drawn by this page's code)
+
+settings-agents-footer-line = When an agent notifies you is set in Notifications.
 settings-agents-open-notifications = Open Notifications
+settings-agents-how-status-works = How status works
 settings-agents-looking-for-agents = Looking for agents…
-settings-agents-reporting-through-hooks = reporting through hooks
-settings-agents-needs-repair = needs repair
-settings-agents-recognised-not-on-path = recognised, not on PATH
+settings-agents-needs-repair = Needs repair
+# The quiet line under an agent: how its status gets to { -brand }.
+settings-agents-hint-hooks = Exact status through hooks
+settings-agents-hint-output = Status read from its output
+settings-agents-hint-partial = Some hook events are missing (it may have been updated)
+settings-agents-hooks-on = Hooks on
 settings-agents-none-title = No coding agents found
 settings-agents-no-coding-agent-on-this-macs = No coding agent on this Mac's PATH. Install Claude Code, Codex or one of the others below: { -brand } recognises it in any terminal, and offers its hooks here.
 settings-agents-status-hooks-on = Status hooks on
 settings-agents-hooks-incomplete = Hooks incomplete
-settings-agents-reading-output = Reading output
 settings-agents-installed-hooks-in = Installed · hooks in
 settings-agents-installed-hooks-incomplete-in = Installed · hooks incomplete in
 settings-agents-installed-status-from-output-hooks-go = Installed · status from output; hooks go in
 settings-agents-installed-status-from-output-no-hook = Installed · status from output (no hook support)
-settings-agents-remove-hooks = Remove hooks
-settings-agents-repair-hooks = Repair hooks
-settings-agents-install-hooks = Install hooks
+settings-agents-remove-hooks = Remove Hooks
+settings-agents-repair-hooks = Repair Hooks
+settings-agents-add-hooks = Add Hooks
 settings-agents-reveal-in-finder = Reveal in Finder
+settings-agents-reveal-hook-file = Reveal Hook File in Finder
 settings-agents-no-hooks = No hooks
 settings-agents-not-on-path = Not on PATH
 settings-agents-status-hooks-available = status hooks available
@@ -172,12 +165,6 @@ settings-agents-hooks-partial = Some of { $agent }'s hook events are missing (it
 # A profile's own login of an agent. { $profile } is the profile's name and { $badge } the state of the
 # hooks there ("Status hooks on"); the folder follows.
 settings-agents-login-state = { $profile } profile · { $badge } in
-
-# The line that opens the list of agents found but not installed. { $count } is a whole number.
-settings-agents-others-head = { $count ->
-    [one] { $count } more agent { -brand } recognises
-   *[other] { $count } more agents { -brand } recognises
-}
 
 ## The command line tool row. In every message { $command } is the tool's name, as the terminal types it.
 

@@ -21,12 +21,12 @@ const HANG: f32 = style::ITEM_LEAD_W + 8.0;
 /// A lead icon hung in the margin before its text (see [`HANG`]), at the top of its
 /// `.relative()` parent. Placed outside the layout: a negative margin would measure the text
 /// around it again in every frame.
-pub(super) fn hang(lead: Div) -> Div {
+fn hang(lead: Div) -> Div {
     div().absolute().top_0().left(px(-HANG)).child(lead)
 }
 
-/// With hooks and without, side by side, and the promise about the files.
-pub(super) fn draw(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+/// With hooks and without, side by side, and the promise about the files: what "How status works" opens.
+pub(super) fn draw(cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let column = |icon: IconName, color: Hsla, title: &'static str, text: &'static str| {
         div()

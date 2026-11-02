@@ -118,6 +118,7 @@ impl SettingsWindow {
             sidebar_preview: None,
             changed_copied: false,
             others_open: false,
+            status_open: false,
             profile_form: None,
             confirm_delete_profile: false,
             new_profile: None,

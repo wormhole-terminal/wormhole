@@ -84,6 +84,25 @@ pub(super) fn tile_rows(ui: UiColors) -> Div {
                 .map(|(kind, word)| style::solid_chip(ui, kind, word)),
             ),
         )
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .child(style::more_row(
+                    "g-more-closed",
+                    ui,
+                    "Other agents Wormhole recognises",
+                    Some("17".into()),
+                    false,
+                )) // text: sample (the gallery's specimen)
+                .child(style::more_row(
+                    "g-more-open",
+                    ui,
+                    "Other agents Wormhole recognises",
+                    Some("17".into()),
+                    true,
+                )), // text: sample (the gallery's specimen)
+        )
         .child(style::empty_list(
             ui,
             style::EmptyList {

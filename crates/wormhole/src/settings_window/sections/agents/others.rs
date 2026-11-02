@@ -1,4 +1,5 @@
-//! The agents that aren't on PATH.
+//! "Other agents Wormhole recognises": the agents that aren't on this Mac's PATH, behind one row that opens
+//! them. Closed it says how many there are; open, each is a tile row with how its status would come.
 
 #[allow(
     clippy::wildcard_imports,
@@ -10,13 +11,10 @@ use wormhole_text::{text, whole};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::how::hang;
-use super::mark;
 use super::snapshot::AgentRow;
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, TextRole};
+use crate::style;
 
-/// The agents that aren't on PATH, folded into one row that lists them when opened.
 pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let Some(snapshot) = &window.agents else { return div().into_any_element() };
@@ -24,60 +22,37 @@ pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
     if others.is_empty() {
         return div().into_any_element();
     }
-    let names = others.iter().map(|row| row.agent.name).collect::<Vec<_>>().join(" · ");
     let open = window.others_open;
-    let head = div()
-        .id("agents-others")
-        .flex()
-        .items_center()
-        .gap_2()
-        .py_2()
-        .rule_top(ui)
-        .cursor_pointer()
-        .hover(move |d| d.bg(ui.hover))
-        .on_click(cx.listener(|this, _, _, cx| {
-            this.others_open = !this.others_open;
-            cx.notify();
-        }))
-        .relative()
-        .child(hang(style::lead(style::disclosure(ui, !open))).bottom_0().flex().items_center())
-        .child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .flex()
-                .flex_col()
-                .child(
-                    div()
-                        .text_body()
-                        .font_weight(FontWeight::MEDIUM)
-                        .child(settings_agents_others_head(whole(others.len()))),
-                )
-                .when(!open, |d| d.child(div().text_caption().text_color(ui.muted).child(names))),
-        )
-        .child(
-            div().flex_none().text_caption().text_color(ui.faint).child(text(SETTINGS_AGENTS_NOT_ON_PATH)),
-        );
+    let head = style::more_row(
+        "agents-others",
+        ui,
+        text(SETTINGS_AGENTS_OTHER),
+        Some(whole(others.len()).to_string().into()),
+        open,
+    )
+    .on_click(cx.listener(|this, _, _, cx| {
+        this.others_open = !this.others_open;
+        cx.notify();
+    }));
     div()
         .flex()
         .flex_col()
         .child(head)
-        .when(open, |d| {
-            d.children(others.into_iter().map(|row| {
-                let hooks = if row.spec.is_some() {
-                    text(SETTINGS_AGENTS_STATUS_HOOKS_AVAILABLE)
-                } else {
-                    text(SETTINGS_AGENTS_STATUS_FROM_OUTPUT)
-                };
-                div()
-                    .flex()
-                    .items_center()
-                    .gap_3()
-                    .py_1()
-                    .child(mark(ui, row.agent))
-                    .child(div().flex_1().min_w_0().text_body().text_color(ui.muted).child(row.agent.name))
-                    .child(div().text_caption().text_color(ui.faint).child(hooks))
-            }))
-        })
+        .children(
+            open.then(|| div().flex().flex_col().children(others.into_iter().map(|row| other_row(ui, row)))),
+        )
+        .into_any_element()
+}
+
+/// One agent that isn't on PATH: its name, and that it isn't, with what its status would come from.
+fn other_row(ui: crate::settings::UiColors, row: &AgentRow) -> AnyElement {
+    let status = text(if row.spec.is_some() {
+        SETTINGS_AGENTS_STATUS_HOOKS_AVAILABLE
+    } else {
+        SETTINGS_AGENTS_STATUS_FROM_OUTPUT
+    });
+    let mut parts = style::TileRowParts::new(style::RowTile::Agent(row.agent.id), row.agent.name);
+    parts.hint = Some(format!("{} · {status}", text(SETTINGS_AGENTS_NOT_ON_PATH)).into());
+    style::tile_row(SharedString::from(format!("agent-other-{:?}", row.agent.id)), ui, parts)
         .into_any_element()
 }

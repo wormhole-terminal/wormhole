@@ -26,8 +26,6 @@ fn sentences() -> Vec<(String, &'static str)> {
             "Some of Codex's hook events are missing (it may have been updated). Repair adds them back; your own entries stay.",
         ),
         (settings_agents_login_state("Work", "Status hooks on"), "Work profile · Status hooks on in"),
-        (settings_agents_others_head(1), "1 more agent Wormhole recognises"),
-        (settings_agents_others_head(4), "4 more agents Wormhole recognises"),
         (settings_agents_cli_install_failed("wh", "denied"), "Couldn't install wh: denied"),
         (settings_agents_cli_remove_failed("wh", "denied"), "Couldn't remove wh: denied"),
         (settings_agents_cli_not_installed("wh"), "wh in any terminal. Not installed"),

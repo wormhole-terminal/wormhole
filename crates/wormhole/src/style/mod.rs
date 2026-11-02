@@ -73,6 +73,7 @@ mod lights;
 pub(crate) mod menu_layer;
 mod messages;
 mod metrics;
+mod more_row;
 pub mod motion;
 mod notice;
 mod open_one;
@@ -125,6 +126,7 @@ pub(crate) use lights::{
 };
 pub use messages::*;
 pub use metrics::Metrics;
+pub use more_row::*;
 pub use notice::*;
 pub(crate) use open_one::OpenOne;
 pub use palette::*;

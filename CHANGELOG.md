@@ -27,6 +27,15 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   its state, one line under it, and the buttons on the right edge, every row the same height. A list with
   nothing in it (no coding agent found, no Probes, no trusted projects, no terminals to import from) says so
   in a card that says what to do.
+- Settings → Coding agents is shorter. Each agent on this Mac is one row with a line that says how its status
+  reaches Wormhole ("Exact status through hooks", "Status read from its output"); where the hooks go is behind
+  the (i). Hooks that are on show a "Hooks on" menu (Repair Hooks, Remove Hooks, Reveal Hook File in Finder),
+  an agent without them has Add Hooks, and one whose hooks are partly missing says "Needs repair" and has Repair
+  Hooks. The agents Wormhole recognises but doesn't find are one row, "Other agents Wormhole recognises", that
+  opens the list, and the counts across the top are gone (the rows and that row hold the same facts). Skill and
+  MCP shows each agent's skill in one line, with the command that adds Wormhole over MCP under its row instead
+  of beside it, where it ran into the label. A last line points to Notifications and opens how status works,
+  replacing the "Notify me…" row.
 - Settings rows show their config key under the pointer, and a click on it copies it and says "Copied"
   for a moment. Holding ⌥ shows every key on the page. A right click on a row (or ⌃↩ on one of its
   controls, or VoiceOver's Show menu) offers Copy Key, Copy as JSON (the key with its current value, ready

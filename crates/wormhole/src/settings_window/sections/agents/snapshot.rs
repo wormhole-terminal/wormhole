@@ -28,6 +28,8 @@ pub(crate) struct AgentRow {
     pub(crate) installed: bool,
     /// How hooks are written for this agent, if they can be.
     pub(crate) spec: Option<&'static Spec>,
+    /// Whether the file the hooks go in is there, so Reveal has something to select.
+    pub(crate) hook_file_exists: bool,
     /// `None` when there is no spec.
     pub(crate) state: Option<Result<State, String>>,
     /// The profiles' login folders for this agent: a second location for the hooks each.
@@ -60,6 +62,7 @@ impl AgentsSnapshot {
                     agent,
                     installed: agents::installed(agent),
                     spec,
+                    hook_file_exists: spec.is_some_and(|spec| spec.path(home).exists()),
                     state: spec.map(|spec| spec.state(home)),
                     logins: spec
                         .map(|spec| {

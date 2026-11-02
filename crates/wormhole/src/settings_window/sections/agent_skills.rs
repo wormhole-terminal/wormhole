@@ -29,7 +29,7 @@ use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
 
 pub(super) const SKILLS: Setting = Setting::block("agent-skills", draw_skills);
-pub(super) const MCP: Setting = Setting::custom("agent-mcp", draw_mcp);
+pub(super) const MCP: Setting = Setting::custom("agent-mcp", draw_mcp).below(mcp_command);
 
 /// One agent's skill as the files have it, read with the rest of the page (`AgentsSnapshot::load`).
 pub(crate) struct SkillRow {
@@ -105,21 +105,31 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let agent = agents::agent(target.agent);
     let word = target.word();
     let state = row.state.as_ref().ok().copied();
-    let (detail, chip) = match state {
-        Some(State::NotInstalled) if row.covered.is_some() => (text(SETTINGS_AGENTS_SKILL_COVERED), None),
-        Some(State::Current) => (
-            text(SETTINGS_AGENTS_SKILL_CURRENT),
-            Some((style::ChipKind::Good, text(SETTINGS_AGENTS_SKILL_CHIP_CURRENT))),
+    // The short line says what the skill is; where it is, and what the row does, is behind the (i).
+    let (hint, detail, chip) = match state {
+        Some(State::NotInstalled) if row.covered.is_some() => (
+            format!("{} {}", text(SETTINGS_AGENTS_SKILL_COVERED), row.covered.as_deref().unwrap_or_default()),
+            text(SETTINGS_AGENTS_SKILL_COVERED),
+            None,
         ),
+        Some(State::Current) => {
+            (text(SETTINGS_AGENTS_SKILL_HINT_CURRENT).to_string(), text(SETTINGS_AGENTS_SKILL_CURRENT), None)
+        }
         Some(State::Outdated) => (
+            text(SETTINGS_AGENTS_SKILL_HINT_OUTDATED).to_string(),
             text(SETTINGS_AGENTS_SKILL_OUTDATED),
             Some((style::ChipKind::Warn, text(SETTINGS_AGENTS_SKILL_CHIP_OUTDATED))),
         ),
         Some(State::Foreign) => (
+            text(SETTINGS_AGENTS_SKILL_HINT_FOREIGN).to_string(),
             text(SETTINGS_AGENTS_SKILL_FOREIGN),
             Some((style::ChipKind::Warn, text(SETTINGS_AGENTS_SKILL_CHIP_FOREIGN))),
         ),
-        _ => (text(SETTINGS_AGENTS_SKILL_NOT_INSTALLED), None),
+        _ => (
+            text(SETTINGS_AGENTS_SKILL_HINT_NONE).to_string(),
+            text(SETTINGS_AGENTS_SKILL_NOT_INSTALLED),
+            None,
+        ),
     };
     let button = |id: &str, label: &'static str, primary: bool| {
         style::form_button(SharedString::from(format!("agent-skill-{word}-{id}")))
@@ -159,7 +169,15 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     });
     let mut parts = style::TileRowParts::new(style::RowTile::Agent(target.agent), agent.name);
     parts.chip = chip.map(|(kind, word)| (kind, word.into()));
-    parts.hint = Some(format!("{detail} {}", row.covered.as_deref().unwrap_or(&row.shown)).into());
+    parts.hint = Some(hint.into());
+    parts.more = Some(
+        format!(
+            "{detail} {}. {}",
+            row.covered.as_deref().unwrap_or(&row.shown),
+            text(SETTINGS_AGENTS_SKILLS_DESCRIPTION)
+        )
+        .into(),
+    );
     parts.controls = controls;
     div()
         .flex()
@@ -169,36 +187,35 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
         .into_any_element()
 }
 
-/// The `claude mcp add …` line and a button that copies it.
-fn draw_mcp(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+/// The button that copies the `claude mcp add …` line; the line itself is under the row, so it never
+/// competes with the label for the row's width (see [`mcp_command`]).
+fn draw_mcp(_: &SettingsWindow, _: &mut Context<SettingsWindow>) -> AnyElement {
+    let copy = mcp_add_command();
+    style::form_button("agent-mcp-copy")
+        .outline()
+        .icon(IconName::Copy)
+        .label(text(SETTINGS_AGENTS_COPY_COMMAND))
+        .on_click(move |_, _, cx| crate::platform::clipboard::write(copy.clone(), cx))
+        .into_any_element()
+}
+
+/// The command, in a box across the column under the MCP row. It wraps rather than cut: it is what a person
+/// pastes into a terminal.
+fn mcp_command(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     let ui = ui(cx);
     let (code_font, _) = crate::fonts::code_font(cx);
-    let command = mcp_add_command();
-    let copy = command.clone();
-    div()
-        .flex()
-        .items_center()
-        .gap_2()
-        .child(
-            div()
-                .px_2()
-                .py_1()
-                .rounded(ui.radius)
-                .bg(ui.hover)
-                .font_family(code_font)
-                .text_caption()
-                .text_color(ui.text)
-                .truncate()
-                .child(command),
-        )
-        .child(
-            style::form_button("agent-mcp-copy")
-                .ghost()
-                .icon(IconName::Copy)
-                .label(text(SETTINGS_AGENTS_COPY_COMMAND))
-                .on_click(move |_, _, cx| crate::platform::clipboard::write(copy.clone(), cx)),
-        )
-        .into_any_element()
+    Some(
+        div()
+            .px_2()
+            .py_1()
+            .rounded(ui.radius)
+            .bg(ui.hover)
+            .font_family(code_font)
+            .text_caption()
+            .text_color(ui.text)
+            .child(mcp_add_command())
+            .into_any_element(),
+    )
 }
 
 #[cfg(test)]
