@@ -30,6 +30,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- The question before quitting said that what runs in your terminals keeps going even when some of them run
+  inside Wormhole and end. It now counts them ("2 terminals keep running; 1 terminal ends because it runs
+  inside Wormhole"). The questions before quitting or closing also said "An agent is still working" for any
+  running command, such as `top`; they now say it only where an agent is detected and name the program.
 - When the data folder could not be created or opened (for example with no home folder), Wormhole ran on
   without saving anything and said nothing. It now names the folder and the error in a notice, on standard
   error and in the log.

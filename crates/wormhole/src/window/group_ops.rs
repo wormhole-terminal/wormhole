@@ -35,7 +35,7 @@ impl Workspace {
             return;
         }
         let running: Vec<(Status, bool)> =
-            asking.iter().map(|s| (s.status(cx), s.command_running(cx))).collect();
+            asking.iter().map(|s| (s.agent_status(cx), s.command_running(cx))).collect();
         let programs: Vec<String> = asking.iter().flat_map(|s| s.running_programs(false, cx)).collect();
         let stakes = self.close_stakes(&members, cx);
         let mut detail = close_group_detail(sessions.len(), &running, &programs, &stakes);

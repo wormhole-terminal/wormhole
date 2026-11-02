@@ -254,3 +254,23 @@ fn a_programs_own_name_is_shown_and_a_known_agents_is_not_taken_for_one(cx: &mut
     report(cx, &a, "state=blocked:kind=question:id=plan/apply");
     assert_eq!(facts(cx, &window)[0].program.as_deref(), Some("terraform"));
 }
+
+/// Any command makes a terminal busy (its output is the signal), so the questions before ending it may call
+/// the status an agent's only where an agent is detected: `top` is not one.
+#[gpui_kit::test]
+fn a_busy_command_is_not_called_an_agent_in_the_questions(cx: &mut TestAppContext) {
+    if isolate("a_busy_command_is_not_called_an_agent_in_the_questions") {
+        return;
+    }
+    let window = start(cx, 1);
+    let t = terminal(cx, &window, 0);
+    event(cx, &t, PtyEvent::Mark(Mark::OutputStart, 0));
+    assert_eq!(now(cx, &t).0, Status::Busy);
+    let said = |cx: &mut TestAppContext| {
+        cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.sessions[0].agent_status(cx)))
+            .expect("window")
+    };
+    assert_eq!(said(cx), Status::Idle, "a command, not an agent");
+    cx.update(|cx| t.update(cx, |t, _| t.agent = Some(wormhole_core::agents::AgentId::Claude)));
+    assert_eq!(said(cx), Status::Busy, "a detected agent at work is said so");
+}

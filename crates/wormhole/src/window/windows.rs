@@ -128,7 +128,7 @@ impl Workspace {
             .sessions
             .iter()
             .filter(|s| s.needs_close_confirmation(cx))
-            .map(|s| (s.status(cx), s.command_running(cx)))
+            .map(|s| (s.agent_status(cx), s.command_running(cx)))
             .collect();
         if running.is_empty() {
             self.discard(cx);
@@ -460,7 +460,7 @@ fn quit_asking(cx: &mut App, end_hosts: bool) {
             } else {
                 local_running += 1;
             }
-            running.push((session.status(cx), session.command_running(cx)));
+            running.push((session.agent_status(cx), session.command_running(cx)));
             programs.extend(session.running_programs(false, cx));
             if window.hidden {
                 let name = app(cx)
@@ -484,8 +484,8 @@ fn quit_asking(cx: &mut App, end_hosts: bool) {
     let title = if end_hosts { "Quit and End All Terminals?" } else { "Quit Wormhole?" };
     let detail = match ask {
         session::QuitAsk::Plain => session::quit_detail(&running, &programs, &elsewhere),
-        session::QuitAsk::KeepBox { local_running } => {
-            session::quit_detail_keeping(&running, &programs, &elsewhere, hosted_running > 0, local_running)
+        session::QuitAsk::KeepBox { .. } => {
+            session::quit_detail_keeping(&running, &programs, &elsewhere, hosted_running, local_running)
         }
     };
     let question = dialog::CloseQuestion { title: title.into(), detail: detail.into(), confirm };

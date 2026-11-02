@@ -108,6 +108,13 @@ impl Session {
         self.terminal().read(cx).status()
     }
 
+    /// The status a question about ending the terminal may call an agent's: the real status where an agent
+    /// is detected in it, else `Idle`. Any command makes a terminal "busy" (its output is the signal), and
+    /// `top` is not an agent: the question names what runs through the programs instead.
+    pub(crate) fn agent_status(&self, cx: &App) -> Status {
+        if self.terminal().read(cx).agent.is_some() { self.status(cx) } else { Status::Idle }
+    }
+
     /// The session's name: the project's, else what runs in its terminal.
     pub(crate) fn name(&self) -> SharedString {
         if let Some(name) = &self.custom_name {
@@ -373,18 +380,31 @@ pub(crate) fn quit_detail_keeping(
     running: &[(Status, bool)],
     programs: &[String],
     other_profiles: &[(String, usize)],
-    hosted_running: bool,
-    local_running: bool,
+    hosted_running: usize,
+    local_running: usize,
 ) -> String {
-    if !hosted_running {
+    if hosted_running == 0 {
         return quit_detail(running, programs, other_profiles);
     }
-    let except = if local_running { ", except in terminals that can't run in the background" } else { "" };
-    let head = format!(
-        "Your terminals come back next time and what runs in them keeps going{except}. Untick the box to \
-         end them."
-    );
+    // Said from the counts: what is kept goes on, and what runs inside the app ends, however the box is.
+    let head = if local_running == 0 {
+        "Your terminals come back next time and what runs in them keeps going. Untick the box to end them."
+            .to_string()
+    } else {
+        let (kept, ended) = (terminals(hosted_running), terminals(local_running));
+        let (ends, runs) = if local_running == 1 { ("ends", "it runs") } else { ("end", "they run") };
+        let keeps = if hosted_running == 1 { "keeps" } else { "keep" };
+        format!(
+            "Your terminals come back next time. {kept} {keeps} running; {ended} {ends} because {runs} \
+             inside Wormhole. Untick the box to end the others too."
+        )
+    };
     quit_detail_with(&head, running, programs, other_profiles)
+}
+
+/// "1 terminal", "3 terminals".
+fn terminals(count: usize) -> String {
+    format!("{count} terminal{}", if count == 1 { "" } else { "s" })
 }
 
 /// What still runs among sessions that ask before closing (`running`: each one's lead status and
@@ -636,19 +656,23 @@ mod tests {
         let programs = names(&["claude"]);
         // Nothing kept runs something: the plain wording is true either way.
         assert_eq!(
-            quit_detail_keeping(&running, &programs, &[], false, true),
+            quit_detail_keeping(&running, &programs, &[], 0, 1),
             quit_detail(&running, &programs, &[])
         );
         assert_eq!(
-            quit_detail_keeping(&running, &programs, &[], true, false),
+            quit_detail_keeping(&running, &programs, &[], 2, 0),
             "Your terminals come back next time and what runs in them keeps going. Untick the box to end \
              them. Still running: claude."
         );
         assert_eq!(
-            quit_detail_keeping(&running, &programs, &[("Work".into(), 1)], true, true),
-            "Your terminals come back next time and what runs in them keeps going, except in terminals \
-             that can't run in the background. Untick the box to end them. Still running: claude. \
+            quit_detail_keeping(&running, &programs, &[("Work".into(), 1)], 2, 1),
+            "Your terminals come back next time. 2 terminals keep running; 1 terminal ends because it runs \
+             inside Wormhole. Untick the box to end the others too. Still running: claude. \
              1 terminal in Work is running an agent or a command."
+        );
+        assert!(
+            quit_detail_keeping(&running, &programs, &[], 1, 3)
+                .contains("1 terminal keeps running; 3 terminals end because they run inside Wormhole.")
         );
     }
 
