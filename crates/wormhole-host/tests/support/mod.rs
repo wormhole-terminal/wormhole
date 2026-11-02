@@ -13,7 +13,7 @@ use std::io::{self, Read as _};
 use std::os::fd::{AsRawFd as _, FromRawFd as _, OwnedFd};
 use std::os::unix::net::UnixStream;
 use std::os::unix::process::CommandExt as _;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -27,6 +27,33 @@ use wormhole_wire::{
 pub(crate) const SIZE: wire::Size = wire::Size { cols: 80, rows: 24, cell_w: 128, cell_h: 256 };
 /// How long any wait in these tests may take before it fails.
 pub(crate) const PATIENCE: Duration = Duration::from_secs(10);
+
+/// The host binary every test of this process starts: `target/debug/wormhole-host` checked once to have been
+/// built from this source tree, and copied for the run. That path is shared by every worktree and every
+/// session on the machine, and the last build wins: a test that ran an older host (without the seed, say)
+/// would fail at random, far from the cause. The copy cannot be built over while the tests run.
+pub(crate) fn host_binary() -> &'static Path {
+    static BINARY: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    BINARY.get_or_init(|| {
+        let built = Path::new(env!("CARGO_BIN_EXE_wormhole-host"));
+        let said = Command::new(built).arg("--built-from").output().expect("the host binary runs");
+        let from = String::from_utf8_lossy(&said.stdout).trim().to_owned();
+        assert_eq!(
+            from,
+            env!("CARGO_MANIFEST_DIR"),
+            "{} was built from {from:?} (nothing at all if it is older than the flag), not from this tree \
+             ({}): another worktree built over the shared target dir. Run `cargo build -p wormhole-host` \
+             from this tree and run the tests again.",
+            built.display(),
+            env!("CARGO_MANIFEST_DIR"),
+        );
+        let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("host-{}", std::process::id()));
+        fs::create_dir_all(&dir).expect("a folder for the host binary");
+        let copy = dir.join("wormhole-host");
+        fs::copy(built, &copy).expect("a copy of the host binary");
+        copy
+    })
+}
 
 static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
@@ -58,7 +85,7 @@ impl Host {
 
     pub(crate) fn start_in(data: tempfile::TempDir, hosts_dir: PathBuf, id: String) -> Self {
         let (read, write) = pipe();
-        let mut command = Command::new(env!("CARGO_BIN_EXE_wormhole-host"));
+        let mut command = Command::new(host_binary());
         command
             .args(["--id", &id, "--dir"])
             .arg(&hosts_dir)

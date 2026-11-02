@@ -10,7 +10,7 @@ mod support;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use support::{PATIENCE, alive, new_id, signal, wait_gone};
+use support::{PATIENCE, alive, host_binary, new_id, signal, wait_gone};
 use wormhole_term::client::{self, HostCommand};
 use wormhole_term::{GridSize, Launch, Pty, PtyEvent, PtyEvents, Shell, StartOptions};
 
@@ -31,11 +31,7 @@ impl Place {
     }
 
     fn command(&self) -> HostCommand<'_> {
-        HostCommand {
-            binary: env!("CARGO_BIN_EXE_wormhole-host").as_ref(),
-            hosts_dir: &self.hosts_dir,
-            id: &self.id,
-        }
+        HostCommand { binary: host_binary(), hosts_dir: &self.hosts_dir, id: &self.id }
     }
 
     fn host_pid(&self) -> u32 {
@@ -115,18 +111,48 @@ fn a_terminal_restored_from_text_runs_in_a_new_host_that_seeds_the_screen() {
     let (pty, _events) = Pty::start_hosted(&place.command(), GRID, &options, launch("/bin/cat", &[]))
         .expect("a hosted terminal");
     assert!(pty.is_hosted(), "it runs in a host, not in the app");
+    assert!(pty.host_minor() >= Some(4), "a host that draws the seed: {:?}", pty.host_minor());
     wait_text(&pty, "old line two");
     wait_text(&pty, "restored");
     pty.write(b"typed now\r".as_slice());
     wait_text(&pty, "typed now");
     let seen = pty.screen_text();
-    assert!(seen.find("old line one") < seen.find("typed now"), "the old text is above: {seen}");
+    let (old, typed) = (seen.find("old line one"), seen.find("typed now"));
+    assert!(old.expect("the old text is on the screen") < typed.expect("and so is the typed line"), "{seen}");
     // A later attach gets the same from the host itself.
     assert!(pty.detach());
     drop(pty);
     let (again, _events) = place.attach(true);
     wait_text(&again, "old line one");
     wait_text(&again, "typed now");
+}
+
+/// An attach shows the host's screen and never draws saved text of its own: the host's repaint has what it
+/// has, so a replica that added the saved text would differ from it (a headless attach would keep it until
+/// shown).
+#[test]
+fn an_attach_never_replays_saved_text() {
+    let place = Place::new();
+    let (pty, _events) = start(&place, "/bin/cat", &[]);
+    pty.write(b"the host's line\r".as_slice());
+    wait_text(&pty, "the host's line");
+    assert!(pty.detach());
+    drop(pty);
+    let socket = client::socket_of(&place.hosts_dir, &place.id).expect("the host's socket");
+    let stale = StartOptions { restore: Some("stale saved text\n"), ..options() };
+    for visible in [true, false] {
+        let (again, _events) = Pty::attach_hosted(&socket, &place.id, &stale, visible).expect("attached");
+        if visible {
+            wait_text(&again, "the host's line");
+        }
+        assert!(
+            !again.screen_text().contains("stale saved text"),
+            "visible {visible}: {}",
+            again.screen_text()
+        );
+        assert!(!again.screen_text().contains("restored"));
+        assert!(again.detach());
+    }
 }
 
 #[test]

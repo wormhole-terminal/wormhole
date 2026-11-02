@@ -79,6 +79,15 @@ fn parse_version(text: &str) -> AppVersion {
 
 /// The whole program: `main` is this.
 pub fn main(argv: impl IntoIterator<Item = OsString>) -> ExitCode {
+    let argv: Vec<OsString> = argv.into_iter().collect();
+    // Hidden, for the tests: which source tree this binary was built from. The binary of a test is
+    // `target/debug/wormhole-host`, which every worktree on a machine shares; a test checks it is its own
+    // before it starts a host from it. Not part of the command line (`args`), which takes nothing else.
+    if argv.len() == 2 && argv[1] == "--built-from" {
+        use std::io::Write as _;
+        let _ = writeln!(std::io::stdout(), "{}", env!("CARGO_MANIFEST_DIR"));
+        return ExitCode::SUCCESS;
+    }
     let args = match args::parse(argv.into_iter().skip(1)) {
         Ok(args) => args,
         Err(err) => {
