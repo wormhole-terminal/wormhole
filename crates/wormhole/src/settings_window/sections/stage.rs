@@ -49,7 +49,7 @@ pub(in crate::settings_window) fn draw_stage(
     let ui = crate::settings::ui(cx);
     let store = cx.global::<SettingsStore>();
     let tokens = &store.tokens;
-    let own: &Settings = &store.settings_without_zen();
+    let own: &Settings = store.settings_without_zen();
     let (bg, fg) = (hsla(tokens.terminal.background), hsla(tokens.terminal.foreground));
     let ansi = |i: usize| hsla(tokens.terminal.ansi[i]);
     let (blue, green) = (ansi(4), ansi(2));
@@ -58,7 +58,17 @@ pub(in crate::settings_window) fn draw_stage(
     let part_of = |part: &TitlePart| {
         let branch = *part == TitlePart::Branch;
         let plain = matches!(part, TitlePart::Folder | TitlePart::Terminal);
-        (sample(*part), if branch { token(tokens, "git.branch") } else if plain { fg } else { faded(fg, 0.6) }, branch)
+        (
+            sample(*part),
+            if branch {
+                token(tokens, "git.branch")
+            } else if plain {
+                fg
+            } else {
+                faded(fg, 0.6)
+            },
+            branch,
+        )
     };
     let side = |ix: usize| {
         let fill = match (own.liquid_glass, ix) {
@@ -70,7 +80,12 @@ pub(in crate::settings_window) fn draw_stage(
         Bar { fill }
     };
     // text: sample (the preview's made-up terminal lines)
-    let lines = [("~/wormhole $ cargo test", blue), ("   Compiling wormhole v1.5.0", fg), ("test result: ok. 412 passed", green), ("~/wormhole $ ", blue)];
+    let lines = [
+        ("~/wormhole $ cargo test", blue),
+        ("   Compiling wormhole v1.5.0", fg),
+        ("test result: ok. 412 passed", green),
+        ("~/wormhole $ ", blue),
+    ];
     let mock = WindowMockProps {
         id: "appearance-window-mock".into(),
         spoken: text_of(SETTINGS_WINDOW_PREVIEW_WINDOW_LABEL),
@@ -80,9 +95,9 @@ pub(in crate::settings_window) fn draw_stage(
         has_rule: own.column_dividers,
         status_color: faded(fg, 0.7),
         has_status: own.status_bar,
-        branch: "main".into(), // text: sample
+        branch: "main".into(),       // text: sample
         changed: "3 changed".into(), // text: sample
-        shell: "zsh".into(), // text: sample
+        shell: "zsh".into(),         // text: sample
         left: left
             .iter()
             .map(part_of)
@@ -94,10 +109,7 @@ pub(in crate::settings_window) fn draw_stage(
             .map(|(text, color, bold)| RightPart { text: text.into(), color, bold })
             .collect(),
         side: (0..3).map(side).collect(),
-        lines: lines
-            .iter()
-            .map(|(text, color)| Line { text: (*text).into(), color: *color })
-            .collect(),
+        lines: lines.iter().map(|(text, color)| Line { text: (*text).into(), color: *color }).collect(),
     };
     let _ = settings(cx);
     card(

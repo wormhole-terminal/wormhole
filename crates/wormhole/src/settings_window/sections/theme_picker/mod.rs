@@ -269,7 +269,11 @@ impl SettingsWindow {
         let is_hidden = |ix: usize| hidden_themes.contains(&entries[ix].value);
         let (mut total, mut hidden_cards) = (0, 0);
         let mut sets: Vec<AnyElement> = Vec::new();
-        let mut add = |caption: Option<SharedString>, all: Vec<usize>, picked: &dyn Fn(usize) -> bool, cards: &[Entity<ThemeCard>], count: usize| {
+        let mut add = |caption: Option<SharedString>,
+                       all: Vec<usize>,
+                       picked: &dyn Fn(usize) -> bool,
+                       cards: &[Entity<ThemeCard>],
+                       count: usize| {
             let shown = if self.themes_all { all.clone() } else { first_cards(&all, count, picked) };
             total += all.len();
             hidden_cards += all.len() - shown.len();
@@ -300,9 +304,7 @@ impl SettingsWindow {
             }
         } else {
             let all: Vec<usize> = (0..set.pairs.len())
-                .filter(|ix| {
-                    set.pair_picked[*ix] || !set.pairs[*ix].halves().all(|half| is_hidden(half))
-                })
+                .filter(|ix| set.pair_picked[*ix] || !set.pairs[*ix].halves().all(&is_hidden))
                 .collect();
             add(None, all, &|ix| set.pair_picked[ix], &set.pair_cards, FIRST_CARDS);
         }
@@ -325,10 +327,14 @@ impl SettingsWindow {
             id: "themes-block".into(),
             spoken: text(SETTINGS_APPEARANCE_THEME).into(),
             show_all: if self.themes_all || hidden_cards > 0 { show_all.into() } else { "".into() },
-            on_show_all: Some(Rc::new(move |e: &ClickEvent, w: &mut Window, cx: &mut App| toggle_all(e, w, cx)) as Handler),
+            on_show_all: Some(Rc::new(move |e: &ClickEvent, w: &mut Window, cx: &mut App| {
+                toggle_all(e, w, cx)
+            }) as Handler),
             hidden: (!hidden_themes.is_empty())
                 .then(|| settings_appearance_hidden_themes(&hidden_themes.len().to_string()).into()),
-            on_hidden: Some(Rc::new(move |e: &ClickEvent, w: &mut Window, cx: &mut App| toggle_hidden(e, w, cx)) as Handler),
+            on_hidden: Some(Rc::new(move |e: &ClickEvent, w: &mut Window, cx: &mut App| {
+                toggle_hidden(e, w, cx)
+            }) as Handler),
             sets: div().flex().flex_col().gap(px(12.0)).children(sets).into_any_element(),
             buttons: div()
                 .flex()

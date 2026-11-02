@@ -7,31 +7,31 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Changed"
-pub const SETTINGS_SECTION_CHANGED: Key = Key::new(569);
+pub const SETTINGS_SECTION_CHANGED: Key = Key::new(566);
 /// "Every setting that differs from its default, with its default beside it. Reset them one by one, or all at once."
-pub const SETTINGS_SECTION_CHANGED_INTRO: Key = Key::new(570);
+pub const SETTINGS_SECTION_CHANGED_INTRO: Key = Key::new(567);
 /// "Everything else is at its default"
-pub const SETTINGS_CHANGED_SUMMARY_DETAIL: Key = Key::new(572);
+pub const SETTINGS_CHANGED_SUMMARY_DETAIL: Key = Key::new(569);
 /// "Every setting is at its default"
-pub const SETTINGS_CHANGED_NONE: Key = Key::new(573);
+pub const SETTINGS_CHANGED_NONE: Key = Key::new(570);
 /// "Nothing differs from what Wormhole ships with"
-pub const SETTINGS_CHANGED_NONE_DETAIL: Key = Key::new(574);
+pub const SETTINGS_CHANGED_NONE_DETAIL: Key = Key::new(571);
 /// "Copy as JSON"
-pub const SETTINGS_CHANGED_COPY: Key = Key::new(575);
+pub const SETTINGS_CHANGED_COPY: Key = Key::new(572);
 /// "Copied"
-pub const SETTINGS_CHANGED_COPIED: Key = Key::new(576);
+pub const SETTINGS_CHANGED_COPIED: Key = Key::new(573);
 /// "Reset All…"
-pub const SETTINGS_CHANGED_RESET_ALL: Key = Key::new(577);
+pub const SETTINGS_CHANGED_RESET_ALL: Key = Key::new(574);
 /// "On"
-pub const SETTINGS_CHANGED_ON: Key = Key::new(580);
+pub const SETTINGS_CHANGED_ON: Key = Key::new(577);
 /// "Off"
-pub const SETTINGS_CHANGED_OFF: Key = Key::new(581);
+pub const SETTINGS_CHANGED_OFF: Key = Key::new(578);
 /// "none"
-pub const SETTINGS_CHANGED_DEFAULT_EMPTY: Key = Key::new(582);
+pub const SETTINGS_CHANGED_DEFAULT_EMPTY: Key = Key::new(579);
 /// "Your terminals, notes and themes are kept."
-pub const SETTINGS_CHANGED_QUESTION_DETAIL: Key = Key::new(584);
+pub const SETTINGS_CHANGED_QUESTION_DETAIL: Key = Key::new(581);
 /// "Reset"
-pub const SETTINGS_CHANGED_QUESTION_CONFIRM: Key = Key::new(585);
+pub const SETTINGS_CHANGED_QUESTION_CONFIRM: Key = Key::new(582);
 
 /// ```text
 /// { $count ->
@@ -40,21 +40,21 @@ pub const SETTINGS_CHANGED_QUESTION_CONFIRM: Key = Key::new(585);
 /// }
 /// ```
 pub fn settings_changed_summary(count: i64) -> String {
-    crate::active::message(571, &[("count", Arg::Int(count))])
+    crate::active::message(568, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Default: { $value }
 /// ```
 pub fn settings_changed_default(value: &str) -> String {
-    crate::active::message(578, &[("value", Arg::Str(value))])
+    crate::active::message(575, &[("value", Arg::Str(value))])
 }
 
 /// ```text
 /// { $group } · Default: { $value }
 /// ```
 pub fn settings_changed_default_in_group(group: &str, value: &str) -> String {
-    crate::active::message(579, &[("group", Arg::Str(group)), ("value", Arg::Str(value))])
+    crate::active::message(576, &[("group", Arg::Str(group)), ("value", Arg::Str(value))])
 }
 
 /// ```text
@@ -64,5 +64,5 @@ pub fn settings_changed_default_in_group(group: &str, value: &str) -> String {
 /// }
 /// ```
 pub fn settings_changed_question(count: i64) -> String {
-    crate::active::message(583, &[("count", Arg::Int(count))])
+    crate::active::message(580, &[("count", Arg::Int(count))])
 }

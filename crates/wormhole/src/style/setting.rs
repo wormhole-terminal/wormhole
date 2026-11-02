@@ -45,9 +45,9 @@ impl RenderOnce for StepperView {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         StepperProps {
             id: self.id.into(),
-            label: wormhole_text::text(wormhole_text::keys::COMMON_STEPPER_LABEL).into(),
-            smaller: wormhole_text::text(wormhole_text::keys::COMMON_STEPPER_SMALLER).into(),
-            larger: wormhole_text::text(wormhole_text::keys::COMMON_STEPPER_LARGER).into(),
+            label: wormhole_text::text(wormhole_text::keys::SETTINGS_WINDOW_STEPPER_LABEL).into(),
+            smaller: wormhole_text::text(wormhole_text::keys::SETTINGS_WINDOW_STEPPER_SMALLER).into(),
+            larger: wormhole_text::text(wormhole_text::keys::SETTINGS_WINDOW_STEPPER_LARGER).into(),
             value: self.value.into(),
             on_smaller: Some(self.minus),
             on_larger: Some(self.plus),

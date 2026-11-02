@@ -26,7 +26,10 @@ use crate::style::{self, TextRole};
 use crate::ui::{Look, PageTitleProps};
 
 use super::open::REVEAL_INSET;
-use super::{COLUMN_W, FrontWindow, INTRO_W, NO_RESULTS_W, PAGE_GAP, PAGE_TITLE_H, PAGE_TOP, Section, SettingsWindow, sections, ui};
+use super::{
+    COLUMN_W, FrontWindow, INTRO_W, NO_RESULTS_W, PAGE_GAP, PAGE_TITLE_H, PAGE_TOP, Section, SettingsWindow,
+    sections, ui,
+};
 
 impl SettingsWindow {
     pub(super) fn new(section: Option<Section>, window: &mut Window, cx: &mut Context<Self>) -> Self {
