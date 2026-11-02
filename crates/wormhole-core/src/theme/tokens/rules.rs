@@ -149,11 +149,11 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         "banner.success.border" => "status.success / 35%",
         // The Settings window's notices are solid: the design's own colours, like the nav's tiles, so a
         // theme's palette doesn't move them. The words on each are the ink that reads on it (4.5:1).
-        "banner.info.solid" => "#0a6fdb",
+        "banner.info.solid" => p("#0a6fdb", "#0a64c8"),
         "banner.info.solid.text" => "readable(#fff, banner.info.solid, 4.5)",
-        "banner.warning.solid" => "#ff9f0a",
+        "banner.warning.solid" => p("#ff9f0a", "#eb9a00"),
         "banner.warning.solid.text" => "readable(#1f1400, banner.warning.solid, 4.5)",
-        "banner.danger.solid" => "#d9342b",
+        "banner.danger.solid" => p("#d9342b", "#cf2f26"),
         "banner.danger.solid.text" => "readable(#fff, banner.danger.solid, 4.5)",
         // The commands a project wants to run, told apart from what runs them: the
         // info color read as text, on the warning callout's tint and in the opaque window.
