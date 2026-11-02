@@ -37,6 +37,7 @@ mod pane_bar;
 mod render;
 mod reported;
 mod scaling;
+mod settle;
 mod status;
 mod window_geometry;
 
@@ -170,9 +171,11 @@ pub struct TerminalView {
     /// What the shell's own marks (OSC 133) say: `Some(true)` at its prompt, `Some(false)`
     /// running a command, `None` for a shell without integration (the heuristics decide alone).
     at_prompt: Option<bool>,
-    /// The shell said a command finished (OSC 133 `D`): the status settles on the next tick
-    /// instead of waiting for the output to go quiet.
+    /// The shell said a command finished (OSC 133 `D`): the status settles at once
+    /// instead of waiting for the output to go quiet (`settle.rs`).
     finished_mark: bool,
+    /// The one-shot timer that settles a busy terminal once its output went quiet (`settle.rs`).
+    settle: Option<Task<()>>,
     /// The last command's failure (a failing exit code), until the next command starts: the
     /// row says it even after the status has been seen.
     failure: Option<Failure>,
@@ -334,6 +337,7 @@ impl TerminalView {
             bell_counted: None,
             at_prompt: None,
             finished_mark: false,
+            settle: None,
             failure: None,
             failures: 0,
             notice: None,

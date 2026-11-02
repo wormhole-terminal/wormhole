@@ -114,6 +114,7 @@ impl Workspace {
             TerminalEvent::Command(mark) => self.publish_command(id, mark, cx),
             TerminalEvent::Printed => self.publish_printed(ix, cx),
             TerminalEvent::Activate => self.focus_pane(id, window, cx),
+            TerminalEvent::Quiet => self.settle_terminal(ix, window, cx),
             // The bar is only on screen in the shown terminals.
             TerminalEvent::HostEnded => self.close_session(ix, window, cx),
             TerminalEvent::Close => {
@@ -121,6 +122,24 @@ impl Workspace {
                     self.request_close_session(ix, window, cx);
                 }
             }
+        }
+    }
+
+    /// A busy terminal went quiet or its command finished: it settles into what the window shows (idle
+    /// where it is in front, else done or failed), and whoever watches statuses looks at once.
+    fn settle_terminal(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
+        let (looking, active) = (self.on_screen(ix), window.is_window_active());
+        let terminal = self.sessions[ix].terminal().clone();
+        let settled = terminal.update(cx, |t, cx| {
+            let settled = t.tick(looking, active);
+            // Still busy (the timer came early): wait out the rest.
+            t.sync_settle(cx);
+            settled
+        });
+        if settled {
+            self.sync_summary_at(ix, cx);
+            attention::tell(Attention::Changed, cx);
+            cx.notify();
         }
     }
 

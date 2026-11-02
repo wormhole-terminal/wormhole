@@ -151,6 +151,8 @@ mod scaling_tests;
 mod session;
 #[cfg(test)]
 mod session_tests;
+#[cfg(test)]
+mod settle_tests;
 mod shortcuts;
 #[cfg(feature = "devctl")]
 mod sidebar_devctl;
@@ -495,7 +497,11 @@ impl Workspace {
         let terminal = self.sessions[ix].terminal().clone();
         let Some(signal) = terminal.update(cx, |t, _| t.hook_signal(agent, event)) else { return };
         let before = terminal.read(cx).status();
-        let status = terminal.update(cx, |t, _| t.apply_signal(agent, signal, message.clone()));
+        let status = terminal.update(cx, |t, cx| {
+            let status = t.apply_signal(agent, signal, message.clone());
+            t.sync_settle(cx);
+            status
+        });
         let looking = self.on_screen(ix) && window.is_window_active();
         if looking && matches!(status, Status::Done | Status::Failed) {
             terminal.update(cx, |t, _| t.acknowledge());

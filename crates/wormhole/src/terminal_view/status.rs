@@ -180,6 +180,9 @@ pub enum TerminalEvent {
     /// first, since the menu's splits act on the selected pane and GPUI tells the window about the
     /// focus it just took only later.
     Activate,
+    /// A busy terminal's output went quiet, or its command finished: the window settles it
+    /// ([`TerminalView::tick`]) with what only it knows (what is on screen, whether it is in front).
+    Quiet,
 }
 
 /// A moment in a command's life, as the shell's marks tell it.
@@ -265,6 +268,8 @@ impl TerminalView {
         if status != self.status {
             self.status = status;
             self.status_since = Instant::now();
+            // The deadline was for the status that just ended.
+            self.settle = None;
             // Seen, or at work again: the finished command is history.
             if !matches!(status, Status::Done | Status::Failed) {
                 self.finished_command = None;
@@ -428,38 +433,8 @@ impl TerminalView {
         true
     }
 
-    /// Called periodically by the workspace to settle busy → idle/done/failed: once the output has
-    /// been quiet for a while, or at once when the shell's marks said the command finished. Seen
-    /// at once, there is nothing to settle into: the result is on screen (and a failure's cue stays
-    /// on the row, see [`Failure`]).
-    pub fn tick(&mut self, is_active: bool, window_active: bool) -> bool {
-        if self.reported() {
-            return false;
-        }
-        let finished = std::mem::take(&mut self.finished_mark);
-        let looking = is_active && window_active;
-        // `failure` is this command's when the mark just came: it replaced the last one's.
-        let failed = finished && self.failure.is_some();
-        if self.status == Status::Busy
-            && (finished || self.last_output.elapsed() > Duration::from_millis(1800))
-        {
-            self.set_status(match (looking, failed) {
-                (true, _) => Status::Idle,
-                (false, true) => Status::Failed,
-                (false, false) => Status::Done,
-            });
-            return true;
-        }
-        // A command that went quiet counts as done; its exit code, when it comes, can say it failed.
-        if failed && !looking && self.status == Status::Done {
-            self.set_status(Status::Failed);
-            return true;
-        }
-        false
-    }
-
     /// A shell with integration says exactly where it is (OSC 133): a command starts running
-    /// (`C`, busy even before it prints), finishes (`D`, settled on the next tick), and the shell
+    /// (`C`, busy even before it prints), finishes (`D`, settled at once, see [`TerminalView::tick`]), and the shell
     /// is back at its prompt, where output is prompts and echoes, not work.
     fn on_mark(&mut self, mark: Mark) {
         if self.hook_driven || self.status == Status::Exited {
@@ -676,6 +651,7 @@ impl TerminalView {
                 self.set_status(Status::Exited);
             }
         }
+        self.sync_settle(cx);
     }
 }
 

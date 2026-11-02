@@ -192,8 +192,8 @@ fn the_output_heuristics_leave_a_reported_status_alone(cx: &mut TestAppContext) 
     event(cx, &t, PtyEvent::Mark(Mark::OutputStart, 0));
     assert_eq!(now(cx, &t).0, Status::Busy);
     event(cx, &t, PtyEvent::Mark(Mark::Finished(Some(0)), 0));
-    cx.update(|cx| t.update(cx, |t, _| t.tick(false, false)));
-    assert_eq!(now(cx, &t).0, Status::Done, "settled by the tick as before");
+    cx.run_until_parked();
+    assert_eq!(now(cx, &t).0, Status::Idle, "settled as before, at once: the person has it in front");
 }
 
 #[gpui_kit::test]

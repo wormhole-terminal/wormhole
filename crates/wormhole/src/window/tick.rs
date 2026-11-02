@@ -51,7 +51,8 @@ impl Workspace {
                 terminal.set_on_screen(is_active);
                 terminal.set_in_front(is_active && looking);
                 let before = terminal.status();
-                let mut changed = terminal.tick(is_active, window_active);
+                // Busy → done is the terminal's own timer (`TerminalEvent::Quiet`), not the tick's.
+                let mut changed = false;
                 if is_active && window_active {
                     changed |= terminal.acknowledge();
                 }
