@@ -61,9 +61,9 @@ pub(super) fn spoken(notice: Notice) -> Option<String> {
     }
 }
 
-/// Why nothing is saved: the folder and the error, in full.
-pub(crate) fn data_folder_detail(folder: &std::path::Path, error: &str) -> String {
-    keys::notice_warned_data_folder_detail(&folder.display().to_string(), error)
+/// Why a profile saves nothing: its name, its folder and the error, in full.
+pub(crate) fn data_folder_detail(profile: &str, folder: &std::path::Path, error: &str) -> String {
+    keys::notice_warned_data_folder_detail(profile, &folder.display().to_string(), error)
 }
 
 /// Why terminals end when Wormhole quits while it runs from a disk image, in full.

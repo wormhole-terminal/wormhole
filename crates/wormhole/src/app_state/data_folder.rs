@@ -9,23 +9,28 @@
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-/// The folder that couldn't be used, and why.
+/// The folder of a profile that couldn't be used, and why.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Unusable {
+    /// The profile whose database it is.
+    pub profile: String,
     pub folder: PathBuf,
     pub error: String,
 }
 
 static UNUSABLE: OnceLock<Unusable> = OnceLock::new();
 
-/// Remember that `folder` couldn't be opened because of `error`, and log it. The first failure stays: it is
-/// the shown profile's, which opens first.
-pub(crate) fn record(folder: &Path, error: &anyhow::Error) {
+/// Remember that the data folder of `profile` couldn't be opened because of `error`, and log it. The first
+/// failure stays: it is the shown profile's, which opens first.
+pub(crate) fn record(profile: &str, folder: &Path, error: &anyhow::Error) {
     let error = format!("{error:#}");
-    tracing::error!(folder = %folder.display(), "persistence disabled: {error}");
+    tracing::error!(profile, folder = %folder.display(), "persistence disabled: {error}");
     // The log may be the very thing that can't be written, and a launch from a terminal should see why.
-    eprintln!("Wormhole: nothing will be saved: can't use the data folder {}: {error}", folder.display());
-    let _ = UNUSABLE.set(Unusable { folder: folder.to_path_buf(), error });
+    eprintln!(
+        "Wormhole: the profile {profile} will save nothing: can't use its data folder {}: {error}",
+        folder.display()
+    );
+    let _ = UNUSABLE.set(Unusable { profile: profile.to_owned(), folder: folder.to_path_buf(), error });
 }
 
 /// What went wrong with the data folder, if anything did.

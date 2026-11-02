@@ -21,9 +21,9 @@ use wormhole_core::storage::store::front_last;
 
 use crate::app::menus;
 use crate::app::tick::{dispatch_hook, handle_menu_command, tick};
-use crate::app_state::AppState;
 use crate::app_state::look::{apply_theme, sync_system_look};
 use crate::app_state::profiles;
+use crate::app_state::{AppState, app};
 use crate::settings::ParkedSettings;
 use crate::status_item;
 use crate::window::window_lifecycle::{
@@ -182,18 +182,17 @@ pub(crate) fn start(
     menus::sync(cx);
 }
 
-/// Say, in the first window, that the data folder couldn't be opened and so nothing is saved.
+/// Say, in the first workspace window (not the intro's, which is no terminal's), that a profile's data
+/// folder couldn't be opened and so that profile saves nothing: on the chip of its selected terminal, or
+/// as the banner over the pane where the chip is off.
 fn tell_data_folder(cx: &mut App) {
     let Some(problem) = crate::app_state::data_folder::unusable() else { return };
-    let Some(window) = cx.windows().first().copied() else { return };
-    crate::notice::post_to_with(
-        window,
-        wormhole_core::view::notice::Notice::Warned(wormhole_core::view::notice::Warning::DataFolder),
-        None,
-        crate::notice::data_folder_detail(&problem.folder, &problem.error),
-        cx,
-    );
+    let Some(workspace) = app(cx).windows.first().and_then(|w| w.workspace.upgrade()) else { return };
+    let detail = crate::notice::data_folder_detail(&problem.profile, &problem.folder, &problem.error);
+    let terminal = workspace.read(cx).active_session().terminal().clone();
+    terminal.update(cx, |terminal, cx| terminal.tell_data_folder(detail, cx));
 }
+
 /// Agent hooks an earlier version installed under the app's old codename are replaced with
 /// today's, off the main thread: they keep working meanwhile (terminals still export the old
 /// variables), and an agent without any is left alone.

@@ -151,6 +151,47 @@ fn with_the_chip_off_the_banner_says_it(cx: &mut TestAppContext) {
     });
 }
 
+fn tell_data_folder(cx: &mut TestAppContext, window: &OpenWindow) {
+    let detail = crate::notice::data_folder_detail("work", std::path::Path::new("/no/where"), "denied");
+    let terminal = terminal(cx, window, 0);
+    cx.update(|cx| terminal.update(cx, |t, cx| t.tell_data_folder(detail, cx)));
+    cx.run_until_parked();
+}
+
+/// A profile whose data folder can't be opened is said on the chip in one line.
+#[gpui_kit::test]
+fn a_data_folder_that_cannot_be_opened_is_said_on_the_chip(cx: &mut TestAppContext) {
+    if isolate("a_data_folder_that_cannot_be_opened_is_said_on_the_chip") {
+        return;
+    }
+    with_chip(cx, |cx, window| {
+        tell_data_folder(cx, window);
+        let words = chip(cx).map(|c| c.1).expect("the chip says it");
+        assert!(words.contains("data folder") && words.contains("saves nothing there"), "{words}");
+    });
+}
+
+/// With the chip off the banner says it, with the profile, the folder and the error.
+#[gpui_kit::test]
+fn with_the_chip_off_a_data_folder_that_cannot_be_opened_is_the_banner(cx: &mut TestAppContext) {
+    if isolate("with_the_chip_off_a_data_folder_that_cannot_be_opened_is_the_banner") {
+        return;
+    }
+    with_language(Language::ENGLISH, || {
+        let window = start(cx, 1);
+        set_notices(cx, false);
+        tell_data_folder(cx, &window);
+        assert_eq!(chip(cx), None);
+        let banner =
+            terminal(cx, &window, 0).read_with(cx, |t, _| t.host_banner_for_test().map(str::to_string));
+        let banner = banner.expect("the banner says it");
+        assert!(
+            banner.contains("work") && banner.contains("/no/where") && banner.contains("denied"),
+            "{banner}"
+        );
+    });
+}
+
 /// Whether the warning waits out of sight, and the terminal's area it is placed for.
 fn kept(cx: &mut TestAppContext) -> (bool, Option<Rect>) {
     cx.update(|cx| {

@@ -290,6 +290,16 @@ impl TerminalView {
         }
     }
 
+    /// Say that a profile's data folder couldn't be opened, so it saves nothing: on the chip, or as the banner
+    /// over the pane where the window's profile has the chip off. `detail` is the explanation in full.
+    pub(crate) fn tell_data_folder(&mut self, detail: String, cx: &mut Context<Self>) {
+        if crate::notice::enabled(&self.profile, cx) {
+            self.say_with(Notice::Warned(Warning::DataFolder), detail, cx);
+        } else {
+            self.host.notice = Some(detail.into());
+        }
+    }
+
     /// Say that this terminal ends when the app quits, because its host couldn't start: on the notice chip,
     /// which stays until it is closed and explains itself (`err` is all it keeps of what went wrong), and
     /// where the window's profile has the chip off, as the banner over the pane (`render_host_notice`).

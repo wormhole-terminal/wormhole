@@ -222,8 +222,9 @@ pub(crate) struct ProfileData {
 impl ProfileData {
     /// Open the profile's database and read what it keeps.
     pub fn open(paths: &ProfilePaths) -> Self {
-        let store =
-            Store::open_for(paths).inspect_err(|err| super::data_folder::record(paths.dir(), err)).ok();
+        let store = Store::open_for(paths)
+            .inspect_err(|err| super::data_folder::record(paths.id().as_str(), paths.dir(), err))
+            .ok();
         let meta = |key: &str| store.as_ref().and_then(|s| s.meta(key).ok().flatten());
         let tips = DismissedTips::parse(meta(DISMISSED_TIPS_KEY).as_deref());
         // Worktrees removed by hand since are forgotten, so nothing offers to remove them.
@@ -429,8 +430,13 @@ mod tests {
         assert!(data.store.is_none(), "no database");
         let problem = crate::app_state::data_folder::unusable().expect("the failure is kept");
         assert!(problem.folder.starts_with(&blocker), "names the folder: {:?}", problem.folder);
+        assert_eq!(problem.profile, "default");
         assert!(!problem.error.is_empty());
-        let words = crate::notice::data_folder_detail(&problem.folder, &problem.error);
-        assert!(words.contains(&problem.folder.display().to_string()) && words.contains(&problem.error));
+        let words = crate::notice::data_folder_detail(&problem.profile, &problem.folder, &problem.error);
+        assert!(
+            words.contains(&problem.folder.display().to_string())
+                && words.contains(&problem.error)
+                && words.contains("default")
+        );
     }
 }

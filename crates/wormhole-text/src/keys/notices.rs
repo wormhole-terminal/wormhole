@@ -60,7 +60,7 @@ pub const NOTICE_FAILED_PUT_LINES: Key = Key::new(284);
 pub const NOTICE_WARNED_HOST_FALLBACK: Key = Key::new(285);
 /// "This terminal runs inside Wormhole and ends when it quits: the helper that keeps terminals running couldn't start."
 pub const NOTICE_WARNED_HOST_FALLBACK_DETAIL: Key = Key::new(286);
-/// "Wormhole can't use its data folder, so nothing is saved"
+/// "Wormhole can't open a profile's data folder, so it saves nothing there"
 pub const NOTICE_WARNED_DATA_FOLDER: Key = Key::new(287);
 /// "Move Wormhole to Applications to keep terminals running when it quits"
 pub const NOTICE_WARNED_MOVE_TO_APPLICATIONS: Key = Key::new(289);
@@ -172,10 +172,10 @@ pub fn notice_driven_reading(name: &str) -> String {
 }
 
 /// ```text
-/// { -brand } can't open its data folder, { $folder }, so it runs without saving anything: no windows, notes or settings are kept. { $error }
+/// { -brand } can't open the data folder of the profile { $profile }, { $folder }, so that profile runs without saving anything: no windows, notes or settings are kept. { $error }
 /// ```
-pub fn notice_warned_data_folder_detail(folder: &str, error: &str) -> String {
-    crate::active::message(288, &[("folder", Arg::Str(folder)), ("error", Arg::Str(error))])
+pub fn notice_warned_data_folder_detail(profile: &str, folder: &str, error: &str) -> String {
+    crate::active::message(288, &[("profile", Arg::Str(profile)), ("folder", Arg::Str(folder)), ("error", Arg::Str(error))])
 }
 
 /// ```text

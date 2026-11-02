@@ -656,7 +656,7 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("notice-copied-named-characters", notice_copied_named_characters(5, "Sample")),
         ("notice-driven-typing", notice_driven_typing("Sample")),
         ("notice-driven-reading", notice_driven_reading("Sample")),
-        ("notice-warned-data-folder-detail", notice_warned_data_folder_detail("Sample", "Sample")),
+        ("notice-warned-data-folder-detail", notice_warned_data_folder_detail("Sample", "Sample", "Sample")),
         ("notice-warned-update-ready", notice_warned_update_ready("Sample")),
         ("settings-advanced-reset-question", settings_advanced_reset_question(1)),
         ("settings-advanced-reset-question", settings_advanced_reset_question(5)),
