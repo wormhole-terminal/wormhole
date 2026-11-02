@@ -47,6 +47,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   do. It lists them by page, each in its own control with its default beside it and a reset arrow, with Copy as
   JSON (the changed values, ready for `config.json`) and Reset All…, which asks first.
 
+- Settings → Updates starts with where the update stands: up to date, available with its release notes read as
+  headings, lists and paragraphs and the buttons at the right, downloading, or installed. Version, Update
+  automatically and Channel follow, then Privacy. The development-build note is a notice at the top.
+
 ### Changed
 
 - A change to `config.json`, a theme file or the custom fonts folder applies at once (within a tenth of a

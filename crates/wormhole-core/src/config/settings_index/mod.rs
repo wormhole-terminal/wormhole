@@ -485,7 +485,10 @@ mod tests {
     #[test]
     fn warnings_stay_visible_and_other_descriptions_remain_searchable() {
         let warnings: Vec<_> = entries().filter(|(_, _, e)| e.visible_hint).map(|(_, _, e)| e.id).collect();
-        assert_eq!(warnings, ["profile-delete", "scrollback", "restore-text", "meta", "reset-settings"]);
+        assert_eq!(
+            warnings,
+            ["profile-delete", "scrollback", "restore-text", "meta", "auto-update", "reset-settings"]
+        );
         let (_, _, minimap) = entry("minimap").expect("minimap row");
         assert!(!minimap.visible_hint);
         let hits = super::search(&super::Query::new("drawn small"));

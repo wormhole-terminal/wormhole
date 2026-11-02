@@ -6,13 +6,11 @@ settings-section-updates = Updates
 
 ## Updates
 
-settings-updates-group-updates = Updates
-
 settings-updates-version = Version
     .keywords = release build
 
 settings-updates-auto-update = Update automatically
-    .description = Checks in the background and installs on the next restart
+    .description = Installs on the next restart
     .keywords = download auto
 
 settings-updates-update-channel = Channel
@@ -28,7 +26,7 @@ settings-updates-group-privacy = Privacy
     .blurb = { -brand } has no analytics, telemetry or crash reports. Update checks are counted, so we know how many people use { -brand } and which Macs and macOS versions to keep supporting, with nothing that tells one Mac from another.
 
 settings-updates-anonymous-count = Count this Mac anonymously
-    .description = The first update check of a day and of a month says so. Off, a check sends the version alone
+    .description = No analytics, telemetry or crash reports. The first check of a day and of a month says so, with nothing that tells one Mac from another.
     .keywords = analytics telemetry privacy usage statistics count tracking
 
 settings-updates-count-details = What an update check sends
@@ -86,9 +84,6 @@ settings-updates-checked-days-ago = { $count ->
     [one] Checked { $count } day ago.
    *[other] Checked { $count } days ago.
 }
-
-# After a check that found nothing new. { $checked } is when it was ("Checked 4 minutes ago.").
-settings-updates-up-to-date-checked = { -brand } is up to date. { $checked }
 
 # A release that fixes a security issue. { $version } is its number.
 settings-updates-security-available = Security update available: { -brand } { $version }.

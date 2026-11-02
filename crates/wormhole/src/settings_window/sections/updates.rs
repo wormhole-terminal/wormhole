@@ -17,8 +17,8 @@ use gpui_kit::component::progress::Progress;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::update::{
-    Release, Security, Severity, UpdateChannel, counted_user_agent, current_platform, macos_version,
-    plain_user_agent,
+    Note, Release, Security, Severity, UpdateChannel, counted_user_agent, current_platform, macos_version,
+    plain_user_agent, read_notes,
 };
 
 use crate::settings::{UiColors, settings};
@@ -203,16 +203,12 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
     let now = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
 
     let status: SharedString = match &phase {
-        UpdatePhase::Idle if !available => text(SETTINGS_UPDATES_DEVELOPMENT_BUILD).into(),
         UpdatePhase::Idle => match last {
             Some(last) => checked_ago(last, now).into(),
             None => text(SETTINGS_UPDATES_NOT_CHECKED_YET).into(),
         },
         UpdatePhase::Checking => text(SETTINGS_UPDATES_CHECKING).into(),
-        UpdatePhase::UpToDate => match last {
-            Some(last) => settings_updates_up_to_date_checked(&checked_ago(last, now)).into(),
-            None => text(SETTINGS_UPDATES_WORMHOLE_IS_UP_TO_DATE).into(),
-        },
+        UpdatePhase::UpToDate => text(SETTINGS_UPDATES_WORMHOLE_IS_UP_TO_DATE).into(),
         UpdatePhase::Available(release) => available_text(release).into(),
         UpdatePhase::Unsupported(message) | UpdatePhase::Failed(message) => message.clone().into(),
         UpdatePhase::Downloading => text(SETTINGS_UPDATES_DOWNLOADING).into(),
@@ -220,6 +216,11 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
             settings_updates_installed_waits(version).into()
         }
         UpdatePhase::Installed(version) => settings_updates_installed_restart(version).into(),
+    };
+    // Under "up to date": when that was found out.
+    let status_hint = match (&phase, last) {
+        (UpdatePhase::UpToDate, Some(last)) => Some(SharedString::from(checked_ago(last, now))),
+        _ => None,
     };
     let status_color = match &phase {
         UpdatePhase::Failed(_) | UpdatePhase::Unsupported(_) => ui.warning_text,
@@ -230,6 +231,17 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
         },
         _ => ui.muted,
     };
+
+    if matches!(phase, UpdatePhase::Idle) && !available {
+        // No feed in this build: nothing to check, so only the reason.
+        return div()
+            .flex()
+            .flex_col()
+            .gap_2()
+            .child(style::notice(ui, style::NoticeKind::Info, text(SETTINGS_UPDATES_DEVELOPMENT_BUILD)))
+            .children(channel_note.map(|note| style::notice(ui, style::NoticeKind::Info, note)))
+            .into_any_element();
+    }
 
     let mut actions = div().flex().items_center().gap_2();
     match &phase {
@@ -286,7 +298,6 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
                 .child(div().w(px(METER_W)).child(Progress::new("update-meter").value(percent as f32)))
                 .child(div().text_caption().tabular_nums().text_color(ui.muted).child(format!("{percent}%")));
         }
-        UpdatePhase::Idle if !available => {}
         _ => {
             actions = actions.child(
                 style::form_button("update-check").label(text(SETTINGS_UPDATES_CHECK_NOW)).on_click(
@@ -326,6 +337,7 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
     let mut parts =
         style::TileRowParts::new(style::RowTile::Icon { fill: tile_fill, icon: tile_icon }, status);
     parts.name_color = Some(status_color);
+    parts.hint = status_hint;
     parts.controls = vec![actions.into_any_element()];
 
     div()
@@ -361,37 +373,53 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
                     ))
                 })
         }))
-        .children(notes.map(|(version, notes)| {
+        .children(notes.map(|(version, notes)| draw_notes(ui, &version, &notes)))
+        .into_any_element()
+}
+
+/// The height the notes may take before they scroll: a long changelog must not push the page's other
+/// rows out of sight.
+const NOTES_MAX_H: f32 = 240.0;
+
+/// A release's notes as the feed wrote them, readable: headings in the text colour, list items with a
+/// dash, paragraphs as they are.
+fn draw_notes(ui: UiColors, version: &str, notes: &str) -> Div {
+    let line = |note: Note| match note {
+        Note::Heading(heading) => {
+            div().pt_2().text_body().font_weight(FontWeight::SEMIBOLD).text_color(ui.text).child(heading)
+        }
+        Note::Item(item) => div()
+            .flex()
+            .gap_2()
+            .text_body()
+            .text_color(ui.muted)
+            .child(div().flex_none().text_color(ui.faint).child("–")) // text: a list mark
+            .child(div().min_w_0().child(item)),
+        Note::Text(text) => div().text_body().text_color(ui.muted).child(text),
+    };
+    div()
+        .flex()
+        .flex_col()
+        .gap_1()
+        .py_3()
+        .rule_top(ui)
+        .child(
             div()
+                .text_caption()
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_color(ui.muted)
+                .child(settings_updates_whats_new(version)),
+        )
+        .child(
+            div()
+                .id("update-notes")
+                .max_h(px(NOTES_MAX_H))
+                .overflow_y_scroll()
                 .flex()
                 .flex_col()
                 .gap_1()
-                .py_3()
-                .rule_top(ui)
-                .child(
-                    div()
-                        .text_caption()
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(ui.muted)
-                        .child(settings_updates_whats_new(&version)),
-                )
-                .children(
-                    notes
-                        .lines()
-                        .map(|line| line.trim().trim_start_matches(['-', '*']).trim().to_string())
-                        .filter(|line| !line.is_empty())
-                        .map(|line| {
-                            div()
-                                .flex()
-                                .gap_2()
-                                .text_body()
-                                .text_color(ui.muted)
-                                .child(div().flex_none().text_color(ui.faint).child("–"))
-                                .child(div().min_w_0().child(line))
-                        }),
-                )
-        }))
-        .into_any_element()
+                .children(read_notes(notes).into_iter().map(line)),
+        )
 }
 
 #[cfg(test)]

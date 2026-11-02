@@ -184,7 +184,10 @@ section Updates
   title "Updates"
   intro "Signed releases, checked in the background."
   nav ""
-group "Updates"
+group ""
+  blurb ""
+  aside ""
+group ""
   blurb ""
   aside ""
 group "Privacy"
@@ -658,25 +661,25 @@ entry Import import-compare
   label "How they compare"
   description ""
   keywords "drawbacks limits strengths differences versus comparison alternatives"
+entry Updates update-status
+  label "Check for updates"
+  description ""
+  keywords "install restart release notes check skip"
 entry Updates version
   label "Version"
   description ""
   keywords "release build"
 entry Updates auto-update
   label "Update automatically"
-  description "Checks in the background and installs on the next restart"
+  description "Installs on the next restart"
   keywords "download auto"
 entry Updates update-channel
   label "Channel"
   description "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
   keywords "beta nightly unstable stable prerelease dev builds main feature flags"
-entry Updates update-status
-  label "Check for updates"
-  description ""
-  keywords "install restart release notes check skip"
 entry Updates anonymous-count
   label "Count this Mac anonymously"
-  description "The first update check of a day and of a month says so. Off, a check sends the version alone"
+  description "No analytics, telemetry or crash reports. The first check of a day and of a month says so, with nothing that tells one Mac from another."
   keywords "analytics telemetry privacy usage statistics count tracking"
 entry Updates count-details
   label "What an update check sends"
