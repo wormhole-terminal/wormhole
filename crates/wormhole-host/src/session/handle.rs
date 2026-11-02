@@ -224,7 +224,7 @@ impl<S: Spawner> Session<S> {
         let Some(at) = self.index(id) else { return };
         let conn = &mut self.conns[at];
         conn.phase = Phase::Ready { role: hello.role };
-        conn.dec.set_max_payload(wire::MAX_PAYLOAD);
+        // The decoder's payload limit is lifted when it is put back (`Conn::restore_decoder`).
         // An admin connection is a short look (`sessions list`, the Session Hosts window asks every
         // second): not worth a line in the log at its usual level.
         if hello.role == Role::Admin {
