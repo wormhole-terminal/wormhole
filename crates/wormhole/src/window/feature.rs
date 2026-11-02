@@ -450,7 +450,8 @@ pub(crate) struct TabDef {
     /// For a tab whose words change with time and no event (Usage's "resets 34m"): how long until a
     /// word on it reads differently, `None` while none moves. The window redraws then, while the tab is
     /// on show (`window/clock.rs`).
-    pub time_words: Option<fn(&App) -> Option<Duration>>,
+    /// It is given the feature's entity and the selected terminal's id.
+    pub time_words: Option<fn(&AnyEntity, i64, &App) -> Option<Duration>>,
     /// The tab is offered only while something holds (Usage: an agent is on screen). The window
     /// remembers the tab it came from when this one is opened, and goes back there when it is gone.
     pub returns_to_previous: bool,

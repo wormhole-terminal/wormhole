@@ -18,6 +18,10 @@ pub(super) fn typed(entity: &AnyEntity) -> Entity<History> {
     entity.clone().downcast::<History>().expect("the history entity is made by this entry's `make`")
 }
 
+fn now_since_epoch() -> std::time::Duration {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default()
+}
+
 /// The History entry: the tab, its panel and keys, the log's polling and the terminals' state.
 pub(crate) const DEF: FeatureDef = FeatureDef {
     id: FeatureId::History,
@@ -36,7 +40,9 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         view: view::tab,
         walk: Some(keys::WALK),
         actions: None,
-        time_words: Some(|_| Some(wormhole_core::view::sidebar::wording::until_next_wall_minute())),
+        time_words: Some(|entity, session, cx| {
+            typed(entity).read(cx).next_age_change(session, now_since_epoch())
+        }),
         returns_to_previous: false,
     }],
     // The log is read again while the tab shows.

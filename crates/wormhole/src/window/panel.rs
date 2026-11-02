@@ -93,8 +93,9 @@ impl Workspace {
         if !self.notes_visible() {
             return None;
         }
-        let (_, entry) = self.tab_entry(self.right_tab)?;
-        entry.time_words?(cx)
+        let (at, entry) = self.tab_entry(self.right_tab)?;
+        let words = entry.time_words?;
+        words(self.feature_entity(at)?, self.active_session().id, cx)
     }
 
     /// The title row's branch chip was clicked: the feature that contributes it shows its tab and opens

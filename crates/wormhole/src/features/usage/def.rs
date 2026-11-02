@@ -39,7 +39,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         view: view::tab,
         walk: None,
         actions: None,
-        time_words: Some(|cx| usage::next_change(state::reports(cx), now_since_epoch())),
+        time_words: Some(|_, _, cx| usage::next_change(state::reports(cx), now_since_epoch())),
         returns_to_previous: true,
     }],
     // The key is the window's (it binds each offered tab's action); its menu line goes with the tab.

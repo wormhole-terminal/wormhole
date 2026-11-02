@@ -139,7 +139,6 @@ impl Workspace {
         if settled {
             self.sync_summary_at(ix, cx);
             attention::tell(Attention::Changed, cx);
-            cx.notify();
         }
     }
 

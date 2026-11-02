@@ -8,7 +8,7 @@
 //! Only the redrawing is the timer's; reading the other windows' terminals stays on the tick
 //! (`refresh_status_bar`), since nothing tells this window what another one's terminals do.
 
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use gpui_kit::*;
 
@@ -28,7 +28,16 @@ pub(in crate::window) struct Clock {
     armed: Option<(Instant, Task<()>)>,
     /// Whether the window is the one in front, as last told: a window nobody looks at draws no clocks.
     window_active: bool,
+    /// When the shown tab's words next read differently, as last planned: the tab is drawn from the clock
+    /// and has no copy to compare, so the window is redrawn for it only once this has passed.
+    tab_due: Option<Instant>,
+    /// The monotonic and the wall clock at the last tick, to see the machine sleep (see `woke`).
+    seen: Option<(Instant, SystemTime)>,
 }
+
+/// How much further the wall clock may have moved than the monotonic one between two ticks before the
+/// machine counts as having slept.
+const SLEPT: Duration = Duration::from_secs(5);
 
 impl Workspace {
     /// How long until a word shown now reads differently, or `None` while none moves.
@@ -57,9 +66,37 @@ impl Workspace {
         next
     }
 
+    /// Remember when the shown tab's words next change. Kept while that moment has not been redrawn
+    /// for, so a plan made just after it does not postpone the redraw.
+    fn plan_tab(&mut self, cx: &App) {
+        let now = Instant::now();
+        if self.regions.drawn.clock.tab_due.is_none_or(|due| due > now) {
+            let due = self.tab_next_word_change(cx).map(|wait| now + wait);
+            self.regions.drawn.clock.tab_due = due;
+        }
+    }
+
+    /// The tick's check that the machine did not sleep. Timers run on the monotonic clock, which stops
+    /// in sleep, while the words are made from the wall clock: after a wake every word may be stale and
+    /// the armed timer is a sleep's length late. Plan afresh and redraw them all once.
+    pub(super) fn check_wake(&mut self, window_active: bool, cx: &mut Context<Self>) {
+        let (now, wall) = (Instant::now(), SystemTime::now());
+        let clock = &mut self.regions.drawn.clock;
+        let slept = clock.seen.replace((now, wall)).is_some_and(|(then, was)| {
+            let moved = wall.duration_since(was).unwrap_or_default();
+            moved.saturating_sub(now.duration_since(then)) > SLEPT
+        });
+        if slept {
+            clock.armed = None;
+            clock.tab_due = Some(now);
+            self.redraw_times(window_active, cx);
+        }
+    }
+
     /// Plan the timer again: keep one that fires no later than the next change, else arm it for that.
     pub(crate) fn sync_clock(&mut self, window_active: bool, cx: &mut Context<Self>) {
         self.regions.drawn.clock.window_active = window_active;
+        self.plan_tab(cx);
         // Nothing moves now: a timer still armed is left to fire once, find nothing and end (arming
         // and dropping one on every status flip of a busy terminal would cost more than that wake).
         let Some(wait) = self.next_word_change(window_active, cx) else { return };
@@ -92,8 +129,10 @@ impl Workspace {
         }
         self.crumb_tick(cx);
         self.redraw_status_bar_if_stale(cx);
-        // The tab on show, if its words move: they are read from the clock when it draws.
-        if self.tab_next_word_change(cx).is_some() {
+        // The tab on show, if its words moved: they are read from the clock when it draws.
+        let clock = &mut self.regions.drawn.clock;
+        if clock.tab_due.is_some_and(|due| due <= Instant::now() + SLACK) {
+            clock.tab_due = None;
             cx.notify();
         }
     }

@@ -73,6 +73,17 @@ impl PickerHost for History {
 }
 
 impl History {
+    /// How long until an age shown for terminal `session`'s log reads differently, from `now` since the
+    /// epoch: the earliest among its commits.
+    pub(crate) fn next_age_change(
+        &self,
+        session: i64,
+        now: std::time::Duration,
+    ) -> Option<std::time::Duration> {
+        let state = self.of.get(&session)?;
+        wormhole_core::view::panel::next_age_change(state.commits.iter().map(|commit| commit.time), now)
+    }
+
     pub(crate) fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         Self {
             of: HashMap::new(),

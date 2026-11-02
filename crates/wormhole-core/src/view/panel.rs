@@ -117,6 +117,31 @@ pub fn age(seconds: i64) -> String {
     }
 }
 
+/// How long until the earliest of `times` (Unix seconds) has an [`age`] that reads differently, from `now`
+/// since the epoch. An age counts whole minutes, then hours, then days; from a week on it is woken for
+/// daily, which is never late for weeks and at most a day for the month and year it turns into.
+pub fn next_age_change(
+    times: impl IntoIterator<Item = i64>,
+    now: std::time::Duration,
+) -> Option<std::time::Duration> {
+    use std::time::Duration;
+    let now_secs = now.as_secs() as i64;
+    // What is left of the current second: ages are made of whole seconds.
+    let rest = Duration::from_secs(1) - Duration::from_nanos(u64::from(now.subsec_nanos()));
+    times
+        .into_iter()
+        .map(|time| {
+            let age = (now_secs - time).max(0);
+            let unit = match age {
+                ..3600 => 60,
+                ..86_400 => 3600,
+                _ => 86_400,
+            };
+            Duration::from_secs((unit - 1 - age % unit) as u64) + rest
+        })
+        .min()
+}
+
 /// [`age`] in words: "3d ago", "just now" under a minute. The one place that decides when it is "now", so
 /// no caller writes "now ago".
 pub fn ago_words(seconds: i64) -> String {
@@ -226,6 +251,14 @@ mod tests {
     fn ago_is_never_now_ago() {
         use wormhole_text::{Language, with_language};
         with_language(Language::ENGLISH, || {
+            use std::time::Duration;
+            // A commit 2 minutes 10 s old turns 3 minutes old in 50 s; the newest decides.
+            let at = Duration::from_secs(1_000_000);
+            assert_eq!(
+                super::next_age_change([1_000_000 - 130, 1_000_000 - 7200], at),
+                Some(Duration::from_secs(50))
+            );
+            assert_eq!(super::next_age_change([], at), None);
             assert_eq!(ago_words(-5), "just now");
             assert_eq!(ago_words(59), "just now");
             assert_eq!(ago_words(60), "1m\u{a0}ago");

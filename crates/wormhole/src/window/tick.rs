@@ -32,6 +32,7 @@ impl Workspace {
         self.sync_window_animation(window, cx);
         self.sync_resize_increments(window, cx);
         self.track_window(window, cx);
+        self.sync_window_title(window);
         // Folders are also re-read when a terminal prints (see `TerminalView`); this
         // is the backstop. Agent detection walks the process tree, so less often.
         let refresh_agent = self.ticks % 5 == 1;
@@ -92,6 +93,7 @@ impl Workspace {
         self.tick_extras(cx);
         self.refresh_status_bar(cx);
         self.sidebar_tick(cx);
+        self.check_wake(window_active, cx);
         self.sync_clock(window_active, cx);
         if self.dirty && !self.discarded {
             self.save(cx);

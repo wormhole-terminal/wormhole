@@ -187,7 +187,8 @@ fn the_output_heuristics_leave_a_reported_status_alone(cx: &mut TestAppContext) 
     assert_eq!(now(cx, &t).0, Status::Busy, "the bell does not ask for you: the program says when");
     assert!(!t.read_with(cx, |t, _| t.bell_rang()));
 
-    // Reporting over, the heuristics are back: a command starting is work again.
+    // Reporting over, the heuristics are back: a command starting is work again, and its end, with the
+    // terminal in front of an active window, settles to idle (not done).
     report(cx, &t, "state=clear");
     event(cx, &t, PtyEvent::Mark(Mark::OutputStart, 0));
     assert_eq!(now(cx, &t).0, Status::Busy);
