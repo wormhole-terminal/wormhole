@@ -5,6 +5,7 @@ use std::path::Path;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::*;
+use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::project::{Feature, FeatureStanding, TrustStatus, trust_applies};
 #[allow(
     clippy::wildcard_imports,
@@ -14,10 +15,12 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use super::super::reveal;
-use super::features::{feature_description, feature_row};
+use super::features::{feature_description, feature_menu, feature_row};
+use super::picker::{choice_label, short_home};
 use crate::features::project;
+use crate::settings_window::nav::page_tile;
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, SettingState, TextRole};
+use crate::style::{self, SettingState, TextRole};
 use crate::window::window_lifecycle::with_front_workspace;
 
 impl SettingsWindow {
@@ -37,11 +40,13 @@ impl SettingsWindow {
         let needing = project.snapshot.needing_trust();
         let has_commands = project.request.as_ref().is_some_and(|r| !r.commands.is_empty());
 
-        // Trust: a badge for where it stands, the one action that fits.
-        let (status, color) = match project.status {
-            TrustStatus::Trusted => (text(SETTINGS_PROJECTS_TRUSTED), ui.success_text),
-            TrustStatus::Changed => (text(SETTINGS_PROJECTS_CHANGED_SINCE_YOU_TRUSTED_IT), ui.warning_text),
-            TrustStatus::Untrusted => (text(SETTINGS_PROJECTS_NOT_TRUSTED), ui.muted),
+        // Trust: the project as a tile row, where it stands and the one action that fits.
+        let (status, kind) = match project.status {
+            TrustStatus::Trusted => (text(SETTINGS_PROJECTS_TRUSTED), style::ChipKind::Good),
+            TrustStatus::Changed => {
+                (text(SETTINGS_PROJECTS_CHANGED_SINCE_YOU_TRUSTED_IT), style::ChipKind::Warn)
+            }
+            TrustStatus::Untrusted => (text(SETTINGS_PROJECTS_NOT_TRUSTED), style::ChipKind::Quiet),
         };
         let detail = trust_detail(project.status, has_commands, &needing);
         let trusted = project.status == TrustStatus::Trusted;
@@ -70,42 +75,23 @@ impl SettingsWindow {
                     this.projects.forget_info();
                 }))
         };
-        let mut trust = div()
+        let tile = style::RowTile::Icon { fill: page_tile(Section::Projects, cx), icon: IconName::Folder };
+        let mut parts = style::TileRowParts::new(tile, choice_label(root));
+        parts.chip = Some((kind, status.into()));
+        parts.hint = Some(short_home(root).into());
+        parts.note = Some((
+            if project.status == TrustStatus::Changed { ui.warning_text } else { ui.muted },
+            detail.into(),
+        ));
+        parts.controls = vec![trust_button.into_any_element()];
+        let mut group = div()
             .flex()
             .flex_col()
-            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_TRUST), None))
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap_4()
-                    .min_h(px(style::SETTING_ROW_MIN_H))
-                    .py_2()
-                    .rule_top(ui)
-                    .child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .child(
-                                div()
-                                    .flex()
-                                    .items_center()
-                                    .gap_2()
-                                    .child(
-                                        div()
-                                            .text_body()
-                                            .font_weight(FontWeight::MEDIUM)
-                                            .child(text(SETTINGS_PROJECTS_THIS_PROJECT)),
-                                    )
-                                    .child(style::status_badge(ui, color, status)),
-                            )
-                            .child(div().text_caption().text_color(ui.muted).child(detail)),
-                    )
-                    .child(trust_button),
-            );
+            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_PROJECTS), None))
+            .child(self.for_row(ui, cx))
+            .child(style::tile_row("project-trust-row", ui, parts));
         if let Some(request) = project.request.as_ref().filter(|r| !trusted && !r.commands.is_empty()) {
-            trust = trust.child(
+            group = group.child(
                 div().pb_2().child(
                     style::card(ui, ui.border)
                         .flex()
@@ -118,66 +104,21 @@ impl SettingsWindow {
             );
         }
         if let Some(error) = hub_error {
-            trust = trust.child(div().pb_2().child(style::notice(ui, style::NoticeKind::Danger, error)));
+            group = group.child(div().pb_2().child(style::notice(ui, style::NoticeKind::Danger, error)));
         }
 
-        // Features: default / on / off per project, as the panel's small segmented control.
-        let mut features = div()
-            .flex()
-            .flex_col()
-            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_THIS_PROJECT), None))
-            .child(
-                div()
-                    .pb_2()
-                    .text_body()
-                    .text_color(ui.muted)
-                    .child(text(SETTINGS_PROJECTS_ONLY_FOR_YOU_NOTHING_IS_WRITTEN)),
-            );
+        // Each feature: the project's own choice, Default, On or Off.
         for (feature, standing, current, default) in prefs {
             let description = feature_description(feature, standing);
-            let key = feature.key();
-            let options = [
-                (
-                    None,
-                    if default {
-                        text(SETTINGS_PROJECTS_DEFAULT_ON)
-                    } else {
-                        text(SETTINGS_PROJECTS_DEFAULT_OFF)
-                    },
-                ),
-                (Some(true), text(SETTINGS_PROJECTS_ON)),
-                (Some(false), text(SETTINGS_PROJECTS_OFF)),
-            ];
-            let control = style::segmented(ui)
-                .children(options.into_iter().enumerate().map(|(ix, (value, label))| {
-                    let root = root.to_path_buf();
-                    style::segment(
-                        SharedString::from(format!("feature-{key}-{ix}")),
-                        ui,
-                        label,
-                        current == value,
-                    )
-                    .on_click(cx.listener(move |_, _, _, cx| {
-                        let root = root.clone();
-                        project::set_feature_for(
-                            &project::shown_profile(cx).clone(),
-                            &root,
-                            feature,
-                            value,
-                            cx,
-                        )
-                    }))
-                }))
-                .into_any_element();
+            let control = feature_menu(ui, feature, root, current, default);
             // Notes without a file are still for the person to switch on: that makes the file.
             let state = if standing == FeatureStanding::Missing && feature != Feature::Notes {
                 SettingState::Disabled
             } else {
                 SettingState::Default
             };
-            features = features.child(feature_row(ui, feature, description, state, control, cx));
+            group = group.child(feature_row(ui, feature, description, state, control, cx));
         }
-        let features = features.rule_bottom(ui);
 
         let errors = (!project.errors.is_empty()).then(|| {
             div()
@@ -215,15 +156,7 @@ impl SettingsWindow {
                     .on_click(move |_, _, cx| reveal(&reveal_root, cx)),
             );
 
-        div()
-            .flex()
-            .flex_col()
-            .gap_6()
-            .child(trust.rule_bottom(ui))
-            .child(features)
-            .children(errors)
-            .child(actions)
-            .into_any_element()
+        div().flex().flex_col().gap_6().child(group).children(errors).child(actions).into_any_element()
     }
 }
 

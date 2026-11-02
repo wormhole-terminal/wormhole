@@ -19,18 +19,17 @@ use super::picker::{choice_label, short_home};
 use crate::features::project;
 use crate::settings_window::nav::page_tile;
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, SettingState, TextRole};
+use crate::style::{self, SettingState};
 
 impl SettingsWindow {
-    pub(super) fn render_project_defaults(&self, cx: &mut Context<Self>) -> AnyElement {
+    /// The defaults every project starts from, one switch per feature, under the "For" row.
+    pub(super) fn defaults_group(&self, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
         let mut defaults = div()
             .flex()
             .flex_col()
-            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_PROJECTS_BY_DEFAULT), None))
-            .child(
-                div().pb_2().text_body().text_color(ui.muted).child(text(SETTINGS_PROJECTS_DEFAULTS_NOTE)),
-            );
+            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_PROJECTS), None))
+            .child(self.for_row(ui, cx));
         for feature in Feature::ALL {
             let on = project::api::default_enabled(feature, cx);
             let profile = project::shown_profile(cx).clone();
@@ -53,8 +52,12 @@ impl SettingsWindow {
                 cx,
             ));
         }
-        let defaults = defaults.rule_bottom(ui);
+        defaults.into_any_element()
+    }
 
+    /// The trusted projects, a tile row each, with the ways into a project's page and out of its trust.
+    pub(super) fn trusted_group(&self, cx: &mut Context<Self>) -> AnyElement {
+        let ui = ui(cx);
         let mut trusted = div().flex().flex_col().child(style::setting_group_head(
             ui,
             text(SETTINGS_PROJECTS_TRUSTED_PROJECTS),
@@ -107,6 +110,6 @@ impl SettingsWindow {
                 text(SETTINGS_PROJECTS_APPROVAL_ISNT_AVAILABLE_ON_THIS_MAC),
             )));
         }
-        div().flex().flex_col().gap_6().child(defaults).child(trusted.rule_bottom(ui)).into_any_element()
+        trusted.into_any_element()
     }
 }

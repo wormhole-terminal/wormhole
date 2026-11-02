@@ -12,10 +12,12 @@ use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
+use super::features::row;
 use crate::features::project;
 use crate::select::{Choice, SearchSelect, SelectTrigger};
 use crate::settings::UiColors;
 use crate::settings_window::SettingsWindow;
+use crate::style::SettingState;
 
 /// The select's first choice: the defaults every project starts from.
 pub(super) fn all_projects() -> &'static str {
@@ -45,6 +47,19 @@ pub(super) fn short_home(path: &Path) -> String {
 }
 
 impl SettingsWindow {
+    /// "For": whose choices the rows under it are, all projects' defaults or one project's own.
+    pub(super) fn for_row(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+        row(
+            "project-for",
+            ui,
+            text(SETTINGS_PROJECTS_FOR),
+            text(SETTINGS_PROJECTS_FOR_NOTE).to_string(),
+            SettingState::Default,
+            self.project_select(ui, cx),
+            cx,
+        )
+    }
+
     /// The project select: "All projects" or one of the known folders, searchable.
     pub(super) fn project_select(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
         let value = self.projects.selected.as_ref().map(|p| p.to_string_lossy().into_owned());

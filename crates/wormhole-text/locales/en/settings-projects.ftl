@@ -12,14 +12,15 @@ settings-projects-projects = Project folders
 
 settings-projects-search-projects = Search projects
 settings-projects-all-projects-defaults = All projects (defaults)
-settings-projects-all-projects = All projects
-settings-projects-project = Project
-settings-projects-use-from-projects-by-default = Use from projects by default
-settings-projects-defaults-note = A project can still turn a feature on or off just for you: pick it above.
+# The "For" row: whose choices the rows under it are. Its menu lists "All projects (defaults)" and each known project.
+settings-projects-for = For
+settings-projects-for-note = All projects sets the defaults. A project can still turn a feature on or off just for you: pick it here.
+# The group of the switches and menus, for all projects or for the picked one.
+settings-projects-use-from-projects = Use from projects
 settings-projects-trusted-projects = Trusted projects
 settings-projects-projects-allowed-to-run-commands = Projects allowed to run commands
 settings-projects-none-yet = No trusted projects yet
-settings-projects-none-hint = Pick a project above and choose Trust with Touch ID: it can then run the commands it asks for.
+settings-projects-none-hint = Pick a project in the For menu and choose Trust with Touch ID: it can then run the commands it asks for.
 settings-projects-settings = Settings
 settings-projects-revoke = Revoke
 settings-projects-approval-isnt-available-on-this-mac = Approval isn't available on this Mac (no Touch ID or login password), so projects can't be trusted.
@@ -29,9 +30,6 @@ settings-projects-not-trusted = Not trusted
 settings-projects-revoke-trust = Revoke trust
 settings-projects-waiting-for-approval = Waiting for approval…
 settings-projects-trust-with-touch-id = Trust with Touch ID…
-settings-projects-trust = Trust
-settings-projects-this-project = This project
-settings-projects-use-from-this-project = Use from this project
 settings-projects-only-for-you-nothing-is-written = Only for you: nothing is written into the project folder.
 settings-projects-default-on = Default (on)
 settings-projects-default-off = Default (off)

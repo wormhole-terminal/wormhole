@@ -28,7 +28,7 @@ use crate::features::project::LoadedProject;
 use crate::select;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges};
+use crate::style::{Edges, TextRole};
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("projects", |w, cx| w.draw_projects(cx))];
 
@@ -127,33 +127,22 @@ impl ProjectPicker {
 impl SettingsWindow {
     pub(super) fn draw_projects(&self, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
-        let all_projects = self.projects.selected.is_some().then(|| {
-            style::link_button("all-projects", ui, text(SETTINGS_PROJECTS_ALL_PROJECTS), false)
-                .on_click(cx.listener(|this, _, _, cx| {
-                    this.projects.selected = None;
-                    cx.notify();
-                }))
-                .into_any_element()
-        });
-        let picker = div()
-            .flex()
-            .flex_col()
-            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_PROJECT), None))
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap_4()
-                    .py_2()
-                    .rule_top(ui)
-                    .child(self.project_select(ui, cx))
-                    .children(all_projects),
-            );
         let body = match self.projects.selected.clone() {
-            None => self.render_project_defaults(cx),
+            None => div()
+                .flex()
+                .flex_col()
+                .gap_6()
+                .child(self.trusted_group(cx))
+                .child(self.defaults_group(cx))
+                .into_any_element(),
             Some(root) => self.render_project(&root, cx),
         };
-        div().flex().flex_col().gap_6().child(picker).child(body).into_any_element()
+        let footer = div()
+            .rule_top(ui)
+            .pt_2()
+            .text_caption()
+            .text_color(ui.muted)
+            .child(text(SETTINGS_PROJECTS_ONLY_FOR_YOU_NOTHING_IS_WRITTEN));
+        div().flex().flex_col().gap_6().child(body).child(footer).into_any_element()
     }
 }

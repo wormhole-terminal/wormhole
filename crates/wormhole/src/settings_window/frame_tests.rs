@@ -177,7 +177,9 @@ const BUDGET: [(&str, u64); 18] = [
     ("Motion", 6779),
     // The Trusted projects list, empty in the tests, says so in the empty list (title, hint, card):
     // 10,264 measured, 983 more than the one line it was.
-    ("Projects", 10259),
+    // Step 8c: the project's own switches are menus (built only while open) and the page's rows are
+    // `style::setting`s: 9,946 measured, 313 fewer.
+    ("Projects", 9946),
     // Measured with the nav's Motion and Import rows, which came after the page.
     // Step 8c: the Probes' rows, with a note under the hint in place of a notice, and the footer in place
     // of the Refresh button; the page measures an empty list in the tests: 2,758, 74 fewer.
