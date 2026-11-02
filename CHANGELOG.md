@@ -30,6 +30,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   starts instead of piling up.
 - The terminal-to-host protocol no longer drops a message because a yes/no field holds a number other than
   0 or 1, so a newer host's messages reach an older Wormhole.
+- A session host started from a preview build (such as 1.6.3-preview.2) said its version was 1.6.0.
 - A session host's log no longer gets three lines for every look at it from the command line or the Session
   Hosts window; those short connections are logged at the debug level.
 

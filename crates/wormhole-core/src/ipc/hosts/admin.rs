@@ -150,7 +150,10 @@ pub(super) fn admin_hello() -> Hello<'static> {
 
 /// This build's version as the wire carries it.
 pub(super) fn app_version() -> AppVersion {
-    let mut parts = env!("CARGO_PKG_VERSION").split('.').map(|p| p.parse::<u16>().unwrap_or(0));
+    // Leading digits of each part: `1.6.3-preview.2` is 1.6.3, not 1.6.0.
+    let mut parts = env!("CARGO_PKG_VERSION").split('.').map(|part| {
+        part.chars().take_while(char::is_ascii_digit).collect::<String>().parse::<u16>().unwrap_or(0)
+    });
     AppVersion {
         major: parts.next().unwrap_or(0),
         minor: parts.next().unwrap_or(0),

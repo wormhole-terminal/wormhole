@@ -59,11 +59,38 @@ use sys::ready::ReadyPipe;
 
 /// The host's version, as `Welcome` carries it.
 pub fn host_version() -> AppVersion {
-    let mut parts = env!("CARGO_PKG_VERSION").split('.').map(|p| p.parse::<u16>().unwrap_or(0));
+    parse_version(env!("CARGO_PKG_VERSION"))
+}
+
+/// `1.6.3` and `1.6.3-preview.2` as the wire carries a version: the leading digits of each of the
+/// first three dot-separated parts (a prerelease tag is not a number, and reading it whole made
+/// the patch 0).
+fn parse_version(text: &str) -> AppVersion {
+    let mut parts = text.split('.').map(|part| {
+        let digits: String = part.chars().take_while(char::is_ascii_digit).collect();
+        digits.parse::<u16>().unwrap_or(0)
+    });
     AppVersion {
         major: parts.next().unwrap_or(0),
         minor: parts.next().unwrap_or(0),
         patch: parts.next().unwrap_or(0),
+    }
+}
+
+#[cfg(test)]
+mod version_tests {
+    use super::parse_version;
+
+    #[test]
+    fn host_version_parses_a_prerelease() {
+        let v = parse_version("1.6.3-preview.2");
+        assert_eq!((v.major, v.minor, v.patch), (1, 6, 3));
+        let v = parse_version("1.6.3");
+        assert_eq!((v.major, v.minor, v.patch), (1, 6, 3));
+        let v = parse_version("2.0.0-rc.1+build5");
+        assert_eq!((v.major, v.minor, v.patch), (2, 0, 0));
+        let v = parse_version("garbage");
+        assert_eq!((v.major, v.minor, v.patch), (0, 0, 0));
     }
 }
 
