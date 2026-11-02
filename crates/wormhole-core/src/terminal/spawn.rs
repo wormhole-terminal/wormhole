@@ -28,7 +28,8 @@ pub fn spawn(size: GridSize, options: &SpawnOptions) -> anyhow::Result<(Pty, Pty
 
 /// [`spawn`] in a new session host (`wormhole-host`): the same program, environment and engine
 /// options, with the program running in `host` instead of the app's own process. The saved text
-/// (`options.restore`) is not replayed: a hosted terminal's history is the host's. Blocks for up
+/// (`options.restore`) goes to the new host as its seed: it draws it before the program's first
+/// byte, and the terminal's replica shows the same. Blocks for up
 /// to a few seconds while the host starts: never on the UI thread.
 pub fn spawn_hosted(
     host: &wormhole_term::client::HostCommand<'_>,

@@ -40,8 +40,9 @@ impl Pty {
     /// The program's environment is the app's with `launch.env` over it, as a local terminal's
     /// is, all of it sent to the host (which adds nothing). `options.restore`, the text of a
     /// previous session whose host is gone, is the host's seed: it draws it dimmed with the "restored"
-    /// marker before the program's first byte (the replica draws the same, so the first stream byte lands
-    /// under it); a host older than protocol 1.4 skips it. Blocks until the program runs or could not be
+    /// marker before the program's first byte. A host that did (protocol 1.4 or newer) has it, and the
+    /// replica draws the same so the first stream byte lands under it; an older host skips the seed, and
+    /// then the replica does not draw it either, or the two would differ. Blocks until the program runs or could not be
     /// started (a few seconds at most); the error then says why, in the words the "could not
     /// start" view shows.
     pub fn start_hosted(
@@ -71,7 +72,11 @@ impl Pty {
                     replica_size,
                     options,
                     StreamMode::Raw,
-                    HostFacts { pid: info.pid, minor: info.proto_minor },
+                    HostFacts {
+                        pid: info.pid,
+                        minor: info.proto_minor,
+                        replay: seed_drawn_by(options.restore, info.proto_minor),
+                    },
                 )
             }
             Err(err) => {
@@ -113,7 +118,8 @@ impl Pty {
             size,
             options,
             first,
-            HostFacts { pid: welcome.pid, minor: welcome.proto_minor },
+            // An attach never replays saved text: the host's screen is what it shows, and its repaint has it.
+            HostFacts { pid: welcome.pid, minor: welcome.proto_minor, replay: None },
         )
         .map_err(|e| AttachError::Failed(format!("{e:#}")))
     }
@@ -283,13 +289,26 @@ fn environment(launch: &Launch) -> Vec<(String, String)> {
     env.into_iter().filter(|(k, v)| fits(k) && fits(v) && !k.is_empty()).collect()
 }
 
-/// What the host's `Welcome` said that the terminal keeps.
+/// The first protocol minor whose host draws a `Spawn`'s seed.
+const SEED_MINOR: u16 = 4;
+
+/// The saved text the replica draws as a host of protocol `minor` did: none for a host that skipped
+/// the seed (it would show what the host does not have).
+pub(super) fn seed_drawn_by(restore: Option<&str>, minor: u16) -> Option<&str> {
+    restore.filter(|_| minor >= SEED_MINOR)
+}
+
+/// What the host's `Welcome` said that the terminal keeps, and what the replica draws first.
 #[derive(Clone, Copy)]
-pub(crate) struct HostFacts {
+pub(crate) struct HostFacts<'a> {
     /// The pid of the terminal's program.
     pub pid: u32,
     /// The protocol minor the host speaks.
     pub minor: u16,
+    /// The saved text a host that was just started drew before the program's first byte, which the
+    /// replica draws too: `None` for an attach (the host has its screen already) and for a host that
+    /// skipped the seed.
+    pub replay: Option<&'a str>,
 }
 
 /// The `Pty` around a connection whose handshake is done, and its thread. `size` is the app's;
@@ -301,16 +320,16 @@ pub(crate) fn hosted(
     replica: GridSize,
     options: &StartOptions,
     first: StreamMode,
-    host: HostFacts,
+    host: HostFacts<'_>,
 ) -> anyhow::Result<(Pty, PtyEvents)> {
-    let HostFacts { pid, minor } = host;
+    let HostFacts { pid, minor, replay } = host;
     let (proxy, events) = EventProxy::new();
     let shared = proxy.shared().clone();
     let replica_options = ReplicaOptions::of(options);
     let mut screen = replica_options.screen(replica);
     // What the host draws before the program's first byte (see `start_hosted`): the same here, so the
     // stream's bytes land under it as they do there.
-    if let Some(text) = options.restore {
+    if let Some(text) = replay {
         crate::restore::replay(&mut screen, &wire::seed_chunks(text).concat());
     }
     if let Some(colors) = options.colors {

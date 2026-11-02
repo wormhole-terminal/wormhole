@@ -118,7 +118,7 @@ fn connected_to_minor(first: StreamMode, minor: u16) -> (Pty, PtyEvents, Script)
         GRID,
         &options,
         first,
-        HostFacts { pid: std::process::id(), minor },
+        HostFacts { pid: std::process::id(), minor, replay: None },
     )
     .expect("a client");
     let write = theirs.try_clone().expect("a second handle");
@@ -608,4 +608,17 @@ mod handshake {
         });
         assert!(matches!(result, Err(AttachError::Unreachable(_))), "{result:?}");
     }
+}
+
+#[test]
+fn the_replica_draws_the_seed_only_as_a_host_that_has_it() {
+    use super::open::seed_drawn_by;
+    assert_eq!(seed_drawn_by(Some("old"), 4), Some("old"));
+    assert_eq!(seed_drawn_by(Some("old"), 9), Some("old"));
+    assert_eq!(
+        seed_drawn_by(Some("old"), 3),
+        None,
+        "a host that skipped the seed: the replica must not draw it"
+    );
+    assert_eq!(seed_drawn_by(None, 4), None);
 }
