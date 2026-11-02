@@ -11,6 +11,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Help → Session Hosts (while Persistent terminals is on) opens a window that shows every session host:
   its processes, version and protocol against the app's, whether it answers, which terminal holds it
   and how that connection is doing, with End, Forget and a copy of the details for a bug report.
+- Settings → Import lists each terminal found as a row with the file it was read from and an Import… button, and
+  "Compare with Wormhole" opens how they compare in a sheet.
 - Every group of rows in Settings sits in one rounded card under its heading, with a line between the rows only while
   Borders is on. With Borders off, menus, outlined buttons, chips and text fields keep their shape with a
   soft fill instead of an outline, in Settings and in the main window (the Changes panel's "vs HEAD").

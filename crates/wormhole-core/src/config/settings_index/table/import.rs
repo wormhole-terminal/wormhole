@@ -1,7 +1,7 @@
 //! The Import section: the terminals found on this Mac with what each would bring over, and how they
 //! compare with Wormhole. Each group is one block the window draws itself.
 
-use super::{entry, group};
+use super::{entry, group, untitled};
 use crate::config::settings_index::Group;
 #[allow(
     clippy::wildcard_imports,
@@ -14,9 +14,7 @@ pub(super) const IMPORT: &[Group] = &[
         SETTINGS_IMPORT_GROUP_FOUND,
         &[entry("import-found", SETTINGS_IMPORT_FOUND, &[]).with_keywords(SETTINGS_IMPORT_FOUND_KEYWORDS)],
     ),
-    group(
-        SETTINGS_IMPORT_GROUP_COMPARE,
-        &[entry("import-compare", SETTINGS_IMPORT_COMPARE, &[])
-            .with_keywords(SETTINGS_IMPORT_COMPARE_KEYWORDS)],
-    ),
+    untitled(&[
+        entry("import-compare", SETTINGS_IMPORT_COMPARE, &[]).with_keywords(SETTINGS_IMPORT_COMPARE_KEYWORDS)
+    ]),
 ];

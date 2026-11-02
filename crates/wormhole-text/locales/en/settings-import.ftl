@@ -26,9 +26,8 @@ settings-import-count = { $count ->
    *[other] { $count } settings
 }
 
-# { $terminal } is a terminal's name, { $count } how many settings it has ("13 settings"). What a screen reader
-# says for the card's header, which opens and closes the card.
-settings-import-card-label = { $terminal }, { $count }
+# The button of a terminal's row: opens the list of what it would bring over.
+settings-import-review = Import…
 
 settings-import-take = Brings over
 settings-import-leave = Doesn't carry over
@@ -120,8 +119,10 @@ settings-import-reason-built-in-theme = { $theme } is built into the other termi
 
 settings-import-group-compare = Compared with { -brand }
 
-settings-import-compare = How they compare
+settings-import-compare = Compare with { -brand }
     .keywords = drawbacks limits strengths differences versus comparison alternatives
+
+settings-import-done = Done
 
 settings-import-compare-none = When another terminal's settings are found, you see here how it compares with { -brand }.
 

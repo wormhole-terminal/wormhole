@@ -243,6 +243,7 @@ impl SettingsWindow {
     pub(super) fn escape(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.new_profile.take().is_some()
             || self.close_probe_sheet(cx)
+            || self.close_import_sheet(cx)
             || self.font_picker.open.take().is_some()
             || self.end_recording(cx)
             || std::mem::take(&mut self.confirm_delete_profile)
@@ -434,6 +435,7 @@ impl Render for SettingsWindow {
             .child(content)
             .children(self.render_new_profile(cx))
             .children(self.render_probe_sheet(window, cx))
+            .children(self.render_import_sheet(window, cx))
     }
 }
 

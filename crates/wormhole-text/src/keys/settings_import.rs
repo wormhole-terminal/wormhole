@@ -26,6 +26,8 @@ pub const SETTINGS_IMPORT_NONE: Key = Key::new(744);
 pub const SETTINGS_IMPORT_NONE_DETAIL: Key = Key::new(745);
 /// "Files read"
 pub const SETTINGS_IMPORT_FILES_READ: Key = Key::new(746);
+/// "Import…"
+pub const SETTINGS_IMPORT_REVIEW: Key = Key::new(748);
 /// "Brings over"
 pub const SETTINGS_IMPORT_TAKE: Key = Key::new(749);
 /// "Doesn't carry over"
@@ -138,128 +140,130 @@ pub const SETTINGS_IMPORT_REASON_OUTSIDE_HOME: Key = Key::new(805);
 pub const SETTINGS_IMPORT_REASON_PARTIAL_PALETTE: Key = Key::new(806);
 /// "Compared with Wormhole"
 pub const SETTINGS_IMPORT_GROUP_COMPARE: Key = Key::new(809);
-/// "How they compare"
+/// "Compare with Wormhole"
 pub const SETTINGS_IMPORT_COMPARE: Key = Key::new(810);
 /// "drawbacks limits strengths differences versus comparison alternatives"
 pub const SETTINGS_IMPORT_COMPARE_KEYWORDS: Key = Key::new(811);
+/// "Done"
+pub const SETTINGS_IMPORT_DONE: Key = Key::new(812);
 /// "When another terminal's settings are found, you see here how it compares with Wormhole."
-pub const SETTINGS_IMPORT_COMPARE_NONE: Key = Key::new(812);
+pub const SETTINGS_IMPORT_COMPARE_NONE: Key = Key::new(813);
 /// "What Wormhole doesn't do yet"
-pub const SETTINGS_IMPORT_WORMHOLE_GAPS: Key = Key::new(814);
+pub const SETTINGS_IMPORT_WORMHOLE_GAPS: Key = Key::new(815);
 /// "Source"
-pub const SETTINGS_IMPORT_SOURCE: Key = Key::new(816);
+pub const SETTINGS_IMPORT_SOURCE: Key = Key::new(817);
 /// "Settings → Import brings them over."
-pub const SETTINGS_IMPORT_WELCOME_TOUR: Key = Key::new(822);
+pub const SETTINGS_IMPORT_WELCOME_TOUR: Key = Key::new(823);
 /// "Native macOS app with native tabs and splits, kitty graphics and keyboard protocols, ligatures."
-pub const SETTINGS_IMPORT_STRENGTH_GHOSTTY_NATIVE_TABS_GRAPHICS: Key = Key::new(823);
+pub const SETTINGS_IMPORT_STRENGTH_GHOSTTY_NATIVE_TABS_GRAPHICS: Key = Key::new(824);
 /// "Running programs end when the app quits; window layout can be restored."
-pub const SETTINGS_IMPORT_GAP_GHOSTTY_NO_SESSION_PERSISTENCE: Key = Key::new(824);
+pub const SETTINGS_IMPORT_GAP_GHOSTTY_NO_SESSION_PERSISTENCE: Key = Key::new(825);
 /// "Its library reads program status (OSC 7501); the app doesn't show it yet."
-pub const SETTINGS_IMPORT_GAP_GHOSTTY_AGENT_STATUS_NOT_SHOWN: Key = Key::new(825);
+pub const SETTINGS_IMPORT_GAP_GHOSTTY_AGENT_STATUS_NOT_SHOWN: Key = Key::new(826);
 /// "Notifications when a command finishes are off by default."
-pub const SETTINGS_IMPORT_GAP_GHOSTTY_COMMAND_NOTIFY_OFF: Key = Key::new(826);
+pub const SETTINGS_IMPORT_GAP_GHOSTTY_COMMAND_NOTIFY_OFF: Key = Key::new(827);
 /// "No Sixel images; the kitty graphics protocol is offered instead."
-pub const SETTINGS_IMPORT_GAP_GHOSTTY_NO_SIXEL: Key = Key::new(827);
+pub const SETTINGS_IMPORT_GAP_GHOSTTY_NO_SIXEL: Key = Key::new(828);
 /// "Settings live in a text file; a settings window is planned."
-pub const SETTINGS_IMPORT_GAP_GHOSTTY_CONFIG_FILE_ONLY: Key = Key::new(828);
+pub const SETTINGS_IMPORT_GAP_GHOSTTY_CONFIG_FILE_ONLY: Key = Key::new(829);
 /// "The broadest macOS feature set: tmux integration, all image protocols, agent Session Status."
-pub const SETTINGS_IMPORT_STRENGTH_ITERM2_BROADEST_FEATURES: Key = Key::new(829);
+pub const SETTINGS_IMPORT_STRENGTH_ITERM2_BROADEST_FEATURES: Key = Key::new(830);
 /// "Programs survive crashes and updates; quitting with ⌘Q or rebooting ends them."
-pub const SETTINGS_IMPORT_GAP_ITERM2_QUIT_ENDS_PROGRAMS: Key = Key::new(830);
+pub const SETTINGS_IMPORT_GAP_ITERM2_QUIT_ENDS_PROGRAMS: Key = Key::new(831);
 /// "Turning on ligatures disables the GPU renderer."
-pub const SETTINGS_IMPORT_GAP_ITERM2_LIGATURES_DISABLE_GPU: Key = Key::new(831);
+pub const SETTINGS_IMPORT_GAP_ITERM2_LIGATURES_DISABLE_GPU: Key = Key::new(832);
 /// "AI features need a plugin, explicit consent and your own API key."
-pub const SETTINGS_IMPORT_GAP_ITERM2_AI_SETUP_REQUIRED: Key = Key::new(832);
+pub const SETTINGS_IMPORT_GAP_ITERM2_AI_SETUP_REQUIRED: Key = Key::new(833);
 /// "Built into macOS, fully native, no install; 24-bit colour and Powerline glyphs since macOS 26."
-pub const SETTINGS_IMPORT_STRENGTH_TERMINAL_APP_BUILT_INTO_MACOS: Key = Key::new(833);
+pub const SETTINGS_IMPORT_STRENGTH_TERMINAL_APP_BUILT_INTO_MACOS: Key = Key::new(834);
 /// "No kitty keyboard protocol or other modern key reporting, in third-party tests."
-pub const SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_KITTY_KEYBOARD: Key = Key::new(834);
+pub const SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_KITTY_KEYBOARD: Key = Key::new(835);
 /// "No documented image protocol (Sixel, kitty or iTerm2)."
-pub const SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_INLINE_IMAGES: Key = Key::new(835);
+pub const SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_INLINE_IMAGES: Key = Key::new(836);
 /// "No agent or program-status features."
-pub const SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_AGENT_STATUS: Key = Key::new(836);
+pub const SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_AGENT_STATUS: Key = Key::new(837);
 /// "Minimal and fast, cross-platform, vi mode, regex hints and the kitty keyboard protocol."
-pub const SETTINGS_IMPORT_STRENGTH_ALACRITTY_MINIMAL_FAST: Key = Key::new(837);
+pub const SETTINGS_IMPORT_STRENGTH_ALACRITTY_MINIMAL_FAST: Key = Key::new(838);
 /// "No tabs or splits by design; a multiplexer or window manager is expected."
-pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_TABS_OR_SPLITS: Key = Key::new(838);
+pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_TABS_OR_SPLITS: Key = Key::new(839);
 /// "No image protocols; Sixel exists only in a community fork."
-pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_IMAGES: Key = Key::new(839);
+pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_IMAGES: Key = Key::new(840);
 /// "No font ligatures (requested since 2017)."
-pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_LIGATURES: Key = Key::new(840);
+pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_LIGATURES: Key = Key::new(841);
 /// "No settings window; configuration is a TOML file."
-pub const SETTINGS_IMPORT_GAP_ALACRITTY_CONFIG_FILE_ONLY: Key = Key::new(841);
+pub const SETTINGS_IMPORT_GAP_ALACRITTY_CONFIG_FILE_ONLY: Key = Key::new(842);
 /// "No program-status or agent features among its escape sequences."
-pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_AGENT_STATUS: Key = Key::new(842);
+pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_AGENT_STATUS: Key = Key::new(843);
 /// "Fast and scriptable; the origin of the kitty graphics and keyboard protocols; layouts and splits."
-pub const SETTINGS_IMPORT_STRENGTH_KITTY_FAST_SCRIPTABLE: Key = Key::new(843);
+pub const SETTINGS_IMPORT_STRENGTH_KITTY_FAST_SCRIPTABLE: Key = Key::new(844);
 /// "Sessions re-create windows; running programs don't survive quitting."
-pub const SETTINGS_IMPORT_GAP_KITTY_NO_SESSION_PERSISTENCE: Key = Key::new(844);
+pub const SETTINGS_IMPORT_GAP_KITTY_NO_SESSION_PERSISTENCE: Key = Key::new(845);
 /// "Started from the Dock, it often lacks your shell's environment variables."
-pub const SETTINGS_IMPORT_GAP_KITTY_GUI_LAUNCH_ENV: Key = Key::new(845);
+pub const SETTINGS_IMPORT_GAP_KITTY_GUI_LAUNCH_ENV: Key = Key::new(846);
 /// "No Sixel images; kitty's own graphics protocol is used instead."
-pub const SETTINGS_IMPORT_GAP_KITTY_NO_SIXEL: Key = Key::new(846);
+pub const SETTINGS_IMPORT_GAP_KITTY_NO_SIXEL: Key = Key::new(847);
 /// "Configuration is a single text file; no settings window."
-pub const SETTINGS_IMPORT_GAP_KITTY_CONFIG_FILE_ONLY: Key = Key::new(847);
+pub const SETTINGS_IMPORT_GAP_KITTY_CONFIG_FILE_ONLY: Key = Key::new(848);
 /// "Built-in multiplexer, ligatures, iTerm2 and kitty images, Lua config, every major platform."
-pub const SETTINGS_IMPORT_STRENGTH_WEZTERM_MULTIPLEXER_LUA: Key = Key::new(848);
+pub const SETTINGS_IMPORT_STRENGTH_WEZTERM_MULTIPLEXER_LUA: Key = Key::new(849);
 /// "No tagged release since February 2024; nightly builds continue."
-pub const SETTINGS_IMPORT_GAP_WEZTERM_NO_RELEASE_SINCE_2024: Key = Key::new(849);
+pub const SETTINGS_IMPORT_GAP_WEZTERM_NO_RELEASE_SINCE_2024: Key = Key::new(850);
 /// "Keeping programs running needs a configured multiplexer domain."
-pub const SETTINGS_IMPORT_GAP_WEZTERM_PERSISTENCE_NEEDS_SETUP: Key = Key::new(850);
+pub const SETTINGS_IMPORT_GAP_WEZTERM_PERSISTENCE_NEEDS_SETUP: Key = Key::new(851);
 /// "The kitty keyboard protocol is off by default."
-pub const SETTINGS_IMPORT_GAP_WEZTERM_KITTY_KEYBOARD_OFF: Key = Key::new(851);
+pub const SETTINGS_IMPORT_GAP_WEZTERM_KITTY_KEYBOARD_OFF: Key = Key::new(852);
 /// "Configuration is Lua code; no settings window."
-pub const SETTINGS_IMPORT_GAP_WEZTERM_CONFIG_IS_LUA: Key = Key::new(852);
+pub const SETTINGS_IMPORT_GAP_WEZTERM_CONFIG_IS_LUA: Key = Key::new(853);
 /// "Open reports of a crash and high GPU use on macOS 26."
-pub const SETTINGS_IMPORT_GAP_WEZTERM_MACOS_26_REPORTS: Key = Key::new(853);
+pub const SETTINGS_IMPORT_GAP_WEZTERM_MACOS_26_REPORTS: Key = Key::new(854);
 /// "Agent-focused: a built-in agent, a Claude Code plugin with tab status, block-based output."
-pub const SETTINGS_IMPORT_STRENGTH_WARP_AGENT_FOCUSED: Key = Key::new(854);
+pub const SETTINGS_IMPORT_STRENGTH_WARP_AGENT_FOCUSED: Key = Key::new(855);
 /// "Running programs end when Warp relaunches or updates (an open request)."
-pub const SETTINGS_IMPORT_GAP_WARP_PROGRAMS_END_ON_RELAUNCH: Key = Key::new(855);
+pub const SETTINGS_IMPORT_GAP_WARP_PROGRAMS_END_ON_RELAUNCH: Key = Key::new(856);
 /// "On the Free plan, AI features require telemetry to be on."
-pub const SETTINGS_IMPORT_GAP_WARP_TELEMETRY_FOR_FREE_AI: Key = Key::new(856);
+pub const SETTINGS_IMPORT_GAP_WARP_TELEMETRY_FOR_FREE_AI: Key = Key::new(857);
 /// "The terminal works without an account; some features need signing in."
-pub const SETTINGS_IMPORT_GAP_WARP_LOGIN_FOR_SOME_FEATURES: Key = Key::new(857);
+pub const SETTINGS_IMPORT_GAP_WARP_LOGIN_FOR_SOME_FEATURES: Key = Key::new(858);
 /// "Full offline support is an open request."
-pub const SETTINGS_IMPORT_GAP_WARP_OFFLINE_REQUESTED: Key = Key::new(858);
+pub const SETTINGS_IMPORT_GAP_WARP_OFFLINE_REQUESTED: Key = Key::new(859);
 /// "No Sixel images; kitty graphics and iTerm2 images are supported."
-pub const SETTINGS_IMPORT_GAP_WARP_NO_SIXEL: Key = Key::new(859);
+pub const SETTINGS_IMPORT_GAP_WARP_NO_SIXEL: Key = Key::new(860);
 /// "A terminal inside the editor; agents in the Agent Panel can run terminal commands."
-pub const SETTINGS_IMPORT_STRENGTH_ZED_TERMINAL_IN_EDITOR: Key = Key::new(860);
+pub const SETTINGS_IMPORT_STRENGTH_ZED_TERMINAL_IN_EDITOR: Key = Key::new(861);
 /// "A panel inside the editor, not a standalone terminal app."
-pub const SETTINGS_IMPORT_GAP_ZED_EDITOR_PANEL: Key = Key::new(861);
+pub const SETTINGS_IMPORT_GAP_ZED_EDITOR_PANEL: Key = Key::new(862);
 /// "No image protocols in the terminal (closed as not planned)."
-pub const SETTINGS_IMPORT_GAP_ZED_NO_IMAGES: Key = Key::new(862);
+pub const SETTINGS_IMPORT_GAP_ZED_NO_IMAGES: Key = Key::new(863);
 /// "No kitty keyboard protocol encoding in its terminal."
-pub const SETTINGS_IMPORT_GAP_ZED_NO_KITTY_KEYBOARD: Key = Key::new(863);
+pub const SETTINGS_IMPORT_GAP_ZED_NO_KITTY_KEYBOARD: Key = Key::new(864);
 /// "Ligatures can't be turned on for the terminal (open since 2024)."
-pub const SETTINGS_IMPORT_GAP_ZED_TERMINAL_LIGATURES: Key = Key::new(864);
+pub const SETTINGS_IMPORT_GAP_ZED_TERMINAL_LIGATURES: Key = Key::new(865);
 /// "Crash reports and usage data are sent by default; both can be turned off."
-pub const SETTINGS_IMPORT_GAP_ZED_TELEMETRY_ON: Key = Key::new(865);
+pub const SETTINGS_IMPORT_GAP_ZED_TELEMETRY_ON: Key = Key::new(866);
 /// "A terminal in the editor with tabs, splits and shell integration; kitty keyboard by default."
-pub const SETTINGS_IMPORT_STRENGTH_VSCODE_TERMINAL_IN_EDITOR: Key = Key::new(866);
+pub const SETTINGS_IMPORT_STRENGTH_VSCODE_TERMINAL_IN_EDITOR: Key = Key::new(867);
 /// "A panel inside the editor, not a standalone terminal app."
-pub const SETTINGS_IMPORT_GAP_VSCODE_EDITOR_PANEL: Key = Key::new(867);
+pub const SETTINGS_IMPORT_GAP_VSCODE_EDITOR_PANEL: Key = Key::new(868);
 /// "After a restart, programs are started again, not kept running."
-pub const SETTINGS_IMPORT_GAP_VSCODE_PROGRAMS_RELAUNCHED: Key = Key::new(868);
+pub const SETTINGS_IMPORT_GAP_VSCODE_PROGRAMS_RELAUNCHED: Key = Key::new(869);
 /// "Images (Sixel, iTerm2, kitty) are off by default."
-pub const SETTINGS_IMPORT_GAP_VSCODE_IMAGES_OFF: Key = Key::new(869);
+pub const SETTINGS_IMPORT_GAP_VSCODE_IMAGES_OFF: Key = Key::new(870);
 /// "Scrollback keeps 1,000 lines by default."
-pub const SETTINGS_IMPORT_GAP_VSCODE_SCROLLBACK_1000: Key = Key::new(870);
+pub const SETTINGS_IMPORT_GAP_VSCODE_SCROLLBACK_1000: Key = Key::new(871);
 /// "Telemetry is on unless turned off in settings."
-pub const SETTINGS_IMPORT_GAP_VSCODE_TELEMETRY_ON: Key = Key::new(871);
+pub const SETTINGS_IMPORT_GAP_VSCODE_TELEMETRY_ON: Key = Key::new(872);
 /// "A native macOS terminal with a sidebar of terminals showing each agent's status, and a git diff panel."
-pub const SETTINGS_IMPORT_STRENGTH_WORMHOLE_AGENT_SIDEBAR: Key = Key::new(872);
+pub const SETTINGS_IMPORT_STRENGTH_WORMHOLE_AGENT_SIDEBAR: Key = Key::new(873);
 /// "macOS only (macOS 14 or later)."
-pub const SETTINGS_IMPORT_GAP_WORMHOLE_MACOS_ONLY: Key = Key::new(873);
+pub const SETTINGS_IMPORT_GAP_WORMHOLE_MACOS_ONLY: Key = Key::new(874);
 /// "A young project: first released in October 2026."
-pub const SETTINGS_IMPORT_GAP_WORMHOLE_YOUNG_PROJECT: Key = Key::new(874);
+pub const SETTINGS_IMPORT_GAP_WORMHOLE_YOUNG_PROJECT: Key = Key::new(875);
 /// "Running programs end when the app quits; windows and recent output come back."
-pub const SETTINGS_IMPORT_GAP_WORMHOLE_PROGRAMS_END_ON_QUIT: Key = Key::new(875);
+pub const SETTINGS_IMPORT_GAP_WORMHOLE_PROGRAMS_END_ON_QUIT: Key = Key::new(876);
 /// "VoiceOver can't read the terminal's text yet; the controls around it are labelled."
-pub const SETTINGS_IMPORT_GAP_WORMHOLE_VOICEOVER_NO_TERMINAL_TEXT: Key = Key::new(876);
+pub const SETTINGS_IMPORT_GAP_WORMHOLE_VOICEOVER_NO_TERMINAL_TEXT: Key = Key::new(877);
 /// "The kitty keyboard protocol's key-release and repeat events aren't sent."
-pub const SETTINGS_IMPORT_GAP_WORMHOLE_KITTY_KEYBOARD_PARTIAL: Key = Key::new(877);
+pub const SETTINGS_IMPORT_GAP_WORMHOLE_KITTY_KEYBOARD_PARTIAL: Key = Key::new(878);
 
 /// ```text
 /// { $count ->
@@ -269,13 +273,6 @@ pub const SETTINGS_IMPORT_GAP_WORMHOLE_KITTY_KEYBOARD_PARTIAL: Key = Key::new(87
 /// ```
 pub fn settings_import_count(count: i64) -> String {
     crate::active::message(747, &[("count", Arg::Int(count))])
-}
-
-/// ```text
-/// { $terminal }, { $count }
-/// ```
-pub fn settings_import_card_label(terminal: &str, count: &str) -> String {
-    crate::active::message(748, &[("terminal", Arg::Str(terminal)), ("count", Arg::Str(count))])
 }
 
 /// ```text
@@ -320,28 +317,28 @@ pub fn settings_import_reason_built_in_theme(theme: &str) -> String {
 /// Where { $terminal } falls short today
 /// ```
 pub fn settings_import_compare_gaps(terminal: &str) -> String {
-    crate::active::message(813, &[("terminal", Arg::Str(terminal))])
+    crate::active::message(814, &[("terminal", Arg::Str(terminal))])
 }
 
 /// ```text
 /// As of { $date }
 /// ```
 pub fn settings_import_as_of(date: &str) -> String {
-    crate::active::message(815, &[("date", Arg::Str(date))])
+    crate::active::message(816, &[("date", Arg::Str(date))])
 }
 
 /// ```text
 /// Source { $number }
 /// ```
 pub fn settings_import_source_numbered(number: &str) -> String {
-    crate::active::message(817, &[("number", Arg::Str(number))])
+    crate::active::message(818, &[("number", Arg::Str(number))])
 }
 
 /// ```text
 /// Use my { $terminal } settings
 /// ```
 pub fn settings_import_use_mine(terminal: &str) -> String {
-    crate::active::message(818, &[("terminal", Arg::Str(terminal))])
+    crate::active::message(819, &[("terminal", Arg::Str(terminal))])
 }
 
 /// ```text
@@ -351,7 +348,7 @@ pub fn settings_import_use_mine(terminal: &str) -> String {
 /// }
 /// ```
 pub fn settings_import_onboarding_summary(brought: i64, left: &str) -> String {
-    crate::active::message(819, &[("brought", Arg::Int(brought)), ("left", Arg::Str(left))])
+    crate::active::message(820, &[("brought", Arg::Int(brought)), ("left", Arg::Str(left))])
 }
 
 /// ```text
@@ -361,12 +358,12 @@ pub fn settings_import_onboarding_summary(brought: i64, left: &str) -> String {
 /// }
 /// ```
 pub fn settings_import_onboarding_all(brought: i64) -> String {
-    crate::active::message(820, &[("brought", Arg::Int(brought))])
+    crate::active::message(821, &[("brought", Arg::Int(brought))])
 }
 
 /// ```text
 /// Your { $terminal } settings were found.
 /// ```
 pub fn settings_import_welcome_found(terminal: &str) -> String {
-    crate::active::message(821, &[("terminal", Arg::Str(terminal))])
+    crate::active::message(822, &[("terminal", Arg::Str(terminal))])
 }

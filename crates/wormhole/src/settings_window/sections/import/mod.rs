@@ -1,6 +1,7 @@
 //! Import: the terminals found on this Mac, what each would bring over (and what it can't), and how
-//! each compares with Wormhole. The page is two blocks drawn from the scan the window keeps
-//! (`found`, `review`, `compare`); the words are in `words`.
+//! each compares with Wormhole. The page is a row for each terminal found (`found`, with
+//! its list, `review`, opening under it) and a row that opens the comparison in a sheet (`compare`), drawn
+//! from the scan the window keeps; the words are in `words`.
 //!
 //! The scan reads files under the real home, so it runs on the background executor and only when
 //! the page is first shown or "Scan again" is pressed, never at launch. Nothing is written until
@@ -22,7 +23,7 @@ use crate::settings_window::SettingsWindow;
 use crate::settings_window::registry::Setting;
 
 pub(super) const SETTINGS: &[Setting] =
-    &[Setting::block("import-found", found::draw), Setting::block("import-compare", compare::draw)];
+    &[Setting::rows("import-found", found::draw), Setting::rows("import-compare", compare::draw)];
 
 /// What the page keeps of its scan: the terminals found, the one open, which rows are ticked.
 #[derive(Default)]
@@ -32,8 +33,10 @@ pub(crate) struct ImportPage {
     /// The scan in progress; a page that was never shown has none and starts one when it is.
     task: Option<Task<()>>,
     started: bool,
-    /// The terminal whose settings are listed under its card.
+    /// The terminal whose settings are listed under its row.
     open: Option<Source>,
+    /// The comparison sheet is open.
+    comparing: bool,
     /// Per terminal, whether each row of its proposal is ticked.
     ticked: HashMap<Source, Vec<bool>>,
     /// The last import, with the terminal it was from.
@@ -43,11 +46,6 @@ pub(crate) struct ImportPage {
 impl ImportPage {
     pub(crate) fn scanning(&self) -> bool {
         self.task.is_some()
-    }
-
-    fn open_found(&self) -> Option<&Found> {
-        let open = self.open?;
-        self.found.as_ref()?.iter().find(|found| found.source == open)
     }
 
     /// The rows of `found` that are ticked, as the page shows them.

@@ -1,7 +1,8 @@
-//! The terminals found: a card each, newest settings first. A card's header names the terminal and
-//! counts what it says; the open one lists the files read and what would be brought over (`review`).
+//! The terminals found: a row each, newest settings first. A row names the terminal, counts what it says and
+//! shows the file it was read from; its button opens the files read and what would be brought over (`review`).
 
 use gpui_kit::assets::IconName;
+use gpui_kit::component::Selectable as _;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::import::{Found, visible};
@@ -28,7 +29,6 @@ pub(super) fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
     div()
         .flex()
         .flex_col()
-        .gap_3()
         .children(all.iter().enumerate().map(|(ix, found)| card(window, found, ix, cx)))
         .into_any_element()
 }
@@ -46,45 +46,57 @@ fn none_found(ui: crate::settings::UiColors) -> Div {
     )
 }
 
+/// One terminal found: its name with how many settings it has, the file it was read from as a visible
+/// hint (where the person's own settings are is what they check first), and the button that opens the list of
+/// what it would bring over under the row.
 fn card(window: &SettingsWindow, found: &Found, ix: usize, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let source = found.source;
     let open = window.import.open == Some(source);
-    let count = found.proposal.values.len();
     let name = terminal_name(source);
-    let header = div()
-        .id(("import-card", ix))
-        .role(Role::Button)
-        .aria_label(settings_import_card_label(name, &settings_import_count(whole(count))))
-        .aria_expanded(open)
-        // A tab stop, so ↩ and Space open and close it as a click does.
-        .focusable()
-        .tab_stop(true)
-        .focus_visible(move |d| d.bg(ui.hover))
-        .flex()
-        .items_center()
-        .gap_2()
-        .min_h(px(style::CONTROL_H))
-        .cursor_pointer()
+    let path = found.files.first().map(|path| visible(&with_tilde(path)).to_string());
+    let button = style::form_button(("import-card", ix))
+        .outline()
+        .icon(IconName::ArrowDownToLine)
+        .label(text(SETTINGS_IMPORT_REVIEW))
+        .selected(open)
         .on_click(cx.listener(move |this, _, _, cx| {
             this.import.open = if this.import.open == Some(source) { None } else { Some(source) };
             cx.notify();
         }))
-        .child(div().text_body().font_weight(FontWeight::SEMIBOLD).child(name))
-        .child(style::count_badge(ui, settings_import_count(whole(count))))
-        .child(div().flex_1())
-        .child(
-            style::icon(if open { IconName::ChevronUp } else { IconName::ChevronDown }).text_color(ui.muted),
-        );
-    let mut card = style::card(ui, if open { ui.border_strong } else { ui.border })
-        .flex()
-        .flex_col()
-        .gap_3()
-        .child(header);
+        .into_any_element();
+    let row = style::setting(
+        SharedString::from(format!("import-row-{}", source.key())),
+        ui,
+        style::SettingParts {
+            label: name.into(),
+            description: path.map(Into::into),
+            visible_hint: true,
+            chip: Some(settings_import_count(whole(found.proposal.values.len())).into()),
+            keys: style::RowKeys::NONE,
+            state: style::SettingState::Default,
+            found: None,
+            found_description: None,
+            control: button,
+            tall: false,
+            extra: None,
+            on_reset: None,
+        },
+        cx,
+    );
+    let mut column = div().flex().flex_col().child(row);
     if open {
-        card = card.child(files_read(ui, found, cx)).child(window.render_review(found, cx));
+        column = column.child(
+            div()
+                .flex()
+                .flex_col()
+                .gap_3()
+                .py_3()
+                .child(files_read(ui, found, cx))
+                .child(window.render_review(found, cx)),
+        );
     }
-    card.into_any_element()
+    column.into_any_element()
 }
 
 /// The files the settings were read from, so a person sees where they came from.
