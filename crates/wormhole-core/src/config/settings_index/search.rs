@@ -305,7 +305,7 @@ mod tests {
     fn the_match_is_marked_where_it_was_found() {
         let hits = search(&Query::new("wrap"));
         let wrap = hits.iter().find(|h| h.entry.id == "diff-wrap").expect("found");
-        assert_eq!(wrap.label_ranges, [0..4], "\"Wrap long lines\"");
+        assert_eq!(wrap.label_ranges, std::iter::once(0..4).collect::<Vec<_>>(), "\"Wrap long lines\"");
         assert!(wrap.description_ranges.is_empty(), "one place to mark per row");
 
         let hits = search(&Query::new("applies"));

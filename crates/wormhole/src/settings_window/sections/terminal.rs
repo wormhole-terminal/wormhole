@@ -152,7 +152,7 @@ fn draw_worktree_base(window: &SettingsWindow, cx: &mut Context<SettingsWindow>)
         settings_index::entry("worktree-base").map_or("", |(_, _, entry)| entry.description()).into()
     });
     let body = div().text_caption().text_color(ui.muted).child(note).into_any_element();
-    opened(head, open.then(|| (Some(body), "edit-worktree-base")), ui, cx)
+    opened(head, open.then_some((Some(body), "edit-worktree-base")), ui, cx)
 }
 
 /// A row that opens more with what it opens under it, and the link that edits `config.json` after it.

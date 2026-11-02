@@ -540,7 +540,7 @@ impl SettingsWindow {
         let revealed = self.revealed_row().filter(|(id, _)| *id == entry.id).map(|(_, anchor)| anchor);
         let found = match hit.map(|hit| hit.label_ranges.clone()).filter(|ranges| !ranges.is_empty()) {
             Some(ranges) => ranges,
-            None if revealed.is_some() => vec![0..entry.label().len()],
+            None if revealed.is_some() => std::iter::once(0..entry.label().len()).collect(),
             None => Vec::new(),
         };
         style::setting(

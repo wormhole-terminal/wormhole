@@ -251,7 +251,7 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                                 "Otherwise the diff scrolls sideways", // text: sample (the gallery's specimen)
                                 &["diff_wrap"],
                                 SettingState::Default,
-                                vec![10..14],
+                                std::iter::once(10..14).collect(),
                                 style::toggle("g-setting-wrap", false, |_, _, _| {}).into_any_element(),
                             )
                             .into_any_element(),
