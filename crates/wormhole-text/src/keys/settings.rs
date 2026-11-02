@@ -7,39 +7,39 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Preview"
-pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1353);
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1354);
 /// "More information"
-pub const SETTINGS_MORE_INFORMATION: Key = Key::new(1359);
+pub const SETTINGS_MORE_INFORMATION: Key = Key::new(1360);
 /// "Copied"
-pub const SETTINGS_ROW_COPIED: Key = Key::new(1360);
+pub const SETTINGS_ROW_COPIED: Key = Key::new(1361);
 /// "Copy Key"
-pub const SETTINGS_ROW_COPY_KEY: Key = Key::new(1361);
+pub const SETTINGS_ROW_COPY_KEY: Key = Key::new(1362);
 /// "Copy as JSON"
-pub const SETTINGS_ROW_COPY_JSON: Key = Key::new(1362);
+pub const SETTINGS_ROW_COPY_JSON: Key = Key::new(1363);
 /// "Reset to Default"
-pub const SETTINGS_ROW_RESET_MENU: Key = Key::new(1363);
+pub const SETTINGS_ROW_RESET_MENU: Key = Key::new(1364);
 /// "Reset to default"
-pub const SETTINGS_ROW_RESET: Key = Key::new(1364);
+pub const SETTINGS_ROW_RESET: Key = Key::new(1365);
 
 /// ```text
 /// { $name }, needs attention
 /// ```
 pub fn settings_nav_spoken_attention(name: &str) -> String {
-    crate::active::message(1354, &[("name", Arg::Str(name))])
+    crate::active::message(1355, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, preview
 /// ```
 pub fn settings_nav_spoken_preview(name: &str) -> String {
-    crate::active::message(1355, &[("name", Arg::Str(name))])
+    crate::active::message(1356, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, no matches
 /// ```
 pub fn settings_nav_spoken_no_matches(name: &str) -> String {
-    crate::active::message(1356, &[("name", Arg::Str(name))])
+    crate::active::message(1357, &[("name", Arg::Str(name))])
 }
 
 /// ```text
@@ -49,7 +49,7 @@ pub fn settings_nav_spoken_no_matches(name: &str) -> String {
 /// }
 /// ```
 pub fn settings_nav_spoken_matches(name: &str, count: i64) -> String {
-    crate::active::message(1357, &[("name", Arg::Str(name)), ("count", Arg::Int(count))])
+    crate::active::message(1358, &[("name", Arg::Str(name)), ("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -59,5 +59,5 @@ pub fn settings_nav_spoken_matches(name: &str, count: i64) -> String {
 /// }
 /// ```
 pub fn settings_nav_spoken_changed(name: &str, count: i64) -> String {
-    crate::active::message(1358, &[("name", Arg::Str(name)), ("count", Arg::Int(count))])
+    crate::active::message(1359, &[("name", Arg::Str(name)), ("count", Arg::Int(count))])
 }

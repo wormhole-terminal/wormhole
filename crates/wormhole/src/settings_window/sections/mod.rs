@@ -71,6 +71,7 @@ pub(super) use profile_form::ProfileForm;
 pub(super) use profile_sheet::NewProfileSheet;
 pub(crate) use profile_sheet::open_new_profile_sheet;
 pub(super) use projects::ProjectPicker;
+pub(super) use profile::ProfileRows;
 pub(super) use split_preview::draw_split_preview;
 pub(super) use terminal::TerminalRows;
 pub(super) use theme_picker::ThemePicker;
@@ -103,6 +104,14 @@ pub(super) fn controls(section: Section) -> &'static [Setting] {
 #[cfg(feature = "devctl")]
 pub(super) fn recorder_id(id: &str) -> Option<&'static str> {
     ["hotkey", "jump-waiting-key"].into_iter().find(|known| *known == id)
+}
+
+/// What a page says above its rows that is of the moment: Notifications while macOS has not allowed banners.
+pub(super) fn page_notice(section: Section, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
+    match section {
+        Section::Notifications => notifications::notice(cx),
+        _ => None,
+    }
 }
 
 impl SettingsWindow {

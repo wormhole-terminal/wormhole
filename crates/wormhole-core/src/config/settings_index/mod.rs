@@ -488,6 +488,8 @@ mod tests {
         assert_eq!(
             warnings,
             [
+                "profile-git",
+                "profile-logins",
                 "profile-delete",
                 "scrollback",
                 "restore-text",

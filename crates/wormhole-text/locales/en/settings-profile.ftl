@@ -4,7 +4,7 @@
 settings-section-profile = Profile
     .intro = Every page here is this profile's. A new profile starts as a copy of one you have, without its terminals or agent logins.
 
-settings-profile-name = Name and colour
+settings-profile-name = Name
     .keywords = profile rename avatar letter swatch colour color edge
 
 settings-profile-start = Start new terminals in
@@ -15,20 +15,16 @@ settings-profile-env = Environment
     .keywords = env variable aws path registry export
 
 settings-profile-git = Git identity
-    .description = Set in its terminals only; { -brand } never writes to a repository.
+    .description = Only in this profile’s terminals. { -brand } never writes to a repository.
     .keywords = author committer name email commit user
 
 settings-profile-logins = Agent logins
-    .description = A separate login for each agent.
+    .description = A separate login per agent
     .keywords = claude codex account config dir home sign in
 
-## Danger zone
-
-settings-profile-group-danger-zone = Danger zone
-
 settings-profile-delete = Delete profile
-    .description = Its terminals, notes, tasks and settings are removed and its windows close.
-    .keywords = remove danger
+    .description = Its terminals, notes and windows go too
+    .keywords = remove danger zone
 
 ## settings_window/sections/profile.rs (labels, hints and notes drawn by this page's code)
 

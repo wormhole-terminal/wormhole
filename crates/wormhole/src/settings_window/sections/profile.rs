@@ -8,9 +8,10 @@ use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::{Input, InputState, Textarea};
+use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::profile::Profile;
-use wormhole_core::config::settings_index::SectionId as Section;
+use wormhole_core::config::settings_index::{self, SectionId as Section};
 use wormhole_core::view::sidebar::GroupColor;
 #[allow(
     clippy::wildcard_imports,
@@ -22,18 +23,26 @@ use wormhole_text::text;
 use super::profile_form::{LOGIN_AGENTS, Pick, ProfileForm};
 use crate::app_state::{AppState, app};
 use crate::settings::SettingsStore;
-use crate::settings_window::registry::Setting;
+use crate::settings_window::registry::{Setting, row_label};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("profile-name", draw_name).tall(),
     Setting::custom("profile-start", draw_start).describe(start_caption).below(folder_list),
-    Setting::custom("profile-env", draw_env).tall(),
-    Setting::custom("profile-git", draw_git),
-    Setting::custom("profile-logins", draw_logins).tall(),
+    Setting::rows("profile-env", draw_env),
+    Setting::rows("profile-git", draw_git),
+    Setting::rows("profile-logins", draw_logins),
     Setting::custom("profile-delete", draw_delete).describe(delete_caption).below(delete_question),
 ];
+
+/// Which of the Profile page's rows that open more are open.
+#[derive(Default)]
+pub(crate) struct ProfileRows {
+    env: bool,
+    git: bool,
+    logins: bool,
+}
 
 /// The widths of the fields.
 const NAME_W: f32 = 180.0;
@@ -186,26 +195,90 @@ fn folder_list(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
     )
 }
 
-fn draw_env(window: &SettingsWindow, _: &mut Context<SettingsWindow>) -> AnyElement {
-    let Some(form) = window.profile_form.as_ref() else { return div().into_any_element() };
-    div().flex_none().w(px(ENV_W)).child(Textarea::new(&form.env).small()).into_any_element()
+/// A row that opens more, for one of the profile's forms: closed it says what is in it and, when the row
+/// has a warning, shows it; open, the table's description and the fields.
+fn form_row(
+    id: &'static str,
+    entry: &'static str,
+    open: bool,
+    value: Option<SharedString>,
+    toggle: fn(&mut ProfileRows),
+    fields: AnyElement,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
+    let ui = ui(cx);
+    let (_, _, info) = settings_index::entry(entry).expect("a profile row of the table");
+    let head = style::more_row(id, ui, row_label(entry), value, open).on_click(cx.listener(
+        move |this, _, _, cx| {
+            toggle(&mut this.profile_rows);
+            cx.notify();
+        },
+    ));
+    let note = || div().text_caption().text_color(ui.muted).child(info.description());
+    div()
+        .flex()
+        .flex_col()
+        .child(head)
+        .when(info.visible_hint && !info.description().is_empty(), |d| d.child(div().pb_2().child(note())))
+        .when(open, |d| {
+            d.child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .items_end()
+                    .gap_2()
+                    .pb_2()
+                    .when(!info.visible_hint, |d| d.child(div().self_start().child(note())))
+                    .child(fields),
+            )
+        })
+        .into_any_element()
 }
 
-fn draw_git(window: &SettingsWindow, _: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_env(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let Some(form) = window.profile_form.as_ref() else { return div().into_any_element() };
-    div()
+    let lines = form.env.read(cx).value().lines().filter(|line| !line.trim().is_empty()).count();
+    let value = (lines > 0).then(|| wormhole_text::whole(lines).to_string().into());
+    let fields = div().flex_none().w(px(ENV_W)).child(Textarea::new(&form.env).small()).into_any_element();
+    form_row(
+        "profile-env",
+        "profile-env",
+        window.profile_rows.env,
+        value,
+        |rows| rows.env = !rows.env,
+        fields,
+        cx,
+    )
+}
+
+fn draw_git(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let Some(form) = window.profile_form.as_ref() else { return div().into_any_element() };
+    let name = form.git_name.read(cx).value();
+    let value = (!name.is_empty()).then(|| SharedString::from(name.to_string()));
+    let fields = div()
         .flex()
         .items_center()
         .gap_2()
         .child(field(&form.git_name, GIT_NAME_W))
         .child(field(&form.git_email, GIT_EMAIL_W))
-        .into_any_element()
+        .into_any_element();
+    form_row(
+        "profile-git",
+        "profile-git",
+        window.profile_rows.git,
+        value,
+        |rows| rows.git = !rows.git,
+        fields,
+        cx,
+    )
 }
 
 fn draw_logins(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let Some(form) = window.profile_form.as_ref() else { return div().into_any_element() };
-    div()
+    let set = form.logins.iter().filter(|input| !input.read(cx).value().is_empty()).count();
+    let value = (set > 0).then(|| wormhole_text::whole(set).to_string().into());
+    let fields = div()
         .flex()
         .flex_col()
         .items_end()
@@ -219,7 +292,16 @@ fn draw_logins(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
                 .child(field(input, PATH_W))
                 .child(choose(("profile-login-choose", ix), Pick::Login(ix), cx))
         }))
-        .into_any_element()
+        .into_any_element();
+    form_row(
+        "profile-logins",
+        "profile-logins",
+        window.profile_rows.logins,
+        value,
+        |rows| rows.logins = !rows.logins,
+        fields,
+        cx,
+    )
 }
 
 fn delete_caption(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<SharedString> {

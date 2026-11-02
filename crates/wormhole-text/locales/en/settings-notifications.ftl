@@ -7,11 +7,9 @@ settings-section-notifications = Notifications
 settings-notifications-preview = Live preview
     .keywords = preview banner notification
 
-## macOS
+## Footer
 
-settings-notifications-group-macos = macOS
-
-settings-notifications-notify-permission = Notifications in System Settings
+settings-notifications-notify-permission = Banner style and Focus are set by macOS
     .keywords = permission allow system settings send test banner
 
 ## Notify me when
@@ -97,6 +95,16 @@ settings-notifications-open-system-settings = Open System Settings
 settings-notifications-allow-notifications = Allow notifications
 settings-notifications-needs-you-hint = An agent asks a question or for permission
 settings-notifications-needs-you-hint-plain = An agent asks a question or for permission. Delivered as a normal notification in this build
+
+# The footer's line under "Banner style and Focus are set by macOS". { $state } is what macOS allows and
+# { $detail } what that means.
+settings-notifications-state = { $state } · { $detail }
+
+# The notice above the page while notifications are off in System Settings.
+settings-notifications-notice-off = Off in System Settings: { -brand } can’t show banners until you allow them.
+
+# The same before macOS was asked.
+settings-notifications-notice-not-asked = { -brand } hasn’t asked macOS yet: nothing is sent until you allow it.
 
 ## The command threshold in "A command finishes"
 

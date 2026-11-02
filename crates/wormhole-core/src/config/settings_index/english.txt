@@ -5,7 +5,7 @@ section Profile
 group ""
   blurb ""
   aside ""
-group "Danger zone"
+group ""
   blurb ""
   aside ""
 section Changed
@@ -114,9 +114,6 @@ section Notifications
 group ""
   blurb ""
   aside ""
-group "macOS"
-  blurb ""
-  aside ""
 group "Notify me when"
   blurb ""
   aside ""
@@ -124,6 +121,9 @@ group "Delivery"
   blurb ""
   aside ""
 group "Dock"
+  blurb ""
+  aside ""
+group ""
   blurb ""
   aside ""
 section Agents
@@ -229,7 +229,7 @@ group ""
   blurb ""
   aside ""
 entry Profile profile-name
-  label "Name and colour"
+  label "Name"
   description ""
   keywords "profile rename avatar letter swatch colour color edge"
 entry Profile profile-start
@@ -242,16 +242,16 @@ entry Profile profile-env
   keywords "env variable aws path registry export"
 entry Profile profile-git
   label "Git identity"
-  description "Set in its terminals only; Wormhole never writes to a repository."
+  description "Only in this profile’s terminals. Wormhole never writes to a repository."
   keywords "author committer name email commit user"
 entry Profile profile-logins
   label "Agent logins"
-  description "A separate login for each agent."
+  description "A separate login per agent"
   keywords "claude codex account config dir home sign in"
 entry Profile profile-delete
   label "Delete profile"
-  description "Its terminals, notes, tasks and settings are removed and its windows close."
-  keywords "remove danger"
+  description "Its terminals, notes and windows go too"
+  keywords "remove danger zone"
 entry Terminal terminal-preview
   label "Live preview"
   description ""
@@ -520,10 +520,6 @@ entry Notifications notifications-preview
   label "Live preview"
   description ""
   keywords "preview banner notification"
-entry Notifications notify-permission
-  label "Notifications in System Settings"
-  description ""
-  keywords "permission allow system settings send test banner"
 entry Notifications notify-needs-you
   label "A terminal needs input"
   description "An agent asks a question or for permission"
@@ -568,6 +564,10 @@ entry Notifications dock-bounce
   label "Bounce when a terminal needs input"
   description "Only while Wormhole isn’t the active app; never for a bell"
   keywords "dock bounce"
+entry Notifications notify-permission
+  label "Banner style and Focus are set by macOS"
+  description ""
+  keywords "permission allow system settings send test banner"
 entry Agents agents-preview
   label "Live preview"
   description ""

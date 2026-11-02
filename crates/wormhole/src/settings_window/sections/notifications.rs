@@ -156,27 +156,24 @@ fn permission_text(permission: Permission) -> (&'static str, &'static str) {
     }
 }
 
-/// The permission's row: what macOS allows, in the row's own words, and what to do about it.
-fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let ui = ui(cx);
-    let permission = notifications::permission(cx);
-    let (title, hint) = permission_text(permission);
+/// The buttons for what macOS allows: ask, send a test, or open System Settings.
+fn permission_buttons(permission: Permission) -> Vec<AnyElement> {
     let send_test = || {
         style::form_button("notify-send-test")
             .outline()
             .label(text(SETTINGS_NOTIFICATIONS_SEND_TEST))
             .on_click(|_, _, cx| notifications::send_test(cx))
+            .into_any_element()
     };
     let system_settings = || {
         style::form_button("notify-open-settings")
             .outline()
             .label(text(SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS))
             .on_click(|_, _, cx| notifications::open_system_settings(cx))
+            .into_any_element()
     };
-    let buttons: Vec<AnyElement> = match permission {
-        Permission::Allowed { .. } => {
-            vec![send_test().into_any_element(), system_settings().into_any_element()]
-        }
+    match permission {
+        Permission::Allowed { .. } => vec![send_test(), system_settings()],
         Permission::NotAsked => vec![
             style::form_button("notify-allow")
                 .primary()
@@ -184,23 +181,32 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
                 .on_click(|_, _, cx| notifications::ask_permission(cx))
                 .into_any_element(),
         ],
-        Permission::Denied => vec![system_settings().into_any_element()],
-        Permission::OutsideBundle => vec![send_test().into_any_element()],
+        Permission::Denied => vec![system_settings()],
+        Permission::OutsideBundle => vec![send_test()],
         Permission::Checking => Vec::new(),
-    };
+    }
+}
+
+/// The footer of the page: what macOS decides, where the state of the permission stays in view, and the
+/// way to test it.
+fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let ui = ui(cx);
+    let permission = notifications::permission(cx);
+    let (title, hint) = permission_text(permission);
+    let state = if hint.is_empty() { title.to_string() } else { settings_notifications_state(title, hint) };
     style::setting(
         "setting-notify-permission",
         ui,
         SettingParts {
-            label: title.into(),
-            description: (!hint.is_empty()).then(|| hint.into()),
+            label: text(SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION).into(),
+            description: Some(state.into()),
             visible_hint: true,
             chip: None,
             keys: RowKeys::NONE,
             state: SettingState::Default,
             found: Vec::new(),
             found_description: Vec::new(),
-            control: div().flex().gap_2().children(buttons).into_any_element(),
+            control: div().flex().gap_2().children(permission_buttons(permission)).into_any_element(),
             tall: false,
             extra: None,
             on_reset: None,
@@ -208,6 +214,28 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
         cx,
     )
     .into_any_element()
+}
+
+/// The notice above the page while macOS has not said yes: off (a warning, with the way to turn it
+/// on) or not asked yet (with the button that asks). Allowed, checking and a build outside the app
+/// bundle have nothing to say here: the footer shows their state.
+pub(super) fn notice(cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
+    let ui = ui(cx);
+    let permission = notifications::permission(cx);
+    let (kind, words) = match permission {
+        Permission::Denied => (style::NoticeKind::Warning, text(SETTINGS_NOTIFICATIONS_NOTICE_OFF)),
+        Permission::NotAsked => (style::NoticeKind::Info, text(SETTINGS_NOTIFICATIONS_NOTICE_NOT_ASKED)),
+        Permission::Allowed { .. } | Permission::OutsideBundle | Permission::Checking => return None,
+    };
+    let button = match permission {
+        Permission::Denied => style::notice_button("notice-open-settings", ui, kind, cx)
+            .label(text(SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS))
+            .on_click(|_, _, cx| notifications::open_system_settings(cx)),
+        _ => style::notice_button("notice-allow", ui, kind, cx)
+            .label(text(SETTINGS_NOTIFICATIONS_ALLOW_NOTIFICATIONS))
+            .on_click(|_, _, cx| notifications::ask_permission(cx)),
+    };
+    Some(style::notice(ui, kind, words).child(button).into_any_element())
 }
 
 /// "A terminal needs input", and when this build can't deliver it as Time Sensitive, says so
