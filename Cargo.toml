@@ -15,7 +15,7 @@ wormhole-core = { path = "crates/wormhole-core" }
 wormhole-term = { path = "crates/wormhole-term" }
 # The terminal engine, in a repository of its own (MIT): a pinned commit until it is on crates.io.
 # The private checkout builds against a local copy instead; see `[patch]` in its .cargo/config.toml.
-wormhole-vt = { git = "https://github.com/wormhole-terminal/wormhole-vt", rev = "78fef2a23ea65c739e86f7ca0bdc821f748bbd8b" }
+wormhole-vt = { git = "https://github.com/wormhole-terminal/wormhole-vt", rev = "e1cf56e6becb611b49839bb5a607124b3234e75b" }
 wormhole-text = { path = "crates/wormhole-text" }
 wormhole-wire = { path = "crates/wormhole-wire" }
 anyhow = "1"

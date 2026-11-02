@@ -12,6 +12,7 @@
 //! decoding runs under those limits and stops on the first problem, and a failure drops that one
 //! image and logs it; the PTY thread never waits on it.
 
+pub mod compose;
 pub(super) mod decode;
 mod store;
 

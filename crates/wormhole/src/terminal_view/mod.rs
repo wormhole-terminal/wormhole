@@ -194,6 +194,11 @@ pub struct TerminalView {
     wants_blink: bool,
     /// The blink is in its off phase.
     cursor_off: bool,
+    /// When the next frame of an animated picture is due (see `render::animation`), as of the
+    /// last frame; `None` when nothing on screen moves.
+    image_due: Option<std::time::Instant>,
+    /// The timer that repaints it; `None` when nothing moves.
+    image_clock: Option<Task<()>>,
     /// Blinking text is on screen in a window in front (see `render::blink`).
     wants_text_blink: bool,
     /// The clock that repaints it twice a second; `None` when nothing blinks.
@@ -343,6 +348,8 @@ impl TerminalView {
             bell_glow_off: None,
             wants_blink: false,
             cursor_off: false,
+            image_due: None,
+            image_clock: None,
             wants_text_blink: false,
             text_blink: None,
             blink_held: false,

@@ -124,3 +124,16 @@ impl TestTerm {
         &mut self.screen
     }
 }
+
+/// The animation plan a program makes with `bytes` (kitty's `a=t` and `a=f` and `a=a` commands, as
+/// the program writes them): the plan of the first picture they transmit. For the view's clock to
+/// be tested against plans the engine makes, since a plan cannot be built any other way.
+pub fn animation_plan(bytes: &[u8]) -> Option<wormhole_vt::image::Animation> {
+    let mut term = wormhole_vt::Terminal::new(10, 4);
+    term.feed(bytes);
+    let handle = term.events().find_map(|event| match event {
+        wormhole_vt::Event::ImageData(upload) => Some(upload.image),
+        _ => None,
+    })?;
+    term.animation(handle).cloned()
+}

@@ -13,10 +13,11 @@
 use std::sync::Arc;
 
 use wormhole_vt::image::ImageHandle;
-use wormhole_vt::image::{Compression, ImageError, ImageFormat, ImageUpload};
+use wormhole_vt::image::{Compression, FrameCompose, FrameUpload, ImageError, ImageFormat, ImageUpload};
 
+use super::frames::{FrameWorker, decode_data};
 use crate::events::{EventProxy, Shared};
-use crate::images::{DecodeError, Format, Image, Limits, decode, key_of as key};
+use crate::images::{Image, key_of as key};
 use crate::pty::FairLock;
 use crate::screen::Screen;
 
@@ -27,15 +28,34 @@ pub(super) struct Uploads {
     /// The engine's replies after a decode go to the program; a replica's go nowhere (the host
     /// answered the program from its own decode).
     replies: bool,
+    /// The animation frames of this terminal's pictures, built in the order they arrive.
+    frames: FrameWorker,
 }
 
 impl Uploads {
     pub(super) fn new(proxy: EventProxy, screen: Arc<FairLock<Screen>>) -> Self {
-        Self { proxy, screen, replies: true }
+        let frames = FrameWorker::new(proxy.clone(), screen.clone(), true);
+        Self { proxy, screen, replies: true, frames }
     }
 
     pub(super) fn replica(proxy: EventProxy, screen: Arc<FairLock<Screen>>) -> Self {
-        Self { replies: false, ..Self::new(proxy, screen) }
+        let frames = FrameWorker::new(proxy.clone(), screen.clone(), false);
+        Self { proxy, screen, replies: false, frames }
+    }
+
+    /// Data for a frame of an animated picture arrived.
+    pub(super) fn frame(&self, screen: &mut Screen, upload: FrameUpload) {
+        self.frames.frame(screen, upload);
+    }
+
+    /// The program composed one frame onto another.
+    pub(super) fn compose(&self, job: FrameCompose) {
+        self.frames.compose(job);
+    }
+
+    /// The program deleted a picture's frames.
+    pub(super) fn clear_frames(&self, image: ImageHandle) {
+        self.frames.clear(image);
     }
 
     /// A picture arrived (the screen is locked, being read). Answer the engine now or when the
@@ -179,20 +199,5 @@ fn settle(
 
 /// The upload as pixels, within the limits, and exactly the size the engine measured.
 fn decoded(upload: &ImageUpload) -> Result<Image, ImageError> {
-    let (width, height) = (upload.width, upload.height);
-    let format = match upload.format {
-        ImageFormat::Rgb => Format::Rgb { width, height },
-        ImageFormat::Rgba => Format::Rgba { width, height },
-        ImageFormat::Png => Format::Png,
-        ImageFormat::File => Format::Any,
-        // A format a newer engine adds is one this decoder does not read.
-        _ => return Err(ImageError::Unsupported),
-    };
-    let compressed = upload.compression == Compression::Zlib;
-    match decode(format, &upload.data, compressed, &Limits::default()) {
-        Ok(image) if (image.width, image.height) == (width, height) => Ok(image),
-        Ok(_) => Err(ImageError::BadData),
-        Err(DecodeError::TooBig) => Err(ImageError::TooBig),
-        Err(DecodeError::Invalid(_)) => Err(ImageError::BadData),
-    }
+    decode_data(upload.format, upload.compression, (upload.width, upload.height), &upload.data)
 }

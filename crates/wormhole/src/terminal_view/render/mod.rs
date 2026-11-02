@@ -18,6 +18,7 @@
 //! - beside the grid: `overlays` (block marks, find ticks, the bell, the drag), `scrollbar`,
 //!   `minimap`, `exited` (the bar of a finished shell)
 
+mod animation;
 mod blink;
 mod cache;
 mod cursor;
@@ -92,6 +93,8 @@ pub(super) struct RenderState {
     scrollbar: Option<scrollbar::ScrollbarLayout>,
     /// The inline images as GPUI frames, one conversion per image.
     images: images::ImageCache,
+    /// Which frame of each animated picture is on show.
+    clocks: animation::Clocks,
     /// The faces learned and the stretched glyphs built for double-width rows.
     outlines: outline::Outlines,
 }

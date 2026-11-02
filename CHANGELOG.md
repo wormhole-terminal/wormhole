@@ -6,6 +6,14 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Added
+
+- Animated pictures from kitty's graphics protocol play: frames sent with `a=f`, started and stopped
+  with `a=a` (gaps, loops, the current frame) and composed with `a=c`. They play only while the window
+  is in front; with Reduce Motion on, an animation stands on its current frame.
+- Pictures placed relative to another (kitty's `P`, `Q`, `H`, `V`) are drawn where their parent is,
+  also relative to a Unicode placeholder, and go with it.
+
 ## [1.6.2] - 2026-11-02
 
 ### Fixed
