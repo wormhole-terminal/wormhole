@@ -23,3 +23,9 @@ pub(crate) fn traffic_light_position(row: f32) -> Point<Pixels> {
 pub(crate) fn lights_end(window: &Window) -> f32 {
     LIGHTS_X + crate::platform::window::span(window).unwrap_or(ASSUMED_LIGHTS_SPAN)
 }
+
+/// Where the traffic lights end, or `None` in full screen, where macOS hides them (they show only in
+/// the menu bar's own strip when the pointer is at the top), so nothing has to clear them.
+pub(crate) fn shown_lights_end(window: &Window) -> Option<f32> {
+    (!window.is_fullscreen()).then(|| lights_end(window))
+}

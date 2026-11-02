@@ -13,7 +13,9 @@ use wormhole_core::view::layout::{Edge, PanelToggle};
 
 use crate::app_state::app;
 use crate::settings::{settings_in, store_in, ui_in};
-use crate::style::{self, ASSUMED_LIGHTS_SPAN, LIGHTS_X, StripFill, StripSide, TitleDrag as _, lights_end};
+use crate::style::{
+    self, ASSUMED_LIGHTS_SPAN, LIGHTS_X, StripFill, StripSide, TitleDrag as _, shown_lights_end,
+};
 use crate::window::Workspace;
 use crate::window::focus::TitleButton;
 use wormhole_core::config::TabId;
@@ -46,13 +48,17 @@ const BESIDE_PANEL: f32 = PANEL_TOGGLE_RIGHT;
 /// button's glyph, so the glyph and text line up with the 12 pt edge below.
 const TITLE_ROW_PAD: f32 = PANEL_TOGGLE_RIGHT;
 
-/// Where the sidebar's collapse button starts, after lights that end at `lights_end`.
-fn collapse_x(lights_end: f32) -> f32 {
-    COLLAPSE_X.max(lights_end + AFTER_LIGHTS)
+/// Where the sidebar's collapse button starts, after lights that end at `lights_end`. Without
+/// lights (full screen) it mirrors the panel toggle: its glyph starts on the 12 pt edge.
+fn collapse_x(lights_end: Option<f32>) -> f32 {
+    match lights_end {
+        Some(end) => COLLAPSE_X.max(end + AFTER_LIGHTS),
+        None => PANEL_TOGGLE_RIGHT,
+    }
 }
 
 /// What the collapse button takes from a title row it sits over, and the gap after it.
-fn collapse_slot(lights_end: f32) -> f32 {
+fn collapse_slot(lights_end: Option<f32>) -> f32 {
     collapse_x(lights_end) + style::HIT_MIN + AFTER_COLLAPSE
 }
 
@@ -96,7 +102,7 @@ impl Workspace {
             .occlude()
             .absolute()
             .top_0()
-            .left(px(collapse_x(lights_end(window))))
+            .left(px(collapse_x(shown_lights_end(window))))
             .h(px(style::TITLE_ROW_H))
             .flex()
             .items_center()
@@ -162,7 +168,7 @@ impl Workspace {
             .items_center()
             // The lights and the toggle float over the row's start; the profile chip is
             // the first thing after them.
-            .pl(px(collapse_x(lights_end(window)) + style::HIT_MIN + AFTER_TOGGLE))
+            .pl(px(collapse_x(shown_lights_end(window)) + style::HIT_MIN + AFTER_TOGGLE))
             .pr(px(TITLE_ROW_PAD))
             .title_drag()
             .children(self.render_profile_chip(cx))
@@ -193,10 +199,10 @@ impl Workspace {
         let panel = self.notes_visible() && self.in_flow(Edge::Panel);
         // The row is the same with terminals as tabs (their bar is under it): after the lights, and
         // the collapse button when the sidebar is only hidden.
-        let lights = if self.tabs_on_top() {
-            lights_end(window) + AFTER_COLLAPSE
-        } else {
-            collapse_slot(lights_end(window))
+        let lights = match (self.tabs_on_top(), shown_lights_end(window)) {
+            (true, Some(end)) => end + AFTER_COLLAPSE,
+            (true, None) => TITLE_ROW_PAD,
+            (false, end) => collapse_slot(end),
         };
         (if sidebar { BESIDE_COLUMN } else { lights }, if panel { BESIDE_PANEL } else { PANEL_TOGGLE_SLOT })
     }
@@ -341,12 +347,12 @@ mod tests {
     /// the title row of a hidden sidebar's window starts after the button.
     #[test]
     fn the_collapse_button_sits_after_the_assumed_lights() {
-        let lights_end = LIGHTS_X + ASSUMED_LIGHTS_SPAN;
+        let lights_end = Some(LIGHTS_X + ASSUMED_LIGHTS_SPAN);
         let glyph = collapse_x(lights_end) + (style::HIT_MIN - style::TITLE_GLYPH) / 2.0;
         assert_eq!((glyph, glyph + style::TITLE_GLYPH), (82.0, 98.0));
         assert_eq!(collapse_slot(lights_end), 76.0 + style::HIT_MIN + 8.0);
         // Narrower lights leave it where it is.
-        assert_eq!(collapse_x(lights_end - 6.0), 76.0);
+        assert_eq!(collapse_x(Some(LIGHTS_X + ASSUMED_LIGHTS_SPAN - 6.0)), 76.0);
     }
 
     /// Lights wider than assumed push the button (and the title row after it) right, so it
@@ -354,15 +360,24 @@ mod tests {
     #[test]
     fn the_collapse_button_clears_wider_lights() {
         let lights_end = LIGHTS_X + 70.0;
-        assert_eq!(collapse_x(lights_end), lights_end + 12.0);
-        assert_eq!(collapse_slot(lights_end), lights_end + 12.0 + style::HIT_MIN + 8.0);
+        assert_eq!(collapse_x(Some(lights_end)), lights_end + 12.0);
+        assert_eq!(collapse_slot(Some(lights_end)), lights_end + 12.0 + style::HIT_MIN + 8.0);
+    }
+
+    /// In full screen macOS hides the lights, so the button moves to the window's left edge,
+    /// its glyph on the 12 pt line as the panel toggle's is at the right.
+    #[test]
+    fn the_collapse_button_moves_left_in_full_screen() {
+        let glyph = collapse_x(None) + (style::HIT_MIN - style::TITLE_GLYPH) / 2.0;
+        assert_eq!(glyph, 12.0);
+        assert_eq!(collapse_slot(None), collapse_x(None) + style::HIT_MIN + 8.0);
     }
 
     /// While a column slides, the title row's ends start at its padding with the column out
     /// and land on its padding beside the column, so the breadcrumb and buttons never jump.
     #[test]
     fn the_title_row_follows_a_sliding_column_to_where_it_lands() {
-        let rest = (collapse_slot(LIGHTS_X + ASSUMED_LIGHTS_SPAN), PANEL_TOGGLE_SLOT);
+        let rest = (collapse_slot(Some(LIGHTS_X + ASSUMED_LIGHTS_SPAN)), PANEL_TOGGLE_SLOT);
         let sidebar = 240.0;
         assert_eq!(sliding_title_pads(Edge::Sidebar, rest, 0.0), rest);
         // Landed: the sidebar carried the terminal its width right; the left end sits beside it,

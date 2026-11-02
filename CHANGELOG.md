@@ -6,6 +6,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Fixed
+
+- In full screen the sidebar's button sits at the window's left edge instead of leaving room for the hidden traffic lights.
+
 ## [1.6.2] - 2026-11-02
 
 ### Fixed
