@@ -287,6 +287,10 @@ pub mod error_code {
     pub const BUSY: u16 = 5;
     /// A field out of range.
     pub const INVALID: u16 = 6;
+    /// The host will not serve this peer (its code signature is not the app's): sent once, as the
+    /// host closes the connection, so a client can tell a host that refuses it from one that is gone
+    /// (minor 3; an older host closes without a word).
+    pub const PEER_REFUSED: u16 = 7;
 }
 
 /// The host refused or failed a request, which `ref_type` names (a frame type id).

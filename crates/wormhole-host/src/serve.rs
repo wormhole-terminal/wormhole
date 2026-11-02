@@ -14,6 +14,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use polling::{AsRawSource, Event, Events, PollMode, Poller};
+use wormhole_wire as wire;
 use wormhole_term::hosted::meta::{self, Meta};
 use wormhole_term::sys::socket::{Stream, peer_user};
 use wormhole_term::sys::user::UserId;
@@ -199,10 +200,12 @@ fn accept_all<S: Spawner>(
             refused => {
                 let peer = refused.map_or_else(|err| format!("unreadable ({err})"), |peer| peer.to_string());
                 tracing::warn!(peer_uid = peer, "refused a connection from another user");
+                tell_refused(stream);
                 continue;
             }
         }
         if !peers.allows(&stream) {
+            tell_refused(stream);
             continue;
         }
         if stream.set_nonblocking(true).is_err() {
@@ -223,6 +226,26 @@ fn accept_all<S: Spawner>(
             }
         }
     }
+}
+
+/// The one frame a refused peer gets before the connection closes: `Error{PEER_REFUSED}` (minor 3),
+/// so a client can tell a host that will not serve it from one that is gone. Best effort: a peer
+/// that does not read, or an older client that does not know the code, loses nothing.
+fn tell_refused(mut stream: Stream) {
+    let _ = stream.write(&refusal_frame());
+}
+
+/// [`tell_refused`]'s bytes.
+fn refusal_frame() -> Vec<u8> {
+    let mut bytes = Vec::new();
+    let refusal = wire::ErrorMsg {
+        ref_type: 0,
+        code: wire::error_code::PEER_REFUSED,
+        text: "this session host does not serve that program",
+    };
+    // A message this small always encodes.
+    let _ = wire::encode(&mut bytes, wire::CHANNEL_LOCAL, 0, &wire::Message::Error(refusal));
+    bytes
 }
 
 fn read_from<S: Spawner>(
@@ -299,5 +322,19 @@ fn flush_at_end<S: Spawner>(session: &mut Session<S>, conns: &mut [(ConnId, Stre
         ));
         let out = session.output(*id).to_vec();
         let _ = stream.write_all(&out);
+    }
+}
+
+#[cfg(test)]
+mod refusal_tests {
+    use super::*;
+
+    #[test]
+    fn a_refused_peer_is_told_peer_refused() {
+        let mut dec = wire::Decoder::new();
+        dec.push(&refusal_frame());
+        let frame = dec.next_frame().expect("decodes").expect("a frame");
+        let wire::Message::Error(err) = frame.message else { panic!("an Error: {:?}", frame.message) };
+        assert_eq!(err.code, wire::error_code::PEER_REFUSED);
     }
 }

@@ -129,6 +129,10 @@ pub fn all() -> Vec<(&'static str, Message<'static>)> {
         ("pong", Message::Pong { n: 99, pty_progress: 1_000_000 }),
         ("error", Message::Error(ErrorMsg { ref_type: 0x10, code: 3, text: "no such program" })),
         (
+            "error_peer_refused",
+            Message::Error(ErrorMsg { ref_type: 0, code: 7, text: "the peer's signature is not the app's" }),
+        ),
+        (
             "spawn",
             Message::Spawn(Spawn {
                 size: SIZE,
