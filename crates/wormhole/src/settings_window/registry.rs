@@ -156,6 +156,9 @@ pub(super) struct Setting {
     /// What the setting is by default, in the control's own words, where the defaults of its keys don't say
     /// it (the colours: "Theme's colour", not "On"). The Changed page shows it.
     pub default_words: Option<fn() -> SharedString>,
+    /// Whether the row has anything to show right now (a status that is only a reason the page's notice
+    /// already gives has not); a row that has not is left out, and a group of such rows with it.
+    pub present: Option<fn(&App) -> bool>,
 }
 
 impl Setting {
@@ -169,6 +172,7 @@ impl Setting {
             chip: None,
             tall: false,
             default_words: None,
+            present: None,
         }
     }
 
@@ -238,6 +242,11 @@ impl Setting {
     /// The default, in words, for the Changed page.
     pub(super) const fn default_words(self, words: fn() -> SharedString) -> Self {
         Self { default_words: Some(words), ..self }
+    }
+
+    /// Only while `present` says the row has something to show.
+    pub(super) const fn present(self, present: fn(&App) -> bool) -> Self {
+        Self { present: Some(present), ..self }
     }
 
     /// A control of more than one line: the label sits beside its first line.
@@ -390,7 +399,7 @@ impl SettingsWindow {
         let mut column = div()
             .flex()
             .flex_col()
-            .gap_6()
+            .gap(px(super::PAGE_GAP))
             .children(super::zen_note::draw(section, cx))
             .children(super::sections::page_notice(section, cx));
         for (at, group) in section.groups().iter().enumerate() {
@@ -410,6 +419,9 @@ impl SettingsWindow {
             let mut shown = 0;
             for entry in group.entries {
                 let Some(setting) = self.drawn(entry, settings(cx)) else { continue };
+                if setting.present.is_some_and(|present| !present(cx)) {
+                    continue;
+                }
                 shown += 1;
                 let element = self.render_entry(entry, setting, &page, hits.get(entry.id), None, cx);
                 if !setting.control.in_card() {

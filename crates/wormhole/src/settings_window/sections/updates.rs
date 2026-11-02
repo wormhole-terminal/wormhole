@@ -45,10 +45,17 @@ pub(super) const SETTINGS: &[Setting] = &[
         |s| usize::from(s.update_channel == UpdateChannel::Unstable),
         |s, ix| s.update_channel = if ix == 1 { UpdateChannel::Unstable } else { UpdateChannel::Stable },
     ),
-    Setting::rows("update-status", draw_status),
+    Setting::rows("update-status", draw_status).present(has_status),
     toggle!("anonymous-count", anonymous_count),
     Setting::rows("count-details", draw_count_details),
 ];
+
+/// Whether the status card has anything to say: a build without an update feed has only the page's notice
+/// (and, after going back to Stable, the note about the channel).
+fn has_status(cx: &App) -> bool {
+    let updates = cx.global::<Updates>();
+    !matches!(updates.phase, UpdatePhase::Idle) || updates.available() || updates.channel_note.is_some()
+}
 
 /// Privacy → what an update check sends: this Mac's own user agent word for word, the daily and
 /// monthly flag, what is never sent, and in the first day how long until the first count.

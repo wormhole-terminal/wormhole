@@ -3,8 +3,6 @@
 //! shortcut recorder). The settings window builds every row of its pages from these.
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_text::{keys, text};
@@ -18,49 +16,45 @@ use super::row_keys::{KeyView, Reset, RowKeys, key_face, with_menu};
 use super::scale::{CONTROL_H, Edges, MARK_DOT, RECORDER_W, SLIDER_W, TextRole};
 use super::section::ClickHandler;
 use crate::settings::UiColors;
-use crate::ui::{Handler, Look, SettingsRowProps, SwitchControlProps};
+use crate::ui::{Handler, Look, SettingsRowProps, StepperProps, SwitchControlProps};
 
 /// A small whole number with a minus and a plus: one outlined control as tall as a
 /// select, the value between hairlines in the middle. Add nothing: `minus` and `plus` are
 /// the click handlers. `id` names the two buttons.
 #[track_caller]
 pub fn stepper(
-    ui: UiColors,
+    _: UiColors,
     id: &'static str,
     value: String,
     minus: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     plus: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
-) -> Div {
-    div()
-        .flex()
-        .flex_none()
-        .items_center()
-        .h(px(CONTROL_H))
-        .rounded(ui.radius)
-        .outlined(ui, ui.border_strong)
-        .bg(ui.input)
-        .child(Button::new((id, 0usize)).ghost().small().icon(IconName::Minus).on_click(minus))
-        .child(
-            div()
-                .w(px(STEPPER_VALUE_W))
-                .h_full()
-                .flex()
-                .items_center()
-                .justify_center()
-                .rule_left(ui)
-                .rule_right(ui)
-                .text_label()
-                .font_weight(FontWeight::NORMAL)
-                .tabular_nums()
-                .text_color(ui.text)
-                .child(value),
-        )
-        .child(Button::new((id, 1usize)).ghost().small().icon(IconName::Plus).on_click(plus))
+) -> StepperView {
+    StepperView { id, value, minus: Rc::new(minus), plus: Rc::new(plus) }
 }
 
-/// Width of the value between a [`stepper`]'s buttons, so "10000" and "80 %" don't
-/// move the buttons.
-const STEPPER_VALUE_W: f32 = 72.0;
+/// A [`stepper`], drawn by the design's `Stepper` component.
+#[derive(IntoElement)]
+pub struct StepperView {
+    id: &'static str,
+    value: String,
+    minus: Handler,
+    plus: Handler,
+}
+
+impl RenderOnce for StepperView {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        StepperProps {
+            id: self.id.into(),
+            label: wormhole_text::text(wormhole_text::keys::COMMON_STEPPER_LABEL).into(),
+            smaller: wormhole_text::text(wormhole_text::keys::COMMON_STEPPER_SMALLER).into(),
+            larger: wormhole_text::text(wormhole_text::keys::COMMON_STEPPER_LARGER).into(),
+            value: self.value.into(),
+            on_smaller: Some(self.minus),
+            on_larger: Some(self.plus),
+        }
+        .render(&Look::of(cx))
+    }
+}
 
 /// What a switch does with the state it is flipped to.
 type OnToggle = Rc<dyn Fn(bool, &mut Window, &mut App)>;

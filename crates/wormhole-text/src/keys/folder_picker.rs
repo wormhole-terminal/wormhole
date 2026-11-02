@@ -7,30 +7,30 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Insert folder path"
-pub const FOLDER_PICKER_NAME: Key = Key::new(107);
+pub const FOLDER_PICKER_NAME: Key = Key::new(110);
 /// "Search folders"
-pub const FOLDER_PICKER_SEARCH: Key = Key::new(108);
+pub const FOLDER_PICKER_SEARCH: Key = Key::new(111);
 /// "Recent"
-pub const FOLDER_PICKER_RECENT: Key = Key::new(109);
+pub const FOLDER_PICKER_RECENT: Key = Key::new(112);
 /// "↩ insert   ⇥ open   ← up   ⌘⌫ forget recent"
-pub const FOLDER_PICKER_HINT: Key = Key::new(110);
+pub const FOLDER_PICKER_HINT: Key = Key::new(113);
 /// "Still reading…"
-pub const FOLDER_PICKER_READING: Key = Key::new(111);
+pub const FOLDER_PICKER_READING: Key = Key::new(114);
 /// "No folders"
-pub const FOLDER_PICKER_EMPTY: Key = Key::new(112);
+pub const FOLDER_PICKER_EMPTY: Key = Key::new(115);
 /// "Can't read this folder"
-pub const FOLDER_PICKER_UNREADABLE: Key = Key::new(113);
+pub const FOLDER_PICKER_UNREADABLE: Key = Key::new(116);
 
 /// ```text
 /// Only the first { $count } folders are listed
 /// ```
 pub fn folder_picker_cut_folders(count: &str) -> String {
-    crate::active::message(114, &[("count", Arg::Str(count))])
+    crate::active::message(117, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// Only the first { $count } entries were searched, so some folders may be missing
 /// ```
 pub fn folder_picker_cut_scanned(count: &str) -> String {
-    crate::active::message(115, &[("count", Arg::Str(count))])
+    crate::active::message(118, &[("count", Arg::Str(count))])
 }

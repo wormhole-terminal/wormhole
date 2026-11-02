@@ -12,6 +12,8 @@ mod changes;
 #[rustfmt::skip]
 mod color_pick;
 #[rustfmt::skip]
+mod common;
+#[rustfmt::skip]
 mod control;
 #[rustfmt::skip]
 mod dialog;
@@ -81,6 +83,7 @@ mod zen;
 pub use agent_sheet::*;
 pub use changes::*;
 pub use color_pick::*;
+pub use common::*;
 pub use control::*;
 pub use dialog::*;
 pub use files::*;
@@ -118,7 +121,7 @@ pub use zen::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 1358] = [
+pub const ALL: [Key; 1361] = [
     AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_READ, AGENT_SHEET_WANTS_TYPE,
     AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_CLOSE,
     AGENT_SHEET_DETAIL, AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_WARNING_UNSIGNED,
@@ -133,7 +136,8 @@ pub const ALL: [Key; 1358] = [
     AGENT_SHEET_BUTTON_KEEP, AGENT_SCRIPTS_LABEL, CHANGES_VIEW_OPTIONS,
     COLOR_PICK_THEME, COLOR_PICK_CUSTOM, COLOR_PICK_CUSTOM_FACE,
     COLOR_PICK_AREA, COLOR_PICK_HUE, COLOR_PICK_HEX,
-    COLOR_PICK_HEX_BAD, COLOR_PICK_DONE, CONTROL_CLOSE_ASKED,
+    COLOR_PICK_HEX_BAD, COLOR_PICK_DONE, COMMON_STEPPER_LABEL,
+    COMMON_STEPPER_SMALLER, COMMON_STEPPER_LARGER, CONTROL_CLOSE_ASKED,
     DIALOG_CANCEL, DIALOG_QUIT_ENDS, DIALOG_QUIT_KEEPS_ALL,
     FILES_READING, FILES_EMPTY, FILES_NO_FOLDER,
     FILES_FOLDER_GONE, FILES_FOLDER_DENIED, FILES_FOLDER_UNREADABLE,

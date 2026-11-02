@@ -36,6 +36,7 @@ pub(crate) use generated::settings_nav::{NavEntry, SettingsNavProps};
 pub(crate) use generated::settings_row::SettingsRowProps;
 pub(crate) use generated::sidebar_profile::SidebarProfileProps;
 pub(crate) use generated::solid_chip::SolidChipProps;
+pub(crate) use generated::stepper::StepperProps;
 pub(crate) use generated::switch_control::SwitchControlProps;
 pub(crate) use generated::split_mock::{LeftLine, RightLine, SplitMockProps};
 pub(crate) use generated::theme_card::{Half, ThemeCardProps};

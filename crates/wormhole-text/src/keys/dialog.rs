@@ -7,11 +7,11 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Cancel"
-pub const DIALOG_CANCEL: Key = Key::new(63);
+pub const DIALOG_CANCEL: Key = Key::new(66);
 /// "Your terminals come back next time, but what runs in them ends."
-pub const DIALOG_QUIT_ENDS: Key = Key::new(64);
+pub const DIALOG_QUIT_ENDS: Key = Key::new(67);
 /// "Your terminals come back next time and what runs in them keeps going. Untick the box to end them."
-pub const DIALOG_QUIT_KEEPS_ALL: Key = Key::new(65);
+pub const DIALOG_QUIT_KEEPS_ALL: Key = Key::new(68);
 
 /// ```text
 /// Your terminals come back next time. { $kept ->
@@ -23,7 +23,7 @@ pub const DIALOG_QUIT_KEEPS_ALL: Key = Key::new(65);
 /// } inside { -brand }. Untick the box to end the others too.
 /// ```
 pub fn dialog_quit_keeps_some(kept: i64, ended: i64) -> String {
-    crate::active::message(66, &[("kept", Arg::Int(kept)), ("ended", Arg::Int(ended))])
+    crate::active::message(69, &[("kept", Arg::Int(kept)), ("ended", Arg::Int(ended))])
 }
 
 /// ```text
@@ -33,5 +33,5 @@ pub fn dialog_quit_keeps_some(kept: i64, ended: i64) -> String {
 /// }
 /// ```
 pub fn dialog_quit_other_profile(count: i64, profile: &str) -> String {
-    crate::active::message(67, &[("count", Arg::Int(count)), ("profile", Arg::Str(profile))])
+    crate::active::message(70, &[("count", Arg::Int(count)), ("profile", Arg::Str(profile))])
 }
