@@ -4,6 +4,9 @@
 settings-section-notifications = Notifications
     .intro = What { -brand } tells you about terminals you aren't looking at.
 
+settings-notifications-preview = Live preview
+    .keywords = preview banner notification
+
 ## macOS
 
 settings-notifications-group-macos = macOS

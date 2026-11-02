@@ -4,7 +4,8 @@
 //!
 //! By file: `open` where it opens and how a row from the palette is shown, `window` the window as a
 //! view (its page and what its controls do), `nav` the left column, `sections` the pages and
-//! `registry`, `recorder`, `font_picker` and `preview_column` what the pages share.
+//! `registry`, `recorder` and `font_picker` what the pages share. A page's preview is its first block, a card
+//! (`sections::card`).
 //!
 //! Above the window and the shared state: it may use them; the app root, the palette and the status
 //! item use it. The shared state keeps its page untyped.
@@ -27,7 +28,6 @@ mod nav;
 #[cfg(test)]
 mod nav_tests;
 mod open;
-mod preview_column;
 mod recorder;
 mod registry;
 #[cfg(test)]
@@ -74,9 +74,8 @@ const INTRO_W: f32 = 560.0;
 /// The card that says nothing matched.
 const NO_RESULTS_W: f32 = 420.0;
 /// The window: the size of a page (the nav and the content column) and the least the window
-/// shrinks to. It opens wider than the page by the preview column (`preview_column`), to the
-/// right, so the page keeps its width.
-const WINDOW_SIZE: (f32, f32) = (920.0, 720.0);
+/// shrinks to.
+const WINDOW_SIZE: (f32, f32) = (840.0, 720.0);
 const WINDOW_MIN: (f32, f32) = (640.0, 420.0);
 
 /// What the Terminals & sidebar preview shows beside the current look while the pointer is
@@ -142,9 +141,6 @@ pub(crate) struct SettingsWindow {
     themes_all: bool,
     /// Terminals & sidebar → the option under the pointer, previewed beside the current look.
     sidebar_preview: Option<SidebarLook>,
-    /// The window is wide enough for the preview column (read at each draw): the previews are in
-    /// it, and their pages leave them out.
-    preview_column: bool,
     /// Advanced → "Reset to defaults…" was pressed: the row asks before it resets.
     confirm_reset: bool,
     /// Coding agents → the agents that aren't on PATH are listed.

@@ -11,6 +11,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Help → Session Hosts (while Persistent terminals is on) opens a window that shows every session host:
   its processes, version and protocol against the app's, whether it answers, which terminal holds it
   and how that connection is doing, with End, Forget and a copy of the details for a bug report.
+- Settings shows each page's live preview as a card at the top of the page, under a Preview label with a caption,
+  instead of in a column at the right of the window, which now opens 840 wide. Terminal shows two split terminals,
+  and Changes & diffs the Changes panel with a diff, both following the page's options.
 - The Settings sidebar lists Terminal first, then Appearance and Fonts, then Terminals & sidebar, Changes &
   diffs, Notifications and Coding agents, then Menu bar & hotkey, Import, Updates and Advanced, with the
   pages still being built under a Preview heading. The open page shows its groups under it, and a click

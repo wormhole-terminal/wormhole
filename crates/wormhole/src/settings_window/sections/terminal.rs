@@ -35,6 +35,7 @@ use crate::style::{self, TextRole};
 const SCROLLBACK: [usize; 6] = [1_000, 5_000, 10_000, 50_000, 100_000, 200_000];
 
 pub(super) const SETTINGS: &[Setting] = &[
+    Setting::block("terminal-preview", super::draw_split_preview),
     Setting::custom("scrollback", draw_scrollback),
     toggle!("restore-text", restore_terminal_text),
     toggle!("minimap", minimap),

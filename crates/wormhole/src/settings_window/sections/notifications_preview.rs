@@ -10,6 +10,7 @@ use gpui_kit::*;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
+use super::card::{Words, card};
 use crate::icons::app_icon_for;
 use crate::settings::{SettingsStore, UiColors};
 use crate::settings_window::{SettingsWindow, ui};
@@ -24,31 +25,33 @@ const BANNER_ICON: f32 = 32.0;
 pub(in crate::settings_window) fn draw_notifications_preview(cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let icon = app_icon_for(cx.global::<SettingsStore>().tokens.appearance);
-    div()
+    let frame = style::preview_frame(ui)
         .flex()
         .flex_col()
-        .gap_2()
-        .child(
-            style::preview_frame(ui)
-                .flex()
-                .flex_col()
-                .items_center()
-                .gap_3()
-                .child(banner(
-                    ui,
-                    icon,
-                    "api needs input", // text: sample (a made-up notification of the preview)
-                    "Allow edit of src/limits.rs?", // text: sample (a made-up notification of the preview)
-                ))
-                .child(banner(
-                    ui,
-                    icon,
-                    "Release notes finished", // text: sample (a made-up notification of the preview)
-                    "Claude Code · 12m",      // text: sample (a made-up notification of the preview)
-                )),
-        )
-        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION)))
-        .into_any_element()
+        .items_center()
+        .gap_3()
+        .child(banner(
+            ui,
+            icon,
+            "api needs input", // text: sample (a made-up notification of the preview)
+            "Allow edit of src/limits.rs?", // text: sample (a made-up notification of the preview)
+        ))
+        .child(banner(
+            ui,
+            icon,
+            "Release notes finished", // text: sample (a made-up notification of the preview)
+            "Claude Code · 12m",      // text: sample (a made-up notification of the preview)
+        ));
+    card(
+        ui,
+        Words {
+            id: "notifications-preview-card",
+            what: SETTINGS_WINDOW_NOTIFICATIONS,
+            spoken: SETTINGS_WINDOW_PREVIEW_NOTIFICATIONS_LABEL,
+            caption: SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION,
+        },
+        frame,
+    )
 }
 
 /// One banner: the app's icon, the title over the body, and when it came.

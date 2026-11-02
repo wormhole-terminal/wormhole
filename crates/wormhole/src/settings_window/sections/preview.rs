@@ -13,6 +13,7 @@ use wormhole_core::view::sidebar::Density;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
+use super::card::{Words, card};
 use super::samples::{AGENT_SAMPLES, Card, SAMPLES, SampleHead};
 use crate::settings::SettingsStore;
 use crate::settings::{Settings, UiColors, settings};
@@ -34,9 +35,7 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
     let now = Look::of(&s);
     let label =
         |text: String| div().text_caption().font_weight(FontWeight::MEDIUM).text_color(ui.muted).child(text);
-    // In the column the two lists stack: a column's width fits one.
-    let column = window.preview_column;
-    let mut panes = div().flex().when(column, |d| d.flex_col()).gap_4().w_full().child(
+    let mut panes = div().flex().gap_4().w_full().child(
         div()
             .flex_1()
             .min_w_0()
@@ -63,17 +62,16 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
                 .child(list("previewed", previewed, SAMPLES, true, ui, cx)),
         );
     }
-    div()
-        .flex()
-        .flex_col()
-        .gap_2()
-        .child(style::preview_frame(ui).child(panes))
-        .child(div().text_caption().text_color(ui.muted).child(if column {
-            text(SETTINGS_SESSIONS_PREVIEW_CAPTION_STACKED)
-        } else {
-            text(SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE)
-        }))
-        .into_any_element()
+    card(
+        ui,
+        Words {
+            id: "sidebar-preview-card",
+            what: SETTINGS_WINDOW_TERMINALS_LIST,
+            spoken: SETTINGS_WINDOW_PREVIEW_TERMINALS_LABEL,
+            caption: SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE,
+        },
+        style::preview_frame(ui).child(panes),
+    )
 }
 
 /// Coding agents → the Terminals list as the options make it, with an agent working, one asking and
@@ -81,20 +79,24 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
 pub(in crate::settings_window) fn draw_agents_preview(cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let look = Look::of(settings(cx));
-    div()
-        .flex()
-        .flex_col()
-        .gap_2()
-        .child(style::preview_frame(ui).child(div().max_w(px(SIDEBAR_W)).child(list(
-            "agents",
-            look,
-            AGENT_SAMPLES,
-            true,
-            ui,
-            cx,
-        ))))
-        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_AGENTS_PREVIEW_CAPTION)))
-        .into_any_element()
+    let frame = style::preview_frame(ui).child(div().max_w(px(SIDEBAR_W)).child(list(
+        "agents",
+        look,
+        AGENT_SAMPLES,
+        true,
+        ui,
+        cx,
+    )));
+    card(
+        ui,
+        Words {
+            id: "agents-preview-card",
+            what: SETTINGS_WINDOW_TERMINALS_LIST,
+            spoken: SETTINGS_WINDOW_PREVIEW_AGENTS_LABEL,
+            caption: SETTINGS_AGENTS_PREVIEW_CAPTION,
+        },
+        frame,
+    )
 }
 
 /// The options a list is drawn with.

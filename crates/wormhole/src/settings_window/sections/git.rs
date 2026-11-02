@@ -20,6 +20,7 @@ fn spaces(width: u32) -> String {
 }
 
 pub(super) const SETTINGS: &[Setting] = &[
+    Setting::block("diff-preview", super::draw_diff_preview),
     Setting::menu(
         "changes-view",
         &[MenuOption::text(SETTINGS_GIT_LIST), MenuOption::text(SETTINGS_GIT_TREE)],

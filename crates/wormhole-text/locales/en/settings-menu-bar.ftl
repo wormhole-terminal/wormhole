@@ -4,6 +4,9 @@
 settings-section-menu-bar = Menu bar & hotkey
     .intro = { -brand } in the macOS menu bar, and a shortcut that works from any app.
 
+settings-menu-bar-preview = Live preview
+    .keywords = preview menu bar item quick panel
+
 ## Menu bar
 
 settings-menu-bar-group-menu-bar = Menu bar

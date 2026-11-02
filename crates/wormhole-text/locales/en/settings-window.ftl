@@ -27,7 +27,7 @@ settings-window-settings = Settings
 
 settings-window-edit-in-project = Edit in project
 
-## settings_window/preview_column.rs (labels, hints and notes drawn by this page's code)
+## settings_window/sections/card.rs (the words of a page's preview card, drawn by this page's code)
 
 settings-window-window = Window
 settings-window-fonts = Fonts
@@ -41,7 +41,10 @@ settings-window-preview-agents-label = Preview of the Terminals list with coding
 settings-window-preview-notifications-label = Preview of how a notification looks
 settings-window-preview-menu-bar-label = Preview of the menu bar item and the quick panel
 settings-window-preview = Preview
-settings-window-preview-column-hint = Shown in the preview column at the right of the window
+settings-window-split-terminals = Split terminals
+settings-window-diff = Changes panel and diff
+settings-window-preview-terminal-label = Preview of two split terminals with your current settings
+settings-window-preview-diff-label = Preview of the Changes panel and a diff with your current settings
 
 ## Sentences with a hole in them
 

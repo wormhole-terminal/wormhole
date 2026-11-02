@@ -7,39 +7,39 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Preview"
-pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1316);
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1333);
 /// "More information"
-pub const SETTINGS_MORE_INFORMATION: Key = Key::new(1321);
+pub const SETTINGS_MORE_INFORMATION: Key = Key::new(1338);
 /// "Copied"
-pub const SETTINGS_ROW_COPIED: Key = Key::new(1322);
+pub const SETTINGS_ROW_COPIED: Key = Key::new(1339);
 /// "Copy Key"
-pub const SETTINGS_ROW_COPY_KEY: Key = Key::new(1323);
+pub const SETTINGS_ROW_COPY_KEY: Key = Key::new(1340);
 /// "Copy as JSON"
-pub const SETTINGS_ROW_COPY_JSON: Key = Key::new(1324);
+pub const SETTINGS_ROW_COPY_JSON: Key = Key::new(1341);
 /// "Reset to Default"
-pub const SETTINGS_ROW_RESET_MENU: Key = Key::new(1325);
+pub const SETTINGS_ROW_RESET_MENU: Key = Key::new(1342);
 /// "Reset to default"
-pub const SETTINGS_ROW_RESET: Key = Key::new(1326);
+pub const SETTINGS_ROW_RESET: Key = Key::new(1343);
 
 /// ```text
 /// { $name }, needs attention
 /// ```
 pub fn settings_nav_spoken_attention(name: &str) -> String {
-    crate::active::message(1317, &[("name", Arg::Str(name))])
+    crate::active::message(1334, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, preview
 /// ```
 pub fn settings_nav_spoken_preview(name: &str) -> String {
-    crate::active::message(1318, &[("name", Arg::Str(name))])
+    crate::active::message(1335, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// { $name }, no matches
 /// ```
 pub fn settings_nav_spoken_no_matches(name: &str) -> String {
-    crate::active::message(1319, &[("name", Arg::Str(name))])
+    crate::active::message(1336, &[("name", Arg::Str(name))])
 }
 
 /// ```text
@@ -49,5 +49,5 @@ pub fn settings_nav_spoken_no_matches(name: &str) -> String {
 /// }
 /// ```
 pub fn settings_nav_spoken_matches(name: &str, count: i64) -> String {
-    crate::active::message(1320, &[("name", Arg::Str(name)), ("count", Arg::Int(count))])
+    crate::active::message(1337, &[("name", Arg::Str(name)), ("count", Arg::Int(count))])
 }

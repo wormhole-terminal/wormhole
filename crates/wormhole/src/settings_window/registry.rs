@@ -363,7 +363,7 @@ impl SettingsWindow {
                     rows = rows.child(div().pb_2().child(below));
                 }
             }
-            // A group that only held the preview the column shows has nothing left to draw.
+            // A group none of whose rows this build draws (a flag is off) has nothing to show.
             if shown == 0 {
                 continue;
             }
@@ -381,9 +381,9 @@ impl SettingsWindow {
     }
 
     /// The control of `entry` if the page draws its row: shown for these settings (not behind a feature
-    /// flag that is off) and not held by the preview column.
+    /// flag that is off).
     fn drawn(&self, entry: &'static Entry, settings: &Settings) -> Option<&'static Setting> {
-        if self.in_column(entry.id) || !entry.is_shown(settings) {
+        if !entry.is_shown(settings) {
             return None;
         }
         let setting = control(entry.id);
@@ -409,9 +409,6 @@ impl SettingsWindow {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let ui = page.ui;
-        if self.in_column(entry.id) {
-            return self.render_preview_note(entry, hit, cx);
-        }
         if let Control::Block(draw) = &setting.control {
             return draw(self, cx);
         }

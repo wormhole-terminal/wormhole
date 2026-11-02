@@ -415,6 +415,24 @@ fn controls(env: &Env) -> Div {
             ),
         )
         .child(
+            div().w(px(COLUMN_W)).child(style::preview_card(
+                ui,
+                style::PreviewCard {
+                    id: "g-preview-card",
+                    label: "Preview",                // text: sample (the gallery's specimen)
+                    what: "Window",                  // text: sample (the gallery's specimen)
+                    spoken: "Preview of the window", // text: sample (the gallery's specimen)
+                    caption: "What the page's settings do, as one window draws them.", // text: sample (the gallery's specimen)
+                },
+                style::preview_frame(ui).child(
+                    div()
+                        .text_caption()
+                        .text_color(ui.muted)
+                        .child("The miniature stands here, in a preview frame"), // text: sample (the gallery's specimen)
+                ),
+            )),
+        )
+        .child(
             div().w(px(COLUMN_W)).child(
                 style::preview_surface(ui)
                     .p_3()

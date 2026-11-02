@@ -1,6 +1,6 @@
 //! The Terminal section: scrollback and restoring, opening, the shell, worktrees, the bell and privacy.
 
-use super::{entry, group};
+use super::{entry, group, untitled};
 use crate::config::settings_index::Group;
 #[allow(
     clippy::wildcard_imports,
@@ -9,6 +9,8 @@ use crate::config::settings_index::Group;
 use wormhole_text::keys::*;
 
 pub(super) const TERMINAL: &[Group] = &[
+    untitled(&[entry("terminal-preview", SETTINGS_TERMINAL_PREVIEW, &[])
+        .with_keywords(SETTINGS_TERMINAL_PREVIEW_KEYWORDS)]),
     group(
         SETTINGS_TERMINAL_GROUP_BEHAVIOUR,
         &[

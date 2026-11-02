@@ -1,6 +1,6 @@
 //! The Notifications section: the permission, which events notify, delivery and the Dock.
 
-use super::{entry, group};
+use super::{entry, group, untitled};
 use crate::config::settings_index::Group;
 #[allow(
     clippy::wildcard_imports,
@@ -9,6 +9,8 @@ use crate::config::settings_index::Group;
 use wormhole_text::keys::*;
 
 pub(super) const NOTIFICATIONS: &[Group] = &[
+    untitled(&[entry("notifications-preview", SETTINGS_NOTIFICATIONS_PREVIEW, &[])
+        .with_keywords(SETTINGS_NOTIFICATIONS_PREVIEW_KEYWORDS)]),
     group(
         SETTINGS_NOTIFICATIONS_GROUP_MACOS,
         &[entry("notify-permission", SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION, &[])

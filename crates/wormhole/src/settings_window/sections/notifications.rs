@@ -26,6 +26,7 @@ use crate::style::{self, RowKeys, SettingParts, SettingState};
 const AFTER: [u32; 3] = [10, 30, 60];
 
 pub(super) const SETTINGS: &[Setting] = &[
+    Setting::block("notifications-preview", |_, cx| super::draw_notifications_preview(cx)),
     Setting::block("notify-permission", draw_permission),
     Setting::toggle(
         "notify-needs-you",

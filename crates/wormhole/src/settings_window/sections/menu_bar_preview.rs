@@ -11,6 +11,7 @@ use gpui_kit::*;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
+use super::card::{Words, card};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, StatusGlyph, TextRole};
 
@@ -76,18 +77,20 @@ pub(in crate::settings_window) fn draw_menu_bar_preview(cx: &mut Context<Setting
         .child(style::palette_result("menu-preview-needs-row", ui, true, needs))
         .child(style::palette_label(ui, text(SETTINGS_MENU_BAR_PREVIEW_WORKING), None))
         .child(style::palette_result("menu-preview-working-row", ui, false, working));
-    div()
+    let frame = style::preview_frame(ui)
         .flex()
         .flex_col()
-        .gap_2()
-        .child(
-            style::preview_frame(ui)
-                .flex()
-                .flex_col()
-                .gap_3()
-                .child(bar)
-                .child(div().flex().justify_end().child(panel)),
-        )
-        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_MENU_BAR_PREVIEW_CAPTION)))
-        .into_any_element()
+        .gap_3()
+        .child(bar)
+        .child(div().flex().justify_end().child(panel));
+    card(
+        ui,
+        Words {
+            id: "menu-bar-preview-card",
+            what: SETTINGS_WINDOW_MENU_BAR,
+            spoken: SETTINGS_WINDOW_PREVIEW_MENU_BAR_LABEL,
+            caption: SETTINGS_MENU_BAR_PREVIEW_CAPTION,
+        },
+        frame,
+    )
 }

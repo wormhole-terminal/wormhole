@@ -29,6 +29,7 @@ use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
 
 pub(super) const SETTINGS: &[Setting] = &[
+    Setting::block("agents-preview", |_, cx| super::draw_agents_preview(cx)),
     Setting::block("agents-summary", draw_summary),
     Setting::custom("agents-notifications", |_, cx| {
         let ui = ui(cx);

@@ -23,7 +23,9 @@ mod agent_access;
 mod agent_skills;
 mod agents;
 mod appearance;
+mod card;
 mod cli_tool;
+mod diff_preview;
 mod extensions;
 mod extensions_sheet;
 mod extensions_text;
@@ -44,6 +46,7 @@ mod profile_sheet;
 mod projects;
 mod samples;
 mod sessions;
+mod split_preview;
 mod stage;
 mod terminal;
 mod theme_picker;
@@ -52,21 +55,21 @@ mod updates;
 
 pub(super) use agents::AgentsSnapshot;
 pub(super) use cli_tool::CliToolPanel;
+pub(super) use diff_preview::draw_diff_preview;
 pub(super) use extensions::Extensions;
 pub(super) use feature_flags::is_unlock_key;
-pub(super) use fonts::draw_specimen;
 pub(crate) use import::ImportPage;
 pub(super) use menu_bar_preview::draw_menu_bar_preview;
 #[cfg(test)]
 pub(super) use motion_preview::MotionPreview;
 pub(super) use motion_preview::{MotionPreviews, Scene as MotionScene};
 pub(super) use notifications_preview::draw_notifications_preview;
-pub(super) use preview::{draw_agents_preview, draw_sidebar_preview};
+pub(super) use preview::draw_agents_preview;
 pub(super) use profile_form::ProfileForm;
 pub(super) use profile_sheet::NewProfileSheet;
 pub(crate) use profile_sheet::open_new_profile_sheet;
 pub(super) use projects::ProjectPicker;
-pub(super) use stage::draw_stage;
+pub(super) use split_preview::draw_split_preview;
 pub(super) use theme_picker::ThemePicker;
 
 /// The controls of a section's rows (their names and words are in core's settings index).

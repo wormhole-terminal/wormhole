@@ -12,6 +12,7 @@ use wormhole_core::theme::fonts::{FontSlot, display_name};
 use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
+use super::card::{Words, card};
 use super::open_button;
 use crate::fonts::LoadedFonts;
 use crate::settings::{SettingsStore, settings};
@@ -148,37 +149,32 @@ pub(in crate::settings_window) fn draw_specimen(
             })
         })
         .child(settings_fonts_specimen_colours(&theme_name));
-    div()
+    // Edge to edge: the tab strip's rule runs the frame's width.
+    let frame = style::preview_frame(ui)
+        .p_0()
         .flex()
         .flex_col()
-        .gap_2()
+        .bg(ui.elevated)
         .child(
-            // Edge to edge: the tab strip's rule runs the frame's width.
-            style::preview_frame(ui)
-                .p_0()
-                .flex()
-                .flex_col()
-                .bg(ui.elevated)
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .justify_between()
-                        .px_2()
-                        .py_2()
-                        .rule_bottom(ui)
-                        .child(tabs)
-                        .child(
-                            div()
-                                .min_w_0()
-                                .truncate()
-                                .text_caption()
-                                .text_color(ui.faint)
-                                .child(text(SETTINGS_FONTS_HOVER_A_FONT_IN_A_LIST)),
-                        ),
-                )
-                .child(specimen)
-                .child(facts),
+            div().flex().items_center().justify_between().px_2().py_2().rule_bottom(ui).child(tabs).child(
+                div()
+                    .min_w_0()
+                    .truncate()
+                    .text_caption()
+                    .text_color(ui.faint)
+                    .child(text(SETTINGS_FONTS_HOVER_A_FONT_IN_A_LIST)),
+            ),
         )
-        .into_any_element()
+        .child(specimen)
+        .child(facts);
+    card(
+        ui,
+        Words {
+            id: "font-specimen-card",
+            what: SETTINGS_WINDOW_FONTS,
+            spoken: SETTINGS_WINDOW_PREVIEW_FONTS_LABEL,
+            caption: SETTINGS_FONTS_SPECIMEN_CAPTION,
+        },
+        frame,
+    )
 }

@@ -6,7 +6,9 @@
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
 use gpui_kit::accesskit::{Action, ActionRequest, NodeId, Role, TreeId};
-use gpui_kit::{AnyWindowHandle, KeyUpEvent, Keystroke, Modifiers, TestAppContext, VisualTestContext};
+use gpui_kit::{
+    AnyWindowHandle, KeyUpEvent, Keystroke, Modifiers, TestAppContext, VisualTestContext, px, size,
+};
 
 use super::info_tests::{centre, draw};
 use super::{Section, current_window, open_settings};
@@ -23,6 +25,9 @@ fn open_at(cx: &mut TestAppContext, section: Section) -> AnyWindowHandle {
     cx.update(|cx| open_settings(Some(section), cx));
     cx.run_until_parked();
     let handle = cx.update(|cx| current_window(cx)).expect("the settings window opened").0;
+    // Tall enough that the page's rows are all on screen: its preview card takes room above them, and a
+    // row below the window's edge isn't painted, so there is nothing to click.
+    VisualTestContext::from_window(handle, cx).simulate_resize(size(px(840.0), px(1400.0)));
     cx.update(|cx| handle.update(cx, |_, window, _| window.simulate_a11y_active(true))).expect("open");
     draw(cx, handle);
     handle

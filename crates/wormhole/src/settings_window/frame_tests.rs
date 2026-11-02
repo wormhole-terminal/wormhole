@@ -116,16 +116,29 @@ const SLACK: u64 = 20;
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 17] = [
     ("Profile", 7051),
-    // With the Worktrees group's switch for cloning build folders (356).
-    ("Terminal", 11291),
+    // With the Worktrees group's switch for cloning build folders (356). Then the preview card of two split
+    // terminals (its label, two panes with their headers, five runs of text each and a minimap's bars):
+    // 12,441 measured, 1,150 more.
+    ("Terminal", 12441),
     // With the Liquid Glass row (16,810 before it came back).
-    ("Appearance", 18033),
-    ("Fonts", 8292),
+    // The preview moved from the right-hand column into a card at the top of the page: 18,117 measured, 84
+    // more (the card's own label, group and caption; the window it draws is the same).
+    ("Appearance", 18117),
+    // The specimen is a card on the page now, not in the column: 8,266 measured, 26 fewer.
+    ("Fonts", 8266),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 16440),
-    ("Git", 5231),
-    ("Notifications", 8749),
+    // The list preview is a card at the top of the page, with the column's second window gone: 13,612
+    // measured, 2,828 fewer than the page and the column made together.
+    ("Sessions", 13612),
+    // The preview card of the Changes panel and a diff: the panel's own file rows (four, with the folder
+    // rows of the tree and the untracked head) and the diff view's own rows (a hunk head and six lines, each
+    // a row with two gutters, a marker and its code): 8,367 measured, 3,136 more, about 340 for each of the
+    // nine rows.
+    ("Git", 8367),
+    // The banners are a card on the page: 8,793 measured, 44 more than in the column (the card's label,
+    // group and caption).
+    ("Notifications", 8793),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
@@ -133,8 +146,10 @@ const BUDGET: [(&str, u64); 17] = [
     // page measured 9,501: under this, which stays.
     // The line that no agent was found became the empty list (a card with a title, the sentence and an
     // icon): 11,013 measured, 527 more, all of it the second text block's shaping and the card.
-    ("Agents", 11013),
-    ("MenuBar", 6904),
+    // The agents list is a card on the page: 11,076 measured, 63 more than in the column.
+    ("Agents", 11076),
+    // The menu bar and the quick panel are a card on the page: 6,962 measured, 58 more than in the column.
+    ("MenuBar", 6962),
     // Fell from 53,549 to 50,188 (measured) when the group labels, notices and buttons became one
     // component each; Terminal, Updates, Motion, Projects and Extensions fell by 3 to 589 with them.
     ("Import", 50188),
@@ -159,7 +174,9 @@ const BUDGET: [(&str, u64); 17] = [
     ("FeatureFlags", 7290),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
-    ("search", 12263),
+    // The results no longer show the window's miniature beside them (it was in the column, whatever was
+    // found): 8,042 measured, 4,221 fewer.
+    ("search", 8042),
 ];
 
 /// What Appearance's Liquid Glass row adds, a switch with its line and Beta chip: it is on the page on

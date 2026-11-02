@@ -1,6 +1,6 @@
 //! The Menu bar section: the status item and the global hotkey.
 
-use super::{entry, group};
+use super::{entry, group, untitled};
 use crate::config::settings_index::Group;
 #[allow(
     clippy::wildcard_imports,
@@ -9,6 +9,8 @@ use crate::config::settings_index::Group;
 use wormhole_text::keys::*;
 
 pub(super) const MENU_BAR: &[Group] = &[
+    untitled(&[entry("menu-bar-preview", SETTINGS_MENU_BAR_PREVIEW, &[])
+        .with_keywords(SETTINGS_MENU_BAR_PREVIEW_KEYWORDS)]),
     group(
         SETTINGS_MENU_BAR_GROUP_MENU_BAR,
         &[

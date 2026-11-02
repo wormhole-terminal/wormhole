@@ -16,6 +16,7 @@ use crate::settings_window::recorder::RecorderRow;
 use crate::settings_window::registry::{MenuOption, Setting, toggle};
 
 pub(super) const SETTINGS: &[Setting] = &[
+    Setting::block("menu-bar-preview", |_, cx| super::draw_menu_bar_preview(cx)),
     toggle!("menu-bar", menu_bar),
     Setting::menu(
         "menu-bar-icon",

@@ -19,8 +19,8 @@ use wormhole_core::view::layout::SIDEBAR_MIN;
     reason = "the keys are generated, one constant per message: naming each would list them twice"
 )]
 use wormhole_text::keys::*;
-use wormhole_text::text;
 
+use super::card::{Words, card};
 use super::preview::{self, Look};
 use super::samples::SAMPLES;
 use crate::settings::{SettingsStore, UiColors, settings};
@@ -99,23 +99,25 @@ pub(in crate::settings_window) fn draw_stage(
         .bg(surfaces.background)
         .child(div().flex_1().min_h_0().flex().child(sidebar).child(content))
         .when(status_bar, |d| d.child(status(ui, cx)));
-    div()
-        .flex()
-        .flex_col()
-        .gap_2()
-        .child(
-            // Edge to edge: the window it shows fills the frame.
-            style::preview_frame(ui)
-                .p_0()
-                .relative()
-                .h(px(STAGE_H))
-                .w_full()
-                .bg(base)
-                .child(div().absolute().size_full().bg(wallpaper))
-                .child(window),
-        )
-        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_APPEARANCE_STAGE_CAPTION)))
-        .into_any_element()
+    // Edge to edge: the window it shows fills the frame.
+    let frame = style::preview_frame(ui)
+        .p_0()
+        .relative()
+        .h(px(STAGE_H))
+        .w_full()
+        .bg(base)
+        .child(div().absolute().size_full().bg(wallpaper))
+        .child(window);
+    card(
+        ui,
+        Words {
+            id: "appearance-preview-card",
+            what: SETTINGS_WINDOW_WINDOW,
+            spoken: SETTINGS_WINDOW_PREVIEW_WINDOW_LABEL,
+            caption: SETTINGS_APPEARANCE_STAGE_CAPTION,
+        },
+        frame,
+    )
 }
 
 /// The terminal's title row: its folder, the branch chip, and the agent at work in it.

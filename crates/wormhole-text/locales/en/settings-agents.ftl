@@ -4,6 +4,9 @@
 settings-section-agents = Coding agents
     .intro = { -brand } recognises the agent running in each terminal. With status hooks it knows exactly when it's working, waiting for you, or done.
 
+settings-agents-preview = Live preview
+    .keywords = preview terminals list working asking finished status
+
 settings-agents-summary = Agents found
     .keywords = installed hooks repair path summary
 

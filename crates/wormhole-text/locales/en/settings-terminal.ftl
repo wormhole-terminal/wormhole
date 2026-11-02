@@ -4,6 +4,11 @@
 settings-section-terminal = Terminal
     .intro = How the terminal behaves. Its font is in Fonts.
 
+settings-terminal-preview-caption = Two split terminals as your settings draw them: the gaps between them and the minimap.
+
+settings-terminal-preview = Live preview
+    .keywords = preview split terminals gaps minimap scrollbar
+
 ## Behaviour
 
 settings-terminal-group-behaviour = Behaviour
