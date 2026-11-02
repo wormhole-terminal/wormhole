@@ -121,12 +121,20 @@ pub(crate) fn start_time_any_user(pid: u32) -> Option<SystemTime> {
 /// layout is the system's ABI, and the buffer is far larger than the struct, so only that prefix is read.
 #[allow(unsafe_code)] // sysctl FFI; the buffer is sized and the kernel is told its size.
 fn kernel_start_time(pid: u32) -> Option<Duration> {
-    let mut mib = [libc::CTL_KERN, libc::KERN_PROC, libc::KERN_PROC_PID, i32::try_from(pid).ok()?];
+    let pid = i32::try_from(pid).ok().filter(|p| *p > 0)?;
+    let mut mib = [libc::CTL_KERN, libc::KERN_PROC, libc::KERN_PROC_PID, pid];
     let mut buf = [0u8; 2048];
     let mut size: libc::size_t = buf.len();
     // SAFETY: `buf` is `size` bytes and `size` tells the kernel so.
     let ok = unsafe {
-        libc::sysctl(mib.as_mut_ptr(), 4, buf.as_mut_ptr().cast(), &mut size, std::ptr::null_mut(), 0)
+        libc::sysctl(
+            mib.as_mut_ptr(),
+            mib.len() as u32,
+            buf.as_mut_ptr().cast(),
+            &mut size,
+            std::ptr::null_mut(),
+            0,
+        )
     };
     if ok != 0 || size < 16 {
         return None;

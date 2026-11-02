@@ -154,6 +154,12 @@ mod tests {
     }
 
     #[test]
+    fn no_start_time_is_made_up_for_pid_0() {
+        assert!(start_time_any_user(0).is_none());
+        assert!(start_time_any_user(std::process::id()).is_some(), "ours is known");
+    }
+
+    #[test]
     fn pids_0_and_1_are_never_signalled() {
         for pid in [0, 1, u32::MAX] {
             assert_eq!(
