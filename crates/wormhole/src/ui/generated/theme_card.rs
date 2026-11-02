@@ -5,7 +5,7 @@ use gpui_kit::*;
 use gpui_kit::accesskit::Toggled;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look};
+use crate::ui::{Handler, Look, Force};
 
 /// One item of `halves`.
 #[derive(Default)]
@@ -40,6 +40,7 @@ impl ThemeCardProps {
         let t_primary = token(look.tokens, "primary");
         let t_text_muted = token(look.tokens, "text.muted");
         let t_text_primary = token(look.tokens, "text.primary");
+        let force = look.force;
         let Self { id, spoken, name, mark, on, on_pick, halves } = self;
 
         div()
@@ -59,6 +60,10 @@ impl ThemeCardProps {
             .text_left()
             .cursor_pointer()
             .text_color(t_text_primary)
+            .when(force == Force::Focus, |this| {
+                this
+                    .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }])
+            })
             .focus_visible(move |style| {
                 let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }]);
                 style

@@ -1,7 +1,5 @@
 //! `NoticeBar`, generated from the design's markup. Do not edit it by hand: it is rewritten whenever the design changes.
 
-use gpui_kit::assets::IconName;
-use gpui_kit::component::{Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
@@ -14,8 +12,6 @@ pub struct NoticeBarProps {
     pub text: SharedString,
     pub warning: bool,
     pub danger: bool,
-    pub alerting: bool,
-    pub informing: bool,
     pub actions: Option<AnyElement>,
 }
 
@@ -28,7 +24,7 @@ impl NoticeBarProps {
         let t_banner_info_solid_text = token(look.tokens, "banner.info.solid.text");
         let t_banner_warning_solid = token(look.tokens, "banner.warning.solid");
         let t_banner_warning_solid_text = token(look.tokens, "banner.warning.solid.text");
-        let Self { id, text, warning, danger, alerting, informing, actions } = self;
+        let Self { id, text, warning, danger, actions } = self;
 
         div()
             .id(id)
@@ -53,21 +49,6 @@ impl NoticeBarProps {
                     .bg(t_banner_danger_solid)
                     .text_color(t_banner_danger_solid_text)
             })
-            .child(div()
-                .flex()
-                .items_center()
-                .justify_center()
-                .flex_shrink_0()
-                .w(px(14.0))
-                .h(px(16.0))
-                .when(alerting, |this| {
-                    this
-                        .child(Icon::new(IconName::TriangleAlert).with_size(px(14.0)))
-                })
-                .when(informing, |this| {
-                    this
-                        .child(Icon::new(IconName::Info).with_size(px(14.0)))
-                }))
             .child(div()
                 .flex_1()
                 .min_w(px(0.0))

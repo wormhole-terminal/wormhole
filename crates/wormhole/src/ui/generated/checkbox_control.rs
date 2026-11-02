@@ -7,7 +7,7 @@ use gpui_kit::*;
 use gpui_kit::accesskit::Toggled;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look, Rule, Sides};
+use crate::ui::{Handler, Look, Force, Rule, Sides};
 
 /// What `CheckboxControl` is drawn from.
 pub struct CheckboxControlProps {
@@ -25,6 +25,7 @@ impl CheckboxControlProps {
         let t_checkbox_border = token(look.tokens, "checkbox.border");
         let t_checkbox_checked = token(look.tokens, "checkbox.checked");
         let t_text_on_primary = token(look.tokens, "text.on_primary");
+        let force = look.force;
         let borders = look.borders;
         let Self { id, label, on, on_click } = self;
 
@@ -49,6 +50,10 @@ impl CheckboxControlProps {
                 this
                     .rule(borders, Sides::ALL, 1.0, t_checkbox_checked, true)
                     .bg(t_checkbox_checked)
+            })
+            .when(force == Force::Focus, |this| {
+                this
+                    .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }])
             })
             .focus_visible(move |style| {
                 let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }]);

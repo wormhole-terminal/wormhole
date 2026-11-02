@@ -4,7 +4,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look};
+use crate::ui::{Handler, Look, Force};
 
 /// One item of `links`.
 #[derive(Default)]
@@ -26,6 +26,7 @@ impl FooterLineProps {
         let t_border_focus = token(look.tokens, "border.focus");
         let t_primary = token(look.tokens, "primary");
         let t_text_muted = token(look.tokens, "text.muted");
+        let force = look.force;
         let Self { text, links } = self;
 
         div()
@@ -52,9 +53,17 @@ impl FooterLineProps {
                         .text_size(rems(0.75))
                         .line_height(rems(1.0625))
                         .cursor_pointer()
+                        .when(force == Force::Hover, |this| {
+                            this
+                                .underline()
+                        })
                         .hover(move |style| {
                             let style = style.underline();
                             style
+                        })
+                        .when(force == Force::Focus, |this| {
+                            this
+                                .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }])
                         })
                         .focus_visible(move |style| {
                             let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }]);

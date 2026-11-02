@@ -5,7 +5,7 @@ use gpui_kit::*;
 use gpui_kit::accesskit::Toggled;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look};
+use crate::ui::{Handler, Look, Force};
 
 /// What `SwitchControl` is drawn from.
 pub struct SwitchControlProps {
@@ -23,6 +23,7 @@ impl SwitchControlProps {
         let t_checkbox_border = token(look.tokens, "checkbox.border");
         let t_primary = token(look.tokens, "primary");
         let t_switch_knob = token(look.tokens, "switch.knob");
+        let force = look.force;
         let Self { id, label, on, disabled, on_click } = self;
 
         div()
@@ -50,6 +51,10 @@ impl SwitchControlProps {
                 this
                     .opacity(0.5)
                     .cursor_default()
+            })
+            .when(force == Force::Focus, |this| {
+                this
+                    .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }])
             })
             .focus_visible(move |style| {
                 let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }]);

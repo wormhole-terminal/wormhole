@@ -205,6 +205,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "settings-project-menu" => settings::project_menu,
         "settings-search" => settings::search,
         "settings-resize" => settings::resize,
+        "settings-components" => settings::components,
         "settings-scroll" => settings::scroll,
         "settings-pointer" => settings::pointer,
         "settings-key" => settings::key,

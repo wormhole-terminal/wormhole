@@ -6,7 +6,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look};
+use crate::ui::{Handler, Look, Force};
 
 /// One item of `rows`.
 #[derive(Default)]
@@ -52,6 +52,7 @@ impl SettingsNavProps {
         let t_text_on_primary = token(look.tokens, "text.on_primary");
         let t_text_primary = token(look.tokens, "text.primary");
         let t_tile_mark_brand = token(look.tokens, "tile.mark.brand");
+        let force = look.force;
         let Self { rows } = self;
 
         div()
@@ -142,10 +143,26 @@ impl SettingsNavProps {
                                     .text_color(t_text_on_primary)
                                     .font_weight(FontWeight::SEMIBOLD)
                             })
+                            .when(force == Force::Hover, |this| {
+                                this
+                                    .bg(t_sidebar_row_hover)
+                            })
+                            .when(force == Force::Hover && row_selected, |this| {
+                                this
+                                    .bg(t_settings_nav_selected)
+                            })
                             .hover(move |style| {
                                 let style = style.bg(t_sidebar_row_hover);
                                 let style = if row_selected { style.bg(t_settings_nav_selected) } else { style };
                                 style
+                            })
+                            .when(force == Force::Focus, |this| {
+                                this
+                                    .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }])
+                            })
+                            .when(force == Force::Focus && row_selected, |this| {
+                                this
+                                    .shadow(vec![BoxShadow { color: t_text_primary, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }])
                             })
                             .focus_visible(move |style| {
                                 let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }]);
@@ -237,9 +254,17 @@ impl SettingsNavProps {
                                     .text_color(t_text_primary)
                                     .font_weight(FontWeight::SEMIBOLD)
                             })
+                            .when(force == Force::Hover, |this| {
+                                this
+                                    .text_color(t_text_primary)
+                            })
                             .hover(move |style| {
                                 let style = style.text_color(t_text_primary);
                                 style
+                            })
+                            .when(force == Force::Focus, |this| {
+                                this
+                                    .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }])
                             })
                             .focus_visible(move |style| {
                                 let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }]);

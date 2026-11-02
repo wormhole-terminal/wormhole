@@ -6,7 +6,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look, Rule, Sides};
+use crate::ui::{Handler, Look, Force, Rule, Sides};
 
 /// What `MoreRow` is drawn from.
 pub struct MoreRowProps {
@@ -26,6 +26,7 @@ impl MoreRowProps {
         let t_sidebar_row_hover = token(look.tokens, "sidebar.row.hover");
         let t_text_muted = token(look.tokens, "text.muted");
         let t_text_primary = token(look.tokens, "text.primary");
+        let force = look.force;
         let borders = look.borders;
         let Self { id, label, value, open, closed, on_click } = self;
 
@@ -49,9 +50,17 @@ impl MoreRowProps {
             .line_height(rems(1.0))
             .text_left()
             .cursor_pointer()
+            .when(force == Force::Hover, |this| {
+                this
+                    .bg(t_sidebar_row_hover)
+            })
             .hover(move |style| {
                 let style = style.bg(t_sidebar_row_hover);
                 style
+            })
+            .when(force == Force::Focus, |this| {
+                this
+                    .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }])
             })
             .focus_visible(move |style| {
                 let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }]);

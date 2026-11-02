@@ -6,7 +6,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Look, Rule, Sides};
+use crate::ui::{Look, Force, Rule, Sides};
 
 /// What `MenuFace` is drawn from.
 pub struct MenuFaceProps {
@@ -25,6 +25,7 @@ impl MenuFaceProps {
         let t_primary = token(look.tokens, "primary");
         let t_text_muted = token(look.tokens, "text.muted");
         let t_text_primary = token(look.tokens, "text.primary");
+        let force = look.force;
         let borders = look.borders;
         let Self { value, lead, open, disabled } = self;
 
@@ -49,6 +50,14 @@ impl MenuFaceProps {
                 this
                     .opacity(0.5)
                     .cursor_default()
+            })
+            .when(force == Force::Hover, |this| {
+                this
+                    .bg(t_button_hover)
+            })
+            .when(force == Force::Hover && disabled, |this| {
+                this
+                    .bg(t_button_background)
             })
             .hover(move |style| {
                 let style = style.bg(t_button_hover);

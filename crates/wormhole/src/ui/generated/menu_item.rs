@@ -6,7 +6,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look};
+use crate::ui::{Handler, Look, Force};
 
 /// What `MenuItem` is drawn from.
 pub struct MenuItemProps {
@@ -29,6 +29,7 @@ impl MenuItemProps {
         let t_text_muted = token(look.tokens, "text.muted");
         let t_text_on_primary = token(look.tokens, "text.on_primary");
         let t_text_primary = token(look.tokens, "text.primary");
+        let force = look.force;
         let Self { id, name, hint, lead, chosen, active, muted, destructive, on_click } = self;
 
         div()
@@ -67,6 +68,19 @@ impl MenuItemProps {
             .when(muted && chosen, |this| this.text_color(t_text_on_primary))
             .when(muted && active, |this| this.text_color(t_text_on_primary))
             .when(destructive && active, |this| this.text_color(t_text_on_primary))
+            .when(force == Force::Hover, |this| {
+                this
+                    .bg(t_primary)
+                    .text_color(t_text_on_primary)
+            })
+            .when(force == Force::Hover && muted, |this| {
+                this
+                    .text_color(t_text_on_primary)
+            })
+            .when(force == Force::Hover && destructive, |this| {
+                this
+                    .text_color(t_text_on_primary)
+            })
             .hover(move |style| {
                 let style = style.bg(t_primary).text_color(t_text_on_primary);
                 let style = if muted { style.text_color(t_text_on_primary) } else { style };

@@ -6,7 +6,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look};
+use crate::ui::{Handler, Look, Force};
 
 /// What `SidebarProfile` is drawn from.
 pub struct SidebarProfileProps {
@@ -30,6 +30,7 @@ impl SidebarProfileProps {
         let t_text_muted = token(look.tokens, "text.muted");
         let t_text_on_primary = token(look.tokens, "text.on_primary");
         let t_text_primary = token(look.tokens, "text.primary");
+        let force = look.force;
         let Self { id, label, letter, name, caption, selected, hits, on_click } = self;
 
         div()
@@ -55,10 +56,26 @@ impl SidebarProfileProps {
                     .bg(t_settings_nav_selected)
                     .text_color(t_text_on_primary)
             })
+            .when(force == Force::Hover, |this| {
+                this
+                    .bg(t_sidebar_row_hover)
+            })
+            .when(force == Force::Hover && selected, |this| {
+                this
+                    .bg(t_settings_nav_selected)
+            })
             .hover(move |style| {
                 let style = style.bg(t_sidebar_row_hover);
                 let style = if selected { style.bg(t_settings_nav_selected) } else { style };
                 style
+            })
+            .when(force == Force::Focus, |this| {
+                this
+                    .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }])
+            })
+            .when(force == Force::Focus && selected, |this| {
+                this
+                    .shadow(vec![BoxShadow { color: t_text_primary, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }])
             })
             .focus_visible(move |style| {
                 let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }]);

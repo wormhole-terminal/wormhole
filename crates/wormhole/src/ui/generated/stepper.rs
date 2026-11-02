@@ -4,7 +4,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look, Rule, Sides};
+use crate::ui::{Handler, Look, Force, Rule, Sides};
 
 /// What `Stepper` is drawn from.
 pub struct StepperProps {
@@ -26,6 +26,7 @@ impl StepperProps {
         let t_button_hover = token(look.tokens, "button.hover");
         let t_text_muted = token(look.tokens, "text.muted");
         let t_text_primary = token(look.tokens, "text.primary");
+        let force = look.force;
         let borders = look.borders;
         let Self { id, label, smaller, larger, value, on_smaller, on_larger } = self;
 
@@ -57,9 +58,18 @@ impl StepperProps {
                 .text_size(rems(0.8125))
                 .line_height(rems(1.0))
                 .cursor_pointer()
+                .when(force == Force::Hover, |this| {
+                    this
+                        .bg(t_button_hover)
+                        .text_color(t_text_primary)
+                })
                 .hover(move |style| {
                     let style = style.bg(t_button_hover).text_color(t_text_primary);
                     style
+                })
+                .when(force == Force::Focus, |this| {
+                    this
+                        .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }])
                 })
                 .focus_visible(move |style| {
                     let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }]);
@@ -95,9 +105,18 @@ impl StepperProps {
                 .text_size(rems(0.8125))
                 .line_height(rems(1.0))
                 .cursor_pointer()
+                .when(force == Force::Hover, |this| {
+                    this
+                        .bg(t_button_hover)
+                        .text_color(t_text_primary)
+                })
                 .hover(move |style| {
                     let style = style.bg(t_button_hover).text_color(t_text_primary);
                     style
+                })
+                .when(force == Force::Focus, |this| {
+                    this
+                        .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }])
                 })
                 .focus_visible(move |style| {
                     let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: true }]);

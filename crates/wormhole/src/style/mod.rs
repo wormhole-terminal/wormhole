@@ -124,6 +124,8 @@ pub use group_card::*;
 pub use groups::*;
 pub(crate) use home::home_dir;
 pub use icon_motion::{Half, IconMotion, MenuMark, StripFill, StripSide};
+#[cfg(feature = "devctl")]
+pub(crate) use info::setting_info;
 #[cfg(test)]
 pub(crate) use info::{LAST_CARD, is_open_in, open_row_in};
 pub use labels::*;

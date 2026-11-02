@@ -77,7 +77,7 @@ pub(super) fn marked(ui: UiColors, text: SharedString, found: Vec<Range<usize>>)
 
 /// The (i) of the row `row`, whose `description` it opens, with `found` marked in it.
 #[derive(IntoElement)]
-pub(super) struct SettingInfo {
+pub(crate) struct SettingInfo {
     row: ElementId,
     ui: UiColors,
     description: SharedString,
@@ -85,7 +85,7 @@ pub(super) struct SettingInfo {
 }
 
 #[track_caller]
-pub(super) fn setting_info(
+pub(crate) fn setting_info(
     row: ElementId,
     ui: UiColors,
     description: SharedString,

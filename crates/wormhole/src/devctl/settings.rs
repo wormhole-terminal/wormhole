@@ -286,3 +286,11 @@ pub(super) fn theme(ctx: &mut Ctx, arg: &str) -> Result<String> {
     ctx.cx.refresh_windows();
     Ok(String::new())
 }
+
+/// `settings-components [<y>|off]`: the Settings window shows every compiled component in its states.
+pub(super) fn components(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let arg = arg.trim();
+    let from = (arg != "off").then(|| arg.parse().unwrap_or(0.0));
+    crate::settings_window::devctl::components(from, ctx.cx);
+    Ok(String::new())
+}

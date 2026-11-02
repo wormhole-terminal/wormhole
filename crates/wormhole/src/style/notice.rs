@@ -67,8 +67,6 @@ impl RenderOnce for Notice {
             text,
             warning: kind == NoticeKind::Warning,
             danger: kind == NoticeKind::Danger,
-            alerting: kind != NoticeKind::Info,
-            informing: kind == NoticeKind::Info,
             actions: (!actions.is_empty())
                 .then(|| div().flex().items_center().gap_2().children(actions).into_any_element()),
         }

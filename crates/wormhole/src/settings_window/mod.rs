@@ -17,6 +17,8 @@ mod changed_tests;
 mod close_tests;
 #[cfg(test)]
 mod color_tests;
+#[cfg(feature = "devctl")]
+mod components_sheet;
 #[cfg(test)]
 mod default_words_tests;
 pub(crate) mod devctl;
@@ -146,6 +148,9 @@ pub(crate) struct SettingsWindow {
     specimen: FontSlot,
     /// Appearance → every theme, not just the first rows.
     themes_all: bool,
+    /// devctl `settings-components`: the window shows the component sheet, from this y of the board, instead of a page.
+    #[cfg(feature = "devctl")]
+    components_sheet: Option<f32>,
     /// Appearance → Choose: a card per kind of theme (Some(true)), or pairs (Some(false)); until chosen it
     /// follows whether the two picks are halves of one pair.
     themes_separate: Option<bool>,

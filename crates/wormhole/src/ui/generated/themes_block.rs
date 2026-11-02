@@ -4,7 +4,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look};
+use crate::ui::{Handler, Look, Force};
 
 /// What `ThemesBlock` is drawn from.
 pub struct ThemesBlockProps {
@@ -23,6 +23,7 @@ impl ThemesBlockProps {
     pub fn render(self, look: &Look) -> Stateful<Div> {
         let t_border_focus = token(look.tokens, "border.focus");
         let t_primary = token(look.tokens, "primary");
+        let force = look.force;
         let Self { id, spoken, show_all, on_show_all, hidden, on_hidden, buttons, sets } = self;
 
         div()
@@ -51,9 +52,17 @@ impl ThemesBlockProps {
                         .line_height(rems(1.0))
                         .text_color(t_primary)
                         .cursor_pointer()
+                        .when(force == Force::Hover, |this| {
+                            this
+                                .underline()
+                        })
                         .hover(move |style| {
                             let style = style.underline();
                             style
+                        })
+                        .when(force == Force::Focus, |this| {
+                            this
+                                .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }])
                         })
                         .focus_visible(move |style| {
                             let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }]);
@@ -73,9 +82,17 @@ impl ThemesBlockProps {
                                 .line_height(rems(1.0))
                                 .text_color(t_primary)
                                 .cursor_pointer()
+                                .when(force == Force::Hover, |this| {
+                                    this
+                                        .underline()
+                                })
                                 .hover(move |style| {
                                     let style = style.underline();
                                     style
+                                })
+                                .when(force == Force::Focus, |this| {
+                                    this
+                                        .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }])
                                 })
                                 .focus_visible(move |style| {
                                     let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }]);

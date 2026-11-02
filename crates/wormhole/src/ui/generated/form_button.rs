@@ -4,7 +4,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::theme_bridge::token;
-use crate::ui::{Handler, Look, Rule, Sides};
+use crate::ui::{Handler, Look, Force, Rule, Sides};
 
 /// What `FormButton` is drawn from.
 pub struct FormButtonProps {
@@ -28,6 +28,7 @@ impl FormButtonProps {
         let t_status_danger_text = token(look.tokens, "status.danger.text");
         let t_text_on_primary = token(look.tokens, "text.on_primary");
         let t_text_primary = token(look.tokens, "text.primary");
+        let force = look.force;
         let borders = look.borders;
         let Self { id, label, primary, destructive, disabled, on_click } = self;
 
@@ -62,12 +63,32 @@ impl FormButtonProps {
                     .opacity(0.45)
                     .cursor_default()
             })
+            .when(force == Force::Hover, |this| {
+                this
+                    .bg(t_button_hover)
+            })
+            .when(force == Force::Hover && primary, |this| {
+                this
+                    .bg(t_primary_hover)
+            })
+            .when(force == Force::Hover && disabled, |this| {
+                this
+                    .bg(t_button_background)
+            })
+            .when(force == Force::Hover && primary && disabled, |this| {
+                this
+                    .bg(t_primary)
+            })
             .hover(move |style| {
                 let style = style.bg(t_button_hover);
                 let style = if primary { style.bg(t_primary_hover) } else { style };
                 let style = if disabled { style.bg(t_button_background) } else { style };
                 let style = if primary && disabled { style.bg(t_primary) } else { style };
                 style
+            })
+            .when(force == Force::Focus, |this| {
+                this
+                    .shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }])
             })
             .focus_visible(move |style| {
                 let style = style.shadow(vec![BoxShadow { color: t_border_focus, offset: point(px(0.0), px(0.0)), blur_radius: px(0.0), spread_radius: px(2.0), inset: false }]);

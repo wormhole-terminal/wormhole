@@ -50,12 +50,24 @@ pub(crate) use rule::{Rule, Sides};
 /// every frame and each element that clicks takes its own copy.
 pub(crate) type Handler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
 
+/// A state a component is drawn in whatever the pointer does: the component sheet (`settings-components`)
+/// shows hover, pressed and focus this way. In the app it is always `None`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) enum Force {
+    #[default]
+    None,
+    Hover,
+    Pressed,
+    Focus,
+}
+
 /// What a component is drawn in: the theme's colours (a component names them by token) and the code font.
 pub(crate) struct Look<'a> {
     pub tokens: &'a ThemeTokens,
     pub code_font: SharedString,
     /// The Borders setting (Increase Contrast turns it on): see `rule`.
     pub borders: bool,
+    pub force: Force,
 }
 
 impl<'a> Look<'a> {
@@ -66,6 +78,11 @@ impl<'a> Look<'a> {
 
     /// Another theme's colours (the Theme Studio's draft) in the app's code font.
     pub(crate) fn with_tokens(tokens: &'a ThemeTokens, cx: &App) -> Self {
-        Self { tokens, code_font: crate::fonts::code_font(cx).0, borders: crate::settings::ui(cx).borders }
+        Self {
+            tokens,
+            code_font: crate::fonts::code_font(cx).0,
+            borders: crate::settings::ui(cx).borders,
+            force: Force::None,
+        }
     }
 }

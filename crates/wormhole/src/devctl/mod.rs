@@ -279,6 +279,7 @@
 //!                   or ⌥ held, in the settings window (logical pixels as in settings-shot); hover shows a
 //!                   row's key and (i); `wheel x y -80` scrolls down 80 under that point
 //!   settings-key <keystroke>   a key pressed in the settings window (`key` goes to the main window): escape, ctrl-enter, …
+//!   settings-components [<y>|off]   the window shows every component in its states (hover, pressed, focus forced), from the board's y
 //!   settings-resize <w> <h>   the settings window's size (a tall one shows a whole page in one shot)
 //!   settings-select <row id>   open that row's select or menu in the settings window (scrollback, tab-width, theme-mode…)
 //!   settings-reset-confirm   press Advanced → Reset to defaults… (shows its question, resets nothing)

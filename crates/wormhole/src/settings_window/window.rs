@@ -92,6 +92,8 @@ impl SettingsWindow {
             branch_pick,
             specimen: FontSlot::Terminal,
             themes_all: false,
+            #[cfg(feature = "devctl")]
+            components_sheet: None,
             themes_separate: None,
             sidebar_preview: None,
             changed_copied: false,
@@ -307,7 +309,15 @@ impl SettingsWindow {
 }
 
 impl Render for SettingsWindow {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        #[cfg(feature = "devctl")]
+        if let Some(from) = self.components_sheet {
+            return div()
+                .id("settings-window")
+                .size_full()
+                .child(super::components_sheet::render(from, cx))
+                .into_any_element();
+        }
         self.sync_color_picks(window, cx);
         self.sync_profile_form(window, cx);
         self.rem = window.rem_size();
@@ -396,6 +406,7 @@ impl Render for SettingsWindow {
             .children(self.render_new_profile(cx))
             .children(self.render_probe_sheet(window, cx))
             .children(self.render_import_sheet(window, cx))
+            .into_any_element()
     }
 }
 

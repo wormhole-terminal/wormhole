@@ -350,3 +350,10 @@ pub(crate) fn pointer(arg: &str, cx: &mut App) -> Result<(), String> {
     });
     Ok(())
 }
+
+/// devctl `settings-components [<y>|off]`: the window shows the component sheet from the board's `y` down
+/// (`components_sheet`; the screen is shorter than the board) or its page.
+#[cfg(feature = "devctl")]
+pub(crate) fn components(from: Option<f32>, cx: &mut App) {
+    with_page(cx, move |page, _, _| page.components_sheet = from);
+}

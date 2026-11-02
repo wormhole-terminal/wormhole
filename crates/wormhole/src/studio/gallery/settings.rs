@@ -176,7 +176,12 @@ fn setting_rows(env: &Env, cx: &App) -> Div {
                 under: None,
                 on_reset: Some(Rc::new(|_, _| {})),
             },
-            &Look { tokens: env.tokens, code_font: env.code_font.clone(), borders: env.ui.borders },
+            &Look {
+                tokens: env.tokens,
+                code_font: env.code_font.clone(),
+                borders: env.ui.borders,
+                force: crate::ui::Force::None,
+            },
             cx,
         )
     };
@@ -391,6 +396,7 @@ fn nav(env: &Env) -> Div {
             tokens: env.tokens,
             code_font: env.code_font.clone(),
             borders: env.ui.borders,
+            force: crate::ui::Force::None,
         }))
 }
 
