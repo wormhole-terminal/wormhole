@@ -60,30 +60,32 @@ pub const NOTICE_FAILED_PUT_LINES: Key = Key::new(284);
 pub const NOTICE_WARNED_HOST_FALLBACK: Key = Key::new(285);
 /// "This terminal runs inside Wormhole and ends when it quits: the helper that keeps terminals running couldn't start."
 pub const NOTICE_WARNED_HOST_FALLBACK_DETAIL: Key = Key::new(286);
+/// "Wormhole can't use its data folder, so nothing is saved"
+pub const NOTICE_WARNED_DATA_FOLDER: Key = Key::new(287);
 /// "Move Wormhole to Applications to keep terminals running when it quits"
-pub const NOTICE_WARNED_MOVE_TO_APPLICATIONS: Key = Key::new(287);
+pub const NOTICE_WARNED_MOVE_TO_APPLICATIONS: Key = Key::new(289);
 /// "Wormhole is running from a disk image or a temporary copy, so its terminals end when it quits. Move it to Applications, then open it from there."
-pub const NOTICE_WARNED_MOVE_TO_APPLICATIONS_DETAIL: Key = Key::new(288);
+pub const NOTICE_WARNED_MOVE_TO_APPLICATIONS_DETAIL: Key = Key::new(290);
 /// "Close"
-pub const NOTICE_CLOSE: Key = Key::new(290);
+pub const NOTICE_CLOSE: Key = Key::new(292);
 /// "More about this warning"
-pub const NOTICE_INFO: Key = Key::new(291);
+pub const NOTICE_INFO: Key = Key::new(293);
 /// "This terminal can't outlive Wormhole"
-pub const NOTICE_INFO_HOST_HEADING: Key = Key::new(292);
+pub const NOTICE_INFO_HOST_HEADING: Key = Key::new(294);
 /// "Wormhole normally keeps each terminal running in a small helper, so your work carries on after you quit Wormhole and is waiting when you open it again. The helper for this terminal couldn't start, so the terminal runs inside Wormhole instead and closes when Wormhole quits."
-pub const NOTICE_INFO_HOST_WHAT: Key = Key::new(293);
+pub const NOTICE_INFO_HOST_WHAT: Key = Key::new(295);
 /// "Other terminals that already run in a helper are not affected."
-pub const NOTICE_INFO_HOST_OTHERS: Key = Key::new(294);
+pub const NOTICE_INFO_HOST_OTHERS: Key = Key::new(296);
 /// "Finish what is running here before you quit. Each new terminal tries to start its helper again, and Wormhole says this once each time it starts."
-pub const NOTICE_INFO_HOST_TRY: Key = Key::new(295);
+pub const NOTICE_INFO_HOST_TRY: Key = Key::new(297);
 /// "What went wrong, if you want to report it:"
-pub const NOTICE_INFO_HOST_REASON: Key = Key::new(296);
+pub const NOTICE_INFO_HOST_REASON: Key = Key::new(298);
 /// "Open Logs Folder"
-pub const NOTICE_INFO_LOGS: Key = Key::new(297);
+pub const NOTICE_INFO_LOGS: Key = Key::new(299);
 /// "Copy reason"
-pub const NOTICE_INFO_COPY: Key = Key::new(298);
+pub const NOTICE_INFO_COPY: Key = Key::new(300);
 /// "Copied"
-pub const NOTICE_INFO_COPIED: Key = Key::new(299);
+pub const NOTICE_INFO_COPIED: Key = Key::new(301);
 
 /// ```text
 /// { $count ->
@@ -170,8 +172,15 @@ pub fn notice_driven_reading(name: &str) -> String {
 }
 
 /// ```text
+/// { -brand } can't open its data folder, { $folder }, so it runs without saving anything: no windows, notes or settings are kept. { $error }
+/// ```
+pub fn notice_warned_data_folder_detail(folder: &str, error: &str) -> String {
+    crate::active::message(288, &[("folder", Arg::Str(folder)), ("error", Arg::Str(error))])
+}
+
+/// ```text
 /// { -brand } { $version } is ready — Restart
 /// ```
 pub fn notice_warned_update_ready(version: &str) -> String {
-    crate::active::message(289, &[("version", Arg::Str(version))])
+    crate::active::message(291, &[("version", Arg::Str(version))])
 }

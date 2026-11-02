@@ -35,4 +35,6 @@ pub(crate) use follow::EVERY as FOLLOW_EVERY;
 pub(crate) use report::{click, notices};
 #[cfg(feature = "devctl")]
 pub(crate) use report::{test_notice, test_sticky};
-pub(crate) use words::{host_fallback_detail, move_to_applications_detail, of as sentence, program_copy};
+pub(crate) use words::{
+    data_folder_detail, host_fallback_detail, move_to_applications_detail, of as sentence, program_copy,
+};

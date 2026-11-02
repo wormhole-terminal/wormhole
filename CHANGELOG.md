@@ -30,6 +30,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- When the data folder could not be created or opened (for example with no home folder), Wormhole ran on
+  without saving anything and said nothing. It now names the folder and the error in a notice, on standard
+  error and in the log.
 - Wormhole run from a disk image or a temporary copy started its terminals inside the app without a word, so
   they ended when it quit. With Persistent terminals on it now says so once ("Move Wormhole to Applications to
   keep terminals running when it quits"), and the Session Hosts window says why it has no host program.

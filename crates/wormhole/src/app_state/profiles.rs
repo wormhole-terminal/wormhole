@@ -223,7 +223,7 @@ impl ProfileData {
     /// Open the profile's database and read what it keeps.
     pub fn open(paths: &ProfilePaths) -> Self {
         let store =
-            Store::open_for(paths).inspect_err(|err| tracing::error!("persistence disabled: {err:#}")).ok();
+            Store::open_for(paths).inspect_err(|err| super::data_folder::record(paths.dir(), err)).ok();
         let meta = |key: &str| store.as_ref().and_then(|s| s.meta(key).ok().flatten());
         let tips = DismissedTips::parse(meta(DISMISSED_TIPS_KEY).as_deref());
         // Worktrees removed by hand since are forgotten, so nothing offers to remove them.
@@ -413,5 +413,24 @@ mod tests {
         let loaded = default_store.load().expect("loads Default");
         assert_eq!(loaded.iter().map(|w| w.id).collect::<Vec<_>>(), vec![1]);
         let _ = std::fs::remove_dir_all(root.base());
+    }
+
+    /// A data folder that can't be created: the app opens with no database, and says so (the folder and the
+    /// error are kept for the first window) instead of running on silently.
+    #[test]
+    fn a_data_folder_that_cannot_be_opened_is_recorded_not_silent() {
+        let root = scratch("unusable");
+        std::fs::create_dir_all(root.base()).expect("scratch");
+        // A file where the data folder should be: no directory can be made under it, as whoever runs this.
+        let blocker = root.base().join("a-file");
+        std::fs::write(&blocker, b"x").expect("blocker");
+        let paths = DataRoot::new(blocker.join("data")).default_profile();
+        let data = super::ProfileData::open(&paths);
+        assert!(data.store.is_none(), "no database");
+        let problem = crate::app_state::data_folder::unusable().expect("the failure is kept");
+        assert!(problem.folder.starts_with(&blocker), "names the folder: {:?}", problem.folder);
+        assert!(!problem.error.is_empty());
+        let words = crate::notice::data_folder_detail(&problem.folder, &problem.error);
+        assert!(words.contains(&problem.folder.display().to_string()) && words.contains(&problem.error));
     }
 }

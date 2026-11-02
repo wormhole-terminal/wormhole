@@ -11,6 +11,7 @@
 //! the updater's `Updates` are globals of their own, set at launch.
 
 pub(crate) mod attention;
+pub(crate) mod data_folder;
 pub(crate) mod look;
 pub(crate) mod profiles;
 pub(crate) mod recent_folders;

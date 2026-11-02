@@ -177,8 +177,22 @@ pub(crate) fn start(
     if let Some(front) = front {
         crate::window::window_lifecycle::bring_forward_later(front, cx);
     }
+    tell_data_folder(cx);
     crate::window::hosting::adopt_orphans(cx);
     menus::sync(cx);
+}
+
+/// Say, in the first window, that the data folder couldn't be opened and so nothing is saved.
+fn tell_data_folder(cx: &mut App) {
+    let Some(problem) = crate::app_state::data_folder::unusable() else { return };
+    let Some(window) = cx.windows().first().copied() else { return };
+    crate::notice::post_to_with(
+        window,
+        wormhole_core::view::notice::Notice::Warned(wormhole_core::view::notice::Warning::DataFolder),
+        None,
+        crate::notice::data_folder_detail(&problem.folder, &problem.error),
+        cx,
+    );
 }
 /// Agent hooks an earlier version installed under the app's old codename are replaced with
 /// today's, off the main thread: they keep working meanwhile (terminals still export the old

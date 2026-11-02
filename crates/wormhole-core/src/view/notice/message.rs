@@ -86,6 +86,8 @@ pub enum Warning {
     /// Wormhole runs from a disk image or a temporary copy, where its helper must not start: terminals end
     /// when it quits until it is moved to Applications.
     MoveToApplications,
+    /// The data folder can't be opened, so nothing is saved.
+    DataFolder,
     /// An update was installed and waits for a restart. The number tells one install from the next, so a
     /// chip the person closed is not said again for the same version, but is for a newer one; the version
     /// itself is words, which come with the post.
@@ -170,7 +172,10 @@ impl Notice {
     /// There is more to say about it than the chip's line: an ⓘ opens it.
     #[must_use]
     pub fn has_info(self) -> bool {
-        matches!(self, Self::Warned(Warning::HostFallback))
+        matches!(
+            self,
+            Self::Warned(Warning::HostFallback | Warning::MoveToApplications | Warning::DataFolder)
+        )
     }
 }
 

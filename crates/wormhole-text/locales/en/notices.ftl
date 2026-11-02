@@ -134,6 +134,12 @@ notice-warned-host-fallback = This terminal ends when { -brand } quits
 # switched off.
 notice-warned-host-fallback-detail = This terminal runs inside { -brand } and ends when it quits: the helper that keeps terminals running couldn't start.
 
+# The chip when the data folder can't be opened: the app runs, but nothing is saved. One line.
+notice-warned-data-folder = { -brand } can't use its data folder, so nothing is saved
+
+# The same, in full: the folder and the system's own words for what went wrong.
+notice-warned-data-folder-detail = { -brand } can't open its data folder, { $folder }, so it runs without saving anything: no windows, notes or settings are kept. { $error }
+
 # The chip when Wormhole runs from a disk image or a temporary copy, where the helper that keeps terminals
 # running must not start. One line.
 notice-warned-move-to-applications = Move { -brand } to Applications to keep terminals running when it quits

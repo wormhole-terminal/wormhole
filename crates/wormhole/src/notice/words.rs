@@ -12,6 +12,9 @@ pub(crate) fn of(notice: Notice) -> Option<String> {
         Notice::Warned(Warning::HostFallback) => {
             return Some(text(keys::NOTICE_WARNED_HOST_FALLBACK).to_string());
         }
+        Notice::Warned(Warning::DataFolder) => {
+            return Some(text(keys::NOTICE_WARNED_DATA_FOLDER).to_string());
+        }
         Notice::Warned(Warning::MoveToApplications) => {
             return Some(text(keys::NOTICE_WARNED_MOVE_TO_APPLICATIONS).to_string());
         }
@@ -56,6 +59,11 @@ pub(super) fn spoken(notice: Notice) -> Option<String> {
         Notice::Warned(Warning::MoveToApplications) => Some(move_to_applications_detail()),
         _ => None,
     }
+}
+
+/// Why nothing is saved: the folder and the error, in full.
+pub(crate) fn data_folder_detail(folder: &std::path::Path, error: &str) -> String {
+    keys::notice_warned_data_folder_detail(&folder.display().to_string(), error)
 }
 
 /// Why terminals end when Wormhole quits while it runs from a disk image, in full.
