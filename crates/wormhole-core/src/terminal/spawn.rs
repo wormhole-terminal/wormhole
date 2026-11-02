@@ -10,6 +10,7 @@ impl SpawnOptions {
     fn start_options(&self) -> StartOptions<'_> {
         StartOptions {
             restore: self.restore.as_deref(),
+            restore_styled: self.restore_styled,
             scrollback_lines: self.scrollback_lines,
             allow_screen_checksum: self.allow_screen_checksum,
             allow_window_ops: self.allow_window_ops,

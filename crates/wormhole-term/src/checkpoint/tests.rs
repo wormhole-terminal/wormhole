@@ -243,6 +243,21 @@ fn forgetting_removes_the_files_and_the_directory() {
 }
 
 #[test]
+fn a_directory_removed_under_a_running_store_comes_back_with_the_next_write() {
+    let root = sessions();
+    let mut store = Store::open(root.path(), ID).unwrap();
+    let a = key(1);
+    store.write(Some(&a), &snapshot(Some(b"one"), "t")).unwrap();
+    forget(store.dir());
+    assert!(!store.dir().exists());
+    let written = store.write(Some(&a), &snapshot(Some(b"two"), "t")).unwrap();
+    assert_eq!(written.generation, 2);
+    let read = read_latest(store.dir(), ID, Some(&a)).unwrap();
+    assert_eq!(read.screen.as_deref().map(Vec::as_slice), Some(&b"two"[..]));
+    assert_eq!(crate::sys::fs::mode(&fs::metadata(store.dir()).unwrap()) & 0o777, 0o700);
+}
+
+#[test]
 fn only_a_host_id_names_a_directory() {
     let root = sessions();
     for bad in ["", "short", "../etc/passwd1", "ABCDEFGHIJ12", "abcdefghij1/"] {

@@ -7,6 +7,8 @@
 //! - `spawn`: [`spawn`] and the hosted variants, which turn a tab's options into the
 //!   [`Launch`](wormhole_term::Launch) and [`StartOptions`](wormhole_term::StartOptions) that
 //!   `Pty::start` takes;
+//! - `checkpoint`: reading a terminal's checkpoint back after a restart of the Mac, and looking after the folder
+//!   they live in (the host writes them and never deletes one);
 //! - `shells`: shell profiles, what a new terminal runs;
 //! - `cli_tool`: the `wh` command line tool and the PATH every terminal starts with;
 //! - `default_terminal`: Wormhole as the Mac's default terminal, and what it does with a file
@@ -15,6 +17,7 @@
 //! Tier 6: it uses `storage`, `config` and `ipc` (the socket a terminal's hooks call). Only
 //! `import` and `onboarding` are above it.
 
+pub mod checkpoint;
 pub mod cli_tool;
 pub mod default_terminal;
 mod process;

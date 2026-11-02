@@ -88,6 +88,12 @@ impl Store {
         }
     }
 
+    /// The key the session host of terminal `host_id` seals its checkpoint with; see
+    /// [`wormhole_term::checkpoint`]. `None` when the profile has no saved-text key (no Keychain).
+    pub fn checkpoint_key(&self, host_id: &str) -> Option<[u8; 32]> {
+        self.saved.checkpoint_key(host_id)
+    }
+
     /// The text of a terminal's sealed record, as `load` gives it.
     pub(super) fn open_scrollback(&self, tab_id: i64, sealed: Option<Vec<u8>>) -> Option<String> {
         self.saved.open(tab_id, &sealed?)

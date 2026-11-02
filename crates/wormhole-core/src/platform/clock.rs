@@ -25,9 +25,25 @@ pub fn local_time_of_day(unix_ms: u64) -> Option<TimeOfDay> {
     Some(TimeOfDay { hour, minute, second, millis: (unix_ms % 1000) as u16 })
 }
 
+/// `2026-11-02 14:03`: the date and the time of day, in the system's time zone, at `unix_seconds`; `None` when
+/// the system can't say.
+pub fn local_date_time(unix_seconds: u64) -> Option<String> {
+    let (year, month, day, hour, minute) = os::local_ymd_hm(unix_seconds)?;
+    Some(format!("{year:04}-{month:02}-{day:02} {hour:02}:{minute:02}"))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{TimeOfDay, local_time_of_day};
+    use super::{TimeOfDay, local_date_time, local_time_of_day};
+
+    #[test]
+    fn the_date_and_time_read_as_a_stamp() {
+        // 2026-10-26 14:02:07 UTC: a day within a day of that date wherever the zone is.
+        let stamp = local_date_time(1_793_023_327).expect("the system knows its zone");
+        assert_eq!(stamp.len(), 16, "{stamp}");
+        assert!(["2026-10-25", "2026-10-26", "2026-10-27"].iter().any(|d| stamp.starts_with(d)), "{stamp}");
+        assert_eq!(&stamp[10..11], " ");
+    }
 
     #[test]
     fn the_time_of_day_keeps_the_seconds_and_milliseconds() {

@@ -137,6 +137,12 @@ impl Store {
     /// Write `snapshot` as the next generation and drop the generations past [`KEEP`]. With no `key` only the
     /// manifest is written: the folder and the shell, never a screen, and never an unsealed one.
     pub fn write(&mut self, key: Option<&Key>, snapshot: &Snapshot<'_>) -> io::Result<Written> {
+        // The app removes a checkpoint when the buffer is cleared, under a host that goes on writing: the
+        // directory comes back with the next generation, and its numbers go on.
+        if !self.dir.is_dir() {
+            let mut builder = DirBuilder::new();
+            private_dir(builder.recursive(true)).create(&self.dir)?;
+        }
         let generation = self.next;
         let mut bytes = 0u64;
         let mut screen = None;

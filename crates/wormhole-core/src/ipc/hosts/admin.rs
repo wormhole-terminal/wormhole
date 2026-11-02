@@ -220,6 +220,11 @@ pub fn forget(hosts_dir: &Path, id: &str) -> Result<ForgetOutcome, ForgetError> 
         return Err(ForgetError::Live(format!("session {id} is running")));
     }
     let Some(stale) = scanned.stale.into_iter().find(|s| s.id == id) else {
+        // A host whose files were forgotten already (after a restart the app forgets them on its own) may
+        // still have a checkpoint, which is what the person asks to be rid of.
+        if forget_checkpoint(hosts_dir, id) {
+            return Ok(ForgetOutcome { removed: Vec::new() });
+        }
         return Err(ForgetError::Unknown);
     };
     let home_socket = hosts_dir.join(format!("{id}.sock"));
@@ -270,7 +275,20 @@ pub fn forget(hosts_dir: &Path, id: &str) -> Result<ForgetOutcome, ForgetError> 
             Err(err) => return Err(ForgetError::Io(format!("{}: {err}", path.display()))),
         }
     }
+    forget_checkpoint(hosts_dir, id);
     Ok(ForgetOutcome { removed })
+}
+
+/// Remove the checkpoint of host `id` (`wormhole_term::checkpoint`: a host never deletes its own, so
+/// forgetting a session is the app's to do); whether there was one.
+fn forget_checkpoint(hosts_dir: &Path, id: &str) -> bool {
+    let dir = wormhole_term::checkpoint::store::dir_in(
+        &wormhole_term::checkpoint::sessions_dir_of_hosts(hosts_dir),
+        id,
+    );
+    let there = dir.is_dir();
+    wormhole_term::checkpoint::forget(&dir);
+    there
 }
 
 /// Whether `path` is a file `forget` may remove for host `id`: its meta (any plain file or link,
@@ -582,6 +600,43 @@ mod tests {
         write_meta(d, "gggggggggggg", dead_pid(), &odd);
         forget(d, "gggggggggggg").expect("forgets");
         assert!(odd.exists());
+    }
+
+    /// A host never deletes its checkpoint, so forgetting a session is what removes it: with the host's files
+    /// when they are there, and alone when the app has forgotten those already (as it does after a restart).
+    #[test]
+    fn forgetting_a_session_removes_its_checkpoint() {
+        let root = short_dir();
+        let hosts = root.path().join("hosts");
+        std::fs::create_dir(&hosts).expect("hosts dir");
+        let sessions = wormhole_term::checkpoint::sessions_dir_of_hosts(&hosts);
+        let make = |id: &str| {
+            let mut store = wormhole_term::checkpoint::Store::open(&sessions, id).expect("a store");
+            let snapshot = wormhole_term::checkpoint::Snapshot {
+                time: 1,
+                cols: 80,
+                rows: 24,
+                cwd: None,
+                shell: None,
+                title: None,
+                ended: None,
+                screen: None,
+            };
+            store.write(None, &snapshot).expect("written");
+        };
+        // A stale host with its checkpoint.
+        make("iiiiiiiiiiii");
+        write_meta(&hosts, "iiiiiiiiiiii", dead_pid(), &hosts.join("iiiiiiiiiiii.sock"));
+        forget(&hosts, "iiiiiiiiiiii").expect("forgets");
+        assert!(!sessions.join("iiiiiiiiiiii").exists());
+        // The host's files are gone already: the checkpoint is still the person's to be rid of.
+        make("jjjjjjjjjjjj");
+        let outcome = forget(&hosts, "jjjjjjjjjjjj").expect("forgets");
+        assert!(outcome.removed.is_empty() && !sessions.join("jjjjjjjjjjjj").exists());
+        // Another session's is not touched.
+        make("kkkkkkkkkkkk");
+        assert_eq!(forget(&hosts, "llllllllllll"), Err(ForgetError::Unknown));
+        assert!(sessions.join("kkkkkkkkkkkk").is_dir());
     }
 
     #[test]

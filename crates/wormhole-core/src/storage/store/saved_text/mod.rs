@@ -125,6 +125,26 @@ impl Keeper {
             .clone()
     }
 
+    /// The key a session host seals terminal `host_id`'s checkpoint with: derived from the saved text's key
+    /// (HKDF-SHA256 over it, with the host id), so each terminal has its own, nothing is stored, and throwing the
+    /// text's key away (erasing the saved text) makes every checkpoint unreadable too. `None` without a key.
+    pub(super) fn checkpoint_key(&self, host_id: &str) -> Option<[u8; 32]> {
+        use ring::hkdf;
+        struct Len32;
+        impl hkdf::KeyType for Len32 {
+            fn len(&self) -> usize {
+                32
+            }
+        }
+        let account = self.account.get()?;
+        let key = self.platform.text_key(&self.dir, account).ok()?;
+        let prk = hkdf::Salt::new(hkdf::HKDF_SHA256, b"wormhole checkpoint key v1").extract(&*key);
+        let info = [b"screen".as_slice(), host_id.as_bytes()];
+        let mut out = [0u8; 32];
+        prk.expand(&info, Len32).ok()?.fill(&mut out).ok()?;
+        Some(out)
+    }
+
     /// Throw the key away (after erasing every text): a copy of the old file anywhere (a snapshot,
     /// a backup) can't be opened any more. The next save makes a new one.
     pub(super) fn forget_key(&self) {

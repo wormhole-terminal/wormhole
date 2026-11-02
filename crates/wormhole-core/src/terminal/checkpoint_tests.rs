@@ -1,0 +1,172 @@
+//! The app's reading of a checkpoint and its looking after the folder, against real files written the way a
+//! host writes them.
+
+use std::collections::HashSet;
+use std::fs;
+use std::path::Path;
+use std::time::{Duration, SystemTime};
+
+use wormhole_term::checkpoint::{Issue, Key, Snapshot, Store};
+
+use super::*;
+
+const A: &str = "aaaaaaaaaaaa";
+const B: &str = "bbbbbbbbbbbb";
+const C: &str = "cccccccccccc";
+
+fn key(byte: u8) -> [u8; 32] {
+    [byte; 32]
+}
+
+fn write(
+    sessions: &Path,
+    id: &str,
+    key_bytes: Option<[u8; 32]>,
+    screen: &[u8],
+    ended: Option<&str>,
+    time: u64,
+) {
+    let mut store = Store::open(sessions, id).expect("a store");
+    let key = key_bytes.map(Key::new);
+    let snapshot = Snapshot {
+        time,
+        cols: 80,
+        rows: 24,
+        cwd: Some("/Users/me/src"),
+        shell: Some("login"),
+        title: None,
+        ended,
+        screen: Some(screen),
+    };
+    store.write(key.as_ref(), &snapshot).expect("written");
+}
+
+#[test]
+fn a_checkpoint_is_read_as_a_screen_with_a_divider_that_says_when() {
+    let sessions = tempfile::tempdir().unwrap();
+    write(sessions.path(), A, Some(key(1)), b"\x1b[1mhello\x1b[0m\r\nworld\r\n", None, 1_793_023_327);
+    let seed = read(sessions.path(), A, Some(&key(1))).expect("reads");
+    assert!(seed.text.starts_with("\x1b[1mhello\x1b[0m\r\nworld\r\n"), "{:?}", seed.text);
+    let divider_line = seed.text.lines().last().unwrap();
+    assert!(
+        divider_line.contains("──── restored 20") && divider_line.ends_with("────\x1b[0m"),
+        "{divider_line:?}"
+    );
+    assert_eq!((seed.time, seed.ended.as_deref()), (1_793_023_327, None));
+}
+
+#[test]
+fn a_program_that_ended_is_said_to_have() {
+    let sessions = tempfile::tempdir().unwrap();
+    write(sessions.path(), A, Some(key(1)), b"bye\r\n", Some("exit:0"), 1);
+    assert_eq!(read(sessions.path(), A, Some(&key(1))).unwrap().ended.as_deref(), Some("exit:0"));
+}
+
+#[test]
+fn whatever_is_in_the_screen_only_text_and_colors_get_in() {
+    let sessions = tempfile::tempdir().unwrap();
+    write(
+        sessions.path(),
+        A,
+        Some(key(1)),
+        b"ok\x1b[6n\x1b]52;c;?\x07\x1b]0;t\x07\x1b[?1000h\x1b[31mred\x1b[0m\r\n",
+        None,
+        1,
+    );
+    let seed = read(sessions.path(), A, Some(&key(1))).unwrap();
+    assert!(!seed.text.contains("\x1b]") && !seed.text.contains("\x1b[6n") && !seed.text.contains("\x1b[?"));
+    assert!(seed.text.contains("\x1b[31mred"));
+}
+
+#[test]
+fn what_cannot_be_read_says_why() {
+    let sessions = tempfile::tempdir().unwrap();
+    assert_eq!(read(sessions.path(), A, Some(&key(1))), Err(Skipped::Missing));
+    write(sessions.path(), A, Some(key(1)), b"x\r\n", None, 1);
+    assert_eq!(read(sessions.path(), A, Some(&key(2))), Err(Skipped::NoScreen(Some(Issue::WrongKey))));
+    assert_eq!(read(sessions.path(), A, None), Err(Skipped::NoScreen(Some(Issue::NoKey))));
+    // A host that was never given a key left the folder and the shell and no screen.
+    write(sessions.path(), B, None, b"not written", None, 1);
+    assert_eq!(read(sessions.path(), B, Some(&key(1))), Err(Skipped::NoScreen(None)));
+    // A newer Wormhole's checkpoint is left as it is.
+    let manifest = sessions.path().join(A).join("g000000000001.manifest");
+    let newer = fs::read_to_string(&manifest).unwrap().replace("min_reader=1", "min_reader=7");
+    fs::write(&manifest, newer).unwrap();
+    assert_eq!(read(sessions.path(), A, Some(&key(1))), Err(Skipped::Newer));
+    // Nothing in it reads.
+    fs::create_dir(sessions.path().join(C)).unwrap();
+    fs::write(sessions.path().join(C).join("g000000000001.manifest"), b"junk").unwrap();
+    assert_eq!(read(sessions.path(), C, Some(&key(1))), Err(Skipped::Unusable));
+}
+
+#[test]
+fn the_folder_is_private_and_kept_out_of_backups() {
+    let parent = tempfile::tempdir().unwrap();
+    let dir = parent.path().join("sessions.noindex");
+    let mut excluded = Vec::new();
+    prepare_dir(&dir, |p| {
+        excluded.push(p.to_path_buf());
+        Ok(())
+    })
+    .unwrap();
+    assert_eq!(excluded, [dir.clone()]);
+    assert_eq!(wormhole_term::sys::fs::mode(&fs::metadata(&dir).unwrap()) & 0o777, 0o700);
+    // A folder that cannot be excluded still opens: that is a warning.
+    let again = parent.path().join("again");
+    prepare_dir(&again, |_| Err(io::Error::other("no"))).unwrap();
+    assert!(again.is_dir());
+}
+
+#[test]
+fn forgetting_removes_one_checkpoint_and_only_a_real_id_names_one() {
+    let sessions = tempfile::tempdir().unwrap();
+    write(sessions.path(), A, Some(key(1)), b"a\r\n", None, 1);
+    write(sessions.path(), B, Some(key(1)), b"b\r\n", None, 1);
+    forget(sessions.path(), A);
+    assert!(!sessions.path().join(A).exists() && sessions.path().join(B).is_dir());
+    forget(sessions.path(), "../b");
+    forget(sessions.path(), "");
+    assert!(sessions.path().join(B).is_dir());
+}
+
+fn age(sessions: &Path, id: &str, by: Duration, now: SystemTime) {
+    for entry in fs::read_dir(sessions.join(id)).unwrap().flatten() {
+        let file = fs::File::options().write(true).open(entry.path()).unwrap();
+        file.set_modified(now - by).unwrap();
+    }
+}
+
+#[test]
+fn the_sweep_takes_the_old_and_spares_the_running_and_the_recent() {
+    let sessions = tempfile::tempdir().unwrap();
+    let now = SystemTime::now();
+    for id in [A, B, C] {
+        write(sessions.path(), id, Some(key(1)), b"x\r\n", None, 1);
+    }
+    age(sessions.path(), A, Duration::from_secs(8 * 24 * 3600), now);
+    age(sessions.path(), B, Duration::from_secs(9 * 24 * 3600), now);
+    let running: HashSet<String> = [B.to_owned()].into();
+    assert_eq!(sweep(sessions.path(), &running, now), [A.to_owned()]);
+    assert!(!sessions.path().join(A).exists());
+    assert!(sessions.path().join(B).is_dir(), "its host still runs");
+    assert!(sessions.path().join(C).is_dir(), "a day old");
+}
+
+#[test]
+fn over_the_budget_the_oldest_go_first() {
+    let sessions = tempfile::tempdir().unwrap();
+    let now = SystemTime::now();
+    let big = vec![b'x'; 10_000];
+    for id in [A, B, C] {
+        write(sessions.path(), id, Some(key(1)), &big, None, 1);
+    }
+    age(sessions.path(), A, Duration::from_secs(3 * 3600), now);
+    age(sessions.path(), B, Duration::from_secs(2 * 3600), now);
+    age(sessions.path(), C, Duration::from_secs(3600), now);
+    // Room for about two of the three.
+    let removed = sweep_with(sessions.path(), &HashSet::new(), now, MAX_AGE, 25_000);
+    assert_eq!(removed, [A.to_owned()]);
+    assert!(sessions.path().join(B).is_dir() && sessions.path().join(C).is_dir());
+    // Nothing else to take once it fits.
+    assert!(sweep_with(sessions.path(), &HashSet::new(), now, MAX_AGE, 25_000).is_empty());
+}

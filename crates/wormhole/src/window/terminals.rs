@@ -420,6 +420,7 @@ fn spawn_options(
         cwd,
         tab_id: tab_id.to_string(),
         restore,
+        restore_styled: false,
         scrollback_lines: 0,
         allow_screen_checksum: false,
         allow_window_ops: false,
