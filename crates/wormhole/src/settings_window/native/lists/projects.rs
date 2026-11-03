@@ -66,10 +66,14 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &mut App) {
 }
 
 pub(super) fn load(cx: &mut App) {
-    if project::present(cx) {
-        let known = project::known_projects(cx);
-        super::cache_mut(cx).projects = known;
-    }
+    // Deferred: Settings can be opened from inside a window's update, and the list reads the windows' terminals.
+    cx.defer(|cx| {
+        if project::present(cx) && cx.has_global::<crate::settings_window::native::Native>() {
+            let known = project::known_projects(cx);
+            super::cache_mut(cx).projects = known;
+            crate::settings_window::native::push(cx);
+        }
+    });
 }
 
 pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
