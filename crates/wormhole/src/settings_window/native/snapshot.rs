@@ -14,7 +14,7 @@ use crate::fonts::FontCatalog;
 use crate::settings::SettingsStore;
 
 /// The row of the theme picker, which carries the import's failure.
-const THEME_ROW: &str = "Appearance:0:2";
+const THEME_ROW: &str = "Appearance:0:2"; // text: not shown (a key or page id of the native window, or a log line)
 
 pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
     let entries = themes::entries(cx);
@@ -63,7 +63,7 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
     }
     // What the app's own look is now (macOS's, or a devctl `appearance` override), for a window whose Mode is "Match system".
     let system = if s_is_light(cx) { "light" } else { "dark" };
-    values.insert("System:appearance".into(), system.into());
+    values.insert("System:appearance".into(), system.into()); // text: not shown (a key or page id of the native window, or a log line)
     let themes = themes::snapshot(&entries, s);
     let preview = preview::build(&entries, s, cx);
     let (lists, sheets) = lists::build(cx);

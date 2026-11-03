@@ -22,10 +22,10 @@ use crate::agent_access::{self, Approved, How};
 use crate::app_state::app;
 use crate::settings_window::native::agents_read::AgentsSnapshot;
 
-const GROUP_AGENTS: &str = "Agents:0";
-const GROUP_COMMAND_LINE: &str = "Agents:1";
-const GROUP_ACCESS: &str = "Agents:2";
-const GROUP_SKILLS: &str = "Agents:3";
+const GROUP_AGENTS: &str = "Agents:0"; // text: not shown (a key or page id of the native window, or a log line)
+const GROUP_COMMAND_LINE: &str = "Agents:1"; // text: not shown (a key or page id of the native window, or a log line)
+const GROUP_ACCESS: &str = "Agents:2"; // text: not shown (a key or page id of the native window, or a log line)
+const GROUP_SKILLS: &str = "Agents:3"; // text: not shown (a key or page id of the native window, or a log line)
 
 fn id_of(agent: &Agent) -> String {
     format!("agent-{:?}", agent.id).to_lowercase()

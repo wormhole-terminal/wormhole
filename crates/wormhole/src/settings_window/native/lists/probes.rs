@@ -26,7 +26,9 @@ use super::probe_words::{describe as describe_permission, verify_text};
 use crate::platform::auth::{self, AuthError};
 use crate::settings::settings;
 
-const GROUP: &str = "Extensions:0";
+/// The page this list belongs to.
+const PAGE: &str = "Extensions"; // text: not shown (a page id of the native window)
+const GROUP: &str = "Extensions:0"; // text: not shown (a key or page id of the native window, or a log line)
 
 /// What the Probes folder held when it was last read, with a request for each Probe that can be approved.
 pub(crate) struct Probes {
@@ -218,7 +220,7 @@ pub(super) fn show_folder(cx: &mut App) {
 
 pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     let mut parts = key.splitn(3, ':');
-    let (Some("Extensions"), Some(_), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
+    let (Some(PAGE), Some(_), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
         return false;
     };
     match action {

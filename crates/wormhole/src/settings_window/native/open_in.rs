@@ -42,7 +42,7 @@ pub(super) fn row(cx: &App) -> Row {
         None => resolved.app.bundle.clone(),
     };
     options.push(("-".into(), "-".into()));
-    options.push((CHOOSE.into(), word("Choose app…")));
+    options.push((CHOOSE.into(), word("Choose app…"))); // text: a native word, translated by its id
     let default = wormhole_core::platform::open_in::resolve("", &OpenIn::apps(cx)).app.bundle;
     Row { value, default, options }
 }

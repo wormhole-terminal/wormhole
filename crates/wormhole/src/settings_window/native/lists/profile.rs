@@ -24,6 +24,8 @@ use wormhole_core::view::sidebar::GroupColor;
 
 /// One edit of the profile, chosen by the field that was left.
 /// The agents that have a login folder of their own, in the order the page lists them.
+/// The page this list belongs to.
+const PAGE: &str = "Profile"; // text: not shown (a page id of the native window)
 const LOGIN_AGENTS: [(AgentId, &str, &str); 2] = [
     (AgentId::Claude, "Claude", "~/.claude-work"), // text: name (the agent's own name)
     (AgentId::Codex, "Codex", "~/.codex-work"),    // text: name (the agent's own name)
@@ -43,8 +45,8 @@ fn parse_env(text: &str) -> Result<BTreeMap<String, String>, String> {
 
 type Change = Box<dyn FnOnce(&mut Profile)>;
 
-const GROUP_FIELDS: &str = "Profile:0";
-const GROUP_DELETE: &str = "Profile:1";
+const GROUP_FIELDS: &str = "Profile:0"; // text: not shown (a key or page id of the native window, or a log line)
+const GROUP_DELETE: &str = "Profile:1"; // text: not shown (a key or page id of the native window, or a log line)
 
 fn active(cx: &App) -> Option<Profile> {
     app(cx).profiles.get(app(cx).active_profile()).cloned()
@@ -177,7 +179,7 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
 
 pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     let mut parts = key.splitn(3, ':');
-    let (Some("Profile"), Some(group), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
+    let (Some(PAGE), Some(group), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
         return false;
     };
     if id == "new" {
@@ -216,7 +218,7 @@ pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     let Some(value) = action.strip_prefix('=') else { return true };
     let value = value.trim().to_string();
     let change: Result<Change, String> = match id {
-        "name" if value.is_empty() => Err("a profile needs a name".into()),
+        "name" if value.is_empty() => Err("a profile needs a name".into()), // text: not shown (a key or page id of the native window, or a log line)
         "name" => Ok(Box::new(move |p| {
             p.name = value.clone();
         })),
@@ -229,7 +231,7 @@ pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
         })),
         "color" => match GroupColor::ALL.into_iter().find(|c| c.key() == value) {
             Some(color) => Ok(Box::new(move |p| p.color = color)),
-            None => Err(format!("no profile colour {value}")),
+            None => Err(format!("no profile colour {value}")), // text: not shown (a key or page id of the native window, or a log line)
         },
         "start" => Ok(Box::new(move |p| p.start_dir = value.clone())),
         "env" => parse_env(&value).map(|env: BTreeMap<String, String>| -> Box<dyn FnOnce(&mut Profile)> {

@@ -145,7 +145,7 @@ pub(super) fn options(id: &str, s: &Settings) -> Option<Vec<Choice>> {
     if id == "default-shell" {
         let mut shells = super::system::shell(s).1;
         shells.push(("-".into(), "-".into()));
-        shells.push(("edit_shells".into(), super::words::word("Edit shells…")));
+        shells.push(("edit_shells".into(), super::words::word("Edit shells…"))); // text: a native word, translated by its id
         return Some(shells);
     }
     if id == "density" {
@@ -169,6 +169,10 @@ pub(super) fn options(id: &str, s: &Settings) -> Option<Vec<Choice>> {
 }
 
 /// Write `value` into the row `id` (`suffix` names a sub-value). Whether it was understood.
+/// The two checkboxes of the translucent row, by the names the window gives them.
+const SETTINGS_WINDOW: &str = "Settings"; // text: not shown (a part of the native window's own row)
+const THEME_STUDIO: &str = "Theme Studio"; // text: not shown (a part of the native window's own row)
+
 pub(super) fn write(id: &str, suffix: &str, s: &mut Settings, value: &str, ctx: &Ctx) -> bool {
     if let Some(flag) = flag(id) {
         s.feature_flags.insert(flag.key().to_string(), value == "on");
@@ -208,12 +212,12 @@ pub(super) fn write(id: &str, suffix: &str, s: &mut Settings, value: &str, ctx: 
             true
         }
         "translucent" => match suffix {
-            "Settings" => {
+            SETTINGS_WINDOW => {
                 // text: not shown (values of the native window's own catalog)
                 s.settings_translucent = value == "on";
                 true
             }
-            "Theme Studio" => {
+            THEME_STUDIO => {
                 // text: not shown (values of the native window's own catalog)
                 s.studio_translucent = value == "on";
                 true

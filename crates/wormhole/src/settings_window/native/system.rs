@@ -31,11 +31,18 @@ use wormhole_core::ipc::control::COMMAND_NAME;
 use wormhole_core::terminal::cli_tool::{self, Status as CliStatus};
 
 /// The row of the Updates page that shows the version.
-const VERSION_ROW: &str = "Updates:1:0";
+const VERSION_ROW: &str = "Updates:1:0"; // text: not shown (a key or page id of the native window, or a log line)
 /// The Command line tool button of the Coding agents page.
-const CLI_TOOL_ROW: &str = "Agents:1:0";
+const CLI_TOOL_ROW: &str = "Agents:1:0"; // text: not shown (a key or page id of the native window, or a log line)
+/// The page whose buttons are the update card's.
+const UPDATES_PAGE: &str = "Updates:"; // text: not shown (a page key of the native window)
+/// The Advanced page's buttons.
+const DATA_FOLDER_ROW: &str = "Advanced:0:1"; // text: not shown (a row key of the native window)
+const LOGS_ROW: &str = "Advanced:0:2"; // text: not shown (a row key of the native window)
+const RESET_TIPS_ROW: &str = "Advanced:1:0"; // text: not shown (a row key of the native window)
+const DEV_TOOLS_ROW: &str = "Advanced:1:1"; // text: not shown (a row key of the native window)
 /// The Terminal page's Default terminal button.
-const DEFAULT_TERMINAL_ROW: &str = "Terminal:1:1";
+const DEFAULT_TERMINAL_ROW: &str = "Terminal:1:1"; // text: not shown (a key or page id of the native window, or a log line)
 
 /// Values the window shows that are not settings: the version, whether Wormhole is the default terminal.
 fn facts() -> Vec<(&'static str, String)> {
@@ -107,7 +114,7 @@ pub(super) fn quiet_notices(cx: &App) -> Vec<&'static str> {
     if matches!(updates.phase, UpdatePhase::Idle) && !updates.available() {
         Vec::new()
     } else {
-        vec!["Updates"]
+        vec!["Updates"] // text: not shown (a key or page id of the native window, or a log line)
     }
 }
 
@@ -204,7 +211,7 @@ pub(super) fn set_shell(s: &mut Settings, id: &str) -> bool {
 pub(super) fn perform(key: &str, id: &str, cx: &mut App) -> bool {
     let is = |wanted: &str| id == wanted;
     match key {
-        "Updates:" => {
+        UPDATES_PAGE => {
             if is("check_now") {
                 if !cx.global::<Updates>().busy() {
                     update::check_for_updates(true, cx);
@@ -236,20 +243,20 @@ pub(super) fn perform(key: &str, id: &str, cx: &mut App) -> bool {
             cli_tool_press();
             true
         }
-        "Advanced:0:1" => {
+        DATA_FOLDER_ROW => {
             crate::settings_window::native::paths::open_folder(&data_dir(), cx);
             true
         }
-        "Advanced:0:2" => {
+        LOGS_ROW => {
             crate::settings_window::native::paths::open_folder(&data_dir().join("logs"), cx);
             true
         }
-        "Advanced:1:0" => {
+        RESET_TIPS_ROW => {
             app_mut(cx).reset_tips();
             cx.refresh_windows();
             true
         }
-        "Advanced:1:1" => {
+        DEV_TOOLS_ROW => {
             crate::platform::dev_tools::open_settings(cx);
             true
         }

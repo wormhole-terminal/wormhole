@@ -33,8 +33,10 @@ fn feature_description(feature: Feature, standing: FeatureStanding) -> String {
     }
 }
 
-const GROUP_PROJECTS: &str = "Projects:0";
-const GROUP_DEFAULTS: &str = "Projects:1";
+/// The page this list belongs to.
+const PAGE: &str = "Projects"; // text: not shown (a page id of the native window)
+const GROUP_PROJECTS: &str = "Projects:0"; // text: not shown (a key or page id of the native window, or a log line)
+const GROUP_DEFAULTS: &str = "Projects:1"; // text: not shown (a key or page id of the native window, or a log line)
 
 /// The id of the "For" row (no feature is called that).
 const FOR: &str = "for";
@@ -192,7 +194,7 @@ pub(super) fn load(cx: &mut App) {
 
 pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     let mut parts = key.splitn(3, ':');
-    let (Some("Projects"), Some(group), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
+    let (Some(PAGE), Some(group), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
         return false;
     };
     if !project::present(cx) {

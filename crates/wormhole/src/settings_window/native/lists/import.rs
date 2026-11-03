@@ -16,7 +16,9 @@ use super::{Entry, import_sheets};
 use crate::settings::import::{self as shared, terminal_name};
 use crate::settings_window::native::paths::with_tilde;
 
-const GROUP: &str = "Import:0";
+/// The page this list belongs to.
+const PAGE: &str = "Import"; // text: not shown (a page id of the native window)
+const GROUP: &str = "Import:0"; // text: not shown (a key or page id of the native window, or a log line)
 
 pub(super) fn lists(out: &mut Map<String, Value>, sheets: &mut Map<String, Value>, cx: &App) {
     let mut list = Vec::new();
@@ -73,7 +75,7 @@ pub(super) fn load(cx: &mut App) {
 
 pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     let mut parts = key.splitn(3, ':');
-    let (Some("Import"), Some(_), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
+    let (Some(PAGE), Some(_), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
         return false;
     };
     // "apply=<the places in the proposal left ticked>"
