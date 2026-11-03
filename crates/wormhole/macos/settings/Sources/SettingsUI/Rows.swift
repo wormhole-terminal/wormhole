@@ -151,7 +151,6 @@ struct ControlView: View {
         case .folder:
             Button { m.perform(row.actionID, row.key) } label: { Image(systemName: "xmark") }.buttonStyle(.borderless).help(row.action)
         case .review: Btn(row.value) { sheeting = true }.sheet(isPresented: $sheeting) { ImportReviewSheet(row: row) }
-        case .compare: Button { sheeting = true } label: { HStack(spacing: 4) { Text(row.value).foregroundStyle(.secondary); Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary) } }.buttonStyle(.borderless).sheet(isPresented: $sheeting) { CompareSheet(row: row) }
         case .project: Btn(cur == "trusted" ? "Revoke" : "Trust with Touch ID…") { m.perform(cur == "trusted" ? "revoke" : "trust", row.key) }
         case .probe:
             if cur == "off" && !row.sheet.isEmpty { Btn("Turn on…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { ticked in approving = false; m.perform("approve=" + ticked, row.key) } } }

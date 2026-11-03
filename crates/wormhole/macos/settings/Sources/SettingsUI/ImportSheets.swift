@@ -63,11 +63,11 @@ struct ImportReviewSheet: View {
 
 /// How each terminal found compares with Wormhole: a strength and today's drawbacks, each with its sources.
 struct CompareSheet: View {
-    let row: Row
+    let id: String
     @Environment(SettingsModel.self) var m
     @Environment(\.dismiss) var dismiss
 
-    var data: [String: Any] { m.sheetDict(row.sheet) ?? [:] }
+    var data: [String: Any] { m.sheetDict(id) ?? [:] }
     var sections: [[String: Any]] { data["sections"] as? [[String: Any]] ?? [] }
 
     var body: some View {

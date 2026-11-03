@@ -21,7 +21,7 @@ struct ContentView: View {
                 }.formStyle(.grouped).scrollContentBackground(.hidden).multilineTextAlignment(.leading)
             }.background(Color(nsColor: .windowBackgroundColor)).ignoresSafeArea(edges: .top)
             .onChange(of: m.scrollTo) { _, v in if let v { withAnimation { proxy.scrollTo(v, anchor: .top) } } }
-            .sheet(isPresented: Binding(get: { m.infoSheet != nil }, set: { if !$0 { m.infoSheet = nil } })) { InfoSheet(id: m.infoSheet ?? "") }
+            .sheet(isPresented: Binding(get: { m.infoSheet != nil }, set: { if !$0 { m.infoSheet = nil } })) { if m.sheetDict(m.infoSheet ?? "")?["kind"] as? String == "compare" { CompareSheet(id: m.infoSheet ?? "") } else { InfoSheet(id: m.infoSheet ?? "") } }
         }
     }
 }

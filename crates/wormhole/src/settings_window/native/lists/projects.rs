@@ -12,6 +12,7 @@ use wormhole_core::project::{Feature, FeatureStanding};
 use wormhole_text::keys::{
     SETTINGS_PROJECTS_ALL_PROJECTS_DEFAULTS, SETTINGS_PROJECTS_DEFAULT_OFF, SETTINGS_PROJECTS_DEFAULT_ON,
     SETTINGS_PROJECTS_FOR, SETTINGS_PROJECTS_FOR_NOTE, SETTINGS_PROJECTS_OFF, SETTINGS_PROJECTS_ON,
+    settings_projects_missing_folder,
 };
 use wormhole_text::text;
 
@@ -97,7 +98,11 @@ fn for_entry(cx: &App) -> Value {
 
 fn feature_entries(root: &Path, cx: &App) -> Vec<Value> {
     let Some(info) = super::cache(cx).and_then(|cache| cache.selected.info.as_ref()) else {
-        return Vec::new();
+        // A folder that is no project (or is gone): say so, as the GPUI page does.
+        return vec![
+            Entry::new("missing", "value", &settings_projects_missing_folder(&root.display().to_string()))
+                .into_value(),
+        ];
     };
     project::api::feature_rows(root, info, cx)
         .into_iter()

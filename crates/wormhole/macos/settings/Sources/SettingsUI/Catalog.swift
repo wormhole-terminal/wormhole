@@ -5,7 +5,7 @@ import SwiftUI
 /// Words are a key plus English text: `Row.key + ".label"`, `".hint"`, `Page.id + ".title"`.
 
 public enum Kind: String {
-    case field, popup, link, danger, toggle, button, themes, swatches, checks, parts, font, agent, skill, key, update, value, project, probe, review, compare, dots, folder
+    case field, popup, link, danger, toggle, button, themes, swatches, checks, parts, font, agent, skill, key, update, value, project, probe, review, dots, folder
 }
 
 /// The stable id of a word: lowercase ASCII letters and digits, anything else one underscore. Ids of the catalog's own

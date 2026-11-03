@@ -51,14 +51,9 @@ pub(super) fn lists(out: &mut Map<String, Value>, sheets: &mut Map<String, Value
             }
         }
     }
+    // The page's own "Compare with Wormhole" row opens this one.
     if let Some(all) = super::cache(cx).and_then(|cache| cache.import.as_ref()) {
         sheets.insert(import_sheets::COMPARE.into(), import_sheets::compare(all));
-        list.push(
-            Entry::new(import_sheets::COMPARE, "compare", text(SETTINGS_IMPORT_COMPARE))
-                .with("sheet", import_sheets::COMPARE)
-                .with("value", wormhole_text::whole(all.len()).to_string())
-                .into_value(),
-        );
     }
     out.insert(GROUP.into(), Value::Array(list));
 }

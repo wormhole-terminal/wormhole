@@ -157,7 +157,7 @@ let standardPages: [Page] = [
     SettingGroup(title: "Found on this Mac", rows: [
     ]),
     SettingGroup(title: "", rows: [
-      Row("Compare with Wormhole", "", .link, options: [], value: "", info: ""),
+      Row("Compare with Wormhole", "", .link, options: [], value: "", info: "", sheet: "import-compare"),
     ]),
   ]),
   Page(id: "Updates", title: "Updates", preview: "", notice: ("info", "Development build: updates only work in released builds.", ""), footer: "", footerButtons: [], groups: [
