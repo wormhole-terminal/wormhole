@@ -73,6 +73,13 @@ impl ProgramStatus {
         }
     }
 
+    /// How long the report stands without a renewal, as of `now`: the wait for a timer armed on it.
+    /// `None` when none is set.
+    pub fn progress_remaining(&self, now: Instant) -> Option<Duration> {
+        let held = self.progress?;
+        Some(PROGRESS_TIMEOUT.saturating_sub(now.saturating_duration_since(held.at)))
+    }
+
     /// The OSC 9;4 progress as the program last set it, if it still stands.
     pub fn progress(&self) -> Option<Progress> {
         self.progress.map(|held| held.progress)
@@ -210,5 +217,18 @@ mod tests {
         assert!(!status.expire_progress(nearly + PROGRESS_TIMEOUT), "nothing left to expire");
         status.set_progress(p(ProgressState::Error, 5), start);
         assert!(status.expire_progress(start + PROGRESS_TIMEOUT), "every state expires");
+    }
+
+    #[test]
+    fn the_wait_for_a_timer_is_what_is_left_of_the_timeout() {
+        let start = Instant::now();
+        let mut status = ProgramStatus::default();
+        assert_eq!(status.progress_remaining(start), None);
+        status.set_progress(p(ProgressState::Normal, 5), start);
+        assert_eq!(status.progress_remaining(start), Some(PROGRESS_TIMEOUT));
+        let later = start + Duration::from_secs(10);
+        assert_eq!(status.progress_remaining(later), Some(PROGRESS_TIMEOUT - Duration::from_secs(10)));
+        assert_eq!(status.progress_remaining(start + PROGRESS_TIMEOUT), Some(Duration::ZERO));
+        assert_eq!(status.progress_remaining(start + PROGRESS_TIMEOUT * 2), Some(Duration::ZERO));
     }
 }

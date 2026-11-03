@@ -84,25 +84,39 @@ fn an_agents_hook_keeps_the_status_a_later_progress_bar_would_take(cx: &mut Test
 }
 
 #[gpui_kit::test]
-fn a_bar_nobody_renews_ends_on_the_tick_and_the_chrome_is_told(cx: &mut TestAppContext) {
-    if isolate("a_bar_nobody_renews_ends_on_the_tick_and_the_chrome_is_told") {
+fn a_bar_nobody_renews_ends_by_its_own_timer_and_the_window_is_told(cx: &mut TestAppContext) {
+    if isolate("a_bar_nobody_renews_ends_by_its_own_timer_and_the_window_is_told") {
         return;
     }
     let window = start(cx, 1);
     let t = terminal(cx, &window, 0);
+    let armed = |cx: &mut TestAppContext| t.read_with(cx, |t, _| t.progress_timer_armed_for_test());
+    let fire = |cx: &mut TestAppContext, at: Instant| {
+        cx.update(|cx| t.update(cx, |t, cx| t.fire_progress_timer(at, cx)));
+        cx.run_until_parked();
+    };
+    assert!(!armed(cx));
     let start_at = Instant::now();
     send(cx, &t, bar(ProgressState::Normal, 40), start_at);
     draw(cx, &window);
-    let expire = |cx: &mut TestAppContext, at: Instant| {
-        cx.update(|cx| t.update(cx, |t, _| t.expire_progress_for_test(at)))
-    };
-    assert!(!expire(cx, start_at + PROGRESS_TIMEOUT - Duration::from_millis(1)));
+    assert!(armed(cx), "a report arms the timer");
+    // Early: nothing to drop, and it waits again.
+    fire(cx, start_at + PROGRESS_TIMEOUT - Duration::from_millis(1));
     assert_eq!(now(cx, &t).0, Status::Busy);
-    // A renewal starts the clock over.
+    assert!(armed(cx));
+    // A renewal moves the deadline without a word to the terminal; the timer finds it when it fires.
     let renewed = start_at + Duration::from_secs(10);
     send(cx, &t, bar(ProgressState::Normal, 40), renewed);
-    assert!(!expire(cx, start_at + PROGRESS_TIMEOUT));
-    assert!(expire(cx, renewed + PROGRESS_TIMEOUT), "told, so the tick reports a change");
+    fire(cx, start_at + PROGRESS_TIMEOUT);
+    assert_eq!(now(cx, &t).0, Status::Busy, "renewed, so it stands");
+    fire(cx, renewed + PROGRESS_TIMEOUT);
     assert_eq!(now(cx, &t), (Status::Idle, None));
+    assert!(!armed(cx), "nothing left to wait for");
+    // The summary was announced, so the chrome is redrawn from it: the oracle checks the replay.
     draw(cx, &window);
+    // A removal cancels a timer that stands.
+    send(cx, &t, bar(ProgressState::Normal, 1), Instant::now());
+    assert!(armed(cx));
+    send(cx, &t, None, Instant::now());
+    assert!(!armed(cx));
 }

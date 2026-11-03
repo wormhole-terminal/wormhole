@@ -428,13 +428,8 @@ impl TerminalView {
     /// Called periodically by the workspace to settle busy → idle/done/failed: once the output has
     /// been quiet for a while, or at once when the shell's marks said the command finished. Seen
     /// at once, there is nothing to settle into: the result is on screen (and a failure's cue stays
-    /// on the row, see [`Failure`]). Also where a progress bar its program stopped renewing ends.
+    /// on the row, see [`Failure`]).
     pub fn tick(&mut self, is_active: bool, window_active: bool) -> bool {
-        let expired = self.expire_progress_at(Instant::now());
-        self.settle(is_active, window_active) | expired
-    }
-
-    fn settle(&mut self, is_active: bool, window_active: bool) -> bool {
         if self.reported() {
             return false;
         }
@@ -646,6 +641,7 @@ impl TerminalView {
             PtyEvent::Notify(notification) => self.on_notice(notification),
             PtyEvent::ProgramStatus => {
                 self.sync_reported(true);
+                self.sync_progress_timer(cx);
             }
             PtyEvent::Bell => {
                 let since = self.bell_counted.map(|at| at.elapsed());
