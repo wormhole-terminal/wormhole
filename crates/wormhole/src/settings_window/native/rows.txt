@@ -27,6 +27,7 @@ Appearance:3:0 borders
 Appearance:3:1 column-dividers
 Appearance:3:2 status-bar
 Appearance:3:3 icon-animations
+Appearance:4:0 title-row
 Appearance:5:0 icon-theme
 Fonts:0:0 font-terminal
 Fonts:0:1 line-height

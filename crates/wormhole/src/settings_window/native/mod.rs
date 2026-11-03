@@ -10,6 +10,7 @@
 //! settings global, so a change made anywhere (the window itself, a file edit the config watcher reads, devctl)
 //! reaches it the same way, with no timer on either side and no file watching of this module's own.
 
+mod accent;
 mod actions;
 mod apply;
 mod codec;

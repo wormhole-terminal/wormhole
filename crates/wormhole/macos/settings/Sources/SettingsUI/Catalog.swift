@@ -117,7 +117,7 @@ public struct SettingsCatalog {
             d[row.key] = row.defaultValue
             if row.kind == .font { d[row.key + "#size"] = String(row.size) }
             for c in row.checks { d[row.key + c] = row.checksOn.contains(c) ? "on" : "off" }
-            if row.kind == .parts { for (name, on) in titleParts { d[row.key + name] = on ? "on" : "off" } }
+            if row.kind == .parts { for (name, on) in titleParts { d[row.key + "#" + titlePartID[name, default: name]] = on ? "on" : "off" } }
         } } }
         return d
     }
@@ -168,6 +168,10 @@ let previewCaptionBase = [
 /// The title row's parts: name, on by default (Appearance → Title row). The first five sit left of the divider.
 let titleParts: [(String, Bool)] = [("Folder", true), ("Branch", true), ("Branch status", true), ("Terminal name", true), ("Terminal status", true),
     ("Agent model and context", true), ("Open ports", true), ("Pull request", false), ("Open in…", true), ("Split buttons", true)]
+/// The id the host knows each part by (a sub-value of the row: `Appearance:4:0#folder`).
+let titlePartID = ["Folder": "folder", "Branch": "branch", "Branch status": "branch_status", "Terminal name": "terminal",
+    "Terminal status": "terminal_status", "Agent model and context": "agent_gauge", "Open ports": "ports",
+    "Pull request": "pull_request", "Open in…": "open_in", "Split buttons": "splits"]
 let titlePartText = ["Folder": "wormhole", "Branch": "main", "Branch status": "↑2", "Terminal name": "cargo test", "Terminal status": "Working",
     "Agent model and context": "Opus · 42%", "Open ports": ":3000", "Pull request": "#128", "Open in…": "Zed", "Split buttons": "◫"]
 

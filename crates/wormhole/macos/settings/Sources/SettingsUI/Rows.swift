@@ -156,7 +156,7 @@ struct PartsRows: View {
             if p.name == "-" {
                 LabeledContent { EmptyView() } label: { VStack(alignment: .leading, spacing: 1) { Text("Flexible space").foregroundStyle(.secondary); Text("Parts above sit at the left, below at the right").role(.body).foregroundStyle(.secondary) } }
             } else {
-                let key = "Appearance:4:0" + p.name
+                let key = "Appearance:4:0#" + titlePartID[p.name, default: p.name]
                 Toggle(isOn: Binding(get: { m.on(key) }, set: { m.set(key, $0 ? "on" : "off") })) {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(p.name)

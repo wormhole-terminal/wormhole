@@ -10,7 +10,7 @@ struct WindowPreview: View {
         let blur = m.on("Appearance", 2, 1), glass = m.on("Appearance", 2, 2)
         let dividers = m.on("Appearance", 3, 1), status = m.on("Appearance", 3, 2)
         let ln = m.line(t)
-        let shown = titleParts.filter { m.on("Appearance:4:0" + $0.0) }.map(\.0)
+        let shown = titleParts.filter { m.on("Appearance:4:0#" + titlePartID[$0.0, default: $0.0]) }.map(\.0)
         let left = shown.filter { ["Folder", "Branch", "Branch status", "Terminal name", "Terminal status"].contains($0) }
         let right = shown.filter { !left.contains($0) }
         let branch = m.swatch("Appearance:1:1") ?? th.green

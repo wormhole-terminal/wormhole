@@ -14,7 +14,7 @@ use wormhole_core::view::sidebar::Density;
 use wormhole_text::keys::{SETTINGS_APPEARANCE_PAIRING_BOTH, SETTINGS_APPEARANCE_PAIRING_SEPARATE};
 use wormhole_text::text;
 
-use super::themes;
+use super::{accent, themes};
 use crate::settings_window::registry::{self, Control, Current};
 
 /// What the codecs may need besides the settings: the themes.
@@ -78,7 +78,12 @@ pub(super) fn read(id: &str, s: &Settings, ctx: &Ctx) -> Vec<(&'static str, Stri
     if let Some(slot) = font_slot(id) {
         return vec![("", family_words(slot, s)), ("#size", format!("{}", s.slot_size(slot).round()))];
     }
+    if accent::is_colour_row(id) {
+        return accent::read_colour(id, s);
+    }
     match id {
+        "title-row" => accent::read_title(s),
+        "icon-theme" => accent::read_icon_theme(s),
         "theme-pairing" => {
             let words = if ctx.separate(s) {
                 SETTINGS_APPEARANCE_PAIRING_SEPARATE
@@ -111,6 +116,9 @@ pub(super) fn read(id: &str, s: &Settings, ctx: &Ctx) -> Vec<(&'static str, Stri
 
 /// The options a row offers, when it is a menu.
 pub(super) fn options(id: &str, s: &Settings) -> Option<Vec<String>> {
+    if id == "icon-theme" {
+        return Some(accent::icon_theme_options(s));
+    }
     if id == "density" {
         return Some(Density::ALL.iter().map(|d| d.label().to_string()).collect());
     }
@@ -139,7 +147,12 @@ pub(super) fn write(id: &str, suffix: &str, s: &mut Settings, value: &str, ctx: 
     if let Some(slot) = font_slot(id) {
         return write_font(slot, suffix, s, value);
     }
+    if accent::is_colour_row(id) {
+        return accent::write_colour(id, suffix, s, value);
+    }
     match id {
+        "title-row" => accent::write_title(suffix, s, value),
+        "icon-theme" => accent::write_icon_theme(s, value),
         "density" => match Density::ALL.iter().find(|d| d.label() == value) {
             Some(density) => {
                 s.density = *density;
