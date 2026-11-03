@@ -19,7 +19,7 @@ use crate::features::git::changes::Changes;
 use crate::features::git::open_file::OpenFile;
 use crate::settings::UiColors;
 use crate::settings::{settings_in, store_in, ui_in};
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, TextRole};
 use crate::terminal_view::TerminalView;
 use crate::theme_bridge::token;
 use crate::window::facts::WindowFacts;
