@@ -10,6 +10,10 @@ use wormhole_core::agents::skill::{self, State as SkillState};
 use wormhole_core::agents::{self, AGENTS, Agent, AgentId, Tile};
 use wormhole_core::ipc::access::Capability;
 use wormhole_core::ipc::control::doctor::mcp_add_command;
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
 use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 

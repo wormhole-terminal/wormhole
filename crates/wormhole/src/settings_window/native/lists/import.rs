@@ -5,6 +5,10 @@
 use gpui_kit::App;
 use serde_json::{Map, Value};
 use wormhole_core::import::{Found, Proposed, Setting, visible};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
 use wormhole_text::keys::*;
 use wormhole_text::text;
 

@@ -7,6 +7,10 @@ use std::collections::BTreeMap;
 use gpui_kit::App;
 use serde_json::{Map, Value};
 use wormhole_core::config::profile::{AgentLogin, GitIdentity, Profile};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
 use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
@@ -14,6 +18,9 @@ use super::Entry;
 use crate::app_state::{AppState, app, app_mut};
 use crate::settings_window::registry::row_label;
 use crate::settings_window::sections::{LOGIN_AGENTS, parse_env};
+
+/// One edit of the profile, chosen by the field that was left.
+type Change = Box<dyn FnOnce(&mut Profile)>;
 
 const GROUP_FIELDS: &str = "Profile:0";
 const GROUP_DELETE: &str = "Profile:1";
@@ -119,7 +126,7 @@ pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
     }
     let Some(value) = name.strip_prefix('=') else { return true };
     let value = value.trim().to_string();
-    let change: Result<Box<dyn FnOnce(&mut Profile)>, String> = match id {
+    let change: Result<Change, String> = match id {
         "name" if value.is_empty() => Err("a profile needs a name".into()),
         "name" => Ok(Box::new(move |p| {
             p.name = value.clone();
