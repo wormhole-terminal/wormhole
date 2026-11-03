@@ -11,75 +11,6 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Help → Session Hosts (while Persistent terminals is on) opens a window that shows every session host:
   its processes, version and protocol against the app's, whether it answers, which terminal holds it
   and how that connection is doing, with End, Forget and a copy of the details for a bug report.
-- Settings buttons, switches, chips, notices, menus, group headings, tile rows, rows that open more, the preview
-  card and the footer lines are drawn from the design's markup: three button styles (normal, primary, destructive)
-  with no icons, a 34 by 20 switch, an open menu with 24 point rows filled with the primary, a profile row with
-  up-down chevrons, and the Preview badge in the primary. Opacity and Line height are menus (a value set by hand
-  stays as an extra checked item), "Also translucent" sits under its label, Motion has one preview card on top,
-  Updates shows its development-build notice at the top and what an update check sends behind a row, the fonts
-  and icon themes folders are a line under their groups, an empty list is a row like the others, and Import's
-  terminals are tile rows. Profile's Environment, Git identity and Agent logins rows say what is in them (None, From ~/.gitconfig, Shared). The page's sentence under its title, the "Settings" title
-  over the sidebar and the Preview dots are gone, and Rescan PATH, Scan again and New profile sit on their page's
-  last line.
-- The Settings sidebar and rows are drawn from the design's own markup, so their sizes match it: a 240 wide
-  sidebar with 24 high sub-rows, rows 40 high with a 13 px label, the changed dot before the label, and the
-  config key, reset arrow and (i) at the design's sizes.
-- Settings pages use the designed words and groups: Terminal's Shells and Worktrees folder are rows that open more
-  (with no footer line about config.json), Appearance has a Details group, Terminals & sidebar is grouped as
-  Layout, Groups, Shortcuts and Row details, and warnings stay under their rows while other hints sit behind the (i).
-- Settings → Import lists each terminal found as a row with the file it was read from and an Import… button, and
-  "Compare with Wormhole" opens how they compare in a sheet.
-- Every group of rows in Settings sits in one rounded card under its heading, with a line between the rows only while
-  Borders is on. With Borders off, menus, outlined buttons, chips and text fields keep their shape with a
-  soft fill instead of an outline, in Settings and in the main window (the Changes panel's "vs HEAD").
-- Settings shows each page's live preview as a card at the top of the page, under a Preview label with a caption,
-  instead of in a column at the right of the window, which now opens 840 wide. Terminal shows two split terminals,
-  and Changes & diffs the Changes panel with a diff, both following the page's options.
-- The Settings sidebar lists Terminal first, then Appearance and Fonts, then Terminals & sidebar, Changes &
-  diffs, Notifications and Coding agents, then Menu bar & hotkey, Import, Updates and Advanced, with the
-  pages still being built under a Preview heading. The open page shows its groups under it, and a click
-  on one scrolls the page there; the list scrolls when they run long. Rows are 28 high with room between
-  them, the profile is a card above the list, and every row can be reached with ⇥ and ↑ ↓ and is read out
-  by VoiceOver. While you search, the sidebar shows how many settings each page holds instead of its groups.
-  Each row has a coloured tile with its icon, in a shade of its own for Light and Dark, and the open page's
-  row is marked in the theme's primary colour.
-- Coding agents, Probes, trusted projects, approved programs and the update status in Settings are one kind of
-  row: a tile (an agent on its own colour, a Probe or project with its icon), the name with a solid chip for
-  its state, one line under it, and the buttons on the right edge, every row the same height. A list with
-  nothing in it (no coding agent found, no Probes, no trusted projects, no terminals to import from) says so
-  in a card that says what to do.
-- Settings → Coding agents is shorter. Each agent on this Mac is one row with a line that says how its status
-  reaches Wormhole ("Exact status through hooks", "Status read from its output"); where the hooks go is behind
-  the (i). Hooks that are on show a "Hooks on" menu (Repair Hooks, Remove Hooks, Reveal Hook File in Finder),
-  an agent without them has Add Hooks, and one whose hooks are partly missing says "Needs repair" and has Repair
-  Hooks. The agents Wormhole recognises but doesn't find are one row, "Other agents Wormhole recognises", that
-  opens the list, and the counts across the top are gone (the rows and that row hold the same facts). Skill and
-  MCP shows each agent's skill in one line, with the command that adds Wormhole over MCP under its row instead
-  of beside it, where it ran into the label. A last line points to Notifications and opens how status works,
-  replacing the "Notify me…" row.
-- Settings rows show their config key under the pointer, and a click on it copies it and says "Copied"
-  for a moment. Holding ⌥ shows every key on the page. A right click on a row (or ⌃↩ on one of its
-  controls, or VoiceOver's Show menu) offers Copy Key, Copy as JSON (the key with its current value, ready
-  for `config.json`) and Reset to Default.
-- Every Settings choice that was a row of buttons is a menu showing the current value, opened with a click,
-  ↩ or Space and chosen with ↑ ↓ and ↩, and VoiceOver reads it as a pop-up button with its value. Tab width
-  is a menu of 4, 2 and 8 in place of the minus and plus, and "A command finishes" is one menu (After 10 s,
-  30 s, 1 min or Off) in place of a threshold beside its switch. A value written in `config.json` that a menu
-  does not list (a tab width of 3, a threshold of 45 s) is shown as it is and kept until you choose another.
-  Theme mode lists Match system first, and the density menu still previews each option in the sidebar.
-- The primary colour and the branch colour in Settings are one colour control: a swatch with the colour's name
-  (or its code), opening the theme's own colour, the eight folder colours as the theme draws them, and
-  Custom…, with an area for saturation and brightness, a hue bar and a field for a hex code (↩ applies it, and
-  what isn't a colour is refused and says so). The branch can also follow the primary. Every colour can be
-  chosen, black and white too; a colour written in `config.json` shows as it is, and ⇥, ↩, the arrows and Esc
-  work it by keyboard.
-- Settings has a Changed page, first in the sidebar while any setting differs from its default, with how many
-  do. It lists them by page, each in its own control with its default beside it and a reset arrow, with Copy as
-  JSON (the changed values, ready for `config.json`) and Reset All…, which asks first.
-
-- Settings → Updates starts with where the update stands: up to date, available with its release notes read as
-  headings, lists and paragraphs and the buttons at the right, downloading, or installed. Version, Update
-  automatically and Channel follow, then Privacy. The development-build note is a notice at the top.
 
 ### Changed
 
@@ -97,24 +28,15 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   are not available (a network volume). Build output in ignored folders no longer causes reads.
 - Drawing the title row no longer asks the system where the apps in Open in… are on every frame.
 - Settings is now a native macOS window: the Mac's own sidebar, controls, menus, sheets and file panels, with
-  live previews, the same settings and the same keys in `config.json`. It opens from ⌘, the menu bar, the command
-  palette and the menu bar extra, and its words follow the interface language. The window Wormhole drew itself,
-  and the Native Settings window feature flag that chose between the two, are gone.
-- Settings rows are more compact. Explanations open from an info button, while warnings stay visible;
-  the full descriptions remain searchable and available to VoiceOver.
-
-- Settings shows one notice for information, warnings and errors, drawn on a solid blue, amber or red with
-  its button on the same colour; every group inside a page has the same heading; every preview sits in the
-  same frame; and every button in a row is as tall as the menus beside it.
-
+  live previews that follow each page's options. The pages keep their purpose, the settings and the keys in
+  `config.json` are the same, and it opens from ⌘, the menu bar, the command palette and the menu bar extra. Its
+  words follow the interface language, and the Native Settings window feature flag that chose between this
+  window and the one Wormhole drew itself is gone.
 - The lines around cards, columns, the sidebar and panels, between settings rows, and around buttons, menus and
   fields are off by default: surfaces are told apart by their shade. After updating, Wormhole looks flatter.
   Settings → Appearance → Details → Borders (`borders` in `config.json`) brings the lines back; Increase Contrast
   keeps them. Selection and focus rings, menu separators, the checkbox's outline, Column dividers and the
   split terminals' hairline are not affected.
-
-- Settings → Advanced → Reset to defaults… asks with the system's alert instead of a strip under the button:
-  Reset is red and Cancel is the default.
 
 ### Fixed
 
