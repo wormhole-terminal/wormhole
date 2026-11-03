@@ -72,7 +72,7 @@ group "Code"
 group "Interface"
   blurb ""
   aside ""
-group "Your fonts"
+group ""
   blurb ""
   aside ""
 section Sessions
@@ -201,6 +201,9 @@ section Motion
   title "Motion"
   intro "How things move. Pick one for each, and watch it loop in the preview under it."
   nav "Preview"
+group ""
+  blurb ""
+  aside ""
 group "Terminals list"
   blurb ""
   aside ""
@@ -427,11 +430,7 @@ entry Fonts font-interface
 entry Fonts fonts-folder
   label "Fonts folder"
   description "JetBrains Mono comes with Wormhole. To use other fonts without installing them, put .ttf, .otf or .ttc files (or folders of them) here: they're listed under Custom within seconds"
-  keywords "custom bundled ttf otf ttc folder"
-entry Fonts custom-fonts
-  label "Custom fonts"
-  description ""
-  keywords "custom families"
+  keywords "custom bundled ttf otf ttc folder families"
 entry Sessions sidebar-preview
   label "Live preview"
   description ""
@@ -696,6 +695,10 @@ entry Advanced reset-settings
   label "Reset all settings"
   description "Your terminals, notes and themes are kept"
   keywords "defaults reset restore"
+entry Motion motion-preview
+  label "Live preview"
+  description ""
+  keywords "preview loop animation motion"
 entry Motion motion-insert
   label "A terminal opens or closes"
   description "How its row comes into the list and leaves it"

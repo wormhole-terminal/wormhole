@@ -494,18 +494,7 @@ mod tests {
                 "scrollback",
                 "restore-text",
                 "meta",
-                "blur",
-                "icon-theme",
-                "font-ligatures",
-                "font-code",
-                "font-interface",
-                "notify-command-failed",
-                "notify-group-bursts",
-                "hotkey",
-                "jump-waiting-key",
-                "auto-update",
-                "open-config",
-                "reset-settings"
+                "reset-settings",
             ]
         );
         let (_, _, minimap) = entry("minimap").expect("minimap row");
