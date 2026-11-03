@@ -39,9 +39,11 @@ use self::processes::Signatures;
 use self::scripted::Asker;
 use crate::app_state::OpenWindow;
 
-pub(crate) use self::approved::{Approved, How, approved, forget_listing, revoke, set_capability};
+#[cfg(any(test, feature = "devctl"))]
+pub(crate) use self::approved::Which;
 #[cfg(feature = "devctl")]
-pub(crate) use self::approved::{Which, now_seconds};
+pub(crate) use self::approved::now_seconds;
+pub(crate) use self::approved::{Approved, How, approved, forget_listing, revoke, set_capability};
 #[cfg(test)]
 pub(crate) use self::ask::Waiting;
 #[cfg(any(test, feature = "devctl"))]

@@ -1,5 +1,5 @@
 //! AppKit's side of `platform::native_settings`: the SwiftUI window of `macos/settings/`, linked as a static
-//! library by `build.rs`. It exposes five C functions (`Host.swift`); text crosses as NUL-terminated UTF-8.
+//! library by `build.rs`. Its five C functions are in `Host.swift`; text crosses as NUL-terminated UTF-8.
 
 use std::ffi::{CStr, CString, c_char};
 use std::sync::OnceLock;
@@ -12,6 +12,7 @@ unsafe extern "C" {
     fn wh_settings_update(json: *const c_char);
     fn wh_settings_is_open() -> bool;
     fn wh_settings_shot(path: *const c_char) -> bool;
+    #[cfg(feature = "devctl")]
     fn wh_settings_look(out: *mut c_char, cap: usize) -> bool;
 }
 
@@ -74,6 +75,7 @@ pub fn shot(path: &str) -> bool {
 }
 
 /// The window's look as it is in force (devctl): the flags AppKit holds, `None` while the window is closed.
+#[cfg(feature = "devctl")]
 pub fn look() -> Option<String> {
     let mut buf = [0 as c_char; 512];
     // SAFETY: `buf` is writable for the `cap` given; Swift writes at most `cap - 1` bytes and a NUL.
