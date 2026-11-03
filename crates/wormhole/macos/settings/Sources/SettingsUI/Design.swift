@@ -10,6 +10,12 @@ enum Space {
     static let sidebarWidth: CGFloat = 240, contentWidth: CGFloat = 600, pageInset: CGFloat = 30
 }
 
+/// The sidebar's sub-pages: the guide line beside them, their indent, the gap after an open group, and the motion.
+enum Nav {
+    static let guideWidth: CGFloat = 1, guideSelectedWidth: CGFloat = 2, indent: CGFloat = 10, groupGap: CGFloat = 6
+    static func motion(_ reduce: Bool) -> Animation? { reduce ? nil : .snappy(duration: 0.2) }
+}
+
 enum Radius {
     static let chip: CGFloat = 5, control: CGFloat = 6, tile: CGFloat = 7, window: CGFloat = 8, card: CGFloat = 10, banner: CGFloat = 14
 }

@@ -9,10 +9,15 @@ use wormhole_core::config::settings_index::SectionId as Section;
 use super::native::{self, Show};
 use super::open_settings;
 
-/// devctl `settings` / `settings-section <page>`: the window, on that page (empty: where it was).
+/// devctl `settings` / `settings-section <page>[/<group>]`: the window, on that page (empty: where it was), and on
+/// one of its sub-pages when a group's title or index follows a slash.
 pub(crate) fn section(name: &str, cx: &mut App) {
-    let section = Section::ALL.into_iter().find(|s| format!("{s:?}").eq_ignore_ascii_case(name));
+    let (page, group) = name.split_once('/').map_or((name, None), |(page, group)| (page, Some(group)));
+    let section = Section::ALL.into_iter().find(|s| format!("{s:?}").eq_ignore_ascii_case(page));
     open_settings(section, cx);
+    if let (Some(section), Some(group)) = (section, group) {
+        native::show(Show { page: Some(format!("{section:?}/{group}")), ..Show::default() }, cx);
+    }
 }
 
 /// devctl `settings-search <text>`: type into the window's search (empty clears it).

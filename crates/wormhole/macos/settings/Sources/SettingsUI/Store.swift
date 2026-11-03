@@ -133,16 +133,20 @@ struct Words {
 @MainActor @Observable public final class SettingsModel {
     let store: any SettingsStore
     let catalog: SettingsCatalog
-    var page: String
+    var sel: Sel { didSet { record(from: oldValue) } }
     var search = ""
-    var scrollTo: String? = nil
+    /// The pages that show their sub-pages in the sidebar, and the selections back and forward walk.
+    var expanded: Set<String> = []
+    @ObservationIgnored var back: [Sel] = []
+    @ObservationIgnored var fwd: [Sel] = []
+    @ObservationIgnored var navigating = false
     var hoverFont: String? = nil
     var specimenTab = "Terminal"
     /// The explanation sheet that is open (a host sheet's id), nil when none.
     var infoSheet: String? = nil
 
     public init(store: any SettingsStore, catalog: SettingsCatalog = .standard, page: String = "Terminal") {
-        self.store = store; self.catalog = catalog; self.page = page
+        self.store = store; self.catalog = catalog; self.sel = Sel(page: page)
     }
     /// The words of the window, in the host's language.
     var words: Words { let s = store; return Words { _ = s.revision; return s.word(wordID($0)) ?? $0 } }

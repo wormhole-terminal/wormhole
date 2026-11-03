@@ -143,7 +143,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     }
 
     private func show(_ w: NSWindow, page: String?, behind: Bool) {
-        if let page, !page.isEmpty { model?.page = page; model?.search = "" }
+        if let page, !page.isEmpty { model?.go(page) }
         if behind {
             w.orderBack(nil)
         } else {
@@ -161,9 +161,10 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
         }
         // Where the app wants the window to go (the palette's setting, a script): a page, a row to scroll to, a search.
         if let show = json["show"] as? [String: Any] {
-            if let page = show["page"] as? String, !page.isEmpty { model?.page = page; model?.search = "" }
+            if let page = show["page"] as? String, !page.isEmpty { model?.go(page) }
             if let search = show["search"] as? String { model?.search = search }
-            if let row = show["scroll"] as? String, !row.isEmpty { model?.scrollTo = row }
+            // A row ("<page>:<group>:<row>") is shown by selecting its group.
+            if let row = show["scroll"] as? String, !row.isEmpty { let k = row.split(separator: ":"); if k.count > 1 { model?.go("\(k[0])/\(k[1])") } }
         }
     }
 

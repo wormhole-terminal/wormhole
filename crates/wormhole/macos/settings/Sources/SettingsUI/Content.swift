@@ -4,12 +4,12 @@ import SwiftUI
 struct ContentView: View {
     @Environment(SettingsModel.self) var m
     @Environment(\.tok) var t
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
     var title: String {
         m.search.isEmpty ? (m.page == "Changed" ? m.w("Changed") : m.catalog.page(m.page).map { m.w($0.title) } ?? "") : m.w("Search")
     }
     var body: some View {
-        ScrollViewReader { proxy in
-          GeometryReader { geo in
+        GeometryReader { geo in
             // The page's column is centred and capped, but the scroller stays at the window's right edge:
             // the Form spans the whole detail and its content margins make the column.
             let side = max(0, (geo.size.width - Space.contentWidth) / 2)
@@ -22,15 +22,16 @@ struct ContentView: View {
                 Group {
                     if !m.search.isEmpty { SearchResults() }
                     else if m.page == "Changed" { ChangedPage() }
-                    else if let p = m.catalog.page(m.page) { PageView(page: p) }
-                }.formStyle(.grouped).scrollContentBackground(.hidden).multilineTextAlignment(.leading).contentMargins(.horizontal, side, for: .scrollContent)
+                    else if let p = m.catalog.page(m.page) { PageView(page: p, group: p.subpages.isEmpty ? nil : m.shownGroup) }
+                }.id(m.search.isEmpty ? m.sel : Sel(page: "")).transition(.opacity)
+                .formStyle(.grouped).scrollContentBackground(.hidden).multilineTextAlignment(.leading).contentMargins(.horizontal, side, for: .scrollContent)
             }.frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(nsColor: .windowBackgroundColor))
-            .onChange(of: m.scrollTo) { _, v in if let v { withAnimation { proxy.scrollTo(v, anchor: .top) } } }
+            .animation(Nav.motion(reduceMotion), value: m.sel)
+            .background(NavKeys())
             .sheet(isPresented: Binding(get: { m.sheetDict("new-profile")?["open"] as? Bool ?? false }, set: { if !$0 { m.perform("new_profile_cancel", "Profile:") } })) { NewProfileSheet() }
             .sheet(isPresented: Binding(get: { m.infoSheet != nil }, set: { if !$0 { m.infoSheet = nil } })) { if m.sheetDict(m.infoSheet ?? "")?["kind"] as? String == "compare" { CompareSheet(id: m.infoSheet ?? "") } else { InfoSheet(id: m.infoSheet ?? "") } }
           }
-        }
     }
 }
 
@@ -62,6 +63,8 @@ struct InfoSheet: View {
 
 struct PageView: View {
     let page: Page
+    /// The sub-page to show alone (a group's index), or nil for the whole page.
+    var group: Int? = nil
     @Environment(SettingsModel.self) var m
     @Environment(\.tok) var t
     var body: some View {
@@ -75,13 +78,13 @@ struct PageView: View {
                     }
                 }
             }
-            if !page.preview.isEmpty { PreviewCard(page: page) }
-            ForEach(Array(page.groups.enumerated()), id: \.offset) { g, grp in
+            if !page.preview.isEmpty, group.map(page.previews) ?? true { PreviewCard(page: page) }
+            ForEach(Array(page.groups.enumerated()).filter { group == nil || $0.offset == group }, id: \.offset) { g, grp in
                 Section {
                     ForEach(m.rows(page, g), id: \.key) { RowView(row: $0) }
-                } header: { if !grp.title.isEmpty { Text(m.w(grp.title)) } }.id(grp.title)
+                } header: { if !grp.title.isEmpty { Text(m.w(grp.title)) } }
             }
-            if !page.footer.isEmpty {
+            if !page.footer.isEmpty, group.map({ $0 == page.groups.count - 1 }) ?? true {
                 Section { HStack(spacing: Space.s2) { Text(m.w(page.footer)).role(.caption).foregroundStyle(.secondary); ForEach(page.footerButtons, id: \.self) { b in Btn(b) { footer(snakeID(b)) } } } }
             }
         }

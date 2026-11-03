@@ -33,35 +33,53 @@ public struct SettingsView: View {
     }
 }
 
-/// The sidebar: a native source list with the board's nav tiles. Under the open page, its groups scroll to.
+/// The sidebar: a native source list with the board's nav tiles. A page of several groups opens into its sub-pages:
+/// each is a selection of its own (page, group) that the content shows alone.
 struct SidebarView: View {
     @Environment(SettingsModel.self) var m
     @Environment(\.tok) var t
-    @State private var activeGroup: String?
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
 
     var body: some View {
-        @Bindable var s = m
-        List(selection: Binding(get: { m.search.isEmpty ? m.page : nil }, set: { if let v = $0 { m.page = v; m.search = ""; m.scrollTo = nil; activeGroup = nil } })) {
-            profileRow.tag("Profile")
-            if !m.changed.isEmpty || m.page == "Changed", let n = m.catalog.navItems["Changed"] { navRow(n, badge: m.changed.count).tag("Changed") }
+        List(selection: Binding(get: { m.search.isEmpty ? m.sel : nil }, set: { if let v = $0 { m.sel = v; m.search = "" } })) {
+            profileRow.tag(Sel(page: "Profile"))
+            if !m.changed.isEmpty || m.page == "Changed", let n = m.catalog.navItems["Changed"] { navRow(n, badge: m.changed.count).tag(Sel(page: "Changed")) }
             ForEach(Array(m.catalog.navGroups.enumerated()), id: \.offset) { _, grp in
                 Section {
                     ForEach(grp.1, id: \.self) { id in
                         if let n = m.catalog.navItems[id] {
-                            navRow(n).tag(id)
-                            if m.page == id && m.search.isEmpty, let p = m.catalog.page(id) {
-                                ForEach(p.groups.filter { !$0.title.isEmpty }, id: \.title) { g in
-                                    let on = (activeGroup ?? p.groups.first { !$0.title.isEmpty }?.title) == g.title
-                                    Button { activeGroup = g.title; m.scrollTo = g.title } label: {
-                                        Text(m.w(g.title)).fontWeight(on ? .semibold : .regular).foregroundStyle(on ? .primary : .secondary)
-                                    }.buttonStyle(.plain).padding(.leading, 28)
-                                }
-                            }
+                            if let p = m.catalog.page(id), !p.subpages.isEmpty {
+                                DisclosureGroup(isExpanded: open(id)) {
+                                    ForEach(p.subpages, id: \.self) { g in subRow(p, g) }
+                                } label: { navRow(n).tag(Sel(page: id)) }
+                            } else { navRow(n).tag(Sel(page: id)) }
                         }
                     }
                 } header: { if let h = grp.0 { Text(m.w(h)) } }
             }
         }.listStyle(.sidebar)
+        .animation(Nav.motion(reduceMotion), value: m.expanded)
+        .onChange(of: m.page, initial: true) { _, p in if m.expanded != [p] { m.expanded = [p] } }
+    }
+
+    /// A page's open state: the selected page is open; collapsing it takes the selection back to the page itself.
+    func open(_ id: String) -> Binding<Bool> {
+        Binding(get: { m.expanded.contains(id) }, set: { on in
+            if on { m.expanded.insert(id) } else { m.expanded.remove(id); if m.page == id { m.sel = Sel(page: id) } }
+        })
+    }
+
+    /// One sub-page: indented under its page, with a thin guide line on its left that takes the accent when it is the one shown.
+    func subRow(_ p: Page, _ g: Int) -> some View {
+        let on = m.page == p.id && m.search.isEmpty && m.shownGroup == g
+        let last = g == p.subpages.last
+        return HStack(spacing: Nav.indent) {
+            Rectangle().fill(on ? t.primary : Color.secondary.opacity(0.25)).frame(width: on ? Nav.guideSelectedWidth : Nav.guideWidth).frame(maxHeight: .infinity)
+            Text(m.w(p.groups[g].title)).foregroundStyle(on ? .primary : .secondary)
+        }
+        .padding(.bottom, last ? Nav.groupGap : 0)
+        .tag(Sel(page: p.id, group: g))
+        .transition(.opacity)
     }
 
     var profileRow: some View {
