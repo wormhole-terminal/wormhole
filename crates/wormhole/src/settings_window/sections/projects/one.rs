@@ -4,7 +4,6 @@ use std::path::Path;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::*;
-use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::project::{Feature, FeatureStanding, TrustStatus, trust_applies};
 #[allow(
     clippy::wildcard_imports,
@@ -17,7 +16,6 @@ use super::super::reveal;
 use super::features::{feature_description, feature_menu, feature_row};
 use super::picker::{choice_label, short_home};
 use crate::features::project;
-use crate::settings_window::nav::page_tile;
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, SettingState, TextRole};
 use crate::window::window_lifecycle::with_front_workspace;
@@ -72,7 +70,7 @@ impl SettingsWindow {
                     this.projects.forget_info();
                 }))
         };
-        let tile = style::RowTile::Icon { fill: page_tile(Section::Projects, cx), icon: IconName::Folder };
+        let tile = style::RowTile::Icon { fill: crate::theme_bridge::token(&cx.global::<crate::settings::SettingsStore>().tokens, "settings.tile.project"), icon: IconName::Folder };
         let mut parts = style::TileRowParts::new(tile, choice_label(root));
         parts.chip = Some((kind, status.into()));
         parts.hint = Some(short_home(root).into());

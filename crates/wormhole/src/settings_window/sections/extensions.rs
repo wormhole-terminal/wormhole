@@ -212,6 +212,7 @@ fn draw_probes(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
                 div()
                     .flex()
                     .flex_col()
+                    .child(style::setting_group_head(ui, text(SETTINGS_EXTENSIONS_PROBES)))
                     .child(style::group_card(ui, rows))
                     .child(footer(cx))
                     .into_any_element()
@@ -332,7 +333,7 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
     };
     let mut parts = style::TileRowParts::new(
         style::RowTile::Icon {
-            fill: crate::settings_window::nav::page_tile(Section::Extensions, cx),
+            fill: crate::theme_bridge::token(&cx.global::<crate::settings::SettingsStore>().tokens, "settings.nav.tile.changed"),
             icon: IconName::Puzzle,
         },
         title,

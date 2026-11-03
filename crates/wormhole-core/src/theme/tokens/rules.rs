@@ -80,6 +80,7 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         "settings.nav.tile.updates" => p("#30d158", "#1f8a3b"),
         "settings.nav.tile.advanced" => p("#8e8e93", "#7a7a80"),
         "settings.nav.tile.motion" => p("#ff375f", "#e0264d"),
+        "settings.tile.project" => p("#2c5d8a", "#2c5d8a"),
         "settings.nav.tile.projects" => p("#32ade6", "#1a78b0"),
         "settings.nav.tile.extensions" => p("#a2845e", "#8f7048"),
         "settings.nav.tile.flags" => p("#ff6b35", "#d9501a"),

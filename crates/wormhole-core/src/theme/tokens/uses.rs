@@ -405,6 +405,7 @@ pub const TOKEN_USES: &[TokenUse] = &[
             "settings.nav.tile.advanced",
             "settings.nav.tile.motion",
             "settings.nav.tile.projects",
+            "settings.tile.project",
             "settings.nav.tile.extensions",
             "settings.nav.tile.flags",
             "state.hover",
