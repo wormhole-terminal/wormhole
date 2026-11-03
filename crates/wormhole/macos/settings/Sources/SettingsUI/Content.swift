@@ -9,22 +9,27 @@ struct ContentView: View {
     }
     var body: some View {
         ScrollViewReader { proxy in
+          GeometryReader { geo in
+            // The page's column is centred and capped, but the scroller stays at the window's right edge:
+            // the Form spans the whole detail and its content margins make the column.
+            let side = max(0, (geo.size.width - Space.contentWidth) / 2)
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: Space.s2) {
                     Text(title).role(.title, weight: .semibold)
                     if m.search.isEmpty, m.catalog.page(m.page)?.badge == true { Chip(text: m.w("Preview"), fill: t.primary, ink: t.onPrimary) }
-                }.padding(.horizontal, Space.pageInset).padding(.top, Space.s2).padding(.bottom, Space.s1)
-                if let banner = m.banner { ConfigBanner(banner: banner) }
+                }.padding(.horizontal, side + Space.pageInset).padding(.top, Space.s2).padding(.bottom, Space.s1)
+                if let banner = m.banner { ConfigBanner(banner: banner).padding(.horizontal, side) }
                 Group {
                     if !m.search.isEmpty { SearchResults() }
                     else if m.page == "Changed" { ChangedPage() }
                     else if let p = m.catalog.page(m.page) { PageView(page: p) }
-                }.formStyle(.grouped).scrollContentBackground(.hidden).multilineTextAlignment(.leading)
-            }.frame(maxWidth: Space.contentWidth, alignment: .leading).frame(maxWidth: .infinity)
+                }.formStyle(.grouped).scrollContentBackground(.hidden).multilineTextAlignment(.leading).contentMargins(.horizontal, side, for: .scrollContent)
+            }.frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(nsColor: .windowBackgroundColor))
             .onChange(of: m.scrollTo) { _, v in if let v { withAnimation { proxy.scrollTo(v, anchor: .top) } } }
             .sheet(isPresented: Binding(get: { m.sheetDict("new-profile")?["open"] as? Bool ?? false }, set: { if !$0 { m.perform("new_profile_cancel", "Profile:") } })) { NewProfileSheet() }
             .sheet(isPresented: Binding(get: { m.infoSheet != nil }, set: { if !$0 { m.infoSheet = nil } })) { if m.sheetDict(m.infoSheet ?? "")?["kind"] as? String == "compare" { CompareSheet(id: m.infoSheet ?? "") } else { InfoSheet(id: m.infoSheet ?? "") } }
+          }
         }
     }
 }

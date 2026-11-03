@@ -61,6 +61,9 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
         default_values.insert(key.clone(), value);
         known.push(key);
     }
+    // What the app's own look is now (macOS's, or a devctl `appearance` override), for a window whose Mode is "Match system".
+    let system = if s_is_light(cx) { "light" } else { "dark" };
+    values.insert("System:appearance".into(), system.into());
     let themes = themes::snapshot(&entries, s);
     let preview = preview::build(&entries, s, cx);
     let (lists, sheets) = lists::build(cx);
@@ -98,4 +101,8 @@ fn fonts(cx: &App) -> Value {
         }
     }
     Value::Array(names.into_iter().map(|n| json!([n, mono.is_some_and(|m| m.contains(&n))])).collect())
+}
+
+fn s_is_light(cx: &App) -> bool {
+    cx.global::<SettingsStore>().system().appearance == wormhole_core::theme::tokens::Appearance::Light
 }

@@ -12,7 +12,7 @@ public struct SettingsView: View {
     init(model: SettingsModel) { _model = State(initialValue: model) }
 
     public var body: some View {
-        Inner().environment(model).preferredColorScheme(model.colourScheme)
+        Inner().environment(model).preferredColorScheme(model.colourScheme ?? (model.value("System:appearance") == "light" ? .light : .dark))
     }
 
     private struct Inner: View {
