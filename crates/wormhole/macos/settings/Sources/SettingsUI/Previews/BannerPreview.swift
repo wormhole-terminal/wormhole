@@ -22,12 +22,12 @@ struct BannerPreview: View {
                         Text(b.1).role(.body).foregroundStyle(t.muted)
                     }
                     Spacer(minLength: 0)
-                    Text("now").role(.micro).foregroundStyle(t.muted).frame(maxHeight: .infinity, alignment: .top)
+                    Text(m.w("now")).role(.micro).foregroundStyle(t.muted).frame(maxHeight: .infinity, alignment: .top)
                 }.padding(.horizontal, Space.s3).padding(.vertical, 10).frame(width: 340)
                     .background(RoundedRectangle(cornerRadius: Radius.banner).fill(t.elevated))
                     .shadow(color: .black.opacity(0.35), radius: 9, y: 6)
             }
-            if banners.isEmpty { Text("Nothing turned on: no banners.").role(.body).foregroundStyle(t.muted).frame(maxWidth: .infinity).padding(.vertical, Space.s3) }
+            if banners.isEmpty { Text(m.w("Nothing turned on: no banners.")).role(.body).foregroundStyle(t.muted).frame(maxWidth: .infinity).padding(.vertical, Space.s3) }
         }.padding(Space.s3).frame(maxWidth: .infinity, minHeight: 64, alignment: .trailing)
     }
 }

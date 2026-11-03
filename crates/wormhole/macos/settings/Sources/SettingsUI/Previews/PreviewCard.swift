@@ -11,13 +11,13 @@ struct PreviewCard: View {
                 card.background(t.panel).clipShape(RoundedRectangle(cornerRadius: Radius.card))
                     .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(m.line(t)))
                 // The caption is part of the row, not the section footer: a grouped form's footer sets its own text alignment.
-                Text(previewCaption[page.preview] ?? "").role(.body).foregroundStyle(t.muted)
+                Text(m.w(previewCaption[page.preview] ?? "")).role(.body).foregroundStyle(t.muted)
                     .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 10)
             }
             .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
         } header: {
-            HStack(spacing: 6) { Text("PREVIEW").role(.caption, weight: .bold).tracking(0.6); Text("· " + (previewName[page.preview] ?? "")).role(.caption).foregroundStyle(.tertiary) }
+            HStack(spacing: 6) { Text(m.w("PREVIEW")).role(.caption, weight: .bold).tracking(0.6); Text("· " + m.w(previewName[page.preview] ?? "")).role(.caption).foregroundStyle(.tertiary) }
         }
     }
 

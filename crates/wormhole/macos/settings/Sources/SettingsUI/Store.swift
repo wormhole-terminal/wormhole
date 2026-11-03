@@ -23,6 +23,8 @@ public protocol SettingsStore: AnyObject {
     func options(for key: String) -> [String]?
     /// The real fonts, themes and accent the previews draw with.
     var preview: PreviewData? { get }
+    /// A word of the window in the app's language, by its id (`wordID`); nil shows the English it was made from.
+    func word(_ id: String) -> String?
     /// The themes to pick from, when the host has its own.
     var themes: ThemeData? { get }
     /// The installed font families (name, monospaced), when the host has them.
@@ -58,6 +60,7 @@ public extension SettingsStore {
     func options(for key: String) -> [String]? { nil }
     var themes: ThemeData? { nil }
     var preview: PreviewData? { nil }
+    func word(_ id: String) -> String? { nil }
     var fonts: [FontChoice]? { nil }
     func list(for group: String) -> [[String: Any]] { [] }
     func sheet(for id: String) -> [String: Any]? { nil }
@@ -94,27 +97,50 @@ public extension SettingsStore {
     public func resetAll() { values = [:]; revision += 1 }
 }
 
-/// Labels as key + English text. A host passes a lookup from its catalogs; the default returns the English.
-public struct Words {
-    public var lookup: (String, String) -> String
-    public init(_ lookup: @escaping (String, String) -> String = { $1 }) { self.lookup = lookup }
-    func callAsFunction(_ key: String, _ english: String) -> String { lookup(key, english) }
+/// The id a word has in the app's catalogs: a slug of its English and the FNV-1a hash of all of it
+/// (`scripts/native-words.py` makes the same id). The English is only the source of the id; what shows is the
+/// host's word for it.
+func wordID(_ english: String) -> String {
+    var h: UInt32 = 0x811C9DC5
+    for b in english.utf8 { h = (h ^ UInt32(b)) &* 0x01000193 }
+    var slug = ""
+    for ch in english.lowercased().prefix(40) {
+        if ch.isASCII && (ch.isLetter || ch.isNumber) { slug.append(ch) } else if !slug.hasSuffix("-") { slug.append("-") }
+    }
+    slug = slug.trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+    let hex = String(h, radix: 16).leftPad(8)
+    return slug.isEmpty ? "native-\(hex)" : "native-\(slug)-\(hex)"
+}
+
+private extension String {
+    func leftPad(_ n: Int) -> String { String(repeating: "0", count: max(0, n - count)) + self }
+}
+
+/// Words by their English source: `words("", "Reset")`, the host's text for it.
+struct Words {
+    let lookup: (String) -> String
+    func callAsFunction(_ key: String, _ english: String) -> String { lookup(english) }
+    func callAsFunction(_ english: String) -> String { lookup(english) }
 }
 
 /// The window's state: the store (values), the catalog (rows) and what only the window knows (page, search).
 @MainActor @Observable public final class SettingsModel {
     let store: any SettingsStore
     let catalog: SettingsCatalog
-    let words: Words
     var page: String
     var search = ""
     var scrollTo: String? = nil
     var hoverFont: String? = nil
     var specimenTab = "Terminal"
 
-    public init(store: any SettingsStore, catalog: SettingsCatalog = .standard, words: Words = Words(), page: String = "Terminal") {
-        self.store = store; self.catalog = catalog; self.words = words; self.page = page
+    public init(store: any SettingsStore, catalog: SettingsCatalog = .standard, page: String = "Terminal") {
+        self.store = store; self.catalog = catalog; self.page = page
     }
+    /// The words of the window, in the host's language.
+    var words: Words { let s = store; return Words { _ = s.revision; return s.word(wordID($0)) ?? $0 } }
+    /// A word with a value in it: the host's text has `%@` where the value goes.
+    func w(_ english: String, _ value: String) -> String { words(english).replacingOccurrences(of: "%@", with: value) }
+    func w(_ english: String) -> String { words(english) }
 
     func value(_ key: String) -> String { _ = store.revision; return store.value(for: key) ?? store.defaultValue(for: key) ?? catalog.defaults[key] ?? "" }
     func get(_ key: String, _ row: Row) -> String { _ = store.revision; return store.value(for: key) ?? store.defaultValue(for: key) ?? row.defaultValue }

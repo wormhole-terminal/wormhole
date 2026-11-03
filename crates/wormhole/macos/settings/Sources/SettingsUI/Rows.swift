@@ -15,17 +15,17 @@ struct RowText: View {
         "A side set to Meta can’t type @ { [ on some layouts", "Only for you: nothing is written into the project folder"]
 
     var keepsHint: Bool { hint != nil || row.tile != nil || [.project, .probe, .value].contains(row.kind) || Self.warnHints.contains(row.hint) }
-    var shownHint: String { hint ?? (keepsHint ? m.words(row.key + ".hint", row.hint) : "") }
+    var shownHint: String { hint ?? (keepsHint ? m.w(row.hint) : "") }
     var infoText: String {
-        [keepsHint ? "" : row.hint, row.info].filter { !$0.isEmpty }.map { m.words(row.key + ".info", $0) }.joined(separator: " ")
+        [keepsHint ? "" : row.hint, row.info].filter { !$0.isEmpty }.map { m.w($0) }.joined(separator: " ")
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 6) {
-                Text(m.words(row.key + ".label", row.label))
-                if !row.chip.isEmpty { Chip(text: row.chip, fill: t.primary, ink: t.onPrimary) }
-                if changedDot { Circle().fill(t.primary).frame(width: 6, height: 6).help("Changed from its default") }
+                Text(m.w(row.label))
+                if !row.chip.isEmpty { Chip(text: m.w(row.chip), fill: t.primary, ink: t.onPrimary) }
+                if changedDot { Circle().fill(t.primary).frame(width: 6, height: 6).help(m.w("Changed from its default")) }
                 if let c = stateChip { Chip(text: c.0, fill: c.1) }
                 if !infoText.isEmpty && row.kind != .danger {
                     Button { showInfo.toggle() } label: { Image(systemName: "info.circle").foregroundStyle(.secondary) }
@@ -34,8 +34,8 @@ struct RowText: View {
                 }
             }
             if !shownHint.isEmpty { Text(shownHint).role(.body).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
-            if !row.warnWhenOff.isEmpty && row.kind == .toggle && !m.isOn(row.key, row) { Text(row.warnWhenOff).role(.body).foregroundStyle(t.warning).fixedSize(horizontal: false, vertical: true) }
-            if !row.note.isEmpty { Text(row.note).role(.body).foregroundStyle(row.kind == .probe ? t.warning : .secondary) }
+            if !row.warnWhenOff.isEmpty && row.kind == .toggle && !m.isOn(row.key, row) { Text(m.w(row.warnWhenOff)).role(.body).foregroundStyle(t.warning).fixedSize(horizontal: false, vertical: true) }
+            if !row.note.isEmpty { Text(m.w(row.note)).role(.body).foregroundStyle(row.kind == .probe ? t.warning : .secondary) }
         }
     }
 }
@@ -77,7 +77,7 @@ struct RowView: View {
                 HStack(spacing: Space.s2) {
                     ControlView(row: row, confirming: $confirming)
                     if showReset {
-                        Button { m.store.reset(row.key) } label: { Image(systemName: "arrow.counterclockwise") }.buttonStyle(.borderless).help("Reset to default").frame(width: 20)
+                        Button { m.store.reset(row.key) } label: { Image(systemName: "arrow.counterclockwise") }.buttonStyle(.borderless).help(m.w("Reset to default")).frame(width: 20)
                     }
                 }
             } label: {
@@ -88,19 +88,19 @@ struct RowView: View {
             }
             if row.kind == .checks || (row.kind == .skill && !row.checks.isEmpty) { ChecksControl(row: row).padding(.leading, tall ? 40 : 0) }
         }
-        .confirmationDialog(row.confirm.isEmpty ? "Reset all settings?" : row.confirm, isPresented: $confirming, titleVisibility: .visible) {
-            Button(row.action.isEmpty ? (row.actions.first ?? "Reset") : row.action, role: row.kind == .danger ? .destructive : nil) { if row.resetAll { m.store.resetAll() } else { m.perform(row.action.isEmpty ? "confirm" : row.action, row.key) } }
-        } message: { Text(row.confirmText) }
+        .confirmationDialog(row.confirm.isEmpty ? m.w("Reset all settings?") : m.w(row.confirm), isPresented: $confirming, titleVisibility: .visible) {
+            Button(m.w(row.action.isEmpty ? (row.actions.first ?? "Reset") : row.action), role: row.kind == .danger ? .destructive : nil) { if row.resetAll { m.store.resetAll() } else { m.perform(row.action.isEmpty ? "confirm" : row.action, row.key) } }
+        } message: { Text(m.w(row.confirmText)) }
     }
     var stateChip: (String, Color)? {
         let v = m.get(row.key, row)
         switch row.kind {
         case .probe:
-            switch v { case "on": return ("Approved", Palette.chipGood); case "off": return ("Off", Palette.chipQuiet)
-            case "changed": return ("Changed", Palette.chipWarn); case "unsupported": return ("Needs code", Palette.chipQuiet); default: return ("Can’t be enabled", Palette.chipBad) }
+            switch v { case "on": return (m.w("Approved"), Palette.chipGood); case "off": return (m.w("Off"), Palette.chipQuiet)
+            case "changed": return (m.w("Changed"), Palette.chipWarn); case "unsupported": return (m.w("Needs code"), Palette.chipQuiet); default: return (m.w("Can’t be enabled"), Palette.chipBad) }
         case .project:
-            switch v { case "trusted": return ("Trusted", Palette.chipGood); case "changed": return ("Changed since you trusted it", Palette.chipWarn); default: return ("Not trusted", Palette.chipQuiet) }
-        case .agent: return v == "repair" ? ("Needs repair", Palette.chipWarn) : nil
+            switch v { case "trusted": return (m.w("Trusted"), Palette.chipGood); case "changed": return (m.w("Changed since you trusted it"), Palette.chipWarn); default: return (m.w("Not trusted"), Palette.chipQuiet) }
+        case .agent: return v == "repair" ? (m.w("Needs repair"), Palette.chipWarn) : nil
         default: return nil
         }
     }
@@ -132,7 +132,7 @@ struct ControlView: View {
         case .value: Text(m.value(row.key)).foregroundStyle(.secondary)
         case .agent:
             switch cur {
-            case "on": Menu { Button("Repair Hooks") { m.perform("Repair Hooks", row.key) }; Button("Remove Hooks", role: .destructive) { m.perform("Remove Hooks", row.key) } } label: { Text("Hooks on") }.fixedSize()
+            case "on": Menu { Button(m.w("Repair Hooks")) { m.perform("Repair Hooks", row.key) }; Button(m.w("Remove Hooks"), role: .destructive) { m.perform("Remove Hooks", row.key) } } label: { Text(m.w("Hooks on")) }.fixedSize()
             case "off": Btn("Add Hooks", primary: true) { m.perform("Add Hooks", row.key) }
             default: Btn("Repair Hooks", primary: true) { m.perform("Repair Hooks", row.key) }
             }
@@ -154,13 +154,13 @@ struct PartsRows: View {
     var body: some View {
         ForEach(Array(titlePartLayout.enumerated()), id: \.offset) { _, p in
             if p.name == "-" {
-                LabeledContent { EmptyView() } label: { VStack(alignment: .leading, spacing: 1) { Text("Flexible space").foregroundStyle(.secondary); Text("Parts above sit at the left, below at the right").role(.body).foregroundStyle(.secondary) } }
+                LabeledContent { EmptyView() } label: { VStack(alignment: .leading, spacing: 1) { Text(m.w("Flexible space")).foregroundStyle(.secondary); Text(m.w("Parts above sit at the left, below at the right")).role(.body).foregroundStyle(.secondary) } }
             } else {
                 let key = "Appearance:4:0#" + titlePartID[p.name, default: p.name]
                 Toggle(isOn: Binding(get: { m.on(key) }, set: { m.set(key, $0 ? "on" : "off") })) {
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(p.name)
-                        if !p.note.isEmpty { Text(p.note).role(.body).foregroundStyle(.secondary) }
+                        Text(m.w(p.name))
+                        if !p.note.isEmpty { Text(m.w(p.note)).role(.body).foregroundStyle(.secondary) }
                     }
                 }.toggleStyle(.switch)
             }
@@ -196,7 +196,7 @@ struct UpdateRow: View {
             HStack(spacing: Space.s3) {
                 Circle().fill(colour).frame(width: 28, height: 28).overlay(Image(systemName: symbol).foregroundStyle(.white))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(c["status"] as? String ?? "")
+                    Text(m.w(c["status"] as? String ?? ""))
                     if let hint = c["hint"] as? String, !hint.isEmpty { Text(hint).role(.body).foregroundStyle(.secondary) }
                 }
             }
@@ -210,7 +210,7 @@ struct UpdateRow: View {
         } label: {
             HStack(spacing: Space.s3) {
                 Circle().fill(Palette.green).frame(width: 28, height: 28).overlay(Image(systemName: "checkmark").foregroundStyle(.white))
-                VStack(alignment: .leading, spacing: 1) { Text("Wormhole is up to date."); Text("Checked 4 minutes ago.").role(.body).foregroundStyle(.secondary) }
+                VStack(alignment: .leading, spacing: 1) { Text(m.w("Wormhole is up to date.")); Text(m.w("Checked 4 minutes ago.")).role(.body).foregroundStyle(.secondary) }
             }
         }
     }
@@ -225,7 +225,7 @@ struct ApprovalSheet: View {
     var data: ApprovalSheetData? { m.sheetData(row.sheet) }
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s3) {
-            Text(data?.title ?? "Approve \(row.label)").font(.headline)
+            Text(data?.title ?? m.w("Approve %@", row.label)).font(.headline)
             Text(data?.identity ?? "").foregroundStyle(.secondary)
             ForEach(data?.since ?? [], id: \.self) { Text($0).foregroundStyle(.secondary) }
             GroupBox {
@@ -241,7 +241,7 @@ struct ApprovalSheet: View {
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(Space.s1)
             }
-            HStack { Spacer(); Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction); Button("Approve", action: approve).keyboardShortcut(.defaultAction) }
+            HStack { Spacer(); Button(m.w("Cancel")) { dismiss() }.keyboardShortcut(.cancelAction); Button(m.w("Approve"), action: approve).keyboardShortcut(.defaultAction) }
         }.padding(Space.s4).frame(width: 380)
     }
 }

@@ -12,8 +12,8 @@ struct PopupControl: View {
         Picker(row.label, selection: Binding(get: { m.get(row.key, row) }, set: { m.set(row.key, $0) })) {
             ForEach(Array(m.options(row).enumerated()), id: \.offset) { _, o in
                 if o == "-" { Divider() }
-                else if row.appIcons, let img = AppIcons.icon(o) { Label { Text(o) } icon: { Image(nsImage: img) }.tag(o) }
-                else { Text(o).tag(o) }
+                else if row.appIcons, let img = AppIcons.icon(o) { Label { Text(m.w(o)) } icon: { Image(nsImage: img) }.tag(o) }
+                else { Text(m.w(o)).tag(o) }
             }
         }.labelsHidden().pickerStyle(.menu).fixedSize()
     }
@@ -57,9 +57,9 @@ struct FontControl: View {
         let size = Int(m.value(row.key + "#size")) ?? row.size
         HStack(spacing: Space.s2) {
             Picker(row.label, selection: Binding(get: { m.get(row.key, row) }, set: { m.set(row.key, $0) })) {
-                if row.same { Text("Same as terminal").tag("Same as terminal"); Divider() }
-                Section("Monospaced") { ForEach(m.fontList.filter { $0.1 }, id: \.0) { Text($0.0).tag($0.0) } }
-                Section("Proportional") { ForEach(m.fontList.filter { !$0.1 }, id: \.0) { Text($0.0).tag($0.0) } }
+                if row.same { Text(m.w("Same as terminal")).tag("Same as terminal"); Divider() }
+                Section(m.w("Monospaced")) { ForEach(m.fontList.filter { $0.1 }, id: \.0) { Text($0.0).tag($0.0) } }
+                Section(m.w("Proportional")) { ForEach(m.fontList.filter { !$0.1 }, id: \.0) { Text($0.0).tag($0.0) } }
             }.labelsHidden().pickerStyle(.menu).fixedSize().font(.system(size: 13, design: row.mono ? .monospaced : .default))
             Stepper("\(size) pt", value: Binding(get: { size }, set: { m.set(row.key + "#size", String($0)) }), in: 8...36).monospacedDigit()
         }
@@ -82,8 +82,8 @@ struct KeyControl: View {
         let cur = m.get(row.key, row)
         VStack(alignment: .trailing, spacing: 4) {
             Button { toggle() } label: {
-                if recording { Text("Type shortcut…").foregroundStyle(t.primary) }
-                else if cur.isEmpty { Text("Record…") }
+                if recording { Text(m.w("Type shortcut…")).foregroundStyle(t.primary) }
+                else if cur.isEmpty { Text(m.w("Record…")) }
                 else { HStack(spacing: 3) { ForEach(Array(Self.caps(cur).enumerated()), id: \.offset) { _, c in cap(c) } } }
             }.buttonStyle(.bordered)
             if let note = m.note(row.key) {
@@ -158,7 +158,7 @@ struct ChecksControl: View {
     var body: some View {
         HStack(spacing: Space.s4) {
             ForEach(row.checks, id: \.self) { c in
-                Toggle(c, isOn: Binding(get: { row.listed ? row.checksOn.contains(c) : m.on(row.key + c) }, set: { on in if row.listed { m.perform("\(c) \(on ? "on" : "off")", row.key) } else { m.set(row.key + c, on ? "on" : "off") } })).toggleStyle(.checkbox)
+                Toggle(m.w(c), isOn: Binding(get: { row.listed ? row.checksOn.contains(c) : m.on(row.key + c) }, set: { on in if row.listed { m.perform("\(c) \(on ? "on" : "off")", row.key) } else { m.set(row.key + c, on ? "on" : "off") } })).toggleStyle(.checkbox)
             }
         }
     }
@@ -171,11 +171,13 @@ struct Chip: View {
 
 /// A button: bordered like any native one, prominent when it is the row's main action.
 struct Btn: View {
+    @Environment(SettingsModel.self) var m
     let title: String; var primary = false; var destructive = false; let action: () -> Void
     init(_ title: String, primary: Bool = false, destructive: Bool = false, action: @escaping () -> Void = {}) {
         self.title = title; self.primary = primary; self.destructive = destructive; self.action = action
     }
     var body: some View {
+        let title = m.w(self.title)
         if primary { Button(title, action: action).buttonStyle(.borderedProminent) }
         else if destructive { Button(role: .destructive, action: action) { Text(title).foregroundStyle(Color.red) }.buttonStyle(.bordered) }
         else { Button(title, action: action).buttonStyle(.bordered) }

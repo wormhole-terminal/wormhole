@@ -15,7 +15,7 @@ struct ColourRow: View {
             HStack(spacing: Space.s2) {
                 pill("Theme"); if isBranch { pill("Primary") }
                 ForEach(accentColours, id: \.0) { n, hex in dot(n, Color(hex: hex)) }
-                ColorPicker("Custom", selection: Binding(get: { m.customColour(row.key) }, set: { m.set(row.key + "#custom", $0.hexString); m.set(row.key, "Custom") }), supportsOpacity: false)
+                ColorPicker(m.w("Custom"), selection: Binding(get: { m.customColour(row.key) }, set: { m.set(row.key + "#custom", $0.hexString); m.set(row.key, "Custom") }), supportsOpacity: false)
                     .labelsHidden().overlay { if cur == "Custom" { Circle().strokeBorder(m.customColour(row.key), lineWidth: 2).padding(-3).allowsHitTesting(false) } }
             }
         }.padding(.vertical, Space.s1)
@@ -23,17 +23,17 @@ struct ColourRow: View {
 
     var hint: String {
         switch cur {
-        case "Theme": "The theme’s · " + m.theme(light: !t.dark).blue.hexString
-        case "Primary": "The primary colour · " + t.primary.hexString
-        case "Custom": "Yours · \(m.customColour(row.key).hexString), in every theme"
-        default: "Yours · " + (accentColours.first { $0.0 == cur }.map { Color(hex: $0.1).hexString } ?? "") + ", in every theme"
+        case "Theme": m.w("The theme’s · %@", m.theme(light: !t.dark).blue.hexString)
+        case "Primary": m.w("The primary colour · %@", t.primary.hexString)
+        case "Custom": m.w("Yours · %@, in every theme", m.customColour(row.key).hexString)
+        default: m.w("Yours · %@, in every theme", accentColours.first { $0.0 == cur }.map { Color(hex: $0.1).hexString } ?? "")
         }
     }
 
     func pill(_ n: String) -> some View {
         let sel = cur == n
         return Button { m.set(row.key, n) } label: {
-            Text(n).role(.body).padding(.horizontal, 9).frame(height: 22)
+            Text(m.w(n)).role(.body).padding(.horizontal, 9).frame(height: 22)
                 .background(Capsule().fill(sel ? t.primary : Color.secondary.opacity(0.18))).foregroundStyle(sel ? t.onPrimary : .secondary)
         }.buttonStyle(.plain)
     }
@@ -42,7 +42,7 @@ struct ColourRow: View {
         Button { m.set(row.key, n) } label: {
             Circle().fill(colour).frame(width: 20, height: 20)
                 .overlay { if cur == n { Circle().strokeBorder(colour, lineWidth: 2).padding(-4) } }.padding(4)
-        }.buttonStyle(.plain).help(n)
+        }.buttonStyle(.plain).help(m.w(n))
     }
 }
 

@@ -4,8 +4,8 @@ import AppKit
 /// The Settings window's content. A host builds it with its own `SettingsStore` (and optionally catalog and words).
 public struct SettingsView: View {
     @State private var model: SettingsModel
-    public init(store: any SettingsStore, catalog: SettingsCatalog = .standard, words: Words = Words(), page: String = "Terminal") {
-        _model = State(initialValue: MainActor.assumeIsolated { SettingsModel(store: store, catalog: catalog, words: words, page: page) })
+    public init(store: any SettingsStore, catalog: SettingsCatalog = .standard, page: String = "Terminal") {
+        _model = State(initialValue: MainActor.assumeIsolated { SettingsModel(store: store, catalog: catalog, page: page) })
     }
 
     /// A host that keeps the model itself (to move the page of a window that is already open).
@@ -26,7 +26,7 @@ public struct SettingsView: View {
             } detail: {
                 ContentView().toolbarBackground(.hidden, for: .windowToolbar)
             }
-            .searchable(text: $s.search, placement: .sidebar, prompt: "Search")
+            .searchable(text: $s.search, placement: .sidebar, prompt: m.w("Search"))
             .environment(\.tok, t).tint(t.primary)
         }
     }
@@ -52,13 +52,13 @@ struct SidebarView: View {
                                 ForEach(p.groups.filter { !$0.title.isEmpty }, id: \.title) { g in
                                     let on = (activeGroup ?? p.groups.first { !$0.title.isEmpty }?.title) == g.title
                                     Button { activeGroup = g.title; m.scrollTo = g.title } label: {
-                                        Text(g.title).fontWeight(on ? .semibold : .regular).foregroundStyle(on ? .primary : .secondary)
+                                        Text(m.w(g.title)).fontWeight(on ? .semibold : .regular).foregroundStyle(on ? .primary : .secondary)
                                     }.buttonStyle(.plain).padding(.leading, 28)
                                 }
                             }
                         }
                     }
-                } header: { if let h = grp.0 { Text(h) } }
+                } header: { if let h = grp.0 { Text(m.w(h)) } }
             }
         }.listStyle(.sidebar)
     }
@@ -66,7 +66,7 @@ struct SidebarView: View {
     var profileRow: some View {
         HStack(spacing: Space.s2) {
             Circle().fill(t.primary).frame(width: 28, height: 28).overlay(Text(m.profileInfo.letter).fontWeight(.semibold).foregroundStyle(t.onPrimary))
-            VStack(alignment: .leading, spacing: 0) { Text(m.profileInfo.name).fontWeight(.semibold); Text("Profile").role(.caption).foregroundStyle(.secondary) }
+            VStack(alignment: .leading, spacing: 0) { Text(m.profileInfo.name).fontWeight(.semibold); Text(m.w("Profile")).role(.caption).foregroundStyle(.secondary) }
             Spacer(minLength: 0)
             Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
         }.padding(.vertical, Space.s1)
@@ -74,7 +74,7 @@ struct SidebarView: View {
 
     func navRow(_ n: NavItem, badge: Int = 0) -> some View {
         Label {
-            HStack { Text(m.words(n.id + ".nav", n.title)); Spacer(); if badge > 0 { Chip(text: "\(badge)", fill: t.primary, ink: t.onPrimary) } }
+            HStack { Text(m.w(n.title)); Spacer(); if badge > 0 { Chip(text: "\(badge)", fill: t.primary, ink: t.onPrimary) } }
         } icon: {
             RoundedRectangle(cornerRadius: Radius.control).fill(Color(css: n.colour)).frame(width: 20, height: 20)
                 .overlay(Image(systemName: n.symbol).font(.system(size: 11, weight: .medium)).foregroundStyle(.white))

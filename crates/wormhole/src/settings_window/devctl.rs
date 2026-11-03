@@ -442,3 +442,8 @@ pub(crate) fn native_set(arg: &str, cx: &mut App) {
 pub(crate) fn native_event(arg: &str, cx: &mut App) {
     super::native::event(arg.trim(), cx);
 }
+
+/// The native Settings window gets its words again, after the interface language changed.
+pub(crate) fn native_words_changed(cx: &mut App) {
+    super::native::push(cx);
+}

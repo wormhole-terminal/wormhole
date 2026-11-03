@@ -11,7 +11,7 @@ struct ThemePicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s3) {
             if m.separateThemes {
-                section("In Dark Mode", m.themeData.darks, light: false); section("In Light Mode", m.themeData.lights, light: true)
+                section(m.w("In Dark Mode"), m.themeData.darks, light: false); section(m.w("In Light Mode"), m.themeData.lights, light: true)
             } else {
                 LazyVGrid(columns: cols, spacing: Space.s3) {
                     ForEach(showAll ? m.themeData.pairs : Array(m.themeData.pairs.prefix(8)), id: \.name) { p in
@@ -21,7 +21,7 @@ struct ThemePicker: View {
             }
             HStack(spacing: Space.s2) {
                 if m.themeData.pairs.count > 8 {
-                    Button(showAll ? "Show fewer" : "Show all \(m.themeData.pairs.count)") { showAll.toggle() }.buttonStyle(.link)
+                    Button(showAll ? m.w("Show fewer") : m.w("Show all %@", String(m.themeData.pairs.count))) { showAll.toggle() }.buttonStyle(.link)
                 }
                 Spacer()
                 Btn("Import Theme…") { m.perform("Import Theme…", m.themeRowKey) }; Btn("Theme Studio") { m.perform("Theme Studio", m.themeRowKey) }

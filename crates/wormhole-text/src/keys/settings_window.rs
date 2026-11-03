@@ -7,88 +7,88 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Rescan PATH"
-pub const SETTINGS_WINDOW_RESCAN_PATH: Key = Key::new(1317);
+pub const SETTINGS_WINDOW_RESCAN_PATH: Key = Key::new(1706);
 /// "New profile…"
-pub const SETTINGS_WINDOW_NEW_PROFILE: Key = Key::new(1318);
+pub const SETTINGS_WINDOW_NEW_PROFILE: Key = Key::new(1707);
 /// "Import theme"
-pub const SETTINGS_WINDOW_IMPORT_THEME: Key = Key::new(1319);
+pub const SETTINGS_WINDOW_IMPORT_THEME: Key = Key::new(1708);
 /// "Search"
-pub const SETTINGS_WINDOW_SEARCH_SETTINGS: Key = Key::new(1320);
+pub const SETTINGS_WINDOW_SEARCH_SETTINGS: Key = Key::new(1709);
 /// "No setting has these words in its name, description or config key."
-pub const SETTINGS_WINDOW_NO_RESULTS: Key = Key::new(1321);
+pub const SETTINGS_WINDOW_NO_RESULTS: Key = Key::new(1710);
 /// "Results"
-pub const SETTINGS_WINDOW_RESULTS: Key = Key::new(1322);
+pub const SETTINGS_WINDOW_RESULTS: Key = Key::new(1711);
 /// "clears the search, then closes"
-pub const SETTINGS_WINDOW_CLEARS_THE_SEARCH_THEN_CLOSES: Key = Key::new(1323);
+pub const SETTINGS_WINDOW_CLEARS_THE_SEARCH_THEN_CLOSES: Key = Key::new(1712);
 /// "Feature flags"
-pub const SETTINGS_WINDOW_FEATURE_FLAGS: Key = Key::new(1324);
+pub const SETTINGS_WINDOW_FEATURE_FLAGS: Key = Key::new(1713);
 /// "Open"
-pub const SETTINGS_WINDOW_OPEN: Key = Key::new(1325);
+pub const SETTINGS_WINDOW_OPEN: Key = Key::new(1714);
 /// "config.json can't be read, so changes made here aren't saved until it is fixed (see Advanced)."
-pub const SETTINGS_WINDOW_CONFIG_JSON_CANT_BE_READ_SO: Key = Key::new(1326);
+pub const SETTINGS_WINDOW_CONFIG_JSON_CANT_BE_READ_SO: Key = Key::new(1715);
 /// "Some settings live only in config.json, and projects can bring their own actions."
-pub const SETTINGS_WINDOW_SOME_SETTINGS_LIVE_ONLY_IN_CONFIG: Key = Key::new(1327);
+pub const SETTINGS_WINDOW_SOME_SETTINGS_LIVE_ONLY_IN_CONFIG: Key = Key::new(1716);
 /// "Open config.json"
-pub const SETTINGS_WINDOW_OPEN_CONFIG_JSON: Key = Key::new(1328);
+pub const SETTINGS_WINDOW_OPEN_CONFIG_JSON: Key = Key::new(1717);
 /// "Clear search"
-pub const SETTINGS_WINDOW_CLEAR_SEARCH: Key = Key::new(1329);
+pub const SETTINGS_WINDOW_CLEAR_SEARCH: Key = Key::new(1718);
 /// "Settings"
-pub const SETTINGS_WINDOW_SETTINGS: Key = Key::new(1330);
+pub const SETTINGS_WINDOW_SETTINGS: Key = Key::new(1719);
 /// "Edit in project"
-pub const SETTINGS_WINDOW_EDIT_IN_PROJECT: Key = Key::new(1331);
+pub const SETTINGS_WINDOW_EDIT_IN_PROJECT: Key = Key::new(1720);
 /// "Window"
-pub const SETTINGS_WINDOW_WINDOW: Key = Key::new(1332);
+pub const SETTINGS_WINDOW_WINDOW: Key = Key::new(1721);
 /// "Fonts"
-pub const SETTINGS_WINDOW_FONTS: Key = Key::new(1333);
+pub const SETTINGS_WINDOW_FONTS: Key = Key::new(1722);
 /// "Terminal font"
-pub const SETTINGS_WINDOW_TERMINAL_FONT: Key = Key::new(1334);
+pub const SETTINGS_WINDOW_TERMINAL_FONT: Key = Key::new(1723);
 /// "Terminals list"
-pub const SETTINGS_WINDOW_TERMINALS_LIST: Key = Key::new(1335);
+pub const SETTINGS_WINDOW_TERMINALS_LIST: Key = Key::new(1724);
 /// "Notifications"
-pub const SETTINGS_WINDOW_NOTIFICATIONS: Key = Key::new(1336);
+pub const SETTINGS_WINDOW_NOTIFICATIONS: Key = Key::new(1725);
 /// "Menu bar"
-pub const SETTINGS_WINDOW_MENU_BAR: Key = Key::new(1337);
+pub const SETTINGS_WINDOW_MENU_BAR: Key = Key::new(1726);
 /// "Preview of the window with your current settings"
-pub const SETTINGS_WINDOW_PREVIEW_WINDOW_LABEL: Key = Key::new(1338);
+pub const SETTINGS_WINDOW_PREVIEW_WINDOW_LABEL: Key = Key::new(1727);
 /// "Preview of your fonts in a sample of terminal text"
-pub const SETTINGS_WINDOW_PREVIEW_FONTS_LABEL: Key = Key::new(1339);
+pub const SETTINGS_WINDOW_PREVIEW_FONTS_LABEL: Key = Key::new(1728);
 /// "Preview of the Terminals list with your current settings"
-pub const SETTINGS_WINDOW_PREVIEW_TERMINALS_LABEL: Key = Key::new(1340);
+pub const SETTINGS_WINDOW_PREVIEW_TERMINALS_LABEL: Key = Key::new(1729);
 /// "Preview of the Terminals list with coding agents at work"
-pub const SETTINGS_WINDOW_PREVIEW_AGENTS_LABEL: Key = Key::new(1341);
+pub const SETTINGS_WINDOW_PREVIEW_AGENTS_LABEL: Key = Key::new(1730);
 /// "Preview of how a notification looks"
-pub const SETTINGS_WINDOW_PREVIEW_NOTIFICATIONS_LABEL: Key = Key::new(1342);
+pub const SETTINGS_WINDOW_PREVIEW_NOTIFICATIONS_LABEL: Key = Key::new(1731);
 /// "Preview of the menu bar item and the quick panel"
-pub const SETTINGS_WINDOW_PREVIEW_MENU_BAR_LABEL: Key = Key::new(1343);
+pub const SETTINGS_WINDOW_PREVIEW_MENU_BAR_LABEL: Key = Key::new(1732);
 /// "Preview"
-pub const SETTINGS_WINDOW_PREVIEW: Key = Key::new(1344);
+pub const SETTINGS_WINDOW_PREVIEW: Key = Key::new(1733);
 /// "Split terminals"
-pub const SETTINGS_WINDOW_SPLIT_TERMINALS: Key = Key::new(1345);
+pub const SETTINGS_WINDOW_SPLIT_TERMINALS: Key = Key::new(1734);
 /// "Changes panel and diff"
-pub const SETTINGS_WINDOW_DIFF: Key = Key::new(1346);
+pub const SETTINGS_WINDOW_DIFF: Key = Key::new(1735);
 /// "Preview of two split terminals with your current settings"
-pub const SETTINGS_WINDOW_PREVIEW_TERMINAL_LABEL: Key = Key::new(1347);
+pub const SETTINGS_WINDOW_PREVIEW_TERMINAL_LABEL: Key = Key::new(1736);
 /// "Preview of the Changes panel and a diff with your current settings"
-pub const SETTINGS_WINDOW_PREVIEW_DIFF_LABEL: Key = Key::new(1348);
+pub const SETTINGS_WINDOW_PREVIEW_DIFF_LABEL: Key = Key::new(1737);
 /// "Value"
-pub const SETTINGS_WINDOW_STEPPER_LABEL: Key = Key::new(1356);
+pub const SETTINGS_WINDOW_STEPPER_LABEL: Key = Key::new(1745);
 /// "Smaller"
-pub const SETTINGS_WINDOW_STEPPER_SMALLER: Key = Key::new(1357);
+pub const SETTINGS_WINDOW_STEPPER_SMALLER: Key = Key::new(1746);
 /// "Larger"
-pub const SETTINGS_WINDOW_STEPPER_LARGER: Key = Key::new(1358);
+pub const SETTINGS_WINDOW_STEPPER_LARGER: Key = Key::new(1747);
 
 /// ```text
 /// Open { $section }
 /// ```
 pub fn settings_window_open_section(section: &str) -> String {
-    crate::active::message(1349, &[("section", Arg::Str(section))])
+    crate::active::message(1738, &[("section", Arg::Str(section))])
 }
 
 /// ```text
 /// Import failed: { $error }
 /// ```
 pub fn settings_window_import_failed(error: &str) -> String {
-    crate::active::message(1350, &[("error", Arg::Str(error))])
+    crate::active::message(1739, &[("error", Arg::Str(error))])
 }
 
 /// ```text
@@ -106,33 +106,33 @@ pub fn settings_window_import_failed(error: &str) -> String {
 /// }
 /// ```
 pub fn settings_window_results_summary(hits: i64, sections: i64, query: &str) -> String {
-    crate::active::message(1351, &[("hits", Arg::Int(hits)), ("sections", Arg::Int(sections)), ("query", Arg::Str(query))])
+    crate::active::message(1740, &[("hits", Arg::Int(hits)), ("sections", Arg::Int(sections)), ("query", Arg::Str(query))])
 }
 
 /// ```text
 /// Preview feature, behind the “{ $flag }” flag — a release build doesn't have it yet.
 /// ```
 pub fn settings_window_preview_feature_note(flag: &str) -> String {
-    crate::active::message(1352, &[("flag", Arg::Str(flag))])
+    crate::active::message(1741, &[("flag", Arg::Str(flag))])
 }
 
 /// ```text
 /// The list of profiles couldn't be read, so it was set aside and rebuilt: { $message }
 /// ```
 pub fn settings_window_profiles_unreadable(message: &str) -> String {
-    crate::active::message(1353, &[("message", Arg::Str(message))])
+    crate::active::message(1742, &[("message", Arg::Str(message))])
 }
 
 /// ```text
 /// Nothing matches “{ $query }”
 /// ```
 pub fn settings_window_nothing_matches(query: &str) -> String {
-    crate::active::message(1354, &[("query", Arg::Str(query))])
+    crate::active::message(1743, &[("query", Arg::Str(query))])
 }
 
 /// ```text
 /// Set by { $project }/{ $dir }/{ $file } while one of its terminals is in front; yours is kept
 /// ```
 pub fn settings_window_set_by_project(project: &str, dir: &str, file: &str) -> String {
-    crate::active::message(1355, &[("project", Arg::Str(project)), ("dir", Arg::Str(dir)), ("file", Arg::Str(file))])
+    crate::active::message(1744, &[("project", Arg::Str(project)), ("dir", Arg::Str(dir)), ("file", Arg::Str(file))])
 }

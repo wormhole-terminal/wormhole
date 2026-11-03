@@ -17,7 +17,7 @@ struct FontPreview: View {
         let drawn = min(size, 18)
         let lh = tab == "Terminal" ? (m.preview.map { String(format: "%.2f", $0.lineHeight) } ?? m.str("Fonts", 0, 1)) : "1.40"
         let lig = m.preview?.ligatures ?? m.on("Fonts", 0, 2)
-        let facts = ["\(name == ".SystemUIFont" ? "System font" : name) \(Int(size)) pt"] + (tab == "Terminal" ? ["line height \(lh)"] : []) + (tab != "Interface" ? ["ligatures \(lig ? "on" : "off")"] : []) + ["\(m.pairName) colours"]
+        let facts = ["\(name == ".SystemUIFont" ? m.w("System font") : name) \(Int(size)) pt"] + (tab == "Terminal" ? [m.w("line height %@", lh)] : []) + (tab != "Interface" ? [m.w(lig ? "ligatures on" : "ligatures off")] : []) + [m.w("%@ colours", m.pairName)]
         // CSS line-height is a multiple of the size; SwiftUI adds to the font's own line height.
         let extra = max(0, (Double(lh) ?? 1.4) * drawn - NSFont.systemFont(ofSize: drawn).boundingRectForFont.height)
 
@@ -35,13 +35,13 @@ struct FontPreview: View {
                 HStack(spacing: 0) {
                     ForEach(["Terminal", "Code", "Interface"], id: \.self) { n in
                         Button { m.specimenTab = n } label: {
-                            Text(n).role(.body).padding(.horizontal, 10).frame(height: 22)
+                            Text(m.w(n)).role(.body).padding(.horizontal, 10).frame(height: 22)
                                 .background(RoundedRectangle(cornerRadius: Radius.chip).fill(n == tab ? t.buttonHover : .clear))
                                 .foregroundStyle(n == tab ? t.text : t.muted)
                         }.buttonStyle(.plain)
                     }
                 }.padding(2).background(RoundedRectangle(cornerRadius: Radius.tile).fill(t.input))
-                Text("Shows the font you chose").role(.body).foregroundStyle(t.faint).lineLimit(1)
+                Text(m.w("Shows the font you chose")).role(.body).foregroundStyle(t.faint).lineLimit(1)
                 Spacer(minLength: 0)
             }.padding(Space.s2)
             Rule(colour: m.line(t))

@@ -29,7 +29,7 @@ struct DiffPreview: View {
             (" " + indent + "if budget == 0 {", nil), ("+" + indent + indent + "self.stats.denied += 1;", add)]
         return HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 1) {
-                Text("Changes · 4").role(.caption, weight: .semibold).foregroundStyle(t.muted).padding(.horizontal, 4).padding(.bottom, 6)
+                Text(m.w("Changes · 4")).role(.caption, weight: .semibold).foregroundStyle(t.muted).padding(.horizontal, 4).padding(.bottom, 6)
                 ForEach(Array(files.enumerated()), id: \.offset) { _, f in
                     HStack(spacing: 6) {
                         Text(f.name).role(f.dir ? .micro : .caption, weight: f.dir ? .semibold : .regular).lineLimit(1).foregroundStyle(f.dir ? t.muted : t.text)

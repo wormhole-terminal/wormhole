@@ -21,10 +21,10 @@ struct MenuBarPreview: View {
             }.role(.caption).padding(.horizontal, 10).frame(height: 24).background(t.titlebar).foregroundStyle(t.text)
             if shown {
                 VStack(spacing: 2) {
-                    Text("Waiting for you").role(.micro, weight: .semibold).foregroundStyle(t.muted).padding(.horizontal, 6).padding(.vertical, 2).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(m.w("Waiting for you")).role(.micro, weight: .semibold).foregroundStyle(t.muted).padding(.horizontal, 6).padding(.vertical, 2).frame(maxWidth: .infinity, alignment: .leading)
                     HStack { Text("Flaky login test"); Spacer(); Text("⌘1") }.padding(.horizontal, 6).padding(.vertical, 4)
                         .background(RoundedRectangle(cornerRadius: Radius.chip).fill(t.primary))
-                    HStack { Text("Rate limits"); Spacer(); Text("⌘2").foregroundStyle(t.muted) }.padding(.horizontal, 6).padding(.vertical, 4)
+                    HStack { Text(m.w("Rate limits")); Spacer(); Text("⌘2").foregroundStyle(t.muted) }.padding(.horizontal, 6).padding(.vertical, 4)
                 }.role(.body).padding(6).frame(width: 240)
                     .background(RoundedRectangle(cornerRadius: Radius.card).fill(t.elevated)).shadow(color: .black.opacity(0.45), radius: 14, y: 10)
                     .padding(.top, 6).padding(.trailing, 10).frame(maxWidth: .infinity, alignment: .trailing)

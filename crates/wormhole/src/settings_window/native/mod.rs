@@ -21,6 +21,8 @@ mod rows;
 mod snapshot;
 mod system;
 mod themes;
+mod words;
+mod words_table;
 
 use std::cell::RefCell;
 use std::collections::VecDeque;
